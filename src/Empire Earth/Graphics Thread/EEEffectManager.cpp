@@ -87,8 +87,6 @@
 #include "ee/EEE3DScreenFlash.h"
 #include "ee/EEE3DEnergyWave.h"
 #include "ee/EEE3DTracerBeam.h"
-#include "ee/EEE3DTracers.h"
-#include "ee/EEE3DCitizenBeam.h"
 #include "ee/EEE3DLinearProjectile.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
@@ -98,7 +96,6 @@
 #include "ee/EEE3DStorm.h"
 #include "ee/EEE3DSnow.h"
 #include "ee/EEE3DRain.h"
-#include "ee/EEE3DPulseCannonBall.h"
 #include "ee/EEE3DParticle.h"
 #include "ee/EESimCapture.h"
 #include "ee/EESaveGameFiles.h"
@@ -204,7 +201,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(); break;
     case kEffect2DWaterRipple: theEffect = new EEE2DWaterRipple(); break;
     case kEffect3DEarthquake: theEffect = new EEE3DEarthquake(); break;
-    case kEffect3DTracers: theEffect = new EEE3DTracers(0x21); break;
+    case kEffect3DTracers: theEffect = new EEE3DRust(0x21); break;
     case kEffect3DVolcano: theEffect = new EEE3DVolcano(); break;
     case kEffect3DDisease: theEffect = new EEE3DDisease(); break;
     case kEffect3DFarm: theEffect = new EEE3DFarm(); break;
@@ -212,7 +209,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DLinearProjectile: theEffect = new EEE3DLinearProjectile(); break;
     case kEffect3DRain: theEffect = new EEE3DRain(); break;
     case kEffect3DSnow: theEffect = new EEE3DSnow(); break;
-    case kEffect3DShells: theEffect = new EEE3DShells(0x26); break;
+    case kEffect3DShells: theEffect = new EEE3DRust(0x26); break;
     case kEffect3DAdditivePass: theEffect = new EEE3DAdditivePass(); break;
     case kEffect3DNuclearExplosion: theEffect = new EEE3DNuclearExplosion(); break;
     case kEffect3DIcon: theEffect = new EEE3DIcon(2); break;
@@ -221,13 +218,13 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DTeleport: theEffect = new EEE3DRust(0x3f); break;
     case kEffect3DTimeWarp: theEffect = new EEE3DRust(0x44); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(0x40); break;
-    case kEffect3DPulseCannonBall: theEffect = new EEE3DPulseCannonBall(0x43); break;
+    case kEffect3DPulseCannonBall: theEffect = new EEE3DRust(0x43); break;
     case kEffect3DShield: theEffect = new EEE3DRust(kEffect3DShield); break;
     case kEffect2DVortex: theEffect = new EEE2DVortex(); break;
     case kEffect3DBlastWave: theEffect = new EEE3DRust(0x18); break;
     case kEffect3DVirus: theEffect = new EEE3DVirus(); break;
     case kEffect2DBattlefieldAmbient: theEffect = new EEE2DBattlefieldAmbient(); break;
-    case kEffect3DCitizenBeam: theEffect = new EEE3DCitizenBeam(0x33); break;
+    case kEffect3DCitizenBeam: theEffect = new EEE3DRust(0x33); break;
     case kEffect3DEnergyWall: theEffect = new EEE3DEnergyWall(0x34); break;
     case kEffect3DDamageVent: theEffect = new EEE3DDamageVent(); break;
     case kEffect3DScreenFlash: theEffect = new EEE3DScreenFlash(); break;
@@ -343,8 +340,8 @@ long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEG
     switch (inEffect->mKind) {
     case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DSmokeMuzzleBlast(inFrom, inTo, inEffect); break;
     case kEffect2DWinterBreath: theEffect = new EEE2DWinterBreath(inFrom, inEffect); break;
-    case kEffect3DTracers: theEffect = new EEE3DTracers(inFrom, inTo, inEffect, 0x21); break;
-    case kEffect3DShells: theEffect = new EEE3DShells(inFrom, inTo, inEffect, 0x26); break;
+    case kEffect3DTracers: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x21); break;
+    case kEffect3DShells: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x26); break;
     case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inFrom, inTo, inEffect); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(inFrom, inTo, inEffect, 0x40); break;
     }
@@ -367,12 +364,12 @@ long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGrap
     switch (inEffect->mKind) {
     case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DSmokeMuzzleBlast(inUnit, inLocation, inEffect); break;
     case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inUnit, inLocation, inEffect); break;
-    case kEffect3DCitizenBeam: theEffect = new EEE3DCitizenBeam(inUnit, inLocation, inEffect, 0x33); break;
+    case kEffect3DCitizenBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x33); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(inUnit, inLocation, inEffect, 0x40); break;
     case kEffect3DCommandConfirmation:
         theEffect = new EEE3DCommandConfirmation(inUnit, inLocation, inEffect, inUnknown, 0x41);
         break;
-    case kEffect3DPulseCannonBall: theEffect = new EEE3DPulseCannonBall(inUnit, inLocation, inEffect, 0x43, true); break;
+    case kEffect3DPulseCannonBall: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x43); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }

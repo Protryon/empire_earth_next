@@ -2115,7 +2115,6 @@ bool EEUnitClass::SharesResearch(long inUnitType)
 }
 
 // IsImportantUnit reads the heal goal (included here, after the unit's init chains: its class static would renumber them)
-#include "ee/EEUGHealUnit.h"
 
 // FUNCTION: EXE 0x634fff
 // Heals the heal goal's target when in range: plays the healing animation and the class's heal effect
@@ -2124,9 +2123,9 @@ void EEUnitClass::Heal(EEComplexUnit* inUnit)
 {
     EEEffectHandle theHandle;
     theHandle.mValue = 0;
-    EEUGHealUnit* theGoal = static_cast<EEUGHealUnit*>(inUnit->GetGoal());
+    EEUGRust* theGoal = EEHealGoalCast(inUnit->GetGoal());   // (the original cast any goal)
     inUnit->DropPath();
-    if (theGoal == NULL || !EECombatHealInRange(inUnit, theGoal->GetTarget()))
+    if (theGoal == NULL || !EECombatHealInRange(inUnit, theGoal->GetHealTarget()))
         return;
     inUnit->SetAnimation(3, -1, 0);
     EEGraphicEffect* theEffect = inUnit->mUnitClass->mHealEffect;
@@ -2138,7 +2137,7 @@ void EEUnitClass::Heal(EEComplexUnit* inUnit)
     case 0x21:
     case 0x26:
     case 0x40:
-        if (::gWorld.GetEffectManager()->CreateEffectBetweenUnits(inUnit, theGoal->GetTarget(), theEffect, &theHandle) != 0)
+        if (::gWorld.GetEffectManager()->CreateEffectBetweenUnits(inUnit, theGoal->GetHealTarget(), theEffect, &theHandle) != 0)
             return;
         break;
     case 2:
@@ -2165,7 +2164,7 @@ void EEUnitClass::Heal(EEComplexUnit* inUnit)
     case 0x2c:
     case 0x3a:
     case 0x3b:
-        if (::gWorld.GetEffectManager()->CreateUnitEffect(theGoal->GetTarget(), theEffect, &theHandle, false, 0, 0) != 0)
+        if (::gWorld.GetEffectManager()->CreateUnitEffect(theGoal->GetHealTarget(), theEffect, &theHandle, false, 0, 0) != 0)
             return;
         break;
     }

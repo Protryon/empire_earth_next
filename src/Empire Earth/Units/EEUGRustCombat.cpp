@@ -1,8 +1,9 @@
-// New (port; docs/RUST_PLAN.md R5b.2, the twelfth round): the combat lane's goals on EEUGRust (ee/EEUGRust.h): the
-// attack on the ground (kGoalAttackGround; was EEUGAttackGround 0x21ce6c..0x21d2f4) and the attack on a unit
-// (kGoalAttackUnit; was EEUGAttackUnit 0x21d2f4..0x21e0c1). EEUGRust's virtuals go through ee_units' goal dispatch
-// (rust_goal.rs), which hands these kinds to ee_combat goal_dispatch.rs: their state and bodies are Rust's
-// (goal_objects.rs, goal_attack.rs; the trigger tests and steps goals.rs's). Here: the combat goals' operations of the
+// New (port; docs/RUST_PLAN.md R5b.2, the twelfth and fourteenth rounds): the combat lane's goals on EEUGRust
+// (ee/EEUGRust.h): the attack on the ground (kGoalAttackGround; was EEUGAttackGround 0x21ce6c..0x21d2f4), the attack
+// on a unit (kGoalAttackUnit; was EEUGAttackUnit 0x21d2f4..0x21e0c1) and the heal (kGoalHealUnit; was EEUGHealUnit
+// 0x22528d..0x22585a). EEUGRust's virtuals go through ee_units' goal dispatch (rust_goal.rs), which hands these kinds
+// to ee_combat goal_dispatch.rs: their state and bodies are Rust's (goal_objects.rs, goal_attack.rs, goal_heal.rs; the
+// trigger tests and steps goals.rs's). Here: the combat goals' operations of the
 // goals' host (EEUGRust.cpp's GoalOp's default case), each the original's statement, the CBGO records (TEST ONLY,
 // recorded from the original bodies first), and the accessors the callers use.
 #include <windows.h>
@@ -18,9 +19,11 @@
 #include "lle/GETerrainMesh.h"
 
 #include "ee/EEPlayer.h"
+#include "ee/EEPhysics.h"
 #include "ee/EEUnit.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUnitGoal.h"
+#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEAreaUtilities.h"
@@ -232,6 +235,17 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
     }
     case EE_COMBAT_G_MAX_HIT_POINTS: return reinterpret_cast<EEUnit*>(theUnit)->mStats->mMaxHitPoints;
     case EE_COMBAT_G_HAS_GROUP: return theUnit->mActiveGroup != NULL;
+    // the heal goal's (ee_combat goal_heal.rs)
+    case EE_COMBAT_G_HEAL_ENV:
+        a[0] = ::gWorld.mInCinematic;
+        a[1] = gPhysics->mTickTimeMs;
+        return 0;
+    case EE_COMBAT_G_SET_HIT_POINTS: theUnit->SetHitPoints((long)a[0]); return 0;
+    case EE_COMBAT_G_RELEASE_HEAL_EFFECT: theUnit->ReleaseHealEffect(); return 0;
+    case EE_COMBAT_G_CAN_HEAL: return EECanHeal(reinterpret_cast<EEUnit*>(theUnit), UnitOf((uint64_t)a[0]));
+    case EE_COMBAT_G_CAPTURE_HEAL_WORK:   // TEST ONLY: CBSO
+        EECombatCaptureHealWork(theUnit, reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0])), (unsigned long)a[1]);
+        return 0;
     }
     return 0;
 }
@@ -370,4 +384,69 @@ void EEUGRust::SetSidestepCount(unsigned long inCount)
     EeCombatAttackGoal theRecord = AttackOf(this);
     theRecord.sidestep = (uint32_t)inCount;
     AttackSet(this, theRecord);
+}
+
+EEUGRust* EEUGRust::NewHealUnit(EEComplexUnit* inTarget, bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalHealUnit, inArg);
+    Combat(EE_COMBAT_GOAL_NEW_HEAL, theGoal, Handle(inTarget));
+    return theGoal;
+}
+
+EEUGRust* EEUGRust::NewHealUnit(bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalHealUnit, inArg);
+    Combat(EE_COMBAT_GOAL_NEW_HEAL, theGoal, 0, 0, 2);
+    return theGoal;
+}
+
+namespace {
+
+EeCombatHealGoal HealOf(const EEUGRust* inGoal)
+{
+    EeCombatHealGoal theRecord;
+    ee_combat_heal_get(Handle(inGoal), &theRecord);
+    return theRecord;
+}
+
+}  // namespace
+
+EEComplexUnit* EEUGRust::GetHealTarget() const
+{
+    return UnitOf(HealOf(this).target);
+}
+
+GE3DPoint EEUGRust::GetHealLocation() const
+{
+    EeCombatHealGoal theRecord = HealOf(this);
+    return GE3DPoint(Float(theRecord.location[0]), Float(theRecord.location[1]), Float(theRecord.location[2]));
+}
+
+void EEUGRust::SetHealLocation(const GE3DPoint& inLocation)
+{
+    ee_combat_heal_set_location(Handle(this), Bits(inLocation.GetX()), Bits(inLocation.GetY()), Bits(inLocation.GetZ()));
+}
+
+GE3DPoint EELocationGoalPoint(EEUnitGoal* inGoal)
+{
+    if (inGoal != NULL && inGoal->mKind == kGoalLocation)
+        return static_cast<EEUGLocation*>(inGoal)->GetLocation();
+    if (EEUGRust* theHeal = EEHealGoalCast(inGoal))
+        return theHeal->GetHealLocation();
+    return GE3DPoint();
+}
+
+void EESetLocationGoalPoint(EEUnitGoal* inGoal, const GE3DPoint& inLocation)
+{
+    if (inGoal != NULL && inGoal->mKind == kGoalLocation)
+        static_cast<EEUGLocation*>(inGoal)->SetLocation(inLocation);
+    else if (EEUGRust* theHeal = EEHealGoalCast(inGoal))
+        theHeal->SetHealLocation(inLocation);
+}
+
+float EELocationGoalYaw(EEUnitGoal* inGoal)
+{
+    if (inGoal != NULL && inGoal->mKind == kGoalLocation)
+        return static_cast<EEUGLocation*>(inGoal)->GetYaw();
+    return 0.0f;   // the heal goal's (its location goal was made with yaw 0, which nothing changed)
 }

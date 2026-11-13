@@ -25,7 +25,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGHealUnit.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEGraphicObject.h"
@@ -119,7 +118,7 @@ void EEPMSpaceship::Step1(EEComplexUnit* inUnit)
     GEVector theForward;
     GEVector theMove;
     EEUGRust* theAttack = EEAttackUnitCast(inUnit->GetGoal());
-    EEUGHealUnit* theHeal = EEGoalCast<EEUGHealUnit>(inUnit->GetGoal());
+    EEUGRust* theHeal = EEHealGoalCast(inUnit->GetGoal());
     float theBrake = inUnit->GetAcceleration();
     bool theAirTarget = false;
     float theSpeed = inUnit->GetVelocity();
@@ -129,8 +128,8 @@ void EEPMSpaceship::Step1(EEComplexUnit* inUnit)
         theTarget.SetX(theAttack->GetAttackTarget()->mComplexUnit->mPhysicalModel.GetLocation().GetX());
         theTarget.SetY(theAttack->GetAttackTarget()->mComplexUnit->mPhysicalModel.GetLocation().GetY());
     } else if (theHeal) {
-        theTarget.SetX(theHeal->GetTarget()->mPhysicalModel.GetLocation().GetX());
-        theTarget.SetY(theHeal->GetTarget()->mPhysicalModel.GetLocation().GetY());
+        theTarget.SetX(theHeal->GetHealTarget()->mPhysicalModel.GetLocation().GetX());
+        theTarget.SetY(theHeal->GetHealTarget()->mPhysicalModel.GetLocation().GetY());
     } else {
         inUnit->mGoalState->GetGoalLocation(theTarget);
     }
@@ -419,8 +418,8 @@ void EEPMSpaceship::Step5(EEComplexUnit* inUnit)
     GEVector theForward(0.0f, 1.0f, 0.0f);
     GEVector theResult;
     EEUnitGoal* theGoalState = inUnit->mGoalState;
-    EEUGLocation* theGoal = EEGoalCast<EEUGLocation>(theGoalState);
-    if (!theGoal)
+    EEUnitGoal* theGoal = theGoalState;   // a location goal or a heal goal (yaw 0)
+    if (!EEGoalHasLocation(theGoal))
         return;
     if (inUnit->GetVelocity() != 0.0f) {
         this->Step4(inUnit);
@@ -430,7 +429,7 @@ void EEPMSpaceship::Step5(EEComplexUnit* inUnit)
         float theLeft;
         float theYawRate;
         float theYaw;
-        this->TurnTowardAngle(inUnit, theHeading, theGoal->GetYaw(), &theLeft, &theYawRate, &theYaw, false);
+        this->TurnTowardAngle(inUnit, theHeading, EELocationGoalYaw(theGoal), &theLeft, &theYawRate, &theYaw, false);
         GEOrientation& theAngularVelocity = inUnit->mAngularVelocity;
         theAngularVelocity.mPitch = 0.0f;
         theAngularVelocity.mRoll = 0.0f;

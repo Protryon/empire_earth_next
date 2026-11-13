@@ -140,6 +140,12 @@ unsafe extern "C" fn replay_host(_comp: *mut c_void, op: Op, a: isize, b: isize,
             let w = expect(&format!("{n} lower-bound {c:x} {d} -> "));
             w.first().and_then(|x| x.parse().ok()).unwrap_or(0)
         }
+        Op::FireEvent => {
+            // SAFETY: the object fires an event code of the enum
+            let e = unsafe { std::mem::transmute::<u32, crate::guihost::EeWonGuiEvent>(a as u32) };
+            expect(&format!("{n} fire {}", crate::guihost::ee_won_gui_event_type(e)));
+            0
+        }
         Op::Draw => {
             // SAFETY: the object passes a live operation
             let o = unsafe { *(b as *const EeWonDrawOp) };

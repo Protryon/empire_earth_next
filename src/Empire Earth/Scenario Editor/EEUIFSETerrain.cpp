@@ -85,8 +85,6 @@
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EESEAPaint.h"
-#include "ee/EESEAPaintTerrain.h"
-#include "ee/EESEAPaintMoutains.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFSETerrain.h"
 
@@ -286,20 +284,20 @@ EESEAPaint* EEUIFSETerrainPaint::CreatePaintAction()
             long theColorID = 0;
             if (theColor < this->mTerrain->mColorTypes.size())
                 theColorID = this->mTerrain->mColorTypes[theColor]->mID;
-            return new EESEAPaintTerrain(this->mTerrain->mTerrains[theType]->mID, theColorID);
+            return new EESEAPaintRust(kSEAPaintTerrain, this->mTerrain->mTerrains[theType]->mID, theColorID);
         }
     } else {
         this->mIsCentered = false;
-        return new EESEAPaintMoutains;
+        return new EESEAPaintRust(kSEAPaintBulldozer);
     }
     return NULL;
 }
 
 // FUNCTION: EXE 0x5ab460
-// Creates a bulldozer paint action (EESEAPaintMoutains' inline ctor, out of line: its first user 0x1ab344 refused it)
+// (EESEAPaintMoutains' inline ctor, out of line: its first user 0x1ab344 refused it; an EESEAPaintRust)
 
 // FUNCTION: EXE 0x5ab48a
-// Destroys and frees the bulldozer paint action (scalar deleting destructor)
+// (EESEAPaintMoutains' scalar deleting destructor: likewise)
 
 // FUNCTION: EXE 0x5ab4bc
 // Tints the preview bitmap's corners with the first, one-third, two-thirds and last colors of the selected color set

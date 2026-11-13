@@ -1779,3 +1779,42 @@ step 178 slider 0x160 1000
 step 179 controls 0x16a 0x162
   0x16a mode=1 '1000'
   0x162 mode=1 '500'
+step 182 tab 0
+step 183 blank 40 40 3
+step 184 tab 3
+step 185 place 1 32 40.5 40.5 0             # citizen
+step 186 place 1 32 41.5 40.5 1.5
+step 187 place 2 20 44.5 38.5 3.14          # clubman
+step 188 select @40,40
+step 189 add @41,40
+step 190 selection
+  selection 16777241 16777242
+step 191 mouseclick 300 200 1               # while rotating: nothing
+step 192 selection
+  selection 16777241 16777242
+step 193 mouseclick 300 200                 # nothing under the mouse: the selection cleared
+step 194 selection
+  selection
+step 195 add @40,40
+step 196 add @41,40
+step 197 lasso add 0 0 1024 600
+step 198 selection
+  selection 16777241 16777242
+step 199 lasso addremove 0 0 1024 600 32
+step 200 selection
+  selection 16777241 16777242
+step 201 lassorect 0 0 1024 600
+step 202 selection
+  selection 16777241 16777242
+step 203 lasso select 0 0 1024 600
+step 204 selection
+  selection
+step 205 add @44,38
+step 206 add @40,40
+step 207 delete 99999
+step 208 selection
+  selection 33554441 16777241
+step 209 delete 2 first
+step 210 units
+  unit 16777241 type=32 player=1 tile=40,40
+  unit 16777242 type=32 player=1 tile=41,40

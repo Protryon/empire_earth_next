@@ -40,7 +40,6 @@
 #include "ee/EEHerd.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGHealUnit.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEAreaUtilities.h"
@@ -543,7 +542,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         return theFound ? 1 : 0;
     }
     case EE_UNITS_ACT_SET_HEAL_GOAL: {
-        EEUnitGoal* theHeal = new EEUGHealUnit(static_cast<EEComplexUnit*>(theContext->mHealee), false);
+        EEUnitGoal* theHeal = EEUGRust::NewHealUnit(static_cast<EEComplexUnit*>(theContext->mHealee), false);
         theUnit->SetGoal(theHeal, inA != 0, 0);
         break;
     }

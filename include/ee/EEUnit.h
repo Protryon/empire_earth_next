@@ -488,7 +488,7 @@ public:
     // 0x1ebdcc (defined in EEActiveGroup.cpp after Virtual48, out of line): mActiveGroup = inGroup, referenced
     // (provisional name)
     void SetActiveGroup(EEActiveGroup* inGroup);
-    // EEUGHealUnit.cpp's callees (provisional names; types inferred)
+    // EEUGHealUnit's callees (now ee_combat goal_heal.rs's host operations, EEUGRustCombat.cpp) (provisional names; types inferred)
     void ReleaseHealEffect();               // 0x1f709c (the healee is let go)
     void SetAnimationFrame(unsigned long inFrame);  // 0x1f414d (ret 4): the state's model at frame inFrame (EEComplexDoppelganger.cpp's range) (provisional name)
     void FleeAfterCalamity(long inArg);     // 0x1fbfdd (EEUnitClass::ActionChanged action 0x7ed passes 0) (provisional name)

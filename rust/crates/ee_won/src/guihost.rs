@@ -704,6 +704,17 @@ pub enum EeWonGuiOp {
     RootDrawImage,
     /// `a->EnsureOnTopOf((Component*)b)` (the parent's `EnsureOnTopOf(b, a)`).
     RootEnsureOnTop,
+    // ---- the button (`btnobj`; its click sound is the C++ member `mClickSound`)
+    /// `dynamic_cast<Button*>(a)`'s Rust button (`EeWonButton*`; 0 when `a` is no button or NULL; a pure read).
+    BtnOf = 550,
+    /// `HandleActivate()` (virtual; 0 or 1).
+    BtnHandleActivate,
+    /// `SetTextHook(*(const GUIString*)a)` (virtual).
+    BtnSetTextHook,
+    /// `mClickSound.get() != NULL` (0 or 1; a pure read).
+    BtnHasClickSound,
+    /// `mClickSound->Play()`.
+    BtnPlayClick,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
@@ -771,6 +782,8 @@ pub enum EeWonGuiEvent {
     Scroll = 4,
     /// `ComponentEvent_TabCtrlTabSelected`.
     TabCtrlTabSelected = 5,
+    /// `ComponentEvent_ButtonPressed`.
+    ButtonPressed = 6,
 }
 
 /// The `WindowEventType` a `FireEvent` op delivers (`ee/wonapi/WONEventTypes.h`): the host fires exactly this, so
@@ -785,6 +798,7 @@ pub extern "C" fn ee_won_gui_event_type(event: EeWonGuiEvent) -> i32 {
         EeWonGuiEvent::InputTextChanged => 21,
         EeWonGuiEvent::ListSelChanged => 22,
         EeWonGuiEvent::TabCtrlTabSelected => 29,
+        EeWonGuiEvent::ButtonPressed => 15,
     }
 }
 
@@ -829,6 +843,7 @@ mod tests {
         assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::InputReturn), 20);
         assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::InputTextChanged), 21);
         assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::ListSelChanged), 22);
+        assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::ButtonPressed), 15);
     }
 
     #[test]

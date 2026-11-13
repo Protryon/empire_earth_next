@@ -2799,6 +2799,8 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
     std::vector<GE3DPoint> thePath;
     EEUnitVectorItem* theQueue = &this->mGoalQueues[0];
     EEUGRust* theAttack = EEAttackUnitCast(this->GetGoal());
+    // a location goal or a heal goal (which derived from it; its group path state was never read)
+    bool theHasLocation = EEGoalHasLocation(this->GetGoal());
     EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(this->GetGoal());
     EEAIPathSector* theStartSector = gContinentManager.GetPathSector(this);
     long theSkipped = 0;
@@ -2806,7 +2808,7 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
     bool theReplaced = false;
     if (this->mHitPoints < 1 || this->mIsDisabled || this->mTile == NULL)
         goto done;
-    if (theLocation == NULL) {
+    if (!theHasLocation) {
         if (theAttack == NULL) {
             if (this->GetCommandType() != kActionIdle)
                 goto done;
@@ -2815,7 +2817,7 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
             if (theQueue->mGoals.size() < 2)
                 goto done;
         }
-    } else
+    } else if (theLocation != NULL)
         theLocation->SetGroupPathState(3);
     if (!theKeepAttack && (theQueue->mGoals.size() == 0
         || (theQueue->mGoals.back()->mKind == 1 && static_cast<EEUGLocation*>(theQueue->mGoals.back())->GetIsAutoWaypoint())))
@@ -2856,17 +2858,19 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
     this->RefreshGoals();
     this->RefreshActiveGoal();
     if (!theReplaced) {
-        EEUGLocation* theCurrent = EEGoalCast<EEUGLocation>(this->GetGoal());
-        if (theCurrent == NULL)
+        EEUnitGoal* theCurrent = this->GetGoal();
+        if (!EEGoalHasLocation(theCurrent))
             goto done;
-        long theY = UMFloor(theCurrent->GetLocation().GetY());
-        long theX = UMFloor(theCurrent->GetLocation().GetX());
+        GE3DPoint theCurrentLocation = EELocationGoalPoint(theCurrent);
+        long theY = UMFloor(theCurrentLocation.GetY());
+        long theX = UMFloor(theCurrentLocation.GetX());
         if (this->GetTileX() == theX && this->GetTileY() == theY)
             goto done;
         if (this->mWaypoints.size() != 0 && UMFloor(this->mWaypoints.back().mLocation.GetX()) == theX
             && UMFloor(this->mWaypoints.back().mLocation.GetY()) == theY)
             goto done;
-        theCurrent->SetGroupPathState(4);
+        if (theCurrent->mKind == kGoalLocation)
+            static_cast<EEUGLocation*>(theCurrent)->SetGroupPathState(4);
     }
     this->StartAction(kActionPrepareToMove);
     this->GetUnitClass()->ActionChanged(this);

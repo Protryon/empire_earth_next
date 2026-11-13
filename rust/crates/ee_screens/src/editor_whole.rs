@@ -13,7 +13,9 @@
 //! - the random map (`EESEACreateRandomMap`): a new world from a random map generator for the players not observing;
 //! - the wall and gate placements (`EESEAPlaceWall`, `EESEAPlaceGate`): queued lines and gates built for their
 //!   players;
-//! - the unit placement and move (`EESEAPlaceUnit`, `EESEAMoveUnit`: `editor_place.rs`).
+//! - the unit placement and move (`EESEAPlaceUnit`, `EESEAMoveUnit`: `editor_place.rs`);
+//! - the deletion (`EESEADeleteUnit`, round 20): one unit (posted only when it exists, its player read then) or a
+//!   player's selection, whole or its first unit (`editor_actions::delete_units`).
 //!
 //! The world, the screens and the files are the host's ([`SewHost`]); every call is in the original's order and
 //! the elevation file's floats are the original's operations (`f32`, in order; Windows' `min` and `max` macros).
@@ -21,7 +23,7 @@
 use ee_ge::types::GeTransformation;
 use ee_ge::um::lrintf;
 
-use crate::editor_actions::area_rectangle;
+use crate::editor_actions::{area_rectangle, SeuDelete};
 use crate::editor_place::{SepHost, SepMove, SepPlace};
 use crate::save_load::{EE_SCREENS_SL_SAVE_SCREEN_GAME, EE_SCREENS_SL_SAVE_SCREEN_SCENARIO};
 
@@ -53,6 +55,9 @@ pub const EE_SCREENS_SEW_PLACE_GATE: u32 = 11;
 pub const EE_SCREENS_SEW_PLACE_UNIT: u32 = 12;
 /// `EESEAMoveUnit` (`ee_screens_sew_pick_up`, `_put_down`, `_cancel`).
 pub const EE_SCREENS_SEW_MOVE_UNIT: u32 = 13;
+/// `EESEADeleteUnit` (a the unit's id, or -1: the player b's selection, all of it when c != 0); posted when made
+/// (the one unit only when it exists).
+pub const EE_SCREENS_SEW_DELETE_UNIT: u32 = 14;
 
 // ---- the host's ops (`ee_screenscpp_sew`: `p` a pointer, `i` up to 8 integers, `f` up to 4 floats, in and out)
 
@@ -156,6 +161,8 @@ pub const EE_SCREENS_SEW_OP_GHOSTS_PLACEABLE: u32 = 48;
 pub const EE_SCREENS_SEW_OP_BUILD_GATE: u32 = 49;
 /// The unit tab places its selected unit class again (`SelectUnitType`).
 pub const EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE: u32 = 50;
+/// -> whether the unit i0 exists (`gWorld.GetUnit`); its player's id -> i1.
+pub const EE_SCREENS_SEW_OP_UNIT_PLAYER: u32 = 51;
 
 /// The elevation file picked on the map tab, read whole.
 #[derive(Clone, Debug, PartialEq)]
@@ -176,6 +183,8 @@ pub trait SewHost: SepHost {
     fn op(&mut self, op: u32, p: usize, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32;
     /// The map tab's elevation file when one is picked and reads whole (`CreateMap`'s files).
     fn elevation(&mut self) -> Option<SewElevation>;
+    /// `EESEADeleteUnit::Virtual4`'s deletion (`editor_actions::delete_units` over the selection's host).
+    fn delete(&mut self, what: SeuDelete);
 }
 
 fn op<H: SewHost + ?Sized>(h: &mut H, code: u32, ints: &[i32]) -> i32 {
@@ -217,16 +226,45 @@ pub enum SewKind {
     Save,
     Test,
     Exit,
-    QuickSave { quick_save: usize },
-    TechTree { first: i32, last: i32, left: bool },
-    Rotate { yaw: f32 },
-    PaintArea { start: (i32, i32), end: (i32, i32), rectangle: [i32; 4] },
-    BlankMap { width: u32, height: u32, terrain: i32 },
-    RandomMap { size: u32, style: u32 },
-    PlaceWall { walls: Vec<SewWall> },
-    PlaceGate { gates: Vec<SewGate> },
+    QuickSave {
+        quick_save: usize,
+    },
+    TechTree {
+        first: i32,
+        last: i32,
+        left: bool,
+    },
+    Rotate {
+        yaw: f32,
+    },
+    PaintArea {
+        start: (i32, i32),
+        end: (i32, i32),
+        rectangle: [i32; 4],
+    },
+    BlankMap {
+        width: u32,
+        height: u32,
+        terrain: i32,
+    },
+    RandomMap {
+        size: u32,
+        style: u32,
+    },
+    PlaceWall {
+        walls: Vec<SewWall>,
+    },
+    PlaceGate {
+        gates: Vec<SewGate>,
+    },
     PlaceUnit(SepPlace),
     MoveUnit(SepMove),
+    /// `id` u32::MAX: the selection of `player`
+    DeleteUnit {
+        id: u32,
+        player: i32,
+        group: bool,
+    },
 }
 
 /// An action: its kind and its `EESEARust` (the object posted).
@@ -268,6 +306,7 @@ impl SewAction {
             EE_SCREENS_SEW_PLACE_GATE => SewKind::PlaceGate { gates: Vec::new() },
             EE_SCREENS_SEW_PLACE_UNIT => SewKind::PlaceUnit(SepPlace::default()),
             EE_SCREENS_SEW_MOVE_UNIT => SewKind::MoveUnit(SepMove::default()),
+            EE_SCREENS_SEW_DELETE_UNIT => SewKind::DeleteUnit { id: a as u32, player: b, group: c != 0 },
             _ => return None,
         };
         Some(SewAction { owner, kind })
@@ -277,13 +316,24 @@ impl SewAction {
         h.op(EE_SCREENS_SEW_OP_POST, self.owner, &mut [0; 8], &mut [0.0; 4]);
     }
 
-    /// After the C++ object holds the action: the kinds whose constructor posted them post now.
-    pub fn begin<H: SewHost + ?Sized>(&self, h: &mut H) {
-        match self.kind {
+    /// After the C++ object holds the action: the kinds whose constructor posted them post now (a deletion of one
+    /// unit only when the unit exists, its player read first).
+    pub fn begin<H: SewHost + ?Sized>(&mut self, h: &mut H) {
+        match &mut self.kind {
             SewKind::TechTree { .. }
             | SewKind::PaintArea { .. }
             | SewKind::BlankMap { .. }
             | SewKind::RandomMap { .. } => self.post(h),
+            SewKind::DeleteUnit { id, player, .. } => {
+                if *id != u32::MAX {
+                    let mut i = [*id as i32, 0, 0, 0, 0, 0, 0, 0];
+                    if h.op(EE_SCREENS_SEW_OP_UNIT_PLAYER, 0, &mut i, &mut [0.0; 4]) == 0 {
+                        return;
+                    }
+                    *player = i[1];
+                }
+                self.post(h);
+            }
             _ => {}
         }
     }
@@ -407,6 +457,14 @@ impl SewAction {
             }
             SewKind::PlaceUnit(place) => place.run(h),
             SewKind::MoveUnit(moving) => moving.run(h),
+            SewKind::DeleteUnit { id, player, group } => {
+                let what = if *id != u32::MAX {
+                    SeuDelete::Unit { player: *player, id: *id }
+                } else {
+                    SeuDelete::Selection { group: *group }
+                };
+                h.delete(what);
+            }
         }
     }
 
@@ -747,12 +805,80 @@ mod tests {
         fn elevation(&mut self) -> Option<SewElevation> {
             self.file.clone()
         }
+        fn delete(&mut self, what: SeuDelete) {
+            self.log.push(format!("delete {what:?}"));
+        }
     }
 
     fn make(h: &mut Rec, kind: u32, object: usize, a: i32, b: i32, c: i32, d: i32) -> SewAction {
-        let action = SewAction::new(h, 0x100, kind, object, a, b, c, d).unwrap();
+        let mut action = SewAction::new(h, 0x100, kind, object, a, b, c, d).unwrap();
         action.begin(h);
         action
+    }
+
+    #[test]
+    fn delete_posts_one_unit_only_when_it_exists_with_its_player() {
+        // the unit 7 exists (player 3): posted, run with that player; the unit 8 does not: not posted
+        struct Units(Rec);
+        impl SepHost for Units {
+            fn sep(&mut self, op: u32, p: usize, t: &mut GeTransformation, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32 {
+                self.0.sep(op, p, t, i, f)
+            }
+        }
+        impl SewHost for Units {
+            fn op(&mut self, op: u32, p: usize, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32 {
+                if op == EE_SCREENS_SEW_OP_UNIT_PLAYER {
+                    self.0.log.push(format!("unit {}", i[0]));
+                    if i[0] != 7 {
+                        return 0;
+                    }
+                    i[1] = 3;
+                    return 1;
+                }
+                self.0.op(op, p, i, f)
+            }
+            fn elevation(&mut self) -> Option<SewElevation> {
+                None
+            }
+            fn delete(&mut self, what: SeuDelete) {
+                self.0.delete(what);
+            }
+        }
+        let mut h = Units(Rec::new());
+        let mut a = SewAction::new(&mut h, 0x100, EE_SCREENS_SEW_DELETE_UNIT, 0, 7, 0, 0, 0).unwrap();
+        a.begin(&mut h);
+        a.run(&mut h);
+        let mut b = SewAction::new(&mut h, 0x200, EE_SCREENS_SEW_DELETE_UNIT, 0, 8, 0, 0, 0).unwrap();
+        b.begin(&mut h);
+        let post = EE_SCREENS_SEW_OP_POST;
+        assert_eq!(
+            h.0.log,
+            [
+                "unit 7".to_string(),
+                format!("{post} p256 [0, 0, 0, 0, 0] [0.0, 0.0, 0.0]"),
+                "delete Unit { player: 3, id: 7 }".to_string(),
+                "unit 8".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn delete_of_a_selection_posts_at_once() {
+        let mut h = Rec::new();
+        let mut a = make(&mut h, EE_SCREENS_SEW_DELETE_UNIT, 0, -1, 2, 1, 0);
+        a.run(&mut h);
+        let mut b = make(&mut h, EE_SCREENS_SEW_DELETE_UNIT, 0, -1, 2, 0, 0);
+        b.run(&mut h);
+        let post = EE_SCREENS_SEW_OP_POST;
+        assert_eq!(
+            h.log,
+            [
+                format!("{post} p256 [0, 0, 0, 0, 0] [0.0, 0.0, 0.0]"),
+                "delete Selection { group: true }".to_string(),
+                format!("{post} p256 [0, 0, 0, 0, 0] [0.0, 0.0, 0.0]"),
+                "delete Selection { group: false }".to_string(),
+            ]
+        );
     }
 
     #[test]

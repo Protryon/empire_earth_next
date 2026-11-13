@@ -1,4 +1,4 @@
-//! The attack-ground, attack-unit and heal goals whole in Rust (R5b.2, the twelfth round): each is an `EEUGRust` (the
+//! The attack-ground, attack-unit (R5b.2, the twelfth round) and heal goals (the fourteenth) whole in Rust: each is an `EEUGRust` (the
 //! core lane's goal class whose state and bodies are Rust's, ee/EEUGRust.h), its own state a record here keyed by the
 //! goal object's address, its bodies over a host of the C++ objects' operations (ee_units' goal host, `EeCombatGoalTable`: the unit's
 //! reach, location and group, the actions, the typed file calls). The trigger tests and steps were Rust already
@@ -120,11 +120,12 @@ pub struct GroundGoal {
 pub struct CombatGoals {
     pub ground: BTreeMap<u64, GroundGoal>,
     pub attack: BTreeMap<u64, crate::goal_attack::EeCombatAttackGoal>,
+    pub heal: BTreeMap<u64, crate::goal_heal::EeCombatHealGoal>,
 }
 
 impl CombatGoals {
     pub const fn new() -> Self {
-        CombatGoals { ground: BTreeMap::new(), attack: BTreeMap::new() }
+        CombatGoals { ground: BTreeMap::new(), attack: BTreeMap::new(), heal: BTreeMap::new() }
     }
 }
 
@@ -238,6 +239,7 @@ pub fn goal_drop(goal: u64) {
     with_goals(|g| {
         g.ground.remove(&goal);
         g.attack.remove(&goal);
+        g.heal.remove(&goal);
     });
 }
 

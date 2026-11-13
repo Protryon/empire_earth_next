@@ -885,6 +885,27 @@ constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_RELEASE = 30;
 /// -> the lasso message's unit type (`EEMSelectUnits::mL30`).
 constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_UNIT_TYPE = 31;
 
+/// -> the unit under the mouse, referenced (`gUnitPicker.PickUnit(gMouse->mPosition, 0)`), or 0.
+constexpr static const uint32_t EE_SCREENS_SEU_PICK_AT_MOUSE = 32;
+
+/// The unit's reference released.
+constexpr static const uint32_t EE_SCREENS_SEU_UNIT_RELEASE = 33;
+
+/// -> a new `EEMAddUnitToSelectedGroup` of the unit's id (an `EEMessage*`).
+constexpr static const uint32_t EE_SCREENS_SEU_NEW_TOGGLE = 34;
+
+/// -> a new `EEMUnselectAllUnits` (an `EEMessage*`).
+constexpr static const uint32_t EE_SCREENS_SEU_NEW_UNSELECT_ALL = 35;
+
+/// The click action (`unit`: an `EEAction*`, an `EEAMouseClick`) holds the message a (`SetMessage`).
+constexpr static const uint32_t EE_SCREENS_SEU_SET_MESSAGE = 36;
+
+/// The action (`unit`: an `EEAction*`) posted (`gUserInterface->PostAction`).
+constexpr static const uint32_t EE_SCREENS_SEU_POST = 37;
+
+/// -> the lasso message's rectangle (`&EEMSelectUnits::mRectangle`, a `GERectangle*`).
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_RECTANGLE = 38;
+
 /// The message types the click and the lasso apply (`EEMessageID.h`).
 constexpr static const size_t EE_SCREENS_SEU_MSG_SELECT_UNIT = 72;
 
@@ -1183,6 +1204,10 @@ constexpr static const uint32_t EE_SCREENS_SEW_PLACE_UNIT = 12;
 /// `EESEAMoveUnit` (`ee_screens_sew_pick_up`, `_put_down`, `_cancel`).
 constexpr static const uint32_t EE_SCREENS_SEW_MOVE_UNIT = 13;
 
+/// `EESEADeleteUnit` (a the unit's id, or -1: the player b's selection, all of it when c != 0); posted when made
+/// (the one unit only when it exists).
+constexpr static const uint32_t EE_SCREENS_SEW_DELETE_UNIT = 14;
+
 /// `gUserInterface->PostAction(p)` (p: the action's `EESEARust`).
 constexpr static const uint32_t EE_SCREENS_SEW_OP_POST = 1;
 
@@ -1332,6 +1357,9 @@ constexpr static const uint32_t EE_SCREENS_SEW_OP_BUILD_GATE = 49;
 
 /// The unit tab places its selected unit class again (`SelectUnitType`).
 constexpr static const uint32_t EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE = 50;
+
+/// -> whether the unit i0 exists (`gWorld.GetUnit`); its player's id -> i1.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_UNIT_PLAYER = 51;
 
 /// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
 constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
@@ -3687,9 +3715,18 @@ void ee_screens_sea_paint_run(EeScreensSeaPaint *paint);
 /// `EESEAMouseClick::Virtual4`: the click's message (an `EEMessage*`, not NULL) applied and released.
 void ee_screens_seu_click(void *message);
 
-/// `EESEALasso::Virtual4`: the lasso's message (an `EEMSelectUnits*`) applied over its rectangle (a
-/// `GERectangle*`) and released.
-void ee_screens_seu_lasso(void *message, const void *rectangle);
+/// `EESEAMouseClick::Execute`: the click at the mouse made into the action's message and the action (`action`, an
+/// `EEAction*`: the `EEAMouseClick`) posted; nothing while rotating.
+void ee_screens_seu_click_execute(void *action,
+                                  uint8_t rotating);
+
+/// `EESEALasso::Virtual4`: the lasso's message (an `EEMSelectUnits*`) applied over its rectangle and released.
+void ee_screens_seu_lasso_message(void *message);
+
+/// `EESEALasso::SelectInRectangle`: the selected units in the rectangle (a `GERectangle*`) deselected, the action
+/// (`action`, an `EEAction*`) posted.
+void ee_screens_seu_lasso_in_rectangle(void *action,
+                                       const void *rectangle);
 
 /// `EESEALasso::SelectUnits`.
 void ee_screens_seu_lasso_select(const void *rectangle,
@@ -3699,12 +3736,6 @@ void ee_screens_seu_lasso_select(const void *rectangle,
 
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
-
-/// `EESEADeleteUnit::Virtual4`: the unit `id` of the player `player`, or (id 0xffffffff) the selection, whole
-/// (`group`) or its first unit.
-void ee_screens_seu_delete(uint32_t id,
-                           int32_t player,
-                           uint8_t group);
 
 /// The action of `kind` (`EE_SCREENS_SEW_*`) for the `EESEARust` `owner`, with its object and arguments; NULL for
 /// an unknown kind. Freed by `ee_screens_sew_free`.

@@ -2,7 +2,7 @@
 // Layout proven: EEUGAttackGround sizeof 0x2c = its new-site size, ctor 0x23c589 exact in EEUnitGoal.cpp; EEUGGather
 // sizeof 0x44 = its new-site size, ctor 0x23c63f exact in EEUnitGoal.cpp; EEUGCastCalamity sizeof 0x34 = its new-site
 // size, ctor 0x2209c9 exact in EEUGCastCalamity.cpp; EEUGAttackUnit sizeof 0x44 = its new-site size, ctor 0x23c5b2
-// exact in EEUnitGoal.cpp; EEUGHealUnit sizeof 0x40 = its new-site size, ctor 0x2252d0 exact in EEUGHealUnit.cpp.
+// exact in EEUnitGoal.cpp; EEUGHealUnit sizeof 0x40 = its new-site size, ctor 0x2252d0 (now Rust's, ee/EEUGRust.h).
 // Member names are provisional.
 // and the goals the calamities hand out. Only what the decompiled units use; provisional names. The goal classes
 // have one header each (ee/EEUGAttackGround.h, EEUGGather.h, EEUGAttackUnit.h, EEUGLocation.h, EEUGHealUnit.h,

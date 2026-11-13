@@ -18,8 +18,18 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// The citizen beam.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_CITIZEN_BEAM = 51;
+
 /// The shield.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
+
+/// The tracers, the shells (a tracer with a pass-5 draw) and the pulse cannon ball.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_TRACERS = 33;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SHELLS = 38;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_PULSE_CANNON_BALL = 67;
 
 /// The plain smoke generator (on a unit or at a point).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_GENERATOR = 43;
@@ -759,6 +769,33 @@ struct EeGfxEffectShield {
   bool scrolling_down;
 };
 
+/// A shot's state.
+struct EeGfxEffectShot {
+  /// `mPath`: from the weapon point to the end (saved)
+  EeGe3DLine path;
+  /// `mLocation`: the place the draw uses (`Queue` copies it); the end while constructing
+  EeGe3DPoint location;
+  /// `mColor`: the shooter's player colour (the tracers')
+  EeGfxColor color;
+  /// the ball's `mScale` and its glow's `mGlowScale` (saved) and the draw's copies
+  float scale;
+  float draw_scale;
+  float glow_scale;
+  float draw_glow_scale;
+  /// `mPosition`: 0..1 along the path (saved; the ball goes on to 1.5) and the draw's copy
+  float position;
+  float draw_position;
+  /// `mSpeed`: path per millisecond (saved)
+  float speed;
+  /// the citizen beam's (`effect_beam.rs`): `mEnd` (saved), `mMiddle` (saved), `mF9C` (saved, never set),
+  /// `mActive` (saved) and the draw's copy
+  EeGe3DPoint end;
+  EeGe3DPoint middle;
+  float unused;
+  bool active;
+  bool draw_active;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -806,6 +843,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectTracer tracer;
   /// the shield's (`effect_follow.rs`)
   EeGfxEffectShield shield;
+  /// the shots' (`effect_shot.rs`)
+  EeGfxEffectShot shot;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1105,10 +1144,25 @@ struct EeGfxGraphicFacts {
   /// the effect has a unit, and its hit points
   bool has_unit;
   int32_t unit_hit_points;
+  /// `mIntParam1` .. `mIntParam3`
+  int32_t int_param1;
+  int32_t int_param2;
+  int32_t int_param3;
+  /// `(unsigned long)gPhysics->mGameTime`
+  uint32_t game_time_bits;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
 using EeGfxModel = void*;
+
+/// The beam's unit as its step reads it (`EEE3DCitizenBeam::Step`).
+struct EeGfxBeamUnit {
+  /// the unit is a complex unit
+  bool complex;
+  /// `mAnimation`, `GetFrame()`
+  int32_t animation;
+  int32_t frame;
+};
 
 /// The C++'s answers for an `EEE3DRust`.
 struct EeGfxEffect3DHost {
@@ -1136,6 +1190,19 @@ struct EeGfxEffect3DHost {
   EeGfxModel (*texture)(void *context);
   /// `FollowUnit`: to the unit's first tag point of type 0x12 (`SetTransformation`)
   void (*follow_unit)(void *context);
+  /// the graphic object's model `index` (`mModels[index]`)
+  EeGfxModel (*model_at)(void *context, uint32_t index);
+  /// a tracer's end: its graphic effect's linked effect 1 placed at the effect's position, then the unit's
+  /// `UnitDamaged` (each when there is one)
+  void (*shot_hit)(void *context);
+  /// the citizen beam's start: the unit's first tag point at its animation and frame
+  EeGe3DPoint (*beam_start)(void *context);
+  /// the citizen beam's unit: a complex unit, its animation and frame
+  EeGfxBeamUnit (*beam_unit)(void *context);
+  /// the beam's unit is cloaked, another player's and the current player's enemy
+  bool (*beam_hidden)(void *context);
+  /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`), when there is one
+  void (*place_linked)(void *context, const EeGe3DPoint *point);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1165,6 +1232,10 @@ struct EeGfxRaster {
   void (*model_scroll_v)(EeGfxModel model, float delta);
   /// puts back the texture coordinates `model_scroll_v` kept
   void (*model_restore_v)(EeGfxModel model);
+  /// `GetMaterial(0)->SetColor(color)`
+  void (*model_color)(EeGfxModel model, EeGfxColor color);
+  /// the model's own `SetTexture(texture, screen)` (not its material's)
+  void (*model_own_texture)(EeGfxModel model, EeGfxModel texture);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.

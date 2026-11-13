@@ -82,6 +82,11 @@ static void Env(int field, long long v)
 // ---- the host: the world, Component's behaviour, the containers' calls on each side
 
 static bool IsCt(intptr_t c) { return c >= 1 && c <= kCt; }
+// whether the component c overrides the call o (a container overrides every call it has; a test with other objects
+// in the world, the button golden's, defines WON_CT_OVERRIDES and its own HasOverride)
+#ifndef WON_CT_OVERRIDES
+static bool HasOverride(intptr_t c, C o) { return IsCt(c) && (int)o != 0; }
+#endif
 
 
 // a container's call made by the host (traced as "do")
@@ -193,7 +198,7 @@ static C OverrideOf(V v)
 static intptr_t VCall(intptr_t c, V v, intptr_t a, intptr_t b)
 {
     C o = OverrideOf(v);
-    if (IsCt(c) && (int)o != 0) return Do(c, o, a, b);
+    if (HasOverride(c, o)) return Do(c, o, a, b);
     return Component_(c, v, a, b, !IsCt(c));
 }
 
@@ -263,8 +268,8 @@ static intptr_t Host(void* inComp, Op inOp, intptr_t a, intptr_t b, intptr_t c, 
     switch (inOp) {
     case Op::CtBase: r = Component_(self, (V)a, b, c, false); break;
     case Op::CtChild: r = VCall(a, (V)b, c, d); break;
-    case Op::CtChildMouseDown: if (IsCt(a)) Do(a, C::MouseDown, b, c, d); break;
-    case Op::CtChildMouseUp: if (IsCt(a)) Do(a, C::MouseUp, b, c, d); break;
+    case Op::CtChildMouseDown: if (HasOverride(a, C::MouseDown)) Do(a, C::MouseDown, b, c, d); break;
+    case Op::CtChildMouseUp: if (HasOverride(a, C::MouseUp)) Do(a, C::MouseUp, b, c, d); break;
     case Op::CtParentCall:
         if (w.parent == 0) break; // (the original's NULL parent: not driven)
         if ((V)a == V::SetCursor) r = Do(w.parent, C::SetCursor, b);

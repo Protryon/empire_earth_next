@@ -105,8 +105,6 @@
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EESEAPaint.h"
-#include "ee/EESEAPaintTerrain.h"
-#include "ee/EESEAPaintMoutains.h"
 #include "lle/UIBitmap.h"
 #include "ee/EEUIFSETerrain.h"
 #include "ee/EESEAChangeLoadText.h"
