@@ -10,7 +10,7 @@
 #include "lle/NERecordPlayback.h"
 #include "lle/NESynchronousServer.h"
 #include "lle/NEServer.h"
-#include "lle/NEMessageManager.h"
+#include "rust/ee_net.h"
 #include "platform/PlatSim.h"
 
 // Release-build trace: compiled out, but its arguments are still evaluated
@@ -72,8 +72,8 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
     this->mLagWarning = false;
     this->mIsOOS = false;
     this->mPhysicsTickCostFactor = inPhysicsTickCostFactor;
-    this->mMessageManager = new NEMessageManager(this);
-    this->mMessageManager->RegisterSlot(kSlotServer);
+    this->mMessageManager = ee_net_mm_new(this, NESynchronousServer::MessageManagerHost);
+    ee_net_mm_register_slot(this->mMessageManager, kSlotServer);
     this->mNextChecksumCT = 40;
     this->mChecksumInterval = 1;
     this->mU17C = 100;
@@ -181,16 +181,140 @@ NESynchronousServer::~NESynchronousServer()
     TSScheduler::DestroyEvent(this->mXferInputAvailableEvent);
     TSScheduler::DestroyEvent(this->mXferAcceptEvent);
     TSScheduler::DestroyEvent(this->mXferStuffWaitingToGoEvent);
-    delete this->mMessageManager;
+    ee_net_mm_free(this->mMessageManager);
     if (this->mGameWasPublished == true)
         this->mServer->Close();
+}
+
+// New (port): the message manager's calls out. The manager (NEMessageManager.cpp before) is a Rust object
+// (rust/crates/ee_net/src/msgmgr.rs); each op is the statement the original made on a message, this server, its
+// protocol server or a transfer's file spec, which is the manager's own copy (FileClone/FileFree).
+ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d)
+{
+    NESynchronousServer* theServer = static_cast<NESynchronousServer*>(inServer);
+    NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
+    FSFileSpec* theFile = reinterpret_cast<FSFileSpec*>(a);
+    switch (inOp) {
+    case EeNetMmOp::MsgReference:
+        theMessage->Reference();
+        return 0;
+    case EeNetMmOp::MsgDereference:
+        theMessage->Dereference();
+        return 0;
+    case EeNetMmOp::MsgType:
+        return theMessage->GetType();
+    case EeNetMmOp::MsgIsResponse:
+        return theMessage->IsResponse(reinterpret_cast<NEMessage*>(b));
+    case EeNetMmOp::MsgSlot:
+        return theMessage->GetOriginatingSlot();
+    case EeNetMmOp::MsgSendTo: {
+        unsigned char* theData;
+        unsigned long theSize;
+        reinterpret_cast<NEMessage*>(b)->ExportMessage(&theData, theSize);
+        long theResult = theServer->mServer->SendTo(a, theData, theSize);
+        delete theData;
+        return (uint32_t)theResult;
+    }
+    case EeNetMmOp::MsgTick:
+        return static_cast<NEMCommunicationsTick*>(theMessage)->GetCurrentCommunicationsTick();
+    case EeNetMmOp::NewResponse: {
+        NEMessage* theSent = reinterpret_cast<NEMessage*>(b);
+        NEMessage* theResponse;
+        if (a == kNetMessageCommunicationsTick)
+            theResponse = new NEMCommunicationsTickResponse(
+                theServer->GetNumberOfCTsProcessedInPhysics(),
+                static_cast<NEMCommunicationsTick*>(theSent)->GetCurrentCommunicationsTick(),
+                theServer->GetAveragePhysicsUpdateTime());
+        else if (a == kNetMessageUnPauseGame)
+            theResponse = new NEMUnPauseGameResponse(static_cast<NEMUnPauseGame*>(theSent)->GetUniqueID());
+        else
+            theResponse = new NEMPauseGameResponse(static_cast<NEMPauseGame*>(theSent)->GetUniqueID());
+        theResponse->SetOriginatingSlot(kSlotServer);
+        return reinterpret_cast<ptrdiff_t>(theResponse);
+    }
+    case EeNetMmOp::LastTick:
+        return theServer->mLastTickReceived;
+    case EeNetMmOp::SetLastTick:
+        theServer->mLastTickReceived = (long)a;
+        return 0;
+    case EeNetMmOp::CtsProcessed:
+        return (uint32_t)theServer->mNumberOfCTsProcessedInPhysics;
+    case EeNetMmOp::AvgPhysics:
+        return (uint32_t)theServer->GetAveragePhysicsUpdateTime();
+    case EeNetMmOp::ProcessSystemMessage:
+        theServer->ProcessSystemMessage(theMessage);
+        return 0;
+    case EeNetMmOp::ForceCt:
+        theServer->mSendThreadForceCTEvent->Set();
+        return 0;
+    case EeNetMmOp::LastCtMessageId:
+        return (uint32_t)theServer->mLastCTMessageID;
+    case EeNetMmOp::StartSendToAllAndWait:
+        theServer->mSendToAllAndWaitMessageNumber = (unsigned long)a;
+        theServer->mSendToAllAndWaitType = (unsigned char)b;
+        theServer->mSendToAllAndWaitTimeout = (unsigned long)c;
+        theServer->mSendToAllAndWaitRetries = (unsigned long)d;
+        theServer->mWaitForResponseEvent->Set();
+        return 0;
+    case EeNetMmOp::Time:
+        return (uint32_t)TMGetTime();
+    case EeNetMmOp::ResetClientConnection:
+        theServer->ResetClientConnection(a);
+        return 0;
+    case EeNetMmOp::XferStatus: {
+        unsigned char theSlot = (unsigned char)a, thePercent = (unsigned char)b, theStatus = (unsigned char)d;
+        uint32_t theID = (uint32_t)c;
+        theServer->HandleXferStatus(theSlot, thePercent, theID, theStatus);
+        return 0;
+    }
+    case EeNetMmOp::XferSend: {
+        unsigned char theStatus = (unsigned char)b;
+        unsigned long theSize = (unsigned long)d;
+        NEMXferMessage* theXfer = new NEMXferMessage(theStatus, reinterpret_cast<unsigned char*>(c), theSize);
+        unsigned char* theData = new unsigned char[theXfer->ExportSize()];
+        theXfer->ExportMessage(&theData, theSize);
+        theXfer->Dereference();
+        long theResult = theServer->mServer->XferSendTo(a, theData, theSize);
+        delete[] theData;
+        return theResult == kErrorOK;
+    }
+    case EeNetMmOp::FileClone: {
+        FSFileSpec* theCopy = new FSFileSpec;
+        *theCopy = *theFile;
+        return reinterpret_cast<ptrdiff_t>(theCopy);
+    }
+    case EeNetMmOp::FileFree:
+        delete theFile;
+        return 0;
+    case EeNetMmOp::FileIsOpen:
+        return theFile->GetIsOpen();
+    case EeNetMmOp::FileOpen:
+        return theFile->Open(kFileAccessRead) == kErrorOK;
+    case EeNetMmOp::FileClose:
+        theFile->Close();
+        return 0;
+    case EeNetMmOp::FileLength: {
+        unsigned long theLength = 0;
+        theFile->GetLength(theLength);
+        return (uint32_t)theLength;
+    }
+    case EeNetMmOp::FileRead: {
+        unsigned long theRead = 0;
+        if (theFile->Read(reinterpret_cast<unsigned char*>(b), 0x400, theRead) != kErrorOK)
+            return -1;
+        return (uint32_t)theRead;
+    }
+    case EeNetMmOp::FileName:
+        return reinterpret_cast<ptrdiff_t>(static_cast<const char*>(theFile->GetFile()));
+    }
+    return 0;
 }
 
 // FUNCTION: LLE 0x10047e73
 // Cancels a file transfer
 void NESynchronousServer::AbortXfer(unsigned long inXferID)
 {
-    this->mMessageManager->AbortXfer(inXferID);
+    ee_net_mm_abort_xfer(this->mMessageManager, inXferID);
 }
 
 // FUNCTION: LLE 0x10047e85
@@ -204,13 +328,13 @@ void NESynchronousServer::BootAllLaggers(unsigned long inMessageNumber)
         this->BeforeRemovingPlayers();
         this->mUnpauseGameEvent->Set();
     }
-    unsigned char* theLaggers = new unsigned char[this->mMessageManager->mNumClients];
-    theSlot = this->mMessageManager->WhoHasNotResponded(inMessageNumber);
+    unsigned char* theLaggers = new unsigned char[ee_net_mm_num_clients(this->mMessageManager)];
+    theSlot = ee_net_mm_who_has_not_responded(this->mMessageManager, inMessageNumber);
     if (theSlot != kSlotNone) {
         theLaggers[0] = theSlot;
         theCount = 1;
     }
-    while ((theSlot = this->mMessageManager->WhoHasNotRespondedNext(theSlot, inMessageNumber)) != 0xff)
+    while ((theSlot = ee_net_mm_who_has_not_responded_next(this->mMessageManager, theSlot, inMessageNumber)) != 0xff)
         theLaggers[theCount++] = theSlot;
     for (unsigned char i = 0; i < theCount; i++)
         this->BootPlayer(theLaggers[i], true, false);
@@ -242,7 +366,7 @@ void NESynchronousServer::BootTheSlowestResponder()
         this->BeforeRemovingPlayers();
         this->mUnpauseGameEvent->Set();
     }
-    unsigned char theSlot = this->mMessageManager->GetSlowestResponder();
+    unsigned char theSlot = ee_net_mm_slowest_responder(this->mMessageManager);
     if (theSlot != kSlotNone)
         this->BootPlayer(theSlot, true, false);
 }
@@ -272,7 +396,7 @@ long NESynchronousServer::BroadcastMessage(NEMessage* inMessage)
 // Returns the message manager's current message number
 unsigned long NESynchronousServer::GetMessageManagerCurrentMessageNumber()
 {
-    return this->mMessageManager->mCurrentMessageNumber;
+    return ee_net_mm_current_number(this->mMessageManager);
 }
 
 // FUNCTION: LLE 0x100480a0
@@ -290,21 +414,7 @@ unsigned char NESynchronousServer::GetSendToSlotForPlayer(unsigned char inPlayer
 // Returns the client with the highest recorded CPU load; 0xff if none has any
 unsigned char NESynchronousServer::GetSlowestClientCPU()
 {
-    std::map<unsigned char, NEMMClient*>::iterator theClients;
-    unsigned char theSlowest = 0xff;
-    unsigned long theHighestTotal = 0;
-    for (theClients = this->mMessageManager->mClients.begin(); theClients != this->mMessageManager->mClients.end();
-         ++theClients) {
-        unsigned long theTotal = 0;
-        for (unsigned long i = 0; i < 240; i++)
-            theTotal += theClients->second->mCPUHistory[i];
-        // the client with the highest CPU load over its history (ties: the higher slot)
-        if (theTotal > 0 && theTotal >= theHighestTotal) {
-            theHighestTotal = theTotal;
-            theSlowest = theClients->first;
-        }
-    }
-    return theSlowest;
+    return ee_net_mm_slowest_client_cpu(this->mMessageManager);
 }
 
 struct NESSSlotOrder { NESSSlotOrder(unsigned char inFirst) : mFirst(inFirst) {} bool operator()(unsigned char inA, unsigned char inB) const { return inA == this->mFirst && inB != this->mFirst; } unsigned char mFirst; };
@@ -379,7 +489,8 @@ void NESynchronousServer::LogChecksumResponse(NEMWorldDatabaseChecksumResponse* 
 // Records a client's response to a message
 long NESynchronousServer::LogResponse(NEMessage* inMessage)
 {
-    return this->mMessageManager->LogResponse(inMessage);
+    ee_net_mm_log_response(this->mMessageManager, inMessage);
+    return kErrorOK;
 }
 
 // FUNCTION: LLE 0x10048484
@@ -406,9 +517,9 @@ void NESynchronousServer::ProcessCommunicationsTickResponse(NEMCommunicationsTic
             theInput->Reference();
             this->mRecordPlayback->Process(theInput);
         }
-    this->mMessageManager->LogResponseTime(inMessage->GetOriginatingSlot(), inMessage->GetLastCommunicationsTickProcessed(),
+    ee_net_mm_log_response_time(this->mMessageManager, inMessage->GetOriginatingSlot(), inMessage->GetLastCommunicationsTickProcessed(),
                                      inMessage->GetAveragePhysicsTickTime());
-    this->mMessageManager->LogResponse(inMessage);
+    ee_net_mm_log_response(this->mMessageManager, inMessage);
     inMessage->Dereference();
 }
 
@@ -475,7 +586,7 @@ void NESynchronousServer::ProcessPendingPlayerInputs2(NEMessage* inMessage)
         break;
     case kNetMessageClientConnectionRequest:
         if (this->mGameState == kServerStateOpen) {
-            this->mMessageManager->RegisterSlot(inMessage->GetOriginatingSlot());
+            ee_net_mm_register_slot(this->mMessageManager, inMessage->GetOriginatingSlot());
             this->ProcessSystemMessage(inMessage);
         }
         break;
@@ -495,13 +606,13 @@ void NESynchronousServer::ProcessPendingPlayerInputs2(NEMessage* inMessage)
         break;
     case kNetMessagePauseGameResponse:
     case kNetMessageUnPauseGameResponse:
-        this->mMessageManager->LogResponse(inMessage);
+        ee_net_mm_log_response(this->mMessageManager, inMessage);
         inMessage->Dereference();
         break;
     case kNetMessageClientReconnectionRequest:
         this->mSendCommunicationsTickLock->Enter();
         if (this->mReconnectCount < this->mWaitForReconnectsTime && this->mGameState == kServerStateOpen) {
-            this->mMessageManager->RegisterSlot(inMessage->GetOriginatingSlot());
+            ee_net_mm_register_slot(this->mMessageManager, inMessage->GetOriginatingSlot());
             if (static_cast<NEMClientReconnectionRequest*>(inMessage)->GetCurrentCT() < this->mLowestReconnectCT) {
                 this->mLowestReconnectCT = static_cast<NEMClientReconnectionRequest*>(inMessage)->GetCurrentCT();
                 this->mRestartCT = this->mLowestReconnectCT;
@@ -548,7 +659,7 @@ void NESynchronousServer::RecordPlaybackCallback(NEMessage* inMessage, void* inT
 // Registers a client slot with the message manager
 void NESynchronousServer::RegisterSlot(unsigned char inSlot)
 {
-    this->mMessageManager->RegisterSlot(inSlot);
+    ee_net_mm_register_slot(this->mMessageManager, inSlot);
 }
 
 // FUNCTION: LLE 0x100488f1
@@ -610,12 +721,12 @@ void NESynchronousServer::SendCommunicationsTick(bool inGenerateChecksum, bool i
     if (!this->mIsOOS && inB && this->TuneServer() != true) {
         NEMessage* theMessage = new NEMServerIsAlive();
         theMessage->SetOriginatingSlot(kSlotServer);
-        this->mMessageManager->Send(theMessage, false);
+        ee_net_mm_send(this->mMessageManager, theMessage, false);
         theMessage->Dereference();
     } else {
         if (!this->mProcessingSendToAllAndWait && this->mSendToAllAndWaitRequests.size() > 0) {
             this->mSendToAllAndWaitRequests.front().mMessage->SetSendToAllAndWaitMessageID(this->mCurrentCommunicationsTick);
-            this->mMessageManager->SendToAllAndWait(this->mSendToAllAndWaitRequests.front().mMessage,
+            ee_net_mm_send_to_all_and_wait(this->mMessageManager, this->mSendToAllAndWaitRequests.front().mMessage,
                                               this->mSendToAllAndWaitRequests.front().mTimeout,
                                               this->mSendToAllAndWaitRequests.front().mRetries);
             this->mSendToAllAndWaitRequests.front().mMessage->GetMessageLabel();
@@ -652,7 +763,7 @@ void NESynchronousServer::SendCommunicationsTick(bool inGenerateChecksum, bool i
                 this->mIncomingPlayerInputsLock->Leave();
             }
             theTick->SetOriginatingSlot(kSlotServer);
-            this->mLastCTMessageID = this->mMessageManager->Send(theTick, true);
+            this->mLastCTMessageID = ee_net_mm_send(this->mMessageManager, theTick, true);
             this->mCurrentCommunicationsTick++;
             theTick->Dereference();
             if (this->mIsOOS) {
@@ -687,14 +798,14 @@ void NESynchronousServer::SimCommunicationsTick()
 // Sends a message to one client slot
 long NESynchronousServer::SendMessageTo(unsigned char inSlot, NEMessage* inMessage, bool inGuaranteed)
 {
-    return this->mMessageManager->SendTo(inMessage, inSlot, inGuaranteed);
+    return ee_net_mm_send_to(this->mMessageManager, inMessage, inSlot, inGuaranteed);
 }
 
 // FUNCTION: LLE 0x10048e4b
 // Sends a message to every client
 long NESynchronousServer::SendMessageToAll(NEMessage* inMessage, bool inGuaranteed)
 {
-    return this->mMessageManager->Send(inMessage, inGuaranteed);
+    return ee_net_mm_send(this->mMessageManager, inMessage, inGuaranteed);
 }
 
 // FUNCTION: LLE 0x10048e61
@@ -718,14 +829,14 @@ unsigned long NESynchronousServer::SendToAllAndWait(NEMessage* inMessage, unsign
 // Sets the lowest communications tick in the message manager
 void NESynchronousServer::SetMessageManagerLowestCTs(unsigned long inCT)
 {
-    this->mMessageManager->SetLowestCTs(inCT);
+    ee_net_mm_set_lowest_cts(this->mMessageManager, inCT);
 }
 
 // FUNCTION: LLE 0x10048ec6
 // Sets the message manager's current message number
 void NESynchronousServer::SetMessageManagerCurrentMessageNumber(unsigned long inNumber)
 {
-    this->mMessageManager->mCurrentMessageNumber = inNumber;
+    ee_net_mm_set_current_number(this->mMessageManager, inNumber);
 }
 
 // FUNCTION: LLE 0x10048ed9
@@ -766,8 +877,8 @@ void NESynchronousServer::StopThreads()
 bool NESynchronousServer::TuneForSlowCPU()
 {
     NESSTrace(this->GetCurrentCommunicationsTick());
-    this->mMessageManager->GetLowestCT();
-    unsigned short theCPU = this->mMessageManager->GetHighestCPU();
+    ee_net_mm_lowest_ct(this->mMessageManager);
+    unsigned short theCPU = ee_net_mm_highest_cpu(this->mMessageManager);
     if (theCPU == 0)
         theCPU = 1;
     this->mPTsPerSecond = (unsigned char)(1000.0f / (theCPU * this->mPhysicsTickCostFactor));
@@ -819,7 +930,7 @@ bool NESynchronousServer::TuneForSlowNetwork()
             break;
         }
     case 1:
-        if (this->mMessageManager->NumberOfOutstandingResponses(this->mLastCTMessageID) > 0) {
+        if (ee_net_mm_outstanding(this->mMessageManager, this->mLastCTMessageID) > 0) {
             theResult = false;
             this->mNetConsecutiveLate++;
             this->mNetLateCount++;
@@ -830,7 +941,7 @@ bool NESynchronousServer::TuneForSlowNetwork()
             break;
         }
         this->mNetConsecutiveLate = 0;
-        this->mHighestResponseTime = this->mMessageManager->GetHighestResponseTime();
+        this->mHighestResponseTime = ee_net_mm_highest_response_time(this->mMessageManager);
         if (this->mHighestResponseTime > this->mSendInterval) {
             if (this->mHighestResponseTime + this->mSendIntervalIncrement > this->mMaxSendInterval) {
                 if (this->mNetAtMaxCount >= 20) {
@@ -883,8 +994,8 @@ bool NESynchronousServer::TuneForSlowNetwork()
         this->mNetLateCount = 0;
         break;
     case 2:
-        if (this->mMessageManager->NumberOfOutstandingResponses(this->mLastCTMessageID) > 0) {
-            this->mMessageManager->Resend(this->mLastCTMessageID);
+        if (ee_net_mm_outstanding(this->mMessageManager, this->mLastCTMessageID) > 0) {
+            ee_net_mm_resend(this->mMessageManager, this->mLastCTMessageID);
             this->mNetResendCount++;
             theResult = false;
             this->mNetTuneState = 3;
@@ -895,10 +1006,10 @@ bool NESynchronousServer::TuneForSlowNetwork()
         this->mNetLateEpisodes = 0;
         break;
     case 3:
-        if (this->mMessageManager->NumberOfOutstandingResponses(this->mLastCTMessageID) > 0) {
+        if (ee_net_mm_outstanding(this->mMessageManager, this->mLastCTMessageID) > 0) {
             if (this->mNetResendCount % 3 == 0) {
                 this->mLagWarning = true;
-                this->mMessageManager->Resend(this->mLastCTMessageID);
+                ee_net_mm_resend(this->mMessageManager, this->mLastCTMessageID);
             }
             this->mNetResendCount++;
             theResult = false;
@@ -954,13 +1065,13 @@ bool NESynchronousServer::TuneForSlowNetwork()
     }
     if (!theChanged)
         return theResult;
-    theSlot = this->mMessageManager->WhoHasNotResponded(this->mLastCTMessageID);
+    theSlot = ee_net_mm_who_has_not_responded(this->mMessageManager, this->mLastCTMessageID);
     if (theSlot != kSlotNone)
         this->mSlotsD0.push_back(theSlot);
-    theSlot = this->mMessageManager->WhoHasNotRespondedNext(theSlot, this->mLastCTMessageID);
+    theSlot = ee_net_mm_who_has_not_responded_next(this->mMessageManager, theSlot, this->mLastCTMessageID);
     while (theSlot != kSlotNone) {
         this->mSlotsD0.push_back(theSlot);
-        theSlot = this->mMessageManager->WhoHasNotRespondedNext(theSlot, this->mLastCTMessageID);
+        theSlot = ee_net_mm_who_has_not_responded_next(this->mMessageManager, theSlot, this->mLastCTMessageID);
     }
     return theResult;
 }
@@ -971,7 +1082,7 @@ bool NESynchronousServer::TuneServer()
 {
     bool theResult = this->TuneForSlowNetwork();
     if (!theResult)
-        this->mMessageManager->mForceCTWhenAllResponded = true;
+        ee_net_mm_set_force_ct(this->mMessageManager, true);
     if (this->mGameState == kServerStateRunning) {
         if (theResult == true)
             theResult = this->TuneForSlowCPU();
@@ -996,7 +1107,7 @@ bool NESynchronousServer::TuneServer()
 void NESynchronousServer::UnregisterSlot(unsigned char inSlot)
 {
     if (inSlot != kSlotServer && inSlot != kSlotNone)
-        this->mMessageManager->UnregisterSlot(inSlot);
+        ee_net_mm_unregister_slot(this->mMessageManager, inSlot);
 }
 
 // FUNCTION: LLE 0x1004976e
@@ -1018,7 +1129,11 @@ void NESynchronousServer::UnpauseGame()
 long NESynchronousServer::XferFileToClient(FSFileSpec& inFile, unsigned long inUserData, unsigned char inSlot,
                                            unsigned long& outXferID, bool inP5)
 {
-    long theResult = this->mMessageManager->AddXfer(inFile, inUserData, inSlot, outXferID, inP5);
+    uint32_t theXferID = 0;
+    long theResult = ee_net_mm_add_xfer(this->mMessageManager, &inFile, (uint32_t)inUserData, inSlot, &theXferID)
+                         ? kErrorOK : kErrorNotFound;
+    if (theResult == kErrorOK)
+        outXferID = theXferID;
     if (theResult == kErrorOK)
         this->mXferStuffWaitingToGoEvent->Set();
     return theResult;
@@ -1093,7 +1208,7 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
                 NEMessage* theMessage = new NEMStopGame();
                 if (theMessage != NULL) {
                     theMessage->SetOriginatingSlot(kSlotServer);
-                    theServer->mMessageManager->Send(theMessage, true);
+                    ee_net_mm_send(theServer->mMessageManager, theMessage, true);
                     theMessage->Dereference();
                     theServer->mGameState = kServerStateOpen;
                     theServer->mSendInterval = kTSWaitInfinite;
@@ -1159,7 +1274,7 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
         if (theTimedOut == true) {
             switch (theWaitState) {
             case 1:
-                if (theServer->mMessageManager->NumberOfOutstandingResponses(
+                if (ee_net_mm_outstanding(theServer->mMessageManager, 
                         theServer->mSendToAllAndWaitMessageNumber) == 0) {
                     theServer->mSendToAllLock->Enter();
                     switch (theServer->mSendToAllAndWaitType) {
@@ -1185,7 +1300,7 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
                         theServer->mChangeSendIntervalEvent->Set();
                         theTimeout = kTSWaitInfinite;
                     } else {
-                        theServer->mMessageManager->Resend(theServer->mSendToAllAndWaitMessageNumber);
+                        ee_net_mm_resend(theServer->mMessageManager, theServer->mSendToAllAndWaitMessageNumber);
                         theDeadline = TMGetTime() + theServer->mSendToAllAndWaitTimeout;
                     }
                 }
@@ -1253,7 +1368,7 @@ unsigned long NESynchronousServer::Send(void* inServerObject)
             theServer->mSendThreadForceCTEvent->Clear();
             if (!(gPlatSimMode && theServer->SimGameRunning()))   // the simulation's physics thread sends them
                 theServer->SendCommunicationsTick(false, true);
-            theServer->mMessageManager->mForceCTWhenAllResponded = false;
+            ee_net_mm_set_force_ct(theServer->mMessageManager, false);
             if (theSendInterval == kTSWaitInfinite)
                 theTimeout = kTSWaitInfinite;
             else {
@@ -1321,7 +1436,7 @@ unsigned long NESynchronousServer::Xfer(void* inServerObject)
             break;
         case kTSWaitTimeout:
             if (theXfersWaiting) {
-                theXfersWaiting = theServer->mMessageManager->ProcessXfers();
+                theXfersWaiting = ee_net_mm_process_xfers(theServer->mMessageManager);
                 if (!theXfersWaiting)
                     theTimeout = kTSWaitInfinite;
             }

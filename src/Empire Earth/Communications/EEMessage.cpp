@@ -148,111 +148,45 @@ static void EENetMsgExport(uint32_t inClass, EeNetMsgSlot* inSlots, size_t inCou
     outMessageSize = ee_netmsg_export(inClass, inSlots, inCount, *outPayloadPointer, theMessageSize);
 }
 
-// each class's slot list (defined before its ExportMessage; some ExportSize bodies come first)
-static size_t Slots(EEMAddPatrolPoint* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMAddRemoveResources* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMAddUnitToSelectedGroup* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMAttackGround* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMAttackPlayers* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMAttackUnit* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMBuildGate* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMBuildUnit* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMBuildWall* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMCameraLocationInfo* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMCastCalamity* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMChangeFormation* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMChangeSelectedUnitCollisionSphere* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMChat* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMCheatCode* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMCivTimerExpired* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMCivUpgrades* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMClearAirportCommands* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMDisband* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMDropoffResource* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMEdictPreProposal* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMEdictPreProposalResponse* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMEdictProposal* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMEdictVote* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMEndCinematic* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMEnterShiftMode* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMExitShiftMode* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMExchangeResources* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMExplore* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMFullGameOptions* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMGameOptions* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMGameRestarting* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMGameSpeed* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMGatherResource* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMGoFanatic* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMHackANewUnit* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMHaltSelectedGroup* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMHealUnit* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMImmediateCargoUnload* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMInGameChat* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMIncrementEpic* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMIncrementRallyTimer* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMJITManufacturing* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMKillUnit* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLagStatus* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLoadMainScreen* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLoadMainScreenResponse* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLoadOrSaveGame* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLoadOrSaveGameResponse* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLoadPercent* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLoadUnitData* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLoadGarrison* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLoadTransport* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMLockUnlock* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMMakeWorldVisible* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMMigrationSlotInfo* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMNewEdictEnacted* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMPackUnpack* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMPathTo* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMPatrol* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMPayTribute* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMPlayerInformation* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMFullPlayerInformation* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMPlayerSlotInfo* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMRecordFrames* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMRemoveUnitFromSelectedGroup* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMRepairUnit* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMReplantFarms* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMReportStatistics* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMResign* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMRemoveImprovement* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMRemoveTechnology* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMResearchTechnology* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMReturnToBase* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSavedGroupAddSelection* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSavedGroupClear* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSavedGroupCreate* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSavedGroupSelect* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMScrambleAircraft* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSelectCustomPlayerForChat* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSelectPatrolGroup* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSelectPlayerChatType* inMessage, EeNetMsgSlot* outSlots);
+// New (game messages lane, round 1): the codec's side of every game message, once. A class gives its codec class
+// and its members as slots in wire order (GetCodecSlots); these run the codec over them, as each class's own
+// ExportMessage, ExportSize and ImportMessage did (a class whose members the slots cannot carry overrides them).
+size_t EEMessage::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
+{
+    // only a class that overrides the three (EEMSelectTheseUnits) has none: the codec refuses the class
+    outClass = 0xffffffffu;
+    return 0;
+}
+
+void EEMessage::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
+{
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    uint32_t theClass;
+    size_t theCount = this->GetCodecSlots(theSlots, theClass);
+    EENetMsgExport(theClass, theSlots, theCount, outPayloadPointer, outMessageSize);
+}
+
+// a class of fixed members its constant, else the size of these members
+unsigned long EEMessage::ExportSize()
+{
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    uint32_t theClass;
+    size_t theCount = this->GetCodecSlots(theSlots, theClass);
+    uint32_t theFixed = ee_netmsg_fixed_size(theClass);
+    return theFixed != 0 ? theFixed : ee_netmsg_export_size(theClass, theSlots, theCount);
+}
+
+void EEMessage::ImportMessage(unsigned char* inPayloadPointer)
+{
+    ESVERIFY_AT(inPayloadPointer != NULL, __LINE__);
+    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
+    uint32_t theClass;
+    size_t theCount = this->GetCodecSlots(theSlots, theClass);
+    ee_netmsg_import(theClass, inPayloadPointer, theSlots, theCount);
+}
+
+// EEMSelectTheseUnits' slot list (its id list is read and written around the codec)
 static size_t Slots(EEMSelectTheseUnits* inMessage, EeNetMsgSlot* outSlots, std::vector<int32_t>& ioIDs);
-static size_t Slots(EEMSelectUnit* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSelectUnits* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSelfDestruct* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSendFlare* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSetAirportCommand* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSetDiplomaticStance* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSetRallyGoal* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSetWaterLevel* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSmartFarmers* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMStartLoading* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMStartLoadingResponse* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSnapToDaylight* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMStopActiveGroup* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMToggleCollisionDetection* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMToggleDayNight* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMUnloadTransport* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMUnselectAllUnits* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMUpdatePingStat* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMImproveUnit* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMZoomInfo* inMessage, EeNetMsgSlot* outSlots);
-static size_t Slots(EEMSetUnitBehavior* inMessage, EeNetMsgSlot* outSlots);
 
 // the Execute decisions (ee/EEMessageExecute.h), each call recorded by the capture's NMDC record (off by default)
 static inline uint8_t DecideSelectionMarksLocal(uint8_t inServer, uint8_t inLocal)
@@ -785,28 +719,14 @@ void EEMAddPatrolPoint::Execute()
                               this->mPoint.GetY());
 }
 
-// EEMAddPatrolPoint's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMAddPatrolPoint* inMessage, EeNetMsgSlot* outSlots)
+// EEMAddPatrolPoint's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMAddPatrolPoint::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPoint);
+    outClass = EE_NETMSG_ADD_PATROL_POINT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPoint);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bb040
-// Writes the Add Patrol Point message (selection id, point) to a new network buffer
-void EEMAddPatrolPoint::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_ADD_PATROL_POINT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bb0be
-// Returns the Add Patrol Point message's wire size: 13 bytes
-unsigned long EEMAddPatrolPoint::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_ADD_PATROL_POINT);
 }
 
 // FUNCTION: EXE 0x4bb0c2
@@ -816,61 +736,17 @@ char* EEMAddPatrolPoint::GetMessageLabel() const
     return "Add Patrol Point";
 }
 
-// FUNCTION: EXE 0x4bb0c8
-// Reads the Add Patrol Point message (selection id, point) from a network buffer
-void EEMAddPatrolPoint::ImportMessage(unsigned char* inPayloadPointer)
+// EEMAddRemoveResources's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMAddRemoveResources::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 1520);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_ADD_PATROL_POINT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-// FUNCTION: EXE 0x4bb118
-// Returns false: an Add Patrol Point message answers no other message
-bool EEMAddPatrolPoint::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// FUNCTION: EXE 0x4bb11d
-// Returns the Add/Remove Resources message's wire size: 18 bytes
-unsigned long EEMAddRemoveResources::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_ADD_REMOVE_RESOURCES);
-}
-
-// EEMAddRemoveResources's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMAddRemoveResources* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mAmount);
-    outSlots[6] = EENetMsgField(inMessage->mPlayerID);
-    outSlots[7] = EENetMsgField(inMessage->mResourceType);
-    outSlots[8] = EENetMsgField(inMessage->mAdd);
+    outClass = EE_NETMSG_ADD_REMOVE_RESOURCES;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mAmount);
+    outSlots[6] = EENetMsgField(this->mPlayerID);
+    outSlots[7] = EENetMsgField(this->mResourceType);
+    outSlots[8] = EENetMsgField(this->mAdd);
     return 9;
-}
-
-// FUNCTION: EXE 0x4bb121
-// Writes the Add/Remove Resources message (selection id, amount, player, resource, add flag) to a new network buffer
-void EEMAddRemoveResources::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_ADD_REMOVE_RESOURCES, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bb1da
-// Reads the Add/Remove Resources message (selection id, amount, player, resource, add flag) from a network buffer
-void EEMAddRemoveResources::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 1601);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_ADD_REMOVE_RESOURCES, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMAddRemoveResources::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bb264
@@ -903,26 +779,14 @@ void EEMAddUnitToSelectedGroup::Execute()
     }
 }
 
-// EEMAddUnitToSelectedGroup's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMAddUnitToSelectedGroup* inMessage, EeNetMsgSlot* outSlots)
+// EEMAddUnitToSelectedGroup's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMAddUnitToSelectedGroup::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitID);
+    outClass = EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitID);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bb377
-// Writes the Add Unit To Selected Group message (selection id, unit id) to a new network buffer
-void EEMAddUnitToSelectedGroup::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMAddUnitToSelectedGroup::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP);
 }
 
 // FUNCTION: EXE 0x4bb3f5
@@ -930,20 +794,6 @@ unsigned long EEMAddUnitToSelectedGroup::ExportSize()
 char* EEMAddUnitToSelectedGroup::GetMessageLabel() const
 {
     return "Add Unit To Selected Group";
-}
-
-// FUNCTION: EXE 0x4bb3fb
-// Reads the Add Unit To Selected Group message (selection id, unit id) from a network buffer
-void EEMAddUnitToSelectedGroup::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 1779);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_ADD_UNIT_TO_SELECTED_GROUP, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMAddUnitToSelectedGroup::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bb44b
@@ -989,41 +839,15 @@ void EEMAttackGround::Execute()
     ee_units_attack_ground(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mX, this->mY);
 }
 
-// EEMAttackGround's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMAttackGround* inMessage, EeNetMsgSlot* outSlots)
+// EEMAttackGround's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMAttackGround::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mX);
-    outSlots[6] = EENetMsgField(inMessage->mY);
+    outClass = EE_NETMSG_ATTACK_GROUND;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mX);
+    outSlots[6] = EENetMsgField(this->mY);
     return 7;
-}
-
-// FUNCTION: EXE 0x4bb666
-// Writes the Attack Ground message (selection id, x, y) to a new network buffer
-void EEMAttackGround::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_ATTACK_GROUND, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMAttackGround::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_ATTACK_GROUND);
-}
-
-// FUNCTION: EXE 0x4bb6f7
-// Reads the Attack Ground message (selection id, x, y) from a network buffer
-void EEMAttackGround::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 2025);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_ATTACK_GROUND, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMAttackGround::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bb75e
@@ -1033,43 +857,15 @@ void EEMAttackPlayers::Execute()
     EEAttackPlayers(this->mPlayerID, this->mAllies);
 }
 
-// EEMAttackPlayers's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMAttackPlayers* inMessage, EeNetMsgSlot* outSlots)
+// EEMAttackPlayers's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMAttackPlayers::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPlayerID);
-    outSlots[6] = EENetMsgField(inMessage->mAllies);
+    outClass = EE_NETMSG_ATTACK_PLAYERS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPlayerID);
+    outSlots[6] = EENetMsgField(this->mAllies);
     return 7;
-}
-
-// FUNCTION: EXE 0x4bb76f
-// Writes the Attack Players message (selection id, player, allies flag) to a new network buffer
-void EEMAttackPlayers::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_ATTACK_PLAYERS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bb7fe
-// Returns the Attack Players message's wire size: 10 bytes
-unsigned long EEMAttackPlayers::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_ATTACK_PLAYERS);
-}
-
-// FUNCTION: EXE 0x4bb802
-// Reads the Attack Players message (selection id, player, allies flag) from a network buffer
-void EEMAttackPlayers::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 2140);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_ATTACK_PLAYERS, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMAttackPlayers::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bb869
@@ -1085,30 +881,16 @@ void EEMAttackUnit::Execute()
                          this->mIsQueued, this->mIsConvert);
 }
 
-// EEMAttackUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMAttackUnit* inMessage, EeNetMsgSlot* outSlots)
+// EEMAttackUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMAttackUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mTargetID);
-    outSlots[6] = EENetMsgField(inMessage->mIsQueued);
-    outSlots[7] = EENetMsgField(inMessage->mIsConvert);
+    outClass = EE_NETMSG_ATTACK_UNIT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mTargetID);
+    outSlots[6] = EENetMsgField(this->mIsQueued);
+    outSlots[7] = EENetMsgField(this->mIsConvert);
     return 8;
-}
-
-// FUNCTION: EXE 0x4bba1f
-// Writes the Attack Unit message (selection id, target, queued and convert flags) to a new network buffer
-void EEMAttackUnit::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_ATTACK_UNIT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bbabf
-// Returns the Attack Unit message's wire size: 11 bytes
-unsigned long EEMAttackUnit::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_ATTACK_UNIT);
 }
 
 // FUNCTION: EXE 0x4bbac3
@@ -1116,20 +898,6 @@ unsigned long EEMAttackUnit::ExportSize()
 char* EEMAttackUnit::GetMessageLabel() const
 {
     return "Attack Unit";
-}
-
-// FUNCTION: EXE 0x4bbac9
-// Reads the Attack Unit message (selection id, target, queued and convert flags) from a network buffer
-void EEMAttackUnit::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 2343);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_ATTACK_UNIT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMAttackUnit::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bbb3f
@@ -1142,31 +910,17 @@ void EEMBuildGate::Execute()
     EEBuildGate(theTile, this->mPlayerID, this->mTechnology, this->mSide);
 }
 
-// EEMBuildGate's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMBuildGate* inMessage, EeNetMsgSlot* outSlots)
+// EEMBuildGate's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMBuildGate::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPoint);
-    outSlots[6] = EENetMsgField(inMessage->mTechnology);
-    outSlots[7] = EENetMsgField(inMessage->mSide);
-    outSlots[8] = EENetMsgField(inMessage->mPlayerID);
+    outClass = EE_NETMSG_BUILD_GATE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPoint);
+    outSlots[6] = EENetMsgField(this->mTechnology);
+    outSlots[7] = EENetMsgField(this->mSide);
+    outSlots[8] = EENetMsgField(this->mPlayerID);
     return 9;
-}
-
-// FUNCTION: EXE 0x4bbb75
-// Writes the Build Gate message (selection id, point, technology, side, player) to a new network buffer
-void EEMBuildGate::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_BUILD_GATE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bbc30
-// Returns the Build Gate message's wire size: 25 bytes
-unsigned long EEMBuildGate::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_BUILD_GATE);
 }
 
 // FUNCTION: EXE 0x4bbc34
@@ -1174,20 +928,6 @@ unsigned long EEMBuildGate::ExportSize()
 char* EEMBuildGate::GetMessageLabel() const
 {
     return "Build Gate";
-}
-
-// FUNCTION: EXE 0x4bbc3a
-// Reads the Build Gate message (selection id, point, technology, side, player) from a network buffer
-void EEMBuildGate::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 2485);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_BUILD_GATE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMBuildGate::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // Orders farms for EEMBuildUnit::Execute: built ones first, then paid-for ones, then the nearer to the tile. Inline
@@ -1226,28 +966,16 @@ void EEMBuildUnit::Execute()
                         (int64_t)(long)this->mPoint.GetX(), (int64_t)(long)this->mPoint.GetY(), this->mIsQueued);
 }
 
-// EEMBuildUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMBuildUnit* inMessage, EeNetMsgSlot* outSlots)
+// EEMBuildUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMBuildUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPoint);
-    outSlots[6] = EENetMsgField(inMessage->mTechnology);
-    outSlots[7] = EENetMsgField(inMessage->mIsQueued);
+    outClass = EE_NETMSG_BUILD_UNIT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPoint);
+    outSlots[6] = EENetMsgField(this->mTechnology);
+    outSlots[7] = EENetMsgField(this->mIsQueued);
     return 8;
-}
-
-// FUNCTION: EXE 0x4bc00c
-// Writes the Build Unit message (selection id, point, technology, queued flag) to a new network buffer
-void EEMBuildUnit::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_BUILD_UNIT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMBuildUnit::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_BUILD_UNIT);
 }
 
 // FUNCTION: EXE 0x4bc0ae
@@ -1255,20 +983,6 @@ unsigned long EEMBuildUnit::ExportSize()
 char* EEMBuildUnit::GetMessageLabel() const
 {
     return "Build Unit";
-}
-
-// FUNCTION: EXE 0x4bc0b4
-// Reads the Build Unit message (selection id, point, technology, queued flag) from a network buffer
-void EEMBuildUnit::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 2837);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_BUILD_UNIT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMBuildUnit::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bc12c
@@ -1283,31 +997,17 @@ void EEMBuildWall::Execute()
                         this->mStart.GetY(), this->mEnd.GetX(), this->mEnd.GetY());
 }
 
-// EEMBuildWall's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMBuildWall* inMessage, EeNetMsgSlot* outSlots)
+// EEMBuildWall's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMBuildWall::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mStart);
-    outSlots[6] = EENetMsgField(inMessage->mEnd);
-    outSlots[7] = EENetMsgField(inMessage->mTechnology);
-    outSlots[8] = EENetMsgField(inMessage->mPlayerID);
+    outClass = EE_NETMSG_BUILD_WALL;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mStart);
+    outSlots[6] = EENetMsgField(this->mEnd);
+    outSlots[7] = EENetMsgField(this->mTechnology);
+    outSlots[8] = EENetMsgField(this->mPlayerID);
     return 9;
-}
-
-// FUNCTION: EXE 0x4bc262
-// Writes the Build Wall message (selection id, start, end, technology, player) to a new network buffer
-void EEMBuildWall::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_BUILD_WALL, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bc31d
-// Returns the Build Wall message's wire size: 29 bytes
-unsigned long EEMBuildWall::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_BUILD_WALL);
 }
 
 // FUNCTION: EXE 0x4bc321
@@ -1317,60 +1017,18 @@ char* EEMBuildWall::GetMessageLabel() const
     return "Build Wall";
 }
 
-// FUNCTION: EXE 0x4bc327
-// Reads the Build Wall message (selection id, start, end, technology, player) from a network buffer
-void EEMBuildWall::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 3021);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_BUILD_WALL, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMBuildWall::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
 void EEMCameraLocationInfo::Execute()
 {
 }
 
-// EEMCameraLocationInfo's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMCameraLocationInfo* inMessage, EeNetMsgSlot* outSlots)
+// EEMCameraLocationInfo's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMCameraLocationInfo::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mLocation);
+    outClass = EE_NETMSG_CAMERA_LOCATION_INFO;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mLocation);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bc3b1
-// Writes the Camera Location Info message (selection id, camera location) to a new network buffer
-void EEMCameraLocationInfo::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_CAMERA_LOCATION_INFO, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bc42f
-// Returns the Camera Location Info message's wire size: 17 bytes
-unsigned long EEMCameraLocationInfo::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_CAMERA_LOCATION_INFO);
-}
-
-// FUNCTION: EXE 0x4bc433
-// Reads the Camera Location Info message (selection id, camera location) from a network buffer
-void EEMCameraLocationInfo::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 3165);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CAMERA_LOCATION_INFO, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMCameraLocationInfo::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 #include "lle/USingleton.h"
@@ -1391,44 +1049,18 @@ void EEMCastCalamity::Execute()
                            this->mTargetID, this->mTileX, this->mTileY, this->mTechnology);
 }
 
-// EEMCastCalamity's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMCastCalamity* inMessage, EeNetMsgSlot* outSlots)
+// EEMCastCalamity's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMCastCalamity::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mCasterID);
-    outSlots[6] = EENetMsgField(inMessage->mTargetID);
-    outSlots[7] = EENetMsgField(inMessage->mTileX);
-    outSlots[8] = EENetMsgField(inMessage->mTileY);
-    outSlots[9] = EENetMsgField(inMessage->mTechnology);
+    outClass = EE_NETMSG_CAST_CALAMITY;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mCasterID);
+    outSlots[6] = EENetMsgField(this->mTargetID);
+    outSlots[7] = EENetMsgField(this->mTileX);
+    outSlots[8] = EENetMsgField(this->mTileY);
+    outSlots[9] = EENetMsgField(this->mTechnology);
     return 10;
-}
-
-// FUNCTION: EXE 0x4bc8c2
-// Writes the Cast Calamity message (selection id, caster, target, tile, technology) to a new network buffer
-void EEMCastCalamity::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_CAST_CALAMITY, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMCastCalamity::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_CAST_CALAMITY);
-}
-
-// FUNCTION: EXE 0x4bc990
-// Reads the Cast Calamity message (selection id, caster, target, tile, technology) from a network buffer
-void EEMCastCalamity::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 3483);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CAST_CALAMITY, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMCastCalamity::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bca28
@@ -1444,27 +1076,15 @@ void EEMChangeFormation::Execute()
     theFormation->Dereference();
 }
 
-// EEMChangeFormation's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMChangeFormation* inMessage, EeNetMsgSlot* outSlots)
+// EEMChangeFormation's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMChangeFormation::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mFormationType);
-    outSlots[6] = EENetMsgField(inMessage->mB14);
+    outClass = EE_NETMSG_CHANGE_FORMATION;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mFormationType);
+    outSlots[6] = EENetMsgField(this->mB14);
     return 7;
-}
-
-// FUNCTION: EXE 0x4bca7d
-// Writes the Change Formation message (selection id, formation type, flag) to a new network buffer
-void EEMChangeFormation::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_CHANGE_FORMATION, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMChangeFormation::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_CHANGE_FORMATION);
 }
 
 // FUNCTION: EXE 0x4bcb0c
@@ -1472,20 +1092,6 @@ unsigned long EEMChangeFormation::ExportSize()
 char* EEMChangeFormation::GetMessageLabel() const
 {
     return "ChangeFormation";
-}
-
-// FUNCTION: EXE 0x4bcb12
-// Reads the Change Formation message (selection id, formation type) from a buffer; the exported flag is never read
-void EEMChangeFormation::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 3634);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CHANGE_FORMATION, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMChangeFormation::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bcb62
@@ -1540,21 +1146,14 @@ void EEMChangeSelectedUnitCollisionSphere::Execute()
     }
 }
 
-// EEMChangeSelectedUnitCollisionSphere's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMChangeSelectedUnitCollisionSphere* inMessage, EeNetMsgSlot* outSlots)
+// EEMChangeSelectedUnitCollisionSphere's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMChangeSelectedUnitCollisionSphere::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mGrow);
+    outClass = EE_NETMSG_CHANGE_SELECTED_UNIT_COLLISION_SPHERE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mGrow);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bcc91
-// Writes the Change Selected Unit Collision Sphere message (selection id, grow flag) to a new network buffer
-void EEMChangeSelectedUnitCollisionSphere::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_CHANGE_SELECTED_UNIT_COLLISION_SPHERE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: EXE 0x4bcd0d
@@ -1562,20 +1161,6 @@ void EEMChangeSelectedUnitCollisionSphere::ExportMessage(unsigned char** outPayl
 char* EEMChangeSelectedUnitCollisionSphere::GetMessageLabel() const
 {
     return "ChangeSelectedUnitCollisionSphere";
-}
-
-// FUNCTION: EXE 0x4bcd13
-// Reads the Change Selected Unit Collision Sphere message (selection id, grow flag) from a network buffer
-void EEMChangeSelectedUnitCollisionSphere::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 3821);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CHANGE_SELECTED_UNIT_COLLISION_SPHERE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMChangeSelectedUnitCollisionSphere::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bcd63
@@ -1594,30 +1179,15 @@ void EEMChat::Execute()
     }
 }
 
-// EEMChat's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMChat* inMessage, EeNetMsgSlot* outSlots)
+// EEMChat's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMChat::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPlayerID);
-    outSlots[6] = EENetMsgString(inMessage->mText);
+    outClass = EE_NETMSG_CHAT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPlayerID);
+    outSlots[6] = EENetMsgString(this->mText);
     return 7;
-}
-
-// FUNCTION: EXE 0x4bcdca
-// Writes the Chat message (selection id, player, text) to a new network buffer
-void EEMChat::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_CHAT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bce60
-// Returns the Chat message's wire size: 6 bytes plus the text
-unsigned long EEMChat::ExportSize()
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_CHAT, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: EXE 0x4bce6d
@@ -1633,13 +1203,8 @@ void EEMChat::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 3949);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CHAT, inPayloadPointer, theSlots, Slots(this, theSlots));
+    ee_netmsg_import(EE_NETMSG_CHAT, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
     this->mText.Import(inPayloadPointer + theSlots[6].offset);
-}
-
-bool EEMChat::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bced6
@@ -1650,27 +1215,15 @@ void EEMCheatCode::Execute()
     gCheatCodes->ApplyCheatCode(this->mCode, thePlayer->mPlayerID, this->mParameter);
 }
 
-// EEMCheatCode's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMCheatCode* inMessage, EeNetMsgSlot* outSlots)
+// EEMCheatCode's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMCheatCode::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mCode);
-    outSlots[6] = EENetMsgField(inMessage->mParameter);
+    outClass = EE_NETMSG_CHEAT_CODE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mCode);
+    outSlots[6] = EENetMsgField(this->mParameter);
     return 7;
-}
-
-// FUNCTION: EXE 0x4bcf0a
-// Writes the Cheat Code message (selection id, code, parameter) to a new network buffer
-void EEMCheatCode::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_CHEAT_CODE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMCheatCode::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_CHEAT_CODE);
 }
 
 // FUNCTION: EXE 0x4bcf9b
@@ -1678,20 +1231,6 @@ unsigned long EEMCheatCode::ExportSize()
 char* EEMCheatCode::GetMessageLabel() const
 {
     return "Cheat Code";
-}
-
-// FUNCTION: EXE 0x4bcfa1
-// Reads the Cheat Code message (selection id, code, parameter) from a network buffer
-void EEMCheatCode::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 4084);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CHEAT_CODE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMCheatCode::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bd008
@@ -1721,26 +1260,14 @@ void EEMCivTimerExpired::Execute()
     }
 }
 
-// EEMCivTimerExpired's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMCivTimerExpired* inMessage, EeNetMsgSlot* outSlots)
+// EEMCivTimerExpired's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMCivTimerExpired::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mIsWarning);
+    outClass = EE_NETMSG_CIV_TIMER_EXPIRED;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mIsWarning);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bd124
-// Writes the Civ Timer Expired message (selection id, warning flag) to a new network buffer
-void EEMCivTimerExpired::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_CIV_TIMER_EXPIRED, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMCivTimerExpired::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_CIV_TIMER_EXPIRED);
 }
 
 // FUNCTION: EXE 0x4bd1a0
@@ -1750,47 +1277,18 @@ char* EEMCivTimerExpired::GetMessageLabel() const
     return "Civ Timer Expired";
 }
 
-// FUNCTION: EXE 0x4bd1a6
-// Reads the Civ Timer Expired message (selection id, warning flag) from a network buffer
-void EEMCivTimerExpired::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 4267);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CIV_TIMER_EXPIRED, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMCivTimerExpired::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// FUNCTION: EXE 0x4bd1f6
-// Returns the civilization upgrades message's wire size: 11 bytes plus 2 per upgrade plus the name
-unsigned long EEMCivUpgrades::ExportSize()
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_CIV_UPGRADES, theSlots, Slots(this, theSlots));
-}
-
 // EEMCivUpgrades' members as the codec's slots
-static size_t Slots(EEMCivUpgrades* inMessage, EeNetMsgSlot* outSlots)
+size_t EEMCivUpgrades::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPlayerID);
-    outSlots[6] = EENetMsgField(inMessage->mNameString);
-    outSlots[7] = EENetMsgRecords(inMessage->mUpgrades.empty() ? NULL : &inMessage->mUpgrades[0], sizeof(EECivUpgrade),
-                                  inMessage->mUpgrades.size());
-    outSlots[8] = EENetMsgString(inMessage->mCivName);
+    outClass = EE_NETMSG_CIV_UPGRADES;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPlayerID);
+    outSlots[6] = EENetMsgField(this->mNameString);
+    outSlots[7] = EENetMsgRecords(this->mUpgrades.empty() ? NULL : &this->mUpgrades[0], sizeof(EECivUpgrade),
+                                  this->mUpgrades.size());
+    outSlots[8] = EENetMsgString(this->mCivName);
     return 9;
-}
-
-// FUNCTION: EXE 0x4bd218
-// Writes the civilization upgrades message (player, name string, upgrades, civ name) to a new network buffer
-void EEMCivUpgrades::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_CIV_UPGRADES, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: EXE 0x4bd327
@@ -1799,18 +1297,13 @@ void EEMCivUpgrades::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 4392);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CIV_UPGRADES, inPayloadPointer, theSlots, Slots(this, theSlots));
+    ee_netmsg_import(EE_NETMSG_CIV_UPGRADES, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
     for (unsigned long i = 0; i < theSlots[7].count; i++) {
         EECivUpgrade theUpgrade;
         memcpy(&theUpgrade, inPayloadPointer + theSlots[7].offset + i * sizeof(theUpgrade), sizeof(theUpgrade));
         this->mUpgrades.push_back(theUpgrade);
     }
     this->mCivName.Import(inPayloadPointer + theSlots[8].offset);
-}
-
-bool EEMCivUpgrades::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bd3f7
@@ -1857,27 +1350,13 @@ char* EEMCivUpgradesRequested::GetMessageLabel() const
     return "Civilization Builder requesting upgrades from server";
 }
 
-// FUNCTION: EXE 0x4bd4d0
-// Returns the Clear Airport Commands message's wire size: 5 bytes
-unsigned long EEMClearAirportCommands::ExportSize()
+// EEMClearAirportCommands's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMClearAirportCommands::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    return ee_netmsg_fixed_size(EE_NETMSG_CLEAR_AIRPORT_COMMANDS);
-}
-
-// EEMClearAirportCommands's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMClearAirportCommands* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_CLEAR_AIRPORT_COMMANDS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4bd4d4
-// Writes the Clear Airport Commands message (selection id) to a new network buffer
-void EEMClearAirportCommands::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_CLEAR_AIRPORT_COMMANDS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: EXE 0x4bd53f
@@ -1887,95 +1366,24 @@ char* EEMClearAirportCommands::GetMessageLabel() const
     return "Clear Airport Commands";
 }
 
-// FUNCTION: EXE 0x4bd545
-// Reads the Clear Airport Commands message (selection id) from a network buffer
-void EEMClearAirportCommands::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 4579);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_CLEAR_AIRPORT_COMMANDS, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMClearAirportCommands::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
 // FUNCTION: EXE 0x4bd588
 // Clears the queued orders of the sender's selected airports, carriers/space docks and navy yards (reopening
 // them and emptying their air traffic queue) and the orders of selected aircraft
 void EEMClearAirportCommands::Execute()
 {
+    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs clear_airport_commands: each selected
+    // airport's, air base's and navy yard's queues cleared and opened, an aircraft's queue 1, the goals refreshed)
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EEGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup != NULL) {
-        for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
-            EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(theGroup->GetUnit(i));
-            EEUnitClass* theClass = theUnit->GetUnitClass();
-            long theCategory = theClass->mCategory;
-            if (theClass->mUnitType == kUnitTypeAirport) {
-                theUnit->mGoalQueues[0].Clear();
-                theUnit->mGoalQueues[1].Clear();
-                theUnit->mGoalQueues[2].Clear();
-                theUnit->mGoalQueues[3].Clear();
-                theUnit->mGoalQueues[4].Clear();
-                theUnit->StartAction(kActionAirportOpen);
-                theClass->ActionChanged(theUnit);
-                theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1]->ClearAirportQueue(theUnit, 0);
-            } else if ((theCategory == kUnitCategoryNavalBuilding || theCategory == kUnitCategorySpaceBuilding) && theClass->mAirTrafficType != 0) {
-                (theUnit->mGoalQueues.begin() + 0)->Clear();
-                (theUnit->mGoalQueues.begin() + 1)->Clear();
-                theUnit->StartAction(kActionAirportOpen);
-                theClass->ActionChanged(theUnit);
-                theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1]->ClearAirportQueue(theUnit, 0);
-            } else if (theClass->mUnitType == kUnitTypeNavyYard) {
-                theUnit->mGoalQueues[0].Clear();
-                theUnit->mGoalQueues[2].Clear();
-                theUnit->StartAction(kActionAirportOpen);
-                theClass->ActionChanged(theUnit);
-                theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1]->ClearAirportQueue(theUnit, 0);
-            } else if (theClass->mCategory == kUnitCategoryAirplane || theClass->mCategory == kUnitCategoryPlanetSpaceship) {
-                theUnit->mGoalQueues[1].Clear();
-            }
-            theUnit->RefreshGoals();
-            theUnit->RefreshActiveGoal();
-        }
-    }
+    ee_units_clear_airport_commands(static_cast<EEGroup*>(thePlayer->mActiveGroup));
 }
 
-// EEMDisband's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMDisband* inMessage, EeNetMsgSlot* outSlots)
+// EEMDisband's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMDisband::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_DISBAND;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4bd77c
-// Writes the Disband message (selection id) to a new network buffer
-void EEMDisband::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_DISBAND, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMDisband::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_DISBAND);
-}
-
-// FUNCTION: EXE 0x4bd7e7
-// Reads the Disband message (selection id) from a network buffer
-void EEMDisband::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 4712);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_DISBAND, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMDisband::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bd82a
@@ -2015,26 +1423,14 @@ void EEMDropoffResource::Execute()
     ee_units_dropoff_resource(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mDropoffID);
 }
 
-// EEMDropoffResource's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMDropoffResource* inMessage, EeNetMsgSlot* outSlots)
+// EEMDropoffResource's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMDropoffResource::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mDropoffID);
+    outClass = EE_NETMSG_DROPOFF_RESOURCE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mDropoffID);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bda6e
-// Writes the Dropoff Resource message (selection id, drop-off unit) to a new network buffer
-void EEMDropoffResource::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_DROPOFF_RESOURCE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMDropoffResource::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_DROPOFF_RESOURCE);
 }
 
 // FUNCTION: EXE 0x4bdaec
@@ -2044,135 +1440,43 @@ char* EEMDropoffResource::GetMessageLabel() const
     return "Dropoff Resource";
 }
 
-// FUNCTION: EXE 0x4bdaf2
-// Reads the Dropoff Resource message (selection id, drop-off unit) from a network buffer
-void EEMDropoffResource::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 4956);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_DROPOFF_RESOURCE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMDropoffResource::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
 void EEMEdictPreProposal::Execute()
 {
 }
 
-// EEMEdictPreProposal's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMEdictPreProposal* inMessage, EeNetMsgSlot* outSlots)
+// EEMEdictPreProposal's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMEdictPreProposal::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mEdict);
+    outClass = EE_NETMSG_EDICT_PRE_PROPOSAL;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mEdict);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bdb82
-// Writes the Edict Pre-Proposal message (selection id, edict) to a new network buffer
-void EEMEdictPreProposal::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_EDICT_PRE_PROPOSAL, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMEdictPreProposal::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_EDICT_PRE_PROPOSAL);
-}
-
-// FUNCTION: EXE 0x4bdc33
-// Reads the Edict Pre-Proposal message (selection id, edict) from a network buffer
-void EEMEdictPreProposal::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 5025);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_EDICT_PRE_PROPOSAL, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMEdictPreProposal::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 void EEMEdictPreProposalResponse::Execute()
 {
 }
 
-// EEMEdictPreProposalResponse's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMEdictPreProposalResponse* inMessage, EeNetMsgSlot* outSlots)
+// EEMEdictPreProposalResponse's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMEdictPreProposalResponse::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mEdict);
-    outSlots[6] = EENetMsgField(inMessage->mW12);
+    outClass = EE_NETMSG_EDICT_PRE_PROPOSAL_RESPONSE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mEdict);
+    outSlots[6] = EENetMsgField(this->mW12);
     return 7;
 }
 
-// FUNCTION: EXE 0x4bdc83
-// Writes the Edict Pre-Proposal Response message (selection id, edict, answer) to a new network buffer
-void EEMEdictPreProposalResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
+// EEMEdictProposal's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMEdictProposal::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_EDICT_PRE_PROPOSAL_RESPONSE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMEdictPreProposalResponse::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_EDICT_PRE_PROPOSAL_RESPONSE);
-}
-
-// FUNCTION: EXE 0x4bdd13
-// Reads the Edict Pre-Proposal Response message (selection id, edict, answer) from a network buffer
-void EEMEdictPreProposalResponse::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 5094);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_EDICT_PRE_PROPOSAL_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMEdictPreProposalResponse::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMEdictProposal's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMEdictProposal* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mEdict);
+    outClass = EE_NETMSG_EDICT_PROPOSAL;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mEdict);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bdd7a
-// Writes the Edict Proposal message (selection id, edict) to a new network buffer
-void EEMEdictProposal::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_EDICT_PROPOSAL, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMEdictProposal::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_EDICT_PROPOSAL);
-}
-
-// FUNCTION: EXE 0x4bddf8
-// Reads the Edict Proposal message (selection id, edict) from a network buffer
-void EEMEdictProposal::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 5162);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_EDICT_PROPOSAL, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMEdictProposal::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bde48
@@ -2187,42 +1491,16 @@ void EEMEdictVote::Execute()
 {
 }
 
-// EEMEdictVote's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMEdictVote* inMessage, EeNetMsgSlot* outSlots)
+// EEMEdictVote's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMEdictVote::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mEdict);
-    outSlots[6] = EENetMsgField(inMessage->mIsYes);
-    outSlots[7] = EENetMsgField(inMessage->mCount);
+    outClass = EE_NETMSG_EDICT_VOTE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mEdict);
+    outSlots[6] = EENetMsgField(this->mIsYes);
+    outSlots[7] = EENetMsgField(this->mCount);
     return 8;
-}
-
-// FUNCTION: EXE 0x4bde69
-// Writes the Edict Vote message (selection id, edict, yes flag, count) to a new network buffer
-void EEMEdictVote::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_EDICT_VOTE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMEdictVote::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_EDICT_VOTE);
-}
-
-// FUNCTION: EXE 0x4bdf08
-// Reads the Edict Vote message (selection id, edict, yes flag, count) from a network buffer
-void EEMEdictVote::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 5241);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_EDICT_VOTE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMEdictVote::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bdf7d
@@ -2233,26 +1511,14 @@ void EEMEndCinematic::Execute()
     gWorld.mScenarioManager->EndCinematic();
 }
 
-// EEMEndCinematic's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMEndCinematic* inMessage, EeNetMsgSlot* outSlots)
+// EEMEndCinematic's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMEndCinematic::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mF10);
+    outClass = EE_NETMSG_END_CINEMATIC;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mF10);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bdfa2
-// Writes the End Cinematic message (selection id, value) to a new network buffer
-void EEMEndCinematic::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_END_CINEMATIC, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMEndCinematic::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_END_CINEMATIC);
 }
 
 // FUNCTION: EXE 0x4be020
@@ -2260,20 +1526,6 @@ unsigned long EEMEndCinematic::ExportSize()
 char* EEMEndCinematic::GetMessageLabel() const
 {
     return "End Cinematic";
-}
-
-// FUNCTION: EXE 0x4be026
-// Reads the End Cinematic message (selection id, value) from a network buffer
-void EEMEndCinematic::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 5369);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_END_CINEMATIC, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMEndCinematic::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4be076
@@ -2286,26 +1538,14 @@ void EEMEnterShiftMode::Execute()
         gMouse->mShiftMode = true;
 }
 
-// EEMEnterShiftMode's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMEnterShiftMode* inMessage, EeNetMsgSlot* outSlots)
+// EEMEnterShiftMode's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMEnterShiftMode::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mGameTime);
+    outClass = EE_NETMSG_ENTER_SHIFT_MODE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mGameTime);
     return 6;
-}
-
-// FUNCTION: EXE 0x4be0b1
-// Writes the Enter Shift Mode message (selection id, game time) to a new network buffer
-void EEMEnterShiftMode::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_ENTER_SHIFT_MODE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMEnterShiftMode::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_ENTER_SHIFT_MODE);
 }
 
 // FUNCTION: EXE 0x4be12f
@@ -2313,20 +1553,6 @@ unsigned long EEMEnterShiftMode::ExportSize()
 char* EEMEnterShiftMode::GetMessageLabel() const
 {
     return "Enter Shift Mode";
-}
-
-// FUNCTION: EXE 0x4be135
-// Reads the Enter Shift Mode message (selection id, game time) from a network buffer
-void EEMEnterShiftMode::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 5491);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_ENTER_SHIFT_MODE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMEnterShiftMode::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4be185
@@ -2339,26 +1565,14 @@ void EEMExitShiftMode::Execute()
         gMouse->mShiftMode = false;
 }
 
-// EEMExitShiftMode's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMExitShiftMode* inMessage, EeNetMsgSlot* outSlots)
+// EEMExitShiftMode's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMExitShiftMode::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mGameTime);
+    outClass = EE_NETMSG_EXIT_SHIFT_MODE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mGameTime);
     return 6;
-}
-
-// FUNCTION: EXE 0x4be1c0
-// Writes the Exit Shift Mode message (selection id, game time) to a new network buffer
-void EEMExitShiftMode::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_EXIT_SHIFT_MODE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMExitShiftMode::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_EXIT_SHIFT_MODE);
 }
 
 // FUNCTION: EXE 0x4be23e
@@ -2368,42 +1582,16 @@ char* EEMExitShiftMode::GetMessageLabel() const
     return "Exit Shift Mode";
 }
 
-// FUNCTION: EXE 0x4be244
-// Reads the Exit Shift Mode message (selection id, game time) from a network buffer
-void EEMExitShiftMode::ImportMessage(unsigned char* inPayloadPointer)
+// EEMExchangeResources's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMExchangeResources::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 5617);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_EXIT_SHIFT_MODE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMExitShiftMode::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMExchangeResources's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMExchangeResources* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mIsSell);
-    outSlots[6] = EENetMsgField(inMessage->mResourceType);
-    outSlots[7] = EENetMsgField(inMessage->mFiveTimes);
+    outClass = EE_NETMSG_EXCHANGE_RESOURCES;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mIsSell);
+    outSlots[6] = EENetMsgField(this->mResourceType);
+    outSlots[7] = EENetMsgField(this->mFiveTimes);
     return 8;
-}
-
-// FUNCTION: EXE 0x4be294
-// Writes the Exchange Resources message (selection id, sell flag, resource, five-times flag) to a new network buffer
-void EEMExchangeResources::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_EXCHANGE_RESOURCES, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMExchangeResources::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_EXCHANGE_RESOURCES);
 }
 
 // FUNCTION: EXE 0x4be334
@@ -2411,20 +1599,6 @@ unsigned long EEMExchangeResources::ExportSize()
 char* EEMExchangeResources::GetMessageLabel() const
 {
     return "Exchange Resources";
-}
-
-// FUNCTION: EXE 0x4be33a
-// Reads the Exchange Resources message (selection id, sell flag, resource, five-times flag) from a network buffer
-void EEMExchangeResources::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 5712);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_EXCHANGE_RESOURCES, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMExchangeResources::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // 0x23cc42 (cdecl): the exchange rate between a resource and the trade resource for inPlayer (provisional name)
@@ -2460,39 +1634,13 @@ void EEMExchangeResources::Execute()
         gUIManager->mMainGameForm->UpdateHelpString();
 }
 
-// EEMExplore's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMExplore* inMessage, EeNetMsgSlot* outSlots)
+// EEMExplore's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMExplore::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_EXPLORE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4be508
-// Writes the Explore message (selection id) to a new network buffer
-void EEMExplore::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_EXPLORE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMExplore::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_EXPLORE);
-}
-
-// FUNCTION: EXE 0x4be573
-// Reads the Explore message (selection id) from a network buffer
-void EEMExplore::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 5856);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_EXPLORE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMExplore::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4be5b6
@@ -2559,47 +1707,32 @@ void EEMFullGameOptions::Execute()
     gUserInterface->PostLobbyUpdateGameOptions();
 }
 
-// EEMFullGameOptions's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMFullGameOptions* inMessage, EeNetMsgSlot* outSlots)
+// EEMFullGameOptions's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMFullGameOptions::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mAllowCustomCivs);
-    outSlots[6] = EENetMsgField(inMessage->mB53);
-    outSlots[7] = EENetMsgField(inMessage->mCheatCodes);
-    outSlots[8] = EENetMsgField(inMessage->mDifficulty);
-    outSlots[9] = EENetMsgField(inMessage->mEpochEnd);
-    outSlots[10] = EENetMsgField(inMessage->mGameSpeed);
-    outSlots[11] = EENetMsgField(inMessage->mLoadType);
-    outSlots[12] = EENetMsgField(inMessage->mVariant);
-    outSlots[13] = EENetMsgField(inMessage->mLockSpeed);
-    outSlots[14] = EENetMsgField(inMessage->mLockTeams);
-    outSlots[15] = EENetMsgField(inMessage->mMapSize);
-    outSlots[16] = EENetMsgField(inMessage->mRecordGames);
-    outSlots[17] = EENetMsgField(inMessage->mResources);
-    outSlots[18] = EENetMsgField(inMessage->mRevealMap);
-    outSlots[19] = EENetMsgField(inMessage->mEpochStart);
-    outSlots[20] = EENetMsgField(inMessage->mUnitLimit);
-    outSlots[21] = EENetMsgField(inMessage->mVictory);
-    outSlots[22] = EENetMsgField(inMessage->mWondersForVictory);
-    outSlots[23] = EENetMsgString(inMessage->mMapType);
+    outClass = EE_NETMSG_FULL_GAME_OPTIONS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mAllowCustomCivs);
+    outSlots[6] = EENetMsgField(this->mB53);
+    outSlots[7] = EENetMsgField(this->mCheatCodes);
+    outSlots[8] = EENetMsgField(this->mDifficulty);
+    outSlots[9] = EENetMsgField(this->mEpochEnd);
+    outSlots[10] = EENetMsgField(this->mGameSpeed);
+    outSlots[11] = EENetMsgField(this->mLoadType);
+    outSlots[12] = EENetMsgField(this->mVariant);
+    outSlots[13] = EENetMsgField(this->mLockSpeed);
+    outSlots[14] = EENetMsgField(this->mLockTeams);
+    outSlots[15] = EENetMsgField(this->mMapSize);
+    outSlots[16] = EENetMsgField(this->mRecordGames);
+    outSlots[17] = EENetMsgField(this->mResources);
+    outSlots[18] = EENetMsgField(this->mRevealMap);
+    outSlots[19] = EENetMsgField(this->mEpochStart);
+    outSlots[20] = EENetMsgField(this->mUnitLimit);
+    outSlots[21] = EENetMsgField(this->mVictory);
+    outSlots[22] = EENetMsgField(this->mWondersForVictory);
+    outSlots[23] = EENetMsgString(this->mMapType);
     return 24;
-}
-
-// FUNCTION: EXE 0x4be876
-// Writes the Full Game Options message (selection id, every option, map type) to a new network buffer
-void EEMFullGameOptions::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_FULL_GAME_OPTIONS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bea4e
-// Returns the Full Game Options message's wire size: 53 bytes plus the map type
-unsigned long EEMFullGameOptions::ExportSize()
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_FULL_GAME_OPTIONS, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: EXE 0x4bea5b
@@ -2615,13 +1748,8 @@ void EEMFullGameOptions::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 6160);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_FULL_GAME_OPTIONS, inPayloadPointer, theSlots, Slots(this, theSlots));
+    ee_netmsg_import(EE_NETMSG_FULL_GAME_OPTIONS, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
     this->mMapType.Import(inPayloadPointer + theSlots[23].offset);
-}
-
-bool EEMFullGameOptions::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bebe1
@@ -2699,31 +1827,16 @@ void EEMGameOptions::Execute()
     gUserInterface->PostLobbyUpdateGameOptions();
 }
 
-// EEMGameOptions's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMGameOptions* inMessage, EeNetMsgSlot* outSlots)
+// EEMGameOptions's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMGameOptions::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mOption);
-    outSlots[6] = EENetMsgField(inMessage->mValue);
-    outSlots[7] = EENetMsgString(inMessage->mMapType);
+    outClass = EE_NETMSG_GAME_OPTIONS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mOption);
+    outSlots[6] = EENetMsgField(this->mValue);
+    outSlots[7] = EENetMsgString(this->mMapType);
     return 8;
-}
-
-// FUNCTION: EXE 0x4beda5
-// Writes the Game Options message (selection id, option, value, map type) to a new network buffer
-void EEMGameOptions::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_GAME_OPTIONS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bee54
-// Returns the Game Options message's wire size: 13 bytes plus the map type
-unsigned long EEMGameOptions::ExportSize()
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_GAME_OPTIONS, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: EXE 0x4bee61
@@ -2739,13 +1852,8 @@ void EEMGameOptions::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 6423);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_GAME_OPTIONS, inPayloadPointer, theSlots, Slots(this, theSlots));
+    ee_netmsg_import(EE_NETMSG_GAME_OPTIONS, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
     this->mMapType.Import(inPayloadPointer + theSlots[7].offset);
-}
-
-bool EEMGameOptions::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4beedd
@@ -2760,25 +1868,13 @@ void EEMGameRestarting::Execute()
     }
 }
 
-// EEMGameRestarting's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMGameRestarting* inMessage, EeNetMsgSlot* outSlots)
+// EEMGameRestarting's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMGameRestarting::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_GAME_RESTARTING;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4bef05
-// Writes the Game Restarting message (selection id) to a new network buffer
-void EEMGameRestarting::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_GAME_RESTARTING, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMGameRestarting::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_GAME_RESTARTING);
 }
 
 // FUNCTION: EXE 0x4bef70
@@ -2788,20 +1884,6 @@ char* EEMGameRestarting::GetMessageLabel() const
     return "Game Restarting";
 }
 
-// FUNCTION: EXE 0x4bef76
-// Reads the Game Restarting message (selection id) from a network buffer
-void EEMGameRestarting::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 6555);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_GAME_RESTARTING, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMGameRestarting::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
 // FUNCTION: EXE 0x4befb9
 // Sets the world's game speed to the requested speed
 void EEMGameSpeed::Execute()
@@ -2809,26 +1891,14 @@ void EEMGameSpeed::Execute()
     gWorld.SetGameSpeed(this->mSpeed);
 }
 
-// EEMGameSpeed's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMGameSpeed* inMessage, EeNetMsgSlot* outSlots)
+// EEMGameSpeed's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMGameSpeed::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mSpeed);
+    outClass = EE_NETMSG_GAME_SPEED;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mSpeed);
     return 6;
-}
-
-// FUNCTION: EXE 0x4befcf
-// Packs the game-speed request (header, selection id, speed) into a new send buffer
-void EEMGameSpeed::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_GAME_SPEED, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMGameSpeed::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_GAME_SPEED);
 }
 
 // FUNCTION: EXE 0x4bf04d
@@ -2836,20 +1906,6 @@ unsigned long EEMGameSpeed::ExportSize()
 char* EEMGameSpeed::GetMessageLabel() const
 {
     return "Game Speed";
-}
-
-// FUNCTION: EXE 0x4bf053
-// Reads the game-speed request (header, selection id, speed) from a received payload
-void EEMGameSpeed::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 6681);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_GAME_SPEED, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMGameSpeed::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bf0a3
@@ -2864,27 +1920,15 @@ void EEMGatherResource::Execute()
     ee_units_gather(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTargetID, this->mIsQueued);
 }
 
-// EEMGatherResource's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMGatherResource* inMessage, EeNetMsgSlot* outSlots)
+// EEMGatherResource's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMGatherResource::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mTargetID);
-    outSlots[6] = EENetMsgField(inMessage->mIsQueued);
+    outClass = EE_NETMSG_GATHER_RESOURCE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mTargetID);
+    outSlots[6] = EENetMsgField(this->mIsQueued);
     return 7;
-}
-
-// FUNCTION: EXE 0x4bf20a
-// Packs the gather order (header, selection id, target id, queued flag) into a new send buffer
-void EEMGatherResource::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_GATHER_RESOURCE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMGatherResource::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_GATHER_RESOURCE);
 }
 
 // FUNCTION: EXE 0x4bf299
@@ -2894,39 +1938,13 @@ char* EEMGatherResource::GetMessageLabel() const
     return "Gather Resource";
 }
 
-// FUNCTION: EXE 0x4bf29f
-// Reads the gather order (header, selection id, target id, queued flag) from a received payload
-void EEMGatherResource::ImportMessage(unsigned char* inPayloadPointer)
+// EEMGoFanatic's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMGoFanatic::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 6846);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_GATHER_RESOURCE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMGatherResource::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMGoFanatic's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMGoFanatic* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_GO_FANATIC;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4bf306
-// Packs the go-fanatic order (header, selection id) into a new send buffer
-void EEMGoFanatic::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_GO_FANATIC, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMGoFanatic::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_GO_FANATIC);
 }
 
 // FUNCTION: EXE 0x4bf371
@@ -2934,20 +1952,6 @@ unsigned long EEMGoFanatic::ExportSize()
 char* EEMGoFanatic::GetMessageLabel() const
 {
     return "Go Fanatic";
-}
-
-// FUNCTION: EXE 0x4bf377
-// Reads the go-fanatic order (header, selection id) from a received payload
-void EEMGoFanatic::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 6922);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_GO_FANATIC, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMGoFanatic::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bf3ba
@@ -2963,42 +1967,16 @@ void EEMGoFanatic::Execute()
     }
 }
 
-// EEMHackANewUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMHackANewUnit* inMessage, EeNetMsgSlot* outSlots)
+// EEMHackANewUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMHackANewUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitType);
-    outSlots[6] = EENetMsgField(inMessage->mPoint);
-    outSlots[7] = EENetMsgField(inMessage->mPlayerID);
+    outClass = EE_NETMSG_HACK_A_NEW_UNIT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitType);
+    outSlots[6] = EENetMsgField(this->mPoint);
+    outSlots[7] = EENetMsgField(this->mPlayerID);
     return 8;
-}
-
-// FUNCTION: EXE 0x4bf429
-// Packs the create-unit cheat (header, selection id, unit type, position, owner id) into a new send buffer
-void EEMHackANewUnit::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_HACK_A_NEW_UNIT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMHackANewUnit::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_HACK_A_NEW_UNIT);
-}
-
-// FUNCTION: EXE 0x4bf4cb
-// Reads the create-unit cheat (header, selection id, unit type, position, owner id) from a received payload
-void EEMHackANewUnit::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 7017);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_HACK_A_NEW_UNIT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMHackANewUnit::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bf543
@@ -3081,25 +2059,13 @@ void EEMHaltSelectedGroup::Execute()
     }
 }
 
-// EEMHaltSelectedGroup's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMHaltSelectedGroup* inMessage, EeNetMsgSlot* outSlots)
+// EEMHaltSelectedGroup's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMHaltSelectedGroup::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_HALT_SELECTED_GROUP;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4bf92b
-// Packs the halt order (header, selection id) into a new send buffer
-void EEMHaltSelectedGroup::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_HALT_SELECTED_GROUP, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMHaltSelectedGroup::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_HALT_SELECTED_GROUP);
 }
 
 // FUNCTION: EXE 0x4bf996
@@ -3107,20 +2073,6 @@ unsigned long EEMHaltSelectedGroup::ExportSize()
 char* EEMHaltSelectedGroup::GetMessageLabel() const
 {
     return "Halt Selected Group";
-}
-
-// FUNCTION: EXE 0x4bf99c
-// Reads the halt order (header, selection id) from a received payload
-void EEMHaltSelectedGroup::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 7263);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_HALT_SELECTED_GROUP, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMHaltSelectedGroup::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bf9df
@@ -3134,26 +2086,14 @@ void EEMHealUnit::Execute()
     ee_units_heal_unit(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTargetID);
 }
 
-// EEMHealUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMHealUnit* inMessage, EeNetMsgSlot* outSlots)
+// EEMHealUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMHealUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mTargetID);
+    outClass = EE_NETMSG_HEAL_UNIT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mTargetID);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bfb0b
-// Packs the heal order (header, selection id, target id) into a new send buffer
-void EEMHealUnit::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_HEAL_UNIT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMHealUnit::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_HEAL_UNIT);
 }
 
 // FUNCTION: EXE 0x4bfb89
@@ -3163,58 +2103,16 @@ char* EEMHealUnit::GetMessageLabel() const
     return "Heal Unit";
 }
 
-// FUNCTION: EXE 0x4bfb8f
-// Reads the heal order (header, selection id, target id) from a received payload
-void EEMHealUnit::ImportMessage(unsigned char* inPayloadPointer)
+// EEMImmediateCargoUnload's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMImmediateCargoUnload::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 7424);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_HEAL_UNIT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMHealUnit::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// FUNCTION: EXE 0x4bfbdf
-// Returns the immediate-unload message's payload size (14 bytes)
-unsigned long EEMImmediateCargoUnload::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_IMMEDIATE_CARGO_UNLOAD);
-}
-
-// EEMImmediateCargoUnload's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMImmediateCargoUnload* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mTransportID);
-    outSlots[6] = EENetMsgField(inMessage->mCargoID);
-    outSlots[7] = EENetMsgField(inMessage->mB18);
+    outClass = EE_NETMSG_IMMEDIATE_CARGO_UNLOAD;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mTransportID);
+    outSlots[6] = EENetMsgField(this->mCargoID);
+    outSlots[7] = EENetMsgField(this->mB18);
     return 8;
-}
-
-// FUNCTION: EXE 0x4bfbe3
-// Packs the immediate-unload order (header, selection id, transport id, cargo id, flag) into a new send buffer
-void EEMImmediateCargoUnload::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_IMMEDIATE_CARGO_UNLOAD, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4bfc85
-// Reads the immediate-unload order (header, selection id, transport id, cargo id, flag) from a received payload
-void EEMImmediateCargoUnload::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 7504);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_IMMEDIATE_CARGO_UNLOAD, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMImmediateCargoUnload::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4bfcfd
@@ -3288,29 +2186,14 @@ void EEMInGameChat::Execute()
     }
 }
 
-// EEMInGameChat's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMInGameChat* inMessage, EeNetMsgSlot* outSlots)
+// EEMInGameChat's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMInGameChat::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgString(inMessage->mText);
+    outClass = EE_NETMSG_IN_GAME_CHAT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgString(this->mText);
     return 6;
-}
-
-// FUNCTION: EXE 0x4bffbc
-// Packs the chat message (header, selection id, text) into a new send buffer
-void EEMInGameChat::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_IN_GAME_CHAT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4c0041
-// Returns the chat message's payload size: the text's export size plus 5 bytes
-unsigned long EEMInGameChat::ExportSize()
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_IN_GAME_CHAT, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: EXE 0x4c004e
@@ -3326,48 +2209,17 @@ void EEMInGameChat::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 7731);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_IN_GAME_CHAT, inPayloadPointer, theSlots, Slots(this, theSlots));
+    ee_netmsg_import(EE_NETMSG_IN_GAME_CHAT, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
     this->mText.Import(inPayloadPointer + theSlots[5].offset);
 }
 
-bool EEMInGameChat::IsResponse(NEMessage* inMessage)
+// EEMIncrementEpic's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMIncrementEpic::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    return false;
-}
-
-// EEMIncrementEpic's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMIncrementEpic* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_INCREMENT_EPIC;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4c00a2
-// Packs the increment-epic message (header, selection id) into a new send buffer
-void EEMIncrementEpic::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_INCREMENT_EPIC, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMIncrementEpic::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_INCREMENT_EPIC);
-}
-
-// FUNCTION: EXE 0x4c010d
-// Reads the increment-epic message (header, selection id) from a received payload
-void EEMIncrementEpic::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 7793);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_INCREMENT_EPIC, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMIncrementEpic::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c0150
@@ -3392,26 +2244,14 @@ void EEMIncrementRallyTimer::Execute()
     }
 }
 
-// EEMIncrementRallyTimer's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMIncrementRallyTimer* inMessage, EeNetMsgSlot* outSlots)
+// EEMIncrementRallyTimer's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMIncrementRallyTimer::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mGoalQueue);
+    outClass = EE_NETMSG_INCREMENT_RALLY_TIMER;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mGoalQueue);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c01e9
-// Packs the rally-timer message (header, selection id, goal queue) into a new send buffer
-void EEMIncrementRallyTimer::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_INCREMENT_RALLY_TIMER, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMIncrementRallyTimer::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_INCREMENT_RALLY_TIMER);
 }
 
 // FUNCTION: EXE 0x4c0265
@@ -3421,39 +2261,13 @@ char* EEMIncrementRallyTimer::GetMessageLabel() const
     return "Increment Rally Timer";
 }
 
-// FUNCTION: EXE 0x4c026b
-// Reads the rally-timer message (header, selection id, goal queue) from a received payload
-void EEMIncrementRallyTimer::ImportMessage(unsigned char* inPayloadPointer)
+// EEMJITManufacturing's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMJITManufacturing::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 7927);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_INCREMENT_RALLY_TIMER, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMIncrementRallyTimer::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMJITManufacturing's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMJITManufacturing* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_J_I_T_MANUFACTURING;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4c02bb
-// Packs the JIT-manufacturing toggle (header, selection id) into a new send buffer
-void EEMJITManufacturing::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_J_I_T_MANUFACTURING, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMJITManufacturing::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_J_I_T_MANUFACTURING);
 }
 
 // FUNCTION: EXE 0x4c0326
@@ -3461,20 +2275,6 @@ unsigned long EEMJITManufacturing::ExportSize()
 char* EEMJITManufacturing::GetMessageLabel() const
 {
     return "JIT Manufacturing";
-}
-
-// FUNCTION: EXE 0x4c032c
-// Reads the JIT-manufacturing toggle (header, selection id) from a received payload
-void EEMJITManufacturing::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 7992);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_J_I_T_MANUFACTURING, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMJITManufacturing::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c036f
@@ -3498,40 +2298,14 @@ void EEMJITManufacturing::Execute()
         gUserInterface->UpdateJITManufacturing();
 }
 
-// EEMKillUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMKillUnit* inMessage, EeNetMsgSlot* outSlots)
+// EEMKillUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMKillUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mAllUnits);
+    outClass = EE_NETMSG_KILL_UNIT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mAllUnits);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c0404
-// Packs the delete-unit order (header, selection id, all-units flag) into a new send buffer
-void EEMKillUnit::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_KILL_UNIT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMKillUnit::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_KILL_UNIT);
-}
-
-// FUNCTION: EXE 0x4c0480
-// Reads the delete-unit order (header, selection id, all-units flag) from a received payload
-void EEMKillUnit::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 8083);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_KILL_UNIT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMKillUnit::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c04d0
@@ -3589,22 +2363,15 @@ void EEMLagStatus::Execute()
     gUserInterface->SetLagStatus(this->mStatus, this->mLagWarning);
 }
 
-// EEMLagStatus's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLagStatus* inMessage, EeNetMsgSlot* outSlots)
+// EEMLagStatus's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLagStatus::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mStatus);
-    outSlots[6] = EENetMsgField(inMessage->mLagWarning);
+    outClass = EE_NETMSG_LAG_STATUS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mStatus);
+    outSlots[6] = EENetMsgField(this->mLagWarning);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c06cd
-// Packs the lag-status message (header, selection id, status, warning) into a new send buffer
-void EEMLagStatus::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LAG_STATUS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: EXE 0x4c075b
@@ -3614,54 +2381,14 @@ char* EEMLagStatus::GetMessageLabel() const
     return "Lag Status";
 }
 
-// FUNCTION: EXE 0x4c0761
-// Reads the lag-status message (header, selection id, status, warning) from a received payload
-void EEMLagStatus::ImportMessage(unsigned char* inPayloadPointer)
+// EEMLoadMainScreen's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLoadMainScreen::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 8285);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LAG_STATUS, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMLagStatus::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMLoadMainScreen's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLoadMainScreen* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mB10);
+    outClass = EE_NETMSG_LOAD_MAIN_SCREEN;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mB10);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c07c8
-// Packs the load-main-screen message (header, selection id, stop flag) into a new send buffer
-void EEMLoadMainScreen::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LOAD_MAIN_SCREEN, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMLoadMainScreen::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_LOAD_MAIN_SCREEN);
-}
-
-// FUNCTION: EXE 0x4c0844
-// Reads the load-main-screen message (header, selection id, stop flag) from a received payload
-void EEMLoadMainScreen::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 8356);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_MAIN_SCREEN, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMLoadMainScreen::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // inline (header-declared; the COMDAT 0x4c0894 sits here): inPoint on the terrain, its own z off
@@ -3715,41 +2442,15 @@ EEMLoadMainScreenResponse::EEMLoadMainScreenResponse(unsigned char inSlot, unsig
 {
 }
 
-// EEMLoadMainScreenResponse's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLoadMainScreenResponse* inMessage, EeNetMsgSlot* outSlots)
+// EEMLoadMainScreenResponse's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLoadMainScreenResponse::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mSlot);
-    outSlots[6] = EENetMsgField(inMessage->mPlayerID);
+    outClass = EE_NETMSG_LOAD_MAIN_SCREEN_RESPONSE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mSlot);
+    outSlots[6] = EENetMsgField(this->mPlayerID);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c0a6e
-// Packs the main-screen response (header, selection id, slot, player id) into a new send buffer
-void EEMLoadMainScreenResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LOAD_MAIN_SCREEN_RESPONSE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMLoadMainScreenResponse::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_LOAD_MAIN_SCREEN_RESPONSE);
-}
-
-// FUNCTION: EXE 0x4c0afb
-// Reads the main-screen response (header, selection id, slot, player id) from a received payload
-void EEMLoadMainScreenResponse::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 8466);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_MAIN_SCREEN_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMLoadMainScreenResponse::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 bool gLocalPlayerOut;                      // 0x4e6099 (.bss between this unit's Execute statics 0x4e6098/0x4e609a; ee/EEMessage.h)
@@ -3781,35 +2482,20 @@ void EEMLoadMainScreenResponse::Execute()
     }
 }
 
-// FUNCTION: EXE 0x4c0ca9
-// Returns the load/save message's payload size: the file name's export size plus 20
-unsigned long EEMLoadOrSaveGame::ExportSize()
+// EEMLoadOrSaveGame's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLoadOrSaveGame::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_LOAD_OR_SAVE_GAME, theSlots, Slots(this, theSlots));
-}
-
-// EEMLoadOrSaveGame's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLoadOrSaveGame* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mIsLoad);
-    outSlots[6] = EENetMsgField(inMessage->mIsQuiet);
-    outSlots[7] = EENetMsgField(inMessage->mTick);
-    outSlots[8] = EENetMsgField(inMessage->mTime);
-    outSlots[9] = EENetMsgField(inMessage->mIsAutoSave);
-    outSlots[10] = EENetMsgField(inMessage->mWaitMessageID);
-    outSlots[11] = EENetMsgString(inMessage->mFileName);
+    outClass = EE_NETMSG_LOAD_OR_SAVE_GAME;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mIsLoad);
+    outSlots[6] = EENetMsgField(this->mIsQuiet);
+    outSlots[7] = EENetMsgField(this->mTick);
+    outSlots[8] = EENetMsgField(this->mTime);
+    outSlots[9] = EENetMsgField(this->mIsAutoSave);
+    outSlots[10] = EENetMsgField(this->mWaitMessageID);
+    outSlots[11] = EENetMsgString(this->mFileName);
     return 12;
-}
-
-// FUNCTION: EXE 0x4c0cb6
-// Packs the load/save request (header, load, quiet, tick, time, auto-save, wait id, file name) into a new send buffer
-void EEMLoadOrSaveGame::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LOAD_OR_SAVE_GAME, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: EXE 0x4c0dae
@@ -3818,7 +2504,7 @@ void EEMLoadOrSaveGame::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 8602);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_OR_SAVE_GAME, inPayloadPointer, theSlots, Slots(this, theSlots));
+    ee_netmsg_import(EE_NETMSG_LOAD_OR_SAVE_GAME, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
     this->mFileName.Import(inPayloadPointer + theSlots[11].offset);
 }
 
@@ -3913,75 +2599,25 @@ long EEMLoadOrSaveGame::LoadOrSave()
 // FUNCTION: EXE 0x4c1264
 // Packs the load/save response (header, selection id, tick) into a new send buffer
 
-// EEMLoadOrSaveGameResponse's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLoadOrSaveGameResponse* inMessage, EeNetMsgSlot* outSlots)
+// EEMLoadOrSaveGameResponse's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLoadOrSaveGameResponse::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mTick);
+    outClass = EE_NETMSG_LOAD_OR_SAVE_GAME_RESPONSE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mTick);
     return 6;
 }
 
-void EEMLoadOrSaveGameResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
+// EEMLoadPercent's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLoadPercent::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LOAD_OR_SAVE_GAME_RESPONSE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMLoadOrSaveGameResponse::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_LOAD_OR_SAVE_GAME_RESPONSE);
-}
-
-// FUNCTION: EXE 0x4c12e2
-// Reads the load/save response (header, selection id, tick) from a received payload
-void EEMLoadOrSaveGameResponse::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 8803);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_OR_SAVE_GAME_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMLoadOrSaveGameResponse::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMLoadPercent's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLoadPercent* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mSlot);
-    outSlots[6] = EENetMsgField(inMessage->mPercent);
+    outClass = EE_NETMSG_LOAD_PERCENT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mSlot);
+    outSlots[6] = EENetMsgField(this->mPercent);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c1332
-// Packs the load-progress message (header, selection id, slot, percent) into a new send buffer
-void EEMLoadPercent::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LOAD_PERCENT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMLoadPercent::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_LOAD_PERCENT);
-}
-
-// FUNCTION: EXE 0x4c13c3
-// Reads the load-progress message (header, selection id, slot, percent) from a received payload
-void EEMLoadPercent::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 8876);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_PERCENT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMLoadPercent::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c142a
@@ -3993,41 +2629,15 @@ void EEMLoadPercent::Execute()
     gUserInterface->SetLoadPercent(this->mSlot, this->mPercent);
 }
 
-// EEMLoadUnitData's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLoadUnitData* inMessage, EeNetMsgSlot* outSlots)
+// EEMLoadUnitData's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLoadUnitData::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitType);
-    outSlots[6] = EENetMsgField(inMessage->mB14);
+    outClass = EE_NETMSG_LOAD_UNIT_DATA;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitType);
+    outSlots[6] = EENetMsgField(this->mB14);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c1447
-// Packs the load-unit-data message (header, selection id, unit type, flag) into a new send buffer
-void EEMLoadUnitData::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LOAD_UNIT_DATA, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMLoadUnitData::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_LOAD_UNIT_DATA);
-}
-
-// FUNCTION: EXE 0x4c14d6
-// Reads the load-unit-data message (header, selection id, unit type, flag) from a received payload
-void EEMLoadUnitData::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 8953);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_UNIT_DATA, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMLoadUnitData::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c153d
@@ -4047,42 +2657,16 @@ void EEMLoadUnitData::Execute()
     }
 }
 
-// EEMLoadGarrison's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLoadGarrison* inMessage, EeNetMsgSlot* outSlots)
+// EEMLoadGarrison's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLoadGarrison::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mGarrisonID);
-    outSlots[6] = EENetMsgField(inMessage->mUnitID);
-    outSlots[7] = EENetMsgField(inMessage->mB18);
+    outClass = EE_NETMSG_LOAD_GARRISON;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mGarrisonID);
+    outSlots[6] = EENetMsgField(this->mUnitID);
+    outSlots[7] = EENetMsgField(this->mB18);
     return 8;
-}
-
-// FUNCTION: EXE 0x4c1608
-// Packs the garrison order (header, selection id, garrison id, unit id, flag) into a new send buffer
-void EEMLoadGarrison::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LOAD_GARRISON, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMLoadGarrison::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_LOAD_GARRISON);
-}
-
-// FUNCTION: EXE 0x4c16aa
-// Reads the garrison order (header, selection id, garrison id, unit id, flag) from a received payload
-void EEMLoadGarrison::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 9056);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_GARRISON, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMLoadGarrison::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 #include "ee/EEUGRust.h"
@@ -4156,42 +2740,16 @@ void EEMLoadGarrison::Execute()
     }
 }
 
-// EEMLoadTransport's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLoadTransport* inMessage, EeNetMsgSlot* outSlots)
+// EEMLoadTransport's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLoadTransport::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mTransportID);
-    outSlots[6] = EENetMsgField(inMessage->mPassengerID);
-    outSlots[7] = EENetMsgField(inMessage->mB18);
+    outClass = EE_NETMSG_LOAD_TRANSPORT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mTransportID);
+    outSlots[6] = EENetMsgField(this->mPassengerID);
+    outSlots[7] = EENetMsgField(this->mB18);
     return 8;
-}
-
-// FUNCTION: EXE 0x4c1a5f
-// Packs the load-transport order (header, selection id, transport id, passenger id, flag) into a new send buffer
-void EEMLoadTransport::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LOAD_TRANSPORT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMLoadTransport::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_LOAD_TRANSPORT);
-}
-
-// FUNCTION: EXE 0x4c1b01
-// Reads the load-transport order (header, selection id, transport id, passenger id, flag) from a received payload
-void EEMLoadTransport::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 9275);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOAD_TRANSPORT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMLoadTransport::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 #include "ee/EEUGRust.h"
@@ -4275,33 +2833,14 @@ void EEMLoadTransport::Execute()
     thePlayer->PlayAcknowledgement(theTransport);
 }
 
-// FUNCTION: EXE 0x4c1ee0
-// Returns the message's payload size (6 bytes)
-unsigned long EEMChangeSelectedUnitCollisionSphere::ExportSize()
+// EEMLockUnlock's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMLockUnlock::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    return ee_netmsg_fixed_size(EE_NETMSG_CHANGE_SELECTED_UNIT_COLLISION_SPHERE);
-}
-
-// EEMLockUnlock's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMLockUnlock* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mIsLocked);
+    outClass = EE_NETMSG_LOCK_UNLOCK;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mIsLocked);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c1ee4
-// Packs the gate lock order (header, selection id, locked flag) into a new send buffer
-void EEMLockUnlock::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_LOCK_UNLOCK, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMLockUnlock::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_LOCK_UNLOCK);
 }
 
 // FUNCTION: EXE 0x4c1f60
@@ -4309,20 +2848,6 @@ unsigned long EEMLockUnlock::ExportSize()
 char* EEMLockUnlock::GetMessageLabel() const
 {
     return "Lock Unlock";
-}
-
-// FUNCTION: EXE 0x4c1f66
-// Reads the gate lock order (header, selection id, locked flag) from a received payload
-void EEMLockUnlock::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 9515);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_LOCK_UNLOCK, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMLockUnlock::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c1fb6
@@ -4347,39 +2872,13 @@ void EEMLockUnlock::Execute()
     }
 }
 
-// EEMMakeWorldVisible's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMMakeWorldVisible* inMessage, EeNetMsgSlot* outSlots)
+// EEMMakeWorldVisible's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMMakeWorldVisible::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_MAKE_WORLD_VISIBLE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4c207d
-// Packs the reveal-map cheat (header, selection id) into a new send buffer
-void EEMMakeWorldVisible::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_MAKE_WORLD_VISIBLE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMMakeWorldVisible::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_MAKE_WORLD_VISIBLE);
-}
-
-// FUNCTION: EXE 0x4c20e8
-// Reads the reveal-map cheat (header, selection id) from a received payload
-void EEMMakeWorldVisible::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 9604);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_MAKE_WORLD_VISIBLE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMMakeWorldVisible::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c212b
@@ -4418,108 +2917,42 @@ void EEMMigrationSlotInfo::Execute()
     }
 }
 
-// EEMMigrationSlotInfo's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMMigrationSlotInfo* inMessage, EeNetMsgSlot* outSlots)
+// EEMMigrationSlotInfo's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMMigrationSlotInfo::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPlayerID);
-    outSlots[6] = EENetMsgField(inMessage->mSlot);
+    outClass = EE_NETMSG_MIGRATION_SLOT_INFO;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPlayerID);
+    outSlots[6] = EENetMsgField(this->mSlot);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c2297
-// Packs the migration slot message (header, selection id, player id, slot) into a new send buffer
-void EEMMigrationSlotInfo::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_MIGRATION_SLOT_INFO, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMMigrationSlotInfo::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_MIGRATION_SLOT_INFO);
-}
-
-// FUNCTION: EXE 0x4c2324
-// Reads the migration slot message (header, selection id, player id, slot) from a received payload
-void EEMMigrationSlotInfo::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 9746);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_MIGRATION_SLOT_INFO, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMMigrationSlotInfo::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// FUNCTION: EXE 0x4c2389
-// Returns the edict message's payload size (12 bytes)
-unsigned long EEMNewEdictEnacted::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_NEW_EDICT_ENACTED);
 }
 
 void EEMNewEdictEnacted::Execute()
 {
 }
 
-// EEMNewEdictEnacted's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMNewEdictEnacted* inMessage, EeNetMsgSlot* outSlots)
+// EEMNewEdictEnacted's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMNewEdictEnacted::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mEdict);
-    outSlots[6] = EENetMsgField(inMessage->mYesVotes);
-    outSlots[7] = EENetMsgField(inMessage->mNoVotes);
-    outSlots[8] = EENetMsgField(inMessage->mIsEnacted);
+    outClass = EE_NETMSG_NEW_EDICT_ENACTED;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mEdict);
+    outSlots[6] = EENetMsgField(this->mYesVotes);
+    outSlots[7] = EENetMsgField(this->mNoVotes);
+    outSlots[8] = EENetMsgField(this->mIsEnacted);
     return 9;
 }
 
-// FUNCTION: EXE 0x4c238d
-// Packs the edict vote result (header, selection id, edict, yes and no votes, enacted flag) into a new send buffer
-void EEMNewEdictEnacted::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
+// EEMPackUnpack's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMPackUnpack::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_NEW_EDICT_ENACTED, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4c2443
-// Reads the edict vote result (header, selection id, edict, yes and no votes, enacted flag) from a received payload
-void EEMNewEdictEnacted::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 9829);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_NEW_EDICT_ENACTED, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMNewEdictEnacted::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMPackUnpack's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMPackUnpack* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPack);
+    outClass = EE_NETMSG_PACK_UNPACK;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPack);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c24cb
-// Packs the pack/unpack order (header, selection id, pack flag) into a new send buffer
-void EEMPackUnpack::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_PACK_UNPACK, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMPackUnpack::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_PACK_UNPACK);
 }
 
 // FUNCTION: EXE 0x4c2547
@@ -4527,20 +2960,6 @@ unsigned long EEMPackUnpack::ExportSize()
 char* EEMPackUnpack::GetMessageLabel() const
 {
     return "Pack Unpack";
-}
-
-// FUNCTION: EXE 0x4c254d
-// Reads the pack/unpack order (header, selection id, pack flag) from a received payload
-void EEMPackUnpack::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 9918);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_PACK_UNPACK, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMPackUnpack::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c259d
@@ -4631,27 +3050,20 @@ void EEMPathTo::Execute()
                      this->mIsForcedMove, this->mIsRotating, this->mIsQueued, this->mUseGroupMovement);
 }
 
-// EEMPathTo's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMPathTo* inMessage, EeNetMsgSlot* outSlots)
+// EEMPathTo's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMPathTo::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mFacing);
-    outSlots[6] = EENetMsgField(inMessage->mX);
-    outSlots[7] = EENetMsgField(inMessage->mY);
-    outSlots[8] = EENetMsgField(inMessage->mIsForcedMove);
-    outSlots[9] = EENetMsgField(inMessage->mIsRotating);
-    outSlots[10] = EENetMsgField(inMessage->mIsQueued);
-    outSlots[11] = EENetMsgField(inMessage->mUseGroupMovement);
+    outClass = EE_NETMSG_PATH_TO;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mFacing);
+    outSlots[6] = EENetMsgField(this->mX);
+    outSlots[7] = EENetMsgField(this->mY);
+    outSlots[8] = EENetMsgField(this->mIsForcedMove);
+    outSlots[9] = EENetMsgField(this->mIsRotating);
+    outSlots[10] = EENetMsgField(this->mIsQueued);
+    outSlots[11] = EENetMsgField(this->mUseGroupMovement);
     return 12;
-}
-
-// FUNCTION: EXE 0x4c2b41
-// Packs the move order (header, facing, x, y, forced, rotating, queued, group-movement flags) into a new send buffer
-void EEMPathTo::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_PATH_TO, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: EXE 0x4c2c30
@@ -4659,20 +3071,6 @@ void EEMPathTo::ExportMessage(unsigned char** outPayloadPointer, unsigned long& 
 char* EEMPathTo::GetMessageLabel() const
 {
     return "Path To";
-}
-
-// FUNCTION: EXE 0x4c2c36
-// Reads the move order (header, facing, x, y, forced, rotating, queued, group-movement flags) from a received payload
-void EEMPathTo::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 10326);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_PATH_TO, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMPathTo::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c2cf2
@@ -4688,26 +3086,14 @@ void EEMPatrol::Execute()
     ee_units_patrol(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mTargetID);
 }
 
-// EEMPatrol's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMPatrol* inMessage, EeNetMsgSlot* outSlots)
+// EEMPatrol's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMPatrol::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mTargetID);
+    outClass = EE_NETMSG_PATROL;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mTargetID);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c2ef5
-// Packs the patrol order (header, selection id, target id) into a new send buffer
-void EEMPatrol::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_PATROL, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMPatrol::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_PATROL);
 }
 
 // FUNCTION: EXE 0x4c2f73
@@ -4717,61 +3103,19 @@ char* EEMPatrol::GetMessageLabel() const
     return "Patrol";
 }
 
-// FUNCTION: EXE 0x4c2f79
-// Reads the patrol order (header, selection id, target id) from a received payload
-void EEMPatrol::ImportMessage(unsigned char* inPayloadPointer)
+// EEMPayTribute's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMPayTribute::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 10546);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_PATROL, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMPatrol::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// FUNCTION: EXE 0x4c2fc9
-// Returns the tribute message's payload size (26 bytes)
-unsigned long EEMPayTribute::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_PAY_TRIBUTE);
-}
-
-// EEMPayTribute's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMPayTribute* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mFood);
-    outSlots[6] = EENetMsgField(inMessage->mGold);
-    outSlots[7] = EENetMsgField(inMessage->mIron);
-    outSlots[8] = EENetMsgField(inMessage->mStone);
-    outSlots[9] = EENetMsgField(inMessage->mWood);
-    outSlots[10] = EENetMsgField(inMessage->mReceiver);
+    outClass = EE_NETMSG_PAY_TRIBUTE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mFood);
+    outSlots[6] = EENetMsgField(this->mGold);
+    outSlots[7] = EENetMsgField(this->mIron);
+    outSlots[8] = EENetMsgField(this->mStone);
+    outSlots[9] = EENetMsgField(this->mWood);
+    outSlots[10] = EENetMsgField(this->mReceiver);
     return 11;
-}
-
-// FUNCTION: EXE 0x4c2fcd
-// Packs the tribute (header, selection id, food, gold, iron, stone, wood, receiver) into a new send buffer
-void EEMPayTribute::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_PAY_TRIBUTE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4c30af
-// Reads the tribute (header, selection id, food, gold, iron, stone, wood, receiver) from a received payload
-void EEMPayTribute::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 10634);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_PAY_TRIBUTE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMPayTribute::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c315b
@@ -4877,36 +3221,17 @@ void EEMPlayerInformation::Execute()
     gUserInterface->PostLobbyUpdatePlayer(this->mSlot, this->mField);
 }
 
-// EEMPlayerInformation's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMPlayerInformation* inMessage, EeNetMsgSlot* outSlots)
+// EEMPlayerInformation's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMPlayerInformation::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mValue);
-    outSlots[6] = EENetMsgField(inMessage->mField);
-    outSlots[7] = EENetMsgField(inMessage->mPing);
-    outSlots[8] = EENetMsgField(inMessage->mSlot);
+    outClass = EE_NETMSG_PLAYER_INFORMATION;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mValue);
+    outSlots[6] = EENetMsgField(this->mField);
+    outSlots[7] = EENetMsgField(this->mPing);
+    outSlots[8] = EENetMsgField(this->mSlot);
     return 9;
-}
-
-// FUNCTION: EXE 0x4c3641
-// Packs the lobby player update (header, selection id, value, field, ping, slot) into a new send buffer
-void EEMPlayerInformation::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_PLAYER_INFORMATION, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMPlayerInformation::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_PLAYER_INFORMATION);
-}
-
-// FUNCTION: EXE 0x4c36fc
-// Returns the move order's payload size (21 bytes)
-unsigned long EEMPathTo::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_PATH_TO);
 }
 
 // FUNCTION: EXE 0x4c3700
@@ -4914,20 +3239,6 @@ unsigned long EEMPathTo::ExportSize()
 char* EEMPlayerInformation::GetMessageLabel() const
 {
     return "Player Information";
-}
-
-// FUNCTION: EXE 0x4c3706
-// Reads the lobby player update (header, selection id, value, field, ping, slot) from a received payload
-void EEMPlayerInformation::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 11046);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_PLAYER_INFORMATION, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMPlayerInformation::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c378e
@@ -4953,40 +3264,25 @@ void EEMFullPlayerInformation::Execute()
 {
 }
 
-// EEMFullPlayerInformation's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMFullPlayerInformation* inMessage, EeNetMsgSlot* outSlots)
+// EEMFullPlayerInformation's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMFullPlayerInformation::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mSlot);
-    outSlots[6] = EENetMsgField(inMessage->mSlotType);
-    outSlots[7] = EENetMsgField(inMessage->mLoadedType);
-    outSlots[8] = EENetMsgString(inMessage->mName);
-    outSlots[9] = EENetMsgField(inMessage->mPing);
-    outSlots[10] = EENetMsgField(inMessage->mColor);
-    outSlots[11] = EENetMsgField(inMessage->mTeam);
-    outSlots[12] = EENetMsgField(inMessage->mCitizenBonus);
-    outSlots[13] = EENetMsgField(inMessage->mIsReady);
-    outSlots[14] = EENetMsgField(inMessage->mIsLocal);
-    outSlots[15] = EENetMsgField(inMessage->mB42);
-    outSlots[16] = EENetMsgField(inMessage->mEngine);
+    outClass = EE_NETMSG_FULL_PLAYER_INFORMATION;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mSlot);
+    outSlots[6] = EENetMsgField(this->mSlotType);
+    outSlots[7] = EENetMsgField(this->mLoadedType);
+    outSlots[8] = EENetMsgString(this->mName);
+    outSlots[9] = EENetMsgField(this->mPing);
+    outSlots[10] = EENetMsgField(this->mColor);
+    outSlots[11] = EENetMsgField(this->mTeam);
+    outSlots[12] = EENetMsgField(this->mCitizenBonus);
+    outSlots[13] = EENetMsgField(this->mIsReady);
+    outSlots[14] = EENetMsgField(this->mIsLocal);
+    outSlots[15] = EENetMsgField(this->mB42);
+    outSlots[16] = EENetMsgField(this->mEngine);
     return 17;
-}
-
-// FUNCTION: EXE 0x4c3818
-// Packs the full lobby player record (header, slot, types, name, ping, color, team, flags) into a new send buffer
-void EEMFullPlayerInformation::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_FULL_PLAYER_INFORMATION, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4c395e
-// Returns the full player record's payload size: the name's export size plus 36 (port: plus 4, the engine)
-unsigned long EEMFullPlayerInformation::ExportSize()
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_FULL_PLAYER_INFORMATION, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: EXE 0x4c396b
@@ -5002,45 +3298,25 @@ void EEMFullPlayerInformation::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 11227);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_FULL_PLAYER_INFORMATION, inPayloadPointer, theSlots, Slots(this, theSlots));
+    ee_netmsg_import(EE_NETMSG_FULL_PLAYER_INFORMATION, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
     this->mName.Import(inPayloadPointer + theSlots[8].offset);
-}
-
-bool EEMFullPlayerInformation::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// FUNCTION: EXE 0x4c3a70
-// Returns the slot-info message's payload size: the address's export size plus 8
-unsigned long EEMPlayerSlotInfo::ExportSize()
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_PLAYER_SLOT_INFO, theSlots, Slots(this, theSlots));
 }
 
 void EEMPlayerSlotInfo::Execute()
 {
 }
 
-// EEMPlayerSlotInfo's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMPlayerSlotInfo* inMessage, EeNetMsgSlot* outSlots)
+// EEMPlayerSlotInfo's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMPlayerSlotInfo::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPlayerID);
-    outSlots[6] = EENetMsgField(inMessage->mSlot);
-    outSlots[7] = EENetMsgField(inMessage->mIsBehindFirewall);
-    outSlots[8] = EENetMsgString(inMessage->mAddress);
+    outClass = EE_NETMSG_PLAYER_SLOT_INFO;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPlayerID);
+    outSlots[6] = EENetMsgField(this->mSlot);
+    outSlots[7] = EENetMsgField(this->mIsBehindFirewall);
+    outSlots[8] = EENetMsgString(this->mAddress);
     return 9;
-}
-
-// FUNCTION: EXE 0x4c3a7d
-// Packs the player slot info (header, selection id, player id, slot, firewall flag, address) into a new send buffer
-void EEMPlayerSlotInfo::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_PLAYER_SLOT_INFO, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: EXE 0x4c3b39
@@ -5049,13 +3325,8 @@ void EEMPlayerSlotInfo::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 11370);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_PLAYER_SLOT_INFO, inPayloadPointer, theSlots, Slots(this, theSlots));
+    ee_netmsg_import(EE_NETMSG_PLAYER_SLOT_INFO, inPayloadPointer, theSlots, this->CodecSlots(theSlots));
     this->mAddress.Import(inPayloadPointer + theSlots[8].offset);
-}
-
-bool EEMPlayerSlotInfo::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c3bbc
@@ -5080,40 +3351,14 @@ void EEMRecordFrames::Execute()
     }
 }
 
-// EEMRecordFrames's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMRecordFrames* inMessage, EeNetMsgSlot* outSlots)
+// EEMRecordFrames's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMRecordFrames::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mSlowPlayback);
+    outClass = EE_NETMSG_RECORD_FRAMES;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mSlowPlayback);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c3c6a
-// Packs the playback-speed message (header, selection id, slow flag) into a new send buffer
-void EEMRecordFrames::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_RECORD_FRAMES, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMRecordFrames::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_RECORD_FRAMES);
-}
-
-// FUNCTION: EXE 0x4c3ce6
-// Reads the playback-speed message (header, selection id, slow flag) from a received payload
-void EEMRecordFrames::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 11499);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_RECORD_FRAMES, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMRecordFrames::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c3d36
@@ -5124,26 +3369,14 @@ void EEMRemoveUnitFromSelectedGroup::Execute()
     thePlayer->RemoveUnitFromSelectedGroup(this->mUnitID);
 }
 
-// EEMRemoveUnitFromSelectedGroup's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMRemoveUnitFromSelectedGroup* inMessage, EeNetMsgSlot* outSlots)
+// EEMRemoveUnitFromSelectedGroup's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMRemoveUnitFromSelectedGroup::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitID);
+    outClass = EE_NETMSG_REMOVE_UNIT_FROM_SELECTED_GROUP;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitID);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c3d5d
-// Packs the deselect message (header, selection id, unit id) into a new send buffer
-void EEMRemoveUnitFromSelectedGroup::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_REMOVE_UNIT_FROM_SELECTED_GROUP, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMRemoveUnitFromSelectedGroup::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_REMOVE_UNIT_FROM_SELECTED_GROUP);
 }
 
 // FUNCTION: EXE 0x4c3ddb
@@ -5151,20 +3384,6 @@ unsigned long EEMRemoveUnitFromSelectedGroup::ExportSize()
 char* EEMRemoveUnitFromSelectedGroup::GetMessageLabel() const
 {
     return "Remove Unit From Selected Group";
-}
-
-// FUNCTION: EXE 0x4c3de1
-// Reads the deselect message (header, selection id, unit id) from a received payload
-void EEMRemoveUnitFromSelectedGroup::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 11621);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_REMOVE_UNIT_FROM_SELECTED_GROUP, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMRemoveUnitFromSelectedGroup::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c3e31
@@ -5179,27 +3398,15 @@ void EEMRepairUnit::Execute()
     ee_units_repair(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTargetID, this->mIsQueued);
 }
 
-// EEMRepairUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMRepairUnit* inMessage, EeNetMsgSlot* outSlots)
+// EEMRepairUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMRepairUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mTargetID);
-    outSlots[6] = EENetMsgField(inMessage->mIsQueued);
+    outClass = EE_NETMSG_REPAIR_UNIT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mTargetID);
+    outSlots[6] = EENetMsgField(this->mIsQueued);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c400a
-// Packs the repair order (header, selection id, target id, queued flag) into a new send buffer
-void EEMRepairUnit::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_REPAIR_UNIT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMRepairUnit::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_REPAIR_UNIT);
 }
 
 // FUNCTION: EXE 0x4c4099
@@ -5209,54 +3416,14 @@ char* EEMRepairUnit::GetMessageLabel() const
     return "Repair Unit";
 }
 
-// FUNCTION: EXE 0x4c409f
-// Reads the repair order (header, selection id, target id, queued flag) from a received payload
-void EEMRepairUnit::ImportMessage(unsigned char* inPayloadPointer)
+// EEMReplantFarms's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMReplantFarms::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 11823);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_REPAIR_UNIT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMRepairUnit::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMReplantFarms's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMReplantFarms* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mFarmID);
+    outClass = EE_NETMSG_REPLANT_FARMS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mFarmID);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c4106
-// Packs the replant order (header, selection id, farm id) into a new send buffer
-void EEMReplantFarms::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_REPLANT_FARMS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMReplantFarms::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_REPLANT_FARMS);
-}
-
-// FUNCTION: EXE 0x4c4184
-// Reads the replant order (header, selection id, farm id) from a received payload
-void EEMReplantFarms::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 11894);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_REPLANT_FARMS, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMReplantFarms::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c41d4
@@ -5310,27 +3477,15 @@ void EEMReportStatistics::Execute()
     }
 }
 
-// EEMReportStatistics's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMReportStatistics* inMessage, EeNetMsgSlot* outSlots)
+// EEMReportStatistics's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMReportStatistics::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mL10);
-    outSlots[6] = EENetMsgField(inMessage->mL14);
+    outClass = EE_NETMSG_REPORT_STATISTICS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mL10);
+    outSlots[6] = EENetMsgField(this->mL14);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c4309
-// Packs the statistics report (header, selection id, two values) into a new send buffer
-void EEMReportStatistics::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_REPORT_STATISTICS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMReportStatistics::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_REPORT_STATISTICS);
 }
 
 // FUNCTION: EXE 0x4c439a
@@ -5340,53 +3495,13 @@ char* EEMReportStatistics::GetMessageLabel() const
     return "Report Statistics";
 }
 
-// FUNCTION: EXE 0x4c43a0
-// Reads the statistics report (header, selection id, two values) from a received payload
-void EEMReportStatistics::ImportMessage(unsigned char* inPayloadPointer)
+// EEMResign's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMResign::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 12099);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_REPORT_STATISTICS, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMReportStatistics::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMResign's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMResign* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_RESIGN;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4c4407
-// Packs the resignation (header, selection id) into a new send buffer
-void EEMResign::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_RESIGN, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMResign::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_RESIGN);
-}
-
-// FUNCTION: EXE 0x4c4472
-// Reads the resignation (header, selection id) from a received payload
-void EEMResign::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 12168);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_RESIGN, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMResign::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c44b5
@@ -5442,27 +3557,15 @@ void EEMRemoveImprovement::Execute()
     }
 }
 
-// EEMRemoveImprovement's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMRemoveImprovement* inMessage, EeNetMsgSlot* outSlots)
+// EEMRemoveImprovement's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMRemoveImprovement::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitID);
-    outSlots[6] = EENetMsgField(inMessage->mImprovement);
+    outClass = EE_NETMSG_REMOVE_IMPROVEMENT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitID);
+    outSlots[6] = EENetMsgField(this->mImprovement);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c4668
-// Packs the improvement cancel order (header, selection id, unit id, improvement) into a new send buffer
-void EEMRemoveImprovement::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_REMOVE_IMPROVEMENT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMRemoveImprovement::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_REMOVE_IMPROVEMENT);
 }
 
 // FUNCTION: EXE 0x4c46f9
@@ -5470,20 +3573,6 @@ unsigned long EEMRemoveImprovement::ExportSize()
 char* EEMRemoveImprovement::GetMessageLabel() const
 {
     return "Remove Improvement";
-}
-
-// FUNCTION: EXE 0x4c46ff
-// Reads the improvement cancel order (header, selection id, unit id, improvement) from a received payload
-void EEMRemoveImprovement::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 12354);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_REMOVE_IMPROVEMENT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMRemoveImprovement::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c4766
@@ -5516,31 +3605,17 @@ void EEMRemoveTechnology::Execute()
     }
 }
 
-// FUNCTION: EXE 0x4c486e
-// Returns the research cancel order's payload size (15 bytes)
-unsigned long EEMRemoveTechnology::ExportSize()
+// EEMRemoveTechnology's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMRemoveTechnology::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    return ee_netmsg_fixed_size(EE_NETMSG_REMOVE_TECHNOLOGY);
-}
-
-// EEMRemoveTechnology's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMRemoveTechnology* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitID);
-    outSlots[6] = EENetMsgField(inMessage->mTechnology);
-    outSlots[7] = EENetMsgField(inMessage->mToggleJITManufacturing);
-    outSlots[8] = EENetMsgField(inMessage->mFiveTimes);
+    outClass = EE_NETMSG_REMOVE_TECHNOLOGY;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitID);
+    outSlots[6] = EENetMsgField(this->mTechnology);
+    outSlots[7] = EENetMsgField(this->mToggleJITManufacturing);
+    outSlots[8] = EENetMsgField(this->mFiveTimes);
     return 9;
-}
-
-// FUNCTION: EXE 0x4c4872
-// Packs the research cancel (header, selection id, building, tech, JIT toggle, five-times flag) into a new send buffer
-void EEMRemoveTechnology::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_REMOVE_TECHNOLOGY, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
 }
 
 // FUNCTION: EXE 0x4c4929
@@ -5548,20 +3623,6 @@ void EEMRemoveTechnology::ExportMessage(unsigned char** outPayloadPointer, unsig
 char* EEMRemoveTechnology::GetMessageLabel() const
 {
     return "Remove Technology";
-}
-
-// FUNCTION: EXE 0x4c492f
-// Reads the research cancel (header, selection id, building, tech, JIT toggle, five-times flag) from a received payload
-void EEMRemoveTechnology::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 12542);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_REMOVE_TECHNOLOGY, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMRemoveTechnology::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c49b7
@@ -5632,28 +3693,16 @@ void EEMResearchTechnology::Execute()
     }
 }
 
-// EEMResearchTechnology's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMResearchTechnology* inMessage, EeNetMsgSlot* outSlots)
+// EEMResearchTechnology's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMResearchTechnology::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mBuildingID);
-    outSlots[6] = EENetMsgField(inMessage->mTechnology);
-    outSlots[7] = EENetMsgField(inMessage->mFiveTimes);
+    outClass = EE_NETMSG_RESEARCH_TECHNOLOGY;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mBuildingID);
+    outSlots[6] = EENetMsgField(this->mTechnology);
+    outSlots[7] = EENetMsgField(this->mFiveTimes);
     return 8;
-}
-
-// FUNCTION: EXE 0x4c4ce2
-// Packs the research order (header, selection id, building id, technology, five-times flag) into a new send buffer
-void EEMResearchTechnology::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_RESEARCH_TECHNOLOGY, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMResearchTechnology::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_RESEARCH_TECHNOLOGY);
 }
 
 // FUNCTION: EXE 0x4c4d84
@@ -5661,20 +3710,6 @@ unsigned long EEMResearchTechnology::ExportSize()
 char* EEMResearchTechnology::GetMessageLabel() const
 {
     return "Research Technology";
-}
-
-// FUNCTION: EXE 0x4c4d8a
-// Reads the research order (header, selection id, building id, technology, five-times flag) from a received payload
-void EEMResearchTechnology::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 12807);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_RESEARCH_TECHNOLOGY, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMResearchTechnology::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c4e02
@@ -5707,27 +3742,15 @@ void EEMReturnToBase::Execute()
     }
 }
 
-// EEMReturnToBase's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMReturnToBase* inMessage, EeNetMsgSlot* outSlots)
+// EEMReturnToBase's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMReturnToBase::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mBaseID);
-    outSlots[6] = EENetMsgField(inMessage->mKeepFlightTime);
+    outClass = EE_NETMSG_RETURN_TO_BASE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mBaseID);
+    outSlots[6] = EENetMsgField(this->mKeepFlightTime);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c4ed5
-// Packs the return-to-base order (header, selection id, base id, keep-flight-time flag) into a new send buffer
-void EEMReturnToBase::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_RETURN_TO_BASE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMReturnToBase::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_RETURN_TO_BASE);
 }
 
 // FUNCTION: EXE 0x4c4f64
@@ -5735,20 +3758,6 @@ unsigned long EEMReturnToBase::ExportSize()
 char* EEMReturnToBase::GetMessageLabel() const
 {
     return "Return To Base";
-}
-
-// FUNCTION: EXE 0x4c4f6a
-// Reads the return-to-base order (header, selection id, base id, keep-flight-time flag) from a received payload
-void EEMReturnToBase::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 12987);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_RETURN_TO_BASE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMReturnToBase::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c4fd1
@@ -5765,26 +3774,14 @@ void EEMSavedGroupAddSelection::Execute()
     }
 }
 
-// EEMSavedGroupAddSelection's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSavedGroupAddSelection* inMessage, EeNetMsgSlot* outSlots)
+// EEMSavedGroupAddSelection's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSavedGroupAddSelection::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mGroup);
+    outClass = EE_NETMSG_SAVED_GROUP_ADD_SELECTION;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mGroup);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c5045
-// Packs the saved-group add message (header, selection id, group) into a new send buffer
-void EEMSavedGroupAddSelection::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SAVED_GROUP_ADD_SELECTION, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSavedGroupAddSelection::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SAVED_GROUP_ADD_SELECTION);
 }
 
 // FUNCTION: EXE 0x4c50c1
@@ -5792,20 +3789,6 @@ unsigned long EEMSavedGroupAddSelection::ExportSize()
 char* EEMSavedGroupAddSelection::GetMessageLabel() const
 {
     return "Add Selection To Saved Group";
-}
-
-// FUNCTION: EXE 0x4c50c7
-// Reads the saved-group add message (header, selection id, group) from a received payload
-void EEMSavedGroupAddSelection::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 13131);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SAVED_GROUP_ADD_SELECTION, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSavedGroupAddSelection::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c5117
@@ -5818,26 +3801,14 @@ void EEMSavedGroupClear::Execute()
         thePlayer->ClearSavedGroup(this->mGroup);
 }
 
-// EEMSavedGroupClear's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSavedGroupClear* inMessage, EeNetMsgSlot* outSlots)
+// EEMSavedGroupClear's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSavedGroupClear::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mGroup);
+    outClass = EE_NETMSG_SAVED_GROUP_CLEAR;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mGroup);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c515c
-// Packs the saved-group clear message (header, selection id, group) into a new send buffer
-void EEMSavedGroupClear::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SAVED_GROUP_CLEAR, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSavedGroupClear::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SAVED_GROUP_CLEAR);
 }
 
 // FUNCTION: EXE 0x4c51d8
@@ -5845,20 +3816,6 @@ unsigned long EEMSavedGroupClear::ExportSize()
 char* EEMSavedGroupClear::GetMessageLabel() const
 {
     return "Clear Saved Group";
-}
-
-// FUNCTION: EXE 0x4c51de
-// Reads the saved-group clear message (header, selection id, group) from a received payload
-void EEMSavedGroupClear::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 13256);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SAVED_GROUP_CLEAR, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSavedGroupClear::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c522e
@@ -5870,26 +3827,14 @@ void EEMSavedGroupCreate::Execute()
         thePlayer->mGroups[this->mGroup]->Assign(thePlayer->mActiveGroup);
 }
 
-// EEMSavedGroupCreate's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSavedGroupCreate* inMessage, EeNetMsgSlot* outSlots)
+// EEMSavedGroupCreate's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSavedGroupCreate::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mGroup);
+    outClass = EE_NETMSG_SAVED_GROUP_CREATE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mGroup);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c5278
-// Packs the saved-group create message (header, selection id, group) into a new send buffer
-void EEMSavedGroupCreate::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SAVED_GROUP_CREATE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSavedGroupCreate::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SAVED_GROUP_CREATE);
 }
 
 // FUNCTION: EXE 0x4c52f4
@@ -5897,20 +3842,6 @@ unsigned long EEMSavedGroupCreate::ExportSize()
 char* EEMSavedGroupCreate::GetMessageLabel() const
 {
     return "Create Saved Group";
-}
-
-// FUNCTION: EXE 0x4c52fa
-// Reads the saved-group create message (header, selection id, group) from a received payload
-void EEMSavedGroupCreate::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 13375);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SAVED_GROUP_CREATE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSavedGroupCreate::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c534a
@@ -5945,27 +3876,15 @@ void EEMSavedGroupSelect::Execute()
     }
 }
 
-// EEMSavedGroupSelect's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSavedGroupSelect* inMessage, EeNetMsgSlot* outSlots)
+// EEMSavedGroupSelect's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSavedGroupSelect::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mGroup);
-    outSlots[6] = EENetMsgField(inMessage->mFlag);
+    outClass = EE_NETMSG_SAVED_GROUP_SELECT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mGroup);
+    outSlots[6] = EENetMsgField(this->mFlag);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c548f
-// Packs the saved-group select message (header, selection id, group, centre flag) into a new send buffer
-void EEMSavedGroupSelect::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SAVED_GROUP_SELECT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSavedGroupSelect::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SAVED_GROUP_SELECT);
 }
 
 // FUNCTION: EXE 0x4c551c
@@ -5973,20 +3892,6 @@ unsigned long EEMSavedGroupSelect::ExportSize()
 char* EEMSavedGroupSelect::GetMessageLabel() const
 {
     return "Select Saved Group";
-}
-
-// FUNCTION: EXE 0x4c5522
-// Reads the saved-group select message (header, selection id, group, centre flag) from a received payload
-void EEMSavedGroupSelect::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 13547);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SAVED_GROUP_SELECT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSavedGroupSelect::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c5587
@@ -6006,28 +3911,16 @@ void EEMScrambleAircraft::Execute()
     }
 }
 
-// EEMScrambleAircraft's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMScrambleAircraft* inMessage, EeNetMsgSlot* outSlots)
+// EEMScrambleAircraft's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMScrambleAircraft::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mX);
-    outSlots[6] = EENetMsgField(inMessage->mY);
-    outSlots[7] = EENetMsgField(inMessage->mUnitID);
+    outClass = EE_NETMSG_SCRAMBLE_AIRCRAFT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mX);
+    outSlots[6] = EENetMsgField(this->mY);
+    outSlots[7] = EENetMsgField(this->mUnitID);
     return 8;
-}
-
-// FUNCTION: EXE 0x4c5633
-// Packs the scramble order (header, selection id, x, y, unit id) into a new send buffer
-void EEMScrambleAircraft::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SCRAMBLE_AIRCRAFT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMScrambleAircraft::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SCRAMBLE_AIRCRAFT);
 }
 
 // FUNCTION: EXE 0x4c56d7
@@ -6035,20 +3928,6 @@ unsigned long EEMScrambleAircraft::ExportSize()
 char* EEMScrambleAircraft::GetMessageLabel() const
 {
     return "Scramble Aircraft";
-}
-
-// FUNCTION: EXE 0x4c56dd
-// Reads the scramble order (header, selection id, x, y, unit id) from a received payload
-void EEMScrambleAircraft::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 13704);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SCRAMBLE_AIRCRAFT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMScrambleAircraft::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c5755
@@ -6060,27 +3939,15 @@ void EEMSelectCustomPlayerForChat::Execute()
         thePlayer->mSendChatMessage[this->mPlayerID] = this->mIsSelected;
 }
 
-// EEMSelectCustomPlayerForChat's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSelectCustomPlayerForChat* inMessage, EeNetMsgSlot* outSlots)
+// EEMSelectCustomPlayerForChat's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSelectCustomPlayerForChat::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPlayerID);
-    outSlots[6] = EENetMsgField(inMessage->mIsSelected);
+    outClass = EE_NETMSG_SELECT_CUSTOM_PLAYER_FOR_CHAT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPlayerID);
+    outSlots[6] = EENetMsgField(this->mIsSelected);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c5783
-// Packs the chat recipient toggle (header, selection id, player id, selected flag) into a new send buffer
-void EEMSelectCustomPlayerForChat::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SELECT_CUSTOM_PLAYER_FOR_CHAT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSelectCustomPlayerForChat::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SELECT_CUSTOM_PLAYER_FOR_CHAT);
 }
 
 // FUNCTION: EXE 0x4c5812
@@ -6088,20 +3955,6 @@ unsigned long EEMSelectCustomPlayerForChat::ExportSize()
 char* EEMSelectCustomPlayerForChat::GetMessageLabel() const
 {
     return "Select Custom Player For Chat";
-}
-
-// FUNCTION: EXE 0x4c5818
-// Reads the chat recipient toggle (header, selection id, player id, selected flag) from a received payload
-void EEMSelectCustomPlayerForChat::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 13834);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SELECT_CUSTOM_PLAYER_FOR_CHAT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSelectCustomPlayerForChat::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c587f
@@ -6115,26 +3968,14 @@ void EEMSelectPatrolGroup::Execute()
         theUnit->mPatrolGroup->Select(thePlayer, true);
 }
 
-// EEMSelectPatrolGroup's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSelectPatrolGroup* inMessage, EeNetMsgSlot* outSlots)
+// EEMSelectPatrolGroup's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSelectPatrolGroup::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitID);
+    outClass = EE_NETMSG_SELECT_PATROL_GROUP;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitID);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c58d8
-// Packs the patrol group selection (header, selection id, unit id) into a new send buffer
-void EEMSelectPatrolGroup::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SELECT_PATROL_GROUP, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSelectPatrolGroup::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SELECT_PATROL_GROUP);
 }
 
 // FUNCTION: EXE 0x4c5956
@@ -6142,20 +3983,6 @@ unsigned long EEMSelectPatrolGroup::ExportSize()
 char* EEMSelectPatrolGroup::GetMessageLabel() const
 {
     return "Select Patrol Group";
-}
-
-// FUNCTION: EXE 0x4c595c
-// Reads the patrol group selection (header, selection id, unit id) from a received payload
-void EEMSelectPatrolGroup::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 13971);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SELECT_PATROL_GROUP, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSelectPatrolGroup::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c59ac
@@ -6167,26 +3994,14 @@ void EEMSelectPlayerChatType::Execute()
         thePlayer->mChatType = this->mChatType;
 }
 
-// EEMSelectPlayerChatType's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSelectPlayerChatType* inMessage, EeNetMsgSlot* outSlots)
+// EEMSelectPlayerChatType's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSelectPlayerChatType::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mChatType);
+    outClass = EE_NETMSG_SELECT_PLAYER_CHAT_TYPE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mChatType);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c59d6
-// Packs the chat type selection (header, selection id, chat type) into a new send buffer
-void EEMSelectPlayerChatType::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SELECT_PLAYER_CHAT_TYPE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSelectPlayerChatType::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SELECT_PLAYER_CHAT_TYPE);
 }
 
 // FUNCTION: EXE 0x4c5a54
@@ -6194,20 +4009,6 @@ unsigned long EEMSelectPlayerChatType::ExportSize()
 char* EEMSelectPlayerChatType::GetMessageLabel() const
 {
     return "Select Player Chat Type";
-}
-
-// FUNCTION: EXE 0x4c5a5a
-// Reads the chat type selection (header, selection id, chat type) from a received payload
-void EEMSelectPlayerChatType::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 14091);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SELECT_PLAYER_CHAT_TYPE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSelectPlayerChatType::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c5aaa
@@ -6273,11 +4074,6 @@ void EEMSelectTheseUnits::ImportMessage(unsigned char* inPayloadPointer)
     }
 }
 
-bool EEMSelectTheseUnits::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
 // FUNCTION: EXE 0x4c5c80
 // Selects one unit for the sender
 void EEMSelectUnit::Execute()
@@ -6286,26 +4082,14 @@ void EEMSelectUnit::Execute()
     thePlayer->SelectUnit(this->mUnitID, true, true);
 }
 
-// EEMSelectUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSelectUnit* inMessage, EeNetMsgSlot* outSlots)
+// EEMSelectUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSelectUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitID);
+    outClass = EE_NETMSG_SELECT_UNIT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitID);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c5cab
-// Packs the single selection (header, selection id, unit id) into a new send buffer
-void EEMSelectUnit::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SELECT_UNIT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSelectUnit::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SELECT_UNIT);
 }
 
 // FUNCTION: EXE 0x4c5d29
@@ -6313,20 +4097,6 @@ unsigned long EEMSelectUnit::ExportSize()
 char* EEMSelectUnit::GetMessageLabel() const
 {
     return "Select Unit";
-}
-
-// FUNCTION: EXE 0x4c5d2f
-// Reads the single selection (header, selection id, unit id) from a received payload
-void EEMSelectUnit::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 14373);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SELECT_UNIT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSelectUnit::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // New (port), TEST ONLY: set by the UI fixture (EETestFixture.cpp, only with EE_TEST_UI) to see each box selection's
@@ -6388,30 +4158,15 @@ void EEMSelectUnits::Execute()
 }
 
 // EEMSelectUnits' members as the codec's slots (the buffer: mBufferSize of its bytes)
-static size_t Slots(EEMSelectUnits* inMessage, EeNetMsgSlot* outSlots)
+size_t EEMSelectUnits::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mBufferSize);
-    EeNetMsgSlot theBuffer = {inMessage->mBuffer, inMessage->mBufferSize, 0, 0};
+    outClass = EE_NETMSG_SELECT_UNITS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mBufferSize);
+    EeNetMsgSlot theBuffer = {this->mBuffer, this->mBufferSize, 0, 0};
     outSlots[6] = theBuffer;
     return 7;
-}
-
-// FUNCTION: EXE 0x4c6093
-// Packs the box selection (header, selection id, buffer size, compressed ids) into a new send buffer
-void EEMSelectUnits::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SELECT_UNITS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4c6132
-// Returns the box selection's payload size: the compressed buffer plus 6 bytes
-unsigned long EEMSelectUnits::ExportSize()
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    return ee_netmsg_export_size(EE_NETMSG_SELECT_UNITS, theSlots, Slots(this, theSlots));
 }
 
 // FUNCTION: EXE 0x4c613d
@@ -6428,50 +4183,19 @@ void EEMSelectUnits::ImportMessage(unsigned char* inPayloadPointer)
 {
     ESVERIFY_AT(inPayloadPointer != NULL, 14536);
     EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    Slots(this, theSlots);
+    this->CodecSlots(theSlots);
     theSlots[6].size = sizeof(this->mBuffer);   // room for the bytes the Rust copies in
     ee_netmsg_import(EE_NETMSG_SELECT_UNITS, inPayloadPointer, theSlots, 7);
     DecompressUnits(this->mBuffer, this->mBufferSize, this->mUnitIDs);
 }
 
-bool EEMSelectUnits::IsResponse(NEMessage* inMessage)
+// EEMSelfDestruct's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSelfDestruct::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    return false;
-}
-
-// EEMSelfDestruct's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSelfDestruct* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_SELF_DESTRUCT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4c61be
-// Packs the self-destruct order (header, selection id) into a new send buffer
-void EEMSelfDestruct::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SELF_DESTRUCT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSelfDestruct::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SELF_DESTRUCT);
-}
-
-// FUNCTION: EXE 0x4c6229
-// Reads the self-destruct order (header, selection id) from a received payload
-void EEMSelfDestruct::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 14613);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SELF_DESTRUCT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSelfDestruct::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c626c
@@ -6491,41 +4215,15 @@ void EEMSelfDestruct::Execute()
     }
 }
 
-// EEMSendFlare's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSendFlare* inMessage, EeNetMsgSlot* outSlots)
+// EEMSendFlare's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSendFlare::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mX);
-    outSlots[6] = EENetMsgField(inMessage->mY);
+    outClass = EE_NETMSG_SEND_FLARE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mX);
+    outSlots[6] = EENetMsgField(this->mY);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c62f0
-// Packs the flare (header, selection id, x, y) into a new send buffer
-void EEMSendFlare::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SEND_FLARE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSendFlare::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SEND_FLARE);
-}
-
-// FUNCTION: EXE 0x4c6381
-// Reads the flare (header, selection id, x, y) from a received payload
-void EEMSendFlare::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 14708);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SEND_FLARE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSendFlare::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c63e8
@@ -6545,38 +4243,17 @@ void EEMSendFlare::Execute()
     }
 }
 
-// EEMSetAirportCommand's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSetAirportCommand* inMessage, EeNetMsgSlot* outSlots)
+// EEMSetAirportCommand's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSetAirportCommand::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPoint);
-    outSlots[6] = EENetMsgField(inMessage->mCommand);
-    outSlots[7] = EENetMsgField(inMessage->mTargetID);
-    outSlots[8] = EENetMsgField(inMessage->mIsQueued);
+    outClass = EE_NETMSG_SET_AIRPORT_COMMAND;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPoint);
+    outSlots[6] = EENetMsgField(this->mCommand);
+    outSlots[7] = EENetMsgField(this->mTargetID);
+    outSlots[8] = EENetMsgField(this->mIsQueued);
     return 9;
-}
-
-// FUNCTION: EXE 0x4c648f
-// Packs the airport order (header, selection id, point, command, target id, queued flag) into a new send buffer
-void EEMSetAirportCommand::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SET_AIRPORT_COMMAND, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-// FUNCTION: EXE 0x4c6548
-// Reads the airport order (header, selection id, point, command, target id, queued flag) from a received payload
-void EEMSetAirportCommand::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 14815);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SET_AIRPORT_COMMAND, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSetAirportCommand::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c65d2
@@ -6584,147 +4261,22 @@ bool EEMSetAirportCommand::IsResponse(NEMessage* inMessage)
 // the point, in the queue(s) the command picks (12-15 add a 60 s timer; 15 shares one attack goal)
 void EEMSetAirportCommand::Execute()
 {
-    EEComplexUnit* theFirstUnit = NULL;
-    EEUnitGoal* theGoal = NULL;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    if (thePlayer->mActiveGroup != NULL)
-        theFirstUnit = thePlayer->mActiveGroup->GetFirstUnit();
-    long theDamageIndex;
-    switch (this->mCommand) {
-    case 8:
-    case 0xe:
-        theDamageIndex = 0xc;
-        break;
-    default:
-        theDamageIndex = 0;
-        break;
-    }
-    bool theAttack = false;
-    if (this->mTargetID != -1) {
-        EEUnit* theTarget = gWorld.GetUnit(this->mTargetID);
-        if (theTarget == NULL)
-            goto issue;
-        if (thePlayer != theTarget->mPlayer && theTarget->mPlayer->mEnemies[thePlayer->mPlayerID] != 0
-            && EEIsSeenBy(theTarget, thePlayer, true)) {
-            unsigned long theClass = theTarget->mUnitClass->mFamily;
-            if ((theTarget->mUnitClass->CanBeAttacked() && EEDamageFactor(theClass, theDamageIndex) > 0.0f) || this->mCommand == 0xf) {
-                theGoal = EEUGRust::NewAttackUnit(theFirstUnit != NULL ? theFirstUnit : theTarget->mComplexUnit, theTarget,
-                                             true, false);
-                theAttack = true;
-            }
-        }
-    }
-    if (!theAttack)
-        theGoal = EEUGRust::NewLocation(this->mPoint, true, true, false, 0.0f, false, 0);
-issue:
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup != NULL) {
-        for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            if (theUnit->mUnitClass->mUnitType != kUnitTypeAirport || theGoal == NULL)
-                continue;
-            EEUnitGoal* theCopy = NULL;
-            if (EEAttackUnitCast(theGoal) != NULL)
-                theCopy = EEAttackUnitCast(theGoal->Clone());
-            switch (this->mCommand) {
-            case 10:
-            case 12:
-                if (!this->mIsQueued)
-                    theUnit->ClearGoalQueue(3);
-                theUnit->QueueGoal(theCopy != NULL ? theCopy : theGoal->Clone(), 3);
-                if (this->mCommand == 12) {
-                    theUnit->mGoalQueues[3].ResetTimer();
-                    theUnit->mGoalQueues[3].AddTime(60000);
-                }
-                break;
-            case 9:
-            case 13:
-                if (!this->mIsQueued)
-                    theUnit->ClearGoalQueue(2);
-                theUnit->QueueGoal(theCopy != NULL ? theCopy : theGoal->Clone(), 2);
-                if (this->mCommand == 13) {
-                    theUnit->mGoalQueues[2].ResetTimer();
-                    theUnit->mGoalQueues[2].AddTime(60000);
-                }
-                break;
-            case 8:
-            case 14:
-                if (!this->mIsQueued)
-                    theUnit->ClearGoalQueue(1);
-                theUnit->QueueGoal(theCopy != NULL ? theCopy : theGoal->Clone(), 1);
-                if (this->mCommand == 14) {
-                    theUnit->mGoalQueues[1].ResetTimer();
-                    theUnit->mGoalQueues[1].AddTime(60000);
-                }
-                break;
-            case 15:
-                if (!this->mIsQueued)
-                    theUnit->ClearAllGoalQueues();
-                // each queue owns its own goal: the attack copy goes to the first one only
-                theUnit->QueueGoal(theCopy != NULL ? theCopy : theGoal->Clone(), 3);
-                theCopy = NULL;
-                theUnit->QueueGoal(theGoal->Clone(), 2);
-                theUnit->QueueGoal(theGoal->Clone(), 1);
-                theUnit->QueueGoal(theGoal->Clone(), 4);
-                theUnit->mGoalQueues[4].ResetTimer();
-                theUnit->mGoalQueues[4].AddTime(60000);
-                theUnit->mGoalQueues[3].ResetTimer();
-                theUnit->mGoalQueues[3].AddTime(60000);
-                theUnit->mGoalQueues[2].ResetTimer();
-                theUnit->mGoalQueues[2].AddTime(60000);
-                theUnit->mGoalQueues[1].ResetTimer();
-                theUnit->mGoalQueues[1].AddTime(60000);
-                break;
-            case 20:
-                if (!this->mIsQueued)
-                    theUnit->ClearGoalQueue(4);
-                theUnit->QueueGoal(EEUGRust::NewLocation(this->mPoint, true, true, false, 0.0f, false, 0), 4);
-                delete theCopy;
-                break;
-            default:
-                delete theCopy;
-                break;
-            }
-        }
-    }
-    delete theGoal;
+    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs set_airport_command: the attack or move
+    // goal, each selected airport's queues and timers by the command) over the store and EEUnitHost.cpp's calls
+    ee_units_set_airport_command(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mPoint.GetX(),
+                                 this->mPoint.GetY(), this->mCommand, this->mTargetID, this->mIsQueued);
 }
 
-// EEMSetDiplomaticStance's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSetDiplomaticStance* inMessage, EeNetMsgSlot* outSlots)
+// EEMSetDiplomaticStance's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSetDiplomaticStance::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPlayerID);
-    outSlots[6] = EENetMsgField(inMessage->mStance);
+    outClass = EE_NETMSG_SET_DIPLOMATIC_STANCE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPlayerID);
+    outSlots[6] = EENetMsgField(this->mStance);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c6a8d
-// Packs the stance change (header, selection id, player id, stance) into a new send buffer
-void EEMSetDiplomaticStance::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SET_DIPLOMATIC_STANCE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSetDiplomaticStance::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SET_DIPLOMATIC_STANCE);
-}
-
-// FUNCTION: EXE 0x4c6b1e
-// Reads the stance change (header, selection id, player id, stance) from a received payload
-void EEMSetDiplomaticStance::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 15132);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SET_DIPLOMATIC_STANCE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSetDiplomaticStance::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c6b85
@@ -6746,50 +4298,17 @@ void EEMSetDiplomaticStance::Execute()
     gUserInterface->AddChatLogEntry(thePlayer->mColor, thePlayer->mName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
 }
 
-// FUNCTION: EXE 0x4c6c83
-// Returns the airport order's payload size (22 bytes)
-unsigned long EEMSetAirportCommand::ExportSize()
+// EEMSetRallyGoal's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSetRallyGoal::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    return ee_netmsg_fixed_size(EE_NETMSG_SET_AIRPORT_COMMAND);
-}
-
-// EEMSetRallyGoal's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSetRallyGoal* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mPoint);
-    outSlots[6] = EENetMsgField(inMessage->mTargetID);
-    outSlots[7] = EENetMsgField(inMessage->mBuildingID);
-    outSlots[8] = EENetMsgField(inMessage->mIsQueued);
+    outClass = EE_NETMSG_SET_RALLY_GOAL;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mPoint);
+    outSlots[6] = EENetMsgField(this->mTargetID);
+    outSlots[7] = EENetMsgField(this->mBuildingID);
+    outSlots[8] = EENetMsgField(this->mIsQueued);
     return 9;
-}
-
-// FUNCTION: EXE 0x4c6c87
-// Packs the rally order (header, selection id, point, target id, building id, queued flag) into a new send buffer
-void EEMSetRallyGoal::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SET_RALLY_GOAL, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSetRallyGoal::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SET_RALLY_GOAL);
-}
-
-// FUNCTION: EXE 0x4c6d40
-// Reads the rally order (header, selection id, point, target id, building id, queued flag) from a received payload
-void EEMSetRallyGoal::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 15239);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SET_RALLY_GOAL, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSetRallyGoal::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 void EEMSetWaterLevel::Execute()
@@ -6807,207 +4326,30 @@ bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
            && EEDamageFactor(theAttacker, theTarget) > 0.0f;
 }
 
-#include "ee/EEUGRust.h"
-#include "ee/EEDoppelganger.h"
 
 // FUNCTION: EXE 0x4c6dca
 // Sets the rally goal of the sender's selected buildings of this type: gather, attack, repair, patrol, garrison,
 // clear (target is the building) or move; airports, docks and aircraft fill their own queues
 void EEMSetRallyGoal::Execute()
 {
-    std::vector<EEComplexUnit*> theGarrisonUnits;
-    std::vector<EEUnitGoal*> theGoals;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    unsigned long thePlayerID = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mPlayerID;
-    EEUnitGoal* theGoal = NULL;
-    EEUnit* theCommandTarget = NULL;
-    long theCommand = 0;
-    bool theClear = false;
-    EEUnit* theBuildingUnit = gWorld.GetUnit(this->mBuildingID);
-    if (theBuildingUnit == NULL)
-        return;
-    EEComplexUnit* theBuilding = theBuildingUnit->mComplexUnit;
-    if (this->mTargetID != -1) {
-        EEUnit* theTarget = gWorld.GetUnit(this->mTargetID);
-        if (theTarget == NULL)
-            goto issue;
-        if (theTarget->mResourceAmount > 0
-            && !((theTarget->mUnitClass->mCategory == kUnitCategoryLandCitizen || theTarget->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
-                 && theTarget->mHitPoints > 0)
-            && (theTarget->mUnitClass->mFamily == kUnitFamilyFish || theTarget->mTileNode == NULL
-                || (theTarget->mComplexUnit->mIsBuilt && theTarget->mPlayer == theBuilding->mPlayer))) {
-            theGoal = EEUGRust::NewGather(theTarget, NULL, true);
-            theGoals.push_back(theGoal);
-            theCommand = 0xba;
-            theCommandTarget = theTarget;
-            goto issue;
-        }
-        EEPlayer* theOwner = theBuilding->mPlayer;
-        if (theTarget->mPlayer != theOwner) {
-            if (theTarget->mPlayer->mEnemies[theOwner->mPlayerID] != 0) {
-                bool theVisible = EEIsSeenBy(theTarget, theOwner, true);
-                if (!theVisible) {
-                    EETile* theTile = static_cast<EETile*>(theTarget->mTile);
-                    for (unsigned long i = 0; i < theTile->GetNumDoppelgangers() && !theVisible; i++)
-                        theVisible = theTile->mDoppelgangers[i]->mUnit == theTarget;
-                }
-                if (theVisible && EEUUGetIsUnitClassTargetable(NULL, theTarget->mUnitClass)
-                    && ((theBuilding->mUnitClass->mCategory != kUnitCategoryAirplane && theBuilding->mUnitClass->mCategory != kUnitCategoryPlanetSpaceship)
-                        || theBuilding->CanAttackClass(theTarget->mUnitClass))) {
-                    theGoal = EEUGRust::NewAttackUnit(theBuilding, theTarget, true, false);
-                    theGoals.push_back(theGoal);
-                    theCommand = 0xb9;
-                    theCommandTarget = theTarget;
-                    goto issue;
-                }
-                theGoal = EEUGRust::NewLocation(this->mPoint, true, true, false, 0.0f, false, 0);
-                theGoals.push_back(theGoal);
-                theCommand = 0xb8;
-                goto issue;
-            }
-        } else {
-            if (theTarget->mUnitClass->mUnitType == kUnitTypeFarm
-                || (theTarget->mUnitClass->IsLandBuilding() && theTarget->mHitPoints < theTarget->mStats->mMaxHitPoints)) {
-                theGoal = EEUGRust::NewBuildRepair(theTarget->mPlayer, theTarget, true);
-            } else if (theTarget->mUnitClass->mUnitType == kUnitTypePathPoint) {
-                theGoal = EEUGRust::NewPatrol(theTarget->mComplexUnit->mPatrolGroup, theTarget->mComplexUnit, true);
-            } else if (theTarget->mUnitClass->mGarrisonCapacity > 0 && theTarget->mTileNode != NULL && theTarget->mHitPoints > 0) {
-                EEComplexUnit* theGarrison = theTarget->mComplexUnit;
-                if (theGarrison->mGoalState != NULL && theGarrison->mGoalState->mKind == kGoalLoadGarrison) {
-                    theGoal = theGarrison->mGoalState->Clone();
-                } else {
-                    theGarrisonUnits.clear();
-                    EEUGRust* theLoad = EEUGRust::NewLoad(kGoalLoadGarrison, theGarrison, theGarrisonUnits, true);
-                    if (theLoad->IsLoadGarrisonValid()) {
-                        theGarrison->SetGoal(theLoad, 0, 0);
-                        if (theGarrison->mStats->mMaxVelocity > 0.0f) theGarrison->StartAction(kActionPrepareToMove); else theGarrison->StartAction(kActionPickedUpLoadableUnits);
-                        theGarrison->mUnitClass->ActionChanged(theGarrison);
-                        theGoal = theLoad->Clone();
-                        theGoals.push_back(theGoal);
-                        theCommand = 0xba;
-                        theCommandTarget = theTarget;
-                    } else {
-                        delete theLoad;
-                        theGoal = NULL;
-                    }
-                    goto issue;
-                }
-            } else if (theTarget == theBuilding) {
-                theGoals.clear();
-                theClear = true;
-                theCommand = 0xba;
-                theCommandTarget = theTarget;
-                goto issue;
-            } else
-                goto location;
-            theGoals.push_back(theGoal);
-            theCommand = 0xba;
-            theCommandTarget = theTarget;
-            goto issue;
-        }
-    }
-location:
-    theGoal = EEUGRust::NewLocation(this->mPoint, true, true, false, 0.0f, false, 0);
-    theGoals.push_back(theGoal);
-    theCommand = 0xb8;
-issue:
-    if (theGoals.size() == 0 && !theClear)
-        return;
-    {
-        unsigned long theType = theBuilding->mUnitClass->mUnitType;
-        EESelectedGroup* theSelection = theBuilding->mPlayer->mActiveGroup;
-        if (theSelection != NULL) {
-            for (unsigned long i = 0; i < theSelection->GetNumUnits(); i++) {
-                EEComplexUnit* theUnit = theSelection->GetUnit(i);
-                if (theUnit->mUnitClass->mUnitType != theType && !theUnit->mUnitClass->SharesRallyPoint(theType))
-                    continue;
-                std::vector<EEUnitGoal*>::iterator theIterator;
-                if (theType == kUnitTypeAirport) {
-                    if (!this->mIsQueued)
-                        theUnit->ClearAllGoalQueues();
-                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++) {
-                        theUnit->QueueGoal((*theIterator)->Clone(), 3);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 2);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 1);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 4);
-                    }
-                } else if (theType == kUnitTypeNavyYard) {
-                    if (!this->mIsQueued)
-                        theUnit->ClearAllGoalQueues();
-                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++) {
-                        theUnit->QueueGoal((*theIterator)->Clone(), 1);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 0);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 2);
-                    }
-                } else if (theUnit->mUnitClass->mCategory == kUnitCategoryAirplane || theUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship) {
-                    if (!this->mIsQueued) {
-                        theUnit->ClearGoalQueue(0);
-                        theUnit->ClearGoalQueue(1);
-                    }
-                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++) {
-                        EEUnitGoal* theRally = *theIterator;
-                        theUnit->QueueGoal(theRally->Clone(), 0);
-                        theUnit->QueueGoal(theRally->Clone(), 1);
-                    }
-                    if (theGoals.size() > 0) {
-                        if (theUnit->GetCommandType() == kActionIdle) theUnit->StartAction(kActionTakeoff); else theUnit->StartAction(kActionPrepareToMove);
-                        theUnit->mUnitClass->ActionChanged(theUnit);
-                    }
-                } else {
-                    // A unit with a single goal queue (a ship that can set a rally point, e.g. a carrier) has no
-                    // rally queue: queue 1 would be past the end of its queues
-                    if (theUnit->GetNumGoalQueues() < 2)
-                        continue;
-                    if (!this->mIsQueued || theClear)
-                        theUnit->ClearGoalQueue(1);
-                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++)
-                        theUnit->QueueGoal((*theIterator)->Clone(), 1);
-                }
-            }
-            if (theCommand != 0) {
-                EESendGroupCommand(theSelection, theCommandTarget, thePlayerID, theCommand, 1);
-                thePlayer->PlayAcknowledgement(theSelection->GetFirstUnit());
-            }
-        }
-    }
-    delete theGoal;
+    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs set_rally_goal: the goal the target gives,
+    // the building owner's selected units' rally queues by the building's type, the marker and the acknowledgement)
+    // over the store and EEUnitHost.cpp's calls
+    ee_units_set_rally_goal(gWorld.GetPlayerBySlot(this->GetOriginatingSlot()), (uint32_t)this->mBuildingID,
+                            this->mPoint.GetX(), this->mPoint.GetY(), this->mTargetID, this->mIsQueued);
 }
 
 // FUNCTION: EXE 0x4c74da
 // Packs the water-level message (header, selection id, level byte) into a new send buffer
 
-// EEMSetWaterLevel's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSetWaterLevel* inMessage, EeNetMsgSlot* outSlots)
+// EEMSetWaterLevel's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSetWaterLevel::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mB10);
+    outClass = EE_NETMSG_SET_WATER_LEVEL;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mB10);
     return 6;
-}
-
-void EEMSetWaterLevel::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SET_WATER_LEVEL, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSetWaterLevel::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SET_WATER_LEVEL);
-}
-
-// FUNCTION: EXE 0x4c7556
-// Reads the water-level message (header, selection id, level byte) from a received payload
-void EEMSetWaterLevel::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 15657);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SET_WATER_LEVEL, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSetWaterLevel::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // EEMSmartFarmers' sort predicate (provisional name): the farther farm first, with +0x34c, then +0x344 ordering
@@ -7069,27 +4411,15 @@ void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool 
         std::sort(ioFarms.begin(), ioFarms.end(), EETileDistanceLess(EETileCoordinate(inX, inY)));
 }
 
-// EEMSmartFarmers's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSmartFarmers* inMessage, EeNetMsgSlot* outSlots)
+// EEMSmartFarmers's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSmartFarmers::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mTargetID);
-    outSlots[6] = EENetMsgField(inMessage->mIsQueued);
+    outClass = EE_NETMSG_SMART_FARMERS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mTargetID);
+    outSlots[6] = EENetMsgField(this->mIsQueued);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c7aec
-// Packs the smart-farmers order (header, selection id, target id, queued flag) into a new send buffer
-void EEMSmartFarmers::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SMART_FARMERS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSmartFarmers::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SMART_FARMERS);
 }
 
 // FUNCTION: EXE 0x4c7b7b
@@ -7099,55 +4429,15 @@ char* EEMSmartFarmers::GetMessageLabel() const
     return "Smart Farmers";
 }
 
-// FUNCTION: EXE 0x4c7b81
-// Reads the smart-farmers order (header, selection id, target id, queued flag) from a received payload
-void EEMSmartFarmers::ImportMessage(unsigned char* inPayloadPointer)
+// EEMStartLoading's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMStartLoading::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    ESVERIFY_AT(inPayloadPointer != NULL, 16019);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SMART_FARMERS, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSmartFarmers::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
-// EEMStartLoading's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMStartLoading* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mNumHumanPlayers);
-    outSlots[6] = EENetMsgField(inMessage->mSeed);
+    outClass = EE_NETMSG_START_LOADING;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mNumHumanPlayers);
+    outSlots[6] = EENetMsgField(this->mSeed);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c7be8
-// Packs the start-loading message (header, selection id, human player count, random seed) into a new send buffer
-void EEMStartLoading::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_START_LOADING, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMStartLoading::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_START_LOADING);
-}
-
-// FUNCTION: EXE 0x4c7c77
-// Reads the start-loading message (header, selection id, human player count, random seed) from a received payload
-void EEMStartLoading::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 16096);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_START_LOADING, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMStartLoading::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c7cdc
@@ -7168,49 +4458,16 @@ void EEMStartLoading::Execute()
     gUserInterface->PostStartLoading();
 }
 
-// FUNCTION: EXE 0x4c7d6d
-// Returns the lag status message's payload size (8 bytes)
-unsigned long EEMLagStatus::ExportSize()
+// EEMStartLoadingResponse's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMStartLoadingResponse::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    return ee_netmsg_fixed_size(EE_NETMSG_LAG_STATUS);
-}
-
-// EEMStartLoadingResponse's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMStartLoadingResponse* inMessage, EeNetMsgSlot* outSlots)
-{
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mSlot);
-    outSlots[6] = EENetMsgField(inMessage->mPlayerID);
-    outSlots[7] = EENetMsgField(inMessage->mLobbySlot);
+    outClass = EE_NETMSG_START_LOADING_RESPONSE;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mSlot);
+    outSlots[6] = EENetMsgField(this->mPlayerID);
+    outSlots[7] = EENetMsgField(this->mLobbySlot);
     return 8;
-}
-
-// FUNCTION: EXE 0x4c7d71
-// Packs the loading reply (header, selection id, slot, player id, lobby slot) into a new send buffer
-void EEMStartLoadingResponse::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_START_LOADING_RESPONSE, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMStartLoadingResponse::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_START_LOADING_RESPONSE);
-}
-
-// FUNCTION: EXE 0x4c7e0f
-// Reads the loading reply (header, selection id, slot, player id, lobby slot) from a received payload
-void EEMStartLoadingResponse::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 16197);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_START_LOADING_RESPONSE, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMStartLoadingResponse::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c7e84
@@ -7247,39 +4504,13 @@ EEMLoadMainScreen::EEMLoadMainScreen(unsigned char inB10)
 {
 }
 
-// EEMSnapToDaylight's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSnapToDaylight* inMessage, EeNetMsgSlot* outSlots)
+// EEMSnapToDaylight's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSnapToDaylight::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_SNAP_TO_DAYLIGHT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4c8011
-// Packs the snap-to-daylight message (header, selection id) into a new send buffer
-void EEMSnapToDaylight::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SNAP_TO_DAYLIGHT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSnapToDaylight::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SNAP_TO_DAYLIGHT);
-}
-
-// FUNCTION: EXE 0x4c807c
-// Reads the snap-to-daylight message (header, selection id) from a received payload
-void EEMSnapToDaylight::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 16321);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SNAP_TO_DAYLIGHT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSnapToDaylight::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c80bf
@@ -7289,25 +4520,13 @@ void EEMSnapToDaylight::Execute()
     gPhysics->mThread->Post(0x503, NULL, NULL, true);
 }
 
-// EEMStopActiveGroup's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMStopActiveGroup* inMessage, EeNetMsgSlot* outSlots)
+// EEMStopActiveGroup's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMStopActiveGroup::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_STOP_ACTIVE_GROUP;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4c80d9
-// Packs the stop order (header, selection id) into a new send buffer
-void EEMStopActiveGroup::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_STOP_ACTIVE_GROUP, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMStopActiveGroup::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_STOP_ACTIVE_GROUP);
 }
 
 // FUNCTION: EXE 0x4c8144
@@ -7317,113 +4536,25 @@ char* EEMStopActiveGroup::GetMessageLabel() const
     return "Stop Active Group";
 }
 
-// FUNCTION: EXE 0x4c814a
-// Reads the stop order (header, selection id) from a received payload
-void EEMStopActiveGroup::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 16396);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_STOP_ACTIVE_GROUP, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMStopActiveGroup::IsResponse(NEMessage* inMessage)
-{
-    return false;
-}
-
 // FUNCTION: EXE 0x4c818d
 // Stops the sender's living selected units: aircraft drop their orders and, unless taking off, flying a
 // pattern or landing, hold at their tile; other units halt
 void EEMStopActiveGroup::Execute()
 {
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
-    if (theGroup->GetFirstUnit()) {
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            if (theUnit->mHitPoints > 0) {
-                if (theUnit->mUnitClass->mCategory == kUnitCategoryAirplane || theUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship) {
-                    theUnit->ClearBuildTargets();
-                    theUnit->ClearGoalQueue(0);
-                    theUnit->ClearGoals(0);
-                    unsigned long theCommand = theUnit->mCommand ? theUnit->mCommand->mType : 0;
-                    switch (theCommand) {
-                    case kActionTakeoff:
-                    case kActionTaxi:
-                    case kActionContinueToTaxi:
-                    case kActionClimb:
-                    case kActionContinueToClimb:
-                    case kActionContinueToFly:
-                    case kActionCircle:
-                    case kActionWaitForLandingClearance:
-                    case kActionHoldingPattern:
-                    case kActionLand:
-                    case kActionDescend:
-                    case kActionContinueToDescend:
-                    case kActionBrake:
-                    case kActionContinueToBrake:
-                    case kActionEmergencyTakeoff:
-                    case kActionSearchForSecondaryTarget:
-                    case kActionBoardTransport:
-                    case kActionRecalculateLanding:
-                    case kActionContinueToWaitForLandingClearance:
-                    case kActionRequestLanding:
-                    case kActionCircleAirtrafficController:
-                        break;
-                    case kActionFly:
-                        theUnit->SetGoal(EEUGRust::NewLocation((float)theUnit->GetTileX(), (float)theUnit->GetTileY(), 0.0f, false, true,
-                                                          false, 0.0f, false, false), 0, 0);
-                        theUnit->StartAction(kActionPrepareToMove);
-                        break;
-                    default:
-                        theUnit->SetGoal(EEUGRust::NewLocation((float)theUnit->GetTileX(), (float)theUnit->GetTileY(), 0.0f, false, true,
-                                                          false, 0.0f, false, false), 0, 0);
-                        theUnit->StartAction(kActionPrepareToMove);
-                        break;
-                    }
-                    theUnit->mUnitClass->ActionChanged(theUnit);
-                } else
-                    theUnit->Halt();
-            }
-        }
-    }
+    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs stop_active_group: aircraft drop their
+    // orders and, unless airborne, move to their tile; the other living units halt)
+    ee_units_stop_active_group(static_cast<EEGroup*>(gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup));
 }
 
-// EEMToggleCollisionDetection's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMToggleCollisionDetection* inMessage, EeNetMsgSlot* outSlots)
+// EEMToggleCollisionDetection's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMToggleCollisionDetection::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mDivisor);
-    outSlots[6] = EENetMsgField(inMessage->mL14);
+    outClass = EE_NETMSG_TOGGLE_COLLISION_DETECTION;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mDivisor);
+    outSlots[6] = EENetMsgField(this->mL14);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c8312
-// Packs the collision debug message (header, selection id, cell size, mode value) into a new send buffer
-void EEMToggleCollisionDetection::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_TOGGLE_COLLISION_DETECTION, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMToggleCollisionDetection::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_TOGGLE_COLLISION_DETECTION);
-}
-
-// FUNCTION: EXE 0x4c83a3
-// Reads the collision debug message (header, selection id, cell size, mode value) from a received payload
-void EEMToggleCollisionDetection::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 16539);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_TOGGLE_COLLISION_DETECTION, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMToggleCollisionDetection::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c840a
@@ -7439,39 +4570,13 @@ void EEMToggleCollisionDetection::Execute()
     }
 }
 
-// EEMToggleDayNight's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMToggleDayNight* inMessage, EeNetMsgSlot* outSlots)
+// EEMToggleDayNight's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMToggleDayNight::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_TOGGLE_DAY_NIGHT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4c8431
-// Packs the day/night toggle (header, selection id) into a new send buffer
-void EEMToggleDayNight::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_TOGGLE_DAY_NIGHT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMToggleDayNight::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_TOGGLE_DAY_NIGHT);
-}
-
-// FUNCTION: EXE 0x4c849c
-// Reads the day/night toggle (header, selection id) from a received payload
-void EEMToggleDayNight::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 16616);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_TOGGLE_DAY_NIGHT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMToggleDayNight::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c84df
@@ -7481,42 +4586,16 @@ void EEMToggleDayNight::Execute()
     gPhysics->mThread->Post(0x502, NULL, NULL, true);
 }
 
-// EEMUnloadTransport's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMUnloadTransport* inMessage, EeNetMsgSlot* outSlots)
+// EEMUnloadTransport's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMUnloadTransport::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitID);
-    outSlots[6] = EENetMsgField(inMessage->mX);
-    outSlots[7] = EENetMsgField(inMessage->mY);
+    outClass = EE_NETMSG_UNLOAD_TRANSPORT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitID);
+    outSlots[6] = EENetMsgField(this->mX);
+    outSlots[7] = EENetMsgField(this->mY);
     return 8;
-}
-
-// FUNCTION: EXE 0x4c84f9
-// Packs the unload order (header, selection id, unit id, x, y) into a new send buffer
-void EEMUnloadTransport::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_UNLOAD_TRANSPORT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMUnloadTransport::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_UNLOAD_TRANSPORT);
-}
-
-// FUNCTION: EXE 0x4c859d
-// Reads the unload order (header, selection id, unit id, x, y) from a received payload
-void EEMUnloadTransport::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 16691);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_UNLOAD_TRANSPORT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMUnloadTransport::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 
@@ -7540,25 +4619,13 @@ void EEMUnselectAllUnits::Execute()
     gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->UnselectAllUnits();
 }
 
-// EEMUnselectAllUnits's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMUnselectAllUnits* inMessage, EeNetMsgSlot* outSlots)
+// EEMUnselectAllUnits's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMUnselectAllUnits::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
+    outClass = EE_NETMSG_UNSELECT_ALL_UNITS;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
     return 5;
-}
-
-// FUNCTION: EXE 0x4c88be
-// Packs the deselect-all message (header, selection id) into a new send buffer
-void EEMUnselectAllUnits::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_UNSELECT_ALL_UNITS, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMUnselectAllUnits::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_UNSELECT_ALL_UNITS);
 }
 
 // FUNCTION: EXE 0x4c8929
@@ -7566,20 +4633,6 @@ unsigned long EEMUnselectAllUnits::ExportSize()
 char* EEMUnselectAllUnits::GetMessageLabel() const
 {
     return "Unselect All Units";
-}
-
-// FUNCTION: EXE 0x4c892f
-// Reads the deselect-all message (header, selection id) from a received payload
-void EEMUnselectAllUnits::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 16934);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_UNSELECT_ALL_UNITS, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMUnselectAllUnits::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c8972
@@ -7595,27 +4648,15 @@ void EEMUpdatePingStat::Execute()
     gUserInterface->PostLobbyUpdatePlayer(this->mSlot, 1);
 }
 
-// EEMUpdatePingStat's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMUpdatePingStat* inMessage, EeNetMsgSlot* outSlots)
+// EEMUpdatePingStat's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMUpdatePingStat::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mSlot);
-    outSlots[6] = EENetMsgField(inMessage->mPing);
+    outClass = EE_NETMSG_UPDATE_PING_STAT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mSlot);
+    outSlots[6] = EENetMsgField(this->mPing);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c89ea
-// Packs the ping update (header, selection id, slot, ping) into a new send buffer
-void EEMUpdatePingStat::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_UPDATE_PING_STAT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMUpdatePingStat::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_UPDATE_PING_STAT);
 }
 
 // FUNCTION: EXE 0x4c8a79
@@ -7623,20 +4664,6 @@ unsigned long EEMUpdatePingStat::ExportSize()
 char* EEMUpdatePingStat::GetMessageLabel() const
 {
     return "Update Ping Stat";
-}
-
-// FUNCTION: EXE 0x4c8a7f
-// Reads the ping update (header, selection id, slot, ping) from a received payload
-void EEMUpdatePingStat::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 17069);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_UPDATE_PING_STAT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMUpdatePingStat::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c8ae4
@@ -7659,41 +4686,15 @@ void EEMImproveUnit::Execute()
     }
 }
 
-// EEMImproveUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMImproveUnit* inMessage, EeNetMsgSlot* outSlots)
+// EEMImproveUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMImproveUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mUnitID);
-    outSlots[6] = EENetMsgField(inMessage->mImprovement);
+    outClass = EE_NETMSG_IMPROVE_UNIT;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mUnitID);
+    outSlots[6] = EENetMsgField(this->mImprovement);
     return 7;
-}
-
-// FUNCTION: EXE 0x4c8bc3
-// Packs the improvement order (header, selection id, unit id, improvement) into a new send buffer
-void EEMImproveUnit::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_IMPROVE_UNIT, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMImproveUnit::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_IMPROVE_UNIT);
-}
-
-// FUNCTION: EXE 0x4c8c54
-// Reads the improvement order (header, selection id, unit id, improvement) from a received payload
-void EEMImproveUnit::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 17217);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_IMPROVE_UNIT, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMImproveUnit::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c8cbb
@@ -7709,40 +4710,14 @@ void EEMZoomInfo::Execute()
     }
 }
 
-// EEMZoomInfo's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMZoomInfo* inMessage, EeNetMsgSlot* outSlots)
+// EEMZoomInfo's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMZoomInfo::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mZoom);
+    outClass = EE_NETMSG_ZOOM_INFO;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mZoom);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c8d23
-// Packs the zoom message (header, selection id, zoom) into a new send buffer
-void EEMZoomInfo::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_ZOOM_INFO, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMZoomInfo::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_ZOOM_INFO);
-}
-
-// FUNCTION: EXE 0x4c8da1
-// Reads the zoom message (header, selection id, zoom) from a received payload
-void EEMZoomInfo::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 17329);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_ZOOM_INFO, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMZoomInfo::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // FUNCTION: EXE 0x4c8df1
@@ -7760,40 +4735,14 @@ void EEMSetUnitBehavior::Execute()
     }
 }
 
-// EEMSetUnitBehavior's members as the codec's slots, in wire order (ee_netmsg classes.rs)
-static size_t Slots(EEMSetUnitBehavior* inMessage, EeNetMsgSlot* outSlots)
+// EEMSetUnitBehavior's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMSetUnitBehavior::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 {
-    inMessage->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(inMessage->mFastSelectionID);
-    outSlots[5] = EENetMsgField(inMessage->mBehavior);
+    outClass = EE_NETMSG_SET_UNIT_BEHAVIOR;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mBehavior);
     return 6;
-}
-
-// FUNCTION: EXE 0x4c8e64
-// Packs the behaviour order (header, selection id, behaviour) into a new send buffer
-void EEMSetUnitBehavior::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
-{
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    EENetMsgExport(EE_NETMSG_SET_UNIT_BEHAVIOR, theSlots, Slots(this, theSlots), outPayloadPointer, outMessageSize);
-}
-
-unsigned long EEMSetUnitBehavior::ExportSize()
-{
-    return ee_netmsg_fixed_size(EE_NETMSG_SET_UNIT_BEHAVIOR);
-}
-
-// FUNCTION: EXE 0x4c8ee2
-// Reads the behaviour order (header, selection id, behaviour) from a received payload
-void EEMSetUnitBehavior::ImportMessage(unsigned char* inPayloadPointer)
-{
-    ESVERIFY_AT(inPayloadPointer != NULL, 17448);
-    EeNetMsgSlot theSlots[kNetMsgMaxSlots];
-    ee_netmsg_import(EE_NETMSG_SET_UNIT_BEHAVIOR, inPayloadPointer, theSlots, Slots(this, theSlots));
-}
-
-bool EEMSetUnitBehavior::IsResponse(NEMessage* inMessage)
-{
-    return false;
 }
 
 // Inline members of ee/EEMessage.h whose first user is the message factory (0xba41b..0xbadd0): the import

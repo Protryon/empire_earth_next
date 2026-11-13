@@ -1,0 +1,7107 @@
+seq 0
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call create 0 0 0 2 0 1 1 [models\B]
+LockEnter L1
+ModelNew M1 0 0 0 2 0 1 [GEModelManager::CreateModel(models\B_1)] 1 G
+LockLeave L1
+ret M1
+ext ref M1
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call create 2 0 1 2 1 1 9 []
+LockEnter L1
+ModelNew M2 2 0 1 2 1 1 [GEModelManager::CreateModel(_2)] 9 G
+LockLeave L1
+ret M2
+ext ref M2
+ext deref M1
+ext deref M2
+call set_path P1
+PathDereference P3
+PathReference P1
+ret
+call load [models\B] T3
+LockEnter L1
+ModelFindFile P1 [models\B] T3 = 0 C1
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C1 T3
+=> 0
+ModelSizeOf M3 = 7347
+ModelFreeFile C1
+LockLeave L1
+ret M3
+ext ref M3
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P1 [models\a\x] T3 = 0 C2
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C2 T3
+=> 0
+ModelSizeOf M4 = 7108
+ModelFreeFile C2
+LockLeave L1
+ret M4
+call remove M1
+LockEnter L1
+ModelSizeOf M1 = 1737
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call set_path P1
+PathDereference P1
+PathReference P1
+ret
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_2) model file is loaded in memory with a reference count of 1.|The models\B model file is loaded in memory with a reference count of 2.|The models\a\x model file is loaded in memory with a reference count of 1.|
+call create 2 0 4 2 3 2 14 [models\b]
+LockEnter L1
+ModelNew M5 2 0 4 2 3 2 [GEModelManager::CreateModel(models\b_3)] 14 G
+LockLeave L1
+ret M5
+ext ref M5
+call load [models\GEModelManager::CreateModel(models\a_1)] T3
+LockEnter L1
+ModelFindFile P1 [models\GEModelManager::CreateModel(models\a_1)] T3 = 0 C3
+ModelNewEmpty M6 G
+ModelStoreLoaded M6 C3 T3
+=> 0
+ModelSizeOf M6 = 2540
+ModelFreeFile C3
+LockLeave L1
+ret M6
+call remove_all
+LockEnter L1
+ModelSizeOf M2 = 795
+BaseDereference M2
+~destroy M2
+ModelSizeOf M6 = 2540
+BaseDereference M6
+~destroy M6
+ModelSizeOf M4 = 7108
+BaseDereference M4
+~destroy M4
+LockLeave L1
+ret 5
+call create 1 1 3 2 4 1 6 [models\a\x]
+LockEnter L1
+ModelNew M7 1 1 3 2 4 1 [GEModelManager::CreateModel(models\a\x_4)] 6 G
+LockLeave L1
+ret M7
+ext ref M7
+call load [models\été] T1
+LockEnter L1
+ModelFindFile P1 [models\été] T1 = 0 C4
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C4 T1
+=> 0
+ModelSizeOf M8 = 627
+ModelFreeFile C4
+LockLeave L1
+ret M8
+call create_sub 0 4 0 3 2 0 8 3 M7
+LockEnter L1
+ModelNew M9 0 4 0 3 2 0 [GEModelManager::CreateModel(models\a\x_4)] 8 G
+SetSubModel M7 M9 3
+~Reference M9
+BaseDereference M9
+LockLeave L1
+ret M9
+ext ref M9
+call load [] T3
+LockEnter L1
+ModelFindFile P1 [] T3 = 0 C5
+ModelNewEmpty M10 G
+ModelStoreLoaded M10 C5 T3
+=> 0
+ModelSizeOf M10 = 3163
+ModelFreeFile C5
+LockLeave L1
+ret M10
+call remove M5
+LockEnter L1
+LockLeave L1
+ret 5
+call remove M5
+LockEnter L1
+LockLeave L1
+ret 5
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The  model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\a\x_4) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\b_3) model file is loaded in memory with a reference count of 2.|The models\B model file is loaded in memory with a reference count of 2.|The models\été model file is loaded in memory with a reference count of 1.|
+call load [models\GEModelManager::CreateModel(models\a_1)] T3
+LockEnter L1
+ModelFindFile P1 [models\GEModelManager::CreateModel(models\a_1)] T3 = 2
+LockLeave L1
+ret 0
+call footprint
+ret 8605
+call load [models\a\x] T1
+LockEnter L1
+ModelFindFile P1 [models\a\x] T1 = 2
+LockLeave L1
+ret 0
+call create_sub 1 1 3 3 2 4 10 1 M10
+LockEnter L1
+ModelNew M11 1 1 3 3 2 4 [] 10 G
+SetSubModel M10 M11 1
+~Reference M11
+BaseDereference M11
+LockLeave L1
+ret M11
+call create 4 1 0 3 1 0 9 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M12 4 1 0 3 1 0 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_5)] 9 G
+LockLeave L1
+ret M12
+call count
+ret 6
+call create 2 0 3 4 0 0 8 [models\a]
+LockEnter L1
+ModelNew M13 2 0 3 4 0 0 [GEModelManager::CreateModel(models\a_6)] 8 G
+LockLeave L1
+ret M13
+call create_sub 3 1 4 4 1 4 3 3 M5
+LockEnter L1
+ModelNew M14 3 1 4 4 1 4 [GEModelManager::CreateModel(models\b_3)] 3 G
+SetSubModel M5 M14 3
+~Reference M14
+BaseDereference M14
+LockLeave L1
+ret M14
+ext deref M7
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The  model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_5) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\a\x_4) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\a_6) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\b_3) model file is loaded in memory with a reference count of 2.|The models\B model file is loaded in memory with a reference count of 2.|The models\été model file is loaded in memory with a reference count of 1.|
+call create_sub 3 3 3 4 3 2 0 0 M11
+LockEnter L1
+ModelNew M15 3 3 3 4 3 2 [] 0 G
+SetSubModel M11 M15 0
+~Reference M15
+BaseDereference M15
+LockLeave L1
+ret M15
+call create_sub 4 3 4 3 3 0 15 1 M12
+LockEnter L1
+ModelNew M16 4 3 4 3 3 0 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_5)] 15 G
+SetSubModel M12 M16 1
+~Reference M16
+BaseDereference M16
+LockLeave L1
+ret M16
+ext ref M16
+call create_sub 4 3 3 4 2 0 1 2 M12
+LockEnter L1
+ModelNew M17 4 3 3 4 2 0 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_5)] 1 G
+SetSubModel M12 M17 2
+~Reference M17
+BaseDereference M17
+LockLeave L1
+ret M17
+ext ref M17
+call set_path P2
+PathDereference P1
+PathReference P2
+ret
+call remove M11
+LockEnter L1
+LockLeave L1
+ret 3
+call create 3 2 4 0 3 4 9 [models\a]
+LockEnter L1
+ModelNew M18 3 2 4 0 3 4 [GEModelManager::CreateModel(models\a_7)] 9 G
+LockLeave L1
+ret M18
+call load [] T3
+LockEnter L1
+LockLeave L1
+ret M10
+call create_sub 1 4 3 3 3 2 4 2 M14
+LockEnter L1
+ModelNew M19 1 4 3 3 3 2 [GEModelManager::CreateModel(models\b_3)] 4 G
+SetSubModel M14 M19 2
+~Reference M19
+BaseDereference M19
+LockLeave L1
+ret M19
+ext ref M19
+call remove M16
+LockEnter L1
+LockLeave L1
+ret 3
+call remove M18
+LockEnter L1
+ModelSizeOf M18 = 3978
+BaseDereference M18
+~destroy M18
+LockLeave L1
+ret 0
+call set_path 0
+PathDereference P2
+ret
+ext deref M17
+call free
+LockEnter L1
+ModelSizeOf M10 = 8789
+BaseDereference M10
+~destroy M10
+~BaseDereference M11
+~destroy M11
+~BaseDereference M15
+~destroy M15
+ModelSizeOf M12 = 1480
+BaseDereference M12
+~destroy M12
+~BaseDereference M16
+~BaseDereference M17
+~destroy M17
+ModelSizeOf M7 = 384
+BaseDereference M7
+~destroy M7
+~BaseDereference M9
+ModelSizeOf M13 = 4821
+BaseDereference M13
+~destroy M13
+ModelSizeOf M8 = 5615
+BaseDereference M8
+~destroy M8
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M3
+ext deref M5
+ext deref M9
+ext deref M16
+ext deref M19
+end models 6 paths 1 1 1 locks 0 files 0
+seq 1
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call create 1 0 1 3 4 4 0 [models\B]
+LockEnter L1
+ModelNew M1 1 0 1 3 4 4 [GEModelManager::CreateModel(models\B_8)] 0 G
+LockLeave L1
+ret M1
+ext ref M1
+call load [models\a] T2
+LockEnter L1
+ModelFindFile P3 [models\a] T2 = 0 C1
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C1 T2
+=> 7
+BaseDereference M2
+~destroy M2
+ModelFreeFile C1
+LockLeave L1
+ret 0
+call create_sub 0 2 3 3 3 0 12 2 M1
+LockEnter L1
+ModelNew M3 0 2 3 3 3 0 [GEModelManager::CreateModel(models\B_8)] 12 G
+SetSubModel M1 M3 2
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+ext ref M3
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 3
+call load [models\été] T1
+LockEnter L1
+ModelFindFile P3 [models\été] T1 = 0 C2
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C2 T1
+call create_sub 0 2 2 4 2 3 2 1 M3
+LockEnter L1
+ModelNew M5 0 2 2 4 2 3 [GEModelManager::CreateModel(models\B_8)] 2 G
+SetSubModel M3 M5 1
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+=> 0
+ModelSizeOf M4 = 2015
+ModelFreeFile C2
+LockLeave L1
+ret M4
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\B_8) model file is loaded in memory with a reference count of 2.|The models\été model file is loaded in memory with a reference count of 1.|
+call create 2 3 2 3 0 3 3 []
+LockEnter L1
+ModelNew M6 2 3 2 3 0 3 [GEModelManager::CreateModel(_9)] 3 G
+LockLeave L1
+ret M6
+call count
+ret 3
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 3
+call create_sub 0 2 2 0 4 1 13 1 M3
+LockEnter L1
+ModelNew M7 0 2 2 0 4 1 [GEModelManager::CreateModel(models\B_8)] 13 G
+SetSubModel M3 M7 1
+~Reference M7
+BaseDereference M7
+LockLeave L1
+ret M7
+ext ref M7
+call count
+ret 3
+ext deref M1
+call create 2 0 2 3 1 1 9 [models\a]
+LockEnter L1
+ModelNew M8 2 0 2 3 1 1 [GEModelManager::CreateModel(models\a_10)] 9 G
+LockLeave L1
+ret M8
+call create 2 4 4 2 2 2 7 [models\ab]
+LockEnter L1
+ModelNew M9 2 4 4 2 2 2 [GEModelManager::CreateModel(models\ab_11)] 7 G
+LockLeave L1
+ret M9
+ext ref M9
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P3 [models\a\x] T3 = 2
+LockLeave L1
+ret 0
+call load [models\a] T2
+LockEnter L1
+ModelFindFile P3 [models\a] T2 = 2
+LockLeave L1
+ret 0
+ext deref M3
+ext deref M7
+call free
+LockEnter L1
+ModelSizeOf M6 = 4741
+BaseDereference M6
+~destroy M6
+ModelSizeOf M1 = 7252
+BaseDereference M1
+~destroy M1
+~BaseDereference M3
+~destroy M3
+~BaseDereference M5
+~destroy M5
+~BaseDereference M7
+~destroy M7
+ModelSizeOf M8 = 3632
+BaseDereference M8
+~destroy M8
+ModelSizeOf M4 = 2015
+BaseDereference M4
+~destroy M4
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+ext deref M9
+end models 1 paths 1 1 1 locks 0 files 0
+seq 2
+call new P1
+PathReference P1
+LockCreate = L1
+ret
+call load [models\a\x] T2
+LockEnter L1
+ModelFindFile P1 [models\a\x] T2 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T2
+=> 0
+ModelSizeOf M1 = 3847
+ModelFreeFile C1
+LockLeave L1
+ret M1
+call verify
+LockEnter L1
+ModelVerify M1
+LockLeave L1
+ret
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The models\a\x model file is loaded in memory with a reference count of 1.|
+call count
+ret 1
+call load [models\b] T2
+LockEnter L1
+ModelFindFile P1 [models\b] T2 = 0 C2
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C2 T2
+call footprint
+ret 3847
+=> 0
+ModelSizeOf M2 = 1818
+ModelFreeFile C2
+LockLeave L1
+ret M2
+ext ref M2
+call create_sub 3 4 1 3 3 2 10 0 M1
+LockEnter L1
+ModelNew M3 3 4 1 3 3 2 [] 10 G
+SetSubModel M1 M3 0
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+call create 2 0 3 2 3 3 5 []
+LockEnter L1
+ModelNew M4 2 0 3 2 3 3 [GEModelManager::CreateModel(_12)] 5 G
+LockLeave L1
+ret M4
+ext ref M4
+call create 3 1 1 0 0 0 3 [models\ab]
+LockEnter L1
+ModelNew M5 3 1 1 0 0 0 [GEModelManager::CreateModel(models\ab_13)] 3 G
+LockLeave L1
+ret M5
+ext ref M5
+call load [models\a\x] T1
+LockEnter L1
+LockLeave L1
+ret M1
+ext deref M2
+call verify
+LockEnter L1
+ModelVerify M4
+ModelVerify M5
+ModelVerify M1
+ModelVerify M2
+LockLeave L1
+ret
+call load [] T3
+LockEnter L1
+ModelFindFile P1 [] T3 = 2
+LockLeave L1
+ret 0
+call set_path P2
+PathDereference P1
+PathReference P2
+ret
+call load [models\a] T1
+LockEnter L1
+ModelFindFile P2 [models\a] T1 = 0 C3
+ModelNewEmpty M6 G
+ModelStoreLoaded M6 C3 T1
+=> 0
+ModelSizeOf M6 = 8774
+ModelFreeFile C3
+LockLeave L1
+ret M6
+call load [models\été] T1
+LockEnter L1
+ModelFindFile P2 [models\été] T1 = 0 C4
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C4 T1
+=> 0
+ModelSizeOf M7 = 7813
+ModelFreeFile C4
+LockLeave L1
+ret M7
+ext ref M7
+call remove M6
+LockEnter L1
+ModelSizeOf M6 = 5805
+BaseDereference M6
+~destroy M6
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 3847
+BaseDereference M1
+~destroy M1
+~BaseDereference M3
+~destroy M3
+ModelSizeOf M2 = 1818
+BaseDereference M2
+~destroy M2
+LockLeave L1
+ret 5
+call create 3 1 4 2 3 1 13 [models\b]
+LockEnter L1
+ModelNew M8 3 1 4 2 3 1 [GEModelManager::CreateModel(models\b_14)] 13 G
+LockLeave L1
+ret M8
+ext ref M8
+call create_sub 3 3 2 2 2 4 0 3 M4
+LockEnter L1
+ModelNew M9 3 3 2 2 2 4 [GEModelManager::CreateModel(_12)] 0 G
+SetSubModel M4 M9 3
+~Reference M9
+BaseDereference M9
+LockLeave L1
+ret M9
+ext ref M9
+call free
+LockEnter L1
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+ext deref M4
+ext deref M5
+ext deref M7
+ext deref M8
+ext deref M9
+end models 5 paths 1 1 1 locks 0 files 0
+seq 3
+call new 0
+LockCreate = L1
+ret
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call footprint
+ret 0
+call create 1 4 4 0 2 2 9 [models\b]
+LockEnter L1
+ModelNew M1 1 4 4 0 2 2 [GEModelManager::CreateModel(models\b_15)] 9 G
+LockLeave L1
+ret M1
+ext ref M1
+call load [models\été] T1
+LockEnter L1
+ModelFindFile 0 [models\été] T1 = 2
+LockLeave L1
+ret 0
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call create 2 1 2 4 2 3 0 []
+LockEnter L1
+ModelNew M2 2 1 2 4 2 3 [GEModelManager::CreateModel(_16)] 0 G
+LockLeave L1
+ret M2
+ext ref M2
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 5
+call count
+ret 2
+call create 4 2 1 1 1 1 5 [models\a]
+LockEnter L1
+ModelNew M3 4 2 1 1 1 1 [GEModelManager::CreateModel(models\a_17)] 5 G
+LockLeave L1
+ret M3
+call verify
+LockEnter L1
+ModelVerify M2
+ModelVerify M3
+ModelVerify M1
+LockLeave L1
+ret
+call load [models\a] T1
+LockEnter L1
+ModelFindFile 0 [models\a] T1 = 0 C1
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C1 T1
+=> 0
+ModelSizeOf M4 = 480
+ModelFreeFile C1
+LockLeave L1
+ret M4
+call create 1 0 1 2 1 4 12 [models\ab]
+LockEnter L1
+ModelNew M5 1 0 1 2 1 4 [GEModelManager::CreateModel(models\ab_18)] 12 G
+LockLeave L1
+ret M5
+ext ref M5
+call remove M4
+LockEnter L1
+ModelSizeOf M4 = 480
+BaseDereference M4
+~destroy M4
+LockLeave L1
+ret 0
+call footprint
+ret 0
+call create 3 0 3 0 4 0 7 [models\ab]
+LockEnter L1
+ModelNew M6 3 0 3 0 4 0 [GEModelManager::CreateModel(models\ab_19)] 7 G
+LockLeave L1
+ret M6
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_16) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a_17) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\ab_18) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\ab_19) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\b_15) model file is loaded in memory with a reference count of 2.|
+ext deref M5
+ext deref M1
+call load [models\GEModelManager::CreateModel(models\a_1)] T2
+LockEnter L1
+ModelFindFile 0 [models\GEModelManager::CreateModel(models\a_1)] T2 = 0 C2
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C2 T2
+=> 0
+ModelSizeOf M7 = 6339
+ModelFreeFile C2
+LockLeave L1
+ret M7
+ext ref M7
+call create 3 1 0 2 4 4 6 [models\a]
+LockEnter L1
+ModelNew M8 3 1 0 2 4 4 [GEModelManager::CreateModel(models\a_20)] 6 G
+LockLeave L1
+ret M8
+ext ref M8
+call verify
+LockEnter L1
+ModelVerify M2
+ModelVerify M3
+ModelVerify M8
+ModelVerify M5
+ModelVerify M6
+ModelVerify M1
+ModelVerify M7
+LockLeave L1
+ret
+call create 2 3 4 2 3 1 14 [m]
+LockEnter L1
+ModelNew M9 2 3 4 2 3 1 [GEModelManager::CreateModel(m_21)] 14 G
+LockLeave L1
+ret M9
+ext ref M9
+call count
+ret 8
+call remove_all
+LockEnter L1
+ModelSizeOf M3 = 1362
+BaseDereference M3
+~destroy M3
+ModelSizeOf M5 = 3393
+BaseDereference M5
+~destroy M5
+ModelSizeOf M6 = 1971
+BaseDereference M6
+~destroy M6
+ModelSizeOf M1 = 5254
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 5
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_16) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(m_21) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a_20) model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|
+call load [models\a] T2
+LockEnter L1
+ModelFindFile 0 [models\a] T2 = 0 C3
+ModelNewEmpty M10 G
+ModelStoreLoaded M10 C3 T2
+=> 0
+ModelSizeOf M10 = 8797
+ModelFreeFile C3
+LockLeave L1
+ret M10
+ext ref M10
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_16) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(m_21) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a_20) model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|The models\a model file is loaded in memory with a reference count of 2.|
+call remove M7
+LockEnter L1
+LockLeave L1
+ret 5
+call create 1 0 2 4 1 0 14 [m]
+LockEnter L1
+ModelNew M11 1 0 2 4 1 0 [GEModelManager::CreateModel(m_22)] 14 G
+LockLeave L1
+ret M11
+ext ref M11
+call remove M11
+LockEnter L1
+LockLeave L1
+ret 5
+call load [] T1
+LockEnter L1
+ModelFindFile 0 [] T1 = 0 C4
+ModelNewEmpty M12 G
+ModelStoreLoaded M12 C4 T1
+=> 0
+ModelSizeOf M12 = 1573
+ModelFreeFile C4
+LockLeave L1
+ret M12
+call set_path P2
+PathReference P2
+ret
+call dump F4
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The  model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(_16) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(m_21) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(m_22) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a_20) model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|The models\a model file is loaded in memory with a reference count of 2.|
+call create 0 3 4 3 4 3 4 [models\B]
+LockEnter L1
+ModelNew M13 0 3 4 3 4 3 [GEModelManager::CreateModel(models\B_23)] 4 G
+LockLeave L1
+ret M13
+call remove M11
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 1 4 3 4 0 0 4 0 M13
+LockEnter L1
+ModelNew M14 1 4 3 4 0 0 [GEModelManager::CreateModel(models\B_23)] 4 G
+SetSubModel M13 M14 0
+~Reference M14
+BaseDereference M14
+LockLeave L1
+ret M14
+ext ref M14
+call load [m] T3
+LockEnter L1
+ModelFindFile P2 [m] T3 = 0 C5
+ModelNewEmpty M15 G
+ModelStoreLoaded M15 C5 T3
+=> 0
+ModelSizeOf M15 = 6626
+ModelFreeFile C5
+LockLeave L1
+ret M15
+ext ref M15
+ext deref M10
+call count
+ret 9
+call create 2 3 4 1 1 2 8 [models\b]
+LockEnter L1
+ModelNew M16 2 3 4 1 1 2 [GEModelManager::CreateModel(models\b_24)] 8 G
+LockLeave L1
+ret M16
+ext ref M16
+call set_path 0
+PathDereference P2
+ret
+call verify
+LockEnter L1
+ModelVerify M12
+ModelVerify M2
+ModelVerify M9
+ModelVerify M11
+ModelVerify M13
+ModelVerify M8
+ModelVerify M16
+ModelVerify M15
+ModelVerify M7
+ModelVerify M10
+LockLeave L1
+ret
+call create_sub 2 3 3 2 0 2 2 2 M8
+LockEnter L1
+ModelNew M17 2 3 3 2 0 2 [GEModelManager::CreateModel(models\a_20)] 2 G
+SetSubModel M8 M17 2
+~Reference M17
+BaseDereference M17
+LockLeave L1
+ret M17
+call create 3 0 1 0 4 1 1 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M18 3 0 1 0 4 1 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_25)] 1 G
+LockLeave L1
+ret M18
+call dump F5
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The  model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(_16) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(m_21) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(m_22) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_23) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_25) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\a_20) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\b_24) model file is loaded in memory with a reference count of 2.|The m model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|The models\a model file is loaded in memory with a reference count of 1.|
+call remove_all
+LockEnter L1
+ModelSizeOf M12 = 1573
+BaseDereference M12
+~destroy M12
+ModelSizeOf M13 = 2139
+BaseDereference M13
+~destroy M13
+~BaseDereference M14
+ModelSizeOf M18 = 4260
+BaseDereference M18
+~destroy M18
+ModelSizeOf M10 = 8797
+BaseDereference M10
+~destroy M10
+LockLeave L1
+ret 5
+call load [models\a\x] T1
+LockEnter L1
+ModelFindFile 0 [models\a\x] T1 = 0 C6
+ModelNewEmpty M19 G
+ModelStoreLoaded M19 C6 T1
+=> 0
+ModelSizeOf M19 = 8415
+ModelFreeFile C6
+LockLeave L1
+ret M19
+ext ref M19
+call free
+LockEnter L1
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M2
+ext deref M7
+ext deref M8
+ext deref M9
+ext deref M11
+ext deref M14
+ext deref M15
+ext deref M16
+ext deref M19
+end models 10 paths 1 1 1 locks 0 files 0
+seq 4
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call load [models\a] T3
+LockEnter L1
+ModelFindFile P3 [models\a] T3 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T3
+=> 0
+ModelSizeOf M1 = 2321
+ModelFreeFile C1
+LockLeave L1
+ret M1
+call remove M1
+LockEnter L1
+ModelSizeOf M1 = 2321
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call create 3 0 1 0 2 4 5 [models\été]
+LockEnter L1
+ModelNew M2 3 0 1 0 2 4 [GEModelManager::CreateModel(models\été_26)] 5 G
+LockLeave L1
+ret M2
+ext ref M2
+call set_path P1
+PathDereference P3
+PathReference P1
+ret
+call create 4 4 2 2 2 2 15 [models\ab]
+LockEnter L1
+ModelNew M3 4 4 2 2 2 2 [GEModelManager::CreateModel(models\ab_27)] 15 G
+LockLeave L1
+ret M3
+call load [] T1
+LockEnter L1
+ModelFindFile P1 [] T1 = 0 C2
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C2 T1
+=> 0
+ModelSizeOf M4 = 2820
+ModelFreeFile C2
+LockLeave L1
+ret M4
+ext ref M4
+call create 3 3 4 4 1 2 15 [models\B]
+LockEnter L1
+ModelNew M5 3 3 4 4 1 2 [GEModelManager::CreateModel(models\B_28)] 15 G
+LockLeave L1
+ret M5
+ext ref M5
+call create 4 2 1 0 3 0 12 [models\B]
+LockEnter L1
+ModelNew M6 4 2 1 0 3 0 [GEModelManager::CreateModel(models\B_29)] 12 G
+LockLeave L1
+ret M6
+ext ref M6
+ext deref M4
+call footprint
+ret 2820
+call load [models\GEModelManager::CreateModel(models\a_1)] T2
+LockEnter L1
+ModelFindFile P1 [models\GEModelManager::CreateModel(models\a_1)] T2 = 0 C3
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C3 T2
+=> 0
+ModelSizeOf M7 = 5105
+ModelFreeFile C3
+LockLeave L1
+ret M7
+ext ref M7
+call verify
+LockEnter L1
+ModelVerify M4
+ModelVerify M5
+ModelVerify M6
+ModelVerify M3
+ModelVerify M2
+ModelVerify M7
+LockLeave L1
+ret
+call remove M3
+LockEnter L1
+ModelSizeOf M3 = 3242
+BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 0
+call load [models\a\x] T1
+LockEnter L1
+ModelFindFile P1 [models\a\x] T1 = 0 C4
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C4 T1
+=> 0
+ModelSizeOf M8 = 2155
+ModelFreeFile C4
+LockLeave L1
+ret M8
+call verify
+LockEnter L1
+ModelVerify M4
+ModelVerify M5
+ModelVerify M6
+ModelVerify M2
+ModelVerify M7
+ModelVerify M8
+LockLeave L1
+ret
+call load [models\b] T2
+LockEnter L1
+ModelFindFile P1 [models\b] T2 = 0 C5
+ModelNewEmpty M9 G
+ModelStoreLoaded M9 C5 T2
+=> 0
+ModelSizeOf M9 = 1738
+ModelFreeFile C5
+LockLeave L1
+ret M9
+call create 4 2 1 0 0 1 14 [models\B]
+LockEnter L1
+ModelNew M10 4 2 1 0 0 1 [GEModelManager::CreateModel(models\B_30)] 14 G
+LockLeave L1
+ret M10
+ext ref M10
+call create 4 0 0 0 1 2 15 [models\ab]
+LockEnter L1
+ModelNew M11 4 0 0 0 1 2 [GEModelManager::CreateModel(models\ab_31)] 15 G
+LockLeave L1
+ret M11
+call set_path 0
+PathDereference P1
+ret
+call free
+LockEnter L1
+ModelSizeOf M4 = 2820
+BaseDereference M4
+~destroy M4
+ModelSizeOf M11 = 3961
+BaseDereference M11
+~destroy M11
+ModelSizeOf M8 = 2155
+BaseDereference M8
+~destroy M8
+ModelSizeOf M9 = 1738
+BaseDereference M9
+~destroy M9
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M2
+ext deref M5
+ext deref M6
+ext deref M7
+ext deref M10
+end models 5 paths 1 1 1 locks 0 files 0
+seq 5
+call new 0
+LockCreate = L1
+ret
+call load [models\a\x] T1
+LockEnter L1
+ModelFindFile 0 [models\a\x] T1 = 2
+LockLeave L1
+ret 0
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call create 4 2 2 1 4 3 11 [models\été]
+LockEnter L1
+ModelNew M1 4 2 2 1 4 3 [GEModelManager::CreateModel(models\été_32)] 11 G
+LockLeave L1
+ret M1
+call verify
+LockEnter L1
+ModelVerify M1
+LockLeave L1
+ret
+call create 2 1 3 2 2 0 2 []
+LockEnter L1
+ModelNew M2 2 1 3 2 2 0 [GEModelManager::CreateModel(_33)] 2 G
+LockLeave L1
+ret M2
+call set_path 0
+ret
+call create_sub 3 3 0 0 3 3 13 1 M2
+LockEnter L1
+ModelNew M3 3 3 0 0 3 3 [GEModelManager::CreateModel(_33)] 13 G
+SetSubModel M2 M3 1
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+call load [models\GEModelManager::CreateModel(models\a_1)] T3
+LockEnter L1
+ModelFindFile 0 [models\GEModelManager::CreateModel(models\a_1)] T3 = 0 C1
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C1 T3
+call count
+ret 2
+=> 0
+ModelSizeOf M4 = 1512
+ModelFreeFile C1
+LockLeave L1
+ret M4
+ext ref M4
+call set_path P1
+PathReference P1
+ret
+call load [] T1
+LockEnter L1
+ModelFindFile P1 [] T1 = 0 C2
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C2 T1
+=> 0
+ModelSizeOf M5 = 7118
+ModelFreeFile C2
+LockLeave L1
+ret M5
+ext ref M5
+call load [m] T1
+LockEnter L1
+ModelFindFile P1 [m] T1 = 0 C3
+ModelNewEmpty M6 G
+ModelStoreLoaded M6 C3 T1
+=> 0
+ModelSizeOf M6 = 5682
+ModelFreeFile C3
+LockLeave L1
+ret M6
+ext ref M6
+call create 1 1 1 1 2 0 11 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M7 1 1 1 1 2 0 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_34)] 11 G
+LockLeave L1
+ret M7
+ext ref M7
+call load [models\b] T1
+LockEnter L1
+ModelFindFile P1 [models\b] T1 = 0 C4
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C4 T1
+=> 0
+ModelSizeOf M8 = 2352
+ModelFreeFile C4
+LockLeave L1
+ret M8
+ext ref M8
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The  model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(_33) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_34) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_32) model file is loaded in memory with a reference count of 1.|The m model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|The models\b model file is loaded in memory with a reference count of 2.|
+call count
+ret 7
+call create 2 0 3 3 0 1 1 [models\a\x]
+LockEnter L1
+ModelNew M9 2 0 3 3 0 1 [GEModelManager::CreateModel(models\a\x_35)] 1 G
+LockLeave L1
+ret M9
+ext ref M9
+call create 0 1 1 0 1 2 1 [models\a\x]
+LockEnter L1
+ModelNew M10 0 1 1 0 1 2 [GEModelManager::CreateModel(models\a\x_36)] 1 G
+LockLeave L1
+ret M10
+call create 0 2 2 4 0 4 3 [models\a]
+LockEnter L1
+ModelNew M11 0 2 2 4 0 4 [GEModelManager::CreateModel(models\a_37)] 3 G
+LockLeave L1
+ret M11
+ext ref M11
+call create 4 0 0 1 4 4 4 [m]
+LockEnter L1
+ModelNew M12 4 0 0 1 4 4 [GEModelManager::CreateModel(m_38)] 4 G
+LockLeave L1
+ret M12
+ext ref M12
+call load [models\ab] T1
+LockEnter L1
+ModelFindFile P1 [models\ab] T1 = 0 C5
+ModelNewEmpty M13 G
+ModelStoreLoaded M13 C5 T1
+call create_sub 0 4 2 4 4 1 6 0 M11
+LockEnter L1
+ModelNew M14 0 4 2 4 4 1 [GEModelManager::CreateModel(models\a_37)] 6 G
+SetSubModel M11 M14 0
+~Reference M14
+BaseDereference M14
+LockLeave L1
+ret M14
+=> 0
+ModelSizeOf M13 = 6899
+ModelFreeFile C5
+LockLeave L1
+ret M13
+ext ref M13
+call footprint
+ret 23563
+call create 1 4 3 2 3 0 4 [models\a]
+LockEnter L1
+ModelNew M15 1 4 3 2 3 0 [GEModelManager::CreateModel(models\a_39)] 4 G
+LockLeave L1
+ret M15
+ext ref M15
+call remove M10
+LockEnter L1
+ModelSizeOf M10 = 1216
+BaseDereference M10
+~destroy M10
+LockLeave L1
+ret 0
+call verify
+LockEnter L1
+ModelVerify M5
+ModelVerify M2
+ModelVerify M12
+ModelVerify M7
+ModelVerify M9
+ModelVerify M11
+ModelVerify M15
+ModelVerify M1
+ModelVerify M6
+ModelVerify M4
+ModelVerify M13
+ModelVerify M8
+LockLeave L1
+ret
+call create_sub 0 3 3 2 2 0 9 3 M3
+LockEnter L1
+ModelNew M16 0 3 3 2 2 0 [GEModelManager::CreateModel(_33)] 9 G
+SetSubModel M3 M16 3
+~Reference M16
+BaseDereference M16
+LockLeave L1
+ret M16
+ext ref M16
+call footprint
+ret 22347
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 3
+call load [models\B] T2
+LockEnter L1
+ModelFindFile P1 [models\B] T2 = 0 C6
+ModelNewEmpty M17 G
+ModelStoreLoaded M17 C6 T2
+=> 0
+ModelSizeOf M17 = 5662
+ModelFreeFile C6
+LockLeave L1
+ret M17
+ext ref M17
+ext deref M4
+call load [models\B] T2
+LockEnter L1
+LockLeave L1
+ret M17
+call create 0 4 2 0 3 0 5 []
+LockEnter L1
+ModelNew M18 0 4 2 0 3 0 [GEModelManager::CreateModel(_40)] 5 G
+LockLeave L1
+ret M18
+ext ref M18
+call load [models\a] T3
+LockEnter L1
+ModelFindFile P1 [models\a] T3 = 0 C7
+ModelNewEmpty M19 G
+ModelStoreLoaded M19 C7 T3
+=> 0
+ModelSizeOf M19 = 5031
+ModelFreeFile C7
+LockLeave L1
+ret M19
+ext ref M19
+call load [models\a\x] T2
+LockEnter L1
+ModelFindFile P1 [models\a\x] T2 = 2
+LockLeave L1
+ret 0
+call footprint
+ret 33040
+call set_path P1
+PathDereference P1
+PathReference P1
+ret
+call footprint
+ret 33040
+call verify
+LockEnter L1
+ModelVerify M5
+ModelVerify M2
+ModelVerify M18
+ModelVerify M12
+ModelVerify M7
+ModelVerify M9
+ModelVerify M11
+ModelVerify M15
+ModelVerify M1
+ModelVerify M6
+ModelVerify M17
+ModelVerify M4
+ModelVerify M19
+ModelVerify M13
+ModelVerify M8
+LockLeave L1
+ret
+call free
+LockEnter L1
+ModelSizeOf M2 = 4323
+BaseDereference M2
+~destroy M2
+~BaseDereference M3
+~destroy M3
+~BaseDereference M16
+ModelSizeOf M1 = 1140
+BaseDereference M1
+~destroy M1
+ModelSizeOf M4 = 1512
+BaseDereference M4
+~destroy M4
+LockLeave L1
+PathDereference P1
+LockDestroy L1 depth 0
+ret
+ext deref M5
+ext deref M6
+ext deref M7
+ext deref M8
+ext deref M9
+ext deref M11
+ext deref M12
+ext deref M13
+ext deref M15
+ext deref M16
+ext deref M17
+ext deref M18
+ext deref M19
+end models 14 paths 1 1 1 locks 0 files 0
+seq 6
+call new P1
+PathReference P1
+LockCreate = L1
+ret
+call create 4 2 3 3 1 0 9 []
+LockEnter L1
+ModelNew M1 4 2 3 3 1 0 [GEModelManager::CreateModel(_41)] 9 G
+LockLeave L1
+ret M1
+ext ref M1
+call footprint
+ret 0
+call create 0 2 0 4 2 1 14 [models\été]
+LockEnter L1
+ModelNew M2 0 2 0 4 2 1 [GEModelManager::CreateModel(models\été_42)] 14 G
+LockLeave L1
+ret M2
+ext ref M2
+call footprint
+ret 0
+call create_sub 0 4 2 2 0 4 0 0 M2
+LockEnter L1
+ModelNew M3 0 4 2 2 0 4 [GEModelManager::CreateModel(models\été_42)] 0 G
+SetSubModel M2 M3 0
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+call footprint
+ret 0
+ext deref M2
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_41) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_42) model file is loaded in memory with a reference count of 1.|
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_41) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_42) model file is loaded in memory with a reference count of 1.|
+call remove_all
+LockEnter L1
+ModelSizeOf M2 = 1727
+BaseDereference M2
+~destroy M2
+~BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 5
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call load [models\b] T2
+LockEnter L1
+ModelFindFile P1 [models\b] T2 = 0 C1
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C1 T2
+=> 7
+BaseDereference M4
+~destroy M4
+ModelFreeFile C1
+LockLeave L1
+ret 0
+call verify
+LockEnter L1
+ModelVerify M1
+LockLeave L1
+ret
+call create 2 1 4 1 1 3 4 [models\été]
+LockEnter L1
+ModelNew M5 2 1 4 1 1 3 [GEModelManager::CreateModel(models\été_43)] 4 G
+LockLeave L1
+ret M5
+ext ref M5
+call load [m] T3
+LockEnter L1
+ModelFindFile P1 [m] T3 = 0 C2
+ModelNewEmpty M6 G
+ModelStoreLoaded M6 C2 T3
+=> 0
+ModelSizeOf M6 = 4154
+ModelFreeFile C2
+LockLeave L1
+ret M6
+ext ref M6
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 5
+call count
+ret 3
+call create 0 4 4 4 2 3 12 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M7 0 4 4 4 2 3 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_44)] 12 G
+LockLeave L1
+ret M7
+ext ref M7
+ext deref M7
+call create 3 1 2 2 4 1 10 [models\a]
+LockEnter L1
+ModelNew M8 3 1 2 2 4 1 [GEModelManager::CreateModel(models\a_45)] 10 G
+LockLeave L1
+ret M8
+ext ref M8
+call create 4 1 1 1 0 4 8 [models\B]
+LockEnter L1
+ModelNew M9 4 1 1 1 0 4 [GEModelManager::CreateModel(models\B_46)] 8 G
+LockLeave L1
+ret M9
+ext deref M5
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_41) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_46) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_44) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\a_45) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_43) model file is loaded in memory with a reference count of 1.|The m model file is loaded in memory with a reference count of 2.|
+call dump F4
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_41) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_46) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_44) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\a_45) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_43) model file is loaded in memory with a reference count of 1.|The m model file is loaded in memory with a reference count of 2.|
+ext deref M1
+call create_sub 3 3 1 4 0 1 6 0 M8
+LockEnter L1
+ModelNew M10 3 3 1 4 0 1 [GEModelManager::CreateModel(models\a_45)] 6 G
+SetSubModel M8 M10 0
+~Reference M10
+BaseDereference M10
+LockLeave L1
+ret M10
+ext ref M10
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 2812
+BaseDereference M1
+~destroy M1
+ModelSizeOf M9 = 1370
+BaseDereference M9
+~destroy M9
+ModelSizeOf M7 = 4192
+BaseDereference M7
+~destroy M7
+ModelSizeOf M5 = 175
+BaseDereference M5
+~destroy M5
+LockLeave L1
+ret 5
+call create 4 0 0 3 4 0 5 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M11 4 0 0 3 4 0 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_47)] 5 G
+LockLeave L1
+ret M11
+ext ref M11
+call create 1 4 3 3 3 0 13 [models\ab]
+LockEnter L1
+ModelNew M12 1 4 3 3 3 0 [GEModelManager::CreateModel(models\ab_48)] 13 G
+LockLeave L1
+ret M12
+ext ref M12
+call create_sub 2 3 3 4 1 3 11 1 M10
+LockEnter L1
+ModelNew M13 2 3 3 4 1 3 [GEModelManager::CreateModel(models\a_45)] 11 G
+SetSubModel M10 M13 1
+~Reference M13
+BaseDereference M13
+LockLeave L1
+ret M13
+ext ref M13
+call load [models\été] T3
+LockEnter L1
+ModelFindFile P1 [models\été] T3 = 0 C3
+ModelNewEmpty M14 G
+ModelStoreLoaded M14 C3 T3
+=> 7
+BaseDereference M14
+~destroy M14
+ModelFreeFile C3
+LockLeave L1
+ret 0
+call remove M13
+LockEnter L1
+LockLeave L1
+ret 3
+call verify
+LockEnter L1
+ModelVerify M11
+ModelVerify M8
+ModelVerify M12
+ModelVerify M6
+LockLeave L1
+ret
+call create 4 2 2 4 3 3 1 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M15 4 2 2 4 3 3 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_49)] 1 G
+LockLeave L1
+ret M15
+ext ref M15
+ext deref M12
+ext deref M11
+call create 4 2 2 1 1 0 6 [models\ab]
+LockEnter L1
+ModelNew M16 4 2 2 1 1 0 [GEModelManager::CreateModel(models\ab_50)] 6 G
+LockLeave L1
+ret M16
+ext ref M16
+call footprint
+ret 4294961174
+ext deref M10
+call footprint
+ret 4294961174
+call remove M8
+LockEnter L1
+LockLeave L1
+ret 5
+call load [m] T1
+LockEnter L1
+LockLeave L1
+ret M6
+call count
+ret 6
+call remove M6
+LockEnter L1
+LockLeave L1
+ret 5
+call create 0 4 2 4 4 4 9 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M17 0 4 2 4 4 4 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_51)] 9 G
+LockLeave L1
+ret M17
+ext ref M17
+call remove M16
+LockEnter L1
+LockLeave L1
+ret 5
+call free
+LockEnter L1
+ModelSizeOf M11 = 1502
+BaseDereference M11
+~destroy M11
+ModelSizeOf M12 = 1587
+BaseDereference M12
+~destroy M12
+LockLeave L1
+PathDereference P1
+LockDestroy L1 depth 0
+ret
+ext deref M6
+ext deref M8
+ext deref M13
+ext deref M15
+ext deref M16
+ext deref M17
+end models 7 paths 1 1 1 locks 0 files 0
+seq 7
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call create 0 0 1 1 0 4 5 [models\a\x]
+LockEnter L1
+ModelNew M1 0 0 1 1 0 4 [GEModelManager::CreateModel(models\a\x_52)] 5 G
+LockLeave L1
+ret M1
+ext ref M1
+call footprint
+ret 0
+call create 4 2 2 3 3 2 7 []
+LockEnter L1
+ModelNew M2 4 2 2 3 3 2 [GEModelManager::CreateModel(_53)] 7 G
+LockLeave L1
+ret M2
+ext ref M2
+call create 3 1 0 2 1 3 11 [models\été]
+LockEnter L1
+ModelNew M3 3 1 0 2 1 3 [GEModelManager::CreateModel(models\été_54)] 11 G
+LockLeave L1
+ret M3
+call load [models\B] T2
+LockEnter L1
+ModelFindFile P3 [models\B] T2 = 0 C1
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C1 T2
+=> 0
+ModelSizeOf M4 = 5481
+ModelFreeFile C1
+LockLeave L1
+ret M4
+ext ref M4
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_53) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a\x_52) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_54) model file is loaded in memory with a reference count of 1.|The models\B model file is loaded in memory with a reference count of 2.|
+call set_path P2
+PathDereference P3
+PathReference P2
+ret
+call remove M3
+LockEnter L1
+ModelSizeOf M3 = 1830
+BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 0
+call footprint
+ret 3651
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P2 [models\a\x] T3 = 0 C2
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C2 T3
+=> 0
+ModelSizeOf M5 = 4337
+ModelFreeFile C2
+LockLeave L1
+ret M5
+call footprint
+ret 7988
+call remove M4
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 3 0 1 4 3 4 9 1 M4
+LockEnter L1
+ModelNew M6 3 0 1 4 3 4 [] 9 G
+SetSubModel M4 M6 1
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+call create 3 1 1 2 0 1 14 [models\été]
+LockEnter L1
+ModelNew M7 3 1 1 2 0 1 [GEModelManager::CreateModel(models\été_55)] 14 G
+LockLeave L1
+ret M7
+call create_sub 4 1 1 2 2 4 15 3 M2
+LockEnter L1
+ModelNew M8 4 1 1 2 2 4 [GEModelManager::CreateModel(_53)] 15 G
+SetSubModel M2 M8 3
+~Reference M8
+BaseDereference M8
+LockLeave L1
+ret M8
+call load [models\a\x] T2
+LockEnter L1
+LockLeave L1
+ret M5
+ext ref M5
+call create_sub 3 4 4 1 2 4 1 3 M1
+LockEnter L1
+ModelNew M9 3 4 4 1 2 4 [GEModelManager::CreateModel(models\a\x_52)] 1 G
+SetSubModel M1 M9 3
+~Reference M9
+BaseDereference M9
+LockLeave L1
+ret M9
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_53) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a\x_52) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_55) model file is loaded in memory with a reference count of 1.|The models\B model file is loaded in memory with a reference count of 2.|The models\a\x model file is loaded in memory with a reference count of 2.|
+call create 2 1 2 3 4 4 9 [models\B]
+LockEnter L1
+ModelNew M10 2 1 2 3 4 4 [GEModelManager::CreateModel(models\B_56)] 9 G
+LockLeave L1
+ret M10
+ext ref M10
+call load [models\B] T1
+LockEnter L1
+LockLeave L1
+ret M4
+ext ref M4
+ext deref M5
+call load [models\a\x] T2
+LockEnter L1
+LockLeave L1
+ret M5
+call free
+LockEnter L1
+ModelSizeOf M7 = 4586
+BaseDereference M7
+~destroy M7
+ModelSizeOf M5 = 4337
+BaseDereference M5
+~destroy M5
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+ext deref M1
+ext deref M2
+ext deref M4
+ext deref M10
+ext deref M4
+end models 7 paths 1 1 1 locks 0 files 0
+seq 8
+call new P2
+PathReference P2
+LockCreate = L1
+ret
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call load [models\b] T2
+LockEnter L1
+ModelFindFile P2 [models\b] T2 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T2
+call create 0 0 2 0 4 1 15 [models\a\x]
+LockEnter L1
+ModelNew M2 0 0 2 0 4 1 [GEModelManager::CreateModel(models\a\x_57)] 15 G
+LockLeave L1
+ret M2
+=> 0
+ModelSizeOf M1 = 8667
+ModelFreeFile C1
+LockLeave L1
+ret M1
+ext ref M1
+call remove M2
+LockEnter L1
+ModelSizeOf M2 = 4076
+BaseDereference M2
+~destroy M2
+LockLeave L1
+ret 0
+call create 0 1 4 1 4 4 7 [models\a\x]
+LockEnter L1
+ModelNew M3 0 1 4 1 4 4 [GEModelManager::CreateModel(models\a\x_58)] 7 G
+LockLeave L1
+ret M3
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 2 4 1 0 3 2 10 0 M3
+LockEnter L1
+ModelNew M4 2 4 1 0 3 2 [GEModelManager::CreateModel(models\a\x_58)] 10 G
+SetSubModel M3 M4 0
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+ext ref M4
+call remove_all
+LockEnter L1
+ModelSizeOf M3 = 3095
+BaseDereference M3
+~destroy M3
+~BaseDereference M4
+LockLeave L1
+ret 5
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The models\b model file is loaded in memory with a reference count of 2.|
+call count
+ret 1
+call create 1 2 0 0 4 0 5 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M5 1 2 0 0 4 0 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_59)] 5 G
+LockLeave L1
+ret M5
+call create 1 2 4 2 3 0 2 [models\B]
+LockEnter L1
+ModelNew M6 1 2 4 2 3 0 [GEModelManager::CreateModel(models\B_60)] 2 G
+LockLeave L1
+ret M6
+ext ref M6
+call load [models\a] T3
+LockEnter L1
+ModelFindFile P2 [models\a] T3 = 0 C2
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C2 T3
+=> 0
+ModelSizeOf M7 = 1767
+ModelFreeFile C2
+LockLeave L1
+ret M7
+call load [models\ab] T3
+LockEnter L1
+ModelFindFile P2 [models\ab] T3 = 0 C3
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C3 T3
+=> 0
+ModelSizeOf M8 = 8778
+ModelFreeFile C3
+LockLeave L1
+ret M8
+call remove_all
+LockEnter L1
+ModelSizeOf M5 = 2979
+BaseDereference M5
+~destroy M5
+ModelSizeOf M7 = 1767
+BaseDereference M7
+~destroy M7
+ModelSizeOf M8 = 8778
+BaseDereference M8
+~destroy M8
+LockLeave L1
+ret 5
+call create 3 4 1 3 2 0 4 [models\été]
+LockEnter L1
+ModelNew M9 3 4 1 3 2 0 [GEModelManager::CreateModel(models\été_61)] 4 G
+LockLeave L1
+ret M9
+call create 1 0 2 3 3 1 11 [m]
+LockEnter L1
+ModelNew M10 1 0 2 3 3 1 [GEModelManager::CreateModel(m_62)] 11 G
+LockLeave L1
+ret M10
+call set_path P2
+PathDereference P2
+PathReference P2
+ret
+ext deref M4
+call set_path P1
+PathDereference P2
+PathReference P1
+ret
+call load [models\a\x] T1
+LockEnter L1
+ModelFindFile P1 [models\a\x] T1 = 0 C4
+ModelNewEmpty M11 G
+ModelStoreLoaded M11 C4 T1
+=> 0
+ModelSizeOf M11 = 7336
+ModelFreeFile C4
+LockLeave L1
+ret M11
+ext ref M11
+call load [models\b] T2
+LockEnter L1
+LockLeave L1
+ret M1
+ext ref M1
+call create_sub 3 1 1 2 2 1 7 2 M10
+LockEnter L1
+ModelNew M12 3 1 1 2 2 1 [GEModelManager::CreateModel(m_62)] 7 G
+SetSubModel M10 M12 2
+~Reference M12
+BaseDereference M12
+LockLeave L1
+ret M12
+ext ref M12
+call create 2 1 3 2 0 0 3 [m]
+LockEnter L1
+ModelNew M13 2 1 3 2 0 0 [GEModelManager::CreateModel(m_63)] 3 G
+LockLeave L1
+ret M13
+call create 1 1 4 4 0 2 15 [m]
+LockEnter L1
+ModelNew M14 1 1 4 4 0 2 [GEModelManager::CreateModel(m_64)] 15 G
+LockLeave L1
+ret M14
+ext ref M14
+call create 2 4 3 3 0 1 3 [models\a]
+LockEnter L1
+ModelNew M15 2 4 3 3 0 1 [GEModelManager::CreateModel(models\a_65)] 3 G
+LockLeave L1
+ret M15
+ext ref M15
+call create 4 2 1 1 1 4 15 [models\ab]
+LockEnter L1
+ModelNew M16 4 2 1 1 1 4 [GEModelManager::CreateModel(models\ab_66)] 15 G
+LockLeave L1
+ret M16
+ext ref M16
+call load [models\B] T3
+LockEnter L1
+ModelFindFile P1 [models\B] T3 = 0 C5
+ModelNewEmpty M17 G
+ModelStoreLoaded M17 C5 T3
+=> 0
+ModelSizeOf M17 = 283
+ModelFreeFile C5
+LockLeave L1
+ret M17
+call load [models\été] T1
+LockEnter L1
+ModelFindFile P1 [models\été] T1 = 0 C6
+ModelNewEmpty M18 G
+ModelStoreLoaded M18 C6 T1
+=> 0
+ModelSizeOf M18 = 3719
+ModelFreeFile C6
+LockLeave L1
+ret M18
+call load [models\été] T2
+LockEnter L1
+LockLeave L1
+ret M18
+call remove M18
+LockEnter L1
+ModelSizeOf M18 = 2825
+BaseDereference M18
+~destroy M18
+LockLeave L1
+ret 0
+call create_sub 1 2 0 4 2 2 8 2 M12
+LockEnter L1
+ModelNew M19 1 2 0 4 2 2 [GEModelManager::CreateModel(m_62)] 8 G
+SetSubModel M12 M19 2
+~Reference M19
+BaseDereference M19
+LockLeave L1
+ret M19
+ext ref M19
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(m_62) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(m_63) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(m_64) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_60) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a_65) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\ab_66) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_61) model file is loaded in memory with a reference count of 1.|The models\B model file is loaded in memory with a reference count of 1.|The models\a\x model file is loaded in memory with a reference count of 2.|The models\b model file is loaded in memory with a reference count of 3.|
+call count
+ret 10
+call count
+ret 10
+call create_sub 4 4 3 1 2 2 15 1 M13
+LockEnter L1
+ModelNew M20 4 4 3 1 2 2 [GEModelManager::CreateModel(m_63)] 15 G
+SetSubModel M13 M20 1
+~Reference M20
+BaseDereference M20
+LockLeave L1
+ret M20
+ext ref M20
+call create 3 0 4 3 3 4 5 [models\a\x]
+LockEnter L1
+ModelNew M21 3 0 4 3 3 4 [GEModelManager::CreateModel(models\a\x_67)] 5 G
+LockLeave L1
+ret M21
+ext ref M21
+call create 1 1 0 4 1 1 14 [models\a]
+LockEnter L1
+ModelNew M22 1 1 0 4 1 1 [GEModelManager::CreateModel(models\a_68)] 14 G
+LockLeave L1
+ret M22
+ext ref M22
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(m_62) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(m_63) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(m_64) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_60) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a\x_67) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a_65) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a_68) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\ab_66) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_61) model file is loaded in memory with a reference count of 1.|The models\B model file is loaded in memory with a reference count of 1.|The models\a\x model file is loaded in memory with a reference count of 2.|The models\b model file is loaded in memory with a reference count of 3.|
+call free
+LockEnter L1
+ModelSizeOf M10 = 3056
+BaseDereference M10
+~destroy M10
+~BaseDereference M12
+ModelSizeOf M13 = 1000
+BaseDereference M13
+~destroy M13
+~BaseDereference M20
+ModelSizeOf M9 = 4077
+BaseDereference M9
+~destroy M9
+ModelSizeOf M17 = 283
+BaseDereference M17
+~destroy M17
+LockLeave L1
+PathDereference P1
+LockDestroy L1 depth 0
+ret
+ext deref M1
+ext deref M6
+ext deref M11
+ext deref M1
+ext deref M12
+ext deref M14
+ext deref M15
+ext deref M16
+ext deref M19
+ext deref M20
+ext deref M21
+ext deref M22
+end models 12 paths 1 1 1 locks 0 files 0
+seq 9
+call new 0
+LockCreate = L1
+ret
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call load [models\été] T3
+LockEnter L1
+ModelFindFile 0 [models\été] T3 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T3
+=> 7
+BaseDereference M1
+~destroy M1
+ModelFreeFile C1
+LockLeave L1
+ret 0
+call load [models\b] T3
+LockEnter L1
+ModelFindFile 0 [models\b] T3 = 0 C2
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C2 T3
+=> 7
+BaseDereference M2
+~destroy M2
+ModelFreeFile C2
+LockLeave L1
+ret 0
+call set_path P3
+PathReference P3
+ret
+call create 1 3 1 2 2 3 14 [models\été]
+LockEnter L1
+ModelNew M3 1 3 1 2 2 3 [GEModelManager::CreateModel(models\été_69)] 14 G
+LockLeave L1
+ret M3
+call footprint
+ret 0
+call load [] T2
+LockEnter L1
+ModelFindFile P3 [] T2 = 0 C3
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C3 T2
+=> 0
+ModelSizeOf M4 = 322
+ModelFreeFile C3
+LockLeave L1
+ret M4
+call footprint
+ret 322
+call create_sub 3 4 4 2 2 3 13 0 M4
+LockEnter L1
+ModelNew M5 3 4 4 2 2 3 [] 13 G
+SetSubModel M4 M5 0
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+ext ref M5
+call set_path P2
+PathDereference P3
+PathReference P2
+ret
+call remove_all
+LockEnter L1
+ModelSizeOf M4 = 322
+BaseDereference M4
+~destroy M4
+~BaseDereference M5
+ModelSizeOf M3 = 3468
+BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 0
+call create_sub 2 3 3 0 2 4 2 3 M5
+LockEnter L1
+ModelNew M6 2 3 3 0 2 4 [] 2 G
+SetSubModel M5 M6 3
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call remove M6
+LockEnter L1
+LockLeave L1
+ret 3
+call remove M6
+LockEnter L1
+LockLeave L1
+ret 3
+call create 4 4 4 1 4 1 13 []
+LockEnter L1
+ModelNew M7 4 4 4 1 4 1 [GEModelManager::CreateModel(_70)] 13 G
+LockLeave L1
+ret M7
+ext deref M6
+call verify
+LockEnter L1
+ModelVerify M7
+LockLeave L1
+ret
+call footprint
+ret 4294963828
+call set_path P2
+PathDereference P2
+PathReference P2
+ret
+call set_path P3
+PathDereference P2
+PathReference P3
+ret
+call footprint
+ret 4294963828
+call load [m] T3
+LockEnter L1
+ModelFindFile P3 [m] T3 = 0 C4
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C4 T3
+=> 0
+ModelSizeOf M8 = 2710
+ModelFreeFile C4
+LockLeave L1
+ret M8
+call free
+LockEnter L1
+ModelSizeOf M7 = 629
+BaseDereference M7
+~destroy M7
+ModelSizeOf M8 = 2710
+BaseDereference M8
+~destroy M8
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+ext deref M5
+end models 2 paths 1 1 1 locks 0 files 0
+seq 10
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call count
+ret 0
+call load [models\GEModelManager::CreateModel(models\a_1)] T1
+LockEnter L1
+ModelFindFile P3 [models\GEModelManager::CreateModel(models\a_1)] T1 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T1
+=> 0
+ModelSizeOf M1 = 584
+ModelFreeFile C1
+LockLeave L1
+ret M1
+ext ref M1
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call footprint
+ret 584
+call create 0 1 4 2 2 0 6 [models\b]
+LockEnter L1
+ModelNew M2 0 1 4 2 2 0 [GEModelManager::CreateModel(models\b_71)] 6 G
+LockLeave L1
+ret M2
+ext ref M2
+call create_sub 2 2 4 2 3 3 1 1 M2
+LockEnter L1
+ModelNew M3 2 2 4 2 3 3 [GEModelManager::CreateModel(models\b_71)] 1 G
+SetSubModel M2 M3 1
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+ext ref M3
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\b_71) model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|
+call set_path 0
+PathDereference P3
+ret
+call create 0 1 3 2 4 1 12 [models\b]
+LockEnter L1
+ModelNew M4 0 1 3 2 4 1 [GEModelManager::CreateModel(models\b_72)] 12 G
+LockLeave L1
+ret M4
+call remove M4
+LockEnter L1
+ModelSizeOf M4 = 3766
+BaseDereference M4
+~destroy M4
+LockLeave L1
+ret 0
+call set_path P3
+PathReference P3
+ret
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 3 1 4 1 2 4 2 2 M2
+LockEnter L1
+ModelNew M5 3 1 4 1 2 4 [GEModelManager::CreateModel(models\b_71)] 2 G
+SetSubModel M2 M5 2
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+call create_sub 3 4 1 0 2 0 7 3 M2
+LockEnter L1
+ModelNew M6 3 4 1 0 2 0 [GEModelManager::CreateModel(models\b_71)] 7 G
+SetSubModel M2 M6 3
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call create 3 2 2 0 2 0 9 []
+LockEnter L1
+ModelNew M7 3 2 2 0 2 0 [GEModelManager::CreateModel(_73)] 9 G
+LockLeave L1
+ret M7
+call load [m] T1
+LockEnter L1
+ModelFindFile P3 [m] T1 = 0 C2
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C2 T1
+=> 0
+ModelSizeOf M8 = 3287
+ModelFreeFile C2
+LockLeave L1
+ret M8
+ext ref M8
+call load [] T1
+LockEnter L1
+ModelFindFile P3 [] T1 = 2
+LockLeave L1
+ret 0
+call footprint
+ret 105
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_73) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\b_71) model file is loaded in memory with a reference count of 2.|The m model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|
+call load [models\b] T3
+LockEnter L1
+ModelFindFile P3 [models\b] T3 = 0 C3
+ModelNewEmpty M9 G
+ModelStoreLoaded M9 C3 T3
+=> 0
+ModelSizeOf M9 = 2858
+ModelFreeFile C3
+LockLeave L1
+ret M9
+ext ref M9
+ext deref M6
+call create 2 1 1 3 1 3 2 []
+LockEnter L1
+ModelNew M10 2 1 1 3 1 3 [GEModelManager::CreateModel(_74)] 2 G
+LockLeave L1
+ret M10
+call load [models\B] T3
+LockEnter L1
+ModelFindFile P3 [models\B] T3 = 0 C4
+ModelNewEmpty M11 G
+ModelStoreLoaded M11 C4 T3
+=> 0
+ModelSizeOf M11 = 4376
+ModelFreeFile C4
+LockLeave L1
+ret M11
+ext ref M11
+call set_path P2
+PathDereference P3
+PathReference P2
+ret
+call footprint
+ret 7339
+call set_path 0
+PathDereference P2
+ret
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 3
+call remove_all
+LockEnter L1
+ModelSizeOf M7 = 501
+BaseDereference M7
+~destroy M7
+ModelSizeOf M10 = 4203
+BaseDereference M10
+~destroy M10
+LockLeave L1
+ret 5
+call create_sub 0 1 0 1 2 3 11 1 M1
+LockEnter L1
+ModelNew M12 0 1 0 1 2 3 [] 11 G
+SetSubModel M1 M12 1
+~Reference M12
+BaseDereference M12
+LockLeave L1
+ret M12
+ext ref M12
+call footprint
+ret 2635
+call free
+LockEnter L1
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M1
+ext deref M2
+ext deref M3
+ext deref M8
+ext deref M9
+ext deref M11
+ext deref M12
+end models 9 paths 1 1 1 locks 0 files 0
+seq 11
+call new 0
+LockCreate = L1
+ret
+call load [models\B] T1
+LockEnter L1
+ModelFindFile 0 [models\B] T1 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T1
+=> 0
+ModelSizeOf M1 = 7112
+ModelFreeFile C1
+LockLeave L1
+ret M1
+ext ref M1
+call footprint
+ret 7112
+call create 0 4 3 3 4 3 7 [m]
+LockEnter L1
+ModelNew M2 0 4 3 3 4 3 [GEModelManager::CreateModel(m_75)] 7 G
+LockLeave L1
+ret M2
+ext ref M2
+call footprint
+ret 7112
+call count
+ret 2
+call count
+ret 2
+call footprint
+ret 7112
+call load [models\été] T3
+LockEnter L1
+ModelFindFile 0 [models\été] T3 = 0 C2
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C2 T3
+call load [models\ab] T2
+LockEnter L1
+ModelFindFile 0 [models\ab] T2 = 0 C3
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C3 T2
+=> 0
+ModelSizeOf M4 = 6415
+ModelFreeFile C3
+LockLeave L1
+ret M4
+=> 0
+ModelSizeOf M3 = 4907
+ModelFreeFile C2
+LockLeave L1
+ret M3
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(m_75) model file is loaded in memory with a reference count of 2.|The models\B model file is loaded in memory with a reference count of 2.|The models\ab model file is loaded in memory with a reference count of 1.|The models\été model file is loaded in memory with a reference count of 1.|
+call create_sub 0 3 3 1 2 4 7 1 M2
+LockEnter L1
+ModelNew M5 0 3 3 1 2 4 [GEModelManager::CreateModel(m_75)] 7 G
+SetSubModel M2 M5 1
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+call free
+LockEnter L1
+ModelSizeOf M4 = 6415
+BaseDereference M4
+~destroy M4
+ModelSizeOf M3 = 4907
+BaseDereference M3
+~destroy M3
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M1
+ext deref M2
+end models 3 paths 1 1 1 locks 0 files 0
+seq 12
+call new P1
+PathReference P1
+LockCreate = L1
+ret
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call create 3 0 0 4 0 2 3 [models\B]
+LockEnter L1
+ModelNew M1 3 0 0 4 0 2 [GEModelManager::CreateModel(models\B_76)] 3 G
+LockLeave L1
+ret M1
+call create 2 0 3 3 4 1 1 [m]
+LockEnter L1
+ModelNew M2 2 0 3 3 4 1 [GEModelManager::CreateModel(m_77)] 1 G
+LockLeave L1
+ret M2
+ext ref M2
+call footprint
+ret 0
+call load [models\ab] T3
+LockEnter L1
+ModelFindFile P1 [models\ab] T3 = 0 C1
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C1 T3
+=> 0
+ModelSizeOf M3 = 6564
+ModelFreeFile C1
+LockLeave L1
+ret M3
+ext ref M3
+call create_sub 4 2 2 3 0 0 9 1 M1
+LockEnter L1
+ModelNew M4 4 2 2 3 0 0 [GEModelManager::CreateModel(models\B_76)] 9 G
+SetSubModel M1 M4 1
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+call verify
+LockEnter L1
+ModelVerify M2
+ModelVerify M1
+ModelVerify M3
+LockLeave L1
+ret
+call set_path P1
+PathDereference P1
+PathReference P1
+ret
+call count
+ret 3
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(m_77) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_76) model file is loaded in memory with a reference count of 1.|The models\ab model file is loaded in memory with a reference count of 2.|
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 5
+call set_path P3
+PathDereference P1
+PathReference P3
+ret
+call load [] T3
+LockEnter L1
+ModelFindFile P3 [] T3 = 0 C2
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C2 T3
+=> 0
+ModelSizeOf M5 = 2455
+ModelFreeFile C2
+LockLeave L1
+ret M5
+call load [models\b] T1
+LockEnter L1
+ModelFindFile P3 [models\b] T1 = 2
+LockLeave L1
+ret 0
+call count
+ret 4
+call free
+LockEnter L1
+ModelSizeOf M5 = 2455
+BaseDereference M5
+~destroy M5
+ModelSizeOf M1 = 4572
+BaseDereference M1
+~destroy M1
+~BaseDereference M4
+~destroy M4
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+ext deref M2
+ext deref M3
+end models 2 paths 1 1 1 locks 0 files 0
+seq 13
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call load [models\b] T3
+LockEnter L1
+ModelFindFile P3 [models\b] T3 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T3
+=> 0
+ModelSizeOf M1 = 6699
+ModelFreeFile C1
+LockLeave L1
+ret M1
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The models\b model file is loaded in memory with a reference count of 1.|
+call create 4 2 1 4 1 3 13 [models\b]
+LockEnter L1
+ModelNew M2 4 2 1 4 1 3 [GEModelManager::CreateModel(models\b_78)] 13 G
+LockLeave L1
+ret M2
+ext ref M2
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 6699
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 5
+call load [models\été] T3
+LockEnter L1
+ModelFindFile P3 [models\été] T3 = 0 C2
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C2 T3
+=> 0
+ModelSizeOf M3 = 200
+ModelFreeFile C2
+LockLeave L1
+ret M3
+call load [m] T2
+LockEnter L1
+ModelFindFile P3 [m] T2 = 0 C3
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C3 T2
+=> 0
+ModelSizeOf M4 = 8488
+ModelFreeFile C3
+LockLeave L1
+ret M4
+ext ref M4
+ext deref M2
+call load [models\b] T2
+LockEnter L1
+ModelFindFile P3 [models\b] T2 = 0 C4
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C4 T2
+=> 0
+ModelSizeOf M5 = 3877
+ModelFreeFile C4
+LockLeave L1
+ret M5
+call create 4 3 2 0 0 0 3 [models\été]
+LockEnter L1
+ModelNew M6 4 3 2 0 0 0 [GEModelManager::CreateModel(models\été_79)] 3 G
+LockLeave L1
+ret M6
+ext ref M6
+call create 3 2 2 0 4 0 10 []
+LockEnter L1
+ModelNew M7 3 2 2 0 4 0 [GEModelManager::CreateModel(_80)] 10 G
+LockLeave L1
+ret M7
+ext ref M7
+call load [] T3
+LockEnter L1
+ModelFindFile P3 [] T3 = 0 C5
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C5 T3
+=> 0
+ModelSizeOf M8 = 4717
+ModelFreeFile C5
+LockLeave L1
+ret M8
+call load [models\GEModelManager::CreateModel(models\a_1)] T3
+LockEnter L1
+ModelFindFile P3 [models\GEModelManager::CreateModel(models\a_1)] T3 = 0 C6
+ModelNewEmpty M9 G
+ModelStoreLoaded M9 C6 T3
+=> 0
+ModelSizeOf M9 = 5467
+ModelFreeFile C6
+LockLeave L1
+ret M9
+ext ref M9
+call create 4 1 1 0 1 2 0 [m]
+LockEnter L1
+ModelNew M10 4 1 1 0 1 2 [GEModelManager::CreateModel(m_81)] 0 G
+LockLeave L1
+ret M10
+call remove_all
+LockEnter L1
+ModelSizeOf M8 = 4717
+BaseDereference M8
+~destroy M8
+ModelSizeOf M10 = 3363
+BaseDereference M10
+~destroy M10
+ModelSizeOf M2 = 1109
+BaseDereference M2
+~destroy M2
+ModelSizeOf M5 = 3877
+BaseDereference M5
+~destroy M5
+ModelSizeOf M3 = 200
+BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 5
+call create 2 2 1 1 2 1 5 [models\B]
+LockEnter L1
+ModelNew M11 2 2 1 1 2 1 [GEModelManager::CreateModel(models\B_82)] 5 G
+LockLeave L1
+ret M11
+call create_sub 4 1 0 3 0 0 15 2 M6
+LockEnter L1
+ModelNew M12 4 1 0 3 0 0 [GEModelManager::CreateModel(models\été_79)] 15 G
+SetSubModel M6 M12 2
+~Reference M12
+BaseDereference M12
+LockLeave L1
+ret M12
+ext ref M12
+call remove M4
+LockEnter L1
+LockLeave L1
+ret 5
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_80) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_82) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\été_79) model file is loaded in memory with a reference count of 2.|The m model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|
+call create 1 4 0 4 2 4 0 [models\ab]
+LockEnter L1
+ModelNew M13 1 4 0 4 2 4 [GEModelManager::CreateModel(models\ab_83)] 0 G
+LockLeave L1
+ret M13
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_80) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_82) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\ab_83) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\été_79) model file is loaded in memory with a reference count of 2.|The m model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|
+call load [models\a] T3
+LockEnter L1
+ModelFindFile P3 [models\a] T3 = 0 C7
+ModelNewEmpty M14 G
+ModelStoreLoaded M14 C7 T3
+=> 0
+ModelSizeOf M14 = 5993
+ModelFreeFile C7
+LockLeave L1
+ret M14
+ext deref M7
+call set_path P3
+PathDereference P3
+PathReference P3
+ret
+call count
+ret 7
+call remove M6
+LockEnter L1
+LockLeave L1
+ret 5
+call footprint
+ret 15476
+call dump F4
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_80) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\B_82) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\ab_83) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\été_79) model file is loaded in memory with a reference count of 2.|The m model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|The models\a model file is loaded in memory with a reference count of 1.|
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P3 [models\a\x] T3 = 0 C8
+ModelNewEmpty M15 G
+ModelStoreLoaded M15 C8 T3
+call create 2 1 3 3 0 3 0 [models\ab]
+LockEnter L1
+ModelNew M16 2 1 3 3 0 3 [GEModelManager::CreateModel(models\ab_84)] 0 G
+LockLeave L1
+ret M16
+=> 0
+ModelSizeOf M15 = 4732
+ModelFreeFile C8
+LockLeave L1
+ret M15
+ext ref M15
+call dump F5
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_80) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\B_82) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\ab_83) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\ab_84) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\été_79) model file is loaded in memory with a reference count of 2.|The m model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|The models\a model file is loaded in memory with a reference count of 1.|The models\a\x model file is loaded in memory with a reference count of 2.|
+call remove_all
+LockEnter L1
+ModelSizeOf M7 = 3872
+BaseDereference M7
+~destroy M7
+ModelSizeOf M11 = 1257
+BaseDereference M11
+~destroy M11
+ModelSizeOf M13 = 768
+BaseDereference M13
+~destroy M13
+ModelSizeOf M16 = 3720
+BaseDereference M16
+~destroy M16
+ModelSizeOf M14 = 5993
+BaseDereference M14
+~destroy M14
+LockLeave L1
+ret 5
+call create 3 0 0 2 2 4 9 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M17 3 0 0 2 2 4 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_85)] 9 G
+LockLeave L1
+ret M17
+ext ref M17
+call create 2 0 3 0 2 4 11 [models\été]
+LockEnter L1
+ModelNew M18 2 0 3 0 2 4 [GEModelManager::CreateModel(models\été_86)] 11 G
+LockLeave L1
+ret M18
+ext ref M18
+call load [models\été] T3
+LockEnter L1
+ModelFindFile P3 [models\été] T3 = 0 C9
+ModelNewEmpty M19 G
+ModelStoreLoaded M19 C9 T3
+=> 0
+ModelSizeOf M19 = 625
+ModelFreeFile C9
+LockLeave L1
+ret M19
+ext deref M15
+call free
+LockEnter L1
+ModelSizeOf M15 = 4732
+BaseDereference M15
+~destroy M15
+ModelSizeOf M19 = 625
+BaseDereference M19
+~destroy M19
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+ext deref M4
+ext deref M6
+ext deref M9
+ext deref M12
+ext deref M17
+ext deref M18
+end models 6 paths 1 1 1 locks 0 files 0
+seq 14
+call new P1
+PathReference P1
+LockCreate = L1
+ret
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call count
+ret 0
+call create 3 0 2 0 4 3 11 [models\b]
+LockEnter L1
+ModelNew M1 3 0 2 0 4 3 [GEModelManager::CreateModel(models\b_87)] 11 G
+LockLeave L1
+ret M1
+ext ref M1
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\b_87) model file is loaded in memory with a reference count of 2.|
+call create 3 4 1 0 2 4 14 [models\ab]
+LockEnter L1
+ModelNew M2 3 4 1 0 2 4 [GEModelManager::CreateModel(models\ab_88)] 14 G
+LockLeave L1
+ret M2
+ext ref M2
+call remove M2
+LockEnter L1
+LockLeave L1
+ret 5
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\ab_88) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\b_87) model file is loaded in memory with a reference count of 2.|
+ext deref M1
+call create_sub 4 3 4 4 1 4 5 0 M2
+LockEnter L1
+ModelNew M3 4 3 4 4 1 4 [GEModelManager::CreateModel(models\ab_88)] 5 G
+SetSubModel M2 M3 0
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+ext ref M3
+call load [models\a] T2
+LockEnter L1
+ModelFindFile P1 [models\a] T2 = 0 C1
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C1 T2
+=> 0
+ModelSizeOf M4 = 8011
+ModelFreeFile C1
+LockLeave L1
+ret M4
+ext ref M4
+call load [m] T1
+LockEnter L1
+ModelFindFile P1 [m] T1 = 0 C2
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C2 T1
+=> 0
+ModelSizeOf M5 = 5392
+ModelFreeFile C2
+LockLeave L1
+ret M5
+ext ref M5
+call create 0 3 1 1 2 0 5 [models\a]
+LockEnter L1
+ModelNew M6 0 3 1 1 2 0 [GEModelManager::CreateModel(models\a_89)] 5 G
+LockLeave L1
+ret M6
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\a_89) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\ab_88) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\b_87) model file is loaded in memory with a reference count of 1.|The m model file is loaded in memory with a reference count of 2.|The models\a model file is loaded in memory with a reference count of 2.|
+call dump F4
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\a_89) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\ab_88) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\b_87) model file is loaded in memory with a reference count of 1.|The m model file is loaded in memory with a reference count of 2.|The models\a model file is loaded in memory with a reference count of 2.|
+call remove_all
+LockEnter L1
+ModelSizeOf M6 = 330
+BaseDereference M6
+~destroy M6
+ModelSizeOf M1 = 782
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 5
+call set_path 0
+PathDereference P1
+ret
+call count
+ret 3
+call load [models\ab] T3
+LockEnter L1
+ModelFindFile 0 [models\ab] T3 = 0 C3
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C3 T3
+=> 0
+ModelSizeOf M7 = 3435
+ModelFreeFile C3
+LockLeave L1
+ret M7
+call footprint
+ret 15726
+call create 0 1 3 1 3 2 10 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M8 0 1 3 1 3 2 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_90)] 10 G
+LockLeave L1
+ret M8
+ext ref M8
+call create_sub 0 4 4 1 3 0 3 3 M5
+LockEnter L1
+ModelNew M9 0 4 4 1 3 0 [] 3 G
+SetSubModel M5 M9 3
+~Reference M9
+BaseDereference M9
+LockLeave L1
+ret M9
+ext ref M9
+call remove M8
+LockEnter L1
+LockLeave L1
+ret 5
+ext deref M2
+ext deref M9
+call create 3 3 4 2 4 2 0 []
+LockEnter L1
+ModelNew M10 3 3 4 2 4 2 [GEModelManager::CreateModel(_91)] 0 G
+LockLeave L1
+ret M10
+ext ref M10
+call create_sub 4 0 1 2 4 1 13 3 M7
+LockEnter L1
+ModelNew M11 4 0 1 2 4 1 [] 13 G
+SetSubModel M7 M11 3
+~Reference M11
+BaseDereference M11
+LockLeave L1
+ret M11
+call create_sub 4 3 3 4 3 2 15 0 M4
+LockEnter L1
+ModelNew M12 4 3 3 4 3 2 [] 15 G
+SetSubModel M4 M12 0
+~Reference M12
+BaseDereference M12
+LockLeave L1
+ret M12
+ext ref M12
+ext deref M8
+call remove_all
+LockEnter L1
+ModelSizeOf M8 = 2605
+BaseDereference M8
+~destroy M8
+ModelSizeOf M2 = 2271
+BaseDereference M2
+~destroy M2
+~BaseDereference M3
+ModelSizeOf M7 = 3435
+BaseDereference M7
+~destroy M7
+~BaseDereference M11
+~destroy M11
+LockLeave L1
+ret 5
+call remove M4
+LockEnter L1
+LockLeave L1
+ret 5
+call free
+LockEnter L1
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M3
+ext deref M4
+ext deref M5
+ext deref M10
+ext deref M12
+end models 6 paths 1 1 1 locks 0 files 0
+seq 15
+call new P1
+PathReference P1
+LockCreate = L1
+ret
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call load [models\GEModelManager::CreateModel(models\a_1)] T2
+LockEnter L1
+ModelFindFile P1 [models\GEModelManager::CreateModel(models\a_1)] T2 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T2
+=> 7
+BaseDereference M1
+~destroy M1
+ModelFreeFile C1
+LockLeave L1
+ret 0
+call count
+ret 0
+call load [models\a] T2
+LockEnter L1
+ModelFindFile P1 [models\a] T2 = 0 C2
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C2 T2
+=> 0
+ModelSizeOf M2 = 731
+ModelFreeFile C2
+LockLeave L1
+ret M2
+call count
+ret 1
+call load [] T2
+LockEnter L1
+ModelFindFile P1 [] T2 = 0 C3
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C3 T2
+=> 7
+BaseDereference M3
+~destroy M3
+ModelFreeFile C3
+LockLeave L1
+ret 0
+call count
+ret 1
+call create 2 1 4 1 3 1 14 [models\été]
+LockEnter L1
+ModelNew M4 2 1 4 1 3 1 [GEModelManager::CreateModel(models\été_92)] 14 G
+LockLeave L1
+ret M4
+call footprint
+ret 731
+call create_sub 2 3 1 4 1 0 14 3 M2
+LockEnter L1
+ModelNew M5 2 3 1 4 1 0 [] 14 G
+SetSubModel M2 M5 3
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+ext ref M5
+call set_path P2
+PathDereference P1
+PathReference P2
+ret
+call remove M2
+LockEnter L1
+ModelSizeOf M2 = 731
+BaseDereference M2
+~destroy M2
+~BaseDereference M5
+LockLeave L1
+ret 0
+call create_sub 0 1 0 1 3 3 7 2 M5
+LockEnter L1
+ModelNew M6 0 1 0 1 3 3 [] 7 G
+SetSubModel M5 M6 2
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call create_sub 0 0 3 4 2 1 15 3 M6
+LockEnter L1
+ModelNew M7 0 0 3 4 2 1 [] 15 G
+SetSubModel M6 M7 3
+~Reference M7
+BaseDereference M7
+LockLeave L1
+ret M7
+call load [] T2
+LockEnter L1
+ModelFindFile P2 [] T2 = 0 C4
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C4 T2
+=> 0
+ModelSizeOf M8 = 6372
+ModelFreeFile C4
+LockLeave L1
+ret M8
+ext ref M8
+call load [models\b] T3
+LockEnter L1
+ModelFindFile P2 [models\b] T3 = 0 C5
+ModelNewEmpty M9 G
+ModelStoreLoaded M9 C5 T3
+=> 0
+ModelSizeOf M9 = 538
+ModelFreeFile C5
+LockLeave L1
+ret M9
+call free
+LockEnter L1
+ModelSizeOf M4 = 1242
+BaseDereference M4
+~destroy M4
+ModelSizeOf M9 = 538
+BaseDereference M9
+~destroy M9
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+ext deref M5
+ext deref M6
+ext deref M8
+end models 4 paths 1 1 1 locks 0 files 0
+seq 16
+call new P2
+PathReference P2
+LockCreate = L1
+ret
+call create 3 3 4 1 1 0 12 []
+LockEnter L1
+ModelNew M1 3 3 4 1 1 0 [GEModelManager::CreateModel(_93)] 12 G
+LockLeave L1
+ret M1
+call create 1 4 0 4 2 4 0 [models\a\x]
+LockEnter L1
+ModelNew M2 1 4 0 4 2 4 [GEModelManager::CreateModel(models\a\x_94)] 0 G
+LockLeave L1
+ret M2
+call set_path P1
+PathDereference P2
+PathReference P1
+ret
+call load [] T3
+LockEnter L1
+ModelFindFile P1 [] T3 = 0 C1
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C1 T3
+=> 0
+ModelSizeOf M3 = 4938
+ModelFreeFile C1
+LockLeave L1
+ret M3
+call create 2 0 3 0 4 4 1 [models\été]
+LockEnter L1
+ModelNew M4 2 0 3 0 4 4 [GEModelManager::CreateModel(models\été_95)] 1 G
+LockLeave L1
+ret M4
+call footprint
+ret 4938
+call create_sub 2 4 0 0 2 4 10 3 M1
+LockEnter L1
+ModelNew M5 2 4 0 0 2 4 [GEModelManager::CreateModel(_93)] 10 G
+SetSubModel M1 M5 3
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+ext ref M5
+call create_sub 0 2 3 0 4 4 4 1 M3
+LockEnter L1
+ModelNew M6 0 2 3 0 4 4 [] 4 G
+SetSubModel M3 M6 1
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P1 [models\a\x] T3 = 2
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+ModelSizeOf M3 = 4938
+BaseDereference M3
+~destroy M3
+~BaseDereference M6
+~destroy M6
+ModelSizeOf M1 = 4600
+BaseDereference M1
+~destroy M1
+~BaseDereference M5
+ModelSizeOf M2 = 1180
+BaseDereference M2
+~destroy M2
+ModelSizeOf M4 = 363
+BaseDereference M4
+~destroy M4
+LockLeave L1
+ret 0
+call create 0 2 2 3 3 0 14 [models\B]
+LockEnter L1
+ModelNew M7 0 2 2 3 3 0 [GEModelManager::CreateModel(models\B_96)] 14 G
+LockLeave L1
+ret M7
+ext ref M7
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 1 3 2 2 2 0 13 1 M5
+LockEnter L1
+ModelNew M8 1 3 2 2 2 0 [GEModelManager::CreateModel(_93)] 13 G
+SetSubModel M5 M8 1
+~Reference M8
+BaseDereference M8
+LockLeave L1
+ret M8
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\B_96) model file is loaded in memory with a reference count of 2.|
+call set_path P3
+PathDereference P1
+PathReference P3
+ret
+call verify
+LockEnter L1
+ModelVerify M7
+LockLeave L1
+ret
+call footprint
+ret 4294961153
+call remove M5
+LockEnter L1
+LockLeave L1
+ret 3
+call create 0 2 1 2 0 1 7 [models\été]
+LockEnter L1
+ModelNew M9 0 2 1 2 0 1 [GEModelManager::CreateModel(models\été_97)] 7 G
+LockLeave L1
+ret M9
+ext ref M9
+call create 3 1 4 2 1 0 6 [models\B]
+LockEnter L1
+ModelNew M10 3 1 4 2 1 0 [GEModelManager::CreateModel(models\B_98)] 6 G
+LockLeave L1
+ret M10
+call create_sub 3 3 4 0 2 1 7 0 M9
+LockEnter L1
+ModelNew M11 3 3 4 0 2 1 [GEModelManager::CreateModel(models\été_97)] 7 G
+SetSubModel M9 M11 0
+~Reference M11
+BaseDereference M11
+LockLeave L1
+ret M11
+call remove M8
+LockEnter L1
+LockLeave L1
+ret 3
+call verify
+LockEnter L1
+ModelVerify M7
+ModelVerify M10
+ModelVerify M9
+LockLeave L1
+ret
+call create 1 0 2 0 4 4 11 [models\a\x]
+LockEnter L1
+ModelNew M12 1 0 2 0 4 4 [GEModelManager::CreateModel(models\a\x_99)] 11 G
+LockLeave L1
+ret M12
+call set_path P3
+PathDereference P3
+PathReference P3
+ret
+call remove_all
+LockEnter L1
+ModelSizeOf M10 = 3020
+BaseDereference M10
+~destroy M10
+ModelSizeOf M12 = 1282
+BaseDereference M12
+~destroy M12
+LockLeave L1
+ret 5
+call create_sub 3 0 0 4 1 3 6 3 M5
+LockEnter L1
+ModelNew M13 3 0 0 4 1 3 [GEModelManager::CreateModel(_93)] 6 G
+SetSubModel M5 M13 3
+~Reference M13
+BaseDereference M13
+LockLeave L1
+ret M13
+call load [models\a\x] T1
+LockEnter L1
+ModelFindFile P3 [models\a\x] T1 = 0 C2
+ModelNewEmpty M14 G
+ModelStoreLoaded M14 C2 T1
+call create 0 0 3 4 1 2 9 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M15 0 0 3 4 1 2 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_100)] 9 G
+LockLeave L1
+ret M15
+=> 0
+ModelSizeOf M14 = 7465
+ModelFreeFile C2
+LockLeave L1
+ret M14
+call load [models\a\x] T1
+LockEnter L1
+LockLeave L1
+ret M14
+call create 1 2 0 0 2 0 11 [models\ab]
+LockEnter L1
+ModelNew M16 1 2 0 0 2 0 [GEModelManager::CreateModel(models\ab_101)] 11 G
+LockLeave L1
+ret M16
+call load [m] T3
+LockEnter L1
+ModelFindFile P3 [m] T3 = 0 C3
+ModelNewEmpty M17 G
+ModelStoreLoaded M17 C3 T3
+=> 0
+ModelSizeOf M17 = 2071
+ModelFreeFile C3
+LockLeave L1
+ret M17
+ext ref M17
+call create_sub 1 1 1 2 4 4 14 0 M5
+LockEnter L1
+ModelNew M18 1 1 1 2 4 4 [GEModelManager::CreateModel(_93)] 14 G
+SetSubModel M5 M18 0
+~Reference M18
+BaseDereference M18
+LockLeave L1
+ret M18
+call create_sub 0 1 1 2 0 2 3 3 M18
+LockEnter L1
+ModelNew M19 0 1 1 2 0 2 [GEModelManager::CreateModel(_93)] 3 G
+SetSubModel M18 M19 3
+~Reference M19
+BaseDereference M19
+LockLeave L1
+ret M19
+ext ref M19
+call create 2 1 1 3 0 2 14 [models\a]
+LockEnter L1
+ModelNew M20 2 1 1 3 0 2 [GEModelManager::CreateModel(models\a_102)] 14 G
+LockLeave L1
+ret M20
+ext ref M20
+ext deref M7
+call remove_all
+LockEnter L1
+ModelSizeOf M7 = 1703
+BaseDereference M7
+~destroy M7
+ModelSizeOf M15 = 3616
+BaseDereference M15
+~destroy M15
+ModelSizeOf M16 = 3128
+BaseDereference M16
+~destroy M16
+ModelSizeOf M14 = 7465
+BaseDereference M14
+~destroy M14
+LockLeave L1
+ret 5
+call create 1 4 3 1 1 1 12 [models\ab]
+LockEnter L1
+ModelNew M21 1 4 3 1 1 1 [GEModelManager::CreateModel(models\ab_103)] 12 G
+LockLeave L1
+ret M21
+ext ref M21
+call free
+LockEnter L1
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+ext deref M5
+ext deref M9
+ext deref M17
+ext deref M19
+ext deref M20
+ext deref M21
+end models 10 paths 1 1 1 locks 0 files 0
+seq 17
+call new 0
+LockCreate = L1
+ret
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call create 0 3 3 4 3 2 3 [models\b]
+LockEnter L1
+ModelNew M1 0 3 3 4 3 2 [GEModelManager::CreateModel(models\b_104)] 3 G
+LockLeave L1
+ret M1
+ext ref M1
+call load [models\été] T3
+LockEnter L1
+ModelFindFile 0 [models\été] T3 = 0 C1
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C1 T3
+=> 0
+ModelSizeOf M2 = 8291
+ModelFreeFile C1
+LockLeave L1
+ret M2
+ext ref M2
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 5
+call create 4 3 3 0 1 1 14 []
+LockEnter L1
+ModelNew M3 4 3 3 0 1 1 [GEModelManager::CreateModel(_105)] 14 G
+LockLeave L1
+ret M3
+call load [models\a\x] T2
+LockEnter L1
+ModelFindFile 0 [models\a\x] T2 = 0 C2
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C2 T2
+call load [models\été] T1
+LockEnter L1
+LockLeave L1
+ret M2
+=> 0
+ModelSizeOf M4 = 6086
+ModelFreeFile C2
+LockLeave L1
+ret M4
+call footprint
+ret 14377
+call remove M2
+LockEnter L1
+LockLeave L1
+ret 5
+call load [models\a] T2
+LockEnter L1
+ModelFindFile 0 [models\a] T2 = 0 C3
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C3 T2
+=> 0
+ModelSizeOf M5 = 219
+ModelFreeFile C3
+LockLeave L1
+ret M5
+ext ref M5
+call create_sub 1 3 1 3 1 3 13 3 M5
+LockEnter L1
+ModelNew M6 1 3 1 3 1 3 [] 13 G
+SetSubModel M5 M6 3
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext deref M5
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_105) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\b_104) model file is loaded in memory with a reference count of 2.|The models\a model file is loaded in memory with a reference count of 1.|The models\a\x model file is loaded in memory with a reference count of 1.|The models\été model file is loaded in memory with a reference count of 2.|
+call create_sub 3 1 0 3 4 3 14 3 M6
+LockEnter L1
+ModelNew M7 3 1 0 3 4 3 [] 14 G
+SetSubModel M6 M7 3
+~Reference M7
+BaseDereference M7
+LockLeave L1
+ret M7
+ext ref M7
+call set_path P1
+PathReference P1
+ret
+call load [models\b] T2
+LockEnter L1
+ModelFindFile P1 [models\b] T2 = 0 C4
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C4 T2
+call create 3 3 4 4 2 3 10 [models\b]
+LockEnter L1
+ModelNew M9 3 3 4 4 2 3 [GEModelManager::CreateModel(models\b_106)] 10 G
+LockLeave L1
+ret M9
+=> 7
+BaseDereference M8
+~destroy M8
+ModelFreeFile C4
+LockLeave L1
+ret 0
+ext deref M2
+call create 2 1 2 0 1 2 2 [models\été]
+LockEnter L1
+ModelNew M10 2 1 2 0 1 2 [GEModelManager::CreateModel(models\été_107)] 2 G
+LockLeave L1
+ret M10
+ext ref M10
+call create_sub 2 1 0 4 1 0 14 1 M1
+LockEnter L1
+ModelNew M11 2 1 0 4 1 0 [GEModelManager::CreateModel(models\b_104)] 14 G
+SetSubModel M1 M11 1
+~Reference M11
+BaseDereference M11
+LockLeave L1
+ret M11
+call set_path 0
+PathDereference P1
+ret
+call set_path P3
+PathReference P3
+ret
+call load [models\été] T2
+LockEnter L1
+LockLeave L1
+ret M2
+call create 2 1 1 1 0 1 12 [models\ab]
+LockEnter L1
+ModelNew M12 2 1 1 1 0 1 [GEModelManager::CreateModel(models\ab_108)] 12 G
+LockLeave L1
+ret M12
+ext ref M12
+call set_path P1
+PathDereference P3
+PathReference P1
+ret
+call remove_all
+LockEnter L1
+ModelSizeOf M3 = 4246
+BaseDereference M3
+~destroy M3
+ModelSizeOf M9 = 3941
+BaseDereference M9
+~destroy M9
+ModelSizeOf M5 = 219
+BaseDereference M5
+~destroy M5
+~BaseDereference M6
+~destroy M6
+~BaseDereference M7
+ModelSizeOf M4 = 6086
+BaseDereference M4
+~destroy M4
+ModelSizeOf M2 = 8291
+BaseDereference M2
+~destroy M2
+LockLeave L1
+ret 5
+call free
+LockEnter L1
+LockLeave L1
+PathDereference P1
+LockDestroy L1 depth 0
+ret
+ext deref M1
+ext deref M7
+ext deref M10
+ext deref M12
+end models 5 paths 1 1 1 locks 0 files 0
+seq 18
+call new P2
+PathReference P2
+LockCreate = L1
+ret
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call load [models\été] T1
+LockEnter L1
+ModelFindFile P2 [models\été] T1 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T1
+=> 0
+ModelSizeOf M1 = 3746
+ModelFreeFile C1
+LockLeave L1
+ret M1
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 3746
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call create 3 4 4 0 0 0 6 [models\été]
+LockEnter L1
+ModelNew M2 3 4 4 0 0 0 [GEModelManager::CreateModel(models\été_109)] 6 G
+LockLeave L1
+ret M2
+call create 3 2 3 4 0 1 2 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M3 3 2 3 4 0 1 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_110)] 2 G
+LockLeave L1
+ret M3
+call create_sub 1 2 2 1 0 3 1 1 M2
+LockEnter L1
+ModelNew M4 1 2 2 1 0 3 [GEModelManager::CreateModel(models\été_109)] 1 G
+SetSubModel M2 M4 1
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+call create_sub 2 4 4 3 1 1 5 2 M4
+LockEnter L1
+ModelNew M5 2 4 4 3 1 1 [GEModelManager::CreateModel(models\été_109)] 5 G
+SetSubModel M4 M5 2
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+call footprint
+ret 0
+call load [] T3
+LockEnter L1
+ModelFindFile P2 [] T3 = 0 C2
+ModelNewEmpty M6 G
+ModelStoreLoaded M6 C2 T3
+=> 0
+ModelSizeOf M6 = 3326
+ModelFreeFile C2
+LockLeave L1
+ret M6
+call load [models\B] T1
+LockEnter L1
+ModelFindFile P2 [models\B] T1 = 0 C3
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C3 T1
+=> 0
+ModelSizeOf M7 = 2420
+ModelFreeFile C3
+LockLeave L1
+ret M7
+call footprint
+ret 5746
+call create_sub 1 0 1 1 2 3 5 0 M7
+LockEnter L1
+ModelNew M8 1 0 1 1 2 3 [] 5 G
+SetSubModel M7 M8 0
+~Reference M8
+BaseDereference M8
+LockLeave L1
+ret M8
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The  model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_110) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\été_109) model file is loaded in memory with a reference count of 1.|The models\B model file is loaded in memory with a reference count of 1.|
+call set_path P2
+PathDereference P2
+PathReference P2
+ret
+call create_sub 4 1 3 3 0 0 7 2 M5
+LockEnter L1
+ModelNew M9 4 1 3 3 0 0 [GEModelManager::CreateModel(models\été_109)] 7 G
+SetSubModel M5 M9 2
+~Reference M9
+BaseDereference M9
+LockLeave L1
+ret M9
+call remove_all
+LockEnter L1
+ModelSizeOf M6 = 3326
+BaseDereference M6
+~destroy M6
+ModelSizeOf M3 = 4711
+BaseDereference M3
+~destroy M3
+ModelSizeOf M2 = 826
+BaseDereference M2
+~destroy M2
+~BaseDereference M4
+~destroy M4
+~BaseDereference M5
+~destroy M5
+~BaseDereference M9
+~destroy M9
+ModelSizeOf M7 = 1641
+BaseDereference M7
+~destroy M7
+~BaseDereference M8
+~destroy M8
+LockLeave L1
+ret 0
+call create 2 1 1 0 1 0 0 [models\ab]
+LockEnter L1
+ModelNew M10 2 1 1 0 1 0 [GEModelManager::CreateModel(models\ab_111)] 0 G
+LockLeave L1
+ret M10
+ext ref M10
+call create 3 4 1 4 4 2 10 [models\b]
+LockEnter L1
+ModelNew M11 3 4 1 4 4 2 [GEModelManager::CreateModel(models\b_112)] 10 G
+LockLeave L1
+ret M11
+ext ref M11
+call set_path 0
+PathDereference P2
+ret
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\ab_111) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\b_112) model file is loaded in memory with a reference count of 2.|
+call verify
+LockEnter L1
+ModelVerify M10
+ModelVerify M11
+LockLeave L1
+ret
+call create_sub 4 0 2 3 4 0 0 3 M11
+LockEnter L1
+ModelNew M12 4 0 2 3 4 0 [GEModelManager::CreateModel(models\b_112)] 0 G
+SetSubModel M11 M12 3
+~Reference M12
+BaseDereference M12
+LockLeave L1
+ret M12
+ext ref M12
+ext deref M11
+call create_sub 2 4 1 2 1 1 1 3 M12
+LockEnter L1
+ModelNew M13 2 4 1 2 1 1 [GEModelManager::CreateModel(models\b_112)] 1 G
+SetSubModel M12 M13 3
+~Reference M13
+BaseDereference M13
+LockLeave L1
+ret M13
+call free
+LockEnter L1
+ModelSizeOf M11 = 711
+BaseDereference M11
+~destroy M11
+~BaseDereference M12
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M10
+ext deref M12
+end models 3 paths 1 1 1 locks 0 files 0
+seq 19
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call set_path P1
+PathDereference P3
+PathReference P1
+ret
+call set_path P2
+PathDereference P1
+PathReference P2
+ret
+call create 4 1 4 4 1 2 10 [models\B]
+LockEnter L1
+ModelNew M1 4 1 4 4 1 2 [GEModelManager::CreateModel(models\B_113)] 10 G
+LockLeave L1
+ret M1
+call create 4 1 2 3 4 1 0 [models\B]
+LockEnter L1
+ModelNew M2 4 1 2 3 4 1 [GEModelManager::CreateModel(models\B_114)] 0 G
+LockLeave L1
+ret M2
+ext ref M2
+call create_sub 0 1 2 3 2 3 8 2 M2
+LockEnter L1
+ModelNew M3 0 1 2 3 2 3 [GEModelManager::CreateModel(models\B_114)] 8 G
+SetSubModel M2 M3 2
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+ext ref M3
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\B_113) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\B_114) model file is loaded in memory with a reference count of 2.|
+call create 3 4 1 2 0 0 11 [models\été]
+LockEnter L1
+ModelNew M4 3 4 1 2 0 0 [GEModelManager::CreateModel(models\été_115)] 11 G
+LockLeave L1
+ret M4
+ext ref M4
+call count
+ret 3
+call dump F4
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\B_113) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\B_114) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_115) model file is loaded in memory with a reference count of 2.|
+ext deref M3
+call load [models\B] T1
+LockEnter L1
+ModelFindFile P2 [models\B] T1 = 0 C1
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C1 T1
+=> 0
+ModelSizeOf M5 = 4581
+ModelFreeFile C1
+LockLeave L1
+ret M5
+ext ref M5
+call count
+ret 4
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 1994
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 5
+call count
+ret 3
+call footprint
+ret 2587
+ext deref M5
+call create_sub 4 2 0 2 4 0 2 0 M5
+LockEnter L1
+ModelNew M6 4 2 0 2 4 0 [] 2 G
+SetSubModel M5 M6 0
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call set_path P1
+PathDereference P2
+PathReference P1
+ret
+call count
+ret 3
+call load [models\a] T2
+LockEnter L1
+ModelFindFile P1 [models\a] T2 = 0 C2
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C2 T2
+=> 0
+ModelSizeOf M7 = 3515
+ModelFreeFile C2
+LockLeave L1
+ret M7
+ext ref M7
+call dump F5
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\B_114) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_115) model file is loaded in memory with a reference count of 2.|The models\B model file is loaded in memory with a reference count of 1.|The models\a model file is loaded in memory with a reference count of 2.|
+call set_path P2
+PathDereference P1
+PathReference P2
+ret
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 3
+call load [models\ab] T2
+LockEnter L1
+ModelFindFile P2 [models\ab] T2 = 0 C3
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C3 T2
+=> 0
+ModelSizeOf M8 = 6614
+ModelFreeFile C3
+LockLeave L1
+ret M8
+ext ref M8
+call footprint
+ret 12716
+call create 4 1 1 3 1 1 5 [models\a\x]
+LockEnter L1
+ModelNew M9 4 1 1 3 1 1 [GEModelManager::CreateModel(models\a\x_116)] 5 G
+LockLeave L1
+ret M9
+call footprint
+ret 12716
+call create_sub 3 4 0 3 3 1 6 0 M7
+LockEnter L1
+ModelNew M10 3 4 0 3 3 1 [] 6 G
+SetSubModel M7 M10 0
+~Reference M10
+BaseDereference M10
+LockLeave L1
+ret M10
+ext ref M10
+call remove M10
+LockEnter L1
+LockLeave L1
+ret 3
+call create 1 0 2 1 4 2 2 [m]
+LockEnter L1
+ModelNew M11 1 0 2 1 4 2 [GEModelManager::CreateModel(m_117)] 2 G
+LockLeave L1
+ret M11
+ext ref M11
+ext deref M10
+call verify
+LockEnter L1
+ModelVerify M11
+ModelVerify M2
+ModelVerify M9
+ModelVerify M4
+ModelVerify M5
+ModelVerify M7
+ModelVerify M8
+LockLeave L1
+ret
+call remove M5
+LockEnter L1
+ModelSizeOf M5 = 4581
+BaseDereference M5
+~destroy M5
+~BaseDereference M6
+LockLeave L1
+ret 0
+call create_sub 2 1 4 4 0 1 8 3 M7
+LockEnter L1
+ModelNew M12 2 1 4 4 0 1 [] 8 G
+SetSubModel M7 M12 3
+~Reference M12
+BaseDereference M12
+LockLeave L1
+ret M12
+call free
+LockEnter L1
+ModelSizeOf M9 = 989
+BaseDereference M9
+~destroy M9
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+ext deref M2
+ext deref M4
+ext deref M6
+ext deref M7
+ext deref M8
+ext deref M11
+end models 9 paths 1 1 1 locks 0 files 0
+seq 20
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call create 2 4 4 4 3 1 8 []
+LockEnter L1
+ModelNew M1 2 4 4 4 3 1 [GEModelManager::CreateModel(_118)] 8 G
+LockLeave L1
+ret M1
+ext ref M1
+call load [m] T1
+LockEnter L1
+ModelFindFile P3 [m] T1 = 0 C1
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C1 T1
+=> 0
+ModelSizeOf M2 = 6781
+ModelFreeFile C1
+LockLeave L1
+ret M2
+ext deref M1
+call create_sub 1 3 1 3 2 0 13 3 M2
+LockEnter L1
+ModelNew M3 1 3 1 3 2 0 [] 13 G
+SetSubModel M2 M3 3
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+ext ref M3
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 3
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 3
+call create_sub 3 1 2 0 3 0 9 1 M3
+LockEnter L1
+ModelNew M4 3 1 2 0 3 0 [] 9 G
+SetSubModel M3 M4 1
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+ext ref M4
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 3
+call remove M4
+LockEnter L1
+LockLeave L1
+ret 3
+call count
+ret 2
+call create 2 3 0 4 3 0 4 [models\a\x]
+LockEnter L1
+ModelNew M5 2 3 0 4 3 0 [GEModelManager::CreateModel(models\a\x_119)] 4 G
+LockLeave L1
+ret M5
+call remove M5
+LockEnter L1
+ModelSizeOf M5 = 1995
+BaseDereference M5
+~destroy M5
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 3420
+BaseDereference M1
+~destroy M1
+ModelSizeOf M2 = 6781
+BaseDereference M2
+~destroy M2
+~BaseDereference M3
+LockLeave L1
+ret 0
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P3 [models\a\x] T3 = 0 C2
+ModelNewEmpty M6 G
+ModelStoreLoaded M6 C2 T3
+=> 0
+ModelSizeOf M6 = 3134
+ModelFreeFile C2
+LockLeave L1
+ret M6
+ext ref M6
+call load [models\ab] T2
+LockEnter L1
+ModelFindFile P3 [models\ab] T2 = 2
+LockLeave L1
+ret 0
+ext deref M3
+call create_sub 2 2 1 2 3 2 14 0 M3
+LockEnter L1
+ModelNew M7 2 2 1 2 3 2 [] 14 G
+SetSubModel M3 M7 0
+~Reference M7
+BaseDereference M7
+LockLeave L1
+ret M7
+call verify
+LockEnter L1
+ModelVerify M6
+LockLeave L1
+ret
+call remove M7
+LockEnter L1
+LockLeave L1
+ret 3
+call create 0 1 1 4 4 4 5 [models\b]
+LockEnter L1
+ModelNew M8 0 1 1 4 4 4 [GEModelManager::CreateModel(models\b_120)] 5 G
+LockLeave L1
+ret M8
+ext ref M8
+call footprint
+ret 4294965015
+call load [models\été] T2
+LockEnter L1
+ModelFindFile P3 [models\été] T2 = 0 C3
+ModelNewEmpty M9 G
+ModelStoreLoaded M9 C3 T2
+=> 0
+ModelSizeOf M9 = 5321
+ModelFreeFile C3
+LockLeave L1
+ret M9
+ext ref M9
+ext deref M8
+call count
+ret 3
+call verify
+LockEnter L1
+ModelVerify M8
+ModelVerify M6
+ModelVerify M9
+LockLeave L1
+ret
+call create_sub 0 0 3 1 2 4 8 2 M9
+LockEnter L1
+ModelNew M10 0 0 3 1 2 4 [] 8 G
+SetSubModel M9 M10 2
+~Reference M10
+BaseDereference M10
+LockLeave L1
+ret M10
+call load [models\ab] T2
+LockEnter L1
+ModelFindFile P3 [models\ab] T2 = 2
+LockLeave L1
+ret 0
+call remove M8
+LockEnter L1
+ModelSizeOf M8 = 384
+BaseDereference M8
+~destroy M8
+LockLeave L1
+ret 0
+call count
+ret 2
+call load [models\a\x] T3
+LockEnter L1
+LockLeave L1
+ret M6
+ext deref M4
+call free
+LockEnter L1
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+ext deref M6
+ext deref M9
+end models 6 paths 1 1 1 locks 0 files 0
+seq 21
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call set_path P1
+PathDereference P3
+PathReference P1
+ret
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call count
+ret 0
+call footprint
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call create 2 1 4 2 3 0 2 [models\ab]
+LockEnter L1
+ModelNew M1 2 1 4 2 3 0 [GEModelManager::CreateModel(models\ab_121)] 2 G
+LockLeave L1
+ret M1
+call set_path P3
+PathDereference P1
+PathReference P3
+ret
+call count
+ret 1
+call remove M1
+LockEnter L1
+ModelSizeOf M1 = 1086
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call footprint
+ret 4294966210
+call load [m] T3
+LockEnter L1
+ModelFindFile P3 [m] T3 = 0 C1
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C1 T3
+=> 0
+ModelSizeOf M2 = 6359
+ModelFreeFile C1
+LockLeave L1
+ret M2
+call load [models\ab] T3
+LockEnter L1
+ModelFindFile P3 [models\ab] T3 = 0 C2
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C2 T3
+=> 0
+ModelSizeOf M3 = 3177
+ModelFreeFile C2
+LockLeave L1
+ret M3
+call set_path P2
+PathDereference P3
+PathReference P2
+ret
+call remove M3
+LockEnter L1
+ModelSizeOf M3 = 3177
+BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 0
+call create_sub 0 4 3 2 1 3 10 0 M2
+LockEnter L1
+ModelNew M4 0 4 3 2 1 3 [] 10 G
+SetSubModel M2 M4 0
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+call free
+LockEnter L1
+ModelSizeOf M2 = 6359
+BaseDereference M2
+~destroy M2
+~BaseDereference M4
+~destroy M4
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+end models 0 paths 1 1 1 locks 0 files 0
+seq 22
+call new P2
+PathReference P2
+LockCreate = L1
+ret
+call count
+ret 0
+call footprint
+ret 0
+call footprint
+ret 0
+call load [models\a] T3
+LockEnter L1
+ModelFindFile P2 [models\a] T3 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T3
+=> 0
+ModelSizeOf M1 = 5291
+ModelFreeFile C1
+LockLeave L1
+ret M1
+call create_sub 0 2 0 4 2 0 11 0 M1
+LockEnter L1
+ModelNew M2 0 2 0 4 2 0 [] 11 G
+SetSubModel M1 M2 0
+~Reference M2
+BaseDereference M2
+LockLeave L1
+ret M2
+ext ref M2
+call load [models\a] T2
+LockEnter L1
+LockLeave L1
+ret M1
+ext ref M1
+call count
+ret 1
+call set_path P2
+PathDereference P2
+PathReference P2
+ret
+ext deref M1
+call load [models\b] T3
+LockEnter L1
+ModelFindFile P2 [models\b] T3 = 0 C2
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C2 T3
+=> 0
+ModelSizeOf M3 = 5986
+ModelFreeFile C2
+LockLeave L1
+ret M3
+call create_sub 2 0 4 4 0 1 4 1 M1
+LockEnter L1
+ModelNew M4 2 0 4 4 0 1 [] 4 G
+SetSubModel M1 M4 1
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+call create_sub 4 1 0 3 0 3 7 1 M3
+LockEnter L1
+ModelNew M5 4 1 0 3 0 3 [] 7 G
+SetSubModel M3 M5 1
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+call remove M2
+LockEnter L1
+LockLeave L1
+ret 3
+call count
+ret 2
+call remove M3
+LockEnter L1
+ModelSizeOf M3 = 5986
+BaseDereference M3
+~destroy M3
+~BaseDereference M5
+~destroy M5
+LockLeave L1
+ret 0
+ext deref M2
+call load [models\b] T2
+LockEnter L1
+ModelFindFile P2 [models\b] T2 = 2
+LockLeave L1
+ret 0
+call set_path P3
+PathDereference P2
+PathReference P3
+ret
+call create_sub 4 2 2 3 4 2 8 2 M4
+LockEnter L1
+ModelNew M6 4 2 2 3 4 2 [] 8 G
+SetSubModel M4 M6 2
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call set_path P1
+PathDereference P3
+PathReference P1
+ret
+call load [m] T2
+LockEnter L1
+ModelFindFile P1 [m] T2 = 0 C3
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C3 T2
+=> 0
+ModelSizeOf M7 = 1010
+ModelFreeFile C3
+LockLeave L1
+ret M7
+call set_path P3
+PathDereference P1
+PathReference P3
+ret
+ext deref M6
+call create 2 0 2 3 2 2 14 [models\a]
+LockEnter L1
+ModelNew M8 2 0 2 3 2 2 [GEModelManager::CreateModel(models\a_122)] 14 G
+LockLeave L1
+ret M8
+call footprint
+ret 6301
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\a_122) model file is loaded in memory with a reference count of 1.|The m model file is loaded in memory with a reference count of 1.|The models\a model file is loaded in memory with a reference count of 1.|
+call create 2 3 3 3 2 2 6 []
+LockEnter L1
+ModelNew M9 2 3 3 3 2 2 [GEModelManager::CreateModel(_123)] 6 G
+LockLeave L1
+ret M9
+ext ref M9
+call create 3 2 1 4 3 3 5 [models\B]
+LockEnter L1
+ModelNew M10 3 2 1 4 3 3 [GEModelManager::CreateModel(models\B_124)] 5 G
+LockLeave L1
+ret M10
+ext ref M10
+call remove M8
+LockEnter L1
+ModelSizeOf M8 = 4364
+BaseDereference M8
+~destroy M8
+LockLeave L1
+ret 0
+call count
+ret 4
+call footprint
+ret 1937
+call create 0 3 3 4 0 3 0 [models\B]
+LockEnter L1
+ModelNew M11 0 3 3 4 0 3 [GEModelManager::CreateModel(models\B_125)] 0 G
+LockLeave L1
+ret M11
+ext ref M11
+call verify
+LockEnter L1
+ModelVerify M9
+ModelVerify M10
+ModelVerify M11
+ModelVerify M7
+ModelVerify M1
+LockLeave L1
+ret
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_123) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_124) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\B_125) model file is loaded in memory with a reference count of 2.|The m model file is loaded in memory with a reference count of 1.|The models\a model file is loaded in memory with a reference count of 1.|
+call free
+LockEnter L1
+ModelSizeOf M7 = 1010
+BaseDereference M7
+~destroy M7
+ModelSizeOf M1 = 5291
+BaseDereference M1
+~destroy M1
+~BaseDereference M2
+~destroy M2
+~BaseDereference M4
+~destroy M4
+~BaseDereference M6
+~destroy M6
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+ext deref M9
+ext deref M10
+ext deref M11
+end models 3 paths 1 1 1 locks 0 files 0
+seq 23
+call new 0
+LockCreate = L1
+ret
+call set_path 0
+ret
+call footprint
+ret 0
+call create 4 4 3 3 3 0 15 []
+LockEnter L1
+ModelNew M1 4 4 3 3 3 0 [GEModelManager::CreateModel(_126)] 15 G
+LockLeave L1
+ret M1
+ext ref M1
+call create_sub 1 2 0 0 2 1 4 3 M1
+LockEnter L1
+ModelNew M2 1 2 0 0 2 1 [GEModelManager::CreateModel(_126)] 4 G
+SetSubModel M1 M2 3
+~Reference M2
+BaseDereference M2
+LockLeave L1
+ret M2
+ext ref M2
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 0 4 2 0 0 3 1 2 M2
+LockEnter L1
+ModelNew M3 0 4 2 0 0 3 [GEModelManager::CreateModel(_126)] 1 G
+SetSubModel M2 M3 2
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+call set_path P1
+PathReference P1
+ret
+call create 0 3 0 0 0 0 9 [models\b]
+LockEnter L1
+ModelNew M4 0 3 0 0 0 0 [GEModelManager::CreateModel(models\b_127)] 9 G
+LockLeave L1
+ret M4
+ext ref M4
+call create_sub 1 0 3 1 4 2 7 3 M3
+LockEnter L1
+ModelNew M5 1 0 3 1 4 2 [GEModelManager::CreateModel(_126)] 7 G
+SetSubModel M3 M5 3
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+call verify
+LockEnter L1
+ModelVerify M1
+ModelVerify M4
+LockLeave L1
+ret
+call create_sub 0 0 2 2 3 1 3 0 M1
+LockEnter L1
+ModelNew M6 0 0 2 2 3 1 [GEModelManager::CreateModel(_126)] 3 G
+SetSubModel M1 M6 0
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+call create_sub 0 1 1 1 1 4 4 3 M3
+LockEnter L1
+ModelNew M7 0 1 1 1 1 4 [GEModelManager::CreateModel(_126)] 4 G
+SetSubModel M3 M7 3
+~Reference M7
+BaseDereference M7
+LockLeave L1
+ret M7
+ext ref M7
+call create_sub 2 0 4 3 3 0 1 0 M3
+LockEnter L1
+ModelNew M8 2 0 4 3 3 0 [GEModelManager::CreateModel(_126)] 1 G
+SetSubModel M3 M8 0
+~Reference M8
+BaseDereference M8
+LockLeave L1
+ret M8
+call set_path P3
+PathDereference P1
+PathReference P3
+ret
+call set_path P2
+PathDereference P3
+PathReference P2
+ret
+call verify
+LockEnter L1
+ModelVerify M1
+ModelVerify M4
+LockLeave L1
+ret
+call verify
+LockEnter L1
+ModelVerify M1
+ModelVerify M4
+LockLeave L1
+ret
+call create_sub 2 2 2 4 0 0 5 0 M8
+LockEnter L1
+ModelNew M9 2 2 2 4 0 0 [GEModelManager::CreateModel(_126)] 5 G
+SetSubModel M8 M9 0
+~Reference M9
+BaseDereference M9
+LockLeave L1
+ret M9
+ext ref M9
+ext deref M1
+call create 3 1 0 0 3 3 13 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M10 3 1 0 0 3 3 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_128)] 13 G
+LockLeave L1
+ret M10
+call load [models\a\x] T1
+LockEnter L1
+ModelFindFile P2 [models\a\x] T1 = 0 C1
+ModelNewEmpty M11 G
+ModelStoreLoaded M11 C1 T1
+=> 0
+ModelSizeOf M11 = 7000
+ModelFreeFile C1
+LockLeave L1
+ret M11
+ext ref M11
+call create 0 1 1 3 4 4 10 []
+LockEnter L1
+ModelNew M12 0 1 1 3 4 4 [GEModelManager::CreateModel(_129)] 10 G
+LockLeave L1
+ret M12
+ext ref M12
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 1645
+BaseDereference M1
+~destroy M1
+~BaseDereference M2
+~BaseDereference M6
+~destroy M6
+ModelSizeOf M10 = 2228
+BaseDereference M10
+~destroy M10
+LockLeave L1
+ret 5
+call verify
+LockEnter L1
+ModelVerify M12
+ModelVerify M4
+ModelVerify M11
+LockLeave L1
+ret
+call count
+ret 3
+call load [models\b] T2
+LockEnter L1
+ModelFindFile P2 [models\b] T2 = 0 C2
+ModelNewEmpty M13 G
+ModelStoreLoaded M13 C2 T2
+call count
+ret 3
+=> 0
+ModelSizeOf M13 = 4344
+ModelFreeFile C2
+LockLeave L1
+ret M13
+ext ref M13
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 5
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 5
+ext deref M4
+ext deref M9
+call create_sub 0 1 3 1 2 0 0 1 M13
+LockEnter L1
+ModelNew M14 0 1 3 1 2 0 [] 0 G
+SetSubModel M13 M14 1
+~Reference M14
+BaseDereference M14
+LockLeave L1
+ret M14
+ext ref M14
+call load [models\GEModelManager::CreateModel(models\a_1)] T1
+LockEnter L1
+ModelFindFile P2 [models\GEModelManager::CreateModel(models\a_1)] T1 = 0 C3
+ModelNewEmpty M15 G
+ModelStoreLoaded M15 C3 T1
+call count
+ret 4
+=> 0
+ModelSizeOf M15 = 8547
+ModelFreeFile C3
+LockLeave L1
+ret M15
+ext ref M15
+call create_sub 0 3 4 3 0 2 14 1 M11
+LockEnter L1
+ModelNew M16 0 3 4 3 0 2 [] 14 G
+SetSubModel M11 M16 1
+~Reference M16
+BaseDereference M16
+LockLeave L1
+ret M16
+ext ref M16
+call create 1 3 1 4 2 0 10 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M17 1 3 1 4 2 0 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_130)] 10 G
+LockLeave L1
+ret M17
+call remove_all
+LockEnter L1
+ModelSizeOf M17 = 4346
+BaseDereference M17
+~destroy M17
+ModelSizeOf M4 = 2644
+BaseDereference M4
+~destroy M4
+LockLeave L1
+ret 5
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 5
+call create 3 2 1 1 2 2 7 [models\a]
+LockEnter L1
+ModelNew M18 3 2 1 1 2 2 [GEModelManager::CreateModel(models\a_131)] 7 G
+LockLeave L1
+ret M18
+ext ref M18
+call remove M8
+LockEnter L1
+LockLeave L1
+ret 3
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(_129) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a_131) model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|The models\a\x model file is loaded in memory with a reference count of 2.|The models\b model file is loaded in memory with a reference count of 2.|
+call remove M7
+LockEnter L1
+LockLeave L1
+ret 3
+call load [models\b] T1
+LockEnter L1
+LockLeave L1
+ret M13
+call free
+LockEnter L1
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+ext deref M2
+ext deref M7
+ext deref M11
+ext deref M12
+ext deref M13
+ext deref M14
+ext deref M15
+ext deref M16
+ext deref M18
+end models 13 paths 1 1 1 locks 0 files 0
+seq 24
+call new 0
+LockCreate = L1
+ret
+call load [models\a\x] T2
+LockEnter L1
+ModelFindFile 0 [models\a\x] T2 = 2
+LockLeave L1
+ret 0
+call load [] T3
+LockEnter L1
+ModelFindFile 0 [] T3 = 2
+LockLeave L1
+ret 0
+call footprint
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call footprint
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call footprint
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call create 4 3 0 1 1 1 13 [models\a]
+LockEnter L1
+ModelNew M1 4 3 0 1 1 1 [GEModelManager::CreateModel(models\a_132)] 13 G
+LockLeave L1
+ret M1
+ext ref M1
+ext deref M1
+call load [models\GEModelManager::CreateModel(models\a_1)] T3
+LockEnter L1
+ModelFindFile 0 [models\GEModelManager::CreateModel(models\a_1)] T3 = 0 C1
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C1 T3
+call load [models\b] T3
+LockEnter L1
+ModelFindFile 0 [models\b] T3 = 0 C2
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C2 T3
+=> 0
+ModelSizeOf M3 = 8362
+ModelFreeFile C2
+LockLeave L1
+ret M3
+=> 7
+BaseDereference M2
+~destroy M2
+ModelFreeFile C1
+LockLeave L1
+ret 0
+call verify
+LockEnter L1
+ModelVerify M1
+ModelVerify M3
+LockLeave L1
+ret
+call count
+ret 2
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 61
+BaseDereference M1
+~destroy M1
+ModelSizeOf M3 = 8362
+BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 0
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call set_path 0
+ret
+call create 3 2 3 0 1 0 15 [m]
+LockEnter L1
+ModelNew M4 3 2 3 0 1 0 [GEModelManager::CreateModel(m_133)] 15 G
+LockLeave L1
+ret M4
+ext ref M4
+call create_sub 1 4 2 1 0 0 7 0 M4
+LockEnter L1
+ModelNew M5 1 4 2 1 0 0 [GEModelManager::CreateModel(m_133)] 7 G
+SetSubModel M4 M5 0
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+call free
+LockEnter L1
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M4
+end models 2 paths 1 1 1 locks 0 files 0
+seq 25
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call load [m] T2
+LockEnter L1
+ModelFindFile P3 [m] T2 = 2
+LockLeave L1
+ret 0
+call set_path 0
+PathDereference P3
+ret
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call load [models\B] T3
+LockEnter L1
+ModelFindFile 0 [models\B] T3 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T3
+=> 0
+ModelSizeOf M1 = 537
+ModelFreeFile C1
+LockLeave L1
+ret M1
+ext ref M1
+call set_path P3
+PathReference P3
+ret
+call load [models\GEModelManager::CreateModel(models\a_1)] T1
+LockEnter L1
+ModelFindFile P3 [models\GEModelManager::CreateModel(models\a_1)] T1 = 0 C2
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C2 T1
+=> 0
+ModelSizeOf M2 = 2021
+ModelFreeFile C2
+LockLeave L1
+ret M2
+ext ref M2
+ext deref M2
+call create 2 4 3 4 2 1 11 [models\ab]
+LockEnter L1
+ModelNew M3 2 4 3 4 2 1 [GEModelManager::CreateModel(models\ab_134)] 11 G
+LockLeave L1
+ret M3
+call verify
+LockEnter L1
+ModelVerify M3
+ModelVerify M1
+ModelVerify M2
+LockLeave L1
+ret
+call create 1 2 4 1 1 4 5 [models\été]
+LockEnter L1
+ModelNew M4 1 2 4 1 1 4 [GEModelManager::CreateModel(models\été_135)] 5 G
+LockLeave L1
+ret M4
+call remove M2
+LockEnter L1
+ModelSizeOf M2 = 2021
+BaseDereference M2
+~destroy M2
+LockLeave L1
+ret 0
+call set_path P3
+PathDereference P3
+PathReference P3
+ret
+call remove_all
+LockEnter L1
+ModelSizeOf M3 = 1841
+BaseDereference M3
+~destroy M3
+ModelSizeOf M4 = 4230
+BaseDereference M4
+~destroy M4
+LockLeave L1
+ret 5
+call create 3 2 1 3 1 1 7 [models\b]
+LockEnter L1
+ModelNew M5 3 2 1 3 1 1 [GEModelManager::CreateModel(models\b_136)] 7 G
+LockLeave L1
+ret M5
+ext ref M5
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 0 4 3 0 0 0 4 3 M1
+LockEnter L1
+ModelNew M6 0 4 3 0 0 0 [] 4 G
+SetSubModel M1 M6 3
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call count
+ret 2
+call create_sub 4 2 0 0 0 2 1 0 M5
+LockEnter L1
+ModelNew M7 4 2 0 0 0 2 [GEModelManager::CreateModel(models\b_136)] 1 G
+SetSubModel M5 M7 0
+~Reference M7
+BaseDereference M7
+LockLeave L1
+ret M7
+ext ref M7
+call load [models\B] T2
+LockEnter L1
+LockLeave L1
+ret M1
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\b_136) model file is loaded in memory with a reference count of 2.|The models\B model file is loaded in memory with a reference count of 2.|
+call remove M5
+LockEnter L1
+LockLeave L1
+ret 5
+call verify
+LockEnter L1
+ModelVerify M5
+ModelVerify M1
+LockLeave L1
+ret
+call free
+LockEnter L1
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+ext deref M1
+ext deref M5
+ext deref M6
+ext deref M7
+end models 4 paths 1 1 1 locks 0 files 0
+seq 26
+call new P2
+PathReference P2
+LockCreate = L1
+ret
+call create 0 4 2 0 4 3 12 [models\été]
+LockEnter L1
+ModelNew M1 0 4 2 0 4 3 [GEModelManager::CreateModel(models\été_137)] 12 G
+LockLeave L1
+ret M1
+ext ref M1
+call create_sub 2 3 3 1 3 0 1 1 M1
+LockEnter L1
+ModelNew M2 2 3 3 1 3 0 [GEModelManager::CreateModel(models\été_137)] 1 G
+SetSubModel M1 M2 1
+~Reference M2
+BaseDereference M2
+LockLeave L1
+ret M2
+ext ref M2
+call create 0 0 2 3 1 2 2 [models\a\x]
+LockEnter L1
+ModelNew M3 0 0 2 3 1 2 [GEModelManager::CreateModel(models\a\x_138)] 2 G
+LockLeave L1
+ret M3
+ext ref M3
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 4 2 4 3 4 4 13 2 M3
+LockEnter L1
+ModelNew M4 4 2 4 3 4 4 [GEModelManager::CreateModel(models\a\x_138)] 13 G
+SetSubModel M3 M4 2
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+call load [models\ab] T3
+LockEnter L1
+ModelFindFile P2 [models\ab] T3 = 0 C1
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C1 T3
+=> 0
+ModelSizeOf M5 = 1332
+ModelFreeFile C1
+LockLeave L1
+ret M5
+call load [models\a] T2
+LockEnter L1
+ModelFindFile P2 [models\a] T2 = 0 C2
+ModelNewEmpty M6 G
+ModelStoreLoaded M6 C2 T2
+=> 0
+ModelSizeOf M6 = 1763
+ModelFreeFile C2
+LockLeave L1
+ret M6
+ext ref M6
+call set_path P2
+PathDereference P2
+PathReference P2
+ret
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 4 2 4 1 1 1 4 1 M3
+LockEnter L1
+ModelNew M7 4 2 4 1 1 1 [GEModelManager::CreateModel(models\a\x_138)] 4 G
+SetSubModel M3 M7 1
+~Reference M7
+BaseDereference M7
+LockLeave L1
+ret M7
+ext deref M6
+ext deref M2
+call create 3 1 1 1 0 0 12 [models\b]
+LockEnter L1
+ModelNew M8 3 1 1 1 0 0 [GEModelManager::CreateModel(models\b_139)] 12 G
+LockLeave L1
+ret M8
+call create 0 2 1 3 3 0 13 [models\a\x]
+LockEnter L1
+ModelNew M9 0 2 1 3 3 0 [GEModelManager::CreateModel(models\a\x_140)] 13 G
+LockLeave L1
+ret M9
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P2 [models\a\x] T3 = 0 C3
+ModelNewEmpty M10 G
+ModelStoreLoaded M10 C3 T3
+=> 7
+BaseDereference M10
+~destroy M10
+ModelFreeFile C3
+LockLeave L1
+ret 0
+call load [models\ab] T3
+LockEnter L1
+LockLeave L1
+ret M5
+ext ref M5
+call load [models\B] T1
+LockEnter L1
+ModelFindFile P2 [models\B] T1 = 0 C4
+ModelNewEmpty M11 G
+ModelStoreLoaded M11 C4 T1
+=> 0
+ModelSizeOf M11 = 4223
+ModelFreeFile C4
+LockLeave L1
+ret M11
+ext ref M11
+call free
+LockEnter L1
+ModelSizeOf M9 = 3795
+BaseDereference M9
+~destroy M9
+ModelSizeOf M8 = 3732
+BaseDereference M8
+~destroy M8
+ModelSizeOf M6 = 1763
+BaseDereference M6
+~destroy M6
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+ext deref M1
+ext deref M3
+ext deref M5
+ext deref M11
+end models 7 paths 1 1 1 locks 0 files 0
+seq 27
+call new P2
+PathReference P2
+LockCreate = L1
+ret
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call set_path P3
+PathDereference P2
+PathReference P3
+ret
+call count
+ret 0
+call set_path 0
+PathDereference P3
+ret
+call load [] T3
+LockEnter L1
+ModelFindFile 0 [] T3 = 2
+LockLeave L1
+ret 0
+call create 1 4 1 1 3 4 13 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M1 1 4 1 1 3 4 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_141)] 13 G
+LockLeave L1
+ret M1
+ext ref M1
+call create_sub 3 2 1 1 2 4 12 0 M1
+LockEnter L1
+ModelNew M2 3 2 1 1 2 4 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_141)] 12 G
+SetSubModel M1 M2 0
+~Reference M2
+BaseDereference M2
+LockLeave L1
+ret M2
+call create 2 3 1 4 4 2 10 [models\été]
+LockEnter L1
+ModelNew M3 2 3 1 4 4 2 [GEModelManager::CreateModel(models\été_142)] 10 G
+LockLeave L1
+ret M3
+ext ref M3
+call count
+ret 2
+call create 2 0 3 2 3 3 8 [models\b]
+LockEnter L1
+ModelNew M4 2 0 3 2 3 3 [GEModelManager::CreateModel(models\b_143)] 8 G
+LockLeave L1
+ret M4
+call remove M4
+LockEnter L1
+ModelSizeOf M4 = 3849
+BaseDereference M4
+~destroy M4
+LockLeave L1
+ret 0
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 5
+call create 3 0 1 3 2 2 8 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M5 3 0 1 3 2 2 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_144)] 8 G
+LockLeave L1
+ret M5
+ext ref M5
+call footprint
+ret 4294963447
+call create 0 3 0 2 0 0 7 [models\ab]
+LockEnter L1
+ModelNew M6 0 3 0 2 0 0 [GEModelManager::CreateModel(models\ab_145)] 7 G
+LockLeave L1
+ret M6
+ext ref M6
+call create 0 0 3 2 2 0 2 [models\a\x]
+LockEnter L1
+ModelNew M7 0 0 3 2 2 0 [GEModelManager::CreateModel(models\a\x_146)] 2 G
+LockLeave L1
+ret M7
+ext ref M7
+ext deref M3
+call load [models\B] T3
+LockEnter L1
+ModelFindFile 0 [models\B] T3 = 0 C1
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C1 T3
+=> 0
+ModelSizeOf M8 = 7923
+ModelFreeFile C1
+LockLeave L1
+ret M8
+call footprint
+ret 4074
+call remove_all
+LockEnter L1
+ModelSizeOf M3 = 4015
+BaseDereference M3
+~destroy M3
+ModelSizeOf M8 = 7923
+BaseDereference M8
+~destroy M8
+LockLeave L1
+ret 5
+call free
+LockEnter L1
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M1
+ext deref M5
+ext deref M6
+ext deref M7
+end models 5 paths 1 1 1 locks 0 files 0
+seq 28
+call new P1
+PathReference P1
+LockCreate = L1
+ret
+call create 1 4 0 0 0 3 14 [models\été]
+LockEnter L1
+ModelNew M1 1 4 0 0 0 3 [GEModelManager::CreateModel(models\été_147)] 14 G
+LockLeave L1
+ret M1
+call verify
+LockEnter L1
+ModelVerify M1
+LockLeave L1
+ret
+call create 2 2 4 4 1 3 9 [models\été]
+LockEnter L1
+ModelNew M2 2 2 4 4 1 3 [GEModelManager::CreateModel(models\été_148)] 9 G
+LockLeave L1
+ret M2
+call create 4 2 4 3 3 1 0 [models\b]
+LockEnter L1
+ModelNew M3 4 2 4 3 3 1 [GEModelManager::CreateModel(models\b_149)] 0 G
+LockLeave L1
+ret M3
+call load [models\B] T2
+LockEnter L1
+ModelFindFile P1 [models\B] T2 = 0 C1
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C1 T2
+=> 0
+ModelSizeOf M4 = 7758
+ModelFreeFile C1
+LockLeave L1
+ret M4
+call load [models\a\x] T1
+LockEnter L1
+ModelFindFile P1 [models\a\x] T1 = 0 C2
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C2 T1
+=> 0
+ModelSizeOf M5 = 1425
+ModelFreeFile C2
+LockLeave L1
+ret M5
+call set_path 0
+PathDereference P1
+ret
+call create_sub 0 0 3 2 0 4 0 2 M5
+LockEnter L1
+ModelNew M6 0 0 3 2 0 4 [] 0 G
+SetSubModel M5 M6 2
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+call remove M5
+LockEnter L1
+ModelSizeOf M5 = 1425
+BaseDereference M5
+~destroy M5
+~BaseDereference M6
+~destroy M6
+LockLeave L1
+ret 0
+call load [models\b] T2
+LockEnter L1
+ModelFindFile 0 [models\b] T2 = 2
+LockLeave L1
+ret 0
+call free
+LockEnter L1
+ModelSizeOf M3 = 4084
+BaseDereference M3
+~destroy M3
+ModelSizeOf M1 = 1722
+BaseDereference M1
+~destroy M1
+ModelSizeOf M2 = 2851
+BaseDereference M2
+~destroy M2
+ModelSizeOf M4 = 7758
+BaseDereference M4
+~destroy M4
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+end models 0 paths 1 1 1 locks 0 files 0
+seq 29
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call create 1 2 0 0 1 3 15 [models\ab]
+LockEnter L1
+ModelNew M1 1 2 0 0 1 3 [GEModelManager::CreateModel(models\ab_150)] 15 G
+LockLeave L1
+ret M1
+ext ref M1
+call remove M1
+LockEnter L1
+LockLeave L1
+ret 5
+call create 1 0 2 2 0 4 14 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M2 1 0 2 2 0 4 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_151)] 14 G
+LockLeave L1
+ret M2
+ext deref M1
+call count
+ret 2
+call create 4 2 0 0 3 3 7 []
+LockEnter L1
+ModelNew M3 4 2 0 0 3 3 [GEModelManager::CreateModel(_152)] 7 G
+LockLeave L1
+ret M3
+call count
+ret 3
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P3 [models\a\x] T3 = 0 C1
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C1 T3
+=> 0
+ModelSizeOf M4 = 4330
+ModelFreeFile C1
+LockLeave L1
+ret M4
+ext ref M4
+call remove M4
+LockEnter L1
+LockLeave L1
+ret 5
+call set_path P3
+PathDereference P3
+PathReference P3
+ret
+call create 0 2 4 0 0 2 5 [models\a]
+LockEnter L1
+ModelNew M5 0 2 4 0 0 2 [GEModelManager::CreateModel(models\a_153)] 5 G
+LockLeave L1
+ret M5
+ext ref M5
+ext deref M5
+call set_path P3
+PathDereference P3
+PathReference P3
+ret
+call set_path P3
+PathDereference P3
+PathReference P3
+ret
+ext deref M4
+call free
+LockEnter L1
+ModelSizeOf M3 = 2697
+BaseDereference M3
+~destroy M3
+ModelSizeOf M2 = 4155
+BaseDereference M2
+~destroy M2
+ModelSizeOf M5 = 1591
+BaseDereference M5
+~destroy M5
+ModelSizeOf M1 = 3
+BaseDereference M1
+~destroy M1
+ModelSizeOf M4 = 4330
+BaseDereference M4
+~destroy M4
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+end models 0 paths 1 1 1 locks 0 files 0
+seq 30
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call create 2 3 1 1 2 0 11 [models\a]
+LockEnter L1
+ModelNew M1 2 3 1 1 2 0 [GEModelManager::CreateModel(models\a_154)] 11 G
+LockLeave L1
+ret M1
+call create_sub 1 3 2 0 3 2 3 3 M1
+LockEnter L1
+ModelNew M2 1 3 2 0 3 2 [GEModelManager::CreateModel(models\a_154)] 3 G
+SetSubModel M1 M2 3
+~Reference M2
+BaseDereference M2
+LockLeave L1
+ret M2
+call create_sub 4 3 2 1 1 0 3 2 M1
+LockEnter L1
+ModelNew M3 4 3 2 1 1 0 [GEModelManager::CreateModel(models\a_154)] 3 G
+SetSubModel M1 M3 2
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+call create 4 4 4 2 4 4 15 [models\a\x]
+LockEnter L1
+ModelNew M4 4 4 4 2 4 4 [GEModelManager::CreateModel(models\a\x_155)] 15 G
+LockLeave L1
+ret M4
+call load [models\B] T1
+LockEnter L1
+ModelFindFile P3 [models\B] T1 = 2
+LockLeave L1
+ret 0
+call load [models\b] T2
+LockEnter L1
+ModelFindFile P3 [models\b] T2 = 0 C1
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C1 T2
+=> 0
+ModelSizeOf M5 = 3966
+ModelFreeFile C1
+LockLeave L1
+ret M5
+call remove M4
+LockEnter L1
+ModelSizeOf M4 = 3455
+BaseDereference M4
+~destroy M4
+LockLeave L1
+ret 0
+call create_sub 2 3 3 0 2 4 2 0 M3
+LockEnter L1
+ModelNew M6 2 3 3 0 2 4 [GEModelManager::CreateModel(models\a_154)] 2 G
+SetSubModel M3 M6 0
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+call create 0 3 4 0 1 4 13 [models\B]
+LockEnter L1
+ModelNew M7 0 3 4 0 1 4 [GEModelManager::CreateModel(models\B_156)] 13 G
+LockLeave L1
+ret M7
+call create_sub 4 1 2 2 1 3 4 1 M6
+LockEnter L1
+ModelNew M8 4 1 2 2 1 3 [GEModelManager::CreateModel(models\a_154)] 4 G
+SetSubModel M6 M8 1
+~Reference M8
+BaseDereference M8
+LockLeave L1
+ret M8
+call remove_all
+LockEnter L1
+ModelSizeOf M7 = 188
+BaseDereference M7
+~destroy M7
+ModelSizeOf M1 = 4477
+BaseDereference M1
+~destroy M1
+~BaseDereference M2
+~destroy M2
+~BaseDereference M3
+~destroy M3
+~BaseDereference M6
+~destroy M6
+~BaseDereference M8
+~destroy M8
+ModelSizeOf M5 = 3966
+BaseDereference M5
+~destroy M5
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call load [models\B] T3
+LockEnter L1
+ModelFindFile P3 [models\B] T3 = 2
+LockLeave L1
+ret 0
+call footprint
+ret 4294959176
+call create 3 4 2 0 0 1 10 [models\a]
+LockEnter L1
+ModelNew M9 3 4 2 0 0 1 [GEModelManager::CreateModel(models\a_157)] 10 G
+LockLeave L1
+ret M9
+ext ref M9
+ext deref M9
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\a_157) model file is loaded in memory with a reference count of 1.|
+call load [] T3
+LockEnter L1
+ModelFindFile P3 [] T3 = 0 C2
+ModelNewEmpty M10 G
+ModelStoreLoaded M10 C2 T3
+=> 0
+ModelSizeOf M10 = 8754
+ModelFreeFile C2
+LockLeave L1
+ret M10
+call count
+ret 2
+call remove M10
+LockEnter L1
+ModelSizeOf M10 = 8754
+BaseDereference M10
+~destroy M10
+LockLeave L1
+ret 0
+call remove M9
+LockEnter L1
+ModelSizeOf M9 = 2012
+BaseDereference M9
+~destroy M9
+LockLeave L1
+ret 0
+call load [models\B] T3
+LockEnter L1
+ModelFindFile P3 [models\B] T3 = 2
+LockLeave L1
+ret 0
+call free
+LockEnter L1
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+end models 0 paths 1 1 1 locks 0 files 0
+seq 31
+call new P2
+PathReference P2
+LockCreate = L1
+ret
+call load [models\été] T2
+LockEnter L1
+ModelFindFile P2 [models\été] T2 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T2
+=> 0
+ModelSizeOf M1 = 2529
+ModelFreeFile C1
+LockLeave L1
+ret M1
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The models\été model file is loaded in memory with a reference count of 1.|
+call load [models\été] T3
+LockEnter L1
+LockLeave L1
+ret M1
+call footprint
+ret 2529
+call remove M1
+LockEnter L1
+ModelSizeOf M1 = 2529
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call set_path P1
+PathDereference P2
+PathReference P1
+ret
+call count
+ret 0
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call footprint
+ret 0
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call free
+LockEnter L1
+LockLeave L1
+PathDereference P1
+LockDestroy L1 depth 0
+ret
+end models 0 paths 1 1 1 locks 0 files 0
+seq 32
+call new P2
+PathReference P2
+LockCreate = L1
+ret
+call load [models\a] T2
+LockEnter L1
+ModelFindFile P2 [models\a] T2 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T2
+=> 0
+ModelSizeOf M1 = 4303
+ModelFreeFile C1
+LockLeave L1
+ret M1
+ext ref M1
+call load [m] T2
+LockEnter L1
+ModelFindFile P2 [m] T2 = 0 C2
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C2 T2
+=> 0
+ModelSizeOf M2 = 8185
+ModelFreeFile C2
+LockLeave L1
+ret M2
+ext ref M2
+ext deref M2
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The m model file is loaded in memory with a reference count of 1.|The models\a model file is loaded in memory with a reference count of 2.|
+call remove_all
+LockEnter L1
+ModelSizeOf M2 = 8185
+BaseDereference M2
+~destroy M2
+LockLeave L1
+ret 5
+call load [models\été] T2
+LockEnter L1
+ModelFindFile P2 [models\été] T2 = 2
+LockLeave L1
+ret 0
+call load [models\été] T3
+LockEnter L1
+ModelFindFile P2 [models\été] T3 = 2
+LockLeave L1
+ret 0
+call count
+ret 1
+ext deref M1
+call create 2 2 1 1 3 3 11 [models\ab]
+LockEnter L1
+ModelNew M3 2 2 1 1 3 3 [GEModelManager::CreateModel(models\ab_158)] 11 G
+LockLeave L1
+ret M3
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P2 [models\a\x] T3 = 2
+LockLeave L1
+ret 0
+call load [models\a] T3
+LockEnter L1
+LockLeave L1
+ret M1
+ext ref M1
+call remove_all
+LockEnter L1
+ModelSizeOf M3 = 4522
+BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 5
+ext deref M1
+call remove M1
+LockEnter L1
+ModelSizeOf M1 = 4303
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call load [models\a\x] T2
+LockEnter L1
+ModelFindFile P2 [models\a\x] T2 = 0 C3
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C3 T2
+=> 0
+ModelSizeOf M4 = 4439
+ModelFreeFile C3
+LockLeave L1
+ret M4
+call set_path 0
+PathDereference P2
+ret
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The models\a\x model file is loaded in memory with a reference count of 1.|
+call remove M4
+LockEnter L1
+ModelSizeOf M4 = 4439
+BaseDereference M4
+~destroy M4
+LockLeave L1
+ret 0
+call footprint
+ret 4294962774
+call load [models\GEModelManager::CreateModel(models\a_1)] T1
+LockEnter L1
+ModelFindFile 0 [models\GEModelManager::CreateModel(models\a_1)] T1 = 0 C4
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C4 T1
+=> 0
+ModelSizeOf M5 = 185
+ModelFreeFile C4
+LockLeave L1
+ret M5
+ext ref M5
+ext deref M5
+call remove M5
+LockEnter L1
+ModelSizeOf M5 = 185
+BaseDereference M5
+~destroy M5
+LockLeave L1
+ret 0
+call load [models\ab] T3
+LockEnter L1
+ModelFindFile 0 [models\ab] T3 = 0 C5
+ModelNewEmpty M6 G
+ModelStoreLoaded M6 C5 T3
+=> 7
+BaseDereference M6
+~destroy M6
+ModelFreeFile C5
+LockLeave L1
+ret 0
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call create 3 3 3 0 2 3 9 [models\a\x]
+LockEnter L1
+ModelNew M7 3 3 3 0 2 3 [GEModelManager::CreateModel(models\a\x_159)] 9 G
+LockLeave L1
+ret M7
+ext ref M7
+call create 4 1 4 3 4 3 3 [models\a\x]
+LockEnter L1
+ModelNew M8 4 1 4 3 4 3 [GEModelManager::CreateModel(models\a\x_160)] 3 G
+LockLeave L1
+ret M8
+ext ref M8
+ext deref M7
+call footprint
+ret 4294962774
+call load [models\été] T1
+LockEnter L1
+ModelFindFile 0 [models\été] T1 = 0 C6
+ModelNewEmpty M9 G
+ModelStoreLoaded M9 C6 T1
+=> 0
+ModelSizeOf M9 = 7454
+ModelFreeFile C6
+LockLeave L1
+ret M9
+call create 4 3 0 1 4 0 6 [models\a\x]
+LockEnter L1
+ModelNew M10 4 3 0 1 4 0 [GEModelManager::CreateModel(models\a\x_161)] 6 G
+LockLeave L1
+ret M10
+ext ref M10
+ext deref M8
+call create 1 1 4 2 3 4 14 [models\a]
+LockEnter L1
+ModelNew M11 1 1 4 2 3 4 [GEModelManager::CreateModel(models\a_162)] 14 G
+LockLeave L1
+ret M11
+ext ref M11
+call create 4 2 3 2 0 0 4 [models\été]
+LockEnter L1
+ModelNew M12 4 2 3 2 0 0 [GEModelManager::CreateModel(models\été_163)] 4 G
+LockLeave L1
+ret M12
+call create 1 2 1 3 4 2 15 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M13 1 2 1 3 4 2 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_164)] 15 G
+LockLeave L1
+ret M13
+ext ref M13
+call load [models\a] T3
+LockEnter L1
+ModelFindFile 0 [models\a] T3 = 2
+LockLeave L1
+ret 0
+call count
+ret 7
+call remove M7
+LockEnter L1
+ModelSizeOf M7 = 1839
+BaseDereference M7
+~destroy M7
+LockLeave L1
+ret 0
+call create_sub 1 4 3 1 1 1 8 0 M9
+LockEnter L1
+ModelNew M14 1 4 3 1 1 1 [] 8 G
+SetSubModel M9 M14 0
+~Reference M14
+BaseDereference M14
+LockLeave L1
+ret M14
+call verify
+LockEnter L1
+ModelVerify M13
+ModelVerify M8
+ModelVerify M10
+ModelVerify M11
+ModelVerify M12
+ModelVerify M9
+LockLeave L1
+ret
+call free
+LockEnter L1
+ModelSizeOf M8 = 3907
+BaseDereference M8
+~destroy M8
+ModelSizeOf M12 = 3244
+BaseDereference M12
+~destroy M12
+ModelSizeOf M9 = 7454
+BaseDereference M9
+~destroy M9
+~BaseDereference M14
+~destroy M14
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M10
+ext deref M11
+ext deref M13
+end models 3 paths 1 1 1 locks 0 files 0
+seq 33
+call new 0
+LockCreate = L1
+ret
+call create 3 3 4 4 0 3 6 [models\été]
+LockEnter L1
+ModelNew M1 3 3 4 4 0 3 [GEModelManager::CreateModel(models\été_165)] 6 G
+LockLeave L1
+ret M1
+call set_path P1
+PathReference P1
+ret
+call load [] T1
+LockEnter L1
+ModelFindFile P1 [] T1 = 0 C1
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C1 T1
+=> 7
+BaseDereference M2
+~destroy M2
+ModelFreeFile C1
+LockLeave L1
+ret 0
+call load [models\GEModelManager::CreateModel(models\a_1)] T2
+LockEnter L1
+ModelFindFile P1 [models\GEModelManager::CreateModel(models\a_1)] T2 = 2
+LockLeave L1
+ret 0
+call set_path P2
+PathDereference P1
+PathReference P2
+ret
+call verify
+LockEnter L1
+ModelVerify M1
+LockLeave L1
+ret
+call load [m] T3
+LockEnter L1
+ModelFindFile P2 [m] T3 = 0 C2
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C2 T3
+=> 0
+ModelSizeOf M3 = 7860
+ModelFreeFile C2
+LockLeave L1
+ret M3
+ext ref M3
+call set_path 0
+PathDereference P2
+ret
+call set_path P3
+PathReference P3
+ret
+ext deref M3
+call create 1 3 4 3 2 4 5 [models\a\x]
+LockEnter L1
+ModelNew M4 1 3 4 3 2 4 [GEModelManager::CreateModel(models\a\x_166)] 5 G
+LockLeave L1
+ret M4
+ext ref M4
+call create 0 2 3 0 4 4 2 [m]
+LockEnter L1
+ModelNew M5 0 2 3 0 4 4 [GEModelManager::CreateModel(m_167)] 2 G
+LockLeave L1
+ret M5
+call verify
+LockEnter L1
+ModelVerify M5
+ModelVerify M4
+ModelVerify M1
+ModelVerify M3
+LockLeave L1
+ret
+call load [models\ab] T1
+LockEnter L1
+ModelFindFile P3 [models\ab] T1 = 0 C3
+ModelNewEmpty M6 G
+ModelStoreLoaded M6 C3 T1
+=> 7
+BaseDereference M6
+~destroy M6
+ModelFreeFile C3
+LockLeave L1
+ret 0
+ext deref M4
+call create 3 0 2 1 2 1 5 [models\a\x]
+LockEnter L1
+ModelNew M7 3 0 2 1 2 1 [GEModelManager::CreateModel(models\a\x_168)] 5 G
+LockLeave L1
+ret M7
+ext ref M7
+ext deref M7
+call create_sub 1 3 1 4 0 2 3 2 M7
+LockEnter L1
+ModelNew M8 1 3 1 4 0 2 [GEModelManager::CreateModel(models\a\x_168)] 3 G
+SetSubModel M7 M8 2
+~Reference M8
+BaseDereference M8
+LockLeave L1
+ret M8
+ext ref M8
+call create 4 1 0 1 1 1 13 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M9 4 1 0 1 1 1 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_169)] 13 G
+LockLeave L1
+ret M9
+ext deref M8
+call footprint
+ret 7860
+call create 1 1 2 4 2 2 7 [models\b]
+LockEnter L1
+ModelNew M10 1 1 2 4 2 2 [GEModelManager::CreateModel(models\b_170)] 7 G
+LockLeave L1
+ret M10
+call create_sub 4 1 1 2 4 2 11 3 M8
+LockEnter L1
+ModelNew M11 4 1 1 2 4 2 [GEModelManager::CreateModel(models\a\x_168)] 11 G
+SetSubModel M8 M11 3
+~Reference M11
+BaseDereference M11
+LockLeave L1
+ret M11
+call footprint
+ret 7860
+call create 4 1 4 3 1 4 1 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M12 4 1 4 3 1 4 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_171)] 1 G
+LockLeave L1
+ret M12
+ext ref M12
+call load [models\a] T1
+LockEnter L1
+ModelFindFile P3 [models\a] T1 = 0 C4
+ModelNewEmpty M13 G
+ModelStoreLoaded M13 C4 T1
+=> 0
+ModelSizeOf M13 = 4078
+ModelFreeFile C4
+LockLeave L1
+ret M13
+ext ref M13
+call footprint
+ret 11938
+call footprint
+ret 11938
+call remove M11
+LockEnter L1
+LockLeave L1
+ret 3
+call load [models\B] T2
+LockEnter L1
+ModelFindFile P3 [models\B] T2 = 2
+LockLeave L1
+ret 0
+call footprint
+ret 11938
+call set_path P2
+PathDereference P3
+PathReference P2
+ret
+call load [models\a\x] T3
+LockEnter L1
+ModelFindFile P2 [models\a\x] T3 = 0 C5
+ModelNewEmpty M14 G
+ModelStoreLoaded M14 C5 T3
+=> 0
+ModelSizeOf M14 = 2193
+ModelFreeFile C5
+LockLeave L1
+ret M14
+ext deref M13
+call create 4 3 2 1 0 2 8 [models\été]
+LockEnter L1
+ModelNew M15 4 3 2 1 0 2 [GEModelManager::CreateModel(models\été_172)] 8 G
+LockLeave L1
+ret M15
+ext ref M15
+call create 0 4 1 0 2 4 13 [models\ab]
+LockEnter L1
+ModelNew M16 0 4 1 0 2 4 [GEModelManager::CreateModel(models\ab_173)] 13 G
+LockLeave L1
+ret M16
+ext ref M16
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(m_167) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_169) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_171) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\a\x_166) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\a\x_168) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\ab_173) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\b_170) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\été_165) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\été_172) model file is loaded in memory with a reference count of 2.|The m model file is loaded in memory with a reference count of 1.|The models\a model file is loaded in memory with a reference count of 1.|The models\a\x model file is loaded in memory with a reference count of 1.|
+call create_sub 1 3 3 4 0 4 12 1 M15
+LockEnter L1
+ModelNew M17 1 3 3 4 0 4 [GEModelManager::CreateModel(models\été_172)] 12 G
+SetSubModel M15 M17 1
+~Reference M17
+BaseDereference M17
+LockLeave L1
+ret M17
+call create_sub 0 2 1 0 3 4 12 3 M5
+LockEnter L1
+ModelNew M18 0 2 1 0 3 4 [GEModelManager::CreateModel(m_167)] 12 G
+SetSubModel M5 M18 3
+~Reference M18
+BaseDereference M18
+LockLeave L1
+ret M18
+call create 1 0 4 1 0 4 12 [m]
+LockEnter L1
+ModelNew M19 1 0 4 1 0 4 [GEModelManager::CreateModel(m_174)] 12 G
+LockLeave L1
+ret M19
+call create_sub 4 3 4 2 0 2 9 3 M1
+LockEnter L1
+ModelNew M20 4 3 4 2 0 2 [GEModelManager::CreateModel(models\été_165)] 9 G
+SetSubModel M1 M20 3
+~Reference M20
+BaseDereference M20
+LockLeave L1
+ret M20
+ext ref M20
+call create 1 2 4 1 3 1 6 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M21 1 2 4 1 3 1 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_175)] 6 G
+LockLeave L1
+ret M21
+call load [models\a] T3
+LockEnter L1
+LockLeave L1
+ret M13
+ext ref M13
+call load [models\b] T3
+LockEnter L1
+ModelFindFile P2 [models\b] T3 = 0 C6
+ModelNewEmpty M22 G
+ModelStoreLoaded M22 C6 T3
+=> 0
+ModelSizeOf M22 = 3147
+ModelFreeFile C6
+LockLeave L1
+ret M22
+call create 1 3 4 3 3 3 8 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M23 1 3 4 3 3 3 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_176)] 8 G
+LockLeave L1
+ret M23
+ext deref M13
+call free
+LockEnter L1
+ModelSizeOf M5 = 529
+BaseDereference M5
+~destroy M5
+~BaseDereference M18
+~destroy M18
+ModelSizeOf M19 = 2022
+BaseDereference M19
+~destroy M19
+ModelSizeOf M9 = 3104
+BaseDereference M9
+~destroy M9
+ModelSizeOf M21 = 2012
+BaseDereference M21
+~destroy M21
+ModelSizeOf M23 = 91
+BaseDereference M23
+~destroy M23
+ModelSizeOf M4 = 2985
+BaseDereference M4
+~destroy M4
+ModelSizeOf M7 = 3656
+BaseDereference M7
+~destroy M7
+~BaseDereference M8
+~destroy M8
+~BaseDereference M11
+~destroy M11
+ModelSizeOf M10 = 4305
+BaseDereference M10
+~destroy M10
+ModelSizeOf M1 = 4838
+BaseDereference M1
+~destroy M1
+~BaseDereference M20
+ModelSizeOf M3 = 7860
+BaseDereference M3
+~destroy M3
+ModelSizeOf M13 = 4078
+BaseDereference M13
+~destroy M13
+ModelSizeOf M14 = 2193
+BaseDereference M14
+~destroy M14
+ModelSizeOf M22 = 3147
+BaseDereference M22
+~destroy M22
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+ext deref M12
+ext deref M15
+ext deref M16
+ext deref M20
+end models 5 paths 1 1 1 locks 0 files 0
+seq 34
+call new P3
+PathReference P3
+LockCreate = L1
+ret
+call verify
+LockEnter L1
+LockLeave L1
+ret
+call footprint
+ret 0
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call set_path P3
+PathDereference P3
+PathReference P3
+ret
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call load [models\GEModelManager::CreateModel(models\a_1)] T3
+LockEnter L1
+ModelFindFile P3 [models\GEModelManager::CreateModel(models\a_1)] T3 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T3
+=> 0
+ModelSizeOf M1 = 6745
+ModelFreeFile C1
+LockLeave L1
+ret M1
+ext ref M1
+ext deref M1
+call create 2 0 0 0 3 2 9 [models\B]
+LockEnter L1
+ModelNew M2 2 0 0 0 3 2 [GEModelManager::CreateModel(models\B_177)] 9 G
+LockLeave L1
+ret M2
+call create_sub 1 2 3 2 4 4 8 2 M1
+LockEnter L1
+ModelNew M3 1 2 3 2 4 4 [] 8 G
+SetSubModel M1 M3 2
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+call create 4 1 1 2 0 4 15 [models\a\x]
+LockEnter L1
+ModelNew M4 4 1 1 2 0 4 [GEModelManager::CreateModel(models\a\x_178)] 15 G
+LockLeave L1
+ret M4
+ext ref M4
+call load [models\ab] T1
+LockEnter L1
+ModelFindFile P3 [models\ab] T1 = 0 C2
+ModelNewEmpty M5 G
+ModelStoreLoaded M5 C2 T1
+=> 0
+ModelSizeOf M5 = 7366
+ModelFreeFile C2
+LockLeave L1
+ret M5
+call set_path 0
+PathDereference P3
+ret
+call load [models\GEModelManager::CreateModel(models\a_1)] T1
+LockEnter L1
+LockLeave L1
+ret M1
+ext ref M1
+call remove M2
+LockEnter L1
+ModelSizeOf M2 = 2636
+BaseDereference M2
+~destroy M2
+LockLeave L1
+ret 0
+call create_sub 0 2 2 0 4 4 7 1 M1
+LockEnter L1
+ModelNew M6 0 2 2 0 4 4 [] 7 G
+SetSubModel M1 M6 1
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call set_path P3
+PathReference P3
+ret
+call create 4 4 4 4 0 3 1 [m]
+LockEnter L1
+ModelNew M7 4 4 4 4 0 3 [GEModelManager::CreateModel(m_179)] 1 G
+LockLeave L1
+ret M7
+ext ref M7
+call verify
+LockEnter L1
+ModelVerify M7
+ModelVerify M4
+ModelVerify M1
+ModelVerify M5
+LockLeave L1
+ret
+ext deref M1
+call count
+ret 4
+call load [models\B] T3
+LockEnter L1
+ModelFindFile P3 [models\B] T3 = 2
+LockLeave L1
+ret 0
+ext deref M6
+call remove M5
+LockEnter L1
+ModelSizeOf M5 = 7366
+BaseDereference M5
+~destroy M5
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 6745
+BaseDereference M1
+~destroy M1
+~BaseDereference M3
+~destroy M3
+~BaseDereference M6
+~destroy M6
+LockLeave L1
+ret 5
+call verify
+LockEnter L1
+ModelVerify M7
+ModelVerify M4
+LockLeave L1
+ret
+call free
+LockEnter L1
+LockLeave L1
+PathDereference P3
+LockDestroy L1 depth 0
+ret
+ext deref M4
+ext deref M7
+end models 2 paths 1 1 1 locks 0 files 0
+seq 35
+call new P2
+PathReference P2
+LockCreate = L1
+ret
+call count
+ret 0
+call load [models\a] T3
+LockEnter L1
+ModelFindFile P2 [models\a] T3 = 2
+LockLeave L1
+ret 0
+call load [] T2
+LockEnter L1
+ModelFindFile P2 [] T2 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T2
+=> 0
+ModelSizeOf M1 = 668
+ModelFreeFile C1
+LockLeave L1
+ret M1
+ext ref M1
+ext deref M1
+call create 2 0 1 1 3 3 12 []
+LockEnter L1
+ModelNew M2 2 0 1 1 3 3 [GEModelManager::CreateModel(_180)] 12 G
+LockLeave L1
+ret M2
+ext ref M2
+call remove M2
+LockEnter L1
+LockLeave L1
+ret 5
+call load [models\GEModelManager::CreateModel(models\a_1)] T3
+LockEnter L1
+ModelFindFile P2 [models\GEModelManager::CreateModel(models\a_1)] T3 = 0 C2
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C2 T3
+=> 0
+ModelSizeOf M3 = 8352
+ModelFreeFile C2
+LockLeave L1
+ret M3
+call create_sub 2 1 2 2 4 4 15 1 M2
+LockEnter L1
+ModelNew M4 2 1 2 2 4 4 [GEModelManager::CreateModel(_180)] 15 G
+SetSubModel M2 M4 1
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The  model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(_180) model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 1.|
+call create_sub 1 1 0 3 4 3 6 2 M2
+LockEnter L1
+ModelNew M5 1 1 0 3 4 3 [GEModelManager::CreateModel(_180)] 6 G
+SetSubModel M2 M5 2
+~Reference M5
+BaseDereference M5
+LockLeave L1
+ret M5
+call remove M3
+LockEnter L1
+ModelSizeOf M3 = 8352
+BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 0
+ext deref M2
+call create_sub 0 3 4 3 2 1 14 3 M5
+LockEnter L1
+ModelNew M6 0 3 4 3 2 1 [GEModelManager::CreateModel(_180)] 14 G
+SetSubModel M5 M6 3
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call load [models\a\x] T1
+LockEnter L1
+ModelFindFile P2 [models\a\x] T1 = 0 C3
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C3 T1
+=> 0
+ModelSizeOf M7 = 5677
+ModelFreeFile C3
+LockLeave L1
+ret M7
+call create 2 3 3 3 2 4 1 [models\a]
+LockEnter L1
+ModelNew M8 2 3 3 3 2 4 [GEModelManager::CreateModel(models\a_181)] 1 G
+LockLeave L1
+ret M8
+ext ref M8
+call count
+ret 4
+call count
+ret 4
+call free
+LockEnter L1
+ModelSizeOf M1 = 3909
+BaseDereference M1
+~destroy M1
+ModelSizeOf M2 = 1223
+BaseDereference M2
+~destroy M2
+~BaseDereference M4
+~destroy M4
+~BaseDereference M5
+~destroy M5
+~BaseDereference M6
+ModelSizeOf M7 = 5677
+BaseDereference M7
+~destroy M7
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+ext deref M6
+ext deref M8
+end models 2 paths 1 1 1 locks 0 files 0
+seq 36
+call new 0
+LockCreate = L1
+ret
+call count
+ret 0
+call create 3 0 0 0 4 2 15 [m]
+LockEnter L1
+ModelNew M1 3 0 0 0 4 2 [GEModelManager::CreateModel(m_182)] 15 G
+LockLeave L1
+ret M1
+call load [models\GEModelManager::CreateModel(models\a_1)] T1
+LockEnter L1
+ModelFindFile 0 [models\GEModelManager::CreateModel(models\a_1)] T1 = 0 C1
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C1 T1
+=> 0
+ModelSizeOf M2 = 3097
+ModelFreeFile C1
+LockLeave L1
+ret M2
+ext ref M2
+call verify
+LockEnter L1
+ModelVerify M1
+ModelVerify M2
+LockLeave L1
+ret
+call remove M1
+LockEnter L1
+ModelSizeOf M1 = 1180
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call set_path P1
+PathReference P1
+ret
+call create 4 3 0 0 4 1 6 [models\été]
+LockEnter L1
+ModelNew M3 4 3 0 0 4 1 [GEModelManager::CreateModel(models\été_183)] 6 G
+LockLeave L1
+ret M3
+ext ref M3
+call create_sub 1 1 3 0 4 1 2 3 M3
+LockEnter L1
+ModelNew M4 1 1 3 0 4 1 [GEModelManager::CreateModel(models\été_183)] 2 G
+SetSubModel M3 M4 3
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+ext ref M4
+call create 0 2 1 2 1 2 15 [models\B]
+LockEnter L1
+ModelNew M5 0 2 1 2 1 2 [GEModelManager::CreateModel(models\B_184)] 15 G
+LockLeave L1
+ret M5
+call remove M3
+LockEnter L1
+LockLeave L1
+ret 5
+call remove M5
+LockEnter L1
+ModelSizeOf M5 = 8457
+BaseDereference M5
+~destroy M5
+LockLeave L1
+ret 0
+ext deref M3
+call create_sub 0 3 2 2 0 1 4 1 M2
+LockEnter L1
+ModelNew M6 0 3 2 2 0 1 [] 4 G
+SetSubModel M2 M6 1
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call footprint
+ret 4294960756
+call remove M6
+LockEnter L1
+LockLeave L1
+ret 3
+call create 3 1 3 2 2 3 11 [models\été]
+LockEnter L1
+ModelNew M7 3 1 3 2 2 3 [GEModelManager::CreateModel(models\été_185)] 11 G
+LockLeave L1
+ret M7
+call load [] T2
+LockEnter L1
+ModelFindFile P1 [] T2 = 0 C2
+ModelNewEmpty M8 G
+ModelStoreLoaded M8 C2 T2
+=> 7
+BaseDereference M8
+~destroy M8
+ModelFreeFile C2
+LockLeave L1
+ret 0
+call count
+ret 3
+call create 3 2 4 3 0 3 1 [models\GEModelManager::CreateModel(models\a_1)]
+LockEnter L1
+ModelNew M9 3 2 4 3 0 3 [GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_186)] 1 G
+LockLeave L1
+ret M9
+ext ref M9
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_186) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\été_183) model file is loaded in memory with a reference count of 1.|The GEModelManager::CreateModel(models\été_185) model file is loaded in memory with a reference count of 1.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|
+call load [] T1
+LockEnter L1
+ModelFindFile P1 [] T1 = 0 C3
+ModelNewEmpty M10 G
+ModelStoreLoaded M10 C3 T1
+=> 0
+ModelSizeOf M10 = 4022
+ModelFreeFile C3
+LockLeave L1
+ret M10
+ext ref M10
+call create 2 3 2 3 4 4 7 [models\a]
+LockEnter L1
+ModelNew M11 2 3 2 3 4 4 [GEModelManager::CreateModel(models\a_187)] 7 G
+LockLeave L1
+ret M11
+call remove M11
+LockEnter L1
+ModelSizeOf M11 = 2482
+BaseDereference M11
+~destroy M11
+LockLeave L1
+ret 0
+ext deref M2
+call count
+ret 5
+call remove_all
+LockEnter L1
+ModelSizeOf M3 = 883
+BaseDereference M3
+~destroy M3
+~BaseDereference M4
+ModelSizeOf M7 = 4598
+BaseDereference M7
+~destroy M7
+ModelSizeOf M2 = 3097
+BaseDereference M2
+~destroy M2
+~BaseDereference M6
+LockLeave L1
+ret 5
+call create 0 0 4 0 1 4 15 [m]
+LockEnter L1
+ModelNew M12 0 0 4 0 1 4 [GEModelManager::CreateModel(m_188)] 15 G
+LockLeave L1
+ret M12
+ext ref M12
+call set_path 0
+PathDereference P1
+ret
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The  model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(m_188) model file is loaded in memory with a reference count of 2.|The GEModelManager::CreateModel(models\GEModelManager::CreateModel(models\a_1)_186) model file is loaded in memory with a reference count of 2.|
+call remove M6
+LockEnter L1
+LockLeave L1
+ret 3
+call free
+LockEnter L1
+LockLeave L1
+LockDestroy L1 depth 0
+ret
+ext deref M4
+ext deref M6
+ext deref M9
+ext deref M10
+ext deref M12
+end models 5 paths 1 1 1 locks 0 files 0
+seq 37
+call new P1
+PathReference P1
+LockCreate = L1
+ret
+call load [models\b] T3
+LockEnter L1
+ModelFindFile P1 [models\b] T3 = 2
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call load [models\b] T1
+LockEnter L1
+ModelFindFile P1 [models\b] T1 = 0 C1
+ModelNewEmpty M1 G
+ModelStoreLoaded M1 C1 T1
+=> 0
+ModelSizeOf M1 = 3603
+ModelFreeFile C1
+LockLeave L1
+ret M1
+ext ref M1
+ext deref M1
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 3603
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call count
+ret 0
+call remove 0
+LockEnter L1
+LockLeave L1
+ret 3
+call load [models\b] T1
+LockEnter L1
+ModelFindFile P1 [models\b] T1 = 0 C2
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C2 T1
+=> 0
+ModelSizeOf M2 = 4634
+ModelFreeFile C2
+LockLeave L1
+ret M2
+ext ref M2
+call load [m] T1
+LockEnter L1
+ModelFindFile P1 [m] T1 = 0 C3
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C3 T1
+=> 0
+ModelSizeOf M3 = 3634
+ModelFreeFile C3
+LockLeave L1
+ret M3
+ext ref M3
+call create_sub 0 3 0 1 2 1 6 0 M3
+LockEnter L1
+ModelNew M4 0 3 0 1 2 1 [] 6 G
+SetSubModel M3 M4 0
+~Reference M4
+BaseDereference M4
+LockLeave L1
+ret M4
+ext deref M3
+call free
+LockEnter L1
+ModelSizeOf M3 = 3634
+BaseDereference M3
+~destroy M3
+~BaseDereference M4
+~destroy M4
+LockLeave L1
+PathDereference P1
+LockDestroy L1 depth 0
+ret
+ext deref M2
+end models 1 paths 1 1 1 locks 0 files 0
+seq 38
+call new P1
+PathReference P1
+LockCreate = L1
+ret
+call dump F1
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||
+call create 0 1 0 2 2 0 7 [models\a]
+LockEnter L1
+ModelNew M1 0 1 0 2 2 0 [GEModelManager::CreateModel(models\a_189)] 7 G
+LockLeave L1
+ret M1
+ext ref M1
+ext deref M1
+call verify
+LockEnter L1
+ModelVerify M1
+LockLeave L1
+ret
+call footprint
+ret 0
+call footprint
+ret 0
+call remove_all
+LockEnter L1
+ModelSizeOf M1 = 2609
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call create 3 4 1 0 3 1 7 [models\été]
+LockEnter L1
+ModelNew M2 3 4 1 0 3 1 [GEModelManager::CreateModel(models\été_190)] 7 G
+LockLeave L1
+ret M2
+call verify
+LockEnter L1
+ModelVerify M2
+LockLeave L1
+ret
+call create_sub 4 1 3 3 4 2 10 3 M2
+LockEnter L1
+ModelNew M3 4 1 3 3 4 2 [GEModelManager::CreateModel(models\été_190)] 10 G
+SetSubModel M2 M3 3
+~Reference M3
+BaseDereference M3
+LockLeave L1
+ret M3
+call load [models\GEModelManager::CreateModel(models\a_1)] T2
+LockEnter L1
+ModelFindFile P1 [models\GEModelManager::CreateModel(models\a_1)] T2 = 0 C1
+ModelNewEmpty M4 G
+ModelStoreLoaded M4 C1 T2
+=> 0
+ModelSizeOf M4 = 8518
+ModelFreeFile C1
+LockLeave L1
+ret M4
+ext ref M4
+call remove_all
+LockEnter L1
+ModelSizeOf M2 = 1929
+BaseDereference M2
+~destroy M2
+~BaseDereference M3
+~destroy M3
+LockLeave L1
+ret 5
+call create 1 0 0 1 1 3 14 [models\B]
+LockEnter L1
+ModelNew M5 1 0 0 1 1 3 [GEModelManager::CreateModel(models\B_191)] 14 G
+LockLeave L1
+ret M5
+call load [models\GEModelManager::CreateModel(models\a_1)] T2
+LockEnter L1
+LockLeave L1
+ret M4
+call dump F2
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\B_191) model file is loaded in memory with a reference count of 1.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|
+call create 0 1 1 3 0 2 13 []
+LockEnter L1
+ModelNew M6 0 1 1 3 0 2 [GEModelManager::CreateModel(_192)] 13 G
+LockLeave L1
+ret M6
+call load [models\b] T3
+LockEnter L1
+ModelFindFile P1 [models\b] T3 = 0 C2
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C2 T3
+=> 0
+ModelSizeOf M7 = 5334
+ModelFreeFile C2
+LockLeave L1
+ret M7
+ext ref M7
+call footprint
+ret 9314
+call remove M7
+LockEnter L1
+LockLeave L1
+ret 5
+call set_path P1
+PathDereference P1
+PathReference P1
+ret
+call create_sub 0 2 0 4 1 4 1 0 M6
+LockEnter L1
+ModelNew M8 0 2 0 4 1 4 [GEModelManager::CreateModel(_192)] 1 G
+SetSubModel M6 M8 0
+~Reference M8
+BaseDereference M8
+LockLeave L1
+ret M8
+call remove_all
+LockEnter L1
+ModelSizeOf M6 = 1252
+BaseDereference M6
+~destroy M6
+~BaseDereference M8
+~destroy M8
+ModelSizeOf M5 = 219
+BaseDereference M5
+~destroy M5
+LockLeave L1
+ret 5
+call set_path P3
+PathDereference P1
+PathReference P3
+ret
+call create 4 0 3 1 4 2 4 [models\a\x]
+LockEnter L1
+ModelNew M9 4 0 3 1 4 2 [GEModelManager::CreateModel(models\a\x_193)] 4 G
+LockLeave L1
+ret M9
+ext ref M9
+call footprint
+ret 7843
+call remove M4
+LockEnter L1
+LockLeave L1
+ret 5
+call create_sub 1 3 3 1 2 1 8 0 M7
+LockEnter L1
+ModelNew M10 1 3 3 1 2 1 [] 8 G
+SetSubModel M7 M10 0
+~Reference M10
+BaseDereference M10
+LockLeave L1
+ret M10
+ext ref M10
+call create_sub 2 4 4 0 4 2 7 0 M4
+LockEnter L1
+ModelNew M11 2 4 4 0 4 2 [] 7 G
+SetSubModel M4 M11 0
+~Reference M11
+BaseDereference M11
+LockLeave L1
+ret M11
+call remove M4
+LockEnter L1
+LockLeave L1
+ret 5
+call verify
+LockEnter L1
+ModelVerify M9
+ModelVerify M4
+ModelVerify M7
+LockLeave L1
+ret
+call set_path P3
+PathDereference P3
+PathReference P3
+ret
+call load [m] T2
+LockEnter L1
+ModelFindFile P3 [m] T2 = 0 C3
+ModelNewEmpty M12 G
+ModelStoreLoaded M12 C3 T2
+=> 0
+ModelSizeOf M12 = 6025
+ModelFreeFile C3
+LockLeave L1
+ret M12
+ext ref M12
+call set_path P2
+PathDereference P3
+PathReference P2
+ret
+call dump F3
+LockEnter L1
+LockLeave L1
+ret
+file ||*********Model Manager - Current Loaded Files In Memory*********||The GEModelManager::CreateModel(models\a\x_193) model file is loaded in memory with a reference count of 2.|The m model file is loaded in memory with a reference count of 2.|The models\GEModelManager::CreateModel(models\a_1) model file is loaded in memory with a reference count of 2.|The models\b model file is loaded in memory with a reference count of 2.|
+call remove M7
+LockEnter L1
+LockLeave L1
+ret 5
+ext deref M9
+ext deref M12
+call free
+LockEnter L1
+ModelSizeOf M9 = 1317
+BaseDereference M9
+~destroy M9
+ModelSizeOf M12 = 6025
+BaseDereference M12
+~destroy M12
+LockLeave L1
+PathDereference P2
+LockDestroy L1 depth 0
+ret
+ext deref M4
+ext deref M7
+ext deref M10
+end models 4 paths 1 1 1 locks 0 files 0
+seq 39
+call new P1
+PathReference P1
+LockCreate = L1
+ret
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call load [models\ab] T1
+LockEnter L1
+ModelFindFile P1 [models\ab] T1 = 2
+LockLeave L1
+ret 0
+call remove_all
+LockEnter L1
+LockLeave L1
+ret 0
+call create 1 4 0 1 1 4 9 [models\b]
+LockEnter L1
+ModelNew M1 1 4 0 1 1 4 [GEModelManager::CreateModel(models\b_194)] 9 G
+LockLeave L1
+ret M1
+call load [models\B] T3
+LockEnter L1
+ModelFindFile P1 [models\B] T3 = 0 C1
+ModelNewEmpty M2 G
+ModelStoreLoaded M2 C1 T3
+=> 0
+ModelSizeOf M2 = 5286
+ModelFreeFile C1
+LockLeave L1
+ret M2
+call remove M1
+LockEnter L1
+ModelSizeOf M1 = 3998
+BaseDereference M1
+~destroy M1
+LockLeave L1
+ret 0
+call load [models\b] T1
+LockEnter L1
+ModelFindFile P1 [models\b] T1 = 0 C2
+ModelNewEmpty M3 G
+ModelStoreLoaded M3 C2 T1
+=> 0
+ModelSizeOf M3 = 5650
+ModelFreeFile C2
+LockLeave L1
+ret M3
+ext ref M3
+call create 2 2 0 2 2 0 9 [m]
+LockEnter L1
+ModelNew M4 2 2 0 2 2 0 [GEModelManager::CreateModel(m_195)] 9 G
+LockLeave L1
+ret M4
+ext ref M4
+call create 1 0 1 1 4 4 15 [models\été]
+LockEnter L1
+ModelNew M5 1 0 1 1 4 4 [GEModelManager::CreateModel(models\été_196)] 15 G
+LockLeave L1
+ret M5
+ext ref M5
+call remove_all
+LockEnter L1
+ModelSizeOf M2 = 5286
+BaseDereference M2
+~destroy M2
+LockLeave L1
+ret 5
+call create_sub 2 2 0 3 1 1 9 1 M5
+LockEnter L1
+ModelNew M6 2 2 0 3 1 1 [GEModelManager::CreateModel(models\été_196)] 9 G
+SetSubModel M5 M6 1
+~Reference M6
+BaseDereference M6
+LockLeave L1
+ret M6
+ext ref M6
+call load [models\été] T1
+LockEnter L1
+ModelFindFile P1 [models\été] T1 = 2
+LockLeave L1
+ret 0
+call load [models\a] T3
+LockEnter L1
+ModelFindFile P1 [models\a] T3 = 0 C3
+ModelNewEmpty M7 G
+ModelStoreLoaded M7 C3 T3
+=> 0
+ModelSizeOf M7 = 8889
+ModelFreeFile C3
+LockLeave L1
+ret M7
+call create 3 1 0 1 2 3 2 []
+LockEnter L1
+ModelNew M8 3 1 0 1 2 3 [GEModelManager::CreateModel(_197)] 2 G
+LockLeave L1
+ret M8
+call footprint
+ret 10541
+call verify
+LockEnter L1
+ModelVerify M8
+ModelVerify M4
+ModelVerify M5
+ModelVerify M7
+ModelVerify M3
+LockLeave L1
+ret
+call footprint
+ret 10541
+call free
+LockEnter L1
+ModelSizeOf M8 = 264
+BaseDereference M8
+~destroy M8
+ModelSizeOf M7 = 4663
+BaseDereference M7
+~destroy M7
+LockLeave L1
+PathDereference P1
+LockDestroy L1 depth 0
+ret
+ext deref M3
+ext deref M4
+ext deref M5
+ext deref M6
+end models 4 paths 1 1 1 locks 0 files 0

@@ -5,6 +5,7 @@
   python -I tools/xbuild.py luatest  [--target T] [--no-run]                    the computer player's Lua runtime (EECPLua)
   python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
   python -I tools/xbuild.py wontest  [--target T] [--no-run] [PROGRAM ...]      WON wire format, crypto, sockets, ops (tests/won)
+  python -I tools/xbuild.py nettest  [--target T] [--no-run] [PROGRAM ...]      the Network Engine's goldens (tests/net)
   python -I tools/xbuild.py sdl3     [--target T]                               SDL3 as a static library (CMake)
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + GX presentation test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
@@ -310,7 +311,7 @@ def cmd_fonttest(a):
 TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
 # the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
 TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
-    "Utilities/UString.cpp", "Utilities/UWideString.cpp", "Network Engine/NEProtocolConfiguration.cpp",
+    "Utilities/UString.cpp", "Utilities/UWideString.cpp",
     "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")]
 
 
@@ -481,6 +482,9 @@ WON_TESTS = {
     # The child layouts (the manager and the eight instruction classes) as whole Rust objects (layoutobj.rs) over a
     # world of components (golden: rust/crates/ee_won/src/golden_layoutobj.txt)
     "won_layoutobj_test": [],
+    # Window as a whole Rust object (winobj.rs) over a world that models the platform window, the root and the
+    # manager as logged host ops (golden: rust/crates/ee_won/src/golden_winobj.txt)
+    "won_winobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -684,18 +688,33 @@ WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                                                        "ServerConnectionDefaults.cpp")],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
 WON_TESTS["won_routeops_test"] = [*WON_TESTS["won_servconn_test"], WON_SRC / "WONCommon" / "StringUtil.cpp"]
+# WONRouting's RoutingGetUserStatusOp over 127.0.0.1 with a routing server stand-in (golden:
+# rust/crates/ee_won/src/golden_userstatus.txt, recorded over the C++ class); its units (won_ops_test's and the op's)
+WON_TESTS["won_userstatus_test"] = [*WON_TESTS["won_ops_test"], WON_SRC / "WONRouting" / "RoutingGetUserStatusOp.cpp"]
+# RustServerOp's host calls that need no C++ object (the clock, the CRT's random numbers, an address, the op's file,
+# the files it measures, the web proxy file) through the op's own call path (golden:
+# rust/crates/ee_won/src/golden_serverop.txt, recorded over ServerOp.cpp's HostCall); its units (won_ops_test's,
+# ServerOp.cpp and what it names) are set here
+WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
+                                  *[WON_SRC / "WONServer" / f for f in ("ServerOp.cpp", "ServerContext.cpp")],
+                                  *[WON_SRC / "WONCommon" / f for f in ("WONFile.cpp", "StringUtil.cpp")],
+                                  *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
+                                  *[WON_SRC / "WONMisc" / f for f in ("HTTPEngine.cpp", "HTTPCache.cpp",
+                                                                     "HTTPCacheDefaults.cpp")],
+                                  *[WON_SRC / "WONAuth" / f for f in ("AuthSession.cpp", "AuthContext.cpp")],
+                                  *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]
 
 
-def build_won_test(t, name, units):
-    """One tests/won program: its source and WON units in the game's dialect and include path (module won's defines),
-    the platform layer as standard code -> the executable."""
-    out = t.out / "won_test" / name
+def build_won_test(t, name, units, folder="won"):
+    """One tests/won (or tests/<folder>) program: its source and units in the game's dialect and include path (module
+    won's defines), the platform layer as standard code -> the executable."""
+    out = t.out / f"{folder}_test" / name
     out.mkdir(parents=True, exist_ok=True)
     exe = out / (name + t.exe_suffix)
-    game = [ROOT / "tests" / "won" / f"{name}.cpp", *units]
+    game = [ROOT / "tests" / folder / f"{name}.cpp", *units]
     inc = [ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
     defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
     objs = []
@@ -749,6 +768,32 @@ def cmd_wontest(a):
             scratch = exe.parent / "run"
             scratch.mkdir(exist_ok=True)
             result |= run_program(t, exe, cwd=scratch)
+    return result
+
+
+# ---- nettest: the Network Engine's whole Rust classes against the original units (tests/net)
+
+# program -> the units it links besides its source (the originals it compares are #included over tests/net/orig's
+# stand-in headers)
+NET_TESTS = {
+    # NEMessageManager (golden: rust/crates/ee_net/src/golden_msgmgr.txt; `--print FILE` writes it)
+    "ne_msgmgr_test": [],
+}
+
+
+def cmd_nettest(a):
+    t = Target(a.target)
+    why = t.can_build()
+    if why:
+        sys.exit(f"{t.name}: {why}")
+    result = 0
+    for name, units in NET_TESTS.items():
+        if a.programs and name not in a.programs:
+            continue
+        exe = build_won_test(t, name, units, folder="net")
+        print(f"built {exe}")
+        if not a.no_run:
+            result |= run_program(t, exe, cwd=exe.parent)
     return result
 
 
@@ -1370,17 +1415,19 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "sdl3", "sdltest", "census", "game", "sim",
+    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "nettest", "sdl3", "sdltest", "census", "game", "sim",
                  "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
-        if name in ("test", "fonttest", "luatest", "tcptest", "wontest", "sdltest"):
+        if name in ("test", "fonttest", "luatest", "tcptest", "wontest", "nettest", "sdltest"):
             p.add_argument("--no-run", action="store_true")
         if name == "test":
             p.add_argument("--no-network", action="store_true")
         if name == "wontest":
             p.add_argument("programs", nargs="*", help="only these tests/won programs (default: all)")
+        if name == "nettest":
+            p.add_argument("programs", nargs="*", help="only these tests/net programs (default: all)")
         if name == "sdltest":
             p.add_argument("--frames", type=int, default=60)
         if name == "sdl3":
@@ -1398,7 +1445,7 @@ def main():
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
     a.sim = a.cmd == "sim"
-    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "luatest": cmd_luatest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
+    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "luatest": cmd_luatest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "nettest": cmd_nettest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
               "census": cmd_census, "game": cmd_game, "sim": cmd_game, "targets": cmd_targets}[a.cmd](a))
 
 

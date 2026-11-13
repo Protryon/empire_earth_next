@@ -11,10 +11,12 @@
 #include <vector>
 #include "lle/UWideString.h"
 #include "ee/EESMIDMap.h"
+#include "rust/ee_scenario.h"
 class EEComplexUnit;
 class EEUnit;
 
-class EESMObject {
+// the numbers (mOwner .. mIsAttributePercent) are EeScenarioObjectFields (ee_scenario fields.rs)
+class EESMObject : public EeScenarioObjectFields {
 public:
     bool FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom);  // 0x1c6d4f, actual ret12/AL/float output
     EESMObject();                           // 0x1c5f73
@@ -65,31 +67,6 @@ public:
     UWideString mName;                      // +0x04 (ctor: gResource string 0x32c9)
     unsigned long GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<unsigned long> mUnits;      // +0x18 (unit ids; Load reads them as unsigned long)
-    unsigned long mOwner;                   // +0x28 (ctor: 7)
-    unsigned long mFamily;                  // +0x2c
-    unsigned long mClass;                   // +0x30
-    unsigned long mMinCount;                // +0x34 (ctor: 1)
-    unsigned long mMaxCount;                // +0x38 (ctor: 1)
-    unsigned long mArea;                    // +0x3c
-    unsigned long mNearMode;                // +0x40
-    unsigned long mNearObject;              // +0x44 (remapped/renumbered by Virtual10/Virtual14)
-    unsigned long mParent;                  // +0x48 (the parent object index: SetParent)
-    unsigned long mAttribute;               // +0x4c
-    unsigned long mAttributeMin;            // +0x50
-    unsigned long mAttributeMax;            // +0x54
-    unsigned long mVisibleByPlayer;         // +0x58
-    unsigned long mState;                   // +0x5c
-    unsigned long mSelectedByPlayer;        // +0x60 (ctor: 7)
-    unsigned long mL64;                     // +0x64
-    unsigned long mInAreaCheck;             // +0x68
-    unsigned long mNearCheck;               // +0x6c
-    unsigned long mHasAttributeCheck;       // +0x70
-    unsigned long mVisibleByCheck;          // +0x74
-    unsigned long mHasStateCheck;           // +0x78
-    unsigned long mSelectedByCheck;         // +0x7c
-    bool mIsSelectOnMap;                    // +0x80 (ctor: 1)
-    bool mIsDynamic;                        // +0x81 (ctor: 1)
-    bool mIsAttributePercent;               // +0x82
 };
 
 #endif

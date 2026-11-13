@@ -76,7 +76,7 @@ EEUIFSEMainButton::EEUIFSEMainButton(unsigned long inId, unsigned char inFlag, G
 
     this->SetNormalBitmap(this->mNormalBitmap2);
     this->SetPressedBitmap(this->mPressedBitmap2);
-    this->mBitmapDrawOffset.SetXY(0.0f, 0.0f);
+    this->SetBitmapDrawOffset(GE2DPoint(0.0f, 0.0f));
     this->mEditor = inEditor;
     this->mFlag = inFlag;
 }

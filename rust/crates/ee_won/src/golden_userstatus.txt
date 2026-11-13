@@ -1,0 +1,35 @@
+bind WS_Success
+== three ids, one twice
+before {2:0 5:0 900000:0} retransmits 3 timeout 1000
+server got WS_Success 16:030748030200000005000000a0bb0d00
+done 1 status WS_Success map {2:1 5:0 900000:4} outgoing 16:030748030200000005000000a0bb0d00
+== the whole map
+before {10:0 11:0} retransmits 3 timeout 1000
+server got WS_Success 12:030748020a0000000b000000
+done 1 status WS_Success map {10:9 11:8} outgoing 12:030748020a0000000b000000
+== wrong header, then right
+before {7:0} retransmits 3 timeout 1000
+server got WS_Success 8:0307480107000000
+after reply 0 done 0 status WS_Pending
+done 1 status WS_Success map {7:6} outgoing 8:0307480107000000
+== count mismatch
+before {1:0 2:0 3:0} retransmits 3 timeout 1000
+server got WS_Success 16:03074803010000000200000003000000
+done 1 status WS_InvalidMessage map {1:0 2:0 3:0} outgoing 16:03074803010000000200000003000000
+== cut short
+before {1:0 2:0 3:0} retransmits 3 timeout 1000
+server got WS_Success 16:03074803010000000200000003000000
+done 1 status WS_MessageUnpackFailure map {1:7 2:0 3:0} outgoing 16:03074803010000000200000003000000
+== no ids
+before {} retransmits 3 timeout 1000
+server got WS_Success 4:03074800
+done 1 status WS_Success map {} outgoing 4:03074800
+== large ids
+before {1:0 2147483648:0 4294967295:0} retransmits 3 timeout 1000
+server got WS_Success 16:030748030100000000000080ffffffff
+done 1 status WS_Success map {1:1 2147483648:2 4294967295:3} outgoing 16:030748030100000000000080ffffffff
+== no reply
+before {4:0} retransmits 3 timeout 1000
+server got WS_Success 8:0307480104000000
+done 1 status WS_NoReply map {4:0} outgoing 8:0307480104000000
+done

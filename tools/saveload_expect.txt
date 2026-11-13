@@ -7,6 +7,7 @@
 # the merge of main a2c4347e (2026-11-12): main's GetGatherCapacity change (every site with something left) changed the classic games;
 # every row re-read (declared). oracle seed 2 1000 s END -> 14: the resource manager's mine list after a load (27 entries) is not the saved game's (8); main's count reads it (with the change reverted: END again).
 # R5b.4 round 18: oracle seed 2 1000 s 14 -> END: the parting was a leaving herd's continent, which EEHerd::RepairPointers recomputed (a 0.263 save keeps the saved one).
+# the merge of main daf9dadb (2026-11-13): next rows re-read (declared) with the tree's Data/ai main's (folder hash df82b2b8): the random Boom is boom_order now. With the previous Data/ai (1494ba43) the merged exe gives the old 479/END/828/END; gather(exact)'s setting saved (EENS version 6) lifted 114/10/102/10 to these.
 oracle 2 1000 END
 oracle 2 1900 END
 oracle 3 1000 END
@@ -43,7 +44,7 @@ calamity 2 1000 END
 calamity 2 1900 END
 calamity 3 1000 END
 calamity 3 1900 END
-next 2 1000 479
-next 2 1900 END
-next 3 1000 828
-next 3 1900 END
+next 2 1000 887
+next 2 1900 51
+next 3 1000 102
+next 3 1900 888

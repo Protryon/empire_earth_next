@@ -435,7 +435,7 @@ void EELobbyOpen()
     long theStyle = 2;
     if (gGamePreferences.mSettings.mFullScreen)
         theStyle = 0x22;
-    gEELobbyPlatformWindow->mStyle = theStyle;
+    gEELobbyPlatformWindow->SetStyle(theStyle);
     WONRectangle theRect(0, 0, 100, 100);
     gEELobbyPlatformWindow->Create(theRect);
     RootContainer* theRoot = gEELobbyPlatformWindow->mRoot.get();

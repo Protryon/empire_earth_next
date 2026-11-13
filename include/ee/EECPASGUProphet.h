@@ -7,7 +7,8 @@
 #define EE_EECPASGUPROPHET_H
 
 class EEUnitGoal;
-class EEUGRust;
+class EEUnitGoal;
+typedef EEUnitGoal EEUGRust;
 
 class EECPASGUProphet : public EECPAttackSubGroupUnit {
 public:

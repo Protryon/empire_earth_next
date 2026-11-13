@@ -15,6 +15,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScenarioHost.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // FUNCTION: EXE 0x5c5783
@@ -170,55 +171,25 @@ long EESMMediaStrings::Import(const UString& inLine, unsigned long inKind, const
 }
 
 // FUNCTION: EXE 0x5c5e78
-// Reads the seven media strings from the saved file; returns the first error
+// Reads the seven media strings from the saved file; returns the first error (ee_scenario save.rs strings)
 long EESMMediaStrings::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = this->mAftermath.Load(inFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mHints.Load(inFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mHistory.Load(inFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mMovieFile.Load(inFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mSoundFile.Load(inFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mInstructions.Load(inFile);
-    if (theResult == 0) {
-        theResult = this->mMapFile.Load(inFile);
-    }
-    return theResult;
+    UWideString* theStrings[] = {&this->mAftermath, &this->mHints, &this->mHistory, &this->mMovieFile,
+                                 &this->mSoundFile, &this->mInstructions, &this->mMapFile};
+    EESMStream theStream = {&inFile, theStrings, NULL, NULL};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_strings_io(&theTable, 7, false);
 }
 
 // FUNCTION: EXE 0x5c5ecc
 // Writes the seven media strings to the saved file; returns the first error
 long EESMMediaStrings::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = this->mAftermath.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mHints.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mHistory.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mMovieFile.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mSoundFile.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mInstructions.Save(outFile);
-    if (theResult == 0) {
-        theResult = this->mMapFile.Save(outFile);
-    }
-    return theResult;
+    UWideString* theStrings[] = {&this->mAftermath, &this->mHints, &this->mHistory, &this->mMovieFile,
+                                 &this->mSoundFile, &this->mInstructions, &this->mMapFile};
+    EESMStream theStream = {&outFile, theStrings, NULL, NULL};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_strings_io(&theTable, 7, true);
 }
 
 // FUNCTION: EXE 0x5c5f20

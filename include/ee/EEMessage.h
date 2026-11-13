@@ -6,6 +6,7 @@
 #include "ee/EECivUpgrade.h"
 
 #include <stdint.h>   // int32_t/uint32_t: the wire fields' fixed widths
+#include <stddef.h>   // size_t: the codec slots' count
 
 #include "lle/U2DPoint.h"                  // EEMSendFlare's inline ctor
 #include "ee/EEMessageID.h"
@@ -33,6 +34,21 @@ public:
     void ExecuteSelectionMessage();                              // 0xb8cf7
     void ExecuteMessage();                                       // 0xb8e86
 
+    // New (game messages lane, round 1): the codec's side of every game message in one place (EEMessage.cpp): a
+    // class gives its codec class (ee_netmsg) and its members as slots in wire order; ExportMessage, ExportSize and
+    // ImportMessage run the codec over them (a class whose members the slots cannot carry overrides them); a game
+    // message answers no request (IsResponse; EEMLoadOrSaveGame's overrides it).
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
+    size_t CodecSlots(EeNetMsgSlot* outSlots)
+    {
+        uint32_t theClass;
+        return this->GetCodecSlots(outSlots, theClass);
+    }
+    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
+    virtual unsigned long ExportSize();
+    virtual void ImportMessage(unsigned char* inData);
+    virtual bool IsResponse(NEMessage* inMessage) { return false; }
+
     unsigned char mFastSelectionID;         // +0x0c (provisional name; not set by the ctor; EEMSelectPlayerChatType 0x1d2b36 stores +0x0d)
     bool mCanSendWhenOut;                   // +0x0d
 };
@@ -57,10 +73,7 @@ public:
     {
         this->mB14 = true;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -75,10 +88,7 @@ public:
     EEMSelectPlayerChatType(unsigned char* inData) { this->ImportMessage(inData); }
     EEMSelectPlayerChatType(long inChatType) : EEMessage(kMessageSelectPlayerChatType, false) { this->mChatType = inChatType; }  // 0x1d2b36
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -90,10 +100,7 @@ class EEMCheatCode : public EEMessage {
 public:
     EEMCheatCode(unsigned char* inData) { this->ImportMessage(inData); }
     EEMCheatCode(long inCode, long inParameter) : EEMessage(kMessageCheatCode, false), mCode(inCode), mParameter(inParameter) {}  // 0x1d3162
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -108,10 +115,8 @@ public:
     virtual ~EEMInGameChat() {}
     EEMInGameChat(const UWideString& inText) : EEMessage(kMessageInGameChat, true) { this->mText = inText; }  // 0x1d3196
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -127,10 +132,7 @@ public:
     EEMSelectUnit(unsigned char* inData) { this->ImportMessage(inData); }
     EEMSelectUnit(unsigned long inUnitID) : EEMessage(kMessageSelectUnit, true) { this->mUnitID = inUnitID; }
     virtual bool GetCanSendWhilePaused() const { return true; }   // datacmp: vtable slot 2 = 0x418aa9 (mov al, 1)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -143,10 +145,7 @@ public:
     EEMAddUnitToSelectedGroup(unsigned char* inData) { this->ImportMessage(inData); }
     EEMAddUnitToSelectedGroup(unsigned long inUnitID) : EEMessage(kMessageAddUnitToSelectedGroup, true) { this->mUnitID = inUnitID; }
     virtual bool GetCanSendWhilePaused() const { return true; }   // datacmp: vtable slot 2 = 0x418aa9 (mov al, 1)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -168,10 +167,7 @@ public:
     EEMSavedGroupAddSelection(unsigned char* inData) { this->ImportMessage(inData); }
     EEMSavedGroupAddSelection(unsigned char inGroup) : EEMessage(kMessageSavedGroupAddSelection, true), mGroup(inGroup) {}
     virtual bool GetCanSendWhilePaused() const { return true; }   // datacmp: vtable slot 2 = 0x418aa9 (mov al, 1)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -183,10 +179,7 @@ class EEMSavedGroupCreate : public EEMessage {
 public:
     EEMSavedGroupCreate(unsigned char* inData) { this->ImportMessage(inData); }
     EEMSavedGroupCreate(unsigned char inGroup) : EEMessage(kMessageSavedGroupCreate, false), mGroup(inGroup) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -199,10 +192,7 @@ public:
     EEMSavedGroupSelect(unsigned char* inData) { this->ImportMessage(inData); }
     EEMSavedGroupSelect(unsigned char inGroup, bool inFlag) : EEMessage(kMessageSavedGroupSelect, true), mGroup(inGroup), mFlag(inFlag) {}
     virtual bool GetCanSendWhilePaused() const { return true; }   // datacmp: vtable slot 2 = 0x418aa9 (mov al, 1)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -222,10 +212,8 @@ public:
     EEMSelectUnits(unsigned char* inData) { this->ImportMessage(inData); }
     virtual ~EEMSelectUnits() {}
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -253,10 +241,7 @@ class EEMAddPatrolPoint : public EEMessage {
 public:
     EEMAddPatrolPoint(unsigned char* inData) { this->ImportMessage(inData); }
     EEMAddPatrolPoint(const GE2DPoint& inPoint) : EEMessage(kMessageAddPatrolPoint, false) { this->mPoint = inPoint; }   // the next AI's ai.patrol
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -270,10 +255,7 @@ public:
     EEMAddRemoveResources(unsigned long inPlayer, long inResource, unsigned long inAmount, unsigned char inAdd)
         : EEMessage(kMessageAddRemoveResources, false), mAmount(inAmount), mPlayerID(inPlayer), mResourceType(inResource), mAdd(inAdd) {}  // out-of-line COMDAT 0x1d5f8f after its first user (diplomacy form)
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Add Remove Resources"; }
 
@@ -304,10 +286,7 @@ public:
         this->mX = inX;
         this->mY = inY;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Attack Ground"; }
 
@@ -321,10 +300,7 @@ public:
     EEMAttackPlayers(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: out-of-line COMDAT 0x2606fb after its first user (type 0x70)
     EEMAttackPlayers(long inPlayerID, unsigned char inAllies) : EEMessage(kMessageAttackPlayers, false), mPlayerID(inPlayerID), mAllies(inAllies) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Attack Players"; }
 
@@ -341,10 +317,7 @@ public:
     {
         this->mIsQueued = inIsQueued;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -365,10 +338,7 @@ public:
         this->mSide = inSide;
         this->mPlayerID = inPlayerID;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -389,10 +359,7 @@ public:
         this->mTechnology = inTechnology;
         this->mIsQueued = inIsQueued;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -414,10 +381,7 @@ public:
         this->mTechnology = inTechnology;
         this->mPlayerID = inPlayerID;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -431,10 +395,7 @@ public:
 class EEMCameraLocationInfo : public EEMessage {
 public:
     EEMCameraLocationInfo(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Camera Location"; }
 
@@ -452,10 +413,7 @@ public:
     {
         this->mTechnology = inTechnology;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Cast Calamity"; }
 
@@ -470,10 +428,7 @@ public:
 class EEMChangeSelectedUnitCollisionSphere : public EEMessage {
 public:
     EEMChangeSelectedUnitCollisionSphere(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -490,10 +445,8 @@ public:
         this->mText = inText;
     }
     virtual ~EEMChat() {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -506,10 +459,7 @@ class EEMCivTimerExpired : public EEMessage {
 public:
     EEMCivTimerExpired(unsigned char* inData) { this->ImportMessage(inData); }
     EEMCivTimerExpired(unsigned char inIsWarning);  // 0x153dd2 (EEPhysics.cpp, after its first user)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -527,10 +477,8 @@ public:
         : EEMessage(inType, inType == kMessageCivUpgradesPurchased), mCivName(inName), mUpgrades(inUpgrades), mNameString(inNameString), mPlayerID(inPlayer) {}
     // (implicit dtor: 0xba6fd does not store EEMCivUpgrades' vptr)
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void SetName(const UWideString& inName) { this->mCivName = inName; }  // +0x30 (0xba6d1) (provisional name)
 
     UWideString mCivName;                   // +0x10
@@ -571,10 +519,7 @@ public:
     EEMClearAirportCommands(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: out-of-line COMDAT 0x26f927 after its first user EEUIFMGStatusButton::Command (type 0x87)
     EEMClearAirportCommands() : EEMessage(kMessageClearAirportCommands, false) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 };
@@ -584,10 +529,7 @@ class EEMDisband : public EEMessage {
 public:
     EEMDisband(unsigned char* inData) { this->ImportMessage(inData); }
     EEMDisband() : EEMessage(kMessageDisband, false) {}  // inline (EEUIFMGStatusButton::Command)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Disband"; }
 };
@@ -597,10 +539,7 @@ class EEMDropoffResource : public EEMessage {
 public:
     EEMDropoffResource(long inDropoffID) : EEMessage(kMessageDropoffResource, false) { this->mDropoffID = inDropoffID; }  // 0x4041cf (inline, first user EEAMouseClick::Execute)
     EEMDropoffResource(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -611,10 +550,7 @@ public:
 class EEMEdictPreProposal : public EEMessage {
 public:
     EEMEdictPreProposal(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Edict Pre-Proposal"; }
 
@@ -625,10 +561,7 @@ public:
 class EEMEdictPreProposalResponse : public EEMessage {
 public:
     EEMEdictPreProposalResponse(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Edict Pre-Proposal Response"; }
 
@@ -640,10 +573,7 @@ public:
 class EEMEdictProposal : public EEMessage {
 public:
     EEMEdictProposal(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Edict Proposal"; }
 
@@ -656,10 +586,7 @@ public:
 class EEMEdictVote : public EEMessage {
 public:
     EEMEdictVote(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Edict Vote"; }
 
@@ -675,10 +602,7 @@ public:
     // inline: COMDAT 0x26fbca after its first user EEUIEndCinematicModeEvent::ProcessEvent (type 0x9d; the original
     // pushes a float with fstp and the COMDAT copies the dword)
     EEMEndCinematic(float inTime) : EEMessage(kMessageEndCinematic, false), mF10(inTime) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -691,10 +615,7 @@ public:
     EEMEnterShiftMode(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: out-of-line COMDAT 0x26008a after its first user (type 0x88; +0x10 stored after the vptr)
     EEMEnterShiftMode(long inGameTime) : EEMessage(kMessageEnterShiftMode, false) { this->mGameTime = inGameTime; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -708,10 +629,7 @@ public:
     // inline: COMDAT 0x26f94b after its first user EEUIFMGStatusButton::Command (type 0xae)
     EEMExchangeResources(unsigned char inIsSell, long inResourceType, unsigned char inFiveTimes)
         : EEMessage(kMessageExchangeResources, false), mIsSell(inIsSell), mResourceType(inResourceType), mFiveTimes(inFiveTimes) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -725,10 +643,7 @@ class EEMExitShiftMode : public EEMessage {
 public:
     EEMExitShiftMode(unsigned char* inData) { this->ImportMessage(inData); }
     EEMExitShiftMode(long inGameTime);      // 0x153ff1 (EEPhysics.cpp, after its first user)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -741,10 +656,7 @@ public:
     EEMExplore(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: out-of-line COMDAT 0x26083a after its first user (type 0x79)
     EEMExplore() : EEMessage(kMessageExplore, false) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Explore"; }
 };
@@ -754,10 +666,8 @@ class EEMFullGameOptions : public EEMessage {
 public:
     EEMFullGameOptions(unsigned char* inData) { this->ImportMessage(inData); }
     EEMFullGameOptions(const EEGameOptions& inOptions);   // 0xbe6c6 (the lobby sends gGameOptions)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -788,10 +698,8 @@ public:
     EEMFullPlayerInformation(unsigned char* inData) { this->ImportMessage(inData); }
     EEMFullPlayerInformation(const EEGameOptionsPlayer& inPlayer);   // 0xc378e (the server sends a lobby slot)
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -814,10 +722,8 @@ class EEMGameOptions : public EEMessage {
 public:
     EEMGameOptions(unsigned char* inData) { this->ImportMessage(inData); }
     EEMGameOptions(long inOption, long inValue, const UWideString& inS14);  // 0xbebe1
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -832,10 +738,7 @@ public:
     EEMGameRestarting(unsigned char* inData) { this->ImportMessage(inData); }
     EEMGameRestarting() : EEMessage(kMessageGameRestarting, true) {}  // 0xccb42 (EEServer.cpp)
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 };
@@ -846,10 +749,7 @@ public:
     EEMGameSpeed(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: out-of-line COMDAT 0x2609e5 after its first user (type 0x5f)
     EEMGameSpeed(float inSpeed) : EEMessage(kMessageGameSpeed, false), mSpeed(inSpeed) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -861,10 +761,7 @@ class EEMGatherResource : public EEMessage {
 public:
     EEMGatherResource(long inTargetID, bool inIsQueued) : EEMessage(kMessageGatherResource, false), mTargetID(inTargetID), mIsQueued(inIsQueued) {}  // inline (EEAMouseClick::Execute 0x403907)
     EEMGatherResource(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -878,10 +775,7 @@ public:
     EEMGoFanatic(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: COMDAT 0x26f986 after its first user EEUIFMGStatusButton::Command (type 0xac)
     EEMGoFanatic() : EEMessage(kMessageGoFanatic, false) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 };
@@ -893,10 +787,7 @@ public:
     EEMHackANewUnit(const long& inType, const GE2DPoint& inTile, unsigned char inPlayer)
         : EEMessage(kMessageHackANewUnit), mUnitType(inType), mPoint(inTile), mPlayerID(inPlayer) {}
     EEMHackANewUnit(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Hack A New Unit"; }
 
@@ -909,10 +800,7 @@ public:
 class EEMHaltSelectedGroup : public EEMessage {
 public:
     EEMHaltSelectedGroup(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 };
@@ -923,10 +811,7 @@ public:
     EEMHealUnit(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: out-of-line COMDAT 0x41fc after its first user (type 0x92; the store follows the vptr)
     EEMHealUnit(long inTarget) : EEMessage(kMessageHealUnit, false) { this->mTargetID = inTarget; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -940,10 +825,7 @@ public:
     // inline (out-of-line COMDAT 0x25af3d after its first user EEUICUnitIconBar::MouseRButtonUp; type 0x95)
     EEMImmediateCargoUnload(long inTransportID, long inCargoID, bool inFlag)
         : EEMessage(kMessageImmediateCargoUnload, false), mTransportID(inTransportID), mCargoID(inCargoID), mB18(inFlag) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Immediate Cargo Unload"; }
 
@@ -963,10 +845,7 @@ public:
         this->mUnitID = inUnitID;
         this->mImprovement = inImprovement;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Upgrade Unit"; }
 
@@ -978,10 +857,7 @@ public:
 class EEMIncrementEpic : public EEMessage {
 public:
     EEMIncrementEpic(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Increment Epic"; }
 };
@@ -992,10 +868,7 @@ public:
     EEMIncrementRallyTimer(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: out-of-line COMDAT 0x2601ad after its first user (type 0x8e)
     EEMIncrementRallyTimer(unsigned char inGoalQueue) : EEMessage(kMessageIncrementRallyTimer, false), mGoalQueue(inGoalQueue) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1008,10 +881,7 @@ public:
     EEMJITManufacturing(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: COMDAT 0x26f9aa after its first user EEUIFMGStatusButton::Command (type 0xad)
     EEMJITManufacturing() : EEMessage(kMessageJITManufacturing, false) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 };
@@ -1022,10 +892,7 @@ public:
     EEMKillUnit(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: out-of-line COMDAT 0x260685 after its first user (type 0x5c)
     EEMKillUnit(unsigned char inAllUnits) : EEMessage(kMessageKillUnit, false), mAllUnits(inAllUnits) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Delete Unit"; }
 
@@ -1038,10 +905,7 @@ public:
     EEMLagStatus(unsigned char* inData) { this->ImportMessage(inData); }
     // 0xccc92 (EEServer.cpp; +0x12 is stored after the vptr: a body assignment)
     EEMLagStatus(unsigned short inW10, unsigned char inLagWarning) : EEMessage(kMessageLagStatus, true) { this->mStatus = inW10; this->mLagWarning = inLagWarning; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1060,10 +924,7 @@ public:
         this->mUnitID = inUnitID;
         this->mGarrisonID = inTarget;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Unit(s) Into Garrison"; }
 
@@ -1078,10 +939,7 @@ public:
     EEMLoadMainScreen(unsigned char* inData) { this->ImportMessage(inData); }
     EEMLoadMainScreen(unsigned char inB10);   // 0xc7fda
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Main Screen"; }
 
@@ -1094,10 +952,7 @@ public:
     EEMLoadMainScreenResponse(unsigned char* inData) { this->ImportMessage(inData); }
     EEMLoadMainScreenResponse(unsigned char inSlot, unsigned char inPlayerID);  // 0xc0a3a
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Main Screen Response"; }
 
@@ -1115,8 +970,7 @@ public:
     virtual bool GetCanSendWhilePaused() const { return true; }
     virtual bool GetSendToAllAndWaitMessageID(unsigned long& outID) const { outID = this->mWaitMessageID; return true; }
     virtual void SetSendToAllAndWaitMessageID(unsigned long inID) { this->mWaitMessageID = inID; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void ImportMessage(unsigned char* inData);
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute();
@@ -1137,10 +991,7 @@ public:
     EEMLoadOrSaveGameResponse(unsigned char* inData) { this->ImportMessage(inData); }
     EEMLoadOrSaveGameResponse(long inTick);  // 0xc1025
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load or Save Repsponse"; }
 
@@ -1153,10 +1004,7 @@ public:
     EEMLoadPercent(unsigned char* inData) { this->ImportMessage(inData); }
     // inline; out-of-line COMDAT 0x279709 after its first user EEUserInterface::SetLoadProgress
     EEMLoadPercent(long inPlayer, unsigned long inPercent) : EEMessage(kMessageLoadPercent), mPercent(inPercent), mSlot(inPlayer) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Percent"; }
 
@@ -1172,10 +1020,7 @@ public:
     EEMLoadTransport(long inTransportID, long inPassengerID, unsigned char inB18)
         : EEMessage(kMessageLoadTransport), mTransportID(inTransportID), mPassengerID(inPassengerID), mB18(inB18) {}
     EEMLoadTransport(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Unit(s) Into Transport"; }
 
@@ -1191,10 +1036,7 @@ public:
     EEMLoadUnitData(long inClassID, unsigned char inFlag) : EEMessage(kMessageLoadUnitData), mUnitType(inClassID), mB14(inFlag) {}
     EEMLoadUnitData(unsigned char* inData) { this->ImportMessage(inData); }
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Unit Data"; }
 
@@ -1208,10 +1050,7 @@ public:
     EEMLockUnlock(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: COMDAT 0x26f9ce after its first user EEUIFMGStatusButton::Command (type 0x8c)
     EEMLockUnlock(bool inLock) : EEMessage(kMessageLockUnlock, false), mIsLocked(inLock) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1224,10 +1063,7 @@ public:
     EEMMakeWorldVisible(unsigned char* inData) { this->ImportMessage(inData); }
     EEMMakeWorldVisible();                  // 0x12ba49 (EECheatCodes.cpp)
     void SetOriginatingSlot(unsigned char inSlot) { this->mOriginatingSlot = inSlot; }  // (the cheat's sender; provisional name)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Make World Visible"; }
 };
@@ -1237,10 +1073,7 @@ class EEMMigrationSlotInfo : public EEMessage {
 public:
     EEMMigrationSlotInfo(unsigned char* inData) { this->ImportMessage(inData); }
     EEMMigrationSlotInfo(unsigned char inSlot, unsigned long inPlayerID) : EEMessage(kMessageMigrationSlotInfo, true), mPlayerID(inPlayerID), mSlot(inSlot) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Migration Slot Info"; }
 
@@ -1256,10 +1089,7 @@ public:
     EEMNewEdictEnacted(const unsigned short& inW10, const unsigned short& inW12, const unsigned short& inW14,
                        unsigned char inIsEnacted)
         : EEMessage(kMessageNewEdictEnacted, false), mEdict(inW10), mYesVotes(inW12), mNoVotes(inW14), mIsEnacted(inIsEnacted) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "New Edict Enabled"; }
 
@@ -1275,10 +1105,7 @@ public:
     EEMPackUnpack(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: COMDAT 0x26f9fb after its first user EEUIFMGStatusButton::Command (type 0xab)
     EEMPackUnpack(bool inPack) : EEMessage(kMessagePackUnpack, false), mPack(inPack) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1307,10 +1134,7 @@ public:
         this->mIsQueued = inIsQueued;
         this->mUseGroupMovement = inUseGroupMovement;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1330,10 +1154,7 @@ public:
     // inline: COMDAT 0x26fa28 after its first user EEUIFMGStatusButton::Command (type 0x73; the store follows the vptr:
     // a body assignment)
     EEMPatrol(long inTargetID) : EEMessage(kMessagePatrol, false) { this->mTargetID = inTargetID; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1349,10 +1170,7 @@ public:
         : EEMessage(kMessagePayTribute, false), mFood(inFood), mGold(inGold), mIron(inIron), mStone(inStone), mWood(inWood),
           mReceiver(inReceiver) {}  // out-of-line COMDAT 0x1d6542 after its first user (diplomacy form)
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Pay Tribute"; }
 
@@ -1376,10 +1194,7 @@ public:
     // 0xc3547; inL14 is a float: the lobby callers push it with fldz/fstp
     EEMPlayerInformation(long inField, long inSlot, long inValue, float inPing);
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1396,10 +1211,8 @@ public:
     // 0xccee8 (EEServer.cpp; argument names are provisional)
     EEMPlayerSlotInfo(unsigned char inSlot, unsigned char inPlayerID, const UWideString& inS10, bool inIsBehindFirewall)
         : EEMessage(kMessagePlayerSlotInfo, true), mAddress(inS10), mPlayerID(inPlayerID), mSlot(inSlot), mIsBehindFirewall(inIsBehindFirewall) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Player Slot Info"; }
 
@@ -1413,10 +1226,7 @@ public:
 class EEMRecordFrames : public EEMessage {
 public:
     EEMRecordFrames(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Record Frames"; }
 
@@ -1434,10 +1244,7 @@ public:
         this->mUnitID = inUnitID;
         this->mImprovement = inImprovement;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1464,10 +1271,7 @@ public:
         this->mTechnology = inTechnology;
         this->mToggleJITManufacturing = inToggleJITManufacturing;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1484,10 +1288,7 @@ public:
     // inline (out-of-line COMDAT 0x25af78 after its first user EEUICUnitIconBar::MouseRButtonUp; type 0x4a)
     EEMRemoveUnitFromSelectedGroup(long inUnitID) : EEMessage(kMessageRemoveUnitFromSelectedGroup, true) { this->mUnitID = inUnitID; }
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1499,10 +1300,7 @@ class EEMRepairUnit : public EEMessage {
 public:
     EEMRepairUnit(long inTargetID, bool inIsQueued) : EEMessage(kMessageRepairUnit, false), mTargetID(inTargetID), mIsQueued(inIsQueued) {}  // inline (EEAMouseClick::Execute 0x40395c)
     EEMRepairUnit(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1515,10 +1313,7 @@ class EEMReplantFarms : public EEMessage {
 public:
     EEMReplantFarms(unsigned char* inData) { this->ImportMessage(inData); }
     EEMReplantFarms(long inFarmID);         // 0x1fe345 (EEComplexUnit.cpp, after its first user SetBuilt)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1530,10 +1325,7 @@ class EEMReportStatistics : public EEMessage {
 public:
     EEMReportStatistics(unsigned char* inData) { this->ImportMessage(inData); }
     EEMReportStatistics(long inL10, long inL14);   // 0x153917 (EEPhysics.cpp, after its first user)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1551,10 +1343,7 @@ public:
         this->mTechnology = inTechnology;
         this->mFiveTimes = inFiveTimes;
     }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1569,10 +1358,7 @@ public:
     EEMResign(unsigned char* inData) { this->ImportMessage(inData); }
     EEMResign() : EEMessage(kMessageResign, true) {}  // out-of-line COMDAT 0x1e0eb5 after its first user
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 };
@@ -1582,10 +1368,7 @@ class EEMReturnToBase : public EEMessage {
 public:
     EEMReturnToBase(long inBaseID, bool inKeepFlightTime) : EEMessage(kMessageReturnToBase, false), mBaseID(inBaseID), mKeepFlightTime(inKeepFlightTime) {}  // inline (EEAMouseClick::Execute 0x403dc5)
     EEMReturnToBase(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1598,10 +1381,7 @@ class EEMSavedGroupClear : public EEMessage {
 public:
     EEMSavedGroupClear(unsigned char* inData) { this->ImportMessage(inData); }
     EEMSavedGroupClear(unsigned char inGroup) : EEMessage(kMessageSavedGroupClear, false), mGroup(inGroup) {}  // 0x25604f (EEUIBSavedGroup::MouseRButtonUp)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1616,10 +1396,7 @@ public:
     // aircraft inUnitID scrambles from the carrier's tile)
     EEMScrambleAircraft(long inUnitID, long inX, long inY) : EEMessage(kMessageScrambleAircraft, false)
         { this->mUnitID = inUnitID; this->mX = inX; this->mY = inY; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1635,10 +1412,7 @@ public:
     EEMSelectCustomPlayerForChat(long inPlayer, bool inFlag) : EEMessage(kMessageSelectCustomPlayerForChat, false), mPlayerID(inPlayer)
         { this->mIsSelected = inFlag; }  // out-of-line COMDAT 0x1d6590 after its first user (diplomacy form) (mB14 stored after the vptr)
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1652,10 +1426,7 @@ public:
     EEMSelectPatrolGroup(unsigned char* inData) { this->ImportMessage(inData); }
     // inline: COMDAT 0x2a3b, first used by EEALasso::SelectUnits 0x28e5 (type 0x74; mL10 assigned after the vptr)
     EEMSelectPatrolGroup(long inUnitID) : EEMessage(kMessageSelectPatrolGroup, false) { this->mUnitID = inUnitID; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1677,7 +1448,6 @@ public:
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
     virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1690,10 +1460,7 @@ class EEMSelfDestruct : public EEMessage {
 public:
     EEMSelfDestruct(unsigned char* inData) { this->ImportMessage(inData); }
     EEMSelfDestruct() : EEMessage(kMessageSelfDestruct, false) {}  // inline (EEUIFMGStatusButton::Command)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Self Destruct"; }
 };
@@ -1705,10 +1472,7 @@ public:
     // 0x27606e too): the body follows the class
     EEMSendFlare(const U2DPoint<long>& inTile);
     EEMSendFlare(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Send Flare"; }
 
@@ -1729,10 +1493,7 @@ public:
     // in the init list, as EEMSetRallyGoal)
     EEMSetAirportCommand(long inCommand, const GE2DPoint& inLocation, long inUnitID, unsigned char inIsQueued)
         : EEMessage(kMessageSetAirportCommand, false), mPoint(inLocation), mCommand(inCommand), mTargetID(inUnitID), mIsQueued(inIsQueued) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Set Airport Command"; }
 
@@ -1749,10 +1510,7 @@ public:
     EEMSetDiplomaticStance(long inPlayer, long inStance) : EEMessage(kMessageSetDiplomaticStance, false), mPlayerID(inPlayer), mStance(inStance) {}
                                             // out-of-line COMDAT 0x1d65c4 after its first user (diplomacy form)
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Set Diplomatic Stance"; }
 
@@ -1768,10 +1526,7 @@ public:
     // EEMessage's vptr store stays)
     EEMSetRallyGoal(long inUnitID, const GE2DPoint& inLocation, long inTargetID, unsigned char inIsQueued)
         : EEMessage(kMessageSetRallyGoal, false), mPoint(inLocation), mTargetID(inTargetID), mBuildingID(inUnitID), mIsQueued(inIsQueued) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Set Rally Goal"; }
 
@@ -1787,10 +1542,7 @@ public:
     EEMSetUnitBehavior(unsigned char* inData) { this->ImportMessage(inData); }
     // inline (0x260a12 expands it: the EEMessage ctor 0x32a6 call, the vptr, then +0x10; type 0x9e)
     EEMSetUnitBehavior(long inBehavior) : EEMessage(kMessageSetUnitBehavior, false) { this->mBehavior = inBehavior; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Set Unit Behavior"; }
 
@@ -1801,10 +1553,7 @@ public:
 class EEMSetWaterLevel : public EEMessage {
 public:
     EEMSetWaterLevel(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Set Water Level"; }
 
@@ -1816,10 +1565,7 @@ class EEMSmartFarmers : public EEMessage {
 public:
     EEMSmartFarmers(long inTargetID, unsigned char inIsQueued) : EEMessage(kMessageSmartFarmers, false), mTargetID(inTargetID), mIsQueued(inIsQueued) {}  // inline (EEAMouseClick::Execute 0x4039e4)
     EEMSmartFarmers(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1831,10 +1577,7 @@ public:
 class EEMSnapToDaylight : public EEMessage {
 public:
     EEMSnapToDaylight(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Snap to Daylight"; }
 };
@@ -1846,10 +1589,7 @@ public:
     // inline: the lobby's Start 0x1da7dd (rand() first, then the stores)
     EEMStartLoading(unsigned char inHumans, long inSeed) : EEMessage(kMessageStartLoading, false), mNumHumanPlayers(inHumans), mSeed(inSeed) {}
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Start Loading"; }
 
@@ -1863,10 +1603,7 @@ public:
     EEMStartLoadingResponse(unsigned char* inData) { this->ImportMessage(inData); }
     EEMStartLoadingResponse(unsigned char inSlot, unsigned char inPlayerID, unsigned char inLobbySlot) : EEMessage(kMessageStartLoadingResponse, true), mSlot(inSlot), mPlayerID(inPlayerID), mLobbySlot(inLobbySlot) {}  // 0xcb815 (EEServer.cpp)
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Start Loading Response"; }
 
@@ -1880,10 +1617,7 @@ class EEMStopActiveGroup : public EEMessage {
 public:
     EEMStopActiveGroup(unsigned char* inData) { this->ImportMessage(inData); }
     EEMStopActiveGroup() : EEMessage(kMessageStopActiveGroup, false) {}  // inline (EEUIFMGStatusButton::Command)
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 };
@@ -1892,10 +1626,7 @@ public:
 class EEMToggleCollisionDetection : public EEMessage {
 public:
     EEMToggleCollisionDetection(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Toggle Collision Detection"; }
 
@@ -1907,10 +1638,7 @@ public:
 class EEMToggleDayNight : public EEMessage {
 public:
     EEMToggleDayNight(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Toggle Day/Night"; }
 };
@@ -1923,10 +1651,7 @@ public:
     // members in the initializer list: the inline expansions store +0x10/+0x14/+0x18 before the vptr (0x26f41b..)
     EEMUnloadTransport(long inUnitID, long inX, long inY)
         : EEMessage(kMessageUnloadTransport, false), mUnitID(inUnitID), mX(inX), mY(inY) {}
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Unload Unit(s) From Transport"; }
     // inline (Execute 0x4c8615 loads both into registers before the argument pushes; provisional names)
@@ -1944,10 +1669,7 @@ public:
     EEMUnselectAllUnits() : EEMessage(kMessageUnselectAllUnits, true) {}  // 0x332c (the editor's mouse click)
     EEMUnselectAllUnits(unsigned char* inData) { this->ImportMessage(inData); }
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 };
@@ -1958,10 +1680,7 @@ public:
     EEMUpdatePingStat(unsigned char* inData) { this->ImportMessage(inData); }
     EEMUpdatePingStat(unsigned char inSlot, float inPing) : EEMessage(kMessageUpdatePingStat, false), mPing(inPing), mSlot(inSlot) {}  // 0xcd262
     virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
@@ -1973,10 +1692,7 @@ public:
 class EEMZoomInfo : public EEMessage {
 public:
     EEMZoomInfo(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
-    virtual unsigned long ExportSize();
-    virtual void ImportMessage(unsigned char* inData);
-    virtual bool IsResponse(NEMessage* inMessage);
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Zoom Info"; }
 

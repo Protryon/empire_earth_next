@@ -615,7 +615,7 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::PointerOutside: {
         Window* window = t->GetRoot();
         if (window == NULL) return 0;
-        int x = window->mMouseX, y = window->mMouseY;
+        int x = window->GetMouseX(), y = window->GetMouseY();
         Container* parent = t->mParent;
         if (parent == NULL) return 0;
         parent->RootToChild(x, y);

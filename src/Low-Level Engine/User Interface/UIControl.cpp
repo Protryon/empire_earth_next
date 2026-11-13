@@ -22,6 +22,8 @@
 #include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
 #include "lle/GERhombus.h"
+#include "lle/GEBitmap.h"
+#include "lle/GEText.h"
 #include "lle/GELine.h"
 #include "lle/TSCriticalSection.h"
 #include "lle/UResourceFile.h"
@@ -31,6 +33,7 @@
 #include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
+#include "UIObjHost.h"
 
 GEColor UIControl::sDarkBorder(0.0f, 0.0f, 0.0f);
 GEColor UIControl::sLightBorder;
@@ -451,6 +454,98 @@ bool UIControl::ShiftKeyPressed()
     if (UIForm::sShiftKey->JustPressed() || UIForm::sShiftKey->GetValue())
         return true;
     return false;
+}
+
+// The ops every whole object's host shares (ee_ui obj.rs): UIControl's members on the object
+bool UIObjHost::Base(UIControl* c, EeUiOp inOp, intptr_t a, float* f, intptr_t* outResult)
+{
+    intptr_t r = 0;
+    switch (inOp) {
+    case EeUiOp::BaseCopyData: r = c->UIControl::CopyData(); break;
+    case EeUiOp::BaseDrawPolygons: r = c->UIControl::DrawPolygons(); break;
+    case EeUiOp::BaseDrawText: r = c->UIControl::DrawTextA(); break;
+    case EeUiOp::BaseSetLocation: c->UIControl::SetLocation(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::SetDirty: c->SetDirty(a != 0); break;
+    case EeUiOp::Rect: UIObjHost::PutRect(f, c->mRectangle); break;
+    case EeUiOp::MouseLocation: f[0] = c->GetMouseLocation().GetX(); f[1] = c->GetMouseLocation().GetY(); break;
+    case EeUiOp::CaptureMouse: c->CaptureMouse(); break;
+    case EeUiOp::ReleaseMouse: c->ReleaseCapturedMouse(); break;
+    case EeUiOp::FireTrigger: c->FireTriggerEvent((unsigned long)a); break;
+    case EeUiOp::BorderThickness: r = c->mBorderThickness; break;
+    case EeUiOp::Width: r = c->GetWidth(); break;
+    case EeUiOp::Index: r = c->mIndex; break;
+    case EeUiOp::BorderType: r = c->mBorderType; break;
+    case EeUiOp::SetBorderType: c->mBorderType = (unsigned long)a; break;
+    case EeUiOp::TabStop: r = c->GetForm()->GetTabStop(); break;
+    case EeUiOp::TabbingOn: r = c->GetForm()->GetTabbingOn(); break;
+    case EeUiOp::SetTabStop: c->GetForm()->SetTabStop((unsigned long)a); break;
+    case EeUiOp::Tabable: r = c->GetTabable(); break;
+    case EeUiOp::HasMouseCapture: r = c->GetHasMouseCapture(); break;
+    case EeUiOp::RightButtonDown: r = c->GetRightMouseButtonDown(); break;
+    case EeUiOp::Key: {
+        ISEntity* theKey = (a & 1) ? UIControl::sEnterKey : UIControl::sSpaceKey;
+        r = a < 2 ? theKey->JustPressed() : theKey->JustUnpressed();
+        break;
+    }
+    case EeUiOp::CaptureKeyboard: c->CaptureKeyboard(); break;
+    case EeUiOp::ReleaseKeyboard: c->ReleaseCapturedKeyboard(); break;
+    default: return false;
+    }
+    *outResult = r;
+    return true;
+}
+
+// The ops on the bitmaps and texts a whole object holds by address (ee_ui obj.rs): a the object, b an argument
+bool UIObjHost::Media(UIControl* c, EeUiOp inOp, intptr_t a, intptr_t b, float* f, intptr_t* outResult)
+{
+    GEBitmap* theBitmap = reinterpret_cast<GEBitmap*>(a);
+    GEText* theText = reinterpret_cast<GEText*>(a);
+    intptr_t r = 0;
+    switch (inOp) {
+    case EeUiOp::BitmapReference: theBitmap->Reference(); break;
+    case EeUiOp::BitmapRelease: theBitmap->Dereference(); break;
+    case EeUiOp::BitmapSetLocation: theBitmap->SetLocation(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::BitmapDraw: r = c->GetRasterizer()->Draw(theBitmap, c->GetScreenIndex()); break;
+    case EeUiOp::TextCreate: r = (intptr_t) new GEText(reinterpret_cast<GEFont*>(a)); break;
+    case EeUiOp::TextDelete: delete theText; break;
+    case EeUiOp::TextSetFont: theText->SetFont(reinterpret_cast<GEFont*>(b)); break;
+    case EeUiOp::TextLength: r = theText->GetText().GetLength(); break;
+    case EeUiOp::TextExtent:
+        f[0] = theText->GetTextExtent().GetWidth();
+        f[1] = theText->GetTextExtent().GetHeight();
+        break;
+    case EeUiOp::TextCopy: *theText = *reinterpret_cast<GEText*>(b); break;
+    case EeUiOp::TextSetText: theText->SetText(*reinterpret_cast<const UWideString*>(b)); break;
+    case EeUiOp::TextSetLocation: theText->SetLocation(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::TextSetFgColor: theText->SetFgColor(GEColor(f[0], f[1], f[2])); break;
+    case EeUiOp::DrawClippedText: r = c->GetForm()->DrawClippedText(UIObjHost::Rect(f), theText, c); break;
+    default: return false;
+    }
+    *outResult = r;
+    return true;
+}
+
+// The ops on a part a whole object owns (ee_ui obj.rs): another control's virtuals, by address
+bool UIObjHost::Part(UIControl* p, EeUiOp inOp, float* f, intptr_t* outResult)
+{
+    intptr_t r = 0;
+    switch (inOp) {
+    case EeUiOp::DeletePart: delete p; break;
+    case EeUiOp::PartCopyData: r = p->CopyData(); break;
+    case EeUiOp::PartDrawPolygons: r = p->DrawPolygons(); break;
+    case EeUiOp::PartDrawText: r = p->DrawTextA(); break;
+    case EeUiOp::PartRect: UIObjHost::PutRect(f, p->mRectangle); break;
+    case EeUiOp::PartMouseDown: r = p->MouseLButtonDown(); break;
+    case EeUiOp::PartMouseUp: r = p->MouseLButtonUp(); break;
+    case EeUiOp::PartMouseMove: r = p->MouseMove(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::PartSetLocation: p->SetLocation(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::PartSetRectangle: p->SetRectangle(UIObjHost::Rect(f)); break;
+    case EeUiOp::PartSetBgColor: p->SetBgColor(GEColor(f[0], f[1], f[2])); break;
+    case EeUiOp::PartSetBgOpacity: p->SetBgOpacity(f[0]); break;
+    default: return false;
+    }
+    *outResult = r;
+    return true;
 }
 
 // The Rust mouse dispatch's view of a control (ee_ui mouse.rs): the buttons' entities, the button-down members and

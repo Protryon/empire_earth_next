@@ -3,9 +3,13 @@
 #ifndef EE_EESCENARIOHOST_H
 #define EE_EESCENARIOHOST_H
 
+#include <vector>
 #include "rust/ee_scenario.h"
 
+class FSFile;
+class UWideString;
 class EESMCondition;
+class EESMTrigger;
 class EESMArea;
 class EESMObject;
 class EEUnit;
@@ -19,8 +23,17 @@ struct EESMHostContext {
 
 // the host table over inContext (it must outlive the Rust call)
 EeScenarioHost EESMHost(EESMHostContext* inContext);
-EeScenarioCondition EESMConditionRecord(const EESMCondition& inCondition);
 EeScenarioAreaRecord EESMAreaRecord(const EESMArea& inArea);
-EeScenarioObjectFilter EESMObjectFilter(const EESMObject& inObject);
+
+// an element's save (ee_scenario save.rs): its file, its strings by slot, its id list (NULL for none), the trigger
+// whose entries it reads or writes (NULL for none)
+struct EESMStream {
+    FSFile* mFile;
+    UWideString* const* mStrings;
+    std::vector<unsigned long>* mList;
+    EESMTrigger* mTrigger;
+};
+// the stream table over inStream (it must outlive the Rust call)
+EeScenarioStream EESMStreamTable(EESMStream* inStream);
 
 #endif

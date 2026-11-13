@@ -13,13 +13,20 @@
 //! - [`object`]: `EESMObject::AcceptsClass` and `PickUnitType` (the class filter by epoch, family, AI kind, set).
 //! - [`trigger`]: `EESMTrigger::Evaluate` with its condition chain (`EESMTConditionWrapper::Evaluate`), duration
 //!   and the timed effects it schedules.
+//! - [`fields`]: the effect's, condition's and object's numbers as records the C++ classes derive from (their
+//!   defaults and index upkeep); [`save`]: their `Load` and `Save` over [`stream`], the `FSFile` calls by operation.
+//! - [`aivar`]: the Set AI Variable effect's table as data (`EESMEffect::SetAIVariable`).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
+pub mod aivar;
 pub mod area;
 pub mod condition;
 pub mod ffi;
+pub mod fields;
 pub mod host;
 pub mod object;
+pub mod save;
+pub mod stream;
 pub mod trigger;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the
