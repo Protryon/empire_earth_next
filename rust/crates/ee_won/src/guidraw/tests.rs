@@ -765,3 +765,55 @@ fn deliver_reports_the_whole_length() {
     assert_eq!(buf[0], ops[0]);
     assert_eq!(buf[3], ops[3]);
 }
+
+/// TextListItem's and MenuItem's measure and MenuItem's paint against `golden_itemobj.txt` (printed by
+/// `tests/won/won_itemobj_test.cpp --print` over the original statements and a recording Graphics).
+#[test]
+fn item_measures_and_menu_item_paint_are_the_originals() {
+    let golden = include_str!("../golden_itemobj.txt");
+    let mut lines = golden.lines().peekable();
+    let mut cases = 0;
+    while let Some(line) = lines.next() {
+        let c: Vec<i64> = line.split_whitespace().skip(1).map(|w| w.parse().unwrap_or(0)).collect();
+        assert!(line.starts_with("case ") && c.len() >= 20, "{line}");
+        let (list_tw, list_h, own_tw, own_h, img_w, img_h) = (c[0], c[1], c[2], c[3], c[4], c[5]);
+        let own_font = c[15] != 0;
+        let has_image = c[16] != 0;
+        let menu = c[19] != 0;
+        let (tw, fh) = if own_font { (own_tw, own_h) } else { (list_tw, list_h) };
+        let size: Vec<i32> =
+            lines.next().unwrap_or("").split_whitespace().skip(1).map(|w| w.parse().unwrap_or(0)).collect();
+        let got = text_item_size(tw as i32, fh as i32, has_image, img_w as i32, img_h as i32, menu);
+        assert_eq!((got.0, got.1), (size[0], size[1]), "case {cases} size");
+        let wh: Vec<i32> =
+            lines.next().unwrap_or("").split_whitespace().skip(1).map(|w| w.parse().unwrap_or(0)).collect();
+        let color = if c[12] == -1 { c[13] as u32 } else { c[12] as u32 };
+        let r = EeWonMenuItemPaint {
+            selected: c[14] != 0,
+            full_row_select: c[6] & 0x10 != 0,
+            has_image,
+            disabled: c[18] != 0,
+            has_submenu: c[17] != 0,
+            sel: EeWonSelColor { background: c[10] as u32, foreground: c[11] as u32, mode: c[9] as i32 },
+            color,
+            paint_width: c[7] as i32,
+            width: wh[0],
+            height: wh[1],
+            image_height: if has_image { img_h as i32 } else { 0 },
+            font_height: fh as i32,
+            view_width: c[8] as i32,
+        };
+        let mut want = Vec::new();
+        while let Some(l) = lines.peek() {
+            if !l.starts_with("op ") {
+                break;
+            }
+            want.push(lines.next().unwrap_or("").to_string());
+        }
+        let ops: Vec<String> =
+            menu_item(&r).iter().map(|o| format!("op {} {} {} {} {}", o.kind, o.a, o.b, o.c, o.d)).collect();
+        assert_eq!(ops, want, "case {cases} paint");
+        cases += 1;
+    }
+    assert_eq!(cases, 400);
+}

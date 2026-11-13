@@ -9,7 +9,6 @@
 #include "ee/EESETSEffectType.h"
 #include <vector>
 
-class EESEEChangeEffectAction;
 class EESETSEffectControls;
 class EESMEffect;
 
@@ -39,7 +38,7 @@ public:
     //   [9] EESETSETPVisibility
     //   [10] EESETSETPVisibility (a second instance)
     //   [11] EESETSETMiniMapFlare
-    EESEEChangeEffectAction* mAction;                                                               // +0x34 (new 0xc: the action combo's trigger event)
+    UIEvent* mAction;                                                                               // +0x34 (new 0xc: the action combo's trigger event)
     long mCurrentType;                                                                              // +0x38 (0 in the ctor)
 };
 

@@ -263,7 +263,7 @@ pub unsafe extern "C" fn ee_gfx_effect_plane(
 // ---- the effect manager's containers (effect_store.rs, EEEffectManager.cpp)
 
 /// The effect manager's containers (opaque to the C++).
-pub struct EeGfxEffectStore(EffectStore);
+pub struct EeGfxEffectStore(pub(crate) EffectStore);
 
 fn store<'a>(s: *const EeGfxEffectStore) -> &'a EffectStore {
     // SAFETY: the C++ passes the store `ee_gfx_effects_new` made, alive until `ee_gfx_effects_free`

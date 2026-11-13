@@ -82,105 +82,30 @@
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EESEAPaint.h"
 #include "ee/EEUIFSEPaintElevation.h"
-
-// 0x445618: the height of one elevation level, defined in EEUIFSEPaintElevation.cpp (its MouseMove reads the
-// same word)
-extern const float kSEPELevelHeight;
-static const float kSEAPEHillHeight = 0.81649655f;   // 0x44598c (provisional name)
-static const float kSEAPEHillLimit = 1.6329931f;     // 0x445988 (provisional name)
+#include "rust/ee_screens.h"
 
 // FUNCTION: EXE 0x5a830a
 // Raises each queued area as the elevation tab's buttons say (a plateau at the level, rough hills at 4x, or flat
-// ground), fixes its cliffs and redraws the minimap; tells the effects about the last area only
+// ground), fixes its cliffs and redraws the minimap; tells the effects about the last area only (ee_screens
+// editor_actions.rs)
 void EESEAPaintElevation::Virtual4()
 {
-    EEMap* theMap = gWorld.mMap;
-    EESEAPaintRegion theRegion;
-    float theHeight;
-    float thePlateau;
-    float theSlope;
-    float theRoughness;
-    bool theRaise;
-
-    gB529066 = false;
-    gCameraFollowing = false;
-    gB529068 = false;
-    if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true) {
-        theHeight = this->mLevel * kSEPELevelHeight;
-        theRaise = true;
-        theSlope = 0.40824829f;
-        thePlateau = 0.0f;
-        theRoughness = 1.0f;
-    } else if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true) {
-        theHeight = this->mLevel * kSEAPEHillHeight;
-        theRaise = true;
-        theSlope = 1.6329931f;
-        thePlateau = 0.0f;
-        if (theHeight < kSEAPEHillLimit)
-            theRoughness = 0.4f;
-        else
-            theRoughness = 0.26f;
-    } else {
-        theRaise = false;
-        theHeight = 0.0f;
-        thePlateau = 0.40824829f;
-        theSlope = 1.6329931f;
-        theRoughness = 1.0f;
-    }
-    while (this->mPendingAreas.size() != 0) {
-        theRegion = this->mPendingAreas.back();
-        this->mPendingAreas.pop_back();
-        this->mPaintedAreas.push_back(theRegion);
-        theMap->Raise(&theRegion.mLeft, &theRegion.mRight, &theRegion.mTop, &theRegion.mBottom, theHeight, thePlateau,
-                      theSlope, theRoughness, theRaise);
-        theMap->RemoveFlatCliffs(theRegion.mLeft, theRegion.mRight + 1, theRegion.mBottom, theRegion.mTop + 1);
-        theMap->UpdateCliffs(theRegion.mLeft - 2, theRegion.mRight + 3, theRegion.mBottom - 2, theRegion.mTop + 3);
-        gMiniMap->RedrawRect(theRegion.mLeft, theRegion.mRight, theRegion.mTop, theRegion.mBottom);
-    }
-    static_cast<EEUIFSEPaint*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationPaint))->StoreMouseTile();
-    gEffectManager->ElevationChanged(theRegion.mLeft, theRegion.mTop, theRegion.mRight, theRegion.mBottom);
-    gMiniMap->Refresh();
+    ee_screens_sea_paint_run(this->mPlan);
 }
 
 // FUNCTION: EXE 0x5a8507
-// Queues the area unless every point already sits at the level's height; returns whether it queued
+// Queues the area unless every point already sits at the level's height; returns whether it queued (ee_screens
+// editor_actions.rs)
 bool EESEAPaintElevation::SetArea(long inLeft, long inTop, long inRight, long inBottom)
 {
-    EESEAPaintRegion theRegion;
-    bool theChanged = false;
-    long x;
-    long y;
-    // the height Virtual4 paints for this level (plateau, hills at 4x, or flat ground), in world units like the
-    // vertex heights
-    float theHeight;
-    if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true)
-        theHeight = this->mLevel * kSEPELevelHeight;
-    else if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true)
-        theHeight = this->mLevel * kSEAPEHillHeight;
-    else
-        theHeight = 0.0f;
-    for (y = inTop + 1; y >= inBottom; y--) {
-        for (x = inLeft; x <= inRight + 1; x++) {
-            if (gWorld.mMap->mTerrainMesh.GetIsValidPoint(x, y) && gWorld.mMap->mTerrainMesh.GetZ(x, y) != theHeight)
-                theChanged = true;
-        }
-    }
-    if (theChanged) {
-        theRegion.mLeft = inLeft;
-        theRegion.mTop = inTop;
-        theRegion.mRight = inRight;
-        theRegion.mBottom = inBottom;
-        this->mPendingAreas.push_back(theRegion);
-    }
-    return theChanged;
+    return ee_screens_sea_paint_set_area(this->mPlan, inLeft, inTop, inRight, inBottom) != 0;
 }
 
 // FUNCTION: EXE 0x5a85d2
-// Returns the last queued elevation area (deque<EESEAPaintRegion>::back)
+// (deque<EESEAPaintRegion>::back: the queues are editor_actions.rs's)
 
 // FUNCTION: EXE 0x5a85f1
-// Grows the block map of the elevation area queue (deque<EESEAPaintRegion>::_Growmap; ICF-shared with
-// deque<EEComplexUnitWaypoint>'s)
+// (deque<EESEAPaintRegion>::_Growmap: likewise)
 
 // ICF-FOLDED: EXE 0x4e123d
 // (no address of its own: folded into the shared `ret` body the vtable slot points at)

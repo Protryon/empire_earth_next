@@ -1,13 +1,18 @@
 // New (port; docs/RUST_PLAN.md R5b.4, rounds 16 and 17): the goals whose class moved whole into Rust. The object is
 // the EEUnitGoal the queues, the unit's mGoalState and the save hold (its base fields, its vtable); its own state and
 // bodies are Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind: patrol.rs for kGoalPatrol,
-// calamity.rs for kGoalCastCalamity, explore.rs for kGoalExplore, unload.rs for kGoalUnloadTransport), every
-// virtual one call. Replaces EEUGPatrol (0x227de8..0x2283bc; EEPlayer's SetPatrolGroup 0x563659 with it),
-// EEUGCastCalamity (0x220986..0x2213dd), EEUGExplore (0x2213dd..0x221d98) and EEUGUnloadTransport
-// (0x2283bc..0x228c4c): their classes and files are deleted.
+// calamity.rs for kGoalCastCalamity, explore.rs for kGoalExplore, unload.rs for kGoalUnloadTransport, load.rs for
+// kGoalLoadTransport and kGoalLoadGarrison), every virtual one call. Replaces EEUGPatrol (0x227de8..0x2283bc;
+// EEPlayer's SetPatrolGroup 0x563659 with it), EEUGCastCalamity (0x220986..0x2213dd), EEUGExplore
+// (0x2213dd..0x221d98), EEUGUnloadTransport (0x2283bc..0x228c4c) and the load goals EEUGLoadContainer
+// (0x22585a..0x226a43), EEUGLoadGarrison (0x226a43..0x2271c7) and EEUGLoadTransport (0x2271c7..0x227621): their
+// classes and files are deleted.
 #ifndef EE_EEUGRUST_H
 #define EE_EEUGRUST_H
 
+#include <vector>
+
+#include "lle/U2DPoint.h"
 #include "ee/EEUnitGoal.h"
 
 class EEComplexUnit;
@@ -61,7 +66,28 @@ public:
     // the transport dropped without its release (the air bomber's unused goal keeps the plane's reference)
     void ForgetUnloadTransport();
 
+    // a load goal (kGoalLoadTransport, kGoalLoadGarrison): the container and the units, all referenced; inUnits is
+    // sorted by id and loses its duplicates, as the original constructors did to the caller's list
+    // (EEUGLoadTransport/EEUGLoadGarrison(inContainer, inUnits, inArg)); or the load's empty goal
+    static EEUGRust* NewLoad(unsigned char inKind, EEComplexUnit* inContainer, std::vector<EEComplexUnit*>& inUnits,
+                             bool inArg);
+    static EEUGRust* NewLoad(unsigned char inKind, bool inArg);
+    // the container, its and the units' rendezvous tiles, the garrison's valid flag (a building it can upgrade or a
+    // capitol); the units to load (each added unless listed)
+    EEComplexUnit* GetLoadContainer();
+    U2DPoint<long> GetLoadContainerTile();
+    U2DPoint<long> GetLoadUnitTile();
+    bool IsLoadGarrisonValid();
+    unsigned long GetNumLoadUnits();
+    EEComplexUnit* GetLoadUnitAt(unsigned long inIndex);
+    bool HasLoadUnit(EEComplexUnit* inUnit);
+    void AddLoadUnit(EEComplexUnit* inUnit);
+    void AddLoadUnits(const std::vector<EEComplexUnit*>& inUnits);
+
     virtual ~EEUGRust();
+    virtual void AddCreatedUnit(EEComplexUnit* inUnit);
+    virtual bool IsLoadGoal();
+    virtual void Abandon(EEComplexUnit* inUnit);
     virtual void GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation);
     virtual EEUnitGoal* Clone();
     virtual void DumpOutOfSynch(FILE* inFile);
@@ -103,6 +129,20 @@ inline EEUGRust* EEExploreGoalCast(EEUnitGoal* inGoal)
 inline EEUGRust* EEUnloadGoalCast(EEUnitGoal* inGoal)
 {
     return EERustGoalCast(inGoal, kGoalUnloadTransport);
+}
+// the old dynamic_cast<EEUGLoadTransport*>, <EEUGLoadGarrison*> and <EEUGLoadContainer*> (either)
+inline EEUGRust* EELoadTransportGoalCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalLoadTransport);
+}
+inline EEUGRust* EELoadGarrisonGoalCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalLoadGarrison);
+}
+inline EEUGRust* EELoadGoalCast(EEUnitGoal* inGoal)
+{
+    EEUGRust* theGoal = EELoadTransportGoalCast(inGoal);
+    return theGoal != NULL ? theGoal : EELoadGarrisonGoalCast(inGoal);
 }
 
 #endif

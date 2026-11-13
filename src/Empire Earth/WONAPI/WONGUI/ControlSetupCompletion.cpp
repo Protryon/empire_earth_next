@@ -1,4 +1,4 @@
-// Container mouse refresh and the WON scroll container's constructor and attribute copy (file name inferred)
+// The WON scroll container's constructor and attribute copy (file name inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -12,16 +12,6 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinnedContainers.h"
 namespace WONAPI {
-// FUNCTION: WON 0x006f66c0
-// Re-sends the current mouse position as a move if the mouse is inside the window
-void Container::MouseAt()
-{
-    if(!this->GetRoot()->mMouseIsInClientArea)
-        return;
-    int x,y;
-    this->GetMousePos(x,y);
-    this->MouseMove(x,y);
-}
 // Creates a WON scroll container with no header and an opaque background (emitted at 0x00719c50)
 WONScrollContainer::WONScrollContainer()
 {

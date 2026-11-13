@@ -41,8 +41,7 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGLoadContainer.h"
-#include "ee/EEUGLoadGarrison.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 
 // the icons' spacing across the queues (0x441294) and the markers' height (0x441298) (provisional names)
@@ -219,7 +218,7 @@ void EEGraphicalGoalManager::Rebuild(long inPlayer)
             long thePrevious = -1;
             for (unsigned long g = 0; g < theUnit->mGoalQueues[q].mGoals.size(); g++) {
                 EEUnitGoal* theGoal = theUnit->mGoalQueues[q].mGoals[g];
-                if (theGoal->mKind == kGoalLocation && dynamic_cast<EEUGLocation*>(theGoal)->mIsAutoWaypoint)
+                if (theGoal->mKind == kGoalLocation && dynamic_cast<EEUGLocation*>(theGoal)->GetIsAutoWaypoint())
                     continue;
                 EEUnitGoal* thePreviousGoal = NULL;
                 if (g > 0 && thePrevious != -1)
@@ -232,9 +231,9 @@ void EEGraphicalGoalManager::Rebuild(long inPlayer)
                     theFrom = GE3DPoint(theUnit->mContainer->mPhysicalModel.GetLocation());
                 theGoal->GetGoalLocation(theTo);
                 if (theGoal->mKind == kGoalLoadGarrison) {
-                    EEUGLoadGarrison* theGarrison = dynamic_cast<EEUGLoadGarrison*>(theGoal);
+                    EEUGRust* theGarrison = EELoadGarrisonGoalCast(theGoal);
                     if (theGarrison != NULL)
-                        theTarget = theGarrison->mContainer;
+                        theTarget = theGarrison->GetLoadContainer();
                 } else if (theGoal->mKind == kGoalAttackUnit) {
                     EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
                     if (theAttack != NULL)

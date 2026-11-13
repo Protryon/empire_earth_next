@@ -87,8 +87,6 @@
 void EEPostGraphicsAll();
 extern RTSRenderObject* gU56534C;
 
-// EEUIEOpenCivBuilder (RTTI 0x445100): the original news 0xc bytes and its ctor initializes only the UIEvent base
-
 // The seven editor tabs, original VA 0x8c46d0, stride 0x20 (provisional names).
 // 0x19eba9 reads order/help/normal+pressed cells/flag while constructing the buttons;
 // 0x19ef5a dispatches group numbers; 0x19f615 reads full-view and brush flags.
@@ -125,7 +123,6 @@ struct EESEToolbarButton {
 //     {0xf, 0x336, 0x2e0, 0x80, 0xc4, 0xa0, 0xc4, 0x213f}
 // };
 
-#include "ee/EESEEditorEvents.h"
 
 #include "lle/UIFullBackground.h"
 
@@ -265,44 +262,3 @@ void EEUIFSEBrushGroup::SetHighlight(float inX, float inY, bool inIsCentered)
     }
 }
 
-// FUNCTION: EXE 0x5a085f
-// Switches the elevation tab between hills (elevation slider), cliffs (strength slider) and cliff paths (no
-// slider), showing the chosen tool's level in the value label
-long EEUIEElevationTool::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UISlider* theSlider = static_cast<UISlider*>(inForm->GetControlById(kSEElevationElevationSlider));
-    UISlider* theEdit = static_cast<UISlider*>(inForm->GetControlById(kSEElevationStrengthSlider));
-    UIControl* theFirstLabel = inForm->GetControlById(kSEElevationElevationTitle);
-    UIControl* theSecondLabel = inForm->GetControlById(kSEElevationStrengthTitle);
-    UIControl* theValueLabel = inForm->GetControlById(kSEElevationStrengthLabel);
-    long theValue;
-    switch (static_cast<UIControl*>(inEntity)->GetId()) {
-    case kSEElevationRaiseButton:
-        theEdit->SetDisplayMode(kDisplayModeHidden);
-        theSlider->SetDisplayMode(kDisplayModeShown);
-        theFirstLabel->SetDisplayMode(kDisplayModeShown);
-        theSecondLabel->SetDisplayMode(kDisplayModeShown);
-        theValueLabel->SetDisplayMode(kDisplayModeShown);
-        theValue = 40 - theSlider->GetCurrentRangeValue();
-        break;
-    case kSEElevationLowerButton:
-        theEdit->SetDisplayMode(kDisplayModeShown);
-        theSlider->SetDisplayMode(kDisplayModeHidden);
-        theFirstLabel->SetDisplayMode(kDisplayModeShown);
-        theSecondLabel->SetDisplayMode(kDisplayModeShown);
-        theValueLabel->SetDisplayMode(kDisplayModeShown);
-        theValue = (long)(40.0f - (float)theEdit->GetCurrentRangeValue() * 4.0f);
-        break;
-    case kSEElevationLevelButton:
-        theEdit->SetDisplayMode(kDisplayModeHidden);
-        theSlider->SetDisplayMode(kDisplayModeHidden);
-        theFirstLabel->SetDisplayMode(kDisplayModeHidden);
-        theSecondLabel->SetDisplayMode(kDisplayModeHidden);
-        theValueLabel->SetDisplayMode(kDisplayModeHidden);
-        return kErrorOK;
-    default:
-        return kErrorOK;
-    }
-    static_cast<UITextLabel*>(theValueLabel)->SetText(theValue);
-    return kErrorOK;
-}

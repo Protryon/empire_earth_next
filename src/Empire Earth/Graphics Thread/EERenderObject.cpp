@@ -28,6 +28,7 @@
 #include "lle/GEScreen.h"
 #include "lle/GEViewport.h"
 #include "lle/GEVertexArray.h"
+#include "rust/ee_gfx.h"
 #include "lle/GEPolygonArray.h"
 #include "lle/GERasterizer.h"
 #include "lle/GEMaterial.h"
@@ -125,27 +126,13 @@ float gU4E92EC[17];                         // 0x4e92ec
 float gU4E92A8[17];                         // 0x4e92a8
 float gU4E9264[17];                         // 0x4e9264
 // 0x4413ac: EEInitialiseScene's 0.549f is a literal (__real COMDAT; the fst chain of a literal, not a static const reload)
-static const float kEERenderObject_F44134C = 50.0f;    // 0x44134c (the ground circles' segments)
-// Fn10C036's constants (.rdata 0x441334..) (provisional names)
-static const float kEERenderObject_F441334 = 0.0f;
-static const float kEERenderObject_F441338 = 1600.0f;
-static const float kEERenderObject_F44133C = 35.0f;
-static const float kEERenderObject_F441340 = 1085.0f;
-static const float kEERenderObject_F441348 = 0.8f;
-static const float kEERenderObject_F441360 = 0.42553192f;
-static const float kEERenderObject_F4413B0 = 0.333333f;
-static const float kEERenderObject_F4413B4 = 0.9375f;
-static const float kEERenderObject_F4413B8 = 0.5625f;
-static const float kGameViewScaleY = 1.0f / 1200.0f;   // 0x4413bc
-static const float kEERenderObject_F4413C0 = 1200.0f;
-static const float kEERenderObject_F4413C4 = 5.0e-05f;
-static bool sB529088;                       // 0x529088 (the letterbox is cleared again; provisional name)
-static unsigned long sSwayClock;            // 0x529084 (+2 every 33 ms: FillRenderLists; the objects' sway; provisional name)
-static const float kEERenderObject_F441344 = 0.017453292f;   // 0x441344 (degrees to radians)
-static const float kEERenderObject_F441354 = 0.025f;         // 0x441354
+// Fn10C036's constants (.rdata 0x441334..0x4413c4: the view band, the clocks' rates, the moon's hours, the fill share):
+// ee_gfx scene.rs
+static uint32_t sSwayClock;                 // 0x529084 (+2 every 33 ms: FillRenderLists; the objects' sway; provisional name)
+// 0x441344 (degrees to radians), 0x441354 (the objects' size step): ee_gfx capture.rs
 bool GetTileHasTree(EETile* inTile);
 static unsigned long sU529090;              // 0x529090 (the music check's last time; provisional name)
-static unsigned long sU529094;              // 0x529094 (the sway clock's last time; provisional name)
+static uint32_t sU529094;                   // 0x529094 (the sway clock's last time; provisional name)
 static unsigned long sL52908C;              // 0x52908c (the frame counter; provisional name)
 EERenderUnit* gU529044;                     // 0x529044 (the picked enemy's render unit: FillUnit; EEROUnits.cpp reads it; provisional name)
 static const float kEERenderObject_F441350 = 0.35f;   // 0x441350 (the see-through opacity)
@@ -198,13 +185,12 @@ GEViewport gU4E8F08;
 // SYNTHETIC: EXE 0x50ae31   (registrar)
 // SYNTHETIC: EXE 0x50ae3d   (dtor)
 
-// the lights' intensity scales (0x4be368, 0x4be36c; .data) (provisional names)
-static float sLightFade = 1.0f;
-static float sLightFadeStart = 1.0f;
-// the frame interpolation (0x4be370..; .data) (provisional names)
-static long sLetterboxDirection = 1;      // 0x4be370
-float gF4BE374 = 1.0f;                     // (EEScenarioManager.cpp reads it)
-static float sLetterboxStart = 1.0f;
+// the light fade (0x4be368 sLightFade, 0x4be36c its start, 0x529070.. its direction, rate and time) and the
+// letterbox (0x4be370 its direction, 0x4be378 its start, 0x52907c.. its rate and time, 0x529088 the bars to clear
+// again): ee_gfx scene.rs (RUST_PLAN R4.4), which steps them; the C++ keeps the storage
+static EeGfxSceneFade sSceneFade = {1.0f, 1.0f, 0, 0.0f, 0.0f, 1, 1.0f, 0.0f, 0.0f, false};
+static float& sLightFade = sSceneFade.light_fade;
+float gF4BE374 = 1.0f;                     // 0x4be374 the letterbox's zoom (EEScenarioManager.cpp reads it)
 // the space-cliff and cliff-edge texture names (0x4be37c; .data, the literals follow it) (provisional name)
 static const char* sCliffTextures[13] = {
     "textures\\spacecliff_1", "textures\\spacecliff_2", "textures\\spacecliff_3", "textures\\spacecliff_4",
@@ -212,14 +198,9 @@ static const char* sCliffTextures[13] = {
     "textures\\cliffedge_1", "textures\\cliffedge_2", "textures\\cliffedge_3", "textures\\cliffedge_4",
     "textures\\cliffedge_5"
 };
-static float sF52907C;                      // 0x52907c
-static float sF529080;                      // 0x529080
 // EEInitialiseScene's state (provisional names)
 static GEBitmap* sU529060;                  // 0x529060
 static bool sSceneInitialised;              // 0x529064 (EEInitialiseScene ran)
-static long sL529070;                       // 0x529070
-static float sF529074;                      // 0x529074
-static float sF529078;                      // 0x529078
 // the unit's other .bss globals (declared in ee/EERenderLists.h, ee/EEGraphics.h, ee/EmpireEarth.h; their address
 // neighbours and references are this unit's) (provisional names)
 bool gB529065;                              // 0x529065
@@ -370,19 +351,11 @@ void EEInitialiseScene()
     gU4E9240[0].Normalize();
     gU4E9240[1].Normalize();
     gU4E9240[2].Normalize();
-    sLightFade = 1.0f;
-    sL529070 = 0;
+    ee_gfx_scene_reset(&sSceneFade);
     gB529066 = false;
-    sF529074 = 0.0f;
     gCameraFollowing = false;
     gB529068 = false;
-    sLetterboxDirection = 1;
-    sF529078 = 0.0f;
-    sLightFadeStart = 1.0f;
     gF4BE374 = 1.0f;
-    sF52907C = 0.0f;
-    sF529080 = 0.0f;
-    sLetterboxStart = 1.0f;
     for (unsigned long i = 0; i < 5; i++)
         gEffectQueues[i].clear();
     for (unsigned long j = 0; j < 0x200; j++)
@@ -399,28 +372,14 @@ void EEInitialiseScene()
 // Starts closing the letterbox bars over the given number of frames (at once for 0)
 void EEStartLetterboxOut(unsigned long inFrames)
 {
-    sLetterboxStart = gF4BE374;
-    sF529080 = 0.0f;
-    sLetterboxDirection = 1;
-    if (inFrames == 0) {
-        sF52907C = 3.4028235e+38f;
-        return;
-    }
-    sF52907C = 1.0f / (float)inFrames;
+    ee_gfx_scene_start_letterbox(&sSceneFade, true, (uint32_t)inFrames, gF4BE374);
 }
 
 // FUNCTION: EXE 0x50b36a
 // Starts opening the letterbox bars over the given number of frames (at once for 0)
 void EEStartLetterboxIn(unsigned long inFrames)
 {
-    sLetterboxDirection = 0;
-    sF529080 = 0.0f;
-    sLetterboxStart = gF4BE374;
-    if (inFrames == 0) {
-        sF52907C = 3.4028235e+38f;
-        return;
-    }
-    sF52907C = 1.0f / (float)inFrames;
+    ee_gfx_scene_start_letterbox(&sSceneFade, false, (uint32_t)inFrames, gF4BE374);
 }
 
 // FUNCTION: EXE 0x50b3b3
@@ -583,7 +542,6 @@ void EERenderObject::DrawGroundCircle(const GETransformation& inLocation, float 
 {
     EERenderLine theLine;
     std::pair<GE3DPoint, float> theVertex;
-    GETerrainMesh* theMesh = &gWorld.mMap->mTerrainMesh;
     if (inMode == 1 || inMode != 2)
         return;
     gU529050.push_back(theLine);
@@ -591,24 +549,17 @@ void EERenderObject::DrawGroundCircle(const GETransformation& inLocation, float 
     theBack.mWidth = gU4E9330;
     theBack.mTexture = gAreaEffectTexture;
     gAreaEffectTexture->Reference();
+    // the 50 points on the ground and the first again, the strip's width: ee_gfx capture.rs
+    EeGe3DPoint thePoints[0x33];
+    EeGfxParticleGround theGround = EEParticleGround();
+    theVertex.second = ee_gfx_capture_ground_circle(&theGround, inLocation.GetX(), inLocation.GetY(), inRadius, thePoints);
     theBack.mPoints.resize(0x33, std::pair<GE3DPoint, float>());
-    float theX = inLocation.GetX();
-    float theY = inLocation.GetY();
-    theVertex.second = UMSin(6.2831855f / kEERenderObject_F44134C) * inRadius;
-    for (unsigned long i = 0; i < 0x32; i++) {
-        float theAngle = i / kEERenderObject_F44134C * 6.2831855f - 3.1415927f;
-        theVertex.first.mX = UMCos(theAngle) * inRadius + theX;
-        theVertex.first.mY = UMSin(theAngle) * inRadius + theY;
-        if (theMesh->GetIsValidTile(UMFloorUnsigned(theVertex.first.GetX()), UMFloorUnsigned(theVertex.first.GetY()))) {
-            theVertex.first.mZ = theMesh->GetMeshZ(theVertex.first.GetX(), theVertex.first.GetY());
-            if (theVertex.first.GetZ() < 0.0f)
-                theVertex.first.mZ = 0.0f;
-        } else {
-            theVertex.first.mZ = 0.0f;
-        }
+    for (unsigned long i = 0; i < 0x33; i++) {
+        theVertex.first.mX = thePoints[i].x;
+        theVertex.first.mY = thePoints[i].y;
+        theVertex.first.mZ = thePoints[i].z;
         theBack.mPoints[i] = theVertex;
     }
-    theBack.mPoints[0x32] = theBack.mPoints[0];
 }
 
 // FUNCTION: EXE 0x50bdd2
@@ -676,98 +627,58 @@ void EERenderObject::Fn10C036()
 {
     GERectangle theRectangle;
     GEColor theBlack(0.0f, 0.0f, 0.0f);
-    GERectangle theView;
     GEVector theForward(0.0f, 1.0f, 0.0f);
     GEVector theDirection;
-    GEColor theColor;
-    GEColor theBlend;
     float theTimeOfDay = gWorld.mTimeOfDay;
     static unsigned long sLastTime = TMGetTime();
-    bool theChanged = false;
     if (gB529066)
         return;
     unsigned long theNow = TMGetTime();
     float theElapsed = (float)(theNow - sLastTime);
     sLastTime = theNow;
-    gU4E9330 += theElapsed * kEERenderObject_F441348 / 1000.0f;
-    if (gU4E9330 >= 1.0f)
-        gU4E9330 -= 1.0f;
+    // the clocks, the fade and the letterbox: ee_gfx scene.rs (the progress in double, as the x87 build's: see there)
     gRenderEnvironment.mWindSpeed = gWorld.mEnvironmentManager->mWind;
-    gRenderEnvironment.mWaterPhase += theElapsed * kEERenderObject_F4413C4 * 6.2831855f;
-    gRenderEnvironment.mCloudOffset += theElapsed * gRenderEnvironment.mWindSpeed;
-    sF529078 += theElapsed;
-    // The fade and letterbox progress (rate * elapsed ms) is evaluated in double, as the x87 build kept it in an
-    // extended-range register: a fade "at once" is the rate FLT_MAX, and FLT_MAX * elapsed overflows a float to
-    // infinity, where (1 - 1) * inf is a NaN; a NaN fade blacked out the whole 3D view on SSE (x64).
-    float theFade;
-    double theProgress = (double)sF529074 * sF529078;
-    if (sL529070 == 0)
-        theFade = (float)(sLightFadeStart + (1.0 - sLightFadeStart) * theProgress);
-    else
-        theFade = (float)((1.0 - theProgress) * sLightFadeStart);
-    if (theFade > 1.0f)
-        theFade = 1.0f;
-    else if (theFade < 0.0f)
-        theFade = 0.0f;
-    if (theFade != sLightFade)
-        theChanged = true;
-    sLightFade = theFade;
-    sF529080 += theElapsed;
-    float theZoom;
-    theProgress = (double)sF52907C * sF529080;
-    if (sLetterboxDirection == 1)
-        theZoom = (float)(sLetterboxStart + (1.0 - sLetterboxStart) * theProgress);
-    else
-        theZoom = (float)((1.0 - theProgress) * sLetterboxStart);
-    if (theZoom > 1.0f)
-        theZoom = 1.0f;
-    else if (theZoom < 0.0f)
-        theZoom = 0.0f;
-    if (sB529088 == true || theZoom == 0.0f) {
-        float theHalf = (kEERenderObject_F4413C0 - (kEERenderObject_F441338 - kEERenderObject_F441334)
-                         * kEERenderObject_F441360) * 0.5f;
-        float theInverse = 1.0f - theZoom;
-        theView.mTop = theInverse * theHalf + kEERenderObject_F44133C * theZoom;
-        theView.mBottom = (kEERenderObject_F4413C0 - theHalf) * theInverse + kEERenderObject_F441340 * theZoom;
-        theRectangle.mLeft = 0.0f;
-        theRectangle.mRight = (float)gGameWindowWidth;
+    EeGfxSceneClocks theClocks = {gU4E9330, gRenderEnvironment.mWaterPhase, gRenderEnvironment.mCloudOffset};
+    ee_gfx_scene_step_clocks(&theClocks, theElapsed, gRenderEnvironment.mWindSpeed);
+    gU4E9330 = theClocks.grid_phase;
+    gRenderEnvironment.mWaterPhase = theClocks.water_phase;
+    gRenderEnvironment.mCloudOffset = theClocks.cloud_offset;
+    EeGfxSceneStep theStep = ee_gfx_scene_step(&sSceneFade, theElapsed, gF4BE374);
+    EeGfxLetterbox theBox = ee_gfx_scene_letterbox(theStep.zoom, (float)gGameWindowHeight);
+    theRectangle.mLeft = 0.0f;
+    theRectangle.mRight = (float)gGameWindowWidth;
+    if (theStep.clear_bars) {
         theRectangle.mTop = 0.0f;
-        theRectangle.mBottom = gGameWindowHeight * kGameViewScaleY * theView.GetTop();
+        theRectangle.mBottom = theBox.top_bar_end;
         gRasterizer->Clear(theBlack, theRectangle, gScreenIndex);
-        theRectangle.mTop = gGameWindowHeight * kGameViewScaleY * theView.mBottom;
+        theRectangle.mTop = theBox.bottom_bar_start;
         theRectangle.mBottom = (float)gGameWindowHeight;
         gRasterizer->Clear(theBlack, theRectangle, gScreenIndex);
-        sB529088 = false;
     }
-    if (theZoom != gF4BE374) {
-        theView.SetLeft(kEERenderObject_F441334);
-        theView.SetRight(kEERenderObject_F441338);
-        float theHalf = (kEERenderObject_F4413C0 - (kEERenderObject_F441338 - kEERenderObject_F441334)
-                         * kEERenderObject_F441360) * 0.5f;
-        float theInverse = 1.0f - theZoom;
-        theView.mTop = theInverse * theHalf + kEERenderObject_F44133C * theZoom;
-        theView.mBottom = (kEERenderObject_F4413C0 - theHalf) * theInverse + kEERenderObject_F441340 * theZoom;
+    // the zoom changed: the view band, the bars cleared (one row more at the top), the UI's backgrounds at full view
+    if (theStep.set_view) {
+        GERectangle theView;
+        theView.mLeft = theBox.left;
+        theView.mRight = theBox.right;
+        theView.mTop = theBox.top;
+        theView.mBottom = theBox.bottom;
         EESetGameViewRectangle(theView);
-        theRectangle.mLeft = 0.0f;
-        theRectangle.mRight = (float)gGameWindowWidth;
         theRectangle.mTop = 0.0f;
-        theRectangle.mBottom = gGameWindowHeight * kGameViewScaleY * theView.GetTop() + 1.0f;
+        theRectangle.mBottom = theBox.top_bar_end + 1.0f;
         gRasterizer->Clear(theBlack, theRectangle, gScreenIndex);
-        theRectangle.mTop = gGameWindowHeight * kGameViewScaleY * theView.mBottom;
+        theRectangle.mTop = theBox.bottom_bar_start;
         theRectangle.mBottom = (float)gGameWindowHeight;
         gRasterizer->Clear(theBlack, theRectangle, gScreenIndex);
-        if (theZoom == 0.0f)
-            sB529088 = true;
-        if (theZoom == 1.0f) {
+        if (theStep.show_backgrounds) {
             gUIManager->GetMainGameForm()->ShowAllBackgrounds();
             gUIManager->RedrawAll();
         }
-        if (gF4BE374 == 1.0f) {
+        if (theStep.hide_backgrounds) {
             gUIManager->GetMainGameForm()->HideAllBackgrounds();
             gUIManager->RedrawAll();
         }
     }
-    gF4BE374 = theZoom;
+    gF4BE374 = theStep.zoom;
     gViewport.SetCamera(gWorld.mTransformation);
     gRasterizer->SetViewport(gViewport, gScreenIndex);
     gU4E8F08 = gViewport;
@@ -779,49 +690,40 @@ void EERenderObject::Fn10C036()
     if (gRenderEnvironment.mTimeOfDay != theTimeOfDay) {
         gRenderEnvironment.mTimeOfDay = theTimeOfDay;
         gRenderEnvironment.mTimeOfDayChanged = true;
-        if (theTimeOfDay >= kEERenderObject_F4413B8 && theTimeOfDay <= kEERenderObject_F4413B4)
-            gU4E9210 = gWorld.mMoonDirection;
-        else
-            gU4E9210 = gWorld.mSunDirection;
-        float theTime = theTimeOfDay * 16.0f;
-        float theFraction = theTime - UMFloor(theTime);
-        unsigned long theIndex = UMFloorUnsigned(theTime);
-        unsigned long theNext = theIndex + 1;
-        if (theNext > 16)
-            theNext = 16;
-        float theRest = 1.0f - theFraction;
-        theBlend.SetRed(gU4E9348[theNext].GetRed() * theFraction + gU4E9348[theIndex].GetRed() * theRest);
-        theBlend.SetGreen(gU4E9348[theNext].GetGreen() * theFraction + gU4E9348[theIndex].GetGreen() * theRest);
-        theBlend.SetBlue(gU4E9348[theNext].GetBlue() * theFraction + gU4E9348[theIndex].GetBlue() * theRest);
+        // the blend of the 17 key frames, the lit direction and the prelit colour: ee_gfx scene.rs
+        EeGfxDaylightTables theTables;
+        for (unsigned long i = 0; i < 17; i++) {
+            theTables.colors[i] = {gU4E9348[i].mRed, gU4E9348[i].mGreen, gU4E9348[i].mBlue};
+            theTables.light[i] = gU4E92EC[i];
+            theTables.ambient[i] = gU4E92A8[i];
+            theTables.unit_ambient[i] = gU4E9264[i];
+        }
+        theTables.ambient_color = {gU4E9338.mRed, gU4E9338.mGreen, gU4E9338.mBlue};
+        for (unsigned long i = 0; i < 3; i++)
+            theTables.fill[i] = {gU4E9240[i].mX, gU4E9240[i].mY, gU4E9240[i].mZ};
+        theTables.sun = {gWorld.mSunDirection.mX, gWorld.mSunDirection.mY, gWorld.mSunDirection.mZ};
+        theTables.moon = {gWorld.mMoonDirection.mX, gWorld.mMoonDirection.mY, gWorld.mMoonDirection.mZ};
+        EeGfxDaylight theLight = ee_gfx_scene_daylight(&theTables, theTimeOfDay);
+        gU4E9210.mX = theLight.direction.x;
+        gU4E9210.mY = theLight.direction.y;
+        gU4E9210.mZ = theLight.direction.z;
+        GEColor theBlend(theLight.light.red, theLight.light.green, theLight.light.blue);
+        GEColor thePrelit(theLight.prelit.red, theLight.prelit.green, theLight.prelit.blue);
         gRenderEnvironment.mTerrainLightColor = theBlend;
         gRenderEnvironment.mUnitLightColor = theBlend;
         gRenderEnvironment.mTerrainAmbientColor = gU4E9338;
         gRenderEnvironment.mUnitAmbientColor = gU4E9338;
-        gRenderEnvironment.mTerrainLightIntensity = theFraction * gU4E92EC[theNext] + theRest * gU4E92EC[theIndex];
-        gRenderEnvironment.mUnitLightIntensity = gRenderEnvironment.mTerrainLightIntensity;
-        gRenderEnvironment.mTerrainAmbientIntensity = theFraction * gU4E92A8[theNext] + theRest * gU4E92A8[theIndex];
-        float theScale = theFraction * gU4E9264[theNext] + theRest * gU4E9264[theIndex];
-        gRenderEnvironment.mUnitAmbientIntensity = theScale;
-        theColor.SetRed(gU4E9338.GetRed() * theScale);
-        theColor.SetGreen(gU4E9338.GetGreen() * theScale);
-        theColor.SetBlue(gU4E9338.GetBlue() * theScale);
-        for (unsigned long i = 0; i < 3; i++) {
-            float theDot = gU4E9240[i].DotProduct(gU4E9210);
-            if (theDot > 0.0f) {
-                theColor.SetRed(theColor.GetRed() + theBlend.GetRed() * theScale * theDot * kEERenderObject_F4413B0);
-                theColor.SetGreen(theColor.GetGreen() + theBlend.GetGreen() * theScale * theDot * kEERenderObject_F4413B0);
-                theColor.SetBlue(theColor.GetBlue() + theBlend.GetBlue() * theScale * theDot * kEERenderObject_F4413B0);
-            }
-        }
-        theColor.Normalize();
-        gRenderEnvironment.mPrelitColor = theColor;
-        gRenderEnvironment.mDimPrelitColor.SetRed(theColor.GetRed() * 0.5f);
-        gRenderEnvironment.mDimPrelitColor.SetGreen(theColor.GetGreen() * 0.5f);
-        gRenderEnvironment.mDimPrelitColor.SetBlue(theColor.GetBlue() * 0.5f);
-        gRenderEnvironment.mColor54 = theColor;
+        gRenderEnvironment.mTerrainLightIntensity = theLight.light_intensity;
+        gRenderEnvironment.mUnitLightIntensity = theLight.light_intensity;
+        gRenderEnvironment.mTerrainAmbientIntensity = theLight.ambient_intensity;
+        gRenderEnvironment.mUnitAmbientIntensity = theLight.unit_ambient_intensity;
+        gRenderEnvironment.mPrelitColor = thePrelit;
+        gRenderEnvironment.mDimPrelitColor =
+            GEColor(theLight.dim_prelit.red, theLight.dim_prelit.green, theLight.dim_prelit.blue);
+        gRenderEnvironment.mColor54 = thePrelit;
     } else {
         gRenderEnvironment.mTimeOfDayChanged = false;
-        if (!theChanged)
+        if (!theStep.fade_changed)
             goto done;
     }
     if (gCameraFollowing) {
@@ -903,9 +805,11 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
     long theID = inUnit->GetUnitID();
     long theSize = inUnit->mUnitClass->mTileSize;
     EEUnitClassUpgrade* theStats = inUnit->mStats;
-    outObject->mLocation.SetX((theID % 3 - 1) * theSize * 0.125f + theSize * 0.5f + inUnit->mTileX);
-    outObject->mLocation.SetY((theID / 3 % 3 - 1) * theSize * 0.125f + inUnit->mUnitClass->mTileSize * 0.5f
-                              + inUnit->mTileY);
+    // the place in its tiles, the size and the sway by id: ee_gfx capture.rs
+    EeGe2DPoint thePlace = ee_gfx_capture_object_place((int32_t)theID, (int32_t)theSize, (int32_t)inUnit->mTileX,
+                                                       (int32_t)inUnit->mTileY);
+    outObject->mLocation.SetX(thePlace.x);
+    outObject->mLocation.SetY(thePlace.y);
     outObject->mLocation.SetZ(theMap->mTerrainMesh.GetMeshZ(outObject->mLocation.GetX(), outObject->mLocation.GetY()));
     theTransformation.SetOrientationYPR(ioInfo.mYaw, 0.0f, 0.0f);
     theTransformation.SetPosition(outObject->mLocation);
@@ -920,7 +824,7 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
     outObject->mObject = inUnit->GetModel();
     outObject->mObject->LoadMedia();
     outObject->mModelScale = theStats->GetScale();
-    outObject->mModelScale *= (unsigned long)inUnit->GetUnitID() % 11 * kEERenderObject_F441354 + 1.0f;
+    outObject->mModelScale *= ee_gfx_capture_object_scale((int32_t)inUnit->GetUnitID());
     long theX = inUnit->mTileX;
     long theY = inUnit->mTileY;
     if (!GetTileHasTree(theMap->GetTile(theX - 1, theY - 1)) || !GetTileHasTree(theMap->GetTile(theX + 1, theY + 1))) {
@@ -942,13 +846,7 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
     outObject->mNextFrame = outObject->mCurrentFrame;
     if (theOne->GetFrameCount() > 1) {
         outObject->mCurrentFrame++;
-        long theAngle = (sSwayClock + inUnit->GetUnitID() * 8) % 360 - 180;
-        float theFraction = (UMSin(theAngle * kEERenderObject_F441344) + 1.0f) * 0.5f;
-        if (theFraction < 0.0f)
-            theFraction = 0.0f;
-        else if (theFraction > 1.0f)
-            theFraction = 1.0f;
-        outObject->mFraction = theFraction;
+        outObject->mFraction = ee_gfx_capture_sway_fraction(sSwayClock, (int32_t)inUnit->GetUnitID());
     } else {
         outObject->mFraction = 0.0f;
     }
@@ -983,9 +881,9 @@ void EERenderObject::FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERe
     float theScale = inDoppelganger->mUnit->mUnitClass->mScale;
     long theID = inDoppelganger->mUnit->GetUnitID();
     long theSize = inDoppelganger->mUnit->mUnitClass->mTileSize;
-    outObject->mLocation.mX = (theID % 3 - 1) * theSize * 0.125f + theSize * 0.5f + inX;
-    outObject->mLocation.mY = (theID / 3 % 3 - 1) * theSize * 0.125f
-                              + inDoppelganger->mUnit->mUnitClass->mTileSize * 0.5f + inY;
+    EeGe2DPoint thePlace = ee_gfx_capture_object_place((int32_t)theID, (int32_t)theSize, (int32_t)inX, (int32_t)inY);
+    outObject->mLocation.mX = thePlace.x;
+    outObject->mLocation.mY = thePlace.y;
     outObject->mLocation.mZ = theMap->mTerrainMesh.GetMeshZ(outObject->mLocation.GetX(), outObject->mLocation.GetY());
     theTransformation.SetOrientationYPR(ioInfo.mYaw, 0.0f, 0.0f);
     theTransformation.SetPosition(outObject->mLocation.GetX(), outObject->mLocation.GetY(), outObject->mLocation.mZ);
@@ -1004,8 +902,7 @@ void EERenderObject::FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERe
     outObject->mHealth = (float)inDoppelganger->GetHitPoints() / theMaximum;
     outObject->mIsFogged = true;
     outObject->mOpacity = 1.0f;
-    outObject->mModelScale = ((unsigned long)inDoppelganger->mUnit->GetUnitID() % 11 * kEERenderObject_F441354 + 1.0f)
-                             * theScale;
+    outObject->mModelScale = ee_gfx_capture_object_scale((int32_t)inDoppelganger->mUnit->GetUnitID()) * theScale;
     outObject->mObject = inDoppelganger->GetModel();
     outObject->mObject->LoadMedia();
     if (!GetTileHasTree(theMap->GetTile(inX - 1, inY - 1)) || !GetTileHasTree(theMap->GetTile(inX + 1, inY + 1))) {
@@ -1021,13 +918,7 @@ void EERenderObject::FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERe
     outObject->mNextFrame = theFrame;
     if (theFrame + 1 < outObject->mObject->mModels[outObject->mModelIndex]->GetFrameCount()) {
         outObject->mCurrentFrame = theFrame + 1;
-        long theAngle = (sSwayClock + inDoppelganger->mUnit->GetUnitID() * 8) % 360 - 180;
-        float theFraction = (UMSin(theAngle * kEERenderObject_F441344) + 1.0f) * 0.5f;
-        if (theFraction < 0.0f)
-            theFraction = 0.0f;
-        else if (theFraction > 1.0f)
-            theFraction = 1.0f;
-        outObject->mFraction = theFraction;
+        outObject->mFraction = ee_gfx_capture_sway_fraction(sSwayClock, (int32_t)inDoppelganger->mUnit->GetUnitID());
     } else {
         outObject->mFraction = 0.0f;
     }
@@ -1471,10 +1362,7 @@ void EERenderObject::FillRenderLists()
     float theCount = 0.0f;
     unsigned long theTime = TMGetTime();
     if (!gB529068) {
-        if (theTime - sU529094 > 0x21) {
-            sSwayClock += 2;
-            sU529094 = theTime;
-        }
+        ee_gfx_capture_sway_tick(&sSwayClock, &sU529094, (uint32_t)theTime);
         this->Fn10E8D1();
         UnloadRenderShadows(EERenderLists::sInstance.mRenderShadows, EERenderLists::sInstance.mRenderShadowCount);
         UnloadRenderUnits(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);
@@ -1689,28 +1577,14 @@ void EEReleaseScene()
 // Starts fading the lights up to full over the given number of frames (at once for 0)
 void EEStartLightFadeIn(unsigned long inFrames)
 {
-    sL529070 = 0;
-    sF529078 = 0.0f;
-    sLightFadeStart = sLightFade;
-    if (inFrames == 0) {
-        sF529074 = 3.4028235e+38f;
-        return;
-    }
-    sF529074 = 1.0f / (float)inFrames;
+    ee_gfx_scene_start_fade(&sSceneFade, false, (uint32_t)inFrames);
 }
 
 // FUNCTION: EXE 0x50f3c6
 // Starts fading the lights down to black over the given number of frames (at once for 0)
 void EEStartLightFadeOut(unsigned long inFrames)
 {
-    sLightFadeStart = sLightFade;
-    sF529078 = 0.0f;
-    sL529070 = 1;
-    if (inFrames == 0) {
-        sF529074 = 3.4028235e+38f;
-        return;
-    }
-    sF529074 = 1.0f / (float)inFrames;
+    ee_gfx_scene_start_fade(&sSceneFade, true, (uint32_t)inFrames);
 }
 
 // FUNCTION: EXE 0x50f412

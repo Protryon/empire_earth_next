@@ -7,25 +7,15 @@
 #ifndef EE_EESEAPAINT_H
 #define EE_EESEAPAINT_H
 
-// a queued paint area in tiles (EESEAPaintTerrain/EESEAPaintMoutains' deques: 0x10-byte elements, movsd x4; SetArea
-// zeroes a local one first: a zeroing default ctor) (provisional name)
-struct EESEAPaintRect {
-    EESEAPaintRect() : mLeft(0), mTop(0), mRight(0), mBottom(0) {}
-    long mLeft;                             // +0x00
-    long mTop;                              // +0x04 (top >= bottom: the loops count y down)
-    long mRight;                            // +0x08
-    long mBottom;                           // +0x0c
-};
+#include <stdint.h>
 
-// EESEAPaintElevation's queued area (0x14-byte elements, rep movsd 5; SetArea zeroes all five) (provisional name)
-struct EESEAPaintRegion {
-    EESEAPaintRegion() : mL00(0), mLeft(0), mTop(0), mRight(0), mBottom(0) {}
-    long mL00;                              // +0x00 (never set by SetArea)
-    long mLeft;                             // +0x04
-    long mTop;                              // +0x08
-    long mRight;                            // +0x0c
-    long mBottom;                           // +0x10
-};
+// The paint actions' queued areas are a Rust record each (ee_screens editor_actions.rs; the original's deques of
+// EESEAPaintRect / EESEAPaintRegion): created by the action's ctor, freed by its dtor (rust/ee_screens.h declares
+// these too; here so the actions' inline ctors need no Rust header)
+struct EeScreensSeaPaint;
+extern "C" EeScreensSeaPaint* ee_screens_sea_paint_new(uint32_t kind, int32_t a, int32_t b);
+extern "C" void ee_screens_sea_paint_free(EeScreensSeaPaint* paint);
+enum { kSEAPaintTerrain = 0, kSEAPaintElevation = 1, kSEAPaintBulldozer = 2 };   // EE_SCREENS_SEA_PAINT_*
 
 class EESEAPaint : public EEAction {
 public:

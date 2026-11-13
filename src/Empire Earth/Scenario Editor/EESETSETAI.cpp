@@ -73,9 +73,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
@@ -93,6 +90,8 @@
 #include "ee/EESETSETCAMGModifyObject.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // Original16fe85; same actual declaration used by the camera-scroll controls.
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);
 
@@ -108,7 +107,7 @@ EESETSETAI::EESETSETAI()
     this->mTypes[kSMAIActionSetAIVariable] = new EESETSETSetAIAttribute;
     this->mTypes[kSMAIActionSetFavoriteUnits] = new EESETSETSetFavoriteUnit;
     this->mCurrentType = 0;
-    this->mAction = new EESEEChangeEffectAction;
+    this->mAction = EECreateScreenEvent(EE_SCREENS_SE_CHANGE_EFFECT_ACTION);
 }
 
 // SYNTHETIC: EXE 0x582edb
@@ -255,9 +254,6 @@ void EESETSETAI::UpdateName(EESMEffect* inEffect, EESETSEffectControls* inContro
         gUIManager->mScenarioEditorForm->GetTriggerScreen()->mNameEditBox->SetText(theText);
     }
 }
-
-// SYNTHETIC: EXE 0x583429
-// (EESEEChangeEffectAction's scalar deleting destructor)
 
 // SYNTHETIC: EXE 0x583454
 // (EESETSETSetAIAttribute's scalar deleting destructor, its implicit dtor inline)

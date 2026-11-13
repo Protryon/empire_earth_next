@@ -440,6 +440,24 @@ WON_TESTS = {
     "won_treeobj_test": [],
     # PopupMenu as a whole Rust object (menuobj.rs), the same way (golden: rust/crates/ee_won/src/golden_menuobj.txt)
     "won_menuobj_test": [],
+    # Scrollbar as a whole Rust object (barobj.rs), the same way; the scroll event traced as the type the C++ fires
+    # (golden: rust/crates/ee_won/src/golden_barobj.txt)
+    "won_barobj_test": [],
+    # Scroller and ScrollbarScroller as one whole Rust object (scrollerobj.rs) over real Rust bars, the same way
+    # (golden: rust/crates/ee_won/src/golden_scrollerobj.txt)
+    "won_scrollerobj_test": [],
+    # TextListItem's and MenuItem's measure and MenuItem's paint, the original statements over a recording
+    # Graphics against ee_won's guidraw (golden: rust/crates/ee_won/src/golden_itemobj.txt)
+    "won_itemobj_test": [],
+    # ScrollArea as a whole Rust object (paneobj.rs), the same way as Scrollbar's (golden:
+    # rust/crates/ee_won/src/golden_paneobj.txt)
+    "won_paneobj_test": [],
+    # Container as a whole Rust object (ctobj.rs), over a scripted world of components (golden:
+    # rust/crates/ee_won/src/golden_ctobj.txt)
+    "won_ctobj_test": [],
+    # Dialog as a whole Rust object (dialogobj.rs) over the container goldens' world (golden:
+    # rust/crates/ee_won/src/golden_dialogobj.txt)
+    "won_dialogobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

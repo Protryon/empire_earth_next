@@ -227,7 +227,7 @@ long EEE3DCommandConfirmation::SetUp()
                 if (EECanStandOn(theTile, this->mUnit->mComplexUnit) == false && theMapTile
                     && theMapTile->IsVisibleTo(this->mUnit->mPlayer))
                     this->mColor = sConfirmRed;
-                else if (theGoal->mIsForcedMove)
+                else if (theGoal->GetIsForcedMove())
                     this->mColor = sConfirmGreen;
                 else
                     this->mColor = sConfirmOrange;

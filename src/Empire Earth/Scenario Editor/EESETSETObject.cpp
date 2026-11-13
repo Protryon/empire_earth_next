@@ -72,9 +72,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
@@ -97,6 +94,8 @@
 #include "ee/EESMObject.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x58849c
 // Creates the object effect page with its thirteen object action types (create ... class attribute) and its combo event
 EESETSETObject::EESETSETObject()
@@ -115,7 +114,7 @@ EESETSETObject::EESETSETObject()
     this->mTypes[kSMObjectActionClassName] = new EESETSETSetObjectName;
     this->mTypes[kSMObjectActionClassAttribute] = new EESETSETSetObjectClassAttribute;
     this->mCurrentType = kSMObjectActionCreate;
-    this->mAction = new EESEEChangeEffectAction;
+    this->mAction = EECreateScreenEvent(EE_SCREENS_SE_CHANGE_EFFECT_ACTION);
 }
 
 // SYNTHETIC: EXE 0x588644

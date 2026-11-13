@@ -74,9 +74,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
@@ -119,7 +116,6 @@
 #include "ee/EESETSAEditBox.h"
 #include "ee/EESETSObject.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEUIFScenarioEditorEvents.h"
 #include "ee/EESMTrigger.h"
 #include "ee/EESMCondition.h"
 #include <stdio.h>
@@ -136,27 +132,13 @@ extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's font
 extern GEFont* gU531934;                    // 0x531934
 extern GEFont* gU531938;                    // 0x531938
 
-// FUNCTION: EXE 0x59cc39
-// Refreshes the unit tab's unit types and the players tab's tech lists when another player is picked
-long EEUIENewPlayer::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(inForm);
-    theEditor->GetUnitScreen()->ReselectUnitType();
-    theEditor->GetPlayerScreen()->FillTechLists();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x59cc5e
-// Turns the camera back to the editor's home rotation (45 degree yaw, 35 degree downward pitch) (Home key)
-long EEUIEReturnToHomeRotation::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    GETransformation theTransformation;
-    theTransformation.MakeIdentity();
-    gWorld.mCameraControl.SetViewTurn(theTransformation, false);
-    theTransformation.SetOrientationYPR(0.7853982f, -0.61086524f, 0.0f);
-    gWorld.mCameraControl.SetOffsetTurn(theTransformation, false);
-    return kErrorOK;
-}
+// The trigger-only save (Ctrl+S; RTTI EEUIESaveScenarioTriggersOnly > UIEvent, sizeof 0xc, inline ctor; the form's
+// other events are EEScreenEvent codes, ee_screens scenario_editor.rs)
+class EEUIESaveScenarioTriggersOnly : public UIEvent {
+public:
+    virtual ~EEUIESaveScenarioTriggersOnly() {}
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x19ccc0
+};
 
 // FUNCTION: EXE 0x59ccc0
 // Saves the scenario triggers to ScenarioTriggers.scn and writes a ScenarioTriggers.txt report of every trigger,
@@ -325,20 +307,6 @@ long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEnt
     return theResult;
 }
 
-// FUNCTION: EXE 0x59d582
-// Loads the scenario triggers back from ScenarioTriggers.scn in the startup directory (Ctrl+L); always returns OK
-long EEUIELoadScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    FSFileSpec theFile;
-    theFile.SetVolume(gStartupVolume);
-    theFile.SetDirectory(gStartupDirectory);
-    theFile.SetFile("ScenarioTriggers.scn");
-    if (theFile.Open(kFileAccessRead) == kErrorOK)
-        gWorld.mScenarioManager->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile);
-    theFile.Close();
-    return kErrorOK;
-}
-
 // The mini map's size and the screen height: plain (non-folded) .rdata floats in the original (0x444f88, 0x44507c),
 // read by the ctor only (provisional names)
 static const float kSEMiniMapSize = 169.84f;
@@ -397,7 +365,7 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     this->AddControl(this->mPlayerComboBox, 0);
     this->mPlayerComboBox->SetDisplayMode(kDisplayModeHidden);
     theIndex++;
-    this->mNewPlayerEvent = new EEUIENewPlayer;
+    this->mNewPlayerEvent = EECreateScreenEvent(EE_SCREENS_SE_NEW_PLAYER);
     this->mPlayerComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, this->mNewPlayerEvent);
 
     // the top text label
@@ -470,7 +438,7 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     theHotKey.SetPressedEvent(this->mRotateCameraEvent);
     theHotKey.SetJustUnpressedEvent(this->mEnableMouseMoveEvent);
     this->AddHotKey(theHotKey, 0);
-    EEUIEReturnToHomeRotation* theHome = new EEUIEReturnToHomeRotation;
+    UIEvent* theHome = EECreateScreenEvent(EE_SCREENS_SE_HOME_ROTATION);
     theHotKey.SetKey(kKeyHome);
     theHotKey.SetJustPressedEvent(theHome);
     theHotKey.SetPressedEvent(NULL);
@@ -480,7 +448,7 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
 
     // the trigger-only save and load, the grab scroll, the debug hot keys
     this->AddHotKey(kKeyS, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, new EEUIESaveScenarioTriggersOnly, NULL, 0, false);
-    this->AddHotKey(kKeyL, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, new EEUIELoadScenarioTriggersOnly, NULL, 0, false);
+    this->AddHotKey(kKeyL, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, EECreateScreenEvent(EE_SCREENS_SE_LOAD_TRIGGERS_ONLY), NULL, 0, false);
     this->mGrabScroll = EECreateGrabScroll(1);
     this->SetMouseMiddleButtonPressedEvent(this->mGrabScroll);
     this->SetMouseMiddleButtonUnpressedEvent(this->mGrabScroll);
@@ -906,8 +874,6 @@ void EEUIFScenarioEditor::CreatePanels(unsigned long& ioIndex)
 void EEPostGraphicsAll();
 extern RTSRenderObject* gU56534C;
 
-// EEUIEOpenCivBuilder (RTTI 0x445100): the original news 0xc bytes and its ctor initializes only the UIEvent base
-
 // The seven editor tabs, original VA 0x8c46d0, stride 0x20 (provisional names).
 // 0x19eba9 reads order/help/normal+pressed cells/flag while constructing the buttons;
 // 0x19ef5a dispatches group numbers; 0x19f615 reads full-view and brush flags.
@@ -944,7 +910,6 @@ EESEToolbarButton sToolbarButtons[6] = {
     {0xf, 0x336, 0x2e0, 0x80, 0xc4, 0xa0, 0xc4, 0x213f}
 };
 
-#include "ee/EESEEditorEvents.h"
 
 #include "lle/UIFullBackground.h"
 
@@ -1027,18 +992,11 @@ void EEUIFScenarioEditor::CreateTabButtons(unsigned long& ioIndex)
     theNormal->Dereference();
     thePressed->Dereference();
     this->mCivBuilderButton->SetStringTableID(IDS_CIVILIZATION_BUILDER_TOOL);
-    UIEvent* theEvent = new EEUIEOpenCivBuilder;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_OPEN_CIV_BUILDER);
     this->mCivBuilderButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     this->AddControl(this->mCivBuilderButton, 0);
     ioIndex++;
-}
-
-// FUNCTION: EXE 0x59ef15
-// Opens the civilization builder on the scenario's custom civilization
-long EEUIEOpenCivBuilder::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    return gUserInterface->OpenCivilizationBuilder(&static_cast<EEUIFScenarioEditor*>(inForm)->mC1A0, true);
 }
 
 // FUNCTION: EXE 0x59ef2f
@@ -1106,11 +1064,11 @@ void EEUIFScenarioEditor::CreateToolbarButtons(unsigned long& ioIndex)
         UIEvent* theEvent;
         switch (theButton.mID) {
         case kToolbarButtonLoad:
-            theEvent = new EESEELoadScenario;
+            theEvent = EECreateScreenEvent(EE_SCREENS_SE_LOAD_SCENARIO);
             this->mLoadButton = theControl;
             break;
         case kToolbarButtonSave:
-            theEvent = new EESEESaveScenario;
+            theEvent = EECreateScreenEvent(EE_SCREENS_SE_SAVE_SCENARIO);
             this->mSaveButton = theControl;
             break;
         case kToolbarButtonQuickLoad:
@@ -1122,11 +1080,11 @@ void EEUIFScenarioEditor::CreateToolbarButtons(unsigned long& ioIndex)
             this->mQuickSaveButton = theControl;
             break;
         case kToolbarButtonTest:
-            theEvent = new EESEETestScenario;
+            theEvent = EECreateScreenEvent(EE_SCREENS_SE_TEST_SCENARIO);
             this->mTestButton = theControl;
             break;
         case kToolbarButtonExit:
-            theEvent = new EESEEExitScenario;
+            theEvent = EECreateScreenEvent(EE_SCREENS_SE_EXIT_SCENARIO);
             this->mExitButton = theControl;
             break;
         default:

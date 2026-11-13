@@ -812,7 +812,7 @@ bool EEUGBuildRepair::IsShiftQueueNext(EEComplexUnit* inUnit)
         if (*i == this)
             continue;
         EEUGLocation* theLocation = (*i)->mKind == kGoalLocation ? static_cast<EEUGLocation*>(*i) : NULL;
-        if (theLocation == NULL || !theLocation->mIsAutoWaypoint)
+        if (theLocation == NULL || !theLocation->GetIsAutoWaypoint())
             return true;
     }
     if (!inUnit->mHasShiftQueuedBuild)

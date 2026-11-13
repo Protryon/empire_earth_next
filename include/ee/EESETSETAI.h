@@ -9,7 +9,6 @@
 #include "ee/EESETSEffectType.h"
 #include <vector>
 
-class EESEEChangeEffectAction;
 class EESETSEffectControls;
 class EESMEffect;
 class UILBString;
@@ -35,7 +34,7 @@ public:
     //   [4] EESETSETToggleAI
     //   [5] EESETSETSetAIAttribute
     //   [6] EESETSETSetFavoriteUnit
-    EESEEChangeEffectAction* mAction;                                                               // +0x20 (new 0xc: the action combo's trigger event)
+    UIEvent* mAction;                                                                               // +0x20 (new 0xc: the action combo's trigger event)
     long mCurrentType;                                                                              // +0x24 (0 in the ctor)
 };
 

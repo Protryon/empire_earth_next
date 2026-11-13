@@ -9,7 +9,6 @@
 
 #include "ee/EESETSEffectType.h"
 
-class EESEEChangeEffectAction;
 
 class EESETSETSetObjectStance : public EESETSEffectType
 {
@@ -21,7 +20,7 @@ public:
     virtual void Load(EESMEffect* inEffect, EESETSEffectControls* inControls);                      // +0x10 0x18e54c
     virtual void Show(EESETSEffectControls* inControls);                                            // +0x14 0x18e5a7
 
-    EESEEChangeEffectAction* mAction;                                                               // +0x04 (the ctor's new 0xc)
+    UIEvent* mAction;                                                                               // +0x04 (the ctor's new 0xc)
 };
 
 #endif

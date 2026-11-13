@@ -69,9 +69,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
@@ -97,6 +94,8 @@
 #include "ee/EESETSArea.h"
 #include "ee/EESETSTrigger.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 extern char gEmptyString[]; // 0x4e5b98: the shared empty string
 
 bool gB4C3220 = true;
@@ -122,7 +121,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
     std::vector<UWideString> theTemp1;
     this->mList = new UILBString(0x7da, theTemp1, gU531930, false, GERectangle(thePosition, 300.0f, 105.0f),
                            inForm, ioIndex, 3);
-    theEvent = new EESEESelectEntry;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_SELECT_ENTRY);
     this->mList->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
     theEvent->Dereference();
     this->mList->SetBgOpacity(0.4f);
@@ -144,7 +143,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
         this->mTabs[i]->SetUpUncheckedBitmap(NULL);
         this->mTabs[i]->GetTextLabel()->SetRectangle(GERectangle(theX + 2.0f, 460.0f, theX + 54.0f, 474.0f));
         this->mTabs[i]->SetBgOpacity(0.4f);
-        theEvent = new EESEEShowTab;
+        theEvent = EECreateScreenEvent(EE_SCREENS_SE_SHOW_TAB);
         this->mTabs[i]->SetTriggerEvent(kControlTriggerChecked, theEvent);
         theEvent->Dereference();
         theGEText = this->mTabs[i]->GetTextLabel()->GetGEText();
@@ -156,7 +155,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
     gResource->GetString(IDS_TRIGGER_EDITOR_NEW, theText);
     thePosition.SetXY(4.0f, 586.0f);
     this->mNewButton = new UIButton(0x7d5, NULL, NULL, NULL, GERectangle(thePosition, 90.0f, 20.0f), inForm, ioIndex, 2);
-    theEvent = new EESEENewEntry;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_NEW_ENTRY);
     this->mNewButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     this->mNewButton->SetBgOpacity(0.4f);
@@ -170,7 +169,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
     thePosition.SetXY(104.0f, 586.0f);
     this->mDuplicateButton = new UIButton(kSETriggerScreenDuplicateButton, NULL, NULL, NULL, GERectangle(thePosition, 90.0f, 20.0f), inForm, ioIndex,
                              2);
-    theEvent = new EESEEDuplicateEntry;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_DUPLICATE_ENTRY);
     this->mDuplicateButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     this->mDuplicateButton->SetBgOpacity(0.4f);
@@ -184,7 +183,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
     thePosition.SetXY(204.0f, 586.0f);
     this->mDeleteButton = new UIButton(kSETriggerScreenDeleteButton, NULL, NULL, NULL, GERectangle(thePosition, 90.0f, 20.0f), inForm, ioIndex,
                              2);
-    theEvent = new EESEEDeleteEntry;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_DELETE_ENTRY);
     this->mDeleteButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     this->mDeleteButton->SetBgOpacity(0.4f);
@@ -200,7 +199,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
                              GERectangle(thePosition, inForm->GetManager()->GetAlphaSortUpBitmap()->GetWidth(),
                                          inForm->GetManager()->GetAlphaSortUpBitmap()->GetHeight()),
                              inForm, ioIndex, 0);
-    theEvent = new EESEEAlphaSort;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_ALPHA_SORT);
     this->mAlphaSortButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mAlphaSortButton, 14);
@@ -212,7 +211,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
                              GERectangle(thePosition, inForm->GetManager()->GetSBBitmapUpNormal()->GetWidth(),
                                          inForm->GetManager()->GetSBBitmapUpNormal()->GetHeight()),
                              inForm, ioIndex, 0);
-    theEvent = new EESEEIncPriority;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_INC_PRIORITY);
     this->mIncPriorityButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mIncPriorityButton, 14);
@@ -224,7 +223,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
                              GERectangle(thePosition, inForm->GetManager()->GetSBBitmapDownNormal()->GetWidth(),
                                          inForm->GetManager()->GetSBBitmapDownNormal()->GetHeight()),
                              inForm, ioIndex, 0);
-    theEvent = new EESEEDecPriority;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_DEC_PRIORITY);
     this->mDecPriorityButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mDecPriorityButton, 14);
@@ -236,7 +235,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
                                             inForm->GetManager()->GetCheckOn()->GetWidth(),
                                             inForm->GetManager()->GetCheckOn()->GetHeight(),
                                             inForm, ioIndex);
-    theEvent = new EESEEShowDebugIDs;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_SHOW_DEBUG_IDS);
     this->mShowIDsCheckBox->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mShowIDsCheckBox, 14);
@@ -260,7 +259,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
     theGEText = this->mNameEditBox->GetGEText();
     theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
     theGEText->SetIsTransparent(true);
-    theEvent = new EESEESelectName;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_SELECT_NAME);
     this->mNameEditBox->SetTriggerEvent(kControlTriggerEnterPressed, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mNameEditBox, 14);
@@ -755,36 +754,6 @@ void EESETriggerScreen::RefreshScreen()
 
 // MISSING 0x57cadf: EEScenarioManager::GetCondition's COMDAT (inline, ee/EEScenarioManager.h); no user written in this
 // unit yet, so it is not emitted here
-
-// SYNTHETIC: EXE 0x57cb0c
-// (EESEEShowTab's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cb37
-// (EESEESelectEntry's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cb62
-// (EESEENewEntry's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cb8d
-// (EESEEDuplicateEntry's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cbb8
-// (EESEEDeleteEntry's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cbe3
-// (EESEEIncPriority's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cc0e
-// (EESEEDecPriority's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cc39
-// (EESEEAlphaSort's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cc64
-// (EESEEShowDebugIDs's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57cc8f
-// (EESEESelectName's scalar deleting destructor)
 
 // FUNCTION: EXE 0x57ccba
 // Sets the hide-UI panel event's full and reduced game view rectangles

@@ -2,7 +2,7 @@
 // (rust/crates/ee_won/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
 // constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs); the InputBox's
 // constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs); the Label's constructor and
-// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs); the ListArea's and its items'
+// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs); the Scrollbar's (barobj.rs); the Scroller's (scrollerobj.rs); the ScrollArea's (paneobj.rs); the ListArea's and its items'
 // defaults (listobj.rs). Each op is a run of the
 // original's C++ statements with no decision between them.
 #include <windows.h>
@@ -30,22 +30,6 @@ using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;
-
-static int* FieldOf(ScrollArea* t, intptr_t inField)
-{
-    switch ((Fd)inField) {
-    case Fd::ScrollWidth: return &t->mScrollArea.width;
-    case Fd::ScrollHeight: return &t->mScrollArea.height;
-    case Fd::VertOffset: return &t->mVertOffset;
-    case Fd::HorzOffset: return &t->mHorzOffset;
-    case Fd::TotalWidth: return &t->mTotalWidth;
-    case Fd::TotalHeight: return &t->mTotalHeight;
-    case Fd::ExtraHeight: return &t->mExtraHeight;
-    case Fd::UpScrollAmount: return &t->mUpScrollAmount;
-    case Fd::DownScrollAmount: return &t->mDownScrollAmount;
-    default: return NULL;
-    }
-}
 
 static Cursor* CursorOf(intptr_t inCursor)
 {
@@ -80,13 +64,9 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
     case Op::SetSize: c->SetSize((int)a, (int)b); return 0;
     case Op::SetDefaultCursor: c->SetDefaultCursor(CursorOf(a)); return 0;
     case Op::FireEvent:
-        // (round 23's lists fired ListSelChanged through here as InputTextChanged: nothing heard a list's
-        // selection, so the LAN lobby's Join Game stayed disabled)
-        switch ((EeWonGuiEvent)a) {
-        case EeWonGuiEvent::InputReturn: c->Fn2F5380(ComponentEvent_InputReturn, 0); break;
-        case EeWonGuiEvent::InputTextChanged: c->Fn2F5380(ComponentEvent_InputTextChanged, 0); break;
-        case EeWonGuiEvent::ListSelChanged: c->Fn2F5380(ComponentEvent_ListSelChanged, 0); break;
-        }
+        // the type is Rust's map, which the goldens check against the enum (round 23's lists fired ListSelChanged
+        // through a switch here as InputTextChanged: the LAN lobby's Join Game stayed disabled)
+        c->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), 0);
         return 0;
     case Op::ClipboardSet: Clipboard::Set(UnitsText(a, b)); return 0;
     case Op::ClipboardTake: {
@@ -106,14 +86,10 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     TextArea* t = (TextArea*)inComp;
     switch (op) {
     case Op::Get:
-        if ((Fd)a == Fd::UserHasScrolled) return t->mUserHasScrolled ? 1 : 0;
         if ((Fd)a == Fd::Width) return t->Width();
         if ((Fd)a == Fd::Height) return t->Height();
-        return FieldOf(t, a) ? *FieldOf(t, a) : 0;
-    case Op::Set:
-        if ((Fd)a == Fd::UserHasScrolled) t->mUserHasScrolled = b != 0;
-        else if (FieldOf(t, a)) *FieldOf(t, a) = (int)b;
-        return 0;
+        return t->GetField((Fd)a);
+    case Op::Set: t->SetField((Fd)a, (int)b); return 0;
     case Op::BaseSizeChanged: t->ScrollArea::Virtual08(); return 0;
     case Op::BaseAdjustPosition: t->ScrollArea::AdjustPosition(a != 0); return 0;
     case Op::BaseNotifyRootVisibility: t->ScrollArea::NotifyRootVisibility(a != 0); return 0;
@@ -186,7 +162,7 @@ TextArea::TextArea()
         this->SetLinkFont(this->GetFont(descriptor));
     }
     this->SetComponentFlags(ComponentFlag_WantFocus,true);
-    this->mTopPad=this->mLeftPad=this->mRightPad=this->mBottomPad=5;
+    this->SetPads(5,5,5,5);
     this->Reset(false);
 }
 // FUNCTION: WON 0x00711be0
@@ -386,6 +362,42 @@ extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr
 static Component* Comp(intptr_t a) { return (Component*)a; }
 static Button* Btn(intptr_t a) { return (Button*)a; }
 
+// a container's children (`a` a child `Component*`), the same for the splitter and the scroll bar
+static intptr_t ContainerOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_t c)
+{
+    switch (op) {
+    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
+    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
+    case Op::ChildSetPosSize: {
+        const EeWonRect4* r = (const EeWonRect4*)b;
+        Comp(a)->SetPosSize(r->x, r->y, r->w, r->h);
+        return 0;
+    }
+    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
+    case Op::ChildSetSize: Comp(a)->SetSize((int)b, (int)c); return 0;
+    case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
+    case Op::ChildIsVisible: return Comp(a)->IsVisible() ? 1 : 0;
+    case Op::ChildIsMine: return Comp(a)->mParent == t ? 1 : 0;
+    case Op::ChildWidth: return Comp(a)->Width();
+    case Op::ChildHeight: return Comp(a)->Height();
+    case Op::ChildLeft: return Comp(a)->Left();
+    case Op::ChildTop: return Comp(a)->Top();
+    case Op::ChildHold: Comp(a)->AddRef(); return 0;
+    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    case Op::ChildFlagSet: return Comp(a)->ComponentFlagSet((int)b) ? 1 : 0;
+    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
+    case Op::ChildHasDefaultCursor: return Comp(a)->GetDefaultCursor() != NULL ? 1 : 0;
+    case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
+    case Op::ChildMouseChild: return (intptr_t)Comp(a)->GetMouseChild();
+    case Op::AddChild: t->AddChild(Comp(a)); return 0;
+    case Op::MouseChild: return (intptr_t)t->GetMouseChild();
+    case Op::IsDisabled: return t->IsDisabled() ? 1 : 0;
+    case Op::EventType: return ((ComponentEvent*)a)->mType;
+    case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+
 namespace WONAPI {
 intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c)
 {
@@ -399,27 +411,6 @@ intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::BaseMouseUp: t->Container::MouseUp((int)a, (int)b, (int)c); return 0;
     case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
     case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
-    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
-    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
-    case Op::ChildSetPosSize: {
-        const EeWonRect4* r = (const EeWonRect4*)b;
-        Comp(a)->SetPosSize(r->x, r->y, r->w, r->h);
-        return 0;
-    }
-    case Op::ChildIsVisible: return Comp(a)->IsVisible() ? 1 : 0;
-    case Op::ChildWidth: return Comp(a)->Width();
-    case Op::ChildHeight: return Comp(a)->Height();
-    case Op::ChildLeft: return Comp(a)->Left();
-    case Op::ChildTop: return Comp(a)->Top();
-    case Op::ChildHold: Comp(a)->AddRef(); return 0;
-    case Op::ChildRelease: Comp(a)->Release(); return 0;
-    case Op::ChildFlagSet: return Comp(a)->ComponentFlagSet((int)b) ? 1 : 0;
-    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
-    case Op::ChildHasDefaultCursor: return Comp(a)->GetDefaultCursor() != NULL ? 1 : 0;
-    case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
-    case Op::ChildMouseChild: return (intptr_t)Comp(a)->GetMouseChild();
-    case Op::AddChild: t->AddChild(Comp(a)); return 0;
-    case Op::MouseChild: return (intptr_t)t->mMouseChild;
     case Op::ButtonControlId: return Btn(a)->mControlId;
     case Op::ButtonSetControlId: Btn(a)->mControlId = (int)b; return 0;
     case Op::ButtonSetCheck: Btn(a)->SetCheck(b != 0, false); return 0;
@@ -440,7 +431,7 @@ intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::EventIsButtonPress: return ((ComponentEvent*)a)->mType == ComponentEvent_ButtonPressed ? 1 : 0;
     case Op::EventControlId: return ((ComponentEvent*)a)->GetControlId();
     case Op::EventButton: return (intptr_t)dynamic_cast<Button*>(((ComponentEvent*)a)->mComponent);
-    default: return ComponentOp(t, op, a, b);
+    default: return ContainerOp(t, op, a, b, c);
     }
 }
 
@@ -462,6 +453,132 @@ extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr
     return SplitterHostCall((Splitter*)inComp, op, a, b, c);
 }
 
+// ---- the scroll bar
+
+extern "C" intptr_t ee_won_guicpp_bar_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    Scrollbar* t = (Scrollbar*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
+    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
+    case Op::BaseAddedToParent: t->Container::AddedToParent(); return 0;
+    case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
+    case Op::BaseSetEnabled: t->Component::SetEnabled(a != 0); return 0;
+    case Op::NewButton: return (intptr_t)static_cast<Component*>(new Button);
+    case Op::ButtonSetFlags: static_cast<Button*>(Comp(a))->SetButtonFlags((int)b, c != 0); return 0;
+    default: return ContainerOp(t, op, a, b, c);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x00705e10
+// Creates an empty vertical or horizontal scrollbar (the Rust bar holds the line steps 10, the page step 50 and a
+// resizing thumb of at least 10)
+Scrollbar::Scrollbar(bool vertical) { this->mRust=ee_won_bar_new(this,ee_won_guicpp_bar_call,vertical); }
+// FUNCTION: WON 0x00705eb0
+// Destroys the scrollbar: the Rust bar gives the thumb, the track and the arrows back
+Scrollbar::~Scrollbar() { ee_won_bar_free(this->mRust); }
+}
+
+// ---- the scroller (`a` the scroll area or a bar)
+
+extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    Scroller* t = (Scroller*)inComp;
+    ScrollArea* area = static_cast<ScrollArea*>(Comp(a));
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseWheel: return t->Container::MouseWheel((int)a) ? 1 : 0;
+    case Op::BaseAddedToParent: t->Container::AddedToParent(); return 0;
+    case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
+    case Op::VirtSizeChanged: t->Virtual08(); return 0;
+    case Op::VirtNotifyScrollChange: t->NotifyScrollChange(a != 0); return 0;
+    case Op::HasFocusChild: return t->GetFocusChild() != NULL ? 1 : 0;
+    case Op::BarOf: return (intptr_t)static_cast<Scrollbar*>(Comp(a))->mRust;
+    case Op::ListenTo: Comp(a)->AddListener(new ComponentListenerComp(t)); return 0;
+    case Op::AreaGet: return area->GetField((Fd)b);
+    case Op::AreaSet: area->SetField((Fd)b, (int)c); return 0;
+    case Op::AreaAdjustPosition: area->AdjustPosition(b != 0); return 0;
+    case Op::AreaRequestFocus: area->RequestFocus(); return 0;
+    case Op::AreaMouseWheel: return area->MouseWheel((int)b) ? 1 : 0;
+    case Op::AreaSetScroller: area->SetScroller(t); return 0;
+    default: return ContainerOp(t, op, a, b, c);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x00705540
+// Creates a scroller with no scroll area (the Rust scroller; a ScrollbarScroller's bars start without, both
+// conditions Enable)
+Scroller::Scroller() { this->mRust=ee_won_scroller_new(this,ee_won_guicpp_scroller_call); }
+// Destroys the scroller: the Rust scroller gives the bars and the scroll area back (the implicit destructors
+// 0x003001e0 and 0x00300060)
+Scroller::~Scroller() { ee_won_scroller_free(this->mRust); }
+}
+
+// ---- the scroll area
+
+extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    ScrollArea* t = (ScrollArea*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
+    case Op::BaseMouseWheel: return t->Container::MouseWheel((int)a) ? 1 : 0;
+    case Op::ContainerPaint: t->Container::Paint(*(Graphics*)a); return 0;
+    case Op::VirtAdjustPosition: t->AdjustPosition(a != 0); return 0;
+    case Op::VirtSizeChanged: t->Virtual08(); return 0;
+    case Op::VirtScrollSizeChanged: t->ScrollSizeChanged(); return 0;
+    case Op::VirtScrollPaint: t->ScrollPaint(*(Graphics*)a); return 0;
+    case Op::GetViewport: return (intptr_t)static_cast<Component*>(t->GetViewport());
+    case Op::PaneBackground: t->mBackground.Paint(*(Graphics*)a, 0, 0, t->Width(), t->Height(), (int)b, (int)c); return 0;
+    case Op::ScrollerNotify: static_cast<Scroller*>(Comp(a))->NotifyScrollChange(b != 0); return 0;
+    case Op::ScrollerSetArea: static_cast<Scroller*>(Comp(a))->SetScrollArea(t); return 0;
+    case Op::ScrollerAsBars:
+        return (intptr_t)static_cast<Component*>(dynamic_cast<ScrollbarScroller*>(static_cast<Scroller*>(Comp(a))));
+    case Op::NewScrollbarScroller: return (intptr_t)static_cast<Component*>(new ScrollbarScroller);
+    case Op::ScrollerSetScrollbar:
+        static_cast<ScrollbarScroller*>(Comp(a))->SetScrollbar(static_cast<Scrollbar*>(Comp(b)));
+        return 0;
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        WONDrawNoCall aNoCall;
+        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
+        return 0;
+    }
+    default: return ContainerOp(t, op, a, b, c);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x00704df0
+// Creates an empty scroll area with its viewport as its child (the Rust area holds the scroll amounts 10 and every
+// other number 0, no scroller)
+ScrollArea::ScrollArea()
+{
+    this->mPane=ee_won_pane_new(this,ee_won_guicpp_pane_call);
+    this->mViewport=new ScrollAreaViewport(this);
+    this->AddChild(this->mViewport.get());
+}
+// Destroys the scroll area: the Rust area goes (the implicit destructor 0x002fa790)
+ScrollArea::~ScrollArea() { ee_won_pane_free(this->mPane); }
+}
+
 // ---- the list
 
 static ListItem* Item(intptr_t a) { return (ListItem*)a; }
@@ -471,14 +588,10 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
 {
     switch (op) {
     case Op::Get:
-        if ((Fd)a == Fd::UserHasScrolled) return t->mUserHasScrolled ? 1 : 0;
         if ((Fd)a == Fd::Width) return t->Width();
         if ((Fd)a == Fd::Height) return t->Height();
-        return FieldOf(t, a) ? *FieldOf(t, a) : 0;
-    case Op::Set:
-        if ((Fd)a == Fd::UserHasScrolled) t->mUserHasScrolled = b != 0;
-        else if (FieldOf(t, a)) *FieldOf(t, a) = (int)b;
-        return 0;
+        return t->GetField((Fd)a);
+    case Op::Set: t->SetField((Fd)a, (int)b); return 0;
     case Op::BaseSizeChanged: t->ScrollArea::Virtual08(); return 0;
     case Op::BaseAdjustPosition: t->ScrollArea::AdjustPosition(a != 0); return 0;
     case Op::BaseMouseDown: t->ScrollArea::MouseDown((int)a, (int)b, (int)c); return 0;
@@ -495,9 +608,7 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::VirtListSelChangedHook: t->ListSelChangedHook(); return 0;
     case Op::SetVertOffset: t->SetVertOffset((int)a); return 0;
     case Op::OnBottom: return t->OnBottom() ? 1 : 0;
-    case Op::FocusChildLost:
-        if (t->mFocusChild != NULL) { t->mFocusChild->LostFocus(); t->mFocusChild = NULL; }
-        return 0;
+    case Op::FocusChildLost: t->DropFocusChild(); return 0;
     case Op::RootKeyMod: return t->GetRoot()->GetKeyMod();
     case Op::SetCursorDefault: t->SetCursor(t->GetDefaultCursor()); return 0;
     case Op::GetViewport: return (intptr_t)t->GetViewport();
@@ -656,7 +767,7 @@ ListArea::ListArea()
     this->mTextColor=(int)0x8000000e;
     this->mFont=this->GetNamedFont("ListArea");
     this->SetComponentFlags(ComponentFlag_WantFocus,true);
-    this->mTopPad=this->mLeftPad=this->mRightPad=this->mBottomPad=2;
+    this->SetPads(2,2,2,2);
     this->mSortFunc=NULL;
 }
 // FUNCTION: WON 0x006fa860
@@ -742,7 +853,7 @@ extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr
         return parent == NULL ? 0 : (intptr_t)child;
     }
     case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
-    case Op::CursorIs: return t->mCurrentCursor.get() == CursorOf(a) ? 1 : 0;
+    case Op::CursorIs: return t->GetCurrentCursor() == CursorOf(a) ? 1 : 0;
     default: return ComponentOp(t, op, a, b);
     }
 }

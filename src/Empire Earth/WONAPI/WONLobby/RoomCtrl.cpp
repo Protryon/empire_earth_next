@@ -318,7 +318,7 @@ void RoomCtrl::HandleServerChanged(ServerChangedEvent* inEvent)
         aAddress=aItem->mAddress;
     }
     int aPosition=aServerItem->GetIndex();
-    int aVertOffset=this->mRoomList->mVertOffset;
+    int aVertOffset=this->mRoomList->GetVertOffset();
     this->mRoomList->BeginUpdate();
     this->mRoomList->RemoveTreeItem(aServerItem);
     this->AddServer(inEvent->mServer.get(),aOpen,aPosition);

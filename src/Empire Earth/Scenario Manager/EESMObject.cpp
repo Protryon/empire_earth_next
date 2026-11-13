@@ -1473,7 +1473,7 @@ void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlaye
 }
 
 #include "ee/EEUnitAction.h"
-#include "ee/EEUGLoadGarrison.h"
+#include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x5c8f28
 // Adds to, subtracts from or sets one unit's attribute (hit points, cargo, flight time, garrison, ammo, scale, power,
@@ -1570,7 +1570,7 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
                 theDelta = theComplex->GetUnitClass()->mGarrisonCapacity - theComplex->mGarrisonCount;
             theComplex->AddGarrison(theDelta, theComplex->mGarrisonPopulation);
             if (theComplex->mGarrisonCount == theComplex->GetUnitClass()->mGarrisonCapacity) {
-                EEUnitGoal* theGoal = new EEUGLoadGarrison(theComplex, theUnits, false);
+                EEUnitGoal* theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, theComplex, theUnits, false);
                 theComplex->QueueGoal(theGoal, 0);
                 theComplex->StartAction(kActionWaitForGarrisonCost);
                 theComplex->GetUnitClass()->ActionChanged(theComplex);

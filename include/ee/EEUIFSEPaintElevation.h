@@ -9,17 +9,18 @@
 #define EE_EEUIFSEPAINTELEVATION_H
 
 #include "ee/EESEAPaint.h"
+#include "rust/ee_screens.h"
 
 class EESEAPaintElevation : public EESEAPaint {   // RTTI 0x445604: > EESEAPaint > EEAction
 public:
-    EESEAPaintElevation(char inLevel) : mLevel(inLevel) {}   // 0x1a46d4 (out of line after its first user)
-    virtual ~EESEAPaintElevation() {}       // ??_G 0x1a4719, dtor 0x1a4735
+    EESEAPaintElevation(char inLevel)          // 0x1a46d4 (out of line after its first user)
+        : mPlan(ee_screens_sea_paint_new(kSEAPaintElevation, inLevel, 0)), mLevel(inLevel) {}
+    virtual ~EESEAPaintElevation() { ee_screens_sea_paint_free(this->mPlan); }   // ??_G 0x1a4719, dtor 0x1a4735
     virtual void Virtual4();                // +0x04 0x1a830a
     virtual void Virtual8();                // +0x08 (0xe123d)
     virtual bool SetArea(long inLeft, long inTop, long inRight, long inBottom);   // +0x0c 0x1a8507
 
-    std::deque<EESEAPaintRegion> mPendingAreas;  // +0x0c (0x14-byte regions: Virtual4 0x1a830a, SetArea 0x1a8507)
-    std::deque<EESEAPaintRegion> mPaintedAreas;  // +0x20
+    EeScreensSeaPaint* mPlan;               // the queued and painted areas (+0x0c, +0x20 were their deques; editor_actions.rs)
     char mLevel;                            // +0x34
 };
 

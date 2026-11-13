@@ -8,7 +8,6 @@
 
 #include "ee/EESETSEffectType.h"
 
-class EESEEChangeEffectAction;
 class EESETSEffectControls;
 class EESMEffect;
 
@@ -30,7 +29,7 @@ public:
     //   [1] EESETSETMediaChangeText
     //   [2] EESETSETMediaSendDialog
     //   [3] EESETSETMediaSendMessage
-    EESEEChangeEffectAction* mAction;                                                               // +0x14 (new 0xc: the action combo's trigger event)
+    UIEvent* mAction;                                                                               // +0x14 (new 0xc: the action combo's trigger event)
     unsigned long mCurrentType;                                                                     // +0x18 (0 in the ctor; Virtual04 passes it to GetCurrentSelection: unsigned)
 };
 

@@ -982,9 +982,9 @@ void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinat
         theStarted = this->RequestGroupPath(inUnit, inFrom, theTo, inUnit->GetPlayer()->GetPlayerID(), 1, -1, inModifier, inUnlimitedRevs);
         if (!theStarted) {
             EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(inUnit->GetGoal());
-            if (theGoal && theGoal->mIsAutoWaypoint) {
-                theTo.mX = (long)theGoal->mLocation.GetX();
-                theTo.mY = (long)theGoal->mLocation.GetY();
+            if (theGoal && theGoal->GetIsAutoWaypoint()) {
+                theTo.mX = (long)theGoal->GetLocation().GetX();
+                theTo.mY = (long)theGoal->GetLocation().GetY();
             }
         }
         theNoPath = inUnit->mWaypoints.size() == 0;
@@ -1381,9 +1381,9 @@ bool EEPathManager::FinishGraphPath(EEPathManagerNode* inNode)
     if (theUnit) {
         theFrom = inNode->mUnit->GetTile();
         EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(theUnit->GetGoal());
-        if (theGoal && theGoal->mIsAutoWaypoint && theUnit->mTile) {
-            long theY = UMFloor(theGoal->mLocation.GetY());
-            long theX = UMFloor(theGoal->mLocation.GetX());
+        if (theGoal && theGoal->GetIsAutoWaypoint() && theUnit->mTile) {
+            long theY = UMFloor(theGoal->GetLocation().GetY());
+            long theX = UMFloor(theGoal->GetLocation().GetX());
             theTo.mX = theX;
             theTo.mY = theY;
             theUnit->DropPath();
@@ -1530,7 +1530,7 @@ void EEPathManager::RequestPendingPaths(EEMap* inMap)
             theUnit->DropPath();
             EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(theUnit->GetGoal());
             bool theGraph;
-            if (theUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->mIsAutoWaypoint))
+            if (theUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->GetIsAutoWaypoint()))
                 theGraph = true;
             else
                 theGraph = false;
@@ -2602,7 +2602,7 @@ void EEPathManager::RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordi
 {
     inUnit->DropPath();
     EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(inUnit->GetGoal());
-    bool theGraph = inUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->mIsAutoWaypoint);
+    bool theGraph = inUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->GetIsAutoWaypoint());
     EETileCoordinate theFrom;
     theFrom.mX = inUnit->mTileX;
     theFrom.mY = inUnit->mTileY;

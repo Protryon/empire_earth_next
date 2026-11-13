@@ -1,4 +1,7 @@
-// Container painting, hit testing, mouse routing, child insertion and lookup (file name inferred)
+// Container (R6 WON round 26): the Rust Container's calls out (rust/crates/ee_won/src/ctobj.rs, EeWonGuiOp's
+// container ops), its constructor and destructor. The original's Container.cpp, ContainerChildLifecycle.cpp,
+// ContainerInteraction.cpp, ContainerLifetime.cpp, ContainerOrdering.cpp, ContainerSetup.cpp, ContainerTimerCursor.cpp
+// and MouseAt are the Rust object; each op here is a run of their C++ statements with no decision between them.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -11,268 +14,181 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_won.h"
-// FindChildAt's verdict on the child hit is ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs); the
-// child under the mouse's exit and enter, the release's child, the desired size and the insert place under the
-// always-on-top children are its guievent module (guievent.rs).
+#include "ee/wonapi/WONGUIDraw.h"
+using namespace WONAPI;
+
+typedef EeWonGuiOp Op;
+typedef EeWonCtVirt V;
+
+static Component* Comp(intptr_t a) { return (Component*)a; }
+
+// a component's virtual (or, for the base, Component's own: inBase)
+static intptr_t CtVirtCall(Component* c, bool inBase, V v, intptr_t a, intptr_t b)
+{
+    if (inBase) {
+        switch (v) {
+        case V::SizeChanged: c->Component::Virtual08(); return 0;
+        case V::PrePaint: c->Component::PrePaint(*(Graphics*)a); return 0;
+        case V::Paint: c->Component::Paint(*(Graphics*)a); return 0;
+        case V::EnableControlsById: c->Component::EnableControlsById(*(const ControlIdSet*)a, b != 0); return 0;
+        case V::NotifyRootVisibility: c->Component::NotifyRootVisibility(a != 0); return 0;
+        case V::HitTest: return c->Component::HitTest((int)a, (int)b) ? 1 : 0;
+        case V::MouseEnter: c->Component::MouseEnter((int)a, (int)b); return 0;
+        case V::MouseExit: c->Component::MouseExit(); return 0;
+        case V::MouseHover: c->Component::MouseHover((unsigned long)a); return 0;
+        case V::HandleBroadcastEvent: c->Component::HandleBroadcastEvent((ComponentEvent*)a); return 0;
+        case V::AddedToParent: c->Component::AddedToParent(); return 0;
+        case V::MarkInvalid: c->Component::MarkInvalid(); return 0;
+        case V::ClearGrabBG: c->Component::ClearGrabBG(); return 0;
+        case V::GotFocus: c->Component::GotFocus(); return 0;
+        case V::LostFocus: c->Component::LostFocus(); return 0;
+        default: return 0;
+        }
+    }
+    switch (v) {
+    case V::NeedsPaint: return c->NeedsPaint() ? 1 : 0;
+    case V::PrePaint: c->PrePaint(*(Graphics*)a); return 0;
+    case V::Paint: c->Paint(*(Graphics*)a); return 0;
+    case V::EnableControlsById: c->EnableControlsById(*(const ControlIdSet*)a, b != 0); return 0;
+    case V::NotifyRootVisibility: c->NotifyRootVisibility(a != 0); return 0;
+    case V::HitTest: return c->HitTest((int)a, (int)b) ? 1 : 0;
+    case V::MouseEnter: c->MouseEnter((int)a, (int)b); return 0;
+    case V::MouseExit: c->MouseExit(); return 0;
+    case V::MouseMove: c->MouseMove((int)a, (int)b); return 0;
+    case V::MouseDrag: c->MouseDrag((int)a, (int)b); return 0;
+    case V::MouseWheel: return c->MouseWheel((int)a) ? 1 : 0;
+    case V::MouseHover: c->MouseHover((unsigned long)a); return 0;
+    case V::HandleBroadcastEvent: c->HandleBroadcastEvent((ComponentEvent*)a); return 0;
+    case V::AddedToParent: c->AddedToParent(); return 0;
+    case V::Invalidate: c->Invalidate(); return 0;
+    case V::MarkInvalid: c->MarkInvalid(); return 0;
+    case V::ClearGrabBG: c->ClearGrabBG(); return 0;
+    case V::TabFocus: return c->TabFocus(a != 0, b != 0) ? 1 : 0;
+    case V::KeyDown: return c->KeyDown((int)a) ? 1 : 0;
+    case V::KeyChar: return c->KeyChar((int)a) ? 1 : 0;
+    case V::KeyUp: return c->KeyUp((int)a) ? 1 : 0;
+    case V::CanClose: return c->CanClose() ? 1 : 0;
+    case V::GotFocus: c->GotFocus(); return 0;
+    case V::LostFocus: c->LostFocus(); return 0;
+    case V::TimerEvent: return c->TimerEvent((int)a) ? 1 : 0;
+    case V::RequestTimer: c->RequestTimer(a != 0); return 0;
+    case V::RequestFocus: c->RequestFocus(); return 0;
+    case V::SetCursor: c->SetCursor((Cursor*)a); return 0;
+    default: return 0;
+    }
+}
+
+// a container's own virtuals (the subclasses' overrides)
+static intptr_t CtOwnCall(Container* t, V v, intptr_t a, intptr_t b)
+{
+    switch (v) {
+    case V::FindChildAt: return (intptr_t)t->FindChildAt((int)a, (int)b);
+    case V::SetCursor: t->SetCursor((Cursor*)a); return 0;
+    case V::TabFocus: return t->TabFocus(a != 0, b != 0) ? 1 : 0;
+    case V::RemoveChild: t->RemoveChild(Comp(a)); return 0;
+    case V::MouseMove: t->MouseMove((int)a, (int)b); return 0;
+    case V::SetFocusChild: t->SetFocusChild(Comp(a)); return 0;
+    case V::AddTimerChild: t->AddTimerChild(Comp(a)); return 0;
+    case V::ChildInvalidated: return t->ChildInvalidated(Comp(a)) ? 1 : 0;
+    default: return 0;
+    }
+}
+
 namespace WONAPI {
-// Container::SizeChanged in the SDK
-// FUNCTION: WON 0x006f62b0
-// Handles a size change: notifies the base, then reruns the child layout instructions
-void Container::Virtual08()
+// every container op, for the Rust Container
+intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
-    Component::Virtual08();
-    this->mChildLayout.ExecuteInstructions(this);
-}
-// FUNCTION: WON 0x006f62d0
-// Returns the size that just encloses every child (largest right and bottom edges)
-void Container::GetDesiredSize(int& width, int& height)
-{
-    std::vector<int32_t> aRects;
-    for(std::list<SmartPtr<Component> >::iterator i=this->mChildList.begin(); i!=this->mChildList.end(); ++i)
-    {
-        Component* child = i->get();
-        aRects.push_back(child->Left());
-        aRects.push_back(child->Top());
-        aRects.push_back(child->Width());
-        aRects.push_back(child->Height());
-    }
-    width = ee_won_gui_ct_desired_size(aRects.empty() ? NULL : &aRects[0], aRects.size() / 4, &height);
-}
-
-// FUNCTION: WON 0x006f6340
-// Lets every child that needs painting capture its background, topmost first, then does its own
-void Container::PrePaint(Graphics& g)
-{
-    if(!this->mChildList.empty()) {
-        std::list<SmartPtr<Component> >::iterator i=this->mChildList.end();
-        do {
-            --i;
-            Component* child=i->get();
-            if(child->NeedsPaint()) {
-                g.Translate(child->Left(),child->Top());
-                child->PrePaint(g);
-                g.Translate(-child->Left(),-child->Top());
-            }
-        } while(i!=this->mChildList.begin());
-    }
-    Component::PrePaint(g);
-}
-
-// FUNCTION: WON 0x006f6480
-// Enables or disables the controls with the given ids in itself and every child
-void Container::EnableControlsById(const ControlIdSet& ids, bool enabled)
-{
-    Component::EnableControlsById(ids,enabled);
-    for(std::list<SmartPtr<Component> >::iterator i=this->mChildList.begin(); i!=this->mChildList.end(); ++i)
-        (*i)->EnableControlsById(ids,enabled);
-}
-
-// FUNCTION: WON 0x006f64d0
-// Records root visibility, resets the dialog-key state and passes it on to every visible child
-void Container::NotifyRootVisibility(bool visible)
-{
-    Component::NotifyRootVisibility(visible);
-    this->mHasUsedDialogKeys=false;
-    for(std::list<SmartPtr<Component> >::iterator i=this->mChildList.begin();i!=this->mChildList.end();++i) {
-        Component* child=i->get();
-        if(child->IsVisible()) child->NotifyRootVisibility(visible);
-    }
-}
-
-// FUNCTION: WON 0x006f6520
-// Returns whether a point hits the container; with child-only input, only points on a child count
-bool Container::HitTest(int x,int y)
-{
-    if(!Component::HitTest(x,y)) return false;
-    if(this->mOnlyChildInput) {
-        std::list<SmartPtr<Component> >::iterator i=this->mChildList.end();
-        do {
-            --i; // No empty-list guard here (the original has none either)
-            Component* child=i->get();
-            if(child->Contains(x,y) && child->HitTest(x-child->Left(),y-child->Top())) return true;
-        } while(i!=this->mChildList.begin());
-        return false;
-    }
-    return true;
-}
-// FUNCTION: WON 0x006f65b0
-// Returns the topmost child under a point, or NULL if that child is disabled or blocked by a modal child
-Component* Container::FindChildAt(int x,int y)
-{
-    if(this->mChildList.empty())
-        return NULL;
-    std::list<SmartPtr<Component> >::iterator i=this->mChildList.end();
-    do {
-        --i;
-        Component* child=i->get();
-        if(child->Contains(x,y) && child->HitTest(x-child->Left(),y-child->Top())) {
-            return ee_won_gui_hit_child(child->IsDisabled(),this->mModalCount>0,(uint32_t)child->mComponentBits) ? child
-                                                                                                                : NULL;
+    switch (op) {
+    case Op::CtBase: return CtVirtCall(t, true, (V)a, b, c);
+    case Op::CtChild: return CtVirtCall(Comp(a), false, (V)b, c, d);
+    case Op::CtChildMouseDown: Comp(a)->MouseDown((int)b, (int)c, (int)d); return 0;
+    case Op::CtChildMouseUp: Comp(a)->MouseUp((int)b, (int)c, (int)d); return 0;
+    case Op::CtParentCall:
+        if ((V)a == V::SetCursor) { t->mParent->SetCursor((Cursor*)b); return 0; }
+        return CtOwnCall(t->mParent, (V)a, (intptr_t)static_cast<Component*>(t), 0);
+    case Op::CtVirt: return CtOwnCall(t, (V)a, b, c);
+    case Op::CtDetach: Comp(a)->mParent->RemoveChild(Comp(a)); return 0;
+    case Op::CtSetParent: Comp(a)->mParent = b != 0 ? t : NULL; return 0;
+    case Op::CtSetFocusId: Comp(a)->mFocusId = (unsigned char)b; return 0;
+    case Op::CtSetInvalidState: Comp(a)->mInvalidState = (char)b; return 0;
+    case Op::CtSetTimerFlags: t->mTimerFlags = (char)a; return 0;
+    case Op::CtAddBG: t->GetRootContainer()->AddBG((BackgroundGrabber*)a); return 0;
+    case Op::CtLayout:
+        switch (a) {
+        case 0: t->mChildLayout->ExecuteInstructions(t); return 0;
+        case 1: t->mChildLayout->RemoveComponent(Comp(b)); return 0;
+        case 2: t->mChildLayout->Clear(); return 0;
+        default: delete t->mChildLayout; t->mChildLayout = NULL; return 0;
         }
-    } while(i!=this->mChildList.begin());
-    return NULL;
-}
-
-// FUNCTION: WON 0x006f6650
-// Tracks which child is under the mouse, sending exit and enter and restoring the cursor on a change
-void Container::UpdateMouseChild(int x,int y)
-{
-    Component* aChild=this->FindChildAt(x,y);
-    uint8_t aSteps=ee_won_gui_ct_mouse_child(aChild==this->mMouseChild,this->mMouseChild!=NULL,aChild!=NULL);
-    if(aChild==this->mMouseChild)
-        return;
-    if(aSteps & 1) {
-        this->mMouseChild->MouseExit();
-        this->mMouseChild=aChild;
-        this->SetCursor(this->GetDefaultCursor());
-    } else this->mMouseChild=aChild;
-    if(aSteps & 2) aChild->MouseEnter(x-aChild->Left(),y-aChild->Top());
-}
-
-// FUNCTION: WON 0x006f6700
-// Shows the default cursor, then enters the child under the mouse
-void Container::MouseEnter(int x,int y)
-{
-    Component::MouseEnter(x,y);
-    this->UpdateMouseChild(x,y);
-}
-// FUNCTION: WON 0x006f6730
-// Closes its tooltip, sends the exit on to the child under the mouse and forgets its cursor
-void Container::MouseExit()
-{
-    Component::MouseExit();
-    if(this->mMouseChild!=NULL)
-    {
-        this->mMouseChild->MouseExit();
-        this->mMouseChild=NULL;
+    case Op::CtCursorHold: ((Cursor*)a)->AddRef(); return 0;
+    case Op::CtCursorRelease: ((Cursor*)a)->Release(); return 0;
+    case Op::CtSetScheme: ((Graphics*)a)->mColorScheme = (ColorScheme*)b; return 0;
+    case Op::CtBits: return (uint32_t)Comp(a)->mComponentBits;
+    case Op::CtParentOf: return (intptr_t)static_cast<Component*>(Comp(a)->mParent);
+    case Op::CtTimerFlags: return Comp(a)->mTimerFlags;
+    case Op::CtInvalidState: return Comp(a)->mInvalidState;
+    case Op::CtFocusId: return Comp(a)->mFocusId;
+    case Op::CtContains: return Comp(a)->Contains((int)b, (int)c) ? 1 : 0;
+    case Op::CtIntersects: return Comp(a)->Intersects(Comp(b)) ? 1 : 0;
+    case Op::CtGrabBG: return (intptr_t)Comp(a)->GetGrabBG();
+    case Op::CtOwnScheme: return (intptr_t)Comp(a)->GetOwnColorScheme();
+    case Op::CtScheme: return (intptr_t)((Graphics*)a)->mColorScheme;
+    case Op::CtRoot: return (intptr_t)static_cast<Component*>(t->GetRootContainer());
+    case Op::CtRootFocused: {
+        Window* aWindow = t->GetRoot(); // GetWindow in the SDK
+        return aWindow->mManager->mFocusWindow == aWindow ? 1 : 0;
     }
-    this->mCurrentCursor=NULL;
-}
-// FUNCTION: WON 0x006f6780
-// Updates the child under the mouse and passes the move to it in its own coordinates
-void Container::MouseMove(int x,int y)
-{
-    this->UpdateMouseChild(x,y);
-    Component* aChild=this->mMouseChild;
-    if(aChild!=NULL) aChild->MouseMove(x-aChild->Left(),y-aChild->Top());
-}
-
-// FUNCTION: WON 0x006f6810
-// Passes a drag to the child under the mouse in its own coordinates
-void Container::MouseDrag(int x,int y)
-{
-    Component* aChild=this->mMouseChild;
-    if(aChild!=NULL) aChild->MouseDrag(x-aChild->Left(),y-aChild->Top());
-}
-
-// FUNCTION: WON 0x006f6840
-// Passes a button release to the child under the mouse, only if it also got the press
-void Container::MouseUp(int x,int y,int button)
-{
-    Component* anOld=this->mMouseChild;
-    this->UpdateMouseChild(x,y);
-    Component* aChild=this->mMouseChild;
-    if(ee_won_gui_ct_release_to_child(aChild!=NULL,aChild==anOld)) aChild->MouseUp(x-aChild->Left(),y-aChild->Top(),button);
-}
-
-// FUNCTION: WON 0x006f6880
-// Updates the child under the mouse and passes the button press to it
-void Container::MouseDown(int x,int y,int button)
-{
-    this->UpdateMouseChild(x,y);
-    Component* aChild=this->mMouseChild;
-    if(aChild!=NULL) aChild->MouseDown(x-aChild->Left(),y-aChild->Top(),button);
-}
-
-
-// FUNCTION: WON 0x006f69d0
-// FUNCTION: WON 0x006f6a40
-// Returns the insert position at or below the given one that stays under the always-on-top children
-std::list<SmartPtr<Component> >::iterator Container::FindTop(std::list<SmartPtr<Component> >::iterator i)
-{
-    // the always-on-top flags of the children before i (front to back)
-    std::vector<uint8_t> anOnTop;
-    for(std::list<SmartPtr<Component> >::iterator j=this->mChildList.begin(); j!=i; ++j)
-        anOnTop.push_back((*j)->ComponentFlagSet(ComponentFlag_AlwaysOnTop) ? 1 : 0);
-    size_t aPlace = ee_won_gui_ct_find_top(anOnTop.empty() ? NULL : &anOnTop[0], anOnTop.size(), anOnTop.size());
-    std::list<SmartPtr<Component> >::iterator r = this->mChildList.begin();
-    std::advance(r, aPlace);
-    return r;
-}
-
-
-std::list<SmartPtr<Component> >::iterator Container::FindTop()
-{
-    return this->FindTop(this->mChildList.end());
-}
-
-// FUNCTION: WON 0x006f6a60
-// Moves a component into this container, below any always-on-top children
-void Container::AddChild(Component* child)
-{
-    if(child->mParent!=NULL) child->mParent->RemoveChild(child);
-    child->mParent=this;
-    child->mChildListItr=this->mChildList.insert(this->FindTop(),SmartPtr<Component>(child));
-    child->AddedToParent();
-}
-
-// FUNCTION: WON 0x006f6b50
-// Moves a component into this container at a list position, kept below any always-on-top children
-void Container::AddChildEx(Component* child,int position)
-{
-    if(child->mParent!=NULL) child->mParent->RemoveChild(child);
-    child->mParent=this;
-    std::list<SmartPtr<Component> >::iterator i=this->mChildList.begin();
-    for(int n=0;n<position && i!=this->mChildList.end();++n) ++i;
-    child->mChildListItr=this->mChildList.insert(this->FindTop(i),SmartPtr<Component>(child));
-    child->AddedToParent();
-}
-
-// FUNCTION: WON 0x006f7320
-// Handles a broadcast event, then passes it to every child
-void Container::HandleBroadcastEvent(ComponentEvent* event)
-{
-    Component::HandleBroadcastEvent(event);
-    for(std::list<SmartPtr<Component> >::iterator i=this->mChildList.begin();i!=this->mChildList.end();++i)
-        (*i)->HandleBroadcastEvent(event);
-}
-
-// FUNCTION: WON 0x006f7770
-// Returns the first component with a control id in this container's tree, searched level by level, or NULL
-Component* Container::FindChildById(int inControlId)
-{
-    std::list<Component*> pending;
-    pending.push_back(this);
-    for (std::list<Component*>::iterator i=pending.begin(); i!=pending.end(); ++i) {
-        Component* component=*i;
-        if (component->mControlId==inControlId)
-            return component;
-        Container* container=dynamic_cast<Container*>(component);
-        if (container==NULL)
-            continue;
-        std::list<SmartPtr<Component> >::iterator child=container->mChildList.begin();
-        while(child!=container->mChildList.end()) {
-            pending.push_back(child->get());
-            ++child;
-        }
+    case Op::CtMouseInClient: return t->GetRoot()->mMouseIsInClientArea ? 1 : 0;
+    case Op::CtDefaultCursor: return (intptr_t)t->GetDefaultCursor();
+    case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
+    case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
+    case Op::VpAreaRectVisible: return static_cast<ScrollArea*>(Comp(a))->IsRectVisible(*(WONRectangle*)b) ? 1 : 0;
+    case Op::CtContainerOf: {
+        Container* aContainer = dynamic_cast<Container*>(Comp(a));
+        return aContainer != NULL ? (intptr_t)aContainer->mCt : 0;
     }
-    return NULL;
+    case Op::ChildHold: Comp(a)->AddRef(); return 0;
+    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    case Op::ChildLeft: return Comp(a)->Left();
+    case Op::ChildTop: return Comp(a)->Top();
+    case Op::ChildWidth: return Comp(a)->Width();
+    case Op::ChildHeight: return Comp(a)->Height();
+    case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
+    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
+    case Op::ChildControlId: return Comp(a)->mControlId;
+    case Op::Invalidate: t->Invalidate(); return 0;
+    case Op::RequestFocus: t->RequestFocus(); return 0;
+    case Op::GetMousePos: t->GetMousePos(*(int*)a, *(int*)b); return 0;
+    case Op::KeyMod: return t->GetKeyMod();
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        WONDrawNoCall aNoCall;
+        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
+        return 0;
+    }
+    default: return 0;
+    }
+}
 }
 
+extern "C" intptr_t ee_won_guicpp_ct_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    return ContainerHostCall(static_cast<Container*>((Component*)inComp), op, a, b, c, d);
 }
 
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0071c2a0
-// (public: void __thiscall std::list<class WONAPI::Component *,class std::allocator<class WONAPI::Component *> >::_Insert(class std::list<class WONAPI::C)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0071ca10
-// (public: class std::list<class WONAPI::Component *,class std::allocator<class WONAPI::Component *> >::iterator __thiscall std::list<class WONAPI::Compo)
-// TEMPLATE: WON 0x0071ebb0
-// (protected: void __thiscall std::list<class WONAPI::Component *,class std::allocator<class WONAPI::Component *> >::_Incsize(unsigned int)    [?_Incsize)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0071dd00
-// (protected: void __thiscall std::list<class WONAPI::SmartPtr<class WONAPI::Component>,class std::allocator<class WONAPI::SmartPtr<class WONAPI::Compone)
-// TEMPLATE: WON 0x007241d0
-// (void __cdecl std::_Construct(class WONAPI::SmartPtr<class WONAPI::Component> *,class WONAPI::SmartPtr<class WONAPI::Component> const &))
+namespace WONAPI {
+bool Container::mMouseWheelGoesToFocusChildDef=false;
+// FUNCTION: WON 0x006f5b70
+// Creates an empty, focusable container (the Rust container: no child, no mouse or focus child, no cursor, no modal
+// state) with an empty child layout
+Container::Container()
+{
+    this->mCt=ee_won_ct_new(static_cast<Component*>(this),ee_won_guicpp_ct_call,Container::mMouseWheelGoesToFocusChildDef);
+    this->mChildLayout=new ChildLayoutManager;
+    this->SetComponentFlags(ComponentFlag_WantFocus,true);
+}
+// FUNCTION: WON 0x006f5e80
+// Destroys the container: the Rust container detaches the children, then releases the cursor, the child layout, the
+// timer children and the children
+Container::~Container() { ee_won_ct_free(this->mCt); }
+}

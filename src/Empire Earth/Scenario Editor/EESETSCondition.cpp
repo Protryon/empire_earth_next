@@ -79,12 +79,13 @@
 #include "ee/EESETSUICBPlayer.h"
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESETSConditionControls.h"
-#include "ee/EESEEConditionPlayerResource.h"
 #include "ee/EESETSConditionType.h"
 #include "ee/EESETSCondition.h"
 #include "ee/EESEEvents.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x57e49e
 // Creates the condition sub-screen: shared controls, title label, condition-type combo and the seven condition
 // types, starting on the object condition
@@ -112,7 +113,7 @@ EESETSCondition::EESETSCondition(GEFont* inFont, UIForm* inForm, unsigned long& 
         gResource->GetString(IDS_TRIGGER_CONDITION_TYPE_FIRST + i, theTypeNames[i]);
     this->mTypeComboBox = new UIComboBox(kSETSConditionTypeComboBox, 1, theTypeNames, inFont, GERectangle(thePosition, 200.0f, 20.0f),
                                    0x190, inForm, ioIndex, 0, 2);
-    UIEvent* theEvent = new EESEEChangeConditionType;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_CHANGE_CONDITION_TYPE);
     this->mTypeComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
     theEvent->Dereference();
     this->mTypeComboBox->SetTextBoxBgOpacity(0.4f);
@@ -343,15 +344,9 @@ void EESETSCondition::Show()
     this->mTypeComboBox->SetDisplayMode(kDisplayModeShown);
 }
 
-// SYNTHETIC: EXE 0x57ee15
-// (EESEEChangeConditionType's scalar deleting destructor)
-
 // FUNCTION: EXE 0x57ee40
 // Creates the player-attribute condition type (EESETSCTPlayerResource ctor)
 // (inline, ee/EESETSConditionType.h)
-
-// SYNTHETIC: EXE 0x57ee71
-// (EESEEConditionPlayerResource's scalar deleting destructor)
 
 // SYNTHETIC: EXE 0x57ee9c
 // (EESETSCTPlayerResource's scalar deleting destructor)

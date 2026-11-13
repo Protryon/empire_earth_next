@@ -93,7 +93,7 @@ void MSButtonBase::DrawButtonText(Graphics& g,int xoff,int yoff) {
     if(!this->HasFocus())
         return;
     Container* parent=this->mParent;
-    if(parent==NULL || !parent->mHasUsedDialogKeys)
+    if(parent==NULL || !parent->HasUsedDialogKeys())
         return;
     if(this->mTextColor<0) g.SetSysColor(this->mStandardTextColor);
     else g.SetColor(this->mTextColor);
