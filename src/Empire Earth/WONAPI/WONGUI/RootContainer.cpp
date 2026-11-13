@@ -28,7 +28,7 @@ RootContainer::RootContainer(Window *theWindow)
 	this->mAllowDrag = true;
 	this->mDragX = this->mDragY = 0;
 	this->mDragging = false;
-	this->mIsolateTabFocus = true;
+	this->SetIsolateTabFocus(true);
 }
 
 // FUNCTION: WON 0x00704510
@@ -149,7 +149,7 @@ void RootContainer::MouseMove(int x, int y)
 	if(this->mCursorComponent==NULL)
 		return;
 	int mx,my;
-	this->mCurrentCursor->GetComponent(mx,my);
+	this->GetCurrentCursor()->GetComponent(mx,my);
 	x = ee_won_gui_root_cursor_place(x, y, mx, my, &y);
 
 	this->mCursorComponent->Invalidate();
@@ -168,7 +168,7 @@ void RootContainer::MouseDrag(int x, int y)
 		if(this->mCursorComponent!=NULL)
 		{
 			int mx,my;
-			this->mCurrentCursor->GetComponent(mx,my);
+			this->GetCurrentCursor()->GetComponent(mx,my);
 			x = ee_won_gui_root_cursor_place(x, y, mx, my, &y);
 
 			this->mCursorComponent->Invalidate();
@@ -200,7 +200,7 @@ void RootContainer::MouseDown(int x, int y, int theButton)
 	if(theButton!=0 || !this->mAllowDrag)
 		return;
 	Window *aWindow = this->mWindow;
-	Component *aMouseChild = this->mMouseChild;
+	Component *aMouseChild = this->GetMouseChild();
 	if(aWindow->mIsOneComponentWindow && aMouseChild!=NULL)
 		aMouseChild = aMouseChild->GetMouseChild();
 
@@ -291,7 +291,7 @@ void RootContainer::SetCursor(Cursor *theCursor)
 			aComponent->SetPos(x,y);
 
 			this->AddChild(aComponent);
-			Component *aTop = this->mChildList.back().get();
+			Component *aTop = this->GetBackChild();
 			if(aTop!=aComponent)
 				aComponent->EnsureOnTopOf(aTop);
 		}

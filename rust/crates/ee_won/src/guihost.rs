@@ -510,6 +510,147 @@ pub enum EeWonGuiOp {
     ContainerPaint,
     /// `mBackground.Paint(*a, 0, 0, Width(), Height(), b, c)`.
     PaneBackground,
+    // ---- the container (`ctobj`; `a` a `Component*` where it says, this container's own one included)
+    /// `Component::X(...)` on this container (`a` an `EeWonCtVirt`, `b`, `c` its arguments; 0 or 1 where it answers).
+    CtBase = 400,
+    /// `a->X(...)` (virtual: `b` an `EeWonCtVirt`, `c`, `d` its arguments; 0 or 1 where it answers).
+    CtChild,
+    /// `a->MouseDown(b, c, d)`.
+    CtChildMouseDown,
+    /// `a->MouseUp(b, c, d)`.
+    CtChildMouseUp,
+    /// `mParent->X(this)` (`a` an `EeWonCtVirt`: SetFocusChild, AddTimerChild, ChildInvalidated, or SetCursor of the
+    /// `Cursor*` `b`; 0 or 1 where it answers).
+    CtParentCall,
+    /// this container's own virtual (`a` an `EeWonCtVirt`: FindChildAt(b, c), SetCursor(b), TabFocus(b, c),
+    /// RemoveChild(b), MouseMove(b, c); the answer where it has one).
+    CtVirt,
+    /// `a->mParent->RemoveChild(a)`.
+    CtDetach,
+    /// `a->mParent = b != 0 ? this : NULL`.
+    CtSetParent,
+    /// `a->mFocusId = b`.
+    CtSetFocusId,
+    /// `a->mInvalidState = b`.
+    CtSetInvalidState,
+    /// `mTimerFlags = a`.
+    CtSetTimerFlags,
+    /// `GetRootContainer()->AddBG((BackgroundGrabber*)a)`.
+    CtAddBG,
+    /// the child layout: `a` 0 `ExecuteInstructions(this)`, 1 `RemoveComponent(b)`, 2 `Clear()`, 3 the manager
+    /// destroyed.
+    CtLayout,
+    /// `((Cursor*)a)->AddRef()` (the current cursor's `SmartPtr`).
+    CtCursorHold,
+    /// `((Cursor*)a)->Release()`.
+    CtCursorRelease,
+    /// `((Graphics*)a)->mColorScheme = (ColorScheme*)b`.
+    CtSetScheme,
+    // the container's pure reads
+    /// `a->mComponentBits`.
+    CtBits = 430,
+    /// `a->mParent`.
+    CtParentOf,
+    /// `a->mTimerFlags`.
+    CtTimerFlags,
+    /// `a->mInvalidState`.
+    CtInvalidState,
+    /// `a->mFocusId`.
+    CtFocusId,
+    /// `a->Contains(b, c)` (0 or 1).
+    CtContains,
+    /// `a->Intersects((Component*)b)` (0 or 1).
+    CtIntersects,
+    /// `a->GetGrabBG()`.
+    CtGrabBG,
+    /// `a->GetOwnColorScheme()`.
+    CtOwnScheme,
+    /// `((Graphics*)a)->mColorScheme`.
+    CtScheme,
+    /// `GetRootContainer()` (as a `Component*`).
+    CtRoot,
+    /// `GetRoot()->mManager->mFocusWindow == GetRoot()` (0 or 1).
+    CtRootFocused,
+    /// `GetRoot()->mMouseIsInClientArea` (0 or 1).
+    CtMouseInClient,
+    /// `GetDefaultCursor()`.
+    CtDefaultCursor,
+    /// `WantFocus()` (0 or 1).
+    CtWantFocus,
+    /// `a->GetNextSibling(b != 0, c != 0)`.
+    CtNextSibling,
+    /// `dynamic_cast<Container*>(a)`'s Rust container (`EeWonContainer*`; 0 when `a` is no container).
+    CtContainerOf,
+    /// `((ScrollArea*)a)->IsRectVisible(*(WONRectangle*)b)` (0 or 1).
+    VpAreaRectVisible,
+    // ---- the dialog (`dialogobj`)
+    /// `Button::SetDialogDefaultButton((Button*)b)` when `a`, else `Button::UnSetDialogDefaultButton((Button*)b)`.
+    DlgDefaultButton = 460,
+    /// `mParent->BringToTop(this)`.
+    DlgBringToTop,
+    /// `InvalidateRect(*(WONRectangle*)a)` (virtual; it may move the rectangle).
+    DlgInvalidateRect,
+    /// `GetRoot()->EndDialog(a, (Component*)b)`.
+    DlgEndDialog,
+    /// `((Button*)a)->Fn2F3440()` (the click).
+    DlgClick,
+    /// `GetRoot()->mManager->mModalComponent == this` (0 or 1; a pure read).
+    DlgIsModal,
+    /// `((Button*)a)->IsDefaultButton()` (0 or 1; a pure read).
+    DlgIsDefault,
+    /// `((Button*)a->mComponent)->mButtonFlags` (a `ComponentEvent*`; a pure read).
+    DlgEventButtonFlags,
+}
+
+/// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
+/// `CtChild`, `CtParentCall`, `CtVirt`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonCtVirt {
+    NeedsPaint = 1,
+    /// `PrePaint(*(Graphics*)arg)`.
+    PrePaint,
+    /// `Paint(*(Graphics*)arg)`.
+    Paint,
+    /// `EnableControlsById(*(const ControlIdSet*)arg1, arg2 != 0)`.
+    EnableControlsById,
+    NotifyRootVisibility,
+    HitTest,
+    MouseEnter,
+    MouseExit,
+    MouseMove,
+    MouseDrag,
+    MouseWheel,
+    MouseHover,
+    /// `HandleBroadcastEvent((ComponentEvent*)arg)`.
+    HandleBroadcastEvent,
+    AddedToParent,
+    Invalidate,
+    MarkInvalid,
+    ClearGrabBG,
+    TabFocus,
+    KeyDown,
+    KeyChar,
+    KeyUp,
+    CanClose,
+    GotFocus,
+    LostFocus,
+    TimerEvent,
+    /// `RequestTimer(arg != 0)` (not virtual).
+    RequestTimer,
+    /// `RequestFocus()` (not virtual).
+    RequestFocus,
+    /// `Virtual08()` (SizeChanged).
+    SizeChanged,
+    SetFocusChild,
+    AddTimerChild,
+    ChildInvalidated,
+    /// `SetCursor((Cursor*)arg)`.
+    SetCursor,
+    FindChildAt,
+    RemoveChild,
+    /// `SetComponentFlags(ComponentFlag_HasFocus, true)` (not virtual).
+    SetHasFocus,
 }
 
 /// The events a component object fires (`FireEvent`).

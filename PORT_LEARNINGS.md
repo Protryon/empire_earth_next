@@ -11439,3 +11439,90 @@ the branch's start (round 24 merged into rust) -> 85,319 (the scrollers' accesso
   screen's base and its members (`mChildList`, `mMouseChild`, `mFocusChild`, the timer set) are read across
   WONGUI and the lobby: an accessor census and commits first. ScrollAreaViewport (the viewport's own methods),
   TabCtrl / TabBar, ComboBox and Dialog are the next whole classes on the scroll classes.
+
+## R6 WON round 26: Container, Dialog and ScrollAreaViewport whole in Rust (ee_won ctobj.rs, dialogobj.rs; branch rust-r6-won26, 2026-11-13)
+
+Measured as rounds 18-25 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 84,750 at
+the branch's start (round 25's head) -> 84,768 (Container's accessors, +18) -> 84,160 (Container, -608) -> 84,053
+(Dialog, -107) -> 83,977 (ScrollAreaViewport, -76). This round's own net: -773 (the accessors +18, the moves -791).
+
+- **The census first** (its own commit). Outside the container's seven units the lobby and WONGUI read
+  `mHasUsedDialogKeys` (the buttons' dialog keys and focus paints), `mFocusChild` / `mMouseChild` (ComboBox,
+  DialogBehavior, GuiHost), `mCurrentCursor` (RootContainer's cursor component, `Window::CheckSetCursor`,
+  GuiHost), `mIsolateTabFocus` (RootContainer), `mModalCount` (`Component::WantFocus`), and `mChildList` with
+  `Component::mChildListItr` (`GetNextSibling`, RootContainer's top child, the test fixture's lobby walk,
+  ScrollAreaViewport::Reset). Each became an accessor; `GetNextSibling` became the parent's `NextChild`.
+- **The move** (`ctobj.rs`): the child list (each child held by reference), the mouse and focus children, the timer
+  children (held, a `BTreeSet` of addresses: the original's `std::set<SmartPtr>` ordered by raw pointer), the next
+  focus id, the current cursor (held: the `SmartPtr` assignment releases the old one before holding the new), the
+  flags and the modal count, with every method of the seven units and `MouseAt`. The child layout manager stays
+  C++, owned by pointer so it is still destroyed between the cursor and the timer children (the member order).
+  `Component::mChildListItr` is gone: a child's node is found by its address (a child is in one list).
+- **The list is a linked list of nodes, not a `Vec`.** The original iterates its `std::list` while calling
+  children, and a callee may insert or remove siblings; each loop reads the next node after the call, as the
+  original's `++i`, and an erased node keeps its links, so an iteration around a callee's change goes on as the
+  original's did. (A `Vec` index would skip or repeat a child after a removal before it.)
+- **Every call out is one of five shapes:** `CtBase` (`Component::X` on itself), `CtChild` (a child's virtual),
+  `CtParentCall` (`mParent->X(this)`), `CtVirt` (its own virtual: FindChildAt, SetCursor, TabFocus, RemoveChild,
+  MouseMove, so the subclasses' overrides run), with the virtual named by `EeWonCtVirt`; plus the setters and the
+  pure reads (flags, parent, bounds, timer flags, invalid state, focus id, the root, the mouse, the sibling walk).
+  The host (`Container.cpp`) is two switches over the virtual's name. A subclass object (the dialog) holds the
+  container's Rust object and calls it directly for `Container::X`.
+- **Behaviour on the original's crashing paths only:** a NULL child to `SetFocusChild` returns after the focus id
+  (the original wrote the id through NULL; ComboBox's `SetFocusChild(NULL)` reaches it when the edit box had the
+  focus); an empty list with child-only input hits nothing (the original read the list's head as a child); the
+  timer set is released in address order at destruction (the original's tree went in its own order).
+- **Dialog** (`dialogobj.rs`): the drag, its flags, the Escape result, the default button (held). The drag's two
+  `InvalidateRect` calls share one rectangle: `Component::InvalidateRect` moves it by the component's place, so the
+  original's second call got the moved rectangle; the Rust passes the same rectangle to both (a fresh one for the
+  second fails 1,575 golden sequences). The constructor left `mDragging` unset; it starts false. The status dialog
+  saved and restored `mDragging` around its resize (Virtual08 ends a drag): the compiler found it after the move
+  (`IsDragging` / `SetDragging`); the census grep had been cut by a `head`. Grep a class's members across all of
+  `src` without a limit before moving it.
+- **ScrollAreaViewport** is a container with its scroll area (`SetViewportArea`): `InvalidateIfRectVisible` (the
+  child's bounds moved up through nested viewports until the scroll area's view) and its `ChildInvalidated` are the
+  Rust container's viewport part; `SetCursor` (the area's) and the empty `ChildStateChanged` stay one-line C++
+  overrides; its Paint, TimerEvent, SetFocusChild and AddTimerChild were the container's and are gone.
+  `ScrollAreaViewport::Reset` had no caller: deleted with the census's `ResetChildren`. ScrollAreaViewport.cpp
+  deleted.
+- **The goldens** share a world (`tests/won/won_ct_world.h`): twelve components, the first four containers, with
+  bounds, flags, parents, timer flags, invalid states, focus ids and control ids, the root, the window's focus, the
+  mouse and the cursors. A call the host makes on a component runs what the C++ runs: a container's overrides on
+  the side running ("do" lines), and Component's own behaviour for the rest (the focus flag, the invalid state,
+  RequestFocus, RequestTimer, Invalidate and AddedToParent calling the parent back, TabFocus); a leaf's answers (a
+  key, a tick, CanClose) come from a second random stream. World changes are traced ("set", "env"), pure reads are
+  answered from the world. The Rust replay is an interpreter of those lines (no copy of the C++ model): "call" and
+  "do" make the calls, "set" and "env" change the world, and every op the Rust makes must be the next "op" line,
+  answered by its "=" line.
+
+  | Golden | Sequences | Trace lines | Mutation | Fails |
+  |---|---|---|---|---|
+  | container | 20,000 x 40 calls | 12,833,433 | SetFocusChild's modal test dropped | 1,340 |
+  | | | | the clip popped unconditionally | 11,122 |
+  | container with viewports | 20,000 x 40 calls | 14,208,418 | a nested viewport's rectangle not moved in x | 268 |
+  | dialog | 20,000 x 40 calls | 10,321,741 | a fresh rectangle for the second InvalidateRect | 1,575 |
+  | | | | MouseDown's button ignored | 12,014 |
+
+  Every reference (children, timer children, cursors, the default button) is given back in every sequence. The
+  goldens' first sequences (41 and 44) are replayed by cargo, which fails on a changed line and on a Rust mutation.
+
+  The first viewport driver put the viewport straight under its area, so the nested path's rectangle never
+  mattered and its mutation passed: the driver now builds a column viewport inside another (MultiListArea's).
+- **Lessons:**
+  - Python's `write_text` on Windows writes CRLF: it turned `tools/xbuild.py` and a new test into CRLF files. Edit
+    through `read_bytes` / `write_bytes`.
+  - cbindgen exports a type only when an exported function reaches it: an enum passed only as an op's integer
+    argument (`EeWonCtVirt`, `EeWonCtField`, `EeWonDlgField`) needs cbindgen.toml's `include`.
+  - Clippy rejects `1 as *mut c_void` in tests (`manual_dangling_ptr`): `std::ptr::dangling_mut::<c_void>()` is the
+    same address 1.
+  - The main checkout's oracle ref came from a tree whose `Data/ai` differs: every trace's first line (the AI folder
+    hash) differs; the rest is identical (`build/w26/orcmp.sh` compares without it and the timing lines).
+- **What runs it.** EE-SIM never builds the lobby (the oracle is unchanged by construction; seeds 2-3 identical
+  after each commit). Every lobby screen, list, scroll area, button group and dialog is a Container, so the whole
+  lobby runs through `ctobj.rs`: the lead's LAN game (`lan_game.py`: the LAN lobby's mouse routing, focus, tab
+  order, timers (the caret, the ping), the game room, the join's status dialog) and the lobby captures (paint
+  order, clipping, colour schemes, invalidation through the list viewports) are the check. Only a person drags a
+  dialog, presses Escape or Enter in one, or tabs through a dialog's controls; those run only in the goldens.
+- **Left:** TabCtrl / TabBar, ComboBox (its edit box and button over the container: GetFocusChild and
+  GetMouseChild are accessors already), and the older input and list goldens' re-recording to trace the delivered
+  event type.
