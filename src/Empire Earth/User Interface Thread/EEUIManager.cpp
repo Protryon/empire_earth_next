@@ -815,7 +815,8 @@ void EEUIManager::DeleteScenarioEditor()
 void EEUIManager::DisplayPasswordPrompt(const UWideString& inMessage, unsigned long inAlignment, EEUIFPasswordCallback inCallback,
                                         bool inFlag)
 {
-    (new EEUIFError(this))->DisplayPassword(inMessage, inAlignment, inCallback, inFlag);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_PASSWORD, inMessage, inAlignment, NULL, (EEUIFErrorCallback)inCallback,
+                                   NULL, NULL, inFlag);
 }
 
 // FUNCTION: EXE 0x674d79
@@ -823,7 +824,7 @@ void EEUIManager::DisplayPasswordPrompt(const UWideString& inMessage, unsigned l
 void EEUIManager::DisplayCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                 EEUIFErrorCallback inCallback, UIForm* inCancel)
 {
-    (new EEUIFError(this))->DisplayCancel(inMessage, inAlignment, inForm, inCallback, inCancel);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_CANCEL, inMessage, inAlignment, inForm, inCallback, NULL, inCancel, false);
 }
 
 // FUNCTION: EXE 0x674db5
@@ -831,7 +832,7 @@ void EEUIManager::DisplayCancel(const UWideString& inMessage, unsigned long inAl
 void EEUIManager::DisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                  EEUIFErrorCallback inCallback, bool inFlag)
 {
-    (new EEUIFError(this))->DisplayMessage(inMessage, inAlignment, inForm, inCallback, inFlag);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_MESSAGE, inMessage, inAlignment, inForm, inCallback, NULL, NULL, inFlag);
 }
 
 // FUNCTION: EXE 0x674df1
@@ -839,7 +840,7 @@ void EEUIManager::DisplayMessage(const UWideString& inMessage, unsigned long inA
 void EEUIManager::DisplayQuestion(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inYes,
                                   EEUIFErrorCallback inNo)
 {
-    (new EEUIFError(this))->DisplayQuestion(inMessage, inAlignment, inForm, inYes, inNo);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_QUESTION, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
 }
 
 // FUNCTION: EXE 0x674e2d
@@ -847,7 +848,8 @@ void EEUIManager::DisplayQuestion(const UWideString& inMessage, unsigned long in
 void EEUIManager::DisplayYesNoCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                      EEUIFErrorCallback inYes, EEUIFErrorCallback inNo)
 {
-    (new EEUIFError(this))->DisplayYesNoCancel(inMessage, inAlignment, inForm, inYes, inNo);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_YES_NO_CANCEL, inMessage, inAlignment, inForm, inYes, inNo, NULL,
+                                   false);
 }
 
 // FUNCTION: EXE 0x674e69

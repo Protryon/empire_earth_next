@@ -29,6 +29,8 @@
 //! - [`civ_choice`]: the in-game civilization choice form whole (form 35: the predefined civilizations, over the C++
 //!   host; the posted loads' files by slot).
 //! - [`debug_sound`]: the debug sound panel whole (form 22: its sliders' events over the C++ host).
+//! - [`dialog`]: the game's message box (`EEUIFError`: each kind's buttons and controls, its layout on open), over
+//!   the C++ host.
 //! - [`diplomacy`]: the diplomacy form whole (form 27: its events and tribute helpers over the C++ host; the players
 //!   as records).
 //! - [`post_game`]: the post-game summary whole (form 25: its graphs, bars and stars, the stats server's reports,
@@ -74,6 +76,9 @@ pub mod custom_campaign;
 pub mod debug_sound;
 #[cfg(not(test))]
 mod debug_sound_ffi;
+pub mod dialog;
+#[cfg(not(test))]
+mod dialog_ffi;
 pub mod diplomacy;
 #[cfg(not(test))]
 mod diplomacy_ffi;

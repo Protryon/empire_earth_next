@@ -602,6 +602,67 @@ constexpr static const uint32_t EE_SCREENS_GAME_DSU_VOLUME = 700;
 /// Put (control id): the debug sound form's control of that id, when it is a label, `SetText`.
 constexpr static const uint32_t EE_SCREENS_TEXT_DSU_LABEL = 130;
 
+/// The kinds (and the modes `Open` lays out): OK (shown or not), Yes/No, Yes/No/Cancel, a text or password with
+/// OK, Cancel only.
+constexpr static const uint32_t EE_SCREENS_DIALOG_MESSAGE = 0;
+
+constexpr static const uint32_t EE_SCREENS_DIALOG_QUESTION = 1;
+
+constexpr static const uint32_t EE_SCREENS_DIALOG_YES_NO_CANCEL = 2;
+
+constexpr static const uint32_t EE_SCREENS_DIALOG_PASSWORD = 3;
+
+constexpr static const uint32_t EE_SCREENS_DIALOG_CANCEL = 4;
+
+/// (button, string id << 2 | callback) the button's text (the string, Tahoma 12), its callback (0 none, 1 the first
+/// with the data, 2 the second with the data, 3 the first with the edit box's text; Cancel's also takes the form it
+/// closes), shown, black and transparent.
+constexpr static const uint32_t EE_SCREENS_DLG_BUTTON = 0;
+
+/// (control, mode) `SetDisplayMode`.
+constexpr static const uint32_t EE_SCREENS_DLG_SHOW = 1;
+
+/// (alignment) the label's alignment, then its text (the message).
+constexpr static const uint32_t EE_SCREENS_DLG_MESSAGE = 2;
+
+/// (width, height) the label's rectangle at the origin.
+constexpr static const uint32_t EE_SCREENS_DLG_MESSAGE_SIZE = 3;
+
+/// The form's tabbing on, its tab stop the edit box.
+constexpr static const uint32_t EE_SCREENS_DLG_TABBING = 4;
+
+/// (flag) the edit box a password box.
+constexpr static const uint32_t EE_SCREENS_DLG_PASSWORD = 5;
+
+/// (mode) the mode `Open` lays out.
+constexpr static const uint32_t EE_SCREENS_DLG_MODE = 6;
+
+/// `gUserInterface->SwitchToForm(the box)`.
+constexpr static const uint32_t EE_SCREENS_DLG_SWITCH = 7;
+
+/// (left | right << 16, top | bottom << 16) the layout (left and right in 1024ths of the window, top and bottom in
+/// 768ths, each a relative side) into the rectangle register.
+constexpr static const uint32_t EE_SCREENS_DLG_CALC = 8;
+
+/// (control) `SetRectangle(the register)`.
+constexpr static const uint32_t EE_SCREENS_DLG_PLACE = 9;
+
+/// (0) the font register: the closest font of index 0x1c to Tahoma 16 scaled to the window's height; (button) the
+/// button's text in it; (4) the register's font released.
+constexpr static const uint32_t EE_SCREENS_DLG_FONT = 10;
+
+/// (side: 0 left, 1 top, 2 right, 3 bottom) -> the register's side (f32 bits).
+constexpr static const uint32_t EE_SCREENS_DLG_RECT = 11;
+
+/// (side, f32 bits) the register's side.
+constexpr static const uint32_t EE_SCREENS_DLG_SET_RECT = 12;
+
+/// -> Tahoma 12's height.
+constexpr static const uint32_t EE_SCREENS_DLG_LINE_HEIGHT = 13;
+
+/// -> the message label's line count.
+constexpr static const uint32_t EE_SCREENS_DLG_LINES = 14;
+
 /// The form's open event (`EECreateFormEvent`'s `kFormEventDSOpen`).
 constexpr static const uint32_t EE_SCREENS_DS_OPEN = 6913;
 
@@ -2662,6 +2723,16 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
 
 /// The debug sound panel's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_debug_sound_event_for(unsigned long id);
+
+/// `EEUIFError::Display`: shows the box as the kind (`EE_SCREENS_DIALOG_*`); `flag` is the message's OK shown or
+/// the prompt's password box.
+void ee_screens_dialog_show(void *dialog,
+                            uint32_t kind,
+                            uint32_t alignment,
+                            bool flag);
+
+/// `EEUIFError::Open`: lays the box's controls out for its mode.
+void ee_screens_dialog_open(void *dialog, uint32_t mode);
 
 /// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
 uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
