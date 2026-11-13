@@ -12422,3 +12422,14 @@ Measured as rounds 18-29 (every file under `src/Empire Earth/WONAPI` and `includ
 - **Left:** the skins' Button subclasses (MSButtonBase, MSCheckbox, MSRadioButton, WONButton, ...) are mostly paint
   over the Graphics and a WrappedText: they need draw ops and only the lobby captures check them, so they were not
   cheap enough for this round. Then Window/WindowManager (platform ops) and the layout managers.
+- **The LAN gate's crash on `rust` 37a013f7 (rounds 28-29), fixed here** (its own commit). The host died on the
+  MultiPlayer click (a read of NULL + 0x60). The lobby's tab control brings its page to the top in AddedToParent
+  (`notify_tab_change`), before the lobby screen joins the root; a page that grabs its background makes the container
+  call `GetRootContainer()->AddBG(grabber)` (`CtAddBG`) with a NULL root. The original's AddBG returned before
+  reading itself when the grabber had nothing to draw, so the NULL `this` never mattered; since round 29 the
+  RootContainer forwarder reads its Rust object first. Container.cpp's host now skips a NULL root (ComponentTraversal
+  already did). `lan_game.py` passes again (`RESULT PASS lan-game`).
+  - **Why no golden saw it:** the goldens replace the C++ host with their world, and the world traced `CtAddBG` with
+    root 0 (env 0) as a harmless op. A method moved behind a forwarder that reads `this->mX` first is no longer
+    safe on a NULL `this` that the original's early return tolerated: before moving a class, grep its callers for
+    calls through a pointer that may be NULL (`GetRootContainer()->`, `GetRoot()->`).
