@@ -117,6 +117,7 @@ pub mod scrollerobj;
 pub mod servconn;
 pub mod servctx;
 pub mod server;
+pub mod smartroute;
 pub mod socket;
 pub mod sockobj;
 pub mod sockop;

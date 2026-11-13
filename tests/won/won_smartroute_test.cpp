@@ -26,6 +26,7 @@
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
+#include "rust/ee_won.h"
 
 using namespace WONAPI;
 
@@ -288,9 +289,31 @@ static std::string InputState(Smart* c, bool inCommand)
         + " name=" + Esc(c->mLastMatchName);
 }
 #else
-static void DumpLines(Smart* c, bool inAsync, std::vector<std::string>& out) { c->DumpModel(inAsync, out); }
-static void DumpCommands(Smart* c, std::vector<std::string>& out) { c->DumpCommands(out); }
-static std::string InputState(Smart* c, bool inCommand) { return c->DumpInput(inCommand); }
+// the Rust object's dump (ee_won smartroute.rs), the same lines
+static void DumpSink(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
+}
+static std::string RustDump(Smart* c, int inWhat, bool inFlag)
+{
+    std::string aText;
+    ee_won_smart_dump(c->mModel, inWhat, inFlag, DumpSink, &aText);
+    return aText;
+}
+static void DumpLines(Smart* c, bool inAsync, std::vector<std::string>& out)
+{
+    std::string aText = RustDump(c, 0, inAsync);
+    size_t aStart = 0;
+    while (true) {
+        size_t anEnd = aText.find((char)10, aStart);
+        out.push_back(aText.substr(aStart, anEnd == std::string::npos ? std::string::npos : anEnd - aStart));
+        if (anEnd == std::string::npos)
+            break;
+        aStart = anEnd + 1;
+    }
+}
+static void DumpCommands(Smart* c, std::vector<std::string>& out) { out.push_back(RustDump(c, 1, false)); }
+static std::string InputState(Smart* c, bool inCommand) { return RustDump(c, 2, inCommand); }
 #endif
 
 static std::string HandlerLine()

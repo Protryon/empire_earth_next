@@ -284,6 +284,7 @@ mod stdio {
         pub fn fclose(file: *mut c_void) -> c_int;
         pub fn fread(data: *mut c_void, size: usize, count: usize, file: *mut c_void) -> usize;
         pub fn feof(file: *mut c_void) -> c_int;
+        pub fn fwrite(data: *const c_void, size: usize, count: usize, file: *mut c_void) -> usize;
     }
 }
 
@@ -332,6 +333,25 @@ pub(crate) fn read_file(path: &[u8], mode: &std::ffi::CStr) -> Option<Vec<u8>> {
         out.extend_from_slice(&buffer[..n]);
     }
     Some(out)
+}
+
+/// A file written whole through `PlatFOpen(path, "wb")` and `fwrite` (false: it did not open). For the other WON
+/// objects that write their files in Rust (smartroute.rs's ignore list).
+pub(crate) fn write_file(path: &[u8], data: &[u8]) -> bool {
+    let Ok(p) = std::ffi::CString::new(path.to_vec()) else {
+        return false;
+    };
+    // SAFETY: two C strings
+    let f = unsafe { stdio::PlatFOpen(p.as_ptr(), c"wb".as_ptr()) };
+    if f.is_null() {
+        return false;
+    }
+    let file = CFile(f);
+    if !data.is_empty() {
+        // SAFETY: the open FILE*, the data's bytes
+        unsafe { stdio::fwrite(data.as_ptr().cast(), 1, data.len(), file.0) };
+    }
+    true
 }
 
 /// The login data (opaque): `AuthContext::mLogin`, its own lock.

@@ -1988,6 +1988,30 @@ constexpr static const uint8_t EE_WON_RT_ACT_USER_STATUS = 7;
 /// `InvalidReplyHeader()` (a group list request's reply of another kind)
 constexpr static const uint8_t EE_WON_RT_ACT_INVALID_HEADER = 8;
 
+/// No request.
+constexpr static const int32_t EE_WON_SMART_ACT_NONE = 0;
+
+/// `SendChat(text, flags, group, NULL)` (`group`: the group, or a whisper's client)
+constexpr static const int32_t EE_WON_SMART_ACT_CHAT = 1;
+
+/// `SetClientFlags(flags, value, 0, 0, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_CLIENT_FLAGS = 2;
+
+/// `InviteClient(group, client, on, text, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_INVITE = 3;
+
+/// `BecomeModerator(on, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_MODERATOR = 4;
+
+/// `MuteClient(group, on, seconds, text, client, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_MUTE = 5;
+
+/// `BanClient(group, on, seconds, text, client, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_BAN = 6;
+
+/// `BanClientByCDKeyId(group, on, seconds, text, value, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_BAN_CDKEY = 7;
+
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
 
@@ -3704,6 +3728,33 @@ enum class EeWonScrollerCall : uint32_t {
   SetScrollbarConditions,
 };
 
+/// Which copy `ee_won_smart_get` makes.
+enum class EeWonSmartGet {
+  /// `GetClient(a)`
+  Client = 0,
+  /// `GetGroup(a)`
+  Group = 1,
+  /// `GetMember(a group, b client)`
+  Member = 2,
+  NextClient = 3,
+  NextGroup = 4,
+  NextMember = 5,
+  LastMember = 6,
+  LastClient = 7,
+};
+
+/// A number of the model (`ee_won_smart_number` / `ee_won_smart_set`).
+enum class EeWonSmartNumber {
+  /// `mClientId` (this client's id)
+  ClientId = 0,
+  /// `mMatchTolerance` set by `SetAllowPartialNameMatch` (1: partial names, 0: exact names only)
+  PartialNames = 1,
+  ServerWide = 2,
+  ColonEmote = 3,
+  LastError = 4,
+  LastCommand = 5,
+};
+
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonSplitCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -4252,6 +4303,9 @@ struct EeWonScroller;
 
 /// `ServerConnection`'s state and steps.
 struct EeWonServerConn;
+
+/// The model (opaque): `SmartRoutingConnection::mModel`.
+struct EeWonSmartRoute;
 
 /// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
 struct EeWonSocketOp;
@@ -6009,6 +6063,56 @@ struct EeWonPingReply {
 
 /// `rand()` for [`ee_won_server_shuffle`].
 using EeWonDraw = int32_t(*)();
+
+/// A finished op's fields: `kind` the op type, then by type (SmartRoutingConnection.cpp's switch).
+struct EeWonSmartOp {
+  int32_t kind;
+  int32_t status;
+  uint16_t group;
+  uint16_t client;
+  uint32_t a;
+  uint32_t b;
+  uint32_t c;
+  bool has;
+  /// `text_len` `wchar_t`s
+  const void *text;
+  size_t text_len;
+  const uint8_t *data_type;
+  size_t data_type_len;
+  const uint8_t *data;
+  size_t data_len;
+};
+
+/// A record's copy for `ClientInfo` / `GroupInfo` / `MemberInfo` (`name` points into the object until its next
+/// call).
+struct EeWonSmartRecord {
+  uint16_t id;
+  uint16_t captain;
+  uint16_t max_clients;
+  uint16_t observers;
+  uint16_t member_count;
+  uint32_t flags;
+  uint32_t async_flags;
+  uint32_t cdkey;
+  uint32_t client_flags;
+  uint8_t member_flags;
+  bool has_client;
+  const uint32_t *name;
+  size_t name_len;
+};
+
+/// The request a chat input makes, for the C++ to send (`text` points into the object until its next call).
+struct EeWonSmartAction {
+  int32_t kind;
+  uint16_t group;
+  uint16_t client;
+  uint32_t flags;
+  uint32_t value;
+  uint32_t seconds;
+  bool on;
+  const uint32_t *text;
+  size_t text_len;
+};
 
 /// A C++ call on a socket (`AsyncSocket*`).
 using EeWonAsyncSocketFn = void(*)(void *socket);
@@ -12670,6 +12774,160 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// # Safety
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
+
+/// A new model: the ignore file's path (`path_len` bytes), the C++'s `wchar_t` size.
+///
+/// # Safety
+/// `path` holds `path_len` bytes.
+EeWonSmartRoute *ee_won_smart_new(uint32_t wchar_size, const uint8_t *path, size_t path_len);
+
+/// # Safety
+/// `r` is from `ee_won_smart_new` (or NULL), not used afterwards.
+void ee_won_smart_free(EeWonSmartRoute *r);
+
+/// A client record of the next op (its list, or its own client).
+///
+/// # Safety
+/// `r` is a model; `name` holds `name_len` `wchar_t`s.
+void ee_won_smart_put_client(EeWonSmartRoute *r,
+                             uint16_t id,
+                             const void *name,
+                             size_t name_len,
+                             uint32_t flags,
+                             uint32_t address);
+
+/// A group record of the next op (a group list's); its members follow with `to_group`.
+///
+/// # Safety
+/// `r` is a model; `name` holds `name_len` `wchar_t`s.
+void ee_won_smart_put_group(EeWonSmartRoute *r,
+                            uint16_t id,
+                            const void *name,
+                            size_t name_len,
+                            uint16_t captain,
+                            uint16_t max_clients,
+                            uint32_t flags,
+                            uint32_t async_flags,
+                            uint16_t observers,
+                            uint16_t max_players);
+
+/// A member record of the next op: into the last group put (`to_group`), else the op's member list; its client
+/// record's name and flags when it has one.
+///
+/// # Safety
+/// `r` is a model; `name` holds `name_len` `wchar_t`s.
+void ee_won_smart_put_member(EeWonSmartRoute *r,
+                             bool to_group,
+                             uint16_t id,
+                             uint8_t flags,
+                             bool has_client,
+                             const void *name,
+                             size_t name_len,
+                             uint32_t client_flags);
+
+/// A data object of the next op (its link id and data).
+///
+/// # Safety
+/// `r` is a model; `data` holds `len` bytes.
+void ee_won_smart_put_object(EeWonSmartRoute *r, uint16_t link, const uint8_t *data, size_t len);
+
+/// `RoutingOpCompleteHook`: the model updated from the op; true when its completion is to be dropped.
+///
+/// # Safety
+/// `r` is a model; `op` points to the op's fields, whose pointers hold their lengths.
+bool ee_won_smart_op(EeWonSmartRoute *r,
+                     const EeWonSmartOp *op);
+
+/// A copy (`which`, with the ids `a` and `b`): false when there is none (`out` untouched).
+///
+/// # Safety
+/// `r` is a model, `out` a record.
+bool ee_won_smart_get(EeWonSmartRoute *r,
+                      EeWonSmartGet which,
+                      uint16_t a,
+                      uint16_t b,
+                      EeWonSmartRecord *out);
+
+/// `StartClientItr` (0), `StartGroupItr` (1) or `StartMemberItr(group)` (2: false when there is no such group).
+///
+/// # Safety
+/// `r` is a model.
+bool ee_won_smart_start(EeWonSmartRoute *r,
+                        int32_t which,
+                        uint16_t group);
+
+/// `FindClient(name)`: the match (`MatchResult`), and the client it set in `out` (`found`).
+///
+/// # Safety
+/// `r` is a model, `name` holds `len` `wchar_t`s, `out` and `found` are valid.
+int32_t ee_won_smart_find(EeWonSmartRoute *r,
+                          const void *name,
+                          size_t len,
+                          EeWonSmartRecord *out,
+                          bool *found);
+
+/// `IgnoreClient` of the client with an id (the ignore file saved).
+///
+/// # Safety
+/// `r` is a model.
+void ee_won_smart_ignore(EeWonSmartRoute *r, uint16_t id, bool on);
+
+/// `AddCommandString(text, command)`.
+///
+/// # Safety
+/// `r` is a model, `name` holds `len` `wchar_t`s.
+void ee_won_smart_add_command(EeWonSmartRoute *r, const void *name, size_t len, int32_t command);
+
+/// `ClearCommandStrings`.
+///
+/// # Safety
+/// `r` is a model.
+void ee_won_smart_clear_commands(EeWonSmartRoute *r);
+
+/// `SetProductName`: the ignore file's path.
+///
+/// # Safety
+/// `r` is a model, `path` holds `len` bytes.
+void ee_won_smart_set_path(EeWonSmartRoute *r, const uint8_t *path, size_t len);
+
+/// The `CloseHook`'s part: this client's id and record forgotten.
+///
+/// # Safety
+/// `r` is a model.
+void ee_won_smart_close(EeWonSmartRoute *r);
+
+/// A number (see [`EeWonSmartNumber`]).
+///
+/// # Safety
+/// `r` is a model.
+int64_t ee_won_smart_number(EeWonSmartRoute *r, EeWonSmartNumber which);
+
+/// Sets a setting (`PartialNames`, `ServerWide`, `ColonEmote`; the others are read only).
+///
+/// # Safety
+/// `r` is a model.
+void ee_won_smart_set(EeWonSmartRoute *r, EeWonSmartNumber which, int64_t value);
+
+/// `HandleInput(text, group)`: true when the input made its request, which `action` describes for the C++ to send.
+///
+/// # Safety
+/// `r` is a model, `text` holds `len` `wchar_t`s, `action` is valid.
+bool ee_won_smart_input(EeWonSmartRoute *r,
+                        const void *text,
+                        size_t len,
+                        int32_t group,
+                        EeWonSmartAction *action);
+
+/// The golden's dump (won_smartroute_test): `what` 0 the model's lines (`flag`: with the async flags), 1 the
+/// commands, 2 the input state (`flag`: with the command); the lines joined with '\n' into the sink.
+///
+/// # Safety
+/// `r` is a model, `sink` a byte sink.
+void ee_won_smart_dump(EeWonSmartRoute *r,
+                       int32_t what,
+                       bool flag,
+                       EeWonByteSink sink,
+                       void *context);
 
 /// A new socket object for the C++ `socket` (the hooks get it), with its own lock.
 ///
