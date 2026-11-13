@@ -12760,3 +12760,91 @@ algorithms (the objects implement their `SliderHost`/`ScrollBarHost` traits over
 - **Left:** UICheckBox, UIRadioButton, UITriStateCheckBox and the other buttons (the radio walk over sibling
   objects), UITextLabel with UITLScrolling, UIEditBox, the list boxes, the combo box, the form and the manager; then
   `UIControl` itself (the base ops would become the objects' own).
+
+## R6: UIButton whole in Rust; the subclasses' census (ee_ui buttonobj.rs; branch rust-r6-ui11, 2026-11-13)
+
+Round 10's pattern applied to the toolkit's most-subclassed control: `UIButton` has seven toolkit subclasses
+(`UIDualButton`, `UIScrollButton`, `UIBlinkingButton`, `UIScalableButton`, `UICheckBox`, `UIRadioButton`,
+`UITriStateCheckBox`) and sixteen in the game (the scenario editor's tabs and tool buttons, the in-game status,
+upgrade, colour and saved-group buttons, the error dialog's OK/Cancel).
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| fd53b109 | Census: the subclasses' reads of UIButton's members behind methods | +3 |
+| 7745725f | UIButton whole (`buttonobj.rs`); UIDualButton's handlers on it; `UIObjHost::Media` | -217 |
+
+- **The census.** Grepping every member of UIButton across `src`, `include` and `tests` found these outside readers:
+  the game's `EEUIBUpgrade` and `EEUIFMGStatusButton` (`mState`), `EEUIBSavedGroup` (`mBitmapLocation`), the
+  editor's unit tab and main buttons (`mBitmapDrawOffset`), and the toolkit's blinking, scalable, check and radio
+  buttons (`mState`, the bitmaps, `mCopiedBitmap`, `mBitmapLocation`, `mTextRectangle`). They now call `GetState`,
+  `GetBitmapLocation`, `GetCopiedBitmap`, `SetTextRectangle`, `SetBitmapDrawOffset`, and (the radio button's swaps,
+  which never dirtied the button) `ReplaceNormalBitmap`/`ReplacePressedBitmap`. `EESEUIBDiplomacy::mState` is that
+  class's own member (it shadows UIButton's) and stays. `UIBlinkingButton::DrawPolygons` calls UIButton's: the
+  original ICF-folded the two identical bodies.
+- **The move.** `EeUiButton` holds `ButtonFields` (round 3's record, now Rust memory) and implements round 3's
+  `ButtonHost` over ops, so the state machine (`button.rs`) and its goldens are unchanged. `UIButton.cpp` is the
+  forwarders (the header's inline getters and setters became out-of-line forwarders), the constructor (its
+  `mBorderType = 1` stays C++) and destructor, `UIButtonHost::Op` (the virtuals `ButtonDown`, `ButtonUp`,
+  `MouseOver`, `MouseMove`; the sound manager's `Load`, `Unload`, `Play`) and the label host calls the check and radio
+  buttons use. The copy constructor is `= delete` (nothing copied a button).
+  - UIControl's ops grew (13-19, 90-94: index, border type, tab stop, tabbing, tabable, mouse capture, right button,
+    key states, keyboard capture). `mBorderType` is written by an op only when it changes: the original wrote it on
+    every record store, which is not observable.
+  - The bitmap and text ops every whole object uses moved into `UIObjHost::Media` (reference, release, location,
+    draw; create, delete, font, length, extent, copy, text, location, colour, clipped draw); the slider's and status
+    bar's hosts lost their copies, and the slider-named ops became `BitmapRelease`/`BitmapSetLocation`/`BitmapDraw`
+    and `ButtonDown`/`ButtonUp` (the same numbers, so round 10's goldens are unchanged).
+  - The subclasses' records (the check box's, the radio button's, the scroll arrow's `mDecrement`) are still C++
+    members: `ButtonRefs` now names the C++ object, its `EeUiButton`, the record and the forwarder's context, and
+    `Btn` (the button's host) also implements the subclasses' host traits over their `ee_uicpp_*` calls. The
+    record FFI of UIButton itself (`ee_ui_button_init`, the eleven `ee_ui_button_*` handlers, the two dual ones) and
+    its 25 `ee_uicpp_button_*` host calls are gone.
+- **Behaviour.** No change. The emptiness test of the button text reads `GetLength()` (an op) instead of the text's
+  bytes; the two agree.
+- **The golden** (`build/ui11/button_driver.cpp`, the round-10 tooling in `build/ui11`). The world: the control's
+  rectangle, border, index and border type, the form's tab stop and tabbing, the mouse and its capture, the right
+  button, the four key states, texts (length and extent follow the text and the font), bitmaps and sound ids as
+  handles; the virtuals run UIButton's own or a subclass's that reads the state (or `GetIsButtonDown`) before the
+  base; trigger events read the button back. 20,000 sequences of 40 calls over all 38 inward calls. `orig` is the
+  census commit's UIButton.cpp/UIDualButton.cpp statements over that commit's record FFI, linked against a saved copy
+  of that commit's Rust library and header (`lib_orig.lib`, `orig_include`): the border type it stores goes to the
+  world at its next op, as the Rust object's change-only op does.
+
+  6,719,589 trace lines, orig = cur byte for byte (same sha256). Mutations:
+
+  | Mutation | Sequences failing |
+  |---|---|
+  | the copied bitmap's new reference taken before the old one released | 8,938 |
+  | the old sound unloaded after the new one loaded | 4,264 |
+  | the destructor releasing the copied bitmap first | 12,421 |
+  | the pressed bitmap defaulting to the focused one | 19,523 |
+  | `ReplaceNormalBitmap` dirtying the button | 9,415 |
+  | the copied text drawn at its rectangle's bottom-left | 1,709 |
+  | the focused text colour's green and blue swapped | 2,662 |
+  | `GetCurrentBitmap` of an unknown state answering the normal bitmap | 0 (no state outside 0..2 is reachable) |
+
+  The first 25 sequences are `golden_buttonobj.txt` (8,343 lines), replayed by cargo, with a changed-answer test and
+  a re-entrant `ButtonUp` override test.
+- **Lessons.**
+  - Python's `write_text` on Windows writes CRLF: four LF sources became CRLF in the working tree (a 650-line diff
+    of `UIControl.cpp`); edit with `read_bytes`/`write_bytes`. Check `git diff --numstat` before committing.
+  - A mutation whose site did not match printed the unmutated trace's sha: always treat "same sha as the base" as
+    "not applied". Multi-line mutation text did not survive the shell's argument passing; `mutate.sh` now takes `\n`
+    and prints `MUTATION NOT APPLIED`. Stopping a mutation run mid-way left the driver exe running and a mutated
+    source behind (the restore is the script's last step): after stopping one, compare the source with the saved
+    copy and kill the driver.
+- **NULL-receiver audit** (round 30's lesson). Every original UIButton method, the header's inline ones included,
+  read a member of `this` before anything else (the getters, `ChangeFont`'s `mText`, the setters' old bitmap, the
+  state machine's record), so no original method tolerated a NULL receiver that a forwarder reading `mRust` would
+  not; the virtual ones dispatched through the vtable first. No early-out needed keeping.
+- **What runs it.** EE-SIM never builds a button: the oracle is unchanged by construction (seeds 2-3 after the
+  commit, 2-7 at the end, identical). The scenario editor gate (`sim_editor.py`, 1,820 lines unchanged) builds the
+  editor's tab radio buttons, tool buttons, check boxes and the unit tab's buttons, so the constructors, the
+  bitmap setters, `SetText`, sounds and the destructor run there through the shim. **Only the tour shows:** every
+  button draw (the copied bitmap and centred text, the focused colour), the mouse on a button (press, drag off,
+  release, the trigger events the menus listen for), Space/Enter on a tabbed button, the right button on dual
+  buttons, the scroll arrows' repeat, the check and radio buttons' clicks through the button object, the blinking
+  and scalable buttons' draws (the menus' scalable buttons, the in-game blinking ones).
+- **Left:** `UICheckBox`, `UIRadioButton`, `UITriStateCheckBox` (their records into the button object; the label as
+  a part; the radio walk over sibling objects), `UIScrollButton`'s polls, `UIBlinkingButton` and
+  `UIScalableButton` (small records), then `UITextLabel` with `UITLScrolling`.
