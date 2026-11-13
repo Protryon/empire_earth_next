@@ -12824,7 +12824,7 @@ copy, free, open, close, length, read and name).
   handed out as copies to nobody. The class, the two NPIM entries (`NPIMGetConfiguration`, `NPIMSetConfiguration`),
   NEProtocol's two members and lookups, and six includes went; `tcp_test` links without the unit.
 - **Commits, net C++ over src + include (without include/rust):** NEMessageManager -804 (+180, -984); NEPlayer -33;
-  NEProtocolConfiguration -429 (+4, -433). Round: -1,266.
+  NEProtocolConfiguration -428 (+2, -430). Round: -1,265.
 - **Lessons:** the Bash tool turns a two-character `\n` inside a heredoc into a newline: Python edit scripts with
   escapes go through the Write tool as a file. A golden driver that loops until a value changes must cap the loop: a
   mutation that stops the change otherwise eats the machine's memory.
