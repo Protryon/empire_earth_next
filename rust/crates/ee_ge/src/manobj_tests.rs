@@ -13,7 +13,7 @@ use crate::managers;
 use std::collections::BTreeMap as Map;
 
 /// A trace token's object (`M5`: the letter in the high bits, the number in the low ones; `0`: none).
-fn id(tok: &[u8]) -> usize {
+pub(crate) fn id(tok: &[u8]) -> usize {
     if tok == b"0" {
         return 0;
     }
@@ -22,7 +22,7 @@ fn id(tok: &[u8]) -> usize {
 }
 
 /// The trace token of an object.
-fn tok(v: usize) -> Vec<u8> {
+pub(crate) fn tok(v: usize) -> Vec<u8> {
     if v == 0 {
         return b"0".to_vec();
     }
@@ -31,17 +31,17 @@ fn tok(v: usize) -> Vec<u8> {
     s
 }
 
-fn cat(parts: &[&[u8]]) -> Vec<u8> {
+pub(crate) fn cat(parts: &[&[u8]]) -> Vec<u8> {
     parts.concat()
 }
 
-fn cstr(p: isize) -> Vec<u8> {
+pub(crate) fn cstr(p: isize) -> Vec<u8> {
     // SAFETY: the Rust object passes NUL-terminated names
     unsafe { c_bytes(p as *const c_char) }.to_vec()
 }
 
 /// The bracketed name of a line and the tokens around it.
-fn split_named(line: &[u8]) -> (Vec<&[u8]>, Vec<u8>, Vec<&[u8]>) {
+pub(crate) fn split_named(line: &[u8]) -> (Vec<&[u8]>, Vec<u8>, Vec<&[u8]>) {
     let open = line.iter().position(|&c| c == b'[').unwrap();
     let close = line.iter().rposition(|&c| c == b']').unwrap();
     let before = line[..open].split(|&c| c == b' ').filter(|t| !t.is_empty()).collect();
@@ -49,7 +49,7 @@ fn split_named(line: &[u8]) -> (Vec<&[u8]>, Vec<u8>, Vec<&[u8]>) {
     (before, line[open + 1..close].to_vec(), after)
 }
 
-fn num(t: &[u8]) -> i64 {
+pub(crate) fn num(t: &[u8]) -> i64 {
     std::str::from_utf8(t).unwrap().parse().unwrap()
 }
 
@@ -70,6 +70,8 @@ struct Replay {
     world: World,
     mgr: *mut EeGeModelManager,
     last_dump: usize,
+    /// A mock host's failure (a panic cannot unwind through the Rust object's `extern "C"` host call).
+    failed: Option<String>,
 }
 
 impl Replay {
@@ -268,6 +270,7 @@ impl Replay {
                 self.expect(&cat(&[b"ModelFreeFile ", &o]));
                 0
             }
+            _ => self.fail(&format!("a texture operation {op:?}")),
         }
     }
 
@@ -325,6 +328,9 @@ impl Replay {
                 _ => self.fail("an unknown call"),
             }
         };
+        if let Some(what) = self.failed.take() {
+            panic!("{what}");
+        }
         let want = if ret.is_empty() { b"ret".to_vec() } else { cat(&[b"ret ", &ret]) };
         self.expect(&want);
     }
@@ -370,11 +376,21 @@ impl Replay {
 unsafe extern "C" fn host(owner: *mut c_void, op: EeGeManOp, obj: *mut c_void, a: isize, b: isize, c: isize) -> isize {
     // SAFETY: the owner is the replay running the sequence
     let r = unsafe { &mut *(owner as *mut Replay) };
-    r.op(op, obj as usize, a, b, c)
+    if r.failed.is_some() {
+        return 0;
+    }
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| r.op(op, obj as usize, a, b, c))) {
+        Ok(v) => v,
+        Err(e) => {
+            let what = e.downcast_ref::<String>().cloned().or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()));
+            r.failed = Some(what.unwrap_or_default());
+            0
+        }
+    }
 }
 
 /// The golden's sequences: (number, lines).
-fn sequences(golden: &[u8]) -> Vec<(usize, Vec<Vec<u8>>)> {
+pub(crate) fn sequences(golden: &[u8]) -> Vec<(usize, Vec<Vec<u8>>)> {
     let mut out: Vec<(usize, Vec<Vec<u8>>)> = Vec::new();
     for line in golden.split(|&c| c == b'\n') {
         let line = line.strip_suffix(b"\r").unwrap_or(line);
@@ -409,7 +425,8 @@ fn the_model_managers_golden_sequences_replay() {
             managers::set_numbers_for_test(None, Some(number));
         }
         let count = lines.len();
-        let mut r = Replay { lines, at: 0, world: World::default(), mgr: std::ptr::null_mut(), last_dump: 0 };
+        let mut r =
+            Replay { lines, at: 0, world: World::default(), mgr: std::ptr::null_mut(), last_dump: 0, failed: None };
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| r.sequence()));
         if let Err(e) = result {
             let what = e.downcast_ref::<String>().cloned().or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()));

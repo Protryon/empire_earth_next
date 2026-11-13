@@ -72,6 +72,7 @@ pub mod terrain_mesh;
 pub mod terrain_visible;
 /// cbindgen:ignore
 pub mod terrain_volume;
+pub mod texobj;
 /// cbindgen:ignore
 pub mod texture;
 pub mod texture_ffi;

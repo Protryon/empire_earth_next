@@ -1,4 +1,4 @@
-//! `GEModelManager` as a whole Rust object (R4.3, seventh part): the cache of models by name (the original's
+//! `GEModelManager` as a whole Rust object (R4.3, seventh part; `texobj.rs` is its twin, GETextureManager): the cache of models by name (the original's
 //! `std::map<UString, GEModel*>`, in `strcmp` order), the model search path (held), the lock and the memory footprint,
 //! with every method of GEModelManager.cpp.
 //!
@@ -64,6 +64,43 @@ pub enum EeGeManOp {
     ModelVerify,
     /// `ee_ge_cem_free(obj)`.
     ModelFreeFile,
+    /// `GEFindTextureFile(obj, UString(a), *c)`: `obj` the path, `a` the name (`const char*`), `c` the file's out
+    /// pointer (`EeOfTexture**`); the result.
+    TexFindFile = 40,
+    /// `ee_of_texture_free(obj)`.
+    TexFreeFile,
+    /// `new GETexture(this)`.
+    TexNew,
+    /// `new GETexture(obj, this)` (`obj` a `GESurface*`).
+    TexNewFromSurface,
+    /// `obj->Load(a's file, *a's description, b, a's MIP maps, drop and frame format)`: `a` an `EeGeTexLoad*`, `b`
+    /// the screen; the result.
+    TexLoad,
+    /// A field of the texture `obj` (`a` an `EeGeTexField`).
+    TexGet,
+    /// The field `a` (`EeGeTexField`) of the texture `obj` = `b`.
+    TexSet,
+    /// `obj->SetLogicalShift(a)`.
+    TexSetLogicalShift,
+    /// `obj->GetStage()`'s setting `a` (`EeGeTexStage`; the bias as its bits).
+    TexStage,
+    /// `obj->SetStage...(b, -1)` for the setting `a` (`EeGeTexStage`; the bias as its bits).
+    TexSetStage,
+    /// `obj->GetFrameTexture(a)`.
+    TexFrame,
+    /// `obj->Reference()`.
+    TexReference,
+    /// `obj->Dereference()` (`GETexture`'s: it may remove the texture from its manager).
+    TexDereference,
+    /// The description `a` (`GESurfaceDescription*`) given `obj->GetSurface()`'s pixel format, depth, volatility and
+    /// 3D and transparency flags.
+    TexSurfaceDescription,
+    /// `obj->Recreate(a)` (`a` the screen); the result.
+    TexRecreate,
+    /// `obj->GetAllocatedSize()`.
+    TexAllocatedSize,
+    /// The texture pack's log line of `obj` named `a` with `b` MIP levels dropped (when `EE_TEXTURE_PACK_LOG` is set).
+    TexPackLog,
 }
 
 /// The C++ host: `owner` is the C++ manager the object belongs to.
@@ -77,7 +114,7 @@ const CREATED_NAME_CAPACITY: usize = 1024;
 ///
 /// # Safety
 /// `s` is NULL or NUL-terminated.
-unsafe fn c_bytes<'a>(s: *const c_char) -> &'a [u8] {
+pub(crate) unsafe fn c_bytes<'a>(s: *const c_char) -> &'a [u8] {
     if s.is_null() {
         &[]
     } else {
@@ -87,7 +124,7 @@ unsafe fn c_bytes<'a>(s: *const c_char) -> &'a [u8] {
 }
 
 /// `bytes` NUL-terminated (a name from a C string or the counters' format: no NUL inside).
-fn c_string(bytes: &[u8]) -> Vec<u8> {
+pub(crate) fn c_string(bytes: &[u8]) -> Vec<u8> {
     let mut v = Vec::with_capacity(bytes.len() + 1);
     v.extend(bytes.iter().copied().take_while(|&b| b != 0));
     v.push(0);
@@ -95,7 +132,7 @@ fn c_string(bytes: &[u8]) -> Vec<u8> {
 }
 
 /// The entry after `key` in `map` (the first for `None`): the walk of a `std::map` that its callees may change.
-fn next_after(map: &BTreeMap<Vec<u8>, usize>, key: Option<&[u8]>) -> Option<(Vec<u8>, usize)> {
+pub(crate) fn next_after(map: &BTreeMap<Vec<u8>, usize>, key: Option<&[u8]>) -> Option<(Vec<u8>, usize)> {
     match key {
         None => map.iter().next(),
         Some(k) => map.range::<[u8], _>((Excluded(k), Unbounded)).next(),
@@ -520,4 +557,4 @@ pub unsafe extern "C" fn ee_ge_modman_verify(p: *mut EeGeModelManager) {
 
 #[cfg(test)]
 #[path = "manobj_tests.rs"]
-mod tests;
+pub(crate) mod tests;

@@ -74,6 +74,75 @@ enum class EeGeManOp : uint32_t {
   ModelVerify,
   /// `ee_ge_cem_free(obj)`.
   ModelFreeFile,
+  /// `GEFindTextureFile(obj, UString(a), *c)`: `obj` the path, `a` the name (`const char*`), `c` the file's out
+  /// pointer (`EeOfTexture**`); the result.
+  TexFindFile = 40,
+  /// `ee_of_texture_free(obj)`.
+  TexFreeFile,
+  /// `new GETexture(this)`.
+  TexNew,
+  /// `new GETexture(obj, this)` (`obj` a `GESurface*`).
+  TexNewFromSurface,
+  /// `obj->Load(a's file, *a's description, b, a's MIP maps, drop and frame format)`: `a` an `EeGeTexLoad*`, `b`
+  /// the screen; the result.
+  TexLoad,
+  /// A field of the texture `obj` (`a` an `EeGeTexField`).
+  TexGet,
+  /// The field `a` (`EeGeTexField`) of the texture `obj` = `b`.
+  TexSet,
+  /// `obj->SetLogicalShift(a)`.
+  TexSetLogicalShift,
+  /// `obj->GetStage()`'s setting `a` (`EeGeTexStage`; the bias as its bits).
+  TexStage,
+  /// `obj->SetStage...(b, -1)` for the setting `a` (`EeGeTexStage`; the bias as its bits).
+  TexSetStage,
+  /// `obj->GetFrameTexture(a)`.
+  TexFrame,
+  /// `obj->Reference()`.
+  TexReference,
+  /// `obj->Dereference()` (`GETexture`'s: it may remove the texture from its manager).
+  TexDereference,
+  /// The description `a` (`GESurfaceDescription*`) given `obj->GetSurface()`'s pixel format, depth, volatility and
+  /// 3D and transparency flags.
+  TexSurfaceDescription,
+  /// `obj->Recreate(a)` (`a` the screen); the result.
+  TexRecreate,
+  /// `obj->GetAllocatedSize()`.
+  TexAllocatedSize,
+  /// The texture pack's log line of `obj` named `a` with `b` MIP levels dropped (when `EE_TEXTURE_PACK_LOG` is set).
+  TexPackLog,
+};
+
+/// A texture's field (`EeGeManOp::TexGet` / `TexSet`'s `a`).
+enum class EeGeTexField : uint32_t {
+  /// `mIsFromTexturePack` (0 or 1).
+  FromPack = 1,
+  /// `mTexturePackMipLevels`.
+  PackMipLevels,
+  /// `mNumMipLevelsToDrop` (`GetNumMipLevelsToDrop`).
+  NumMipLevelsToDrop,
+  /// `mIsManaged` (set only).
+  IsManaged,
+  /// `GetCreateMIPMaps()` (get only).
+  CreateMipMaps,
+  /// `GetFrameFormat()` (get only).
+  FrameFormat,
+  /// `GetFrameCount()` (get only).
+  FrameCount,
+  /// `SetIsPromoted(b != 0)` (set only).
+  Promoted,
+};
+
+/// A stage setting (`EeGeManOp::TexStage`'s and `TexSetStage`'s `a`): the `GETStage` field and its `SetStage...`
+/// setter (always for stage -1, as the manager calls them). The bias is its `f32` bits.
+enum class EeGeTexStage : uint32_t {
+  AlphaMode = 1,
+  ColorMode,
+  MagFilterMode,
+  MinFilterMode,
+  MipFilterMode,
+  MipMapBias,
+  TextureAddressingMode,
 };
 
 /// A model as `GEModel::StoreLoaded` takes it.
@@ -81,6 +150,9 @@ struct EeGeCemModel;
 
 /// The model manager.
 struct EeGeModelManager;
+
+/// The texture manager.
+struct EeGeTextureManager;
 
 /// The plan of one frame.
 struct EeGeVisiblePlan;
@@ -398,6 +470,19 @@ struct EeGePhysicalModels {
                      unsigned long lod);
 };
 
+/// `GETextureDescription` (lle/GETextureManager.h), field for field.
+struct EeGeTextureDescription {
+  unsigned long surface_volatility;
+  unsigned long frame_format;
+  unsigned long pixel_depth;
+  long num_mip_levels_to_drop;
+  bool is_3d_renderable;
+  bool is_transparency_enabled;
+  bool has_alpha;
+  bool create_mipmaps;
+  bool use_texture_pack;
+};
+
 /// The surface a frame is stored into (`GEStoreFrame`): depth 16 or 32, format, no alpha, pixel size, row pitch.
 struct EeGeStoreTarget {
   unsigned long pixel_depth;
@@ -560,6 +645,34 @@ struct EeGeTmTile {
   uint16_t reference_count;
   uint8_t texture_set_id;
   uint8_t water_info;
+};
+
+/// `GESurfaceDescription` (lle/GESurface.h), field for field.
+struct EeGeSurfaceDescription {
+  /// `mType`.
+  unsigned long kind;
+  unsigned long pixel_format;
+  unsigned long surface_volatility;
+  unsigned long width;
+  unsigned long height;
+  unsigned long m14;
+  long mip_level_count;
+  unsigned long pixel_depth;
+  bool is_3d_renderable;
+  bool is_transparency_enabled;
+  /// The constructor's one store (false).
+  bool no_alpha;
+};
+
+/// `GETexture::Load`'s arguments but the texture and the screen (`EeGeManOp::TexLoad`'s `a`).
+struct EeGeTexLoad {
+  /// The decoded file (`const EeOfTexture*`).
+  void *file;
+  /// The description `Load` reads and writes.
+  EeGeSurfaceDescription *description;
+  bool create_mipmaps;
+  long num_mip_levels_to_drop;
+  unsigned long frame_format;
 };
 
 extern "C" {
@@ -1474,6 +1587,118 @@ bool ee_ge_physical_model_walk(const EeGePhysicalModels *table,
                                const void *other,
                                unsigned long other_frame,
                                unsigned long lod);
+
+/// `GETextureManager::GETextureManager(path)`: the object of the C++ manager `owner`.
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_texman_free`.
+EeGeTextureManager *ee_ge_texman_new(EeGeManHostFn host, void *owner, void *path);
+
+/// `~GETextureManager`.
+///
+/// # Safety
+/// `p` is from `ee_ge_texman_new` (freed).
+void ee_ge_texman_free(EeGeTextureManager *p);
+
+/// `DumpAllLoadedMedia(file)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_texman_dump(EeGeTextureManager *p, void *file);
+
+/// `GetMemoryFootprint`.
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_texman_footprint(EeGeTextureManager *p);
+
+/// `GetScreen`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_texman_screen(EeGeTextureManager *p);
+
+/// `SetScreen(screen)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_texman_set_screen(EeGeTextureManager *p, void *screen);
+
+/// `GetTexturePath`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_texman_path(EeGeTextureManager *p);
+
+/// `GetTextureCount`.
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_texman_count(EeGeTextureManager *p);
+
+/// `GetTextureAt(index)`: the cache's texture at `index` in name order (NULL past the end).
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_texman_at(EeGeTextureManager *p, unsigned long index);
+
+/// `LoadTexture(name, description)`.
+///
+/// # Safety
+/// `p` is live; `name` is NUL-terminated; `description` is valid.
+void *ee_ge_texman_load(EeGeTextureManager *p,
+                        const char *name,
+                        const EeGeTextureDescription *description);
+
+/// `MakeTexture(surface)`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_texman_make(EeGeTextureManager *p, void *surface);
+
+/// `PromoteTexture(texture)`.
+///
+/// # Safety
+/// `p` is live.
+long ee_ge_texman_promote(EeGeTextureManager *p, void *texture);
+
+/// `RefreshAllTextures`.
+///
+/// # Safety
+/// `p` is live.
+long ee_ge_texman_refresh_all(EeGeTextureManager *p);
+
+/// `ReloadTexture(name, description)`.
+///
+/// # Safety
+/// `p` is live; `name` is NUL-terminated; `description` is valid.
+long ee_ge_texman_reload(EeGeTextureManager *p,
+                         const char *name,
+                         const EeGeTextureDescription *description);
+
+/// `RemoveAllTextures`.
+///
+/// # Safety
+/// `p` is live.
+long ee_ge_texman_remove_all(EeGeTextureManager *p);
+
+/// `RemoveTexture(texture)`.
+///
+/// # Safety
+/// `p` is live.
+long ee_ge_texman_remove(EeGeTextureManager *p, void *texture);
+
+/// `SetTexturePath(path)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_texman_set_path(EeGeTextureManager *p, void *path);
+
+/// `UpdateMIPFilterMode(mode)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_texman_update_mip_filter(EeGeTextureManager *p, unsigned long mode);
 
 /// `GEPackColor(format, red, green, blue, alpha)`.
 unsigned long ee_ge_pack_color(unsigned long format,

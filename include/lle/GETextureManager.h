@@ -3,15 +3,17 @@
 #ifndef LLE_GETEXTUREMANAGER_H
 #define LLE_GETEXTUREMANAGER_H
 
-#include <map>
+#include <map>   // (the original's cache; kept for the units that rely on it)
+#include <stdint.h>
 
 class FSFileSpec;
 class FSPath;
 class GEScreen;
 class GESurface;
 class GETexture;
-class TSCriticalSection;
 class UString;
+struct EeGeTextureManager;
+enum class EeGeManOp : uint32_t;
 
 // How a texture file is loaded (the original's sizeof 0x14, copied with `rep movsd` x5 by the User Interface
 // backgrounds, UITextureBackground 0x1005c84e; 0x18 with the port's mUseTexturePack). Fields from
@@ -31,23 +33,26 @@ struct GETextureDescription {
     bool mUseTexturePack = true;            // +0x14
 };
 
-class LLE_API GETextureManager {            // sizeof 0x1c (implicit copy ctor 0xdfd3, operator= 0xe013)
+// port (R4.3, seventh part): a whole Rust object (ee_ge texobj.rs); this class is its shell.
+class LLE_API GETextureManager {            // sizeof 0x1c in the original (implicit copy ctor 0xdfd3, operator= 0xe013)
 public:
     GETextureManager(FSPath* inTexturePath);
     ~GETextureManager();
+    GETextureManager(const GETextureManager&) = delete;   // port: one Rust object per manager
+    GETextureManager& operator=(const GETextureManager&) = delete;
     void DumpAllLoadedMedia(FSFileSpec& inFile);
-    unsigned long GetMemoryFootprint() { return this->mMemoryFootprint; }
-    GEScreen* GetScreen() const { return this->mScreen; }
-    unsigned long GetTextureCount() { return this->mTextures.size(); }
+    unsigned long GetMemoryFootprint();     // the sum of the cached textures' GetAllocatedSize()
+    GEScreen* GetScreen() const;
+    unsigned long GetTextureCount();
     GETexture* GetTextureAt(unsigned long inIndex);   // port: the cache's textures in name order (the store gate)
-    FSPath* GetTexturePath() { return this->mTexturePath; }
+    FSPath* GetTexturePath();
     GETexture* LoadTexture(const UString& inName, const GETextureDescription& inDescription);
     GETexture* MakeTexture(GESurface* inSurface);
     long RefreshAllTextures();
     long ReloadTexture(const UString& inName, const GETextureDescription& inDescription);
     long RemoveAllTextures();
     long RemoveTexture(GETexture* inTexture);
-    void SetScreen(GEScreen* inScreen) { this->mScreen = inScreen; }
+    void SetScreen(GEScreen* inScreen);
     void SetTexturePath(FSPath* inTexturePath);
     void UpdateMIPFilterMode(unsigned long inMode);
     // port: the optional texture pack (docs/DATA_FORMATS.md "Texture packs"). inDirectory (e.g. "textures-4x")
@@ -66,13 +71,10 @@ public:
 private:
     friend class GETexture;
     long PromoteTexture(GETexture* inTexture);
-    void SetTexturePackSizes(GETexture* inTexture, long inMipLevels);   // port
+    // the calls the Rust object makes on other objects (GETextureManager.cpp)
+    static intptr_t Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 
-    std::map<UString, GETexture*> mTextures;   // +0x00 (node 0x24: key +0xc, value +0x1c, color +0x20, nil +0x21)
-    TSCriticalSection* mCriticalSection;    // +0x0c
-    FSPath* mTexturePath;                   // +0x10
-    GEScreen* mScreen;                      // +0x14
-    unsigned long mMemoryFootprint;         // +0x18
+    EeGeTextureManager* mRust;              // the cache (name -> texture), the lock, the path, the screen, the footprint
 };
 
 #endif
