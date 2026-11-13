@@ -11644,3 +11644,72 @@ the branch's start (round 25's head) -> 84,768 (Container's accessors, +18) -> 8
 - **Left:** TabCtrl / TabBar, ComboBox (its edit box and button over the container: GetFocusChild and
   GetMouseChild are accessors already), and the older input and list goldens' re-recording to trace the delivered
   event type.
+
+## R6 WON round 27: TabBar and TabCtrl whole in Rust (ee_won tabobj.rs; branch rust-r6-won27, 2026-11-13)
+
+Measured as rounds 18-26 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+82,658 at the branch's start (rust 5cfc3c6b; the network lane's merges had removed lines since round 26's count)
+-> 82,665 (TabCtrl's accessors, +7) -> 82,202 (TabBar and TabCtrl, -463). This round's own net: -456.
+
+- **The census first** (its own commit). Outside TabCtrl.cpp, TabCtrlConfig wrote the bar height, both overlaps and
+  the bottom bar's offsets, and the root screen read `mBottomTabBar->GetCurTabId()` (six times). They became
+  TabCtrl setters and `GetCurTabId`. The page area's layout point stays a member: TabCtrlConfig's CONTAINERLAYOUT
+  and the skins' frames (MSTabCtrl, WONTabCtrl) read it.
+- **The move** (`tabobj.rs`):
+  - The bar holds its buttons (held, in vector order), its selected tab, its overlap and its control's Rust
+    object.
+  - The control holds the padding, the bottom bar's offsets, the bar height and overlap, the arrows (held, with the
+    SmartPtr assignment's release-then-hold), the placement flags, the pages and the selected page.
+  - Every method of both classes moved.
+  - The control's four containers (the bars and their containers) and the layout point stay C++ members: object
+    lifetimes stay C++. The constructor makes them, and `ee_won_tab_init` runs the original constructor's
+    statements over them (an `EeWonTabParts`).
+  - The destructor order is kept: the arrows are released in the body (right one first), then the members.
+- **Calls out.**
+  - `Container::X` on the control or bar goes to its own Rust container.
+  - `Container::X` on a container part (`mTopTabBar->AddChild`, `SetHasUsedDialogKeys`, `SetOnlyChildInput`) goes to
+    that part's Rust container through the pure read `CtContainerOf`.
+  - Every virtual on a component goes through the C++ object (`CtChild`, `CtVirt`) so overrides run. Container.cpp
+    gained a child's `RemoveChild` (the top bar's) and its own `Virtual08` (AddTab's relayout).
+  - The bar calls its control's Rust object directly. The control clears that pointer when it goes; the original's
+    pointer dangled.
+- **The event.** `TabCtrlTabSelected` (5) is in `ee_won_gui_event_type` (29). The golden traces the delivered type
+  and checks it against the enum. The new ops are `TabTextIs` (a button's text equals a `GUIString*`, a pure read)
+  and `TabAddLayoutPoint`.
+- **Behaviour changes, on the original's crash paths only:**
+  - A NULL page selected after a page had been shown is skipped. The original called `SetVisible` on NULL.
+  - The constructor's unset `mUserHasInteracted` starts false.
+- **The golden** (`tests/won/won_tabobj_test.cpp`) uses round 26's world (`won_ct_world.h`), now sizable
+  (`WON_CT_N` / `WON_CT_CT`) and with a parent field in `Set`. It has nineteen components: the control, its bottom
+  bar, top bar, the bars' two containers and its parent (six real Rust containers per side), then the layout point,
+  two arrows, five buttons and five pages.
+  - The world runs Component's `SetSize` (a size change calls the container's `Virtual08`), `SetEnabled` and
+    `SetVisible` (the parent's `ChildStateChanged`, the invalidation, the root visibility).
+  - It runs 20,000 sequences of 40 calls with 27,552,878 trace lines, all identical.
+  - Two mutations fail it: the bar's re-add position off by one fails 2,579 sequences; the bottom container placed
+    without its offset fails 19,495.
+  - `CopyAttributes` (two controls) is a cargo unit test, together with the defaults, the fields and the arrows'
+    reference order.
+- **The cargo replay is shared.** `ctobj_tests.rs`'s line interpreter takes a golden's own hooks (`Ext`: overrides
+  of container calls, pure reads, op lines it prints, top-level lines, cleanup) and a larger world (7 containers,
+  24 components). The tab replay is about 150 lines on top of it.
+- **Lessons:**
+  - cbindgen's renames are global even for a private struct: a helper named `Obj` became `struct
+    EeAStarGraphObject;` in ee_won.h (ee_astar's rename) and made ee_astar.h include ee_won.h. Prefix even private
+    helper types (`EeWonTabOut`).
+  - **Never use `git stash` in these worktrees.** The stash list belongs to the repository, not the worktree. The
+    screens lane stashed three seconds before this lane, and this lane's pop then applied the screens lane's stash.
+    The work came back from the dangling stash commit (`git fsck --unreachable`, `git stash apply <sha>`).
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction (seeds 2-3 identical
+  after each commit). The root screen's tab control is built at every lobby entry. The lead's LAN game
+  (`lan_game.py`: the LAN tab is selected at entry, the game tab is enabled and selected on joining and the previous
+  tab comes back on leaving, through `EnterGameTab` and `GetCurTabId`) and the lobby captures (the tab row, the
+  arrows' visibility, the page area's padding) are the check. Keyboard tab switching, tab focus order and the scroll
+  arrows (more tabs than fit) run only in the golden unless a person uses them.
+- **Left:**
+  - ComboBox. Census: only `mShowButtonWhenDisabled` (ComboBoxConfig) needs a setter; `mEdit`, `mButton`,
+    `mListBox` and `mListArea` are set and read by MSComboBox, WONComboBox, the skins and the game options control,
+    so they stay members, as the tab control's parts did.
+  - The move needs about 30 ops: list area, edit box, popup and the undo text (a GUIString member).
+  - Then Window/RootContainer, the remaining controls and layout managers, and the input and list goldens'
+    re-recording to trace the delivered event type.
