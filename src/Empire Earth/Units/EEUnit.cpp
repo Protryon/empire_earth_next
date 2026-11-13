@@ -39,6 +39,7 @@
 #include "ee/EEUCGate.h"
 #include "ee/EESoundObject.h"
 #include "ee/RTSRegionTable.h"
+#include "ee/EEUnitRegions.h"
 #include "ee/EEInfluenceTable.h"
 #include <math.h>
 #include <algorithm>
@@ -620,7 +621,7 @@ void EEUnit::MoveTo(long inX, long inY, bool inUpdateTiles)
 {
     long theOldX = this->mTileX;
     long theOldY = this->mTileY;
-    RTSRegionTable<EEComplexUnit*>* theRegions = gWorld.mMap ? gWorld.mMap->mUnitRegions : 0;
+    EeCombatUnitRegions* theRegions = gWorld.mMap ? gWorld.mMap->mUnitRegions : 0;
     RTSTile* theOldTile = this->mTile;
     bool theSameRegion = false;
     if (theOldX == inX && theOldY == inY)
@@ -642,7 +643,7 @@ void EEUnit::MoveTo(long inX, long inY, bool inUpdateTiles)
         this->SightMoved(this->mTileX, this->mTileY, inX, inY);
         if (this->mTile != NULL) {
             if (this->mUnitClass->mTileSize <= 1) {
-                long theSize = theRegions->mRegionSize;
+                long theSize = ee_combat_regions_size(theRegions);
                 long theOldRegionX = theOldX / theSize;
                 long theOldRegionY = theOldY / theSize;
                 long theRegionX = inX / theSize;

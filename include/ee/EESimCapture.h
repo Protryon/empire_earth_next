@@ -24,6 +24,9 @@ public:
     static void Exclusive(bool inOn);
     // No record of any thread after it (the game's end, after its sweeps: the units a sweep made must not add any)
     static void Close();
+    // While on, no record of any thread is written (a profile that records only its end sweep: on from the start,
+    // off when the sweep begins)
+    static void Hold(bool inOn);
     // Whether a record of inTag committed now on this thread would be written (a caller that folds many records into
     // one checks each before folding it in)
     static bool Keeps(unsigned int inTag);

@@ -5399,7 +5399,7 @@ long EEComputerPlayer::RestoreManagers(unsigned long inMajorVersion, unsigned lo
 }
 
 // Complete goal/utility types after this unit's static definitions preserve existing initializer order.
-#include "ee/EEUGLocation.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
 
@@ -5422,7 +5422,7 @@ void EEComputerPlayer::SendToNearestBase(EEComplexUnit* inUnit)
         std::sort(theUnits.begin(), theUnits.end(), EECPUnitTileDistanceLess(inUnit->GetTile()));
         EEUnitClass* theClass = inUnit->mUnitClass;
         if (EEGetDockShipFacing(&thePoint, theClass, theUnits.front(), false, &theTransformation)) {
-            EEUnitGoal* theGoal = new EEUGLocation(theTransformation.GetX(), theTransformation.GetY(),
+            EEUnitGoal* theGoal = EEUGRust::NewLocation(theTransformation.GetX(), theTransformation.GetY(),
                 theTransformation.GetZ(), false, true, false, 0.0f, false, false);
             inUnit->QueueGoal(theGoal, 0);
             this->DetachUnitFromAI(inUnit);

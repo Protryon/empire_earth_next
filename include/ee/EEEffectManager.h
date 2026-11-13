@@ -85,4 +85,8 @@ public:
 
 extern EEEffectManager*& gEffectManager;     // 0x53185c
 
+// TEST ONLY (EE-SIM --effect-sweep; tools/sim_capture.py --profile effects): every swept 3D effect kind made in the
+// game's world at its end, stepped, saved and loaded (EEEffectManager.cpp)
+void EEEffectCaptureSweep();
+
 #endif

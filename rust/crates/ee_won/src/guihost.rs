@@ -715,6 +715,17 @@ pub enum EeWonGuiOp {
     BtnHasClickSound,
     /// `mClickSound->Play()`.
     BtnPlayClick,
+    // ---- the child layouts (`layoutobj`; a component is a `Component*`, an instruction a
+    // `ChildLayoutInstructionBase*`; the reads are `ChildLeft` .. `ChildHeight`, the moves `ChildSetPos`,
+    // `ChildSetPosSize` and `ChildSetSize`, a layout point's reference `ChildHold` / `ChildRelease`)
+    /// `a->mParent` (a `Component*`; a pure read).
+    LayParentOf = 560,
+    /// `a->SetSizeAtLeast(b, c)`.
+    LaySetSizeAtLeast,
+    /// `a->AddRef()` (an instruction: the manager's `SmartPtr`).
+    LayHold,
+    /// `a->Release()` (an instruction; the last one deletes it, and its Rust object with it).
+    LayRelease,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

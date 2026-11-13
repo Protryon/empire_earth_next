@@ -26,7 +26,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUCAirplane.h"
-#include "ee/EEUGLocation.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEPhysics.h"
