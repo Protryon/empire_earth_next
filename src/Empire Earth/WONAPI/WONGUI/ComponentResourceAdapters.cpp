@@ -48,15 +48,15 @@ void Component::SubscribeToBroadcast(bool subscribe)
 void Component::GetMousePos(int& x,int& y)
 {
     Window* window=this->GetRoot();
-    x=window->mMouseX;
-    y=window->mMouseY;
+    x=window->GetMouseX();
+    y=window->GetMouseY();
     this->RootToChild(x,y);
 }
 // FUNCTION: WON 0x006f57a0
 // Returns the window's current key modifiers
 int Component::GetKeyMod()
 {
-    return this->GetRoot()->mKeyMod;
+    return this->GetRoot()->GetKeyMod();
 }
 // FUNCTION: WON 0x006f5960
 // Returns the component's own color scheme, or NULL

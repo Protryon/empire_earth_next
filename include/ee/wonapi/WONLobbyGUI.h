@@ -1989,6 +1989,21 @@ public:
     void SetTitle(const GUIString&);        // 0x32adc0
     void SetIcon(NativeIcon*);              // 0x32ae20
     int GetKeyMod() const { return this->mKeyMod; }
+    // R6 WON round 32's census: the fields read or written outside Window.cpp
+    int GetWindowState() const { return this->mWindowState; }
+    int GetMouseX() const { return this->mMouseX; }
+    int GetMouseY() const { return this->mMouseY; }
+    bool IsMouseInClientArea() const { return this->mMouseIsInClientArea; }
+    bool IsShowing() const { return this->mIsShowing; }
+    void SetIsShowing(bool inShowing) { this->mIsShowing = inShowing; }
+    bool IsPopup() const { return this->mIsPopup; }
+    void SetIsPopup(bool inPopup) { this->mIsPopup = inPopup; }
+    bool IsOneComponentWindow() const { return this->mIsOneComponentWindow; }
+    void SetOneComponentWindow(bool inOne) { this->mIsOneComponentWindow = inOne; }
+    int GetStyle() const { return this->mStyle; }
+    void SetStyle(int inStyle) { this->mStyle = inStyle; }
+    bool GetMinimizeOnResolutionRestore() const { return this->mMinimizeOnResolutionRestore; }
+    Window* GetParent() const { return this->mParent; }
     enum WindowState { WindowState_Open, WindowState_Closing, WindowState_Closed };
     typedef bool (*AllowCloseFunc)(Window*);
     WindowState mWindowState; // +08
