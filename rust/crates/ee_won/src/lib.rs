@@ -15,6 +15,7 @@ pub mod barobj;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
+pub mod btnobj;
 pub mod buffer;
 pub mod cachemap;
 pub mod cdkey;

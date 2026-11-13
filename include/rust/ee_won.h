@@ -2630,6 +2630,16 @@ enum class EeWonGuiOp : uint32_t {
   RootDrawImage,
   /// `a->EnsureOnTopOf((Component*)b)` (the parent's `EnsureOnTopOf(b, a)`).
   RootEnsureOnTop,
+  /// `dynamic_cast<Button*>(a)`'s Rust button (`EeWonButton*`; 0 when `a` is no button or NULL; a pure read).
+  BtnOf = 550,
+  /// `HandleActivate()` (virtual; 0 or 1).
+  BtnHandleActivate,
+  /// `SetTextHook(*(const GUIString*)a)` (virtual).
+  BtnSetTextHook,
+  /// `mClickSound.get() != NULL` (0 or 1; a pure read).
+  BtnHasClickSound,
+  /// `mClickSound->Play()`.
+  BtnPlayClick,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -2669,6 +2679,71 @@ enum class EeWonBarCall : uint32_t {
   SetRange,
   /// `SetLineScrollSizes(a, b)` (up, down).
   SetLineScrollSizes,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonBtnCall : uint32_t {
+  /// `Fn2F3440()` (the activation).
+  Click = 1,
+  /// `SetText(*a, b != 0)` (`a` a `const GUIString*`).
+  SetText,
+  /// `SetCheck(a != 0, b != 0)`.
+  SetCheck,
+  /// `SetButtonFlags(a, b != 0)`.
+  SetButtonFlags,
+  /// `CopyAttributes`'s flags (`a` the other button's `EeWonButton*`; the click sound is C++'s statement).
+  CopyAttributes,
+  /// `IsMouseOver()` (0 or 1).
+  IsMouseOver,
+  /// `IsDefaultButton()` (0 or 1).
+  IsDefaultButton,
+  AddedToParent,
+  /// `MouseEnter(a, b)`.
+  MouseEnter,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  MouseExit,
+  ButtonDown,
+  /// `ButtonUp(a != 0)`.
+  ButtonUp,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  GotFocus,
+  LostFocus,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `KeyUp(a)` (0 or 1).
+  KeyUp,
+  /// `TimerEvent(a)` (1).
+  TimerEvent,
+  /// `MouseHover(a)`.
+  MouseHover,
+  /// `GetNextRadio(a != 0)`: the radio's `Component*`, or 0.
+  GetNextRadio,
+  /// `GetEndRadio(a != 0)`: the radio's `Component*`.
+  GetEndRadio,
+  /// the field `a` (`EeWonBtnField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+};
+
+/// Button's static functions and the two default buttons (`ee_won_btn_static`).
+enum class EeWonBtnStatic : uint32_t {
+  /// `SetDialogDefaultButton(a)`.
+  SetDialogDefault = 1,
+  /// `UnSetDialogDefaultButton(a)`.
+  UnSetDialogDefault,
+  /// `SetDefaultButton(a)`.
+  SetDefault,
+  /// `UnSetDefaultButton(a)`.
+  UnSetDefault,
+  /// `mDefaultButton.get()`.
+  Default,
+  /// `mDialogDefaultButton.get()`.
+  DialogDefault,
 };
 
 /// A number of the parser.
@@ -2977,6 +3052,8 @@ enum class EeWonGuiEvent : uint32_t {
   Scroll = 4,
   /// `ComponentEvent_TabCtrlTabSelected`.
   TabCtrlTabSelected = 5,
+  /// `ComponentEvent_ButtonPressed`.
+  ButtonPressed = 6,
 };
 
 /// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
@@ -4394,6 +4471,18 @@ enum class EeWonRootField : uint32_t {
   BgCount,
 };
 
+/// The button's fields (the skins and the tests read them).
+enum class EeWonBtnField : uint32_t {
+  /// `mButtonFlags`.
+  Flags = 1,
+  /// `mKeyDown` (0 or 1).
+  KeyDown,
+  /// `mDelayAcc`.
+  DelayAcc,
+  /// `mMouseDownState` (0 up, 1 down outside, 2 down over).
+  MouseDownState,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -4417,6 +4506,9 @@ struct EeWonAuthSecrets;
 
 /// `AuthSession` (0x10cc bytes in the original): the session's type, id, key, sequence numbers and last use.
 struct EeWonAuthSession;
+
+/// The Rust Button.
+struct EeWonButton;
 
 /// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
 struct EeWonByteBuffer;
@@ -6816,6 +6908,31 @@ ptrdiff_t ee_won_bar_call(const EeWonScrollbar *bar,
                           ptrdiff_t a,
                           ptrdiff_t b,
                           ptrdiff_t c);
+
+/// A new Rust Button for the C++ `component`, its calls out through `host`.
+EeWonButton *ee_won_btn_new(void *component, EeWonGuiHostFn host);
+
+/// Frees a Rust Button (the original's destructor had no statement).
+///
+/// # Safety
+/// `btn` came from `ee_won_btn_new` (or is NULL) and is not used again.
+void ee_won_btn_free(EeWonButton *btn);
+
+/// One of Button's methods (`EeWonBtnCall`).
+///
+/// # Safety
+/// `btn` is live; the call's arguments as documented.
+ptrdiff_t ee_won_btn_call(const EeWonButton *btn,
+                          EeWonBtnCall call,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t c);
+
+/// One of Button's static functions (`EeWonBtnStatic`; `a` a `Button*` as a `Component*`), its calls out through
+/// `host` with a NULL component.
+ptrdiff_t ee_won_btn_static(EeWonGuiHostFn host,
+                            EeWonBtnStatic call,
+                            ptrdiff_t a);
 
 /// `ByteBuffer(data, length, false)`: a copy.
 ///
