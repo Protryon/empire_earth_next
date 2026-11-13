@@ -12724,3 +12724,66 @@ members class by class, so the readers moved with them.
   171, calamity 183, scenario 16 equal to their goldens (scenario seeds 2-7 also PASS, 44 digests, on the coverage
   build); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS, no load
   fault (every save and load of a location goal goes through the new `Save`/`Load`/`RepairPointers`).
+
+## R5b.2, fifteenth round: the drop location, the hit distance and the map's unit regions in Rust (ee_combat leaves.rs, regions.rs; branch rust-combat15, 2026-11-13)
+
+Measured by net C++ deletion (src and include/ee, git numstat).
+
+| Commit | What | C++ |
+|---|---|---|
+| 0ee808ac | `EEFindDropLocation` and `EEGetHitDistanceSquared` whole in Rust over the world host | +65 -71, net -6 |
+| d4bb3958 | the map's unit regions a Rust table (`EEMap::mUnitRegions`), its 26 C++ sites on it | +152 -233, net -81 |
+
+- **The drop location and the hit distance.** leaves.rs `find_drop_location` and `hit_distance_squared` are the
+  original's statements over the world host: the active goal's kind (`mActiveGoal`, not the store's `mGoalState`),
+  its location and its attack target, the target model's drop point (`GetModel()->mModel`, `mDefaultPoint`), the
+  tile's height and a unit's virtual `GetPosition` (a simple unit's tile centre) are new reads and operations
+  (Q 88, H 10, W 70-73); the scale, built flag, hit points, maximum and location were reads already. The CBDP and
+  CBHD records are written from Rust at the original's places (the target's id from the store's `Q_ID`), so the
+  goldens recorded from the C++ in round 2 and 4 gate the move: oracle, calamity and late at seeds 2-3 equal. The C++
+  names stay one-line forwarders (fifteen callers: the bombs, helicopters, air animals, landables, missile physics,
+  the drop calamity, the unit AI). `ee_combat_drop_point` and `ee_combat_hit_distance` had no caller left and went.
+  The predecessor's estimate held: the move is about even in C++ lines (the host cases cost what the body saved);
+  `EEPointArgs` folds the operations' point outputs to keep it from growing. `FireShot`'s `W_FIND_DROP` still calls
+  the forwarder: calling Rust directly would re-plumb the drop point into three launch operations for no deletion.
+- **The unit regions: a Rust object the map owns.** `RTSRegionTable<EEComplexUnit*>` was one instantiation of a
+  template the influence table and the effect regions keep, so the template stays; `EEMap::mUnitRegions` is now an
+  `EeCombatUnitRegions*` (`ee_combat_regions_new`/`_free` where the map made and deleted it: two maps keep two
+  tables, no global). Regions are `Vec<u64>` (C++ pointers) in the original's column-major array; `add` appends,
+  `remove` erases the first copy (order kept), `values` walks the regions from the last and each from its back,
+  `collect` sorts by handle and dedups (the original's `std::less` on pointers), `footprint` is the fortress
+  footprint's add or remove (the original's single-region branch was the loop's one pass). Off-grid tests stay
+  unsigned (a negative region is a large unsigned index: none).
+- **The C++ readers take a slice.** `ee_combat_regions_units` hands out the region's pointer and length, valid until the
+  table next changes, as the original's `std::vector*` was (`EEUnitRegion` in ee/EEUnitRegions.h). The AI's two
+  collector templates, the A* view, three `CollectValues` callers, the active group and the path smoothing read
+  through it; the combat searches' two host tables lost their three region callbacks each (`unit_regions`: the
+  table pointer, read in Rust), and `FindImpactUnit`'s host reads the slice.
+- **The save's region order in Rust.** `order` (the count of regions with two units or more, each index, size and the
+  units' store ids) and `restore` (the matching by first untaken id) replace `SaveRegionOrder`/`RestoreRegionOrder`'s
+  bodies; the C++ still writes each value as the `unsigned long` it was (-1 for a part without a complex unit) and
+  reads the file. EE-SIM's region dump prints the same text from the order.
+- **Threads.** The original read the vectors from the AI and the UI while the physics changed them, unlocked; the
+  Rust table is the same (raw pointers through the C interface, no lock), so nothing changed there.
+- **Not moved: `IsHuman`.** The trigger record's `in.human` is one line; a player-table field needs ee_units'
+  players table (the core lane's) and a report from `EEHumanPlayer`'s constructors (the base constructor's `Reset`
+  sees the virtual answer false): more C++ than it deletes, for the round that moves the players.
+- **Coverage (temporary prints, removed): oracle seeds 2-3 and saveload's oracle and calamity games at 1000 s.**
+  Reached: the drop location's goal-location branch, the model branch and the active attack goal's target; the hit
+  distance's melee position; `FindImpactUnit`'s region; the path smoothing's region tests; the fortress footprint's
+  add and remove; the load's restore (every region put back). Not reached by any gate game: the drop location's tile
+  branch (a target with no model), `EEIsEditorSpacingClear` (the scenario editor), the A* view's region state, a
+  restore of a region holding other units or off the table. Those are unit tests only (ee_combat: 4 new in
+  leaves_tests.rs, 6 in regions_tests.rs).
+- **Only a tour (or the editor) shows:** `EEIsEditorSpacingClear` (the scenario editor's placement test, now over the
+  region slice). Nothing drawn changed; the LAN game sends nothing of this. The A* view's region state reached no
+  gate game either (unit-tested only through the table).
+- **Gates.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical to the main checkout's `ref`, the Rust gate
+  PASS; the drop commit also captures at seeds 2-3 of oracle (169 digests), missile, calamity (183) and late (170),
+  CBDP/CBHD among them; the regions commit captures oracle and late at seeds 2-3 and `saveload --settings all
+  --seeds 2-3 --at 1000,1900 --expect` PASS (it saves and restores the region order). On the round's head before the
+  second merge: oracle seeds 2-7 identical; captures at seeds 2-3 of space (171), calamity (183) and scenario (16)
+  PASS; the test profile 0/0. After merging `rust` 5d3ce6a9 (screens 20, renderer 13, WON Internet 18; only the two
+  docs conflicted, a criss-cross after `rust` took round 14: rust's text kept, this section and the R5b.2 row
+  added): build `--sim` and the test profile 0/0, oracle seeds 2-7 identical to `ref`, the Rust gate PASS.
+  `rust_includes.py` re-adds `rust/ee_screens.h` to two scenario editor files after each merge: not committed.

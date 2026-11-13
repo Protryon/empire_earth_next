@@ -14,11 +14,8 @@ use crate::walks::EeCombatHandle;
 #[derive(Clone, Copy)]
 pub struct EeCombatSearchHost {
     pub ctx: *mut c_void,
-    /// The regions' rectangle into `out` (left, top, right, bottom).
-    pub regions:
-        unsafe extern "C" fn(ctx: *mut c_void, left: i32, top: i32, right: i32, bottom: i32, out: *mut [i32; 4]),
-    pub region_len: unsafe extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
-    pub region_unit: unsafe extern "C" fn(ctx: *mut c_void, x: i32, y: i32, index: i32) -> u64,
+    /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
+    pub unit_regions: *const crate::regions::EeCombatUnitRegions,
     pub unit_position: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, out: *mut [f32; 2]),
     pub list_next: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, prev: i32) -> u64,
     pub dummy_head: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
@@ -33,19 +30,24 @@ pub struct EeCombatSearchHost {
     pub trace: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, code: i32, score: i32),
 }
 
+impl EeCombatSearchHost {
+    fn table(&self) -> &crate::regions::EeCombatUnitRegions {
+        // SAFETY: the table's contract: the regions are live for the call that handed them over
+        unsafe { &*self.unit_regions }
+    }
+}
+
 // SAFETY (every call below): the table's contract: `ctx` is live for the call that handed it over, and the
 // callbacks are callable with it.
 impl SearchHost for EeCombatSearchHost {
     fn regions(&mut self, left: i32, top: i32, right: i32, bottom: i32) -> (i32, i32, i32, i32) {
-        let mut out = [0i32; 4];
-        unsafe { (self.regions)(self.ctx, left, top, right, bottom, &mut out) };
-        (out[0], out[1], out[2], out[3])
+        self.table().rect(left, top, right, bottom)
     }
     fn region_len(&mut self, x: i32, y: i32) -> i32 {
-        unsafe { (self.region_len)(self.ctx, x, y) }
+        self.table().region(x as u32, y as u32).map_or(-1, |r| r.len() as i32)
     }
     fn region_unit(&mut self, x: i32, y: i32, index: i32) -> EeCombatHandle {
-        unsafe { (self.region_unit)(self.ctx, x, y, index) }
+        self.table().region(x as u32, y as u32).map_or(0, |r| r[index as usize])
     }
     fn unit_tile(&mut self, unit: EeCombatHandle) -> (i32, i32) {
         // the unit store's record (ee_combat store.rs: every handle here a live complex unit)

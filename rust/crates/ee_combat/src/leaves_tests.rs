@@ -13,6 +13,8 @@ struct World {
     answers: HashMap<i32, u64>,
     locations: HashMap<u64, [f32; 3]>,
     path_start: [f32; 3],
+    /// the points operations write out in `a[0..3]`, by code
+    points: HashMap<i32, [f32; 3]>,
     log: Vec<(i32, u64, u64, EeCombatWorldArgs)>,
     captures: Vec<(u32, Vec<u8>)>,
 }
@@ -65,6 +67,11 @@ impl WorldHost for World {
                 bytes.extend_from_slice(unsafe { std::slice::from_raw_parts(at as usize as *const u8, size as usize) });
             }
             self.captures.push((args[0] as u32, bytes));
+        }
+        if let Some(p) = self.points.get(&code) {
+            for (slot, v) in args.iter_mut().zip(p) {
+                *slot = i64::from(v.to_bits());
+            }
         }
         if code == EE_COMBAT_W_PATH_START {
             for (slot, v) in args.iter_mut().zip(self.path_start) {
@@ -382,4 +389,128 @@ fn seen_by_walks_a_large_units_footprint_until_a_tile_is_seen() {
     w.set(EE_COMBAT_Q_TILE_SIZE, TARGET, 1).set(EE_COMBAT_Q_CATEGORY, TARGET, 0x19);
     assert!(!is_seen_by(&mut w, TARGET, PLAYER, true));
     assert_eq!(w.ops().iter().filter(|&&c| c == EE_COMBAT_W_TILE_SEEN).count(), 4);
+}
+
+const DROP_COMPLEX: u64 = 0x40;
+
+fn dropping() -> World {
+    let mut w = World::default();
+    w.handles.insert((EE_COMBAT_H_COMPLEX, TARGET), DROP_COMPLEX);
+    w.answers.insert(EE_COMBAT_W_DROP_MODEL, 1);
+    w.points.insert(EE_COMBAT_W_DROP_MODEL, [1.0, 2.0, 4.0]);
+    w.real(EE_COMBAT_Q_SCALE, DROP_COMPLEX, 2.0).set(EE_COMBAT_Q_BUILT, DROP_COMPLEX, 1);
+    w.set(EE_COMBAT_Q_HIT_POINTS, TARGET, 50).set(EE_COMBAT_Q_MAX_HIT_POINTS, TARGET, 100);
+    w.set(EE_COMBAT_Q_ID, TARGET, 77);
+    w.locations.insert(DROP_COMPLEX, [10.0, 20.0, 30.0]);
+    w
+}
+
+fn drop_record(w: &World) -> (EeCombatDropIn, [f32; 3], i32) {
+    let (tag, bytes) = w.captures.iter().find(|c| c.0 == u32::from_le_bytes(*b"CBDP")).unwrap();
+    assert_eq!(*tag, u32::from_le_bytes(*b"CBDP"));
+    let n = std::mem::size_of::<EeCombatDropIn>();
+    assert_eq!(bytes.len(), n + 16);
+    // SAFETY: the record's first bytes are the input record
+    let input = unsafe { std::ptr::read_unaligned(bytes.as_ptr() as *const EeCombatDropIn) };
+    let f = |at: usize| f32::from_le_bytes(bytes[at..at + 4].try_into().unwrap());
+    (input, [f(n), f(n + 4), f(n + 8)], i32::from_le_bytes(bytes[n + 12..n + 16].try_into().unwrap()))
+}
+
+#[test]
+fn the_drop_location_is_the_models_drop_point_through_its_location() {
+    let mut w = dropping();
+    let (target, p) = find_drop_location(&mut w, UNIT, TARGET);
+    let expected = drop_point(&EeCombatDropIn {
+        kind: DROP_KIND_MODEL,
+        offset: [1.0, 2.0, 4.0],
+        scale: 2.0,
+        built: 1,
+        hit_points: 50,
+        max_hit_points: 100,
+        transformation: w.location(DROP_COMPLEX).m,
+        ..Default::default()
+    });
+    assert_eq!(target, TARGET);
+    assert_eq!((p.x, p.y, p.z), (expected.x, expected.y, expected.z));
+    let (input, out, id) = drop_record(&w);
+    assert_eq!((input.kind, input.scale, input.built, input.hit_points), (DROP_KIND_MODEL, 2.0, 1, 50));
+    assert_eq!((out, id), ([p.x, p.y, p.z], 77));
+    // an unbuilt unit's point is lowered by its health
+    let mut w = dropping();
+    w.set(EE_COMBAT_Q_BUILT, DROP_COMPLEX, 0);
+    let (_, q) = find_drop_location(&mut w, UNIT, TARGET);
+    assert_eq!(drop_record(&w).0.built, 0);
+    assert!(q.z != p.z);
+}
+
+#[test]
+fn the_drop_location_falls_back_to_the_tile_then_to_none() {
+    // no model: the tile's centre at its height
+    let mut w = dropping();
+    w.answers.insert(EE_COMBAT_W_DROP_MODEL, 0);
+    w.answers.insert(EE_COMBAT_W_TILE_HEIGHT, 1);
+    w.points.insert(EE_COMBAT_W_TILE_HEIGHT, [3.5, 0.0, 0.0]);
+    w.set(EE_COMBAT_Q_TILE_X, TARGET, 4).set(EE_COMBAT_Q_TILE_Y, TARGET, 6);
+    let (target, p) = find_drop_location(&mut w, UNIT, TARGET);
+    assert_eq!((target, p.x, p.y, p.z), (TARGET, 4.5, 6.5, 3.5));
+    assert_eq!(drop_record(&w).0.kind, DROP_KIND_TILE);
+    // no complex unit: the model is never asked
+    let mut w = dropping();
+    w.handles.clear();
+    w.answers.insert(EE_COMBAT_W_TILE_HEIGHT, 1);
+    find_drop_location(&mut w, UNIT, TARGET);
+    assert!(!w.ops().contains(&EE_COMBAT_W_DROP_MODEL));
+    // neither: no target, the point 0, the record's id -1
+    let mut w = dropping();
+    w.answers.insert(EE_COMBAT_W_DROP_MODEL, 0);
+    let (target, p) = find_drop_location(&mut w, UNIT, TARGET);
+    assert_eq!((target, p.x, p.y, p.z), (0, 0.0, 0.0, 0.0));
+    let (input, out, id) = drop_record(&w);
+    assert_eq!((input.kind, out, id), (DROP_KIND_NONE, [0.0; 3], -1));
+}
+
+#[test]
+fn the_drop_location_without_a_target_asks_the_active_goal() {
+    // an attack goal: its target
+    let mut w = dropping();
+    w.set(EE_COMBAT_Q_ACTIVE_GOAL_KIND, UNIT, 2);
+    w.handles.insert((EE_COMBAT_H_ACTIVE_GOAL_TARGET, UNIT), TARGET);
+    let (target, _) = find_drop_location(&mut w, UNIT, 0);
+    assert_eq!(target, TARGET);
+    assert!(!w.ops().contains(&EE_COMBAT_W_GOAL_LOCATION));
+    // another goal: its location, no target, a record of kind 0 and id -1
+    let mut w = dropping();
+    w.set(EE_COMBAT_Q_ACTIVE_GOAL_KIND, UNIT, 1);
+    w.points.insert(EE_COMBAT_W_GOAL_LOCATION, [5.0, 6.0, 7.0]);
+    let (target, p) = find_drop_location(&mut w, UNIT, 0);
+    assert_eq!((target, p.x, p.y, p.z), (0, 5.0, 6.0, 7.0));
+    assert_eq!(w.ops(), [EE_COMBAT_W_GOAL_LOCATION, EE_COMBAT_W_CAPTURE]);
+    let (input, out, id) = drop_record(&w);
+    assert_eq!((input, out, id), (EeCombatDropIn::default(), [5.0, 6.0, 7.0], -1));
+    // a given target: the goal is not read
+    let mut w = dropping();
+    w.set(EE_COMBAT_Q_ACTIVE_GOAL_KIND, UNIT, 1);
+    assert_eq!(find_drop_location(&mut w, UNIT, TARGET).0, TARGET);
+}
+
+#[test]
+fn the_hit_distance_measures_to_the_drop_point_or_a_melee_targets_position() {
+    // ranged: from the unit's position to the drop point, on the ground; CBDP then CBHD
+    let mut w = dropping();
+    w.locations.insert(UNIT, [0.0, 0.0, 9.0]);
+    let (_, p) = find_drop_location(&mut w, UNIT, TARGET);
+    w.captures.clear();
+    let d = hit_distance_squared(&mut w, UNIT, TARGET, -10000.0, -10000.0);
+    let unit = translation(&w.location(UNIT));
+    let input = EeCombatHitDistanceIn { from: [unit.x, unit.y, unit.z], to: [p.x, p.y, p.z], x: -10000.0, y: -10000.0 };
+    assert_eq!(d, screen_hit_distance(&input));
+    let tags: Vec<u32> = w.captures.iter().map(|c| c.0).collect();
+    assert_eq!(tags, [u32::from_le_bytes(*b"CBDP"), u32::from_le_bytes(*b"CBHD")]);
+    // melee: the target's position (the virtual), no drop record; a given point replaces the unit's
+    let mut w = dropping();
+    w.set(EE_COMBAT_Q_CLASS_FLAGS, UNIT, EE_COMBAT_CLASS_MELEE);
+    w.points.insert(EE_COMBAT_W_POSITION, [3.0, 4.0, 100.0]);
+    assert_eq!(hit_distance_squared(&mut w, UNIT, TARGET, -10000.0, -10000.0), 25.0);
+    assert_eq!(hit_distance_squared(&mut w, UNIT, TARGET, 3.0, 0.0), 16.0);
+    assert!(w.captures.iter().all(|c| c.0 == u32::from_le_bytes(*b"CBHD")));
 }

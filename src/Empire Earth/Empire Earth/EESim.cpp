@@ -200,6 +200,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
+#include "rust/ee_combat.h"
 
 // TEST ONLY: the combat formulas' sweep of the simulation capture (ee/EECombatFormulas.h). The computer players'
 // games never regenerate, heal or convert, and seldom test the range to hit, so with EE_SIM_CAPTURE on this calls
@@ -881,16 +882,15 @@ void DumpState(const std::string& inPath)
         }
     }
     // the units of each map region in order (RTSRegionTable: FindImpactUnit and the target searches walk them)
-    if (gWorld.mMap != NULL && gWorld.mMap->mUnitRegions != NULL) {
-        RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap->mUnitRegions;
-        for (unsigned long r = 0; r < theTable->mRegionsX * theTable->mRegionsY; r++) {
-            if (theTable->mRegions[r].size() < 2)
-                continue;
-            fprintf(f, "REGION %lu:", r);
-            for (size_t k = 0; k < theTable->mRegions[r].size(); k++)
-                fprintf(f, " %lu", theTable->mRegions[r][k] != NULL ? (unsigned long)theTable->mRegions[r][k]->mUnitID : 0UL);
-            fprintf(f, "\n");
-        }
+    // (ee_combat regions.rs's saved order: the count, then each region's index, size and ids, -1 for none)
+    std::vector<uint32_t> theOrder(gWorld.mMap != NULL ? ee_combat_regions_order(gWorld.mMap->mUnitRegions, NULL, 0) : 0);
+    if (!theOrder.empty())
+        ee_combat_regions_order(gWorld.mMap->mUnitRegions, theOrder.data(), theOrder.size());
+    for (size_t k = 1; k < theOrder.size(); k += 2 + theOrder[k + 1]) {
+        fprintf(f, "REGION %lu:", (unsigned long)theOrder[k]);
+        for (uint32_t n = 0; n < theOrder[k + 1]; n++)
+            fprintf(f, " %lu", theOrder[k + 2 + n] != 0xffffffffu ? (unsigned long)theOrder[k + 2 + n] : 0UL);
+        fprintf(f, "\n");
     }
     fclose(f);
 }

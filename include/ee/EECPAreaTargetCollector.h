@@ -13,8 +13,8 @@ template <class Predicate>
 long EECollectASGTargets(const EEAIAStarBounds& inBounds, std::vector<EEComplexUnit*>& outUnits,
                         Predicate& inPredicate, bool inUnique)
 {
-    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(inBounds);
-    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap->mUnitRegions;
+    EeCombatUnitRegions* theTable = gWorld.mMap->mUnitRegions;
+    U2DRectangle<long> theRegions = EEUnitRegionRect(theTable, inBounds);
     U2DPoint<long> theEndX = theRegions.GetBottomRight();
     U2DPoint<long> theEndY = theRegions.GetBottomRight();
     bool theMultiple = false;
@@ -22,10 +22,10 @@ long EECollectASGTargets(const EEAIAStarBounds& inBounds, std::vector<EEComplexU
     for (long x = theStart.GetX(); x <= theEndX.GetX(); x++) {
         U2DPoint<long> theRowStart = theRegions.GetTopLeft();
         for (long y = theRowStart.mY; y <= theEndY.mY; y++) {
-            RTSRegion<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-            if (theRegion) {
-                for (long i = theRegion->size() - 1; i >= 0; i--) {
-                    EEComplexUnit* theUnit = theRegion->GetAt(i);
+            EEUnitRegion theRegion(theTable, x, y);
+            if (theRegion.Exists()) {
+                for (long i = theRegion.size() - 1; i >= 0; i--) {
+                    EEComplexUnit* theUnit = theRegion[i];
                     if (inBounds.Contains(theUnit->GetTileX(), theUnit->GetTileY()) &&
                         inPredicate(theUnit)) {
                         if (theUnit->GetUnitClass()->GetTileSize() > 1)

@@ -87,6 +87,7 @@
 #include "ee/EECPNextUnits.h"
 #include "platform/PlatSim.h"
 #include "rust/ee_ai.h"   // ee_ai_units_*: the save block's format (units_save.rs), the bindings' Lua helpers (units_lua.rs)
+#include "ee/EEUnitRegions.h"
 
 // ---------------------------------------------------------------------------------------------------------------
 // The state
@@ -2677,7 +2678,7 @@ static int LuaEnemyNear(lua_State* L)
         }
         theCount = theTable->SumEnemyValue(me->mPlayerID, theTable->GetRegions(theRect), true);
         if (theCount > 0) {
-            theMap->mUnitRegions->CollectValues(theRect, theUnits, std::less<EEComplexUnit*>());
+            EECollectRegionUnits(theMap->mUnitRegions, theRect, theUnits);
             theCount = 0;
             for (size_t i = 0; i < theUnits.size(); i++) {
                 EEComplexUnit* u = theUnits[i];

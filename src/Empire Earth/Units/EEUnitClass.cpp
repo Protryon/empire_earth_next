@@ -2198,14 +2198,12 @@ void EEUnitClass::AddToRegion(EEUnit* inUnit)
 {
     EEMap* theMap = ::gWorld.mMap;
     U2DPoint<long> theRegion(0, 0);
-    RTSRegionTable<EEComplexUnit*>* theTable = theMap->mUnitRegions;
+    EeCombatUnitRegions* theTable = theMap->mUnitRegions;
     if (inUnit->mTileNode == NULL || inUnit->IsPathMarker())
         return;
-    theRegion = U2DPoint<long>(inUnit->GetTileX() / theTable->mRegionSize, inUnit->GetTileY() / theTable->mRegionSize);
-    EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-    std::vector<EEComplexUnit*>* theList = theTable->GetRegion(theRegion);
-    if (theList != NULL)
-        theList->push_back(theUnit);
+    long theSize = ee_combat_regions_size(theTable);
+    theRegion = U2DPoint<long>(inUnit->GetTileX() / theSize, inUnit->GetTileY() / theSize);
+    ee_combat_regions_add(theTable, (uint32_t)theRegion.mX, (uint32_t)theRegion.mY, (uint64_t)(uintptr_t)inUnit->GetComplexUnit());
 }
 
 // FUNCTION: EXE 0x63523c
@@ -2983,14 +2981,12 @@ void EEUnitClass::RemoveFromRegion(EEUnit* inUnit)
 {
     EEMap* theMap = ::gWorld.mMap;
     U2DPoint<long> theRegion(0, 0);
-    RTSRegionTable<EEComplexUnit*>* theTable = theMap->mUnitRegions;
+    EeCombatUnitRegions* theTable = theMap->mUnitRegions;
     if (inUnit->mTileNode == NULL || inUnit->IsPathMarker())
         return;
-    theRegion = U2DPoint<long>(inUnit->GetTileX() / theTable->mRegionSize, inUnit->GetTileY() / theTable->mRegionSize);
-    EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-    RTSRegion<EEComplexUnit*>* theList = theTable->GetRegion(theRegion);
-    if (theList != NULL)
-        theList->Remove(theUnit);
+    long theSize = ee_combat_regions_size(theTable);
+    theRegion = U2DPoint<long>(inUnit->GetTileX() / theSize, inUnit->GetTileY() / theSize);
+    ee_combat_regions_remove(theTable, (uint32_t)theRegion.mX, (uint32_t)theRegion.mY, (uint64_t)(uintptr_t)inUnit->GetComplexUnit());
 }
 
 // FUNCTION: EXE 0x636b33
