@@ -3302,6 +3302,76 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 
+/// `FillComboBox`.
+constexpr static const uint32_t EE_SCREENS_UH_FILL_COMBO_BOX = 1;
+
+/// `LoadUnitData`.
+constexpr static const uint32_t EE_SCREENS_UH_LOAD_UNIT_DATA = 2;
+
+/// `PlaceUnit(x, y)`.
+constexpr static const uint32_t EE_SCREENS_UH_PLACE_UNIT = 3;
+
+/// `Update(x, y)`.
+constexpr static const uint32_t EE_SCREENS_UH_UPDATE = 4;
+
+/// The game's unit class count (`EEUnitClassCount()`).
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS_COUNT = 1;
+
+/// Class a: 0 no class, else 1 | enabled << 1 | placeable << 2.
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS = 2;
+
+/// Class a's category.
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS_CATEGORY = 3;
+
+/// Class a's unit type.
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS_TYPE = 4;
+
+/// Class a's name: its byte length, the bytes written into the buffer when it has room.
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS_NAME = 5;
+
+/// The object combo box: `DeleteAllEntries`.
+constexpr static const uint32_t EE_SCREENS_UH_OP_COMBO_CLEAR = 6;
+
+/// The object combo box: `AppendLine` of the buffer's bytes.
+constexpr static const uint32_t EE_SCREENS_UH_OP_COMBO_APPEND = 7;
+
+/// The object combo box: `SetCurrentSelection(0)`.
+constexpr static const uint32_t EE_SCREENS_UH_OP_COMBO_SELECT_FIRST = 8;
+
+/// The object combo box's `GetCurrentSelection` (the selection; none is all ones).
+constexpr static const uint32_t EE_SCREENS_UH_OP_COMBO_SELECTION = 9;
+
+/// A list's `GetListBox()->GetCurrentSelection(f)`: a 1 the object list, 2 the player list. Returns the call's error
+/// code; the selection goes to `out`.
+constexpr static const uint32_t EE_SCREENS_UH_OP_LIST_SELECTION = 10;
+
+/// Whether the map has the tile at (`(long)f[0]`, `(long)f[1]`).
+constexpr static const uint32_t EE_SCREENS_UH_OP_TILE = 11;
+
+/// The Shift (a 0) or Ctrl (a 1) key's value.
+constexpr static const uint32_t EE_SCREENS_UH_OP_KEY = 12;
+
+/// Whether player slot a is empty or the local player.
+constexpr static const uint32_t EE_SCREENS_UH_OP_PLAYER_SKIPPED = 13;
+
+/// The local player's id.
+constexpr static const uint32_t EE_SCREENS_UH_OP_LOCAL_PLAYER = 14;
+
+/// `EEMHackANewUnit(a, the tile f, (unsigned char)b)` sent as local input.
+constexpr static const uint32_t EE_SCREENS_UH_OP_SEND_PLACE = 15;
+
+/// `EEMLoadUnitData(a, true)` sent as local input.
+constexpr static const uint32_t EE_SCREENS_UH_OP_SEND_LOAD = 16;
+
+/// Whether the view rectangle contains the point f.
+constexpr static const uint32_t EE_SCREENS_UH_OP_IN_VIEW = 17;
+
+/// The left mouse button: a 0 `JustPressed`, 1 `JustUnpressed`.
+constexpr static const uint32_t EE_SCREENS_UH_OP_LEFT_BUTTON = 18;
+
+/// `EEPointUnitOrTile(f, ..., true)`: whether a point was found; its x and y into f.
+constexpr static const uint32_t EE_SCREENS_UH_OP_POINT = 19;
+
 /// A paint action's record (opaque to C++).
 struct EeScreensSeaPaint;
 
@@ -3310,6 +3380,9 @@ struct EeScreensSeeEvent;
 
 /// An `EESEARust`'s action (opaque to C++).
 struct EeScreensSewAction;
+
+/// The unit hack's record (opaque to C++).
+struct EeScreensUnitHack;
 
 /// A chat log entry's fixed fields (its name and text go as bytes beside it).
 struct EeScreensChatLogHead {
@@ -4217,6 +4290,24 @@ uint32_t ee_screens_settings_event_for(unsigned long id);
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+
+/// The hack made for the form (the class list read through the host). Freed by `ee_screens_unit_hack_free`.
+EeScreensUnitHack *ee_screens_unit_hack_new(void *form);
+
+/// # Safety
+/// `hack` comes from `ee_screens_unit_hack_new` (or is NULL).
+void ee_screens_unit_hack_free(EeScreensUnitHack *hack);
+
+/// One of the hack's methods (`EE_SCREENS_UH_*`); `x`, `y` the point of the place and update calls. The record is
+/// taken out of its box around the call: no Rust reference into the box lives across the host's calls.
+///
+/// # Safety
+/// `hack` comes from `ee_screens_unit_hack_new`.
+void ee_screens_unit_hack_call(EeScreensUnitHack *hack,
+                               void *form,
+                               uint32_t call,
+                               float x,
+                               float y);
 
 }  // extern "C"
 

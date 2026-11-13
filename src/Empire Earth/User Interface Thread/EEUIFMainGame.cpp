@@ -188,160 +188,129 @@ UWideString gDefaultPlayerNames[32] = {
 // SYNTHETIC: EXE 0x6628be   (registrar)
 // SYNTHETIC: EXE 0x6628ca   (dtor)
 
-// FUNCTION: EXE 0x6628e5
-// Creates the developer unit-placing hack with the alphabetical list of player-placeable unit classes
+// The unit hack whole in Rust (ee_screens unit_hack.rs): the original's members 0x2628e5 (ctor: the sorted
+// class names), 0x262a91 (dtor), 0x262aa5 PlaceUnit, 0x262c6f FillComboBox, 0x262cdc LoadUnitData, 0x262d66
+// Update, 0x262e29 GetSelection, and the two message ctors' COMDATs 0x262c24 (EEMHackANewUnit) and 0x262d32
+// (EEMLoadUnitData). The host answers its ops (EE_SCREENS_UH_OP_*): the class table, the object and player lists,
+// the keys, the mouse, the messages.
+extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t inA, int32_t inB, float* ioPoint,
+                                           uint32_t* ioSelection, uint8_t* ioText, size_t inLength)
+{
+    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
+    UIComboBox* theObjects = static_cast<UIComboBox*>(theForm->GetControl(kMainGameTempObjectList));
+
+    switch (inOp) {
+    case EE_SCREENS_UH_OP_CLASS_COUNT:
+        return (int32_t)EEUnitClassCount();
+    case EE_SCREENS_UH_OP_CLASS: {
+        EEUnitClass* theClass = gUnitClassTable[inA];
+        if (theClass == NULL)
+            return 0;
+        return 1 | (theClass->mIsEnabled ? 2 : 0) | (theClass->mIsPlayerPlaceable ? 4 : 0);
+    }
+    case EE_SCREENS_UH_OP_CLASS_CATEGORY:
+        return gUnitClassTable[inA]->mCategory;
+    case EE_SCREENS_UH_OP_CLASS_TYPE:
+        return gUnitClassTable[inA]->mUnitType;
+    case EE_SCREENS_UH_OP_CLASS_NAME: {
+        UWideString theName((const char*)gUnitClassTable[inA]->mName);
+        size_t theLength = theName.GetTCHARLength();
+        if (theLength <= inLength)
+            memcpy(ioText, (const char*)theName, theLength);
+        return (int32_t)theLength;
+    }
+    case EE_SCREENS_UH_OP_COMBO_CLEAR:
+        theObjects->DeleteAllEntries();
+        return 0;
+    case EE_SCREENS_UH_OP_COMBO_APPEND: {
+        char* theBytes = new char[inLength + 1];
+        memcpy(theBytes, ioText, inLength);
+        theBytes[inLength] = 0;
+        theObjects->AppendLine(UWideString(theBytes));
+        delete[] theBytes;
+        return 0;
+    }
+    case EE_SCREENS_UH_OP_COMBO_SELECT_FIRST:
+        theObjects->SetCurrentSelection(0);
+        return 0;
+    case EE_SCREENS_UH_OP_COMBO_SELECTION: {
+        unsigned long theSelection;
+        theObjects->GetCurrentSelection(theSelection);
+        return (int32_t)theSelection;
+    }
+    case EE_SCREENS_UH_OP_LIST_SELECTION: {
+        unsigned long theSelection = *ioSelection;
+        long theResult = static_cast<UIComboBox*>(theForm->GetControl(inA == 1 ? kMainGameTempObjectList
+                                                                                 : kMainGameTempPlayerList))
+                             ->GetListBox()->GetCurrentSelection(theSelection);
+        *ioSelection = (uint32_t)theSelection;
+        return (int32_t)theResult;
+    }
+    case EE_SCREENS_UH_OP_TILE:
+        return gWorld.mMap->GetTile((long)ioPoint[0], (long)ioPoint[1]) != NULL;
+    case EE_SCREENS_UH_OP_KEY: {
+        ISEntity* theKey;
+        gISKeyboard->GetEntity(inA == 0 ? kKeyShift : kKeyControl, theKey);
+        return (int32_t)theKey->GetValue();
+    }
+    case EE_SCREENS_UH_OP_PLAYER_SKIPPED:
+        return gWorld.mPlayers[inA] == NULL || gWorld.mPlayers[inA] == gWorld.GetCurrentPlayer();
+    case EE_SCREENS_UH_OP_LOCAL_PLAYER:
+        return (int32_t)gWorld.GetCurrentPlayer()->mPlayerID;
+    case EE_SCREENS_UH_OP_SEND_PLACE: {
+        long theType = inA;
+        gCommunications->ProcessLocalUserInput(
+            new EEMHackANewUnit(theType, GE2DPoint(ioPoint[0], ioPoint[1]), (unsigned char)inB), kSlotNone);
+        return 0;
+    }
+    case EE_SCREENS_UH_OP_SEND_LOAD:
+        gCommunications->ProcessLocalUserInput(new EEMLoadUnitData(inA, true), kSlotNone);
+        return 0;
+    case EE_SCREENS_UH_OP_IN_VIEW:
+        return gViewport.GetViewRectangle().Contains(GE2DPoint(ioPoint[0], ioPoint[1]));
+    case EE_SCREENS_UH_OP_LEFT_BUTTON:
+        return inA == 0 ? UIManager::GetLMouseButton()->JustPressed() : UIManager::GetLMouseButton()->JustUnpressed();
+    case EE_SCREENS_UH_OP_POINT: {
+        GE3DPoint thePoint;
+        EETile* theLocation;
+        bool theFound = EEPointUnitOrTile(GE2DPoint(ioPoint[0], ioPoint[1]), theLocation, thePoint, true);
+        ioPoint[0] = thePoint.GetX();
+        ioPoint[1] = thePoint.GetY();
+        return theFound;
+    }
+    }
+    return 0;
+}
+
 EEUIFMGUnitHack::EEUIFMGUnitHack(EEUIFMainGame* inForm)
 {
-    UWideString theName;
-    unsigned long theCount;
-    unsigned long i;
-    unsigned long j;
-
-    this->mL28 = -1;
-    theCount = 0;
-    this->mMode = 0;
     this->mForm = inForm;
-    for (i = 0; i < EEUnitClassCount(); i++) {
-        EEUnitClass* theClass = gUnitClassTable[i];
-        if (theClass == NULL || !theClass->mIsEnabled)
-            continue;
-        if (theClass->mCategory == kUnitCategoryProjectile || theClass->mCategory == kUnitCategoryBomb || theClass->mCategory == kUnitCategoryMissile ||
-            theClass->mCategory == kUnitCategoryTorpedo)
-            continue;
-        if (!theClass->mIsPlayerPlaceable)
-            continue;
-        if (theClass->mUnitType == kUnitTypeWaypoint || theClass->mUnitType == kUnitTypePathPoint || theClass->mUnitType == kUnitTypeFoundation1x1 ||
-            theClass->mUnitType == kUnitTypeFoundation2x2 || theClass->mUnitType == kUnitTypeFoundation3x3 || theClass->mUnitType == kUnitTypeFoundation6x6)
-            continue;
-        theName = theClass->mName;
-        for (j = 0; j < theCount; j++) {
-            if (theName < this->mNames[j])
-                break;
-        }
-        this->mNames.insert(this->mNames.begin() + j, theName);
-        this->mClassIDs.insert(this->mClassIDs.begin() + j, i);
-        theCount++;
-    }
+    this->mRecord = ee_screens_unit_hack_new(inForm);
 }
 
-// FUNCTION: EXE 0x662a91
-// Destroys the unit-placing hack
 EEUIFMGUnitHack::~EEUIFMGUnitHack()
 {
+    ee_screens_unit_hack_free(this->mRecord);
 }
 
-// FUNCTION: EXE 0x662aa5
-// Places a unit of the listed class at a tile on a Shift or Ctrl click (for the listed player, or the local
-// one with Shift)
 void EEUIFMGUnitHack::PlaceUnit(const GE2DPoint& inTile)
 {
-    ISEntity* theShift;
-    ISEntity* theControl;
-    unsigned long thePlayer;
-
-    if (gWorld.mMap->GetTile((long)inTile.GetX(), (long)inTile.GetY()) == NULL)
-        return;
-    gISKeyboard->GetEntity(kKeyShift, theShift);
-    gISKeyboard->GetEntity(kKeyControl, theControl);
-    if (!(this->mMode > 0) || (theShift->GetValue() == 0 && theControl->GetValue() == 0))
-        return;
-    switch (this->mMode) {
-    case 1: {
-        long theType = this->mClassIDs[this->GetSelection()];   // the class picked in the list
-        if (theShift->GetValue() == 0 &&
-            (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempPlayerList))->GetListBox()->GetCurrentSelection(thePlayer) == kErrorOK ||
-             static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempPlayerList))->GetListBox()->GetCurrentSelection(thePlayer) == 0xd)) {
-            unsigned long theIndex = 0;
-            unsigned long theLeft = thePlayer + 1;
-            do {
-                theIndex++;
-                while (gWorld.mPlayers[theIndex] == NULL || gWorld.mPlayers[theIndex] == gWorld.GetCurrentPlayer())
-                    theIndex++;
-            } while (--theLeft);
-            thePlayer = theIndex;
-        } else {
-            thePlayer = gWorld.GetCurrentPlayer()->mPlayerID;
-        }
-        gCommunications->ProcessLocalUserInput(new EEMHackANewUnit(theType, inTile, (unsigned char)thePlayer), kSlotNone);
-        break;
-    }
-    }
+    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_PLACE_UNIT, inTile.GetX(), inTile.GetY());
 }
 
-// FUNCTION: EXE 0x662c24
-// Creates a place-new-unit message
-// (an out-of-line inline COMDAT after its first user)
-
-// FUNCTION: EXE 0x662c6f
-// Fills the hack's object combo box with the unit class names
 void EEUIFMGUnitHack::FillComboBox()
 {
-    unsigned long i;
-
-    static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->DeleteAllEntries();
-    for (i = 0; i < this->mClassIDs.size(); i++)
-        (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList)))->AppendLine(this->mNames[i]);
-    static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->SetCurrentSelection(0);
+    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_FILL_COMBO_BOX, 0.0f, 0.0f);
 }
 
-// FUNCTION: EXE 0x662cdc
-// Sends a reload of the unit data of the class selected in the hack's list
 void EEUIFMGUnitHack::LoadUnitData()
 {
-    unsigned long theSelection;
-
-    this->FnE123D();
-    if (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->GetCurrentSelection(theSelection), !UIsNone32(theSelection))
-        gCommunications->ProcessLocalUserInput(new EEMLoadUnitData(this->mClassIDs[theSelection], true), kSlotNone);
+    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_LOAD_UNIT_DATA, 0.0f, 0.0f);
 }
 
-// FUNCTION: EXE 0x662d32
-// Creates a load-unit-data message
-// (an out-of-line inline COMDAT after its first user)
-
-// FUNCTION: EXE 0x662d66
-// Handles the hack's mouse clicks in the game view: a release places a unit at the clicked tile
 void EEUIFMGUnitHack::Update(const GE2DPoint& inLocation)
 {
-    GE3DPoint thePoint;
-    GE2DPoint theTile;
-    EETile* theLocation;
-    bool theInside = gViewport.GetViewRectangle().Contains(inLocation);
-
-    if (UIManager::GetLMouseButton()->JustPressed()) {
-        if (theInside) {
-            bool theFound = EEPointUnitOrTile(inLocation, theLocation, thePoint, true);
-            theTile.SetX(thePoint.GetX());
-            theTile.SetY(thePoint.GetY());
-            if (theFound)
-                this->Fn157269(theTile);
-        }
-    } else if (UIManager::GetLMouseButton()->JustUnpressed()) {
-        if (theInside) {
-            bool theFound = EEPointUnitOrTile(inLocation, theLocation, thePoint, true);
-            theTile.SetX(thePoint.GetX());
-            theTile.SetY(thePoint.GetY());
-            if (theFound)
-                this->PlaceUnit(theTile);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x662e29
-// Returns the selection of the hack's object or player list, by mode
-unsigned long EEUIFMGUnitHack::GetSelection()
-{
-    unsigned long theSelection = 0;
-
-    switch (this->mMode) {
-    case 1:
-        static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->GetListBox()->GetCurrentSelection(theSelection);
-        break;
-    case 2:
-        static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempPlayerList))->GetListBox()->GetCurrentSelection(theSelection);
-        break;
-    }
-    return theSelection;
+    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_UPDATE, inLocation.GetX(), inLocation.GetY());
 }
 
 // FUNCTION: EXE 0x662e73
@@ -1739,14 +1708,6 @@ void EEUIFMainGame::UpdateIconBar()
 // (vector<UWideString>::operator[]: a template COMDAT; CopyData calls it out of line)
 
 // ICF-folded empty members (no address of their own: 0x157269 / 0xe123d are their twins)
-void EEUIFMGUnitHack::Fn157269(const GE2DPoint& inTile)
-{
-}
-
-void EEUIFMGUnitHack::FnE123D()
-{
-}
-
 void EEUIFMainGame::FnE123D()
 {
 }
