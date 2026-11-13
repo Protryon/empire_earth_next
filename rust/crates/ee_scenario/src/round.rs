@@ -91,6 +91,8 @@ pub fn update<H: Round>(h: &mut H) {
 /// size read again each step: an effect may add or re-arm one), each due one (its time as a float at most the clock)
 /// whose effect exists, not run, and in the cinematic when one plays, marked run and executed; then the run ones
 /// erased, the timer reset and the chat text cleared.
+// the negated test is the original's: a NaN clock skips every entry
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
 fn round<H: Round>(h: &mut H, human: bool) {
     let count = h.op(EE_SCENARIO_ROUND_TRIGGER_COUNT, 0, 0, 0.0) as i32;
     for t in 0..count {
