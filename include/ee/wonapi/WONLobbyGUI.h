@@ -1090,6 +1090,7 @@ public:
     void SetScrollbar(Scrollbar*); //305760
     void AddControls(); //305860
     Scrollbar* GetScrollbar(bool vertical) { return vertical?this->mVertScrollbar.get():this->mHorzScrollbar.get(); } // inline; +0x88/+0x8c
+    void SetBar(bool vertical,Scrollbar* s) { if(vertical) this->mVertScrollbar=s; else this->mHorzScrollbar=s; } // the field only (MSScrollContainer's constructor)
     bool EnableScrollbar(Scrollbar*,ScrollbarCondition); //3058d0
     void SetScrollbarConditions(ScrollbarCondition,ScrollbarCondition); // 0x305990
     SmartPtr<Scrollbar> mHorzScrollbar,mVertScrollbar; // at +0x88/+0x8c

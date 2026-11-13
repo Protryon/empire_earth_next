@@ -138,8 +138,8 @@ MSListCtrl::MSListCtrl(MultiListArea* area)
 void MSListCtrl::Virtual08()
 {
     MSScrollContainer::Virtual08();
-    this->mHeader->SetPosSize(this->mScrollArea->Left(),this->mScrollArea->Top()-this->mHeaderHeight,
-                     this->mScrollArea->Width(),this->mHeaderHeight);
+    this->mHeader->SetPosSize(this->GetScrollArea()->Left(),this->GetScrollArea()->Top()-this->mHeaderHeight,
+                     this->GetScrollArea()->Width(),this->mHeaderHeight);
 }
 }
 
