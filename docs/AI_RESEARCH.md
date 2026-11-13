@@ -5016,6 +5016,56 @@ an army of 0.6 against 1.2. Within noise.
 - the ChooseUnitsToKill rooms;
 - GiveImprovements;
 - the scenario tasks.
+### 8.77 Porting everything, 2f: the rest (2026-11-13, EE-SIM)
+
+The last of the C++ classic's decision code, in the order of §8.76:
+
+- **CheckRaids / Retaliate** (`check_raids`).
+  - Every 80 s once the first attack has started, the port counts its land buildings (no walls or farms; the queued
+    ones count).
+  - With fewer than bonzai_attack_level, it attacks a random enemy's most valuable building with every group and a
+    new one, sends every citizen there, then waits 300 s.
+  - The Bundeswehr power's citizen research is not started.
+- **BuildUp** (a deathmatch's start). Three defence groups, each of one random land defence class (the C++'s
+  screen), up to the unit allowance and 20 each.
+- **EpochReached.** On reaching the WW1 epoch in a game started before it: a defence group, and 1-4 cruisers on a
+  map of 250 water tiles or more.
+- **CombatManager::Attack** (`attack_at`). The attack groups' units are measured against the difficulty's share of
+  the unit limit (Easy all, Medium 75%, Hard 50%):
+  - under it, the nearest groups of the wanted kinds are sent, up to the first that is not already attacking;
+  - over it, the nearest attacking group that is free or within ~17 tiles is sent;
+  - when none is sent and new groups are allowed, a new group is made.
+
+  It serves two callers:
+  - **An ally's flare:** FlareReceived becomes a `flare` event for a script seat, as in §8.76. It sends every kind
+    of group and allows a new one. It is untested, since EE-SIM has no human to flare.
+  - **CoverLanding:** a crossing's beach is covered by the air, sea and space groups.
+- **CheckSpecials' cloaking.** A capitol whose nearest town's threat passes 0.5 casts the cloak (calamity tech
+  0x43d). DEVIATION: the capitol's power is not read; the engine refuses the cast without it. Batteries past 10
+  are now deleted, those with the most other batteries and fewest town centres within 4 tiles first.
+- **ChooseUnitsToKill for CheckNaval and CheckSpace.** Land citizens are deleted for the room the maintenance group
+  needs beyond the units available, the idle first.
+- **The wonder race's 95% military share** (kCMFactor) is now in the unit limit and the units available.
+- **GiveImprovements** (create_group, with the improvements enabled, not on Easy): num_improved_unit_types classes
+  of the selection, num_improved_attributes improvements each. DEVIATION: the port orders them through an own unit
+  of the class, so a class with none yet is skipped.
+- **NOT PORTED:** the scenario's attack and defend tasks (AddAttackTask / AddDefendTask, from scenario triggers). A
+  script seat ignores them.
+
+**Results** (balanced):
+- Land, 32 seeds, 90 minutes: C++ 17, port 10, 5 close (16-10 with 6 close in §8.73, 12-15 and 11-17 before).
+  Within noise. The port bought improvements in 55 groups.
+- Deathmatch, 8 seeds, 45 minutes: the port won 4, the C++ 2, 2 close. 24 build-up groups were made, three a game.
+- Small Islands, 8 seeds, 90 minutes: the port won 2, 6 close. Landings were covered twice.
+- WW2 start with cheats, 8 seeds: C++ 2, 6 close.
+
+No Retaliate fired: no game fell below the bonzai level. No cloak or WW1 group appeared either: the land games stop
+before WW1, and the late starts begin after it.
+
+0 script errors. Determinism (seeds 2 and 5, --repeat 2) is identical on land and in deathmatch.
+
+**Stage 2 is complete.** Everything of the C++ classic's decision code is ported or recorded in ORIGIN as a deviation
+or not ported. Stage 3 is next: the benches beyond Small land, with the late-start economy first (§8.63).
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

@@ -158,8 +158,16 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 AttackPlayer / DefendPlayer: PORTED (the attack_player / defend_player events: the caller's most
                 valuable building seen or remembered - DEVIATION: ChooseTargetUnit reads every unit - attacked or
                 defended by every group and a new group; the aid timers halved).
-                NOT STARTED: Attack's flares and covered landings, EpochReached's WW1 groups, the scenario's attack
-                and defend tasks.
+                Attack: PORTED (army.lua attack_at: the attack groups' units against the difficulty's share of the
+                unit limit; under it the nearest groups of the wanted kinds up to the first not attacking, else the
+                nearest attacking group free or within ~17 tiles; else a new group when allowed), for an ally's
+                flare (FlareReceived: the "flare" event, every kind and a new group) and CoverLanding (a crossing's
+                beach: the air, sea and space groups). DEVIATIONS: the space map's transport rule and the
+                near-water filter are not ported. EpochReached: PORTED (the WW1 epoch reached in a game started
+                before it: a defence group, and 1-4 cruisers on a map of 250 water tiles or more). The wonder race's
+                95% military share (kCMFactor): PORTED (military_share_k).
+                NOT PORTED: the scenario's attack and defend tasks (AddAttackTask / AddDefendTask: scenario
+                triggers; a script seat ignores them).
   EECPCombatStrategy.cpp        PARTLY -> army.lua: ComputeDomainShares' sea share (GetDomainShare: the water tiles'
                 share, the own sea strength against the target's, the air unit weight's pull) and Calculate (the
                 sea's count, the rest land), RedistributeDomainCounts (no sea or air class: to land); the air share from WW1 (the target's town
@@ -202,7 +210,9 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 sub-group (EECPASGSpaceship, the other space units): a sea sub-group of the space region
                 (AssignSpaceTask as AssignSeaTask over the space area). The submarine sub-group (EECPASGSubmarine, AI
                 kind 0x15): a sea sub-group whose units take only targets their weapons hurt (lib.groups can_hurt).
-                NOT STARTED: GiveImprovements.
+                GiveImprovements: PORTED (create_group, with the improvements enabled, not on Easy:
+                num_improved_unit_types classes of the selection, num_improved_attributes improvements each;
+                DEVIATION: ordered through an own unit of the class, so a class with none yet is skipped).
   EECPUnitSelector.cpp          PARTLY -> army.lua: Select: GatherCandidates (the free soldiers, an attack also the
                 defence groups' at rest: GatherDefendingUnits; the classes the player trains by AI kind,
                 KeepBestClasses, FilterByStrategy), ComputeGroupSize (the attack/defence share of the target file's
@@ -243,20 +253,25 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 town by guard_town_percentage, a random point of the group's land). DEVIATIONS: the towns are
                 EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
                 bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
-                the adjacent continents' step of the ladder, CheckRaids / Retaliate, BuildUp
-                (deathmatch). AidAllies: PORTED (army.lua aid_allies, every defence update: the allies shuffled,
+                the adjacent continents' step of the ladder. CheckRaids / Retaliate: PORTED (army.lua check_raids:
+                every 80 s once the first attack has started, fewer land buildings - no walls or farms, the queued
+                counted - than bonzai_attack_level: every group and a new one at a random enemy's most valuable
+                building, every citizen sent there; then 300 s; the Bundeswehr citizen research NOT STARTED).
+                BuildUp: PORTED (a deathmatch's start, three times: a random land defence class of the screen, up to
+                the unit allowance and 20, one defence group each). AidAllies: PORTED (army.lua aid_allies, every defence update: the allies shuffled,
                 the first with a threatened town - else a town of more than 2 buildings without a package - gets an
                 aid package while the unit allowance holds; a human ally's is sent at once; the allies' towns are
                 their buildings clustered as the own). CheckSpecials: PORTED (army.lua check_specials, every ship_maintenance_timer / 2
                 minutes: the anti-missile batteries, one and one more per town centre, settlement or capitol up to
-                10; one ICBM kept once the missile base can make it). NOT STARTED: its ChooseUnitsToKill past 10
-                batteries, the capitols' cloaking. CheckSpace: PORTED (every ship_maintenance_timer minutes on a space map:
+                10, those past 10 deleted - the most batteries and fewest town centres within 4 tiles first; one
+                ICBM kept once the missile base can make it; the capitols' cloak cast where the nearest town's threat
+                passes 0.5 - DEVIATION: the capitol's power is not read, the cast is refused without it). CheckSpace: PORTED (every ship_maintenance_timer minutes on a space map:
                 the space units own and asked for topped up to ships_to_maintain by a space-only group of kind 5,
                 the favourite space type its fill; a space carrier more while fewer than the space docks and 4; its
-                ChooseUnitsToKill: NOT STARTED; the space units join the land sub-groups until the air and space
+                ChooseUnitsToKill: land citizens deleted for the room past the units available; the space units join the land sub-groups until the air and space
                 sub-groups are ported). CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
                 50 water tiles: the warships own and asked for topped up to ships_to_maintain by a sea-only group of
-                kind 5; the carrier fighters from WW2, the difficulty's carrier_fighters_* kept, own and asked for, of the epoch's fighter; its ChooseUnitsToKill: NOT STARTED).
+                kind 5; the carrier fighters from WW2, the difficulty's carrier_fighters_* kept, own and asked for, of the epoch's fighter; its ChooseUnitsToKill: land citizens deleted for the room past the units available).
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
                 class drafted or requested, explore with the difficulty's stance, every 30 s), the sea explorers
                 (num_sea_explorers of the fastest warship class, once the dock is researched, with water on the map).

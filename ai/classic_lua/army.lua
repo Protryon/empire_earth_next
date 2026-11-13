@@ -646,20 +646,29 @@ local function favorite_land_ok(name)
         and ak ~= KIND_ARTILLERY and not k.is_transport and not k.mine
 end
 
--- GetUnitsAvailable: the military room, (1 - the citizen share - military / limit) x the limit, up
+-- the military share of the population limit: 1 - the citizen share, 95% in a wonder race (kCMFactor)
+local function military_share_k(memory)
+    local a = memory.army
+    if a ~= nil and a.race then
+        return 950
+    end
+    return 1000 - memory.t.behavior.citizen_percentage_k
+end
+
+-- GetUnitsAvailable: the military room, (the military share - military / limit) x the limit, up
 local function units_available(view, memory)
     local cap = view.population_cap
     if cap <= 0 then
         return 0
     end
     local military = U.military(view, memory, true)
-    local v = (1000 - memory.t.behavior.citizen_percentage_k) * cap - military * 1000
+    local v = military_share_k(memory) * cap - military * 1000
     return v > 0 and (v + 999) // 1000 or v // 1000
 end
 
 -- GetUnitLimit
 local function unit_limit(view, memory)
-    return view.population_cap * (1000 - memory.t.behavior.citizen_percentage_k) // 1000
+    return view.population_cap * military_share_k(memory) // 1000
 end
 
 -- GetDomainShare(sea): the water's share of the map's tiles (x 0.85..1.15), cut by the own sea strength against the
@@ -1397,13 +1406,63 @@ end
 
 -- CreateGroup (MakePlan, PlaceSubGroups): a sub-group of the selection, its held units taken, its slots requested
 -- through Personnel. Returns the group, or nil
-local function create_group(view, memory, kind, mission, target, why, naval, domain)
+-- GiveImprovements (MakePlan, with the improvements enabled, not on Easy): num_improved_unit_types random classes of
+-- the selection, each with num_improved_attributes random improvements it can buy (the i-th bought up to i times).
+-- DEVIATION: an improvement is ordered through an own unit of the class (ai.improve), so a class with none yet is
+-- skipped
+local function give_improvements(view, memory, sel)
+    local b = memory.t.behavior
+    if not memory.cp.improve_enabled or (memory.t.difficulty or 0) == 0 then
+        return
+    end
+    local classes, seen = {}, {}
+    for _, name in ipairs(sel.slots) do
+        if not seen[name] then
+            seen[name] = true
+            classes[#classes + 1] = name
+        end
+    end
+    for _, c in ipairs(sel.held) do
+        if not seen[c.type] then
+            seen[c.type] = true
+            classes[#classes + 1] = c.type
+        end
+    end
+    shuffle(classes)
+    local bought = 0
+    for j = 1, math.min(b.num_improved_unit_types or 0, #classes) do
+        local unit = ai.units{type = classes[j], limit = 1}[1]
+        if unit ~= nil then
+            local list = {}
+            for what = 0, 15 do
+                if ai.improve_cost(classes[j], what) ~= nil then
+                    list[#list + 1] = what
+                end
+            end
+            shuffle(list)
+            for i = 1, math.min(b.num_improved_attributes or 0, #list) do
+                for _ = 1, i do
+                    if ai.improve(unit, list[i]) ~= "ok" then
+                        break
+                    end
+                    bought = bought + 1
+                end
+            end
+        end
+    end
+    if bought > 0 then
+        print(string.format("classic_lua army.improve bought=%d", bought))
+    end
+end
+
+local function create_group(view, memory, kind, mission, target, why, naval, domain, preset)
     local mem = army(memory)
-    local sel = select_units(view, memory, kind, target, naval, domain)
+    local sel = preset or select_units(view, memory, kind, target, naval, domain)
     if sel == nil or (#sel.held == 0 and #sel.slots == 0) then
         print(string.format("classic_lua army.%s kind=%d target=%d none", why, kind, target or 0))
         return nil
     end
+    give_improvements(view, memory, sel)
     local rx, ry = rally_point(view)
     if rx == nil or rx < 0 then
         return nil
@@ -1799,6 +1858,16 @@ end
 -- AssignLandTask: an attack (mission 0 or 2) goes for the target's territory (the weakest region first); else the
 -- defence ladder; else back to the rally point. A sea sub-group: AssignSeaTask
 local function assign_task(view, memory, g)
+    if g.goto_x ~= nil then
+        -- (an attack-location task: CombatManager::Attack's, the flare's or the landing's cover)
+        g.mission = 2
+        set_place(g, "attack", g.goto_x, g.goto_y, 0, g.enemy)
+        g.goto_x, g.goto_y = nil, nil
+        g.task_t = view.time
+        print(string.format("classic_lua army.task id=%d mission=2 location at=%d,%d units=%d", g.id, g.x, g.y,
+            #g.units))
+        return
+    end
     if g.wonder_id ~= nil and M.wonder_task(view, g) then
         g.task_t = view.time
         print(string.format("classic_lua army.task id=%d mission=%d wonder at=%d,%d units=%d", g.id, g.mission, g.x,
@@ -1932,6 +2001,10 @@ local function cross_step(view, memory, g)
             end
             c.L = L
             print(string.format("classic_lua army.cross id=%d board ships=%d units=%d", g.id, #ships, #g.units))
+            -- CoverLanding: the air, sea and space groups sent to cover the beach
+            if L.site_x ~= nil then
+                M.attack_at(view, memory, L.site_x, L.site_y, {air = true, sea = true, space = true, why = "cover"})
+            end
             return
         end
         local class = FERRY.transport_class(view)
@@ -2039,7 +2112,15 @@ end
 local function assign_air_task(view, memory, g)
     local b = memory.t.behavior
     local why = nil
-    if g.wonder_id ~= nil and M.wonder_task(view, g) and air_reach(g, g.x, g.y) then
+    if g.goto_x ~= nil then
+        if air_reach(g, g.goto_x, g.goto_y) then
+            g.mission = 2
+            set_place(g, "attack", g.goto_x, g.goto_y, 0, g.enemy)
+            why = "location"
+        end
+        g.goto_x, g.goto_y = nil, nil
+    end
+    if why == nil and g.wonder_id ~= nil and M.wonder_task(view, g) and air_reach(g, g.x, g.y) then
         why = "wonder"
     end
     if why == nil and (g.mission == 2 or g.mission == 0) then
@@ -2322,6 +2403,51 @@ end
 -- asked for) topped up to the difficulty's ships_to_maintain by a group of a sea-only strategy (kind 5: a defence
 -- group) against a random enemy; the peace rules hold it back as an attack's. ChooseUnitsToKill's room: NOT STARTED.
 -- The carrier fighters: from WW2, the difficulty's number kept (carrier_fighters_*)
+-- ChooseUnitsToKill for a maintenance group's room (EEAIFOUnitsToKillForNavalMaintenance / ForSpaceMaintenance): n
+-- land citizens deleted (they cost population), the idle first, then the waiting gatherers and the gatherers by
+-- their resource (KillUnitsForMilitary's order)
+local KILL_ORDER = {wood = 40, stone = 30, iron = 20, gold = 15, food = 10}
+
+local function kill_citizens(n, why)
+    if n <= 0 then
+        return
+    end
+    local ids = ai.units{category = "citizen"}
+    if #ids == 0 then
+        return
+    end
+    local cols = ai.get(ids, {"action", "gathers", "waiting", "inside"})
+    local list = {}
+    for k = 1, #ids do
+        if cols.action[k] ~= nil and cols.inside[k] == nil then
+            local score = 10000
+            if cols.action[k] == "idle" then
+                score = 10070
+            elseif cols.action[k] == "gather" then
+                if cols.waiting[k] then
+                    score = 10060
+                end
+                score = score + (KILL_ORDER[cols.gathers[k] or ""] or 0)
+            end
+            list[#list + 1] = {id = ids[k], score = score}
+        end
+    end
+    table.sort(list, function(p, q)
+        if p.score ~= q.score then
+            return p.score > q.score
+        end
+        return p.id < q.id
+    end)
+    local kill = {}
+    for k = 1, math.min(n, #list) do
+        kill[#kill + 1] = list[k].id
+    end
+    if #kill > 0 then
+        ai.delete(kill)
+        print(string.format("classic_lua army.kill %s citizens=%d", why, #kill))
+    end
+end
+
 local function check_naval(view, memory)
     local a = army(memory)
     if view.time <= (a.next_naval or 0) then
@@ -2351,6 +2477,8 @@ local function check_naval(view, memory)
             local p = t.personality
             local peace = (view.epoch <= 0 and not p.prehistoric_attacks) or (view.epoch == 1 and not p.stone_attacks)
             if target ~= nil and not peace then
+                -- (ChooseUnitsToKill: the room the group needs beyond the unit allowance)
+                kill_citizens(limit - have - units_available(view, memory), "naval")
                 create_group(view, memory, 5, 1, target, "naval", limit - have)
             end
         end
@@ -2419,6 +2547,7 @@ local function check_space(view, memory)
         if have < limit then
             local target = random_enemy()
             if target ~= nil then
+                kill_citizens(limit - have - units_available(view, memory), "space")
                 create_group(view, memory, 5, 1, target, "space", limit - have, "space")
             end
         end
@@ -2436,6 +2565,8 @@ end
 local ICBM = "cp_icbm"                      -- kUnitTypeCpICBM: it sits in its missile base
 local AMB = "n14_anti_missile_battery"      -- kUnitType14AntiMissileBattery
 local WONDER_ATTACK_MS = 150000             -- UpdateWonderRace: a wonder of the racing team attacked every 150 s
+local CLOAK_TECH = 0x43d                     -- the cloaking calamity's tech (CheckSpecials)
+local CLOAK_THREAT = 500                    -- kDCCalamityThreat 0.5, in the threat's thousandths
 local CANNON_CHANCE_K = {200, 400, 600}     -- kCMCannonChance by difficulty: the ICBM fired with a new attack
 
 -- the wonders this step (ai.wonders, once a step)
@@ -2759,8 +2890,56 @@ local function check_specials(view, memory)
     if t ~= nil and t.available and not t.obsolete and view.epoch >= (t.epoch or 0) then
         local towns = #ai.units{type = C.settlement} + #ai.units{type = C.town_center} + #ai.units{type = "b_capitol"}
         local n = #ai.units{type = AMB} + (waiting[AMB] or 0)
-        if n == 0 or (n < towns and n + 1 < 10) then
+        if n > 10 then
+            -- EEAIFOAMBToKill: the batteries past 10, those with the most batteries and fewest town centres within
+            -- 4 tiles first
+            local list = {}
+            for _, id in ipairs(ai.units{type = AMB}) do
+                local u = R.unit(id)
+                if u ~= nil then
+                    local score = #ai.units{type = AMB, near = {u.x, u.y, 4}} - 1
+                        - #ai.units{type = C.town_center, near = {u.x, u.y, 4}}
+                    list[#list + 1] = {id = id, score = score}
+                end
+            end
+            table.sort(list, function(p, q)
+                if p.score ~= q.score then
+                    return p.score > q.score
+                end
+                return p.id < q.id
+            end)
+            local kill = {}
+            for k = 1, math.min(n - 10, #list) do
+                kill[#kill + 1] = list[k].id
+            end
+            if #kill > 0 then
+                ai.delete(kill)
+            end
+        elseif n == 0 or (n < towns and n + 1 < 10) then
             U.request(view, memory, AMB, 1)
+        end
+    end
+    -- the cloaking power (kCivPowerCloaking): a capitol whose nearest town's threat passes kDCCalamityThreat (0.5) casts
+    -- the cloak (calamity tech 0x43d) at its own tile. DEVIATION: the capitol's power against the calamity's cost is
+    -- not read (the cast is refused without it)
+    local cloak = ai.techs{id = CLOAK_TECH}
+    if cloak ~= nil and cloak[1] ~= nil and cloak[1].available then
+        for _, id in ipairs(ai.units{type = C.capitol}) do
+            local u = R.unit(id)
+            if u ~= nil then
+                local best, bd = nil, nil
+                for _, tw in ipairs(towns()) do
+                    local px, py = hull_closest(tw, u.x, u.y)
+                    local d = d2(px, py, u.x, u.y)
+                    if bd == nil or d < bd then
+                        best, bd = tw, d
+                    end
+                end
+                if best ~= nil and town_threat(memory, best, false) > CLOAK_THREAT then
+                    ai.cast({id}, CLOAK_TECH, u.x, u.y)
+                    print(string.format("classic_lua army.cloak capitol=%d", id))
+                end
+            end
         end
     end
     local it = U.class_tech(view, ICBM)
@@ -3154,6 +3333,18 @@ local function choose_target_unit(player)
     return best
 end
 
+-- AttackUnit on a unit that is no wonder: every group at it and a new attack group
+local function attack_target(view, memory, player, u)
+    local groups = wonder_groups(memory)
+    for _, g in ipairs(groups) do
+        g.wonder_id, g.wonder_defend = nil, nil
+        g.mission, g.enemy = 2, player
+        set_place(g, "attack", u.x, u.y, 0, player)
+    end
+    create_group(view, memory, 0, 2, player, "retaliate")
+    return #groups
+end
+
 local function answer_call(view, memory, player, defend)
     local a = army(memory)
     local u = choose_target_unit(player)
@@ -3184,6 +3375,221 @@ local function answer_call(view, memory, player, defend)
         player, u.x, u.y, #groups))
 end
 
+-- BuildUp (a deathmatch's start, three times): a random class of the screen (a land defence unit the player can make
+-- now, not obsolete; no mine, priest, medic, converter or citizen; no special, field weapon, anti-air, artillery, siege,
+-- anti-submarine helicopter or Mech Zeus kind; only while the difficulty's min_military_buildings_*_dm is set), as
+-- many as the unit allowance up to 20, in a defence group (kind 5) of that class alone
+local BUILDUP_SKIP = {[KIND_SPECIAL] = true, [0xa] = true, [KIND_ANTI_AIR] = true, [KIND_ARTILLERY] = true,
+                      [KIND_SIEGE] = true, [KIND_ANTI_SUB_HELICOPTER] = true, [KIND_MECH_ZEUS] = true}
+
+local function build_up(view, memory)
+    local b = memory.t.behavior
+    if (T.by_difficulty(memory, b.min_military_buildings_easy_dm, b.min_military_buildings_medium_dm,
+            b.min_military_buildings_hard_dm) or 0) == 0 then
+        return
+    end
+    local list = {}
+    for _, c in ipairs(view.costs or {}) do
+        if c.military and not c.building then
+            local k = cls(c.type)
+            local t = U.class_tech(view, c.type)
+            if k.category == "soldier" and domain_of(k) == "land" and k.defense_unit and (k.speed or 0) > 0
+                    and (k.epoch or 0) <= view.epoch and t ~= nil and not t.obsolete and not k.mine
+                    and not k.medic and not k.converts and not BUILDUP_SKIP[k.ai_kind or 0] then
+                list[#list + 1] = c.type
+            end
+        end
+    end
+    table.sort(list)
+    if #list == 0 then
+        return
+    end
+    local class = list[ai.random(1, #list)]
+    local n = math.min(unit_allowance(view, memory), 20)
+    if n <= 0 then
+        return
+    end
+    local slots = {}
+    for k = 1, n do
+        slots[k] = class
+    end
+    create_group(view, memory, 5, 1, random_enemy(), "buildup", nil, nil,
+        {count = n, held = {}, slots = slots, strength = 0, sea_k = 0})
+end
+
+-- EpochReached (the Atomic Age - WW1 reached in a game started before it): a defence group (kind 1: the specials,
+-- the counters, the favourites) against a random enemy, and on a map of 250 water tiles or more, with the cruiser
+-- available, a group of 1-4 cruisers
+function M.epoch_reached(view, memory)
+    local t = memory.t
+    if view.epoch ~= 9 or (t.epoch_start or 0) >= 9 then
+        return
+    end
+    local enemy = random_enemy()
+    if enemy == nil then
+        return
+    end
+    create_group(view, memory, 1, 1, enemy, "ww1")
+    local ct = U.class_tech(view, "s10_cruiser")
+    if (t.water_tiles or 0) >= 250 and ct ~= nil and ct.available then
+        local n = ai.random(1, 4)
+        local slots = {}
+        for k = 1, n do
+            slots[k] = "s10_cruiser"
+        end
+        create_group(view, memory, 1, 1, enemy, "ww1", nil, nil,
+            {count = n, held = {}, slots = slots, strength = 0, sea_k = 1000})
+    end
+end
+
+-- CombatManager::Attack (an ally's flare, the cover of a landing): the attack groups' units against the difficulty's
+-- share of the unit limit (Easy all, Medium 75%, Hard 50%); while under it, the nearest groups of the wanted kinds
+-- (land, air, sea, space) up to the first that is not attacking already are sent at the tile; else the nearest
+-- attacking group with no active task or within ~17 tiles; none sent and the share not reached: a new attack group
+-- (when allowed). DEVIATIONS: the space map's transport rule and the near-water filter are not ported
+function M.attack_at(view, memory, x, y, opts)
+    local a = army(memory)
+    local needed = unit_limit(view, memory)
+    needed = (needed * T.by_difficulty(memory, 1000, 750, 500) + 999) // 1000
+    local attacking = {}
+    local units = 0
+    local ok = true
+    for _, g in ipairs(G.all(a)) do
+        if g.role == "army" and g.phase == "task" and g.task == "attack" and #g.units > 0 then
+            attacking[#attacking + 1] = g
+            if ok then
+                units = units + #g.units
+                ok = units < needed
+            end
+        end
+    end
+    local function kind_ok(g)
+        if g.space or g.spaceship then
+            return opts.space
+        elseif g.air then
+            return opts.air
+        elseif g.sea then
+            return opts.sea
+        end
+        return opts.land
+    end
+    local function by_distance(list)
+        table.sort(list, function(p, q)
+            local dp = d2(p.cx or p.x, p.cy or p.y, x, y)
+            local dq = d2(q.cx or q.x, q.cy or q.y, x, y)
+            if dp ~= dq then
+                return dp < dq
+            end
+            return p.id < q.id
+        end)
+        return list
+    end
+    local selected = {}
+    if ok then
+        local cands = {}
+        for _, g in ipairs(G.all(a)) do
+            if g.role == "army" and g.phase == "task" and #g.units > 0 and kind_ok(g) then
+                cands[#cands + 1] = g
+            end
+        end
+        for _, g in ipairs(by_distance(cands)) do
+            selected[#selected + 1] = g
+            if g.task ~= "attack" then
+                break
+            end
+        end
+    else
+        for _, g in ipairs(by_distance(attacking)) do
+            if g.x < 0 or d2(g.cx or g.x, g.cy or g.y, x, y) <= 300 then
+                selected[#selected + 1] = g
+                break
+            end
+        end
+    end
+    local enemy = random_enemy() or 0
+    for _, g in ipairs(selected) do
+        g.wonder_id, g.wonder_defend = nil, nil
+        g.mission, g.enemy = 2, enemy
+        if g.air then
+            g.goto_x, g.goto_y = x, y
+            assign_air_task(view, memory, g)
+        else
+            set_place(g, "attack", x, y, 0, enemy)
+        end
+    end
+    if #selected == 0 and ok and opts.allow_new then
+        local g = create_group(view, memory, 0, 2, enemy, "location")
+        if g ~= nil then
+            g.goto_x, g.goto_y = x, y
+        end
+    end
+    print(string.format("classic_lua army.attack_at %s at=%d,%d sent=%d units=%d/%d", opts.why or "", x, y, #selected,
+        units, needed))
+end
+
+-- CheckRaids (every 80 s once the first attack has started, the first check at initial_attack_delay_max minutes): with
+-- fewer land buildings (no walls or farms; the ones asked for counted) than bonzai_attack_level, Retaliate against a
+-- random enemy and wait 300 s. Retaliate: the enemy's most valuable building (ChooseTargetUnit, as AttackPlayer's)
+-- attacked by every group and a new group (AttackUnit on a unit that is no wonder), and every citizen sent at it (the
+-- armed ones fighting on the way, the others forced). The Bundeswehr power's citizen research: NOT STARTED
+local function check_raids(view, memory)
+    local a = army(memory)
+    local b = memory.t.behavior
+    if a.next_raid_check == nil then
+        a.next_raid_check = (b.initial_attack_delay_max or 0) * 60000
+    end
+    if not memory.cp.attack_started or view.time < a.next_raid_check then
+        return
+    end
+    a.next_raid_check = view.time + 80000
+    local n = 0
+    for _, id in ipairs(ai.units{category = "building"}) do
+        local u = R.unit(id)
+        if u ~= nil and not u.type:find("^b_wall") and u.type ~= C.farm and u.type ~= C.robotic_farm then
+            n = n + 1
+        end
+    end
+    local bm = require("classic_lua.build").state(memory)
+    for _, list in pairs(bm.q) do
+        for _, req in ipairs(list) do
+            if not req.class:find("^b_wall") then
+                n = n + 1
+            end
+        end
+    end
+    if n >= (b.bonzai_attack_level or 0) then
+        return
+    end
+    local enemy = random_enemy()
+    if enemy == nil or enemy == 0 then
+        return
+    end
+    local u = choose_target_unit(enemy)
+    if u ~= nil then
+        attack_target(view, memory, enemy, u)
+        local armed, unarmed = {}, {}
+        for _, id in ipairs(ai.units{category = "citizen"}) do
+            local c = R.unit(id)
+            if c ~= nil and c.inside == nil then
+                if (cls(c.type).attack or 0) > 0 then
+                    armed[#armed + 1] = id
+                else
+                    unarmed[#unarmed + 1] = id
+                end
+            end
+        end
+        if #armed > 0 then
+            ai.move(armed, u.x, u.y, {forced = false})
+        end
+        if #unarmed > 0 then
+            ai.move(unarmed, u.x, u.y, {forced = true})
+        end
+        print(string.format("classic_lua army.retaliate player=%d at=%d,%d buildings=%d citizens=%d", enemy, u.x, u.y,
+            n, #armed + #unarmed))
+    end
+    a.next_raid_check = view.time + 300000
+end
+
 local function defense(view, memory)
     local cp = memory.cp
     local a = army(memory)
@@ -3208,6 +3614,7 @@ local function defense(view, memory)
     if view.time >= cp.next_aid then
         plan_aid(view, memory)
     end
+    check_raids(view, memory)
     check_naval(view, memory)
     check_space(view, memory)
     check_specials(view, memory)
@@ -3342,7 +3749,11 @@ end
 function M.on_events(view, memory, events)
     note_deaths(view, memory, events)
     for _, e in ipairs(events) do
-        if e.kind == "attack_player" then
+        if e.kind == "flare" then
+            -- FlareReceived: an ally's flare, CombatManager::Attack at its tile with every kind and a new group
+            M.attack_at(view, memory, e.x, e.y, {land = true, air = true, sea = true, space = true, allow_new = true,
+                                                 why = "flare"})
+        elseif e.kind == "attack_player" then
             answer_call(view, memory, e.player, false)
         elseif e.kind == "defend_player" then
             answer_call(view, memory, e.player, true)
@@ -3417,6 +3828,12 @@ end
 function M.step(view, memory)
     local a = army(memory)
     G.init(a)
+    if memory.t.deathmatch and not a.built_up then
+        a.built_up = true
+        for _ = 1, 3 do
+            build_up(view, memory)
+        end
+    end
     kill_for_military(view, memory)
     fill_requests(view, memory)
     update_groups(view, memory)
