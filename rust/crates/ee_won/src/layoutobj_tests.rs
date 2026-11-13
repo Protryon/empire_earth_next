@@ -170,9 +170,7 @@ fn replay(lines: &[String]) -> Vec<String> {
     }
     let mgr = Box::new(EeWonLayoutMgr::new(0x77 as *mut c_void, Some(host)));
     let mp: *const EeWonLayoutMgr = &*mgr;
-    WORLD.with(|x| {
-        *x.borrow_mut() = Some(World { w, trace: vec![lines[0].clone()], depth: 0, mgr: mp, live: 0 })
-    });
+    WORLD.with(|x| *x.borrow_mut() = Some(World { w, trace: vec![lines[0].clone()], depth: 0, mgr: mp, live: 0 }));
     let mut next_id = 0;
     for line in &lines[1..] {
         let n = nums(line);
@@ -221,7 +219,8 @@ fn replay(lines: &[String]) -> Vec<String> {
             }
             hold(shell);
             match usage {
-                0 => mgr.add_child_layout(shell as isize, lay, group, CONTAINER),
+                // SAFETY: held by the creator's reference
+                0 => mgr.add_child_layout(shell as isize, unsafe { &*lay }, group, CONTAINER),
                 // SAFETY: held by the creator's reference
                 1 => unsafe { (*lay).execute(parent) },
                 // SAFETY: held
@@ -300,7 +299,8 @@ fn golden_layoutobj_replays() {
 #[test]
 fn a_changed_move_is_seen() {
     let seqs = sequences();
-    let (s, k) = seqs.iter().find_map(|s| s.iter().position(|l| l.starts_with("pos ")).map(|k| (s, k))).expect("a move");
+    let (s, k) =
+        seqs.iter().find_map(|s| s.iter().position(|l| l.starts_with("pos ")).map(|k| (s, k))).expect("a move");
     let mut m = s.clone();
     let mut w: Vec<String> = m[k].split(' ').map(str::to_string).collect();
     let x: i32 = w[2].parse().unwrap();

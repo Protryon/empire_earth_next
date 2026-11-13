@@ -241,11 +241,9 @@ impl EeWonLayout {
         if items.is_empty() {
             return;
         }
-        let extents: Vec<i32> =
-            items.iter().map(|&c| if self.horz { self.width(c) } else { self.height(c) }).collect();
+        let extents: Vec<i32> = items.iter().map(|&c| if self.horz { self.width(c) } else { self.height(c) }).collect();
         let b = self.refs[0];
-        let (pos, extent) =
-            if self.horz { (self.left(b), self.width(b)) } else { (self.top(b), self.height(b)) };
+        let (pos, extent) = if self.horz { (self.left(b), self.width(b)) } else { (self.top(b), self.height(b)) };
         let positions = guilayout::space_evenly(&extents, pos, extent, b == parent, self.ints[0], self.ints[1]);
         for (c, p) in items.into_iter().zip(positions) {
             if self.horz {
@@ -262,8 +260,7 @@ impl EeWonLayout {
         let (reference, target) = (self.refs[0], self.refs[1]);
         let t = self.bounds(target);
         let r = self.bounds(reference);
-        let Some((dx, dy)) =
-            guilayout::no_overlap(t, r, reference == parent, self.ints[0], self.ints[1], self.ints[2])
+        let Some((dx, dy)) = guilayout::no_overlap(t, r, reference == parent, self.ints[0], self.ints[1], self.ints[2])
         else {
             return;
         };
@@ -291,19 +288,13 @@ impl EeWonLayout {
         let mut edges = [0i32; 4];
         if p.px >= 0 || p.pw >= 0 {
             edges[0] = if left == parent { 0 } else { self.left(left) };
-            edges[1] = if right == parent {
-                self.width(parent)
-            } else {
-                self.left(right).wrapping_add(self.width(right))
-            };
+            edges[1] =
+                if right == parent { self.width(parent) } else { self.left(right).wrapping_add(self.width(right)) };
         }
         if p.py >= 0 || p.ph >= 0 {
             edges[2] = if top == parent { 0 } else { self.top(top) };
-            edges[3] = if bottom == parent {
-                self.height(parent)
-            } else {
-                self.top(bottom).wrapping_add(self.height(bottom))
-            };
+            edges[3] =
+                if bottom == parent { self.height(parent) } else { self.top(bottom).wrapping_add(self.height(bottom)) };
         }
         let r = guilayout::percent_layout(self.bounds(target), edges, p);
         self.set_pos_size(target, r);
@@ -442,9 +433,7 @@ impl EeWonLayoutMgr {
 
     /// `Container::AddChildLayout(instr, id)`: the group stored as a byte; group 0 enabled and run at once (before
     /// the manager holds it), any other disabled.
-    pub fn add_child_layout(&self, instr: isize, lay: *const EeWonLayout, id: i32, container: isize) {
-        // SAFETY: the caller's live instruction
-        let l = unsafe { &*lay };
+    pub fn add_child_layout(&self, instr: isize, l: &EeWonLayout, id: i32, container: isize) {
         l.set_group(id as u8);
         if id == 0 {
             l.set_enabled(true);
@@ -452,7 +441,7 @@ impl EeWonLayoutMgr {
         } else {
             l.set_enabled(false);
         }
-        self.add_instruction(instr, lay);
+        self.add_instruction(instr, l);
     }
 
     /// The destructor: the members in reverse order, the layout points first, then the instructions.
@@ -470,7 +459,8 @@ impl EeWonLayoutMgr {
             C::RemoveComponent => self.remove_component(a),
             C::Clear => self.clear(),
             C::EnableInstructions => self.enable_instructions(a as i32, b != 0),
-            C::AddChildLayout => self.add_child_layout(a, b as *const EeWonLayout, c as i32, d),
+            // SAFETY: the C++ caller passes its live instruction's Rust object
+            C::AddChildLayout => self.add_child_layout(a, unsafe { &*(b as *const EeWonLayout) }, c as i32, d),
             C::Count => return self.instructions.borrow().len() as isize,
         }
         0
@@ -509,7 +499,12 @@ pub unsafe extern "C" fn ee_won_layout_free(lay: *mut EeWonLayout) {
 /// # Safety
 /// `lay` is live.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_layout_call(lay: *const EeWonLayout, call: EeWonLayoutCall, a: isize, b: isize) -> isize {
+pub unsafe extern "C" fn ee_won_layout_call(
+    lay: *const EeWonLayout,
+    call: EeWonLayoutCall,
+    a: isize,
+    b: isize,
+) -> isize {
     // SAFETY: live (the contract); a shared reference: the calls out may re-enter
     unsafe { (*lay).call(call, a, b) }
 }
@@ -518,13 +513,7 @@ pub unsafe extern "C" fn ee_won_layout_call(lay: *const EeWonLayout, call: EeWon
 /// listed) run on the parent.
 #[no_mangle]
 pub extern "C" fn ee_won_layout_center(host: EeWonGuiHostFn, parent: isize, child: isize, horz: bool, vert: bool) {
-    let init = EeWonLayoutInit {
-        kind: EeWonLayoutKind::Center,
-        refs: [parent, 0, 0, 0, 0],
-        ints: [0; 8],
-        horz,
-        vert,
-    };
+    let init = EeWonLayoutInit { kind: EeWonLayoutKind::Center, refs: [parent, 0, 0, 0, 0], ints: [0; 8], horz, vert };
     let l = EeWonLayout::new(std::ptr::null_mut(), host, &init);
     l.add(child);
     l.execute(parent);
