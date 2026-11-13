@@ -13273,3 +13273,86 @@ No unit or player C++ moved this round: the brief said to stop at a real nondete
   `Load`/`Save` (they create the elements; next with the manager's numbers as a record), `Update`'s trigger round
   and the timed effects' queue (the queue is read by the editor, the capture and `EndCinematic`: move it with the
   manager), `SetPlayerAttribute` (a plan over player writes, next), `ExpandTokens`.
+
+## R5b.4 game messages, round 1: four Execute bodies over the unit store, the codec side of the classes once (ee_units rally.rs; EEMessage; branch rust-msg1, 2026-11-13)
+
+The game messages lane (RUST_PLAN R5b.4 leaf 4 (c)): `src/Empire Earth/Communications/EEMessage.cpp`'s classes, their
+`Execute` bodies and the classes themselves. The codec (wire layout) was already Rust (`ee_netmsg`), and leaf 4 (a)/(b)
+and the 15 goal-giving bodies (`ee_units` group.rs, commands.rs) had moved in the core lane's rounds 3-9.
+
+- **The measure (before this round).** EEMessage.cpp 7,947 lines, ee/EEMessage.h 1,986. 111 classes with methods in
+  the file (104 game message classes, their bases); 4,663 lines of methods, 1,955 of them `Execute` bodies. Each class
+  also carried the same codec boilerplate: a `Slots` function (its members as the codec's slots), `ExportMessage`,
+  `ExportSize`, `ImportMessage` and `IsResponse` (103 of the 104 `return false`), about 30 lines a class. The biggest
+  `Execute` bodies: EEMSetRallyGoal 159, EEMSetAirportCommand 107, EEMLoadTransport 75, EEMLoadGarrison 65,
+  EEMResearchTechnology 64, EEMHackANewUnit 62, EEMGameOptions 62 (UI), EEMStopActiveGroup 54, EEMPayTribute 53,
+  EEMInGameChat 48 (UI), EEMChangeSelectedUnitCollisionSphere 48, EEMClearAirportCommands 38. No class has Save/Load
+  (messages are not saved; EEMLoadOrSaveGame only starts one). Callers: the constructors (`new EEMxxx(...)`) in the UI
+  actions (EEAMouseClick, EEABuild, EEALasso, EEUIFMGStatusButton, EEUICUnitIconBar, EEScreens), the Lua AI's
+  `EECPNextUnits.cpp` (which sends rally points, among others), the test fixture, EEServer/EEClient (the lobby and
+  load messages) and EEPhysics (execution); members are read outside the class only by the capture (EEMessageCapture)
+  and a few senders. `build/msg/measure.py`-style counts: after this round EEMessage.cpp is 4,896 lines (methods 3,394,
+  `Execute` 1,626) and the header 1,702.
+- **Four bodies in Rust** (`rust/crates/ee_units/src/rally.rs`, over the store, `players` and EEUnitHost.cpp):
+  `EEMSetAirportCommand` (the attack goal on a seen enemy whose class can be attacked by the command's damage row, or
+  a move; each selected airport's queues and 60 s timers by the command; the attack copy into the first queue only),
+  `EEMSetRallyGoal` (the target's goal: gather, attack, repair or farm work, a path point's patrol, a garrison's load
+  goal (a new one the garrison takes first), the rally point cleared, else a move; the building owner's selected units'
+  queues by the building's type; the marker and the sender's acknowledgement), `EEMClearAirportCommands` and
+  `EEMStopActiveGroup`. The C++ `Execute`s are one call each. New host calls: the queues (`ClearGoalQueue`,
+  `mGoalQueues[i].Clear()`, `ClearAllGoalQueues`, `QueueGoal`, the timers), the active goal's clone, the garrison's
+  load block (verbatim), Halt, ClearBuildTargets, ActionChanged, RefreshGoals, the air traffic queue, and reads on the
+  objects the store does not hold (EEIsSeenBy, the tile's doppelgangers, CanBeAttacked and the damage table, the class
+  targetable test, CanAttackClass, the maximum hit points, the garrison capacity, the tile node, SharesRallyPoint,
+  the queue count, the air traffic type, and a whole record for a selected unit already out of its list). A new goal
+  constructor `EE_GOAL_CTOR_BUILD_REPAIR` (13). The players' diplomacy table (`players.rs`) is read through the host
+  (`player_record`), so the mock host can give it.
+- **Gate: the USGC sweep.** No gate game sends these four (the computer players send rally points only through the
+  Lua AI's `ai.rally`, which the oracle's games did not reach). The sweep gained the four originals' statements over
+  the dry host (each world call through the same host calls, each unit read on the object: `gWorld.GetUnit`,
+  `mUnitClass`, `mPlayer->mEnemies`, `mGoalState`) and cases: airport commands 8, 10, 13, 15, 20 and 11 (no queue)
+  toward no unit, the next player's first unit, its own first unit and an unknown id, plain and queued; rally points
+  from the player's first unit, first airport, navy yard and land building toward no unit, the world's resource, the
+  next player's unit, its path point, its first garrison, farm and damaged building, the building itself and an
+  unknown id, plain and queued; the two clears over the selection. The dry host's `player_selection` is the sweep's
+  selection; the dry garrison load is "valid" (a goal is a world change). Every sweep in the four profiles' 24 games
+  gave equal logs (EE-SIM stops on a difference); USGC grew from 8,406 to 17,900-18,000 records a game in the oracle
+  profile (late 23,500, space 24,100-25,200, calamity 16,750-17,750) and its golden lines were recorded again from the
+  24 games (seeds 2-7, two at a time); every other tag equal to its golden.
+- **The codec side of the classes, once.** EEMessage now has `virtual size_t GetCodecSlots(EeNetMsgSlot*, uint32_t&
+  outClass)` (each class's old `Slots` function as a member that also names its codec class) and runs the codec in
+  one `ExportMessage`, `ExportSize` (the class's fixed size, else the slots' size) and `ImportMessage`; `IsResponse`
+  defaults to false. 103 classes lost `ExportMessage`/`ExportSize`/`IsResponse`, 94 also `ImportMessage` (the other
+  nine read a string or a buffer after the codec and keep their import, calling `CodecSlots`); EEMSelectTheseUnits
+  (an id list beside its slots) and EEMLoadOrSaveGame's `IsResponse` keep theirs. The transformation was a script
+  that converted only bodies equal to the templates, so every converted class runs the same calls as before. Gate:
+  NMSW (every game message type exported, sized and imported over edge payloads) and NMIM equal to the goldens. The
+  import constructors still call `ImportMessage` from the class's constructor: a virtual call there resolves to the
+  class being built, whose `GetCodecSlots` is its own (the same in the subclasses that inherit their parent's codec).
+- **Behaviour changes.** A NULL payload's verify reports EEMessage.cpp's one line instead of each class's original line
+  (`ESVERIFY_AT`); `EEMStopActiveGroup`, `EEMClearAirportCommands` and `EEMSetAirportCommand` with no active group do
+  nothing (the first two read through it before); a rally point's or airport order's goal that the host fails to make
+  is skipped (the original cloned a NULL). Every vtable of the game messages gained `GetCodecSlots` (no caller depends
+  on the layout).
+- **Round 30's lesson applied.** The forwarders pass `mActiveGroup` (possibly NULL) and Rust checks it before any
+  host call; the rally point's building is looked up by id and its complex unit's record read before use.
+- **What only a played game runs:** the four bodies' world calls (no gate game sends them): a right click with
+  buildings selected (EEAMouseClick: rally points, also the mini map's), the airport and stop buttons
+  (EEUIFMGStatusButton), the Lua AI's `ai.rally`. The codec change runs in every game (the local server still builds
+  messages through the factory for the capture) and in the LAN game's encoding.
+- **Next:** EEMLoadTransport and EEMLoadGarrison (75, 65; the load goals are Rust since the core lane's round 18),
+  EEMResearchTechnology and EEMHackANewUnit (tech and unit creation), EEMPayTribute's remaining calls, then the
+  members as Rust records (the slots are the members' list already: a class whose members only its own `Execute` and
+  the senders' constructors touch could become one generic class over a Rust record per type).
+- **Gates** (each code commit: build `--sim` 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-3; the Rust
+  gate PASS (2,646 tests in 67 binaries) after the clippy fix; at the end: the oracle identical on seeds 2-7, the four
+  capture profiles over seeds 2-7 equal to the goldens but USGC (recorded), the scenario profile at seeds 2-3
+  PASS (16 SM digests equal; the sweep ran in every scenario too), the test-profile build 0/0, `lan_game.py` RESULT PASS lan-game (host PT 2940, joiner 2944, under the
+  harness lock), the saveload matrix `saveload expect: PASS` (matrix oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 2/4: the expected file's)). The merge of `rust` (core round 21's `EEUGLocation` whole in Rust, combat 15, gfx 20, LLE 1, WON 31) met
+  EEMessage.cpp: its `new EEUGLocation` -> `EEUGRust::NewLocation` edits applied to the bodies still in C++ (the four
+  moved ones make their moves through the host's goal specs, which core round 21 already serves). On the merged
+  tree: build `--sim` 0/0, the oracle identical on seeds 2-7, the four capture profiles at seeds 2-3 PASS (USGC equal
+  to the new goldens), the Rust gate PASS (2,678 tests in 69 binaries; `periodic_callback_timers_tick_until_stopped`
+  failed once under load and passed alone and in the rerun), the test-profile build 0/0. The LAN game ran on the
+  pre-merge commit 04687a73. Not
+  run: a tour or a played game (the four bodies' world calls), macOS or Linux builds.
