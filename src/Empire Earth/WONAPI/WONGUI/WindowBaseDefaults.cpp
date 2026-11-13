@@ -43,5 +43,5 @@ void Window::PlatformSetMouseCapture(bool) {}
 void Window::QueueEvent(WindowEventBase* event) { event->mWindow=this; this->mManager->PostEvent(event); }
 // FUNCTION: WON 0x00729e80
 // Returns whether the window was last shown
-bool Window::PlatformIsVisible() { return this->mIsShowing; }
+bool Window::PlatformIsVisible() { return this->IsShowing(); }
 }

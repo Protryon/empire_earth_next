@@ -8,7 +8,6 @@
 #include "lle/UIButton.h"
 
 class LLE_API UIDualButton : public UIButton {
-    friend struct UIButtonRust;             // the Rust button logic's host calls (User Interface/UIButtonRust.h)
 public:
     UIDualButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap, GEBitmap* inPressedBitmap,
                  const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,

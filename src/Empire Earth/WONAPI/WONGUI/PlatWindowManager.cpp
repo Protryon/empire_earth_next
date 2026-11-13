@@ -307,11 +307,11 @@ void PlatWindowManager::RemovePlatWindow(PlatGUIWindow* inWindow)
         this->mDragWindow = NULL;
     if (this->mPlatFocusWindow == inWindow) {
         this->mPlatFocusWindow = NULL;
-        PlatGUIWindow* theNext = dynamic_cast<PlatGUIWindow*>(inWindow->mParent);
+        PlatGUIWindow* theNext = dynamic_cast<PlatGUIWindow*>(inWindow->GetParent());
         if (theNext == NULL || !theNext->mRegistered || !theNext->mVisible) {
             theNext = NULL;
             for (size_t i = this->mZOrder.size(); i-- > 0;)
-                if (this->mZOrder[i]->mVisible && !this->mZOrder[i]->mIsPopup) {
+                if (this->mZOrder[i]->mVisible && !this->mZOrder[i]->IsPopup()) {
                     theNext = this->mZOrder[i];
                     break;
                 }
@@ -339,7 +339,7 @@ void PlatWindowManager::SetFocusWindow(PlatGUIWindow* inWindow)
         return;
     PlatGUIWindow* theOld = this->mPlatFocusWindow;
     this->mPlatFocusWindow = inWindow;
-    if (theOld != NULL && theOld->mWindowState == Window::WindowState_Open && this->mAppActive)
+    if (theOld != NULL && theOld->GetWindowState() == Window::WindowState_Open && this->mAppActive)
         theOld->QueueEvent(new InputEvent(InputEvent_LostFocus));
     if (inWindow != NULL && this->mAppActive)
         inWindow->QueueEvent(new InputEvent(InputEvent_GotFocus));
@@ -353,7 +353,7 @@ static void DrawingOrder(const std::vector<PlatGUIWindow*>& inWindows, std::vect
     for (int thePass = 0; thePass < 4; thePass++)
         for (size_t i = 0; i < inWindows.size(); i++) {
             PlatGUIWindow* w = inWindows[i];
-            int theLayer = w->mIsPopup ? 3 : w->mTopMost ? 2 : w->FillsSurface() ? 0 : 1;
+            int theLayer = w->IsPopup() ? 3 : w->mTopMost ? 2 : w->FillsSurface() ? 0 : 1;
             if (theLayer == thePass)
                 outOrder.push_back(w);
         }
@@ -434,7 +434,7 @@ void PlatWindowManager::HandlePlatEvent(const PlatInputEvent& inEvent)
             this->mPlatFocusWindow->QueueEvent(new InputEvent(InputEvent_GotFocus));
         else {
             for (size_t i = this->mZOrder.size(); i-- > 0;)
-                if (this->mZOrder[i]->mVisible && !this->mZOrder[i]->mIsPopup) {
+                if (this->mZOrder[i]->mVisible && !this->mZOrder[i]->IsPopup()) {
                     this->SetFocusWindow(this->mZOrder[i]);
                     break;
                 }
@@ -512,7 +512,7 @@ void PlatWindowManager::HandleMouse(const PlatInputEvent& inEvent)
             if (inEvent.mType == PLAT_EVENT_MOUSE_DOWN) {
                 SmartPtr<Window> theHold = theTarget;
                 theTarget->ClosePopup(NULL);
-                if (!this->NotModalWindow(theTarget) && theTarget->mWindowState == Window::WindowState_Open) {
+                if (!this->NotModalWindow(theTarget) && theTarget->GetWindowState() == Window::WindowState_Open) {
                     theTarget->PlatformSetFocus();
                     if (theButton == 0 && y < theClient.y && y >= theTarget->mY + kFrameBorder) {
                         this->mDragWindow = theTarget;
@@ -603,7 +603,7 @@ void PlatWindowManager::PaintAndComposite()
         theWindows.push_back(this->mZOrder[i]);
     for (size_t i = 0; i < theWindows.size(); i++) {
         PlatGUIWindow* w = static_cast<PlatGUIWindow*>(theWindows[i].get());
-        if (w->mRegistered && w->mVisible && w->mWindowState == Window::WindowState_Open)
+        if (w->mRegistered && w->mVisible && w->GetWindowState() == Window::WindowState_Open)
             w->OnPaint();
     }
     if (this->mDirty)

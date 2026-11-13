@@ -148,7 +148,7 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
         Window* aWindow = t->GetRoot(); // GetWindow in the SDK
         return aWindow->mManager->mFocusWindow == aWindow ? 1 : 0;
     }
-    case Op::CtMouseInClient: return t->GetRoot()->mMouseIsInClientArea ? 1 : 0;
+    case Op::CtMouseInClient: return t->GetRoot()->IsMouseInClientArea() ? 1 : 0;
     case Op::CtDefaultCursor: return (intptr_t)t->GetDefaultCursor();
     case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
     case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);

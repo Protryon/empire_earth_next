@@ -10,11 +10,16 @@
 
 use std::ffi::c_void;
 
-use ee_ge::types::{Ge3DPoint, GeVector};
+use ee_ge::types::{Ge3DPoint, GeTransformation, GeVector};
 
+use crate::effect_additive::{additive, EeGfxUnitFrame, EE_GFX_EFFECT_KIND_ADDITIVE_PASS};
 use crate::effect_aged::aged;
 use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
+use crate::effect_orbit::{
+    load_orbit, orbit, save_orbit, EeGfxAnimation, EeGfxOrbital, EE_GFX_EFFECT_KIND_DISEASE,
+    EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE, EE_GFX_EFFECT_KIND_VIRUS,
+};
 use crate::effect_shot::{is_shot, load_shot, save_shot, shot};
 use crate::effect_state::{
     identity, load_aged, save_aged, timed_step, EeGfxEffectRecord, EeGfxTimedTick, EffectFile,
@@ -124,6 +129,27 @@ pub struct EeGfxEffect3DHost {
     pub place_linked: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint),
     /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
     pub complex_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
+    /// the unit's model is the effect's second model (`mUnit->GetModel()`); its `LoadMedia`
+    pub unit_model_media: extern "C" fn(context: *mut c_void) -> i32,
+    /// the unit's stats' scale (`mUnit->mStats->GetScale()`)
+    pub unit_scale: extern "C" fn(context: *mut c_void) -> f32,
+    /// the unit's complex unit's physical model's location
+    pub unit_location: extern "C" fn(context: *mut c_void) -> GeTransformation,
+    /// the unit's model's first model's bounding radius at frame 0
+    pub unit_model_radius: extern "C" fn(context: *mut c_void) -> f32,
+    /// the unit's complex unit's physical model's frame and animation
+    pub unit_frame: extern "C" fn(context: *mut c_void) -> EeGfxUnitFrame,
+    /// the unit's model's model `index` (`mModels[index]`)
+    pub unit_model_at: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxModel,
+    /// the graphic object's orbital count (`GetOrbitalCount`)
+    pub orbital_count: extern "C" fn(context: *mut c_void) -> u32,
+    /// a copy of the graphic object's orbital `index` (`*GetOrbital(index)`)
+    pub orbital: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxOrbital,
+    /// the graphic object's animation 13: its start frame, frame time and frame count
+    pub animation: extern "C" fn(context: *mut c_void) -> EeGfxAnimation,
+    /// the animation's sound at `frame` (`changed`: a new frame) at the unit's location (`PlayAnimationSound`), kept
+    /// as the effect's sound (`SetSound`, then its reference dropped, as the original)
+    pub animation_sound: extern "C" fn(context: *mut c_void, frame: u32, changed: bool),
 }
 
 /// The world as the effects ask it.
@@ -148,6 +174,36 @@ pub trait Effect3DHost {
     fn complex_position(&mut self) -> Ge3DPoint {
         self.unit_position()
     }
+    /// the tests' hosts that do not draw the additive pass answer nothing
+    fn unit_model_media(&mut self) -> i32 {
+        0
+    }
+    fn unit_scale(&mut self) -> f32 {
+        0.0
+    }
+    fn unit_location(&mut self) -> GeTransformation {
+        identity()
+    }
+    fn unit_model_radius(&mut self) -> f32 {
+        0.0
+    }
+    fn unit_frame(&mut self) -> EeGfxUnitFrame {
+        EeGfxUnitFrame::default()
+    }
+    fn unit_model_at(&mut self, _index: u32) -> EeGfxModel {
+        std::ptr::null_mut()
+    }
+    /// the tests' hosts that make no orbiting effect have no orbitals
+    fn orbital_count(&mut self) -> u32 {
+        0
+    }
+    fn orbital(&mut self, _index: u32) -> EeGfxOrbital {
+        EeGfxOrbital { model: std::ptr::null_mut(), speed: 0.0, angle: 0.0 }
+    }
+    fn animation(&mut self) -> EeGfxAnimation {
+        EeGfxAnimation::default()
+    }
+    fn animation_sound(&mut self, _frame: u32, _changed: bool) {}
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -202,6 +258,36 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn complex_position(&mut self) -> Ge3DPoint {
         (self.complex_position)(self.context)
     }
+    fn unit_model_media(&mut self) -> i32 {
+        (self.unit_model_media)(self.context)
+    }
+    fn unit_scale(&mut self) -> f32 {
+        (self.unit_scale)(self.context)
+    }
+    fn unit_location(&mut self) -> GeTransformation {
+        (self.unit_location)(self.context)
+    }
+    fn unit_model_radius(&mut self) -> f32 {
+        (self.unit_model_radius)(self.context)
+    }
+    fn unit_frame(&mut self) -> EeGfxUnitFrame {
+        (self.unit_frame)(self.context)
+    }
+    fn unit_model_at(&mut self, index: u32) -> EeGfxModel {
+        (self.unit_model_at)(self.context, index)
+    }
+    fn orbital_count(&mut self) -> u32 {
+        (self.orbital_count)(self.context)
+    }
+    fn orbital(&mut self, index: u32) -> EeGfxOrbital {
+        (self.orbital)(self.context, index)
+    }
+    fn animation(&mut self) -> EeGfxAnimation {
+        (self.animation)(self.context)
+    }
+    fn animation_sound(&mut self, frame: u32, changed: bool) {
+        (self.animation_sound)(self.context, frame, changed)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -224,6 +310,10 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         k if is_shot(k) => unsafe { shot(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_CITIZEN_BEAM => unsafe { beam(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_WATER_SPLASH | EE_GFX_EFFECT_KIND_SCREEN_FLASH => unsafe { aged(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_ADDITIVE_PASS => unsafe { additive(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE | EE_GFX_EFFECT_KIND_DISEASE | EE_GFX_EFFECT_KIND_VIRUS => unsafe {
+            orbit(op, r, g, h, x)
+        },
         _ => 0,
     }
 }
@@ -274,6 +364,23 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 load_aged(r, f)
             } else {
                 save_aged(r, f)
+            }
+        }
+        EE_GFX_EFFECT_KIND_ADDITIVE_PASS => {
+            // the base's error stops it; the load's result is the media's
+            if base != 0 || !load {
+                base
+            } else {
+                h.load_media()
+            }
+        }
+        EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE | EE_GFX_EFFECT_KIND_DISEASE | EE_GFX_EFFECT_KIND_VIRUS => {
+            // the base's result is ignored
+            if load {
+                // SAFETY: `r` is the only reference to the record during the call
+                unsafe { load_orbit(r, f, h) }
+            } else {
+                save_orbit(r, f)
             }
         }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {

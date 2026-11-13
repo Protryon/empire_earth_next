@@ -41,6 +41,7 @@ pub mod order;
 pub mod patrol;
 pub mod physics;
 pub mod players;
+pub mod rally;
 pub mod registry;
 pub mod rust_goal;
 pub mod script;

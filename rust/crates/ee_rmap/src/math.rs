@@ -146,14 +146,15 @@ mod tests {
     const TABLES_DIGEST: u64 = 0xbca1_7df0_a7ca_d6c2;
 
     #[test]
-    fn lrintf_rounds_half_to_even_and_flags_out_of_range() {
+    fn lrintf_rounds_half_to_even_and_answers_as_the_ucrt_out_of_range() {
         assert_eq!(lrintf(0.5), 0);
         assert_eq!(lrintf(1.5), 2);
         assert_eq!(lrintf(2.5), 2);
         assert_eq!(lrintf(-1.5), -2);
-        assert_eq!(lrintf(f32::NAN), i32::MIN);
-        assert_eq!(lrintf(3e9), i32::MIN);
-        assert_eq!(lrintf(-3e9), i32::MIN);
+        // the UCRT's lrintf (ee_ge um.rs): 0 past the long range and for NaN
+        assert_eq!(lrintf(f32::NAN), 0);
+        assert_eq!(lrintf(3e9), 0);
+        assert_eq!(lrintf(-3e9), 0);
     }
 
     #[test]
