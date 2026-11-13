@@ -127,17 +127,7 @@ void EEUGHealUnit::GetGoalLocation(GE3DPoint& outLocation)
     this->mTarget->GetPosition(outLocation);
 }
 
-// FUNCTION: EXE 0x6254c0
-// Returns whether the target is within the healer class's heal range of the healer
-bool EEUGHealUnit::IsInRange(EEComplexUnit* inHealer, EEComplexUnit* inTarget)
-{
-    GE3DPoint theTargetPosition;
-    GE3DPoint theHealerPosition;
-    float theRange = inHealer->mUnitClass->mHealRange;
-    inHealer->GetPosition(theHealerPosition);
-    inTarget->GetPosition(theTargetPosition);
-    return EECombatWithinRange(theHealerPosition.DistanceToSquared(theTargetPosition), theRange) != 0;
-}
+// IsInRange 0x6254c0: ee_combat reads.rs heal_in_range (EECombatGoals.cpp EECombatHealInRange)
 
 // FUNCTION: EXE 0x625534
 // On the turn-to-face action, plays the turning animation (0xd) until the healer faces the target and drops its path
@@ -219,9 +209,7 @@ void EEUGHealUnit::SetTarget(EEComplexUnit* inTarget)
 bool EEUGHealUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     // ee_combat goals.rs condition (CBTC); the location goal's test is the host's base read
-    EeCombatConditionIn in;
-    EECombatFillCondition(in, EE_COMBAT_GOAL_HEAL, inUnit, inEvent, this->mTarget);
-    return EECombatCondition(in, inUnit, this, NULL) != 0;
+    return EECombatCondition(EE_COMBAT_GOAL_HEAL, inUnit, inEvent, this->mTarget, this, NULL) != 0;
 }
 
 // FUNCTION: EXE 0x625789

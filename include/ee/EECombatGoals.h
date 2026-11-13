@@ -22,22 +22,20 @@
 class EEComplexUnit;
 class EEUnit;
 
-// The plain reads of a test of inUnit on inEvent with the target inTarget (NULL: none; the record's target fields
-// stay 0). The attack goal's own fields (goal_tile, convert) are the caller's. Defined in EECombatGoals.cpp.
-void EECombatFillCondition(EeCombatConditionIn& in, int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent,
-                           EEUnit* inTarget);
 // CBTC, CBGS (no record while the capture is off)
 void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatConditionOut& inOut);
 void EECombatCaptureStep(const EeCombatStepIn& in);
 // writes the tests' last CBTC batch (EE-SIM at the game's end, before the capture closes)
 void EECombatCaptureFlush();
 
-// The test of in (filled by EECombatFillCondition) through ee_combat_condition over the C++ host (inGoal for the
-// goals, inClass for the shots); the action applied (a shot's attack goal on the unit it hit), then the CBTC record.
-// Returns the test's value. Defined in EECombatGoals.cpp.
+// The trigger test inKind (EE_COMBAT_GOAL_*) of inUnit on inEvent with the target inTarget (NULL: none): its record
+// filled (ee_combat store.rs; the attack goal's last target tile and convert flag from inGoal), the test through
+// ee_combat_condition over the C++ host (inGoal for the goals, inClass for the shots), the action applied (a shot's
+// attack goal on the unit it hit), then the CBTC record. Returns the test's value. Defined in EECombatGoals.cpp.
 class EEUnitGoal;
 class EEUnitClass;
-long EECombatCondition(EeCombatConditionIn& in, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnitClass* inClass);
+long EECombatCondition(int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent, EEUnit* inTarget,
+                       EEUnitGoal* inGoal, EEUnitClass* inClass);
 // The step of inGoal (inKind) through ee_combat_goal_step: the plan's operations executed on inUnit and inGoal as
 // they are issued, then the CBGS record
 void EECombatStep(int32_t inKind, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnit* inTarget);
@@ -60,7 +58,8 @@ enum {
 void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
                              uint32_t inExtra0 = 0, uint32_t inExtra1 = 0, uint32_t inExtra2 = 0);
 // The reads' bodies through ee_combat reads.rs over the C++ host (EECombatGoals.cpp): FindImpactUnit, IsInReach,
-// IsStillReachable and IsGateClosed (inGoal the attack goal), EEIsEnemyWithinRange, FacesPoint (inClass `this`)
+// EEUGAttackUnit's IsStillReachable and IsGateClosed (inGoal the attack goal; their CBQR records here),
+// EEIsEnemyWithinRange, FacesPoint (inClass `this`), EEUGHealUnit's IsInRange (the healer's heal range)
 class EEUGAttackUnit;
 class GE3DPoint;
 EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit);
@@ -68,6 +67,7 @@ bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget);
 bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
 bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
 bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit);
+bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget);
 bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance);
 
 // CBSO (TEST ONLY): the outcome of a shot's ActionChanged or Update (the unit's command before and after, animation,

@@ -146,9 +146,7 @@ long EEUGAttackGround::Save(unsigned long inMajorVersion, unsigned long inMinorV
 bool EEUGAttackGround::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     // ee_combat goals.rs condition (CBTC)
-    EeCombatConditionIn in;
-    EECombatFillCondition(in, EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, inEvent, NULL);
-    return EECombatCondition(in, inUnit, this, NULL) != 0;
+    return EECombatCondition(EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, inEvent, NULL, this, NULL) != 0;
 }
 
 // ICF-FOLDED: EXE 0x61d460

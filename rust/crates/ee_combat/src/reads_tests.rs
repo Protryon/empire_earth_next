@@ -661,3 +661,24 @@ fn the_stats_reads_come_from_the_stats_table() {
     let mut h = Stored::new(&mut host);
     assert_eq!(h.read(EE_COMBAT_Q_RANGE, 83, 0), 1);
 }
+
+#[test]
+fn the_heal_range_test_takes_the_class_range_and_the_stored_positions() {
+    use crate::store::tests::put_unit;
+    let at = |object, x: f32, y: f32| EeCombatStoredUnit {
+        object,
+        object_kind: EE_COMBAT_STORED_COMPLEX_UNIT,
+        location: [x.to_bits(), y.to_bits(), 0],
+        ..Default::default()
+    };
+    put_unit(at(91, 0.0, 0.0));
+    put_unit(at(92, 3.0, 4.0));
+    // the Plain host's heal range: 1 (its default answer): 5 * 5 is outside
+    let mut host = Plain { asked: Vec::new() };
+    assert!(!heal_in_range(&mut Stored::new(&mut host), 91, 92));
+    assert_eq!(host.asked, vec![EE_COMBAT_Q_HEAL_RANGE], "the range is the host's, the positions the store's");
+    // within_range's own rule over the same distance
+    let d = Ge3DPoint { x: 0.0, y: 0.0, z: 0.0 }.distance_to_squared(Ge3DPoint { x: 3.0, y: 4.0, z: 0.0 });
+    assert_eq!(crate::within_range(d, 5.0), 1);
+    assert_eq!(crate::within_range(d, 1.0), 0);
+}

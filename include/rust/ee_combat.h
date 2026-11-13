@@ -2265,6 +2265,12 @@ int32_t ee_combat_still_reachable(uint64_t unit, const EeCombatQueryHost *host);
 /// As [`ee_combat_impact_unit`].
 int32_t ee_combat_gate_closed(uint64_t unit, const EeCombatQueryHost *host);
 
+/// `EEUGHealUnit::IsInRange` of `healer` on `target`.
+///
+/// # Safety
+/// As [`ee_combat_impact_unit`].
+int32_t ee_combat_heal_in_range(uint64_t healer, uint64_t target, const EeCombatQueryHost *host);
+
 /// `EEIsEnemyWithinRange` of `unit`.
 ///
 /// # Safety

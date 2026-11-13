@@ -441,6 +441,15 @@ pub fn gate_closed<H: QueryHost>(h: &mut H, unit: EeCombatHandle) -> bool {
     h.read(EE_COMBAT_Q_COMMAND, carrier, 0) != ACTION_CLOSED
 }
 
+/// `EEUGHealUnit::IsInRange(healer, target)`: the target's position within the healer class's heal range of the
+/// healer's (`EECombatWithinRange` of the squared distance; the range read first, as the original).
+pub fn heal_in_range<H: QueryHost>(h: &mut H, healer: EeCombatHandle, target: EeCombatHandle) -> bool {
+    let range = real(h, EE_COMBAT_Q_HEAL_RANGE, healer);
+    let from = h.position(healer);
+    let to = h.position(target);
+    crate::within_range(from.distance_to_squared(to), range) != 0
+}
+
 /// One side of `EEIsEnemyWithinRange`'s walk: whether `candidate` is no enemy in reach (`seen` is the side's first
 /// unit's complex unit: the original tests that one's visibility for every candidate).
 fn passed_over<H: QueryHost>(
@@ -849,6 +858,16 @@ pub unsafe extern "C" fn ee_combat_still_reachable(unit: u64, host: *const EeCom
 pub unsafe extern "C" fn ee_combat_gate_closed(unit: u64, host: *const EeCombatQueryHost) -> i32 {
     let mut h = unsafe { *host };
     i32::from(gate_closed(&mut Stored::new(&mut h), unit))
+}
+
+/// `EEUGHealUnit::IsInRange` of `healer` on `target`.
+///
+/// # Safety
+/// As [`ee_combat_impact_unit`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_heal_in_range(healer: u64, target: u64, host: *const EeCombatQueryHost) -> i32 {
+    let mut h = unsafe { *host };
+    i32::from(heal_in_range(&mut Stored::new(&mut h), healer, target))
 }
 
 /// `EEIsEnemyWithinRange` of `unit`.
