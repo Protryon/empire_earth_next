@@ -115,6 +115,7 @@ pub mod resource;
 pub mod rootobj;
 pub mod routeconn;
 pub mod routemsg;
+pub mod routeop;
 pub mod routing;
 pub mod scrollerobj;
 pub mod servconn;
