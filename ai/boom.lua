@@ -1466,6 +1466,12 @@ function M.step(view, memory)
         end
         if plan.boats > 0 or docks > 0 then
             local boats = plan.boats
+            -- (BO.OPT.boats_then_mines, §8.51: the Stone Age's first 15 minutes took in 1020-1170 wood and the boats
+            -- spent 700 of it, 14 boats; the mines' settlements waited 10-15 minutes on wood) past the owner's 10, no
+            -- more boats in the Stone Age while a kept mine waits for its settlement
+            if ECON.order and BO.OPT.boats_then_mines and age == 2 and memory.settle_short then
+                boats = math.min(boats, math.max(10, view.boats))
+            end
             if #memory.boats_lost >= BOATS_LOST_MAX then
                 boats = math.min(boats, view.boats)   -- the boats left fish on; none are replaced for now
             end
