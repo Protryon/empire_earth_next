@@ -97,8 +97,10 @@
 
 namespace {
 
-enum EventKind { kEvAttacked = 1, kEvDied, kEvCreated, kEvBuilt, kEvIdle, kEvSwapped, kEvConverted };
-const char* const kEventNames[] = {"", "attacked", "died", "created", "built", "idle", "swapped", "converted"};
+enum EventKind { kEvAttacked = 1, kEvDied, kEvCreated, kEvBuilt, kEvIdle, kEvSwapped, kEvConverted, kEvAttackPlayer,
+                 kEvDefendPlayer };
+const char* const kEventNames[] = {"", "attacked", "died", "created", "built", "idle", "swapped", "converted",
+                                   "attack_player", "defend_player"};
 
 struct UnitsEvent {
     long mKind, mUnit, mOther, mType, mAmount, mTime;
@@ -524,6 +526,16 @@ void EECPUnitsOnPlaced(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
     EECPUnitsState* s = inPlayer->mUnitsState;
     if (s != NULL && inUnit != NULL && inUnit->mUnitClass != NULL)
         EECPUnitsEventAdd(s, kEvCreated, (long)inUnit->mUnitID, 0, inUnit->mUnitClass->mUnitType, 0);
+}
+
+// the attack-players order (EEAttackPlayers: a player's "attack me" / "defend me" call): the classic's
+// EECPCombatManager::AttackPlayer / DefendPlayer, an event for a script seat ("attack_player" / "defend_player",
+// `player` the one who called)
+void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool inDefend)
+{
+    EECPUnitsState* s = inPlayer->mUnitsState;
+    if (s != NULL)
+        EECPUnitsEventAdd(s, inDefend ? kEvDefendPlayer : kEvAttackPlayer, 0, inPlayerID, -1, 0);
 }
 
 void EECPUnitsOnCompleted(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
@@ -1513,6 +1525,9 @@ static int LuaEvents(lua_State* L)
                 EECPUnitsSetInt(L, "killer", e.mOther);
             if (e.mType >= 0)
                 EECPUnitsSetStr(L, "type", EECPUnitsName(s, e.mType));
+            break;
+        case kEvAttackPlayer: case kEvDefendPlayer:
+            EECPUnitsSetInt(L, "player", e.mOther);
             break;
         case kEvSwapped:
             EECPUnitsSetInt(L, "new", e.mOther);
@@ -4601,7 +4616,7 @@ static bool EECPUnitsLoadState(EECPUnitsState* s, const std::string& inBytes)
         e.mType = g.Get();
         e.mAmount = g.Get();
         e.mTime = g.Get();
-        if (e.mKind < kEvAttacked || e.mKind > kEvConverted)
+        if (e.mKind < kEvAttacked || e.mKind > kEvDefendPlayer)
             g.mOK = false;
         else
             s->mEvents.push_back(e);

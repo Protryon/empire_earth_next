@@ -38,6 +38,7 @@ void EECPUnitsOnDamage(EEComputerPlayer* inPlayer, long inAttackerPlayer, long i
 void EECPUnitsOnDealt(EEComputerPlayer* inPlayer, long inAmount, EEUnit* inVictim);
 void EECPUnitsOnPlaced(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit);
 void EECPUnitsOnCompleted(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit);
+void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool inDefend);
 void EECPUnitsOnTaken(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit, bool inSwapped);
 void EECPUnitsOnGoalDone(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit);
 void EECPUnitsOnSwapped(EEComputerPlayer* inPlayer, std::vector<EEPUnitSwap>& ioSwaps);
