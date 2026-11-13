@@ -672,6 +672,38 @@ pub enum EeWonGuiOp {
     ComboRelayout,
     /// `mListBox->AddListener(NULL)`.
     ComboUnlisten,
+    // ---- the root container (`rootobj`; its window is the C++ member `mWindow`)
+    /// `((Cursor*)a)->GetComponent(*(int*)b, *(int*)c)` (the cursor's component and hot spot; a pure read).
+    RootCursorComponent = 530,
+    /// `mWindow->mIsOneComponentWindow` (0 or 1; a pure read).
+    RootOneComponentWindow,
+    /// `mWindow->mMouseX`, `mMouseY` into `*(int*)a`, `*(int*)b` (a pure read).
+    RootWindowMouse,
+    /// `mWindow->GetRect(*(WONRectangle*)a, false)` (a pure read).
+    RootWindowRect,
+    /// `mWindow->SetPosSize(a, b, -1, -1)`.
+    RootWindowSetPos,
+    /// `a->GetMouseChild()` (virtual; a pure read).
+    RootMouseChildOf,
+    /// `GetColorScheme()` (a pure read).
+    RootScheme,
+    /// the grabber `a`'s drawing state into `*(EeWonRootGrab*)b` (a pure read).
+    RootGrabberRead,
+    /// `((BackgroundGrabber*)a)->Clear()`.
+    RootGrabberClear,
+    /// `((BackgroundGrabber*)a)->Clear(); a->mBGImage = NULL;`.
+    RootGrabberDrop,
+    /// `((NativeImage*)a)->AddRef()` (an image the background map holds).
+    RootImageHold,
+    /// `((NativeImage*)a)->Release()`.
+    RootImageRelease,
+    /// `((NativeImage*)a)->mWidth`, `mHeight` into `*(int*)b`, `*(int*)c` (a pure read).
+    RootImageSize,
+    /// `((Graphics*)a)->DrawImage((NativeImage*)b, q[0], .., q[5])` with `q` the six ints at `c` (x, y, source x,
+    /// source y, width, height).
+    RootDrawImage,
+    /// `a->EnsureOnTopOf((Component*)b)` (the parent's `EnsureOnTopOf(b, a)`).
+    RootEnsureOnTop,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

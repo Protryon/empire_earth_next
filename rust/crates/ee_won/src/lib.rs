@@ -111,6 +111,7 @@ pub mod reqlast;
 pub mod reqop;
 pub mod reqops;
 pub mod resource;
+pub mod rootobj;
 pub mod routemsg;
 pub mod routing;
 pub mod scrollerobj;

@@ -1326,12 +1326,6 @@ public:
 
 // the root of the lobby's components (runs the popups and modal dialogs; RTTI WONAPI::RootContainer; its base
 // Container)
-// RootContainer (0xc8 bytes): constructor and destructor out of line.
-// Keyboard callback interface (RefCount, 8 bytes); RootContainer calls vtable +0x04 (key, type) at 0x3049bd.
-class KeyboardListenerBase : public RefCount {
-public:
-    virtual void KeyEvent(int,int)=0;
-};
 // BackgroundGrabber (0x38 bytes); RootContainer keeps a pointer to it.
 // 0x33613f/0x336148 store the 64-bit order at +0x30/+0x34; +0x2c..0x2f is padding.
 class BackgroundGrabber {
@@ -1353,47 +1347,37 @@ public:
     void Invalidate(Component*); // 0x336680: sets need-put-BG when the background is grabbed
     bool NeedDrawBG() const { return this->mHaveBG && this->mNeedPutBG; }
 };
+// RootContainer (R6 WON round 29): the Rust RootContainer (rust/crates/ee_won/src/rootobj.rs) holds the invalid
+// rectangle, the queued backgrounds (their images held), the cursor's component and the window drag; the virtuals and
+// AddBG are forwarders. The window stays a member (Component::GetRoot reads it). The original's keyboard listener (never
+// set), popup set and modal component (never read) are gone, and so are its FindChildAt, ChildInvalidated and
+// MouseEnter, which only called the container's.
 class RootContainer : public Container {
 public:
     RootContainer(Window*); // 0x3040d0
-    virtual void Virtual08(); //304730 SizeChanged
-    virtual void PrePaint(Graphics&);  //304760 PrePaint
-    virtual void Paint(Graphics&); //304900
-    virtual void MouseEnter(int,int); //304c40 MouseEnter
-    virtual void MouseExit(); //304c60 MouseExit
-    virtual void MouseDown(int,int,int); //304bd0 MouseDown
-    virtual void MouseUp(int,int,int);   //304c90 MouseUp
-    virtual void MouseMove(int,int); //304a30 MouseMove
-    virtual void MouseDrag(int,int); //304ac0 MouseDrag
-    virtual bool KeyChar(int);   //304a00 KeyChar
-    virtual bool KeyDown(int);   //3049a0 KeyDown
-    virtual bool KeyUp(int);     //3049d0 KeyUp
-    virtual void InvalidateRect(WONRectangle&); //304980 InvalidateRect
-    virtual void SetCursor(Cursor*); //304cf0 SetCursor
-    virtual Component* FindChildAt(int,int); //304710 FindChildAt
-    virtual bool ChildInvalidated(Component*); //304970 InvalidateUp
-    virtual void RemoveChild(Component*); //304cc0 RemoveChild
-    void AddBG(BackgroundGrabber*); //304510
+    virtual ~RootContainer();
+    virtual void Virtual08() { this->RCall(EeWonRootCall::SizeChanged); } //304730 SizeChanged
+    virtual void PrePaint(Graphics& g) { this->RCall(EeWonRootCall::PrePaint,(intptr_t)&g); } //304760
+    virtual void Paint(Graphics& g) { this->RCall(EeWonRootCall::Paint,(intptr_t)&g); } //304900
+    virtual void MouseExit() { this->RCall(EeWonRootCall::MouseExit); } //304c60
+    virtual void MouseDown(int x,int y,int b) { this->RCall(EeWonRootCall::MouseDown,x,y,b); } //304bd0
+    virtual void MouseUp(int x,int y,int b) { this->RCall(EeWonRootCall::MouseUp,x,y,b); } //304c90
+    virtual void MouseMove(int x,int y) { this->RCall(EeWonRootCall::MouseMove,x,y); } //304a30
+    virtual void MouseDrag(int x,int y) { this->RCall(EeWonRootCall::MouseDrag,x,y); } //304ac0
+    virtual bool KeyChar(int k) { return this->RCall(EeWonRootCall::KeyChar,k)!=0; } //304a00
+    virtual bool KeyDown(int k) { return this->RCall(EeWonRootCall::KeyDown,k)!=0; } //3049a0
+    virtual bool KeyUp(int k) { return this->RCall(EeWonRootCall::KeyUp,k)!=0; } //3049d0
+    virtual void InvalidateRect(WONRectangle& r) { this->RCall(EeWonRootCall::InvalidateRect,(intptr_t)&r); } //304980
+    virtual void SetCursor(Cursor* c) { this->RCall(EeWonRootCall::SetCursor,(intptr_t)c); } //304cf0
+    virtual void RemoveChild(Component* c) { this->RCall(EeWonRootCall::RemoveChild,(intptr_t)c); } //304cc0
+    void AddBG(BackgroundGrabber* g) { this->RCall(EeWonRootCall::AddBG,(intptr_t)g); } //304510
     // Window::InvalidateRoot's union of the whole root into the invalid rectangle
-    void UnionInvalidRect(const WONRectangle& r) { this->mInvalidRect.DoUnion(r); }
+    void UnionInvalidRect(const WONRectangle& r) { this->RCall(EeWonRootCall::InvalidateRect,(intptr_t)&r); }
 
-    struct BGStruct {
-        int mImageX,mImageY;
-        WONRectangle mClipRect;
-        SmartPtr<NativeImage> mImage;
-        BGStruct() : mImageX(0),mImageY(0) {}
-        BGStruct(int x,int y,NativeImage* image,const WONRectangle& clip)
-          : mImageX(x),mImageY(y),mClipRect(clip),mImage(image) {}
-    }; // 0x1c bytes; map node 0x30
-    WONRectangle mInvalidRect; //84..93
-    Component* mModalComponent; //94
-    Window* mWindow; //98
-    Component* mCursorComponent; //9c
-    int mDragX,mDragY; //a0/a4
-    bool mDragging,mAllowDrag; //a8/a9
-    SmartPtr<KeyboardListenerBase> mKeyboardListener; //ac
-    std::set<Component*> mPopupSet; //b0..bb
-    std::map<int,BGStruct> mBGStructMap; //bc..c7
+    Window* mWindow;
+    EeWonRoot* mRootObj;
+private:
+    intptr_t RCall(EeWonRootCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_root_call(this->mRootObj,c,a,b,cc); }
 };
 
 // how a popup is opened (0x2c bytes, on the stack; provisional names)
