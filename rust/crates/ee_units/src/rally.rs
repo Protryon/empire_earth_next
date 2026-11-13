@@ -284,9 +284,7 @@ fn rally_goal(
         } else {
             // a new load goal the garrison takes; its clone is the rally goal (an invalid one gives none: return)
             rally.goal = host.garrison_rally_load(garrison);
-            if rally.goal.is_none() {
-                return None;
-            }
+            rally.goal.as_ref()?;
             rally.has_goal = true;
             rally.command = COMMAND_TARGET;
             rally.target = target.id;
