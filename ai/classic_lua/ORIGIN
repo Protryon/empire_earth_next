@@ -218,7 +218,12 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
                 class drafted or requested, explore with the difficulty's stance, every 30 s), the sea explorers
                 (num_sea_explorers of the fastest warship class, once the dock is researched, with water on the map).
-                NOT STARTED: the space and air explorers.
+                The space explorers (as many as the sea explorers, as the C++ reads them; the fastest space class
+                once the space dock is researched, with space on the map) and the air explorers (num_air_explorers
+                of the fastest air class once the first attack has started and the airport is researched; an
+                aircraft inside its airport goes out too). DEVIATION: the classes trainable now (view.costs), so
+                no Corsair without a carrier (the C++ asked for one 52 times in 8 WW2 games and got none); the
+                outdated explorers (two epochs back) are not replaced.
   EECPDiplomacyManager.cpp      empty in the original: nothing to port
   EECPPlayerInteractionManager.cpp
                 NOT STARTED (chat taunts: no chat command in the interface)
