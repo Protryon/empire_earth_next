@@ -21,17 +21,6 @@ void Component::SetComponentFlags(int flags,bool on)
     if(on) this->mComponentBits|=flags;
     else this->mComponentBits&=~flags;
 }
-// FUNCTION: WON 0x006f7910
-// Creates a focusable, draggable dialog that grabs its background, stays inside the root window and ignores Escape
-Dialog::Dialog()
-{
-    this->mDragX=this->mDragY=0;
-    this->SetComponentFlags(0x118,true);
-    this->mAllowDrag=true;
-    this->mKeepInRoot=true;
-    this->mEndOnEscape=false;
-    this->mEscapeId=-1;
-}
 // Creates an arrow button pointing the given way that repeats while held (emitted at 0x006ff0c0)
 MSArrowButton::MSArrowButton(Direction direction)
 {

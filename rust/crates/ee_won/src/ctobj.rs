@@ -1361,4 +1361,4 @@ pub unsafe extern "C" fn ee_won_ct_call(
 
 #[cfg(test)]
 #[path = "ctobj_tests.rs"]
-mod tests;
+pub(crate) mod tests;

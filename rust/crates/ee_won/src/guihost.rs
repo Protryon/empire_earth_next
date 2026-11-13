@@ -581,6 +581,23 @@ pub enum EeWonGuiOp {
     CtNextSibling,
     /// `dynamic_cast<Container*>(a)`'s Rust container (`EeWonContainer*`; 0 when `a` is no container).
     CtContainerOf,
+    // ---- the dialog (`dialogobj`)
+    /// `Button::SetDialogDefaultButton((Button*)b)` when `a`, else `Button::UnSetDialogDefaultButton((Button*)b)`.
+    DlgDefaultButton = 460,
+    /// `mParent->BringToTop(this)`.
+    DlgBringToTop,
+    /// `InvalidateRect(*(WONRectangle*)a)` (virtual; it may move the rectangle).
+    DlgInvalidateRect,
+    /// `GetRoot()->EndDialog(a, (Component*)b)`.
+    DlgEndDialog,
+    /// `((Button*)a)->Fn2F3440()` (the click).
+    DlgClick,
+    /// `GetRoot()->mManager->mModalComponent == this` (0 or 1; a pure read).
+    DlgIsModal,
+    /// `((Button*)a)->IsDefaultButton()` (0 or 1; a pure read).
+    DlgIsDefault,
+    /// `((Button*)a->mComponent)->mButtonFlags` (a `ComponentEvent*`; a pure read).
+    DlgEventButtonFlags,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

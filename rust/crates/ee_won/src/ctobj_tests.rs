@@ -182,9 +182,13 @@ fn the_list_survives_removals_around_an_iteration() {
     assert_eq!(l.prev(a), HEAD);
 }
 
-// ---- the golden's replay: the C++ test's world (the pure reads answered from it), its lines driving the calls
-// ("call", "do") and the world's changes ("set", "env"); every op the Rust makes must be the golden's next "op" line,
-// answered by the golden's "=" line
+// ---- the golden's replay: the C++ test's world (won_ct_world.h; the pure reads answered from it), its lines driving
+// the calls ("call", "do", and the dialog golden's "dlg") and the world's changes ("set", "env"); every op the Rust
+// makes must be the golden's next "op" line, answered by the golden's "=" line. The dialog golden
+// (`golden_dialogobj.txt`) replays here too: its "dialog" line makes a Rust Dialog over container 1, which then takes
+// that container's calls the Dialog overrides.
+
+use crate::dialogobj::{EeWonDialog, EeWonDlgCall as D};
 
 const GOLDEN: &str = include_str!("golden_ctobj.txt");
 const CTS: usize = 4;
@@ -208,9 +212,12 @@ struct Replay {
     lines: Vec<&'static str>,
     at: usize,
     w: [W; 13],
-    env: [i64; 7],
+    /// 0..6 the world's environment; 8 the window's modal component, 9 the dialog default button, 10..12 the
+    /// event's type, button flags and control id (the dialog golden)
+    env: [i64; 13],
     scheme: isize,
     cts: [usize; CTS + 1],
+    dlg: usize,
     failure: Option<String>,
 }
 
@@ -265,6 +272,60 @@ fn apply_set(n: &[i64]) {
     });
 }
 
+fn dlg_of() -> Option<&'static EeWonDialog> {
+    let p = with(|r| r.dlg);
+    // SAFETY: the replay's dialog lives until its "free-dialog" line
+    (p != 0).then(|| unsafe { &*(p as *const EeWonDialog) })
+}
+
+fn dlg_call_of(n: i64) -> D {
+    assert!((1..=D::SetField as i64).contains(&n), "dialog call {n}");
+    // SAFETY: a value of the enum's range (repr(u32), consecutive from 1)
+    unsafe { std::mem::transmute::<u32, D>(n as u32) }
+}
+
+/// The Dialog's override of a container call (the C++ test's `DialogOverride`).
+fn dialog_override(c: EeWonCtCall) -> Option<D> {
+    type C = EeWonCtCall;
+    Some(match c {
+        C::SizeChanged => D::SizeChanged,
+        C::MouseDown => D::MouseDown,
+        C::MouseUp => D::MouseUp,
+        C::MouseExit => D::MouseExit,
+        C::MouseDrag => D::MouseDrag,
+        C::GotFocus => D::GotFocus,
+        C::LostFocus => D::LostFocus,
+        C::KeyDown => D::KeyDown,
+        C::CanClose => D::CanClose,
+        _ => return None,
+    })
+}
+
+/// A container's call as the C++ test's `SideCall` makes it: container 1's overridden calls to the dialog.
+fn side_call(ct: isize, call: EeWonCtCall, a: isize, b: isize, c: isize) -> isize {
+    if ct == 1 {
+        if let (Some(d), Some(o)) = (dlg_of(), dialog_override(call)) {
+            return d.call(o, a, b, c);
+        }
+    }
+    match ct_of(ct) {
+        Some(t) => t.call(call, a, b, c),
+        None => {
+            fail(format!("line {}: no container {ct}", with(|r| r.at)));
+            0
+        }
+    }
+}
+
+fn apply_env(n: &[i64]) {
+    with(|r| {
+        let k = n[0] as usize;
+        for (i, v) in n[1..].iter().enumerate() {
+            r.env[k + i] = *v;
+        }
+    });
+}
+
 fn call_of(n: i64) -> EeWonCtCall {
     assert!((1..=EeWonCtCall::SetField as i64).contains(&n), "call {n}");
     // SAFETY: a value of the enum's range (repr(u32), consecutive from 1)
@@ -279,14 +340,11 @@ fn answer() -> isize {
             return v.parse().unwrap_or(0);
         } else if l.starts_with("set ") {
             apply_set(&nums(l));
+        } else if l.starts_with("env ") {
+            apply_env(&nums(l));
         } else if l.starts_with("do ") {
             let n = nums(l);
-            match ct_of(n[0] as isize) {
-                Some(t) => {
-                    t.call(call_of(n[1]), n[2] as isize, n[3] as isize, n[4] as isize);
-                }
-                None => fail(format!("line {}: no container {}", with(|r| r.at), n[0])),
-            }
+            side_call(n[0] as isize, call_of(n[1]), n[2] as isize, n[3] as isize, n[4] as isize);
         } else {
             fail(format!("line {}: golden {l:?} where an op's lines go on", with(|r| r.at)));
             return 0;
@@ -348,9 +406,18 @@ unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, 
             return 0;
         }
         Op::KeyMod => return with(|r| r.env[5]) as isize,
+        Op::DlgIsModal => return (with(|r| r.env[8]) as isize == me) as isize,
+        Op::DlgIsDefault => return (with(|r| r.env[9]) as isize == a) as isize,
+        Op::EventType => return with(|r| r.env[10]) as isize,
+        Op::DlgEventButtonFlags => return with(|r| r.env[11]) as isize,
+        Op::EventCompControlId => return with(|r| r.env[12]) as isize,
         _ => {}
     }
-    let mine = if op == Op::Draw {
+    let mine = if op == Op::DlgInvalidateRect {
+        // SAFETY: the Rust passes its rectangle
+        let q = unsafe { &*(a as *const crate::guictl::EeWonRect4) };
+        format!("op {} rect {} {} {} {} @{me}", op as u32, q.x, q.y, q.w, q.h)
+    } else if op == Op::Draw {
         // SAFETY: the Rust passes a draw operation
         let o = unsafe { &*(b as *const EeWonDrawOp) };
         format!("op {} {a} {} {} {} {} {} @{me}", op as u32, o.kind, o.a, o.b, o.c, o.d)
@@ -372,12 +439,22 @@ unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, 
             q.bits = if c != 0 { q.bits | b as u32 } else { q.bits & !(b as u32) };
         }
         Op::CtSetScheme => r.scheme = b,
+        Op::DlgInvalidateRect => {
+            // Component::InvalidateRect: moved by the component's place when it has a parent
+            let w = r.w[me as usize];
+            if w.parent != 0 {
+                // SAFETY: the Rust passes its rectangle
+                let q = unsafe { &mut *(a as *mut crate::guictl::EeWonRect4) };
+                q.x = q.x.wrapping_add(w.x);
+                q.y = q.y.wrapping_add(w.y);
+            }
+        }
         _ => {}
     });
     answer()
 }
 
-fn replay(seq: &[&'static str]) -> Option<String> {
+pub(crate) fn replay(seq: &[&'static str]) -> Option<String> {
     REPLAY.with(|r| {
         *r.borrow_mut() = Some(Replay { lines: seq.to_vec(), scheme: 0xB000, ..Replay::default() });
     });
@@ -400,7 +477,7 @@ fn replay(seq: &[&'static str]) -> Option<String> {
                     control_id: n[8] as i32,
                 }
             }),
-            "env" => with(|r| r.env[n[0] as usize] = n[1]),
+            "env" => apply_env(&n),
             "set" => apply_set(&n),
             "new" => {
                 let t = Box::into_raw(Box::new(EeWonContainer::new(n[0] as *mut c_void, Some(replay_host), false)));
@@ -414,15 +491,40 @@ fn replay(seq: &[&'static str]) -> Option<String> {
                     drop(Box::from_raw(p as *mut EeWonContainer));
                 }
             }
+            "dialog" => {
+                let ct = with(|r| r.cts[1]) as *const EeWonContainer;
+                let d = Box::into_raw(Box::new(EeWonDialog::new(
+                    std::ptr::dangling_mut::<c_void>(),
+                    Some(replay_host),
+                    ct,
+                )));
+                with(|r| r.dlg = d as usize);
+            }
+            "free-dialog" => {
+                let p = with(|r| std::mem::take(&mut r.dlg));
+                // SAFETY: made by "dialog"; taken out first
+                unsafe {
+                    (*(p as *const EeWonDialog)).destroy();
+                    drop(Box::from_raw(p as *mut EeWonDialog));
+                }
+            }
+            "dlg" => {
+                let d = dlg_of().expect("a dialog");
+                let r1 = d.call(dlg_call_of(n[0]), n[1] as isize, n[2] as isize, n[3] as isize);
+                let want = format!("-> {r1} 0");
+                let got = next_line();
+                if got != want {
+                    fail(format!("line {}: golden {got:?}, rust {want:?}", with(|r| r.at)));
+                }
+            }
             "call" => {
-                let t = ct_of(n[0] as isize).expect("a container");
                 let call = call_of(n[1]);
                 let (r1, r2) = if call == EeWonCtCall::DesiredSize {
                     let (mut w, mut h) = (-1i32, -1i32);
-                    t.call(call, &mut w as *mut i32 as isize, &mut h as *mut i32 as isize, 0);
+                    side_call(n[0] as isize, call, &mut w as *mut i32 as isize, &mut h as *mut i32 as isize, 0);
                     (w as i64, h as i64)
                 } else {
-                    (t.call(call, n[2] as isize, n[3] as isize, n[4] as isize) as i64, 0)
+                    (side_call(n[0] as isize, call, n[2] as isize, n[3] as isize, n[4] as isize) as i64, 0)
                 };
                 let want = format!("-> {r1} {r2}");
                 let got = next_line();
@@ -435,6 +537,11 @@ fn replay(seq: &[&'static str]) -> Option<String> {
     }
     // a failure may leave containers behind: freed without their destructor's calls
     with(|r| {
+        if r.dlg != 0 {
+            // SAFETY: made by "dialog" and not freed
+            drop(unsafe { Box::from_raw(r.dlg as *mut EeWonDialog) });
+            r.dlg = 0;
+        }
         for p in r.cts.iter_mut() {
             if *p != 0 {
                 // SAFETY: made by "new" and not freed
@@ -447,8 +554,12 @@ fn replay(seq: &[&'static str]) -> Option<String> {
 }
 
 fn sequences() -> Vec<(String, Vec<&'static str>)> {
+    sequences_of(GOLDEN)
+}
+
+pub(crate) fn sequences_of(golden: &'static str) -> Vec<(String, Vec<&'static str>)> {
     let mut out: Vec<(String, Vec<&'static str>)> = Vec::new();
-    for l in GOLDEN.lines() {
+    for l in golden.lines() {
         if l.starts_with("seq ") {
             out.push((l.to_string(), Vec::new()));
         } else if let Some(s) = out.last_mut() {

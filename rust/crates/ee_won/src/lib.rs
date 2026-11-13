@@ -28,6 +28,7 @@ pub mod crc16;
 pub mod ctobj;
 pub mod db;
 pub mod der;
+pub mod dialogobj;
 pub mod dialogs;
 pub mod dir;
 pub mod dirchange;

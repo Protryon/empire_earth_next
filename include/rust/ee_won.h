@@ -2390,6 +2390,22 @@ enum class EeWonGuiOp : uint32_t {
   CtNextSibling,
   /// `dynamic_cast<Container*>(a)`'s Rust container (`EeWonContainer*`; 0 when `a` is no container).
   CtContainerOf,
+  /// `Button::SetDialogDefaultButton((Button*)b)` when `a`, else `Button::UnSetDialogDefaultButton((Button*)b)`.
+  DlgDefaultButton = 460,
+  /// `mParent->BringToTop(this)`.
+  DlgBringToTop,
+  /// `InvalidateRect(*(WONRectangle*)a)` (virtual; it may move the rectangle).
+  DlgInvalidateRect,
+  /// `GetRoot()->EndDialog(a, (Component*)b)`.
+  DlgEndDialog,
+  /// `((Button*)a)->Fn2F3440()` (the click).
+  DlgClick,
+  /// `GetRoot()->mManager->mModalComponent == this` (0 or 1; a pure read).
+  DlgIsModal,
+  /// `((Button*)a)->IsDefaultButton()` (0 or 1; a pure read).
+  DlgIsDefault,
+  /// `((Button*)a->mComponent)->mButtonFlags` (a `ComponentEvent*`; a pure read).
+  DlgEventButtonFlags,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -2574,6 +2590,38 @@ enum class EeWonCtCall : uint32_t {
   /// `if (mFocusChild) { mFocusChild->LostFocus(); mFocusChild = NULL; }`.
   DropFocusChild,
   /// the field `a` (`EeWonCtField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonDlgCall : uint32_t {
+  /// `SetEndOnEscape(a)`.
+  SetEndOnEscape = 1,
+  SetDontEndOnEscape,
+  /// `SetDefaultButton(a)` (a `Button*` as a `Component*`).
+  SetDefaultButton,
+  GotFocus,
+  LostFocus,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  MouseExit,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `CanClose()` (0 or 1).
+  CanClose,
+  /// `ActivateDefaultButton()` (0 or 1).
+  ActivateDefaultButton,
+  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
+  HandleComponentEvent,
+  /// the field `a` (`EeWonDlgField`).
   GetField,
   /// the field `a` = `b`.
   SetField,
@@ -3929,6 +3977,18 @@ enum class EeWonCtField : uint32_t {
   NumChildren,
 };
 
+/// The dialog's fields its configs and subclasses read and set.
+enum class EeWonDlgField : uint32_t {
+  AllowDrag = 1,
+  KeepInRoot,
+  EndOnEscape,
+  EscapeId,
+  Dragging,
+  DragX,
+  DragY,
+  DefaultButton,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -3961,6 +4021,9 @@ struct EeWonConfigLexer;
 
 /// The Rust Container.
 struct EeWonContainer;
+
+/// The Rust Dialog.
+struct EeWonDialog;
 
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
@@ -6879,6 +6942,30 @@ bool ee_won_db_user_id(const uint8_t *data, size_t length, int32_t *out);
 
 /// Whether a DBProxy reply's sub-message answers the request's `sub` (the email requests).
 bool ee_won_db_answers(int16_t reply_sub, uint16_t sub);
+
+/// A new Rust Dialog for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the dialog's.
+EeWonDialog *ee_won_dlg_new(void *component,
+                            EeWonGuiHostFn host,
+                            const EeWonContainer *ct);
+
+/// The destructor's statement (the default button released), then the object freed.
+///
+/// # Safety
+/// `dlg` came from `ee_won_dlg_new` (or is NULL) and is not used again.
+void ee_won_dlg_free(EeWonDialog *dlg);
+
+/// One of Dialog's methods (`EeWonDlgCall`).
+///
+/// # Safety
+/// `dlg` is live; the call's arguments as documented.
+ptrdiff_t ee_won_dlg_call(const EeWonDialog *dlg,
+                          EeWonDlgCall call,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t c);
 
 bool ee_won_dlg_create_enabled(uint32_t name_len, bool password_shown, uint32_t password_len);
 

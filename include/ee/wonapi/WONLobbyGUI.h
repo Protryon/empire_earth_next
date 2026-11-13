@@ -488,34 +488,38 @@ public:
     std::list<Component*> mComponentList;   // +14, owns nodes, borrows components
 };
 
-// a modal or popup dialog (0x98 bytes: EELobbyConnectDialog's members start at +0x98; its implicit dtor is the
-// lobby glue's COMDAT 0x290a26)
+// a modal or popup dialog (0x98 bytes in the original: EELobbyConnectDialog's members start at +0x98).
+// Dialog (R6 WON round 26): its drag, Escape result and default button are the Rust Dialog
+// (rust/crates/ee_won/src/dialogobj.rs) over the container's Rust object; this is the type the lobby's dialogs derive
+// from, with one-line forwarders (DialogBehavior.cpp is its host).
 class Dialog : public Container {
 public:
-    virtual void Virtual08();               // 0x2f7a60
-    virtual void MouseExit();               // 0x2f7b20
-    virtual void MouseDown(int inX, int inY, int inButton); // 0x2f7a70
-    virtual void MouseUp(int inX, int inY, int inButton);   // 0x2f7af0
-    virtual void MouseDrag(int inX, int inY); // 0x2f7b40
-    virtual void GotFocus();                // 0x2f7a20
-    virtual void LostFocus();               // 0x2f7a40
-    virtual bool KeyDown(int inKey);         // 0x2f7c30
-    virtual bool CanClose();                // 0x2f7c90
     Dialog();                               // 0x2f7910 (WONAPI)
-    void SetEndOnEscape(int); // 0x2f7990
-    void SetDontEndOnEscape(); // 0x2f79b0
-    void SetDefaultButton(Button*); // 0x2f79c0: keeps the button at +0x94
-    bool ActivateDefaultButton(); // 0x2f7ce0: activates the default button when one is set
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);    // +0x7c 0x2f7d20 (WONAPI)
+    virtual ~Dialog();
+    virtual void Virtual08() { this->DCall(EeWonDlgCall::SizeChanged); } // 0x2f7a60
+    virtual void MouseExit() { this->DCall(EeWonDlgCall::MouseExit); } // 0x2f7b20
+    virtual void MouseDown(int x, int y, int b) { this->DCall(EeWonDlgCall::MouseDown,x,y,b); } // 0x2f7a70
+    virtual void MouseUp(int x, int y, int b) { this->DCall(EeWonDlgCall::MouseUp,x,y,b); } // 0x2f7af0
+    virtual void MouseDrag(int x, int y) { this->DCall(EeWonDlgCall::MouseDrag,x,y); } // 0x2f7b40
+    virtual void GotFocus() { this->DCall(EeWonDlgCall::GotFocus); } // 0x2f7a20
+    virtual void LostFocus() { this->DCall(EeWonDlgCall::LostFocus); } // 0x2f7a40
+    virtual bool KeyDown(int k) { return this->DCall(EeWonDlgCall::KeyDown,k)!=0; } // 0x2f7c30
+    virtual bool CanClose() { return this->DCall(EeWonDlgCall::CanClose)!=0; } // 0x2f7c90
+    void SetEndOnEscape(int id) { this->DCall(EeWonDlgCall::SetEndOnEscape,id); } // 0x2f7990
+    void SetDontEndOnEscape() { this->DCall(EeWonDlgCall::SetDontEndOnEscape); } // 0x2f79b0
+    void SetDefaultButton(Button*); // 0x2f79c0: keeps the button (held)
+    bool ActivateDefaultButton() { return this->DCall(EeWonDlgCall::ActivateDefaultButton)!=0; } // 0x2f7ce0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->DCall(EeWonDlgCall::HandleComponentEvent,(intptr_t)e); } // 0x2f7d20
+    // the config's writes (DialogConfig)
+    void SetAllowDrag(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::AllowDrag,v); }
+    void SetKeepInRoot(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::KeepInRoot,v); }
+    // the status dialog keeps the drag across its resize (Virtual08 ends it)
+    bool IsDragging() { return this->DCall(EeWonDlgCall::GetField,(intptr_t)EeWonDlgField::Dragging)!=0; }
+    void SetDragging(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::Dragging,v); }
 
-    int mDragX;                            // +0x84
-    int mDragY;                            // +0x88
-    bool mDragging;                        // +0x8c, dragging; the constructor does not initialize it
-    bool mAllowDrag;                       // +0x8d
-    bool mKeepInRoot;                      // +0x8e
-    bool mEndOnEscape;                     // +0x8f
-    int mEscapeId;                         // +0x90
-    SmartPtr<Button> mDefaultButton;        // +0x94, the default button
+    EeWonDialog* mDlg;
+private:
+    intptr_t DCall(EeWonDlgCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_dlg_call(this->mDlg,c,a,b,cc); }
 };
 
 class Button : public Component {

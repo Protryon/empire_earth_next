@@ -1,4 +1,6 @@
-// Dialog behaviour: dragging, focus, Escape/Enter keys and the default button
+// Dialog (R6 WON round 26): the Rust Dialog's calls out (rust/crates/ee_won/src/dialogobj.rs, EeWonGuiOp's dialog
+// ops; the container's fall back to Container.cpp's), its constructor, destructor and default button. The original's
+// DialogBehavior.cpp (dragging, focus, Escape and Enter, the default button) is the Rust object.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -11,148 +13,46 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_won.h"
+using namespace WONAPI;
+
+typedef EeWonGuiOp Op;
+
+extern "C" intptr_t ee_won_guicpp_dlg_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    Dialog* t = static_cast<Dialog*>((Component*)inComp);
+    switch (op) {
+    case Op::DlgDefaultButton:
+        if (a) Button::SetDialogDefaultButton((Button*)(Component*)b);
+        else Button::UnSetDialogDefaultButton((Button*)(Component*)b);
+        return 0;
+    case Op::DlgBringToTop: t->mParent->BringToTop(t); return 0;
+    case Op::DlgInvalidateRect: t->InvalidateRect(*(WONRectangle*)a); return 0;
+    case Op::DlgEndDialog: t->GetRoot()->EndDialog((int)a, (Component*)b); return 0;
+    case Op::DlgClick: ((Button*)(Component*)a)->Fn2F3440(); return 0;
+    case Op::DlgIsModal: return t->GetRoot()->mManager->mModalComponent == t ? 1 : 0;
+    case Op::DlgIsDefault: return ((Button*)(Component*)a)->IsDefaultButton() ? 1 : 0;
+    case Op::DlgEventButtonFlags: return static_cast<Button*>(((ComponentEvent*)a)->mComponent)->mButtonFlags;
+    case Op::ChildSetPos: ((Component*)a)->SetPos((int)b, (int)c); return 0;
+    case Op::EventType: return ((ComponentEvent*)a)->mType;
+    case Op::EventCompControlId: return ((ComponentEvent*)a)->mComponent->mControlId;
+    case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
+    default: return ContainerHostCall(t, op, a, b, c, d);
+    }
+}
+
 namespace WONAPI {
-// FUNCTION: WON 0x006f7990
-// Makes Escape end the dialog with the given result id
-void Dialog::SetEndOnEscape(int id)
+// FUNCTION: WON 0x006f7910
+// Creates a focusable, draggable dialog that grabs its background, stays inside the root window and ignores Escape
+// (the Rust dialog: no drag, drag allowed and kept in the root, the Escape result -1, no default button)
+Dialog::Dialog()
 {
-    this->mEndOnEscape=true;
-    this->mEscapeId=id;
+    this->mDlg=ee_won_dlg_new(static_cast<Component*>(this),ee_won_guicpp_dlg_call,this->mCt);
+    this->SetComponentFlags(0x118,true);
 }
-// FUNCTION: WON 0x006f79b0
-// Stops Escape from ending the dialog
-void Dialog::SetDontEndOnEscape()
-{
-    this->mEndOnEscape=false;
-}
+// Destroys the dialog: the Rust dialog gives the default button back (the implicit destructor in the original)
+Dialog::~Dialog() { ee_won_dlg_free(this->mDlg); }
 // FUNCTION: WON 0x006f79c0
 // Sets the button that Enter activates (held by reference)
-void Dialog::SetDefaultButton(Button* button)
-{
-    this->mDefaultButton=button;
-}
-// FUNCTION: WON 0x006f7a20
-// Registers the dialog's default button as the active default, then runs the container's focus gain
-void Dialog::GotFocus()
-{
-    Button::SetDialogDefaultButton(this->mDefaultButton.get());
-    Container::GotFocus();
-}
-// FUNCTION: WON 0x006f7a40
-// Unregisters the dialog's default button as the active default, then runs the container's focus loss
-void Dialog::LostFocus()
-{
-    Button::UnSetDialogDefaultButton(this->mDefaultButton.get());
-    Container::LostFocus();
-}
-// FUNCTION: WON 0x006f7a60
-// Cancels any drag in progress, then runs the container's handler for this slot
-void Dialog::Virtual08()
-{
-    this->mDragging=false;
-    Container::Virtual08();
-}
-// FUNCTION: WON 0x006f7a70
-// Passes the press to the children; a left press takes the focus and, when dragging is allowed and the
-// child under the mouse is a drag handle (flag 0x20), brings the dialog to the top and starts a drag
-void Dialog::MouseDown(int x,int y,int button)
-{
-    Container::MouseDown(x,y,button);
-    if(button!=0) return;
-    this->RequestFocus();
-    if(!this->mAllowDrag || this->GetMouseChild()==NULL || !this->GetMouseChild()->ComponentFlagSet(ComponentFlag_ParentDrag))
-        return;
-    if(this->GetNextSibling(true,false)!=NULL) this->mParent->BringToTop(this);
-    this->mDragging=true;
-    this->mDragX=x;
-    this->mDragY=y;
-}
-// FUNCTION: WON 0x006f7af0
-// Passes the release to the children; a left release ends any drag
-void Dialog::MouseUp(int x,int y,int button)
-{
-    Container::MouseUp(x,y,button);
-    if(button==0) this->mDragging=false;
-}
-// FUNCTION: WON 0x006f7b20
-// Passes the mouse exit to the children and ends any drag
-void Dialog::MouseExit()
-{
-    Container::MouseExit();
-    this->mDragging=false;
-}
-// FUNCTION: WON 0x006f7b40
-// Moves a dragged dialog by the mouse offset, optionally kept inside the root container, and repaints
-// the old and new areas; without a drag passes the move to the children
-void Dialog::MouseDrag(int x,int y)
-{
-    if(!this->mDragging) {
-        Container::MouseDrag(x,y);
-        return;
-    }
-    // The original clamps against GetRootContainer(), where the newer SDK uses GetParent()
-    Container* root=this->GetRootContainer();
-    int newX=this->Left()+(x-this->mDragX);
-    int newY=this->Top()+(y-this->mDragY);
-    if(this->mKeepInRoot) {
-        if(newX+this->Width()>root->Width()) newX=root->Width()-this->Width();
-        if(newX<0) newX=0;
-        if(newY+this->Height()>root->Height()) newY=root->Height()-this->Height();
-        if(newY<0) newY=0;
-    }
-    if(newX==this->Left() && newY==this->Top()) return;
-    WONRectangle r(0,0,this->Width(),this->Height());
-    this->mParent->ChildInvalidated(this);
-    this->InvalidateRect(r);
-    this->SetPos(newX,newY);
-    this->InvalidateRect(r);
-    this->Invalidate();
-}
-// FUNCTION: WON 0x006f7c30
-// Gives the key to the children first; otherwise Escape ends the dialog (if enabled) and Enter
-// activates the default button; returns whether the key was used
-bool Dialog::KeyDown(int key)
-{
-    if(Container::KeyDown(key)) return true;
-    if(key==27 && this->mEndOnEscape) {
-        this->GetRoot()->EndDialog(this->mEscapeId,this);
-        return true;
-    } else if(key==13) return this->ActivateDefaultButton();
-    return false;
-}
-// FUNCTION: WON 0x006f7c90
-// Returns whether the dialog may close; a modal dialog closes only if Escape ends it, which ends
-// it with the escape result
-bool Dialog::CanClose()
-{
-    Window* window=this->GetRoot();
-    if(!Container::CanClose()) return false;
-    if(window->mManager->mModalComponent==this) {
-        if(this->mEndOnEscape) window->EndDialog(this->mEscapeId,NULL);
-        else return false;
-    }
-    return true;
-}
-// FUNCTION: WON 0x006f7ce0
-// Clicks the default button if it is set, enabled and still the default; returns whether it did
-bool Dialog::ActivateDefaultButton()
-{
-    if(this->mDefaultButton.get()!=NULL && !this->mDefaultButton->IsDisabled() && this->mDefaultButton->IsDefaultButton()) {
-        this->mDefaultButton->Fn2F3440();
-        return true;
-    }
-    return false;
-}
-// FUNCTION: WON 0x006f7d20
-// Activates the default button on event 20, ends the dialog with the button's control id when a
-// button with flag 0x100 is clicked (event 15), and passes other events on
-void Dialog::HandleComponentEvent(ComponentEvent* event)
-{
-    if(event->mType==ComponentEvent_InputReturn) { this->ActivateDefaultButton(); return; }
-    if(event->mType==ComponentEvent_ButtonPressed && ((static_cast<Button*>(event->mComponent)->mButtonFlags&0x100)?true:false)) {
-        this->GetRoot()->EndDialog(event->mComponent->mControlId,NULL);
-        return;
-    }
-    Container::HandleComponentEvent(event);
-}
+void Dialog::SetDefaultButton(Button* button) { this->DCall(EeWonDlgCall::SetDefaultButton,(intptr_t)static_cast<Component*>(button)); }
 }
