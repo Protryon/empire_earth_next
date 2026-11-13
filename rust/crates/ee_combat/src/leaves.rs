@@ -8,6 +8,7 @@
 //! `f64`, `UMQuadraticEquation` as ee_ge's; no random draw.
 
 use crate::damage_table::ee_combat_damage_factor;
+use crate::decide::{drop_point, EeCombatDropIn, DROP_KIND_GOAL, DROP_KIND_MODEL, DROP_KIND_NONE, DROP_KIND_TILE};
 use crate::reads::{
     EE_COMBAT_CLASS_MELEE, EE_COMBAT_CLASS_WALL, EE_COMBAT_H_COMPLEX, EE_COMBAT_H_GOAL_TARGET, EE_COMBAT_H_PLAYER,
     EE_COMBAT_Q_ATTACK_GOAL, EE_COMBAT_Q_BALLISTIC_HIT, EE_COMBAT_Q_CATEGORY, EE_COMBAT_Q_CLASS_FLAGS,
@@ -15,6 +16,10 @@ use crate::reads::{
     EE_COMBAT_Q_NONE, EE_COMBAT_Q_PLAYER_ID, EE_COMBAT_Q_PROJECTILE_CATEGORY, EE_COMBAT_Q_RANGE,
     EE_COMBAT_Q_SPECIAL_ATTACK, EE_COMBAT_Q_TILE_X, EE_COMBAT_Q_TILE_Y, EE_COMBAT_Q_UNIT_TYPE,
 };
+use crate::reads::{
+    EE_COMBAT_Q_BUILT, EE_COMBAT_Q_HIT_POINTS, EE_COMBAT_Q_ID, EE_COMBAT_Q_MAX_HIT_POINTS, EE_COMBAT_Q_SCALE,
+};
+use crate::screen::{hit_distance as screen_hit_distance, EeCombatHitDistanceIn};
 use crate::walks::EeCombatHandle;
 use crate::world::{
     WorldHost, EE_COMBAT_Q_GOAL_KIND, EE_COMBAT_Q_LAND_BUILDING, EE_COMBAT_Q_TILE_SIZE, EE_COMBAT_W_LINE_BLOCKED,
@@ -408,6 +413,146 @@ pub unsafe extern "C" fn ee_combat_is_seen_by(
     let mut world = unsafe { *host };
     let h = &mut crate::reads::Stored::new(&mut world);
     is_seen_by(h, unit, player, explored != 0)
+}
+
+// ---- the drop location and the hit distance (R5b.2, fifteenth round)
+
+/// a complex unit's `mActiveGoal->mKind` ([`EE_COMBAT_Q_NONE`] without one).
+pub const EE_COMBAT_Q_ACTIVE_GOAL_KIND: i32 = 88;
+/// a complex unit's active goal's attack target (`static_cast<EEUGRust*>(mActiveGoal)->GetAttackTarget()`).
+pub const EE_COMBAT_H_ACTIVE_GOAL_TARGET: i32 = 10;
+/// `object->mActiveGoal->GetGoalLocation(point)`: the point's bits out in `a[0..3]`.
+pub const EE_COMBAT_W_GOAL_LOCATION: i32 = 70;
+/// `object->GetModel()->mModel != NULL`; the model's `mDefaultPoint` bits out in `a[0..3]`.
+pub const EE_COMBAT_W_DROP_MODEL: i32 = 71;
+/// `object->mTile != NULL`; the tile's `GetHeight()` bits out in `a[0]`.
+pub const EE_COMBAT_W_TILE_HEIGHT: i32 = 72;
+/// `object->GetPosition(point)` (the virtual: a simple unit's tile centre): the point's bits out in `a[0..3]`.
+pub const EE_COMBAT_W_POSITION: i32 = 73;
+
+const TAG_DROP: u32 = u32::from_le_bytes(*b"CBDP");
+const TAG_HIT_DISTANCE: u32 = u32::from_le_bytes(*b"CBHD");
+/// `kGoalAttackUnit`
+const GOAL_ATTACK_UNIT: u32 = 2;
+
+/// CBDP's output: the point, then the target's id (-1: none).
+#[repr(C)]
+struct DropRecord {
+    x: f32,
+    y: f32,
+    z: f32,
+    target: i32,
+}
+
+/// `EEFindDropLocation(unit, &target, &point, target_in)`: where a unit's drop or shot lands on `target_in` (its
+/// active attack goal's target when 0; without either, its active goal's location): the target model's drop point
+/// (lower with an unbuilt unit's health), else the target's tile centre at its height. The target out is 0 when it
+/// has neither (the point then 0, 0, 0).
+pub fn find_drop_location<H: WorldHost>(
+    h: &mut H,
+    unit: EeCombatHandle,
+    target_in: EeCombatHandle,
+) -> (EeCombatHandle, Ge3DPoint) {
+    let mut input = EeCombatDropIn::default();
+    let mut location = Ge3DPoint::default();
+    let mut target = target_in;
+    if target == 0 && h.read(EE_COMBAT_Q_ACTIVE_GOAL_KIND, unit, 0) != GOAL_ATTACK_UNIT {
+        input.kind = DROP_KIND_GOAL;
+        let mut a = [0i64; 12];
+        h.op(EE_COMBAT_W_GOAL_LOCATION, unit, 0, &mut a);
+        location = args_point(&a, 0);
+    } else {
+        if target == 0 {
+            target = h.handle(EE_COMBAT_H_ACTIVE_GOAL_TARGET, unit, 0);
+        }
+        let complex = h.handle(EE_COMBAT_H_COMPLEX, target, 0);
+        let mut model = [0i64; 12];
+        let mut tile = [0i64; 12];
+        if complex != 0 && h.op(EE_COMBAT_W_DROP_MODEL, target, 0, &mut model) != 0 {
+            input.kind = DROP_KIND_MODEL;
+            let offset = args_point(&model, 0);
+            input.offset = [offset.x, offset.y, offset.z];
+            input.scale = real(h, EE_COMBAT_Q_SCALE, complex);
+            input.built = i32::from(flag(h, EE_COMBAT_Q_BUILT, complex));
+            input.hit_points = h.read(EE_COMBAT_Q_HIT_POINTS, target, 0) as i32;
+            input.max_hit_points = h.read(EE_COMBAT_Q_MAX_HIT_POINTS, target, 0) as i32;
+            input.transformation = h.location(complex).m;
+        } else if h.op(EE_COMBAT_W_TILE_HEIGHT, target, 0, &mut tile) != 0 {
+            input.kind = DROP_KIND_TILE;
+            input.tile_x = h.read(EE_COMBAT_Q_TILE_X, target, 0) as i32;
+            input.tile_y = h.read(EE_COMBAT_Q_TILE_Y, target, 0) as i32;
+            input.tile_height = f32::from_bits(tile[0] as u32);
+        } else {
+            input.kind = DROP_KIND_NONE;
+            target = 0;
+        }
+        if input.kind != DROP_KIND_NONE {
+            let p = drop_point(&input);
+            location = Ge3DPoint { x: p.x, y: p.y, z: p.z };
+        }
+    }
+    let id = if target != 0 { h.read(EE_COMBAT_Q_ID, target, 0) as i32 } else { -1 };
+    capture(h, TAG_DROP, &input, &DropRecord { x: location.x, y: location.y, z: location.z, target: id });
+    (target, location)
+}
+
+/// `EEGetHitDistanceSquared(unit, target, x, y)`: the ground distance squared from the unit's position (or (x, y)
+/// when x is not -10000) to where it hits the target: its drop location, a melee unit's the target's position.
+pub fn hit_distance_squared<H: WorldHost>(
+    h: &mut H,
+    unit: EeCombatHandle,
+    target: EeCombatHandle,
+    x: f32,
+    y: f32,
+) -> f32 {
+    let from = translation(&h.location(unit));
+    let to = if h.read(EE_COMBAT_Q_CLASS_FLAGS, unit, 0) & EE_COMBAT_CLASS_MELEE == 0 {
+        find_drop_location(h, unit, target).1
+    } else {
+        let mut a = [0i64; 12];
+        h.op(EE_COMBAT_W_POSITION, target, 0, &mut a);
+        args_point(&a, 0)
+    };
+    let input = EeCombatHitDistanceIn { from: [from.x, from.y, from.z], to: [to.x, to.y, to.z], x, y };
+    let distance = screen_hit_distance(&input);
+    capture(h, TAG_HIT_DISTANCE, &input, &distance);
+    distance
+}
+
+/// `EEFindDropLocation` of `unit` on `target` (0: its goal's) over `host`: the target out, the point in `point`.
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context, `point` to three floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_find_drop_location(
+    unit: u64,
+    target: u64,
+    host: *const crate::world::EeCombatWorldHost,
+    point: *mut [f32; 3],
+) -> u64 {
+    let mut world = unsafe { *host };
+    let h = &mut crate::reads::Stored::new(&mut world);
+    let (target, location) = find_drop_location(h, unit, target);
+    // SAFETY: the function's contract
+    unsafe { *point = [location.x, location.y, location.z] };
+    target
+}
+
+/// `EEGetHitDistanceSquared(unit, target, x, y)` over `host`.
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_hit_distance_squared(
+    unit: u64,
+    target: u64,
+    x: f32,
+    y: f32,
+    host: *const crate::world::EeCombatWorldHost,
+) -> f32 {
+    let mut world = unsafe { *host };
+    let h = &mut crate::reads::Stored::new(&mut world);
+    hit_distance_squared(h, unit, target, x, y)
 }
 
 /// A class's fields the targetable tests read (`EEUUGetIsUnitClassTargetable`, `EECanTargetClass`), filled by the

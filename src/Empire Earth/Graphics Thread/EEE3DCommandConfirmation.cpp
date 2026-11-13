@@ -42,7 +42,7 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEEffect3D.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEE3DCommandConfirmation.h"
 #include "ee/EEAreaUtilities.h"
@@ -170,7 +170,7 @@ long EEE3DCommandConfirmation::SetUp()
 {
     UString theUnused;
     EETileCoordinate theTile(0, 0);
-    EEUGLocation* theGoal;
+    EEUGRust* theGoal;
     this->mStartSize = this->mGraphicEffect->GetStartSize();
     float theHeight = this->mGraphicEffect->mSize;
     long theState = this->mGraphicEffect->mIntParam1;
@@ -215,7 +215,7 @@ long EEE3DCommandConfirmation::SetUp()
         break;
     case 0:
         if (this->mUnit && this->mUnit->mComplexUnit) {
-            theGoal = this->mUnit->mComplexUnit->mGoalQueues[this->mGoalIndex].mGoals.size() == 0 ? NULL : dynamic_cast<EEUGLocation*>(this->mUnit->mComplexUnit->mGoalQueues[this->mGoalIndex].mGoals.back());
+            theGoal = this->mUnit->mComplexUnit->mGoalQueues[this->mGoalIndex].mGoals.size() == 0 ? NULL : EELocationGoalCast(this->mUnit->mComplexUnit->mGoalQueues[this->mGoalIndex].mGoals.back());
             if (this->mGoalIndex == 0) {
                 this->mStartSize = this->mUnit->mUnitClass->mSelectionSize * 1.25f * this->mStartSize;
                 this->mEndSize = this->mUnit->mUnitClass->mSelectionSize * 1.25f;
