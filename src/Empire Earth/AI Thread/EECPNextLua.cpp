@@ -488,13 +488,14 @@ static EECPNextResult EECPNextRunOrder(EEComputerPlayer* inPlayer, const EECPLua
         long n = r.Int("n", 0, true);
         std::string thePrefer = r.Str("prefer", "patch");
         long theExact = r.Int("exact", -1);
+        long theGranaryFarms = r.Int("granary_farms", -2);   // (-2: unchanged; -1: the engine's rule)
         if (!r.Done())
             return EECPNextRefuse(inPlayer, v, r.mProblem);
         long theIndex = EECPNextResourceIndex(theResource);
         long thePreferKind = thePrefer == "patch" ? kNextPreferPatch : thePrefer == "hunt" ? kNextPreferHunt : -1;
         if (theIndex < 0 || thePreferKind < 0)
             return EECPNextRefuse(inPlayer, v, theIndex < 0 ? "resource " + theResource : "prefer " + thePrefer);
-        return EECPNextGather(inPlayer, theIndex, n, thePreferKind, theExact);
+        return EECPNextGather(inPlayer, theIndex, n, thePreferKind, theExact, theGranaryFarms);
     }
     if (v == "claim" || v == "release") {
         long theSite = r.Int("site", 0, true);
@@ -873,7 +874,8 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
 
 // ---------------------------------------------------------------------------------------------------------------
 // The save (EEPPlayerHelper, from version 0.252): little-endian int32 fields, strings as a uint32 length and bytes.
-//   "EENS", uint32 version 2 (1: the same without the army block below)
+//   "EENS", uint32 version 4 (1: the same without the army block below; 3 adds the gather safety's spots and scan
+//     time; 4 the granary_farms setting, gather(granary_farms = n))
 //   the tactics' state: claim range, reserve[5], food preference, land food gatherers, epoch, epoch start, next repair
 //     time, income totals[5], the income ring[60][5], its step count; per player id 0..63: seen army, seen strength,
 //     last seen, seen town x, y; the events (count, then kind, type, count each); the C++ test opening's memory (4)
@@ -1055,7 +1057,7 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
 {
     outBytes.clear();
     outBytes.append("EENS", 4);
-    EECPNextPut(outBytes, 3);
+    EECPNextPut(outBytes, 4);
     EECPNextPut(outBytes, s->mClaimRange);
     for (long i = 0; i < kNextResources; i++)
         EECPNextPut(outBytes, s->mReserve[i]);
@@ -1102,6 +1104,8 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
     // version 3: the gather safety's memory (the enemy soldiers seen lately, as the spots; the time of its last scan)
     EECPNextPutSpots(outBytes, s->mThreats);
     EECPNextPut(outBytes, s->mThreatsTime);
+    // version 4: gather(granary_farms = n)'s setting (§8.51)
+    EECPNextPut(outBytes, s->mGranaryFarms);
 }
 
 // the state from its bytes (false: not a version 1 block, or bytes left over); the Lua memory goes to mRestoreBytes,
@@ -1113,7 +1117,7 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
     EECPNextGetter g(inBytes);
     g.mOffset = 4;
     long theVersion = g.Get();
-    if (theVersion < 1 || theVersion > 3)
+    if (theVersion < 1 || theVersion > 4)
         return false;
     s->mClaimRange = g.Get();
     for (long i = 0; i < kNextResources; i++)
@@ -1174,6 +1178,7 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
         EECPNextGetSpots(g, s->mThreats);
         s->mThreatsTime = g.Get();
     }
+    s->mGranaryFarms = theVersion >= 4 ? g.Get() : -1;
     if (!g.mOK || g.mOffset != inBytes.size())
         return false;
     delete s->mLua;

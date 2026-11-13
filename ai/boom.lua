@@ -1133,10 +1133,21 @@ function M.step(view, memory)
         local tower_wanted = tower ~= nil and towers < tower_target
         local boats_changed = (memory.boats_seen or -1) ~= view.boats
         memory.boats_seen = view.boats
+        -- (BO.OPT.lua_farms, §8.51: the engine builds no granary's fields, gather(granary_farms = 0), until the plan's
+        -- granaries all stand, then 8 a standing granary; the Copper Age's wood goes to the granaries first)
+        local gfarms = nil
+        if ECON.order and BO.OPT.lua_farms then
+            gfarms = ((V.buildings(view, "b_granary") or {}).finished or 0) < (plan.granaries or 0) and 0 or 8
+        end
+        local gfarms_new = gfarms ~= nil and memory.gfarms ~= gfarms
         for _, r in ipairs(V.resources) do
-            if want[r] ~= view.wanted[r] or (r == "food" and boats_changed) then
-                order("gather_" .. r, {verb = "gather", resource = r, n = want[r], exact = ECON.order and 1 or nil})
+            if want[r] ~= view.wanted[r] or (r == "food" and (boats_changed or gfarms_new)) then
+                order("gather_" .. r, {verb = "gather", resource = r, n = want[r], exact = ECON.order and 1 or nil,
+                                       granary_farms = r == "food" and gfarms or nil})
             end
+        end
+        if gfarms_new then
+            memory.gfarms = gfarms
         end
         memory.want = want
 
@@ -1430,7 +1441,31 @@ function M.step(view, memory)
                     patch_room = patch_room + s.room
                 end
             end
-            if ECON.order and V.total(granaries) < plan.granaries and not going_up(granaries)
+            -- (BO.OPT.lua_farms: the engine's fields, 8 by each granary as it stood, took the Copper Age's wood while
+            -- granaries 2 and 3 waited, 3 standing 8-10 minutes in, and a third placed on the second's laid field was
+            -- lost; lib.place picks each granary's site, room for its 8 fields clear of the other granaries' rings, one
+            -- job at a time, ordered once its cost is in hand, and the fields wait for the third, gfarms above)
+            local lfarms = ECON.order and BO.OPT.lua_farms
+            local placing = granaries ~= nil and granaries.queued > 0
+            local gcost = lfarms and V.cost(view, "b_granary") or nil
+            local gjob = false
+            if lfarms then
+                for _, k in ipairs(ai.keys((memory.place or {}).jobs or {})) do
+                    gjob = gjob or string.sub(k, 1, 7) == "granary"
+                end
+            end
+            if lfarms and V.total(granaries) < plan.granaries and not gjob and not placing and gcost ~= nil then
+                local pays = true
+                for r, n in pairs(gcost.cost) do
+                    pays = pays and (n or 0) <= (view.stock[r] or 0)   -- (the reserve gives way: granaries first)
+                end
+                if pays then
+                    PL.request(view, memory, "granary" .. V.total(granaries), "b_granary", {}, view.town_x, view.town_y,
+                               PL.granary_spot)
+                end
+            elseif lfarms then
+                -- (nothing: the granary's job is under way)
+            elseif ECON.order and V.total(granaries) < plan.granaries and not going_up(granaries)
                     and V.cost(view, "b_granary") ~= nil then
                 -- (the owner: 3 granaries at once in the Copper Age, the patch workers and hunters farm them)
                 order("granary", {verb = "build", type = "b_granary", near = "town"})

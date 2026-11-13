@@ -24,9 +24,12 @@ M.OPT = {
     claim_target = true,    -- the mines claimed for the phase's whole target
     food_reach = false,     -- the Stone claim reaches claim_dry while the food places are short (off: the owner's playtest,
                             -- "unpopulated food settlement near my base"; the bisect: no gain)
-    boat_wood = false,      -- (off until benched) in stone_start, until the boats are out, the settlements wait too: the
-                            -- bank's wood pays the dock and the boats first
+    boat_wood = false,      -- (on in boom_order, §8.51) in stone_start, until the boats are out, the settlements wait
+                            -- too: the bank's wood pays the dock and the boats first
     shore_scout = false,    -- (off until benched) one wood gatherer walks the shore round home before the advance
+    lua_farms = false,      -- (on in boom_order, §8.51) the Copper Age's 3 granaries sited by lib.place one after
+                            -- another, and the engine builds no granary's fields (gather granary_farms = 0) until all
+                            -- stand, then 8 each
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }

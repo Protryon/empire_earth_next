@@ -4042,6 +4042,53 @@ off). What changed on the way, each benched on 32 seeds against the improved cla
 Still open: the owner's citizen growth (3.4 a minute against 1.6-2.1), gold and iron income (about half the
 requirement), the Prehistoric's exact counts (one over or one short on the mines in most games).
 
+**The gaps against the owner's spec (2026-11-12): the dock's wood and the granaries' fields.** G5 (as merged, 93c4ca7)
+confirmed on 64 seeds (2-65) against Rel4: against the improved classic won-lost-close 28-16-20 against 20-29-15,
+Copper in 56 games against 47, Bronze 87.1 in 44 against 79.6 in 37, 11 defeats against 9; against Age of AI 39-6-19
+against 31-14-19, Bronze 66.3 (61) against 67.8 (60). The diagnosis of the four gaps, in the owner's order:
+- **Gold and iron income** (31/38 a minute at minutes 30-45 against 81/74) is the gatherer count, not the rate: 3-6
+  gold and 6 iron gatherers at minutes 30-35 against the owner's 12-18, at 4.7-5.3 a gatherer (6.1 wanted; the
+  engine's pace, §8.50). The fill reaches 12/12 only at about 58 citizens, so it waits on the growth.
+- **The Stone Age's growth** (1.8-2.3 a minute against 3.4): food stock about 20 and the town centres idle 26-67 s a
+  minute in stone_start/grow, land food fixed at 18, so the boats carry the growth.
+- **The dock** (10 boats by +7 missed in 25 of 63 games against the classic): not refused. The fish verb queued it
+  in the Stone Age's first minute (afford=0), and it waited 12 minutes in the build queue while the Stone settlements
+  (cap 14) took the wood each time it reached about 100 (seed 2: one patch's settlement placed three times).
+  `BO.OPT.boat_wood` (the stone_start settlements wait for 10 boats) fixes it: H1.
+- **The granaries** (3 within 10 minutes of Copper missed in 20 of 56): no script orders the farms. A standing
+  granary lays its 8 fields as free foundations (EEComplexUnit::SetBuilt -> ReplantFarm, a game rule), and the engine's
+  food runner sends idle food gatherers to build them, each paying a farm's price: Copper's wood went into the first
+  granary's fields while granaries 2 and 3 waited queued (afford=0). More wood (W1: Copper's first wood step 15 -> 22)
+  did not help (+2/+12/+9 minutes on 3 seeds against +6/+11/+11): the fields took it. The decision stays in Lua: the
+  food `gather` order's `granary_farms = n` (AI_LUA_UNITS) stops the runner at n built farms a standing granary (0
+  none). `BO.OPT.lua_farms` holds the fields (0) until the plan's 3 granaries stand, then 8; lib.place sites each
+  granary (`granary_spot`: room for all 8 fields, clear of the other granaries' rings, standing or planned), one job at
+  a time, ordered once its cost is in hand (a cost refusal waits 20 s, not 5 minutes). The C++ build verb had put a
+  third granary on the second's laid field (build.stalled, the granary lost). Other field paths checked: the classic's
+  building counts do not run for a next seat, RepairBuildings skips farms, a farm exhausted is only laid again (built
+  by its farmer, after the hold), and boom orders no farms under the option. Smoke variants on seeds 12/13/16: L1
+  (Lua orders the farms: a farm ordered where no field was laid waits forever), L2 (fields allowed once all are
+  placed: +11/+13/+11), L3-L6 (the hold until they stand; the C++ verb's sites, then the reserve and the 5-minute cost
+  wait) led to L7 (+4/+7/+3).
+- **H2** (stone_start/grow land food 18 -> 21) raised growth against the classic (1.9 -> 2.2) but took the mines'
+  citizens (29/37 and 53/61 a minute), Bronze 90.4 against 78.0 on seeds 2-33: dropped.
+
+64 seeds (2-65; H1's first half on the old exe, identical game samples on the new one), G5 -> H1 -> L7 (L7 = H1 +
+lua_farms):
+
+| | G5 | H1 | L7 |
+|---|---|---|---|
+| classic: won-lost-close, defeated | 28-16-20, 11 | 29-21-14, 8 | 25-20-19, 9 |
+| classic: Copper (games), Bronze (games) | 51.7 (56), 87.1 (44) | 51.6 (54), 83.4 (42) | 51.6 (54), 78.3 (42) |
+| classic: docks / 10 boats by +7 missed | 9 / 25 | 4 / 21 | 4 / 21 |
+| classic: 3 granaries by Copper +10 missed (median) | 20 of 56 (+9) | 21 of 54 (+10) | 6 of 54 (+3) |
+| Age of AI: won-lost-close | 39-6-19 | 34-6-24 | 32-7-25 |
+| Age of AI: Copper, Bronze (games) | 45.0, 66.3 (61) | 45.3, 65.1 (60) | 45.3, 64.4 (59) |
+| Age of AI: 3 granaries missed (median) | 17 of 63 (+8) | 19 of 63 (+7) | 1 of 63 (+2) |
+
+Both are on in boom_order. The boats' remaining misses are the pace (a dock at +1 trains its tenth boat at +6 to +7),
+and the growth and the mines' income stay open.
+
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
 **Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the

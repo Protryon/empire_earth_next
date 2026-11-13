@@ -1009,6 +1009,12 @@ found no town). `tests/ai_units/types.lua` checks that a list's ids are the unio
   it off, absent leaves it as it was): the gatherer runner's rebalance then moves a gatherer off a resource as soon as
   it has more than wanted, not only past one more (`EECPNextState::mExact`, per player, not saved: the next order sets
   it again). Boom's build order (`lib.build_order`, `ECON.order`) sends it with every gather order.
+- **The food `gather` order takes `granary_farms = n`** (2026-11-12): a standing granary lays its fields as free
+  foundations, and the engine's food runner sends idle food gatherers to build them (each paying a farm's cost). With
+  `granary_farms = 0` it builds none; with n > 0 it stops at n built farms per standing granary; -1 restores the
+  engine's rule, and absent leaves the setting as it was (`EECPNextState::mGranaryFarms`, per player, saved: next-state
+  version 4; `EECPRMBuildsFields` in EECPResourceManager.cpp). The classic, and every script that never sends it,
+  keep the old behaviour. Boom's `BO.OPT.lua_farms` holds the fields until the Copper Age's three granaries stand.
 
 **The cost of an improvement (2026-11-12):** `ai.improve_cost(class, what)` -> `{food, wood, stone, gold, iron,
 level, max}`: the next level's cost of a class's improvement (`what`: `attack`, `hit_points`, `range`, `speed` or the

@@ -331,7 +331,7 @@ enum EECPNextFoodPrefer {
 
 // gather(resource, n[, prefer]): n land gatherers wanted on resource 0..4 (food: plus the boats fishing)
 EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long inCount, long inPrefer = kNextPreferPatch,
-    long inExact = -1);
+    long inExact = -1, long inGranaryFarms = -2);
 // claim(site) / release(site): gather from a resource centre or stop (EECPResourceCenter::SetActive)
 EECPNextResult EECPNextClaim(EEComputerPlayer* inPlayer, long inSite);
 EECPNextResult EECPNextRelease(EEComputerPlayer* inPlayer, long inSite);
@@ -468,6 +468,10 @@ struct EECPNextState {
     long mFoodLand;                         // the land food gatherers asked for (gather adds the boats)
     long mExact;                            // gather(exact = 1): no gatherer kept past the wanted count (the rebalance's
                                             // one of slack off; docs/AI_RESEARCH.md §8.51; transient, the next order sets it)
+    long mGranaryFarms;                     // gather(resource = "food", granary_farms = n): the idle food gatherers
+                                            // build a granary's unfinished fields only up to n built farms a standing
+                                            // granary, 0 never (the script orders its farms); -1 (the default) always
+                                            // (EECPRMBuildsFields; §8.51; saved, state version 4)
     long mEpoch;                            // the epoch at the last step, and since when
     unsigned long mEpochStart;
     unsigned long mNextRepairTime;
