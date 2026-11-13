@@ -4557,7 +4557,9 @@ The owner's direction: port all of the C++ classic into Lua, so that its decisio
 1. the inventory (below);
 2. the missing parts by value: transports and island play (2a), walls (2b), air, space and submarines (2c), the
    wonder race and the ICBM (2d), allies (2e), the rest (2f);
-3. benches beyond Small land maps;
+3. benches beyond Small land maps. First on the list (coordinator, 2026-11-13): the late-start economy. At the WW2
+   start the port has 22 citizens at 10 minutes against the C++'s 33 (§8.74). An economy that trails the C++'s
+   blocks the deletion, so this cannot stay a known deviation. After it: the wall count (§8.70) and the rest;
 4. classic_lua as the lobby's classic for a soak;
 5. then the deletion, keeping the helpers the Lua calls (EEComputerPlayer's engine glue split out).
 
@@ -4919,6 +4921,50 @@ without the vent's tag points (PORT_LEARNINGS). It did so with the old scripts t
 0 script errors. Determinism (WW2 start with cheats, seeds 2 and 5, --repeat 2, air groups in both) is identical.
 
 2c is complete apart from the submarines' kind (EECPASGSubmarine) and the planet spaceships' own sub-group.
+### 8.75 Porting everything, 2d: the wonders, the ICBM, the submarines and spaceships (2026-11-13, EE-SIM)
+
+- **The wonders** (army.lua `update_wonders`; new helper `ai.wonders`, AI_LUA_UNITS §11).
+  - RespondToUnit fires when another player completes a wonder with the victory conditions on.
+    - An ally's wonder: DefendUnit. Difficulty sets the share of groups sent to defend it (Easy 30-40%, Medium
+      20-30%, Hard 10-15%, with more than 3 groups), and a defence group is made.
+    - An enemy's wonder: AttackUnit. A share of groups attacks it (Easy 5-10%, Medium 10-25%, Hard 25-40%) and an
+      attack group is made. If that team has enough wonders to win, every group goes, five new groups are made, and
+      the wonder race starts.
+  - UpdateWonderRace: one of the racing team's wonders is attacked every 150 s.
+  - The next Update after a response goes for the leading wonder racer's nearest wonder.
+  - A wonder task attacks or defends round the wonder while it stands.
+  - **DEVIATION:** a wonder's tile is known only where explored. Otherwise the port uses its owner's known town;
+    with `sees_all` it reads them all.
+- **The ICBM.**
+  - With a new attack, at the difficulty's chance (20/40/60%), the ICBM fires at the target's seen unit with the
+    most hit points of 1500 or more. `ai.attack` now takes a missile base holding its ICBM, as a human's order does.
+  - CheckSpecials is ported: anti-missile batteries (one, then one more per town centre up to 10) and one ICBM kept
+    with the missile base. **NOT STARTED:** the capitols' cloaking, and culling batteries past 10.
+- **The sub-groups.**
+  - Submarines (EECPASGSubmarine, AI kind 0x15) form a sea sub-group whose units take only targets their weapons
+    hurt (the opt-in `can_hurt` in lib.groups).
+  - The space units now split as the C++'s GetSubGroupKind does. Planet spaceships (category 0x22, the new class
+    field `planet_spaceship`) take the space fighter sub-group (§8.74). The other space units take EECPASGSpaceship:
+    a sea sub-group of the space region (AssignSpaceTask as AssignSeaTask over the space area). This corrects §8.74,
+    which had the two the other way round.
+
+**The skirmish AIs build no wonders.** Neither the C++ nor any Lua AI orders one, so a test copy of the scripts had
+seat 3 build a Colosseum (scratch only, not committed). At the WW2 start with cheats, the wonders became available
+after about 41 minutes. In the game where one was completed (seed 3, at 63 minutes), the port answered:
+- an attack share (3 groups sent) and a new attack group;
+- then an attack on the racer's nearest wonder;
+- the groups took wonder tasks at it.
+
+**Results.** WW2 start, cheats, 8 seeds, 90 minutes:
+- 139 air, 333 navy and 49 submarine group lines;
+- wins: C++ 2, port 0, 6 close (3-0 with 5 close in §8.74).
+
+Space Age on Planets Earth, cheats, 4 seeds: 11 spaceship, 6 space-fighter and 22 air groups; the spaceship groups
+took space tasks. The C++ won 3, 1 close (4-0 before).
+
+0 script errors. Determinism is identical at the WW2 start and on Planets Earth (seeds 2 and 5, --repeat 2).
+
+2d is done. Next is 2e: the allies (AttackPlayer / DefendPlayer, AidAllies).
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

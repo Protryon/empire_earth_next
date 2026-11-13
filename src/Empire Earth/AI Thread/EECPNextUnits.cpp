@@ -1352,6 +1352,60 @@ static int LuaCanHurt(lua_State* L)
     return 1;
 }
 
+// ai.wonders() -> {victory, to_win, players = {{player, team, count}}, list = {{id, player, team, type, built, x, y}}}:
+// the wonders (the units whose tech is a wonder, kind 4), as the game announces them and the wonder countdown shows
+// them; a wonder's tile (x, y) only where the player has explored it, or with the manifest's "sees_all" (the classic's
+// information cheat: its UpdateWonderRace and AttackUnit read every wonder). The classic's wonder race and response
+// (EECPCombatManager::RespondToUnit, UpdateWonderRace).
+static int LuaWonders(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    EECPUnitsCharge(L, kCostCall);
+    bool theAll = EECPEngineSeesAll(me);
+    lua_createtable(L, 0, 4);
+    EECPUnitsSetBool(L, "victory", gWorld.mVictoryEnabled);
+    EECPUnitsSetInt(L, "to_win", (long)gWorld.mNumberOfWondersToWin);
+    lua_newtable(L);
+    lua_newtable(L);
+    long theCount = 0;
+    long theListed = 0;
+    for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[i];
+        if (thePlayer == NULL || thePlayer->mObserverMode || thePlayer->mTechnologies == NULL)
+            continue;
+        long theTeam = (long)thePlayer->GetTeamIndex();
+        lua_createtable(L, 0, 3);
+        EECPUnitsSetInt(L, "player", (long)thePlayer->mPlayerID);
+        EECPUnitsSetInt(L, "team", theTeam);
+        EECPUnitsSetInt(L, "count", (long)thePlayer->GetNumWonderUnits());
+        lua_rawseti(L, -3, ++theCount);
+        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* c = theUnit->mComplexUnit;
+            if (c == NULL || c->mHitPoints <= 0 || !c->mUnitClass->IsLandBuilding())
+                continue;
+            EETechTreeNode* theNode = thePlayer->mTechnologies->Get(c->mUnitClass->mTechnology);
+            if (theNode == NULL || theNode->mData->mKind != 4)
+                continue;
+            EECPUnitsCharge(L, kCostId);
+            lua_createtable(L, 0, 7);
+            EECPUnitsSetInt(L, "id", (long)c->mUnitID);
+            EECPUnitsSetInt(L, "player", (long)thePlayer->mPlayerID);
+            EECPUnitsSetInt(L, "team", theTeam);
+            EECPUnitsSetStr(L, "type", EECPUnitsName(s, c->mUnitClass->mUnitType));
+            EECPUnitsSetBool(L, "built", c->mIsBuilt);
+            if (thePlayer == me || theAll || (EECPUnitsOnMap(c) && static_cast<EETile*>(c->mTile)->IsVisibleTo(me))) {
+                EECPUnitsSetInt(L, "x", (long)c->mTileX);
+                EECPUnitsSetInt(L, "y", (long)c->mTileY);
+            }
+            lua_rawseti(L, -2, ++theListed);
+        }
+    }
+    lua_setfield(L, -3, "list");
+    lua_setfield(L, -2, "players");
+    return 1;
+}
+
 // ai.class(type) -> static data from the class and the player's improvements (what the unit's panel shows)
 static int LuaClass(lua_State* L)
 {
@@ -1407,6 +1461,9 @@ static int LuaClass(lua_State* L)
     EECPUnitsSetBool(L, "medic", c->mIsMedic);
     EECPUnitsSetBool(L, "converts", c->mHasCalamityPowers || c->mConversionRate != 0.0f);
     EECPUnitsSetBool(L, "is_transport", c->IsTransport());
+    // a planet spaceship (category 0x22: the classic's space fighter sub-group, kind 11; the other space units take
+    // the spaceship sub-group, kind 9: EECPAttackGroup::GetSubGroupKind)
+    EECPUnitsSetBool(L, "planet_spaceship", c->mCategory == kUnitCategoryPlanetSpaceship);
     EECPUnitsSetBool(L, "mine", c->mFamily == kUnitFamilyMines);
     EECPUnitsSetInt(L, "influence", c->mInfluence);
     EECPUnitsSetInt(L, "epoch", c->mEpoch);
@@ -1634,7 +1691,16 @@ static bool EECPUnitsMobile(EEComplexUnit* c)
 
 static bool EECPUnitsCanAttack(EEComplexUnit* c)
 {
-    return EECPUnitsMobile(c) || (c->mStats != NULL && c->mStats->mAttack != 0.0f);
+    if (EECPUnitsMobile(c) || (c->mStats != NULL && c->mStats->mAttack != 0.0f))
+        return true;
+    // a missile base holding its ICBM launches it at the target (the classic's CheckSpecials / Update ICBM: the
+    // attack goal goes to the ICBM's container, as a human's attack order on the base does)
+    for (unsigned long i = 0; i < c->GetNumCargoUnits(); i++) {
+        EEComplexUnit* theCargo = c->GetCargo(i);
+        if (theCargo != NULL && theCargo->mUnitClass->GetFamily() == kUnitFamilyICBM)
+            return true;
+    }
+    return false;
 }
 
 static bool EECPUnitsCitizen(EEComplexUnit* c)
@@ -4335,7 +4401,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
     static const luaL_Reg kFunctions[] = {
         {"me", LuaMe}, {"time", LuaTime}, {"players", LuaPlayers}, {"map", LuaMap},
         {"units", LuaUnits}, {"unit", LuaUnit}, {"get", LuaGet}, {"seen", LuaSeen}, {"memory", LuaMemory},
-        {"resources", LuaResources}, {"tile", LuaTile}, {"class", LuaClass}, {"can_hurt", LuaCanHurt}, {"events", LuaEvents},
+        {"resources", LuaResources}, {"tile", LuaTile}, {"class", LuaClass}, {"can_hurt", LuaCanHurt}, {"wonders", LuaWonders}, {"events", LuaEvents},
         {"can_place", LuaCanPlace}, {"reach", LuaReach}, {"strength", LuaStrength},
         {"move", LuaMove}, {"attack", LuaAttack}, {"attack_ground", LuaAttackGround}, {"gather", LuaGather},
         {"build", LuaBuild}, {"repair", LuaRepair}, {"garrison", LuaGarrison}, {"load", LuaLoad}, {"unload", LuaUnload},

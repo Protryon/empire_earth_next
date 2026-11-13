@@ -33,7 +33,7 @@ local FOREST_RANGE = 35          -- AssignSubGroupTask: forests within squared d
 local CITIZEN_DEATHS = 20        -- NoteThreat: more citizens lost in a region than this sends the army there
 
 local KIND_SPECIAL, KIND_SIEGE, KIND_ARTILLERY, KIND_HERO, KIND_ANTI_TANK, KIND_ANTI_AIR = 3, 0x14, 0x10, 0x1b, 1, 0xd
-local KIND_ANTI_SUB_HELICOPTER, KIND_MECH_ZEUS = 0x1c, 0x1e
+local KIND_ANTI_SUB_HELICOPTER, KIND_MECH_ZEUS, KIND_SUBMARINE = 0x1c, 0x1e, 0x15
 local KIND_CARRIER = 0xf                -- kAIKindAircraftCarrier
 local CARRIER = "s11_enterprise_aircraft_carrier"
 local SPACE_CARRIER = "sp15_space_carrier"           -- kUnitTypeSp15SpaceCarrier   -- kUnitTypeS11EnterpriseAircraftCarrier
@@ -1363,15 +1363,22 @@ local function create_group(view, memory, kind, mission, target, why, naval, dom
         return nil
     end
     -- MakeSubGroups: one sub-group per kind (GetSubGroupKind): land (with the helicopters, which fly over: a kind
-    -- of land sub-group), sea (the warships), air (the planes: EECPASGAir, a manual group run by air_update) and
-    -- space (EECPASGSpaceFighter: the air sub-group's life, every unit flying to its target as a fighter does;
-    -- DEVIATION: the planet spaceships too, which the C++ gives a sub-group of their own)
+    -- of land sub-group), sea (the warships), sub (the submarines: EECPASGSubmarine, a sea sub-group whose units
+    -- only take targets their weapons hurt), air (the planes: EECPASGAir, a manual group run by air_update), space
+    -- (the planet spaceships: EECPASGSpaceFighter, the air sub-group's life, every unit flying to its target as a
+    -- fighter does) and spaceship (the other space units: EECPASGSpaceship, a sea sub-group of the space region)
     local parts = {land = {slots = {}, ids = {}}, sea = {slots = {}, ids = {}}, air = {slots = {}, ids = {}},
-                   space = {slots = {}, ids = {}}}
+                   space = {slots = {}, ids = {}}, sub = {slots = {}, ids = {}}, spaceship = {slots = {}, ids = {}}}
     local function part_of(c)
         local d = domain_of(c)
-        if d == "space" and c.is_transport then
-            return "land"
+        if d == "space" then
+            if c.is_transport then
+                return "land"
+            end
+            return c.planet_spaceship and "space" or "spaceship"
+        end
+        if d == "sea" and (c.ai_kind or 0) == KIND_SUBMARINE then
+            return "sub"
         end
         return d
     end
@@ -1384,13 +1391,18 @@ local function create_group(view, memory, kind, mission, target, why, naval, dom
         part.ids[#part.ids + 1] = c.id
     end
     local first = nil
-    for _, d in ipairs({"land", "sea", "air", "space"}) do
+    for _, d in ipairs({"land", "sea", "sub", "spaceship", "air", "space"}) do
         local part = parts[d]
         if #part.slots > 0 or #part.ids > 0 then
             local g = G.create(mem, {task = "defend", role = "army", x = rx, y = ry, radius = GUARD_RADIUS, target = 0,
                                      manual = d == "air" or d == "space"})
             g.kind, g.mission, g.enemy = kind, mission, target or 0
-            g.sea = d == "sea"
+            g.sea = d == "sea" or d == "sub" or d == "spaceship"
+            if d == "sub" then
+                g.sub, g.can_hurt = true, true
+            elseif d == "spaceship" then
+                g.spaceship = true
+            end
             if d == "air" or d == "space" then
                 g.air = true
                 g.space = d == "space"
@@ -1414,7 +1426,8 @@ local function create_group(view, memory, kind, mission, target, why, naval, dom
             end
             print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d sea=%d air=%d airslots=%d carriers=%d%s",
                 why, g.id, kind, mission, target or 0, sel.count, #part.ids, #g.slots, sel.strength, sel.sea_k,
-                sel.air_k or 0, nair, ncarrier, g.sea and " navy" or (g.space and " space" or (g.air and " air" or ""))))
+                sel.air_k or 0, nair, ncarrier, g.sub and " sub" or (g.spaceship and " spaceship" or (g.sea and " navy"
+                or (g.space and " space" or (g.air and " air" or ""))))))
             first = first or g
         end
     end
@@ -1690,10 +1703,12 @@ end
 -- remembered (ai.memory)
 local function assign_sea_task(view, memory, g)
     local x, y = g.cx or g.x, g.cy or g.y
-    -- (GetMainContinent: the water body under the sub-group, else the largest)
+    -- (GetMainContinent: the water body under the sub-group, else the largest; a spaceship sub-group's: its space
+    -- region, AssignSpaceTask)
     local here = (x ~= nil and x >= 0) and ai.area(x, y) or nil
-    local body = (here ~= nil and here.category == 2) and here.id or 0
-    if body == 0 then
+    local want = g.spaceship and 4 or 2
+    local body = (here ~= nil and here.category == want) and here.id or 0
+    if body == 0 and not g.spaceship then
         body = memory.t.largest_sea or 0
     end
     local why = nil
@@ -1738,6 +1753,12 @@ end
 -- AssignLandTask: an attack (mission 0 or 2) goes for the target's territory (the weakest region first); else the
 -- defence ladder; else back to the rally point. A sea sub-group: AssignSeaTask
 local function assign_task(view, memory, g)
+    if g.wonder_id ~= nil and M.wonder_task(view, g) then
+        g.task_t = view.time
+        print(string.format("classic_lua army.task id=%d mission=%d wonder at=%d,%d units=%d", g.id, g.mission, g.x,
+            g.y, #g.units))
+        return
+    end
     if g.sea then
         return assign_sea_task(view, memory, g)
     end
@@ -1972,7 +1993,10 @@ end
 local function assign_air_task(view, memory, g)
     local b = memory.t.behavior
     local why = nil
-    if g.mission == 2 or g.mission == 0 then
+    if g.wonder_id ~= nil and M.wonder_task(view, g) and air_reach(g, g.x, g.y) then
+        why = "wonder"
+    end
+    if why == nil and (g.mission == 2 or g.mission == 0) then
         local regions = target_regions(memory, g.enemy)
         for i = #regions, 1, -1 do
             local pick = regions[i]
@@ -1989,6 +2013,9 @@ local function assign_air_task(view, memory, g)
         end
     end
     local x, y = g.cx or g.x, g.cy or g.y
+    if x == nil then
+        x, y = -1, -1
+    end
     if x == nil or x < 0 then
         x, y = rally_point(view)
     end
@@ -2357,6 +2384,347 @@ local function check_space(view, memory)
     a.next_space = view.time + b.ship_maintenance_timer * 60000
 end
 
+-- ---------------------------------------------------------------------------------------------------------------
+-- The wonders (EECPCombatManager::RespondToUnit, AttackUnit, DefendUnit, UpdateWonderRace) and the ICBM
+
+local ICBM = "cp_icbm"                      -- kUnitTypeCpICBM: it sits in its missile base
+local AMB = "n14_anti_missile_battery"      -- kUnitType14AntiMissileBattery
+local WONDER_ATTACK_MS = 150000             -- UpdateWonderRace: a wonder of the racing team attacked every 150 s
+local CANNON_CHANCE_K = {200, 400, 600}     -- kCMCannonChance by difficulty: the ICBM fired with a new attack
+
+-- the wonders this step (ai.wonders, once a step)
+local function wonders()
+    return R.memo("army_wonders", function()
+        return ai.wonders()
+    end)
+end
+
+local function wonder_by_id(id)
+    for _, w in ipairs(wonders().list or {}) do
+        if w.id == id then
+            return w
+        end
+    end
+    return nil
+end
+
+local function is_enemy(view, player)
+    for _, e in ipairs(view.enemies or {}) do
+        if e.player == player then
+            return true
+        end
+    end
+    return false
+end
+
+-- a wonder's place: its tile when known, else its owner's known town (DEVIATION: the C++ reads every wonder)
+local function wonder_place(view, w)
+    if w.x ~= nil then
+        return w.x, w.y
+    end
+    for _, e in ipairs(view.enemies or {}) do
+        if e.player == w.player and (e.town_x or -1) >= 0 then
+            return e.town_x, e.town_y
+        end
+    end
+    return nil
+end
+
+-- the wonders of a team (completed or not, as UpdateWonderRace collects them) and the team's count
+local function team_wonders(team)
+    local list, count = {}, 0
+    local ws = wonders()
+    for _, w in ipairs(ws.list or {}) do
+        if w.team == team then
+            list[#list + 1] = w
+        end
+    end
+    for _, p in ipairs(ws.players or {}) do
+        if p.team == team then
+            count = count + p.count
+        end
+    end
+    return list, count
+end
+
+-- a group's wonder task (kAGTaskAttackWonder / kAGTaskDefendWonder): attack it, or defend round it; false when the
+-- wonder is gone (the task lapses: IsUnitTaskValid)
+local function wonder_task(view, g)
+    if g.wonder_id == nil then
+        return false
+    end
+    local w = wonder_by_id(g.wonder_id)
+    local x, y
+    if w ~= nil then
+        x, y = wonder_place(view, w)
+    end
+    if x == nil then
+        g.wonder_id = nil
+        return false
+    end
+    if g.wonder_defend then
+        g.mission = 1
+        set_place(g, "defend", x, y, GUARD_RADIUS, 0)
+    else
+        g.mission = 2
+        g.enemy = w.player
+        set_place(g, "attack", x, y, 0, w.player)
+    end
+    return true
+end
+M.wonder_task = wonder_task
+
+-- the groups AttackUnit and DefendUnit may send (CollectAll): the army's sub-groups at a task, with units
+local function wonder_groups(memory)
+    local out = {}
+    for _, g in ipairs(G.all(army(memory))) do
+        if g.role == "army" and g.phase == "task" and #g.units > 0 then
+            out[#out + 1] = g
+        end
+    end
+    table.sort(out, function(p, q) return p.id < q.id end)
+    return out
+end
+
+local function retask(view, memory, g, w, defend)
+    g.wonder_id, g.wonder_defend = w.id, defend or nil
+    if g.air then
+        g.task_check = view.time + ai.random(15, 180) * 1000
+    end
+    wonder_task(view, g)
+end
+
+-- AttackUnit: a share of the groups by difficulty (Easy 5-10%, Medium 10-25%, Hard 25-40%, with more than 3 groups)
+-- at the wonder and a new attack group; a team with enough wonders to win gets every group and five new ones, and
+-- the wonder race starts
+local function attack_unit(view, memory, w)
+    local a = army(memory)
+    local ws = wonders()
+    local _, strength = team_wonders(w.team)
+    local groups = wonder_groups(memory)
+    local selected = {}
+    local all = false
+    if strength < (ws.to_win or 0) or (ws.to_win or 0) == 0 then
+        if #groups > 3 then
+            local lo, hi = T.by_difficulty(memory, 50, 100, 250), T.by_difficulty(memory, 100, 250, 400)
+            local n = math.min((ai.random(lo, hi) * #groups + 999) // 1000, #groups)
+            for k = 1, n do
+                selected[#selected + 1] = groups[k]
+            end
+        end
+    else
+        a.race = true
+        selected = groups
+        all = true
+    end
+    for _, g in ipairs(selected) do
+        retask(view, memory, g, w, false)
+    end
+    for _ = 1, all and 5 or 1 do
+        local g = create_group(view, memory, 0, 2, w.player, "wonder")
+        if g ~= nil then
+            g.wonder_id = w.id
+        end
+    end
+    print(string.format("classic_lua army.wonder attack id=%d player=%d sent=%d race=%d", w.id, w.player, #selected,
+        a.race and 1 or 0))
+end
+
+-- DefendUnit: a share of the groups by difficulty (Easy 30-40%, Medium 20-30%, Hard 10-15%, with more than 3 groups)
+-- round the own or allied wonder (every group when its team is about to win) and a new defence group
+local function defend_unit(view, memory, w)
+    local ws = wonders()
+    local _, strength = team_wonders(w.team)
+    local groups = wonder_groups(memory)
+    local selected = {}
+    if (ws.to_win or 0) == 0 or strength < ws.to_win then
+        if #groups > 3 then
+            local lo, hi = T.by_difficulty(memory, 300, 200, 100), T.by_difficulty(memory, 400, 300, 150)
+            local n = math.min((ai.random(lo, hi) * #groups + 999) // 1000, #groups)
+            for k = 1, n do
+                selected[#selected + 1] = groups[k]
+            end
+        end
+    else
+        selected = groups
+    end
+    for _, g in ipairs(selected) do
+        retask(view, memory, g, w, true)
+    end
+    local g = create_group(view, memory, 1, 1, random_enemy(), "wonder")
+    if g ~= nil then
+        g.wonder_id, g.wonder_defend = w.id, true
+    end
+    print(string.format("classic_lua army.wonder defend id=%d player=%d sent=%d", w.id, w.player, #selected))
+end
+
+-- RespondToUnit (WonderStarted: another player's wonder completed, with the victory conditions on): an own or allied
+-- wonder defended, an enemy's attacked (and the next attack choice goes for the leading wonder racer); in the wonder
+-- race the 150-s attacks start. UpdateWonderRace: while an enemy team has enough wonders to win, one of its wonders
+-- (at random) is attacked every 150 s
+local function update_wonders(view, memory)
+    local a = army(memory)
+    local ws = wonders()
+    if not ws.victory then
+        return
+    end
+    a.wonders_known = a.wonders_known or {}
+    for _, w in ipairs(ws.list or {}) do
+        local key = tostring(w.id)
+        if w.built and not a.wonders_known[key] then
+            a.wonders_known[key] = true
+            if w.player ~= view.player then
+                if is_enemy(view, w.player) then
+                    a.was_attacked = true
+                    attack_unit(view, memory, w)
+                    if a.race and a.wonder_t == nil then
+                        a.wonder_t = view.time + WONDER_ATTACK_MS
+                    end
+                else
+                    defend_unit(view, memory, w)
+                end
+            end
+        end
+    end
+    if not a.race then
+        return
+    end
+    -- UpdateWonderRace: the enemy teams with enough wonders
+    local racer = nil
+    if (ws.to_win or 0) > 0 then
+        local teams = {}
+        for _, p in ipairs(ws.players or {}) do
+            if p.player ~= view.player and is_enemy(view, p.player) then
+                teams[p.team] = (teams[p.team] or 0)
+            end
+        end
+        for _, p in ipairs(ws.players or {}) do
+            if teams[p.team] ~= nil then
+                teams[p.team] = teams[p.team] + p.count
+            end
+        end
+        for _, team in ipairs(ai.keys(teams)) do
+            if teams[team] >= ws.to_win then
+                racer = team
+            end
+        end
+    end
+    a.race = racer ~= nil
+    if not a.race then
+        a.wonder_t = nil
+        return
+    end
+    if a.wonder_t ~= nil and view.time >= a.wonder_t then
+        local list = team_wonders(racer)
+        if #list > 0 then
+            attack_unit(view, memory, list[ai.random(1, #list)])
+            a.wonder_t = view.time + WONDER_ATTACK_MS
+        else
+            a.wonder_t = nil
+        end
+    end
+end
+
+-- the ICBM fired at a unit: its missile base (the ICBM's container) given the attack
+local function fire_icbm(target_id)
+    for _, id in ipairs(ai.units{type = ICBM}) do
+        local u = ai.unit(id)
+        if u ~= nil and u.inside ~= nil then
+            local code = ai.attack({u.inside}, target_id)
+            print(string.format("classic_lua army.icbm target=%d %s", target_id, tostring(code)))
+            return code == "ok"
+        end
+    end
+    return false
+end
+
+-- Update's ICBM with a new attack (kCMCannonChance by difficulty): the target player's seen unit with the most hit
+-- points of 1500 or more (DEVIATION: the most hit points of the class as the player's own improvements give them)
+local function icbm_at_player(memory, player)
+    if T.random_k() > CANNON_CHANCE_K[(memory.t.difficulty or 2) + 1] then
+        return
+    end
+    if #ai.units{type = ICBM} == 0 then
+        return
+    end
+    local best, bh = nil, nil
+    for _, id in ipairs(ai.seen{enemy = true, player = player}) do
+        local u = ai.unit(id)
+        if u ~= nil then
+            local hp = cls(u.type).hp or 0
+            if hp >= 1500 and (bh == nil or hp > bh or (hp == bh and u.id < best)) then
+                best, bh = u.id, hp
+            end
+        end
+    end
+    if best ~= nil then
+        fire_icbm(best)
+    end
+end
+
+-- Update after a wonder response (mWasAttacked): the enemy with the most wonders (its file's victory share), its
+-- team's wonder nearest the town attacked by a new group, and the ICBM at it
+local function attack_wonder_racer(view, memory)
+    local a = army(memory)
+    a.was_attacked = false
+    local ws = wonders()
+    local best, bc = nil, 0
+    for _, p in ipairs(ws.players or {}) do
+        if p.player ~= view.player and is_enemy(view, p.player) and p.count > bc then
+            best, bc = p, p.count
+        end
+    end
+    if best == nil then
+        return
+    end
+    local tx, ty = R.town(view)
+    local near, nd = nil, nil
+    for _, w in ipairs(team_wonders(best.team)) do
+        local x, y = wonder_place(view, w)
+        if x ~= nil and tx ~= nil then
+            local d = d2(x, y, tx, ty)
+            if nd == nil or d < nd then
+                near, nd = w, d
+            end
+        end
+    end
+    if near == nil then
+        return
+    end
+    local g = create_group(view, memory, 0, 2, near.player, "wonder")
+    if g ~= nil then
+        g.wonder_id = near.id
+    end
+    print(string.format("classic_lua army.wonder racer id=%d player=%d", near.id, near.player))
+    fire_icbm(near.id)
+end
+
+-- CheckSpecials (every ship_maintenance_timer / 2 minutes): the anti-missile batteries (one, then one more per town
+-- centre, settlement or capitol up to 10; more than 10: ChooseUnitsToKill NOT STARTED) and, with the missile base
+-- power, one ICBM kept. The capitols' cloaking: NOT STARTED
+local function check_specials(view, memory)
+    local a = army(memory)
+    if view.time <= (a.next_special or 0) then
+        return
+    end
+    a.next_special = view.time + memory.t.behavior.ship_maintenance_timer * 30000
+    local waiting = U.state(memory).waiting
+    local t = U.class_tech(view, AMB)
+    if t ~= nil and t.available and not t.obsolete and view.epoch >= (t.epoch or 0) then
+        local towns = #ai.units{type = C.settlement} + #ai.units{type = C.town_center} + #ai.units{type = "b_capitol"}
+        local n = #ai.units{type = AMB} + (waiting[AMB] or 0)
+        if n == 0 or (n < towns and n + 1 < 10) then
+            U.request(view, memory, AMB, 1)
+        end
+    end
+    local it = U.class_tech(view, ICBM)
+    if it ~= nil and it.available and not it.obsolete and view.epoch >= (it.epoch or 0) then
+        if #ai.units{type = ICBM} + (waiting[ICBM] or 0) < 1 then
+            U.request(view, memory, ICBM, 1)
+        end
+    end
+end
+
 -- CounterAttack: a defence group (kind 1, mission 3) for the package's town against its attacker
 local function counter_attack(view, memory, pk)
     if pk.player == 0 or unit_allowance(view, memory) <= 0 then
@@ -2693,6 +3061,7 @@ local function defense(view, memory)
     end
     check_naval(view, memory)
     check_space(view, memory)
+    check_specials(view, memory)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -2701,7 +3070,13 @@ end
 local function attack(view, memory)
     local cp = memory.cp
     local a = army(memory)
-    if R.town(view) == nil or view.time < cp.next_attack then
+    if R.town(view) == nil or (view.time < cp.next_attack and not a.was_attacked) then
+        return
+    end
+    if a.was_attacked then
+        -- (Update after a wonder response: the leading wonder racer's nearest wonder, the ICBM at it)
+        attack_wonder_racer(view, memory)
+        require("classic_lua.main").set_next_attack(view, memory)
         return
     end
     local main = require("classic_lua.main")
@@ -2759,6 +3134,7 @@ local function attack(view, memory)
         local peace = (view.epoch <= 0 and not p.prehistoric_attacks) or (view.epoch == 1 and not p.stone_attacks)
         if not peace then
             create_group(view, memory, 0, 2, choice, "attack")
+            icbm_at_player(memory, choice)
         end
     end
     main.set_next_attack(view, memory)
@@ -2891,6 +3267,7 @@ function M.step(view, memory)
     if view.time >= (memory.me + 5) * 1000 then
         defense(view, memory)   -- (the defence commander's first update at the player id + 5 s)
     end
+    update_wonders(view, memory)
     attack(view, memory)
     drop_spent(view, memory)
     -- (a sub-group waiting for its first units is no lib.groups group yet: lib.groups drops empty groups)
