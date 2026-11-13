@@ -3,7 +3,8 @@
 // actions' world edits (ee_screenscpp_sea*), the actions' world, screens and files (ee_screenscpp_sew,
 // ee_screenscpp_sew_elevation), the placements' (ee_screenscpp_sep) and the selection's (ee_screenscpp_seu*: the
 // click, the lasso, the rotation, the deletion; the original's EESEADeleteUnit.cpp 0x1a6b45..0x1a7331, its class an
-// EESEARust kind, ee/EESEARust.h). The paint actions themselves are
+// EESEARust kind, ee/EESEARust.h; EESEALasso.cpp 0x1a7358..0x1a747d and EESEAMouseClick.cpp 0x1a747d..0x1a75e0, their
+// classes' bodies inline over Rust). The paint actions themselves are
 // EESEAPaintRust (ee/EESEAPaint.h): the original's EESEAPaintElevation.cpp 0x1a830a..0x1a86ff, EESEAPaintMoutains.cpp
 // 0x1a86ff..0x1a8d3e and EESEAPaintTerrain.cpp 0x1a8d3e..0x1a9112 (their deque and std::sort COMDATs with them).
 #include <windows.h>
@@ -110,6 +111,7 @@
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUnitPicker.h"
+#include "ee/EEAMouseClick.h"
 #include "lle/GERectangle.h"
 #include "ee/EESEARust.h"
 
@@ -876,6 +878,23 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
         return 0;
     case EE_SCREENS_SEU_MESSAGE_UNIT_TYPE:
         return (uintptr_t)(intptr_t)static_cast<EEMSelectUnits*>(inUnit)->mL30;
+    case EE_SCREENS_SEU_PICK_AT_MOUSE:
+        return (uintptr_t)gUnitPicker.PickUnit(gMouse->mPosition, 0);
+    case EE_SCREENS_SEU_UNIT_RELEASE:
+        theUnit->Dereference();
+        return 0;
+    case EE_SCREENS_SEU_NEW_TOGGLE:
+        return (uintptr_t)static_cast<EEMessage*>(new EEMAddUnitToSelectedGroup(theUnit->mUnitID));
+    case EE_SCREENS_SEU_NEW_UNSELECT_ALL:
+        return (uintptr_t)static_cast<EEMessage*>(new EEMUnselectAllUnits);
+    case EE_SCREENS_SEU_SET_MESSAGE:
+        static_cast<EEAMouseClick*>(static_cast<EEAction*>(inUnit))->SetMessage(reinterpret_cast<EEMessage*>(inA));
+        return 0;
+    case EE_SCREENS_SEU_POST:
+        gUserInterface->PostAction(static_cast<EEAction*>(inUnit));
+        return 0;
+    case EE_SCREENS_SEU_MESSAGE_RECTANGLE:
+        return (uintptr_t)&static_cast<EEMSelectUnits*>(inUnit)->mRectangle;
     }
     return 0;
 }

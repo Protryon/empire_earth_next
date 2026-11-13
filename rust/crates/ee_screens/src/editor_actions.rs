@@ -377,6 +377,20 @@ pub const EE_SCREENS_SEU_MESSAGE_UNIT: u32 = 29;
 pub const EE_SCREENS_SEU_MESSAGE_RELEASE: u32 = 30;
 /// -> the lasso message's unit type (`EEMSelectUnits::mL30`).
 pub const EE_SCREENS_SEU_MESSAGE_UNIT_TYPE: u32 = 31;
+/// -> the unit under the mouse, referenced (`gUnitPicker.PickUnit(gMouse->mPosition, 0)`), or 0.
+pub const EE_SCREENS_SEU_PICK_AT_MOUSE: u32 = 32;
+/// The unit's reference released.
+pub const EE_SCREENS_SEU_UNIT_RELEASE: u32 = 33;
+/// -> a new `EEMAddUnitToSelectedGroup` of the unit's id (an `EEMessage*`).
+pub const EE_SCREENS_SEU_NEW_TOGGLE: u32 = 34;
+/// -> a new `EEMUnselectAllUnits` (an `EEMessage*`).
+pub const EE_SCREENS_SEU_NEW_UNSELECT_ALL: u32 = 35;
+/// The click action (`unit`: an `EEAction*`, an `EEAMouseClick`) holds the message a (`SetMessage`).
+pub const EE_SCREENS_SEU_SET_MESSAGE: u32 = 36;
+/// The action (`unit`: an `EEAction*`) posted (`gUserInterface->PostAction`).
+pub const EE_SCREENS_SEU_POST: u32 = 37;
+/// -> the lasso message's rectangle (`&EEMSelectUnits::mRectangle`, a `GERectangle*`).
+pub const EE_SCREENS_SEU_MESSAGE_RECTANGLE: u32 = 38;
 
 /// The message types the click and the lasso apply (`EEMessageID.h`).
 pub const EE_SCREENS_SEU_MSG_SELECT_UNIT: usize = 0x48;
@@ -438,6 +452,36 @@ pub fn apply_click<H: SeuHost + ?Sized>(h: &mut H, message: usize) {
     }
     seu(h, EE_SCREENS_SEU_UPDATE_SELECTION, 0);
     seu(h, EE_SCREENS_SEU_MESSAGE_RELEASE, message);
+}
+
+/// `EESEAMouseClick::Execute` (not while rotating): a selected unit under the mouse is toggled off (the toggle
+/// message), empty ground clears the selection (the unselect-all message), an unselected unit does nothing; the
+/// message made is the action's (`action`: its `EEAction*`) and the action posted.
+pub fn click_execute<H: SeuHost + ?Sized>(h: &mut H, action: usize, rotating: bool) {
+    if rotating {
+        return;
+    }
+    let unit = seu(h, EE_SCREENS_SEU_PICK_AT_MOUSE, 0);
+    let mut message = 0;
+    if unit != 0 {
+        if seu(h, EE_SCREENS_SEU_HAS_COMPLEX, unit) != 0 && seu(h, EE_SCREENS_SEU_IS_SELECTED, unit) != 0 {
+            message = seu(h, EE_SCREENS_SEU_NEW_TOGGLE, unit);
+        }
+        seu(h, EE_SCREENS_SEU_UNIT_RELEASE, unit);
+    } else {
+        message = seu(h, EE_SCREENS_SEU_NEW_UNSELECT_ALL, 0);
+    }
+    if message != 0 {
+        h.op(EE_SCREENS_SEU_SET_MESSAGE, action, message as isize, 0.0);
+        seu(h, EE_SCREENS_SEU_POST, action);
+    }
+}
+
+/// `EESEALasso::SelectInRectangle`: the selected units in the rectangle deselected, the action (`action`: its
+/// `EEAction*`) posted (the original's second argument is unused).
+pub fn lasso_in_rectangle<H: SeuHost + ?Sized>(h: &mut H, action: usize, rectangle: usize) {
+    lasso_select(h, rectangle, 0, true, true);
+    seu(h, EE_SCREENS_SEU_POST, action);
 }
 
 /// `EESEALasso::SelectUnits`: the units of the type picked in the rectangle selected when not yet (unless only
@@ -809,6 +853,8 @@ mod tests {
         msg_unit: usize,
         picked: Vec<u32>,
         log: Vec<String>,
+        /// the unit under the mouse
+        mouse: usize,
     }
 
     impl Sel {
@@ -846,6 +892,16 @@ mod tests {
                 EE_SCREENS_SEU_MESSAGE_TYPE => unit - 1000,
                 EE_SCREENS_SEU_MESSAGE_UNIT => self.msg_unit,
                 EE_SCREENS_SEU_MESSAGE_UNIT_TYPE => 7,
+                EE_SCREENS_SEU_PICK_AT_MOUSE => self.mouse,
+                EE_SCREENS_SEU_NEW_TOGGLE => {
+                    self.log.push(format!("toggle message {unit}"));
+                    2000 + unit
+                }
+                EE_SCREENS_SEU_NEW_UNSELECT_ALL => {
+                    self.log.push("unselect-all message".into());
+                    3000
+                }
+                EE_SCREENS_SEU_MESSAGE_RECTANGLE => unit + 5000,
                 EE_SCREENS_SEU_SELECT => {
                     self.units[unit].selected = true;
                     self.selection.push(unit);
@@ -934,6 +990,60 @@ mod tests {
         h.picked = vec![1, 4];
         lasso_select(&mut h, 55, 0, true, true);
         assert_eq!(h.selection, [3]);
+    }
+
+    #[test]
+    fn click_execute_makes_the_message_and_posts() {
+        let (rel, set, post) = (EE_SCREENS_SEU_UNIT_RELEASE, EE_SCREENS_SEU_SET_MESSAGE, EE_SCREENS_SEU_POST);
+        // rotating: nothing, not even a pick
+        let mut h = Sel::with(3);
+        h.mouse = 1;
+        click_execute(&mut h, 77, true);
+        assert!(h.log.is_empty());
+        // nothing under the mouse: unselect all
+        h.mouse = 0;
+        click_execute(&mut h, 77, false);
+        assert_eq!(h.log, ["unselect-all message".to_string(), format!("op {set} 77 3000"), format!("op {post} 77 0")]);
+        // a selected unit of a complex unit: the toggle, then the unit released before the post
+        h.log.clear();
+        h.units[2] = U { complex: true, selected: true, ..U::default() };
+        h.mouse = 2;
+        click_execute(&mut h, 77, false);
+        assert_eq!(
+            h.log,
+            [
+                "toggle message 2".to_string(),
+                format!("op {rel} 2 0"),
+                format!("op {set} 77 2002"),
+                format!("op {post} 77 0")
+            ]
+        );
+        // an unselected unit, or a selected one without a complex unit: released, no message, not posted
+        h.log.clear();
+        h.units[1] = U { complex: true, ..U::default() };
+        h.mouse = 1;
+        click_execute(&mut h, 77, false);
+        h.units[3] = U { selected: true, ..U::default() };
+        h.mouse = 3;
+        click_execute(&mut h, 77, false);
+        assert_eq!(h.log, [format!("op {rel} 1 0"), format!("op {rel} 3 0")]);
+    }
+
+    #[test]
+    fn lasso_in_rectangle_deselects_then_posts() {
+        let mut h = Sel::with(4);
+        h.units[1].selected = true;
+        h.units[2].selected = true;
+        h.selection = vec![1, 2];
+        h.picked = vec![2, 3];
+        lasso_in_rectangle(&mut h, 88, 55);
+        assert_eq!(h.selection, [1]);
+        let post = EE_SCREENS_SEU_POST;
+        // (the original deselects an unselected unit too: DeselectUnit on it does nothing)
+        assert_eq!(
+            h.log,
+            ["pick 55 0".to_string(), "deselect 2".to_string(), "deselect 3".to_string(), format!("op {post} 88 0")]
+        );
     }
 
     #[test]

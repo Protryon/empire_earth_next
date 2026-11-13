@@ -885,6 +885,27 @@ constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_RELEASE = 30;
 /// -> the lasso message's unit type (`EEMSelectUnits::mL30`).
 constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_UNIT_TYPE = 31;
 
+/// -> the unit under the mouse, referenced (`gUnitPicker.PickUnit(gMouse->mPosition, 0)`), or 0.
+constexpr static const uint32_t EE_SCREENS_SEU_PICK_AT_MOUSE = 32;
+
+/// The unit's reference released.
+constexpr static const uint32_t EE_SCREENS_SEU_UNIT_RELEASE = 33;
+
+/// -> a new `EEMAddUnitToSelectedGroup` of the unit's id (an `EEMessage*`).
+constexpr static const uint32_t EE_SCREENS_SEU_NEW_TOGGLE = 34;
+
+/// -> a new `EEMUnselectAllUnits` (an `EEMessage*`).
+constexpr static const uint32_t EE_SCREENS_SEU_NEW_UNSELECT_ALL = 35;
+
+/// The click action (`unit`: an `EEAction*`, an `EEAMouseClick`) holds the message a (`SetMessage`).
+constexpr static const uint32_t EE_SCREENS_SEU_SET_MESSAGE = 36;
+
+/// The action (`unit`: an `EEAction*`) posted (`gUserInterface->PostAction`).
+constexpr static const uint32_t EE_SCREENS_SEU_POST = 37;
+
+/// -> the lasso message's rectangle (`&EEMSelectUnits::mRectangle`, a `GERectangle*`).
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_RECTANGLE = 38;
+
 /// The message types the click and the lasso apply (`EEMessageID.h`).
 constexpr static const size_t EE_SCREENS_SEU_MSG_SELECT_UNIT = 72;
 
@@ -3694,9 +3715,18 @@ void ee_screens_sea_paint_run(EeScreensSeaPaint *paint);
 /// `EESEAMouseClick::Virtual4`: the click's message (an `EEMessage*`, not NULL) applied and released.
 void ee_screens_seu_click(void *message);
 
-/// `EESEALasso::Virtual4`: the lasso's message (an `EEMSelectUnits*`) applied over its rectangle (a
-/// `GERectangle*`) and released.
-void ee_screens_seu_lasso(void *message, const void *rectangle);
+/// `EESEAMouseClick::Execute`: the click at the mouse made into the action's message and the action (`action`, an
+/// `EEAction*`: the `EEAMouseClick`) posted; nothing while rotating.
+void ee_screens_seu_click_execute(void *action,
+                                  uint8_t rotating);
+
+/// `EESEALasso::Virtual4`: the lasso's message (an `EEMSelectUnits*`) applied over its rectangle and released.
+void ee_screens_seu_lasso_message(void *message);
+
+/// `EESEALasso::SelectInRectangle`: the selected units in the rectangle (a `GERectangle*`) deselected, the action
+/// (`action`, an `EEAction*`) posted.
+void ee_screens_seu_lasso_in_rectangle(void *action,
+                                       const void *rectangle);
 
 /// `EESEALasso::SelectUnits`.
 void ee_screens_seu_lasso_select(const void *rectangle,

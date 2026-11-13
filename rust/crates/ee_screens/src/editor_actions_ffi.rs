@@ -6,7 +6,8 @@
 use core::ffi::c_void;
 
 use crate::editor_actions::{
-    apply_click, apply_lasso, lasso_select, rotate_selection, SePaint, SePaintKind, SeaHost, SeuHost,
+    apply_click, apply_lasso, click_execute, lasso_in_rectangle, lasso_select, rotate_selection, SePaint, SePaintKind,
+    SeaHost, SeuHost, EE_SCREENS_SEU_MESSAGE_RECTANGLE,
 };
 
 /// cbindgen:ignore
@@ -146,11 +147,28 @@ pub extern "C" fn ee_screens_seu_click(message: *mut c_void) {
     apply_click(&mut Selection, message as usize);
 }
 
-/// `EESEALasso::Virtual4`: the lasso's message (an `EEMSelectUnits*`) applied over its rectangle (a
-/// `GERectangle*`) and released.
+/// `EESEAMouseClick::Execute`: the click at the mouse made into the action's message and the action (`action`, an
+/// `EEAction*`: the `EEAMouseClick`) posted; nothing while rotating.
 #[no_mangle]
-pub extern "C" fn ee_screens_seu_lasso(message: *mut c_void, rectangle: *const c_void) {
-    apply_lasso(&mut Selection, message as usize, rectangle as usize);
+pub extern "C" fn ee_screens_seu_click_execute(action: *mut c_void, rotating: u8) {
+    click_execute(&mut Selection, action as usize, rotating != 0);
+}
+
+/// `EESEALasso::Virtual4`: the lasso's message (an `EEMSelectUnits*`) applied over its rectangle and released.
+#[no_mangle]
+pub extern "C" fn ee_screens_seu_lasso_message(message: *mut c_void) {
+    if message.is_null() {
+        return;
+    }
+    let rectangle = Selection.op(EE_SCREENS_SEU_MESSAGE_RECTANGLE, message as usize, 0, 0.0);
+    apply_lasso(&mut Selection, message as usize, rectangle);
+}
+
+/// `EESEALasso::SelectInRectangle`: the selected units in the rectangle (a `GERectangle*`) deselected, the action
+/// (`action`, an `EEAction*`) posted.
+#[no_mangle]
+pub extern "C" fn ee_screens_seu_lasso_in_rectangle(action: *mut c_void, rectangle: *const c_void) {
+    lasso_in_rectangle(&mut Selection, action as usize, rectangle as usize);
 }
 
 /// `EESEALasso::SelectUnits`.

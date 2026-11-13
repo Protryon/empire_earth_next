@@ -71,7 +71,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Empire Earth/EESimEditor.cpp",
                        # the host of the scenario editor's actions whole in Rust: the paints' ranges
                        # 0x1a830a..0x1a9112 (ee/EESEAPaint.h's EESEAPaintRust; ee_screens editor_actions.rs), the
-                       # deletion's 0x1a6b45..0x1a7331 (an EESEARust kind)
+                       # deletion's 0x1a6b45..0x1a7331 (an EESEARust kind), the lasso's and the click's
+                       # 0x1a7358..0x1a75e0 (their bodies inline over Rust: ee/EESEALasso.h, ee/EESEAMouseClick.h)
                        "Empire Earth/Scenario Editor Actions/EESEARust.cpp",
                        # TEST ONLY: the simulation capture of the Rust leaves' gates (EE_SIM_CAPTURE; tools/sim_capture.py)
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
