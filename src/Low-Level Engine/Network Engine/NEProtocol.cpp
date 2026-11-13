@@ -41,7 +41,6 @@ NEProtocol::NEProtocol(PIMModule* inModule)
                                 inModule->GetEntry("NPIMEnumerateNetworkAdapters");
     this->mGetClientAddress = (long (*)(const NEServer*, unsigned long, UWideString&))
                         inModule->GetEntry("NPIMGetClientAddress");
-    this->mGetConfiguration = (long (*)(NEProtocolConfiguration*&))inModule->GetEntry("NPIMGetConfiguration");
     this->mGetDetectedGame = (long (*)(unsigned long, UString&, UString&, UWideString&))
                        inModule->GetEntry("NPIMGetDetectedGame");
     this->mGetDetectedGameCount = (unsigned long (*)())inModule->GetEntry("NPIMGetDetectedGameCount");
@@ -62,7 +61,6 @@ NEProtocol::NEProtocol(PIMModule* inModule)
     this->mSendSingle = (long (*)(const UString&, unsigned short, const unsigned char*, unsigned long))
                   inModule->GetEntry("NPIMSendSingle");
     this->mSendTo = (long (*)(NEServer*, unsigned long, const unsigned char*, unsigned long))inModule->GetEntry("NPIMSendTo");
-    this->mSetConfiguration = (long (*)(NEProtocolConfiguration*))inModule->GetEntry("NPIMSetConfiguration");
     this->mXferReceive = (long (*)(unsigned long, unsigned char*, unsigned long&))inModule->GetEntry("NPIMXferReceive");
     this->mXferSendTo = (long (*)(NEServer*, unsigned long, const unsigned char*, unsigned long))
                   inModule->GetEntry("NPIMXferSendTo");

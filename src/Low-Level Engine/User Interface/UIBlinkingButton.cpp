@@ -83,26 +83,21 @@ long UIBlinkingButton::CopyData()
 {
     bool thePolled = this->mPoll.Poll() != 0;
     EeUiBlinkShow theShow = ee_ui_blink_copy_data(reinterpret_cast<EeUiBlinkFields*>(&this->mBlinkPhase), thePolled,
-                                                  this->mPoll.GetTimeLeft(), this->mState, this->GetBgOpacity(),
+                                                  this->mPoll.GetTimeLeft(), this->GetState(), this->GetBgOpacity(),
                                                   this->GetBorderOpacity());
     this->SetBgOpacity(theShow.background);
     this->SetBorderOpacity(theShow.border);
-    if (this->mPressedBitmap)
-        this->mPressedBitmap->SetOpacity(theShow.pressed);
-    if (this->mNormalBitmap)
-        this->mNormalBitmap->SetOpacity(theShow.normal);
+    if (this->GetPressedBitmap())
+        this->GetPressedBitmap()->SetOpacity(theShow.pressed);
+    if (this->GetNormalBitmap())
+        this->GetNormalBitmap()->SetOpacity(theShow.normal);
     return UIButton::CopyData();
 }
 
 // Draws the control, then the copied button bitmap; ICF-folded into UIButton::DrawPolygons (0x1005eb30): the same body
 long UIBlinkingButton::DrawPolygons()
 {
-    long theResult = UIControl::DrawPolygons();
-    if (this->mCopiedBitmap) {
-        this->mCopiedBitmap->SetLocation(this->mBitmapLocation);
-        theResult = this->GetRasterizer()->Draw(this->mCopiedBitmap, this->GetScreenIndex());
-    }
-    return theResult;
+    return UIButton::DrawPolygons();
 }
 
 // FUNCTION: LLE 0x1005e477

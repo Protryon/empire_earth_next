@@ -837,7 +837,7 @@ void DumpState(const std::string& inPath)
             for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {
                 const EEGoalDeque& theGoals = x->GetQueueGoals(q);
                 for (size_t g = 0; g < theGoals.size(); g++)
-                    fprintf(f, " g%ld:%s:%08lx", q, typeid(*theGoals[g]).name(),
+                    fprintf(f, " g%ld:k%u:%08lx", q, (unsigned)theGoals[g]->mKind,
                             (unsigned long)(uint32_t)theGoals[g]->GetOutOfSynchChecksum());
             }
             // what the raw bytes hold only as pointers: the contacts, the last attacker, the area effects
@@ -1283,6 +1283,13 @@ void Select(long inControl, const std::string& inValue, const std::string& inLab
     long theSelection = -1;
     if (!ComboState(inControl, theLines, theSelection))
         Fail(inLabel + ": control " + std::to_string(inControl) + " is not a combo on the lobby");
+    if (theLines.empty()) {
+        // a combo the lobby has not filled yet (or is filling again from a lobby update): under load the lines come
+        // later than the driver's pause ("index #0 outside the combo's 0 lines", an exit 2 before the game)
+        WaitFor((inLabel + "'s lines").c_str(), 60, [&] {
+            return ComboState(inControl, theLines, theSelection) && !theLines.empty();
+        });
+    }
     long theIndex = Resolve(inValue, theLines, inLabel);
     if (theSelection != theIndex) {
         {
@@ -1309,10 +1316,14 @@ void SetUpLobby()
     WaitFor("the lobby's combos", 60, [&] {
         std::vector<std::string> l;
         long s;
+        // each combo there and filled: the slots' lines come with the local server's first lobby update
         for (long k = 0; k < kVisibleSlots; k++)
-            if (!ComboState(kPlayerType + k, l, s))
+            if (!ComboState(kPlayerType + k, l, s) || l.empty())
                 return false;
-        return ComboState(177, l, s) && ComboState(179, l, s) && ComboState(207, l, s);
+        for (long c : {177L, 179L, 207L})
+            if (!ComboState(c, l, s) || l.empty())
+                return false;
+        return true;
     });
     SimSleep(1500);   // the local server's readiness and queued lobby updates (the harness waits 3 s)
     // (control, value, label), applied in order, absolutely (ai_game.py)
@@ -1631,9 +1642,10 @@ void ScenarioFromLobby()
     WaitForm(kFormLobbyID);
     Note("UI lobby (scenario)");
     WaitFor("the lobby's game type box", 60, [&] {
-        std::vector<std::string> l;
+        // filled (SetUpLobby's wait): under load an empty box took no selection and the run timed out before the game
+        std::vector<std::string> l, d;
         long s;
-        return ComboState(175, l, s) && ComboState(207, l, s);
+        return ComboState(175, l, s) && l.size() > 2 && ComboState(207, d, s) && !d.empty();
     });
     SimSleep(1500);   // the local server's readiness (SetUpLobby's wait)
     {

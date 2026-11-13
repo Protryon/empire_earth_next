@@ -103,7 +103,7 @@ SmartPtr<Window> MSMessageBox::PrepareWindow(Window* parent)
     SmartPtr<Window> window=CreateNativeWindow();
     window->SetParent(parent);
     window->SetTitle(this->mTitle);
-    window->mStyle=0x59;
+    window->SetStyle(0x59);
     window->Create(WONRectangle(0,0,this->Width(),this->Height()));
     window->AddComponent(this);
     this->mButton1->RequestFocus();

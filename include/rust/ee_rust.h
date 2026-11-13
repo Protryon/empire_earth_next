@@ -16,6 +16,7 @@
 #include "ee_gfx.h"
 #include "ee_input.h"
 #include "ee_mixer.h"
+#include "ee_net.h"
 #include "ee_net_tcp.h"
 #include "ee_netmsg.h"
 #include "ee_openformats.h"

@@ -22,10 +22,33 @@ M.OPT = {
     techs = true,           -- the town centre's gathering techs
     stone_uncap = true,     -- no citizen cap at the places' work in the Stone Age
     claim_target = true,    -- the mines claimed for the phase's whole target
-    food_reach = true,      -- the Stone claim reaches claim_dry while the food places are short
-    boat_wood = false,      -- (off until benched) in stone_start, until the boats are out, the settlements wait too: the
-                            -- bank's wood pays the dock and the boats first
+    food_reach = false,     -- the Stone claim reaches claim_dry while the food places are short (off: the owner's playtest,
+                            -- "unpopulated food settlement near my base"; the bisect: no gain)
+    boat_wood = false,      -- (on in boom_order, §8.51) in stone_start, until the boats are out, the settlements wait
+                            -- too: the bank's wood pays the dock and the boats first
     shore_scout = false,    -- (off until benched) one wood gatherer walks the shore round home before the advance
+    lua_farms = false,      -- (on in boom_order, §8.51) the Copper Age's 3 granaries sited by lib.place one after
+                            -- another, and the engine builds no granary's fields (gather granary_farms = 0) until all
+                            -- stand, then 8 each
+    soldiers_after_boats = false, -- (on in boom_order) stone_start trains no soldier before 10 boats, unless threatened
+    settle_afford = false,  -- (off until benched) a settlement is placed only with its whole cost in hand, and one refused
+                            -- for its cost tries again in 20 s, not 5 minutes
+    builder_pool = false,   -- (off until benched) the Stone Age's citizens: the fill's places plus those building (at most
+                            -- BUILDER_POOL), never past STONE_MOST; none for a resource past its most
+    blocked_skip = false,   -- (on in boom_order) a foundation lost on a blocked tile passes over every tile it covered
+    mines_early = false,    -- (off until benched) from the advance the gold and iron mines are claimed for stone_grow's
+                            -- target and their settlements pass the boat hold once the dock stands; lib.place retries a
+                            -- cost refusal in 20 s
+    boats_then_mines = false, -- (off until benched) past 10 boats, no more in the Stone Age while a kept mine waits for
+                            -- its settlement
+    owner_mines = false,    -- (off until benched) the owner's mines (his answers, 2026-11-13): the second gold and iron
+                            -- mines claimed and settled in the Prehistoric (touching, no food gatherers building); a
+                            -- third mine of a resource only past 12 on it; wood 7 until Stone +12; the bank 575
+    pre_mines = false,      -- (off until benched) the Prehistoric part of owner_mines alone
+    pre_lean = false,       -- (off until benched) the owner's Prehistoric settlements: two patches while two home patches
+                            -- stand, one settlement a site (any kind touched), none for wood
+    mines_after_barracks = false, -- (off until benched) a Prehistoric mine settlement waits for the barracks and a tower
+    owner_barracks = false, -- (off until benched) the Prehistoric barracks at OWNER_BARRACKS_AT citizens (his: 2.4 min)
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -38,9 +61,15 @@ M.FILL = {
     stone_start = {{"food", 18}, {"wood", 12}, {"stone", 2}, {"gold", 2}, {"iron", 2}},
     stone_grow = {{"food", 18}, {"wood", 10}, {"stone", 2}, {"gold", 2}, {"iron", 2}, {"iron", 12}, {"gold", 12},
                   {"stone", 6}, {"iron", 15}, {"gold", 15}, {"wood", 12}, {"iron", 18}, {"gold", 18}, {"wood", 15}},
-    copper = {{"food", 18}, {"wood", 15}, {"stone", 6}, {"gold", 18}, {"iron", 18}, {"food", 28}, {"wood", 20}},
+    -- (the owner's Copper town: 120-133 citizens, food 25-44 with 13 boats, wood 16-42; "not enough cits" at 80 min)
+    copper = {{"food", 18}, {"wood", 15}, {"stone", 6}, {"gold", 18}, {"iron", 18}, {"food", 28}, {"wood", 20},
+              {"food", 40}, {"wood", 30}},
 }
 M.FILL.stone_developed = M.FILL.stone_grow
+-- (OPT.owner_mines: the citizens the early Stone wood leaves go to the Prehistoric's two settled mines, 6 each)
+M.FILL_OWNER = {
+    stone_start = {{"food", 18}, {"wood", 12}, {"stone", 2}, {"gold", 2}, {"iron", 2}, {"iron", 6}, {"gold", 6}},
+}
 
 -- the acceptance ranges of each phase (tools: the trace check, econ\order_check.py): gatherers [lo, hi]
 M.RANGES = {
@@ -48,26 +77,32 @@ M.RANGES = {
     stone_developed = {food = {15, 21}, wood = {10, 15}, stone = {6, 6}, gold = {12, 18}, iron = {12, 18}},
 }
 
+-- the phase's fill (OPT.owner_mines: its own where it has one)
+local function fill_of(phase)
+    return (M.OPT.owner_mines and M.FILL_OWNER[phase]) or M.FILL[phase] or {}
+end
+
 -- the plan overlays (the economy's keys; the army adds its soldier fields here)
 M.PHASE = {
-    -- (patches 3: the start's 12 on two, the food past the game near home on a third; settlements 7: the patches,
-    -- the forest edge and the three mines)
+    -- (patches 3: the start's 12 on two, the food past the game near home on a third; settlements 10: the patches,
+    -- the forest edge, the three mines, and the touching ones by the home patches and mines the town centre served:
+    -- at 7 the third patch stood claimed with no settlement in every game, food 15.9 on 18 wanted)
     pre = {citizens = 32, citizens_max = 32, patches = 3, hunt = 6, towers = 3, barracks = 1, ranges = 0,
-           barracks_at = 24, settlements = 7},
+           barracks_at = 24, settlements = 10},
     -- (from the Stone Age a second town centre: one trains about 2 citizens a minute, the owner's town grew by 3.4 a
     -- minute, 35 to 86 in 15 minutes)
     -- (one town centre until the boats and the soldiers: the second's 5 citizens garrisoned at the advance left the town
     -- at its weakest, boom-defence's seeds 4 and 24)
     stone_start = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
-                   army_first = false, towers = 4, town_centers = 1, tc_at = 30, claim_dry = 45,
+                   army_first = false, towers = 4, town_centers = 1, tc_at = 30, claim_dry = 45, settlements = 14,
                    soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},   -- (the army's: rs0, boom-defence)
     stone_grow = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
-                  army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
+                  army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45, settlements = 14,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
     stone_developed = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
-                       army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
+                       army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45, settlements = 14,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
-    copper = {citizens = 90, citizens_max = 100, boats = 13, docks = 1, granaries = 3, save_at = 75,
+    copper = {citizens = 120, citizens_max = 130, boats = 13, docks = 1, granaries = 3, settlements = 16, save_at = 75,
               save_after = 12},
 }
 
@@ -78,6 +113,14 @@ M.RAID_WAIT_MIN = 15       -- minutes developed: the Copper Age is saved for eve
 M.FOOD_BANK = 0            -- food kept past the Stone Age's cost at the advance: the 5-10 soldiers trained at once (8 x 30)
 M.WOOD_BANK = 500          -- wood kept in the Prehistoric reserve while the Stone Age is saved for (the dock 175, ten
                            -- boats 500)
+M.WOOD_BANK_OWNER = 575    -- (OPT.owner_mines) the owner's bank at the advance (his playtest logs: 575 wood)
+M.STONE_WOOD = 7           -- (OPT.owner_mines) wood gatherers at most until STONE_WOOD_MIN into the Stone Age
+M.STONE_WOOD_MIN = 12
+M.wood_cap = nil           -- (set by boom each step)
+M.OWNER_BARRACKS_AT = 6    -- (OPT.owner_barracks) citizens
+M.BUILDER_POOL = 11        -- (OPT.builder_pool) the Stone Age's citizens building on top of the fill's places, at most
+M.STONE_MOST = 86          -- ... and the Stone Age's citizens at most (the owner's 35 -> 86)
+M.BUILDER_IDLE = 4         -- (OPT.builder_pool) no citizen trained while this many stand idle
 
 local V = require("lib.view")
 
@@ -144,7 +187,7 @@ function M.plan(plan, phase)
     for _, r in ipairs(RESOURCES) do
         cap[r] = 0
     end
-    for _, s in ipairs(M.FILL[phase] or {}) do
+    for _, s in ipairs(fill_of(phase)) do
         cap[s[1]] = math.max(cap[s[1]], s[2])
     end
     cap.food = nil
@@ -163,11 +206,14 @@ function M.fill(phase, land, room, keep_left)
     local left = land
     local function give(r, upto)
         local most = math.min(upto, room[r] or upto)
+        if r == "wood" and M.wood_cap ~= nil then   -- (OPT.owner_mines: the early Stone wood, set by boom each step)
+            most = math.min(most, M.wood_cap)
+        end
         local n = math.max(math.min(most - want[r], left), 0)
         want[r] = want[r] + n
         left = left - n
     end
-    for _, s in ipairs(M.FILL[phase] or {}) do
+    for _, s in ipairs(fill_of(phase)) do
         give(s[1], s[2])
     end
     if keep_left then
@@ -189,7 +235,7 @@ end
 -- the most the fill puts on a resource
 function M.most(phase, resource)
     local n = 0
-    for _, s in ipairs(M.FILL[phase] or {}) do
+    for _, s in ipairs(fill_of(phase)) do
         if s[1] == resource then
             n = math.max(n, s[2])
         end

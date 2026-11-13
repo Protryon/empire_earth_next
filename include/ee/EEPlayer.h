@@ -556,8 +556,8 @@ public:
     void SetPlayer(EEPlayer* inPlayer);     // 0x1cd358
     void UpdateInterface(bool inEpochChanged);  // 0x1cd374
     EETechTree& operator=(const EETechTree& inOther);   // 0x1cd3cb
-    // 0x267eaa: the epoch the statistics group shows (inline, defined in ee/EEUIFMGGStatistics.h: refused at its
-    // one call site, the COMDAT follows EEUIFMGGStatistics::Select; provisional name)
+    // 0x267eaa: the epoch the statistics group shows (inline in the original's EEUIFMGGStatistics.h, the COMDAT after
+    // its Select; defined in EEUIFMGMainGroup.cpp with the panel groups' host; provisional name)
     long GetShownEpoch() const;
 
     // the save keys (EETechTree.cpp's `$E` chains 0x1cba2f..0x1cbc47; guard byte 0x562dc0). Unguarded

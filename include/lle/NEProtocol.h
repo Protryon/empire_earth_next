@@ -11,7 +11,6 @@
 
 class NEConnection;
 class NEProtocol;
-class NEProtocolConfiguration;
 class NEServer;
 class TSEvent;
 
@@ -35,8 +34,6 @@ public:
     unsigned long GetBytesSent() { return this->mBytesSent; }
     long GetClientAddress(const NEServer* inServer, unsigned long inIndex, UWideString& outAddress)
         { return (*this->mGetClientAddress)(inServer, inIndex, outAddress); }
-    long GetConfiguration(NEProtocolConfiguration*& outConfiguration)
-        { return (*this->mGetConfiguration)(outConfiguration); }
     static unsigned long GetCount() { return NEProtocol::sProtocols.size(); }
     long GetDetectedGame(unsigned long inIndex, UString& outName, UString& outHost, UWideString& outAddress)
         { return (*this->mGetDetectedGame)(inIndex, outName, outHost, outAddress); }
@@ -54,7 +51,6 @@ public:
     long SearchForGame(const UString& inHost, const UString& inName, bool inStart)
         { return (*this->mSearchForGame)(inHost, inName, inStart); }
     long SendSingle(const UString& inHost, unsigned short inPort, const unsigned char* inData, unsigned long inLength);
-    long SetConfiguration(NEProtocolConfiguration* inConfiguration) { return (*this->mSetConfiguration)(inConfiguration); }
     long XferReceive(unsigned long inSize, unsigned char* outBuffer, unsigned long& outReceived);
 
 private:
@@ -90,7 +86,6 @@ private:
     long (*mDeactivate)();
     unsigned long (*mEnumerateNetworkAdapters)(std::vector<UWideString>&);
     long (*mGetClientAddress)(const NEServer*, unsigned long, UWideString&);
-    long (*mGetConfiguration)(NEProtocolConfiguration*&);
     long (*mGetDetectedGame)(unsigned long, UString&, UString&, UWideString&);
     unsigned long (*mGetDetectedGameCount)();
     UWideString& (*mGetLocalAddress)(unsigned long);
@@ -107,7 +102,6 @@ private:
     long (*mSend)(NEConnection*, const unsigned char*, unsigned long);
     long (*mSendSingle)(const UString&, unsigned short, const unsigned char*, unsigned long);
     long (*mSendTo)(NEServer*, unsigned long, const unsigned char*, unsigned long);
-    long (*mSetConfiguration)(NEProtocolConfiguration*);
     long (*mXferSendTo)(NEServer*, unsigned long, const unsigned char*, unsigned long);   // +0x70
     long (*mXferReceive)(unsigned long, unsigned char*, unsigned long&);                  // +0x74 (after SendTo)
     PIMModule* mModule;                     // +0x78

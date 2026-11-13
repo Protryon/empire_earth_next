@@ -217,12 +217,12 @@ SmartPtr<Window> DialogLogic::GetDialogWindow(bool inReuse)
     if (inReuse && !this->mDialogStack.empty())
         return this->mDialogStack.back().mWindow;
     SmartPtr<Window> aWindow(CreateNativeWindow());
-    aWindow->mIsOneComponentWindow = true;
+    aWindow->SetOneComponentWindow(true);
     if (!this->mDialogStack.empty())
         aWindow->SetParent(this->mDialogStack.back().mWindow.get());
     else
         aWindow->SetParent(LobbyGetRootWindow());
-    aWindow->mStyle = 0x22;
+    aWindow->SetStyle(0x22);
     aWindow->Create(WONRectangle(0, 0, 100, 100));
     LobbyAddLogicListener(aWindow->mRoot.get());
     aWindow->mRoot->SetColorScheme(LobbyGetColorScheme());

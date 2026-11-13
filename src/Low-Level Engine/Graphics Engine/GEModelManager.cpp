@@ -3,8 +3,13 @@
 //
 // 0x100206c7..0x10020d20: GEModelManager's members, then the map<UString, GEModel*> COMDATs and the UList
 // template-static init pairs. No U2D keys. The ESVERIFY is the original's line 39 (0x27).
+//
+// port (R4.3, seventh part): the manager is a whole Rust object (ee_ge manobj.rs): the cache, the path, the lock and
+// the footprint with every method. This unit is its shell: the forwarders and the host, which makes each call the
+// original made on another object (the lock, the path, the models, the file lookup, the dump's lines).
 #include <windows.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <map>
 
 #include "lle/LowLevelEngineCore.h"
@@ -22,29 +27,96 @@
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
 #include "GEOpenFormats.h"   // GEFindModelFile: a model's .glb/.gltf
-#include "rust/ee_ge.h"       // ee_ge_cem_free; the manager's logic (ee_ge managers.rs)
+#include "rust/ee_ge.h"       // the manager (ee_ge manobj.rs), ee_ge_cem_free
 
-// (sModelNumber 0x100d953c, appended to created models' names, counts in Rust: ee_ge_modman_created_name)
-//
+// CreateModel's and CreateSubModel's counts and flags, through the Rust object to the host
+struct GEModelCreateArgs {
+    unsigned long mPolygonCount, mVertexCount, mMaterialCount, mTagPointCount, mFrameCount, mSubModelCount, mFlags;
+};
+
+// The calls the manager makes on other objects (EeGeManOp), in the original's statements
+intptr_t GEModelManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
+{
+    GEModelManager* theManager = (GEModelManager*)inOwner;
+    GEModel* theModel = (GEModel*)inObj;
+    const GEModelCreateArgs* theArgs = (const GEModelCreateArgs*)a;
+    switch (inOp) {
+    case EeGeManOp::LockCreate: {
+        TSCriticalSection* theLock = NULL;
+        ESVERIFY_AT(TSScheduler::CreateCriticalSection(theLock) == keseOK, 39);
+        return (intptr_t)theLock;
+    }
+    case EeGeManOp::LockDestroy:
+        TSScheduler::DestroyCriticalSection((TSCriticalSection*)inObj);
+        return 0;
+    case EeGeManOp::LockEnter:
+        ((TSCriticalSection*)inObj)->Enter();
+        return 0;
+    case EeGeManOp::LockLeave:
+        ((TSCriticalSection*)inObj)->Leave();
+        return 0;
+    case EeGeManOp::PathReference:
+        ((FSPath*)inObj)->Reference();
+        return 0;
+    case EeGeManOp::PathDereference:
+        ((FSPath*)inObj)->Dereference();
+        return 0;
+    case EeGeManOp::RefCount:
+        return (intptr_t)theModel->mReferenceCount;
+    case EeGeManOp::BaseDereference:
+        theModel->UReferenceCounter::Dereference();
+        return 0;
+    case EeGeManOp::DumpHeader:
+        fprintf(*(FSFileSpec*)inObj, "\n\n*********Model Manager - Current Loaded Files In Memory*********\n\n");
+        return 0;
+    case EeGeManOp::DumpLine:
+        fprintf(*(FSFileSpec*)b, "The %s model file is loaded in memory with a reference count of %ld.\n",
+                (const char*)a, theModel->mReferenceCount);
+        return 0;
+    case EeGeManOp::ModelNew:
+        return (intptr_t)new GEModel(theArgs->mPolygonCount, theArgs->mVertexCount, theArgs->mMaterialCount,
+                                     theArgs->mTagPointCount, theArgs->mFrameCount, theArgs->mSubModelCount,
+                                     UString((const char*)b), theArgs->mFlags, theManager);
+    case EeGeManOp::ModelNewSub: {
+        GEModel* theSubModel = new GEModel(theArgs->mPolygonCount, theArgs->mVertexCount, theArgs->mMaterialCount,
+                                           theArgs->mTagPointCount, theArgs->mFrameCount, theArgs->mSubModelCount,
+                                           theModel->mName, theArgs->mFlags, theManager);
+        theModel->SetSubModel(theSubModel, (unsigned long)b);
+        theSubModel->UReferenceCounter::Dereference();
+        return (intptr_t)theSubModel;
+    }
+    case EeGeManOp::ModelFindFile:
+        return GEFindModelFile((FSPath*)inObj, UString((const char*)a), *(std::map<unsigned long, long>*)b,
+                               *(EeGeCemModel**)c);
+    case EeGeManOp::ModelNewEmpty:
+        return (intptr_t)new GEModel(theManager);
+    case EeGeManOp::ModelStoreLoaded:
+        return theModel->StoreLoaded((const EeGeCemModel*)a, *(std::map<unsigned long, long>*)b);
+    case EeGeManOp::ModelSizeOf:
+        return (intptr_t)theModel->SizeOf();
+    case EeGeManOp::ModelVerify:
+        theModel->Verify();
+        return 0;
+    case EeGeManOp::ModelFreeFile:
+        ee_ge_cem_free((EeGeCemModel*)inObj);
+        return 0;
+    default:
+        return 0;
+    }
+}
+
 // FUNCTION: LLE 0x100206c7
 // Creates the model manager with a model search path and its lock
 GEModelManager::GEModelManager(FSPath* inPath)
 {
-    this->mMemoryFootprint = 0;
-    this->mPath = inPath;
-    if (inPath)
-        inPath->Reference();
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mCriticalSection) == keseOK, 39);
+    this->mRust = ee_ge_modman_new(&GEModelManager::Host, this, inPath);
 }
 
 // FUNCTION: LLE 0x10020717
 // Destroys the model manager: removes every unreferenced model, releases the path and the lock
 GEModelManager::~GEModelManager()
 {
-    this->RemoveAllModels();
-    if (this->mPath)
-        this->mPath->Dereference();
-    TSScheduler::DestroyCriticalSection(this->mCriticalSection);
+    ee_ge_modman_free(this->mRust);
 }
 
 // FUNCTION: LLE 0x1002073d
@@ -52,15 +124,9 @@ GEModelManager::~GEModelManager()
 GEModel* GEModelManager::CreateModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsigned long inMaterialCount, unsigned long inTagPointCount,
                                      unsigned long inFrameCount, unsigned long inSubModelCount, const UString& inName, unsigned long inFlags)
 {
-    char theBuffer[1024];
-    GEModel* theModel;
-    this->mCriticalSection->Enter();
-    ee_ge_modman_created_name(inName, theBuffer, sizeof(theBuffer));
-    UString theName(theBuffer);
-    theModel = new GEModel(inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount, inSubModelCount, theName, inFlags, this);
-    this->mModels[theName] = theModel;
-    this->mCriticalSection->Leave();
-    return theModel;
+    GEModelCreateArgs theArgs = {inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount,
+                                 inSubModelCount, inFlags};
+    return (GEModel*)ee_ge_modman_create(this->mRust, &theArgs, inName);
 }
 
 // FUNCTION: LLE 0x100207d6
@@ -69,26 +135,26 @@ GEModel* GEModelManager::CreateSubModel(unsigned long inPolygonCount, unsigned l
                                         unsigned long inFrameCount, unsigned long inSubModelCount, unsigned long inFlags,
                                         unsigned long inIndex, GEModel* inParent)
 {
-    GEModel* theModel;
-    this->mCriticalSection->Enter();
-    theModel = new GEModel(inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount, inSubModelCount, inParent->mName, inFlags, this);
-    inParent->SetSubModel(theModel, inIndex);
-    theModel->UReferenceCounter::Dereference();
-    this->mCriticalSection->Leave();
-    return theModel;
+    GEModelCreateArgs theArgs = {inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount,
+                                 inSubModelCount, inFlags};
+    return (GEModel*)ee_ge_modman_create_sub(this->mRust, &theArgs, inIndex, inParent);
 }
 
 // FUNCTION: LLE 0x10020845
 // Writes the list of loaded models and their reference counts to a file
 void GEModelManager::DumpAllLoadedMedia(FSFileSpec& inFile)
 {
-    std::map<UString, GEModel*>::iterator theIter;
-    this->mCriticalSection->Enter();
-    fprintf(inFile, "\n\n*********Model Manager - Current Loaded Files In Memory*********\n\n");
-    for (theIter = this->mModels.begin(); theIter != this->mModels.end(); theIter++)
-        fprintf(inFile, "The %s model file is loaded in memory with a reference count of %ld.\n",
-                (const char*)theIter->first, theIter->second->mReferenceCount);
-    this->mCriticalSection->Leave();
+    ee_ge_modman_dump(this->mRust, &inFile);
+}
+
+unsigned long GEModelManager::GetMemoryFootprint()
+{
+    return ee_ge_modman_footprint(this->mRust);
+}
+
+unsigned long GEModelManager::GetModelCount()
+{
+    return ee_ge_modman_count(this->mRust);
 }
 
 // FUNCTION: LLE 0x100208b0
@@ -97,110 +163,33 @@ void GEModelManager::DumpAllLoadedMedia(FSFileSpec& inFile)
 // original's was "<name>.cem")
 GEModel* GEModelManager::LoadModel(const UString& inName, std::map<unsigned long, long>& ioTextures)
 {
-    EeGeCemModel* theFile = NULL;
-    GEModel* theModel = NULL;
-    std::map<UString, GEModel*>::iterator theIter;
-    TSScheduler::GetCurrentThreadIndex();
-    this->mCriticalSection->Enter();
-    theIter = this->mModels.find(inName);
-    if (theIter != this->mModels.end())
-        theModel = theIter->second;
-    else if (GEFindModelFile(this->mPath, inName, ioTextures, theFile) == kErrorOK) {
-        theModel = new GEModel(this);
-        if (theModel->StoreLoaded(theFile, ioTextures) == kErrorOK) {
-            this->mModels[inName] = theModel;
-            this->mMemoryFootprint += theModel->SizeOf();
-        } else {
-            theModel->UReferenceCounter::Dereference();
-            theModel = NULL;
-        }
-        ee_ge_cem_free(theFile);
-    }
-    this->mCriticalSection->Leave();
-    TSScheduler::GetCurrentThreadIndex();
-    return theModel;
+    return (GEModel*)ee_ge_modman_load(this->mRust, inName, &ioTextures);
 }
 
 // FUNCTION: LLE 0x100209dd
 // Releases every model nobody else references; returns 5 when some are still in use
 long GEModelManager::RemoveAllModels()
 {
-    long theResult = kErrorOK;
-    std::map<UString, GEModel*>::iterator theIter;
-    GEModel* theModel;
-    this->mCriticalSection->Enter();
-    for (theIter = this->mModels.begin(); theIter != this->mModels.end();) {
-        theModel = theIter->second;
-        bool theRemove;
-        long theDecision = ee_ge_manager_remove_decision(theModel->mReferenceCount, &theRemove);
-        if (theRemove) {
-            this->mMemoryFootprint -= theModel->SizeOf();
-            theModel->UReferenceCounter::Dereference();
-            theIter = this->mModels.erase(theIter);
-        } else {
-            theResult = theDecision;
-            theIter++;
-        }
-    }
-    this->mCriticalSection->Leave();
-    return theResult;
+    return ee_ge_modman_remove_all(this->mRust);
 }
 
 // FUNCTION: LLE 0x10020a53
 // Releases a model if nobody else references it; 3 when it is unknown, 5 when it is still in use
 long GEModelManager::RemoveModel(GEModel* inModel)
 {
-    long theResult = 3;
-    std::map<UString, GEModel*>::iterator theIter;
-    this->mCriticalSection->Enter();
-    for (theIter = this->mModels.begin(); theIter != this->mModels.end(); theIter++)
-        if (theIter->second == inModel) {
-            bool theRemove;
-            theResult = ee_ge_manager_remove_decision(inModel->mReferenceCount, &theRemove);
-            if (theRemove) {
-                this->mMemoryFootprint -= inModel->SizeOf();
-                inModel->UReferenceCounter::Dereference();
-                this->mModels.erase(theIter);
-            }
-            break;
-        }
-    this->mCriticalSection->Leave();
-    return theResult;
+    return ee_ge_modman_remove(this->mRust, inModel);
 }
 
 // FUNCTION: LLE 0x10020ad1
 // Replaces the model search path, keeping a reference to the new one
 void GEModelManager::SetModelPath(FSPath* inPath)
 {
-    if (this->mPath)
-        this->mPath->Dereference();
-    this->mPath = inPath;
-    if (inPath)
-        inPath->Reference();
+    ee_ge_modman_set_path(this->mRust, inPath);
 }
 
 // FUNCTION: LLE 0x10020af2
 // Runs the self check on every loaded model (results ignored)
 void GEModelManager::VerifyModels()
 {
-    std::map<UString, GEModel*>::iterator theIter = this->mModels.begin();
-    this->mCriticalSection->Enter();
-    for (; theIter != this->mModels.end(); theIter++)
-        theIter->second->Verify();
-    this->mCriticalSection->Leave();
+    ee_ge_modman_verify(this->mRust);
 }
-
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-
-// Compiler-generated, continued:
-// TEMPLATE: LLE 0x10020b31
-// TEMPLATE: LLE 0x10020b6a
-// TEMPLATE: LLE 0x10020b95
-// TEMPLATE: LLE 0x10020bd8
-// TEMPLATE: LLE 0x10020c9d
-
-// UList<GELOD*>::sNodePool init wrapper and atexit registrars (GELOD.h through GEModel.h):
-// SYNTHETIC: LLE 0x10020cde
-// SYNTHETIC: LLE 0x10020cfc
-// SYNTHETIC: LLE 0x10020d08
-// SYNTHETIC: LLE 0x10020d14
