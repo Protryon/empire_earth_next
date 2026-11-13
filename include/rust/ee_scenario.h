@@ -227,6 +227,54 @@ constexpr static const uint32_t EE_SCENARIO_MANAGER_EXPORT_NAME = 0;
 
 constexpr static const uint32_t EE_SCENARIO_MANAGER_LAST_CHAT = 1;
 
+/// `gWorld.mGameSpeed`'s bits (an `f32`).
+constexpr static const uint32_t EE_SCENARIO_ROUND_GAME_SPEED = 0;
+
+/// `gPhysics->GetTickSeconds()`'s bits (an `f32`).
+constexpr static const uint32_t EE_SCENARIO_ROUND_TICK_SECONDS = 1;
+
+/// `mMessages.size()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_MESSAGE_COUNT = 2;
+
+/// `ShowDialogMessage()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_SHOW_DIALOG = 3;
+
+/// Whether a player is human and not an observer (1/0).
+constexpr static const uint32_t EE_SCENARIO_ROUND_HUMAN_PLAYING = 4;
+
+/// `gWorld.mInCinematic` (1/0).
+constexpr static const uint32_t EE_SCENARIO_ROUND_IN_CINEMATIC = 5;
+
+/// `MoveCameraToStart()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_MOVE_CAMERA = 6;
+
+/// `mTriggers.size()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_TRIGGER_COUNT = 7;
+
+/// `GetTrigger(a)->Evaluate(time)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_EVALUATE_TRIGGER = 8;
+
+/// `mEffects[a] != NULL` (1/0; the original's unchecked index).
+constexpr static const uint32_t EE_SCENARIO_ROUND_EFFECT_EXISTS = 9;
+
+/// `mEffects[a]->Execute(b != 0)`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_EXECUTE = 10;
+
+/// `mLastChatText.Clear()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_CLEAR_CHAT = 11;
+
+/// TEST ONLY: the SMUP record (`a`: the human flag) while the capture is on.
+constexpr static const uint32_t EE_SCENARIO_ROUND_CAPTURE = 12;
+
+/// The letterbox's state `gF4BE374`'s bits (an `f32`; 1 once it is gone).
+constexpr static const uint32_t EE_SCENARIO_ROUND_LETTERBOX = 13;
+
+/// `ExitCinematic()`.
+constexpr static const uint32_t EE_SCENARIO_ROUND_EXIT_CINEMATIC = 14;
+
+/// The trigger interval (ms; `kTriggerInterval`).
+constexpr static const float TRIGGER_INTERVAL = 500.0;
+
 /// The effect's string slots (`EESMEffect`'s members; the C++ hands them in this order).
 constexpr static const uint32_t EE_SCENARIO_EFFECT_NAME = 0;
 
@@ -607,6 +655,14 @@ struct EeScenarioManagerFields {
   bool mIsEndingCinematic;
 };
 
+/// The C ABI's round host: the manager's numbers and queue, and the operation callback.
+struct EeScenarioRoundHost {
+  void *ctx;
+  EeScenarioManagerFields *fields;
+  EeScenarioTimedQueue *queue;
+  int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
+};
+
 /// One trigger entry: the NOT flag (0/1) or the delay, the operator, the condition or effect index.
 struct EeScenarioEntry {
   unsigned long first;
@@ -879,12 +935,6 @@ void ee_scenario_timed_erase(EeScenarioTimedQueue *queue, size_t index);
 /// `queue` must be a live queue.
 void ee_scenario_timed_clear(EeScenarioTimedQueue *queue);
 
-/// Marks timed effect `index` run (`index` below the count).
-///
-/// # Safety
-/// `queue` must be a live queue.
-void ee_scenario_timed_mark_run(EeScenarioTimedQueue *queue, size_t index);
-
 /// `RenumberEffects`' timed part.
 ///
 /// # Safety
@@ -939,6 +989,12 @@ int32_t ee_scenario_manager_save(const EeScenarioStream *stream,
                                  const EeScenarioManagerFields *fields,
                                  EeScenarioTimedQueue *queue,
                                  unsigned long minor);
+
+/// `EEScenarioManager::Update` (round.rs): the clocks and, every 500 ms while a human plays, the trigger round.
+///
+/// # Safety
+/// `host` must be valid for the call: its `fields` and `queue` the live manager's, reached only between callbacks.
+void ee_scenario_manager_update(const EeScenarioRoundHost *host);
 
 }  // extern "C"
 

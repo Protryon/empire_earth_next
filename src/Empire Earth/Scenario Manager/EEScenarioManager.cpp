@@ -93,7 +93,6 @@ template<class T> long EESMSaveVector(unsigned long inMajorVersion, unsigned lon
 bool gScenarioSimDialogs = false;
 
 static const float kTriggerInterval = 500.0f;  // 0x445fcc (trigger interval, ms: Update, ApplyPendingEffects; unit .rdata; provisional name)
-static const float kSMZero = 0.0f;           // 0x445fd0 (Update's mTriggerTimer test while mIsMovingCamera; unit .rdata; provisional name)
 extern float gF4BE374;                       // 0x4be374 (= 1.0f; Update ends the cinematic when it is 1; provisional name)
 extern float& gSideScrollSpeed;               // 0x530828 (MoveCameraToStart's camera step scale; provisional name)
 
@@ -849,57 +848,59 @@ void EEScenarioManager::StartCinematic()
     gGraphics->PostLetterboxIn(3000);
 }
 
+namespace {
+
+int64_t RoundFloatBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+// Update's world (ee_scenario round.rs): each operation the original's statement at its place
+int64_t RoundOp(void* inContext, uint32_t inOp, int64_t inA, int64_t inB, float inTime)
+{
+    EEScenarioManager* theManager = static_cast<EEScenarioManager*>(inContext);
+    switch (inOp) {
+    case EE_SCENARIO_ROUND_GAME_SPEED: return RoundFloatBits(gWorld.mGameSpeed);
+    case EE_SCENARIO_ROUND_TICK_SECONDS: return RoundFloatBits(gPhysics->GetTickSeconds());
+    case EE_SCENARIO_ROUND_MESSAGE_COUNT: return (int64_t)theManager->mMessages.size();
+    case EE_SCENARIO_ROUND_SHOW_DIALOG: theManager->ShowDialogMessage(); return 0;
+    case EE_SCENARIO_ROUND_HUMAN_PLAYING: {
+        bool theHumanPlaying = false;
+        for (long i = 0; i < (long)gWorld.mNumPlayers; i++) {
+            if (gWorld.GetPlayer(i) != NULL && gWorld.GetPlayer(i)->IsHuman() && !gWorld.GetPlayer(i)->mObserverMode)
+                theHumanPlaying = true;
+        }
+        return theHumanPlaying;
+    }
+    case EE_SCENARIO_ROUND_IN_CINEMATIC: return gWorld.mInCinematic;
+    case EE_SCENARIO_ROUND_MOVE_CAMERA: theManager->MoveCameraToStart(); return 0;
+    case EE_SCENARIO_ROUND_TRIGGER_COUNT: return (int64_t)theManager->mTriggers.size();
+    case EE_SCENARIO_ROUND_EVALUATE_TRIGGER: theManager->GetTrigger((unsigned long)inA)->Evaluate(inTime); return 0;
+    case EE_SCENARIO_ROUND_EFFECT_EXISTS: return theManager->mEffects[(unsigned long)inA] != NULL;
+    case EE_SCENARIO_ROUND_EXECUTE: theManager->mEffects[(unsigned long)inA]->Execute(inB != 0); return 0;
+    case EE_SCENARIO_ROUND_CLEAR_CHAT: theManager->mLastChatText.Clear(); return 0;
+    case EE_SCENARIO_ROUND_CAPTURE:
+        if (EESimCaptureRecord::Active())
+            EESMCaptureUpdate(theManager, inA != 0);
+        return 0;
+    case EE_SCENARIO_ROUND_LETTERBOX: return RoundFloatBits(gF4BE374);
+    case EE_SCENARIO_ROUND_EXIT_CINEMATIC: theManager->ExitCinematic(); return 0;
+    }
+    return 0;
+}
+
+}   // namespace
+
 // FUNCTION: EXE 0x5b20e6
 // Runs a scenario tick (EEPhysics 0x153265): shows queued dialog, advances the clocks (tick / game speed in a
-// cinematic); while a human plays, every 500 ms evaluates the triggers and runs the due timed effects
+// cinematic); while a human plays, every 500 ms evaluates the triggers and runs the due timed effects (ee_scenario
+// round.rs update)
 void EEScenarioManager::Update()
 {
-    float theSpeed = gWorld.mGameSpeed;
-    bool theHumanPlaying = false;
-    float theTick = gPhysics->GetTickSeconds() * 1000.0f;
-    if (this->mMessages.size() > 0 && !this->mIsShowingDialog)
-        this->ShowDialogMessage();
-    for (long i = 0; i < (long)gWorld.mNumPlayers; i++) {
-        if (gWorld.GetPlayer(i) != NULL && gWorld.GetPlayer(i)->IsHuman() && !gWorld.GetPlayer(i)->mObserverMode)
-            theHumanPlaying = true;
-    }
-    if (gWorld.mInCinematic)
-        theTick /= theSpeed;
-    this->mTime += theTick;
-    this->mTriggerTimer += theTick;
-    if (theHumanPlaying) {
-        if (this->mIsMovingCamera && this->mTriggerTimer >= kSMZero)
-            this->MoveCameraToStart();
-        if (this->mTriggerTimer >= kTriggerInterval) {
-            long theCount = this->mTriggers.size();
-            for (long t = 0; t < theCount; t++)
-                this->GetTrigger(t)->Evaluate(this->mTime);
-            for (int e = 0; e < (int)this->GetNumTimedEffects(); e++) {
-                if (!(this->GetTimedEntry(e).mTime <= this->mTime))
-                    continue;
-                EESMEffect* theEffect = this->GetTimedEffect(e);
-                if (theEffect != NULL && !this->GetTimedEntry(e).mHasRun
-                    && (!gWorld.mInCinematic || this->GetTimedEntry(e).mIsInCinematic)) {
-                    ee_scenario_timed_mark_run(this->mTimedEffects, e);
-                    theEffect->Execute(this->GetTimedEntry(e).mIsInCinematic);
-                }
-            }
-            for (int k = (int)this->GetNumTimedEffects() - 1; k >= 0; k--) {
-                if (this->GetTimedEntry(k).mHasRun) {
-
-                    this->EraseTimedEffect(k);
-                }
-            }
-            this->mTriggerTimer = 0.0f;
-            this->mLastChatText.Clear();
-            if (EESimCaptureRecord::Active())
-                EESMCaptureUpdate(this, theHumanPlaying);
-        }
-    }
-    if (this->mIsEndingCinematic && gF4BE374 == 1.0f) {
-        this->mIsEndingCinematic = false;
-        this->ExitCinematic();
-    }
+    EeScenarioRoundHost theHost = {this, this, this->mTimedEffects, RoundOp};
+    ee_scenario_manager_update(&theHost);
 }
 
 // FUNCTION: EXE 0x5b23dc

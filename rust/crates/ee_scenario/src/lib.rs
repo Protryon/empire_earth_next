@@ -17,6 +17,7 @@
 //!   defaults and index upkeep); [`save`]: their `Load` and `Save` over [`stream`], the `FSFile` calls by operation.
 //! - [`manager`]: the manager's own numbers as a record the C++ class derives from, its timed effects' queue, and
 //!   its `Load` and `Save`.
+//! - [`round`]: `EEScenarioManager::Update`, the clocks and the trigger round with the timed effects.
 //! - [`aivar`]: the Set AI Variable effect's table as data (`EESMEffect::SetAIVariable`).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
@@ -28,6 +29,7 @@ pub mod fields;
 pub mod host;
 pub mod manager;
 pub mod object;
+pub mod round;
 pub mod save;
 pub mod stream;
 pub mod trigger;

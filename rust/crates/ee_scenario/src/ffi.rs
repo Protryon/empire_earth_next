@@ -14,6 +14,7 @@ use crate::fields::{
 use crate::host::EeScenarioHost;
 use crate::manager::{self, EeScenarioManagerFields, EeScenarioTimedEntry, EeScenarioTimedQueue};
 use crate::object::{self, EeScenarioObjectFilter};
+use crate::round::{self, EeScenarioRoundHost};
 use crate::save;
 use crate::stream::EeScenarioStream;
 use crate::trigger::{
@@ -585,16 +586,6 @@ pub unsafe extern "C" fn ee_scenario_timed_clear(queue: *mut EeScenarioTimedQueu
     unsafe { queue_of(queue) }.entries.clear();
 }
 
-/// Marks timed effect `index` run (`index` below the count).
-///
-/// # Safety
-/// `queue` must be a live queue.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_mark_run(queue: *mut EeScenarioTimedQueue, index: usize) {
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.entries[index].mHasRun = true;
-}
-
 /// `RenumberEffects`' timed part.
 ///
 /// # Safety
@@ -703,4 +694,17 @@ pub unsafe extern "C" fn ee_scenario_manager_save(
     // SAFETY: the caller's contract; the entries are copied before the first callback
     let (mut s, f, timed) = unsafe { (stream_of(stream), *fields, queue_of(queue).entries.clone()) };
     manager::save(&mut s, &f, &timed, minor)
+}
+
+/// `EEScenarioManager::Update` (round.rs): the clocks and, every 500 ms while a human plays, the trigger round.
+///
+/// # Safety
+/// `host` must be valid for the call: its `fields` and `queue` the live manager's, reached only between callbacks.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_manager_update(host: *const EeScenarioRoundHost) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe {
+        EeScenarioRoundHost { ctx: (*host).ctx, fields: (*host).fields, queue: (*host).queue, op: (*host).op }
+    };
+    round::update(&mut h);
 }
