@@ -121,8 +121,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapGenerators.h"
 #include "ee/EEUIFileComboBox.h"
-#include "ee/EESEACreateBlankMap.h"
-#include "ee/EESEACreateRandomMap.h"
+#include "ee/EESEARust.h"
 #include "ee/EEUIFSEMap.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EERules.h"
@@ -694,7 +693,7 @@ void EEUIFSEMap::CreateMap()
         long theHeight = atoi(this->mHeight->GetTextLabel()->GetText(0));
         this->mDefaultTerrain->GetListBox()->GetCurrentSelection(theTerrain);
         long theTerrainID = (this->mTerrains[theTerrain])->mID;
-        EEAction* theAction = new EESEACreateBlankMap(theWidth, theHeight, theTerrainID);
+        EEAction* theAction = new EESEARust(kSEABlankMap, NULL, theWidth, theHeight, theTerrainID);
         theAction->Dereference();
         theRandom.SetSeed(TMGetTime());
         gUserInterface->mRandomSeed = theRandom.Generate(0, 1000000);
@@ -707,7 +706,7 @@ void EEUIFSEMap::CreateMap()
         } else
             gUserInterface->mRandomSeed = atoi(this->mSeedEditBox->GetText(0));
         this->mMapStyle->GetCurrentSelection(theStyle);
-        EEAction* theAction = new EESEACreateRandomMap(theSize, theStyle);
+        EEAction* theAction = new EESEARust(kSEARandomMap, NULL, (int32_t)theSize, (int32_t)theStyle);
         theAction->Dereference();
     }
 }

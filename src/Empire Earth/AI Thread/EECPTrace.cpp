@@ -51,8 +51,6 @@
 #include "ee/EECPAGTask.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGGather.h"
-#include "ee/EEUGBuildRepair.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPExperimentTimers.h"
@@ -572,7 +570,7 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             EEUnitGoal* theGoal = theUnit->mComplexUnit->mActiveGoal;
             theGoals[theGoal == NULL ? 0 : theGoal->mKind >= 0 && theGoal->mKind < 16 ? theGoal->mKind : 15]++;
             if (theGoal != NULL && theGoal->mKind == kGoalBuildRepair) {
-                EEUnit* theTarget = static_cast<EEUGBuildRepair*>(theGoal)->mTarget;
+                EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetBuildTarget();
                 EEComplexUnit* theComplex = theTarget != NULL ? theTarget->mComplexUnit : NULL;
                 bool theBuilt = theComplex != NULL && theComplex->mIsBuilt;
                 theBuilders[theBuilt ? 1 : 0]++;
@@ -590,7 +588,7 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             if (theGoal == NULL)
                 theIdle++;
             else if (theGoal->mKind == kGoalGather) {
-                EEUnit* theResource = static_cast<EEUGGather*>(theGoal)->mResource;
+                EEUnit* theResource = static_cast<EEUGRust*>(theGoal)->GetGatherResource();
                 unsigned long theType = theResource != NULL ? theResource->mResourceType : 0;
                 theGatherers[theType >= kResourceFood && theType <= kResourceIron ? theType : 0]++;
                 if (theResource != NULL && theType >= kResourceFood && theType <= kResourceIron)

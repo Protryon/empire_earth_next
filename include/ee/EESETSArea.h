@@ -7,7 +7,7 @@
 #ifndef EE_EESETSAREA_H
 #define EE_EESETSAREA_H
 
-class EESEAPaintArea;
+class EESEARust;
 class GEFont;
 class UIButton;
 class UIComboBox;
@@ -44,7 +44,7 @@ public:
     UIComboBox* mModeComboBox;              // +0x24 (id 0x898: rectangle / anchor; EESEEAreaCheck)
     UIButton* mCenterButton;                // +0x28 (id 0x89a; EESEECenterCameraOnArea)
     UITextLabel* mLabel;                    // +0x2c (id 0x89b, red: shown while there is no area)
-    EESEAPaintArea* mPaintAction;           // +0x30 (while the left button paints)
+    EESEARust* mPaintAction;                // +0x30 (while the left button paints)
     bool mRectangleMode;                    // +0x34
     bool GetHasRectangle() const { return this->mHasRectangle; }
     bool mHasRectangle;                     // +0x35

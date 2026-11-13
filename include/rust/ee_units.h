@@ -363,6 +363,9 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 /// `kGoalGather` (`EEUnitGoal::mKind` of `EEUGGather`).
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
+/// `kGoalBuildRepair`
+constexpr static const uint8_t GOAL_BUILD_REPAIR = 4;
+
 /// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
 
@@ -387,6 +390,9 @@ constexpr static const int32_t EE_TECH_CONQUISTADORS_SPELL = 7020;
 
 /// the calamity class whose cast every selected caster takes a copy of (`mClassEnum` 0x12)
 constexpr static const int32_t EE_CALAMITY_CLASS_GROUP_CAST = 18;
+
+/// `kGoalGather`
+constexpr static const uint8_t GOAL_GATHER = 6;
 
 /// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
 constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
@@ -818,6 +824,154 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_GENERATE = 129;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS = 130;
 
+/// `a`: the unit, `sink`: an `EeUnitsBuildUnit` it fills (zeros for no unit; `b` 1: only the class, player, tile and
+/// complex unit)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BUILD_UNIT = 400;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TECH_NODE = 401;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NODE_INFO = 402;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAYER_ID = 403;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CLASS_UNIT_TYPE = 404;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BUILDERS_ADD = 405;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_ATTACK_PART = 406;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_IN_WORK_REACH = 407;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SURROUNDING_TILES = 408;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_COMPLETE_BUILDING = 409;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAY_EFFECT = 410;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_PRODUCTION_TIME = 411;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FILL_PARTS = 412;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_FREE_TILE = 413;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION = 414;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LOCATION_GOAL = 415;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_HELP_BUILD = 416;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TEND_FARM = 417;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_NEAR = 418;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GATE_SIDE_PART = 419;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BUILD_EVENT = 420;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_ABANDON_BUILDING = 421;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FACE_TARGET = 422;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_WORK_TIMER = 423;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_HALT = 424;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SITE_TAKEN = 425;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FOOTPRINT_CLEAR = 426;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SITE_FREE = 427;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED = 428;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_USERS = 429;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEW_GATHER = 430;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_GOAL = 431;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEAREST_SITE = 432;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CLEAR_SITE = 433;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_PRODUCE = 434;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR = 435;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FRIENDLY = 436;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_IN_CINEMATIC = 437;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_PAID = 438;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PAY = 439;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_HIT_POINTS = 440;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FOUNDATION_STARTED = 441;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GOAL_ARG = 442;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FARM_TILE = 450;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_SPOT = 451;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_RESOURCE = 452;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_STORAGE = 453;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FREE_TILE = 454;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_HEIGHT = 455;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT = 456;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_FARM = 457;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_STORAGE_SEARCH = 458;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_SPOT = 459;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BEGIN_GATHERING = 460;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_DEPOSIT_LOAD = 461;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_TREE = 462;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BUILD_FARMS = 463;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_HUNT = 464;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_GATHERED = 465;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_ROOM = 466;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LAST_WAYPOINT = 467;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_REACH = 468;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_STORAGE_REACH = 469;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_ACTIVE = 470;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_GHOST = 471;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_RESOURCE = 472;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_STORAGE = 473;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED = 474;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_ACCESSIBLE = 475;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_LENGTH = 476;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_WORK = 477;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NAVAL_SEARCH = 478;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH = 479;
+
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -938,6 +1092,39 @@ constexpr static const int32_t EE_UNITS_GOAL_LOAD_UNIT_AT = 75;
 
 /// the container (the result), `io.i`: the container and unit tiles, the garrison's valid flag, the unit count
 constexpr static const int32_t EE_UNITS_GOAL_LOAD_FIELDS = 76;
+
+/// `a`: the unit; `Work` (the base goal's does nothing)
+constexpr static const int32_t EE_UNITS_GOAL_WORK = 300;
+
+/// `a`: the unit; `PathTaken` (the base goal's does nothing)
+constexpr static const int32_t EE_UNITS_GOAL_PATH_TAKEN = 301;
+
+/// a build/repair goal: `a` the player, `b` the building
+constexpr static const int32_t EE_UNITS_GOAL_NEW_BUILD = 310;
+
+constexpr static const int32_t EE_UNITS_GOAL_BUILD_NEW_EMPTY = 311;
+
+/// the building (the result), `io.i`: its type, technology, tech tree node and class
+constexpr static const int32_t EE_UNITS_GOAL_BUILD_FIELDS = 312;
+
+/// `IsBuildSiteTaken`
+constexpr static const int32_t EE_UNITS_GOAL_BUILD_SITE_TAKEN = 313;
+
+/// a gather goal: `a` the resource, `b` the storage
+constexpr static const int32_t EE_UNITS_GOAL_NEW_GATHER = 320;
+
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_NEW_EMPTY = 321;
+
+/// the resource (the result), `io.i`: the storage, the gathering and waiting flags; `io.f` the destination
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_FIELDS = 322;
+
+/// `a`: the new resource, storage (`SetResource`, `SetStorage`)
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_SET_RESOURCE = 323;
+
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_SET_STORAGE = 324;
+
+/// `a`: the unit; `FindGatherSpot`
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_FIND_SPOT = 325;
 
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
@@ -1801,6 +1988,62 @@ struct EeUnitsTickHost {
   void (*update_player)(void *ctx, uint32_t index);
   /// `gWorld.mUpdateUnits[index]->Step()` (the list's id at the index handed in: the host checks it)
   void (*step)(void *ctx, uint32_t index, uint32_t id);
+};
+
+/// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
+/// a complex unit).
+struct EeUnitsBuildUnit {
+  /// `mComplexUnit`, `mUnitClass`, `mPlayer`; the first of the complex unit's linked parts (`mPreviousPart`
+  /// walked), its `mNextPart`
+  uint64_t complex;
+  uint64_t unit_class;
+  uint64_t player;
+  uint64_t first;
+  uint64_t next;
+  /// the class's type, tile size, category; `gUnitClassTable[type]`'s technology (`kTechNone` without one)
+  int32_t unit_type;
+  int32_t tile_size;
+  int32_t category;
+  int32_t table_technology;
+  /// `mHitPoints`, `mStats->mMaxHitPoints`, `mNumBuilders`, the tile, the command's type (0: none)
+  int32_t hit_points;
+  int32_t max_hit_points;
+  int32_t builders;
+  int32_t tile_x;
+  int32_t tile_y;
+  int32_t command;
+  /// `mStats->mRepairRate`, `mStats->mWorkRate`, `mStats->mBuildTimeScale`, `GetLineOfSight()`, the physical
+  /// model's location
+  int32_t repair_rate;
+  int32_t work_rate;
+  float build_time_scale;
+  float line_of_sight;
+  float location[3];
+  /// `mIsBuilt`, `mTileNode`, `mTile`, `mIsValid`, `mIsPaidFor`, `IsFoundation()`
+  bool built;
+  bool tile_node;
+  bool tile;
+  bool valid;
+  bool paid_for;
+  bool foundation;
+  /// the class's `mIsWall`, `mIsTower`, `IsDropSite()`
+  bool wall;
+  bool tower;
+  bool drop_site;
+  /// the player's `mInstantBuild`, `IsHuman()`, `mComputerPlayer != NULL`; the unit's `mHasShiftQueuedBuild`
+  bool instant_build;
+  bool human;
+  bool computer;
+  bool shift_queued_build;
+  /// the gather goal's: `mResourceType`, `mResourceAmount`, `mStats->mCarryAmount`, the class's `mFamily` and
+  /// `mIsTree`, the complex unit's `mStats->mMaxVelocity > 0`, `mIsDisabled`
+  int32_t resource_type;
+  int32_t resource_amount;
+  int32_t carry_amount;
+  int32_t family;
+  bool is_tree;
+  bool moving;
+  bool disabled;
 };
 
 extern "C" {

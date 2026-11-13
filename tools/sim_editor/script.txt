@@ -46,3 +46,31 @@ quicksave gate
 savefile gate
 random 0 0
 digest random
+# the map tab's elevation file (EESEACreateBlankMap::CreateMap's heights), then placement through the ghosts
+tab 0
+elevfile ridge 64 48 40 4 12 150   # width height, water cutoff and depth, land height and cutoff
+blank 40 40 3
+digest elevation-file
+elevfile -
+tab 3
+ghost 1 37 38 42 0                 # house: snapped to its tiles
+placeghost 1
+ghost 1 209 42 40 0                # trojan horse
+placeghost 1
+ghost 1 32 44 41 1.0               # citizen, boarding the horse under the mouse
+placeghost 1 @42,40
+ghost 2 20 36 36 2.0               # clubman
+placeghost 2
+ghost 1 32 46 44 0                 # a second citizen
+placeghost 1
+digest ghost-place
+pickup @36,36                      # the clubman
+ghostat 40 46
+drop
+pickup @46,44                      # the second citizen, boarding the horse
+ghostat 43 40
+drop @42,40
+digest drop
+pickup @38,42                      # the house, then the move cancelled
+cancelmove
+digest cancel

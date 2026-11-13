@@ -37,7 +37,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -221,7 +221,7 @@ void EECPIntelligencePlayerFile::Update(EEComputerPlayer* inPlayer, bool inForce
                 this->mBounds.Extend(theTile);
                 if (theUnit->GetUnitClass()->mCategory == kUnitCategoryLandCitizen && theComplex->mGoalState != NULL
                     && theComplex->mGoalState->mKind == kGoalGather) {
-                    theResource = dynamic_cast<EEUGGather*>(theComplex->mGoalState.Get())->mResource;
+                    theResource = EEGatherGoalCast(theComplex->mGoalState.Get())->GetGatherResource();
                     if (theResource != NULL)
                         theResources.push_back(theResource);
                 }

@@ -6,8 +6,8 @@
 use core::ffi::c_void;
 
 use crate::editor_actions::{
-    apply_click, apply_lasso, area_rectangle, delete_units, lasso_select, rotate_selection, SePaint, SePaintKind,
-    SeaHost, SeuDelete, SeuHost,
+    apply_click, apply_lasso, delete_units, lasso_select, rotate_selection, SePaint, SePaintKind, SeaHost, SeuDelete,
+    SeuHost,
 };
 
 /// cbindgen:ignore
@@ -113,22 +113,6 @@ pub unsafe extern "C" fn ee_screens_sea_paint_set_area(
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_sea_paint_run(paint: *mut EeScreensSeaPaint) {
     unsafe { with_record(paint, |record| record.run(&mut Host)) }
-}
-
-/// `EESEAPaintArea::SetCorner`'s rectangle -> out[0..4] = left, top, right, bottom.
-///
-/// # Safety
-/// `out` points at four integers.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_sea_area_rectangle(
-    start_x: i32,
-    start_y: i32,
-    end_x: i32,
-    end_y: i32,
-    out: *mut i32,
-) {
-    let (l, t, r, b) = area_rectangle(start_x, start_y, end_x, end_y);
-    unsafe { core::slice::from_raw_parts_mut(out, 4).copy_from_slice(&[l, t, r, b]) };
 }
 
 // ---- group 2: the selection's actions (`EESEAMouseClick`, `EESEALasso`, `EESEARotateUnits`, `EESEADeleteUnit`;
