@@ -50,6 +50,18 @@ pub enum EeWonGuiField {
     ScrollX,
     /// `mScrollArea.y`.
     ScrollY,
+    /// `mLeftScrollAmount`.
+    LeftScrollAmount,
+    /// `mRightScrollAmount`.
+    RightScrollAmount,
+    /// `mLeftPad`.
+    LeftPad,
+    /// `mTopPad`.
+    TopPad,
+    /// `mRightPad`.
+    RightPad,
+    /// `mBottomPad`.
+    BottomPad,
 }
 
 /// The cursor `SetParentCursor` sets on the parent.
@@ -479,6 +491,25 @@ pub enum EeWonGuiOp {
     VirtSizeChanged,
     /// `NotifyScrollChange(a != 0)` (virtual).
     VirtNotifyScrollChange,
+    // ---- the scroll area (`paneobj`; `a` a `Scroller*` where it says)
+    /// `((Scroller*)a)->NotifyScrollChange(b != 0)` (virtual).
+    ScrollerNotify = 360,
+    /// `((Scroller*)a)->SetScrollArea(this)`.
+    ScrollerSetArea,
+    /// `dynamic_cast<ScrollbarScroller*>((Scroller*)a)` (NULL for NULL).
+    ScrollerAsBars,
+    /// `new ScrollbarScroller` (no reference: the original's scroll area borrowed it).
+    NewScrollbarScroller,
+    /// `((ScrollbarScroller*)a)->SetScrollbar((Scrollbar*)b)`.
+    ScrollerSetScrollbar,
+    /// `ScrollSizeChanged()` (virtual).
+    VirtScrollSizeChanged,
+    /// `ScrollPaint(*a)` (virtual; `a` the Graphics).
+    VirtScrollPaint,
+    /// `Container::Paint(*a)`.
+    ContainerPaint,
+    /// `mBackground.Paint(*a, 0, 0, Width(), Height(), b, c)`.
+    PaneBackground,
 }
 
 /// The events a component object fires (`FireEvent`).

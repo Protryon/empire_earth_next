@@ -2303,6 +2303,24 @@ enum class EeWonGuiOp : uint32_t {
   VirtSizeChanged,
   /// `NotifyScrollChange(a != 0)` (virtual).
   VirtNotifyScrollChange,
+  /// `((Scroller*)a)->NotifyScrollChange(b != 0)` (virtual).
+  ScrollerNotify = 360,
+  /// `((Scroller*)a)->SetScrollArea(this)`.
+  ScrollerSetArea,
+  /// `dynamic_cast<ScrollbarScroller*>((Scroller*)a)` (NULL for NULL).
+  ScrollerAsBars,
+  /// `new ScrollbarScroller` (no reference: the original's scroll area borrowed it).
+  NewScrollbarScroller,
+  /// `((ScrollbarScroller*)a)->SetScrollbar((Scrollbar*)b)`.
+  ScrollerSetScrollbar,
+  /// `ScrollSizeChanged()` (virtual).
+  VirtScrollSizeChanged,
+  /// `ScrollPaint(*a)` (virtual; `a` the Graphics).
+  VirtScrollPaint,
+  /// `Container::Paint(*a)`.
+  ContainerPaint,
+  /// `mBackground.Paint(*a, 0, 0, Width(), Height(), b, c)`.
+  PaneBackground,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3208,6 +3226,47 @@ enum class EeWonMHeadCall : uint32_t {
   DragColumn,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonPaneCall : uint32_t {
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition = 1,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  SetDelegatePos,
+  /// `OnBottom()` (0 or 1).
+  OnBottom,
+  /// `SetBorderPadding(a[0], a[1], a[2], a[3])` (`a` points at the left, top, right and bottom padding).
+  SetBorderPadding,
+  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollTranslate,
+  /// `ScrollUntranslate(*a, *b)`.
+  ScrollUntranslate,
+  /// `SetSizeEqualToTotal(a, b)`.
+  SetSizeEqualToTotal,
+  /// `IsRectVisible(*a)` (`a` a `WONRectangle`; 0 or 1).
+  IsRectVisible,
+  /// `SetScrollDimension(a, b)`.
+  SetScrollDimension,
+  /// `SetScrollbar(a)` (a `Scrollbar*`).
+  SetScrollbar,
+  /// `SetScroller(a)` (a `Scroller*`, borrowed).
+  SetScroller,
+  /// `SetVertOffset(a)`.
+  SetVertOffset,
+  /// `SetOffsets(a, b)` (horizontal, vertical).
+  SetOffsets,
+  /// the field `a` (`EeWonGuiField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+};
+
 /// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
 /// cut given).
 enum class EeWonPrefsRead {
@@ -3627,6 +3686,18 @@ enum class EeWonGuiField : uint32_t {
   ScrollX,
   /// `mScrollArea.y`.
   ScrollY,
+  /// `mLeftScrollAmount`.
+  LeftScrollAmount,
+  /// `mRightScrollAmount`.
+  RightScrollAmount,
+  /// `mLeftPad`.
+  LeftPad,
+  /// `mTopPad`.
+  TopPad,
+  /// `mRightPad`.
+  RightPad,
+  /// `mBottomPad`.
+  BottomPad,
 };
 
 /// The cursor `SetParentCursor` sets on the parent.
@@ -3744,6 +3815,9 @@ struct EeWonQueueSocket;
 
 /// A Rust op held by a C++ `ServerRequestOp`.
 struct EeWonReqOp;
+
+/// The Rust ScrollArea.
+struct EeWonScrollPane;
 
 /// The Rust Scrollbar.
 struct EeWonScrollbar;
@@ -10686,6 +10760,23 @@ size_t ee_won_op_tracker_len(const EeWonOpTracker *t);
 /// # Safety
 /// `t` is valid.
 void *ee_won_op_tracker_at(const EeWonOpTracker *t, size_t index);
+
+/// A new Rust ScrollArea for the C++ `component`, its calls out through `host`.
+EeWonScrollPane *ee_won_pane_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `pane` came from `ee_won_pane_new` (or is NULL) and is not used again.
+void ee_won_pane_free(EeWonScrollPane *pane);
+
+/// One of ScrollArea's methods (`EeWonPaneCall`).
+///
+/// # Safety
+/// `pane` is live; the call's arguments as documented.
+ptrdiff_t ee_won_pane_call(const EeWonScrollPane *pane,
+                           EeWonPaneCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
 
 /// A record's or reply's read into `sink`: `kind` 0 a `VersionData`, 1 a `PatchData`, 2 a `PatchData` of a patch
 /// list, 3 the version check's reply data, 4 the patch list's.

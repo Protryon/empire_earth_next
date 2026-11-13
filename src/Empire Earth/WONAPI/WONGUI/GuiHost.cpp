@@ -2,7 +2,7 @@
 // (rust/crates/ee_won/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
 // constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs); the InputBox's
 // constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs); the Label's constructor and
-// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs); the Scrollbar's (barobj.rs); the Scroller's (scrollerobj.rs); the ListArea's and its items'
+// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs); the Scrollbar's (barobj.rs); the Scroller's (scrollerobj.rs); the ScrollArea's (paneobj.rs); the ListArea's and its items'
 // defaults (listobj.rs). Each op is a run of the
 // original's C++ statements with no decision between them.
 #include <windows.h>
@@ -30,24 +30,6 @@ using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;
-
-static int* FieldOf(ScrollArea* t, intptr_t inField)
-{
-    switch ((Fd)inField) {
-    case Fd::ScrollX: return &t->mScrollArea.x;
-    case Fd::ScrollY: return &t->mScrollArea.y;
-    case Fd::ScrollWidth: return &t->mScrollArea.width;
-    case Fd::ScrollHeight: return &t->mScrollArea.height;
-    case Fd::VertOffset: return &t->mVertOffset;
-    case Fd::HorzOffset: return &t->mHorzOffset;
-    case Fd::TotalWidth: return &t->mTotalWidth;
-    case Fd::TotalHeight: return &t->mTotalHeight;
-    case Fd::ExtraHeight: return &t->mExtraHeight;
-    case Fd::UpScrollAmount: return &t->mUpScrollAmount;
-    case Fd::DownScrollAmount: return &t->mDownScrollAmount;
-    default: return NULL;
-    }
-}
 
 static Cursor* CursorOf(intptr_t inCursor)
 {
@@ -104,14 +86,10 @@ extern "C" intptr_t ee_won_guicpp_text_call(void* inComp, EeWonGuiOp op, intptr_
     TextArea* t = (TextArea*)inComp;
     switch (op) {
     case Op::Get:
-        if ((Fd)a == Fd::UserHasScrolled) return t->mUserHasScrolled ? 1 : 0;
         if ((Fd)a == Fd::Width) return t->Width();
         if ((Fd)a == Fd::Height) return t->Height();
-        return FieldOf(t, a) ? *FieldOf(t, a) : 0;
-    case Op::Set:
-        if ((Fd)a == Fd::UserHasScrolled) t->mUserHasScrolled = b != 0;
-        else if (FieldOf(t, a)) *FieldOf(t, a) = (int)b;
-        return 0;
+        return t->GetField((Fd)a);
+    case Op::Set: t->SetField((Fd)a, (int)b); return 0;
     case Op::BaseSizeChanged: t->ScrollArea::Virtual08(); return 0;
     case Op::BaseAdjustPosition: t->ScrollArea::AdjustPosition(a != 0); return 0;
     case Op::BaseNotifyRootVisibility: t->ScrollArea::NotifyRootVisibility(a != 0); return 0;
@@ -529,8 +507,8 @@ extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, int
     case Op::HasFocusChild: return t->mFocusChild != NULL ? 1 : 0;
     case Op::BarOf: return (intptr_t)static_cast<Scrollbar*>(Comp(a))->mRust;
     case Op::ListenTo: Comp(a)->AddListener(new ComponentListenerComp(t)); return 0;
-    case Op::AreaGet: return FieldOf(area, b) ? *FieldOf(area, b) : 0;
-    case Op::AreaSet: if (FieldOf(area, b)) *FieldOf(area, b) = (int)c; return 0;
+    case Op::AreaGet: return area->GetField((Fd)b);
+    case Op::AreaSet: area->SetField((Fd)b, (int)c); return 0;
     case Op::AreaAdjustPosition: area->AdjustPosition(b != 0); return 0;
     case Op::AreaRequestFocus: area->RequestFocus(); return 0;
     case Op::AreaMouseWheel: return area->MouseWheel((int)b) ? 1 : 0;
@@ -549,6 +527,58 @@ Scroller::Scroller() { this->mRust=ee_won_scroller_new(this,ee_won_guicpp_scroll
 Scroller::~Scroller() { ee_won_scroller_free(this->mRust); }
 }
 
+// ---- the scroll area
+
+extern "C" intptr_t ee_won_guicpp_pane_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    ScrollArea* t = (ScrollArea*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
+    case Op::BaseMouseWheel: return t->Container::MouseWheel((int)a) ? 1 : 0;
+    case Op::ContainerPaint: t->Container::Paint(*(Graphics*)a); return 0;
+    case Op::VirtAdjustPosition: t->AdjustPosition(a != 0); return 0;
+    case Op::VirtSizeChanged: t->Virtual08(); return 0;
+    case Op::VirtScrollSizeChanged: t->ScrollSizeChanged(); return 0;
+    case Op::VirtScrollPaint: t->ScrollPaint(*(Graphics*)a); return 0;
+    case Op::GetViewport: return (intptr_t)static_cast<Component*>(t->GetViewport());
+    case Op::PaneBackground: t->mBackground.Paint(*(Graphics*)a, 0, 0, t->Width(), t->Height(), (int)b, (int)c); return 0;
+    case Op::ScrollerNotify: static_cast<Scroller*>(Comp(a))->NotifyScrollChange(b != 0); return 0;
+    case Op::ScrollerSetArea: static_cast<Scroller*>(Comp(a))->SetScrollArea(t); return 0;
+    case Op::ScrollerAsBars:
+        return (intptr_t)static_cast<Component*>(dynamic_cast<ScrollbarScroller*>(static_cast<Scroller*>(Comp(a))));
+    case Op::NewScrollbarScroller: return (intptr_t)static_cast<Component*>(new ScrollbarScroller);
+    case Op::ScrollerSetScrollbar:
+        static_cast<ScrollbarScroller*>(Comp(a))->SetScrollbar(static_cast<Scrollbar*>(Comp(b)));
+        return 0;
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        WONDrawNoCall aNoCall;
+        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
+        return 0;
+    }
+    default: return ContainerOp(t, op, a, b, c);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x00704df0
+// Creates an empty scroll area with its viewport as its child (the Rust area holds the scroll amounts 10 and every
+// other number 0, no scroller)
+ScrollArea::ScrollArea()
+{
+    this->mPane=ee_won_pane_new(this,ee_won_guicpp_pane_call);
+    this->mViewport=new ScrollAreaViewport(this);
+    this->AddChild(this->mViewport.get());
+}
+// Destroys the scroll area: the Rust area goes (the implicit destructor 0x002fa790)
+ScrollArea::~ScrollArea() { ee_won_pane_free(this->mPane); }
+}
+
 // ---- the list
 
 static ListItem* Item(intptr_t a) { return (ListItem*)a; }
@@ -558,14 +588,10 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
 {
     switch (op) {
     case Op::Get:
-        if ((Fd)a == Fd::UserHasScrolled) return t->mUserHasScrolled ? 1 : 0;
         if ((Fd)a == Fd::Width) return t->Width();
         if ((Fd)a == Fd::Height) return t->Height();
-        return FieldOf(t, a) ? *FieldOf(t, a) : 0;
-    case Op::Set:
-        if ((Fd)a == Fd::UserHasScrolled) t->mUserHasScrolled = b != 0;
-        else if (FieldOf(t, a)) *FieldOf(t, a) = (int)b;
-        return 0;
+        return t->GetField((Fd)a);
+    case Op::Set: t->SetField((Fd)a, (int)b); return 0;
     case Op::BaseSizeChanged: t->ScrollArea::Virtual08(); return 0;
     case Op::BaseAdjustPosition: t->ScrollArea::AdjustPosition(a != 0); return 0;
     case Op::BaseMouseDown: t->ScrollArea::MouseDown((int)a, (int)b, (int)c); return 0;

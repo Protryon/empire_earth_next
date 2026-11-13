@@ -11,19 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// FUNCTION: WON 0x00705010
-// Attaches a scroller to the scroll area and points the scroller back at it
-void ScrollArea::SetScroller(Scroller* scroller)
-{
-    this->mScroller=scroller;
-    if(scroller!=NULL) scroller->SetScrollArea(this);
-}
-// FUNCTION: WON 0x00705180
-// Handles a component event with the plain component behaviour
-void ScrollArea::HandleComponentEvent(ComponentEvent* event)
-{
-    Component::HandleComponentEvent(event);
-}
 // FUNCTION: WON 0x00705c10
 // Repaints the scroll area if a rectangle, translated up through nested viewports, is in view
 void ScrollAreaViewport::InvalidateIfRectVisible(WONRectangle& rect)

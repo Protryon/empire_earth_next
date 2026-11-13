@@ -89,6 +89,7 @@ pub mod multiping;
 pub mod netstats;
 pub mod opobj;
 pub mod ops;
+pub mod paneobj;
 pub mod parser;
 pub mod patch;
 pub mod path;

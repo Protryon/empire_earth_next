@@ -2499,60 +2499,53 @@ public:
     SmartPtr<ComponentListener> mListener; // at +0x34
 };
 
-// Only a prefix of ScrollArea is declared; nothing here allocates it.
+// ScrollArea (R6 WON round 25): its offsets, content, padding, view, scroller (borrowed) and scroll amounts are the
+// Rust ScrollArea (rust/crates/ee_won/src/paneobj.rs); this is the type the lists, text areas, scrollers and configs
+// hold. The viewport and the background stay C++ members.
 class ScrollArea : public Container {
 public:
     ScrollArea(); // 0x304df0: viewport setup
-    // Implicit virtual destructor (0x2fa790)
-    virtual void AdjustPosition(bool);      // 305030
-    virtual void ScrollSizeChanged();       // 4142a0
-    virtual void ScrollPaint(Graphics&);     // 2fa500
-    virtual void Virtual08(); //3051c0 SizeChanged
-    virtual void GetDesiredSize(int&,int&); //3054a0
-    virtual bool MouseWheel(int); //305410 MouseWheel
-    virtual void Paint(Graphics&); // 0x3052d0 (override)
-    void SetDelegatePos(); //304fd0
-    bool OnBottom(); //305190
-    void SetBorderPadding(int,int,int,int); //305270
-    void ScrollTranslate(int&,int&); //305390
-    void ScrollUntranslate(int&,int&); //3053d0
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x305180, vtable +0x7c override
-    void SetSizeEqualToTotal(int,int); //305450
-    bool IsRectVisible(const WONRectangle&); //3054f0
+    virtual ~ScrollArea(); // the implicit destructor (0x2fa790)
+    virtual void AdjustPosition(bool b) { this->ACall(EeWonPaneCall::AdjustPosition,b); } // 305030
+    virtual void ScrollSizeChanged() {} // 4142a0
+    virtual void ScrollPaint(Graphics&) {} // 2fa500
+    virtual void Virtual08() { this->ACall(EeWonPaneCall::SizeChanged); } //3051c0 SizeChanged
+    virtual void GetDesiredSize(int& w,int& h) { this->ACall(EeWonPaneCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } //3054a0
+    virtual bool MouseWheel(int n) { return this->ACall(EeWonPaneCall::MouseWheel,n)!=0; } //305410
+    virtual void Paint(Graphics& g) { this->ACall(EeWonPaneCall::Paint,(intptr_t)&g); } // 0x3052d0 (override)
+    void SetDelegatePos() { this->ACall(EeWonPaneCall::SetDelegatePos); } //304fd0
+    bool OnBottom() { return this->ACall(EeWonPaneCall::OnBottom)!=0; } //305190
+    void SetBorderPadding(int l,int t,int r,int b) { int p[4]={l,t,r,b}; this->ACall(EeWonPaneCall::SetBorderPadding,(intptr_t)p); } //305270
+    void ScrollTranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollTranslate,(intptr_t)&x,(intptr_t)&y); } //305390
+    void ScrollUntranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollUntranslate,(intptr_t)&x,(intptr_t)&y); } //3053d0
+    virtual void HandleComponentEvent(ComponentEvent* e) { Component::HandleComponentEvent(e); } // 0x305180, vtable +0x7c override
+    void SetSizeEqualToTotal(int w,int h) { this->ACall(EeWonPaneCall::SetSizeEqualToTotal,w,h); } //305450
+    bool IsRectVisible(const WONRectangle& r) { return this->ACall(EeWonPaneCall::IsRectVisible,(intptr_t)&r)!=0; } //3054f0
     ScrollAreaViewport* GetViewport() { return this->mViewport.get(); }
-    void SetScrollDimension(int,int); // sets the content dimensions
-    void SetScrollbar(Scrollbar*); // selects a scrollbar scroller
-    void SetScroller(Scroller*); // 0x305010; the scroller at +0xd4 is not owned
-    int GetTotalHeight() { return this->mTotalHeight; }
-    int GetTotalWidth() { return this->mTotalWidth; }
-    int GetLeftPad() { return this->mLeftPad; }
-    int GetRightPad() { return this->mRightPad; }
-    int GetTopPad() { return this->mTopPad; }
-    void SetPads(int l,int t,int r,int b) { this->mLeftPad=l; this->mTopPad=t; this->mRightPad=r; this->mBottomPad=b; } // the fields only (the text area's and list's constructors)
-    int GetHorzOffset() { return this->mHorzOffset; }
-    int GetViewWidth() { return this->mScrollArea.width; }
-    int GetViewHeight() { return this->mScrollArea.height; }
-    void SetVertOffset(int); //305130
-    void SetOffsets(int, int); //305150, horizontal then vertical
+    void SetScrollDimension(int w,int h) { this->ACall(EeWonPaneCall::SetScrollDimension,w,h); } // sets the content dimensions
+    void SetScrollbar(Scrollbar* s) { this->ACall(EeWonPaneCall::SetScrollbar,(intptr_t)static_cast<Component*>(s)); } // selects a scrollbar scroller
+    void SetScroller(Scroller* s) { this->ACall(EeWonPaneCall::SetScroller,(intptr_t)static_cast<Component*>(s)); } // 0x305010; not owned
+    void SetVertOffset(int v) { this->ACall(EeWonPaneCall::SetVertOffset,v); } //305130
+    void SetOffsets(int h,int v) { this->ACall(EeWonPaneCall::SetOffsets,h,v); } //305150, horizontal then vertical
+    // the fields the lists, text areas, scrollers and lobby controls read and set
+    int GetField(EeWonGuiField f) { return (int)this->ACall(EeWonPaneCall::GetField,(intptr_t)f); }
+    void SetField(EeWonGuiField f,int v) { this->ACall(EeWonPaneCall::SetField,(intptr_t)f,v); }
+    int GetTotalHeight() { return this->GetField(EeWonGuiField::TotalHeight); }
+    int GetTotalWidth() { return this->GetField(EeWonGuiField::TotalWidth); }
+    int GetLeftPad() { return this->GetField(EeWonGuiField::LeftPad); }
+    int GetRightPad() { return this->GetField(EeWonGuiField::RightPad); }
+    int GetTopPad() { return this->GetField(EeWonGuiField::TopPad); }
+    void SetPads(int l,int t,int r,int b) { this->SetField(EeWonGuiField::LeftPad,l); this->SetField(EeWonGuiField::TopPad,t); this->SetField(EeWonGuiField::RightPad,r); this->SetField(EeWonGuiField::BottomPad,b); } // the fields only (the text area's and list's constructors)
+    int GetVertOffset() { return this->GetField(EeWonGuiField::VertOffset); }
+    int GetHorzOffset() { return this->GetField(EeWonGuiField::HorzOffset); }
+    int GetViewWidth() { return this->GetField(EeWonGuiField::ScrollWidth); }
+    int GetViewHeight() { return this->GetField(EeWonGuiField::ScrollHeight); }
     SmartPtr<ScrollAreaViewport> mViewport; // at +0x84
-    WONRectangle mInvalidRect; //88..97
-    int GetVertOffset() { return this->mVertOffset; }
-    int mVertOffset; //98
-    int mHorzOffset; //9c
-    int mTotalHeight; //a0
-    int mTotalWidth;                        // total width
-    int mAVertOffset,mAHorzOffset,mATotalHeight,mATotalWidth; //a8..b7
-    int mOldScrollAreaWidth,mOldScrollAreaHeight; //b8..bf
-    int mLeftPad; //c0
-    int mRightPad; //c4
-    int mTopPad,mBottomPad; //c8,cc
-    bool mUserHasScrolled; //d0
-    Scroller* mScroller; //d4 borrowed
-    WONRectangle mScrollArea; //d8, visible height e4
-    Background mBackground; // at +0xe8..0xfb
+    Background mBackground;
     void SetBackground(const Background& theBackground) { this->mBackground=theBackground; }
-    int mExtraHeight; //fc
-    int mUpScrollAmount,mDownScrollAmount,mLeftScrollAmount,mRightScrollAmount; //100..10f
+    EeWonScrollPane* mPane;
+private:
+    intptr_t ACall(EeWonPaneCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_pane_call(this->mPane,c,a,b,cc); }
 };
 
 enum ListSortType { ListSortType_Ascending, ListSortType_Descending, ListSortType_None };
