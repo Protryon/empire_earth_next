@@ -10503,3 +10503,37 @@ Round 4's pattern (RUST_PLAN's row) applied to the last small pieces of the game
 - **Not done this round** (RUST_PLAN's row): the campaign editor's events (934, with `EECampaignEditorBehavior`),
   the scenario intro's form manager (`EEUISCIFormManager`, 315: file specs and media strings the scenario screens,
   the summary and the main game form read), the civilization builder's helpers.
+
+## R5b.2, eleventh round: the stats reads from the stats table, the goals' last reads in Rust (ee_combat store.rs, reads.rs; branch rust-combat11, 2026-11-13)
+
+Measured by net C++ deletion (src and include/ee, git numstat).
+
+| Commit | What | C++ |
+|---|---|---|
+| the stats reads | the trigger, step and heal-work records' stats fields, the reads' seven stats cases, the damage record's armour from ee_units' stats table | +7 -45, net -38 |
+| the goals' reads | `EECombatFillCondition` folded into `EECombatCondition(kind, unit, event, target, goal, class)` (six call sites one line each); `EEUGAttackUnit::IsGateClosed`/`IsStillReachable` and `EEUGHealUnit::IsInRange` deleted | +58 -91, net -33 |
+
+- **The stats by the record's object.** The unit record's `stats` (field 48) names the `EEUnitClassUpgrade`; ee_rust's
+  bridge `ee_combat_store_stats_of` copies the fields combat reads from `ee_units::stats::stats_of` (a Rust-to-Rust
+  bridge: listed in cbindgen.toml's `exclude` with the other two, or it lands in `ee_rust_common.h` and makes that
+  header include `ee_combat.h`). No stats object, or one the table lacks, reads 0 (the fills' NULL test); the
+  original's reads dereferenced the stats unchecked, so no defined behaviour changed. The armour is a read
+  (`EE_COMBAT_Q_ARMOR`, arg the weapon column) after the C++'s damage operation, not inside it: the record is the same
+  bytes (CBDM unchanged).
+- **The captures stay where the calls are.** `IsGateClosed`/`IsStillReachable` had only the trigger test's host as
+  caller; their CBQR records (scope, outcome, path attempts, ignored count) moved into `EECombatIsGateClosed`/
+  `EECombatIsStillReachable` unchanged, so CBQR is equal. `IsInRange` (heal) is `reads.rs heal_in_range`: the class's
+  heal range read first, the positions the store's locations (`GetPosition` is the location's translation),
+  `within_range` of `distance_to_squared` (dz, dy, dx then the sum in x, y, z order, as `GE3DPoint::DistanceToSquared`).
+  No game of the profiles heals (CBCH is a sweep): the heal range test has unit tests and the trigger's CBTC only where
+  a calamity game heals; `EEUnitClass::Heal` reaches it too.
+- **`IsHuman` not moved.** A player table field would be written by `EEUnitStorePlayerTable`, but `EEPlayer::Reset`
+  (its first caller) runs in the base constructor, where `IsHuman` answers false for an `EEHumanPlayer`: the field
+  needs a report from `EEHumanPlayer`'s constructors, which adds C++ for one deleted line. Left for the round that moves
+  the players.
+- **`sed -i` and `cargo fmt` on CRLF files.** reads.rs is CRLF in the index; Git Bash's `sed -i` rewrote it to LF (a
+  whole-file diff). Edit such files through bytes (Python) and check `git ls-files --eol` before committing.
+- **A fresh worktree's first link failed**: `build/clang/exe` did not exist (`link.rsp` FileNotFoundError after every
+  unit compiled); `mkdir -p build/clang/exe` and rerun.
+- **What only a person or a tour reaches:** nothing drawn changed. The heal range test also gates `EEUnitClass::Heal`'s
+  animation and effect.
