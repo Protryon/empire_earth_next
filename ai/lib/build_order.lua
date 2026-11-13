@@ -30,6 +30,7 @@ M.OPT = {
     lua_farms = false,      -- (on in boom_order, §8.51) the Copper Age's 3 granaries sited by lib.place one after
                             -- another, and the engine builds no granary's fields (gather granary_farms = 0) until all
                             -- stand, then 8 each
+    soldiers_after_boats = false, -- (off until benched) stone_start trains no soldier before 10 boats, unless threatened
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }

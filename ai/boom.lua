@@ -610,6 +610,13 @@ function M.step(view, memory)
     if plan.raid or memory.raid ~= nil then
         soldiers_wanted = math.min(RD.wanted(memory, soldiers_wanted), math.max(plan.soldiers_max, soldiers_wanted))
     end
+    -- (BO.OPT.soldiers_after_boats, §8.51: stone_start's soldiers took 38 of its 131 food a minute while the town centres
+    -- waited on food; the owner: the dock and 10 boats at once, the troops about one a minute after) no new soldier in
+    -- stone_start before 10 boats, unless threatened or enemy soldiers are in sight
+    if ECON.order and BO.OPT.soldiers_after_boats and phase == "stone_start" and view.boats < 10 and not threatened
+            and #D.clusters() == 0 then
+        soldiers_wanted = math.min(soldiers_wanted, view.army_count)
+    end
     local army_short = view.army_count < soldiers_wanted
     -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
     -- stand in for an empty army: they cover only the land round them)
