@@ -1605,6 +1605,7 @@ static void ApplyLighting(EeGfxLighting inKind)
 // the rasterizer as the Rust draws call it (ee_gfx raster.rs), on the current screen
 extern const EeGfxRaster gEERustRaster;
 static std::vector<float> sKeptV;      // the texture coordinates' v that model_scroll_v changed
+static std::vector<float> sKeptU;      // the texture coordinates' u that model_scroll_u changed
 const EeGfxRaster gEERustRaster = {
     [](float inValue) { gRasterizer->SetAlphaTestingRefValue(inValue, gScreenIndex); },
     []() -> uint32_t { return gRasterizer->GetFog(gScreenIndex); },
@@ -1672,6 +1673,32 @@ const EeGfxRaster gEERustRaster = {
         GETransformation theTransformation(*reinterpret_cast<const GETransformation*>(inTransformation));
         theTransformation.Scale(inX, inY, inZ);
         static_cast<GEModel*>(inModel)->SetGraphicsPostModelTransform(theTransformation);
+    },
+    [](void* inModel, uint32_t inFrame) { static_cast<GEModel*>(inModel)->SetGraphicsCurrentFrame(inFrame); },
+    [](void* inModel, const EeGeTransformation* inTransformation) {
+        static_cast<GEModel*>(inModel)->SetGraphicsPreModelTransform(*reinterpret_cast<const GETransformation*>(inTransformation));
+    },
+    [](void* inModel, float inDelta) {
+        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
+        GETextureCoordinate theCoordinate;
+        sKeptU.clear();
+        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
+            theArray->GetTextureCoordinate(theCoordinate, i);
+            float theU = theCoordinate.GetU();
+            sKeptU.push_back(theU);
+            theU += inDelta;
+            theCoordinate.SetU(theU);
+            theArray->SetTextureCoordinate(theCoordinate, i);
+        }
+    },
+    [](void* inModel) {
+        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
+        GETextureCoordinate theCoordinate;
+        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
+            theArray->GetTextureCoordinate(theCoordinate, i);
+            theCoordinate.SetU(sKeptU[i]);
+            theArray->SetTextureCoordinate(theCoordinate, i);
+        }
     },
 };
 

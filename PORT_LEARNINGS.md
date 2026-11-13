@@ -13466,3 +13466,64 @@ copy, free, open, close, length, read and name).
 - **Lessons:** the Bash tool turns a two-character `\n` inside a heredoc into a newline: Python edit scripts with
   escapes go through the Write tool as a file. A golden driver that loops until a value changes must cap the loop: a
   mutation that stops the change otherwise eats the machine's memory.
+
+## R4.4, fifteenth round: the additive pass, the linear projectile, the disease and the virus whole in Rust on EEE3DRust (ee_gfx effect_additive.rs, effect_orbit.rs; branch rust-gfx21, 2026-11-13)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 21,643 lines before the round; 21,446 after the
+additive pass (-197); 21,220 after the linear projectile (-226); 20,627 after the disease and virus (-593).
+`EEE3DAdditivePass`, `EEE3DLinearProjectile`, `EEE3DDisease` and `EEE3DVirus` (`.cpp` and `.h`) deleted. All four
+kinds were already in round 14's effects sweep (0x27 on a unit, 0x25 between points, 0x23 and 0x42 on a unit), so
+no sweep extension was needed: each move is checked against the original C++'s golden in a game world.
+
+- **The additive pass (0x27, `effect_additive.rs`).** The unit's own model of its animation redrawn in pass 5
+  (one-one blending, z test only, white lighting dimmed by the fog factor at its place, the effect's texture on the
+  model's first material, the fog restored after), queued in 3 with the unit's frame, animation, transformation and
+  scale; it follows the unit's stats' scale and location every step (7 at zero hit points). `EEE3DRust` gains
+  `mUnitModel` (the unit's `EEModel`, loaded by `SetUp` and `RepairPointers`, unloaded by the destructor). The host
+  gains the unit's model media, scale, location, model radius, frame and animation, and model by index; the table
+  `SetGraphicsCurrentFrame`. `EEEffect3D(long)`, which the original emitted in `EEE3DAdditivePass.cpp`, is in
+  `EEEffect3D.cpp` now. Record part: `pass` (`EeGfxEffectPass`).
+- **The orbitals in Rust (`effect_orbit.rs`).** `EEOrbital` copies of the graphic object's (the host's
+  `orbital_count`/`orbital`: model, speed, angle) are a Rust list the record owns (`orbit.orbitals`, a `Box` made on
+  first use, freed by `ee_gfx_effect_record_free`), with `mOrbitalCount` (`orbit.count`) and the draw's angles.
+  `EEOrbital::Update` is `EeGfxOrbital::update` (the same f32 ops and wrap); each orbital's model gets its
+  pre-model transformation from `set_orientation(Ypr, angle, 0, 0)` (a new table entry). The projectile's set-up and
+  Load draw one effect random per orbital in order (the RNG is checked by EFST's seed).
+- **The linear projectile (0x25).** A new `EEE3DRust(from, to, graphic effect, kind)` constructor (the manager's
+  `CreateEffectBetween`): the line, the speed of about one duration (one random draw), the step along the line (7
+  past its end at 1), queue 3, the prelit pass-5 draw fading over the last fifth; Load and Save of position, speed and
+  line on the shot part (format unchanged). The constructor's "to" travels in `shot.location`, zeroed after, as the
+  original's `mLocation` was until the first queue.
+- **The disease (0x23) and the virus (0x42).** Animation 13 of the graphic object (the host's `animation`: start
+  frame, frame time, frame count), the frame advance (`UMFloatToLong` is `ee_ge::um::lrintf`; the frame products
+  wrapping u32 as the C++'s unsigned long), the age over the duration on the aged record (7 at a dead unit or past
+  1), the disease on its unit's location, the virus on its first tag point (`FollowUnit`) with its u scroll by
+  param 1 (wrapped to 0..1), the orbitals turned, and the animation's sound at the unit (the host's
+  `animation_sound`: `PlayAnimationSound`, `SetSound` and the extra dereference exactly as the original; the sound is
+  `EEE3DRust::mSound`, stopped and released by the destructor). Pass 5: z test and write, alpha blended, unit
+  lighting (the disease sets the shading source, the virus does not), the frame, scale, the virus's u scroll (new
+  table entries `model_scroll_u`/`model_restore_u`, twins of the shield's v), the orbitals, fading over the last
+  tenth. Load and Save of time, frame, age and the virus's scroll (format unchanged).
+- **Golden drivers** (`build/gx21/drv/make.py COMMIT|WORKTREE OUT KINDS`: the original classes cut from d8f1de16, or
+  `EEE3DRust`'s host, constructors, `Call`, `RepairPointers` and the rasterizer table cut from the worktree over the
+  Rust; round 14's aged driver's stub world plus the unit's stats and model, `SetGraphicsCurrentFrame` and
+  `SetGraphicsPreModelTransform`, the graphic object's orbitals and animation 13, `EEOrbital::Update` cut from
+  `EEOrbital.cpp`, sounds, u texture coordinates, a tag-point list). Ops per effect: construction, set-up, then
+  random steps, queues, pass 5, passes 2/4/6, `RepairPointers` and moves of the unit; the state printed after each.
+  Identical bytes: additive 300 effects (6,793 lines) and 3,000 on seed 2 (68,081); projectile 300 (6,479) and
+  3,000 (67,940); disease and virus 300 (6,819) and 3,000 (67,781; 6,024 sounds, 670 fades, 1,531 viruses); the four
+  together on the final tree 300 (6,566) and 3,000 (68,099). Rust tests: 3 additive, 8 orbit (the orbital's wrap,
+  each kind's set-up/step/queue, draws, Load and Save).
+- **Lesson (tooling):** this shell collapses a doubled backslash inside heredocs; Python edit scripts with escapes must be written
+  as files with the editor, not piped through a heredoc.
+- **Behaviour:** none intended (each commit's effects capture equals the golden recorded from the original C++).
+  One hardening: a graphic whose animation 13 has zero frames gives frame 0 instead of the C++'s divide by zero.
+- **Gates.** On the result merged with rust (1f4b8a50): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,681 tests), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169 digests, late 170, calamity 183, effects 6), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected). Per commit: the build 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-3 PASS against the C++ golden, the Rust gate PASS (2,645, 2,649, 2,653 tests; on the third commit two load-timing tests outside ee_gfx failed in the full run, `ee_gx`'s bind-group test and `ee_plat_core`'s timer tests, each passing alone; the gate was then run with `--no-fail-fast`: every crate's tests, clippy, rustfmt and the header check PASS). The drivers were run on each move's commit; the merge touched no file they cut. No tour run.
+- **Only a tour or a person reaches:** every draw of the four kinds through the table (the additive pass's
+  one-one redraw of a unit's model and the fog it restores; the projectile's and disease's alpha-blended models with
+  turning orbital parts; the virus's u-scrolled texture and its restore: a missing restore would leave the model's
+  texture shifted for every later draw of that model), the animation sounds of the disease and virus (EE-SIM has no
+  sound), and a saved game holding one of them loaded whole.
+- **Next:** the hurricane (0x24: orbitals and a sound like the virus, the same host calls) after extending the sweep
+  to it (golden from f839d277 in a temporary worktree, as round 14), the energy wave, nuclear explosion and goal;
+  the 2D twin (`EEE2DRust` over `EEEffect2D`) for the sprite effects.
