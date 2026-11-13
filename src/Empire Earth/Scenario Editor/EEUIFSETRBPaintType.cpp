@@ -17,9 +17,7 @@
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
-#include "ee/EESEASaveScenario.h"
-#include "ee/EESEATestScenario.h"
-#include "ee/EESEAExitScenario.h"
+#include "ee/EESEARust.h"
 #include "lle/TSEvent.h"
 #include "lle/TSThread.h"
 #include "lle/UResourceFile.h"
@@ -130,7 +128,6 @@
 #include "ee/EESEEQuickLoad.h"
 #include "ee/EESEEQuickSave.h"
 #include "ee/EEAQuickSaveLoad.h"
-#include "ee/EESEAQuickSaveScenario.h"
 #include "ee/EEStringIDs.h"
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
 // moved to EEUIFSETerrain.cpp (one translation unit; its UIListBox<vector<GEColor> > /
@@ -186,7 +183,7 @@ long EESEEQuickLoad::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Posts a quick save of the scenario
 long EESEEQuickSave::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    EEAction* theAction = new EESEAQuickSaveScenario(this->mOwner);
+    EEAction* theAction = new EESEARust(kSEAQuickSave, static_cast<EEAction*>(this->mOwner));
     gUserInterface->PostAction(theAction);
     theAction->Dereference();
     return kErrorOK;

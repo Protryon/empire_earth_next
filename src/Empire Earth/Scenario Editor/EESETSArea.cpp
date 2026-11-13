@@ -94,7 +94,7 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEAScroll.h"
 #include "ee/EEUIFSEBrushGroup.h"
-#include "ee/EESEAPaintArea.h"
+#include "ee/EESEARust.h"
 #include "ee/EESMArea.h"
 #include "ee/EESETSArea.h"
 #include "ee/EEStringIDs.h"
@@ -195,7 +195,7 @@ void EESETSArea::Update()
         theX = (long)theLocation.GetX();
         theY = (long)theLocation.GetY();
     }
-    this->mPaintAction->SetCorner(theX, theY);
+    ee_screens_sew_area_corner(this->mPaintAction->mAction, theX, theY);
 }
 
 // FUNCTION: EXE 0x57d1d5
@@ -432,7 +432,7 @@ void EESETSArea::MouseMove(const GE2DPoint& inLocation)
                     theX = (long)theLocation.GetX();
                     theY = (long)theLocation.GetY();
                 }
-                this->mPaintAction->SetCorner(theX, theY);
+                ee_screens_sew_area_corner(this->mPaintAction->mAction, theX, theY);
             } else if (UIManager::GetLMouseButton()->JustUnpressed()) {
                 theEditor = static_cast<EEUIFScenarioEditor*>(this->mCenterButton->GetForm());
                 gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(),
@@ -440,7 +440,10 @@ void EESETSArea::MouseMove(const GE2DPoint& inLocation)
                 theEditor->mEdgeScroll->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f,
                                                        (float)gGameWindow->GetHeight() - 1.0f);
                 this->mHasRectangle = true;
-                this->mRectangle = this->mPaintAction->mR0C;
+                int32_t theArea[4];   // left, top, right, bottom
+                ee_screens_sew_area(this->mPaintAction->mAction, theArea);
+                this->mRectangle = GERectangle((float)theArea[0], (float)theArea[1], (float)theArea[2],
+                                               (float)theArea[3]);
                 this->mPaintAction->Dereference();
                 this->mPaintAction = NULL;
             }
@@ -449,7 +452,7 @@ void EESETSArea::MouseMove(const GE2DPoint& inLocation)
         if (!UIManager::GetLMouseButton()->JustPressed() || theTile == NULL)
             return;
         theEditor = static_cast<EEUIFScenarioEditor*>(this->mCenterButton->GetForm());
-        this->mPaintAction = new EESEAPaintArea(theX, theY);
+        this->mPaintAction = new EESEARust(kSEAPaintArea, NULL, theX, theY);
         gMouse->SetBounds(gViewport.GetViewRectangle());
         theEditor->mEdgeScroll->mEdges = GERectangle(gViewport.GetViewRectangle().GetLeft(),
                                                gViewport.GetViewRectangle().GetTop(),
@@ -471,14 +474,7 @@ void EESETSArea::MouseMove(const GE2DPoint& inLocation)
 }
 
 // FUNCTION: EXE 0x57d991
-// Creates and posts the rectangle drawing action, starting as a single point at the given tile
-// (the rectangle from the four coordinates: the original converts y once into two memory slots)
-// (the action's ctor, defined after its first user)
-EESEAPaintArea::EESEAPaintArea(long inX, long inY) : mStartX(inX), mStartY(inY), mEndX(inX), mEndY(inY)
-{
-    this->mR0C = GERectangle((float)inX, (float)inY, (float)inX, (float)inY);
-    gUserInterface->PostAction(this);
-}
+// (the rectangle drawing action's ctor: ee_screens editor_whole.rs, an EESEARust)
 
 // FUNCTION: EXE 0x57da08
 // Returns the scenario's area by index (EEScenarioManager::GetArea, inline)

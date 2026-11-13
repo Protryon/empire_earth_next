@@ -22,15 +22,15 @@ void RootScreen::EnterGameTab(bool enter)
     if(enter)
     {
         this->mTabCtrl->EnableTab(this->mGameTab,true);
-        if(this->mTabCtrl->mBottomTabBar->GetCurTabId()!=this->mGameTab)
+        if(this->mTabCtrl->GetCurTabId()!=this->mGameTab)
         {
-            this->mLastJoinTab=this->mTabCtrl->mBottomTabBar->GetCurTabId();
+            this->mLastJoinTab=this->mTabCtrl->GetCurTabId();
             this->mTabCtrl->SetCurTab(this->mGameTab,true);
         }
     }
     else
     {
-        if(this->mTabCtrl->mBottomTabBar->GetCurTabId()==this->mGameTab)
+        if(this->mTabCtrl->GetCurTabId()==this->mGameTab)
             this->mTabCtrl->SetCurTab(this->mLastJoinTab,true);
         this->mTabCtrl->EnableTab(this->mGameTab,false);
     }
@@ -128,13 +128,13 @@ RootScreen::~RootScreen() {}
 // Returns whether the LAN screen is showing its direct connect tab
 bool RootScreen::OnDirectConnectTab()
 {
-    return this->mIsLan && this->mTabCtrl->mBottomTabBar->GetCurTabId()==this->mDirectConnectTab;
+    return this->mIsLan && this->mTabCtrl->GetCurTabId()==this->mDirectConnectTab;
 }
 // FUNCTION: WON 0x007c3f00
 // Returns whether the LAN screen is showing its LAN games tab
 bool RootScreen::OnLanTab()
 {
-    return this->mIsLan && this->mTabCtrl->mBottomTabBar->GetCurTabId()==this->mLanTab;
+    return this->mIsLan && this->mTabCtrl->GetCurTabId()==this->mLanTab;
 }
 // FUNCTION: WON 0x007c4990
 // Resets the help and news browsers and selects the tab saved in the user's preferences
@@ -198,7 +198,7 @@ void RootScreen::HandleTabCtrlTabSelected(ComponentEvent* inEvent)
         aWindow->GetRect(aClientRect,true);
         int aWindowHeight=aWindowRect.height;
         int aClientHeight=aClientRect.height;
-        if(this->mTabCtrl->mBottomTabBar->GetCurTabId()==2)
+        if(this->mTabCtrl->GetCurTabId()==2)
         {
             this->mHideLowerControls=true;
             aOldHeight=aWindowRect.height;

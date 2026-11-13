@@ -600,6 +600,11 @@ pub enum EeWonGuiOp {
     DlgIsDefault,
     /// `((Button*)a->mComponent)->mButtonFlags` (a `ComponentEvent*`; a pure read).
     DlgEventButtonFlags,
+    // ---- the tab control and its bar (`tabobj`)
+    /// `((Button*)a)->GetText() == *(const GUIString*)b` (0 or 1; a pure read).
+    TabTextIs = 480,
+    /// `AddLayoutPoint((LayoutPoint*)a)`.
+    TabAddLayoutPoint,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
@@ -665,6 +670,8 @@ pub enum EeWonGuiEvent {
     ListSelChanged = 3,
     /// `ComponentEvent_Scroll`.
     Scroll = 4,
+    /// `ComponentEvent_TabCtrlTabSelected`.
+    TabCtrlTabSelected = 5,
 }
 
 /// The `WindowEventType` a `FireEvent` op delivers (`ee/wonapi/WONEventTypes.h`): the host fires exactly this, so
@@ -678,6 +685,7 @@ pub extern "C" fn ee_won_gui_event_type(event: EeWonGuiEvent) -> i32 {
         EeWonGuiEvent::InputReturn => 20,
         EeWonGuiEvent::InputTextChanged => 21,
         EeWonGuiEvent::ListSelChanged => 22,
+        EeWonGuiEvent::TabCtrlTabSelected => 29,
     }
 }
 

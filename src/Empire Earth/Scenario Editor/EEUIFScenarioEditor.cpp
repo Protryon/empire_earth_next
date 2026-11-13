@@ -933,7 +933,7 @@ extern RTSRenderObject* gU56535C; // the terrain render object (an EEROTerrain n
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMusicManager.h"
 #include "ee/EEScenarioManager.h"
-#include "ee/EESEAExitScenario.h"
+#include "ee/EESEARust.h"
 #include "lle/GEText.h"
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EEAQuickSaveLoad.h"
@@ -1245,7 +1245,7 @@ void EEUIFScenarioEditor::Open()
     this->mIsSwitching = false;
     if (this->mExitAfterSave != true)
         return;
-    EESEAExitScenario* theAction = new EESEAExitScenario;
+    EESEARust* theAction = new EESEARust(kSEAExit);
     gUserInterface->PostAction(theAction);
     theAction->Dereference();
     this->mExitAfterSave = false;
