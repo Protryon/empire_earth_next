@@ -249,6 +249,13 @@ EEE3DRust::~EEE3DRust()
 long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
                      unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
+    Ask theAsk = {this, inQueues};
+    EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
+                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
+                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked};
+    // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
+    if (inFile != NULL)
+        return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
     EEGraphicEffect* theEffect = this->mGraphicEffect;
     EEGraphicObject* theObject = theEffect ? theEffect->mGraphicObject : NULL;
     EeGfxGraphicFacts theFacts = {};
@@ -275,12 +282,6 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
         theFacts.int_param3 = (int32_t)theEffect->mIntParam3;
     }
     theFacts.game_time_bits = (uint32_t)(unsigned long)gPhysics->mGameTime;
-    Ask theAsk = {this, inQueues};
-    EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
-                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
-                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked};
-    if (inFile != NULL)
-        return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
     return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
 }
 
