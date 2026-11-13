@@ -1394,6 +1394,48 @@ pub unsafe extern "C" fn ee_gfx_tracer_save(r: *const EeGfxEffectRecord, file: *
     unsafe { effect_tracer::save_tracer(&*r, &mut File(&*file), id) }
 }
 
+/// One virtual of an `EEE3DRust` (the effects whole in Rust: `effect_rising.rs`), drawing through `raster`.
+///
+/// # Safety
+/// `r` is a live record; `g`, `host` and `raster` are readable and their functions valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect3d(
+    op: crate::effect_rising::EeGfxEffect3DOp,
+    r: *mut EeGfxEffectRecord,
+    g: *const crate::effect_rising::EeGfxGraphicFacts,
+    host: *const crate::effect_rising::EeGfxEffect3DHost,
+    raster: *const crate::raster::EeGfxRaster,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut h = &*host;
+        let mut x = &*raster;
+        crate::effect_rising::effect3d(op, r, &*g, &mut h, &mut x)
+    }
+}
+
+/// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s (its result `base`).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid; `host` is readable and its functions valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect3d_file(
+    op: crate::effect_rising::EeGfxEffect3DOp,
+    base: i32,
+    r: *mut EeGfxEffectRecord,
+    file: *const EeGfxEffectFile,
+    major: u32,
+    minor: u32,
+    host: *const crate::effect_rising::EeGfxEffect3DHost,
+) -> i32 {
+    // SAFETY: the function's contract; the record is a copy while Rust reads or writes it (the host's media load
+    // does not read it)
+    unsafe {
+        let mut h = &*host;
+        on_copy(r, |r| crate::effect_rising::effect3d_file(op, base, r, &mut File(&*file), major, minor, &mut h))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1463,47 +1505,5 @@ mod tests {
             ee_gfx_effect_record_free(r);
             ee_gfx_effect_record_free(std::ptr::null_mut());
         }
-    }
-}
-
-/// One virtual of an `EEE3DRust` (the effects whole in Rust: `effect_rising.rs`), drawing through `raster`.
-///
-/// # Safety
-/// `r` is a live record; `g`, `host` and `raster` are readable and their functions valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect3d(
-    op: crate::effect_rising::EeGfxEffect3DOp,
-    r: *mut EeGfxEffectRecord,
-    g: *const crate::effect_rising::EeGfxGraphicFacts,
-    host: *const crate::effect_rising::EeGfxEffect3DHost,
-    raster: *const crate::raster::EeGfxRaster,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let mut h = &*host;
-        let mut x = &*raster;
-        crate::effect_rising::effect3d(op, r, &*g, &mut h, &mut x)
-    }
-}
-
-/// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s (its result `base`).
-///
-/// # Safety
-/// `r` is a live record; `file` is valid; `host` is readable and its functions valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect3d_file(
-    op: crate::effect_rising::EeGfxEffect3DOp,
-    base: i32,
-    r: *mut EeGfxEffectRecord,
-    file: *const EeGfxEffectFile,
-    major: u32,
-    minor: u32,
-    host: *const crate::effect_rising::EeGfxEffect3DHost,
-) -> i32 {
-    // SAFETY: the function's contract; the record is a copy while Rust reads or writes it (the host's media load
-    // does not read it)
-    unsafe {
-        let mut h = &*host;
-        on_copy(r, |r| crate::effect_rising::effect3d_file(op, base, r, &mut File(&*file), major, minor, &mut h))
     }
 }
