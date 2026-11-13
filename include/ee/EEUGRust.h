@@ -1,7 +1,8 @@
-// New (port; docs/RUST_PLAN.md R5b.4, the sixteenth round): a goal whose class moved whole into Rust. The object is
+// New (port; docs/RUST_PLAN.md R5b.4, rounds 16 and 17): the goals whose class moved whole into Rust. The object is
 // the EEUnitGoal the queues, the unit's mGoalState and the save hold (its base fields, its vtable); its own state and
-// bodies are Rust's (rust/crates/ee_units/src/patrol.rs for kGoalPatrol), every virtual one call. Replaces
-// EEUGPatrol (0x227de8..0x2283bc: its class and file are deleted; EEPlayer's SetPatrolGroup 0x563659 with it).
+// bodies are Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind: patrol.rs for kGoalPatrol,
+// calamity.rs for kGoalCastCalamity), every virtual one call. Replaces EEUGPatrol (0x227de8..0x2283bc; EEPlayer's
+// SetPatrolGroup 0x563659 with it) and EEUGCastCalamity (0x220986..0x2213dd): their classes and files are deleted.
 #ifndef EE_EEUGRUST_H
 #define EE_EEUGRUST_H
 
@@ -16,6 +17,9 @@ class UWideString;
 
 class EEUGRust : public EEUnitGoal {
 public:
+    // a goal of the kind with no state yet (the bodies' copies make theirs; the New functions below for the rest)
+    EEUGRust(unsigned char inKind, bool inArg);
+
     // a patrol (kGoalPatrol): a new empty patrol group, no point (EEUGPatrol(inArg)); or an existing group and the
     // point to start at, both referenced (EEUGPatrol(inGroup, inTarget, inArg))
     static EEUGRust* NewPatrol(bool inArg);
@@ -25,7 +29,18 @@ public:
     EEComplexUnit* GetPatrolTarget();
     void SetPatrolGroup(EEPPatrolGroup* inGroup);
 
+    // a cast (kGoalCastCalamity): the source casts the calamity of technology inCalamityType on the target unit or
+    // at the tile, both units referenced (EEUGCastCalamity(...)); or the load's empty goal (EEUGCastCalamity(inArg))
+    static EEUGRust* NewCastCalamity(EEComplexUnit* inSource, EEUnit* inTarget, long inTileX, long inTileY,
+                                     long inCalamityType, bool inArg);
+    static EEUGRust* NewCastCalamity(bool inArg);
+    // the cast's technology (its tile and target unit when asked); where the calamity goes (the target, the source
+    // for two technologies, else the tile; at the flying source's height)
+    long GetCalamityType(long* outTileX = NULL, long* outTileY = NULL, EEUnit** outTarget = NULL);
+    void GetCalamityTargetLocation(GE3DPoint& outLocation);
+
     virtual ~EEUGRust();
+    virtual void GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation);
     virtual EEUnitGoal* Clone();
     virtual void DumpOutOfSynch(FILE* inFile);
     virtual long GetOutOfSynchChecksum();
@@ -33,22 +48,29 @@ public:
     virtual void GetDebugText(UWideString& ioText);
     virtual void GetGoalLocation(GE3DPoint& outLocation);
     virtual long GetStartAction();
+    virtual void SetOwner(EEComplexUnit* inUnit);
     virtual void Step(EEComplexUnit* inUnit);
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond);
     virtual void Start(EEComplexUnit* inUnit);
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    virtual bool EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
     virtual void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit*);
     virtual bool Suits(EEUnit* inUnit);
-
-private:
-    EEUGRust(unsigned char inKind, bool inArg);
 };
 
-// the patrol goal of inGoal (the old EEGoalCast<EEUGPatrol>), NULL when it is another goal or none
+// the goal of kind inKind (the old EEGoalCast<EEUGPatrol>, EEGoalCast<EEUGCastCalamity>), NULL for another or none
+inline EEUGRust* EERustGoalCast(EEUnitGoal* inGoal, unsigned char inKind)
+{
+    return inGoal != NULL && inGoal->mKind == inKind ? static_cast<EEUGRust*>(inGoal) : NULL;
+}
 inline EEUGRust* EEPatrolGoalCast(EEUnitGoal* inGoal)
 {
-    return inGoal != NULL && inGoal->mKind == kGoalPatrol ? static_cast<EEUGRust*>(inGoal) : NULL;
+    return EERustGoalCast(inGoal, kGoalPatrol);
+}
+inline EEUGRust* EECastCalamityGoalCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalCastCalamity);
 }
 
 #endif

@@ -5,8 +5,8 @@
 // exact in EEUnitGoal.cpp; EEUGHealUnit sizeof 0x40 = its new-site size, ctor 0x2252d0 exact in EEUGHealUnit.cpp.
 // Member names are provisional.
 // and the goals the calamities hand out. Only what the decompiled units use; provisional names. The goal classes
-// have one header each (ee/EEUGAttackGround.h, EEUGPatrol.h, EEUGGather.h, EEUGCastCalamity.h, EEUGAttackUnit.h,
-// EEUGLocation.h, EEUGHealUnit.h, EEUGExplore.h, ...).
+// have one header each (ee/EEUGAttackGround.h, EEUGGather.h, EEUGAttackUnit.h, EEUGLocation.h, EEUGHealUnit.h,
+// EEUGExplore.h, ...); the ones moved whole to Rust are ee/EEUGRust.h.
 #ifndef EE_EEUNITGOAL_H
 #define EE_EEUNITGOAL_H
 

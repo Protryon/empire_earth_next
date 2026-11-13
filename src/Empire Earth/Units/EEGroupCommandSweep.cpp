@@ -661,7 +661,7 @@ void OriginalSmartFarmers(EEPlayer* thePlayer, void* theSelection, int32_t inTar
     ee_units_host_group_finish(theGroup);
 }
 
-// a cast goal's spec (new EEUGCastCalamity(inUnit, inTarget, x, y, the technology, true))
+// a cast goal's spec (EEUGRust::NewCastCalamity(inUnit, inTarget, x, y, the technology, true))
 void* CastGoal(uint32_t inUnit, uint32_t inTarget, long inX, long inY, long inTechnology)
 {
     EeGoalSpec theSpec;

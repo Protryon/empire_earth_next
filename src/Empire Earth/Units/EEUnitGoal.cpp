@@ -22,7 +22,6 @@
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGCastCalamity.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGHealUnit.h"
@@ -78,7 +77,7 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
         theGoal = new EEUGBuildRepair(false);
         break;
     case kGoalCastCalamity:
-        theGoal = new EEUGCastCalamity(false);
+        theGoal = EEUGRust::NewCastCalamity(false);
         break;
     case kGoalExplore:
         theGoal = new EEUGExplore(false);

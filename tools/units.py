@@ -85,8 +85,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Units/EEUnitHost.cpp",
                        # the host of the unit classes' Update sequences (ee/EEUnitUpdate.h; ee_units update.rs)
                        "Empire Earth/Units/EEUnitUpdate.cpp",
-                       # the goals whose class moved whole to Rust: EEUGPatrol's range 0x227de8..0x2283bc (ee/EEUGRust.h;
-                       # ee_units patrol.rs)
+                       # the goals whose class moved whole to Rust: EEUGPatrol's range 0x227de8..0x2283bc,
+                       # EEUGCastCalamity's 0x220986..0x2213dd (ee/EEUGRust.h; ee_units rust_goal.rs)
                        "Empire Earth/Units/EEUGRust.cpp",
                        # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
                        # (ee/EECombatGoals.h; ee_combat goals.rs)

@@ -1378,7 +1378,6 @@ bool EEMCameraLocationInfo::IsResponse(NEMessage* inMessage)
 }
 
 #include "lle/USingleton.h"
-#include "ee/EEUGCastCalamity.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEStringIDs.h"

@@ -593,34 +593,6 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
-constexpr static const int32_t EE_UNITS_PATROL_CREATE_EMPTY = 1;
-
-constexpr static const int32_t EE_UNITS_PATROL_CREATE = 2;
-
-constexpr static const int32_t EE_UNITS_PATROL_DESTROY = 3;
-
-constexpr static const int32_t EE_UNITS_PATROL_SET_GROUP = 4;
-
-constexpr static const int32_t EE_UNITS_PATROL_CLONE_TARGET = 5;
-
-constexpr static const int32_t EE_UNITS_PATROL_CHECKSUM = 6;
-
-constexpr static const int32_t EE_UNITS_PATROL_STEP = 7;
-
-constexpr static const int32_t EE_UNITS_PATROL_START = 8;
-
-constexpr static const int32_t EE_UNITS_PATROL_SAVE = 9;
-
-constexpr static const int32_t EE_UNITS_PATROL_LOAD = 10;
-
-constexpr static const int32_t EE_UNITS_PATROL_REPAIR = 11;
-
-constexpr static const int32_t EE_UNITS_PATROL_TARGET = 12;
-
-constexpr static const int32_t EE_UNITS_PATROL_GROUP = 13;
-
-constexpr static const int32_t EE_UNITS_PATROL_FORWARD = 14;
-
 /// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
 constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
 
@@ -630,6 +602,172 @@ constexpr static const int32_t EE_UNITS_MODE_BRAKE = 4;
 
 /// The player ids (`gWorld.mPlayers`, `mEnemies`: 17 entries).
 constexpr static const size_t EE_UNITS_PLAYER_COUNT = 17;
+
+/// `kTriggerUnitFacingNotRequired`: the base goal's one trigger
+constexpr static const int64_t TRIGGER_UNIT_FACING_NOT_REQUIRED = 9014;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_REFERENCE = 1;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_DEREFERENCE = 2;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_ID = 3;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_TILE = 4;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_VALID = 5;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_COMMAND = 6;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS = 7;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_START_ACTION = 8;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_UNIT = 9;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_POSITION = 10;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_LOCATION = 11;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TELL_GROUP = 12;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_PHYSICS_ACTION = 13;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_ANIMATION = 14;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_DROP_PATH = 15;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEW_GOAL = 16;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FILE_OPEN = 17;
+
+/// `i[0]`: the type (0 `unsigned long`, 1 `long`, 2 `bool`), `i[1]` the value
+constexpr static const int32_t EE_UNITS_GOAL_HOST_WRITE = 18;
+
+/// `i[0]`: the type, `i[1]` the value in and out
+constexpr static const int32_t EE_UNITS_GOAL_HOST_READ = 19;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_APPEND = 20;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_APPEND_CLASS_NAME = 21;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEW_PATROL_GROUP = 30;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GROUP_NEXT = 31;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GROUP_PREVIOUS = 32;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GROUP_COUNT = 33;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GROUP_ID = 34;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GROUP_NEAREST = 35;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAYER_GROUP = 36;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GROUP_POINTS = 37;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GROUP_POINT = 38;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CALAMITY_CLASS = 50;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CALAMITY_PLACE = 51;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CALAMITY_INFO = 52;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CREATE_CALAMITY = 53;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_SAVED_GROUP = 54;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SPEND_POWER = 55;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_CAST_AT = 56;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FACES_TARGET = 57;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FACES_POINT = 58;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_IN_SET = 59;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_STATS_RANGE = 60;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CONTACT_RANGE = 61;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_DISTANCE_TO_UNIT = 62;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_HEIGHT = 63;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_HIT_POINTS = 64;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNDETECTABLE = 65;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_COMPLEX_UNIT = 66;
+
+constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
+
+/// `b`: the base goal's `GetB1C()`; the new goal's handle
+constexpr static const int32_t EE_UNITS_GOAL_CLONE = 2;
+
+constexpr static const int32_t EE_UNITS_GOAL_DUMP = 3;
+
+constexpr static const int32_t EE_UNITS_GOAL_CHECKSUM = 4;
+
+constexpr static const int32_t EE_UNITS_GOAL_DEBUG_LINE = 5;
+
+constexpr static const int32_t EE_UNITS_GOAL_DEBUG_TEXT = 6;
+
+/// `io.f`: the location
+constexpr static const int32_t EE_UNITS_GOAL_LOCATION = 7;
+
+/// `a`: the unit; `io.f`: the destination (the unit's active group told)
+constexpr static const int32_t EE_UNITS_GOAL_DESTINATION = 8;
+
+constexpr static const int32_t EE_UNITS_GOAL_START_ACTION = 9;
+
+constexpr static const int32_t EE_UNITS_GOAL_SET_OWNER = 10;
+
+constexpr static const int32_t EE_UNITS_GOAL_STEP = 11;
+
+constexpr static const int32_t EE_UNITS_GOAL_LOAD = 12;
+
+constexpr static const int32_t EE_UNITS_GOAL_SAVE = 13;
+
+constexpr static const int32_t EE_UNITS_GOAL_REPAIR = 14;
+
+constexpr static const int32_t EE_UNITS_GOAL_START = 15;
+
+/// `a`: the unit, `b`: the event; 0 or 1
+constexpr static const int32_t EE_UNITS_GOAL_EVALUATE = 16;
+
+/// `a`: the old complex unit, `b`: the new one
+constexpr static const int32_t EE_UNITS_GOAL_REPLACE_UNIT = 17;
+
+/// a patrol: `a` the group (0: a new empty one), `b` the point
+constexpr static const int32_t EE_UNITS_GOAL_NEW_PATROL = 30;
+
+constexpr static const int32_t EE_UNITS_GOAL_PATROL_TARGET = 31;
+
+constexpr static const int32_t EE_UNITS_GOAL_PATROL_GROUP = 32;
+
+constexpr static const int32_t EE_UNITS_GOAL_PATROL_SET_GROUP = 33;
+
+constexpr static const int32_t EE_UNITS_GOAL_PATROL_NEW_EMPTY = 34;
+
+/// a cast: `a` the source, `b` the target, `io.i` the tile x, y and the technology
+constexpr static const int32_t EE_UNITS_GOAL_NEW_CALAMITY = 40;
+
+/// `io.i`: the technology, the tile x, y; the target unit (the result)
+constexpr static const int32_t EE_UNITS_GOAL_CALAMITY_FIELDS = 41;
+
+/// `io.f`: where the calamity goes
+constexpr static const int32_t EE_UNITS_GOAL_CALAMITY_TARGET_LOCATION = 42;
+
+/// the load's empty cast
+constexpr static const int32_t EE_UNITS_GOAL_CALAMITY_NEW_EMPTY = 43;
+
+/// `kGoalPatrol`, `kGoalCastCalamity`
+constexpr static const uint8_t GOAL_PATROL = 9;
+
+constexpr static const uint8_t GOAL_CAST_CALAMITY = 11;
 
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
@@ -1318,31 +1456,6 @@ struct EeUnitsPushIn {
   float tick_seconds;
 };
 
-/// The C++ host table.
-struct EePatrolHost {
-  void *context;
-  uint64_t (*new_group)(void*);
-  void (*reference)(void*, uint64_t, bool);
-  void (*dereference)(void*, uint64_t, bool);
-  uint64_t (*group_next)(void*, uint64_t, uint64_t);
-  uint64_t (*group_previous)(void*, uint64_t, uint64_t);
-  uint32_t (*group_count)(void*, uint64_t);
-  uint32_t (*group_id)(void*, uint64_t);
-  uint64_t (*group_nearest)(void*, uint64_t, int64_t, int64_t);
-  void (*unit_tile)(void*, uint64_t, int64_t*, int64_t*);
-  uint32_t (*unit_id)(void*, uint64_t);
-  bool (*unit_valid)(void*, uint64_t);
-  int64_t (*unit_command)(void*, uint64_t);
-  void (*reset_path_attempts)(void*, uint64_t);
-  void (*start_action)(void*, uint64_t, int64_t);
-  uint64_t (*find_unit)(void*, uint32_t);
-  uint64_t (*player_group)(void*, uint64_t, uint32_t);
-  int32_t (*write_u32)(void*, uint32_t);
-  int32_t (*write_bool)(void*, bool);
-  int32_t (*read_u32)(void*, uint32_t*);
-  int32_t (*read_bool)(void*, bool*);
-};
-
 /// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
 struct EeUnitsTurn {
   float delta;
@@ -1405,6 +1518,20 @@ struct EeUnitsPitchIn {
   float rate;
   /// 1: `EEPMNaval`'s (and `EEPMSpaceship`'s) mode, 0: the base model's
   uint8_t naval;
+};
+
+/// The argument block of one operation (ints, floats, text).
+struct EeUnitsGoalIo {
+  int64_t i[8];
+  float f[4];
+  const uint8_t *text;
+  size_t len;
+};
+
+/// The host: `op(context, operation, a, b, io)` (`EE_UNITS_GOAL_HOST_*`).
+struct EeUnitsGoalHost {
+  void *context;
+  int64_t (*op)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
 };
 
 /// One stats object's fields (floats as their bits), as the C++ fills them (`EEUnitStatsFill`).
@@ -2037,17 +2164,6 @@ float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_
 /// `member` points to a valid input.
 EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
 
-/// A patrol goal's body `op` on the goal `goal` (`a`, `b`: the unit, the group or the target as the body takes
-/// them); its result (a handle, a status, a checksum or a flag; 0 otherwise).
-///
-/// # Safety
-/// `host` points to a valid table for the call.
-int64_t ee_units_patrol_goal(int32_t op,
-                             uint64_t goal,
-                             uint64_t a,
-                             uint64_t b,
-                             const EePatrolHost *host);
-
 /// `TurnTowardAngle` over the C++'s values.
 ///
 /// # Safety
@@ -2132,6 +2248,19 @@ uint32_t ee_units_player_check(const uint64_t *objects,
                                const uint32_t *ids,
                                const uint32_t *enemies,
                                size_t count);
+
+/// One body of a Rust goal: `op` (`EE_UNITS_GOAL_*`) on the goal object `goal` of kind `kind` (`a`, `b`, `io` as
+/// the operation takes them); its result (a handle, a status, a checksum or a flag; 0 otherwise).
+///
+/// # Safety
+/// `host` points to a valid table for the call, `io` to a valid block.
+int64_t ee_units_rust_goal(int32_t op,
+                           uint8_t kind,
+                           uint64_t goal,
+                           uint64_t a,
+                           uint64_t b,
+                           EeUnitsGoalIo *io,
+                           const EeUnitsGoalHost *host);
 
 /// A stats object's report (its fields may have changed). Returns its version.
 ///

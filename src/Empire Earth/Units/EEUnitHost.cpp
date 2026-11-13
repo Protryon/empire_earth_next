@@ -36,7 +36,6 @@
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGGather.h"
 #include "lle/USingleton.h"
-#include "ee/EEUGCastCalamity.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEAreaUtilities.h"
@@ -472,8 +471,9 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
         if (theUnit == NULL)
             return NULL;
-        return static_cast<EEUnitGoal*>(new EEUGCastCalamity(theUnit, UnitOf(inSpec->unit_b), (long)inSpec->ints[0],
-                                                             (long)inSpec->ints[1], (long)inSpec->ints[2], theFlagA));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewCastCalamity(theUnit, UnitOf(inSpec->unit_b), (long)inSpec->ints[0],
+                                                                  (long)inSpec->ints[1], (long)inSpec->ints[2],
+                                                                  theFlagA));
     }
     default:
         return NULL;

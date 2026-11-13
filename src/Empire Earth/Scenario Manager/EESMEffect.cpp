@@ -3305,7 +3305,6 @@ void EESMEffect::ChangeAttribute()
 
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
-#include "ee/EEUGCastCalamity.h"
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEWUnitsOffMapInfo.h"
@@ -3433,8 +3432,8 @@ void EESMEffect::TaskUnitsToObject()
                     for (unsigned long n = 0; n < theCalamities.size(); n++) {
                         if (thePlayer->GetTechTree()->Get(theCalamities[n])
                                 ->Contains(theUnit->GetUnitClass()->GetUnitType())) {
-                            EEUGCastCalamity* theGoal = new EEUGCastCalamity(theUnit, theTarget, -10000, -10000,
-                                                                             theCalamities[n], true);
+                            EEUGRust* theGoal = EEUGRust::NewCastCalamity(theUnit, theTarget, -10000, -10000,
+                                                                         theCalamities[n], true);
                             theUnit->ClearGoals(0);
                             theUnit->SetGoal(theGoal, 0, 0);
                             theUnit->StartAction(kActionPrepareToMove);
@@ -3918,9 +3917,9 @@ void EESMEffect::TaskUnitsToArea()
                             if (!thePlayer->GetTechTree()->Get(theCalamities[n])
                                     ->Contains(theUnit->GetUnitClass()->GetUnitType()))
                                 continue;
-                            EEUGCastCalamity* theGoal =
-                                new EEUGCastCalamity(theUnit, NULL, (long)theTarget.GetX(),
-                                                     (long)theTarget.GetY(), theCalamities[n], true);
+                            EEUGRust* theGoal =
+                                EEUGRust::NewCastCalamity(theUnit, NULL, (long)theTarget.GetX(),
+                                                          (long)theTarget.GetY(), theCalamities[n], true);
                             theUnit->ClearGoals(0);
                             theUnit->SetGoal(theGoal, 0, 0);
                             theUnit->StartAction(kActionPrepareToMove);

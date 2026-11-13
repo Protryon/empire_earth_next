@@ -75,7 +75,7 @@
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGCastCalamity.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEGroupPathRequest.h"
 #include "ee/EEAutoPathRequest.h"
@@ -3376,7 +3376,7 @@ void EEComplexUnit::TakeOffMap()
         ::gWorld.DeactivateUnit(theUnit);
     }
     if (this->mGoalState != NULL
-        && (this->mGoalState->mKind != kGoalCastCalamity || EEGoalCast<EEUGCastCalamity>(this->GetGoal())->mCalamityType != 0x77c)) {
+        && (this->mGoalState->mKind != kGoalCastCalamity || EECastCalamityGoalCast(this->GetGoal())->GetCalamityType() != 0x77c)) {
         this->StartAction(kActionIdle);
         this->GetUnitClass()->ActionChanged(this);
     }

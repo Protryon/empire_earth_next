@@ -1,32 +1,44 @@
-// New (port; docs/RUST_PLAN.md R5b.4, the sixteenth round): the goals whose class moved whole into Rust
-// (ee/EEUGRust.h). Each virtual is one call of the Rust body (ee_units patrol.rs for kGoalPatrol) over the host
-// below: the patrol group's walk, the units' reads, the references, the typed file calls. The base goal's own
-// fields, save and checksum stay EEUnitGoal's.
+// New (port; docs/RUST_PLAN.md R5b.4, rounds 16 and 17): the goals whose class moved whole into Rust
+// (ee/EEUGRust.h). Each virtual is one call of the Rust body (ee_units rust_goal.rs, by mKind) over the host below:
+// one operation callback whose cases are the reads and world calls the bodies make (the units, the patrol group's
+// walk, the calamity classes and manager, the typed file calls, the texts). The base goal's own fields, save and
+// checksum stay EEUnitGoal's.
 #include <windows.h>
 #include <stdio.h>
+#include <string>
 
 #include "lle/LowLevelEngine.h"
+#include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
+#include "lle/USingleton.h"
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "ee/EEMap.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
+#include "ee/EEUnitSetManager.h"
+#include "ee/EECalamityManager.h"
+#include "ee/EECalamityClass.h"
+#include "ee/EEAreaUtilities.h"
 #include "ee/EEUnitKind.h"
 #include "rust/ee_units.h"
 
 namespace {
 
-struct EEPatrolIO {
+// where a body's file calls and text go
+struct EEGoalContext {
     FSFile* mFile;
+    UWideString* mText;
+    FILE* mDump;
 };
 
 uint64_t Handle(const void* inObject)
@@ -34,140 +46,237 @@ uint64_t Handle(const void* inObject)
     return reinterpret_cast<uintptr_t>(inObject);
 }
 
-EEComplexUnit* UnitOf(uint64_t inHandle)
+template <class T> T* ObjectOf(uint64_t inHandle)
 {
-    return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(inHandle));
+    return reinterpret_cast<T*>(static_cast<uintptr_t>(inHandle));
 }
 
-EEPPatrolGroup* GroupOf(uint64_t inHandle)
+void PointOut(EeUnitsGoalIo* ioArgs, const GE3DPoint& inPoint)
 {
-    return reinterpret_cast<EEPPatrolGroup*>(static_cast<uintptr_t>(inHandle));
+    ioArgs->f[0] = inPoint.GetX();
+    ioArgs->f[1] = inPoint.GetY();
+    ioArgs->f[2] = inPoint.GetZ();
 }
 
-uint64_t PatrolNewGroup(void*)
+void PointIn(const EeUnitsGoalIo& inArgs, GE3DPoint& outLocation)
 {
-    return Handle(new EEPPatrolGroup);
+    outLocation.SetX(inArgs.f[0]);
+    outLocation.SetY(inArgs.f[1]);
+    outLocation.SetZ(inArgs.f[2]);
 }
 
-void PatrolReference(void*, uint64_t inObject, bool inGroup)
+// one operation (EE_UNITS_GOAL_HOST_*) of a body: inA, inB the handles it names, ioArgs the rest
+int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs)
 {
-    if (inGroup)
-        GroupOf(inObject)->Reference();
-    else
-        UnitOf(inObject)->Reference();
+    EEGoalContext* theContext = static_cast<EEGoalContext*>(inContext);
+    EEUnit* theUnit = ObjectOf<EEUnit>(inA);
+    EEComplexUnit* theComplex = ObjectOf<EEComplexUnit>(inA);
+    EEPPatrolGroup* theGroup = ObjectOf<EEPPatrolGroup>(inA);
+    EECalamityClass* theClass = ObjectOf<EECalamityClass>(inA);
+    GE3DPoint thePoint(ioArgs->f[0], ioArgs->f[1], ioArgs->f[2]);
+    switch (inOp) {
+    case EE_UNITS_GOAL_HOST_REFERENCE:
+        if (inB != 0)
+            theGroup->Reference();
+        else
+            theUnit->Reference();
+        return 0;
+    case EE_UNITS_GOAL_HOST_DEREFERENCE:
+        if (inB != 0)
+            theGroup->Dereference();
+        else
+            theUnit->Dereference();
+        return 0;
+    case EE_UNITS_GOAL_HOST_UNIT_ID:
+        return (uint32_t)theUnit->mUnitID;
+    case EE_UNITS_GOAL_HOST_UNIT_TILE:
+        ioArgs->i[0] = theUnit->mTileX.Get();
+        ioArgs->i[1] = theUnit->mTileY.Get();
+        return 0;
+    case EE_UNITS_GOAL_HOST_UNIT_VALID:
+        return theUnit->mIsValid ? 1 : 0;
+    case EE_UNITS_GOAL_HOST_UNIT_COMMAND:
+        return theComplex->mCommand ? (int64_t)theComplex->mCommand->mType : 0;
+    case EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS:
+        ObjectOf<EEUnitGoal>(inA)->SetPathAttempts(0);
+        return 0;
+    case EE_UNITS_GOAL_HOST_START_ACTION:
+        theComplex->StartAction((unsigned long)ioArgs->i[0]);
+        theComplex->mUnitClass->ActionChanged(theComplex);
+        return 0;
+    case EE_UNITS_GOAL_HOST_FIND_UNIT:
+        if (inB != 0)
+            return Handle(EEUnitCast<EEComplexUnit>(::gWorld.GetUnit((unsigned long)inA)));
+        return Handle(static_cast<EEUnit*>(::gWorld.GetUnit((unsigned long)inA)));
+    case EE_UNITS_GOAL_HOST_UNIT_POSITION:
+        theUnit->GetPosition(thePoint);
+        PointOut(ioArgs, thePoint);
+        return 0;
+    case EE_UNITS_GOAL_HOST_TILE_LOCATION:
+        ::gWorld.mMap->GetTileLocation((long)ioArgs->i[0], (long)ioArgs->i[1], thePoint);
+        PointOut(ioArgs, thePoint);
+        return 0;
+    case EE_UNITS_GOAL_HOST_TELL_GROUP:
+        if (theComplex->mActiveGroup != NULL)
+            theComplex->mActiveGroup->TellGroup(theComplex, thePoint);
+        return 0;
+    case EE_UNITS_GOAL_HOST_SET_PHYSICS_ACTION:
+        theComplex->SetCurrentPhysicsAction((long)ioArgs->i[0]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_SET_ANIMATION:
+        theComplex->SetAnimation((long)ioArgs->i[0], -1, 0);
+        return 0;
+    case EE_UNITS_GOAL_HOST_DROP_PATH:
+        theComplex->DropPath();
+        return 0;
+    case EE_UNITS_GOAL_HOST_NEW_GOAL:
+        return Handle(new EEUGRust((unsigned char)inA, inB != 0));
+    case EE_UNITS_GOAL_HOST_FILE_OPEN:
+        return theContext->mFile->GetIsOpen() ? 1 : 0;
+    case EE_UNITS_GOAL_HOST_WRITE:
+        if (ioArgs->i[0] == 0)
+            return theContext->mFile->Write((uint32_t)ioArgs->i[1]);
+        if (ioArgs->i[0] == 1)
+            return theContext->mFile->Write((int32_t)ioArgs->i[1]);
+        return theContext->mFile->Write(ioArgs->i[1] != 0);
+    case EE_UNITS_GOAL_HOST_READ: {
+            long theResult;
+            if (ioArgs->i[0] == 0) {
+                uint32_t theValue = (uint32_t)ioArgs->i[1];
+                theResult = theContext->mFile->Read(theValue);
+                ioArgs->i[1] = theValue;
+            } else if (ioArgs->i[0] == 1) {
+                int32_t theValue = (int32_t)ioArgs->i[1];
+                theResult = theContext->mFile->Read(theValue);
+                ioArgs->i[1] = theValue;
+            } else {
+                bool theValue = ioArgs->i[1] != 0;
+                theResult = theContext->mFile->Read(theValue);
+                ioArgs->i[1] = theValue;
+            }
+            return theResult;
+        }
+    case EE_UNITS_GOAL_HOST_APPEND: {
+            std::string theText((const char*)ioArgs->text, ioArgs->len);
+            if (theContext->mText != NULL)
+                *theContext->mText += theText.c_str();
+            else
+                fputs(theText.c_str(), theContext->mDump);
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_APPEND_CLASS_NAME:
+        *theContext->mText += (const char*)theUnit->mUnitClass->mName;
+        return 0;
+
+    // the patrol's
+    case EE_UNITS_GOAL_HOST_NEW_PATROL_GROUP:
+        return Handle(new EEPPatrolGroup);
+    case EE_UNITS_GOAL_HOST_GROUP_NEXT:
+        return Handle(theGroup->GetNext(ObjectOf<EEComplexUnit>(inB)));
+    case EE_UNITS_GOAL_HOST_GROUP_PREVIOUS:
+        return Handle(theGroup->GetPrevious(ObjectOf<EEComplexUnit>(inB)));
+    case EE_UNITS_GOAL_HOST_GROUP_COUNT:
+        return (uint32_t)theGroup->GetNumPoints();
+    case EE_UNITS_GOAL_HOST_GROUP_ID:
+        return (uint32_t)theGroup->mID;
+    case EE_UNITS_GOAL_HOST_GROUP_NEAREST:
+        return Handle(theGroup->GetNearest((long)ioArgs->i[0], (long)ioArgs->i[1]));
+    case EE_UNITS_GOAL_HOST_PLAYER_GROUP:
+        return Handle(theComplex->GetPlayer()->GetPatrolGroup((unsigned long)inB));
+    case EE_UNITS_GOAL_HOST_GROUP_POINTS:
+        return (int64_t)theGroup->mPatrolPoints.size();
+    case EE_UNITS_GOAL_HOST_GROUP_POINT:
+        return Handle(theGroup->mPatrolPoints[(size_t)inB]);
+
+    // the cast calamity's
+    case EE_UNITS_GOAL_HOST_CALAMITY_CLASS: {
+            EETechTreeNode* theNode = theComplex->mPlayer->mTechnologies->Get((long)ioArgs->i[0]);
+            if (theNode == NULL)
+                return 0;
+            ioArgs->i[1] = ioArgs->i[2] = theNode->mData->mCalamity;
+            return Handle(
+                EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)theNode->mData->mCalamity));
+        }
+    case EE_UNITS_GOAL_HOST_CALAMITY_PLACE:
+        theClass->Place(ObjectOf<EEComplexUnit>(inB), (unsigned long)ioArgs->i[0], (unsigned long)ioArgs->i[1]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_CALAMITY_INFO:
+        ioArgs->i[0] = theClass->GetTargetKind();
+        ioArgs->i[1] = theClass->GetCost();
+        ioArgs->i[2] = theClass->mRange;
+        return 0;
+    case EE_UNITS_GOAL_HOST_CREATE_CALAMITY: {
+            EECalamityManager* theManager = EECalamityManager::GetInstance();
+            unsigned long theCalamity = (unsigned long)ioArgs->i[1];
+            unsigned long theSource = theComplex->GetUnitID();
+            unsigned long thePlayer = ObjectOf<EEComplexUnit>((uint64_t)ioArgs->i[4])->mPlayer->GetPlayerID();
+            if (ioArgs->i[0] == 3)
+                return theManager->CreateUnitCalamity(theCalamity, theSource, ObjectOf<EEUnit>(inB)->GetUnitID(),
+                                                      thePlayer);
+            if (ioArgs->i[0] == 2)
+                return theManager->CreateLocationCalamity(theCalamity, theSource, (long)ioArgs->i[2],
+                                                          (long)ioArgs->i[3], thePlayer);
+            return theManager->CreateGlobalCalamity(theCalamity, theSource, thePlayer);
+        }
+    case EE_UNITS_GOAL_HOST_RESET_SAVED_GROUP:
+        theComplex->mPlayer->mSavedGroups.Reset(6, 1);
+        return 0;
+    case EE_UNITS_GOAL_HOST_SPEND_POWER:
+        theComplex->SetPower(theComplex->GetPower() - (long)ioArgs->i[0]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_CAN_CAST_AT: {
+            GE3DPoint theLocation;
+            return theClass->EECalamityClass::CanCastAt(ObjectOf<EEComplexUnit>(inB), theLocation,
+                                                        (unsigned long)ioArgs->i[0], (unsigned long)ioArgs->i[1],
+                                                        true, NULL) == 0;
+        }
+    case EE_UNITS_GOAL_HOST_FACES_TARGET:
+        return theComplex->GetUnitClass()->FacesTarget(theComplex, ObjectOf<EEUnit>(inB), false);
+    case EE_UNITS_GOAL_HOST_FACES_POINT:
+        return theComplex->GetUnitClass()->FacesPoint(theComplex, thePoint, false);
+    case EE_UNITS_GOAL_HOST_UNIT_IN_SET: {
+            EEUnitSet* theSet = gUnitSetManager.GetSet((long)ioArgs->i[0]);
+            return theSet != NULL && theSet->Contains(theComplex->mUnitClass->mUnitType);
+        }
+    case EE_UNITS_GOAL_HOST_STATS_RANGE:
+        ioArgs->f[0] = theComplex->mStats->mRange;
+        return 0;
+    case EE_UNITS_GOAL_HOST_CONTACT_RANGE: {
+            GE3DPoint theTarget;
+            ObjectOf<EEUnit>(inB)->GetPosition(theTarget);
+            theComplex->GetPosition(thePoint);
+            return EEIsInContactRange(theComplex, ObjectOf<EEUnit>(inB), thePoint.DistanceToSquared(theTarget));
+        }
+    case EE_UNITS_GOAL_HOST_DISTANCE_TO_UNIT:
+        ioArgs->f[0] = theComplex->DistanceSquaredToUnit(ObjectOf<EEUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_UNIT_HEIGHT:
+        ioArgs->f[0] = theComplex->mHeight;
+        return 0;
+    case EE_UNITS_GOAL_HOST_HIT_POINTS:
+        return theUnit->mHitPoints;
+    case EE_UNITS_GOAL_HOST_UNDETECTABLE: {
+            EEUnit* theTarget = ObjectOf<EEUnit>(inB);
+            return theTarget->mComplexUnit->mIsCloakable && theTarget->mComplexUnit->GetIsCloaked()
+                && theTarget->mPlayer != theComplex->mPlayer
+                && theComplex->mPlayer->mEnemies[theTarget->mPlayer->mPlayerID] != 0
+                && theTarget->mUnitClass->mCloakRadius == 0;
+        }
+    case EE_UNITS_GOAL_HOST_COMPLEX_UNIT:
+        return Handle(theUnit->mComplexUnit);
+    }
+    return 0;
 }
 
-void PatrolDereference(void*, uint64_t inObject, bool inGroup)
+// one body (EE_UNITS_GOAL_*) of inGoal; inA, inB, ioArgs as it takes them; the file or the text it writes
+int64_t Goal(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t inB = 0,
+             EeUnitsGoalIo* ioArgs = NULL, FSFile* inFile = NULL, UWideString* inText = NULL, FILE* inDump = NULL)
 {
-    if (inGroup)
-        GroupOf(inObject)->Dereference();
-    else
-        UnitOf(inObject)->Dereference();
-}
-
-uint64_t PatrolGroupNext(void*, uint64_t inGroup, uint64_t inUnit)
-{
-    return Handle(GroupOf(inGroup)->GetNext(UnitOf(inUnit)));
-}
-
-uint64_t PatrolGroupPrevious(void*, uint64_t inGroup, uint64_t inUnit)
-{
-    return Handle(GroupOf(inGroup)->GetPrevious(UnitOf(inUnit)));
-}
-
-uint32_t PatrolGroupCount(void*, uint64_t inGroup)
-{
-    return (uint32_t)GroupOf(inGroup)->GetNumPoints();
-}
-
-uint32_t PatrolGroupID(void*, uint64_t inGroup)
-{
-    return (uint32_t)GroupOf(inGroup)->mID;
-}
-
-uint64_t PatrolGroupNearest(void*, uint64_t inGroup, int64_t inX, int64_t inY)
-{
-    return Handle(GroupOf(inGroup)->GetNearest((long)inX, (long)inY));
-}
-
-void PatrolUnitTile(void*, uint64_t inUnit, int64_t* outX, int64_t* outY)
-{
-    *outX = (int64_t)UnitOf(inUnit)->mTileX.Get();
-    *outY = (int64_t)UnitOf(inUnit)->mTileY.Get();
-}
-
-uint32_t PatrolUnitID(void*, uint64_t inUnit)
-{
-    return (uint32_t)UnitOf(inUnit)->mUnitID;
-}
-
-bool PatrolUnitValid(void*, uint64_t inUnit)
-{
-    return UnitOf(inUnit)->mIsValid ? true : false;
-}
-
-int64_t PatrolUnitCommand(void*, uint64_t inUnit)
-{
-    EEComplexUnit* theUnit = UnitOf(inUnit);
-    return theUnit->mCommand ? (int64_t)theUnit->mCommand->mType : 0;
-}
-
-void PatrolResetPathAttempts(void*, uint64_t inGoal)
-{
-    reinterpret_cast<EEUnitGoal*>(static_cast<uintptr_t>(inGoal))->SetPathAttempts(0);
-}
-
-void PatrolStartAction(void*, uint64_t inUnit, int64_t inAction)
-{
-    EEComplexUnit* theUnit = UnitOf(inUnit);
-    theUnit->StartAction((unsigned long)inAction);
-    theUnit->mUnitClass->ActionChanged(theUnit);
-}
-
-uint64_t PatrolFindUnit(void*, uint32_t inID)
-{
-    return Handle(EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(inID)));
-}
-
-uint64_t PatrolPlayerGroup(void*, uint64_t inUnit, uint32_t inID)
-{
-    return Handle(UnitOf(inUnit)->GetPlayer()->GetPatrolGroup(inID));
-}
-
-int32_t PatrolWriteU32(void* inContext, uint32_t inValue)
-{
-    unsigned long theValue = inValue;
-    return (int32_t)static_cast<EEPatrolIO*>(inContext)->mFile->Write(theValue);
-}
-
-int32_t PatrolWriteBool(void* inContext, bool inValue)
-{
-    return (int32_t)static_cast<EEPatrolIO*>(inContext)->mFile->Write(inValue);
-}
-
-int32_t PatrolReadU32(void* inContext, uint32_t* outValue)
-{
-    unsigned long theValue = *outValue;
-    long theResult = static_cast<EEPatrolIO*>(inContext)->mFile->Read(theValue);
-    *outValue = (uint32_t)theValue;
-    return (int32_t)theResult;
-}
-
-int32_t PatrolReadBool(void* inContext, bool* outValue)
-{
-    return (int32_t)static_cast<EEPatrolIO*>(inContext)->mFile->Read(*outValue);
-}
-
-// one body of the patrol (EE_UNITS_PATROL_*) on inGoal; inFile for the record's
-int64_t Patrol(int inOperation, const EEUGRust* inGoal, uint64_t inA, uint64_t inB, FSFile* inFile = NULL)
-{
-    EEPatrolIO theIO = {inFile};
-    EePatrolHost theHost = {&theIO, PatrolNewGroup, PatrolReference, PatrolDereference, PatrolGroupNext,
-                            PatrolGroupPrevious, PatrolGroupCount, PatrolGroupID, PatrolGroupNearest, PatrolUnitTile,
-                            PatrolUnitID, PatrolUnitValid, PatrolUnitCommand, PatrolResetPathAttempts,
-                            PatrolStartAction, PatrolFindUnit, PatrolPlayerGroup, PatrolWriteU32, PatrolWriteBool,
-                            PatrolReadU32, PatrolReadBool};
-    return ee_units_patrol_goal(inOperation, Handle(inGoal), inA, inB, &theHost);
+    EEGoalContext theContext = {inFile, inText, inDump};
+    EeUnitsGoalHost theHost = {&theContext, GoalOp};
+    EeUnitsGoalIo theArgs = {};
+    return ee_units_rust_goal(inOperation, inGoal->mKind, Handle(inGoal), inA, inB,
+                              ioArgs != NULL ? ioArgs : &theArgs, &theHost);
 }
 
 }  // namespace
@@ -180,106 +289,127 @@ EEUGRust::EEUGRust(unsigned char inKind, bool inArg)
 EEUGRust* EEUGRust::NewPatrol(bool inArg)
 {
     EEUGRust* theGoal = new EEUGRust(kGoalPatrol, inArg);
-    Patrol(EE_UNITS_PATROL_CREATE_EMPTY, theGoal, 0, 0);
+    Goal(EE_UNITS_GOAL_PATROL_NEW_EMPTY, theGoal);
     return theGoal;
 }
 
 EEUGRust* EEUGRust::NewPatrol(EEPPatrolGroup* inGroup, EEComplexUnit* inTarget, bool inArg)
 {
     EEUGRust* theGoal = new EEUGRust(kGoalPatrol, inArg);
-    Patrol(EE_UNITS_PATROL_CREATE, theGoal, Handle(inGroup), Handle(inTarget));
+    Goal(EE_UNITS_GOAL_NEW_PATROL, theGoal, Handle(inGroup), Handle(inTarget));
     return theGoal;
 }
 
 EEPPatrolGroup* EEUGRust::GetPatrolGroup()
 {
-    return GroupOf((uint64_t)Patrol(EE_UNITS_PATROL_GROUP, this, 0, 0));
+    return ObjectOf<EEPPatrolGroup>((uint64_t)Goal(EE_UNITS_GOAL_PATROL_GROUP, this));
 }
 
 EEComplexUnit* EEUGRust::GetPatrolTarget()
 {
-    return UnitOf((uint64_t)Patrol(EE_UNITS_PATROL_TARGET, this, 0, 0));
+    return ObjectOf<EEComplexUnit>((uint64_t)Goal(EE_UNITS_GOAL_PATROL_TARGET, this));
 }
 
 void EEUGRust::SetPatrolGroup(EEPPatrolGroup* inGroup)
 {
-    Patrol(EE_UNITS_PATROL_SET_GROUP, this, Handle(inGroup), 0);
+    Goal(EE_UNITS_GOAL_PATROL_SET_GROUP, this, Handle(inGroup));
+}
+
+EEUGRust* EEUGRust::NewCastCalamity(EEComplexUnit* inSource, EEUnit* inTarget, long inTileX, long inTileY,
+                                    long inCalamityType, bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalCastCalamity, inArg);
+    EeUnitsGoalIo theArgs = {{inTileX, inTileY, inCalamityType}};
+    Goal(EE_UNITS_GOAL_NEW_CALAMITY, theGoal, Handle(inSource), Handle(inTarget), &theArgs);
+    return theGoal;
+}
+
+EEUGRust* EEUGRust::NewCastCalamity(bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalCastCalamity, inArg);
+    Goal(EE_UNITS_GOAL_CALAMITY_NEW_EMPTY, theGoal);
+    return theGoal;
+}
+
+long EEUGRust::GetCalamityType(long* outTileX, long* outTileY, EEUnit** outTarget)
+{
+    EeUnitsGoalIo theArgs = {};
+    EEUnit* theTarget = ObjectOf<EEUnit>((uint64_t)Goal(EE_UNITS_GOAL_CALAMITY_FIELDS, this, 0, 0, &theArgs));
+    if (outTileX != NULL)
+        *outTileX = (long)theArgs.i[1];
+    if (outTileY != NULL)
+        *outTileY = (long)theArgs.i[2];
+    if (outTarget != NULL)
+        *outTarget = theTarget;
+    return (long)theArgs.i[0];
+}
+
+void EEUGRust::GetCalamityTargetLocation(GE3DPoint& outLocation)
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_CALAMITY_TARGET_LOCATION, this, 0, 0, &theArgs);
+    PointIn(theArgs, outLocation);
 }
 
 EEUGRust::~EEUGRust()
 {
-    Patrol(EE_UNITS_PATROL_DESTROY, this, 0, 0);
+    Goal(EE_UNITS_GOAL_DESTROY, this);
+}
+
+void EEUGRust::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)
+{
+    EeUnitsGoalIo theArgs = {};
+    PointOut(&theArgs, outLocation);
+    Goal(EE_UNITS_GOAL_DESTINATION, this, Handle(inUnit), 0, &theArgs);
+    PointIn(theArgs, outLocation);
 }
 
 EEUnitGoal* EEUGRust::Clone()
 {
-    EEPPatrolGroup* theGroup = this->GetPatrolGroup();
-    EEComplexUnit* theStart = UnitOf((uint64_t)Patrol(EE_UNITS_PATROL_CLONE_TARGET, this, 0, 0));
-    return EEUGRust::NewPatrol(theGroup, theGroup != NULL ? theStart : NULL, this->GetB1C());
+    return ObjectOf<EEUGRust>((uint64_t)Goal(EE_UNITS_GOAL_CLONE, this, 0, this->GetB1C()));
 }
 
 void EEUGRust::DumpOutOfSynch(FILE* inFile)
 {
-    EEComplexUnit* theTarget = this->GetPatrolTarget();
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Patrol Group ID is %ld\n", this->GetPatrolGroup()->mID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Current Patrol Point #%08lx\n",
-            theTarget != NULL ? theTarget->mUnitID : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Going Forward Flag is %d\n",
-            Patrol(EE_UNITS_PATROL_FORWARD, this, 0, 0) != 0);
-    EEUnitGoal::DumpOutOfSynch(inFile);
+    Goal(EE_UNITS_GOAL_DUMP, this, 0, 0, NULL, NULL, NULL, inFile);
 }
 
 long EEUGRust::GetOutOfSynchChecksum()
 {
-    long theChecksum = (long)Patrol(EE_UNITS_PATROL_CHECKSUM, this, 0, 0);
-    return EEUnitGoal::GetOutOfSynchChecksum() + theChecksum;
+    return EEUnitGoal::GetOutOfSynchChecksum() + (long)Goal(EE_UNITS_GOAL_CHECKSUM, this);
 }
 
 void EEUGRust::GetDebugLine(UWideString& ioText)
 {
-    UWideString theText;
-    EEPPatrolGroup* theGroup = this->GetPatrolGroup();
-    if (theGroup != NULL)
-        sprintf(theText, "pat %ld:", theGroup->GetNumPoints());
-    else
-        sprintf(theText, "pat 0:");
-    ioText += theText;
+    Goal(EE_UNITS_GOAL_DEBUG_LINE, this, 0, 0, NULL, NULL, &ioText);
 }
 
 void EEUGRust::GetDebugText(UWideString& ioText)
 {
-    UWideString theText;
-    EEPPatrolGroup* theGroup = this->GetPatrolGroup();
-    sprintf(theText, "Patrol\nPatrol Points: %ld", theGroup != NULL ? theGroup->GetNumPoints() : 0);
-    ioText += theText;
-    if (theGroup == NULL)
-        return;
-    sprintf(theText, "Patrol Points: ( ");
-    ioText += theText;
-    for (unsigned long i = 0; i < theGroup->mPatrolPoints.size(); i++) {
-        EEComplexUnit* thePoint = theGroup->mPatrolPoints[i];
-        if (thePoint == NULL)
-            continue;
-        sprintf(theText, "{%ld,%ld} ", thePoint->mTileX.Get(), thePoint->mTileY.Get());
-        ioText += theText;
-    }
-    sprintf(theText, " )\n");
-    ioText += theText;
+    Goal(EE_UNITS_GOAL_DEBUG_TEXT, this, 0, 0, NULL, NULL, &ioText);
 }
 
 void EEUGRust::GetGoalLocation(GE3DPoint& outLocation)
 {
-    this->GetPatrolTarget()->GetPosition(outLocation);
+    EeUnitsGoalIo theArgs = {};
+    PointOut(&theArgs, outLocation);
+    Goal(EE_UNITS_GOAL_LOCATION, this, 0, 0, &theArgs);
+    PointIn(theArgs, outLocation);
 }
 
 long EEUGRust::GetStartAction()
 {
-    return kActionGetNextPatrolPoint;
+    return (long)Goal(EE_UNITS_GOAL_START_ACTION, this);
+}
+
+void EEUGRust::SetOwner(EEComplexUnit* inUnit)
+{
+    Goal(EE_UNITS_GOAL_SET_OWNER, this, Handle(inUnit));
 }
 
 void EEUGRust::Step(EEComplexUnit* inUnit)
 {
-    Patrol(EE_UNITS_PATROL_STEP, this, Handle(inUnit), 0);
+    Goal(EE_UNITS_GOAL_STEP, this, Handle(inUnit));
 }
 
 long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -287,17 +417,17 @@ long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     long theResult = EEUnitGoal::Load(inMajorVersion, inMinorVersion, inFile);
     if (theResult != 0)
         return theResult;
-    return (long)Patrol(EE_UNITS_PATROL_LOAD, this, 0, 0, &inFile);
+    return (long)Goal(EE_UNITS_GOAL_LOAD, this, 0, 0, NULL, &inFile);
 }
 
 long EEUGRust::RepairPointers(unsigned long, unsigned long)
 {
-    return (long)Patrol(EE_UNITS_PATROL_REPAIR, this, 0, 0);
+    return (long)Goal(EE_UNITS_GOAL_REPAIR, this);
 }
 
 void EEUGRust::Start(EEComplexUnit* inUnit)
 {
-    Patrol(EE_UNITS_PATROL_START, this, Handle(inUnit), 0);
+    Goal(EE_UNITS_GOAL_START, this, Handle(inUnit));
 }
 
 long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
@@ -305,11 +435,17 @@ long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult != 0)
         return theResult;
-    return (long)Patrol(EE_UNITS_PATROL_SAVE, this, 0, 0, &outFile);
+    return (long)Goal(EE_UNITS_GOAL_SAVE, this, 0, 0, NULL, &outFile);
 }
 
-void EEUGRust::ReplaceUnit(EEComplexUnit*, EEComplexUnit*, EEComplexUnit*)
+bool EEUGRust::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
+    return Goal(EE_UNITS_GOAL_EVALUATE, this, Handle(inUnit), inEvent) != 0;
+}
+
+void EEUGRust::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit*)
+{
+    Goal(EE_UNITS_GOAL_REPLACE_UNIT, this, Handle(inOld), Handle(inNew));
 }
 
 bool EEUGRust::Suits(EEUnit*)

@@ -8,3 +8,5 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
+# GE3DPoint's squared distance (the cast calamity's range)
+ee_ge = { path = "../ee_ge" }
