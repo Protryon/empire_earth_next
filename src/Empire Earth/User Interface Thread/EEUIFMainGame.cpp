@@ -197,7 +197,11 @@ extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t 
                                            uint32_t* ioSelection, uint8_t* ioText, size_t inLength)
 {
     EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
-    UIComboBox* theObjects = static_cast<UIComboBox*>(theForm->GetControl(kMainGameTempObjectList));
+    // the object list only for its ops: the class table's are asked from the form's constructor, before its
+    // controls exist
+    UIComboBox* theObjects = inOp >= EE_SCREENS_UH_OP_COMBO_CLEAR && inOp <= EE_SCREENS_UH_OP_COMBO_SELECTION
+                                 ? static_cast<UIComboBox*>(theForm->GetControl(kMainGameTempObjectList))
+                                 : NULL;
 
     switch (inOp) {
     case EE_SCREENS_UH_OP_CLASS_COUNT:
