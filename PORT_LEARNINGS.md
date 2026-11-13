@@ -10450,3 +10450,45 @@ Round 4's pattern (RUST_PLAN's row) applied to the last small pieces of the game
 - **Not done this round** (RUST_PLAN's row): the campaign editor's events (934, with `EECampaignEditorBehavior`),
   the scenario intro's form manager (`EEUISCIFormManager`, 315: file specs and media strings the scenario screens,
   the summary and the main game form read), the civilization builder's helpers.
+
+## R6: the game screens, twelfth round: the campaign editor's events whole in Rust (ee_screens campaign_editor.rs; branch rust-screens12, 2026-11-12)
+
+Round 4's pattern (RUST_PLAN's row) applied to the campaign editor (form 24); round 10's count.
+
+- **Deleted:** `EEUIECampaignEditorEvents.cpp` (934) and its header (102); `EEUIECEClose` and
+  `EEUIECECampaignNameChanged` (both the shared `return 0`) out of `EEUIManagerEvents.h` and `EEUIManager.cpp`, with the
+  factory's twelve `new`s and the classes' `??_G` notes; the unit's `link/exe/units.txt` line. Game UI C++ lines
+  39,004 -> 38,083 (-921); git over the C++ +218 -1,144 (the host +208).
+- **Codes:** 0x1801..0x180f the form's open and close events and its control events (`ee_screens_campaign_editor_event_for`
+  is the factory's table; the password box's Enter and the password page's OK share one code, as they shared a
+  class), 0x1810..0x1818 the questions' answers. The answers are host statics that call `ee_screens_event` with their
+  code on the question's form (round 7's `EEScreensResignYes` pattern, one macro line each); the save error's message
+  reuses the custom campaign form's `EEScreensNoCustomCampaigns` (the original's `CloseEditor` was ICF-folded into
+  that unit's identical static: both close the top form).
+- **The model stays C++:** `EECampaignEditorBehavior` and its global `gCampaignEditor` (now in `EEScreens.cpp`) are
+  called through host ops, one model call each (a field by number, a list as 0-ended texts, the scenario list's result
+  and the last error kept by the host). The host clears the kept error before each call that takes one: the
+  original's error was a fresh local per function, and the delete question's yes shows an empty error when nothing
+  is selected (Rust passes an empty text there rather than reading the kept one).
+- **The `dynamic_cast` checks** are one host op (`EE_SCREENS_OP_CE_IS`: control and class) asked where the original
+  asked them; the reads and writes after it are the static casts the other forms use. `CheckUnsavedChanges`' four
+  comparisons are one host op each (`UWideString`'s `!=`, `PlatMbsCmp`, stays C++; the getters' calls are in it).
+- **The posted save** (`EEUIECECampaignSaveContinued` held the form): a code cannot, so the code runs on form 24 by id
+  (`ee_screenscpp_form(24)`; only form 24's Save button posts it).
+- **Golden driver** (scratch, `build/sc12/ce_driver.cpp`, `drv.py`): a type-checking cast registry (`dynamic_cast`
+  redefined to a template that answers per control and class from sets the case draws), fake list virtuals by probed
+  vtable slots with the toolkit's selection rules (`ChangeSelectionIndex` clamps, `DeleteAllEntries` drops the
+  selection: without them the original read past a list's end), the model printing every call, the questions',
+  messages' and posted events' callbacks kept and run by later cases. Old unit and new host print the same on seeds
+  1-5 (2,000; 20,000 x3; 2,000 cases). The committed golden is seed 5 (`golden_campaign_editor.txt`), the seed of the
+  first ten whose 2,000 cases reach the save-before-open path that moves the selection; the Rust replay redraws each
+  case with the driver's generator instead of parsing its state line. Mutations (that path's scroll flag; the
+  background label's text when not found) each fail it; a mutation of the scroll flag passed seed 1's golden, which
+  never reaches it.
+- **Behaviour:** none intended. Only a person reaches the campaign editor (the editors' sub-menu's Campaign Editor;
+  no gate opens form 24).
+- **Not moved:** the scenario intro's form manager (`EEUISCIFormManager`, 315): its decisions are three extension
+  lists and `HasMedia`'s short-circuit; a Rust move replaces each test with a forwarder of the same size, so it
+  deletes nothing (the only saving there is a C++ refactor of the three `Open*`). The civilization builder's helpers
+  (`EECivilizationBuilder.cpp` 617, `EECBUIListBox` 835) are thin toolkit calls with C++ callers across the builder's
+  units; they wait for the builder's files to move.
