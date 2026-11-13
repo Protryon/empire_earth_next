@@ -229,6 +229,46 @@ enum class EeUiOp : uint32_t {
 };
 
 /// The inward calls (the C++ shim's methods).
+enum class EeUiScrollBarCall : uint32_t {
+  /// `CopyData()` -> the slider's result.
+  CopyData = 1,
+  /// `DrawPolygons()` -> the decrement button's result.
+  DrawPolygons = 2,
+  /// `DrawTextA()` -> the base's result.
+  DrawText = 3,
+  /// `IncrementBy(a)`.
+  IncrementBy = 4,
+  /// `MouseLButtonDown()`.
+  MouseLButtonDown = 5,
+  /// `MouseLButtonUp()`.
+  MouseLButtonUp = 6,
+  /// `MouseMove(f[0], f[1])`.
+  MouseMove = 7,
+  /// `SetLocation(f[0], f[1])`.
+  SetLocation = 8,
+  /// `DecrementByPageSize()` (the slider's).
+  DecrementByPageSize = 9,
+  /// `IncrementByPageSize()` (the slider's).
+  IncrementByPageSize = 10,
+  /// `SetCurrentRangeValue(a)` (the slider's).
+  SetCurrentRangeValue = 11,
+  /// `SetBgColor(f[0..3])` (the slider's).
+  SetBgColor = 12,
+  /// `SetBgOpacity(f[0])` (the slider's).
+  SetBgOpacity = 13,
+  /// `SetPageSize(a)` (the slider's).
+  SetPageSize = 14,
+  /// `SetRange(a, b)` (the slider's).
+  SetRange = 15,
+  /// `GetDecrementButton()`.
+  DecrementButton = 16,
+  /// `GetIncrementButton()`.
+  IncrementButton = 17,
+  /// `GetSlider()`.
+  Slider = 18,
+};
+
+/// The inward calls (the C++ shim's methods).
 enum class EeUiSliderCall : uint32_t {
   /// `CopyData()` -> its result.
   CopyData = 1,
@@ -290,8 +330,33 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
+/// The Rust UIScrollBar.
+struct EeUiScrollBar;
+
 /// The Rust UISlider.
 struct EeUiSlider;
+
+/// `GERectangle`: the C++ member order, `mBottom` first.
+struct EeUiRect {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
+};
+
+/// The constructor's geometry for a bar at `at`, `length` long: the control's rectangle, the slider's and the
+/// increment button's location (the decrement button sits at `at`).
+struct EeUiScrollBarLayout {
+  EeUiRect rect;
+  EeUiRect slider;
+  EeUiPoint increment;
+};
 
 /// A whole object's host: `(the C++ object, op, a, b, c, d, f)` -> the op's result.
 using EeUiHostFn = ptrdiff_t(*)(void *obj,
@@ -301,14 +366,6 @@ using EeUiHostFn = ptrdiff_t(*)(void *obj,
                                 ptrdiff_t c,
                                 ptrdiff_t d,
                                 float *f);
-
-/// `GERectangle`: the C++ member order, `mBottom` first.
-struct EeUiRect {
-  float bottom;
-  float left;
-  float right;
-  float top;
-};
 
 /// What a tiling class's `DrawBackground` hands its (virtual) `DrawTiledBackground`: the redraw rectangle's overlap
 /// with the background, the rows and columns of tiles under it (longs passed as unsigned longs, as the C++ did) and
@@ -405,12 +462,6 @@ struct EeUiBackgroundTableRefs {
   EeUiLayout *layout;
   EeUiRect *texture_rect;
   EeUiColor *color;
-};
-
-/// `GE2DPoint`: x, y.
-struct EeUiPoint {
-  float x;
-  float y;
 };
 
 /// `UIButton`'s members in their C++ order (the record starts at `mTextRectangle`). The pointers are C++'s and
@@ -918,24 +969,6 @@ struct EeUiListRefs {
   const unsigned long *border;
 };
 
-/// The constructor's geometry for a bar at `at`, `length` long: the control's rectangle, the slider's and the
-/// increment button's location (the decrement button sits at `at`).
-struct EeUiScrollBarLayout {
-  EeUiRect rect;
-  EeUiRect slider;
-  EeUiPoint increment;
-};
-
-/// `UIScrollBar`'s members in their C++ order (from `mIncrementButton` on). The pointers are C++'s.
-struct EeUiScrollBarFields {
-  void *increment_button;
-  void *decrement_button;
-  void *slider;
-  bool increment_pressed;
-  bool decrement_pressed;
-  bool slider_pressed;
-};
-
 /// `UICheckBox`'s members in their C++ order (from `mTextLabel` on).
 struct EeUiCheckFields {
   /// `UITextLabel*`, C++'s.
@@ -979,6 +1012,38 @@ struct EeUiDirtyRect {
 };
 
 extern "C" {
+
+/// The constructor's geometry ([`scrollbar::layout`]): the C++ needs the rectangle for `UIControl`'s constructor,
+/// before this object is made.
+EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at,
+                                            float length,
+                                            unsigned long style);
+
+/// A new Rust scroll bar for the C++ `bar` (its `UIControl` part constructed): `f` the location and length.
+///
+/// # Safety
+/// `f` points at four live floats.
+EeUiScrollBar *ee_ui_scroll_bar_new(void *bar,
+                                    EeUiHostFn host,
+                                    const float *f,
+                                    unsigned long style,
+                                    unsigned long border);
+
+/// The destructor: deletes the parts and frees the object.
+///
+/// # Safety
+/// `bar` came from `ee_ui_scroll_bar_new` (or is NULL) and is not used again.
+void ee_ui_scroll_bar_free(EeUiScrollBar *bar);
+
+/// One of UIScrollBar's methods ([`EeUiScrollBarCall`]).
+///
+/// # Safety
+/// `bar` is live; `f` is NULL or four live floats.
+ptrdiff_t ee_ui_scroll_bar_call(const EeUiScrollBar *bar,
+                                EeUiScrollBarCall call,
+                                ptrdiff_t a,
+                                ptrdiff_t b,
+                                float *f);
 
 /// A new Rust slider for the C++ `slider` (its `UIControl` part constructed), its calls out through `host`.
 EeUiSlider *ee_ui_slider_new(void *slider,
@@ -2013,37 +2078,6 @@ long ee_ui_manager_close_candidate_window(void *manager);
 
 /// `UIManager::CopyData`'s candidate window, after the forms (`result`: theirs) -> the result.
 long ee_ui_manager_copy_candidate_window(void *manager, long result);
-
-/// The constructor's geometry ([`scrollbar::layout`]).
-EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at, float length, unsigned long style);
-
-/// `UIScrollBar::MouseLButtonDown`.
-long ee_ui_scroll_bar_mouse_l_button_down(void *bar,
-                                          EeUiScrollBarFields *fields,
-                                          const EeUiRect *rect);
-
-/// `UIScrollBar::MouseLButtonUp`.
-long ee_ui_scroll_bar_mouse_l_button_up(void *bar,
-                                        EeUiScrollBarFields *fields,
-                                        const EeUiRect *rect);
-
-/// `UIScrollBar::MouseMove`.
-long ee_ui_scroll_bar_mouse_move(void *bar,
-                                 EeUiScrollBarFields *fields,
-                                 const EeUiRect *rect,
-                                 EeUiPoint at);
-
-/// `UIScrollBar::SetLocation`.
-void ee_ui_scroll_bar_set_location(void *bar,
-                                   EeUiScrollBarFields *fields,
-                                   const EeUiRect *rect,
-                                   EeUiPoint at);
-
-/// `UIScrollBar::IncrementBy`.
-void ee_ui_scroll_bar_increment_by(void *bar,
-                                   EeUiScrollBarFields *fields,
-                                   const EeUiRect *rect,
-                                   long amount);
 
 /// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
 void ee_ui_label_wrap(void *ctx, const char *text, float width);

@@ -32,6 +32,8 @@ pub struct Replay<'a> {
     dispatch: Dispatch,
     /// Calls and ops checked.
     pub checked: Cell<usize>,
+    /// The first failure inside a call out.
+    failed: RefCell<Option<String>>,
 }
 
 pub fn hex4(f: &[f32; 4]) -> String {
@@ -53,8 +55,21 @@ fn int(w: &str) -> isize {
 unsafe extern "C" fn host(obj: *mut c_void, op: EeUiOp, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
     // SAFETY: the replay passes itself as the object and outlives the Rust object's calls
     let r = unsafe { &*(obj as *const Replay) };
+    if r.failed.borrow().is_some() {
+        return 0;
+    }
+    // a panic may not unwind out of an extern "C" function: the first is kept and raised after the inward call
     // SAFETY: the Rust objects pass four live floats
-    unsafe { r.on_op(op, a, b, c, d, f) }
+    let got = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe { r.on_op(op, a, b, c, d, f) }));
+    got.unwrap_or_else(|e| {
+        let m = e
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
+            .unwrap_or_default();
+        r.failed.borrow_mut().get_or_insert(m);
+        0
+    })
 }
 
 impl<'a> Replay<'a> {
@@ -66,6 +81,7 @@ impl<'a> Replay<'a> {
             target: Cell::new(core::ptr::null()),
             dispatch,
             checked: Cell::new(0),
+            failed: RefCell::new(None),
         }
     }
 
@@ -133,6 +149,7 @@ impl<'a> Replay<'a> {
         let mut buf = floats(&w[4..]);
         // SAFETY: the target is the live Rust object the test made
         let r = unsafe { (self.dispatch)(self.target.get(), call, int(w[2]), int(w[3]), buf.as_mut_ptr()) };
+        self.raise();
         self.expect(&format!("ret {r} {}", hex4(&buf)));
     }
 
@@ -148,6 +165,14 @@ impl<'a> Replay<'a> {
                 "call" => unsafe { self.call(&w) },
                 _ => assert!(other(self, &w), "golden line {}: unexpected {l:?}", self.pos.get()),
             }
+            self.raise();
+        }
+    }
+
+    /// Raises the first failure a call out met.
+    fn raise(&self) {
+        if let Some(m) = self.failed.borrow_mut().take() {
+            panic!("{m}");
         }
     }
 

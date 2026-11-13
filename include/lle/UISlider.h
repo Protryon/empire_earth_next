@@ -15,7 +15,6 @@
 struct EeUiSlider;
 
 class LLE_API UISlider : public UIControl {
-    friend class UIScrollBar;               // its host calls the protected page steps and mouse handlers
     friend struct UIScrollBarRust;          // UIScrollBar.cpp: the scroll bar's host
     friend struct UISliderHost;             // UISlider.cpp: the Rust object's calls out
 public:

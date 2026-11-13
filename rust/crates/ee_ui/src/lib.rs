@@ -33,6 +33,7 @@ pub mod mouse;
 pub mod obj;
 pub mod rect;
 pub mod scrollbar;
+pub mod scrollbarobj;
 pub mod scrolling;
 pub mod slider;
 pub mod sliderobj;
@@ -109,9 +110,6 @@ mod manager_ffi;
 // imports the C++ manager's music and IME members, the sound manager's calls (UIManager.cpp), absent from a test binary
 #[cfg(not(test))]
 mod manager_media_ffi;
-// imports the C++ scroll bar's host calls (UIScrollBar.cpp), absent from a test binary
-#[cfg(not(test))]
-mod scrollbar_ffi;
 // imports the C++ text measuring (UITextLabel.cpp)
 #[cfg(not(test))]
 mod wrap_ffi;
