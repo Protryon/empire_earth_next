@@ -71,7 +71,7 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
+#include "ee/EESEARust.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -478,8 +478,8 @@ void EESETSETModifyAIMilitaryTarget::Load(EESMEffect* inEffect, EESETSEffectCont
         inControls->mRadioButtons[4]->Check();
     else
         inControls->mRadioButtons[5]->Check();
-    EESEEUseObjectArea* theEvent = new EESEEUseObjectArea(inControls->mLabels[3], inControls->mScenarioComboBoxes[1],
-                                                          inControls->mRadioButtons[2]);
+    EESEERust* theEvent = EESEENewUseObjectArea(inControls->mLabels[3], inControls->mScenarioComboBoxes[1],
+                                                inControls->mRadioButtons[2]);
     inControls->mRadioButtons[2]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mRadioButtons[3]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     theEvent->Dereference();

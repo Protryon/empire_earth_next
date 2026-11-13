@@ -18,7 +18,7 @@ mod sys {
     extern "C" {
         pub fn ee_screenscpp_sew(op: u32, p: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_sew_elevation(data: *mut i16, capacity: usize, out: *mut i32) -> usize;
-        pub fn ee_screenscpp_see(op: u32, p: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
+        pub fn ee_screenscpp_see(op: u32, p: *mut c_void, q: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_sep(op: u32, p: *mut c_void, t: *mut f32, i: *mut i32, f: *mut f32) -> i32;
     }
 }
@@ -290,8 +290,8 @@ pub unsafe extern "C" fn ee_screens_sew_place_push(
 // `EEUIFSETRBPaintType.cpp`)
 
 impl SeeHost for Host {
-    fn op(&mut self, op: u32, p: usize, i: &mut [i32; 2], f: &mut [f32; 4]) -> i32 {
-        unsafe { sys::ee_screenscpp_see(op, p as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
+    fn op(&mut self, op: u32, p: usize, q: usize, i: &mut [i32; 2], f: &mut [f32; 4]) -> i32 {
+        unsafe { sys::ee_screenscpp_see(op, p as *mut c_void, q as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
     }
 }
 
@@ -348,6 +348,51 @@ pub unsafe extern "C" fn ee_screens_see_hide_ui_views(
     if !event.is_null() {
         let (u, c) = unsafe { (core::slice::from_raw_parts(unchecked, 4), core::slice::from_raw_parts(checked, 4)) };
         unsafe { (*event).0.set_hide_ui_views([u[0], u[1], u[2], u[3]], [c[0], c[1], c[2], c[3]]) };
+    }
+}
+
+/// The slider event's label, NUL-terminated format, scale and offset (`EESEESliderChange`'s constructor).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL); `format` is NUL-terminated (or NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_see_slider(
+    event: *mut EeScreensSeeEvent,
+    label: *mut c_void,
+    format: *const core::ffi::c_char,
+    scale: f32,
+    offset: f32,
+) {
+    if !event.is_null() && !format.is_null() {
+        let format = unsafe { core::ffi::CStr::from_ptr(format) }.to_bytes();
+        unsafe { (*event).0.set_slider(label as usize, format, scale, offset) };
+    }
+}
+
+/// A control the check box event shows and hides (`EESEECheckDisplay::mControls.push_back`).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_see_push_control(event: *mut EeScreensSeeEvent, control: *mut c_void) {
+    if !event.is_null() {
+        unsafe { (*event).0.push_control(control as usize) };
+    }
+}
+
+/// The object/area event's label, scenario combo box and area control (`EESEEUseObjectArea`'s constructor).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_see_object_area(
+    event: *mut EeScreensSeeEvent,
+    label: *mut c_void,
+    combo: *mut c_void,
+    area: *mut c_void,
+) {
+    if !event.is_null() {
+        unsafe { (*event).0.set_object_area(label as usize, combo as usize, area as usize) };
     }
 }
 

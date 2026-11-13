@@ -912,6 +912,15 @@ constexpr static const uint32_t EE_SCREENS_SEE_QUICK_LOAD = 3;
 /// `EESEEQuickSave` (object: the quick save/load action).
 constexpr static const uint32_t EE_SCREENS_SEE_QUICK_SAVE = 4;
 
+/// `EESEESliderChange` (its label, format, scale and offset: `ee_screens_see_slider`).
+constexpr static const uint32_t EE_SCREENS_SEE_SLIDER_CHANGE = 5;
+
+/// `EESEECheckDisplay` (its controls: `ee_screens_see_push_control`).
+constexpr static const uint32_t EE_SCREENS_SEE_CHECK_DISPLAY = 6;
+
+/// `EESEEUseObjectArea` (its label, combo box and area control: `ee_screens_see_object_area`).
+constexpr static const uint32_t EE_SCREENS_SEE_USE_OBJECT_AREA = 7;
+
 /// The object p referenced / released.
 constexpr static const uint32_t EE_SCREENS_SEE_OP_REFERENCE = 1;
 
@@ -938,6 +947,23 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_SHOW_LOADED = 8;
 
 /// A quick save action of the quick save/load action p posted.
 constexpr static const uint32_t EE_SCREENS_SEE_OP_QUICK_SAVE = 9;
+
+/// -> the slider p's current value (`GetCurrentRangeValue`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_RANGE = 10;
+
+/// The label p's text set to the value f0 printed by the NUL-terminated format q (`sprintf` into a `UWideString`,
+/// the float passed as a double as through the original's `...`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SLIDER_TEXT = 11;
+
+/// The control p's display mode set to i0.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SET_DISPLAY = 12;
+
+/// The scenario combo box p refilled with the areas (i0 != 0) or the objects, the label q titled
+/// (`FillScenarioComboBox`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_FILL_SCENARIO = 13;
+
+/// The combo box p's selection set to i0.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SET_SELECTION = 14;
 
 /// The ghosts' lock taken (i0 != 0) or let go.
 constexpr static const uint32_t EE_SCREENS_SEP_GHOST_LOCK = 1;
@@ -3738,6 +3764,31 @@ void ee_screens_see_viewport(EeScreensSeeEvent *event,
 void ee_screens_see_hide_ui_views(EeScreensSeeEvent *event,
                                   const float *unchecked,
                                   const float *checked);
+
+/// The slider event's label, NUL-terminated format, scale and offset (`EESEESliderChange`'s constructor).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL); `format` is NUL-terminated (or NULL).
+void ee_screens_see_slider(EeScreensSeeEvent *event,
+                           void *label,
+                           const char *format,
+                           float scale,
+                           float offset);
+
+/// A control the check box event shows and hides (`EESEECheckDisplay::mControls.push_back`).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+void ee_screens_see_push_control(EeScreensSeeEvent *event, void *control);
+
+/// The object/area event's label, scenario combo box and area control (`EESEEUseObjectArea`'s constructor).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+void ee_screens_see_object_area(EeScreensSeeEvent *event,
+                                void *label,
+                                void *combo,
+                                void *area);
 
 /// The `EESEERust`'s destructor.
 ///

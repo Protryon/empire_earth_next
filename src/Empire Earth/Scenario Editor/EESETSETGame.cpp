@@ -68,7 +68,7 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
+#include "ee/EESEARust.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -460,7 +460,7 @@ void EESETSETGameDayNight::Show(EESETSEffectControls* inControls)
     inControls->mSliders[0]->SetLocation(theLocation);
     inControls->mSliders[0]->SetPageSize(1);
     inControls->mSliders[0]->SetDisplayMode(kDisplayModeShown);
-    UIEvent* theEvent = new EESEESliderChange(inControls->mLabels[3], UWideString("%2.0f"), 1.0f, 0.0f);
+    UIEvent* theEvent = EESEENewSliderChange(inControls->mLabels[3], "%2.0f", 1.0f, 0.0f);
     inControls->mSliders[0]->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
     theEvent->Dereference();
     theLocation.SetX(inControls->mSliders[0]->GetRectangle().GetLeft() + 40.0f);
@@ -632,7 +632,7 @@ void EESETSETGameStartCinematic::Show(EESETSEffectControls* inControls)
     inControls->mSliders[0]->SetLocation(theLocation);
     inControls->mSliders[0]->SetPageSize(1);
     inControls->mSliders[0]->SetDisplayMode(kDisplayModeShown);
-    UIEvent* theEvent = new EESEESliderChange(inControls->mLabels[3], UWideString("%#2.1f"), 0.1f, 0.1f);
+    UIEvent* theEvent = EESEENewSliderChange(inControls->mLabels[3], "%#2.1f", 0.1f, 0.1f);
     inControls->mSliders[0]->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
     theEvent->Dereference();
     theLocation.SetX(inControls->mSliders[0]->GetRectangle().GetLeft() + 40.0f);

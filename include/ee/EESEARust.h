@@ -48,20 +48,27 @@ enum {
     kSEAMoveUnit = 13,
 };
 
-// The editor form's events whole in Rust (ee_screens editor_events.rs): the hide-UI box, the viewport change, the
-// toolbar's quick load and quick save (the original's EESEEHideUI, EESEEChangeViewport, EESEEQuickLoad,
-// EESEEQuickSave). Requires lle/UIEvent.h for EESEERust.
+// The editor's events whole in Rust (ee_screens editor_events.rs): the hide-UI box, the viewport change, the
+// toolbar's quick load and quick save, the trigger screens' slider label, check box display and area/object refill
+// (the original's EESEEHideUI, EESEEChangeViewport, EESEEQuickLoad, EESEEQuickSave, EESEESliderChange,
+// EESEECheckDisplay, EESEEUseObjectArea). Requires lle/UIEvent.h for EESEERust.
 struct EeScreensSeeEvent;
 extern "C" EeScreensSeeEvent* ee_screens_see_new(uint32_t kind, void* object);
 extern "C" int32_t ee_screens_see_process(const EeScreensSeeEvent* event, void* entity);
 extern "C" void ee_screens_see_viewport(EeScreensSeeEvent* event, const float* rectangle, uint8_t hidden);
 extern "C" void ee_screens_see_free(EeScreensSeeEvent* event);
 extern "C" void ee_screens_see_hide_ui_views(EeScreensSeeEvent* event, const float* unchecked, const float* checked);
+extern "C" void ee_screens_see_slider(EeScreensSeeEvent* event, void* label, const char* format, float scale, float offset);
+extern "C" void ee_screens_see_push_control(EeScreensSeeEvent* event, void* control);
+extern "C" void ee_screens_see_object_area(EeScreensSeeEvent* event, void* label, void* combo, void* area);
 enum {
     kSEEHideUI = 1,
     kSEEChangeViewport = 2,
     kSEEQuickLoad = 3,          // object: the quick save/load action
     kSEEQuickSave = 4,          // object: the quick save/load action
+    kSEESliderChange = 5,       // EESEENewSliderChange
+    kSEECheckDisplay = 6,       // its controls: EESEEPushControl
+    kSEEUseObjectArea = 7,      // EESEENewUseObjectArea
 };
 
 class EESEARust : public EEAction {
@@ -88,5 +95,34 @@ public:
     }
     EeScreensSeeEvent* mEvent;
 };
+
+class UIControl;
+class UIEntity;
+class UITextLabel;
+class EESETSEScenarioComboBox;
+
+// EESEESliderChange(label, format, scale, offset): the slider's value * scale + offset printed by the format into the
+// label (the format is copied)
+inline EESEERust* EESEENewSliderChange(UITextLabel* inLabel, const char* inFormat, float inScale, float inOffset)
+{
+    EESEERust* theEvent = new EESEERust(kSEESliderChange);
+    ee_screens_see_slider(theEvent->mEvent, inLabel, inFormat, inScale, inOffset);
+    return theEvent;
+}
+
+// EESEECheckDisplay's mControls.push_back: a control shown while the check box is checked, else hidden
+inline void EESEEPushControl(EESEERust* inEvent, UIControl* inControl)
+{
+    ee_screens_see_push_control(inEvent->mEvent, inControl);
+}
+
+// EESEEUseObjectArea(label, combo box, area control): the combo box refilled with the areas when the area control
+// is the one checked, else with the objects (FillScenarioComboBox), its first line picked
+inline EESEERust* EESEENewUseObjectArea(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, UIEntity* inAreaControl)
+{
+    EESEERust* theEvent = new EESEERust(kSEEUseObjectArea);
+    ee_screens_see_object_area(theEvent->mEvent, inLabel, inComboBox, inAreaControl);
+    return theEvent;
+}
 
 #endif

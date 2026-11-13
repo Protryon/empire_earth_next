@@ -124,6 +124,10 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
 #include "lle/UICheckBox.h"
+#include "lle/UILBString.h"
+#include "lle/UIComboBox.h"
+#include "lle/UITextLabel.h"
+#include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EEAQuickSaveLoad.h"
 #include "ee/EEStringIDs.h"
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
@@ -154,7 +158,15 @@ long EESEEGameUnitLimit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // (EESEEQuickSave::ProcessEvent: ee_screens editor_events.rs)
 
 // The host of the editor form's events whole in Rust (EE_SCREENS_SEE_OP_*; EESEERust in ee/EESEARust.h)
-extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* p, int32_t* i, float* f)
+void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
+
+static_assert(kSEEHideUI == EE_SCREENS_SEE_HIDE_UI && kSEEChangeViewport == EE_SCREENS_SEE_CHANGE_VIEWPORT &&
+                  kSEEQuickLoad == EE_SCREENS_SEE_QUICK_LOAD && kSEEQuickSave == EE_SCREENS_SEE_QUICK_SAVE &&
+                  kSEESliderChange == EE_SCREENS_SEE_SLIDER_CHANGE && kSEECheckDisplay == EE_SCREENS_SEE_CHECK_DISPLAY &&
+                  kSEEUseObjectArea == EE_SCREENS_SEE_USE_OBJECT_AREA,
+              "ee/EESEARust.h's event kinds");
+
+extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* p, void* q, int32_t* i, float* f)
 {
     switch (inOp) {
     case EE_SCREENS_SEE_OP_REFERENCE:
@@ -189,6 +201,24 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* p, int32_t* i, float* 
         theAction->Dereference();
         break;
     }
+    case EE_SCREENS_SEE_OP_RANGE:
+        return (int32_t)static_cast<UISlider*>(static_cast<UIEntity*>(p))->GetCurrentRangeValue();
+    case EE_SCREENS_SEE_OP_SLIDER_TEXT: {
+        // the original's sprintf of its UWideString format: the float value passed as a double through `...`
+        UWideString theText;
+        sprintf(theText, static_cast<const char*>(q), (double)f[0]);
+        static_cast<UITextLabel*>(p)->SetText(theText);
+        break;
+    }
+    case EE_SCREENS_SEE_OP_SET_DISPLAY:
+        static_cast<UIControl*>(p)->SetDisplayMode((unsigned long)i[0]);
+        break;
+    case EE_SCREENS_SEE_OP_FILL_SCENARIO:
+        FillScenarioComboBox(static_cast<EESETSEScenarioComboBox*>(p), static_cast<UITextLabel*>(q), i[0] != 0);
+        break;
+    case EE_SCREENS_SEE_OP_SET_SELECTION:
+        static_cast<UIComboBox*>(static_cast<EESETSEScenarioComboBox*>(p))->SetCurrentSelection((unsigned long)i[0]);
+        break;
     }
     return 0;
 }

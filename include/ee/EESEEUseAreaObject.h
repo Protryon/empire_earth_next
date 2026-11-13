@@ -4,7 +4,7 @@
 // the controls' mRadioButtons[0]/[1]). ??_G 0x187a34 (0x2b bytes, three vptr stores: a user-declared empty dtor).
 // ProcessEvent 0x18b2dc looks up the form's controls 0x96d and 0x99e and calls the cdecl
 // helper 0x18b1b0 (the 0x96d control, the 0x99e control, bool: the clicked button's id +0x80 == 0x988); returns 0.
-// The twin of EESEEUseObjectArea (ee/EESEEvents.h). Names are provisional. Requires lle/UIEvent.h.
+// The twin of EESEEUseObjectArea (an EESEERust, ee/EESEARust.h). Names are provisional. Requires lle/UIEvent.h.
 #ifndef EE_EESEEUSEAREAOBJECT_H
 #define EE_EESEEUSEAREAOBJECT_H
 

@@ -73,7 +73,7 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
+#include "ee/EESEARust.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -445,7 +445,7 @@ void EESETSETCreateAIMilitaryGroup::Load(EESMEffect* inEffect, EESETSEffectContr
             theList = inControls->mListBoxes[1];
         theList->AppendLine(theNames[i]);
     }
-    theEvent = new EESEEUseObjectArea(inControls->mLabels[3], inControls->mScenarioComboBoxes[1],
+    theEvent = EESEENewUseObjectArea(inControls->mLabels[3], inControls->mScenarioComboBoxes[1],
                                      inControls->mRadioButtons[0]);
     inControls->mRadioButtons[0]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mRadioButtons[1]->SetTriggerEvent(kControlTriggerChecked, theEvent);
