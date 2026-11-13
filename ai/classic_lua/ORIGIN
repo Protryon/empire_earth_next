@@ -148,8 +148,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 DefendPlayer (allies), the scenario's attack and defend tasks.
   EECPCombatStrategy.cpp        PARTLY -> army.lua: ComputeDomainShares' sea share (GetDomainShare: the water tiles'
                 share, the own sea strength against the target's, the air unit weight's pull) and Calculate (the
-                sea's count, the rest land), RedistributeDomainCounts (no sea class: to land). NOT STARTED: the air
-                share (from WW1) and space
+                sea's count, the rest land), RedistributeDomainCounts (no sea or air class: to land); the air share from WW1 (the target's town
+                across water, the anti-air counts, the pull toward the target's air strength; DEVIATION: the town values'
+                rule is not ported); the air count's counters and a favourite air type (DEVIATION: a random trainable air
+                class). NOT STARTED: the space share
   EECPAttackCommander.cpp, EECPAttackGroup.cpp, EECPAttackSubGroup.cpp
                 PARTLY -> army.lua: CreateGroup / MakePlan / PlaceSubGroups (one land sub-group per group: its held
                 units taken, its slots requested), DropSpentGroups every 45 s, the sub-group's phases (WaitForUnits

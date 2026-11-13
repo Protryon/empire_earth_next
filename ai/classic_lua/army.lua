@@ -637,6 +637,67 @@ local function sea_share(memory, f)
     return result
 end
 
+-- ComputeDomainShares' air share (from the Atomic Age - WW1): a weight, the target's town across water 0.1-0.3, more
+-- anti-air units with the target than with the player 0.05-0.2, none of these 0.2-0.35 (planets 0-0.1); the share a
+-- random 0.9-1.35 of it, pulled toward the target's air share of its strength by the naval unit weight (as the
+-- original: mNavalUnitWeight); thousandths. DEVIATION: the town values' rule (a target town 1.5 x the player's
+-- worth: 0.2-0.4) is not ported (the target's town values are not known)
+local function air_share(view, memory, f, target)
+    if view.epoch < 9 then
+        return 0
+    end
+    local t = memory.t
+    local weight = 0
+    local tx, ty = R.town(view)
+    local ex, ey
+    for _, e in ipairs(view.enemies or {}) do
+        if e.player == target and e.town_x ~= nil and e.town_x >= 0 then
+            ex, ey = e.town_x, e.town_y
+        end
+    end
+    if tx ~= nil and ex ~= nil and not ai.reach(tx, ty, ex, ey) and not t.space then
+        weight = ai.random(100, 300)
+    end
+    local theirs, ours = 0, 0
+    for _, ty2 in ipairs(f.types or {}) do
+        if (cls(ty2).ai_kind or 0) == KIND_ANTI_AIR then
+            theirs = theirs + 1
+        end
+    end
+    for _, src in ipairs({own_military()}) do
+        for _, u in ipairs(src) do
+            if (cls(u.type).ai_kind or 0) == KIND_ANTI_AIR then
+                ours = ours + 1
+            end
+        end
+    end
+    if ours < theirs then
+        weight = weight + ai.random(50, 200)
+    end
+    if weight <= 0 then
+        weight = t.planets and ai.random(0, 100) or ai.random(200, 350)
+    end
+    local result = ai.random(900, 1350) * weight // 1000
+    if result > 1000 then
+        result = 950
+    elseif result < 1 then
+        result = 0
+    end
+    local tdom = f.dom or {land = 0, sea = 0, air = 0, space = 0}
+    local tsum = tdom.land + tdom.sea + tdom.air + tdom.space
+    if tsum ~= 0 then
+        local share = tdom.air * 1000 // tsum
+        if share > 0 and result > 0 then
+            result = (share - result) * (t.behavior.naval_unit_weight_k or 0) // 1000 + result
+            result = math.max(0, math.min(1000, result))
+        end
+    end
+    return result
+end
+
+-- the air counterpart of IsFavoriteLand (EECPUSFavoriteUnitsScreen::IsFavoriteAir). DEVIATION: the favourite air type
+-- is a random trainable air class of the selection (ChooseFavoriteAirType's screen is not readable)
+
 -- the sea counterpart of IsFavoriteLand (EECPUSFavoriteUnitsScreen::IsFavoriteSea)
 local function favorite_sea_ok(name)
     local k = cls(name)
@@ -923,12 +984,22 @@ local function select_units(view, memory, kind, target, naval)
     if count <= 0 then
         return nil
     end
-    -- ComputeDomainShares and Calculate: the sea's count (the cap x its share must make a unit), the rest land
-    local numSea = 0
-    local sea_k = sea_share(memory, f)
+    -- ComputeDomainShares and Calculate: the air's count (from WW1), the sea's on what is left (the cap x a share
+    -- must make a unit), the rest land
+    local numSea, numAir = 0, 0
+    local air_k = air_share(view, memory, f, target)
+    local sea_k = math.min(sea_share(memory, f), 1000 - air_k)
     local cap = view.population_cap
-    local land_k = 1000 - sea_k
+    local land_k = 1000 - sea_k - air_k
+    if land_k < 1 then
+        land_k = 0
+    end
     local sum = 0
+    if air_k > 0 and cap * air_k // 1000 > 0 then
+        sum = sum + air_k
+    else
+        air_k = 0
+    end
     if sea_k > 0 and cap * sea_k // 1000 > 0 then
         sum = sum + sea_k
     else
@@ -940,13 +1011,20 @@ local function select_units(view, memory, kind, target, naval)
     if sum > 0 and sea_k > 0 then
         numSea = sea_k * count // sum
     end
+    if sum > 0 and air_k > 0 then
+        numAir = air_k * count // sum
+    end
     local byKind = candidate_classes(view, kind, "land")
     local seaKind = candidate_classes(view, kind, "sea")
+    local airKind = candidate_classes(view, kind, "air")
     -- RedistributeDomainCounts: a domain with no class gives its count to land
     if numSea > 0 and #ai.keys(seaKind) == 0 then
         numSea = 0
     end
-    local numLand = count - numSea
+    if numAir > 0 and #ai.keys(airKind) == 0 then
+        numAir = 0
+    end
+    local numLand = count - numSea - numAir
     local held, slots = {}, {}
     -- AllocateHeldUnits: the most common classes first (up to 9 classes), each domain within its count
     if held_n > 0 then
@@ -971,8 +1049,10 @@ local function select_units(view, memory, kind, target, naval)
             if best == nil then
                 break
             end
-            local sea = domain_of(cls(best)) == "sea"
-            local take = math.min(bn, wanted, sea and numSea or numLand)
+            local dom = domain_of(cls(best))
+            local sea = dom == "sea"
+            local airc = dom == "air"
+            local take = math.min(bn, wanted, sea and numSea or airc and numAir or numLand)
             for _, c in ipairs(cands) do
                 if take <= 0 then
                     break
@@ -984,6 +1064,8 @@ local function select_units(view, memory, kind, target, naval)
                     wanted = wanted - 1
                     if sea then
                         numSea = numSea - 1
+                    elseif airc then
+                        numAir = numAir - 1
                     else
                         numLand = numLand - 1
                     end
@@ -1010,6 +1092,9 @@ local function select_units(view, memory, kind, target, naval)
         for _, ak in ipairs(ai.keys(seaKind)) do
             all[ak] = true
         end
+        for _, ak in ipairs(ai.keys(airKind)) do
+            all[ak] = true
+        end
         local weights = {}
         for _, t in ipairs(f.types or {}) do
             local k = cls(t)
@@ -1021,6 +1106,13 @@ local function select_units(view, memory, kind, target, naval)
             end
         end
         if #ai.keys(weights) > 0 then
+            if numAir > 0 then
+                local got
+                got, numAir = counter_slots(memory, airKind, weights, list, numAir, ai.random(3, 5), nil)
+                for _, name in ipairs(got) do
+                    slots[#slots + 1] = name
+                end
+            end
             if numSea > 0 then
                 local got
                 got, numSea = counter_slots(memory, seaKind, weights, list, numSea, ai.random(3, 5), nil)
@@ -1038,8 +1130,30 @@ local function select_units(view, memory, kind, target, naval)
             end
         end
     end
-    -- AllocateFavoriteUnits: the sea count the favourite sea type (none: the count goes to land), then the land count
-    -- the favourite land type
+    -- AllocateFavoriteUnits: the air count a favourite air type (none: the count goes to land), the sea count the
+    -- favourite sea type (none: to land), then the land count the favourite land type
+    if favorites and numAir > 0 then
+        local names = {}
+        for _, ak in ipairs(ai.keys(airKind)) do
+            for _, name in ipairs(airKind[ak]) do
+                names[#names + 1] = name
+            end
+        end
+        table.sort(names)
+        if #names > 0 then
+            local fav = names[ai.random(1, #names)]
+            for _ = 1, numAir do
+                slots[#slots + 1] = fav
+            end
+        else
+            numLand = numLand + numAir
+        end
+        numAir = 0
+    end
+    if numAir > 0 then
+        numLand = numLand + numAir
+        numAir = 0
+    end
     if favorites and numSea > 0 then
         local fav = favorite_of(view, memory.cp.favorite_sea, "sea", seaKind, favorite_sea_ok)
         if fav ~= nil then
@@ -1059,7 +1173,7 @@ local function select_units(view, memory, kind, target, naval)
             end
         end
     end
-    return {count = count, held = held, slots = slots, strength = strength, sea_k = sea_k}
+    return {count = count, held = held, slots = slots, strength = strength, sea_k = sea_k, air_k = air_k}
 end
 
 -- CheckNaval's selection: `count` units, all at sea (no sea class: they go to land, as AllocateFavoriteUnits moves
@@ -1183,9 +1297,15 @@ local function create_group(view, memory, kind, mission, target, why, naval)
             if #part.ids > 0 then
                 G.add(mem, g, part.ids)
             end
-            print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d sea=%d%s",
+            local nair = 0
+            for _, sl in ipairs(g.slots) do
+                if domain_of(cls(sl.c or sl)) == "air" then
+                    nair = nair + 1
+                end
+            end
+            print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d sea=%d air=%d airslots=%d%s",
                 why, g.id, kind, mission, target or 0, sel.count, #part.ids, #g.slots, sel.strength, sel.sea_k,
-                g.sea and " navy" or ""))
+                sel.air_k or 0, nair, g.sea and " navy" or ""))
             first = first or g
         end
     end
