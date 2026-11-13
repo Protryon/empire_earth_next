@@ -69,6 +69,9 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Empire Earth/EESim.cpp",
                        # TEST ONLY: its scripted scenario editor (EE-SIM.exe --editor-script; ee/EESimEditor.h)
                        "Empire Earth/Empire Earth/EESimEditor.cpp",
+                       # the host of the scenario editor's actions whole in Rust: the paints' ranges
+                       # 0x1a830a..0x1a9112 (ee/EESEAPaint.h's EESEAPaintRust; ee_screens editor_actions.rs)
+                       "Empire Earth/Scenario Editor Actions/EESEARust.cpp",
                        # TEST ONLY: the simulation capture of the Rust leaves' gates (EE_SIM_CAPTURE; tools/sim_capture.py)
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)

@@ -1,7 +1,7 @@
 //! `extern "C"` for the scenario editor's actions whole in Rust (`editor_whole.rs`): the record an `EESEARust`
 //! (`ee/EESEARust.h`) holds, made, begun, run and freed by it, and the calls of the actions' users (the rotation,
 //! the trigger area's corner, the wall and gate placements). The host is `ee_screenscpp_sew` and
-//! `ee_screenscpp_sew_elevation` (`Scenario Editor Actions/EESEAPaintTerrain.cpp`).
+//! `ee_screenscpp_sew_elevation` (`Scenario Editor Actions/EESEARust.cpp`).
 
 use core::ffi::c_void;
 

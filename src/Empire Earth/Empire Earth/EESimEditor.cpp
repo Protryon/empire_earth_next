@@ -144,7 +144,6 @@
 #include "lle/UIComboBox.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESEAPaint.h"
-#include "ee/EESEAPaintTerrain.h"
 #include "ee/EESEARust.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
@@ -166,7 +165,6 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EEUIFSEPaintElevation.h"
-#include "ee/EESEAPaintMoutains.h"
 #include "lle/URandom.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EETileCoordinate.h"
@@ -721,14 +719,14 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             theCode = [=] { (new EESEARust(kSEARandomMap, NULL, L(1), L(2)))->Dereference(); };
         else if (c == "terrain")
             theCode = [=] {
-                EESEAPaint* a = new EESEAPaintTerrain(L(1), EETerrainTable::Get(L(1))->mColorType);
+                EESEAPaint* a = new EESEAPaintRust(kSEAPaintTerrain, L(1), EETerrainTable::Get(L(1))->mColorType);
                 if (a->SetArea(L(2), L(3), L(4), L(5)))
                     gUserInterface->PostAction(a);
                 a->Dereference();
             };
         else if (c == "bulldoze")
             theCode = [=] {
-                EESEAPaint* a = new EESEAPaintMoutains;
+                EESEAPaint* a = new EESEAPaintRust(kSEAPaintBulldozer);
                 if (a->SetArea(L(1), L(2), L(3), L(4)))
                     gUserInterface->PostAction(a);
                 a->Dereference();
@@ -738,7 +736,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 long theButton = w[1] == "raise" ? kSEElevationRaiseButton
                                  : w[1] == "hills" ? kSEElevationLowerButton : kSEElevationLevelButton;
                 static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(theButton))->Check();
-                EESEAPaint* a = new EESEAPaintElevation((char)L(2));
+                EESEAPaint* a = new EESEAPaintRust(kSEAPaintElevation, (char)L(2));
                 if (a->SetArea(L(3), L(4), L(5), L(6)))
                     gUserInterface->PostAction(a);
                 a->Dereference();

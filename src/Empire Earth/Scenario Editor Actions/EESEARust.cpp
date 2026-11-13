@@ -1,6 +1,9 @@
-// C:\EEX\Empire Earth\Scenario Editor Actions\EESEAPaintTerrain.cpp (file name inferred: no __FILE__; RTTI class
-// EESEAPaintTerrain). The terrain painting action: 0x1a8d3e..0x1a9112 (PlantTerrainUnits, Virtual4, SetArea, the deque
-// _Growmap/iterator COMDATs). After EESEAPaintMoutains.cpp, before EESEAPlaceGate.cpp.
+// C:\EEX\Empire Earth\Scenario Editor Actions\EESEARust.cpp (port addition, no original address). The host of the
+// scenario editor's actions whole in Rust (ee_screens editor_actions.rs, editor_whole.rs, editor_place.rs): the paint
+// actions' world edits (ee_screenscpp_sea*), the actions' world, screens and files (ee_screenscpp_sew,
+// ee_screenscpp_sew_elevation) and the placements' (ee_screenscpp_sep). The paint actions themselves are
+// EESEAPaintRust (ee/EESEAPaint.h): the original's EESEAPaintElevation.cpp 0x1a830a..0x1a86ff, EESEAPaintMoutains.cpp
+// 0x1a86ff..0x1a8d3e and EESEAPaintTerrain.cpp 0x1a8d3e..0x1a9112 (their deque and std::sort COMDATs with them).
 #include <windows.h>
 #include <mbstring.h>
 #include <stdio.h>
@@ -77,7 +80,7 @@
 #include "lle/URandom.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EESEAPaint.h"
-#include "ee/EESEAPaintTerrain.h"
+#include "ee/EESEAPaint.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEPaint.h"
@@ -104,35 +107,6 @@
 #include "ee/EEMouse.h"
 #include "ee/EESEADeleteUnit.h"
 #include "ee/EESEARust.h"
-
-// FUNCTION: EXE 0x5a8d3e
-// (PlantTerrainUnits: the ambient units' scatter, ee_screens editor_actions.rs plant_terrain_units)
-
-// FUNCTION: EXE 0x5a8e6c
-// Paints each queued area with the terrain and texture (unless the terrain only adds ambient units), scatters its
-// ambient units, fixes cliffs and redraws the minimap (ee_screens editor_actions.rs)
-void EESEAPaintTerrain::Virtual4()
-{
-    ee_screens_sea_paint_run(this->mPlan);
-}
-
-// FUNCTION: EXE 0x5a8f45
-// Queues the area if any of its tiles is on the map; returns whether it queued (ee_screens editor_actions.rs)
-bool EESEAPaintTerrain::SetArea(long inLeft, long inTop, long inRight, long inBottom)
-{
-    return ee_screens_sea_paint_set_area(this->mPlan, inLeft, inTop, inRight, inBottom) != 0;
-}
-
-// FUNCTION: EXE 0x5a8fea
-// (the paint area queue's deque<EESEAPaintRect>::_Growmap: the queue is editor_actions.rs's)
-
-// FUNCTION: EXE 0x5a90ea
-// (deque<EESEAPaintRect>::iterator::operator*: likewise)
-
-// Does nothing (Virtual8: the shared empty slot +0x08, ICF-folded into 0xe123d; no marker of its own)
-void EESEAPaintTerrain::Virtual8()
-{
-}
 
 // ------------------------------------------------------------------------------------------------ the host
 // The paint actions' world-edit host (ee_screens editor_actions.rs: EE_SCREENS_SEA_*): the terrain, elevation and
@@ -388,7 +362,7 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
     case EE_SCREENS_SEW_OP_TERRAIN_AMBIENT:
         return EETerrainTable::Get(i[0])->mAmbientUnitChance > 0;
     case EE_SCREENS_SEW_OP_POST_AMBIENT_PAINT: {
-        EESEAPaint* thePaint = new EESEAPaintTerrain(i[0], EETerrainTable::Get(i[0])->mColorType);
+        EESEAPaint* thePaint = new EESEAPaintRust(kSEAPaintTerrain, i[0], EETerrainTable::Get(i[0])->mColorType);
         thePaint->SetArea(0, i[1] - 1, i[1] - 1, 0);
         gUserInterface->PostAction(thePaint);
         thePaint->Dereference();

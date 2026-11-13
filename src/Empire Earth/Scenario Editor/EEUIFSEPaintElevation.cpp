@@ -168,19 +168,19 @@ EESEAPaint* EEUIFSEPaintElevation::CreatePaintAction()
         UISlider* theSlider = static_cast<UISlider*>(this->GetForm()->GetControlById(kSEElevationStrengthSlider));
         theLevel = (char)((float)(theSlider->GetMaxRange() - theSlider->GetCurrentRangeValue()) - 6.0f);
     }
-    EESEAPaint* theAction = new EESEAPaintElevation(theLevel);
+    EESEAPaint* theAction = new EESEAPaintRust(kSEAPaintElevation, theLevel);
     this->SetIsCentered(false);
     return theAction;
 }
 
 // FUNCTION: EXE 0x5a46d4
-// Creates an elevation paint action for one level (EESEAPaintElevation's inline ctor, out of line after its first user)
+// (EESEAPaintElevation's inline ctor, out of line after its first user: an EESEAPaintRust, ee/EESEAPaint.h)
 
 // FUNCTION: EXE 0x5a4719
-// Destroys an elevation paint action and frees it if asked (scalar deleting destructor, emitted with its vtable)
+// (EESEAPaintElevation's scalar deleting destructor: likewise)
 
 // FUNCTION: EXE 0x5a4735
-// Destroys an elevation paint action (EESEAPaintElevation's inline dtor)
+// (EESEAPaintElevation's inline dtor: likewise)
 
 // FUNCTION: EXE 0x5a475d
 // Stops painting; if the right button is still down, starts a right-button elevation drag again
@@ -226,7 +226,7 @@ long EEUIFSEPaintElevation::MouseMove(const GE2DPoint& inLocation)
             theCheck = 0;
         }
         if (theNewLevel != theOldLevel && theCheck >= -0x18 && theCheck <= 0x28) {
-            EESEAPaintElevation* theAction = new EESEAPaintElevation((char)theNewLevel);
+            EESEAPaint* theAction = new EESEAPaintRust(kSEAPaintElevation, (char)theNewLevel);
             if (theAction->SetArea(this->mTileX - this->mBrushSize, this->mTileY + this->mBrushSize, this->mTileX + this->mBrushSize, this->mTileY - this->mBrushSize))
                 gUserInterface->PostAction(theAction);
             theAction->Dereference();
