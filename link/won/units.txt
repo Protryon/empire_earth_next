@@ -106,12 +106,8 @@
 3016f0 302236 WONGUI/MSMessageBox.cpp
 3033a0 3199da WONGUI/WONControlSetup.cpp
 3040d0 304ded WONGUI/RootContainer.cpp
-304df0 305540 WONGUI/ScrollArea.cpp
 305010 305e0d WONGUI/ScrollAreaViewport.cpp
 305540 306a3c WONGUI/ControlLifetime.cpp
-305580 3056f5 WONGUI/Scroller.cpp
-305760 305c0e WONGUI/ScrollbarScroller.cpp
-305fa0 30683e WONGUI/Scrollbar.cpp
 306870 306e08 WONGUI/ImageComponent.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp
 309880 3098cd WONGUI/PaletteLifetime.cpp

@@ -43,7 +43,7 @@ void FriendsListItem::Paint(Graphics& inGraphics,ListArea* inList)
 {
     if(this->mFriend.get()==NULL) {
         if(this->mSeparator) {
-            int width=inList->mTotalWidth+10;
+            int width=inList->GetTotalWidth()+10;
             if(inList->GetPaintWidth()>width) width=inList->GetPaintWidth();
             int y=this->mHeight>>2;
             inGraphics.SetSysColor(StandardColor_Text);

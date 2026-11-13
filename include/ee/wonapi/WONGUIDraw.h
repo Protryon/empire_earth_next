@@ -71,6 +71,7 @@ template <class Call> inline void WONDrawOne(Graphics& g, const EeWonDrawOp& o, 
             }
             break;
         }
+        case EE_WON_DRAW_PIXEL: g.SetPixel(o.a, o.b, (DWORD)(unsigned int)o.c); break;
         default: break;
     }
 }

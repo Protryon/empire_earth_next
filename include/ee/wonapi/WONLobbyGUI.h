@@ -15,6 +15,7 @@
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "ee/wonapi/WONLobbyMap.h"
+#include "ee/wonapi/WONEventTypes.h"
 
 namespace WONAPI {
 
@@ -49,53 +50,6 @@ enum Direction { Direction_Left, Direction_Right, Direction_Up, Direction_Down }
 enum HorzAlign { HorzAlign_Left, HorzAlign_Center, HorzAlign_Right };
 enum VertAlign { VertAlign_Top, VertAlign_Center, VertAlign_Bottom };
 
-// SDK event and flag constants; the input event ids 1..14 and the popup bit tests in the exe agree.
-enum WindowEventType
-	{
-		WindowEventType_None,
-
-		InputEvent_SizeChange,
-		InputEvent_MouseMove,
-		InputEvent_MouseDown,
-		InputEvent_MouseDoubleClick,
-		InputEvent_MouseDownCheckDoubleClick, 
-		InputEvent_MouseUp,
-		InputEvent_MouseWheel,
-		InputEvent_KeyDown,
-		InputEvent_KeyUp,
-		InputEvent_KeyChar,
-		InputEvent_GotFocus,
-		InputEvent_LostFocus,
-		InputEvent_MouseExit,
-		InputEvent_WindowClose,
-
-		ComponentEvent_ButtonPressed,
-		ComponentEvent_Scroll,
-		ComponentEvent_TextLinkActivated,
-		ComponentEvent_HyperLinkActivated,
-		ComponentEvent_HyperLinkOver,
-		ComponentEvent_InputReturn,
-		ComponentEvent_InputTextChanged,
-
-		ComponentEvent_ListSelChanged,
-		ComponentEvent_ListItemClicked,
-		ComponentEvent_ListItemUpClicked,
-		ComponentEvent_MenuItemSelected,
-		ComponentEvent_TreeItemOpened,
-		ComponentEvent_ComboSelChanged,
-		ComponentEvent_TabBarTabSelected,
-		ComponentEvent_TabCtrlTabSelected,
-		ComponentEvent_EndPopup,
-		ComponentEvent_BrowserStatusChange,
-		ComponentEvent_BrowserLocationChange,
-		ComponentEvent_BrowserButtonChange,
-		ComponentEvent_SpinnerValueChanged,
-
-		ComponentEvent_ContextStart	= 10000, 
-		ComponentEvent_ContextEnd = 20000,
-
-		Event_User_Start = 100000
-	};
 enum PopupFlags
 {
 	PopupFlag_EndOnLeftMouseDown			= 0x0001,
@@ -1013,88 +967,77 @@ public:
     Container* mCurTab; // at +0xd4; the class is 0xd8 bytes
 };
 
-// Scrollbar (0xb8 bytes); constructor 0x305e10, destructor 0x305eb0
+// Scrollbar (R6 WON round 25): its parts (arrows, track, thumb), orientation, thumb options, range, steps, position
+// and drag are the Rust Scrollbar (rust/crates/ee_won/src/barobj.rs); this is the type the skins, configs and
+// scrollers hold (MSScrollbar and WONScrollbar derive from it). Constructor 0x305e10, destructor 0x305eb0.
 class Scrollbar : public Container {
 public:
     Scrollbar(bool=true); // 0x305e10 (ret 4)
     virtual ~Scrollbar(); // 0x305eb0
-    virtual void Virtual08(); //306380
-    virtual void MouseDown(int,int,int); //3064c0
-    virtual void MouseDrag(int,int); //306510
-    virtual void AddedToParent(); //305fe0
-    virtual void HandleComponentEvent(ComponentEvent*); //306690
-    virtual void SetEnabled(bool); // 0x3067e0, vtable +0x90
-    void CopyAttributes(Scrollbar*); // 0x305fa0
-    void AddControls(); //306000
-    void LayoutThumb(bool); //3061d0
-    void S_SetPos(Component*,int,int); // 0x306100
-    void S_SetSize(Component*,int,int); // 0x306140
-    void S_SetPosSize(Component*,int,int,int,int); // 0x306180
-    int S_Left(Component* c) { return this->mVertical?c->Left():c->Top(); }
-    int S_Right(Component* c) { return this->mVertical?c->Left()+c->Width():c->Top()+c->Height(); }
-    int S_Top(Component* c) { return this->mVertical?c->Top():c->Left(); }
-    int S_Bottom(Component* c) { return this->mVertical?c->Top()+c->Height():c->Left()+c->Width(); }
-    int S_Height(Component* c) { return this->mVertical?c->Height():c->Width(); }
-    int S_Width(Component* c) { return this->mVertical?c->Width():c->Height(); }
-    // the parts the skins, the configs and the scroller read and set (the subclasses' and factories' arrows, thumb
-    // and track; the orientation; the scroller's sizes and position)
-    Button* GetUpArrow() { return this->mUpArrow.get(); }
-    void SetUpArrow(Button* b) { this->mUpArrow=b; }
-    Button* GetDownArrow() { return this->mDownArrow.get(); }
-    void SetDownArrow(Button* b) { this->mDownArrow=b; }
-    Button* GetScrollRect() { return this->mScrollRect.get(); }
-    void SetScrollRect(Button* b) { this->mScrollRect=b; }
-    Component* GetThumb() { return this->mThumb.get(); }
-    void SetThumb(Component* c) { this->mThumb=c; }
-    bool IsVertical() { return this->mVertical; }
-    void SetVertical(bool on) { this->mVertical=on; }
-    void SetResizeThumb(bool on) { this->mResizeThumb=on; }
-    void SetMinThumbSize(unsigned char n) { this->mMinThumbSize=n; }
-    int GetPosition() { return this->mPosition; }
-    void SetPosition(int p) { this->mPosition=p; } // the field only (the scroller's update)
-    void SetRange(int total,int page) { this->mTotalSize=total; this->mPageSize=page; this->mPageScrollSize=page; }
-    void SetLineScrollSizes(int up,int down) { this->mLineUpScrollSize=up; this->mLineDownScrollSize=down; }
-    SmartPtr<Button> mUpArrow,mDownArrow,mScrollRect; //84/88/8c
-    SmartPtr<Component> mThumb; //90
-    bool mResizeThumb,mVertical; //94/95
-    unsigned char mMinThumbSize; //96
-    int mPosition,mPageSize,mTotalSize; //98/9c/a0
-    int mLineUpScrollSize,mLineDownScrollSize,mPageScrollSize; //a4/a8/ac
-    int mDragX,mDragY; //b0/b4
+    virtual void Virtual08() { this->Call(EeWonBarCall::SizeChanged); } //306380
+    virtual void MouseDown(int x,int y,int b) { this->Call(EeWonBarCall::MouseDown,x,y,b); } //3064c0
+    virtual void MouseDrag(int x,int y) { this->Call(EeWonBarCall::MouseDrag,x,y); } //306510
+    virtual void AddedToParent() { this->Call(EeWonBarCall::AddedToParent); } //305fe0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonBarCall::HandleEvent,(intptr_t)e); } //306690
+    virtual void SetEnabled(bool on) { this->Call(EeWonBarCall::SetEnabled,on); } // 0x3067e0, vtable +0x90
+    void CopyAttributes(Scrollbar* from) { this->Call(EeWonBarCall::CopyAttributes,(intptr_t)from->mRust); } // 0x305fa0
+    void AddControls() { this->Call(EeWonBarCall::AddControls); } //306000
+    void LayoutThumb(bool changePos) { this->Call(EeWonBarCall::LayoutThumb,changePos); } //3061d0
+    // the parts the skins, the configs and the scroller read and set
+    Button* GetUpArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,0); }
+    void SetUpArrow(Button* b) { this->Call(EeWonBarCall::SetPart,0,(intptr_t)static_cast<Component*>(b)); }
+    Button* GetDownArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,1); }
+    void SetDownArrow(Button* b) { this->Call(EeWonBarCall::SetPart,1,(intptr_t)static_cast<Component*>(b)); }
+    Button* GetScrollRect() { return (Button*)this->Call(EeWonBarCall::GetPart,2); }
+    void SetScrollRect(Button* b) { this->Call(EeWonBarCall::SetPart,2,(intptr_t)static_cast<Component*>(b)); }
+    Component* GetThumb() { return (Component*)this->Call(EeWonBarCall::GetPart,3); }
+    void SetThumb(Component* c) { this->Call(EeWonBarCall::SetPart,3,(intptr_t)c); }
+    bool IsVertical() { return this->Call(EeWonBarCall::IsVertical)!=0; }
+    void SetVertical(bool on) { this->Call(EeWonBarCall::SetVertical,on); }
+    void SetResizeThumb(bool on) { this->Call(EeWonBarCall::SetResizeThumb,on); }
+    void SetMinThumbSize(unsigned char n) { this->Call(EeWonBarCall::SetMinThumbSize,n); }
+    int GetPosition() { return (int)this->Call(EeWonBarCall::GetPosition); }
+    void SetPosition(int p) { this->Call(EeWonBarCall::SetPosition,p); } // the field only (the scroller's update)
+    void SetRange(int total,int page) { this->Call(EeWonBarCall::SetRange,total,page); }
+    void SetLineScrollSizes(int up,int down) { this->Call(EeWonBarCall::SetLineScrollSizes,up,down); }
+    EeWonScrollbar* mRust;
+private:
+    intptr_t Call(EeWonBarCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_bar_call(this->mRust,c,a,b,cc); }
 };
 
-// Scroller (0x88 bytes): owns the scroll area at +0x84
+// Scroller and ScrollbarScroller (R6 WON round 25): the scroll area, the bars and their conditions are one Rust
+// Scroller (rust/crates/ee_won/src/scrollerobj.rs) the Scroller constructor makes; these are the types the configs,
+// the combo box, the scroll areas and the scroll containers (MSScrollContainer, WONScrollContainer) hold.
 class Scroller : public Container {
 public:
     Scroller(); // 0x305540
-    // Implicit virtual destructor (0x3001e0)
-    virtual void MouseDown(int,int,int); //305670
-    virtual bool MouseWheel(int); //3056c0
+    virtual ~Scroller(); // the implicit destructors (0x3001e0, ScrollbarScroller's 0x300060)
+    virtual void MouseDown(int x,int y,int b) { this->SCall(EeWonScrollerCall::MouseDown,x,y,b); } //305670
+    virtual bool MouseWheel(int n) { return this->SCall(EeWonScrollerCall::MouseWheel,n)!=0; } //3056c0
     virtual void NotifyScrollChange(bool) {} // empty inline (shared body at 0x30a800)
-    ScrollArea* GetScrollArea() { return this->mScrollArea.get(); }
-    void SetScrollArea(ScrollArea*); // 0x305580: sets the scroll area and its back link
-    void SetOffsets(int,int); //3055e0 horizontal thenvertical
-    void SetVertOffset(int); //305630
-    void SetHorzOffset(int); //305650
-    SmartPtr<ScrollArea> mScrollArea; // at +0x84; released by the implicit destructor 0x3001e0
+    ScrollArea* GetScrollArea() { return (ScrollArea*)this->SCall(EeWonScrollerCall::GetScrollArea); }
+    // (a ScrollArea's Component is at its own address: single inheritance)
+    void SetScrollArea(ScrollArea* a) { this->SCall(EeWonScrollerCall::SetScrollArea,(intptr_t)a); } // 0x305580
+    void SetOffsets(int h,int v) { this->SCall(EeWonScrollerCall::SetOffsets,h,v); } //3055e0 horizontal then vertical
+    void SetVertOffset(int v) { this->SCall(EeWonScrollerCall::SetVertOffset,v); } //305630
+    void SetHorzOffset(int h) { this->SCall(EeWonScrollerCall::SetHorzOffset,h); } //305650
+    EeWonScroller* mRust;
+protected:
+    intptr_t SCall(EeWonScrollerCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_scroller_call(this->mRust,c,a,b,cc); }
 };
 enum ScrollbarCondition { ScrollbarCondition_Disable=0,ScrollbarCondition_Enable=1,ScrollbarCondition_Conditional=2 };
-// ScrollbarScroller (0x9c bytes)
+// ScrollbarScroller (0x305700: both conditions Enable, in the Rust scroller)
 class ScrollbarScroller : public Scroller {
 public:
-    ScrollbarScroller(); // 0x305700
-    // Implicit virtual destructor (0x300060)
-    virtual void AddedToParent(); //305840 AddedToParent
-    virtual void HandleComponentEvent(ComponentEvent*); //305a00
-    virtual void NotifyScrollChange(bool); // 0x305a50, vtable +0xcc
-    void SetScrollbar(Scrollbar*); //305760
-    void AddControls(); //305860
-    Scrollbar* GetScrollbar(bool vertical) { return vertical?this->mVertScrollbar.get():this->mHorzScrollbar.get(); } // inline; +0x88/+0x8c
-    bool EnableScrollbar(Scrollbar*,ScrollbarCondition); //3058d0
-    void SetScrollbarConditions(ScrollbarCondition,ScrollbarCondition); // 0x305990
-    SmartPtr<Scrollbar> mHorzScrollbar,mVertScrollbar; // at +0x88/+0x8c
-    ScrollbarCondition mVertCondition,mHorzCondition; //90/94
-    bool mSettingScrollbarConditions; // at +0x98; +0x99..0x9b padding
+    virtual void AddedToParent() { this->SCall(EeWonScrollerCall::AddedToParent); } //305840
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->SCall(EeWonScrollerCall::HandleEvent,(intptr_t)e); } //305a00
+    virtual void NotifyScrollChange(bool b) { this->SCall(EeWonScrollerCall::NotifyScrollChange,b); } // 0x305a50, vtable +0xcc
+    void SetScrollbar(Scrollbar* s) { this->SCall(EeWonScrollerCall::SetScrollbar,(intptr_t)static_cast<Component*>(s)); } //305760
+    void AddControls() { this->SCall(EeWonScrollerCall::AddControls); } //305860
+    Scrollbar* GetScrollbar(bool vertical) { return (Scrollbar*)this->SCall(EeWonScrollerCall::GetScrollbar,vertical); }
+    void SetBar(bool vertical,Scrollbar* s) { this->SCall(EeWonScrollerCall::SetBar,vertical,(intptr_t)static_cast<Component*>(s)); } // the field only (MSScrollContainer's constructor)
+    bool EnableScrollbar(Scrollbar* s,ScrollbarCondition c) { return this->SCall(EeWonScrollerCall::EnableScrollbar,(intptr_t)static_cast<Component*>(s),c)!=0; } //3058d0
+    void SetScrollbarConditions(ScrollbarCondition h,ScrollbarCondition v) { this->SCall(EeWonScrollerCall::SetScrollbarConditions,h,v); } // 0x305990
 };
 enum ScrollButtonCondition {
     ScrollButtonCondition_Disable=0, ScrollButtonCondition_Enable=1,
@@ -2556,55 +2499,53 @@ public:
     SmartPtr<ComponentListener> mListener; // at +0x34
 };
 
-// Only a prefix of ScrollArea is declared; nothing here allocates it.
+// ScrollArea (R6 WON round 25): its offsets, content, padding, view, scroller (borrowed) and scroll amounts are the
+// Rust ScrollArea (rust/crates/ee_won/src/paneobj.rs); this is the type the lists, text areas, scrollers and configs
+// hold. The viewport and the background stay C++ members.
 class ScrollArea : public Container {
 public:
     ScrollArea(); // 0x304df0: viewport setup
-    // Implicit virtual destructor (0x2fa790)
-    virtual void AdjustPosition(bool);      // 305030
-    virtual void ScrollSizeChanged();       // 4142a0
-    virtual void ScrollPaint(Graphics&);     // 2fa500
-    virtual void Virtual08(); //3051c0 SizeChanged
-    virtual void GetDesiredSize(int&,int&); //3054a0
-    virtual bool MouseWheel(int); //305410 MouseWheel
-    virtual void Paint(Graphics&); // 0x3052d0 (override)
-    void SetDelegatePos(); //304fd0
-    bool OnBottom(); //305190
-    void SetBorderPadding(int,int,int,int); //305270
-    void ScrollTranslate(int&,int&); //305390
-    void ScrollUntranslate(int&,int&); //3053d0
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x305180, vtable +0x7c override
-    void SetSizeEqualToTotal(int,int); //305450
-    bool IsRectVisible(const WONRectangle&); //3054f0
+    virtual ~ScrollArea(); // the implicit destructor (0x2fa790)
+    virtual void AdjustPosition(bool b) { this->ACall(EeWonPaneCall::AdjustPosition,b); } // 305030
+    virtual void ScrollSizeChanged() {} // 4142a0
+    virtual void ScrollPaint(Graphics&) {} // 2fa500
+    virtual void Virtual08() { this->ACall(EeWonPaneCall::SizeChanged); } //3051c0 SizeChanged
+    virtual void GetDesiredSize(int& w,int& h) { this->ACall(EeWonPaneCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } //3054a0
+    virtual bool MouseWheel(int n) { return this->ACall(EeWonPaneCall::MouseWheel,n)!=0; } //305410
+    virtual void Paint(Graphics& g) { this->ACall(EeWonPaneCall::Paint,(intptr_t)&g); } // 0x3052d0 (override)
+    void SetDelegatePos() { this->ACall(EeWonPaneCall::SetDelegatePos); } //304fd0
+    bool OnBottom() { return this->ACall(EeWonPaneCall::OnBottom)!=0; } //305190
+    void SetBorderPadding(int l,int t,int r,int b) { int p[4]={l,t,r,b}; this->ACall(EeWonPaneCall::SetBorderPadding,(intptr_t)p); } //305270
+    void ScrollTranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollTranslate,(intptr_t)&x,(intptr_t)&y); } //305390
+    void ScrollUntranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollUntranslate,(intptr_t)&x,(intptr_t)&y); } //3053d0
+    virtual void HandleComponentEvent(ComponentEvent* e) { Component::HandleComponentEvent(e); } // 0x305180, vtable +0x7c override
+    void SetSizeEqualToTotal(int w,int h) { this->ACall(EeWonPaneCall::SetSizeEqualToTotal,w,h); } //305450
+    bool IsRectVisible(const WONRectangle& r) { return this->ACall(EeWonPaneCall::IsRectVisible,(intptr_t)&r)!=0; } //3054f0
     ScrollAreaViewport* GetViewport() { return this->mViewport.get(); }
-    void SetScrollDimension(int,int); // sets the content dimensions
-    void SetScrollbar(Scrollbar*); // selects a scrollbar scroller
-    void SetScroller(Scroller*); // 0x305010; the scroller at +0xd4 is not owned
-    int GetTotalHeight() { return this->mTotalHeight; }
-    int GetTotalWidth() { return this->mTotalWidth; }
-    int GetLeftPad() { return this->mLeftPad; }
-    int GetRightPad() { return this->mRightPad; }
-    void SetVertOffset(int); //305130
-    void SetOffsets(int, int); //305150, horizontal then vertical
+    void SetScrollDimension(int w,int h) { this->ACall(EeWonPaneCall::SetScrollDimension,w,h); } // sets the content dimensions
+    void SetScrollbar(Scrollbar* s) { this->ACall(EeWonPaneCall::SetScrollbar,(intptr_t)static_cast<Component*>(s)); } // selects a scrollbar scroller
+    void SetScroller(Scroller* s) { this->ACall(EeWonPaneCall::SetScroller,(intptr_t)static_cast<Component*>(s)); } // 0x305010; not owned
+    void SetVertOffset(int v) { this->ACall(EeWonPaneCall::SetVertOffset,v); } //305130
+    void SetOffsets(int h,int v) { this->ACall(EeWonPaneCall::SetOffsets,h,v); } //305150, horizontal then vertical
+    // the fields the lists, text areas, scrollers and lobby controls read and set
+    int GetField(EeWonGuiField f) { return (int)this->ACall(EeWonPaneCall::GetField,(intptr_t)f); }
+    void SetField(EeWonGuiField f,int v) { this->ACall(EeWonPaneCall::SetField,(intptr_t)f,v); }
+    int GetTotalHeight() { return this->GetField(EeWonGuiField::TotalHeight); }
+    int GetTotalWidth() { return this->GetField(EeWonGuiField::TotalWidth); }
+    int GetLeftPad() { return this->GetField(EeWonGuiField::LeftPad); }
+    int GetRightPad() { return this->GetField(EeWonGuiField::RightPad); }
+    int GetTopPad() { return this->GetField(EeWonGuiField::TopPad); }
+    void SetPads(int l,int t,int r,int b) { this->SetField(EeWonGuiField::LeftPad,l); this->SetField(EeWonGuiField::TopPad,t); this->SetField(EeWonGuiField::RightPad,r); this->SetField(EeWonGuiField::BottomPad,b); } // the fields only (the text area's and list's constructors)
+    int GetVertOffset() { return this->GetField(EeWonGuiField::VertOffset); }
+    int GetHorzOffset() { return this->GetField(EeWonGuiField::HorzOffset); }
+    int GetViewWidth() { return this->GetField(EeWonGuiField::ScrollWidth); }
+    int GetViewHeight() { return this->GetField(EeWonGuiField::ScrollHeight); }
     SmartPtr<ScrollAreaViewport> mViewport; // at +0x84
-    WONRectangle mInvalidRect; //88..97
-    int GetVertOffset() { return this->mVertOffset; }
-    int mVertOffset; //98
-    int mHorzOffset; //9c
-    int mTotalHeight; //a0
-    int mTotalWidth;                        // total width
-    int mAVertOffset,mAHorzOffset,mATotalHeight,mATotalWidth; //a8..b7
-    int mOldScrollAreaWidth,mOldScrollAreaHeight; //b8..bf
-    int mLeftPad; //c0
-    int mRightPad; //c4
-    int mTopPad,mBottomPad; //c8,cc
-    bool mUserHasScrolled; //d0
-    Scroller* mScroller; //d4 borrowed
-    WONRectangle mScrollArea; //d8, visible height e4
-    Background mBackground; // at +0xe8..0xfb
+    Background mBackground;
     void SetBackground(const Background& theBackground) { this->mBackground=theBackground; }
-    int mExtraHeight; //fc
-    int mUpScrollAmount,mDownScrollAmount,mLeftScrollAmount,mRightScrollAmount; //100..10f
+    EeWonScrollPane* mPane;
+private:
+    intptr_t ACall(EeWonPaneCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_pane_call(this->mPane,c,a,b,cc); }
 };
 
 enum ListSortType { ListSortType_Ascending, ListSortType_Descending, ListSortType_None };

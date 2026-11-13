@@ -48,7 +48,7 @@ void UserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
 {
     if(this->mClient.get()==NULL) {
         if(this->mShowSeparator) {
-            int width=inArea->mTotalWidth+10;
+            int width=inArea->GetTotalWidth()+10;
             if(inArea->GetPaintWidth()>width) width=inArea->GetPaintWidth();
             int y=this->mHeight>>2;
             inGraphics.SetSysColor(StandardColor_Text);
