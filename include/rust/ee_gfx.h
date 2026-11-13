@@ -153,6 +153,46 @@ constexpr static const float BAR_FRACTION = 0.75;
 /// The image's side (`textures\Volcano.png`, 19 x 19).
 constexpr static const size_t EE_GFX_VOLCANO_IMAGE_SIDE = 19;
 
+/// The calls of `EEE3DRust`'s virtuals.
+enum class EeGfxEffect3DOp : uint32_t {
+  /// the constructor on a unit (after `EEEffect3D`'s)
+  Create = 0,
+  SetUp = 1,
+  Queue = 2,
+  DrawPass2 = 3,
+  DrawPass3 = 4,
+  DrawPass4 = 5,
+  DrawPass5 = 6,
+  DrawPass6 = 7,
+  Step = 8,
+};
+
+/// The set-ups, one per C++ function.
+enum class EeGfxLighting : uint32_t {
+  /// `SetSceneFog`
+  SceneFog = 0,
+  /// `SetFogOff`
+  FogOff = 1,
+  /// `SetLightingOff`
+  Off = 2,
+  /// `SetPrelitLighting`
+  Prelit = 3,
+  /// `SetCloudLighting`
+  Cloud = 4,
+  /// `SetWhiteLighting`
+  White = 5,
+  /// `SetTerrainLighting`
+  Terrain = 6,
+  /// `SetMapObjectLighting`
+  MapObject = 7,
+  /// `SetUnitLighting`
+  Unit = 8,
+  /// `RestoreUnitLighting`
+  RestoreUnit = 9,
+  /// `DimUnitLighting`
+  DimUnit = 10,
+};
+
 /// The manager's creation entry points (the effects' constructors differ by entry; the C++ keeps them).
 enum class EeGfxEffectEntry {
   /// `CreateUnitEffect`: on a unit
@@ -201,32 +241,6 @@ enum class EeGfxRasterOpKind : uint32_t {
   AddLight = 11,
   /// `UpdateLight(slot, light, screen)`
   UpdateLight = 12,
-};
-
-/// The set-ups, one per C++ function.
-enum class EeGfxLighting : uint32_t {
-  /// `SetSceneFog`
-  SceneFog = 0,
-  /// `SetFogOff`
-  FogOff = 1,
-  /// `SetLightingOff`
-  Off = 2,
-  /// `SetPrelitLighting`
-  Prelit = 3,
-  /// `SetCloudLighting`
-  Cloud = 4,
-  /// `SetWhiteLighting`
-  White = 5,
-  /// `SetTerrainLighting`
-  Terrain = 6,
-  /// `SetMapObjectLighting`
-  MapObject = 7,
-  /// `SetUnitLighting`
-  Unit = 8,
-  /// `RestoreUnitLighting`
-  RestoreUnit = 9,
-  /// `DimUnitLighting`
-  DimUnit = 10,
 };
 
 /// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
@@ -626,6 +640,9 @@ struct EeGfxEffectAged {
   EeGeTransformation transformation;
   /// the blast wave's `mIsAging` (saved)
   bool aging;
+  /// the teleport's and time warp's age and place for the draw (`Queue` copies them; not saved)
+  float draw_age;
+  EeGe3DPoint location;
 };
 
 /// A storm's state (`EEE3DStorm`'s, `EEE3DRain`'s and `EEE3DSnow`'s plain members).
@@ -1037,6 +1054,73 @@ struct EeGfxTracerTick {
   uint32_t duration;
   bool has_linked1;
   bool has_target;
+};
+
+/// What the effects read of their graphic effect and the tick, gathered by the C++ for each call.
+struct EeGfxGraphicFacts {
+  /// `mSize`
+  float size;
+  float param1;
+  float param2;
+  bool flag1;
+  /// ms
+  uint32_t duration;
+  /// the graphic effect has its graphic object, and that object's alpha reference
+  bool has_object;
+  float alpha_ref;
+  /// `GetTickSeconds`, `GetTickTime`
+  float tick_seconds;
+  float tick_time;
+};
+
+/// A model to draw (`GEModel*`), opaque to Rust.
+using EeGfxModel = void*;
+
+/// The C++'s answers for an `EEE3DRust`.
+struct EeGfxEffect3DHost {
+  void *context;
+  /// the unit's position (`EEUnit::GetPosition`)
+  EeGe3DPoint (*unit_position)(void *context);
+  /// the graphic effect's first model's height in its bounding box at frame 0
+  float (*model_height)(void *context);
+  /// `MoveToTransformation(mTransformation)` (the region)
+  void (*move_to)(void *context);
+  /// `gEffectManager->CreateLineEffect` from `start` along `direction` with linked effect 1 or 2
+  void (*create_line)(void *context,
+                      const EeGe3DPoint *start,
+                      const EeGeVector *direction,
+                      uint32_t linked);
+  /// `EEEffect3D::Queue`
+  int32_t (*base_queue)(void *context);
+  /// push the effect into render queue `index` under its graphic effect's texture
+  void (*queue)(void *context, uint32_t index);
+  /// the graphic object is the graphic effect's; `LoadMedia`
+  int32_t (*load_media)(void *context);
+  /// the graphic object's model
+  EeGfxModel (*model)(void *context);
+};
+
+/// The C++'s rasterizer calls, each on the current screen.
+struct EeGfxRaster {
+  void (*set_alpha_ref)(float value);
+  uint32_t (*get_fog)();
+  void (*set_fog)(uint32_t state);
+  EeGfxColor (*get_ambient)();
+  void (*set_ambient)(EeGfxColor color);
+  void (*set_zbuffer)(uint32_t mode);
+  void (*set_blending)(uint32_t source, uint32_t destination);
+  void (*set_shading_source)(uint32_t source);
+  void (*set_alpha_testing)(uint32_t state);
+  /// one of the capture's lighting set-ups (`SetWhiteLighting` ...)
+  void (*lighting)(EeGfxLighting kind);
+  /// `GetFogFactor` (it reads the fog's attributes and turns the fog off when it is on)
+  float (*fog_factor)(const EeGe3DPoint *location, uint32_t fog);
+  void (*model_opacity)(EeGfxModel model, float opacity);
+  void (*model_transform)(EeGfxModel model, const EeGeTransformation *transformation);
+  void (*model_scale)(EeGfxModel model, float scale);
+  void (*model_prepare)(EeGfxModel model);
+  /// `Draw(model, screen, opacity, gOrthographicView)`
+  int32_t (*model_draw)(EeGfxModel model, float opacity);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
@@ -2356,6 +2440,16 @@ int32_t ee_gfx_tracer_load(EeGfxEffectRecord *r,
 int32_t ee_gfx_tracer_save(const EeGfxEffectRecord *r,
                            const EeGfxEffectFile *file,
                            uint32_t id);
+
+/// One virtual of an `EEE3DRust` (the effects whole in Rust: `effect_rising.rs`), drawing through `raster`.
+///
+/// # Safety
+/// `r` is a live record; `g`, `host` and `raster` are readable and their functions valid.
+int32_t ee_gfx_effect3d(EeGfxEffect3DOp op,
+                        EeGfxEffectRecord *r,
+                        const EeGfxGraphicFacts *g,
+                        const EeGfxEffect3DHost *host,
+                        const EeGfxRaster *raster);
 
 /// An entry point's choice for a graphic effect of `kind` (`detail_ok`: its detail level is within the setting;
 /// `from_alive`/`to_alive`: the units are there and living).

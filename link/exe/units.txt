@@ -217,8 +217,6 @@ f923f f9871 Empire Earth/Graphics Thread/EEE3DShield.cpp
 f9871 f9b6d Empire Earth/Graphics Thread/EEE3DSmokeGenerator.cpp
 f9b6d fb088 Empire Earth/Graphics Thread/EEE3DSnow.cpp
 fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
-fb9f6 fbec6 Empire Earth/Graphics Thread/EEE3DTeleport.cpp
-fbec6 fc382 Empire Earth/Graphics Thread/EEE3DTimeWarp.cpp
 fc382 fd330 Empire Earth/Graphics Thread/EEE3DTracerBeam.cpp
 fd330 fdbab Empire Earth/Graphics Thread/EEE3DTracers.cpp
 fdbab fe553 Empire Earth/Graphics Thread/EEE3DVirus.cpp

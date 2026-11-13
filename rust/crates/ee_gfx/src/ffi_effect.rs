@@ -1465,3 +1465,23 @@ mod tests {
         }
     }
 }
+
+/// One virtual of an `EEE3DRust` (the effects whole in Rust: `effect_rising.rs`), drawing through `raster`.
+///
+/// # Safety
+/// `r` is a live record; `g`, `host` and `raster` are readable and their functions valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect3d(
+    op: crate::effect_rising::EeGfxEffect3DOp,
+    r: *mut EeGfxEffectRecord,
+    g: *const crate::effect_rising::EeGfxGraphicFacts,
+    host: *const crate::effect_rising::EeGfxEffect3DHost,
+    raster: *const crate::raster::EeGfxRaster,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut h = &*host;
+        let mut x = &*raster;
+        crate::effect_rising::effect3d(op, r, &*g, &mut h, &mut x)
+    }
+}

@@ -160,11 +160,20 @@ pub struct EeGfxEffectAged {
     pub transformation: GeTransformation,
     /// the blast wave's `mIsAging` (saved)
     pub aging: bool,
+    /// the teleport's and time warp's age and place for the draw (`Queue` copies them; not saved)
+    pub draw_age: f32,
+    pub location: Ge3DPoint,
 }
 
 impl Default for EeGfxEffectAged {
     fn default() -> EeGfxEffectAged {
-        EeGfxEffectAged { age: 0.0, transformation: identity(), aging: false }
+        EeGfxEffectAged {
+            age: 0.0,
+            transformation: identity(),
+            aging: false,
+            draw_age: 0.0,
+            location: Ge3DPoint::default(),
+        }
     }
 }
 

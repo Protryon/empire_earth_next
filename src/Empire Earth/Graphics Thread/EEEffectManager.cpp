@@ -82,10 +82,9 @@
 #include "ee/EEE3DParticleEmitter.h"
 #include "ee/EEE3DMultiEffect.h"
 #include "ee/EEEDamagedEffect.h"
-#include "ee/EEE3DTeleport.h"
+#include "ee/EEE3DRust.h"
 #include "ee/EEE3DCommandConfirmation.h"
 #include "ee/EEE3DVirus.h"
-#include "ee/EEE3DTimeWarp.h"
 #include "ee/EEE3DShield.h"
 #include "ee/EEE3DScreenFlash.h"
 #include "ee/EEE3DEnergyWave.h"
@@ -221,8 +220,8 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DIcon: theEffect = new EEE3DIcon(2); break;
     case kEffect3DMarchingLine: theEffect = new EEE3DMarchingLine(); break;
     case kEffect3DGoal: theEffect = new EEE3DGoal(); break;
-    case kEffect3DTeleport: theEffect = new EEE3DTeleport(0x3f); break;
-    case kEffect3DTimeWarp: theEffect = new EEE3DTimeWarp(0x44); break;
+    case kEffect3DTeleport: theEffect = new EEE3DRust(0x3f); break;
+    case kEffect3DTimeWarp: theEffect = new EEE3DRust(0x44); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(0x40); break;
     case kEffect3DPulseCannonBall: theEffect = new EEE3DPulseCannonBall(0x43); break;
     case kEffect3DShield: theEffect = new EEE3DShield(); break;
@@ -317,7 +316,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x2b: theEffect = new EEE3DSmokeGenerator(inUnit, inEffect, 0x2b); break;
     case 0x35: theEffect = new EEE3DDamageVent(inUnit, inEffect); break;
     case 0x41: theEffect = new EEE3DCommandConfirmation(inUnit, inEffect, inGoalIndex, 0x41); break;
-    case 0x3f: theEffect = new EEE3DTeleport(inUnit, inEffect, 0x3f); break;
+    case 0x3f: theEffect = new EEE3DRust(inUnit, inEffect, 0x3f); break;
     case 0x3e: theEffect = new EEEDamagedEffect(inUnit, inEffect); break;
     case 0x3b: theEffect = new EEE3DMultiEffect(inUnit, inEffect, 0x3b); break;
     case 0x3a: theEffect = new EEE3DParticleEmitter(inUnit, inEffect, 0x3a, inTagPoint); break;
@@ -325,7 +324,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x47: theEffect = new EEE3DEnergyWave(inUnit, inEffect); break;
     case 0x46: theEffect = new EEE3DScreenFlash(inUnit, inEffect); break;
     case 0x45: theEffect = new EEE3DShield(inUnit, inEffect); break;
-    case 0x44: theEffect = new EEE3DTimeWarp(inUnit, inEffect, 0x44); break;
+    case 0x44: theEffect = new EEE3DRust(inUnit, inEffect, 0x44); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }

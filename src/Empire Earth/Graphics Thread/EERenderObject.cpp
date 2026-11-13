@@ -1600,6 +1600,36 @@ static void ApplyLighting(EeGfxLighting inKind)
     }
 }
 
+// the rasterizer as the Rust draws call it (ee_gfx raster.rs), on the current screen
+extern const EeGfxRaster gEERustRaster;
+const EeGfxRaster gEERustRaster = {
+    [](float inValue) { gRasterizer->SetAlphaTestingRefValue(inValue, gScreenIndex); },
+    []() -> uint32_t { return gRasterizer->GetFog(gScreenIndex); },
+    [](uint32_t inState) { gRasterizer->SetFog(inState, gScreenIndex); },
+    []() { const GEColor& theColor = gRasterizer->GetAmbientColor(); return EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue}; },
+    [](EeGfxColor inColor) { gRasterizer->SetAmbientColor(GEColor(inColor.red, inColor.green, inColor.blue), gScreenIndex); },
+    [](uint32_t inMode) { gRasterizer->SetZBuffer(inMode, gScreenIndex); },
+    [](uint32_t inSource, uint32_t inDestination) { gRasterizer->SetBlending(inSource, inDestination, gScreenIndex); },
+    [](uint32_t inSource) { gRasterizer->SetShadingColorSource(inSource, gScreenIndex); },
+    [](uint32_t inState) { gRasterizer->SetAlphaTesting(inState, gScreenIndex); },
+    [](EeGfxLighting inKind) { ApplyLighting(inKind); },
+    [](const EeGe3DPoint* inLocation, uint32_t inFog) {
+        float theValue;
+        GetFogFactor(GE3DPoint(inLocation->x, inLocation->y, inLocation->z), inFog, theValue);
+        return theValue;
+    },
+    [](void* inModel, float inOpacity) { static_cast<GEModel*>(inModel)->SetOpacity(inOpacity); },
+    [](void* inModel, const EeGeTransformation* inTransformation) {
+        static_cast<GEModel*>(inModel)->SetGraphicsPostModelTransform(*reinterpret_cast<const GETransformation*>(inTransformation));
+    },
+    [](void* inModel, float inScale) { static_cast<GEModel*>(inModel)->SetGraphicsScale(inScale); },
+    [](void* inModel) { static_cast<GEModel*>(inModel)->PrepareTransforms(); },
+    [](void* inModel, float inOpacity) -> int32_t {
+        bool theSorted = gOrthographicView;
+        return gRasterizer->Draw(static_cast<GEModel*>(inModel), gScreenIndex, inOpacity, theSorted);
+    },
+};
+
 // FUNCTION: EXE 0x50f60f
 // Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance
 // (off in the orthographic view)
