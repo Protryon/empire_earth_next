@@ -67,10 +67,7 @@ public:
     void SetEntityGroup(long inGroup);      // 0x2655da
     void ShowAllBackgrounds();              // 0x26568e
     void SetPauseText(bool inPaused);       // 0x26572f
-    long GetAttackStance(EEUnit* inUnit, long inCommand, long inAllowDead);  // 0x265791
     bool IsInGameView(const GE2DPoint& inLocation);     // 0x265a06 (in the view, outside background 0x64)
-    long GetRepairCommand(EEUnit* inUnit, long inCommand, long inAllowDead);  // 0x265e35 (4: the selection's 0x40-flag unit
-                                            // can work on inUnit; provisional name)
     void SetErrorString(const UWideString& inText, unsigned long inIndex);   // 0x265ff6 (mStrings, mStringsChanged)
     void ShowInformation(EEUIFMGInformation* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
     void PauseInformation();                // 0x2662d7
@@ -86,10 +83,9 @@ public:
     void HideAllBackgrounds();              // 0x266960
     void HideMessages();                    // 0x2669e8 (stops the information text)
     void RefreshStatus();                   // 0x266a3b (the status update, each mPoll tick)
-    long GetCommandOnUnit(EEUnit* inUnit, unsigned long inCommand, unsigned long inFlags, bool inAllowDead);  // 0x26588c
-    long Fn265D7A(EEUnit* inUnit, unsigned long inCommand, unsigned long inFlags, bool inAllowDead);   // 0x265d7a
-    long GetTransportCommand(EEUnit* inUnit, unsigned long inCommand, unsigned long inFlags, bool inAllowDead);  // 0x265e89
-    void UpdateCursorKind();                // 0x266f8b (the cursor)
+    void UpdateCursorKind();                // 0x266f8b (the cursor: ee_screens cursor.rs, with 0x265791 GetAttackStance,
+                                            // 0x26588c GetCommandOnUnit, 0x265a4f EEGetAttackRangeKind, 0x265d7a,
+                                            // 0x265e35 GetRepairCommand, 0x265e89 GetTransportCommand)
     void RefreshSavedGroups();              // 0x26716e (refreshes the saved-group buttons 0xd4..0xdd)
     void UpdateIconBar();                   // 0x2671b0 (control 0xde)
     void FnE123D();                         // (ICF-folded into 0xe123d: an empty body; provisional name)

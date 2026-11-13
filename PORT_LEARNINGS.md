@@ -13852,3 +13852,94 @@ upgrade, colour and saved-group buttons, the error dialog's OK/Cancel).
 - **Left:** `UICheckBox`, `UIRadioButton`, `UITriStateCheckBox` (their records into the button object; the label as
   a part; the radio walk over sibling objects), `UIScrollButton`'s polls, `UIBlinkingButton` and
   `UIScalableButton` (small records), then `UITextLabel` with `UITLScrolling`.
+
+## R6: the game screens, twenty-first round: the main game form's cursor decisions, its five panel groups and its unit hack in Rust (ee_screens cursor.rs, panel_groups.rs, unit_hack.rs; branch rust-screens21, 2026-11-13)
+
+Back to the game screens after the editor (rounds 14-20). Count: the screens' C++ (`User Interface Thread` without
+`EEFOFindNewTargetNearOldTarget.cpp`, `UI Events`, `include/ee/EEUI*.h`; `build/sc21/count.sh`): 22,051 at the
+branch's start (5d3ce6a9) -> 21,307 at 97c4d3e8 (-744; git over `src` and `include/ee`: +361 -1,105).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| b6109110 | the cursor decisions in Rust (`cursor.rs`) | +159 -292, net -133 |
+| d67cd953 | the five panel groups as one `EEUIFMGGRust` (`panel_groups.rs`) | +91 -664, net -573 |
+| 2714ae84 | the unit hack whole in Rust (`unit_hack.rs`) | +107 -149, net -42 |
+| 97c4d3e8 | fix: the unit hack's host touched the form's controls from the form's constructor | +5 -1 |
+
+- **The measure** (`build/sc21/measure.py`: per unit the lines of function bodies that are not one-line Rust
+  forwarders): `EEUIFMainGame` 1,410 of 1,915 (constructor 166, `CopyData` 120, `RefreshStatus` 109, the cursor's
+  seven functions ~310), `EEUserInterface` 1,386 (`HandleMessage` 363, `HandleEvent` 130), `EEUIFMGStatusButton`
+  1,237 (`Command` 150, `GetHelpString` 103, `CopyData` 87, `ButtonUp` 82), `EEUIFMGStatusBox` 744, `EEUIFMGMainGroup`
+  430, `EEUIManager` 368, `EEUIMiniMap` 336, `EEUICUnitIconBar` 305, `EEUICPortrait` 292, `EEUIBUpgrade` 243,
+  `EEUICCommandUnits` 227, `EEUIFError` 223, `EEUIFMGStatusBar` 215; the rest under 200 each (the five panel groups
+  and their base 14-41 each). Toolkit bases: the form (`UIForm`: main game), controls (`UIControl`: portrait, icon
+  bar, minimap, command and select units, chat line, ping, attribute, status bar), buttons (`UIButton`: status
+  button, upgrade, saved group, colour, the group buttons), the error dialog (`UIForm`). Not this lane's:
+  `EEFOFindNewTargetNearOldTarget.cpp` (6,557: the units' utilities), WON's boxes (`EEUICWonNet*`).
+- **The cursor (commit 1)**: `UpdateCursorKind` with `GetAttackStance`, `GetCommandOnUnit`, `EEGetAttackRangeKind`,
+  `Fn265D7A`, `GetRepairCommand`, `GetTransportCommand` and `EECanEnterUnit`'s use: `cursor.rs`. Every read of the
+  world is one host op (`EE_SCREENS_CURSOR_OP_*`, 42 of them, `ee_screenscpp_cursor` in `EEUIFMainGame.cpp`) asked
+  where the original read it: the target (the picked unit, held by the host between `PICK` and `RELEASE`), the
+  selection by index, an air base's cargo by (unit, cargo). The predicates with a cost (`PickUnit`, `EEIsSeenBy`,
+  `EEUUGetIsUnitClassTargetable`, `CanGather` through `FindUnitWithFlags`, `CanAttackClass`, `EECanHeal`,
+  `EECanConvert` with its in/out shielded flag, `Dereference`) are asked exactly when and as often as the original
+  asked them; plain reads (kind flags, hit points, owner) where convenient. The range test is
+  `ee_ge`'s `distance_to_squared` (what `GE3DPoint::DistanceToSquared` forwards to) against `range * range`
+  (`UMSquare`). `EECanEnterUnit` (the unit utilities' file) is restated in Rust for the cursor; the C++ one stays
+  for its other callers. The five member declarations left `EEUIFMainGame.h`.
+- **The cursor's golden** (`build/sc21/cursor`: `fake.h`, `driver.cpp`, `cut.py`, `drv.py`): the original seven
+  functions cut verbatim from 5d3ce6a9 (and `EECanEnterUnit` from the unit utilities) and the new host plus
+  `UpdateCursorKind` cut from the work tree, both compiled against one fake world (the names the code reads, each
+  costly predicate appending a token to a trace) and linked with `ee_rust.lib`. Per case a random world (1-5 selected
+  units of random kinds, air bases with cargo, a target of a random owner, kind, hit points, model or tile, the mouse
+  over no control, the command units or another control; 30% of the attackers exactly at their minimum range
+  from the aim point), then both sides: result and trace must match. Seeds 2-4 x 25,000 cases: 0 differences; every
+  cursor kind reached (0, 1, 2, 3, 4, 5, 7, 10, 0xb, 0x10, 0x12, 0x14). Mutations of the host caught by the driver
+  (25,000 cases): the owner's enemy/other swapped (5,648 differing), the protected test dropped (421), the
+  shielded flag not written back (277), the tile aim's +0.5 dropped (8), the built flag read from the tile node
+  (126). `golden_cursor.txt` (3,000 cases of seed 1: the world's answers, the result and the trace) is replayed by
+  `cursor::tests::golden_cursor`; eight Rust mutations fail it (the range tie `>=`, the stance's command 8, the
+  shielded bit, the patrol point's 0x20, the teleporter as repairable, the range loop's break, the first unit's
+  alive test, the long range's unseen test). The first replay missed the tie: no world put an attacker exactly at
+  its range until the driver placed some there.
+- **The panel groups (commit 2)**: `EEUIFMGGStatistics` (119), `EEUIFMGGChat`, `EEUIFMGGCivBuilder`,
+  `EEUIFMGGDiplomacy`, `EEUIFMGGOptions` (85 each, empty) and the base's unit `EEUIFMGGroup.cpp` (76) are one class,
+  `EEUIFMGGRust : EEUIFMGGroup` made with its index (`EE_SCREENS_GROUP_*`, `ee/EEUIFMGMainGroup.h`); the base's ctor,
+  dtor, `Reset` and `WantsRefresh` are inline. `Refresh` and `Select` call `ee_screens_group_call`: the statistics
+  group's three texts (the conversions against their limit, set only when changed; the wonders to win; the epoch
+  wonders become available in) as formats and string ids in `panel_groups.rs`, printed by the host
+  (`ee_screenscpp_group`, `EEUIFMGMainGroup.cpp`, the original's `sprintf` into a `UWideString`).
+  `EETechTree::GetShownEpoch` (inline in the original's statistics header) is defined there. Six units and five
+  headers deleted, their `link/exe/units.txt` lines removed.
+- **The unit hack (commit 3)**: `EEUIFMGUnitHack` (the developer unit placement, no RTTI) whole in Rust
+  (`unit_hack.rs`): its record holds the sorted names (bytes, `PlatMbsCmp`'s byte order: a name equal to an earlier
+  one goes after it) and class ids, the mode and `mL28`; the C++ class keeps the form and the record and forwards
+  its four methods (`ee_screens_unit_hack_*`, the record taken out of its box around each call); the empty
+  `Fn157269` is inline (the status button calls it). The host (`ee_screenscpp_unit_hack`, 19 ops) reads the class
+  table, the object and player lists, the keys and the mouse and sends `EEMHackANewUnit` / `EEMLoadUnitData`.
+  `GetSelection` and the empty `FnE123D` went with the class.
+  - Nothing sets the hack's mode (the constructor's 0): the placement returns after its tile and key reads, as in the
+    original. The unit tests set mode 1 to pin the rest (the player list's walk past empty slots and the local player,
+    the list's code 0xd on the second call, Shift's local player).
+- **A start-up hang only the tour found** (fixed in 97c4d3e8): the hack's record is made in the main game form's
+  constructor, which runs when the UI manager creates its forms at start-up, before the form's controls exist. The
+  first host read the object list's control (`GetControl`, an unchecked `mControls[i]`) at the top of every op, the
+  class table's ops included; the game stopped after the video mode was set and the tour timed out waiting for the
+  main menu. The control is now read only by the combo ops. EE-SIM, the goldens and the unit tests never build the
+  form: a host that touches the owner's members must be checked against when the owner calls it (a constructor's
+  call is not a later method's).
+- **Tests**: 5 cursor (the golden, every kind reached, `EECanEnterUnit`'s pairs, the range's tie and the long range's
+  7, no cursor without a live first unit or outside the view), 3 panel groups, 5 unit hack.
+- **Behaviour**: none intended. The cursor's plain reads are asked once per decision where the original read a field
+  twice (no side effects).
+- **What runs it**: EE-SIM builds no main game form: the oracle and the editor gate are unchanged by construction.
+  The tour creates the form (the unit hack's constructor reads the real class table; `Open` fills the hidden object
+  combo box), runs `RefreshStatus` every tick and so `UpdateCursorKind` (cursor 0 without a selection under the
+  mouse), and `CreateGroup` makes the five `EEUIFMGGRust`. **Only a person reaches**: the cursor over a unit with a
+  selection (gather, repair, enter, attack, convert, heal, the patrol point, too close, the long range's 7), the
+  statistics panel (its three texts), the hack's reload (`EEUIManagerEvents`' hot key) and its mouse placement
+  (mode never set).
+- **Gates** (on the merge with rust 57ae2ad1): build `--sim` (EE-AOC and EE-SIM) and the test profile link 0/0; the Rust gate PASS; the sim oracle identical to ref on seeds 2-7; `tools/sim_editor.py` PASS (1820 lines, unchanged). Per commit: the build 0/0, the oracle at seeds 2-3 identical, the editor gate PASS. **Tours** (`fixture_game.py --exercise tour --play-seconds 60`, the harness lock held): the first, on 2714ae84, FAILED (the start-up hang above); after the fix 97c4d3e8 `RESULT PASS tour`, `gx_errors` {}. The merge needed nothing but `rust_includes.py`'s two editor includes reverted (it re-adds `rust/ee_screens.h` there).
+- **Left of the main game form**: the constructor (the mode tables), `CopyData`, `RefreshStatus`, `DisplayChatLine`,
+  `ShowInformation`, the start modes (gate, wall, calamity, flare, patrol, build). Next by size: `EEUserInterface`'s
+  `HandleMessage`, the status button's `Command` and `GetHelpString`, the status box.
