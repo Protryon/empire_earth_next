@@ -26,8 +26,6 @@ class EEUnit;
 // stay 0). The attack goal's own fields (goal_tile, convert) are the caller's. Defined in EECombatGoals.cpp.
 void EECombatFillCondition(EeCombatConditionIn& in, int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent,
                            EEUnit* inTarget);
-// The plain reads of a step of inUnit (the target only gives its id)
-void EECombatFillStep(EeCombatStepIn& in, int32_t inKind, EEComplexUnit* inUnit, EEUnit* inTarget);
 // CBTC, CBGS (no record while the capture is off)
 void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatConditionOut& inOut);
 void EECombatCaptureStep(const EeCombatStepIn& in);

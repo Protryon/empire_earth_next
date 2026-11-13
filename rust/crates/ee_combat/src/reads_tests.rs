@@ -613,3 +613,51 @@ fn the_damage_reads_and_the_complex_unit_come_from_the_unit_store() {
     assert_eq!(h.handle(EE_COMBAT_H_COMPLEX, 73, 0), 0x77, "another object: the host's");
     assert_eq!(h.handle(EE_COMBAT_H_COMPLEX, 0, 0), 0x77, "no handle: the host's");
 }
+
+#[test]
+fn the_stats_reads_come_from_the_stats_table() {
+    use crate::store::tests::{put_stats, put_unit};
+    use crate::store::EeCombatStoredStats;
+    put_stats(
+        0x8800,
+        EeCombatStoredStats {
+            scale: 1.25f32.to_bits(),
+            range: 6.0f32.to_bits(),
+            max_velocity: 0.5f32.to_bits(),
+            attack: 9.0f32.to_bits(),
+            flight_time: 1,
+            reload_time: 1800,
+            max_hit_points: 420,
+            healing_points: 2,
+            armor: [0, 0, 4.5f32.to_bits(), 0, 0, 0],
+            can_fire_over_walls: 1,
+        },
+    );
+    let unit = |object, stats| EeCombatStoredUnit {
+        object,
+        object_kind: EE_COMBAT_STORED_COMPLEX_UNIT,
+        stats,
+        ..Default::default()
+    };
+    put_unit(unit(81, 0x8800));
+    put_unit(unit(82, 0));
+    let mut host = Plain { asked: Vec::new() };
+    {
+        let mut h = Stored::new(&mut host);
+        assert_eq!(h.read(EE_COMBAT_Q_MAX_HIT_POINTS, 81, 0), 420);
+        assert_eq!(h.read(EE_COMBAT_Q_STATS_SCALE, 81, 0), 1.25f32.to_bits());
+        assert_eq!(h.read(EE_COMBAT_Q_FIRE_OVER_WALLS, 81, 0), 1);
+        assert_eq!(h.read(EE_COMBAT_Q_RANGE, 81, 0), 6.0f32.to_bits());
+        assert_eq!(h.read(world::EE_COMBAT_Q_STATS_MAX_VELOCITY, 81, 0), 0.5f32.to_bits());
+        assert_eq!(h.read(world::EE_COMBAT_Q_ATTACK, 81, 0), 9.0f32.to_bits());
+        assert_eq!(h.read(world::EE_COMBAT_Q_RELOAD_TIME, 81, 0), 1800);
+        assert_eq!(h.read(crate::damage::EE_COMBAT_Q_ARMOR, 81, 2), 4.5f32.to_bits(), "the weapon column's");
+        assert_eq!(h.read(crate::damage::EE_COMBAT_Q_ARMOR, 81, 6), 0, "out of the table");
+        // no stats object: 0, never the host
+        assert_eq!(h.read(EE_COMBAT_Q_RANGE, 82, 0), 0);
+    }
+    assert!(host.asked.is_empty(), "no host read: {:?}", host.asked);
+    // no record (a test's store without the unit): the host's
+    let mut h = Stored::new(&mut host);
+    assert_eq!(h.read(EE_COMBAT_Q_RANGE, 83, 0), 1);
+}

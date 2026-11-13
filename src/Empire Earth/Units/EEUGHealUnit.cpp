@@ -231,16 +231,12 @@ void EEUGHealUnit::Work(EEComplexUnit* inUnit)
 {
     EECombatHostReadScope theScope(3);
     // ee_combat shots.rs heal_work over the plain reads (the target's 0 without one); CBSO records the outcome
-    // (the command, the target's hit points and players: ee_combat store.rs's, from the unit store)
+    // (the command, the target's hit points and players, the stats: ee_combat store.rs's, from the unit store)
     EeCombatHealWorkIn in;
-    EEUnit* theTarget = this->mTarget;
-    ee_combat_fill_heal_work(&in, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), (uint64_t)(uintptr_t)theTarget);
+    ee_combat_fill_heal_work(&in, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), (uint64_t)(uintptr_t)this->mTarget);
     in.cinematic = ::gWorld.mInCinematic;
     in.elapsed = (uint32_t)this->mElapsedTime;
     in.tick_ms = (int32_t)gPhysics->mTickTimeMs;
-    in.healing = inUnit->mStats != NULL ? (int32_t)inUnit->mStats->mHealingPoints : 0;
-    if (theTarget != NULL)
-        in.max_hp = theTarget->mStats != NULL ? (int32_t)theTarget->mStats->mMaxHitPoints : 0;
     EeCombatHealWorkOut theOut = ee_combat_heal_work(&in);
     if (theOut.work) {
         this->mElapsedTime = theOut.elapsed;
