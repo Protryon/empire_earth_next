@@ -24,6 +24,8 @@
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
+#include "ee/wonapi/WONLobbyPopupEvent.h"
+#include "ee/wonapi/WONLobbyMSPainters.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
@@ -580,6 +582,34 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::CheckDoubleClick: return t->CheckDoubleClick((int)a) ? 1 : 0;
     case Op::DeliverTreeOpened: t->DeliverEvent(new TreeItemOpenedEvent(t, (TreeItem*)a), false); return 0;
     case Op::BaseHandleEvent: t->ScrollArea::HandleComponentEvent((ComponentEvent*)a); return 0;
+    // the popup menu (menuobj.rs)
+    case Op::ChildHold: Comp(a)->AddRef(); return 0;
+    case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
+    case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
+    case Op::MenuSelItem: return (intptr_t)((PopupMenu*)a)->GetSelItem();
+    case Op::MenuSetSelAt: ((PopupMenu*)a)->SetSelItem((int)b); return 0;
+    case Op::MenuItemOf: return (intptr_t)dynamic_cast<MenuItem*>(Item(a));
+    case Op::MenuItemSub: return (intptr_t)((MenuItem*)a)->mSubMenu.get();
+    case Op::MenuItemDisabled: return ((MenuItem*)a)->mDisabled ? 1 : 0;
+    case Op::ScrollUntranslate: t->ScrollUntranslate(*(int*)a, *(int*)b); return 0;
+    case Op::LocalToRoot: t->LocalToRoot(*(int*)a, *(int*)b); return 0;
+    case Op::MenuReset: ((PopupMenu*)a)->Reset(); return 0;
+    case Op::QueueSubMenu: {
+        const int* at = (const int*)b;
+        const EeWonRect4* q = (const EeWonRect4*)c;
+        PopupParams params((PopupMenu*)a, (int)d, t, at[0], at[1]);
+        params.mAvoidRect = WONRectangle(q->x, q->y, q->w, q->h);
+        t->GetRoot()->QueueEvent(new DoPopupEvent(params));
+        return 0;
+    }
+    case Op::QueueMouseUp: {
+        Window* window = t->GetRoot();
+        int x = (int)a, y = (int)b;
+        t->LocalToRoot(x, y);
+        window->QueueEvent(new MouseEvent(InputEvent_MouseUp, x, y, window->GetKeyMod(), (int)c));
+        return 0;
+    }
+    case Op::MenuTryKeyDown: return ((PopupMenu*)a)->TryKeyDown((int)b) ? 1 : 0;
     case Op::Draw: {
         WONDrawSlots aSlots;
         WONDrawNoCall aNoCall;
@@ -821,4 +851,24 @@ TreeItem* TreeArea::InsertString(TreeItem* theParent,const GUIString& theStr,Ima
     anItem->mImage=theIcon;
     return this->InsertTreeItem(theParent,anItem.get(),thePos);
 }
+}
+
+// ---- the popup menu (menuobj.rs)
+
+namespace WONAPI {
+// FUNCTION: WON 0x006fd150
+// Creates a popup menu with the menu font and colors, a popup background and 4-pixel padding (the Rust menu holds
+// no submenu, the timer at 0 and mouse mode)
+PopupMenu::PopupMenu()
+{
+    this->mMenu=ee_won_menu_new(this,ee_won_guicpp_list_call,this->mRust);
+    this->SetFont(this->GetNamedFont("Menu"));
+    this->SetListFlags(0x806,true);
+    this->SetBackground(new MSPopup);
+    this->mTextColor=0x8000000c;
+    this->SetBorderPadding(4,4,4,4);
+}
+// FUNCTION: WON 0x006fd340
+// Destroys the menu: the Rust menu gives the submenu's item and the submenu back
+PopupMenu::~PopupMenu() { ee_won_menu_free(this->mMenu); }
 }

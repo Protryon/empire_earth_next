@@ -2278,6 +2278,33 @@ enum class EeWonGuiOp : uint32_t {
   CheckDoubleClick,
   /// `DeliverEvent(new TreeItemOpenedEvent(this, a), false)`.
   DeliverTreeOpened,
+  /// `GetRoot()->ClosePopup(a)`.
+  ClosePopup = 300,
+  /// `a->mComponent` (a `ComponentEvent*`).
+  EventComponent,
+  /// `a->GetSelItem()` (a submenu).
+  MenuSelItem,
+  /// `a->SetSelItem(b)` (a submenu; the event fired).
+  MenuSetSelAt,
+  /// `dynamic_cast<MenuItem*>(a)` (`a` a `ListItem*` or NULL).
+  MenuItemOf,
+  /// `a->mSubMenu.get()` (a `MenuItem*`).
+  MenuItemSub,
+  /// `a->mDisabled` (0 or 1).
+  MenuItemDisabled,
+  /// `ScrollUntranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollUntranslate,
+  /// `LocalToRoot(*a, *b)` (`a`, `b` point at i32s).
+  LocalToRoot,
+  /// `a->Reset()` (a submenu).
+  MenuReset,
+  /// `GetRoot()->QueueEvent(new DoPopupEvent(PopupParams(a, d, this, b[0], b[1])))` with the avoided rectangle the
+  /// `EeWonRect4` at `c` (`b` points at two i32s).
+  QueueSubMenu,
+  /// `LocalToRoot(a, b)`, then the root's `QueueEvent(new MouseEvent(InputEvent_MouseUp, a, b, GetKeyMod(), c))`.
+  QueueMouseUp,
+  /// `a->TryKeyDown(b)` (a submenu; 0 or 1).
+  MenuTryKeyDown,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -2842,6 +2869,34 @@ enum class EeWonLobbyKeyKind {
   NarrowNoCase = 5,
   /// LobbyOptionSet: `GUIString` values unique by `Compare`, in insertion order
   InOrder = 6,
+};
+
+/// The inward calls (`PopupMenu`'s virtuals and methods).
+enum class EeWonMenuCall : uint32_t {
+  /// `MouseDown(a, b, c)`.
+  MouseDown = 1,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `TimerEvent(a)` (0 or 1).
+  TimerEvent,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  ListSelChangedHook,
+  EndSubMenu,
+  CheckSubMenu,
+  /// `TryKeyDown(a)` (0 or 1).
+  TryKeyDown,
+  Reset,
+  /// `mCurSubMenu`.
+  SubMenu,
+  /// `mKeyboardMode` (0 or 1).
+  KeyboardMode,
+  /// `mTimerAcc`.
+  TimerAcc,
+  /// `mMouseUpCount`.
+  MouseUpCount,
 };
 
 /// The inward calls of the list (`MultiListArea`'s virtuals and methods).
@@ -3446,6 +3501,9 @@ struct EeWonMHead;
 
 /// The Rust MultiListItem: its cells (a reference held on each).
 struct EeWonMRow;
+
+/// The Rust PopupMenu.
+struct EeWonMenu;
 
 /// The Rust MultiListArea.
 struct EeWonMulti;
@@ -9907,6 +9965,25 @@ const EeWonIpAddr *ee_won_lobbymap_key_addr(const EeWonLobbyMap *m, size_t i);
 const void *ee_won_lobbymap_key_text(const EeWonLobbyMap *m,
                                      size_t i,
                                      size_t *count);
+
+/// A new Rust PopupMenu for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
+EeWonMenu *ee_won_menu_new(void *component,
+                           EeWonGuiHostFn host,
+                           const EeWonList *list);
+
+/// # Safety
+/// `menu` came from `ee_won_menu_new` (or is NULL) and is not used again.
+void ee_won_menu_free(EeWonMenu *menu);
+
+/// One of PopupMenu's methods (`EeWonMenuCall`).
+///
+/// # Safety
+/// `menu` is live; the call's arguments as documented.
+ptrdiff_t ee_won_menu_call(const EeWonMenu *menu,
+                           EeWonMenuCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
 
 /// Which list: 0 `GetPatchList`, 1 `GetValidPatchList`, 2 `GetHighestPatchList(from, to)`. The chosen patches'
 /// indices go to `put` in the list's order.

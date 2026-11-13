@@ -96,7 +96,6 @@
 2fb7b0 2fbac8 WONGUI/ListAreaToolTip.cpp
 2fcd30 2fd479 WONGUI/MenuItemLifetime.cpp
 2fcee0 2fdc3d WONGUI/MenuBehavior.cpp
-2fd150 2fd3d3 WONGUI/PopupMenu.cpp
 2fd480 2fd57a WONGUI/MenuAddItem.cpp
 2fdcd0 2fe6d1 WONGUI/MSGraphicsUtil.cpp
 2fe6e0 2febe6 WONGUI/MSButtonBase.cpp

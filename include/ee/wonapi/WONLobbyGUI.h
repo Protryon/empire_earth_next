@@ -2752,34 +2752,31 @@ inline intptr_t TreeItem::NCall(ListArea* l,EeWonTNodeCall c,intptr_t a,intptr_t
     return ee_won_tnode_call(this->mNode,l ? static_cast<TreeArea*>(l)->mTree : NULL,c,a,b,cc);
 }
 
-// PopupMenu (0x180 bytes): ListArea (0x164) plus two SmartPtrs, four ints and a bool.
-// Constructor 0x2fd150 (57 vtable slots).
-// The implicit destructor (0x2fd340) releases the SmartPtrs in reverse order, then ListArea's members.
+// PopupMenu (R6 WON round 24): the open submenu and its item, the swallowed first release, the submenu timer, the last
+// mouse place, the keyboard mode and the input methods are the Rust PopupMenu (rust/crates/ee_won/src/menuobj.rs);
+// this is the type the lobby and the window manager hold, with its constructor's look (font, flags, background,
+// colour, padding) and the item adders, with one-line forwarders.
 class PopupMenu : public ListArea {
 public:
     PopupMenu(); // 0x2fd150: default configuration
-    // Implicit virtual destructor (0x2fd340)
-    virtual void MouseDown(int,int,int); //2fdb70
-    virtual void MouseUp(int,int,int);   //2fdc10
-    virtual void MouseMove(int,int); //2fdb10
-    virtual bool TimerEvent(int); //2fd820
-    virtual void HandleComponentEvent(ComponentEvent*); //2fd7d0
-    virtual void ListSelChangedHook(); //2fd860
+    virtual ~PopupMenu(); // 0x2fd340
+    virtual void MouseDown(int x,int y,int b) { this->PCall(EeWonMenuCall::MouseDown,x,y,b); } // 0x2fdb70
+    virtual void MouseUp(int x,int y,int b) { this->PCall(EeWonMenuCall::MouseUp,x,y,b); } // 0x2fdc10
+    virtual void MouseMove(int x,int y) { this->PCall(EeWonMenuCall::MouseMove,x,y); } // 0x2fdb10
+    virtual bool TimerEvent(int d) { return this->PCall(EeWonMenuCall::TimerEvent,d)!=0; } // 0x2fd820
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->PCall(EeWonMenuCall::HandleEvent,(intptr_t)e); } // 0x2fd7d0
+    virtual void ListSelChangedHook() { this->PCall(EeWonMenuCall::ListSelChangedHook); } // 0x2fd860
     MenuItem* AddItem(const GUIString&,int); //2fd440,ret8
     MenuItem* AddItem(const GUIString&,ComponentListener*,int); // 0x2fd460 (ret 0x0c)
     MenuItem* AddItem(const GUIString&,NativeImage*,ComponentListener*,int); //2fd480,ret10
     void AddSeperator(); //2fd8b0,ret0
-    void EndSubMenu(); // 0x2fd580: closes the submenu
-    void CheckSubMenu(); // 0x2fd610: opens the submenu
-    bool TryKeyDown(int); // passes keys to the submenu recursively
-    void Reset(); // 0x2fd400: closes the submenu, then clears the selected index
-protected:
-    SmartPtr<PopupMenu> mCurSubMenu; // at +0x164
-    SmartPtr<ListItem> mCurSubMenuItem; // at +0x168
-    int mMouseUpCount; //16c
-    int mTimerAcc; //170
-    int mLastX,mLastY; //174,178
-    bool mKeyboardMode; // at +0x17c; +0x17d..0x17f padding; the class is 0x180 bytes; the constructor leaves mLastX/Y unset
+    void EndSubMenu() { this->PCall(EeWonMenuCall::EndSubMenu); } // 0x2fd580
+    void CheckSubMenu() { this->PCall(EeWonMenuCall::CheckSubMenu); } // 0x2fd610
+    bool TryKeyDown(int k) { return this->PCall(EeWonMenuCall::TryKeyDown,k)!=0; } // the keys, the submenu's first
+    void Reset() { this->PCall(EeWonMenuCall::Reset); } // 0x2fd400
+    EeWonMenu* mMenu;
+private:
+    intptr_t PCall(EeWonMenuCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_menu_call(this->mMenu,c,a,b,cc); }
 };
 
 class ScrollAreaViewport : public Container {

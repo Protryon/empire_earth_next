@@ -78,6 +78,7 @@ pub mod listobj;
 pub mod lobbyhost;
 pub mod lobbymap;
 pub mod md5;
+pub mod menuobj;
 pub mod miscops;
 pub mod model;
 pub mod multiobj;

@@ -403,6 +403,34 @@ pub enum EeWonGuiOp {
     CheckDoubleClick,
     /// `DeliverEvent(new TreeItemOpenedEvent(this, a), false)`.
     DeliverTreeOpened,
+    // ---- the popup menu (`menuobj`; a submenu is a `PopupMenu*`)
+    /// `GetRoot()->ClosePopup(a)`.
+    ClosePopup = 300,
+    /// `a->mComponent` (a `ComponentEvent*`).
+    EventComponent,
+    /// `a->GetSelItem()` (a submenu).
+    MenuSelItem,
+    /// `a->SetSelItem(b)` (a submenu; the event fired).
+    MenuSetSelAt,
+    /// `dynamic_cast<MenuItem*>(a)` (`a` a `ListItem*` or NULL).
+    MenuItemOf,
+    /// `a->mSubMenu.get()` (a `MenuItem*`).
+    MenuItemSub,
+    /// `a->mDisabled` (0 or 1).
+    MenuItemDisabled,
+    /// `ScrollUntranslate(*a, *b)` (`a`, `b` point at i32s).
+    ScrollUntranslate,
+    /// `LocalToRoot(*a, *b)` (`a`, `b` point at i32s).
+    LocalToRoot,
+    /// `a->Reset()` (a submenu).
+    MenuReset,
+    /// `GetRoot()->QueueEvent(new DoPopupEvent(PopupParams(a, d, this, b[0], b[1])))` with the avoided rectangle the
+    /// `EeWonRect4` at `c` (`b` points at two i32s).
+    QueueSubMenu,
+    /// `LocalToRoot(a, b)`, then the root's `QueueEvent(new MouseEvent(InputEvent_MouseUp, a, b, GetKeyMod(), c))`.
+    QueueMouseUp,
+    /// `a->TryKeyDown(b)` (a submenu; 0 or 1).
+    MenuTryKeyDown,
 }
 
 /// The events a component object fires (`FireEvent`).

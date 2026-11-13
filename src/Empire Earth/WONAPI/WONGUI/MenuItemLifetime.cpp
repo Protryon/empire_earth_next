@@ -19,13 +19,6 @@ MenuItem::MenuItem(const GUIString& text,ComponentListener* listener)
     this->mDisabled=false;
     this->mMenuId=0;
 }
-// FUNCTION: WON 0x006fd400
-// Closes the open submenu and clears the selection
-void PopupMenu::Reset()
-{
-    this->mCurSubMenu=(PopupMenu*)NULL;
-    this->SetSelItem(-1,true);
-}
 // FUNCTION: WON 0x006fd440
 // FUNCTION: WON 0x006fd460
 // Adds a text item with a menu id and no listener (this overload is 0x006fd440; the listener overload
