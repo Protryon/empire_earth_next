@@ -2718,6 +2718,10 @@ public:
     bool ContainsPoint(int,int); //314e60
     TreeItem* mParent; // at +0x18, the parent item
     bool IsOpen() { return this->mOpen; } // inline
+    ListItem* GetWrappedItem() { return this->mItem.get(); } // mItem
+    int GetNumChildren() { return (int)this->mChildren.size(); }
+    TreeItem* GetParentItem() { return this->mParent; } // mParent
+    int GetIndex() { return this->mIndex; } // mIndex
     int mX,mIndex; //1c/20
     bool mOpen; //24
     SmartPtr<ListItem> mItem; // at +0x28, the wrapped item
