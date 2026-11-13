@@ -202,9 +202,22 @@ std::condition_variable sStepDone;
 bool sStepFinished = false;
 long sStepClock = 1000;                     // the time TMGetTime answers on the UI thread for the next step
 
+// The step's end, after the events it posted to the UI thread's queue: lets the clock run and wakes the driver
+class EESimEditorDone : public UIEvent {
+public:
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+    {
+        gTMPinnedTime = -1;
+        std::lock_guard<std::mutex> theGuard(sStepLock);
+        sStepFinished = true;
+        sStepDone.notify_all();
+        return 0;
+    }
+};
+
 // The last action of a step: posted after the step's own actions, it posts itself again inLeft times (an action run
-// by a step's action, e.g. the blank map's terrain paint, is queued after it), then lets the clock run and wakes the
-// driver.
+// by a step's action, e.g. the blank map's terrain paint, is queued after it), then posts the step's end
+// (EESimEditorDone) to the UI thread's message queue.
 class EESimEditorMarker : public EEAction {
 public:
     EESimEditorMarker(long inLeft) : EEAction(false), mLeft(inLeft) {}
@@ -214,10 +227,11 @@ public:
             gUserInterface->PostAction(this);
             return;
         }
-        gTMPinnedTime = -1;
-        std::lock_guard<std::mutex> theGuard(sStepLock);
-        sStepFinished = true;
-        sStepDone.notify_all();
+        // the end goes through the UI thread's message queue too: the events a step posted there (e.g. the hide-UI
+        // box's viewport change) are processed first (one queue, in order)
+        UIEvent* theDone = new EESimEditorDone;
+        gUserInterface->PostEvent(theDone, NULL);
+        theDone->Dereference();
     }
     virtual void Virtual8() {}
     long mLeft;
