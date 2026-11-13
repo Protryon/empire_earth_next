@@ -47,7 +47,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIKindIDs.h"
@@ -201,7 +200,7 @@ static void EECPNextGiveMove(EEComplexUnit* inUnit, long inX, long inY, bool inF
     if (!EECPNextCanOrder(inUnit) || gWorld.mMap == NULL || inX < 0 || inY < 0
         || gWorld.mMap->GetTile((unsigned long)inX, (unsigned long)inY) == NULL)
         return;
-    EEUGLocation* theGoal = new EEUGLocation(GE2DPoint(inX + 0.5f, inY + 0.5f), true, inForced, false, 0.0f, false, false);
+    EEUGRust* theGoal = EEUGRust::NewLocation(GE2DPoint(inX + 0.5f, inY + 0.5f), true, inForced, false, 0.0f, false, false);
     inUnit->SetGoal(theGoal, false, 0);
     inUnit->StartAction(kActionPrepareToMove);
     inUnit->mUnitClass->ActionChanged(inUnit);

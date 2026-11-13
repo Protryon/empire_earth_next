@@ -43,7 +43,6 @@
 
 #include "ee/EEUGRust.h"
 
-#include "ee/EEUGLocation.h"
 
 // FUNCTION: EXE 0x44fd61
 // Creates a space fighter sub-group belonging to the given attack group
@@ -94,7 +93,7 @@ void EECPASGSpaceFighter::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUn
         inUnit->mNeedsOrders = false;
         thePoint.SetX(theTarget->mTileX);
         thePoint.SetY(theTarget->mTileY);
-        theGoal = new EEUGLocation(thePoint, true, false, false, 0.0f, false, false);
+        theGoal = EEUGRust::NewLocation(thePoint, true, false, false, 0.0f, false, false);
         theAction = theCanAct ? 1000 : 8000;
         if (!this->GiveGoal(inUnit->GetUnit(), theGoal, 0, theAction) && theGoal != NULL)
             delete theGoal;
@@ -258,7 +257,7 @@ void EECPASGSpaceFighter::SetDestination(const EECPILocation& inLocation)
             theUnit->GetUnit()->mPhysicalModel.GetLocation().GetZ() == theUnit->GetUnit()->mTile->GetHeight());
         if (!theOnMap) {
             theUnit->GetUnit()->StartAction(kActionPrepareToMove);
-            theGoal = new EEUGLocation(thePoint, true, theFlag, false, 0.0f, false, false);
+            theGoal = EEUGRust::NewLocation(thePoint, true, theFlag, false, 0.0f, false, false);
             if (!this->GiveGoal(theUnit->GetUnit(), theGoal, 0, theUnit->GetUnit()->GetCommandType()) && theGoal != NULL)
                 delete theGoal;
         } else {
@@ -267,7 +266,7 @@ void EECPASGSpaceFighter::SetDestination(const EECPILocation& inLocation)
                 theUnit->GetUnit()->GetCommandType() == kActionContinueToDescend || theUnit->GetUnit()->GetCommandType() == kActionBrake ||
                 theUnit->GetUnit()->GetCommandType() == kActionContinueToBrake)
                 continue;
-            theGoal = new EEUGLocation(thePoint, true, theFlag, false, 0.0f, false, false);
+            theGoal = EEUGRust::NewLocation(thePoint, true, theFlag, false, 0.0f, false, false);
             if (!this->GiveGoal(theUnit->GetUnit(), theGoal, 0, theCanAct ? 1000 : 8000) && theGoal != NULL)
                 delete theGoal;
         }
@@ -290,7 +289,7 @@ void EECPASGSpaceFighter::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPI
         inUnit->GetUnit()->mPhysicalModel.GetLocation().GetZ() == inUnit->GetUnit()->mTile->GetHeight());
     if (!theOnMap) {
         inUnit->GetUnit()->StartAction(kActionPrepareToMove);
-        theGoal = new EEUGLocation(thePoint, true, inFlag, false, 0.0f, false, false);
+        theGoal = EEUGRust::NewLocation(thePoint, true, inFlag, false, 0.0f, false, false);
         if (!this->GiveGoal(inUnit->GetUnit(), theGoal, 0, inUnit->GetUnit()->GetCommandType()) && theGoal != NULL)
             delete theGoal;
     } else {
@@ -299,7 +298,7 @@ void EECPASGSpaceFighter::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPI
             inUnit->GetUnit()->GetCommandType() == kActionContinueToDescend || inUnit->GetUnit()->GetCommandType() == kActionBrake ||
             inUnit->GetUnit()->GetCommandType() == kActionContinueToBrake)
             return;
-        theGoal = new EEUGLocation(thePoint, true, inFlag, false, 0.0f, false, false);
+        theGoal = EEUGRust::NewLocation(thePoint, true, inFlag, false, 0.0f, false, false);
         if (!this->GiveGoal(inUnit->GetUnit(), theGoal, 0, theCanAct ? 1000 : 8000) && theGoal != NULL)
             delete theGoal;
     }

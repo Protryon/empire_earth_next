@@ -19,6 +19,9 @@ pub(crate) const ZBUFFER_TEST_AND_WRITE: u32 = 3;
 pub(crate) const BLEND_ONE: u32 = 1;
 pub(crate) const BLEND_SRC_ALPHA: u32 = 4;
 pub(crate) const BLEND_INV_SRC_ALPHA: u32 = 5;
+/// `kCompareLess`, `kCompareLessEqual` (the z compare).
+pub(crate) const COMPARE_LESS: u32 = 1;
+pub(crate) const COMPARE_LESS_EQUAL: u32 = 2;
 
 /// A model to draw (`GEModel*`), opaque to Rust.
 pub type EeGfxModel = *mut c_void;
@@ -55,6 +58,18 @@ pub struct EeGfxRaster {
     pub model_color: extern "C" fn(model: EeGfxModel, color: EeGfxColor),
     /// the model's own `SetTexture(texture, screen)` (not its material's)
     pub model_own_texture: extern "C" fn(model: EeGfxModel, texture: EeGfxModel),
+    /// the render snapshot's camera transformation (`gRenderSnapshot.mCamera`)
+    pub camera: extern "C" fn() -> GeTransformation,
+    /// the shared standing plane model (`gEffect2DModel`)
+    pub standing_plane: extern "C" fn() -> EeGfxModel,
+    /// the main viewport's depth range, then the viewport set on the rasterizer (`gU4E8F08`)
+    pub depth_range: extern "C" fn(near: f32, far: f32),
+    pub set_zcompare: extern "C" fn(mode: u32),
+    /// `GetMaterial(0)->SetOpacity(opacity)`
+    pub model_material_opacity: extern "C" fn(model: EeGfxModel, opacity: f32),
+    /// a copy of `transformation` scaled by `GETransformation::Scale(x, y, z)`, then the model's post-model transform
+    pub model_transform_scaled:
+        extern "C" fn(model: EeGfxModel, transformation: *const GeTransformation, x: f32, y: f32, z: f32),
 }
 
 /// The rasterizer as the draws call it.
@@ -80,6 +95,12 @@ pub trait Raster {
     fn model_restore_v(&mut self, model: EeGfxModel);
     fn model_color(&mut self, model: EeGfxModel, color: EeGfxColor);
     fn model_own_texture(&mut self, model: EeGfxModel, texture: EeGfxModel);
+    fn camera(&mut self) -> GeTransformation;
+    fn standing_plane(&mut self) -> EeGfxModel;
+    fn depth_range(&mut self, near: f32, far: f32);
+    fn set_zcompare(&mut self, mode: u32);
+    fn model_material_opacity(&mut self, model: EeGfxModel, opacity: f32);
+    fn model_transform_scaled(&mut self, model: EeGfxModel, transformation: &GeTransformation, x: f32, y: f32, z: f32);
 }
 
 impl Raster for &EeGfxRaster {
@@ -146,6 +167,24 @@ impl Raster for &EeGfxRaster {
     fn model_own_texture(&mut self, model: EeGfxModel, texture: EeGfxModel) {
         (self.model_own_texture)(model, texture)
     }
+    fn camera(&mut self) -> GeTransformation {
+        (self.camera)()
+    }
+    fn standing_plane(&mut self) -> EeGfxModel {
+        (self.standing_plane)()
+    }
+    fn depth_range(&mut self, near: f32, far: f32) {
+        (self.depth_range)(near, far)
+    }
+    fn set_zcompare(&mut self, mode: u32) {
+        (self.set_zcompare)(mode)
+    }
+    fn model_material_opacity(&mut self, model: EeGfxModel, opacity: f32) {
+        (self.model_material_opacity)(model, opacity)
+    }
+    fn model_transform_scaled(&mut self, model: EeGfxModel, transformation: &GeTransformation, x: f32, y: f32, z: f32) {
+        (self.model_transform_scaled)(model, transformation, x, y, z)
+    }
 }
 
 /// A rasterizer that logs every call (the tests').
@@ -156,6 +195,7 @@ pub struct LogRaster {
     pub fog: u32,
     pub ambient: EeGfxColor,
     pub fog_value: f32,
+    pub camera: GeTransformation,
 }
 
 #[cfg(test)]
@@ -224,5 +264,23 @@ impl Raster for LogRaster {
     }
     fn model_own_texture(&mut self, _model: EeGfxModel, _texture: EeGfxModel) {
         self.calls.push("own texture".into());
+    }
+    fn camera(&mut self) -> GeTransformation {
+        self.camera
+    }
+    fn standing_plane(&mut self) -> EeGfxModel {
+        std::ptr::null_mut()
+    }
+    fn depth_range(&mut self, near: f32, far: f32) {
+        self.calls.push(format!("depth {near} {far}"));
+    }
+    fn set_zcompare(&mut self, mode: u32) {
+        self.calls.push(format!("zcompare {mode}"));
+    }
+    fn model_material_opacity(&mut self, _model: EeGfxModel, opacity: f32) {
+        self.calls.push(format!("material opacity {opacity}"));
+    }
+    fn model_transform_scaled(&mut self, _model: EeGfxModel, t: &GeTransformation, x: f32, y: f32, z: f32) {
+        self.calls.push(format!("transform {} {} {} scaled {x} {y} {z}", t.m[0][3], t.m[1][3], t.m[2][3]));
     }
 }

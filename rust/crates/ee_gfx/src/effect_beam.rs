@@ -45,10 +45,12 @@ pub(crate) unsafe fn beam<H: Effect3DHost, R: Raster>(
     // SAFETY (every access below): the function's contract; no reference to the record is kept
     match op {
         EeGfxEffect3DOp::Create => {
-            // the C++ put the target in the end
+            // the C++ put the target in the end; the line is the original member's default (`GE3DLine()`: from
+            // the origin along +x) until the beam aims, and an unaimed beam saves it so
             unsafe {
                 let s = &mut (*r).shot;
                 s.end.z = g.param1 + s.end.z;
+                s.path.direction = ee_ge::types::GeVector { x: 1.0, y: 0.0, z: 0.0 };
                 s.active = false;
             }
             0

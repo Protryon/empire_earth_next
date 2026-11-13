@@ -138,6 +138,11 @@ int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarge
 // EEGetFiringPosition (inFiring) or EEGetLeadPosition (ee_combat leaves.rs firing_position, lead_position) over the
 // world host: ioLocation in and out.
 void EECombatAttackPosition(bool inFiring, EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& ioLocation);
+// EEFindDropLocation (ee_combat leaves.rs find_drop_location) over the world host: the target out (NULL: none), the
+// point in outLocation.
+EEUnit* EECombatFindDropLocation(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocation);
+// EEGetHitDistanceSquared (ee_combat leaves.rs hit_distance_squared) over the world host.
+float EECombatHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX, float inY);
 // EEIsSeenBy (ee_combat leaves.rs is_seen_by) over the world host.
 bool EECombatIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored);
 // The damage of one hit (ee_combat damage.rs compute_damage; ee/EERules.h EEDamageForm, combat.yaml's constants):

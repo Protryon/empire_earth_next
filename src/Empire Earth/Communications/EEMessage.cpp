@@ -4085,7 +4085,6 @@ bool EEMLoadGarrison::IsResponse(NEMessage* inMessage)
     return false;
 }
 
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x4c1722
@@ -4146,7 +4145,7 @@ void EEMLoadGarrison::Execute()
             }
             theGroup->KeepMobileUnits();
             if (theGroup->GetNumUnits() > 0) {
-                theGroup->SetGoal(new EEUGLocation(GE2DPoint((float)theGarrison->mTileX, (float)theGarrison->mTileY),
+                theGroup->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theGarrison->mTileX, (float)theGarrison->mTileY),
                                                    true, true, false, 0.0f, false, 0), false);
                 theGroup->mAction = kActionPrepareToMove;
                 thePlayer->mPendingGroups.push_back(theGroup);
@@ -4195,7 +4194,6 @@ bool EEMLoadTransport::IsResponse(NEMessage* inMessage)
     return false;
 }
 
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x4c1b79
@@ -4265,7 +4263,7 @@ void EEMLoadTransport::Execute()
             }
             theGroup->KeepMobileUnits();
             if (theGroup->GetNumUnits() > 0) {
-                theGroup->SetGoal(new EEUGLocation(GE2DPoint((float)theTileX, (float)theTileY), true, true, false, 0.0f,
+                theGroup->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theTileX, (float)theTileY), true, true, false, 0.0f,
                                                    false, 0), false);
                 theGroup->mAction = kActionPrepareToMove;
                 thePlayer->mPendingGroups.push_back(theGroup);
@@ -5999,7 +5997,7 @@ void EEMScrambleAircraft::Execute()
     if (theUnit) {
         EEComplexUnit* theAircraft = theUnit->GetComplexUnit();
         if (theAircraft && (theAircraft->mUnitClass->mCategory == kUnitCategoryAirplane || theAircraft->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship)) {
-            EEUGLocation* theGoal = new EEUGLocation(GE2DPoint(long(this->mX), long(this->mY)), false, false, false, 0.0f, false, false);
+            EEUGRust* theGoal = EEUGRust::NewLocation(GE2DPoint(long(this->mX), long(this->mY)), false, false, false, 0.0f, false, false);
             theAircraft->ClearAllGoalQueues();
             theAircraft->QueueGoal(theGoal, 0);
             theAircraft->QueueGoal(theGoal->Clone(), 1);
@@ -6617,7 +6615,7 @@ void EEMSetAirportCommand::Execute()
         }
     }
     if (!theAttack)
-        theGoal = new EEUGLocation(this->mPoint, true, true, false, 0.0f, false, 0);
+        theGoal = EEUGRust::NewLocation(this->mPoint, true, true, false, 0.0f, false, 0);
 issue:
     EESelectedGroup* theGroup = thePlayer->mActiveGroup;
     if (theGroup != NULL) {
@@ -6680,7 +6678,7 @@ issue:
             case 20:
                 if (!this->mIsQueued)
                     theUnit->ClearGoalQueue(4);
-                theUnit->QueueGoal(new EEUGLocation(this->mPoint, true, true, false, 0.0f, false, 0), 4);
+                theUnit->QueueGoal(EEUGRust::NewLocation(this->mPoint, true, true, false, 0.0f, false, 0), 4);
                 delete theCopy;
                 break;
             default:
@@ -6862,7 +6860,7 @@ void EEMSetRallyGoal::Execute()
                     theCommandTarget = theTarget;
                     goto issue;
                 }
-                theGoal = new EEUGLocation(this->mPoint, true, true, false, 0.0f, false, 0);
+                theGoal = EEUGRust::NewLocation(this->mPoint, true, true, false, 0.0f, false, 0);
                 theGoals.push_back(theGoal);
                 theCommand = 0xb8;
                 goto issue;
@@ -6909,7 +6907,7 @@ void EEMSetRallyGoal::Execute()
         }
     }
 location:
-    theGoal = new EEUGLocation(this->mPoint, true, true, false, 0.0f, false, 0);
+    theGoal = EEUGRust::NewLocation(this->mPoint, true, true, false, 0.0f, false, 0);
     theGoals.push_back(theGoal);
     theCommand = 0xb8;
 issue:
@@ -7373,12 +7371,12 @@ void EEMStopActiveGroup::Execute()
                     case kActionCircleAirtrafficController:
                         break;
                     case kActionFly:
-                        theUnit->SetGoal(new EEUGLocation((float)theUnit->GetTileX(), (float)theUnit->GetTileY(), 0.0f, false, true,
+                        theUnit->SetGoal(EEUGRust::NewLocation((float)theUnit->GetTileX(), (float)theUnit->GetTileY(), 0.0f, false, true,
                                                           false, 0.0f, false, false), 0, 0);
                         theUnit->StartAction(kActionPrepareToMove);
                         break;
                     default:
-                        theUnit->SetGoal(new EEUGLocation((float)theUnit->GetTileX(), (float)theUnit->GetTileY(), 0.0f, false, true,
+                        theUnit->SetGoal(EEUGRust::NewLocation((float)theUnit->GetTileX(), (float)theUnit->GetTileY(), 0.0f, false, true,
                                                           false, 0.0f, false, false), 0, 0);
                         theUnit->StartAction(kActionPrepareToMove);
                         break;
@@ -7521,7 +7519,6 @@ bool EEMUnloadTransport::IsResponse(NEMessage* inMessage)
     return false;
 }
 
-#include "ee/EEUGLocation.h"
 
 // FUNCTION: EXE 0x4c8615
 // Splits the sender's selection by kind; parts with a loaded transport unload at the point, the rest move
