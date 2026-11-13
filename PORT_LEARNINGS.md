@@ -10129,3 +10129,46 @@ Round 4's pattern (RUST_PLAN's row) applied to the rest of the main game form's 
 - **Behaviour:** none intended where the original was defined. The grab scroll's saved mouse move event is released
   with its form's destructor (the original's object was released when its last reference went, normally the same
   moment).
+
+## R6: WON's Internet code, round 13 (AuthContext's login data, GetVersionOp and FindPatchOp as Rust objects)
+
+Branch `rust-won-net13`. Measured by net C++ deletion, as rounds 7 to 12. Nothing in the game reaches this code but
+an Internet login (AuthContext's login data: the lobby's login, account and certificate requests) or nothing at all
+(GetVersionOp and FindPatchOp had no caller); the servers are gone. Only the drivers and the Rust replays exercise
+it; the shims' new lines only compile.
+
+- **AuthContext's login data as one Rust object** (`authlogin.rs`): the user name and password, the secret file and
+  its secrets, the communities (CD key, valid flag, file hashes), the CD-key joins, the user data, the nicknames,
+  each setter of the original and the login request's three blocks, behind its own lock. AuthContext keeps its
+  lock, peer data, server context and certificate flow and is otherwise a shim (`mLogin`); its maps, strings,
+  secret list and the `AuthLoginCommunityData` type are gone. `GetName`, `GetUserName` and `GetPassword` return
+  copies now (EEWonNet and UpdateAccountCtrl read them).
+- **The file hashes over the original's stdio loop.** `SetHashFileList` is the MD5 loop over `PlatFOpen` / `fread` /
+  `feof` (a `Stream` trait: the C file in the game, the bytes in the replay, the end flag set by a short read as
+  the CRT's): sections run across files, the short last one at the end of the last file; a file that does not
+  open returns false with the hashes cleared and what was hashed so far kept, as the original.
+- **The maps' order is `std::map<std::wstring>`'s on Windows** (UTF-16 units). A POSIX build's 32-bit `wchar_t`
+  ordered names above U+FFFF differently; nothing uses such names.
+- **GetVersionOp and FindPatchOp are directory request ops** (`verop.rs`, kinds 16 and 17): each ran one GetDirOp
+  child and read its entities when it finished, so the Rust op is the directory op itself (made at `RunHook`, its
+  flags and path as the original's) reading the listing when it succeeds. Results and queries by number (the
+  versions, their descriptions, `CheckVersion`, the patches and the three patch lists through a setter and
+  `num_at`). The `SetVersionCompare` hook (no caller) is gone: the compare is `std::string::compare`. Their units,
+  headers and the C++ helpers only they used (`FindPatchMsg`, `PatchFilterSet`, `PatchIsFiltered`) moved to
+  `tests/won/won_version_msg.h`. New C ABI for bare request ops: `ee_won_reqop_set`, `_num_at`, `_entities`.
+- **GetHTTPDocumentOp's C++ helpers moved in** (`httpdoc.rs`): the cache file names (from the WON directory the
+  shim passes), the once-per-process path file (closed now; the original left it open), the lower case of the
+  product and language, and `GetDocument`'s read through `PlatFOpen`. The web proxy file stays C++: its read is a
+  host call in `golden_hostop.txt`'s H traces.
+- **Goldens first.** `golden_authlogin.txt` (won_auth_test's login sequences, 300) and `golden_verop.txt`
+  (won_verop_test, 600). Drivers 117,983 and 100,000 checks, 0 failed; mutations fail 18,563 and 293 checks and
+  the replays.
+- **A version's data was read as a C string** (`std::string(mData->data())`): to its first NUL, and past the end
+  of a buffer without one. An empty buffer's `data()` is NULL here (ee_won's bytes), which crashed the driver's
+  original half: the data is read to its first NUL or its end, both halves.
+- **A first golden missed the filter**: the generator's version data used "pt:opt", but the filter line's key is
+  "pt" before a space. Check that a golden reaches each branch (count the outcomes) before recording it.
+- **Goldens printed on Windows are CR LF** (stdout's text mode); `str::lines` reads both. The new ones are LF.
+- **Not moved, and why.** The peer auth objects (PeerAuthOp, PeerAuthServerOp, PeerAuthClient, PeerAuthServer) and
+  the certificate classes: not started this round. AuthContext's lock, peer data, server context and the
+  certificate flow's hook table stay C++ until the peer auth ops and GetCertOp's objects are Rust.
