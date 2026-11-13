@@ -11967,3 +11967,64 @@ Measured as rounds 18-28 (every file under `src/Empire Earth/WONAPI` and `includ
   component (the skin's `ComponentCursor`, if the lobby's resources make one); those run only in the golden.
 - **Left:** Button's move (census done), then Window/WindowManager (platform ops), the layout managers, and the
   input and list goldens' re-recording to trace the delivered event type.
+
+## R6 WON round 30: Button whole in Rust; the input and list goldens trace the delivered event type (ee_won btnobj.rs; branch rust-r6-won30, 2026-11-13)
+
+Measured as rounds 18-29 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+81,700 at the branch's start (round 29's head) -> 81,517 (Button, -183). The census was round 29's.
+
+- **The move** (`btnobj.rs`): the button flags, Space's hold, the repeat delay and the mouse's press state, with
+  every method of Button.cpp. Button.cpp is now the host, the constructor (its `WantTabFocus` statement stays C++),
+  the destructor, the four static functions' forwarders, the two virtuals the skins override (`HandleActivate`,
+  `SetTextHook`, which keep their empty C++ bodies) and `SetClickSound`. The header's methods are one-line
+  forwarders; the inline flag tests (`IsRadio`, `IsChecked`, ...) read `GetButtonFlags()`.
+  - Five button ops (550-554): `BtnOf`, `BtnHandleActivate`, `BtnSetTextHook`, `BtnHasClickSound`, `BtnPlayClick`.
+    The rest are the container's (`CtBase` for `Component::X`, `ChildSetFlags`, `CtBits`, `CtWantFocus`,
+    `Invalidate`, `ChildInvalidate`, `RequestTimer`, `RequestFocus`, `CtChild` for the next radio's `RequestFocus`,
+    `CtNextSibling`, `CtParentOf`, `CtContainerOf`, `ChildWidth`/`Height`, `ChildHold`/`Release`, `FireEvent`).
+  - **The radio group's walk** reads each sibling's Rust object through `BtnOf` (the original's
+    `dynamic_cast<Button*>`, a pure read like `CtContainerOf`) and calls its non-virtual methods directly
+    (`IsRadio`, `IsChecked`, `SetButtonFlags`, `GetNextRadio`, `Fn2F3440`), as the original did; its virtuals
+    (`Invalidate`) and Component's methods (`SetComponentFlags`, `WantFocus`, `RequestFocus`) go through ops.
+  - `mParent->SetHasUsedDialogKeys(true)` goes to the parent's Rust container (`CtParentOf`, `CtContainerOf`).
+  - **The two default buttons** (the original's static `SmartPtr<Button>`s) are a `Mutex<[isize; 2]>` in the Rust
+    module, never locked across a call out. The assignment is the `SmartPtr`'s: the old one released, then the new
+    one held (nothing when they are the same). The statics' calls out go through the host with a NULL component
+    (`ee_won_btn_static(host, call, button)`), so they need no button object.
+  - The click sound stays a C++ member: `ButtonDown` asks `BtnHasClickSound` and then plays it.
+  - `ButtonPressed` (`EeWonGuiEvent` 6) is fired through `ee_won_gui_event_type` (15); the golden checks it against
+    `ComponentEvent_ButtonPressed`.
+- **Behaviour changes, on undefined paths only:** the constructor left `mDelayAcc` unset; it starts at 0 (a
+  `TimerEvent` before any press read garbage). The default buttons are no longer released at process exit (the
+  original's static destructors ran then).
+- **The golden** (`tests/won/won_btnobj_test.cpp`) uses round 26's world with fourteen components: 1..3 real Rust
+  containers per side, 4..13 buttons, 14 a leaf. `won_ct_world.h` gained `HasOverride` (a test defining
+  `WON_CT_OVERRIDES` says which of its own objects override a call), so the world's calls on a button (the
+  containers' mouse, key, focus and timer routing, AddChild's AddedToParent) run its override on the side running
+  ("do" lines carrying the container call's code, which the cargo replay's `Ext::side` maps to the button's call).
+  - The driver gives the buttons random flags (radios more often than not), lays them out in runs under one
+    container (so radio groups form), toggles click sounds ("sound" lines), and makes 40 calls per sequence on the
+    buttons, the containers and the statics; the default buttons are cleared at the end, so every reference must
+    come back.
+  - It runs 20,000 sequences with 14,796,987 trace lines, all identical. Five mutations fail it: a radio sibling
+    unchecked without its repaint (6,227 sequences), AddedToParent's group walk backwards (6,974), LostFocus
+    repainting before giving up the default (4,696), the repeat delay starting at 100 (140), the default's new
+    button held before the old one released (3,732); the restored source: 0.
+  - `golden_btnobj.txt` holds 41 sequences, replayed by cargo through round 27's `Ext` hooks; the replay fails on
+    a button event of another type. The default buttons are process-wide, so the cargo tests that touch them take
+    one lock.
+- **The input and list goldens** (round 30's second commit): their original sides now fire the original enum and
+  both sides trace the type the listeners receive ("fire 20", "fire 22"), as the tab, combo and button goldens do;
+  only the fire lines of `golden_inputobj.txt` and `golden_listobj.txt` changed.
+- **Lesson:** the mutation run restored the source with `git checkout` before every mutation and finished with an
+  unmutated run (0 differing), and nothing was left running (round 29's lesson).
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction (seeds 2-3 identical
+  after the commit). Every lobby button runs through `btnobj.rs`: the lead's LAN game (`lan_game.py`: clicking Host,
+  Join, Ready, Start and the dialogs' OK buttons, the ButtonPressed events the lobby screens listen for, the
+  default button Enter presses in the login and create-game dialogs) and the lobby captures (the pressed, hover,
+  checked and default looks the skins paint from `GetButtonFlags`/`IsDefaultButton`/`GetMouseDownState`) are the
+  check. Radio groups with arrow keys, Space's hold, repeating arrow buttons held down and a press dragged off a
+  button run only in the golden unless a person uses them.
+- **Left:** the skins' Button subclasses (MSButtonBase, MSCheckbox, MSRadioButton, WONButton, ...) are mostly paint
+  over the Graphics and a WrappedText: they need draw ops and only the lobby captures check them, so they were not
+  cheap enough for this round. Then Window/WindowManager (platform ops) and the layout managers.
