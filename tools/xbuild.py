@@ -474,6 +474,9 @@ WON_TESTS = {
     # Button as a whole Rust object (btnobj.rs) over the container goldens' world: the radio groups, the default
     # buttons, the click sound and the event (golden: rust/crates/ee_won/src/golden_btnobj.txt)
     "won_btnobj_test": [],
+    # The child layouts (the manager and the eight instruction classes) as whole Rust objects (layoutobj.rs) over a
+    # world of components (golden: rust/crates/ee_won/src/golden_layoutobj.txt)
+    "won_layoutobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

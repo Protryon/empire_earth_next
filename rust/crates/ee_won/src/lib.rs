@@ -80,6 +80,7 @@ pub mod labelobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod lanobj;
+pub mod layoutobj;
 pub mod listobj;
 pub mod lobbyhost;
 pub mod lobbymap;
