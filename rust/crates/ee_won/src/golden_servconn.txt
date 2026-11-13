@@ -130,5 +130,73 @@ listener accept WS_Success
 peer send ignored WS_Success
 ops done
 opconn destroyed
+== RoutingConnection
+listener bind WS_Success
+listener listen WS_Success
+route fresh valid 0 open 0 connected 0 type 0 lengthfield 2
+route CloseHook
+peerauth new auth2 1
+peerauth run listener type 0 context null mode 2 timeout 5000 socket set
+peerauth connect WS_Success
+route connect WS_Success
+listener accept WS_Success
+server client left server WS_Success
 plain destroyed
-core shut down peerauth made 12 freed 12
+route complete hook RoutingClientLeftServerOp WS_Success
+left server completed RoutingClientLeftServerOp type 10 WS_Success killed 0 mode 2
+server shutdown aborted WS_Success
+route complete hook RoutingServerShutdownAbortedOp WS_Success
+default completed RoutingServerShutdownAbortedOp type 49 WS_Success killed 0 mode 2
+server short header WS_Success
+server unknown type WS_Success
+route after unknown left 1 default 1
+server got leave completed RecvMsgOp WS_Success killed 0
+server got leave message 5:03072b0700
+server status 0 WS_Success
+route complete hook RoutingLeaveGroupOp WS_Success
+leave completed RoutingLeaveGroupOp type 35 WS_Success killed 0 mode 1
+server got leave 1 completed RecvMsgOp WS_Success killed 0
+server got leave 1 message 5:03072b0100
+server got cancel completed RecvMsgOp WS_Success killed 0
+server got cancel message 6:030705020000
+server status -1 WS_Success
+route complete hook RoutingLeaveGroupOp WS_CommServ_Failure
+default completed RoutingLeaveGroupOp type 35 WS_CommServ_Failure killed 0 mode 1
+server status 0 WS_Success
+route complete hook RoutingCancelJoinGroupOp WS_Success
+cancel join completed RoutingCancelJoinGroupOp type 5 WS_Success killed 0 mode 1
+server got client list completed RecvMsgOp WS_Success killed 0
+server got client list message 3:030718
+server got leave 3 completed RecvMsgOp WS_Success killed 0
+server got leave 3 message 5:03072b0300
+server client left server WS_Success
+route complete hook RoutingClientLeftServerOp WS_Success
+left server completed RoutingClientLeftServerOp type 10 WS_Success killed 0 mode 2
+server status cut WS_Success
+leave 3 completed RoutingLeaveGroupOp type 35 WS_RoutingOp_DontWantReply killed 0 mode 1
+server derived WS_Success
+route complete hook RoutingDerivedServerOp WS_Success
+default completed RoutingDerivedServerOp type 60 WS_Success killed 0 mode 2
+route CloseHook
+client list completed RoutingGetClientListOp type 20 WS_Killed killed 1 mode 1
+route CloseHook
+route KillHook
+route CloseHook
+peerauth new auth2 1
+peerauth run listener type 0 context null mode 2 timeout 5000 socket set
+peerauth connect WS_Success
+route reconnect WS_Success
+listener accept WS_Success
+server client left server WS_Success
+server derived WS_Success
+route complete hook RoutingClientLeftServerOp WS_Success
+route after kill left 2 default 3
+server got leave 4 completed RecvMsgOp WS_Success killed 0
+server got leave 4 message 5:03072b0400
+server status 0 WS_Success
+route complete hook RoutingLeaveGroupOp WS_Success
+leave 4 completed RoutingLeaveGroupOp type 35 WS_Success killed 0 mode 1
+route CloseHook
+route destroyed
+routing done
+core shut down peerauth made 14 freed 14

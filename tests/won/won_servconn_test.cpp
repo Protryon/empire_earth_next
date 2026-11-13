@@ -4,8 +4,10 @@
 // for real, or stays pending for port 0), the connect completion, the message callback on the repeat receive, the
 // keep-alive timer and its no-op messages, a period of 0, the close hook killing a pending connect and the timer,
 // the kill hook dropping the connect completion, a second connect while one is pending, and ServerConnectionConnectOp
-// run blocking (connected, timed out on a pending connect, killed). `--print` prints the lines instead. The exit code
-// is the number of failures.
+// (connected, killed). Then RoutingConnection (recorded over its C++ class before its move): the completions by op
+// type and the default one, notifications, requests and their status replies in the list's order, a reply no op
+// wants, a reply cut short, a derived server's message, the close killing a waiting op, the kill dropping the
+// completions. `--print` prints the lines instead. The exit code is the number of failures.
 //
 // PeerAuthOp is a Rust op on the op base (ee_won peerop.rs) whose real run needs certificates and a WON server:
 // this driver defines PeerAuthOp's constructor and RustServerOp's members itself (ServerOp.cpp is not linked), so
@@ -396,6 +398,154 @@ static void ConnectOps()
     Log("ops done");
 }
 
+// ---- RoutingConnection (round 16's second part): the op list, the completions by op type, the reply dispatch
+
+class LogRouting : public RoutingConnection {
+public:
+    LogRouting(const char* inName) : mName(inName) {}
+    virtual void CloseHook() { Log(this->mName + " CloseHook"); RoutingConnection::CloseHook(); }
+    virtual void KillHook() { Log(this->mName + " KillHook"); RoutingConnection::KillHook(); }
+    virtual void RoutingOpCompleteHook(RoutingOp* inOp)
+    {
+        Log(this->mName + " complete hook " + TypeName(inOp, typeid(*inOp)) + " " + St(inOp->GetStatus()));
+    }
+    std::string mName;
+protected:
+    virtual ~LogRouting() { Log(this->mName + " destroyed"); }
+};
+
+class RouteDone : public CompletionBase<AsyncOpPtr> {
+public:
+    RouteDone(const char* inName) : mName(inName), mCount(0) {}
+    virtual void Complete(AsyncOpPtr inOp)
+    {
+        this->mCount++;
+        RoutingOp* anOp = dynamic_cast<RoutingOp*>(inOp.get());
+        if (anOp == NULL) {
+            Log(this->mName + " completed a non-routing op");
+            return;
+        }
+        Log(this->mName + " completed " + TypeName(anOp, typeid(*anOp)) + " type " + N(anOp->GetType()) + " "
+            + St(anOp->GetStatus()) + " killed " + N(anOp->IsKilled()) + " mode " + N(anOp->GetMode()));
+    }
+    std::string mName;
+    int mCount;
+};
+static void PumpRoute(RouteDone* inDone, int inCount)
+{
+    uint64_t anEnd = PlatTimeMilliseconds64() + 5000;
+    while (inDone->mCount < inCount && PlatTimeMilliseconds64() < anEnd)
+        sCore->Pump(5);
+    if (inDone->mCount < inCount)
+        Log(inDone->mName + " TIMED OUT waiting for " + N(inCount));
+}
+
+// a routing message as the server frames it: the 2-byte length (its own bytes included), then the bytes
+static void Push(Server& s, const char* inName, const unsigned char* inBytes, size_t inLength)
+{
+    std::string aMsg(2, '\0');
+    size_t aLength = 2 + inLength;
+    aMsg[0] = (char)(aLength & 0xff);
+    aMsg[1] = (char)((aLength >> 8) & 0xff);
+    aMsg.append(reinterpret_cast<const char*>(inBytes), inLength);
+    Log(std::string("server ") + inName + " "
+        + St(s.Peer()->SendMsg(Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000)));
+}
+#define PUSH(s, name, ...) do { static const unsigned char b_[] = {__VA_ARGS__}; Push(s, name, b_, sizeof(b_)); } while (0)
+
+static void Routing()
+{
+    Log("== RoutingConnection");
+    Server s;
+    s.Open();
+    SmartPtr<LogRouting> r = new LogRouting("route");
+    Log(Show("route fresh", r));
+    r->SetKeepAlivePeriod(0);
+    SmartPtr<RouteDone> aLeft = new RouteDone("left server");
+    SmartPtr<RouteDone> aDefault = new RouteDone("default");
+    r->SetOpCompletion(10, aLeft);
+    r->SetDefaultOpCompletion(aDefault);
+    LOG2("route connect ", St(r->ConnectBlock(s.Addr(), 5000)), "");
+    s.Accept();
+    s.Peer()->SetLengthFieldSize(2);
+
+    // notifications: the type's completion, then the default one
+    PUSH(s, "client left server", 3, 7, 10, 5, 0);
+    PumpRoute(aLeft, 1);
+    PUSH(s, "shutdown aborted", 3, 7, 58);
+    PumpRoute(aDefault, 1);
+    // a short header and an unknown type with nothing waiting: nothing happens
+    PUSH(s, "short header", 3, 7);
+    PUSH(s, "unknown type", 3, 7, 200, 1, 2);
+    PumpFor(100);
+    Log("route after unknown left " + N(aLeft->mCount) + " default " + N(aDefault->mCount));
+
+    // a request: its own completion, the server's status reply
+    SmartPtr<RouteDone> aLeave = new RouteDone("leave");
+    r->LeaveGroup(7, aLeave);
+    s.Expect("server got leave");
+    PUSH(s, "status 0", 3, 7, 66, 0, 0);
+    PumpRoute(aLeave, 1);
+
+    // two waiting requests: the first one without a completion takes the default; a status reply for each in order
+    SmartPtr<RouteDone> aCancel = new RouteDone("cancel join");
+    r->LeaveGroup(1, NULL);
+    s.Expect("server got leave 1");
+    r->CancelJoinGroup(2, false, aCancel);
+    s.Expect("server got cancel");
+    PUSH(s, "status -1", 3, 7, 66, 0xff, 0xff);
+    PumpRoute(aDefault, 2);
+    PUSH(s, "status 0", 3, 7, 66, 0, 0);
+    PumpRoute(aCancel, 1);
+
+    // a notification while a request waits: the notification goes first; the request still waits
+    SmartPtr<RouteDone> aList = new RouteDone("client list");
+    r->GetClientList(aList);
+    s.Expect("server got client list");
+    SmartPtr<RouteDone> aLeave3 = new RouteDone("leave 3");
+    r->LeaveGroup(3, aLeave3);
+    s.Expect("server got leave 3");
+    PUSH(s, "client left server", 3, 7, 10, 6, 0);
+    PumpRoute(aLeft, 2);
+    // a status reply cut short: the client list op does not want it, the leave op's read fails (the catch finishes
+    // it with the status the client list op returned)
+    PUSH(s, "status cut", 3, 7, 66);
+    PumpRoute(aLeave3, 1);
+    // (a notification cut short is left out: its op, first in the list, is finished in the catch with a status no
+    // op has returned yet, a variable the original never set)
+    // a derived server's message: a derived op, unsolicited
+    PUSH(s, "derived", 3, 8, 9, 1, 2, 3);
+    PumpRoute(aDefault, 3);
+    // the close kills the waiting client list op
+    r->Close();
+    PumpRoute(aList, 1);
+    s.Peer()->Close();
+
+    // the kill drops the completions: a notification completes nobody (the hook still runs); derived messages are
+    // not unsolicited any more
+    r->Kill();
+    r->mAllDerivedOpsAreUnsolicited = false;
+    LOG2("route reconnect ", St(r->ConnectBlock(s.Addr(), 5000)), "");
+    s.Accept();
+    s.Peer()->SetLengthFieldSize(2);
+    PUSH(s, "client left server", 3, 7, 10, 7, 0);
+    PUSH(s, "derived", 3, 8, 9, 1);
+    PumpFor(150);
+    Log("route after kill left " + N(aLeft->mCount) + " default " + N(aDefault->mCount));
+    // a request's own completion still works
+    SmartPtr<RouteDone> aLeave4 = new RouteDone("leave 4");
+    r->LeaveGroup(4, aLeave4);
+    s.Expect("server got leave 4");
+    PUSH(s, "status 0", 3, 7, 66, 0, 0);
+    PumpRoute(aLeave4, 1);
+    r->Close();
+    s.Peer()->Close();
+    s.mListener->Close();
+    PumpFor(50);
+    r = NULL;
+    Log("routing done");
+}
+
 static std::string GoldenPath()
 {
     std::string aPath = __FILE__;
@@ -415,6 +565,7 @@ int main(int argc, char** argv)
         BlockingConnect();
         AsyncConnect();
         ConnectOps();
+        Routing();
         aCore.Pump(50);
         aCore.Shutdown();
     }

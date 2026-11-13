@@ -2217,6 +2217,9 @@ public:
     void CalcCompletion(RoutingOp*); //2ba740, type-index/default completion
     SmartPtr<RoutingOp> GetUnsolicitedOp(unsigned char,bool); //2ba830, sret/ret0c; call-only
     RoutingConnection(); //2ba050; allocation1c0 at3eddd4
+    // the completion an op of a type (RoutingOpType, below 61) gets when it has none, and the default one
+    void SetOpCompletion(int inType, CompletionBase<AsyncOpPtr>* inCompletion) { this->mCompletions[inType] = inCompletion; }
+    void SetDefaultOpCompletion(CompletionBase<AsyncOpPtr>* inCompletion) { this->mDefaultCompletion = inCompletion; }
     // 0x2bf1d0: subscribes to the data objects of a type (EEWonNet's room and game objects)
     void SubscribeDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag,
                         CompletionBase<AsyncOpPtr>* inCompletion);
