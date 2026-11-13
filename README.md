@@ -196,6 +196,11 @@ list by seat. The report (JSON) holds the outcome, the game time and per player 
 epoch, citizens, army, buildings, population and resources every `--sample-seconds`. See PORT_LEARNINGS.md "The
 headless simulation" for what it shares with the game and where it differs.
 
+**The scripted scenario editor gate**: `python -I tools/sim_editor.py` opens the scenario editor in EE-SIM, runs
+`tools/sim_editor/script.txt` (the editor's actions: maps, terrain, elevation, units, walls, gates, a quick save) and
+compares the world's digests with `tools/sim_editor/expected.txt` (`--update` rewrites it; the commands:
+`src/Empire Earth/Empire Earth/EESimEditor.cpp`). No tour opens the editor: this is its only automated check.
+
 **Benches on a Linux machine** (headless, many cores; Ubuntu 24.04 x86_64). `python3 -I tools/xbuild.py sim` builds
 the game and links `ee-sim` beside it (`build/xbuild/linux-x86_64/game/`): the same exe, started as the simulation by
 its name (`ee-aoc --sim` is the same). It needs no display (SDL's dummy video driver) and no GPU, but a Vulkan

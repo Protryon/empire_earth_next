@@ -197,6 +197,8 @@
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
+#include "ee/EESimEditor.h"
+#include "ee/EEUIFScenarioEditor.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
@@ -468,6 +470,8 @@ struct Options {
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
     std::string mScenario;                               // --scenario FILE ("" a random map from the lobby)
+    std::string mEditorScript;                           // --editor-script FILE ("" a game, not the editor)
+    std::string mEditorOut;                              // --editor-out FILE (the script's steps; "" stdout)
     bool mQuiet = false;
 };
 
@@ -1654,6 +1658,59 @@ void ScenarioFromLobby()
     Note("UI start (scenario)");
 }
 
+// ------------------------------------------------------------------------------------------------ the editor
+
+const unsigned long kFormEditors = 9;   // the editor form has no form id (UIForm id -1): found as the manager's
+
+// --editor-script: the main menu's Editors, the sub-menu's Scenario Editor (EEUIManager::StartScenarioEditor: a local
+// server, load type 3), the editor form (the manager's mScenarioEditorForm) over its default map, then the script (EESimEditor.cpp) and the exit
+[[noreturn]] void RunEditor()
+{
+    long theButton = ControlWithEvent<EEScreenEvent>(kFormMain, EE_SCREENS_EDITORS_OPEN);
+    if (theButton < 0)
+        Fail("--editor-script: no Editors button on the main menu");
+    Click(kFormMain, (unsigned long)theButton);
+    WaitForm(kFormEditors);
+    theButton = ControlWithEvent<EEScreenEvent>(kFormEditors, EE_SCREENS_EDITORS_SCENARIO_EDITOR);
+    if (theButton < 0)
+        Fail("--editor-script: no Scenario Editor button on the editors' menu");
+    Click(kFormEditors, (unsigned long)theButton);
+    Note("UI scenario editor");
+    // the load ends in the game form; the main game form enters the editor once a communications tick has run
+    // (EE_SCREENS_MG_ENTER_EDITOR), so the physics runs until the editor form is up, then stops for good: the editor
+    // pauses the game and reloads ScenDefault (gPhysics->Init), and the script's actions are the world's only writes
+    unsigned long theLast = 0;
+    WaitFor("the scenario editor", 600, [&] {
+        unsigned long theTop = TopForm();
+        if (theTop != theLast)
+            Note("UI form %lu", theTop);
+        theLast = theTop;
+        if (theTop == kFormGame && gPhysics != NULL && gPhysics->mTimerRunning)
+            gPlatSimRun = 1;
+        UILock theLock;
+        return gUIManager->mScenarioEditorForm != NULL &&
+               gUIManager->GetCurrentForm() == gUIManager->mScenarioEditorForm && gWorld.GetMap() != NULL;
+    });
+    gPlatSimRun = 0;
+    SimSleep(2000);   // the editor's own posted work (its tabs' loads) before the script's first step
+    FILE* theOut = sOptions.mEditorOut.empty() ? stdout : fopen(sOptions.mEditorOut.c_str(), "wb");
+    if (theOut == NULL)
+        Fail("--editor-out: cannot write " + sOptions.mEditorOut);
+    std::string theError;
+    int theCode = EESimEditorRun(sOptions.mEditorScript, theOut, theError);
+    if (theOut != stdout)
+        fclose(theOut);
+    if (theCode != 0)
+        Fail("--editor-script: " + theError);
+    Note("EDITOR script done");
+    {
+        std::lock_guard<std::mutex> theGuard(sStateLock);
+        sOutcome = "editor-script";
+    }
+    WriteReport(0, std::string());
+    Quit(0);
+}
+
 // ------------------------------------------------------------------------------------------------ the driver
 
 void Drive()
@@ -1673,6 +1730,8 @@ void Drive()
             remove(SavePath(SaveName(k)).c_str());   // a stage is reused: no file of an earlier run
         WaitForm(kFormMain, 300);
         Note("UI main menu");
+        if (!sOptions.mEditorScript.empty())
+            RunEditor();
         Click(kFormMain, 0);
         WaitForm(kFormSingle);
         bool theScenario = !sOptions.mScenario.empty();
@@ -1818,6 +1877,9 @@ const char* kUsage =
     "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
     "  --missile-sweep        TEST ONLY: with EE_SIM_CAPTURE, when the game ends the players' units fire every\n"
     "                         missile class (the capture's missile game: CBMA, CBMH and the impact tests)\n"
+    "  --editor-script FILE   TEST ONLY: instead of a game, the scenario editor (main menu -> Editors -> Scenario\n"
+    "                         Editor) and this script of its actions and digests (EESimEditor.cpp names the commands)\n"
+    "  --editor-out FILE      the script's steps and digests (default stdout)\n"
     "  --quiet                no progress on stderr\n";
 
 // a path made absolute now (the game moves the current directory to its data root at start)
@@ -2026,6 +2088,10 @@ int EESimMain(int argc, char** argv)
             sOptions.mLoadSave = Absolute(value());
         else if (a == "--scenario")
             sOptions.mScenario = Absolute(value());
+        else if (a == "--editor-script")
+            sOptions.mEditorScript = Absolute(value());
+        else if (a == "--editor-out")
+            sOptions.mEditorOut = Absolute(value());
         else if (a == "--dump-at") {
             std::string v = value();
             size_t eq = v.find('=');
