@@ -56,11 +56,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 recounted from the own units every check; the units-per shares, the maxima, the difficulty's first
                 military count, coast_fishing's two docks, no airport before the attacks, the granary for the farms),
                 RepairBuildings (idle citizens to buildings under 80%), ChooseGarrison / ChooseFortress /
-                FillGarrison (early_town_centers; the idle and waiting citizens sent, the rest of the garrison filled with
+                FillGarrison (on island and planets maps a town centre hires its garrison and any available citizen fills it; early_town_centers; the idle and waiting citizens sent, the rest of the garrison filled with
                 none through the manifest's "fills_garrison" - the classic's garrison cheat; new citizens routed there
                 every 2 s, DEVIATION from UnitAdded's at once), QueueMoraleBuilding. DEVIATIONS: the morale effect's fill is not
-                readable (the town centre wants 2 houses in its 10-tile square, the capitol 4: the data's morale effects; a settlement none); the island map's
-                hired garrison citizens are not ported; GetFarmType's robotic farm (Nano) is not ported; the gate
+                readable (the town centre wants 2 houses in its 10-tile square, the capitol 4: the data's morale effects; a settlement none); GetFarmType's robotic farm (Nano) is not ported; the gate
                 chains' repair end is not ported.
   EECPUnitManager.cpp
                 PORTED -> units.lua: the per-epoch request FIFOs, RequestUnits (a producer first: the cheapest
