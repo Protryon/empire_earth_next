@@ -24,8 +24,6 @@
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGBuildRepair.h"
-#include "ee/EEUGLoadGarrison.h"
-#include "ee/EEUGLoadTransport.h"
 
 const UString EEUnitGoal::sData("EEUnitGoal-Data");
 // SYNTHETIC: EXE 0x63c332   (wrapper)
@@ -82,10 +80,10 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
         theGoal = new EEUGGather(false);
         break;
     case kGoalLoadGarrison:
-        theGoal = new EEUGLoadGarrison(false);
+        theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, false);
         break;
     case kGoalLoadTransport:
-        theGoal = new EEUGLoadTransport(false);
+        theGoal = EEUGRust::NewLoad(kGoalLoadTransport, false);
         break;
     case kGoalLocation:
         theGoal = new EEUGLocation(false, false, false, false);

@@ -43,9 +43,6 @@
 #include "ee/EEUGGather.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGBuildRepair.h"
-#include "ee/EEUGLoadContainer.h"
-#include "ee/EEUGLoadGarrison.h"
-#include "ee/EEUGLoadTransport.h"
 #include "ee/EEUGRust.h"
 #include "ee/UReferenceContainer.h"
 #include "ee/EEUCBasicCitizen.h"
@@ -756,7 +753,7 @@ void EECPResourceManager::CitizenLost(EEComplexUnit* inUnit)
     EETechTree* theTechTree = this->mManager->mPlayer->mTechnologies;
     EETechTreeNode* theNode = theTechTree->Get(gUnitClassTable[kUnitTypeCitizen] ? gUnitClassTable[kUnitTypeCitizen]->mTechnology : 100000);
     this->RemoveGatherer(inUnit);
-    if (dynamic_cast<EEUGLoadGarrison*>(inUnit->GetLoadGoal()) == NULL)
+    if (EELoadGarrisonGoalCast(inUnit->GetLoadGoal()) == NULL)
         this->AddCosts(theNode, 1);
 }
 
@@ -1877,7 +1874,7 @@ bool EECPResourceManager::FerryGatherers(std::vector<EEComplexUnit*>& inUnits, E
             long theCount = inTransport->GetUnitClass()->mTransportCapacity / inUnits[0]->GetUnitClass()->mWeight;
             std::vector<EEComplexUnit*>::iterator theEnd = theCount > inUnits.size() ? inUnits.end() : inUnits.begin() + theCount;
             theUnits.assign(inUnits.begin(), theEnd);
-            EEUGLoadTransport* theLoad = new EEUGLoadTransport(inTransport, theUnits, true);
+            EEUGRust* theLoad = EEUGRust::NewLoad(kGoalLoadTransport, inTransport, theUnits, true);
             inTransport->SetGoal(theLoad, 1, 0);
             inTransport->StartAction(kActionPrepareToMove);
             inTransport->GetUnitClass()->ActionChanged(inTransport);
@@ -1908,23 +1905,20 @@ void EECPResourceManager::TransportIdle(EEComplexUnit* inUnit)
 {
     std::vector<EEComplexUnit*> theUnits;
     EEUnitGoal* theGoal = inUnit->mActiveGoal;
-    EEUGLoadTransport* theLoad = dynamic_cast<EEUGLoadTransport*>(theGoal);
+    EEUGRust* theLoad = EELoadTransportGoalCast(theGoal);
     EEUGRust* theUnload = EEUnloadGoalCast(theGoal);
     bool theChanged = false;
     if (theLoad == NULL && theUnload == NULL) {
         theGoal = inUnit->mActiveGoal;
-        theLoad = dynamic_cast<EEUGLoadTransport*>(theGoal);
+        theLoad = EELoadTransportGoalCast(theGoal);
         theUnload = EEUnloadGoalCast(theGoal);
     }
     if (theLoad != NULL) {
-        UReferenceContainer<EEComplexUnit*>& theCargo = theLoad->mUnits;
-        long theCount = theCargo.GetSize();
+        long theCount = theLoad->GetNumLoadUnits();
         if (theCount > 0) {
             this->mManager->mUnitManager->GetCitizens(theUnits);
             for (std::vector<EEComplexUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); ++it) {
-                EEComplexUnit* theUnit = *it;
-                std::vector<EEComplexUnit*>::iterator theWhere;
-                if (!theCargo.Contains(theUnit, theWhere))
+                if (!theLoad->HasLoadUnit(*it))
                     continue;
                 (*it)->ClearGoalQueue(0);
                 (*it)->StartAction(kActionIdle);
@@ -1933,7 +1927,7 @@ void EECPResourceManager::TransportIdle(EEComplexUnit* inUnit)
             }
             if (theChanged) {
                 if (inUnit->GetNumCargoUnits() > 0 && theLoad->EvaluateCondition(inUnit, kTriggerHaveReachedRendezvousPoint)) {
-                    U2DPoint<long> theTile = theLoad->mContainerTile;
+                    U2DPoint<long> theTile = theLoad->GetLoadContainerTile();
                     inUnit->UnloadCargoAtTile(theTile.GetX(), theTile.GetY(), true);
                 }
                 inUnit->ClearGoalQueue(0);

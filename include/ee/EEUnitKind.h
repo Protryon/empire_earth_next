@@ -26,9 +26,6 @@ class EEUnitGoal;
 class EEUGLocation;
 class EEUGBuildRepair;
 class EEUGGather;
-class EEUGLoadContainer;
-class EEUGLoadTransport;
-class EEUGLoadGarrison;
 class EEUGHealUnit;
 
 // each goal class's bit
@@ -36,9 +33,6 @@ template <class T> struct EEGoalKindBit;
 template <> struct EEGoalKindBit<EEUGLocation> { static const uint32_t kBit = EE_GOAL_KIND_LOCATION; };
 template <> struct EEGoalKindBit<EEUGBuildRepair> { static const uint32_t kBit = EE_GOAL_KIND_BUILD_REPAIR; };
 template <> struct EEGoalKindBit<EEUGGather> { static const uint32_t kBit = EE_GOAL_KIND_GATHER; };
-template <> struct EEGoalKindBit<EEUGLoadContainer> { static const uint32_t kBit = EE_GOAL_KIND_LOAD_CONTAINER; };
-template <> struct EEGoalKindBit<EEUGLoadTransport> { static const uint32_t kBit = EE_GOAL_KIND_LOAD_TRANSPORT; };
-template <> struct EEGoalKindBit<EEUGLoadGarrison> { static const uint32_t kBit = EE_GOAL_KIND_LOAD_GARRISON; };
 template <> struct EEGoalKindBit<EEUGHealUnit> { static const uint32_t kBit = EE_GOAL_KIND_HEAL_UNIT; };
 
 // whether inGoal (not NULL) is a T

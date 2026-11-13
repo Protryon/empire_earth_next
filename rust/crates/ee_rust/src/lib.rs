@@ -270,7 +270,7 @@ const _: () = {
     assert!(
         size_of::<ee_units::rust_goal::EeUnitsGoalHost>() == size_of::<ee_combat::goal_objects::EeCombatGoalTable>()
     );
-    assert!(ee_units::rust_goal::EE_UNITS_GOAL_SET_PATH_ATTEMPTS == 20);
+    assert!(ee_units::rust_goal::EE_UNITS_GOAL_SET_PATH_ATTEMPTS == 22);
     assert!(ee_units::rust_goal::EE_UNITS_GOAL_SUITS == 19);
     assert!(ee_units::rust_goal::EE_UNITS_GOAL_DESTROY == 1);
     assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_NEW_GOAL == 16);
@@ -287,5 +287,65 @@ mod tests {
     #[test]
     fn abi_version_is_exported_unchanged() {
         assert_eq!(ee_rust_abi_version(), EE_RUST_ABI_VERSION);
+    }
+}
+
+/// The goal operation tables of ee_units (the generic `EEUGRust`'s bodies, `EE_UNITS_GOAL_*`, and its host's,
+/// `EE_UNITS_GOAL_HOST_*`) and ee_combat (its mirrors of the common bodies, `OP_*`; its own bodies,
+/// `EE_COMBAT_GOAL_*`; its host operations, `EE_COMBAT_G_*`, the host's default case) share one number space each:
+/// a number both crates define for different operations sends one crate's call to the other's body (round 12's
+/// `SetPathAttempts` and core round 18's `AddCreatedUnit` were both 20). Read from the sources.
+#[cfg(test)]
+mod goal_op_tables {
+    use std::collections::BTreeMap;
+
+    fn consts(source: &str, prefix: &str) -> BTreeMap<String, i64> {
+        let mut out = BTreeMap::new();
+        for line in source.lines() {
+            let line = line.trim();
+            let Some(rest) = line.strip_prefix("pub const ").or_else(|| line.strip_prefix("pub(crate) const ")) else {
+                continue;
+            };
+            let Some((name, value)) = rest.split_once(": i32 = ") else { continue };
+            if !name.starts_with(prefix) {
+                continue;
+            }
+            if let Ok(v) = value.trim_end_matches(';').trim().parse::<i64>() {
+                out.insert(name.to_string(), v);
+            }
+        }
+        out
+    }
+
+    const UNITS: &str = include_str!("../../ee_units/src/rust_goal.rs");
+    const DISPATCH: &str = include_str!("../../ee_combat/src/goal_dispatch.rs");
+    const OBJECTS: &str = include_str!("../../ee_combat/src/goal_objects.rs");
+    const ATTACK: &str = include_str!("../../ee_combat/src/goal_attack.rs");
+
+    #[test]
+    fn the_crates_goal_operations_do_not_overlap() {
+        let all = consts(UNITS, "EE_UNITS_GOAL_");
+        let host: BTreeMap<_, _> = all.iter().filter(|(k, _)| k.starts_with("EE_UNITS_GOAL_HOST_")).collect();
+        let bodies: BTreeMap<_, _> = all.iter().filter(|(k, _)| !k.starts_with("EE_UNITS_GOAL_HOST_")).collect();
+        assert!(host.len() > 20 && bodies.len() > 20, "the tables were not read: {} {}", host.len(), bodies.len());
+        // the mirrors: each of combat's OP_* is ee_units' body of the same name, with the same number
+        let mirrors = consts(DISPATCH, "OP_");
+        assert!(mirrors.len() >= 20);
+        for (name, value) in &mirrors {
+            let units = format!("EE_UNITS_GOAL_{}", &name[3..]);
+            let units = if units == "EE_UNITS_GOAL_REPLACE" { "EE_UNITS_GOAL_REPLACE_UNIT".to_string() } else { units };
+            assert_eq!(all.get(&units), Some(value), "{name} mirrors {units}");
+        }
+        // combat's own bodies and host operations are numbers ee_units does not use
+        let mut combat = consts(DISPATCH, "EE_COMBAT_GOAL_");
+        combat.extend(consts(DISPATCH, "EE_COMBAT_G_"));
+        combat.extend(consts(OBJECTS, "EE_COMBAT_G_"));
+        combat.extend(consts(ATTACK, "EE_COMBAT_G_"));
+        assert!(combat.len() > 10, "the combat tables were not read: {}", combat.len());
+        for (name, value) in &combat {
+            for (other, v) in bodies.iter().chain(host.iter()) {
+                assert_ne!(value, *v, "{name} = {value} is also {other}");
+            }
+        }
     }
 }

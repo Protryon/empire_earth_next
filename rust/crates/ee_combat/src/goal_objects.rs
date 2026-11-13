@@ -50,15 +50,26 @@ pub trait GoalHost {
 #[repr(C)]
 pub struct EeCombatGoalIo {
     pub i: [i64; 8],
-    pub f: [f32; 4],
+    pub f: [f32; 8],
     pub text: *const u8,
     pub len: usize,
     pub sink: *mut c_void,
+    /// ee_units' handle list (the load goals'; unused here)
+    pub list: *const u64,
+    pub list_len: usize,
 }
 
 impl Default for EeCombatGoalIo {
     fn default() -> Self {
-        EeCombatGoalIo { i: [0; 8], f: [0.0; 4], text: std::ptr::null(), len: 0, sink: std::ptr::null_mut() }
+        EeCombatGoalIo {
+            i: [0; 8],
+            f: [0.0; 8],
+            text: std::ptr::null(),
+            len: 0,
+            sink: std::ptr::null_mut(),
+            list: std::ptr::null(),
+            list_len: 0,
+        }
     }
 }
 

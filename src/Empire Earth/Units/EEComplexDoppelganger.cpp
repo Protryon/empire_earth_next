@@ -932,7 +932,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
                 theFailed = theResult != 0;
             if (theGoal->mKind == kGoalLocation) {
                 EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(theGoal);
-                theAutoWaypoint = theLocation->mIsAutoWaypoint == true;
+                theAutoWaypoint = theLocation->GetIsAutoWaypoint() == true;
             } else
                 theAutoWaypoint = false;
             if (theResult == 0 && item == 0 && theGoal->mKind == kGoalBuildRepair)
@@ -1111,7 +1111,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
         for (long autoGoal = this->mGoalQueues[0].mGoals.size() - 1; autoGoal >= 0; autoGoal--) {
             EEUnitGoal* theGoal = this->mGoalQueues[0].mGoals.back();
             if (theGoal == NULL || EEGoalCast<EEUGLocation>(theGoal) == NULL
-                || !EEGoalCast<EEUGLocation>(theGoal)->mIsAutoWaypoint)
+                || !EEGoalCast<EEUGLocation>(theGoal)->GetIsAutoWaypoint())
                 break;
             this->mGoalQueues[0].PopBack();
         }

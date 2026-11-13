@@ -34,7 +34,7 @@ pub(crate) const OP_EVALUATE: i32 = 16;
 pub(crate) const OP_REPLACE: i32 = 17;
 pub(crate) const OP_MAX_PATH_ATTEMPTS: i32 = 18;
 pub(crate) const OP_SUITS: i32 = 19;
-pub(crate) const OP_SET_PATH_ATTEMPTS: i32 = 20;
+pub(crate) const OP_SET_PATH_ATTEMPTS: i32 = 22;
 // and its host's: the new goal object, a text appended, the unit id, the unit's tile, its hit points
 pub(crate) const HOST_NEW_GOAL: i32 = 16;
 pub(crate) const HOST_APPEND: i32 = 20;

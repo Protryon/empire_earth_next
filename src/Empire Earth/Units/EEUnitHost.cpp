@@ -447,7 +447,7 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_LOCATION: {   // EEMPathTo's: new EEUGLocation(&point, true, forced, rotating, facing, false, 0)
         GE3DPoint theLocation(inSpec->point[0], inSpec->point[1], inSpec->point[2]);
         EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, theFlagA, theFlagB, inSpec->value, false, 0);
-        theGoal->mUseGroupMovement = inSpec->flag_c != 0;
+        theGoal->SetUseGroupMovement(inSpec->flag_c != 0);
         return static_cast<EEUnitGoal*>(theGoal);
     }
     case EE_GOAL_CTOR_UNLOAD_TRANSPORT: {   // EEMUnloadTransport's: the first unit's complex unit, the tile

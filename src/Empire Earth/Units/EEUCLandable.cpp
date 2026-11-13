@@ -230,8 +230,8 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     EEUGRust* theGround = EEAttackGroundCast(theGoal);
     EEUGRust* theUnload = EEUnloadGoalCast(theGoal);
     if (theLocation != NULL) {
-        theTarget.SetX(theLocation->mLocation.GetX());
-        theTarget.SetY(theLocation->mLocation.GetY());
+        theTarget.SetX(theLocation->GetLocation().GetX());
+        theTarget.SetY(theLocation->GetLocation().GetY());
     } else if (thePatrol != NULL) {
         theTarget.SetX((float)thePatrol->GetPatrolTarget()->GetTileX() + 0.5f);
         theTarget.SetY((float)thePatrol->GetPatrolTarget()->GetTileY() + 0.5f);
@@ -652,7 +652,7 @@ void EEUCLandable::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
         inUnit->ClearGoalQueue(0);
         inUnit->SetGoal(theMove, 0, 0);
     } else
-        theLocation->mLocation = theDeck;
+        theLocation->SetLocation(theDeck);
 }
 
 // FUNCTION: EXE 0x615a4d
@@ -978,7 +978,7 @@ bool EEUCLandable::IsAwayFromGoal(EEComplexUnit* inUnit)
         theTags->mPoints[0]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
     }
     bool theResult;
-    if (!(theDeck.DistanceToSquared(static_cast<EEUGLocation*>(inUnit->GetGoal())->mLocation) <= 1.0f))
+    if (!(theDeck.DistanceToSquared(static_cast<EEUGLocation*>(inUnit->GetGoal())->GetLocation()) <= 1.0f))
         theResult = true;
     else
         theResult = false;

@@ -307,7 +307,7 @@ void EEPMLand::Step5(EEComplexUnit* inUnit)
         float theLeft;
         float theYawRate;
         float theYaw;
-        this->TurnTowardAngle(inUnit, theHeading, theGoal->mYaw, &theLeft, &theYawRate, &theYaw, false);
+        this->TurnTowardAngle(inUnit, theHeading, theGoal->GetYaw(), &theLeft, &theYawRate, &theYaw, false);
         GEOrientation& theAngularVelocity = inUnit->mAngularVelocity;
         theAngularVelocity.mPitch = 0.0f;
         theAngularVelocity.mRoll = 0.0f;

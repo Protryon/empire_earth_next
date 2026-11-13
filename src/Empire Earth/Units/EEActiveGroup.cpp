@@ -278,22 +278,22 @@ void EEActiveGroup::LayOutFormation()
             if ((theCategory != kUnitCategoryAirplane && theCategory != kUnitCategoryPlanetSpaceship) || theUnit->mContainer == NULL)
                 continue;
             if (this->mIsQueued && theUnit->GetGoal() != NULL) {
-                theUnit->mGoalQueues[0].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->mIsForcedMove,
+                theUnit->mGoalQueues[0].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
                                                        false, 0.0f, false, 0));
                 theUnit->RefreshGoals();
                 theUnit->RefreshActiveGoal();
-                theUnit->mGoalQueues[1].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->mIsForcedMove,
+                theUnit->mGoalQueues[1].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
                                                        false, 0.0f, false, 0));
                 theUnit->RefreshGoals();
                 theUnit->RefreshActiveGoal();
             } else {
                 theUnit->ClearGoalQueue(0);
                 theUnit->ClearGoalQueue(1);
-                theUnit->mGoalQueues[0].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->mIsForcedMove,
+                theUnit->mGoalQueues[0].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
                                                        false, 0.0f, false, 0));
                 theUnit->RefreshGoals();
                 theUnit->RefreshActiveGoal();
-                theUnit->mGoalQueues[1].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->mIsForcedMove,
+                theUnit->mGoalQueues[1].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
                                                        false, 0.0f, false, 0));
                 theUnit->RefreshGoals();
                 theUnit->RefreshActiveGoal();
@@ -334,7 +334,7 @@ void EEActiveGroup::LayOutFormation()
     switch (this->mGoal->mKind) {
     case kGoalLocation:
         theHasYaw = true;
-        theYaw = EEGoalCast<EEUGLocation>(this->mGoal)->mYaw;
+        theYaw = EEGoalCast<EEUGLocation>(this->mGoal)->GetYaw();
         break;
     case kGoalUnloadTransport: {
         EEUGRust* theUnload = EEUnloadGoalCast(this->mGoal);
@@ -498,8 +498,8 @@ void EEActiveGroup::LayOutFormation()
         switch (this->mGoal->mKind) {
         case kGoalLocation: {
             EEUGLocation* theLocationGoal = EEGoalCast<EEUGLocation>(this->mGoal);
-            theGoal = new EEUGLocation(&theSlotLocation, theLocationGoal->GetB1C(), theLocationGoal->mIsForcedMove,
-                                       theLocationGoal->mShouldFace, theSlots[i].mHeading, false, 1);
+            theGoal = new EEUGLocation(&theSlotLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
+                                       theLocationGoal->GetShouldFace(), theSlots[i].mHeading, false, 1);
             break;
         }
         case kGoalUnloadTransport:
@@ -522,7 +522,7 @@ void EEActiveGroup::LayOutFormation()
             if (this->mIsQueued)
                 theQueued.push_back(theUnit);
         } else if (theGoal->mKind == kGoalLocation)
-            EEGoalCast<EEUGLocation>(theGoal)->mGroupPathState = 0;
+            EEGoalCast<EEUGLocation>(theGoal)->SetGroupPathState(0);
         long theClassType = theUnit->GetUnitClass()->mAIKind;
         if (theClassType == kAIKindAircraftCarrier || theClassType == kAIKindSpaceCarrier) {
             theGoal->GetGoalLocation(theLocation);
@@ -858,7 +858,7 @@ void EEActiveGroup::SetGoal(EEUnitGoal* inGoal, bool inFlag)
 {
     this->mGoal = inGoal;
     this->mIsQueued = inFlag;
-    this->mMovesTogether = inGoal->mKind == kGoalLocation && static_cast<EEUGLocation*>(inGoal)->mUseGroupMovement;
+    this->mMovesTogether = inGoal->mKind == kGoalLocation && static_cast<EEUGLocation*>(inGoal)->GetUseGroupMovement();
 }
 
 // FUNCTION: EXE 0x5edcc0

@@ -11090,3 +11090,58 @@ Measured by net C++ deletion (src and include/ee, git numstat).
   run of the parent exe), the Rust gate PASS; captures at seeds 2-3: oracle, calamity, late, missile (the leaves),
   oracle and calamity (the seen test). ee_combat tests: 14 new (leaves_tests.rs). Nothing drawn changed; the seen
   test is also the UI's (the mouse click, the main game form's status, the minimap), which only a tour exercises.
+## R5b.4, eighteenth round: the herd's continent after a load; the load goals whole in Rust; EEUGLocation's accessors (ee_units load.rs; branch rust-r5b4-core18, 2026-11-13)
+
+| Commit | What | C++ |
+|---|---|---|
+| e82b9142 | a loaded herd keeps its saved continent | +5 -2 |
+| 530ab345 | saveload_expect: oracle seed 2 at 1000 s END | (tool) |
+| fff5f63f | cherry-pick of combat's 2e5e35a1: EEUGRust::Save hands the version | +1 -1 |
+| e5abdb28 | the load goals whole in Rust (EEUGLoadContainer, EEUGLoadGarrison, EEUGLoadTransport deleted) | +350 -1484, net -1134 |
+| 5e1f9035 | EEUGLocation's accessors, its members protected | +70 -60 |
+
+- **The save gap was not the mine list.** The main merge's note blamed `mMines` (27 entries after a load, 8 in the
+  continued game). That difference is real: the load's `RefreshResourceCenters` rebuilds the list, and the unit
+  manager's citizen target reads it (`GetGatherCapacity`) before the resource manager's first `Update` takes the saved
+  one. Making `Refresh` take the saved lists at the load closed it, but no save in 40 (plains, islands, mediterranean,
+  medium difficulty, seeds 2-3 at 1000/1900 s) changed, so that change was not committed. The first difference was found by
+  `--dump-at` at the parting tick in both games, then a temporary `fprintf` with `__builtin_return_address(0)`
+  resolved against `EE-SIM.map` (the image loads at its preferred base): a newborn animal's goal came from
+  `EEHerd::GiveGoal`, and the two games put it in different herds. `EEHerd::CanTake` compares the herd's
+  `mContinent`, saved, but `RepairPointers` recomputed it from the first animal's tile at the load, and a leaving
+  herd's first animal had crossed to another continent. A 0.263 save (its regions restored) now keeps the saved value:
+  oracle seed 2's 1000 s save continues to the end. No other row of the matrix changed (plains-medium-3ai, islands,
+  mediterranean, medium-difficulty, late, space and next still part where they did).
+- **The load goals on the generic EEUGRust.** The same pattern as round 17: one Rust record per goal object
+  (`load.rs`), one host operation per world call (20 new cases; the unload's sound case now falls through into a
+  generic sound case). The C++ keeps the caller's list sort (`std::sort` by `mUnitID`, `std::unique`): the callers then
+  walk the sorted list, so the sort must still happen in place in the caller's vector. `EeUnitsGoalIo` gained a handle
+  list (`list`, `list_len`: the rendezvous search's units) and eight floats (the boarding search's location and result);
+  the file calls gained a `float` type (3).
+- **The base goal's defaults bite.** The first oracle run parted at seed 3's tick 358: a town building upgraded by its
+  garrison (`EEReplaceUnit`) idled in the original and stayed in `GarrisonUpgrade` here. `EEUGLoadContainer::Suits`
+  answered true, as `EEUGRust`'s dispatch did for the other kinds, but the load kinds were excluded from that default
+  (to answer 6 path attempts) and their body fell through to 0. A kind that leaves the generic defaults must answer
+  every one of them itself. The diagnosis: the base exe rebuilt from a stash with a print in the garrison constructor,
+  and a comparison of both exes' dumps.
+- **Uninitialized fields.** The garrison's list constructor never set `mCost` or `mUpgrade` for a goal whose upgrade is
+  unavailable (and the AI queues such goals without testing `mIsValid`). Rust starts them at 0. No gate game made one.
+- **Coverage by a temporary print (removed).** Garrison goals run in every random-map game: oracle and late seeds 2-3
+  (creation, copies, steps, triggers, destination, abandon, the replacement on upgrade, destruction). Transport goals
+  run only in the saveload games (islands, late, space): creation, start, steps, triggers, and the AI's reads of the
+  unit list. No game saves or loads a load goal (`Save`, `Load`, `RepairPointers`: unit tests only), and the scenario
+  profile reaches neither kind.
+- **EEUGLocation's accessors.** Making the members `protected` (not private: `EEUGHealUnit` derives from the class)
+  let the compiler list every outside access. `build.py --compile-only` reports a file's errors only up to clang's
+  limit and then moves on, so it took four passes. A script turned each named column into the accessor (assignments
+  into the setter).
+- **Process lessons.**
+  - A `git commit` after a `git rm` commits the staged deletions with the file you meant to commit. `git add` the one
+    file is not enough; check `git status` (repaired here by a soft reset before anything else).
+  - Bash heredocs turned `\n` in a Python string into a real newline three times. Write such scripts with the file
+    tool.
+  - The open tree's `Data/ai` changed under the main checkout's `ref` mid-round (folder hash 327d5891 -> 1494ba43):
+    the oracle "parted" at line 0. Compare against a ref made by the branch's base exe on the same tree.
+- **Gates.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical, Rust gate PASS (the load commit). Captures at
+  seeds 2-3: oracle, late, scenario PASS. Saveload: the full matrix on e82b9142 as the expect file (one row better);
+  oracle, islands, late and space at seeds 2-3 on the load tree as the expect file.

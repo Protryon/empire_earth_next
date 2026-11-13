@@ -35,7 +35,7 @@
 #include "lle/FSPersistent.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGLoadGarrison.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffect.h"
@@ -1109,17 +1109,17 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                             theCreated->AddBuildTarget(EEGoalCast<EEUGBuildRepair>(*i)->mTarget);
                             continue;
                         } else if ((*i)->mKind == kGoalLoadGarrison) {
-                            EEUGLoadGarrison* theLoad = EEGoalCast<EEUGLoadGarrison>(*i);
+                            EEUGRust* theLoad = EELoadGarrisonGoalCast(*i);
                             if (theCreated->GetUnitClass()->mCanGarrison) {
                                 theGoal = theLoad->Clone();
                                 if (theGoal->IsLoadGoal())
                                     theGoal->AddCreatedUnit(theCreated);
-                                if (theLoad->mContainer->mActiveGoal != NULL)
-                                    EEGoalCast<EEUGLoadGarrison>(theLoad->mContainer->mActiveGoal)->AddUnit(theCreated);
+                                if (theLoad->GetLoadContainer()->mActiveGoal != NULL)
+                                    EELoadGarrisonGoalCast(theLoad->GetLoadContainer()->mActiveGoal)->AddLoadUnit(theCreated);
                             } else {
-                                if (theLoad->mContainer == NULL)
+                                if (theLoad->GetLoadContainer() == NULL)
                                     continue;
-                                theLoad->mContainer->GetPosition(theGoalPosition);
+                                theLoad->GetLoadContainer()->GetPosition(theGoalPosition);
                                 theGoal = new EEUGLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
                             }
                         } else {
@@ -1148,7 +1148,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
     //
                             if (EEFindPlacement(&theOrigin, theCreated, NULL, theLineTiles[theIndex].mX,
                                 theLineTiles[theIndex].GetY(), 1, theRings, true, true, true, false, &theAdjusted, NULL))
-                                static_cast<EEUGLocation*>(theGoal)->mLocation = theAdjusted.GetPosition();
+                                static_cast<EEUGLocation*>(theGoal)->SetLocation(theAdjusted.GetPosition());
                         }
                     }
                     if (theGoal->mKind == kGoalAttackUnit && (theCreated->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || theCreated->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen)) {
@@ -2919,10 +2919,10 @@ void EEUnitClass::PathToGoal(EEComplexUnit* inUnit)
             long theRevs = -1;
             EEUGLocation* theLocationGoal = theGoal->mKind == kGoalLocation ? static_cast<EEUGLocation*>(theGoal) : 0;
             if (theLocationGoal != NULL) {
-                theUseGraph = !theLocationGoal->mIsAutoWaypoint && !theGoal->mB1D;
-                if (theLocationGoal->mGroupPathState == 1) {
+                theUseGraph = !theLocationGoal->GetIsAutoWaypoint() && !theGoal->mB1D;
+                if (theLocationGoal->GetGroupPathState() == 1) {
                     theRevs = 15;
-                    theLocationGoal->mGroupPathState = 2;
+                    theLocationGoal->SetGroupPathState(2);
                 } else {
                     theArg8 = !theUseGraph;
                 }
