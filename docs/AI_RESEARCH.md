@@ -4647,6 +4647,39 @@ Small Islands, balanced, 90 minutes, 8 seeds:
 Determinism on islands (seeds 3 and 5, 90 minutes, --repeat 2, a landing in one of them) is identical. On land maps
 nothing changes (no crossing is needed).
 
+### 8.66 Porting everything, 2a: the island growth gap, the queues, the island garrisons (2026-11-13, EE-SIM)
+
+**Where the gap starts.** On Small Islands (8 seeds) the two sides train their citizens in the same batches of 5
+(at 30, 172, 314 and 456 s) for the first 8 minutes. They part from minute 6 (15.4 against 12.6 citizens), and by
+20 minutes stand at 32.2 against 25.9. The epoch reserve and the epoch pressure are the same on both sides (a
+traced game: 0.333 at 10 minutes on both, the Stone Age's 1,122 food reserved).
+
+**Two differences, both ported:**
+- **The queues (IsInProduction).** The C++ counts a class as in production while any producer is making it or has
+  it queued (EEComplexUnit::IsResearchQueued). The port saw only the item being made, a documented deviation, now
+  gone: own building records have `queued` (the techs behind the one being made; AI_LUA_UNITS §11), and the port's
+  IsInProduction reads it.
+- **The island garrisons (FillGarrison).** On island and planets maps the C++ fills a garrison with any available
+  citizen, a gatherer too, not only the idle ones. A town centre hires its garrison: the citizens for the free room
+  are trained at once when affordable, else requested. The upgrade then uses them up. In the C++, 73 citizens a
+  bench die inside a garrison in the first 20 minutes (4.6 a game, at tile -10000, no killer); the port lost 0.4.
+  The port now does both (civ.lua `fill_garrison`; the deviation in ORIGIN is gone).
+
+| Small Islands, 16 seeds, 60 min | before | queues | queues + garrisons |
+|---|---|---|---|
+| Lua won-lost | 10-3, 3 close (§8.64) | 10-2, 4 close | 8-2, 6 close |
+| citizens at 20 / 40 min, Lua | 31.1 / 63.8 | 31.1 / 63.2 | 27.9 / 58.9 |
+| citizens at 20 / 40 min, the C++ | 24.2 / 34.2 | 24.2 / 34.9 | 24.1 / 34.4 |
+| citizens lost by 20 min, Lua / C++ | 0.4 / 4.6 | 0.4 / 4.6 | 1.9 / 4.7 |
+
+On land (balanced, 32 seeds) the queues give 11-17, 4 close (12-16, 4 close before), within noise. The garrisons
+change only island and planets maps.
+
+**Open in 2a.** The gap has narrowed but is not closed: 27.9 against 24.1 citizens at 20 minutes, and Copper 12 of
+16 against 3. The C++ still loses more citizens in its first 20 minutes (4.7 against 1.9). The coast towers
+(FindTowerSite's island coasts) go with the gates' and choke points' towers in 2b.
+
+Determinism: islands (seeds 3 and 5) and land (seed 2), 60 minutes, --repeat 2, identical. 0 script errors.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
