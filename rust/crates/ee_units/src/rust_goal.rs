@@ -616,6 +616,7 @@ pub const EE_UNITS_GOAL_START_ACTION: i32 = 9;
 pub const EE_UNITS_GOAL_SET_OWNER: i32 = 10;
 pub const EE_UNITS_GOAL_STEP: i32 = 11;
 pub const EE_UNITS_GOAL_LOAD: i32 = 12;
+/// `a`, `b`: the save's major and minor version
 pub const EE_UNITS_GOAL_SAVE: i32 = 13;
 pub const EE_UNITS_GOAL_REPAIR: i32 = 14;
 pub const EE_UNITS_GOAL_START: i32 = 15;

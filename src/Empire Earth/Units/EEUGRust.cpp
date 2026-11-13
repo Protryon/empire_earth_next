@@ -730,7 +730,7 @@ long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult != 0)
         return theResult;
-    return (long)Goal(EE_UNITS_GOAL_SAVE, this, 0, 0, NULL, &outFile);
+    return (long)Goal(EE_UNITS_GOAL_SAVE, this, inMajorVersion, inMinorVersion, NULL, &outFile);
 }
 
 bool EEUGRust::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
