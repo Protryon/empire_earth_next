@@ -44,6 +44,7 @@ pub mod physics;
 pub mod players;
 pub mod rally;
 pub mod registry;
+pub mod research;
 pub mod rust_goal;
 pub mod script;
 pub mod select;

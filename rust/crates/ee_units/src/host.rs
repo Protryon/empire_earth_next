@@ -377,12 +377,28 @@ pub trait Host {
     /// `EEUCTransport::FilterLoadable(&units, transport, &rejected)`: the units the transport cannot take leave
     /// `units` (in order) for `rejected`
     fn transport_filter(&mut self, transport: u32, units: &mut Vec<u32>, rejected: &mut Vec<u32>);
+    /// The player's node of the technology (`player->GetTechTree()->Get(technology)`), None when it has none
+    fn research_node(&mut self, player: HostRef, technology: i32) -> Option<crate::research::ResearchNode>;
+    /// `gWorld.mGameOptions.mIsScenarioGame`
+    fn scenario_game(&mut self) -> bool;
+    /// `unit->mUnitClass->SharesResearch(unit_type)`
+    fn unit_shares_research(&mut self, unit: u32, unit_type: i64) -> bool;
+    /// `unit->GetBuildQueueSize()`, `mCurrentResearch`, `mIsDisabled`
+    fn unit_research_state(&mut self, unit: u32) -> (i64, i64, bool);
+    /// `unit->QueueResearch(technology, front)`
+    fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool);
 }
 
 /// `Host::unit_load_traits`' bits
 pub const EE_UNITS_LOAD_CAN_GARRISON: u8 = 1;
 pub const EE_UNITS_LOAD_TRANSPORT: u8 = 2;
 pub const EE_UNITS_LOAD_MOVES: u8 = 4;
+/// `Host::research_node`'s bits: the node was found, `ResearchNode`'s flags
+pub const EE_UNITS_RESEARCH_FOUND: u8 = 1;
+pub const EE_UNITS_RESEARCH_HERO: u8 = 2;
+pub const EE_UNITS_RESEARCH_BUNDESWEHR: u8 = 4;
+pub const EE_UNITS_RESEARCH_MAKES_UNIT: u8 = 8;
+pub const EE_UNITS_RESEARCH_EPOCH: u8 = 16;
 
 /// The game's host (C++). Absent from a test binary.
 #[cfg(not(test))]
@@ -529,6 +545,11 @@ pub mod game {
         fn ee_units_host_load_goal_fields(goal: *mut c_void, x: *mut i64, y: *mut i64) -> u8;
         fn ee_units_host_player_event(player: *mut c_void, x: i64, y: i64, code: i32);
         fn ee_units_host_group_add_unit(group: *mut c_void, unit: u32);
+        fn ee_units_host_research_node(player: *mut c_void, technology: i32, kind: *mut i32) -> u8;
+        fn ee_units_host_scenario_game() -> u8;
+        fn ee_units_host_unit_shares_research(unit: u32, unit_type: i64) -> u8;
+        fn ee_units_host_unit_research_state(unit: u32, current: *mut i64, disabled: *mut u8) -> i64;
+        fn ee_units_host_unit_queue_research(unit: u32, technology: i32, front: u8);
         fn ee_units_host_transport_filter(transport: u32, units: *mut u32, count: usize, rejected: *mut u32) -> usize;
     }
 
@@ -953,6 +974,33 @@ pub mod game {
             units.truncate(kept);
             rejected.extend_from_slice(&out[..gone]);
         }
+        fn research_node(&mut self, player: HostRef, technology: i32) -> Option<crate::research::ResearchNode> {
+            let mut kind = 0i32;
+            // SAFETY: the kind is written for the call
+            let bits = unsafe { ee_units_host_research_node(player.0, technology, &mut kind) };
+            (bits & EE_UNITS_RESEARCH_FOUND != 0).then_some(crate::research::ResearchNode {
+                kind,
+                hero: bits & EE_UNITS_RESEARCH_HERO != 0,
+                bundeswehr: bits & EE_UNITS_RESEARCH_BUNDESWEHR != 0,
+                makes_unit: bits & EE_UNITS_RESEARCH_MAKES_UNIT != 0,
+                epoch: bits & EE_UNITS_RESEARCH_EPOCH != 0,
+            })
+        }
+        fn scenario_game(&mut self) -> bool {
+            unsafe { ee_units_host_scenario_game() != 0 }
+        }
+        fn unit_shares_research(&mut self, unit: u32, unit_type: i64) -> bool {
+            unsafe { ee_units_host_unit_shares_research(unit, unit_type) != 0 }
+        }
+        fn unit_research_state(&mut self, unit: u32) -> (i64, i64, bool) {
+            let (mut current, mut disabled) = (0i64, 0u8);
+            // SAFETY: the two values are written for the call
+            let queue = unsafe { ee_units_host_unit_research_state(unit, &mut current, &mut disabled) };
+            (queue, current, disabled != 0)
+        }
+        fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool) {
+            unsafe { ee_units_host_unit_queue_research(unit, technology, front as u8) }
+        }
     }
 }
 
@@ -1077,6 +1125,7 @@ pub(crate) mod tests {
         Event(HostRef, i64, i64, i32),
         AddUnit(HostRef, u32),
         Filter(u32, Vec<u32>),
+        QueueResearch(u32, i32, bool),
     }
 
     /// A host over plain values: groups as id lists (new ones at 0x1001, 0x1002, ...), goals as boxed kinds; Fill
@@ -1161,6 +1210,12 @@ pub(crate) mod tests {
         pub load_fields: BTreeMap<usize, (bool, i64, i64)>,
         pub new_load: (bool, i64, i64),
         pub unloadable: Vec<u32>,
+        /// the research order: the technologies' nodes; the buildings' (queue, research, disabled) (absent: (0,
+        /// kTechNone, false)); the units sharing the research; a scenario game
+        pub research_nodes: BTreeMap<i32, crate::research::ResearchNode>,
+        pub research_states: BTreeMap<u32, (i64, i64, bool)>,
+        pub shares_research: Vec<u32>,
+        pub scenario: bool,
     }
 
     impl Host for MockHost {
@@ -1672,6 +1727,21 @@ pub(crate) mod tests {
             let gone: Vec<u32> = units.iter().copied().filter(|u| self.unloadable.contains(u)).collect();
             units.retain(|u| !gone.contains(u));
             rejected.extend(gone);
+        }
+        fn research_node(&mut self, _player: HostRef, technology: i32) -> Option<crate::research::ResearchNode> {
+            self.research_nodes.get(&technology).copied()
+        }
+        fn scenario_game(&mut self) -> bool {
+            self.scenario
+        }
+        fn unit_shares_research(&mut self, unit: u32, _unit_type: i64) -> bool {
+            self.shares_research.contains(&unit)
+        }
+        fn unit_research_state(&mut self, unit: u32) -> (i64, i64, bool) {
+            self.research_states.get(&unit).copied().unwrap_or((0, 100000, false))
+        }
+        fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool) {
+            self.calls.push(Call::QueueResearch(unit, technology, front));
         }
     }
 

@@ -501,6 +501,17 @@ constexpr static const uint8_t EE_UNITS_LOAD_TRANSPORT = 2;
 
 constexpr static const uint8_t EE_UNITS_LOAD_MOVES = 4;
 
+/// `Host::research_node`'s bits: the node was found, `ResearchNode`'s flags
+constexpr static const uint8_t EE_UNITS_RESEARCH_FOUND = 1;
+
+constexpr static const uint8_t EE_UNITS_RESEARCH_HERO = 2;
+
+constexpr static const uint8_t EE_UNITS_RESEARCH_BUNDESWEHR = 4;
+
+constexpr static const uint8_t EE_UNITS_RESEARCH_MAKES_UNIT = 8;
+
+constexpr static const uint8_t EE_UNITS_RESEARCH_EPOCH = 16;
+
 /// The improvement kinds (ee/EEImprovementIDs.h): 0 area effect, 1 attack, 2..7 the armours, 8 flight time or power,
 /// 9 hit points, 10 leadership, 11 range, 12 repair, 14 speed, 15 transport; 13 unused.
 constexpr static const int32_t EE_UNITS_IMPROVEMENT_AREA_EFFECT = 0;
@@ -2468,6 +2479,14 @@ void ee_units_load_transport(void *player,
                              uint32_t transport,
                              int32_t passenger);
 
+/// `EEMResearchTechnology::Execute`'s body (`research::research_technology`) for the sender, its selection (null:
+/// none), the clicked building's id, the technology and the five-times flag.
+void ee_units_research_technology(void *player,
+                                  void *selection,
+                                  uint32_t building,
+                                  int32_t technology,
+                                  uint8_t five);
+
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
 void ee_units_cast_calamity(void *player,
@@ -2794,6 +2813,18 @@ extern uint8_t ee_units_host_load_goal_fields(void *goal, int64_t *x, int64_t *y
 extern void ee_units_host_player_event(void *player, int64_t x, int64_t y, int32_t code);
 
 extern void ee_units_host_group_add_unit(void *group, uint32_t unit);
+
+extern uint8_t ee_units_host_research_node(void *player, int32_t technology, int32_t *kind);
+
+extern uint8_t ee_units_host_scenario_game();
+
+extern uint8_t ee_units_host_unit_shares_research(uint32_t unit, int64_t unit_type);
+
+extern int64_t ee_units_host_unit_research_state(uint32_t unit,
+                                                 int64_t *current,
+                                                 uint8_t *disabled);
+
+extern void ee_units_host_unit_queue_research(uint32_t unit, int32_t technology, uint8_t front);
 
 extern size_t ee_units_host_transport_filter(uint32_t transport,
                                              uint32_t *units,

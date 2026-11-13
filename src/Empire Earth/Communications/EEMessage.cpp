@@ -3501,67 +3501,11 @@ char* EEMRemoveTechnology::GetMessageLabel() const
 // kinds 0/2/7/8 and hero techs go to one building: one with an empty queue and no research, else the first
 void EEMResearchTechnology::Execute()
 {
-    EECivPower thePower;
+    // New (game messages lane, round 2): the body is Rust (ee_units research.rs research_technology: each built
+    // selected building of the type queues it, or the one with the shortest queue) over the store and EEUnitHost.cpp
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEUnit* theUnit = gWorld.GetUnit(this->mBuildingID);
-    EEComplexUnit* theBest = NULL;
-    unsigned long theBestQueue = 10000;
-    bool theWonder = false;
-    bool thePower2 = false;
-    unsigned long theCount = this->mFiveTimes ? 5 : 1;
-    if (theUnit && theUnit->mHitPoints > 0) {
-        long theType = theUnit->mUnitClass->mUnitType;
-        EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(this->mTechnology);
-        bool theAll;
-        if (theNode->mData->mKind == 0 || theNode->mData->mKind == 2 || theNode->mData->mKind == 7 || theNode->mData->mKind == 8)
-            theAll = true;
-        else
-            theAll = false;
-        if (theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass] && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero)
-            theWonder = true;
-        else if (theNode->mData->mKind == 3 && gCivPowersManager.GetPower(kCivPowerBundeswehr, thePower)
-                 && thePower.mTechnology == theNode->mData->mPrerequisite1)
-            thePower2 = true;
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theOther = theGroup->GetUnit(i);
-            EEComplexUnit* theComplexUnit = theOther->mComplexUnit;
-            if (theOther->mHitPoints > 0
-                && (theOther->mUnitClass->mUnitType == theType || theOther->mUnitClass->SharesResearch(theType))
-                && theComplexUnit && theComplexUnit->mIsBuilt && theCount > 0) {
-                for (unsigned long j = 0; j < theCount; j++) {
-                    if (theAll || (theWonder && !gWorld.mGameOptions.mIsScenarioGame)) {
-                        unsigned long theQueue = theOther->mComplexUnit->GetBuildQueueSize() + (theOther->mComplexUnit->mCurrentResearch != 100000);   // queue + the one in progress (precedence)
-                        if (theQueue < theBestQueue) {
-                            theBestQueue = theQueue;
-                            theBest = theOther;
-                        }
-                    } else {
-                        if (thePower2 && theOther->mComplexUnit && theOther->mComplexUnit->mCurrentResearch != kTechNone
-                            && theOther->mHitPoints > 0 && !theOther->mComplexUnit->mIsDisabled
-                            && thePlayer->GetTechTree()->Get(theOther->mComplexUnit->mCurrentResearch)
-                            && thePlayer->mTechnologies->Get(theOther->mComplexUnit->mCurrentResearch)->mData->mMakesUnit) {
-                            theOther->mComplexUnit->StartAction(kActionIdle);
-                            theOther->mUnitClass->ActionChanged(theOther->mComplexUnit);
-                        }
-                        theOther->mComplexUnit->QueueResearch(this->mTechnology, (EEIsEpochID(this->mTechnology)) || thePower2);
-                    }
-                }
-            }
-        }
-        if (theAll || (theWonder && !gWorld.mGameOptions.mIsScenarioGame)) {
-            if (theBest) {
-                if (thePower2 && theBest->mComplexUnit && theBest->mComplexUnit->mCurrentResearch != kTechNone && theBest->mHitPoints > 0
-                    && !theBest->mComplexUnit->mIsDisabled && thePlayer->GetTechTree()->Get(theBest->mComplexUnit->mCurrentResearch)
-                    && thePlayer->GetTechTree()->Get(theBest->mComplexUnit->mCurrentResearch)->mData->mMakesUnit) {
-                    theBest->mComplexUnit->StartAction(kActionIdle);
-                    theBest->mUnitClass->ActionChanged(theBest->mComplexUnit);
-                }
-                theBest->mComplexUnit->QueueResearch(this->mTechnology, (EEIsEpochID(this->mTechnology)) || thePower2);
-            }
-        }
-    }
+    ee_units_research_technology(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mBuildingID,
+                                 this->mTechnology, this->mFiveTimes ? 1 : 0);
 }
 
 // EEMResearchTechnology's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)

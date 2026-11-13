@@ -56,6 +56,8 @@
 #include "ee/EEUnitHost.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EEUCTransport.h"
+#include "ee/EECivPowersManager.h"
+#include "ee/EETechTreeTechID.h"
 #include "rust/ee_units.h"
 
 static EEUnit* UnitOf(uint32_t inID)
@@ -170,7 +172,8 @@ enum DryEvent {
     kDryLoadFields,       // ctor, valid, the tile x, y
     kDryEvent,            // player id, x, y, code
     kDryAddUnit,          // tag, unit
-    kDryFilter            // transport, the count kept, the ids, the count rejected, the ids
+    kDryFilter,           // transport, the count kept, the ids, the count rejected, the ids
+    kDryQueueResearch     // unit, technology, front
 };
 
 // the dry goals the host makes without a goal spec: a unit's active goal's clone, the garrison's load goal's clone
@@ -1758,4 +1761,56 @@ extern "C" size_t ee_units_host_transport_filter(uint32_t inTransport, uint32_t*
         LogIDs(outRejected, theRejected.size());
     }
     return theUnits.size();
+}
+
+// ---- EEMResearchTechnology's calls (research.rs) ----
+
+// the node's reads (the dry host's too): its kind; found, a hero's technology, the Bundeswehr power's, makes a unit,
+// an epoch
+extern "C" uint8_t ee_units_host_research_node(void* inPlayer, int32_t inTechnology, int32_t* outKind)
+{
+    EETechTreeNode* theNode = static_cast<EEPlayer*>(inPlayer)->GetTechTree()->Get(inTechnology);
+    *outKind = 0;
+    if (theNode == NULL)
+        return 0;
+    EECivPower thePower;
+    uint8_t theBits = EE_UNITS_RESEARCH_FOUND;
+    *outKind = theNode->mData->mKind;
+    if (theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass]
+        && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero)
+        theBits |= EE_UNITS_RESEARCH_HERO;
+    if (gCivPowersManager.GetPower(kCivPowerBundeswehr, thePower) && thePower.mTechnology == theNode->mData->mPrerequisite1)
+        theBits |= EE_UNITS_RESEARCH_BUNDESWEHR;
+    if (theNode->mData->mMakesUnit)
+        theBits |= EE_UNITS_RESEARCH_MAKES_UNIT;
+    if (EEIsEpochID(inTechnology))
+        theBits |= EE_UNITS_RESEARCH_EPOCH;
+    return theBits;
+}
+
+extern "C" uint8_t ee_units_host_scenario_game()
+{
+    return gWorld.mGameOptions.mIsScenarioGame ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_host_unit_shares_research(uint32_t inUnit, int64_t inUnitType)
+{
+    return ComplexOf(inUnit)->mUnitClass->SharesResearch((long)inUnitType) ? 1 : 0;
+}
+
+extern "C" int64_t ee_units_host_unit_research_state(uint32_t inUnit, int64_t* outCurrent, uint8_t* outDisabled)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    *outCurrent = theUnit->mCurrentResearch;
+    *outDisabled = theUnit->mIsDisabled ? 1 : 0;
+    return (int64_t)theUnit->GetBuildQueueSize();
+}
+
+extern "C" void ee_units_host_unit_queue_research(uint32_t inUnit, int32_t inTechnology, uint8_t inFront)
+{
+    if (sDry != NULL) {
+        Log({kDryQueueResearch, inUnit, (uint32_t)inTechnology, inFront});
+        return;
+    }
+    ComplexOf(inUnit)->QueueResearch(inTechnology, inFront != 0);
 }

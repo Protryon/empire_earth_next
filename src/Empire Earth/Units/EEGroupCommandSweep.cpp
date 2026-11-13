@@ -39,6 +39,7 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EETechTreeTechID.h"
+#include "ee/EECivPowersManager.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitHost.h"
@@ -1331,6 +1332,74 @@ void OriginalLoadTransport(EEPlayer* thePlayer, void* theSelection, int32_t inTr
     ee_units_host_acknowledge_unit(thePlayer, theTransportID);   // PlayAcknowledgement(theTransport)
 }
 
+// EEMResearchTechnology::Execute (0x4c49b7) as it was, each world call through the host (QueueResearch and the
+// interruption's StartAction), the units and the node read on the objects (a technology the tree lacks: the sweep
+// sends none)
+void OriginalResearchTechnology(EEPlayer* thePlayer, void* theGroup, int32_t inBuildingID, int32_t inTechnology, bool inFiveTimes)
+{
+    EECivPower thePower;
+    EEUnit* theUnit = gWorld.GetUnit(inBuildingID);
+    EEComplexUnit* theBest = NULL;
+    uint32_t theBestID = kNone;
+    unsigned long theBestQueue = 10000;
+    bool theWonder = false;
+    bool thePower2 = false;
+    unsigned long theCount = inFiveTimes ? 5 : 1;
+    if (theUnit && theUnit->mHitPoints > 0) {
+        long theType = theUnit->mUnitClass->mUnitType;
+        EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(inTechnology);
+        if (theNode == NULL)
+            return;
+        bool theAll;
+        if (theNode->mData->mKind == 0 || theNode->mData->mKind == 2 || theNode->mData->mKind == 7 || theNode->mData->mKind == 8)
+            theAll = true;
+        else
+            theAll = false;
+        if (theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass] && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero)
+            theWonder = true;
+        else if (theNode->mData->mKind == 3 && gCivPowersManager.GetPower(kCivPowerBundeswehr, thePower)
+                 && thePower.mTechnology == theNode->mData->mPrerequisite1)
+            thePower2 = true;
+        unsigned long theNumUnits = theGroup != NULL ? Count(theGroup) : 0;
+        for (unsigned long i = 0; i < theNumUnits; i++) {
+            uint32_t theOtherID = UnitAt(theGroup, (long)i);
+            uint32_t theComplexID = ee_units_host_unit_complex_id(theOtherID);   // theOther->mComplexUnit
+            EEComplexUnit* theOther = static_cast<EEComplexUnit*>(ObjectOf(theOtherID));
+            EEComplexUnit* theComplexUnit = theComplexID != kNone ? static_cast<EEComplexUnit*>(ObjectOf(theComplexID)) : NULL;
+            if (theOther != NULL && theOther->mHitPoints > 0
+                && (theOther->mUnitClass->mUnitType == theType || theOther->mUnitClass->SharesResearch(theType))
+                && theComplexUnit && theComplexUnit->mIsBuilt && theCount > 0) {
+                for (unsigned long j = 0; j < theCount; j++) {
+                    if (theAll || (theWonder && !gWorld.mGameOptions.mIsScenarioGame)) {
+                        unsigned long theQueue = theComplexUnit->GetBuildQueueSize() + (theComplexUnit->mCurrentResearch != 100000);
+                        if (theQueue < theBestQueue) {
+                            theBestQueue = theQueue;
+                            theBest = theOther;
+                            theBestID = theComplexID;
+                        }
+                    } else {
+                        if (thePower2 && theComplexUnit->mCurrentResearch != kTechNone && theOther->mHitPoints > 0
+                            && !theComplexUnit->mIsDisabled && thePlayer->GetTechTree()->Get(theComplexUnit->mCurrentResearch)
+                            && thePlayer->mTechnologies->Get(theComplexUnit->mCurrentResearch)->mData->mMakesUnit)
+                            ee_units_host_unit_start_action(theComplexID, kActionIdle);   // and ActionChanged
+                        ee_units_host_unit_queue_research(theComplexID, inTechnology, (EEIsEpochID(inTechnology)) || thePower2);
+                    }
+                }
+            }
+        }
+        if (theAll || (theWonder && !gWorld.mGameOptions.mIsScenarioGame)) {
+            if (theBest) {
+                EEComplexUnit* theComplexUnit = static_cast<EEComplexUnit*>(ObjectOf(theBestID));
+                if (thePower2 && theComplexUnit->mCurrentResearch != kTechNone && theBest->mHitPoints > 0
+                    && !theComplexUnit->mIsDisabled && thePlayer->GetTechTree()->Get(theComplexUnit->mCurrentResearch)
+                    && thePlayer->GetTechTree()->Get(theComplexUnit->mCurrentResearch)->mData->mMakesUnit)
+                    ee_units_host_unit_start_action(theBestID, kActionIdle);
+                ee_units_host_unit_queue_research(theBestID, inTechnology, (EEIsEpochID(inTechnology)) || thePower2);
+            }
+        }
+    }
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
@@ -1351,7 +1420,8 @@ enum SweepBody {
     kSweepClearAirportCommands = 17,
     kSweepStopActiveGroup = 18,
     kSweepLoadGarrison = 19,
-    kSweepLoadTransport = 20
+    kSweepLoadTransport = 20,
+    kSweepResearchTechnology = 21
 };
 
 struct SweepCase {
@@ -1502,6 +1572,13 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
         else
             OriginalLoadTransport(inPlayer, inSelection, inCase.mTarget, inCase.mCaster);
         break;
+    case kSweepResearchTechnology:   // mTarget: the building; mQueued: five times
+        if (inRust)
+            ee_units_research_technology(inPlayer, inSelection, (uint32_t)inCase.mTarget, inCase.mTechnology,
+                                         inCase.mQueued ? 1 : 0);
+        else
+            OriginalResearchTechnology(inPlayer, inSelection, inCase.mTarget, inCase.mTechnology, inCase.mQueued);
+        break;
     }
 }
 
@@ -1547,6 +1624,8 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
     }
     if (inCase.mBody == kSweepLoadTransport)
         theRecord.I32(inCase.mCaster);
+    if (inCase.mBody == kSweepResearchTechnology)
+        theRecord.U32((unsigned int)inCase.mTechnology | (inCase.mQueued ? 0x80000000u : 0u));
     theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
         theRecord.U32(IDOf(inUnits[i]));
@@ -1994,6 +2073,54 @@ void EEGroupCommandSweep()
                     RunCase(theCase, p, thePlayer, theUnits);
                 }
             theCase.mCaster = 0;
+            // Research Technology (game messages lane, round 2): at its first unit, first land building, the next
+            // player's first unit and an id no unit has; the first technology of its tree of each kind 0-9 and its
+            // first hero's; once and five times
+            std::vector<int32_t> theResearchTechs;
+            {
+                EETechTree* theTree = thePlayer->mTechnologies;
+                int32_t theByKind[11];
+                for (int k = 0; k < 11; k++)
+                    theByKind[k] = -1;
+                for (long e = 0; e < theTree->mEpochs.size(); e++) {
+                    std::vector<long> theIDs;
+                    theTree->mEpochs[e].GetNodeIDs(theIDs);
+                    for (size_t i = 0; i < theIDs.size(); i++) {
+                        EETechTreeNode* theNode = theTree->Get(theIDs[i]);
+                        if (theNode == NULL || theNode->mData == NULL)
+                            continue;
+                        long theKind = theNode->mData->mKind;
+                        if (theKind >= 0 && theKind < 10 && theByKind[theKind] == -1)
+                            theByKind[theKind] = (int32_t)theIDs[i];
+                        long theClass = theNode->mData->mUnitClass;
+                        if (theByKind[10] == -1 && theClass > 0 && (unsigned long)theClass < EEUnitClassCount()
+                            && gUnitClassTable[theClass] && gUnitClassTable[theClass]->mAIKind == kAIKindHero)
+                            theByKind[10] = (int32_t)theIDs[i];
+                    }
+                }
+                for (int k = 0; k < 11; k++)
+                    if (theByKind[k] != -1)
+                        theResearchTechs.push_back(theByKind[k]);
+            }
+            std::vector<int32_t> theResearchAt;
+            if (!theOwn.empty())
+                theResearchAt.push_back((int32_t)IDOf(theOwn[0]));
+            if (theFound[2] != -1)
+                theResearchAt.push_back(theFound[2]);
+            if (theTargets.size() > 2)
+                theResearchAt.push_back(theTargets[2]);
+            theResearchAt.push_back(0x7e000001);
+            theCase.mBody = kSweepResearchTechnology;
+            for (size_t b = 0; b < theResearchAt.size(); b++)
+                for (size_t k = 0; k < theResearchTechs.size(); k++)
+                    for (int q = 0; q < 2; q++) {
+                        theCase.mTarget = theResearchAt[b];
+                        theCase.mTechnology = theResearchTechs[k];
+                        theCase.mQueued = q != 0;
+                        RunCase(theCase, p, thePlayer, theUnits);
+                    }
+            theCase.mTechnology = 0;
+            theCase.mQueued = false;
         }
     }
 }

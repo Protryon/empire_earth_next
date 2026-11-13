@@ -547,6 +547,28 @@ pub extern "C" fn ee_units_load_transport(player: *mut c_void, selection: *mut c
     );
 }
 
+/// `EEMResearchTechnology::Execute`'s body (`research::research_technology`) for the sender, its selection (null:
+/// none), the clicked building's id, the technology and the five-times flag.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_research_technology(
+    player: *mut c_void,
+    selection: *mut c_void,
+    building: u32,
+    technology: i32,
+    five: u8,
+) {
+    let mut host = crate::host::game::GameHost;
+    crate::research::research_technology(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        building,
+        technology,
+        five != 0,
+    );
+}
+
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
 #[cfg(not(test))]
