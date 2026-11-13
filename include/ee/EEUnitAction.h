@@ -1,38 +1,27 @@
-// EEUnitAction.h (RECONSTRUCTION; file name inferred). An action (state) of a unit AI script and its triggers
-// (EEUnitAction.cpp 0x22a509..0x22d95f; the unit's +0x1e8, mCommand, is one; EEComplexUnit::Fn1FF2E8 calls
-// Evaluate). Layout from the ctor 0x22b93f and the dtor 0x22ba95. Names are provisional.
-// Requires the engine declarations of: UString.
+// EEUnitAction.h (RECONSTRUCTION; file name inferred). An action (state) of a unit AI script (the unit's +0x1e8,
+// mCommand, is one) and the action and trigger ids. New (port, R5b.4 round 20): the scripts are Rust's (ee_units
+// script.rs: the parser of Unit AI Scripts\*.tai, the actions and their triggers, the name tables, the cache); an
+// action is a Rust object whose first field is its id, all the C++ reads of it. EEUnitTrigger is gone.
 #ifndef EE_EEUNITACTION_H
 #define EE_EEUNITACTION_H
 
-class EEComplexUnit;
-class EEUnitTrigger;
+#include <stdint.h>
 
-// vtable 0x447aac; sizeof 0x28; ctor 0x22b93f; ??_G 0x22b984; dtor 0x22ba95
+class EEComplexUnit;
+class UString;
+
 class EEUnitAction {
 public:
-    EEUnitAction(long inAction);            // 0x22b93f
-    virtual ~EEUnitAction();                // +0x00 dtor 0x22ba95
+    unsigned long GetType() const { return this->mType; }
+    uint32_t mType;                         // the action id (5000 is the idle action)
 
-    void AddTrigger(EEUnitTrigger* inTrigger);   // 0x22bbae
-    long Evaluate(EEComplexUnit* inUnit, EEUnitAction*& outAction);   // 0x22cd8b (0: none, 1: outAction, 2: done)
-    void Link(std::map<long, EEUnitAction*>*& ioActions);             // 0x22c777
-
-    static long GetActionID(const char* inName);        // 0x22c70b
-    static UString& GetActionName(unsigned long inAction);       // 0x22c75a
-    static std::map<long, EEUnitAction*>* GetScript(const UString& inName);   // 0x22c7e0
-    static void Register(const char* inName, long inAction);   // 0x22bae6
-    static void RegisterAll();                          // 0x22bd05
+    static long GetActionID(const char* inName);        // 0x22c70b (0: unknown)
+    static const char* GetActionName(unsigned long inAction);   // 0x22c75a ("" for an unknown id)
+    static void* GetScript(const UString& inName);       // 0x22c7e0 (the script's handle; ee_units_script_find)
     static void DeleteScripts();                        // 0x22cdb6
 
-    std::vector<EEUnitTrigger*> mTriggers;  // +0x004
-    UString mName;                          // +0x014
-    unsigned long GetType() const { return this->mType; }
-    unsigned long mType;                    // +0x024 (the action id; 5000 is the idle action; unsigned: the EEUC* switches compare jb/jbe)
-
-    static std::map<UString, std::map<long, EEUnitAction*>*> sScripts;   // 0x563688
-    static std::map<UString, long> sActionIDs;      // 0x563678
-    static std::map<unsigned long, UString> sActionNames;    // 0x563668
+private:
+    EEUnitAction();                         // made only by the Rust scripts
 };
 
 // Unit-AI action ids: EEUnitAction::RegisterAll 0x62bd05 registers each name with its id.

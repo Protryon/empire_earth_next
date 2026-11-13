@@ -934,9 +934,9 @@ void EESETSObject::Activate()
         case 10003:
         case 15000:
         case 15001: {
-            std::map<unsigned long, UString>::iterator it = EEUnitAction::sActionNames.find(i);
-            if (it != EEUnitAction::sActionNames.end())
-                this->mActionComboBox->AppendLine(UWideString(it->second));
+            const char* theName = EEUnitAction::GetActionName(i);   // port: the Rust table ("" unknown)
+            if (*theName != 0)
+                this->mActionComboBox->AppendLine(UWideString(UString(theName)));
             break;
         }
         }
@@ -1010,7 +1010,7 @@ void EESETSObject::Store()
     unsigned long theAction;
     this->mActionComboBox->GetCurrentSelection(theAction);
     theActionName = *(this->mActionComboBox->GetListBox()->GetDataArray().begin() + theAction);
-    theObject->mState = EEUnitAction::sActionIDs.find(theActionName)->second;
+    theObject->mState = EEUnitAction::GetActionID((const char*)theActionName);
     theObject->mSelectedByPlayer = this->mPlayerCC->GetSelectedPlayer();
 }
 
@@ -1132,8 +1132,8 @@ void EESETSObject::Load()
     theActions = this->mActionComboBox->GetListBox()->GetDataArray();
     for (i = 0; i < theActions.size(); i++) {
         unsigned long theAction = theObject->mState;
-        std::map<unsigned long, UString>::iterator it = EEUnitAction::sActionNames.find(theAction);
-        if (it != EEUnitAction::sActionNames.end() && theActions[i] == it->second)
+        const char* theName = EEUnitAction::GetActionName(theAction);
+        if (*theName != 0 && theActions[i] == UString(theName))
             break;
     }
     this->mActionComboBox->SetCurrentSelection(i < theActions.size() ? i : 0);
