@@ -25,7 +25,7 @@ public:
 
     static const UString sData;             // "EEE3DWaterSplashData" (0x4e8d70; provisional name)
 
-    float mAge;                             // +0x74 0..1 (saved)
+    float& mAge = this->mRecord->aged.age;   // +0x74 0..1 (saved; the record's: ee_gfx effect_state.rs)
     float mDrawAge;                         // +0x78 (Virtual24 copies mAge; the draw eases it)
     EEGraphicObject* mGraphicObject;        // +0x7c
 };

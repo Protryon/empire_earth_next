@@ -28,9 +28,10 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x40 0xe8089
     virtual long Step();                    // +0x4c 0xe80c0
 
-    GETransformation mTransformation;       // +0x54 (at water level: z = 0; saved)
+    // +0x54 (at water level: z = 0; saved) and the age: the record's (ee_gfx effect_state.rs)
+    GETransformation& mTransformation = *reinterpret_cast<GETransformation*>(&this->mRecord->aged.transformation);
     EEGraphicObject* mGraphicObject;        // +0x94 (UnloadMedia in the dtor)
-    float mAge;                             // +0x98 0..1 (saved)
+    float& mAge = this->mRecord->aged.age;   // +0x98 0..1 (saved)
     float mDrawAge;                         // +0x9c (Virtual24's copy of mAge)
 };
 

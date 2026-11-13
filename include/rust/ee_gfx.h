@@ -48,6 +48,21 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_PARTICLE_2D = 46;
 /// The 3D particle (a model).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_PARTICLE_3D = 57;
 
+/// The water splash.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_WATER_SPLASH = 27;
+
+/// The shock wave.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SHOCKWAVE = 18;
+
+/// The screen flash.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SCREEN_FLASH = 70;
+
+/// The water ripple.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_WATER_RIPPLE = 34;
+
+/// An aged effect's tick asks the C++ whether the tile under the ripple is blocked (the ripple lives on while it is).
+constexpr static const int32_t EE_GFX_EFFECT_ASK_BLOCKED = 1;
+
 /// `EeGfxMeshVertex::set`: the point was set.
 constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
 
@@ -493,6 +508,14 @@ struct EeGfxEffectEmitter {
   float emit_time;
 };
 
+/// The aged effects' state (water splash, shock wave, screen flash, water ripple).
+struct EeGfxEffectAged {
+  /// `mAge`: 0..1 over the duration (saved)
+  float age;
+  /// the water ripple's own `mTransformation`, at water level (saved)
+  EeGeTransformation transformation;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -528,6 +551,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectDamaged damaged;
   /// the particle emitter's
   EeGfxEffectEmitter emitter;
+  /// the aged effects'
+  EeGfxEffectAged aged;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1624,6 +1649,27 @@ int32_t ee_gfx_effect_load_emitter(EeGfxEffectRecord *r, const EeGfxEffectFile *
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_effect_save_emitter(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// The aged effects' `Step`: 7 when it ends; the ripple's `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`.
+///
+/// # Safety
+/// `r` is a live record; `tile` has room for two.
+int32_t ee_gfx_effect_aged_step(EeGfxEffectRecord *r,
+                                float tick_seconds,
+                                uint32_t duration,
+                                int32_t *tile);
+
+/// The aged effects' own Load reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_aged(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// The aged effects' own Save writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_aged(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEEffect::GetRandom`.
 float ee_gfx_effect_random();

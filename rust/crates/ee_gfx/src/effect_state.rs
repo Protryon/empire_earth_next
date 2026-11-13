@@ -144,6 +144,22 @@ pub struct EeGfxEffectEmitter {
     pub emit_time: f32,
 }
 
+/// The aged effects' state (water splash, shock wave, screen flash, water ripple).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeGfxEffectAged {
+    /// `mAge`: 0..1 over the duration (saved)
+    pub age: f32,
+    /// the water ripple's own `mTransformation`, at water level (saved)
+    pub transformation: GeTransformation,
+}
+
+impl Default for EeGfxEffectAged {
+    fn default() -> EeGfxEffectAged {
+        EeGfxEffectAged { age: 0.0, transformation: identity() }
+    }
+}
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -181,6 +197,8 @@ pub struct EeGfxEffectRecord {
     pub damaged: EeGfxEffectDamaged,
     /// the particle emitter's
     pub emitter: EeGfxEffectEmitter,
+    /// the aged effects'
+    pub aged: EeGfxEffectAged,
 }
 
 /// The identity (`GETransformation()`).
@@ -213,6 +231,7 @@ impl EeGfxEffectRecord {
             ambient: EeGfxEffectAmbient::default(),
             damaged: EeGfxEffectDamaged::default(),
             emitter: EeGfxEffectEmitter::default(),
+            aged: EeGfxEffectAged::default(),
         }
     }
 
@@ -1687,6 +1706,80 @@ pub fn save_emitter<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
     res
 }
 
+// ---- the effects that only age (EEE3DWaterSplash 0x1b, EEE2DShockwave 0x12, EEE3DScreenFlash 0x46, EEE2DWaterRipple 0x22)
+
+/// The water splash.
+pub const EE_GFX_EFFECT_KIND_WATER_SPLASH: i32 = 0x1b;
+/// The shock wave.
+pub const EE_GFX_EFFECT_KIND_SHOCKWAVE: i32 = 0x12;
+/// The screen flash.
+pub const EE_GFX_EFFECT_KIND_SCREEN_FLASH: i32 = 0x46;
+/// The water ripple.
+pub const EE_GFX_EFFECT_KIND_WATER_RIPPLE: i32 = 0x22;
+
+/// An aged effect's tick asks the C++ whether the tile under the ripple is blocked (the ripple lives on while it is).
+pub const EE_GFX_EFFECT_ASK_BLOCKED: i32 = 1;
+
+/// The aged effects' `Step`: the age by the tick in ms over the duration; 7 once past 1 (the screen flash at 1).
+/// The ripple, still young, sits at water level and returns `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`
+/// (the C++ ends it, 7, unless the tile is blocked).
+pub fn aged_step(r: &mut EeGfxEffectRecord, tick_seconds: f32, duration: u32, tile: &mut [i32; 2]) -> i32 {
+    let a = &mut r.aged;
+    a.age += (tick_seconds * 1000.0) / duration as f32;
+    match r.kind {
+        EE_GFX_EFFECT_KIND_SCREEN_FLASH => {
+            if a.age >= 1.0 {
+                7
+            } else {
+                0
+            }
+        }
+        EE_GFX_EFFECT_KIND_WATER_RIPPLE => {
+            if a.age <= 1.0 {
+                a.transformation.m[2][3] = 0.0;
+                tile[1] = um::floor(a.transformation.m[1][3]);
+                tile[0] = um::floor(a.transformation.m[0][3]);
+                EE_GFX_EFFECT_ASK_BLOCKED
+            } else {
+                7
+            }
+        }
+        _ => {
+            if a.age > 1.0 {
+                7
+            } else {
+                0
+            }
+        }
+    }
+}
+
+/// The aged effects' own Load after the base's (ignored) and the media load: the ripple's transformation, then the
+/// age; the first error.
+pub fn load_aged<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
+    let ripple = r.kind == EE_GFX_EFFECT_KIND_WATER_RIPPLE;
+    let a = &mut r.aged;
+    if ripple {
+        let res = load_transformation(f, &mut a.transformation);
+        if res != OK {
+            return res;
+        }
+    }
+    f.read_f32(&mut a.age)
+}
+
+/// The aged effects' own Save.
+pub fn save_aged<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
+    let a = &r.aged;
+    if r.kind == EE_GFX_EFFECT_KIND_WATER_RIPPLE {
+        let res = save_transformation(f, &a.transformation);
+        if res != OK {
+            return res;
+        }
+    }
+    f.write_f32(a.age)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2265,6 +2358,35 @@ mod tests {
         let mut g = Mem { items: f.items.clone(), ..Default::default() };
         assert_eq!(load_emitter(&mut back, &mut g), 0);
         assert_eq!(back.emitter, r.emitter);
+    }
+
+    #[test]
+    fn the_aged_effects_end_by_their_age() {
+        let mut tile = [0, 0];
+        let mut s = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_WATER_SPLASH);
+        assert_eq!(aged_step(&mut s, 0.5, 1000, &mut tile), 0);
+        assert_eq!(aged_step(&mut s, 0.5, 1000, &mut tile), 0);
+        assert_eq!(aged_step(&mut s, 0.001, 1000, &mut tile), 7);
+        let mut f = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_SCREEN_FLASH);
+        aged_step(&mut f, 0.5, 1000, &mut tile);
+        assert_eq!(aged_step(&mut f, 0.5, 1000, &mut tile), 7);
+        let mut w = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_WATER_RIPPLE);
+        w.aged.transformation.m[0][3] = 3.5;
+        w.aged.transformation.m[1][3] = -0.5;
+        w.aged.transformation.m[2][3] = 2.0;
+        assert_eq!(aged_step(&mut w, 0.5, 1000, &mut tile), EE_GFX_EFFECT_ASK_BLOCKED);
+        assert_eq!((tile, w.aged.transformation.m[2][3]), ([3, -1], 0.0));
+        assert_eq!(aged_step(&mut w, 0.6, 1000, &mut tile), 7);
+        let mut m = Mem::default();
+        assert_eq!(save_aged(&w, &mut m), 0);
+        assert_eq!(m.items.len(), 17);
+        let mut back = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_WATER_RIPPLE);
+        let mut g = Mem { items: m.items.clone(), ..Default::default() };
+        assert_eq!(load_aged(&mut back, &mut g), 0);
+        assert_eq!(back.aged, w.aged);
+        let mut m2 = Mem::default();
+        save_aged(&s, &mut m2);
+        assert_eq!(m2.items.len(), 1);
     }
 
     #[test]

@@ -819,6 +819,50 @@ pub unsafe extern "C" fn ee_gfx_effect_save_emitter(r: *const EeGfxEffectRecord,
     }
 }
 
+/// The aged effects' `Step`: 7 when it ends; the ripple's `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`.
+///
+/// # Safety
+/// `r` is a live record; `tile` has room for two.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_aged_step(
+    r: *mut EeGfxEffectRecord,
+    tick_seconds: f32,
+    duration: u32,
+    tile: *mut i32,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut t = [0i32; 2];
+        let res = on_copy(r, |r| effect_state::aged_step(r, tick_seconds, duration, &mut t));
+        *tile = t[0];
+        *tile.add(1) = t[1];
+        res
+    }
+}
+
+/// The aged effects' own Load reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_load_aged(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::load_aged(r, &mut File(&*file))) }
+}
+
+/// The aged effects' own Save writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_save_aged(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let local = r.read();
+        effect_state::save_aged(&local, &mut File(&*file))
+    }
+}
+
 /// `EEEffect::GetRandom`.
 #[no_mangle]
 pub extern "C" fn ee_gfx_effect_random() -> f32 {
