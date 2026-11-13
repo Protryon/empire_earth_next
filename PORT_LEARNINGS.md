@@ -13153,6 +13153,15 @@ classes whole, in the WON lane's pattern (PORT_LEARNINGS "R6 WON round 26"-"30")
   (oracle 169, late 170, calamity 183 digests; TNMT has no golden in any of them, as before this round), the test
   profile 0/0, the Rust gate PASS. Nothing saved moved (the managers are not in a save): no saveload matrix. Not run:
   any harness session (the tour, the menu pixel comparison, the LAN game), macOS or Linux builds.
+- **The merge of `rust`** (57ae2ad1: WON round 31, the LLE lane's round 1, the renderer's round 14, combat 15, core 21;
+  it moved during the round): only the docs and cbindgen.toml's `include` list conflicted (both sides appended).
+  `rust_includes.py` gave the two manager headers `rust/ee_ge.h` in place of their forward declarations of the Rust
+  object and `EeGeManOp` (kept, its own commit: the tool's convention, as `GETextureSet.h`'s, so the next run leaves
+  them alone; every unit including a manager header now sees ee_ge's header) and re-added `rust/ee_screens.h` to the
+  two scenario editor files (not committed). On the merged tree: build `--sim` 0/0, the Rust gate PASS, the store
+  gate PASS, the oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169, calamity 183; late failed
+  once on seed 3's message counts, NMEX/NMIM 5 -> 6 with NMDC and USCK one more, the load flake PORT_LEARNINGS
+  records for calamity seed 3, and passed with 170 on a rerun), the test profile 0/0.
 - **Left** (by the census): GESurface (codecs; a subclass), GETexture and GEModel (accessors for their outside
   readers first, as WON's census rounds did), GETerrainMesh, GERasterizer, GEBitmap, GEFontBitmap,
   GETransformation's member copies.
