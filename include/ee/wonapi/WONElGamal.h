@@ -27,6 +27,7 @@ public:
     ByteBufferPtr GetRawPublicKey() const;
     // takes ownership of a key ee_won made (an auth block's); NULL leaves no key
     void Adopt(EeWonElGamal* inKey);
+    const EeWonElGamal* Raw() const { return this->mKey; } // the Rust key (copied by ee_won_peer_new)
 };
 }
 #endif

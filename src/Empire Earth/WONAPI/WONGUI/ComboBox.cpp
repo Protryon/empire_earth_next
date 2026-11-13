@@ -161,7 +161,7 @@ void ComboBox::SetListBoxHeight(int h) { this->mListBoxHeight=h;this->CalcListBo
 void ComboBox::GotFocus()
 {
     Container::GotFocus();
-    if(this->mFocusChild==NULL) this->mEdit->RequestFocus();
+    if(this->GetFocusChild()==NULL) this->mEdit->RequestFocus();
 }
 // FUNCTION: WON 0x006f40b0
 // Loses focus (container behaviour only)
@@ -272,7 +272,7 @@ void ComboBox::MouseDown(int x,int y,int button)
 {
     Container::MouseDown(x,y,button);
     if(button==0) {
-        if(this->mMouseChild==this->mEdit.get() && this->mNoType) this->mButton->Fn2F3440();
+        if(this->GetMouseChild()==this->mEdit.get() && this->mNoType) this->mButton->Fn2F3440();
         this->RequestFocus();
     }
 }
@@ -316,7 +316,7 @@ void ComboBox::SetNoType(bool inNoType)
     this->mNoType=inNoType;
     this->mEdit->SetComponentFlags(ComponentFlag_WantFocus,!inNoType);
     this->mEdit->SetAllowSelection(!inNoType);
-    if(inNoType && this->mFocusChild==this->mEdit.get()) this->SetFocusChild(NULL);
+    if(inNoType && this->GetFocusChild()==this->mEdit.get()) this->SetFocusChild(NULL);
 }
 // FUNCTION: WON 0x006f4800
 // Enables or disables the combo box and its input box and button, closing an open list on disable and

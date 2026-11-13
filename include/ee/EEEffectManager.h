@@ -66,9 +66,6 @@ public:
     // 0x10673e: a weather effect over inTiles (kinds 0x2a rain, 0x3d snow) (provisional name)
     long CreateWeatherEffect(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffect* inEffect,
                              EEEffectHandle* outHandle);
-    void AddEffect(EEEffect* inEffect, bool inNewHandle);   // 0x1055d0 (links and maps it) (provisional name)
-    void RemoveEffect(EEEffect* inEffect);  // 0x1072d0 (unlinks and dereferences it) (provisional name)
-    long DestroyQueued();                   // 0x1067ce (the handles DestroyEffect queued) (provisional name)
 
     // 0x4e8e38 "EEEffectManager-Data": a class static (its atexit dtor 0x105513 is guarded) (provisional name)
     static const UString sData;

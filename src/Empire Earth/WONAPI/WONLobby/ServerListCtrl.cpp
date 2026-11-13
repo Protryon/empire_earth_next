@@ -506,7 +506,7 @@ void ServerListCtrl::AddFilteredEntries(bool inPreserve,ServerDetailsList& ioLis
     if(inPreserve)
     {
         int aOffset=this->mList->GetVertOffset();
-        int aBottom=this->mList->GetVertOffset()+this->mList->mScrollArea.Height();
+        int aBottom=this->mList->GetVertOffset()+this->mList->GetViewHeight();
         int anIndex=this->mList->GetItemPosAtYPos(aOffset);
         ListItem* anItem=this->mList->GetItem(anIndex);
         if(anItem!=NULL && (anItem->mHeight+anItem->mTop)/2<aOffset) ++anIndex;

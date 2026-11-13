@@ -63,7 +63,6 @@
 #include "ee/EEAction.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EEUIFileComboBox.h"
-#include "ee/EESEEFindText.h"
 #include "ee/EESEIAExport.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEScenarioManager.h"
@@ -73,6 +72,8 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 extern GEFont* gU531938;                    // 0x531938 (Empire Earth.cpp's fonts)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
@@ -136,7 +137,7 @@ EESEInstructions::EESEInstructions(unsigned long& ioIndex, UIForm* inForm, GEFon
     FSFileSpec theMoviesDirectory;
     GE2DPoint theLocation;
     UWideString theText;
-    EESEEFindText* theFindText = new EESEEFindText;
+    UIEvent* theFindText = EECreateScreenEvent(EE_SCREENS_SE_FIND_TEXT);
     GEText* theGEText;
     theScenDirectory.SetVolume(gStartupVolume);
     theScenDirectory.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
@@ -490,9 +491,6 @@ void EEABuild::Virtual8()
 
 // FUNCTION: EXE 0x5720c7
 // Destroys the editor's main group and frees it when asked (EEUIFSEMainGroup's scalar deleting destructor)
-
-// FUNCTION: EXE 0x5720e4
-// Destroys the find-text event and frees it when asked (EESEEFindText's scalar deleting destructor)
 
 // FUNCTION: EXE 0x57210f
 // Creates an empty list of wide strings (vector<UWideString> default constructor, template COMDAT)

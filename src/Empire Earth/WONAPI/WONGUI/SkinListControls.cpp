@@ -50,7 +50,7 @@ void WONListCtrl::SetStandarColumnHeader(int theCol, const GUIString &theTitle, 
 			this->mHeaderHeight = 15;
 	}
 		
-	static_cast<MultiListArea*>(this->mScrollArea.get())->SetColumnWidth(theCol,theWidth,false);
+	static_cast<MultiListArea*>(this->GetScrollArea())->SetColumnWidth(theCol,theWidth,false);
 }
 
 // FUNCTION: WON 0x0071A4C0
@@ -66,7 +66,7 @@ void WONListCtrl::SetColumnHeader(int theCol, Component *theHeader, int theWidth
 	}
 
 	this->mHeader->SetColumnItem(theCol,theHeader);
-	static_cast<MultiListArea*>(this->mScrollArea.get())->SetColumnWidth(theCol,theWidth,false);
+	static_cast<MultiListArea*>(this->GetScrollArea())->SetColumnWidth(theCol,theWidth,false);
 }
 
 
@@ -76,7 +76,7 @@ void WONListCtrl::Virtual08()
 {
 	WONScrollContainer::Virtual08();
 
-	this->mHeader->SetPosSize(this->mScrollArea->Left(),this->mScrollArea->Top()-this->mHeaderHeight,this->mScrollArea->Width(),this->mHeaderHeight);
+	this->mHeader->SetPosSize(this->GetScrollArea()->Left(),this->GetScrollArea()->Top()-this->mHeaderHeight,this->GetScrollArea()->Width(),this->mHeaderHeight);
 }
 }
 

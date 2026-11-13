@@ -22,7 +22,7 @@ void Container::AddChildLayout(ChildLayoutInstructionBase* theInstr, int theId)
     }
     else
         theInstr->mEnabled = false;
-    this->mChildLayout.AddInstruction(theInstr);
+    this->mChildLayout->AddInstruction(theInstr);
 }
 }
 

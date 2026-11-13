@@ -33,7 +33,6 @@
 #include "ee/EESEPlayerScreen.h"
 #include "lle/UIEvent.h"
 #include "ee/EESEPSSetPlayers.h"
-#include "ee/EESEEDisplayEpoch.h"
 #include "ee/EEStringIDs.h"
 // SYNTHETIC: EXE 0x572b0f
 // SYNTHETIC: EXE 0x572b19
@@ -56,14 +55,6 @@ std::vector<long> EESEPSSetPlayers::sV531FB0;
 std::vector<long> EESEPSSetPlayers::sBuildingTechs;
 std::vector<long> EESEPSSetPlayers::sV531F88;
 std::vector<long> EESEPSSetPlayers::sTechnologyTechs;
-
-// FUNCTION: EXE 0x572c33
-// Rebuilds the player screen's technology lists (an empty function in AoC); returns OK
-long EESEEDisplayEpoch::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ((EESEPlayerScreen*)(static_cast<EEUIFScenarioEditor*>(inForm))->mTabGroups[kEditorTabPlayers])->RebuildTechLists();
-    return kErrorOK;
-}
 
 // FUNCTION: EXE 0x572c4a
 // Creates the 100x25 'Set All Players' button with transparent text

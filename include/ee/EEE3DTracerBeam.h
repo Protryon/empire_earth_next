@@ -34,18 +34,20 @@ public:
 
     EEUnit* mTarget;                        // +0x74 (referenced; 0: a point target)
     EEGraphicObject* mGraphicObject;        // +0x78
-    GE3DPoint mTargetPoint;                 // +0x7c
-    float mScroll;                          // +0x88
+    // +0x7c .. +0xac but the draw copies: the record's (ee_gfx effect_tracer.rs: the scroll, width, age and events,
+    // load and save)
+    GE3DPoint& mTargetPoint = *reinterpret_cast<GE3DPoint*>(&this->mRecord->tracer.target_point);
+    float& mScroll = this->mRecord->tracer.scroll;
     float mDrawScroll;                       // +0x8c
-    float mAge;                             // +0x90
+    float& mAge = this->mRecord->tracer.age;
     float mDrawAge;                         // +0x94
-    float mLength;                           // +0x98
+    float& mLength = this->mRecord->tracer.length;
     float mDrawLength;                       // +0x9c
-    float mWidth;                            // +0xa0
+    float& mWidth = this->mRecord->tracer.width;
     float mDrawWidth;                        // +0xa4
-    bool mIsTimed;                          // +0xa8
-    bool mIsImpactCreated;                  // +0xa9
-    long mWeaponTagPoint;                   // +0xac (the unit's complex unit +0x2ec)
+    bool& mIsTimed = this->mRecord->tracer.timed;
+    bool& mIsImpactCreated = this->mRecord->tracer.impact_created;
+    int32_t& mWeaponTagPoint = this->mRecord->tracer.weapon_tag_point;   // the unit's complex unit +0x2ec
 };
 
 #endif

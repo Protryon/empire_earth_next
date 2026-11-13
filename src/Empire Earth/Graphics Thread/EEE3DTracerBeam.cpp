@@ -291,23 +291,24 @@ long EEE3DTracerBeam::DrawPass6()
 }
 // FUNCTION: EXE 0x4fcf21
 // Reads the target unit's id, age, timing, length, scroll, width, target point and (from version 0.250) weapon tag
-// point; returns the first read error
+// point (ee_gfx effect_tracer.rs); returns the first read error
 long EEE3DTracerBeam::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mTarget = (EEUnit*)-1;
     this->mGraphicObject = this->GetGraphicObject();
     long theResult = this->mGraphicObject->LoadMedia();
-    unsigned long theID;
-    if (theResult == 0 && (theResult = inFile.Read(theID)) == 0) {
-        this->mTarget = USavedPointer<EEUnit>(theID);  // serialized ID; RepairPointers resolves it through gWorld.GetUnit
-        if ((theResult = inFile.Read(this->mAge)) == 0 && (theResult = inFile.Read(this->mIsTimed)) == 0
-            && (theResult = inFile.Read(this->mLength)) == 0 && (theResult = inFile.Read(this->mScroll)) == 0
-            && (theResult = inFile.Read(this->mWidth)) == 0 && (theResult = this->mTargetPoint.Load(inFile)) == 0
-            && (inMajorVersion > 0 || inMinorVersion >= 0xfa))
-            return inFile.Read(this->mWeaponTagPoint);
+    if (theResult != 0) {
+        this->mWeaponTagPoint = 0;
+        return theResult;
     }
-    this->mWeaponTagPoint = 0;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    uint32_t theID = 0;
+    bool theRead = false;
+    theResult = ee_gfx_tracer_load(this->mRecord, &theFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion, &theID,
+                                   &theRead);
+    if (theRead)
+        this->mTarget = USavedPointer<EEUnit>(theID);  // serialized ID; RepairPointers resolves it through gWorld.GetUnit
     return theResult;
 }
 
@@ -328,22 +329,15 @@ long EEE3DTracerBeam::RepairPointers()
 }
 
 // FUNCTION: EXE 0x4fd04e
-// Writes the target unit's id (-1 for none), age, timing, length, scroll, width, target point and weapon tag point;
-// returns the first write error
+// Writes the target unit's id (-1 for none), age, timing, length, scroll, width, target point and weapon tag point
+// (ee_gfx effect_tracer.rs); returns the first write error
 long EEE3DTracerBeam::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theID = (unsigned long)-1;
     long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult != 0)
         return theResult;
-    if (this->mTarget)
-        theID = this->mTarget->GetUnitID();
-    if ((theResult = outFile.Write(theID)) == 0 && (theResult = outFile.Write(this->mAge)) == 0
-        && (theResult = outFile.Write(this->mIsTimed)) == 0 && (theResult = outFile.Write(this->mLength)) == 0
-        && (theResult = outFile.Write(this->mScroll)) == 0 && (theResult = outFile.Write(this->mWidth)) == 0
-        && (theResult = this->mTargetPoint.Save(outFile)) == 0)
-        theResult = outFile.Write(this->mWeaponTagPoint);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_tracer_save(this->mRecord, &theFile, this->mTarget ? (uint32_t)this->mTarget->GetUnitID() : 0xffffffffu);
 }
 
 // FUNCTION: EXE 0x4fd10f
@@ -360,44 +354,31 @@ void EEE3DTracerBeam::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 
 // FUNCTION: EXE 0x4fd140
 // Re-aims the beam, scrolls its texture and pulses its width; a timed beam ages, places its impact effect after age
-// param 7, reports a hit to the target at age param 5 and returns 7 past age 1
+// param 7, reports a hit to the target at age param 5 and returns 7 past age 1 (the timing: ee_gfx effect_tracer.rs)
 long EEE3DTracerBeam::Step()
 {
     long theResult = 0;
     this->Aim();
-    float theLength = this->mLength;
-    if (theLength < 1.0f)
-        theLength = 1.0f;
-    this->mScroll = (gPhysics->GetTickTime() * this->mGraphicEffect->GetParam1()) / theLength + this->mScroll;
-    if (this->mScroll > 1.0f)
-        this->mScroll -= 1.0f;
-    if (this->mScroll < 0.0f)
-        this->mScroll += 1.0f;
-    this->mWidth += gPhysics->GetTickTime() * this->mGraphicEffect->GetParam2();
-    if (this->mWidth > this->mGraphicEffect->GetParam4())
-        this->mWidth = this->mGraphicEffect->GetParam3();
-    if (this->mIsTimed) {
-        float thePreviousTime = this->mAge;
-        this->mAge += gPhysics->GetTickTime() / this->mGraphicEffect->mDuration;
-        if (this->mGraphicEffect->mLinkedEffect1 && !this->mIsImpactCreated && this->mAge > this->mGraphicEffect->GetParam7()) {
-            GETransformation theTransformation;
-            GE3DPoint theLocation;
-            if (this->mTarget) {
-                theTransformation = this->mTarget->mComplexUnit->mPhysicalModel.GetLocation();
-                theTransformation.Apply(this->mTargetPoint, theLocation);
-            } else {
-                theTransformation.MakeIdentity();
-                theLocation = this->mTargetPoint;
-            }
-            EEGraphicEffect* theSubEffect = this->mGraphicEffect->mLinkedEffect1;
-            theResult = gEffectManager->CreatePlacedEffect(theLocation, theSubEffect, NULL);
-            this->mIsImpactCreated = true;
-        }
-        if (this->mTarget && thePreviousTime <= this->mGraphicEffect->GetParam5() && this->mGraphicEffect->GetParam5() <= this->mAge)
-            this->mTarget->mUnitClass->UnitDamaged(this->mTarget->mComplexUnit, NULL, 0);
-        if (this->mAge > 1.0f)
-            theResult = 7;
+    EEGraphicEffect* theEffect = this->mGraphicEffect;
+    EeGfxTracerTick theTick = {gPhysics->GetTickTime(), theEffect->GetParam1(), theEffect->GetParam2(),
+                               theEffect->GetParam3(), theEffect->GetParam4(), theEffect->GetParam5(),
+                               theEffect->GetParam7(), (uint32_t)theEffect->mDuration, theEffect->mLinkedEffect1 != NULL,
+                               this->mTarget != NULL};
+    int32_t theEvents = ee_gfx_tracer_step(this->mRecord, &theTick);
+    if (theEvents & EE_GFX_TRACER_IMPACT) {
+        GETransformation theTransformation;
+        GE3DPoint theLocation;
+        if (this->mTarget) {
+            theTransformation = this->mTarget->mComplexUnit->mPhysicalModel.GetLocation();
+            theTransformation.Apply(this->mTargetPoint, theLocation);
+        } else
+            theLocation = this->mTargetPoint;
+        theResult = gEffectManager->CreatePlacedEffect(theLocation, theEffect->mLinkedEffect1, NULL);
     }
+    if (theEvents & EE_GFX_TRACER_HIT)
+        this->mTarget->mUnitClass->UnitDamaged(this->mTarget->mComplexUnit, NULL, 0);
+    if (theEvents & EE_GFX_TRACER_OVER)
+        theResult = 7;
     return theResult;
 }
 

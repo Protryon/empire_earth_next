@@ -65,6 +65,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Empire Earth/EEGameLog.cpp",
                        # TEST ONLY: the headless simulation's driver (EE-SIM.exe: build.py --sim links its entry)
                        "Empire Earth/Empire Earth/EESim.cpp",
+                       # TEST ONLY: its scripted scenario editor (EE-SIM.exe --editor-script; ee/EESimEditor.h)
+                       "Empire Earth/Empire Earth/EESimEditor.cpp",
                        # TEST ONLY: the simulation capture of the Rust leaves' gates (EE_SIM_CAPTURE; tools/sim_capture.py)
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)

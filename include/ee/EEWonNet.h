@@ -21,7 +21,8 @@ class UIControl;
 class UITextLabel;
 
 struct EeWonAuthLogin; // rust/ee_won.h
-struct EeWonAuthFlow; // rust/ee_rust.h (authflow.rs)
+struct EeWonAuthFlow; // rust/ee_won.h (authflow.rs)
+struct EeWonLightCert; // rust/ee_won.h (authflow.rs: LightGetCertOp's member)
 struct EeWonIpAddr; // rust/ee_rust.h (ipobj.rs)
 struct EeWonAddr; // rust/ee_rust.h (servctx.rs)
 namespace WONAPI {
@@ -317,7 +318,6 @@ typedef std::list<DirEntityPtr> DirEntityList;
 namespace WONAPI {
 class AsyncOp;
 class GetCertOp;
-class LightGetCertOp;
 class AuthPeerData;
 class WriteBuffer;
 class AuthSession; //actual borrowed session API identity
@@ -387,7 +387,8 @@ public:
     void StopAutoRefresh(); //2de8e0
     void Kill(); //2df260
     void StartAutoRefresh(bool = false); //2de970 actual call-only, owner allocation remains original
-    void RefreshAsync(LightGetCertOp* = NULL, DWORD = INFINITE); //2deba0 actual call-only
+    // a waiting LightGetCertOp: its run (an AsyncOp) and its member (ee_won authflow.rs), or NULL for none
+    void RefreshAsync(AsyncOp* = NULL, EeWonLightCert* = NULL, DWORD = INFINITE); //2deba0 actual call-only
     long RefreshBlock(DWORD = INFINITE); //2dedf0, actual WONStatus=long alias expansion before Routing typedef
     void GetCertCallback(GetCertOp*); //2de5f0
     static void StaticGetCertCallback(SmartPtr<AsyncOp>,SmartPtr<RefCount>); //2de560 support0
@@ -395,9 +396,9 @@ public:
     friend struct AuthContextFlow;
     CriticalSection mDataCrit; //08..20
     // the peer sessions and the certificate flow (0x20..0x4c: the refresh set, the GetCertOp, the auto-refresh
-    // timer, the refresh status and flag, the session map and its clean-up cursor): ee_won's (authflow.rs), owned
+    // timer, the refresh status and flag, the session map and its clean-up cursor) and the peer data (0x4c):
+    // ee_won's (authflow.rs), owned
     EeWonAuthFlow* mFlow;
-    ConstSmartPtr<AuthPeerData> mPeerData; //4c
     // the login data (0x50..0xbc: the user name and password, the secret file and secrets, the communities with
     // their CD keys and file hashes, the CD-key joins, the user data and the nicknames): ee_won's (authlogin.rs),
     // owned, its own lock

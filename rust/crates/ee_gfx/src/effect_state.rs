@@ -18,6 +18,11 @@ use ee_ge::types::{Ge3DPoint, GeTransformation};
 use ee_ge::um;
 use ee_random::URandom;
 
+use crate::effect_icon::EeGfxEffectIcon;
+use crate::effect_storm::EeGfxEffectStorm;
+use crate::effect_tracer::EeGfxEffectTracer;
+use crate::effect_wall::EeGfxEffectWall;
+
 /// `kErrorOK`.
 const OK: i32 = 0;
 
@@ -199,6 +204,14 @@ pub struct EeGfxEffectRecord {
     pub emitter: EeGfxEffectEmitter,
     /// the aged effects'
     pub aged: EeGfxEffectAged,
+    /// the weather storms' (`effect_storm.rs`)
+    pub storm: EeGfxEffectStorm,
+    /// the 3D icons' (`effect_icon.rs`)
+    pub icon: EeGfxEffectIcon,
+    /// the energy walls' (`effect_wall.rs`)
+    pub wall: EeGfxEffectWall,
+    /// the tracer beams' (`effect_tracer.rs`)
+    pub tracer: EeGfxEffectTracer,
 }
 
 /// The identity (`GETransformation()`).
@@ -232,6 +245,10 @@ impl EeGfxEffectRecord {
             damaged: EeGfxEffectDamaged::default(),
             emitter: EeGfxEffectEmitter::default(),
             aged: EeGfxEffectAged::default(),
+            storm: EeGfxEffectStorm::default(),
+            icon: EeGfxEffectIcon::default(),
+            wall: EeGfxEffectWall::default(),
+            tracer: EeGfxEffectTracer::default(),
         }
     }
 
@@ -284,7 +301,7 @@ pub trait EffectFile {
 }
 
 /// `GE3DPoint::Load(FSFile&)`: 4 on a closed file.
-fn load_point<F: EffectFile>(f: &mut F, p: &mut Ge3DPoint) -> i32 {
+pub(crate) fn load_point<F: EffectFile>(f: &mut F, p: &mut Ge3DPoint) -> i32 {
     if !f.is_open() {
         return 4;
     }
@@ -299,7 +316,7 @@ fn load_point<F: EffectFile>(f: &mut F, p: &mut Ge3DPoint) -> i32 {
 }
 
 /// `GE3DPoint::Save(FSFile&)`.
-fn save_point<F: EffectFile>(f: &mut F, p: &Ge3DPoint) -> i32 {
+pub(crate) fn save_point<F: EffectFile>(f: &mut F, p: &Ge3DPoint) -> i32 {
     if !f.is_open() {
         return 4;
     }
@@ -605,6 +622,10 @@ pub fn save_plume<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
 }
 
 // ---- the effects' random generator
+
+/// The effects' generator is one for the process: the tests that draw from it take turns.
+#[cfg(test)]
+pub(crate) static RANDOM_TESTS: Mutex<()> = Mutex::new(());
 
 /// `EEEffect.cpp`'s `URandom` (default seed: 1; never reseeded, not saved).
 static RANDOM: Mutex<URandom> = Mutex::new(URandom { seed: 1 });
@@ -1783,9 +1804,6 @@ pub fn save_aged<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The effects' generator is one for the process: the tests that draw from it take turns.
-    static RANDOM_TESTS: Mutex<()> = Mutex::new(());
 
     /// A file of typed values (the debug file's view: each write and its type).
     #[derive(Default)]

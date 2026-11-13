@@ -15,6 +15,7 @@
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "ee/wonapi/WONLobbyMap.h"
+#include "ee/wonapi/WONEventTypes.h"
 
 namespace WONAPI {
 
@@ -49,53 +50,6 @@ enum Direction { Direction_Left, Direction_Right, Direction_Up, Direction_Down }
 enum HorzAlign { HorzAlign_Left, HorzAlign_Center, HorzAlign_Right };
 enum VertAlign { VertAlign_Top, VertAlign_Center, VertAlign_Bottom };
 
-// SDK event and flag constants; the input event ids 1..14 and the popup bit tests in the exe agree.
-enum WindowEventType
-	{
-		WindowEventType_None,
-
-		InputEvent_SizeChange,
-		InputEvent_MouseMove,
-		InputEvent_MouseDown,
-		InputEvent_MouseDoubleClick,
-		InputEvent_MouseDownCheckDoubleClick, 
-		InputEvent_MouseUp,
-		InputEvent_MouseWheel,
-		InputEvent_KeyDown,
-		InputEvent_KeyUp,
-		InputEvent_KeyChar,
-		InputEvent_GotFocus,
-		InputEvent_LostFocus,
-		InputEvent_MouseExit,
-		InputEvent_WindowClose,
-
-		ComponentEvent_ButtonPressed,
-		ComponentEvent_Scroll,
-		ComponentEvent_TextLinkActivated,
-		ComponentEvent_HyperLinkActivated,
-		ComponentEvent_HyperLinkOver,
-		ComponentEvent_InputReturn,
-		ComponentEvent_InputTextChanged,
-
-		ComponentEvent_ListSelChanged,
-		ComponentEvent_ListItemClicked,
-		ComponentEvent_ListItemUpClicked,
-		ComponentEvent_MenuItemSelected,
-		ComponentEvent_TreeItemOpened,
-		ComponentEvent_ComboSelChanged,
-		ComponentEvent_TabBarTabSelected,
-		ComponentEvent_TabCtrlTabSelected,
-		ComponentEvent_EndPopup,
-		ComponentEvent_BrowserStatusChange,
-		ComponentEvent_BrowserLocationChange,
-		ComponentEvent_BrowserButtonChange,
-		ComponentEvent_SpinnerValueChanged,
-
-		ComponentEvent_ContextStart	= 10000, 
-		ComponentEvent_ContextEnd = 20000,
-
-		Event_User_Start = 100000
-	};
 enum PopupFlags
 {
 	PopupFlag_EndOnLeftMouseDown			= 0x0001,
@@ -412,92 +366,91 @@ public:
     InstructionList mInstructions; //08
     std::list<SmartPtr<LayoutPoint> > mLayoutPoints; //14
 };
+// Container (R6 WON round 26): its children (held), mouse and focus children, timer children, focus ids, current
+// cursor, flags and modal count are the Rust Container (rust/crates/ee_won/src/ctobj.rs); this is the type every
+// component holds and the base of every screen, dialog, list and control group, with the child layout manager. Its
+// virtuals and methods are forwarders; the calls the Rust makes are Container.cpp's host.
+class Container;
+// the container ops every container object's host falls back to (Container.cpp)
+intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 class Container : public Component {
 public:
     Container();                            // 0x2f5b70 (WONAPI, /GX)
     virtual ~Container();                   // 0x2f5e80 (WONAPI, /GX)
     // Overrides (vtable 0x44d7cc).
-    virtual void Virtual08();               // 0x2f62b0
-    virtual void GetDesiredSize(int& outWidth, int& outHeight); // 0x2f62d0
-    virtual void PrePaint(Graphics& inGraphics);  // 0x2f6340
-    virtual void Paint(Graphics& inGraphics); // 0x2f63b0
-    virtual bool HitTest(int inX, int inY);   // 0x2f6520
-    virtual void MouseEnter(int inX, int inY); // 0x2f6700
-    virtual void MouseExit();               // 0x2f6730
-    virtual void MouseDown(int inX, int inY, int inButton); // 0x2f6880
-    virtual void MouseUp(int inX, int inY, int inButton);   // 0x2f6840
-    virtual void MouseMove(int inX, int inY); // 0x2f6780
-    virtual void MouseDrag(int inX, int inY); // 0x2f6810
-    virtual bool MouseWheel(int inWheel);     // 0x2f67c0
-    virtual void MouseHover(unsigned long inDelta); // 0x2f67f0
-    virtual bool TimerEvent(int inDelta); // 0x2f7210
-    virtual void GotFocus();                // 0x2f7400
-    virtual void LostFocus();               // 0x2f7420
-    virtual bool KeyChar(int inKey);         // 0x2f7710
-    virtual bool KeyDown(int inKey);         // 0x2f7690
-    virtual bool KeyUp(int inChar);          // 0x2f76f0
-    virtual bool CanClose();                // 0x2f7730
-    virtual void Invalidate();              // 0x2f6980
-    virtual void MarkInvalid();             // 0x2f6940
-    virtual void AddedToParent();           // 0x2f6990
-    virtual void ClearGrabBG();             // 0x2f69a0
-    virtual void SetCursor(Cursor* inCursor);    // 0x2f7360
-    virtual void HandleBroadcastEvent(ComponentEvent* inEvent); // 0x2f7320
-    virtual void NotifyRootVisibility(bool inFlag);  // 0x2f64d0
-    virtual bool TabFocus(bool inForward, bool inInit);  // 0x2f75a0
-    virtual void EnableControlsById(const ControlIdSet& inIds, bool inEnabled); // 0x2f6480
-    virtual Component* GetMouseChild() { return this->mMouseChild; } // 0x1c42ce (shared 4-byte body)
+    virtual void Virtual08() { this->CCall(EeWonCtCall::SizeChanged); } // 0x2f62b0
+    virtual void GetDesiredSize(int& w, int& h) { this->CCall(EeWonCtCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } // 0x2f62d0
+    virtual void PrePaint(Graphics& g) { this->CCall(EeWonCtCall::PrePaint,(intptr_t)&g); } // 0x2f6340
+    virtual void Paint(Graphics& g) { this->CCall(EeWonCtCall::Paint,(intptr_t)&g); } // 0x2f63b0
+    virtual bool HitTest(int x, int y) { return this->CCall(EeWonCtCall::HitTest,x,y)!=0; } // 0x2f6520
+    virtual void MouseEnter(int x, int y) { this->CCall(EeWonCtCall::MouseEnter,x,y); } // 0x2f6700
+    virtual void MouseExit() { this->CCall(EeWonCtCall::MouseExit); } // 0x2f6730
+    virtual void MouseDown(int x, int y, int b) { this->CCall(EeWonCtCall::MouseDown,x,y,b); } // 0x2f6880
+    virtual void MouseUp(int x, int y, int b) { this->CCall(EeWonCtCall::MouseUp,x,y,b); } // 0x2f6840
+    virtual void MouseMove(int x, int y) { this->CCall(EeWonCtCall::MouseMove,x,y); } // 0x2f6780
+    virtual void MouseDrag(int x, int y) { this->CCall(EeWonCtCall::MouseDrag,x,y); } // 0x2f6810
+    virtual bool MouseWheel(int n) { return this->CCall(EeWonCtCall::MouseWheel,n)!=0; } // 0x2f67c0
+    virtual void MouseHover(unsigned long d) { this->CCall(EeWonCtCall::MouseHover,(intptr_t)d); } // 0x2f67f0
+    virtual bool TimerEvent(int d) { return this->CCall(EeWonCtCall::TimerEvent,d)!=0; } // 0x2f7210
+    virtual void GotFocus() { this->CCall(EeWonCtCall::GotFocus); } // 0x2f7400
+    virtual void LostFocus() { this->CCall(EeWonCtCall::LostFocus); } // 0x2f7420
+    virtual bool KeyChar(int k) { return this->CCall(EeWonCtCall::KeyChar,k)!=0; } // 0x2f7710
+    virtual bool KeyDown(int k) { return this->CCall(EeWonCtCall::KeyDown,k)!=0; } // 0x2f7690
+    virtual bool KeyUp(int k) { return this->CCall(EeWonCtCall::KeyUp,k)!=0; } // 0x2f76f0
+    virtual bool CanClose() { return this->CCall(EeWonCtCall::CanClose)!=0; } // 0x2f7730
+    virtual void MarkInvalid() { this->CCall(EeWonCtCall::MarkInvalid); } // 0x2f6940
+    virtual void AddedToParent() { this->CCall(EeWonCtCall::AddedToParent); } // 0x2f6990
+    virtual void ClearGrabBG() { this->CCall(EeWonCtCall::ClearGrabBG); } // 0x2f69a0
+    virtual void SetCursor(Cursor* c) { this->CCall(EeWonCtCall::SetCursor,(intptr_t)c); } // 0x2f7360
+    virtual void HandleBroadcastEvent(ComponentEvent* e) { this->CCall(EeWonCtCall::HandleBroadcastEvent,(intptr_t)e); } // 0x2f7320
+    virtual void NotifyRootVisibility(bool v) { this->CCall(EeWonCtCall::NotifyRootVisibility,v); } // 0x2f64d0
+    virtual bool TabFocus(bool f, bool i) { return this->CCall(EeWonCtCall::TabFocus,f,i)!=0; } // 0x2f75a0
+    virtual void EnableControlsById(const ControlIdSet& ids, bool e) { this->CCall(EeWonCtCall::EnableControlsById,(intptr_t)&ids,e); } // 0x2f6480
+    virtual Component* GetMouseChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::MouseChild); } // 0x1c42ce
     // 0x2f6140 (ret 0x20): adds inChild laid out against inRef (EELobbyInterface 0x2972c6: the lobby screen, 3,
     // the root, 0, 0, 0, 0, 0; provisional name)
     void Fn2F6140(Component* inChild, int inFlags, Component* inRef, int inA, int inB, int inC, int inD, int inE);
     void AddChildLayout(ChildLayoutInstructionBase*,int=0); // 0x2f61d0: keeps the instruction; group id 0 runs first (the test reads the full int, the id is stored as a byte)
     void EnableLayoutInstructions(int inId, bool inEnabled); // 0x2f6120
     void Relayout();                         // 0x2f6290
-    void EnterModal(); // 0x2f6210: counts the modal level and moves the focus
-    void LeaveModal(); // 0x2f6260: counts the modal level and moves the focus
-    void RemoveAllChildren(); // 0x2f6d80 (WindowManager::EndPopup calls it at 0x32e663/0x32e67c)
-    void UpdateMouseChild(int,int); //2f6650 mouse-selection transition99
-    void MouseAt(); // 0x2f66c0: refreshes the mouse state (no arguments)
-    std::list<SmartPtr<Component> >::iterator FindTop(); // 0x2f6a40 (forwarder)
-    std::list<SmartPtr<Component> >::iterator FindTop(std::list<SmartPtr<Component> >::iterator); //2f69d0 real suffix ordering99
-    void SetOnlyChildInput(bool v) { this->mOnlyChildInput=v; } // at +0x7c
-    void SetIsolateTabFocus(bool v) { this->mIsolateTabFocus=v; } // inline (used at 0x389f3b), at +0x7a
+    void EnterModal() { this->CCall(EeWonCtCall::EnterModal); } // 0x2f6210: counts the modal level and moves the focus
+    void LeaveModal() { this->CCall(EeWonCtCall::LeaveModal); } // 0x2f6260: ends the modal state and moves the focus
+    void RemoveAllChildren() { this->CCall(EeWonCtCall::RemoveAllChildren); } // 0x2f6d80
+    void UpdateMouseChild(int x,int y) { this->CCall(EeWonCtCall::UpdateMouseChild,x,y); } // 0x2f6650
+    void MouseAt() { this->CCall(EeWonCtCall::MouseAt); } // 0x2f66c0: refreshes the mouse state
+    void SetOnlyChildInput(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::OnlyChildInput,v); }
+    void SetIsolateTabFocus(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::IsolateTabFocus,v); }
     void AddLayoutPoint(LayoutPoint*); // 0x2f6100: keeps the layout point as a child
-    void AddChildEx(Component*,int); // 0x2f6b50
-    void BringToTop(Component*); // 0x2f6dd0
-    void SetHasUsedDialogKeys(bool v) { this->mHasUsedDialogKeys=v; } // inline, at +0x7b
-    unsigned char GetNextFocusId(); // 0x2f6010
-    void SetFocusToLastFocusChild(); // 0x2f6030
-    void EnsureOnTopOf(Component*,Component*); // 0x2f6f60
-    void AddChild(Component* inChild);      // 0x2f6a60
-    virtual Component* FindChildAt(int inX, int inY); // 0x2f65b0
+    void AddChildEx(Component* c,int p) { this->CCall(EeWonCtCall::AddChildEx,(intptr_t)c,p); } // 0x2f6b50
+    void BringToTop(Component* c) { this->CCall(EeWonCtCall::BringToTop,(intptr_t)c); } // 0x2f6dd0
+    void SetHasUsedDialogKeys(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::HasUsedDialogKeys,v); }
+    bool HasUsedDialogKeys() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::HasUsedDialogKeys)!=0; }
+    Component* GetFocusChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::FocusChild); }
+    Cursor* GetCurrentCursor() { return (Cursor*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::CurrentCursor); }
+    bool IsModal() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::ModalCount)>0; }
+    Component* GetFrontChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::FrontChild); }
+    Component* GetBackChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::BackChild); }
+    // Component::GetNextSibling's walk (0x2f5230)
+    Component* NextChild(Component* c,bool f,bool w) { return (Component*)this->CCall(EeWonCtCall::NextChild,(intptr_t)c,f,w); }
+    void DropFocusChild() { this->CCall(EeWonCtCall::DropFocusChild); }
+    unsigned char GetNextFocusId() { return (unsigned char)this->CCall(EeWonCtCall::NextFocusId); } // 0x2f6010
+    void SetFocusToLastFocusChild() { this->CCall(EeWonCtCall::SetFocusToLastFocusChild); } // 0x2f6030
+    void EnsureOnTopOf(Component* b,Component* t) { this->CCall(EeWonCtCall::EnsureOnTopOf,(intptr_t)b,(intptr_t)t); } // 0x2f6f60
+    void AddChild(Component* c) { this->CCall(EeWonCtCall::AddChild,(intptr_t)c); } // 0x2f6a60
+    virtual Component* FindChildAt(int x, int y) { return (Component*)this->CCall(EeWonCtCall::FindChildAt,x,y); } // 0x2f65b0
     virtual Component* FindClickChildAt(int inX, int inY) { return this->FindChildAt(inX, inY); } // 0x2909c7
-    virtual void SetFocusChild(Component* inChild);
-    virtual void AddTimerChild(Component* inChild);
-    virtual void ChildStateChanged(Component* inChild);
-    virtual bool ChildInvalidated(Component* inChild);
-    virtual void RemoveChild(Component* inChild);
-    virtual Component* FindChildById(int inControlId);
+    virtual void SetFocusChild(Component* c) { this->CCall(EeWonCtCall::SetFocusChild,(intptr_t)c); } // 0x2f7440
+    virtual void AddTimerChild(Component* c) { this->CCall(EeWonCtCall::AddTimerChild,(intptr_t)c); } // 0x2f70c0
+    virtual void ChildStateChanged(Component* c) { this->CCall(EeWonCtCall::ChildStateChanged,(intptr_t)c); } // 0x2f7510
+    virtual bool ChildInvalidated(Component* c) { return this->CCall(EeWonCtCall::ChildInvalidated,(intptr_t)c)!=0; } // 0x2f68c0
+    virtual void RemoveChild(Component* c) { this->CCall(EeWonCtCall::RemoveChild,(intptr_t)c); } // 0x2f6c60
+    virtual Component* FindChildById(int id) { return (Component*)this->CCall(EeWonCtCall::FindChildById,id); } // 0x2f7770
 
-    // Private members: constructor 0x2f5b70, destructor 0x2f5e80, readers 0x2f62d0/0x2f7770.
-    // The remaining private members are set up by the out-of-line constructor and destructor.
-    Component* mMouseChild;                // +0x30, borrowed
-    Component* mFocusChild;                // +0x34, borrowed
-    std::list<SmartPtr<Component> > mChildList; // +0x38, owning values
-    typedef std::set<SmartPtr<Component>,SmartPtr<Component>::Comp> ChildTimerSet;
-    ChildTimerSet mChildTimerSet; // at +0x44..0x4f, owns the child timers
-    ChildLayoutManager mChildLayout; // at +0x50..0x6f, owns the child layout instructions (0x20 bytes)
-    unsigned char mNextFocusId; // at +0x70; incremented as a byte and wraps to 0 (0x2f6010); +0x71..0x73 padding
-    SmartPtr<Cursor> mCurrentCursor; //74, ctor2f5c45/dtor2f5ed2/Root304a51
-    bool mChildNeedsTimer; //78
-    bool mMouseWheelGoesToFocusChild; //79
-    bool mIsolateTabFocus; // at +0x7a (set at 0x30420f)
-    bool mHasUsedDialogKeys; // at +0x7b, set by Tab handling (not mIsolateTabFocus at +0x7a)
-    bool mOnlyChildInput; //7c
-    bool mRemovingAllChildren; // at +0x7d, set by RemoveAllChildren, read by RemoveChild; +0x7e/0x7f padding
-    int mModalCount; // at +0x80, signed count; modal children take the input while it is nonzero
+    EeWonContainer* mCt;
+    ChildLayoutManager* mChildLayout; // owned: destroyed between the cursor and the timer children, as the member was
 protected:
     static bool mMouseWheelGoesToFocusChildDef; // 0x566234 (declaration only)
+    intptr_t CCall(EeWonCtCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_ct_call(this->mCt,c,a,b,cc); }
 };
 
 // ScreenContainer (0x88 bytes); constructor 0x306a20, destructor 0x306a60; points at the current screen.
@@ -533,34 +486,38 @@ public:
     std::list<Component*> mComponentList;   // +14, owns nodes, borrows components
 };
 
-// a modal or popup dialog (0x98 bytes: EELobbyConnectDialog's members start at +0x98; its implicit dtor is the
-// lobby glue's COMDAT 0x290a26)
+// a modal or popup dialog (0x98 bytes in the original: EELobbyConnectDialog's members start at +0x98).
+// Dialog (R6 WON round 26): its drag, Escape result and default button are the Rust Dialog
+// (rust/crates/ee_won/src/dialogobj.rs) over the container's Rust object; this is the type the lobby's dialogs derive
+// from, with one-line forwarders (DialogBehavior.cpp is its host).
 class Dialog : public Container {
 public:
-    virtual void Virtual08();               // 0x2f7a60
-    virtual void MouseExit();               // 0x2f7b20
-    virtual void MouseDown(int inX, int inY, int inButton); // 0x2f7a70
-    virtual void MouseUp(int inX, int inY, int inButton);   // 0x2f7af0
-    virtual void MouseDrag(int inX, int inY); // 0x2f7b40
-    virtual void GotFocus();                // 0x2f7a20
-    virtual void LostFocus();               // 0x2f7a40
-    virtual bool KeyDown(int inKey);         // 0x2f7c30
-    virtual bool CanClose();                // 0x2f7c90
     Dialog();                               // 0x2f7910 (WONAPI)
-    void SetEndOnEscape(int); // 0x2f7990
-    void SetDontEndOnEscape(); // 0x2f79b0
-    void SetDefaultButton(Button*); // 0x2f79c0: keeps the button at +0x94
-    bool ActivateDefaultButton(); // 0x2f7ce0: activates the default button when one is set
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);    // +0x7c 0x2f7d20 (WONAPI)
+    virtual ~Dialog();
+    virtual void Virtual08() { this->DCall(EeWonDlgCall::SizeChanged); } // 0x2f7a60
+    virtual void MouseExit() { this->DCall(EeWonDlgCall::MouseExit); } // 0x2f7b20
+    virtual void MouseDown(int x, int y, int b) { this->DCall(EeWonDlgCall::MouseDown,x,y,b); } // 0x2f7a70
+    virtual void MouseUp(int x, int y, int b) { this->DCall(EeWonDlgCall::MouseUp,x,y,b); } // 0x2f7af0
+    virtual void MouseDrag(int x, int y) { this->DCall(EeWonDlgCall::MouseDrag,x,y); } // 0x2f7b40
+    virtual void GotFocus() { this->DCall(EeWonDlgCall::GotFocus); } // 0x2f7a20
+    virtual void LostFocus() { this->DCall(EeWonDlgCall::LostFocus); } // 0x2f7a40
+    virtual bool KeyDown(int k) { return this->DCall(EeWonDlgCall::KeyDown,k)!=0; } // 0x2f7c30
+    virtual bool CanClose() { return this->DCall(EeWonDlgCall::CanClose)!=0; } // 0x2f7c90
+    void SetEndOnEscape(int id) { this->DCall(EeWonDlgCall::SetEndOnEscape,id); } // 0x2f7990
+    void SetDontEndOnEscape() { this->DCall(EeWonDlgCall::SetDontEndOnEscape); } // 0x2f79b0
+    void SetDefaultButton(Button*); // 0x2f79c0: keeps the button (held)
+    bool ActivateDefaultButton() { return this->DCall(EeWonDlgCall::ActivateDefaultButton)!=0; } // 0x2f7ce0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->DCall(EeWonDlgCall::HandleComponentEvent,(intptr_t)e); } // 0x2f7d20
+    // the config's writes (DialogConfig)
+    void SetAllowDrag(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::AllowDrag,v); }
+    void SetKeepInRoot(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::KeepInRoot,v); }
+    // the status dialog keeps the drag across its resize (Virtual08 ends it)
+    bool IsDragging() { return this->DCall(EeWonDlgCall::GetField,(intptr_t)EeWonDlgField::Dragging)!=0; }
+    void SetDragging(bool v) { this->DCall(EeWonDlgCall::SetField,(intptr_t)EeWonDlgField::Dragging,v); }
 
-    int mDragX;                            // +0x84
-    int mDragY;                            // +0x88
-    bool mDragging;                        // +0x8c, dragging; the constructor does not initialize it
-    bool mAllowDrag;                       // +0x8d
-    bool mKeepInRoot;                      // +0x8e
-    bool mEndOnEscape;                     // +0x8f
-    int mEscapeId;                         // +0x90
-    SmartPtr<Button> mDefaultButton;        // +0x94, the default button
+    EeWonDialog* mDlg;
+private:
+    intptr_t DCall(EeWonDlgCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_dlg_call(this->mDlg,c,a,b,cc); }
 };
 
 class Button : public Component {
@@ -1013,88 +970,77 @@ public:
     Container* mCurTab; // at +0xd4; the class is 0xd8 bytes
 };
 
-// Scrollbar (0xb8 bytes); constructor 0x305e10, destructor 0x305eb0
+// Scrollbar (R6 WON round 25): its parts (arrows, track, thumb), orientation, thumb options, range, steps, position
+// and drag are the Rust Scrollbar (rust/crates/ee_won/src/barobj.rs); this is the type the skins, configs and
+// scrollers hold (MSScrollbar and WONScrollbar derive from it). Constructor 0x305e10, destructor 0x305eb0.
 class Scrollbar : public Container {
 public:
     Scrollbar(bool=true); // 0x305e10 (ret 4)
     virtual ~Scrollbar(); // 0x305eb0
-    virtual void Virtual08(); //306380
-    virtual void MouseDown(int,int,int); //3064c0
-    virtual void MouseDrag(int,int); //306510
-    virtual void AddedToParent(); //305fe0
-    virtual void HandleComponentEvent(ComponentEvent*); //306690
-    virtual void SetEnabled(bool); // 0x3067e0, vtable +0x90
-    void CopyAttributes(Scrollbar*); // 0x305fa0
-    void AddControls(); //306000
-    void LayoutThumb(bool); //3061d0
-    void S_SetPos(Component*,int,int); // 0x306100
-    void S_SetSize(Component*,int,int); // 0x306140
-    void S_SetPosSize(Component*,int,int,int,int); // 0x306180
-    int S_Left(Component* c) { return this->mVertical?c->Left():c->Top(); }
-    int S_Right(Component* c) { return this->mVertical?c->Left()+c->Width():c->Top()+c->Height(); }
-    int S_Top(Component* c) { return this->mVertical?c->Top():c->Left(); }
-    int S_Bottom(Component* c) { return this->mVertical?c->Top()+c->Height():c->Left()+c->Width(); }
-    int S_Height(Component* c) { return this->mVertical?c->Height():c->Width(); }
-    int S_Width(Component* c) { return this->mVertical?c->Width():c->Height(); }
-    // the parts the skins, the configs and the scroller read and set (the subclasses' and factories' arrows, thumb
-    // and track; the orientation; the scroller's sizes and position)
-    Button* GetUpArrow() { return this->mUpArrow.get(); }
-    void SetUpArrow(Button* b) { this->mUpArrow=b; }
-    Button* GetDownArrow() { return this->mDownArrow.get(); }
-    void SetDownArrow(Button* b) { this->mDownArrow=b; }
-    Button* GetScrollRect() { return this->mScrollRect.get(); }
-    void SetScrollRect(Button* b) { this->mScrollRect=b; }
-    Component* GetThumb() { return this->mThumb.get(); }
-    void SetThumb(Component* c) { this->mThumb=c; }
-    bool IsVertical() { return this->mVertical; }
-    void SetVertical(bool on) { this->mVertical=on; }
-    void SetResizeThumb(bool on) { this->mResizeThumb=on; }
-    void SetMinThumbSize(unsigned char n) { this->mMinThumbSize=n; }
-    int GetPosition() { return this->mPosition; }
-    void SetPosition(int p) { this->mPosition=p; } // the field only (the scroller's update)
-    void SetRange(int total,int page) { this->mTotalSize=total; this->mPageSize=page; this->mPageScrollSize=page; }
-    void SetLineScrollSizes(int up,int down) { this->mLineUpScrollSize=up; this->mLineDownScrollSize=down; }
-    SmartPtr<Button> mUpArrow,mDownArrow,mScrollRect; //84/88/8c
-    SmartPtr<Component> mThumb; //90
-    bool mResizeThumb,mVertical; //94/95
-    unsigned char mMinThumbSize; //96
-    int mPosition,mPageSize,mTotalSize; //98/9c/a0
-    int mLineUpScrollSize,mLineDownScrollSize,mPageScrollSize; //a4/a8/ac
-    int mDragX,mDragY; //b0/b4
+    virtual void Virtual08() { this->Call(EeWonBarCall::SizeChanged); } //306380
+    virtual void MouseDown(int x,int y,int b) { this->Call(EeWonBarCall::MouseDown,x,y,b); } //3064c0
+    virtual void MouseDrag(int x,int y) { this->Call(EeWonBarCall::MouseDrag,x,y); } //306510
+    virtual void AddedToParent() { this->Call(EeWonBarCall::AddedToParent); } //305fe0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->Call(EeWonBarCall::HandleEvent,(intptr_t)e); } //306690
+    virtual void SetEnabled(bool on) { this->Call(EeWonBarCall::SetEnabled,on); } // 0x3067e0, vtable +0x90
+    void CopyAttributes(Scrollbar* from) { this->Call(EeWonBarCall::CopyAttributes,(intptr_t)from->mRust); } // 0x305fa0
+    void AddControls() { this->Call(EeWonBarCall::AddControls); } //306000
+    void LayoutThumb(bool changePos) { this->Call(EeWonBarCall::LayoutThumb,changePos); } //3061d0
+    // the parts the skins, the configs and the scroller read and set
+    Button* GetUpArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,0); }
+    void SetUpArrow(Button* b) { this->Call(EeWonBarCall::SetPart,0,(intptr_t)static_cast<Component*>(b)); }
+    Button* GetDownArrow() { return (Button*)this->Call(EeWonBarCall::GetPart,1); }
+    void SetDownArrow(Button* b) { this->Call(EeWonBarCall::SetPart,1,(intptr_t)static_cast<Component*>(b)); }
+    Button* GetScrollRect() { return (Button*)this->Call(EeWonBarCall::GetPart,2); }
+    void SetScrollRect(Button* b) { this->Call(EeWonBarCall::SetPart,2,(intptr_t)static_cast<Component*>(b)); }
+    Component* GetThumb() { return (Component*)this->Call(EeWonBarCall::GetPart,3); }
+    void SetThumb(Component* c) { this->Call(EeWonBarCall::SetPart,3,(intptr_t)c); }
+    bool IsVertical() { return this->Call(EeWonBarCall::IsVertical)!=0; }
+    void SetVertical(bool on) { this->Call(EeWonBarCall::SetVertical,on); }
+    void SetResizeThumb(bool on) { this->Call(EeWonBarCall::SetResizeThumb,on); }
+    void SetMinThumbSize(unsigned char n) { this->Call(EeWonBarCall::SetMinThumbSize,n); }
+    int GetPosition() { return (int)this->Call(EeWonBarCall::GetPosition); }
+    void SetPosition(int p) { this->Call(EeWonBarCall::SetPosition,p); } // the field only (the scroller's update)
+    void SetRange(int total,int page) { this->Call(EeWonBarCall::SetRange,total,page); }
+    void SetLineScrollSizes(int up,int down) { this->Call(EeWonBarCall::SetLineScrollSizes,up,down); }
+    EeWonScrollbar* mRust;
+private:
+    intptr_t Call(EeWonBarCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_bar_call(this->mRust,c,a,b,cc); }
 };
 
-// Scroller (0x88 bytes): owns the scroll area at +0x84
+// Scroller and ScrollbarScroller (R6 WON round 25): the scroll area, the bars and their conditions are one Rust
+// Scroller (rust/crates/ee_won/src/scrollerobj.rs) the Scroller constructor makes; these are the types the configs,
+// the combo box, the scroll areas and the scroll containers (MSScrollContainer, WONScrollContainer) hold.
 class Scroller : public Container {
 public:
     Scroller(); // 0x305540
-    // Implicit virtual destructor (0x3001e0)
-    virtual void MouseDown(int,int,int); //305670
-    virtual bool MouseWheel(int); //3056c0
+    virtual ~Scroller(); // the implicit destructors (0x3001e0, ScrollbarScroller's 0x300060)
+    virtual void MouseDown(int x,int y,int b) { this->SCall(EeWonScrollerCall::MouseDown,x,y,b); } //305670
+    virtual bool MouseWheel(int n) { return this->SCall(EeWonScrollerCall::MouseWheel,n)!=0; } //3056c0
     virtual void NotifyScrollChange(bool) {} // empty inline (shared body at 0x30a800)
-    ScrollArea* GetScrollArea() { return this->mScrollArea.get(); }
-    void SetScrollArea(ScrollArea*); // 0x305580: sets the scroll area and its back link
-    void SetOffsets(int,int); //3055e0 horizontal thenvertical
-    void SetVertOffset(int); //305630
-    void SetHorzOffset(int); //305650
-    SmartPtr<ScrollArea> mScrollArea; // at +0x84; released by the implicit destructor 0x3001e0
+    ScrollArea* GetScrollArea() { return (ScrollArea*)this->SCall(EeWonScrollerCall::GetScrollArea); }
+    // (a ScrollArea's Component is at its own address: single inheritance)
+    void SetScrollArea(ScrollArea* a) { this->SCall(EeWonScrollerCall::SetScrollArea,(intptr_t)a); } // 0x305580
+    void SetOffsets(int h,int v) { this->SCall(EeWonScrollerCall::SetOffsets,h,v); } //3055e0 horizontal then vertical
+    void SetVertOffset(int v) { this->SCall(EeWonScrollerCall::SetVertOffset,v); } //305630
+    void SetHorzOffset(int h) { this->SCall(EeWonScrollerCall::SetHorzOffset,h); } //305650
+    EeWonScroller* mRust;
+protected:
+    intptr_t SCall(EeWonScrollerCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_scroller_call(this->mRust,c,a,b,cc); }
 };
 enum ScrollbarCondition { ScrollbarCondition_Disable=0,ScrollbarCondition_Enable=1,ScrollbarCondition_Conditional=2 };
-// ScrollbarScroller (0x9c bytes)
+// ScrollbarScroller (0x305700: both conditions Enable, in the Rust scroller)
 class ScrollbarScroller : public Scroller {
 public:
-    ScrollbarScroller(); // 0x305700
-    // Implicit virtual destructor (0x300060)
-    virtual void AddedToParent(); //305840 AddedToParent
-    virtual void HandleComponentEvent(ComponentEvent*); //305a00
-    virtual void NotifyScrollChange(bool); // 0x305a50, vtable +0xcc
-    void SetScrollbar(Scrollbar*); //305760
-    void AddControls(); //305860
-    Scrollbar* GetScrollbar(bool vertical) { return vertical?this->mVertScrollbar.get():this->mHorzScrollbar.get(); } // inline; +0x88/+0x8c
-    bool EnableScrollbar(Scrollbar*,ScrollbarCondition); //3058d0
-    void SetScrollbarConditions(ScrollbarCondition,ScrollbarCondition); // 0x305990
-    SmartPtr<Scrollbar> mHorzScrollbar,mVertScrollbar; // at +0x88/+0x8c
-    ScrollbarCondition mVertCondition,mHorzCondition; //90/94
-    bool mSettingScrollbarConditions; // at +0x98; +0x99..0x9b padding
+    virtual void AddedToParent() { this->SCall(EeWonScrollerCall::AddedToParent); } //305840
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->SCall(EeWonScrollerCall::HandleEvent,(intptr_t)e); } //305a00
+    virtual void NotifyScrollChange(bool b) { this->SCall(EeWonScrollerCall::NotifyScrollChange,b); } // 0x305a50, vtable +0xcc
+    void SetScrollbar(Scrollbar* s) { this->SCall(EeWonScrollerCall::SetScrollbar,(intptr_t)static_cast<Component*>(s)); } //305760
+    void AddControls() { this->SCall(EeWonScrollerCall::AddControls); } //305860
+    Scrollbar* GetScrollbar(bool vertical) { return (Scrollbar*)this->SCall(EeWonScrollerCall::GetScrollbar,vertical); }
+    void SetBar(bool vertical,Scrollbar* s) { this->SCall(EeWonScrollerCall::SetBar,vertical,(intptr_t)static_cast<Component*>(s)); } // the field only (MSScrollContainer's constructor)
+    bool EnableScrollbar(Scrollbar* s,ScrollbarCondition c) { return this->SCall(EeWonScrollerCall::EnableScrollbar,(intptr_t)static_cast<Component*>(s),c)!=0; } //3058d0
+    void SetScrollbarConditions(ScrollbarCondition h,ScrollbarCondition v) { this->SCall(EeWonScrollerCall::SetScrollbarConditions,h,v); } // 0x305990
 };
 enum ScrollButtonCondition {
     ScrollButtonCondition_Disable=0, ScrollButtonCondition_Enable=1,
@@ -2556,55 +2502,53 @@ public:
     SmartPtr<ComponentListener> mListener; // at +0x34
 };
 
-// Only a prefix of ScrollArea is declared; nothing here allocates it.
+// ScrollArea (R6 WON round 25): its offsets, content, padding, view, scroller (borrowed) and scroll amounts are the
+// Rust ScrollArea (rust/crates/ee_won/src/paneobj.rs); this is the type the lists, text areas, scrollers and configs
+// hold. The viewport and the background stay C++ members.
 class ScrollArea : public Container {
 public:
     ScrollArea(); // 0x304df0: viewport setup
-    // Implicit virtual destructor (0x2fa790)
-    virtual void AdjustPosition(bool);      // 305030
-    virtual void ScrollSizeChanged();       // 4142a0
-    virtual void ScrollPaint(Graphics&);     // 2fa500
-    virtual void Virtual08(); //3051c0 SizeChanged
-    virtual void GetDesiredSize(int&,int&); //3054a0
-    virtual bool MouseWheel(int); //305410 MouseWheel
-    virtual void Paint(Graphics&); // 0x3052d0 (override)
-    void SetDelegatePos(); //304fd0
-    bool OnBottom(); //305190
-    void SetBorderPadding(int,int,int,int); //305270
-    void ScrollTranslate(int&,int&); //305390
-    void ScrollUntranslate(int&,int&); //3053d0
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x305180, vtable +0x7c override
-    void SetSizeEqualToTotal(int,int); //305450
-    bool IsRectVisible(const WONRectangle&); //3054f0
+    virtual ~ScrollArea(); // the implicit destructor (0x2fa790)
+    virtual void AdjustPosition(bool b) { this->ACall(EeWonPaneCall::AdjustPosition,b); } // 305030
+    virtual void ScrollSizeChanged() {} // 4142a0
+    virtual void ScrollPaint(Graphics&) {} // 2fa500
+    virtual void Virtual08() { this->ACall(EeWonPaneCall::SizeChanged); } //3051c0 SizeChanged
+    virtual void GetDesiredSize(int& w,int& h) { this->ACall(EeWonPaneCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } //3054a0
+    virtual bool MouseWheel(int n) { return this->ACall(EeWonPaneCall::MouseWheel,n)!=0; } //305410
+    virtual void Paint(Graphics& g) { this->ACall(EeWonPaneCall::Paint,(intptr_t)&g); } // 0x3052d0 (override)
+    void SetDelegatePos() { this->ACall(EeWonPaneCall::SetDelegatePos); } //304fd0
+    bool OnBottom() { return this->ACall(EeWonPaneCall::OnBottom)!=0; } //305190
+    void SetBorderPadding(int l,int t,int r,int b) { int p[4]={l,t,r,b}; this->ACall(EeWonPaneCall::SetBorderPadding,(intptr_t)p); } //305270
+    void ScrollTranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollTranslate,(intptr_t)&x,(intptr_t)&y); } //305390
+    void ScrollUntranslate(int& x,int& y) { this->ACall(EeWonPaneCall::ScrollUntranslate,(intptr_t)&x,(intptr_t)&y); } //3053d0
+    virtual void HandleComponentEvent(ComponentEvent* e) { Component::HandleComponentEvent(e); } // 0x305180, vtable +0x7c override
+    void SetSizeEqualToTotal(int w,int h) { this->ACall(EeWonPaneCall::SetSizeEqualToTotal,w,h); } //305450
+    bool IsRectVisible(const WONRectangle& r) { return this->ACall(EeWonPaneCall::IsRectVisible,(intptr_t)&r)!=0; } //3054f0
     ScrollAreaViewport* GetViewport() { return this->mViewport.get(); }
-    void SetScrollDimension(int,int); // sets the content dimensions
-    void SetScrollbar(Scrollbar*); // selects a scrollbar scroller
-    void SetScroller(Scroller*); // 0x305010; the scroller at +0xd4 is not owned
-    int GetTotalHeight() { return this->mTotalHeight; }
-    int GetTotalWidth() { return this->mTotalWidth; }
-    int GetLeftPad() { return this->mLeftPad; }
-    int GetRightPad() { return this->mRightPad; }
-    void SetVertOffset(int); //305130
-    void SetOffsets(int, int); //305150, horizontal then vertical
+    void SetScrollDimension(int w,int h) { this->ACall(EeWonPaneCall::SetScrollDimension,w,h); } // sets the content dimensions
+    void SetScrollbar(Scrollbar* s) { this->ACall(EeWonPaneCall::SetScrollbar,(intptr_t)static_cast<Component*>(s)); } // selects a scrollbar scroller
+    void SetScroller(Scroller* s) { this->ACall(EeWonPaneCall::SetScroller,(intptr_t)static_cast<Component*>(s)); } // 0x305010; not owned
+    void SetVertOffset(int v) { this->ACall(EeWonPaneCall::SetVertOffset,v); } //305130
+    void SetOffsets(int h,int v) { this->ACall(EeWonPaneCall::SetOffsets,h,v); } //305150, horizontal then vertical
+    // the fields the lists, text areas, scrollers and lobby controls read and set
+    int GetField(EeWonGuiField f) { return (int)this->ACall(EeWonPaneCall::GetField,(intptr_t)f); }
+    void SetField(EeWonGuiField f,int v) { this->ACall(EeWonPaneCall::SetField,(intptr_t)f,v); }
+    int GetTotalHeight() { return this->GetField(EeWonGuiField::TotalHeight); }
+    int GetTotalWidth() { return this->GetField(EeWonGuiField::TotalWidth); }
+    int GetLeftPad() { return this->GetField(EeWonGuiField::LeftPad); }
+    int GetRightPad() { return this->GetField(EeWonGuiField::RightPad); }
+    int GetTopPad() { return this->GetField(EeWonGuiField::TopPad); }
+    void SetPads(int l,int t,int r,int b) { this->SetField(EeWonGuiField::LeftPad,l); this->SetField(EeWonGuiField::TopPad,t); this->SetField(EeWonGuiField::RightPad,r); this->SetField(EeWonGuiField::BottomPad,b); } // the fields only (the text area's and list's constructors)
+    int GetVertOffset() { return this->GetField(EeWonGuiField::VertOffset); }
+    int GetHorzOffset() { return this->GetField(EeWonGuiField::HorzOffset); }
+    int GetViewWidth() { return this->GetField(EeWonGuiField::ScrollWidth); }
+    int GetViewHeight() { return this->GetField(EeWonGuiField::ScrollHeight); }
     SmartPtr<ScrollAreaViewport> mViewport; // at +0x84
-    WONRectangle mInvalidRect; //88..97
-    int GetVertOffset() { return this->mVertOffset; }
-    int mVertOffset; //98
-    int mHorzOffset; //9c
-    int mTotalHeight; //a0
-    int mTotalWidth;                        // total width
-    int mAVertOffset,mAHorzOffset,mATotalHeight,mATotalWidth; //a8..b7
-    int mOldScrollAreaWidth,mOldScrollAreaHeight; //b8..bf
-    int mLeftPad; //c0
-    int mRightPad; //c4
-    int mTopPad,mBottomPad; //c8,cc
-    bool mUserHasScrolled; //d0
-    Scroller* mScroller; //d4 borrowed
-    WONRectangle mScrollArea; //d8, visible height e4
-    Background mBackground; // at +0xe8..0xfb
+    Background mBackground;
     void SetBackground(const Background& theBackground) { this->mBackground=theBackground; }
-    int mExtraHeight; //fc
-    int mUpScrollAmount,mDownScrollAmount,mLeftScrollAmount,mRightScrollAmount; //100..10f
+    EeWonScrollPane* mPane;
+private:
+    intptr_t ACall(EeWonPaneCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_pane_call(this->mPane,c,a,b,cc); }
 };
 
 enum ListSortType { ListSortType_Ascending, ListSortType_Descending, ListSortType_None };
@@ -2797,20 +2741,17 @@ private:
     intptr_t PCall(EeWonMenuCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_menu_call(this->mMenu,c,a,b,cc); }
 };
 
+// ScrollAreaViewport (R6 WON round 26): the scrolled content's container. Its scroll area and the repaint of a child
+// in view through nested viewports are the Rust container's viewport part (ctobj.rs); the class is 0x88 bytes in the
+// original (allocated at 0x304e49). Paint, TimerEvent, SetFocusChild and AddTimerChild were the container's; Reset
+// (0x305c70) had no caller.
 class ScrollAreaViewport : public Container {
 public:
-    ScrollAreaViewport(ScrollArea* area) : mScrollArea(area) {} // inline (0x304e70..0x304e83)
-    void Reset(); // 0x305c70: resets the contents and the popup
-    void InvalidateIfRectVisible(WONRectangle&); // 0x305c10
-    // Implicit virtual destructor (0x306a60)
-    ScrollArea* mScrollArea; // at +0x84, back link; the class is 0x88 bytes (allocated at 0x304e49)
-    virtual void Paint(Graphics&); // vtable +0x18, 0x305e00
-    virtual bool TimerEvent(int); // vtable +0x44, 0x305dd0
-    virtual void SetCursor(Cursor*); // vtable +0x78, 0x305de0
-    virtual void SetFocusChild(Component*); // vtable +0xb4, 0x305db0
-    virtual void AddTimerChild(Component*); // vtable +0xb8, 0x305dc0
-    virtual void ChildStateChanged(Component*); // vtable +0xbc, 0x2fa500
-    virtual bool ChildInvalidated(Component*); // vtable +0xc0, 0x305d70
+    ScrollAreaViewport(ScrollArea* area) { this->CCall(EeWonCtCall::SetViewportArea,(intptr_t)static_cast<Component*>(area)); } // inline (0x304e70..0x304e83)
+    Component* GetScrollArea() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::ViewportArea); }
+    virtual void SetCursor(Cursor* c) { this->GetScrollArea()->SetCursor(c); } // vtable +0x78, 0x305de0: the area's
+    virtual void ChildStateChanged(Component*) {} // vtable +0xbc, 0x2fa500: ignored
+    virtual bool ChildInvalidated(Component* c) { return this->CCall(EeWonCtCall::VpChildInvalidated,(intptr_t)c)!=0; } // vtable +0xc0, 0x305d70
 };
 
 // MultiListArea, MultiListItem and MultiListHeader (R6 WON round 24): their columns, cells, header buttons, sort,

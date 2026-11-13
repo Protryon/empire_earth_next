@@ -1,0 +1,48 @@
+# The scripted scenario editor gate's script (tools/sim_editor.py; EE-SIM.exe --editor-script; the commands:
+# src/Empire Earth/Empire Earth/EESimEditor.cpp). Terrains are dbterrain ids, unit types dbobjects rows, technologies
+# dbtechtree mIDs; players 1 (the human) and 2 (a computer). A 40 x 40 blank map is a diamond in an 80 x 80 square:
+# its tiles lie around (40, 40).
+tab 0
+blank 40 40 3                      # grass
+digest blank
+tab 2
+terrain 20 32 45 38 40             # ice
+terrain 22 42 50 47 46             # dark cracked mud
+terrain 31 44 38 50 33             # beach: 15% ambients (the pinned clock)
+terrain 41 30 36 35 31             # forest maple: ambients only (trees)
+digest terrain
+tab 1
+elevation raise 3 34 52 38 48
+elevation hills 2 48 52 52 48
+elevation level 0 36 50 37 49
+digest elevation
+tab 3
+place 1 32 40.5 40.5 0             # citizen
+place 1 32 41.5 40.5 1.5
+place 2 20 44.5 38.5 3.14          # clubman
+place 1 37 36 42 0                 # house
+place 2 34 46 34 0                 # barracks
+digest place
+select @40,40
+add @41,40
+rotate 0.75
+digest rotate
+toggle @41,40
+delete 1 group
+digest delete
+pickup @44,38
+putdown 39 43 2.0
+digest move
+delete @46,34
+wall 1 3085 33 44 33 38            # palisade
+gate 1 3087 33 41 2                # along the wall (direction 2: y)
+digest wall
+tab 2
+bulldoze 30 36 33 33
+digest bulldoze
+area 35 36 41 44
+digest area
+quicksave gate
+savefile gate
+random 0 0
+digest random

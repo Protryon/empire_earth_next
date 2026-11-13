@@ -278,6 +278,24 @@ pub const EE_WON_HOST_FILE_FIRST_CHAR: i32 = 149;
 pub const EE_WON_HOST_SESSION_ADD: i32 = 150;
 /// the op's `mTracker.IsEmpty()` -> out_num
 pub const EE_WON_HOST_TRACKER_EMPTY: i32 = 151;
+// PeerAuthOp's and PeerAuthServerOp's (peerop.rs):
+/// `ServerOp::mSocket` -> out_obj, borrowed
+pub const EE_WON_HOST_OWN_SOCKET: i32 = 152;
+/// a socket obj0's `GetLengthFieldSize()` -> out_num
+pub const EE_WON_HOST_SOCKET_LFS: i32 = 153;
+/// `mClientKeySize | mUseClientKey << 8` -> out_num
+pub const EE_WON_HOST_CLIENT_KEY: i32 = 154;
+/// `mAuthContext->GetPeerData()` -> out_num: a new `EeWonAuthObj*` reference the op takes (0: none)
+pub const EE_WON_HOST_PEER_CTX_DATA: i32 = 155;
+/// `mAuthContext->RefreshBlock(num0)` -> out_num (the status)
+pub const EE_WON_HOST_PEER_REFRESH_BLOCK: i32 = 156;
+/// `new LightGetCertOp`'s run (a plain `AsyncOp`; its member is the op's `EeWonLightCert`) -> out_obj
+pub const EE_WON_HOST_PEER_NEW_LIGHT: i32 = 157;
+/// `mAuthContext->RefreshAsync(obj0, num0)`: the light op's run and its member (an `EeWonLightCert*`, borrowed);
+/// may call back
+pub const EE_WON_HOST_PEER_REFRESH_ASYNC: i32 = 158;
+/// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
+pub const EE_WON_HOST_PEER_NEW_SESSION: i32 = 160;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`
@@ -672,6 +690,35 @@ impl<P: Plan> Host<P> {
     }
     pub(crate) fn op_is_recv_msg(&self, op: Obj) -> bool {
         self.num_of(EE_WON_HOST_OP_IS_RECV_MSG, op, [0, 0]) != 0
+    }
+
+    // ---- the peer authentication ops
+    pub(crate) fn own_socket(&self) -> Obj {
+        self.invoke(EE_WON_HOST_OWN_SOCKET, [Obj::none(); 2], [0, 0], &[], [0; 6]).obj
+    }
+    pub(crate) fn socket_lfs(&self, socket: Obj) -> u8 {
+        self.num_of(EE_WON_HOST_SOCKET_LFS, socket, [0, 0]) as u8
+    }
+    pub(crate) fn client_key(&self) -> i64 {
+        self.num_of(EE_WON_HOST_CLIENT_KEY, Obj::none(), [0, 0])
+    }
+    pub(crate) fn ctx_peer_data(&self) -> Option<std::sync::Arc<crate::peerobj::PeerData>> {
+        let h = self.num_of(EE_WON_HOST_PEER_CTX_DATA, Obj::none(), [0, 0]);
+        // SAFETY: the answer is a new reference the op takes, or 0
+        unsafe { crate::peerobj::take_peer(h as usize as *mut crate::peerobj::EeWonAuthObj) }
+    }
+    pub(crate) fn refresh_block(&self, timeout: u32) -> i32 {
+        self.num_of(EE_WON_HOST_PEER_REFRESH_BLOCK, Obj::none(), [i64::from(timeout), 0]) as i32
+    }
+    pub(crate) fn new_light_get_cert(&self) -> Obj {
+        self.invoke(EE_WON_HOST_PEER_NEW_LIGHT, [Obj::none(); 2], [0, 0], &[], [0; 6]).obj
+    }
+    pub(crate) fn refresh_async(&self, light: Obj, cert: &std::sync::Arc<crate::authflow::EeWonLightCert>) {
+        let c = std::sync::Arc::as_ptr(cert) as usize as i64;
+        self.num_of(EE_WON_HOST_PEER_REFRESH_ASYNC, light, [c, 0]);
+    }
+    pub(crate) fn new_auth_session(&self, session: *mut crate::peerauth::EeWonAuthSession) -> Obj {
+        self.invoke(EE_WON_HOST_PEER_NEW_SESSION, [Obj::none(); 2], [session as usize as i64, 0], &[], [0; 6]).obj
     }
 
     /// `slot = o` for an object slot of the members (`o` carries the reference the slot keeps; the old one goes
