@@ -4123,6 +4123,12 @@ boat_wood holds every Stone settlement until 10 boats, the settlement's stone ru
 lib.place's 5-minute wait), and a wild animal on the tile had the same spot re-placed each minute (`blocked_skip`).
 Next: claim and settle them from the advance, near home only, then the pool and exact = 2 on top.
 
+**boom_order is the default boom (2026-11-13, the owner).** ai/ais.json's `boom` entry (random) now runs
+`ai/boom_order.lua`, the owner-order configuration (`boom.configure`), with its description; the `boom_order` entry
+("Boom (owner order)") is gone and the old default configuration is retired. boom.lua's own defaults are unchanged
+(every option off), so `boom` plays exactly what `boom_order` played: identical game samples on 3 seeds (2-4, 40
+minutes against the improved classic, the same exe). Benches name the engine `boom` from here on.
+
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
 **Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the
