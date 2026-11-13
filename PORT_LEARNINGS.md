@@ -12721,6 +12721,9 @@ Measured by net C++ deletion (src and include/ee, git numstat).
 - **Gates.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical to the main checkout's `ref`, the Rust gate
   PASS; the drop commit also captures at seeds 2-3 of oracle (169 digests), missile, calamity (183) and late (170),
   CBDP/CBHD among them; the regions commit captures oracle and late at seeds 2-3 and `saveload --settings all
-  --seeds 2-3 --at 1000,1900 --expect` PASS (it saves and restores the region order). At the end (`rust` unchanged
-  since the round's merge, 37a013f7): oracle seeds 2-7 identical; captures at seeds 2-3 of space (171), calamity
-  (183) and scenario (16) PASS; the test profile links 0/0.
+  --seeds 2-3 --at 1000,1900 --expect` PASS (it saves and restores the region order). On the round's head before the
+  second merge: oracle seeds 2-7 identical; captures at seeds 2-3 of space (171), calamity (183) and scenario (16)
+  PASS; the test profile 0/0. After merging `rust` 5d3ce6a9 (screens 20, renderer 13, WON Internet 18; only the two
+  docs conflicted, a criss-cross after `rust` took round 14: rust's text kept, this section and the R5b.2 row
+  added): build `--sim` and the test profile 0/0, oracle seeds 2-7 identical to `ref`, the Rust gate PASS.
+  `rust_includes.py` re-adds `rust/ee_screens.h` to two scenario editor files after each merge: not committed.
