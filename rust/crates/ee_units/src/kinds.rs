@@ -82,7 +82,8 @@ pub const fn goal_kinds_of(kind: u8) -> u32 {
         10 => EE_GOAL_KIND_EXPLORE,
         11 => EE_GOAL_KIND_CAST_CALAMITY,
         12 => EE_GOAL_KIND_LOAD_GARRISON | EE_GOAL_KIND_LOAD_CONTAINER,
-        15 => EE_GOAL_KIND_HEAL_UNIT | EE_GOAL_KIND_LOCATION,
+        // the heal goal derived from the location goal until it moved to Rust (combat round 14): no longer one
+        15 => EE_GOAL_KIND_HEAL_UNIT,
         _ => 0,
     }
 }
@@ -213,7 +214,7 @@ mod tests {
     #[test]
     fn every_goal_kind_is_its_class_and_its_bases() {
         assert_eq!(EE_UNIT_GOAL_KINDS[1], EE_GOAL_KIND_LOCATION);
-        assert_eq!(EE_UNIT_GOAL_KINDS[15] & EE_GOAL_KIND_LOCATION, EE_GOAL_KIND_LOCATION); // a heal goal is a location goal
+        assert_eq!(EE_UNIT_GOAL_KINDS[15], EE_GOAL_KIND_HEAL_UNIT); // an EEUGRust, no longer a location goal
         assert_eq!(EE_UNIT_GOAL_KINDS[7], EE_GOAL_KIND_LOAD_TRANSPORT | EE_GOAL_KIND_LOAD_CONTAINER);
         assert_eq!(EE_UNIT_GOAL_KINDS[12], EE_GOAL_KIND_LOAD_GARRISON | EE_GOAL_KIND_LOAD_CONTAINER);
         // the kinds no goal has (5, 13, 14 and the rest) are no class
@@ -227,7 +228,7 @@ mod tests {
                 *o += (kinds >> b) & 1;
             }
         }
-        assert_eq!(owners, [2, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1]);
+        assert_eq!(owners, [1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1]);
     }
 
     #[test]

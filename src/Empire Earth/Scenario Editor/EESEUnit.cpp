@@ -120,7 +120,6 @@
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEARust.h"
-#include "ee/EESEADeleteUnit.h"
 #include "ee/EESEUICCommandUnits.h"
 #include "ee/EESEAChangeLoadText.h"
 #include "ee/EESELoadThread.h"
@@ -424,7 +423,7 @@ void EEUIFSELBCargoList::RemoveSelected()
 {
     unsigned long theSelection;
     if (this->GetLineCount() > 0 && this->GetCurrentSelection(theSelection) == kErrorOK) {
-        EESEADeleteUnit* theAction = new EESEADeleteUnit(this->mCargo[theSelection]->GetUnitID());
+        EESEARust* theAction = new EESEARust(kSEADeleteUnit, NULL, this->mCargo[theSelection]->GetUnitID());
         theAction->Dereference();
     }
 }
@@ -1454,11 +1453,7 @@ void EESEUnit::UpdateKeys()
         gISKeyboard->GetEntity(kKeyDelete, theKey);
         if (theKey->JustPressed()) {
             gISKeyboard->GetEntity(kKeyShift, theKey);
-            EESEADeleteUnit* theAction;
-            if (theKey->GetValue() != 0)
-                theAction = new EESEADeleteUnit(thePlayer->GetPlayerID(), true);
-            else
-                theAction = new EESEADeleteUnit(thePlayer->GetPlayerID(), false);
+            EESEARust* theAction = new EESEARust(kSEADeleteUnit, NULL, -1, thePlayer->GetPlayerID(), theKey->GetValue() != 0);
             theAction->Dereference();
         }
     }

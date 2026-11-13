@@ -520,69 +520,59 @@ private:
     intptr_t DCall(EeWonDlgCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_dlg_call(this->mDlg,c,a,b,cc); }
 };
 
+// Button (R6 WON round 30): its flags, Space's hold, the repeat delay, the mouse's press state, the radio group's walk
+// and the two default buttons are the Rust Button (rust/crates/ee_won/src/btnobj.rs); this is the type the skins and
+// the lobby derive from, with one-line forwarders. The click sound stays a member (Button.cpp is the host).
 class Button : public Component {
 public:
-    void Fn2F3440(); // click activation (tests the enabled and checked states), no arguments
+    void Fn2F3440() { this->BCall(EeWonBtnCall::Click); } // 0x2f3440: the click activation (tests the enabled and checked states)
     Button();                               // 0x2f3070 (WONAPI)
     virtual ~Button();                      // 0x2f3100 (WONAPI)
     virtual bool HandleActivate();          // +0xac (a click; EELobbyColorButton 0x290669)
     virtual void SetTextHook(const GUIString&); // 0x2f30d0
-    virtual void SetText(const GUIString& inText, bool inFlag);    // +0xb4 (0x2f3180)
+    virtual void SetText(const GUIString& t, bool inv) { this->BCall(EeWonBtnCall::SetText,(intptr_t)&t,inv); } // +0xb4 (0x2f3180)
     virtual const GUIString& GetText() { return gEmptyGUIString; }   // +0xb8 0x2905a8
-    void SetCheck(bool inChecked, bool inNotify = false);      // 0x2f3500
-    void SetButtonFlags(unsigned long inFlags, bool inSet);    // 0x2f3370 (EELobbyColorButton: 0x40, true)
+    void SetCheck(bool c, bool n = false) { this->BCall(EeWonBtnCall::SetCheck,c,n); } // 0x2f3500
+    void SetButtonFlags(unsigned long f, bool s) { this->BCall(EeWonBtnCall::SetButtonFlags,(intptr_t)f,s); } // 0x2f3370 (EELobbyColorButton: 0x40, true)
 
-    union {
-        unsigned long mButtonFlags; // at +0x30, flags
-        struct {
-    unsigned long mButtonFlag0 : 1;         // +0x30 bits (Button::SetCheck 0x2f3500 tests bit 3)
-    unsigned long mButtonFlag1 : 1;
-    unsigned long mChecked : 1;             // +0x30 bit 2 (a check box's state)
-    unsigned long mButtonFlag3 : 1;
-    unsigned long mButtonFlag4 : 1;
-    unsigned long mButtonFlag5 : 1;         // +0x30 bit 5 (EELobbyColorButton 0x29060b draws it pressed)
-        };
-    };
     // the flag tests read one bit through an inline bool getter (shr n; test 1: Button::SetButtonFlags 0x2f3370)
-    bool IsRepeat() { return (mButtonFlags & 0x02) != 0; }
-    bool IsChecked() { return (mButtonFlags & 0x04) ? true : false; }
-    bool IsRadio() { return (mButtonFlags & 0x08) != 0; }
-    bool IsPressed() { return (mButtonFlags & 0x20) != 0; }
-    bool IsActivateOnPress() { return (mButtonFlags & 0x40) != 0; }
-    bool IsNoActivate() { return (mButtonFlags & 0x200) != 0; }
-    bool IsDefaultOnFocus() { return (mButtonFlags & 0x400) != 0; }
-    unsigned long GetButtonFlags() { return mButtonFlags; }
-    int GetMouseDownState() { return mMouseDownState; } // 0 up, 1 down outside, 2 down over
-    bool mKeyDown; //34
-    int mDelayAcc; //38
+    bool IsRepeat() { return (GetButtonFlags() & 0x02) != 0; }
+    bool IsChecked() { return (GetButtonFlags() & 0x04) ? true : false; }
+    bool IsRadio() { return (GetButtonFlags() & 0x08) != 0; }
+    bool IsPressed() { return (GetButtonFlags() & 0x20) != 0; }
+    bool IsActivateOnPress() { return (GetButtonFlags() & 0x40) != 0; }
+    bool IsNoActivate() { return (GetButtonFlags() & 0x200) != 0; }
+    bool IsDefaultOnFocus() { return (GetButtonFlags() & 0x400) != 0; }
+    unsigned long GetButtonFlags() { return (unsigned long)this->BCall(EeWonBtnCall::GetField,(intptr_t)EeWonBtnField::Flags); }
+    int GetMouseDownState() { return (int)this->BCall(EeWonBtnCall::GetField,(intptr_t)EeWonBtnField::MouseDownState); } // 0 up, 1 down outside, 2 down over
     SmartPtr<Sound> mClickSound; // at +0x3c
-    unsigned char mMouseDownState; //40, 0=up 1=downoutside 2=downover
-    static SmartPtr<Button> mDefaultButton; // 0x966224
-    static SmartPtr<Button> mDialogDefaultButton; // 0x966228
+    EeWonButton* mBtn;
     static void SetDialogDefaultButton(Button*); //2f31c0
     static void UnSetDialogDefaultButton(Button*); //2f3230
     static void SetDefaultButton(Button*); //2f3280
     static void UnSetDefaultButton(Button*); //2f3300
     void CopyAttributes(Button*); //2f3310
-    void ButtonDown(); //2f3660
-    void ButtonUp(bool); //2f36d0
-    Button* GetNextRadio(bool); //2f34a0
-    Button* GetEndRadio(bool); //2f34e0
-    bool IsMouseOver(); //2f3170
-    bool IsDefaultButton(); //2f31b0
+    void ButtonDown() { this->BCall(EeWonBtnCall::ButtonDown); } //2f3660
+    void ButtonUp(bool a) { this->BCall(EeWonBtnCall::ButtonUp,a); } //2f36d0
+    Button* GetNextRadio(bool f) { return static_cast<Button*>((Component*)this->BCall(EeWonBtnCall::GetNextRadio,f)); } //2f34a0
+    Button* GetEndRadio(bool f) { return static_cast<Button*>((Component*)this->BCall(EeWonBtnCall::GetEndRadio,f)); } //2f34e0
+    bool IsMouseOver() { return this->BCall(EeWonBtnCall::IsMouseOver)!=0; } //2f3170
+    bool IsDefaultButton() { return this->BCall(EeWonBtnCall::IsDefaultButton)!=0; } //2f31b0
     void SetClickSound(Sound*); //2f3910
-    virtual void AddedToParent(); //2f33c0 AddedToParent
-    virtual void MouseEnter(int,int); //2f35b0 MouseEnter
-    virtual void MouseExit(); //2f3620 MouseExit
-    virtual void MouseDown(int,int,int); //MouseDown
-    virtual void MouseUp(int,int,int);   //MouseUp
-    virtual void MouseDrag(int,int); //2f3740 MouseDrag
-    virtual void GotFocus();  //2f37a0 GotFocus
-    virtual void LostFocus(); //2f37d0 LostFocus
-    virtual bool KeyUp(int);     // 0x2f38b0, vtable +0x58
-    virtual bool KeyDown(int);   //KeyDown
-    virtual bool TimerEvent(int); //TimerEvent
-    virtual void MouseHover(unsigned long); // 0x2f3900 (forwarder)
+    virtual void AddedToParent() { this->BCall(EeWonBtnCall::AddedToParent); } //2f33c0
+    virtual void MouseEnter(int x,int y) { this->BCall(EeWonBtnCall::MouseEnter,x,y); } //2f35b0
+    virtual void MouseExit() { this->BCall(EeWonBtnCall::MouseExit); } //2f3620
+    virtual void MouseDown(int x,int y,int b) { this->BCall(EeWonBtnCall::MouseDown,x,y,b); } //2f35e0
+    virtual void MouseUp(int x,int y,int b) { this->BCall(EeWonBtnCall::MouseUp,x,y,b); } //2f3600
+    virtual void MouseDrag(int x,int y) { this->BCall(EeWonBtnCall::MouseDrag,x,y); } //2f3740
+    virtual void GotFocus() { this->BCall(EeWonBtnCall::GotFocus); } //2f37a0
+    virtual void LostFocus() { this->BCall(EeWonBtnCall::LostFocus); } //2f37d0
+    virtual bool KeyUp(int k) { return this->BCall(EeWonBtnCall::KeyUp,k)!=0; } // 0x2f38b0, vtable +0x58
+    virtual bool KeyDown(int k) { return this->BCall(EeWonBtnCall::KeyDown,k)!=0; } // 0x2f3800
+    virtual bool TimerEvent(int d) { return this->BCall(EeWonBtnCall::TimerEvent,d)!=0; } // 0x2f38d0
+    virtual void MouseHover(unsigned long d) { this->BCall(EeWonBtnCall::MouseHover,(intptr_t)d); } // 0x2f3900
+private:
+    intptr_t BCall(EeWonBtnCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_btn_call(this->mBtn,c,a,b,cc); }
 };
 
 enum MouseButton { MouseButton_Left=0,MouseButton_Middle=1,MouseButton_Right=2 };
