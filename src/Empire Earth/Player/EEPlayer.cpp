@@ -4599,20 +4599,12 @@ void EEPlayer::UnselectAllUnits()
     this->mActiveGroup->Clear();
 }
 
-#include "ee/EEUGPatrol.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // FUNCTION: EXE 0x563659
 // Sets the patrol group the patrol goal follows, moving the reference
-// EEUGPatrol's member, emitted in this unit (out of line among EEPlayer's members)
-void EEUGPatrol::SetPatrolGroup(EEPPatrolGroup* inGroup)
-{
-    if (this->mPatrolGroup != NULL)
-        this->mPatrolGroup->Dereference();
-    this->mPatrolGroup = inGroup;
-    if (inGroup != NULL)
-        inGroup->Reference();
-}
+// EEUGPatrol's member, emitted in this unit: the patrol goal moved whole to Rust (ee/EEUGRust.h; ee_units patrol.rs)
 
 // FUNCTION: EXE 0x563138
 // Adds a town building to a town: a new one, the only fitting one, or the largest fitting one after merging
@@ -4681,10 +4673,10 @@ bool EEPlayer::AddUnitToTown(EEComplexUnit* inUnit)
                 for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
                     if (theUnit->GetComplexUnit() == NULL)
                         continue;
-                    EEUGPatrol* theGoal = EEGoalCast<EEUGPatrol>(theUnit->GetComplexUnit()->mGoalState);
+                    EEUGRust* theGoal = EEPatrolGoalCast(theUnit->GetComplexUnit()->mGoalState);
                     if (theGoal == NULL)
                         continue;
-                    EEPPatrolGroup* theGroup = theGoal->mPatrolGroup;
+                    EEPPatrolGroup* theGroup = theGoal->GetPatrolGroup();
                     if (theGroup != NULL &&
                         std::find(theOldGroups.begin(), theOldGroups.end(), theGroup) != theOldGroups.end())
                         theGoal->SetPatrolGroup(theTown->mPatrolGroup);
@@ -4715,7 +4707,7 @@ void EEPlayer::RestorePatrols()
         EEGroup* theBase = theGroup;
         this->mPendingGroups.push_back(theBase);
         theGroup->KeepMobileUnits();
-        EEUGPatrol* theGoal = new EEUGPatrol(thePatrol, thePoint, true);
+        EEUGRust* theGoal = EEUGRust::NewPatrol(thePatrol, thePoint, true);
         theGroup->ClearGoal();
         theGroup->SetGoal(theGoal, false);
         theGroup->mAction = kActionMoveToNextPatrolPoint;

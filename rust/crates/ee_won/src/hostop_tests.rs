@@ -1086,20 +1086,11 @@ fn new_op(which: char, addr: &[u8]) -> Op {
         ee_won_multiping_new()
     } else if which == 'D' {
         const PRODUCTS: [&str; 3] = ["eeaoc", "", "x y"];
-        const NAMES: [&str; 4] = ["motd", "tou", "adv", "zzz"];
         let (t, p) = (addr[0] as usize, addr[1] as usize);
-        let doc = |owner: usize| {
-            if t < 3 {
-                format!("_won{}{}.txt", if owner == 0 { "sys" } else { PRODUCTS[p] }, NAMES[t])
-            } else {
-                String::new()
-            }
-        };
-        let (a, b) = (doc(0), doc(1));
         with(|s| s.doc = true);
         let pr = PRODUCTS[p];
-        // SAFETY: the texts' bytes
-        unsafe { ee_won_httpdoc_new(t as i32, pr.as_ptr(), pr.len(), a.as_ptr(), a.len(), b.as_ptr(), b.len()) }
+        // SAFETY: the texts' bytes (the WON directory: none, the driver's names)
+        unsafe { ee_won_httpdoc_new(t as i32, pr.as_ptr(), pr.len(), std::ptr::null(), 0) }
     } else if which == 'H' {
         const URLS: [&str; 4] =
             ["http://www.sierra.com/motd/sys/motd.txt", "www.sierra.com", "http://h:8080/a/b?c=1", "http://onlyhost"];

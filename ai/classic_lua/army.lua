@@ -14,6 +14,8 @@ local T = require("classic_lua.tune")
 local R = require("classic_lua.resource")
 local U = require("classic_lua.units")
 local G = require("lib.groups")
+local NAVY = require("lib.navy")
+local FERRY = require("classic_lua.ferry")
 local C = T.C
 
 local M = {}
@@ -1547,10 +1549,128 @@ local function assign_task(view, memory, g)
         #g.units))
 end
 
+-- The crossings (EECPASGSeaTransport: an attack sub-group whose target lies across water is carried there). DEVIATION:
+-- the crossing is lib.navy's landing (board, sail, unload at the weakest beach of the target's land) with the free
+-- transports; while too few hold the group, one more transport is ordered at a time (the epoch's sea transport,
+-- ferry.lua's class), and a crossing not under way in 5 minutes, or aborted, gives the group a defence task, with no
+-- crossing tried again for 10 minutes. The group's own orders wait while it crosses (lib.groups `manual`)
+local CROSS_WAIT_MS, CROSS_AGAIN_MS = 300000, 600000
+
+local function ships_in_use(memory)
+    local used = {}
+    for _, g in ipairs(G.all(army(memory))) do
+        if g.crossing ~= nil and g.crossing.L ~= nil then
+            for _, id in ipairs(g.crossing.L.ships) do
+                used[id] = true
+            end
+        end
+    end
+    local f = memory.ferry
+    if f ~= nil and f.trip ~= nil then
+        for _, id in ipairs(f.trip.L.ships) do
+            used[id] = true
+        end
+    end
+    return used
+end
+
+local function group_centre(g)
+    local sx, sy, n = 0, 0, 0
+    for _, id in ipairs(g.units) do
+        local u = R.unit(id)
+        if u ~= nil and u.inside == nil then
+            sx, sy, n = sx + u.x, sy + u.y, n + 1
+        end
+    end
+    if n == 0 then
+        return nil
+    end
+    return sx // n, sy // n
+end
+
+local function needs_crossing(view, memory, g)
+    if g.sea or g.task ~= "attack" or not FERRY.water_map(memory) or view.time < (g.no_cross or 0) then
+        return false
+    end
+    local cx, cy = group_centre(g)
+    return cx ~= nil and not ai.reach(cx, cy, g.x, g.y)
+end
+
+local function end_crossing(view, memory, g, why)
+    g.crossing = nil
+    g.manual = false
+    if why ~= nil then
+        g.no_cross = view.time + CROSS_AGAIN_MS
+        print(string.format("classic_lua army.cross id=%d end=%s", g.id, why))
+        g.mission = 0
+        assign_task(view, memory, g)
+    end
+end
+
+local function cross_step(view, memory, g)
+    local c = g.crossing
+    if c == nil then
+        c = {t = view.time}
+        g.crossing = c
+        g.manual = true
+        print(string.format("classic_lua army.cross id=%d start units=%d to=%d,%d", g.id, #g.units, g.x, g.y))
+    end
+    if c.L == nil then
+        if view.time - c.t >= CROSS_WAIT_MS then
+            end_crossing(view, memory, g, "no_ships")
+            return
+        end
+        local used = ships_in_use(memory)
+        local ships, cap = {}, 0
+        for _, t in ipairs(NAVY.transports()) do
+            if not used[t.id] and t.cargo == 0 and cap < #g.units then
+                ships[#ships + 1] = t
+                cap = cap + t.cap
+            end
+        end
+        if cap >= #g.units and #ships > 0 then
+            local L, why = NAVY.plan({x = g.x, y = g.y, player = g.enemy or 0}, g.units, ships)
+            if L == nil then
+                end_crossing(view, memory, g, "plan_" .. tostring(why))
+                return
+            end
+            c.L = L
+            print(string.format("classic_lua army.cross id=%d board ships=%d units=%d", g.id, #ships, #g.units))
+            return
+        end
+        local class = FERRY.transport_class(view)
+        if class == nil then
+            end_crossing(view, memory, g, "no_dock")
+            return
+        end
+        if not U.is_requested(memory, class) and not U.in_production(view, class) then
+            U.request(view, memory, class, 1)
+        end
+        return
+    end
+    local res, out = NAVY.landing_step(c.L)
+    if res == "landed" then
+        print(string.format("classic_lua army.cross id=%d landed n=%d", g.id, #out))
+        end_crossing(view, memory, g, nil)
+        set_place(g, "attack", g.x, g.y, g.radius, g.target)
+    elseif res == "aborted" then
+        end_crossing(view, memory, g, "aborted_" .. tostring(out))
+    end
+end
+
 -- the sub-groups' life: wait for the slots (at the rally point), gather (30 s at most), the task; a task done is
 -- given again
 local function update_groups(view, memory)
     local mem = army(memory)
+    -- (the transports the crossings hold, for the ferries)
+    memory.cross_ships = {}
+    for _, g in ipairs(G.all(mem)) do
+        if g.crossing ~= nil and g.crossing.L ~= nil then
+            for _, id in ipairs(g.crossing.L.ships) do
+                memory.cross_ships[id] = true
+            end
+        end
+    end
     for _, g in ipairs(G.all(mem)) do
         if g.role == "army" then
             if g.phase == "wait" then
@@ -1570,6 +1690,8 @@ local function update_groups(view, memory)
                     g.phase = "task"
                     assign_task(view, memory, g)
                 end
+            elseif g.phase == "task" and #g.units > 0 and (g.crossing ~= nil or needs_crossing(view, memory, g)) then
+                cross_step(view, memory, g)
             elseif g.phase == "task" and #g.units > 0 then
                 -- (EECPASGLand: a sub-group whose fight is over goes idle and is given a task again)
                 local fought = g.was_fighting and g.state ~= "fighting"

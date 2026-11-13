@@ -863,6 +863,40 @@ fn a_blit_small_against_the_window_is_not_a_frame() {
     assert!(g.blt(p, None, Some(exact_half), None, 0, 0).present.is_some());
 }
 
+#[test]
+fn a_copy_from_the_primary_reads_what_the_window_shows() {
+    let mut g = gx();
+    let (p, frame) = setup_present(&mut g);
+    let save = target(&mut g, 32, 32);
+    // nothing shown yet: the target is left as it was
+    drained(&mut g);
+    assert_eq!(g.blt(save, None, Some(p), Some(Rect::new(10, 10, 42, 42)), 0, 0).result, GX_OK);
+    assert!(!drained(&mut g).iter().any(|c| matches!(c, Call::DrawBlit(..))));
+    // a whole frame shown at (100, 100): the screen rect is read from the frame, in the frame's coordinates
+    g.blt(p, Some(Rect::new(100, 100, 1124, 868)), Some(frame), None, 0, 0);
+    drained(&mut g);
+    assert_eq!(g.blt(save, None, Some(p), Some(Rect::new(110, 120, 142, 152)), 0, 0).result, GX_OK);
+    let calls = drained(&mut g);
+    let blits: Vec<_> = calls.iter().filter_map(|c| if let Call::DrawBlit(d) = c { Some(*d) } else { None }).collect();
+    assert_eq!(blits.len(), 1);
+    assert_eq!(blits[0].mode, BlitMode::Copy);
+    assert_eq!(blits[0].source, Some(frame), "the last frame, not the primary");
+    // with partial blits on the window, the window image is read
+    let pointer = target(&mut g, 16, 16);
+    g.blt(p, Some(Rect::new(100, 100, 116, 116)), Some(pointer), None, 0, 0);
+    let image = g.s(p).window_image.unwrap();
+    drained(&mut g);
+    g.blt(save, None, Some(p), Some(Rect::new(100, 100, 132, 132)), 0, 0);
+    let calls = drained(&mut g);
+    let blits: Vec<_> = calls.iter().filter_map(|c| if let Call::DrawBlit(d) = c { Some(*d) } else { None }).collect();
+    assert_eq!(blits.len(), 1);
+    assert_eq!(blits[0].source, Some(image));
+    // a copy of what is shown onto itself does nothing
+    drained(&mut g);
+    assert_eq!(g.blt(image, None, Some(p), None, 0, 0).result, GX_OK);
+    assert!(!drained(&mut g).iter().any(|c| matches!(c, Call::DrawBlit(..))));
+}
+
 // ---- DrawText
 
 #[test]

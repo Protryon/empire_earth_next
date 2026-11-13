@@ -3796,6 +3796,117 @@ unaffordable under the epoch reserve. The towers' attack upgrade was refused for
   range upgrade boom buys from the Stone Age takes the towers'. B1's attack half is dead weight, and its cost is
   dropped from the priority spend.
 
+**The small raids (2026-11-12).** Against the improved classic, boom's Stone-Age food income was a fifth below its
+income against Age of AI (143.5 against 177.4 a minute). The classic raided it 12 times in the Stone Age, against 2
+for Age of AI, with 16 citizens lost against 8. 46% of those citizens died to 1-2 raiders, 44% while fleeing, and 42%
+with no own soldier within 10 tiles. Three switches, on the boom_order setup (boom-econ's 5da1c67d), 32 seeds:
+
+| Variant | Classic: defeats | Under 30 | W/L/C | Stone food a minute | Stone citizens lost | Age of AI: defeats, W/L/C |
+|---|---|---|---|---|---|---|
+| s0 | 9 | 13 | 2/20/10 | 154.4 | 14.1 | 0, 3/10/19 |
+| S1 militia at 2 x and short flights against 1-2 raiders (`small_raid`) | 11 | 17 | 2/20/10 | 150.6 | 15.6 | 0, 2/14/15 |
+| S2 the 3 nearest guard soldiers to raids of 1-3 (`detach_small`) | **5** | 8 | 6/23/3 | 153.2 | 11.6 | 0, 3/11/18 |
+| S3 back to work sooner (`fast_return`) | **6** | 7 | 2/22/8 | 161.6 | 11.9 | 0, 5/12/14 |
+| S1 + S2 + S3 | 11 | 13 | 5/21/6 | 154.1 | 14.9 | 0, 4/9/19 |
+| S2 + S3 | 7 | 10 | 3/21/8 | 164.0 | 11.7 | 0, 5/13/14 |
+
+On 64 seeds (2-65):
+
+| Variant | Opponent | Defeats | Under 30 | W/L/C | Copper | Bronze | End citizens |
+|---|---|---|---|---|---|---|---|
+| s0 | improved classic | 19 | 26 | 3/43/18 | 46, 54.6 | 23, 78.9 | 53.7 |
+| | Age of AI | 0 | 0 | 5/22/37 | 63, 50.2 | 52, 77.3 | 102.9 |
+| S2 + S3 (on) | improved classic | **12** | **18** | 6/41/17 | 49, 57.1 | 25, 88.1 | 65.5 |
+| | Age of AI | 0 | 0 | 9/20/35 | 63, 49.5 | 56, 79.8 | 101.6 |
+
+- **S2 and S3 are on by default.** The Stone food is 10-15 a minute higher against the classic (164 and 149 against
+  154 and 133 on the two halves of the seeds), defeats fall from 19 to 12 of 64, and the towns end with 12 more
+  citizens.
+- **S1 is off.** The militia against small raids loses citizens to the ranged raiders it now fights.
+- **Benched only on boom_order.** The default boom shares lib.defence and lib.guard and gets the two switches too.
+
+**The late game: iron (2026-11-12).** With S2 and S3 on, no town of the default boom falls after the Copper Age.
+What holds it back is the Bronze advance: its save sits unpaid for 44 minutes on iron alone (stock 3-27, income 0-75
+a minute), because the army is exempt from the reserve and spends the iron as it comes in. Two switches against
+that, and B4 (warships from the dock) for the default boom, 32 seeds against the improved classic, the m13 exe:
+
+| Variant | Defeats | Bronze (games, median min) | Dark | Save unpaid (min) | Boats lost after Copper |
+|---|---|---|---|---|---|
+| boom, base | 7 | 9, 93.7 | - | 44 | 24 |
+| boom, `iron_free` (soldiers without iron while the iron is short) | 8 | 9, 90.2 | 5 | 42 | 21 |
+| boom, `iron_free` + boom-econ's `iron_guard` | 8 | 8, 89.4 | 4 | 43 | 21 |
+| boom, B4 (`boat_guard`, `tower_up_ships`) | 8 | 8, 90.1 | - | 39 | **14** |
+| boom_order, base | 6 | 11, 79.5 | 7 | 58 | 13 |
+| boom_order, `iron_free` | 6 | 14, 78.7 | 10 | 56 | 11 |
+| boom_order, `iron_free` + `iron_guard` | 6 | **16**, 83.2 | 10 | 55 | 14 |
+
+- **`iron_free` with `iron_guard` helps boom_order:** 16 games reach the Bronze Age against 11, at the same 6
+  defeats. The save still waits about as long; the gain is in games that would never have paid it.
+- **It does not help the default boom,** whose iron income is too low for the saving to matter. Off there.
+- **B4 cuts the default boom's boats lost after the Copper Age by 40%** (14 against 24) and the save's wait by 5
+  minutes, for one defeat more (within the noise).
+- Both switches stay off by default here (`plan.iron_free`, `econ.iron_guard`): the choice is the owner's.
+
+**The waves after Copper (2026-11-12).** On boom_order against the improved classic, with both iron switches on,
+175 incidents of 3-13 foes after the Copper Age killed 592 citizens, against 337 lost to raids of 1-2. A wave is
+typically 4 foes, lasts about 50 s, and comes about 15 tiles out. 84% of the dead were killed by land soldiers, at 1.6
+tiles: bowmen, macemen, short swords, phalanxes, horsemen and war elephants. 54-60% were running when first hit. The
+losses follow the army: 5.9 citizens a wave with 0-5 soldiers, 1.5 with 25 or more. With a temporary trace of the
+guard's view (168 waves):
+- in 85 waves the guard saw only clusters of 1-3, so S2 sent 3 soldiers to each and the rest waited at the post;
+- in 47 it engaged, losing 4.6 citizens a wave;
+- in 27 it had no soldiers (6.0 a wave);
+- in 8 it held off on the odds.
+
+The iron switches starved the army: under 10 soldiers in 28% of the minutes after Copper, against 9% without them.
+iron_guard reserved the epoch's iron that iron_free only released while the stock was below the cost. With no archery
+range, iron_free trained nothing. An unaffordable order sat queued and kept its class from being ordered again.
+
+Fixes, 32 seeds (2-33), the m14 exe (the FindGatherSpot crash fixed):
+
+| Variant | Defeats | Under 30 | Copper | Bronze | Army under 10 | Wave dead |
+|---|---|---|---|---|---|---|
+| A0 base (both switches off) | 6 | 10 | 22 | 11 | 9% | 476 |
+| A1 iron switches fixed + `train_spare` | 7 | 10 | 22 | 14 | 20% | 1040 |
+| A2 `train_spare` only | 7 | 10 | 22 | 11 | 13% | 663 |
+| A3 iron switches fixed | 7 | 8 | 24 | 16 | 26% | 718 |
+| B1 `detach_r` 12 | 6 | 6 | 25 | 13 | 10% | 597 |
+| C1 `guard_refuge` | 9 | 12 | 21 | 11 | 4% | 447 |
+| C2 `guard_refuge` from Copper | 7 | 11 | 22 | 12 | 8% | 475 |
+
+On seeds 34-65, B1 had 8 defeats against A0's 5 (14 against 11 of 64).
+- **None is better than the base.** The fixed iron switches still starve the army: a ranged-only guard cannot keep
+  its numbers. Holding back an unaffordable order (`train_spare`) is worse than queueing it, because a queued order
+  has the first claim on the income. All of them stay off (`plan.iron_free`, `plan.train_spare`, `detach_r = 0`,
+  `guard_refuge`).
+- The waves are an army-size problem: the guard engages them when it has the soldiers.
+
+**The Bronze save (2026-11-12).** On boom_order (base, the m14 exe, 32 seeds against the improved classic), a
+per-minute trace of the save found 914 minutes of saving for Bronze in 22 games:
+- **Iron** (1320 for Bronze) was short in 849 minutes, and the only resource short in 450. Food was short in 389 and
+  gold in 320. Stone is not in the cost.
+- **Iron income:** about 12 gatherers against the want of 18, bringing in about 65 iron a minute. The soldier orders
+  asked for about 41 of it. The slow saves had 6-10 iron gatherers and 33-52 iron a minute; the fast ones had 16-20
+  and 95-107.
+
+Two fixes:
+- boom-econ's walker to claimed sites nobody has seen (1fe7a900, always on in the order) brought the unexplored iron
+  mines into use, and its ECON.iron_push found nothing more to do (off).
+- Here, `plan.iron_lean`: from the Copper Age while saving, this percent of the iron infantry's share is trained as
+  ranged soldiers.
+
+| Variant (with the walker) | Seeds | Defeats | Copper | Bronze | Dark | Wave dead | Army under 10 |
+|---|---|---|---|---|---|---|---|
+| P0 base | 2-33 | 5 | 23, 52.9 | 15, 75.1 | 8 | 374 | 9% |
+| P2 `iron_lean` 50 | 2-33 | 5 | 23 | 17, 76.7 | 12 | 220 | 4% |
+| P12 + `iron_push` | 2-33 | 5 | 23 | 17, 76.7 | 12 | 218 | 4% |
+| P0 base | 34-65 | 3 | 26, 53.4 | 16, 79.9 | 11 | 573 | 5% |
+| P2 `iron_lean` 50 | 34-65 | 3 | 26 | 18, 81.4 | 11 | 720 | 7% |
+
+- **`iron_lean` 50 on 64 seeds:** Bronze in 35 games against 31 and Dark in 23 against 19, at the same 8 defeats. The
+  wave dead are equal (940 against 947).
+- **The save is no shorter** (about 60 minutes unpaid in both). What it waits on after the walker is not measured yet.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
@@ -3862,6 +3973,40 @@ The requirement: Stone ~21, Copper ~45, Bronze ~66; gold 81 and iron 74 a minute
 Open: the O3 to O8 slowdown; gold and iron 12-18 held through Stone; the citizens' growth (a third town centre or
 earlier second one); the losses against the improved classic (boom-defence's o4b: in 12 of 14 the Stone forage ran out
 before Copper was paid; O8's food reach did not yet move it).
+
+**Later rounds (2026-11-12), to the playtest entry `boom_order`.** The order went to the owner's playtest as its own AI,
+`boom_order` ("Boom (owner order)", `ai/boom_order.lua` through `boom.configure`; the default `boom` keeps the order
+off). What changed on the way, each benched on 32 seeds against the improved classic and Age of AI:
+
+- **The settlements touch from the start** (the owner's rule; lib.place's builders now 3 from within 20 tiles, which
+  brought its pace up to the C++ verb's); the Prehistoric food bank at the advance (240 food) is off: it put the
+  Stone Age 2 minutes later.
+- **The Stone Age's town centres wait on food, then on the save.** A TEST ONLY spending trace (`EE_AI_EXP=spending`
+  in `EEComputerPlayer::Pay`; game samples identical with it) shows Stone's food against Age of AI: 185 a minute in,
+  89 on citizens (2.2 a minute), 20 on soldiers, 23 on the epoch, 1 on the techs (the techs cost nothing that matters).
+  `stone_developed` now latches on the owner's targets only (12+ gold and iron, 6 stone, 10+ wood, 10 boats; 30 minutes
+  as a safety); the Stone phases train to 76 citizens. Neither more town centres (C2) nor more mines (C7) moved gold
+  and iron: the citizens, and behind them the food, are the limit.
+- **The boats.** The owner's own pace is one dock at once and a boat every 30 s (10 by +7 minutes). A second dock
+  (D1) and a larger wood bank (Wx) did not help. The late docks had wood but no dock site: the dock finder knew 9-18
+  fish within 30 tiles and no shore tile in sight for them (a building goes only on seen tiles). The shore scout
+  (`BO.OPT.shore_scout`, on in boom_order: a wood gatherer walks a ring 16 tiles round home while the Stone Age is
+  saved for) brought "10 boats by +7" misses from 9 to 5 of 32 against Age of AI and Bronze from 26 to 29 games, the
+  improved classic unchanged.
+- **The Bronze save's iron.** boom-defence found the save unpaid 44-60 minutes on iron alone. The further iron mines
+  stood claimed but unexplored for 30 minutes (gatherers go only to seen sites): lib.place now sends a walker to a
+  claimed site nobody has seen (on in the order). On seed 17 that took the Copper Age's iron from 6 to 18 gatherers
+  (Bronze at 63.1). `ECON.iron_push` (claim iron out to FAR_REACH and move food to iron while the save lacks iron)
+  adds nothing on top of it and stays off; `ECON.iron_guard` stays off. boom-defence's `iron_lean` 50 (half the guard's
+  iron infantry share to ranged during the Bronze save; 64 seeds: the same defeats, Bronze 35 games against 31) is on
+  in boom_order.
+- **boom_order against the improved classic is level with the default boom** (11 defeats each on main e8067a9's exe);
+  against Age of AI 16-5-11 (boom's default, Gbase2: 16-7-8). P1 (boom_order with iron_push, boom-defence's exe):
+  Stone 20.0, Copper 46.5, Bronze 70.8 (28/32), Dark 86.1 (22) against Age of AI, the Bronze save unpaid 27.6 minutes
+  a game.
+
+Still open: the owner's citizen growth (3.4 a minute against 1.6-2.1), gold and iron income (about half the
+requirement), the Prehistoric's exact counts (one over or one short on the mines in most games).
 
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
@@ -4284,6 +4429,108 @@ line, AI_LUA_UNITS §11):
   - the late raids on far gatherers (§8.58-§8.61: 1111 citizens lost after 60 minutes against the C++'s 599);
   - the empty sub-groups' tasks (§8.55).
 
+
+### 8.63 Porting everything: the inventory, and the C++ classic on islands (2026-11-12, EE-SIM)
+
+The owner's direction: port all of the C++ classic into Lua, so that its decision code can be deleted. The order:
+1. the inventory (below);
+2. the missing parts by value: transports and island play (2a), walls (2b), air, space and submarines (2c), the
+   wonder race and the ICBM (2d), allies (2e), the rest (2f);
+3. benches beyond Small land maps;
+4. classic_lua as the lobby's classic for a soak;
+5. then the deletion, keeping the helpers the Lua calls (EEComputerPlayer's engine glue split out).
+
+**The inventory.**
+- **Decision code: about 47,900 lines.**
+  - Managers and commanders: 34,374. These are EEComputerPlayer, the civilization, unit, build, research and
+    resource managers, the resource centres, the walls, the combat manager and its strategy, the attack
+    commander/groups/sub-groups and formations, the unit selector, the personnel, the intelligence, the defence
+    commander and aid packages, the exploration, the player interaction and EEAIFunctionObjects.
+  - Sub-group and unit state machines (ASG*, ASGU*): 13,481.
+- **What stays:** the Lua engine and its helpers (12,706) and the engine proper (pathfinding, continents, influence,
+  towns, herds: about 15,800).
+- **classic_lua today:** 7,324 lines, with lib.groups for the army's movement and fighting.
+- **Not started:**
+  - the walls;
+  - the transports and ferries (RequestFerry / FerryGatherers / TransportIdle, ChooseTransportClass, the sea
+    transport sub-groups, covered landings);
+  - the air, space and submarine groups, carriers and paratroopers;
+  - the wonder race and the ICBM;
+  - the allies (AidAllies, AttackPlayer / DefendPlayer, CheckRaids / Retaliate);
+  - BuildUp (deathmatch);
+  - the prophets' and priests' micro (calamities), GiveImprovements, the WW1 groups, flares;
+  - BalanceProduction, BuildingAbandoned / BuilderLost, CitizenLost's re-cost;
+  - the robotic farm, the island map's hired garrison citizens, the chat taunts.
+
+**The C++ classic on islands.** The first island bench (Small Islands, balanced, 8 seeds, 60 minutes) gave the port
+7-0, 1 close. The C++ stood at 22 citizens from minute 10 and reached Copper in no game. Neither side used a
+transport.
+- **How it stalls.** A citizen request stood from minute 8 and never started: the epoch reserve held the food.
+  Two bush gatherers fed it. The demand split wanted 2 on food with 1,108 food short.
+- **Why.** The food room (GetGatherCapacity) counted only untapped sites. A resource's hit points fall from 1 when
+  it is first gathered from (§8.57), and an island has little food outside its centres, so the room fell to about
+  2 gatherers.
+- **The fix, in both** (the owner's rule for such bugs). GetGatherCapacity counts the untapped sites for the
+  citizen target only (GetWantedCitizens, inResource -1). A resource's own room counts every site with something
+  left. The port did this already (§8.58's deviation), which is now gone: the port and the C++ agree.
+
+| bench | before | after |
+|---|---|---|
+| Small Islands, 8 seeds: Lua won-lost | 7-0, 1 close | 6-0, 2 close |
+| islands: the C++'s Stone / Copper | 6/8 at 35 min / 0/8 | 8/8 at 25 min / 2/8 at 55 min |
+| islands: the C++'s citizens at 40 min | 22 | 40.5 |
+| land (balanced, 32 seeds): Lua won-lost | 12-13, 7 close (§8.61) | 12-16, 4 close |
+| land: the C++'s Copper / Bronze | 21 / 3 | 27 / 6 |
+| land: the C++'s citizens at 30 / 40 min | 27.5 / 41.4 | 33.5 / 48.2 |
+| land: Lua's Copper / Bronze | 24 / 12 | 20 / 11 |
+
+**On land the C++ classic is stronger now.** It reaches Copper in 27 of 32 games, not 21, and it has 7 more
+citizens at 40 minutes. This changes the opponent of every bench against the classic: the benches before this fix
+need a new baseline. The port, the same code against a stronger opponent, now trails 12-16 (Copper 20 against 27).
+That is near the edge of the noise, and it is to be watched as 2a goes on. On islands the C++ now plays, but the
+port still wins 6-0 with 2 close (66.8 citizens at 40 minutes against 40.5). That gap is 2a's.
+### 8.64 Porting everything, 2a: the ferries (2026-11-12, EE-SIM)
+
+The classic's ferries (EECPResourceManager::RequestFerry / FerryGatherers / TransportIdle, IsIslandExpansionDue,
+ChooseTransportClass's sea transports) are now `ai/classic_lua/ferry.lua`. On an island or planets map a mineral can
+be wanted, or the island expansion due (its timer: island_expansion_timer minutes, started again after each ferry).
+When the resource's first target lies on land the town's idle citizens cannot walk to, a free transport takes as
+many as it holds to it. The crossing is lib.navy's landing: board, sail, unload. Ashore, the citizens are sent to
+gather. With no free transport, one more is ordered while fewer than 4 exist and none is requested or being made.
+The citizens on a trip are left alone by the gatherer assignment and the builders.
+
+Small Islands, balanced, 60 minutes, 16 seeds:
+- **Ferries:** 67 started, 50 landed, 6 aborted, 0 script errors. The C++ asked for 240 transports for its
+  ferries and 35 for its attacks.
+- **The result:** Lua 10-3, 3 close. The 8 seeds before the ferry gave 6-0, 2 close (§8.63), so the island gap is
+  the economy's, not the ferry's.
+- **Citizens:** the port has more from 10 minutes (23.8 against 21.0; 63.8 against 34.2 at 40 minutes).
+- **Copper:** 12 of 16 games against 5.
+
+Determinism on islands (seeds 3 and 5, 60 minutes, --repeat 2, ferries in both) is identical. Next in 2a: the
+attack groups' crossings (the C++'s ASGSeaTransport: the transports for an attack across water), and why the port
+outgrows the C++ on islands from the first minutes.
+
+### 8.65 Porting everything, 2a: the attack crossings (2026-11-12, EE-SIM)
+
+An attack sub-group whose target lies across water (on an island or planets map, the group's land not reaching
+it) is now carried there, standing in for the C++'s EECPASGSeaTransport (army.lua `cross_step`).
+- **The crossing.** The free transports (none held by a ferry or by another crossing) are taken until they hold the
+  group, and lib.navy's landing carries it: board, sail, unload at the weakest beach of the target's land. Ashore,
+  the group takes up its attack task again.
+- **Too few transports.** One more of the epoch's sea transport is ordered at a time.
+- **Giving up.** A crossing not under way within 5 minutes, or aborted, gives the group a defence task, and no
+  crossing is tried again for 10 minutes.
+- **The group's own orders** wait while it crosses (lib.groups `manual`).
+- **DEVIATION.** The C++'s transport sub-group (its loading, escorts and covered landings) is lib.navy's landing.
+
+Small Islands, balanced, 90 minutes, 8 seeds:
+- 21 crossings started, all 21 boarded, 20 landed. 0 script errors.
+- The C++ asked for 41 transports for its attacks.
+- The result stays 6-0, 2 close: the island gap is still the economy's, which is next.
+
+Determinism on islands (seeds 3 and 5, 90 minutes, --repeat 2, a landing in one of them) is identical. On land maps
+nothing changes (no crossing is needed).
 
 ### 8.9 Next
 

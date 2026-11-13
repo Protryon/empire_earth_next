@@ -60,8 +60,6 @@
 #include "ee/EEE2DLightGlow.h"
 #include "ee/EEE2DLightning.h"
 #include "ee/EEE2DMarchingIcons.h"
-#include "ee/EEE2DCircularMarchingIcons.h"
-#include "ee/EEE2DSquareMarchingIcons.h"
 #include "ee/EEE2DParticle.h"
 #include "ee/EEE2DPulseWave.h"
 #include "ee/EEE2DSmokePlume.h"
@@ -206,13 +204,13 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
             break;
         case 16:
             if (inUnit && inUnit->mComplexUnit)
-                theEffect = new EEE2DCircularMarchingIcons(inUnit, inEffect);
+                theEffect = new EEE2DMarchingIcons(inUnit, inEffect, EE_GFX_EFFECT_KIND_CIRCULAR_ICONS);
             else
                 theResult = 10;
             break;
         case 15:
             if (inUnit && inUnit->mComplexUnit)
-                theEffect = new EEE2DSquareMarchingIcons(inUnit, inEffect);
+                theEffect = new EEE2DMarchingIcons(inUnit, inEffect, EE_GFX_EFFECT_KIND_SQUARE_ICONS);
             else
                 theResult = 10;
             break;
@@ -838,10 +836,10 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                     theEffect = new EEE2DFireTrail();
                     break;
                 case kEffect2DSquareMarchingIcons:
-                    theEffect = new EEE2DSquareMarchingIcons();
+                    theEffect = new EEE2DMarchingIcons(EE_GFX_EFFECT_KIND_SQUARE_ICONS);
                     break;
                 case kEffect2DCircularMarchingIcons:
-                    theEffect = new EEE2DCircularMarchingIcons();
+                    theEffect = new EEE2DMarchingIcons(EE_GFX_EFFECT_KIND_CIRCULAR_ICONS);
                     break;
                 case kEffect2DPulseWave:
                     theEffect = new EEE2DPulseWave();

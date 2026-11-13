@@ -2217,7 +2217,13 @@ unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
             theActive++;
             for (unsigned long u = 0; u < theCenter->mUnits.size(); u++) {
                 unsigned long theType = theCenter->mUnits[u]->mResourceType;
-                if (theType >= 2 && theType < 7 && theCenter->mUnits[u]->mHitPoints > 0)
+                // fixed (AI_RESEARCH 8.63): a resource's hit points fall from 1 when it is first gathered from, so the
+                // untapped sites (mHitPoints > 0) are counted for the citizen target only (inResource -1); a
+                // resource's own room counts every site with something left (on a small island the tapped bushes
+                // left the food room at about 2 gatherers and the economy stalled against the epoch reserve)
+                bool theCounts = inResource < 0 ? theCenter->mUnits[u]->mHitPoints > 0
+                                                : theCenter->mUnits[u]->GetResourceAmount() > 0;
+                if (theType >= 2 && theType < 7 && theCounts)
                     theSites[theType]++;
             }
         }

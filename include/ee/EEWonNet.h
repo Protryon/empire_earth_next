@@ -20,7 +20,7 @@ class TSCriticalSection;
 class UIControl;
 class UITextLabel;
 
-struct EeWonAuthSecrets; // rust/ee_rust.h
+struct EeWonAuthLogin; // rust/ee_won.h
 struct EeWonAuthFlow; // rust/ee_rust.h (authflow.rs)
 struct EeWonIpAddr; // rust/ee_rust.h (ipobj.rs)
 struct EeWonAddr; // rust/ee_rust.h (servctx.rs)
@@ -270,14 +270,6 @@ public:
     bool mValid; //18; actual SDK mIsValid; complete extent1c
 };
 
-// Full real SDK mapped value3c. Its empty inline constructor is defined in WONBuffer.h, where ByteBuffer is complete.
-class AuthLoginCommunityData {
-public:
-    AuthLoginCommunityData();
-    CDKey mCDKey; //00..1c
-    std::basic_string<unsigned char> mSimpleHash; //1c..2c, exact canonical RawBuffer alias expansion
-    std::basic_string<unsigned char> mKeyedHashData; //2c..3c
-};
 
 struct DirDataObject {
     std::string mDataType; //00..0f
@@ -328,7 +320,6 @@ class GetCertOp;
 class LightGetCertOp;
 class AuthPeerData;
 class WriteBuffer;
-class AuthLoginCommunityData; //actual full3c value defined above with existing CDKey
 class AuthSession; //actual borrowed session API identity
 class ElGamal;
 class ServerContext; //actual complete3c owner in Routing
@@ -377,9 +368,9 @@ public:
 
     // inline accessor: one more inline expansion in EEUIEWNAROpenScreen::ProcessEvent makes VC6 refuse the fourth
     // UIEvent ctor as in the original (0x1eb3a2)
-    const std::wstring& GetName() const { return mName; }
-    const std::wstring& GetUserName() const { return mName; } //genuine SDK alias for actualusername50, native loginrequest
-    const std::wstring& GetPassword() const { return mPassword; } //genuine SDK borrowed60 accessor
+    std::wstring GetName() const { return this->LoginText(1); } // a copy (the original returned its member)
+    std::wstring GetUserName() const { return this->LoginText(1); }
+    std::wstring GetPassword() const { return this->LoginText(2); }
 
     SmartPtr<AuthSession> GetSession(const IPAddr&); //2df080, owning return; call-only
     void PutSession(const IPAddr&,AuthSession*); //2deeb0, actual borrowed parameters; call-only
@@ -407,15 +398,12 @@ public:
     // timer, the refresh status and flag, the session map and its clean-up cursor): ee_won's (authflow.rs), owned
     EeWonAuthFlow* mFlow;
     ConstSmartPtr<AuthPeerData> mPeerData; //4c
-    std::wstring mName;                     // +0x50 (the lobby screens show it)
-    std::wstring mPassword; //60..70, genuine owned string
-    std::string mLoginSecretFile; //70..80
-    std::map<std::wstring,AuthLoginCommunityData> mCommunityMap; //80..8c, untouched by secret source; true full3c mapped value already complete above
-    // the login secrets (0x8c..0x98, a std::list of expiry and 8-byte key): ee_won's (authctx.rs), owned here
-    EeWonAuthSecrets* mSecrets;
-    std::map<std::wstring,CDKey> mCDKeyCommunityJoinMap; //98..a4, true completeCDKey1c
-    std::map<std::wstring,ConstSmartPtr<ByteBuffer> > mSetCommunityUserDataMap; //a4..b0
-    std::map<std::wstring,std::wstring> mNicknameMap; //b0..bc
+    // the login data (0x50..0xbc: the user name and password, the secret file and secrets, the communities with
+    // their CD keys and file hashes, the CD-key joins, the user data and the nicknames): ee_won's (authlogin.rs),
+    // owned, its own lock
+    EeWonAuthLogin* mLogin;
+    std::wstring LoginText(int inWhich) const;
+    void LoginSet(int inWhich, const std::wstring& inKey, const std::string& inValue = std::string(), long long inNum = 0);
     SmartPtr<ServerContext> mServerContext; //bc..c0, genuine last owner; actual completec0 allocation
 };
 } //namespace WONAPI

@@ -12,11 +12,10 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinnedContainers.h"
 namespace WONAPI {
-// Creates a multi-column list area with the given column count, room for 11000 items and no sort
-// function (emitted at 0x007033a0)
+// Creates a multi-column list area with the given column count and no sort (the original reserved room for
+// 11000 items: the Rust list grows as needed; emitted at 0x007033a0)
 MultiListArea::MultiListArea(int columns)
 {
-    this->mItems.reserve(11000);
     this->mTotalColumnWidth=0;
     this->mSortColumn=0;
     this->mSortColumnPrev=0;

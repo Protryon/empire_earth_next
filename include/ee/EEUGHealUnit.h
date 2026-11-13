@@ -33,7 +33,6 @@ public:
     virtual void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit*);  // +0x6c 0x225828
     virtual bool Suits(EEUnit* inUnit);       // +0x70 0x22583d
     virtual void Work(EEComplexUnit* inUnit);        // +0x74 0x225789: heals the healee every second
-    bool IsInRange(EEComplexUnit* inHealer, EEComplexUnit* inTarget);   // 0x2254c0 (provisional name)
     void SetTarget(EEComplexUnit* inTarget);   // 0x22567a (provisional name)
     // out of line, ICF-folded into 0x12c734 (EECCAreaEffect::GetContagionFunctor, `mov eax,[ecx+0x38]`): mTarget; the
     // helicopter's Virtual10 0x558da4 calls it (provisional name)

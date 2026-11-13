@@ -135,7 +135,8 @@ function M.available_citizens_now()
     local out = {}
     for _, id in ipairs(ai.units{category = "citizen"}) do
         local u = R.unit(id)
-        if u ~= nil and u.inside == nil and (u.action == "idle" or u.action == "gather") then
+        if u ~= nil and u.inside == nil and (u.action == "idle" or u.action == "gather")
+                and not require("classic_lua.ferry").busy_now[id] then
             out[#out + 1] = u
         end
     end

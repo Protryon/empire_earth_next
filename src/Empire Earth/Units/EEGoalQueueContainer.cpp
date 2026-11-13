@@ -25,6 +25,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitStore.h"
+#include "rust/ee_units.h"
 #include "ee/EECalamityManager.h"
 
 const UString EEUnitVectorItem::sData("EEGoalQueueContainer-Data");
@@ -32,6 +33,111 @@ const UString EEUnitVectorItem::sData("EEGoalQueueContainer-Data");
 // SYNTHETIC: EXE 0x605616   (ctor)
 // SYNTHETIC: EXE 0x605627   (registrar)
 // SYNTHETIC: EXE 0x605633   (dtor)
+
+// New (R5b.4, the sixteenth round): the host of the queues' record and per-tick update in Rust (ee_units goals.rs):
+// typed FSFile reads and writes, the goals' own Save and CreateGoal + Load, the container's fields; the update's
+// expiry and refresh (EEUnitUpdate.cpp hands a unit, no file)
+namespace {
+
+int32_t QueueWriteU32(void* inContext, uint32_t inValue)
+{
+    return (int32_t)static_cast<EEGoalQueueIO*>(inContext)->mFile->Write(inValue);
+}
+
+int32_t QueueWriteU8(void* inContext, uint8_t inValue)
+{
+    unsigned char theValue = inValue;
+    return (int32_t)static_cast<EEGoalQueueIO*>(inContext)->mFile->Write(theValue);
+}
+
+int32_t QueueWriteBool(void* inContext, bool inValue)
+{
+    return (int32_t)static_cast<EEGoalQueueIO*>(inContext)->mFile->Write(inValue);
+}
+
+int32_t QueueReadU32(void* inContext, uint32_t* outValue)
+{
+    return (int32_t)static_cast<EEGoalQueueIO*>(inContext)->mFile->Read(*outValue);
+}
+
+int32_t QueueReadU8(void* inContext, uint8_t* outValue)
+{
+    unsigned char theValue = *outValue;
+    long theResult = static_cast<EEGoalQueueIO*>(inContext)->mFile->Read(theValue);
+    *outValue = theValue;
+    return (int32_t)theResult;
+}
+
+int32_t QueueSaveGoal(void* inContext, uint64_t inGoal)
+{
+    EEGoalQueueIO* theIO = static_cast<EEGoalQueueIO*>(inContext);
+    EEUnitGoal* theGoal = reinterpret_cast<EEUnitGoal*>(static_cast<uintptr_t>(inGoal));
+    return (int32_t)theGoal->Save(theIO->mMajor, theIO->mMinor, *theIO->mFile);
+}
+
+int32_t QueueLoadGoal(void* inContext, uint8_t inKind)
+{
+    EEGoalQueueIO* theIO = static_cast<EEGoalQueueIO*>(inContext);
+    EEUnitGoal* theGoal = EEUnitGoal::CreateGoal(inKind);
+    long theResult = theGoal->Load(theIO->mMajor, theIO->mMinor, *theIO->mFile);
+    if (theResult == kErrorOK)
+        theIO->mQueue->mGoals.push_back(theGoal);
+    else
+        delete theGoal;
+    return (int32_t)theResult;
+}
+
+void QueueClear(void* inContext)
+{
+    static_cast<EEGoalQueueIO*>(inContext)->mQueue->Clear();
+}
+
+int32_t QueueReadTimer(void* inContext, uint32_t inField)
+{
+    EEGoalQueueIO* theIO = static_cast<EEGoalQueueIO*>(inContext);
+    EEUnitVectorItem* theQueue = theIO->mQueue;
+    long theResult;
+    if (inField == 0)
+        theResult = theIO->mFile->Read(theQueue->mStartTime);
+    else if (inField == 1)
+        theResult = theIO->mFile->Read(theQueue->mTime);
+    else
+        theResult = theIO->mFile->Read(theQueue->mStarted);
+    EEGoalQueueReport(theQueue);
+    return (int32_t)theResult;
+}
+
+void QueueExpire(void* inContext, uint32_t inIndex)
+{
+    EEUnitVectorItem& theQueue = static_cast<EEGoalQueueIO*>(inContext)->mUnit->mGoalQueues[inIndex];
+    theQueue.Clear();
+    theQueue.ResetTimer();
+}
+
+void QueueRefresh(void* inContext)
+{
+    EEComplexUnit* theUnit = static_cast<EEGoalQueueIO*>(inContext)->mUnit;
+    theUnit->RefreshGoals();
+    theUnit->RefreshActiveGoal();
+}
+
+}  // namespace
+
+void EEGoalQueueHostOf(EEGoalQueueIO& inIO, EeGoalQueueHost& outHost)
+{
+    outHost.context = &inIO;
+    outHost.write_u32 = QueueWriteU32;
+    outHost.write_u8 = QueueWriteU8;
+    outHost.write_bool = QueueWriteBool;
+    outHost.read_u32 = QueueReadU32;
+    outHost.read_u8 = QueueReadU8;
+    outHost.save_goal = QueueSaveGoal;
+    outHost.load_goal = QueueLoadGoal;
+    outHost.clear = QueueClear;
+    outHost.read_timer = QueueReadTimer;
+    outHost.expire = QueueExpire;
+    outHost.refresh = QueueRefresh;
+}
 
 // FUNCTION: EXE 0x60564f
 // Creates an empty goal queue for a unit, with its timer stopped
@@ -58,6 +164,7 @@ EEUnitVectorItem::EEUnitVectorItem(const EEUnitVectorItem& inItem)
     this->mStartTime = inItem.mStartTime;
     this->mTime = inItem.mTime;
     this->mStarted = inItem.mStarted;
+    EEGoalQueueReport(this);   // New (R5b.4, the sixteenth round): the mirror's timer
 }
 
 // FUNCTION: EXE 0x605768
@@ -70,13 +177,6 @@ EEUnitVectorItem::~EEUnitVectorItem()
 
 // FUNCTION: EXE 0x605780
 // Empties the queue once its timer has run out
-void EEUnitVectorItem::Update()
-{
-    if (gPhysics->mGameTime >= this->mStartTime + this->mTime) {
-        this->Clear();
-        this->ResetTimer();
-    }
-}
 
 // FUNCTION: EXE 0x6057a7
 // Tells each goal it left the queue, deletes them all and stops the timer
@@ -114,6 +214,7 @@ void EEUnitVectorItem::AddTime(long inTime)
         this->mStartTime = gPhysics->mGameTime;
     }
     this->mTime += inTime;
+    EEGoalQueueReport(this);   // New (R5b.4, the sixteenth round): the mirror's timer (ee/EEUnitStore.h)
 }
 
 // FUNCTION: EXE 0x605843
@@ -132,37 +233,12 @@ void EEUnitVectorItem::Insert(unsigned long inIndex, EEUnitGoal* inGoal)
 // and reads the timer; returns the first read error
 long EEUnitVectorItem::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned char theKind = 0;
-    unsigned long theCount;
-    EEUnitGoal* theGoal;
-    this->Clear();
-    long theResult = inFile.Read(theCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = inFile.Read(theKind);
-        if (theResult != kErrorOK)
-            continue;
-        theGoal = EEUnitGoal::CreateGoal(theKind);
-        theResult = theGoal->Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK)
-            this->mGoals.push_back(theGoal);
-        else {
-            delete theGoal;
-            theGoal = NULL;
-        }
-    }
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(this->mStartTime);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(this->mTime);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mStarted);
-        }
-    }
-    return theResult;
+    // New (R5b.4, the sixteenth round): the record's sequence is Rust (ee_units goals.rs load), the reads, the
+    // goals' CreateGoal and Load and the container's fields this host's
+    EEGoalQueueIO theIO = {this, &inFile, inMajorVersion, inMinorVersion, NULL};
+    EeGoalQueueHost theHost;
+    EEGoalQueueHostOf(theIO, theHost);
+    return ee_units_goal_queue_load(&theHost);
 }
 
 // FUNCTION: EXE 0x605960
@@ -187,28 +263,12 @@ void EEUnitVectorItem::PopFront()
 // Writes the goals (kind, then data) and the timer to the saved game; returns the first write error
 long EEUnitVectorItem::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theCount = this->mGoals.size();
-    long theResult = outFile.Write(theCount);
-    if (theResult != 0)
-        return theResult;
-    for (theCount = 0; theCount < this->mGoals.size(); theCount++) {
-        if (theResult != 0)
-            return theResult;
-        EEUnitGoal* theGoal = this->mGoals[theCount];
-        unsigned char theKind = theGoal->mKind;
-        theResult = outFile.Write(theKind);
-        if (theResult == 0)
-            theResult = theGoal->Save(inMajorVersion, inMinorVersion, outFile);
-    }
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mStartTime);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mTime);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mStarted);
-    return theResult;
+    // New (R5b.4, the sixteenth round): written from the Rust mirror (ee_units goals.rs save): the goals' kinds and
+    // the timer from it, each goal's own record by this host
+    EEGoalQueueIO theIO = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
+    EeGoalQueueHost theHost;
+    EEGoalQueueHostOf(theIO, theHost);
+    return ee_units_goal_queue_save(reinterpret_cast<uintptr_t>(this), &theHost);
 }
 
 // FUNCTION: EXE 0x605aad
@@ -218,6 +278,7 @@ void EEUnitVectorItem::ResetTimer()
     this->mStartTime = 0;
     this->mTime = 0;
     this->mStarted = false;
+    EEGoalQueueReport(this);   // New (R5b.4, the sixteenth round): the mirror's timer
 }
 
 // FUNCTION: EXE 0x605ab9
@@ -235,6 +296,7 @@ EEUnitVectorItem& EEUnitVectorItem::operator=(const EEUnitVectorItem& inItem)
         this->mStartTime = inItem.mStartTime;
         this->mTime = inItem.mTime;
         this->mStarted = inItem.mStarted;
+        EEGoalQueueReport(this);   // New (R5b.4, the sixteenth round): the mirror's timer
     }
     return *this;
 }

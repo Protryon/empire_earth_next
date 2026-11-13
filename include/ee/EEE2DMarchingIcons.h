@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEE2DMarchingIcons.h (RECONSTRUCTION; file name inferred). Icons circling a
 // unit while an area effect of a kind is on it (RTTI EEE2DMarchingIcons > EEEffect2D; vtable 0x43fdc4;
-// EEE2DMarchingIcons.cpp 0xe3954..0xe4529; sizeof 0xa0). The circular and square variants lay the
-// icons out (pure WriteDetailsHook). Layout from the two ctors 0xe3aa3/0xe3b1d, the dtor 0xe3bf6 and Load/Save; names
+// EEE2DMarchingIcons.cpp 0xe3954..0xe4529; sizeof 0xa0). The circular and square variants laid the
+// icons out (pure WriteDetailsHook); new (port, RUST_PLAN R4.4): they are kinds 0x10 and 0xf of this class. Layout from the two ctors 0xe3aa3/0xe3b1d, the dtor 0xe3bf6 and Load/Save; names
 // are provisional (the members after the save keys). Requires ee/EEEffect2D.h, lle/GE3DPoint.h.
 #ifndef EE_EEE2DMARCHINGICONS_H
 #define EE_EEE2DMARCHINGICONS_H
@@ -19,8 +19,10 @@ public:
     static const UString sIconCountStringID;        // "MarchingIconsIconCountStringID" (0x4e88d8, bit 8)
     static const UString sAreaEffectTypeStringID;   // "MarchingIconsAreaEffectTypeStringID" (0x4e88c8, bit 0x10)
 
-    EEE2DMarchingIcons(long inKind);        // 0xe3aa3 (the load-time ctor)
-    EEE2DMarchingIcons(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind);   // 0xe3b1d
+    EEE2DMarchingIcons(long inKind);        // 0xe3aa3 (the load-time ctor; 0x10, 0xf)
+    // 0xe3b1d; kind 0x10: on a circle of param 1 (EEE2DCircularMarchingIcons 0xdf5ac), 0xf: on a square of half side
+    // param 1 (EEE2DSquareMarchingIcons 0xe732a)
+    EEE2DMarchingIcons(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind);
     virtual ~EEE2DMarchingIcons();          // +0x00 0xe3bf6 (??_G: the ICF-kept copy 0xdf590)
     virtual long DrawPass6();               // +0x18 0xe3e92 (draws the icons)
     virtual long Queue(EEEffectQueue* inQueues);       // +0x24 0xe3c32
@@ -30,8 +32,9 @@ public:
     virtual long RepairPointers();          // +0x3c 0xe4132
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // +0x40 0xe4182
     virtual long Step();                    // +0x4c 0xe41ef
-    // +0x54: the icons' offsets around the unit for an angular offset (the circular/square variants)
-    virtual void ComputeOffsets(float inAngle, std::vector<GE3DPoint>& outPoints) = 0;
+    // +0x54: the icons' offsets around the unit for an angular offset (the circular/square variants 0xdf63d/0xe74ed,
+    // now one body: ee_gfx effect_state.rs lays them out by kind)
+    virtual void ComputeOffsets(float inAngle, std::vector<GE3DPoint>& outPoints);
     virtual bool IsIconShown(const GE3DPoint& inOffset);  // +0x58 0xe3cdf (whether an icon at inOffset shows)
     virtual bool Virtual5C();               // +0x5c 0xe3d8e
     virtual bool GetPlayerID(unsigned long& outPlayerID);  // +0x60 0xe3dd0

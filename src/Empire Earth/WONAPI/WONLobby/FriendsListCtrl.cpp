@@ -44,7 +44,7 @@ void FriendsListItem::Paint(Graphics& inGraphics,ListArea* inList)
     if(this->mFriend.get()==NULL) {
         if(this->mSeparator) {
             int width=inList->mTotalWidth+10;
-            if(inList->mPaintWidth>width) width=inList->mPaintWidth;
+            if(inList->GetPaintWidth()>width) width=inList->GetPaintWidth();
             int y=this->mHeight>>2;
             inGraphics.SetSysColor(StandardColor_Text);
             inGraphics.DrawLine(0,y,width,y);
@@ -121,7 +121,7 @@ FriendsListItem* FriendsListCtrl::FindFriend(LobbyFriend* inFriend)
 // Returns the friend of the selected entry, or NULL
 LobbyFriend* FriendsListCtrl::GetSelectedFriend()
 {
-    FriendsListItem* item=static_cast<FriendsListItem*>(this->mFriendsList->mSelItem);
+    FriendsListItem* item=static_cast<FriendsListItem*>(this->mFriendsList->GetSelItem());
     if(item!=NULL) return item->mFriend.get();
     return NULL;
 }
@@ -178,7 +178,7 @@ void FriendsListCtrl::FillFriends() {
 // Enables Locate and Remove only while an entry is selected
 void FriendsListCtrl::UpdateButtons()
 {
-    if(this->mFriendsList->mSelItem==NULL) {
+    if(this->mFriendsList->GetSelItem()==NULL) {
         this->mLocateButton->SetEnabled(false);
         this->mRemoveButton->SetEnabled(false);
     } else {
@@ -202,7 +202,7 @@ void FriendsListCtrl::HandleComponentEvent(ComponentEvent* inEvent)
         return;
     case ComponentEvent_ListSelChanged:this->UpdateButtons();return;
     case ComponentEvent_ListItemClicked: {
-        FriendsListItem* item=static_cast<FriendsListItem*>(this->mFriendsList->mSelItem);
+        FriendsListItem* item=static_cast<FriendsListItem*>(this->mFriendsList->GetSelItem());
         ListItemClickedEvent* click=static_cast<ListItemClickedEvent*>(inEvent);
         if(item!=NULL&&item==click->mItem.get()&&item->mFriend.get()!=NULL) {
             if(click->GetButton()==2) {

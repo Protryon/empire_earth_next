@@ -288,7 +288,7 @@ void ServerDetailsItem::PaintNumPlayers(Graphics& g,ServerDetailsItem* inItem,Se
     if(inItem->mGame->GetMaxPlayers()>0) sprintf(aBuffer,"%d/%d",inItem->mGame->GetNumPlayers(),inItem->mGame->GetMaxPlayers());
     else sprintf(aBuffer,"%d",inItem->mGame->GetNumPlayers());
     GUIString aText(new GUIStringData(aBuffer));
-    int aWidth=inCtrl->mList->mPaintWidth;
+    int aWidth=inCtrl->mList->GetPaintWidth();
     int aTextWidth=g.mFont->GetStringWidth(aText);
     g.DrawString(aText,(aWidth-aTextWidth)/2,0);
 }
@@ -308,7 +308,7 @@ void ServerDetailsItem::Paint(Graphics& g,ListArea* inList)
         if(this->mSelected)
         {
             g.SetColor(aList->GetSelColor().GetBackgroundColor(g));
-            g.FillRect(0,0,aList->mPaintWidth,this->mSummaryHeight);
+            g.FillRect(0,0,aList->GetPaintWidth(),this->mSummaryHeight);
         }
         if(!this->mGame->GetShowDetails()) return;
         int aWidth=aList->GetColumnWidth(0);
@@ -434,7 +434,7 @@ void ServerListCtrl::UpdateJoinButton()
 // Returns the selected game, or NULL
 LobbyGame* ServerListCtrl::GetSelGame()
 {
-    ServerDetailsItem* aSelected=static_cast<ServerDetailsItem*>(this->mList->mSelItem);
+    ServerDetailsItem* aSelected=static_cast<ServerDetailsItem*>(this->mList->GetSelItem());
     return aSelected==NULL?NULL:aSelected->mGame.get();
 }
 // FUNCTION: WON 0x007c6ff0
@@ -558,7 +558,7 @@ bool ServerListCtrl::HandleRefreshButton()
 void ServerListCtrl::HandleListItemClicked(ListItemClickedEvent* inEvent)
 {
     if(!inEvent->IsSelectedItem()) return;
-    ServerDetailsItem* aSelected=static_cast<ServerDetailsItem*>(this->mList->mSelItem);
+    ServerDetailsItem* aSelected=static_cast<ServerDetailsItem*>(this->mList->GetSelItem());
     if(aSelected==NULL) return;
     LobbyGame* aGame=aSelected->mGame.get();
     if(inEvent->mButton==2) this->DeliverEvent(new GameActionEvent(7,aGame),false);

@@ -6,6 +6,16 @@ use super::*;
 thread_local! {
     static UNITS: RefCell<BTreeMap<u64, EeCombatStoredUnit>> = const { RefCell::new(BTreeMap::new()) };
     static PLAYERS: RefCell<BTreeMap<u64, EeCombatStoredPlayer>> = const { RefCell::new(BTreeMap::new()) };
+    static STATS: RefCell<BTreeMap<u64, EeCombatStoredStats>> = const { RefCell::new(BTreeMap::new()) };
+}
+
+/// The tests' stats table (by stats object).
+pub(crate) fn stats(object: u64) -> Option<EeCombatStoredStats> {
+    STATS.with(|s| s.borrow().get(&object).copied())
+}
+
+pub(crate) fn put_stats(object: u64, record: EeCombatStoredStats) {
+    STATS.with(|s| s.borrow_mut().insert(object, record));
 }
 
 /// The tests' unit store (by object, as the game's bridge).
@@ -179,4 +189,68 @@ fn the_heal_work_record_takes_command_hit_points_and_players() {
     put_unit(complex(0x231, 73, 0x9200));
     fill_heal_work(&mut i, 0x130, 0x231);
     assert_eq!((i.same_player, i.target_enemy_of), (1, 0));
+}
+
+fn some_stats() -> EeCombatStoredStats {
+    EeCombatStoredStats {
+        scale: 1.5f32.to_bits(),
+        range: 7.25f32.to_bits(),
+        max_velocity: 2.0f32.to_bits(),
+        attack: 12.5f32.to_bits(),
+        flight_time: 900,
+        reload_time: 2400,
+        max_hit_points: 0x1_0000_0050,
+        healing_points: 6,
+        armor: [0; 6],
+        can_fire_over_walls: 1,
+    }
+}
+
+#[test]
+fn the_records_take_the_stats_tables_fields() {
+    put_stats(0x7000, some_stats());
+    let mut target_stats = some_stats();
+    target_stats.attack = 3.0f32.to_bits();
+    target_stats.max_hit_points = 250;
+    put_stats(0x7100, target_stats);
+    let mut u = complex(0x140, 81, 0);
+    u.stats = 0x7000;
+    put_unit(u);
+    let mut t = complex(0x240, 82, 0);
+    t.stats = 0x7100;
+    put_unit(t);
+    let mut i = EeCombatConditionIn::default();
+    fill_condition(&mut i, 1, 0x140, 3, 0x240, 0);
+    assert_eq!((i.range, i.reload_time, i.fire_over_walls, i.flight_time_max), (7.25, 2400, 1, 900));
+    // the `long`'s low 32 bits, as the C++'s cast
+    assert_eq!((i.target_attack, i.target_max_hp), (3.0, 250));
+    let mut s = EeCombatStepIn::default();
+    fill_step(&mut s, 1, 0x140, 0x240);
+    assert_eq!((s.reload_time, s.fire_over_walls), (2400, 1));
+    let mut h = EeCombatHealWorkIn::default();
+    fill_heal_work(&mut h, 0x140, 0x240);
+    assert_eq!((h.healing, h.max_hp), (6, 250));
+    // the target's own stats are the unit's here: max hit points 0x1_0000_0050 -> 0x50
+    t.stats = 0x7000;
+    put_unit(t);
+    fill_condition(&mut i, 1, 0x140, 3, 0x240, 0);
+    assert_eq!(i.target_max_hp, 0x50);
+}
+
+#[test]
+fn no_stats_object_leaves_the_stats_fields_zero() {
+    let mut u = complex(0x150, 91, 0);
+    // a stats object the table lacks reads as none
+    u.stats = 0x7fff;
+    put_unit(u);
+    put_unit(complex(0x250, 92, 0));
+    let mut i = EeCombatConditionIn::default();
+    fill_condition(&mut i, 1, 0x150, 3, 0x250, 0);
+    assert_eq!((i.range, i.reload_time, i.fire_over_walls, i.flight_time_max), (0.0, 0, 0, 0));
+    assert_eq!((i.target_attack, i.target_max_hp), (0.0, 0));
+    let mut h = EeCombatHealWorkIn::default();
+    fill_heal_work(&mut h, 0x150, 0);
+    assert_eq!((h.healing, h.max_hp), (0, 0));
+    assert_eq!(unit_stats(0x150), None);
+    assert_eq!(stats_of(0), None);
 }

@@ -94,9 +94,10 @@ call logged, nothing changed); the original body's statements run over the same 
 EE-SIM exits 3). The record holds the Rust body's log.
 USTM is the unit step's leaves (ee/EEUnitStore.h, ee_units step.rs): one record per physics tick, the calls of the
 reload, target and heal search countdowns and RegeneratePower and the FNV-1a of each call's kind, unit, inputs and
-outputs. Its golden lines come from the C++ bodies (oracle, late 3-5, space 2-3); late 2, 6, 7 (the fishing-boat
-rebaseline's games), space 4-7 and calamity from the Rust bodies, whose every call the original's statements recheck
-while the capture runs (EE-SIM exits 3 on a difference).
+outputs. Its golden lines come from the C++ bodies (late 3, space 2); late 2, 6, 7 (the fishing-boat rebaseline's
+games), late 4, 5, the oracle and space 3, 6, 7 (main's AI changes, the merge of a2c4347e), space 4, 5 and calamity
+from the Rust bodies, whose every call the original's statements recheck while the capture runs (EE-SIM exits 3 on a
+difference).
 SM** are the scenario manager's records (ee/EEScenarioCapture.h, R5b.5): SMCE every trigger condition's test, SMTE
 every trigger's evaluation, SMOB every scenario object's, SMCP the player choices and SMAR the area queries outside an
 object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile

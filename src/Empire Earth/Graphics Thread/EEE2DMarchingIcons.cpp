@@ -88,6 +88,31 @@ EEE2DMarchingIcons::EEE2DMarchingIcons(EEUnit* inUnit, EEGraphicEffect* inGraphi
             break;
         }
     }
+    // the variants' ctors: the circle's radius, the square's half diagonal
+    if (inKind == EE_GFX_EFFECT_KIND_SQUARE_ICONS)
+        this->SetBoundingRadius(ee_gfx_effect_square_icons_radius(inGraphicEffect->mParam1));
+    else
+        this->SetBoundingRadius(inGraphicEffect->mParam1);
+}
+
+// FUNCTION: EXE 0x4df63d
+// Lists the shown icon offsets spaced evenly around the circle or square, starting at the given angle (the points are
+// ee_gfx effect_state.rs's; IsIconShown keeps them in order)
+void EEE2DMarchingIcons::ComputeOffsets(float inAngle, std::vector<GE3DPoint>& outPoints)
+{
+    long theCount = this->GetIconCount();
+    if (theCount <= 0)
+        return;
+    // (on the stack: no heap allocation the original did not make)
+    EeGe3DPoint thePoints[64];
+    size_t theMade = ee_gfx_effect_marching_offsets((int32_t)this->mKind, (int32_t)theCount, inAngle,
+                                                    this->mBoundingRadius, this->mGraphicEffect->mParam1,
+                                                    thePoints, 64);
+    for (size_t i = 0; i < theMade; i++) {
+        const GE3DPoint& thePoint = *reinterpret_cast<const GE3DPoint*>(&thePoints[i]);
+        if (this->IsIconShown(thePoint))
+            outPoints.push_back(thePoint);
+    }
 }
 
 // FUNCTION: EXE 0x4e3bf6
