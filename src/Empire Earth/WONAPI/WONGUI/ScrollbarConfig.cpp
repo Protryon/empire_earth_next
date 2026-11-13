@@ -19,9 +19,9 @@ namespace WONAPI {
 bool ScrollbarConfig::Virtual24(const std::string& instruction)
 {
     const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_SCROLLBARCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
-    if(aKeyIdx==0) this->mScrollbar->mVertical=this->ReadBool();
-    else if(aKeyIdx==1) this->mScrollbar->mResizeThumb=this->ReadBool();
-    else if(aKeyIdx==2) this->mScrollbar->mMinThumbSize=(unsigned char)this->ReadInt();
+    if(aKeyIdx==0) this->mScrollbar->SetVertical(this->ReadBool());
+    else if(aKeyIdx==1) this->mScrollbar->SetResizeThumb(this->ReadBool());
+    else if(aKeyIdx==2) this->mScrollbar->SetMinThumbSize((unsigned char)this->ReadInt());
     else return ContainerConfig::Virtual24(instruction);
     return true;
 }
@@ -34,22 +34,22 @@ bool ScrollbarConfig::GetPredefinedComponent(const std::string& name,ComponentCo
     if(aKeyIdx==0)
     {
         config=new ComponentConfig;
-        component=this->mScrollbar->mThumb.get();
+        component=this->mScrollbar->GetThumb();
     }
     else if(aKeyIdx==1)
     {
         config=new ButtonConfig;
-        component=this->mScrollbar->mUpArrow.get();
+        component=this->mScrollbar->GetUpArrow();
     }
     else if(aKeyIdx==2)
     {
         config=new ButtonConfig;
-        component=this->mScrollbar->mDownArrow.get();
+        component=this->mScrollbar->GetDownArrow();
     }
     else if(aKeyIdx==3)
     {
         config=new ButtonConfig;
-        component=this->mScrollbar->mScrollRect.get();
+        component=this->mScrollbar->GetScrollRect();
     }
     else return ContainerConfig::GetPredefinedComponent(name,config,component);
     return true;

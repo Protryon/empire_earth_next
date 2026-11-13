@@ -335,7 +335,7 @@ int ServerDetailsItem::Compare(const ListItem* inOther,ListArea* inList) const
     if(this==anOther) return 0;
     MultiListArea* aList=static_cast<MultiListArea*>(inList);
     ServerListCtrl* aCtrl=static_cast<ServerListCtrl*>(aList->mParent->mParent);
-    int aSecondaryColumn=aList->mSortColumnPrev; // 0x184
+    int aSecondaryColumn=aList->GetSortColumnPrev(); // 0x184
     ServerListCtrl::ColumnInfo::CompareFunc aCompare=aCtrl->mColumnInfo[aList->GetSortColumn()].mCompareFunc;
     int aResult;
     if(aCompare!=NULL)
@@ -933,7 +933,7 @@ void ServerListCtrlConfig::HandleAddColumn()
     }
     aList->SetNumColumns(++this->mNumColumns);
     int aCol=this->mNumColumns;
-    if(aWidth==0) aList->mDynamicSizeColumn=--aCol;
+    if(aWidth==0) aList->SetDynamicSizeColumn(--aCol);
     else aList->SetColumnWidth(--aCol,aWidth,false);
     this->mHeader->SetColumnItem(this->mNumColumns-1,aComponent);
     this->mServerList->mColumnInfo.push_back(aInfo);

@@ -1,4 +1,4 @@
-// List box sort type, text colour and number sort; multi-column mouse item reset (file name inferred)
+// List box text colour and number sort (file name inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -19,12 +19,5 @@ int ListArea::GetTextColor() { return this->mTextColor; }
 int ListArea::NumberSortFunc(ListArea*,const ListItem* left,const ListItem* right)
 {
     return ((TextListItem*)left)->mText.mData->ToInt(0)-((TextListItem*)right)->mText.mData->ToInt(0);
-}
-// FUNCTION: WON 0x007035d0
-// Forgets the item under the mouse, including the column item
-void MultiListArea::NotifyMouseItemGone()
-{
-    ListArea::NotifyMouseItemGone();
-    this->mMouseColItem=NULL;
 }
 }
