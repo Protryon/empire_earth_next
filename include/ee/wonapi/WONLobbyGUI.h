@@ -2527,6 +2527,11 @@ public:
     int GetTotalWidth() { return this->mTotalWidth; }
     int GetLeftPad() { return this->mLeftPad; }
     int GetRightPad() { return this->mRightPad; }
+    int GetTopPad() { return this->mTopPad; }
+    void SetPads(int l,int t,int r,int b) { this->mLeftPad=l; this->mTopPad=t; this->mRightPad=r; this->mBottomPad=b; } // the fields only (the text area's and list's constructors)
+    int GetHorzOffset() { return this->mHorzOffset; }
+    int GetViewWidth() { return this->mScrollArea.width; }
+    int GetViewHeight() { return this->mScrollArea.height; }
     void SetVertOffset(int); //305130
     void SetOffsets(int, int); //305150, horizontal then vertical
     SmartPtr<ScrollAreaViewport> mViewport; // at +0x84

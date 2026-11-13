@@ -46,7 +46,7 @@ void MenuItem::Paint(Graphics& g,ListArea* area)
     r.height=this->mHeight;
     r.image_height=anImage ? anImage->mHeight : 0;
     r.font_height=this->mFont->GetHeight();
-    r.view_width=area->mScrollArea.width;
+    r.view_width=area->GetViewWidth();
     WONDrawSlots aSlots;
     aSlots.mImages[0]=anImage;
     aSlots.mFont=this->mFont.get();

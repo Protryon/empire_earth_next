@@ -184,7 +184,7 @@ TextArea::TextArea()
         this->SetLinkFont(this->GetFont(descriptor));
     }
     this->SetComponentFlags(ComponentFlag_WantFocus,true);
-    this->mTopPad=this->mLeftPad=this->mRightPad=this->mBottomPad=5;
+    this->SetPads(5,5,5,5);
     this->Reset(false);
 }
 // FUNCTION: WON 0x00711be0
@@ -743,7 +743,7 @@ ListArea::ListArea()
     this->mTextColor=(int)0x8000000e;
     this->mFont=this->GetNamedFont("ListArea");
     this->SetComponentFlags(ComponentFlag_WantFocus,true);
-    this->mTopPad=this->mLeftPad=this->mRightPad=this->mBottomPad=2;
+    this->SetPads(2,2,2,2);
     this->mSortFunc=NULL;
 }
 // FUNCTION: WON 0x006fa860
