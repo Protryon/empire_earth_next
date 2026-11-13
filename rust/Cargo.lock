@@ -390,6 +390,7 @@ version = "0.1.0"
 name = "ee_screens"
 version = "0.1.0"
 dependencies = [
+ "ee_ge",
  "ee_plat_core",
 ]
 
@@ -418,6 +419,10 @@ dependencies = [
 [[package]]
 name = "ee_units"
 version = "0.1.0"
+dependencies = [
+ "ee_astar",
+ "ee_ge",
+]
 
 [[package]]
 name = "ee_won"

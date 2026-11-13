@@ -820,6 +820,10 @@ constexpr static const int32_t EE_WON_DRAW_TEXT = 15;
 /// A call the plan's caller makes (`a`: which, per plan; `b`..: its arguments).
 constexpr static const int32_t EE_WON_DRAW_CALL = 16;
 
+/// A dotted line from (a, b), `c` long, vertical when `d` is set: every other pixel in the current colour, starting
+/// on the first even coordinate (TreeItem.cpp's `DrawHorzDottedLine` / `DrawVertDottedLine`).
+constexpr static const int32_t EE_WON_DRAW_DOTTED_LINE = 17;
+
 /// The stretch filter's `CopyRawImage(a ? dst : src, dst, b, c, d, e, f, g)` (dest x, y, source x, y, width, height).
 constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 
@@ -2310,6 +2314,91 @@ enum class EeWonGuiOp : uint32_t {
   ItemHold,
   /// `a->Release()`.
   ItemRelease,
+  /// `a->Compare(b, this)` (a cell's own order).
+  ItemCompare = 250,
+  /// `((ListArea::SortFunc)a)(this, b, c)` (a column's sort function).
+  CallSortFunc,
+  /// `a->mWidth = b`.
+  ItemSetWidth,
+  /// `SetCursor(a)` (`EeWonGuiCursor`).
+  SetCursor,
+  /// `mCurrentCursor.get() == a` (`EeWonGuiCursor`; 0 or 1).
+  CursorIs,
+  /// `GetSelColor().GetBackgroundColor(*a)` (`a` the Graphics).
+  SelBackground,
+  /// a column's viewport: `v = new ScrollAreaViewport(this)` held by the column (`AddRef`), then
+  /// `GetViewport()->AddChild(v)`; returns `v` (given back with `ChildRelease`).
+  NewColumnViewport,
+  /// `a->SetPos(b, c)`.
+  ChildSetPos,
+  /// `((MultiListHeader*)a)->NotifyColumnChange()`.
+  HeaderNotify,
+  /// `((MultiListHeader*)a)->SetSortColumn(b, c)`.
+  HeaderSetSortColumn,
+  /// `((MultiListItem*)a)->GetItem(b)`.
+  RowCell,
+  /// `((MultiListItem*)a)->SetItem(b, c)`.
+  RowSetCell,
+  /// `((MultiListArea*)a)->mMulti` (the Rust multi-column list of a header's list).
+  MultiOf,
+  /// `RemoveChild(a)`.
+  RemoveChild,
+  /// `a->mControlId`.
+  ChildControlId,
+  /// `a->mControlId = b`.
+  ChildSetControlId,
+  /// `a->Right()`.
+  ChildRight,
+  /// `a->GetDesiredSize(b[0], b[1])` (`b` points at two i32s).
+  ChildDesiredSize,
+  /// the event `a`'s component's ancestor whose parent is this container (`child = a->mComponent`, climbed while
+  /// its parent is neither this nor NULL); 0 when the climb ends at NULL.
+  EventChildUnder,
+  /// `((TreeItem*)a)->mNode` (a row's Rust object).
+  NodeOf = 280,
+  /// a new `TreeItem` with the creator's reference (`AddRef`; given back with `ItemRelease`).
+  NewTreeItem,
+  /// `a->mSelectable = b != 0`.
+  ItemSetSelectable,
+  /// `a->SetPos(b, c)`.
+  ItemSetPosXY,
+  /// `a->mType` (a `ComponentEvent*`).
+  EventType,
+  /// `a->mComponent->mControlId`.
+  EventCompControlId,
+  /// `a->mComponent->Top()`.
+  EventComponentTop,
+  /// `CheckDoubleClick(a)` (0 or 1).
+  CheckDoubleClick,
+  /// `DeliverEvent(new TreeItemOpenedEvent(this, a), false)`.
+  DeliverTreeOpened,
+  /// `GetRoot()->ClosePopup(a)`.
+  ClosePopup = 300,
+  /// `a->mComponent` (a `ComponentEvent*`).
+  EventComponent,
+  /// `a->GetSelItem()` (a submenu).
+  MenuSelItem,
+  /// `a->SetSelItem(b)` (a submenu; the event fired).
+  MenuSetSelAt,
+  /// `dynamic_cast<MenuItem*>(a)` (`a` a `ListItem*` or NULL).
+  MenuItemOf,
+  /// `a->mSubMenu.get()` (a `MenuItem*`).
+  MenuItemSub,
+  /// `a->mDisabled` (0 or 1).
+  MenuItemDisabled,
+  /// `ScrollUntranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollUntranslate,
+  /// `LocalToRoot(*a, *b)` (`a`, `b` point at i32s).
+  LocalToRoot,
+  /// `a->Reset()` (a submenu).
+  MenuReset,
+  /// `GetRoot()->QueueEvent(new DoPopupEvent(PopupParams(a, d, this, b[0], b[1])))` with the avoided rectangle the
+  /// `EeWonRect4` at `c` (`b` points at two i32s).
+  QueueSubMenu,
+  /// `LocalToRoot(a, b)`, then the root's `QueueEvent(new MouseEvent(InputEvent_MouseUp, a, b, GetKeyMod(), c))`.
+  QueueMouseUp,
+  /// `a->TryKeyDown(b)` (a submenu; 0 or 1).
+  MenuTryKeyDown,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -2876,6 +2965,153 @@ enum class EeWonLobbyKeyKind {
   InOrder = 6,
 };
 
+/// The inward calls (`PopupMenu`'s virtuals and methods).
+enum class EeWonMenuCall : uint32_t {
+  /// `MouseDown(a, b, c)`.
+  MouseDown = 1,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `TimerEvent(a)` (0 or 1).
+  TimerEvent,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  ListSelChangedHook,
+  EndSubMenu,
+  CheckSubMenu,
+  /// `TryKeyDown(a)` (0 or 1).
+  TryKeyDown,
+  Reset,
+  /// `mCurSubMenu`.
+  SubMenu,
+  /// `mKeyboardMode` (0 or 1).
+  KeyboardMode,
+  /// `mTimerAcc`.
+  TimerAcc,
+  /// `mMouseUpCount`.
+  MouseUpCount,
+};
+
+/// The inward calls of the list (`MultiListArea`'s virtuals and methods).
+enum class EeWonMultiCall : uint32_t {
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition = 1,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `ScrollPaint(*a)`.
+  ScrollPaint,
+  NotifyMouseItemGone,
+  /// `SetNumColumns(a)`.
+  SetNumColumns,
+  /// `SetColumnWidth(a, b, c != 0)`.
+  SetColumnWidth,
+  /// `SetSortColumn(a, b)`.
+  SetSortColumn,
+  /// `SetSortColumnFunc(a, b)` (`b` a `ListArea::SortFunc`).
+  SetSortColumnFunc,
+  /// `SetColumnHAlign(a, b)`.
+  SetColumnHAlign,
+  /// `SetColumnSizeMode(a, b)`.
+  SetColumnSizeMode,
+  /// `UpdateItem(a)`: the row.
+  UpdateItem,
+  /// `SetCell(a, b, c)`: the row or 0.
+  SetCell,
+  /// `GetColumnAt(a)`.
+  ColumnAt,
+  /// `GetColumnWidth(a)`.
+  ColumnWidth,
+  /// `GetColumnPos(a)`.
+  ColumnPos,
+  /// `mColumnPaintContext`.
+  PaintContext,
+  /// `mSortColumn`.
+  SortColumn,
+  /// `mSortColumnPrev`.
+  SortColumnPrev,
+  /// `mDynamicSizeColumn = a`.
+  SetDynamicSizeColumn,
+  /// `mAutoGrowColumns = a != 0`.
+  SetAutoGrowColumns,
+  /// `mColumnInfoVector.size()`.
+  NumColumns,
+  /// `mTotalColumnWidth`.
+  TotalColumnWidth,
+  /// `mMouseColItem`.
+  MouseColItem,
+  /// `mListHeader`.
+  Header,
+};
+
+/// The inward calls of a row (`MultiListItem`'s virtuals and methods; the list's calls need its Rust list).
+enum class EeWonMRowCall : uint32_t {
+  /// `CalcDimensions(list)`.
+  CalcDimensions = 1,
+  /// `Compare(a, list)`.
+  Compare,
+  /// `SetPos(a, b)` (no list needed).
+  SetPos,
+  /// `Paint(*a, list)`.
+  Paint,
+  /// `SetViewport(list, a)`.
+  SetViewport,
+  /// `CanSelect(list, a, b)` (0 or 1).
+  CanSelect,
+  /// `MouseEnter(list, a, b)`.
+  MouseEnter,
+  /// `MouseExit(list)`.
+  MouseExit,
+  /// `MouseMove(list, a, b)`.
+  MouseMove,
+  /// `MouseDrag(list, a, b)`.
+  MouseDrag,
+  /// `MouseDown(list, a, b, c)`.
+  MouseDown,
+  /// `MouseUp(list, a, b, c)`.
+  MouseUp,
+  /// `SetItem(a, b)` (no list needed).
+  SetItem,
+  /// `GetItem(a)` (no list needed).
+  GetItem,
+  /// `InsertItem(a)` (no list needed).
+  InsertItem,
+};
+
+/// The inward calls of the header (`MultiListHeader`'s virtuals and methods).
+enum class EeWonMHeadCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  MouseExit,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `SetColumnItem(a, b)`.
+  SetColumnItem,
+  /// `SetMultiListArea(a)`.
+  SetMultiListArea,
+  NotifyColumnChange,
+  /// `SetSortColumn(a, b)`.
+  SetSortColumn,
+  /// `GetColumnIndex(a)`.
+  ColumnIndex,
+  /// `GetSortType(a)`.
+  SortType,
+  /// `mDrawSortArrow` (0 or 1).
+  DrawSortArrow,
+  /// `mListArea`.
+  ListArea,
+  /// `mDragColumn`.
+  DragColumn,
+};
+
 /// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
 /// cut given).
 enum class EeWonPrefsRead {
@@ -3097,6 +3333,109 @@ enum class EeWonTitleInstr {
   ErrorNestCommunity,
 };
 
+/// The inward calls of the tree (`TreeArea`'s virtuals and methods; rows are `TreeItem*`s).
+enum class EeWonTreeCall : uint32_t {
+  /// the constructor's steps (the root row made and opened, the list flags, the tree flags).
+  Init = 1,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  NotifyMouseItemGone,
+  /// `SetSortType(a)`.
+  SetSortType,
+  /// `Sort(a, b != 0)` (`a` a row or NULL: the root).
+  SortItem,
+  /// `SetTreeFlags(a, b != 0)`.
+  SetTreeFlags,
+  /// `mTreeFlags`.
+  TreeFlags,
+  /// `InsertTreeItem(a, b, c)`: the new row.
+  InsertTreeItem,
+  /// `RemoveTreeItem(a)`.
+  RemoveTreeItem,
+  /// `RemoveAllItems(a)` (`ClearTree` with NULL).
+  RemoveAllItems,
+  /// `OpenItem(a, b != 0)`.
+  OpenItem,
+  /// `CloseItem(a, b != 0, c != 0)`.
+  CloseItem,
+  /// `ToggleItem(a, b != 0, c != 0)`.
+  ToggleItem,
+  /// `mRoot`.
+  Root,
+  /// `mTreeSortType`.
+  SortType,
+  /// `mMouseColItem`.
+  MouseColItem,
+};
+
+/// The inward calls of a row (`TreeItem`'s virtuals and methods; `tree` is given for the ones that have one).
+enum class EeWonTNodeCall : uint32_t {
+  /// `Paint(*a, tree)`.
+  Paint = 1,
+  /// `CalcDimensions(tree)`.
+  CalcDimensions,
+  /// `SetViewport(tree, a)`.
+  SetViewport,
+  /// `Compare(a, tree)`.
+  Compare,
+  /// `CanSelect(tree, a, b)` (0 or 1).
+  CanSelect,
+  /// `SetPos(a, b)` (no tree).
+  SetPos,
+  /// `MouseEnter(tree, a, b)`.
+  MouseEnter,
+  /// `MouseExit(tree)`.
+  MouseExit,
+  /// `MouseMove(tree, a, b)`.
+  MouseMove,
+  /// `MouseDrag(tree, a, b)`.
+  MouseDrag,
+  /// `MouseDown(tree, a, b, c)`.
+  MouseDown,
+  /// `MouseUp(tree, a, b, c)`.
+  MouseUp,
+  /// `GetChild(a)` (no tree).
+  GetChild,
+  /// `GetNextNonChild()` (no tree).
+  GetNextNonChild,
+  /// `GetNextNonChildPos(tree)`.
+  GetNextNonChildPos,
+  /// `InsertChild(tree, a, b)`.
+  InsertChild,
+  /// `RemoveAllChildren(tree)`.
+  RemoveAllChildren,
+  /// `RemoveChild(tree, a)`.
+  RemoveChild,
+  /// `RemoveFromParent(tree)`.
+  RemoveFromParent,
+  /// `CloseAll()` (no tree).
+  CloseAll,
+  /// `InsertChildren(tree, a)`.
+  InsertChildren,
+  /// `SetOpen(tree, a != 0, b != 0, c != 0)`.
+  SetOpen,
+  /// `ToggleOpen(tree, a != 0, b != 0)`.
+  ToggleOpen,
+  /// `IsLastChild()` (no tree; 0 or 1).
+  IsLastChild,
+  /// `ContainsPoint(a, b)` (no tree; 0 or 1).
+  ContainsPoint,
+  /// `Sort(tree, a != 0)`.
+  Sort,
+  /// `mItem` (no tree).
+  Item,
+  /// `mChildren.size()` (no tree).
+  NumChildren,
+  /// `mParent` (no tree).
+  Parent,
+  /// `mOpen` (no tree; 0 or 1).
+  IsOpen,
+  /// `mX` (no tree).
+  Indent,
+  /// `mIndex` (no tree).
+  Index,
+};
+
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
 /// caught it in `HandleMessage` and did nothing more); outside every `short` status.
 enum class EeWonLobbyResult {
@@ -3254,6 +3593,18 @@ struct EeWonLobbyMap;
 /// `LobbyPersistentData`'s scalar state and its setters' rules.
 struct EeWonLobbyPrefs;
 
+/// The Rust MultiListHeader.
+struct EeWonMHead;
+
+/// The Rust MultiListItem: its cells (a reference held on each).
+struct EeWonMRow;
+
+/// The Rust PopupMenu.
+struct EeWonMenu;
+
+/// The Rust MultiListArea.
+struct EeWonMulti;
+
 /// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
 struct EeWonOpContainer;
 
@@ -3283,6 +3634,9 @@ struct EeWonSplitter;
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
 
+/// The Rust TreeItem.
+struct EeWonTNode;
+
 /// The Rust TextArea.
 struct EeWonText;
 
@@ -3292,6 +3646,9 @@ struct EeWonThread;
 /// `TimerThread`: the deadline queue (holding a reference per op, taken by the C++ before `add`), its lock, the
 /// signal and the thread that pumps it.
 struct EeWonTimerThread;
+
+/// The Rust TreeArea.
+struct EeWonTree;
 
 /// `UDPManager`'s state and steps.
 struct EeWonUdpManager;
@@ -9774,6 +10131,25 @@ const void *ee_won_lobbymap_key_text(const EeWonLobbyMap *m,
                                      size_t i,
                                      size_t *count);
 
+/// A new Rust PopupMenu for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
+EeWonMenu *ee_won_menu_new(void *component,
+                           EeWonGuiHostFn host,
+                           const EeWonList *list);
+
+/// # Safety
+/// `menu` came from `ee_won_menu_new` (or is NULL) and is not used again.
+void ee_won_menu_free(EeWonMenu *menu);
+
+/// One of PopupMenu's methods (`EeWonMenuCall`).
+///
+/// # Safety
+/// `menu` is live; the call's arguments as documented.
+ptrdiff_t ee_won_menu_call(const EeWonMenu *menu,
+                           EeWonMenuCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
 /// Which list: 0 `GetPatchList`, 1 `GetValidPatchList`, 2 `GetHighestPatchList(from, to)`. The chosen patches'
 /// indices go to `put` in the list's order.
 ///
@@ -9877,6 +10253,61 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 const uint8_t *data,
                                 size_t data_length,
                                 uint16_t *out_count);
+
+/// A new Rust MultiListArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
+EeWonMulti *ee_won_multi_new(void *component,
+                             EeWonGuiHostFn host,
+                             const EeWonList *list);
+
+/// # Safety
+/// `multi` came from `ee_won_multi_new` (or is NULL) and is not used again.
+void ee_won_multi_free(EeWonMulti *multi);
+
+/// One of MultiListArea's methods (`EeWonMultiCall`).
+///
+/// # Safety
+/// `multi` is live; the call's arguments as documented.
+ptrdiff_t ee_won_multi_call(const EeWonMulti *multi,
+                            EeWonMultiCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new Rust MultiListItem for the C++ row `component`; `host` gives the cells' references.
+EeWonMRow *ee_won_mrow_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `row` came from `ee_won_mrow_new` (or is NULL) and is not used again.
+void ee_won_mrow_free(EeWonMRow *row);
+
+/// One of MultiListItem's methods (`EeWonMRowCall`); `multi` is the row's list's Rust object (NULL for the calls
+/// that need no list).
+///
+/// # Safety
+/// `row` is live; `multi` is live or NULL; the call's arguments as documented.
+ptrdiff_t ee_won_mrow_call(const EeWonMRow *row,
+                           const EeWonMulti *multi,
+                           EeWonMRowCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust MultiListHeader for the C++ `component`, its calls out through `host`.
+EeWonMHead *ee_won_mhead_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `head` came from `ee_won_mhead_new` (or is NULL) and is not used again.
+void ee_won_mhead_free(EeWonMHead *head);
+
+/// One of MultiListHeader's methods (`EeWonMHeadCall`).
+///
+/// # Safety
+/// `head` is live; the call's arguments as documented.
+ptrdiff_t ee_won_mhead_call(const EeWonMHead *head,
+                            EeWonMHeadCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// `new MultiPingOp`: the Rust op a `RustServerOp` runs.
 EeWonHostOp *ee_won_multiping_new();
@@ -11956,6 +12387,46 @@ void ee_won_titlecfg_community_text(const uint8_t *header,
                                     size_t pair_count,
                                     EeWonByteSink sink,
                                     void *context);
+
+/// A new Rust TreeArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
+EeWonTree *ee_won_tree_new(void *component,
+                           EeWonGuiHostFn host,
+                           const EeWonList *list);
+
+/// # Safety
+/// `tree` came from `ee_won_tree_new` (or is NULL) and is not used again.
+void ee_won_tree_free(EeWonTree *tree);
+
+/// One of TreeArea's methods (`EeWonTreeCall`).
+///
+/// # Safety
+/// `tree` is live; the call's arguments as documented.
+ptrdiff_t ee_won_tree_call(const EeWonTree *tree,
+                           EeWonTreeCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust TreeItem for the C++ row `component`; `host` answers `NodeOf`, `ItemSetTop`, `ItemSetPosXY`,
+/// `ItemTop`, `ItemContains` and the references.
+EeWonTNode *ee_won_tnode_new(void *component,
+                             EeWonGuiHostFn host);
+
+/// # Safety
+/// `node` came from `ee_won_tnode_new` (or is NULL) and is not used again.
+void ee_won_tnode_free(EeWonTNode *node);
+
+/// One of TreeItem's methods (`EeWonTNodeCall`); `tree` is the row's tree's Rust object (NULL for the calls that
+/// need none).
+///
+/// # Safety
+/// `node` is live; `tree` is live or NULL; the call's arguments as documented.
+ptrdiff_t ee_won_tnode_call(const EeWonTNode *node,
+                            const EeWonTree *tree,
+                            EeWonTNodeCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// A new manager object for the C++ `manager`.
 ///

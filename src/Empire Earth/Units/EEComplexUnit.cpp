@@ -75,7 +75,7 @@
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGCastCalamity.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEGroupPathRequest.h"
 #include "ee/EEAutoPathRequest.h"
@@ -84,8 +84,6 @@
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEFleeFromLocationScreenBase.h"
-#include "ee/EEUGRust.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEComputerPlayer.h"
@@ -999,7 +997,7 @@ void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
         for (unsigned long j = 0; j < theOther->mGoalQueues[i].mGoals.size(); ++j) {
             EEUnitGoal* theGoal = theOther->mGoalQueues[i].mGoals[j];
             if (theGoal->mKind == kGoalUnloadTransport && theOther->GetPlayer() == this->GetPlayer())
-                EEGoalCast<EEUGUnloadTransport>(theGoal)->SetTransport(this);
+                EEUnloadGoalCast(theGoal)->SetUnloadTransport(this);
             theGoal = theGoal->Clone();
             this->mGoalQueues[i].mGoals.push_back(theGoal);
             theGoal->SetOwner(this->mGoalQueues[i].mUnit);
@@ -2626,8 +2624,10 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
         inPlayer != NULL && (inPlayer == this->mPlayer || this->mPlayer->mEnemies[inPlayer->mPlayerID] == 0 ||
                           theUnarmed || inForce)) {
         if (theCommand == kActionWaitForOpenPosition) {
+            // (the port: a unit waiting for a spot whose goal is no longer a gather - the original dereferenced the
+            // null cast; seen when a repair began beside such a unit, PORT_LEARNINGS)
             EEUGGather* theGather = EEGoalCast<EEUGGather>(this->GetGoal());
-            if (theGather->FindGatherSpot(this)) {
+            if (theGather != NULL && theGather->FindGatherSpot(this)) {
                 this->StartAction(kActionMoveToWaitingArea);
                 this->GetUnitClass()->ActionChanged(this);
             }
@@ -3375,7 +3375,7 @@ void EEComplexUnit::TakeOffMap()
         ::gWorld.DeactivateUnit(theUnit);
     }
     if (this->mGoalState != NULL
-        && (this->mGoalState->mKind != kGoalCastCalamity || EEGoalCast<EEUGCastCalamity>(this->GetGoal())->mCalamityType != 0x77c)) {
+        && (this->mGoalState->mKind != kGoalCastCalamity || EECastCalamityGoalCast(this->GetGoal())->GetCalamityType() != 0x77c)) {
         this->StartAction(kActionIdle);
         this->GetUnitClass()->ActionChanged(this);
     }

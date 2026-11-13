@@ -7,6 +7,25 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The host's ops (`ee_screenscpp_action`): an action's reference taken, released, run (`Virtual4`), undone
+/// (`Virtual8`), asked whether it is undoable; the UI copy lock and the world's write lock taken and released.
+constexpr static const uint32_t EE_SCREENS_ACTION_REFERENCE = 0;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_DEREFERENCE = 1;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_RUN = 2;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_UNDO = 3;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_UNDOABLE = 4;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_LOCK = 5;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_UNLOCK = 6;
+
+/// Undo and Redo's answer when there is nothing to undo or redo.
+constexpr static const int32_t EE_SCREENS_ACTION_NONE = 7;
+
 /// The grave key's press and release around the free camera's rotation (`EEUIEDisableMouseMove`,
 /// `EEUIEEnableMouseMove`).
 constexpr static const uint32_t EE_SCREENS_CAM_DISABLE_MOUSE_MOVE = 2880;
@@ -602,6 +621,67 @@ constexpr static const uint32_t EE_SCREENS_GAME_DSU_VOLUME = 700;
 /// Put (control id): the debug sound form's control of that id, when it is a label, `SetText`.
 constexpr static const uint32_t EE_SCREENS_TEXT_DSU_LABEL = 130;
 
+/// The kinds (and the modes `Open` lays out): OK (shown or not), Yes/No, Yes/No/Cancel, a text or password with
+/// OK, Cancel only.
+constexpr static const uint32_t EE_SCREENS_DIALOG_MESSAGE = 0;
+
+constexpr static const uint32_t EE_SCREENS_DIALOG_QUESTION = 1;
+
+constexpr static const uint32_t EE_SCREENS_DIALOG_YES_NO_CANCEL = 2;
+
+constexpr static const uint32_t EE_SCREENS_DIALOG_PASSWORD = 3;
+
+constexpr static const uint32_t EE_SCREENS_DIALOG_CANCEL = 4;
+
+/// (button, string id << 2 | callback) the button's text (the string, Tahoma 12), its callback (0 none, 1 the first
+/// with the data, 2 the second with the data, 3 the first with the edit box's text; Cancel's also takes the form it
+/// closes), shown, black and transparent.
+constexpr static const uint32_t EE_SCREENS_DLG_BUTTON = 0;
+
+/// (control, mode) `SetDisplayMode`.
+constexpr static const uint32_t EE_SCREENS_DLG_SHOW = 1;
+
+/// (alignment) the label's alignment, then its text (the message).
+constexpr static const uint32_t EE_SCREENS_DLG_MESSAGE = 2;
+
+/// (width, height) the label's rectangle at the origin.
+constexpr static const uint32_t EE_SCREENS_DLG_MESSAGE_SIZE = 3;
+
+/// The form's tabbing on, its tab stop the edit box.
+constexpr static const uint32_t EE_SCREENS_DLG_TABBING = 4;
+
+/// (flag) the edit box a password box.
+constexpr static const uint32_t EE_SCREENS_DLG_PASSWORD = 5;
+
+/// (mode) the mode `Open` lays out.
+constexpr static const uint32_t EE_SCREENS_DLG_MODE = 6;
+
+/// `gUserInterface->SwitchToForm(the box)`.
+constexpr static const uint32_t EE_SCREENS_DLG_SWITCH = 7;
+
+/// (left | right << 16, top | bottom << 16) the layout (left and right in 1024ths of the window, top and bottom in
+/// 768ths, each a relative side) into the rectangle register.
+constexpr static const uint32_t EE_SCREENS_DLG_CALC = 8;
+
+/// (control) `SetRectangle(the register)`.
+constexpr static const uint32_t EE_SCREENS_DLG_PLACE = 9;
+
+/// (0) the font register: the closest font of index 0x1c to Tahoma 16 scaled to the window's height; (button) the
+/// button's text in it; (4) the register's font released.
+constexpr static const uint32_t EE_SCREENS_DLG_FONT = 10;
+
+/// (side: 0 left, 1 top, 2 right, 3 bottom) -> the register's side (f32 bits).
+constexpr static const uint32_t EE_SCREENS_DLG_RECT = 11;
+
+/// (side, f32 bits) the register's side.
+constexpr static const uint32_t EE_SCREENS_DLG_SET_RECT = 12;
+
+/// -> Tahoma 12's height.
+constexpr static const uint32_t EE_SCREENS_DLG_LINE_HEIGHT = 13;
+
+/// -> the message label's line count.
+constexpr static const uint32_t EE_SCREENS_DLG_LINES = 14;
+
 /// The form's open event (`EECreateFormEvent`'s `kFormEventDSOpen`).
 constexpr static const uint32_t EE_SCREENS_DS_OPEN = 6913;
 
@@ -651,6 +731,27 @@ constexpr static const uint32_t EE_SCREENS_TEXT_DS_NAME = 123;
 constexpr static const uint32_t EE_SCREENS_TEXT_DS_CIVILIZATION = 124;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_DS_BUTTON = 125;
+
+/// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
+constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
+
+/// The main game form's debug unit reload (`EEUIELoadUnit`).
+constexpr static const uint32_t EE_SCREENS_CPP_LOAD_UNIT = 65538;
+
+/// WON's server select form's open event (`EEUIEWNSOpen`).
+constexpr static const uint32_t EE_SCREENS_CPP_WNS_OPEN = 65539;
+
+/// The frame texture's cells: the edges, the large corners, the small corners, the side ornaments.
+constexpr static const uint32_t EE_SCREENS_FRAME_CELL_EDGE = 0;
+
+constexpr static const uint32_t EE_SCREENS_FRAME_CELL_LARGE_CORNER = 1;
+
+constexpr static const uint32_t EE_SCREENS_FRAME_CELL_CORNER = 2;
+
+constexpr static const uint32_t EE_SCREENS_FRAME_CELL_SIDE = 3;
+
+/// No reorder of the texture coordinates.
+constexpr static const uint32_t EE_SCREENS_FRAME_KEEP = 256;
 
 /// `EEUIEHKSelectGroup(group, false)` / `(group, true)`: the number keys (with Alt: the true one).
 constexpr static const uint32_t EE_SCREENS_HK_SELECT_GROUP = 3584;
@@ -2564,11 +2665,40 @@ struct EeScreensPgsRecord {
   uint32_t epoch_second;
 };
 
+/// One piece: the bitmap stretched from `texture` (the piece's whole rectangle, in the frame's pixels) onto
+/// `destination` with the cell's texture, its texture coordinates reordered by each of `orders` in turn
+/// (`EE_SCREENS_FRAME_KEEP` for none; the scales swapped after the first when `swap_scale`), placed at `location`.
+/// Rectangles are left, top, right, bottom.
+struct EeScreensFramePiece {
+  float texture[4];
+  float destination[4];
+  float location[2];
+  uint32_t cell;
+  uint32_t orders[3];
+  bool swap_scale;
+};
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
 
 extern "C" {
+
+/// `EEUserInterface::PostAction`: queues the action (`EEAction*`) with a reference of its own.
+void ee_screens_actions_post(void *action);
+
+/// `EEUserInterface::ProcessActions`: runs the queued actions under the UI copy lock and the world's write lock.
+void ee_screens_actions_process();
+
+/// `EEUserInterface::Undo`: 0, or 7 when there is nothing to undo.
+long ee_screens_actions_undo();
+
+/// `EEUserInterface::Redo`: 0, or 7 when there is nothing to redo.
+long ee_screens_actions_redo();
+
+/// `EEUserInterface::ClearQueue`: releases every action of a queue (0 the action queue, 1 the undo list, 2 the redo
+/// list).
+void ee_screens_actions_clear(uint32_t queue);
 
 /// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: not
 /// grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
@@ -2662,6 +2792,35 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
 
 /// The debug sound panel's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_debug_sound_event_for(unsigned long id);
+
+/// `EEUIFError::Display`: shows the box as the kind (`EE_SCREENS_DIALOG_*`); `flag` is the message's OK shown or
+/// the prompt's password box.
+void ee_screens_dialog_show(void *dialog,
+                            uint32_t kind,
+                            uint32_t alignment,
+                            bool flag);
+
+/// `EEUIFError::Open`: lays the box's controls out for its mode.
+void ee_screens_dialog_open(void *dialog, uint32_t mode);
+
+/// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
+/// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the
+/// manager's scenario editor flag (the save and load forms' kind).
+uint32_t ee_screens_control_event_for(unsigned long id,
+                                      bool screen_active,
+                                      bool in_editor);
+
+/// `EEUIManager`'s form-event factory: the event code for a form event id, 0 for none.
+uint32_t ee_screens_form_event_for(unsigned long id);
+
+/// `EEUIBGenericBackground::DrawBackground`: the background (its `GERectangle`, frame scale and flags) drawn within
+/// `clip` (a `GERectangle`); the panel's draw result.
+long ee_screens_frame_draw(void *background,
+                           const void *rectangle,
+                           float scale_x,
+                           float scale_y,
+                           uint32_t flags,
+                           const void *clip);
 
 /// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
 uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,

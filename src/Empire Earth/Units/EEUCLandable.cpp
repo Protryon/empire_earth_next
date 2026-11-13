@@ -46,9 +46,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGExplore.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUCTransport.h"
 #include "ee/EEUCLandable.h"
 
@@ -227,10 +225,10 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     EEUnitGoal* theGoal = inUnit->mGoalState;
     EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(theGoal);
     EEUGRust* theAttack = EEAttackUnitCast(theGoal);
-    EEUGExplore* theExplore = EEGoalCast<EEUGExplore>(theGoal);
+    EEUGRust* theExplore = EEExploreGoalCast(theGoal);
     EEUGRust* thePatrol = EEPatrolGoalCast(theGoal);
     EEUGRust* theGround = EEAttackGroundCast(theGoal);
-    EEUGUnloadTransport* theUnload = EEGoalCast<EEUGUnloadTransport>(theGoal);
+    EEUGRust* theUnload = EEUnloadGoalCast(theGoal);
     if (theLocation != NULL) {
         theTarget.SetX(theLocation->mLocation.GetX());
         theTarget.SetY(theLocation->mLocation.GetY());
@@ -238,11 +236,11 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
         theTarget.SetX((float)thePatrol->GetPatrolTarget()->GetTileX() + 0.5f);
         theTarget.SetY((float)thePatrol->GetPatrolTarget()->GetTileY() + 0.5f);
     } else if (theExplore != NULL) {
-        theExplore->GetTileCenter(theTarget);
+        theExplore->GetExploreTileCenter(theTarget);
         if (theTarget.GetX() <= 0.5f && theTarget.GetY() <= 0.5f) {
             inUnit->StartAction(kActionFindUnexploredArea);
             theExplore->Step(inUnit);
-            theExplore->GetTileCenter(theTarget);
+            theExplore->GetExploreTileCenter(theTarget);
             long theKind = inUnit->mUnitClass->mAirTrafficType;
             if (theKind == 2 || theKind == 4)
                 inUnit->StartAction(kActionContinueToTaxi);
@@ -764,7 +762,7 @@ unsigned long EEUCLandable::GetNextFlightState(EEComplexUnit* inUnit)
             break;
         }
         case kGoalExplore: {
-            static_cast<EEUGExplore*>(theGoal)->GetTileCenter(theTarget);
+            static_cast<EEUGRust*>(theGoal)->GetExploreTileCenter(theTarget);
             break;
         }
         default:

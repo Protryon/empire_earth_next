@@ -62,6 +62,15 @@ template <class Call> inline void WONDrawOne(Graphics& g, const EeWonDrawOp& o, 
         case EE_WON_DRAW_STRING_ALL: g.DrawString(*s.mString, o.b, o.c); break;
         case EE_WON_DRAW_TEXT: s.mText->Paint(g, o.b, o.c); break;
         case EE_WON_DRAW_CALL: call(o); break;
+        case EE_WON_DRAW_DOTTED_LINE: { // every other pixel in the current colour (TreeItem's dotted lines)
+            DWORD aColor = g.mColor;
+            int i = ((o.d ? o.b : o.a) & 1) ? 1 : 0;
+            for (; i < o.c; i += 2) {
+                if (o.d) g.SetPixel(o.a, o.b + i, aColor);
+                else g.SetPixel(o.a + i, o.b, aColor);
+            }
+            break;
+        }
         default: break;
     }
 }

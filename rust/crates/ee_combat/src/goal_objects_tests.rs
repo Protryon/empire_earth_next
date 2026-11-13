@@ -48,7 +48,7 @@ const UNIT: u64 = 0x600;
 
 #[test]
 fn the_destination_is_the_unit_when_the_tile_is_reachable_else_the_target() {
-    ee_combat_ground_create(GOAL, 10.75, -3.25, 1.5);
+    ground_create(GOAL, [10.75, -3.25, 1.5]);
     let mut h =
         Mock { reach: true, location: [1.0f32.to_bits(), 2.0f32.to_bits(), 0.5f32.to_bits()], ..Default::default() };
     let out = ground_destination(&mut h, GOAL, UNIT);
@@ -64,28 +64,28 @@ fn the_destination_is_the_unit_when_the_tile_is_reachable_else_the_target() {
     let out = ground_destination(&mut h, GOAL, UNIT);
     assert_eq!(out, bits([10.75, -3.25, 1.5]));
     assert_eq!(h.log.iter().map(|l| l.0).collect::<Vec<_>>(), vec![EE_COMBAT_G_CAN_REACH_TILE, EE_COMBAT_G_TELL_GROUP]);
-    ee_combat_goal_drop(GOAL);
+    goal_drop(GOAL);
 }
 
 #[test]
 fn the_checksum_sums_the_raw_bits() {
     let goal = GOAL + 1;
-    ee_combat_ground_create(goal, -1.0, 2.0, 3.0);
+    ground_create(goal, [-1.0, 2.0, 3.0]);
     let want = ((-1.0f32).to_bits() as i32).wrapping_add(2.0f32.to_bits() as i32).wrapping_add(3.0f32.to_bits() as i32);
     assert_eq!(ground_checksum(goal), want);
-    ee_combat_goal_drop(goal);
+    goal_drop(goal);
     assert_eq!(ground_checksum(goal), 0, "no record: 0, 0, 0");
 }
 
 #[test]
 fn save_and_load_round_trip_and_stop_at_the_first_error() {
     let goal = GOAL + 2;
-    ee_combat_ground_create(goal, 4.0, 5.0, 6.0);
+    ground_create(goal, [4.0, 5.0, 6.0]);
     let mut h = Mock::default();
     assert_eq!(ground_save(&mut h, goal), 0);
     assert_eq!(h.file, bits([4.0, 5.0, 6.0]).to_vec());
     let other = GOAL + 3;
-    ee_combat_ground_create(other, 0.0, 0.0, 0.0);
+    ground_create(other, [0.0, 0.0, 0.0]);
     assert_eq!(ground_load(&mut h, other), 0);
     let mut t = [0.0f32; 3];
     unsafe { ee_combat_ground_target(other, &mut t) };
@@ -99,6 +99,6 @@ fn save_and_load_round_trip_and_stop_at_the_first_error() {
     assert_eq!(ground_load(&mut h, other), 3);
     unsafe { ee_combat_ground_target(other, &mut t) };
     assert_eq!(t, [7.0, 5.0, 6.0]);
-    ee_combat_goal_drop(goal);
-    ee_combat_goal_drop(other);
+    goal_drop(goal);
+    goal_drop(other);
 }

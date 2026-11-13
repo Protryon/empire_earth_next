@@ -48,14 +48,12 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGExplore.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EECPIntelligence.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUCFortress.h"
 
 // 0x446ff0/0x446ff4: the unit's named constants (one .rdata copy per unit)
@@ -117,7 +115,7 @@ bool EEUCBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
             }
             if (theCargo->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = theCargo->mGoalQueues[1].GetFront();
-                EEUGExplore* theExplore = EEGoalCast<EEUGExplore>(theGoal);
+                EEUGRust* theExplore = EEExploreGoalCast(theGoal);
                 if (theGoal != NULL) {
                     theCargo->mGoalQueues[0].Clear();
                     inUnit->SetExitingUnitID(theCargo->mUnitID);
@@ -577,7 +575,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
                         theRally->GetGoalLocation(theTarget);
                         if (theLast && EEIsTileFree(theCargo, UMFloorUnsigned(theTarget.GetX()),
                                                   UMFloorUnsigned(theTarget.GetY())))
-                            theGoal = new EEUGUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
+                            theGoal = EEUGRust::NewUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
                         else
                             theGoal = new EEUGLocation(&theTarget, false, true, false, 0.0f, false, false);
                     }
@@ -607,7 +605,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
             theCargo->GetGoal()->GetGoalLocation(theTarget);
             EEUnitGoal* theCopy;
             if (theLast && EEIsTileFree(theCargo, UMFloorUnsigned(theTarget.GetX()), UMFloorUnsigned(theTarget.GetY())))
-                theCopy = new EEUGUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
+                theCopy = EEUGRust::NewUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
             else
                 theCopy = new EEUGLocation(&theTarget, false, true, false, 0.0f, false, false);
             theCargo->QueueGoal(theCopy, 0);

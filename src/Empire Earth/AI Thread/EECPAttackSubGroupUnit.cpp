@@ -35,7 +35,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGCastCalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
 #include "ee/EEUnitVectorItem.h"
@@ -1550,7 +1549,7 @@ bool EECPAttackSubGroupUnit::TryCastCalamity()
     }
     if (theChoice == NULL)
         return false;
-    EEUGCastCalamity* theGoal = new EEUGCastCalamity(this->GetUnit(), theChoice->mUnit, this->GetUnit()->GetTileX(),
+    EEUGRust* theGoal = EEUGRust::NewCastCalamity(this->GetUnit(), theChoice->mUnit, this->GetUnit()->GetTileX(),
         this->GetUnit()->GetTileY(), theCalamity == 0x1c ? 0x3aa8 : 0x277a, true);
     this->SetTarget(theChoice->mUnit);
     if (this->mSubGroup->GiveGoal(this->GetUnit(), theGoal, 0, kActionPrepareToMove))

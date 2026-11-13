@@ -27,7 +27,6 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGHealUnit.h"
-#include "ee/EEUGCastCalamity.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPhysicsModel.h"
@@ -129,7 +128,7 @@ void EEPMHelicopter::Step1(EEComplexUnit* inUnit)
     GEVector theForward;
     GEVector theMove;
     EEUGRust* theAttack = EEAttackUnitCast(theGoal);
-    EEUGCastCalamity* theCast = EEGoalCast<EEUGCastCalamity>(theGoal);
+    EEUGRust* theCast = EECastCalamityGoalCast(theGoal);
     EEUGHealUnit* theHeal = EEGoalCast<EEUGHealUnit>(theGoal);
     float theSpeed = inUnit->mVelocity;
     float theBrake = inUnit->GetAcceleration();
@@ -145,7 +144,7 @@ void EEPMHelicopter::Step1(EEComplexUnit* inUnit)
             theTarget.SetY((float) theAttack->GetAttackTarget()->GetTileY() + 0.5f);
         }
     } else if (theCast) {
-        theCast->GetTargetLocation(theTarget);
+        theCast->GetCalamityTargetLocation(theTarget);
     } else if (theHeal) {
         theTarget.SetX(theHeal->GetTarget()->mPhysicalModel.GetLocation().GetX());
         theTarget.SetY(theHeal->GetTarget()->mPhysicalModel.GetLocation().GetY());

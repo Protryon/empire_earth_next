@@ -1,8 +1,9 @@
 //! The patrol goal whole in Rust (RUST_PLAN R5b.4, the sixteenth round): `EEUGPatrol`'s state (its patrol group,
 //! its current point, its direction) and every body (`Step`, `Start`, `Clone`'s start point, the checksum, `Save`,
 //! `Load`, `RepairPointers`, `SetPatrolGroup`, the destructor's releases) by the goal's object. The C++ class is
-//! gone: a patrol goal is an `EEUGRust` of kind `kGoalPatrol` (ee/EEUGRust.h), whose virtuals call these over one
-//! host table (`EePatrolHost`: the patrol group's walk, the units' reads, the references, the typed file calls).
+//! gone: a patrol goal is an `EEUGRust` of kind `kGoalPatrol` (ee/EEUGRust.h), whose virtuals call these over the
+//! Rust goals' host (rust_goal.rs: the units' reads, the references, the typed file calls) and the patrol group's
+//! walk (`PatrolHost`). The debug texts and the out-of-synch dump are Rust's too (the seventeenth round).
 //!
 //! The group and the point are reference-counted C++ objects held by handle (their addresses); between `Load` and
 //! `RepairPointers` they are the saved ids, as the original kept them in its pointer fields.
@@ -10,28 +11,11 @@
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
+use crate::rust_goal::{hex8, EeUnitsGoalIo, GoalHost, Held};
+
 /// `kActionGetNextPatrolPoint`, `kActionPrepareToMove`
 const ACTION_GET_NEXT_PATROL_POINT: i64 = 8020;
 const ACTION_PREPARE_TO_MOVE: i64 = 8000;
-
-/// What the group or the point field holds.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Held {
-    None,
-    /// a live object (referenced)
-    Object(u64),
-    /// a saved id read by `Load`, resolved by `RepairPointers`
-    Saved(u32),
-}
-
-impl Held {
-    fn object(self) -> u64 {
-        match self {
-            Held::Object(o) => o,
-            _ => 0,
-        }
-    }
-}
 
 /// One patrol goal's state.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -68,36 +52,21 @@ fn put(goal: u64, state: Patrol) {
     });
 }
 
-/// The host's calls (the FFI table; the tests' mock).
-pub trait PatrolHost {
+/// The patrol group's calls (the FFI adapter; the tests' mock).
+pub trait PatrolHost: GoalHost {
     /// a new, empty patrol group (`new EEPPatrolGroup`: one reference, the goal's)
     fn new_group(&mut self) -> u64;
-    /// `Reference()` / `Dereference()` of a group (`group` true) or a unit
-    fn reference(&mut self, object: u64, group: bool);
-    fn dereference(&mut self, object: u64, group: bool);
     /// the group's `GetNext(unit)`, `GetPrevious(unit)`, `GetNumPoints()`, `mID`, `GetNearest(x, y)`
     fn group_next(&mut self, group: u64, unit: u64) -> u64;
     fn group_previous(&mut self, group: u64, unit: u64) -> u64;
     fn group_count(&mut self, group: u64) -> u32;
     fn group_id(&mut self, group: u64) -> u32;
     fn group_nearest(&mut self, group: u64, x: i64, y: i64) -> u64;
-    /// a unit's `mTileX`, `mTileY`, `mUnitID`, `mIsValid`, its command's type (0: none)
-    fn unit_tile(&mut self, unit: u64) -> (i64, i64);
-    fn unit_id(&mut self, unit: u64) -> u32;
-    fn unit_valid(&mut self, unit: u64) -> bool;
-    fn unit_command(&mut self, unit: u64) -> i64;
-    /// the goal's `SetPathAttempts(0)`; the unit's `StartAction(a)` and its class's `ActionChanged`
-    fn reset_path_attempts(&mut self, goal: u64);
-    fn start_action(&mut self, unit: u64, action: i64);
-    /// the world's complex unit of an id (`EEUnitCast<EEComplexUnit>(gWorld.GetUnit(id))`, 0: none); its player's
-    /// patrol group of an id (0: none)
-    fn find_unit(&mut self, id: u32) -> u64;
+    /// the unit's player's patrol group of an id (0: none)
     fn player_group(&mut self, unit: u64, id: u32) -> u64;
-    /// typed `FSFile` calls (`Write(unsigned long)`, `Write(bool)`, `Read(unsigned long&)`, `Read(bool&)`)
-    fn write_u32(&mut self, value: u32) -> i32;
-    fn write_bool(&mut self, value: bool) -> i32;
-    fn read_u32(&mut self, value: &mut u32) -> i32;
-    fn read_bool(&mut self, value: &mut bool) -> i32;
+    /// the group's `mPatrolPoints.size()` and its point `i` (0: an empty slot)
+    fn group_points(&mut self, group: u64) -> u32;
+    fn group_point(&mut self, group: u64, index: u32) -> u64;
 }
 
 /// `EEUGPatrol(inArg)`: a new empty group, no point, forward.
@@ -114,15 +83,7 @@ pub fn create(goal: u64, group: u64, target: u64, host: &mut dyn PatrolHost) {
     if target != 0 {
         host.reference(target, false);
     }
-    put(goal, Patrol { group: held(group), target: held(target), forward: true });
-}
-
-fn held(object: u64) -> Held {
-    if object == 0 {
-        Held::None
-    } else {
-        Held::Object(object)
-    }
+    put(goal, Patrol { group: Held::of(group), target: Held::of(target), forward: true });
 }
 
 /// The destructor: the group and the point released.
@@ -158,7 +119,7 @@ pub fn set_group(goal: u64, group: u64, host: &mut dyn PatrolHost) {
     if group != 0 {
         host.reference(group, true);
     }
-    p.group = held(group);
+    p.group = Held::of(group);
     put(goal, p);
 }
 
@@ -297,22 +258,17 @@ pub fn load(goal: u64, host: &mut dyn PatrolHost) -> i32 {
 /// (referenced); 3 when the point or the group is gone.
 pub fn repair(goal: u64, host: &mut dyn PatrolHost) -> i32 {
     let mut p = get(goal);
-    let saved = |h: Held| match h {
-        Held::Saved(id) => id,
-        Held::Object(_) => u32::MAX - 1,
-        Held::None => 0,
-    };
-    let point = saved(p.target);
+    let point = p.target.saved_id();
     let mut result = 0;
     if point != u32::MAX {
-        let unit = host.find_unit(point);
-        p.target = held(unit);
+        let unit = host.find_unit(point, true);
+        p.target = Held::of(unit);
         if unit != 0 {
             host.reference(unit, false);
-            let group = saved(p.group);
+            let group = p.group.saved_id();
             if group != u32::MAX {
                 let g = host.player_group(unit, group);
-                p.group = held(g);
+                p.group = Held::of(g);
                 if g != 0 {
                     host.reference(g, true);
                 } else {
@@ -334,139 +290,86 @@ pub fn repair(goal: u64, host: &mut dyn PatrolHost) -> i32 {
     result
 }
 
-/// The C++ host table.
-#[repr(C)]
-pub struct EePatrolHost {
-    pub context: *mut std::ffi::c_void,
-    pub new_group: unsafe extern "C" fn(*mut std::ffi::c_void) -> u64,
-    pub reference: unsafe extern "C" fn(*mut std::ffi::c_void, u64, bool),
-    pub dereference: unsafe extern "C" fn(*mut std::ffi::c_void, u64, bool),
-    pub group_next: unsafe extern "C" fn(*mut std::ffi::c_void, u64, u64) -> u64,
-    pub group_previous: unsafe extern "C" fn(*mut std::ffi::c_void, u64, u64) -> u64,
-    pub group_count: unsafe extern "C" fn(*mut std::ffi::c_void, u64) -> u32,
-    pub group_id: unsafe extern "C" fn(*mut std::ffi::c_void, u64) -> u32,
-    pub group_nearest: unsafe extern "C" fn(*mut std::ffi::c_void, u64, i64, i64) -> u64,
-    pub unit_tile: unsafe extern "C" fn(*mut std::ffi::c_void, u64, *mut i64, *mut i64),
-    pub unit_id: unsafe extern "C" fn(*mut std::ffi::c_void, u64) -> u32,
-    pub unit_valid: unsafe extern "C" fn(*mut std::ffi::c_void, u64) -> bool,
-    pub unit_command: unsafe extern "C" fn(*mut std::ffi::c_void, u64) -> i64,
-    pub reset_path_attempts: unsafe extern "C" fn(*mut std::ffi::c_void, u64),
-    pub start_action: unsafe extern "C" fn(*mut std::ffi::c_void, u64, i64),
-    pub find_unit: unsafe extern "C" fn(*mut std::ffi::c_void, u32) -> u64,
-    pub player_group: unsafe extern "C" fn(*mut std::ffi::c_void, u64, u32) -> u64,
-    pub write_u32: unsafe extern "C" fn(*mut std::ffi::c_void, u32) -> i32,
-    pub write_bool: unsafe extern "C" fn(*mut std::ffi::c_void, bool) -> i32,
-    pub read_u32: unsafe extern "C" fn(*mut std::ffi::c_void, *mut u32) -> i32,
-    pub read_bool: unsafe extern "C" fn(*mut std::ffi::c_void, *mut bool) -> i32,
+/// The out-of-synch dump (the group's id, the point's id, the direction; the base goal's dump is empty).
+pub fn dump(goal: u64, host: &mut dyn PatrolHost) {
+    let p = get(goal);
+    let id = host.group_id(p.group.object()) as i32;
+    host.append(&format!("OUT OF SYNCH DUMP:  EEUGPatrol - Patrol Group ID is {id}\n"));
+    let point = match p.target {
+        Held::Object(t) => host.unit_id(t),
+        _ => u32::MAX,
+    };
+    host.append(&format!("OUT OF SYNCH DUMP:  EEUGPatrol - Current Patrol Point #{}\n", hex8(point)));
+    host.append(&format!("OUT OF SYNCH DUMP:  EEUGPatrol - Going Forward Flag is {}\n", i32::from(p.forward)));
 }
 
-// SAFETY (every call): the table's contract: `context` is live for the FFI call that handed out the table
-impl PatrolHost for &EePatrolHost {
-    fn new_group(&mut self) -> u64 {
-        unsafe { (self.new_group)(self.context) }
-    }
-    fn reference(&mut self, object: u64, group: bool) {
-        unsafe { (self.reference)(self.context, object, group) }
-    }
-    fn dereference(&mut self, object: u64, group: bool) {
-        unsafe { (self.dereference)(self.context, object, group) }
-    }
-    fn group_next(&mut self, group: u64, unit: u64) -> u64 {
-        unsafe { (self.group_next)(self.context, group, unit) }
-    }
-    fn group_previous(&mut self, group: u64, unit: u64) -> u64 {
-        unsafe { (self.group_previous)(self.context, group, unit) }
-    }
-    fn group_count(&mut self, group: u64) -> u32 {
-        unsafe { (self.group_count)(self.context, group) }
-    }
-    fn group_id(&mut self, group: u64) -> u32 {
-        unsafe { (self.group_id)(self.context, group) }
-    }
-    fn group_nearest(&mut self, group: u64, x: i64, y: i64) -> u64 {
-        unsafe { (self.group_nearest)(self.context, group, x, y) }
-    }
-    fn unit_tile(&mut self, unit: u64) -> (i64, i64) {
-        let (mut x, mut y) = (0i64, 0i64);
-        unsafe { (self.unit_tile)(self.context, unit, &mut x, &mut y) };
-        (x, y)
-    }
-    fn unit_id(&mut self, unit: u64) -> u32 {
-        unsafe { (self.unit_id)(self.context, unit) }
-    }
-    fn unit_valid(&mut self, unit: u64) -> bool {
-        unsafe { (self.unit_valid)(self.context, unit) }
-    }
-    fn unit_command(&mut self, unit: u64) -> i64 {
-        unsafe { (self.unit_command)(self.context, unit) }
-    }
-    fn reset_path_attempts(&mut self, goal: u64) {
-        unsafe { (self.reset_path_attempts)(self.context, goal) }
-    }
-    fn start_action(&mut self, unit: u64, action: i64) {
-        unsafe { (self.start_action)(self.context, unit, action) }
-    }
-    fn find_unit(&mut self, id: u32) -> u64 {
-        unsafe { (self.find_unit)(self.context, id) }
-    }
-    fn player_group(&mut self, unit: u64, id: u32) -> u64 {
-        unsafe { (self.player_group)(self.context, unit, id) }
-    }
-    fn write_u32(&mut self, value: u32) -> i32 {
-        unsafe { (self.write_u32)(self.context, value) }
-    }
-    fn write_bool(&mut self, value: bool) -> i32 {
-        unsafe { (self.write_bool)(self.context, value) }
-    }
-    fn read_u32(&mut self, value: &mut u32) -> i32 {
-        unsafe { (self.read_u32)(self.context, value) }
-    }
-    fn read_bool(&mut self, value: &mut bool) -> i32 {
-        unsafe { (self.read_bool)(self.context, value) }
-    }
+/// `GetDebugLine`: "pat <points>:".
+pub fn debug_line(goal: u64, host: &mut dyn PatrolHost) {
+    let count = match get(goal).group {
+        Held::Object(g) => host.group_count(g) as i32,
+        _ => 0,
+    };
+    host.append(&format!("pat {count}:"));
 }
 
-// ---- the FFI: one entry per body (`op`: EE_UNITS_PATROL_*)
-pub const EE_UNITS_PATROL_CREATE_EMPTY: i32 = 1;
-pub const EE_UNITS_PATROL_CREATE: i32 = 2;
-pub const EE_UNITS_PATROL_DESTROY: i32 = 3;
-pub const EE_UNITS_PATROL_SET_GROUP: i32 = 4;
-pub const EE_UNITS_PATROL_CLONE_TARGET: i32 = 5;
-pub const EE_UNITS_PATROL_CHECKSUM: i32 = 6;
-pub const EE_UNITS_PATROL_STEP: i32 = 7;
-pub const EE_UNITS_PATROL_START: i32 = 8;
-pub const EE_UNITS_PATROL_SAVE: i32 = 9;
-pub const EE_UNITS_PATROL_LOAD: i32 = 10;
-pub const EE_UNITS_PATROL_REPAIR: i32 = 11;
-pub const EE_UNITS_PATROL_TARGET: i32 = 12;
-pub const EE_UNITS_PATROL_GROUP: i32 = 13;
-pub const EE_UNITS_PATROL_FORWARD: i32 = 14;
+/// `GetDebugText`: the point count, then each point's tile.
+pub fn debug_text(goal: u64, host: &mut dyn PatrolHost) {
+    let group = get(goal).group.object();
+    let count = if group != 0 { host.group_count(group) as i32 } else { 0 };
+    host.append(&format!("Patrol\nPatrol Points: {count}"));
+    if group == 0 {
+        return;
+    }
+    host.append("Patrol Points: ( ");
+    for i in 0..host.group_points(group) {
+        let point = host.group_point(group, i);
+        if point == 0 {
+            continue;
+        }
+        let (x, y) = host.unit_tile(point);
+        host.append(&format!("{{{},{}}} ", x as i32, y as i32));
+    }
+    host.append(" )\n");
+}
 
-/// A patrol goal's body `op` on the goal `goal` (`a`, `b`: the unit, the group or the target as the body takes
-/// them); its result (a handle, a status, a checksum or a flag; 0 otherwise).
-///
-/// # Safety
-/// `host` points to a valid table for the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_patrol_goal(op: i32, goal: u64, a: u64, b: u64, host: *const EePatrolHost) -> i64 {
-    // SAFETY: the caller's contract
-    let mut h = unsafe { &*host };
-    let h: &mut dyn PatrolHost = &mut h;
+/// The goal's body `op` (rust_goal.rs `EE_UNITS_GOAL_*`).
+pub fn body(op: i32, goal: u64, a: u64, b: u64, io: &mut EeUnitsGoalIo, host: &mut dyn PatrolHost) -> i64 {
+    use crate::rust_goal::*;
     match op {
-        EE_UNITS_PATROL_CREATE_EMPTY => create_empty(goal, h),
-        EE_UNITS_PATROL_CREATE => create(goal, a, b, h),
-        EE_UNITS_PATROL_DESTROY => destroy(goal, h),
-        EE_UNITS_PATROL_SET_GROUP => set_group(goal, a, h),
-        EE_UNITS_PATROL_CLONE_TARGET => return clone_target(goal, h) as i64,
-        EE_UNITS_PATROL_CHECKSUM => return checksum(goal, h),
-        EE_UNITS_PATROL_STEP => step(goal, a, h),
-        EE_UNITS_PATROL_START => start(goal, a, h),
-        EE_UNITS_PATROL_SAVE => return i64::from(save(goal, h)),
-        EE_UNITS_PATROL_LOAD => return i64::from(load(goal, h)),
-        EE_UNITS_PATROL_REPAIR => return i64::from(repair(goal, h)),
-        EE_UNITS_PATROL_TARGET => return target(goal) as i64,
-        EE_UNITS_PATROL_GROUP => return group(goal) as i64,
-        EE_UNITS_PATROL_FORWARD => return i64::from(forward(goal)),
+        EE_UNITS_GOAL_PATROL_NEW_EMPTY => create_empty(goal, host),
+        EE_UNITS_GOAL_NEW_PATROL => create(goal, a, b, host),
+        EE_UNITS_GOAL_DESTROY => destroy(goal, host),
+        EE_UNITS_GOAL_PATROL_SET_GROUP => set_group(goal, a, host),
+        EE_UNITS_GOAL_CLONE => {
+            let group = self::group(goal);
+            let start = if group != 0 { clone_target(goal, host) } else { 0 };
+            let copy = host.new_goal(GOAL_PATROL, b != 0);
+            create(copy, group, start, host);
+            return copy as i64;
+        }
+        EE_UNITS_GOAL_CHECKSUM => return checksum(goal, host),
+        EE_UNITS_GOAL_DUMP => dump(goal, host),
+        EE_UNITS_GOAL_DEBUG_LINE => debug_line(goal, host),
+        EE_UNITS_GOAL_DEBUG_TEXT => debug_text(goal, host),
+        EE_UNITS_GOAL_LOCATION | EE_UNITS_GOAL_DESTINATION => {
+            let target = target(goal);
+            if target != 0 {
+                let p = host.unit_position(target);
+                io.f[..3].copy_from_slice(&p);
+            }
+            if op == EE_UNITS_GOAL_DESTINATION {
+                host.tell_group(a, [io.f[0], io.f[1], io.f[2]]);
+            }
+        }
+        EE_UNITS_GOAL_START_ACTION => return ACTION_GET_NEXT_PATROL_POINT,
+        EE_UNITS_GOAL_STEP => step(goal, a, host),
+        EE_UNITS_GOAL_START => start(goal, a, host),
+        EE_UNITS_GOAL_SAVE => return i64::from(save(goal, host)),
+        EE_UNITS_GOAL_LOAD => return i64::from(load(goal, host)),
+        EE_UNITS_GOAL_REPAIR => return i64::from(repair(goal, host)),
+        EE_UNITS_GOAL_EVALUATE => return i64::from(base_condition(b as i64)),
+        EE_UNITS_GOAL_PATROL_TARGET => return target(goal) as i64,
+        EE_UNITS_GOAL_PATROL_GROUP => return self::group(goal) as i64,
         _ => {}
     }
     0
@@ -485,19 +388,98 @@ mod tests {
         log: Vec<String>,
         file: Vec<u32>,
         reads: Vec<u32>,
+        text: String,
     }
     const G: u64 = 0x6000;
+
+    impl GoalHost for World {
+        fn reference(&mut self, o: u64, g: bool) {
+            self.log.push(format!("ref {o:x} {g}"));
+        }
+        fn dereference(&mut self, o: u64, g: bool) {
+            self.log.push(format!("deref {o:x} {g}"));
+        }
+        fn unit_tile(&mut self, u: u64) -> (i64, i64) {
+            *self.tiles.get(&u).unwrap_or(&(0, 0))
+        }
+        fn unit_id(&mut self, u: u64) -> u32 {
+            u as u32
+        }
+        fn unit_valid(&mut self, _u: u64) -> bool {
+            true
+        }
+        fn unit_command(&mut self, _u: u64) -> i64 {
+            self.command
+        }
+        fn reset_path_attempts(&mut self, _g: u64) {
+            self.log.push("attempts 0".into());
+        }
+        fn start_action(&mut self, u: u64, a: i64) {
+            self.log.push(format!("start {u:x} {a}"));
+        }
+        fn find_unit(&mut self, id: u32, _c: bool) -> u64 {
+            u64::from(id)
+        }
+        fn write_u32(&mut self, v: u32) -> i32 {
+            self.file.push(v);
+            0
+        }
+        fn write_bool(&mut self, v: bool) -> i32 {
+            self.file.push(u32::from(v));
+            0
+        }
+        fn read_u32(&mut self, v: &mut u32) -> i32 {
+            *v = self.reads.remove(0);
+            0
+        }
+        fn read_bool(&mut self, v: &mut bool) -> i32 {
+            *v = self.reads.remove(0) != 0;
+            0
+        }
+        fn unit_position(&mut self, u: u64) -> [f32; 3] {
+            let (x, y) = self.unit_tile(u);
+            [x as f32, y as f32, 0.0]
+        }
+        fn tile_location(&mut self, x: i64, y: i64) -> [f32; 3] {
+            [x as f32, y as f32, 0.0]
+        }
+        fn tell_group(&mut self, u: u64, p: [f32; 3]) {
+            self.log.push(format!("tell {u:x} {p:?}"));
+        }
+        fn set_physics_action(&mut self, _u: u64, _a: i64) {}
+        fn set_animation(&mut self, _u: u64, _a: i64) {}
+        fn drop_path(&mut self, _u: u64) {}
+        fn new_goal(&mut self, _k: u8, _a: bool) -> u64 {
+            0x7a7e_0f00
+        }
+        fn file_open(&mut self) -> bool {
+            true
+        }
+        fn write_i32(&mut self, v: i32) -> i32 {
+            self.file.push(v as u32);
+            0
+        }
+        fn read_i32(&mut self, v: &mut i32) -> i32 {
+            *v = self.reads.remove(0) as i32;
+            0
+        }
+        fn append(&mut self, t: &str) {
+            self.text.push_str(t);
+        }
+        fn append_class_name(&mut self, _u: u64) {}
+    }
 
     impl PatrolHost for World {
         fn new_group(&mut self) -> u64 {
             self.log.push("new group".into());
             G
         }
-        fn reference(&mut self, o: u64, g: bool) {
-            self.log.push(format!("ref {o:x} {g}"));
+        fn group_points(&mut self, _g: u64) -> u32 {
+            self.points.len() as u32 + 1
         }
-        fn dereference(&mut self, o: u64, g: bool) {
-            self.log.push(format!("deref {o:x} {g}"));
+        fn group_point(&mut self, _g: u64, i: u32) -> u64 {
+            // a NULL slot at the end
+            self.points.get(i as usize).copied().unwrap_or(0)
         }
         fn group_next(&mut self, _g: u64, u: u64) -> u64 {
             if u == 0 {
@@ -526,49 +508,12 @@ mod tests {
         fn group_nearest(&mut self, _g: u64, x: i64, _y: i64) -> u64 {
             self.points.iter().copied().min_by_key(|p| (self.tiles[p].0 - x).abs()).unwrap_or(0)
         }
-        fn unit_tile(&mut self, u: u64) -> (i64, i64) {
-            *self.tiles.get(&u).unwrap_or(&(0, 0))
-        }
-        fn unit_id(&mut self, u: u64) -> u32 {
-            u as u32
-        }
-        fn unit_valid(&mut self, _u: u64) -> bool {
-            true
-        }
-        fn unit_command(&mut self, _u: u64) -> i64 {
-            self.command
-        }
-        fn reset_path_attempts(&mut self, _g: u64) {
-            self.log.push("attempts 0".into());
-        }
-        fn start_action(&mut self, u: u64, a: i64) {
-            self.log.push(format!("start {u:x} {a}"));
-        }
-        fn find_unit(&mut self, id: u32) -> u64 {
-            u64::from(id)
-        }
         fn player_group(&mut self, _u: u64, id: u32) -> u64 {
             if id == 7 {
                 G
             } else {
                 0
             }
-        }
-        fn write_u32(&mut self, v: u32) -> i32 {
-            self.file.push(v);
-            0
-        }
-        fn write_bool(&mut self, v: bool) -> i32 {
-            self.file.push(u32::from(v));
-            0
-        }
-        fn read_u32(&mut self, v: &mut u32) -> i32 {
-            *v = self.reads.remove(0);
-            0
-        }
-        fn read_bool(&mut self, v: &mut bool) -> i32 {
-            *v = self.reads.remove(0) != 0;
-            0
         }
     }
 
@@ -618,6 +563,44 @@ mod tests {
         step(goal, 0x900, &mut w);
         assert!(w.log.is_empty());
         destroy(goal, &mut w);
+    }
+
+    #[test]
+    fn the_texts_and_the_dispatcher() {
+        use crate::rust_goal::*;
+        let goal = 0x7a7e_0006u64;
+        let mut w = world();
+        let mut io = EeUnitsGoalIo::default();
+        body(EE_UNITS_GOAL_NEW_PATROL, goal, G, 0x102, &mut io, &mut w);
+        body(EE_UNITS_GOAL_DUMP, goal, 0, 0, &mut io, &mut w);
+        assert_eq!(
+            w.text,
+            "OUT OF SYNCH DUMP:  EEUGPatrol - Patrol Group ID is 7\n\
+             OUT OF SYNCH DUMP:  EEUGPatrol - Current Patrol Point #00000102\n\
+             OUT OF SYNCH DUMP:  EEUGPatrol - Going Forward Flag is 1\n"
+        );
+        w.text.clear();
+        body(EE_UNITS_GOAL_DEBUG_LINE, goal, 0, 0, &mut io, &mut w);
+        body(EE_UNITS_GOAL_DEBUG_TEXT, goal, 0, 0, &mut io, &mut w);
+        assert_eq!(w.text, "pat 3:Patrol\nPatrol Points: 3Patrol Points: ( {0,0} {10,0} {20,0}  )\n");
+        assert_eq!(body(EE_UNITS_GOAL_START_ACTION, goal, 0, 0, &mut io, &mut w), 8020);
+        assert_eq!(body(EE_UNITS_GOAL_EVALUATE, goal, 0x900, 9014, &mut io, &mut w), 1);
+        assert_eq!(body(EE_UNITS_GOAL_EVALUATE, goal, 0x900, 2003, &mut io, &mut w), 0);
+        body(EE_UNITS_GOAL_DESTINATION, goal, 0x900, 0, &mut io, &mut w);
+        assert_eq!(io.f[..3], [10.0, 0.0, 0.0]);
+        assert_eq!(w.log.last().unwrap(), "tell 900 [10.0, 0.0, 0.0]");
+        // the copy starts at the point before the current one, in the same group
+        let copy = body(EE_UNITS_GOAL_CLONE, goal, 0, 1, &mut io, &mut w) as u64;
+        assert_eq!((group(copy), target(copy)), (G, 0x101));
+        // no group: no text past the count
+        let empty = 0x7a7e_0007u64;
+        create(empty, 0, 0, &mut w);
+        w.text.clear();
+        debug_text(empty, &mut w);
+        assert_eq!(w.text, "Patrol\nPatrol Points: 0");
+        for g in [goal, copy, empty] {
+            destroy(g, &mut w);
+        }
     }
 
     #[test]

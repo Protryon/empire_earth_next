@@ -256,7 +256,29 @@ pub extern "C" fn ee_rust_abi_version() -> u32 {
 #[no_mangle]
 pub unsafe extern "C" fn ee_rust_init(log: unsafe extern "C" fn(line: *const c_char)) {
     ee_panic::install(log);
+    // the combat goals' bodies behind ee_units' goal dispatch (attack unit, attack ground: ee_combat goal_dispatch.rs)
+    #[cfg(not(test))]
+    ee_units::rust_goal::register_other_goal_kinds(ee_combat::goal_dispatch::rust_goal);
 }
+
+// ee_combat's mirrors of ee_units' goal host and block, and the operation numbers it copies
+#[cfg(not(test))]
+const _: () = {
+    use std::mem::{align_of, size_of};
+    assert!(size_of::<ee_units::rust_goal::EeUnitsGoalIo>() == size_of::<ee_combat::goal_objects::EeCombatGoalIo>());
+    assert!(align_of::<ee_units::rust_goal::EeUnitsGoalIo>() == align_of::<ee_combat::goal_objects::EeCombatGoalIo>());
+    assert!(
+        size_of::<ee_units::rust_goal::EeUnitsGoalHost>() == size_of::<ee_combat::goal_objects::EeCombatGoalTable>()
+    );
+    assert!(ee_units::rust_goal::EE_UNITS_GOAL_SET_PATH_ATTEMPTS == 20);
+    assert!(ee_units::rust_goal::EE_UNITS_GOAL_SUITS == 19);
+    assert!(ee_units::rust_goal::EE_UNITS_GOAL_DESTROY == 1);
+    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_NEW_GOAL == 16);
+    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_APPEND == 20);
+    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_UNIT_ID == 3);
+    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_UNIT_TILE == 4);
+    assert!(ee_units::rust_goal::EE_UNITS_GOAL_HOST_HIT_POINTS == 64);
+};
 
 #[cfg(test)]
 mod tests {

@@ -64,6 +64,7 @@
 #include "ee/EEUIManager.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEUIBMapBackground.h"
+#include "rust/ee_screens.h"   // ee_screens_frame_draw (ee_screens frame.rs)
 
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
@@ -118,253 +119,58 @@ EEUIBGenericBackground::~EEUIBGenericBackground()
 }
 
 // FUNCTION: EXE 0x654acc
-// Draws the frame's four small corners, clipped to the redraw rectangle
-void EEUIBGenericBackground::DrawCorners(const GERectangle& inRectangle)
-{
-    GERectangle theClipped;
-    GEBitmap* theBitmap = this->mBitmap;
-    float theInset;
-    if (this->mFrameFlags & 4)
-        theInset = this->mScaleX * 17.0f;
-    else
-        theInset = 0.0f;
-    GERectangle theCorner;
-    theCorner.SetLeft(this->mRectangle.GetLeft() + theInset);
-    theCorner.SetRight(this->mScaleX * 7.0f - 1.0f + theCorner.GetLeft());
-    theCorner.SetTop(this->mRectangle.GetTop());
-    theCorner.SetBottom(this->mScaleY * 7.0f - 1.0f + theCorner.GetTop());
-    if (theCorner.And(inRectangle, theClipped) == true)
-        this->DrawCorner(theBitmap, sCornerCell, theClipped, theCorner, 0);
-    theCorner.SetTop(this->mRectangle.GetBottom() - this->mScaleY * 7.0f + 1.0f);
-    theCorner.SetBottom(this->mRectangle.GetBottom());
-    if (theCorner.And(inRectangle, theClipped) == true)
-        this->DrawCorner(theBitmap, sCornerCell, theClipped, theCorner, 1);
-    theCorner.SetLeft(this->mRectangle.GetRight() - this->mScaleX * 7.0f - theInset + 1.0f);
-    theCorner.SetRight(this->mRectangle.GetRight() - theInset);
-    if (theCorner.And(inRectangle, theClipped) == true)
-        this->DrawCorner(theBitmap, sCornerCell, theClipped, theCorner, 2);
-    theCorner.SetTop(this->mRectangle.GetTop());
-    theCorner.SetBottom(this->mScaleY * 7.0f - 1.0f + this->mRectangle.GetTop());
-    if (theCorner.And(inRectangle, theClipped) == true)
-        this->DrawCorner(theBitmap, sCornerCell, theClipped, theCorner, 3);
-}
-
 // FUNCTION: EXE 0x654c5d
-// Draws the frame's four edges (the top and bottom ones rotated), clipped to the redraw rectangle
-void EEUIBGenericBackground::DrawEdges(const GERectangle& inRectangle)
-{
-    GERectangle theClipped;
-    float theInset;
-    if (this->mFrameFlags & 4)
-        theInset = this->mScaleX * 18.0f - 1.0f;
-    else
-        theInset = 0.0f;
-    GERectangle theEdge;
-    theEdge.SetLeft(this->mRectangle.GetLeft() + theInset);
-    theEdge.SetRight(this->mScaleX * 7.0f - 1.0f + theEdge.GetLeft());
-    theEdge.SetTop(this->mRectangle.GetTop() + this->mScaleY * 7.0f);
-    theEdge.SetBottom(this->mRectangle.GetBottom() - this->mScaleY * 7.0f);
-    if (theEdge.And(inRectangle, theClipped) == true)
-        this->DrawEdge(theClipped, theEdge, false, false, false);
-    theEdge.SetLeft(this->mRectangle.GetRight() - (this->mScaleX * 7.0f - 1.0f) - theInset);
-    theEdge.SetRight(this->mRectangle.GetRight() - theInset);
-    if (theEdge.And(inRectangle, theClipped) == true)
-        this->DrawEdge(theClipped, theEdge, false, false, true);
-    theEdge.SetLeft(this->mRectangle.GetLeft() + this->mScaleX * 7.0f + theInset);
-    theEdge.SetRight(this->mRectangle.GetRight() - theInset - this->mScaleX * 7.0f);
-    theEdge.SetTop(this->mRectangle.GetTop());
-    theEdge.SetBottom(this->mScaleY * 7.0f - 1.0f + theEdge.GetTop());
-    if (theEdge.And(inRectangle, theClipped) == true)
-        this->DrawEdge(theClipped, theEdge, true, false, false);
-    theEdge.SetTop(this->mRectangle.GetBottom() - (this->mScaleY * 7.0f - 1.0f));
-    theEdge.SetBottom(this->mRectangle.GetBottom());
-    if (theEdge.And(inRectangle, theClipped) == true)
-        this->DrawEdge(theClipped, theEdge, true, true, false);
-}
-
 // FUNCTION: EXE 0x654e05
-// Draws the frame's four large corners, clipped to the redraw rectangle
-void EEUIBGenericBackground::DrawFrameCorners(const GERectangle& inRectangle)
-{
-    GERectangle theClipped;
-    GEBitmap* theBitmap = this->mBitmap;
-    float theInset;
-    if (this->mFrameFlags & 4)
-        theInset = this->mScaleX * 18.0f - 1.0f;
-    else
-        theInset = 0.0f;
-    GERectangle theCorner;
-    theCorner.SetLeft(this->mRectangle.GetLeft() + theInset);
-    theCorner.SetRight(this->mScaleX * 28.0f - 1.0f + theCorner.GetLeft());
-    theCorner.SetTop(this->mRectangle.GetTop());
-    theCorner.SetBottom(this->mScaleY * 38.0f - 1.0f + theCorner.GetTop());
-    if (theCorner.And(inRectangle, theClipped) == true)
-        this->DrawCorner(theBitmap, sFrameCornerCell, theClipped, theCorner, 0);
-    theCorner.SetTop(this->mRectangle.GetBottom() - this->mScaleY * 38.0f + 1.0f);
-    theCorner.SetBottom(this->mRectangle.GetBottom());
-    if (theCorner.And(inRectangle, theClipped) == true)
-        this->DrawCorner(theBitmap, sFrameCornerCell, theClipped, theCorner, 1);
-    theCorner.SetLeft(this->mRectangle.GetRight() - this->mScaleX * 28.0f + 1.0f - theInset);
-    theCorner.SetRight(this->mRectangle.GetRight() - theInset);
-    if (theCorner.And(inRectangle, theClipped) == true)
-        this->DrawCorner(theBitmap, sFrameCornerCell, theClipped, theCorner, 2);
-    theCorner.SetTop(this->mRectangle.GetTop());
-    theCorner.SetBottom(this->mScaleY * 38.0f - 1.0f + this->mRectangle.GetTop());
-    if (theCorner.And(inRectangle, theClipped) == true)
-        this->DrawCorner(theBitmap, sFrameCornerCell, theClipped, theCorner, 3);
-}
-
 // FUNCTION: EXE 0x654f98
-// Draws the two side ornaments at mid height, clipped to the redraw rectangle
-// NEAR: the first GetTopLeft expands the float GE2DPoint ctor in the orig (ours calls the import);
-// the stand-in that made it exact before G1 no longer does at any n/position (inline-budget knife edge)
-void EEUIBGenericBackground::DrawSides(const GERectangle& inRectangle)
-{
-    GERectangle theSide;
-    GERectangle theClipped;
-    GEBitmap* theBitmap = this->mBitmap;
-    unsigned long theScreen = this->GetForm()->GetManager()->GetScreen();
-    theSide.SetLeft(this->mRectangle.GetLeft());
-    theSide.SetRight(this->mScaleX * 18.0f - 1.0f + theSide.GetLeft());
-    theSide.SetTop(this->mRectangle.GetHeight() * 0.5f + this->mRectangle.GetTop() - this->mScaleY * 10.0f);
-    theSide.SetBottom(this->mScaleY * 20.0f - 1.0f + theSide.GetTop());
-    if (theSide.And(inRectangle, theClipped) == true) {
-        theBitmap->ComputeStretchedCoordsAndScale(theSide, theClipped, sSideCell, theScreen);
-        theBitmap->SetLocation(theClipped.GetTopLeft());
-        this->GetForm()->GetManager()->GetRasterizer()->Draw(theBitmap, theScreen);
-    }
-    theSide.SetLeft(this->GetRectangle().GetRight() - this->mScaleX * 18.0f + 1.0f);
-    theSide.SetRight(this->GetRectangle().GetRight());
-    if (theSide.And(inRectangle, theClipped) != true)
-        return;
-    theBitmap->ComputeStretchedCoordsAndScale(theSide, theClipped, sSideCell, theScreen);
-    theBitmap->SetLocation(theClipped.GetTopLeft());
-    this->GetForm()->GetManager()->GetRasterizer()->Draw(theBitmap, theScreen);
-}
-
 // FUNCTION: EXE 0x655131
-// Draws the tinted background inside the side insets, then the frame pieces its flags ask for
-// NEAR: the original also re-stores theInner's left and top before the +1 (as a GERectangle(l, t, r + 1, b + 1)
-// built in theInner's own slots); SetLeft(GetLeft())/SetTop(GetTop()) makes it exact but is filler (rejected)
+// FUNCTION: EXE 0x65528a
+// FUNCTION: EXE 0x655463
+// Draws the tinted background inside the side insets, then the frame pieces its flags ask for, each clipped to the
+// redraw rectangle (the original's DrawCorners, DrawEdges, DrawFrameCorners, DrawSides, DrawEdge and DrawCorner:
+// ee_screens frame.rs over the two host calls below)
 long EEUIBGenericBackground::DrawBackground(const GERectangle& inRectangle)
 {
+    return ee_screens_frame_draw(this, &this->mRectangle, this->mScaleX, this->mScaleY, this->mFrameFlags, &inRectangle);
+}
+
+// The background's host (frame.rs): the tinted panel over a rectangle (left, top, right, bottom); the draw's result
+extern "C" long ee_screenscpp_frame_fill(void* inBackground, const float* inInner)
+{
+    EEUIBGenericBackground* theBackground = static_cast<EEUIBGenericBackground*>(inBackground);
     GERhombus theRhombus;
-    GERectangle theInner;
-    GERectangle theRectangle = this->mRectangle;
-    float theInset;
-    if (this->mFrameFlags & 4)
-        theInset = 18.0f;
-    else
-        theInset = 0.0f;
-    theRectangle.And(inRectangle);
-    theRhombus.SetOpacity(this->mOpacity);
-    theRhombus.SetColor(this->mColor);
-    theInner = this->mRectangle;
-    theInner.SetLeft(theInner.GetLeft() + theInset);
-    theInner.SetRight(theInner.GetRight() - theInset);
-    theInner.And(inRectangle);
-    theInner.SetRight(theInner.GetRight() + 1.0f);
-    theInner.SetBottom(theInner.GetBottom() + 1.0f);
-    theRhombus.SetRectangle(theInner);
-    long theResult = this->GetForm()->GetManager()->GetRasterizer()->Draw(&theRhombus,
-                                                                    this->GetForm()->GetManager()->GetScreen());
-    if (this->mFrameFlags & 1) {
-        this->DrawEdges(theRectangle);
-        if (!(this->mFrameFlags & 2))
-            this->DrawCorners(theRectangle);
-    }
-    if (this->mFrameFlags & 2)
-        this->DrawFrameCorners(theRectangle);
-    if (this->mFrameFlags & 4)
-        this->DrawSides(theRectangle);
-    return theResult;
+    theRhombus.SetOpacity(theBackground->mOpacity);
+    theRhombus.SetColor(theBackground->mColor);
+    theRhombus.SetRectangle(GERectangle(inInner[0], inInner[1], inInner[2], inInner[3]));
+    UIManager* theManager = theBackground->GetForm()->GetManager();
+    return theManager->GetRasterizer()->Draw(&theRhombus, theManager->GetScreen());
 }
 
-// FUNCTION: EXE 0x65528a
-// Draws one stretched edge piece, rotated and/or flipped as asked
-// NEAR: inline budget (orig refuses the GE2DPoint copy ctor in SetLocation(GetTopLeft()) and SetXYScale's body differs) and the rotated rectangle's store order
-void EEUIBGenericBackground::DrawEdge(const GERectangle& inDestination, const GERectangle& inTexture,
-                                      bool inRotate, bool inFlipVertically, bool inFlipHorizontally)
+// One frame piece: the bitmap stretched from the piece's rectangle onto its visible part with the cell, its texture
+// coordinates reordered (each order the new corners' indices into the current top-left, top-right, bottom-right,
+// bottom-left; the scales swapped after a quarter turn), placed and drawn
+extern "C" void ee_screenscpp_frame_piece(void* inBackground, const EeScreensFramePiece* inPiece)
 {
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theTopRight;
-    GERectangle theDestination;
-    theDestination = inDestination;
-    GETextureCoordinate theBottomRight;
-    GETextureCoordinate theBottomLeft;
-    GERectangle theTexture = inTexture;
-    GEBitmap* theBitmap = this->mBitmap;
-    unsigned long theScreen = this->GetForm()->GetManager()->GetScreen();
-    if (inRotate == true) {
-        theDestination.SetLeft(inTexture.GetBottom() - inDestination.GetBottom() + inTexture.GetTop());
-        theDestination.SetRight(inTexture.GetBottom() - inDestination.GetTop() + inTexture.GetTop());
-        theDestination.SetTop(inDestination.GetLeft());
-        theDestination.SetBottom(inDestination.GetRight());
-        theTexture.SetTop(inTexture.GetLeft());
-        theTexture.SetBottom(inTexture.GetRight());
-        theTexture.SetLeft(inTexture.GetTop());
-        theTexture.SetRight(inTexture.GetBottom());
-        theBitmap->ComputeStretchedCoordsAndScale(theTexture, theDestination, sEdgeCell, theScreen);
-        theBitmap->GetTextureCoordinatesPerVertex(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
-        theBitmap->SetTextureCoordinates(theTopRight, theBottomLeft, theTopLeft, theBottomRight);
-        theBitmap->SetXYScale(theBitmap->GetYScale(), theBitmap->GetXScale());
-    } else
-        theBitmap->ComputeStretchedCoordsAndScale(inTexture, theDestination, sEdgeCell, theScreen);
-    if (inFlipHorizontally) {
-        theBitmap->GetTextureCoordinatesPerVertex(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
-        theBitmap->SetTextureCoordinates(theTopRight, theTopLeft, theBottomLeft, theBottomRight);
+    static const GERectangle* kCells[] = {&sEdgeCell, &sFrameCornerCell, &sCornerCell, &sSideCell};
+    EEUIBGenericBackground* theBackground = static_cast<EEUIBGenericBackground*>(inBackground);
+    GEBitmap* theBitmap = theBackground->GetBitmap();
+    UIManager* theManager = theBackground->GetForm()->GetManager();
+    unsigned long theScreen = theManager->GetScreen();
+    const float* t = inPiece->texture;
+    const float* d = inPiece->destination;
+    theBitmap->ComputeStretchedCoordsAndScale(GERectangle(t[0], t[1], t[2], t[3]), GERectangle(d[0], d[1], d[2], d[3]),
+                                              *kCells[inPiece->cell], theScreen);
+    for (int i = 0; i < 3; i++) {
+        uint32_t theOrder = inPiece->orders[i];
+        if (theOrder == EE_SCREENS_FRAME_KEEP)
+            continue;
+        GETextureCoordinate c[4];
+        theBitmap->GetTextureCoordinatesPerVertex(c[0], c[1], c[2], c[3]);
+        theBitmap->SetTextureCoordinates(c[theOrder & 3], c[theOrder >> 2 & 3], c[theOrder >> 4 & 3], c[theOrder >> 6 & 3]);
+        if (i == 0 && inPiece->swap_scale)
+            theBitmap->SetXYScale(theBitmap->GetYScale(), theBitmap->GetXScale());
     }
-    if (inFlipVertically) {
-        theBitmap->GetTextureCoordinatesPerVertex(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
-        theBitmap->SetTextureCoordinates(theBottomRight, theBottomLeft, theTopLeft, theTopRight);
-    }
-    theBitmap->SetLocation(inDestination.GetTopLeft());
-    this->GetForm()->GetManager()->GetRasterizer()->Draw(theBitmap, theScreen);
-}
-
-// FUNCTION: EXE 0x655463
-// Draws one corner piece, mirrored into the corner given by the rotation (0..3)
-// NEAR: inline budget (orig refuses the GE2DPoint copy ctor in SetLocation(GetTopLeft()): 8 more frame bytes) and store order of the rotated rectangle
-void EEUIBGenericBackground::DrawCorner(GEBitmap* inBitmap, const GERectangle& inCell,
-                                        const GERectangle& inDestination, const GERectangle& inCorner,
-                                        long inRotation)
-{
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theTopRight;
-    GERectangle theDestination = inDestination;
-    GETextureCoordinate theBottomRight;
-    GETextureCoordinate theBottomLeft;
-    unsigned long theScreen = this->GetForm()->GetManager()->GetScreen();
-    switch (inRotation) {
-    case 0:
-        inBitmap->ComputeStretchedCoordsAndScale(inCorner, theDestination, inCell, theScreen);
-        break;
-    case 1:
-        theDestination.SetTop(inCorner.GetBottom() - inDestination.GetBottom() + inCorner.GetTop());
-        theDestination.SetBottom(inCorner.GetBottom() - inDestination.GetTop() + inCorner.GetTop());
-        inBitmap->ComputeStretchedCoordsAndScale(inCorner, theDestination, inCell, theScreen);
-        inBitmap->GetTextureCoordinatesPerVertex(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
-        inBitmap->SetTextureCoordinates(theBottomRight, theBottomLeft, theTopLeft, theTopRight);
-        break;
-    case 2:
-        theDestination.SetLeft(inCorner.GetRight() - inDestination.GetRight() + inCorner.GetLeft());
-        theDestination.SetRight(inCorner.GetRight() - inDestination.GetLeft() + inCorner.GetLeft());
-        theDestination.SetTop(inCorner.GetBottom() - inDestination.GetBottom() + inCorner.GetTop());
-        theDestination.SetBottom(inCorner.GetBottom() - inDestination.GetTop() + inCorner.GetTop());
-        inBitmap->ComputeStretchedCoordsAndScale(inCorner, theDestination, inCell, theScreen);
-        inBitmap->GetTextureCoordinatesPerVertex(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
-        inBitmap->SetTextureCoordinates(theBottomLeft, theBottomRight, theTopRight, theTopLeft);
-        break;
-    case 3:
-        theDestination.SetLeft(inCorner.GetRight() - inDestination.GetRight() + inCorner.GetLeft());
-        theDestination.SetRight(inCorner.GetRight() - inDestination.GetLeft() + inCorner.GetLeft());
-        inBitmap->ComputeStretchedCoordsAndScale(inCorner, theDestination, inCell, theScreen);
-        inBitmap->GetTextureCoordinatesPerVertex(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
-        inBitmap->SetTextureCoordinates(theTopRight, theTopLeft, theBottomLeft, theBottomRight);
-        break;
-    }
-    inBitmap->SetLocation(inDestination.GetTopLeft());
-    this->GetForm()->GetManager()->GetRasterizer()->Draw(inBitmap, theScreen);
+    theBitmap->SetLocation(GE2DPoint(inPiece->location[0], inPiece->location[1]));
+    theManager->GetRasterizer()->Draw(theBitmap, theScreen);
 }
 
 // FUNCTION: EXE 0x655675

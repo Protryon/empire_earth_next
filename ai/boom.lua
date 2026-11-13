@@ -40,6 +40,9 @@ local ECON = {
                             -- holds its cost, whatever the citizens or the minutes (§8.51)
     useful_cap = false,     -- from the Copper Age, as in the Prehistoric, no more citizens than the places have work for
     order = false,          -- the owner's build order (lib.build_order): the phases, their exact gatherers and buildings
+    iron_guard = false,     -- from the Copper Age, while saving, the epoch's iron kept from the army's exemption (§8.51)
+    iron_push = false,      -- from the Copper Age, while the save lacks iron: iron claimed further out, 18 on it, from
+                            -- the food once the epoch's food is in stock (§8.51)
 }
 
 local PLAN = {
@@ -333,6 +336,8 @@ end
 -- and claimed, and the escort holds it (§8.34). Only sites on the town's side (safe_site, §8.35); a claimed one under
 -- a tower (or with one on the way) is not kept. Returns the places the kept sites hold, the contested site (nil: none)
 -- and the places of the kept sites the gatherers can go to now (open).
+local claim_far = {}   -- (ECON.iron_push) the minerals claimed out to FAR_REACH this pass, on the town's side
+
 local function claim_sites(view, order, keep, resource, patch, wanted, most, range, skip)
     local want_sites = 0
     if wanted > 0 then
@@ -344,7 +349,7 @@ local function claim_sites(view, order, keep, resource, patch, wanted, most, ran
     -- (ECON.order, the owner: "only claim iron/gold near home") the minerals within the claim range only
     -- (C7: the minerals within the town's own area, the claim range and a drop site's reach past it; safe_site keeps
     -- them on the town's side, never toward the enemy)
-    local reach = patch and range or (ECON.order and range + ORDER_MINE_REACH or FAR_REACH)
+    local reach = patch and range or (ECON.order and not claim_far[resource] and range + ORDER_MINE_REACH or FAR_REACH)
     local kept, places, open, open_places = 0, 0, 0, 0
     local list = sites_of(view, resource, patch)
     for _, s in ipairs(list) do
@@ -392,7 +397,7 @@ end
 
 -- a variant's settings before the game starts (ai/boom_order.lua; each seat has its own Lua state, so a variant's
 -- module changes only its own seat): econ = ECON switches, plan = PLAN fields from the Stone Age on, defence =
--- lib.defence options
+-- lib.defence options, order = lib.build_order's BO.OPT
 function M.configure(o)
     for k, v in pairs(o.econ or {}) do
         ECON[k] = v
@@ -404,6 +409,9 @@ function M.configure(o)
     end
     for k, v in pairs(o.defence or {}) do
         D.opts[k] = v
+    end
+    for k, v in pairs(o.order or {}) do   -- (lib.build_order's BO.OPT)
+        BO.OPT[k] = v
     end
     return M
 end
@@ -651,6 +659,12 @@ function M.step(view, memory)
     -- out: the Stone Age for the rest of the game)
     local no_site = memory.no_site or {}
     local function guarded(r)
+        -- (ECON.iron_guard, boom-defence's late-game finding: the Bronze save unpaid 44 minutes on iron alone, stock 3-27,
+        -- the reserve 0 iron while the light army, always short in Copper, retrained spearmen and macemen from it) from
+        -- the Copper Age, while saving, the epoch's iron is kept from the army too
+        if ECON.iron_guard and r == "iron" and age >= 3 and saving and cost[r] > 0 then
+            return true
+        end
         return cost[r] > 0 and (view.stock[r] * 10 >= cost[r] * 7 or no_site[r] == true)
     end
     -- (balanced's claim_needed) an advance with a resource short that no site the gatherers can reach holds and
@@ -992,7 +1006,17 @@ function M.step(view, memory)
             if ECON.order and BO.OPT.claim_target then
                 claim_want = math.max(want[r], BO.fill(phase, plan.citizens_max)[r])
             end
-            local places, c = claim_sites(view, order, keep, r, false, claim_want, plan.mine_sites or 3, range, unsettled_r)
+            -- (ECON.iron_push, boom-defence's Bronze saves: unpaid on iron 849 of 914 minutes, 12 of 18 on iron at 5 a
+            -- minute; the fast saves had 16-20 on it) from the Copper Age, while the save lacks iron, the iron is claimed
+            -- out to FAR_REACH (still on the town's side) and up to 5 sites, for the whole 18
+            local most = plan.mine_sites or 3
+            claim_far[r] = nil
+            if ECON.iron_push and r == "iron" and age >= 3 and saving and view.stock.iron < (view.next_epoch_cost.iron or 0) then
+                claim_far[r] = true
+                most = math.max(most, 5)
+                claim_want = math.max(claim_want, 18)
+            end
+            local places, c = claim_sites(view, order, keep, r, false, claim_want, most, range, unsettled_r)
             memory.no_site[r] = want[r] > 0 and (places == 0 or c ~= nil)
             mineral_places[r] = places
             if c ~= nil and (contest == nil or c.distance < contest.distance) then
@@ -1074,6 +1098,13 @@ function M.step(view, memory)
                 local k = math.max(math.min(4, want.food - 12), 0)
                 want.food, want.wood = want.food - k, want.wood + k
             end
+            -- (ECON.iron_push: the save lacks iron and its food is in stock: food gatherers to iron up to 18, within the
+            -- iron's places)
+            if ECON.iron_push and age >= 3 and saving and view.stock.iron < (cost.iron or 0)
+                    and view.stock.food >= (cost.food or 0) then
+                local k = math.max(math.min(18 - want.iron, want.food - 12, (room.iron or 0) - want.iron), 0)
+                want.food, want.iron = want.food - k, want.iron + k
+            end
             -- (a mine's settlement waits on wood: up to 4 more on wood until it is paid)
             local settle = V.cost(view, "b_settlement")
             if false and memory.settle_short and settle ~= nil and view.stock.wood < settle.cost.wood * 2 then
@@ -1116,7 +1147,10 @@ function M.step(view, memory)
             end
         end
         local swant = ECON.order and memory.plan_want or want   -- (ECON.order: the phase's want, not the touched)
-        if V.cost(view, "b_settlement") ~= nil and going < SETTLE_AT_ONCE and total < plan.settlements then
+        -- (BO.OPT.boat_wood: the settlements too wait for the boats in stone_start)
+        local settle_hold = ECON.order and BO.OPT.boat_wood and BO.holds_wood(view, phase)
+        if V.cost(view, "b_settlement") ~= nil and going < SETTLE_AT_ONCE and total < plan.settlements
+                and not settle_hold then
             local wanted = {}
             for _, s in ipairs(view.sites) do
                 if keep[s.index] and s.danger == 0 and memory.bad_spots[spot_of(s)] == nil
@@ -1208,6 +1242,10 @@ function M.step(view, memory)
                             if placed then
                                 memory.settle_at[spot_of(s)] = view.time
                             end
+                        elseif #rids == 0 and not s.explored then
+                            -- (a claimed mine nobody has seen: its units are not listed until a citizen walks there; the
+                            -- Copper Age's second iron mine stood claimed and unexplored for 30 minutes)
+                            PL.walk(view, memory, spot_of(s), s.x, s.y)
                         end
                     elseif ECON.order and BO.OPT.place then
                         local spot = "w" .. c.x .. "," .. c.y
@@ -1330,12 +1368,18 @@ function M.step(view, memory)
         end
 
         -- fishing: from the Stone Age's first minute, two docks and the boats (they pay for themselves in food)
-        if plan.boats > 0 then
+        -- (ECON.order with BO.OPT.pre_dock: the dock goes up while the Stone Age is saved for, so the boats start at
+        -- the advance; the owner had 8 boats 3 minutes into Stone, boom 10 at 6)
+        local docks = plan.docks or 0
+        if ECON.order and BO.OPT.pre_dock and phase == "pre" and saving then
+            docks = 1
+        end
+        if plan.boats > 0 or docks > 0 then
             local boats = plan.boats
             if #memory.boats_lost >= BOATS_LOST_MAX then
                 boats = math.min(boats, view.boats)   -- the boats left fish on; none are replaced for now
             end
-            order("fish", {verb = "fish", boats = boats, docks = plan.docks})
+            order("fish", {verb = "fish", boats = boats, docks = docks})
         end
 
         -- the trainers: a barracks once the town has ten citizens, then an archery range, then the second of each as
@@ -1394,7 +1438,23 @@ function M.step(view, memory)
     if army_short then
         -- (lib.guard: the classes by the mix for the raiders seen, AI_RESEARCH §8.41)
         -- (lib.raid: while the Stone raid's force builds, 3 an order as under a threat)
-        GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2)
+        -- (plan.iron_free, AI_RESEARCH §8.50: while the next epoch's iron is short, or the reserve leaves the army less
+        -- than an order of spearmen, the soldiers that cost none)
+        local iron_free = plan.iron_free and saving and (view.stock.iron < (view.next_epoch_cost.iron or 0)
+            or view.stock.iron - (view.reserve.iron or 0) < 180)
+        -- (plan.train_spare, AI_RESEARCH §8.50: no order the reserve leaves unaffordable; a scramble spends the reserve)
+        -- (plan.iron_lean, AI_RESEARCH §8.50: from the Copper Age while saving, this percent of the iron infantry's share
+        -- trained as ranged soldiers)
+        local spare = nil
+        if plan.train_spare and not scramble then
+            spare = {}
+            for _, r in ipairs(V.resources) do
+                spare[r] = view.stock[r] - (view.reserve[r] or 0)
+            end
+        end
+        GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2, iron_free,
+            spare,
+            plan.iron_lean ~= nil and saving and view.epoch >= 2 and plan.iron_lean or 0)
     end
 
     -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard
@@ -1435,6 +1495,9 @@ function M.step(view, memory)
     memory.epoch_now = view.epoch
     GD.step(view, memory, {zone = view.claim_range})
     home = GD.group(memory)
+    if memory.def ~= nil then   -- (lib.defence's guard_refuge: the guard's post, while it holds 4 or more)
+        memory.def.guard_post = home ~= nil and home.post_x ~= nil and #home.units >= 4 and {home.post_x, home.post_y} or nil
+    end
     if plan.watch then
         SC.step(view, memory, {from = home})
     end
@@ -1505,6 +1568,9 @@ function M.step(view, memory)
 
     if ECON.order then
         PL.step(view, memory)   -- (the settlements' builders back to the engine once they stand)
+        if BO.OPT.shore_scout and phase == "pre" then
+            BO.shore_scout(view, memory, saving)
+        end
     end
     -- the plan line, once a minute
     if view.time % 60000 < 1000 and ECON.order then

@@ -1,6 +1,6 @@
 //! The attack-ground, attack-unit and heal goals whole in Rust (R5b.2, the twelfth round): each is an `EEUGRust` (the
 //! core lane's goal class whose state and bodies are Rust's, ee/EEUGRust.h), its own state a record here keyed by the
-//! goal object's address, its bodies over a host of the C++ objects' operations (`EeCombatGoalHost`: the unit's
+//! goal object's address, its bodies over a host of the C++ objects' operations (ee_units' goal host, `EeCombatGoalTable`: the unit's
 //! reach, location and group, the actions, the typed file calls). The trigger tests and steps were Rust already
 //! (goals.rs); the C++ keeps the object (the base goal's fields and vtable) and the text formatting of the debug and
 //! out-of-synch dumps.
@@ -12,21 +12,21 @@ use std::collections::BTreeMap;
 use std::ffi::c_void;
 use std::sync::Mutex;
 
-// ---- the host's operations (EeCombatGoalHost::op): `unit` the call's unit, `args` the arguments and answers
+// ---- the host's operations (the goal host's, from 1000): `unit` the call's unit, `args` the arguments and answers
 
 /// `inUnit->CanReachTile(args[0], args[1])`.
-pub const EE_COMBAT_G_CAN_REACH_TILE: i32 = 1;
+pub const EE_COMBAT_G_CAN_REACH_TILE: i32 = 1001;
 /// the unit's location's x, y, z as float bits into `args[0..3]`.
-pub const EE_COMBAT_G_UNIT_LOCATION: i32 = 2;
+pub const EE_COMBAT_G_UNIT_LOCATION: i32 = 1002;
 /// `if (inUnit->mActiveGroup != NULL) inUnit->mActiveGroup->TellGroup(inUnit, point)`, the point's bits in
 /// `args[0..3]`; answers whether the unit had a group.
-pub const EE_COMBAT_G_TELL_GROUP: i32 = 3;
+pub const EE_COMBAT_G_TELL_GROUP: i32 = 1003;
 /// `inUnit->StartAction(args[0]); inUnit->mUnitClass->ActionChanged(inUnit)`.
-pub const EE_COMBAT_G_START_ACTION: i32 = 4;
+pub const EE_COMBAT_G_START_ACTION: i32 = 1004;
 /// the file's `Write(float)` of the bits in `args[0]`; answers the result.
-pub const EE_COMBAT_G_WRITE_F32: i32 = 10;
+pub const EE_COMBAT_G_WRITE_F32: i32 = 1010;
 /// the file's `Read(float)` into `args[0]` (bits; its value before the read in `args[0]` too); answers the result.
-pub const EE_COMBAT_G_READ_F32: i32 = 11;
+pub const EE_COMBAT_G_READ_F32: i32 = 1011;
 
 /// `kActionInitialAttackState` (ee/EEUnitAction.h).
 pub const ACTION_INITIAL_ATTACK_STATE: i64 = 2016;
@@ -39,20 +39,60 @@ pub type EeCombatGoalArgs = [i64; 8];
 /// The C++ objects' operations behind the goals' bodies (a mock in the tests).
 pub trait GoalHost {
     fn op(&mut self, code: i32, unit: u64, args: &mut EeCombatGoalArgs) -> i64;
+    /// an operation with a second handle (ee_units' host's `b`)
+    fn op_ab(&mut self, code: i32, a: u64, b: u64, args: &mut EeCombatGoalArgs) -> i64 {
+        let _ = b;
+        self.op(code, a, args)
+    }
 }
 
-/// The C++ host: `op` over `ctx` (the call's file for the save and load).
+/// ee_units' `EeUnitsGoalIo` (rust_goal.rs), the argument block of the goals' host: the same layout.
 #[repr(C)]
-#[derive(Clone, Copy)]
-pub struct EeCombatGoalHost {
-    pub ctx: *mut c_void,
-    pub op: unsafe extern "C" fn(ctx: *mut c_void, code: i32, unit: u64, args: *mut EeCombatGoalArgs) -> i64,
+pub struct EeCombatGoalIo {
+    pub i: [i64; 8],
+    pub f: [f32; 4],
+    pub text: *const u8,
+    pub len: usize,
+    pub sink: *mut c_void,
 }
 
-impl GoalHost for EeCombatGoalHost {
-    fn op(&mut self, code: i32, unit: u64, args: &mut EeCombatGoalArgs) -> i64 {
+impl Default for EeCombatGoalIo {
+    fn default() -> Self {
+        EeCombatGoalIo { i: [0; 8], f: [0.0; 4], text: std::ptr::null(), len: 0, sink: std::ptr::null_mut() }
+    }
+}
+
+/// ee_units' `EeUnitsGoalHost`: the C++ host of every Rust goal (EEUGRust.cpp's `GoalOp`; the combat goals'
+/// operations are its default case, EEUGRustCombat.cpp's `EECombatGoalHostOp`).
+#[repr(C)]
+pub struct EeCombatGoalTable {
+    pub context: *mut c_void,
+    pub op: unsafe extern "C" fn(*mut c_void, i32, u64, u64, *mut EeCombatGoalIo) -> i64,
+}
+
+/// The goals' host over the C++ table: `args` are the block's ints, `unit` its first handle.
+pub struct TableHost<'a>(pub &'a EeCombatGoalTable);
+
+impl TableHost<'_> {
+    /// An operation of ee_units' common host with its whole block (`a`, `b` the handles).
+    pub fn call(&mut self, code: i32, a: u64, b: u64, io: &mut EeCombatGoalIo) -> i64 {
         // SAFETY: the C++ host answers over its own context for the duration of the call
-        unsafe { (self.op)(self.ctx, code, unit, args) }
+        unsafe { (self.0.op)(self.0.context, code, a, b, io) }
+    }
+}
+
+impl GoalHost for TableHost<'_> {
+    fn op(&mut self, code: i32, unit: u64, args: &mut EeCombatGoalArgs) -> i64 {
+        let mut io = EeCombatGoalIo { i: *args, ..Default::default() };
+        let r = self.call(code, unit, 0, &mut io);
+        *args = io.i;
+        r
+    }
+    fn op_ab(&mut self, code: i32, a: u64, b: u64, args: &mut EeCombatGoalArgs) -> i64 {
+        let mut io = EeCombatGoalIo { i: *args, ..Default::default() };
+        let r = self.call(code, a, b, &mut io);
+        *args = io.i;
+        r
     }
 }
 
@@ -88,6 +128,11 @@ pub fn with_goals<R>(f: impl FnOnce(&mut CombatGoals) -> R) -> R {
 
 fn bits(p: [f32; 3]) -> [u32; 3] {
     [p[0].to_bits(), p[1].to_bits(), p[2].to_bits()]
+}
+
+/// The attack-ground goal's target point (float bits; 0 for a goal without a record).
+pub fn ground_target_bits(goal: u64) -> [u32; 3] {
+    ground_of(goal).target
 }
 
 fn ground_of(goal: u64) -> GroundGoal {
@@ -159,22 +204,7 @@ pub fn ground_load<H: GoalHost>(h: &mut H, goal: u64) -> i32 {
     result
 }
 
-// ---- the C ABI
-
-/// A new attack-ground goal's record (its target point).
-#[no_mangle]
-pub extern "C" fn ee_combat_ground_create(goal: u64, x: f32, y: f32, z: f32) {
-    with_goals(|g| g.ground.insert(goal, GroundGoal { target: bits([x, y, z]) }));
-}
-
-/// The goal object goes: its record with it (any kind).
-#[no_mangle]
-pub extern "C" fn ee_combat_goal_drop(goal: u64) {
-    with_goals(|g| {
-        g.ground.remove(&goal);
-        g.attack.remove(&goal);
-    });
-}
+// ---- the C ABI (the accessors' reads; the bodies are goal_dispatch.rs's)
 
 /// The attack-ground goal's target into `out` (0, 0, 0 for a goal without a record).
 ///
@@ -187,46 +217,17 @@ pub unsafe extern "C" fn ee_combat_ground_target(goal: u64, out: *mut [f32; 3]) 
     unsafe { *out = [f32::from_bits(t[0]), f32::from_bits(t[1]), f32::from_bits(t[2])] };
 }
 
-/// `GetDestination` of the attack-ground goal into `out`.
-///
-/// # Safety
-/// `host` must be a valid host; `out` three writable floats.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_ground_destination(
-    goal: u64,
-    unit: u64,
-    host: *const EeCombatGoalHost,
-    out: *mut [f32; 3],
-) {
-    let mut h = unsafe { *host };
-    let t = ground_destination(&mut h, goal, unit);
-    unsafe { *out = [f32::from_bits(t[0]), f32::from_bits(t[1]), f32::from_bits(t[2])] };
+/// A new attack-ground goal's record (its target point).
+pub fn ground_create(goal: u64, point: [f32; 3]) {
+    with_goals(|g| g.ground.insert(goal, GroundGoal { target: bits(point) }));
 }
 
-/// The attack-ground goal's own checksum part.
-#[no_mangle]
-pub extern "C" fn ee_combat_ground_checksum(goal: u64) -> i32 {
-    ground_checksum(goal)
-}
-
-/// The attack-ground goal's own `Save` part over `host`'s file.
-///
-/// # Safety
-/// `host` must be a valid host.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_ground_save(goal: u64, host: *const EeCombatGoalHost) -> i32 {
-    let mut h = unsafe { *host };
-    ground_save(&mut h, goal)
-}
-
-/// The attack-ground goal's own `Load` part over `host`'s file.
-///
-/// # Safety
-/// `host` must be a valid host.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_ground_load(goal: u64, host: *const EeCombatGoalHost) -> i32 {
-    let mut h = unsafe { *host };
-    ground_load(&mut h, goal)
+/// The goal object goes: its record with it (any kind).
+pub fn goal_drop(goal: u64) {
+    with_goals(|g| {
+        g.ground.remove(&goal);
+        g.attack.remove(&goal);
+    });
 }
 
 #[cfg(test)]

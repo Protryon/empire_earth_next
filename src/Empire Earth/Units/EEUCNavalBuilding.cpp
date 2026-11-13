@@ -31,7 +31,7 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGExplore.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCNavalBuilding.h"
 #include "ee/EEMedia.h"
@@ -62,7 +62,7 @@ bool EEUCNavalBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
                 EEUnitGoal* theGoal = (theCargo->mGoalQueues.begin() + 1)->GetFront();
                 if (EEAttackUnitCast(theGoal) == 0 &&
                     EEGoalCast<EEUGLocation>(theGoal) == 0 &&
-                    EEGoalCast<EEUGExplore>(theGoal) == 0)
+                    EEExploreGoalCast(theGoal) == 0)
                     theGoal = NULL;
                 if (theGoal != NULL)
                     theReady = true;
@@ -71,7 +71,7 @@ bool EEUCNavalBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
                 EEUnitGoal* theGoal = (inUnit->mGoalQueues.begin() + 1)->GetFront();
                 if (EEAttackUnitCast(theGoal) == 0 &&
                     EEGoalCast<EEUGLocation>(theGoal) == 0 &&
-                    EEGoalCast<EEUGExplore>(theGoal) == 0)
+                    EEExploreGoalCast(theGoal) == 0)
                     theGoal = NULL;
                 if (theGoal != NULL)
                     theReady = true;

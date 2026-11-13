@@ -14,7 +14,7 @@ using namespace WONAPI;
 // FUNCTION: WON 0x00705760
 // Uses a scrollbar as the vertical or horizontal one (by its orientation) and listens to its events
 void ScrollbarScroller::SetScrollbar(Scrollbar* scrollbar) {
-    if(scrollbar->mVertical) this->mVertScrollbar=scrollbar;
+    if(scrollbar->IsVertical()) this->mVertScrollbar=scrollbar;
     else this->mHorzScrollbar=scrollbar;
     scrollbar->AddListener(new ComponentListenerComp(this));
 }
@@ -42,7 +42,7 @@ bool ScrollbarScroller::EnableScrollbar(Scrollbar* scrollbar,ScrollbarCondition 
     ScrollArea* a=this->mScrollArea.get();
     EeWonScrollArea anArea = { a->mVertOffset, a->mHorzOffset, a->mTotalWidth, a->mTotalHeight, a->mExtraHeight,
                                a->mScrollArea.x, a->mScrollArea.y, a->mScrollArea.width, a->mScrollArea.height };
-    int k=ee_won_gui_scrollbar_condition(condition,this->mSettingScrollbarConditions,visible,scrollbar->mVertical,
+    int k=ee_won_gui_scrollbar_condition(condition,this->mSettingScrollbarConditions,visible,scrollbar->IsVertical(),
                                          anArea);
     if(k<0) return false;
     if(k==0 || k==1) scrollbar->SetVisible(k==1);
@@ -67,8 +67,8 @@ void ScrollbarScroller::SetScrollbarConditions(ScrollbarCondition horizontal,Scr
 void ScrollbarScroller::HandleComponentEvent(ComponentEvent* event) {
     if(event->mType==ComponentEvent_Scroll) {
         Scrollbar* scrollbar=static_cast<Scrollbar*>(event->mComponent);
-        int position=scrollbar->mPosition;
-        if(scrollbar->mVertical) {
+        int position=scrollbar->GetPosition();
+        if(scrollbar->IsVertical()) {
             if(scrollbar==this->mVertScrollbar.get()) { this->SetVertOffset(position);return; }
         } else if(scrollbar==this->mHorzScrollbar.get()) { this->SetHorzOffset(position);return; }
     }
@@ -83,22 +83,17 @@ void ScrollbarScroller::NotifyScrollChange(bool becauseOfScroller) {
     int aTotal=0,aPage=0;
     if(this->mVertScrollbar.get()!=NULL) {
         bool anEnabled=ee_won_gui_scrollbar_sync(anArea,true,&aTotal,&aPage);
-        this->mVertScrollbar->mTotalSize=aTotal;
-        this->mVertScrollbar->mPageSize=aPage;
-        this->mVertScrollbar->mPageScrollSize=aPage;
-        this->mVertScrollbar->mLineUpScrollSize=this->mScrollArea->mUpScrollAmount;
-        this->mVertScrollbar->mLineDownScrollSize=this->mScrollArea->mDownScrollAmount;
-        if(!becauseOfScroller) this->mVertScrollbar->mPosition=this->mScrollArea->mVertOffset;
+        this->mVertScrollbar->SetRange(aTotal,aPage);
+        this->mVertScrollbar->SetLineScrollSizes(this->mScrollArea->mUpScrollAmount,this->mScrollArea->mDownScrollAmount);
+        if(!becauseOfScroller) this->mVertScrollbar->SetPosition(this->mScrollArea->mVertOffset);
         this->mVertScrollbar->LayoutThumb(!becauseOfScroller);
         this->mVertScrollbar->SetEnabled(anEnabled);
         this->mVertScrollbar->Invalidate();
     }
     if(this->mHorzScrollbar.get()!=NULL) {
         bool anEnabled=ee_won_gui_scrollbar_sync(anArea,false,&aTotal,&aPage);
-        this->mHorzScrollbar->mTotalSize=aTotal;
-        this->mHorzScrollbar->mPageSize=aPage;
-        this->mHorzScrollbar->mPageScrollSize=aPage;
-        if(!becauseOfScroller) this->mHorzScrollbar->mPosition=this->mScrollArea->mHorzOffset;
+        this->mHorzScrollbar->SetRange(aTotal,aPage);
+        if(!becauseOfScroller) this->mHorzScrollbar->SetPosition(this->mScrollArea->mHorzOffset);
         this->mHorzScrollbar->LayoutThumb(!becauseOfScroller);
         this->mHorzScrollbar->SetEnabled(anEnabled);
         this->mHorzScrollbar->Invalidate();

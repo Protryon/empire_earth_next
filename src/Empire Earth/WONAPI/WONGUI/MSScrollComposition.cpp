@@ -19,19 +19,19 @@ MSScrollbar::MSScrollbar(bool vertical) : Scrollbar(vertical)
 {
     this->mIsTransparent=false;
     if(vertical) {
-        this->mUpArrow=MSScrollbar::ArrowButtonFactory(Direction_Up);
-        this->mDownArrow=MSScrollbar::ArrowButtonFactory(Direction_Down);
+        this->SetUpArrow(MSScrollbar::ArrowButtonFactory(Direction_Up));
+        this->SetDownArrow(MSScrollbar::ArrowButtonFactory(Direction_Down));
     } else {
-        this->mUpArrow=MSScrollbar::ArrowButtonFactory(Direction_Left);
-        this->mDownArrow=MSScrollbar::ArrowButtonFactory(Direction_Right);
+        this->SetUpArrow(MSScrollbar::ArrowButtonFactory(Direction_Left));
+        this->SetDownArrow(MSScrollbar::ArrowButtonFactory(Direction_Right));
     }
-    if(this->mUpArrow->Width()==0 || this->mUpArrow->Height()==0)
-        this->mUpArrow->SetSizeAtLeast(15,15);
-    if(this->mDownArrow->Width()==0 || this->mDownArrow->Height()==0)
-        this->mDownArrow->SetSizeAtLeast(15,15);
-    this->mThumb=MSScrollbar::ThumbFactory(ThumbType(this->mVertical));
-    this->mScrollRect=new Button;
-    this->SetSize(this->mUpArrow->Width(),this->mUpArrow->Height());
+    if(this->GetUpArrow()->Width()==0 || this->GetUpArrow()->Height()==0)
+        this->GetUpArrow()->SetSizeAtLeast(15,15);
+    if(this->GetDownArrow()->Width()==0 || this->GetDownArrow()->Height()==0)
+        this->GetDownArrow()->SetSizeAtLeast(15,15);
+    this->SetThumb(MSScrollbar::ThumbFactory(ThumbType(this->IsVertical())));
+    this->SetScrollRect(new Button);
+    this->SetSize(this->GetUpArrow()->Width(),this->GetUpArrow()->Height());
 }
 // FUNCTION: WON 0x006ffeb0
 // Creates a scroll container around the scroll area with Windows-style scrollbars, no header and both

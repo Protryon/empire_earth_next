@@ -1,9 +1,10 @@
-// New (port; docs/RUST_PLAN.md R5b.2, the twelfth round): the combat lane's goals as EEUGRust (ee/EEUGRust.h): the
+// New (port; docs/RUST_PLAN.md R5b.2, the twelfth round): the combat lane's goals on EEUGRust (ee/EEUGRust.h): the
 // attack on the ground (kGoalAttackGround; was EEUGAttackGround 0x21ce6c..0x21d2f4) and the attack on a unit
-// (kGoalAttackUnit; was EEUGAttackUnit 0x21d2f4..0x21e0c1). Their state and bodies are
-// ee_combat goal_objects.rs's (a record by goal object) and goals.rs's (the trigger tests and steps); here each virtual
-// is one call over the host of the C++ objects' operations, the debug and out-of-synch texts' formatting, and the CBGO
-// records (TEST ONLY, recorded from the original bodies first).
+// (kGoalAttackUnit; was EEUGAttackUnit 0x21d2f4..0x21e0c1). EEUGRust's virtuals go through ee_units' goal dispatch
+// (rust_goal.rs), which hands these kinds to ee_combat goal_dispatch.rs: their state and bodies are Rust's
+// (goal_objects.rs, goal_attack.rs; the trigger tests and steps goals.rs's). Here: the combat goals' operations of the
+// goals' host (EEUGRust.cpp's GoalOp's default case), each the original's statement, the CBGO records (TEST ONLY,
+// recorded from the original bodies first), and the accessors the callers use.
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -30,6 +31,7 @@
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUnitKind.h"
 #include "rust/ee_combat.h"
+#include "rust/ee_units.h"
 
 namespace {
 
@@ -58,12 +60,21 @@ float Float(int64_t inBits)
     return theValue;
 }
 
-// the operations of ee_combat goal_objects.rs (EE_COMBAT_G_*), each the original's statement; inContext the call's file
-int64_t GoalOp(void* inContext, int32_t inCode, uint64_t inUnit, EeCombatGoalArgs* ioArgs)
+EEUnitGoal* UnitGoalOf(uint64_t inHandle)
 {
-    int64_t* a = *ioArgs;
+    return reinterpret_cast<EEUnitGoal*>(static_cast<uintptr_t>(inHandle));
+}
+
+
+}  // namespace
+
+// the combat goals' operations of the goals' host (ee_combat EE_COMBAT_G_*, from 1000: EEUGRust.cpp's GoalOp
+// default case), each the original's statement; inFile the call's file
+int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint64_t inB, EeUnitsGoalIo* ioArgs)
+{
+    int64_t* a = ioArgs->i;
     EEComplexUnit* theUnit = UnitOf(inUnit);
-    FSFile* theFile = (FSFile*)inContext;
+    FSFile* theFile = inFile;
     switch (inCode) {
     case EE_COMBAT_G_CAN_REACH_TILE:
         return theUnit->CanReachTile((long)a[0], (long)a[1]);
@@ -196,27 +207,73 @@ int64_t GoalOp(void* inContext, int32_t inCode, uint64_t inUnit, EeCombatGoalArg
         a[0] = Bits(theValue);
         return theResult;
     }
+    // the dispatch's (ee_combat goal_dispatch.rs)
+    case EE_COMBAT_G_STEP:
+        EECombatStep((int32_t)a[0], theUnit, UnitGoalOf((uint64_t)a[2]), reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[1])));
+        return 0;
+    case EE_COMBAT_G_EVALUATE:
+        return EECombatCondition((int32_t)a[0], theUnit, (unsigned long)a[1], reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[2])),
+                                 UnitGoalOf((uint64_t)a[3]), NULL);
+    case EE_COMBAT_G_PROJECTILE_CLASS: return reinterpret_cast<EEUnit*>(theUnit)->mUnitClass->mProjectileClass != NULL;
+    case EE_COMBAT_G_CAPTURE: {   // TEST ONLY: CBGO
+        float thePoint[3] = {Float(a[4]), Float(a[5]), Float(a[6])};
+        EECombatCaptureGoal((uint32_t)a[0], (uint32_t)a[1], reinterpret_cast<EEUnit*>(theUnit),
+                            reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[2])), (int32_t)a[3], thePoint, (uint32_t)a[7],
+                            (uint32_t)((uint64_t)a[7] >> 32));
+        return 0;
+    }
+    case EE_COMBAT_G_PATH_ATTEMPTS: return UnitGoalOf(inUnit)->mPathAttempts;
+    case EE_COMBAT_G_SAVE_FLAGS:
+        return (EESaveHasLiveState((unsigned long)a[0], (unsigned long)a[1]) ? 1 : 0)
+            | (EESaveHasGoalGhosts((unsigned long)a[0], (unsigned long)a[1]) ? 2 : 0);
+    case EE_COMBAT_G_CLASS_NAME: {
+        EEUnitClass* theClass = reinterpret_cast<EEUnit*>(theUnit)->mUnitClass;
+        return theClass != NULL ? (int64_t)(uintptr_t)(const char*)theClass->mName : 0;
+    }
+    case EE_COMBAT_G_MAX_HIT_POINTS: return reinterpret_cast<EEUnit*>(theUnit)->mStats->mMaxHitPoints;
+    case EE_COMBAT_G_HAS_GROUP: return theUnit->mActiveGroup != NULL;
     }
     return 0;
 }
 
-EeCombatGoalHost HostOf(FSFile* inFile)
+namespace {
+
+// one combat body through the goal dispatch; the point in and out
+int64_t Combat(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t inB = 0, int64_t inI0 = 0,
+               GE3DPoint* ioPoint = NULL)
 {
-    EeCombatGoalHost theHost = {inFile, GoalOp};
-    return theHost;
+    EeUnitsGoalIo theArgs = {};
+    theArgs.i[0] = inI0;
+    if (ioPoint != NULL) {
+        theArgs.f[0] = ioPoint->GetX();
+        theArgs.f[1] = ioPoint->GetY();
+        theArgs.f[2] = ioPoint->GetZ();
+    }
+    int64_t theResult = EEUGRustGoal(inOperation, inGoal, inA, inB, &theArgs);
+    if (ioPoint != NULL)
+        ioPoint->SetXYZ(theArgs.f[0], theArgs.f[1], theArgs.f[2]);
+    return theResult;
+}
+
+EeCombatAttackGoal AttackOf(const EEUGRust* inGoal)
+{
+    EeCombatAttackGoal theRecord;
+    ee_combat_attack_get(Handle(inGoal), &theRecord);
+    return theRecord;
+}
+
+void AttackSet(const EEUGRust* inGoal, const EeCombatAttackGoal& inRecord)
+{
+    ee_combat_attack_set(Handle(inGoal), &inRecord);
 }
 
 }  // namespace
 
-bool EEUGRustIsCombat(unsigned char inKind)
-{
-    return inKind == kGoalAttackGround || inKind == kGoalAttackUnit;
-}
-
 EEUGRust* EEUGRust::NewAttackGround(const GE3DPoint& inTarget, bool inArg)
 {
     EEUGRust* theGoal = new EEUGRust(kGoalAttackGround, inArg);
-    ee_combat_ground_create(Handle(theGoal), inTarget.GetX(), inTarget.GetY(), inTarget.GetZ());
+    GE3DPoint thePoint = inTarget;
+    Combat(EE_COMBAT_GOAL_NEW_GROUND, theGoal, 0, 0, 0, &thePoint);
     return theGoal;
 }
 
@@ -227,31 +284,17 @@ GE3DPoint EEUGRust::GetGroundTarget()
     return GE3DPoint(thePoint[0], thePoint[1], thePoint[2]);
 }
 
-// ---- the attack on a unit (kGoalAttackUnit; was EEUGAttackUnit 0x21d2f4..0x21e0c1): ee_combat goal_attack.rs
-
-namespace {
-
-EeCombatAttackGoal AttackOf(const EEUGRust* inGoal)
-{
-    EeCombatAttackGoal theRecord;
-    ee_combat_attack_get(Handle(inGoal), &theRecord);
-    return theRecord;
-}
-
-int32_t Attack(int32_t inFunction, EEUGRust* inGoal, uint64_t inA = 0, uint64_t inB = 0, FSFile* inFile = NULL,
-               float (*ioPoint)[3] = NULL)
-{
-    EeCombatGoalHost theHost = HostOf(inFile);
-    return ee_combat_attack_goal(inFunction, Handle(inGoal), inA, inB, &theHost, ioPoint);
-}
-
-}  // namespace
-
 EEUGRust* EEUGRust::NewAttackUnit(EEComplexUnit* inAttacker, EEUnit* inTarget, bool inArg3, bool inIsConvert)
 {
     EEUGRust* theGoal = new EEUGRust(kGoalAttackUnit, inArg3);
-    Attack(inIsConvert ? EE_COMBAT_ATTACK_CREATE_CONVERT : EE_COMBAT_ATTACK_CREATE, theGoal, Handle(inAttacker),
-           Handle(inTarget));
+    Combat(EE_COMBAT_GOAL_NEW_ATTACK, theGoal, Handle(inAttacker), Handle(inTarget), inIsConvert ? 1 : 0);
+    return theGoal;
+}
+
+EEUGRust* EEUGRust::NewAttackUnitEmpty(bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalAttackUnit, inArg);
+    Combat(EE_COMBAT_GOAL_NEW_ATTACK, theGoal, 0, 0, 2);
     return theGoal;
 }
 
@@ -269,22 +312,22 @@ void EEUGRust::SetAttacker(EEComplexUnit* inAttacker)
 {
     EeCombatAttackGoal theRecord = AttackOf(this);
     theRecord.attacker = Handle(inAttacker);
-    ee_combat_attack_set(Handle(this), &theRecord);
+    AttackSet(this, theRecord);
 }
 
 void EEUGRust::SetAttackTarget(EEUnit* inTarget)
 {
-    Attack(EE_COMBAT_ATTACK_SET_TARGET, this, Handle(inTarget));
+    Combat(EE_COMBAT_GOAL_SET_TARGET, this, Handle(inTarget));
 }
 
 void EEUGRust::RetargetGatePart(EEComplexUnit*)
 {
-    Attack(EE_COMBAT_ATTACK_RETARGET_GATE, this);
+    Combat(EE_COMBAT_GOAL_RETARGET_GATE, this);
 }
 
 void EEUGRust::UpdateTargetTile()
 {
-    Attack(EE_COMBAT_ATTACK_UPDATE_TILE, this);
+    Combat(EE_COMBAT_GOAL_UPDATE_TILE, this);
 }
 
 long EEUGRust::GetAttackTileX() const
@@ -314,7 +357,7 @@ void EEUGRust::SetAttackLocation(const GE3DPoint& inLocation)
     theRecord.location[0] = Bits(inLocation.GetX());
     theRecord.location[1] = Bits(inLocation.GetY());
     theRecord.location[2] = Bits(inLocation.GetZ());
-    ee_combat_attack_set(Handle(this), &theRecord);
+    AttackSet(this, theRecord);
 }
 
 unsigned long EEUGRust::GetSidestepCount() const
@@ -326,237 +369,5 @@ void EEUGRust::SetSidestepCount(unsigned long inCount)
 {
     EeCombatAttackGoal theRecord = AttackOf(this);
     theRecord.sidestep = (uint32_t)inCount;
-    ee_combat_attack_set(Handle(this), &theRecord);
-}
-
-EEUGRust* EEUGRust::NewAttackUnitEmpty(bool inArg)
-{
-    EEUGRust* theGoal = new EEUGRust(kGoalAttackUnit, inArg);
-    Attack(EE_COMBAT_ATTACK_CREATE_EMPTY, theGoal);
-    return theGoal;
-}
-
-// the attack on a unit's bodies (EEUGRust's Combat* for kGoalAttackUnit)
-
-static void AttackDumpOutOfSynch(EEUGRust* inGoal, FILE* inFile)
-{
-    GE3DPoint theLocation = inGoal->GetAttackLocation();
-    EEComplexUnit* theAttacker = inGoal->GetAttacker();
-    EEUnit* theTarget = inGoal->GetAttackTarget();
-    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The Actual Destination is (%6.6f, %6.6f, %6.6f)\n",
-            theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The attacking unit #%08lx is a %s\n", theAttacker->mUnitID,
-            (const char*)theAttacker->mUnitClass->mName);
-    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The target unit #%08lx is a %s\n",
-            theTarget ? theTarget->mUnitID : -1, theTarget ? (const char*)theTarget->mUnitClass->mName : "???");
-    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The last known target X,Y(%ld, %ld)\n", inGoal->GetAttackTileX(),
-            inGoal->GetAttackTileY());
-    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - Is this a convert goal? %2d\n", inGoal->IsConvertAttack());
-    inGoal->EEUnitGoal::DumpOutOfSynch(inFile);
-}
-
-static void AttackDebugLine(EEUGRust* inGoal, UWideString& ioText)
-{
-    UWideString theText;
-    ioText += "attack";
-    EEUnit* theTarget = inGoal->GetAttackTarget();
-    if (theTarget != NULL) {
-        sprintf(theText, " unit (uid %ld, hp %ld):", theTarget->mUnitID & 0xffffff, theTarget->mHitPoints.Get());
-        ioText += theText;
-    }
-}
-
-static void AttackDebugText(EEUGRust* inGoal, UWideString& ioText)
-{
-    UWideString theText;
-    ioText += "Attack\n";
-    EEUnit* theTarget = inGoal->GetAttackTarget();
-    if (theTarget == NULL)
-        return;
-    sprintf(theText, "Target Unit: %s at (%ld,%ld)\nTarget Health: %ld/%ld (%.2f%%)\n",
-            (const char*)theTarget->mUnitClass->mName, theTarget->mTileX.Get(), theTarget->mTileY.Get(),
-            theTarget->mHitPoints.Get(), theTarget->mStats->mMaxHitPoints,
-            (float)theTarget->mHitPoints / theTarget->mStats->mMaxHitPoints);
-    ioText += theText;
-}
-
-void EEUGRust::CombatDestroy()
-{
-    if (this->mKind == kGoalAttackUnit)
-        Attack(EE_COMBAT_ATTACK_DESTROY, this);
-    ee_combat_goal_drop(Handle(this));
-}
-
-EEUnitGoal* EEUGRust::CombatClone()
-{
-    if (this->mKind == kGoalAttackUnit)
-        return EEUGRust::NewAttackUnit(this->GetAttacker(), this->GetAttackTarget(), this->GetB1C(), this->IsConvertAttack());
-    return EEUGRust::NewAttackGround(this->GetGroundTarget(), this->GetB1C());
-}
-
-void EEUGRust::CombatDumpOutOfSynch(FILE* inFile)
-{
-    if (this->mKind == kGoalAttackUnit)
-        return AttackDumpOutOfSynch(this, inFile);
-    GE3DPoint theTarget = this->GetGroundTarget();
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Attack Ground Location(%6.6f, %6.6f, %6.6f)\n", theTarget.GetX(), theTarget.GetY(),
-            theTarget.GetZ());
-}
-
-long EEUGRust::CombatChecksum()
-{
-    if (this->mKind == kGoalAttackUnit)
-        return EEUnitGoal::GetOutOfSynchChecksum() + Attack(EE_COMBAT_ATTACK_CHECKSUM, this);
-    return EEUnitGoal::GetOutOfSynchChecksum() + ee_combat_ground_checksum(Handle(this));
-}
-
-void EEUGRust::CombatDebugLine(UWideString& ioText)
-{
-    if (this->mKind == kGoalAttackUnit)
-        return AttackDebugLine(this, ioText);
-    UWideString theText;
-    GE3DPoint theTarget = this->GetGroundTarget();
-    sprintf(theText, " attack grnd %.2f,%.2f:", theTarget.GetX(), theTarget.GetY());
-    ioText += theText;
-}
-
-void EEUGRust::CombatDebugText(UWideString& ioText)
-{
-    if (this->mKind == kGoalAttackUnit)
-        return AttackDebugText(this, ioText);
-    UWideString theText;
-    GE3DPoint theTarget = this->GetGroundTarget();
-    sprintf(theText, "Attack Ground %.2f,%.2f\n", theTarget.GetX(), theTarget.GetY());
-    ioText += theText;
-}
-
-void EEUGRust::CombatGoalLocation(GE3DPoint& outLocation)
-{
-    if (this->mKind == kGoalAttackUnit)
-        return (void)(outLocation = this->GetAttackLocation());
-    outLocation = this->GetGroundTarget();
-}
-
-long EEUGRust::CombatStartAction()
-{
-    return kActionCheckRange;
-}
-
-void EEUGRust::CombatStep(EEComplexUnit* inUnit)
-{
-    if (this->mKind == kGoalAttackUnit)
-        return EECombatStep(EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, this, this->GetAttackTarget());
-    // ee_combat goals.rs step: the plan's operations executed by ee/EECombatGoals.h's host (CBGS)
-    EECombatStep(EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, this, NULL);
-}
-
-long EEUGRust::CombatLoad(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    long theResult = EEUnitGoal::Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult != 0)
-        return theResult;
-    if (this->mKind == kGoalAttackUnit)
-        return Attack(EE_COMBAT_ATTACK_LOAD, this, inMajorVersion,
-                      (uint64_t)(uint32_t)inMinorVersion | ((uint64_t)EESaveHasLiveState(inMajorVersion, inMinorVersion) << 32),
-                      &inFile);
-    EeCombatGoalHost theHost = HostOf(&inFile);
-    return ee_combat_ground_load(Handle(this), &theHost);
-}
-
-long EEUGRust::CombatRepairPointers(unsigned long inFirst, unsigned long inSecond)
-{
-    if (this->mKind == kGoalAttackUnit)
-        return Attack(EE_COMBAT_ATTACK_REPAIR, this, EESaveHasLiveState(inFirst, inSecond));
-    return EEUnitGoal::RepairPointers(inFirst, inSecond);
-}
-
-void EEUGRust::CombatStart(EEComplexUnit* inUnit)
-{
-    EeCombatGoalArgs theArgs = {kActionInitialAttackState};
-    GoalOp(NULL, EE_COMBAT_G_START_ACTION, Handle(inUnit), &theArgs);
-}
-
-long EEUGRust::CombatSave(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult != 0)
-        return theResult;
-    if (this->mKind == kGoalAttackUnit)
-        return Attack(EE_COMBAT_ATTACK_SAVE, this,
-                      (EESaveHasLiveState(inMajorVersion, inMinorVersion) ? 1 : 0)
-                          | (EESaveHasGoalGhosts(inMajorVersion, inMinorVersion) ? 2 : 0), 0, &outFile);
-    EeCombatGoalHost theHost = HostOf(&outFile);
-    return ee_combat_ground_save(Handle(this), &theHost);
-}
-
-void EEUGRust::CombatReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew)
-{
-    if (this->mKind == kGoalAttackUnit)
-        Attack(EE_COMBAT_ATTACK_REPLACE, this, Handle(inOld), Handle(inNew));
-}
-
-bool EEUGRust::CombatSuits(EEUnit* inUnit)
-{
-    if (this->mKind == kGoalAttackUnit) {
-        bool theSuits = Attack(EE_COMBAT_ATTACK_SUITS, this, Handle(inUnit)) != 0;
-        EECombatCaptureGoal(EE_COMBAT_GO_SUITS, kGoalAttackUnit, inUnit, this->GetAttackTarget(), theSuits);
-        return theSuits;
-    }
-    bool theResult = inUnit->mUnitClass->mProjectileClass != NULL;
-    GE3DPoint theTarget = this->GetGroundTarget();
-    float thePoint[3] = {theTarget.GetX(), theTarget.GetY(), theTarget.GetZ()};
-    EECombatCaptureGoal(EE_COMBAT_GO_SUITS, kGoalAttackGround, inUnit, NULL, theResult, thePoint);
-    return theResult;
-}
-
-void EEUGRust::CombatDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)
-{
-    if (this->mKind == kGoalAttackUnit) {
-        float thePoint[3] = {outLocation.GetX(), outLocation.GetY(), outLocation.GetZ()};
-        Attack(EE_COMBAT_ATTACK_DESTINATION, this, Handle(inUnit), 0, NULL, &thePoint);
-        outLocation.SetXYZ(thePoint[0], thePoint[1], thePoint[2]);
-        EECombatCaptureGoal(EE_COMBAT_GO_DESTINATION, kGoalAttackUnit, inUnit, this->GetAttackTarget(),
-                            inUnit->mActiveGroup != NULL, thePoint, (uint32_t)this->GetAttackTileX(),
-                            (uint32_t)this->GetAttackTileY());
-        return;
-    }
-    EeCombatGoalHost theHost = HostOf(NULL);
-    float thePoint[3];
-    ee_combat_ground_destination(Handle(this), Handle(inUnit), &theHost, &thePoint);
-    outLocation.SetXYZ(thePoint[0], thePoint[1], thePoint[2]);
-    EECombatCaptureGoal(EE_COMBAT_GO_DESTINATION, kGoalAttackGround, inUnit, NULL, inUnit->mActiveGroup != NULL, thePoint);
-}
-
-long EEUGRust::CombatMaxPathAttempts()
-{
-    if (this->mKind == kGoalAttackUnit)
-        return this->mPathAttempts + 1;
-    return EEUnitGoal::GetMaxPathAttempts();
-}
-
-void EEUGRust::CombatSetOwner(EEComplexUnit* inUnit)
-{
-    if (this->mKind == kGoalAttackUnit)
-        return this->SetAttacker(inUnit);
-    EEUnitGoal::SetOwner(inUnit);
-}
-
-void EEUGRust::CombatSetPathAttempts(long inValue)
-{
-    if (this->mKind == kGoalAttackUnit && inValue == 0)
-        this->SetSidestepCount(0);
-    EEUnitGoal::SetPathAttempts(inValue);
-}
-
-bool EEUGRust::CombatEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
-{
-    if (this->mKind == kGoalAttackUnit)
-        return EECombatCondition(EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, inEvent, this->GetAttackTarget(), this, NULL) != 0;
-    // ee_combat goals.rs condition (CBTC)
-    return EECombatCondition(EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, inEvent, NULL, this, NULL) != 0;
-}
-
-void EEUGRust::CombatWork(EEComplexUnit* inUnit)
-{
-    EEUnitGoal::Work(inUnit);
+    AttackSet(this, theRecord);
 }

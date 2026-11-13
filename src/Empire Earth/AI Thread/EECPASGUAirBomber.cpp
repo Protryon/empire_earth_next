@@ -30,7 +30,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
-#include "ee/EEUGUnloadTransport.h"
+#include "ee/EEUGRust.h"
 #include "ee/EECPASGUAirBomber.h"
 
 // FUNCTION: EXE 0x405d47
@@ -93,7 +93,7 @@ bool EECPASGUAirBomber::Retarget()
             EEAIContinent* theContinent = gContinentManager.GetContinentAt(theTile);
             if (theContinent == NULL || theContinent->mCategory != kContinentCategoryLand)
                 return false;
-            EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(this->mUnit, theTile.GetX(), theTile.mY, false);
+            EEUGRust* theGoal = EEUGRust::NewUnloadTransport(this->mUnit, theTile.GetX(), theTile.mY, false);
             if (theGoal->CanUnloadAtDestination()) {
                 this->SetTarget(theTarget->mUnit);
                 if (!this->mSubGroup->GiveGoal(this->mUnit, theGoal, 0, kActionFly)) {
@@ -103,7 +103,7 @@ bool EECPASGUAirBomber::Retarget()
             } else {
                 // the goal is not used: free it (it used to leak). The plane keeps the reference the goal took on
                 // it, as before: unit reference counts are game state (cargo release and the unit pool read them)
-                theGoal->mTransport = NULL;
+                theGoal->ForgetUnloadTransport();
                 delete theGoal;
             }
         }

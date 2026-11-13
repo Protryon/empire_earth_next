@@ -27,7 +27,6 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGCastCalamity.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EETileCoordinate.h"
 #include "ee/EEAreaUtilities.h"
@@ -119,7 +118,7 @@ void EEPMLand::Step1(EEComplexUnit* inUnit)
     GEVector theForward;
     GEVector theMove;
     EEUGRust* theAttack = EEAttackUnitCast(theGoal);
-    EEUGCastCalamity* theCast = EEGoalCast<EEUGCastCalamity>(theGoal);
+    EEUGRust* theCast = EECastCalamityGoalCast(theGoal);
     EEUGHealUnit* theHeal = EEGoalCast<EEUGHealUnit>(theGoal);
     float theBrake = inUnit->GetAcceleration();
     float theSpeed = inUnit->GetVelocity();

@@ -1036,6 +1036,24 @@ public:
     int S_Bottom(Component* c) { return this->mVertical?c->Top()+c->Height():c->Left()+c->Width(); }
     int S_Height(Component* c) { return this->mVertical?c->Height():c->Width(); }
     int S_Width(Component* c) { return this->mVertical?c->Width():c->Height(); }
+    // the parts the skins, the configs and the scroller read and set (the subclasses' and factories' arrows, thumb
+    // and track; the orientation; the scroller's sizes and position)
+    Button* GetUpArrow() { return this->mUpArrow.get(); }
+    void SetUpArrow(Button* b) { this->mUpArrow=b; }
+    Button* GetDownArrow() { return this->mDownArrow.get(); }
+    void SetDownArrow(Button* b) { this->mDownArrow=b; }
+    Button* GetScrollRect() { return this->mScrollRect.get(); }
+    void SetScrollRect(Button* b) { this->mScrollRect=b; }
+    Component* GetThumb() { return this->mThumb.get(); }
+    void SetThumb(Component* c) { this->mThumb=c; }
+    bool IsVertical() { return this->mVertical; }
+    void SetVertical(bool on) { this->mVertical=on; }
+    void SetResizeThumb(bool on) { this->mResizeThumb=on; }
+    void SetMinThumbSize(unsigned char n) { this->mMinThumbSize=n; }
+    int GetPosition() { return this->mPosition; }
+    void SetPosition(int p) { this->mPosition=p; } // the field only (the scroller's update)
+    void SetRange(int total,int page) { this->mTotalSize=total; this->mPageSize=page; this->mPageScrollSize=page; }
+    void SetLineScrollSizes(int up,int down) { this->mLineUpScrollSize=up; this->mLineDownScrollSize=down; }
     SmartPtr<Button> mUpArrow,mDownArrow,mScrollRect; //84/88/8c
     SmartPtr<Component> mThumb; //90
     bool mResizeThumb,mVertical; //94/95
@@ -2681,47 +2699,40 @@ private:
 };
 
 
-// TreeItem (0x3c bytes): allocated at 0x3150b2, constructor 0x3140f0, destructor 0x314170.
-// Constructor and destructor are out of line; nothing here allocates a TreeArea.
+// TreeArea and TreeItem (R6 WON round 24): the rows' parents, indents, indices, open states, wrapped items and
+// children, the tree's root, flags, sort type and hovered item, and every method are the Rust objects of
+// rust/crates/ee_won/src/treeobj.rs; these are the types the room control and the config hold, with one-line
+// forwarders.
 class TreeArea;
 class TreeItem : public ListItem {
 public:
-    TreeItem(); // 0x3140f0
-    // Implicit virtual destructor (0x314170)
-    virtual void Paint(Graphics&,ListArea*);     //314b60
-    virtual void CalcDimensions(ListArea*); //314df0
-    virtual void SetViewport(ListArea*,Container*); //314dd0
-    virtual int Compare(const ListItem*,ListArea*) const;   //314e20
-    virtual bool CanSelect(ListArea*,int,int); //314e40
-    virtual void SetPos(int,int);    //314b40
-    virtual void MouseEnter(ListArea*,int,int); //3142c0
-    virtual void MouseExit(ListArea*); //3142e0
-    virtual void MouseMove(ListArea*,int,int); //314310
-    virtual void MouseDrag(ListArea*,int,int); //314340
-    virtual void MouseDown(ListArea*,int,int,int); //3143b0
-    virtual void MouseUp(ListArea*,int,int,int);   //314370
-    TreeItem* GetChild(int); //314440
-    TreeItem* GetNextNonChild(); //314470
-    int GetNextNonChildPos(TreeArea*); // 0x3144b0
-    int GetInsertPos(TreeArea*,TreeItem*,int); //3144d0
-    void InsertChild(TreeArea*,TreeItem*,int=-1); //314570
-    void RemoveAllChildren(TreeArea*); //314710
-    void RemoveChild(TreeArea*,TreeItem*); //314770
-    void RemoveFromParent(TreeArea*); //314830
-    void Sort(TreeArea*,bool); // sorts the children recursively (not identified in the original exe)
-    void CloseAll(); //314850
-    void InsertChildren(TreeArea*,int); //314880
-    void SetOpen(TreeArea*,bool,bool=false,bool=true); //3148e0
-    void ToggleOpen(TreeArea*,bool=false,bool=true); // 0x314af0
-    bool IsLastChild(); //314b10
-    ListItem* GetMouseItem(ListArea*,int&,int&); //314210
-    bool ContainsPoint(int,int); //314e60
-    TreeItem* mParent; // at +0x18, the parent item
-    bool IsOpen() { return this->mOpen; } // inline
-    int mX,mIndex; //1c/20
-    bool mOpen; //24
-    SmartPtr<ListItem> mItem; // at +0x28, the wrapped item
-    std::vector<SmartPtr<TreeItem> > mChildren; // at +0x2c..0x3b, Dinkum vector (16 bytes)
+    TreeItem(); // 0x3140f0: a closed row at indent 0 with no parent and no index (the Rust row, GuiHost.cpp)
+    virtual ~TreeItem(); // 0x314170
+    virtual void Paint(Graphics& g,ListArea* l) { this->NCall(l,EeWonTNodeCall::Paint,(intptr_t)&g); } // 0x314b60
+    virtual void CalcDimensions(ListArea* l) { this->NCall(l,EeWonTNodeCall::CalcDimensions); } // 0x314df0
+    virtual void SetViewport(ListArea* l,Container* v) { this->NCall(l,EeWonTNodeCall::SetViewport,(intptr_t)v); } // 0x314dd0
+    virtual int Compare(const ListItem* o,ListArea* l) const { return (int)const_cast<TreeItem*>(this)->NCall(l,EeWonTNodeCall::Compare,(intptr_t)o); } // 0x314e20
+    virtual bool CanSelect(ListArea* l,int x,int y) { return this->NCall(l,EeWonTNodeCall::CanSelect,x,y)!=0; } // 0x314e40
+    virtual void SetPos(int x,int y) { this->NCall(NULL,EeWonTNodeCall::SetPos,x,y); } // 0x314b40
+    virtual void MouseEnter(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseEnter,x,y); } // 0x3142c0
+    virtual void MouseExit(ListArea* l) { this->NCall(l,EeWonTNodeCall::MouseExit); } // 0x3142e0
+    virtual void MouseMove(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseMove,x,y); } // 0x314310
+    virtual void MouseDrag(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseDrag,x,y); } // 0x314340
+    virtual void MouseDown(ListArea* l,int x,int y,int b) { this->NCall(l,EeWonTNodeCall::MouseDown,x,y,b); } // 0x3143b0
+    virtual void MouseUp(ListArea* l,int x,int y,int b) { this->NCall(l,EeWonTNodeCall::MouseUp,x,y,b); } // 0x314370
+    TreeItem* GetChild(int i) { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::GetChild,i); } // 0x314440
+    TreeItem* GetNextNonChild() { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::GetNextNonChild); } // 0x314470
+    void CloseAll() { this->NCall(NULL,EeWonTNodeCall::CloseAll); } // 0x314850
+    bool IsLastChild() { return this->NCall(NULL,EeWonTNodeCall::IsLastChild)!=0; } // 0x314b10
+    bool ContainsPoint(int x,int y) { return this->NCall(NULL,EeWonTNodeCall::ContainsPoint,x,y)!=0; } // 0x314e60
+    bool IsOpen() { return this->NCall(NULL,EeWonTNodeCall::IsOpen)!=0; }
+    ListItem* GetWrappedItem() { return (ListItem*)this->NCall(NULL,EeWonTNodeCall::Item); } // mItem
+    int GetNumChildren() { return (int)this->NCall(NULL,EeWonTNodeCall::NumChildren); }
+    TreeItem* GetParentItem() { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::Parent); } // mParent
+    int GetIndex() { return (int)this->NCall(NULL,EeWonTNodeCall::Index); } // mIndex
+    EeWonTNode* mNode;
+private:
+    intptr_t NCall(ListArea* l,EeWonTNodeCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0);
 };
 class TreeItemOpenedEvent : public ComponentEvent {
 public:
@@ -2730,61 +2741,60 @@ public:
     // Implicit destructor (0x314a60): no own vptr write.
     SmartPtr<TreeItem> mItem; // at +0x20; the event is 0x24 bytes
 };
-// TreeArea (0x174 bytes); constructor 0x314ea0.
+// TreeArea (0x174 bytes in the original); constructor 0x314ea0.
 class TreeArea : public ListArea {
 public:
-    TreeArea(); // 0x314ea0: sets up the root item, open state and list flags
-    // Implicit virtual destructor (0x314fc0)
-    virtual void MouseDown(int,int,int); // 0x315260 (forwarder)
-    virtual void HandleComponentEvent(ComponentEvent*); //315280
-    virtual void NotifyMouseItemGone(); //315060
-    virtual bool Sort(); // 0x315050 (returns false)
-    void SetSortType(ListSortType); //315030
-    void Sort(TreeItem*,bool=false); // sorts the visible subtree (not identified in the original exe)
+    TreeArea(); // 0x314ea0: the root row, open; list flags 0x30 off and 0x200 on; tree flags 3
+    virtual ~TreeArea(); // 0x314fc0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->TCall(EeWonTreeCall::HandleEvent,(intptr_t)e); } // 0x315280
+    virtual void NotifyMouseItemGone() { this->TCall(EeWonTreeCall::NotifyMouseItemGone); } // 0x315060
+    virtual bool Sort() { return false; } // 0x315050
+    void SetSortType(ListSortType t) { this->TCall(EeWonTreeCall::SetSortType,t); } // 0x315030
+    void Sort(TreeItem* i,bool recursive=false) { this->TCall(EeWonTreeCall::SortItem,(intptr_t)i,recursive); } // sorts the visible subtree
     TreeItem* InsertString(TreeItem*,const GUIString&,Image* =NULL,int=-1);
-    void CloseItem(TreeItem*,bool=false,bool=true);
-    void SetTreeFlags(int,bool);
-    TreeItem* InsertTreeItem(TreeItem*,ListItem*,int=-1); //315080
-    void RemoveTreeItem(TreeItem*); //315190
-    void ClearTree(bool=true); //3151a0
-    void RemoveAllItems(TreeItem*); //3151b0
-    void OpenItem(TreeItem*,bool=true); //315220
-    void ToggleItem(TreeItem*,bool=false,bool=true); //315240
-    bool TreeFlagSet(int flags) { return (this->mTreeFlags&flags)!=0; }
-    SmartPtr<TreeItem> mRoot; //164
-    int mTreeFlags; //168
-    ListItem* mMouseColItem; // at +0x16c, the item under the mouse
-    int mTreeSortType; //170
+    void CloseItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::CloseItem,(intptr_t)i,all,send); }
+    void SetTreeFlags(int f,bool on) { this->TCall(EeWonTreeCall::SetTreeFlags,f,on); }
+    TreeItem* InsertTreeItem(TreeItem* p,ListItem* i,int pos=-1) { return (TreeItem*)this->TCall(EeWonTreeCall::InsertTreeItem,(intptr_t)p,(intptr_t)i,pos); } // 0x315080
+    void RemoveTreeItem(TreeItem* i) { this->TCall(EeWonTreeCall::RemoveTreeItem,(intptr_t)i); } // 0x315190
+    void ClearTree(bool=true) { this->TCall(EeWonTreeCall::RemoveAllItems,0); } // 0x3151a0 (the flag unused)
+    void RemoveAllItems(TreeItem* p) { this->TCall(EeWonTreeCall::RemoveAllItems,(intptr_t)p); } // 0x3151b0
+    void OpenItem(TreeItem* i,bool send=true) { this->TCall(EeWonTreeCall::OpenItem,(intptr_t)i,send); } // 0x315220
+    void ToggleItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::ToggleItem,(intptr_t)i,all,send); } // 0x315240
+    bool TreeFlagSet(int flags) { return (this->TCall(EeWonTreeCall::TreeFlags)&flags)!=0; }
+    EeWonTree* mTree;
+private:
+    intptr_t TCall(EeWonTreeCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_tree_call(this->mTree,c,a,b,cc); }
 };
+inline intptr_t TreeItem::NCall(ListArea* l,EeWonTNodeCall c,intptr_t a,intptr_t b,intptr_t cc)
+{
+    return ee_won_tnode_call(this->mNode,l ? static_cast<TreeArea*>(l)->mTree : NULL,c,a,b,cc);
+}
 
-// PopupMenu (0x180 bytes): ListArea (0x164) plus two SmartPtrs, four ints and a bool.
-// Constructor 0x2fd150 (57 vtable slots).
-// The implicit destructor (0x2fd340) releases the SmartPtrs in reverse order, then ListArea's members.
+// PopupMenu (R6 WON round 24): the open submenu and its item, the swallowed first release, the submenu timer, the last
+// mouse place, the keyboard mode and the input methods are the Rust PopupMenu (rust/crates/ee_won/src/menuobj.rs);
+// this is the type the lobby and the window manager hold, with its constructor's look (font, flags, background,
+// colour, padding) and the item adders, with one-line forwarders.
 class PopupMenu : public ListArea {
 public:
     PopupMenu(); // 0x2fd150: default configuration
-    // Implicit virtual destructor (0x2fd340)
-    virtual void MouseDown(int,int,int); //2fdb70
-    virtual void MouseUp(int,int,int);   //2fdc10
-    virtual void MouseMove(int,int); //2fdb10
-    virtual bool TimerEvent(int); //2fd820
-    virtual void HandleComponentEvent(ComponentEvent*); //2fd7d0
-    virtual void ListSelChangedHook(); //2fd860
+    virtual ~PopupMenu(); // 0x2fd340
+    virtual void MouseDown(int x,int y,int b) { this->PCall(EeWonMenuCall::MouseDown,x,y,b); } // 0x2fdb70
+    virtual void MouseUp(int x,int y,int b) { this->PCall(EeWonMenuCall::MouseUp,x,y,b); } // 0x2fdc10
+    virtual void MouseMove(int x,int y) { this->PCall(EeWonMenuCall::MouseMove,x,y); } // 0x2fdb10
+    virtual bool TimerEvent(int d) { return this->PCall(EeWonMenuCall::TimerEvent,d)!=0; } // 0x2fd820
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->PCall(EeWonMenuCall::HandleEvent,(intptr_t)e); } // 0x2fd7d0
+    virtual void ListSelChangedHook() { this->PCall(EeWonMenuCall::ListSelChangedHook); } // 0x2fd860
     MenuItem* AddItem(const GUIString&,int); //2fd440,ret8
     MenuItem* AddItem(const GUIString&,ComponentListener*,int); // 0x2fd460 (ret 0x0c)
     MenuItem* AddItem(const GUIString&,NativeImage*,ComponentListener*,int); //2fd480,ret10
     void AddSeperator(); //2fd8b0,ret0
-    void EndSubMenu(); // 0x2fd580: closes the submenu
-    void CheckSubMenu(); // 0x2fd610: opens the submenu
-    bool TryKeyDown(int); // passes keys to the submenu recursively
-    void Reset(); // 0x2fd400: closes the submenu, then clears the selected index
-protected:
-    SmartPtr<PopupMenu> mCurSubMenu; // at +0x164
-    SmartPtr<ListItem> mCurSubMenuItem; // at +0x168
-    int mMouseUpCount; //16c
-    int mTimerAcc; //170
-    int mLastX,mLastY; //174,178
-    bool mKeyboardMode; // at +0x17c; +0x17d..0x17f padding; the class is 0x180 bytes; the constructor leaves mLastX/Y unset
+    void EndSubMenu() { this->PCall(EeWonMenuCall::EndSubMenu); } // 0x2fd580
+    void CheckSubMenu() { this->PCall(EeWonMenuCall::CheckSubMenu); } // 0x2fd610
+    bool TryKeyDown(int k) { return this->PCall(EeWonMenuCall::TryKeyDown,k)!=0; } // the keys, the submenu's first
+    void Reset() { this->PCall(EeWonMenuCall::Reset); } // 0x2fd400
+    EeWonMenu* mMenu;
+private:
+    intptr_t PCall(EeWonMenuCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_menu_call(this->mMenu,c,a,b,cc); }
 };
 
 class ScrollAreaViewport : public Container {
@@ -2803,125 +2813,98 @@ public:
     virtual bool ChildInvalidated(Component*); // vtable +0xc0, 0x305d70
 };
 
-class MultiListItem : public ListItem {
-protected:
-    typedef std::vector<SmartPtr<ListItem> > ItemVector;
-    ItemVector mItems; //18, allocator18/first1c/end20/cap24
-    ListItem* GetMouseItem(ListArea*,int&);
-    ListItem* GetMouseItem(ListArea*,int&,int&);
-public:
-    // Implicit default constructor (0x3fa110).
-    // Implicit virtual destructor (0x303db0).
-    void InsertItem(ListItem*); // appends an owned cell
-    void SetItem(ListItem*,int); // 0x302480: sets a cell, growing the row
-    ListItem* GetItem(int) const; // 0x302500
-    virtual void Paint(Graphics&,ListArea*);
-    virtual void CalcDimensions(ListArea*);
-    virtual void SetViewport(ListArea*,Container*);
-    virtual int Compare(const ListItem*,ListArea*) const;
-    virtual bool CanSelect(ListArea*,int,int);
-    virtual void SetPos(int,int);
-    virtual bool Contains(int,int inY) { return inY>=this->mTop && inY<this->mTop+this->mHeight; }
-    virtual void MouseEnter(ListArea*,int,int);
-    virtual void MouseExit(ListArea*);
-    virtual void MouseMove(ListArea*,int,int);
-    virtual void MouseDrag(ListArea*,int,int);
-    virtual void MouseDown(ListArea*,int,int,int);
-    virtual void MouseUp(ListArea*,int,int,int);
-};
-
-// MultiListArea (0x1a4 bytes); constructor and destructor out of line.
+// MultiListArea, MultiListItem and MultiListHeader (R6 WON round 24): their columns, cells, header buttons, sort,
+// paint and drags are the Rust objects of rust/crates/ee_won/src/multiobj.rs; these are the types the lobby, the
+// configs and the adapter list hold, with one-line forwarders.
+class MultiListItem;
 class MultiListHeader;
+// MultiListArea (0x1a4 bytes in the original).
 class MultiListArea : public ListArea {
 public:
     MultiListArea(int=1); // 0x3033a0 (ret 4)
-    virtual void NotifyMouseItemGone(); // 0x3035d0 (vtable +0xd8)
-    void SetNumColumns(int); //303600/393
-    void SetColumnSizeMode(int,unsigned char); // partner-column size mode (not identified in the original exe)
+    virtual ~MultiListArea();
+    virtual void NotifyMouseItemGone() { this->MCall(EeWonMultiCall::NotifyMouseItemGone); } // 0x3035d0
+    void SetNumColumns(int n) { this->MCall(EeWonMultiCall::SetNumColumns,n); } // 0x303600
+    void SetColumnSizeMode(int c,unsigned char m) { this->MCall(EeWonMultiCall::SetColumnSizeMode,c,m); }
     MultiListItem* InsertRow(int=-1); // inserts a blank row
-    void SetColumnWidth(int,int,bool); //3037e0/382
-    // Implicit virtual destructor (0x303540)
-    int GetColumnPaintContext() { return this->mColumnPaintContext; }
-    int GetSortColumn() { return this->mSortColumn; }
-    struct ColumnInfo {
-        SmartPtr<ScrollAreaViewport> mContainer;
-        int mx, mWidth;
-        ListArea::SortFunc mSortFunc;
-        unsigned char mSizeMode;
-        int mPartnerColumn;
-        unsigned char mHAlign;
-        ColumnInfo() : mx(0),mWidth(0),mSortFunc(NULL),mSizeMode(1),mPartnerColumn(-1),mHAlign(0) {} // default values (0x303627..0x303652)
-    }; // 0x1c bytes; SetNumColumns resizes this vector
-    std::vector<ColumnInfo> mColumnInfoVector; //164..173
-    ListArea::SortFunc mSortColFunc; //174
-    int mColumnPaintContext; //178
-    int mTotalColumnWidth; //17c
-    int mSortColumn; //180
-    int mSortColumnPrev; //184
-    int mColumnBorderWidth; //188
-    int mDynamicSizeColumn; //18c
-    bool mAutoGrowColumns; //190
-    ListItem* mMouseColItem; //194, borrowed
-    int mMouseColNum; //198
-    int mMaxTotalColumnWidth; // at +0x19c (0x3038ac)
-    MultiListHeader* mListHeader; // at +0x1a0 (0x3035f0/0x303b24)
-    void NotifyListHeader(); // 0x3035f0
-    void SetSortColumn(int,ListSortType); //303ac0
-    void SetSortColumnFunc(int,SortFunc); // 0x303b50
-    void SetColumnHAlign(int,HorzAlign); // 0x303790
-    virtual void AdjustPosition(bool); // 0x303bb0
-    virtual void Virtual08(); //303be0 SizeChanged
-    virtual void ScrollPaint(Graphics&); //303c70 ScrollPaint
-    MultiListItem* UpdateItem(MultiListItem*); //303e50
-    MultiListItem* SetCell(int,int,ListItem*); //303ee0
-    int GetColumnAt(int); //3039c0
-    int GetColumnPos(int); //303a60
-    int GetColumnWidth(int); //303960
-    MultiListItem* InsertItem(MultiListItem*, int = -1); //303e30
-    MultiListItem* SetString(int, int, const GUIString&, Image* = NULL); //303f60
+    void SetColumnWidth(int c,int w,bool fromSize) { this->MCall(EeWonMultiCall::SetColumnWidth,c,w,fromSize); } // 0x3037e0
+    int GetColumnPaintContext() { return (int)this->MCall(EeWonMultiCall::PaintContext); }
+    int GetSortColumn() { return (int)this->MCall(EeWonMultiCall::SortColumn); }
+    int GetSortColumnPrev() { return (int)this->MCall(EeWonMultiCall::SortColumnPrev); }
+    void SetDynamicSizeColumn(int c) { this->MCall(EeWonMultiCall::SetDynamicSizeColumn,c); }
+    void SetAutoGrowColumns(bool on) { this->MCall(EeWonMultiCall::SetAutoGrowColumns,on); }
+    void SetSortColumn(int c,ListSortType t) { this->MCall(EeWonMultiCall::SetSortColumn,c,t); } // 0x303ac0
+    void SetSortColumnFunc(int c,SortFunc f) { this->MCall(EeWonMultiCall::SetSortColumnFunc,c,(intptr_t)f); } // 0x303b50
+    void SetColumnHAlign(int c,HorzAlign a) { this->MCall(EeWonMultiCall::SetColumnHAlign,c,a); } // 0x303790
+    virtual void AdjustPosition(bool b) { this->MCall(EeWonMultiCall::AdjustPosition,b); } // 0x303bb0
+    virtual void Virtual08() { this->MCall(EeWonMultiCall::SizeChanged); } // 0x303be0 SizeChanged
+    virtual void ScrollPaint(Graphics& g) { this->MCall(EeWonMultiCall::ScrollPaint,(intptr_t)&g); } // 0x303c70
+    MultiListItem* UpdateItem(MultiListItem* r) { return (MultiListItem*)this->MCall(EeWonMultiCall::UpdateItem,(intptr_t)r); } // 0x303e50
+    MultiListItem* SetCell(int r,int c,ListItem* i) { return (MultiListItem*)this->MCall(EeWonMultiCall::SetCell,r,c,(intptr_t)i); } // 0x303ee0
+    int GetColumnAt(int x) { return (int)this->MCall(EeWonMultiCall::ColumnAt,x); } // 0x3039c0
+    int GetColumnPos(int c) { return (int)this->MCall(EeWonMultiCall::ColumnPos,c); } // 0x303a60
+    int GetColumnWidth(int c) { return (int)this->MCall(EeWonMultiCall::ColumnWidth,c); } // 0x303960
+    MultiListItem* InsertItem(MultiListItem* r,int pos=-1); // 0x303e30
+    MultiListItem* SetString(int,int,const GUIString&,Image* =NULL); // 0x303f60
+    EeWonMulti* mMulti;
+private:
+    intptr_t MCall(EeWonMultiCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_multi_call(this->mMulti,c,a,b,cc); }
 };
 
-// MultiListHeader (0xac bytes, Container's 51 vtable slots); fields as set at 0x302a90.
-// type descriptor 0x4d64a0, COL 0x476030, vtable 0x44f170; ten overrides,
-// the other 41 slots are Container's.
+class MultiListItem : public ListItem {
+public:
+    MultiListItem(); // the Rust row (GuiHost.cpp)
+    virtual ~MultiListItem();
+    void InsertItem(ListItem* i) { this->RCall(NULL,EeWonMRowCall::InsertItem,(intptr_t)i); } // appends a cell
+    void SetItem(ListItem* i,int c) { this->RCall(NULL,EeWonMRowCall::SetItem,(intptr_t)i,c); } // 0x302480
+    ListItem* GetItem(int c) const { return (ListItem*)const_cast<MultiListItem*>(this)->RCall(NULL,EeWonMRowCall::GetItem,c); } // 0x302500
+    virtual void Paint(Graphics& g,ListArea* l) { this->RCall(l,EeWonMRowCall::Paint,(intptr_t)&g); }
+    virtual void CalcDimensions(ListArea* l) { this->RCall(l,EeWonMRowCall::CalcDimensions); }
+    virtual void SetViewport(ListArea* l,Container* v) { this->RCall(l,EeWonMRowCall::SetViewport,(intptr_t)v); }
+    virtual int Compare(const ListItem* o,ListArea* l) const { return (int)const_cast<MultiListItem*>(this)->RCall(l,EeWonMRowCall::Compare,(intptr_t)o); }
+    virtual bool CanSelect(ListArea* l,int x,int y) { return this->RCall(l,EeWonMRowCall::CanSelect,x,y)!=0; }
+    virtual void SetPos(int x,int y) { this->RCall(NULL,EeWonMRowCall::SetPos,x,y); }
+    virtual bool Contains(int,int inY) { return inY>=this->mTop && inY<this->mTop+this->mHeight; }
+    virtual void MouseEnter(ListArea* l,int x,int y) { this->RCall(l,EeWonMRowCall::MouseEnter,x,y); }
+    virtual void MouseExit(ListArea* l) { this->RCall(l,EeWonMRowCall::MouseExit); }
+    virtual void MouseMove(ListArea* l,int x,int y) { this->RCall(l,EeWonMRowCall::MouseMove,x,y); }
+    virtual void MouseDrag(ListArea* l,int x,int y) { this->RCall(l,EeWonMRowCall::MouseDrag,x,y); }
+    virtual void MouseDown(ListArea* l,int x,int y,int b) { this->RCall(l,EeWonMRowCall::MouseDown,x,y,b); }
+    virtual void MouseUp(ListArea* l,int x,int y,int b) { this->RCall(l,EeWonMRowCall::MouseUp,x,y,b); }
+    EeWonMRow* mRow;
+private:
+    intptr_t RCall(ListArea* l,EeWonMRowCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0)
+    { return ee_won_mrow_call(this->mRow,l ? static_cast<MultiListArea*>(l)->mMulti : NULL,c,a,b,cc); }
+};
+inline MultiListItem* MultiListArea::InsertItem(MultiListItem* r,int pos) { ListArea::InsertItem(r,pos); return r; }
+inline MultiListItem* MultiListArea::InsertRow(int row) { return this->InsertItem(new MultiListItem,row); }
+
+// MultiListHeader (0xac bytes in the original, the 51 vtable slots of Container; ten overrides).
 class MultiListHeader : public Container {
 public:
     MultiListHeader(MultiListArea* =NULL); // 0x302a90 (ret 4)
-    // Implicit virtual destructor (0x302b50)
-    virtual void Virtual08(); //08=302fb0,SizeChanged
-    virtual void Paint(Graphics&); //18=305e00
-    virtual void MouseExit(); //28=303390,MouseExit
-    virtual void MouseDown(int,int,int); //2c=303260,MouseUp
-    virtual void MouseUp(int,int,int);   //30=303350,MouseDown
-    virtual void MouseMove(int,int); //34=303290,MouseMove
-    virtual void MouseDrag(int,int); //38=3032f0,MouseDrag
-    virtual void HandleComponentEvent(ComponentEvent*); //7c=302be0
-    virtual Component* FindChildAt(int,int); //ac=304710,FindChildAt
-    void SetColumnItem(int,Component*); //302cf0/283,ret8
-    void SetMultiListArea(MultiListArea*); // 0x302bc0 (ret 4)
-    void NotifyColumnChange(); // 0x302e10
-    void SetSortColumn(int,ListSortType); // 0x302cb0
+    virtual ~MultiListHeader();
+    virtual void Virtual08() { this->HCall(EeWonMHeadCall::SizeChanged); } // 0x302fb0 SizeChanged
+    virtual void Paint(Graphics&); // 0x305e00 (the container paint)
+    virtual void MouseExit() { this->HCall(EeWonMHeadCall::MouseExit); } // 0x303390
+    virtual void MouseDown(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseDown,x,y,b); } // 0x303260
+    virtual void MouseUp(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseUp,x,y,b); } // 0x303350
+    virtual void MouseMove(int x,int y) { this->HCall(EeWonMHeadCall::MouseMove,x,y); } // 0x303290
+    virtual void MouseDrag(int x,int y) { this->HCall(EeWonMHeadCall::MouseDrag,x,y); } // 0x3032f0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->HCall(EeWonMHeadCall::HandleEvent,(intptr_t)e); } // 0x302be0
+    virtual Component* FindChildAt(int,int); // 0x304710 (the container hit test)
+    void SetColumnItem(int c,Component* i) { this->HCall(EeWonMHeadCall::SetColumnItem,c,(intptr_t)i); } // 0x302cf0
+    void SetMultiListArea(MultiListArea* a) { this->HCall(EeWonMHeadCall::SetMultiListArea,(intptr_t)a); } // 0x302bc0
+    void NotifyColumnChange() { this->HCall(EeWonMHeadCall::NotifyColumnChange); } // 0x302e10
+    void SetSortColumn(int c,ListSortType t) { this->HCall(EeWonMHeadCall::SetSortColumn,c,t); } // 0x302cb0
     static ListSortType GetSortTypeForButton(Component*); // 0x303050
-protected:
-    struct ColumnInfo {
-        Component* mComponent; // the Container owns the child
-        ListSortType mSortType;
-        ColumnInfo(Component* c=NULL) : mComponent(c),mSortType(ListSortType_None) {} // default used when resizing (0x302d1c..0x302d29)
-    }; // 8-byte value; no owning pointer
-    typedef std::vector<ColumnInfo> ColumnVector;
-    ColumnVector mColumnVector; // at +0x84: allocator +0x84, first +0x88, end +0x8c, capacity +0x90
-    MultiListArea* mListArea; // at +0x94, back link (set by 0x302bc0)
-    int mDragColumn; //98
-    Component* mDragComponent; //9c borrowed
-    int mDragX; //a0
-    int mCurSortCol; //a4
-    bool mDrawSortArrow; // at +0xa8; +0xa9..0xab padding; the class is 0xac bytes
-    Component* GetDragComponent(int); // 0x3030b0
-public:
-    int GetColumnIndex(Component*); // 0x302fd0
-    ListSortType GetSortType(int); // 0x303010
+    int GetColumnIndex(Component* c) { return (int)this->HCall(EeWonMHeadCall::ColumnIndex,(intptr_t)c); } // 0x302fd0
+    ListSortType GetSortType(int c) { return (ListSortType)this->HCall(EeWonMHeadCall::SortType,c); } // 0x303010
+    bool DrawSortArrow() { return this->HCall(EeWonMHeadCall::DrawSortArrow)!=0; }
+    EeWonMHead* mHead;
+private:
+    intptr_t HCall(EeWonMHeadCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_mhead_call(this->mHead,c,a,b,cc); }
 };
-
 
 struct GUIStringLessNoCase {
     bool operator()(const GUIString& inLeft, const GUIString& inRight) const

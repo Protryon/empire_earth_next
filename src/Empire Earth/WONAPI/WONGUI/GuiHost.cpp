@@ -24,6 +24,8 @@
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
+#include "ee/wonapi/WONLobbyPopupEvent.h"
+#include "ee/wonapi/WONLobbyMSPainters.h"
 using namespace WONAPI;
 
 typedef EeWonGuiOp Op;
@@ -78,8 +80,13 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
     case Op::SetSize: c->SetSize((int)a, (int)b); return 0;
     case Op::SetDefaultCursor: c->SetDefaultCursor(CursorOf(a)); return 0;
     case Op::FireEvent:
-        c->Fn2F5380((EeWonGuiEvent)a == EeWonGuiEvent::InputReturn ? ComponentEvent_InputReturn
-                                                                  : ComponentEvent_InputTextChanged, 0);
+        // (round 23's lists fired ListSelChanged through here as InputTextChanged: nothing heard a list's
+        // selection, so the LAN lobby's Join Game stayed disabled)
+        switch ((EeWonGuiEvent)a) {
+        case EeWonGuiEvent::InputReturn: c->Fn2F5380(ComponentEvent_InputReturn, 0); break;
+        case EeWonGuiEvent::InputTextChanged: c->Fn2F5380(ComponentEvent_InputTextChanged, 0); break;
+        case EeWonGuiEvent::ListSelChanged: c->Fn2F5380(ComponentEvent_ListSelChanged, 0); break;
+        }
         return 0;
     case Op::ClipboardSet: Clipboard::Set(UnitsText(a, b)); return 0;
     case Op::ClipboardTake: {
@@ -547,6 +554,67 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::ItemMouseUp: Item(a)->MouseUp(t, (int)b, (int)c, (int)d); return 0;
     case Op::ItemHold: Item(a)->AddRef(); return 0;
     case Op::ItemRelease: Item(a)->Release(); return 0;
+    // the multi-column list and its rows (multiobj.rs)
+    case Op::ItemCompare: return Item(a)->Compare(Item(b), t);
+    case Op::CallSortFunc: return ((ListArea::SortFunc)a)(t, Item(b), Item(c));
+    case Op::ItemSetWidth: Item(a)->mWidth = (int)b; return 0;
+    case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
+    case Op::SelBackground: return (intptr_t)t->GetSelColor().GetBackgroundColor(*(Graphics*)a);
+    case Op::NewColumnViewport: {
+        ScrollAreaViewport* v = new ScrollAreaViewport(t);
+        v->AddRef(); // the column's SmartPtr, given back with ChildRelease
+        t->GetViewport()->AddChild(v);
+        return (intptr_t)v;
+    }
+    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
+    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    case Op::HeaderNotify: ((MultiListHeader*)a)->NotifyColumnChange(); return 0;
+    case Op::HeaderSetSortColumn: ((MultiListHeader*)a)->SetSortColumn((int)b, (ListSortType)c); return 0;
+    case Op::RowCell: return (intptr_t)((MultiListItem*)a)->GetItem((int)b);
+    case Op::RowSetCell: ((MultiListItem*)a)->SetItem(Item(b), (int)c); return 0;
+    // the tree list and its rows (treeobj.rs)
+    case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
+    case Op::NewTreeItem: {
+        TreeItem* n = new TreeItem;
+        n->AddRef(); // the creator's SmartPtr, given back with ItemRelease
+        return (intptr_t)n;
+    }
+    case Op::ItemSetSelectable: Item(a)->mSelectable = b != 0; return 0;
+    case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
+    case Op::EventType: return ((ComponentEvent*)a)->mType;
+    case Op::EventCompControlId: return ((ComponentEvent*)a)->mComponent->mControlId;
+    case Op::EventComponentTop: return ((ComponentEvent*)a)->mComponent->Top();
+    case Op::CheckDoubleClick: return t->CheckDoubleClick((int)a) ? 1 : 0;
+    case Op::DeliverTreeOpened: t->DeliverEvent(new TreeItemOpenedEvent(t, (TreeItem*)a), false); return 0;
+    case Op::BaseHandleEvent: t->ScrollArea::HandleComponentEvent((ComponentEvent*)a); return 0;
+    // the popup menu (menuobj.rs)
+    case Op::ChildHold: Comp(a)->AddRef(); return 0;
+    case Op::ClosePopup: t->GetRoot()->ClosePopup(Comp(a)); return 0;
+    case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
+    case Op::MenuSelItem: return (intptr_t)((PopupMenu*)a)->GetSelItem();
+    case Op::MenuSetSelAt: ((PopupMenu*)a)->SetSelItem((int)b); return 0;
+    case Op::MenuItemOf: return (intptr_t)dynamic_cast<MenuItem*>(Item(a));
+    case Op::MenuItemSub: return (intptr_t)((MenuItem*)a)->mSubMenu.get();
+    case Op::MenuItemDisabled: return ((MenuItem*)a)->mDisabled ? 1 : 0;
+    case Op::ScrollUntranslate: t->ScrollUntranslate(*(int*)a, *(int*)b); return 0;
+    case Op::LocalToRoot: t->LocalToRoot(*(int*)a, *(int*)b); return 0;
+    case Op::MenuReset: ((PopupMenu*)a)->Reset(); return 0;
+    case Op::QueueSubMenu: {
+        const int* at = (const int*)b;
+        const EeWonRect4* q = (const EeWonRect4*)c;
+        PopupParams params((PopupMenu*)a, (int)d, t, at[0], at[1]);
+        params.mAvoidRect = WONRectangle(q->x, q->y, q->w, q->h);
+        t->GetRoot()->QueueEvent(new DoPopupEvent(params));
+        return 0;
+    }
+    case Op::QueueMouseUp: {
+        Window* window = t->GetRoot();
+        int x = (int)a, y = (int)b;
+        t->LocalToRoot(x, y);
+        window->QueueEvent(new MouseEvent(InputEvent_MouseUp, x, y, window->GetKeyMod(), (int)c));
+        return 0;
+    }
+    case Op::MenuTryKeyDown: return ((PopupMenu*)a)->TryKeyDown((int)b) ? 1 : 0;
     case Op::Draw: {
         WONDrawSlots aSlots;
         WONDrawNoCall aNoCall;
@@ -613,4 +681,199 @@ void PopupMenu::AddSeperator()
     this->InsertItem(new ComponentListItem(new MSSeperator(6),true,false));
     this->SetSizeEqualToTotal(100,-1);
 }
+}
+
+// ---- the multi-column list, its rows and header (multiobj.rs)
+
+// a row's own calls out (its SetPos and its cells' references)
+extern "C" intptr_t ee_won_guicpp_mrow_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)inComp; (void)c; (void)d;
+    switch (op) {
+    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
+    case Op::ItemSetPos: Item(a)->SetPos(0, (int)b); return 0;
+    case Op::ItemHold: Item(a)->AddRef(); return 0;
+    case Op::ItemRelease: Item(a)->Release(); return 0;
+    default: return 0;
+    }
+}
+
+extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    MultiListHeader* t = (MultiListHeader*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
+    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseUp: t->Container::MouseUp((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseMove: t->Container::MouseMove((int)a, (int)b); return 0;
+    case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
+    case Op::BaseMouseExit: t->Container::MouseExit(); return 0;
+    case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
+    case Op::MultiOf: return (intptr_t)((MultiListArea*)a)->mMulti;
+    case Op::RemoveChild: t->RemoveChild(Comp(a)); return 0;
+    case Op::AddChild: t->AddChild(Comp(a)); return 0;
+    case Op::ChildSetControlId: Comp(a)->mControlId = (int)b; return 0;
+    case Op::ChildControlId: return Comp(a)->mControlId;
+    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
+    case Op::ChildDesiredSize: { int* wh = (int*)b; Comp(a)->GetDesiredSize(wh[0], wh[1]); return 0; }
+    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
+    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
+    case Op::ChildSetPosSize: {
+        const EeWonRect4* r = (const EeWonRect4*)b;
+        Comp(a)->SetPosSize(r->x, r->y, r->w, r->h);
+        return 0;
+    }
+    case Op::ChildLeft: return Comp(a)->Left();
+    case Op::ChildRight: return Comp(a)->Right();
+    case Op::ChildWidth: return Comp(a)->Width();
+    case Op::EventIsButtonPress: return ((ComponentEvent*)a)->mType == ComponentEvent_ButtonPressed ? 1 : 0;
+    case Op::EventChildUnder: {
+        Component* child = ((ComponentEvent*)a)->mComponent;
+        Container* parent = child->mParent;
+        while (parent != t && parent != NULL) {
+            child = parent;
+            parent = child->mParent;
+        }
+        return parent == NULL ? 0 : (intptr_t)child;
+    }
+    case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
+    case Op::CursorIs: return t->mCurrentCursor.get() == CursorOf(a) ? 1 : 0;
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x007033a0
+// Creates a multi-column list area with the given column count and no sort (the Rust list holds the 5-pixel column
+// border, no dynamic column, no width cap and auto grow off; the original reserved room for 11000 items)
+MultiListArea::MultiListArea(int columns)
+{
+    this->mMulti=ee_won_multi_new(this,ee_won_guicpp_list_call,this->mRust);
+    this->SetNumColumns(columns);
+}
+// FUNCTION: WON 0x00703540
+// Destroys the list: the Rust list gives its columns' viewports back (the ListArea base then its rows)
+MultiListArea::~MultiListArea() { ee_won_multi_free(this->mMulti); }
+// FUNCTION: WON 0x00703f60
+// Puts a text cell (the list's font and colour, an optional image) into a row's column; returns the row
+MultiListItem* MultiListArea::SetString(int row,int column,const GUIString& text,Image* image)
+{
+    SmartPtr<TextListItem> item=new TextListItem;
+    item->mText=text;
+    item->mColor=this->mTextColor;
+    item->mFont=this->mFont;
+    item->mImage=image;
+    return this->SetCell(row,column,item.get());
+}
+// Creates an empty row (the implicit constructor at 0x3fa110); the Rust row holds the cells
+MultiListItem::MultiListItem() { this->mRow=ee_won_mrow_new(this,ee_won_guicpp_mrow_call); }
+// Destroys the row (0x00703db0): the Rust row gives its cells back
+MultiListItem::~MultiListItem() { ee_won_mrow_free(this->mRow); }
+
+// FUNCTION: WON 0x00702a90
+// Creates a clipped list header with sort arrows on, no sort column, attached to a list area
+MultiListHeader::MultiListHeader(MultiListArea* area)
+{
+    this->mHead=ee_won_mhead_new(this,ee_won_guicpp_mhead_call); // no drag, no sort column, sort arrows on
+    this->SetComponentFlags(ComponentFlag_Clip,true);
+    this->SetMultiListArea(area);
+}
+// FUNCTION: WON 0x00702b50
+// Destroys the header: the Rust header goes (its buttons are the container's children)
+MultiListHeader::~MultiListHeader() { ee_won_mhead_free(this->mHead); }
+// Paints the header's children (the linker folds this body into the identical ScrollAreaViewport::Paint at 0x00705e00)
+void MultiListHeader::Paint(Graphics& graphics) { Container::Paint(graphics); }
+// Returns the child under a point (the linker folds this body into the identical RootContainer::FindChildAt
+// at 0x00704710)
+Component* MultiListHeader::FindChildAt(int x,int y) { return Container::FindChildAt(x,y); }
+// FUNCTION: WON 0x00703050
+// Returns the sort arrow a header button should draw, found through its enclosing header (none without one)
+ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
+{
+    while(true) {
+        Container* parent=button->mParent;
+        if(parent==NULL) return ListSortType_None;
+        MultiListHeader* header=dynamic_cast<MultiListHeader*>(parent);
+        if(header==NULL) {
+            button=parent;
+            continue;
+        }
+        if(header->DrawSortArrow()) return header->GetSortType(header->GetColumnIndex(button));
+        return ListSortType_None;
+    }
+}
+}
+
+// ---- the tree list and its rows (treeobj.rs)
+
+// a row's own calls out (its SetPos, its walks' other rows, its references)
+extern "C" intptr_t ee_won_guicpp_tnode_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)inComp; (void)d;
+    switch (op) {
+    case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
+    case Op::ItemTop: return Item(a)->mTop;
+    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
+    case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
+    case Op::ItemContains: return Item(a)->Contains((int)b, (int)c) ? 1 : 0;
+    case Op::ItemHold: Item(a)->AddRef(); return 0;
+    case Op::ItemRelease: Item(a)->Release(); return 0;
+    default: return 0;
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x007140f0
+// Creates a closed row at indent 0 with no parent and no index (the Rust row)
+TreeItem::TreeItem() { this->mNode=ee_won_tnode_new(this,ee_won_guicpp_tnode_call); }
+// FUNCTION: WON 0x00714170
+// Destroys the row: the Rust row gives its children and its wrapped item back
+TreeItem::~TreeItem() { ee_won_tnode_free(this->mNode); }
+
+// FUNCTION: WON 0x00714ea0
+// Creates an empty tree with an open root row, list flags 0x30 off and 0x200 on, and tree flags 3 (the Rust tree)
+TreeArea::TreeArea()
+{
+    this->mTree=ee_won_tree_new(this,ee_won_guicpp_list_call,this->mRust);
+    this->TCall(EeWonTreeCall::Init);
+}
+// FUNCTION: WON 0x00714fc0
+// Destroys the tree: the Rust tree gives its root back (and so every row's)
+TreeArea::~TreeArea() { ee_won_tree_free(this->mTree); }
+// Wraps a text item (the tree's colour and font, an optional icon) in a new row under a parent (not identified in
+// the original exe)
+TreeItem* TreeArea::InsertString(TreeItem* theParent,const GUIString& theStr,Image* theIcon,int thePos)
+{
+    SmartPtr<TextListItem> anItem=new TextListItem;
+    anItem->mText=theStr;
+    anItem->mColor=this->mTextColor;
+    anItem->mFont=this->mFont;
+    anItem->mImage=theIcon;
+    return this->InsertTreeItem(theParent,anItem.get(),thePos);
+}
+}
+
+// ---- the popup menu (menuobj.rs)
+
+namespace WONAPI {
+// FUNCTION: WON 0x006fd150
+// Creates a popup menu with the menu font and colors, a popup background and 4-pixel padding (the Rust menu holds
+// no submenu, the timer at 0 and mouse mode)
+PopupMenu::PopupMenu()
+{
+    this->mMenu=ee_won_menu_new(this,ee_won_guicpp_list_call,this->mRust);
+    this->SetFont(this->GetNamedFont("Menu"));
+    this->SetListFlags(0x806,true);
+    this->SetBackground(new MSPopup);
+    this->mTextColor=0x8000000c;
+    this->SetBorderPadding(4,4,4,4);
+}
+// FUNCTION: WON 0x006fd340
+// Destroys the menu: the Rust menu gives the submenu's item and the submenu back
+PopupMenu::~PopupMenu() { ee_won_menu_free(this->mMenu); }
 }

@@ -29,7 +29,6 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUCSpaceBuilding.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGExplore.h"
 #include "ee/EEUGLocation.h"
 
 // FUNCTION: EXE 0x619fe3
@@ -167,7 +166,7 @@ bool EEUCSpaceBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
                 EEUnitGoal* theGoal = (theCargo->mGoalQueues.begin() + 1)->GetFront();
                 if (EEAttackUnitCast(theGoal) == 0 &&
                     EEGoalCast<EEUGLocation>(theGoal) == 0 &&
-                    EEGoalCast<EEUGExplore>(theGoal) == 0)
+                    EEExploreGoalCast(theGoal) == 0)
                     theGoal = NULL;
                 if (theGoal != NULL)
                     theReady = true;
@@ -176,7 +175,7 @@ bool EEUCSpaceBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
                 EEUnitGoal* theGoal = (inUnit->mGoalQueues.begin() + 1)->GetFront();
                 if (EEAttackUnitCast(theGoal) == 0 &&
                     EEGoalCast<EEUGLocation>(theGoal) == 0 &&
-                    EEGoalCast<EEUGExplore>(theGoal) == 0)
+                    EEExploreGoalCast(theGoal) == 0)
                     theGoal = NULL;
                 if (theGoal != NULL)
                     theReady = true;

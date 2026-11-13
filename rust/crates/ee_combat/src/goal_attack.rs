@@ -1,5 +1,5 @@
 //! The attack-unit goal whole in Rust (R5b.2, the twelfth round; was `EEUGAttackUnit` 0x21d2f4..0x21e0c1): its state a
-//! record by goal object (goal_objects.rs's table), its bodies over the goals' host (`EeCombatGoalHost`): the
+//! record by goal object (goal_objects.rs's table), its bodies over the goals' host (goal_objects.rs's `GoalHost`): the
 //! constructor's and destructor's attacker counts and references, `SetTarget`, `RetargetGatePart`, `ReplaceUnit`,
 //! `GetDestination`, `Suits`, the checksum part, `Save` and `Load` after the base goal's, `RepairPointers`. The trigger
 //! test and the step are goals.rs's; the C++ formats the debug and out-of-synch texts.
@@ -7,68 +7,68 @@
 //! Units are handles (the `EEUnit*`'s address, 0 for none). Between `Load` and `RepairPointers` the target and attacker
 //! hold the saved ids (`USavedID`: the id in the pointer's place), as the original's members did.
 
-use crate::goal_objects::{with_goals, EeCombatGoalArgs, EeCombatGoalHost, GoalHost};
+use crate::goal_objects::{with_goals, EeCombatGoalArgs, GoalHost};
 
 // ---- the host's operations (goal_objects.rs's numbering goes on)
 
 /// `inUnit->mTileNode != NULL`.
-pub const EE_COMBAT_G_ON_TILE: i32 = 20;
+pub const EE_COMBAT_G_ON_TILE: i32 = 1020;
 /// `inUnit->mComplexUnit` (a handle).
-pub const EE_COMBAT_G_COMPLEX: i32 = 21;
+pub const EE_COMBAT_G_COMPLEX: i32 = 1021;
 /// the attacker's flags: `EE_COMBAT_G_HUMAN` (`mPlayer->IsHuman()`), `EE_COMBAT_G_PROJECTILE` (its class's
 /// `mIsProjectile`), `EE_COMBAT_G_PRIEST` (its class's `IsPriest()`).
-pub const EE_COMBAT_G_ATTACKER_FLAGS: i32 = 22;
+pub const EE_COMBAT_G_ATTACKER_FLAGS: i32 = 1022;
 pub const EE_COMBAT_G_HUMAN: i64 = 1;
 pub const EE_COMBAT_G_PROJECTILE: i64 = 2;
 pub const EE_COMBAT_G_PRIEST: i64 = 4;
 /// the complex unit's `mNumAttackers`; with `args[0]` non-zero, adds it first.
-pub const EE_COMBAT_G_NUM_ATTACKERS: i32 = 23;
+pub const EE_COMBAT_G_NUM_ATTACKERS: i32 = 1023;
 /// the complex unit's parts: 1 `mNextPart != NULL`, 2 `mPreviousPart != NULL`.
-pub const EE_COMBAT_G_PARTS: i32 = 24;
+pub const EE_COMBAT_G_PARTS: i32 = 1024;
 /// `EEGetAttackPart(unit, args[0])` (a handle).
-pub const EE_COMBAT_G_ATTACK_PART: i32 = 25;
+pub const EE_COMBAT_G_ATTACK_PART: i32 = 1025;
 /// `unit->Reference()`, `unit->Dereference()`.
-pub const EE_COMBAT_G_REFERENCE: i32 = 26;
-pub const EE_COMBAT_G_DEREFERENCE: i32 = 27;
+pub const EE_COMBAT_G_REFERENCE: i32 = 1026;
+pub const EE_COMBAT_G_DEREFERENCE: i32 = 1027;
 /// `mTileX`, `mTileY` into `args[0]`, `args[1]`; `GetTileX()`, `GetTileY()` (the location's tile) into `args[2]`, `args[3]`.
-pub const EE_COMBAT_G_TILE: i32 = 28;
+pub const EE_COMBAT_G_TILE: i32 = 1028;
 /// the unit's class's `mFamily`.
-pub const EE_COMBAT_G_FAMILY: i32 = 29;
+pub const EE_COMBAT_G_FAMILY: i32 = 1029;
 /// the attacker's player's attacks: `args[0]` 1 begins one (the first sets the combat state 2), -1 ends one (the last
 /// sets it 1), 2 a loaded one (`args[1]`: the save has the live state; see `repair`).
-pub const EE_COMBAT_G_PLAYER_ATTACK: i32 = 30;
+pub const EE_COMBAT_G_PLAYER_ATTACK: i32 = 1030;
 /// SetTarget's checks (`ESVERIFY`: the target class targetable by the attacker, its weapon in the table).
-pub const EE_COMBAT_G_VERIFY_TARGET: i32 = 31;
+pub const EE_COMBAT_G_VERIFY_TARGET: i32 = 1031;
 /// `::gWorld.GetUnit(args[0])` (a handle); with `args[1]` non-zero, `EEUnitCast<EEComplexUnit>` of it.
-pub const EE_COMBAT_G_FIND_UNIT: i32 = 32;
+pub const EE_COMBAT_G_FIND_UNIT: i32 = 1032;
 /// `EEFindLoadedGhostUnit(args[0])`.
-pub const EE_COMBAT_G_FIND_GHOST: i32 = 33;
+pub const EE_COMBAT_G_FIND_GHOST: i32 = 1033;
 /// `mUnitID` (`GetUnitID()`).
-pub const EE_COMBAT_G_ID: i32 = 34;
+pub const EE_COMBAT_G_ID: i32 = 1034;
 /// `mHitPoints`.
-pub const EE_COMBAT_G_HIT_POINTS: i32 = 35;
+pub const EE_COMBAT_G_HIT_POINTS: i32 = 1035;
 /// the class's `mCategory`.
-pub const EE_COMBAT_G_CATEGORY: i32 = 36;
+pub const EE_COMBAT_G_CATEGORY: i32 = 1036;
 /// the complex unit's `mVelocity` (float bits).
-pub const EE_COMBAT_G_VELOCITY: i32 = 37;
+pub const EE_COMBAT_G_VELOCITY: i32 = 1037;
 /// `EEGetLeadPosition(unit, args[0], p)` (args[1] 0) or `EEGetFiringPosition(unit, args[0], p)` (args[1] 1) on the
 /// caller's point `p` (its bits in `args[2..5]`: both may leave parts of it as they were): the point's bits into
 /// `args[0..3]`.
-pub const EE_COMBAT_G_POSITION: i32 = 38;
+pub const EE_COMBAT_G_POSITION: i32 = 1038;
 /// Suits' reads: `mPlayer` of the unit (a handle), the class's `mAmmoType`, the class's `CanBeAttacked()`.
-pub const EE_COMBAT_G_PLAYER: i32 = 39;
-pub const EE_COMBAT_G_AMMO_TYPE: i32 = 40;
-pub const EE_COMBAT_G_CAN_BE_ATTACKED: i32 = 41;
+pub const EE_COMBAT_G_PLAYER: i32 = 1039;
+pub const EE_COMBAT_G_AMMO_TYPE: i32 = 1040;
+pub const EE_COMBAT_G_CAN_BE_ATTACKED: i32 = 1041;
 /// a player's `mPlayerID`; with `args[0]` set to 1, `mEnemies[args[1]]` instead.
-pub const EE_COMBAT_G_PLAYER_READ: i32 = 42;
+pub const EE_COMBAT_G_PLAYER_READ: i32 = 1042;
 /// the file's typed calls (the result answered; a read's value in and out of `args[0]`): `unsigned long`, `long`,
 /// `bool`.
-pub const EE_COMBAT_G_WRITE_U32: i32 = 12;
-pub const EE_COMBAT_G_READ_U32: i32 = 13;
-pub const EE_COMBAT_G_WRITE_I32: i32 = 14;
-pub const EE_COMBAT_G_READ_I32: i32 = 15;
-pub const EE_COMBAT_G_WRITE_BOOL: i32 = 16;
-pub const EE_COMBAT_G_READ_BOOL: i32 = 17;
+pub const EE_COMBAT_G_WRITE_U32: i32 = 1012;
+pub const EE_COMBAT_G_READ_U32: i32 = 1013;
+pub const EE_COMBAT_G_WRITE_I32: i32 = 1014;
+pub const EE_COMBAT_G_READ_I32: i32 = 1015;
+pub const EE_COMBAT_G_WRITE_BOOL: i32 = 1016;
+pub const EE_COMBAT_G_READ_BOOL: i32 = 1017;
 
 use crate::goal_objects::{EE_COMBAT_G_READ_F32, EE_COMBAT_G_TELL_GROUP, EE_COMBAT_G_WRITE_F32};
 
@@ -456,7 +456,7 @@ pub fn repair<H: GoalHost>(h: &mut H, goal: u64, live: bool) -> i32 {
     result
 }
 
-// ---- the C ABI (the bodies over `host`; the record's fields through `ee_combat_attack_get`/`_set`)
+// ---- the C ABI (the record's fields for the accessors; the bodies are goal_dispatch.rs's)
 
 /// The record of the goal into `out` (zeroes for none).
 ///
@@ -476,89 +476,6 @@ pub unsafe extern "C" fn ee_combat_attack_get(goal: u64, out: *mut EeCombatAttac
 pub unsafe extern "C" fn ee_combat_attack_set(goal: u64, value: *const EeCombatAttackGoal) {
     put(goal, unsafe { *value });
 }
-
-/// One body of the attack-unit goal (`EE_COMBAT_ATTACK_*`) on `goal`; `a`, `b` its arguments (see each).
-///
-/// # Safety
-/// `host` must be a valid host; `out` three writable floats for the destination (else unused, may be null).
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_attack_goal(
-    function: i32,
-    goal: u64,
-    a: u64,
-    b: u64,
-    host: *const EeCombatGoalHost,
-    out: *mut [f32; 3],
-) -> i32 {
-    let mut h = unsafe { *host };
-    match function {
-        // a: the attacker, b: the target
-        EE_COMBAT_ATTACK_CREATE => {
-            create(&mut h, goal, a, b, false);
-            0
-        }
-        EE_COMBAT_ATTACK_CREATE_CONVERT => {
-            create(&mut h, goal, a, b, true);
-            0
-        }
-        EE_COMBAT_ATTACK_CREATE_EMPTY => {
-            create_empty(goal);
-            0
-        }
-        EE_COMBAT_ATTACK_DESTROY => {
-            destroy(&mut h, goal);
-            0
-        }
-        EE_COMBAT_ATTACK_SET_TARGET => {
-            set_target(&mut h, goal, a);
-            0
-        }
-        EE_COMBAT_ATTACK_RETARGET_GATE => {
-            retarget_gate_part(&mut h, goal);
-            0
-        }
-        EE_COMBAT_ATTACK_UPDATE_TILE => {
-            update_target_tile(&mut h, goal);
-            0
-        }
-        EE_COMBAT_ATTACK_REPLACE => {
-            replace_unit(&mut h, goal, a, b);
-            0
-        }
-        EE_COMBAT_ATTACK_DESTINATION => {
-            // `out`: the caller's point in, the destination out
-            let o = unsafe { *out };
-            let p = destination(&mut h, goal, a, [o[0].to_bits(), o[1].to_bits(), o[2].to_bits()]);
-            unsafe { *out = [f32::from_bits(p[0]), f32::from_bits(p[1]), f32::from_bits(p[2])] };
-            0
-        }
-        EE_COMBAT_ATTACK_SUITS => i32::from(suits(&mut h, goal, a)),
-        EE_COMBAT_ATTACK_CHECKSUM => checksum(&mut h, goal),
-        // a: live (bit 0), ghosts (bit 1)
-        EE_COMBAT_ATTACK_SAVE => save(&mut h, goal, a & 1 != 0, a & 2 != 0),
-        // a: the major version, b: the minor version and live (bit 32)
-        EE_COMBAT_ATTACK_LOAD => load(&mut h, goal, a as u32, b as u32, b >> 32 != 0),
-        // a: live
-        EE_COMBAT_ATTACK_REPAIR => repair(&mut h, goal, a != 0),
-        _ => 0,
-    }
-}
-
-/// `ee_combat_attack_goal`'s functions.
-pub const EE_COMBAT_ATTACK_CREATE: i32 = 1;
-pub const EE_COMBAT_ATTACK_CREATE_CONVERT: i32 = 2;
-pub const EE_COMBAT_ATTACK_CREATE_EMPTY: i32 = 3;
-pub const EE_COMBAT_ATTACK_DESTROY: i32 = 4;
-pub const EE_COMBAT_ATTACK_SET_TARGET: i32 = 5;
-pub const EE_COMBAT_ATTACK_RETARGET_GATE: i32 = 6;
-pub const EE_COMBAT_ATTACK_UPDATE_TILE: i32 = 7;
-pub const EE_COMBAT_ATTACK_REPLACE: i32 = 8;
-pub const EE_COMBAT_ATTACK_DESTINATION: i32 = 9;
-pub const EE_COMBAT_ATTACK_SUITS: i32 = 10;
-pub const EE_COMBAT_ATTACK_CHECKSUM: i32 = 11;
-pub const EE_COMBAT_ATTACK_SAVE: i32 = 12;
-pub const EE_COMBAT_ATTACK_LOAD: i32 = 13;
-pub const EE_COMBAT_ATTACK_REPAIR: i32 = 14;
 
 #[cfg(test)]
 #[path = "goal_attack_tests.rs"]

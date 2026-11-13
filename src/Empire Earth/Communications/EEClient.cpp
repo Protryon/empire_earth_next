@@ -89,7 +89,6 @@ EEClient::EEClient()
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGLoadGarrison.h"
@@ -817,10 +816,10 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
         if (inCommand == 0xbb) {
             theGoal->GetGoalLocation(theGround);
             if (theGoal->mKind == kGoalUnloadTransport) {
-                EEUGUnloadTransport* theUnload = EEGoalCast<EEUGUnloadTransport>(theGoal);
-                if (theUnload != NULL && theUnload->mTransport != NULL &&
-                    theUnload->mTransport->mUnitClass->mCategory == kUnitCategoryFortress)
-                    theUnload->mTransport->GetPosition(theGround);
+                EEUGRust* theUnload = EEUnloadGoalCast(theGoal);
+                if (theUnload != NULL && theUnload->GetUnloadTransport() != NULL &&
+                    theUnload->GetUnloadTransport()->mUnitClass->mCategory == kUnitCategoryFortress)
+                    theUnload->GetUnloadTransport()->GetPosition(theGround);
             }
             gWorld.GetEffectManager()->CreateEffect(theUnit, theGround, theMoveEffect, &theHandle, theIndex);
             EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);
