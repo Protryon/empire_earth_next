@@ -2108,7 +2108,7 @@ mod tests {
         let mut r = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_2D);
         r.particle.velocity = Ge3DPoint { x: 0.0, y: 0.0, z: -1.0 };
         assert_eq!(particle_update(&mut r, &tick, &mut Flat(0.0, true, false)), 0);
-        let vz = 10.0f32 * -1.0 * 0.1 + -1.0;
+        let vz = -10.0f32 * 0.1 + -1.0;
         let bounce = vz * (-1.0 - 0.5) / 1.0;
         assert_eq!(r.particle.velocity.z, 1.0 * bounce + vz);
         assert_eq!(r.particle.draw_position.z, 0.0);
@@ -2313,7 +2313,7 @@ mod tests {
         };
         let mut out = Ge3DPoint::default();
         assert_eq!(emitter_move(&mut r, 0.125, &m, &mut Flat(-5.0, true, false), &mut out), 0);
-        let vx = -1.0f32 * 0.125 + 1.0;
+        let vx = -0.125f32 + 1.0;
         assert_eq!((r.emitter.velocity.x, out.x), (vx, vx * 0.125 + 3.0));
         assert_eq!(emitter_move(&mut r, 0.125, &m, &mut Flat(-5.0, false, false), &mut out), 7);
         // the burst: three draws of place (two when flat), pitch, yaw and speed per particle, then the countdown
