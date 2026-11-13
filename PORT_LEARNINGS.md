@@ -11054,3 +11054,60 @@ energy walls -93, tracer beams -19).
   profile link 0/0, the Rust gate PASS (the same timer test rerun alone), oracle seeds 2-7 identical, captures at
   seeds 2-3 oracle, late, calamity and scenario PASS. ee_units tests 157 (13 new). No tour: nothing
   drawn changed (the debug texts appear only in the debug panels).
+
+## R4.4, tenth round: the effect manager's algorithms, the capture's fade, letterbox, clocks and daylight blend and its per-object arithmetic in Rust (ee_gfx effect_manager.rs, scene.rs, capture.rs; branch rust-gfx16, 2026-11-12)
+
+Round 9 found the effect leaves yielding under 0.5k lines a round, so this round took the larger structures. Graphics
+Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 24,188 lines before the round; 23,699 after the manager
+(`EEEffectManager.cpp` 1,162 -> 673); 23,573 after the capture's state and arithmetic (`EERenderObject.cpp`
+2,026 -> 1,900).
+
+- **The effect manager (`effect_manager.rs`, `ffi_manager.rs`).** Over the round-6 store: the creation plan of each
+  of the eight entry points (`CreateUnitEffect` ... `CreateWeatherEffect`: above the detail setting nothing and 0;
+  a kind the entry does not make 10, but 0 for `CreateEffectBetween` and `CreateWeatherEffect`; a kind without the
+  living (complex) unit or units it needs 10; the multi-effect unsaved), the registration (unsaved first, `SetUp`,
+  `AddEffect` under a new handle even when the set-up fails, the handle out; a pool that returns no effect gives 0),
+  `AddEffect`, `RemoveEffect`, `DestroyQueued` (its 3/9 result), `ClearEffects`, `RepairPointers`' walk (7 or above
+  the detail setting: dropped; another error stops it; then the goal markers'), `Load` (the counter, the effects by
+  kind, a save before 0.200 giving handles anew, an effect added even when its load fails, the goal markers, the
+  queue), `Save` (an effect's error can be overwritten by the next one's, as the original) and `Update`'s loop. The
+  effects stay C++ objects: the C++ constructs them per entry point (one switch each, without the unit tests) and
+  per saved kind, and answers `EeGfxEffectManagerHost` (record, reference, release, set-up, step, repair, the
+  detail test, the load-time constructor, load, save, the goal markers). Every call is the original's in its order:
+  an effect the update or the queue removes is released twice, as before. The store is borrowed for one operation
+  at a time (`StoreAccess::with`), never across a callback: a step, a set-up or a load creates and destroys effects
+  in between. `AddEffect`, `RemoveEffect` and `DestroyQueued` left the class (nothing else called them). One
+  difference: `Load`'s handle counter was an uninitialized local in the original (garbage in the store after a
+  failed first read); it starts at 0. Verified by the EFMU and EFST capture records (recorded from the C++ manager
+  in rounds 6 and 7) in the oracle, late and calamity profiles and by unit tests with a mock host (the call log of
+  update, queue, repair and clear; save and load round trips; old saves; errors). No golden driver over the original
+  manager: it would need every effect class; the capture records are the C++'s behaviour.
+- **The capture's fade, letterbox, clocks and daylight (`scene.rs`).** `EEStartLightFadeIn`/`Out`,
+  `EEStartLetterboxIn`/`Out`, `EEInitialiseScene`'s reset and `Fn10C036`'s grid, water and cloud clocks, light fade,
+  letterbox zoom (the cleared bars, the view band, the clear rectangles' rows, the UI backgrounds' show and hide),
+  and the time-of-day blend (the moon's hours, the 17 key frames, the fill lights, the clamped prelit colour). The
+  state is one `EeGfxSceneFade` the C++ owns (`sLightFade` a reference into it for the lighting set-ups;
+  `gF4BE374`, which the scenario manager reads, stays a C++ global). The progress stays `f64` (the x87 note of
+  `Fn10C036`). The camera, viewport and terrain lighting stay C++.
+- **The capture's per-object arithmetic (`capture.rs`).** A map object's place inside its tiles and its size jitter
+  by id (`FillObject`, `FillDoppelgangerObject`; the id's `long` arithmetic as `i32`/`u32`), the sway clock
+  (`FillRenderLists`) and the swaying blend fraction, and `DrawGroundCircle`'s 51 points and strip width over the
+  terrain (`EEParticleGround`'s callbacks).
+- **A golden driver that cuts the original's code out of the unit.** `EERenderObject.cpp` is too entangled to
+  #include whole (the world, the UI, the rasterizer, the picker), so the driver (`build/gx16/scene_driver`,
+  `make.py`) takes the functions and statement ranges verbatim from `git show BASE:file` by their first and last
+  lines and compiles them over stubs with the same member names (a rasterizer whose `Clear` logs, a UI whose
+  backgrounds log, a 64 x 48 slope for the terrain, `#define GETransformation Location`), with the real GE headers and
+  `UMCos` from `ee_rust.lib`. The same generator cut from the new unit (its new first and last lines) and linked
+  over the forwarders printed the same 2,866 lines. Cutting by text needs each range to compile alone: wrap it in
+  braces (two ranges declared `theBlend`) and give the stubs every member it names.
+- **Gates of the round:** Gates on the result merged with rust: the sim oracle identical on seeds 2-7 in every decision line (the trace's AI folder-hash header differs from `ref`: the open tree's `Data/ai` was rewritten at 23:45, after the reference; the unmodified rust tip shows the same), the captures at seeds 2-3 PASS with EFMU and EFST (oracle 167 digests, late 168, calamity 181), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` matches every row but `next` seeds 2-3 at 1000 s (647 -> 479, 1217 -> 828), which the unmodified rust tip's EE-SIM gives too on the same tree (the new `Data/ai`), the Rust gate PASS, `build.py --sim` and the test profile link 0/0. Per commit: the build 0/0, the oracle at seeds 2-3 identical, the oracle and late captures at seeds 2-3 PASS (calamity too for the manager), the Rust gate PASS. No tour run.
+- **Only a tour or a person reaches:** the capture's moves are drawn only (EE-SIM never runs `Fn10C036`,
+  `FillRenderLists` or `DrawGroundCircle`): the letterbox bars and their clears at a cinematic's start and end (the
+  scenario editor's and a scenario's cinematics; `EEStartLetterbox*`), the UI backgrounds shown and hidden around
+  them, the light fade (`EEStartLightFade*`: a cinematic and the game's end), the sky and terrain light colours at
+  every time-of-day change (the day cycle; the prelit, cloud and unit lighting), the water's phase and the clouds'
+  scroll, the grid's and area rings' texture scroll, the map objects' (trees') places, sizes and sway (and the
+  remembered ones under the fog), and the range ring of a selected, built priest tower (`DrawGroundCircle`, mode 2). The manager's moves
+  are simulation code and are covered by EFMU/EFST and the saveload gate; a windowed game's load of a saved game
+  goes through the same Rust `Load`.
