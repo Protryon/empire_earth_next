@@ -7,7 +7,9 @@
 // action of its own in the UI thread's action queue (so under the UI copy lock and the world's write lock, as every
 // editor action runs) that posts the line's actions, then a marker that posts itself again three times (an action
 // posted by an action, such as the blank map's terrain paint, runs before it) and wakes the driver. The physics never
-// runs (gPlatSimRun stays clear): the editor's actions are its only writes to the world. While a step runs, TMGetTime
+// runs (gPlatSimRun stays clear): the editor's actions are its only writes to the world. The physics thread still
+// flushes the world (EEPhysics::FlushWorld: the placed units' pending lists, the killed units' removal) on its own
+// clock, so a digest flushes it first. While a step runs, TMGetTime
 // answers a pinned time on the UI thread (gTMPinnedTime: 2000, 3000, ... by step), so the terrain paint's ambient
 // units (EESEAPaintTerrain::PlantTerrainUnits seeds its random from the clock) are the same on every run.
 //
@@ -635,8 +637,11 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 theOutput.push_back("savefile " + w[1]);
                 FileDigest(theName, theOutput);
             };
-        else if (c == "digest")
-            theCode = [=, &theOutput] { Digest(w.size() > 1 ? w[1] : std::string(), theOutput); };
+        else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
+            theCode = [=, &theOutput] {
+                gPhysics->FlushWorld();
+                Digest(w.size() > 1 ? w[1] : std::string(), theOutput);
+            };
         else {
             outError = inScript + ":" + std::to_string(k + 1) + ": unknown command " + c;
             return 2;
