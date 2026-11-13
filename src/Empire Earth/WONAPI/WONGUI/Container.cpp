@@ -114,7 +114,15 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     case Op::CtSetFocusId: Comp(a)->mFocusId = (unsigned char)b; return 0;
     case Op::CtSetInvalidState: Comp(a)->mInvalidState = (char)b; return 0;
     case Op::CtSetTimerFlags: t->mTimerFlags = (char)a; return 0;
-    case Op::CtAddBG: t->GetRootContainer()->AddBG((BackgroundGrabber*)a); return 0;
+    case Op::CtAddBG: {
+        // A container not yet under a root (the lobby's tab control is laid out, and brings its page to the top, before
+        // the lobby screen joins the root) has no root container. The original called AddBG on that NULL root, which
+        // returned before reading itself when the grabber had nothing to draw; the Rust RootContainer's forwarder reads
+        // its object first, so a NULL root is skipped here (round 30: the LAN gate's crash on the MultiPlayer click).
+        RootContainer* aRoot = t->GetRootContainer();
+        if (aRoot != NULL) aRoot->AddBG((BackgroundGrabber*)a);
+        return 0;
+    }
     case Op::CtLayout:
         switch (a) {
         case 0: t->mChildLayout->ExecuteInstructions(t); return 0;

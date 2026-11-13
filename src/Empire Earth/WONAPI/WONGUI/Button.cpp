@@ -1,3 +1,8 @@
+// Button (R6 WON round 30): the Rust Button's calls out (rust/crates/ee_won/src/btnobj.rs, EeWonGuiOp's button ops and
+// the component ops it shares with the container), its constructor and destructor, the static functions' forwarders,
+// the two virtuals subclasses override (HandleActivate, SetTextHook) and the click sound. The original's Button.cpp
+// (the flags, the press and release, the keys, the repeat, the radio group, the default buttons) is the Rust object;
+// each op here is a run of its C++ statements with no decision between them.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -11,286 +16,108 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_won.h"
-// The release, drag, key and repeat decisions are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs);
-// this unit keeps the buttons, their radio groups, sounds, timers, focus and events.
+using namespace WONAPI;
+
+typedef EeWonGuiOp Op;
+typedef EeWonCtVirt V;
+
+static Component* Comp(intptr_t a) { return (Component*)a; }
+
+// t is NULL for the static functions' ops (those on a)
+extern "C" intptr_t ee_won_guicpp_btn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    Button* t = static_cast<Button*>((Component*)inComp);
+    switch (op) {
+    case Op::CtBase:
+        switch ((V)a) {
+        case V::AddedToParent: t->Component::AddedToParent(); return 0;
+        case V::MouseEnter: t->Component::MouseEnter((int)b, (int)c); return 0;
+        case V::MouseExit: t->Component::MouseExit(); return 0;
+        case V::GotFocus: t->Component::GotFocus(); return 0;
+        case V::LostFocus: t->Component::LostFocus(); return 0;
+        case V::MouseHover: t->Component::MouseHover((unsigned long)b); return 0;
+        default: return 0;
+        }
+    case Op::CtChild: if ((V)b == V::RequestFocus) Comp(a)->RequestFocus(); return 0; // (the next radio's)
+    case Op::CtBits: return (uint32_t)Comp(a)->mComponentBits;
+    case Op::CtParentOf: return (intptr_t)static_cast<Component*>(Comp(a)->mParent);
+    case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
+    case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
+    case Op::CtContainerOf: {
+        Container* aContainer = dynamic_cast<Container*>(Comp(a));
+        return aContainer != NULL ? (intptr_t)aContainer->mCt : 0;
+    }
+    case Op::BtnOf: {
+        Button* aButton = dynamic_cast<Button*>(Comp(a));
+        return aButton != NULL ? (intptr_t)aButton->mBtn : 0;
+    }
+    case Op::ChildHold: Comp(a)->AddRef(); return 0;
+    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    case Op::ChildWidth: return Comp(a)->Width();
+    case Op::ChildHeight: return Comp(a)->Height();
+    case Op::ChildInvalidate: Comp(a)->Invalidate(); return 0;
+    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
+    case Op::Invalidate: t->Invalidate(); return 0;
+    case Op::RequestFocus: t->RequestFocus(); return 0;
+    case Op::RequestTimer: t->RequestTimer(a != 0); return 0;
+    case Op::BtnHandleActivate: return t->HandleActivate() ? 1 : 0;
+    case Op::BtnSetTextHook: t->SetTextHook(*(const GUIString*)a); return 0;
+    case Op::BtnHasClickSound: return t->mClickSound.get() != NULL ? 1 : 0;
+    case Op::BtnPlayClick: t->mClickSound->Play(); return 0;
+    // the type is Rust's map, which the golden checks against the enum
+    case Op::FireEvent: t->Fn2F5380(ee_won_gui_event_type((EeWonGuiEvent)a), b != 0); return 0;
+    default: return 0;
+    }
+}
+
 namespace WONAPI {
-// Current default button and the dialog's default button (0x00966224 and 0x00966228 in the original)
-SmartPtr<Button> Button::mDefaultButton;
-SmartPtr<Button> Button::mDialogDefaultButton;
 // FUNCTION: WON 0x006f3070
-// Creates a button with no flags, not pressed, that takes focus
+// Creates a button that takes focus (the Rust button: no flags, not pressed)
 Button::Button()
 {
-    mButtonFlags=0;
-    this->mKeyDown=false;
-    this->mMouseDownState=0;
+    this->mBtn=ee_won_btn_new(static_cast<Component*>(this),ee_won_guicpp_btn_call);
     this->SetComponentFlags(ComponentFlag_WantTabFocus,true);
 }
-// Destroys the button (members only)
-Button::~Button() {}
+// Destroys the button (the Rust button; the click sound is a member)
+Button::~Button() { ee_won_btn_free(this->mBtn); }
 
 // FUNCTION: WON 0x006f30d0
 // Lets an activation fire its event (always true here)
 bool Button::HandleActivate() { return true; }
 
 void Button::SetTextHook(const GUIString&) {}
-// FUNCTION: WON 0x006f3180
-// Sets the button text and optionally repaints
-void Button::SetText(const GUIString& text,bool invalidate)
-{
-    this->SetTextHook(text);
-    if(invalidate) this->Invalidate();
-}
 // FUNCTION: WON 0x006f31c0
 // Makes a button the dialog's default button and the current default
-void Button::SetDialogDefaultButton(Button* button)
+void Button::SetDialogDefaultButton(Button* b)
 {
-    if(button==Button::mDialogDefaultButton.get()) return;
-    Button::mDialogDefaultButton=button;
-    Button::SetDefaultButton(button);
+    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::SetDialogDefault,(intptr_t)static_cast<Component*>(b));
 }
 // FUNCTION: WON 0x006f3230
 // Clears the dialog's default button if it is this one, and drops it as the current default
-void Button::UnSetDialogDefaultButton(Button* button)
+void Button::UnSetDialogDefaultButton(Button* b)
 {
-    if(button!=Button::mDialogDefaultButton.get()) return;
-    Button::mDialogDefaultButton=NULL;
-    Button::UnSetDefaultButton(button);
+    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::UnSetDialogDefault,(intptr_t)static_cast<Component*>(b));
 }
 // FUNCTION: WON 0x006f3280
 // Makes a button the current default (the one Enter presses), repainting the old and the new one
-void Button::SetDefaultButton(Button* button)
+void Button::SetDefaultButton(Button* b)
 {
-    if(button==Button::mDefaultButton.get()) return;
-    if(Button::mDefaultButton.get()!=NULL) Button::mDefaultButton->Invalidate();
-    Button::mDefaultButton=button;
-    if(button!=NULL) button->Invalidate();
+    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::SetDefault,(intptr_t)static_cast<Component*>(b));
 }
 // FUNCTION: WON 0x006f3300
-// Falls back to the dialog's default button as the current default
-void Button::UnSetDefaultButton(Button* button)
+// Falls back to the dialog's default button as the current default (the original ignores the argument)
+void Button::UnSetDefaultButton(Button* b)
 {
-    // the original ignores the argument and falls back to the dialog's default button (0x6f3300)
-    Button::SetDefaultButton(Button::mDialogDefaultButton.get());
+    ee_won_btn_static(ee_won_guicpp_btn_call,EeWonBtnStatic::UnSetDefault,(intptr_t)static_cast<Component*>(b));
 }
 // FUNCTION: WON 0x006f3310
 // Copies another button's flags and click sound
 void Button::CopyAttributes(Button* from)
 {
-    mButtonFlags=from->mButtonFlags;
+    this->BCall(EeWonBtnCall::CopyAttributes,(intptr_t)from->mBtn);
     this->mClickSound=from->mClickSound;
 }
-// FUNCTION: WON 0x006f3170
-// Returns whether the mouse is over the button
-bool Button::IsMouseOver() { return mButtonFlags&0x10?true:false; }
-// FUNCTION: WON 0x006f31b0
-// Returns whether this is the current default button
-bool Button::IsDefaultButton() { return Button::mDefaultButton.get()==this; }
-// FUNCTION: WON 0x006f3370
-// Sets or clears button flags; a radio button's selected state follows its check
-void Button::SetButtonFlags(unsigned long flags,bool set)
-{
-    if(set) mButtonFlags|=flags;
-    else mButtonFlags&=~flags;
-    if(this->IsRadio()) this->SetComponentFlags(ComponentFlag_WantFocus,this->IsChecked());
-}
-// FUNCTION: WON 0x006f33c0
-// Resets hover and press on joining a parent; a radio group with no focusable member makes this one focusable
-void Button::AddedToParent()
-{
-    Component::AddedToParent();
-    this->SetButtonFlags(0x30,false);
-    if(!this->IsRadio())
-        return;
-    this->SetCheck(this->IsChecked(),false);
-    if(this->WantFocus())
-        return;
-    Button* radio=this->GetEndRadio(false);
-    while(radio!=NULL) {
-        if(radio->WantFocus()) return;
-        radio=radio->GetNextRadio(true);
-    }
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
-}
-// FUNCTION: WON 0x006f3440
-// Activates the button unless disabled: checks a radio, toggles a check box, and fires the button event
-void Button::Fn2F3440()
-{
-    if(this->IsDisabled() || this->IsNoActivate()) return;
-    if(this->IsRadio()) this->SetCheck(true,false);
-    else this->SetCheck(!this->IsChecked(),false);
-    if(this->HandleActivate()) this->Fn2F5380(ComponentEvent_ButtonPressed,0);
-}
-// FUNCTION: WON 0x006f34a0
-// Returns the next (or previous) sibling if it is a radio button, else NULL
-Button* Button::GetNextRadio(bool forward)
-{
-    Component* aSibling=this->GetNextSibling(forward,false);
-    Button* button=dynamic_cast<Button*>(aSibling);
-    return button!=NULL && button->IsRadio() ? button : NULL;
-}
-// FUNCTION: WON 0x006f34e0
-// Returns the last (or first) radio button of this button's group
-Button* Button::GetEndRadio(bool forward)
-{
-    Button* last=this;
-    while(true) {
-        Button* next=last->GetNextRadio(forward);
-        if(next==NULL) break;
-        last=next;
-    }
-    return last;
-}
-// FUNCTION: WON 0x006f3500
-// Checks or unchecks the button (a checked radio unchecks its group and takes focus); the optional
-// event fires before the check state changes
-void Button::SetCheck(bool checked,bool notify)
-{
-    if(this->IsRadio()) {
-        this->SetComponentFlags(ComponentFlag_WantFocus,checked);
-        if(checked) {
-            Button* radio=this->GetEndRadio(false);
-            while(radio!=NULL) {
-                if(radio!=this) {
-                    radio->SetComponentFlags(ComponentFlag_WantFocus,false);
-                    if(radio->IsChecked()) { radio->SetButtonFlags(4,false); radio->Invalidate(); }
-                }
-                radio=radio->GetNextRadio(true);
-            }
-            this->RequestFocus();
-        }
-    }
-    if(notify) this->Fn2F5380(ComponentEvent_ButtonPressed,0);
-    if(this->IsChecked()!=checked) { this->SetButtonFlags(4,checked); this->Invalidate(); }
-}
-// FUNCTION: WON 0x006f35b0
-// Marks the mouse as over the button and repaints if it highlights on hover
-void Button::MouseEnter(int x,int y)
-{
-    Component::MouseEnter(x,y);
-    this->SetButtonFlags(0x10,true);
-    if(mButtonFlags&1) this->Invalidate();
-}
-// FUNCTION: WON 0x006f35e0
-// Presses the button on a left click
-void Button::MouseDown(int,int,int button)
-{
-    if(button==0) { this->mMouseDownState=2; this->ButtonDown(); }
-}
-// FUNCTION: WON 0x006f3600
-// Releases the button on a left release, activating it
-void Button::MouseUp(int,int,int button)
-{
-    if(button==0) { this->mMouseDownState=0; this->ButtonUp(true); }
-}
-// FUNCTION: WON 0x006f3620
-// Releases the button without activating and clears the hover state
-void Button::MouseExit()
-{
-    Component::MouseExit();
-    this->mMouseDownState=0;
-    this->ButtonUp(false);
-    if(this->IsMouseOver() && (mButtonFlags&1)) this->Invalidate();
-    this->SetButtonFlags(0x10,false);
-}
-// FUNCTION: WON 0x006f3660
-// Presses the button: plays the click sound, starts repeating or activates on press if set, takes focus
-void Button::ButtonDown()
-{
-    if(this->IsPressed()) return;
-    if(this->mClickSound.get()!=NULL) this->mClickSound->Play();
-    this->SetButtonFlags(0x20,true);
-    this->Invalidate();
-    if(this->IsRepeat()) { this->mDelayAcc=0; this->RequestTimer(true); this->Fn2F3440(); }
-    if(this->IsActivateOnPress()) this->Fn2F3440();
-    this->RequestFocus();
-}
-// FUNCTION: WON 0x006f36d0
-// Releases a pressed button (unless the mouse or key still holds it), activating it unless dragged off
-void Button::ButtonUp(bool activate)
-{
-    EeWonButtonUp anUp=ee_won_gui_button_up((uint32_t)mButtonFlags,this->mMouseDownState,this->mKeyDown,activate);
-    if(anUp==EeWonButtonUp::Ignore) return;
-    this->SetButtonFlags(0x20,false);
-    this->Invalidate();
-    if(anUp==EeWonButtonUp::StopRepeat) { this->RequestTimer(false); return; }
-    if(anUp==EeWonButtonUp::Activate) this->Fn2F3440();
-}
-// FUNCTION: WON 0x006f3740
-// Presses the button while dragging inside it and releases it, without activating, outside
-void Button::MouseDrag(int x,int y)
-{
-    int aWhere=ee_won_gui_button_drag(this->mMouseDownState,x,y,this->Width(),this->Height());
-    if(aWhere<0) return;
-    if(aWhere==0) {
-        this->mMouseDownState=2;
-        if(!this->IsPressed()) { this->ButtonDown(); this->mDelayAcc=500; }
-    } else { this->mMouseDownState=1; this->ButtonUp(false); }
-}
-// FUNCTION: WON 0x006f37a0
-// Takes focus, becoming the default button if it asks to
-void Button::GotFocus()
-{
-    Component::GotFocus();
-    if(this->IsDefaultOnFocus()) Button::SetDefaultButton(this);
-    this->Invalidate();
-}
-// FUNCTION: WON 0x006f37d0
-// Loses focus: releases a key press without activating and gives up the default button
-void Button::LostFocus()
-{
-    Component::LostFocus();
-    if(this->mKeyDown) { this->mKeyDown=false; this->ButtonUp(false); }
-    Button::UnSetDefaultButton(this);
-    this->Invalidate();
-}
-// FUNCTION: WON 0x006f3800
-// Handles keys: Enter activates the default button, Space presses, arrows move and activate within a radio group
-bool Button::KeyDown(int key)
-{
-    EeWonButtonKey anAction=ee_won_gui_button_key(key,this->IsDefaultButton(),this->mKeyDown,this->IsRadio());
-    switch(anAction) {
-    case EeWonButtonKey::Activate:
-        this->Fn2F3440();
-        return true;
-    case EeWonButtonKey::Press:
-        this->mKeyDown=true;
-        if(this->mParent!=NULL) this->mParent->SetHasUsedDialogKeys(true);
-        this->ButtonDown();
-        return true;
-    case EeWonButtonKey::RadioBack:
-    case EeWonButtonKey::RadioForward:
-    {
-        if(this->mParent!=NULL) this->mParent->SetHasUsedDialogKeys(true);
-        Button* next=this->GetNextRadio(anAction==EeWonButtonKey::RadioForward);
-        if(next!=NULL) { next->Fn2F3440(); next->RequestFocus(); }
-        return true;
-    }
-    default:
-        return false;
-    }
-}
-// FUNCTION: WON 0x006f38b0
-// Releases the button on Space, activating it
-bool Button::KeyUp(int key)
-{
-    if(key==32) {
-        this->mKeyDown=false;
-        this->ButtonUp(true);
-        return true;
-    }
-    return false;
-}
-// FUNCTION: WON 0x006f38d0
-// Repeats the activation every 100 ms after an initial 500 ms hold
-bool Button::TimerEvent(int delta)
-{
-    if(ee_won_gui_button_repeat(this->mDelayAcc,delta,&this->mDelayAcc)) this->Fn2F3440();
-    return true;
-}
-// FUNCTION: WON 0x006f3900
-// Forwards mouse hover to the base component
-void Button::MouseHover(unsigned long delta) { Component::MouseHover(delta); }
 // FUNCTION: WON 0x006f3910
 // Sets the sound played when the button is pressed
 void Button::SetClickSound(Sound* sound) { this->mClickSound=sound; }
