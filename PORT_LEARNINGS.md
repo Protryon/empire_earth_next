@@ -11849,3 +11849,54 @@ Measured as rounds 18-26 (every file under `src/Empire Earth/WONAPI` and `includ
   - The move needs about 30 ops: list area, edit box, popup and the undo text (a GUIString member).
   - Then Window/RootContainer, the remaining controls and layout managers, and the input and list goldens'
     re-recording to trace the delivered event type.
+
+## R6 WON round 28: ComboBox whole in Rust (ee_won comboobj.rs; branch rust-r6-won28, 2026-11-13)
+
+Measured as rounds 18-27 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+82,202 at the branch's start (round 27's head) -> 82,203 (the setter, +1) -> 81,969 (ComboBox, -234). This round's own
+net: -233.
+
+- **The census first** (its own commit). Only one ComboBox field was read or written outside its unit:
+  ComboBoxConfig's `mShowButtonWhenDisabled`, now `SetShowButtonWhenDisabled`. The full grep was run without a
+  limit, as round 26's lesson says.
+  - The parts (`mEdit`, `mButton`, `mListBox`, `mListArea`) stay members. MSComboBox and WONComboBox make them and
+    lay them out, the skins duplicate them, ComboBoxConfig hands out the input box and the list area, and the game
+    options control reads the list area.
+  - The undo text (a GUIString) also stays a member. This is round 27's pattern for the tab control's containers.
+- **The move** (`comboobj.rs`): whether the list is open, no-typing, the button while disabled and the list box's
+  configured size, with every method.
+  - The Rust object reaches the parts through `ComboPart` (read again at every use, as the original read its
+    members) and 31 combo ops (490-520). Each is one of the original's statements on a part: the list area's
+    inserts, deletes, selection, metrics and item reads, the input box's texts and selection, the undo text, the
+    popup, the selection event, the list box's listener.
+  - The list area's KeyDown and MouseWheel, the input box's RequestFocus and the combo box's own SetFocusChild go
+    through `CtChild` and `CtVirt`, so overrides run.
+  - The input box's events fired again (InputTextChanged, InputReturn, with the original's `true`) go through
+    `ee_won_gui_event_type`.
+  - ComboBox.cpp is now the host, the constructor (its two flag statements stay C++), the destructor and
+    `SetListBox`. The skins' `ComboBox::Virtual08()` calls are the forwarder.
+- **Behaviour on a crash path only:** a NULL list box given to `SetListBox` is no longer read. The original read its
+  scroll area before the NULL test.
+- **The golden** (`tests/won/won_comboobj_test.cpp`) uses round 26's world: the combo box and its parent are real
+  Rust containers, and the parts are leaves.
+  - The parts' state (the items with their texts and widths, the selection, the input box's and undo texts, the list
+    box, the second list box's scroll area) is a model in the test.
+  - Every combo op is traced with its answer, the model's reads included. The cargo replay therefore needs no model:
+    it returns each answer from the golden's "=" line. The order of those reads is the same on both sides because
+    both are written out statement by statement.
+  - It runs 20,000 sequences of 40 calls with 14,430,991 trace lines, all identical.
+  - Two mutations fail it: the end of the popup not closing the list fails 2,087 sequences; a press on the input box
+    clicking the button while typing is allowed fails 3,255.
+  - `golden_comboobj.txt` holds 41 sequences, replayed by cargo through round 27's `Ext` hooks.
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction (seeds 2-3 identical
+  after each commit). The lobby's combo boxes (game options, player options, the LAN name and tab choice in the
+  lobby options, the server list's filters) are built at lobby entry.
+  - The lead's LAN game reaches what the host's game options show and change.
+  - The lobby captures reach the combo boxes' paint and size: the input box, the button, the list box's size.
+  - Only a person runs an open list, keyboard selection, the wheel, Escape's undo and no-typing presses; those run
+    only in the golden.
+- **Left:**
+  - Window/RootContainer: RootContainer.cpp is 337 lines over the background grabbers, the cursor and the mouse
+    drag. Window.cpp and WindowManager.cpp are larger and reach the platform window.
+  - The remaining controls (Button and its skins) and the layout managers.
+  - Re-recording the input and list goldens so they trace the delivered event type.
