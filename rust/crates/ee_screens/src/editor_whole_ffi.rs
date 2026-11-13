@@ -7,6 +7,7 @@ use core::ffi::c_void;
 
 use ee_ge::types::GeTransformation;
 
+use crate::editor_events::{SeeHost, SeeKind};
 use crate::editor_place::SepHost;
 use crate::editor_whole::{SewAction, SewElevation, SewGate, SewHost, SewWall};
 
@@ -17,6 +18,7 @@ mod sys {
     extern "C" {
         pub fn ee_screenscpp_sew(op: u32, p: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_sew_elevation(data: *mut i16, capacity: usize, out: *mut i32) -> usize;
+        pub fn ee_screenscpp_see(op: u32, p: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_sep(op: u32, p: *mut c_void, t: *mut f32, i: *mut i32, f: *mut f32) -> i32;
     }
 }
@@ -282,4 +284,64 @@ pub unsafe extern "C" fn ee_screens_sew_place_push(
     }
     let entry = crate::editor_place::SepPlaced { container: -1, t: transformation, player, unit_type, animation };
     unsafe { (*action).0.place_push(entry) };
+}
+
+// ---- the editor form's events whole in Rust (`editor_events.rs`; `EESEERust`; the host `ee_screenscpp_see` in
+// `EEUIFSETRBPaintType.cpp`)
+
+impl SeeHost for Host {
+    fn op(&mut self, op: u32, p: usize, i: &mut [i32; 2], f: &mut [f32; 4]) -> i32 {
+        unsafe { sys::ee_screenscpp_see(op, p as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
+    }
+}
+
+/// An `EESEERust`'s event (opaque to C++).
+pub struct EeScreensSeeEvent(SeeKind);
+
+/// The event of `kind` (`EE_SCREENS_SEE_*`; `object` the quick save/load action); NULL for an unknown kind. Freed
+/// by `ee_screens_see_free`.
+#[no_mangle]
+pub extern "C" fn ee_screens_see_new(kind: u32, object: *mut c_void) -> *mut EeScreensSeeEvent {
+    match SeeKind::new(&mut Host, kind, object as usize) {
+        Some(e) => Box::into_raw(Box::new(EeScreensSeeEvent(e))),
+        None => core::ptr::null_mut(),
+    }
+}
+
+/// `ProcessEvent`: the check box or button `entity` (the form is the editor's).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_see_process(event: *const EeScreensSeeEvent, entity: *mut c_void) -> i32 {
+    if event.is_null() {
+        return 0;
+    }
+    // a copy: no Rust reference into the box across the host's calls (the post may run other events)
+    let e = unsafe { (*event).0.clone() };
+    e.process(&mut Host, entity as usize)
+}
+
+/// The viewport change's rectangle (four floats: left, top, right, bottom) and whether the UI is hidden.
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL); `rectangle` points at four floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_see_viewport(event: *mut EeScreensSeeEvent, rectangle: *const f32, hidden: u8) {
+    if !event.is_null() {
+        let r = unsafe { core::slice::from_raw_parts(rectangle, 4) };
+        unsafe { (*event).0.set_viewport([r[0], r[1], r[2], r[3]], hidden != 0) };
+    }
+}
+
+/// The `EESEERust`'s destructor.
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL) and is not used after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_see_free(event: *mut EeScreensSeeEvent) {
+    if !event.is_null() {
+        let e = unsafe { Box::from_raw(event) };
+        e.0.free(&mut Host);
+    }
 }

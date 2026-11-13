@@ -900,6 +900,45 @@ constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
 
 constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
 
+/// `EESEEHideUI`.
+constexpr static const uint32_t EE_SCREENS_SEE_HIDE_UI = 1;
+
+/// `EESEEChangeViewport` (its rectangle and flag: `ee_screens_see_viewport`).
+constexpr static const uint32_t EE_SCREENS_SEE_CHANGE_VIEWPORT = 2;
+
+/// `EESEEQuickLoad` (object: the quick save/load action).
+constexpr static const uint32_t EE_SCREENS_SEE_QUICK_LOAD = 3;
+
+/// `EESEEQuickSave` (object: the quick save/load action).
+constexpr static const uint32_t EE_SCREENS_SEE_QUICK_SAVE = 4;
+
+/// The object p referenced / released.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_REFERENCE = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEE_OP_DEREFERENCE = 2;
+
+/// -> whether the check box p is checked.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_CHECKED = 3;
+
+/// A viewport change to the rectangle f0..f3 (left, top, right, bottom), the UI hidden when i0, posted -> the
+/// post's result.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_POST_VIEWPORT = 4;
+
+/// -> whether the scenario editor's form exists.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_HAS_EDITOR = 5;
+
+/// The editor's game view set to the rectangle f0..f3, its UI shown when i0 (`SetGameView`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SET_GAME_VIEW = 6;
+
+/// Everything redrawn (`gUIManager->RedrawAll`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_REDRAW_ALL = 7;
+
+/// The scenario editor shows the loaded object p (`PostShowLoadedObject`; the event's form is the editor's).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SHOW_LOADED = 8;
+
+/// A quick save action of the quick save/load action p posted.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_QUICK_SAVE = 9;
+
 /// The ghosts' lock taken (i0 != 0) or let go.
 constexpr static const uint32_t EE_SCREENS_SEP_GHOST_LOCK = 1;
 
@@ -2970,6 +3009,9 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 /// A paint action's record (opaque to C++).
 struct EeScreensSeaPaint;
 
+/// An `EESEERust`'s event (opaque to C++).
+struct EeScreensSeeEvent;
+
 /// An `EESEARust`'s action (opaque to C++).
 struct EeScreensSewAction;
 
@@ -3668,6 +3710,31 @@ void ee_screens_sew_place_push(EeScreensSewAction *action,
                                int32_t unit_type,
                                const float *t,
                                int32_t animation);
+
+/// The event of `kind` (`EE_SCREENS_SEE_*`; `object` the quick save/load action); NULL for an unknown kind. Freed
+/// by `ee_screens_see_free`.
+EeScreensSeeEvent *ee_screens_see_new(uint32_t kind,
+                                      void *object);
+
+/// `ProcessEvent`: the check box or button `entity` (the form is the editor's).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+int32_t ee_screens_see_process(const EeScreensSeeEvent *event, void *entity);
+
+/// The viewport change's rectangle (four floats: left, top, right, bottom) and whether the UI is hidden.
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL); `rectangle` points at four floats.
+void ee_screens_see_viewport(EeScreensSeeEvent *event,
+                             const float *rectangle,
+                             uint8_t hidden);
+
+/// The `EESEERust`'s destructor.
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL) and is not used after.
+void ee_screens_see_free(EeScreensSeeEvent *event);
 
 /// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
 /// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the

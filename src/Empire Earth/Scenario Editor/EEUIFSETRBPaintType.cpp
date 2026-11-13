@@ -124,9 +124,6 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
 #include "lle/UICheckBox.h"
-#include "ee/EESEEHideUI.h"
-#include "ee/EESEEQuickLoad.h"
-#include "ee/EESEEQuickSave.h"
 #include "ee/EEAQuickSaveLoad.h"
 #include "ee/EEStringIDs.h"
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
@@ -145,48 +142,55 @@ long EESEEGameUnitLimit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 }
 
 // FUNCTION: EXE 0x5af4c1
-// Posts a viewport change to the full view or the framed view, as the hide-UI check box is checked or not
-long EESEEHideUI::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UICheckBox* theBox = static_cast<UICheckBox*>(inEntity);
-    GERectangle theRectangle;
-    if (theBox->GetIsChecked())
-        theRectangle = this->mR1C;
-    else
-        theRectangle = this->mR0C;
-    UIEvent* theEvent = new EESEEChangeViewport(theRectangle, theBox->GetIsChecked());
-    long theResult = gUserInterface->PostEvent(theEvent, NULL);
-    theEvent->Dereference();
-    return theResult;
-}
+// (EESEEHideUI::ProcessEvent: ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x5af55a
-// Sets the scenario editor's game view rectangle and UI visibility, then redraws everything
-long EESEEChangeViewport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (gUIManager->mScenarioEditorForm != NULL) {
-        gUIManager->mScenarioEditorForm->SetGameView(this->mRectangle, this->mHidden == false);
-        gUIManager->RedrawAll();
-    }
-    return kErrorOK;
-}
+// (EESEEChangeViewport::ProcessEvent: ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x5af58e
-// Asks the editor to show the quick-loaded scenario
-long EESEEQuickLoad::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->PostShowLoadedObject(this->mOwner);
-    return kErrorOK;
-}
+// (EESEEQuickLoad::ProcessEvent: ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x5af874
-// Posts a quick save of the scenario
-long EESEEQuickSave::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+// (EESEEQuickSave::ProcessEvent: ee_screens editor_events.rs)
+
+// The host of the editor form's events whole in Rust (EE_SCREENS_SEE_OP_*; EESEERust in ee/EESEARust.h)
+extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* p, int32_t* i, float* f)
 {
-    EEAction* theAction = new EESEARust(kSEAQuickSave, static_cast<EEAction*>(this->mOwner));
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-    return kErrorOK;
+    switch (inOp) {
+    case EE_SCREENS_SEE_OP_REFERENCE:
+        static_cast<EEAction*>(p)->Reference();
+        break;
+    case EE_SCREENS_SEE_OP_DEREFERENCE:
+        static_cast<EEAction*>(p)->Dereference();
+        break;
+    case EE_SCREENS_SEE_OP_CHECKED:
+        return static_cast<UICheckBox*>(static_cast<UIEntity*>(p))->GetIsChecked() ? 1 : 0;
+    case EE_SCREENS_SEE_OP_POST_VIEWPORT: {
+        EESEERust* theEvent = new EESEERust(kSEEChangeViewport);
+        ee_screens_see_viewport(theEvent->mEvent, f, i[0] != 0 ? 1 : 0);
+        long theResult = gUserInterface->PostEvent(theEvent, NULL);
+        theEvent->Dereference();
+        return (int32_t)theResult;
+    }
+    case EE_SCREENS_SEE_OP_HAS_EDITOR:
+        return gUIManager->mScenarioEditorForm != NULL;
+    case EE_SCREENS_SEE_OP_SET_GAME_VIEW:
+        gUIManager->mScenarioEditorForm->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), i[0] != 0);
+        break;
+    case EE_SCREENS_SEE_OP_REDRAW_ALL:
+        gUIManager->RedrawAll();
+        break;
+    case EE_SCREENS_SEE_OP_SHOW_LOADED:
+        gUIManager->mScenarioEditorForm->PostShowLoadedObject(static_cast<EEAction*>(p));
+        break;
+    case EE_SCREENS_SEE_OP_QUICK_SAVE: {
+        EEAction* theAction = new EESEARust(kSEAQuickSave, static_cast<EEAction*>(p));
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        break;
+    }
+    }
+    return 0;
 }
 
 // FUNCTION: EXE 0x5af8ad

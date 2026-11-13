@@ -48,6 +48,21 @@ enum {
     kSEAMoveUnit = 13,
 };
 
+// The editor form's events whole in Rust (ee_screens editor_events.rs): the hide-UI box, the viewport change, the
+// toolbar's quick load and quick save (the original's EESEEHideUI, EESEEChangeViewport, EESEEQuickLoad,
+// EESEEQuickSave). Requires lle/UIEvent.h for EESEERust.
+struct EeScreensSeeEvent;
+extern "C" EeScreensSeeEvent* ee_screens_see_new(uint32_t kind, void* object);
+extern "C" int32_t ee_screens_see_process(const EeScreensSeeEvent* event, void* entity);
+extern "C" void ee_screens_see_viewport(EeScreensSeeEvent* event, const float* rectangle, uint8_t hidden);
+extern "C" void ee_screens_see_free(EeScreensSeeEvent* event);
+enum {
+    kSEEHideUI = 1,
+    kSEEChangeViewport = 2,
+    kSEEQuickLoad = 3,          // object: the quick save/load action
+    kSEEQuickSave = 4,          // object: the quick save/load action
+};
+
 class EESEARust : public EEAction {
 public:
     EESEARust(uint32_t inKind, void* inObject = 0, int32_t inA = 0, int32_t inB = 0, int32_t inC = 0, int32_t inD = 0)
@@ -60,6 +75,17 @@ public:
     virtual void Virtual4() { ee_screens_sew_run(this->mAction); }
     virtual void Virtual8() {}
     EeScreensSewAction* mAction;
+};
+
+class EESEERust : public UIEvent {
+public:
+    EESEERust(uint32_t inKind, void* inObject = 0) : mEvent(ee_screens_see_new(inKind, inObject)) {}
+    virtual ~EESEERust() { ee_screens_see_free(this->mEvent); }
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+    {
+        return ee_screens_see_process(this->mEvent, inEntity);
+    }
+    EeScreensSeeEvent* mEvent;
 };
 
 #endif
