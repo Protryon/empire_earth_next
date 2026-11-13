@@ -40,9 +40,8 @@ struct UIStatusBarHost {
     {
         UIStatusBar* s = static_cast<UIStatusBar*>(inBar);
         GERhombus& theRhombus = a ? s->mCopiedStatusRhombus : s->mStatusRhombus;
-        GEText* theText = reinterpret_cast<GEText*>(a);
         intptr_t r = 0;
-        if (UIObjHost::Base(s, inOp, a, f, &r))
+        if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Media(s, inOp, a, b, f, &r))
             return r;
         switch (inOp) {
         case EeUiOp::RhombusRect: UIObjHost::PutRect(f, theRhombus.GetRectangle()); break;
@@ -51,18 +50,6 @@ struct UIStatusBarHost {
         case EeUiOp::RhombusSetOpacity: theRhombus.SetOpacity(f[0]); break;
         case EeUiOp::RhombusSetColor: theRhombus.SetColor(GEColor(f[0], f[1], f[2])); break;
         case EeUiOp::RhombusDraw: return s->GetRasterizer()->Draw(&theRhombus, s->GetScreenIndex());
-        case EeUiOp::TextCreate: return (intptr_t) new GEText(reinterpret_cast<GEFont*>(a));
-        case EeUiOp::TextDelete: delete theText; break;
-        case EeUiOp::TextSetFont: theText->SetFont(reinterpret_cast<GEFont*>(b)); break;
-        case EeUiOp::TextLength: return theText->GetText().GetLength();
-        case EeUiOp::TextExtent:
-            f[0] = theText->GetTextExtent().GetWidth();
-            f[1] = theText->GetTextExtent().GetHeight();
-            break;
-        case EeUiOp::TextCopy: *theText = *reinterpret_cast<GEText*>(b); break;
-        case EeUiOp::TextSetText: theText->SetText(*reinterpret_cast<const UWideString*>(b)); break;
-        case EeUiOp::TextSetLocation: theText->SetLocation(GE2DPoint(f[0], f[1])); break;
-        case EeUiOp::DrawClippedText: return s->GetForm()->DrawClippedText(UIObjHost::Rect(f), theText, s);
         default: break;
         }
         return 0;

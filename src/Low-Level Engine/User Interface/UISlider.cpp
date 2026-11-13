@@ -35,23 +35,20 @@
 #include "UIObjHost.h"
 
 struct UISliderHost {
-    static intptr_t Op(void* inSlider, EeUiOp inOp, intptr_t a, intptr_t, intptr_t, intptr_t, float* f)
+    static intptr_t Op(void* inSlider, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
     {
         UISlider* s = static_cast<UISlider*>(inSlider);
         GEBitmap* theThumb = reinterpret_cast<GEBitmap*>(a);
         UIManager* theManager = s->mForm->GetManager();
         intptr_t r = 0;
-        if (UIObjHost::Base(s, inOp, a, f, &r))
+        if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Media(s, inOp, a, b, f, &r))
             return r;
         switch (inOp) {
         case EeUiOp::SliderChangeRange: s->ChangeRange((unsigned long)a); break;
-        case EeUiOp::SliderButtonDown: s->ButtonDown(); break;
-        case EeUiOp::SliderButtonUp: s->ButtonUp(); break;
+        case EeUiOp::ButtonDown: s->ButtonDown(); break;
+        case EeUiOp::ButtonUp: s->ButtonUp(); break;
         case EeUiOp::ThumbCreate:
             return (intptr_t)theManager->CreateBitmapForScaledControl(theManager->GetDragBarBitmap(), UIObjHost::Rect(f));
-        case EeUiOp::ThumbRelease: theThumb->Dereference(); break;
-        case EeUiOp::ThumbSetLocation: theThumb->SetLocation(GE2DPoint(f[0], f[1])); break;
-        case EeUiOp::ThumbDraw: return s->GetRasterizer()->Draw(theThumb, s->GetScreenIndex());
         case EeUiOp::DragBarScale:
             f[0] = theManager->GetDragBarBitmap()->GetXScale();
             f[1] = theManager->GetDragBarBitmap()->GetYScale();

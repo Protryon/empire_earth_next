@@ -47,22 +47,36 @@ pub enum EeUiOp {
     BorderThickness = 11,
     /// *Pure*: `GetWidth()`.
     Width = 12,
+    /// *Pure*: `mIndex`.
+    Index = 13,
+    /// *Pure*: `mBorderType`.
+    BorderType = 14,
+    /// `mBorderType = a`.
+    SetBorderType = 15,
+    /// *Pure*: the form's `GetTabStop()`.
+    TabStop = 16,
+    /// *Pure*: the form's `GetTabbingOn()`.
+    TabbingOn = 17,
+    /// The form's `SetTabStop(a)`.
+    SetTabStop = 18,
+    /// *Pure*: the virtual `GetTabable()`.
+    Tabable = 19,
 
     // ---- UISlider
     /// The virtual `ChangeRange(a)` (`EEUIFSEESElevation` overrides it).
     SliderChangeRange = 20,
-    /// The virtual `ButtonDown()`.
-    SliderButtonDown = 21,
-    /// The virtual `ButtonUp()`.
-    SliderButtonUp = 22,
+    /// The virtual `ButtonDown()` (the slider's, the button's).
+    ButtonDown = 21,
+    /// The virtual `ButtonUp()` (the slider's, the button's).
+    ButtonUp = 22,
     /// The manager's `CreateBitmapForScaledControl(drag bar, f)` -> the thumb bitmap.
     ThumbCreate = 23,
-    /// The thumb bitmap `a`'s `Dereference()`.
-    ThumbRelease = 24,
-    /// The thumb bitmap `a`'s `SetLocation(f[0], f[1])`.
-    ThumbSetLocation = 25,
+    /// Bitmap `a`'s `Dereference()`.
+    BitmapRelease = 24,
+    /// Bitmap `a`'s `SetLocation(f[0], f[1])`.
+    BitmapSetLocation = 25,
     /// The rasterizer's `Draw(bitmap a, GetScreenIndex())` -> its result.
-    ThumbDraw = 26,
+    BitmapDraw = 26,
     /// *Pure*: the manager's drag bar bitmap's `GetXScale()`, `GetYScale()` -> `f[0]`, `f[1]`.
     DragBarScale = 27,
     /// The thumb bitmap `a`'s `SetXYScale(f[0], f[1])`.
@@ -148,6 +162,32 @@ pub enum EeUiOp {
     TextSetLocation = 83,
     /// The form's `DrawClippedText(f, text a, this)` -> its result.
     DrawClippedText = 84,
+
+    // ---- UIButton (its bitmaps, texts and sounds by address or id)
+    /// *Pure*: `GetHasMouseCapture()`.
+    HasMouseCapture = 90,
+    /// *Pure*: `GetRightMouseButtonDown()`.
+    RightButtonDown = 91,
+    /// *Pure*: a key's state: `a` 0 Space `JustPressed()`, 1 Enter's, 2 Space `JustUnpressed()`, 3 Enter's.
+    Key = 92,
+    /// `CaptureKeyboard()`.
+    CaptureKeyboard = 93,
+    /// The virtual `ReleaseCapturedKeyboard()`.
+    ReleaseKeyboard = 94,
+    /// The virtual `MouseOver()`.
+    ButtonMouseOver = 95,
+    /// The virtual `MouseMove(f[0], f[1])`.
+    ButtonMouseMove = 96,
+    /// Bitmap `a`'s `Reference()`.
+    BitmapReference = 97,
+    /// The sound manager's `Load(*(const UString*)a, 0, 1)` -> the sample id.
+    SoundLoad = 98,
+    /// The sound manager's `Unload(a)`.
+    SoundUnload = 99,
+    /// The sound manager's `Play(a, 1, 0, 1, false, NULL)`.
+    SoundPlay = 100,
+    /// Text `a`'s `SetFgColor(f[0..3])`.
+    TextSetFgColor = 101,
 }
 
 impl EeUiOp {
@@ -159,6 +199,14 @@ impl EeUiOp {
             Rect | MouseLocation
                 | BorderThickness
                 | Width
+                | Index
+                | BorderType
+                | TabStop
+                | TabbingOn
+                | Tabable
+                | HasMouseCapture
+                | RightButtonDown
+                | Key
                 | DragBarScale
                 | ManagerBitmap
                 | PartRect

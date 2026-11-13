@@ -144,7 +144,7 @@ impl EeUiSlider {
     /// The destructor: the thumb bitmap's reference.
     pub fn release(&self) {
         let bitmap = self.fields().thumb_bitmap;
-        self.host.op(Op::ThumbRelease, bitmap as isize, 0, 0, 0);
+        self.host.op(Op::BitmapRelease, bitmap as isize, 0, 0, 0);
     }
 
     pub fn copy_data(&self) -> isize {
@@ -158,8 +158,8 @@ impl EeUiSlider {
         self.host.op(Op::BaseDrawPolygons, 0, 0, 0, 0);
         let f = self.fields();
         let bitmap = f.thumb_bitmap as isize;
-        self.host.op_point(Op::ThumbSetLocation, bitmap, f.copied_thumb.top_left());
-        self.host.op(Op::ThumbDraw, bitmap, 0, 0, 0)
+        self.host.op_point(Op::BitmapSetLocation, bitmap, f.copied_thumb.top_left());
+        self.host.op(Op::BitmapDraw, bitmap, 0, 0, 0)
     }
 
     pub fn set_location(&self, at: UiPoint) {
@@ -179,13 +179,13 @@ impl EeUiSlider {
         self.host.op(Op::CaptureMouse, 0, 0, 0, 0);
         let mouse = self.host.mouse();
         slider::press(&mut self.f.borrow_mut(), mouse);
-        self.host.op(Op::SliderButtonDown, 0, 0, 0, 0);
+        self.host.op(Op::ButtonDown, 0, 0, 0, 0);
         0
     }
 
     pub fn mouse_l_button_up(&self) -> isize {
         self.host.op(Op::ReleaseMouse, 0, 0, 0, 0);
-        self.host.op(Op::SliderButtonUp, 0, 0, 0, 0);
+        self.host.op(Op::ButtonUp, 0, 0, 0, 0);
         0
     }
 

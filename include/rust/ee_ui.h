@@ -131,20 +131,34 @@ enum class EeUiOp : uint32_t {
   BorderThickness = 11,
   /// *Pure*: `GetWidth()`.
   Width = 12,
+  /// *Pure*: `mIndex`.
+  Index = 13,
+  /// *Pure*: `mBorderType`.
+  BorderType = 14,
+  /// `mBorderType = a`.
+  SetBorderType = 15,
+  /// *Pure*: the form's `GetTabStop()`.
+  TabStop = 16,
+  /// *Pure*: the form's `GetTabbingOn()`.
+  TabbingOn = 17,
+  /// The form's `SetTabStop(a)`.
+  SetTabStop = 18,
+  /// *Pure*: the virtual `GetTabable()`.
+  Tabable = 19,
   /// The virtual `ChangeRange(a)` (`EEUIFSEESElevation` overrides it).
   SliderChangeRange = 20,
-  /// The virtual `ButtonDown()`.
-  SliderButtonDown = 21,
-  /// The virtual `ButtonUp()`.
-  SliderButtonUp = 22,
+  /// The virtual `ButtonDown()` (the slider's, the button's).
+  ButtonDown = 21,
+  /// The virtual `ButtonUp()` (the slider's, the button's).
+  ButtonUp = 22,
   /// The manager's `CreateBitmapForScaledControl(drag bar, f)` -> the thumb bitmap.
   ThumbCreate = 23,
-  /// The thumb bitmap `a`'s `Dereference()`.
-  ThumbRelease = 24,
-  /// The thumb bitmap `a`'s `SetLocation(f[0], f[1])`.
-  ThumbSetLocation = 25,
+  /// Bitmap `a`'s `Dereference()`.
+  BitmapRelease = 24,
+  /// Bitmap `a`'s `SetLocation(f[0], f[1])`.
+  BitmapSetLocation = 25,
   /// The rasterizer's `Draw(bitmap a, GetScreenIndex())` -> its result.
-  ThumbDraw = 26,
+  BitmapDraw = 26,
   /// *Pure*: the manager's drag bar bitmap's `GetXScale()`, `GetYScale()` -> `f[0]`, `f[1]`.
   DragBarScale = 27,
   /// The thumb bitmap `a`'s `SetXYScale(f[0], f[1])`.
@@ -226,6 +240,110 @@ enum class EeUiOp : uint32_t {
   TextSetLocation = 83,
   /// The form's `DrawClippedText(f, text a, this)` -> its result.
   DrawClippedText = 84,
+  /// *Pure*: `GetHasMouseCapture()`.
+  HasMouseCapture = 90,
+  /// *Pure*: `GetRightMouseButtonDown()`.
+  RightButtonDown = 91,
+  /// *Pure*: a key's state: `a` 0 Space `JustPressed()`, 1 Enter's, 2 Space `JustUnpressed()`, 3 Enter's.
+  Key = 92,
+  /// `CaptureKeyboard()`.
+  CaptureKeyboard = 93,
+  /// The virtual `ReleaseCapturedKeyboard()`.
+  ReleaseKeyboard = 94,
+  /// The virtual `MouseOver()`.
+  ButtonMouseOver = 95,
+  /// The virtual `MouseMove(f[0], f[1])`.
+  ButtonMouseMove = 96,
+  /// Bitmap `a`'s `Reference()`.
+  BitmapReference = 97,
+  /// The sound manager's `Load(*(const UString*)a, 0, 1)` -> the sample id.
+  SoundLoad = 98,
+  /// The sound manager's `Unload(a)`.
+  SoundUnload = 99,
+  /// The sound manager's `Play(a, 1, 0, 1, false, NULL)`.
+  SoundPlay = 100,
+  /// Text `a`'s `SetFgColor(f[0..3])`.
+  TextSetFgColor = 101,
+};
+
+/// The inward calls (the C++ shim's methods).
+enum class EeUiButtonCall : uint32_t {
+  /// `CopyData()` -> its result.
+  CopyData = 1,
+  /// `DrawPolygons()` -> its result.
+  DrawPolygons = 2,
+  /// `DrawTextA()` -> its result.
+  DrawText = 3,
+  /// `UIButton::ButtonDown()`.
+  ButtonDown = 4,
+  /// `UIButton::ButtonUp()`.
+  ButtonUp = 5,
+  /// `UIButton::MouseLButtonDown()` -> OK.
+  MouseLButtonDown = 6,
+  /// `UIButton::MouseLButtonUp()` -> OK.
+  MouseLButtonUp = 7,
+  /// `UIButton::MouseMove(f[0], f[1])` -> OK.
+  MouseMove = 8,
+  /// `UIButton::MouseOver()`.
+  MouseOver = 9,
+  /// `UIButton::TabbedTo()`.
+  TabbedTo = 10,
+  /// `UIButton::TabbedFrom()`.
+  TabbedFrom = 11,
+  /// `UIButton::UpdateKeyboard()` -> OK.
+  UpdateKeyboard = 12,
+  /// `UIButton::SetLocation(f[0], f[1])`.
+  SetLocation = 13,
+  /// `SetText(*(const UWideString*)a, font b)`.
+  SetText = 14,
+  /// `ChangeFont(font a)`.
+  ChangeFont = 15,
+  /// `SetButtonDownSound(*(const UString*)a)`.
+  SetButtonDownSound = 16,
+  /// `SetButtonUpSound(*(const UString*)a)`.
+  SetButtonUpSound = 17,
+  /// `GetButtonDownSound()`.
+  ButtonDownSound = 18,
+  /// `GetButtonUpSound()`.
+  ButtonUpSound = 19,
+  /// `SetNormalBitmap(a)`.
+  SetNormalBitmap = 20,
+  /// `SetFocusedBitmap(a)`.
+  SetFocusedBitmap = 21,
+  /// `SetPressedBitmap(a)`.
+  SetPressedBitmap = 22,
+  /// `GetNormalBitmap()`.
+  NormalBitmap = 23,
+  /// `GetFocusedBitmap()`.
+  FocusedBitmap = 24,
+  /// `GetPressedBitmap()`.
+  PressedBitmap = 25,
+  /// `GetCurrentBitmap()`.
+  CurrentBitmap = 26,
+  /// `GetCopiedBitmap()`.
+  CopiedBitmap = 27,
+  /// `GetGEText()`.
+  Text = 28,
+  /// `GetIsButtonDown()`.
+  IsButtonDown = 29,
+  /// `GetState()`.
+  State = 30,
+  /// `GetBitmapLocation()` -> `f[0]`, `f[1]`.
+  BitmapLocation = 31,
+  /// `SetBitmapDrawOffset(f[0], f[1])`.
+  SetBitmapDrawOffset = 32,
+  /// `SetFocusedTextColor(f[0..3])`.
+  SetFocusedTextColor = 33,
+  /// `SetTextRectangle(f)`.
+  SetTextRectangle = 34,
+  /// `ReplaceNormalBitmap(a)` (no `SetDirty`).
+  ReplaceNormalBitmap = 35,
+  /// `ReplacePressedBitmap(a)` (no `SetDirty`).
+  ReplacePressedBitmap = 36,
+  /// `UIDualButton::MouseRButtonDown()` -> OK.
+  DualMouseRButtonDown = 37,
+  /// `UIDualButton::MouseRButtonUp()` -> OK.
+  DualMouseRButtonUp = 38,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -366,6 +484,9 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
+/// The Rust UIButton.
+struct EeUiButton;
+
 /// The Rust UIScrollBar.
 struct EeUiScrollBar;
 
@@ -374,6 +495,15 @@ struct EeUiSlider;
 
 /// The Rust UIStatusBar.
 struct EeUiStatusBar;
+
+/// A whole object's host: `(the C++ object, op, a, b, c, d, f)` -> the op's result.
+using EeUiHostFn = ptrdiff_t(*)(void *obj,
+                                EeUiOp op,
+                                ptrdiff_t a,
+                                ptrdiff_t b,
+                                ptrdiff_t c,
+                                ptrdiff_t d,
+                                float *f);
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
 struct EeUiRect {
@@ -396,15 +526,6 @@ struct EeUiScrollBarLayout {
   EeUiRect slider;
   EeUiPoint increment;
 };
-
-/// A whole object's host: `(the C++ object, op, a, b, c, d, f)` -> the op's result.
-using EeUiHostFn = ptrdiff_t(*)(void *obj,
-                                EeUiOp op,
-                                ptrdiff_t a,
-                                ptrdiff_t b,
-                                ptrdiff_t c,
-                                ptrdiff_t d,
-                                float *f);
 
 /// What a tiling class's `DrawBackground` hands its (virtual) `DrawTiledBackground`: the redraw rectangle's overlap
 /// with the background, the rows and columns of tiles under it (longs passed as unsigned longs, as the C++ did) and
@@ -503,39 +624,12 @@ struct EeUiBackgroundTableRefs {
   EeUiColor *color;
 };
 
-/// `UIButton`'s members in their C++ order (the record starts at `mTextRectangle`). The pointers are C++'s and
-/// never dereferenced here.
-struct EeUiButtonFields {
-  EeUiRect text_rect;
-  EeUiPoint bitmap_location;
-  void *pressed_bitmap;
-  void *normal_bitmap;
-  void *focused_bitmap;
-  void *copied_bitmap;
-  unsigned long state;
-  EeUiRect copied_text_rect;
-  EeUiPoint bitmap_draw_offset;
-  EeUiColor focused_text_color;
-  unsigned long button_down_sound;
-  unsigned long button_up_sound;
-  void *text;
-  void *copied_text;
-  bool key_down;
-  bool mouse_down;
-  bool has_copied_text;
-};
-
-/// One button as Rust sees it: the C++ object (as a `UIButton*`), its record from `mTextRectangle` on, the
-/// `UIControl` members it uses, the subclass's record (`CheckFields`, `RadioFields`, the scroll button's
-/// `mDecrement`; NULL for a plain button) and `ctx`, the C++ forwarder's own context for a host call (a `SetText`'s
-/// text and font; NULL otherwise).
+/// One button subclass as Rust sees it: the C++ object (as a `UIButton*`), its Rust button, the subclass's record
+/// (`CheckFields`, `RadioFields`, the scroll button's `mDecrement`) and `ctx`, the C++ forwarder's own context for a
+/// host call (a `SetText`'s text and font; NULL otherwise).
 struct EeUiButtonRefs {
   void *button;
-  EeUiButtonFields *fields;
-  unsigned long *border_type;
-  const EeUiRect *rect;
-  const unsigned long *border;
-  const unsigned long *index;
+  const EeUiButton *obj;
   void *sub;
   void *ctx;
 };
@@ -1052,6 +1146,29 @@ struct EeUiDirtyRect {
 
 extern "C" {
 
+/// A new Rust button for the C++ `button` (its `UIControl` part constructed), its calls out through `host`.
+EeUiButton *ee_ui_button_new(void *button,
+                             EeUiHostFn host,
+                             void *normal,
+                             void *focused,
+                             void *pressed);
+
+/// The destructor: releases the texts, bitmaps and sounds and frees the object.
+///
+/// # Safety
+/// `button` came from `ee_ui_button_new` (or is NULL) and is not used again.
+void ee_ui_button_free(EeUiButton *button);
+
+/// One of UIButton's methods ([`EeUiButtonCall`]).
+///
+/// # Safety
+/// `button` is live; `f` is NULL or four live floats.
+ptrdiff_t ee_ui_button_call(const EeUiButton *button,
+                            EeUiButtonCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            float *f);
+
 /// The constructor's geometry ([`scrollbar::layout`]): the C++ needs the rectangle for `UIControl`'s constructor,
 /// before this object is made.
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at,
@@ -1207,48 +1324,6 @@ long ee_ui_event_initialize(unsigned long *count, void *event);
 
 /// `UIEvent::Uninitialize`.
 long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// The constructor's part after `UIControl`'s ([`button::init`]).
-void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);
-
-/// `UIButton::ButtonDown`.
-void ee_ui_button_button_down(const EeUiButtonRefs *refs);
-
-/// `UIButton::ButtonUp`.
-void ee_ui_button_button_up(const EeUiButtonRefs *refs);
-
-/// `UIButton::MouseOver`.
-void ee_ui_button_mouse_over(const EeUiButtonRefs *refs);
-
-/// `UIButton::MouseLButtonDown`.
-long ee_ui_button_mouse_l_button_down(const EeUiButtonRefs *refs);
-
-/// `UIButton::MouseLButtonUp`.
-long ee_ui_button_mouse_l_button_up(const EeUiButtonRefs *refs);
-
-/// `UIButton::MouseMove`.
-long ee_ui_button_mouse_move(const EeUiButtonRefs *refs, EeUiPoint at);
-
-/// `UIButton::TabbedTo`.
-void ee_ui_button_tabbed_to(const EeUiButtonRefs *refs);
-
-/// `UIButton::TabbedFrom`.
-void ee_ui_button_tabbed_from(const EeUiButtonRefs *refs);
-
-/// `UIButton::UpdateKeyboard`.
-long ee_ui_button_update_keyboard(const EeUiButtonRefs *refs);
-
-/// `UIButton::SetLocation`.
-void ee_ui_button_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
-
-/// `UIButton::CopyData`.
-long ee_ui_button_copy_data(const EeUiButtonRefs *refs);
-
-/// `UIDualButton::MouseRButtonDown`.
-long ee_ui_dual_button_mouse_r_button_down(const EeUiButtonRefs *refs);
-
-/// `UIDualButton::MouseRButtonUp`.
-long ee_ui_dual_button_mouse_r_button_up(const EeUiButtonRefs *refs);
 
 /// `UIScrollButton::ButtonDown` (`sub`: `mDecrement`).
 void ee_ui_scroll_button_button_down(const EeUiButtonRefs *refs);

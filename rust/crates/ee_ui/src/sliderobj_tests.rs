@@ -86,5 +86,5 @@ fn the_virtual_change_range_reenters() {
     let log = LOG.with(|l| l.borrow().clone());
     assert!(log.contains(&"override read 0".to_string()), "{log:?}");
     assert!(log.contains(&"FireTrigger 1000".to_string()), "{log:?}");
-    assert_eq!(log.last().unwrap(), "ThumbRelease 0");
+    assert_eq!(log.last().unwrap(), "BitmapRelease 0");
 }
