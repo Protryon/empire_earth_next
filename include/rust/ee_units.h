@@ -1021,6 +1021,9 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER = 493;
 /// `a`: the unit; `mGoalQueues[0].mGoals.size()`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN = 494;
 
+/// `a`: the goal; `b` 0: its saved fields into `i[0..6]` ([`GoalBase`] in order), `b` 1: set from them
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BASE_FIELDS = 495;
+
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
 /// `b`: the base goal's `GetB1C()`; the new goal's handle

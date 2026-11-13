@@ -1650,6 +1650,22 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH:
         theComplex->mActiveGoal->SetPathAttempts(0);
         return 0;
+    case EE_UNITS_GOAL_HOST_BASE_FIELDS: {   // the base goal's saved fields, read (b 0) or written (b 1)
+        EEUnitGoal* theGoal = ObjectOf<EEUnitGoal>(inA);
+        if (inB == 0) {
+            int64_t theFields[6] = {theGoal->mAction, theGoal->mB1C, theGoal->mID, theGoal->mB1D,
+                                    theGoal->mStartTime, theGoal->mCreationTime};
+            memcpy(ioArgs->i, theFields, sizeof(theFields));
+        } else {
+            theGoal->mAction = (unsigned long)ioArgs->i[0];
+            theGoal->mB1C = ioArgs->i[1] != 0;
+            theGoal->mID = (unsigned long)ioArgs->i[2];
+            theGoal->mB1D = ioArgs->i[3] != 0;
+            theGoal->mStartTime = (unsigned long)ioArgs->i[4];
+            theGoal->mCreationTime = (unsigned long)ioArgs->i[5];
+        }
+        return 0;
+    }
     default:   // the combat goals' operations (EEUGRustCombat.cpp)
         return EECombatGoalHostOp(theContext->mFile, inOp, inA, inB, ioArgs);
     }
@@ -1675,9 +1691,43 @@ int64_t EEUGRustGoal(int inOperation, const EEUGRust* inGoal, uint64_t inA, uint
     return Goal(inOperation, inGoal, inA, inB, ioArgs, inFile);
 }
 
-EEUGRust::EEUGRust(unsigned char inKind, bool inArg)
-    : EEUnitGoal(inKind, inArg)
+// the goals' counter (0x564480; EEPlayer's save and load keep it: ee/EmpireEarth.h)
+unsigned long sGoalCounter;
+
+// 0x23c375: an active, idle goal of a kind with the next goal id, stamped with the game time
+EEUnitGoal::EEUnitGoal(unsigned char inKind, bool inArg)
+    : mKind(inKind), mB1C(inArg)
 {
+    this->mAction = kActionIdle;
+    this->mB1D = false;
+    this->mIsActive = true;
+    this->mStartTime = 0;
+    this->mCreationTime = gPhysics->mGameTime;
+    this->mID = ++sGoalCounter;
+    this->mPathAttempts = 0;
+}
+
+// 0x23c3e6: an empty goal of a kind for loading, giving the drawn goal id back (NULL for an unknown kind)
+EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
+{
+    EEUnitGoal* theGoal = NULL;
+    switch (inKind) {
+    case kGoalAttackGround: theGoal = NewAttackGround(GE3DPoint(), false); break;
+    case kGoalAttackUnit: theGoal = NewAttackUnitEmpty(false); break;
+    case kGoalBuildRepair: theGoal = NewBuildRepair(false); break;
+    case kGoalCastCalamity: theGoal = NewCastCalamity(false); break;
+    case kGoalExplore: theGoal = NewExplore(false); break;
+    case kGoalGather: theGoal = NewGather(false); break;
+    case kGoalLoadGarrison:
+    case kGoalLoadTransport: theGoal = NewLoad(inKind, false); break;
+    case kGoalLocation: theGoal = NewLocation(false, false, false, false); break;
+    case kGoalPatrol: theGoal = NewPatrol(false); break;
+    case kGoalUnloadTransport: theGoal = NewUnloadTransport(false); break;
+    case kGoalHealUnit: theGoal = NewHealUnit(false); break;
+    }
+    if (theGoal != NULL)
+        theGoal->mID = --sGoalCounter;
+    return theGoal;
 }
 
 // the location goal (location.rs); its accessors read and write the record directly
@@ -2154,7 +2204,7 @@ void EEUGRust::Abandon(EEComplexUnit* inUnit)
     Goal(EE_UNITS_GOAL_ABANDON, this, Handle(inUnit));
 }
 
-EEUGRust::~EEUGRust()
+EEUnitGoal::~EEUnitGoal()
 {
     Goal(EE_UNITS_GOAL_DESTROY, this);
 }
@@ -2179,7 +2229,7 @@ void EEUGRust::DumpOutOfSynch(FILE* inFile)
 
 long EEUGRust::GetOutOfSynchChecksum()
 {
-    return EEUnitGoal::GetOutOfSynchChecksum() + (long)Goal(EE_UNITS_GOAL_CHECKSUM, this);
+    return (long)Goal(EE_UNITS_GOAL_CHECKSUM, this);
 }
 
 void EEUGRust::GetDebugLine(UWideString& ioText)
@@ -2222,10 +2272,7 @@ void EEUGRust::Step(EEComplexUnit* inUnit)
 
 long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    // the heal goal's Save and Load write and read no base goal data (EEUGHealUnit's)
-    long theResult = this->mKind != kGoalHealUnit ? EEUnitGoal::Load(inMajorVersion, inMinorVersion, inFile) : 0;
-    if (theResult != 0)
-        return theResult;
+    // the base goal's record first (but the heal goal's), then the kind's: one Rust sequence (rust_goal.rs)
     return (long)Goal(EE_UNITS_GOAL_LOAD, this, inMajorVersion, inMinorVersion, NULL, &inFile);
 }
 
@@ -2241,9 +2288,6 @@ void EEUGRust::Start(EEComplexUnit* inUnit)
 
 long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = this->mKind != kGoalHealUnit ? EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile) : 0;
-    if (theResult != 0)
-        return theResult;
     return (long)Goal(EE_UNITS_GOAL_SAVE, this, inMajorVersion, inMinorVersion, NULL, &outFile);
 }
 
@@ -2265,6 +2309,6 @@ bool EEUGRust::Suits(EEUnit* inUnit)
 
 void EEUGRust::SetPathAttempts(long inValue)
 {
-    EEUnitGoal::SetPathAttempts(inValue);
+    this->mPathAttempts = inValue;
     Goal(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, this, (uint64_t)(int64_t)inValue);
 }

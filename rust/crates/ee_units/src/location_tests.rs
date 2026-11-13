@@ -391,3 +391,53 @@ fn dispatch_defaults() {
     assert!(w.log.is_empty());
     run(EE_UNITS_GOAL_DESTROY, g, 0, 0, &mut w);
 }
+
+/// The base goal's record (EEUnitGoal's Save and Load, round 22): its order, the version gates, the id cleared
+/// before minor 100 and after a failed read.
+#[test]
+fn base_goal_record() {
+    let f = GoalBase { action: 7, b1c: true, id: 42, b1d: false, start_time: 1000, creation_time: 900 };
+    let mut w = World::default();
+    assert_eq!(base_save(&mut w, &f), 0);
+    assert_eq!(w.file, vec![7, 1, 42, 0, 1000, 900]);
+
+    // the current version reads all six back
+    let mut w = World { reads: vec![7, 1, 42, 0, 1000, 900], ..Default::default() };
+    let mut g = GoalBase::default();
+    assert_eq!(base_load(&mut w, 0, 0x10c, &mut g), 0);
+    assert_eq!(g, f);
+    assert!(w.reads.is_empty());
+
+    // up to minor 14: the action only
+    let mut w = World { reads: vec![3, 9], ..Default::default() };
+    let mut g = GoalBase { id: 5, ..Default::default() };
+    assert_eq!(base_load(&mut w, 0, 14, &mut g), 0);
+    assert_eq!((g.action, g.id, w.reads.len()), (3, 5, 1));
+
+    // minor 99: the flag, no id (cleared), nothing more
+    let mut w = World { reads: vec![3, 1, 8], ..Default::default() };
+    let mut g = GoalBase { id: 5, ..Default::default() };
+    assert_eq!(base_load(&mut w, 0, 99, &mut g), 0);
+    assert_eq!((g.b1c, g.id, w.reads.len()), (true, 0, 1));
+
+    // minor 134: the flag and the id
+    let mut w = World { reads: vec![3, 1, 8, 1], ..Default::default() };
+    let mut g = GoalBase::default();
+    assert_eq!(base_load(&mut w, 0, 134, &mut g), 0);
+    assert_eq!((g.id, g.b1d, w.reads.len()), (8, false, 1));
+
+    // minor 157: no creation time; minor 164: both times
+    let mut w = World { reads: vec![3, 0, 8, 1, 50, 60], ..Default::default() };
+    let mut g = GoalBase { creation_time: 11, ..Default::default() };
+    assert_eq!(base_load(&mut w, 0, 157, &mut g), 0);
+    assert_eq!((g.b1d, g.start_time, g.creation_time, w.reads.len()), (true, 50, 11, 1));
+    let mut w = World { reads: vec![3, 0, 8, 1, 50, 60], ..Default::default() };
+    assert_eq!(base_load(&mut w, 1, 100, &mut g), 0); // (a later major reads the id by its minor alone)
+    assert_eq!(g.creation_time, 60);
+
+    // a failed flag read: the id is cleared and nothing more is read
+    let mut w = World { reads: vec![3, 1, 8, 1, 50, 60], fail_read_at: Some(1), ..Default::default() };
+    let mut g = GoalBase { id: 5, ..Default::default() };
+    assert_eq!(base_load(&mut w, 0, 200, &mut g), 2);
+    assert_eq!((g.action, g.id, w.reads.len()), (3, 0, 5));
+}

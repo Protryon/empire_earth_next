@@ -349,6 +349,112 @@ pub const EE_UNITS_GOAL_HOST_SET_TRANSFORMATION: i32 = 492;
 pub const EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER: i32 = 493;
 /// `a`: the unit; `mGoalQueues[0].mGoals.size()`
 pub const EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN: i32 = 494;
+// the base goal's (round 22)
+/// `a`: the goal; `b` 0: its saved fields into `i[0..6]` ([`GoalBase`] in order), `b` 1: set from them
+pub const EE_UNITS_GOAL_HOST_BASE_FIELDS: i32 = 495;
+
+/// The base goal's saved fields (`EEUnitGoal`'s `mAction`, `mB1C`, `mID`, `mB1D`, `mStartTime`, `mCreationTime`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct GoalBase {
+    pub action: u32,
+    pub b1c: bool,
+    pub id: u32,
+    pub b1d: bool,
+    pub start_time: u32,
+    pub creation_time: u32,
+}
+
+/// `kGoalHealUnit`: its Save and Load write and read no base record (`EEUGHealUnit`'s own)
+pub const GOAL_HEAL_UNIT: u8 = 15;
+
+/// `EEUnitGoal::Load` (0x23c6d1): the action, then by version the flags, the id (0 before minor 100 or after a
+/// failed read), the start and creation times; the first read error. Every read gets the field's value in and
+/// takes what the file left in it.
+pub fn base_load<H: GoalHost + ?Sized>(h: &mut H, major: u32, minor: u32, f: &mut GoalBase) -> i32 {
+    let mut result = h.read_u32(&mut f.action);
+    if major == 0 && minor <= 14 {
+        return result;
+    }
+    if result == 0 {
+        result = h.read_bool(&mut f.b1c);
+    }
+    if minor >= 100 && result == 0 {
+        result = h.read_u32(&mut f.id);
+    } else {
+        f.id = 0;
+    }
+    if major > 0 || minor >= 135 {
+        if result == 0 {
+            result = h.read_bool(&mut f.b1d);
+        }
+        if result == 0 && (major > 0 || minor >= 157) {
+            result = h.read_u32(&mut f.start_time);
+        }
+        if result == 0 && (major > 0 || minor >= 164) {
+            result = h.read_u32(&mut f.creation_time);
+        }
+    }
+    result
+}
+
+/// `EEUnitGoal::Save` (0x23c7bd): the action, the flags, the id and both times; the first write error.
+pub fn base_save<H: GoalHost + ?Sized>(h: &mut H, f: &GoalBase) -> i32 {
+    let mut result = h.write_u32(f.action);
+    if result == 0 {
+        result = h.write_bool(f.b1c);
+    }
+    if result == 0 {
+        result = h.write_u32(f.id);
+    }
+    if result == 0 {
+        result = h.write_bool(f.b1d);
+    }
+    if result == 0 {
+        result = h.write_u32(f.start_time);
+    }
+    if result == 0 {
+        result = h.write_u32(f.creation_time);
+    }
+    result
+}
+
+impl OpHost<'_> {
+    fn base_fields(&mut self, goal: u64) -> GoalBase {
+        let mut io = EeUnitsGoalIo::default();
+        self.call(EE_UNITS_GOAL_HOST_BASE_FIELDS, goal, 0, &mut io);
+        GoalBase {
+            action: io.i[0] as u32,
+            b1c: io.i[1] != 0,
+            id: io.i[2] as u32,
+            b1d: io.i[3] != 0,
+            start_time: io.i[4] as u32,
+            creation_time: io.i[5] as u32,
+        }
+    }
+    fn set_base_fields(&mut self, goal: u64, f: &GoalBase) {
+        let mut io = EeUnitsGoalIo::default();
+        io.i[..6].copy_from_slice(&[
+            i64::from(f.action),
+            i64::from(f.b1c),
+            i64::from(f.id),
+            i64::from(f.b1d),
+            i64::from(f.start_time),
+            i64::from(f.creation_time),
+        ]);
+        self.call(EE_UNITS_GOAL_HOST_BASE_FIELDS, goal, 1, &mut io);
+    }
+
+    /// the base record of a Save or Load (`a`, `b`: the version), before the kind's own; its status
+    fn base_record(&mut self, op: i32, goal: u64, a: u64, b: u64) -> i32 {
+        let mut f = self.base_fields(goal);
+        if op == EE_UNITS_GOAL_SAVE {
+            return base_save(self, &f);
+        }
+        let result = base_load(self, a as u32, b as u32, &mut f);
+        self.set_base_fields(goal, &f);
+        result
+    }
+}
 
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
 /// a complex unit).
@@ -1368,6 +1474,14 @@ pub unsafe extern "C" fn ee_units_rust_goal(
     io: *mut EeUnitsGoalIo,
     host: *const EeUnitsGoalHost,
 ) -> i64 {
+    // the base goal's record first (EEUnitGoal's Save and Load; not the heal goal's), for every kind
+    if (op == EE_UNITS_GOAL_LOAD || op == EE_UNITS_GOAL_SAVE) && kind != GOAL_HEAL_UNIT {
+        // SAFETY: the caller's contract
+        let result = OpHost(unsafe { &*host }).base_record(op, goal, a, b);
+        if result != 0 {
+            return i64::from(result);
+        }
+    }
     if !matches!(
         kind,
         GOAL_LOCATION
