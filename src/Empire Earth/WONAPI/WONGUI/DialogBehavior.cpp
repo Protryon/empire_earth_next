@@ -26,7 +26,9 @@ extern "C" intptr_t ee_won_guicpp_dlg_call(void* inComp, EeWonGuiOp op, intptr_t
         if (a) Button::SetDialogDefaultButton((Button*)(Component*)b);
         else Button::UnSetDialogDefaultButton((Button*)(Component*)b);
         return 0;
-    case Op::DlgBringToTop: t->mParent->BringToTop(t); return 0;
+    // (the original's BringToTop compared the child's parent with `this` before reading itself; the Rust asks only
+    // with a next sibling, so a parent exists, and the guard keeps a NULL parent unread: round 30's hazard)
+    case Op::DlgBringToTop: if (t->mParent != NULL) t->mParent->BringToTop(t); return 0;
     case Op::DlgInvalidateRect: t->InvalidateRect(*(WONRectangle*)a); return 0;
     case Op::DlgEndDialog: t->GetRoot()->EndDialog((int)a, (Component*)b); return 0;
     case Op::DlgClick: ((Button*)(Component*)a)->Fn2F3440(); return 0;

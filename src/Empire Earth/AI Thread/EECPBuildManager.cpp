@@ -61,6 +61,7 @@
 #include "ee/EECPTrace.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
+#include "ee/EEUnitRegions.h"
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
 const UString EECPBuildManager::sData("EECPBuildManager-Data");
@@ -606,7 +607,7 @@ bool EECPBuildManager::HasEnemyNear(long inX, long inY)
         }
         theCount = theTable->SumEnemyValue(thePlayerID, theTable->GetRegions(theRect), true);
         if (theCount > 0) {
-            gWorld.mMap->mUnitRegions->CollectValues(theRect, theUnits, std::less<EEComplexUnit*>());
+            EECollectRegionUnits(gWorld.mMap->mUnitRegions, theRect, theUnits);
             std::vector<EEComplexUnit*>::iterator it;
             for (it = theUnits.begin(); it != theUnits.end();) {
                 if ((*it)->mPlayer == this->mPlayer)

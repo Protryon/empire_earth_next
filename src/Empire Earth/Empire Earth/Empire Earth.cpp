@@ -2503,7 +2503,6 @@ int main(int argc, char** argv)
 // FUNCTION: EXE 0x5461f6
 // Copy-constructs a file spec in place
 
-#include "lle/SECD.h"
 #include "lle/UMFastMath.h"
 #include <string.h>
 
@@ -2583,7 +2582,7 @@ bool EEInitializeSounds()
     FSFileSpec theUnusedFile;
     UWideString theMusicDirectory(260);
     theStartupDirectory.SetDirectory(gStartupDirectory);
-    if (SEInitialize(theStartupDirectory, gGameWindow, false) != kErrorOK)
+    if (SEInitialize(theStartupDirectory, gGameWindow) != kErrorOK)
         return false;
     long theResult = SEMixer::GetMixer(0, gConductor);
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x770, "theResult == keseOK");
@@ -2614,7 +2613,6 @@ bool EEInitializeSounds()
     gSoundManager->SetMasterVolume(gGamePreferences.mSettings.mSoundVolume);
     gSoundManager->SetCategoryPriority(0x31, 0);
     gSoundManager->SetCategoryPercentage(0x31, 1.0f);
-    SECD::SetNotificationRecipient(gGameWindow);
     gSoundManager->SetLatency(200);
     theResult = URegisterShutdown(EEDeleteSoundManager);
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x7c4, "theResult == keseOK");

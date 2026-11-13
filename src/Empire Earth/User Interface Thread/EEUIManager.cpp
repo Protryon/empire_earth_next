@@ -86,7 +86,6 @@
 #include "lle/UICheckBox.h"
 #include "lle/UIStatusBar.h"
 #include "lle/UIBlinkingButton.h"
-#include "lle/SECD.h"
 #include "lle/SEConductor.h"
 #include "lle/NESynchronousClient.h"
 #include "ee/EEClient.h"
