@@ -2321,6 +2321,75 @@ enum class EeWonGuiOp : uint32_t {
   ContainerPaint,
   /// `mBackground.Paint(*a, 0, 0, Width(), Height(), b, c)`.
   PaneBackground,
+  /// `Component::X(...)` on this container (`a` an `EeWonCtVirt`, `b`, `c` its arguments; 0 or 1 where it answers).
+  CtBase = 400,
+  /// `a->X(...)` (virtual: `b` an `EeWonCtVirt`, `c`, `d` its arguments; 0 or 1 where it answers).
+  CtChild,
+  /// `a->MouseDown(b, c, d)`.
+  CtChildMouseDown,
+  /// `a->MouseUp(b, c, d)`.
+  CtChildMouseUp,
+  /// `mParent->X(this)` (`a` an `EeWonCtVirt`: SetFocusChild, AddTimerChild, ChildInvalidated, or SetCursor of the
+  /// `Cursor*` `b`; 0 or 1 where it answers).
+  CtParentCall,
+  /// this container's own virtual (`a` an `EeWonCtVirt`: FindChildAt(b, c), SetCursor(b), TabFocus(b, c),
+  /// RemoveChild(b), MouseMove(b, c); the answer where it has one).
+  CtVirt,
+  /// `a->mParent->RemoveChild(a)`.
+  CtDetach,
+  /// `a->mParent = b != 0 ? this : NULL`.
+  CtSetParent,
+  /// `a->mFocusId = b`.
+  CtSetFocusId,
+  /// `a->mInvalidState = b`.
+  CtSetInvalidState,
+  /// `mTimerFlags = a`.
+  CtSetTimerFlags,
+  /// `GetRootContainer()->AddBG((BackgroundGrabber*)a)`.
+  CtAddBG,
+  /// the child layout: `a` 0 `ExecuteInstructions(this)`, 1 `RemoveComponent(b)`, 2 `Clear()`, 3 the manager
+  /// destroyed.
+  CtLayout,
+  /// `((Cursor*)a)->AddRef()` (the current cursor's `SmartPtr`).
+  CtCursorHold,
+  /// `((Cursor*)a)->Release()`.
+  CtCursorRelease,
+  /// `((Graphics*)a)->mColorScheme = (ColorScheme*)b`.
+  CtSetScheme,
+  /// `a->mComponentBits`.
+  CtBits = 430,
+  /// `a->mParent`.
+  CtParentOf,
+  /// `a->mTimerFlags`.
+  CtTimerFlags,
+  /// `a->mInvalidState`.
+  CtInvalidState,
+  /// `a->mFocusId`.
+  CtFocusId,
+  /// `a->Contains(b, c)` (0 or 1).
+  CtContains,
+  /// `a->Intersects((Component*)b)` (0 or 1).
+  CtIntersects,
+  /// `a->GetGrabBG()`.
+  CtGrabBG,
+  /// `a->GetOwnColorScheme()`.
+  CtOwnScheme,
+  /// `((Graphics*)a)->mColorScheme`.
+  CtScheme,
+  /// `GetRootContainer()` (as a `Component*`).
+  CtRoot,
+  /// `GetRoot()->mManager->mFocusWindow == GetRoot()` (0 or 1).
+  CtRootFocused,
+  /// `GetRoot()->mMouseIsInClientArea` (0 or 1).
+  CtMouseInClient,
+  /// `GetDefaultCursor()`.
+  CtDefaultCursor,
+  /// `WantFocus()` (0 or 1).
+  CtWantFocus,
+  /// `a->GetNextSibling(b != 0, c != 0)`.
+  CtNextSibling,
+  /// `dynamic_cast<Container*>(a)`'s Rust container (`EeWonContainer*`; 0 when `a` is no container).
+  CtContainerOf,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -2429,6 +2498,85 @@ enum class EeWonCfgOptional {
   WarnNoString,
   /// A comma and another word: "Expecting string: optional after include ..., include is required."
   WarnOtherWord,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods; `a`, `b`, `c` as each says).
+enum class EeWonCtCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `PrePaint(*a)` (`a` the Graphics).
+  PrePaint,
+  /// `Paint(*a)`.
+  Paint,
+  /// `EnableControlsById(*a, b != 0)` (`a` the `ControlIdSet`).
+  EnableControlsById,
+  NotifyRootVisibility,
+  /// `HitTest(a, b)` (0 or 1).
+  HitTest,
+  /// `FindChildAt(a, b)` (the child or 0).
+  FindChildAt,
+  UpdateMouseChild,
+  MouseAt,
+  MouseEnter,
+  MouseExit,
+  MouseMove,
+  MouseDrag,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  MouseHover,
+  /// `AddChild(a)`.
+  AddChild,
+  /// `AddChildEx(a, b)`.
+  AddChildEx,
+  HandleBroadcastEvent,
+  /// `FindChildById(a)` (the component or 0).
+  FindChildById,
+  EnterModal,
+  LeaveModal,
+  RemoveChild,
+  RemoveAllChildren,
+  BringToTop,
+  SetFocusChild,
+  ChildStateChanged,
+  /// `ChildInvalidated(a)` (0 or 1).
+  ChildInvalidated,
+  MarkInvalid,
+  ClearGrabBG,
+  /// `TabFocus(a != 0, b != 0)` (0 or 1).
+  TabFocus,
+  KeyDown,
+  KeyUp,
+  KeyChar,
+  CanClose,
+  GotFocus,
+  LostFocus,
+  AddedToParent,
+  AddTimerChild,
+  /// `TimerEvent(a)` (0 or 1).
+  TimerEvent,
+  /// `SetCursor(a)` (a `Cursor*`).
+  SetCursor,
+  SetFocusToLastFocusChild,
+  /// `EnsureOnTopOf(a, b)` (bottom, top).
+  EnsureOnTopOf,
+  /// `GetNextFocusId()`.
+  NextFocusId,
+  /// `NextChild(a, b != 0, c != 0)` (Component::GetNextSibling's walk; the child or 0).
+  NextChild,
+  /// ScrollAreaViewport::Reset's clear (the children are not told).
+  ResetChildren,
+  /// `if (mFocusChild) { mFocusChild->LostFocus(); mFocusChild = NULL; }`.
+  DropFocusChild,
+  /// the field `a` (`EeWonCtField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
 };
 
 /// What an ElGamal call computes into a sink.
@@ -3716,6 +3864,71 @@ enum class EeWonGuiCursor : uint32_t {
   NorthSouth = 5,
 };
 
+/// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
+/// `CtChild`, `CtParentCall`, `CtVirt`).
+enum class EeWonCtVirt : uint32_t {
+  NeedsPaint = 1,
+  /// `PrePaint(*(Graphics*)arg)`.
+  PrePaint,
+  /// `Paint(*(Graphics*)arg)`.
+  Paint,
+  /// `EnableControlsById(*(const ControlIdSet*)arg1, arg2 != 0)`.
+  EnableControlsById,
+  NotifyRootVisibility,
+  HitTest,
+  MouseEnter,
+  MouseExit,
+  MouseMove,
+  MouseDrag,
+  MouseWheel,
+  MouseHover,
+  /// `HandleBroadcastEvent((ComponentEvent*)arg)`.
+  HandleBroadcastEvent,
+  AddedToParent,
+  Invalidate,
+  MarkInvalid,
+  ClearGrabBG,
+  TabFocus,
+  KeyDown,
+  KeyChar,
+  KeyUp,
+  CanClose,
+  GotFocus,
+  LostFocus,
+  TimerEvent,
+  /// `RequestTimer(arg != 0)` (not virtual).
+  RequestTimer,
+  /// `RequestFocus()` (not virtual).
+  RequestFocus,
+  /// `Virtual08()` (SizeChanged).
+  SizeChanged,
+  SetFocusChild,
+  AddTimerChild,
+  ChildInvalidated,
+  /// `SetCursor((Cursor*)arg)`.
+  SetCursor,
+  FindChildAt,
+  RemoveChild,
+  /// `SetComponentFlags(ComponentFlag_HasFocus, true)` (not virtual).
+  SetHasFocus,
+};
+
+/// The container's fields its users read and set.
+enum class EeWonCtField : uint32_t {
+  MouseChild = 1,
+  FocusChild,
+  CurrentCursor,
+  MouseWheelGoesToFocusChild,
+  IsolateTabFocus,
+  HasUsedDialogKeys,
+  OnlyChildInput,
+  ModalCount,
+  NextFocusId,
+  FrontChild,
+  BackChild,
+  NumChildren,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -3745,6 +3958,9 @@ struct EeWonChatParser;
 
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
+
+/// The Rust Container.
+struct EeWonContainer;
 
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
@@ -6551,6 +6767,29 @@ void ee_won_cfg_include_path(const uint8_t *path,
                              size_t base_length,
                              EeWonByteSink sink,
                              void *context);
+
+/// A new Rust Container for the C++ `component`, its calls out through `host`; the wheel goes to the focus child
+/// when `wheel_to_focus` (the class default).
+EeWonContainer *ee_won_ct_new(void *component,
+                              EeWonGuiHostFn host,
+                              bool wheel_to_focus);
+
+/// The destructor's statements (children told, cursor, layout, timer children and children released), then the
+/// object freed.
+///
+/// # Safety
+/// `ct` came from `ee_won_ct_new` (or is NULL) and is not used again.
+void ee_won_ct_free(EeWonContainer *ct);
+
+/// One of Container's methods (`EeWonCtCall`).
+///
+/// # Safety
+/// `ct` is live; the call's arguments as documented.
+ptrdiff_t ee_won_ct_call(const EeWonContainer *ct,
+                         EeWonCtCall call,
+                         ptrdiff_t a,
+                         ptrdiff_t b,
+                         ptrdiff_t c);
 
 /// `new ProfileData`.
 EeWonProfile *ee_won_profile_new();

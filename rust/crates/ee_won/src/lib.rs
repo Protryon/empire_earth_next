@@ -25,6 +25,7 @@ pub mod chatobj;
 pub mod config;
 pub mod configobj;
 pub mod crc16;
+pub mod ctobj;
 pub mod db;
 pub mod der;
 pub mod dialogs;

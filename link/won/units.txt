@@ -74,17 +74,11 @@
 2f4cc0 2f5b11 WONGUI/ComponentTraversal.cpp
 2f4e70 32b11b WONGUI/ComponentApiCompletion.cpp
 2f5560 3010e0 WONGUI/MSControlConstructors.cpp
-2f5b70 2f5cbe WONGUI/ContainerSetup.cpp
-2f5e80 2f600a WONGUI/ContainerLifetime.cpp
-2f6010 2f70c0 WONGUI/ContainerOrdering.cpp
 2f6100 2f62a1 WONGUI/ComponentLayoutAdapters.cpp
 2f6140 2f620f WONGUI/ChildLayoutRegistration.cpp
 2f61b0 3372c0 WONGUI/ChildLayouts.cpp
-2f6210 2f759d WONGUI/ContainerChildLifecycle.cpp
 2f62b0 2f7903 WONGUI/Container.cpp
-2f63b0 2f7765 WONGUI/ContainerInteraction.cpp
 2f66c0 319fe1 WONGUI/ControlSetupCompletion.cpp
-2f70c0 2f73f4 WONGUI/ContainerTimerCursor.cpp
 2f7990 2f7d69 WONGUI/DialogBehavior.cpp
 2f7d70 2f7f66 WONGUI/ImageButton.cpp
 2f84b0 306b01 WONGUI/ScreenSelectionState.cpp

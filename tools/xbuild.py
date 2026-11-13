@@ -448,6 +448,9 @@ WON_TESTS = {
     # ScrollArea as a whole Rust object (paneobj.rs), the same way as Scrollbar's (golden:
     # rust/crates/ee_won/src/golden_paneobj.txt)
     "won_paneobj_test": [],
+    # Container as a whole Rust object (ctobj.rs), over a scripted world of components (golden:
+    # rust/crates/ee_won/src/golden_ctobj.txt)
+    "won_ctobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

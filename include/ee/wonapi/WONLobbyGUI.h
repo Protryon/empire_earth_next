@@ -366,102 +366,93 @@ public:
     InstructionList mInstructions; //08
     std::list<SmartPtr<LayoutPoint> > mLayoutPoints; //14
 };
+// Container (R6 WON round 26): its children (held), mouse and focus children, timer children, focus ids, current
+// cursor, flags and modal count are the Rust Container (rust/crates/ee_won/src/ctobj.rs); this is the type every
+// component holds and the base of every screen, dialog, list and control group, with the child layout manager. Its
+// virtuals and methods are forwarders; the calls the Rust makes are Container.cpp's host.
+class Container;
+// the container ops every container object's host falls back to (Container.cpp)
+intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
 class Container : public Component {
 public:
     Container();                            // 0x2f5b70 (WONAPI, /GX)
     virtual ~Container();                   // 0x2f5e80 (WONAPI, /GX)
     // Overrides (vtable 0x44d7cc).
-    virtual void Virtual08();               // 0x2f62b0
-    virtual void GetDesiredSize(int& outWidth, int& outHeight); // 0x2f62d0
-    virtual void PrePaint(Graphics& inGraphics);  // 0x2f6340
-    virtual void Paint(Graphics& inGraphics); // 0x2f63b0
-    virtual bool HitTest(int inX, int inY);   // 0x2f6520
-    virtual void MouseEnter(int inX, int inY); // 0x2f6700
-    virtual void MouseExit();               // 0x2f6730
-    virtual void MouseDown(int inX, int inY, int inButton); // 0x2f6880
-    virtual void MouseUp(int inX, int inY, int inButton);   // 0x2f6840
-    virtual void MouseMove(int inX, int inY); // 0x2f6780
-    virtual void MouseDrag(int inX, int inY); // 0x2f6810
-    virtual bool MouseWheel(int inWheel);     // 0x2f67c0
-    virtual void MouseHover(unsigned long inDelta); // 0x2f67f0
-    virtual bool TimerEvent(int inDelta); // 0x2f7210
-    virtual void GotFocus();                // 0x2f7400
-    virtual void LostFocus();               // 0x2f7420
-    virtual bool KeyChar(int inKey);         // 0x2f7710
-    virtual bool KeyDown(int inKey);         // 0x2f7690
-    virtual bool KeyUp(int inChar);          // 0x2f76f0
-    virtual bool CanClose();                // 0x2f7730
-    virtual void Invalidate();              // 0x2f6980
-    virtual void MarkInvalid();             // 0x2f6940
-    virtual void AddedToParent();           // 0x2f6990
-    virtual void ClearGrabBG();             // 0x2f69a0
-    virtual void SetCursor(Cursor* inCursor);    // 0x2f7360
-    virtual void HandleBroadcastEvent(ComponentEvent* inEvent); // 0x2f7320
-    virtual void NotifyRootVisibility(bool inFlag);  // 0x2f64d0
-    virtual bool TabFocus(bool inForward, bool inInit);  // 0x2f75a0
-    virtual void EnableControlsById(const ControlIdSet& inIds, bool inEnabled); // 0x2f6480
-    virtual Component* GetMouseChild() { return this->mMouseChild; } // 0x1c42ce (shared 4-byte body)
+    virtual void Virtual08() { this->CCall(EeWonCtCall::SizeChanged); } // 0x2f62b0
+    virtual void GetDesiredSize(int& w, int& h) { this->CCall(EeWonCtCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } // 0x2f62d0
+    virtual void PrePaint(Graphics& g) { this->CCall(EeWonCtCall::PrePaint,(intptr_t)&g); } // 0x2f6340
+    virtual void Paint(Graphics& g) { this->CCall(EeWonCtCall::Paint,(intptr_t)&g); } // 0x2f63b0
+    virtual bool HitTest(int x, int y) { return this->CCall(EeWonCtCall::HitTest,x,y)!=0; } // 0x2f6520
+    virtual void MouseEnter(int x, int y) { this->CCall(EeWonCtCall::MouseEnter,x,y); } // 0x2f6700
+    virtual void MouseExit() { this->CCall(EeWonCtCall::MouseExit); } // 0x2f6730
+    virtual void MouseDown(int x, int y, int b) { this->CCall(EeWonCtCall::MouseDown,x,y,b); } // 0x2f6880
+    virtual void MouseUp(int x, int y, int b) { this->CCall(EeWonCtCall::MouseUp,x,y,b); } // 0x2f6840
+    virtual void MouseMove(int x, int y) { this->CCall(EeWonCtCall::MouseMove,x,y); } // 0x2f6780
+    virtual void MouseDrag(int x, int y) { this->CCall(EeWonCtCall::MouseDrag,x,y); } // 0x2f6810
+    virtual bool MouseWheel(int n) { return this->CCall(EeWonCtCall::MouseWheel,n)!=0; } // 0x2f67c0
+    virtual void MouseHover(unsigned long d) { this->CCall(EeWonCtCall::MouseHover,(intptr_t)d); } // 0x2f67f0
+    virtual bool TimerEvent(int d) { return this->CCall(EeWonCtCall::TimerEvent,d)!=0; } // 0x2f7210
+    virtual void GotFocus() { this->CCall(EeWonCtCall::GotFocus); } // 0x2f7400
+    virtual void LostFocus() { this->CCall(EeWonCtCall::LostFocus); } // 0x2f7420
+    virtual bool KeyChar(int k) { return this->CCall(EeWonCtCall::KeyChar,k)!=0; } // 0x2f7710
+    virtual bool KeyDown(int k) { return this->CCall(EeWonCtCall::KeyDown,k)!=0; } // 0x2f7690
+    virtual bool KeyUp(int k) { return this->CCall(EeWonCtCall::KeyUp,k)!=0; } // 0x2f76f0
+    virtual bool CanClose() { return this->CCall(EeWonCtCall::CanClose)!=0; } // 0x2f7730
+    virtual void MarkInvalid() { this->CCall(EeWonCtCall::MarkInvalid); } // 0x2f6940
+    virtual void AddedToParent() { this->CCall(EeWonCtCall::AddedToParent); } // 0x2f6990
+    virtual void ClearGrabBG() { this->CCall(EeWonCtCall::ClearGrabBG); } // 0x2f69a0
+    virtual void SetCursor(Cursor* c) { this->CCall(EeWonCtCall::SetCursor,(intptr_t)c); } // 0x2f7360
+    virtual void HandleBroadcastEvent(ComponentEvent* e) { this->CCall(EeWonCtCall::HandleBroadcastEvent,(intptr_t)e); } // 0x2f7320
+    virtual void NotifyRootVisibility(bool v) { this->CCall(EeWonCtCall::NotifyRootVisibility,v); } // 0x2f64d0
+    virtual bool TabFocus(bool f, bool i) { return this->CCall(EeWonCtCall::TabFocus,f,i)!=0; } // 0x2f75a0
+    virtual void EnableControlsById(const ControlIdSet& ids, bool e) { this->CCall(EeWonCtCall::EnableControlsById,(intptr_t)&ids,e); } // 0x2f6480
+    virtual Component* GetMouseChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::MouseChild); } // 0x1c42ce
     // 0x2f6140 (ret 0x20): adds inChild laid out against inRef (EELobbyInterface 0x2972c6: the lobby screen, 3,
     // the root, 0, 0, 0, 0, 0; provisional name)
     void Fn2F6140(Component* inChild, int inFlags, Component* inRef, int inA, int inB, int inC, int inD, int inE);
     void AddChildLayout(ChildLayoutInstructionBase*,int=0); // 0x2f61d0: keeps the instruction; group id 0 runs first (the test reads the full int, the id is stored as a byte)
     void EnableLayoutInstructions(int inId, bool inEnabled); // 0x2f6120
     void Relayout();                         // 0x2f6290
-    void EnterModal(); // 0x2f6210: counts the modal level and moves the focus
-    void LeaveModal(); // 0x2f6260: counts the modal level and moves the focus
-    void RemoveAllChildren(); // 0x2f6d80 (WindowManager::EndPopup calls it at 0x32e663/0x32e67c)
-    void UpdateMouseChild(int,int); //2f6650 mouse-selection transition99
-    void MouseAt(); // 0x2f66c0: refreshes the mouse state (no arguments)
-    std::list<SmartPtr<Component> >::iterator FindTop(); // 0x2f6a40 (forwarder)
-    std::list<SmartPtr<Component> >::iterator FindTop(std::list<SmartPtr<Component> >::iterator); //2f69d0 real suffix ordering99
-    void SetOnlyChildInput(bool v) { this->mOnlyChildInput=v; } // at +0x7c
-    void SetIsolateTabFocus(bool v) { this->mIsolateTabFocus=v; } // inline (used at 0x389f3b), at +0x7a
+    void EnterModal() { this->CCall(EeWonCtCall::EnterModal); } // 0x2f6210: counts the modal level and moves the focus
+    void LeaveModal() { this->CCall(EeWonCtCall::LeaveModal); } // 0x2f6260: ends the modal state and moves the focus
+    void RemoveAllChildren() { this->CCall(EeWonCtCall::RemoveAllChildren); } // 0x2f6d80
+    void UpdateMouseChild(int x,int y) { this->CCall(EeWonCtCall::UpdateMouseChild,x,y); } // 0x2f6650
+    void MouseAt() { this->CCall(EeWonCtCall::MouseAt); } // 0x2f66c0: refreshes the mouse state
+    void SetOnlyChildInput(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::OnlyChildInput,v); }
+    void SetIsolateTabFocus(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::IsolateTabFocus,v); }
     void AddLayoutPoint(LayoutPoint*); // 0x2f6100: keeps the layout point as a child
-    void AddChildEx(Component*,int); // 0x2f6b50
-    void BringToTop(Component*); // 0x2f6dd0
-    void SetHasUsedDialogKeys(bool v) { this->mHasUsedDialogKeys=v; } // inline, at +0x7b
-    // the readers outside the container's units (R6 WON round 26, before the Rust container)
-    bool HasUsedDialogKeys() { return this->mHasUsedDialogKeys; }
-    Component* GetFocusChild() { return this->mFocusChild; }
-    Cursor* GetCurrentCursor() { return this->mCurrentCursor.get(); }
-    bool IsModal() { return this->mModalCount>0; }
-    Component* GetFrontChild() { return this->mChildList.empty() ? NULL : this->mChildList.front().get(); }
-    Component* GetBackChild() { return this->mChildList.empty() ? NULL : this->mChildList.back().get(); }
-    Component* NextChild(Component* inChild,bool inForward,bool inWrap); // Component::GetNextSibling's walk
-    void DropFocusChild() { if(this->mFocusChild!=NULL) { this->mFocusChild->LostFocus(); this->mFocusChild=NULL; } }
-    void ResetChildren(); // ScrollAreaViewport::Reset's clear: no mouse or focus child, no timer child, no child
-    unsigned char GetNextFocusId(); // 0x2f6010
-    void SetFocusToLastFocusChild(); // 0x2f6030
-    void EnsureOnTopOf(Component*,Component*); // 0x2f6f60
-    void AddChild(Component* inChild);      // 0x2f6a60
-    virtual Component* FindChildAt(int inX, int inY); // 0x2f65b0
+    void AddChildEx(Component* c,int p) { this->CCall(EeWonCtCall::AddChildEx,(intptr_t)c,p); } // 0x2f6b50
+    void BringToTop(Component* c) { this->CCall(EeWonCtCall::BringToTop,(intptr_t)c); } // 0x2f6dd0
+    void SetHasUsedDialogKeys(bool v) { this->CCall(EeWonCtCall::SetField,(intptr_t)EeWonCtField::HasUsedDialogKeys,v); }
+    bool HasUsedDialogKeys() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::HasUsedDialogKeys)!=0; }
+    Component* GetFocusChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::FocusChild); }
+    Cursor* GetCurrentCursor() { return (Cursor*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::CurrentCursor); }
+    bool IsModal() { return this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::ModalCount)>0; }
+    Component* GetFrontChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::FrontChild); }
+    Component* GetBackChild() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::BackChild); }
+    // Component::GetNextSibling's walk (0x2f5230)
+    Component* NextChild(Component* c,bool f,bool w) { return (Component*)this->CCall(EeWonCtCall::NextChild,(intptr_t)c,f,w); }
+    void DropFocusChild() { this->CCall(EeWonCtCall::DropFocusChild); }
+    void ResetChildren() { this->CCall(EeWonCtCall::ResetChildren); } // ScrollAreaViewport::Reset's clear
+    unsigned char GetNextFocusId() { return (unsigned char)this->CCall(EeWonCtCall::NextFocusId); } // 0x2f6010
+    void SetFocusToLastFocusChild() { this->CCall(EeWonCtCall::SetFocusToLastFocusChild); } // 0x2f6030
+    void EnsureOnTopOf(Component* b,Component* t) { this->CCall(EeWonCtCall::EnsureOnTopOf,(intptr_t)b,(intptr_t)t); } // 0x2f6f60
+    void AddChild(Component* c) { this->CCall(EeWonCtCall::AddChild,(intptr_t)c); } // 0x2f6a60
+    virtual Component* FindChildAt(int x, int y) { return (Component*)this->CCall(EeWonCtCall::FindChildAt,x,y); } // 0x2f65b0
     virtual Component* FindClickChildAt(int inX, int inY) { return this->FindChildAt(inX, inY); } // 0x2909c7
-    virtual void SetFocusChild(Component* inChild);
-    virtual void AddTimerChild(Component* inChild);
-    virtual void ChildStateChanged(Component* inChild);
-    virtual bool ChildInvalidated(Component* inChild);
-    virtual void RemoveChild(Component* inChild);
-    virtual Component* FindChildById(int inControlId);
+    virtual void SetFocusChild(Component* c) { this->CCall(EeWonCtCall::SetFocusChild,(intptr_t)c); } // 0x2f7440
+    virtual void AddTimerChild(Component* c) { this->CCall(EeWonCtCall::AddTimerChild,(intptr_t)c); } // 0x2f70c0
+    virtual void ChildStateChanged(Component* c) { this->CCall(EeWonCtCall::ChildStateChanged,(intptr_t)c); } // 0x2f7510
+    virtual bool ChildInvalidated(Component* c) { return this->CCall(EeWonCtCall::ChildInvalidated,(intptr_t)c)!=0; } // 0x2f68c0
+    virtual void RemoveChild(Component* c) { this->CCall(EeWonCtCall::RemoveChild,(intptr_t)c); } // 0x2f6c60
+    virtual Component* FindChildById(int id) { return (Component*)this->CCall(EeWonCtCall::FindChildById,id); } // 0x2f7770
 
-    // Private members: constructor 0x2f5b70, destructor 0x2f5e80, readers 0x2f62d0/0x2f7770.
-    // The remaining private members are set up by the out-of-line constructor and destructor.
-    Component* mMouseChild;                // +0x30, borrowed
-    Component* mFocusChild;                // +0x34, borrowed
-    std::list<SmartPtr<Component> > mChildList; // +0x38, owning values
-    typedef std::set<SmartPtr<Component>,SmartPtr<Component>::Comp> ChildTimerSet;
-    ChildTimerSet mChildTimerSet; // at +0x44..0x4f, owns the child timers
-    ChildLayoutManager mChildLayout; // at +0x50..0x6f, owns the child layout instructions (0x20 bytes)
-    unsigned char mNextFocusId; // at +0x70; incremented as a byte and wraps to 0 (0x2f6010); +0x71..0x73 padding
-    SmartPtr<Cursor> mCurrentCursor; //74, ctor2f5c45/dtor2f5ed2/Root304a51
-    bool mChildNeedsTimer; //78
-    bool mMouseWheelGoesToFocusChild; //79
-    bool mIsolateTabFocus; // at +0x7a (set at 0x30420f)
-    bool mHasUsedDialogKeys; // at +0x7b, set by Tab handling (not mIsolateTabFocus at +0x7a)
-    bool mOnlyChildInput; //7c
-    bool mRemovingAllChildren; // at +0x7d, set by RemoveAllChildren, read by RemoveChild; +0x7e/0x7f padding
-    int mModalCount; // at +0x80, signed count; modal children take the input while it is nonzero
+    EeWonContainer* mCt;
+    ChildLayoutManager* mChildLayout; // owned: destroyed between the cursor and the timer children, as the member was
 protected:
     static bool mMouseWheelGoesToFocusChildDef; // 0x566234 (declaration only)
+private:
+    intptr_t CCall(EeWonCtCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_ct_call(this->mCt,c,a,b,cc); }
 };
 
 // ScreenContainer (0x88 bytes); constructor 0x306a20, destructor 0x306a60; points at the current screen.
