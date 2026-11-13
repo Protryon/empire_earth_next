@@ -135,7 +135,7 @@
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEPPatrolGroup.h"
@@ -260,7 +260,7 @@ std::string GoalText(EEUnitGoal* inGoal)
     std::string theText = Number(inGoal->mKind) + ":";
     switch (inGoal->mKind) {
     case kGoalGather:
-        return "gather:" + Number(IDOf(static_cast<EEUGGather*>(inGoal)->mResource));
+        return "gather:" + Number(IDOf(static_cast<EEUGRust*>(inGoal)->GetGatherResource()));
     case kGoalLocation:
         return "location:" + Point(static_cast<EEUGLocation*>(inGoal)->GetLocation().GetX(),
                                    static_cast<EEUGLocation*>(inGoal)->GetLocation().GetY());
@@ -344,7 +344,7 @@ void JudgeGather(OrderState& ioState)
         std::string theGot = GoalText(theGoal);
         if (gContinentManager.CanGetTo(theUnit, theX, theY)) {
             bool theOK = theGoal != NULL && theGoal->mKind == kGoalGather
-                && static_cast<EEUGGather*>(theGoal)->mResource == theTarget;
+                && static_cast<EEUGRust*>(theGoal)->GetGatherResource() == theTarget;
             Judge(theRow, theOK, "gather:" + Number(ioState.mTarget), theGot);
         } else {
             bool theOK = theGoal != NULL && theGoal->mKind == kGoalLocation
@@ -533,7 +533,7 @@ void MessageHook(NEMessage* inMessage, int inPhase)
             theRow.mGoal = theUnit->mGoalState.Get();
             theRow.mHadGoal = theRow.mGoal != NULL;
             theRow.mGatheringTarget = theRow.mGoal != NULL && theRow.mGoal->mKind == kGoalGather && theTarget != NULL
-                && static_cast<EEUGGather*>(theRow.mGoal)->mResource == theTarget;
+                && static_cast<EEUGRust*>(theRow.mGoal)->GetGatherResource() == theTarget;
             bool theListed = false;
             for (size_t j = 0; j < sOrder.mUnits.size(); j++)
                 theListed = theListed || sOrder.mUnits[j].mID == theRow.mID;

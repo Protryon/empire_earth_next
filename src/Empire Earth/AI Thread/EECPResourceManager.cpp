@@ -40,9 +40,9 @@
 #include "ee/EEAIForest.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/UReferenceContainer.h"
 #include "ee/EEUCBasicCitizen.h"
@@ -354,12 +354,12 @@ static void EECPRMShedCrowds(EECPResourceManager* inManager)
             if (theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen || theUnit->mIsDisabled
                 || theUnit->mIsDetachedFromAI || theUnit->mCitizenBuildQueue.size() != 0)
                 continue;
-            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
-            if (theGather != NULL && theGather->mResource != NULL && theGather->mResource->mUnitClass->mIsTree
-                && theGather->mResource->mTile != NULL) {
+            EEUGRust* theGather = EEGatherGoalCast(theUnit->GetLoadGoal());
+            if (theGather != NULL && theGather->GetGatherResource() != NULL && theGather->GetGatherResource()->mUnitClass->mIsTree
+                && theGather->GetGatherResource()->mTile != NULL) {
                 // §8.36: a wood gatherer the game moved on to a tree with no drop site at hand (the forest edge is cut
                 // back) goes back to the idle list when an edge by a drop site has trees, and is sent there
-                EEUnit* theTree = theGather->mResource;
+                EEUnit* theTree = theGather->GetGatherResource();
                 if (!EECPNextDropReady(thePlayer, theTree->GetTileX(), theTree->GetTileY(), false, kNextWoodSlack)) {
                     if (theWoodReady < 0)
                         theWoodReady = EECPNextWoodTarget(thePlayer, 0, NULL) != NULL ? 1 : 0;
@@ -368,11 +368,11 @@ static void EECPRMShedCrowds(EECPResourceManager* inManager)
                 }
                 continue;
             }
-            if (theGather == NULL || theGather->mResource == NULL || theGather->mResource->mUnitClass->mIsTree
-                || theGather->mResource->mUnitClass->mFamily == kUnitFamilyAnimal
-                || theGather->mResource->mUnitClass->mFamily == kUnitFamilyFish)
+            if (theGather == NULL || theGather->GetGatherResource() == NULL || theGather->GetGatherResource()->mUnitClass->mIsTree
+                || theGather->GetGatherResource()->mUnitClass->mFamily == kUnitFamilyAnimal
+                || theGather->GetGatherResource()->mUnitClass->mFamily == kUnitFamilyFish)
                 continue;
-            EEUnit* theResource = theGather->mResource;
+            EEUnit* theResource = theGather->GetGatherResource();
             bool theOver = ++theOnUnit[theResource] > theLimit;
             std::map<EEUnit*, EECPResourceCenter*>::iterator thePatch = thePatchOf.find(theResource);
             if (thePatch != thePatchOf.end() && ++theOnPatch[thePatch->second] > kNextPatchPlaces)
@@ -422,8 +422,8 @@ static void EECPRMHelpBuildDrops(EECPResourceManager* inManager, std::deque<EECo
     for (unsigned long k = 0; k < theSites.size() && !ioIdle.empty(); k++) {
         long theBuilders = 0;
         for (unsigned long c = 0; c < theCitizens.size(); c++) {
-            EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theCitizens[c]->GetLoadGoal());
-            if (theGoal != NULL && theGoal->mTarget == theSites[k])
+            EEUGRust* theGoal = EEBuildRepairGoalCast(theCitizens[c]->GetLoadGoal());
+            if (theGoal != NULL && theGoal->GetBuildTarget() == theSites[k])
                 theBuilders++;
         }
         long theSent = 0;
@@ -434,7 +434,7 @@ static void EECPRMHelpBuildDrops(EECPResourceManager* inManager, std::deque<EECo
                     theNearest = it;
             EEComplexUnit* theWorker = *theNearest;
             ioIdle.erase(theNearest);
-            EEUGBuildRepair* theGoal = new EEUGBuildRepair(thePlayer, theSites[k], false);
+            EEUGRust* theGoal = EEUGRust::NewBuildRepair(thePlayer, theSites[k], false);
             theWorker->ClearGoalQueue(0);
             theWorker->SetGoal(theGoal, 0, 0);
             theWorker->StartAction(theGoal->GetStartAction());
@@ -478,8 +478,8 @@ void EECPResourceManager::AssignGatherers()
     for (it = this->mGatherers[0].begin(); it != this->mGatherers[0].end(); ++it) {
         theUnit = *it;
         EEUGRust* theAttack = EEAttackUnitCast(theUnit->GetLoadGoal());
-        EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
-        if ((theGather != NULL && theGather->mResource != NULL)
+        EEUGRust* theGather = EEGatherGoalCast(theUnit->GetLoadGoal());
+        if ((theGather != NULL && theGather->GetGatherResource() != NULL)
             || (theAttack != NULL && theAttack->GetAttackTarget()->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
             theMoved.push_back(theUnit);
     }
@@ -494,7 +494,7 @@ void EECPResourceManager::AssignGatherers()
         for (it = this->mGatherers[j].begin(); it != this->mGatherers[j].end(); ++it) {
             theUnit = *it;
             EEUnitGoal* theGoal = theUnit->GetLoadGoal();
-            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
+            EEUGRust* theGather = EEGatherGoalCast(theGoal);
             if (theUnit->GetIsDisabled() || theUnit->mIsDetachedFromAI)
                 continue;
             if (theUnit->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen) {
@@ -502,7 +502,7 @@ void EECPResourceManager::AssignGatherers()
                     theBoats.push_back(theUnit);
             } else if (theUnit->mCitizenBuildQueue.size() == 0 && theUnit->GetHitPoints() > 0 && theUnit->GetTileX() != -10000
                        && theUnit->GetTileY() != -10000
-                       && (theGoal == NULL || (theGather != NULL && theGather->mWaiting && theUnit->mCurrentPhysicsAction != 0))
+                       && (theGoal == NULL || (theGather != NULL && theGather->IsGatherWaiting() && theUnit->mCurrentPhysicsAction != 0))
                        && !(theNext && EECPNextExploring(thePlayer, theUnit)))   // (§8.36: kept where it looks)
                 theIdle.push_back(theUnit);
         }
@@ -650,7 +650,7 @@ void EECPResourceManager::AssignGatherers()
                                                 for (k = 0; k < theFound.size(); k++) {
                                                     theUnit = theIdle.front();
                                                     theIdle.pop_front();
-                                                    theUnit->SetGoal(new EEUGBuildRepair(thePlayer, theFound[k], true), 0, 0);
+                                                    theUnit->SetGoal(EEUGRust::NewBuildRepair(thePlayer, theFound[k], true), 0, 0);
                                                     theUnit->StartAction(kActionMoveToRepairSite);
                                                     theUnit->GetUnitClass()->ActionChanged(theUnit);
                                                     theWanted--;
@@ -833,7 +833,7 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
 {
     U2DPoint<float> theSpot(0.0f, 0.0f);
     EETileDistanceLess theSite(0, 0);
-    EEUGGather* theGoal = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
+    EEUGRust* theGoal = EEGatherGoalCast(inUnit->GetLoadGoal());
     EEUCBasicCitizen* theClass = dynamic_cast<EEUCBasicCitizen*>(inUnit->GetUnitClass());
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;
     long theRadius = thePlayer->mDropOffDistance;
@@ -845,8 +845,8 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
     // (the next engine's strategy builds its settlements: build(settlement, site))
     if (thePlayer->mCanBuild && this->mSettlementsEnabled && !EECPNextEngine(thePlayer)
         && thePlayer->CanProduceUnitType(kUnitTypeSettlement, 0x20, NULL)) {
-        EEUnit* theResource = theGoal->mResource;
-        EEUnit* theStorage = theGoal->mStorage;
+        EEUnit* theResource = theGoal->GetGatherResource();
+        EEUnit* theStorage = theGoal->GetGatherStorage();
         // the experiment "foodeco" (docs/AI_RESEARCH.md §8.27; the owner builds on the patch "so citizens move as little
         // as possible"): a forage patch with no drop site within kPatchDropRange tiles gets a settlement in the rings
         // round the patch itself (the original waited for the full drop-off distance and searched round the centre)
@@ -912,7 +912,7 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
                                                                                (float)theRadius * 0.75f);
                                 if (theResult) {
                                     EEUnit* theTarget = EEMakeBuilding(thePlayer, 0x2b, theSite.mCenter.mX, theSite.mCenter.GetY());
-                                    inUnit->SetGoal(new EEUGBuildRepair(thePlayer, theTarget, false), 1, 0);
+                                    inUnit->SetGoal(EEUGRust::NewBuildRepair(thePlayer, theTarget, false), 1, 0);
                                     inUnit->StartAction(kActionMoveToRepairSite);
                                     EE_CP_TRACE(thePlayer, "settlement.order", "resource=%lu x=%ld y=%ld", (unsigned long)theResource->mResourceType, (long)theSite.mCenter.mX, (long)theSite.mCenter.GetY());
                                     inUnit->GetUnitClass()->ActionChanged(inUnit);
@@ -1683,9 +1683,9 @@ void EECPResourceManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
         long theCategory = theNew->GetUnitClass()->mCategory;
         if ((theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen) || theNew->mPlayer != thePlayer)
             continue;
-        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theNew->GetLoadGoal());
-        if (theGoal != NULL && theGoal->mResource != NULL)
-            this->AddGatherer(theNew, theGoal->mResource->mResourceType);
+        EEUGRust* theGoal = EEGatherGoalCast(theNew->GetLoadGoal());
+        if (theGoal != NULL && theGoal->GetGatherResource() != NULL)
+            this->AddGatherer(theNew, theGoal->GetGatherResource()->mResourceType);
     }
 }
 
@@ -1705,23 +1705,23 @@ void EECPResourceManager::SendToGather(EEComplexUnit* inUnit, EEUnit* inResource
     if (theCommand != NULL && theCommand->mType == kActionIdle) {
         if (inResource->GetResourceType() != inUnit->GetResourceType())
             inUnit->SetResourceAmount(0);
-        EEUnitGoal* theGoal = new EEUGGather(inResource, inStorage, true);
+        EEUnitGoal* theGoal = EEUGRust::NewGather(inResource, inStorage, true);
         inUnit->ClearGoalQueue(0);
         inUnit->SetGoal(theGoal, 0, 0);
     } else if (inUnit->IsGathering()) {
-        EEUGGather* theGoal = static_cast<EEUGGather*>(inUnit->GetLoadGoal());
+        EEUGRust* theGoal = static_cast<EEUGRust*>(inUnit->GetLoadGoal());
         inUnit->SetResourceAmount(0);
         inUnit->SetGatheredResource(NULL);
-        theGoal->SetResource(inResource);
-        theGoal->SetStorage(inStorage);
+        theGoal->SetGatherResource(inResource);
+        theGoal->SetGatherStorage(inStorage);
     } else {
-        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
+        EEUGRust* theGoal = EEGatherGoalCast(inUnit->GetLoadGoal());
         if (theGoal != NULL) {
             if (inResource->GetResourceType() != inUnit->GetResourceType())
                 inUnit->SetResourceAmount(0);
             inUnit->SetGatheredResource(NULL);
-            theGoal->SetResource(inResource);
-            theGoal->SetStorage(inStorage);
+            theGoal->SetGatherResource(inResource);
+            theGoal->SetGatherStorage(inStorage);
         } else
             theOK = false;
     }
@@ -1755,9 +1755,9 @@ long EECPResourceManager::Restore(unsigned long inMajorVersion, unsigned long in
     unsigned long i, n;
     for (i = 0, n = theUnits.size(); i < n; i++) {
         EEComplexUnit* theUnit = theUnits[i];
-        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
-        if (theGoal != NULL && theGoal->mResource != NULL)
-            this->AddGatherer(theUnit, theGoal->mResource->mResourceType);
+        EEUGRust* theGoal = EEGatherGoalCast(theUnit->GetLoadGoal());
+        if (theGoal != NULL && theGoal->GetGatherResource() != NULL)
+            this->AddGatherer(theUnit, theGoal->GetGatherResource()->mResourceType);
     }
     this->mInitialized = false;
     this->mTime170 += theTime;
@@ -1878,7 +1878,7 @@ bool EECPResourceManager::FerryGatherers(std::vector<EEComplexUnit*>& inUnits, E
             inTransport->SetGoal(theLoad, 1, 0);
             inTransport->StartAction(kActionPrepareToMove);
             inTransport->GetUnitClass()->ActionChanged(inTransport);
-            EEUnitGoal* theGather = new EEUGGather(inResource, NULL, true);
+            EEUnitGoal* theGather = EEUGRust::NewGather(inResource, NULL, true);
             unsigned long i, n;
             for (i = 0, n = theUnits.size(); i < n; i++) {
                 theUnits[i]->ClearGoalQueue(0);
@@ -2129,8 +2129,8 @@ static unsigned long EECPRMHunters(EECPResourceManager* inManager)
 {
     unsigned long theCount = 0;
     for (unsigned long k = 0; k < inManager->mGatherers[2].size(); k++) {
-        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(inManager->mGatherers[2][k]->GetLoadGoal());
-        EEUnit* theResource = theGoal != NULL ? theGoal->mResource : NULL;
+        EEUGRust* theGoal = EEGatherGoalCast(inManager->mGatherers[2][k]->GetLoadGoal());
+        EEUnit* theResource = theGoal != NULL ? theGoal->GetGatherResource() : NULL;
         if (theResource != NULL && theResource->mUnitClass->mFamily == kUnitFamilyAnimal)
             theCount++;
     }
@@ -2148,8 +2148,8 @@ static unsigned long EECPRMFoodOutsideCenters(EECPResourceManager* inManager)
             theCount++;
             continue;
         }
-        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
-        EEUnit* theResource = theGoal != NULL ? theGoal->mResource : NULL;
+        EEUGRust* theGoal = EEGatherGoalCast(theUnit->GetLoadGoal());
+        EEUnit* theResource = theGoal != NULL ? theGoal->GetGatherResource() : NULL;
         if (theResource == NULL)
             continue;
         if (theResource->mUnitClass->GetUnitType() == theFarm)
@@ -2195,8 +2195,8 @@ void EECPRMDumpFoodCapacity(EECPResourceManager* inManager, FILE* inFile)
     fprintf(inFile, " food2=");
     for (size_t k = 0; k < inManager->mGatherers[2].size(); k++) {
         EEComplexUnit* theUnit = inManager->mGatherers[2][k];
-        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
-        fprintf(inFile, "%s%lu>%lu", k ? "," : "", theUnit->mUnitID, theGoal != NULL && theGoal->mResource != NULL ? theGoal->mResource->mUnitID : 0UL);
+        EEUGRust* theGoal = EEGatherGoalCast(theUnit->GetLoadGoal());
+        fprintf(inFile, "%s%lu>%lu", k ? "," : "", theUnit->mUnitID, theGoal != NULL && theGoal->GetGatherResource() != NULL ? theGoal->GetGatherResource()->mUnitID : 0UL);
     }
 }
 
@@ -2768,11 +2768,11 @@ void EECPResourceManager::RebalanceGatherers()
     unsigned long theFreed = 0;
     for (unsigned long i = 0; i < theCitizens.size(); i++) {
         EEComplexUnit* theUnit = theCitizens[i];
-        EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theUnit->mActiveGoal);
+        EEUGRust* theGoal = EEBuildRepairGoalCast(theUnit->mActiveGoal);
         if (theGoal == NULL || theUnit->mIsDetachedFromAI || theUnit->mIsDisabled || !(theUnit->mHitPoints > 0)
             || (theUnit->mCommand ? theUnit->mCommand->mType : 0) != kActionTaskSmartCitizen)
             continue;
-        EEComplexUnit* theTarget = theGoal->mTarget != NULL ? theGoal->mTarget->mComplexUnit : NULL;
+        EEComplexUnit* theTarget = theGoal->GetBuildTarget() != NULL ? theGoal->GetBuildTarget()->mComplexUnit : NULL;
         if (theTarget != NULL && !theTarget->mIsBuilt)
             continue;
         theUnit->ClearGoalQueue(0);

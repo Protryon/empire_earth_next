@@ -49,7 +49,7 @@
 #include "ee/EEPathManager.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 
 // port (save version 0.256): each loaded unit's contact (collision) list as saved, by unit id, head first. The load
 // makes its own contacts while it places the units, and EEPhysicsModel reads the list before it rebuilds it (a unit
@@ -936,7 +936,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
             } else
                 theAutoWaypoint = false;
             if (theResult == 0 && item == 0 && theGoal->mKind == kGoalBuildRepair)
-                this->mCurrentResearch = static_cast<EEUGBuildRepair*>(theGoal)->mTechTreeID;
+                this->mCurrentResearch = static_cast<EEUGRust*>(theGoal)->GetBuildTechTreeID();
         }
         if (!theFailed)
             continue;

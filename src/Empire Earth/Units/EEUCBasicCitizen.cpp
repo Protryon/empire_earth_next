@@ -35,8 +35,8 @@
 #include "ee/EEMapDimensions.h"
 #include "ee/EETileCoordinate.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGGather.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EEAIArea.h"
 #include "ee/EECivPowersManager.h"
@@ -240,7 +240,7 @@ EEUnit* EEUCBasicCitizen::FindNextResource(EEComplexUnit* inUnit, EEUnit* inReso
     long theRange = UMFloatToLong(inUnit->GetLineOfSight() * 5.0f);
     EEUnit* theResult;
     if (theGoal != NULL && theGoal->mKind == kGoalGather) {
-        EEUnit* theStorage = static_cast<EEUGGather*>(theGoal)->mResource;
+        EEUnit* theStorage = static_cast<EEUGRust*>(theGoal)->GetGatherResource();
         if (theStorage != NULL && gContinentManager.CanGetToUnit(theStorage, inUnit)) {
             theResult = this->FindResourceOfKind(inUnit, theStorage, inResource, theRange, inKind, ioUnits, true);
             if (theResult != NULL)
@@ -266,13 +266,13 @@ EEUnit* EEUCBasicCitizen::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
     EEComplexUnit* theResult = NULL;
     EEComplexUnit* theOwn = NULL;
     if (theGoal != NULL && theGoal->mKind == kGoalGather) {
-        EEUGGather* theGather = EEGoalCast<EEUGGather>(theGoal);
+        EEUGRust* theGather = EEGatherGoalCast(theGoal);
         if (!inAnyStorage) {
-            theOwn = static_cast<EEComplexUnit*>(theGather->mStorage);
+            theOwn = static_cast<EEComplexUnit*>(theGather->GetGatherStorage());
             if (theOwn != NULL && theOwn->GetHitPoints() > 0 && !theOwn->mIsDisabled)
                 theResult = theOwn;
         }
-        EEUnit* theResource = theGather->mResource;
+        EEUnit* theResource = theGather->GetGatherResource();
         if (theResource != NULL && theResource->GetUnitClass()->GetUnitType() == kUnitTypeFarm) {
             EEGetFarmDropSites(theResource->GetComplexUnit(), theUnits);
             for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); ++it) {
@@ -330,12 +330,12 @@ void EEUCBasicCitizen::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX,
 {
     std::vector<U2DPoint<long> > theTiles;
     EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
-    EEUGGather* theGather = EEGoalCast<EEUGGather>(inUnit->GetGoal());
-    EEUGBuildRepair* theBuild = EEGoalCast<EEUGBuildRepair>(inUnit->GetGoal());
+    EEUGRust* theGather = EEGatherGoalCast(inUnit->GetGoal());
+    EEUGRust* theBuild = EEBuildRepairGoalCast(inUnit->GetGoal());
     long theUnitX = inUnit->mTileX;
     long theUnitY = inUnit->mTileY;
     EEUnit* theFarm;
-    if (theGather != NULL && theGather->mGathering && (theFarm = theGather->mResource) != NULL
+    if (theGather != NULL && theGather->IsGathering() && (theFarm = theGather->GetGatherResource()) != NULL
         && theFarm->mUnitClass->mUnitType == kUnitTypeFarm) {
         for (long x = theFarm->mTileX; x < theFarm->mUnitClass->GetTileSize() + theFarm->mTileX; x++)
             for (long y = theFarm->mTileY; y < theFarm->mUnitClass->GetTileSize() + theFarm->mTileY; y++)
@@ -368,14 +368,14 @@ void EEUCBasicCitizen::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX,
                 ++it;
         }
     }
-    if (theBuild != NULL && theBuild->mTargetClass->mIsWall) {
+    if (theBuild != NULL && theBuild->GetBuildTargetClass()->mIsWall) {
         it = theTiles.begin();
         while (it != theTiles.end()) {
             EEMapTile* theTile = gWorld.mMap->GetTile(it->GetX(), it->GetY());
             bool theErased = false;
             if (theTile != NULL) {
                 for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL && !theErased; theNode = theNode->mNext) {
-                    if (theNode->mUnit != NULL && theNode->mUnit->mUnitClass->mUnitType == theBuild->mTargetType) {
+                    if (theNode->mUnit != NULL && theNode->mUnit->mUnitClass->mUnitType == theBuild->GetBuildTargetType()) {
                         it = theTiles.erase(it);
                         theErased = true;
                     }
@@ -477,7 +477,7 @@ long EEUCBasicCitizen::EvaluateCondition(EEComplexUnit* inUnit, unsigned long in
         if ((long)inUnit->mCitizenBuildQueue.size() > 0) {
             EEUnit* theSite = inUnit->PopBuildTarget();
             if (theSite != NULL) {
-                inUnit->SetGoal(new EEUGBuildRepair(inUnit->GetPlayer(), theSite, true), 0, 0);
+                inUnit->SetGoal(EEUGRust::NewBuildRepair(inUnit->GetPlayer(), theSite, true), 0, 0);
                 inUnit->StartAction(kActionMoveToRepairSite);
                 theTrue = true;
             }

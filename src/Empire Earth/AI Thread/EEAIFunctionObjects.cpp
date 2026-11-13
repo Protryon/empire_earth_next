@@ -33,7 +33,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEMap.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
@@ -151,15 +151,15 @@ long EEAIFOUnitsToKillScoringBase::ScoreTransport(EEComplexUnit* inUnit)
 // builders lowest
 long EEAIFOUnitsToKillScoringBase::ScoreCitizen(EEComplexUnit* inUnit)
 {
-    EEUGGather* theGather = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
+    EEUGRust* theGather = EEGatherGoalCast(inUnit->GetLoadGoal());
     long theScore = 10000;
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle)
         theScore = 10070;
     else if (theGather != NULL) {
         if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionWaitForOpenPosition)
             theScore = 10060;
-        if (theGather->mResource != NULL) {
-            switch (theGather->mResource->mResourceType) {
+        if (theGather->GetGatherResource() != NULL) {
+            switch (theGather->GetGatherResource()->mResourceType) {
             case kResourceFood:
                 theScore += 10;
                 break;

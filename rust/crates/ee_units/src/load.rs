@@ -205,7 +205,7 @@ pub trait LoadHost: GoalHost {
 }
 
 /// `UMFloor`: rounds to nearest, then steps down when that went up.
-fn um_floor(value: f32) -> i32 {
+pub(crate) fn um_floor(value: f32) -> i32 {
     let result = lrintf(value);
     if (result as f32) > value {
         result.wrapping_sub(1)
@@ -215,7 +215,7 @@ fn um_floor(value: f32) -> i32 {
 }
 
 /// `UMCeil`
-fn um_ceil(value: f32) -> i32 {
+pub(crate) fn um_ceil(value: f32) -> i32 {
     let result = lrintf(value);
     if (result as f32) < value {
         result.wrapping_add(1)

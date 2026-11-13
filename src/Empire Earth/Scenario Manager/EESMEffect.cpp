@@ -3308,7 +3308,7 @@ void EESMEffect::ChangeAttribute()
 #include "ee/EEWUnitsOffMapInfo.h"
 #include "ee/EEUnitCalamityClass.h"
 #include "ee/EEUCTransport.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
@@ -3446,7 +3446,7 @@ void EESMEffect::TaskUnitsToObject()
                     && theCarrier->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), true, false))) {
                 theGroup->SpreadAroundTile(theTarget->GetTileX(), theTarget->GetTileY());
                 theGroup->ClearGoal();
-                theGroup->SetGoal(new EEUGGather(theTarget, NULL, true), false);
+                theGroup->SetGoal(EEUGRust::NewGather(theTarget, NULL, true), false);
                 theGroup->mAction = kActionGatherResource;
                 theGroup->Plan();
                 continue;
@@ -3585,7 +3585,7 @@ void EESMEffect::TaskUnitsToObject()
                 theDone = true;
                 theGroup->SpreadAroundTile(theTarget->GetTileX(), theTarget->GetTileY());
                 theGroup->ClearGoal();
-                theGroup->SetGoal(new EEUGGather(NULL, theTarget->GetComplexUnit(), true), false);
+                theGroup->SetGoal(EEUGRust::NewGather(NULL, theTarget->GetComplexUnit(), true), false);
                 theGroup->mAction = kActionDropoffResource;
                 theGroup->Plan();
                 if (theGroup->GetNumUnits() == 0)

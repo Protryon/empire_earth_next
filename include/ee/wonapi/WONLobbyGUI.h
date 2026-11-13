@@ -905,69 +905,55 @@ public:
 };
 
 // a drop-down list (vtable 0x84d638; its list at +0x90)
-// TabBar (0xa0 bytes) and TabCtrl (0xd8 bytes)
+// TabBar and TabCtrl (R6 WON round 27): the bar's buttons, selected tab and overlap and the control's padding, offsets,
+// bar height and overlap, arrows, placement flags, pages and selected page are the Rust objects
+// (rust/crates/ee_won/src/tabobj.rs); these are the types the configs, the skins (MSTabCtrl, WONTabCtrl) and the root
+// screen use, with one-line forwarders (TabCtrl.cpp is their host). The control's four containers and its page area's
+// layout point stay its members: its constructor makes them and gives them to the Rust control.
 class TabCtrl;
 class LayoutPoint;
 class TabBar : public Container {
 public:
     TabBar(TabCtrl*);
-    // Implicit destructor (0x3081f0): no own vptr store; the vector holds the button references
-    virtual void HandleComponentEvent(ComponentEvent*);
-    void PositionTab(Button*);
-    void AddTab(Button*);
-    void RemoveTab(int); // removes the tab, renumbers and reparents the rest
-    void SetCurTab(int,bool=true);
-    void SetCurTabByName(const GUIString&,bool=true);
-    void EnableTab(int,bool=true);
-    bool Disabled(int);
-    int GetCurTabId(); // getter
-    std::vector<SmartPtr<Button> > mTabVector; //84, data88/end8c/cap90
-    Button* mCurTab; //94, borrowed
-    TabCtrl* mTabCtrl; //98, borrowed
-    int mOverlap; // at +0x9c; the class is 0xa0 bytes
+    virtual ~TabBar(); // the implicit destructor (0x3081f0): the Rust bar gives the buttons back
+    virtual void HandleComponentEvent(ComponentEvent* e) { ee_won_tabbar_call(this->mBar,EeWonTabBarCall::HandleComponentEvent,(intptr_t)e); } // 0x308610
+    EeWonTabBar* mBar;
 };
 class TabCtrl : public Container {
 public:
     TabCtrl(); // 0x308670
-    // Implicit destructor (0x301340, shared with another class); no own vptr store
-    virtual void Virtual08(); // SizeChanged308f50
-    virtual void GetDesiredSize(int&,int&); // GetDesiredSize3089e0
-    virtual bool KeyDown(int);   // KeyDown309240
-    virtual void AddedToParent(); // AddedToParent308cb0
-    virtual void HandleComponentEvent(ComponentEvent*); //3090e0
-    virtual bool TabFocus(bool,bool);  //TakeTabFocus309140
-    void CopyAttributes(TabCtrl*);
-    void SetTabBarOnRight(bool);
-    void SetArrowsOnLeft(bool);
-    void SetTabArrows(Button*,Button*);
-    void NotifyTabChange(bool);
-    void KeepTabButtonInView();
-    void PositionTabContainer(Container*);
-    void PositionArrows();
-    void HorzPositionTabBar();
-    void VertPositionTabBar();
-    void CalcContainerLayout();
-    bool NeedScrollButtons();
-    void AdjustTabBarScroll(int=0);
-    void SetCurTab(int,bool);
-    void SetCurTabByName(const GUIString&,bool);
-    int GetTabIdForContainer(Container*); // GetTabIdForContainer55
-    void EnableTab(int,bool);
-    void AddTab(Button*,Container*);
-    void RemoveTab(int); // removes the tab and reselects
+    virtual ~TabCtrl(); // the implicit destructor (0x301340): the Rust control gives the arrows back
+    virtual void Virtual08() { this->TCall(EeWonTabCall::SizeChanged); } // SizeChanged 0x308f50
+    virtual void GetDesiredSize(int& w,int& h) { this->TCall(EeWonTabCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); } // 0x3089e0
+    virtual bool KeyDown(int k) { return this->TCall(EeWonTabCall::KeyDown,k)!=0; } // 0x309240
+    virtual void AddedToParent() { this->TCall(EeWonTabCall::AddedToParent); } // 0x308cb0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->TCall(EeWonTabCall::HandleComponentEvent,(intptr_t)e); } // 0x3090e0
+    virtual bool TabFocus(bool f,bool i) { return this->TCall(EeWonTabCall::TabFocus,f,i)!=0; } // 0x309140
+    void CopyAttributes(TabCtrl* from) { this->TCall(EeWonTabCall::CopyAttributes,(intptr_t)from->mTab); } // 0x308960
+    void SetTabBarOnRight(bool v) { this->TCall(EeWonTabCall::SetTabBarOnRight,v); } // 0x308a30
+    void SetArrowsOnLeft(bool v) { this->TCall(EeWonTabCall::SetArrowsOnLeft,v); } // 0x308a40
+    void SetTabArrows(Button* l,Button* r) { this->TCall(EeWonTabCall::SetTabArrows,(intptr_t)static_cast<Component*>(l),(intptr_t)static_cast<Component*>(r)); } // 0x308a50
+    void SetCurTab(int id,bool f) { this->TCall(EeWonTabCall::SetCurTab,id,f); } // 0x309350
+    void SetCurTabByName(const GUIString& n,bool f) { this->TCall(EeWonTabCall::SetCurTabByName,(intptr_t)&n,f); } // 0x309370
+    int GetTabIdForContainer(Container* c) { return (int)this->TCall(EeWonTabCall::GetTabIdForContainer,(intptr_t)static_cast<Component*>(c)); } // 0x309390
+    void EnableTab(int id,bool e) { this->TCall(EeWonTabCall::EnableTab,id,e); } // 0x3093d0
+    void AddTab(Button* t,Container* c) { this->TCall(EeWonTabCall::AddTab,(intptr_t)static_cast<Component*>(t),(intptr_t)static_cast<Component*>(c)); } // 0x3093f0
+    void RemoveTab(int id) { this->TCall(EeWonTabCall::RemoveTab,id); } // removes the tab and reselects
+    // the selected tab's id and the configs' writes (TabCtrlConfig, RootScreen)
+    int GetCurTabId() { return (int)this->TCall(EeWonTabCall::GetField,(intptr_t)EeWonTabField::CurTabId); }
+    void SetTabBarHeight(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::TabBarHeight,v); }
+    void SetTabOverlap(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::TabOverlap,v); }
+    void SetTabBarOverlap(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::TabBarOverlap,v); }
+    void SetBottomTabTopOffset(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::BottomTabTopOffset,v); }
+    void SetBottomTabLeftOffset(int v) { this->TCall(EeWonTabCall::SetField,(intptr_t)EeWonTabField::BottomTabLeftOffset,v); }
     SmartPtr<TabBar> mBottomTabBar; //84
     SmartPtr<Container> mTopTabBar; //88
     SmartPtr<Container> mBottomTabBarContainer; //8c
     SmartPtr<Container> mTopTabBarContainer; //90
-    SmartPtr<LayoutPoint> mContainerLayout; //94
-    int mLeftPad,mRightPad,mTopPad,mBottomPad; //98..a4
-    int mBottomTabLeftOffset,mBottomTabTopOffset; //a8/ac
-    int mTabBarHeight,mTabBarOverlap; //b0/b4
-    SmartPtr<Button> mTabBarLeft,mTabBarRight; //b8/bc
-    bool mArrowsOnLeft,mTabBarOnRight,mTabBarOnBottom,mUserHasInteracted; //c0..c3
-    // The constructor leaves mUserHasInteracted uninitialized.
-    std::vector<Container*> mTabVector; //c4, nonowning values, datac8/endcc/capd0
-    Container* mCurTab; // at +0xd4; the class is 0xd8 bytes
+    SmartPtr<LayoutPoint> mContainerLayout; //94 (TabCtrlConfig's CONTAINERLAYOUT, the skins' frames)
+    EeWonTabCtrl* mTab;
+private:
+    intptr_t TCall(EeWonTabCall c,intptr_t a=0,intptr_t b=0) { return ee_won_tab_call(this->mTab,c,a,b); }
 };
 
 // Scrollbar (R6 WON round 25): its parts (arrows, track, thumb), orientation, thumb options, range, steps, position

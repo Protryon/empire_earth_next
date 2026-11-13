@@ -74,6 +74,7 @@ static intptr_t CtVirtCall(Component* c, bool inBase, V v, intptr_t a, intptr_t 
     case V::RequestTimer: c->RequestTimer(a != 0); return 0;
     case V::RequestFocus: c->RequestFocus(); return 0;
     case V::SetCursor: c->SetCursor((Cursor*)a); return 0;
+    case V::RemoveChild: static_cast<Container*>(c)->RemoveChild(Comp(a)); return 0; // (a container: the tab bar's)
     default: return 0;
     }
 }
@@ -90,6 +91,7 @@ static intptr_t CtOwnCall(Container* t, V v, intptr_t a, intptr_t b)
     case V::SetFocusChild: t->SetFocusChild(Comp(a)); return 0;
     case V::AddTimerChild: t->AddTimerChild(Comp(a)); return 0;
     case V::ChildInvalidated: return t->ChildInvalidated(Comp(a)) ? 1 : 0;
+    case V::SizeChanged: t->Virtual08(); return 0;
     default: return 0;
     }
 }

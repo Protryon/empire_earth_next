@@ -126,6 +126,7 @@ pub mod stagingobj;
 /// cbindgen:ignore
 pub mod status;
 pub mod strcase;
+pub mod tabobj;
 pub mod text;
 pub mod textobj;
 pub mod thread;

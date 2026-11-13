@@ -11645,6 +11645,74 @@ the branch's start (round 25's head) -> 84,768 (Container's accessors, +18) -> 8
   GetMouseChild are accessors already), and the older input and list goldens' re-recording to trace the delivered
   event type.
 
+## R5b.4, nineteenth round: the build/repair and gather goals whole in Rust (ee_units build.rs, gather.rs; branch rust-r5b4-core19, 2026-11-13)
+
+| Commit | What | C++ |
+|---|---|---|
+| 1a965c0c | the build/repair goal whole in Rust (EEUGBuildRepair deleted) | +608 -1290, net -682 |
+| a53eed21 | the gather goal whole in Rust (EEUGGather deleted) | +801 -1511, net -710 |
+| 4506e07c | merge of rust (combat rounds 12-13: the attack goals on EEUGRust) | |
+| c26d5e8a | the build goal's RepairPointers reads only what the original read | +9 -7 |
+
+- **Operation numbers by lane.** Combat's goal bodies are 200-299 and its host operations 1000 up (its
+  `SetPathAttempts` body is 22); this round's bodies start at 300 (`Work` 300, `PathTaken` 301, the build goal's
+  310-313, the gather goal's 320-325) and its host operations at 400 (the build goal's 400-442, the gather goal's
+  450-479). ee_rust's `goal_op_tables` test reads both crates' tables and fails on an overlap. The build and gather
+  kinds must also be listed among the kinds ee_units dispatches itself (`ee_units_rust_goal`'s `matches!`): every
+  other kind goes to combat's dispatch, which answers 0 to an unknown kind, so a missing entry is silent.
+- **One unit record instead of many reads.** The two goals read some 40 fields of a unit, its class, its player and
+  its stats. Rather than one host operation per field, `EE_UNITS_GOAL_HOST_BUILD_UNIT` fills a `#[repr(C)]` record
+  (`EeUnitsBuildUnit`, through `io.sink`; listed in cbindgen.toml's `[export] include`, as no function names it) in
+  one case. The complex unit's own fields are filled only for a complex unit; a field named `class` would be a C++
+  keyword in the generated header (`unit_class`).
+- **What stayed C++, verbatim, as host cases.** World searches and effects with no goal state: the footprint and
+  blocking-unit tests, the completion's research and sounds, a foundation's wonder notice and media, the cancelled
+  foundation's refund, the static next-job helpers (help build, tend a farm, gather near a drop site), the gather
+  spot with its tile order, the gather room, the beginning of gathering, the next tree of a forest, the settlements
+  to build, the gathering tick (`Work`), the naval search, the accessible trigger. They moved from the class files
+  into EEUGRust.cpp's helpers, which is why each commit's C++ is about half of the class's lines, not all of them.
+- **Reentrancy.** The gather goal's settlement search (C++) sets the goal's storage through its accessor, which is a
+  Rust body: the gather bodies read and write the record around each host call (`change`) instead of holding a copy
+  across one. The build goal's copies are taken after the calls that can reenter (`SetGoal`, `ActionChanged`).
+- **Shared test mocks across modules.** gather.rs's tests implement `GatherHost` on build.rs's test `World`
+  (`pub(crate) mod tests`), and both modules' tests take goal handles from one atomic counter: the tests run at once
+  over the same static tables, and two tests using the same handle made a checksum test fail now and then.
+- **A gate run picked up a file mid-edit.** The header-constants test (`header_consts`) scans every source file of
+  the crate, so gather.rs, written while the build commit's gate ran, failed it (two action constants with no C++
+  name: they are `kActionMoveToStorage` and `kActionFindNewResource`). Keep work for the next commit out of the
+  tree while a gate runs.
+- **The merge with combat 12-13** met in the callers (one condition reading an attack goal's and a gather goal's
+  target), in EEUGRust.h/.cpp (both lanes' virtuals and casts kept, the core lane's host cases before combat's
+  default case) and in the deleted files' includes; the gather goal's hunt now makes combat's
+  `EEUGRust::NewAttackUnit`.
+- **EEUGLocation not moved.** `EEUGHealUnit` still derives from it on the merged tree (combat round 13 did not move
+  the heal goal): its layout stays until the heal goal moves.
+- **Behaviour:** none on the games' paths (a goal without a building answers its not-paid-for trigger false; a gather
+  goal holding no storage ignores a replacement; the originals read NULL there).
+- **The load fault the saveload gate found.** The first matrix run on the merged tree had 19 loads exit with an
+  access violation in `RepairPointers` (resolved through EE-SIM.map: `EEUGRust::RepairPointers` -> build.rs `repair`
+  -> the unit record's host case). The record walked the building's parts and read its stats and command, which are
+  still saved ids while a game loads; the original's `RepairPointers` read only the class, player, tile and complex
+  unit. The record now has that basic form (`b` 1) for the repair. No gate before the saveload matrix loads a game:
+  run it on any change to a goal's `RepairPointers`.
+- **Coverage by temporary prints (removed): the first sight of each body, step command and trigger, to a file.**
+  Oracle seeds 2-3: the build goal's creation, destination, Step (work cycle, wait for the site, the move), Work,
+  every build trigger (destroyed, repaired with the completion, in range, clear, visible, valid, not paid for, goal is
+  build, repair unaffordable, special unit), ReplaceUnit, Abandon, the AI's site test; the gather goal's creation,
+  destination, Work, PathTaken, the accessors, and every Step handler but the next farm (find storage and new
+  storage, find resource, drop off, gather, arrive, finish, the naval search, next tree, build settlements) and every
+  trigger but farm-not-found and cannot-path. The saveload games (oracle, islands, late, space at 1000 s) add Save,
+  Load and RepairPointers of both goals, the empty goals of the load, the build goal's insufficient-resources event.
+  The calamity profile reaches the same bodies. No game reaches: the copies (Clone), the texts and dumps, the build
+  goal's cancelled foundation, smart-citizen next job (a human's), gate retarget; the gather goal's next farm and
+  `FindGatherSpot` accessor; the scenario profile reaches neither goal. Those are unit tests only.
+- **Gates of the round.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical to the main checkout's `ref`,
+  Rust gate PASS. On the result merged with rust (c0df6600): build `--sim` and the test profile link 0/0; oracle
+  seeds 2-7 identical; captures at seeds 2-3 oracle (169 digests), late (170), scenario (16) and calamity (183) PASS;
+  `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS (after c26d5e8a); Rust gate PASS. ee_units tests
+  174 (12 new). No tour: nothing drawn changed (the debug texts appear only in the debug panels). The round's C++
+  (src, include): -1383 net before the merge.
+
 ## R6: the game screens, sixteenth round: the editor gate extended; thirteen scenario editor actions whole in Rust behind one C++ action (ee_screens editor_whole.rs, editor_place.rs; branch rust-screens16, 2026-11-13)
 
 Round 15's item (b) rest, by C++ deleted. Count: `build/sc14/count.sh` (the round-10 UI set, the Scenario Editor
@@ -11713,6 +11781,74 @@ folder, its actions' folder and their headers).
   (the stateful events: slider, check display, object area, quick save/load, hide UI/viewport, terrain colour/type,
   map type, unit sort, start epoch, unit limit, the effect editors' events).
 
+## R6 WON round 27: TabBar and TabCtrl whole in Rust (ee_won tabobj.rs; branch rust-r6-won27, 2026-11-13)
+
+Measured as rounds 18-26 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+82,658 at the branch's start (rust 5cfc3c6b; the network lane's merges had removed lines since round 26's count)
+-> 82,665 (TabCtrl's accessors, +7) -> 82,202 (TabBar and TabCtrl, -463). This round's own net: -456.
+
+- **The census first** (its own commit). Outside TabCtrl.cpp, TabCtrlConfig wrote the bar height, both overlaps and
+  the bottom bar's offsets, and the root screen read `mBottomTabBar->GetCurTabId()` (six times). They became
+  TabCtrl setters and `GetCurTabId`. The page area's layout point stays a member: TabCtrlConfig's CONTAINERLAYOUT
+  and the skins' frames (MSTabCtrl, WONTabCtrl) read it.
+- **The move** (`tabobj.rs`):
+  - The bar holds its buttons (held, in vector order), its selected tab, its overlap and its control's Rust
+    object.
+  - The control holds the padding, the bottom bar's offsets, the bar height and overlap, the arrows (held, with the
+    SmartPtr assignment's release-then-hold), the placement flags, the pages and the selected page.
+  - Every method of both classes moved.
+  - The control's four containers (the bars and their containers) and the layout point stay C++ members: object
+    lifetimes stay C++. The constructor makes them, and `ee_won_tab_init` runs the original constructor's
+    statements over them (an `EeWonTabParts`).
+  - The destructor order is kept: the arrows are released in the body (right one first), then the members.
+- **Calls out.**
+  - `Container::X` on the control or bar goes to its own Rust container.
+  - `Container::X` on a container part (`mTopTabBar->AddChild`, `SetHasUsedDialogKeys`, `SetOnlyChildInput`) goes to
+    that part's Rust container through the pure read `CtContainerOf`.
+  - Every virtual on a component goes through the C++ object (`CtChild`, `CtVirt`) so overrides run. Container.cpp
+    gained a child's `RemoveChild` (the top bar's) and its own `Virtual08` (AddTab's relayout).
+  - The bar calls its control's Rust object directly. The control clears that pointer when it goes; the original's
+    pointer dangled.
+- **The event.** `TabCtrlTabSelected` (5) is in `ee_won_gui_event_type` (29). The golden traces the delivered type
+  and checks it against the enum. The new ops are `TabTextIs` (a button's text equals a `GUIString*`, a pure read)
+  and `TabAddLayoutPoint`.
+- **Behaviour changes, on the original's crash paths only:**
+  - A NULL page selected after a page had been shown is skipped. The original called `SetVisible` on NULL.
+  - The constructor's unset `mUserHasInteracted` starts false.
+- **The golden** (`tests/won/won_tabobj_test.cpp`) uses round 26's world (`won_ct_world.h`), now sizable
+  (`WON_CT_N` / `WON_CT_CT`) and with a parent field in `Set`. It has nineteen components: the control, its bottom
+  bar, top bar, the bars' two containers and its parent (six real Rust containers per side), then the layout point,
+  two arrows, five buttons and five pages.
+  - The world runs Component's `SetSize` (a size change calls the container's `Virtual08`), `SetEnabled` and
+    `SetVisible` (the parent's `ChildStateChanged`, the invalidation, the root visibility).
+  - It runs 20,000 sequences of 40 calls with 27,552,878 trace lines, all identical.
+  - Two mutations fail it: the bar's re-add position off by one fails 2,579 sequences; the bottom container placed
+    without its offset fails 19,495.
+  - `CopyAttributes` (two controls) is a cargo unit test, together with the defaults, the fields and the arrows'
+    reference order.
+- **The cargo replay is shared.** `ctobj_tests.rs`'s line interpreter takes a golden's own hooks (`Ext`: overrides
+  of container calls, pure reads, op lines it prints, top-level lines, cleanup) and a larger world (7 containers,
+  24 components). The tab replay is about 150 lines on top of it.
+- **Lessons:**
+  - cbindgen's renames are global even for a private struct: a helper named `Obj` became `struct
+    EeAStarGraphObject;` in ee_won.h (ee_astar's rename) and made ee_astar.h include ee_won.h. Prefix even private
+    helper types (`EeWonTabOut`).
+  - **Never use `git stash` in these worktrees.** The stash list belongs to the repository, not the worktree. The
+    screens lane stashed three seconds before this lane, and this lane's pop then applied the screens lane's stash.
+    The work came back from the dangling stash commit (`git fsck --unreachable`, `git stash apply <sha>`).
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction (seeds 2-3 identical
+  after each commit). The root screen's tab control is built at every lobby entry. The lead's LAN game
+  (`lan_game.py`: the LAN tab is selected at entry, the game tab is enabled and selected on joining and the previous
+  tab comes back on leaving, through `EnterGameTab` and `GetCurTabId`) and the lobby captures (the tab row, the
+  arrows' visibility, the page area's padding) are the check. Keyboard tab switching, tab focus order and the scroll
+  arrows (more tabs than fit) run only in the golden unless a person uses them.
+- **Left:**
+  - ComboBox. Census: only `mShowButtonWhenDisabled` (ComboBoxConfig) needs a setter; `mEdit`, `mButton`,
+    `mListBox` and `mListArea` are set and read by MSComboBox, WONComboBox, the skins and the game options control,
+    so they stay members, as the tab control's parts did.
+  - The move needs about 30 ops: list area, edit box, popup and the undo text (a GUIString member).
+  - Then Window/RootContainer, the remaining controls and layout managers, and the input and list goldens'
+    re-recording to trace the delivered event type.
 ## R6: the game screens, seventeenth round: the editor form's own stateful events whole in Rust (ee_screens editor_events.rs; branch rust-screens17, 2026-11-13)
 
 Round 14's item (a), first part. Count: `build/sc14/count.sh` (its round-10 part moved with other lanes' merges:
