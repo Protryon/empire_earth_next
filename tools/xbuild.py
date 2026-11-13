@@ -757,6 +757,8 @@ def cmd_wontest(a):
 NET_TESTS = {
     # NEMessageManager (golden: rust/crates/ee_net/src/golden_msgmgr.txt; `--print FILE` writes it)
     "ne_msgmgr_test": [],
+    # NELagLossSimulator, NERecordPlayback, NETimestampedMessage (golden: rust/crates/ee_net/src/golden_queues.txt)
+    "ne_queues_test": [],
 }
 
 

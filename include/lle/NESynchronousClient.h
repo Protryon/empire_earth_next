@@ -11,10 +11,10 @@
 #include "lle/NESynchronousCommunications.h"
 #include "lle/NEProtocol.h"
 #include "lle/NEConnection.h"
-#include "lle/NERecordPlayback.h"
 
 class FSFile;
-class NELagLossSimulator;
+struct EeNetLagLoss;                        // NELagLossSimulator, whole in Rust (rust/ee_net.h)
+struct EeNetRecPlay;                        // NERecordPlayback, whole in Rust (rust/ee_net.h)
 class NEMCommunicationsTick;
 class NEMessage;
 class TSEvent;
@@ -45,10 +45,12 @@ public:
     unsigned long GetCurrentPhysicsTick() const { return this->mCurrentPhysicsTick; }
     const NECDIClient& GetDebugInfo() const { return this->mDebugInfo; }
     unsigned long GetDetectedGameCount() const { return this->mProtocol->GetDetectedGameCount(); }
-    NELagLossSimulator* GetLagLossSimulator() const { return this->mLagLossSimulator; }
     unsigned char GetMySendToSlot() const { return this->mMySendToSlot; }
     unsigned long GetNumConnectionTrys() const { return this->mNumConnectionTrys; }
-    NERecordPlayback* GetRecordPlayback() const { return this->mRecordPlayback; }
+    // the recorder's mode (NERecordPlaybackMode) and its playback speed (ee_net recplay.rs)
+    unsigned char GetRecordPlaybackMode() const;
+    void SetSlowPlayback();
+    void SetNormalPlayback();
     void SendExitMessage()
     {
         this->mReceiveThreadExitEvent->Set();
@@ -106,6 +108,8 @@ private:
     void ProcessMessage(NEMessage* inMessage);
     static unsigned long Receive(void* inClientObject);
     static void RecordPlaybackCallback(NEMessage* inMessage, void* inThisPointer);
+    // the lag simulator's and the recorder's calls out (ee_net's EeNetQOp): their callbacks, then the common ones
+    static ptrdiff_t QueueHost(void* inClient, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
     long SendAMessage(NEMessage* inMessage);
 
     NECDIClient mDebugInfo;                 // +0x30
@@ -132,8 +136,8 @@ private:
     TSEvent* mReceiveThreadFinishedEvent;   // +0xa4
     TSCriticalSection* mIncomingMessagesLock;   // +0xa8
     TSCriticalSection* mOutgoingMessagesLock;   // +0xac
-    NELagLossSimulator* mLagLossSimulator;  // +0xb0
-    NERecordPlayback* mRecordPlayback;      // +0xb4
+    EeNetLagLoss* mLagLossSimulator;        // +0xb0 NELagLossSimulator, whole in Rust (ee_net lagloss.rs)
+    EeNetRecPlay* mRecordPlayback;          // +0xb4 NERecordPlayback, whole in Rust (ee_net recplay.rs)
     unsigned long mUB8;                     // +0xb8 (provisional name)
     unsigned long mCurrentPhysicsTick;      // +0xbc
     unsigned long mCurrentCommunicationsTick;   // +0xc0
