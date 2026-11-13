@@ -619,6 +619,20 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+/// `kGoalLocation`
+constexpr static const uint8_t GOAL_LOCATION = 1;
+
+/// `kActionPrepareToMove`, `kActionIdle`, `kActionTurnToUnitFacing`
+constexpr static const int64_t ACTION_PREPARE_TO_MOVE = 8000;
+
+constexpr static const int64_t ACTION_TURN_TO_UNIT_FACING = 9006;
+
+/// `kTriggerCompletedUnitFacing`
+constexpr static const int64_t TRIGGER_COMPLETED_UNIT_FACING = 9015;
+
+/// `kUnitCategoryAirplane`, `kUnitCategoryPlanetSpaceship`: the start's aircraft
+constexpr static const int64_t CATEGORY_AIRPLANE = 3;
+
 /// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
 constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
 
@@ -992,6 +1006,21 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_NAVAL_SEARCH = 478;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH = 479;
 
+/// `a`: the unit; its class's `mCategory`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_CATEGORY = 490;
+
+/// `a`: the unit, `sink`: a `GETransformation` it fills (`mPhysicalModel.GetLocation()`)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION = 491;
+
+/// `a`: the unit, `sink`: the `GETransformation` it is given (`SetTransformation(t, true)`)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_TRANSFORMATION = 492;
+
+/// `a`: the unit, `i[0]`: `SetTargetSearchTimer`'s value
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER = 493;
+
+/// `a`: the unit; `mGoalQueues[0].mGoals.size()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN = 494;
+
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -1145,6 +1174,13 @@ constexpr static const int32_t EE_UNITS_GOAL_GATHER_SET_STORAGE = 324;
 
 /// `a`: the unit; `FindGatherSpot`
 constexpr static const int32_t EE_UNITS_GOAL_GATHER_FIND_SPOT = 325;
+
+/// a location goal: `io.f` the location and yaw, `io.i` the forced-move, facing, auto-waypoint flags and the group
+/// path state (no group movement)
+constexpr static const int32_t EE_UNITS_GOAL_NEW_LOCATION = 480;
+
+/// `a`: the unit; `FaceYaw` (0 or 1)
+constexpr static const int32_t EE_UNITS_GOAL_FACE_YAW = 481;
 
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
@@ -1848,6 +1884,21 @@ struct EeUnitsImproveStats {
   int32_t carry_amount;
   /// the upgrade's own class has a flight time (a flight-time-or-power change moves the flight time)
   bool upgrade_has_flight_time;
+};
+
+/// A location goal's state (`EEUGLocation`'s members).
+struct EeUnitsLocationGoal {
+  /// `mLocation`
+  float location[3];
+  /// `mYaw`: the heading to face on arrival
+  float yaw;
+  /// `mIsForcedMove`, `mShouldFace`, `mIsAutoWaypoint`, `mUseGroupMovement`
+  bool forced_move;
+  bool should_face;
+  bool auto_waypoint;
+  bool group_movement;
+  /// `mGroupPathState`
+  uint8_t group_path_state;
 };
 
 /// What `Move`'s arithmetic gives: whether the unit moves (the push is past the stop distance), whether the move is
@@ -2658,6 +2709,20 @@ int32_t ee_units_improve_gain(const EeUnitsImproveClass *c,
                               const int32_t *levels,
                               int32_t level,
                               int32_t improvement);
+
+/// The goal's record into `out` (zeros for a goal that has none).
+///
+/// # Safety
+/// `out` must point to a writable record.
+void ee_units_location_goal_get(uint64_t goal, EeUnitsLocationGoal *out);
+
+/// The goal's record replaced by `*record` (the accessors' setters: the location, the group movement flag, the
+/// group path state).
+///
+/// # Safety
+/// `record` must point to a valid record.
+void ee_units_location_goal_set(uint64_t goal,
+                                const EeUnitsLocationGoal *record);
 
 /// `AfterStep`'s roll decay over the store: the new roll.
 float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_seconds);

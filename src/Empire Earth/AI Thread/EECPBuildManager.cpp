@@ -51,7 +51,6 @@
 #include "ee/EECPUnitTileDistanceLess.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPWallManager.h"
@@ -520,7 +519,7 @@ void EECPBuildManager::CancelStalledBuilds()
             this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theGoal->GetBuildTechNode()->GetCost(i, 0x20, 1.0f)));
         if (this->mTownCenterTile.mX != -10000 && this->mTownCenterTile.mY != -10000) {
             theUnit->ClearGoalQueue(0);
-            theUnit->SetGoal(new EEUGLocation((float)this->mTownCenterTile.GetX(), (float)this->mTownCenterTile.GetY(), 0.0f, false, true,
+            theUnit->SetGoal(EEUGRust::NewLocation((float)this->mTownCenterTile.GetX(), (float)this->mTownCenterTile.GetY(), 0.0f, false, true,
                 false, 0.0f, false, false), 0, 0);
             theUnit->StartAction(kActionPrepareToMove);
         } else

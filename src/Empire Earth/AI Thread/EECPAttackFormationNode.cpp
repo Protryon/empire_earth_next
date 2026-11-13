@@ -30,7 +30,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEFormation.h"
 #include "ee/EEFCircle.h"
 #include "ee/EECPILocation.h"
@@ -107,7 +107,7 @@ void EECPAttackFormationNode::Create(EECPAttackFormation* inFormation)
         if (theSpread)
             theSlots[j].mUnit->mFormationRank = (long)((float)j / theCount * kAFNQuarters);
         EEFormationSlot& theSlot = theSlots[j];
-        EEUGLocation* theGoal = new EEUGLocation(&theSlot.mPosition, true, !inFormation->mNoForcedMove, true,
+        EEUGRust* theGoal = EEUGRust::NewLocation(&theSlot.mPosition, true, !inFormation->mNoForcedMove, true,
             theSlot.mHeading, false, false);
         if (!inFormation->mSubGroup->GiveGoal(theSlots[j].mUnit, theGoal, 0, kActionPrepareToMove) && theGoal)
             delete theGoal;

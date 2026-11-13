@@ -33,7 +33,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -744,7 +743,7 @@ void EECPAttackSubGroupUnit::Flee()
                 theScreen.mContinentID = gContinentManager.GetContinentID(this->mUnit);
                 theScreen.mUseWaterAreas = !theFlag;
                 if (EEFOFindLocation(theBounds, theTile, gPhysics->mRandom, theScreen, 15)) {
-                    EEUGLocation* theGoal = new EEUGLocation(gPhysics->GetRandom(0.05f, 0.95f) + theTile.GetX(),
+                    EEUGRust* theGoal = EEUGRust::NewLocation(gPhysics->GetRandom(0.05f, 0.95f) + theTile.GetX(),
                         gPhysics->GetRandom(0.05f, 0.95f) + theTile.GetY(), 0.0f, true, true, false, 0.0f, false, false);
                     if (this->mSubGroup->GiveGoal(this->mUnit, theGoal, 0, kActionPrepareToMove))
                         return;
@@ -772,7 +771,7 @@ void EECPAttackSubGroupUnit::Flee()
             theScreen.mUseWaterAreas = theKind;
             theNearest.begin()->second->GetPosition(theTo);
             if (this->mUnit->FindFleePoint(&theTo, &theFrom, 12, -18.0f, 18.0f, 3.0f, 8.0f, &theScreen)) {
-                EEUGLocation* theGoal = new EEUGLocation(&theFrom, true, true, false, 0.0f, false, false);
+                EEUGRust* theGoal = EEUGRust::NewLocation(&theFrom, true, true, false, 0.0f, false, false);
                 if (this->mSubGroup->GiveGoal(this->mUnit, theGoal, 0, kActionPrepareToMove))
                     return;
                 if (theGoal != NULL)
@@ -796,7 +795,7 @@ void EECPAttackSubGroupUnit::Flee()
             theTo.mX = UMCos(theHeading) * 2.0f + theFrom.GetX();
             theTo.mY = UMCos(1.5707964f - theHeading) * 2.0f + theFrom.GetY();
             if (this->mUnit->FindFleePoint(&theTo, &theFrom, 12, -18.0f, 18.0f, 3.0f, 8.0f, &theScreen)) {
-                EEUGLocation* theGoal = new EEUGLocation(&theFrom, true, true, false, 0.0f, false, false);
+                EEUGRust* theGoal = EEUGRust::NewLocation(&theFrom, true, true, false, 0.0f, false, false);
                 if (this->mSubGroup->GiveGoal(this->mUnit, theGoal, 0, kActionPrepareToMove))
                     return;   // success ends the flee, as the other two steps (was: return on failure)
                 if (theGoal != NULL)
@@ -825,7 +824,7 @@ void EECPAttackSubGroupUnit::Flee()
         theNearestUnit->GetPosition(theTo);
         this->mUnit->GetPosition(theFrom);
         if (this->mUnit->FindFleePoint(&theTo, &theFrom, 12, -18.0f, 18.0f, 3.0f, 8.0f, &theScreen)) {
-            EEUGLocation* theGoal = new EEUGLocation(&theFrom, true, true, false, 0.0f, false, false);
+            EEUGRust* theGoal = EEUGRust::NewLocation(&theFrom, true, true, false, 0.0f, false, false);
             if (!this->mSubGroup->GiveGoal(this->mUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL)
                 delete theGoal;
         }
@@ -1301,7 +1300,7 @@ void EECPAttackSubGroupUnit::MoveTo(EEComplexUnit* inUnit, bool inArg2, bool inU
         }
         thePoint.mX = theTile.mX + 0.5f;
         thePoint.mY = theTile.mY + 0.5f;
-        EEUGLocation* theGoal = new EEUGLocation(&thePoint, true, !inArg2, false, 0.0f, false, false);
+        EEUGRust* theGoal = EEUGRust::NewLocation(&thePoint, true, !inArg2, false, 0.0f, false, false);
         if (!this->mSubGroup->GiveGoal(this->GetUnit(), theGoal, 0, kActionPrepareToMove) && theGoal != NULL)
             delete theGoal;
     }

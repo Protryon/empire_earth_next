@@ -72,7 +72,6 @@ struct EECPAITargetNearest {
 #include "ee/EEUnitUtilities.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 // 0x40c6cd (cdecl; only EECPASGUProphet::ReleaseAnalyzers calls it) (provisional name)
 long DeleteAnalyzers(std::vector<EECPASGUProphetCalamityAnalyzerBase*>& inAnalyzers);
 
@@ -1237,7 +1236,7 @@ void EECPASGUProphet::MoveAwayFromCast()
     EEUGRust* theCasting = EECastCalamityGoalCast(this->mUnit->GetGoal());
     if (theCasting == NULL || !EEGetRandomPointAhead(this->mUnit, &theLocation))
         return;
-    EEUnitGoal* theGoal = new EEUGLocation(theLocation, true, true, false, 0.0f, false, 0);
+    EEUnitGoal* theGoal = EEUGRust::NewLocation(theLocation, true, true, false, 0.0f, false, 0);
     if (!this->mSubGroup->GiveGoal(this->mUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL)
         delete theGoal;
 }

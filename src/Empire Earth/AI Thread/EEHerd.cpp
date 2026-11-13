@@ -50,7 +50,6 @@
 #include "ee/EEFormation.h"
 #include "ee/EEFCircle.h"
 #include "ee/EEFInwardCircle.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEHerd.h"
@@ -307,7 +306,7 @@ bool EEHerd::Chase()
                     else
                         theLocation = GE3DPoint(0.0f, 0.0f, 0.0f);
                 }
-                EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, true, theFace, theHeading, false, false);
+                EEUGRust* theGoal = EEUGRust::NewLocation(&theLocation, true, true, theFace, theHeading, false, false);
                 if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal)
                     delete theGoal;
             }
@@ -345,7 +344,7 @@ bool EEHerd::MoveTo(const U2DPoint<long>& inTile, unsigned long inRadius)
             if (theUnits.back()->mTileX != -10000 && !theUnits.back()->mIsDisabled) {
                 theResult = true;
                 for (long i = theSlots.size() - 1; i >= 0; i--) {
-                    EEUGLocation* theGoal = new EEUGLocation(&theSlots[i].mPosition, true, false, true,
+                    EEUGRust* theGoal = EEUGRust::NewLocation(&theSlots[i].mPosition, true, false, true,
                                                              theSlots[i].mHeading, false, false);
                     if (!this->GiveGoal(theUnits.back(), theGoal, 1, kActionPrepareToMove) && theGoal)
                         delete theGoal;
@@ -510,7 +509,7 @@ void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
         return;
     theLocation.SetX((float)theTile.GetX() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
     theLocation.SetY((float)theTile.GetY() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
-    EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, !this->GetAnimal()->GetIsPredator(), false, 0.0f, false, false);
+    EEUGRust* theGoal = EEUGRust::NewLocation(&theLocation, true, !this->GetAnimal()->GetIsPredator(), false, 0.0f, false, false);
     bool theMoved = this->GiveGoal(inUnit, theGoal, 0, kActionPrepareToMove);
     if (!theMoved && theGoal)
         delete theGoal;
@@ -541,7 +540,7 @@ void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
         }
         theLocation.SetX((float)theTile.GetX() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
         theLocation.SetY((float)theTile.GetY() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
-        EEUGLocation* theYoungGoal = new EEUGLocation(&theLocation, true, !this->GetAnimal()->GetIsPredator(), false, 0.0f,
+        EEUGRust* theYoungGoal = EEUGRust::NewLocation(&theLocation, true, !this->GetAnimal()->GetIsPredator(), false, 0.0f,
                                                       false, false);
         if (!this->GiveGoal(theYoung, theYoungGoal, 0, kActionPrepareToMove) && theYoungGoal)
             delete theYoungGoal;
@@ -1179,7 +1178,7 @@ void EEHerd::Surround(EEComplexUnit* inTarget)
             theBestDistance = theDistance;
         }
         theUnits.erase(theUnits.begin() + theBestIndex);
-        EEUGLocation* theGoal = new EEUGLocation(&theSlots.back().mPosition, true, false, true,
+        EEUGRust* theGoal = EEUGRust::NewLocation(&theSlots.back().mPosition, true, false, true,
                                                  theSlots.back().mHeading, false, false);
         if (!this->GiveGoal(theBest, theGoal, 0, kActionPrepareToMove) && theGoal)
             delete theGoal;
@@ -1322,7 +1321,7 @@ unsigned long EEHerd::UpdateLeaving(unsigned long inTime)
         if (theMap->GetTile(UMFloor(theUnit->GetPhysicalModel().GetLocation().GetX()),
                             UMFloor(theUnit->GetPhysicalModel().GetLocation().GetY()))) {
             for (long j = theUnit->mGoalQueues[0].mGoals.size() - 1; j >= 0 && !theLeaving; j--) {
-                EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(theUnit->mGoalQueues[0].mGoals[j]);
+                EEUGRust* theGoal = EELocationGoalCast(theUnit->mGoalQueues[0].mGoals[j]);
                 if (theGoal)
                     theLeaving = theMap->GetTile(UMFloor(theGoal->GetLocation().GetX()), UMFloor(theGoal->GetLocation().GetY())) == NULL;
             }
@@ -1358,7 +1357,7 @@ unsigned long EEHerd::UpdateLeaving(unsigned long inTime)
                     }
                 } else
                     theExit.SetX(theExit.mY = -10000);
-                EEUGLocation* theExitGoal = new EEUGLocation((float)theExit.GetX() + 0.5f, (float)theExit.GetY() + 0.5f, 0.0f,
+                EEUGRust* theExitGoal = EEUGRust::NewLocation((float)theExit.GetX() + 0.5f, (float)theExit.GetY() + 0.5f, 0.0f,
                                                              true, true, false, 0.0f, false, false);
                 if (!this->GiveGoal(theUnit, theExitGoal, 0, kActionPrepareToMove) && theExitGoal)
                     delete theExitGoal;

@@ -366,7 +366,7 @@ void OriginalPathTo(EEPlayer* thePlayer, void* theSelection, float inX, float in
         if (Count(theGroup) > 0) {
             ee_units_host_pending_push(thePlayer, theGroup);
             ee_units_host_group_keep_mobile(theGroup);
-            EeGoalSpec theSpec;   // new EEUGLocation(&theLocation, true, forced, rotating, facing, false, 0)
+            EeGoalSpec theSpec;   // EEUGRust::NewLocation(&theLocation, true, forced, rotating, facing, false, 0)
             memset(&theSpec, 0, sizeof(theSpec));
             theSpec.ctor = EE_GOAL_CTOR_LOCATION;
             theSpec.unit_a = kNone;
@@ -489,7 +489,7 @@ void OriginalUnloadTransport(EEPlayer* thePlayer, void* theGroup, long inX, long
             if (ee_units_host_unit_can_unload(theUnit))
                 ee_units_host_unload_warning(thePlayer, inX, inY);
             ee_units_host_group_clear_goal(theActiveGroup);
-            EeGoalSpec theMove;   // new EEUGLocation((float)x, (float)y, 0.0f, false, true, false, 0.0f, false, 0)
+            EeGoalSpec theMove;   // EEUGRust::NewLocation((float)x, (float)y, 0.0f, false, true, false, 0.0f, false, 0)
             memset(&theMove, 0, sizeof(theMove));
             theMove.ctor = EE_GOAL_CTOR_LOCATION_XY;
             theMove.unit_a = kNone;
@@ -644,7 +644,7 @@ void OriginalSmartFarmers(EEPlayer* thePlayer, void* theSelection, int32_t inTar
                 theSpec.flag_a = 1;
                 theAction = kActionMoveToStorage;
             } else {
-                theSpec.ctor = EE_GOAL_CTOR_LOCATION_2D;   // new EEUGLocation(GE2DPoint(the target's tile), true, true, ..)
+                theSpec.ctor = EE_GOAL_CTOR_LOCATION_2D;   // EEUGRust::NewLocation(GE2DPoint(the target's tile), true, true, ..)
                 theSpec.point[0] = (float)theTarget->GetTileX();
                 theSpec.point[1] = (float)theTarget->GetTileY();
                 theAction = kActionPrepareToMove;

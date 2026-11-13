@@ -28,7 +28,6 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
@@ -76,7 +75,7 @@ bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
     if (theIdle) {
         theIdle = theKind == 1;
         if (theIdle)
-            theIdle = !static_cast<EEUGLocation*>(inGoal)->GetIsForcedMove();
+            theIdle = !static_cast<EEUGRust*>(inGoal)->GetIsForcedMove();
     }
     if (inUnit->mTargetSearchTimer <= 0 || theIdle) {
         EEUnit* theTarget;
@@ -143,7 +142,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
         break;
     case kTriggerAttackMoveEnabled: {
         unsigned char theKind = theGoal != NULL ? theGoal->mKind : 0;
-        theFlag = theKind == kGoalLocation && this->CanAttackMove() && !static_cast<EEUGLocation*>(theGoal)->GetIsForcedMove();
+        theFlag = theKind == kGoalLocation && this->CanAttackMove() && !static_cast<EEUGRust*>(theGoal)->GetIsForcedMove();
         break;
     }
     case kTriggerAmmoExhausted:
@@ -490,7 +489,7 @@ bool EEIsLocationGoalQueued(EEComplexUnit* inUnit)
     bool theResult = false;
     for (; it != theEnd && !theResult; ++it) {
         EEUnitGoal* theGoal = *it;
-        if (theGoal != NULL && theGoal->mKind == kGoalLocation && !static_cast<EEUGLocation*>(theGoal)->GetIsForcedMove())
+        if (theGoal != NULL && theGoal->mKind == kGoalLocation && !static_cast<EEUGRust*>(theGoal)->GetIsForcedMove())
             theResult = true;
         else
             theResult = false;

@@ -25,7 +25,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPhysicsModel.h"

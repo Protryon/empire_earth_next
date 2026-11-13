@@ -39,7 +39,6 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEAreaUtilities.h"
@@ -437,7 +436,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->SetAnimation((long)inA, -1, inB != 0);
         break;
     case EE_UNITS_ACT_RETURN_TO_CONTACT: {
-        EEUnitGoal* theLocation = new EEUGLocation(&theUnit->mInitialContactLocation, false, false, true,
+        EEUnitGoal* theLocation = EEUGRust::NewLocation(&theUnit->mInitialContactLocation, false, false, true,
                                                    theUnit->mInitialContactHeading, false, false);
         theUnit->SetGoal(theLocation, inA != 0, 0);
         break;
@@ -528,7 +527,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->SetHasArrived(false);
         break;
     case EE_UNITS_ACT_FACE_YAW:
-        return static_cast<EEUGLocation*>(theUnit->mGoalState)->FaceYaw(theUnit) ? 1 : 0;
+        return static_cast<EEUGRust*>(theUnit->mGoalState)->FaceYaw(theUnit) ? 1 : 0;
     case EE_UNITS_ACT_FIND_PATH:
         theClass->FindPath(theUnit);
         break;

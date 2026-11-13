@@ -18,7 +18,7 @@
 #include "ee/EEAreaEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
+#include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x4b338d
 // Creates the special-location calamity class
@@ -84,7 +84,7 @@ bool EECCSpecialLocation::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalam
         theLocation = theCalamity->mTargetLocation;
         EECalamityCaptureEvent(kCalamityOpSpecialLocation);   // CALW (TEST ONLY)
         theUnit->ClearGoals(0);
-        theUnit->SetGoal(new EEUGLocation(&theLocation, 1, 1, 0, 0.0f, 0, 0), 0, 0);
+        theUnit->SetGoal(EEUGRust::NewLocation(&theLocation, 1, 1, 0, 0.0f, 0, 0), 0, 0);
         theUnit->StartAction(kActionSpecialLocation);
         theUnit->mUnitClass->ActionChanged(theUnit);
         return true;

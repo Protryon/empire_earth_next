@@ -87,7 +87,6 @@ EEClient::EEClient()
 #include "ee/EEFormation.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"

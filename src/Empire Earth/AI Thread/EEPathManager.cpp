@@ -45,7 +45,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAIAStarStorage.h"
@@ -981,7 +980,7 @@ void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinat
     if (inUseGraph) {
         theStarted = this->RequestGroupPath(inUnit, inFrom, theTo, inUnit->GetPlayer()->GetPlayerID(), 1, -1, inModifier, inUnlimitedRevs);
         if (!theStarted) {
-            EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(inUnit->GetGoal());
+            EEUGRust* theGoal = EELocationGoalCast(inUnit->GetGoal());
             if (theGoal && theGoal->GetIsAutoWaypoint()) {
                 theTo.mX = (long)theGoal->GetLocation().GetX();
                 theTo.mY = (long)theGoal->GetLocation().GetY();
@@ -1298,7 +1297,7 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
     bool theSet = false;
     inMachine->GetPath(thePath);
     if (inUnit) {
-        EEUGLocation* theLocation = dynamic_cast<EEUGLocation*>(inUnit->GetGoal());
+        EEUGRust* theLocation = EELocationGoalCast(inUnit->GetGoal());
         const EEGoalDeque& theGoals = inUnit->mGoalQueues[0].mGoals;
         if (inUnit->GetGoal())
             inUnit->GetGoal()->mB1D = true;
@@ -1314,14 +1313,14 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
         }
         if (theGoals.size() == 0)
             goto done;
-        if (theGoals.back()->GetKind() == 1 && static_cast<EEUGLocation*>(theGoals.back())->GetIsAutoWaypoint())
+        if (theGoals.back()->GetKind() == 1 && static_cast<EEUGRust*>(theGoals.back())->GetIsAutoWaypoint())
             goto done;
     build:
         if (thePath.size() > 1 && inUnit->mTile) {
             for (long i = 0; i < (long)thePath.size() - 2; i++) {
                 EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)thePath[i]);
                 theTile = theSector->mLocation;
-                EEUGLocation* theGoal = new EEUGLocation(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f, 0.0f,
+                EEUGRust* theGoal = EEUGRust::NewLocation(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f, 0.0f,
                                                          inUnit->GetGoal() && inUnit->GetGoal()->GetB1C(), theForced,
                                                          false, 0.0f, true, 0);
                 if (!theAttack) {
@@ -1380,7 +1379,7 @@ bool EEPathManager::FinishGraphPath(EEPathManagerNode* inNode)
     bool theResult = this->RequestUnitPaths(theUnit, theRequest, theMachine);
     if (theUnit) {
         theFrom = inNode->mUnit->GetTile();
-        EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(theUnit->GetGoal());
+        EEUGRust* theGoal = EELocationGoalCast(theUnit->GetGoal());
         if (theGoal && theGoal->GetIsAutoWaypoint() && theUnit->mTile) {
             long theY = UMFloor(theGoal->GetLocation().GetY());
             long theX = UMFloor(theGoal->GetLocation().GetX());
@@ -1528,7 +1527,7 @@ void EEPathManager::RequestPendingPaths(EEMap* inMap)
         EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mPending[i].mUnitID)));
         if (theUnit != NULL) {
             theUnit->DropPath();
-            EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(theUnit->GetGoal());
+            EEUGRust* theGoal = EELocationGoalCast(theUnit->GetGoal());
             bool theGraph;
             if (theUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->GetIsAutoWaypoint()))
                 theGraph = true;
@@ -2601,7 +2600,7 @@ void EEAwaitAutoPathRequest(long inRequestID, EECPAttackSubGroup* inSubGroup, st
 void EEPathManager::RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile)
 {
     inUnit->DropPath();
-    EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(inUnit->GetGoal());
+    EEUGRust* theGoal = EELocationGoalCast(inUnit->GetGoal());
     bool theGraph = inUnit->GetGoal() != NULL && (theGoal == NULL || !theGoal->GetIsAutoWaypoint());
     EETileCoordinate theFrom;
     theFrom.mX = inUnit->mTileX;

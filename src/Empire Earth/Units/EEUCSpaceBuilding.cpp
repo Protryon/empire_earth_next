@@ -29,7 +29,6 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUCSpaceBuilding.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 
 // FUNCTION: EXE 0x619fe3
 // Puts a space building's location at the class's cruise altitude

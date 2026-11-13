@@ -45,7 +45,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUCTransport.h"
 #include "ee/EEUCLandable.h"
@@ -394,7 +393,7 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
             break;
         }
         if (theAttack->GetAttackTarget()->GetTileX() != -10000) {
-            EEUGLocation* theMove = new EEUGLocation((float)theAttack->GetAttackTarget()->GetTileX() + 0.5f,
+            EEUGRust* theMove = EEUGRust::NewLocation((float)theAttack->GetAttackTarget()->GetTileX() + 0.5f,
                                                      (float)theAttack->GetAttackTarget()->GetTileY() + 0.5f, theClass->GetCruiseAltitude(),
                                                      theAttack->GetB1C(), true, false, 0.0f, false, false);
             inUnit->SetGoal(theMove, 0, 0);
@@ -649,7 +648,7 @@ void EEUCLandable::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
     if (inUnit->mGoalState != NULL && EEGoalHasLocation(inUnit->GetGoal()))
         theLocation = inUnit->GetGoal();
     if (theLocation == NULL) {
-        EEUGLocation* theMove = new EEUGLocation(&theDeck, false, true, false, 0.0f, false, false);
+        EEUGRust* theMove = EEUGRust::NewLocation(&theDeck, false, true, false, 0.0f, false, false);
         inUnit->ClearGoalQueue(0);
         inUnit->SetGoal(theMove, 0, 0);
     } else
@@ -876,7 +875,7 @@ void EEUCLandable::ApproachRunway(EEComplexUnit* inUnit, long inDX, long inDY)
     if (theHeight < 0.0f)
         theHeight = 0.0f;
     theWaypoint.SetZ(theHeight);
-    EEUGLocation* theMove = new EEUGLocation(&theWaypoint, false, true, false, 0.0f, false, false);
+    EEUGRust* theMove = EEUGRust::NewLocation(&theWaypoint, false, true, false, 0.0f, false, false);
     bool theKeep;
     if (inUnit->mGoalState == NULL || inUnit->mGoalState->mKind != kGoalExplore) {
         inUnit->ClearGoalQueue(0);

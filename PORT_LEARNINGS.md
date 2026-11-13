@@ -12664,3 +12664,63 @@ members class by class, so the readers moved with them.
 - **Not moved, and why.** RoutingGetUserStatusOp (UDPManagerSendRecvOp's subclass: the lobby lane's object). The
   RustServerOp host (ServerOp.cpp's HostCall): still answers on C++ objects. ServerConnectionConnectOp (four short
   members over the connection).
+
+## R5b.4, twenty-first round: the location goal whole in Rust (ee_units location.rs; branch rust-r5b4-core21, 2026-11-13)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| e69d3b7c | merge of `rust-combat14` (the heal goal on EEUGRust, no longer an `EEUGLocation`) | |
+| 0283763c | the location goal whole in Rust (`EEUGLocation` deleted; 51 caller files) | +353 -648, net -295 |
+
+- **The most used goal, the same pattern.** `EEUGLocation` (every move order, the group paths' slots, forced moves,
+  facing on arrival, the automatic waypoints) is an `EEUGRust` of kind `kGoalLocation`. Its seven members are one
+  `#[repr(C)]` record by goal object (`EeUnitsLocationGoal`); the bodies are location.rs: the four constructors (one
+  body operation, 480: the point, the yaw and the flags in the argument block; the `(bool, ...)` load constructor
+  passes 0, 0, 0, yaw 0, no facing), `Clone` (the group movement flag copied, as the original's), the dump, the
+  checksum, the debug texts, `GetGoalLocation`, `Start`, `Save`, `Load` (five version branches folded into one
+  sequence of version tests: the same reads in the same order), `EvaluateCondition` and `FaceYaw` (481). The base
+  goal's answers (`GetDestination` told to the group, three path attempts, `Suits` true, the empty `Step`, `SetOwner`,
+  `Abandon`, `ReplaceUnit`, `RepairPointers` 0) come from the dispatch's defaults or the body's empty arms.
+- **The accessors read the record without the host.** The callers (the physics models' `Step5` every tick, the path
+  manager, the active group, the client, the AI) read and write the members through `EEUGRust` accessors with the
+  original names (`GetLocation`, `SetLocation`, `GetYaw`, `GetIsForcedMove`, `GetShouldFace`, `GetIsAutoWaypoint`,
+  `Get/SetUseGroupMovement`, `Get/SetGroupPathState`), each one copy of the record out of (and back into) the table
+  through `ee_units_location_goal_get` / `_set`: no host callback, no dispatch. `GetLocation` now returns by value
+  (no caller bound the reference). `EELocationGoalCast` replaces `EEGoalCast<EEUGLocation>`, `dynamic_cast` and the
+  kind-tested `static_cast`s; `new EEUGLocation(...)` became `EEUGRust::NewLocation(...)` with the same four
+  argument lists (a script did the 51 files: the class name, the casts, the include). The goal class cast template
+  of `EEUnitKind.h` went with it (no goal class is a C++ class of its own any more).
+- **FaceYaw in Rust over ee_ge.** The original's arithmetic (the forward vector through the unit's transformation,
+  `UMArcTan2`, the half-turn wrap, the one-degree test, `SetOrientationYPR(yaw, 0, 0)`) already forwarded to ee_ge
+  in C++ (`GETransformation::SetOrientationYPR` -> `ee_ge_t_set_orientation`, `UMArcTan2` -> `ee_ge_um_arctan2`, the
+  header's inline `Apply(vector)` restated in its order as `apply_vector`), so the Rust body calls the same functions:
+  the host only hands over the unit's `GETransformation` (64 bytes through `io.sink`, `static_assert`ed) and takes the
+  turned one back (`SetTransformation(t, true)`). Host operations 490-494: the class category, the transformation in
+  and out, `SetTargetSearchTimer`, the first goal queue's length. The unit update's `FACE_YAW` action calls the same
+  body. Clippy rejects the literals `3.1415927` (`approx_constant`): `f32::consts::PI` and `TAU` are the same bits.
+- **Combat's four helpers** (`EELocationGoalPoint`, `EESetLocationGoalPoint`, `EELocationGoalYaw`; `EEGoalHasLocation`
+  unchanged) take their location branch from the accessors. The heal goal's own copy of the facing test
+  (`EEHealLocationCondition`, combat's, at yaw 0) is left as it is.
+- **An include removed above its first use.** The script dropped `ee/EEUGLocation.h` wherever the file already
+  included `ee/EEUGRust.h`; in `EESMEffect.cpp` that include came 1,600 lines below the first `NewLocation` (one
+  compile error; the include now stands where the old one was).
+- **Coverage by temporary prints (removed): the first sight of each body and branch, one file per process.** Oracle
+  seeds 2-7, the scenario profile seeds 2-7 and saveload's oracle, islands and space games (seed 2, 1000 s) reach:
+  creation, `Destroy`, `GetGoalLocation`, `GetDestination`, `GetStartAction`, `Start` (the timer reset, prepare to
+  move for ground units and aircraft), `EvaluateCondition` (facing done both ways, facing not required with and
+  without the facing flag, the base fallback for the rest), `FaceYaw` true and false, `SetOwner`, `Abandon`,
+  `ReplaceUnit`, `PathTaken`, `SetPathAttempts`, `Save`, `Load` (0.280) and `RepairPointers`, and the accessors (get
+  and set). No game reaches `Clone`, the dump, the checksum (the oracle's `oos` is not the goals' sum), the debug
+  texts, or `Start` on the location itself (turn to face or idle): unit tests only (location_tests.rs, 6 tests).
+- **Only a tour reaches:** the client's location commands (`EEClient` 0xb8-0xba with a location goal), the command
+  confirmation's waypoint flags (`EEE3DCommandConfirmation`), the graphical goal manager's auto-waypoint test, the
+  debug panels' location texts, and the test fixture's order checks (`EETestFixtureOrders.cpp`). No goal is ever
+  encoded on the wire (the messages make their goals on each side), so the LAN game's codec is unchanged.
+- **Behaviour:** none on the games' paths. The members of the load constructor's goal that it left unset in the
+  original (`mLocation` before `Load`) were already 0, 0, 0 (`GE3DPoint()`).
+- **Gates.** On 0283763c (the branch is `rust` 37a013f7 plus combat round 14; `rust` had not moved): build `--sim`
+  and the test profile link 0/0; oracle seeds 2-7 identical to the main checkout's `ref`; the Rust gate PASS (ee_units
+  189 tests, 6 new; `goal_op_tables` with the new numbers); captures at seeds 2-3: oracle 169 digests, late 170, space
+  171, calamity 183, scenario 16 equal to their goldens (scenario seeds 2-7 also PASS, 44 digests, on the coverage
+  build); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS, no load
+  fault (every save and load of a location goal goes through the new `Save`/`Load`/`RepairPointers`).

@@ -55,7 +55,6 @@
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EECPASGSea.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECPAAirTargetFilters.h"
 
@@ -437,7 +436,7 @@ void EECPASGAirTransport::UnloadAt(const EECPILocation& inLocation)
         theBounds.Grow(7, true);
         for (i = theFailed.size() - 1; i >= 0; i--) {
             EEComplexUnit* theUnit = theFailed[i];
-            EEUnitGoal* theGoal = new EEUGLocation((float)gPhysics->GetRandom(theBounds.mLeft, theBounds.mRight),
+            EEUnitGoal* theGoal = EEUGRust::NewLocation((float)gPhysics->GetRandom(theBounds.mLeft, theBounds.mRight),
                 (float)gPhysics->GetRandom(theBounds.mTop, theBounds.mBottom), 0.0f, true, true, false, 0.0f,
                 false, false);
             if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL)

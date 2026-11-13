@@ -48,7 +48,6 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 
 // port (save version 0.256): each loaded unit's contact (collision) list as saved, by unit id, head first. The load
@@ -931,7 +930,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
             if (!theFailed)
                 theFailed = theResult != 0;
             if (theGoal->mKind == kGoalLocation) {
-                EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(theGoal);
+                EEUGRust* theLocation = EELocationGoalCast(theGoal);
                 theAutoWaypoint = theLocation->GetIsAutoWaypoint() == true;
             } else
                 theAutoWaypoint = false;
@@ -1110,8 +1109,8 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     if (theAutoWaypoint) {
         for (long autoGoal = this->mGoalQueues[0].mGoals.size() - 1; autoGoal >= 0; autoGoal--) {
             EEUnitGoal* theGoal = this->mGoalQueues[0].mGoals.back();
-            if (theGoal == NULL || EEGoalCast<EEUGLocation>(theGoal) == NULL
-                || !EEGoalCast<EEUGLocation>(theGoal)->GetIsAutoWaypoint())
+            if (theGoal == NULL || EELocationGoalCast(theGoal) == NULL
+                || !EELocationGoalCast(theGoal)->GetIsAutoWaypoint())
                 break;
             this->mGoalQueues[0].PopBack();
         }

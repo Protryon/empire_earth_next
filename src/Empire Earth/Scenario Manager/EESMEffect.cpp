@@ -27,8 +27,8 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUCAirplane.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUCBuilding.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
@@ -1678,7 +1678,7 @@ void EESMEffect::FaceObject()
             theUnit->PlaceOnGround(thePosition);
         } else {
             theUnit->ClearGoals(0);
-            theUnit->SetGoal(new EEUGLocation(&GE3DPoint(theUnit->mPhysicalModel.GetLocation()),
+            theUnit->SetGoal(EEUGRust::NewLocation(&GE3DPoint(theUnit->mPhysicalModel.GetLocation()),
                 true, true, true, theYaw, false, false), 0, 0);
             theUnit->StartAction(kActionPrepareToMove);
             theUnit->GetUnitClass()->ActionChanged(theUnit);
@@ -3559,7 +3559,7 @@ void EESMEffect::TaskUnitsToObject()
                     for (unsigned long n = 0; n < theRejected.size(); n++)
                         theGroup->AddMember(theRejected[n], true);
                     theGroup->KeepMobileUnits();
-                    theGroup->SetGoal(new EEUGLocation(GE2DPoint((float)theDestination.GetX(),
+                    theGroup->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theDestination.GetX(),
                                                                  (float)theDestination.GetY()),
                                                        true, true, false, 0.0f, false, 0),
                                       false);
@@ -3642,12 +3642,12 @@ void EESMEffect::TaskUnitsToObject()
                             if (theUnit->mContainer != NULL) {
                                 theUnit->ClearGoalQueue(0);
                                 theUnit->ClearGoalQueue(1);
-                                theUnit->QueueGoal(new EEUGLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0), 0);
-                                theUnit->QueueGoal(new EEUGLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0), 1);
+                                theUnit->QueueGoal(EEUGRust::NewLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0), 0);
+                                theUnit->QueueGoal(EEUGRust::NewLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0), 1);
                                 theUnit->mGoalQueues[1].AddTime(1);
                             } else if (theUnit->mTile != NULL) {
-                                EEUGLocation* theGoal =
-                                    new EEUGLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0);
+                                EEUGRust* theGoal =
+                                    EEUGRust::NewLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0);
                                 theUnit->ClearGoals(0);
                                 theUnit->SetGoal(theGoal, 0, 0);
                                 theUnit->StartAction(kActionTakeoff);
@@ -3656,7 +3656,7 @@ void EESMEffect::TaskUnitsToObject()
                         }
                     } else {
                         theGroup->ClearGoal();
-                        theGroup->SetGoal(new EEUGLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0),
+                        theGroup->SetGoal(EEUGRust::NewLocation(thePoint, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0),
                                           false);
                         theGroup->mAction = kActionPrepareToMove;
                         theGroup->Plan();
@@ -3845,7 +3845,7 @@ void EESMEffect::TaskUnitsToArea()
                     && (theFirst->GetComplexUnit() == NULL || theFirst->GetComplexUnit()->GetCommandType() == kActionIdle)) {
                     for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
                         EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                        EEUGLocation* theGoal = new EEUGLocation(theTarget, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0);
+                        EEUGRust* theGoal = EEUGRust::NewLocation(theTarget, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0);
                         theUnit->ClearGoals(0);
                         theUnit->SetGoal(theGoal, 0, 0);
                         if (theUnit->mContainer == NULL) {
@@ -3855,7 +3855,7 @@ void EESMEffect::TaskUnitsToArea()
                     }
                 } else {
                     theGroup->ClearGoal();
-                    theGroup->SetGoal(new EEUGLocation(theTarget, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0), false);
+                    theGroup->SetGoal(EEUGRust::NewLocation(theTarget, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0), false);
                     theGroup->mAction = kActionPrepareToMove;
                     theGroup->Plan();
                 }
@@ -3886,7 +3886,7 @@ void EESMEffect::TaskUnitsToArea()
                     } else {
                         delete theGoal;
                         theUnit->ClearGoals(0);
-                        theUnit->SetGoal(new EEUGLocation(theTarget.GetX(), theTarget.GetY(), 0.0f, true, true, false,
+                        theUnit->SetGoal(EEUGRust::NewLocation(theTarget.GetX(), theTarget.GetY(), 0.0f, true, true, false,
                                                           0.0f, false, 0),
                                          0, 0);
                     }

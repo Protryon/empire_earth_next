@@ -21,7 +21,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 
 const UString EEUnitGoal::sData("EEUnitGoal-Data");
@@ -85,7 +84,7 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
         theGoal = EEUGRust::NewLoad(kGoalLoadTransport, false);
         break;
     case kGoalLocation:
-        theGoal = new EEUGLocation(false, false, false, false);
+        theGoal = EEUGRust::NewLocation(false, false, false, false);
         break;
     case kGoalPatrol:
         theGoal = EEUGRust::NewPatrol(false);
