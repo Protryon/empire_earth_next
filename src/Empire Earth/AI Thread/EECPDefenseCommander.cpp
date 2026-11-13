@@ -37,7 +37,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGCastCalamity.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIChokePoint.h"
@@ -1783,7 +1783,7 @@ unsigned long EECPDefenseCommander::CheckSpecials(unsigned long inTime)
             if (!(theThreat > kDCCalamityThreat) ||
                 theCalamity->CanCastAt(theUnit, theLocation, theUnit->GetTileX(), theUnit->GetTileY(), true, NULL) != 0)
                 continue;
-            theUnit->SetGoal(new EEUGCastCalamity(theUnit, NULL, theUnit->GetTileX(), theUnit->GetTileY(), 0x43d, true),
+            theUnit->SetGoal(EEUGRust::NewCastCalamity(theUnit, NULL, theUnit->GetTileX(), theUnit->GetTileY(), 0x43d, true),
                              0, 0);
             theUnit->StartAction(kActionCalamityPreCast);
             theUnit->GetUnitClass()->ActionChanged(theUnit);
