@@ -33,6 +33,12 @@ local FOREST_RANGE = 35          -- AssignSubGroupTask: forests within squared d
 local CITIZEN_DEATHS = 20        -- NoteThreat: more citizens lost in a region than this sends the army there
 
 local KIND_SPECIAL, KIND_SIEGE, KIND_ARTILLERY, KIND_HERO, KIND_ANTI_TANK, KIND_ANTI_AIR = 3, 0x14, 0x10, 0x1b, 1, 0xd
+local KIND_ANTI_SUB_HELICOPTER, KIND_MECH_ZEUS = 0x1c, 0x1e
+local KIND_CARRIER = 0xf                -- kAIKindAircraftCarrier
+local CARRIER = "s11_enterprise_aircraft_carrier"
+local SPACE_CARRIER = "sp15_space_carrier"           -- kUnitTypeSp15SpaceCarrier   -- kUnitTypeS11EnterpriseAircraftCarrier
+-- EECPUGatherCarrierFightersCount's carrier fighters (the three the data has)
+local FIGHTERS = {"a_carrierfighter11_corsair1", "a_carrierfighter12_f_14", "a_carrierfighter13_avenger"}
 
 local function army(memory)
     local a = memory.army
@@ -637,6 +643,67 @@ local function sea_share(memory, f)
     return result
 end
 
+-- ComputeDomainShares' air share (from the Atomic Age - WW1): a weight, the target's town across water 0.1-0.3, more
+-- anti-air units with the target than with the player 0.05-0.2, none of these 0.2-0.35 (planets 0-0.1); the share a
+-- random 0.9-1.35 of it, pulled toward the target's air share of its strength by the naval unit weight (as the
+-- original: mNavalUnitWeight); thousandths. DEVIATION: the town values' rule (a target town 1.5 x the player's
+-- worth: 0.2-0.4) is not ported (the target's town values are not known)
+local function air_share(view, memory, f, target)
+    if view.epoch < 9 then
+        return 0
+    end
+    local t = memory.t
+    local weight = 0
+    local tx, ty = R.town(view)
+    local ex, ey
+    for _, e in ipairs(view.enemies or {}) do
+        if e.player == target and e.town_x ~= nil and e.town_x >= 0 then
+            ex, ey = e.town_x, e.town_y
+        end
+    end
+    if tx ~= nil and ex ~= nil and not ai.reach(tx, ty, ex, ey) and not t.space then
+        weight = ai.random(100, 300)
+    end
+    local theirs, ours = 0, 0
+    for _, ty2 in ipairs(f.types or {}) do
+        if (cls(ty2).ai_kind or 0) == KIND_ANTI_AIR then
+            theirs = theirs + 1
+        end
+    end
+    for _, src in ipairs({own_military()}) do
+        for _, u in ipairs(src) do
+            if (cls(u.type).ai_kind or 0) == KIND_ANTI_AIR then
+                ours = ours + 1
+            end
+        end
+    end
+    if ours < theirs then
+        weight = weight + ai.random(50, 200)
+    end
+    if weight <= 0 then
+        weight = t.planets and ai.random(0, 100) or ai.random(200, 350)
+    end
+    local result = ai.random(900, 1350) * weight // 1000
+    if result > 1000 then
+        result = 950
+    elseif result < 1 then
+        result = 0
+    end
+    local tdom = f.dom or {land = 0, sea = 0, air = 0, space = 0}
+    local tsum = tdom.land + tdom.sea + tdom.air + tdom.space
+    if tsum ~= 0 then
+        local share = tdom.air * 1000 // tsum
+        if share > 0 and result > 0 then
+            result = (share - result) * (t.behavior.naval_unit_weight_k or 0) // 1000 + result
+            result = math.max(0, math.min(1000, result))
+        end
+    end
+    return result
+end
+
+-- the air counterpart of IsFavoriteLand (EECPUSFavoriteUnitsScreen::IsFavoriteAir). DEVIATION: the favourite air type
+-- is a random trainable air class of the selection (ChooseFavoriteAirType's screen is not readable)
+
 -- the sea counterpart of IsFavoriteLand (EECPUSFavoriteUnitsScreen::IsFavoriteSea)
 local function favorite_sea_ok(name)
     local k = cls(name)
@@ -645,6 +712,14 @@ local function favorite_sea_ok(name)
         and ak ~= KIND_SPECIAL and not k.is_transport and not k.mine
 end
 M.favorite_sea_ok = favorite_sea_ok
+
+-- the space counterpart (EECPUSFavoriteUnitsScreen::IsFavoriteSpace): as the sea's, and no anti-air, artillery,
+-- siege, anti-submarine helicopter or Mech Zeus kind
+function M.favorite_space_ok(name)
+    local ak = cls(name).ai_kind or 0
+    return favorite_sea_ok(name) and ak ~= KIND_ANTI_AIR and ak ~= KIND_ARTILLERY and ak ~= KIND_SIEGE
+        and ak ~= KIND_ANTI_SUB_HELICOPTER and ak ~= KIND_MECH_ZEUS
+end
 
 -- AllocateCounterUnits for one domain: the classes whose family counters the target's types (weights 3/2/1), up to
 -- `maximum` classes, each in the choices its weight's times; ceil(n x the RPS factor) picks. -> the slots, n left
@@ -735,7 +810,7 @@ end
 -- group (and the land count - 1), under its share of the population limit (pop_percentage, the own and asked for
 -- counted): a free one of the class taken -> the wanted count asked for; else the held candidates of the class, else
 -- the class asked for when a candidate. As the original, the free-one path leaves the land count as it is.
--- The paratroopers and carriers: NOT STARTED
+-- The paratroopers: NOT STARTED (the carriers: in select_units)
 local function special_slots(view, memory, kind, numLand, numUnits, list, cands, held, byKind)
     local b = memory.t.behavior
     local slots = {}
@@ -862,7 +937,7 @@ end
 -- The candidates are the free soldiers and warships (and, for an attack, the defence groups' soldiers:
 -- GatherDefendingUnits). ComputeDomainShares: the sea share (GetDomainShare); the air share (from WW1) and space:
 -- NOT STARTED
-local function select_units(view, memory, kind, target, naval)
+local function select_units(view, memory, kind, target, naval, domain)
     local b = memory.t.behavior
     local mem = army(memory)
     local pool, list = free_pool()
@@ -886,7 +961,7 @@ local function select_units(view, memory, kind, target, naval)
     local strength = strength_of(view, memory, f)
     if naval ~= nil then
         -- (CheckNaval's strategy: the count set, the sea's share 100, a counter requirement and the favourites)
-        return M.select_naval(view, memory, kind, f, strength, list, naval)
+        return M.select_naval(view, memory, kind, f, strength, list, naval, domain)
     end
     -- ComputeGroupSize
     local share
@@ -923,12 +998,22 @@ local function select_units(view, memory, kind, target, naval)
     if count <= 0 then
         return nil
     end
-    -- ComputeDomainShares and Calculate: the sea's count (the cap x its share must make a unit), the rest land
-    local numSea = 0
-    local sea_k = sea_share(memory, f)
+    -- ComputeDomainShares and Calculate: the air's count (from WW1), the sea's on what is left (the cap x a share
+    -- must make a unit), the rest land
+    local numSea, numAir = 0, 0
+    local air_k = air_share(view, memory, f, target)
+    local sea_k = math.min(sea_share(memory, f), 1000 - air_k)
     local cap = view.population_cap
-    local land_k = 1000 - sea_k
+    local land_k = 1000 - sea_k - air_k
+    if land_k < 1 then
+        land_k = 0
+    end
     local sum = 0
+    if air_k > 0 and cap * air_k // 1000 > 0 then
+        sum = sum + air_k
+    else
+        air_k = 0
+    end
     if sea_k > 0 and cap * sea_k // 1000 > 0 then
         sum = sum + sea_k
     else
@@ -940,13 +1025,20 @@ local function select_units(view, memory, kind, target, naval)
     if sum > 0 and sea_k > 0 then
         numSea = sea_k * count // sum
     end
+    if sum > 0 and air_k > 0 then
+        numAir = air_k * count // sum
+    end
     local byKind = candidate_classes(view, kind, "land")
     local seaKind = candidate_classes(view, kind, "sea")
+    local airKind = candidate_classes(view, kind, "air")
     -- RedistributeDomainCounts: a domain with no class gives its count to land
     if numSea > 0 and #ai.keys(seaKind) == 0 then
         numSea = 0
     end
-    local numLand = count - numSea
+    if numAir > 0 and #ai.keys(airKind) == 0 then
+        numAir = 0
+    end
+    local numLand = count - numSea - numAir
     local held, slots = {}, {}
     -- AllocateHeldUnits: the most common classes first (up to 9 classes), each domain within its count
     if held_n > 0 then
@@ -971,8 +1063,10 @@ local function select_units(view, memory, kind, target, naval)
             if best == nil then
                 break
             end
-            local sea = domain_of(cls(best)) == "sea"
-            local take = math.min(bn, wanted, sea and numSea or numLand)
+            local dom = domain_of(cls(best))
+            local sea = dom == "sea"
+            local airc = dom == "air"
+            local take = math.min(bn, wanted, sea and numSea or airc and numAir or numLand)
             for _, c in ipairs(cands) do
                 if take <= 0 then
                     break
@@ -984,6 +1078,8 @@ local function select_units(view, memory, kind, target, naval)
                     wanted = wanted - 1
                     if sea then
                         numSea = numSea - 1
+                    elseif airc then
+                        numAir = numAir - 1
                     else
                         numLand = numLand - 1
                     end
@@ -1000,6 +1096,53 @@ local function select_units(view, memory, kind, target, naval)
             slots[#slots + 1] = name
         end
     end
+    -- AllocateSpecialUnits' aircraft carriers: with a sea count and more than one unit, by the carrier chance, 1 up
+    -- to the most per group (less one sea unit), while the carriers (own and asked for) stay under their share of the
+    -- military room; a class of the carriers' kind among the sea candidates (as the C++: none, no carriers)
+    do
+        local b = memory.t.behavior
+        local ck = cls(CARRIER)
+        local takes = kind == 4 or kind == 5 or (ck.attack_unit and kind == 0) or (ck.defense_unit and kind == 1)
+        if numSea > 0 and count > 1 and ck.ai_kind ~= nil and takes and T.random_k() <= (b.carrier_chance_k or 0) then
+            local wanted = ai.random(1, math.max(math.min(b.carrier_max_per_group or 0, numSea - 1), 1))
+            local have = 0
+            for _, u in ipairs(own_ships()) do
+                if (cls(u.type).ai_kind or 0) == KIND_CARRIER then
+                    have = have + 1
+                end
+            end
+            for _, g in ipairs(G.all(army(memory))) do
+                for _, sl in ipairs(g.slots or {}) do
+                    if (cls(sl.c or sl).ai_kind or 0) == KIND_CARRIER then
+                        have = have + 1
+                    end
+                end
+            end
+            local limit = ((b.carrier_pop_percentage_k or 0) * unit_limit(view, memory) + 999) // 1000
+            if have < limit then
+                wanted = math.min(wanted, limit - have)
+                local names = {}
+                for _, ak in ipairs(ai.keys(seaKind)) do
+                    for _, name in ipairs(seaKind[ak]) do
+                        if (cls(name).ai_kind or 0) == KIND_CARRIER then
+                            names[#names + 1] = name
+                        end
+                    end
+                end
+                table.sort(names)
+                if #names > 0 then
+                    local pick = names[ai.random(1, #names)]
+                    for _ = 1, wanted do
+                        if numSea <= 0 then
+                            break
+                        end
+                        slots[#slots + 1] = pick
+                        numSea = numSea - 1
+                    end
+                end
+            end
+        end
+    end
     -- AllocateCounterUnits: the families that counter the target's unit types, weighted 3/2/1 (WeighCounters: the
     -- families with a candidate class), the sea (3-5 classes) before the land (2-6, the siege share)
     if counters and (numLand > 0 or numSea > 0) then
@@ -1008,6 +1151,9 @@ local function select_units(view, memory, kind, target, naval)
             all[ak] = true
         end
         for _, ak in ipairs(ai.keys(seaKind)) do
+            all[ak] = true
+        end
+        for _, ak in ipairs(ai.keys(airKind)) do
             all[ak] = true
         end
         local weights = {}
@@ -1021,6 +1167,13 @@ local function select_units(view, memory, kind, target, naval)
             end
         end
         if #ai.keys(weights) > 0 then
+            if numAir > 0 then
+                local got
+                got, numAir = counter_slots(memory, airKind, weights, list, numAir, ai.random(3, 5), nil)
+                for _, name in ipairs(got) do
+                    slots[#slots + 1] = name
+                end
+            end
             if numSea > 0 then
                 local got
                 got, numSea = counter_slots(memory, seaKind, weights, list, numSea, ai.random(3, 5), nil)
@@ -1038,8 +1191,30 @@ local function select_units(view, memory, kind, target, naval)
             end
         end
     end
-    -- AllocateFavoriteUnits: the sea count the favourite sea type (none: the count goes to land), then the land count
-    -- the favourite land type
+    -- AllocateFavoriteUnits: the air count a favourite air type (none: the count goes to land), the sea count the
+    -- favourite sea type (none: to land), then the land count the favourite land type
+    if favorites and numAir > 0 then
+        local names = {}
+        for _, ak in ipairs(ai.keys(airKind)) do
+            for _, name in ipairs(airKind[ak]) do
+                names[#names + 1] = name
+            end
+        end
+        table.sort(names)
+        if #names > 0 then
+            local fav = names[ai.random(1, #names)]
+            for _ = 1, numAir do
+                slots[#slots + 1] = fav
+            end
+        else
+            numLand = numLand + numAir
+        end
+        numAir = 0
+    end
+    if numAir > 0 then
+        numLand = numLand + numAir
+        numAir = 0
+    end
     if favorites and numSea > 0 then
         local fav = favorite_of(view, memory.cp.favorite_sea, "sea", seaKind, favorite_sea_ok)
         if fav ~= nil then
@@ -1059,15 +1234,17 @@ local function select_units(view, memory, kind, target, naval)
             end
         end
     end
-    return {count = count, held = held, slots = slots, strength = strength, sea_k = sea_k}
+    return {count = count, held = held, slots = slots, strength = strength, sea_k = sea_k, air_k = air_k}
 end
 
 -- CheckNaval's selection: `count` units, all at sea (no sea class: they go to land, as AllocateFavoriteUnits moves
--- the count), the counter requirement first, then the favourites
-function M.select_naval(view, memory, kind, f, strength, list, count)
+-- the count), the counter requirement first, then the favourites. CheckSpace's: the same in space (domain "space",
+-- the favourite space type)
+function M.select_naval(view, memory, kind, f, strength, list, count, domain)
     local b = memory.t.behavior
+    domain = domain or "sea"
     local byKind = candidate_classes(view, kind, "land")
-    local seaKind = candidate_classes(view, kind, "sea")
+    local seaKind = candidate_classes(view, kind, domain)
     local numSea, numLand = count, 0
     if #ai.keys(seaKind) == 0 then
         numSea, numLand = 0, count
@@ -1107,7 +1284,12 @@ function M.select_naval(view, memory, kind, f, strength, list, count)
         end
     end
     if numSea > 0 then
-        local fav = favorite_of(view, memory.cp.favorite_sea, "sea", seaKind, favorite_sea_ok)
+        local fav
+        if domain == "space" then
+            fav = favorite_of(view, memory.cp.favorite_space, "space", seaKind, M.favorite_space_ok)
+        else
+            fav = favorite_of(view, memory.cp.favorite_sea, "sea", seaKind, favorite_sea_ok)
+        end
         if fav ~= nil then
             for _ = 1, numSea do
                 slots[#slots + 1] = fav
@@ -1124,7 +1306,7 @@ function M.select_naval(view, memory, kind, f, strength, list, count)
             end
         end
     end
-    return {count = count, held = {}, slots = slots, strength = strength, sea_k = 1000}
+    return {count = count, held = {}, slots = slots, strength = strength, sea_k = domain == "sea" and 1000 or 0}
 end
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -1149,9 +1331,9 @@ end
 
 -- CreateGroup (MakePlan, PlaceSubGroups): a sub-group of the selection, its held units taken, its slots requested
 -- through Personnel. Returns the group, or nil
-local function create_group(view, memory, kind, mission, target, why, naval)
+local function create_group(view, memory, kind, mission, target, why, naval, domain)
     local mem = army(memory)
-    local sel = select_units(view, memory, kind, target, naval)
+    local sel = select_units(view, memory, kind, target, naval, domain)
     if sel == nil or (#sel.held == 0 and #sel.slots == 0) then
         print(string.format("classic_lua army.%s kind=%d target=%d none", why, kind, target or 0))
         return nil
@@ -1183,9 +1365,19 @@ local function create_group(view, memory, kind, mission, target, why, naval)
             if #part.ids > 0 then
                 G.add(mem, g, part.ids)
             end
-            print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d sea=%d%s",
+            local nair, ncarrier = 0, 0
+            for _, sl in ipairs(g.slots) do
+                local k = cls(sl.c or sl)
+                if domain_of(k) == "air" then
+                    nair = nair + 1
+                end
+                if (k.ai_kind or 0) == KIND_CARRIER then
+                    ncarrier = ncarrier + 1
+                end
+            end
+            print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d sea=%d air=%d airslots=%d carriers=%d%s",
                 why, g.id, kind, mission, target or 0, sel.count, #part.ids, #g.slots, sel.strength, sel.sea_k,
-                g.sea and " navy" or ""))
+                sel.air_k or 0, nair, ncarrier, g.sea and " navy" or ""))
             first = first or g
         end
     end
@@ -1735,7 +1927,7 @@ end
 -- CheckNaval: every ship_maintenance_timer minutes, with more than 50 water tiles on the map, the warships (own and
 -- asked for) topped up to the difficulty's ships_to_maintain by a group of a sea-only strategy (kind 5: a defence
 -- group) against a random enemy; the peace rules hold it back as an attack's. ChooseUnitsToKill's room: NOT STARTED.
--- The carrier fighters (WW2): NOT STARTED
+-- The carrier fighters: from WW2, the difficulty's number kept (carrier_fighters_*)
 local function check_naval(view, memory)
     local a = army(memory)
     if view.time <= (a.next_naval or 0) then
@@ -1768,8 +1960,80 @@ local function check_naval(view, memory)
                 create_group(view, memory, 5, 1, target, "naval", limit - have)
             end
         end
+        -- the carrier fighters (from the Atomic Age - WW2): the difficulty's number kept, own and asked for, of the
+        -- epoch's carrier fighter (WW2 the Corsair, Modern the F-14, later the Avenger)
+        if view.epoch >= 10 then
+            local wanted
+            if t.deathmatch then
+                wanted = T.by_difficulty(memory, b.carrier_fighters_dm_easy, b.carrier_fighters_dm_medium,
+                    b.carrier_fighters_dm_hard)
+            else
+                wanted = T.by_difficulty(memory, b.carrier_fighters_easy, b.carrier_fighters_medium,
+                    b.carrier_fighters_hard)
+            end
+            wanted = (wanted or 0) - #ai.units{type = FIGHTERS}
+            for _, name in ipairs(FIGHTERS) do
+                wanted = wanted - (U.state(memory).waiting[name] or 0)
+            end
+            if wanted > 0 then
+                local class = view.epoch == 10 and "a_carrierfighter11_corsair1"
+                    or view.epoch == 11 and "a_carrierfighter12_f_14" or "a_carrierfighter13_avenger"
+                U.request(view, memory, class, wanted)
+            end
+        end
     end
     a.next_naval = view.time + b.ship_maintenance_timer * 60000
+end
+
+-- CheckSpace: every ship_maintenance_timer minutes on a space map, the space units (own and asked for: armed space
+-- classes, no transport) topped up to ships_to_maintain (the warships' number, as the C++ reads it) by a space-only
+-- group (kind 5) against a random enemy; and a space carrier more while fewer than the space docks and 4.
+-- ChooseUnitsToKill's room: NOT STARTED (as CheckNaval's)
+local function check_space(view, memory)
+    local a = army(memory)
+    if view.time <= (a.next_space or 0) then
+        return
+    end
+    local t = memory.t
+    local b = t.behavior
+    if t.space then
+        local limit
+        if t.deathmatch then
+            limit = T.by_difficulty(memory, b.ships_to_maintain_dm_easy, b.ships_to_maintain_dm_medium,
+                b.ships_to_maintain_dm_hard)
+        else
+            limit = T.by_difficulty(memory, b.ships_to_maintain_easy, b.ships_to_maintain_medium,
+                b.ships_to_maintain_hard)
+        end
+        local have = 0
+        for _, id in ipairs(ai.units{}) do
+            local u = R.unit(id)
+            if u ~= nil then
+                local k = cls(u.type)
+                if k.domain == "space" and not k.is_transport and not k.building and k.category ~= "citizen" and k.category ~= "boat" then
+                    have = have + 1
+                end
+            end
+        end
+        for _, g in ipairs(G.all(a)) do
+            for _, sl in ipairs(g.slots or {}) do
+                if domain_of(cls(sl.c or sl)) == "space" then
+                    have = have + 1
+                end
+            end
+        end
+        if have < limit then
+            local target = random_enemy()
+            if target ~= nil then
+                create_group(view, memory, 5, 1, target, "space", limit - have, "space")
+            end
+        end
+        local carriers = #ai.units{type = SPACE_CARRIER} + (U.state(memory).waiting[SPACE_CARRIER] or 0)
+        if carriers < #ai.units{type = "b_space_dock"} and carriers < 4 then
+            U.request(view, memory, SPACE_CARRIER, 1)
+        end
+    end
+    a.next_space = view.time + b.ship_maintenance_timer * 60000
 end
 
 -- CounterAttack: a defence group (kind 1, mission 3) for the package's town against its attacker
@@ -2107,6 +2371,7 @@ local function defense(view, memory)
         plan_aid(view, memory)
     end
     check_naval(view, memory)
+    check_space(view, memory)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------

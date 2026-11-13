@@ -44,8 +44,9 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 another player's unit is seen, 2 under attack, back to 1 a minute after the last hit): the engine's
                 EEPlayer::mCombatState is not readable. ENGINE: WorkOutPopulation, the extra and reveal cheats,
                 ChooseCivilization, UnitStranded's kill, SendToNearestBase, the save. ChooseFavoriteSeaType (main.lua: a random
-                warship class trainable now that passes IsFavoriteSea). NOT STARTED: the favourite
-                air and space types, Regroup's island fishing rule beyond mUsesFishing.
+                warship class trainable now that passes IsFavoriteSea); ChooseFavoriteSpaceType (likewise
+                with IsFavoriteSpace; no draw while no space class is trainable). The favourite air type: see
+                EECPUnitSelector. NOT STARTED: Regroup's island fishing rule beyond mUsesFishing.
                 DEVIATION: ChooseFavoriteLandType draws among the soldier classes the barracks, archery range, stable
                 and factories train (the favourite screener's AI lines are not exposed).
   EECPCivilizationManager.cpp
@@ -131,7 +132,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 wall planner path); the enemy's centre is the town the view knows (its capitol); IsPathUsable is not
                 tested; a stretch with units on it is not left out; a wall piece lost is not queued again (UnitLost).
                 In 8 balanced 90-minute games the C++ ordered 62 walls (142 pieces, in 5 games), the port 8 (68 pieces,
-                in 2): the port knows fewer enemy towns (fog) and waits for each wall's gate (AI_RESEARCH 8.69).
+                in 2). OPEN (AI_RESEARCH 8.71): the port's lines across its way are blocked 9 times in 10, mostly by its own
+                settlements and towers (then the enemy's settlements) within 2 tiles; neither the refined steps
+                (ai.wall_path) nor a whole tile path changed that; the C++'s coarse way (the path manager's request
+                with the wall planner's influence costs) is the difference left untried. Back in stage 3.
   EECPCombatManager.cpp         PARTLY -> army.lua: Update on the attack timer (IsAttackDue; SetNextAttackTime in
                 main.lua: the initial delay per epoch span and the frequency, the difficulty's modifiers, the bounds),
                 the target player (computers by the aggression's chance when humans are there too; theLargest, else
@@ -145,8 +149,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 DefendPlayer (allies), the scenario's attack and defend tasks.
   EECPCombatStrategy.cpp        PARTLY -> army.lua: ComputeDomainShares' sea share (GetDomainShare: the water tiles'
                 share, the own sea strength against the target's, the air unit weight's pull) and Calculate (the
-                sea's count, the rest land), RedistributeDomainCounts (no sea class: to land). NOT STARTED: the air
-                share (from WW1) and space
+                sea's count, the rest land), RedistributeDomainCounts (no sea or air class: to land); the air share from WW1 (the target's town
+                across water, the anti-air counts, the pull toward the target's air strength; DEVIATION: the town values'
+                rule is not ported); the air count's counters and a favourite air type (DEVIATION: a random trainable air
+                class). NOT STARTED: the space share
   EECPAttackCommander.cpp, EECPAttackGroup.cpp, EECPAttackSubGroup.cpp
                 PARTLY -> army.lua: CreateGroup / MakePlan / PlaceSubGroups (one land sub-group per group: its held
                 units taken, its slots requested), DropSpentGroups every 45 s, the sub-group's phases (WaitForUnits
@@ -176,7 +182,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 a random favourite candidate, none: the count to land; the favourite land type, else a random favourite
                 candidate); the sea's classes and counts as the land's (the counter classes 3-5 at sea, the held units
                 within each domain's count). DEVIATION: the target file's counts (see EECPIntelligence).
-                AllocateSpecialUnits: the priests, prophets and heroes (the chance, the most per group, the population share; the heroes without the game's hero limit). NOT STARTED: its carriers and paratroopers, the deathmatch
+                AllocateSpecialUnits: the priests, prophets and heroes (the chance, the most per group, the population share; the heroes without the game's hero limit); its aircraft carriers (the carrier chance, the most per group less one sea unit, the population share of the unit limit; as in the C++ they never come up with this data: the carrier is neither an attack nor a defence unit, so it is no candidate, and carriers come only as the carrier fighters' producer). NOT STARTED: its paratroopers, the deathmatch
                 early scale, ChooseUnitsToKill's room.
   EECPPersonnel.cpp             PARTLY -> army.lua: the requests (a slot per class: a free unit of the class, else
                 one ordered once through the unit manager's RequestUnits; the 600 s deadline drops the open slots);
@@ -207,13 +213,22 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
                 bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
                 the adjacent continents' step of the ladder, AidAllies, CheckRaids / Retaliate, BuildUp
-                (deathmatch), CheckSpace, CheckSpecials. CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
+                (deathmatch), CheckSpecials. CheckSpace: PORTED (every ship_maintenance_timer minutes on a space map:
+                the space units own and asked for topped up to ships_to_maintain by a space-only group of kind 5,
+                the favourite space type its fill; a space carrier more while fewer than the space docks and 4; its
+                ChooseUnitsToKill: NOT STARTED; the space units join the land sub-groups until the air and space
+                sub-groups are ported). CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
                 50 water tiles: the warships own and asked for topped up to ships_to_maintain by a sea-only group of
-                kind 5; its ChooseUnitsToKill and the carrier fighters: NOT STARTED).
+                kind 5; the carrier fighters from WW2, the difficulty's carrier_fighters_* kept, own and asked for, of the epoch's fighter; its ChooseUnitsToKill: NOT STARTED).
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
                 class drafted or requested, explore with the difficulty's stance, every 30 s), the sea explorers
                 (num_sea_explorers of the fastest warship class, once the dock is researched, with water on the map).
-                NOT STARTED: the space and air explorers.
+                The space explorers (as many as the sea explorers, as the C++ reads them; the fastest space class
+                once the space dock is researched, with space on the map) and the air explorers (num_air_explorers
+                of the fastest air class once the first attack has started and the airport is researched; an
+                aircraft inside its airport goes out too). DEVIATION: the classes trainable now (view.costs), so
+                no Corsair without a carrier (the C++ asked for one 52 times in 8 WW2 games and got none); the
+                outdated explorers (two epochs back) are not replaced.
   EECPDiplomacyManager.cpp      empty in the original: nothing to port
   EECPPlayerInteractionManager.cpp
                 NOT STARTED (chat taunts: no chat command in the interface)

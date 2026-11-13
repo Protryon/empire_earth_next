@@ -925,7 +925,7 @@ from data, so that a script can make its decisions with the same numbers:
   popband, catchup, retire: whether each is on for the seat); `personality` (aipersonalities.yaml as EECPPersonality
   picks it, with EE_AI_PERSONALITY and the TEST ONLY EE_AI_EXP switches folded in); `behavior` (every dbcpbehavior
   value EEComputerPlayer::Init copies, by a snake_case name, plus the population cap weights, the epoch advance scale
-  and the mining limit). Floats are thousandths, under keys ending in `_k`.
+  the mining limit and the carrier fighters to keep, `carrier_fighters_easy`..`_hard` and `carrier_fighters_dm_*`). Floats are thousandths, under keys ending in `_k`.
 - `ai.techs{epoch = n, id = tech}` -> the tech tree's nodes of epochs n..0 (the current epoch by default), latest
   epoch first as GetEpochNodeIDs collects them: `id`, `name`, `epoch`, `kind`, `makes` (the class), `counts_toward_epoch`,
   `researched`, `available`, `obsolete`, `obsolete_epoch`, `producers` (class names), `plain_producer` (a producer that

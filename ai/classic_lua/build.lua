@@ -653,6 +653,21 @@ end
 -- StartBuilding: a site and a builder; -> whether the request is done
 
 local DROP_WITHOUT_BUILDER = {}
+local STALL_MEMORY_MS = 600000
+
+-- a site within 2 tiles of one that stalled twice for the class in the last ten minutes (cancel_stalled; the
+-- foundation's place and the site's tile may differ by its footprint)
+local function stalled_site(view, memory, class, x, y)
+    local stalls = M.state(memory).stalls or {}
+    for _, key in ipairs(ai.keys(stalls)) do
+        local st = stalls[key]
+        if st.class == class and st.n >= 2 and view.time - st.t <= STALL_MEMORY_MS
+                and math.abs(st.x - x) <= 2 and math.abs(st.y - y) <= 2 then
+            return true
+        end
+    end
+    return false
+end
 
 local function start_building(view, memory, req)
     local class = req.class
@@ -672,6 +687,9 @@ local function start_building(view, memory, req)
         if memory.t.personality.claim_range and (class == C.farm or class == C.granary or class == C.settlement) then
             R.claim_expand(view, memory)
         end
+        return false
+    end
+    if fid == nil and stalled_site(view, memory, class, x, y) then
         return false
     end
     local w = M.find_builder(memory, x, y, class)
@@ -724,6 +742,11 @@ end
 -- C++'s: FindSite picks another), the builder sent to the town centre; one builder at a time until none
 local function cancel_stalled(view, memory)
     local bm = M.state(memory)
+    for _, key in ipairs(ai.keys(bm.stalls or {})) do
+        if view.time - bm.stalls[key].t > STALL_MEMORY_MS then
+            bm.stalls[key] = nil
+        end
+    end
     local ids = ai.units{category = "citizen"}
     if #ids == 0 then
         return
@@ -745,6 +768,17 @@ local function cancel_stalled(view, memory)
                 if tx ~= nil then
                     ai.move({ids[k]}, tx, ty)
                 end
+                -- New (not the C++'s): the stalled site remembered; one that stalled twice in ten minutes is not
+                -- used again for that class until then (a ship parked on a navy yard's shore site stalled it 33
+                -- times in one game, AI_RESEARCH 8.73)
+                bm.stalls = bm.stalls or {}
+                local key = string.format("%s@%d,%d", b.type, b.x, b.y)
+                local st = bm.stalls[key]
+                if st == nil or view.time - st.t > STALL_MEMORY_MS then
+                    st = {n = 0, t = view.time, class = b.type, x = b.x, y = b.y}
+                    bm.stalls[key] = st
+                end
+                st.n = st.n + 1
                 print(string.format("classic_lua build.stalled %s at=%d,%d", b.type, b.x, b.y))
             end
         end

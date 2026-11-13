@@ -4121,6 +4121,13 @@ static int LuaTuning(lua_State* L)
 #undef EE_TUNE_INT
 #undef EE_TUNE_K
     EECPUnitsSetInt(L, "epoch_advance_time_scale_k", EECPUnitsMilli(gCPBehaviors[kCPBehaviorEpochAdvanceTimeScale].mFloatValue));
+    // the carrier fighters to keep (CheckNaval from WW2): easy, medium, hard; and in a deathmatch
+    EECPUnitsSetInt(L, "carrier_fighters_easy", gCPBehaviors[kCPBehaviorCarrierFightersToMaintain].mIntValue1);
+    EECPUnitsSetInt(L, "carrier_fighters_medium", gCPBehaviors[kCPBehaviorCarrierFightersToMaintain].mIntValue2);
+    EECPUnitsSetInt(L, "carrier_fighters_hard", (long)gCPBehaviors[kCPBehaviorCarrierFightersToMaintain].mFloatValue);
+    EECPUnitsSetInt(L, "carrier_fighters_dm_easy", gCPBehaviors[kCPBehaviorCarrierFightersToMaintainDM].mIntValue1);
+    EECPUnitsSetInt(L, "carrier_fighters_dm_medium", gCPBehaviors[kCPBehaviorCarrierFightersToMaintainDM].mIntValue2);
+    EECPUnitsSetInt(L, "carrier_fighters_dm_hard", (long)gCPBehaviors[kCPBehaviorCarrierFightersToMaintainDM].mFloatValue);
     EECPUnitsSetInt(L, "population_cap_own_weight_k", EECPUnitsMilli(gCPBehaviors[kCPBehaviorPopulationCapOwnWeight].mFloatValue));
     EECPUnitsSetInt(L, "population_cap_other_weight_k", EECPUnitsMilli(gCPBehaviors[kCPBehaviorPopulationCapOtherWeight].mFloatValue));
     lua_setfield(L, -2, "behavior");
