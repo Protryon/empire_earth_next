@@ -329,3 +329,57 @@ fn firing_position_ring_at_half_the_range_then_the_target() {
     assert_eq!(w.log.iter().find(|l| l.0 == EE_COMBAT_W_FIRING_RING).unwrap().3[0], 0);
     assert_eq!(out, before);
 }
+
+#[test]
+fn seen_by_skips_without_a_map_and_hides_cloaked_enemies() {
+    const COMPLEX: u64 = 0x30;
+    const PLAYER: u64 = 0x100;
+    const OWNER: u64 = 0x200;
+    // no map (or a player without visibility): seen, nothing else asked
+    let mut w = World::default();
+    assert!(is_seen_by(&mut w, TARGET, PLAYER, true));
+    assert_eq!(w.ops(), [EE_COMBAT_W_SEES_MAP]);
+    // no complex unit (a simple unit): its tile
+    w.answers.insert(EE_COMBAT_W_SEES_MAP, 1);
+    w.answers.insert(EE_COMBAT_W_TILE_SEEN, 1);
+    assert!(is_seen_by(&mut w, TARGET, PLAYER, true));
+    // a cloaked enemy: never; a cloaked ally: its tile
+    w.handles.insert((EE_COMBAT_H_COMPLEX, TARGET), COMPLEX);
+    w.handles.insert((EE_COMBAT_H_PLAYER, TARGET), OWNER);
+    w.set(EE_COMBAT_Q_CLOAKABLE, COMPLEX, 1).set(EE_COMBAT_Q_CLOAKED, COMPLEX, 1);
+    w.set(EE_COMBAT_Q_PLAYER_ID, OWNER, 3).set(EE_COMBAT_Q_ENEMY, PLAYER, 1);
+    assert!(!is_seen_by(&mut w, TARGET, PLAYER, true));
+    w.set(EE_COMBAT_Q_ENEMY, PLAYER, 0);
+    w.set(EE_COMBAT_Q_TILE_X, TARGET, 7).set(EE_COMBAT_Q_TILE_Y, TARGET, 9);
+    w.log.clear();
+    assert!(is_seen_by(&mut w, TARGET, PLAYER, false));
+    let seen = w.log.iter().find(|l| l.0 == EE_COMBAT_W_TILE_SEEN).unwrap();
+    assert_eq!((seen.1, seen.3[..4].to_vec()), (PLAYER, vec![7, 9, 0, 1]));
+    w.answers.insert(EE_COMBAT_W_TILE_SEEN, 0);
+    assert!(!is_seen_by(&mut w, TARGET, PLAYER, false));
+}
+
+#[test]
+fn seen_by_walks_a_large_units_footprint_until_a_tile_is_seen() {
+    const COMPLEX: u64 = 0x30;
+    const PLAYER: u64 = 0x100;
+    let mut w = World::default();
+    w.answers.insert(EE_COMBAT_W_SEES_MAP, 1);
+    w.handles.insert((EE_COMBAT_H_COMPLEX, TARGET), COMPLEX);
+    w.set(EE_COMBAT_Q_TILE_SIZE, TARGET, 2);
+    w.answers.insert(EE_COMBAT_W_FOOTPRINT, 4);
+    w.answers.insert(EE_COMBAT_W_TILE_SEEN, 1);
+    assert!(is_seen_by(&mut w, TARGET, PLAYER, true));
+    // the first tile seen ends the walk
+    assert_eq!(
+        w.ops(),
+        [EE_COMBAT_W_SEES_MAP, EE_COMBAT_W_FOOTPRINT, EE_COMBAT_W_FOOTPRINT_TILE, EE_COMBAT_W_TILE_SEEN]
+    );
+    assert_eq!(w.log[3].3[2..4], [1, 0]);
+    // none seen: every tile asked; a gate's footprint too
+    w.log.clear();
+    w.answers.insert(EE_COMBAT_W_TILE_SEEN, 0);
+    w.set(EE_COMBAT_Q_TILE_SIZE, TARGET, 1).set(EE_COMBAT_Q_CATEGORY, TARGET, 0x19);
+    assert!(!is_seen_by(&mut w, TARGET, PLAYER, true));
+    assert_eq!(w.ops().iter().filter(|&&c| c == EE_COMBAT_W_TILE_SEEN).count(), 4);
+}

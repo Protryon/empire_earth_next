@@ -579,6 +579,7 @@ struct EEQueryContext {
     std::vector<EEUnit*> mNear;             // Attacked's units near the attacked unit
     U2DPoint<long> mTile;                   // Attacked's EEIsAttackReachable tile (one for all helpers, as the original)
     GE3DPoint mPoint;                       // FireShot's drop point
+    std::vector<EETileCoordinate> mFootprint;   // EEIsSeenBy's footprint tiles
 };
 
 EEUnit* EEQueryUnit(uint64_t inHandle)
@@ -1083,6 +1084,20 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         a[3] = EEConditionBits(thePoint.GetZ());
         return theFound;
     }
+    case EE_COMBAT_W_SEES_MAP: return ::gWorld.mMap != NULL && ((EEPlayer*)(uintptr_t)inObject)->mSaveVisMap;
+    case EE_COMBAT_W_FOOTPRINT: EEGetFootprintTiles(EEQueryUnit(inObject), theContext->mFootprint); return theContext->mFootprint.size();
+    case EE_COMBAT_W_FOOTPRINT_TILE: {
+        const EETileCoordinate& theTile = theContext->mFootprint[(size_t)a[0]];
+        a[0] = theTile.mX;
+        a[1] = theTile.mY;
+        return 0;
+    }
+    case EE_COMBAT_W_TILE_SEEN: {
+        EEPlayer* thePlayer = (EEPlayer*)(uintptr_t)inObject;
+        EETile* theTile = a[3] ? ::gWorld.mMap->GetTileAtLocation(EETileLocation((long)a[0], (long)a[1]))
+                               : ::gWorld.mMap->GetTile((unsigned long)a[0], (unsigned long)a[1]);
+        return theTile != NULL && (a[2] ? theTile->IsSeenBy(thePlayer) : theTile->GetVisibility(thePlayer->GetPlayerID()) > 1);
+    }
     case EE_COMBAT_W_HIT_CAPTURE:   // TEST ONLY: CBXA
         EECombatCaptureXAction(EE_COMBAT_XA_APPLY_HIT, theObject, EEQueryUnit(inOther), 0);
         return 0;
@@ -1151,6 +1166,13 @@ void EECombatAttackPosition(bool inFiring, EEComplexUnit* inAttacker, EEUnit* in
     float thePoint[3] = {ioLocation.GetX(), ioLocation.GetY(), ioLocation.GetZ()};
     ee_combat_attack_position(inFiring, EEQueryHandleOf(inAttacker), EEQueryHandleOf(inTarget), &theHost, &thePoint);
     ioLocation = GE3DPoint(thePoint[0], thePoint[1], thePoint[2]);
+}
+
+bool EECombatIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored)
+{
+    EEQueryContext theContext = {NULL, NULL, NULL};
+    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp};
+    return ee_combat_is_seen_by(EEQueryHandleOf(inUnit), (uint64_t)(uintptr_t)inPlayer, inExplored, &theHost);
 }
 
 bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget)

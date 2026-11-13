@@ -3823,49 +3823,7 @@ bool EEIsFootprintVisibleTo(EEUnit* inUnit, EEPlayer* inPlayer)
 // unit's footprint)
 bool EEIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored)
 {
-    std::vector<EETileCoordinate> theTiles;
-    EEMap* theMap = ::gWorld.mMap;
-    bool theResult = true;
-    if (theMap != NULL && inPlayer->mSaveVisMap) {
-        if (inUnit != NULL) {
-            EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
-            if (theComplexUnit == NULL || theComplexUnit->mIsCloakable && theComplexUnit->mIsCloaked && inUnit->mPlayer != inPlayer
-                && inPlayer->mEnemies[inUnit->mPlayer->GetPlayerID()] != 0)
-                theResult = theComplexUnit == NULL;
-        }
-        if (theResult) {
-            theResult = false;
-            if (inUnit->mUnitClass->mTileSize > 1 || inUnit->mUnitClass->mCategory == kUnitCategoryGate) {
-                EEGetFootprintTiles(inUnit, theTiles);
-                if (inExplored) {
-                    unsigned long theCount = theTiles.size();
-                    for (unsigned long i = 0; i < theCount; i++) {
-                        if (theResult)
-                            break;
-                        EETileCoordinate& thePoint = theTiles[i];
-                        EETile* theTile = theMap->GetTile(thePoint.mX, thePoint.mY);
-                        theResult = theTile != NULL && theTile->IsSeenBy(inPlayer);
-                    }
-                } else {
-                    unsigned long theCount = theTiles.size();
-                    for (unsigned long i = 0; i < theCount; i++) {
-                        if (theResult)
-                            break;
-                        EETileCoordinate& thePoint = theTiles[i];
-                        EETile* theTile = theMap->GetTile(thePoint.mX, thePoint.mY);
-                        theResult = theTile != NULL && theTile->GetVisibility(inPlayer->GetPlayerID()) > 1;
-                    }
-                }
-            } else {
-                EETile* theTile = theMap->GetTileAtLocation(EETileLocation(inUnit->GetTileX(), inUnit->GetTileY()));
-                if (inExplored == true)
-                    theResult = theTile != NULL && theTile->IsSeenBy(inPlayer);
-                else
-                    theResult = theTile != NULL && theTile->GetVisibility(inPlayer->GetPlayerID()) > 1;
-            }
-        }
-    }
-    return theResult;
+    return EECombatIsSeenBy(inUnit, inPlayer, inExplored);   // ee_combat leaves.rs is_seen_by
 }
 
 // FUNCTION: EXE 0x647bd8

@@ -474,6 +474,11 @@ constexpr static const int32_t EE_COMBAT_Q_WAYPOINTS = 84;
 /// a complex unit's `GetMaxVelocity()` (float bits).
 constexpr static const int32_t EE_COMBAT_Q_MAX_VELOCITY = 85;
 
+/// a complex unit's `mIsCloakable`, `mIsCloaked` (the unit store's).
+constexpr static const int32_t EE_COMBAT_Q_CLOAKABLE = 86;
+
+constexpr static const int32_t EE_COMBAT_Q_CLOAKED = 87;
+
 /// a formula's capture record (TEST ONLY): `a[0]` the tag, `a[1]`/`a[2]` the input's address and size, `a[3]`/`a[4]`
 /// the output's.
 constexpr static const int32_t EE_COMBAT_W_CAPTURE = 60;
@@ -493,6 +498,20 @@ constexpr static const int32_t EE_COMBAT_W_NEW_TARGET_NEAR_OLD = 64;
 /// `EEGetFiringPosition`'s ring: the sorted ring tiles at `a[0]` and `a[0] + 1` around `other` from `object`'s
 /// position, nearest to `object` first, and `EEPickTileNear` of them (the point's bits in and out in `a[1..4]`).
 constexpr static const int32_t EE_COMBAT_W_FIRING_RING = 65;
+
+/// `EEGetFootprintTiles(object, tiles)` into the host's list: its size.
+constexpr static const int32_t EE_COMBAT_W_FOOTPRINT = 66;
+
+/// of the player `object`: `gWorld.mMap != NULL && mSaveVisMap` (the seen test's start; an operation: a player is no
+/// unit the store's reads may take).
+constexpr static const int32_t EE_COMBAT_W_SEES_MAP = 69;
+
+/// the host's footprint tile `a[0]`: x, y out in `a[0]`, `a[1]`.
+constexpr static const int32_t EE_COMBAT_W_FOOTPRINT_TILE = 67;
+
+/// whether the player `object` sees tile (`a[0]`, `a[1]`) (`GetTileAtLocation` when `a[3]`, else `GetTile`): a NULL
+/// tile never; `IsSeenBy(player)` when `a[2]` (explored), else `GetVisibility(id) > 1`.
+constexpr static const int32_t EE_COMBAT_W_TILE_SEEN = 68;
 
 /// `GetTileX()`, `GetTileY()`.
 constexpr static const int32_t EE_COMBAT_Q_TILE_X = 1;
@@ -2499,6 +2518,15 @@ void ee_combat_attack_position(int32_t firing,
                                uint64_t target,
                                const EeCombatWorldHost *host,
                                float (*point)[3]);
+
+/// `EEIsSeenBy(unit, player, explored)` over `host`.
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context.
+bool ee_combat_is_seen_by(uint64_t unit,
+                          uint64_t player,
+                          int32_t explored,
+                          const EeCombatWorldHost *host);
 
 /// `EEUUGetIsUnitClassTargetable` (`can_target` 0) or `EECanTargetClass` (1) of the record.
 ///

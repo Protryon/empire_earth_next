@@ -684,6 +684,8 @@ fn stored_field(r: &EeCombatStoredUnit, code: i32) -> Option<u32> {
         damage::EE_COMBAT_Q_HERD => u32::from(r.herd),
         damage::EE_COMBAT_Q_CLOAK_TIMER => r.cloak_timer as u32,
         crate::leaves::EE_COMBAT_Q_CRUSADER => u32::from(r.crusader),
+        crate::leaves::EE_COMBAT_Q_CLOAKABLE => u32::from(r.cloakable),
+        crate::leaves::EE_COMBAT_Q_CLOAKED => u32::from(r.cloaked),
         _ => return None,
     })
 }

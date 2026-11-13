@@ -1,5 +1,5 @@
 //! The unit utilities' combat leaves (R5b.2, thirteenth round): `EEIsInRangeToHit`, `EEIsInContactRange`,
-//! `EEIsAttackedBy`, `EEGetLeadPosition`, `EEGetFiringPosition` over the world host ([`WorldHost`]: the reads, store-backed through
+//! `EEIsAttackedBy`, `EEGetLeadPosition`, `EEGetFiringPosition`, `EEIsSeenBy` over the world host ([`WorldHost`]: the reads, store-backed through
 //! [`Stored`], and the operations), and `EEUUGetIsUnitClassTargetable` with `EECanTargetClass` over a plain record of
 //! the class's fields (their C++ callers hand classes, not units).
 //!
@@ -9,9 +9,10 @@
 
 use crate::damage_table::ee_combat_damage_factor;
 use crate::reads::{
-    EE_COMBAT_CLASS_MELEE, EE_COMBAT_CLASS_WALL, EE_COMBAT_H_COMPLEX, EE_COMBAT_H_GOAL_TARGET, EE_COMBAT_Q_ATTACK_GOAL,
-    EE_COMBAT_Q_BALLISTIC_HIT, EE_COMBAT_Q_CLASS_FLAGS, EE_COMBAT_Q_FIRE_OVER_WALLS, EE_COMBAT_Q_HEAL_RANGE,
-    EE_COMBAT_Q_HIT_DISTANCE_SQUARED, EE_COMBAT_Q_NONE, EE_COMBAT_Q_PROJECTILE_CATEGORY, EE_COMBAT_Q_RANGE,
+    EE_COMBAT_CLASS_MELEE, EE_COMBAT_CLASS_WALL, EE_COMBAT_H_COMPLEX, EE_COMBAT_H_GOAL_TARGET, EE_COMBAT_H_PLAYER,
+    EE_COMBAT_Q_ATTACK_GOAL, EE_COMBAT_Q_BALLISTIC_HIT, EE_COMBAT_Q_CATEGORY, EE_COMBAT_Q_CLASS_FLAGS,
+    EE_COMBAT_Q_ENEMY, EE_COMBAT_Q_FIRE_OVER_WALLS, EE_COMBAT_Q_HEAL_RANGE, EE_COMBAT_Q_HIT_DISTANCE_SQUARED,
+    EE_COMBAT_Q_NONE, EE_COMBAT_Q_PLAYER_ID, EE_COMBAT_Q_PROJECTILE_CATEGORY, EE_COMBAT_Q_RANGE,
     EE_COMBAT_Q_SPECIAL_ATTACK, EE_COMBAT_Q_TILE_X, EE_COMBAT_Q_TILE_Y, EE_COMBAT_Q_UNIT_TYPE,
 };
 use crate::walks::EeCombatHandle;
@@ -37,6 +38,9 @@ pub const EE_COMBAT_Q_TOWER: i32 = 83;
 pub const EE_COMBAT_Q_WAYPOINTS: i32 = 84;
 /// a complex unit's `GetMaxVelocity()` (float bits).
 pub const EE_COMBAT_Q_MAX_VELOCITY: i32 = 85;
+/// a complex unit's `mIsCloakable`, `mIsCloaked` (the unit store's).
+pub const EE_COMBAT_Q_CLOAKABLE: i32 = 86;
+pub const EE_COMBAT_Q_CLOAKED: i32 = 87;
 
 // ---- the operations (world.rs's numbering goes on from damage.rs's 53)
 
@@ -54,6 +58,16 @@ pub const EE_COMBAT_W_NEW_TARGET_NEAR_OLD: i32 = 64;
 /// `EEGetFiringPosition`'s ring: the sorted ring tiles at `a[0]` and `a[0] + 1` around `other` from `object`'s
 /// position, nearest to `object` first, and `EEPickTileNear` of them (the point's bits in and out in `a[1..4]`).
 pub const EE_COMBAT_W_FIRING_RING: i32 = 65;
+/// `EEGetFootprintTiles(object, tiles)` into the host's list: its size.
+pub const EE_COMBAT_W_FOOTPRINT: i32 = 66;
+/// of the player `object`: `gWorld.mMap != NULL && mSaveVisMap` (the seen test's start; an operation: a player is no
+/// unit the store's reads may take).
+pub const EE_COMBAT_W_SEES_MAP: i32 = 69;
+/// the host's footprint tile `a[0]`: x, y out in `a[0]`, `a[1]`.
+pub const EE_COMBAT_W_FOOTPRINT_TILE: i32 = 67;
+/// whether the player `object` sees tile (`a[0]`, `a[1]`) (`GetTileAtLocation` when `a[3]`, else `GetTile`): a NULL
+/// tile never; `IsSeenBy(player)` when `a[2]` (explored), else `GetVisibility(id) > 1`.
+pub const EE_COMBAT_W_TILE_SEEN: i32 = 68;
 
 /// The tags of the captures made here.
 const TAG_RANGE: u32 = u32::from_le_bytes(*b"CBRH");
@@ -64,6 +78,7 @@ const CATEGORY_PROJECTILE: i32 = 9;
 const CATEGORY_BOMB: i32 = 0xb;
 const CATEGORY_MISSILE: i32 = 0xc;
 const CATEGORY_TORPEDO: i32 = 0x14;
+const CATEGORY_GATE: u32 = 0x19;
 const TYPE_ROMAN_LEGIONNAIRE: u32 = 0x2dc;
 const TYPE_BALLOON_OBSERVATION: u32 = 0x5a;
 const TYPE_HURRICANE: u32 = 0xb6;
@@ -318,6 +333,81 @@ pub unsafe extern "C" fn ee_combat_attack_position(
         lead_position(h, attacker, target, &mut out);
     }
     *p = [out.x, out.y, out.z];
+}
+
+fn tile_seen<H: WorldHost>(
+    h: &mut H,
+    player: EeCombatHandle,
+    x: i64,
+    y: i64,
+    explored: bool,
+    at_location: bool,
+) -> bool {
+    let mut a = [0i64; 12];
+    a[0] = x;
+    a[1] = y;
+    a[2] = i64::from(explored);
+    a[3] = i64::from(at_location);
+    h.op(EE_COMBAT_W_TILE_SEEN, player, 0, &mut a) != 0
+}
+
+/// `EEIsSeenBy(unit, player, explored)`: true without a map or for a player that keeps no visibility; never a cloaked
+/// enemy; else any tile of a large unit's or a gate's footprint, or the unit's
+/// tile, seen (`explored`: explored is enough) by the player.
+pub fn is_seen_by<H: WorldHost>(h: &mut H, unit: EeCombatHandle, player: EeCombatHandle, explored: bool) -> bool {
+    let mut result = true;
+    if h.op(EE_COMBAT_W_SEES_MAP, player, 0, &mut [0; 12]) == 0 {
+        return result;
+    }
+    if unit != 0 {
+        let complex = h.handle(EE_COMBAT_H_COMPLEX, unit, 0);
+        if complex == 0
+            || (flag(h, EE_COMBAT_Q_CLOAKABLE, complex) && flag(h, EE_COMBAT_Q_CLOAKED, complex) && {
+                let owner = h.handle(EE_COMBAT_H_PLAYER, unit, 0);
+                owner != player && {
+                    let id = h.read(EE_COMBAT_Q_PLAYER_ID, owner, 0);
+                    h.read(EE_COMBAT_Q_ENEMY, player, id as i32) != 0
+                }
+            })
+        {
+            result = complex == 0;
+        }
+    }
+    if !result {
+        return result;
+    }
+    if h.read(EE_COMBAT_Q_TILE_SIZE, unit, 0) as i32 > 1 || h.read(EE_COMBAT_Q_CATEGORY, unit, 0) == CATEGORY_GATE {
+        let count = h.op(EE_COMBAT_W_FOOTPRINT, unit, 0, &mut [0; 12]);
+        let mut found = false;
+        for i in 0..count {
+            if found {
+                break;
+            }
+            let mut a = [0i64; 12];
+            a[0] = i as i64;
+            h.op(EE_COMBAT_W_FOOTPRINT_TILE, unit, 0, &mut a);
+            found = tile_seen(h, player, a[0], a[1], explored, false);
+        }
+        return found;
+    }
+    let (x, y) = (h.read(EE_COMBAT_Q_TILE_X, unit, 0) as i32, h.read(EE_COMBAT_Q_TILE_Y, unit, 0) as i32);
+    tile_seen(h, player, i64::from(x), i64::from(y), explored, true)
+}
+
+/// `EEIsSeenBy(unit, player, explored)` over `host`.
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_is_seen_by(
+    unit: u64,
+    player: u64,
+    explored: i32,
+    host: *const crate::world::EeCombatWorldHost,
+) -> bool {
+    let mut world = unsafe { *host };
+    let h = &mut crate::reads::Stored::new(&mut world);
+    is_seen_by(h, unit, player, explored != 0)
 }
 
 /// A class's fields the targetable tests read (`EEUUGetIsUnitClassTargetable`, `EECanTargetClass`), filled by the
