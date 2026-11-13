@@ -13114,3 +13114,60 @@ The round's C++: net -449 (the +280 of the first commit is mostly the class decl
   `EEGatherHasRoom` and `EEGatherAccessible` (thin over C++ tile and continent queries: under -20 net each). The
   queue container (`EEUnitVectorItem`) keeps its deque; moving its storage to the Rust mirror would put an FFI call
   under every read of a queue (`mGoals.size()` is read many times a tick).
+
+## R5b.4, twenty-third round: EE-SIM's exit 2 and the one-message capture flake, both traced to start-up races (branch rust-r5b4-core23, 2026-11-13)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 9430091c | EE-SIM waits for the lobby's combos to be filled before it selects (test only) | +16 -4 |
+| 7aac1bae | the unit hack's box filled without its change event: no `EEMLoadUnitData` racing the game's start | +19 -3 |
+
+No unit or player C++ moved this round: the brief said to stop at a real nondeterminism fix.
+
+- **EE-SIM's exit 2 is `Fail`, and these runs failed in the lobby.** `Quit(2)` comes only from `Fail` (EESim.cpp:
+  the report's `"outcome": "error"` and a `FAILED:` line on stdout, which `sim_oracle.py` keeps in `log-<seed>.txt`;
+  a fault exits with its exception code instead). The UI lane's oracle seed 6 (162-byte trace) failed with `slot 0
+  human: index #0 outside the combo's 0 lines`. The lobby's slot combos exist before their lines do: ee_screens
+  `lobby_form.rs` `fill_player_types` clears and fills a slot's box when the local server's lobby update changes its
+  menu. `SetUpLobby` waited only for the controls and then slept 1.5 s, so under load a selection could resolve over
+  an empty box. The space capture's failed rerun (exit 2, a 66 KB capture) and the triggers lane's scenario seed 6
+  (exit 2, 66 KB) stopped at the same point, before the game. `tools/sim_bench.py` already retried this error, but
+  EE-SIM itself was never fixed. Now `SetUpLobby` waits until every slot box and the size, map and difficulty boxes
+  have lines, and `Select` waits for an empty box's lines. `ScenarioFromLobby` waits until the game type box has a
+  third line (index 2) and the difficulty box has lines. These are test-only waits: nothing in the game changed.
+- **The extra executed message was the unit hack's `EEMLoadUnitData`.** Opening the main game form calls
+  `EEUIFMGUnitHack::FillComboBox`, and its `SetCurrentSelection(0)` fired the box's change event (`EEUIELoadUnit`).
+  That sent `EEMLoadUnitData` from the UI thread while the game was starting. A temporary print in
+  `NESynchronousServer::ProcessLocalUserInput` showed it arriving in communications tick 26, one tick before
+  `NEMStartGame` (27). `EEClient::HandleMessage` runs a CT's inputs as lobby input while its PT count is 0xff, and
+  queues them for the physics once the CT has physics ticks. So an input that arrives one CT late runs in
+  `EEPhysics::DrainInput` as a game input. That adds one NMEX, NMIM, NMDC (kind 3) and USCK record and one count
+  to `mInputMessagesProcessed`, with no other digest changed. Every earlier sighting matches: the space seed 2
+  capture (NMEX 9 to 10) and calamity seed 3 (3 to 4). The count also feeds the out-of-synch checksum and the AI
+  trace's `sim hash ... inputs=` line, so the same race could make an oracle seed differ. The message's only effect
+  is the sender's `mHackUnitClass` and that class's media, preloaded for every player.
+  `EEMHackANewUnit` reads `mHackUnitClass` only when it carries no class, and the hack's own `PlaceUnit` always sends
+  the listed class. `FillComboBox` now detaches the change event while it selects line 0 (with a reference held)
+  and restores it afterwards. Changing the box later still sends the message.
+- **What the reproduction ruled out.** I could not reproduce the extra message on demand. Four parallel space seed 2
+  captures and four instrumented ones all gave the same 9 NMEX (6 `EEMReplantFarms` from the physics thread, 3
+  `EEMCivTimerExpired`). Eight parallel calamity seed 3 games executed the same 3 messages at the same game ms.
+  After the start, every `ProcessLocalUserInput` came from the physics thread. The wall-clock and keyboard senders
+  cannot fire for EE-SIM's idle human: `ReportStatistics` (sent only when series 0x14/0x15 change, which only a
+  human's clicks and hot keys do) and `CheckShiftMode` (needs `mShiftMode`). The number of CTs before the start
+  varies by run (offsets of 1-6), but the simulation does not use it: `ApplyUpgradeLevel` and `SaveGame` read it
+  into unused locals, and the autosave's `EEMLoadOrSaveGame` payload is the only place it reaches a message. The
+  physics, AI and loading threads gave identical executed lists in all twelve games.
+- **Tour only:** `FillComboBox` runs when the main game form opens. The tours open that form; EE-SIM opens it
+  without drawing it. The hack class's media is no longer preloaded at the start.
+- **Behaviour:** single-player and LAN games no longer send `EEMLoadUnitData` at the start. Nothing reaches the
+  simulation: oracle seeds 2-7 are identical to `ref`, and the captures match their goldens.
+- **Gates** (on the result, which already contained rust 57ae2ad1: the merge was a no-op): build `--sim` 0/0;
+  oracle seeds 2-7 identical to the main checkout's `ref`; the Rust gate PASS; captures at seeds 2-3: oracle (169
+  digests), late (170), space (171, NMEX 9 on seed 2), calamity (183) and scenario (16) PASS; the test profile 0/0. Before the fix, an instrumented build ran oracle seeds
+  2-3 identical with no `0x71` sent. The saveload matrix was not run (nothing in Save, Load or RepairPointers
+  changed).
+- **For the next round:** the moves the brief named are still open (the unit classes' bodies through the unit store,
+  or the player's per-tick code). The largest are `EEUnitClass`'s constructor (477 lines), `FindPath`/`AdjustPath`
+  (259 and 162), `Animate` (192), `EEComplexUnit`'s `ResetEEComplexUnit`/`CopyFrom`/`UpdateHidden` (about 150
+  each), and `EEPlayer::Load`/`Save` (722 and 206). `EEPlayer::UpdatePlayer` (76 lines) is small.
