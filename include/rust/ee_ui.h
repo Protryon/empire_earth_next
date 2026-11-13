@@ -285,6 +285,22 @@ enum class EeUiOp : uint32_t {
   RadioOf = 118,
   /// *Pure*: the form's `GetControlCount()`.
   ControlCount = 119,
+  /// `new TMPoll(a, 0, false)` -> the poll.
+  PollCreate = 130,
+  /// `delete` poll `a`.
+  PollDelete = 131,
+  /// *Pure*: poll `a`'s `GetIsRunning()`.
+  PollRunning = 132,
+  /// Poll `a`'s `Poll()` -> its result (nonzero: the time ran out).
+  PollPoll = 133,
+  /// Poll `a`'s `Start()`.
+  PollStart = 134,
+  /// Poll `a`'s `Stop()`.
+  PollStop = 135,
+  /// Poll `a`'s `GetTimeLeft()` (the clock's: traced, not pure).
+  PollTimeLeft = 136,
+  /// Poll `a`'s `SetTimeDelay(b)`.
+  PollSetDelay = 137,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -457,6 +473,12 @@ enum class EeUiButtonCall : uint32_t {
   TriCycle = 89,
   /// `ButtonUp()`: the cycle, then `UIButton::ButtonUp()`.
   TriButtonUp = 90,
+  /// The constructor's part after `UIButton`'s: the slider `a`, the direction `b` (nonzero: down), the polls made.
+  ScrollInit = 95,
+  /// `ButtonDown()`: the slider stepped on the press, after the delay and at every repeat, then `UIButton`'s.
+  ScrollButtonDown = 96,
+  /// `ButtonUp()`: the polls stopped, then `UIButton::ButtonUp()`.
+  ScrollButtonUp = 97,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -735,16 +757,6 @@ struct EeUiBackgroundTableRefs {
   EeUiLayout *layout;
   EeUiRect *texture_rect;
   EeUiColor *color;
-};
-
-/// One button subclass as Rust sees it: the C++ object (as a `UIButton*`), its Rust button, the subclass's record
-/// (`CheckFields`, `RadioFields`, the scroll button's `mDecrement`) and `ctx`, the C++ forwarder's own context for a
-/// host call (a `SetText`'s text and font; NULL otherwise).
-struct EeUiButtonRefs {
-  void *button;
-  const EeUiButton *obj;
-  void *sub;
-  void *ctx;
 };
 
 /// `UIBlinkingButton`'s members in their C++ order (from `mBlinkPhase` on).
@@ -1259,6 +1271,11 @@ ptrdiff_t ee_ui_button_call(const EeUiButton *button,
                             ptrdiff_t b,
                             float *f);
 
+/// The check box's and radio button's bitmap rectangle (their constructors' `UIButton` argument; the tri-state box's
+/// without scaling: [`button::box_rect`]).
+EeUiRect ee_ui_button_box_rect(EeUiRect rect,
+                               bool scale_bitmap);
+
 /// The constructor's geometry ([`scrollbar::layout`]): the C++ needs the rectangle for `UIControl`'s constructor,
 /// before this object is made.
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at,
@@ -1414,12 +1431,6 @@ long ee_ui_event_initialize(unsigned long *count, void *event);
 
 /// `UIEvent::Uninitialize`.
 long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// `UIScrollButton::ButtonDown` (`sub`: `mDecrement`).
-void ee_ui_scroll_button_button_down(const EeUiButtonRefs *refs);
-
-/// The check box's and radio button's bitmap rectangle ([`button::box_rect`]).
-EeUiRect ee_ui_button_box_rect(EeUiRect rect, bool scale_bitmap);
 
 /// `UIBlinkingButton`'s constructor: the record after `UIButton`'s (written whole).
 void ee_ui_blink_init(EeUiBlinkFields *fields, unsigned long rate, bool always_dirty);

@@ -42,6 +42,7 @@ pub mod sliderobj;
 pub mod status;
 pub mod statusobj;
 pub mod text;
+pub mod variantobj;
 pub mod wrap;
 
 // imports the C++ backgrounds' draws and moves (UI*Background.cpp, UIForm.cpp), absent from a test binary
@@ -51,10 +52,6 @@ mod background_ffi;
 // absent from a test binary
 #[cfg(not(test))]
 mod background_table_ffi;
-// imports the C++ button subclasses' host calls (UICheckBox.cpp, UIRadioButton.cpp, UIScrollButton.cpp), absent from a
-// test binary
-#[cfg(not(test))]
-mod button_ffi;
 // the blinking and scalable buttons' pure exports (UIBlinkingButton.cpp, UIScalableButton.cpp)
 #[cfg(not(test))]
 mod button_variants_ffi;

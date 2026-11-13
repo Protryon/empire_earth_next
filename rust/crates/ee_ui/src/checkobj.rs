@@ -74,7 +74,7 @@ impl EeUiButton {
             Sub::Check(c) => c.text_label,
             Sub::Radio(r) => r.text_label,
             Sub::TriState(t) => t.text_label,
-            Sub::Plain => core::ptr::null_mut(),
+            _ => core::ptr::null_mut(),
         }
     }
 
@@ -83,7 +83,7 @@ impl EeUiButton {
             Sub::Check(c) => c.text_label = label,
             Sub::Radio(r) => r.text_label = label,
             Sub::TriState(t) => t.text_label = label,
-            Sub::Plain => {}
+            _ => {}
         }
     }
 
@@ -407,10 +407,17 @@ impl EeUiButton {
                 variants::tri_state_cycle(&mut Tri(Btn::new(self)));
                 button::button_up(&mut h);
             }
-            _ => {}
+            _ => return self.call_variant(call, a, b, buf),
         }
         0
     }
+}
+
+/// The check box's and radio button's bitmap rectangle (their constructors' `UIButton` argument; the tri-state box's
+/// without scaling: [`button::box_rect`]).
+#[no_mangle]
+pub extern "C" fn ee_ui_button_box_rect(rect: UiRect, scale_bitmap: bool) -> UiRect {
+    button::box_rect(&rect, scale_bitmap)
 }
 
 impl LabelHost for Btn<'_> {

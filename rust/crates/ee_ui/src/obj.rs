@@ -211,6 +211,24 @@ pub enum EeUiOp {
     RadioOf = 118,
     /// *Pure*: the form's `GetControlCount()`.
     ControlCount = 119,
+
+    // ---- the polls a button holds by address (the scroll arrow's delay and repeat, the blinking button's phase)
+    /// `new TMPoll(a, 0, false)` -> the poll.
+    PollCreate = 130,
+    /// `delete` poll `a`.
+    PollDelete = 131,
+    /// *Pure*: poll `a`'s `GetIsRunning()`.
+    PollRunning = 132,
+    /// Poll `a`'s `Poll()` -> its result (nonzero: the time ran out).
+    PollPoll = 133,
+    /// Poll `a`'s `Start()`.
+    PollStart = 134,
+    /// Poll `a`'s `Stop()`.
+    PollStop = 135,
+    /// Poll `a`'s `GetTimeLeft()` (the clock's: traced, not pure).
+    PollTimeLeft = 136,
+    /// Poll `a`'s `SetTimeDelay(b)`.
+    PollSetDelay = 137,
 }
 
 impl EeUiOp {
@@ -237,6 +255,7 @@ impl EeUiOp {
                 | CopiedDrawRect
                 | RadioOf
                 | ControlCount
+                | PollRunning
                 | PartRect
                 | SliderStyle
                 | SliderValue

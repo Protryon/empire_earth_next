@@ -11,8 +11,8 @@
 //! and calls back in, a trigger event may read the button.
 //!
 //! The state machine is round 3's (`button.rs`, pinned by its goldens); this object is its [`ButtonHost`]. A
-//! subclass's record is the object's [`Sub`] (R6 ui round 12: the check box, `checkobj.rs`); the subclasses still
-//! holding C++ records reach this object for `UIButton`'s part through [`Btn`] (`button_ffi.rs`).
+//! subclass's record is the object's [`Sub`] (R6 ui round 12: the check box, radio button and tri-state box in
+//! `checkobj.rs`, the scroll arrow, blinking and scalable buttons in `variantobj.rs`).
 
 use core::cell::RefCell;
 use core::ffi::{c_long, c_ulong, c_void};
@@ -201,6 +201,14 @@ pub enum EeUiButtonCall {
     TriCycle = 89,
     /// `ButtonUp()`: the cycle, then `UIButton::ButtonUp()`.
     TriButtonUp = 90,
+
+    // ---- UIScrollButton (variantobj.rs)
+    /// The constructor's part after `UIButton`'s: the slider `a`, the direction `b` (nonzero: down), the polls made.
+    ScrollInit = 95,
+    /// `ButtonDown()`: the slider stepped on the press, after the delay and at every repeat, then `UIButton`'s.
+    ScrollButtonDown = 96,
+    /// `ButtonUp()`: the polls stopped, then `UIButton::ButtonUp()`.
+    ScrollButtonUp = 97,
 }
 
 /// A subclass's own record (its constructor's init call sets it): what were the C++ subclass's members.
@@ -214,6 +222,8 @@ pub(crate) enum Sub {
     Radio(button::RadioFields),
     /// `UITriStateCheckBox` (`checkobj.rs`).
     TriState(crate::button_variants::TriStateFields),
+    /// `UIScrollButton` (`variantobj.rs`).
+    Scroll(crate::variantobj::ScrollFields),
 }
 
 /// The Rust UIButton.
@@ -223,14 +233,10 @@ pub struct EeUiButton {
     pub(crate) sub: RefCell<Sub>,
 }
 
-/// The button as round 3's state machine sees it: the record copied in and out around every op, a `SetText`'s text
-/// and font (the label's, `checkobj.rs`) and (for a subclass still holding a C++ record, `button_ffi.rs`) that
-/// record.
+/// The button as round 3's state machine sees it: the record copied in and out around every op, and a `SetText`'s
+/// text and font (the label's, `checkobj.rs`).
 pub(crate) struct Btn<'a> {
     pub(crate) o: &'a EeUiButton,
-    // read by the subclasses' host calls (button_ffi.rs), absent from a test binary
-    #[cfg_attr(test, allow(dead_code))]
-    pub(crate) sub: *mut c_void,
     /// A `SetText`'s `const UWideString*` and font (the label's create and text ops).
     pub(crate) text: isize,
     pub(crate) font: isize,
@@ -238,7 +244,7 @@ pub(crate) struct Btn<'a> {
 
 impl<'a> Btn<'a> {
     pub(crate) fn new(o: &'a EeUiButton) -> Self {
-        Btn { o, sub: core::ptr::null_mut(), text: 0, font: 0 }
+        Btn { o, text: 0, font: 0 }
     }
     fn op(&self, op: Op, a: isize) -> isize {
         self.o.host.op(op, a, 0, 0, 0)
@@ -408,6 +414,7 @@ impl EeUiButton {
     /// the four bitmaps' references and the two sounds released.
     pub fn release(&self) {
         self.release_sub();
+        self.release_variant();
         let f = self.fields();
         if !f.text.is_null() {
             self.op(Op::TextDelete, f.text as isize, 0);

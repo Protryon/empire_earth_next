@@ -7,8 +7,9 @@
 //
 // UIButton is whole in Rust (rust/crates/ee_ui/src/buttonobj.rs, R6 ui round 11): the members below forward to the
 // Rust object, which calls out through UIButtonHost::Op (UIControl's members, the virtuals ButtonDown, ButtonUp,
-// MouseOver, MouseMove, SetDirty and the captures, the bitmaps, the texts, the sound manager). The check box's, radio
-// button's and scroll arrow's algorithms reach it through UIButtonRust.h.
+// MouseOver, MouseMove, SetDirty and the captures, the bitmaps, the texts, the sound manager). Its subclasses' records
+// are the Rust button's too (R6 ui round 12: checkobj.rs, variantobj.rs); the host answers their ops (the label, the
+// radio walk and Check/UnCheck, the polls, the slider) and the subclasses forward through UIButtonRust.h.
 #include <windows.h>
 #include <stddef.h>
 
@@ -35,6 +36,8 @@
 #include "lle/UIButton.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIRadioButton.h"
+#include "lle/TMPoll.h"
+#include "lle/UISlider.h"
 #include "UIButtonRust.h"
 #include "UIObjHost.h"
 
@@ -63,6 +66,16 @@ struct UIButtonHost {
             UIControl* c = s->GetForm()->GetControl((unsigned long)a);
             return c && c->GetType() == kControlTypeRadioButton ? (intptr_t) static_cast<UIButton*>(c)->mRust : 0;
         }
+        case EeUiOp::PollCreate: return (intptr_t) new TMPoll((unsigned long)a, 0, false);
+        case EeUiOp::PollDelete: delete reinterpret_cast<TMPoll*>(a); break;
+        case EeUiOp::PollRunning: return reinterpret_cast<TMPoll*>(a)->GetIsRunning();
+        case EeUiOp::PollPoll: return (intptr_t)reinterpret_cast<TMPoll*>(a)->Poll();
+        case EeUiOp::PollStart: reinterpret_cast<TMPoll*>(a)->Start(); break;
+        case EeUiOp::PollStop: reinterpret_cast<TMPoll*>(a)->Stop(); break;
+        case EeUiOp::PollTimeLeft: return (intptr_t)reinterpret_cast<TMPoll*>(a)->GetTimeLeft();
+        case EeUiOp::PollSetDelay: reinterpret_cast<TMPoll*>(a)->SetTimeDelay((unsigned long)b); break;
+        case EeUiOp::SliderValue: return reinterpret_cast<UISlider*>(a)->GetCurrentRangeValue();
+        case EeUiOp::SliderSetValue: reinterpret_cast<UISlider*>(a)->SetCurrentRangeValue((long)b); break;
         case EeUiOp::LabelSetText:
             reinterpret_cast<UITextLabel*>(a)->SetText(*reinterpret_cast<const UWideString*>(b));   // SetText(text, true)
             break;
