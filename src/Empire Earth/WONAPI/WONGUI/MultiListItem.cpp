@@ -100,7 +100,7 @@ void MultiListItem::Paint(Graphics& inGraphics,ListArea* inList)
     r.total_width=anArea->mTotalColumnWidth;
     r.height=this->mHeight;
     r.align=anItem!=NULL ? anArea->mColumnInfoVector[aColumn].mHAlign : 0;
-    r.paint_width=anArea->mPaintWidth;
+    r.paint_width=anArea->GetPaintWidth();
     r.cell_width=anItem!=NULL ? anItem->mWidth : 0;
     WONDrawOps anOps([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_multi_row(&r,o,n); });
     WONDrawRun(inGraphics,anOps,WONDrawSlots(),[&](const EeWonDrawOp& o) {

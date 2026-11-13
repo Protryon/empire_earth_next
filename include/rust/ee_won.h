@@ -2135,6 +2135,87 @@ enum class EeWonGuiOp : uint32_t {
   EventButton,
   /// `Container::HandleComponentEvent(a)`.
   BaseHandleEvent,
+  /// `AdjustPosition(a != 0)` (virtual: a subclass's override).
+  VirtAdjustPosition = 190,
+  /// `Sort()` (virtual; 0 or 1).
+  VirtSort,
+  /// `NotifyMouseItemGone()` (virtual).
+  VirtNotifyMouseItemGone,
+  /// `ListSelChangedHook()` (virtual).
+  VirtListSelChangedHook,
+  /// `SetVertOffset(a)`.
+  SetVertOffset,
+  /// `OnBottom()` (0 or 1).
+  OnBottom,
+  /// `if (mFocusChild != NULL) { mFocusChild->LostFocus(); mFocusChild = NULL; }`.
+  FocusChildLost,
+  /// `GetRoot()->GetKeyMod()`.
+  RootKeyMod,
+  /// `SetCursor(GetDefaultCursor())`.
+  SetCursorDefault,
+  /// `GetViewport()`.
+  GetViewport,
+  /// the root's mouse point outside the list (`SetListFlags`: a window, a parent, and not `Contains`; 0 or 1).
+  PointerOutside,
+  /// `DeliverEvent(new ListItemClickedEvent(this, a, button, CheckDoubleClick(button), up, x, y), false)` with
+  /// the `EeWonItemClick` at `b`.
+  DeliverItemClicked,
+  /// the item tool tip made when there is none, then `DoTip(a)`.
+  TipShow,
+  /// `if (mItemToolTip != NULL) mItemToolTip->DoTip(NULL)`.
+  TipHide,
+  /// `if (mItemToolTip != NULL) mItemToolTip->EndTip()`.
+  TipEnd,
+  /// `std::sort` of the `b` items at `a` with `LineSortPred(this, GetSortFunc(), c)`.
+  SortItems,
+  /// `std::lower_bound` of the item `c` in the `b` sorted items at `a` with `LineSortPred(this, GetSortFunc(), d)`.
+  LowerBound,
+  /// `LineSortPred(this, GetSortFunc(), c)(a, b)` (0 or 1).
+  Less,
+  /// `a->mTop`.
+  ItemTop = 220,
+  /// `a->mTop = b`.
+  ItemSetTop,
+  /// `a->mHeight`.
+  ItemHeight,
+  /// `a->mHeight = b`.
+  ItemSetHeight,
+  /// `a->mWidth`.
+  ItemWidth,
+  /// `a->mSelected` (0 or 1).
+  ItemSelected,
+  /// `a->mSelected = b != 0`.
+  ItemSetSelected,
+  /// `a->mSelectable` (0 or 1).
+  ItemSelectable,
+  /// `a->SetPos(0, b)`.
+  ItemSetPos,
+  /// `a->Contains(b, c)` (0 or 1).
+  ItemContains,
+  /// `a->CanSelect(this, b, c)` (0 or 1).
+  ItemCanSelect,
+  /// `a->CalcDimensions(this)`.
+  ItemCalcDimensions,
+  /// `a->SetViewport(this, b)` (`b` a `Container*` or NULL).
+  ItemSetViewport,
+  /// `a->Paint(*b, this)`.
+  ItemPaint,
+  /// `a->MouseEnter(this, b, c)`.
+  ItemMouseEnter,
+  /// `a->MouseExit(this)`.
+  ItemMouseExit,
+  /// `a->MouseMove(this, b, c)`.
+  ItemMouseMove,
+  /// `a->MouseDrag(this, b, c)`.
+  ItemMouseDrag,
+  /// `a->MouseDown(this, b, c, d)`.
+  ItemMouseDown,
+  /// `a->MouseUp(this, b, c, d)`.
+  ItemMouseUp,
+  /// `a->AddRef()` (the list's `SmartPtr`).
+  ItemHold,
+  /// `a->Release()`.
+  ItemRelease,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -2592,6 +2673,97 @@ enum class EeWonLanCall : uint32_t {
   Accept,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods). Items are `ListItem*`s.
+enum class EeWonListCall : uint32_t {
+  /// `ListArea::Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `ListArea::AdjustPosition(a != 0)`.
+  AdjustPosition,
+  /// `ListArea::ScrollPaint(*a)` (`a` the Graphics).
+  ScrollPaint,
+  /// `ListArea::MouseEnter(a, b)`.
+  MouseEnter,
+  MouseExit,
+  /// `ListArea::MouseDown(a, b, c)`.
+  MouseDown,
+  /// `ListArea::MouseUp(a, b, c)`.
+  MouseUp,
+  /// `ListArea::MouseMove(a, b)`.
+  MouseMove,
+  /// `ListArea::MouseDrag(a, b)`.
+  MouseDrag,
+  /// `ListArea::KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `ListArea::NotifyMouseItemGone()`.
+  NotifyMouseItemGone,
+  /// `ListArea::Sort()` (0 or 1).
+  Sort,
+  BeginUpdate,
+  EndUpdate,
+  /// `Clear(a != 0)`.
+  Clear,
+  /// `GetItem(a)`.
+  GetItem,
+  /// `InsertItem(a, b)`: the item.
+  InsertItem,
+  /// `RefreshItem(a)`.
+  RefreshItem,
+  /// `DeleteItem(a)`.
+  DeleteItem,
+  /// `RemoveItem(a)`.
+  RemoveItem,
+  /// `DeleteRange(a, b)`.
+  DeleteRange,
+  /// `SetListFlags(a, b != 0)`.
+  SetListFlags,
+  /// `mListFlags`.
+  ListFlags,
+  /// `GetNumItems()`.
+  NumItems,
+  /// `GetItemPos(a)`.
+  GetItemPos,
+  /// `SetSelItem(int a, b != 0)`.
+  SetSelItemAt,
+  /// `SetSelItem(ListItem* a, b != 0, c != 0)` (0 or 1).
+  SetSelItem,
+  /// `EnsureVisible(a)`.
+  EnsureVisible,
+  /// `ClearSelection(a != 0)`.
+  ClearSelection,
+  /// `SelectRange(a, b)`.
+  SelectRange,
+  /// `FindItemAt(a)`.
+  FindItemAt,
+  /// `IsItemVisible(a)` (0 or 1).
+  IsItemVisible,
+  EnforceInvariants,
+  RewindSelections,
+  /// `HasMoreSelections()` (0 or 1).
+  HasMoreSelections,
+  /// `GetNextSelection()`.
+  GetNextSelection,
+  /// `GetItemPosAtYPos(a)`.
+  GetItemPosAtYPos,
+  /// `FindSelectableItem(a, b != 0, c != 0)`.
+  FindSelectableItem,
+  /// `SetSortType(a)`.
+  SetSortType,
+  /// `mSortType`.
+  SortType,
+  /// `mSortType = a` (no sort).
+  SetSortTypeOnly,
+  /// `mSelItem`.
+  SelItem,
+  /// `mMouseItem`.
+  MouseItem,
+  /// `mMouseItem = NULL` (the field only).
+  ClearMouseItem,
+  /// `mPaintWidth`.
+  PaintWidth,
+  /// `mPaintWidth = a`.
+  SetPaintWidth,
+};
+
 /// A container's key kind (its comparator).
 enum class EeWonLobbyKeyKind {
   /// `unsigned short` / `unsigned long` ids
@@ -2913,6 +3085,8 @@ enum class EeWonGuiEvent : uint32_t {
   InputReturn = 1,
   /// `ComponentEvent_InputTextChanged`.
   InputTextChanged = 2,
+  /// `ComponentEvent_ListSelChanged`.
+  ListSelChanged = 3,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -2973,6 +3147,9 @@ struct EeWonLan;
 /// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
 struct EeWonLanSocket;
+
+/// The Rust ListArea.
+struct EeWonList;
 
 /// An ordered container of the lobby (see the module).
 struct EeWonLobbyMap;
@@ -4930,6 +5107,14 @@ struct EeWonUdpOpHooks {
   void *(*new_wait)(void *request, const EeWonIpAddr *addr);
   /// a receive op's Rust object
   const EeWonUdpRecvOp *(*recv_object)(void *op);
+};
+
+/// A click the list delivers (`ListItemClickedEvent`'s arguments besides the item; `DeliverItemClicked`'s `b`).
+struct EeWonItemClick {
+  int32_t button;
+  bool up;
+  int32_t x;
+  int32_t y;
 };
 
 extern "C" {
@@ -9260,6 +9445,23 @@ ptrdiff_t ee_won_lan_call(const EeWonLan *lan,
                           void *b,
                           ptrdiff_t c,
                           ptrdiff_t d);
+
+/// A new Rust ListArea for the C++ `component`, its calls out through `host`.
+EeWonList *ee_won_list_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `list` came from `ee_won_list_new` (or is NULL) and is not used again.
+void ee_won_list_free(EeWonList *list);
+
+/// One of ListArea's methods (`EeWonListCall`).
+///
+/// # Safety
+/// `list` is live; the call's arguments as documented.
+ptrdiff_t ee_won_list_call(const EeWonList *list,
+                           EeWonListCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
 
 /// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
 ///
