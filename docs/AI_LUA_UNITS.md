@@ -951,6 +951,15 @@ from data, so that a script can make its decisions with the same numbers:
   builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
   `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
   sub-group's common move flags).
+- `ai.wall_line(x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tiles a wall from (x1, y1) to (x2, y2) lays, in order
+  (EEGetWallLine).
+- `ai.wall_stretches(x1, y1, x2, y2)` -> blocked, `{{ax, ay, bx, by, len, level}, ...}`: the classic wall planner's
+  look at one wall line (EECPWallManager::PlanWall, IsPathBlocked). `blocked`: a land building on the line or within 2
+  tiles of it (the player's own wall pieces on the line excepted). The stretches: the runs of open tiles after a
+  blocked one (off the map, a forest, a cliff, water, space), with their ends, length and whether five level tiles in
+  a row lie on them (EEAreTilesLevel). classic_lua's wall planner (walls.lua) uses both.
+- Own and allied building records have `queued`: the techs queued behind the one being made (`producing`), in order
+  (EEComplexUnit::IsResearchQueued, the classic's IsInProduction).
 - Resource records have `untapped`: the resource's hit points still stand at 1, i.e. nobody has gathered from it yet
   (the classic's GetGatherCapacity and its sites trace count a centre's units with mHitPoints > 0, so a tapped mine
   no longer adds room).
@@ -1009,6 +1018,15 @@ found no town). `tests/ai_units/types.lua` checks that a list's ids are the unio
   it off, absent leaves it as it was): the gatherer runner's rebalance then moves a gatherer off a resource as soon as
   it has more than wanted, not only past one more (`EECPNextState::mExact`, per player, not saved: the next order sets
   it again). Boom's build order (`lib.build_order`, `ECON.order`) sends it with every gather order.
+  `exact = 2` (2026-11-13) also keeps the engine's idle runner (AssignIdleGatherers) from sending an idle citizen to
+  a resource that already has its wanted gatherers: the leftovers stay idle for the script (boom's
+  `BO.OPT.builder_pool`: the owner's ranges, no spill onto wood). exact = 1 and the classic are unchanged.
+- **The food `gather` order takes `granary_farms = n`** (2026-11-12): a standing granary lays its fields as free
+  foundations, and the engine's food runner sends idle food gatherers to build them (each paying a farm's cost). With
+  `granary_farms = 0` it builds none; with n > 0 it stops at n built farms per standing granary; -1 restores the
+  engine's rule, and absent leaves the setting as it was (`EECPNextState::mGranaryFarms`, per player, saved: next-state
+  version 4; `EECPRMBuildsFields` in EECPResourceManager.cpp). The classic, and every script that never sends it,
+  keep the old behaviour. Boom's `BO.OPT.lua_farms` holds the fields until the Copper Age's three granaries stand.
 
 **The cost of an improvement (2026-11-12):** `ai.improve_cost(class, what)` -> `{food, wood, stone, gold, iron,
 level, max}`: the next level's cost of a class's improvement (`what`: `attack`, `hit_points`, `range`, `speed` or the

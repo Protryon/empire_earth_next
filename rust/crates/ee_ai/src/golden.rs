@@ -270,6 +270,15 @@ fn gen_next(seed: u32, big: bool) -> NextSave {
     s
 }
 
+/// A version 5 block as the driver's version 4 (the C++ the golden was printed by): the same bytes without the last
+/// field (granary_farms, from the merge of main daf9dadb; -1 on a version 4 decode).
+fn as_v4(mut b: Vec<u8>) -> Vec<u8> {
+    assert_eq!(b[4], 5);
+    b.truncate(b.len() - 4);
+    b[4] = 4;
+    b
+}
+
 fn put_le(b: &mut [u8], at: usize, v: u32) {
     b[at..at + 4].copy_from_slice(&v.to_le_bytes());
 }
@@ -329,7 +338,7 @@ fn next_state_block() {
     let mut got = Vec::new();
     for seed in 1..=60u32 {
         let s = gen_next(seed, seed % 10 == 9);
-        let b = next_save::encode(&s);
+        let b = as_v4(next_save::encode(&s));
         got.push(format!("nens enc {seed} {} {:016x}", b.len(), fnv64(&b)));
         if seed <= 3 {
             got.push(format!("nens hex {seed} {}", hex(&b)));
@@ -342,7 +351,8 @@ fn next_state_block() {
             match next_save::decode(&m, 200) {
                 None => got.push(format!("nens dec {seed} {name} 0")),
                 Some(d) => {
-                    let again = next_save::encode(&next_apply(&target, &d));
+                    assert_eq!(d.granary_farms, -1);
+                    let again = as_v4(next_save::encode(&next_apply(&target, &d)));
                     got.push(format!(
                         "nens dec {seed} {name} 1 {} 1 {} {:016x}",
                         !d.memory.is_empty() as i32,
