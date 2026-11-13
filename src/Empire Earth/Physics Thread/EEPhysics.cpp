@@ -14,7 +14,6 @@
 #include "lle/TSScheduler.h"
 #include "lle/NEMessage.h"
 #include "lle/ISEntity.h"
-#include "lle/ISDevice.h"
 #include "lle/ISKeyboard.h"
 #include "lle/Input System.h"
 #include "lle/GEColor.h"
