@@ -77,8 +77,6 @@ public:
     EEUnitVectorItem(const EEUnitVectorItem& inItem);   // 0x20569d (copies every goal through its Virtual10)
     virtual ~EEUnitVectorItem();            // +0x00 0x205768 (??_G 0x205681)
     EEUnitVectorItem& operator=(const EEUnitVectorItem& inItem);   // 0x205ab9
-    // 0x205780: drops the goals once the timer has run out (provisional name)
-    void Update();
     void Clear();                           // 0x2057a7: every goal's Virtual68, then deletes them (provisional name)
     bool IsShiftMode();                     // 0x2057fa: the unit's player's mShiftMode (provisional name)
     unsigned long GetTimeLeft();            // 0x205807 (0 when not started) (provisional name)
@@ -106,5 +104,17 @@ public:
 
     static const UString sData;             // "EEGoalQueueContainer-Data" (init chain 0x20560c)
 };
+
+// New (R5b.4, the sixteenth round): the context of the queues' Rust host (EEGoalQueueContainer.cpp): the queue and
+// its file for the record, the unit for the per-tick update (ee_units goals.rs)
+struct EeGoalQueueHost;
+struct EEGoalQueueIO {
+    EEUnitVectorItem* mQueue;
+    FSFile* mFile;
+    unsigned long mMajor;
+    unsigned long mMinor;
+    EEComplexUnit* mUnit;
+};
+void EEGoalQueueHostOf(EEGoalQueueIO& inIO, EeGoalQueueHost& outHost);
 
 #endif

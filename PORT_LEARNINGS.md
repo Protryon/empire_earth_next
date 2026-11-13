@@ -10503,3 +10503,25 @@ Round 4's pattern (RUST_PLAN's row) applied to the last small pieces of the game
 - **Not done this round** (RUST_PLAN's row): the campaign editor's events (934, with `EECampaignEditorBehavior`),
   the scenario intro's form manager (`EEUISCIFormManager`, 315: file specs and media strings the scenario screens,
   the summary and the main game form read), the civilization builder's helpers.
+
+## R5b.4, sixteenth round: the goal queues' record and update, the patrol goal whole in Rust (ee_units goals.rs, patrol.rs; EEUGRust; branch rust-r5b4-core16, 2026-11-13)
+
+- **The record from the mirror.** The queue mirror now holds the goals' objects and kinds beside their ids, and the
+  timer (reported by `AddTime`, `ResetTimer`, the copies and the load's reads). `EEGoalQueueContainer::Save` writes
+  from it and `Load` is a Rust sequence; the host makes the typed `FSFile` calls (the debug file formats each type, so
+  a byte is `Write(unsigned char)`, never raw bytes) and the goals' own `Save`/`CreateGoal`+`Load`. Saves are
+  byte-for-byte the same format; saveload's oracle setting stays END on every save.
+- **The queues' update.** The classes' goal-queue step (started, non-empty queues expire at start + time, then
+  `RefreshGoals`/`RefreshActiveGoal`) reads the mirror per queue: the refresh may change the next one. One host op
+  keeps the one USST note.
+- **A whole goal class to Rust, and what it costs.** `EEUGPatrol` is gone: a patrol goal is an `EEUGRust` (one C++
+  class for goals whose state and bodies are Rust's: the base goal's fields and vtable stay, every virtual is one
+  call), its state a Rust table by goal object. The callers moved to `EEUGRust::NewPatrol`, `EEPatrolGoalCast` and
+  accessors. The first class costs as much as it saves (C++ +413 -414): the generic class and its host table are as
+  long as the class. The next goals reuse both, so each further class deletes its whole file.
+- **A broad regex over a file edits more than the class.** `theGoal->mTarget` -> the patrol accessor also caught the
+  attack goal's `theGoal->mTarget` in an earlier case of `EEActiveGroup::Plan`; the compiler named it. Anchor such
+  replacements to the declaration they follow.
+- **Coverage by a temporary print.** The oracle and late games never patrol; the scenario profile's games create
+  routed patrols and step them, so its captures gate the move. No saveload game holds a patrol goal: its record is
+  unit tests only.

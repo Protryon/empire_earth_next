@@ -3130,7 +3130,7 @@ void EESMEffect::SetAIToggle()
 }
 
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEUGPatrol.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGExplore.h"
 #include "ee/EEPPatrolGroup.h"
 
@@ -3214,7 +3214,7 @@ void EESMEffect::SetUnitsStance()
             theGroup->AddMember(theUnit, true);
             theUnit->mPlayer->mPendingGroups.push_back(theGroup);
             theGroup->KeepMobileUnits();
-            EEUGPatrol* theGoal = new EEUGPatrol(thePatrolGroup, theTarget, true);
+            EEUGRust* theGoal = EEUGRust::NewPatrol(thePatrolGroup, theTarget, true);
             theGroup->ClearGoal();
             theGroup->SetGoal(theGoal, false);
             theGroup->mAction = kActionMoveToNextPatrolPoint;
@@ -3602,7 +3602,7 @@ void EESMEffect::TaskUnitsToObject()
             } else if (theTargetClass->GetUnitType() == kUnitTypePathPoint) {
                 theGroup->KeepMobileUnits();
                 EEPPatrolGroup* thePatrolGroup = theTarget->GetComplexUnit()->mPatrolGroup;
-                EEUGPatrol* theGoal = new EEUGPatrol(thePatrolGroup, theTarget->GetComplexUnit(), true);
+                EEUGRust* theGoal = EEUGRust::NewPatrol(thePatrolGroup, theTarget->GetComplexUnit(), true);
                 theGroup->ClearGoal();
                 theGroup->SetGoal(theGoal, false);
                 theGroup->mAction = kActionMoveToNextPatrolPoint;
@@ -3623,11 +3623,11 @@ void EESMEffect::TaskUnitsToObject()
                     continue;
                 switch (this->mTaskAction) {
                 case kSMTaskActionPatrol: {
-                    EEUGPatrol* theGoal = new EEUGPatrol(true);
+                    EEUGRust* theGoal = EEUGRust::NewPatrol(true);
                     if (theFirst != NULL) {
-                        theGoal->mPatrolGroup->AddPoint(GE2DPoint((float)theFirst->GetTileX(), (float)theFirst->GetTileY()), p);
-                        theGoal->mPatrolGroup->AddPoint(thePoint, p);
-                        theFirst->GetPlayer()->AddPatrolGroup(theGoal->mPatrolGroup);
+                        theGoal->GetPatrolGroup()->AddPoint(GE2DPoint((float)theFirst->GetTileX(), (float)theFirst->GetTileY()), p);
+                        theGoal->GetPatrolGroup()->AddPoint(thePoint, p);
+                        theFirst->GetPlayer()->AddPatrolGroup(theGoal->GetPatrolGroup());
                     }
                     theGroup->ClearGoal();
                     theGroup->SetGoal(theGoal, false);
@@ -3868,11 +3868,11 @@ void EESMEffect::TaskUnitsToArea()
                 break;
             }
             case kSMTaskActionPatrol: {
-                EEUGPatrol* theGoal = new EEUGPatrol(true);
+                EEUGRust* theGoal = EEUGRust::NewPatrol(true);
                 if (theFirst != NULL && theFirst->GetTileX() != -10000 && theFirst->GetTileY() != -10000) {
-                    theGoal->mPatrolGroup->AddPoint(GE2DPoint((float)theFirst->GetTileX(), (float)theFirst->GetTileY()), p);
-                    theGoal->mPatrolGroup->AddPoint(theTarget, p);
-                    theFirst->GetPlayer()->AddPatrolGroup(theGoal->mPatrolGroup);
+                    theGoal->GetPatrolGroup()->AddPoint(GE2DPoint((float)theFirst->GetTileX(), (float)theFirst->GetTileY()), p);
+                    theGoal->GetPatrolGroup()->AddPoint(theTarget, p);
+                    theFirst->GetPlayer()->AddPatrolGroup(theGoal->GetPatrolGroup());
                 }
                 theGroup->ClearGoal();
                 theGroup->SetGoal(theGoal, false);
