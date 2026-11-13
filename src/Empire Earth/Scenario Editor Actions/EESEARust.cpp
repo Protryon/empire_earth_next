@@ -1,7 +1,9 @@
 // C:\EEX\Empire Earth\Scenario Editor Actions\EESEARust.cpp (port addition, no original address). The host of the
 // scenario editor's actions whole in Rust (ee_screens editor_actions.rs, editor_whole.rs, editor_place.rs): the paint
 // actions' world edits (ee_screenscpp_sea*), the actions' world, screens and files (ee_screenscpp_sew,
-// ee_screenscpp_sew_elevation) and the placements' (ee_screenscpp_sep). The paint actions themselves are
+// ee_screenscpp_sew_elevation), the placements' (ee_screenscpp_sep) and the selection's (ee_screenscpp_seu*: the
+// click, the lasso, the rotation, the deletion; the original's EESEADeleteUnit.cpp 0x1a6b45..0x1a7331, its class an
+// EESEARust kind, ee/EESEARust.h). The paint actions themselves are
 // EESEAPaintRust (ee/EESEAPaint.h): the original's EESEAPaintElevation.cpp 0x1a830a..0x1a86ff, EESEAPaintMoutains.cpp
 // 0x1a86ff..0x1a8d3e and EESEAPaintTerrain.cpp 0x1a8d3e..0x1a9112 (their deque and std::sort COMDATs with them).
 #include <windows.h>
@@ -105,7 +107,10 @@
 #include "lle/GEOrientation.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEMouse.h"
-#include "ee/EESEADeleteUnit.h"
+#include "ee/EEAirTrafficControl.h"
+#include "ee/EEMessage.h"
+#include "ee/EEUnitPicker.h"
+#include "lle/GERectangle.h"
 #include "ee/EESEARust.h"
 
 // ------------------------------------------------------------------------------------------------ the host
@@ -472,6 +477,13 @@ extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* 
         EEBuildGate(theTile, i[2], i[3], i[4]);
         break;
     }
+    case EE_SCREENS_SEW_OP_UNIT_PLAYER: {
+        RTSUnit* theUnit = gWorld.GetUnit((unsigned long)(uint32_t)i[0]);
+        if (theUnit == NULL)
+            return 0;
+        i[1] = (int32_t)theUnit->mPlayer->mPlayerID;
+        return 1;
+    }
     case EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE:
         static_cast<EESEUnit*>(theEditor->mTabGroups[kEditorTabUnits])->SelectUnitType(GE2DPoint(0.0f, 0.0f));
         break;
@@ -757,8 +769,125 @@ extern "C" int32_t ee_screenscpp_sep(uint32_t inOp, void* p, float* t, int32_t* 
         EESEPUnit(i[0])->mComplexUnit->GetUnitClass()->LevelGround(&gWorld.mMap->mTerrainMesh, i[1], i[2], &f[0]);
         break;
     case EE_SCREENS_SEP_DELETE:
-        new EESEADeleteUnit((unsigned long)(uint32_t)i[0]);
+        new EESEARust(kSEADeleteUnit, NULL, i[0]);
         break;
     }
     return 0;
+}
+
+// ------------------------------------------------------------------------------------------------ the host
+// The selection's actions' host (ee_screens editor_actions.rs, EE_SCREENS_SEU_*: the click, the lasso, the rotation
+// and the deletion (an EESEARust kind) call it under the UI copy lock and the world's write lock). A unit is an EEUnit*.
+
+static_assert(kMessageSelectUnit == 0x48 && kMessageAddUnitToSelectedGroup == 0x49 &&
+                  kMessageAlwaysAddUnitToSelectedGroup == 0x76 && kMessageUnselectAllUnits == 0x4b &&
+                  kMessageSelectUnits == 0x4e && kMessageAddUnitsToSelectedGroup == 0x4f &&
+                  kMessageAddAndRemoveUnitsFromSelectedGroup == 0x50,
+              "editor_actions.rs's EE_SCREENS_SEU_MSG_*");
+
+extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA, float inF)
+{
+    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
+    EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(inUnit);   // the ops on a complex unit's part
+    switch (inOp) {
+    case EE_SCREENS_SEU_SELECTED_COUNT:
+        return theEditor->GetSelectedUnitCount();
+    case EE_SCREENS_SEU_SELECTED:
+        return (uintptr_t)(EEUnit*)theEditor->mSelectedUnits[(unsigned long)inA];
+    case EE_SCREENS_SEU_FIRST_SELECTED:
+        return (uintptr_t)theEditor->GetFirstSelectedUnit();
+    case EE_SCREENS_SEU_CLEAR:
+        theEditor->ClearSelection();
+        return 0;
+    case EE_SCREENS_SEU_DESELECT_FIRST:
+        theEditor->DeselectFirstUnit();
+        return 0;
+    case EE_SCREENS_SEU_SELECT:
+        theEditor->SelectUnit(theUnit);
+        return 0;
+    case EE_SCREENS_SEU_DESELECT:
+        theEditor->DeselectUnit(theUnit);
+        return 0;
+    case EE_SCREENS_SEU_UPDATE_SELECTION:
+        static_cast<EESEUnit*>(theEditor->mTabGroups[kEditorTabUnits])->UpdateSelection();
+        return 0;
+    case EE_SCREENS_SEU_UNIT:
+        return (uintptr_t)gWorld.GetUnit((unsigned long)inA);
+    case EE_SCREENS_SEU_PLAYER_UNIT:
+        return (uintptr_t)static_cast<EEUnit*>(gWorld.GetPlayer((long)(intptr_t)inUnit)->GetUnit((unsigned long)inA));
+    case EE_SCREENS_SEU_IS_SELECTED:
+        return theUnit->mIsEditorSelected ? 1 : 0;
+    case EE_SCREENS_SEU_HAS_COMPLEX:
+        return theUnit->mComplexUnit != NULL ? 1 : 0;
+    case EE_SCREENS_SEU_TURNS:
+        return theUnit->mUnitClass->mAngularAcceleration > 0.0f ? 1 : 0;
+    case EE_SCREENS_SEU_ROTATE: {
+        GETransformation theTransformation = theUnit->mComplexUnit->mPhysicalModel.GetLocation();
+        theTransformation.SetOrientationYPR(inF, 0.0f, 0.0f);
+        theUnit->mComplexUnit->SetTransformation(theTransformation, true);
+        return 0;
+    }
+    case EE_SCREENS_SEU_PATH_POINT:
+        return theUnit->GetUnitClass()->GetUnitType() == kUnitTypePathPoint ? 1 : 0;
+    case EE_SCREENS_SEU_OFF_MAP:
+        return theUnit->GetTileX() == -10000 && theUnit->GetTileY() == -10000 ? 1 : 0;
+    case EE_SCREENS_SEU_ON_TILE:
+        return theUnit->mTileNode != NULL ? 1 : 0;
+    case EE_SCREENS_SEU_REMOVE_SIMPLE:
+        if (theUnit->GetUnitClass()->GetCategory() == kUnitCategoryResource)
+            theUnit->SetResourceAmount(0);
+        theUnit->Kill(false, false, false);
+        theUnit->GetPlayer()->KillUnit(theUnit, false);
+        return 0;
+    case EE_SCREENS_SEU_PLAYER:
+        return (uintptr_t)theComplex->mPlayer;
+    case EE_SCREENS_SEU_LEAVE_AIR_TRAFFIC:
+        if (theComplex->mUnitClass->IsLandBuilding() && theComplex->mUnitClass->mAirTrafficType != 0)
+            theComplex->mPlayer->mAirTraffic[theComplex->mUnitClass->mAirTrafficType - 1]->RemoveAirport(theComplex);
+        return 0;
+    case EE_SCREENS_SEU_CARGO_COUNT:
+        return theComplex->GetNumCargoUnits();
+    case EE_SCREENS_SEU_KILL_CARGO:
+        theComplex->KillCargo();
+        return 0;
+    case EE_SCREENS_SEU_KILL_PART:
+        theComplex->Kill(false, false, false);
+        reinterpret_cast<EEPlayer*>(inA)->KillUnit(theComplex, false);
+        return 0;
+    case EE_SCREENS_SEU_NEXT_PART:
+        return (uintptr_t)theComplex->mNextPart;
+    case EE_SCREENS_SEU_CONTAINER:
+        return (uintptr_t)(EEComplexUnit*)theComplex->mContainer;
+    case EE_SCREENS_SEU_CARGO:
+        return (uintptr_t)(EEUnit*)theComplex->GetCargo((unsigned long)inA);
+    case EE_SCREENS_SEU_UNLOAD: {
+        GETransformation theTransformation;
+        theTransformation = theComplex->mPhysicalModel.GetLocation();
+        theComplex->UnloadCargoAt((unsigned long)inA, theTransformation);
+        return 0;
+    }
+    case EE_SCREENS_SEU_MESSAGE_TYPE:
+        return static_cast<EEMessage*>(inUnit)->GetType();
+    case EE_SCREENS_SEU_MESSAGE_UNIT:
+        return static_cast<EEMAddUnitToSelectedGroup*>(inUnit)->mUnitID;
+    case EE_SCREENS_SEU_MESSAGE_RELEASE:
+        static_cast<EEMessage*>(inUnit)->Dereference();
+        return 0;
+    case EE_SCREENS_SEU_MESSAGE_UNIT_TYPE:
+        return (uintptr_t)(intptr_t)static_cast<EEMSelectUnits*>(inUnit)->mL30;
+    }
+    return 0;
+}
+
+// the ids of the units of a type picked in a screen rectangle (the lasso's); the count alone when they do not fit
+extern "C" size_t ee_screenscpp_seu_pick(const void* inRectangle, int32_t inUnitType, uint32_t* outIDs, size_t inCapacity)
+{
+    std::vector<unsigned long> theUnitIDs;
+    gUnitPicker.PickUnitsInRectangle(*static_cast<const GERectangle*>(inRectangle), inUnitType, theUnitIDs);
+    if (theUnitIDs.size() > inCapacity)
+        return theUnitIDs.size();
+    for (size_t i = 0; i < theUnitIDs.size(); i++)
+        outIDs[i] = (uint32_t)theUnitIDs[i];
+    return theUnitIDs.size();
 }

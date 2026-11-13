@@ -2,7 +2,7 @@
 // save, test, exit and quick save actions, the tech lists' move, the rotation, the trigger area's rectangle, the
 // blank and random maps, the wall and gate placements (the original's EESEASaveScenario, EESEATestScenario,
 // EESEAExitScenario, EESEAQuickSaveScenario, EESEATechTree, EESEARotateUnits, EESEAPaintArea, EESEACreateBlankMap,
-// EESEACreateRandomMap, EESEAPlaceWall, EESEAPlaceGate, EESEAPlaceUnit, EESEAMoveUnit). One EEAction holds the Rust action; the kinds that posted
+// EESEACreateRandomMap, EESEAPlaceWall, EESEAPlaceGate, EESEAPlaceUnit, EESEAMoveUnit, EESEADeleteUnit). One EEAction holds the Rust action; the kinds that posted
 // themselves when made post when made. Requires ee/EEAction.h.
 #ifndef EE_EESEARUST_H
 #define EE_EESEARUST_H
@@ -46,6 +46,7 @@ enum {
     kSEAPlaceGate = 11,
     kSEAPlaceUnit = 12,
     kSEAMoveUnit = 13,
+    kSEADeleteUnit = 14,    // a the unit's id (posted only when it exists), or -1: the player b's selection (c: all)
 };
 
 // The editor's events whole in Rust (ee_screens editor_events.rs): the hide-UI box, the viewport change, the

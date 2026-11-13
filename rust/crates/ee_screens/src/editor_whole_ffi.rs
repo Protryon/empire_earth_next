@@ -37,6 +37,9 @@ impl SewHost for Host {
     fn op(&mut self, op: u32, p: usize, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32 {
         unsafe { sys::ee_screenscpp_sew(op, p as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
     }
+    fn delete(&mut self, what: crate::editor_actions::SeuDelete) {
+        crate::editor_actions::delete_units(&mut crate::editor_actions_ffi::Selection, what);
+    }
     fn elevation(&mut self) -> Option<SewElevation> {
         // the host reads the picked file pair; a second call with room for all its heights (none written when
         // there was too little room)

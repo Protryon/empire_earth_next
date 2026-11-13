@@ -148,7 +148,6 @@
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEAirTrafficControl.h"
-#include "ee/EESEADeleteUnit.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EEMessage.h"
@@ -824,9 +823,9 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
         else if (c == "delete")   // delete UNIT | delete PLAYER group|first (the player's selection)
             theCode = [=] {
                 if (w.size() > 2)
-                    (new EESEADeleteUnit(L(1), w[2] == "group"))->Dereference();
+                    (new EESEARust(kSEADeleteUnit, NULL, -1, L(1), w[2] == "group"))->Dereference();
                 else
-                    (new EESEADeleteUnit(UnitRef(w[1])))->Dereference();
+                    (new EESEARust(kSEADeleteUnit, NULL, (int32_t)UnitRef(w[1])))->Dereference();
             };
         else if (c == "pickup")   // pickup UNIT: the move's first half (lifted off the map, a ghost at the mouse)
             theCode = [=] {

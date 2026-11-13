@@ -1183,6 +1183,10 @@ constexpr static const uint32_t EE_SCREENS_SEW_PLACE_UNIT = 12;
 /// `EESEAMoveUnit` (`ee_screens_sew_pick_up`, `_put_down`, `_cancel`).
 constexpr static const uint32_t EE_SCREENS_SEW_MOVE_UNIT = 13;
 
+/// `EESEADeleteUnit` (a the unit's id, or -1: the player b's selection, all of it when c != 0); posted when made
+/// (the one unit only when it exists).
+constexpr static const uint32_t EE_SCREENS_SEW_DELETE_UNIT = 14;
+
 /// `gUserInterface->PostAction(p)` (p: the action's `EESEARust`).
 constexpr static const uint32_t EE_SCREENS_SEW_OP_POST = 1;
 
@@ -1332,6 +1336,9 @@ constexpr static const uint32_t EE_SCREENS_SEW_OP_BUILD_GATE = 49;
 
 /// The unit tab places its selected unit class again (`SelectUnitType`).
 constexpr static const uint32_t EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE = 50;
+
+/// -> whether the unit i0 exists (`gWorld.GetUnit`); its player's id -> i1.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_UNIT_PLAYER = 51;
 
 /// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
 constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
@@ -3699,12 +3706,6 @@ void ee_screens_seu_lasso_select(const void *rectangle,
 
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
-
-/// `EESEADeleteUnit::Virtual4`: the unit `id` of the player `player`, or (id 0xffffffff) the selection, whole
-/// (`group`) or its first unit.
-void ee_screens_seu_delete(uint32_t id,
-                           int32_t player,
-                           uint8_t group);
 
 /// The action of `kind` (`EE_SCREENS_SEW_*`) for the `EESEARust` `owner`, with its object and arguments; NULL for
 /// an unknown kind. Freed by `ee_screens_sew_free`.

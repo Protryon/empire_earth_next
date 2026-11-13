@@ -58,7 +58,6 @@
 #include "ee/EEUIFSEMainGroup.h"
 #include "lle/GE3DPoint.h"
 #include "ee/EESEARust.h"
-#include "ee/EESEADeleteUnit.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
 // FUNCTION: EXE 0x597261
@@ -99,7 +98,7 @@ long EESEUICCommandUnits::MouseRButtonUp()
         EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, 0);
         if (theUnit)
         {
-            EESEADeleteUnit* theAction = new EESEADeleteUnit(theUnit->mUnitID);
+            EESEARust* theAction = new EESEARust(kSEADeleteUnit, NULL, theUnit->mUnitID);
             theAction->Dereference();
             theUnit->Dereference();
         }

@@ -6,8 +6,7 @@
 use core::ffi::c_void;
 
 use crate::editor_actions::{
-    apply_click, apply_lasso, delete_units, lasso_select, rotate_selection, SePaint, SePaintKind, SeaHost, SeuDelete,
-    SeuHost,
+    apply_click, apply_lasso, lasso_select, rotate_selection, SePaint, SePaintKind, SeaHost, SeuHost,
 };
 
 /// cbindgen:ignore
@@ -116,9 +115,10 @@ pub unsafe extern "C" fn ee_screens_sea_paint_run(paint: *mut EeScreensSeaPaint)
 }
 
 // ---- group 2: the selection's actions (`EESEAMouseClick`, `EESEALasso`, `EESEARotateUnits`, `EESEADeleteUnit`;
-// the host `ee_screenscpp_seu`, `ee_screenscpp_seu_pick` in `EESEADeleteUnit.cpp`)
+// the host `ee_screenscpp_seu`, `ee_screenscpp_seu_pick` in `Scenario Editor Actions/EESEARust.cpp`)
 
-struct Selection;
+/// The selection's host (the deletion, an `EESEARust` kind, runs through it too: `editor_whole_ffi.rs`).
+pub(crate) struct Selection;
 
 impl SeuHost for Selection {
     fn op(&mut self, op: u32, unit: usize, a: isize, f: f32) -> usize {
@@ -168,12 +168,4 @@ pub extern "C" fn ee_screens_seu_lasso_select(
 #[no_mangle]
 pub extern "C" fn ee_screens_seu_rotate(yaw: f32) {
     rotate_selection(&mut Selection, yaw);
-}
-
-/// `EESEADeleteUnit::Virtual4`: the unit `id` of the player `player`, or (id 0xffffffff) the selection, whole
-/// (`group`) or its first unit.
-#[no_mangle]
-pub extern "C" fn ee_screens_seu_delete(id: u32, player: i32, group: u8) {
-    let what = if id != u32::MAX { SeuDelete::Unit { player, id } } else { SeuDelete::Selection { group: group != 0 } };
-    delete_units(&mut Selection, what);
 }
