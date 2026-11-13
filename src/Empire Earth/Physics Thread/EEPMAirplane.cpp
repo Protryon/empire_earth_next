@@ -24,7 +24,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEPhysicsModel.h"
@@ -134,7 +134,7 @@ void EEPMAirplane::Step1(EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     GEVector theForward;
     GEVector theMove;
-    EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
+    EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
     float theStep = gPhysics->mTickSeconds;
     if (theClass->mAirTrafficType == 2 || theClass->mAirTrafficType == 4) {
         if (theLocation.GetZ() >= theClass->GetCruiseAltitude())
@@ -147,7 +147,7 @@ void EEPMAirplane::Step1(EEComplexUnit* inUnit)
             inUnit->mPhysicalModel.SetScale(inUnit->mStats->GetScale() * 0.5f);
     }
     if (theGoal) {
-        EEUnit* theTargetUnit = theGoal->mTarget;
+        EEUnit* theTargetUnit = theGoal->GetAttackTarget();
         if (theTargetUnit->mComplexUnit) {
             theTarget.SetX(theTargetUnit->mComplexUnit->mPhysicalModel.GetLocation().GetX());
             theTarget.SetY(theTargetUnit->mComplexUnit->mPhysicalModel.GetLocation().GetY());

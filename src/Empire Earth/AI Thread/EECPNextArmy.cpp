@@ -48,7 +48,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIKindIDs.h"
@@ -191,7 +191,7 @@ static void EECPNextGiveAttack(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
     if (!EECPNextCanOrder(inUnit))
         return;
-    EEUGAttackUnit* theGoal = new EEUGAttackUnit(inUnit, inTarget, true, false);
+    EEUGRust* theGoal = EEUGRust::NewAttackUnit(inUnit, inTarget, true, false);
     inUnit->SetGoal(theGoal, false, 0);
     inUnit->StartAction(2016);
     inUnit->mUnitClass->ActionChanged(inUnit);
@@ -1406,7 +1406,7 @@ static long EECPNextDoing(EEComplexUnit* inUnit)
         }
     }
     case kGoalAttackUnit: {
-        EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+        EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
         return theTarget != NULL && theTarget->mUnitClass->GetFamily() == kUnitFamilyAnimal ? kDoingHunt : kDoingFight;
     }
     case kGoalBuildRepair: return kDoingBuild;

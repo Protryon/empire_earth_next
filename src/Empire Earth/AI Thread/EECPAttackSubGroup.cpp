@@ -39,7 +39,7 @@
 #include "ee/EEMap.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "lle/GERectangle.h"
 #include "ee/EEMapDimensions.h"
 #include "ee/EEDatabaseTables.h"
@@ -407,7 +407,7 @@ void EECPAttackSubGroup::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUni
     if (inUnit->GetUnit()->GetUnitClass()->IsCrusader() && EECanConvert(inUnit->GetUnit(), inTarget, theUnused)
         && gPhysics->GetRandom() <= 0.35f)
         theSpecial = true;
-    EEUGAttackUnit* theGoal = new EEUGAttackUnit(inUnit->GetUnit(), inTarget, true, theSpecial);
+    EEUGRust* theGoal = EEUGRust::NewAttackUnit(inUnit->GetUnit(), inTarget, true, theSpecial);
     if (!this->GiveGoal(inUnit->GetUnit(), theGoal, 0, theAction)) {
         if (theGoal)
             delete theGoal;
@@ -1775,11 +1775,11 @@ bool EECPAttackSubGroup::DecideSplit()
 // Returns the sub-group unit that the given unit's attack goal targets, or NULL
 EECPAttackSubGroupUnit* EECPAttackSubGroup::FindUnitTargetedBy(EEComplexUnit* inUnit)
 {
-    EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
+    EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetLoadGoal());
     EECPAttackSubGroupUnit* theResult = NULL;
     if (theGoal) {
         for (long i = this->GetNumUnits() - 1; i >= 0; i--) {
-            EEUnit* theTarget = theGoal->mTarget;
+            EEUnit* theTarget = theGoal->GetAttackTarget();
             if (theTarget == this->GetUnitUnit(i)) {
                 theResult = this->GetUnitAt(i);
                 break;

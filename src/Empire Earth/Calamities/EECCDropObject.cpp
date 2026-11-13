@@ -31,7 +31,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EETechCapture.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitSetManager.h"
 
 // FUNCTION: EXE 0x4afef9
@@ -182,7 +182,7 @@ bool EECCDropObject::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCal
         EEUnit* theUnit = theUnitClass->CreateUnit(theX, theY, theCaster->mPlayer->mPlayerID, 0, theCaster);
         theUnit->mComplexUnit->SetLauncherClass(theUnitClass);
         theUnit->mComplexUnit->SetOwner(theUnit->mComplexUnit);
-        theUnit->mComplexUnit->SetGoal(new EEUGAttackUnit(theUnit->GetComplexUnit(), theTargetUnit, 0, 0), 0, 0);
+        theUnit->mComplexUnit->SetGoal(EEUGRust::NewAttackUnit(theUnit->GetComplexUnit(), theTargetUnit, 0, 0), 0, 0);
         theUnit->mComplexUnit->SetVelocity(0.0f);
         theUnit->mComplexUnit->SetProjectileStart(theLocation);
         theUnit->mComplexUnit->SetHeight(theLocation.GetZ());

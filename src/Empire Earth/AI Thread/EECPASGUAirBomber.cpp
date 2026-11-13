@@ -22,7 +22,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EECPILocation.h"
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EECPAttackSubGroupUnit.h"
@@ -73,8 +73,8 @@ bool EECPASGUAirBomber::Retarget()
                 return this->mTarget != NULL;
             bool theNewTarget = this->mTarget != theTarget->mUnit;
             if (!theNewTarget) {
-                EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(this->mUnit->GetLoadGoal());
-                if (theGoal != NULL && theGoal->mTarget == theTarget->mUnit)
+                EEUGRust* theGoal = EEAttackUnitCast(this->mUnit->GetLoadGoal());
+                if (theGoal != NULL && theGoal->GetAttackTarget() == theTarget->mUnit)
                     return this->mTarget != NULL;
                 theNewTarget = true;
             }
