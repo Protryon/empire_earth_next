@@ -929,7 +929,7 @@ bool EEHerd::RemoveUnit(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x4a3967
 // After a load, turns the saved ids back into player, animal, units, leader and target, restores the looks,
 // rebuilds the area and recounts the young; returns 0
-long EEHerd::RepairPointers(long, long)
+long EEHerd::RepairPointers(long inMajorVersion, long inMinorVersion)
 {
     std::vector<EEComplexUnit*> theYoung;
     std::vector<U2DPoint<long> > theTiles;
@@ -975,7 +975,10 @@ long EEHerd::RepairPointers(long, long)
             this->GetTarget()->mReferenceCount++;
     } else
         this->mTarget = NULL;
-    if (this->mUnits.size() > 0)
+    // port (0.263): a save with its continent regions keeps the saved continent (the last joining animal's, which
+    // CanTake compares): the first animal's tile at the load can be on another continent (a leaving herd's: a loaded
+    // game's herd refused an animal the continued game's took, seed 2's save at 1000 s)
+    if (this->mUnits.size() > 0 && !EESaveHasContinentRegions(inMajorVersion, inMinorVersion))
         this->mContinent = gContinentManager.GetContinentID(this->mUnits[0]);
     for (long k = this->mUnits.size() - 1; k >= 0; k--)
         theTiles.push_back(U2DPoint<long>(this->mUnits[k]->GetTileX(), this->mUnits[k]->GetTileY()));
