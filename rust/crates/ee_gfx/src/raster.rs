@@ -22,6 +22,8 @@ pub(crate) const BLEND_INV_SRC_ALPHA: u32 = 5;
 /// `kCompareLess`, `kCompareLessEqual` (the z compare).
 pub(crate) const COMPARE_LESS: u32 = 1;
 pub(crate) const COMPARE_LESS_EQUAL: u32 = 2;
+/// `kCullCW` (the culling).
+pub(crate) const CULL_CW: u32 = 1;
 
 /// A model to draw (`GEModel*`), opaque to Rust.
 pub type EeGfxModel = *mut c_void;
@@ -78,6 +80,9 @@ pub struct EeGfxRaster {
     pub model_scroll_u: extern "C" fn(model: EeGfxModel, delta: f32),
     /// puts back the texture coordinates `model_scroll_u` kept
     pub model_restore_u: extern "C" fn(model: EeGfxModel),
+    /// `GetCulling()`, `SetCulling(mode)`
+    pub get_culling: extern "C" fn() -> u32,
+    pub set_culling: extern "C" fn(mode: u32),
 }
 
 /// The rasterizer as the draws call it.
@@ -113,6 +118,8 @@ pub trait Raster {
     fn model_pre_transform(&mut self, model: EeGfxModel, transformation: &GeTransformation);
     fn model_scroll_u(&mut self, model: EeGfxModel, delta: f32);
     fn model_restore_u(&mut self, model: EeGfxModel);
+    fn get_culling(&mut self) -> u32;
+    fn set_culling(&mut self, mode: u32);
 }
 
 impl Raster for &EeGfxRaster {
@@ -209,6 +216,12 @@ impl Raster for &EeGfxRaster {
     fn model_restore_u(&mut self, model: EeGfxModel) {
         (self.model_restore_u)(model)
     }
+    fn get_culling(&mut self) -> u32 {
+        (self.get_culling)()
+    }
+    fn set_culling(&mut self, mode: u32) {
+        (self.set_culling)(mode)
+    }
 }
 
 /// A rasterizer that logs every call (the tests').
@@ -220,6 +233,7 @@ pub struct LogRaster {
     pub ambient: EeGfxColor,
     pub fog_value: f32,
     pub camera: GeTransformation,
+    pub culling: u32,
 }
 
 #[cfg(test)]
@@ -318,5 +332,11 @@ impl Raster for LogRaster {
     }
     fn model_restore_u(&mut self, _model: EeGfxModel) {
         self.calls.push("restore u".into());
+    }
+    fn get_culling(&mut self) -> u32 {
+        self.culling
+    }
+    fn set_culling(&mut self, mode: u32) {
+        self.calls.push(format!("culling {mode}"));
     }
 }

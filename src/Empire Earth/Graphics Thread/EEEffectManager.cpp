@@ -71,7 +71,6 @@
 #include "ee/EEE2DBattlefieldAmbient.h"
 #include "ee/EEE3DIcon.h"
 #include "ee/EEE3DNuclearExplosion.h"
-#include "ee/EEE3DHurricane.h"
 #include "ee/EEE3DSmokeGenerator.h"
 #include "ee/EEE3DFarm.h"
 #include "ee/EEE3DEnergyWall.h"
@@ -199,7 +198,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DVolcano: theEffect = new EEE3DVolcano(); break;
     case kEffect3DDisease: theEffect = new EEE3DRust(0x23); break;
     case kEffect3DFarm: theEffect = new EEE3DFarm(); break;
-    case kEffect3DHurricane: theEffect = new EEE3DHurricane(); break;
+    case kEffect3DHurricane: theEffect = new EEE3DRust(0x24); break;
     case kEffect3DLinearProjectile: theEffect = new EEE3DRust(0x25); break;
     case kEffect3DRain: theEffect = new EEE3DRain(); break;
     case kEffect3DSnow: theEffect = new EEE3DSnow(); break;
@@ -294,7 +293,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x18: theEffect = new EEE3DRust(inUnit, inEffect, 0x18); break;
     case 0x28: theEffect = new EEE3DNuclearExplosion(inUnit, inEffect); break;
     case 0x27: theEffect = new EEE3DRust(inUnit, inEffect, 0x27); break;
-    case 0x24: theEffect = new EEE3DHurricane(inUnit, inEffect); break;
+    case 0x24: theEffect = new EEE3DRust(inUnit, inEffect, 0x24); break;
     case 0x23: theEffect = new EEE3DRust(inUnit, inEffect, 0x23); break;
     case 0x1e: theEffect = EEE3DSmokeGenerator::CreateDestructionSmoke(inUnit, inEffect); break;
     case 0x29: theEffect = new EEE3DFarm(inUnit, inEffect); break;

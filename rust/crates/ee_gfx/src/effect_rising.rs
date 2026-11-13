@@ -16,6 +16,7 @@ use crate::effect_additive::{additive, EeGfxUnitFrame, EE_GFX_EFFECT_KIND_ADDITI
 use crate::effect_aged::aged;
 use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
+use crate::effect_hurricane::{hurricane, load_hurricane, save_hurricane, EE_GFX_EFFECT_KIND_HURRICANE};
 use crate::effect_orbit::{
     load_orbit, orbit, save_orbit, EeGfxAnimation, EeGfxOrbital, EE_GFX_EFFECT_KIND_DISEASE,
     EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE, EE_GFX_EFFECT_KIND_VIRUS,
@@ -87,6 +88,8 @@ pub struct EeGfxGraphicFacts {
     pub game_time_bits: u32,
     /// `mStartSize`
     pub start_size: f32,
+    /// the graphic effect has its linked effect 1
+    pub has_linked1: bool,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -150,6 +153,12 @@ pub struct EeGfxEffect3DHost {
     /// the animation's sound at `frame` (`changed`: a new frame) at the unit's location (`PlayAnimationSound`), kept
     /// as the effect's sound (`SetSound`, then its reference dropped, as the original)
     pub animation_sound: extern "C" fn(context: *mut c_void, frame: u32, changed: bool),
+    /// the hurricane's spawn points: the graphic's tag points of kind 6 (0: none)
+    pub spawn_count: extern "C" fn(context: *mut c_void) -> u32,
+    /// spawn point `index` at `frame` around the unit, scaled by the graphic effect's size
+    pub spawn_at: extern "C" fn(context: *mut c_void, index: u32, frame: u32) -> Ge3DPoint,
+    /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`): its result
+    pub spawn: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint) -> i32,
 }
 
 /// The world as the effects ask it.
@@ -204,6 +213,16 @@ pub trait Effect3DHost {
         EeGfxAnimation::default()
     }
     fn animation_sound(&mut self, _frame: u32, _changed: bool) {}
+    /// the tests' hosts that make no hurricane spawn nothing
+    fn spawn_count(&mut self) -> u32 {
+        0
+    }
+    fn spawn_at(&mut self, _index: u32, _frame: u32) -> Ge3DPoint {
+        Ge3DPoint::default()
+    }
+    fn spawn(&mut self, _point: &Ge3DPoint) -> i32 {
+        0
+    }
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -288,6 +307,15 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn animation_sound(&mut self, frame: u32, changed: bool) {
         (self.animation_sound)(self.context, frame, changed)
     }
+    fn spawn_count(&mut self) -> u32 {
+        (self.spawn_count)(self.context)
+    }
+    fn spawn_at(&mut self, index: u32, frame: u32) -> Ge3DPoint {
+        (self.spawn_at)(self.context, index, frame)
+    }
+    fn spawn(&mut self, point: &Ge3DPoint) -> i32 {
+        (self.spawn)(self.context, point)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -314,6 +342,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE | EE_GFX_EFFECT_KIND_DISEASE | EE_GFX_EFFECT_KIND_VIRUS => unsafe {
             orbit(op, r, g, h, x)
         },
+        EE_GFX_EFFECT_KIND_HURRICANE => unsafe { hurricane(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -381,6 +410,15 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 unsafe { load_orbit(r, f, h) }
             } else {
                 save_orbit(r, f)
+            }
+        }
+        EE_GFX_EFFECT_KIND_HURRICANE => {
+            // the base's result is ignored
+            if load {
+                // SAFETY: `r` is the only reference to the record during the call
+                unsafe { load_hurricane(r, f, h) }
+            } else {
+                save_hurricane(r, f)
             }
         }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {

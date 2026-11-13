@@ -27,6 +27,9 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_CITIZEN_BEAM = 51;
 /// The shield.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
 
+/// `kEffect3DHurricane`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_HURRICANE = 36;
+
 /// `kEffect3DLinearProjectile`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE = 37;
 
@@ -836,6 +839,11 @@ struct EeGfxEffectOrbit {
   /// the virus's `mScroll` (the texture's u offset, saved) and the draw's copy
   float scroll;
   float draw_scroll;
+  /// the hurricane's (`effect_hurricane.rs`) `mSpawnTime` (ms until its next linked effect) and `mScale` (0.1..1),
+  /// both saved, and the draw's scale
+  float spawn_time;
+  float scale;
+  float draw_scale;
 };
 
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
@@ -1198,6 +1206,8 @@ struct EeGfxGraphicFacts {
   uint32_t game_time_bits;
   /// `mStartSize`
   float start_size;
+  /// the graphic effect has its linked effect 1
+  bool has_linked1;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1294,6 +1304,12 @@ struct EeGfxEffect3DHost {
   /// the animation's sound at `frame` (`changed`: a new frame) at the unit's location (`PlayAnimationSound`), kept
   /// as the effect's sound (`SetSound`, then its reference dropped, as the original)
   void (*animation_sound)(void *context, uint32_t frame, bool changed);
+  /// the hurricane's spawn points: the graphic's tag points of kind 6 (0: none)
+  uint32_t (*spawn_count)(void *context);
+  /// spawn point `index` at `frame` around the unit, scaled by the graphic effect's size
+  EeGe3DPoint (*spawn_at)(void *context, uint32_t index, uint32_t frame);
+  /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`): its result
+  int32_t (*spawn)(void *context, const EeGe3DPoint *point);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1350,6 +1366,9 @@ struct EeGfxRaster {
   void (*model_scroll_u)(EeGfxModel model, float delta);
   /// puts back the texture coordinates `model_scroll_u` kept
   void (*model_restore_u)(EeGfxModel model);
+  /// `GetCulling()`, `SetCulling(mode)`
+  uint32_t (*get_culling)();
+  void (*set_culling)(uint32_t mode);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.

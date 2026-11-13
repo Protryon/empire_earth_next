@@ -30,6 +30,7 @@ pub mod effect_additive;
 pub mod effect_aged;
 pub mod effect_beam;
 pub mod effect_follow;
+pub mod effect_hurricane;
 pub mod effect_icon;
 pub mod effect_manager;
 pub mod effect_orbit;

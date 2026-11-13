@@ -198,7 +198,6 @@ ed606 ee1b4 Empire Earth/Graphics Thread/EEE3DEnergyWall.cpp
 ee1b4 ee5c0 Empire Earth/Graphics Thread/EEE3DEnergyWave.cpp
 ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
 f1327 f1600 Empire Earth/Graphics Thread/EEE3DGoal.cpp
-f1600 f2046 Empire Earth/Graphics Thread/EEE3DHurricane.cpp
 f2046 f2d93 Empire Earth/Graphics Thread/EEE3DIcon.cpp
 f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
 f4247 f43c7 Empire Earth/Graphics Thread/EEE3DMultiEffect.cpp

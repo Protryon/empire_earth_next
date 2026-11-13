@@ -1700,6 +1700,8 @@ const EeGfxRaster gEERustRaster = {
             theArray->SetTextureCoordinate(theCoordinate, i);
         }
     },
+    []() -> uint32_t { return (uint32_t)gRasterizer->GetCulling(); },
+    [](uint32_t inMode) { gRasterizer->SetCulling(inMode); },
 };
 
 // FUNCTION: EXE 0x50f60f
