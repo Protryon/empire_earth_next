@@ -88,7 +88,7 @@
 #include "ee/EESETSCComboBox.h"
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESETSConditionType.h"
-#include "ee/EESEEvents.h"
+#include "ee/EESEARust.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
@@ -329,10 +329,10 @@ void EESETSCTGame::Show(EESETSConditionControls* inControls)
     inControls->mCheckBoxes[0]->ChangeWidth(200);
     inControls->mCheckBoxes[0]->SetText(theText, gU531934);
     inControls->mCheckBoxes[0]->SetDisplayMode(kDisplayModeShown);
-    EESEECheckDisplay* theEvent = new EESEECheckDisplay;
+    EESEERust* theEvent = new EESEERust(kSEECheckDisplay);
     inControls->mCheckBoxes[0]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mCheckBoxes[0]->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
-    theEvent->mControls.push_back(inControls->mComboBoxes[0]);
+    EESEEPushControl(theEvent, inControls->mComboBoxes[0]);
     theEvent->Dereference();
     GEText* theGEText = inControls->mCheckBoxes[0]->GetTextLabel()->GetGEText();
     theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
@@ -355,13 +355,13 @@ void EESETSCTGame::Show(EESETSConditionControls* inControls)
     inControls->mCheckBoxes[1]->ChangeWidth(200);
     inControls->mCheckBoxes[1]->SetText(theText, gU531934);
     inControls->mCheckBoxes[1]->SetDisplayMode(kDisplayModeShown);
-    theEvent = new EESEECheckDisplay;
+    theEvent = new EESEERust(kSEECheckDisplay);
     inControls->mCheckBoxes[1]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mCheckBoxes[1]->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
-    theEvent->mControls.push_back(inControls->mLabels[1]);
-    theEvent->mControls.push_back(inControls->mEditBoxes[0]);
-    theEvent->mControls.push_back(inControls->mLabels[2]);
-    theEvent->mControls.push_back(inControls->mEditBoxes[1]);
+    EESEEPushControl(theEvent, inControls->mLabels[1]);
+    EESEEPushControl(theEvent, inControls->mEditBoxes[0]);
+    EESEEPushControl(theEvent, inControls->mLabels[2]);
+    EESEEPushControl(theEvent, inControls->mEditBoxes[1]);
     theEvent->Dereference();
     theGEText = inControls->mCheckBoxes[1]->GetTextLabel()->GetGEText();
     theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
@@ -400,11 +400,11 @@ void EESETSCTGame::Show(EESETSConditionControls* inControls)
     inControls->mCheckBoxes[2]->ChangeWidth(200);
     inControls->mCheckBoxes[2]->SetText(theText, gU531934);
     inControls->mCheckBoxes[2]->SetDisplayMode(kDisplayModeShown);
-    theEvent = new EESEECheckDisplay;
+    theEvent = new EESEERust(kSEECheckDisplay);
     inControls->mCheckBoxes[2]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mCheckBoxes[2]->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
-    theEvent->mControls.push_back(inControls->mSlider);
-    theEvent->mControls.push_back(inControls->mLabels[3]);
+    EESEEPushControl(theEvent, inControls->mSlider);
+    EESEEPushControl(theEvent, inControls->mLabels[3]);
     theEvent->Dereference();
     theGEText = inControls->mCheckBoxes[2]->GetTextLabel()->GetGEText();
     theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
@@ -416,7 +416,7 @@ void EESETSCTGame::Show(EESETSConditionControls* inControls)
     inControls->mSlider->SetLocation(theLocation);
     inControls->mSlider->SetPageSize(1);
     inControls->mSlider->SetDisplayMode(kDisplayModeShown);
-    UIEvent* theSliderEvent = new EESEESliderChange(inControls->mLabels[3], UWideString("%2.0f"), 1.0f, 0.0f);
+    UIEvent* theSliderEvent = EESEENewSliderChange(inControls->mLabels[3], "%2.0f", 1.0f, 0.0f);
     inControls->mSlider->SetTriggerEvent(kControlTriggerRangeChanged, theSliderEvent);
     theSliderEvent->Dereference();
     theLocation.SetX(inControls->mSlider->GetRectangle().GetRight() + 2.0f);
@@ -428,13 +428,14 @@ void EESETSCTGame::Show(EESETSConditionControls* inControls)
 }
 
 // FUNCTION: EXE 0x57fdf1
-// Creates a slider event that prints the value times a scale plus an offset into a label (EESEESliderChange's ctor)
+// Creates a slider event that prints the value times a scale plus an offset into a label (EESEESliderChange's ctor;
+// ee_screens editor_events.rs: EESEENewSliderChange)
 
 // SYNTHETIC: EXE 0x57fe51
 // (the scalar deleting destructor, emitted with the vtable; slot EESEESliderChange+0x0, stores EESEESliderChange vtable)
 
 // FUNCTION: EXE 0x57fe85
-// Creates a check box event with an empty list of controls to show or hide (EESEECheckDisplay's ctor)
+// Creates a check box event with an empty list of controls to show or hide (EESEECheckDisplay's ctor; an EESEERust)
 
 // SYNTHETIC: EXE 0x57febd
 // (the scalar deleting destructor, emitted with the vtable; slot EESEECheckDisplay+0x0, stores EESEECheckDisplay vtable)

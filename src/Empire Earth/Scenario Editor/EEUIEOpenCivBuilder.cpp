@@ -48,8 +48,6 @@
 #include "lle/UResourceFile.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEUIFSERBBrush.h"
-#include "ee/EESEEQuickLoad.h"
-#include "ee/EESEEQuickSave.h"
 #include <algorithm>
 #include "lle/UITextLabel.h"
 #include "ee/EECivilization.h"

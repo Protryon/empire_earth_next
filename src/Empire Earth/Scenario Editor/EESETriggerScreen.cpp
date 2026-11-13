@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\Scenario Editor\EESETriggerScreen.cpp (file name inferred: no __FILE__; RTTI class
 // EESETriggerScreen). The editor's trigger tab: 0x17b0b7..0x17ccf3 (ctor, the ??_G pair, dtor, the event handlers and
 // slots in source order, the sub-screen factory, then the COMDATs this unit is the first user of: the list and radio
-// button ??_G, EEScenarioManager::GetCondition, the events' ??_G, EESEEPanelEvent::SetRectangles). After the "?" unit
+// button ??_G, EEScenarioManager::GetCondition, the events' ??_G, the hide-UI event's SetRectangles). After the "?" unit
 // 0x17acf6..0x17b0b7 (a globals chain), before EESETSArea.cpp (0x17ccf3). Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
@@ -69,7 +69,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -95,6 +94,7 @@
 #include "ee/EESETSTrigger.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
+#include "ee/EESEARust.h"
 #include "rust/ee_screens.h"
 extern char gEmptyString[]; // 0x4e5b98: the shared empty string
 
@@ -645,7 +645,13 @@ void EESETriggerScreen::Enter()
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->mNewButton->GetForm());
     EESetGameViewRectangle(theRectangle);
     theEditor->GetControlById(kScenarioEditorHideUICheckBox)->SetDisplayMode(kDisplayModeShown);
-    static_cast<EESEEPanelEvent*>(theEditor->GetControlById(kScenarioEditorHideUICheckBox)->GetTriggerEvent(kControlTriggerChecked))->SetRectangles(theEdges, theRectangle);
+    // the hide-UI event's two views (the original's inline SetRectangles; the event is an EESEERust since it moved)
+    EESEERust* theHideUI = static_cast<EESEERust*>(
+        theEditor->GetControlById(kScenarioEditorHideUICheckBox)->GetTriggerEvent(kControlTriggerChecked));
+    const float theUnchecked[4] = {theEdges.GetLeft(), theEdges.GetTop(), theEdges.GetRight(), theEdges.GetBottom()};
+    const float theChecked[4] = {theRectangle.GetLeft(), theRectangle.GetTop(), theRectangle.GetRight(),
+                                 theRectangle.GetBottom()};
+    ee_screens_see_hide_ui_views(theHideUI->mEvent, theUnchecked, theChecked);
     theEditor->SetGameView(theRectangle, false);
     static_cast<UICheckBox*>(theEditor->GetControlById(kScenarioEditorHideUICheckBox))->SetChecked(true);
     theEditor->GetEntityGroupById(14)->Enable();
@@ -757,4 +763,4 @@ void EESETriggerScreen::RefreshScreen()
 
 // FUNCTION: EXE 0x57ccba
 // Sets the hide-UI panel event's full and reduced game view rectangles
-// EESEEPanelEvent::SetRectangles (inline, ee/EESETriggerScreen.h)
+// (inline; ee_screens editor_events.rs: ee_screens_see_hide_ui_views)

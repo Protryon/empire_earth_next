@@ -12002,3 +12002,126 @@ Thread/*.cpp`): 23,388 lines before the round; 23,127 after the teleport and tim
 - **Next:** the same class takes the other 3D leaves one kind at a time (each a Rust module and host ops); a 2D twin
   (`EEE2DRust` over `EEEffect2D`) for the sprite effects; the render objects' passes once the table has the vertex
   array, polygon and text draws they use.
+
+## R6: the game screens, seventeenth round: the editor form's own stateful events whole in Rust (ee_screens editor_events.rs; branch rust-screens17, 2026-11-13)
+
+Round 14's item (a), first part. Count: `build/sc14/count.sh` (its round-10 part moved with other lanes' merges:
+compare by git over the counted paths).
+
+- **The gate first** (expected.txt 1013 -> 1034 lines, recorded on the unmodified events, its own commit):
+  `check ID 0|1` sets an editor check box (`UICheckBox::SetChecked` fires its trigger events), `view` prints the
+  game view's rectangle and the editor's UI hidden flag, `click quicksave` releases the toolbar's quick save button
+  (its trigger event), `editorsave` digests the editor's own quick save file (`EEQuickSave.scn`). The script hides
+  and shows the UI (the hide-UI box 0x12) and quick saves through the button.
+  - The hide-UI event's two rectangles are default `GERectangle`s (all zero) and nothing sets them: hiding the UI
+    sets a zero game view (`view 0,0,0,0 hidden=1`), as the original.
+- **One C++ event, `EESEERust` (`ee/EESEARust.h`)**, the events' counterpart of round 16's `EESEARust`: a `UIEvent`
+  holding a Rust `EeScreensSeeEvent`, `ProcessEvent` forwarding the entity. Moved whole (4 classes, 3 headers
+  deleted): `EESEEHideUI` (the box's state read twice, as the original's two `GetIsChecked`, posts a viewport
+  change), `EESEEChangeViewport` (its rectangle and flag set by `ee_screens_see_viewport` after it is made),
+  `EESEEQuickLoad` and `EESEEQuickSave` (the shared `EESEAQuickSaveLoad` referenced while the event lives). The
+  host `ee_screenscpp_see` is in `EEUIFSETRBPaintType.cpp`. The quick load shows the object on the editor form
+  (`gUIManager->mScenarioEditorForm`) rather than the event's form argument: the event only hangs on the editor's
+  own button, so they are the same form.
+- **Count:** -68 (git over the counted paths: +74 -142).
+- **Tests:** 3 in `editor_events.rs` (the views posted by the check state, the viewport change only with an editor,
+  the quick load and save holding and releasing their action).
+- **Only a person reaches:** the quick load (`PostShowLoadedObject` goes through the editor's load thread; the gate
+  does not load), the hide-UI box itself (hidden on the form: the gate sets it directly).
+- **Not done:** the trigger screens' events (`EESEESliderChange`, `EESEECheckDisplay`, `EESEEUseObjectArea`: the
+  gate would have to open the condition and effect editors first), terrain colour/type, map type, unit sort, start
+  epoch, unit limit, the effect editors' events, `EESEAChangeLoadText`, and the thin click, lasso, delete and paint
+  classes.
+
+## R6: the game screens, eighteenth round: a round-17 crash in the trigger tab fixed; the trigger screens' and effect editors' events whole in Rust (ee_screens editor_events.rs; branch rust-screens18, 2026-11-13)
+
+Round 14's item (a), second part. Count: git over the moved paths (`git diff --numstat` over `include/ee` and `src`).
+
+- **A crash from round 17, found by extending the gate:** `EESETriggerScreen::Enter` set the hide-UI box's two
+  views by casting the box's trigger event to `EESEEPanelEvent` (an inline `SetRectangles` writing two
+  `GERectangle`s after `UIEvent`'s members). Round 17 made that event an `EESEERust`, whose only member is the Rust
+  event's pointer: the write replaced the pointer with float bits and ran 24 bytes past the object, and the
+  `SetChecked(true)` right after crashed in `ee_screens_see_process` (EE-SIM: `tab 4`, FAULT c0000005). A person hit
+  it on every visit to the editor's trigger tab. Enter now calls `ee_screens_see_hide_ui_views`; `EESEEPanelEvent`
+  is gone. Round 17's note that "nothing sets them" (the hide-UI event's rectangles) was wrong: Enter does, through
+  that cast. **Lesson:** before moving a class whole, grep for casts to *other* names at its construction and use
+  sites (`GetTriggerEvent(...)` cast to a provisional class): a reconstruction may have named one object twice.
+  - The views: unchecked the first (`0,0,1024,606`), checked the second (`0,0,1024,447`), as the original's
+    `EESEEHideUI` (+0x0c, +0x1c).
+- **The gate first, twice** (expected.txt 1034 -> 1371 -> 1734 lines, each recorded on the unmodified events in its
+  own commit; lines only added): `trigger SCREEN` (the trigger tab's sub-screen), `newentry`, `ctype TYPE` and
+  `etype TYPE ACTION` (the type combos as a person picks them, then `ChangeConditionType` / `ChangeEffectType` and
+  `ChangeEffectAction`), `ctl c|e check|slide|radio INDEX [VALUE]` (a check box set: it fires its events; a slider
+  moved and its range-changed event processed; a radio checked: it fires unless it was checked), `ctl e list|combo
+  INDEX LINE` (a list box's line selected and its button-up event processed; a combo's line picked and its
+  selection-changed event processed) and `ui c|e` (the controls' display modes, label texts, slider values, combo
+  and list lines, the scenario combos' kind and selection). The script enters the trigger tab, adds an area and an
+  object, drives the game condition, the game effects' daylight and cinematic sliders, the AI effects' area/object
+  radios, a military group's lists, two AI attributes (their ranges differ: proof the event ran), the dialogue's
+  scroll slider and the flare's and camera script's radios.
+  - `tab 4` then `view`: the posted viewport change is processed between steps, so a `view` right after a
+    `check 0x12` shows the state before it.
+- **Moved whole** (9 classes behind `EESEERust`, kinds 5-12; 5 headers deleted: `EESEEvents.h`,
+  `EESETSETCAMGModifyObject.h`, `EESETSETMSDCameraScrollChange.h`, `EESETSETSAAAttributeChange.h`,
+  `EESEEUseAreaObject.h`):
+  - `EESEESliderChange`: `GetCurrentRangeValue() * scale + offset` in `f32` as the original's `long * float +
+    float` (no FMA), printed by the host's `sprintf` of the event's format (`EE_SCREENS_SEE_OP_SLIDER_TEXT`: the
+    float passed as a double through `...`, as the original). The format is copied into the Rust record with its NUL;
+    the host reads it through a pointer into the event's clone, valid for the call.
+  - `EESEECheckDisplay` (its controls pushed by `EESEEPushControl`), `EESEEUseObjectArea` (the area control compared
+    with the event's entity; `FillScenarioComboBox` stays C++: the effects call it too).
+  - `EESETSETCAMGModifyObject` (the clicked list's selection, none -> nothing; id 0x9bf adds, else removes),
+    `EESETSETMSDCameraScrollChange`, `EESETSETSAAAttributeChange` (their type and the effect's controls through
+    `EESEENewObjects`), `EESEEUseAreaObject` with `EESEEMoveAreaObject` (one kind: ICF folded their bodies) and
+    `EESEEFaceAreaObject` (the form's label, combo and area-radio ids are data in the kind).
+  - The host `ee_screenscpp_see` now takes three pointers and four integers; `ee_screens_see_process` takes the
+    form (only the area/object radios read it). The host `static_assert`s the event kinds.
+- **Behaviour change:** `EESETSETSAAAttributeChange` with no combo selection passed an uninitialised selection; it
+  passes -1 (0xffffffff) now (the combo always has one when it fires).
+- **Count:** +201 -335 (net -134) over `include/ee` and `src` without the gate's own file (the fix +13 -15, the
+  first move +100 -132, the second +88 -188).
+- **Tests:** 6 new in `editor_events.rs` (the slider's f32 value and format, the check box's controls, the
+  object/area refill, the military group's add/remove/none, the scroll and attribute shows, the three radios' ids)
+  and the hide-UI views in the first test. No golden driver: the editor gate ran on the unmodified code first and is
+  unchanged by each move.
+- **Only a person reaches:** the mouse itself (the gate sets the controls and processes their events directly), the
+  slider drag's own firing, the trigger tab's drawing. No tour opens the editor.
+- **Not done:** terrain colour/type (`EEUIETerrainColorChange`, `EEUIETerrainTypeChange`), map type
+  (`EEUIFSEEMapType`), unit sort (`EEUIFSEESortUnitList`), start epoch (`EESEEChangeStartEpoch`), unit limit
+  (`EESEEGameUnitLimit`), `EESEAChangeLoadText`, and the thin click, lasso, delete and paint classes.
+
+## R6: the game screens, nineteenth round: the editor tabs' map type, unit sort, start epoch and unit limit events whole in Rust (ee_screens editor_events.rs; branch rust-screens19, 2026-11-13)
+
+Round 14's item (a), third part. Count: git over `include/ee` and `src` without the gate's own file.
+
+- **The gate first** (expected.txt 1734 -> 1781 lines, recorded on the unmodified events in its own commit, lines
+  only added): `combo ID LINE`, `slider ID VALUE` and `radio ID` drive an editor control by id (a combo's
+  selection-changed or a slider's range-changed event processed after the value is set; a radio's `Check` fires its
+  own); `controls ID...` prints display modes and a label's first line; `unitlist` prints the unit tab's list
+  (0x3f1); `epoch ROW START END` sets a player row's end epoch, picks its start and prints the end combo. The script
+  shows and hides the map tab's elevation boxes, re-sorts and re-filters the unit list (by epoch, alphabetical, sea,
+  world), walks the start epochs (end kept, end earlier than the new start, the all-players row) and moves the unit
+  limit.
+  - The sea button's radio left the list unchanged and the world button changed it (169 -> 15 units): recorded as
+    the code does; not investigated.
+- **Moved whole** (4 classes, `EESEERust` kinds 13-16; `EESEEGameUnitLimit.h` deleted, `EEUIFSEEMapType` and
+  `EESEEChangeStartEpoch` out of their headers, `EEUIFSEESortUnitList` out of `EESEUnit.cpp`):
+  - `EEUIFSEEMapType`: the original's unsigned `selection > 0` (no selection reads as -1: shown).
+  - `EEUIFSEESortUnitList`: the editor form's unit tab's `RefreshUnitList` (the form argument, as the original).
+  - `EESEEChangeStartEpoch`: the end epoch's index in all epochs (`end + count - lines`, unsigned), the titles from
+    the start on refilled by one host op (`AppendStringArray` of the whole list, as the original), the end kept or
+    the first line.
+  - `EESEEGameUnitLimit`: no longer a `UIESliderChange`; the record holds the label, "%g", the modifier and the
+    offset (a `long` made a float, as the original's sum). The per-player count (unsigned division by
+    `mMaxPlayers - 1`) goes into label 0x162 first, then the value as `UIESliderChange::ProcessEvent` prints it
+    (no value of this event is ever mapped to a string, so the map lookup is not carried).
+- **Behaviour changes:** with `mMaxPlayers` 1 the unit limit skips the per-player label (the original divided by
+  zero); the start epoch and map type read a failed `GetCurrentSelection` as -1 (the original's out value).
+- **Count:** +65 -101 (net -36).
+- **Tests:** 3 new in `editor_events.rs` (12 there): map type and sort, start epoch (kept, earlier, none), unit
+  limit (per player then "%g"; one player).
+- **Only a person reaches:** the mouse on these controls; the drawing of the map, unit and player tabs.
+- **Not done:** terrain colour/type (`EEUIETerrainColorChange`, `EEUIETerrainTypeChange`: bitmap and texture work,
+  which EE-SIM cannot check), `EESEAChangeLoadText` (posted only by the editor's load thread, which the gate does not
+  run), and the thin click, lasso, delete and paint action classes (with the `EESEAPaintTerrain.cpp` hosts moving to
+  an `EXTRA_UNITS` unit if that file goes).
