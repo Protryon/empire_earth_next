@@ -4794,6 +4794,9 @@ struct EeWonUdpRecvOp;
 /// `UDPManagerSendRecvOp`'s state and steps.
 struct EeWonUdpSendRecvOp;
 
+/// The op's map (ids as the C++ `unsigned long`s they are: 64-bit on LP64 systems, sent as their low 32 bits).
+struct EeWonUserStatus;
+
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
 
@@ -6869,6 +6872,9 @@ struct EeWonUdpOpHooks {
   /// a receive op's Rust object
   const EeWonUdpRecvOp *(*recv_object)(void *op);
 };
+
+/// One entry, to the C++ copy.
+using EeWonUserStatusSink = void(*)(void *context, uint64_t id, uint8_t status);
 
 /// A click the list delivers (`ListItemClickedEvent`'s arguments besides the item; `DeliverItemClicked`'s `b`).
 struct EeWonItemClick {
@@ -14833,6 +14839,55 @@ void ee_won_udpsendrecvop_recv_done(const EeWonUdpSendRecvOp *r, void *wait);
 /// # Safety
 /// `r` is live.
 void ee_won_udpsendrecvop_cleanup(const EeWonUdpSendRecvOp *r);
+
+/// A new, empty map.
+EeWonUserStatus *ee_won_userstatus_new();
+
+/// Frees it.
+///
+/// # Safety
+/// `s` is NULL or from [`ee_won_userstatus_new`], not used after.
+void ee_won_userstatus_free(EeWonUserStatus *s);
+
+/// `AddWONUserId`.
+///
+/// # Safety
+/// `s` is a live map (so for every `ee_won_userstatus_` call taking one).
+void ee_won_userstatus_add(EeWonUserStatus *s, uint64_t id);
+
+/// Empties the map (the start of an assignment of a whole map).
+///
+/// # Safety
+/// As [`ee_won_userstatus_add`].
+void ee_won_userstatus_clear(EeWonUserStatus *s);
+
+/// `map[id] = status`.
+///
+/// # Safety
+/// As [`ee_won_userstatus_add`].
+void ee_won_userstatus_put(EeWonUserStatus *s, uint64_t id, uint8_t status);
+
+/// Every entry in order to `sink`.
+///
+/// # Safety
+/// As [`ee_won_userstatus_add`]; `sink` takes `context`.
+void ee_won_userstatus_each(const EeWonUserStatus *s, EeWonUserStatusSink sink, void *context);
+
+/// The request datagram to `sink`.
+///
+/// # Safety
+/// As [`ee_won_userstatus_add`]; `sink` takes `context`.
+void ee_won_userstatus_request(const EeWonUserStatus *s, EeWonByteSink sink, void *context);
+
+/// `CheckResponse`: the message (`len` bytes) read from `pos`; returns the status, `out_pos` the position after.
+///
+/// # Safety
+/// As [`ee_won_userstatus_add`]; `data` holds `len` bytes; `out_pos` is writable.
+int32_t ee_won_userstatus_reply(EeWonUserStatus *s,
+                                const uint8_t *data,
+                                size_t len,
+                                size_t pos,
+                                size_t *out_pos);
 
 }  // extern "C"
 

@@ -141,6 +141,7 @@ pub mod titlecfg;
 pub mod treeobj;
 pub mod udpmgr;
 pub mod udpops;
+pub mod userstatus;
 pub mod verop;
 pub mod wire;
 
