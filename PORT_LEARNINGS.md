@@ -10807,3 +10807,57 @@ Measured by net C++ deletion (src and include/ee, git numstat).
   unit compiled); `mkdir -p build/clang/exe` and rerun.
 - **What only a person or a tour reaches:** nothing drawn changed. The heal range test also gates `EEUnitClass::Heal`'s
   animation and effect.
+
+## R5b.4, seventeenth round: EEUGRust generic over the goal kind; the cast calamity, explore and unload transport goals whole in Rust (ee_units rust_goal.rs, calamity.rs, explore.rs, unload.rs; branch rust-r5b4-core17, 2026-11-13)
+
+- **One host for every Rust goal: an operation callback, not a table.** Round 16's `EEUGRust` had the patrol's
+  21-function host table; a second class would have needed its own and cost as much as it saved. The class is now
+  generic: every virtual calls `ee_units_rust_goal(op, kind, goal, a, b, io, host)`, which dispatches by `mKind` to
+  the class's bodies, and the C++ answers through one callback (`EeUnitsGoalHost`: an operation number, two handles
+  and an argument block of ints, floats, a text and a list sink). Each read or world call is one `case` of a switch
+  (two to five lines) instead of a function plus a table entry. Rust keeps one trait per class (`PatrolHost`,
+  `CalamityHost`, `ExploreHost`, `UnloadHost`, over a common `GoalHost`), so the bodies and their mock-host tests
+  stay typed; one adapter (`OpHost`) implements them all over the callback.
+- **The texts and the defaults moved with it.** The debug line and text and the out-of-synch dump are Rust
+  (`format!`, appended through the host into the `UWideString` or the dump's `FILE`; a unit's class name is its own
+  operation); `GetDestination` with its group notice, `GetStartAction`, `Start`, the base `EvaluateCondition`,
+  `GetMaxPathAttempts` (3, the unload's 9) and `Suits` (true, the unload's test) are answered in Rust, and `Load` and
+  `RepairPointers` hand Rust the save version. A class moved later adds only its own operations and accessors.
+- **What it deleted.** C++ (src and include, not the generated header) per commit: the cast calamity with the
+  generic rework +392 -738 (net -346), explore +197 -470 (-273), unload transport +213 -511 (-298): the round -917
+  before the merge, against the lane's +83 over rounds 15-16.
+- **Explore's bad tiles are ee_astar's `SparseArray`** (ee_units now depends on ee_astar and ee_ge): the point set
+  behind `U2DSparseArrayPointContainer` was already Rust, so the save lists the bad tiles in the same order and the
+  checksum's count is its `size`. `GE3DPoint::DistanceToSquared` is ee_ge's.
+- **State by value, no lock across a host call.** Each body copies its goal's record out of the table, calls the
+  host, and writes it back (the explore record, with its point set, is cloned). A reentrant body for the same goal
+  would see the record as it was before the outer body; no gate game has one.
+- **Two unit types behind one handle.** A goal's target may be any `EEUnit` while its source or transport is an
+  `EEComplexUnit`; single inheritance puts both at the same address, so the host casts each handle to the type the
+  original read through, and the saved ids' lookup says which (`find_unit(id, complex)`).
+- **Accessors for the callers' member reads.** The AI read and wrote the classes' members directly: the prophet the
+  cast's technology, tile and target; the active group the explore copy's tile and the unload's tile; the AI
+  personnel the unload's destination before `FindUnloadTiles` (now `SetUnloadDestination`, one call); the air
+  bomber cleared the transport so the goal's destructor would not release it (`ForgetUnloadTransport`). The
+  compiler lists them once the class is gone.
+- **Coverage by temporary prints (removed).** No game of any profile reaches the cast calamity goal (calamity seeds
+  2-7; oracle, late, space, missile, scenario 2-3: the calamity profile's calamities are cast through the manager)
+  nor the unload transport goal (oracle, late, space, scenario 2-3 and the islands saveload game): both are unit
+  tests only. Explore goals run in every random-map profile, but only through the computer players' continent
+  fallback (an explorer that is not human never searches rings), the ship's lighthouse test and once the random map
+  point (calamity seed 6); the ring search is unit tests only. The patrol's move onto the generic host is gated by
+  the scenario profile, as in round 16.
+- **Bash heredocs again.** A temporary `printf("...\n")` and a Python edit with `\\n` sent through quoted heredocs
+  came out with a real newline (the compiler and an assertion stopped them). Edit strings with escapes through the
+  editor tool or a script written by the file tool.
+- **Behaviour:** a cast without a source no longer reads its height; a patrol without a point leaves
+  `GetGoalLocation`'s point as it was; an unload whose transport was not found on load answers its range trigger
+  false and its texts without the transport (each read NULL before). Everything else is the original's, call for call.
+- **Gates of the round.** Per commit: build `--sim` 0/0, the Rust gate PASS (ee_plat_core's scaled timer test failed
+  once under load on two runs, PASS rerun), oracle seeds 2-3 identical; captures at seeds 2-3: scenario and calamity
+  (calamity commit), oracle and late (explore; calamity skipped for disk), oracle, late, space and scenario (unload);
+  saveload (oracle, calamity, late, space, next, plains-medium-3ai; seed 2 at 1000/1900 s) as the expect file on the
+  unload tree (it holds the explore goals' save and load). On the result merged with rust: build `--sim` and the test
+  profile link 0/0, the Rust gate PASS (the same timer test rerun alone), oracle seeds 2-7 identical, captures at
+  seeds 2-3 oracle, late, calamity and scenario PASS. ee_units tests 157 (13 new). No tour: nothing
+  drawn changed (the debug texts appear only in the debug panels).
