@@ -540,6 +540,11 @@ function M.step(view, memory)
     if ECON.order then
         phase = BO.phase(view, memory)
         plan = BO.plan(plan, phase)
+        -- (BO.OPT.owner_barracks, the owner's log: the barracks at 2.4 minutes, after the patches' centres and before
+        -- the mines'; ours stood at 11-14.5 with barracks_at 24 citizens) the Prehistoric barracks with the first citizens
+        if BO.OPT.owner_barracks and phase == "pre" then
+            plan.barracks_at = BO.OWNER_BARRACKS_AT
+        end
     end
     PL.afford_retry = ECON.order and (BO.OPT.settle_afford or BO.OPT.mines_early) or false
     PL.blocked_skip = ECON.order and BO.OPT.blocked_skip or false

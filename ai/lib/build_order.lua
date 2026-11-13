@@ -48,6 +48,7 @@ M.OPT = {
     pre_lean = false,       -- (off until benched) the owner's Prehistoric settlements: two patches while two home patches
                             -- stand, one settlement a site (any kind touched), none for wood
     mines_after_barracks = false, -- (off until benched) a Prehistoric mine settlement waits for the barracks and a tower
+    owner_barracks = false, -- (off until benched) the Prehistoric barracks at OWNER_BARRACKS_AT citizens (his: 2.4 min)
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -116,6 +117,7 @@ M.WOOD_BANK_OWNER = 575    -- (OPT.owner_mines) the owner's bank at the advance 
 M.STONE_WOOD = 7           -- (OPT.owner_mines) wood gatherers at most until STONE_WOOD_MIN into the Stone Age
 M.STONE_WOOD_MIN = 12
 M.wood_cap = nil           -- (set by boom each step)
+M.OWNER_BARRACKS_AT = 6    -- (OPT.owner_barracks) citizens
 M.BUILDER_POOL = 11        -- (OPT.builder_pool) the Stone Age's citizens building on top of the fill's places, at most
 M.STONE_MOST = 86          -- ... and the Stone Age's citizens at most (the owner's 35 -> 86)
 M.BUILDER_IDLE = 4         -- (OPT.builder_pool) no citizen trained while this many stand idle
