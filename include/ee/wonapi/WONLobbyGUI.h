@@ -2803,128 +2803,98 @@ public:
     virtual bool ChildInvalidated(Component*); // vtable +0xc0, 0x305d70
 };
 
-class MultiListItem : public ListItem {
-protected:
-    typedef std::vector<SmartPtr<ListItem> > ItemVector;
-    ItemVector mItems; //18, allocator18/first1c/end20/cap24
-    ListItem* GetMouseItem(ListArea*,int&);
-    ListItem* GetMouseItem(ListArea*,int&,int&);
-public:
-    // Implicit default constructor (0x3fa110).
-    // Implicit virtual destructor (0x303db0).
-    void InsertItem(ListItem*); // appends an owned cell
-    void SetItem(ListItem*,int); // 0x302480: sets a cell, growing the row
-    ListItem* GetItem(int) const; // 0x302500
-    virtual void Paint(Graphics&,ListArea*);
-    virtual void CalcDimensions(ListArea*);
-    virtual void SetViewport(ListArea*,Container*);
-    virtual int Compare(const ListItem*,ListArea*) const;
-    virtual bool CanSelect(ListArea*,int,int);
-    virtual void SetPos(int,int);
-    virtual bool Contains(int,int inY) { return inY>=this->mTop && inY<this->mTop+this->mHeight; }
-    virtual void MouseEnter(ListArea*,int,int);
-    virtual void MouseExit(ListArea*);
-    virtual void MouseMove(ListArea*,int,int);
-    virtual void MouseDrag(ListArea*,int,int);
-    virtual void MouseDown(ListArea*,int,int,int);
-    virtual void MouseUp(ListArea*,int,int,int);
-};
-
-// MultiListArea (0x1a4 bytes); constructor and destructor out of line.
+// MultiListArea, MultiListItem and MultiListHeader (R6 WON round 24): their columns, cells, header buttons, sort,
+// paint and drags are the Rust objects of rust/crates/ee_won/src/multiobj.rs; these are the types the lobby, the
+// configs and the adapter list hold, with one-line forwarders.
+class MultiListItem;
 class MultiListHeader;
+// MultiListArea (0x1a4 bytes in the original).
 class MultiListArea : public ListArea {
 public:
     MultiListArea(int=1); // 0x3033a0 (ret 4)
-    virtual void NotifyMouseItemGone(); // 0x3035d0 (vtable +0xd8)
-    void SetNumColumns(int); //303600/393
-    void SetColumnSizeMode(int,unsigned char); // partner-column size mode (not identified in the original exe)
+    virtual ~MultiListArea();
+    virtual void NotifyMouseItemGone() { this->MCall(EeWonMultiCall::NotifyMouseItemGone); } // 0x3035d0
+    void SetNumColumns(int n) { this->MCall(EeWonMultiCall::SetNumColumns,n); } // 0x303600
+    void SetColumnSizeMode(int c,unsigned char m) { this->MCall(EeWonMultiCall::SetColumnSizeMode,c,m); }
     MultiListItem* InsertRow(int=-1); // inserts a blank row
-    void SetColumnWidth(int,int,bool); //3037e0/382
-    // Implicit virtual destructor (0x303540)
-    int GetColumnPaintContext() { return this->mColumnPaintContext; }
-    int GetSortColumn() { return this->mSortColumn; }
-    int GetSortColumnPrev() { return this->mSortColumnPrev; }
-    void SetDynamicSizeColumn(int c) { this->mDynamicSizeColumn=c; }
-    void SetAutoGrowColumns(bool on) { this->mAutoGrowColumns=on; }
-    struct ColumnInfo {
-        SmartPtr<ScrollAreaViewport> mContainer;
-        int mx, mWidth;
-        ListArea::SortFunc mSortFunc;
-        unsigned char mSizeMode;
-        int mPartnerColumn;
-        unsigned char mHAlign;
-        ColumnInfo() : mx(0),mWidth(0),mSortFunc(NULL),mSizeMode(1),mPartnerColumn(-1),mHAlign(0) {} // default values (0x303627..0x303652)
-    }; // 0x1c bytes; SetNumColumns resizes this vector
-    std::vector<ColumnInfo> mColumnInfoVector; //164..173
-    ListArea::SortFunc mSortColFunc; //174
-    int mColumnPaintContext; //178
-    int mTotalColumnWidth; //17c
-    int mSortColumn; //180
-    int mSortColumnPrev; //184
-    int mColumnBorderWidth; //188
-    int mDynamicSizeColumn; //18c
-    bool mAutoGrowColumns; //190
-    ListItem* mMouseColItem; //194, borrowed
-    int mMouseColNum; //198
-    int mMaxTotalColumnWidth; // at +0x19c (0x3038ac)
-    MultiListHeader* mListHeader; // at +0x1a0 (0x3035f0/0x303b24)
-    void NotifyListHeader(); // 0x3035f0
-    void SetSortColumn(int,ListSortType); //303ac0
-    void SetSortColumnFunc(int,SortFunc); // 0x303b50
-    void SetColumnHAlign(int,HorzAlign); // 0x303790
-    virtual void AdjustPosition(bool); // 0x303bb0
-    virtual void Virtual08(); //303be0 SizeChanged
-    virtual void ScrollPaint(Graphics&); //303c70 ScrollPaint
-    MultiListItem* UpdateItem(MultiListItem*); //303e50
-    MultiListItem* SetCell(int,int,ListItem*); //303ee0
-    int GetColumnAt(int); //3039c0
-    int GetColumnPos(int); //303a60
-    int GetColumnWidth(int); //303960
-    MultiListItem* InsertItem(MultiListItem*, int = -1); //303e30
-    MultiListItem* SetString(int, int, const GUIString&, Image* = NULL); //303f60
+    void SetColumnWidth(int c,int w,bool fromSize) { this->MCall(EeWonMultiCall::SetColumnWidth,c,w,fromSize); } // 0x3037e0
+    int GetColumnPaintContext() { return (int)this->MCall(EeWonMultiCall::PaintContext); }
+    int GetSortColumn() { return (int)this->MCall(EeWonMultiCall::SortColumn); }
+    int GetSortColumnPrev() { return (int)this->MCall(EeWonMultiCall::SortColumnPrev); }
+    void SetDynamicSizeColumn(int c) { this->MCall(EeWonMultiCall::SetDynamicSizeColumn,c); }
+    void SetAutoGrowColumns(bool on) { this->MCall(EeWonMultiCall::SetAutoGrowColumns,on); }
+    void SetSortColumn(int c,ListSortType t) { this->MCall(EeWonMultiCall::SetSortColumn,c,t); } // 0x303ac0
+    void SetSortColumnFunc(int c,SortFunc f) { this->MCall(EeWonMultiCall::SetSortColumnFunc,c,(intptr_t)f); } // 0x303b50
+    void SetColumnHAlign(int c,HorzAlign a) { this->MCall(EeWonMultiCall::SetColumnHAlign,c,a); } // 0x303790
+    virtual void AdjustPosition(bool b) { this->MCall(EeWonMultiCall::AdjustPosition,b); } // 0x303bb0
+    virtual void Virtual08() { this->MCall(EeWonMultiCall::SizeChanged); } // 0x303be0 SizeChanged
+    virtual void ScrollPaint(Graphics& g) { this->MCall(EeWonMultiCall::ScrollPaint,(intptr_t)&g); } // 0x303c70
+    MultiListItem* UpdateItem(MultiListItem* r) { return (MultiListItem*)this->MCall(EeWonMultiCall::UpdateItem,(intptr_t)r); } // 0x303e50
+    MultiListItem* SetCell(int r,int c,ListItem* i) { return (MultiListItem*)this->MCall(EeWonMultiCall::SetCell,r,c,(intptr_t)i); } // 0x303ee0
+    int GetColumnAt(int x) { return (int)this->MCall(EeWonMultiCall::ColumnAt,x); } // 0x3039c0
+    int GetColumnPos(int c) { return (int)this->MCall(EeWonMultiCall::ColumnPos,c); } // 0x303a60
+    int GetColumnWidth(int c) { return (int)this->MCall(EeWonMultiCall::ColumnWidth,c); } // 0x303960
+    MultiListItem* InsertItem(MultiListItem* r,int pos=-1); // 0x303e30
+    MultiListItem* SetString(int,int,const GUIString&,Image* =NULL); // 0x303f60
+    EeWonMulti* mMulti;
+private:
+    intptr_t MCall(EeWonMultiCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_multi_call(this->mMulti,c,a,b,cc); }
 };
 
-// MultiListHeader (0xac bytes, Container's 51 vtable slots); fields as set at 0x302a90.
-// type descriptor 0x4d64a0, COL 0x476030, vtable 0x44f170; ten overrides,
-// the other 41 slots are Container's.
+class MultiListItem : public ListItem {
+public:
+    MultiListItem(); // the Rust row (GuiHost.cpp)
+    virtual ~MultiListItem();
+    void InsertItem(ListItem* i) { this->RCall(NULL,EeWonMRowCall::InsertItem,(intptr_t)i); } // appends a cell
+    void SetItem(ListItem* i,int c) { this->RCall(NULL,EeWonMRowCall::SetItem,(intptr_t)i,c); } // 0x302480
+    ListItem* GetItem(int c) const { return (ListItem*)const_cast<MultiListItem*>(this)->RCall(NULL,EeWonMRowCall::GetItem,c); } // 0x302500
+    virtual void Paint(Graphics& g,ListArea* l) { this->RCall(l,EeWonMRowCall::Paint,(intptr_t)&g); }
+    virtual void CalcDimensions(ListArea* l) { this->RCall(l,EeWonMRowCall::CalcDimensions); }
+    virtual void SetViewport(ListArea* l,Container* v) { this->RCall(l,EeWonMRowCall::SetViewport,(intptr_t)v); }
+    virtual int Compare(const ListItem* o,ListArea* l) const { return (int)const_cast<MultiListItem*>(this)->RCall(l,EeWonMRowCall::Compare,(intptr_t)o); }
+    virtual bool CanSelect(ListArea* l,int x,int y) { return this->RCall(l,EeWonMRowCall::CanSelect,x,y)!=0; }
+    virtual void SetPos(int x,int y) { this->RCall(NULL,EeWonMRowCall::SetPos,x,y); }
+    virtual bool Contains(int,int inY) { return inY>=this->mTop && inY<this->mTop+this->mHeight; }
+    virtual void MouseEnter(ListArea* l,int x,int y) { this->RCall(l,EeWonMRowCall::MouseEnter,x,y); }
+    virtual void MouseExit(ListArea* l) { this->RCall(l,EeWonMRowCall::MouseExit); }
+    virtual void MouseMove(ListArea* l,int x,int y) { this->RCall(l,EeWonMRowCall::MouseMove,x,y); }
+    virtual void MouseDrag(ListArea* l,int x,int y) { this->RCall(l,EeWonMRowCall::MouseDrag,x,y); }
+    virtual void MouseDown(ListArea* l,int x,int y,int b) { this->RCall(l,EeWonMRowCall::MouseDown,x,y,b); }
+    virtual void MouseUp(ListArea* l,int x,int y,int b) { this->RCall(l,EeWonMRowCall::MouseUp,x,y,b); }
+    EeWonMRow* mRow;
+private:
+    intptr_t RCall(ListArea* l,EeWonMRowCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0)
+    { return ee_won_mrow_call(this->mRow,l ? static_cast<MultiListArea*>(l)->mMulti : NULL,c,a,b,cc); }
+};
+inline MultiListItem* MultiListArea::InsertItem(MultiListItem* r,int pos) { ListArea::InsertItem(r,pos); return r; }
+inline MultiListItem* MultiListArea::InsertRow(int row) { return this->InsertItem(new MultiListItem,row); }
+
+// MultiListHeader (0xac bytes in the original, the 51 vtable slots of Container; ten overrides).
 class MultiListHeader : public Container {
 public:
     MultiListHeader(MultiListArea* =NULL); // 0x302a90 (ret 4)
-    // Implicit virtual destructor (0x302b50)
-    virtual void Virtual08(); //08=302fb0,SizeChanged
-    virtual void Paint(Graphics&); //18=305e00
-    virtual void MouseExit(); //28=303390,MouseExit
-    virtual void MouseDown(int,int,int); //2c=303260,MouseUp
-    virtual void MouseUp(int,int,int);   //30=303350,MouseDown
-    virtual void MouseMove(int,int); //34=303290,MouseMove
-    virtual void MouseDrag(int,int); //38=3032f0,MouseDrag
-    virtual void HandleComponentEvent(ComponentEvent*); //7c=302be0
-    virtual Component* FindChildAt(int,int); //ac=304710,FindChildAt
-    void SetColumnItem(int,Component*); //302cf0/283,ret8
-    void SetMultiListArea(MultiListArea*); // 0x302bc0 (ret 4)
-    void NotifyColumnChange(); // 0x302e10
-    void SetSortColumn(int,ListSortType); // 0x302cb0
+    virtual ~MultiListHeader();
+    virtual void Virtual08() { this->HCall(EeWonMHeadCall::SizeChanged); } // 0x302fb0 SizeChanged
+    virtual void Paint(Graphics&); // 0x305e00 (the container paint)
+    virtual void MouseExit() { this->HCall(EeWonMHeadCall::MouseExit); } // 0x303390
+    virtual void MouseDown(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseDown,x,y,b); } // 0x303260
+    virtual void MouseUp(int x,int y,int b) { this->HCall(EeWonMHeadCall::MouseUp,x,y,b); } // 0x303350
+    virtual void MouseMove(int x,int y) { this->HCall(EeWonMHeadCall::MouseMove,x,y); } // 0x303290
+    virtual void MouseDrag(int x,int y) { this->HCall(EeWonMHeadCall::MouseDrag,x,y); } // 0x3032f0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->HCall(EeWonMHeadCall::HandleEvent,(intptr_t)e); } // 0x302be0
+    virtual Component* FindChildAt(int,int); // 0x304710 (the container hit test)
+    void SetColumnItem(int c,Component* i) { this->HCall(EeWonMHeadCall::SetColumnItem,c,(intptr_t)i); } // 0x302cf0
+    void SetMultiListArea(MultiListArea* a) { this->HCall(EeWonMHeadCall::SetMultiListArea,(intptr_t)a); } // 0x302bc0
+    void NotifyColumnChange() { this->HCall(EeWonMHeadCall::NotifyColumnChange); } // 0x302e10
+    void SetSortColumn(int c,ListSortType t) { this->HCall(EeWonMHeadCall::SetSortColumn,c,t); } // 0x302cb0
     static ListSortType GetSortTypeForButton(Component*); // 0x303050
-protected:
-    struct ColumnInfo {
-        Component* mComponent; // the Container owns the child
-        ListSortType mSortType;
-        ColumnInfo(Component* c=NULL) : mComponent(c),mSortType(ListSortType_None) {} // default used when resizing (0x302d1c..0x302d29)
-    }; // 8-byte value; no owning pointer
-    typedef std::vector<ColumnInfo> ColumnVector;
-    ColumnVector mColumnVector; // at +0x84: allocator +0x84, first +0x88, end +0x8c, capacity +0x90
-    MultiListArea* mListArea; // at +0x94, back link (set by 0x302bc0)
-    int mDragColumn; //98
-    Component* mDragComponent; //9c borrowed
-    int mDragX; //a0
-    int mCurSortCol; //a4
-    bool mDrawSortArrow; // at +0xa8; +0xa9..0xab padding; the class is 0xac bytes
-    Component* GetDragComponent(int); // 0x3030b0
-public:
-    int GetColumnIndex(Component*); // 0x302fd0
-    ListSortType GetSortType(int); // 0x303010
+    int GetColumnIndex(Component* c) { return (int)this->HCall(EeWonMHeadCall::ColumnIndex,(intptr_t)c); } // 0x302fd0
+    ListSortType GetSortType(int c) { return (ListSortType)this->HCall(EeWonMHeadCall::SortType,c); } // 0x303010
+    bool DrawSortArrow() { return this->HCall(EeWonMHeadCall::DrawSortArrow)!=0; }
+    EeWonMHead* mHead;
+private:
+    intptr_t HCall(EeWonMHeadCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_mhead_call(this->mHead,c,a,b,cc); }
 };
-
 
 struct GUIStringLessNoCase {
     bool operator()(const GUIString& inLeft, const GUIString& inRight) const

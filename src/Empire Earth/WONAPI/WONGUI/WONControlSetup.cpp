@@ -1,4 +1,4 @@
-// Multi-column list area and skinned combo box constructors (file name inferred)
+// Skinned combo box constructor (file name inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -12,22 +12,6 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySkinnedContainers.h"
 namespace WONAPI {
-// Creates a multi-column list area with the given column count and no sort (the original reserved room for
-// 11000 items: the Rust list grows as needed; emitted at 0x007033a0)
-MultiListArea::MultiListArea(int columns)
-{
-    this->mTotalColumnWidth=0;
-    this->mSortColumn=0;
-    this->mSortColumnPrev=0;
-    this->mListHeader=NULL;
-    this->mColumnBorderWidth=5;
-    this->mDynamicSizeColumn=-1;
-    this->mMaxTotalColumnWidth=0;
-    this->mMouseColItem=NULL;
-    this->mSortColFunc=NULL;
-    this->mAutoGrowColumns=false;
-    this->SetNumColumns(columns);
-}
 // Creates a skinned combo box with a framed button, a new input box and a new list area (emitted at
 // 0x00719800)
 WONComboBox::WONComboBox()

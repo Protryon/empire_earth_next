@@ -343,6 +343,47 @@ pub enum EeWonGuiOp {
     ItemHold,
     /// `a->Release()`.
     ItemRelease,
+    // ---- the multi-column list, its rows and header (`multiobj`)
+    /// `a->Compare(b, this)` (a cell's own order).
+    ItemCompare = 250,
+    /// `((ListArea::SortFunc)a)(this, b, c)` (a column's sort function).
+    CallSortFunc,
+    /// `a->mWidth = b`.
+    ItemSetWidth,
+    /// `SetCursor(a)` (`EeWonGuiCursor`).
+    SetCursor,
+    /// `mCurrentCursor.get() == a` (`EeWonGuiCursor`; 0 or 1).
+    CursorIs,
+    /// `GetSelColor().GetBackgroundColor(*a)` (`a` the Graphics).
+    SelBackground,
+    /// a column's viewport: `v = new ScrollAreaViewport(this)` held by the column (`AddRef`), then
+    /// `GetViewport()->AddChild(v)`; returns `v` (given back with `ChildRelease`).
+    NewColumnViewport,
+    /// `a->SetPos(b, c)`.
+    ChildSetPos,
+    /// `((MultiListHeader*)a)->NotifyColumnChange()`.
+    HeaderNotify,
+    /// `((MultiListHeader*)a)->SetSortColumn(b, c)`.
+    HeaderSetSortColumn,
+    /// `((MultiListItem*)a)->GetItem(b)`.
+    RowCell,
+    /// `((MultiListItem*)a)->SetItem(b, c)`.
+    RowSetCell,
+    /// `((MultiListArea*)a)->mMulti` (the Rust multi-column list of a header's list).
+    MultiOf,
+    /// `RemoveChild(a)`.
+    RemoveChild,
+    /// `a->mControlId`.
+    ChildControlId,
+    /// `a->mControlId = b`.
+    ChildSetControlId,
+    /// `a->Right()`.
+    ChildRight,
+    /// `a->GetDesiredSize(b[0], b[1])` (`b` points at two i32s).
+    ChildDesiredSize,
+    /// the event `a`'s component's ancestor whose parent is this container (`child = a->mComponent`, climbed while
+    /// its parent is neither this nor NULL); 0 when the climb ends at NULL.
+    EventChildUnder,
 }
 
 /// The events a component object fires (`FireEvent`).

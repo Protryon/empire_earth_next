@@ -80,6 +80,7 @@ pub mod lobbymap;
 pub mod md5;
 pub mod miscops;
 pub mod model;
+pub mod multiobj;
 pub mod multiping;
 /// cbindgen:ignore
 pub mod netstats;

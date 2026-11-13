@@ -2216,6 +2216,46 @@ enum class EeWonGuiOp : uint32_t {
   ItemHold,
   /// `a->Release()`.
   ItemRelease,
+  /// `a->Compare(b, this)` (a cell's own order).
+  ItemCompare = 250,
+  /// `((ListArea::SortFunc)a)(this, b, c)` (a column's sort function).
+  CallSortFunc,
+  /// `a->mWidth = b`.
+  ItemSetWidth,
+  /// `SetCursor(a)` (`EeWonGuiCursor`).
+  SetCursor,
+  /// `mCurrentCursor.get() == a` (`EeWonGuiCursor`; 0 or 1).
+  CursorIs,
+  /// `GetSelColor().GetBackgroundColor(*a)` (`a` the Graphics).
+  SelBackground,
+  /// a column's viewport: `v = new ScrollAreaViewport(this)` held by the column (`AddRef`), then
+  /// `GetViewport()->AddChild(v)`; returns `v` (given back with `ChildRelease`).
+  NewColumnViewport,
+  /// `a->SetPos(b, c)`.
+  ChildSetPos,
+  /// `((MultiListHeader*)a)->NotifyColumnChange()`.
+  HeaderNotify,
+  /// `((MultiListHeader*)a)->SetSortColumn(b, c)`.
+  HeaderSetSortColumn,
+  /// `((MultiListItem*)a)->GetItem(b)`.
+  RowCell,
+  /// `((MultiListItem*)a)->SetItem(b, c)`.
+  RowSetCell,
+  /// `((MultiListArea*)a)->mMulti` (the Rust multi-column list of a header's list).
+  MultiOf,
+  /// `RemoveChild(a)`.
+  RemoveChild,
+  /// `a->mControlId`.
+  ChildControlId,
+  /// `a->mControlId = b`.
+  ChildSetControlId,
+  /// `a->Right()`.
+  ChildRight,
+  /// `a->GetDesiredSize(b[0], b[1])` (`b` points at two i32s).
+  ChildDesiredSize,
+  /// the event `a`'s component's ancestor whose parent is this container (`child = a->mComponent`, climbed while
+  /// its parent is neither this nor NULL); 0 when the climb ends at NULL.
+  EventChildUnder,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -2782,6 +2822,125 @@ enum class EeWonLobbyKeyKind {
   InOrder = 6,
 };
 
+/// The inward calls of the list (`MultiListArea`'s virtuals and methods).
+enum class EeWonMultiCall : uint32_t {
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition = 1,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `ScrollPaint(*a)`.
+  ScrollPaint,
+  NotifyMouseItemGone,
+  /// `SetNumColumns(a)`.
+  SetNumColumns,
+  /// `SetColumnWidth(a, b, c != 0)`.
+  SetColumnWidth,
+  /// `SetSortColumn(a, b)`.
+  SetSortColumn,
+  /// `SetSortColumnFunc(a, b)` (`b` a `ListArea::SortFunc`).
+  SetSortColumnFunc,
+  /// `SetColumnHAlign(a, b)`.
+  SetColumnHAlign,
+  /// `SetColumnSizeMode(a, b)`.
+  SetColumnSizeMode,
+  /// `UpdateItem(a)`: the row.
+  UpdateItem,
+  /// `SetCell(a, b, c)`: the row or 0.
+  SetCell,
+  /// `GetColumnAt(a)`.
+  ColumnAt,
+  /// `GetColumnWidth(a)`.
+  ColumnWidth,
+  /// `GetColumnPos(a)`.
+  ColumnPos,
+  /// `mColumnPaintContext`.
+  PaintContext,
+  /// `mSortColumn`.
+  SortColumn,
+  /// `mSortColumnPrev`.
+  SortColumnPrev,
+  /// `mDynamicSizeColumn = a`.
+  SetDynamicSizeColumn,
+  /// `mAutoGrowColumns = a != 0`.
+  SetAutoGrowColumns,
+  /// `mColumnInfoVector.size()`.
+  NumColumns,
+  /// `mTotalColumnWidth`.
+  TotalColumnWidth,
+  /// `mMouseColItem`.
+  MouseColItem,
+  /// `mListHeader`.
+  Header,
+};
+
+/// The inward calls of a row (`MultiListItem`'s virtuals and methods; the list's calls need its Rust list).
+enum class EeWonMRowCall : uint32_t {
+  /// `CalcDimensions(list)`.
+  CalcDimensions = 1,
+  /// `Compare(a, list)`.
+  Compare,
+  /// `SetPos(a, b)` (no list needed).
+  SetPos,
+  /// `Paint(*a, list)`.
+  Paint,
+  /// `SetViewport(list, a)`.
+  SetViewport,
+  /// `CanSelect(list, a, b)` (0 or 1).
+  CanSelect,
+  /// `MouseEnter(list, a, b)`.
+  MouseEnter,
+  /// `MouseExit(list)`.
+  MouseExit,
+  /// `MouseMove(list, a, b)`.
+  MouseMove,
+  /// `MouseDrag(list, a, b)`.
+  MouseDrag,
+  /// `MouseDown(list, a, b, c)`.
+  MouseDown,
+  /// `MouseUp(list, a, b, c)`.
+  MouseUp,
+  /// `SetItem(a, b)` (no list needed).
+  SetItem,
+  /// `GetItem(a)` (no list needed).
+  GetItem,
+  /// `InsertItem(a)` (no list needed).
+  InsertItem,
+};
+
+/// The inward calls of the header (`MultiListHeader`'s virtuals and methods).
+enum class EeWonMHeadCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  MouseExit,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `SetColumnItem(a, b)`.
+  SetColumnItem,
+  /// `SetMultiListArea(a)`.
+  SetMultiListArea,
+  NotifyColumnChange,
+  /// `SetSortColumn(a, b)`.
+  SetSortColumn,
+  /// `GetColumnIndex(a)`.
+  ColumnIndex,
+  /// `GetSortType(a)`.
+  SortType,
+  /// `mDrawSortArrow` (0 or 1).
+  DrawSortArrow,
+  /// `mListArea`.
+  ListArea,
+  /// `mDragColumn`.
+  DragColumn,
+};
+
 /// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
 /// cut given).
 enum class EeWonPrefsRead {
@@ -3156,6 +3315,15 @@ struct EeWonLobbyMap;
 
 /// `LobbyPersistentData`'s scalar state and its setters' rules.
 struct EeWonLobbyPrefs;
+
+/// The Rust MultiListHeader.
+struct EeWonMHead;
+
+/// The Rust MultiListItem: its cells (a reference held on each).
+struct EeWonMRow;
+
+/// The Rust MultiListArea.
+struct EeWonMulti;
 
 /// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
 struct EeWonOpContainer;
@@ -9712,6 +9880,61 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 const uint8_t *data,
                                 size_t data_length,
                                 uint16_t *out_count);
+
+/// A new Rust MultiListArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
+EeWonMulti *ee_won_multi_new(void *component,
+                             EeWonGuiHostFn host,
+                             const EeWonList *list);
+
+/// # Safety
+/// `multi` came from `ee_won_multi_new` (or is NULL) and is not used again.
+void ee_won_multi_free(EeWonMulti *multi);
+
+/// One of MultiListArea's methods (`EeWonMultiCall`).
+///
+/// # Safety
+/// `multi` is live; the call's arguments as documented.
+ptrdiff_t ee_won_multi_call(const EeWonMulti *multi,
+                            EeWonMultiCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
+/// A new Rust MultiListItem for the C++ row `component`; `host` gives the cells' references.
+EeWonMRow *ee_won_mrow_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `row` came from `ee_won_mrow_new` (or is NULL) and is not used again.
+void ee_won_mrow_free(EeWonMRow *row);
+
+/// One of MultiListItem's methods (`EeWonMRowCall`); `multi` is the row's list's Rust object (NULL for the calls
+/// that need no list).
+///
+/// # Safety
+/// `row` is live; `multi` is live or NULL; the call's arguments as documented.
+ptrdiff_t ee_won_mrow_call(const EeWonMRow *row,
+                           const EeWonMulti *multi,
+                           EeWonMRowCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust MultiListHeader for the C++ `component`, its calls out through `host`.
+EeWonMHead *ee_won_mhead_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `head` came from `ee_won_mhead_new` (or is NULL) and is not used again.
+void ee_won_mhead_free(EeWonMHead *head);
+
+/// One of MultiListHeader's methods (`EeWonMHeadCall`).
+///
+/// # Safety
+/// `head` is live; the call's arguments as documented.
+ptrdiff_t ee_won_mhead_call(const EeWonMHead *head,
+                            EeWonMHeadCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// `new MultiPingOp`: the Rust op a `RustServerOp` runs.
 EeWonHostOp *ee_won_multiping_new();

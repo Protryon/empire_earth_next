@@ -115,11 +115,7 @@
 300a60 300d0d WONGUI/MSEtchedFrameGroup.cpp
 3010e0 3016ee WONGUI/MSTabComposition.cpp
 3016f0 302236 WONGUI/MSMessageBox.cpp
-302480 302a84 WONGUI/MultiListItem.cpp
-302500 30252a WONGUI/MultiListAdapters.cpp
-302a90 30339f WONGUI/MultiListHeader.cpp
 3033a0 3199da WONGUI/WONControlSetup.cpp
-3035f0 3040c3 WONGUI/MultiListArea.cpp
 3040d0 304ded WONGUI/RootContainer.cpp
 304df0 305540 WONGUI/ScrollArea.cpp
 305010 305e0d WONGUI/ScrollAreaViewport.cpp

@@ -547,6 +547,24 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::ItemMouseUp: Item(a)->MouseUp(t, (int)b, (int)c, (int)d); return 0;
     case Op::ItemHold: Item(a)->AddRef(); return 0;
     case Op::ItemRelease: Item(a)->Release(); return 0;
+    // the multi-column list and its rows (multiobj.rs)
+    case Op::ItemCompare: return Item(a)->Compare(Item(b), t);
+    case Op::CallSortFunc: return ((ListArea::SortFunc)a)(t, Item(b), Item(c));
+    case Op::ItemSetWidth: Item(a)->mWidth = (int)b; return 0;
+    case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
+    case Op::SelBackground: return (intptr_t)t->GetSelColor().GetBackgroundColor(*(Graphics*)a);
+    case Op::NewColumnViewport: {
+        ScrollAreaViewport* v = new ScrollAreaViewport(t);
+        v->AddRef(); // the column's SmartPtr, given back with ChildRelease
+        t->GetViewport()->AddChild(v);
+        return (intptr_t)v;
+    }
+    case Op::ChildSetPos: Comp(a)->SetPos((int)b, (int)c); return 0;
+    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    case Op::HeaderNotify: ((MultiListHeader*)a)->NotifyColumnChange(); return 0;
+    case Op::HeaderSetSortColumn: ((MultiListHeader*)a)->SetSortColumn((int)b, (ListSortType)c); return 0;
+    case Op::RowCell: return (intptr_t)((MultiListItem*)a)->GetItem((int)b);
+    case Op::RowSetCell: ((MultiListItem*)a)->SetItem(Item(b), (int)c); return 0;
     case Op::Draw: {
         WONDrawSlots aSlots;
         WONDrawNoCall aNoCall;
@@ -612,5 +630,131 @@ void PopupMenu::AddSeperator()
 {
     this->InsertItem(new ComponentListItem(new MSSeperator(6),true,false));
     this->SetSizeEqualToTotal(100,-1);
+}
+}
+
+// ---- the multi-column list, its rows and header (multiobj.rs)
+
+// a row's own calls out (its SetPos and its cells' references)
+extern "C" intptr_t ee_won_guicpp_mrow_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)inComp; (void)c; (void)d;
+    switch (op) {
+    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
+    case Op::ItemSetPos: Item(a)->SetPos(0, (int)b); return 0;
+    case Op::ItemHold: Item(a)->AddRef(); return 0;
+    case Op::ItemRelease: Item(a)->Release(); return 0;
+    default: return 0;
+    }
+}
+
+extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    MultiListHeader* t = (MultiListHeader*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
+    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseUp: t->Container::MouseUp((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseMove: t->Container::MouseMove((int)a, (int)b); return 0;
+    case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
+    case Op::BaseMouseExit: t->Container::MouseExit(); return 0;
+    case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
+    case Op::MultiOf: return (intptr_t)((MultiListArea*)a)->mMulti;
+    case Op::RemoveChild: t->RemoveChild(Comp(a)); return 0;
+    case Op::AddChild: t->AddChild(Comp(a)); return 0;
+    case Op::ChildSetControlId: Comp(a)->mControlId = (int)b; return 0;
+    case Op::ChildControlId: return Comp(a)->mControlId;
+    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
+    case Op::ChildDesiredSize: { int* wh = (int*)b; Comp(a)->GetDesiredSize(wh[0], wh[1]); return 0; }
+    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
+    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
+    case Op::ChildSetPosSize: {
+        const EeWonRect4* r = (const EeWonRect4*)b;
+        Comp(a)->SetPosSize(r->x, r->y, r->w, r->h);
+        return 0;
+    }
+    case Op::ChildLeft: return Comp(a)->Left();
+    case Op::ChildRight: return Comp(a)->Right();
+    case Op::ChildWidth: return Comp(a)->Width();
+    case Op::EventIsButtonPress: return ((ComponentEvent*)a)->mType == ComponentEvent_ButtonPressed ? 1 : 0;
+    case Op::EventChildUnder: {
+        Component* child = ((ComponentEvent*)a)->mComponent;
+        Container* parent = child->mParent;
+        while (parent != t && parent != NULL) {
+            child = parent;
+            parent = child->mParent;
+        }
+        return parent == NULL ? 0 : (intptr_t)child;
+    }
+    case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
+    case Op::CursorIs: return t->mCurrentCursor.get() == CursorOf(a) ? 1 : 0;
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x007033a0
+// Creates a multi-column list area with the given column count and no sort (the Rust list holds the 5-pixel column
+// border, no dynamic column, no width cap and auto grow off; the original reserved room for 11000 items)
+MultiListArea::MultiListArea(int columns)
+{
+    this->mMulti=ee_won_multi_new(this,ee_won_guicpp_list_call,this->mRust);
+    this->SetNumColumns(columns);
+}
+// FUNCTION: WON 0x00703540
+// Destroys the list: the Rust list gives its columns' viewports back (the ListArea base then its rows)
+MultiListArea::~MultiListArea() { ee_won_multi_free(this->mMulti); }
+// FUNCTION: WON 0x00703f60
+// Puts a text cell (the list's font and colour, an optional image) into a row's column; returns the row
+MultiListItem* MultiListArea::SetString(int row,int column,const GUIString& text,Image* image)
+{
+    SmartPtr<TextListItem> item=new TextListItem;
+    item->mText=text;
+    item->mColor=this->mTextColor;
+    item->mFont=this->mFont;
+    item->mImage=image;
+    return this->SetCell(row,column,item.get());
+}
+// Creates an empty row (the implicit constructor at 0x3fa110); the Rust row holds the cells
+MultiListItem::MultiListItem() { this->mRow=ee_won_mrow_new(this,ee_won_guicpp_mrow_call); }
+// Destroys the row (0x00703db0): the Rust row gives its cells back
+MultiListItem::~MultiListItem() { ee_won_mrow_free(this->mRow); }
+
+// FUNCTION: WON 0x00702a90
+// Creates a clipped list header with sort arrows on, no sort column, attached to a list area
+MultiListHeader::MultiListHeader(MultiListArea* area)
+{
+    this->mHead=ee_won_mhead_new(this,ee_won_guicpp_mhead_call); // no drag, no sort column, sort arrows on
+    this->SetComponentFlags(ComponentFlag_Clip,true);
+    this->SetMultiListArea(area);
+}
+// FUNCTION: WON 0x00702b50
+// Destroys the header: the Rust header goes (its buttons are the container's children)
+MultiListHeader::~MultiListHeader() { ee_won_mhead_free(this->mHead); }
+// Paints the header's children (the linker folds this body into the identical ScrollAreaViewport::Paint at 0x00705e00)
+void MultiListHeader::Paint(Graphics& graphics) { Container::Paint(graphics); }
+// Returns the child under a point (the linker folds this body into the identical RootContainer::FindChildAt
+// at 0x00704710)
+Component* MultiListHeader::FindChildAt(int x,int y) { return Container::FindChildAt(x,y); }
+// FUNCTION: WON 0x00703050
+// Returns the sort arrow a header button should draw, found through its enclosing header (none without one)
+ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
+{
+    while(true) {
+        Container* parent=button->mParent;
+        if(parent==NULL) return ListSortType_None;
+        MultiListHeader* header=dynamic_cast<MultiListHeader*>(parent);
+        if(header==NULL) {
+            button=parent;
+            continue;
+        }
+        if(header->DrawSortArrow()) return header->GetSortType(header->GetColumnIndex(button));
+        return ListSortType_None;
+    }
 }
 }
