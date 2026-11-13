@@ -1,8 +1,8 @@
 //! The management logic of `GETextureManager` and `GEModelManager` (`GETextureManager.cpp`, `GEModelManager.cpp`):
 //! a texture's cache name, the texture pack (its settings, a texture's name in it, the sizes of a texture loaded from
 //! it), the surface description a texture description asks for, a load's MIP decisions, the reference-count decision
-//! of a removal, and the names of made textures and created models. The maps, the lock, the textures and models and
-//! their lifetimes stay C++.
+//! of a removal, and the names of made textures and created models. The managers themselves (their caches, locks and
+//! methods) are whole Rust objects since R4.3's seventh part: `manobj.rs` and `texobj.rs`.
 //!
 //! Not simulation code: the graphics thread and the UI load media.
 
