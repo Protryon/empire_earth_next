@@ -1988,49 +1988,39 @@ public:
     void SetParent(Window*);                // 0x32a210, the parent at +0x80
     void SetTitle(const GUIString&);        // 0x32adc0
     void SetIcon(NativeIcon*);              // 0x32ae20
-    int GetKeyMod() const { return this->mKeyMod; }
+    // R6 WON round 32: the state is the Rust window (rust/crates/ee_won/src/winobj.rs); these read and set it
+    int GetKeyMod() const { return (int)this->WField(EeWonWinField::KeyMod); }
+    int GetWindowState() const { return (int)this->WField(EeWonWinField::State); }
+    int GetMouseX() const { return (int)this->WField(EeWonWinField::MouseX); }
+    int GetMouseY() const { return (int)this->WField(EeWonWinField::MouseY); }
+    bool IsMouseInClientArea() const { return this->WField(EeWonWinField::InClient) != 0; }
+    bool IsShowing() const { return this->WField(EeWonWinField::IsShowing) != 0; }
+    void SetIsShowing(bool inShowing) { this->WSet(EeWonWinField::IsShowing, inShowing ? 1 : 0); }
+    bool IsPopup() const { return this->WField(EeWonWinField::IsPopup) != 0; }
+    void SetIsPopup(bool inPopup) { this->WSet(EeWonWinField::IsPopup, inPopup ? 1 : 0); }
+    bool IsOneComponentWindow() const { return this->WField(EeWonWinField::OneComponent) != 0; }
+    void SetOneComponentWindow(bool inOne) { this->WSet(EeWonWinField::OneComponent, inOne ? 1 : 0); }
+    int GetStyle() const { return (int)this->WField(EeWonWinField::Style); }
+    void SetStyle(int inStyle) { this->WSet(EeWonWinField::Style, inStyle); }
+    bool GetMinimizeOnResolutionRestore() const { return this->WField(EeWonWinField::MinimizeOnRestore) != 0; }
+    Window* GetParent() const { return (Window*)this->WField(EeWonWinField::Parent); }
     enum WindowState { WindowState_Open, WindowState_Closing, WindowState_Closed };
     typedef bool (*AllowCloseFunc)(Window*);
-    WindowState mWindowState; // +08
+    // the Rust window, freed after every other member (the root's destruction may still call the window)
+    struct WinObj { EeWonWindow* p; WinObj() : p(NULL) {} ~WinObj() { ee_won_win_free(this->p); } };
+    WinObj mWinObj;
+    intptr_t WCall(EeWonWinCall c, intptr_t a = 0, intptr_t b = 0) const { return ee_won_win_call(this->mWinObj.p, c, a, b); }
+    intptr_t WField(EeWonWinField f) const { return this->WCall(EeWonWinCall::GetField, (intptr_t)f); }
+    void WSet(EeWonWinField f, intptr_t v) { this->WCall(EeWonWinCall::SetField, (intptr_t)f, v); }
+    // the members that are C++ objects (the original's offsets)
     SmartPtr<NativeImage> mOffscreenImage; // +0c
-    int mMouseX; // +10
-    int mMouseY; // +14
-    int mKeyMod; // +18
-    bool mMouseIsDown[3]; // +1c
-    bool mMouseIsInClientArea; // +1f
-    Cursor* mCurrentCursor; // +20
-    bool mNativeCursorShowing; // +24
     SmartPtr<DisplayContext> mDisplayContext; // +28
-    DWORD mButtonDownTick[3]; // +2c
-    bool mButtonDoubleClick[3]; // +38
-    bool mDetectDoubleClick; // +3b
-    int mDoubleClickX; // +3c
-    int mDoubleClickY; // +40
-    DWORD mLastMoveTick; // +44
-    int mMinWidth; // +48
-    int mMinHeight; // +4c
-    int mMaxWidth; // +50
-    int mMaxHeight; // +54
-    bool mNeedResize; // +58
-    int mNewWidth; // +5c
-    int mNewHeight; // +60
-    DWORD mResizeDelay; // +64
-    DWORD mLastResizeTick; // +68
-    DWORD mLastCheckCursorTick; // +6c
-    int mSuspendRootResize; // +70
-    int mStyle; // +74
-    bool mIsPopup; // +78
-    bool mIsOneComponentWindow; // +79
-    bool mMinimizeOnResolutionRestore; // +7a
     WindowManager* GetWindowManager() { return this->mManager; } // inline
     WindowManager* mManager; // +7c
-    Window* mParent; // +80
-    std::set<Window*> mChildWindowSet; // +84
     SmartPtr<WindowEventBase> mCloseEvent; // +90
     AllowCloseFunc mAllowCloseFunc; // +94
     SmartPtr<NativeIcon> mIcon; // +98
     GUIString mTitle; // +9c
-    bool mIsShowing; // +a0
     SmartPtr<RootContainer> mRoot; // +a4
     std::map<FontDescriptor, SmartPtr<Font> > mFontMap; // +a8
     SmartPtr<Font> mDefaultFont; // +b4

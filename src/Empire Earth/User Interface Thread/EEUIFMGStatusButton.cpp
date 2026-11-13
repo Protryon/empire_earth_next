@@ -421,7 +421,7 @@ long EEUIFMGStatusButton::CopyData()
     this->mAvailable = ee_screens_button_available(theTest, &theFacts, theUnits.empty() ? NULL : &theUnits[0],
                                                    theUnits.size());
     // the icon: none for the two group buttons
-    unsigned long theIcon = ee_screens_button_icon(this->mButtonObject != NULL, this->mButton, this->mState,
+    unsigned long theIcon = ee_screens_button_icon(this->mButtonObject != NULL, this->mButton, this->GetState(),
                                                    this->GetNormalBitmap() == this->GetPressedBitmap(),
                                                    this->GetFocusedBitmap() == this->GetPressedBitmap(),
                                                    this->GetPressedBitmap() == NULL);
@@ -582,7 +582,7 @@ void EEUIFMGStatusButton::HotKeyDown()
 // Releases the button from its hot key
 void EEUIFMGStatusButton::HotKeyUp()
 {
-    if (this->mState == kButtonStatePressed)
+    if (this->GetState() == kButtonStatePressed)
         this->ButtonUp();
 }
 
@@ -701,7 +701,7 @@ void EEUIFMGStatusButton::SetLocation(const GE2DPoint& inLocation)
 // Releases a pressed button when tabbing away
 void EEUIFMGStatusButton::TabbedFrom()
 {
-    if (this->mState == kButtonStatePressed)
+    if (this->GetState() == kButtonStatePressed)
         this->HotKeyUp();
     else
         UIButton::TabbedFrom();

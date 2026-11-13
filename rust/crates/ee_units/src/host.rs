@@ -13,6 +13,7 @@
 use std::ffi::c_void;
 use std::ptr::NonNull;
 
+use crate::players::PlayerRecord;
 use crate::store::EeUnitRecord;
 
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
@@ -43,6 +44,8 @@ pub const EE_GOAL_CTOR_LOCATION_2D: u32 = 11;
 /// `new EEUGCastCalamity(unit_a, unit_b, ints[0], ints[1], ints[2], flag_a)` (the caster's complex unit, the target
 /// or none, the tile x and y, the technology)
 pub const EE_GOAL_CTOR_CAST_CALAMITY: u32 = 12;
+/// `EEUGRust::NewBuildRepair(unit_a->mPlayer, unit_a, flag_a)` (EEMSetRallyGoal's repair or farm work)
+pub const EE_GOAL_CTOR_BUILD_REPAIR: u32 = 13;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 pub const EE_UNIT_ID_NONE: u32 = 0xffff_ffff;
@@ -95,6 +98,7 @@ impl EeGoalSpec {
             EE_GOAL_CTOR_LOCATION | EE_GOAL_CTOR_LOCATION_XY | EE_GOAL_CTOR_LOCATION_2D => 1,
             EE_GOAL_CTOR_UNLOAD_TRANSPORT => 8,
             EE_GOAL_CTOR_CAST_CALAMITY => 11,
+            EE_GOAL_CTOR_BUILD_REPAIR => 4,
             _ => return None,
         })
     }
@@ -294,6 +298,61 @@ pub trait Host {
     fn unit_clear_goals(&mut self, unit: u32);
     /// `unit->mHitPoints` read on the object, for a unit the store does not hold
     fn object_hit_points(&mut self, unit: u32) -> i64;
+    /// A player object's diplomacy table (`players`), None when it has none.
+    fn player_record(&mut self, player: u64) -> Option<PlayerRecord>;
+    /// `player->mActiveGroup` (null: none)
+    fn player_selection(&mut self, player: HostRef) -> HostRef;
+    /// `EEIsSeenBy(unit, player, true)`, read on the objects
+    fn unit_seen_by(&mut self, unit: u32, player: HostRef) -> bool;
+    /// one of the doppelgangers of the unit's tile is the unit's (`mTile->mDoppelgangers[i]->mUnit == unit`)
+    fn unit_ghost_seen(&mut self, unit: u32) -> bool;
+    /// `unit->mUnitClass->CanBeAttacked() && EEDamageFactor(unit->mUnitClass->mFamily, index) > 0.0f`
+    fn unit_attackable(&mut self, unit: u32, damage_index: i64) -> bool;
+    /// `EEUUGetIsUnitClassTargetable(NULL, unit->mUnitClass)`
+    fn unit_class_targetable(&mut self, unit: u32) -> bool;
+    /// `unit->mComplexUnit->CanAttackClass(target->mUnitClass)`
+    fn unit_can_attack_class(&mut self, unit: u32, target: u32) -> bool;
+    /// `unit->mStats->mMaxHitPoints`
+    fn unit_max_hit_points(&mut self, unit: u32) -> i64;
+    /// `unit->mUnitClass->mGarrisonCapacity`
+    fn unit_garrison_capacity(&mut self, unit: u32) -> i64;
+    /// `unit->mTileNode != NULL`
+    fn unit_has_tile_node(&mut self, unit: u32) -> bool;
+    /// `unit->mUnitClass->SharesRallyPoint(unit_type)`
+    fn unit_shares_rally_point(&mut self, unit: u32, unit_type: i64) -> bool;
+    /// `unit->GetNumGoalQueues()`
+    fn unit_num_goal_queues(&mut self, unit: u32) -> i64;
+    /// `unit->ClearGoalQueue(queue)`
+    fn unit_clear_goal_queue(&mut self, unit: u32, queue: i64);
+    /// `unit->ClearAllGoalQueues()`
+    fn unit_clear_all_goal_queues(&mut self, unit: u32);
+    /// `unit->QueueGoal(goal, queue)`: the unit takes the goal
+    fn unit_queue_goal(&mut self, unit: u32, goal: GoalHandle, queue: i64);
+    /// `unit->mGoalQueues[queue].ResetTimer()`, then `AddTime(ms)`
+    fn unit_queue_timer(&mut self, unit: u32, queue: i64, ms: i64);
+    /// `unit->mGoalState->Clone()` (the unit's active goal)
+    fn unit_goal_clone(&mut self, unit: u32) -> Option<GoalHandle>;
+    /// EEMSetRallyGoal's garrison: a new load garrison goal with no units (`EEUGRust::NewLoad`); when
+    /// `IsLoadGarrisonValid`, the garrison takes it (`SetGoal(goal, 0, 0)`, `StartAction(mMaxVelocity > 0 ?
+    /// PrepareToMove : PickedUpLoadableUnits)`, `ActionChanged`) and its clone comes back; else it is deleted (None)
+    fn garrison_rally_load(&mut self, garrison: u32) -> Option<GoalHandle>;
+    /// A unit the store does not hold, read on the object (a selected unit already out of its list): its id, hit
+    /// points, class category and type (-1: no class), command and tile; None when no unit has the id.
+    fn object_record(&mut self, unit: u32) -> Option<EeUnitRecord>;
+    /// `unit->mUnitClass->mAirTrafficType`
+    fn unit_air_traffic_type(&mut self, unit: u32) -> i64;
+    /// `unit->mGoalQueues[queue].Clear()` (the queue alone: not `ClearGoalQueue`)
+    fn unit_queue_clear(&mut self, unit: u32, queue: i64);
+    /// `unit->GetPlayer()->mAirTraffic[unit->mUnitClass->mAirTrafficType - 1]->ClearAirportQueue(unit, 0)`
+    fn unit_clear_air_traffic(&mut self, unit: u32);
+    /// `unit->RefreshGoals()`, then `RefreshActiveGoal()`
+    fn unit_refresh_goals(&mut self, unit: u32);
+    /// `unit->ClearBuildTargets()`
+    fn unit_clear_build_targets(&mut self, unit: u32);
+    /// `unit->mUnitClass->ActionChanged(unit)`
+    fn unit_action_changed(&mut self, unit: u32);
+    /// `unit->Halt()`
+    fn unit_halt(&mut self, unit: u32);
 }
 
 /// The game's host (C++). Absent from a test binary.
@@ -403,6 +462,31 @@ pub mod game {
         fn ee_units_host_group_remove_unit(group: *mut c_void, unit: u32);
         fn ee_units_host_unit_clear_goals(unit: u32);
         fn ee_units_host_object_hit_points(unit: u32) -> i64;
+        fn ee_units_host_player_selection(player: *mut c_void) -> *mut c_void;
+        fn ee_units_host_unit_seen_by(unit: u32, player: *mut c_void) -> u8;
+        fn ee_units_host_unit_ghost_seen(unit: u32) -> u8;
+        fn ee_units_host_unit_attackable(unit: u32, damage_index: i64) -> u8;
+        fn ee_units_host_unit_class_targetable(unit: u32) -> u8;
+        fn ee_units_host_unit_can_attack_class(unit: u32, target: u32) -> u8;
+        fn ee_units_host_unit_max_hit_points(unit: u32) -> i64;
+        fn ee_units_host_unit_garrison_capacity(unit: u32) -> i64;
+        fn ee_units_host_unit_has_tile_node(unit: u32) -> u8;
+        fn ee_units_host_unit_shares_rally_point(unit: u32, unit_type: i64) -> u8;
+        fn ee_units_host_unit_num_goal_queues(unit: u32) -> i64;
+        fn ee_units_host_unit_clear_goal_queue(unit: u32, queue: i64);
+        fn ee_units_host_unit_clear_all_goal_queues(unit: u32);
+        fn ee_units_host_unit_queue_goal(unit: u32, goal: *mut c_void, queue: i64);
+        fn ee_units_host_unit_queue_timer(unit: u32, queue: i64, ms: i64);
+        fn ee_units_host_unit_goal_clone(unit: u32) -> *mut c_void;
+        fn ee_units_host_garrison_rally_load(garrison: u32) -> *mut c_void;
+        fn ee_units_host_object_record(unit: u32, out: *mut EeUnitRecord) -> u8;
+        fn ee_units_host_unit_air_traffic_type(unit: u32) -> i64;
+        fn ee_units_host_unit_queue_clear(unit: u32, queue: i64);
+        fn ee_units_host_unit_clear_air_traffic(unit: u32);
+        fn ee_units_host_unit_refresh_goals(unit: u32);
+        fn ee_units_host_unit_clear_build_targets(unit: u32);
+        fn ee_units_host_unit_action_changed(unit: u32);
+        fn ee_units_host_unit_halt(unit: u32);
     }
 
     /// A list the host fills: one call (`capacity` 0) for the count, a second for the ids. The host answers the
@@ -704,6 +788,87 @@ pub mod game {
         fn object_hit_points(&mut self, unit: u32) -> i64 {
             unsafe { ee_units_host_object_hit_points(unit) }
         }
+        fn player_record(&mut self, player: u64) -> Option<PlayerRecord> {
+            crate::players::with_players(|p| p.get(player).copied())
+        }
+        fn player_selection(&mut self, player: HostRef) -> HostRef {
+            HostRef(unsafe { ee_units_host_player_selection(player.0) })
+        }
+        fn unit_seen_by(&mut self, unit: u32, player: HostRef) -> bool {
+            unsafe { ee_units_host_unit_seen_by(unit, player.0) != 0 }
+        }
+        fn unit_ghost_seen(&mut self, unit: u32) -> bool {
+            unsafe { ee_units_host_unit_ghost_seen(unit) != 0 }
+        }
+        fn unit_attackable(&mut self, unit: u32, damage_index: i64) -> bool {
+            unsafe { ee_units_host_unit_attackable(unit, damage_index) != 0 }
+        }
+        fn unit_class_targetable(&mut self, unit: u32) -> bool {
+            unsafe { ee_units_host_unit_class_targetable(unit) != 0 }
+        }
+        fn unit_can_attack_class(&mut self, unit: u32, target: u32) -> bool {
+            unsafe { ee_units_host_unit_can_attack_class(unit, target) != 0 }
+        }
+        fn unit_max_hit_points(&mut self, unit: u32) -> i64 {
+            unsafe { ee_units_host_unit_max_hit_points(unit) }
+        }
+        fn unit_garrison_capacity(&mut self, unit: u32) -> i64 {
+            unsafe { ee_units_host_unit_garrison_capacity(unit) }
+        }
+        fn unit_has_tile_node(&mut self, unit: u32) -> bool {
+            unsafe { ee_units_host_unit_has_tile_node(unit) != 0 }
+        }
+        fn unit_shares_rally_point(&mut self, unit: u32, unit_type: i64) -> bool {
+            unsafe { ee_units_host_unit_shares_rally_point(unit, unit_type) != 0 }
+        }
+        fn unit_num_goal_queues(&mut self, unit: u32) -> i64 {
+            unsafe { ee_units_host_unit_num_goal_queues(unit) }
+        }
+        fn unit_clear_goal_queue(&mut self, unit: u32, queue: i64) {
+            unsafe { ee_units_host_unit_clear_goal_queue(unit, queue) }
+        }
+        fn unit_clear_all_goal_queues(&mut self, unit: u32) {
+            unsafe { ee_units_host_unit_clear_all_goal_queues(unit) }
+        }
+        fn unit_queue_goal(&mut self, unit: u32, goal: GoalHandle, queue: i64) {
+            // SAFETY: the unit takes the goal the host created
+            unsafe { ee_units_host_unit_queue_goal(unit, goal.as_ptr(), queue) }
+        }
+        fn unit_queue_timer(&mut self, unit: u32, queue: i64, ms: i64) {
+            unsafe { ee_units_host_unit_queue_timer(unit, queue, ms) }
+        }
+        fn unit_goal_clone(&mut self, unit: u32) -> Option<GoalHandle> {
+            GoalHandle::from_ptr(unsafe { ee_units_host_unit_goal_clone(unit) })
+        }
+        fn garrison_rally_load(&mut self, garrison: u32) -> Option<GoalHandle> {
+            GoalHandle::from_ptr(unsafe { ee_units_host_garrison_rally_load(garrison) })
+        }
+        fn object_record(&mut self, unit: u32) -> Option<EeUnitRecord> {
+            let mut record = EeUnitRecord::default();
+            // SAFETY: the host writes one record
+            (unsafe { ee_units_host_object_record(unit, &mut record) } != 0).then_some(record)
+        }
+        fn unit_air_traffic_type(&mut self, unit: u32) -> i64 {
+            unsafe { ee_units_host_unit_air_traffic_type(unit) }
+        }
+        fn unit_queue_clear(&mut self, unit: u32, queue: i64) {
+            unsafe { ee_units_host_unit_queue_clear(unit, queue) }
+        }
+        fn unit_clear_air_traffic(&mut self, unit: u32) {
+            unsafe { ee_units_host_unit_clear_air_traffic(unit) }
+        }
+        fn unit_refresh_goals(&mut self, unit: u32) {
+            unsafe { ee_units_host_unit_refresh_goals(unit) }
+        }
+        fn unit_clear_build_targets(&mut self, unit: u32) {
+            unsafe { ee_units_host_unit_clear_build_targets(unit) }
+        }
+        fn unit_action_changed(&mut self, unit: u32) {
+            unsafe { ee_units_host_unit_action_changed(unit) }
+        }
+        fn unit_halt(&mut self, unit: u32) {
+            unsafe { ee_units_host_unit_halt(unit) }
+        }
     }
 }
 
@@ -795,6 +960,31 @@ pub(crate) mod tests {
         Ints([i64; 3]),
         /// a goal's arguments: (ctor, unit a, unit b, the point's bits, flag a, object)
         Spec(u32, u32, u32, [u32; 3], u8, usize),
+        PlayerSelection(HostRef),
+        SeenBy(u32, HostRef),
+        GhostSeen(u32),
+        Attackable(u32, i64),
+        Targetable(u32),
+        CanAttackClass(u32, u32),
+        MaxHitPoints(u32),
+        GarrisonCapacity(u32),
+        TileNode(u32),
+        SharesRally(u32, i64),
+        NumQueues(u32),
+        ClearQueue(u32, i64),
+        ClearAllQueues(u32),
+        /// unit, the goal's kind, the queue
+        QueueGoal(u32, u8, i64),
+        QueueTimer(u32, i64, i64),
+        GoalStateClone(u32),
+        GarrisonLoad(u32),
+        ObjectRecord(u32),
+        QueueClear(u32, i64),
+        ClearAirTraffic(u32),
+        RefreshGoals(u32),
+        ClearBuildTargets(u32),
+        ActionChanged(u32),
+        Halt(u32),
     }
 
     /// A host over plain values: groups as id lists (new ones at 0x1001, 0x1002, ...), goals as boxed kinds; Fill
@@ -853,6 +1043,25 @@ pub(crate) mod tests {
         pub power: BTreeMap<u32, i64>,
         pub cost: i64,
         pub object_hp: BTreeMap<u32, i64>,
+        /// the players' diplomacy tables by object; the players' selections (by object)
+        pub players: BTreeMap<u64, PlayerRecord>,
+        pub selections: BTreeMap<usize, usize>,
+        /// the units seen, with a seen doppelganger, attackable (and attackable by a class), targetable classes
+        pub seen: Vec<u32>,
+        pub ghosts: Vec<u32>,
+        pub attackable: Vec<u32>,
+        pub targetable: Vec<u32>,
+        /// the maximum hit points; the garrison capacities; the units without a tile node; the units that share a
+        /// rally point; the goal queue counts (absent: 2); whether a garrison's load goal is valid
+        pub max_hp: BTreeMap<u32, i64>,
+        pub garrison_capacity: BTreeMap<u32, i64>,
+        pub off_tiles: Vec<u32>,
+        pub shares_rally: Vec<u32>,
+        pub num_queues: BTreeMap<u32, i64>,
+        pub garrison_valid: bool,
+        /// the units read on the objects (absent from the store); the classes' air traffic types
+        pub objects: BTreeMap<u32, EeUnitRecord>,
+        pub air_traffic: BTreeMap<u32, i64>,
     }
 
     impl Host for MockHost {
@@ -1225,6 +1434,106 @@ pub(crate) mod tests {
             self.calls.push(Call::ObjectHitPoints(unit));
             self.object_hp.get(&unit).copied().unwrap_or(0)
         }
+        fn player_record(&mut self, player: u64) -> Option<PlayerRecord> {
+            self.players.get(&player).copied()
+        }
+        fn player_selection(&mut self, player: HostRef) -> HostRef {
+            self.calls.push(Call::PlayerSelection(player));
+            HostRef(self.selections.get(&(player.0 as usize)).copied().unwrap_or(0) as *mut c_void)
+        }
+        fn unit_seen_by(&mut self, unit: u32, player: HostRef) -> bool {
+            self.calls.push(Call::SeenBy(unit, player));
+            self.seen.contains(&unit)
+        }
+        fn unit_ghost_seen(&mut self, unit: u32) -> bool {
+            self.calls.push(Call::GhostSeen(unit));
+            self.ghosts.contains(&unit)
+        }
+        fn unit_attackable(&mut self, unit: u32, damage_index: i64) -> bool {
+            self.calls.push(Call::Attackable(unit, damage_index));
+            self.attackable.contains(&unit)
+        }
+        fn unit_class_targetable(&mut self, unit: u32) -> bool {
+            self.calls.push(Call::Targetable(unit));
+            self.targetable.contains(&unit)
+        }
+        fn unit_can_attack_class(&mut self, unit: u32, target: u32) -> bool {
+            self.calls.push(Call::CanAttackClass(unit, target));
+            self.attackable.contains(&target)
+        }
+        fn unit_max_hit_points(&mut self, unit: u32) -> i64 {
+            self.calls.push(Call::MaxHitPoints(unit));
+            self.max_hp.get(&unit).copied().unwrap_or(0)
+        }
+        fn unit_garrison_capacity(&mut self, unit: u32) -> i64 {
+            self.calls.push(Call::GarrisonCapacity(unit));
+            self.garrison_capacity.get(&unit).copied().unwrap_or(0)
+        }
+        fn unit_has_tile_node(&mut self, unit: u32) -> bool {
+            self.calls.push(Call::TileNode(unit));
+            !self.off_tiles.contains(&unit)
+        }
+        fn unit_shares_rally_point(&mut self, unit: u32, unit_type: i64) -> bool {
+            self.calls.push(Call::SharesRally(unit, unit_type));
+            self.shares_rally.contains(&unit)
+        }
+        fn unit_num_goal_queues(&mut self, unit: u32) -> i64 {
+            self.calls.push(Call::NumQueues(unit));
+            self.num_queues.get(&unit).copied().unwrap_or(2)
+        }
+        fn unit_clear_goal_queue(&mut self, unit: u32, queue: i64) {
+            self.calls.push(Call::ClearQueue(unit, queue));
+        }
+        fn unit_clear_all_goal_queues(&mut self, unit: u32) {
+            self.calls.push(Call::ClearAllQueues(unit));
+        }
+        fn unit_queue_goal(&mut self, unit: u32, goal: GoalHandle, queue: i64) {
+            let kind = self.goal_kind(&goal);
+            self.goal_release(goal);
+            self.calls.push(Call::QueueGoal(unit, kind, queue));
+        }
+        fn unit_queue_timer(&mut self, unit: u32, queue: i64, ms: i64) {
+            self.calls.push(Call::QueueTimer(unit, queue, ms));
+        }
+        fn unit_goal_clone(&mut self, unit: u32) -> Option<GoalHandle> {
+            self.calls.push(Call::GoalStateClone(unit));
+            let kind = self.units.get(&unit).map_or(0, |u| u.goal_kind as u8);
+            self.live += 1;
+            GoalHandle::from_ptr(Box::into_raw(Box::new(kind)) as *mut c_void)
+        }
+        fn garrison_rally_load(&mut self, garrison: u32) -> Option<GoalHandle> {
+            self.calls.push(Call::GarrisonLoad(garrison));
+            if !self.garrison_valid {
+                return None;
+            }
+            self.live += 1;
+            GoalHandle::from_ptr(Box::into_raw(Box::new(12u8)) as *mut c_void)
+        }
+        fn object_record(&mut self, unit: u32) -> Option<EeUnitRecord> {
+            self.calls.push(Call::ObjectRecord(unit));
+            self.objects.get(&unit).copied()
+        }
+        fn unit_air_traffic_type(&mut self, unit: u32) -> i64 {
+            self.air_traffic.get(&unit).copied().unwrap_or(0)
+        }
+        fn unit_queue_clear(&mut self, unit: u32, queue: i64) {
+            self.calls.push(Call::QueueClear(unit, queue));
+        }
+        fn unit_clear_air_traffic(&mut self, unit: u32) {
+            self.calls.push(Call::ClearAirTraffic(unit));
+        }
+        fn unit_refresh_goals(&mut self, unit: u32) {
+            self.calls.push(Call::RefreshGoals(unit));
+        }
+        fn unit_clear_build_targets(&mut self, unit: u32) {
+            self.calls.push(Call::ClearBuildTargets(unit));
+        }
+        fn unit_action_changed(&mut self, unit: u32) {
+            self.calls.push(Call::ActionChanged(unit));
+        }
+        fn unit_halt(&mut self, unit: u32) {
+            self.calls.push(Call::Halt(unit));
+        }
     }
 
     impl MockHost {
@@ -1241,7 +1550,7 @@ pub(crate) mod tests {
 
     #[test]
     fn the_constructors_kinds() {
-        let kinds: Vec<_> = (0..14).map(|c| EeGoalSpec::new(c).kind()).collect();
+        let kinds: Vec<_> = (0..15).map(|c| EeGoalSpec::new(c).kind()).collect();
         assert_eq!(
             kinds,
             vec![
@@ -1258,6 +1567,7 @@ pub(crate) mod tests {
                 Some(1),
                 Some(1),
                 Some(11),
+                Some(4),
                 None
             ]
         );

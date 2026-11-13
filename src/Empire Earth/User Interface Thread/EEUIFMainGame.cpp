@@ -234,9 +234,25 @@ extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t 
         delete[] theBytes;
         return 0;
     }
-    case EE_SCREENS_UH_OP_COMBO_SELECT_FIRST:
+    case EE_SCREENS_UH_OP_COMBO_SELECT_FIRST: {
+        // port: the first line is selected without the box's change event. The original's event sent EEMLoadUnitData
+        // from the UI thread as the main game form opened, racing the game's start: in the loading's last communications
+        // ticks the client ran it as lobby input, a tick later the physics ran it as a game input (one more input
+        // counted: the out-of-synch checksum, EE-SIM's AI trace "inputs=" and its capture's NMEX/NMIM/NMDC/USCK
+        // differed by run under load). Its only effect was the sender's hack class and that class's media preloaded
+        // for every player; the hack's own placing sends the listed class, and a later change still sends the message.
+        UIEvent* theEvent = theObjects->GetTriggerEvent(kControlTriggerSelectionChanged);
+        if (theEvent != NULL) {
+            theEvent->Reference();
+            theObjects->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
+        }
         theObjects->SetCurrentSelection(0);
+        if (theEvent != NULL) {
+            theObjects->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+            theEvent->Dereference();
+        }
         return 0;
+    }
     case EE_SCREENS_UH_OP_COMBO_SELECTION: {
         unsigned long theSelection;
         theObjects->GetCurrentSelection(theSelection);

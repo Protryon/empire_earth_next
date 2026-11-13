@@ -29,8 +29,8 @@ extern "C" intptr_t ee_won_guicpp_root_call(void* inComp, EeWonGuiOp op, intptr_
         // (no cursor: no component; the original's MouseMove read through a NULL current cursor)
         if (a == 0) { *(int*)b = *(int*)c = 0; return 0; }
         return (intptr_t)((Cursor*)a)->GetComponent(*(int*)b, *(int*)c);
-    case Op::RootOneComponentWindow: return t->mWindow->mIsOneComponentWindow ? 1 : 0;
-    case Op::RootWindowMouse: *(int*)a = t->mWindow->mMouseX; *(int*)b = t->mWindow->mMouseY; return 0;
+    case Op::RootOneComponentWindow: return t->mWindow->IsOneComponentWindow() ? 1 : 0;
+    case Op::RootWindowMouse: *(int*)a = t->mWindow->GetMouseX(); *(int*)b = t->mWindow->GetMouseY(); return 0;
     case Op::RootWindowRect: t->mWindow->GetRect(*(WONRectangle*)a, false); return 0;
     case Op::RootWindowSetPos: t->mWindow->SetPosSize((int)a, (int)b, -1, -1); return 0;
     case Op::RootMouseChildOf: return (intptr_t)Comp(a)->GetMouseChild();
