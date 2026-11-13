@@ -573,6 +573,7 @@ function M.update(view, memory)
     U.update(view, memory)
     require("classic_lua.econ").update(view, memory)
     B.update(view, memory)
+    require("classic_lua.walls").update(view, memory)   -- (EECPWallManager::Update)
     RS.update(view, memory)
     if not civ.advancing and (B.has_later_requests(view, memory) or RS.has_later_ids(view, memory)
             or U.has_later_requests(view, memory) or view.epoch < max_human_epoch(view)) then

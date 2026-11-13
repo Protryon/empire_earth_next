@@ -121,7 +121,16 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 (centre_drop: AdoptDropSite). DEVIATION (fog): the original groups every resource of the map at the
                 start (nature's unit list); the port groups what is explored, again every 15 s (with the reveal cheat
                 the same as the original). GetCenter's free-tile search is not ported (the box's middle).
-  EECPWallManager.cpp           NOT STARTED (the defence stage; ai.wall, ai.gate)
+  EECPWallManager.cpp
+                PORTED -> walls.lua: from the Copper Age a wall across the way from each enemy's centre to each own town
+                centre and capitol (AddWalls, the nearest enemy first), one every 30 s once the last one's gate stands;
+                PlanWall over the size table (ai.wall_stretches across each step; the shortest open level stretch clear
+                of the centres and gates), the next size on failure, the 9th the stretch nearest a gate
+                (ChooseRunNearGates); BuildWall (a builder every 10 tiles, ai.wall); the gate at the wall's middle
+                (AddGates, FindGate: ai.gate). DEVIATIONS: the way is ai.route's, straight between its cells (the
+                wall planner path); the enemy's centre is the town the view knows (its capitol); IsPathUsable is not
+                tested; a stretch with units on it is not left out; a wall piece lost is not queued again (UnitLost).
+                The C++ built no wall in 40 bench games (why is not traced yet); the port builds about one a game.
   EECPCombatManager.cpp         PARTLY -> army.lua: Update on the attack timer (IsAttackDue; SetNextAttackTime in
                 main.lua: the initial delay per epoch span and the frequency, the difficulty's modifiers, the bounds),
                 the target player (computers by the aggression's chance when humans are there too; theLargest, else

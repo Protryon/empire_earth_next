@@ -951,6 +951,13 @@ from data, so that a script can make its decisions with the same numbers:
   builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
   `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
   sub-group's common move flags).
+- `ai.wall_line(x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tiles a wall from (x1, y1) to (x2, y2) lays, in order
+  (EEGetWallLine).
+- `ai.wall_stretches(x1, y1, x2, y2)` -> blocked, `{{ax, ay, bx, by, len, level}, ...}`: the classic wall planner's
+  look at one wall line (EECPWallManager::PlanWall, IsPathBlocked). `blocked`: a land building on the line or within 2
+  tiles of it (the player's own wall pieces on the line excepted). The stretches: the runs of open tiles after a
+  blocked one (off the map, a forest, a cliff, water, space), with their ends, length and whether five level tiles in
+  a row lie on them (EEAreTilesLevel). classic_lua's wall planner (walls.lua) uses both.
 - Own and allied building records have `queued`: the techs queued behind the one being made (`producing`), in order
   (EEComplexUnit::IsResearchQueued, the classic's IsInProduction).
 - Resource records have `untapped`: the resource's hit points still stand at 1, i.e. nobody has gathered from it yet

@@ -3011,6 +3011,128 @@ static int LuaHillPoint(lua_State* L)
     return 3;
 }
 
+// the classic wall manager's area utilities (EECPWallManager.cpp declares them the same way)
+void EEGetWallLine(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo, std::vector<U2DPoint<long> >& outTiles);
+void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoint<long> >& outTiles);
+long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits);
+bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
+
+// ai.wall_line(x1, y1, x2, y2) -> {{x, y}, ...}: the tiles a wall from (x1, y1) to (x2, y2) lays (EEGetWallLine), in order
+static int LuaWallLine(lua_State* L)
+{
+    lua_newtable(L);
+    for (int i = 1; i <= 4; i++)
+        if (!lua_isinteger(L, i))
+            return 1;
+    U2DPoint<long> theFrom((long)lua_tointeger(L, 1), (long)lua_tointeger(L, 2));
+    U2DPoint<long> theTo((long)lua_tointeger(L, 3), (long)lua_tointeger(L, 4));
+    std::vector<U2DPoint<long> > theTiles;
+    EEGetWallLine(theFrom, theTo, theTiles);
+    EECPUnitsCharge(L, kCostCall + (int64_t)theTiles.size() * kCostField * 2);
+    for (size_t k = 0; k < theTiles.size(); k++) {
+        lua_createtable(L, 2, 0);
+        lua_pushinteger(L, (lua_Integer)theTiles[k].mX);
+        lua_rawseti(L, -2, 1);
+        lua_pushinteger(L, (lua_Integer)theTiles[k].mY);
+        lua_rawseti(L, -2, 2);
+        lua_rawseti(L, -2, (lua_Integer)k + 1);
+    }
+    return 1;
+}
+
+// ai.wall_stretches(x1, y1, x2, y2) -> blocked, {{ax, ay, bx, by, len, level}, ...}: the classic wall planner's look at
+// one wall line (EECPWallManager::PlanWall, IsPathBlocked). blocked: a land building stands on the line or within 2
+// tiles of it (the player's own wall pieces on the line excepted). The stretches: the runs of open tiles that follow
+// a blocked tile (off the map, a forest, a cliff, water, space), each with its ends, its length and whether five
+// level tiles in a row lie on it (EEAreTilesLevel)
+static int LuaWallStretches(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    for (int i = 1; i <= 4; i++)
+        if (!lua_isinteger(L, i) || gWorld.mMap == NULL) {
+            lua_pushboolean(L, 1);
+            lua_newtable(L);
+            return 2;
+        }
+    U2DPoint<long> theFrom((long)lua_tointeger(L, 1), (long)lua_tointeger(L, 2));
+    U2DPoint<long> theTo((long)lua_tointeger(L, 3), (long)lua_tointeger(L, 4));
+    std::vector<U2DPoint<long> > theLine;
+    EEGetWallLine(theFrom, theTo, theLine);
+    EECPUnitsCharge(L, kCostCall + (int64_t)theLine.size() * 25 * kCostScan);
+    // IsPathBlocked
+    std::vector<U2DPoint<long> > theAll;
+    std::vector<U2DPoint<long> > theAround;
+    for (size_t k = 0; k < theLine.size(); k++) {
+        theAll.push_back(theLine[k]);
+        for (long r = 1; r <= 2; r++) {
+            EEGetSquareRingTiles(theLine[k].mX, theLine[k].mY, r, theAround);
+            theAll.insert(theAll.end(), theAround.begin(), theAround.end());
+        }
+    }
+    std::sort(theAll.begin(), theAll.end());
+    theAll.erase(std::unique(theAll.begin(), theAll.end()), theAll.end());
+    std::vector<EEUnit*> theUnits;
+    EEGetUnitsOn(theAll, theUnits);
+    bool theBlocked = false;
+    for (size_t k = 0; k < theUnits.size() && !theBlocked; k++) {
+        EEUnit* u = theUnits[k];
+        if (!u->mUnitClass->IsLandBuilding())
+            continue;
+        theBlocked = true;
+        if (u->mPlayer == me && u->mUnitClass->mIsWall && u->mUnitClass->mCategory != kUnitCategoryGate
+            && std::find(theLine.begin(), theLine.end(), U2DPoint<long>(u->mTileX, u->mTileY)) != theLine.end())
+            theBlocked = false;
+    }
+    lua_pushboolean(L, theBlocked ? 1 : 0);
+    lua_newtable(L);
+    if (theBlocked)
+        return 2;
+    // the stretches between the blocks
+    std::vector<std::pair<long, long> > theStretches;
+    bool theInRun = false, theSeenBlock = false;
+    long theRunStart = 0;
+    for (size_t j = 0; j < theLine.size(); j++) {
+        bool theBlock;
+        if (gWorld.mMap->GetTile((unsigned long)theLine[j].mX, (unsigned long)theLine[j].mY) == NULL)
+            theBlock = true;
+        else if (gContinentManager.GetForestAt(theLine[j]) != NULL)
+            theBlock = true;
+        else {
+            EEAIContinent* theArea = gContinentManager.GetContinentAt(theLine[j].mX, theLine[j].mY);
+            unsigned char theKind = theArea != NULL ? theArea->GetCategory() : kContinentCategoryWater;
+            theBlock = theKind == kContinentCategoryCliff || theKind == kContinentCategoryWater || theKind == kContinentCategorySpace;
+        }
+        if (theBlock) {
+            if (theInRun) {
+                theInRun = false;
+                theStretches.push_back(std::make_pair(theRunStart, (long)j - 1));
+            }
+            theSeenBlock = true;
+        } else if (theSeenBlock && !theInRun) {
+            theInRun = true;
+            theRunStart = (long)j;
+        }
+    }
+    for (size_t k = 0; k < theStretches.size(); k++) {
+        long a = theStretches[k].first, b = theStretches[k].second;
+        bool theLevel = false;
+        std::vector<U2DPoint<long> > theFive;
+        for (long m = 0; a + m + 4 <= b && !theLevel; m++) {
+            theFive.assign(theLine.begin() + a + m, theLine.begin() + a + m + 5);
+            theLevel = EEAreTilesLevel(theFive);
+        }
+        lua_createtable(L, 0, 6);
+        EECPUnitsSetInt(L, "ax", theLine[a].mX);
+        EECPUnitsSetInt(L, "ay", theLine[a].mY);
+        EECPUnitsSetInt(L, "bx", theLine[b].mX);
+        EECPUnitsSetInt(L, "by", theLine[b].mY);
+        EECPUnitsSetInt(L, "len", b - a + 1);
+        EECPUnitsSetBool(L, "level", theLevel);
+        lua_rawseti(L, -2, (lua_Integer)k + 1);
+    }
+    return 2;
+}
+
 // ai.choke_point(x, y, nearest, pick, seed) -> x, y, n: a random point of one of the continent manager's choke points
 // (EEAIChokePoint) of the land mass at (x, y) - of the `nearest` ones to the tile (by their closest point) when
 // nearest > 0, else of all n of them; the (pick mod count)-th (the classic defence ladder's choke point and
@@ -4153,7 +4275,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig}, {"used", LuaUsed},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
