@@ -541,7 +541,7 @@ function M.step(view, memory)
         phase = BO.phase(view, memory)
         plan = BO.plan(plan, phase)
     end
-    PL.afford_retry = ECON.order and BO.OPT.settle_afford or false
+    PL.afford_retry = ECON.order and (BO.OPT.settle_afford or BO.OPT.mines_early) or false
     PL.blocked_skip = ECON.order and BO.OPT.blocked_skip or false
     if plan.army_per ~= nil then
         plan = GD.scaled(plan, view.citizens, view.epoch)   -- (the light army by the workers, balanced's rule: lib.guard)
@@ -1044,6 +1044,11 @@ function M.step(view, memory)
             if ECON.order and BO.OPT.claim_target then
                 claim_want = math.max(want[r], BO.fill(phase, plan.citizens_max)[r])
             end
+            -- (BO.OPT.mines_early: from the advance the gold and iron are claimed for stone_grow's target, within the
+            -- claim range near home; stone_start's own fill wants 2 of each, so the second mine waited 5 minutes)
+            if ECON.order and BO.OPT.mines_early and phase == "stone_start" and (r == "gold" or r == "iron") then
+                claim_want = math.max(claim_want, BO.fill("stone_grow", plan.citizens_max)[r])
+            end
             -- (ECON.iron_push, boom-defence's Bronze saves: unpaid on iron 849 of 914 minutes, 12 of 18 on iron at 5 a
             -- minute; the fast saves had 16-20 on it) from the Copper Age, while the save lacks iron, the iron is claimed
             -- out to FAR_REACH (still on the town's side) and up to 5 sites, for the whole 18
@@ -1213,6 +1218,14 @@ function M.step(view, memory)
         local swant = ECON.order and memory.plan_want or want   -- (ECON.order: the phase's want, not the touched)
         -- (BO.OPT.boat_wood: the settlements too wait for the boats in stone_start)
         local settle_hold = ECON.order and BO.OPT.boat_wood and BO.holds_wood(view, phase)
+        -- (BO.OPT.mines_early, §8.51: the second and third gold and iron mines stood 5-15 minutes unsettled; the
+        -- owner's dock and 10 boats come first, the mines' settlements right behind the dock) once the dock stands, the
+        -- hold keeps back the other settlements only
+        local mines_only = settle_hold and ECON.order and BO.OPT.mines_early
+            and ((V.buildings(view, "b_dock") or {}).finished or 0) >= 1
+        if mines_only then
+            settle_hold = false
+        end
         if V.cost(view, "b_settlement") ~= nil and going < SETTLE_AT_ONCE and total < plan.settlements
                 and not settle_hold then
             local wanted = {}
@@ -1255,6 +1268,9 @@ function M.step(view, memory)
                                 end
                             end
                         end
+                    end
+                    if mines_only and not (s.holds.gold > 0 or s.holds.iron > 0) then
+                        rank = nil
                     end
                     if rank ~= nil then
                         wanted[#wanted + 1] = {rank = rank, distance = s.distance, x = s.x, y = s.y, site = s}
@@ -1450,6 +1466,12 @@ function M.step(view, memory)
         end
         if plan.boats > 0 or docks > 0 then
             local boats = plan.boats
+            -- (BO.OPT.boats_then_mines, §8.51: the Stone Age's first 15 minutes took in 1020-1170 wood and the boats
+            -- spent 700 of it, 14 boats; the mines' settlements waited 10-15 minutes on wood) past the owner's 10, no
+            -- more boats in the Stone Age while a kept mine waits for its settlement
+            if ECON.order and BO.OPT.boats_then_mines and age == 2 and memory.settle_short then
+                boats = math.min(boats, math.max(10, view.boats))
+            end
             if #memory.boats_lost >= BOATS_LOST_MAX then
                 boats = math.min(boats, view.boats)   -- the boats left fish on; none are replaced for now
             end

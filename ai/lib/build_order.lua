@@ -35,7 +35,12 @@ M.OPT = {
                             -- for its cost tries again in 20 s, not 5 minutes
     builder_pool = false,   -- (off until benched) the Stone Age's citizens: the fill's places plus those building (at most
                             -- BUILDER_POOL), never past STONE_MOST; none for a resource past its most
-    blocked_skip = false,   -- (off until benched) a foundation lost on a blocked tile passes over every tile it covered
+    blocked_skip = false,   -- (on in boom_order) a foundation lost on a blocked tile passes over every tile it covered
+    mines_early = false,    -- (off until benched) from the advance the gold and iron mines are claimed for stone_grow's
+                            -- target and their settlements pass the boat hold once the dock stands; lib.place retries a
+                            -- cost refusal in 20 s
+    boats_then_mines = false, -- (off until benched) past 10 boats, no more in the Stone Age while a kept mine waits for
+                            -- its settlement
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
