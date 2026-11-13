@@ -41,8 +41,6 @@ public:
 
     void Place();                           // 0xed784: the posts and the segment ends (provisional name)
     void FindSegments();                    // 0xedf5a: the segments from both posts (provisional name)
-    // 0xee00c: segments inFrom..inTo-1 towards the friendly wall pieces around tile (inX, inY) (provisional name)
-    void FindSegments(long inX, long inY, long inFrom, long inTo);
 
     static const UString sData;             // "EEE3DEnergyWall-Data" (0x4e8b58; provisional name)
 
@@ -51,13 +49,16 @@ public:
     float mAlpha;                           // +0x7c (the effect's mF30; 0 for a cloaked enemy)
     float mGateAlpha;                       // +0x80 (the segment between a gate's posts: by the gate's mOpenFraction)
     GETextureCoordinate mTextureOffset;     // +0x84 (the animation frame: (frame & 7, frame >> 2 & 7) * 0.14)
-    bool mPlaced;                           // +0x8c (saved)
+    // +0x8c, +0x9c, +0xa0 .. +0x11c: the record's (ee_gfx effect_wall.rs: the segment ends, the segments, the
+    // timer, load and save)
+    bool& mPlaced = this->mRecord->wall.placed;   // (saved)
     bool mSeen;                             // +0x8d (Virtual54: a doppelganger; resets the frame once)
     GEColor mColor;                         // +0x90 (the owner's colour)
-    bool mGate;                             // +0x9c (two posts; saved)
-    GE3DPoint mPoints[10];                  // +0xa0 [0]/[9] the posts, [1..4]/[5..8] the segment ends (saved)
-    unsigned long mSegments;                // +0x118 bit i: segment i is drawn (saved)
-    long mTimer;                            // +0x11c ms to the next FindSegments (saved)
+    bool& mGate = this->mRecord->wall.gate;       // two posts (saved)
+    // [0]/[9] the posts, [1..4]/[5..8] the segment ends (saved)
+    GE3DPoint (&mPoints)[10] = *reinterpret_cast<GE3DPoint(*)[10]>(this->mRecord->wall.points);
+    uint32_t& mSegments = this->mRecord->wall.segments;   // bit i: segment i is drawn (saved)
+    int32_t& mTimer = this->mRecord->wall.timer;          // ms to the next FindSegments (saved)
 };
 
 #endif

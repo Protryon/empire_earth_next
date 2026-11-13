@@ -580,6 +580,20 @@ struct EeGfxEffectIcon {
   bool growing;
 };
 
+/// `EEE3DEnergyWall`'s state.
+struct EeGfxEffectWall {
+  /// `mPoints`: [0] and [9] the posts, [1..4] and [5..8] the segment ends (saved)
+  EeGe3DPoint points[10];
+  /// `mSegments`: bit i, segment i is drawn (saved)
+  uint32_t segments;
+  /// `mTimer`: ms to the next search (saved)
+  int32_t timer;
+  /// `mPlaced` (saved)
+  bool placed;
+  /// `mGate`: two posts (saved)
+  bool gate;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -621,6 +635,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectStorm storm;
   /// the 3D icons' (`effect_icon.rs`)
   EeGfxEffectIcon icon;
+  /// the energy walls' (`effect_wall.rs`)
+  EeGfxEffectWall wall;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -863,6 +879,13 @@ struct EeGfxIconTick {
   float rate;
   int32_t int_param2;
   float param11;
+};
+
+/// The friendly wall pieces a segment reaches (`context`: the effect).
+struct EeGfxWallHost {
+  void *context;
+  /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
+  bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -1918,6 +1941,39 @@ int32_t ee_gfx_icon_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_icon_save(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DEnergyWall::Place`'s segment ends after the C++ set the posts.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_wall_place(EeGfxEffectRecord *r);
+
+/// `EEE3DEnergyWall::FindSegments` (`height`: the graphic effect's `GetParam6()`).
+///
+/// # Safety
+/// `r` is a live record; `host` is valid.
+void ee_gfx_wall_find_segments(EeGfxEffectRecord *r, float height, const EeGfxWallHost *host);
+
+/// `EEE3DEnergyWall::Step`'s timer: whether the segments are due.
+///
+/// # Safety
+/// `r` is a live record.
+bool ee_gfx_wall_step(EeGfxEffectRecord *r, float tick_time);
+
+/// `EEE3DEnergyWall::Load`'s (or, `old`, `LoadOldVersion`'s) own reads after the media load (`media`: its result).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_wall_load(EeGfxEffectRecord *r,
+                         const EeGfxEffectFile *file,
+                         int32_t media,
+                         bool old);
+
+/// `EEE3DEnergyWall::Save`'s own writes after `EEEffect3D::Save`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_wall_save(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEE3DFarm::BuildGroundModel`'s mesh into `vertices` and `triangles`; returns the models' place.
 ///

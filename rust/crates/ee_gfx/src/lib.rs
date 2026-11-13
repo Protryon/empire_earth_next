@@ -28,6 +28,7 @@ pub mod effect_icon;
 pub mod effect_state;
 pub mod effect_store;
 pub mod effect_storm;
+pub mod effect_wall;
 pub mod effects;
 pub mod farm;
 pub mod ffi;
