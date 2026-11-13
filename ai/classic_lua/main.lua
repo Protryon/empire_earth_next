@@ -197,6 +197,18 @@ local function choose_favorite_land(view, memory)
     if #sea > 0 then
         memory.cp.favorite_sea = sea[ai.random(1, #sea)]
     end
+    -- ChooseFavoriteSpaceType: a random space class the player can train now that passes IsFavoriteSpace (the same
+    -- DEVIATION); none before the space units, so no random draw then
+    local space = {}
+    for _, c in ipairs(view.costs or {}) do
+        if c.military and not c.building and R.class_of(c.type).domain == "space" and ARMY.favorite_space_ok(c.type) then
+            space[#space + 1] = c.type
+        end
+    end
+    table.sort(space)
+    if #space > 0 then
+        memory.cp.favorite_space = space[ai.random(1, #space)]
+    end
 end
 
 -- KeepStandingArmy: the personality's standing_army per worker, up to the military room, 5 at a time, of the favourite

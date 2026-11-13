@@ -44,8 +44,9 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 another player's unit is seen, 2 under attack, back to 1 a minute after the last hit): the engine's
                 EEPlayer::mCombatState is not readable. ENGINE: WorkOutPopulation, the extra and reveal cheats,
                 ChooseCivilization, UnitStranded's kill, SendToNearestBase, the save. ChooseFavoriteSeaType (main.lua: a random
-                warship class trainable now that passes IsFavoriteSea). NOT STARTED: the favourite
-                air and space types, Regroup's island fishing rule beyond mUsesFishing.
+                warship class trainable now that passes IsFavoriteSea); ChooseFavoriteSpaceType (likewise
+                with IsFavoriteSpace; no draw while no space class is trainable). The favourite air type: see
+                EECPUnitSelector. NOT STARTED: Regroup's island fishing rule beyond mUsesFishing.
                 DEVIATION: ChooseFavoriteLandType draws among the soldier classes the barracks, archery range, stable
                 and factories train (the favourite screener's AI lines are not exposed).
   EECPCivilizationManager.cpp
@@ -212,7 +213,11 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
                 bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
                 the adjacent continents' step of the ladder, AidAllies, CheckRaids / Retaliate, BuildUp
-                (deathmatch), CheckSpace, CheckSpecials. CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
+                (deathmatch), CheckSpecials. CheckSpace: PORTED (every ship_maintenance_timer minutes on a space map:
+                the space units own and asked for topped up to ships_to_maintain by a space-only group of kind 5,
+                the favourite space type its fill; a space carrier more while fewer than the space docks and 4; its
+                ChooseUnitsToKill: NOT STARTED; the space units join the land sub-groups until the air and space
+                sub-groups are ported). CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
                 50 water tiles: the warships own and asked for topped up to ships_to_maintain by a sea-only group of
                 kind 5; the carrier fighters from WW2, the difficulty's carrier_fighters_* kept, own and asked for, of the epoch's fighter; its ChooseUnitsToKill: NOT STARTED).
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
