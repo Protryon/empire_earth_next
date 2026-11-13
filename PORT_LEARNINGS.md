@@ -12664,3 +12664,105 @@ members class by class, so the readers moved with them.
 - **Not moved, and why.** RoutingGetUserStatusOp (UDPManagerSendRecvOp's subclass: the lobby lane's object). The
   RustServerOp host (ServerOp.cpp's HostCall): still answers on C++ objects. ServerConnectionConnectOp (four short
   members over the connection).
+
+## LLE lane, round 1: the census of the engine's own modules, four dead classes deleted, the Input System's devices whole in Rust (ee_input; branch rust-lle1, 2026-11-13)
+
+A new lane: the Low-Level Engine (`src/Low-Level Engine`, `include/lle`) into Rust as whole classes. The UI toolkit
+(`ee_ui`) and the Graphics Engine (`ee_ge`) have their own lanes; the Network Engine got its own lane during this round
+(its numbers below are context only). Measured over src + include without the generated `include/rust`
+(`git diff --numstat`): -1,834 (the dead classes) and -229 (ISDeviceInput), -2,063 net C++ in two code commits.
+
+- **The census** (`build/lle1/measure.py`, not committed: per file, the lines; the code lines without comments and
+  blank lines that are not in a function whose body is one statement or a plain return, the "not a forwarder" column;
+  users: the files outside the module that name the class, without `EESETSUICBPlayer.cpp`, which includes every
+  engine header). At the branch's start (5d3ce6a9):
+
+  | Module, file | Lines | Not a forwarder | Users outside the module | Note |
+  |---|---|---|---|---|
+  | FS `FSFileSpec.cpp` | 804 | 674 | 307 files name it | the path/file/directory walk on PlatFile; live everywhere |
+  | FS `FSDebugFile.cpp` (+ .h 106) | 845 | 522 | 2 (save, load: built, never opened) | **dead, deleted** |
+  | FS `FSArchive.cpp` | 481 | 387 | campaigns, FSPath (`.ssa`) | tables already `ee_fs`; the directory walk and mapping C++ |
+  | FS `FSMemoryFile.cpp` | 435 | 286 | 49 | already forwarders over `ee_fs::memfile`; the FSFile overloads and stdio temp file stay |
+  | FS `FSPath.cpp` | 298 | 185 | 157 | search path over archives and folders |
+  | FS `File System.cpp` | 153 | 58 | | `FSGetVolumeAndDirectory`, `FSInitialize` |
+  | FS `FSChunk.cpp` | 149 | 105 | save/load | Rust state; the debug-file hooks were dead |
+  | FS `FSBasicFile.cpp` | 128 | 48 | base of FSFileSpec | |
+  | FS `FSPersistentList.cpp` | 105 | 69 | `Empire Earth.cpp` (11 registrations), FSChunk | a tag -> prototype map |
+  | Utilities `UWideString.cpp` / `UString.cpp` | 609 / 569 | 463 / 430 | everything | the string classes; their callers are the whole game |
+  | Utilities `UGraph.cpp` | 398 | 245 | the post-game graphs (UIGraph, EEUIPGSLineGraph) | tour only |
+  | Utilities `U2DSparseArray.cpp` | 168 | 88 | the A* and continents | simulation |
+  | Utilities `UReferenceCounter.cpp` | 151 | 102 | many | |
+  | Utilities `UMath.cpp`, `U2DFractal.cpp`, `Utilities.cpp`, `UEncryption.cpp`, `UConfig.cpp`, `UResourceFile.cpp`, `UDataCompression.cpp` | 128, 94, 89, 75, 63, 61, 52 | 78, 73, 57, 60, 29, 41, 38 | | `UEncryption`/`UDataCompression` already `ee_codec` |
+  | Sound `SESoundManager.cpp` | 854 | 649 | 229 (the `gSoundManager` calls) | decisions in `ee_sound`; nodes, samples, threads, trampolines C++ |
+  | Sound `Mixer/Mixer.cpp` | 489 | 420 | the PIM table | miniaudio's device and decoder |
+  | Sound `SEConductor.cpp` | 435 | 366 | 16 | dmusic's loader/performance; decisions in `ee_sound` |
+  | Sound `SECD.cpp` (+ .h 93) | 308 | 241 | the window hook, `SEInitialize(..., false)` | **dead (never initialised), deleted** |
+  | Sound `Sound Engine.cpp` | 143 | 120 | | the CD set-up (MCI) went with SECD: 35 lines left |
+  | Sound `SEMixer.cpp`, `SEScore.cpp` | 134, 27 | 90, 14 | | |
+  | TS `TSThread.cpp`, `TSScheduler.cpp`, `TSEvent.cpp`, `TSReadWriteLock.cpp`, `TSCriticalSection.cpp`, `TSLockable.h`, `Thread System.cpp` | 227, 170, 75, 61, 54, 43, 40 | 165, 122, 55, 40, 36, 22, 28 | 170+ (the preamble), real use: threads, locks | thin layers over PlatThread |
+  | TM `TMTimer.cpp`, `TMPoll.cpp`, `Time Manager.cpp` | 154, 128, 77 | 115, 92, 50 | `TMPoll` 171, `TMTimer` the physics clock | |
+  | ES `Error System.cpp` | 336 | 209 | `ESVERIFY_AT`, `ESDebugOut` (24), `ESRecordNativeError` | Filter.txt, the error log (opened, never written), verify |
+  | ES `ESChecksum.cpp` | 148 | 82 | 42 (world checksums); `EEPChecksum` subclasses it, `EEGameState` embeds it | |
+  | ES `ESProfile.cpp` (+ .h 49) | 108 | 60 | none | **empty inline bodies, a history nothing filled: deleted** |
+  | ES `ESCallerLog.cpp` (+ .h 27), `Low-Level Engine.cpp` | 90, 26 | 43 | four static logs nobody called | **deleted** |
+  | IS `Input System.cpp` | 319 | 218 | the window thread, the UI fixture (`ISHandleEvent`) | **ISDeviceInput moved: 132 lines left** |
+  | IS `ISKeyboard.cpp`, `ISMouse.cpp` | 206, 210 | 176, 172 | `gISKeyboard`/`gISMouse` (150 files name them) | the keys' entities, double presses |
+  | IS `ISKey.cpp`, `ISDevice.cpp`, `ISMouseButton.cpp`, `ISExtendedKey.cpp`, `ISMouseAxis.cpp` | 60, 54, 42, 23, 23 | 36, 27, 27, 12, 12 | UIHotKey, EEPhysics | the entity classes (virtuals) |
+  | NE (now its own lane) `NESynchronousServer.cpp`, `NEMessage.cpp`, `NEMessageManager.cpp`, `NESynchronousClient.cpp`, the rest | 1,392, 1,252, 829, 640, 1,786 | 1,168, 775, 590, 532 | | context only |
+
+  Modules at the end of the round (`.cpp` + private headers): File System 3,410 -> 2,525; Sound Engine 2,390 -> 1,974;
+  Error System 682 -> 484; Input System 937 -> 750; Utilities 2,457, Thread System 670, Time Manager 359 unchanged.
+  The column "not a forwarder" counts what a whole-class move must port: the FS and Sound facades are mostly glue
+  over C++ objects (FSFile virtuals, UString, FSFileSpec, dmusic, miniaudio), not logic, so "the logic is already
+  Rust" does not make them cheap to delete: each needs the C++ objects it touches to cross first.
+- **Four dead classes deleted** (commit 1, -1,834): they were constructed or linked, so the linker census
+  (`tools/dead_census.py`) kept them, but nothing used them.
+  - `FSDebugFile`: `FSChunk::SetDebugFile` had no caller, so `sDebugFile` was always NULL; `EEGameStateLoader::Load`
+    built one around its memory file and never opened it; `SaveGameToFile` used it only to delete the save's old
+    ".txt" twin. That deletion stays, written directly (the same `PLAT_MAX_PATH` rule, the native error recorded).
+    FSChunk's `BuildFileToUse`, `Set/ClearDebugFile` and its four static label strings (only the debug file wrote
+    them) went too. FSChunk's layout is unchanged (the statics were not members of the record).
+  - `SECD` (MCI CD audio): `SEInitialize` was always called with `inUseCD = false`, so no drive was ever opened;
+    `SEInitializeCD`, the shutdown's CD loop, `SECD::SetNotificationRecipient` at start-up and the `MM_MCINOTIFY` case
+    of the Win32 message hook went with it. `SEInitialize` lost the parameter. An `MM_MCINOTIFY` now reaches the
+    default handling instead of being dropped: nothing opens an MCI device, so none arrives.
+  - `ESCallerLog` (two static logs in `EEAmbientSound.cpp`, two in `Low-Level Engine.cpp`, which held nothing else;
+    `RecordCaller` had no caller) and `ESProfile` (every member an empty inline body; the history map nothing filled).
+  - `link/lle/units.txt` lost the four units' lines.
+- **ISDeviceInput whole in Rust** (`rust/crates/ee_input`, commit 2, -229): the device buffers the port wrote in
+  place of DirectInput 7 (PORT.md step 4.4): the 256-record buffer and its overflow flag, the key bytes, the mouse's
+  motion and buttons, acquire/unacquire, and `ISHandleEvent`'s event switch (scan codes, `PlatWindow` buttons to
+  DirectInput's order, the wheel's `lrintf(notches x 120)`, a focus loss letting go of every key and button). The two
+  system devices are Rust statics (`ee_input_system_init` / `_device(0|1)` / `_shutdown`); `ISKeyboard` and
+  `ISMouse` keep an opaque `ISDeviceInput*` (`typedef EeInputDevice`) and call `ee_input_*`. `ISMouseState` and
+  `ISInputRecord` are now the Rust records under their old names (`typedef EeInputMouseState`, `EeInputRecord`,
+  with DirectInput's field names `lX`, `dwOfs`, ... so `ISMouseAxis`'s pointers into the state and every reader
+  compile unchanged). `ISHandleEvent` is one C++ line passing the event's type and both union views' fields; the
+  Rust reads only those of the event's type.
+  - **The golden** (`tests/input/is_device_golden.cpp` over `tests/input/is_device_orig.h`, the class and the
+    event switch copied unchanged from 5d3ce6a9): 20,000 sequences of 30-90 random calls (events through
+    `ISHandleEvent` with one system device sometimes absent, acquire/unacquire, buffer reads with random counts and
+    NULL, key and mouse state reads, direct calls with out-of-range scan codes and buttons, bursts of 100-350 moves
+    that overflow the buffer): 1,206,926 trace lines, 309,525 result lines, all equal in the Rust replay
+    (`EE_INPUT_GOLDEN=<file> cargo test -p ee_input long_run`). Seven Rust mutations fail it: a 255-record buffer
+    (947 sequences), acquire keeping the motion (2,703), a key recorded without a change (10,703), right and middle
+    swapped (5,858), the mouse state keeping its motion (4,552), the overflow reported twice (3,555), a focus loss
+    skipping key 0xff (1,898); the restored source: 0. `golden_input.txt` (the first 40 sequences) is replayed by
+    `cargo test`. The wheel values stay under 1,000 notches in the golden: past 2^31 / 120 the original's `long` is
+    32-bit on Windows and 64-bit on LP64, so the indefinite value and the sum's overflow differ by system (a unit
+    test pins x86's indefinite value; arm64's `lrintf` saturates there, which no device reaches).
+  - **Behaviour:** none on the traced paths. The device lock is a Rust `Mutex` (the original's `PlatMutex`); no
+    call holds it across a call out.
+- **What runs it.** EE-SIM never creates the Input System, and the deletions are unreachable code: the oracle stays
+  identical by construction (seeds 2-3 identical after each commit). The input devices run in every windowed game:
+  the lead's tour (`fixture_game.py`: the clicks and key presses go through `ISHandleEvent`, the F3 input check, the
+  arrow-key scroll and the zoom keys) is the check; a focus loss, the wheel and a buffer overflow run only in the
+  golden unless a person uses them. The save path's twin deletion runs in EE-SIM's saves (the saveload matrix).
+- **Left, in the order this census suggests:** `ISKeyboard`/`ISMouse` with their entities (`ISKey`,
+  `ISExtendedKey`, `ISMouseButton`, `ISMouseAxis`: virtuals the UI's hot keys read); the Error System
+  (Filter.txt's filters, the native error, `ESVerify`; its error log is opened and never written); `FSPersistentList`
+  (a tag -> prototype map over C++ objects); `ESChecksum` (embedded in `EEGameState` and subclassed by
+  `EEPChecksum`: a Rust object with a copy); `TMPoll`/`TMTimer`; the thread system over PlatThread; then the File
+  System's `FSFileSpec`/`FSPath`/`FSArchive` walk and the Sound Engine's object side, which need `UString` and the
+  FSFile virtuals across first. The string classes (`UString`, `UWideString`, 1.2k lines, used by every unit) are
+  the largest single piece and the last.
