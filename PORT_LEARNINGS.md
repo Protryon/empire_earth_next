@@ -12733,3 +12733,61 @@ reaches this round's code, no LAN step does; the drivers and the Rust tests exer
   RoutingLogic's friend search on Internet servers. EE-SIM makes neither.
 - **Net C++** (src+include, the generated headers left out): the host calls +10 -90 (ServerOp.cpp +9 -88); the user
   status op +48 -164 (WONRoutingMsg.h -149); the round +58 -254.
+
+## R6: WON's Internet code, round 20 (AuthContext whole in Rust; GetCertOp's certificate objects as Rust handles)
+
+Branch `rust-won-net20`. Measured by net C++ deletion, as rounds 7 to 19. Round 19 left ServerOp.cpp's `HostCall`
+answering the certificate ops' calls on C++ objects (group 3: the auth context, the certificates, key blocks, private
+keys and peer data) because AuthContext was a C++ class with its lock and login data; this round moved both together.
+
+- **What moved.** `authobj.rs` (`EeWonAuthCtx`): AuthContext's lock (`mDataCrit`, a Win32 critical section: a
+  recursive `ReLock` here, taken around each call where the original took it), its flow (authflow.rs, unchanged) and
+  login data (authlogin.rs, unchanged) as members, its server list (a C++ `ServerContext*`, one reference, released
+  last as the original's last member) and the class's verifier key (`mVerifierKey`, `mCheckedVerifierFile`,
+  `GetVerifierCrit()`: a Rust static; `LoadVerifierKey` reads the file through `PlatFOpen` in Rust). The C++
+  `AuthContext` is a RefCount shim holding one `Arc` reference (`mCore`); every method forwards; `GetVerifierKey()`
+  is gone (only the host calls used it). `hostauth.rs`: the op base answers the 30 `EE_WON_HOST_CERT_*` calls and the
+  request ops' seven auth context calls (`HAS_AUTH`, `CERT_USER_ID`, `GET_SESSION`, `PUT_SESSION`, `PEER_CTX_DATA`,
+  `PEER_REFRESH_BLOCK`, `PEER_REFRESH_ASYNC`) in Rust when the game binds the op (`ee_won_hostop_bind_native`, round
+  19's switch); the certificates, key blocks, private keys and peer data GetCertOp makes are Rust handles. `HostCall`
+  keeps one call for all of them, `EE_WON_HOST_AUTH_CORE` (a C++ `AuthContext*`, or the op's `mAuthContext`, to its
+  Rust object). `GetCertOp::GetPeerData` returns a shim over a new reference (`EE_WON_GETCERT_PEER_DATA`), and the
+  flow's `cert_peer_data` hook reads it. src+include: +82 -320 (AuthContext.cpp +63 -209, ServerOp.cpp +6 -91).
+- **Handles beside C++ objects.** The op's members and the host calls' objects are numbers (`HostObj`): a handle is
+  an `Arc<Item>` pointer with its low bit set (a C++ `RefCount*` is aligned, never odd), so the generic `ADD_REF` /
+  `RELEASE` calls are answered in Rust for a handle and sent to C++ for anything else, and the op's destructor's
+  releases need no change. getcert.rs and certhost.rs are untouched: the op still makes the same calls, round 6's
+  goldens (`golden_getcert.txt`, `golden_cert.txt`) and the drivers' stand-ins still see every one.
+- **Identity kept where it showed.** A peer data handle carries its key block's handle, as the C++ `AuthPeerData`
+  shim carried `mKeyBlock`: `GetPeerData` makes a new one per call (`peer block is the block 0` in the golden), `new
+  AuthPeerData(cert, block, ...)` holds the given one (`peer 0 block the block`), so `GetPubKeyBlock()` stays borrowed.
+- **The lock and the server list.** The flow already had its own state lock and never held a borrow across a hook;
+  the outer recursive lock keeps the original's serialization of whole operations (a completion re-entering the
+  context on the same thread takes it again). `AddAddress` / `RemoveAddress` / `AddAddressesFromDir` (SDK bodies,
+  no caller in the game) take a reference to the server list under the lock and call it after; the original held the
+  context's lock across the call (the list has its own lock).
+- **Draws.** The verifier key is made with an unseeded generator (`Random::default()`): the original's static drew one
+  system seed before `main`, which no run, the drivers' fixed seeds included, could see. Every other construction
+  draws where the C++ shims drew (a certificate's key, `new ElGamal`, an empty peer data's three).
+- **The golden over the real classes.** `won_authhost_test` (new, `xbuild wontest`, the same units as
+  won_serverop_test): a real AuthContext (its verifier file in the WON directory: won_peerop_test's key 0), a real
+  GetCertOp, and every certificate call through the op's own call path (`ee_won_hostop_call`) with real certificates,
+  key blocks (signed by keys 0 and 1, junk, empty) and private keys: validity, ids, verification by the verifier, by
+  a block and by peer data, encryption bytes (a fixed seed), times and deltas relative to now, peer data made and
+  set, the context's peer data read back through the class; the login texts, community data, hashes and secrets with
+  the secret file's bytes; the request ops' auth calls (sessions put and taken, the user id, the peer data, a blocking
+  and an asynchronous refresh with no servers: `100055`); the class's server list and auto-refresh. 174 lines,
+  recorded over the unmodified C++ (six runs the same, its own commit); 0 failures over the Rust side. Mutation: a
+  key block's id off by one fails the golden from line 17 (its first block id). Driver trap: `Log(a + f() + g())` evaluates its calls in any
+  order (the server list counts came out before the adds): every call with an effect is its own statement.
+- **Unchanged and passing:** won_cert_test (2,317,106 checks), won_peerop_test (2,000), won_authctx_test (2,644,851),
+  won_hostop_test, won_serverop_test (80 lines). Cargo: authobj's lock, construction, server list order, sessions and
+  verifier; hostauth's handles, counts, the block identity, the context calls and the calls without a context.
+- **The original's undefined corners, defined.** A call on a missing context or object (`mAuthContext` NULL, a NULL
+  peer data's user id, a NULL block's `Verify`) answers 0, none or nothing; a secret shorter than 8 bytes is padded
+  with zeros; a missing private key for new peer data is an empty key.
+- **LAN reach.** Every LAN lobby makes an AuthContext (`WONLobbyPrv`'s `new AuthContext`, `SetServerContext`,
+  `SetCommunity`, `SetCDKey`, `Kill` on exit), so the forwarders, the Rust lock, the server list and the verifier file
+  check run in the lead's LAN gate. The host calls (GetCertOp, the request ops' auth context) run only for an Internet
+  login or a direct-connect game with the CD key check (its certificate refresh); the gate's LAN-listed game does
+  not reach them. EE-SIM makes no AuthContext.
