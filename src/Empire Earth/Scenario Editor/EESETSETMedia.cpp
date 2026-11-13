@@ -68,8 +68,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
@@ -81,7 +79,6 @@
 #include "ee/EESETSEComboBox.h"
 #include "ee/EESETSUICBPlayer.h"
 #include "ee/EESETSEffectControls.h"
-#include "ee/EESEEClearAddLine.h"
 #include "ee/EESETSETMedia.h"
 #include "ee/EESETSETMSDCameraScrollChange.h"
 #include "ee/EEStringIDs.h"
@@ -217,20 +214,6 @@ void EESETSETMedia::UpdateName(EESMEffect* inEffect, EESETSEffectControls* inCon
 // FUNCTION: EXE 0x5864b3
 // Destroys an effect type object (EESETSEffectType's scalar deleting destructor; inline empty dtor)
 
-// FUNCTION: EXE 0x5864d0
-// Hides the text edit box and control 0x96d when 'Clear' (radio 0x988) is checked, shows them for 'Add line'
-long EESEEClearAddLine::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (static_cast<UIControl*>(inEntity)->GetId() == 0x988) {
-        inForm->GetControlById(kSETSEComboBoxTextEditBox)->SetDisplayMode(kDisplayModeHidden);
-        inForm->GetControlById(0x96d)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        inForm->GetControlById(kSETSEComboBoxTextEditBox)->SetDisplayMode(kDisplayModeShown);
-        inForm->GetControlById(0x96d)->SetDisplayMode(kDisplayModeShown);
-    }
-    return kErrorOK;
-}
-
 // FUNCTION: EXE 0x586531
 // Stores the chosen text object (hints / objectives / history), whether to clear it, and the line to add
 void EESETSETMediaChangeText::Store(EESMEffect* inEffect, EESETSEffectControls* inControls)
@@ -307,7 +290,7 @@ void EESETSETMediaChangeText::Show(EESETSEffectControls* inControls)
     theLocation.SetY(641.0f);
     gResource->GetString(IDS_CLEAR, theText);
     inControls->mRadioButtons[0]->SetText(theText, gU531934);
-    UIEvent* theEvent = new EESEEClearAddLine;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_CLEAR_ADD_LINE);
     inControls->mRadioButtons[0]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     GEText* theGEText = inControls->mRadioButtons[0]->GetTextLabel()->GetGEText();
     theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
@@ -337,9 +320,6 @@ void EESETSETMediaChangeText::Show(EESETSEffectControls* inControls)
     inControls->mTextEditBox->SetLocation(theLocation);
     inControls->mTextEditBox->SetDisplayMode(kDisplayModeShown);
 }
-
-// FUNCTION: EXE 0x5869d1
-// Destroys a clear / add-line radio event (EESEEClearAddLine's scalar deleting destructor, the inline empty dtor)
 
 // FUNCTION: EXE 0x5869fc
 // Stores the typed sound file name into the effect (always: the file-name flag is set by the ctor)

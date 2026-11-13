@@ -68,8 +68,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
@@ -255,24 +253,10 @@ void EESETSETGameAmbientWeather::Show(EESETSEffectControls* inControls)
     inControls->mCheckBoxes[0]->SetDisplayMode(kDisplayModeShown);
 }
 
-// FUNCTION: EXE 0x584a41
-// Refills the calamity's place combo with area names (area radio, id 0x988) or object names and selects the first
-// EESEEGCPlace::ProcessEvent below; FillPlaceComboBox (0x184a90) fills the place label and combo box of the
-// calamity type: area names (inAreas) or object names
-static void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);
-
-long EESEEGCPlace::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UITextLabel* theLabel = static_cast<UITextLabel*>(inForm->GetControlById(0x96d));
-    UIComboBox* theComboBox = static_cast<UIComboBox*>(inForm->GetControlById(0x999));
-    FillPlaceComboBox(static_cast<UIControl*>(inEntity)->GetId() == 0x988, theLabel, theComboBox);
-    theComboBox->SetCurrentSelection(0);
-    return kErrorOK;
-}
-
 // FUNCTION: EXE 0x584a90
 // Sets the place label to 'Area' or 'Object' and fills the place combo with the scenario's area or object names
-static void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox)
+// (the place radios' event, ee_screens scenario_editor.rs, calls it through EESEEvents.cpp's host too)
+void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox)
 {
     std::vector<UWideString> theNames;
     UWideString theTitle;
@@ -326,15 +310,11 @@ void EESETSETGameCalamity::Load(EESMEffect* inEffect, EESETSEffectControls* inCo
         inControls->mRadioButtons[1]->Check();
         inControls->mComboBoxes[2]->SetCurrentSelection(inEffect->mPlaceObject);
     }
-    UIEvent* theEvent = new EESEEGCPlace;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_PLACE);
     inControls->mRadioButtons[0]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mRadioButtons[1]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     theEvent->Dereference();
 }
-
-// FUNCTION: EXE 0x584d8a
-// Deletes an area/object radio event of the calamity place (EESEEGCPlace scalar deleting destructor)
-// (the inline empty dtor; ee/EESEEGCPlace.h; emitted with the vtable by EESETSETGameCalamity::Load's `new`)
 
 // FUNCTION: EXE 0x584db5
 // Shows the calamity combo, area/object radios and place combo; rebuilds mCalamities with the combo
@@ -492,17 +472,6 @@ void EESETSETGameDayNight::Show(EESETSEffectControls* inControls)
     inControls->mLabels[3]->SetDisplayMode(kDisplayModeShown);
 }
 
-// FUNCTION: EXE 0x58547c
-// Refills the graphic effect's place combo with area names (area radio, id 0x988) or object names and selects the first
-long EESEEPlace::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UITextLabel* theLabel = static_cast<UITextLabel*>(inForm->GetControlById(0x96d));
-    UIComboBox* theComboBox = static_cast<UIComboBox*>(inForm->GetControlById(0x999));
-    FillPlaceComboBox(static_cast<UIControl*>(inEntity)->GetId() == 0x988, theLabel, theComboBox);
-    theComboBox->SetCurrentSelection(0);
-    return kErrorOK;
-}
-
 // FUNCTION: EXE 0x5854cb
 // Hides the calamity label and combo, the area/object radios and the place label and combo; detaches the radio events
 void EESETSETGameCalamity::VirtualC(EESETSEffectControls* inControls)
@@ -534,7 +503,7 @@ void EESETSETGameGraphicEffect::Load(EESMEffect* inEffect, EESETSEffectControls*
         inControls->mComboBoxes[1]->SetTriggerEvent(kControlTriggerSelectionChanged, theAction);
         theAction->Dereference();
     }
-    UIEvent* theEvent = new EESEEPlace;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_PLACE);
     inControls->mRadioButtons[0]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mRadioButtons[1]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     theEvent->Dereference();
@@ -558,10 +527,6 @@ void EESETSETGameGraphicEffect::Load(EESMEffect* inEffect, EESETSEffectControls*
         inControls->mComboBoxes[2]->SetCurrentSelection(inEffect->mPlaceObject);
     }
 }
-
-// FUNCTION: EXE 0x585765
-// Deletes an area/object radio event of the graphic effect place (EESEEPlace scalar deleting destructor)
-// (the inline empty dtor; ee/EESEEPlace.h; emitted with the vtable by EESETSETGameGraphicEffect::Load's `new`)
 
 // FUNCTION: EXE 0x585790
 // Shows the listed graphic effects, radios and place combo; rebuilds mGraphicEffects with the combo

@@ -48,9 +48,6 @@
 
 
 
-// Callback names are provisional; these are the original functions at 0x1af832 / 0x1af7b2.
-void EESESaveBeforeExit(UIForm* inForm);
-void EESEExitWithoutSaving(UIForm* inForm);
 
 
 #include <mbstring.h>
@@ -123,10 +120,8 @@ void EESEExitWithoutSaving(UIForm* inForm);
 #include "lle/UIEditBox.h"
 #include <string.h>
 
-#include "ee/EESEEFindText.h"
 
 #include "ee/EEButtonObject.h"
-#include "ee/EESEEditorEvents.h"
 
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
@@ -140,54 +135,6 @@ void EESEExitWithoutSaving(UIForm* inForm);
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
 // moved to EEUIFSETerrain.cpp (one translation unit; its UIListBox<vector<GEColor> > /
 // UIListBox<EESEUITTData> COMDATs are what that file compiles).
-
-// FUNCTION: EXE 0x5af2a9
-// Expands an edit box text of the form "///n,m,..." into the concatenated resource strings n, m, ...
-// (digits are read across the box's lines)
-long EESEEFindText::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theText;
-    UWideString theNumber("");
-    UWideString thePrefix("///");
-    UIEditBox* theEdit = static_cast<UIEditBox*>(inEntity);
-    unsigned long theLine = 0;
-    unsigned long theLineCount = theEdit->GetLineCount();
-    theText.CopyString(theEdit->GetText(0), 3);
-    if (theText == thePrefix) {
-        theText = "";
-        const unsigned char* theCurrent = PlatMbsNInc(reinterpret_cast<const unsigned char*>(theEdit->GetText(0)), 3);
-        while (theLine < theLineCount) {
-            if (PlatMbsNBCmp(theCurrent, (const unsigned char*)"", 1) == 0) {
-                theLine++;
-                if (theLineCount <= theLine)
-                    break;
-                theCurrent = reinterpret_cast<const unsigned char*>(theEdit->GetText(theLine));
-            } else {
-                if (PlatIsMbcDigit((char)*theCurrent)) {
-                    unsigned char theDigit[4];
-                    PlatMbsNCpy(theDigit, theCurrent, 1);
-                    strcpy((char*)PlatMbsInc(theDigit), "");
-                    theNumber += reinterpret_cast<const char*>(theDigit);
-                } else {
-                    if (PlatMbsNBCmp(theCurrent, (const unsigned char*)",", 1) != 0)
-                        break;
-                    gResource->GetString(atoi(theNumber), theNumber);
-                    theText += theNumber;
-                    theNumber = "";
-                }
-                theCurrent = PlatMbsInc(theCurrent);
-            }
-        }
-        if (theNumber.GetLength() > 0) {
-            gResource->GetString(atoi(theNumber), theNumber);
-            theText += theNumber;
-            theNumber = "";
-        }
-        if (theText.GetLength() > 0)
-            theEdit->SetText(theText);
-    }
-    return kErrorOK;
-}
 
 // FUNCTION: EXE 0x5af47b
 // Shows the unit limit per player (slider value / non-gaia players) and updates the slider's own label
@@ -233,66 +180,6 @@ long EESEEQuickLoad::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     static_cast<EEUIFScenarioEditor*>(inForm)->PostShowLoadedObject(this->mOwner);
     return kErrorOK;
-}
-
-// FUNCTION: EXE 0x5af59f
-// Opens the load screen for scenarios in the editor, or for saved games elsewhere
-long EESEELoadScenario::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UIEvent* theEvent = EECreateScreenEvent(gUIManager->GetInScenarioEditor() == true ? EE_SCREENS_SL_LOAD_SCREEN_SCENARIO
-                                                                                      : EE_SCREENS_SL_LOAD_SCREEN_GAME);
-    static_cast<EEUIFScenarioEditor*>(inForm)->PostLoadEvent(theEvent);
-    theEvent->Dereference();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x5af74a
-// Posts a save scenario action
-long EESEESaveScenario::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    EESEASaveScenario* theAction = new EESEASaveScenario;
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x5af77e
-// Posts a test scenario action
-long EESEETestScenario::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    EESEATestScenario* theAction = new EESEATestScenario;
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x5af7b2
-// Posts an exit scenario editor action (the No answer of the save prompt)
-void EESEExitWithoutSaving(UIForm* inForm)
-{
-    EESEAExitScenario* theAction = new EESEAExitScenario;
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-}
-
-// FUNCTION: EXE 0x5af7e2
-// Asks whether to save the scenario before exiting (Yes saves then exits, No exits, Cancel stays)
-long EESEEExitScenario::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theText;
-    gResource->GetString(IDS_SAVE_SCENARIO_BEFORE_EXITING, theText);
-    gUIManager->DisplayYesNoCancel(theText, 1, NULL, EESESaveBeforeExit, EESEExitWithoutSaving);
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x5af832
-// Posts a save scenario action and makes the editor exit once the save is done (the Yes answer)
-void EESESaveBeforeExit(UIForm* inForm)
-{
-    EESEASaveScenario* theAction = new EESEASaveScenario;
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-    gUIManager->mScenarioEditorForm->mExitAfterSave = true;
 }
 
 // FUNCTION: EXE 0x5af874

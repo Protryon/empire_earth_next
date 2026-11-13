@@ -3,10 +3,13 @@
 // object, area, condition, effect and trigger screens' events) are EEScreenEvent codes handled by ee_screens
 // scenario_editor.rs over this unit's host, ee_screenscpp_se (docs/RUST_PLAN.md "R6 game screens"); the events with
 // per-instance state (the slider's label, the check box's controls, the scenario combo box's refill) stay here.
+// The host also serves the editor form's and its tabs' events (the toolbar, the hot keys, the elevation tool, the
+// player tab's epoch, the effects' radios, the instructions' "///" expansion: the units that newed them).
 // After RTSPlayer.cpp (..0x16f892), before EESEIAExport.cpp's Virtual4 0x16ff5f. Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
+#include <string>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -85,11 +88,51 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
+#include "lle/GETransformation.h"
+#include "ee/EEUserInterface.h"
+#include "ee/EESaveGameFiles.h"
+#include "ee/EESEUnit.h"
+#include "ee/EESEPlayerScreen.h"
+#include "ee/EESEASaveScenario.h"
+#include "ee/EESEATestScenario.h"
+#include "ee/EESEAExitScenario.h"
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);
+void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSETGame.cpp
 
-// ---- the host of the trigger tab's events (ee_screens scenario_editor.rs): inForm is the scenario editor's form,
+// ---- the host of the editor's events (ee_screens scenario_editor.rs): inForm is the scenario editor's form,
 // inEntity the event's control. The editor's objects, one call each (EE_SCREENS_SE_OP_*).
 static GE2DPoint sAreaCenter;   // EE_SCREENS_SE_OP_AREA_CENTER's, for EE_SCREENS_SE_OP_CENTER_ON_AREA
+
+// the exit question's answers (on the question's form)
+static void EESESaveBeforeExit(UIForm* inForm) { ee_screens_event(EE_SCREENS_SE_SAVE_BEFORE_EXIT, inForm, NULL); }
+static void EESEExitWithoutSaving(UIForm* inForm) { ee_screens_event(EE_SCREENS_SE_EXIT_WITHOUT_SAVING, inForm, NULL); }
+
+// a text (EE_SCREENS_SE_TEXT_*) into outText (up to inCapacity bytes); its length in bytes
+extern "C" size_t ee_screenscpp_se_text(void* inForm, void* inEntity, uint32_t inWhich, uint32_t inArg, uint8_t* outText,
+                                        size_t inCapacity)
+{
+    UWideString theText;
+    if (inWhich == EE_SCREENS_SE_TEXT_EDIT_LINE)
+        theText = static_cast<UIEditBox*>(static_cast<UIEntity*>(inEntity))->GetText(inArg);
+    else
+        gResource->GetString((int32_t)inArg, theText);
+    size_t theLength = theText.GetTCHARLength();
+    memcpy(outText, (const char*)theText, theLength < inCapacity ? theLength : inCapacity);
+    return theLength;
+}
+
+// the entity's (an edit box's) text
+extern "C" void ee_screenscpp_se_set_text(void* inEntity, const uint8_t* inText, size_t inLength)
+{
+    UWideString theText(std::string(reinterpret_cast<const char*>(inText), inLength).c_str());
+    static_cast<UIEditBox*>(static_cast<UIEntity*>(inEntity))->SetText(theText);
+}
+
+static void EESEPostAction(EEAction* inAction)
+{
+    gUserInterface->PostAction(inAction);
+    inAction->Dereference();
+}
 
 extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB)
 {
@@ -204,6 +247,74 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         if (UIControl* theControl = theEditor->GetControlById(inA))
             theControl->SetDisplayMode(inB);
         break;
+    // the editor form's and its tabs' (group 2)
+    case EE_SCREENS_SE_OP_UNIT_RESELECT:
+        theEditor->GetUnitScreen()->ReselectUnitType();
+        break;
+    case EE_SCREENS_SE_OP_PLAYER_FILL_TECH:
+        theEditor->GetPlayerScreen()->FillTechLists();
+        break;
+    case EE_SCREENS_SE_OP_HOME_ROTATION: {
+        GETransformation theTransformation;
+        theTransformation.MakeIdentity();
+        gWorld.mCameraControl.SetViewTurn(theTransformation, false);
+        theTransformation.SetOrientationYPR(0.7853982f, -0.61086524f, 0.0f);
+        gWorld.mCameraControl.SetOffsetTurn(theTransformation, false);
+        break;
+    }
+    case EE_SCREENS_SE_OP_OPEN_CIV_BUILDER:
+        return (uint32_t)gUserInterface->OpenCivilizationBuilder(&theEditor->mC1A0, true);
+    case EE_SCREENS_SE_OP_LOAD_TRIGGERS: {
+        FSFileSpec theFile;
+        theFile.SetVolume(gStartupVolume);
+        theFile.SetDirectory(gStartupDirectory);
+        theFile.SetFile("ScenarioTriggers.scn");
+        if (theFile.Open(kFileAccessRead) == kErrorOK)
+            gWorld.mScenarioManager->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile);
+        theFile.Close();
+        break;
+    }
+    case EE_SCREENS_SE_OP_RANGE:
+        return (uint32_t)static_cast<UISlider*>(theEditor->GetControlById(inA))->GetCurrentRangeValue();
+    case EE_SCREENS_SE_OP_LABEL_NUMBER:
+        static_cast<UITextLabel*>(theEditor->GetControlById(inA))->SetText((long)(int32_t)inB);
+        break;
+    case EE_SCREENS_SE_OP_PLAYER_REBUILD_TECH:
+        theEditor->GetPlayerScreen()->RebuildTechLists();
+        break;
+    case EE_SCREENS_SE_OP_PLACE_FILL: {
+        UIComboBox* theComboBox = static_cast<UIComboBox*>(theEditor->GetControlById(0x999));
+        FillPlaceComboBox(inA != 0, static_cast<UITextLabel*>(theEditor->GetControlById(0x96d)), theComboBox);
+        theComboBox->SetCurrentSelection(0);
+        break;
+    }
+    case EE_SCREENS_SE_OP_IN_EDITOR:
+        return gUIManager->GetInScenarioEditor() == true;
+    case EE_SCREENS_SE_OP_POST_LOAD_EVENT: {
+        UIEvent* theEvent = EECreateScreenEvent(inA);
+        theEditor->PostLoadEvent(theEvent);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_SCREENS_SE_OP_POST_ACTION:
+        if (inA == EE_SCREENS_SE_ACTION_SAVE)
+            EESEPostAction(new EESEASaveScenario);
+        else if (inA == EE_SCREENS_SE_ACTION_TEST)
+            EESEPostAction(new EESEATestScenario);
+        else
+            EESEPostAction(new EESEAExitScenario);
+        break;
+    case EE_SCREENS_SE_OP_ASK_EXIT: {
+        UWideString theText;
+        gResource->GetString(IDS_SAVE_SCENARIO_BEFORE_EXITING, theText);
+        gUIManager->DisplayYesNoCancel(theText, 1, NULL, EESESaveBeforeExit, EESEExitWithoutSaving);
+        break;
+    }
+    case EE_SCREENS_SE_OP_EXIT_AFTER_SAVE:
+        gUIManager->mScenarioEditorForm->mExitAfterSave = true;
+        break;
+    case EE_SCREENS_SE_OP_EDIT_LINES:
+        return static_cast<UIEditBox*>(theEntity)->GetLineCount();
     }
     return 0;
 }

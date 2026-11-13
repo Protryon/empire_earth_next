@@ -71,8 +71,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
@@ -121,6 +119,8 @@
 #include "ee/EEUIFSEPaintElevation.h"
 #include "ee/EEUIFSEElevation.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 
 // FUNCTION: EXE 0x5a098e
 // Builds the elevation tab: the paint area, the hills / cliffs / cliff paths radio buttons, the titles,
@@ -144,7 +144,7 @@ EEUIFSEElevation::EEUIFSEElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBru
     theGEText = this->mRaiseButton->GetTextLabel()->GetGEText();
     theGEText->SetIsTransparent(true);
     theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    UIEvent* theEvent = new EEUIEElevationTool;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_ELEVATION_TOOL);
     this->mRaiseButton->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inForm->AddControl(this->mRaiseButton, 2);
     ioIndex++;
@@ -243,9 +243,6 @@ EEUIFSEElevation::EEUIFSEElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBru
     inForm->AddControl(this->mElevationSlider, 2);
     this->mStrengthSlider->SetDisplayMode(kDisplayModeHidden);
 }
-
-// FUNCTION: EXE 0x5a1232
-// Destroys and frees the elevation tool event (EEUIEElevationTool's scalar deleting destructor, with its vtable)
 
 // SYNTHETIC: EXE 0x5a125d
 // (EEUIFSEElevation's scalar deleting destructor)

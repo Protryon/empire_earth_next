@@ -1938,6 +1938,40 @@ constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_CHANGE_INDEX = 9237;
 
 constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_REMOVE = 9238;
 
+/// The editor form's own events and its tabs' (group 2): the player combo box's change, the camera's home rotation,
+/// the civilization builder's button, the triggers-only load (Ctrl+L), the elevation tab's raise, lower and level
+/// buttons, the player tab's epoch box, the change-text effect's and the place effects' radios, the main buttons'
+/// load, save, test and exit, the exit question's answers, the instructions' "///" expansion.
+constexpr static const uint32_t EE_SCREENS_SE_NEW_PLAYER = 9248;
+
+constexpr static const uint32_t EE_SCREENS_SE_HOME_ROTATION = 9249;
+
+constexpr static const uint32_t EE_SCREENS_SE_OPEN_CIV_BUILDER = 9250;
+
+constexpr static const uint32_t EE_SCREENS_SE_LOAD_TRIGGERS_ONLY = 9251;
+
+constexpr static const uint32_t EE_SCREENS_SE_ELEVATION_TOOL = 9252;
+
+constexpr static const uint32_t EE_SCREENS_SE_DISPLAY_EPOCH = 9253;
+
+constexpr static const uint32_t EE_SCREENS_SE_CLEAR_ADD_LINE = 9254;
+
+constexpr static const uint32_t EE_SCREENS_SE_PLACE = 9255;
+
+constexpr static const uint32_t EE_SCREENS_SE_LOAD_SCENARIO = 9256;
+
+constexpr static const uint32_t EE_SCREENS_SE_SAVE_SCENARIO = 9257;
+
+constexpr static const uint32_t EE_SCREENS_SE_TEST_SCENARIO = 9258;
+
+constexpr static const uint32_t EE_SCREENS_SE_EXIT_SCENARIO = 9259;
+
+constexpr static const uint32_t EE_SCREENS_SE_SAVE_BEFORE_EXIT = 9260;
+
+constexpr static const uint32_t EE_SCREENS_SE_EXIT_WITHOUT_SAVING = 9261;
+
+constexpr static const uint32_t EE_SCREENS_SE_FIND_TEXT = 9262;
+
 /// -> the entity's control id.
 constexpr static const uint32_t EE_SCREENS_SE_OP_ENTITY_ID = 1;
 
@@ -2018,6 +2052,63 @@ constexpr static const uint32_t EE_SCREENS_SE_OP_CHECKED = 26;
 
 /// (control id, mode) the form's control of the id (`GetControlById`) shown or hidden.
 constexpr static const uint32_t EE_SCREENS_SE_OP_SHOW = 27;
+
+/// The unit tab's `ReselectUnitType`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_UNIT_RESELECT = 28;
+
+/// The player tab's `FillTechLists`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_PLAYER_FILL_TECH = 29;
+
+/// The camera's view turn the identity, its offset turn yaw 45 degrees, pitch -35.
+constexpr static const uint32_t EE_SCREENS_SE_OP_HOME_ROTATION = 30;
+
+/// -> `OpenCivilizationBuilder` on the editor's civilization (its result).
+constexpr static const uint32_t EE_SCREENS_SE_OP_OPEN_CIV_BUILDER = 31;
+
+/// The scenario manager loaded from "ScenarioTriggers.scn" (when it opens).
+constexpr static const uint32_t EE_SCREENS_SE_OP_LOAD_TRIGGERS = 32;
+
+/// (control id) -> the form's slider's range value.
+constexpr static const uint32_t EE_SCREENS_SE_OP_RANGE = 33;
+
+/// (control id, value) the form's text label's number.
+constexpr static const uint32_t EE_SCREENS_SE_OP_LABEL_NUMBER = 34;
+
+/// The player tab's `RebuildTechLists`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_PLAYER_REBUILD_TECH = 35;
+
+/// (flag) the place label (0x96d) and combo box (0x999) filled with area (flag) or object names, its first picked.
+constexpr static const uint32_t EE_SCREENS_SE_OP_PLACE_FILL = 36;
+
+/// -> the UI manager in the scenario editor.
+constexpr static const uint32_t EE_SCREENS_SE_OP_IN_EDITOR = 37;
+
+/// (screen event code) the editor's `PostLoadEvent` of that screen event.
+constexpr static const uint32_t EE_SCREENS_SE_OP_POST_LOAD_EVENT = 38;
+
+/// (kind: `EE_SCREENS_SE_ACTION_*`) the editor's action posted.
+constexpr static const uint32_t EE_SCREENS_SE_OP_POST_ACTION = 39;
+
+/// The save question (Yes saves then exits, No exits, Cancel stays).
+constexpr static const uint32_t EE_SCREENS_SE_OP_ASK_EXIT = 40;
+
+/// The editor exits once the save is done.
+constexpr static const uint32_t EE_SCREENS_SE_OP_EXIT_AFTER_SAVE = 41;
+
+/// -> the entity's (an edit box's) line count.
+constexpr static const uint32_t EE_SCREENS_SE_OP_EDIT_LINES = 42;
+
+/// The host's texts (`ee_screenscpp_se_text`): the entity's (an edit box's) line, a string of the game.
+constexpr static const uint32_t EE_SCREENS_SE_TEXT_EDIT_LINE = 0;
+
+constexpr static const uint32_t EE_SCREENS_SE_TEXT_STRING = 1;
+
+/// The editor's actions (`EE_SCREENS_SE_OP_POST_ACTION`).
+constexpr static const uint32_t EE_SCREENS_SE_ACTION_SAVE = 0;
+
+constexpr static const uint32_t EE_SCREENS_SE_ACTION_TEST = 1;
+
+constexpr static const uint32_t EE_SCREENS_SE_ACTION_EXIT = 2;
 
 /// The trigger tab's calls (`EE_SCREENS_SE_OP_TAB`'s method): `ShowTab(arg)`, then the argless ones.
 constexpr static const uint32_t EE_SCREENS_SE_TAB_SHOW = 0;

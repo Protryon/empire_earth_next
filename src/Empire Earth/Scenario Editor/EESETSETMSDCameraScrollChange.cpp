@@ -71,8 +71,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"

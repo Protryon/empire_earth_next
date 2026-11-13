@@ -23,6 +23,12 @@ impl SeHost for Replay<'_> {
         assert_eq!([op, a, b], want[..3], "{}", self.case);
         want[3]
     }
+    fn text(&mut self, which: u32, arg: u32) -> Vec<u8> {
+        panic!("{}: a text {which} {arg}", self.case)
+    }
+    fn set_edit_text(&mut self, _: &[u8]) {
+        panic!("{}: a text set", self.case)
+    }
 }
 
 /// The log as (header, calls) blocks.
@@ -98,6 +104,10 @@ impl SeHost for Record {
             _ => 0,
         }
     }
+    fn text(&mut self, _: u32, _: u32) -> Vec<u8> {
+        Vec::new()
+    }
+    fn set_edit_text(&mut self, _: &[u8]) {}
 }
 
 #[test]
@@ -121,6 +131,7 @@ fn a_combo_box_without_a_selection_leaves_rectangle_mode() {
 fn another_forms_code_is_not_the_editors() {
     let mut h = Record::default();
     assert_eq!(dispatch(&mut h, 0x2418), None);
+    assert_eq!(dispatch(&mut h, 0x242f), None);
     assert_eq!(dispatch(&mut h, 0x2400), None);
     assert!(h.calls.is_empty());
 }
