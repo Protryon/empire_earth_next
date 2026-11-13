@@ -3,7 +3,7 @@
 // effect_orbit.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
-// EEE3DAdditivePass.cpp and EEE3DLinearProjectile.cpp.
+// EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp and EEE3DVirus.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -204,6 +204,31 @@ struct Ask {
         EEOrbital* theOrbital = E(inAsk)->mGraphicObject->GetOrbital(inIndex);
         return EeGfxOrbital{theOrbital->mModel, theOrbital->mSpeed, theOrbital->mAngle};
     }
+    // the disease's and virus's animation 13 (EEE3DDisease::Step, 0xec4d7)
+    static EeGfxAnimation Animation(void* inAsk)
+    {
+        EEGraphicObject* theObject = E(inAsk)->mGraphicObject;
+        return EeGfxAnimation{(uint32_t)theObject->mStartFrames[13], (uint32_t)theObject->mFrameTimes[13],
+                              (uint32_t)theObject->mFrameCounts[13]};
+    }
+    // the frame's sound at the unit, kept as the effect's (EEE3DDisease::Step and SetSound, 0xec6bd)
+    static void AnimationSound(void* inAsk, uint32_t inFrame, bool inChanged)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        GE3DPoint theLocation;
+        theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
+        SESMInstanceNode* theSound =
+            PlayAnimationSound(theLocation, theEffect->mGraphicObject, 0, theEffect->mSound, inFrame, inChanged);
+        if (theSound != theEffect->mSound) {
+            if (theEffect->mSound)
+                theEffect->mSound->Dereference();
+            theEffect->mSound = theSound;
+            if (theSound)
+                theSound->Reference();
+        }
+        if (theEffect->mSound)
+            theEffect->mSound->Dereference();
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -281,9 +306,15 @@ EEE3DRust::EEE3DRust(long inKind)
 {
 }
 
-// unloads the graphic object's media and the unit model's (the additive pass's)
+// stops the sound (the disease's and virus's), unloads the graphic object's media and the unit model's (the
+// additive pass's)
 EEE3DRust::~EEE3DRust()
 {
+    if (this->mSound) {
+        gSoundManager->Stop(this->mSound, false);
+        this->mSound->Dereference();
+        this->mSound = NULL;
+    }
     if (this->mGraphicObject) {
         this->mGraphicObject->UnloadMedia();
         this->mGraphicObject = NULL;
@@ -303,7 +334,7 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
                                  Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitScale, Ask::UnitLocation,
                                  Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
-                                 Ask::Orbital};
+                                 Ask::Orbital, Ask::Animation, Ask::AnimationSound};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);

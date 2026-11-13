@@ -11,6 +11,7 @@ struct Host {
     calls: Vec<String>,
     queue_result: i32,
     orbitals: Vec<EeGfxOrbital>,
+    animation: EeGfxAnimation,
 }
 
 impl Effect3DHost for Host {
@@ -63,6 +64,20 @@ impl Effect3DHost for Host {
     fn orbital(&mut self, index: u32) -> EeGfxOrbital {
         self.orbitals[index as usize]
     }
+    fn unit_location(&mut self) -> ee_ge::types::GeTransformation {
+        self.calls.push("location".into());
+        let mut t = identity();
+        t.m[0][3] = 5.0;
+        t.m[1][3] = 6.0;
+        t.m[2][3] = 7.0;
+        t
+    }
+    fn animation(&mut self) -> EeGfxAnimation {
+        self.animation
+    }
+    fn animation_sound(&mut self, frame: u32, changed: bool) {
+        self.calls.push(format!("sound {frame} {changed}"));
+    }
 }
 
 fn host() -> Host {
@@ -76,6 +91,8 @@ fn facts() -> EeGfxGraphicFacts {
         duration: 1000,
         tick_seconds: 0.5,
         tick_time: 250.0,
+        has_unit: true,
+        unit_hit_points: 10,
         has_object: true,
         alpha_ref: 0.5,
         ..Default::default()
@@ -257,5 +274,127 @@ fn the_projectile_saves_and_loads_its_way_and_turns_new_orbitals() {
     for record in [back, short] {
         // SAFETY: a record of `ee_gfx_effect_record_new`'s kind, freed once
         unsafe { crate::ffi_effect::ee_gfx_effect_record_free(Box::into_raw(Box::new(record))) };
+    }
+}
+
+fn sick_host() -> Host {
+    Host { animation: EeGfxAnimation { start: 2, frame_time: 100, frame_count: 4 }, ..host() }
+}
+
+#[test]
+fn the_disease_plays_its_animation_on_its_unit_until_its_time_is_up() {
+    let mut h = sick_host();
+    let mut r = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_DISEASE);
+    assert_eq!(run(EeGfxEffect3DOp::Create, &mut r, &facts(), &mut h).0, 0);
+    let seed = random_seed();
+    assert_eq!(run(EeGfxEffect3DOp::SetUp, &mut r, &facts(), &mut h).0, 3);
+    // the orbitals keep the graphic's angles (no draw)
+    assert_eq!(seed, random_seed());
+    assert_eq!((r.orbit.frame, r.orbit.time, r.aged.age, r.bounding_radius), (2, 0.0, 0.0, 1.5));
+    assert_eq!(list(&r).list[1].angle, 0.5);
+    assert_eq!(h.calls, ["media", "location", "move"]);
+    assert_eq!(r.transformation.m[0][3], 5.0);
+    h.calls.clear();
+    // 250 ms of 1000: 2.5 frames of 100 ms round to 2 (half to even), 50 ms left, frame (2 + 2) % 4
+    assert_eq!(run(EeGfxEffect3DOp::Step, &mut r, &facts(), &mut h).0, 0);
+    assert_eq!((r.aged.age, r.orbit.time, r.orbit.frame), (0.25, 50.0, 0));
+    assert_eq!(h.calls, ["location", "move", "sound 0 true"]);
+    let mut turned = EeGfxOrbital { model: std::ptr::null_mut(), speed: 1.0, angle: 0.5 };
+    turned.update(0.5);
+    assert_eq!(list(&r).list[0].angle, turned.angle);
+    // under a frame: the same frame, no change
+    h.calls.clear();
+    let short = EeGfxGraphicFacts { tick_time: 25.0, ..facts() };
+    assert_eq!(run(EeGfxEffect3DOp::Step, &mut r, &short, &mut h).0, 0);
+    assert_eq!((r.orbit.time, r.orbit.frame), (75.0, 0));
+    assert_eq!(h.calls.last().unwrap(), "sound 0 false");
+    turned.update(0.5);
+    // the queue keeps the frame, age, place and angles
+    h.calls.clear();
+    assert_eq!(run(EeGfxEffect3DOp::Queue, &mut r, &facts(), &mut h).0, 0);
+    assert_eq!((r.orbit.draw_frame, r.aged.draw_age, r.aged.location.y), (0, r.aged.age, 6.0));
+    assert_eq!(list(&r).angles[0], turned.angle);
+    assert_eq!(h.calls, ["queue 3"]);
+    // a dead unit or the end of its time: 7, untouched
+    h.calls.clear();
+    let dead = EeGfxGraphicFacts { unit_hit_points: 0, ..facts() };
+    assert_eq!(run(EeGfxEffect3DOp::Step, &mut r, &dead, &mut h).0, 7);
+    assert!(h.calls.is_empty());
+    r.aged.age = 0.9;
+    assert_eq!(run(EeGfxEffect3DOp::Step, &mut r, &facts(), &mut h).0, 7);
+    assert_eq!((r.aged.age, h.calls.len()), (0.9 + 0.25, 0));
+}
+
+#[test]
+fn the_virus_follows_its_unit_and_scrolls_its_texture() {
+    let mut h = sick_host();
+    let mut r = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_VIRUS);
+    run(EeGfxEffect3DOp::SetUp, &mut r, &facts(), &mut h);
+    assert_eq!(h.calls, ["media", "follow"]);
+    h.calls.clear();
+    let g = EeGfxGraphicFacts { param1: 0.005, ..facts() };
+    assert_eq!(run(EeGfxEffect3DOp::Step, &mut r, &g, &mut h).0, 0);
+    assert_eq!(r.orbit.scroll, 0.005f32 * 250.0 - 1.0);
+    assert_eq!(h.calls, ["follow", "sound 0 true"]);
+    let back = EeGfxGraphicFacts { param1: -0.005, ..facts() };
+    run(EeGfxEffect3DOp::Step, &mut r, &back, &mut h);
+    assert_eq!(r.orbit.scroll, (0.005f32 * 250.0 - 1.0) + -0.005 * 250.0 + 1.0);
+    run(EeGfxEffect3DOp::Queue, &mut r, &facts(), &mut h);
+    assert_eq!(r.orbit.draw_scroll, r.orbit.scroll);
+}
+
+#[test]
+fn the_disease_and_the_virus_draw_their_frame_and_orbitals_fading_at_the_end() {
+    for kind in [EE_GFX_EFFECT_KIND_DISEASE, EE_GFX_EFFECT_KIND_VIRUS] {
+        let mut h = sick_host();
+        let mut r = EeGfxEffectRecord::new(kind);
+        run(EeGfxEffect3DOp::SetUp, &mut r, &facts(), &mut h);
+        r.aged.location = Ge3DPoint { x: 7.0, y: 8.0, z: 9.0 };
+        r.orbit.draw_frame = 3;
+        r.orbit.draw_scroll = 0.25;
+        r.aged.draw_age = 0.95;
+        let (result, x) = run(EeGfxEffect3DOp::DrawPass5, &mut r, &facts(), &mut h);
+        assert_eq!(result, 0);
+        let fade = format!("opacity {}", (1.0f32 - 0.95) * 10.0);
+        let mut want = vec!["alpharef 0.5", "zbuffer 3", "blend 4 5", "shading 0", "lighting Unit", "transform 7 8 9"];
+        want.extend(["frame 3", "scale 1.5", "scroll u 0.25", "pre 1", "pre 1", "prepare", "own texture"]);
+        want.extend([fade.as_str(), "draw 1", "opacity 1", "restore u"]);
+        if kind == EE_GFX_EFFECT_KIND_DISEASE {
+            want.retain(|c| !c.contains(" u"));
+        } else {
+            want.retain(|c| *c != "shading 0");
+        }
+        assert_eq!(x.calls, want);
+        for op in [EeGfxEffect3DOp::DrawPass2, EeGfxEffect3DOp::DrawPass4, EeGfxEffect3DOp::DrawPass6] {
+            let (result, x) = run(op, &mut r, &facts(), &mut h);
+            assert_eq!((result, x.calls.len()), (0, 0));
+        }
+    }
+}
+
+#[test]
+fn the_disease_and_the_virus_save_and_load_time_frame_age_and_scroll() {
+    for (kind, words) in [(EE_GFX_EFFECT_KIND_DISEASE, 3), (EE_GFX_EFFECT_KIND_VIRUS, 4)] {
+        let mut h = sick_host();
+        let mut r = EeGfxEffectRecord::new(kind);
+        r.orbit.time = 12.5;
+        r.orbit.frame = 3;
+        r.aged.age = 0.5;
+        r.orbit.scroll = 0.75;
+        let mut m = Mem::default();
+        assert_eq!(effect3d_file(EeGfxEffect3DOp::Save, 5, &mut r, &mut m, 0, 0, &mut h), 0);
+        assert_eq!(m.0.len(), words);
+        let mut back = EeGfxEffectRecord::new(kind);
+        let seed = random_seed();
+        assert_eq!(effect3d_file(EeGfxEffect3DOp::Load, 5, &mut back, &mut Mem(m.0.clone(), 0), 0, 0, &mut h), 0);
+        assert_eq!(seed, random_seed());
+        assert_eq!((back.orbit.time, back.orbit.frame, back.aged.age), (12.5, 3, 0.5));
+        assert_eq!(back.orbit.scroll, if words == 4 { 0.75 } else { 0.0 });
+        assert_eq!((back.orbit.count, list(&back).list[0].angle), (2, 0.5));
+        let mut short = EeGfxEffectRecord::new(kind);
+        assert_eq!(
+            effect3d_file(EeGfxEffect3DOp::Load, 0, &mut short, &mut Mem(m.0[..2].to_vec(), 0), 0, 0, &mut h),
+            9
+        );
     }
 }

@@ -30,6 +30,11 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
 /// `kEffect3DLinearProjectile`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE = 37;
 
+/// `kEffect3DDisease`, `kEffect3DVirus`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_DISEASE = 35;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_VIRUS = 66;
+
 /// The tracers, the shells (a tracer with a pass-5 draw) and the pulse cannon ball.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_TRACERS = 33;
 
@@ -824,6 +829,13 @@ struct EeGfxEffectOrbit {
   EeGfxOrbitals *orbitals;
   /// `mOrbitalCount`: the graphic's orbital count when they were copied
   int32_t count;
+  /// the disease's and virus's `mTime` (ms into the frame) and `mFrame` (both saved), the draw's frame
+  float time;
+  uint32_t frame;
+  uint32_t draw_frame;
+  /// the virus's `mScroll` (the texture's u offset, saved) and the draw's copy
+  float scroll;
+  float draw_scroll;
 };
 
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
@@ -1213,6 +1225,13 @@ struct EeGfxOrbital {
   float angle;
 };
 
+/// The graphic object's animation 13 (`mStartFrames[13]`, `mFrameTimes[13]` in ms, `mFrameCounts[13]`).
+struct EeGfxAnimation {
+  uint32_t start;
+  uint32_t frame_time;
+  uint32_t frame_count;
+};
+
 /// The C++'s answers for an `EEE3DRust`.
 struct EeGfxEffect3DHost {
   void *context;
@@ -1270,6 +1289,11 @@ struct EeGfxEffect3DHost {
   uint32_t (*orbital_count)(void *context);
   /// a copy of the graphic object's orbital `index` (`*GetOrbital(index)`)
   EeGfxOrbital (*orbital)(void *context, uint32_t index);
+  /// the graphic object's animation 13: its start frame, frame time and frame count
+  EeGfxAnimation (*animation)(void *context);
+  /// the animation's sound at `frame` (`changed`: a new frame) at the unit's location (`PlayAnimationSound`), kept
+  /// as the effect's sound (`SetSound`, then its reference dropped, as the original)
+  void (*animation_sound)(void *context, uint32_t frame, bool changed);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1322,6 +1346,10 @@ struct EeGfxRaster {
   void (*model_frame)(EeGfxModel model, uint32_t frame);
   /// `SetGraphicsPreModelTransform(transformation)`
   void (*model_pre_transform)(EeGfxModel model, const EeGeTransformation *transformation);
+  /// adds `delta` to the u of every texture coordinate of vertex array 0, keeping the old ones
+  void (*model_scroll_u)(EeGfxModel model, float delta);
+  /// puts back the texture coordinates `model_scroll_u` kept
+  void (*model_restore_u)(EeGfxModel model);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
