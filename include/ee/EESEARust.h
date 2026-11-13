@@ -50,17 +50,20 @@ enum {
 
 // The editor's events whole in Rust (ee_screens editor_events.rs): the hide-UI box, the viewport change, the
 // toolbar's quick load and quick save, the trigger screens' slider label, check box display and area/object refill
-// (the original's EESEEHideUI, EESEEChangeViewport, EESEEQuickLoad, EESEEQuickSave, EESEESliderChange,
-// EESEECheckDisplay, EESEEUseObjectArea). Requires lle/UIEvent.h for EESEERust.
+// and the effect editors' own events (the original's EESEEHideUI, EESEEChangeViewport, EESEEQuickLoad,
+// EESEEQuickSave, EESEESliderChange, EESEECheckDisplay, EESEEUseObjectArea, EESETSETCAMGModifyObject,
+// EESETSETMSDCameraScrollChange, EESETSETSAAAttributeChange, EESEEUseAreaObject, EESEEMoveAreaObject,
+// EESEEFaceAreaObject). Requires lle/UIEvent.h for EESEERust.
 struct EeScreensSeeEvent;
 extern "C" EeScreensSeeEvent* ee_screens_see_new(uint32_t kind, void* object);
-extern "C" int32_t ee_screens_see_process(const EeScreensSeeEvent* event, void* entity);
+extern "C" int32_t ee_screens_see_process(const EeScreensSeeEvent* event, void* form, void* entity);
 extern "C" void ee_screens_see_viewport(EeScreensSeeEvent* event, const float* rectangle, uint8_t hidden);
 extern "C" void ee_screens_see_free(EeScreensSeeEvent* event);
 extern "C" void ee_screens_see_hide_ui_views(EeScreensSeeEvent* event, const float* unchecked, const float* checked);
 extern "C" void ee_screens_see_slider(EeScreensSeeEvent* event, void* label, const char* format, float scale, float offset);
 extern "C" void ee_screens_see_push_control(EeScreensSeeEvent* event, void* control);
 extern "C" void ee_screens_see_object_area(EeScreensSeeEvent* event, void* label, void* combo, void* area);
+extern "C" void ee_screens_see_objects(EeScreensSeeEvent* event, void* a, void* b, void* c);
 enum {
     kSEEHideUI = 1,
     kSEEChangeViewport = 2,
@@ -69,6 +72,11 @@ enum {
     kSEESliderChange = 5,       // EESEENewSliderChange
     kSEECheckDisplay = 6,       // its controls: EESEEPushControl
     kSEEUseObjectArea = 7,      // EESEENewUseObjectArea
+    kSEECAMGModifyObject = 8,   // EESEENewObjects(kind, the military group type, its two lists)
+    kSEEMSDCameraScroll = 9,    // EESEENewObjects(kind, the send-dialogue type, the effect's controls)
+    kSEESAAAttribute = 10,      // EESEENewObjects(kind, the set-AI-attribute type, the effect's controls)
+    kSEEUseAreaObject = 11,     // EESEEUseAreaObject and EESEEMoveAreaObject (one body)
+    kSEEFaceAreaObject = 12,
 };
 
 class EESEARust : public EEAction {
@@ -91,7 +99,7 @@ public:
     virtual ~EESEERust() { ee_screens_see_free(this->mEvent); }
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     {
-        return ee_screens_see_process(this->mEvent, inEntity);
+        return ee_screens_see_process(this->mEvent, inForm, inEntity);
     }
     EeScreensSeeEvent* mEvent;
 };
@@ -122,6 +130,16 @@ inline EESEERust* EESEENewUseObjectArea(UITextLabel* inLabel, EESETSEScenarioCom
 {
     EESEERust* theEvent = new EESEERust(kSEEUseObjectArea);
     ee_screens_see_object_area(theEvent->mEvent, inLabel, inComboBox, inAreaControl);
+    return theEvent;
+}
+
+// the effect editors' events: kSEECAMGModifyObject (the EESETSETCreateAIMilitaryGroup, its "to add" and "added"
+// lists), kSEEMSDCameraScroll (the EESETSETMediaSendDialog, the EESETSEffectControls), kSEESAAAttribute (the
+// EESETSETSetAIAttribute, the EESETSEffectControls); each pointer passed as its own class's
+inline EESEERust* EESEENewObjects(uint32_t inKind, void* inA, void* inB, void* inC = 0)
+{
+    EESEERust* theEvent = new EESEERust(inKind);
+    ee_screens_see_objects(theEvent->mEvent, inA, inB, inC);
     return theEvent;
 }
 

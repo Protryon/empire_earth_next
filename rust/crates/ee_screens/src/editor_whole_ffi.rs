@@ -18,7 +18,7 @@ mod sys {
     extern "C" {
         pub fn ee_screenscpp_sew(op: u32, p: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_sew_elevation(data: *mut i16, capacity: usize, out: *mut i32) -> usize;
-        pub fn ee_screenscpp_see(op: u32, p: *mut c_void, q: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
+        pub fn ee_screenscpp_see(op: u32, p: *const *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_sep(op: u32, p: *mut c_void, t: *mut f32, i: *mut i32, f: *mut f32) -> i32;
     }
 }
@@ -290,8 +290,10 @@ pub unsafe extern "C" fn ee_screens_sew_place_push(
 // `EEUIFSETRBPaintType.cpp`)
 
 impl SeeHost for Host {
-    fn op(&mut self, op: u32, p: usize, q: usize, i: &mut [i32; 2], f: &mut [f32; 4]) -> i32 {
-        unsafe { sys::ee_screenscpp_see(op, p as *mut c_void, q as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
+    fn op(&mut self, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32 {
+        // three pointers (the host's p[0], p[1], p[2]), four integers, four floats
+        let p = p.map(|x| x as *mut c_void);
+        unsafe { sys::ee_screenscpp_see(op, p.as_ptr(), i.as_mut_ptr(), f.as_mut_ptr()) }
     }
 }
 
@@ -308,18 +310,22 @@ pub extern "C" fn ee_screens_see_new(kind: u32, object: *mut c_void) -> *mut EeS
     }
 }
 
-/// `ProcessEvent`: the check box or button `entity` (the form is the editor's).
+/// `ProcessEvent`: the event's `form` and control `entity`.
 ///
 /// # Safety
 /// `event` comes from `ee_screens_see_new` (or is NULL).
 #[no_mangle]
-pub unsafe extern "C" fn ee_screens_see_process(event: *const EeScreensSeeEvent, entity: *mut c_void) -> i32 {
+pub unsafe extern "C" fn ee_screens_see_process(
+    event: *const EeScreensSeeEvent,
+    form: *mut c_void,
+    entity: *mut c_void,
+) -> i32 {
     if event.is_null() {
         return 0;
     }
     // a copy: no Rust reference into the box across the host's calls (the post may run other events)
     let e = unsafe { (*event).0.clone() };
-    e.process(&mut Host, entity as usize)
+    e.process_in(&mut Host, form as usize, entity as usize)
 }
 
 /// The viewport change's rectangle (four floats: left, top, right, bottom) and whether the UI is hidden.
@@ -393,6 +399,23 @@ pub unsafe extern "C" fn ee_screens_see_object_area(
 ) {
     if !event.is_null() {
         unsafe { (*event).0.set_object_area(label as usize, combo as usize, area as usize) };
+    }
+}
+
+/// The effect editors' events' objects (`EESETSETCAMGModifyObject`: the type and its two lists;
+/// `EESETSETMSDCameraScrollChange`, `EESETSETSAAAttributeChange`: the type and the effect's controls, `c` NULL).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_see_objects(
+    event: *mut EeScreensSeeEvent,
+    a: *mut c_void,
+    b: *mut c_void,
+    c: *mut c_void,
+) {
+    if !event.is_null() {
+        unsafe { (*event).0.set_objects(a as usize, b as usize, c as usize) };
     }
 }
 

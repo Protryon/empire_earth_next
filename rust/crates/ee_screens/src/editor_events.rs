@@ -6,7 +6,11 @@
 //! trigger screens' controls' events (`EESEESliderChange`: the slider's value times a scale plus an offset printed
 //! into a label through the host's `sprintf` of the event's format; `EESEECheckDisplay`: controls shown while a check
 //! box is checked; `EESEEUseObjectArea`: a scenario combo box refilled with the areas or the objects as the area
-//! radio or another was checked, its first line picked).
+//! radio or another was checked, its first line picked); and the effect editors' own events
+//! (`EESETSETCAMGModifyObject`: an object moved into or out of a military group by the list clicked;
+//! `EESETSETMSDCameraScrollChange`: the dialogue's camera scroll speed shown; `EESETSETSAAAttributeChange`: the AI
+//! attribute's ranges shown; `EESEEUseAreaObject`, `EESEEMoveAreaObject`, `EESEEFaceAreaObject`: the form's location
+//! combo box refilled with the areas or the objects by the radio checked).
 
 // ---- the kinds (`EESEERust`'s constructor)
 
@@ -24,8 +28,22 @@ pub const EE_SCREENS_SEE_SLIDER_CHANGE: u32 = 5;
 pub const EE_SCREENS_SEE_CHECK_DISPLAY: u32 = 6;
 /// `EESEEUseObjectArea` (its label, combo box and area control: `ee_screens_see_object_area`).
 pub const EE_SCREENS_SEE_USE_OBJECT_AREA: u32 = 7;
+/// `EESETSETCAMGModifyObject` (the military group type, its two lists: `ee_screens_see_objects`).
+pub const EE_SCREENS_SEE_CAMG_MODIFY_OBJECT: u32 = 8;
+/// `EESETSETMSDCameraScrollChange` (the send-dialogue type, the effect's controls: `ee_screens_see_objects`).
+pub const EE_SCREENS_SEE_MSD_CAMERA_SCROLL: u32 = 9;
+/// `EESETSETSAAAttributeChange` (the set-AI-attribute type, the effect's controls: `ee_screens_see_objects`).
+pub const EE_SCREENS_SEE_SAA_ATTRIBUTE: u32 = 10;
+/// `EESEEUseAreaObject` and `EESEEMoveAreaObject` (one body: ICF folded them): the label 0x96d, the combo box 0x99e,
+/// the area radio 0x988.
+pub const EE_SCREENS_SEE_USE_AREA_OBJECT: u32 = 11;
+/// `EESEEFaceAreaObject`: the label 0x96e, the combo box 0x99f, the area radio 0x98a.
+pub const EE_SCREENS_SEE_FACE_AREA_OBJECT: u32 = 12;
 
-// ---- the host's ops (`ee_screenscpp_see`: `p` and `q` pointers, `i` up to 2 integers, `f` up to 4 floats)
+/// The military group's "to add" list: a click there adds (`EESETSETCAMGModifyObject`).
+pub const EE_SCREENS_SEE_TO_ADD_LIST_ID: u32 = 0x9bf;
+
+// ---- the host's ops (`ee_screenscpp_see`: `p`, `q` and `r` pointers, `i` up to 4 integers, `f` up to 4 floats)
 
 /// The object p referenced / released.
 pub const EE_SCREENS_SEE_OP_REFERENCE: u32 = 1;
@@ -57,19 +75,39 @@ pub const EE_SCREENS_SEE_OP_SET_DISPLAY: u32 = 12;
 pub const EE_SCREENS_SEE_OP_FILL_SCENARIO: u32 = 13;
 /// The combo box p's selection set to i0.
 pub const EE_SCREENS_SEE_OP_SET_SELECTION: u32 = 14;
+/// -> the control p's id (`GetId`).
+pub const EE_SCREENS_SEE_OP_ENTITY_ID: u32 = 15;
+/// -> the list box p's selection, -1 for none.
+pub const EE_SCREENS_SEE_OP_LIST_SELECTION: u32 = 16;
+/// The military group type p's `AddObject(i0, q, r)` / `RemoveObject(i0, q, r)` (the lists q and r).
+pub const EE_SCREENS_SEE_OP_CAMG_ADD: u32 = 17;
+pub const EE_SCREENS_SEE_OP_CAMG_REMOVE: u32 = 18;
+/// The send-dialogue type p's `ShowCameraScrollSpeed(q)` (q the effect's controls).
+pub const EE_SCREENS_SEE_OP_MSD_SHOW: u32 = 19;
+/// -> the combo box p's selection, -1 for none.
+pub const EE_SCREENS_SEE_OP_COMBO_SELECTION: u32 = 20;
+/// The set-AI-attribute type p's `ShowAttributeRanges(i0, q)` (q the effect's controls).
+pub const EE_SCREENS_SEE_OP_SAA_SHOW: u32 = 21;
+/// The form p's label i0 and scenario combo box i1 refilled with the areas (i2 != 0) or the objects
+/// (`FillAreaObjectComboBox`).
+pub const EE_SCREENS_SEE_OP_FILL_AREA_OBJECT: u32 = 22;
 
 /// The form, the controls and the actions.
 pub trait SeeHost {
-    fn op(&mut self, op: u32, p: usize, q: usize, i: &mut [i32; 2], f: &mut [f32; 4]) -> i32;
+    fn op(&mut self, op: u32, p: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32;
 }
 
 fn call<H: SeeHost + ?Sized>(h: &mut H, op: u32, p: usize, ints: [i32; 2], floats: [f32; 4]) -> i32 {
-    call2(h, op, p, 0, ints, floats)
+    call3(h, op, [p, 0, 0], [ints[0], ints[1], 0, 0], floats)
 }
 
 fn call2<H: SeeHost + ?Sized>(h: &mut H, op: u32, p: usize, q: usize, ints: [i32; 2], floats: [f32; 4]) -> i32 {
+    call3(h, op, [p, q, 0], [ints[0], ints[1], 0, 0], floats)
+}
+
+fn call3<H: SeeHost + ?Sized>(h: &mut H, op: u32, p: [usize; 3], ints: [i32; 4], floats: [f32; 4]) -> i32 {
     let (mut i, mut f) = (ints, floats);
-    h.op(op, p, q, &mut i, &mut f)
+    h.op(op, p, &mut i, &mut f)
 }
 
 /// What an event does.
@@ -107,6 +145,28 @@ pub enum SeeKind {
         combo: usize,
         area: usize,
     },
+    /// `ty`: the `EESETSETCreateAIMilitaryGroup`; `first`, `second`: its "to add" and "added" lists
+    CamgModifyObject {
+        ty: usize,
+        first: usize,
+        second: usize,
+    },
+    /// `ty`: the `EESETSETMediaSendDialog`; `controls`: the effect's `EESETSEffectControls`
+    MsdCameraScroll {
+        ty: usize,
+        controls: usize,
+    },
+    /// `ty`: the `EESETSETSetAIAttribute`; `controls`: the effect's `EESETSEffectControls`
+    SaaAttribute {
+        ty: usize,
+        controls: usize,
+    },
+    /// the form's label and combo box ids and the id of the radio that means areas
+    AreaObject {
+        label_id: i32,
+        combo_id: i32,
+        area_id: u32,
+    },
 }
 
 impl SeeKind {
@@ -120,6 +180,11 @@ impl SeeKind {
             }
             EE_SCREENS_SEE_CHECK_DISPLAY => SeeKind::CheckDisplay { controls: Vec::new() },
             EE_SCREENS_SEE_USE_OBJECT_AREA => SeeKind::UseObjectArea { label: 0, combo: 0, area: 0 },
+            EE_SCREENS_SEE_CAMG_MODIFY_OBJECT => SeeKind::CamgModifyObject { ty: 0, first: 0, second: 0 },
+            EE_SCREENS_SEE_MSD_CAMERA_SCROLL => SeeKind::MsdCameraScroll { ty: 0, controls: 0 },
+            EE_SCREENS_SEE_SAA_ATTRIBUTE => SeeKind::SaaAttribute { ty: 0, controls: 0 },
+            EE_SCREENS_SEE_USE_AREA_OBJECT => SeeKind::AreaObject { label_id: 0x96d, combo_id: 0x99e, area_id: 0x988 },
+            EE_SCREENS_SEE_FACE_AREA_OBJECT => SeeKind::AreaObject { label_id: 0x96e, combo_id: 0x99f, area_id: 0x98a },
             EE_SCREENS_SEE_QUICK_LOAD | EE_SCREENS_SEE_QUICK_SAVE => {
                 call(h, EE_SCREENS_SEE_OP_REFERENCE, object, [0; 2], [0.0; 4]);
                 if kind == EE_SCREENS_SEE_QUICK_LOAD {
@@ -166,6 +231,23 @@ impl SeeKind {
         }
     }
 
+    /// The effect editors' events' objects (their constructors): the type and its two lists, or the type and the
+    /// effect's controls (`c` unused).
+    pub fn set_objects(&mut self, a: usize, b: usize, c: usize) {
+        match self {
+            SeeKind::CamgModifyObject { ty, first, second } => {
+                *ty = a;
+                *first = b;
+                *second = c;
+            }
+            SeeKind::MsdCameraScroll { ty, controls } | SeeKind::SaaAttribute { ty, controls } => {
+                *ty = a;
+                *controls = b;
+            }
+            _ => {}
+        }
+    }
+
     /// The hide-UI event's two views (`EESETriggerScreen::Enter`: the original's inline `SetRectangles`).
     pub fn set_hide_ui_views(&mut self, to_unchecked: [f32; 4], to_checked: [f32; 4]) {
         if let SeeKind::HideUi { unchecked, checked } = self {
@@ -174,8 +256,13 @@ impl SeeKind {
         }
     }
 
-    /// `ProcessEvent(form, entity)` (the form is the editor's: unused).
+    /// `ProcessEvent(form, entity)` for the events that do not read their form.
     pub fn process<H: SeeHost + ?Sized>(&self, h: &mut H, entity: usize) -> i32 {
+        self.process_in(h, 0, entity)
+    }
+
+    /// `ProcessEvent(form, entity)` (only the area/object radios read the form: the editor's).
+    pub fn process_in<H: SeeHost + ?Sized>(&self, h: &mut H, form: usize, entity: usize) -> i32 {
         match self {
             SeeKind::HideUi { unchecked, checked } => {
                 let is_checked = call(h, EE_SCREENS_SEE_OP_CHECKED, entity, [0; 2], [0.0; 4]) != 0;
@@ -219,6 +306,42 @@ impl SeeKind {
                 call(h, EE_SCREENS_SEE_OP_SET_SELECTION, *combo, [0; 2], [0.0; 4]);
                 0
             }
+            SeeKind::CamgModifyObject { ty, first, second } => {
+                let selection = call(h, EE_SCREENS_SEE_OP_LIST_SELECTION, entity, [0; 2], [0.0; 4]);
+                if selection == -1 {
+                    return 0;
+                }
+                let op = if call(h, EE_SCREENS_SEE_OP_ENTITY_ID, entity, [0; 2], [0.0; 4]) as u32
+                    == EE_SCREENS_SEE_TO_ADD_LIST_ID
+                {
+                    EE_SCREENS_SEE_OP_CAMG_ADD
+                } else {
+                    EE_SCREENS_SEE_OP_CAMG_REMOVE
+                };
+                call3(h, op, [*ty, *first, *second], [selection, 0, 0, 0], [0.0; 4]);
+                0
+            }
+            SeeKind::MsdCameraScroll { ty, controls } => {
+                call2(h, EE_SCREENS_SEE_OP_MSD_SHOW, *ty, *controls, [0; 2], [0.0; 4]);
+                0
+            }
+            SeeKind::SaaAttribute { ty, controls } => {
+                // the original reads the selection whatever the call answered: none passes -1 here
+                let selection = call(h, EE_SCREENS_SEE_OP_COMBO_SELECTION, entity, [0; 2], [0.0; 4]);
+                call2(h, EE_SCREENS_SEE_OP_SAA_SHOW, *ty, *controls, [selection, 0], [0.0; 4]);
+                0
+            }
+            SeeKind::AreaObject { label_id, combo_id, area_id } => {
+                let areas = call(h, EE_SCREENS_SEE_OP_ENTITY_ID, entity, [0; 2], [0.0; 4]) as u32 == *area_id;
+                call3(
+                    h,
+                    EE_SCREENS_SEE_OP_FILL_AREA_OBJECT,
+                    [form, 0, 0],
+                    [*label_id, *combo_id, i32::from(areas), 0],
+                    [0.0; 4],
+                );
+                0
+            }
         }
     }
 
@@ -239,11 +362,20 @@ mod tests {
         checked: bool,
         editor: bool,
         range: i32,
+        id: i32,
+        selection: i32,
     }
 
     impl SeeHost for Rec {
-        fn op(&mut self, op: u32, p: usize, q: usize, i: &mut [i32; 2], f: &mut [f32; 4]) -> i32 {
+        fn op(&mut self, op: u32, ptrs: [usize; 3], i: &mut [i32; 4], f: &mut [f32; 4]) -> i32 {
+            let [p, q, r] = ptrs;
             match op {
+                EE_SCREENS_SEE_OP_ENTITY_ID => return self.id,
+                EE_SCREENS_SEE_OP_LIST_SELECTION | EE_SCREENS_SEE_OP_COMBO_SELECTION => return self.selection,
+                EE_SCREENS_SEE_OP_CAMG_ADD | EE_SCREENS_SEE_OP_CAMG_REMOVE | EE_SCREENS_SEE_OP_FILL_AREA_OBJECT => {
+                    self.log.push(format!("{op} p{p} q{q} r{r} {i:?}"));
+                    return 0;
+                }
                 EE_SCREENS_SEE_OP_CHECKED => return i32::from(self.checked),
                 EE_SCREENS_SEE_OP_RANGE => return self.range,
                 EE_SCREENS_SEE_OP_SLIDER_TEXT => {
@@ -263,13 +395,13 @@ mod tests {
                 }
                 _ => {}
             }
-            self.log.push(format!("{op} p{p} {i:?} {f:?}"));
+            self.log.push(format!("{op} p{p} {:?} {f:?}", &i[..2]));
             0
         }
     }
 
     fn rec() -> Rec {
-        Rec { log: Vec::new(), checked: false, editor: true, range: 0 }
+        Rec { log: Vec::new(), checked: false, editor: true, range: 0, id: 0, selection: 0 }
     }
 
     #[test]
@@ -301,7 +433,7 @@ mod tests {
         h.editor = false;
         e.process(&mut h, 0);
         assert!(h.log.is_empty());
-        assert_eq!(SeeKind::new(&mut h, 9, 0), None);
+        assert_eq!(SeeKind::new(&mut h, 99, 0), None);
     }
 
     #[test]
@@ -376,5 +508,50 @@ mod tests {
         // the events without an action release nothing
         e.free(&mut h);
         assert_eq!(h.log.len(), 4);
+    }
+
+    #[test]
+    fn military_group_lists_add_from_the_first_and_remove_from_the_second() {
+        let mut h = rec();
+        let mut e = SeeKind::new(&mut h, EE_SCREENS_SEE_CAMG_MODIFY_OBJECT, 0).unwrap();
+        e.set_objects(0x10, 0x20, 0x30);
+        h.selection = 2;
+        h.id = 0x9bf;
+        e.process(&mut h, 7);
+        h.id = 0x9c0;
+        e.process(&mut h, 7);
+        // no selection: nothing moved
+        h.selection = -1;
+        e.process(&mut h, 7);
+        assert_eq!(h.log, ["17 p16 q32 r48 [2, 0, 0, 0]", "18 p16 q32 r48 [2, 0, 0, 0]"]);
+    }
+
+    #[test]
+    fn scroll_speed_and_attribute_ranges_shown_by_their_type() {
+        let mut h = rec();
+        let mut m = SeeKind::new(&mut h, EE_SCREENS_SEE_MSD_CAMERA_SCROLL, 0).unwrap();
+        m.set_objects(0x10, 0x20, 0);
+        let mut a = SeeKind::new(&mut h, EE_SCREENS_SEE_SAA_ATTRIBUTE, 0).unwrap();
+        a.set_objects(0x40, 0x20, 0);
+        h.selection = 60;
+        m.process(&mut h, 5);
+        a.process(&mut h, 5);
+        assert_eq!(h.log, ["19 p16 [0, 0] [0.0, 0.0, 0.0, 0.0]", "21 p64 [60, 0] [0.0, 0.0, 0.0, 0.0]"]);
+    }
+
+    #[test]
+    fn area_object_radios_refill_the_forms_combo() {
+        let mut h = rec();
+        let u = SeeKind::new(&mut h, EE_SCREENS_SEE_USE_AREA_OBJECT, 0).unwrap();
+        let f = SeeKind::new(&mut h, EE_SCREENS_SEE_FACE_AREA_OBJECT, 0).unwrap();
+        h.id = 0x988;
+        u.process_in(&mut h, 0x50, 1);
+        f.process_in(&mut h, 0x50, 1);
+        h.id = 0x98a;
+        f.process_in(&mut h, 0x50, 1);
+        assert_eq!(
+            h.log,
+            ["22 p80 q0 r0 [2413, 2462, 1, 0]", "22 p80 q0 r0 [2414, 2463, 0, 0]", "22 p80 q0 r0 [2414, 2463, 1, 0]"]
+        );
     }
 }

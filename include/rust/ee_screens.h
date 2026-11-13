@@ -921,6 +921,25 @@ constexpr static const uint32_t EE_SCREENS_SEE_CHECK_DISPLAY = 6;
 /// `EESEEUseObjectArea` (its label, combo box and area control: `ee_screens_see_object_area`).
 constexpr static const uint32_t EE_SCREENS_SEE_USE_OBJECT_AREA = 7;
 
+/// `EESETSETCAMGModifyObject` (the military group type, its two lists: `ee_screens_see_objects`).
+constexpr static const uint32_t EE_SCREENS_SEE_CAMG_MODIFY_OBJECT = 8;
+
+/// `EESETSETMSDCameraScrollChange` (the send-dialogue type, the effect's controls: `ee_screens_see_objects`).
+constexpr static const uint32_t EE_SCREENS_SEE_MSD_CAMERA_SCROLL = 9;
+
+/// `EESETSETSAAAttributeChange` (the set-AI-attribute type, the effect's controls: `ee_screens_see_objects`).
+constexpr static const uint32_t EE_SCREENS_SEE_SAA_ATTRIBUTE = 10;
+
+/// `EESEEUseAreaObject` and `EESEEMoveAreaObject` (one body: ICF folded them): the label 0x96d, the combo box 0x99e,
+/// the area radio 0x988.
+constexpr static const uint32_t EE_SCREENS_SEE_USE_AREA_OBJECT = 11;
+
+/// `EESEEFaceAreaObject`: the label 0x96e, the combo box 0x99f, the area radio 0x98a.
+constexpr static const uint32_t EE_SCREENS_SEE_FACE_AREA_OBJECT = 12;
+
+/// The military group's "to add" list: a click there adds (`EESETSETCAMGModifyObject`).
+constexpr static const uint32_t EE_SCREENS_SEE_TO_ADD_LIST_ID = 2495;
+
 /// The object p referenced / released.
 constexpr static const uint32_t EE_SCREENS_SEE_OP_REFERENCE = 1;
 
@@ -964,6 +983,30 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_FILL_SCENARIO = 13;
 
 /// The combo box p's selection set to i0.
 constexpr static const uint32_t EE_SCREENS_SEE_OP_SET_SELECTION = 14;
+
+/// -> the control p's id (`GetId`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_ENTITY_ID = 15;
+
+/// -> the list box p's selection, -1 for none.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_LIST_SELECTION = 16;
+
+/// The military group type p's `AddObject(i0, q, r)` / `RemoveObject(i0, q, r)` (the lists q and r).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_CAMG_ADD = 17;
+
+constexpr static const uint32_t EE_SCREENS_SEE_OP_CAMG_REMOVE = 18;
+
+/// The send-dialogue type p's `ShowCameraScrollSpeed(q)` (q the effect's controls).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_MSD_SHOW = 19;
+
+/// -> the combo box p's selection, -1 for none.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_COMBO_SELECTION = 20;
+
+/// The set-AI-attribute type p's `ShowAttributeRanges(i0, q)` (q the effect's controls).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SAA_SHOW = 21;
+
+/// The form p's label i0 and scenario combo box i1 refilled with the areas (i2 != 0) or the objects
+/// (`FillAreaObjectComboBox`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_FILL_AREA_OBJECT = 22;
 
 /// The ghosts' lock taken (i0 != 0) or let go.
 constexpr static const uint32_t EE_SCREENS_SEP_GHOST_LOCK = 1;
@@ -3742,11 +3785,11 @@ void ee_screens_sew_place_push(EeScreensSewAction *action,
 EeScreensSeeEvent *ee_screens_see_new(uint32_t kind,
                                       void *object);
 
-/// `ProcessEvent`: the check box or button `entity` (the form is the editor's).
+/// `ProcessEvent`: the event's `form` and control `entity`.
 ///
 /// # Safety
 /// `event` comes from `ee_screens_see_new` (or is NULL).
-int32_t ee_screens_see_process(const EeScreensSeeEvent *event, void *entity);
+int32_t ee_screens_see_process(const EeScreensSeeEvent *event, void *form, void *entity);
 
 /// The viewport change's rectangle (four floats: left, top, right, bottom) and whether the UI is hidden.
 ///
@@ -3789,6 +3832,16 @@ void ee_screens_see_object_area(EeScreensSeeEvent *event,
                                 void *label,
                                 void *combo,
                                 void *area);
+
+/// The effect editors' events' objects (`EESETSETCAMGModifyObject`: the type and its two lists;
+/// `EESETSETMSDCameraScrollChange`, `EESETSETSAAAttributeChange`: the type and the effect's controls, `c` NULL).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+void ee_screens_see_objects(EeScreensSeeEvent *event,
+                            void *a,
+                            void *b,
+                            void *c);
 
 /// The `EESEERust`'s destructor.
 ///

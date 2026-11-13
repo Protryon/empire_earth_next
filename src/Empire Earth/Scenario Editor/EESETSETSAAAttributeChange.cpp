@@ -84,11 +84,10 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEffectType.h"
 #include "ee/EESETSETAI.h"
-#include "ee/EESETSETCAMGModifyObject.h"
 #include "ee/EESETSEComboBox.h"
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESETSETObject.h"
-#include "ee/EESETSETSAAAttributeChange.h"
+#include "ee/EESEARust.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EEUnit.h"
 #include "lle/UIESliderChange.h"
@@ -124,7 +123,7 @@ void EESETSETSetAIAttribute::Load(EESMEffect* inEffect, EESETSEffectControls* in
         inControls->mSliders[2]->SetCurrentRangeValue(theRangeValue);
     sprintf(theText, "%g", inEffect->GetFloatValue());
     inControls->mLabels[12]->SetText(theText);
-    EESETSETSAAAttributeChange* theEvent = new EESETSETSAAAttributeChange(this, inControls);
+    EESEERust* theEvent = EESEENewObjects(kSEESAAAttribute, this, inControls);
     inControls->mComboBoxes[1]->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
     theEvent->Dereference();
 }

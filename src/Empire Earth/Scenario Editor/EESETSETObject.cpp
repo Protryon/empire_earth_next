@@ -85,7 +85,6 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEffectType.h"
 #include "ee/EESETSETAI.h"
-#include "ee/EESETSETCAMGModifyObject.h"
 #include "ee/EESETSEComboBox.h"
 #include "ee/EESETSETObject.h"
 #include "ee/EESETSETSetObjectStance.h"

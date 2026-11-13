@@ -72,6 +72,7 @@
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
 #include "ee/EESEARust.h"
+void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas);   // EESETSETPlayer.cpp
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -85,12 +86,9 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEffectType.h"
 #include "ee/EESETSETAI.h"
-#include "ee/EESETSETCAMGModifyObject.h"
 #include "ee/EESETSETMedia.h"
-#include "ee/EESETSETMSDCameraScrollChange.h"
 #include "ee/EESETSETPlayer.h"
 #include "ee/EESETSETNoEffect.h"
-#include "ee/EESEEUseAreaObject.h"
 #include "ee/EEStringIDs.h"
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // 0x16fe85 (EESEEvents.cpp)
 
@@ -103,7 +101,7 @@ void EESETSETMediaSendDialog::Show(EESETSEffectControls* inControls)
     UWideString theText;
     UWideString theMoreText;
     GE2DPoint theLocation;
-    EESETSETMSDCameraScrollChange* theEvent;
+    EESEERust* theEvent;
     gResource->GetString(IDS_SE_PLAYER, theText);
     theLocation.SetX(220.0f);
     theLocation.SetY(616.0f);
@@ -152,7 +150,7 @@ void EESETSETMediaSendDialog::Show(EESETSEffectControls* inControls)
     theRect = GERectangle(theLocation, GE2DPoint(theLocation.GetX() + 110.0f, theLocation.GetY() + 20.0f));
     inControls->mSliders[0]->SetRectangle(theRect);
     inControls->mSliders[0]->SetDisplayMode(kDisplayModeShown);
-    theEvent = new EESETSETMSDCameraScrollChange(this, inControls);
+    theEvent = EESEENewObjects(kSEEMSDCameraScroll, this, inControls);
     inControls->mSliders[0]->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
     theEvent->Dereference();
     inControls->mSliders[0]->SetRange(0, 0xb);
@@ -358,7 +356,7 @@ void EESETSETMiniMapFlare::Load(EESMEffect* inEffect, EESETSEffectControls* inCo
         inControls->mScenarioComboBoxes[1]->SetTriggerEvent(kControlTriggerSelectionChanged, theAction);
         theAction->Dereference();
     }
-    EESEEUseAreaObject* theEvent = new EESEEUseAreaObject;
+    EESEERust* theEvent = new EESEERust(kSEEUseAreaObject);
     inControls->mRadioButtons[0]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mRadioButtons[1]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     theEvent->Dereference();
