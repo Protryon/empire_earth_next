@@ -56,11 +56,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 recounted from the own units every check; the units-per shares, the maxima, the difficulty's first
                 military count, coast_fishing's two docks, no airport before the attacks, the granary for the farms),
                 RepairBuildings (idle citizens to buildings under 80%), ChooseGarrison / ChooseFortress /
-                FillGarrison (early_town_centers; the idle and waiting citizens sent, the rest of the garrison filled with
+                FillGarrison (on island and planets maps a town centre hires its garrison and any available citizen fills it; early_town_centers; the idle and waiting citizens sent, the rest of the garrison filled with
                 none through the manifest's "fills_garrison" - the classic's garrison cheat; new citizens routed there
                 every 2 s, DEVIATION from UnitAdded's at once), QueueMoraleBuilding. DEVIATIONS: the morale effect's fill is not
-                readable (the town centre wants 2 houses in its 10-tile square, the capitol 4: the data's morale effects; a settlement none); the island map's
-                hired garrison citizens are not ported; GetFarmType's robotic farm (Nano) is not ported; the gate
+                readable (the town centre wants 2 houses in its 10-tile square, the capitol 4: the data's morale effects; a settlement none); GetFarmType's robotic farm (Nano) is not ported; the gate
                 chains' repair end is not ported.
   EECPUnitManager.cpp
                 PORTED -> units.lua: the per-epoch request FIFOs, RequestUnits (a producer first: the cheapest
@@ -68,7 +67,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 island map; the requests started while the population has room, all at once when affordable, else one),
                 StartProduction (round robin at the least busy producers: ai.train), DropObsoleteRequests,
                 GetWantedCitizens (with max_citizen_share). DEVIATIONS: the units in production are the producers'
-                queue lengths; IsInProduction sees the item being made, not the queue behind it; the transports'
+                queue lengths; the transports'
                 priority (ChooseTransportClass) is not ported (the navy stage); BalanceProduction is not ported.
   EECPBuildManager.cpp
                 PARTLY -> build.lua: the per-epoch queues, QueueBuilding (the personality's vetoes: no Prehistoric
@@ -217,6 +216,11 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 PORTED -> militia.lua (the micro step answers the hits; the zones' flight every step). The raiders'
                 strength: every one through the manifest's sees_all (ai.enemy_force), as the C++; the fighters go for
                 the raiders seen.
+
+KNOWN DEVIATION (islands, AI_RESEARCH 8.66): on island maps the port grows faster than the C++ in its first 20
+minutes (Small Islands: 27.9 citizens at 20 minutes against 24.1; Copper 12 of 16 against 3) and loses fewer
+citizens early (1.9 against 4.7). The training, the reserve, the queues and the garrisons now follow the C++; the
+rest is left as it is: the aim is to replace the C++, not to copy its weaknesses.
 
 The army's movement, fighting and retreat run on lib.groups (ai/lib/groups.lua: forming, legs, per-unit targets,
 the raid flight, the retreat), standing in for EECPAttackGroup / EECPAttackSubGroup / the ASG* state machines.

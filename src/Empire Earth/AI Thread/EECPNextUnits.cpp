@@ -1145,6 +1145,14 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
         EECPUnitsSetInt(L, "queue", (long)c->mBuildQueue.size() + (c->mCurrentResearch != 100000 ? 1 : 0));
         if (c->mCurrentResearch != 100000)
             EECPUnitsSetInt(L, "producing", c->mCurrentResearch);
+        if (!c->mBuildQueue.empty()) {   // the techs queued behind the one being made (EEComplexUnit::IsResearchQueued)
+            lua_createtable(L, (int)c->mBuildQueue.size(), 0);
+            for (size_t k = 0; k < c->mBuildQueue.size(); k++) {
+                lua_pushinteger(L, (lua_Integer)c->mBuildQueue[k].mTechnology);
+                lua_rawseti(L, -2, (lua_Integer)k + 1);
+            }
+            lua_setfield(L, -2, "queued");
+        }
     }
     long theStance = -1;
     for (unsigned long k = 0; k < EEUnitBehavior::sTable.size(); k++)
