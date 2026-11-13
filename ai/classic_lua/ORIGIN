@@ -217,6 +217,11 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 strength: every one through the manifest's sees_all (ai.enemy_force), as the C++; the fighters go for
                 the raiders seen.
 
+KNOWN DEVIATION (islands, AI_RESEARCH 8.66): on island maps the port grows faster than the C++ in its first 20
+minutes (Small Islands: 27.9 citizens at 20 minutes against 24.1; Copper 12 of 16 against 3) and loses fewer
+citizens early (1.9 against 4.7). The training, the reserve, the queues and the garrisons now follow the C++; the
+rest is left as it is: the aim is to replace the C++, not to copy its weaknesses.
+
 The army's movement, fighting and retreat run on lib.groups (ai/lib/groups.lua: forming, legs, per-unit targets,
 the raid flight, the retreat), standing in for EECPAttackGroup / EECPAttackSubGroup / the ASG* state machines.
 
