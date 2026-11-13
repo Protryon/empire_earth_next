@@ -61,8 +61,9 @@ void Units(EESimCaptureRecord& ioRecord, const std::vector<unsigned long>& inUni
 
 void TimedEffects(EESimCaptureRecord& ioRecord, EEScenarioManager* inManager)
 {
-    ioRecord.U32((unsigned int)inManager->mTimedEffects.size());
-    for (const EESMTimedEffect& e : inManager->mTimedEffects) {
+    ioRecord.U32((unsigned int)inManager->GetNumTimedEffects());
+    for (unsigned long i = 0; i < inManager->GetNumTimedEffects(); i++) {
+        EeScenarioTimedEntry e = inManager->GetTimedEntry(i);
         ioRecord.U32((unsigned int)e.mEffectIndex);
         ioRecord.U32((unsigned int)e.mTime);
         ioRecord.U32((e.mIsInCinematic ? 1u : 0u) | (e.mHasRun ? 2u : 0u));

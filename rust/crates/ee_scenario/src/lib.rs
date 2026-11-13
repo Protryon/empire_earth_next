@@ -15,6 +15,8 @@
 //!   and the timed effects it schedules.
 //! - [`fields`]: the effect's, condition's and object's numbers as records the C++ classes derive from (their
 //!   defaults and index upkeep); [`save`]: their `Load` and `Save` over [`stream`], the `FSFile` calls by operation.
+//! - [`manager`]: the manager's own numbers as a record the C++ class derives from, its timed effects' queue, and
+//!   its `Load` and `Save`.
 //! - [`aivar`]: the Set AI Variable effect's table as data (`EESMEffect::SetAIVariable`).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
@@ -24,6 +26,7 @@ pub mod condition;
 pub mod ffi;
 pub mod fields;
 pub mod host;
+pub mod manager;
 pub mod object;
 pub mod save;
 pub mod stream;

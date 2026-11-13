@@ -223,6 +223,12 @@ int32_t StreamIO(void* inContext, uint32_t inOp, uint32_t inSlot, unsigned long 
         }
         return 0;
     }
+    case EE_SCENARIO_IO_ELEMENT_LOAD:
+    case EE_SCENARIO_IO_ELEMENT_SAVE:
+    case EE_SCENARIO_IO_ELEMENT_COUNT:
+    case EE_SCENARIO_IO_MEDIA:
+    case EE_SCENARIO_IO_MESSAGES:
+        return EESMManagerIO(theStream, inOp, inSlot, inIndex, ioValue);
     }
     return 0;
 }

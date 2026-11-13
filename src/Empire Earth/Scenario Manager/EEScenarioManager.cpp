@@ -98,9 +98,6 @@ extern float gF4BE374;                       // 0x4be374 (= 1.0f; Update ends th
 extern float& gSideScrollSpeed;               // 0x530828 (MoveCameraToStart's camera step scale; provisional name)
 
 // the stable_sort predicates (empty function objects passed by value: 0x1b5e77..0x1b5f7b; provisional names)
-struct EESMTimedEffectLess {
-    bool operator()(EESMTimedEffect inA, EESMTimedEffect inB) const { return inA.mTime < inB.mTime; }
-};
 struct EESMConditionLess {
     bool operator()(EESMCondition* inA, EESMCondition* inB) const { return inA->mName < inB->mName; }
 };
@@ -120,8 +117,9 @@ struct EESMTriggerLess {
 // FUNCTION: EXE 0x5afa90
 // Creates a scenario holding only the default entries (see Reset)
 EEScenarioManager::EEScenarioManager()
-    : FSPersistent(kPersistentScenario)
+    : FSPersistent(kPersistentScenario), EeScenarioManagerFields()
 {
+    this->mTimedEffects = ee_scenario_timed_new();
     this->Reset();
 }
 
@@ -135,20 +133,7 @@ void EEScenarioManager::Reset()
 {
     UWideString theName;
 
-    this->mIsMovingCamera = false;
-    this->mTime = 0.0f;
-    this->mShowDebugIDs = false;
-    this->mTriggerTimer = 0.0f;
-    this->mCinematicStartTime = 0.0f;
-    this->mNextTriggerID = 0;
-    this->mNextConditionID = 0;
-    this->mNextEffectID = 0;
-    this->mStartX = 0.0f;
-    this->mNextObjectID = 0;
-    this->mNextAreaID = 0;
-    this->mGameResult = 0;
-    this->mStartY = 0.0f;
-
+    ee_scenario_manager_reset(this, this->mTimedEffects);   // the numbers, the timed effects (manager.rs reset)
     DeleteVectorContents(this->mTriggers);
     DeleteVectorContents(this->mConditions);
     EESMCondition* theCondition = new EESMCondition;
@@ -183,12 +168,7 @@ void EEScenarioManager::Reset()
     theArea->SetAnchor(U2DPoint<long>(-1, -1));
     this->mAreas.push_back(theArea);
 
-    this->mTimedEffects.clear();
     this->mPendingEffects.clear();
-    this->mShowDebugIDs = false;
-    this->mIsShowingDialog = false;
-    this->mIsEndingCinematic = false;
-    this->mB234 = true;
 }
 
 // FUNCTION: EXE 0x5afe66
@@ -206,7 +186,8 @@ EEScenarioManager::~EEScenarioManager()
     DeleteVectorContents(this->mEffects);
     DeleteVectorContents(this->mObjects);
     DeleteVectorContents(this->mAreas);
-    this->mTimedEffects.clear();
+    ee_scenario_timed_free(this->mTimedEffects);
+    this->mTimedEffects = NULL;
     DeleteVectorContents(this->mPendingEffects);
 }
 
@@ -233,9 +214,7 @@ void EEScenarioManager::AddV134Effect(const EESMEffect& inEffect)
 // Schedules an effect (by index) to run at the given scenario time, keeping the timed effects sorted by time
 void EEScenarioManager::AddTimedEffect(long inEffect, unsigned long inTime, bool inIsInCinematic)
 {
-    EESMTimedEffect theEntry(inEffect, inTime, inIsInCinematic);
-    this->mTimedEffects.push_back(theEntry);
-    std::stable_sort(this->mTimedEffects.begin(), this->mTimedEffects.end(), EESMTimedEffectLess());
+    ee_scenario_timed_add(this->mTimedEffects, inEffect, inTime, inIsInCinematic);
 }
 
 // FUNCTION: EXE 0x5b00c1
@@ -285,7 +264,7 @@ void EEScenarioManager::SortEffects()
 {
     std::vector<EESMEffect*> theOldEffects(this->mEffects);
     EESMIDMap theMap;
-    this->mTimedEffects.clear();
+    ee_scenario_timed_clear(this->mTimedEffects);
     std::stable_sort(this->mEffects.begin() + 1, this->mEffects.end(), EESMEffectLess());
     for (unsigned long theNew = 1; theNew < this->mEffects.size(); theNew++) {
         for (unsigned long theOld = 0; theOld < theOldEffects.size(); theOld++) {
@@ -606,19 +585,14 @@ bool EEScenarioManager::DeleteTrigger(unsigned long inIndex)
 // Drops every timed entry of the given effect
 void EEScenarioManager::RemoveTimedEffects(long inEffect)
 {
-    for (unsigned long i = 0; i < this->mTimedEffects.size(); i++) {
-        if (this->mTimedEffects[i].mEffectIndex == inEffect) {
-            this->mTimedEffects.erase(this->mTimedEffects.begin() + i);
-            i--;
-        }
-    }
+    ee_scenario_timed_remove_effect(this->mTimedEffects, inEffect);
 }
 
 // FUNCTION: EXE 0x5b11d1
 // Drops one timed effect entry by position
 void EEScenarioManager::EraseTimedEffect(unsigned long inIndex)
 {
-    this->mTimedEffects.erase(this->mTimedEffects.begin() + inIndex);
+    ee_scenario_timed_erase(this->mTimedEffects, inIndex);
 }
 
 // FUNCTION: EXE 0x5b120d
@@ -787,17 +761,7 @@ void EEScenarioManager::EndCinematic()
         return;
     gSoundManager->SetLatency(100);
     unsigned long i;
-    for (i = 0; i < this->mTimedEffects.size(); i++) {
-        if (!this->mTimedEffects[i].mIsInCinematic) {
-            this->mTimedEffects[i].mTime += (long)theElapsed + 3000;
-
-
-        } else if (!this->mTimedEffects[i].mHasRun) {
-
-            this->mTimedEffects[i].mHasRun = true;
-        }
-    }
-    std::stable_sort(this->mTimedEffects.begin(), this->mTimedEffects.end(), EESMTimedEffectLess());
+    ee_scenario_timed_end_cinematic(this->mTimedEffects, (long)theElapsed + 3000);   // manager.rs end_cinematic
     unsigned long t;
     for (t = 0; t < this->GetNumTriggers(); t++) {
         if (!this->GetTrigger(t)->mIsInCinematic && this->GetTrigger(t)->mConditionDuration > 0)
@@ -910,18 +874,18 @@ void EEScenarioManager::Update()
             long theCount = this->mTriggers.size();
             for (long t = 0; t < theCount; t++)
                 this->GetTrigger(t)->Evaluate(this->mTime);
-            for (int e = 0; e < (int)this->mTimedEffects.size(); e++) {
-                if (!((this->mTimedEffects.begin() + e)->mTime <= this->mTime))
+            for (int e = 0; e < (int)this->GetNumTimedEffects(); e++) {
+                if (!(this->GetTimedEntry(e).mTime <= this->mTime))
                     continue;
                 EESMEffect* theEffect = this->GetTimedEffect(e);
-                if (theEffect != NULL && !this->mTimedEffects[e].mHasRun
-                    && (!gWorld.mInCinematic || this->mTimedEffects[e].mIsInCinematic)) {
-                    (this->mTimedEffects.begin() + e)->mHasRun = true;
-                    theEffect->Execute((this->mTimedEffects.begin() + e)->mIsInCinematic);
+                if (theEffect != NULL && !this->GetTimedEntry(e).mHasRun
+                    && (!gWorld.mInCinematic || this->GetTimedEntry(e).mIsInCinematic)) {
+                    ee_scenario_timed_mark_run(this->mTimedEffects, e);
+                    theEffect->Execute(this->GetTimedEntry(e).mIsInCinematic);
                 }
             }
-            for (int k = (int)this->mTimedEffects.size() - 1; k >= 0; k--) {
-                if ((this->mTimedEffects.begin() + k)->mHasRun) {
+            for (int k = (int)this->GetNumTimedEffects() - 1; k >= 0; k--) {
+                if (this->GetTimedEntry(k).mHasRun) {
 
                     this->EraseTimedEffect(k);
                 }
@@ -1130,15 +1094,7 @@ void EEScenarioManager::RenumberEffects(unsigned long inOld, unsigned long inNew
     for (i = 0; i < theCount; i++)
         this->mTriggers[i]->RenumberEffects(inOld, inNew);
     // Bounded by the current size: after an erase the cached count read a stale slot past the end.
-    for (i = 0; i < this->mTimedEffects.size(); i++) {
-        if (this->mTimedEffects[i].mEffectIndex != inOld)
-            continue;
-        if (UIsNone32(inNew)) {
-            this->mTimedEffects.erase(this->mTimedEffects.begin() + i);
-            i--;
-        } else
-            this->mTimedEffects[i].mEffectIndex = inNew;
-    }
+    ee_scenario_timed_renumber(this->mTimedEffects, inOld, inNew);
 }
 
 // FUNCTION: EXE 0x5b2e33
@@ -1149,9 +1105,13 @@ void EEScenarioManager::RemapEffects(EESMIDMap& inMap)
     unsigned long i;
     for (i = 0; i < theCount; i++)
         this->mTriggers[i]->RemapEffects(inMap);
-    theCount = this->mTimedEffects.size();
-    for (i = 0; i < theCount; i++)
-        EERemapID(this->mTimedEffects[i].mEffectIndex, inMap);
+    std::vector<unsigned long> theOlds;
+    std::vector<unsigned long> theNews;
+    for (EESMIDMap::iterator theEntry = inMap.begin(); theEntry != inMap.end(); ++theEntry) {
+        theOlds.push_back(theEntry->first);
+        theNews.push_back(theEntry->second);
+    }
+    ee_scenario_timed_remap(this->mTimedEffects, theOlds.data(), theNews.data(), theOlds.size());
 }
 
 // FUNCTION: EXE 0x5b2eb2
@@ -1575,169 +1535,90 @@ long EEScenarioManager::Load(unsigned long inMajorVersion, unsigned long inMinor
     return theResult;
 }
 
-// Load's body (Load adds the simulation capture's SMSV record: ee/EEScenarioCapture.h)
+// Load's body (Load adds the simulation capture's SMSV record: ee/EEScenarioCapture.h): after Reset, ee_scenario
+// manager.rs load over the stream (the elements created and kept here: EEScenarioHost.cpp's StreamIO)
 long EEScenarioManager::LoadUncaptured(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    std::vector<long> theUnused1;
-    std::vector<long> theUnused2;
-    unsigned long theCount;
-    unsigned long i;
-    bool theIsInCinematic = false;
-    unsigned long theEffect = 0;
-    unsigned long theTime = 0;
-    EESMTrigger* theTrigger;
-    EESMCondition* theCondition;
-    EESMEffect* theSMEffect;
-    EESMObject* theObject;
-    EESMArea* theArea;
     this->Reset();
-    long theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        for (i = 0; i < theCount; i++) {
-            theTrigger = new EESMTrigger;
-            theResult = theTrigger->Load(inMajorVersion, inMinorVersion, inFile);
-            if (theResult != kErrorOK) {
-                delete theTrigger;
-                goto theEnd;
-            }
-            this->mTriggers.push_back(theTrigger);
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theCondition = new EESMCondition;
-                theResult = theCondition->Load(inMajorVersion, inMinorVersion, inFile);
-                if (theResult != kErrorOK) {
-                    delete theCondition;
-                    goto theEnd;
-                }
-                if (theCondition->mType != kSMConditionObject || theCondition->mObjectIndex != 0)
-                    this->mConditions.push_back(theCondition);
-                else
-                    delete theCondition;    // a dropped "object 0" condition is freed (it leaked)
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theSMEffect = new EESMEffect;
-                theResult = theSMEffect->Load(inMajorVersion, inMinorVersion, inFile);
-                if (theResult != kErrorOK) {
-                    delete theSMEffect;
-                    goto theEnd;
-                }
-                this->mEffects.push_back(theSMEffect);
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theObject = new EESMObject;
-                theResult = theObject->Load(inMajorVersion, inMinorVersion, inFile);
-                if (theResult != kErrorOK) {
-                    delete theObject;
-                    goto theEnd;
-                }
-                this->mObjects.push_back(theObject);
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theArea = new EESMArea;
-                theResult = theArea->Load(inMajorVersion, inMinorVersion, inFile);
-                if (theResult != kErrorOK) {
-                    delete theArea;
-                    goto theEnd;
-                }
-                this->mAreas.push_back(theArea);
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theEffect = 0;
-                theTime = 0;
-                theIsInCinematic = false;
-                theResult = inFile.Read(theEffect);
-                if (theResult != kErrorOK)
-                    return theResult;
-                theResult = inFile.Read(theTime);
-                if (theResult != kErrorOK)
-                    return theResult;
-                theResult = inFile.Read(theIsInCinematic);
-                if (theResult != kErrorOK)
-                    return theResult;
-                this->mTimedEffects.push_back(EESMTimedEffect(theEffect, theTime, theIsInCinematic));
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount; i++) {
-                theSMEffect = new EESMEffect;
-                theResult = theSMEffect->Load(inMajorVersion, inMinorVersion, inFile);
-                if (theResult != kErrorOK) {
-                    delete theSMEffect;
-                    break;
-                }
-                if (!GetIsLoadingScenario())
-                    this->mPendingEffects.push_back(theSMEffect);
-                else
-                    delete theSMEffect;
-            }
-        }
-        if (theResult == kErrorOK)
-            theResult = inFile.Read(this->mNextTriggerID);
-    }
-theEnd:
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNextConditionID);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNextEffectID);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNextObjectID);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNextAreaID);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTriggerTimer);
-    if (theResult == kErrorOK)
-        theResult = this->mMediaStrings.Load(inMajorVersion, inMinorVersion, inFile);
-    // written only from minor version 0x14 on (Save): older files go straight on to the debug-ID flag
-    if (theResult == kErrorOK && inMinorVersion >= 0x14)
-        theResult = inFile.Read(this->mIsMovingCamera);
-    if (theResult == kErrorOK && inMinorVersion >= 0x14)
-        theResult = inFile.Read(this->mStartX);
-    if (theResult == kErrorOK && inMinorVersion >= 0x14)
-        theResult = inFile.Read(this->mStartY);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mShowDebugIDs);
-    if (theResult == kErrorOK)
-        theResult = EESMLoadVector(inMajorVersion, inMinorVersion, inFile, this->mMessages);
-    if (theResult == kErrorOK)
-        theResult = this->mExportFileName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mLastChatText.Load(inFile);
+    UWideString* theStrings[] = {&this->mExportFileName, &this->mLastChatText};
+    EESMStream theStream = {&inFile, theStrings, NULL, NULL, this, inMajorVersion, inMinorVersion};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_manager_load(&theTable, this, this->mTimedEffects, inMinorVersion);
+}
+
+namespace {
+
+// a new element of a manager list read by its Load and kept as Load kept it: an "object 0" condition is freed, a
+// pending effect only kept when a saved game (not a scenario) loads; freed on an error
+template<class T> long EESMLoadElement(EESMStream* inStream, std::vector<T*>& ioList, uint32_t inKind)
+{
+    T* theElement = new T;
+    long theResult = theElement->Load(inStream->mMajor, inStream->mMinor, *inStream->mFile);
+    bool theKeep = theResult == kErrorOK;
+    if (theKeep && inKind == EE_SCENARIO_ELEMENT_PENDING)
+        theKeep = !GetIsLoadingScenario();
+    if (theKeep)
+        ioList.push_back(theElement);
+    else
+        delete theElement;
     return theResult;
+}
+
+template<class T> int32_t EESMListIO(EESMStream* inStream, std::vector<T*>& ioList, uint32_t inOp, uint32_t inKind,
+                                     unsigned long inIndex, void* ioValue)
+{
+    switch (inOp) {
+    case EE_SCENARIO_IO_ELEMENT_LOAD: return (int32_t)EESMLoadElement(inStream, ioList, inKind);
+    case EE_SCENARIO_IO_ELEMENT_SAVE:
+        return (int32_t)ioList[inIndex]->Save(inStream->mMajor, inStream->mMinor, *inStream->mFile);
+    case EE_SCENARIO_IO_ELEMENT_COUNT: *static_cast<unsigned long*>(ioValue) = ioList.size(); return 0;
+    }
+    return 0;
+}
+
+}   // namespace
+
+int32_t EESMManagerIO(EESMStream* inStream, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue)
+{
+    EEScenarioManager* theManager = inStream->mManager;
+    FSFile& theFile = *inStream->mFile;
+    if (inOp == EE_SCENARIO_IO_MEDIA)
+        return (int32_t)(inSlot == 0 ? theManager->mMediaStrings.Load(inStream->mMajor, inStream->mMinor, theFile)
+                                     : theManager->mMediaStrings.Save(inStream->mMajor, inStream->mMinor, theFile));
+    if (inOp == EE_SCENARIO_IO_MESSAGES)
+        return (int32_t)(inSlot == 0 ? EESMLoadVector(inStream->mMajor, inStream->mMinor, theFile, theManager->mMessages)
+                                     : EESMSaveVector(inStream->mMajor, inStream->mMinor, theFile, theManager->mMessages));
+    if (inOp == EE_SCENARIO_IO_ELEMENT_LOAD && inSlot == EE_SCENARIO_ELEMENT_CONDITIONS) {
+        // a condition naming object 0 is dropped (freed: it leaked)
+        EESMCondition* theCondition = new EESMCondition;
+        long theResult = theCondition->Load(inStream->mMajor, inStream->mMinor, theFile);
+        if (theResult == kErrorOK && (theCondition->mType != kSMConditionObject || theCondition->mObjectIndex != 0))
+            theManager->mConditions.push_back(theCondition);
+        else
+            delete theCondition;
+        return (int32_t)theResult;
+    }
+    switch (inSlot) {
+    case EE_SCENARIO_ELEMENT_TRIGGERS: return EESMListIO(inStream, theManager->mTriggers, inOp, inSlot, inIndex, ioValue);
+    case EE_SCENARIO_ELEMENT_CONDITIONS:
+        return EESMListIO(inStream, theManager->mConditions, inOp, inSlot, inIndex, ioValue);
+    case EE_SCENARIO_ELEMENT_EFFECTS: return EESMListIO(inStream, theManager->mEffects, inOp, inSlot, inIndex, ioValue);
+    case EE_SCENARIO_ELEMENT_OBJECTS: return EESMListIO(inStream, theManager->mObjects, inOp, inSlot, inIndex, ioValue);
+    case EE_SCENARIO_ELEMENT_AREAS: return EESMListIO(inStream, theManager->mAreas, inOp, inSlot, inIndex, ioValue);
+    case EE_SCENARIO_ELEMENT_PENDING:
+        return EESMListIO(inStream, theManager->mPendingEffects, inOp, inSlot, inIndex, ioValue);
+    }
+    return 0;
 }
 
 // FUNCTION: EXE 0x5b45cb
 // Sets the run flag of the first timed entry of an effect whose flag differs
 void EEScenarioManager::SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag)
 {
-    for (unsigned long i = 0; i < this->mTimedEffects.size(); i++) {
-        if (this->GetEffect(this->mTimedEffects[i].mEffectIndex) == inEffect && this->mTimedEffects[i].mHasRun != inFlag) {
-            this->mTimedEffects[i].mHasRun = inFlag;
-            return;
-        }
-    }
+    // an entry's effect is inEffect when its index is inEffect's place in mEffects (GetEffect: NULL past the end)
+    unsigned long theIndex = std::find(this->mEffects.begin(), this->mEffects.end(), inEffect) - this->mEffects.begin();
+    ee_scenario_timed_set_has_run(this->mTimedEffects, inEffect != NULL && theIndex < this->mEffects.size(), theIndex,
+                                  inFlag);
 }
 
 // FUNCTION: EXE 0x5b463b
@@ -1921,110 +1802,14 @@ long EEScenarioManager::ImportText(const std::vector<UString>& inLines, unsigned
 
 // FUNCTION: EXE 0x5b4d1a
 // Writes triggers, conditions, effects, objects and areas (not the built-ins), timed and pending effects, ID
-// counters, clocks, media strings, start camera and dialog messages; returns the first write error
+// counters, clocks, media strings, start camera and dialog messages; returns the first write error (ee_scenario
+// manager.rs save over the stream)
 long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long i = 0;
-    unsigned long theCount = this->mTriggers.size();
-    long theResult = outFile.Write(theCount);
-    // Each section's count is written unconditionally, which used to replace the previous section's error:
-    // the first error is kept and returned (the bytes written are unchanged).
-    long theFirstError = kErrorOK;
-    if (theResult == 0) {
-        for (; i < theCount; i++) {
-            EESMTrigger*& theTrigger = this->mTriggers[i];
-            theResult = theTrigger->Save(inMajorVersion, inMinorVersion, outFile);
-            if (theResult != 0)
-                break;
-        }
-    }
-    if (theFirstError == kErrorOK)
-        theFirstError = theResult;
-    theCount = this->mConditions.size() - 1;
-    theResult = outFile.Write(theCount);
-    if (theResult == 0) {
-        for (i = 1; i < theCount + 1; i++) {
-            EESMCondition*& theCondition = this->mConditions[i];
-            theResult = theCondition->Save(inMajorVersion, inMinorVersion, outFile);
-            if (theResult != 0)
-                break;
-        }
-    }
-    if (theFirstError == kErrorOK)
-        theFirstError = theResult;
-    theCount = this->mEffects.size() - 1;
-    theResult = outFile.Write(theCount);
-    if (theResult == 0) {
-        for (i = 1; i < theCount + 1; i++) {
-            EESMEffect*& theEffect = this->mEffects[i];
-            theResult = theEffect->Save(inMajorVersion, inMinorVersion, outFile);
-            if (theResult != 0)
-                break;
-        }
-    }
-    if (theFirstError == kErrorOK)
-        theFirstError = theResult;
-    theCount = this->mObjects.size() - 1;
-    theResult = outFile.Write(theCount);
-    if (theResult == 0) {
-        for (i = 1; i < theCount + 1; i++) {
-            EESMObject*& theObject = this->mObjects[i];
-            theResult = theObject->Save(inMajorVersion, inMinorVersion, outFile);
-            if (theResult != 0)
-                break;
-        }
-    }
-    if (theFirstError == kErrorOK)
-        theFirstError = theResult;
-    theCount = this->mAreas.size() - 2;
-    theResult = outFile.Write(theCount);
-    if (theResult == 0) {
-        for (i = 2; i < theCount + 2; i++) {
-            EESMArea*& theArea = this->mAreas[i];
-            theResult = theArea->Save(inMajorVersion, inMinorVersion, outFile);
-            if (theResult != 0)
-                break;
-        }
-    }
-    if (theFirstError == kErrorOK)
-        theFirstError = theResult;
-    theCount = this->mTimedEffects.size();
-    if (theResult == 0)
-        theResult = outFile.Write(theCount);
-    if (theResult == 0) {
-        for (unsigned long j = 0; j < theCount; j++) {
-            if ((theResult = outFile.Write((this->mTimedEffects.begin() + j)->mEffectIndex)) != 0 || (theResult = outFile.Write(this->mTimedEffects[j].mTime)) != 0
-                || (theResult = outFile.Write(this->mTimedEffects[j].mIsInCinematic)) != 0)
-                break;
-        }
-    }
-    if (theFirstError == kErrorOK)
-        theFirstError = theResult;
-    theCount = this->mPendingEffects.size();
-    theResult = outFile.Write(theCount);
-    if (theResult == 0) {
-        for (unsigned long k = 0; k < theCount; k++) {
-            EESMEffect*& theEffect = this->mPendingEffects[k];
-            theResult = theEffect->Save(inMajorVersion, inMinorVersion, outFile);
-            if (theResult != 0)
-                break;
-        }
-        if (theResult == 0 && (theResult = outFile.Write(this->mNextTriggerID)) == 0 && (theResult = outFile.Write(this->mNextConditionID)) == 0
-            && (theResult = outFile.Write(this->mNextEffectID)) == 0 && (theResult = outFile.Write(this->mNextObjectID)) == 0
-            && (theResult = outFile.Write(this->mNextAreaID)) == 0 && (theResult = outFile.Write(this->mTime)) == 0
-            && (theResult = outFile.Write(this->mTriggerTimer)) == 0
-            && (theResult = this->mMediaStrings.Save(inMajorVersion, inMinorVersion, outFile)) == 0) {
-            if (inMinorVersion >= 0x14) {
-                if ((theResult = outFile.Write(this->mIsMovingCamera)) == 0 && (theResult = outFile.Write(this->mStartX)) == 0)
-                    theResult = outFile.Write(this->mStartY);
-            }
-            if (theResult == 0 && (theResult = outFile.Write(this->mShowDebugIDs)) == 0
-                && (theResult = EESMSaveVector(inMajorVersion, inMinorVersion, outFile, this->mMessages)) == 0
-                && (theResult = this->mExportFileName.Save(outFile)) == 0)
-                theResult = this->mLastChatText.Save(outFile);    // its result was dropped
-        }
-    }
-    return theFirstError != kErrorOK ? theFirstError : theResult;
+    UWideString* theStrings[] = {&this->mExportFileName, &this->mLastChatText};
+    EESMStream theStream = {&outFile, theStrings, NULL, NULL, this, inMajorVersion, inMinorVersion};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_manager_save(&theTable, this, this->mTimedEffects, inMinorVersion);
 }
 
 // FUNCTION: EXE 0x5b5173
@@ -2546,8 +2331,8 @@ void EESMDialogMessage::operator=(const EESMDialogMessage& inMessage)
 EESMEffect* EEScenarioManager::GetTimedEffect(unsigned long inIndex)
 {
     EESMEffect* theEffect = NULL;
-    if (inIndex < this->mTimedEffects.size())
-        theEffect = this->mEffects[this->mTimedEffects[inIndex].mEffectIndex];
+    if (inIndex < this->GetNumTimedEffects())
+        theEffect = this->mEffects[this->GetTimedEntry(inIndex).mEffectIndex];
     return theEffect;
 }
 

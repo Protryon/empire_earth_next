@@ -222,6 +222,11 @@ constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_FIRST_UNIT_TYPE = 47;
 /// `GetScenarioObject(a)->PickUnitType()`.
 constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_PICK = 48;
 
+/// The manager's string slots in its stream: `mExportFileName`, `mLastChatText`.
+constexpr static const uint32_t EE_SCENARIO_MANAGER_EXPORT_NAME = 0;
+
+constexpr static const uint32_t EE_SCENARIO_MANAGER_LAST_CHAT = 1;
+
 /// The effect's string slots (`EESMEffect`'s members; the C++ hands them in this order).
 constexpr static const uint32_t EE_SCENARIO_EFFECT_NAME = 0;
 
@@ -303,6 +308,35 @@ constexpr static const uint32_t EE_SCENARIO_IO_ENTRY_AT = 15;
 /// value)` then `SetConditionOperator(index, op)`, or `SetEffect(index, first, value)` then `SetEffectOperator`.
 constexpr static const uint32_t EE_SCENARIO_IO_ENTRY_SET = 16;
 
+/// The manager's element list `slot` (`EE_SCENARIO_ELEMENT_*`): a new element read by its `Load` and kept as the
+/// original kept it (the result the element's).
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_LOAD = 17;
+
+/// The manager's element `index` of list `slot`: its `Save` (the result).
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_SAVE = 18;
+
+/// The manager's element list `slot`: its `size()` into `*value` (an `unsigned long`).
+constexpr static const uint32_t EE_SCENARIO_IO_ELEMENT_COUNT = 19;
+
+/// The manager's media strings: `Load` (`slot` 0) or `Save` (1).
+constexpr static const uint32_t EE_SCENARIO_IO_MEDIA = 20;
+
+/// The manager's dialog messages (`EESMLoadVector` / `EESMSaveVector`): `slot` 0 load, 1 save.
+constexpr static const uint32_t EE_SCENARIO_IO_MESSAGES = 21;
+
+/// The manager's element lists: triggers, conditions, effects, objects, areas, pending effects.
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_TRIGGERS = 0;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_CONDITIONS = 1;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_EFFECTS = 2;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_OBJECTS = 3;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_AREAS = 4;
+
+constexpr static const uint32_t EE_SCENARIO_ELEMENT_PENDING = 5;
+
 /// The trigger's condition entries (`EESMTConditionWrapper`) and effect entries (`EESMTEffectWrapper`).
 constexpr static const uint32_t EE_SCENARIO_ENTRIES_CONDITIONS = 0;
 
@@ -314,6 +348,9 @@ constexpr static const int32_t EE_SCENARIO_OPERATOR_END = 0;
 constexpr static const int32_t EE_SCENARIO_OPERATOR_AND = 1;
 
 constexpr static const int32_t EE_SCENARIO_OPERATOR_OR = 2;
+
+/// The manager's timed effects, kept sorted by time (stably: equal times in the order they came).
+struct EeScenarioTimedQueue;
 
 /// The C ABI's host: a context and the read callback.
 struct EeScenarioHost {
@@ -533,6 +570,41 @@ struct EeScenarioAreaSave {
   unsigned long select_mode;
   unsigned long tiles_time;
   unsigned long id;
+};
+
+/// One timed effect (`EESMTimedEffect`): an `mEffects` index, the scenario time it is due, the cinematic flag, and
+/// whether it has run (the round erases those).
+struct EeScenarioTimedEntry {
+  unsigned long mEffectIndex;
+  unsigned long mTime;
+  bool mIsInCinematic;
+  bool mHasRun;
+};
+
+/// `EEScenarioManager`'s numbers, in the class's order.
+struct EeScenarioManagerFields {
+  long mGameResult;
+  /// The camera zoom `StartCinematic` saves.
+  float mSavedZoom;
+  float mStartX;
+  float mStartY;
+  /// The scenario clock (ms).
+  float mTime;
+  /// The time since the last trigger round (ms).
+  float mTriggerTimer;
+  float mCinematicStartTime;
+  long mSavedCameraMode;
+  unsigned long mNextTriggerID;
+  unsigned long mNextConditionID;
+  unsigned long mNextEffectID;
+  unsigned long mNextObjectID;
+  unsigned long mNextAreaID;
+  /// Set by `Reset`: new pending effects are not recorded until `ApplyPendingEffects` has run.
+  bool mB234;
+  bool mIsMovingCamera;
+  bool mShowDebugIDs;
+  bool mIsShowingDialog;
+  bool mIsEndingCinematic;
 };
 
 /// One trigger entry: the NOT flag (0/1) or the delay, the operator, the condition or effect index.
@@ -758,6 +830,115 @@ int32_t ee_scenario_area_io(const EeScenarioStream *stream, EeScenarioAreaSave *
 int32_t ee_scenario_strings_io(const EeScenarioStream *stream,
                                uint32_t count,
                                bool save);
+
+/// A new, empty timed effects' queue.
+EeScenarioTimedQueue *ee_scenario_timed_new();
+
+/// Frees a queue of `ee_scenario_timed_new` (null: nothing).
+///
+/// # Safety
+/// `queue` must be null or a queue of `ee_scenario_timed_new` not freed before.
+void ee_scenario_timed_free(EeScenarioTimedQueue *queue);
+
+/// The number of timed effects.
+///
+/// # Safety
+/// `queue` must be a live queue.
+size_t ee_scenario_timed_count(EeScenarioTimedQueue *queue);
+
+/// Timed effect `index` (a copy; `index` must be below the count).
+///
+/// # Safety
+/// `queue` must be a live queue.
+EeScenarioTimedEntry ee_scenario_timed_at(EeScenarioTimedQueue *queue, size_t index);
+
+/// `EEScenarioManager::AddTimedEffect`.
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_add(EeScenarioTimedQueue *queue,
+                           long effect,
+                           unsigned long time,
+                           bool cinematic);
+
+/// `EEScenarioManager::RemoveTimedEffects`.
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_remove_effect(EeScenarioTimedQueue *queue, long effect);
+
+/// `EEScenarioManager::EraseTimedEffect` (`index` below the count).
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_erase(EeScenarioTimedQueue *queue, size_t index);
+
+/// Empties the queue (`SortEffects`).
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_clear(EeScenarioTimedQueue *queue);
+
+/// Marks timed effect `index` run (`index` below the count).
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_mark_run(EeScenarioTimedQueue *queue, size_t index);
+
+/// `RenumberEffects`' timed part.
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_renumber(EeScenarioTimedQueue *queue, unsigned long old, unsigned long new_);
+
+/// `RemapEffects`' timed part: the map as `count` pairs `olds[i]` -> `news[i]`.
+///
+/// # Safety
+/// `queue` must be a live queue; `olds` and `news` valid for `count` reads (either may be null when it is 0).
+void ee_scenario_timed_remap(EeScenarioTimedQueue *queue,
+                             const unsigned long *olds,
+                             const unsigned long *news,
+                             size_t count);
+
+/// `SetTimedEffectHasRun`: the effect's `mEffects` index (`found` false: not in the list).
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_set_has_run(EeScenarioTimedQueue *queue,
+                                   bool found,
+                                   unsigned long effect,
+                                   bool flag);
+
+/// `EndCinematic`'s timed part (`shift` = `(long)elapsed + 3000`).
+///
+/// # Safety
+/// `queue` must be a live queue.
+void ee_scenario_timed_end_cinematic(EeScenarioTimedQueue *queue, long shift);
+
+/// `EEScenarioManager::Reset`'s numbers and the queue emptied.
+///
+/// # Safety
+/// `fields` must be valid for a read and a write, `queue` a live queue.
+void ee_scenario_manager_reset(EeScenarioManagerFields *fields, EeScenarioTimedQueue *queue);
+
+/// `EEScenarioManager::Load` after its `Reset`: the first error. The numbers are read into a copy stored back after
+/// the last callback; each timed effect is appended to the queue as it is read.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write, `queue` a live queue no callback touches.
+int32_t ee_scenario_manager_load(const EeScenarioStream *stream,
+                                 EeScenarioManagerFields *fields,
+                                 EeScenarioTimedQueue *queue,
+                                 unsigned long minor);
+
+/// `EEScenarioManager::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read, `queue` a live queue.
+int32_t ee_scenario_manager_save(const EeScenarioStream *stream,
+                                 const EeScenarioManagerFields *fields,
+                                 EeScenarioTimedQueue *queue,
+                                 unsigned long minor);
 
 }  // extern "C"
 
