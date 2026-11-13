@@ -128,6 +128,9 @@ void EESEAPlaceUnit::Virtual4()
                 theUnit->GetComplexUnit()->SetPower(theUnit->mStats->mPower);
         }
         if (theEntry.mContainer != NULL) {
+            // Port: the new unit is inserted first (its id given, as the physics' flush gives it): the transport's
+            // cargo holds units by id since R5a.4, and a unit without one resolved to nothing (the next save crashed)
+            thePlayer->AddPendingUnits(0, 1);
             theEntry.mContainer->LoadCargo(theUnit->GetComplexUnit(), false, 0);
             if (!theEntry.mContainer->mIsEditorSelected)
                 gUIManager->mScenarioEditorForm->SelectUnit(theEntry.mContainer);
