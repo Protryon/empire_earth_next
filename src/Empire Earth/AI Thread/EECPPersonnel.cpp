@@ -56,7 +56,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEAreaUtilities.h"
-#include "ee/EEUGUnloadTransport.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEMathInline.h"
 #include "ee/EECPTrace.h"
@@ -1210,15 +1210,15 @@ void EECPPersonnel::UnloadTransport(EEComplexUnit* inUnit)
     EEAIContinent* theContinent = gContinentManager.GetContinentAt(inUnit);
     if (theContinent == NULL)
         return;
-    EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), true);
+    EEUGRust* theGoal = EEUGRust::NewUnloadTransport(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), true);
     bool theFound = false;
     long n;
     if (inUnit->GetUnitClass()->mDomains & kMovementAir) {
         EEAIContinent* theTarget = dynamic_cast<EEAIContinent*>(gContinentManager.GetRandomContinent(kContinentCategoryLand, gPhysics->mRandom));
         if (theTarget != NULL) {
             for (n = 0x14; n >= 0; n--) {
-                theGoal->mDestination = theTarget->GetRandomPoint();
-                theGoal->FindUnloadTiles();
+                U2DPoint<long> theTile = theTarget->GetRandomPoint();
+                theGoal->SetUnloadDestination(theTile.mX, theTile.mY);
                 if (theGoal->CanUnloadAtDestination()) {
                     theFound = true;
                     break;
@@ -1250,8 +1250,7 @@ void EECPPersonnel::UnloadTransport(EEComplexUnit* inUnit)
         if (theTiles.size() != 0) {
             PermuteValues(theTiles, UMFloatToLong(gPhysics->mRandom.Generate()));
             for (n = 0x14; theTiles.size() != 0; ) {
-                theGoal->mDestination = theTiles.back();
-                theGoal->FindUnloadTiles();
+                theGoal->SetUnloadDestination(theTiles.back().mX, theTiles.back().mY);
                 if (theGoal->CanUnloadAtDestination()) {
                     theFound = true;
                     break;

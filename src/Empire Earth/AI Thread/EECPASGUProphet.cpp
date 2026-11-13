@@ -72,7 +72,7 @@ struct EECPAITargetNearest {
 #include "ee/EEUnitUtilities.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGCastCalamity.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 // 0x40c6cd (cdecl; only EECPASGUProphet::ReleaseAnalyzers calls it) (provisional name)
 long DeleteAnalyzers(std::vector<EECPASGUProphetCalamityAnalyzerBase*>& inAnalyzers);
@@ -1115,23 +1115,24 @@ void EECPASGUProphet::MakeAnalyzers()
 // FUNCTION: EXE 0x40b68c
 // Tells whether a calamity cast goal (the given one, else the unit's loaded goal) can still be cast at its location
 // and target
-bool EECPASGUProphet::CanStillCast(EEUGCastCalamity* inGoal)
+bool EECPASGUProphet::CanStillCast(EEUGRust* inGoal)
 {
     GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
     bool theResult = false;
-    EEUGCastCalamity* theGoal = inGoal;
+    EEUGRust* theGoal = inGoal;
     if (theGoal == NULL)
-        theGoal = dynamic_cast<EEUGCastCalamity*>(this->mUnit->GetLoadGoal());
+        theGoal = EECastCalamityGoalCast(this->mUnit->GetLoadGoal());
     EECalamityClass* theClass = NULL;
     if (theGoal != NULL) {
-        long theCalamity = theGoal->mCalamityType;
+        long theCalamity = theGoal->GetCalamityType();
         EETechTreeNode* theNode = this->mUnit->mPlayer->GetTechTree()->Get(theCalamity);
         if (theNode != NULL) {
             long theType = theNode->mData->mCalamity;
             USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theType, theClass);
             if (theClass != NULL) {
                 theGoal->GetGoalLocation(theLocation);
-                EEUnit* theTarget = theGoal->mTarget;
+                EEUnit* theTarget = NULL;
+                theGoal->GetCalamityType(NULL, NULL, &theTarget);
                 theResult = theClass->CanCastAt(this->mUnit, theLocation, (long)theLocation.GetX(), (long)theLocation.GetY(), true, theTarget) == 0;
             }
         }
@@ -1167,22 +1168,21 @@ bool EECPASGUProphet::Retarget()
     }
     if (theRanked.size() <= 0)
         return theChanged;
-    EEUGCastCalamity* theGoal = dynamic_cast<EEUGCastCalamity*>(this->mUnit->mActiveGoal);
+    EEUGRust* theGoal = EECastCalamityGoalCast(this->mUnit->mActiveGoal);
     if (theGoal != NULL && (theKeepGoal = this->CanStillCast(theGoal))) {
-        theOldX = theGoal->mTileX;
-        theOldY = theGoal->mTileY;
+        theGoal->GetCalamityType(&theOldX, &theOldY);
     }
     for (theIter = theRanked.begin(); theIter != theRanked.end() && !theChanged; theIter++) {
         EECPASGUProphetCalamityAnalyzerBase* theAnalyzer = theIter->second;   // this pass's analyzer (was always the best)
         bool theSelect = !theKeepGoal;
         if (theKeepGoal) {
-            if (theAnalyzer->mTechID == theGoal->mCalamityType) {
+            if (theAnalyzer->mTechID == theGoal->GetCalamityType()) {
                 if (theOldX == theAnalyzer->mTile.GetX() && theOldY == theAnalyzer->mTile.GetY())
                     break;
                 theSelect = true;
             } else {
                 for (theOldIter = theRanked.begin(); theOldIter != theRanked.end(); theOldIter++) {
-                    if (theOldIter->second->mTechID == theGoal->mCalamityType) {
+                    if (theOldIter->second->mTechID == theGoal->GetCalamityType()) {
                         theOldScore = theOldIter->first;
                         break;
                     }
@@ -1199,7 +1199,7 @@ bool EECPASGUProphet::Retarget()
             theChanged = true;
             EETileLocation theTile(theAnalyzer->mTile.GetX(), theAnalyzer->mTile.GetY());
             if (gWorld.mMap->GetTileAtLocation(theTile) != NULL) {
-                theGoal = new EEUGCastCalamity(this->mUnit, theAnalyzer->mUnit, theAnalyzer->mTile.GetX(),
+                theGoal = EEUGRust::NewCastCalamity(this->mUnit, theAnalyzer->mUnit, theAnalyzer->mTile.GetX(),
                                              theAnalyzer->mTile.GetY(), theAnalyzer->mTechID, true);
                 if (!this->mSubGroup->GiveGoal(this->mUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL)
                     delete theGoal;
@@ -1235,7 +1235,7 @@ void EECPASGUProphet::SetState(long inState, unsigned long inTime)
 void EECPASGUProphet::MoveAwayFromCast()
 {
     GE2DPoint theLocation(0.0f, 0.0f);
-    EEUGCastCalamity* theCasting = dynamic_cast<EEUGCastCalamity*>(this->mUnit->GetGoal());
+    EEUGRust* theCasting = EECastCalamityGoalCast(this->mUnit->GetGoal());
     if (theCasting == NULL || !EEGetRandomPointAhead(this->mUnit, &theLocation))
         return;
     EEUnitGoal* theGoal = new EEUGLocation(theLocation, true, true, false, 0.0f, false, 0);

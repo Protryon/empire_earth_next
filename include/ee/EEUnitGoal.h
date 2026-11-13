@@ -5,8 +5,8 @@
 // exact in EEUnitGoal.cpp; EEUGHealUnit sizeof 0x40 = its new-site size, ctor 0x2252d0 exact in EEUGHealUnit.cpp.
 // Member names are provisional.
 // and the goals the calamities hand out. Only what the decompiled units use; provisional names. The goal classes
-// have one header each (ee/EEUGAttackGround.h, EEUGPatrol.h, EEUGGather.h, EEUGCastCalamity.h, EEUGAttackUnit.h,
-// EEUGLocation.h, EEUGHealUnit.h, EEUGExplore.h, ...).
+// have one header each (ee/EEUGAttackGround.h, EEUGGather.h, EEUGAttackUnit.h, EEUGLocation.h, EEUGHealUnit.h,
+// ...); the ones moved whole to Rust are ee/EEUGRust.h.
 #ifndef EE_EEUNITGOAL_H
 #define EE_EEUNITGOAL_H
 
@@ -83,10 +83,6 @@ public:
     // (unguarded: a class static only renumbers an includer's `$E` symbols, never its bytes)
     static const UString sData;             // "EEUnitGoal-Data" (EEUnitGoal.cpp's init chain 0x23c332) (provisional name)
 };
-
-// Exploring: ee/EEUGExplore.h (it embeds a U2DSparseArrayPointContainer, so it needs lle/U2DSparseArray.h, which
-// a game unit includes only when it constructs that header's keys, so it is kept out of this header).
-class EEUGExplore;
 
 // EEUnitGoal::mKind: EEUnitGoal::CreateGoal 0x23c3e6 creates the goal class of each kind.
 enum EEUnitGoalKind {

@@ -7,7 +7,7 @@
 #define EE_EECPASGUPROPHET_H
 
 class EEUnitGoal;
-class EEUGCastCalamity;
+class EEUGRust;
 
 class EECPASGUProphet : public EECPAttackSubGroupUnit {
 public:
@@ -22,7 +22,7 @@ public:
     virtual void Update(unsigned long inTime);      // +0x6c 0xbb69
     virtual bool ShouldRetreat();           // +0x74 0xbd2b
     // +0x7c 0xb68c: inGoal 0 -> dynamic_cast<EEUnitGoal*>(mUnit's +0x1ec); its +0x30 tech id names the calamity
-    virtual bool CanStillCast(EEUGCastCalamity* inGoal);
+    virtual bool CanStillCast(EEUGRust* inGoal);
     virtual void MoveAwayFromCast();        // +0x80 0xbaab (news a 0x38-byte goal)
     // +0x84 0xb375: a new analyzer for calamity kind inType (a switch), 0 for the others
     virtual EECPASGUProphetCalamityAnalyzerBase* CreateAnalyzer(long inTechID, unsigned long inType);

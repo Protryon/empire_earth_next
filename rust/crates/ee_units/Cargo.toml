@@ -8,3 +8,7 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
+# the explore goal's bad tiles (U2DSparseArrayPointContainer's set)
+ee_astar = { path = "../ee_astar" }
+# GE3DPoint's squared distance (the cast calamity's range)
+ee_ge = { path = "../ee_ge" }
