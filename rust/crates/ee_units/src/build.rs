@@ -1003,6 +1003,14 @@ pub(crate) mod tests {
         pub(crate) goal_state: u64,
         /// the gather mock's answers by name
         pub(crate) knobs: Map<&'static str, i64>,
+        /// the world searches' answers (world.rs): the units in any radius, the footprint's tiles and units, the
+        /// blocking and movable units by tile, the tile standing by unit
+        pub(crate) radius_units: Vec<u64>,
+        pub(crate) footprint: Vec<(i32, i32)>,
+        pub(crate) footprint_units: Vec<u64>,
+        pub(crate) blocking: Map<(i32, i32), Vec<u64>>,
+        pub(crate) movable: Map<(i32, i32), Vec<u64>>,
+        pub(crate) standing: Map<u64, i32>,
     }
 
     pub(crate) const GOAL: u64 = 0x9000;

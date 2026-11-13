@@ -918,8 +918,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION = 414;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_LOCATION_GOAL = 415;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_HELP_BUILD = 416;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_TEND_FARM = 417;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_NEAR = 418;
@@ -935,12 +933,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_FACE_TARGET = 422;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_WORK_TIMER = 423;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_HALT = 424;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SITE_TAKEN = 425;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_FOOTPRINT_CLEAR = 426;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_SITE_FREE = 427;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED = 428;
 
@@ -992,13 +984,9 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_STORAGE_SEARCH = 458;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_SPOT = 459;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_BEGIN_GATHERING = 460;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_DEPOSIT_LOAD = 461;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_TREE = 462;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_BUILD_FARMS = 463;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_HUNT = 464;
 
@@ -1026,10 +1014,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_ACCESSIBLE = 475;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_LENGTH = 476;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_WORK = 477;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_NAVAL_SEARCH = 478;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH = 479;
 
 /// `a`: the unit; its class's `mCategory`
@@ -1046,6 +1030,55 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER = 493;
 
 /// `a`: the unit; `mGoalQueues[0].mGoals.size()`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN = 494;
+
+/// `a`: the goal; `b` 0: its saved fields into `i[0..6]` ([`GoalBase`] in order), `b` 1: set from them
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BASE_FIELDS = 495;
+
+/// `f[0..2]` the centre, `f[2]` the radius: `EEGetUnitsInRadius`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNITS_IN_RADIUS = 496;
+
+/// `a`: the unit; its footprint's tiles (`sink`: tiles), the units on them (`sink`: units)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FOOTPRINT_TILES = 497;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FOOTPRINT_UNITS = 498;
+
+/// `a`: the player, `i[0]` the unit type, `i[1]`, `i[2]` the map tile: `EEGetBlockingUnits` /
+/// `EEGetMovableTileUnits` (not ignoring the owner)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BLOCKING_UNITS = 499;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_MOVABLE_UNITS = 500;
+
+/// `a`: the unit, `b`: the player, `i[0]` the unit type: `EEGetTileUnitStanding(unit, player, type, false)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_STANDING = 501;
+
+/// `a`: the unit; its class's `ActionChanged(unit)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_ACTION_CHANGED = 502;
+
+/// `a`: the resource, `b`: the gatherer: `TakeHit(gatherer, UMFloatToLong(its attack), 0, 1)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TAKE_HIT = 503;
+
+/// `a`: the resource, `b`: the gatherer: `DepleteResource(1)`, `AddResourceAmount(1)`, `SetLastResource`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TAKE_ONE = 504;
+
+/// `a`: the tree, `b`: the gatherer: `RegrowForest`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_REGROW = 505;
+
+/// `a`: the gatherer, `b`: the resource: the gathering's work timer
+constexpr static const int32_t EE_UNITS_GOAL_HOST_WORK_TIMER = 506;
+
+/// `a`: the gatherer: its epoch's high-tech tools; `ReleaseFireEffect()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS = 507;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RELEASE_FIRE = 508;
+
+/// `a`: the gatherer, `b`: the resource: the mining beam (the gatherer's fire effect)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_MINING_BEAM = 509;
+
+/// `a`: the gatherer, `i[0]`: `SetResourceType`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_RESOURCE_TYPE = 510;
+
+/// `a`: the naval gatherer, `b`: the fish: its class's `FindResourceOfKind` around the fish
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_FISH = 511;
 
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
@@ -1207,6 +1240,9 @@ constexpr static const int32_t EE_UNITS_GOAL_NEW_LOCATION = 480;
 
 /// `a`: the unit; `FaceYaw` (0 or 1)
 constexpr static const int32_t EE_UNITS_GOAL_FACE_YAW = 481;
+
+/// `a`: the unit; `FindUnfinishedFarm` (any kind; world.rs): the settlement or 0
+constexpr static const int32_t EE_UNITS_GOAL_UNFINISHED_FARM = 482;
 
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
@@ -2175,6 +2211,10 @@ struct EeUnitsBuildUnit {
   bool is_tree;
   bool moving;
   bool disabled;
+  /// the class's `IsLandBuilding()` (round 22: the world searches)
+  bool land_building;
+  /// the complex unit's `mAnimation` (the gathering)
+  int32_t animation;
 };
 
 extern "C" {
@@ -3007,6 +3047,12 @@ uint32_t ee_units_player_check(const uint64_t *objects,
 /// # Safety
 /// `sink` is the `io.sink` of the operation in progress.
 void ee_units_goal_push_tile(void *sink, int32_t x, int32_t y);
+
+/// The host pushes one unit onto a list sink (`io.sink` of the world searches' unit lists).
+///
+/// # Safety
+/// `sink` is the `io.sink` of the operation in progress.
+void ee_units_goal_push_unit(void *sink, uint64_t unit);
 
 /// One body of a Rust goal: `op` (`EE_UNITS_GOAL_*`) on the goal object `goal` of kind `kind` (`a`, `b`, `io` as
 /// the operation takes them); its result (a handle, a status, a checksum or a flag; 0 otherwise).
