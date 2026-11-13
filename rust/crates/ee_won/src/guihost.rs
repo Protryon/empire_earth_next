@@ -431,6 +431,23 @@ pub enum EeWonGuiOp {
     QueueMouseUp,
     /// `a->TryKeyDown(b)` (a submenu; 0 or 1).
     MenuTryKeyDown,
+    // ---- the scroll bar (`barobj`; a part is a `Component*`)
+    /// `a->SetSize(b, c)`.
+    ChildSetSize = 320,
+    /// `a->Invalidate()`.
+    ChildInvalidate,
+    /// `a->mParent == this` (0 or 1).
+    ChildIsMine,
+    /// `IsDisabled()` (0 or 1).
+    IsDisabled,
+    /// `new Button` (no reference: the caller holds it with `ChildHold`).
+    NewButton,
+    /// `((Button*)a)->SetButtonFlags(b, c != 0)`.
+    ButtonSetFlags,
+    /// `Container::AddedToParent()`.
+    BaseAddedToParent,
+    /// `Component::SetEnabled(a != 0)`.
+    BaseSetEnabled,
 }
 
 /// The events a component object fires (`FireEvent`).
@@ -443,6 +460,22 @@ pub enum EeWonGuiEvent {
     InputTextChanged = 2,
     /// `ComponentEvent_ListSelChanged`.
     ListSelChanged = 3,
+    /// `ComponentEvent_Scroll`.
+    Scroll = 4,
+}
+
+/// The `WindowEventType` a `FireEvent` op delivers (`ee/wonapi/WONEventTypes.h`): the host fires exactly this, so
+/// no event code needs a case of its own in the C++ (round 23's lists fired every event but InputReturn as
+/// InputTextChanged through such a switch). The goldens trace the type listeners receive through this function and
+/// compare it with the original's enum.
+#[no_mangle]
+pub extern "C" fn ee_won_gui_event_type(event: EeWonGuiEvent) -> i32 {
+    match event {
+        EeWonGuiEvent::Scroll => 16,
+        EeWonGuiEvent::InputReturn => 20,
+        EeWonGuiEvent::InputTextChanged => 21,
+        EeWonGuiEvent::ListSelChanged => 22,
+    }
 }
 
 /// Appends `count` text units of `unit_size` bytes (2 or 4: a `wchar_t`) to the Rust buffer of a take op.
@@ -477,6 +510,16 @@ pub unsafe extern "C" fn ee_won_gui_sink_units(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn event_types_are_the_original_enum() {
+        // WindowEventType: 14 input events after None, then ButtonPressed (15), Scroll, TextLinkActivated,
+        // HyperLinkActivated, HyperLinkOver, InputReturn (20), InputTextChanged, ListSelChanged
+        assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::Scroll), 16);
+        assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::InputReturn), 20);
+        assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::InputTextChanged), 21);
+        assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::ListSelChanged), 22);
+    }
 
     #[test]
     fn sink_reads_both_unit_sizes() {

@@ -1907,147 +1907,6 @@ constexpr static const int32_t EE_WON_REQOP_PATCH_SIZE = 71;
 /// element: the position; -1 past the end)
 constexpr static const int32_t EE_WON_REQOP_PATCH_QUERY = 72;
 
-/// A number of the parser.
-enum class EeWonChatParserNumber {
-  Error = 0,
-  Command = 1,
-  Prefix = 2,
-  RoomFlags = 3,
-  Duration = 4,
-  Invitation = 5,
-  MatchThreshold = 6,
-  AllowColonEmote = 7,
-};
-
-/// A text of the parser.
-enum class EeWonChatParserText {
-  /// `mInput`: the reply target's name
-  Input = 0,
-  TargetName = 1,
-  Text = 2,
-};
-
-/// What an upper-cased token is in a group.
-enum class EeWonCfgToken {
-  /// `}`: the group's end.
-  Close,
-  /// `name:`: a key's value follows (the key is the token without its last character).
-  Key,
-  /// Anything else: a child group or an instruction.
-  Group,
-};
-
-/// `ReadGroupStart`'s next step after a token.
-enum class EeWonCfgStart {
-  /// The token is the group's name (read through a StringParser); read the next token.
-  Name,
-  /// `:` read: the next token is the base name.
-  Colon,
-  /// The token is the base name; read the next token.
-  Base,
-  /// `{`: the header is complete.
-  Open,
-  /// Not `{` where it was expected: "Expecting '{' but got <token>".
-  Error,
-};
-
-/// `HandleInstruction`'s and `HandleValueInstruction`'s instructions (upper-cased tokens).
-enum class EeWonCfgInstruction {
-  /// A registered child group, or unknown.
-  Other,
-  GroupDefine,
-  IfDefined,
-  IfNotDefined,
-  Define,
-  Redefine,
-  IncludeGroup,
-  IncludeFile,
-};
-
-/// The `, optional` suffix of `INCLUDEGROUP` / `INCLUDEFILE`.
-enum class EeWonCfgOptional {
-  /// No suffix, or a bad one (see the warnings): required.
-  Required,
-  /// `, optional`.
-  Optional,
-  /// A comma and no string: "Expecting string: 'optional' after include ..., include is required."
-  WarnNoString,
-  /// A comma and another word: "Expecting string: optional after include ..., include is required."
-  WarnOtherWord,
-};
-
-/// What an ElGamal call computes into a sink.
-enum class EeWonElGamalOp : uint32_t {
-  Encrypt = 0,
-  Decrypt = 1,
-  Sign = 2,
-  RawPrivateKey = 3,
-  RawPublicKey = 4,
-};
-
-/// What `ee_won_auth_cert2_query` asks of an `Auth2Certificate`.
-enum class EeWonCert2Query : uint32_t {
-  /// the community's key id
-  KeyId = 0,
-  /// the first community (0 if none)
-  FirstCommunity = 1,
-  /// the first community's trust
-  FirstCommunityTrust = 2,
-};
-
-/// Where StagingLogic sends a room message: nowhere, handled by itself (the host), or handed to the network logic.
-enum class EeWonStageRoute {
-  Drop = 0,
-  Local = 1,
-  Net = 2,
-  /// Handled locally and handed to the network logic too (the host's broadcast).
-  LocalAndNet = 3,
-};
-
-/// What `ButtonUp` does.
-enum class EeWonButtonUp {
-  /// Still held (or not pressed): nothing.
-  Ignore = 0,
-  /// Released: a repeating button stops its timer.
-  StopRepeat = 1,
-  /// Released without activating.
-  Release = 2,
-  /// Released and activated.
-  Activate = 3,
-};
-
-/// What `Button::KeyDown` does.
-enum class EeWonButtonKey {
-  /// Not handled (false).
-  None = 0,
-  /// Enter on the default button: activate (true).
-  Activate = 1,
-  /// Space: held down and pressed (true).
-  Press = 2,
-  /// An arrow in a radio group: the previous radio activated and focused (true).
-  RadioBack = 3,
-  /// The next radio.
-  RadioForward = 4,
-};
-
-/// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
-enum class EeWonScrollPress {
-  LineUp = 0,
-  LineDown = 1,
-  /// The track, with the mouse along the axis.
-  Track = 2,
-};
-
-/// The search or compare `ee_won_guistring_op` runs.
-enum class EeWonGuiStringOp {
-  Compare,
-  CompareNoCase,
-  Find,
-  FindNoCase,
-  FindOneOf,
-  RFind,
-};
-
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
   /// the field `a` (`EeWonGuiField`).
@@ -2399,6 +2258,214 @@ enum class EeWonGuiOp : uint32_t {
   QueueMouseUp,
   /// `a->TryKeyDown(b)` (a submenu; 0 or 1).
   MenuTryKeyDown,
+  /// `a->SetSize(b, c)`.
+  ChildSetSize = 320,
+  /// `a->Invalidate()`.
+  ChildInvalidate,
+  /// `a->mParent == this` (0 or 1).
+  ChildIsMine,
+  /// `IsDisabled()` (0 or 1).
+  IsDisabled,
+  /// `new Button` (no reference: the caller holds it with `ChildHold`).
+  NewButton,
+  /// `((Button*)a)->SetButtonFlags(b, c != 0)`.
+  ButtonSetFlags,
+  /// `Container::AddedToParent()`.
+  BaseAddedToParent,
+  /// `Component::SetEnabled(a != 0)`.
+  BaseSetEnabled,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonBarCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  AddedToParent,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `SetEnabled(a != 0)`.
+  SetEnabled,
+  /// `CopyAttributes(a)` (`a` the other bar's Rust object).
+  CopyAttributes,
+  AddControls,
+  /// `LayoutThumb(a != 0)`.
+  LayoutThumb,
+  /// the part `a` (0 the up arrow, 1 the down arrow, 2 the track, 3 the thumb).
+  GetPart,
+  /// the part `a` = `b` (the original's `SmartPtr` assignment).
+  SetPart,
+  /// `IsVertical()` (0 or 1).
+  IsVertical,
+  /// `SetVertical(a != 0)`.
+  SetVertical,
+  /// `SetResizeThumb(a != 0)`.
+  SetResizeThumb,
+  /// `SetMinThumbSize(a)` (an unsigned char).
+  SetMinThumbSize,
+  GetPosition,
+  /// `SetPosition(a)` (the field only).
+  SetPosition,
+  /// `SetRange(a, b)` (total, page; the page step is the page).
+  SetRange,
+  /// `SetLineScrollSizes(a, b)` (up, down).
+  SetLineScrollSizes,
+};
+
+/// A number of the parser.
+enum class EeWonChatParserNumber {
+  Error = 0,
+  Command = 1,
+  Prefix = 2,
+  RoomFlags = 3,
+  Duration = 4,
+  Invitation = 5,
+  MatchThreshold = 6,
+  AllowColonEmote = 7,
+};
+
+/// A text of the parser.
+enum class EeWonChatParserText {
+  /// `mInput`: the reply target's name
+  Input = 0,
+  TargetName = 1,
+  Text = 2,
+};
+
+/// What an upper-cased token is in a group.
+enum class EeWonCfgToken {
+  /// `}`: the group's end.
+  Close,
+  /// `name:`: a key's value follows (the key is the token without its last character).
+  Key,
+  /// Anything else: a child group or an instruction.
+  Group,
+};
+
+/// `ReadGroupStart`'s next step after a token.
+enum class EeWonCfgStart {
+  /// The token is the group's name (read through a StringParser); read the next token.
+  Name,
+  /// `:` read: the next token is the base name.
+  Colon,
+  /// The token is the base name; read the next token.
+  Base,
+  /// `{`: the header is complete.
+  Open,
+  /// Not `{` where it was expected: "Expecting '{' but got <token>".
+  Error,
+};
+
+/// `HandleInstruction`'s and `HandleValueInstruction`'s instructions (upper-cased tokens).
+enum class EeWonCfgInstruction {
+  /// A registered child group, or unknown.
+  Other,
+  GroupDefine,
+  IfDefined,
+  IfNotDefined,
+  Define,
+  Redefine,
+  IncludeGroup,
+  IncludeFile,
+};
+
+/// The `, optional` suffix of `INCLUDEGROUP` / `INCLUDEFILE`.
+enum class EeWonCfgOptional {
+  /// No suffix, or a bad one (see the warnings): required.
+  Required,
+  /// `, optional`.
+  Optional,
+  /// A comma and no string: "Expecting string: 'optional' after include ..., include is required."
+  WarnNoString,
+  /// A comma and another word: "Expecting string: optional after include ..., include is required."
+  WarnOtherWord,
+};
+
+/// What an ElGamal call computes into a sink.
+enum class EeWonElGamalOp : uint32_t {
+  Encrypt = 0,
+  Decrypt = 1,
+  Sign = 2,
+  RawPrivateKey = 3,
+  RawPublicKey = 4,
+};
+
+/// What `ee_won_auth_cert2_query` asks of an `Auth2Certificate`.
+enum class EeWonCert2Query : uint32_t {
+  /// the community's key id
+  KeyId = 0,
+  /// the first community (0 if none)
+  FirstCommunity = 1,
+  /// the first community's trust
+  FirstCommunityTrust = 2,
+};
+
+/// Where StagingLogic sends a room message: nowhere, handled by itself (the host), or handed to the network logic.
+enum class EeWonStageRoute {
+  Drop = 0,
+  Local = 1,
+  Net = 2,
+  /// Handled locally and handed to the network logic too (the host's broadcast).
+  LocalAndNet = 3,
+};
+
+/// What `ButtonUp` does.
+enum class EeWonButtonUp {
+  /// Still held (or not pressed): nothing.
+  Ignore = 0,
+  /// Released: a repeating button stops its timer.
+  StopRepeat = 1,
+  /// Released without activating.
+  Release = 2,
+  /// Released and activated.
+  Activate = 3,
+};
+
+/// What `Button::KeyDown` does.
+enum class EeWonButtonKey {
+  /// Not handled (false).
+  None = 0,
+  /// Enter on the default button: activate (true).
+  Activate = 1,
+  /// Space: held down and pressed (true).
+  Press = 2,
+  /// An arrow in a radio group: the previous radio activated and focused (true).
+  RadioBack = 3,
+  /// The next radio.
+  RadioForward = 4,
+};
+
+/// The events a component object fires (`FireEvent`).
+enum class EeWonGuiEvent : uint32_t {
+  /// `ComponentEvent_InputReturn`.
+  InputReturn = 1,
+  /// `ComponentEvent_InputTextChanged`.
+  InputTextChanged = 2,
+  /// `ComponentEvent_ListSelChanged`.
+  ListSelChanged = 3,
+  /// `ComponentEvent_Scroll`.
+  Scroll = 4,
+};
+
+/// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
+enum class EeWonScrollPress {
+  LineUp = 0,
+  LineDown = 1,
+  /// The track, with the mouse along the axis.
+  Track = 2,
+};
+
+/// The search or compare `ee_won_guistring_op` runs.
+enum class EeWonGuiStringOp {
+  Compare,
+  CompareNoCase,
+  Find,
+  FindNoCase,
+  FindOneOf,
+  RFind,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -3512,16 +3579,6 @@ enum class EeWonGuiCursor : uint32_t {
   NorthSouth = 5,
 };
 
-/// The events a component object fires (`FireEvent`).
-enum class EeWonGuiEvent : uint32_t {
-  /// `ComponentEvent_InputReturn`.
-  InputReturn = 1,
-  /// `ComponentEvent_InputTextChanged`.
-  InputTextChanged = 2,
-  /// `ComponentEvent_ListSelChanged`.
-  ListSelChanged = 3,
-};
-
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -3621,6 +3678,9 @@ struct EeWonQueueSocket;
 
 /// A Rust op held by a C++ `ServerRequestOp`.
 struct EeWonReqOp;
+
+/// The Rust Scrollbar.
+struct EeWonScrollbar;
 
 /// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
 struct EeWonSocketOp;
@@ -3741,6 +3801,14 @@ struct EeWonAuthFlowHooks {
   /// the context's `mPeerData->GetExpireDelta()`
   int64_t (*peer_expire_delta)(void*);
 };
+
+/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
+using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
+                                    EeWonGuiOp op,
+                                    ptrdiff_t a,
+                                    ptrdiff_t b,
+                                    ptrdiff_t c,
+                                    ptrdiff_t d);
 
 /// `ReadBuffer`'s state, embedded by value in the C++ object (a reader over bytes someone else owns).
 struct EeWonReadBuffer {
@@ -4783,14 +4851,6 @@ struct EeWonHttpSessionHooks {
   int (*conn_num_ops)(void*);
 };
 
-/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
-using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
-                                    EeWonGuiOp op,
-                                    ptrdiff_t a,
-                                    ptrdiff_t b,
-                                    ptrdiff_t c,
-                                    ptrdiff_t d);
-
 /// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
 struct EeWonAddr {
   uint8_t sockaddr[16];
@@ -5814,6 +5874,23 @@ bool ee_won_auth_login_secrets(const EeWonAuthLogin *l,
                                const uint8_t *key,
                                int64_t t0,
                                int64_t t1);
+
+/// A new Rust Scrollbar for the C++ `component`, its calls out through `host`.
+EeWonScrollbar *ee_won_bar_new(void *component, EeWonGuiHostFn host, bool vertical);
+
+/// # Safety
+/// `bar` came from `ee_won_bar_new` (or is NULL) and is not used again.
+void ee_won_bar_free(EeWonScrollbar *bar);
+
+/// One of Scrollbar's methods (`EeWonBarCall`).
+///
+/// # Safety
+/// `bar` is live; the call's arguments as documented.
+ptrdiff_t ee_won_bar_call(const EeWonScrollbar *bar,
+                          EeWonBarCall call,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t c);
 
 /// `ByteBuffer(data, length, false)`: a copy.
 ///
@@ -8465,6 +8542,12 @@ bool ee_won_gui_button_state_cell(int32_t state,
                                   int32_t index,
                                   int32_t *out_state,
                                   int32_t *out_checked);
+
+/// The `WindowEventType` a `FireEvent` op delivers (`ee/wonapi/WONEventTypes.h`): the host fires exactly this, so
+/// no event code needs a case of its own in the C++ (round 23's lists fired every event but InputReturn as
+/// InputTextChanged through such a switch). The goldens trace the type listeners receive through this function and
+/// compare it with the original's enum.
+int32_t ee_won_gui_event_type(EeWonGuiEvent event);
 
 /// Appends `count` text units of `unit_size` bytes (2 or 4: a `wchar_t`) to the Rust buffer of a take op.
 ///

@@ -121,7 +121,6 @@
 305540 306a3c WONGUI/ControlLifetime.cpp
 305580 3056f5 WONGUI/Scroller.cpp
 305760 305c0e WONGUI/ScrollbarScroller.cpp
-305fa0 30683e WONGUI/Scrollbar.cpp
 306870 306e08 WONGUI/ImageComponent.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp
 309880 3098cd WONGUI/PaletteLifetime.cpp

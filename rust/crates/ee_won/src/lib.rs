@@ -11,6 +11,7 @@ pub mod auth;
 pub mod authctx;
 pub mod authflow;
 pub mod authlogin;
+pub mod barobj;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;

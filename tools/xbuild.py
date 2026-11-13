@@ -436,6 +436,9 @@ WON_TESTS = {
     "won_treeobj_test": [],
     # PopupMenu as a whole Rust object (menuobj.rs), the same way (golden: rust/crates/ee_won/src/golden_menuobj.txt)
     "won_menuobj_test": [],
+    # Scrollbar as a whole Rust object (barobj.rs), the same way; the scroll event traced as the type the C++ fires
+    # (golden: rust/crates/ee_won/src/golden_barobj.txt)
+    "won_barobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
