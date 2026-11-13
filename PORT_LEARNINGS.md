@@ -1613,6 +1613,16 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Fix:** the line ends at the first tile off the map, and `EEGetBlockingUnits` treats a NULL tile as holding no
   units (its other callers pass `GetTile` results too).
 
+## A citizen waiting for a gather spot whose goal is no gather (EE-SIM, 2026-11-12)
+
+- **Crash:** `EEUGGather::FindGatherSpot` read `this->mResource` through a NULL `this` (c0000005, every time at
+  105 minutes in one seed of boom_order against the improved classic). `EEUGBuildRepair::BeginRepair` asks the units on
+  the site to step aside (`EEStepAsideFromSite`), and `EEComplexUnit::StepAside` takes a unit in
+  `kActionWaitForOpenPosition` to have an `EEUGGather` goal: `dynamic_cast<EEUGGather*>(GetGoal())->FindGatherSpot`.
+  This unit's goal was something else (probably a new order from a script, given while the action had not changed
+  yet). Frames resolved from `EE-SIM.map` by address (the image loads at its preferred base).
+- **Fix:** a NULL cast skips the gather-spot search; the unit stays where it is.
+
 ## Unit upgrades lost on loading a save, on macOS/Linux (2026-11-08)
 
 - **Symptom** (owner's playtest): after every load of an autosave, units kept some purchased improvements (attack,
@@ -10503,3 +10513,31 @@ Round 4's pattern (RUST_PLAN's row) applied to the last small pieces of the game
 - **Not done this round** (RUST_PLAN's row): the campaign editor's events (934, with `EECampaignEditorBehavior`),
   the scenario intro's form manager (`EEUISCIFormManager`, 315: file specs and media strings the scenario screens,
   the summary and the main game form read), the civilization builder's helpers.
+## The mouse pointer's save-under under GX (full screen, 2026-11-12)
+
+- **Symptom**: in full screen (not windowed), moving the mouse left white squares and pieces of the pointer along its
+  path, over the menus (Game Setup) and the game's top and bottom bars: everywhere the UI is redrawn only where it
+  is dirty. The 3D view, redrawn every frame, hid them. The harness never saw it: its build is windowed.
+- **Two save-unders, a DirectDraw flip chain behind them.** RTSMouse keeps two save-under records and swaps them every
+  pointer frame. The graphics thread saves under the pointer, draws it, shows the frame and restores: windowed the
+  record it just saved (the back buffer keeps its pixels after the blit to the window), in full screen the previous
+  one, because a flip hands back the frame before last with the previous pointer in it. GX's Flip presents a copy of
+  the back buffer and keeps it, so that full-screen restore put back a stale rectangle: the pointer drawn this frame
+  stayed until the next one, and the next save took pieces of it in (the fragments).
+- **The mouse-pointer thread draws on the primary.** Every 25 ms, when the pointer moved, RTSMousePointer restores,
+  saves under and draws the pointer straight onto the screen (the original's pointer between frames), with the same
+  records. GX's primary has no texture and sampling it gives white, so its save-under was white; the graphics
+  thread's full-screen restore of "the previous record" then wrote that white rectangle into the back buffer.
+- **Fix**: RTSGraphics::Render restores the frame's own record in full screen too (the windowed restore), and a GX
+  blit from the primary reads what the window shows (the window image with the pointer's partial blits, else the last
+  whole frame, in its coordinates) instead of white; in full screen, where Flip leaves no such frame, it leaves the
+  target alone. Evidence, from a throwaway build that dumped the presented GPU copy and moved the pointer a little
+  every frame (full-screen Game Setup, WARP): before, 2,517 graphics-thread restores of a pointer-thread record and
+  3,125 white 8x8 blocks after 17,600 frames; after, none in full screen or windowed.
+- **Not a regression of a recent commit**: both halves date from the GX renderer (2026-11-04). The harness and
+  windowed play never show it, and how often the pointer thread runs between two frames depends on timing.
+- Dumping a frame by setting the surface's CPU copy valid changes which path later blits take (CPU blits instead of
+  GPU ones), and that hid the bug: dump frames without changing a surface's CPU/GPU state, or the evidence lies.
+- The harness cannot see this class of bug: the test profile is windowed and the gates check milestones. A
+  full-screen check needs a display. A disconnected session (this machine's RDP) still renders (WARP), but a BitBlt
+  of the screen captures white.

@@ -192,6 +192,25 @@ function M.pending(mem)
     return n
 end
 
+-- a citizen walks to a site nobody has seen yet (its resource units are not listed until seen, so no spot can be
+-- found there): the walker job, as request's for an unexplored spot
+function M.walk(view, mem, key, x, y)
+    mem.place = mem.place or {jobs = {}, bad = {}}
+    local P = mem.place
+    if P.jobs[key] ~= nil or (P.bad[key] or -1) > view.time then
+        return "busy"
+    end
+    local w = builders(x, y, 40)
+    if #w == 0 then
+        return "none"
+    end
+    ai.take({w[1]})
+    ai.move({w[1]}, x, y)
+    P.jobs[key] = {walk = true, t = view.time, builders = {w[1]}}
+    print(string.format("place walk key=%s to=%d,%d", key, x, y))
+    return "walking"
+end
+
 function M.request(view, mem, key, type, rids, x, y)
     mem.place = mem.place or {jobs = {}, bad = {}}
     local P = mem.place

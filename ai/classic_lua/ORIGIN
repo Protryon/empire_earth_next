@@ -96,7 +96,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
   EECPResourceManager.cpp
                 PARTLY -> econ.lua, resource.lua: the gatherer lists, the needs ledger (AddCosts / RemoveCosts / Earn,
                 Spend from the view's income_total), UpdateWantedGatherers with the stock correction and the army
-                floor (demand_split false) or EECPRMSplitByDemand with GetDemand's tiers and GetGatherCapacity (the untapped sites, `untapped`, for the citizen target only: DEVIATION, every site for the per-resource room)
+                floor (demand_split false) or EECPRMSplitByDemand with GetDemand's tiers and GetGatherCapacity (the untapped sites, `untapped`, for the citizen target; every site with something left for a resource's own room, as the fixed C++)
                 (demand_split true), EECPRMActivateNeeded (the patches kept claimed, claim_needed), EECPRMSettlePatches,
                 EECPRMGuardSites, the claim range and its growth, RebalanceGatherers (the done builders freed,
                 moves_per_cycle), AssignGatherers (food: the bushes near with a drop site, the idle farms, the game
@@ -113,8 +113,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 the influence regions round the tile. BuildSettlementFor (the gather goal's
                 storage search asks the AI for a settlement when the drop site is far; the engine hook skips a script's
                 seat): PORTED in econ.lua, every 4 s over the gatherers at work (the nearest drop site stands for the
-                gatherer's storage; the site in the rings round the resource). NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
-                CitizenLost's re-cost.
+                gatherer's storage; the site in the rings round the resource). RequestFerry / FerryGatherers / TransportIdle, IsIslandExpansionDue,
+                ChooseTransportClass (the sea): PORTED -> ferry.lua on lib.navy's landing (board, sail, unload; the
+                citizens ashore sent to gather). DEVIATION: the air and space transports are not chosen yet. NOT
+                STARTED: CitizenLost's re-cost.
   EECPResourceCenter.cpp
                 PORTED -> resource.lua (update_groups, flag_group, centre_middle, find_resource_unit) and build.lua
                 (centre_drop: AdoptDropSite). DEVIATION (fog): the original groups every resource of the map at the
@@ -151,7 +153,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 nothing; 25% a known unit of the target on the sub-group's water, else a random point of that water,
                 else the water by the town; a sea task is looked at again after 10-120 s). DEVIATIONS: the known units
                 are those remembered; the defend tasks of ChooseTask (scenario) are not ported.
-                NOT STARTED: air, space and transport sub-groups, submarines' kind; GiveImprovements.
+                The transport sub-group (EECPASGSeaTransport): PORTED -> army.lua cross_step: an attack sub-group whose
+                target lies across water is carried there. DEVIATION: the crossing is lib.navy's landing with the free
+                transports (one more ordered at a time while too few hold the group; given up after 5 minutes).
+                NOT STARTED: air and space sub-groups, submarines' kind; GiveImprovements.
   EECPUnitSelector.cpp          PARTLY -> army.lua: Select: GatherCandidates (the free soldiers, an attack also the
                 defence groups' at rest: GatherDefendingUnits; the classes the player trains by AI kind,
                 KeepBestClasses, FilterByStrategy), ComputeGroupSize (the attack/defence share of the target file's
