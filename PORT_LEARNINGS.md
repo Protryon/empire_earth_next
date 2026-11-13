@@ -12845,6 +12845,13 @@ upgrade, colour and saved-group buttons, the error dialog's OK/Cancel).
   release, the trigger events the menus listen for), Space/Enter on a tabbed button, the right button on dual
   buttons, the scroll arrows' repeat, the check and radio buttons' clicks through the button object, the blinking
   and scalable buttons' draws (the menus' scalable buttons, the in-game blinking ones).
+- **The tour** (authorized for this round; harness lock held): `fixture_game.py --exercise tour --play-seconds 60`
+  on the test-profile build: `RESULT PASS tour` (main menu, the three settings tabs, single player, random-map setup,
+  play; no GX errors). A first attempt timed out before any form (`form None`): it was the worktree's first run, which
+  built the open data tree for eleven minutes while a stray copy of the wait script (a stopped background task whose
+  inner loop survived TaskStop) started a second fixture_game on the same tree. A menu run with the main checkout's exe
+  and then with this branch's both reached the main menu; the rerun passed. Lesson: stopping a background shell does
+  not stop its children; check for leftover processes before starting a harness session.
 - **Left:** `UICheckBox`, `UIRadioButton`, `UITriStateCheckBox` (their records into the button object; the label as
   a part; the radio walk over sibling objects), `UIScrollButton`'s polls, `UIBlinkingButton` and
   `UIScalableButton` (small records), then `UITextLabel` with `UITLScrolling`.
