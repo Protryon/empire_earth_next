@@ -722,6 +722,18 @@ constexpr static const uint32_t EE_SCREENS_CPP_LOAD_UNIT = 65538;
 /// WON's server select form's open event (`EEUIEWNSOpen`).
 constexpr static const uint32_t EE_SCREENS_CPP_WNS_OPEN = 65539;
 
+/// The frame texture's cells: the edges, the large corners, the small corners, the side ornaments.
+constexpr static const uint32_t EE_SCREENS_FRAME_CELL_EDGE = 0;
+
+constexpr static const uint32_t EE_SCREENS_FRAME_CELL_LARGE_CORNER = 1;
+
+constexpr static const uint32_t EE_SCREENS_FRAME_CELL_CORNER = 2;
+
+constexpr static const uint32_t EE_SCREENS_FRAME_CELL_SIDE = 3;
+
+/// No reorder of the texture coordinates.
+constexpr static const uint32_t EE_SCREENS_FRAME_KEEP = 256;
+
 /// `EEUIEHKSelectGroup(group, false)` / `(group, true)`: the number keys (with Alt: the true one).
 constexpr static const uint32_t EE_SCREENS_HK_SELECT_GROUP = 3584;
 
@@ -2634,6 +2646,19 @@ struct EeScreensPgsRecord {
   uint32_t epoch_second;
 };
 
+/// One piece: the bitmap stretched from `texture` (the piece's whole rectangle, in the frame's pixels) onto
+/// `destination` with the cell's texture, its texture coordinates reordered by each of `orders` in turn
+/// (`EE_SCREENS_FRAME_KEEP` for none; the scales swapped after the first when `swap_scale`), placed at `location`.
+/// Rectangles are left, top, right, bottom.
+struct EeScreensFramePiece {
+  float texture[4];
+  float destination[4];
+  float location[2];
+  uint32_t cell;
+  uint32_t orders[3];
+  bool swap_scale;
+};
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
@@ -2752,6 +2777,15 @@ uint32_t ee_screens_control_event_for(unsigned long id,
 
 /// `EEUIManager`'s form-event factory: the event code for a form event id, 0 for none.
 uint32_t ee_screens_form_event_for(unsigned long id);
+
+/// `EEUIBGenericBackground::DrawBackground`: the background (its `GERectangle`, frame scale and flags) drawn within
+/// `clip` (a `GERectangle`); the panel's draw result.
+long ee_screens_frame_draw(void *background,
+                           const void *rectangle,
+                           float scale_x,
+                           float scale_y,
+                           uint32_t flags,
+                           const void *clip);
 
 /// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
 uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
