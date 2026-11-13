@@ -553,6 +553,7 @@ pub fn strings<S: Stream>(s: &mut S, count: u32, save: bool) -> i32 {
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)] // the tests set a few fields of a sample
 mod tests {
     use super::*;
     use crate::stream::Bytes;

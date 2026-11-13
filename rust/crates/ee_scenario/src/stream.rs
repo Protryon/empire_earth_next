@@ -3,6 +3,9 @@
 //! (`unsigned long` and `long` through their 4-byte adapters, `float`, `bool`), into or out of the field itself, and
 //! the strings and id lists of the C++ object by slot.
 
+// `c_ulong` and `c_long` are 32 bits on Windows and 64 elsewhere: the casts are needed there
+#![allow(clippy::unnecessary_cast)]
+
 use std::ffi::c_void;
 use std::os::raw::{c_long, c_ulong};
 
@@ -413,6 +416,7 @@ impl Bytes {
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)] // the tests set a few fields of a sample
 mod tests {
     use super::*;
 

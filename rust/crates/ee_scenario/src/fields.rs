@@ -5,6 +5,8 @@
 //! [`crate::stream`] reaches them by slot).
 
 #![allow(non_snake_case)]
+// `c_ulong` and `c_long` are 32 bits on Windows and 64 elsewhere: the casts to the 32-bit records are needed there
+#![allow(clippy::unnecessary_cast)]
 
 use std::os::raw::{c_long, c_ulong};
 
