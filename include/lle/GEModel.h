@@ -113,6 +113,27 @@ private:
     // ('GEModel Load.cpp')
     long StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures);
     void SetSubModel(GEModel* inModel, unsigned long inIndex);   // 0x10020166
+    // port (R4.3, ninth part): what the friends read (the store gate's digest), as accessors
+    unsigned long GetVertexCount() const { return this->mVertexCount; }
+    unsigned long GetSharedFrameCount() const { return (unsigned long)this->mSharedFrames.size(); }
+    void GetSharedFrame(unsigned long inIndex, unsigned long& outFrame, long& outOffset) const
+    {
+        std::map<unsigned long, long>::const_iterator theEntry = this->mSharedFrames.begin();
+        std::advance(theEntry, inIndex);
+        outFrame = theEntry->first;
+        outOffset = theEntry->second;
+    }
+    const GETransformation* GetInternalTransforms() const { return this->mInternalTransforms; }
+    const GEBoundingBox* GetBoundingBoxes() const { return this->mBoundingBoxes; }
+    const GEBoundingBox* GetGraphicsBoundingBoxPointer() const { return this->mGraphicsBoundingBox; }
+    const float* GetBoundingRadii() const { return this->mBoundingRadii; }
+    GE3DPoint* const* GetFrameTagPoints() const { return this->mFrameTagPoints; }
+    GEMaterial* const* GetMaterials() const { return this->mMaterials; }
+    const UString* GetTextureFilenames() const { return this->mTextureFilenames; }
+    const UString* GetTagPointNames() const { return this->mTagPointNames; }
+    GEPolygonArray* const* GetPolygonArrays() const { return this->mPolygonArrays; }
+    GEVertexArray* const* GetVertexArrays() const { return this->mVertexArrays; }
+    GEModel* const* GetSubModels() const { return this->mSubModels; }
 
     GETransformation mGraphicsPreModelTransform;    // +0x08
     GETransformation mGraphicsPostModelTransform;   // +0x48
