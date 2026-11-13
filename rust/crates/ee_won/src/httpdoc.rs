@@ -5,10 +5,9 @@
 //! session, per owner the is-new flag, the retry, the download's status, HTTP status and modify time, the cache
 //! file) and its steps: `RunHook`, `TryHTTPOp`, `OpFinished`, `CallbackHook`, `DoFinish`.
 //!
-//! The C++ side makes it (`RustServerOp::NewHttpDocument`: the cache file names from the WON directory, the
-//! once-per-process path files `CheckHostAndPath` opened and ignored) and reads the documents
-//! (`HttpDocument(op, owner)`: the cache file, a MOTD without its flag character); the readers (InitLogic,
-//! MOTDCtrl, LobbyEvents, EEWonNet) read the members below by number.
+//! The C++ side makes it with the WON directory (`RustServerOp::NewHttpDocument`); the cache file names, the
+//! once-per-process path files `CheckHostAndPath` opened and ignored and the documents' read (`GetDocument`) are
+//! here too. The readers (InitLogic, MOTDCtrl, TOUDialog, LobbyEvents, EEWonNet) read the members by number.
 //!
 //! Behaviour: `golden_hostop.txt`'s `D` sequences, recorded over the original's statements before the C++ class
 //! was deleted. Reached by nothing in the game but an Internet login (the WON web servers are gone).
@@ -44,6 +43,8 @@ pub const EE_WON_HTTPDOC_HTTP_STATUS: i32 = 6;
 pub const EE_WON_HTTPDOC_MODIFIED: i32 = 7;
 /// `GetDocumentPath(owner)` (bytes)
 pub const EE_WON_HTTPDOC_PATH: i32 = 8;
+/// `GetDocument(owner)`: the cache file's bytes as of now, NUL-ended (a MOTD without its flag character)
+pub const EE_WON_HTTPDOC_DOCUMENT: i32 = 9;
 
 /// `WS_GetMOTD_SysNotFound`, `WS_GetMOTD_GameNotFound`
 const ST_SYS_NOT_FOUND: i32 = 100098;
@@ -243,12 +244,22 @@ impl Plan for HttpDoc {
     }
 
     fn bytes(&self, which: i32, index: i64) -> Option<Vec<u8>> {
-        (which == EE_WON_HTTPDOC_PATH).then(|| self.documents[(index & 1) as usize].clone())
+        let path = &self.documents[(index & 1) as usize];
+        match which {
+            EE_WON_HTTPDOC_PATH => Some(path.clone()),
+            // GetDocument(owner): the cache file read now
+            EE_WON_HTTPDOC_DOCUMENT => {
+                let file = if path.is_empty() { None } else { crate::authlogin::read_file(path, c"r") };
+                Some(document(self.doc_type, file))
+            }
+            _ => None,
+        }
     }
 
     fn set(h: &H, which: i32, v: &SetValue) {
         match which {
-            EE_WON_HTTPDOC_CONFIG => h.st().config_lower = v.data.to_vec(),
+            // StringToLowerCase(mPath) as TryHTTPOp read it
+            EE_WON_HTTPDOC_CONFIG => h.st().config_lower = v.data.to_ascii_lowercase(),
             EE_WON_HTTPDOC_SESSION => {
                 h.add_ref(v.obj);
                 h.replace(|s| &mut s.session, v.obj);
@@ -290,33 +301,68 @@ impl Plan for HttpDoc {
     }
 }
 
-/// `new GetHTTPDocumentOp(product, type)`: the document type, the product's lower-case name and the two cache
-/// files (the C++ side names them from the WON directory, as `SetDocType` did).
+/// `SetDocType`'s cache files of the system's and the game's copy in the WON directory `dir` (none for another
+/// type)
+pub fn documents(doc_type: i32, product: &[u8], dir: &[u8]) -> [Vec<u8>; 2] {
+    let name: &[u8] = match doc_type {
+        EE_WON_HTTPDOC_MOTD => b"motd",
+        EE_WON_HTTPDOC_TOU => b"tou",
+        EE_WON_HTTPDOC_ADV => b"adv",
+        _ => return [Vec::new(), Vec::new()],
+    };
+    let make = |owner: &[u8]| [dir, b"_won", owner, name, b".txt"].concat();
+    [make(b"sys"), make(product)]
+}
+
+/// `CheckHostAndPath`: once per process the type's `_won*path.txt` override file in the WON directory opened and
+/// ignored (the original left it open)
+fn check_host_and_path(doc_type: i32, dir: &[u8]) {
+    static CHECKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if CHECKED.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
+    let name: &[u8] = match doc_type {
+        EE_WON_HTTPDOC_MOTD => b"_wonmotdpath.txt",
+        EE_WON_HTTPDOC_TOU => b"_wontoupath.txt",
+        EE_WON_HTTPDOC_ADV => b"_wonadvpath.txt",
+        _ => return,
+    };
+    let _ = crate::authlogin::read_file(&[dir, name].concat(), c"r");
+}
+
+/// `GetDocument(owner)`'s bytes from a file's (`None`: it did not open): a MOTD's leading flag character dropped
+/// (kept when it is the '<' of HTML), then a NUL; a file that does not open gives the NUL alone
+pub fn document(doc_type: i32, file: Option<Vec<u8>>) -> Vec<u8> {
+    let Some(mut d) = file else {
+        return vec![0];
+    };
+    if doc_type == EE_WON_HTTPDOC_MOTD && d.first().is_some_and(|&c| c != b'<') {
+        d.remove(0);
+    }
+    d.push(0);
+    d
+}
+
+/// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
+/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
 ///
 /// # Safety
 /// The texts hold their lengths' bytes.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_httpdoc_new(
     doc_type: i32,
-    product_lower: *const u8,
+    product: *const u8,
     product_len: usize,
-    sys_doc: *const u8,
-    sys_len: usize,
-    game_doc: *const u8,
-    game_len: usize,
+    dir: *const u8,
+    dir_len: usize,
 ) -> *mut EeWonHostOp {
     // SAFETY: the contract
-    let (p, a, b) = unsafe {
-        (
-            crate::ffi::bytes(product_lower, product_len),
-            crate::ffi::bytes(sys_doc, sys_len),
-            crate::ffi::bytes(game_doc, game_len),
-        )
-    };
+    let (p, d) = unsafe { (crate::ffi::bytes(product, product_len), crate::ffi::bytes(dir, dir_len)) };
+    check_host_and_path(doc_type, d);
     EeWonHostOp::boxed(HttpDoc {
         doc_type,
-        product_lower: p.to_vec(),
-        documents: [a.to_vec(), b.to_vec()],
+        product_lower: p.to_ascii_lowercase(),
+        documents: documents(doc_type, p, d),
         ..Default::default()
     })
 }
@@ -366,5 +412,26 @@ mod tests {
         assert_eq!(s.num(EE_WON_HTTPDOC_TYPE, 0), i64::from(EE_WON_HTTPDOC_TOU));
         assert_eq!(s.bytes(EE_WON_HTTPDOC_PATH, 1).unwrap(), b"_woneeaocmotd.txt");
         assert_eq!(s.bytes(EE_WON_HTTPDOC_TYPE, 0), None);
+    }
+}
+
+#[cfg(test)]
+mod file_tests {
+    use super::*;
+
+    #[test]
+    fn the_cache_files_are_named_by_owner_and_type() {
+        let [a, b] = documents(EE_WON_HTTPDOC_TOU, b"EEAoC", b"C:/won/");
+        assert_eq!((a.as_slice(), b.as_slice()), (&b"C:/won/_wonsystou.txt"[..], &b"C:/won/_wonEEAoCtou.txt"[..]));
+        assert_eq!(documents(3, b"x", b"d/"), [Vec::new(), Vec::new()]);
+    }
+
+    #[test]
+    fn a_motd_drops_its_flag_unless_it_is_html() {
+        assert_eq!(document(EE_WON_HTTPDOC_MOTD, Some(b"1hello".to_vec())), b"hello\0");
+        assert_eq!(document(EE_WON_HTTPDOC_MOTD, Some(b"<b>".to_vec())), b"<b>\0");
+        assert_eq!(document(EE_WON_HTTPDOC_MOTD, Some(Vec::new())), b"\0");
+        assert_eq!(document(EE_WON_HTTPDOC_TOU, Some(b"1x".to_vec())), b"1x\0");
+        assert_eq!(document(EE_WON_HTTPDOC_ADV, None), b"\0");
     }
 }

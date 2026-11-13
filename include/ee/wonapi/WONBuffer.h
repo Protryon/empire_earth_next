@@ -84,7 +84,6 @@ public:
     EeWonByteBuffer* mBytes;
 };
 
-inline AuthLoginCommunityData::AuthLoginCommunityData() {}
 typedef ConstSmartPtr<ByteBuffer> ByteBufferPtr;
 
 // ee_won's sinks: bytes into a new ByteBuffer held by *(ByteBufferPtr*)inContext; UTF-16 units into the std::wstring
