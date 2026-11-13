@@ -2217,6 +2217,16 @@ constexpr static const int32_t EE_WON_REQOP_PATCH_SIZE = 71;
 /// element: the position; -1 past the end)
 constexpr static const int32_t EE_WON_REQOP_PATCH_QUERY = 72;
 
+/// `Window::WindowState`.
+constexpr static const int32_t EE_WON_WIN_OPEN = 0;
+
+constexpr static const int32_t EE_WON_WIN_CLOSING = 1;
+
+constexpr static const int32_t EE_WON_WIN_CLOSED = 2;
+
+/// The last field.
+constexpr static const int32_t EE_WON_WIN_FIELD_COUNT = 38;
+
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
   /// the field `a` (`EeWonGuiField`).
@@ -2834,6 +2844,36 @@ enum class EeWonGuiOp : uint32_t {
   LayHold,
   /// `a->Release()` (an instruction; the last one deletes it, and its Rust object with it).
   LayRelease,
+  /// `WONTickCount()`.
+  WinTick = 570,
+  /// a root container method (`a` an `EeWonWinRoot`; `b`, `c`, `d` its arguments).
+  WinRoot,
+  /// one of the window's platform virtuals (`a` an `EeWonWinPlat`, `b` its argument).
+  WinPlat,
+  /// `SetPosSize(a, b, c, d)` (virtual).
+  WinSetPosSize,
+  /// `((Window*)a)->GetRect(*(WONRectangle*)b, c != 0)` (virtual).
+  WinGetRect,
+  /// `((Window*)a)->PlatformIsVisible()` (virtual; 0 or 1).
+  WinIsVisible,
+  /// `mManager->GetScreenRect(*(WONRectangle*)a)`.
+  WinScreenRect,
+  /// `mManager->AddWindow(this)`.
+  WinAddToManager,
+  /// CheckResize's image: a new offscreen image `a` x `b` with the old one drawn into it.
+  WinNewOffscreen,
+  /// `QueueEvent(new InputEvent(InputEvent_WindowClose))`.
+  WinQueueClose,
+  /// `((Window*)a)->CanClose()` (a child window; 0 or 1).
+  WinCanClose,
+  /// the allow-close function's answer (1 when there is none).
+  WinAllowClose,
+  /// the parent `a`'s child set: this window inserted (`b != 0`) or erased.
+  WinChildSet,
+  /// `Cursor::GetStandardCursor(StandardCursor_Arrow)`.
+  WinStdArrow,
+  /// `((Cursor*)a)->GetNative()`.
+  WinCursorNative,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -4541,6 +4581,54 @@ enum class EeWonTNodeCall : uint32_t {
   Index,
 };
 
+/// The inward calls (`ee_won_win_call`).
+enum class EeWonWinCall : uint32_t {
+  CanClose = 1,
+  Close,
+  /// `CheckResize(a)` (a tick).
+  CheckResize,
+  /// `SetTitle`'s platform part (the C++ stored the title).
+  TitleChanged,
+  /// `SetIcon`'s platform part (the C++ stored the icon).
+  IconChanged,
+  /// `Center(a != 0)`.
+  Center,
+  SetClientSize,
+  Show,
+  HandleMouseExit,
+  /// `HandleKeyEvent`, `HandleMouseDown`, `HandleMouseEvent`, `HandleInputEvent` with `a` an `EeWonWinEvent*`.
+  HandleKeyEvent,
+  HandleMouseDown,
+  HandleMouseEvent,
+  HandleInputEvent,
+  /// `IdleUpdate()` (0 or 1).
+  IdleUpdate,
+  /// `TimerEvent(a)`.
+  TimerEvent,
+  /// `Create`'s statements after the icon (`a`, `b` the rectangle's width and height).
+  Create,
+  /// the base `PlatformClose`.
+  PlatformClose,
+  ShowNativeCursor,
+  CheckSetCursor,
+  InvalidateRoot,
+  Minimize,
+  SuspendRootResize,
+  RemoveComponent,
+  IsMouseDown,
+  AddComponent,
+  SetModal,
+  CheckDoubleClick,
+  /// `SetParent((Window*)a)`.
+  SetParent,
+  /// the child window set: `a` inserted (`b != 0`) or erased (the parent's half of `Create` / `PlatformClose`).
+  ChildSet,
+  /// the field `a` (`EeWonWinField`).
+  GetField,
+  /// the field `a` set to `b`.
+  SetField,
+};
+
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
 /// caught it in `HandleMessage` and did nothing more); outside every `short` status.
 enum class EeWonLobbyResult {
@@ -4761,6 +4849,102 @@ enum class EeWonBtnField : uint32_t {
   MouseDownState,
 };
 
+/// The root container's methods the window calls (`WinRoot`'s `a`; `b`, `c`, `d` its arguments).
+enum class EeWonWinRoot : uint32_t {
+  /// `SetSize(b, c)`.
+  SetSize = 1,
+  Invalidate,
+  MouseExit,
+  KeyDown,
+  KeyUp,
+  KeyChar,
+  /// `MouseDown(b, c, d)`.
+  MouseDown,
+  MouseEnter,
+  MouseDrag,
+  MouseMove,
+  MouseUp,
+  MouseWheel,
+  GotFocus,
+  LostFocus,
+  MouseHover,
+  TimerEvent,
+  /// `CanClose()` (0 or 1).
+  CanClose,
+  /// `AddChild((Component*)b)`.
+  AddChild,
+  /// `RemoveChild((Component*)b)`.
+  RemoveChild,
+  EnterModal,
+  LeaveModal,
+  /// `UnionInvalidRect(GetBounds())` (the root's own bounds).
+  UnionBounds,
+  /// `GetCurrentCursor()` (a `Cursor*`; a pure read).
+  CurrentCursor,
+  /// the bounds' reads (pure)
+  Left,
+  Top,
+  Width,
+  Height,
+  /// `mTimerFlags` (a pure read).
+  TimerFlags,
+};
+
+/// The window's own platform virtuals (`WinPlat`'s `a`; `b` the argument).
+enum class EeWonWinPlat : uint32_t {
+  SetTitle = 1,
+  SetIcon,
+  /// `PlatformSetCursor((Cursor*)b)`.
+  SetCursor,
+  ShowNativeCursor,
+  Show,
+  Minimize,
+  SetFocus,
+};
+
+/// The fields (the accessors, the goldens and the unit tests).
+enum class EeWonWinField : uint32_t {
+  State = 1,
+  MouseX,
+  MouseY,
+  KeyMod,
+  MouseDown0,
+  MouseDown1,
+  MouseDown2,
+  InClient,
+  CurrentCursor,
+  NativeCursorShowing,
+  DownTick0,
+  DownTick1,
+  DownTick2,
+  Double0,
+  Double1,
+  Double2,
+  DetectDouble,
+  DoubleX,
+  DoubleY,
+  LastMoveTick,
+  MinWidth,
+  MinHeight,
+  MaxWidth,
+  MaxHeight,
+  NeedResize,
+  NewWidth,
+  NewHeight,
+  ResizeDelay,
+  LastResizeTick,
+  LastCheckCursorTick,
+  SuspendRootResize,
+  Style,
+  IsPopup,
+  OneComponent,
+  MinimizeOnRestore,
+  Parent,
+  IsShowing,
+  /// the number of child windows
+  ChildCount,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -4960,6 +5144,9 @@ struct EeWonUdpSendRecvOp;
 
 /// The op's map (ids as the C++ `unsigned long`s they are: 64-bit on LP64 systems, sent as their low 32 bits).
 struct EeWonUserStatus;
+
+/// The Rust Window.
+struct EeWonWindow;
 
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
@@ -7066,6 +7253,22 @@ struct EeWonRootGrab {
   int32_t y;
   EeWonRect4 clip;
   ptrdiff_t image;
+};
+
+/// An input event's fields, as the C++ forwarder reads them (`KeyEvent`, `MouseEvent`, `SizeEvent`, `InputEvent`).
+struct EeWonWinEvent {
+  /// the `WindowEventType`
+  int32_t kind;
+  int32_t x;
+  int32_t y;
+  int32_t key_mod;
+  /// a mouse event's button or wheel amount
+  int32_t button;
+  /// a key event's key
+  int32_t key;
+  /// a size event's
+  int32_t width;
+  int32_t height;
 };
 
 extern "C" {
@@ -15137,6 +15340,21 @@ int32_t ee_won_userstatus_reply(EeWonUserStatus *s,
                                 size_t len,
                                 size_t pos,
                                 size_t *out_pos);
+
+/// A new Rust Window for the C++ `window`, its calls out through `host`.
+EeWonWindow *ee_won_win_new(void *window, EeWonGuiHostFn host);
+
+/// The window's object freed (the child set with it).
+///
+/// # Safety
+/// `win` came from `ee_won_win_new` (or is NULL) and is not used again.
+void ee_won_win_free(EeWonWindow *win);
+
+/// One of Window's methods (`EeWonWinCall`).
+///
+/// # Safety
+/// `win` is live; the call's arguments as documented.
+ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
 
 }  // extern "C"
 

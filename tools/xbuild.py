@@ -482,6 +482,9 @@ WON_TESTS = {
     # The child layouts (the manager and the eight instruction classes) as whole Rust objects (layoutobj.rs) over a
     # world of components (golden: rust/crates/ee_won/src/golden_layoutobj.txt)
     "won_layoutobj_test": [],
+    # Window as a whole Rust object (winobj.rs) over a world that models the platform window, the root and the
+    # manager as logged host ops (golden: rust/crates/ee_won/src/golden_winobj.txt)
+    "won_winobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

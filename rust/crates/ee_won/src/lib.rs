@@ -145,6 +145,7 @@ pub mod udpmgr;
 pub mod udpops;
 pub mod userstatus;
 pub mod verop;
+pub mod winobj;
 pub mod wire;
 
 #[cfg(test)]
