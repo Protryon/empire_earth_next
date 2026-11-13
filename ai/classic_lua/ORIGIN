@@ -130,7 +130,8 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 (AddGates, FindGate: ai.gate). DEVIATIONS: the way is ai.route's, straight between its cells (the
                 wall planner path); the enemy's centre is the town the view knows (its capitol); IsPathUsable is not
                 tested; a stretch with units on it is not left out; a wall piece lost is not queued again (UnitLost).
-                The C++ built no wall in 40 bench games (why is not traced yet); the port builds about one a game.
+                In 8 balanced 90-minute games the C++ ordered 62 walls (142 pieces, in 5 games), the port 8 (68 pieces,
+                in 2): the port knows fewer enemy towns (fog) and waits for each wall's gate (AI_RESEARCH 8.69).
   EECPCombatManager.cpp         PARTLY -> army.lua: Update on the attack timer (IsAttackDue; SetNextAttackTime in
                 main.lua: the initial delay per epoch span and the frequency, the difficulty's modifiers, the bounds),
                 the target player (computers by the aggression's chance when humans are there too; theLargest, else

@@ -60,12 +60,22 @@ local function state(memory)
     return w
 end
 
--- the enemy's centre: the town the view knows
+-- the enemy's centre (GetCenter: its capitol, else its first unit): the town the view knows, else the first unit of
+-- the player the seat remembers (ai.memory). DEVIATION (fog): the classic reads every unit of the player
 local function enemy_centre(view, player)
     for _, e in ipairs(view.enemies or {}) do
         if e.player == player and e.town_x ~= nil and e.town_x >= 0 then
             return e.town_x, e.town_y
         end
+    end
+    local best
+    for _, m in ipairs(ai.memory{player = player}) do
+        if best == nil or m.id < best.id then
+            best = m
+        end
+    end
+    if best ~= nil then
+        return best.x, best.y
     end
     return nil
 end
@@ -85,8 +95,9 @@ local function add_walls(view, memory, uid)
     end
     local enemies = {}
     for _, e in ipairs(view.enemies or {}) do
-        if e.town_x ~= nil and e.town_x >= 0 then
-            enemies[#enemies + 1] = {player = e.player, d = d2(e.town_x, e.town_y, u.x, u.y)}
+        local ex, ey = enemy_centre(view, e.player)
+        if ex ~= nil then
+            enemies[#enemies + 1] = {player = e.player, d = d2(ex, ey, u.x, u.y)}
         end
     end
     table.sort(enemies, function(a, b)
@@ -412,6 +423,15 @@ function M.update(view, memory)
     end
     if view.time < w.next_time then
         return
+    end
+    if #w.queue == 0 then
+        -- (DEVIATION, fog: the classic queued its plans at the start, every enemy known; the port again for its
+        -- town centres and capitols whenever its queue is empty, for the enemies it has met since)
+        for _, t in ipairs({C.town_center, C.capitol}) do
+            for _, id in ipairs(ai.units{type = t, built = true}) do
+                add_walls(view, memory, id)
+            end
+        end
     end
     if #w.queue > 0 then
         w.next_time = view.time + 30000
