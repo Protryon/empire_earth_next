@@ -10807,3 +10807,74 @@ Measured by net C++ deletion (src and include/ee, git numstat).
   unit compiled); `mkdir -p build/clang/exe` and rerun.
 - **What only a person or a tour reaches:** nothing drawn changed. The heal range test also gates `EEUnitClass::Heal`'s
   animation and effect.
+
+## R6 WON round 24: MultiListArea with its rows and header, TreeArea and TreeItem, PopupMenu whole in Rust; the lists' selection event fixed (ee_won multiobj.rs, treeobj.rs, menuobj.rs; branch rust-r6-won24, 2026-11-13)
+
+Measured as rounds 18-23 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 87,629 at
+the branch's start -> 87,632 (MultiListArea accessors, +3) -> 86,904 (the multi-column list, -728) -> 86,908 (TreeItem
+accessors, +4) -> 86,252 (the tree, -656) -> 86,100 (PopupMenu, -152); the merge of rust (other lanes) -> 85,300;
+the selection event fix +5, the Scrollbar accessors +13 -> 85,318. This round's own net: -1,511.
+
+- **The regression (found by the lead's LAN gate, fixed here in its own commit):** round 23's Rust ListArea fires its
+  selection change through the component op `FireEvent(EeWonGuiEvent::ListSelChanged)`, and GuiHost's `ComponentOp`
+  turned every event but InputReturn into `ComponentEvent_InputTextChanged`. No list's selection reached a listener,
+  so the LAN lobby never enabled Join Game. The golden could not see it: its host traced the op, not the event the
+  C++ made of it. Lesson: when an op's C++ side maps codes, check each code reaches its own case (a new code added to
+  a shared op table needs its host case too).
+- **Accessors first, in their own commits.** MultiListArea: the configs' and ServerListCtrl's writes of
+  `mDynamicSizeColumn` / `mAutoGrowColumns` and read of `mSortColumnPrev`. TreeItem: RoomCtrl's reads of `mItem`,
+  `mChildren.size()`, `mParent`, `mIndex`, `mOpen` (`GetWrappedItem`, `GetNumChildren`, `GetParentItem`, `GetIndex`,
+  `IsOpen`). Scrollbar: the skins, MSScrollbar, the configs and ScrollbarScroller (arrows, thumb, track, orientation,
+  thumb options, `SetRange`, `SetLineScrollSizes`, `Get/SetPosition`); the move itself is next round. PopupMenu had no
+  reader outside its units.
+- **Subclasses over a Rust base.** MultiListArea, TreeArea and PopupMenu derive from ListArea, which is Rust since
+  round 23. Their Rust objects hold the list's Rust object (`ee_won_*_new(this, host, this->mRust)`: the base's
+  constructor ran first and its destructor runs after) and call it directly for every `ListArea::X` the original
+  made. The list's own virtuals (AdjustPosition, Sort, NotifyMouseItemGone, ListSelChangedHook) still go back through
+  the C++ object, so the overrides run. The goldens run BOTH sides over a real Rust ListArea with one scripted host,
+  so the traces carry the base's ops too.
+- **Rows as Rust objects.** MultiListItem and TreeItem stay C++ `ListItem`s (the list's items; NetworkAdapterListItem
+  derives from MultiListItem), each holding a Rust row (`EeWonMRow`, `EeWonTNode`) with its cells or its children
+  and wrapped item held by reference. A row's virtuals get the list, and the forwarder passes along the list's Rust
+  object. The calls with no list (`SetPos`, `GetItem`, the walks) go through the row's own small host (references,
+  `NodeOf`, the item SetPos). A row reaches another row's Rust state through the op `NodeOf` (the C++ row's `mNode`),
+  and the header reaches its list's through `MultiOf`.
+- **Undefined states the goldens avoid (the Rust keeps away from them):**
+  - a negative column to `SetItem` / `SetColumnItem` (the original compared it with the vector's size as unsigned);
+  - a row's cell past the columns at paint (the original read past the vector);
+  - a header without a list at a drag (a null read).
+  - In the tree, `CloseAll` alone, or a changing call on a hidden row left open, can leave rows of a closed or
+    detached subtree in the list. Their parent's removal then makes the original read a freed row (the first tree
+    golden crashed there). The tree golden's changing calls take shown rows, as the room control does.
+- **Unset fields given a value:** TreeArea's `mTreeSortType` (none; the config sets it) and PopupMenu's
+  `mLastX`/`mLastY` (0; only keyboard mode reads them, after a move set them). One dropped override:
+  `TreeArea::MouseDown` only called `ListArea::MouseDown`.
+- **The tree's paint** is guidraw's operations. The dotted lines' pixel loops are a new `EE_WON_DRAW_DOTTED_LINE`
+  (17), executed by `WONDrawOne`.
+- **The sorts:** a row's Compare is called from `std::sort` / `std::lower_bound` inside the list's ops. The goldens'
+  hosts sort through the side's rows. The Rust replays take a sort's order from the golden and run `lower_bound`'s
+  binary search themselves (the same comparisons).
+- **The goldens** (`tests/won/won_multiobj_test.cpp`, `won_treeobj_test.cpp`, `won_menuobj_test.cpp`; 20,000
+  sequences each, every reference given back):
+
+  | Golden | Trace lines | Mutation | Sequences it fails | Replayed |
+  |---|---|---|---|---|
+  | multi-column list | 11,327,345 | an empty cell's order | 4,342 | 46 sequences |
+  | tree | 13,409,107 | an ancestor's dotted line's x | 3,014 | 42 sequences |
+  | popup menu | 6,174,909 | the cleared submenu selection's index | 2,337 | 40 sequences |
+
+  `WON_TRACE_SEQ` / `WON_ECHO` / `WON_FIRST_SEQ` in the tree test print the sequence and its live trace (how its
+  crash was found).
+- **Shell lesson:** the Bash tool turned `\n` inside a heredoc into a real newline, even with a quoted delimiter. It
+  broke a C string literal twice: write such files with the file tool.
+- **What runs it.** EE-SIM never builds the lobby (the oracle is unchanged by construction). The lead's LAN game
+  checks:
+  - the LAN game list (a plain ListArea) and its selection event (`lan_game.py` PASS here, after the fix);
+  - the game room's player list (MultiListArea: GameUserListCtrl's rows over MultiListItem);
+  - the right-click menus (PopupMenu) if a person opens one.
+
+  The tree is the Internet room list only. The lobby captures check the multi-column paint (rows, columns, header
+  buttons, sort arrows). Column drags, header sorts, submenus, keyboard menus and the tree's mouse run only in the
+  goldens.
+- **Left:** Scrollbar (accessors done) with ScrollbarScroller; TextListItem and MenuItem's paints (data classes the
+  lobby fills; their decisions are guidraw's); then the containers.
