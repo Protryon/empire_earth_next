@@ -526,7 +526,7 @@ void Window::InvalidateRoot()
 {
     this->mRoot->Invalidate();
     RootContainer* root=this->mRoot.get();
-    root->mInvalidRect.DoUnion(root->GetBounds());
+    root->UnionInvalidRect(root->GetBounds());
 }
 }
 

@@ -1374,6 +1374,8 @@ public:
     virtual bool ChildInvalidated(Component*); //304970 InvalidateUp
     virtual void RemoveChild(Component*); //304cc0 RemoveChild
     void AddBG(BackgroundGrabber*); //304510
+    // Window::InvalidateRoot's union of the whole root into the invalid rectangle
+    void UnionInvalidRect(const WONRectangle& r) { this->mInvalidRect.DoUnion(r); }
 
     struct BGStruct {
         int mImageX,mImageY;
