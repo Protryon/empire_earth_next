@@ -400,6 +400,40 @@ enum class EeUiButtonCall : uint32_t {
   CheckIsChecked = 55,
   /// `GetTextLabel()` (the check box's, radio button's or tri-state box's).
   TextLabel = 56,
+  /// The constructor's part after `UIButton`'s: the other state's bitmaps, a checked button's swap, the bitmap
+  /// offset in a box of height `f[0]`, then `SetText(*(const UWideString*)a, font b)`; `f[1]` the push button,
+  /// `f[2]` checked, `f[3]` the scaled bitmap (nonzero: true).
+  RadioInit = 60,
+  /// `UIRadioButton::Check()`.
+  RadioCheck = 61,
+  /// `UIRadioButton::UnCheck()`.
+  RadioUnCheck = 62,
+  /// `CopyData()` -> its result.
+  RadioCopyData = 63,
+  /// `DrawPolygons()` -> its result.
+  RadioDrawPolygons = 64,
+  /// `DrawTextA()` -> its result.
+  RadioDrawText = 65,
+  /// `GetIsChecked()`.
+  RadioIsChecked = 66,
+  /// `GetTabable()`: not a push button.
+  RadioTabable = 67,
+  /// `SetDownCheckedBitmap(a)`.
+  RadioSetDownChecked = 68,
+  /// `SetDownUncheckedBitmap(a)`.
+  RadioSetDownUnchecked = 69,
+  /// `SetUpCheckedBitmap(a)`.
+  RadioSetUpChecked = 70,
+  /// `SetUpUncheckedBitmap(a)`.
+  RadioSetUpUnchecked = 71,
+  /// `SetLocation(f[0], f[1])`.
+  RadioSetLocation = 72,
+  /// `SetText(*(const UWideString*)a, font b)`.
+  RadioSetText = 73,
+  /// `ButtonUp()`: the virtual `Check()`, then `UIButton::ButtonUp()`.
+  RadioButtonUp = 74,
+  /// `MouseLButtonDown()` -> OK.
+  RadioMouseLButtonDown = 75,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -1386,35 +1420,6 @@ void ee_ui_scroll_button_button_down(const EeUiButtonRefs *refs);
 
 /// The check box's and radio button's bitmap rectangle ([`button::box_rect`]).
 EeUiRect ee_ui_button_box_rect(EeUiRect rect, bool scale_bitmap);
-
-/// The check box's (`float_border`) and radio button's bitmap offset: true and `out` written, or false to keep it
-/// ([`button::label_bitmap_offset`]).
-bool ee_ui_button_label_bitmap_offset(float height,
-                                      unsigned long border,
-                                      bool scale_bitmap,
-                                      bool float_border,
-                                      EeUiPoint *out);
-
-/// `UIRadioButton::Check`.
-void ee_ui_radio_check(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::UnCheck`.
-void ee_ui_radio_uncheck(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::RemoveOtherChecks`.
-void ee_ui_radio_remove_other_checks(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::CopyData`'s button part (the label's stays C++).
-long ee_ui_radio_copy_data(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::MouseLButtonDown`.
-long ee_ui_radio_mouse_l_button_down(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::SetLocation` (`ctx`: the label, as for `SetText`).
-void ee_ui_radio_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
-
-/// `UIRadioButton::SetText` (`ctx` as for the check box).
-void ee_ui_radio_set_text(const EeUiButtonRefs *refs, const char *s);
 
 /// The constructor's `UIButton` rectangle.
 EeUiRect ee_ui_tristate_rect(const EeUiRect *rect);

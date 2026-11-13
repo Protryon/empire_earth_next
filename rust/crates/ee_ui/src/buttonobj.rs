@@ -140,6 +140,42 @@ pub enum EeUiButtonCall {
     CheckIsChecked = 55,
     /// `GetTextLabel()` (the check box's, radio button's or tri-state box's).
     TextLabel = 56,
+
+    // ---- UIRadioButton (checkobj.rs)
+    /// The constructor's part after `UIButton`'s: the other state's bitmaps, a checked button's swap, the bitmap
+    /// offset in a box of height `f[0]`, then `SetText(*(const UWideString*)a, font b)`; `f[1]` the push button,
+    /// `f[2]` checked, `f[3]` the scaled bitmap (nonzero: true).
+    RadioInit = 60,
+    /// `UIRadioButton::Check()`.
+    RadioCheck = 61,
+    /// `UIRadioButton::UnCheck()`.
+    RadioUnCheck = 62,
+    /// `CopyData()` -> its result.
+    RadioCopyData = 63,
+    /// `DrawPolygons()` -> its result.
+    RadioDrawPolygons = 64,
+    /// `DrawTextA()` -> its result.
+    RadioDrawText = 65,
+    /// `GetIsChecked()`.
+    RadioIsChecked = 66,
+    /// `GetTabable()`: not a push button.
+    RadioTabable = 67,
+    /// `SetDownCheckedBitmap(a)`.
+    RadioSetDownChecked = 68,
+    /// `SetDownUncheckedBitmap(a)`.
+    RadioSetDownUnchecked = 69,
+    /// `SetUpCheckedBitmap(a)`.
+    RadioSetUpChecked = 70,
+    /// `SetUpUncheckedBitmap(a)`.
+    RadioSetUpUnchecked = 71,
+    /// `SetLocation(f[0], f[1])`.
+    RadioSetLocation = 72,
+    /// `SetText(*(const UWideString*)a, font b)`.
+    RadioSetText = 73,
+    /// `ButtonUp()`: the virtual `Check()`, then `UIButton::ButtonUp()`.
+    RadioButtonUp = 74,
+    /// `MouseLButtonDown()` -> OK.
+    RadioMouseLButtonDown = 75,
 }
 
 /// A subclass's own record (its constructor's init call sets it): what were the C++ subclass's members.
@@ -149,6 +185,8 @@ pub(crate) enum Sub {
     Plain,
     /// `UICheckBox` (`checkobj.rs`).
     Check(button::CheckFields),
+    /// `UIRadioButton` (`checkobj.rs`).
+    Radio(button::RadioFields),
 }
 
 /// The Rust UIButton.
@@ -160,14 +198,12 @@ pub struct EeUiButton {
 
 /// The button as round 3's state machine sees it: the record copied in and out around every op, a `SetText`'s text
 /// and font (the label's, `checkobj.rs`) and (for a subclass still holding a C++ record, `button_ffi.rs`) that
-/// record and the forwarder's context.
+/// record.
 pub(crate) struct Btn<'a> {
     pub(crate) o: &'a EeUiButton,
     // read by the subclasses' host calls (button_ffi.rs), absent from a test binary
     #[cfg_attr(test, allow(dead_code))]
     pub(crate) sub: *mut c_void,
-    #[cfg_attr(test, allow(dead_code))]
-    pub(crate) ctx: *mut c_void,
     /// A `SetText`'s `const UWideString*` and font (the label's create and text ops).
     pub(crate) text: isize,
     pub(crate) font: isize,
@@ -175,7 +211,7 @@ pub(crate) struct Btn<'a> {
 
 impl<'a> Btn<'a> {
     pub(crate) fn new(o: &'a EeUiButton) -> Self {
-        Btn { o, sub: core::ptr::null_mut(), ctx: core::ptr::null_mut(), text: 0, font: 0 }
+        Btn { o, sub: core::ptr::null_mut(), text: 0, font: 0 }
     }
     fn op(&self, op: Op, a: isize) -> isize {
         self.o.host.op(op, a, 0, 0, 0)

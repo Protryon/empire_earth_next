@@ -34,6 +34,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIButton.h"
 #include "lle/UITextLabel.h"
+#include "lle/UIRadioButton.h"
 #include "UIButtonRust.h"
 #include "UIObjHost.h"
 
@@ -56,6 +57,12 @@ struct UIButtonHost {
         case EeUiOp::LabelCreate:
             return (intptr_t) new UITextLabel(*reinterpret_cast<const UWideString*>(a), reinterpret_cast<GEFont*>(b),
                                               s->GetId(), UIObjHost::Rect(f), s->GetForm(), 0, s->GetIndex(), 0);
+        case EeUiOp::RadioCheck: static_cast<UIRadioButton*>(s)->Check(); break;
+        case EeUiOp::RadioUnCheckAt: static_cast<UIRadioButton*>(s->GetForm()->GetControl((unsigned long)a))->UnCheck(); break;
+        case EeUiOp::RadioOf: {
+            UIControl* c = s->GetForm()->GetControl((unsigned long)a);
+            return c && c->GetType() == kControlTypeRadioButton ? (intptr_t) static_cast<UIButton*>(c)->mRust : 0;
+        }
         case EeUiOp::LabelSetText:
             reinterpret_cast<UITextLabel*>(a)->SetText(*reinterpret_cast<const UWideString*>(b));   // SetText(text, true)
             break;
@@ -168,25 +175,6 @@ void UIButton::SetTextRectangle(const GERectangle& inRectangle)
 }
 void UIButton::ReplaceNormalBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplaceNormalBitmap, (intptr_t)inBitmap); }
 void UIButton::ReplacePressedBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplacePressedBitmap, (intptr_t)inBitmap); }
-
-// The radio button's label (UIRadioButton.cpp): the context names it
-extern "C" void ee_uicpp_label_set_text(void* inButton, void* inLabel)
-{
-    UIButtonRust::Label* theLabel = static_cast<UIButtonRust::Label*>(inLabel);
-    (*theLabel->mLabel)->SetText(*theLabel->mText);   // the public SetText(text, true)
-}
-extern "C" void ee_uicpp_label_create(void* inButton, void* inLabel, const EeUiRect* inRectangle)
-{
-    UIButtonRust::Label* theLabel = static_cast<UIButtonRust::Label*>(inLabel);
-    UIButton* theButton = UIButtonRust::Button(inButton);
-    *theLabel->mLabel = new UITextLabel(*theLabel->mText, theLabel->mFont, theButton->GetId(),
-                                        *reinterpret_cast<const GERectangle*>(inRectangle), theButton->GetForm(), 0,
-                                        theButton->GetIndex(), 0);
-}
-extern "C" void ee_uicpp_label_set_location(void* inButton, void* inLabel, float inX, float inY)
-{
-    (*static_cast<UIButtonRust::Label*>(inLabel)->mLabel)->SetLocation(GE2DPoint(inX, inY));
-}
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
 // SYNTHETIC: LLE 0x1005e47c
