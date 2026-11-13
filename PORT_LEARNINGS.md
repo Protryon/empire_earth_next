@@ -12821,7 +12821,7 @@ copy, free, open, close, length, read and name).
 - **Gates** (the round's head, a8582dc5 + docs; rust 5d3ce6a9 is already in the branch, so the merge was a no-op):
   build --sim 0/0 (EE-AOC and EE-SIM) after each commit; oracle seeds 2-7 identical to ref after the first and the
   last commit; the Rust gate PASS; the test-profile build 0/0; tcp_test passes without NEProtocolConfiguration;
-   on the final test exe: RESULT PASS lan-game, PT host 2942 joiner 2941 (60 s of play, CTs equal at
+  lan_game.py on the final test exe: RESULT PASS lan-game, PT host 2942 joiner 2941 (60 s of play, CTs equal at
   every 5 s sample within 2). No capture or saveload run: nothing in the tick path or the saved state moved (NMNE
   covers the engine messages' codec, which this round did not touch).
 - **NEPlayer deleted** (its own commit): the header-only class had no user; four units included it.
