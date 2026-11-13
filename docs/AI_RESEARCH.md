@@ -4680,6 +4680,19 @@ change only island and planets maps.
 (FindTowerSite's island coasts) go with the gates' and choke points' towers in 2b.
 
 Determinism: islands (seeds 3 and 5) and land (seed 2), 60 minutes, --repeat 2, identical. 0 script errors.
+### 8.67 Porting everything, 2a closed (2026-11-13, EE-SIM)
+
+The close-out bench was Small Islands, balanced, 90 minutes, 32 seeds:
+- **The result:** Lua 19-3, 10 close. Copper 29 of 32 against the C++'s 15; Bronze 17 against 0.
+- **Citizens:** 54.1 against 36.4 at 40 minutes. Citizens lost: 14.7 against 14.4 in all, 1.8 against 3.6 by 20
+  minutes.
+- **The ferries:** 274 started, 214 landed, 43 aborted (3 found no plan).
+- **The attack crossings:** 3 started, 2 landed. Few groups attacked across water in these games.
+- 0 script errors.
+
+The port plays islands better than the C++. That is accepted, and recorded in ORIGIN as a known deviation: the aim
+is to replace the C++, not to copy its weaknesses. 2a is done: the ferries, the attack crossings, the queues, the
+island garrisons. The coast towers move to 2b with the walls and the other tower sites.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
