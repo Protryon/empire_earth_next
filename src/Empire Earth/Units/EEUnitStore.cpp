@@ -29,6 +29,8 @@
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"
 #include "ee/EESimCapture.h"
+#include "ee/EEUnitVectorItem.h"
+#include "ee/EEUnitGoal.h"
 #include "ee/EEUnitStore.h"
 #include "rust/ee_units.h"
 
@@ -303,8 +305,10 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
     }
     case kUnitFieldGoal: {
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mGoalState));
-        if (theUnit->mInUnitStore)
+        if (theUnit->mInUnitStore) {
             Set(theUnit, EE_UNIT_FIELD_GOAL_KIND, GoalKind(theUnit->mGoalState.Get()));
+            Set(theUnit, EE_UNIT_FIELD_GOAL_ID, theUnit->mGoalState.Get() != NULL ? (int64_t)(uint32_t)theUnit->mGoalState.Get()->mID : 0);
+        }
         break;
     }
     default:
@@ -317,6 +321,34 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
 static bool OnMap(RTSUnit* inUnit)
 {
     return inUnit->mTileNode != NULL && inUnit->mTileNode->mPrev != NULL;
+}
+
+void EEGoalQueueReport(EEUnitVectorItem* inQueue)
+{
+    uint32_t theIDs[16];
+    std::vector<uint32_t> theMore;
+    size_t theCount = inQueue->mGoals.size();
+    uint32_t* theWords = theIDs;
+    if (theCount > 16) {
+        theMore.resize(theCount);
+        theWords = &theMore[0];
+    }
+    for (size_t i = 0; i < theCount; i++) {
+        EEUnitGoal* theGoal = inQueue->mGoals[i];
+        theWords[i] = theGoal != NULL ? (uint32_t)theGoal->mID : 0;
+    }
+    ee_units_goal_queue_set(reinterpret_cast<uintptr_t>(inQueue), reinterpret_cast<uintptr_t>(inQueue->mUnit), theWords,
+                            theCount);
+}
+
+void EEGoalQueueDropped(EEUnitVectorItem* inQueue)
+{
+    ee_units_goal_queue_drop(reinterpret_cast<uintptr_t>(inQueue));
+}
+
+void EEGoalDeque::Changed()
+{
+    EEGoalQueueReport(OwnerOf<EEUnitVectorItem>(this, offsetof(EEUnitVectorItem, mGoals)));
 }
 
 void EEUnitStoreLinked(RTSUnit* inUnit)
@@ -346,6 +378,7 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.hit_points = (int64_t)theUnit->mHitPoints.Get();
         outRecord.resource_amount = (int64_t)theUnit->mResourceAmount.Get();
         outRecord.complex = (uint8_t)ComplexOf(theUnit);
+        outRecord.stats = reinterpret_cast<uintptr_t>(theUnit->mStats);
         EEUnitClass* theClass = theUnit->mUnitClass.Get();
         if (theClass != NULL) {
             outRecord.category = (int64_t)theClass->mCategory;
@@ -365,6 +398,7 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
         outRecord.built = theUnit->mIsBuilt.Get() ? 1 : 0;
         outRecord.goal_kind = (int32_t)GoalKind(theUnit->mGoalState.Get());
+        outRecord.goal_id = theUnit->mGoalState.Get() != NULL ? (uint32_t)theUnit->mGoalState.Get()->mID : 0;
         outRecord.commandable = theUnit->mIsCommandable.Get() ? 1 : 0;
         outRecord.formation_slot = (int64_t)theUnit->mFormationSlot.Get();
         const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
@@ -394,6 +428,68 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.herd = theUnit->mHerd.Get() != NULL ? 1 : 0;
         outRecord.container = theUnit->mContainer.Get() != NULL ? 1 : 0;
     }
+}
+
+void EEUnitStoreInsertUnlisted(RTSUnit* inUnit)
+{
+    if (inUnit == NULL || inUnit->mInUnitStore || inUnit->mUnitID != 0xffffffff)
+        return;
+    EEPlayer* thePlayer = inUnit->mObjectKind.mValue >= EE_OBJECT_UNIT ? static_cast<EEUnit*>(inUnit)->mPlayer : NULL;
+    EeUnitRecord theRecord;
+    Fill(inUnit, thePlayer != NULL ? thePlayer->mPlayerID : 0, static_cast<const RTSPlayer*>(thePlayer), theRecord);
+    ee_units_store_insert_unlisted(&theRecord);
+    inUnit->mInUnitStore = true;
+}
+
+// New (R5b.4, the fourteenth round): a stats object's fields as its record (ee_units stats.rs EeUnitStatsRecord)
+static void StatsFill(EEUnitClassUpgrade* inStats, EeUnitStatsRecord& outRecord)
+{
+    memset(&outRecord, 0, sizeof(outRecord));
+    outRecord.object = reinterpret_cast<uintptr_t>(inStats);
+    outRecord.unit_type = inStats->mUnitClass != NULL ? (int64_t)inStats->mUnitClass->mUnitType : -1;
+    outRecord.scale = FloatBits(inStats->mScale);
+    outRecord.range = FloatBits(inStats->mRange);
+    outRecord.area_effect = FloatBits(inStats->mAreaEffect);
+    outRecord.line_of_sight = FloatBits(inStats->mLineOfSight);
+    outRecord.acceleration = FloatBits(inStats->mAcceleration);
+    outRecord.max_velocity = FloatBits(inStats->mMaxVelocity);
+    outRecord.max_angular_velocity = FloatBits(inStats->mMaxAngularVelocity);
+    outRecord.attack = FloatBits(inStats->mAttack);
+    outRecord.leadership = FloatBits(inStats->mLeadership);
+    for (int i = 0; i < 6; i++)
+        outRecord.armor[i] = FloatBits(inStats->mArmor[i]);
+    for (int i = 0; i < 7; i++)
+        outRecord.gather_times[i] = (int64_t)inStats->mGatherTimes[i];
+    outRecord.power_regeneration = (int64_t)inStats->mPowerRegeneration;
+    outRecord.flight_time = (int64_t)inStats->mFlightTime;
+    outRecord.work_rate = (int64_t)inStats->mWorkRate;
+    outRecord.reload_time = (int64_t)inStats->mReloadTime;
+    outRecord.max_hit_points = (int64_t)inStats->mMaxHitPoints;
+    outRecord.power = (int64_t)inStats->mPower;
+    outRecord.healing_points = (int64_t)inStats->mHealingPoints;
+    outRecord.regeneration = (int64_t)inStats->mRegeneration;
+    outRecord.can_fire_over_walls = inStats->mCanFireOverWalls ? 1 : 0;
+    outRecord.converts_buildings = inStats->mConvertsBuildings ? 1 : 0;
+    outRecord.converts_priests = inStats->mConvertsPriests ? 1 : 0;
+    outRecord.death_sound = inStats->mDeathSound != NULL ? 1 : 0;
+}
+
+void EEUnitStatsReport(EEUnitClassUpgrade* inStats)
+{
+    EeUnitStatsRecord theRecord;
+    StatsFill(inStats, theRecord);
+    ee_units_stats_report(&theRecord);
+}
+
+void EEUnitStatsRemove(EEUnitClassUpgrade* inStats)
+{
+    ee_units_stats_remove(reinterpret_cast<uintptr_t>(inStats));
+}
+
+void EEUnitStoreStatsChanged(EEUnit* inUnit)
+{
+    if (inUnit->mInUnitStore)
+        Set(inUnit, EE_UNIT_FIELD_STATS, (int64_t)reinterpret_cast<uintptr_t>(inUnit->mStats));
 }
 
 void EEUnitStoreInsert(RTSUnit* inUnit, unsigned long inOwner, const RTSPlayer* inPlayer)
@@ -612,6 +708,106 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
     }
     EeUnitStoreCheck theCheck;
     ee_units_store_check(sObjects.empty() ? NULL : &sObjects[0], sObjects.size(), &theCheck);
+    // the unlisted units' records (the shots, a scenario's path points) against their objects; a difference counts
+    // like a field's (the compared count stays the listed units', so the USCK record is unchanged while there is none)
+    {
+        static std::vector<uint64_t> sUnlisted;
+        static std::vector<EeUnitRecord> sUnlistedRecords;
+        size_t theCount = ee_units_store_unlisted(NULL, 0);
+        sUnlisted.resize(theCount);
+        if (theCount != 0)
+            ee_units_store_unlisted(&sUnlisted[0], theCount);
+        sUnlistedRecords.clear();
+        for (size_t i = 0; i < theCount; i++) {
+            RTSUnit* theUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(sUnlisted[i]));
+            EEPlayer* thePlayer = theUnit->mObjectKind.mValue >= EE_OBJECT_UNIT ? static_cast<EEUnit*>(theUnit)->mPlayer : NULL;
+            EeUnitRecord theRecord;
+            Fill(theUnit, thePlayer != NULL ? thePlayer->mPlayerID : 0, static_cast<const RTSPlayer*>(thePlayer), theRecord);
+            sUnlistedRecords.push_back(theRecord);
+        }
+        uint32_t theUnlistedBad = ee_units_store_check_unlisted(sUnlistedRecords.empty() ? NULL : &sUnlistedRecords[0],
+                                                                sUnlistedRecords.size(), &theCheck);
+        if (theUnlistedBad != 0) {
+            fprintf(stderr, "EE-UNIT-STORE: %u of the %zu unlisted units differ from the store\n", theUnlistedBad, theCount);
+            theCheck.mismatches += theUnlistedBad;
+        }
+    }
+    // the stats objects of every unit (listed and unlisted) against the stats table (ee_units stats.rs); a difference
+    // counts like a field's
+    {
+        static std::vector<EeUnitRecord> sUnlistedRecords;
+        static std::vector<EeUnitStatsRecord> sStats;
+        static std::vector<uint64_t> sStatsSeen;
+        size_t theCount = ee_units_store_unlisted(NULL, 0);
+        static std::vector<uint64_t> sUnlisted;
+        sUnlisted.resize(theCount);
+        if (theCount != 0)
+            ee_units_store_unlisted(&sUnlisted[0], theCount);
+        sUnlistedRecords.clear();
+        for (size_t i = 0; i < theCount; i++) {
+            RTSUnit* theUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(sUnlisted[i]));
+            EeUnitRecord theRecord;
+            Fill(theUnit, 0, NULL, theRecord);
+            sUnlistedRecords.push_back(theRecord);
+        }
+        sStats.clear();
+        sStatsSeen.clear();
+        for (size_t i = 0; i < sObjects.size() + sUnlistedRecords.size(); i++) {
+            const EeUnitRecord& theRecord = i < sObjects.size() ? sObjects[i] : sUnlistedRecords[i - sObjects.size()];
+            if (theRecord.stats == 0)
+                continue;
+            if (std::find(sStatsSeen.begin(), sStatsSeen.end(), theRecord.stats) != sStatsSeen.end())
+                continue;
+            sStatsSeen.push_back(theRecord.stats);
+            EeUnitStatsRecord theStats;
+            StatsFill(reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(theRecord.stats)), theStats);
+            sStats.push_back(theStats);
+        }
+        uint32_t theStatsBad = ee_units_stats_check(sStats.empty() ? NULL : &sStats[0], sStats.size());
+        if (theStatsBad != 0) {
+            fprintf(stderr, "EE-UNIT-STORE: %u of the %zu units' stats objects differ from the stats table\n", theStatsBad,
+                    sStats.size());
+            theCheck.mismatches += theStatsBad;
+        }
+    }
+    // every listed complex unit's goal queues (their containers in order, their goals' ids) against the Rust mirror
+    // (ee_units goals.rs); a difference counts like a field's
+    {
+        static std::vector<uint64_t> sContainers;
+        static std::vector<uint32_t> sLens;
+        static std::vector<uint32_t> sIDs;
+        uint32_t theBad = 0;
+        for (unsigned long p = 0; p < 17; p++) {
+            EEPlayer* thePlayer = gWorld.mPlayers[p];
+            if (thePlayer == NULL)
+                continue;
+            for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext) {
+                if (theUnit->mObjectKind.mValue != EE_OBJECT_COMPLEX_UNIT)
+                    continue;
+                EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
+                sContainers.clear();
+                sLens.clear();
+                sIDs.clear();
+                for (size_t q = 0; q < theComplex->mGoalQueues.size(); q++) {
+                    EEUnitVectorItem& theQueue = theComplex->mGoalQueues[q];
+                    sContainers.push_back(reinterpret_cast<uintptr_t>(&theQueue));
+                    sLens.push_back((uint32_t)theQueue.mGoals.size());
+                    for (size_t i = 0; i < theQueue.mGoals.size(); i++)
+                        sIDs.push_back(theQueue.mGoals[i] != NULL ? (uint32_t)theQueue.mGoals[i]->mID : 0);
+                }
+                // (a queue's mUnit is its unit: the mirror's unit is the container's mUnit)
+                uint64_t theOwner = theComplex->mGoalQueues.empty() ? reinterpret_cast<uintptr_t>(theComplex)
+                                                                    : reinterpret_cast<uintptr_t>(theComplex->mGoalQueues[0].mUnit);
+                theBad += ee_units_goal_queue_check_unit(theOwner, sContainers.empty() ? NULL : &sContainers[0],
+                                                         sLens.empty() ? NULL : &sLens[0], sContainers.size(),
+                                                         sIDs.empty() ? NULL : &sIDs[0], sIDs.size());
+            }
+        }
+        if (theBad != 0) {
+            fprintf(stderr, "EE-UNIT-STORE: %u goal queues differ from the Rust mirror\n", theBad);
+            theCheck.mismatches += theBad;
+        }
+    }
     // the world's unit chain (the out-of-sync checksum's walk) against the records' on-the-map flags, and the
     // checksum's flag 1 over it (EEComplexUnit::GetChecksum(1)) against the store's sum; a mismatch counts like a
     // field's (so the USCK record, and its digest, stay the same while there is none)
@@ -631,15 +827,11 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
                                                      sChainObjects.empty() ? NULL : &sChainObjects[0], sChainIDs.size());
     unsigned long theStoreFlag1 = (unsigned long)ee_units_store_checksum_flag1();
     unsigned long theStoreFlag2 = (unsigned long)ee_units_store_checksum_flag2();
-    static const bool sSoftChain = getenv("EE_SIM_STORE_CHECK_SOFT") != NULL;   // (below)
-    static bool sChainReported = false;
     if (theOffMap != 0 || theStoreFlag1 != theFlag1 || theStoreFlag2 != theFlag2) {
-        if (!(sSoftChain && sChainReported))
-            fprintf(stderr, "EE-UNIT-STORE: the unit chain (%zu units) and the store's on-the-map records differ: %u; flag 1 "
+        fprintf(stderr, "EE-UNIT-STORE: the unit chain (%zu units) and the store's on-the-map records differ: %u; flag 1 "
                 "%08lx over the chain, %08lx over the store; flag 2 %08lx, %08lx\n", sChainIDs.size(), theOffMap,
                 (unsigned long)(uint32_t)theFlag1, (unsigned long)(uint32_t)theStoreFlag1,
                 (unsigned long)(uint32_t)theFlag2, (unsigned long)(uint32_t)theStoreFlag2);
-        sChainReported = true;
         theCheck.mismatches += theOffMap != 0 ? theOffMap : 1;
     }
     // the world's players' diplomacy tables (ee_units players.rs); a difference counts like a field's
@@ -684,18 +876,11 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
     theRecord.U32(theCheck.compared);
     theRecord.U32(theCheck.mismatches);
     theRecord.Commit();
-    // EE_SIM_STORE_CHECK_SOFT (TEST ONLY: sim_capture.py's scenario profile, whose loaded scenarios the store does not
-    // follow yet): a mismatch is reported once and recorded, and the game goes on
-    static const bool sSoft = getenv("EE_SIM_STORE_CHECK_SOFT") != NULL;
-    static bool sReported = false;
-    if (theCheck.mismatches != 0 && !(sSoft && sReported)) {
+    if (theCheck.mismatches != 0) {
         fprintf(stderr, "EE-UNIT-STORE: %u of %u units differ from the store (%u records) at %lu: first id 0x%08x field %u\n",
                 theCheck.mismatches, theCheck.compared, theCheck.records, inWhere, theCheck.first_id, theCheck.first_field);
-        sReported = true;
-        if (!sSoft) {
-            EESimCaptureRecord::Flush();
-            exit(3);
-        }
+        EESimCaptureRecord::Flush();
+        exit(3);
     }
     return theListed;
 }

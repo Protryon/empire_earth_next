@@ -15,6 +15,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "ee/EEUnitStore.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -433,6 +434,7 @@ void EEUnit::Init(EEUnitClass* inClass, long inX, long inY, EEPlayer* inPlayer)
     this->mUnitClass = inClass;
     if (inClass != NULL)
         this->mStats = inPlayer->mUnitClassUpgrades[inClass->mUnitType];
+    EEUnitStoreStatsChanged(this);   // New (R5b.4, the fourteenth round): the record's stats handle
     this->MoveTo(inX, inY, 0);
 }
 
@@ -449,6 +451,7 @@ void EEUnit::Init(EEUnitClass* inClass, EEPlayer* inPlayer)
     this->mComplexUnit = static_cast<EEComplexUnit*>(this);
     if (inClass != NULL)
         this->mStats = inPlayer->mUnitClassUpgrades[inClass->mUnitType];
+    EEUnitStoreStatsChanged(this);   // New (R5b.4, the fourteenth round): the record's stats handle
     this->mResourceAmount = 0;
     this->mResourceType = kResourceNone;
     this->mHitPoints = 0;
@@ -465,6 +468,7 @@ void EEUnit::ResetEEUnit()
     this->mHitPoints = 0;
     this->mHiddenFlags = 0;
     this->mStats = NULL;
+    EEUnitStoreStatsChanged(this);   // New (R5b.4, the fourteenth round): the record's stats handle
 }
 
 // FUNCTION: EXE 0x62971e

@@ -14,6 +14,8 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
@@ -34,69 +36,35 @@ static const float kPlanetSpaceshipNoHeight = -10000.0f;
 // holding pattern over its home airport (dies without one), circling the controller, dying; others to the base
 void EEUCPlanetSpaceship::ActionChanged(EEComplexUnit* inUnit)
 {
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs planet_spaceship), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_PLANET_SPACESHIP, this, inUnit);
+}
+
+// New (R5b.4, the fourteenth round): EEUCPlanetSpaceship::ActionChanged's holding pattern over its home airport (dies
+// without one; the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HOLDING_PATTERN 1 calls it)
+void EEPlanetSpaceshipHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEUCPlanetSpaceship* theClass = static_cast<EEUCPlanetSpaceship*>(inClass);
     GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
     EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionCircle:
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
-        if ((long)inUnit->mWaypoints.size() > 0)
-            inUnit->DropPath();
-        if (gPhysics->mRandom.Generate() < 0.5f)
-            inUnit->SetCurrentPhysicsOrder(0);
+    if (inUnit->mHomeBase == NULL) {
+        if (theControl->GetNumSlots() > 0)
+            inUnit->SetHomeBase(theControl->GetSlot(0).mAirport);
         else
-            inUnit->SetCurrentPhysicsOrder(1);
-        inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
-        inUnit->mInitialContactHeading = kPlanetSpaceshipNoHeight;
-        if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind != kGoalExplore)
-            inUnit->ClearGoals(0);
-        break;
-    case kActionHoldingPattern:
-        inUnit->SetCurrentPhysicsAction(3);
-        if (inUnit->mHomeBase == NULL) {
-            if (theControl->GetNumSlots() > 0)
-                inUnit->SetHomeBase(theControl->GetSlot(0).mAirport);
-            else
-                inUnit->Kill(true, false, false);
-        }
-        if (inUnit->mHomeBase != NULL) {
-            inUnit->DropPath();
-            theTarget.SetX(inUnit->mHomeBase->mTileX + 1.5f);
-            theTarget.SetY(inUnit->mHomeBase->GetTileY() + 1.5f);
-            theTarget.SetZ(this->GetCruiseAltitude());
-            this->PathToward(inUnit, thePosition, theTarget, true);
-            inUnit->SetIsCommandable(false);
-            if (inUnit->GetNextWaypointPoint(thePosition) == 0)
-                inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
-        }
-        break;
-    case kActionCircleAirtrafficController:
-        inUnit->SetCurrentPhysicsAction(3);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
-        break;
-    case kActionDying: {
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(4, -1, 0);
-        inUnit->DropPath();
-        if (this->mDeathEffect != NULL)
-            gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
-        break;
+            inUnit->Kill(true, false, false);
     }
-    default:
-        EEUCLandable::ActionChanged(inUnit);
-        break;
+    if (inUnit->mHomeBase != NULL) {
+        inUnit->DropPath();
+        theTarget.SetX(inUnit->mHomeBase->mTileX + 1.5f);
+        theTarget.SetY(inUnit->mHomeBase->GetTileY() + 1.5f);
+        theTarget.SetZ(theClass->GetCruiseAltitude());
+        theClass->PathToward(inUnit, thePosition, theTarget, true);
+        inUnit->SetIsCommandable(false);
+        if (inUnit->GetNextWaypointPoint(thePosition) == 0)
+            inUnit->SetHeight(theClass->GetHeightAt(inUnit, thePosition));
     }
 }
 

@@ -19,6 +19,7 @@
 #include "lle/GEModel.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitVectorItem.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"

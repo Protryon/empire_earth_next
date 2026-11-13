@@ -17,6 +17,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/UResourceFile.h"
 
+#include "ee/EEUnitStore.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -388,6 +389,7 @@ float EEUnitClassImprovement::AddFloatSteps(EEUnitClass* inUnitClass, long inImp
 void EEUnitClassImprovement::ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, long inImprovement,
                                       long inDelta)
 {
+    EEUnitStatsScope theStatsScope(inUpgrade);   // New (R5b.4, the fourteenth round): the stats table (ee/EEUnitStore.h)
     long theCost = this->GetCost(inImprovement);
     if (inUnitClass->mImprovements == NULL)
         return;

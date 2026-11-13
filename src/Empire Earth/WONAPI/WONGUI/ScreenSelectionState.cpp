@@ -35,21 +35,4 @@ void ScreenContainer::ShowScreen(Component* screen,bool takeFocus)
     this->Invalidate();
 }
 
-// FUNCTION: WON 0x006f84b0
-// Turns text selection on (I-beam cursor) or off (default cursor), clearing any selection when turned off
-void InputBox::SetAllowSelection(bool allowSelection)
-{
-    if(allowSelection==this->mAllowSelection)
-        return;
-    this->mAllowSelection=allowSelection;
-    if(allowSelection)
-        this->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_IBeam));
-    else
-        this->SetDefaultCursor(NULL);
-    this->mSelecting=false;
-    if(!this->mAllowSelection && this->mSelStartChar!=this->mSelEndChar) {
-        this->mSelStartChar=this->mSelEndChar=0;
-        this->Invalidate();
-    }
-}
 }

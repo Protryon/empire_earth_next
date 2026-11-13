@@ -170,98 +170,40 @@ void EEUCAirAnimal::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, f
 // path to the goal); dying spins it with the roll set to its yaw rate; other actions use the common handling
 void EEUCAirAnimal::ActionChanged(EEComplexUnit* inUnit)
 {
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs air_animal), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_AIR_ANIMAL, this, inUnit);
+}
+
+// New (R5b.4, the fourteenth round): EEUCAirAnimal::ActionChanged's operations that are more than a call (the
+// original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): the path to the goal
+// when preparing to move (EE_UNITS_ACT_AIR_ANIMAL_PATH), the dying spin (EE_UNITS_ACT_DEATH_ROLL 0)
+void EEAirAnimalPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEUCAirAnimal* theClass = static_cast<EEUCAirAnimal*>(inClass);
     GE3DPoint theTarget;
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     EEUnitGoal* theGoal = inUnit->mGoalState;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionTaxi:
-    case kActionClimb:
-    case kActionFly:
-    case kActionDescend:
-    case kActionBrake:
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetCurrentPhysicsOrder(5);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
-        return;
-    case kActionCircle:
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
-        if (theGoal != NULL && theGoal->mKind != kGoalExplore)
-            inUnit->ClearGoals(0);
-        if (gPhysics->GetRandom() < 0.5f)
-            inUnit->SetCurrentPhysicsOrder(0);
-        else
-            inUnit->SetCurrentPhysicsOrder(1);
-        inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
-        return;
-    case kActionContinueToTaxi:
-    case kActionContinueToClimb:
-    case kActionContinueToFly:
-    case kActionContinueToDescend:
-    case kActionContinueToBrake:
-    case kActionContinueToWaitForLandingClearance:
-        inUnit->SetCurrentPhysicsOrder(5);
-        inUnit->NextWaypoint();
-        return;
-    case kActionLand:
-    case kActionRecalculateLanding:
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetCurrentPhysicsOrder(5);
-        break;
-    case kActionTakeoff:
-        inUnit->SetCurrentPhysicsOrder(5);
-        this->ReturnToAirport(inUnit);
-        inUnit->SetFlightTime(inUnit->mStats->mFlightTime);
-        inUnit->SetAmmunition(this->mAmmunition);
-        break;
-    case kActionDying: {
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(4, -1, 0);
-        inUnit->DropPath();
-        EEPMAirAnimal* theModel = dynamic_cast<EEPMAirAnimal*>(this->mPhysicsModel);
-        inUnit->SetF220(theModel->ComputeRoll(inUnit, inUnit->mAngularVelocity.GetYaw()));
-        inUnit->mAngularVelocity = GEOrientation(inUnit->mAngularVelocity.GetYaw(), inUnit->mAngularVelocity.GetPitch(), inUnit->mAngularVelocity.GetYaw());
-        return;
-    }
-    case kActionPrepareToMove: {
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetCurrentPhysicsOrder(5);
-        inUnit->DropPath();
-        if (theGoal->mKind == kGoalAttackUnit) {
-            EEUnit* theUnit;
-            EEFindDropLocation(inUnit, &theUnit, &theTarget, NULL);
-            float theRange = inUnit->mStats->mRange;
-            float theRange2 = theRange;
-            if (EEGetHitDistanceSquared(inUnit, theUnit, -10000.0f, -10000.0f) > theRange * theRange2)
-                theGoal->GetDestination(inUnit, theTarget);
-        } else
+    if (theGoal->mKind == kGoalAttackUnit) {
+        EEUnit* theUnit;
+        EEFindDropLocation(inUnit, &theUnit, &theTarget, NULL);
+        float theRange = inUnit->mStats->mRange;
+        float theRange2 = theRange;
+        if (EEGetHitDistanceSquared(inUnit, theUnit, -10000.0f, -10000.0f) > theRange * theRange2)
             theGoal->GetDestination(inUnit, theTarget);
-        if (theGoal->mKind == kGoalExplore)
-            theTarget.SetZ(this->GetCruiseAltitude());
-        this->PathToward(inUnit, thePosition, theTarget, true);
-        break;
-    }
-    case kActionResourcesRotting:
-        this->HandleActionChanged(inUnit);
-        return;
-    default:
-        this->HandleActionChanged(inUnit);
-        return;
-    }
-    inUnit->SetAnimation(0xd, -1, 0);
-    if (inUnit->GetNextWaypointPoint(thePosition) == 0)
-        inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
+    } else
+        theGoal->GetDestination(inUnit, theTarget);
+    if (theGoal->mKind == kGoalExplore)
+        theTarget.SetZ(theClass->GetCruiseAltitude());
+    theClass->PathToward(inUnit, thePosition, theTarget, true);
+}
+
+void EEAirAnimalDeathRoll(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEPMAirAnimal* theModel = dynamic_cast<EEPMAirAnimal*>(inClass->mPhysicsModel);
+    inUnit->SetF220(theModel->ComputeRoll(inUnit, inUnit->mAngularVelocity.GetYaw()));
+    inUnit->mAngularVelocity = GEOrientation(inUnit->mAngularVelocity.GetYaw(), inUnit->mAngularVelocity.GetPitch(), inUnit->mAngularVelocity.GetYaw());
 }
 
 // FUNCTION: EXE 0x60ad1c

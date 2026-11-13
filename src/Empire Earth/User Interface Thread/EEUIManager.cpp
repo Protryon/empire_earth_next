@@ -114,7 +114,6 @@
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationManager.h"
-#include "ee/EEUIEPDCSEvents.h"
 #include "ee/EEUIEWonNetServerSelectEvents.h"
 #include "ee/EEUIFError.h"
 #include "ee/EEUIFScenarioEditor.h"
@@ -125,16 +124,13 @@
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEUIECampaignEditorEvents.h"
-#include "ee/EEUIEMainScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
-#include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEUIEProcessTimerExpired.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetArenaRoomEvents.h"
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
 #include "ee/EEUIEWonNetStatsEvents.h"
-#include "ee/EEDSUIEvents.h"
 #include "lle/UIBitmap.h"
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUIFMGUnitHack.h"
@@ -350,13 +346,13 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = EECreateScreenEvent(EE_SCREENS_SPL_OPEN);
         break;
     case kFormEventSSFormOpen:
-        theEvent = new EEUIESSEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_SS_OPEN);   // (ee_screens splash.rs)
         break;
     case kFormEventPGSOpen:
-        theEvent = new EEUIEPGSEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_PGS_OPEN);
         break;
     case kFormEventPGSClose:
-        theEvent = new EEUIEPGSEClose;
+        theEvent = EECreateScreenEvent(EE_SCREENS_PGS_CLOSE);
         break;
     case kFormEventDSOpen:
         theEvent = EECreateScreenEvent(EE_SCREENS_DS_OPEN);
@@ -378,17 +374,9 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
     return theEvent;
 }
 
-// SYNTHETIC: EXE 0x671cd8
-// (EEUIESSEOpen's scalar deleting destructor, after its first user)
-
 // SYNTHETIC: EXE 0x671daf
 // (EEUIEWNSOpen's scalar deleting destructor, after its first user)
 
-// SYNTHETIC: EXE 0x671e30
-// (EEUIEPGSEOpen's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671e5b
-// (EEUIEPGSEClose's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x671eb1
 // (EEUIECEOpen's scalar deleting destructor, after its first user)
@@ -417,46 +405,11 @@ UIEvent* EECreateSaveLoadEvent(UIForm* inForm, unsigned long inID)
 // (EEUIECancel's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x6724eb
-// Creates the debug sound form's event for a control id; NULL for other ids
+// Creates the debug sound form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
+// debug_sound.rs)
 UIEvent* EECreateDebugSoundEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    switch (inID) {
-    case kControlEventDSAdjustCommandSoundOne:
-        theEvent = new EEDSUIAdjustCommandSoundOne;
-        break;
-    case kControlEventDSAdjustCommandSoundTwo:
-        theEvent = new EEDSUIAdjustCommandSoundTwo;
-        break;
-    case kControlEventDSAdjustCreatedSound:
-        theEvent = new EEDSUIAdjustCreatedSound;
-        break;
-    case kControlEventDSAdjustDyingSound:
-        theEvent = new EEDSUIAdjustDyingSound;
-        break;
-    case kControlEventDSAdjustSelectedSoundOne:
-        theEvent = new EEDSUIAdjustSelectedSoundOne;
-        break;
-    case kControlEventDSAdjustSelectedSoundTwo:
-        theEvent = new EEDSUIAdjustSelectedSoundTwo;
-        break;
-    case kControlEventDSAdjustAttackSoundOne:
-        theEvent = new EEDSUIAdjustAttackSoundOne;
-        break;
-    case kControlEventDSAdjustAttackSoundTwo:
-        theEvent = new EEDSUIAdjustAttackSoundTwo;
-        break;
-    case kControlEventDSAdjustWalkSoundOne:
-        theEvent = new EEDSUIAdjustWalkSoundOne;
-        break;
-    case kControlEventDSAdjustWalkSoundTwo:
-        theEvent = new EEDSUIAdjustWalkSoundTwo;
-        break;
-    case kControlEventDSHideDebugSoundPanel:
-        theEvent = new EEDSUIHideDebugSoundPanel;
-        break;
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_debug_sound_event_for(inID));
 }
 
 // FUNCTION: EXE 0x6726b3
@@ -731,112 +684,11 @@ UIEvent* EECreateMainScreenEvent(UIForm* inForm, unsigned long inID)
 }
 
 // FUNCTION: EXE 0x673a89
-// Creates the post-game summary's event for a control id; NULL for other ids
+// Creates the post-game summary's event for a control id; NULL for other ids (ee_screens post_game.rs)
 UIEvent* EECreatePostGameSummaryEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventPGSTabSummary && inID <= kControlEventPGSNextGraph) {
-        switch (inID) {
-        case kControlEventPGSTabSummary:
-            theEvent = new EEUIEPGSETabSummary;
-            break;
-        case kControlEventPGSTabTimeline:
-            theEvent = new EEUIEPGSETabTimeLine;
-            break;
-        case kControlEventPGSTabMilitary:
-            theEvent = new EEUIEPGSETabMilitary;
-            break;
-        case kControlEventPGSTabEconomy:
-            theEvent = new EEUIEPGSETabEconomy;
-            break;
-        case kControlEventPGSTabEpoch:
-            theEvent = new EEUIEPGSETabEpoch;
-            break;
-        case kControlEventPGSTabSociety:
-            theEvent = new EEUIEPGSETabSociety;
-            break;
-        case kControlEventPGSTabMisc:
-            theEvent = new EEUIEPGSETabMisc;
-            break;
-        case kControlEventPGSExitToMainMenu:
-            theEvent = new EEUIEPGSEExit;
-            break;
-        case kControlEventPGSPlayer1CheckBox:
-        case kControlEventPGSPlayer2CheckBox:
-        case kControlEventPGSPlayer3CheckBox:
-        case kControlEventPGSPlayer4CheckBox:
-        case kControlEventPGSPlayer5CheckBox:
-        case kControlEventPGSPlayer6CheckBox:
-        case kControlEventPGSPlayer7CheckBox:
-        case kControlEventPGSPlayer8CheckBox:
-        case kControlEventPGSPlayer9CheckBox:
-        case kControlEventPGSPlayer10CheckBox:
-        case kControlEventPGSPlayer11CheckBox:
-        case kControlEventPGSPlayer12CheckBox:
-        case kControlEventPGSPlayer13CheckBox:
-        case kControlEventPGSPlayer14CheckBox:
-        case kControlEventPGSPlayer15CheckBox:
-        case kControlEventPGSPlayer16CheckBox:
-            theEvent = new EEUIEPGSEPlayerChecked(inID);
-            break;
-        case kControlEventPGSPlayer1UnCheckBox:
-        case kControlEventPGSPlayer2UnCheckBox:
-        case kControlEventPGSPlayer3UnCheckBox:
-        case kControlEventPGSPlayer4UnCheckBox:
-        case kControlEventPGSPlayer5UnCheckBox:
-        case kControlEventPGSPlayer6UnCheckBox:
-        case kControlEventPGSPlayer7UnCheckBox:
-        case kControlEventPGSPlayer8UnCheckBox:
-        case kControlEventPGSPlayer9UnCheckBox:
-        case kControlEventPGSPlayer10UnCheckBox:
-        case kControlEventPGSPlayer11UnCheckBox:
-        case kControlEventPGSPlayer12UnCheckBox:
-        case kControlEventPGSPlayer13UnCheckBox:
-        case kControlEventPGSPlayer14UnCheckBox:
-        case kControlEventPGSPlayer15UnCheckBox:
-        case kControlEventPGSPlayer16UnCheckBox:
-            theEvent = new EEUIEPGSEPlayerUnChecked(inID);
-            break;
-        case kControlEventPGSNextGraph:
-            theEvent = new EEUIEPGSENextGraph;
-            break;
-        }
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_post_game_event_for(inID));
 }
-
-// SYNTHETIC: EXE 0x673ca4
-// (EEUIEPGSETabSummary's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673ccf
-// (EEUIEPGSETabTimeLine's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673cfa
-// (EEUIEPGSETabMilitary's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673d25
-// (EEUIEPGSETabEconomy's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673d50
-// (EEUIEPGSETabEpoch's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673d7b
-// (EEUIEPGSETabSociety's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673da6
-// (EEUIEPGSETabMisc's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673dd1
-// (EEUIEPGSEExit's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673dfc
-// (EEUIEPGSEPlayerChecked's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673e27
-// (EEUIEPGSEPlayerUnChecked's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673e52
-// (EEUIEPGSENextGraph's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x673e7d
 // Creates the scenario editor form on first use

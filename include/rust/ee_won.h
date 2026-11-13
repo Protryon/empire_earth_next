@@ -2044,6 +2044,278 @@ enum class EeWonGuiStringOp {
   RFind,
 };
 
+/// The op codes. `a`..`d` are integers or pointers as each says.
+enum class EeWonGuiOp : uint32_t {
+  /// the field `a` (`EeWonGuiField`).
+  Get = 1,
+  /// the field `a` = `b`.
+  Set,
+  /// `ScrollArea::Virtual08()` (it calls the virtual AdjustPosition back).
+  BaseSizeChanged,
+  /// `ScrollArea::AdjustPosition(a != 0)`.
+  BaseAdjustPosition,
+  /// `ScrollArea::NotifyRootVisibility(a != 0)`.
+  BaseNotifyRootVisibility,
+  /// `ScrollArea::MouseDown(a, b, c)`.
+  BaseMouseDown,
+  /// `ScrollArea::MouseUp(a, b, c)`.
+  BaseMouseUp,
+  /// `ScrollArea::MouseExit()`.
+  BaseMouseExit,
+  /// `ScrollArea::MouseMove(a, b)`.
+  BaseMouseMove,
+  /// `ScrollArea::MouseEnter(a, b)`.
+  BaseMouseEnter,
+  /// `ScrollArea::MouseDrag(a, b)`.
+  BaseMouseDrag,
+  /// `ScrollArea::KeyDown(a)` (0 or 1).
+  BaseKeyDown,
+  /// `ScrollArea::KeyChar(a)` (0 or 1).
+  BaseKeyChar,
+  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollTranslate,
+  /// `Component::GotFocus()` (the input box's base).
+  BaseGotFocus = 20,
+  /// `Component::LostFocus()`.
+  BaseLostFocus,
+  /// `Component::Paint(*a)` (`a` the Graphics).
+  BasePaint,
+  /// `Invalidate()`.
+  Invalidate = 30,
+  /// `RequestTimer(a != 0)`.
+  RequestTimer,
+  /// `RequestFocus()`.
+  RequestFocus,
+  /// `GetMousePos(*a, *b)` (`a`, `b` point at i32s).
+  GetMousePos,
+  /// `GetKeyMod()`.
+  KeyMod,
+  /// `mParent->SetCursor(a)` (`EeWonGuiCursor`).
+  SetParentCursor,
+  /// the selection colours into `*a` (an `EeWonSelColor`).
+  SelColor,
+  /// `mLinkParam = a->GetLinkParam(); DeliverEvent(new TextLinkActivatedEvent(this, a), false)`.
+  LinkActivated,
+  /// the copied text (a GUIString the C++ object keeps) `.append(a->mText, b, c)`.
+  SelTextAppend,
+  /// the copied text `.append("\r\n")`.
+  SelTextBreak,
+  /// `Clipboard::Set(copied text)`, then the copied text emptied.
+  SelTextCopy,
+  /// `SetSize(a, b)`.
+  SetSize = 45,
+  /// `SetDefaultCursor(a)` (`EeWonGuiCursor`).
+  SetDefaultCursor,
+  /// `FireEvent(a, false)` (`EeWonGuiEvent`).
+  FireEvent,
+  /// `Clipboard::Set(text)`, the text `b` units (u32) at `a`.
+  ClipboardSet,
+  /// `Clipboard::Get()`'s units appended to the Rust buffer `a` with `ee_won_gui_sink_units`.
+  ClipboardTake,
+  /// `a->AddRef()`.
+  SegHold = 60,
+  /// `a->Release()`.
+  SegRelease,
+  /// `a->mLineBreak` (0 or 1).
+  SegLineBreak,
+  /// `a->GetLength()`.
+  SegLength,
+  /// `a->CalcDimensions()`'s measures into `*b` (three i32s: the text's width, the font's height and ascent).
+  SegMeasure,
+  /// `a->mFont->GetStringWidth(a->mText, b, c)`.
+  SegStringWidth,
+  /// `a->mFont->GetCharacterWidth(a->mText[b])`.
+  SegCharWidth,
+  /// `a`'s text units appended to the Rust buffer `b` with `ee_won_gui_sink_units`.
+  SegTextTake,
+  /// `a->IsLink()` (0 or 1).
+  SegIsLink,
+  /// `a->Pressed()`.
+  SegPressed,
+  /// `a->Released()` (0 or 1).
+  SegReleased,
+  /// `a->mColor`.
+  SegColor,
+  /// executes the draw operation `*b` (an `EeWonDrawOp`) on the Graphics `a`, its font and string slots the
+  /// segment `c`'s font and text (none when `c` is 0).
+  Draw = 90,
+  /// `mFont->GetHeight()`.
+  FontHeight = 100,
+  /// `mFont->GetCharacterWidth(a)`.
+  FontCharWidth,
+  /// `mFont->GetStringWidth(mText, a, b)` (both cast to unsigned short).
+  TextWidth,
+  /// `mFont->GetStringWidth(mText)`.
+  TextWidthAll,
+  /// `mFont->GetCharacterWidth(mText[a])`.
+  TextCharWidth,
+  /// `mFont->GetStringWidth(GUIString("M"))`.
+  FontStringM,
+  /// the C++ copy of a text (`a`: 0 the shown text `mText`, 1 the real one `GetText()`) = the `c` units (u32)
+  /// at `b`.
+  TextStore,
+  /// `mInputFilter(this, s)` over the string `s` of the `b` units (u32) at `a`: 2 without a filter, else the
+  /// filter's answer (0 or 1) with `s` after it appended to the Rust buffer `c`.
+  Filter,
+  /// `mIcon->mWidth`, or -1 without an icon.
+  IconWidth,
+  /// the C++ members of the paint into `*a` (an `EeWonInputPaint`: the disabled look, the icon and its height,
+  /// the focus, the text colours, the font's height, the selection colours).
+  PaintInputs,
+  /// `mWrappedText->SetMaxWidth(a)`.
+  WrapSetMaxWidth = 130,
+  /// `mWrappedText->SetCentered(a != 0)`.
+  WrapSetCentered,
+  /// `mWrappedText->SetWrap(a != 0)`.
+  WrapSetWrap,
+  /// `mWrappedText->GetWidth()`.
+  WrapWidth,
+  /// `mWrappedText->GetHeight()`.
+  WrapHeight,
+  /// `mBackground.Paint(*a, 0, 0, b, c)`.
+  PaintBackground,
+  /// `a->SetEnabled(b != 0)`.
+  ChildSetEnabled = 150,
+  /// `a->SetVisible(b != 0)`.
+  ChildSetVisible,
+  /// `a->SetPosSize(r.x, r.y, r.w, r.h)` with `r` the `EeWonRect4` at `b`.
+  ChildSetPosSize,
+  /// `a->IsVisible()` (0 or 1).
+  ChildIsVisible,
+  /// `a->Width()`.
+  ChildWidth,
+  /// `a->Height()`.
+  ChildHeight,
+  /// `a->Left()`.
+  ChildLeft,
+  /// `a->Top()`.
+  ChildTop,
+  /// `a->AddRef()` (a `SmartPtr` the Rust object keeps).
+  ChildHold,
+  /// `a->Release()`.
+  ChildRelease,
+  /// `a->ComponentFlagSet(b)` (0 or 1).
+  ChildFlagSet,
+  /// `a->SetComponentFlags(b, c != 0)`.
+  ChildSetFlags,
+  /// `a->GetDefaultCursor() != NULL` (0 or 1).
+  ChildHasDefaultCursor,
+  /// `a->SetDefaultCursor(b)` (`EeWonGuiCursor`).
+  ChildSetDefaultCursor,
+  /// `a->GetMouseChild()`.
+  ChildMouseChild,
+  /// `AddChild(a)`.
+  AddChild,
+  /// `mMouseChild`.
+  MouseChild,
+  /// `a->mControlId` (a button).
+  ButtonControlId,
+  /// `a->mControlId = b`.
+  ButtonSetControlId,
+  /// `a->SetCheck(b != 0, false)`.
+  ButtonSetCheck,
+  /// `a->IsChecked()` (0 or 1).
+  ButtonIsChecked,
+  /// a new `Component` laid over the container `a` (`Fn2F6140(c, 3, a, 0, 0, 0, 0, 0)`) and added to it
+  /// (`AddChildEx(c, 0)`), the creator's reference gone (the container holds it).
+  NewDragComponent,
+  /// a new `Component` sized `a` x `a`, with the creator's reference (given back with `ChildRelease`).
+  NewSizedComponent,
+  /// `a->mType == ComponentEvent_ButtonPressed` (0 or 1).
+  EventIsButtonPress,
+  /// `a->GetControlId()`.
+  EventControlId,
+  /// `dynamic_cast<Button*>(a->mComponent)`.
+  EventButton,
+  /// `Container::HandleComponentEvent(a)`.
+  BaseHandleEvent,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
+enum class EeWonInputCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  GotFocus,
+  LostFocus,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  MouseExit,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `TimerEvent(a)` (0 or 1).
+  TimerEvent,
+  /// `KeyChar(a)` (0 or 1).
+  KeyChar,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  /// `SetText(text a, b, c != 0)`.
+  SetText,
+  /// `SetPasswordChar(a)` (a `char`, sign-extended).
+  SetPasswordChar,
+  /// `SetAllowSelection(a != 0)`.
+  SetAllowSelection,
+  /// `SelectRange(a, b)`.
+  SelectRange,
+  /// `SetIcon`'s steps after the C++ set the icon.
+  IconChanged,
+  /// `SetCharWidth(a)`.
+  SetCharWidth,
+  /// `SetCursorBlinkRate(a, b)`.
+  SetCursorBlinkRate,
+  /// `AdjustPosition()`.
+  AdjustPosition,
+  /// `CopySelection()`.
+  CopySelection,
+  /// `SetSelText(text a, b, c != 0)`.
+  SetSelText,
+  /// `AddInputHistory(text a, b, c != 0)`.
+  AddInputHistory,
+  /// `SetInputHistory(text a, b, c != 0)`.
+  SetInputHistory,
+  /// `mMaxChars = a`.
+  SetMaxChars,
+  /// `mSelectOnFocus = a != 0`.
+  SetSelectOnFocus,
+  /// `mMaxInputHistory = a`.
+  SetMaxInputHistory,
+  /// `mLeftPad = a`.
+  SetLeftPad,
+  /// `mSelStartChar` (the numeric filter reads it).
+  SelStart,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonLabelCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  /// `SetText`'s steps after the C++ set the wrapped text: refit, and repaint when `a != 0`.
+  TextSet,
+  /// `SetHorzAlign(a)`.
+  SetHorzAlign,
+  /// `SetVertAlign(a)`.
+  SetVertAlign,
+  /// `SetWrap(a != 0)`.
+  SetWrap,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `SetVertPad(a, b)`.
+  SetVertPad,
+  /// `SetTextColor(a)`.
+  SetTextColor,
+  /// `mColor`.
+  TextColor,
+};
+
 /// Where a message goes: nowhere, handled by this lobby itself (the host), or queued on a socket.
 enum class EeWonLanRoute {
   Drop = 0,
@@ -2510,6 +2782,43 @@ enum class EeWonResKind {
   Sound = 2,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonSplitCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `CheckMaxButton(a)` (0 or 1).
+  CheckMaxButton,
+  /// `RegisterMaxButton(a, b)`.
+  RegisterMaxButton,
+  /// `AddQuadrant(a, b)`.
+  AddQuadrant,
+  /// `AddSplitter(a, b)`.
+  AddSplitter,
+  /// `AddComplexSplitter(a, b, c)` (`c` the drag handle or NULL).
+  AddComplexSplitter,
+  /// `AddInvisibleSplitter(a, b)`.
+  AddInvisibleSplitter,
+  /// `MaxQuadrant(a)`.
+  MaxQuadrant,
+  UnMaxQuadrant,
+  /// `SetMinLeftRight(a, b)`.
+  SetMinLeftRight,
+  /// `SetMinTopBottom(a, b)`.
+  SetMinTopBottom,
+  /// `SetPercentages(a, b)`.
+  SetPercentages,
+  /// `SetSplitterPos(a, b, c != 0)`.
+  SetSplitterPos,
+};
+
 /// The sound `UpdateReadyState` plays (if the staging sounds are on).
 enum class EeWonReadySound {
   Silent = 0,
@@ -2547,87 +2856,6 @@ enum class EeWonStagingCall : uint32_t {
   LeaveGame,
   NotifyStagingChange,
   NotifyPingChange,
-};
-
-/// The op codes. `a`..`d` are integers or pointers as each says.
-enum class EeWonGuiOp : uint32_t {
-  /// the field `a` (`EeWonGuiField`).
-  Get = 1,
-  /// the field `a` = `b`.
-  Set,
-  /// `ScrollArea::Virtual08()` (it calls the virtual AdjustPosition back).
-  BaseSizeChanged,
-  /// `ScrollArea::AdjustPosition(a != 0)`.
-  BaseAdjustPosition,
-  /// `ScrollArea::NotifyRootVisibility(a != 0)`.
-  BaseNotifyRootVisibility,
-  /// `ScrollArea::MouseDown(a, b, c)`.
-  BaseMouseDown,
-  /// `ScrollArea::MouseUp(a, b, c)`.
-  BaseMouseUp,
-  /// `ScrollArea::MouseExit()`.
-  BaseMouseExit,
-  /// `ScrollArea::MouseMove(a, b)`.
-  BaseMouseMove,
-  /// `ScrollArea::MouseEnter(a, b)`.
-  BaseMouseEnter,
-  /// `ScrollArea::MouseDrag(a, b)`.
-  BaseMouseDrag,
-  /// `ScrollArea::KeyDown(a)` (0 or 1).
-  BaseKeyDown,
-  /// `ScrollArea::KeyChar(a)` (0 or 1).
-  BaseKeyChar,
-  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
-  ScrollTranslate,
-  /// `Invalidate()`.
-  Invalidate = 30,
-  /// `RequestTimer(a != 0)`.
-  RequestTimer,
-  /// `RequestFocus()`.
-  RequestFocus,
-  /// `GetMousePos(*a, *b)` (`a`, `b` point at i32s).
-  GetMousePos,
-  /// `GetKeyMod()`.
-  KeyMod,
-  /// `mParent->SetCursor(a)` (`EeWonGuiCursor`).
-  SetParentCursor,
-  /// the selection colours into `*a` (an `EeWonSelColor`).
-  SelColor,
-  /// `mLinkParam = a->GetLinkParam(); DeliverEvent(new TextLinkActivatedEvent(this, a), false)`.
-  LinkActivated,
-  /// the copied text (a GUIString the C++ object keeps) `.append(a->mText, b, c)`.
-  SelTextAppend,
-  /// the copied text `.append("\r\n")`.
-  SelTextBreak,
-  /// `Clipboard::Set(copied text)`, then the copied text emptied.
-  SelTextCopy,
-  /// `a->AddRef()`.
-  SegHold = 60,
-  /// `a->Release()`.
-  SegRelease,
-  /// `a->mLineBreak` (0 or 1).
-  SegLineBreak,
-  /// `a->GetLength()`.
-  SegLength,
-  /// `a->CalcDimensions()`'s measures into `*b` (three i32s: the text's width, the font's height and ascent).
-  SegMeasure,
-  /// `a->mFont->GetStringWidth(a->mText, b, c)`.
-  SegStringWidth,
-  /// `a->mFont->GetCharacterWidth(a->mText[b])`.
-  SegCharWidth,
-  /// `a`'s text units appended to the Rust buffer `b` with `ee_won_gui_sink_units`.
-  SegTextTake,
-  /// `a->IsLink()` (0 or 1).
-  SegIsLink,
-  /// `a->Pressed()`.
-  SegPressed,
-  /// `a->Released()` (0 or 1).
-  SegReleased,
-  /// `a->mColor`.
-  SegColor,
-  /// executes the draw operation `*b` (an `EeWonDrawOp`) on the Graphics `a`, its font and string slots the
-  /// segment `c`'s font and text (none when `c` is 0).
-  Draw = 90,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). `a`..`d` as each says.
@@ -2765,6 +2993,20 @@ enum class EeWonGuiCursor : uint32_t {
   Hand = 1,
   /// `Cursor::GetStandardCursor(StandardCursor_IBeam)`.
   IBeam = 2,
+  /// `Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest)`.
+  NorthSouthEastWest = 3,
+  /// `Cursor::GetStandardCursor(StandardCursor_EastWest)`.
+  EastWest = 4,
+  /// `Cursor::GetStandardCursor(StandardCursor_NorthSouth)`.
+  NorthSouth = 5,
+};
+
+/// The events a component object fires (`FireEvent`).
+enum class EeWonGuiEvent : uint32_t {
+  /// `ComponentEvent_InputReturn`.
+  InputReturn = 1,
+  /// `ComponentEvent_InputTextChanged`.
+  InputTextChanged = 2,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -2813,8 +3055,14 @@ struct EeWonHttpConn;
 /// length; a host equal but for case finds the first one's connection).
 struct EeWonHttpSession;
 
+/// The Rust InputBox.
+struct EeWonInput;
+
 /// `IPAddr`'s value.
 struct EeWonIpAddr;
+
+/// The Rust Label.
+struct EeWonLabel;
 
 /// LanLogic's scalar state (the original's 0x6c, 0x74, 0xa8, 0xb4, 0xb6).
 struct EeWonLan;
@@ -2851,6 +3099,9 @@ struct EeWonSocketOp;
 
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
 struct EeWonSocketThread;
+
+/// The Rust Splitter.
+struct EeWonSplitter;
 
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
@@ -3998,6 +4249,14 @@ struct EeWonHttpSessionHooks {
   int (*conn_num_ops)(void*);
 };
 
+/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
+using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
+                                    EeWonGuiOp op,
+                                    ptrdiff_t a,
+                                    ptrdiff_t b,
+                                    ptrdiff_t c,
+                                    ptrdiff_t d);
+
 /// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
 struct EeWonAddr {
   uint8_t sockaddr[16];
@@ -4631,14 +4890,6 @@ struct EeWonGameSummary {
   uint32_t read;
   size_t rest;
 };
-
-/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
-using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
-                                    EeWonGuiOp op,
-                                    ptrdiff_t a,
-                                    ptrdiff_t b,
-                                    ptrdiff_t c,
-                                    ptrdiff_t d);
 
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
@@ -8892,6 +9143,23 @@ EeWonHostOp *ee_won_httpget_new(const uint8_t *host,
 /// `url` holds `len` bytes.
 EeWonHostOp *ee_won_httpget_new_url(const uint8_t *url, size_t len);
 
+/// A new Rust InputBox for the C++ `component`, its calls out through `host`.
+EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `input` came from `ee_won_input_new` (or is NULL) and is not used again.
+void ee_won_input_free(EeWonInput *input);
+
+/// One of InputBox's methods (`EeWonInputCall`).
+///
+/// # Safety
+/// `input` is live; the call's arguments as documented.
+ptrdiff_t ee_won_input_call(const EeWonInput *input,
+                            EeWonInputCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
+
 /// `IPAddr()`: zero, invalid, no remembered host.
 EeWonIpAddr *ee_won_ipaddr_new();
 
@@ -9053,6 +9321,23 @@ EeWonAddr ee_won_ipaddr_to_raw(const EeWonIpAddr *a);
 /// # Safety
 /// As `ee_won_ipaddr_clone`; `raw` is valid, its host `host_len` bytes.
 void ee_won_ipaddr_from_raw(EeWonIpAddr *a, const EeWonAddr *raw);
+
+/// A new Rust Label for the C++ `component`, its calls out through `host`.
+EeWonLabel *ee_won_label_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `label` came from `ee_won_label_new` (or is NULL) and is not used again.
+void ee_won_label_free(EeWonLabel *label);
+
+/// One of Label's methods (`EeWonLabelCall`).
+///
+/// # Safety
+/// `label` is live; the call's arguments as documented.
+ptrdiff_t ee_won_label_call(const EeWonLabel *label,
+                            EeWonLabelCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
 
@@ -11131,6 +11416,23 @@ size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
 /// # Safety
 /// `hooks` is valid; `op` is a live op.
 bool ee_won_socket_thread_do_op(const EeWonSocketOpHooks *hooks, void *op);
+
+/// A new Rust Splitter for the C++ `component`, its calls out through `host`.
+EeWonSplitter *ee_won_split_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `split` came from `ee_won_split_new` (or is NULL) and is not used again.
+void ee_won_split_free(EeWonSplitter *split);
+
+/// One of Splitter's methods (`EeWonSplitCall`).
+///
+/// # Safety
+/// `split` is live; the call's arguments as documented.
+ptrdiff_t ee_won_split_call(const EeWonSplitter *split,
+                            EeWonSplitCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///

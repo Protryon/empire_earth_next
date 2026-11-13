@@ -41,7 +41,6 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEEffect.h"
 #include "ee/EEEffect2D.h"
-#include "lle/URandom.h"
 #include "lle/GEModelManager.h"
 #include "lle/GEPolygonArray.h"
 #include "lle/GEQuaternion.h"
@@ -59,8 +58,32 @@ const UString EEEffect::sData("EEEffect-Data");
 
 // SYNTHETIC: EXE 0x502560
 // SYNTHETIC: EXE 0x502565
-// the effects' random numbers (EEEffect::GetRandom, GetEffectRandomFloat, GetEffectRandomLong; no dtor) (provisional name)
-static URandom sEffectRandom;
+// (the effects' random numbers, the original's file-static URandom: ee_gfx effect_state.rs)
+
+// The effects' records (ee_gfx effect_state.rs) hold the GE value classes as their mirrors
+static_assert(sizeof(GETransformation) == sizeof(EeGeTransformation), "GE mirrors");
+
+// An FSFile as effect_state.rs's typed reads and writes (each the FSFile call of that type)
+struct EEEffectFileOps {
+    static FSFile& File(void* inContext) { return *static_cast<FSFile*>(inContext); }
+    static bool IsOpen(void* inContext) { return File(inContext).GetIsOpen(); }
+    static int32_t ReadU32(void* inContext, uint32_t* outValue) { return (int32_t)File(inContext).Read(*outValue); }
+    static int32_t ReadI32(void* inContext, int32_t* outValue) { return (int32_t)File(inContext).Read(*outValue); }
+    static int32_t ReadF32(void* inContext, float* outValue) { return (int32_t)File(inContext).Read(*outValue); }
+    static int32_t ReadBool(void* inContext, bool* outValue) { return (int32_t)File(inContext).Read(*outValue); }
+    static int32_t WriteU32(void* inContext, uint32_t inValue) { return (int32_t)File(inContext).Write(inValue); }
+    static int32_t WriteI32(void* inContext, int32_t inValue) { return (int32_t)File(inContext).Write(inValue); }
+    static int32_t WriteF32(void* inContext, float inValue) { return (int32_t)File(inContext).Write(inValue); }
+    static int32_t WriteBool(void* inContext, bool inValue) { return (int32_t)File(inContext).Write(inValue); }
+};
+
+EeGfxEffectFile EEEffectFile(FSFile& inFile)
+{
+    EeGfxEffectFile theFile = {&inFile, EEEffectFileOps::IsOpen, EEEffectFileOps::ReadU32, EEEffectFileOps::ReadI32,
+                               EEEffectFileOps::ReadF32, EEEffectFileOps::ReadBool, EEEffectFileOps::WriteU32,
+                               EEEffectFileOps::WriteI32, EEEffectFileOps::WriteF32, EEEffectFileOps::WriteBool};
+    return theFile;
+}
 
 // The two quad batches (one draw call per 0x800 vertices; provisional names): the camera-facing quads of AddGlowSprite
 // (0x4e8db8) and the flat/heightened ones of AddGroundSprite/AddGroundQuad/AddBlendedSprite/AddGroundStrip (0x4e8da8)
@@ -107,14 +130,8 @@ EEEffect::EEEffect(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind
     this->mGraphicEffect = inGraphicEffect;
     if (this->mGraphicEffect)
         this->mGraphicEffect->Reference();
-    this->mTileX = -1;
-    this->mTileY = -1;
     this->mKind = inKind;
     this->mKeepsUnit = inKeepsUnit;
-    this->mIsLocalOnly = false;
-    this->mPlayer = 0;
-    this->mIsSaved = true;
-    this->mHandle = kNoEffectHandle;
     this->LoadMedia(gLoadingSavedGame == false);
 }
 
@@ -137,8 +154,8 @@ EEEffect::~EEEffect()
         this->mUnit->Dereference();
         this->mUnit = NULL;
     }
-    this->mTileX = -1;
-    this->mTileY = -1;
+    ee_gfx_effect_record_free(this->mRecord);
+    this->mRecord = NULL;
 }
 
 // FUNCTION: EXE 0x50269c
@@ -325,24 +342,27 @@ void EndEffectBatches()
 // Returns a random float between the minimum and the maximum from the effects' random generator
 float GetEffectRandomFloat(float inMinimum, float inMaximum)
 {
-    return sEffectRandom.Generate(inMinimum, inMaximum);
+    return ee_gfx_effect_random_float(inMinimum, inMaximum);
 }
 
 // FUNCTION: EXE 0x502f57
 // Returns a random long from the minimum to the maximum (clamped to the maximum) (provisional name)
 long GetEffectRandomLong(long inMinimum, long inMaximum)
 {
-    long theResult = UMFloatToLong(sEffectRandom.Generate() * (inMaximum - inMinimum) + inMinimum);
-    if (theResult > inMaximum)
-        theResult = inMaximum;
-    return theResult;
+    return ee_gfx_effect_random_long((int32_t)inMinimum, (int32_t)inMaximum);
 }
 
 // FUNCTION: EXE 0x502f8b
 // Returns the next random fraction from the effects' random generator
 float EEEffect::GetRandom()
 {
-    return sEffectRandom.Generate();
+    return ee_gfx_effect_random();
+}
+
+// TEST ONLY (tools/sim_capture.py EFST): the effects' random seed
+unsigned long EEEffectRandomSeed()
+{
+    return ee_gfx_effect_random_seed();
 }
 
 // FUNCTION: EXE 0x502f96
@@ -381,40 +401,25 @@ void EEEffect::Init()
 {
     this->mUnit = NULL;
     this->mGraphicEffect = NULL;
-    this->mHandle = kNoEffectHandle;
-    this->mTileX = -1;
-    this->mTileY = -1;
-    this->mPlayer = 0;
-    this->mKeepsUnit = false;
-    this->mIsSaved = true;
-    this->mIsLocalOnly = false;
+    ee_gfx_effect_init(this->mRecord);
 }
 
 // FUNCTION: EXE 0x503027
 // Reads the graphic effect id (and loads its media), region, saved unit id, handle and keeps-unit flag; returns
 // the first read error
+// (the reads are ee_gfx effect_state.rs's; the graphic effect is resolved after them: its media load reads no file)
 long EEEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theValue;
-    long theResult = inFile.Read(theValue);
-    if (theResult != kErrorOK)
-        return theResult;
-    this->mGraphicEffect = EEGraphicEffect::Get(theValue);
-    this->mGraphicEffect->Reference();
-    this->LoadMedia(false);
-    theResult = inFile.Read(this->mTileX);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mTileY);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(theValue);
-    this->mUnit = reinterpret_cast<EEUnit*>(theValue);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mHandle.mValue);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mKeepsUnit);
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    EeGfxEffectLoaded theLoaded;
+    long theResult = ee_gfx_effect_load(this->mRecord, &theFile, &theLoaded);
+    if (theLoaded.has_graphic_effect) {
+        this->mGraphicEffect = EEGraphicEffect::Get(theLoaded.graphic_effect_id);
+        this->mGraphicEffect->Reference();
+        this->LoadMedia(false);
+    }
+    if (theLoaded.has_unit)
+        this->mUnit = reinterpret_cast<EEUnit*>((uintptr_t)theLoaded.unit_id);
     return theResult;
 }
 
@@ -632,75 +637,43 @@ long EEEffect::RepairPointers()
 // write error
 long EEEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theUnitID = (unsigned long)-1;
-    long theIndex = this->mGraphicEffect->mID;
-    long theResult = outFile.Write(theIndex);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mTileX);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mTileY);
-    if (theResult != 0)
-        return theResult;
-    if (this->mUnit)
-        theUnitID = this->mUnit->mUnitID;
-    theResult = outFile.Write(theUnitID);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mHandle.mValue);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mKeepsUnit);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save(this->mRecord, &theFile, (int32_t)this->mGraphicEffect->mID,
+                              this->mUnit ? (uint32_t)this->mUnit->mUnitID : 0xffffffffu);
 }
 
 // FUNCTION: EXE 0x50409b
 // Moves the effect to the map region under a point when that region changed (mTileX/mTileY hold region
 // coordinates)
-// NEAR: the two theEffect temporaries' frame slots are swapped (ebp-8 / ebp-4)
 void EEEffect::MoveToPoint(const GE3DPoint& inLocation)
 {
+    this->MoveToRegion(inLocation.GetX(), inLocation.GetY());
+}
+
+// Moves the effect to the map region under (inX, inY) when that region changed: leaves the old region's list, joins
+// the new one (the region is ee_gfx effect_state.rs's) (provisional name)
+void EEEffect::MoveToRegion(float inX, float inY)
+{
     RTSRegionTable<EEEffect*>* theTable = gWorld.mMap->mEffectRegions;
-    long theX = UMFloor(inLocation.GetX());
-    long theY = UMFloor(inLocation.GetY());
-    theX /= theTable->mRegionSize;
-    theY /= theTable->mRegionSize;
-    if (theX != this->mTileX || theY != this->mTileY) {
+    int32_t theX, theY;
+    if (ee_gfx_effect_region_changed(this->mRecord, inX, inY, (int32_t)theTable->mRegionSize, &theX, &theY)) {
         EEEffect* theEffect = this;
         RTSRegion<EEEffect*>* theList = theTable->GetRegion(this->mTileX, this->mTileY);
         if (theList != NULL)
             theList->Remove(theEffect);
         this->mTileX = theX;
         this->mTileY = theY;
-        EEEffect* theEffect2 = this;
         theList = theTable->GetRegion(this->mTileX, this->mTileY);
         if (theList != NULL)
-            theList->push_back(theEffect2);
+            theList->push_back(theEffect);
     }
 }
 
 // FUNCTION: EXE 0x504175
 // Moves the effect to the map region under a transformation's translation when that region changed
-// NEAR: as MoveToPoint (swapped frame slots)
 void EEEffect::MoveToTransformation(const GETransformation& inTransformation)
 {
-    RTSRegionTable<EEEffect*>* theTable = gWorld.mMap->mEffectRegions;
-    long theX = UMFloor(inTransformation.GetX());
-    long theY = UMFloor(inTransformation.GetY());
-    theX /= theTable->mRegionSize;
-    theY /= theTable->mRegionSize;
-    if (theX != this->mTileX || theY != this->mTileY) {
-        EEEffect* theEffect = this;
-        RTSRegion<EEEffect*>* theList = theTable->GetRegion(this->mTileX, this->mTileY);
-        if (theList != NULL)
-            theList->Remove(theEffect);
-        this->mTileX = theX;
-        this->mTileY = theY;
-        theEffect = this;
-        theList = theTable->GetRegion(this->mTileX, this->mTileY);
-        if (theList != NULL)
-            theList->push_back(theEffect);
-    }
+    this->MoveToRegion(inTransformation.GetX(), inTransformation.GetY());
 }
 
 // FUNCTION: EXE 0x504250

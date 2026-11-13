@@ -24,6 +24,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
+#include "ee/EEUnitStore.h"
 #include "ee/EECalamityManager.h"
 
 const UString EEUnitVectorItem::sData("EEGoalQueueContainer-Data");
@@ -51,7 +52,7 @@ EEUnitVectorItem::EEUnitVectorItem(const EEUnitVectorItem& inItem)
     this->Clear();
     this->mGoals.resize(inItem.mGoals.size(), NULL);
     for (long i = inItem.mGoals.size() - 1; i >= 0; i--) {
-        this->mGoals[i] = inItem.mGoals[i]->Clone();
+        this->mGoals.Set(i, inItem.mGoals[i]->Clone());
         this->mGoals[i]->SetOwner(this->mUnit);
     }
     this->mStartTime = inItem.mStartTime;
@@ -64,6 +65,7 @@ EEUnitVectorItem::EEUnitVectorItem(const EEUnitVectorItem& inItem)
 EEUnitVectorItem::~EEUnitVectorItem()
 {
     this->Clear();
+    EEGoalQueueDropped(this);   // New (R5b.4, the fifteenth round): out of the Rust mirror (ee/EEUnitStore.h)
 }
 
 // FUNCTION: EXE 0x605780
@@ -227,7 +229,7 @@ EEUnitVectorItem& EEUnitVectorItem::operator=(const EEUnitVectorItem& inItem)
         this->Clear();
         this->mGoals.resize(inItem.mGoals.size(), NULL);
         for (long i = inItem.mGoals.size() - 1; i >= 0; i--) {
-            this->mGoals[i] = inItem.mGoals[i]->Clone();
+            this->mGoals.Set(i, inItem.mGoals[i]->Clone());
             this->mGoals[i]->SetOwner(this->mUnit);
         }
         this->mStartTime = inItem.mStartTime;

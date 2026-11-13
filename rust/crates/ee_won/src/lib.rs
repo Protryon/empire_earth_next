@@ -67,9 +67,11 @@ pub mod http;
 pub mod httpdoc;
 pub mod httpengine;
 pub mod httpget;
+pub mod inputobj;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod ipobj;
+pub mod labelobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod lanobj;
@@ -108,6 +110,7 @@ pub mod sockobj;
 pub mod sockop;
 pub mod sockops;
 pub mod sockthread;
+pub mod splitobj;
 pub mod staging;
 pub mod stagingobj;
 /// cbindgen:ignore
