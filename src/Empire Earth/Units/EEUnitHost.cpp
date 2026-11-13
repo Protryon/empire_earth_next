@@ -26,7 +26,6 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGExplore.h"
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
@@ -427,7 +426,7 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
     bool theFlagB = inSpec->flag_b != 0;
     switch (inSpec->ctor) {
     case EE_GOAL_CTOR_EXPLORE:
-        return static_cast<EEUnitGoal*>(new EEUGExplore(theFlagA));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewExplore(theFlagA));
     case EE_GOAL_CTOR_ATTACK_GROUND:
         return static_cast<EEUnitGoal*>(new EEUGAttackGround(GE3DPoint(inSpec->point[0], inSpec->point[1], inSpec->point[2]), theFlagA));
     case EE_GOAL_CTOR_ATTACK_UNIT: {

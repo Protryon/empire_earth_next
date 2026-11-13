@@ -3131,7 +3131,6 @@ void EESMEffect::SetAIToggle()
 
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGExplore.h"
 #include "ee/EEPPatrolGroup.h"
 
 // FUNCTION: EXE 0x5c2811
@@ -3160,7 +3159,7 @@ void EESMEffect::SetUnitsStance()
             thePlayer->mPendingGroups.push_back(theGroup);
             theGroup->KeepMobileUnits();
             theGroup->ClearGoal();
-            theGroup->SetGoal(new EEUGExplore(true), false);
+            theGroup->SetGoal(EEUGRust::NewExplore(true), false);
             theGroup->mAction = kActionFindUnexploredArea;
             theGroup->Plan();
             break;

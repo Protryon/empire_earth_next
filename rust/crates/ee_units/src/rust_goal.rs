@@ -1,7 +1,7 @@
 //! The goals whose class moved whole into Rust (RUST_PLAN R5b.4, rounds 16 and 17): one C++ class, `EEUGRust`
 //! (ee/EEUGRust.h), keeps the base goal's fields and vtable; every virtual is one call of
-//! [`ee_units_rust_goal`], which dispatches by the goal's kind to the class's bodies (`patrol`, `calamity`), their
-//! state a Rust table by the goal's object. The C++ answers through one operation callback
+//! [`ee_units_rust_goal`], which dispatches by the goal's kind to the class's bodies (`patrol`, `calamity`,
+//! `explore`), their state a Rust table by the goal's object. The C++ answers through one operation callback
 //! ([`EeUnitsGoalHost`]): every read and world call the bodies make is one numbered operation
 //! (`EE_UNITS_GOAL_HOST_*`) with two handles and an argument block ([`EeUnitsGoalIo`]).
 //!
@@ -11,6 +11,7 @@
 use std::ffi::c_void;
 
 use crate::calamity::CalamityHost;
+use crate::explore::ExploreHost;
 use crate::patrol::PatrolHost;
 
 /// What a unit or group field of a goal holds.
@@ -100,18 +101,20 @@ pub fn base_condition(event: i64) -> bool {
 }
 
 // ---- the C++ host: one operation callback
-/// The argument block of one operation (ints, floats, text).
+/// The argument block of one operation (ints, floats, text, a list sink).
 #[repr(C)]
 pub struct EeUnitsGoalIo {
     pub i: [i64; 8],
     pub f: [f32; 4],
     pub text: *const u8,
     pub len: usize,
+    /// a `Vec<(i32, i32)>` the host pushes tiles onto (`ee_units_goal_push_tile`)
+    pub sink: *mut c_void,
 }
 
 impl Default for EeUnitsGoalIo {
     fn default() -> Self {
-        EeUnitsGoalIo { i: [0; 8], f: [0.0; 4], text: std::ptr::null(), len: 0 }
+        EeUnitsGoalIo { i: [0; 8], f: [0.0; 4], text: std::ptr::null(), len: 0, sink: std::ptr::null_mut() }
     }
 }
 
@@ -174,6 +177,26 @@ pub const EE_UNITS_GOAL_HOST_UNIT_HEIGHT: i32 = 63;
 pub const EE_UNITS_GOAL_HOST_HIT_POINTS: i32 = 64;
 pub const EE_UNITS_GOAL_HOST_UNDETECTABLE: i32 = 65;
 pub const EE_UNITS_GOAL_HOST_COMPLEX_UNIT: i32 = 66;
+// the explore goal's
+pub const EE_UNITS_GOAL_HOST_PLAYER_HUMAN: i32 = 70;
+pub const EE_UNITS_GOAL_HOST_PLAYER_SEES_ALL: i32 = 71;
+pub const EE_UNITS_GOAL_HOST_CONTAINER: i32 = 72;
+pub const EE_UNITS_GOAL_HOST_GROUP_UNITS: i32 = 73;
+pub const EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS: i32 = 74;
+pub const EE_UNITS_GOAL_HOST_LINE_OF_SIGHT: i32 = 75;
+pub const EE_UNITS_GOAL_HOST_RING_TILES: i32 = 76;
+pub const EE_UNITS_GOAL_HOST_TILE_SCREEN: i32 = 77;
+pub const EE_UNITS_GOAL_HOST_CELL_TAKEN: i32 = 78;
+pub const EE_UNITS_GOAL_HOST_CAN_STAND: i32 = 79;
+pub const EE_UNITS_GOAL_HOST_PATH_REACHABLE: i32 = 80;
+pub const EE_UNITS_GOAL_HOST_PATH_AREA_ID: i32 = 81;
+pub const EE_UNITS_GOAL_HOST_MAP_DIMENSIONS: i32 = 82;
+pub const EE_UNITS_GOAL_HOST_CONTINENT_POINT: i32 = 83;
+pub const EE_UNITS_GOAL_HOST_RANDOM: i32 = 84;
+pub const EE_UNITS_GOAL_HOST_NOTICE_FOREIGN: i32 = 85;
+pub const EE_UNITS_GOAL_HOST_UNIT_FAMILY: i32 = 86;
+pub const EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE: i32 = 87;
+
 /// The FFI adapter over the callback.
 pub struct OpHost<'a>(pub &'a EeUnitsGoalHost);
 
@@ -403,6 +426,91 @@ impl CalamityHost for OpHost<'_> {
     }
 }
 
+impl ExploreHost for OpHost<'_> {
+    fn player_human(&mut self, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_PLAYER_HUMAN, unit, 0) != 0
+    }
+    fn player_sees_all(&mut self, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_PLAYER_SEES_ALL, unit, 0) != 0
+    }
+    fn container(&mut self, unit: u64) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_CONTAINER, unit, 0) as u64
+    }
+    fn group_units(&mut self, unit: u64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_GROUP_UNITS, unit, 0)
+    }
+    fn path_area_bounds(&mut self, unit: u64) -> Option<[i32; 4]> {
+        let mut io = EeUnitsGoalIo::default();
+        if self.call(EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS, unit, 0, &mut io) == 0 {
+            return None;
+        }
+        Some([io.i[0] as i32, io.i[1] as i32, io.i[2] as i32, io.i[3] as i32])
+    }
+    fn line_of_sight(&mut self, unit: u64) -> f32 {
+        self.op_point(EE_UNITS_GOAL_HOST_LINE_OF_SIGHT, unit, 0, &[])[0]
+    }
+    fn ring_tiles(&mut self, x: i32, y: i32, ring: i32) -> Vec<(i32, i32)> {
+        let mut tiles: Vec<(i32, i32)> = Vec::new();
+        let mut io = EeUnitsGoalIo { sink: (&mut tiles as *mut Vec<(i32, i32)>).cast(), ..Default::default() };
+        io.i[0] = i64::from(x);
+        io.i[1] = i64::from(y);
+        io.i[2] = i64::from(ring);
+        self.call(EE_UNITS_GOAL_HOST_RING_TILES, 0, 0, &mut io);
+        tiles
+    }
+    fn tile_screen(&mut self, unit: u64, x: i32, y: i32) -> bool {
+        self.op_ints(EE_UNITS_GOAL_HOST_TILE_SCREEN, unit, 0, &[i64::from(x), i64::from(y)]) != 0
+    }
+    fn cell_taken(&mut self, unit: u64, x: i32, y: i32) -> bool {
+        self.op_ints(EE_UNITS_GOAL_HOST_CELL_TAKEN, unit, 0, &[i64::from(x), i64::from(y)]) != 0
+    }
+    fn can_stand(&mut self, unit: u64, x: i32, y: i32) -> bool {
+        self.op_ints(EE_UNITS_GOAL_HOST_CAN_STAND, unit, 0, &[i64::from(x), i64::from(y)]) != 0
+    }
+    fn path_reachable(&mut self, unit: u64, from: (i32, i32), to: (i32, i32)) -> bool {
+        let ints = [i64::from(from.0), i64::from(from.1), i64::from(to.0), i64::from(to.1)];
+        self.op_ints(EE_UNITS_GOAL_HOST_PATH_REACHABLE, unit, 0, &ints) != 0
+    }
+    fn path_area_id(&mut self, x: i32, y: i32) -> u16 {
+        self.op_ints(EE_UNITS_GOAL_HOST_PATH_AREA_ID, 0, 0, &[i64::from(x), i64::from(y)]) as u16
+    }
+    fn map_dimensions(&mut self) -> [i32; 4] {
+        let mut io = EeUnitsGoalIo::default();
+        self.call(EE_UNITS_GOAL_HOST_MAP_DIMENSIONS, 0, 0, &mut io);
+        [io.i[0] as i32, io.i[1] as i32, io.i[2] as i32, io.i[3] as i32]
+    }
+    fn continent_point(&mut self, unit: u64) -> Option<(i32, i32)> {
+        let mut io = EeUnitsGoalIo::default();
+        if self.call(EE_UNITS_GOAL_HOST_CONTINENT_POINT, unit, 0, &mut io) == 0 {
+            return None;
+        }
+        Some((io.i[0] as i32, io.i[1] as i32))
+    }
+    fn random(&mut self, low: i32, high: i32) -> i32 {
+        self.op_ints(EE_UNITS_GOAL_HOST_RANDOM, 0, 0, &[i64::from(low), i64::from(high)]) as i32
+    }
+    fn notice_foreign(&mut self, unit: u64) {
+        self.op(EE_UNITS_GOAL_HOST_NOTICE_FOREIGN, unit, 0);
+    }
+    fn unit_family(&mut self, unit: u64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_UNIT_FAMILY, unit, 0)
+    }
+    fn owns_lighthouse(&mut self, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE, unit, 0) != 0
+    }
+}
+
+/// The host pushes one tile onto a list sink (`io.sink` of the ring tiles' operation).
+///
+/// # Safety
+/// `sink` is the `io.sink` of the operation in progress.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_goal_push_tile(sink: *mut c_void, x: i32, y: i32) {
+    // SAFETY: the caller's contract: the sink is the Vec the operation made
+    let tiles = unsafe { &mut *sink.cast::<Vec<(i32, i32)>>() };
+    tiles.push((x, y));
+}
+
 // ---- the goal's bodies, by operation (`EEUGRust`'s virtuals and accessors)
 pub const EE_UNITS_GOAL_DESTROY: i32 = 1;
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -441,9 +549,14 @@ pub const EE_UNITS_GOAL_CALAMITY_FIELDS: i32 = 41;
 pub const EE_UNITS_GOAL_CALAMITY_TARGET_LOCATION: i32 = 42;
 /// the load's empty cast
 pub const EE_UNITS_GOAL_CALAMITY_NEW_EMPTY: i32 = 43;
+pub const EE_UNITS_GOAL_NEW_EXPLORE: i32 = 50;
+/// `io.i`: the tile x, y (out; in for the set)
+pub const EE_UNITS_GOAL_EXPLORE_TILE: i32 = 51;
+pub const EE_UNITS_GOAL_EXPLORE_SET_TILE: i32 = 52;
 
-/// `kGoalPatrol`, `kGoalCastCalamity`
+/// `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 pub const GOAL_PATROL: u8 = 9;
+pub const GOAL_EXPLORE: u8 = 10;
 pub const GOAL_CAST_CALAMITY: u8 = 11;
 
 /// One body of a Rust goal: `op` (`EE_UNITS_GOAL_*`) on the goal object `goal` of kind `kind` (`a`, `b`, `io` as
@@ -467,6 +580,7 @@ pub unsafe extern "C" fn ee_units_rust_goal(
     match kind {
         GOAL_PATROL => crate::patrol::body(op, goal, a, b, io, &mut h),
         GOAL_CAST_CALAMITY => crate::calamity::body(op, goal, a, b, io, &mut h),
+        GOAL_EXPLORE => crate::explore::body(op, goal, a, b, io, &mut h),
         _ => 0,
     }
 }

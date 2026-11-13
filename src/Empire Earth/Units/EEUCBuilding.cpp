@@ -49,7 +49,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGAttackGround.h"
-#include "ee/EEUGExplore.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EECPIntelligence.h"
 #include "ee/EEGameVariant.h"
@@ -118,7 +118,7 @@ bool EEUCBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
             }
             if (theCargo->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = theCargo->mGoalQueues[1].GetFront();
-                EEUGExplore* theExplore = EEGoalCast<EEUGExplore>(theGoal);
+                EEUGRust* theExplore = EEExploreGoalCast(theGoal);
                 if (theGoal != NULL) {
                     theCargo->mGoalQueues[0].Clear();
                     inUnit->SetExitingUnitID(theCargo->mUnitID);

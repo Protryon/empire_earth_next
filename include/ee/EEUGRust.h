@@ -1,8 +1,9 @@
 // New (port; docs/RUST_PLAN.md R5b.4, rounds 16 and 17): the goals whose class moved whole into Rust. The object is
 // the EEUnitGoal the queues, the unit's mGoalState and the save hold (its base fields, its vtable); its own state and
 // bodies are Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind: patrol.rs for kGoalPatrol,
-// calamity.rs for kGoalCastCalamity), every virtual one call. Replaces EEUGPatrol (0x227de8..0x2283bc; EEPlayer's
-// SetPatrolGroup 0x563659 with it) and EEUGCastCalamity (0x220986..0x2213dd): their classes and files are deleted.
+// calamity.rs for kGoalCastCalamity, explore.rs for kGoalExplore), every virtual one call. Replaces EEUGPatrol
+// (0x227de8..0x2283bc; EEPlayer's SetPatrolGroup 0x563659 with it), EEUGCastCalamity (0x220986..0x2213dd) and
+// EEUGExplore (0x2213dd..0x221d98): their classes and files are deleted.
 #ifndef EE_EEUGRUST_H
 #define EE_EEUGRUST_H
 
@@ -39,6 +40,12 @@ public:
     long GetCalamityType(long* outTileX = NULL, long* outTileY = NULL, EEUnit** outTarget = NULL);
     void GetCalamityTargetLocation(GE3DPoint& outLocation);
 
+    // an explore goal (kGoalExplore): no tile searched yet (EEUGExplore(inArg)); the tile being explored's centre
+    // (x and y only: EEUGExplore's GetTileCenter), the tile set
+    static EEUGRust* NewExplore(bool inArg);
+    void GetExploreTileCenter(GE3DPoint& outLocation);
+    void SetExploreTile(long inX, long inY);
+
     virtual ~EEUGRust();
     virtual void GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation);
     virtual EEUnitGoal* Clone();
@@ -59,7 +66,8 @@ public:
     virtual bool Suits(EEUnit* inUnit);
 };
 
-// the goal of kind inKind (the old EEGoalCast<EEUGPatrol>, EEGoalCast<EEUGCastCalamity>), NULL for another or none
+// the goal of kind inKind (the old EEGoalCast<EEUGPatrol>, <EEUGCastCalamity>, <EEUGExplore>), NULL for another or
+// none
 inline EEUGRust* EERustGoalCast(EEUnitGoal* inGoal, unsigned char inKind)
 {
     return inGoal != NULL && inGoal->mKind == inKind ? static_cast<EEUGRust*>(inGoal) : NULL;
@@ -71,6 +79,10 @@ inline EEUGRust* EEPatrolGoalCast(EEUnitGoal* inGoal)
 inline EEUGRust* EECastCalamityGoalCast(EEUnitGoal* inGoal)
 {
     return EERustGoalCast(inGoal, kGoalCastCalamity);
+}
+inline EEUGRust* EEExploreGoalCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalExplore);
 }
 
 #endif

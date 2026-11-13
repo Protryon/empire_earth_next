@@ -1,11 +1,13 @@
 // New (port; docs/RUST_PLAN.md R5b.4, rounds 16 and 17): the goals whose class moved whole into Rust
 // (ee/EEUGRust.h). Each virtual is one call of the Rust body (ee_units rust_goal.rs, by mKind) over the host below:
 // one operation callback whose cases are the reads and world calls the bodies make (the units, the patrol group's
-// walk, the calamity classes and manager, the typed file calls, the texts). The base goal's own fields, save and
-// checksum stay EEUnitGoal's.
+// walk, the calamity classes and manager, the explore goal's map, path and continent queries, the typed file
+// calls, the texts). The base goal's own fields, save and checksum stay EEUnitGoal's.
 #include <windows.h>
 #include <stdio.h>
+#include <map>
 #include <string>
+#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -16,6 +18,8 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/USingleton.h"
+#include "lle/U2DPolygon.h"
+#include "lle/U2DSparseArray.h"
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -29,6 +33,21 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEAreaUtilities.h"
+#include "ee/EETileLocation.h"
+#include "ee/EEUnitUtilities.h"
+#include "ee/EECPILocation.h"
+#include "ee/EECPAttackSubGroup.h"
+#include "ee/EEAIArea.h"
+#include "ee/EEAIContinent.h"
+#include "ee/EEAIPathArea.h"
+#include "ee/EEAIPathSubSector.h"
+#include "ee/EEAIContinentManager.h"
+#include "ee/EEPathManager.h"
+#include "ee/EEAutoPathRequest.h"
+#include "ee/EEPhysics.h"
+#include "ee/EEAIRandom.h"
+#include "ee/EECPIntelligence.h"
+#include "ee/EEMapDimensions.h"
 #include "ee/EEUnitKind.h"
 #include "rust/ee_units.h"
 
@@ -264,6 +283,125 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         }
     case EE_UNITS_GOAL_HOST_COMPLEX_UNIT:
         return Handle(theUnit->mComplexUnit);
+
+    // the explore goal's
+    case EE_UNITS_GOAL_HOST_PLAYER_HUMAN:
+        return theComplex->mPlayer->IsHuman() ? 1 : 0;
+    case EE_UNITS_GOAL_HOST_PLAYER_SEES_ALL:
+        return theComplex->mPlayer->mSeesAll ? 1 : 0;
+    case EE_UNITS_GOAL_HOST_CONTAINER:
+        return Handle(theComplex->mContainer);
+    case EE_UNITS_GOAL_HOST_GROUP_UNITS:
+        return theComplex->mActiveGroup == NULL ? -1 : (int64_t)theComplex->mActiveGroup->GetNumUnits();
+    case EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS: {
+            EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(theComplex);
+            if (theArea == NULL)
+                return 0;
+            const U2DRectangle<long>& theBounds = theArea->mHull.GetBounds();
+            ioArgs->i[0] = theBounds.mTop;
+            ioArgs->i[1] = theBounds.mBottom;
+            ioArgs->i[2] = theBounds.mLeft;
+            ioArgs->i[3] = theBounds.mRight;
+            return 1;
+        }
+    case EE_UNITS_GOAL_HOST_LINE_OF_SIGHT:
+        ioArgs->f[0] = theComplex->GetLineOfSight();
+        return 0;
+    case EE_UNITS_GOAL_HOST_RING_TILES: {
+            std::vector<U2DPoint<long> > theTiles;
+            EEGetSquareRingTiles((long)ioArgs->i[0], (long)ioArgs->i[1], (long)ioArgs->i[2], theTiles);
+            EEAIRandomShuffle(theTiles.begin(), theTiles.end());
+            for (size_t i = 0; i < theTiles.size(); i++)
+                ee_units_goal_push_tile(ioArgs->sink, (int32_t)theTiles[i].mX, (int32_t)theTiles[i].mY);
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_TILE_SCREEN: {
+            EEMap* theMap = ::gWorld.mMap;
+            long theX = (long)ioArgs->i[0];
+            long theY = (long)ioArgs->i[1];
+            EEMapTile* theTile = theMap->GetTile(theX, theY);
+            if (theTile == NULL || theMap->IsEdgeTile(theX, theY) || theTile->IsVisibleTo(theComplex->mPlayer))
+                return 1;
+            return (theComplex->mUnitClass->mDomains & kMovementAir) != 0
+                && (!theMap->mTerrainMesh.GetIsSpaceMap() || theComplex->mUnitClass->CanMoveOnTerrain(theComplex, 12));
+        }
+    case EE_UNITS_GOAL_HOST_CELL_TAKEN: {
+            GE3DPoint theCell((float)(long)ioArgs->i[0] + 0.5f, (float)(long)ioArgs->i[1] + 0.5f, 0.0f);
+            return theComplex->mActiveGroup != NULL && theComplex->mActiveGroup->IsCellTaken(theCell);
+        }
+    case EE_UNITS_GOAL_HOST_CAN_STAND: {
+            EETileCoordinate theTile;
+            theTile.mX = (long)ioArgs->i[0];
+            theTile.mY = (long)ioArgs->i[1];
+            return EECanStandOn(theTile, theComplex);
+        }
+    case EE_UNITS_GOAL_HOST_PATH_REACHABLE: {
+            EECPASGFlags theFlags;
+            theComplex->mUnitClass->GetTerrainFlags(theComplex, theFlags);
+            EETileCoordinate theFrom;
+            theFrom.mX = (long)ioArgs->i[0];
+            theFrom.mY = (long)ioArgs->i[1];
+            EETileCoordinate theTo;
+            theTo.mX = (long)ioArgs->i[2];
+            theTo.mY = (long)ioArgs->i[3];
+            EEAutoPathRequest* thePath =
+                gPathManager.RequestPath(theComplex->mPlayer->GetPlayerID(), theFrom, theTo, &theFlags, 1, 10, NULL, 1);
+            bool theReachable = false;
+            if (thePath->mPath.size() > 0) {
+                EETileCoordinate theLast = thePath->mPath.back();
+                EEAIPathSubSector* theFirst = gContinentManager.GetPathSubSectorAt(theLast.GetX(), theLast.mY);
+                EEAIPathSubSector* theSecond = gContinentManager.GetPathSubSectorAt(theTo.GetX(), theTo.mY);
+                theReachable = theFirst == theSecond;
+                if (!theReachable && theFirst != NULL && theSecond != NULL && theFirst->IsNeighbor(theSecond))
+                    theReachable = theFirst->AreLinksBlocked(theSecond, theFlags);
+            }
+            thePath->Dereference();
+            return theReachable;
+        }
+    case EE_UNITS_GOAL_HOST_PATH_AREA_ID: {
+            U2DPoint<long> theTile;
+            theTile.mX = (long)ioArgs->i[0];
+            theTile.mY = (long)ioArgs->i[1];
+            EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(theTile);
+            return theArea != NULL ? theArea->mID : 0;
+        }
+    case EE_UNITS_GOAL_HOST_MAP_DIMENSIONS:
+        ioArgs->i[0] = gMapWidth;
+        ioArgs->i[1] = gMapHeight;
+        ioArgs->i[2] = ::gWorld.mMap->mL195614;
+        ioArgs->i[3] = ::gWorld.mMap->mL195610;
+        return 0;
+    case EE_UNITS_GOAL_HOST_CONTINENT_POINT: {
+            EEAIArea* theArea;
+            if (((theComplex->mUnitClass->mDomains & kMovementAir) == 0
+                 || (::gWorld.mMap->mTerrainMesh.GetIsSpaceMap() && !theComplex->mUnitClass->CanMoveOnTerrain(theComplex, 12)))
+                && theComplex->mUnitClass->mUnitType != kUnitTypeSp15SpaceFighter)
+                theArea = gContinentManager.GetContinentAt(theComplex);
+            else
+                theArea = dynamic_cast<EEAIContinent*>(
+                    gContinentManager.GetRandomContinent(kContinentCategoryNone, gPhysics->mRandom));
+            if (theArea == NULL)
+                return 0;
+            U2DPoint<long> thePoint = theArea->GetRandomPoint();
+            ioArgs->i[0] = thePoint.mX;
+            ioArgs->i[1] = thePoint.mY;
+            return 1;
+        }
+    case EE_UNITS_GOAL_HOST_RANDOM:
+        return gPhysics->GetRandom((long)ioArgs->i[0], (long)ioArgs->i[1]);
+    case EE_UNITS_GOAL_HOST_NOTICE_FOREIGN: {
+            EEUnit* theTarget = EEFindNearbyTarget(theComplex);
+            if (theTarget != NULL)
+                theComplex->mPlayer->NoticeForeignUnit(theTarget);
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_UNIT_FAMILY:
+        return theComplex->mUnitClass->mFamily;
+    case EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE: {
+            std::vector<EEUnit*> theUnits;
+            EEGetPlayerUnitsOfType(kUnitTypeLighthouseAtAlexandria, theComplex->mPlayer->GetPlayerID(), theUnits);
+            return theUnits.size() > 0;
+        }
     }
     return 0;
 }
@@ -349,6 +487,27 @@ void EEUGRust::GetCalamityTargetLocation(GE3DPoint& outLocation)
     EeUnitsGoalIo theArgs = {};
     Goal(EE_UNITS_GOAL_CALAMITY_TARGET_LOCATION, this, 0, 0, &theArgs);
     PointIn(theArgs, outLocation);
+}
+
+EEUGRust* EEUGRust::NewExplore(bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalExplore, inArg);
+    Goal(EE_UNITS_GOAL_NEW_EXPLORE, theGoal);
+    return theGoal;
+}
+
+void EEUGRust::GetExploreTileCenter(GE3DPoint& outLocation)
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_EXPLORE_TILE, this, 0, 0, &theArgs);
+    outLocation.SetX((float)(long)theArgs.i[0] + 0.5f);
+    outLocation.SetY((float)(long)theArgs.i[1] + 0.5f);
+}
+
+void EEUGRust::SetExploreTile(long inX, long inY)
+{
+    EeUnitsGoalIo theArgs = {{inX, inY}};
+    Goal(EE_UNITS_GOAL_EXPLORE_SET_TILE, this, 0, 0, &theArgs);
 }
 
 EEUGRust::~EEUGRust()

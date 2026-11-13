@@ -702,6 +702,42 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_UNDETECTABLE = 65;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_COMPLEX_UNIT = 66;
 
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAYER_HUMAN = 70;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAYER_SEES_ALL = 71;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CONTAINER = 72;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GROUP_UNITS = 73;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_AREA_BOUNDS = 74;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LINE_OF_SIGHT = 75;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RING_TILES = 76;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_SCREEN = 77;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CELL_TAKEN = 78;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_STAND = 79;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_REACHABLE = 80;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_AREA_ID = 81;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_MAP_DIMENSIONS = 82;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CONTINENT_POINT = 83;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RANDOM = 84;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NOTICE_FOREIGN = 85;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_FAMILY = 86;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE = 87;
+
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -764,8 +800,17 @@ constexpr static const int32_t EE_UNITS_GOAL_CALAMITY_TARGET_LOCATION = 42;
 /// the load's empty cast
 constexpr static const int32_t EE_UNITS_GOAL_CALAMITY_NEW_EMPTY = 43;
 
-/// `kGoalPatrol`, `kGoalCastCalamity`
+constexpr static const int32_t EE_UNITS_GOAL_NEW_EXPLORE = 50;
+
+/// `io.i`: the tile x, y (out; in for the set)
+constexpr static const int32_t EE_UNITS_GOAL_EXPLORE_TILE = 51;
+
+constexpr static const int32_t EE_UNITS_GOAL_EXPLORE_SET_TILE = 52;
+
+/// `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 constexpr static const uint8_t GOAL_PATROL = 9;
+
+constexpr static const uint8_t GOAL_EXPLORE = 10;
 
 constexpr static const uint8_t GOAL_CAST_CALAMITY = 11;
 
@@ -1520,12 +1565,14 @@ struct EeUnitsPitchIn {
   uint8_t naval;
 };
 
-/// The argument block of one operation (ints, floats, text).
+/// The argument block of one operation (ints, floats, text, a list sink).
 struct EeUnitsGoalIo {
   int64_t i[8];
   float f[4];
   const uint8_t *text;
   size_t len;
+  /// a `Vec<(i32, i32)>` the host pushes tiles onto (`ee_units_goal_push_tile`)
+  void *sink;
 };
 
 /// The host: `op(context, operation, a, b, io)` (`EE_UNITS_GOAL_HOST_*`).
@@ -2248,6 +2295,12 @@ uint32_t ee_units_player_check(const uint64_t *objects,
                                const uint32_t *ids,
                                const uint32_t *enemies,
                                size_t count);
+
+/// The host pushes one tile onto a list sink (`io.sink` of the ring tiles' operation).
+///
+/// # Safety
+/// `sink` is the `io.sink` of the operation in progress.
+void ee_units_goal_push_tile(void *sink, int32_t x, int32_t y);
 
 /// One body of a Rust goal: `op` (`EE_UNITS_GOAL_*`) on the goal object `goal` of kind `kind` (`a`, `b`, `io` as
 /// the operation takes them); its result (a handle, a status, a checksum or a flag; 0 otherwise).

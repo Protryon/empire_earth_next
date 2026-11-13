@@ -17,12 +17,14 @@
 //! over the stepped units' list `tick`; the classes' `Update`s as sequences of those leaves and host calls `update`,
 //! their `ActionChanged`s as decisions over the store and host operations `actions`.
 //! The players' diplomacy tables (by player object) are `players`. The goal classes moved whole (one C++ class,
-//! `EEUGRust`, every virtual one call) are `rust_goal` (the dispatch and the host) with `patrol` and `calamity`.
+//! `EEUGRust`, every virtual one call) are `rust_goal` (the dispatch and the host) with `patrol`, `calamity` and
+//! `explore`.
 
 pub mod actions;
 pub mod ai;
 pub mod calamity;
 pub mod commands;
+pub mod explore;
 pub mod ffi;
 pub mod goals;
 pub mod group;
