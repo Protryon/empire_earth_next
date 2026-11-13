@@ -4834,6 +4834,45 @@ changed.
 Next in 2c: the carriers and their fighters (CheckNaval's carrier, the 37 Corsairs), the anti-air count (the C++ asks
 for nearly three times as many guns), the air and space explorers, the favourite space type and CheckSpace, then the
 air sub-groups' own behaviour (bombers, fighters, helicopters) beyond lib.groups.
+### 8.73 Porting everything, 2c: carriers, anti-air, explorers, space (2026-11-13, EE-SIM)
+
+The benches start in the Atomic Age - WW2 (`--start-epoch`; 8 seeds, 45 and 90 minutes) and, for space, in the Space
+Age on Planets Earth (4 seeds, 45 minutes).
+
+- **The aircraft carriers.** AllocateSpecialUnits' carriers are ported:
+  - the carrier chance;
+  - at most the per-group number, less one sea unit;
+  - the carriers' share of the unit limit.
+
+  As in the C++, they never come up with this data. The carrier is neither an attack nor a defence unit, so it is
+  never a candidate. A carrier comes only as the carrier fighters' producer. The army line now prints `carriers=`.
+- **The carrier fighters.** From WW2, CheckNaval keeps the difficulty's carrier fighters (new tuning fields
+  `carrier_fighters_*` in `ai.tuning().behavior`, AI_LUA_UNITS §11), counting own units and those asked for. The
+  fighter is the epoch's: Corsair, then F-14, then Avenger. The request queues the carrier as its producer at the
+  start, as the C++'s does: 8 carriers queued plus 1 later in 8 games for both.
+- **The anti-air count.** It was already the C++'s; the 22 in §8.72 was a 90-minute count. At 45 minutes it is 8
+  against 7; at 90 minutes 12 against 12.
+- **A stall loop (new, not the C++'s).** In one game a navy yard's shore site stalled 33 times: the foundation was
+  deleted and placed again on the same tile. Now a site that stalled twice for its class in ten minutes is skipped
+  until then. That game had 4 stalls afterwards.
+- **The explorers.** The air explorers are ported: num_air_explorers, once the first attack has started and the
+  airport is researched; an aircraft inside its airport also goes out. The space explorers are ported too: as many as
+  the sea explorers (the C++ reads that number), once the space dock is researched on a space map.
+
+  DEVIATION: the port picks the fastest class trainable now. The C++ asked for a Corsair 52 times in 8 WW2 games,
+  with no carrier to build it, and got none. The port asked for 15 aircraft it could train (A-10, B-17, B-2).
+- **CheckSpace.** On a space map, every ship_maintenance_timer minutes, a space-only group of kind 5 tops the space
+  units (own and asked for) up to ships_to_maintain. A space carrier is added while there are fewer than the space
+  docks and 4. ChooseFavoriteSpaceType and IsFavoriteSpace are ported. On Planets Earth the port made 13 space
+  groups in 4 games. The space units join the land sub-groups until the air and space sub-groups are ported.
+
+0 script errors. Determinism (seeds 2 and 5, --repeat 2) is identical at the WW2 start and on Planets Earth. Only a
+Lua tuning export changed in the C++; the classic's decisions did not change.
+
+On land (balanced, 32 seeds, 90 minutes) the C++ won 16, the port 10, with 6 close (12-15 and 11-17 before), within noise. Only the stall rule acts on land: these games never reach the epochs of the other changes.
+
+Next in 2c: the air sub-groups (EECPASGAir and its bomber, fighter and helicopter units), and the space fighters'
+sub-group.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
