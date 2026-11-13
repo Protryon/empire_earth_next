@@ -96,11 +96,6 @@
 #include "ee/EEUIBSavedGroup.h"
 #include "ee/EEUICUnitIconBar.h"
 #include "ee/EEUIFMGErrorLog.h"
-#include "ee/EEUIFMGGChat.h"
-#include "ee/EEUIFMGGCivBuilder.h"
-#include "ee/EEUIFMGGDiplomacy.h"
-#include "ee/EEUIFMGGOptions.h"
-#include "ee/EEUIFMGGStatistics.h"
 #include "ee/EEUIFMGUnitHack.h"
 #include "lle/UIFormManager.h"
 #include "ee/EESMMediaStrings.h"
@@ -900,20 +895,12 @@ void EEUIFMainGame::CreateGroup(unsigned long inIndex)
     case 0:
         this->mGroups[0] = new EEUIFMGMainGroup(this);
         break;
-    case 1:
-        this->mGroups[1] = new EEUIFMGGStatistics(this);
-        break;
-    case 2:
-        this->mGroups[2] = new EEUIFMGGChat(this);
-        break;
-    case 3:
-        this->mGroups[3] = new EEUIFMGGDiplomacy(this);
-        break;
-    case 4:
-        this->mGroups[4] = new EEUIFMGGOptions(this);
-        break;
-    case 5:
-        this->mGroups[5] = new EEUIFMGGCivBuilder(this);
+    case EE_SCREENS_GROUP_STATISTICS:
+    case EE_SCREENS_GROUP_CHAT:
+    case EE_SCREENS_GROUP_DIPLOMACY:
+    case EE_SCREENS_GROUP_OPTIONS:
+    case EE_SCREENS_GROUP_CIV_BUILDER:
+        this->mGroups[inIndex] = new EEUIFMGGRust(this, inIndex);
         break;
     }
 }

@@ -2351,6 +2351,42 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
 
+/// The statistics group (`mGroups[1]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_STATISTICS = 1;
+
+/// The chat group (`mGroups[2]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_CHAT = 2;
+
+/// The diplomacy group (`mGroups[3]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_DIPLOMACY = 3;
+
+/// The options group (`mGroups[4]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_OPTIONS = 4;
+
+/// The civilization builder group (`mGroups[5]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_CIV_BUILDER = 5;
+
+/// `Refresh` (slot +0x04).
+constexpr static const uint32_t EE_SCREENS_GROUP_REFRESH = 1;
+
+/// `Select` (slot +0x0c).
+constexpr static const uint32_t EE_SCREENS_GROUP_SELECT = 2;
+
+/// The local player's conversions (`mSavedGroups.GetLastValue(5)`).
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_CONVERSIONS = 1;
+
+/// The world table's conversions limit (`kWorldConversionsStatisticMax`).
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_CONVERSIONS_MAX = 2;
+
+/// `gWorld.mNumberOfWondersToWin`.
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_WONDERS_TO_WIN = 3;
+
+/// The title string of the epoch the local player's tech tree shows (`EEEpochTitleID(GetShownEpoch())`).
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_EPOCH_TITLE = 4;
+
+/// Whether the world has a current player.
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_HAS_PLAYER = 5;
+
 /// A tab: `EE_SCREENS_PGS_TAB + page - 1`, pages 1..7 (summary, time line, military, economy, epoch, society, misc).
 constexpr static const uint32_t EE_SCREENS_PGS_TAB = 6401;
 
@@ -4142,6 +4178,9 @@ long ee_screens_event(uint32_t event,
 
 /// The menus' event code for a control event id, 0 for another form's.
 uint32_t ee_screens_menus_event_for(unsigned long id);
+
+/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
+void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);
 
 /// The post-game summary's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_post_game_event_for(unsigned long id);

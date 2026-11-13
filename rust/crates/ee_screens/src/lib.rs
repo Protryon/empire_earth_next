@@ -64,6 +64,8 @@
 //! - [`editor_whole`]: the scenario editor's actions whole in Rust behind one C++ action (`EESEARust`): save, test,
 //!   exit, quick save, the tech lists, the rotation, the trigger area, the blank map (the elevation file's heights)
 //!   and the random map, the wall and gate placements, the unit placement and move ([`editor_place`]).
+//! - [`panel_groups`]: the main game form's statistics, chat, diplomacy, options and civilization builder panel
+//!   groups (one C++ class `EEUIFMGGRust` by kind): the statistics' texts.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
@@ -135,6 +137,9 @@ pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
 mod menus_ffi;
+pub mod panel_groups;
+#[cfg(not(test))]
+mod panel_groups_ffi;
 pub mod post_game;
 #[cfg(not(test))]
 mod post_game_ffi;

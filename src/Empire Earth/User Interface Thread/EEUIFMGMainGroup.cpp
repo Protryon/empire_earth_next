@@ -572,3 +572,65 @@ void EEUIFMGMainGroup::Select()
 void EEUIFMGMainGroup::Virtual08()
 {
 }
+
+#include "ee/EETechTreeTechID.h"
+
+// FUNCTION: EXE 0x667eaa
+// Returns the epoch the tech tree shows to the player (two past the start, at most the end; at least the Bronze
+// Age's): the statistics group's "wonders available in" (inline in the original EEUIFMGGStatistics.h)
+long EETechTree::GetShownEpoch() const
+{
+    long theEpoch = this->mStartEpoch + 2 > this->mEndEpoch ? this->mEndEpoch : this->mStartEpoch + 2;
+    return theEpoch > kTechEpochBronze ? theEpoch : 3;
+}
+
+// The panel groups' host (ee_screens panel_groups.rs): a value (EE_SCREENS_GROUP_VALUE_*), or a label's text
+// printed from the format with the resource strings[0] and strings[1] (when not -1) or strings[0] and the two values
+extern "C" int32_t ee_screenscpp_group(void* inGroup, bool inPrint, uint32_t inWhich, uint32_t inControl,
+                                       bool inIfChanged, const char* inFormat, const int32_t* inStrings,
+                                       const int32_t* inValues)
+{
+    EEUIFMGGRust* theGroup = static_cast<EEUIFMGGRust*>(inGroup);
+    if (!inPrint) {
+        switch (inWhich) {
+        case EE_SCREENS_GROUP_VALUE_CONVERSIONS:
+            return gWorld.GetCurrentPlayer()->mSavedGroups.GetLastValue(5);
+        case EE_SCREENS_GROUP_VALUE_CONVERSIONS_MAX:
+            return gWorldTable.GetLongValue(kWorldConversionsStatisticMax);
+        case EE_SCREENS_GROUP_VALUE_WONDERS_TO_WIN:
+            return gWorld.mNumberOfWondersToWin;
+        case EE_SCREENS_GROUP_VALUE_EPOCH_TITLE:
+            return EEEpochTitleID(gWorld.GetCurrentPlayer()->GetTechTree()->GetShownEpoch());
+        case EE_SCREENS_GROUP_VALUE_HAS_PLAYER:
+            return gWorld.GetCurrentPlayer() != NULL;
+        }
+        return 0;
+    }
+    UWideString theText, theFirst, theSecond;
+    gResource->GetString(inStrings[0], theFirst);
+    if (inStrings[1] != -1) {
+        gResource->GetString(inStrings[1], theSecond);
+        sprintf(theText, inFormat, (const char*)theFirst, (const char*)theSecond);
+    } else {
+        sprintf(theText, inFormat, (const char*)theFirst, (long)inValues[0], (long)inValues[1]);
+    }
+    UITextLabel* theLabel = static_cast<UITextLabel*>(theGroup->mOwner->GetControl(inControl));
+    if (!inIfChanged || theLabel->GetText(0) != theText)
+        theLabel->SetText(theText);
+    return 0;
+}
+
+// FUNCTION: EXE 0x667ce7
+// Refreshes the panel group (the statistics group: the conversions against their limit, when the text changed)
+void EEUIFMGGRust::Refresh()
+{
+    ee_screens_group_call(this, this->mKind, EE_SCREENS_GROUP_REFRESH);
+}
+
+// FUNCTION: EXE 0x667db1
+// Selects the panel group (the statistics group: the wonders to win, the epoch wonders become available in, then
+// the conversions)
+void EEUIFMGGRust::Select()
+{
+    ee_screens_group_call(this, this->mKind, EE_SCREENS_GROUP_SELECT);
+}
