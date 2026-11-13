@@ -112,6 +112,7 @@ pub mod reqops;
 pub mod resource;
 pub mod routeconn;
 pub mod routemsg;
+pub mod routeop;
 pub mod routing;
 pub mod scrollerobj;
 pub mod servconn;

@@ -480,6 +480,205 @@ static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
     default: break;
     }
 }
+#else
+// the Rust op's members through the accessors its readers use, the same lines
+#define NUM(f) (inOp->Num(EE_WON_RTF_##f))
+#define TXT(w) (inOp->Text(EE_WON_RTT_##w))
+static void DumpFields(RoutingOp* inOp, std::vector<std::string>& out)
+{
+    bool ok = inOp->GetStatus() == WS_Success;
+    switch (inOp->GetType()) {
+    case RoutingOp_AcceptClient:
+    case RoutingOp_InviteClient:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " client=" + N(inOp->GetClientId()) + " on=" + N(NUM(ON)) + " "
+                      + Esc(TXT(COMMENT)));
+        break;
+    case RoutingOp_BanClient:
+    case RoutingOp_MuteClient:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " on=" + N(NUM(ON)) + " time=" + N(NUM(TIME)) + " "
+                      + Esc(TXT(COMMENT)) + " bywon=" + N(NUM(BY_WON_ID)) + " cdkey=" + N(NUM(IS_CDKEY)) + " won="
+                      + N(NUM(WON_ID)) + " client=" + N(inOp->GetClientId()));
+        break;
+    case RoutingOp_BecomeModerator: Line(out, "on=" + N(NUM(ON))); break;
+    case RoutingOp_CancelJoinGroup: Line(out, "group=" + N(inOp->GetGroupId()) + " leave=" + N(NUM(ON))); break;
+    case RoutingOp_ClientFlagsChanged:
+        Line(out, "client=" + N(inOp->GetClientId()) + " f=" + X((unsigned long)NUM(CLIENT_FLAGS)));
+        break;
+    case RoutingOp_ClientJoinedGroup:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " client=" + N(inOp->GetClientId()) + " mf=" + N(NUM(MEMBER_FLAGS))
+                      + " " + Esc(TXT(NAME)) + " cf=" + X((unsigned long)NUM(CLIENT_FLAGS)) + " has="
+                      + N(NUM(HAS_CLIENT_FLAGS)));
+        break;
+    case RoutingOp_ClientJoinedServer: {
+        RoutingClientInfoPtr c = inOp->GetClientInfo();
+        Line(out, "client " + Client(c.get()) + " name " + Esc(c.get() != NULL ? c->mName : std::wstring()));
+        break;
+    }
+    case RoutingOp_ClientLeftGroup:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " client=" + N(inOp->GetClientId()));
+        break;
+    case RoutingOp_ClientLeftServer: Line(out, "client=" + N(inOp->GetClientId())); break;
+    case RoutingOp_CreateDataObject:
+        Line(out, "f=" + N(NUM(FLAGS8)) + " link=" + N(inOp->GetLinkId()) + " type=" + Esc(inOp->DataType()) + " "
+                      + Esc(TXT(NAME)) + " data=" + Hex(inOp->GetData().get()));
+        break;
+    case RoutingOp_CreateGroup:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " parent=" + N(NUM(PARENT_ID)) + " " + Esc(TXT(NAME)) + " pw="
+                      + Esc(TXT(PASSWORD)) + " maxp=" + N(NUM(MAX_PLAYERS)) + " jf=" + N(NUM(JOIN_FLAGS)) + " gf="
+                      + X((unsigned long)NUM(GROUP_FLAGS)) + " af=" + X((unsigned long)NUM(ASYNC_FLAGS)) + " leave="
+                      + N(NUM(LEAVE_ON_CANCEL)));
+        break;
+    case RoutingOp_DataObjectCreated:
+        Line(out, "link=" + N(inOp->GetLinkId()) + " type=" + Esc(inOp->DataType()) + " " + Esc(TXT(NAME)) + " data="
+                      + Hex(inOp->GetData().get()));
+        break;
+    case RoutingOp_DataObjectDeleted:
+    case RoutingOp_DeleteDataObject:
+        Line(out, "link=" + N(inOp->GetLinkId()) + " type=" + Esc(inOp->DataType()) + " " + Esc(TXT(NAME)));
+        break;
+    case RoutingOp_DataObjectModified:
+    case RoutingOp_ModifyDataObject:
+        Line(out, "link=" + N(inOp->GetLinkId()) + " type=" + Esc(inOp->DataType()) + " " + Esc(TXT(NAME)) + " off="
+                      + N(NUM(OFFSET)) + " ins=" + N(NUM(ON)) + " data=" + Hex(inOp->GetData().get()));
+        break;
+    case RoutingOp_GetBadUserList: {
+        Line(out, "list=" + N(NUM(LIST_TYPE)) + " group=" + N(inOp->GetGroupId()) + " f=" + N(NUM(FLAGS8)));
+        RoutingBadUserList aList;
+        inOp->GetBadUsers(aList);
+        BadUsers(out, aList);
+        break;
+    }
+    case RoutingOp_GetClientList: {
+        Line(out, "ex=" + N(NUM(IS_EX)));
+        RoutingClientMap aMap;
+        inOp->GetClients(aMap);
+        Clients(out, "clients", aMap);
+        break;
+    }
+    case RoutingOp_GetGroupList: {
+        Line(out, "f=" + X((unsigned long)NUM(FLAGS16)) + " parent=" + N(NUM(PARENT_ID)) + " members="
+                      + N((NUM(FLAGS16) & 0x80) != 0));
+        RoutingGroupMap aMap;
+        inOp->GetGroups(aMap);
+        Groups(out, aMap);
+        break;
+    }
+    case RoutingOp_GetMembersOfGroup: {
+        Line(out, "group=" + N(inOp->GetGroupId())
+                      + (ok ? " obs=" + N(NUM(OBSERVERS)) + " names=" + N(NUM(HAS_NAMES)) + " cflags="
+                                  + N(NUM(HAS_CLIENT_FLAGS))
+                            : std::string()));
+        RoutingMemberMap aMap;
+        inOp->GetMembers(aMap);
+        Members(out, "members", aMap);
+        break;
+    }
+    case RoutingOp_GroupCaptainChanged:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " captain=" + N(NUM(CAPTAIN_ID)));
+        break;
+    case RoutingOp_GroupCreated: {
+        Line(out, "group=" + N(inOp->GetGroupId()) + " " + Esc(TXT(NAME)) + " maxc=" + N(NUM(MAX_CLIENTS)) + " f="
+                      + X((unsigned long)NUM(GROUP_FLAGS)) + " af=" + X((unsigned long)NUM(ASYNC_FLAGS)));
+        RoutingGroupInfoPtr g = inOp->GetGroupInfo();
+        Line(out, "info " + Group(g.get()) + " members " + N(g->mMembers.size()));
+        break;
+    }
+    case RoutingOp_GroupDeleted: Line(out, "group=" + N(inOp->GetGroupId())); break;
+    case RoutingOp_GroupFlagsChanged:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " f=" + X((unsigned long)NUM(GROUP_FLAGS)) + " af="
+                      + X((unsigned long)NUM(ASYNC_FLAGS)));
+        break;
+    case RoutingOp_GroupInvitation:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " client=" + N(inOp->GetClientId()) + " on=" + N(NUM(ON)) + " "
+                      + Esc(TXT(COMMENT)));
+        break;
+    case RoutingOp_GroupJoinAttempt:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " client=" + N(inOp->GetClientId()) + " " + Esc(TXT(COMMENT))
+                      + " f=" + N(NUM(FLAGS8)));
+        break;
+    case RoutingOp_GroupMaxPlayersChanged:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " maxp=" + N(NUM(MAX_PLAYERS)));
+        break;
+    case RoutingOp_GroupMemberCount:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " count=" + N(NUM(MEMBER_COUNT)));
+        break;
+    case RoutingOp_GroupNameChanged: Line(out, "group=" + N(inOp->GetGroupId()) + " " + Esc(TXT(NAME))); break;
+    case RoutingOp_GroupObserverCount:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " obs=" + N(NUM(OBSERVERS)));
+        break;
+    case RoutingOp_JoinGroup: {
+        Line(out, "group=" + N(inOp->GetGroupId()) + " pw=" + Esc(TXT(PASSWORD)) + " " + Esc(TXT(COMMENT)) + " jf="
+                      + N(NUM(JOIN_FLAGS)) + " mf=" + N(NUM(MEMBER_FLAGS)));
+        RoutingMemberMap aMap;
+        inOp->GetMembers(aMap);
+        Members(out, "members", aMap);
+        break;
+    }
+    case RoutingOp_LeaveGroup: Line(out, "group=" + N(inOp->GetGroupId())); break;
+    case RoutingOp_MemberFlagsChanged:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " client=" + N(inOp->GetClientId()) + " mf="
+                      + N(NUM(MEMBER_FLAGS)));
+        break;
+    case RoutingOp_PeerChat:
+        Line(out, "client=" + N(inOp->GetClientId()) + " f=" + X((unsigned long)NUM(FLAGS16)) + " whisper="
+                      + N((NUM(FLAGS16) & 4) != 0) + " " + Esc(TXT(TEXT)) + " to=" + Ids(inOp->Recipients()));
+        break;
+    case RoutingOp_PeerData:
+        Line(out, "client=" + N(inOp->GetClientId()) + " data=" + Hex(inOp->GetData().get()));
+        break;
+    case RoutingOp_ReadDataObject: {
+        Line(out, "link=" + N(inOp->GetLinkId()) + " type=" + Esc(inOp->DataType()) + " f=" + N(NUM(FLAGS8))
+                      + " sub=" + N(NUM(ON)));
+        RoutingDataObjectList aList;
+        inOp->GetDataObjects(aList);
+        Objects(out, aList);
+        break;
+    }
+    case RoutingOp_RegisterClient: {
+        Line(out, Esc(TXT(NAME)) + " pw=" + Esc(TXT(PASSWORD)) + " reconnect=" + N(NUM(RECONNECT_ID)) + " af="
+                      + X((unsigned long)NUM(ASYNC_MSG_FLAGS)) + " rf=" + X((unsigned long)NUM(REGISTER_FLAGS))
+                      + " cf=" + X((unsigned long)NUM(CLIENT_FLAGS))
+                      + (ok ? " client=" + N(inOp->GetClientId()) : std::string()));
+        RoutingClientMap aMap;
+        inOp->GetClients(aMap);
+        Clients(out, "clients", aMap);
+        break;
+    }
+    case RoutingOp_SendChat:
+        Line(out, "f=" + X((unsigned long)NUM(FLAGS16)) + " " + Esc(TXT(TEXT)) + " to=" + Ids(inOp->Recipients()));
+        break;
+    case RoutingOp_SendData:
+        Line(out, "f=" + X((unsigned long)NUM(FLAGS8)) + " data=" + Hex(inOp->GetData().get()) + " to="
+                      + Ids(inOp->Recipients()));
+        break;
+    case RoutingOp_SendServerAlert: Line(out, Esc(TXT(TEXT)) + " to=" + Ids(inOp->Recipients())); break;
+    case RoutingOp_ServerAlert:
+    case RoutingOp_ServerShutdownAborted: Line(out, Esc(TXT(TEXT))); break;
+    case RoutingOp_ServerShutdownStarted:
+    case RoutingOp_StartServerShutdown: Line(out, Esc(TXT(TEXT)) + " secs=" + N(NUM(TIME))); break;
+    case RoutingOp_SetClientFlags:
+        Line(out, "cm=" + X((unsigned long)NUM(CLIENT_MASK)) + " cf=" + X((unsigned long)NUM(CLIENT_FLAGS)) + " am="
+                      + X((unsigned long)NUM(ASYNC_MSG_MASK)) + " af=" + X((unsigned long)NUM(ASYNC_MSG_FLAGS)));
+        break;
+    case RoutingOp_SetGroupFlags:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " gm=" + X((unsigned long)NUM(GROUP_MASK)) + " gf="
+                      + X((unsigned long)NUM(GROUP_FLAGS)) + " am=" + X((unsigned long)NUM(ASYNC_MASK)) + " af="
+                      + X((unsigned long)NUM(ASYNC_FLAGS)));
+        break;
+    case RoutingOp_UnsubscribeDataObject:
+        Line(out, "link=" + N(inOp->GetLinkId()) + " type=" + Esc(inOp->DataType()) + " f=" + N(NUM(FLAGS8)));
+        break;
+    case RoutingOp_YouWereBanned:
+    case RoutingOp_YouWereMuted:
+        Line(out, "group=" + N(inOp->GetGroupId()) + " on=" + N(NUM(ON)) + " secs=" + N(NUM(TIME)) + " "
+                      + Esc(TXT(COMMENT)));
+        break;
+    case RoutingOp_DerivedServerOp:
+        Line(out, "msg=" + N(NUM(MSG_TYPE)) + " data=" + Hex(inOp->GetData().get()));
+        break;
+    default: break;
+    }
+}
 #endif
 
 static void DumpOp(const std::string& inWhy, RoutingOp* inOp)
@@ -778,6 +977,7 @@ static void Requests(RoutingConnection* c)
     // the firewall check without listening: the status, then its result
     REQUEST("firewall", c->DetectFirewall(0, 5, false, done), Status(0), Msg(19).S(0).S(4321));
 
+#ifndef EE_WON_ROUTE_OPS_RUST
     // the ops the lobby (RoutingLogic) builds itself
     {
         Log("== logic ban");
@@ -904,6 +1104,145 @@ static void Requests(RoutingConnection* c)
         sServer.Send("groups", w);
         PumpRoute(d, 1);
     }
+#else
+    // the ops the lobby (RoutingLogic) builds itself: RoutingOps of their types, their members set as the original
+    // ops' setters set them
+    {
+        Log("== logic ban");
+        SmartPtr<RouteDone> d = new RouteDone("logic ban");
+        SmartPtr<RoutingOp> ban = new RoutingOp(c, RoutingOp_BanClient);
+        ban->SetText(EE_WON_RTT_COMMENT, L"why");
+        ban->SetNum(EE_WON_RTF_TIME, 120);
+        ban->SetNum(EE_WON_RTF_GROUP_ID, 100);
+        ban->SetNum(EE_WON_RTF_WON_ID, 5555);
+        ban->SetNum(EE_WON_RTF_BY_WON_ID, 1);
+        ban->SetNum(EE_WON_RTF_IS_CDKEY, 1);
+        ban->SetCompletion(d);
+        ban->RunAsync(-1);
+        sServer.Expect("logic ban");
+        sServer.Send("status", Status(0));
+        PumpRoute(d, 1);
+        SmartPtr<RouteDone> d2 = new RouteDone("logic kick");
+        SmartPtr<RoutingOp> kick = new RoutingOp(c, RoutingOp_BanClient);
+        kick->SetNum(EE_WON_RTF_TIME, 1);
+        kick->SetNum(EE_WON_RTF_GROUP_ID, 300);
+        kick->SetNum(EE_WON_RTF_CLIENT_ID, 12);
+        kick->SetNum(EE_WON_RTF_BY_WON_ID, 0);
+        kick->SetCompletion(d2);
+        kick->RunAsync(-1);
+        sServer.Expect("logic kick");
+        sServer.Send("status", Status(0));
+        PumpRoute(d2, 1);
+        Log("kick group " + N(kick->GetGroupId()) + " client " + N(kick->GetClientId()));
+    }
+    {
+        Log("== logic unmute");
+        SmartPtr<RouteDone> d = new RouteDone("logic unmute");
+        SmartPtr<RoutingOp> mute = new RoutingOp(c, RoutingOp_MuteClient);
+        mute->SetText(EE_WON_RTT_COMMENT, L"ok");
+        mute->SetNum(EE_WON_RTF_TIME, 0);
+        mute->SetNum(EE_WON_RTF_GROUP_ID, 0xffff);
+        mute->SetNum(EE_WON_RTF_WON_ID, 4444);
+        mute->SetNum(EE_WON_RTF_BY_WON_ID, 1);
+        mute->SetNum(EE_WON_RTF_IS_CDKEY, 1);
+        mute->SetNum(EE_WON_RTF_ON, 0);
+        mute->SetCompletion(d);
+        mute->RunAsync(-1);
+        sServer.Expect("logic unmute");
+        sServer.Send("status", Status(0));
+        PumpRoute(d, 1);
+        Log("unmute group " + N(mute->GetGroupId()) + " muted " + N(mute->Num(EE_WON_RTF_ON)) + " client "
+            + N(mute->GetClientId()));
+    }
+    {
+        Log("== logic create");
+        SmartPtr<RouteDone> d = new RouteDone("logic create");
+        SmartPtr<RoutingOp> op = new RoutingOp(c, RoutingOp_CreateGroup);
+        op->SetText(EE_WON_RTT_PASSWORD, L"secret");
+        op->SetText(EE_WON_RTT_NAME, L"MyGame");
+        op->SetNum(EE_WON_RTF_GROUP_FLAGS, 0x4);
+        op->SetNum(EE_WON_RTF_JOIN_FLAGS, 1);
+        op->SetNum(EE_WON_RTF_LEAVE_ON_CANCEL, 1);
+        op->SetCompletion(d);
+        op->RunAsync(-1);
+        sServer.Expect("logic create");
+        sServer.Send("create reply", Msg(12).S(0).S(400).W2("MyGame"));
+        sServer.Send("join status", Msg(41).S(0));
+        PumpRoute(d, 1);
+        Log("created group " + N(op->GetGroupId()));
+    }
+    {
+        Log("== logic join retry");
+        SmartPtr<RouteDone> d = new RouteDone("logic join");
+        SmartPtr<RoutingOp> op = new RoutingOp(c, RoutingOp_JoinGroup);
+        op->SetNum(EE_WON_RTF_GROUP_ID, 400);
+        op->SetText(EE_WON_RTT_PASSWORD, L"wrong");
+        op->SetCompletion(d);
+        op->RunAsync(-1);
+        sServer.Expect("logic join");
+        sServer.Send("join bad password", Msg(41).S(-2524).S(400).W2(""));
+        PumpRoute(d, 1);
+        PumpFor(50); // the first run settles before the op runs again
+        op->SetText(EE_WON_RTT_PASSWORD, L"secret");
+        op->RunAsync(-1);
+        sServer.Expect("logic join again");
+        sServer.Send("join ok", Msg(41).S(0).S(400).W2(""));
+        PumpRoute(d, 2);
+        Log("joined " + N(op->GetGroupId()) + " killed " + N(op->IsKilled()));
+    }
+    {
+        Log("== logic bad users");
+        SmartPtr<RouteDone> d = new RouteDone("logic bad users");
+        SmartPtr<RoutingOp> op = new RoutingOp(c, RoutingOp_GetBadUserList);
+        op->SetNum(EE_WON_RTF_LIST_TYPE, RoutingBadUserListType_BannedUsers);
+        op->SetNum(EE_WON_RTF_GROUP_ID, 300);
+        op->SetNum(EE_WON_RTF_FLAGS8, 0x0f);
+        op->SetCompletion(d);
+        op->RunAsync(-1);
+        sServer.Expect("logic bad users");
+        W w = Msg(21);
+        w.S(0).B(1).S(300).B(0x01).S(1);
+        W u;
+        u.L(7001).W2("Oscar").L(30);
+        w.Entry(u);
+        sServer.Send("bad users", w);
+        PumpRoute(d, 1);
+    }
+    {
+        Log("== logic register");
+        SmartPtr<RouteDone> d = new RouteDone("logic register");
+        SmartPtr<RoutingOp> op = new RoutingOp(c, RoutingOp_RegisterClient);
+        op->SetNum(EE_WON_RTF_REGISTER_FLAGS, 0x15);
+        op->SetNum(EE_WON_RTF_RECONNECT_ID, 0x1234);
+        op->SetNum(EE_WON_RTF_CLIENT_FLAGS, 0x44);
+        op->SetCompletion(d);
+        op->RunAsync(-1);
+        sServer.Expect("logic register");
+        sServer.Send("reply", Msg(51).S(0).S(50).W2("anon").L(0x5678));
+        sServer.Send("clients", Msg(23).S(0).S(1).S(50).W2("anon").L(0x44));
+        PumpRoute(d, 1);
+        RoutingClientMap aClients;
+        op->GetClients(aClients);
+        Log("register reconnect " + N(op->Num(EE_WON_RTF_RECONNECT_ID)) + " client " + N(op->GetClientId())
+            + " clients " + N(aClients.size()));
+    }
+    {
+        Log("== logic group list");
+        SmartPtr<RouteDone> d = new RouteDone("logic group list");
+        SmartPtr<RoutingOp> op = new RoutingOp(c, RoutingOp_GetGroupList);
+        op->SetNum(EE_WON_RTF_FLAGS16, 0xff);
+        op->SetCompletion(d);
+        op->RunAsync(-1);
+        sServer.Expect("logic group list");
+        W w = Msg(25);
+        w.S(0).S(0xff).S(1);
+        W g;
+        g.S(400).W2("MyGame").S(50).S(8).L(0x4).L(0).S(0).S(1).S(50).B(1);
+        w.Entry(g);
+        sServer.Send("groups", w);
+        PumpRoute(d, 1);
+    }
+#endif
     // a chat without a reply wanted (flag 1 clear): sent, never added to the list
     {
         Log("== chat no reply");
@@ -964,7 +1303,16 @@ static void Notifications()
 static void ParseGroupBody()
 {
     Log("== parse group list body");
+#ifndef EE_WON_ROUTE_OPS_RUST
     SmartPtr<RoutingGetGroupListOp> op = new RoutingGetGroupListOp;
+#define GROUPS_OF(op) (op)->GetGroupMap()
+#define FLAGS_OF(op) (op)->GetFlags()
+#else
+    SmartPtr<RoutingOp> op = new RoutingOp(NULL, RoutingOp_GetGroupList);
+    RoutingGroupMap aMap;
+#define GROUPS_OF(op) ((op)->GetGroups(aMap), aMap)
+#define FLAGS_OF(op) (unsigned long)(op)->Num(EE_WON_RTF_FLAGS16)
+#endif
     W w;
     w.S(0x81).S(2);
     W g1;
@@ -975,8 +1323,8 @@ static void ParseGroupBody()
     w.Entry(g2);
     bool ok = op->ParseGroupListObj(w.b.data(), (unsigned long)w.b.size());
     std::vector<std::string> aLines;
-    Groups(aLines, op->GetGroupMap());
-    Log("parsed " + N(ok) + " flags " + X(op->GetFlags()));
+    Groups(aLines, GROUPS_OF(op));
+    Log("parsed " + N(ok) + " flags " + X(FLAGS_OF(op)));
     for (size_t i = 0; i < aLines.size(); i++)
         Log(aLines[i]);
     W cut;
@@ -987,8 +1335,8 @@ static void ParseGroupBody()
     cut.S(40).S(10);
     ok = op->ParseGroupListObj(cut.b.data(), (unsigned long)cut.b.size());
     aLines.clear();
-    Groups(aLines, op->GetGroupMap());
-    Log("parsed cut " + N(ok) + " flags " + X(op->GetFlags()));
+    Groups(aLines, GROUPS_OF(op));
+    Log("parsed cut " + N(ok) + " flags " + X(FLAGS_OF(op)));
     for (size_t i = 0; i < aLines.size(); i++)
         Log(aLines[i]);
 }
