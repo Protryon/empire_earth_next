@@ -344,6 +344,7 @@ function M.step(view, memory)
     if cp.epoch ~= view.epoch then
         cp.epoch = view.epoch
         CIV.epoch_reached(view, memory)
+        ARMY.epoch_reached(view, memory)   -- (EECPCombatManager::EpochReached: the WW1 groups)
         choose_favorite_land(view, memory)
     end
     CIV.update(view, memory)
