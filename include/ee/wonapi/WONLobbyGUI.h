@@ -1036,6 +1036,24 @@ public:
     int S_Bottom(Component* c) { return this->mVertical?c->Top()+c->Height():c->Left()+c->Width(); }
     int S_Height(Component* c) { return this->mVertical?c->Height():c->Width(); }
     int S_Width(Component* c) { return this->mVertical?c->Width():c->Height(); }
+    // the parts the skins, the configs and the scroller read and set (the subclasses' and factories' arrows, thumb
+    // and track; the orientation; the scroller's sizes and position)
+    Button* GetUpArrow() { return this->mUpArrow.get(); }
+    void SetUpArrow(Button* b) { this->mUpArrow=b; }
+    Button* GetDownArrow() { return this->mDownArrow.get(); }
+    void SetDownArrow(Button* b) { this->mDownArrow=b; }
+    Button* GetScrollRect() { return this->mScrollRect.get(); }
+    void SetScrollRect(Button* b) { this->mScrollRect=b; }
+    Component* GetThumb() { return this->mThumb.get(); }
+    void SetThumb(Component* c) { this->mThumb=c; }
+    bool IsVertical() { return this->mVertical; }
+    void SetVertical(bool on) { this->mVertical=on; }
+    void SetResizeThumb(bool on) { this->mResizeThumb=on; }
+    void SetMinThumbSize(unsigned char n) { this->mMinThumbSize=n; }
+    int GetPosition() { return this->mPosition; }
+    void SetPosition(int p) { this->mPosition=p; } // the field only (the scroller's update)
+    void SetRange(int total,int page) { this->mTotalSize=total; this->mPageSize=page; this->mPageScrollSize=page; }
+    void SetLineScrollSizes(int up,int down) { this->mLineUpScrollSize=up; this->mLineDownScrollSize=down; }
     SmartPtr<Button> mUpArrow,mDownArrow,mScrollRect; //84/88/8c
     SmartPtr<Component> mThumb; //90
     bool mResizeThumb,mVertical; //94/95

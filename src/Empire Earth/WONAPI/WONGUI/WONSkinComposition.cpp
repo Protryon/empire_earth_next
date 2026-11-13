@@ -21,16 +21,16 @@ WONScrollbar* WONSkin::GetScrollbar(bool vertical)
 {
     WONScrollbar* bar=new WONScrollbar(vertical);
     bar->CopyAttributes(this->mScrollbar[vertical?1:0].get());
-    bar->mThumb=this->GetScrollThumb(vertical);
-    bar->mScrollRect=this->GetScrollGutter(vertical);
+    bar->SetThumb(this->GetScrollThumb(vertical));
+    bar->SetScrollRect(this->GetScrollGutter(vertical));
     if(vertical) {
-        bar->mUpArrow=this->GetArrowButton(Direction_Up);
-        bar->mDownArrow=this->GetArrowButton(Direction_Down);
-        bar->SetSize(bar->mUpArrow->Width(),bar->Height());
+        bar->SetUpArrow(this->GetArrowButton(Direction_Up));
+        bar->SetDownArrow(this->GetArrowButton(Direction_Down));
+        bar->SetSize(bar->GetUpArrow()->Width(),bar->Height());
     } else {
-        bar->mUpArrow=this->GetArrowButton(Direction_Left);
-        bar->mDownArrow=this->GetArrowButton(Direction_Right);
-        bar->SetSize(bar->Width(),bar->mUpArrow->Height());
+        bar->SetUpArrow(this->GetArrowButton(Direction_Left));
+        bar->SetDownArrow(this->GetArrowButton(Direction_Right));
+        bar->SetSize(bar->Width(),bar->GetUpArrow()->Height());
     }
     return bar;
 }

@@ -21,7 +21,7 @@ bool WONScrollbarConfig::Virtual24(const std::string& key)
     if(aKeyIdx==0) {
         if(this->ReadBool()) {
             Button* rect=new Button;
-            this->mScrollbar->mScrollRect=rect;
+            this->mScrollbar->SetScrollRect(rect);
         }
     } else return ScrollbarConfig::Virtual24(key);
     return true;
