@@ -160,13 +160,19 @@ fn read(_me: isize, op: Op, a: isize, b: isize, c: isize, _d: isize) -> Option<i
         }
         Op::RootWindowRect => {
             // SAFETY: the Rust passes its rectangle
-            unsafe { *(a as *mut EeWonRect4) = EeWonRect4 { x: env_of(17) as i32, y: env_of(18) as i32, w: 640, h: 480 } };
+            unsafe {
+                *(a as *mut EeWonRect4) = EeWonRect4 { x: env_of(17) as i32, y: env_of(18) as i32, w: 640, h: 480 }
+            };
             Some(0)
         }
         Op::RootMouseChildOf => {
             let p = if (1..=4).contains(&a) { ct_ptr(a as usize) } else { 0 };
             // SAFETY: a replay container lives until its "free" line
-            Some(if p == 0 { 0 } else { unsafe { &*(p as *const EeWonContainer) }.field(EeWonCtField::MouseChild as i32) })
+            Some(if p == 0 {
+                0
+            } else {
+                unsafe { &*(p as *const EeWonContainer) }.field(EeWonCtField::MouseChild as i32)
+            })
         }
         Op::RootScheme => Some(0xA100),
         Op::RootImageSize => {
@@ -233,7 +239,8 @@ fn word(w: &str, n: &[i64]) -> bool {
         }
         "root-rect" => {
             let q = EeWonRect4 { x: n[0] as i32, y: n[1] as i32, w: n[2] as i32, h: n[3] as i32 };
-            let r = root_of().expect("a root").call(EeWonRootCall::InvalidateRect, &q as *const EeWonRect4 as isize, 0, 0);
+            let r =
+                root_of().expect("a root").call(EeWonRootCall::InvalidateRect, &q as *const EeWonRect4 as isize, 0, 0);
             check_result(r);
         }
         "free-root" => {
