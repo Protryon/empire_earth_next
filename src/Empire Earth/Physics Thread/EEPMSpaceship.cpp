@@ -24,7 +24,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGGather.h"
@@ -118,16 +118,16 @@ void EEPMSpaceship::Step1(EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     GEVector theForward;
     GEVector theMove;
-    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
+    EEUGRust* theAttack = EEAttackUnitCast(inUnit->GetGoal());
     EEUGHealUnit* theHeal = EEGoalCast<EEUGHealUnit>(inUnit->GetGoal());
     float theBrake = inUnit->GetAcceleration();
     bool theAirTarget = false;
     float theSpeed = inUnit->GetVelocity();
     float theStep = gPhysics->mTickSeconds;
-    if (theAttack && theAttack->mTarget->mComplexUnit) {
-        theAirTarget = theAttack->mTarget->mComplexUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship;
-        theTarget.SetX(theAttack->mTarget->mComplexUnit->mPhysicalModel.GetLocation().GetX());
-        theTarget.SetY(theAttack->mTarget->mComplexUnit->mPhysicalModel.GetLocation().GetY());
+    if (theAttack && theAttack->GetAttackTarget()->mComplexUnit) {
+        theAirTarget = theAttack->GetAttackTarget()->mComplexUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship;
+        theTarget.SetX(theAttack->GetAttackTarget()->mComplexUnit->mPhysicalModel.GetLocation().GetX());
+        theTarget.SetY(theAttack->GetAttackTarget()->mComplexUnit->mPhysicalModel.GetLocation().GetY());
     } else if (theHeal) {
         theTarget.SetX(theHeal->GetTarget()->mPhysicalModel.GetLocation().GetX());
         theTarget.SetY(theHeal->GetTarget()->mPhysicalModel.GetLocation().GetY());

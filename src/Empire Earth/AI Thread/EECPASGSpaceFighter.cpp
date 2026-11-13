@@ -41,7 +41,7 @@
 #include "ee/EECPASGSpaceship.h"
 #include "ee/EECPASGSpaceFighter.h"
 
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 
 #include "ee/EEUGLocation.h"
 
@@ -80,7 +80,7 @@ void EECPASGSpaceFighter::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUn
     if (!theOnMap) {
         inUnit->mNeedsOrders = true;
         inUnit->GetUnit()->StartAction(kActionInitialAttackState);
-        theGoal = new EEUGAttackUnit(inUnit->GetUnit(), theTarget, true, false);
+        theGoal = EEUGRust::NewAttackUnit(inUnit->GetUnit(), theTarget, true, false);
         theAction = inUnit->GetUnit()->GetCommandType();
         if (!this->GiveGoal(inUnit->GetUnit(), theGoal, 0, theAction) && theGoal != NULL)
             delete theGoal;
