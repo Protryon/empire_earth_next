@@ -28,7 +28,7 @@
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEUCAirplane.h"
@@ -180,7 +180,7 @@ void EEUCAirplane::FlyOffMap(EEComplexUnit* inUnit)
     }
     EEComplexUnit* theUnit = EEConvertUnit(inUnit, 0, 0);
     theUnit->SetFlightTime(1000000);
-    EEUGLocation* theGoal = new EEUGLocation(theX + 0.5f, theY + 0.5f, 0.0f, true, true, false, 0.0f, false, false);
+    EEUGRust* theGoal = EEUGRust::NewLocation(theX + 0.5f, theY + 0.5f, 0.0f, true, true, false, 0.0f, false, false);
     theUnit->DropPath();
     this->AddWaypointAt(theUnit, theX + 0.5f, theY + 0.5f, this->GetCruiseAltitude(), true);
     theUnit->SetGoal(theGoal, 0, 0);

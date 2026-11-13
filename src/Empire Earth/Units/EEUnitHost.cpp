@@ -28,7 +28,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"
@@ -443,9 +442,9 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         return static_cast<EEUnitGoal*>(EEUGRust::NewPatrol(theFlagA));
     case EE_GOAL_CTOR_PATROL_ROUTE:
         return static_cast<EEUnitGoal*>(EEUGRust::NewPatrol(static_cast<EEPPatrolGroup*>(inSpec->object), ComplexOf(inSpec->unit_a), theFlagA));
-    case EE_GOAL_CTOR_LOCATION: {   // EEMPathTo's: new EEUGLocation(&point, true, forced, rotating, facing, false, 0)
+    case EE_GOAL_CTOR_LOCATION: {   // EEMPathTo's: EEUGRust::NewLocation(&point, true, forced, rotating, facing, false, 0)
         GE3DPoint theLocation(inSpec->point[0], inSpec->point[1], inSpec->point[2]);
-        EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, theFlagA, theFlagB, inSpec->value, false, 0);
+        EEUGRust* theGoal = EEUGRust::NewLocation(&theLocation, true, theFlagA, theFlagB, inSpec->value, false, 0);
         theGoal->SetUseGroupMovement(inSpec->flag_c != 0);
         return static_cast<EEUnitGoal*>(theGoal);
     }
@@ -457,10 +456,10 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
                                                                 (long)inSpec->point[1], theFlagA));
     }
     case EE_GOAL_CTOR_LOCATION_XY:   // EEMUnloadTransport's move
-        return static_cast<EEUnitGoal*>(new EEUGLocation(inSpec->point[0], inSpec->point[1], 0.0f, false, true, false,
+        return static_cast<EEUnitGoal*>(EEUGRust::NewLocation(inSpec->point[0], inSpec->point[1], 0.0f, false, true, false,
                                                          0.0f, false, 0));
     case EE_GOAL_CTOR_LOCATION_2D:   // EEMSmartFarmers' move
-        return static_cast<EEUnitGoal*>(new EEUGLocation(GE2DPoint(inSpec->point[0], inSpec->point[1]), true, true, false,
+        return static_cast<EEUnitGoal*>(EEUGRust::NewLocation(GE2DPoint(inSpec->point[0], inSpec->point[1]), true, true, false,
                                                          0.0f, false, 0));
     case EE_GOAL_CTOR_CAST_CALAMITY: {   // EEMCastCalamity's: the caster, the target or none, the tile, the technology
         EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);

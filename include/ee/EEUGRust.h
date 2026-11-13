@@ -1,9 +1,9 @@
 // New (port; docs/RUST_PLAN.md R5b.4, rounds 16 to 19; R5b.2 for the attack goals): the goals whose class moved
 // whole into Rust. The object is the EEUnitGoal the queues, the unit's mGoalState and the save hold (its base fields,
 // its vtable); its own state and bodies are Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind:
-// patrol.rs, calamity.rs, explore.rs, unload.rs, load.rs for both load kinds, build.rs for kGoalBuildRepair, gather.rs
-// for kGoalGather; the other kinds go to ee_combat's goal dispatch: goal_objects.rs, goal_attack.rs, goal_heal.rs),
-// every virtual one call. Replaces EEUGPatrol
+// location.rs for kGoalLocation, patrol.rs, calamity.rs, explore.rs, unload.rs, load.rs for both load kinds, build.rs
+// for kGoalBuildRepair, gather.rs for kGoalGather; the other kinds go to ee_combat's goal dispatch: goal_objects.rs,
+// goal_attack.rs, goal_heal.rs), every virtual one call. Replaces EEUGLocation (0x227621..0x227de8; round 21), EEUGPatrol
 // (0x227de8..0x2283bc; EEPlayer's SetPatrolGroup 0x563659 with it), EEUGCastCalamity (0x220986..0x2213dd),
 // EEUGExplore (0x2213dd..0x221d98), EEUGUnloadTransport (0x2283bc..0x228c4c), the load goals EEUGLoadContainer
 // (0x22585a..0x226a43), EEUGLoadGarrison (0x226a43..0x2271c7) and EEUGLoadTransport (0x2271c7..0x227621),
@@ -25,6 +25,7 @@ class EEUnitClass;
 class EEPPatrolGroup;
 class EEUnit;
 class FSFile;
+class GE2DPoint;
 class GE3DPoint;
 class UWideString;
 struct EeUnitsGoalIo;
@@ -33,6 +34,31 @@ class EEUGRust : public EEUnitGoal {
 public:
     // a goal of the kind with no state yet (the bodies' copies make theirs; the New functions below for the rest)
     EEUGRust(unsigned char inKind, bool inArg);
+
+    // a location goal (kGoalLocation; ee_units location.rs; the four EEUGLocation constructors): at the point (x, y, z;
+    // a map position at height 0; a 3D point) with the forced-move, facing (its yaw), auto-waypoint flags and the
+    // group path state; or the load's empty goal (at 0, 0, 0, yaw 0, no facing). None uses group movement.
+    static EEUGRust* NewLocation(float inX, float inY, float inZ, bool inArg, bool inIsForcedMove, bool inShouldFace,
+                                 float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState);
+    static EEUGRust* NewLocation(const GE2DPoint& inLocation, bool inArg, bool inIsForcedMove, bool inShouldFace,
+                                 float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState);
+    static EEUGRust* NewLocation(const GE3DPoint* inLocation, bool inArg, bool inIsForcedMove, bool inShouldFace,
+                                 float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState);
+    static EEUGRust* NewLocation(bool inArg, bool inIsForcedMove, bool inIsAutoWaypoint, unsigned char inGroupPathState);
+    // the location goal's members (EEUGLocation's accessors; the record's fields, no host call): its point, the yaw
+    // to face, the flags and the group path state
+    GE3DPoint GetLocation() const;
+    void SetLocation(const GE3DPoint& inLocation);
+    float GetYaw() const;
+    bool GetIsForcedMove() const;
+    bool GetShouldFace() const;
+    bool GetIsAutoWaypoint() const;
+    bool GetUseGroupMovement() const;
+    void SetUseGroupMovement(bool inValue);
+    unsigned char GetGroupPathState() const;
+    void SetGroupPathState(unsigned char inValue);
+    // whether inUnit faces the goal's yaw (within a degree); if so it is turned to it exactly (EEUGLocation::FaceYaw)
+    bool FaceYaw(EEComplexUnit* inUnit);
 
     // a patrol (kGoalPatrol): a new empty patrol group, no point (EEUGPatrol(inArg)); or an existing group and the
     // point to start at, both referenced (EEUGPatrol(inGroup, inTarget, inArg))
@@ -234,6 +260,12 @@ inline EEUGRust* EEAttackUnitCast(EEUnitGoal* inGoal)
 inline EEUGRust* EEHealGoalCast(EEUnitGoal* inGoal)
 {
     return EERustGoalCast(inGoal, kGoalHealUnit);
+}
+// the location goal (the old EEGoalCast<EEUGLocation> and dynamic_cast to EEUGLocation once the heal goal no longer
+// derived from it), NULL for another kind or none
+inline EEUGRust* EELocationGoalCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalLocation);
 }
 // the location goal's class as its callers saw it (the old EEGoalCast<EEUGLocation> != NULL): a location goal or a
 // heal goal, which derived from it until it moved to Rust (R5b.2, the fourteenth round)

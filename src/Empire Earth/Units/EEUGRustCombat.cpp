@@ -23,7 +23,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECombatGoals.h"
 #include "ee/EEAreaUtilities.h"
@@ -429,8 +428,8 @@ void EEUGRust::SetHealLocation(const GE3DPoint& inLocation)
 
 GE3DPoint EELocationGoalPoint(EEUnitGoal* inGoal)
 {
-    if (inGoal != NULL && inGoal->mKind == kGoalLocation)
-        return static_cast<EEUGLocation*>(inGoal)->GetLocation();
+    if (EEUGRust* theLocation = EELocationGoalCast(inGoal))
+        return theLocation->GetLocation();
     if (EEUGRust* theHeal = EEHealGoalCast(inGoal))
         return theHeal->GetHealLocation();
     return GE3DPoint();
@@ -438,15 +437,15 @@ GE3DPoint EELocationGoalPoint(EEUnitGoal* inGoal)
 
 void EESetLocationGoalPoint(EEUnitGoal* inGoal, const GE3DPoint& inLocation)
 {
-    if (inGoal != NULL && inGoal->mKind == kGoalLocation)
-        static_cast<EEUGLocation*>(inGoal)->SetLocation(inLocation);
+    if (EEUGRust* theLocation = EELocationGoalCast(inGoal))
+        theLocation->SetLocation(inLocation);
     else if (EEUGRust* theHeal = EEHealGoalCast(inGoal))
         theHeal->SetHealLocation(inLocation);
 }
 
 float EELocationGoalYaw(EEUnitGoal* inGoal)
 {
-    if (inGoal != NULL && inGoal->mKind == kGoalLocation)
-        return static_cast<EEUGLocation*>(inGoal)->GetYaw();
+    if (EEUGRust* theLocation = EELocationGoalCast(inGoal))
+        return theLocation->GetYaw();
     return 0.0f;   // the heal goal's (its location goal was made with yaw 0, which nothing changed)
 }

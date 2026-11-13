@@ -26,7 +26,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EETileCoordinate.h"

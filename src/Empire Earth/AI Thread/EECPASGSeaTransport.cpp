@@ -56,7 +56,6 @@
 #include "ee/EECPAttackFormation.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EEUGLocation.h"
 
 #include "ee/EECPAAirTargetFilters.h"
 #include "ee/EECPAreaTargetCollector.h"
@@ -277,7 +276,7 @@ void EECPASGSeaTransport::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPI
         return;
     thePoint.SetX(theLocation.mTile.mX);
     thePoint.SetY(theLocation.mTile.mY);
-    EEUnitGoal* theGoal = new EEUGLocation(thePoint, true, inFlag, false, 0.0f, false, false);
+    EEUnitGoal* theGoal = EEUGRust::NewLocation(thePoint, true, inFlag, false, 0.0f, false, false);
     if (!this->GiveGoal(inUnit->GetUnit(), theGoal, inFlag, kActionPrepareToMove) && theGoal != NULL)
         delete theGoal;
 }
@@ -1165,7 +1164,7 @@ void EECPASGSeaTransport::UnloadAt(const EECPILocation& inLocation)
         theBounds.Grow(7, true);
         for (i = theFailed.size() - 1; i >= 0; i--) {
             EEComplexUnit* theUnit = theFailed[i];
-            EEUnitGoal* theGoal = new EEUGLocation((float)gPhysics->GetRandom(theBounds.mLeft, theBounds.mRight),
+            EEUnitGoal* theGoal = EEUGRust::NewLocation((float)gPhysics->GetRandom(theBounds.mLeft, theBounds.mRight),
                 (float)gPhysics->GetRandom(theBounds.mTop, theBounds.mBottom), 0.0f, true, true, false, 0.0f,
                 false, false);
             if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL)

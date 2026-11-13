@@ -38,7 +38,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "lle/GERectangle.h"
 #include "ee/EEMapDimensions.h"
@@ -257,7 +256,7 @@ void EECPAttackSubGroup::AddUnit(EEComplexUnit* inUnit)
                 theTile = this->mNextWaypoint.mTile;
             else
                 this->FindPosition(theTile, true, false);
-            EEUGLocation* theGoal = new EEUGLocation(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f, 0.0f, true, true, false,
+            EEUGRust* theGoal = EEUGRust::NewLocation(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f, 0.0f, true, true, false,
                                                      0.0f, false, false);
             if (!this->GiveGoal(inUnit, theGoal, 0, kActionPrepareToMove) && theGoal)
                 delete theGoal;
@@ -440,7 +439,7 @@ void EECPAttackSubGroup::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUni
     }
     if (inTile->GetX() == 0 && inTile->GetY() == 0)
         return;
-    EEUGLocation* theMove = new EEUGLocation(GE2DPoint(inTile->GetX() + 0.5f, inTile->GetY() + 0.5f), true, true, false,
+    EEUGRust* theMove = EEUGRust::NewLocation(GE2DPoint(inTile->GetX() + 0.5f, inTile->GetY() + 0.5f), true, true, false,
                                              0.0f, false, false);
     if (!this->GiveGoal(inUnit->GetUnit(), theMove, 1, kActionPrepareToMove) && theMove)
         delete theMove;
@@ -869,7 +868,7 @@ bool EECPAttackSubGroup::RegroupHere()
             for (long i = this->GetNumUnits() - 1; i >= 0; i--) {
                 if (this->mUnits[i]->IsDone())
                     continue;
-                EEUGLocation* theGoal = new EEUGLocation(thePoint, true, true, false, 0.0f, false, false);
+                EEUGRust* theGoal = EEUGRust::NewLocation(thePoint, true, true, false, 0.0f, false, false);
                 if (!this->GiveGoal(this->mUnits[i]->GetUnit(), theGoal, 0, kActionPrepareToMove) && theGoal)
                     delete theGoal;
             }
@@ -1954,7 +1953,7 @@ void EECPAttackSubGroup::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPIL
         return;
     thePoint.SetX((float)theLocation.mTile.GetX());
     thePoint.SetY((float)theLocation.mTile.GetY());
-    EEUGLocation* theGoal = new EEUGLocation(thePoint, true, inFlag, false, 0.0f, false, false);
+    EEUGRust* theGoal = EEUGRust::NewLocation(thePoint, true, inFlag, false, 0.0f, false, false);
     if (!this->GiveGoal(inUnit->GetUnit(), theGoal, inFlag, kActionPrepareToMove) && theGoal)
         delete theGoal;
 }
@@ -2424,7 +2423,7 @@ void EECPAttackSubGroup::ReturnToRallyPoint()
         if (this->mUnits[i]->IsDone())
             continue;
         EEComplexUnit* theUnit = this->mUnits[i]->mUnit;
-        EEUGLocation* theGoal = new EEUGLocation(&thePoint, true, true, false, 0.0f, false, false);
+        EEUGRust* theGoal = EEUGRust::NewLocation(&thePoint, true, true, false, 0.0f, false, false);
         if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal)
             delete theGoal;
     }

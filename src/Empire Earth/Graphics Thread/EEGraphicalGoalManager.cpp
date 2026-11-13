@@ -40,7 +40,6 @@
 #include "ee/EEGraphicalGoalManager.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 
 // the icons' spacing across the queues (0x441294) and the markers' height (0x441298) (provisional names)
@@ -217,7 +216,7 @@ void EEGraphicalGoalManager::Rebuild(long inPlayer)
             long thePrevious = -1;
             for (unsigned long g = 0; g < theUnit->mGoalQueues[q].mGoals.size(); g++) {
                 EEUnitGoal* theGoal = theUnit->mGoalQueues[q].mGoals[g];
-                if (theGoal->mKind == kGoalLocation && dynamic_cast<EEUGLocation*>(theGoal)->GetIsAutoWaypoint())
+                if (theGoal->mKind == kGoalLocation && EELocationGoalCast(theGoal)->GetIsAutoWaypoint())
                     continue;
                 EEUnitGoal* thePreviousGoal = NULL;
                 if (g > 0 && thePrevious != -1)

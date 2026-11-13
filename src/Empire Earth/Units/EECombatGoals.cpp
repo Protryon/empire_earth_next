@@ -23,7 +23,6 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUCProjectile.h"
 #include "ee/EEUCMissile.h"
@@ -890,7 +889,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_SEEN_BY_OWNER: return EEIsSeenByOwnerOf(theObject, EEQueryUnit(inOther));
     case EE_COMBAT_W_ATTACKED_GOAL: {
         if (a[0])
-            theContext->mAttackedGoal = new EEUGLocation(theOther->mPhysicalModel.GetLocation().GetX(),
+            theContext->mAttackedGoal = EEUGRust::NewLocation(theOther->mPhysicalModel.GetLocation().GetX(),
                 theOther->mPhysicalModel.GetLocation().GetY(), 0.0f, false, false, false, 0.0f, false, 0);
         else
             theContext->mAttackedGoal = EEUGRust::NewAttackUnit(theObject, theOther, false, false);

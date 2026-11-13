@@ -42,7 +42,6 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EEGroupCluster.h"
 #include "ee/EEActiveGroup.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEMap.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEPathManager.h"
@@ -269,7 +268,7 @@ void EEActiveGroup::LayOutFormation()
     EEMapTile* theTile = ::gWorld.mMap->GetTile(UMFloorUnsigned(theLocation.GetX()), UMFloorUnsigned(theLocation.GetY()));
     switch (this->mGoal->mKind) {
     case kGoalLocation: {
-        EEUGLocation* theLocationGoal = EEGoalCast<EEUGLocation>(this->mGoal);
+        EEUGRust* theLocationGoal = EELocationGoalCast(this->mGoal);
         unsigned long theCount = this->GetNumUnits();
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
@@ -277,22 +276,22 @@ void EEActiveGroup::LayOutFormation()
             if ((theCategory != kUnitCategoryAirplane && theCategory != kUnitCategoryPlanetSpaceship) || theUnit->mContainer == NULL)
                 continue;
             if (this->mIsQueued && theUnit->GetGoal() != NULL) {
-                theUnit->mGoalQueues[0].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
+                theUnit->mGoalQueues[0].Add(EEUGRust::NewLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
                                                        false, 0.0f, false, 0));
                 theUnit->RefreshGoals();
                 theUnit->RefreshActiveGoal();
-                theUnit->mGoalQueues[1].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
+                theUnit->mGoalQueues[1].Add(EEUGRust::NewLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
                                                        false, 0.0f, false, 0));
                 theUnit->RefreshGoals();
                 theUnit->RefreshActiveGoal();
             } else {
                 theUnit->ClearGoalQueue(0);
                 theUnit->ClearGoalQueue(1);
-                theUnit->mGoalQueues[0].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
+                theUnit->mGoalQueues[0].Add(EEUGRust::NewLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
                                                        false, 0.0f, false, 0));
                 theUnit->RefreshGoals();
                 theUnit->RefreshActiveGoal();
-                theUnit->mGoalQueues[1].Add(new EEUGLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
+                theUnit->mGoalQueues[1].Add(EEUGRust::NewLocation(&theLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
                                                        false, 0.0f, false, 0));
                 theUnit->RefreshGoals();
                 theUnit->RefreshActiveGoal();
@@ -312,13 +311,13 @@ void EEActiveGroup::LayOutFormation()
             if ((theCategory != kUnitCategoryAirplane && theCategory != kUnitCategoryPlanetSpaceship) || theUnit->mContainer == NULL)
                 continue;
             if (this->mIsQueued && theUnit->GetGoal() != NULL) {
-                theUnit->QueueGoal(new EEUGLocation(&theLocation, this->mGoal->GetB1C(), true, false, 0.0f, false, 0), 0);
-                theUnit->QueueGoal(new EEUGLocation(&theLocation, this->mGoal->GetB1C(), true, false, 0.0f, false, 0), 1);
+                theUnit->QueueGoal(EEUGRust::NewLocation(&theLocation, this->mGoal->GetB1C(), true, false, 0.0f, false, 0), 0);
+                theUnit->QueueGoal(EEUGRust::NewLocation(&theLocation, this->mGoal->GetB1C(), true, false, 0.0f, false, 0), 1);
             } else {
                 theUnit->ClearGoalQueue(0);
                 theUnit->ClearGoalQueue(1);
-                theUnit->QueueGoal(new EEUGLocation(&theLocation, this->mGoal->GetB1C(), true, false, 0.0f, false, 0), 0);
-                theUnit->QueueGoal(new EEUGLocation(&theLocation, this->mGoal->GetB1C(), true, false, 0.0f, false, 0), 1);
+                theUnit->QueueGoal(EEUGRust::NewLocation(&theLocation, this->mGoal->GetB1C(), true, false, 0.0f, false, 0), 0);
+                theUnit->QueueGoal(EEUGRust::NewLocation(&theLocation, this->mGoal->GetB1C(), true, false, 0.0f, false, 0), 1);
             }
             theUnit->mGoalQueues[1].AddTime(1);
             this->RemoveUnit(theUnit);
@@ -333,7 +332,7 @@ void EEActiveGroup::LayOutFormation()
     switch (this->mGoal->mKind) {
     case kGoalLocation:
         theHasYaw = true;
-        theYaw = EEGoalCast<EEUGLocation>(this->mGoal)->GetYaw();
+        theYaw = EELocationGoalCast(this->mGoal)->GetYaw();
         break;
     case kGoalUnloadTransport: {
         EEUGRust* theUnload = EEUnloadGoalCast(this->mGoal);
@@ -496,8 +495,8 @@ void EEActiveGroup::LayOutFormation()
             theFree++;
         switch (this->mGoal->mKind) {
         case kGoalLocation: {
-            EEUGLocation* theLocationGoal = EEGoalCast<EEUGLocation>(this->mGoal);
-            theGoal = new EEUGLocation(&theSlotLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
+            EEUGRust* theLocationGoal = EELocationGoalCast(this->mGoal);
+            theGoal = EEUGRust::NewLocation(&theSlotLocation, theLocationGoal->GetB1C(), theLocationGoal->GetIsForcedMove(),
                                        theLocationGoal->GetShouldFace(), theSlots[i].mHeading, false, 1);
             break;
         }
@@ -510,10 +509,10 @@ void EEActiveGroup::LayOutFormation()
                     theUnloads = true;
                 else {
                     delete theGoal;
-                    theGoal = new EEUGLocation(&theSlotLocation, false, true, false, 0.0f, false, 0);
+                    theGoal = EEUGRust::NewLocation(&theSlotLocation, false, true, false, 0.0f, false, 0);
                 }
             } else
-                theGoal = new EEUGLocation(&theSlotLocation, false, true, false, 0.0f, false, 0);
+                theGoal = EEUGRust::NewLocation(&theSlotLocation, false, true, false, 0.0f, false, 0);
             break;
         }
         if (!this->mIsQueued || theUnit->GetGoal() == NULL) {
@@ -521,7 +520,7 @@ void EEActiveGroup::LayOutFormation()
             if (this->mIsQueued)
                 theQueued.push_back(theUnit);
         } else if (theGoal->mKind == kGoalLocation)
-            EEGoalCast<EEUGLocation>(theGoal)->SetGroupPathState(0);
+            EELocationGoalCast(theGoal)->SetGroupPathState(0);
         long theClassType = theUnit->GetUnitClass()->mAIKind;
         if (theClassType == kAIKindAircraftCarrier || theClassType == kAIKindSpaceCarrier) {
             theGoal->GetGoalLocation(theLocation);
@@ -857,7 +856,7 @@ void EEActiveGroup::SetGoal(EEUnitGoal* inGoal, bool inFlag)
 {
     this->mGoal = inGoal;
     this->mIsQueued = inFlag;
-    this->mMovesTogether = inGoal->mKind == kGoalLocation && static_cast<EEUGLocation*>(inGoal)->GetUseGroupMovement();
+    this->mMovesTogether = inGoal->mKind == kGoalLocation && static_cast<EEUGRust*>(inGoal)->GetUseGroupMovement();
 }
 
 // FUNCTION: EXE 0x5edcc0
@@ -901,7 +900,7 @@ void EEActiveGroup::Plan()
                         theX = theStorage->GetTileX();
                         theY = theStorage->GetTileY();
                     }
-                    theUnit->SetGoal(new EEUGLocation(GE2DPoint((float)theX, (float)theY), true, true,
+                    theUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theX, (float)theY), true, true,
                                                       false, 0.0f, false, false), 0, 0);
                     theUnit->StartAction(kActionPrepareToMove);
                 }
@@ -932,11 +931,11 @@ void EEActiveGroup::Plan()
                     }
                 }
             } else if (this->mIsQueued && theUnit->mGoalState)
-                theUnit->QueueGoal(new EEUGLocation(GE2DPoint((float)theResource->GetTileX(),
+                theUnit->QueueGoal(EEUGRust::NewLocation(GE2DPoint((float)theResource->GetTileX(),
                                                             (float)theResource->GetTileY()),
                                                   true, true, false, 0.0f, false, false), 0);
             else {
-                theUnit->SetGoal(new EEUGLocation(GE2DPoint((float)theResource->GetTileX(), (float)theResource->GetTileY()),
+                theUnit->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theResource->GetTileX(), (float)theResource->GetTileY()),
                                                   true, true, false, 0.0f, false, false), 0, 0);
                 theUnit->StartAction(kActionPrepareToMove);
                 theUnit->mUnitClass->ActionChanged(theUnit);
@@ -1075,8 +1074,8 @@ void EEActiveGroup::Plan()
                 && theUnit->mContainer) {
                 theUnit->ClearGoalQueue(0);
                 theUnit->ClearGoalQueue(1);
-                theUnit->QueueGoal(new EEUGLocation(&theLocation, false, true, false, 0.0f, false, false), 0);
-                theUnit->QueueGoal(new EEUGLocation(&theLocation, false, true, false, 0.0f, false, false), 1);
+                theUnit->QueueGoal(EEUGRust::NewLocation(&theLocation, false, true, false, 0.0f, false, false), 0);
+                theUnit->QueueGoal(EEUGRust::NewLocation(&theLocation, false, true, false, 0.0f, false, false), 1);
                 theUnit->mGoalQueues[1].AddTime(1);
             } else if (theUnit->mIsCommandable && theGoal->Suits(theUnit)) {
                 theUnit->SetGoal(theGoal->Clone(), 0, 0);
@@ -1084,7 +1083,7 @@ void EEActiveGroup::Plan()
                 theUnit->mUnitClass->ActionChanged(theUnit);
                 theFlag = true;
             } else if (theUnit->mStats->GetMaxVelocity() > 0.0f) {
-                theUnit->SetGoal(new EEUGLocation(&theLocation, false, true, false, 0.0f, false, false), 0, 0);
+                theUnit->SetGoal(EEUGRust::NewLocation(&theLocation, false, true, false, 0.0f, false, false), 0, 0);
                 theUnit->StartAction(kActionPrepareToMove);
                 theUnit->mUnitClass->ActionChanged(theUnit);
             }
@@ -1154,15 +1153,15 @@ void EEActiveGroup::Plan()
                 thePoint->mPhysicalModel.GetLocation().GetPosition(theLocation);
                 theUnit->ClearGoalQueue(0);
                 theUnit->ClearGoalQueue(1);
-                theUnit->QueueGoal(new EEUGLocation(&theLocation, true, true, false, 0.0f, false, false), 0);
-                theUnit->QueueGoal(new EEUGLocation(&theLocation, true, true, false, 0.0f, false, false), 1);
+                theUnit->QueueGoal(EEUGRust::NewLocation(&theLocation, true, true, false, 0.0f, false, false), 0);
+                theUnit->QueueGoal(EEUGRust::NewLocation(&theLocation, true, true, false, 0.0f, false, false), 1);
                 theUnit->mGoalQueues[1].AddTime(1);
             } else {
                 if (!theUnit->mUnitClass->mCanPatrol
                     && (!theUnit->mIsDetachedFromAI || theUnit->mUnitClass->FindAction(kActionGetNextPatrolPoint) == NULL)) {
                     EEComplexUnit* thePoint = theGoal->GetPatrolTarget() ? theGoal->GetPatrolTarget() : theGoal->GetPatrolGroup()->GetLast();
                     thePoint->mPhysicalModel.GetLocation().GetPosition(theLocation);
-                    theUnit->SetGoal(new EEUGLocation(&theLocation, true, true, false, 0.0f, false, false), 0, 0);
+                    theUnit->SetGoal(EEUGRust::NewLocation(&theLocation, true, true, false, 0.0f, false, false), 0, 0);
                     theUnit->StartAction(kActionPrepareToMove);
                 } else {
                     theUnit->SetGoal(theGoal->Clone(), 0, 0);
@@ -1268,7 +1267,7 @@ void EEActiveGroup::SpreadAroundUnit(EEUnit* inTarget, long inTileX, long inTile
     float theDX = theX + 0.5f - theGroup->GetFirstUnit()->mPhysicalModel.GetLocation().GetX();
     float theHeading = UMArcTan2(-theDX,
                                  theY + 0.5f - theGroup->GetFirstUnit()->mPhysicalModel.GetLocation().GetY());
-    theGroup->SetGoal(new EEUGLocation(GE2DPoint(theX, theY), true, true, true, theHeading, false, false), this->mIsQueued);
+    theGroup->SetGoal(EEUGRust::NewLocation(GE2DPoint(theX, theY), true, true, true, theHeading, false, false), this->mIsQueued);
     theGroup->mAction = kActionPrepareToMove;
     this->mPlayer->mPendingGroups.push_back(theGroup);
     theGroup->Plan();
@@ -1344,7 +1343,7 @@ void EEActiveGroup::SpreadAroundResource(EEUnit* inTarget)
         float theDX = (inTarget->GetTileX() + 0.5f) - theOthers->GetFirstUnit()->mPhysicalModel.GetLocation().GetX();
         theHeading = UMArcTan2(-theDX, (inTarget->GetTileY() + 0.5f)
                                      - theOthers->GetFirstUnit()->mPhysicalModel.GetLocation().GetY());
-        theOthers->SetGoal(new EEUGLocation(GE2DPoint(inTarget->GetTileX() + 0.5f, inTarget->GetTileY() + 0.5f), true, true,
+        theOthers->SetGoal(EEUGRust::NewLocation(GE2DPoint(inTarget->GetTileX() + 0.5f, inTarget->GetTileY() + 0.5f), true, true,
                                             true, theHeading, false, false), this->mIsQueued);
         theOthers->mAction = kActionPrepareToMove;
         this->mPlayer->mPendingGroups.push_back(theOthers);
@@ -1409,7 +1408,7 @@ void EEActiveGroup::SpreadAroundTile(long inTileX, long inTileY)
     float theDX = (inTileX + 0.5f) - theGroup->GetFirstUnit()->mPhysicalModel.GetLocation().GetX();
     float theHeading = UMArcTan2(-theDX, (inTileY + 0.5f)
                                  - theGroup->GetFirstUnit()->mPhysicalModel.GetLocation().GetY());
-    theGroup->SetGoal(new EEUGLocation(theLocation, true, true, true, theHeading, false, false), this->mIsQueued);
+    theGroup->SetGoal(EEUGRust::NewLocation(theLocation, true, true, true, theHeading, false, false), this->mIsQueued);
     theGroup->mAction = kActionPrepareToMove;
     this->mPlayer->mPendingGroups.push_back(theGroup);
     theGroup->Plan();
@@ -1478,7 +1477,7 @@ void EEActiveGroup::SpreadForUnload(long inTileX, long inTileY)
     float theDX = (inTileX + 0.5f) - theGroup->GetFirstUnit()->mPhysicalModel.GetLocation().GetX();
     float theHeading = UMArcTan2(-theDX, (inTileY + 0.5f)
                                  - theGroup->GetFirstUnit()->mPhysicalModel.GetLocation().GetY());
-    theGroup->SetGoal(new EEUGLocation(theLocation, true, true, true, theHeading, false, false), this->mIsQueued);
+    theGroup->SetGoal(EEUGRust::NewLocation(theLocation, true, true, true, theHeading, false, false), this->mIsQueued);
     theGroup->mAction = kActionPrepareToMove;
     this->mPlayer->mPendingGroups.push_back(theGroup);
     theGroup->Plan();

@@ -74,7 +74,6 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEGroupPathRequest.h"
@@ -1593,7 +1592,7 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
             fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (y): %6.6f\n", (double)theLocation.GetY());
             fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (z): %6.6f\n", (double)theLocation.GetZ());
             if ((theGoals[j])->mKind == kGoalLocation) {
-                if (static_cast<EEUGLocation*>(theGoals[j])->GetIsAutoWaypoint() == true)
+                if (static_cast<EEUGRust*>(theGoals[j])->GetIsAutoWaypoint() == true)
                     fprintf(inFile, "OUT OF SYNCH DUMP:  Location Goal Is An AutoWaypoint\n");
                 else
                     fprintf(inFile, "OUT OF SYNCH DUMP:  Location Goal Is Not An AutoWaypoint\n");
@@ -2658,7 +2657,7 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
             if (theFound == true) {
                 thePoint.SetX((float)theTile.mX + 0.5f);
                 thePoint.SetY((float)theTile.GetY() + 0.5f);
-                EEUnitGoal* theGoal = new EEUGLocation(thePoint, false, true, false, 0.0f, false, 0);
+                EEUnitGoal* theGoal = EEUGRust::NewLocation(thePoint, false, true, false, 0.0f, false, 0);
                 this->SetGoal(theGoal, theCommand == kActionGatherResource, 0);
                 this->StartAction(kActionPrepareToMove);
                 this->GetUnitClass()->ActionChanged(this);
@@ -2784,7 +2783,7 @@ void EEComplexUnit::FleeAfterCalamity(long inArg)
         GE2DPoint thePoint(0.0f, 0.0f);
         if (!EEGetRandomPointAhead(this, &thePoint))
             return;
-        this->SetGoal(new EEUGLocation(thePoint, true, true, false, 0.0f, false, false), 0, 0);
+        this->SetGoal(EEUGRust::NewLocation(thePoint, true, true, false, 0.0f, false, false), 0, 0);
         this->StartAction(kActionPrepareToMove);
     }
     this->GetUnitClass()->ActionChanged(this);
@@ -2801,7 +2800,7 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
     EEUGRust* theAttack = EEAttackUnitCast(this->GetGoal());
     // a location goal or a heal goal (which derived from it; its group path state was never read)
     bool theHasLocation = EEGoalHasLocation(this->GetGoal());
-    EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(this->GetGoal());
+    EEUGRust* theLocation = EELocationGoalCast(this->GetGoal());
     EEAIPathSector* theStartSector = gContinentManager.GetPathSector(this);
     long theSkipped = 0;
     bool theKeepAttack = false;
@@ -2820,7 +2819,7 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
     } else if (theLocation != NULL)
         theLocation->SetGroupPathState(3);
     if (!theKeepAttack && (theQueue->mGoals.size() == 0
-        || (theQueue->mGoals.back()->mKind == 1 && static_cast<EEUGLocation*>(theQueue->mGoals.back())->GetIsAutoWaypoint())))
+        || (theQueue->mGoals.back()->mKind == 1 && static_cast<EEUGRust*>(theQueue->mGoals.back())->GetIsAutoWaypoint())))
         goto done;
     if (inPath.size() >= 2) {
         thePath.reserve(inPath.size());
@@ -2846,7 +2845,7 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
                 thePath.push_back(inPath[i]);
         }
         for (long thePathIndex = thePath.size() - 1; thePathIndex >= 0; thePathIndex--) {
-            EEUnitGoal* theGoal = new EEUGLocation(&thePath[thePathIndex], this->mGoalState != NULL && this->mGoalState->mB1C,
+            EEUnitGoal* theGoal = EEUGRust::NewLocation(&thePath[thePathIndex], this->mGoalState != NULL && this->mGoalState->mB1C,
                 theLocation != NULL && theLocation->GetIsForcedMove(), false, 0.0f, true, false);
             if (!theKeepAttack) {
                 this->SetGoal(theGoal, 1, 0);
@@ -2870,7 +2869,7 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
             && UMFloor(this->mWaypoints.back().mLocation.GetY()) == theY)
             goto done;
         if (theCurrent->mKind == kGoalLocation)
-            static_cast<EEUGLocation*>(theCurrent)->SetGroupPathState(4);
+            static_cast<EEUGRust*>(theCurrent)->SetGroupPathState(4);
     }
     this->StartAction(kActionPrepareToMove);
     this->GetUnitClass()->ActionChanged(this);
@@ -3015,8 +3014,8 @@ bool EEComplexUnit::ReleaseHeld(EEComplexUnit* inUnit)
 // Pops auto-waypoint goals off the main queue, starting each following goal that suits the unit
 void EEComplexUnit::DropFinishedGoals(bool inStartAll)
 {
-    if (this->mGoalState != NULL && this->mGoalState->mKind == kGoalLocation && static_cast<EEUGLocation*>(this->mGoalState)->GetIsAutoWaypoint() == true) {
-        EEUGLocation* theGoal = static_cast<EEUGLocation*>(this->mGoalState);
+    if (this->mGoalState != NULL && this->mGoalState->mKind == kGoalLocation && static_cast<EEUGRust*>(this->mGoalState)->GetIsAutoWaypoint() == true) {
+        EEUGRust* theGoal = static_cast<EEUGRust*>(this->mGoalState);
         while (true) {
             if (theGoal->GetIsAutoWaypoint() != true)
                 break;
@@ -3024,7 +3023,7 @@ void EEComplexUnit::DropFinishedGoals(bool inStartAll)
             theGoal = NULL;
             EEUnitGoal* theNext = this->RefreshGoals();
             if (theNext->mKind == kGoalLocation)
-                theGoal = static_cast<EEUGLocation*>(theNext);
+                theGoal = static_cast<EEUGRust*>(theNext);
             if (theGoal == NULL || inStartAll || !theGoal->GetIsAutoWaypoint()) {
                 if (theNext->Suits(this))
                     theNext->Start(this);
@@ -3477,7 +3476,7 @@ void EEComplexUnit::RefreshActiveGoal()
     unsigned long theCount = theGoals.size();
     for (unsigned long i = 0; i < theCount; i++) {
         EEUnitGoal* theGoal = theGoals[i];
-        if (theGoal->mKind != kGoalLocation || !static_cast<EEUGLocation*>(theGoal)->GetIsAutoWaypoint()) {
+        if (theGoal->mKind != kGoalLocation || !static_cast<EEUGRust*>(theGoal)->GetIsAutoWaypoint()) {
             theResult = theGoal;
             break;
         }
@@ -3822,7 +3821,7 @@ void EEComplexUnit::SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inIndex
             if ((unsigned long)inIndex < 1)
                 this->mActiveGoal = NULL;
             for (;;) {
-                EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(this->GetQueuedGoal(inIndex));
+                EEUGRust* theLocation = EELocationGoalCast(this->GetQueuedGoal(inIndex));
                 if (theLocation == NULL || !theLocation->GetIsAutoWaypoint())
                     break;
                 this->mGoalQueues[inIndex].PopFront();
@@ -3835,7 +3834,7 @@ void EEComplexUnit::SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inIndex
     this->SetIsFiringHigh(false);
     if (inIndex != 0)
         return;
-    if (inGoal->mKind != kGoalLocation || !static_cast<EEUGLocation*>(inGoal)->GetIsAutoWaypoint())
+    if (inGoal->mKind != kGoalLocation || !static_cast<EEUGRust*>(inGoal)->GetIsAutoWaypoint())
         this->mActiveGoal = inGoal;
     this->mGoalState = inGoal;
 }
@@ -3890,7 +3889,7 @@ void EEComplexUnit::PlayEffect(long inTechnology)
 // so it may move on to the next goal
 bool EEComplexUnit::ShouldMoveToNextAutoWaypoint()
 {
-    EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(this->GetGoal());
+    EEUGRust* theLocation = EELocationGoalCast(this->GetGoal());
     if (theLocation == NULL || !theLocation->GetIsAutoWaypoint() || this->mGoalQueues[0].mGoals.size() <= 1
         || !gPathManager.IsPathDone(this) || gPathManager.HasAutoPath(this))
         return false;
