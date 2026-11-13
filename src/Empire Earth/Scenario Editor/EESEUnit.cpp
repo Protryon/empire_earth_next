@@ -138,6 +138,7 @@ extern unsigned long& gTexturePixelDepth;
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFSEUpgradePanel.h"
 #include "ee/EEStringIDs.h"
+#include "rust/ee_screens.h"
 
 
 
