@@ -10871,6 +10871,131 @@ The dialogs, the UI manager and the UI thread (RUST_PLAN's row: ~4.2k); round 10
   kind) and `StartScenarioEditor`, `EEUIFileComboBox` (a toolkit control subclass). The scenario editor's map is in
   RUST_PLAN's row.
 
+## R6 WON round 24: MultiListArea with its rows and header, TreeArea and TreeItem, PopupMenu whole in Rust; the lists' selection event fixed (ee_won multiobj.rs, treeobj.rs, menuobj.rs; branch rust-r6-won24, 2026-11-13)
+
+Measured as rounds 18-23 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 87,629 at
+the branch's start -> 87,632 (MultiListArea accessors, +3) -> 86,904 (the multi-column list, -728) -> 86,908 (TreeItem
+accessors, +4) -> 86,252 (the tree, -656) -> 86,100 (PopupMenu, -152); the merge of rust (other lanes) -> 85,300;
+the selection event fix +5, the Scrollbar accessors +13 -> 85,318. This round's own net: -1,511.
+
+- **The regression (found by the lead's LAN gate, fixed here in its own commit):** round 23's Rust ListArea fires its
+  selection change through the component op `FireEvent(EeWonGuiEvent::ListSelChanged)`, and GuiHost's `ComponentOp`
+  turned every event but InputReturn into `ComponentEvent_InputTextChanged`. No list's selection reached a listener,
+  so the LAN lobby never enabled Join Game. The golden could not see it: its host traced the op, not the event the
+  C++ made of it. Lesson: when an op's C++ side maps codes, check each code reaches its own case (a new code added to
+  a shared op table needs its host case too).
+- **Accessors first, in their own commits.** MultiListArea: the configs' and ServerListCtrl's writes of
+  `mDynamicSizeColumn` / `mAutoGrowColumns` and read of `mSortColumnPrev`. TreeItem: RoomCtrl's reads of `mItem`,
+  `mChildren.size()`, `mParent`, `mIndex`, `mOpen` (`GetWrappedItem`, `GetNumChildren`, `GetParentItem`, `GetIndex`,
+  `IsOpen`). Scrollbar: the skins, MSScrollbar, the configs and ScrollbarScroller (arrows, thumb, track, orientation,
+  thumb options, `SetRange`, `SetLineScrollSizes`, `Get/SetPosition`); the move itself is next round. PopupMenu had no
+  reader outside its units.
+- **Subclasses over a Rust base.** MultiListArea, TreeArea and PopupMenu derive from ListArea, which is Rust since
+  round 23. Their Rust objects hold the list's Rust object (`ee_won_*_new(this, host, this->mRust)`: the base's
+  constructor ran first and its destructor runs after) and call it directly for every `ListArea::X` the original
+  made. The list's own virtuals (AdjustPosition, Sort, NotifyMouseItemGone, ListSelChangedHook) still go back through
+  the C++ object, so the overrides run. The goldens run BOTH sides over a real Rust ListArea with one scripted host,
+  so the traces carry the base's ops too.
+- **Rows as Rust objects.** MultiListItem and TreeItem stay C++ `ListItem`s (the list's items; NetworkAdapterListItem
+  derives from MultiListItem), each holding a Rust row (`EeWonMRow`, `EeWonTNode`) with its cells or its children
+  and wrapped item held by reference. A row's virtuals get the list, and the forwarder passes along the list's Rust
+  object. The calls with no list (`SetPos`, `GetItem`, the walks) go through the row's own small host (references,
+  `NodeOf`, the item SetPos). A row reaches another row's Rust state through the op `NodeOf` (the C++ row's `mNode`),
+  and the header reaches its list's through `MultiOf`.
+- **Undefined states the goldens avoid (the Rust keeps away from them):**
+  - a negative column to `SetItem` / `SetColumnItem` (the original compared it with the vector's size as unsigned);
+  - a row's cell past the columns at paint (the original read past the vector);
+  - a header without a list at a drag (a null read).
+  - In the tree, `CloseAll` alone, or a changing call on a hidden row left open, can leave rows of a closed or
+    detached subtree in the list. Their parent's removal then makes the original read a freed row (the first tree
+    golden crashed there). The tree golden's changing calls take shown rows, as the room control does.
+- **Unset fields given a value:** TreeArea's `mTreeSortType` (none; the config sets it) and PopupMenu's
+  `mLastX`/`mLastY` (0; only keyboard mode reads them, after a move set them). One dropped override:
+  `TreeArea::MouseDown` only called `ListArea::MouseDown`.
+- **The tree's paint** is guidraw's operations. The dotted lines' pixel loops are a new `EE_WON_DRAW_DOTTED_LINE`
+  (17), executed by `WONDrawOne`.
+- **The sorts:** a row's Compare is called from `std::sort` / `std::lower_bound` inside the list's ops. The goldens'
+  hosts sort through the side's rows. The Rust replays take a sort's order from the golden and run `lower_bound`'s
+  binary search themselves (the same comparisons).
+- **The goldens** (`tests/won/won_multiobj_test.cpp`, `won_treeobj_test.cpp`, `won_menuobj_test.cpp`; 20,000
+  sequences each, every reference given back):
+
+  | Golden | Trace lines | Mutation | Sequences it fails | Replayed |
+  |---|---|---|---|---|
+  | multi-column list | 11,327,345 | an empty cell's order | 4,342 | 46 sequences |
+  | tree | 13,409,107 | an ancestor's dotted line's x | 3,014 | 42 sequences |
+  | popup menu | 6,174,909 | the cleared submenu selection's index | 2,337 | 40 sequences |
+
+  `WON_TRACE_SEQ` / `WON_ECHO` / `WON_FIRST_SEQ` in the tree test print the sequence and its live trace (how its
+  crash was found).
+- **Shell lesson:** the Bash tool turned `\n` inside a heredoc into a real newline, even with a quoted delimiter. It
+  broke a C string literal twice: write such files with the file tool.
+- **What runs it.** EE-SIM never builds the lobby (the oracle is unchanged by construction). The lead's LAN game
+  checks:
+  - the LAN game list (a plain ListArea) and its selection event (`lan_game.py` PASS here, after the fix);
+  - the game room's player list (MultiListArea: GameUserListCtrl's rows over MultiListItem);
+  - the right-click menus (PopupMenu) if a person opens one.
+
+  The tree is the Internet room list only. The lobby captures check the multi-column paint (rows, columns, header
+  buttons, sort arrows). Column drags, header sorts, submenus, keyboard menus and the tree's mouse run only in the
+  goldens.
+- **Left:** Scrollbar (accessors done) with ScrollbarScroller; TextListItem and MenuItem's paints (data classes the
+  lobby fills; their decisions are guidraw's); then the containers.
+
+## R5b.4, seventeenth round: EEUGRust generic over the goal kind; the cast calamity, explore and unload transport goals whole in Rust (ee_units rust_goal.rs, calamity.rs, explore.rs, unload.rs; branch rust-r5b4-core17, 2026-11-13)
+
+- **One host for every Rust goal: an operation callback, not a table.** Round 16's `EEUGRust` had the patrol's
+  21-function host table; a second class would have needed its own and cost as much as it saved. The class is now
+  generic: every virtual calls `ee_units_rust_goal(op, kind, goal, a, b, io, host)`, which dispatches by `mKind` to
+  the class's bodies, and the C++ answers through one callback (`EeUnitsGoalHost`: an operation number, two handles
+  and an argument block of ints, floats, a text and a list sink). Each read or world call is one `case` of a switch
+  (two to five lines) instead of a function plus a table entry. Rust keeps one trait per class (`PatrolHost`,
+  `CalamityHost`, `ExploreHost`, `UnloadHost`, over a common `GoalHost`), so the bodies and their mock-host tests
+  stay typed; one adapter (`OpHost`) implements them all over the callback.
+- **The texts and the defaults moved with it.** The debug line and text and the out-of-synch dump are Rust
+  (`format!`, appended through the host into the `UWideString` or the dump's `FILE`; a unit's class name is its own
+  operation); `GetDestination` with its group notice, `GetStartAction`, `Start`, the base `EvaluateCondition`,
+  `GetMaxPathAttempts` (3, the unload's 9) and `Suits` (true, the unload's test) are answered in Rust, and `Load` and
+  `RepairPointers` hand Rust the save version. A class moved later adds only its own operations and accessors.
+- **What it deleted.** C++ (src and include, not the generated header) per commit: the cast calamity with the
+  generic rework +392 -738 (net -346), explore +197 -470 (-273), unload transport +213 -511 (-298): the round -917
+  before the merge, against the lane's +83 over rounds 15-16.
+- **Explore's bad tiles are ee_astar's `SparseArray`** (ee_units now depends on ee_astar and ee_ge): the point set
+  behind `U2DSparseArrayPointContainer` was already Rust, so the save lists the bad tiles in the same order and the
+  checksum's count is its `size`. `GE3DPoint::DistanceToSquared` is ee_ge's.
+- **State by value, no lock across a host call.** Each body copies its goal's record out of the table, calls the
+  host, and writes it back (the explore record, with its point set, is cloned). A reentrant body for the same goal
+  would see the record as it was before the outer body; no gate game has one.
+- **Two unit types behind one handle.** A goal's target may be any `EEUnit` while its source or transport is an
+  `EEComplexUnit`; single inheritance puts both at the same address, so the host casts each handle to the type the
+  original read through, and the saved ids' lookup says which (`find_unit(id, complex)`).
+- **Accessors for the callers' member reads.** The AI read and wrote the classes' members directly: the prophet the
+  cast's technology, tile and target; the active group the explore copy's tile and the unload's tile; the AI
+  personnel the unload's destination before `FindUnloadTiles` (now `SetUnloadDestination`, one call); the air
+  bomber cleared the transport so the goal's destructor would not release it (`ForgetUnloadTransport`). The
+  compiler lists them once the class is gone.
+- **Coverage by temporary prints (removed).** No game of any profile reaches the cast calamity goal (calamity seeds
+  2-7; oracle, late, space, missile, scenario 2-3: the calamity profile's calamities are cast through the manager)
+  nor the unload transport goal (oracle, late, space, scenario 2-3 and the islands saveload game): both are unit
+  tests only. Explore goals run in every random-map profile, but only through the computer players' continent
+  fallback (an explorer that is not human never searches rings), the ship's lighthouse test and once the random map
+  point (calamity seed 6); the ring search is unit tests only. The patrol's move onto the generic host is gated by
+  the scenario profile, as in round 16.
+- **Bash heredocs again.** A temporary `printf("...\n")` and a Python edit with `\\n` sent through quoted heredocs
+  came out with a real newline (the compiler and an assertion stopped them). Edit strings with escapes through the
+  editor tool or a script written by the file tool.
+- **Behaviour:** a cast without a source no longer reads its height; a patrol without a point leaves
+  `GetGoalLocation`'s point as it was; an unload whose transport was not found on load answers its range trigger
+  false and its texts without the transport (each read NULL before). Everything else is the original's, call for call.
+- **Gates of the round.** Per commit: build `--sim` 0/0, the Rust gate PASS (ee_plat_core's scaled timer test failed
+  once under load on two runs, PASS rerun), oracle seeds 2-3 identical; captures at seeds 2-3: scenario and calamity
+  (calamity commit), oracle and late (explore; calamity skipped for disk), oracle, late, space and scenario (unload);
+  saveload (oracle, calamity, late, space, next, plains-medium-3ai; seed 2 at 1000/1900 s) as the expect file on the
+  unload tree (it holds the explore goals' save and load). On the result merged with rust: build `--sim` and the test
+  profile link 0/0, the Rust gate PASS (the same timer test rerun alone), oracle seeds 2-7 identical, captures at
+  seeds 2-3 oracle, late, calamity and scenario PASS. ee_units tests 157 (13 new). No tour: nothing
+  drawn changed (the debug texts appear only in the debug panels).
+
 ## R6: the game screens, fourteenth round: the scenario editor's stateless events in Rust (ee_screens scenario_editor.rs; branch rust-screens14, 2026-11-12)
 
 Round 13's map, item (a). The count is round 10's (`build/sc10/count.sh`) plus the scenario editor's two folders and

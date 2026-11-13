@@ -106,7 +106,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGBuildRepair.h"
-#include "ee/EEUGCastCalamity.h"
+#include "ee/EEUGRust.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUCBuilding.h"
@@ -4655,12 +4655,9 @@ void EEGetHelicopterPriestDestination(EEComplexUnit* inUnit, GE3DPoint& outPoint
     GEVector theOffset;
     GE3DPoint thePosition;
     GE3DPoint theTarget;
-    EEUGCastCalamity* theGoal = dynamic_cast<EEUGCastCalamity*>(inUnit->GetGoal());
-    if (theGoal->mTarget != NULL)
-        theGoal->mTarget->GetPosition(theTarget);
-    else
-        ::gWorld.mMap->GetTileLocation(theGoal->mTileX, theGoal->mTileY, theTarget);
-    long theType = theGoal->mCalamityType;
+    EEUGRust* theGoal = EECastCalamityGoalCast(inUnit->GetGoal());
+    theGoal->GetGoalLocation(theTarget);
+    long theType = theGoal->GetCalamityType();
     EETechTree* theTree = inUnit->mPlayer->mTechnologies;
     EETechnology* theTechnology = theTree->Get(theType);
     if (theTechnology == NULL)

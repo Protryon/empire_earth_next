@@ -164,7 +164,7 @@ TreeItem* RoomCtrl::GetServerItem(const IPAddr& inAddress)
     for(int i=0;i<this->mRoomList->GetNumItems();++i)
     {
         TreeItem* aTree=static_cast<TreeItem*>(this->mRoomList->GetItem(i));
-        RoomListItem* aItem=static_cast<RoomListItem*>(aTree->mItem.get());
+        RoomListItem* aItem=static_cast<RoomListItem*>(aTree->GetWrappedItem());
         if(aItem->mAddress==inAddress) return aTree;
     }
     return NULL;
@@ -176,10 +176,10 @@ TreeItem* RoomCtrl::GetGroupItem(const IPAddr& inAddress,int inGroupId)
     TreeItem* aServer=this->GetServerItem(inAddress);
     if(aServer==NULL)
         return NULL;
-    for(int i=0;i<static_cast<int>(aServer->mChildren.size());++i)
+    for(int i=0;i<aServer->GetNumChildren();++i)
     {
         TreeItem* aChild=aServer->GetChild(i);
-        if(static_cast<RoomListItem*>(aChild->mItem.get())->mGroupId==static_cast<unsigned long>(inGroupId)) return aChild;
+        if(static_cast<RoomListItem*>(aChild->GetWrappedItem())->mGroupId==static_cast<unsigned long>(inGroupId)) return aChild;
     }
     return NULL;
 }
@@ -205,7 +205,7 @@ void RoomCtrl::DoJoinRoom()
     TreeItem* aSelected=static_cast<TreeItem*>(this->mRoomList->GetSelItem());
     if(aSelected!=NULL)
     {
-        RoomListItem* aItem=static_cast<RoomListItem*>(aSelected->mItem.get());
+        RoomListItem* aItem=static_cast<RoomListItem*>(aSelected->GetWrappedItem());
         this->DeliverEvent(new JoinRoomEvent(aItem->mAddress,aItem->mGroupId),false);
     }
 }
@@ -215,7 +215,7 @@ void RoomCtrl::DoCreateRoom()
 {
     IPAddr aAddress;
     TreeItem* aSelected=static_cast<TreeItem*>(this->mRoomList->GetSelItem());
-    if(aSelected!=NULL) aAddress=static_cast<RoomListItem*>(aSelected->mItem.get())->mAddress;
+    if(aSelected!=NULL) aAddress=static_cast<RoomListItem*>(aSelected->GetWrappedItem())->mAddress;
     this->DeliverEvent(new CreateRoomEvent(aAddress),false);
 }
 // FUNCTION: WON 0x007c2550
@@ -271,9 +271,9 @@ void RoomCtrl::HandleGroupChanged(GroupChangedEvent* inEvent)
     TreeItem* aGroupItem=this->GetGroupItem(aServer,aGroup);
     if(aGroupItem!=NULL)
     {
-        static_cast<RoomListItem*>(aGroupItem->mItem.get())->UpdateText(aServer,aGroup);
-        static_cast<RoomListItem*>(aGroupItem->mParent->mItem.get())->UpdateText(aServer,NULL);
-        this->mRoomList->RefreshItem(aGroupItem->mParent);
+        static_cast<RoomListItem*>(aGroupItem->GetWrappedItem())->UpdateText(aServer,aGroup);
+        static_cast<RoomListItem*>(aGroupItem->GetParentItem()->GetWrappedItem())->UpdateText(aServer,NULL);
+        this->mRoomList->RefreshItem(aGroupItem->GetParentItem());
         this->mRoomList->RefreshItem(aGroupItem);
     }
     this->EnableControls();
@@ -283,9 +283,9 @@ void RoomCtrl::HandleGroupChanged(GroupChangedEvent* inEvent)
 void RoomCtrl::HandleItemOpened(TreeItemOpenedEvent* inEvent)
 {
     TreeItem* aTree=inEvent->mItem.get();
-    if(aTree->mOpen)
+    if(aTree->IsOpen())
     {
-        RoomListItem* aItem=static_cast<RoomListItem*>(aTree->mItem.get());
+        RoomListItem* aItem=static_cast<RoomListItem*>(aTree->GetWrappedItem());
         this->DeliverEvent(new QueryServerGroupsEvent(aItem->mAddress),false);
     }
 }
@@ -307,17 +307,17 @@ void RoomCtrl::HandleServerChanged(ServerChangedEvent* inEvent)
     }
     TreeItem* aServerItem=this->GetServerItem(inEvent->mServer.get());
     if(aServerItem==NULL) return;
-    bool aOpen=aServerItem->mOpen;
+    bool aOpen=aServerItem->IsOpen();
     TreeItem* aSelected=static_cast<TreeItem*>(this->mRoomList->GetSelItem());
     unsigned long aGroupId=0xffff;
     IPAddr aAddress;
-    if(aSelected!=NULL && aSelected->mParent==aServerItem)
+    if(aSelected!=NULL && aSelected->GetParentItem()==aServerItem)
     {
-        RoomListItem* aItem=static_cast<RoomListItem*>(aSelected->mItem.get());
+        RoomListItem* aItem=static_cast<RoomListItem*>(aSelected->GetWrappedItem());
         aGroupId=aItem->mGroupId;
         aAddress=aItem->mAddress;
     }
-    int aPosition=aServerItem->mIndex;
+    int aPosition=aServerItem->GetIndex();
     int aVertOffset=this->mRoomList->mVertOffset;
     this->mRoomList->BeginUpdate();
     this->mRoomList->RemoveTreeItem(aServerItem);

@@ -100,7 +100,6 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEActiveGroup.h"
-#include "ee/EEUGExplore.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"

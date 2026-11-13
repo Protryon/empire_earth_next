@@ -343,6 +343,94 @@ pub enum EeWonGuiOp {
     ItemHold,
     /// `a->Release()`.
     ItemRelease,
+    // ---- the multi-column list, its rows and header (`multiobj`)
+    /// `a->Compare(b, this)` (a cell's own order).
+    ItemCompare = 250,
+    /// `((ListArea::SortFunc)a)(this, b, c)` (a column's sort function).
+    CallSortFunc,
+    /// `a->mWidth = b`.
+    ItemSetWidth,
+    /// `SetCursor(a)` (`EeWonGuiCursor`).
+    SetCursor,
+    /// `mCurrentCursor.get() == a` (`EeWonGuiCursor`; 0 or 1).
+    CursorIs,
+    /// `GetSelColor().GetBackgroundColor(*a)` (`a` the Graphics).
+    SelBackground,
+    /// a column's viewport: `v = new ScrollAreaViewport(this)` held by the column (`AddRef`), then
+    /// `GetViewport()->AddChild(v)`; returns `v` (given back with `ChildRelease`).
+    NewColumnViewport,
+    /// `a->SetPos(b, c)`.
+    ChildSetPos,
+    /// `((MultiListHeader*)a)->NotifyColumnChange()`.
+    HeaderNotify,
+    /// `((MultiListHeader*)a)->SetSortColumn(b, c)`.
+    HeaderSetSortColumn,
+    /// `((MultiListItem*)a)->GetItem(b)`.
+    RowCell,
+    /// `((MultiListItem*)a)->SetItem(b, c)`.
+    RowSetCell,
+    /// `((MultiListArea*)a)->mMulti` (the Rust multi-column list of a header's list).
+    MultiOf,
+    /// `RemoveChild(a)`.
+    RemoveChild,
+    /// `a->mControlId`.
+    ChildControlId,
+    /// `a->mControlId = b`.
+    ChildSetControlId,
+    /// `a->Right()`.
+    ChildRight,
+    /// `a->GetDesiredSize(b[0], b[1])` (`b` points at two i32s).
+    ChildDesiredSize,
+    /// the event `a`'s component's ancestor whose parent is this container (`child = a->mComponent`, climbed while
+    /// its parent is neither this nor NULL); 0 when the climb ends at NULL.
+    EventChildUnder,
+    // ---- the tree list and its rows (`treeobj`)
+    /// `((TreeItem*)a)->mNode` (a row's Rust object).
+    NodeOf = 280,
+    /// a new `TreeItem` with the creator's reference (`AddRef`; given back with `ItemRelease`).
+    NewTreeItem,
+    /// `a->mSelectable = b != 0`.
+    ItemSetSelectable,
+    /// `a->SetPos(b, c)`.
+    ItemSetPosXY,
+    /// `a->mType` (a `ComponentEvent*`).
+    EventType,
+    /// `a->mComponent->mControlId`.
+    EventCompControlId,
+    /// `a->mComponent->Top()`.
+    EventComponentTop,
+    /// `CheckDoubleClick(a)` (0 or 1).
+    CheckDoubleClick,
+    /// `DeliverEvent(new TreeItemOpenedEvent(this, a), false)`.
+    DeliverTreeOpened,
+    // ---- the popup menu (`menuobj`; a submenu is a `PopupMenu*`)
+    /// `GetRoot()->ClosePopup(a)`.
+    ClosePopup = 300,
+    /// `a->mComponent` (a `ComponentEvent*`).
+    EventComponent,
+    /// `a->GetSelItem()` (a submenu).
+    MenuSelItem,
+    /// `a->SetSelItem(b)` (a submenu; the event fired).
+    MenuSetSelAt,
+    /// `dynamic_cast<MenuItem*>(a)` (`a` a `ListItem*` or NULL).
+    MenuItemOf,
+    /// `a->mSubMenu.get()` (a `MenuItem*`).
+    MenuItemSub,
+    /// `a->mDisabled` (0 or 1).
+    MenuItemDisabled,
+    /// `ScrollUntranslate(*a, *b)` (`a`, `b` point at i32s).
+    ScrollUntranslate,
+    /// `LocalToRoot(*a, *b)` (`a`, `b` point at i32s).
+    LocalToRoot,
+    /// `a->Reset()` (a submenu).
+    MenuReset,
+    /// `GetRoot()->QueueEvent(new DoPopupEvent(PopupParams(a, d, this, b[0], b[1])))` with the avoided rectangle the
+    /// `EeWonRect4` at `c` (`b` points at two i32s).
+    QueueSubMenu,
+    /// `LocalToRoot(a, b)`, then the root's `QueueEvent(new MouseEvent(InputEvent_MouseUp, a, b, GetKeyMod(), c))`.
+    QueueMouseUp,
+    /// `a->TryKeyDown(b)` (a submenu; 0 or 1).
+    MenuTryKeyDown,
 }
 
 /// The events a component object fires (`FireEvent`).

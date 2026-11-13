@@ -30,9 +30,6 @@ class EEUGBuildRepair;
 class EEUGGather;
 class EEUGLoadContainer;
 class EEUGLoadTransport;
-class EEUGUnloadTransport;
-class EEUGExplore;
-class EEUGCastCalamity;
 class EEUGLoadGarrison;
 class EEUGHealUnit;
 
@@ -45,9 +42,6 @@ template <> struct EEGoalKindBit<EEUGBuildRepair> { static const uint32_t kBit =
 template <> struct EEGoalKindBit<EEUGGather> { static const uint32_t kBit = EE_GOAL_KIND_GATHER; };
 template <> struct EEGoalKindBit<EEUGLoadContainer> { static const uint32_t kBit = EE_GOAL_KIND_LOAD_CONTAINER; };
 template <> struct EEGoalKindBit<EEUGLoadTransport> { static const uint32_t kBit = EE_GOAL_KIND_LOAD_TRANSPORT; };
-template <> struct EEGoalKindBit<EEUGUnloadTransport> { static const uint32_t kBit = EE_GOAL_KIND_UNLOAD_TRANSPORT; };
-template <> struct EEGoalKindBit<EEUGExplore> { static const uint32_t kBit = EE_GOAL_KIND_EXPLORE; };
-template <> struct EEGoalKindBit<EEUGCastCalamity> { static const uint32_t kBit = EE_GOAL_KIND_CAST_CALAMITY; };
 template <> struct EEGoalKindBit<EEUGLoadGarrison> { static const uint32_t kBit = EE_GOAL_KIND_LOAD_GARRISON; };
 template <> struct EEGoalKindBit<EEUGHealUnit> { static const uint32_t kBit = EE_GOAL_KIND_HEAL_UNIT; };
 

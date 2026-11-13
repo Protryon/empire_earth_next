@@ -55,7 +55,7 @@
 #include "ee/EECPASGAir.h"
 #include "ee/EECPAttackFormation.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGUnloadTransport.h"
+#include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x45096f
 // Creates a space transport sub-group for the attack group, with no land group to carry yet
@@ -649,7 +649,7 @@ void EECPASGSpaceTransport::UnloadAt(const EECPILocation& inLocation)
     long i;
     for (i = this->mUnits.size() - 1; i >= 0; i--) {
         EEComplexUnit* theUnit = this->mUnits[i]->mUnit;
-        EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(theUnit, inLocation.mTile.mX,
+        EEUGRust* theGoal = EEUGRust::NewUnloadTransport(theUnit, inLocation.mTile.mX,
                                                               inLocation.mTile.GetY(), true);
         bool theSkip = theUnit->GetNumCargoUnits() == 0;
         if (!theSkip) {

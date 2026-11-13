@@ -33,7 +33,7 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGCastCalamity.h"
+#include "ee/EEUGRust.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
@@ -189,7 +189,7 @@ void EECCCloaking::CloakUnit(EECalamity* inCalamity, EEComplexUnit* inUnit)
         if (inUnit->mPower != thePower)
             inUnit->mPower = thePower;
     }
-    inUnit->SetGoal(new EEUGCastCalamity(inUnit, 0, inUnit->GetTileX(), inUnit->GetTileY(), 0x43d, true), 0, 0);
+    inUnit->SetGoal(EEUGRust::NewCastCalamity(inUnit, 0, inUnit->GetTileX(), inUnit->GetTileY(), 0x43d, true), 0, 0);
     inUnit->StartAction(kActionCalamityPreCast);
     inUnit->mUnitClass->ActionChanged(inUnit);
 }

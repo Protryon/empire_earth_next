@@ -65,6 +65,9 @@ pub const EE_WON_DRAW_STRING_ALL: i32 = 14;
 pub const EE_WON_DRAW_TEXT: i32 = 15;
 /// A call the plan's caller makes (`a`: which, per plan; `b`..: its arguments).
 pub const EE_WON_DRAW_CALL: i32 = 16;
+/// A dotted line from (a, b), `c` long, vertical when `d` is set: every other pixel in the current colour, starting
+/// on the first even coordinate (TreeItem.cpp's `DrawHorzDottedLine` / `DrawVertDottedLine`).
+pub const EE_WON_DRAW_DOTTED_LINE: i32 = 17;
 /// The stretch filter's `CopyRawImage(a ? dst : src, dst, b, c, d, e, f, g)` (dest x, y, source x, y, width, height).
 pub const EE_WON_DRAW_COPY_PIXELS: i32 = 20;
 /// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
