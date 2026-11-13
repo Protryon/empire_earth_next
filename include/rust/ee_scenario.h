@@ -222,10 +222,53 @@ constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_FIRST_UNIT_TYPE = 47;
 /// `GetScenarioObject(a)->PickUnitType()`.
 constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_PICK = 48;
 
+/// `gWorld.mPlayers[a]->mShareBonus`.
+constexpr static const uint32_t EE_SCENARIO_READ_SHARE_BONUS = 50;
+
+/// `gWorld.mPlayerPopulationLimit`.
+constexpr static const uint32_t EE_SCENARIO_READ_WORLD_POPULATION_LIMIT = 51;
+
+/// `gWorld.mPlayers[a]->mPlayerID`.
+constexpr static const uint32_t EE_SCENARIO_READ_PLAYER_ID = 52;
+
 /// The manager's string slots in its stream: `mExportFileName`, `mLastChatText`.
 constexpr static const uint32_t EE_SCENARIO_MANAGER_EXPORT_NAME = 0;
 
 constexpr static const uint32_t EE_SCENARIO_MANAGER_LAST_CHAT = 1;
+
+/// `SetPlayerAttribute(player, b, c, d)` again, through the C++ entry (the any/all resources' recursion).
+constexpr static const uint32_t EE_SCENARIO_WRITE_SET_ATTRIBUTE = 0;
+
+/// `mResourceCaps[b] = c`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_RESOURCE = 1;
+
+/// `mShareBonus = b`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_SHARE_BONUS = 2;
+
+/// A copy of the effect with `mPlayer = b`, `mPlayerAttributeMode = 0`, `mPlayerAttributeAmount = c` handed to
+/// `AddV134Effect` (the population cap a saved game replays).
+constexpr static const uint32_t EE_SCENARIO_WRITE_PENDING_POPULATION = 3;
+
+/// `mComputerPlayer->mDifficulty = b`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_DIFFICULTY = 4;
+
+/// `mScenarioVariables[b] = c`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_VARIABLE = 5;
+
+/// `mTributes[b] = c`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_TRIBUTE = 6;
+
+/// `AddTribute(b, c, d)`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_ADD_TRIBUTE = 7;
+
+/// `mSavedGroups.Reset(b, c)` (the statistics).
+constexpr static const uint32_t EE_SCENARIO_WRITE_STATISTIC_ADD = 8;
+
+/// `mSavedGroups.Set(b, c)`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_STATISTIC_SET = 9;
+
+/// `mMiningLimit = b`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_MINING_LIMIT = 10;
 
 /// `gWorld.mGameSpeed`'s bits (an `f32`).
 constexpr static const uint32_t EE_SCENARIO_ROUND_GAME_SPEED = 0;
@@ -413,6 +456,8 @@ struct EeScenarioHost {
                   const int32_t *players,
                   size_t count,
                   uint32_t seed);
+  /// [`Host::write`].
+  void (*write)(void *ctx, uint32_t op, long player, int64_t b, int64_t c, int64_t d);
 };
 
 /// `EESMCondition`'s numbers, in the class's order.
@@ -995,6 +1040,16 @@ int32_t ee_scenario_manager_save(const EeScenarioStream *stream,
 /// # Safety
 /// `host` must be valid for the call: its `fields` and `queue` the live manager's, reached only between callbacks.
 void ee_scenario_manager_update(const EeScenarioRoundHost *host);
+
+/// `EESMEffect::SetPlayerAttribute` (player.rs): its writes through the host's `write`.
+///
+/// # Safety
+/// `host` must be valid for the call.
+void ee_scenario_set_player_attribute(const EeScenarioHost *host,
+                                      long player,
+                                      unsigned long attribute,
+                                      long mode,
+                                      long amount);
 
 }  // extern "C"
 

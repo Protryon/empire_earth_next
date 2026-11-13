@@ -18,6 +18,7 @@
 //! - [`manager`]: the manager's own numbers as a record the C++ class derives from, its timed effects' queue, and
 //!   its `Load` and `Save`.
 //! - [`round`]: `EEScenarioManager::Update`, the clocks and the trigger round with the timed effects.
+//! - [`player`]: the Set Player Attribute effect as a plan of writes (`EESMEffect::SetPlayerAttribute`).
 //! - [`aivar`]: the Set AI Variable effect's table as data (`EESMEffect::SetAIVariable`).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
@@ -29,6 +30,7 @@ pub mod fields;
 pub mod host;
 pub mod manager;
 pub mod object;
+pub mod player;
 pub mod round;
 pub mod save;
 pub mod stream;

@@ -14,6 +14,7 @@ use crate::fields::{
 use crate::host::EeScenarioHost;
 use crate::manager::{self, EeScenarioManagerFields, EeScenarioTimedEntry, EeScenarioTimedQueue};
 use crate::object::{self, EeScenarioObjectFilter};
+use crate::player;
 use crate::round::{self, EeScenarioRoundHost};
 use crate::save;
 use crate::stream::EeScenarioStream;
@@ -30,7 +31,7 @@ pub const EE_SCENARIO_MAX_PLAYERS: usize = 64;
 /// `host` must be valid for a read.
 unsafe fn host_of(host: *const EeScenarioHost) -> EeScenarioHost {
     // SAFETY: the caller's contract
-    unsafe { EeScenarioHost { ctx: (*host).ctx, read: (*host).read, players: (*host).players } }
+    unsafe { EeScenarioHost { ctx: (*host).ctx, read: (*host).read, players: (*host).players, write: (*host).write } }
 }
 
 // SAFETY (every function taking pointers below): the caller passes valid, aligned pointers for the documented reads
@@ -707,4 +708,21 @@ pub unsafe extern "C" fn ee_scenario_manager_update(host: *const EeScenarioRound
         EeScenarioRoundHost { ctx: (*host).ctx, fields: (*host).fields, queue: (*host).queue, op: (*host).op }
     };
     round::update(&mut h);
+}
+
+/// `EESMEffect::SetPlayerAttribute` (player.rs): its writes through the host's `write`.
+///
+/// # Safety
+/// `host` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_set_player_attribute(
+    host: *const EeScenarioHost,
+    player: c_long,
+    attribute: c_ulong,
+    mode: c_long,
+    amount: c_long,
+) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { host_of(host) };
+    player::set_player_attribute(&mut h, player, attribute, mode, amount);
 }

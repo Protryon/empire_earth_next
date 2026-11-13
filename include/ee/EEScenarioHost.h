@@ -12,13 +12,15 @@ class EESMCondition;
 class EESMTrigger;
 class EESMArea;
 class EESMObject;
+class EESMEffect;
 class EEUnit;
 
 // what a read may ask beyond the world: the condition whose chat text EE_SCENARIO_READ_CHAT_CONTAINS reads, the unit
-// of EE_SCENARIO_READ_UNIT_* (NULL where no read asks)
+// of EE_SCENARIO_READ_UNIT_* (NULL where no read asks); the effect whose plan the writes carry out (NULL for none)
 struct EESMHostContext {
     EESMCondition* mCondition;
     EEUnit* mUnit;
+    EESMEffect* mEffect;
 };
 
 // the host table over inContext (it must outlive the Rust call)
