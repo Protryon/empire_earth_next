@@ -900,6 +900,189 @@ constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
 
 constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
 
+/// `EESEASaveScenario`.
+constexpr static const uint32_t EE_SCREENS_SEW_SAVE = 1;
+
+/// `EESEATestScenario`.
+constexpr static const uint32_t EE_SCREENS_SEW_TEST = 2;
+
+/// `EESEAExitScenario`.
+constexpr static const uint32_t EE_SCREENS_SEW_EXIT = 3;
+
+/// `EESEAQuickSaveScenario` (object: the editor's `EEAQuickSaveLoad`, referenced while the action lives).
+constexpr static const uint32_t EE_SCREENS_SEW_QUICK_SAVE = 4;
+
+/// `EESEATechTree` (a first line, b last line, c player, d the left list); posted when made.
+constexpr static const uint32_t EE_SCREENS_SEW_TECH_TREE = 5;
+
+/// `EESEARotateUnits` (`ee_screens_sew_rotate` posts it).
+constexpr static const uint32_t EE_SCREENS_SEW_ROTATE = 6;
+
+/// `EESEAPaintArea` (a, b the first corner); posted when made.
+constexpr static const uint32_t EE_SCREENS_SEW_PAINT_AREA = 7;
+
+/// `EESEACreateBlankMap` (a width, b height, c terrain); posted when made.
+constexpr static const uint32_t EE_SCREENS_SEW_BLANK_MAP = 8;
+
+/// `EESEACreateRandomMap` (a size, b style); posted when made.
+constexpr static const uint32_t EE_SCREENS_SEW_RANDOM_MAP = 9;
+
+/// `EESEAPlaceWall` (`ee_screens_sew_wall` queues and posts).
+constexpr static const uint32_t EE_SCREENS_SEW_PLACE_WALL = 10;
+
+/// `EESEAPlaceGate` (`ee_screens_sew_gate` queues and posts).
+constexpr static const uint32_t EE_SCREENS_SEW_PLACE_GATE = 11;
+
+/// `gUserInterface->PostAction(p)` (p: the action's `EESEARust`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_POST = 1;
+
+/// The object p referenced / released (`UReferenceCounter`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_REFERENCE = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEW_OP_DEREFERENCE = 3;
+
+/// The editor left (`ExitEditor(i0 != 0)`: to test the scenario).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_EXIT_EDITOR = 4;
+
+/// The editor's current tab's settings stored (`RefreshCurrentGroup`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_REFRESH_GROUP = 5;
+
+/// -> whether the scenario editor is open (`mInScenarioEditor`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_IN_EDITOR = 6;
+
+/// `gWorld.mMap->PrepareSave()`.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_PREPARE_SAVE = 7;
+
+/// The screen event i0 (`EECreateScreenEvent`) posted.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_POST_SCREEN_EVENT = 8;
+
+/// The quick save p (`EEAQuickSaveLoad`) posted to save, written to disk.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_QUICK_SAVE = 9;
+
+/// The unit types tab's tech list (i0: the left one) filled with the lines i1..i2.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_TECH_FILL = 10;
+
+/// The selection turned to the yaw f0 (`editor_actions::rotate_selection`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_ROTATE = 11;
+
+/// The editor's paint area set to the rectangle i0..i3 (left, top, right, bottom).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_PAINT_AREA = 12;
+
+/// The renderer paused (posted, then waited for with both locks let go) and the locks taken again.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_PAUSE = 13;
+
+/// The world reset, a new scenario manager and environment manager.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_RESET = 14;
+
+/// -> the world's player count (`GetNumPlayers`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_PLAYER_COUNT = 15;
+
+/// A new map (width i0, height i1, players i2, terrain i3) set as the world's.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_NEW_MAP = 16;
+
+/// -> the map's size (`mSize`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_MAP_SIZE = 17;
+
+/// -> whether the mesh point (i0, i1) is valid (the coordinates unsigned, as `GetIsValidPoint`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_POINT = 18;
+
+/// -> whether the mesh tile (i0, i1) is valid.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_TILE = 19;
+
+/// The mesh point (i0, i1)'s height -> f0.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_GET_Z = 20;
+
+/// The mesh point (i0, i1)'s height set to f0.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_SET_Z = 21;
+
+/// `ComputeVertexNormal(i0, i1)`.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_NORMAL = 22;
+
+/// The tile (i0, i1): water when i2 (`SetIsWater`), its height f0.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_TILE_WATER = 23;
+
+/// `ComputeShorelines(i0, i1)`.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_SHORELINES = 24;
+
+/// `EEMap::PaintTerrain(i0, i1, i2)`.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_PAINT_TERRAIN = 25;
+
+/// `SetWaterColorSet(i0, i1)`.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_WATER_COLOR = 26;
+
+/// `EEMap::UpdateCliffs(i0, i1, i2, i3)`.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_UPDATE_CLIFFS = 27;
+
+/// The continents cleared (`gContinentManager.Clear`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_CONTINENTS_CLEAR = 28;
+
+/// The continents' regions built (`BuildRegions`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_CONTINENTS_BUILD = 29;
+
+/// -> whether the terrain i0 scatters ambient units (its chance above 0).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_TERRAIN_AMBIENT = 30;
+
+/// A terrain paint of the terrain i0 (its own colour type) over the whole map (size i1) posted.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_POST_AMBIENT_PAINT = 31;
+
+/// The influence table made for the map.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_INFLUENCE = 32;
+
+/// The camera put at (f0, f1, f2).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_CAMERA = 33;
+
+/// The minimap given the map (`SetMap`, `EEUIMiniMap::Update`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_MINIMAP_SET = 34;
+
+/// The minimap redrawn (`RedrawAll`, `Redraw`, `Refresh`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_MINIMAP_REDRAW = 35;
+
+/// The scene released and made again, the renderer resumed.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_RESUME = 36;
+
+/// -> the local player's id.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_LOCAL_PLAYER = 37;
+
+/// The random map size i0's dimensions -> i0, i1 (`EEGameOptions::GetMapDimensions`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_MAP_DIMENSIONS = 38;
+
+/// -> the default terrain (`gDefaultTerrain`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_DEFAULT_TERRAIN = 39;
+
+/// -> the world's player slots (`mMaxPlayers`: `CopyPlayers`' count).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_MAX_PLAYERS = 40;
+
+/// The player i0: -> whether there is one; i1 observing, i2 human, i3 its tech tree's start epoch.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_PLAYER = 41;
+
+/// `EERandomMap::CreateRandomMap` for the players p (i32 ids, i0 of them), the local index i1, the generator of
+/// style i2, the start epoch i3, the size i4 -> the camera's location f0..f2.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_RANDOM_MAP = 42;
+
+/// The player i0's pending units given their media and added to the world (buildings' buttons loaded).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_ADD_PENDING = 43;
+
+/// The player i0 loads the media of the technology i1's unit class (`SetUnitClassMedia(.., 0x7f)`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_LOAD_MEDIA = 44;
+
+/// The player i0 releases the media of the technology i1's unit class.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_UNLOAD_MEDIA = 45;
+
+/// `EEPlanWall` from (f0, f1) to (f2, f3) of the player i0's class of the technology i1.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_PLAN_WALL = 46;
+
+/// The ghosts' lock taken (i0 != 0) or let go.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_GHOST_LOCK = 47;
+
+/// -> whether every ghost can be placed (true without any).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_GHOSTS_PLACEABLE = 48;
+
+/// `EEBuildGate` on the tile (i0, i1) for the player i2, the technology i3, the direction i4.
+constexpr static const uint32_t EE_SCREENS_SEW_OP_BUILD_GATE = 49;
+
+/// The unit tab places its selected unit class again (`SelectUnitType`).
+constexpr static const uint32_t EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE = 50;
+
 /// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
 constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
 
@@ -2681,6 +2864,9 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 /// A paint action's record (opaque to C++).
 struct EeScreensSeaPaint;
 
+/// An `EESEARust`'s action (opaque to C++).
+struct EeScreensSewAction;
+
 /// A chat log entry's fixed fields (its name and text go as bytes beside it).
 struct EeScreensChatLogHead {
   float colour[3];
@@ -3245,16 +3431,6 @@ uint8_t ee_screens_sea_paint_set_area(EeScreensSeaPaint *paint,
 /// `paint` comes from `ee_screens_sea_paint_new`.
 void ee_screens_sea_paint_run(EeScreensSeaPaint *paint);
 
-/// `EESEAPaintArea::SetCorner`'s rectangle -> out[0..4] = left, top, right, bottom.
-///
-/// # Safety
-/// `out` points at four integers.
-void ee_screens_sea_area_rectangle(int32_t start_x,
-                                   int32_t start_y,
-                                   int32_t end_x,
-                                   int32_t end_y,
-                                   int32_t *out);
-
 /// `EESEAMouseClick::Virtual4`: the click's message (an `EEMessage*`, not NULL) applied and released.
 void ee_screens_seu_click(void *message);
 
@@ -3276,6 +3452,75 @@ void ee_screens_seu_rotate(float yaw);
 void ee_screens_seu_delete(uint32_t id,
                            int32_t player,
                            uint8_t group);
+
+/// The action of `kind` (`EE_SCREENS_SEW_*`) for the `EESEARust` `owner`, with its object and arguments; NULL for
+/// an unknown kind. Freed by `ee_screens_sew_free`.
+EeScreensSewAction *ee_screens_sew_new(void *owner,
+                                       uint32_t kind,
+                                       void *object,
+                                       int32_t a,
+                                       int32_t b,
+                                       int32_t c,
+                                       int32_t d);
+
+/// After the `EESEARust` holds it: the kinds made posted post.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+void ee_screens_sew_begin(EeScreensSewAction *action);
+
+/// `Virtual4`.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+void ee_screens_sew_run(EeScreensSewAction *action);
+
+/// The `EESEARust`'s destructor.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL) and is not used after.
+void ee_screens_sew_free(EeScreensSewAction *action);
+
+/// The rotation's yaw kept and the action posted (`EESEARotateUnits::Rotate`).
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+void ee_screens_sew_rotate(EeScreensSewAction *action, float yaw);
+
+/// The trigger area's dragged corner (`EESEAPaintArea::SetCorner`).
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+void ee_screens_sew_area_corner(EeScreensSewAction *action, int32_t x, int32_t y);
+
+/// The trigger area's rectangle -> out[0..4] = left, top, right, bottom.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL); `out` points at four integers.
+void ee_screens_sew_area(const EeScreensSewAction *action, int32_t *out);
+
+/// `EESEAPlaceWall::Place`: a wall line queued and the action posted.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+void ee_screens_sew_wall(EeScreensSewAction *action,
+                         float x0,
+                         float y0,
+                         float x1,
+                         float y1,
+                         int32_t player,
+                         int32_t technology);
+
+/// `EESEAPlaceGate::Place`: a gate queued and the action posted when every ghost can be placed; 1 when it was.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+uint8_t ee_screens_sew_gate(EeScreensSewAction *action,
+                            int32_t x,
+                            int32_t y,
+                            int32_t player,
+                            int32_t technology,
+                            int32_t direction);
 
 /// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
 /// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the

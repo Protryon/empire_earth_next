@@ -135,13 +135,12 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESEAPaint.h"
 #include "ee/EESEAPaintTerrain.h"
-#include "ee/EESEACreateRandomMap.h"
+#include "ee/EESEARust.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EESEADeleteUnit.h"
 #include "ee/EECivilization.h"
-#include "ee/EESEAExitScenario.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EEMessage.h"
 #include "ee/EEALasso.h"
@@ -153,7 +152,6 @@
 #include "ee/EEGhostUnit.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EESEAMoveUnit.h"
-#include "ee/EESEAPaintArea.h"
 #include "lle/GE3DPlane.h"
 #include "lle/UIRadioButton.h"
 #include "ee/EEEffectManager.h"
@@ -165,18 +163,12 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EESEAPlaceUnit.h"
 #include "ee/EESEAQuickSaveLoad.h"
-#include "ee/EESEAQuickSaveScenario.h"
 #include "ee/EEAreaEffect.h"
-#include "ee/EESEARotateUnits.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
-#include "ee/EESEASaveScenario.h"
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "ee/EESEUITechListBox.h"
-#include "ee/EESEATechTree.h"
-#include "ee/EESEATestScenario.h"
-#include "ee/EESEACreateBlankMap.h"
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -481,7 +473,7 @@ unsigned long UnitRef(const std::string& inWord)
 }
 
 // the editor's long-lived actions (the tabs keep one of each and post it again)
-EESEARotateUnits* sRotate = NULL;
+EESEARust* sRotate = NULL;
 EESEAMoveUnit* sMove = NULL;
 EESEAPlaceUnit* sPlace = NULL;
 
@@ -606,9 +598,9 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
         if (c == "tab")
             theCode = [=] { gUIManager->mScenarioEditorForm->mTabButtons[L(1)]->CheckDirect(); };
         else if (c == "blank")
-            theCode = [=] { (new EESEACreateBlankMap(L(1), L(2), L(3)))->Dereference(); };
+            theCode = [=] { (new EESEARust(kSEABlankMap, NULL, L(1), L(2), L(3)))->Dereference(); };
         else if (c == "random")
-            theCode = [=] { (new EESEACreateRandomMap((unsigned long)L(1), (unsigned long)L(2)))->Dereference(); };
+            theCode = [=] { (new EESEARust(kSEARandomMap, NULL, L(1), L(2)))->Dereference(); };
         else if (c == "terrain")
             theCode = [=] {
                 EESEAPaint* a = new EESEAPaintTerrain(L(1), EETerrainTable::Get(L(1))->mColorType);
@@ -635,8 +627,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "area")
             theCode = [=] {
-                EESEAPaintArea* a = new EESEAPaintArea(L(1), L(2));
-                a->SetCorner(L(3), L(4));
+                EESEARust* a = new EESEARust(kSEAPaintArea, NULL, L(1), L(2));
+                ee_screens_sew_area_corner(a->mAction, L(3), L(4));
                 a->Dereference();
             };
         else if (c == "place")   // place PLAYER TYPE X Y YAW [ANIMATION]
@@ -669,8 +661,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
         else if (c == "rotate")
             theCode = [=] {
                 if (sRotate == NULL)
-                    sRotate = new EESEARotateUnits;
-                sRotate->Rotate(F(1));
+                    sRotate = new EESEARust(kSEARotate);
+                ee_screens_sew_rotate(sRotate->mAction, F(1));
             };
         else if (c == "delete")   // delete UNIT | delete PLAYER group|first (the player's selection)
             theCode = [=] {
@@ -704,23 +696,20 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "wall")   // wall PLAYER TECHNOLOGY X0 Y0 X1 Y1
             theCode = [=] {
-                EESEAPlaceWall* a = new EESEAPlaceWall;
-                a->Place(GE2DPoint(F(3), F(4)), GE2DPoint(F(5), F(6)), L(1), L(2));
+                EESEARust* a = new EESEARust(kSEAPlaceWall);
+                ee_screens_sew_wall(a->mAction, F(3), F(4), F(5), F(6), L(1), L(2));
                 a->Dereference();
             };
         else if (c == "gate")   // gate PLAYER TECHNOLOGY X Y DIRECTION
             theCode = [=] {
-                EESEAPlaceGate* a = new EESEAPlaceGate;
-                EETileCoordinate theTile;
-                theTile.mX = L(3);
-                theTile.mY = L(4);
-                a->Place(theTile, L(1), L(2), L(5));
+                EESEARust* a = new EESEARust(kSEAPlaceGate);
+                ee_screens_sew_gate(a->mAction, L(3), L(4), L(1), L(2), L(5));
                 a->Dereference();
             };
         else if (c == "quicksave")   // quicksave NAME: the toolbar's quick save (written to data\Scenarios)
             theCode = [=] {
                 EESEAQuickSaveLoad* theSave = new EESEAQuickSaveLoad(UString(w[1].c_str()));
-                EESEAQuickSaveScenario* a = new EESEAQuickSaveScenario(theSave);
+                EESEARust* a = new EESEARust(kSEAQuickSave, static_cast<EEAction*>(theSave));
                 gUserInterface->PostAction(a);
                 a->Dereference();
                 theSave->Dereference();

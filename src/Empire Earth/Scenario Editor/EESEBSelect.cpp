@@ -116,7 +116,7 @@
 #include "ee/EEUIFSEBrushGroup.h"
 #include "lle/TMPoll.h"
 #include "ee/EESEPlayerScreen.h"
-#include "ee/EESEATechTree.h"
+#include "ee/EESEARust.h"
 #include "ee/EESEBSelect.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
@@ -238,7 +238,7 @@ void EESEBSelect::Select()
     }
     unsigned long thePlayer;
     gUIManager->mScenarioEditorForm->mPlayerComboBox->GetCurrentSelection(thePlayer);
-    (new EESEATechTree(theFirst, theLast, thePlayer + 1, theLeft))->Dereference();
+    (new EESEARust(kSEATechTree, NULL, theFirst, theLast, (int32_t)thePlayer + 1, theLeft))->Dereference();
 }
 
 // FUNCTION: EXE 0x573060

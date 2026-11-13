@@ -84,6 +84,22 @@
 #include "ee/EEScenarioEditorIDs.h"
 #include "lle/UIRadioButton.h"
 #include "rust/ee_screens.h"
+#include "lle/GEFont.h"
+#include "lle/GEText.h"
+#include "lle/UIListBox.h"
+#include "lle/UILBString.h"
+#include "lle/UIComboBox.h"
+#include "lle/UISlider.h"
+#include "lle/UIScrollBar.h"
+#include "lle/FSMemoryFile.h"
+#include "ee/EEAQuickSaveLoad.h"
+#include "ee/EEScreenEvent.h"
+#include "ee/EESEUITechListBox.h"
+#include "ee/EETileCoordinate.h"
+#include "ee/EEGhostUnit.h"
+#include "ee/EEUIFSEMainGroup.h"
+#include "ee/EESEUnit.h"
+#include "ee/EESEARust.h"
 
 // FUNCTION: EXE 0x5a8d3e
 // (PlantTerrainUnits: the ambient units' scatter, ee_screens editor_actions.rs plant_terrain_units)
@@ -232,4 +248,302 @@ extern "C" void ee_screenscpp_sea_remove(void* inUnit)
     theUnit->Kill(false, false, false);
     theUnit->GetPlayer()->KillUnit(theUnit, false);
     theUnit->Dereference();
+}
+
+// ------------------------------------------------------------------------------------------------ the whole actions
+// The host of the editor's actions whole in Rust (ee_screens editor_whole.rs: EE_SCREENS_SEW_OP_*; ee/EESEARust.h):
+// the original EESEASaveScenario, EESEATestScenario, EESEAExitScenario, EESEAQuickSaveScenario, EESEATechTree,
+// EESEARotateUnits, EESEAPaintArea, EESEACreateBlankMap, EESEACreateRandomMap, EESEAPlaceWall and EESEAPlaceGate.
+
+static_assert(kSEASave == EE_SCREENS_SEW_SAVE && kSEATest == EE_SCREENS_SEW_TEST && kSEAExit == EE_SCREENS_SEW_EXIT &&
+                  kSEAQuickSave == EE_SCREENS_SEW_QUICK_SAVE && kSEATechTree == EE_SCREENS_SEW_TECH_TREE &&
+                  kSEARotate == EE_SCREENS_SEW_ROTATE && kSEAPaintArea == EE_SCREENS_SEW_PAINT_AREA &&
+                  kSEABlankMap == EE_SCREENS_SEW_BLANK_MAP && kSEARandomMap == EE_SCREENS_SEW_RANDOM_MAP &&
+                  kSEAPlaceWall == EE_SCREENS_SEW_PLACE_WALL && kSEAPlaceGate == EE_SCREENS_SEW_PLACE_GATE,
+              "ee/EESEARust.h's kinds are editor_whole.rs's");
+
+extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
+
+extern "C" int32_t ee_screenscpp_sew(uint32_t inOp, void* p, int32_t* i, float* f)
+{
+    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EEMap* theMap = gWorld.mMap;
+    // a mesh coordinate as the original's unsigned long (x - 1 at 0 wraps)
+    unsigned long x = (unsigned long)(long)i[0], y = (unsigned long)(long)i[1];
+    switch (inOp) {
+    case EE_SCREENS_SEW_OP_POST:
+        gUserInterface->PostAction(static_cast<EEAction*>(p));
+        break;
+    case EE_SCREENS_SEW_OP_REFERENCE:
+        static_cast<EEAction*>(p)->Reference();
+        break;
+    case EE_SCREENS_SEW_OP_DEREFERENCE:
+        static_cast<EEAction*>(p)->Dereference();
+        break;
+    case EE_SCREENS_SEW_OP_EXIT_EDITOR:
+        theEditor->ExitEditor(i[0] != 0);
+        break;
+    case EE_SCREENS_SEW_OP_REFRESH_GROUP:
+        theEditor->RefreshCurrentGroup();
+        break;
+    case EE_SCREENS_SEW_OP_IN_EDITOR:
+        return gUIManager->mInScenarioEditor == true;
+    case EE_SCREENS_SEW_OP_PREPARE_SAVE:
+        theMap->PrepareSave();
+        break;
+    case EE_SCREENS_SEW_OP_POST_SCREEN_EVENT: {
+        UIEvent* theEvent = EECreateScreenEvent((uint32_t)i[0]);
+        gUserInterface->PostEvent(theEvent, NULL);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_SCREENS_SEW_OP_QUICK_SAVE: {
+        EEAQuickSaveLoad* theAction = static_cast<EEAQuickSaveLoad*>(static_cast<EEAction*>(p));
+        theAction->mIsLoad = false;
+        theAction->mWriteToFile = true;
+        gUserInterface->PostAction(theAction);
+        break;
+    }
+    case EE_SCREENS_SEW_OP_TECH_FILL:
+        static_cast<EESEUITechListBox*>(
+            theEditor->GetControlById(i[0] != 0 ? kSERBUnitTypesTechList : kSERBUnitTypesOtherTechList))
+            ->Fill(i[1], i[2]);
+        break;
+    case EE_SCREENS_SEW_OP_ROTATE:
+        ee_screens_seu_rotate(f[0]);
+        break;
+    case EE_SCREENS_SEW_OP_PAINT_AREA: {
+        GERectangle theArea;
+        theArea.SetLeft((long)i[0]);
+        theArea.SetRight((long)i[2]);
+        theArea.SetTop((long)i[1]);
+        theArea.SetBottom((long)i[3]);
+        theEditor->SetPaintArea(theArea);
+        break;
+    }
+    case EE_SCREENS_SEW_OP_PAUSE:
+        gGraphics->PostPause();
+        gWorld.mLock->WriteUnlock();
+        gUIManager->UnlockUIForCopyData();
+        for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
+            PlatSleep(1);
+        gUIManager->LockUIForCopyData();
+        gWorld.mLock->WriteLock();
+        break;
+    case EE_SCREENS_SEW_OP_RESET:
+        gWorld.Reset();
+        gWorld.SetScenarioManager(new EEScenarioManager);
+        gWorld.SetEnvironmentManager(new EEEnvironmentManager);
+        break;
+    case EE_SCREENS_SEW_OP_PLAYER_COUNT:
+        return (int32_t)gWorld.GetNumPlayers();
+    case EE_SCREENS_SEW_OP_NEW_MAP: {
+        EEMap* theNewMap = new EEMap(i[0], i[1], (unsigned long)i[2], i[3]);
+        ESVERIFY_AT(theNewMap, 249);
+        gWorld.SetMap(theNewMap);
+        break;
+    }
+    case EE_SCREENS_SEW_OP_MAP_SIZE:
+        return (int32_t)theMap->mSize;
+    case EE_SCREENS_SEW_OP_POINT:
+        return theMap->mTerrainMesh.GetIsValidPoint(x, y);
+    case EE_SCREENS_SEW_OP_TILE:
+        return theMap->mTerrainMesh.GetIsValidTile(x, y);
+    case EE_SCREENS_SEW_OP_GET_Z:
+        f[0] = theMap->mTerrainMesh.GetZ(x, y);
+        break;
+    case EE_SCREENS_SEW_OP_SET_Z:
+        theMap->mTerrainMesh.SetZ(x, y, f[0]);
+        break;
+    case EE_SCREENS_SEW_OP_NORMAL:
+        theMap->mTerrainMesh.ComputeVertexNormal(x, y);
+        break;
+    case EE_SCREENS_SEW_OP_TILE_WATER:
+        theMap->mTerrainMesh.SetIsWater(x, y, i[2] != 0 ? 1 : 0);
+        theMap->GetTile(x, y)->mHeight = f[0];
+        break;
+    case EE_SCREENS_SEW_OP_SHORELINES:
+        theMap->mTerrainMesh.ComputeShorelines(x, y);
+        break;
+    case EE_SCREENS_SEW_OP_PAINT_TERRAIN:
+        theMap->PaintTerrain(i[0], i[1], i[2]);
+        break;
+    case EE_SCREENS_SEW_OP_WATER_COLOR:
+        theMap->mTerrainMesh.SetWaterColorSet(x, y);
+        break;
+    case EE_SCREENS_SEW_OP_UPDATE_CLIFFS:
+        theMap->UpdateCliffs(i[0], i[1], i[2], i[3]);
+        break;
+    case EE_SCREENS_SEW_OP_CONTINENTS_CLEAR:
+        gContinentManager.Clear(theMap);
+        break;
+    case EE_SCREENS_SEW_OP_CONTINENTS_BUILD:
+        gContinentManager.BuildRegions(theMap);
+        break;
+    case EE_SCREENS_SEW_OP_TERRAIN_AMBIENT:
+        return EETerrainTable::Get(i[0])->mAmbientUnitChance > 0;
+    case EE_SCREENS_SEW_OP_POST_AMBIENT_PAINT: {
+        EESEAPaint* thePaint = new EESEAPaintTerrain(i[0], EETerrainTable::Get(i[0])->mColorType);
+        thePaint->SetArea(0, i[1] - 1, i[1] - 1, 0);
+        gUserInterface->PostAction(thePaint);
+        thePaint->Dereference();
+        break;
+    }
+    case EE_SCREENS_SEW_OP_INFLUENCE:
+        gWorld.CreateInfluenceTable(theMap);
+        break;
+    case EE_SCREENS_SEW_OP_CAMERA:
+        gWorld.mCameraControl.SetLocation(GE3DPoint(f[0], f[1], f[2]), true, true);
+        break;
+    case EE_SCREENS_SEW_OP_MINIMAP_SET:
+        gMiniMap->SetMap(theMap);
+        EEUIMiniMap::Update(gMiniMap);
+        break;
+    case EE_SCREENS_SEW_OP_MINIMAP_REDRAW:
+        gMiniMap->RedrawAll();
+        gMiniMap->Redraw();
+        gMiniMap->Refresh();
+        break;
+    case EE_SCREENS_SEW_OP_RESUME:
+        gGraphics->PostReleaseScene();
+        gGraphics->PostInitialiseScene();
+        gGraphics->PostResume();
+        break;
+    case EE_SCREENS_SEW_OP_LOCAL_PLAYER:
+        return (int32_t)gWorld.GetCurrentPlayer()->mPlayerID;
+    case EE_SCREENS_SEW_OP_MAP_DIMENSIONS: {
+        EEGameOptions theOptions;
+        theOptions.mMapSize = (unsigned long)i[0];
+        long theWidth, theHeight;
+        theOptions.GetMapDimensions(theWidth, theHeight);
+        i[0] = (int32_t)theWidth;
+        i[1] = (int32_t)theHeight;
+        break;
+    }
+    case EE_SCREENS_SEW_OP_DEFAULT_TERRAIN:
+        return (int32_t)gDefaultTerrain;
+    case EE_SCREENS_SEW_OP_MAX_PLAYERS:
+        return (int32_t)gWorld.mMaxPlayers;
+    case EE_SCREENS_SEW_OP_PLAYER: {
+        EEPlayer* thePlayer = gWorld.mPlayers[i[0]];
+        if (thePlayer == NULL)
+            return 0;
+        i[1] = thePlayer->mObserverMode != false;
+        i[2] = dynamic_cast<EEHumanPlayer*>(thePlayer) != NULL;
+        i[3] = (int32_t)thePlayer->GetTechTree()->mStartEpoch;
+        return 1;
+    }
+    case EE_SCREENS_SEW_OP_RANDOM_MAP: {
+        EEGameOptions theOptions;
+        theOptions.mMapSize = (unsigned long)i[4];
+        theOptions.mEpochStart = i[3];
+        std::vector<EEPlayer*> thePlayers;
+        for (int32_t k = 0; k < i[0]; k++)
+            thePlayers.push_back(gWorld.mPlayers[static_cast<const int32_t*>(p)[k]]);
+        GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
+        unsigned long theSeed = gUserInterface->mRandomSeed;
+        EERandomMap::CreateRandomMap(&theOptions, thePlayers, (unsigned long)i[1],
+                                     EERMGetGeneratorName((unsigned long)i[2]), theSeed, theMap, theLocation);
+        f[0] = theLocation.mX;
+        f[1] = theLocation.mY;
+        f[2] = theLocation.mZ;
+        break;
+    }
+    case EE_SCREENS_SEW_OP_ADD_PENDING: {
+        EEPlayer* thePlayer = gWorld.mPlayers[i[0]];
+        if (thePlayer == NULL)
+            break;
+        for (unsigned long j = 0; j < thePlayer->GetNumPendingUnits(); j++) {
+            EEUnit* theUnit = static_cast<EEUnit*>(thePlayer->GetPendingUnit(j));
+            theUnit->LoadMedia(theUnit->IsFoundation());
+            gWorld.AddUnitEntry(thePlayer->GetPendingUnit(j), NULL);
+            if (theUnit->GetUnitClass()->IsLandBuilding() && theUnit->GetComplexUnit()->mIsBuilt == true)
+                thePlayer->LoadUnitClassButtons(theUnit->GetUnitClass()->GetUnitType());
+        }
+        break;
+    }
+    case EE_SCREENS_SEW_OP_LOAD_MEDIA:
+        gWorld.mPlayers[i[0]]->SetUnitClassMedia(gTechTree.GetData(i[1])->mUnitClass, 0x7f);
+        break;
+    case EE_SCREENS_SEW_OP_UNLOAD_MEDIA:
+        gWorld.mPlayers[i[0]]->UnloadUnitClassMedia(gTechTree.GetData(i[1])->mUnitClass);
+        break;
+    case EE_SCREENS_SEW_OP_PLAN_WALL: {
+        std::vector<EEUnit*> theWalls;
+        EEPlayer* thePlayer = gWorld.mPlayers[i[0]];
+        EEUnitClass* theClass = gUnitClassTable[thePlayer->mTechnologies->GetData(i[1])->mUnitClass];
+        EEPlanWall(GE2DPoint(f[0], f[1]), GE2DPoint(f[2], f[3]), theClass, thePlayer, 0, 1, theWalls);
+        break;
+    }
+    case EE_SCREENS_SEW_OP_GHOST_LOCK:
+        if (i[0] != 0)
+            gWorld.mGhostUnitsLock->Enter();
+        else
+            gWorld.mGhostUnitsLock->Leave();
+        break;
+    case EE_SCREENS_SEW_OP_GHOSTS_PLACEABLE:
+        for (unsigned long k = 0; k < gWorld.GetNumGhostUnits(); k++)
+            if (!gWorld.mGhostUnits[k]->mCanPlace)
+                return 0;
+        return 1;
+    case EE_SCREENS_SEW_OP_BUILD_GATE: {
+        EETileCoordinate theTile;
+        theTile.mX = i[0];
+        theTile.mY = i[1];
+        EEBuildGate(theTile, i[2], i[3], i[4]);
+        break;
+    }
+    case EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE:
+        static_cast<EESEUnit*>(theEditor->mTabGroups[kEditorTabUnits])->SelectUnitType(GE2DPoint(0.0f, 0.0f));
+        break;
+    }
+    return 0;
+}
+
+// The map tab's picked elevation file pair (data\Scenarios\Elevation Maps\NAME.dat and .txt: "WIDTH HEIGHT", then
+// the shorts) read whole into outData when inCapacity holds it -> the heights' count (0: none picked, or the files
+// do not read whole); out: the width, the height and the tab's water cutoff and depth, land height and cutoff
+extern "C" size_t ee_screenscpp_sew_elevation(int16_t* outData, size_t inCapacity, int32_t* out)
+{
+    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    UIComboBox* theList = static_cast<UIComboBox*>(theEditor->GetControlById(kSEMapElevationFile));
+    unsigned long theSelection;
+    theList->GetCurrentSelection(theSelection);
+    if (theSelection == 0)
+        return 0;
+    FSFileSpec theMapFile;
+    FSFileSpec theInfoFile;
+    theMapFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
+    theMapFile.SetFile(UString(theList->GetListBox()->GetData(theSelection) + ".dat"));
+    theInfoFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
+    theInfoFile.SetFile(UString(theList->GetListBox()->GetData(theSelection) + ".txt"));
+    size_t theResult = 0;
+    if (theMapFile.Open(kFileAccessRead) == 0) {
+        if (theInfoFile.Open(kFileAccessRead) == 0) {
+            char theLine[32];
+            unsigned long theRead;
+            unsigned long theFileWidth = 0;
+            unsigned long theFileHeight = 0;
+            theInfoFile.Read(theLine, 0x20, theRead);
+            sscanf(theLine, "%ld%ld", &theFileWidth, &theFileHeight);
+            unsigned long theCount = theFileHeight * theFileWidth;
+            if (theCount > 0 && theCount > inCapacity)
+                theResult = theCount;   // asked again with room
+            else if (theCount > 0) {
+                memset(outData, 0, theCount * 2);
+                theMapFile.Read(reinterpret_cast<unsigned char*>(outData), theCount * 2, theRead);
+                if (theRead == theCount * 2) {
+                    theResult = theCount;
+                    out[0] = (int32_t)theFileWidth;
+                    out[1] = (int32_t)theFileHeight;
+                    const long theBoxes[4] = {kSEMapWaterCutoff, kSEMapWaterDepth, kSEMapLandHeight, kSEMapLandCutoff};
+                    for (int k = 0; k < 4; k++)
+                        out[2 + k] = static_cast<UIEditBox*>(theEditor->GetControlById(theBoxes[k]))->GetTextAsInt(0);
+                }
+            }
+            theInfoFile.Close();
+        }
+        theMapFile.Close();
+    }
+    return theResult;
 }

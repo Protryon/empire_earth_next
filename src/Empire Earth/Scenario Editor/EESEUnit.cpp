@@ -120,7 +120,7 @@
 #include "ee/EEUnitPicker.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEUICCommandUnits.h"
-#include "ee/EESEARotateUnits.h"
+#include "ee/EESEARust.h"
 #include "ee/EESEADeleteUnit.h"
 #include "ee/EESEUICCommandUnits.h"
 #include "ee/EESEAChangeLoadText.h"
@@ -917,8 +917,8 @@ EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* 
     this->mMouseClick = new EESEAMouseClick;
     this->mLasso = new EESEALasso;
     this->mPlaceUnit = new EESEAPlaceUnit;
-    this->mPlaceGate = new EESEAPlaceGate;
-    this->mPlaceWall = new EESEAPlaceWall;
+    this->mPlaceGate = new EESEARust(kSEAPlaceGate);
+    this->mPlaceWall = new EESEARust(kSEAPlaceWall);
     this->mMoveUnit = new EESEAMoveUnit;
     this->mSelectUnits = new EEUICSelectUnits(inForm, 0x3f6, ioIndex, this->mMouseClick, this->mLasso);
     inForm->AddControl(this->mSelectUnits, 0);
@@ -960,13 +960,13 @@ EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* 
 // (EESEAPlaceUnit's scalar deleting destructor)
 
 // FUNCTION: EXE 0x59ba16
-// Creates the action that places a gate (EESEAPlaceGate ctor, inline; the tab's ctor calls it)
+// Creates the action that places a gate (EESEAPlaceGate ctor, inline; an EESEARust now)
 
 // SYNTHETIC: EXE 0x59ba46
 // (EESEAPlaceGate's scalar deleting destructor)
 
 // FUNCTION: EXE 0x59ba78
-// Creates the action that places a wall (EESEAPlaceWall ctor, inline; the tab's ctor calls it)
+// Creates the action that places a wall (EESEAPlaceWall ctor, inline; an EESEARust now)
 
 // SYNTHETIC: EXE 0x59baa8
 // (EESEAPlaceWall's scalar deleting destructor)
@@ -1031,7 +1031,8 @@ void EESEUnit::PlaceWall()
         this->mPlayerComboBox->GetCurrentSelection(theSelection);
         thePlayer = theSelection + 1;
     }
-    this->mPlaceWall->Place(theStart, theEnd, thePlayer, this->mBuildWall.mTechnology);
+    ee_screens_sew_wall(this->mPlaceWall->mAction, theStart.GetX(), theStart.GetY(), theEnd.GetX(), theEnd.GetY(),
+                        thePlayer, this->mBuildWall.mTechnology);
 }
 
 // FUNCTION: EXE 0x59bd2d
@@ -1114,10 +1115,8 @@ void EESEUnit::PlaceGate()
         this->mPlayerComboBox->GetCurrentSelection(theSelection);
         thePlayer = theSelection + 1;
     }
-    EETileCoordinate theTile;
-    theTile.mX = this->mBuildGate.mTileX;
-    theTile.mY = this->mBuildGate.mTileY;
-    this->mPlaceGate->Place(theTile, thePlayer, this->mBuildGate.mTechnology, this->mBuildGate.mDirection);
+    ee_screens_sew_gate(this->mPlaceGate->mAction, this->mBuildGate.mTileX, this->mBuildGate.mTileY, thePlayer,
+                        this->mBuildGate.mTechnology, this->mBuildGate.mDirection);
 }
 
 // FUNCTION: EXE 0x59c026

@@ -59,6 +59,9 @@
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
 //!   paints' queued areas and runs, the trigger area's rectangle.
+//! - [`editor_whole`]: the scenario editor's actions whole in Rust behind one C++ action (`EESEARust`): save, test,
+//!   exit, quick save, the tech lists, the rotation, the trigger area, the blank map (the elevation file's heights)
+//!   and the random map, the wall and gate placements.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
@@ -98,6 +101,9 @@ mod diplomacy_ffi;
 pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
+pub mod editor_whole;
+#[cfg(not(test))]
+mod editor_whole_ffi;
 pub mod factories;
 pub mod frame;
 #[cfg(not(test))]
