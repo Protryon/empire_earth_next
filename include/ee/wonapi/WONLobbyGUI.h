@@ -551,6 +551,8 @@ public:
     bool IsActivateOnPress() { return (mButtonFlags & 0x40) != 0; }
     bool IsNoActivate() { return (mButtonFlags & 0x200) != 0; }
     bool IsDefaultOnFocus() { return (mButtonFlags & 0x400) != 0; }
+    unsigned long GetButtonFlags() { return mButtonFlags; }
+    int GetMouseDownState() { return mMouseDownState; } // 0 up, 1 down outside, 2 down over
     bool mKeyDown; //34
     int mDelayAcc; //38
     SmartPtr<Sound> mClickSound; // at +0x3c
@@ -1032,49 +1034,51 @@ enum ScrollButtonCondition {
     ScrollButtonCondition_Disable=0, ScrollButtonCondition_Enable=1,
     ScrollButtonCondition_Conditional=2, ScrollButtonCondition_PartialConditional=3
 };
-// ComboBox (0xa4 bytes)
+// ComboBox (R6 WON round 28): whether the list is open, no-typing, the button while disabled and the list box's
+// configured size are the Rust ComboBox (rust/crates/ee_won/src/comboobj.rs) with every method; this is the type the
+// skins (MSComboBox, WONComboBox), the configs and the lobby use, with one-line forwarders (ComboBox.cpp is its
+// host). The parts and the undo text stay members: the skins make the parts and read them.
 class Scroller;
 class ComboBox : public Container {
 public:
     ComboBox();
-    virtual ~ComboBox(); // own-vptr normal2f3a50, real listener-detach body
-    virtual void Virtual08(); //2f4010 SizeChanged
-    virtual void MouseDown(int,int,int); //2f4600 MouseDown
-    virtual bool MouseWheel(int); //2f4650 MouseWheel
-    virtual void GotFocus();  //2f4090 GotFocus
-    virtual void LostFocus(); //2f40b0 inherited LostFocus forwarding0
-    virtual bool KeyDown(int);   //2f4680 KeyDown
-    virtual void AddedToParent(); //2f3ef0 AddedToParent
-    virtual void HandleComponentEvent(ComponentEvent*); //2f44e0
-    virtual void SetEnabled(bool); //2f4800
-    ListItem* AddString(const GUIString&,int=-1); // 0x2f3b70
-    void InsertItem(TextListItem*,int=-1);
-    void DeleteItem(int);
-    void UpdateItem(TextListItem*);
-    void Clear(bool=true);
-    int GetSelItem(); // 0x2f3d40
-    void SetSelItem(int,bool=false);
-    void SetListBox(Scroller*);
-    void AddControls();
-    void CalcListBoxSize();
-    void SetListBoxDimensions(int,int);
-    void SetListBoxWidth(int);
-    void SetListBoxHeight(int);
-    void SetInputBoxToListSelection(bool=false,bool=true);
-    void SetText(const GUIString&,bool=false);
-    void SetTextAndSel(const GUIString&,bool);
-    void ShowList();
-    void SetNoType(bool);
+    virtual ~ComboBox(); // 0x2f3a50: the Rust combo box leaves its list box's listeners
+    virtual void Virtual08() { this->BCall(EeWonComboCall::SizeChanged); } //2f4010 SizeChanged
+    virtual void MouseDown(int x,int y,int b) { this->BCall(EeWonComboCall::MouseDown,x,y,b); } //2f4600
+    virtual bool MouseWheel(int n) { return this->BCall(EeWonComboCall::MouseWheel,n)!=0; } //2f4650
+    virtual void GotFocus() { this->BCall(EeWonComboCall::GotFocus); } //2f4090
+    virtual void LostFocus() { this->BCall(EeWonComboCall::LostFocus); } //2f40b0
+    virtual bool KeyDown(int k) { return this->BCall(EeWonComboCall::KeyDown,k)!=0; } //2f4680
+    virtual void AddedToParent() { this->BCall(EeWonComboCall::AddedToParent); } //2f3ef0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->BCall(EeWonComboCall::HandleComponentEvent,(intptr_t)e); } //2f44e0
+    virtual void SetEnabled(bool e) { this->BCall(EeWonComboCall::SetEnabled,e); } //2f4800
+    ListItem* AddString(const GUIString& s,int pos=-1) { return (ListItem*)this->BCall(EeWonComboCall::AddString,(intptr_t)&s,pos); } // 0x2f3b70
+    void InsertItem(TextListItem* item,int pos=-1) { this->BCall(EeWonComboCall::InsertItem,(intptr_t)item,pos); } // 0x2f3bb0
+    void DeleteItem(int pos) { this->BCall(EeWonComboCall::DeleteItem,pos); } // 0x2f3c10
+    void UpdateItem(TextListItem* item) { this->BCall(EeWonComboCall::UpdateItem,(intptr_t)item); } // 0x2f3c40
+    void Clear(bool input=true) { this->BCall(EeWonComboCall::Clear,input); } // 0x2f3c60
+    int GetSelItem() { return (int)this->BCall(EeWonComboCall::GetSelItem); } // 0x2f3d40
+    void SetSelItem(int pos,bool notify=false) { this->BCall(EeWonComboCall::SetSelItem,pos,notify); } // 0x2f3d60
+    void SetListBox(Scroller* s); // 0x2f3e70
+    void AddControls() { this->BCall(EeWonComboCall::AddControls); } // 0x2f3f10
+    void CalcListBoxSize() { this->BCall(EeWonComboCall::CalcListBoxSize); } // 0x2f3fa0
+    void SetListBoxDimensions(int w,int h) { this->BCall(EeWonComboCall::SetListBoxDimensions,w,h); } // 0x2f4030
+    void SetListBoxWidth(int w) { this->BCall(EeWonComboCall::SetListBoxWidth,w); } // 0x2f4050
+    void SetListBoxHeight(int h) { this->BCall(EeWonComboCall::SetListBoxHeight,h); } // 0x2f4070
+    void SetInputBoxToListSelection(bool active=false,bool fire=true) { this->BCall(EeWonComboCall::SetInputBoxToListSelection,active,fire); } // 0x2f40c0
+    void SetText(const GUIString& s,bool notify=false) { this->BCall(EeWonComboCall::SetText,(intptr_t)&s,notify); } // 0x2f42b0
+    void SetTextAndSel(const GUIString& s,bool notify) { this->BCall(EeWonComboCall::SetTextAndSel,(intptr_t)&s,notify); } // 0x2f42e0
+    void ShowList() { this->BCall(EeWonComboCall::ShowList); } // 0x2f4370
+    void SetNoType(bool v) { this->BCall(EeWonComboCall::SetNoType,v); } // 0x2f47a0
+    void SetShowButtonWhenDisabled(bool v) { this->BCall(EeWonComboCall::SetField,(intptr_t)EeWonComboField::ShowButtonWhenDisabled,v); } // ComboBoxConfig
     SmartPtr<InputBox> mEdit; //84
     SmartPtr<Button> mButton; //88
     SmartPtr<Scroller> mListBox; //8c
     SmartPtr<ListArea> mListArea; //90
-    bool mListBoxVisible; //94
-    bool mNoType; //95
-    bool mShowButtonWhenDisabled; // at +0x96; +0x97 padding
-    int mListBoxWidth; //98
-    int mListBoxHeight; //9c
-    GUIString mUndoStr; // at +0xa0; the class is 0xa4 bytes
+    GUIString mUndoStr; // the text Escape restores
+    EeWonComboBox* mCombo;
+private:
+    intptr_t BCall(EeWonComboCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_combo_call(this->mCombo,c,a,b,cc); }
 };
 
 // one local network address (a std::list element, 0x14 bytes; provisional names)
@@ -1324,12 +1328,6 @@ public:
 
 // the root of the lobby's components (runs the popups and modal dialogs; RTTI WONAPI::RootContainer; its base
 // Container)
-// RootContainer (0xc8 bytes): constructor and destructor out of line.
-// Keyboard callback interface (RefCount, 8 bytes); RootContainer calls vtable +0x04 (key, type) at 0x3049bd.
-class KeyboardListenerBase : public RefCount {
-public:
-    virtual void KeyEvent(int,int)=0;
-};
 // BackgroundGrabber (0x38 bytes); RootContainer keeps a pointer to it.
 // 0x33613f/0x336148 store the 64-bit order at +0x30/+0x34; +0x2c..0x2f is padding.
 class BackgroundGrabber {
@@ -1351,45 +1349,37 @@ public:
     void Invalidate(Component*); // 0x336680: sets need-put-BG when the background is grabbed
     bool NeedDrawBG() const { return this->mHaveBG && this->mNeedPutBG; }
 };
+// RootContainer (R6 WON round 29): the Rust RootContainer (rust/crates/ee_won/src/rootobj.rs) holds the invalid
+// rectangle, the queued backgrounds (their images held), the cursor's component and the window drag; the virtuals and
+// AddBG are forwarders. The window stays a member (Component::GetRoot reads it). The original's keyboard listener (never
+// set), popup set and modal component (never read) are gone, and so are its FindChildAt, ChildInvalidated and
+// MouseEnter, which only called the container's.
 class RootContainer : public Container {
 public:
     RootContainer(Window*); // 0x3040d0
-    virtual void Virtual08(); //304730 SizeChanged
-    virtual void PrePaint(Graphics&);  //304760 PrePaint
-    virtual void Paint(Graphics&); //304900
-    virtual void MouseEnter(int,int); //304c40 MouseEnter
-    virtual void MouseExit(); //304c60 MouseExit
-    virtual void MouseDown(int,int,int); //304bd0 MouseDown
-    virtual void MouseUp(int,int,int);   //304c90 MouseUp
-    virtual void MouseMove(int,int); //304a30 MouseMove
-    virtual void MouseDrag(int,int); //304ac0 MouseDrag
-    virtual bool KeyChar(int);   //304a00 KeyChar
-    virtual bool KeyDown(int);   //3049a0 KeyDown
-    virtual bool KeyUp(int);     //3049d0 KeyUp
-    virtual void InvalidateRect(WONRectangle&); //304980 InvalidateRect
-    virtual void SetCursor(Cursor*); //304cf0 SetCursor
-    virtual Component* FindChildAt(int,int); //304710 FindChildAt
-    virtual bool ChildInvalidated(Component*); //304970 InvalidateUp
-    virtual void RemoveChild(Component*); //304cc0 RemoveChild
-    void AddBG(BackgroundGrabber*); //304510
+    virtual ~RootContainer();
+    virtual void Virtual08() { this->RCall(EeWonRootCall::SizeChanged); } //304730 SizeChanged
+    virtual void PrePaint(Graphics& g) { this->RCall(EeWonRootCall::PrePaint,(intptr_t)&g); } //304760
+    virtual void Paint(Graphics& g) { this->RCall(EeWonRootCall::Paint,(intptr_t)&g); } //304900
+    virtual void MouseExit() { this->RCall(EeWonRootCall::MouseExit); } //304c60
+    virtual void MouseDown(int x,int y,int b) { this->RCall(EeWonRootCall::MouseDown,x,y,b); } //304bd0
+    virtual void MouseUp(int x,int y,int b) { this->RCall(EeWonRootCall::MouseUp,x,y,b); } //304c90
+    virtual void MouseMove(int x,int y) { this->RCall(EeWonRootCall::MouseMove,x,y); } //304a30
+    virtual void MouseDrag(int x,int y) { this->RCall(EeWonRootCall::MouseDrag,x,y); } //304ac0
+    virtual bool KeyChar(int k) { return this->RCall(EeWonRootCall::KeyChar,k)!=0; } //304a00
+    virtual bool KeyDown(int k) { return this->RCall(EeWonRootCall::KeyDown,k)!=0; } //3049a0
+    virtual bool KeyUp(int k) { return this->RCall(EeWonRootCall::KeyUp,k)!=0; } //3049d0
+    virtual void InvalidateRect(WONRectangle& r) { this->RCall(EeWonRootCall::InvalidateRect,(intptr_t)&r); } //304980
+    virtual void SetCursor(Cursor* c) { this->RCall(EeWonRootCall::SetCursor,(intptr_t)c); } //304cf0
+    virtual void RemoveChild(Component* c) { this->RCall(EeWonRootCall::RemoveChild,(intptr_t)c); } //304cc0
+    void AddBG(BackgroundGrabber* g) { this->RCall(EeWonRootCall::AddBG,(intptr_t)g); } //304510
+    // Window::InvalidateRoot's union of the whole root into the invalid rectangle
+    void UnionInvalidRect(const WONRectangle& r) { this->RCall(EeWonRootCall::InvalidateRect,(intptr_t)&r); }
 
-    struct BGStruct {
-        int mImageX,mImageY;
-        WONRectangle mClipRect;
-        SmartPtr<NativeImage> mImage;
-        BGStruct() : mImageX(0),mImageY(0) {}
-        BGStruct(int x,int y,NativeImage* image,const WONRectangle& clip)
-          : mImageX(x),mImageY(y),mClipRect(clip),mImage(image) {}
-    }; // 0x1c bytes; map node 0x30
-    WONRectangle mInvalidRect; //84..93
-    Component* mModalComponent; //94
-    Window* mWindow; //98
-    Component* mCursorComponent; //9c
-    int mDragX,mDragY; //a0/a4
-    bool mDragging,mAllowDrag; //a8/a9
-    SmartPtr<KeyboardListenerBase> mKeyboardListener; //ac
-    std::set<Component*> mPopupSet; //b0..bb
-    std::map<int,BGStruct> mBGStructMap; //bc..c7
+    Window* mWindow;
+    EeWonRoot* mRootObj;
+private:
+    intptr_t RCall(EeWonRootCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_root_call(this->mRootObj,c,a,b,cc); }
 };
 
 // how a popup is opened (0x2c bytes, on the stack; provisional names)

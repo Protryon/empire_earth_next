@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONAuthPeerData.h" //complete type needed by GetCertOp's users
 #include "ee/wonapi/WONStringCompare.h"
 #include <stdio.h> //FILE* member (RecvBytesOp::mFile)
-#include <set> //SmartRoutingConnection IgnoreSet
+#include <set> //AddrSet
 #include <stdint.h>
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"
@@ -665,13 +665,6 @@ struct RoutingClientInfo : public RefCount {
 };
 typedef SmartPtr<RoutingClientInfo> RoutingClientInfoPtr;
 
-// SmartRoutingClientInfo: 0x30 bytes, held by pointer; factory 2bfe60 allocates 0x30.
-// Destructor stays implicit.
-struct SmartRoutingClientInfo : public RoutingClientInfo {
-    SmartRoutingClientInfo() : RoutingClientInfo(),mNumGroups(0),mIgnored(false) {}
-    unsigned short mNumGroups; //2c
-    bool mIgnored; //2e, naturalalignment2f
-};
 typedef std::map<unsigned short, RoutingClientInfoPtr> RoutingClientMap;
 
 // a member of a group: the client it is
@@ -2171,6 +2164,9 @@ private:
     EeWonSocketThread* mOps; //owned
 };
 
+// A Rust object since net round 16 (rust/crates/ee_won/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
+// type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period
+// +0xb4, and every step of ServerConnection.cpp); this class is the shim RoutingConnection and the lobby derive from
 class ServerConnection : public BlockingSocket {
 public:
     void StartKeepAlive(); //2aaf10
@@ -2179,22 +2175,21 @@ public:
     static void StaticKeepAliveCallback(AsyncOpPtr,SmartPtr<RefCount>); //2ab7b0
     void KeepAliveCallback(AsyncOp*); //2ab840
     void SendNoOp(); //2ab910
-    ServerConnection(); //2aab10; implicit ordinary dtor2aabe0, no explicit body
+    ServerConnection(); //2aab10
+    virtual ~ServerConnection(); // the Rust object (the original's was implicit, 2aabe0)
     virtual void CloseHook(); //CloseHook2abe70
     virtual void KillHook();  //KillHook2abf50
-    virtual void ConnectCallback(PeerAuthOp*); //ConnectCallback2ab1f0, ret4
+    void ConnectCallback(PeerAuthOp*); //ConnectCallback2ab1f0 (virtual in the SDK; nothing overrides it)
     virtual void MsgCallback(const ByteBuffer*); //MsgCallback2fa500,ret4
     void SetAuth(AuthContext*, AuthType);  //SetAuth
     PeerAuthOp* ConnectAsync(const IPAddr&, unsigned long); //2abc40; raw borrowed member result
     WONStatus ConnectBlock(const IPAddr&,DWORD inTimeout=0xffffffff);
     void SetKeepAlivePeriod(DWORD);
     void SetConnectCompletion(CompletionBase<AsyncOpPtr>*); //2abdc0
-    SmartPtr<AuthContext> mAuthContext; //a0; ctor2aab35zero, dtor owned
-    AuthType mAuthType; //a4; scalar32, never decref
-    SmartPtr<PeerAuthOp> mPeerAuthOp; //a8, owned
-    OpCompletionBasePtr mConnectCompletion; //ac, owned
-    AsyncOpPtr mKeepAliveOp; //b0, owned plainAsyncOp44
-    unsigned long mKeepAlivePeriod; //b4=300, sizeb8
+private:
+    ServerConnection(const ServerConnection&);
+    ServerConnection& operator=(const ServerConnection&);
+    EeWonServerConn* mConn;
 };
 
 class ServerConnectionConnectOp : public AsyncOp {
@@ -2209,12 +2204,17 @@ public:
     IPAddr mAddr; //48..6f, sizeof70, IPAddr 0x28
 };
 
+// The op list, the completions and the reply dispatch are a Rust object since net round 16
+// (rust/crates/ee_won/src/routeconn.rs EeWonRouteConn: the list +0xb8, the completions +0xc8 and the default one
+// +0x1bc, and AddOp 2ba630, CalcCompletion 2ba740, GetUnsolicitedOp 2ba830, MsgCallback 2bc850, CloseHook 2bcb20,
+// KillHook 2bcbb0); the request helpers below stay C++ (each makes its C++ op)
 class RoutingConnection : public ServerConnection {
 public:
     void AddOp(RoutingOp*); //2ba630, AutoCrit/list ownership
-    void CalcCompletion(RoutingOp*); //2ba740, type-index/default completion
-    SmartPtr<RoutingOp> GetUnsolicitedOp(unsigned char,bool); //2ba830, sret/ret0c; call-only
     RoutingConnection(); //2ba050; allocation1c0 at3eddd4
+    // the completion an op of a type (RoutingOpType, below 61) gets when it has none, and the default one
+    void SetOpCompletion(int inType, CompletionBase<AsyncOpPtr>* inCompletion);
+    void SetDefaultOpCompletion(CompletionBase<AsyncOpPtr>* inCompletion);
     // 0x2bf1d0: subscribes to the data objects of a type (EEWonNet's room and game objects)
     void SubscribeDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag,
                         CompletionBase<AsyncOpPtr>* inCompletion);
@@ -2325,17 +2325,22 @@ void AbortServerShutdown(CompletionBase<AsyncOpPtr>* completion); //2be200 ret4
     virtual SmartPtr<RoutingOp> GetUnsolicitedDerivedOp(unsigned char); //GetUnsolicitedDerivedOp2bc6c0, sret+arg ret8
     virtual void RoutingOpCompleteHook(RoutingOp*) {} //inline RoutingOpCompleteHook (WON SDK), shared 30a800 ret4
     // 04/10/14 are inherited unchanged; no generic vtable padding or aliases.
-    typedef std::list<SmartPtr<RoutingOp> > RoutingOpList;
-    RoutingOpList mOpList; //b8 allocator/headbc/countc0; owns elements
-    bool mAllDerivedOpsAreUnsolicited; //c4
-    OpCompletionBasePtr mCompletions[61]; //c8..1b8, 61-element vector built by the ctor
-    OpCompletionBasePtr mDefaultCompletion; //1bc; extent1c0
+    bool mAllDerivedOpsAreUnsolicited; //c4 (GetUnsolicitedDerivedOp reads it)
 protected:
     virtual ~RoutingConnection(); //ordinary2ba4b0; explicit own-vptr store
+private:
+    RoutingConnection(const RoutingConnection&);
+    RoutingConnection& operator=(const RoutingConnection&);
+    EeWonRouteConn* mRoute; // owned
 };
 
-// IgnoreClient 2c3848/2c38a5 both call 2a6b60; a negative compare orders the tree.
-
+// The client, group and member model, the ignore list, the chat commands and the snapshots are a Rust object since
+// net round 17 (rust/crates/ee_won/src/smartroute.rs EeWonSmartRoute: the maps +0x1c0..0x1d7, the iterators, the
+// default group, this client's record, id and async flags, the command table and settings, the last input's state,
+// the handled records, the ignore set and its file; RoutingOpCompleteHook 2c0be0's steps, HandleInput, FindClient
+// 2c35a0, IgnoreClient 2c37d0, LoadIgnoreSet 2c3110, SaveIgnoreSet 2c3460 and the copies). The class hands each
+// finished op's fields in and sends the request a chat input makes.
+#define EE_WON_SMART_ROUTE_RUST 1 // the model is a Rust object (won_smartroute_test reads it so)
 class SmartRoutingConnection : public RoutingConnection {
 public:
     // Enum declarations as in the SDK; widths and map operations agree with the original.
@@ -2347,37 +2352,35 @@ public:
         InputCommand_ServerMute, InputCommand_ServerBan, InputCommand_Mute, InputCommand_Ban,
         InputCommand_Unmute, InputCommand_ServerUnmute, InputCommand_Invite, InputCommand_Uninvite };
     // WON SDK value-copy records; independent, no enclosing-object fields.
-struct ClientInfo
-	{
-		std::wstring mName;
-		unsigned short mId;
-		unsigned long mFlags;
-		unsigned long mCDKeyId;
-
-		ClientInfo() : mId(0), mFlags(0), mCDKeyId(0) {}
-	};
-struct MemberInfo
-	{
-		std::wstring mName;
-		unsigned short mClientId;
-		unsigned long mClientFlags;
-		unsigned char mMemberFlags;
-
-		MemberInfo() : mClientId(0), mClientFlags(0), mMemberFlags(0) {}
-	};
-struct GroupInfo
-	{
-		std::wstring mName;
-		unsigned short mId;
-		unsigned short mCaptainId;
-		unsigned short mMaxPlayers;
-		unsigned long mFlags;
-		unsigned long mAsyncFlags;
-		unsigned short mObserverCount; // only applicable if non-detailed observers is on
-
-		GroupInfo() : mId(0), mCaptainId(0), mMaxPlayers(0), mFlags(0), mAsyncFlags(0), mObserverCount(0) {}
-	};
-    RoutingMemberInfoPtr GetMemberRef(unsigned short,int=-1);
+    struct ClientInfo {
+        std::wstring mName;
+        unsigned short mId;
+        unsigned long mFlags;
+        unsigned long mCDKeyId;
+        ClientInfo() : mId(0), mFlags(0), mCDKeyId(0) {}
+    };
+    struct MemberInfo {
+        std::wstring mName;
+        unsigned short mClientId;
+        unsigned long mClientFlags;
+        unsigned char mMemberFlags;
+        MemberInfo() : mClientId(0), mClientFlags(0), mMemberFlags(0) {}
+    };
+    struct GroupInfo {
+        std::wstring mName;
+        unsigned short mId;
+        unsigned short mCaptainId;
+        unsigned short mMaxPlayers;     // the group's client limit (RoutingGroupInfo::mMaxClients)
+        unsigned long mFlags;
+        unsigned long mAsyncFlags;
+        unsigned short mObserverCount; // only applicable if non-detailed observers is on
+        unsigned short mMemberCount;   // RoutingGroupInfo::mMaxPlayers (+0x2a): the group list's member count
+        GroupInfo() : mId(0), mCaptainId(0), mMaxPlayers(0), mFlags(0), mAsyncFlags(0), mObserverCount(0),
+            mMemberCount(0) {}
+    };
+    SmartRoutingConnection(); //2bfb00; the 0x258 allocation is this class
+    virtual void CloseHook(); //CloseHook2c4120
+    virtual void RoutingOpCompleteHook(RoutingOp*); //2c0be0
     bool GetClient(unsigned short,ClientInfo&);
     bool GetGroup(unsigned short,GroupInfo&);
     bool GetMember(unsigned short,unsigned short,MemberInfo&);
@@ -2389,101 +2392,25 @@ struct GroupInfo
     bool GetNextMember(MemberInfo&);
     bool GetLastTargetMember(MemberInfo&);
     bool GetLastTargetClient(ClientInfo&);
-    SmartRoutingConnection(); //2bfb00; the 0x258 allocation is this class
-    // Destructor stays implicit: ordinary2c0130 lacks own-vptr store, natural member cleanup.
-    virtual void CloseHook(); //CloseHook2c4120
-    virtual RoutingClientInfoPtr GetNewClientInfo(); //2bfe60 SAME base smartptr result, not covariantSP
-    virtual void RoutingOpCompleteHook(RoutingOp*); //2c0be0, calls slot14 for the op type
-    void InitHandlerVariables(RoutingClientInfo*); //2c0a10
-    void InitHandlerVariables(RoutingGroupInfo*,RoutingMemberInfo* =NULL); //2c0ac0
-    void HandleClientFlagsChanged(RoutingClientFlagsChangedOp*); //2c24f0
-    void HandleGroupCaptainChanged(RoutingGroupCaptainChangedOp*); //2c2860
-    void HandleGroupMaxPlayersChanged(RoutingGroupMaxPlayersChangedOp*); //2c2900
-    void HandleGroupFlagsChanged(RoutingGroupFlagsChangedOp*); //2c2bb0
-    void HandleGroupNameChanged(RoutingGroupNameChangedOp*); //2c2c50
-    void HandleGroupObserverCount(RoutingGroupObserverCountOp*); //2c2d00
-    void HandleMemberFlagsChanged(RoutingMemberFlagsChangedOp*); //2c2da0
-    RoutingClientInfoPtr GetClient(unsigned short); //2c0330, owned BY VALUE
-    RoutingGroupInfoPtr GetGroup(unsigned short); //2c0450, owned BY VALUE
+    // 2c35a0: the client a typed name refers to (exact, unique prefix, ambiguous or not found); outFound when the
+    // search set one (the original's out pointer)
+    MatchResult FindClient(const std::wstring&, ClientInfo&, bool& outFound);
+    void IgnoreClient(unsigned short inClientId, bool inOn); //2c37d0, the client GetClient(id) finds
     void AddCommandString(const std::wstring&, InputCommand); //2c3970
-    void AddDefaultUserCommandStrings(); //2c3a50
-    void AddDefaultModeratorCommandStrings(); //2c3d90
-    void SetAllowPartialNameMatch(bool); //2c40a0, locked, enum 2/3
-    void SetServerWideCommands(bool); //2c40f0
-    void EraseClient(const RoutingClientMap::iterator&); //2c0570
-    void EraseClient(unsigned short); //2c0600
-    void EraseGroup(const RoutingGroupMap::iterator&); //2c0670
-    void EraseMember(RoutingMemberMap&,const RoutingMemberMap::iterator&); //2c0740
-    void SetClientName(RoutingClientInfo*,const std::wstring&); //2c07d0
-    SmartRoutingClientInfo* EnsureInClientMap(unsigned short); //2c0860, borrowedraw
-    void HandleGetClientList(RoutingGetClientListOp*); //2c1130
-    void SyncMemberMapWithClientMap(RoutingMemberMap&,const RoutingMemberMap&); //2c1bd0
-    void SyncMemberMapWithClientMap(RoutingMemberMap&); //2c1f20
-    void HandleGetGroupList(RoutingGetGroupListOp*); //2c2070
-    void SyncClientMapWithIgnoreList(); //2c2740
-    void HandleRegisterClient(RoutingRegisterClientOp *theOp);
-    void HandleSetClientFlags(RoutingSetClientFlagsOp *theOp);
-    void HandleReadDataObject(RoutingReadDataObjectOp *theOp);
-    void HandleDataObjectCreated(RoutingDataObjectCreatedOp *theOp);
-    void HandleDataObjectModified(RoutingDataObjectModifiedOp *theOp);
-    void SetClientCDKeyIdFromDataObject(unsigned short theClientID, ByteBufferPtr theBuf);
-    void HandleClientJoinedGroup(RoutingClientJoinedGroupOp *theOp);
-    void HandleClientLeftGroup(RoutingClientLeftGroupOp *theOp);
-    void HandleGetMembersOfGroup(RoutingGetMembersOfGroupOp *theOp);
-    void HandleJoinGroup(RoutingJoinGroupOp *theOp);
-    void HandleClientJoinedServer(RoutingClientJoinedServerOp *theOp);
-    void HandleClientLeftServer(RoutingClientLeftServerOp *theOp);
-    void HandleGroupCreated(RoutingGroupCreatedOp *theOp);
-    void HandleGroupDeleted(RoutingGroupDeletedOp *theOp);
-    void CheckIgnore(RoutingOp *theOp, unsigned short theSenderId);
-    void HandlePeerChat(RoutingPeerChatOp *theOp);
-    void HandleGroupInvitation(RoutingGroupInvitationOp *theOp);
-    void HandleGroupJoinAttempt(RoutingGroupJoinAttemptOp *theOp);
-    void HandleLeaveGroup(RoutingLeaveGroupOp *);
-    void HandleDataObjectDeleted(RoutingDataObjectDeletedOp	*theOp);
-    MatchResult FindClient(const std::wstring&, RoutingClientInfoPtr&); //2c35a0
-    MatchResult GetMemberByNameRef(RoutingGroupInfoPtr,const std::wstring&,RoutingMemberInfoPtr&);
-    MatchResult GetMemberByNameRef(unsigned short,const std::wstring&,RoutingMemberInfoPtr&);
-    bool HandleInput(const std::wstring&,int=-1);
     void ClearCommandStrings();
+    void SetAllowPartialNameMatch(bool); //2c40a0
+    void SetServerWideCommands(bool); //2c40f0
     void SetDoColonEmote(bool);
+    bool HandleInput(const std::wstring&,int=-1);
+    void SetProductName(const std::string&); //2c2fc0, the ignore file's path (provisional name)
+    void ClearProductName() { this->SetProductName(""); }
+    unsigned short GetMyClientId(); // OnChat 0x4d040c
+    EeWonSmartRoute* mModel; // owned
 protected:
-    bool HandleCommand(const std::wstring&,int);
-public:
-    void IgnoreClient(RoutingClientInfo*, bool); //2c37d0 RAW pointer, not SmartPtr&
-    void LoadIgnoreSet(); // 2c3110
-    void SaveIgnoreSet(); // 2c3460
-    void SetProductName(const std::string&); //2c2fc0, IgnoreFilePath setter (provisional name)
-    void ClearProductName() { this->SetProductName(""); } //protected helper, the ignore path setter
-    const RoutingGroupMap& GetGroupMap() const { return this->mGroupMap; }
-    unsigned short GetMyClientId() const { return this->mClientId; }  // inline (OnChat 0x4d040c: loaded into si first)
-    RoutingGroupMap mGroupMap; //1c0..1cb
-    RoutingClientMap mClientMap; //1cc..1d7
-    RoutingClientMap::iterator mClientItr; //1d8
-    RoutingGroupMap::iterator mGroupItr; //1dc
-    RoutingMemberMap::iterator mMemberItr; //1e0
-    RoutingGroupInfoPtr mMemberItrGroup; //1e4, CORRECT group ptr (not member ptr)
-    unsigned short mDefaultGroupId; //1e8
-    RoutingClientInfoPtr mMyClient; //1ec
-    unsigned short mClientId; //1f0, mMyClientId (name kept for old readers)
-    unsigned long mAsyncFlags; //1f4
-    typedef std::map<std::wstring,InputCommand> CommandStringMap;
-    CommandStringMap mCommandStringMap; //1f8..203
-    MatchResult mMatchTolerance; //204
-    bool mServerWideCommands; //208
-    bool mDoColonEmote; //209
-    InputError mLastInputError; //20c
-    InputCommand mLastInputCommand; //210
-    RoutingMemberInfoPtr mLastTargetMember; //214
-    RoutingClientInfoPtr mLastTargetClient; //218
-    std::wstring mLastMatchName; //21c..22b
-    RoutingClientInfoPtr mHandlerClient; //22c, OWNING
-    RoutingGroupInfoPtr mHandlerGroup; //230, OWNING
-    RoutingMemberInfoPtr mHandlerMember; //234, OWNING
-    bool mReadClientCDKeyId; //238
-    typedef std::set<std::wstring,WStringLessNoCase> IgnoreSet;
-    IgnoreSet mIgnoreSet; //23c..247; comparator2a6b60
-    std::string mIgnoreFilePath; //248..257
+    virtual ~SmartRoutingConnection();
+private:
+    SmartRoutingConnection(const SmartRoutingConnection&);
+    SmartRoutingConnection& operator=(const SmartRoutingConnection&);
 };
 
 // No class here duplicates the old flattened RoutingConnection (0x258).

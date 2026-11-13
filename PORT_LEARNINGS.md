@@ -11912,3 +11912,515 @@ Measured as rounds 18-26 (every file under `src/Empire Earth/WONAPI` and `includ
   identical to ref; Rust gate PASS; captures at seeds 2-3 of oracle, late, space and calamity: every seed 2-3 digest
   equal to its golden (the `check` was run without `--seeds 2-3` and failed only on the seed 4-7 digests the run did
   not make: pass `--seeds` to `check` too); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS.
+
+## R5b.4, twentieth round: the unit AI scripts and the class improvements in Rust (ee_units script.rs, improve.rs; branch rust-r5b4-core20, 2026-11-13)
+
+| Commit | What | C++ |
+|---|---|---|
+| e80747d1 | the unit AI scripts whole in Rust (`EEUnitTrigger` deleted; `EEUnitAction` an id view) | +61 -1059, net -998 |
+| 67b91082 | objcache: a 0-byte stored object is a miss | (tool) |
+| 6cfc2039 | the class improvements' arithmetic in Rust | +120 -443, net -323 |
+
+- **EEUGLocation stays blocked**: combat round 14 is moving `EEUGHealUnit` off it. This round took the next
+  biggest self-contained pieces that do not touch the goals: the unit AI scripts and the improvement levels.
+- **The scripts: the parser, the model and the name tables.** `Unit AI Scripts\*.tai` are parsed in Rust byte for
+  byte as the original (the comment strip, the quote-aware tokens, the `anyof(`/`allof(` lists re-read with `", "`
+  after the cursor's rewind, the `true(`/`false(` and `#include("X.tai")` names cut as `UString::Copy` cut them,
+  `remove()` skipped, `AddTrigger`'s single-event replacement and removal, the links making empty actions, the idle
+  action). Quirks kept: a space after a list's comma ends the whole parse (the empty token stops the loop; no shipped
+  script has one), a trigger left open at the file's end is dropped.
+- **An action is a Rust object C++ points at.** `EEComplexUnit::mCommand` and `EEUnitClass::FindAction` hand out
+  `EEUnitAction*`, and every C++ reader reads only its id: the action is a `#[repr(C)]` Rust struct with the id first,
+  and `EEUnitAction` is a view of that one field (`uint32_t mType`). Actions live at stable addresses (`Box`) until
+  `DeleteScripts`. The AI step reads the triggers straight from Rust (the host's trigger callback is gone).
+- **The name tables were generated, then checked against the headers.** 167 actions and 250 triggers, in the
+  registration order, from the deleted `RegisterAll` bodies; a test checks every pair against the enumerators'
+  `Register("Name", id)` comments. `std::map::insert` keeps the first registration: two triggers share 12007
+  (GarrisonUpgrade first), and the Rust lookup takes the first match.
+- **A golden before the C++ went (the golden-driver pattern, in game).** With both parsers in, `GetScript` dumped
+  each script both ways (actions, triggers, events, any/all, true/false ids and the linked actions' ids) and compared
+  them: identical for all 51 scripts the oracle games load (seeds 2-3). Then the C++ parser was deleted.
+- **The improvements: the arithmetic in Rust over two records.** `CanUpgrade`, the base value and the step, the
+  integer and float step sums (one f32 addition per step, the truncating casts), a level change and the button's gain
+  are Rust (improve.rs) over the class's fields and the upgrade's stats as `#[repr(C)]` records; the C++ writes back
+  only the stat a change moved (range with line of sight, through `SetRange`; speed through `SetMaxVelocity`), keeps
+  the names (now a table), `Save`, and `Load` with its five version branches folded into one (the same reads in the
+  same order). A golden in game compared the original arithmetic (copied, temporarily) with the Rust over every
+  class with an improvement table, every improvement, six level changes and their gains: 145,600 checks, 0 different.
+  No gate game changes a level (no AI buys an improvement in the oracle games: a temporary print saw none); the
+  saveload games load the levels (all at 1).
+- **A shared object cache can hand out an empty object.** A link failed on `EEE3DRain.obj` ("unknown file type"):
+  the store held a 0-byte object (a truncated write), and every build that hit its key copied it. The lookup now
+  treats an empty object as a miss. Two builds of one worktree at once (a background build still writing its layout
+  when the next started) interleaved their logs here: wait for a build's notification before the next.
+- **Coverage.** Every game parses the scripts its classes name (51 per oracle game) and steps their actions: the
+  oracle and the captures gate the scripts. The improvements' arithmetic runs in no gate game (golden and unit tests
+  only); its `Load` runs in every saveload game. The scenario editor's action combo box (its names from the Rust
+  table) is UI only: a tour or the editor would show it.
+- **Gates of the round.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical to `ref`, Rust gate PASS; the
+  improvements' commit also the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`: PASS, every
+  row as the expect file). At the end (`rust` unchanged since the round's base, eb2f738e): oracle seeds 2-7
+  identical; captures at seeds 2-3 oracle (169 digests), late (170), scenario (16), calamity (183) PASS; the test
+  profile links 0/0. ee_units tests 183 (9 new). No tour: nothing drawn changed but the scenario editor's action combo.
+
+## R4.4, eleventh round: the lighting set-ups, IsUnitDrawn's decisions and the timed effects in Rust (ee_gfx lighting.rs, walk.rs, effect_state.rs; branch rust-gfx17, 2026-11-13)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 23,573 lines before the round, 23,388 after it
+(lighting -75, walk -79, timed effects -31).
+
+- **The lighting set-ups as call lists (`lighting.rs`).** `SetSceneFog`, `SetFogOff`, `SetLightingOff`,
+  `SetPrelitLighting`, `SetCloudLighting`, `SetWhiteLighting`, `SetTerrainLighting`, `SetMapObjectLighting`,
+  `SetUnitLighting`, `RestoreUnitLighting` and `DimUnitLighting` are one Rust function that returns the rasterizer
+  calls in their order (`EeGfxRasterOps`: fog state, colour, range and type, ambient colour and intensity, remove the
+  lights, lighting on or off, the shared light's colour, intensity and direction, `AddLight`/`UpdateLight`); one
+  C++ applier (`ApplyLighting`) fills the inputs (the light fade, the fog colour, the environment's colours and
+  intensities, the sun, the view's rear distance, the zoom lock, the orthographic view, unit lighting) and runs them.
+  The eleven names stay one-line C++ functions (their callers are all over the render objects and effects). The
+  map objects' flattened sun is normalized in Rust (`GeVector::normalize`); `GELight::SetColor`/`SetDirection`'s
+  clamp and negation stay the C++ header's.
+- **The world walk's decisions (`walk.rs`).** `IsUnitDrawn` gathers the unit's facts (`EeGfxUnitFacts`: the
+  resource, owner, seen tile, free camera, scale, tree, type, pool fills, the complex part's dead command, gate,
+  path point, flare and foundation, owner = current player, `Fn27C0B4`, `IsPathMarker`, id and tile) and answers
+  three questions (`EeGfxDrawnHost`: the footprint set's insert, the complex unit's view test, a model placed at a
+  point on the ground facing the camera; the last shared by units and map objects). Rust decides, in the original's
+  order of questions, and computes the map object's jittered point and a unit's tile centre. The owned-food test
+  (`FillUnit`'s `theFogged`), the waypoint marker's tint by its carrier's id and `FillRenderLists`' music intensity
+  are Rust. The facts are read eagerly: every read is a pure member or `IsSeenBy`/`IsFoundation`/`IsPathMarker`/
+  `GetScale` (the original asked some only on some paths). `FillUnit`'s and `FillRenderLists`' remaining code is
+  record filling and the tile walk over C++ containers: moving it would add host code, not delete C++.
+- **Golden drivers cut from the original unit, as round 10's** (`build/gx17/light`, `build/gx17/walk`): the
+  set-ups whole over a rasterizer that logs every call and the shared `GELight` at `AddLight`/`UpdateLight` (600
+  cases replayed in `golden_lighting.rs`, which models `GELight`'s clamp, computed colour and direction); 
+  `IsUnitDrawn` whole, the fog expression, the tint switch and the music switch over a stub world whose view tests
+  answer from the driver's LCG (2,000 units, 600 tints, 800 music cases in `golden_walk.rs`, which replays the
+  same LCG). Each driver cut from the new unit over the forwarders printed the same bytes, and at ten times the size
+  on seed 2. Argument evaluation order is unspecified in C++ (clang-cl evaluates right to left): a driver that calls
+  its random generator inside one call's arguments cannot be replayed; draw into locals first.
+- **The timed effects on the records.** The blast wave's, teleport's and time warp's ages (and the blast wave's
+  aging flag) are the aged record's (`EeGfxEffectAged::aging` added); `timed_step` ages them (the blast wave by
+  `GetTickTime` over the duration while aging, 7 past 1; the others by the tick in ms, rising or sinking by the
+  speed within the duration, `EE_GFX_EFFECT_MOVED` so the C++ moves the effect to its region, 7 past it), and
+  `load_aged`/`save_aged` read and write them by kind (format unchanged). The blast wave's unit following and every
+  draw stay C++.
+- **Gates.** On the result merged with rust (c0df6600): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,516 tests), the sim oracle identical on seeds 2-7 including the folder-hash line (the reference re-recorded), the captures at seeds 2-3 PASS with EFMU and EFST (oracle 169 digests, late 170, calamity 183). Per commit: the build 0/0 and the oracle at seeds 2-3 identical in every decision line; the Rust gate PASS from the merge on (the lighting commit's own run hit clippy on a half-written next file and the goldens' lints, fixed in the clippy commit); the timed-effects commit the oracle and calamity captures at seeds 2-3 PASS (167 and 181 digests before the merge). No tour run.
+- **Only a tour or a person reaches:** every lighting set-up (each draw pass calls them: the terrain, map objects,
+  units, fogged and restored units, sky, clouds, effects; the scene fog), `IsUnitDrawn` (which units and trees are
+  drawn and picked each frame: fog of war, the free camera's editor view, foundations, path points and flares, the
+  pools' limits), a waypoint marker's tint (a selected unit's queued waypoints), the battle music's intensity
+  changes (`gMusicFollowsBattle`) and the darkened food under the fog. EE-SIM draws nothing. The timed effects' ticks
+  are EFST's only when a profile's game makes one (not measured which do); their draws are unchanged.
+
+## R4.4, twelfth round: a rasterizer table for Rust draws, and whole effect classes in Rust with their draws (ee_gfx raster.rs, effect_rising.rs, effect_follow.rs; branch rust-gfx18, 2026-11-13)
+
+Round 11 showed the leaf moves returning 10-40 lines a class while the draws stayed C++. This round gives Rust a
+way to draw and moves whole effect classes with their draws. Graphics Thread C++ (`src/Empire Earth/Graphics
+Thread/*.cpp`): 23,388 lines before the round; 23,127 after the teleport and time warp (-261, net of the new
+`EEE3DRust.cpp` and the rasterizer table); 22,651 after the blast wave and shield (-476). Headers: `EEE3DTeleport.h`,
+`EEE3DTimeWarp.h`, `EEE3DBlastWave.h`, `EEE3DShield.h` deleted, `EEE3DRust.h` added.
+
+- **The rasterizer as Rust calls it (`raster.rs`).** One C++ table, `gEERustRaster` in `EERenderObject.cpp`, of
+  captureless lambdas over `gRasterizer` on the current screen (`gScreenIndex`): alpha reference, fog get and set,
+  ambient colour get and set, z buffer, blending, shading colour source, alpha testing, a lighting set-up by kind
+  (`ApplyLighting`, round 11's call lists), `GetFogFactor` (which reads the fog's attributes and turns the fog off),
+  and a model by handle (`GEModel*`): opacity, post-model transformation, scale, `PrepareTransforms`, `Draw` with
+  `gOrthographicView`, material 0's texture, and the texture-coordinate v scroll with its restore (the shield's). Rust
+  draws through the `Raster` trait: the table in the game, `LogRaster` in the unit tests. A table of function
+  pointers rather than `extern "C"` imports keeps `ee_gfx` free of link-time C++ symbols, so the scratch drivers
+  still link `ee_rust.lib` alone. Adding a call is one lambda and one trait method; textures are opaque handles
+  from the host.
+- **One C++ class for the 3D effects that moved (`EEE3DRust`).** Each virtual (`DrawPass2..6`, `Queue`, `SetUp`,
+  `Step`, the constructors on a unit and at a point, `RepairPointers` after `EEEffect`'s, `Load`/`Save` after
+  `EEEffect3D`'s) calls `ee_gfx_effect3d` (or `ee_gfx_effect3d_file`) with the op, the record, the graphic effect's
+  facts (`EeGfxGraphicFacts`: size, params 1-6, flag 1, duration, alpha reference, the tick, the unit's hit points)
+  and the host (`EeGfxEffect3DHost`: the unit's position, the model's height, the region move, the line effects,
+  `EEEffect3D::Queue`, the render queue push, the media load, the model, the texture, `FollowUnit`). Rust dispatches
+  by the record's kind. The manager makes `EEE3DRust(kind)` where it made the leaf. The record is reached through its
+  raw pointer field by field: the host's region move and `FollowUnit` read and write it through the C++ members, so
+  no Rust reference to it lives across a host call (rule: no Rust reference across a call back into C++).
+- **Moved whole:** the teleport (0x3f) and the time warp (0x44) (`effect_rising.rs`: construction with the two line
+  effects, set-up, queue, the depth-mask draw of pass 4, the rise or sink, the media on repair, Load/Save of the
+  age), the blast wave (0x18, on a unit or at a point: the additive draw of pass 6 growing or shrinking and dimming,
+  the age while aging) and the shield (0x45: the texture scroll between params 2 and 3, the flash on a hit, the fade,
+  the draw of pass 5 with its v scroll, Load from before 0.180 and after, Save) (`effect_follow.rs`). New record
+  parts: `aged.draw_age`, `aged.location`, `EeGfxEffectShield`. `FollowUnit` (the tag-point geometry) stays the
+  host's.
+- **Golden drivers over a logging rasterizer** (`build/gx18/rising`, `build/gx18/follow`): the original classes'
+  constructors, `SetUp`, `Queue`, draw, `Step` and `FollowUnit` cut verbatim from f839d277 (before rounds 11-12) over
+  a stub world (a unit with a complex unit, physical model, tag list or none, a vertex array of 0 to 6 v's, a
+  material) and a rasterizer, model and effect manager that print every call; against the new side cut from the
+  worktree (`EEE3DRust.cpp`'s host, constructors and `Call`, the rasterizer table) over the Rust. Both printed the
+  same bytes: rising 300 effects (5,443 lines) and 3,000 on seed 2 (52,163), follow 300 (6,688) and 3,000 on seed 2
+  (67,160). The goldens are not replayed in Rust (the driver's per-call order of LCG draws inside `GEColor(...)`
+  arguments is the compiler's); the Rust unit tests pin each op against `LogRaster`.
+- **Behaviour:** none intended. The blast wave's, time warp's and teleport's media now come from
+  `GetGraphicObject()` everywhere (the time warp and teleport read `mGraphicEffect->mGraphicObject` directly; the
+  same object).
+- **Gates.** On the result merged with rust (eb2f738e): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,554 tests), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS with EFMU and EFST (oracle 169 digests, late 170, calamity 183); the follow driver rebuilt on the merged tree printed the same bytes. Per commit: the build 0/0; the teleport/time warp commit the oracle at seeds 2-3 identical (its captures were stopped by the disk floor and ran with the next commit's); the blast wave/shield commit the oracle at seeds 2-3 identical, the oracle, calamity and late captures at seeds 2-3 PASS (169, 183, 170 digests), the Rust gate PASS after moving `ffi_effect.rs`'s test module back to the end (clippy). The rising driver was rerun on its own commit, not after the follow commit changed the shared host (its media load now `GetGraphicObject()`, the same object); the follow driver exercises that host. No tour run; saveload not run.
+- **Only a tour or a person reaches:** every draw of the four effects through the new table (the teleport's and
+  time warp's depth mask in pass 4, the blast wave's additive model in pass 6 at its scale and light, the shield's
+  pass 5 with its scrolled texture and opacity), their queueing and the rasterizer state they leave behind. Where they
+  appear: the teleport and time warp from those calamities (a prophet's), the shield from the shield power, the blast
+  wave from the effects that make it (explosions on units, placed blasts). EFST covers their tick, Load and Save only
+  when a profile's game makes one (not measured which do).
+- **Next:** the same class takes the other 3D leaves one kind at a time (each a Rust module and host ops); a 2D twin
+  (`EEE2DRust` over `EEEffect2D`) for the sprite effects; the render objects' passes once the table has the vertex
+  array, polygon and text draws they use.
+
+## R6: the game screens, seventeenth round: the editor form's own stateful events whole in Rust (ee_screens editor_events.rs; branch rust-screens17, 2026-11-13)
+
+Round 14's item (a), first part. Count: `build/sc14/count.sh` (its round-10 part moved with other lanes' merges:
+compare by git over the counted paths).
+
+- **The gate first** (expected.txt 1013 -> 1034 lines, recorded on the unmodified events, its own commit):
+  `check ID 0|1` sets an editor check box (`UICheckBox::SetChecked` fires its trigger events), `view` prints the
+  game view's rectangle and the editor's UI hidden flag, `click quicksave` releases the toolbar's quick save button
+  (its trigger event), `editorsave` digests the editor's own quick save file (`EEQuickSave.scn`). The script hides
+  and shows the UI (the hide-UI box 0x12) and quick saves through the button.
+  - The hide-UI event's two rectangles are default `GERectangle`s (all zero) and nothing sets them: hiding the UI
+    sets a zero game view (`view 0,0,0,0 hidden=1`), as the original.
+- **One C++ event, `EESEERust` (`ee/EESEARust.h`)**, the events' counterpart of round 16's `EESEARust`: a `UIEvent`
+  holding a Rust `EeScreensSeeEvent`, `ProcessEvent` forwarding the entity. Moved whole (4 classes, 3 headers
+  deleted): `EESEEHideUI` (the box's state read twice, as the original's two `GetIsChecked`, posts a viewport
+  change), `EESEEChangeViewport` (its rectangle and flag set by `ee_screens_see_viewport` after it is made),
+  `EESEEQuickLoad` and `EESEEQuickSave` (the shared `EESEAQuickSaveLoad` referenced while the event lives). The
+  host `ee_screenscpp_see` is in `EEUIFSETRBPaintType.cpp`. The quick load shows the object on the editor form
+  (`gUIManager->mScenarioEditorForm`) rather than the event's form argument: the event only hangs on the editor's
+  own button, so they are the same form.
+- **Count:** -68 (git over the counted paths: +74 -142).
+- **Tests:** 3 in `editor_events.rs` (the views posted by the check state, the viewport change only with an editor,
+  the quick load and save holding and releasing their action).
+- **Only a person reaches:** the quick load (`PostShowLoadedObject` goes through the editor's load thread; the gate
+  does not load), the hide-UI box itself (hidden on the form: the gate sets it directly).
+- **Not done:** the trigger screens' events (`EESEESliderChange`, `EESEECheckDisplay`, `EESEEUseObjectArea`: the
+  gate would have to open the condition and effect editors first), terrain colour/type, map type, unit sort, start
+  epoch, unit limit, the effect editors' events, `EESEAChangeLoadText`, and the thin click, lasso, delete and paint
+  classes.
+
+## R6: the game screens, eighteenth round: a round-17 crash in the trigger tab fixed; the trigger screens' and effect editors' events whole in Rust (ee_screens editor_events.rs; branch rust-screens18, 2026-11-13)
+
+Round 14's item (a), second part. Count: git over the moved paths (`git diff --numstat` over `include/ee` and `src`).
+
+- **A crash from round 17, found by extending the gate:** `EESETriggerScreen::Enter` set the hide-UI box's two
+  views by casting the box's trigger event to `EESEEPanelEvent` (an inline `SetRectangles` writing two
+  `GERectangle`s after `UIEvent`'s members). Round 17 made that event an `EESEERust`, whose only member is the Rust
+  event's pointer: the write replaced the pointer with float bits and ran 24 bytes past the object, and the
+  `SetChecked(true)` right after crashed in `ee_screens_see_process` (EE-SIM: `tab 4`, FAULT c0000005). A person hit
+  it on every visit to the editor's trigger tab. Enter now calls `ee_screens_see_hide_ui_views`; `EESEEPanelEvent`
+  is gone. Round 17's note that "nothing sets them" (the hide-UI event's rectangles) was wrong: Enter does, through
+  that cast. **Lesson:** before moving a class whole, grep for casts to *other* names at its construction and use
+  sites (`GetTriggerEvent(...)` cast to a provisional class): a reconstruction may have named one object twice.
+  - The views: unchecked the first (`0,0,1024,606`), checked the second (`0,0,1024,447`), as the original's
+    `EESEEHideUI` (+0x0c, +0x1c).
+- **The gate first, twice** (expected.txt 1034 -> 1371 -> 1734 lines, each recorded on the unmodified events in its
+  own commit; lines only added): `trigger SCREEN` (the trigger tab's sub-screen), `newentry`, `ctype TYPE` and
+  `etype TYPE ACTION` (the type combos as a person picks them, then `ChangeConditionType` / `ChangeEffectType` and
+  `ChangeEffectAction`), `ctl c|e check|slide|radio INDEX [VALUE]` (a check box set: it fires its events; a slider
+  moved and its range-changed event processed; a radio checked: it fires unless it was checked), `ctl e list|combo
+  INDEX LINE` (a list box's line selected and its button-up event processed; a combo's line picked and its
+  selection-changed event processed) and `ui c|e` (the controls' display modes, label texts, slider values, combo
+  and list lines, the scenario combos' kind and selection). The script enters the trigger tab, adds an area and an
+  object, drives the game condition, the game effects' daylight and cinematic sliders, the AI effects' area/object
+  radios, a military group's lists, two AI attributes (their ranges differ: proof the event ran), the dialogue's
+  scroll slider and the flare's and camera script's radios.
+  - `tab 4` then `view`: the posted viewport change is processed between steps, so a `view` right after a
+    `check 0x12` shows the state before it.
+- **Moved whole** (9 classes behind `EESEERust`, kinds 5-12; 5 headers deleted: `EESEEvents.h`,
+  `EESETSETCAMGModifyObject.h`, `EESETSETMSDCameraScrollChange.h`, `EESETSETSAAAttributeChange.h`,
+  `EESEEUseAreaObject.h`):
+  - `EESEESliderChange`: `GetCurrentRangeValue() * scale + offset` in `f32` as the original's `long * float +
+    float` (no FMA), printed by the host's `sprintf` of the event's format (`EE_SCREENS_SEE_OP_SLIDER_TEXT`: the
+    float passed as a double through `...`, as the original). The format is copied into the Rust record with its NUL;
+    the host reads it through a pointer into the event's clone, valid for the call.
+  - `EESEECheckDisplay` (its controls pushed by `EESEEPushControl`), `EESEEUseObjectArea` (the area control compared
+    with the event's entity; `FillScenarioComboBox` stays C++: the effects call it too).
+  - `EESETSETCAMGModifyObject` (the clicked list's selection, none -> nothing; id 0x9bf adds, else removes),
+    `EESETSETMSDCameraScrollChange`, `EESETSETSAAAttributeChange` (their type and the effect's controls through
+    `EESEENewObjects`), `EESEEUseAreaObject` with `EESEEMoveAreaObject` (one kind: ICF folded their bodies) and
+    `EESEEFaceAreaObject` (the form's label, combo and area-radio ids are data in the kind).
+  - The host `ee_screenscpp_see` now takes three pointers and four integers; `ee_screens_see_process` takes the
+    form (only the area/object radios read it). The host `static_assert`s the event kinds.
+- **Behaviour change:** `EESETSETSAAAttributeChange` with no combo selection passed an uninitialised selection; it
+  passes -1 (0xffffffff) now (the combo always has one when it fires).
+- **Count:** +201 -335 (net -134) over `include/ee` and `src` without the gate's own file (the fix +13 -15, the
+  first move +100 -132, the second +88 -188).
+- **Tests:** 6 new in `editor_events.rs` (the slider's f32 value and format, the check box's controls, the
+  object/area refill, the military group's add/remove/none, the scroll and attribute shows, the three radios' ids)
+  and the hide-UI views in the first test. No golden driver: the editor gate ran on the unmodified code first and is
+  unchanged by each move.
+- **Only a person reaches:** the mouse itself (the gate sets the controls and processes their events directly), the
+  slider drag's own firing, the trigger tab's drawing. No tour opens the editor.
+- **Not done:** terrain colour/type (`EEUIETerrainColorChange`, `EEUIETerrainTypeChange`), map type
+  (`EEUIFSEEMapType`), unit sort (`EEUIFSEESortUnitList`), start epoch (`EESEEChangeStartEpoch`), unit limit
+  (`EESEEGameUnitLimit`), `EESEAChangeLoadText`, and the thin click, lasso, delete and paint classes.
+
+## R6: the game screens, nineteenth round: the editor tabs' map type, unit sort, start epoch and unit limit events whole in Rust (ee_screens editor_events.rs; branch rust-screens19, 2026-11-13)
+
+Round 14's item (a), third part. Count: git over `include/ee` and `src` without the gate's own file.
+
+- **The gate first** (expected.txt 1734 -> 1781 lines, recorded on the unmodified events in its own commit, lines
+  only added): `combo ID LINE`, `slider ID VALUE` and `radio ID` drive an editor control by id (a combo's
+  selection-changed or a slider's range-changed event processed after the value is set; a radio's `Check` fires its
+  own); `controls ID...` prints display modes and a label's first line; `unitlist` prints the unit tab's list
+  (0x3f1); `epoch ROW START END` sets a player row's end epoch, picks its start and prints the end combo. The script
+  shows and hides the map tab's elevation boxes, re-sorts and re-filters the unit list (by epoch, alphabetical, sea,
+  world), walks the start epochs (end kept, end earlier than the new start, the all-players row) and moves the unit
+  limit.
+  - The sea button's radio left the list unchanged and the world button changed it (169 -> 15 units): recorded as
+    the code does; not investigated.
+- **Moved whole** (4 classes, `EESEERust` kinds 13-16; `EESEEGameUnitLimit.h` deleted, `EEUIFSEEMapType` and
+  `EESEEChangeStartEpoch` out of their headers, `EEUIFSEESortUnitList` out of `EESEUnit.cpp`):
+  - `EEUIFSEEMapType`: the original's unsigned `selection > 0` (no selection reads as -1: shown).
+  - `EEUIFSEESortUnitList`: the editor form's unit tab's `RefreshUnitList` (the form argument, as the original).
+  - `EESEEChangeStartEpoch`: the end epoch's index in all epochs (`end + count - lines`, unsigned), the titles from
+    the start on refilled by one host op (`AppendStringArray` of the whole list, as the original), the end kept or
+    the first line.
+  - `EESEEGameUnitLimit`: no longer a `UIESliderChange`; the record holds the label, "%g", the modifier and the
+    offset (a `long` made a float, as the original's sum). The per-player count (unsigned division by
+    `mMaxPlayers - 1`) goes into label 0x162 first, then the value as `UIESliderChange::ProcessEvent` prints it
+    (no value of this event is ever mapped to a string, so the map lookup is not carried).
+- **Behaviour changes:** with `mMaxPlayers` 1 the unit limit skips the per-player label (the original divided by
+  zero); the start epoch and map type read a failed `GetCurrentSelection` as -1 (the original's out value).
+- **Count:** +65 -101 (net -36).
+- **Tests:** 3 new in `editor_events.rs` (12 there): map type and sort, start epoch (kept, earlier, none), unit
+  limit (per player then "%g"; one player).
+- **Only a person reaches:** the mouse on these controls; the drawing of the map, unit and player tabs.
+- **Not done:** terrain colour/type (`EEUIETerrainColorChange`, `EEUIETerrainTypeChange`: bitmap and texture work,
+  which EE-SIM cannot check), `EESEAChangeLoadText` (posted only by the editor's load thread, which the gate does not
+  run), and the thin click, lasso, delete and paint action classes (with the `EESEAPaintTerrain.cpp` hosts moving to
+  an `EXTRA_UNITS` unit if that file goes).
+
+## R6 WON round 28: ComboBox whole in Rust (ee_won comboobj.rs; branch rust-r6-won28, 2026-11-13)
+
+Measured as rounds 18-27 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+82,202 at the branch's start (round 27's head) -> 82,203 (the setter, +1) -> 81,969 (ComboBox, -234). This round's own
+net: -233.
+
+- **The census first** (its own commit). Only one ComboBox field was read or written outside its unit:
+  ComboBoxConfig's `mShowButtonWhenDisabled`, now `SetShowButtonWhenDisabled`. The full grep was run without a
+  limit, as round 26's lesson says.
+  - The parts (`mEdit`, `mButton`, `mListBox`, `mListArea`) stay members. MSComboBox and WONComboBox make them and
+    lay them out, the skins duplicate them, ComboBoxConfig hands out the input box and the list area, and the game
+    options control reads the list area.
+  - The undo text (a GUIString) also stays a member. This is round 27's pattern for the tab control's containers.
+- **The move** (`comboobj.rs`): whether the list is open, no-typing, the button while disabled and the list box's
+  configured size, with every method.
+  - The Rust object reaches the parts through `ComboPart` (read again at every use, as the original read its
+    members) and 31 combo ops (490-520). Each is one of the original's statements on a part: the list area's
+    inserts, deletes, selection, metrics and item reads, the input box's texts and selection, the undo text, the
+    popup, the selection event, the list box's listener.
+  - The list area's KeyDown and MouseWheel, the input box's RequestFocus and the combo box's own SetFocusChild go
+    through `CtChild` and `CtVirt`, so overrides run.
+  - The input box's events fired again (InputTextChanged, InputReturn, with the original's `true`) go through
+    `ee_won_gui_event_type`.
+  - ComboBox.cpp is now the host, the constructor (its two flag statements stay C++), the destructor and
+    `SetListBox`. The skins' `ComboBox::Virtual08()` calls are the forwarder.
+- **Behaviour on a crash path only:** a NULL list box given to `SetListBox` is no longer read. The original read its
+  scroll area before the NULL test.
+- **The golden** (`tests/won/won_comboobj_test.cpp`) uses round 26's world: the combo box and its parent are real
+  Rust containers, and the parts are leaves.
+  - The parts' state (the items with their texts and widths, the selection, the input box's and undo texts, the list
+    box, the second list box's scroll area) is a model in the test.
+  - Every combo op is traced with its answer, the model's reads included. The cargo replay therefore needs no model:
+    it returns each answer from the golden's "=" line. The order of those reads is the same on both sides because
+    both are written out statement by statement.
+  - It runs 20,000 sequences of 40 calls with 14,430,991 trace lines, all identical.
+  - Two mutations fail it: the end of the popup not closing the list fails 2,087 sequences; a press on the input box
+    clicking the button while typing is allowed fails 3,255.
+  - `golden_comboobj.txt` holds 41 sequences, replayed by cargo through round 27's `Ext` hooks.
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction (seeds 2-3 identical
+  after each commit). The lobby's combo boxes (game options, player options, the LAN name and tab choice in the
+  lobby options, the server list's filters) are built at lobby entry.
+  - The lead's LAN game reaches what the host's game options show and change.
+  - The lobby captures reach the combo boxes' paint and size: the input box, the button, the list box's size.
+  - Only a person runs an open list, keyboard selection, the wheel, Escape's undo and no-typing presses; those run
+    only in the golden.
+- **Left:**
+  - Window/RootContainer: RootContainer.cpp is 337 lines over the background grabbers, the cursor and the mouse
+    drag. Window.cpp and WindowManager.cpp are larger and reach the platform window.
+  - The remaining controls (Button and its skins) and the layout managers.
+  - Re-recording the input and list goldens so they trace the delivered event type.
+
+## R6 WON round 29: RootContainer whole in Rust; Button's census (ee_won rootobj.rs; branch rust-r6-won29, 2026-11-13)
+
+Measured as rounds 18-28 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+81,969 at the branch's start (round 28's head) -> 81,971 (the root's `UnionInvalidRect`, +2) -> 81,698 (RootContainer,
+-273) -> 81,700 (Button's accessors, +2). This round's own net: -269.
+
+- **The census first** (its own commit). Outside RootContainer.cpp only `Window::InvalidateRoot` wrote a root field
+  (`mInvalidRect.DoUnion(bounds)`), now `UnionInvalidRect`. The window (`mWindow`) stays a member:
+  `Component::GetRoot` reads it. The full grep (every root field across `src`, `include` and `tests`, no limit) found
+  nothing else.
+- **The move** (`rootobj.rs`): the invalid rectangle, the queued backgrounds (a `BTreeMap` from the grabber's image
+  order, as the original's `std::map<int,BGStruct>`, each image held), the cursor's component (borrowed, as the
+  original's raw pointer) and the window drag (its place, whether it runs, whether it may), with every method.
+  - Dropped as dead: the keyboard listener (`mKeyboardListener` and `KeyboardListenerBase`: nothing set it, so its
+    three `KeyEvent` calls never ran), the popup set and the root's modal component (never read). The overrides
+    that only called the container's (FindChildAt, ChildInvalidated, MouseEnter) are gone: the container's run.
+  - 15 root ops (530-544): the cursor's component and hot spot, the window's one-component flag, mouse, rectangle and
+    place, a child's mouse child, the colour scheme, the grabber's state, its clear and drop, the images' hold,
+    release, size and draw, and `EnsureOnTopOf`. The pure reads are not traced, except the grabber's (below).
+  - The map assignment is traced as the original runs it: the temporary `BGStruct` holds the image, the entry's
+    `SmartPtr` assignment releases the old image and holds the new one (nothing when they are the same), the
+    temporary releases. The map's clear and the destructor release in key order (the original's tree went in its
+    own order).
+  - Its own `RemoveChild` (called as a virtual by MouseExit and SetCursor) goes through the C++ object (`CtVirt`);
+    its own `InvalidateRect` is called directly (no class derives from RootContainer).
+- **Behaviour on the original's undefined paths only:** while a cursor's component is shown, MouseMove and MouseDrag
+  read the hot spot of the container's current cursor. When that cursor is NULL (the original read through NULL) the
+  host answers no component and a zero hot spot; when it is a plain cursor (`Cursor::GetComponent` writes nothing)
+  the hot spot is 0, where the original used two uninitialised ints. Both happen only when the root's mouse child
+  keeps the parent's cursor (the container's NoParentCursor path) after a cursor with a component was set.
+- **The golden** (`tests/won/won_rootobj_test.cpp`) uses round 26's world: the root (component 1) and three
+  containers are real Rust containers, the rest leaves. The cursors 0x5002..0x5004 have components (11, 12) and hot
+  spots; the grabbers are 0x9000 + a component id with a drawing state the driver changes; the images have sizes
+  from their id; the window's numbers are env 14..18. The world runs Component's SetPos and SetVisible as the tab
+  golden does, and counts the images' references (all given back).
+  - The grabber's read is traced with its answer (`grab-read`), so the cargo replay keeps no model of the grabbers;
+    `Ext::read` takes that line itself and fills the Rust's struct.
+  - It runs 20,000 sequences of 40 calls with 15,822,318 trace lines, all identical.
+  - Four mutations fail it: the backgrounds drawn lowest order first fails 2,065 sequences; `EnsureOnTopOf`'s
+    arguments swapped fails 9,137; the one-component window ignored fails 989; the cursor component's rectangle
+    from its old place fails 10,387.
+  - `golden_rootobj.txt` holds 43 sequences, replayed by cargo through round 27's `Ext` hooks; the replay fails on a
+    window place moved by one.
+- **Lesson:** a mutation script stopped with TaskStop kept running (the bash and its build went on), and the rerun
+  copied the source while the first run had a mutation applied: the "clean" baseline then failed 10,387 sequences.
+  Before trusting mutation numbers, check that no earlier run is alive (`ps -ef | grep`), restore the source from git
+  rather than from a copy, and finish with an unmutated run (here: 0 differing).
+- **Button's census** (its own commit; the move is next). Outside Button.cpp the skins (MSButton, MSArrowButton,
+  MSCheckbox, MSRadioButton, the header and close buttons, WONButton, WONSimpleButton, the cross promotion and colour
+  buttons, the list header), the dialog host and nine lobby controls read `mButtonFlags`, its bitfields `mChecked`
+  and `mButtonFlag5`, and `mMouseDownState`. They now read `IsPressed()`, `IsChecked()`, `GetButtonFlags()` and
+  `GetMouseDownState()`.
+- **Why Button next and not Window.** Window.cpp (624 lines) and WindowManager.cpp (1,501) are the platform
+  window's: their methods are mostly platform calls, popups and the modal stack, whose behaviour only a live window
+  shows (no golden world models it yet). Button is a leaf with no platform call: its census is done, and the move
+  needs the radio group's walk over the other buttons' Rust objects (a `BtnOf` read as the container's
+  `CtContainerOf`), the default buttons (the original's two static `SmartPtr`s), the click sound (a C++ member) and
+  the ButtonPressed event through `ee_won_gui_event_type`.
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction. Every lobby window's
+  root is this object: the lead's LAN game (`lan_game.py`: the root's mouse and key routing to every lobby control,
+  its Paint's clip to the invalid rectangle, the repaints after every change) and the lobby captures (the whole
+  window repainted through the invalid rectangle, the dialogs' backgrounds drawn under them from the grabbers) are
+  the check. Only a person drags the lobby window (a press on a ParentDrag child) or sees a cursor drawn by a
+  component (the skin's `ComponentCursor`, if the lobby's resources make one); those run only in the golden.
+- **Left:** Button's move (census done), then Window/WindowManager (platform ops), the layout managers, and the
+  input and list goldens' re-recording to trace the delivered event type.
+
+## R6: WON's Internet code, round 16 (ServerConnection and RoutingConnection's op list and dispatch as Rust objects)
+
+Branch `rust-won-net16`. Measured by net C++ deletion, as rounds 7 to 15. The servers are gone: only an Internet
+login (RoutingLogic::ConnectToServer, EEWonNet's dead server select) makes a ServerConnection or a RoutingConnection,
+so no LAN step reaches this round's code; the golden driver and the Rust tests exercise it.
+
+- **Where the socket layer stood.** Round 15's premise ("every remaining Internet class waits on the socket
+  objects") was already met: the lobby lane's rounds 14 to 16 made AsyncSocket, SocketOp and its eight ops,
+  QueueSocket, LobbyLanSocket, IPAddr, UDPManager and its two ops Rust objects with C++ shims (their state and every
+  step; the C++ files left are the shims, the hook tables and the `Winsock numbering` asserts). BlockingSocket has no
+  state (each call makes one op and runs it blocking): moving its seven three-line calls would add a hook per op kind
+  and delete nothing. SocketThread's two classes were already shims (round 13). So this round went one level up.
+- **The golden over real loopback sockets.** `won_servconn_test` (new, `xbuild wontest`): a listener on 127.0.0.1
+  and the connection under test, the peer authentication a stand-in that connects the connection's socket for real
+  (or stays pending for port 0; PeerAuthOp is a Rust op that needs certificates, so the driver defines PeerAuthOp's
+  constructor and RustServerOp's members itself and ServerOp.cpp is not linked). 134 lines for ServerConnection and
+  ServerConnectionConnectOp, recorded over the unmodified classes (five runs the same); then 68 for RoutingConnection,
+  recorded over its unmodified class (six runs the same), the first 132 lines unchanged (the plain connection's
+  deferred destruction now lands at the routing part's first pump). Deterministic by construction: every wait is a
+  pump until a completion count (no line depends on the clock but the keep-alive's one-second period, whose
+  no-ops are counted, not timed).
+- **Driver traps.** WON's message framing counts the length field itself and SendMsg sends the bytes as given: a
+  "hello" without its 4-byte length was read as a bad length and closed the connection. RunAsync only queues: a
+  ServerConnectionConnectOp run blocking waits on a peer op whose run the pump starts, so it ran 4 s and stayed
+  pending (it runs async and pumped). A blocking op on a pending connect races two equal time-outs (the op's and its
+  peer op's): left out. A notification cut short is finished in MsgCallback's catch with `status`, a variable no op
+  has set yet when the notification's op is first in the list (the golden showed 1150674430): left out of the
+  golden; the Rust defines it as `EE_WON_RT_UNPACK_FAILURE` (unit test).
+- **ServerConnection** (`servconn.rs`, `EeWonServerConn`): the auth context and type, the peer authentication op, the
+  connect completion, the keep-alive timer and its period (a reference each), and every step: StartKeepAlive,
+  SetAuth, ConnectCallback (the repeat receive and keep-alive on success), KeepAliveCallback and SendNoOp, the close
+  and kill hooks, ConnectAsync and ConnectBlock, under the socket's lock where the C++ held it, references dropped
+  where a `SmartPtr` assignment dropped them. A kill may call back into the object (the timer's completion is
+  KeepAliveCallback, a pending connect's is the connect completion): no borrow lives across a hook and the slot is
+  read again after it. One hook table (19 entries); `ConnectCallback` is no longer virtual (nothing overrode it).
+  ServerConnectionConnectOp stays C++ (four short members over the connection; moving it would add more hooks than it
+  deletes). Mutation: no keep-alive restart fails the golden from line 59.
+- **RoutingConnection** (`routeconn.rs`, `EeWonRouteConn`): the op list, the 61 completions by op type and the
+  default one, and AddOp, CalcCompletion, GetUnsolicitedOp, MsgCallback (the header, the new notification op
+  first, the walk with the original's dispatch rule, the catch path without the complete hook), CloseHook (an op a
+  kill adds is killed too, as the std::list walk did) and KillHook. The completions are set through
+  `SetOpCompletion` / `SetDefaultOpCompletion` (EEWonNet and RoutingLogic wrote the array: mechanical, its own
+  commit). What stays C++: the request helpers (each makes its C++ op class), the notification ops' constructors
+  (one hook with the original's switch), HandleReply over a `ReadBuffer` with its `ReadBufferException` (a flag
+  across the C ABI), `mAllDerivedOpsAreUnsolicited` (read by the C++ virtual GetUnsolicitedDerivedOp). A type past
+  the 61 slots (the original read past its array) has no completion. Mutation: the type's completion ignored fails the
+  golden from line 146. A `c_long` hook return cast to `i32` is a clippy error on Windows (`c_long` is `i32` there)
+  and a needed cast on Linux: such hooks return `i32` (`int32_t` in the C++).
+- **Net C++** (src+include, the generated headers left out): ServerConnection +100 -117; the completion setters
+  +31 -28; RoutingConnection +111 -136; the round +242 -281. Small: each class keeps a hook table (19 and 14
+  entries) because its ops, completions and subclasses are still C++.
+- **LAN reach: none.** Every LAN lobby and game runs on QueueSocket, LobbyLanSocket, the socket ops and UDPManager
+  (the lobby lane's objects, untouched here). ServerConnection and RoutingConnection are made only by an Internet
+  login (the WON servers are gone); the lead's LAN gate does not reach this round's code, and neither does EE-SIM.
+- **Not moved, and why.** TitleConfig: ConfigObject is still C++ (WONGUI's configs derive from it). The RustServerOp
+  host (ServerOp.cpp's HostCall, ServerOp's members): not started this round. SmartRoutingConnection's model,
+  commands and snapshots (~1,600 lines) sit on RoutingConnection's request helpers and its own maps: next.
+
+## R6: WON's Internet code, round 17 (SmartRoutingConnection's model, commands and snapshots as one Rust object)
+
+Branch `rust-won-net17`. Measured by net C++ deletion, as rounds 7 to 16. Round 16's net was small because each moved
+class kept a hook table while its ops stayed C++; this round took a class whose state and logic are self-contained.
+
+- **What moved.** `smartroute.rs` (`EeWonSmartRoute`): SmartRoutingConnection's client, group and member maps (shared
+  records in `Rc<RefCell>`: a member's client is the client map's record, as the original's `SmartPtr`s were, and a
+  record dropped from the map lives on in the members and handled slots that hold it), the client, group and member
+  iterators and the erase rules that step them, the handled records (`mHandlerClient` / `Group` / `Member`), this
+  client's id, record and async flags, the default group, the ignore set (`WStringCompareNoCase` order) and its file
+  (read and written through `PlatFOpen` in Rust, `authlogin.rs`'s `read_file` / new `write_file`), the command table
+  and settings, the last chat input's error, command, target member and client and matched name. Every step:
+  `RoutingOpCompleteHook`'s 25 op types (the merges of client, group and member lists, the joins and leaves, the
+  field notifications, the CD key ids from `_KeyId` data objects, the ignored senders whose completion is dropped),
+  `HandleInput` / `HandleCommand` (chat.rs's `get_token` / `rest_of_line` / `compare_names` over the CRT's
+  `towupper` / `iswspace` / `isalpha` / `atoi`, as the lobby's parser), `FindClient`, `IgnoreClient`, the copies and
+  iterators. The C++ class is a shim: it hands each finished op's fields in (`ee_won_smart_put_*` for its lists, then
+  `ee_won_smart_op`), and sends the request a chat input returns (`EeWonSmartAction`: chat, flags, invite, moderator,
+  mute, ban, ban by CD key) through RoutingConnection's request helpers. No hook table: the Rust object never calls
+  back into C++. `SmartRoutingClientInfo` and the `GetNewClientInfo` override are gone (the ops' records are plain
+  `RoutingClientInfo`s; nothing outside the model read the smart fields). SmartRoutingConnectionCommands.cpp,
+  ...Snapshots.cpp and the three empty units (Events, Models, Sync) are deleted.
+- **The API that changed.** Raw records no longer leave the model: `GetGroupMap`, `GetClient(id)` returning a
+  `RoutingClientInfoPtr`, `GetMemberRef`, the `Handle*` methods and the public members are gone. EEWonNet (the only
+  user) reads copies: `RoutingGroups()` (StartGroupItr / GetNextGroup under the data lock) for the room list, the
+  game and room joins and ConnectToLobby's walk; `GetClient(id, ClientInfo&)` in OnChat; `FindClient(name,
+  ClientInfo&, bool& found)` and `IgnoreClient(id, on)` for the /ignore and /tell commands; `GetMyClientId()` for
+  `mRouting->mClientId`. `GroupInfo` gained `mMemberCount` (the record's +0x2a `mMaxPlayers`, the group list's member
+  count), which ListRoomCallback read as the room's maximum players; `GroupInfo::mMaxPlayers` stays the client limit.
+  JoinGroupCallback's unused `GetGroup` read is dropped.
+- **The golden over real loopback sockets.** `won_smartroute_test` (new, `xbuild wontest`): a SmartRoutingConnection
+  connected to a routing server stand-in on 127.0.0.1 that sends the notifications and replies the ops read (built
+  from routemsg.rs's formats), recorded over the unmodified C++ class (five runs the same, 668 lines,
+  `golden_smartroute.txt`): register with and without the client list (the ignore file read), group and client
+  lists merged, joins and leaves, every field notification, chats / invitations / join attempts from an ignored
+  client (no completion), the iterators stepped past erased records, a group list removing the member iterator's
+  group, the CD key ids, 50 chat inputs with the requests the server receives, the ignore file's bytes, the close.
+  The model is dumped after each step: the original's members read directly, the Rust object through
+  `ee_won_smart_dump` (the same text; `EE_WON_SMART_ROUTE_RUST` picks the path). Relinked over the shim: 668 lines,
+  0 failures, three runs. Mutation: no client-iterator step on an erase fails line 202.
+- **Driver traps.** The handled records are reset by every op's hook, so a "sync" notification after each step
+  cleared them: they are logged from the default completion, which runs right after the hook for the same op. The
+  operands of `+` are unordered: `Log(... + N(c->GetNextMember(m)) + Show(m))` printed the copy before the call.
+- **The original's undefined corners, defined.** An iterator a whole-map assignment (register) or clear invalidated
+  is at the end; a member without a client is skipped where the original dereferenced it (a leave, a list merge); a
+  command whose target is missing names client 0; a non-ASCII duration unit is no letter; `mLastInputCommand` (never
+  set by the constructor) starts at 0; `IgnoreClient` by id ignores the record `GetClient(id)` finds (EEWonNet called
+  it right after `FindClient` on the same record).
+- **Net C++** (src+include, the generated headers left out): +353 -1732 (WONRouting.h +52 -132,
+  SmartRoutingConnection.cpp +227 -906, the five deleted units -635, EEWonNet.cpp +74 -59).
+- **LAN reach: none.** SmartRoutingConnection is made only by EEWonNet's Internet server select (the WON servers are
+  gone); the lobby's RoutingLogic uses a plain RoutingConnection and every LAN game runs on the lobby lane's sockets.
+  EE-SIM never makes one. The driver and the Rust tests exercise it.
+- **Not moved, and why.** The RustServerOp host (ServerOp.cpp's HostCall, ~600 lines): it answers the Rust ops'
+  calls on C++ objects (the socket shims, AuthContext, the GetCertOp objects, files, completions); moving it makes
+  every one of those a host call the other way, and the routing ops do not run on it (RoutingConnection drives them),
+  so it would not let the routing op classes lose their bodies. The routing request helpers and the notification /
+  request op classes (RoutingConnection.cpp, RoutingRequestOps.cpp, RoutingNotifications.cpp): RoutingLogic reads
+  their members by class; a move needs the lobby's readers changed with them.

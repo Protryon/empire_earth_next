@@ -192,7 +192,6 @@ e773c e7d67 Empire Earth/Graphics Thread/EEE2DVortex.cpp
 e7d67 e8158 Empire Earth/Graphics Thread/EEE2DWaterRipple.cpp
 e8158 e89c6 Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp
 e89c6 e8ed8 Empire Earth/Graphics Thread/EEE3DAdditivePass.cpp
-e8ed8 e9474 Empire Earth/Graphics Thread/EEE3DBlastWave.cpp
 e9474 e9bee Empire Earth/Graphics Thread/EEE3DCitizenBeam.cpp
 e9bee ea703 Empire Earth/Graphics Thread/EEE3DCommandConfirmation.cpp
 ea9e2 ebbba Empire Earth/Graphics Thread/EEE3DDamageVent.cpp
@@ -213,12 +212,9 @@ f69e3 f7394 Empire Earth/Graphics Thread/EEE3DPulseCannonBall.cpp
 f7394 f8ceb Empire Earth/Graphics Thread/EEE3DRain.cpp
 f8ceb f90e9 Empire Earth/Graphics Thread/EEE3DScreenFlash.cpp
 f90e9 f923f Empire Earth/Graphics Thread/EEE3DShells.cpp
-f923f f9871 Empire Earth/Graphics Thread/EEE3DShield.cpp
 f9871 f9b6d Empire Earth/Graphics Thread/EEE3DSmokeGenerator.cpp
 f9b6d fb088 Empire Earth/Graphics Thread/EEE3DSnow.cpp
 fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
-fb9f6 fbec6 Empire Earth/Graphics Thread/EEE3DTeleport.cpp
-fbec6 fc382 Empire Earth/Graphics Thread/EEE3DTimeWarp.cpp
 fc382 fd330 Empire Earth/Graphics Thread/EEE3DTracerBeam.cpp
 fd330 fdbab Empire Earth/Graphics Thread/EEE3DTracers.cpp
 fdbab fe553 Empire Earth/Graphics Thread/EEE3DVirus.cpp

@@ -2800,13 +2800,9 @@ void EEUnitClass::CreateUnitClasses()
 // Returns the class's AI script action for a key, or NULL when the class has no script or no such action
 EEUnitAction* EEUnitClass::FindAction(long inKey)
 {
-    EEUnitAction* theResult = NULL;
-    if (this->mAIScript != NULL) {
-        std::map<long, EEUnitAction*>::iterator theEntry = this->mAIScript->find(inKey);
-        if (theEntry != this->mAIScript->end())
-            theResult = theEntry->second;
-    }
-    return theResult;
+    // port (R5b.4 round 20): the script is Rust's (ee_units script.rs)
+    return reinterpret_cast<EEUnitAction*>(static_cast<uintptr_t>(
+        ee_units_script_find(reinterpret_cast<uintptr_t>(this->mAIScript), (int32_t)inKey)));
 }
 
 // FUNCTION: EXE 0x6364f3

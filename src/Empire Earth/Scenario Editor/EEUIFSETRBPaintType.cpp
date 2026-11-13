@@ -114,7 +114,9 @@
 #include "ee/EEMouse.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "lle/UISlider.h"
-#include "ee/EESEEGameUnitLimit.h"
+#include "ee/EEUIFSEMap.h"
+#include "ee/EESEUnit.h"
+#include "ee/EETechTreeTechID.h"
 #include "lle/UIEditBox.h"
 #include <string.h>
 
@@ -124,9 +126,13 @@
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
 #include "lle/UICheckBox.h"
-#include "ee/EESEEHideUI.h"
-#include "ee/EESEEQuickLoad.h"
-#include "ee/EESEEQuickSave.h"
+#include "lle/UILBString.h"
+#include "lle/UIComboBox.h"
+#include "lle/UITextLabel.h"
+#include "ee/EESETSEScenarioComboBox.h"
+#include "ee/EESETSEffectType.h"
+#include "ee/EESETSETAI.h"
+#include "ee/EESETSETMedia.h"
 #include "ee/EEAQuickSaveLoad.h"
 #include "ee/EEStringIDs.h"
 // 0x1ac48b..0x1af2a9 (the EEUIFSETRBPaintType ctor, EEUIFSETerrain's members and the unit's template COMDATs)
@@ -135,58 +141,157 @@
 
 // FUNCTION: EXE 0x5af47b
 // Shows the unit limit per player (slider value / non-gaia players) and updates the slider's own label
-long EESEEGameUnitLimit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UITextLabel* theLabel = static_cast<UITextLabel*>(inForm->GetControlById(kSERBUnitTypesPerPlayerCountLabel));
-    UISlider* theSlider = static_cast<UISlider*>(inEntity);
-    unsigned long thePlayerCount = gWorld.mMaxPlayers - 1;
-    theLabel->SetText((unsigned long)theSlider->GetCurrentRangeValue() / thePlayerCount);
-    return UIESliderChange::ProcessEvent(inForm, inEntity);
-}
+// (EESEEGameUnitLimit; ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x5af4c1
-// Posts a viewport change to the full view or the framed view, as the hide-UI check box is checked or not
-long EESEEHideUI::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UICheckBox* theBox = static_cast<UICheckBox*>(inEntity);
-    GERectangle theRectangle;
-    if (theBox->GetIsChecked())
-        theRectangle = this->mR1C;
-    else
-        theRectangle = this->mR0C;
-    UIEvent* theEvent = new EESEEChangeViewport(theRectangle, theBox->GetIsChecked());
-    long theResult = gUserInterface->PostEvent(theEvent, NULL);
-    theEvent->Dereference();
-    return theResult;
-}
+// (EESEEHideUI::ProcessEvent: ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x5af55a
-// Sets the scenario editor's game view rectangle and UI visibility, then redraws everything
-long EESEEChangeViewport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (gUIManager->mScenarioEditorForm != NULL) {
-        gUIManager->mScenarioEditorForm->SetGameView(this->mRectangle, this->mHidden == false);
-        gUIManager->RedrawAll();
-    }
-    return kErrorOK;
-}
+// (EESEEChangeViewport::ProcessEvent: ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x5af58e
-// Asks the editor to show the quick-loaded scenario
-long EESEEQuickLoad::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->PostShowLoadedObject(this->mOwner);
-    return kErrorOK;
-}
+// (EESEEQuickLoad::ProcessEvent: ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x5af874
-// Posts a quick save of the scenario
-long EESEEQuickSave::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+// (EESEEQuickSave::ProcessEvent: ee_screens editor_events.rs)
+
+// The host of the editor form's events whole in Rust (EE_SCREENS_SEE_OP_*; EESEERust in ee/EESEARust.h)
+void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);   // EESEEvents.cpp
+void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, bool inAreas);   // EESETSETPlayer.cpp
+
+static_assert(kSEEHideUI == EE_SCREENS_SEE_HIDE_UI && kSEEChangeViewport == EE_SCREENS_SEE_CHANGE_VIEWPORT &&
+                  kSEEQuickLoad == EE_SCREENS_SEE_QUICK_LOAD && kSEEQuickSave == EE_SCREENS_SEE_QUICK_SAVE &&
+                  kSEESliderChange == EE_SCREENS_SEE_SLIDER_CHANGE && kSEECheckDisplay == EE_SCREENS_SEE_CHECK_DISPLAY &&
+                  kSEEUseObjectArea == EE_SCREENS_SEE_USE_OBJECT_AREA &&
+                  kSEECAMGModifyObject == EE_SCREENS_SEE_CAMG_MODIFY_OBJECT &&
+                  kSEEMSDCameraScroll == EE_SCREENS_SEE_MSD_CAMERA_SCROLL && kSEESAAAttribute == EE_SCREENS_SEE_SAA_ATTRIBUTE &&
+                  kSEEUseAreaObject == EE_SCREENS_SEE_USE_AREA_OBJECT && kSEEFaceAreaObject == EE_SCREENS_SEE_FACE_AREA_OBJECT &&
+                  kSEEMapType == EE_SCREENS_SEE_MAP_TYPE && kSEESortUnitList == EE_SCREENS_SEE_SORT_UNIT_LIST &&
+                  kSEEStartEpoch == EE_SCREENS_SEE_START_EPOCH && kSEEUnitLimit == EE_SCREENS_SEE_UNIT_LIMIT &&
+                  EE_SCREENS_SEE_PER_PLAYER_LABEL_ID == kSERBUnitTypesPerPlayerCountLabel,
+              "ee/EESEARust.h's event kinds");
+
+// p: three pointers, i: four integers, f: four floats (EE_SCREENS_SEE_OP_*)
+extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int32_t* i, float* f)
 {
-    EEAction* theAction = new EESEARust(kSEAQuickSave, static_cast<EEAction*>(this->mOwner));
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
-    return kErrorOK;
+    void* p = inPointers[0];
+    void* q = inPointers[1];
+    void* r = inPointers[2];
+    switch (inOp) {
+    case EE_SCREENS_SEE_OP_REFERENCE:
+        static_cast<EEAction*>(p)->Reference();
+        break;
+    case EE_SCREENS_SEE_OP_DEREFERENCE:
+        static_cast<EEAction*>(p)->Dereference();
+        break;
+    case EE_SCREENS_SEE_OP_CHECKED:
+        return static_cast<UICheckBox*>(static_cast<UIEntity*>(p))->GetIsChecked() ? 1 : 0;
+    case EE_SCREENS_SEE_OP_POST_VIEWPORT: {
+        EESEERust* theEvent = new EESEERust(kSEEChangeViewport);
+        ee_screens_see_viewport(theEvent->mEvent, f, i[0] != 0 ? 1 : 0);
+        long theResult = gUserInterface->PostEvent(theEvent, NULL);
+        theEvent->Dereference();
+        return (int32_t)theResult;
+    }
+    case EE_SCREENS_SEE_OP_HAS_EDITOR:
+        return gUIManager->mScenarioEditorForm != NULL;
+    case EE_SCREENS_SEE_OP_SET_GAME_VIEW:
+        gUIManager->mScenarioEditorForm->SetGameView(GERectangle(f[0], f[1], f[2], f[3]), i[0] != 0);
+        break;
+    case EE_SCREENS_SEE_OP_REDRAW_ALL:
+        gUIManager->RedrawAll();
+        break;
+    case EE_SCREENS_SEE_OP_SHOW_LOADED:
+        gUIManager->mScenarioEditorForm->PostShowLoadedObject(static_cast<EEAction*>(p));
+        break;
+    case EE_SCREENS_SEE_OP_QUICK_SAVE: {
+        EEAction* theAction = new EESEARust(kSEAQuickSave, static_cast<EEAction*>(p));
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        break;
+    }
+    case EE_SCREENS_SEE_OP_RANGE:
+        return (int32_t)static_cast<UISlider*>(static_cast<UIEntity*>(p))->GetCurrentRangeValue();
+    case EE_SCREENS_SEE_OP_SLIDER_TEXT: {
+        // the original's sprintf of its UWideString format: the float value passed as a double through `...`
+        UWideString theText;
+        sprintf(theText, static_cast<const char*>(q), (double)f[0]);
+        static_cast<UITextLabel*>(p)->SetText(theText);
+        break;
+    }
+    case EE_SCREENS_SEE_OP_SET_DISPLAY:
+        static_cast<UIControl*>(p)->SetDisplayMode((unsigned long)i[0]);
+        break;
+    case EE_SCREENS_SEE_OP_FILL_SCENARIO:
+        FillScenarioComboBox(static_cast<EESETSEScenarioComboBox*>(p), static_cast<UITextLabel*>(q), i[0] != 0);
+        break;
+    case EE_SCREENS_SEE_OP_SET_SELECTION:
+        static_cast<UIComboBox*>(static_cast<EESETSEScenarioComboBox*>(p))->SetCurrentSelection((unsigned long)i[0]);
+        break;
+    case EE_SCREENS_SEE_OP_ENTITY_ID:
+        return (int32_t)static_cast<UIControl*>(static_cast<UIEntity*>(p))->GetId();
+    case EE_SCREENS_SEE_OP_LIST_SELECTION: {
+        unsigned long theSelection;
+        return static_cast<UILBString*>(static_cast<UIEntity*>(p))->GetCurrentSelection(theSelection) == kErrorOK
+                   ? (int32_t)theSelection
+                   : -1;
+    }
+    case EE_SCREENS_SEE_OP_CAMG_ADD:
+        static_cast<EESETSETCreateAIMilitaryGroup*>(p)->AddObject((unsigned long)i[0], static_cast<UILBString*>(q),
+                                                                  static_cast<UILBString*>(r));
+        break;
+    case EE_SCREENS_SEE_OP_CAMG_REMOVE:
+        static_cast<EESETSETCreateAIMilitaryGroup*>(p)->RemoveObject((unsigned long)i[0], static_cast<UILBString*>(q),
+                                                                     static_cast<UILBString*>(r));
+        break;
+    case EE_SCREENS_SEE_OP_MSD_SHOW:
+        static_cast<EESETSETMediaSendDialog*>(p)->ShowCameraScrollSpeed(static_cast<EESETSEffectControls*>(q));
+        break;
+    case EE_SCREENS_SEE_OP_COMBO_SELECTION: {
+        unsigned long theSelection;
+        return static_cast<UIComboBox*>(static_cast<UIEntity*>(p))->GetCurrentSelection(theSelection) == kErrorOK
+                   ? (int32_t)theSelection
+                   : -1;
+    }
+    case EE_SCREENS_SEE_OP_SAA_SHOW:
+        static_cast<EESETSETSetAIAttribute*>(p)->ShowAttributeRanges((unsigned long)i[0],
+                                                                     static_cast<EESETSEffectControls*>(q));
+        break;
+    case EE_SCREENS_SEE_OP_FILL_AREA_OBJECT: {
+        UIForm* theForm = static_cast<UIForm*>(p);
+        FillAreaObjectComboBox(static_cast<UITextLabel*>(theForm->GetControlById(i[0])),
+                               static_cast<EESETSEScenarioComboBox*>(theForm->GetControlById(i[1])), i[2] != 0);
+        break;
+    }
+    case EE_SCREENS_SEE_OP_MAP_ELEVATION:
+        static_cast<EEUIFSEMap*>(p)->ShowElevationControls(i[0] != 0);
+        break;
+    case EE_SCREENS_SEE_OP_REFRESH_UNIT_LIST:
+        ((EESEUnit*)(static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p)))->mTabGroups[kEditorTabUnits])
+            ->RefreshUnitList();
+        break;
+    case EE_SCREENS_SEE_OP_EPOCH_COUNT:
+        return (int32_t)EEEpochCount();
+    case EE_SCREENS_SEE_OP_LINE_COUNT:
+        return (int32_t)static_cast<UIComboBox*>(p)->GetListBox()->GetLineCount();
+    case EE_SCREENS_SEE_OP_FILL_EPOCHS: {
+        UWideString theText;
+        std::vector<UWideString> theNames;
+        for (unsigned long k = (unsigned long)i[0]; k < (unsigned long)EEEpochCount(); k++) {
+            gResource->GetString(EEEpochTitleID(k), theText);
+            theNames.push_back(theText);
+        }
+        static_cast<UIComboBox*>(p)->DeleteAllEntries();
+        static_cast<UIComboBox*>(p)->AppendStringArray(theNames);
+        break;
+    }
+    case EE_SCREENS_SEE_OP_MAX_PLAYERS:
+        return (int32_t)gWorld.mMaxPlayers;
+    case EE_SCREENS_SEE_OP_LABEL_NUMBER:
+        static_cast<UITextLabel*>(static_cast<UIForm*>(p)->GetControlById(i[0]))->SetText((unsigned long)(uint32_t)i[1]);
+        break;
+    }
+    return 0;
 }
 
 // FUNCTION: EXE 0x5af8ad

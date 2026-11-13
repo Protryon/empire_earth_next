@@ -137,10 +137,6 @@ static unsigned long sL52908C;              // 0x52908c (the frame counter; prov
 EERenderUnit* gU529044;                     // 0x529044 (the picked enemy's render unit: FillUnit; EEROUnits.cpp reads it; provisional name)
 static const float kEERenderObject_F441350 = 0.35f;   // 0x441350 (the see-through opacity)
 // 0x44136c (0.5, the near fade's depth): ee_gfx view.rs NEAR_FADE_DEPTH
-static const float kEERenderObject_F441358 = 0.6f;    // 0x441358 (the second light set's ambient scale)
-static const float kEERenderObject_F44135C = 10.0f;   // 0x44135c (its light's z scale)
-static const float kEERenderObject_F441364 = 4.0f;    // 0x441364 (the fog band)
-static const float kEERenderObject_F441368 = 4.0f;    // 0x441368
 // SYNTHETIC: EXE 0x50ace6   (wrapper)
 
 // SYNTHETIC: EXE 0x50acf0   (ctor)
@@ -387,102 +383,64 @@ void EEStartLetterboxIn(unsigned long inFrames)
 // view; a unit whose footprint spans several tiles counts once (ioDrawn)
 bool EERenderObject::IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit*>& ioDrawn)
 {
-    GEPhysicalModel theModel;
-    GETransformation theTransformation(false);
-    GETerrainMesh* theMesh = &gWorld.mMap->mTerrainMesh;
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    float theX;
-    float theY;
-    float theZ;
-    bool theResult = true;
-    bool theOwnedTarget;
-    if (inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0 && theComplexUnit != NULL && inUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen
-        && inUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen && inUnit->mPlayer->GetPlayerID() == 0)
-        theOwnedTarget = true;
-    else
-        theOwnedTarget = false;
-    if ((inTile->IsSeenBy(thePlayer) || theOwnedTarget || gFreeCamera) && theStats->GetScale() != 0.0f) {
-        EEUnitClass* theClass = inUnit->mUnitClass;
-        if (!theClass->mIsTree && theClass->GetUnitType() != kUnitTypePathPoint) {
-            if (EERenderLists::sInstance.mRenderUnitCount < 0x200
-                && (theComplexUnit == NULL
-                    || (theComplexUnit->mCommand == NULL ? 0 : theComplexUnit->mCommand->mType) != kActionDead)) {
-                if (theClass->GetTileSize() > 1) {
-                    theResult = false;
-                    if (ioDrawn.find(inUnit) != ioDrawn.end())
-                        return theResult;
-                    ioDrawn.insert(inUnit);
-                    theResult = true;
-                }
-                if (theComplexUnit != NULL) {
-                    if (theComplexUnit->mUnitClass->mCategory != kUnitCategoryGate) {
-                        theResult = theComplexUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView);
-                        if (!theResult)
-                            return theResult;
-                    }
-                    if (!gFreeCamera) {
-                        if (theComplexUnit->mUnitClass->GetUnitType() == kUnitTypePathPoint) {
-                            if (inUnit->mPlayer == thePlayer && inUnit->Fn27C0B4())
-                                theResult = true;
-                            else
-                                theResult = false;
-                        } else if (theComplexUnit->IsFoundation()) {
-                            theResult = inUnit->mPlayer == thePlayer;
-                        } else if (theComplexUnit->mUnitClass->mIsFlare) {
-                            theResult = false;
-                        }
-                    }
-                } else {
-                    float theHalf = theClass->GetTileSize() * 0.5f;
-                    theX = inUnit->mTileX + theHalf;
-                    theY = inUnit->mTileY + theHalf;
-                    theZ = theMesh->GetMeshZ(theX, theY);
-                    theTransformation.SetOrientationYPR(gRenderEnvironment.mCameraYaw, 0.0f, 0.0f);
-                    theTransformation.SetPosition(theX, theY, theZ);
-                    theTransformation.SetElement(3, 0, 0.0f);
-                    theTransformation.SetElement(3, 1, 0.0f);
-                    theTransformation.SetElement(3, 2, 0.0f);
-                    theTransformation.SetElement(3, 3, 1.0f);
-                    theModel.SetModel(inUnit->GetModel()->mModels[0]);
-                    theModel.SetFrame(0);
-                    theModel.SetLocationAndScale(theTransformation, theStats->GetScale());
-                    theResult = theModel.Intersects(gViewport, gOrthographicView);
-                    if (theResult) {
-                        if (inUnit->IsPathMarker() && inUnit->mPlayer != thePlayer)
-                            theResult = false;
-                        else
-                            theResult = true;
-                    }
-                }
-            } else {
-                theResult = false;
-            }
-        } else if (theClass->mIsTree && EERenderLists::sInstance.mRenderShadowCount < 0x600) {
-            long theID = inUnit->GetUnitID();
-            long theSize = theClass->GetTileSize();
-            float theHalf = theSize * 0.5f;
-            theX = ((theID % 3 - 1) * theSize) * 0.125f + inUnit->mTileX + theHalf;
-            theY = ((theID / 3 % 3 - 1) * theSize) * 0.125f + inUnit->mTileY + theHalf;
-            theZ = theMesh->GetMeshZ(theX, theY);
+    // the decisions are ee_gfx walk.rs's (RUST_PLAN R4.4); the drawn set and the view tests are answered here
+    struct Ask {
+        EEUnit* mUnit;
+        std::set<EEUnit*>* mDrawn;
+        static bool First(void* inAsk) { return static_cast<Ask*>(inAsk)->mDrawn->insert(static_cast<Ask*>(inAsk)->mUnit).second; }
+        static bool Complex(void* inAsk)
+        {
+            return static_cast<Ask*>(inAsk)->mUnit->mComplexUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView);
+        }
+        static bool Model(void* inAsk, float inX, float inY)
+        {
+            EEUnit* theUnit = static_cast<Ask*>(inAsk)->mUnit;
+            GEPhysicalModel theModel;
+            GETransformation theTransformation(false);
+            float theZ = gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY);
             theTransformation.SetOrientationYPR(gRenderEnvironment.mCameraYaw, 0.0f, 0.0f);
-            theTransformation.SetPosition(theX, theY, theZ);
+            theTransformation.SetPosition(inX, inY, theZ);
             theTransformation.SetElement(3, 0, 0.0f);
             theTransformation.SetElement(3, 1, 0.0f);
             theTransformation.SetElement(3, 2, 0.0f);
             theTransformation.SetElement(3, 3, 1.0f);
-            theModel.SetModel(inUnit->GetModel()->mModels[0]);
+            theModel.SetModel(theUnit->GetModel()->mModels[0]);
             theModel.SetFrame(0);
-            theModel.SetLocationAndScale(theTransformation, theStats->GetScale());
-            theResult = theModel.Intersects(gViewport, gOrthographicView);
-        } else {
-            theResult = false;
+            theModel.SetLocationAndScale(theTransformation, theUnit->mStats->GetScale());
+            return theModel.Intersects(gViewport, gOrthographicView);
         }
-    } else {
-        theResult = false;
+    } theAsk = {inUnit, &ioDrawn};
+    EEComplexUnit* theComplex = inUnit->mComplexUnit;
+    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+    EEUnitClass* theClass = inUnit->mUnitClass;
+    EeGfxUnitFacts theFacts = {};
+    theFacts.food = inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0;
+    theFacts.has_complex = theComplex != NULL;
+    theFacts.category = theClass->mCategory;
+    theFacts.owner_id = inUnit->mPlayer->GetPlayerID();
+    theFacts.seen = inTile->IsSeenBy(thePlayer);
+    theFacts.free_camera = gFreeCamera;
+    theFacts.scale = inUnit->mStats->GetScale();
+    theFacts.is_tree = theClass->mIsTree;
+    theFacts.unit_type = theClass->GetUnitType();
+    theFacts.unit_count = EERenderLists::sInstance.mRenderUnitCount;
+    theFacts.object_count = EERenderLists::sInstance.mRenderShadowCount;
+    theFacts.tile_size = theClass->GetTileSize();
+    theFacts.mine = inUnit->mPlayer == thePlayer;
+    theFacts.marker_shown = inUnit->Fn27C0B4();
+    theFacts.path_marker = inUnit->IsPathMarker();
+    theFacts.id = inUnit->GetUnitID();
+    theFacts.tile_x = inUnit->mTileX;
+    theFacts.tile_y = inUnit->mTileY;
+    if (theComplex != NULL) {
+        theFacts.dead = theComplex->mCommand != NULL && theComplex->mCommand->mType == kActionDead;
+        theFacts.complex_gate = theComplex->mUnitClass->mCategory == kUnitCategoryGate;
+        theFacts.complex_path_point = theComplex->mUnitClass->GetUnitType() == kUnitTypePathPoint;
+        theFacts.complex_flare = theComplex->mUnitClass->mIsFlare;
+        theFacts.foundation = theComplex->IsFoundation();
     }
-    return theResult;
+    EeGfxDrawnHost theHost = {&theAsk, Ask::First, Ask::Complex, Ask::Model};
+    return ee_gfx_capture_unit_drawn(&theFacts, &theHost);
 }
 
 // FUNCTION: EXE 0x50b7e1
@@ -1061,9 +1019,9 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
     long theTileY = inUnit->mTileY;
     GEVector theUp(0.0f, 1.0f, 0.0f);
     GEVector theForward;
-    bool theFogged = inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0 && theComplex != NULL
-                     && inUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen && inUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen
-                     && inUnit->GetPlayer()->GetPlayerID() == 0;
+    bool theFogged = ee_gfx_capture_owned_food(inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0,
+                                               theComplex != NULL, inUnit->mUnitClass->mCategory,
+                                               inUnit->GetPlayer()->GetPlayerID());
     if (theComplex != NULL) {
         if (ioInfo.mAmbient)
             gAmbientSoundManager.mAnalyzer.CountUnit(theComplex);
@@ -1243,24 +1201,8 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
                 thePoint = theWaypoint->mLocation;
                 if (theMesh->GetIsValidTile(UMFloor(thePoint.GetX()), UMFloor(thePoint.GetY())))
                     thePoint.SetZ(theMesh->GetMeshZ(thePoint.GetX(), thePoint.GetY()));
-                unsigned long theID = theCarrier->GetUnitID() & 0xffffff;
-                switch (theID % 3) {
-                case 0:
-                    outUnit->mTintColor.mRed = theID % 6 / 5.0f;
-                    outUnit->mTintColor.mGreen = ((theCarrier->GetUnitID() & 0xffffff) + 1) / 5.0f;
-                    outUnit->mTintColor.mBlue = ((theCarrier->GetUnitID() & 0xffffff) + 2) / 5.0f;
-                    break;
-                case 1:
-                    outUnit->mTintColor.mRed = (theID + 1) / 5.0f;
-                    outUnit->mTintColor.mGreen = (theCarrier->GetUnitID() & 0xffffff) % 6 / 5.0f;
-                    outUnit->mTintColor.mBlue = ((theCarrier->GetUnitID() & 0xffffff) + 2) / 5.0f;
-                    break;
-                case 2:
-                    outUnit->mTintColor.mRed = (theID + 2) / 5.0f;
-                    outUnit->mTintColor.mGreen = ((theCarrier->GetUnitID() & 0xffffff) + 1) / 5.0f;
-                    outUnit->mTintColor.mBlue = (theCarrier->GetUnitID() & 0xffffff) % 6 / 5.0f;
-                    break;
-                }
+                EeGfxColor theTint = ee_gfx_capture_waypoint_tint((int32_t)theCarrier->GetUnitID());
+                outUnit->mTintColor = GEColor(theTint.red, theTint.green, theTint.blue);
             }
         }
         inUnit->mUnitClass->GroundLocation(thePoint);
@@ -1504,33 +1446,8 @@ void EERenderObject::FillRenderLists()
         gB529068 = true;
         if (gMusicFollowsBattle && theTime - sU529090 >= 0xfa) {
             sU529090 = theTime;
-            float theAverage = theCount != 0.0f ? theInfo.mNumFightingUnits / theCount : 0.0f;
-            unsigned long theIntensity;
-            switch (gMusicManager->mIntensity) {
-            case 3:
-                if (theAverage < -0.0001f || theAverage > 0.0001f)
-                    theIntensity = 3;
-                else
-                    theIntensity = 1;
-                break;
-            case 2:
-                if (theAverage < -0.0001f || theAverage > 0.0001f)
-                    theIntensity = theAverage >= 0.65f ? 3 : 2;
-                else
-                    theIntensity = 1;
-                break;
-            case 0:
-            case 1:
-                if (theAverage < -0.0001f || theAverage > 0.0001f)
-                    theIntensity = theAverage < 0.5f ? 2 : 3;
-                else
-                    theIntensity = 1;
-                break;
-            default:
-                theIntensity = 1;
-                break;
-            }
-            gMusicManager->SetIntensity(theIntensity);
+            gMusicManager->SetIntensity(ee_gfx_capture_music_intensity((uint32_t)gMusicManager->mIntensity,
+                                                                       theInfo.mNumFightingUnits, theCount));
         }
         if (theInfo.mAmbient)
             gAmbientSoundManager.Update();
@@ -1638,167 +1555,152 @@ bool EERenderObject::GetUnitOpacity(EEUnit* inUnit, float& outOpacity)
     return theResult;
 }
 
-// FUNCTION: EXE 0x50f60f
-// Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance
-// (off in the orthographic view)
-void SetSceneFog()
+// The lighting set-ups below: their rasterizer calls are ee_gfx lighting.rs's (RUST_PLAN R4.4), applied in order
+static void ApplyLighting(EeGfxLighting inKind)
 {
-    GEColor theColor;
-    theColor.SetRed(gU4E9220.GetRed() * sLightFade);
-    theColor.SetGreen(gU4E9220.GetGreen() * sLightFade);
-    theColor.SetBlue(gU4E9220.GetBlue() * sLightFade);
+    EeGfxLightingInputs theIn;
+    EeGfxColor* theColors[] = {&theIn.fog_color, &theIn.prelit, &theIn.dim_prelit, &theIn.cloud, &theIn.terrain_ambient,
+                                     &theIn.terrain_light, &theIn.unit_ambient, &theIn.unit_light};
+    const GEColor* theSources[] = {&gU4E9220, &gRenderEnvironment.mPrelitColor, &gRenderEnvironment.mDimPrelitColor,
+                                   &gRenderEnvironment.mColor54, &gRenderEnvironment.mTerrainAmbientColor,
+                                   &gRenderEnvironment.mTerrainLightColor, &gRenderEnvironment.mUnitAmbientColor,
+                                   &gRenderEnvironment.mUnitLightColor};
+    for (int i = 0; i < 8; i++)
+        *theColors[i] = EeGfxColor{theSources[i]->mRed, theSources[i]->mGreen, theSources[i]->mBlue};
+    theIn.light_fade = sLightFade;
+    theIn.orthographic = gOrthographicView;
+    theIn.unit_lighting = gUnitLighting;
+    theIn.rear_clipping = gViewport.GetRearClippingDistance();
+    theIn.zoom_lock = gZoomLock;
+    theIn.terrain_ambient_intensity = gRenderEnvironment.mTerrainAmbientIntensity;
+    theIn.terrain_light_intensity = gRenderEnvironment.mTerrainLightIntensity;
+    theIn.unit_ambient_intensity = gRenderEnvironment.mUnitAmbientIntensity;
+    theIn.unit_light_intensity = gRenderEnvironment.mUnitLightIntensity;
+    theIn.sun = EeGeVector{gU4E9210.mX, gU4E9210.mY, gU4E9210.mZ};
+    EeGfxRasterOps theOps = ee_gfx_lighting(inKind, &theIn);
     unsigned long theScreen = gScreenIndex;
-    if (!gOrthographicView) {
-        gRasterizer->SetFog(1, theScreen);
-        gRasterizer->SetFogColor(theColor, theScreen);
-        gRasterizer->SetFogRange(gViewport.GetRearClippingDistance()
-                                 - (kEERenderObject_F441364 * gZoomLock + kEERenderObject_F441368),
-                                 gViewport.GetRearClippingDistance(), theScreen);
-        gRasterizer->SetFogType(1, theScreen);
-    } else {
-        gRasterizer->SetFog(0, theScreen);
+    for (uint32_t i = 0; i < theOps.count; i++) {
+        const EeGfxRasterOp& theOp = theOps.ops[i];
+        GEColor theColor(theOp.f[0], theOp.f[1], theOp.f[2]);
+        switch (theOp.kind) {
+        case EeGfxRasterOpKind::Fog: gRasterizer->SetFog(theOp.value, theScreen); break;
+        case EeGfxRasterOpKind::FogColor: gRasterizer->SetFogColor(theColor, theScreen); break;
+        case EeGfxRasterOpKind::FogRange: gRasterizer->SetFogRange(theOp.f[0], theOp.f[1], theScreen); break;
+        case EeGfxRasterOpKind::FogType: gRasterizer->SetFogType(theOp.value, theScreen); break;
+        case EeGfxRasterOpKind::AmbientColor: gRasterizer->SetAmbientColor(theColor, theScreen); break;
+        case EeGfxRasterOpKind::AmbientIntensity: gRasterizer->SetAmbientIntensity(theOp.f[0], theScreen); break;
+        case EeGfxRasterOpKind::RemoveLights: gRasterizer->RemoveAllLights(theScreen); break;
+        case EeGfxRasterOpKind::Lighting: gRasterizer->SetLighting(theOp.value, theScreen); break;
+        case EeGfxRasterOpKind::LightColor: gU4E9198.SetColor(theColor); break;
+        case EeGfxRasterOpKind::LightIntensity: gU4E9198.SetIntensity(theOp.f[0]); break;
+        case EeGfxRasterOpKind::LightDirection: gU4E9198.SetDirection(GEVector(theOp.f[0], theOp.f[1], theOp.f[2])); break;
+        case EeGfxRasterOpKind::AddLight: gRasterizer->AddLight(gU4E9198, theScreen, gU4E9190); break;
+        case EeGfxRasterOpKind::UpdateLight: gRasterizer->UpdateLight(gU4E9190, gU4E9198, theScreen); break;
+        }
     }
 }
 
+// the rasterizer as the Rust draws call it (ee_gfx raster.rs), on the current screen
+extern const EeGfxRaster gEERustRaster;
+static std::vector<float> sKeptV;      // the texture coordinates' v that model_scroll_v changed
+const EeGfxRaster gEERustRaster = {
+    [](float inValue) { gRasterizer->SetAlphaTestingRefValue(inValue, gScreenIndex); },
+    []() -> uint32_t { return gRasterizer->GetFog(gScreenIndex); },
+    [](uint32_t inState) { gRasterizer->SetFog(inState, gScreenIndex); },
+    []() { const GEColor& theColor = gRasterizer->GetAmbientColor(); return EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue}; },
+    [](EeGfxColor inColor) { gRasterizer->SetAmbientColor(GEColor(inColor.red, inColor.green, inColor.blue), gScreenIndex); },
+    [](uint32_t inMode) { gRasterizer->SetZBuffer(inMode, gScreenIndex); },
+    [](uint32_t inSource, uint32_t inDestination) { gRasterizer->SetBlending(inSource, inDestination, gScreenIndex); },
+    [](uint32_t inSource) { gRasterizer->SetShadingColorSource(inSource, gScreenIndex); },
+    [](uint32_t inState) { gRasterizer->SetAlphaTesting(inState, gScreenIndex); },
+    [](EeGfxLighting inKind) { ApplyLighting(inKind); },
+    [](const EeGe3DPoint* inLocation, uint32_t inFog) {
+        float theValue;
+        GetFogFactor(GE3DPoint(inLocation->x, inLocation->y, inLocation->z), inFog, theValue);
+        return theValue;
+    },
+    [](void* inModel, float inOpacity) { static_cast<GEModel*>(inModel)->SetOpacity(inOpacity); },
+    [](void* inModel, const EeGeTransformation* inTransformation) {
+        static_cast<GEModel*>(inModel)->SetGraphicsPostModelTransform(*reinterpret_cast<const GETransformation*>(inTransformation));
+    },
+    [](void* inModel, float inScale) { static_cast<GEModel*>(inModel)->SetGraphicsScale(inScale); },
+    [](void* inModel) { static_cast<GEModel*>(inModel)->PrepareTransforms(); },
+    [](void* inModel, float inOpacity) -> int32_t {
+        bool theSorted = gOrthographicView;
+        return gRasterizer->Draw(static_cast<GEModel*>(inModel), gScreenIndex, inOpacity, theSorted);
+    },
+    [](void* inModel, void* inTexture) {
+        static_cast<GEModel*>(inModel)->GetMaterial(0)->SetTexture(static_cast<GETexture*>(inTexture), gScreenIndex);
+    },
+    [](void* inModel, float inDelta) {
+        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
+        GETextureCoordinate theCoordinate;
+        sKeptV.clear();
+        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
+            theArray->GetTextureCoordinate(theCoordinate, i);
+            float theV = theCoordinate.GetV();
+            sKeptV.push_back(theV);
+            theV += inDelta;
+            theCoordinate.SetV(theV);
+            theArray->SetTextureCoordinate(theCoordinate, i);
+        }
+    },
+    [](void* inModel) {
+        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
+        GETextureCoordinate theCoordinate;
+        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
+            theArray->GetTextureCoordinate(theCoordinate, i);
+            theCoordinate.SetV(sKeptV[i]);
+            theArray->SetTextureCoordinate(theCoordinate, i);
+        }
+    },
+};
+
+// FUNCTION: EXE 0x50f60f
+// Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance
+// (off in the orthographic view)
+void SetSceneFog() { ApplyLighting(EeGfxLighting::SceneFog); }
+
 // FUNCTION: EXE 0x50f6c7
 // Turns the fog off
-void SetFogOff()
-{
-    gRasterizer->SetFog(0, gScreenIndex);
-}
+void SetFogOff() { ApplyLighting(EeGfxLighting::FogOff); }
 
 // FUNCTION: EXE 0x50f6de
 // Turns lighting off (no ambient light, no lights)
-void SetLightingOff()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetAmbientIntensity(0.0f, theScreen);
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(0, theScreen);
-}
+void SetLightingOff() { ApplyLighting(EeGfxLighting::Off); }
 
 // FUNCTION: EXE 0x50f71c
 // Lights with the environment's prelit colour as ambient, dimmed by the light fade, and no lights
-void SetPrelitLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetAmbientColor(gRenderEnvironment.mPrelitColor, theScreen);
-    gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-}
+void SetPrelitLighting() { ApplyLighting(EeGfxLighting::Prelit); }
 
 // FUNCTION: EXE 0x50f772
 // Lights with the environment's second ambient colour (the clouds'), dimmed by the light fade, and no lights
-void SetCloudLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetAmbientColor(gRenderEnvironment.mColor54, theScreen);
-    gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-}
+void SetCloudLighting() { ApplyLighting(EeGfxLighting::Cloud); }
 
 // FUNCTION: EXE 0x50f7c8
 // Lights with white ambient light dimmed by the light fade, and no lights
-void SetWhiteLighting()
-{
-    GEColor theWhite(1.0f, 1.0f, 1.0f);
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetAmbientColor(theWhite, theScreen);
-    gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-}
+void SetWhiteLighting() { ApplyLighting(EeGfxLighting::White); }
 
 // FUNCTION: EXE 0x50f833
 // Sets the terrain lighting: the environment's terrain ambient light and the sun light, dimmed by the fade
-void SetTerrainLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-    gRasterizer->SetAmbientColor(gRenderEnvironment.mTerrainAmbientColor, theScreen);
-    gRasterizer->SetAmbientIntensity(gRenderEnvironment.mTerrainAmbientIntensity * sLightFade, theScreen);
-    gU4E9198.SetColor(gRenderEnvironment.mTerrainLightColor);
-    gU4E9198.SetIntensity(gRenderEnvironment.mTerrainLightIntensity * sLightFade);
-    gU4E9198.SetDirection(gU4E9210);
-    gRasterizer->AddLight(gU4E9198, theScreen, gU4E9190);
-}
+void SetTerrainLighting() { ApplyLighting(EeGfxLighting::Terrain); }
 
 // FUNCTION: EXE 0x50f8de
 // Sets the map objects' lighting: unit ambient and a flattened sun light when unit lighting is on, else the
 // prelit colour at a fixed intensity
-void SetMapObjectLighting()
-{
-    GEVector theDirection = gU4E9210;
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-    if (gUnitLighting) {
-        theDirection.SetZ(gU4E9210.GetZ() * kEERenderObject_F44135C);
-        theDirection.Normalize();
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mUnitAmbientColor, theScreen);
-        gRasterizer->SetAmbientIntensity(gRenderEnvironment.mUnitAmbientIntensity * (sLightFade * kEERenderObject_F441358), theScreen);
-        gU4E9198.SetColor(gRenderEnvironment.mUnitLightColor);
-        gU4E9198.SetIntensity(gRenderEnvironment.mUnitLightIntensity * sLightFade);
-        gU4E9198.SetDirection(theDirection);
-        gRasterizer->AddLight(gU4E9198, theScreen, gU4E9190);
-    } else {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mPrelitColor, theScreen);
-        gRasterizer->SetAmbientIntensity(kEERenderObject_F441358, theScreen);
-    }
-}
+void SetMapObjectLighting() { ApplyLighting(EeGfxLighting::MapObject); }
 
 // FUNCTION: EXE 0x50fa01
 // Sets the units' lighting: unit ambient and the sun light when unit lighting is on, else the prelit colour
-void SetUnitLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-    if (gUnitLighting) {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mUnitAmbientColor, theScreen);
-        gRasterizer->SetAmbientIntensity(gRenderEnvironment.mUnitAmbientIntensity * sLightFade, theScreen);
-        gU4E9198.SetColor(gRenderEnvironment.mUnitLightColor);
-        gU4E9198.SetIntensity(gRenderEnvironment.mUnitLightIntensity * sLightFade);
-        gU4E9198.SetDirection(gU4E9210);
-        gRasterizer->AddLight(gU4E9198, theScreen, gU4E9190);
-    } else {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mPrelitColor, theScreen);
-        gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    }
-}
+void SetUnitLighting() { ApplyLighting(EeGfxLighting::Unit); }
 
 // FUNCTION: EXE 0x50fae8
 // Restores the units' lighting at full strength for a unit in view (not fogged)
-void RestoreUnitLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    if (gUnitLighting) {
-        gRasterizer->SetAmbientIntensity(gRenderEnvironment.mUnitAmbientIntensity * sLightFade, theScreen);
-        gU4E9198.SetIntensity(gRenderEnvironment.mUnitLightIntensity * sLightFade);
-        gRasterizer->UpdateLight(gU4E9190, gU4E9198, theScreen);
-    } else {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mPrelitColor, theScreen);
-        gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    }
-}
+void RestoreUnitLighting() { ApplyLighting(EeGfxLighting::RestoreUnit); }
 
 // FUNCTION: EXE 0x50fb74
 // Halves the units' lighting for a fogged unit (the dim prelit colour without unit lighting)
-void DimUnitLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    if (gUnitLighting) {
-        gRasterizer->SetAmbientIntensity(gRenderEnvironment.mUnitAmbientIntensity * sLightFade * 0.5f, theScreen);
-        gU4E9198.SetIntensity(gRenderEnvironment.mUnitLightIntensity * sLightFade * 0.5f);
-        gRasterizer->UpdateLight(gU4E9190, gU4E9198, theScreen);
-    } else {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mDimPrelitColor, theScreen);
-        gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    }
-}
+void DimUnitLighting() { ApplyLighting(EeGfxLighting::DimUnit); }
 
 // FUNCTION: EXE 0x50fc0c
 // Posts the game's render objects, the user interface's last, to the graphics thread

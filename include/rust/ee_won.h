@@ -1664,6 +1664,9 @@ constexpr static const int32_t EE_WON_REQOP_VERSION_TO = 31;
 
 constexpr static const int32_t EE_WON_REQOP_VERSION_URL = 32;
 
+/// How many op types have a completion slot (`mCompletions[61]`).
+constexpr static const size_t EE_WON_ROUTE_COMPLETIONS = 61;
+
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
 /// `WS_None`
@@ -1984,6 +1987,30 @@ constexpr static const uint8_t EE_WON_RT_ACT_USER_STATUS = 7;
 
 /// `InvalidReplyHeader()` (a group list request's reply of another kind)
 constexpr static const uint8_t EE_WON_RT_ACT_INVALID_HEADER = 8;
+
+/// No request.
+constexpr static const int32_t EE_WON_SMART_ACT_NONE = 0;
+
+/// `SendChat(text, flags, group, NULL)` (`group`: the group, or a whisper's client)
+constexpr static const int32_t EE_WON_SMART_ACT_CHAT = 1;
+
+/// `SetClientFlags(flags, value, 0, 0, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_CLIENT_FLAGS = 2;
+
+/// `InviteClient(group, client, on, text, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_INVITE = 3;
+
+/// `BecomeModerator(on, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_MODERATOR = 4;
+
+/// `MuteClient(group, on, seconds, text, client, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_MUTE = 5;
+
+/// `BanClient(group, on, seconds, text, client, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_BAN = 6;
+
+/// `BanClientByCDKeyId(group, on, seconds, text, value, NULL)`
+constexpr static const int32_t EE_WON_SMART_ACT_BAN_CDKEY = 7;
 
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
@@ -2533,6 +2560,103 @@ enum class EeWonGuiOp : uint32_t {
   TabTextIs = 480,
   /// `AddLayoutPoint((LayoutPoint*)a)`.
   TabAddLayoutPoint,
+  /// the part `a` (0 the input box, 1 the button, 2 the list box, 3 the list area) as a `Component*` (a pure read).
+  ComboPart = 490,
+  /// `mListArea->InsertString(*(const GUIString*)a, b)` (the item).
+  ComboInsertString,
+  /// `mListArea->InsertItem((TextListItem*)a, b)`.
+  ComboInsertItem,
+  /// `SmartPtr<TextListItem> held = (TextListItem*)a;` (taken and released).
+  ComboDropItem,
+  /// `mListArea->DeleteItem(a)`.
+  ComboDeleteItem,
+  /// `mListArea->RefreshItem((TextListItem*)a)`.
+  ComboRefreshItem,
+  /// `mListArea->Clear(true)`.
+  ComboListClear,
+  /// `mListArea->GetSelItem()`.
+  ComboSelItem,
+  /// `mListArea->GetItemPos((ListItem*)a)`.
+  ComboItemPos,
+  /// `mListArea->SetSelItem(a, b != 0)`.
+  ComboSetSel,
+  /// `mListBox = (Scroller*)a`.
+  ComboSetListBox,
+  /// `((Scroller*)a)->GetScrollArea()` as a `Component*`.
+  ComboBoxArea,
+  /// `mListArea->SetScroller(mListBox)`.
+  ComboSetScroller,
+  /// `mListArea->SetListFlags(a, b != 0)`.
+  ComboSetListFlags,
+  /// the list area's `a`: 0 `GetRightPad()`, 1 `GetLeftPad()`, 2 `GetTotalWidth()`, 3 `GetTotalHeight()`.
+  ComboListMetric,
+  /// `mEdit->SetText(GUIString(""), a != 0)`.
+  ComboEditClear,
+  /// `mEdit->SetText(((TextListItem*)a)->mText, true)`.
+  ComboEditItemText,
+  /// `mEdit->SetText(*(const GUIString*)a, b != 0)`.
+  ComboEditSetText,
+  /// `mEdit->SetText(mUndoStr, true)`.
+  ComboEditUndo,
+  /// `mUndoStr = mEdit->GetText()`.
+  ComboUndoSave,
+  /// `mEdit->SelectRange(a, b)`.
+  ComboEditSelect,
+  /// `mEdit->SetAllowSelection(a != 0)`.
+  ComboEditAllowSelection,
+  /// `((TextListItem*)a)->mWidth`.
+  ComboItemWidth,
+  /// `((TextListItem*)a)->mText.length()`.
+  ComboItemTextLength,
+  /// `DeliverEvent(new ComboSelChangedEvent(this, (TextListItem*)a, b != 0), false)`.
+  ComboDeliverSel,
+  /// `mListArea->GetNumItems()`.
+  ComboItemCount,
+  /// `mListArea->GetItem(a)`.
+  ComboItemAt,
+  /// `((TextListItem*)a)->mText == *(const GUIString*)b`, or the input box's text when `b` is 0 (0 or 1).
+  ComboItemTextIs,
+  /// the list box opened as a popup below the combo box (`GetRoot()->OpenPopup(PopupParams(...))`).
+  ComboOpenPopup,
+  /// `mListArea->EnsureVisible((ListItem*)a)`.
+  ComboEnsureVisible,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  ComboEventButton,
+  /// `Relayout()`.
+  ComboRelayout,
+  /// `mListBox->AddListener(NULL)`.
+  ComboUnlisten,
+  /// `((Cursor*)a)->GetComponent(*(int*)b, *(int*)c)` (the cursor's component and hot spot; a pure read).
+  RootCursorComponent = 530,
+  /// `mWindow->mIsOneComponentWindow` (0 or 1; a pure read).
+  RootOneComponentWindow,
+  /// `mWindow->mMouseX`, `mMouseY` into `*(int*)a`, `*(int*)b` (a pure read).
+  RootWindowMouse,
+  /// `mWindow->GetRect(*(WONRectangle*)a, false)` (a pure read).
+  RootWindowRect,
+  /// `mWindow->SetPosSize(a, b, -1, -1)`.
+  RootWindowSetPos,
+  /// `a->GetMouseChild()` (virtual; a pure read).
+  RootMouseChildOf,
+  /// `GetColorScheme()` (a pure read).
+  RootScheme,
+  /// the grabber `a`'s drawing state into `*(EeWonRootGrab*)b` (a pure read).
+  RootGrabberRead,
+  /// `((BackgroundGrabber*)a)->Clear()`.
+  RootGrabberClear,
+  /// `((BackgroundGrabber*)a)->Clear(); a->mBGImage = NULL;`.
+  RootGrabberDrop,
+  /// `((NativeImage*)a)->AddRef()` (an image the background map holds).
+  RootImageHold,
+  /// `((NativeImage*)a)->Release()`.
+  RootImageRelease,
+  /// `((NativeImage*)a)->mWidth`, `mHeight` into `*(int*)b`, `*(int*)c` (a pure read).
+  RootImageSize,
+  /// `((Graphics*)a)->DrawImage((NativeImage*)b, q[0], .., q[5])` with `q` the six ints at `c` (x, y, source x,
+  /// source y, width, height).
+  RootDrawImage,
+  /// `a->EnsureOnTopOf((Component*)b)` (the parent's `EnsureOnTopOf(b, a)`).
+  RootEnsureOnTop,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -2592,6 +2716,62 @@ enum class EeWonChatParserText {
   Input = 0,
   TargetName = 1,
   Text = 2,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonComboCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  GotFocus,
+  LostFocus,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  AddedToParent,
+  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
+  HandleComponentEvent,
+  /// `SetEnabled(a != 0)`.
+  SetEnabled,
+  /// `AddString(*a, b)` (`a` a `const GUIString*`): the item, or 0.
+  AddString,
+  /// `InsertItem(a, b)` (a `TextListItem*`).
+  InsertItem,
+  /// `DeleteItem(a)`.
+  DeleteItem,
+  /// `UpdateItem(a)` (a `TextListItem*`).
+  UpdateItem,
+  /// `Clear(a != 0)`.
+  Clear,
+  /// `GetSelItem()`.
+  GetSelItem,
+  /// `SetSelItem(a, b != 0)`.
+  SetSelItem,
+  /// `SetListBox(a)` (a `Scroller*` as a `Component*`).
+  SetListBox,
+  AddControls,
+  CalcListBoxSize,
+  /// `SetListBoxDimensions(a, b)`.
+  SetListBoxDimensions,
+  /// `SetListBoxWidth(a)`.
+  SetListBoxWidth,
+  /// `SetListBoxHeight(a)`.
+  SetListBoxHeight,
+  /// `SetInputBoxToListSelection(a != 0, b != 0)`.
+  SetInputBoxToListSelection,
+  /// `SetText(*a, b != 0)` (`a` a `const GUIString*`).
+  SetText,
+  /// `SetTextAndSel(*a, b != 0)`.
+  SetTextAndSel,
+  ShowList,
+  /// `SetNoType(a != 0)`.
+  SetNoType,
+  /// the field `a` (`EeWonComboField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
 };
 
 /// What an upper-cased token is in a group.
@@ -3674,6 +3854,41 @@ enum class EeWonResKind {
   Sound = 2,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonRootCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `PrePaint(*a)` (`a` the Graphics).
+  PrePaint,
+  /// `Paint(*a)`.
+  Paint,
+  MouseExit,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `KeyChar(a)` (always 1).
+  KeyChar,
+  /// `KeyDown(a)` (always 1).
+  KeyDown,
+  /// `KeyUp(a)` (always 1).
+  KeyUp,
+  /// `InvalidateRect(*a)` (a `WONRectangle*`, not changed), also Window::InvalidateRoot's union.
+  InvalidateRect,
+  /// `SetCursor(a)` (a `Cursor*`).
+  SetCursor,
+  /// `RemoveChild(a)`.
+  RemoveChild,
+  /// `AddBG(a)` (a `BackgroundGrabber*`).
+  AddBG,
+  /// the field `a` (`EeWonRootField`).
+  GetField,
+};
+
 /// The inward calls (the C++ shells' virtuals and methods).
 enum class EeWonScrollerCall : uint32_t {
   /// `MouseDown(a, b, c)`.
@@ -3705,6 +3920,33 @@ enum class EeWonScrollerCall : uint32_t {
   EnableScrollbar,
   /// `SetScrollbarConditions(a, b)` (horizontal, vertical).
   SetScrollbarConditions,
+};
+
+/// Which copy `ee_won_smart_get` makes.
+enum class EeWonSmartGet {
+  /// `GetClient(a)`
+  Client = 0,
+  /// `GetGroup(a)`
+  Group = 1,
+  /// `GetMember(a group, b client)`
+  Member = 2,
+  NextClient = 3,
+  NextGroup = 4,
+  NextMember = 5,
+  LastMember = 6,
+  LastClient = 7,
+};
+
+/// A number of the model (`ee_won_smart_number` / `ee_won_smart_set`).
+enum class EeWonSmartNumber {
+  /// `mClientId` (this client's id)
+  ClientId = 0,
+  /// `mMatchTolerance` set by `SetAllowPartialNameMatch` (1: partial names, 0: exact names only)
+  PartialNames = 1,
+  ServerWide = 2,
+  ColonEmote = 3,
+  LastError = 4,
+  LastCommand = 5,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -4182,6 +4424,30 @@ enum class EeWonTabField : uint32_t {
   UserHasInteracted,
 };
 
+/// The fields a config sets and the tests read.
+enum class EeWonComboField : uint32_t {
+  ListBoxVisible = 1,
+  NoType,
+  ShowButtonWhenDisabled,
+  ListBoxWidth,
+  ListBoxHeight,
+};
+
+/// The root's fields (for the goldens and the unit tests).
+enum class EeWonRootField : uint32_t {
+  InvalidX = 1,
+  InvalidY,
+  InvalidWidth,
+  InvalidHeight,
+  CursorComponent,
+  Dragging,
+  DragX,
+  DragY,
+  AllowDrag,
+  /// the number of queued backgrounds
+  BgCount,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -4211,6 +4477,9 @@ struct EeWonByteBuffer;
 
 /// `ChatCommandParser`'s state (see the module).
 struct EeWonChatParser;
+
+/// The Rust ComboBox.
+struct EeWonComboBox;
 
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
@@ -4299,6 +4568,12 @@ struct EeWonQueueSocket;
 /// A Rust op held by a C++ `ServerRequestOp`.
 struct EeWonReqOp;
 
+/// The Rust RootContainer.
+struct EeWonRoot;
+
+/// `RoutingConnection`'s op list, completions and steps.
+struct EeWonRouteConn;
+
 /// The Rust ScrollArea.
 struct EeWonScrollPane;
 
@@ -4307,6 +4582,12 @@ struct EeWonScrollbar;
 
 /// The Rust Scroller (and ScrollbarScroller).
 struct EeWonScroller;
+
+/// `ServerConnection`'s state and steps.
+struct EeWonServerConn;
+
+/// The model (opaque): `SmartRoutingConnection::mModel`.
+struct EeWonSmartRoute;
 
 /// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
 struct EeWonSocketOp;
@@ -5831,6 +6112,42 @@ struct EeWonResource {
   bool new_section;
 };
 
+/// What the routing connection object calls back in the C++. One static table serves every connection. Every
+/// object is passed as its `RefCount*`.
+struct EeWonRouteConnHooks {
+  /// `object->AddRef()`, `->Release()` (an op or a completion)
+  void (*add_ref)(void *object);
+  void (*release)(void *object);
+  /// an op's `Kill(true)`, `GetCompletion()` (borrowed), `SetCompletion(c)`, the virtual `GetType()`,
+  /// `mIsDerivedServerOp`
+  void (*op_kill)(void *op);
+  void *(*op_completion)(void *op);
+  void (*op_set_completion)(void *op, void *completion);
+  long (*op_type)(void *op);
+  bool (*op_derived)(void *op);
+  /// `op->HandleReply(type, msg)` over a `ReadBuffer` of the message at `pos`; a `ReadBufferException` sets
+  /// `threw` (the status is then not read)
+  int32_t (*handle_reply)(void *op,
+                          uint8_t message_type,
+                          const uint8_t *data,
+                          size_t length,
+                          size_t pos,
+                          bool *threw);
+  /// the end of a dispatched op: `SetMode(OP_MODE_BLOCK)`, then `ForceFinish(status)` (unsolicited) or
+  /// `Finish(status)`
+  void (*op_end)(void *op, bool unsolicited, long status);
+  /// `op->Complete()`
+  void (*op_complete)(void *op);
+  /// the virtual `RoutingOpCompleteHook(op)`
+  void (*complete_hook)(void *conn, void *op);
+  /// a new notification op of the kind (`EE_WON_RT_N_*`) on the connection, or for a derived server's message the
+  /// virtual `GetUnsolicitedDerivedOp(type)` (`kind` -1): one reference held for the caller, or null
+  void *(*new_unsolicited)(void *conn, int32_t kind, uint8_t message_type);
+  /// `ServerConnection::CloseHook()`, `ServerConnection::KillHook()`
+  void (*server_close_hook)(void *conn);
+  void (*server_kill_hook)(void *conn);
+};
+
 /// A request's fields from the C++ (strings as UTF-16 LE bytes).
 struct EeWonRouteRequest {
   int32_t kind;
@@ -5918,6 +6235,40 @@ struct EeWonServerPick {
   bool language;
 };
 
+/// What the connection object calls back in the C++. One static table serves every connection. Every object is
+/// passed as its `RefCount*`.
+struct EeWonServerConnHooks {
+  /// `object->AddRef()`, `->Release()` (an auth context, an op or a completion)
+  void (*add_ref)(void *object);
+  void (*release)(void *object);
+  /// an op's `GetStatus()`, `IsKilled()`, `Kill(true)`, `SetCompletion(c)`, `RunAsync(t)`, `RunBlock(t)`
+  long (*op_status)(void *op);
+  bool (*op_killed)(void *op);
+  void (*op_kill)(void *op);
+  void (*op_set_completion)(void *op, void *completion);
+  void (*op_run_async)(void *op, long timeout);
+  void (*op_run_block)(void *op, uint32_t timeout);
+  /// `completion->Complete(AsyncOpPtr(op))`
+  void (*complete)(void *completion, void *op);
+  /// `new PeerAuthOp(*address, context, type, conn, true)` (the op's reference not yet taken)
+  void *(*new_peer_auth)(void *conn, const void *address, void *context, int32_t auth);
+  /// `op->SetCompletion(new ParamCompletion(StaticConnectCallback, conn))`
+  void (*route_connect)(void *conn, void *op);
+  /// `new AsyncOp` with its completion `ParamCompletion(StaticKeepAliveCallback, conn)` (reference not taken)
+  void *(*new_keep_alive)(void *conn);
+  /// `SetRepeatCompletion(new ParamCompletion(StaticMsgCallback, conn))`, then `SetRepeatOp(new RecvMsgOp)`
+  void (*start_messages)(void *conn);
+  /// `SetRepeatCompletion(NULL)`
+  void (*stop_messages)(void *conn);
+  /// `QueueOp(new SendMsgOp(new ByteBuffer(bytes)), -1)`
+  void (*queue_message)(void *conn, const uint8_t *bytes, size_t length);
+  /// the socket's `Close()`, `GetLengthFieldSize()`, and `QueueSocket::CloseHook()`, `QueueSocket::KillHook()`
+  void (*close)(void *conn);
+  uint8_t (*length_field_size)(void *conn);
+  void (*queue_close_hook)(void *conn);
+  void (*queue_kill_hook)(void *conn);
+};
+
 /// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
 using EeWonRand = int32_t(*)(bool seed);
 
@@ -6000,6 +6351,56 @@ struct EeWonPingReply {
 
 /// `rand()` for [`ee_won_server_shuffle`].
 using EeWonDraw = int32_t(*)();
+
+/// A finished op's fields: `kind` the op type, then by type (SmartRoutingConnection.cpp's switch).
+struct EeWonSmartOp {
+  int32_t kind;
+  int32_t status;
+  uint16_t group;
+  uint16_t client;
+  uint32_t a;
+  uint32_t b;
+  uint32_t c;
+  bool has;
+  /// `text_len` `wchar_t`s
+  const void *text;
+  size_t text_len;
+  const uint8_t *data_type;
+  size_t data_type_len;
+  const uint8_t *data;
+  size_t data_len;
+};
+
+/// A record's copy for `ClientInfo` / `GroupInfo` / `MemberInfo` (`name` points into the object until its next
+/// call).
+struct EeWonSmartRecord {
+  uint16_t id;
+  uint16_t captain;
+  uint16_t max_clients;
+  uint16_t observers;
+  uint16_t member_count;
+  uint32_t flags;
+  uint32_t async_flags;
+  uint32_t cdkey;
+  uint32_t client_flags;
+  uint8_t member_flags;
+  bool has_client;
+  const uint32_t *name;
+  size_t name_len;
+};
+
+/// The request a chat input makes, for the C++ to send (`text` points into the object until its next call).
+struct EeWonSmartAction {
+  int32_t kind;
+  uint16_t group;
+  uint16_t client;
+  uint32_t flags;
+  uint32_t value;
+  uint32_t seconds;
+  bool on;
+  const uint32_t *text;
+  size_t text_len;
+};
 
 /// A C++ call on a socket (`AsyncSocket*`).
 using EeWonAsyncSocketFn = void(*)(void *socket);
@@ -6284,6 +6685,17 @@ struct EeWonItemClick {
   bool up;
   int32_t x;
   int32_t y;
+};
+
+/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
+/// map's `int` key), its image's place, its clip rectangle and its image.
+struct EeWonRootGrab {
+  int32_t need;
+  int32_t order;
+  int32_t x;
+  int32_t y;
+  EeWonRect4 clip;
+  ptrdiff_t image;
 };
 
 extern "C" {
@@ -6897,6 +7309,30 @@ bool ee_won_chatparser_handle_input(EeWonChatParser *p,
                                     bool has_clients,
                                     uint32_t wchar_size,
                                     int32_t *target);
+
+/// A new Rust ComboBox for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the combo box's.
+EeWonComboBox *ee_won_combo_new(void *component,
+                                EeWonGuiHostFn host,
+                                const EeWonContainer *ct);
+
+/// The destructor's statement (the list box's listener dropped), then the object freed.
+///
+/// # Safety
+/// `combo` came from `ee_won_combo_new` (or is NULL) and is not used again.
+void ee_won_combo_free(EeWonComboBox *combo);
+
+/// One of ComboBox's methods (`EeWonComboCall`).
+///
+/// # Safety
+/// `combo` is live; the call's arguments as documented.
+ptrdiff_t ee_won_combo_call(const EeWonComboBox *combo,
+                            EeWonComboCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 EeWonConfigLexer *ee_won_config_new();
 
@@ -12257,6 +12693,84 @@ size_t ee_won_resource_count();
 /// `out` is writable.
 bool ee_won_resource_row(size_t index, EeWonResource *out);
 
+/// A new Rust RootContainer for the C++ `component` over its container's Rust object `ct`, its calls out through
+/// `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the root's.
+EeWonRoot *ee_won_root_new(void *component,
+                           EeWonGuiHostFn host,
+                           const EeWonContainer *ct);
+
+/// The destructor's statements (the queued backgrounds' images released), then the object freed.
+///
+/// # Safety
+/// `root` came from `ee_won_root_new` (or is NULL) and is not used again.
+void ee_won_root_free(EeWonRoot *root);
+
+/// One of RootContainer's methods (`EeWonRootCall`).
+///
+/// # Safety
+/// `root` is live; the call's arguments as documented.
+ptrdiff_t ee_won_root_call(const EeWonRoot *root,
+                           EeWonRootCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new routing connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
+///
+/// # Safety
+/// `hooks` is a static table; `conn` and `lock` outlive the object.
+EeWonRouteConn *ee_won_routeconn_new(void *conn,
+                                     const EeWonRouteConnHooks *hooks,
+                                     void *lock);
+
+/// Frees the routing connection object (its references go).
+///
+/// # Safety
+/// `r` came from `ee_won_routeconn_new` and is freed once.
+void ee_won_routeconn_free(EeWonRouteConn *r);
+
+/// `mCompletions[op_type] = completion` (`op_type` -1: `mDefaultCompletion`).
+///
+/// # Safety
+/// `r` is a live routing connection object (so for every `ee_won_routeconn_` call); the objects passed are live
+/// C++ objects of the kinds named, or null where the C++ allowed it.
+void ee_won_routeconn_set_completion(const EeWonRouteConn *r,
+                                     int32_t op_type,
+                                     void *completion);
+
+/// `CalcCompletion(op)`.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`.
+void ee_won_routeconn_calc_completion(const EeWonRouteConn *r, void *op);
+
+/// `AddOp(op)`.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`.
+void ee_won_routeconn_add_op(const EeWonRouteConn *r, void *op);
+
+/// `MsgCallback(message)`: the message's bytes.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`; `data` holds `length` bytes (or is null with 0).
+void ee_won_routeconn_msg_callback(const EeWonRouteConn *r, const uint8_t *data, size_t length);
+
+/// `CloseHook`.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`.
+void ee_won_routeconn_close_hook(const EeWonRouteConn *r);
+
+/// `KillHook`.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`.
+void ee_won_routeconn_kill_hook(const EeWonRouteConn *r);
+
 /// A request's message into `sink`.
 ///
 /// # Safety
@@ -12346,6 +12860,88 @@ ptrdiff_t ee_won_scroller_call(const EeWonScroller *scroller,
                                ptrdiff_t a,
                                ptrdiff_t b,
                                ptrdiff_t c);
+
+/// A new connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
+///
+/// # Safety
+/// `hooks` is a static table; `conn` and `lock` outlive the object.
+EeWonServerConn *ee_won_servconn_new(void *conn, const EeWonServerConnHooks *hooks, void *lock);
+
+/// Frees the connection object (its references go).
+///
+/// # Safety
+/// `c` came from `ee_won_servconn_new` and is freed once.
+void ee_won_servconn_free(EeWonServerConn *c);
+
+/// `StartKeepAlive`.
+///
+/// # Safety
+/// `c` is a live connection object (so for every `ee_won_servconn_` call); the objects passed are live C++ objects
+/// of the kinds named, or null where the C++ allowed it.
+void ee_won_servconn_start_keep_alive(const EeWonServerConn *c);
+
+/// `SetAuth(context, type)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_set_auth(const EeWonServerConn *c, void *context, int32_t auth_type);
+
+/// `ConnectCallback(op)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_connect_callback(const EeWonServerConn *c, void *op);
+
+/// `KeepAliveCallback(op)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_keep_alive_callback(const EeWonServerConn *c, void *op);
+
+/// `SendNoOp`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_send_no_op(const EeWonServerConn *c);
+
+/// `SetConnectCompletion(c)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_set_connect_completion(const EeWonServerConn *c, void *completion);
+
+/// `SetKeepAlivePeriod(seconds)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_set_keep_alive_period(const EeWonServerConn *c, uint32_t seconds);
+
+/// `CloseHook`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_close_hook(const EeWonServerConn *c);
+
+/// `KillHook`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_kill_hook(const EeWonServerConn *c);
+
+/// `ConnectAsync(address, timeout)`: the peer authentication op (borrowed). `address` is the C++ `IPAddr*`, handed
+/// to `new_peer_auth` unread.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void *ee_won_servconn_connect_async(const EeWonServerConn *c,
+                                    const void *address,
+                                    long timeout);
+
+/// `ConnectBlock(address, timeout)`: the status.
+///
+/// # Safety
+/// As `ee_won_servconn_connect_async`.
+long ee_won_servconn_connect_block(const EeWonServerConn *c, const void *address, uint32_t timeout);
 
 /// A new, empty list (shuffling on).
 EeWonServerList *ee_won_ctx_new();
@@ -12537,6 +13133,160 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// # Safety
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
+
+/// A new model: the ignore file's path (`path_len` bytes), the C++'s `wchar_t` size.
+///
+/// # Safety
+/// `path` holds `path_len` bytes.
+EeWonSmartRoute *ee_won_smart_new(uint32_t wchar_size, const uint8_t *path, size_t path_len);
+
+/// # Safety
+/// `r` is from `ee_won_smart_new` (or NULL), not used afterwards.
+void ee_won_smart_free(EeWonSmartRoute *r);
+
+/// A client record of the next op (its list, or its own client).
+///
+/// # Safety
+/// `r` is a model; `name` holds `name_len` `wchar_t`s.
+void ee_won_smart_put_client(EeWonSmartRoute *r,
+                             uint16_t id,
+                             const void *name,
+                             size_t name_len,
+                             uint32_t flags,
+                             uint32_t address);
+
+/// A group record of the next op (a group list's); its members follow with `to_group`.
+///
+/// # Safety
+/// `r` is a model; `name` holds `name_len` `wchar_t`s.
+void ee_won_smart_put_group(EeWonSmartRoute *r,
+                            uint16_t id,
+                            const void *name,
+                            size_t name_len,
+                            uint16_t captain,
+                            uint16_t max_clients,
+                            uint32_t flags,
+                            uint32_t async_flags,
+                            uint16_t observers,
+                            uint16_t max_players);
+
+/// A member record of the next op: into the last group put (`to_group`), else the op's member list; its client
+/// record's name and flags when it has one.
+///
+/// # Safety
+/// `r` is a model; `name` holds `name_len` `wchar_t`s.
+void ee_won_smart_put_member(EeWonSmartRoute *r,
+                             bool to_group,
+                             uint16_t id,
+                             uint8_t flags,
+                             bool has_client,
+                             const void *name,
+                             size_t name_len,
+                             uint32_t client_flags);
+
+/// A data object of the next op (its link id and data).
+///
+/// # Safety
+/// `r` is a model; `data` holds `len` bytes.
+void ee_won_smart_put_object(EeWonSmartRoute *r, uint16_t link, const uint8_t *data, size_t len);
+
+/// `RoutingOpCompleteHook`: the model updated from the op; true when its completion is to be dropped.
+///
+/// # Safety
+/// `r` is a model; `op` points to the op's fields, whose pointers hold their lengths.
+bool ee_won_smart_op(EeWonSmartRoute *r,
+                     const EeWonSmartOp *op);
+
+/// A copy (`which`, with the ids `a` and `b`): false when there is none (`out` untouched).
+///
+/// # Safety
+/// `r` is a model, `out` a record.
+bool ee_won_smart_get(EeWonSmartRoute *r,
+                      EeWonSmartGet which,
+                      uint16_t a,
+                      uint16_t b,
+                      EeWonSmartRecord *out);
+
+/// `StartClientItr` (0), `StartGroupItr` (1) or `StartMemberItr(group)` (2: false when there is no such group).
+///
+/// # Safety
+/// `r` is a model.
+bool ee_won_smart_start(EeWonSmartRoute *r,
+                        int32_t which,
+                        uint16_t group);
+
+/// `FindClient(name)`: the match (`MatchResult`), and the client it set in `out` (`found`).
+///
+/// # Safety
+/// `r` is a model, `name` holds `len` `wchar_t`s, `out` and `found` are valid.
+int32_t ee_won_smart_find(EeWonSmartRoute *r,
+                          const void *name,
+                          size_t len,
+                          EeWonSmartRecord *out,
+                          bool *found);
+
+/// `IgnoreClient` of the client with an id (the ignore file saved).
+///
+/// # Safety
+/// `r` is a model.
+void ee_won_smart_ignore(EeWonSmartRoute *r, uint16_t id, bool on);
+
+/// `AddCommandString(text, command)`.
+///
+/// # Safety
+/// `r` is a model, `name` holds `len` `wchar_t`s.
+void ee_won_smart_add_command(EeWonSmartRoute *r, const void *name, size_t len, int32_t command);
+
+/// `ClearCommandStrings`.
+///
+/// # Safety
+/// `r` is a model.
+void ee_won_smart_clear_commands(EeWonSmartRoute *r);
+
+/// `SetProductName`: the ignore file's path.
+///
+/// # Safety
+/// `r` is a model, `path` holds `len` bytes.
+void ee_won_smart_set_path(EeWonSmartRoute *r, const uint8_t *path, size_t len);
+
+/// The `CloseHook`'s part: this client's id and record forgotten.
+///
+/// # Safety
+/// `r` is a model.
+void ee_won_smart_close(EeWonSmartRoute *r);
+
+/// A number (see [`EeWonSmartNumber`]).
+///
+/// # Safety
+/// `r` is a model.
+int64_t ee_won_smart_number(EeWonSmartRoute *r, EeWonSmartNumber which);
+
+/// Sets a setting (`PartialNames`, `ServerWide`, `ColonEmote`; the others are read only).
+///
+/// # Safety
+/// `r` is a model.
+void ee_won_smart_set(EeWonSmartRoute *r, EeWonSmartNumber which, int64_t value);
+
+/// `HandleInput(text, group)`: true when the input made its request, which `action` describes for the C++ to send.
+///
+/// # Safety
+/// `r` is a model, `text` holds `len` `wchar_t`s, `action` is valid.
+bool ee_won_smart_input(EeWonSmartRoute *r,
+                        const void *text,
+                        size_t len,
+                        int32_t group,
+                        EeWonSmartAction *action);
+
+/// The golden's dump (won_smartroute_test): `what` 0 the model's lines (`flag`: with the async flags), 1 the
+/// commands, 2 the input state (`flag`: with the command); the lines joined with '\n' into the sink.
+///
+/// # Safety
+/// `r` is a model, `sink` a byte sink.
+void ee_won_smart_dump(EeWonSmartRoute *r,
+                       int32_t what,
+                       bool flag,
+                       EeWonByteSink sink,
+                       void *context);
 
 /// A new socket object for the C++ `socket` (the hooks get it), with its own lock.
 ///
