@@ -1242,6 +1242,9 @@ constexpr static const int32_t EE_WON_HTTPDOC_MODIFIED = 7;
 /// `GetDocumentPath(owner)` (bytes)
 constexpr static const int32_t EE_WON_HTTPDOC_PATH = 8;
 
+/// `GetDocument(owner)`: the cache file's bytes as of now, NUL-ended (a MOTD without its flag character)
+constexpr static const int32_t EE_WON_HTTPDOC_DOCUMENT = 9;
+
 /// `SetLocalPath` / `GetLocalPath()` (bytes)
 constexpr static const int32_t EE_WON_HTTPGET_LOCAL_PATH = 1;
 
@@ -8811,18 +8814,16 @@ void ee_won_http_cache_file_name(int32_t id,
 /// `HTTPCache::WriteCacheMap`'s keep rule.
 bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
 
-/// `new GetHTTPDocumentOp(product, type)`: the document type, the product's lower-case name and the two cache
-/// files (the C++ side names them from the WON directory, as `SetDocType` did).
+/// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
+/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
 ///
 /// # Safety
 /// The texts hold their lengths' bytes.
 EeWonHostOp *ee_won_httpdoc_new(int32_t doc_type,
-                                const uint8_t *product_lower,
+                                const uint8_t *product,
                                 size_t product_len,
-                                const uint8_t *sys_doc,
-                                size_t sys_len,
-                                const uint8_t *game_doc,
-                                size_t game_len);
+                                const uint8_t *dir,
+                                size_t dir_len);
 
 /// # Safety
 /// `hooks` points to a hook table whose context outlives the connection.

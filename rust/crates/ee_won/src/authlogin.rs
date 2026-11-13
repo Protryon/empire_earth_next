@@ -315,6 +315,25 @@ fn open_c(path: &[u8]) -> Option<Box<dyn Stream>> {
     (!f.is_null()).then(|| Box::new(CFile(f)) as Box<dyn Stream>)
 }
 
+/// A file's whole bytes through `PlatFOpen(path, mode)` and `fread` (`None`: it did not open). For the other WON
+/// objects that read their files in Rust (httpdoc.rs).
+pub(crate) fn read_file(path: &[u8], mode: &std::ffi::CStr) -> Option<Vec<u8>> {
+    let p = std::ffi::CString::new(path.to_vec()).ok()?;
+    // SAFETY: two C strings
+    let f = unsafe { stdio::PlatFOpen(p.as_ptr(), mode.as_ptr()) };
+    if f.is_null() {
+        return None;
+    }
+    let mut file = CFile(f);
+    let mut out = Vec::new();
+    let mut buffer = [0u8; 1024];
+    while !file.eof() {
+        let n = file.read(&mut buffer);
+        out.extend_from_slice(&buffer[..n]);
+    }
+    Some(out)
+}
+
 /// The login data (opaque): `AuthContext::mLogin`, its own lock.
 pub struct EeWonAuthLogin(Mutex<Login>);
 

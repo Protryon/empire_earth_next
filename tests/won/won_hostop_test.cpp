@@ -2988,11 +2988,8 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     else if (inOp == 'D') {
         S.mDoc = true;
         string p = kDocProducts[(int)addr[1]];
-        string a = addr[0] < 3 ? DocPath(addr[0], addr[1], 0) : string();
-        string b = addr[0] < 3 ? DocPath(addr[0], addr[1], 1) : string();
-        r = ee_won_httpdoc_new(addr[0], reinterpret_cast<const uint8_t*>(p.data()), p.size(),
-                               reinterpret_cast<const uint8_t*>(a.data()), a.size(),
-                               reinterpret_cast<const uint8_t*>(b.data()), b.size());
+        // the WON directory: none (the cache file names are the original half's DocPath)
+        r = ee_won_httpdoc_new(addr[0], reinterpret_cast<const uint8_t*>(p.data()), p.size(), NULL, 0);
     } else if (inOp == 'H') {
         S.mHttp = true;
         if (addr[1]) {

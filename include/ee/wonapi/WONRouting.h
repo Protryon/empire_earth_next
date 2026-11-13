@@ -1776,11 +1776,13 @@ public:
     void SetBytes(int inWhich, const std::string& inBytes);
     BlockingSocket* GetHttpSocket() const;
     time_t GetHttpLastModifiedTime();
-    // GetHTTPDocumentOp(product, type) (ee_won httpdoc.rs; the type an HTTPDocType), its language and HTTP session,
-    // and GetDocument(owner): the cache file as a NUL-ended buffer, a MOTD without its leading flag character
+    // GetHTTPDocumentOp(product, type) (ee_won httpdoc.rs; the type an HTTPDocType, its files in the WON directory)
     static RustServerOp* NewHttpDocument(const std::string& inProduct, int inType);
-    void SetHttpDocConfig(const std::string& inLanguage);
-    ByteBufferPtr GetHttpDocument(int inOwner) const;
+    ByteBufferPtr GetHttpDocument(int inOwner) const // GetDocument(owner): the cache file, NUL-ended
+    {
+        std::string aBytes = this->GetBytes(EE_WON_HTTPDOC_DOCUMENT, inOwner);
+        return new ByteBuffer(aBytes.data(), (unsigned long)aBytes.size(), false);
+    }
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
