@@ -264,8 +264,8 @@ std::string GoalText(EEUnitGoal* inGoal)
     case kGoalGather:
         return "gather:" + Number(IDOf(static_cast<EEUGGather*>(inGoal)->mResource));
     case kGoalLocation:
-        return "location:" + Point(static_cast<EEUGLocation*>(inGoal)->mLocation.GetX(),
-                                   static_cast<EEUGLocation*>(inGoal)->mLocation.GetY());
+        return "location:" + Point(static_cast<EEUGLocation*>(inGoal)->GetLocation().GetX(),
+                                   static_cast<EEUGLocation*>(inGoal)->GetLocation().GetY());
     case kGoalAttackUnit:
         return "attack:" + Number(IDOf(static_cast<EEUGAttackUnit*>(inGoal)->mTarget));
     case kGoalAttackGround:
@@ -350,8 +350,8 @@ void JudgeGather(OrderState& ioState)
             Judge(theRow, theOK, "gather:" + Number(ioState.mTarget), theGot);
         } else {
             bool theOK = theGoal != NULL && theGoal->mKind == kGoalLocation
-                && static_cast<EEUGLocation*>(theGoal)->mLocation.GetX() == (float)theX
-                && static_cast<EEUGLocation*>(theGoal)->mLocation.GetY() == (float)theY;
+                && static_cast<EEUGLocation*>(theGoal)->GetLocation().GetX() == (float)theX
+                && static_cast<EEUGLocation*>(theGoal)->GetLocation().GetY() == (float)theY;
             Judge(theRow, theOK, "location:" + Point((float)theX, (float)theY), theGot);
         }
     }
@@ -426,8 +426,8 @@ void JudgePatrol(OrderState& ioState)
             float theX = thePoint->mPhysicalModel.GetLocation().GetX();
             float theY = thePoint->mPhysicalModel.GetLocation().GetY();
             bool theOK = theGoal != NULL && theGoal->mKind == kGoalLocation
-                && static_cast<EEUGLocation*>(theGoal)->mLocation.GetX() == theX
-                && static_cast<EEUGLocation*>(theGoal)->mLocation.GetY() == theY;
+                && static_cast<EEUGLocation*>(theGoal)->GetLocation().GetX() == theX
+                && static_cast<EEUGLocation*>(theGoal)->GetLocation().GetY() == theY;
             Judge(theRow, theOK, "location:" + Point(theX, theY), theFound);
         } else {
             bool theOK = theGoal != NULL && theGoal->mKind == kGoalPatrol

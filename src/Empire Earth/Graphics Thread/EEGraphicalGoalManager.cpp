@@ -218,7 +218,7 @@ void EEGraphicalGoalManager::Rebuild(long inPlayer)
             long thePrevious = -1;
             for (unsigned long g = 0; g < theUnit->mGoalQueues[q].mGoals.size(); g++) {
                 EEUnitGoal* theGoal = theUnit->mGoalQueues[q].mGoals[g];
-                if (theGoal->mKind == kGoalLocation && dynamic_cast<EEUGLocation*>(theGoal)->mIsAutoWaypoint)
+                if (theGoal->mKind == kGoalLocation && dynamic_cast<EEUGLocation*>(theGoal)->GetIsAutoWaypoint())
                     continue;
                 EEUnitGoal* thePreviousGoal = NULL;
                 if (g > 0 && thePrevious != -1)

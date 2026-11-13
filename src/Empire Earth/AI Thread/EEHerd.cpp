@@ -1324,7 +1324,7 @@ unsigned long EEHerd::UpdateLeaving(unsigned long inTime)
             for (long j = theUnit->mGoalQueues[0].mGoals.size() - 1; j >= 0 && !theLeaving; j--) {
                 EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(theUnit->mGoalQueues[0].mGoals[j]);
                 if (theGoal)
-                    theLeaving = theMap->GetTile(UMFloor(theGoal->mLocation.GetX()), UMFloor(theGoal->mLocation.GetY())) == NULL;
+                    theLeaving = theMap->GetTile(UMFloor(theGoal->GetLocation().GetX()), UMFloor(theGoal->GetLocation().GetY())) == NULL;
             }
             if (!theLeaving) {
                 U2DPoint<long> theExit;

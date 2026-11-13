@@ -1149,7 +1149,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
     //
                             if (EEFindPlacement(&theOrigin, theCreated, NULL, theLineTiles[theIndex].mX,
                                 theLineTiles[theIndex].GetY(), 1, theRings, true, true, true, false, &theAdjusted, NULL))
-                                static_cast<EEUGLocation*>(theGoal)->mLocation = theAdjusted.GetPosition();
+                                static_cast<EEUGLocation*>(theGoal)->SetLocation(theAdjusted.GetPosition());
                         }
                     }
                     if (theGoal->mKind == kGoalAttackUnit && (theCreated->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || theCreated->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen)) {
@@ -2920,10 +2920,10 @@ void EEUnitClass::PathToGoal(EEComplexUnit* inUnit)
             long theRevs = -1;
             EEUGLocation* theLocationGoal = theGoal->mKind == kGoalLocation ? static_cast<EEUGLocation*>(theGoal) : 0;
             if (theLocationGoal != NULL) {
-                theUseGraph = !theLocationGoal->mIsAutoWaypoint && !theGoal->mB1D;
-                if (theLocationGoal->mGroupPathState == 1) {
+                theUseGraph = !theLocationGoal->GetIsAutoWaypoint() && !theGoal->mB1D;
+                if (theLocationGoal->GetGroupPathState() == 1) {
                     theRevs = 15;
-                    theLocationGoal->mGroupPathState = 2;
+                    theLocationGoal->SetGroupPathState(2);
                 } else {
                     theArg8 = !theUseGraph;
                 }
