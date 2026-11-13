@@ -33,7 +33,7 @@ pub struct EeGfxEffectFile {
     pub write_bool: extern "C" fn(context: *mut c_void, value: bool) -> i32,
 }
 
-struct File<'a>(&'a EeGfxEffectFile);
+pub(crate) struct File<'a>(pub(crate) &'a EeGfxEffectFile);
 
 impl EffectFile for File<'_> {
     fn is_open(&mut self) -> bool {

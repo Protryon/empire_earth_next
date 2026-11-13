@@ -138,6 +138,26 @@ constexpr static const float BAR_FRACTION = 0.75;
 /// The image's side (`textures\Volcano.png`, 19 x 19).
 constexpr static const size_t EE_GFX_VOLCANO_IMAGE_SIDE = 19;
 
+/// The manager's creation entry points (the effects' constructors differ by entry; the C++ keeps them).
+enum class EeGfxEffectEntry {
+  /// `CreateUnitEffect`: on a unit
+  Unit = 0,
+  /// `CreateEffectBetweenUnits`: from a unit to a unit
+  BetweenUnits = 1,
+  /// `CreateEffect`: from a unit to a point
+  UnitToPoint = 2,
+  /// `CreatePlacedEffect`: at a point
+  Placed = 3,
+  /// `CreateTransformationEffect`: at a transformation
+  Transformation = 4,
+  /// `CreateLineEffect`: along a line
+  Line = 5,
+  /// `CreateEffectBetween`: between two points
+  Between = 6,
+  /// `CreateWeatherEffect`: over tiles
+  Weather = 7,
+};
+
 /// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
 /// `mSecondaryEffects`), owned by the record (`EeGfxEffectDamaged::lists`, made on first use, freed with it).
 struct EeGfxEffectLists;
@@ -933,6 +953,36 @@ struct EeGfxTracerTick {
   uint32_t duration;
   bool has_linked1;
   bool has_target;
+};
+
+/// What an entry point does for a kind: create the effect (saved or not), or return `result`.
+struct EeGfxEffectPlan {
+  bool create;
+  bool saved;
+  int32_t result;
+};
+
+/// The effects and goal markers the manager calls (`context`: the C++'s; `effect`: an `EEEffect*`).
+struct EeGfxEffectManagerHost {
+  void *context;
+  /// the effect's record (its kind, handle and saved flag)
+  EeGfxEffectRecord *(*record)(void *context, void *effect);
+  void (*reference)(void *context, void *effect);
+  /// `EEEffect::Release` (may delete it)
+  void (*release)(void *context, void *effect);
+  int32_t (*set_up)(void *context, void *effect);
+  int32_t (*step)(void *context, void *effect);
+  int32_t (*repair)(void *context, void *effect);
+  /// its graphic effect is above the detail setting
+  bool (*above_detail)(void *context, void *effect);
+  /// a load-time effect of a saved kind (null: none)
+  void *(*new_loaded)(void *context, uint32_t kind);
+  /// the effect's Load and Save over the manager's file
+  int32_t (*load)(void *context, void *effect, const EeGfxEffectFile *file);
+  int32_t (*save)(void *context, void *effect, const EeGfxEffectFile *file);
+  void (*goals_update)(void *context);
+  int32_t (*goals_load)(void *context, const EeGfxEffectFile *file);
+  int32_t (*goals_repair)(void *context);
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -2046,6 +2096,84 @@ int32_t ee_gfx_tracer_load(EeGfxEffectRecord *r,
 int32_t ee_gfx_tracer_save(const EeGfxEffectRecord *r,
                            const EeGfxEffectFile *file,
                            uint32_t id);
+
+/// An entry point's choice for a graphic effect of `kind` (`detail_ok`: its detail level is within the setting;
+/// `from_alive`/`to_alive`: the units are there and living).
+EeGfxEffectPlan ee_gfx_effects_plan(EeGfxEffectEntry entry,
+                                    int32_t kind,
+                                    bool detail_ok,
+                                    bool from_alive,
+                                    bool to_alive);
+
+/// Registers an entry point's new effect (null: none): unsaved unless `saved`, set up, added under a new handle;
+/// writes the handle to `out_handle` (null: not asked) when there is an effect. Returns the set-up's result (0: none).
+///
+/// # Safety
+/// `s` is a store, `h` a host, `out_handle` null or writable.
+int32_t ee_gfx_effects_create(EeGfxEffectStore *s,
+                              const EeGfxEffectManagerHost *h,
+                              void *effect,
+                              bool saved,
+                              uint32_t *out_handle);
+
+/// `AddEffect`.
+///
+/// # Safety
+/// `s` is a store, `h` a host, `effect` an effect.
+void ee_gfx_effects_add_effect(EeGfxEffectStore *s,
+                               const EeGfxEffectManagerHost *h,
+                               void *effect,
+                               bool new_handle);
+
+/// `RemoveEffect`.
+///
+/// # Safety
+/// As `ee_gfx_effects_add_effect`.
+void ee_gfx_effects_remove_effect(EeGfxEffectStore *s,
+                                  const EeGfxEffectManagerHost *h,
+                                  void *effect);
+
+/// `DestroyQueued`.
+///
+/// # Safety
+/// `s` is a store, `h` a host.
+int32_t ee_gfx_effects_destroy_queued(EeGfxEffectStore *s, const EeGfxEffectManagerHost *h);
+
+/// `ClearEffects`.
+///
+/// # Safety
+/// `s` is a store, `h` a host.
+void ee_gfx_effects_clear(EeGfxEffectStore *s, const EeGfxEffectManagerHost *h);
+
+/// `RepairPointers` (the goal markers' through the host).
+///
+/// # Safety
+/// `s` is a store, `h` a host.
+int32_t ee_gfx_effects_repair(EeGfxEffectStore *s, const EeGfxEffectManagerHost *h);
+
+/// `Load` from `file` (the save's version `major`.`minor`).
+///
+/// # Safety
+/// `s` is a store, `h` a host, `file` a file.
+int32_t ee_gfx_effects_load(EeGfxEffectStore *s,
+                            const EeGfxEffectManagerHost *h,
+                            const EeGfxEffectFile *file,
+                            uint32_t major,
+                            uint32_t minor);
+
+/// `Save` to `file`.
+///
+/// # Safety
+/// `s` is a store, `h` a host, `file` a file.
+int32_t ee_gfx_effects_save(EeGfxEffectStore *s,
+                            const EeGfxEffectManagerHost *h,
+                            const EeGfxEffectFile *file);
+
+/// `Update`'s goal markers, destruction queue and step loop.
+///
+/// # Safety
+/// `s` is a store, `h` a host.
+void ee_gfx_effects_update(EeGfxEffectStore *s, const EeGfxEffectManagerHost *h);
 
 /// `EEE3DFarm::BuildGroundModel`'s mesh into `vertices` and `triangles`; returns the models' place.
 ///
