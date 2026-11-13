@@ -47,15 +47,7 @@ public:
     virtual void HideControls();            // slot 0x9c 0x1a1a6b (provisional name)
 };
 
-// the elevation file combo box's selection event (0x3eb)
-class EEUIFSEEMapType : public UIEvent {
-public:
-    EEUIFSEEMapType(EEUIFSEMap* inMap) : mMap(inMap) {}
-    virtual ~EEUIFSEEMapType() {}          // ??_G 0x1a3ae0
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x1a1bc6
-
-    EEUIFSEMap* mMap;                       // +0x0c
-};
+// (the elevation file combo box's selection event (0x3eb), EEUIFSEEMapType, is an EESEERust: ee/EESEARust.h)
 
 class EEUIFSEMap : public EEUIFSEMainGroup {
 public:

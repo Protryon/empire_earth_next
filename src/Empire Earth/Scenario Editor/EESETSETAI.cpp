@@ -73,7 +73,7 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
+#include "ee/EESEARust.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -87,7 +87,6 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEffectType.h"
 #include "ee/EESETSETAI.h"
-#include "ee/EESETSETCAMGModifyObject.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
 #include "ee/EEScreenEvent.h"
@@ -325,18 +324,7 @@ void EESETSETBuildObject::Show(EESETSEffectControls* inControls)
 
 // FUNCTION: EXE 0x58370d
 // Moves the clicked object between the 'to add' list (id 0x9bf) and the 'added' list of the military group action
-long EESETSETCAMGModifyObject::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UILBString* theList = static_cast<UILBString*>(inEntity);
-    unsigned long theSelection;
-    if (theList->GetCurrentSelection(theSelection) != kErrorOK)
-        return kErrorOK;
-    if (theList->GetId() == 0x9bf)
-        this->mType->AddObject(theSelection, this->mFirst, this->mSecond);
-    else
-        this->mType->RemoveObject(theSelection, this->mFirst, this->mSecond);
-    return kErrorOK;
-}
+// (EESETSETCAMGModifyObject; ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x583753
 // Moves an object from the 'to add' list into the 'added' list, keeping the added list sorted by object index
@@ -445,7 +433,7 @@ void EESETSETCreateAIMilitaryGroup::Load(EESMEffect* inEffect, EESETSEffectContr
             theList = inControls->mListBoxes[1];
         theList->AppendLine(theNames[i]);
     }
-    theEvent = new EESEEUseObjectArea(inControls->mLabels[3], inControls->mScenarioComboBoxes[1],
+    theEvent = EESEENewUseObjectArea(inControls->mLabels[3], inControls->mScenarioComboBoxes[1],
                                      inControls->mRadioButtons[0]);
     inControls->mRadioButtons[0]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mRadioButtons[1]->SetTriggerEvent(kControlTriggerChecked, theEvent);
@@ -480,7 +468,7 @@ void EESETSETCreateAIMilitaryGroup::Show(EESETSEffectControls* inControls)
     UWideString theText;
     GE2DPoint theLocation;
     GEText* theGEText;
-    EESETSETCAMGModifyObject* theEvent;
+    EESEERust* theEvent;
     theLocation.SetX(4.0f);
     theLocation.SetY(692.0f);
     inControls->mCheckBoxes[0]->SetLocation(theLocation);
@@ -549,7 +537,7 @@ void EESETSETCreateAIMilitaryGroup::Show(EESETSEffectControls* inControls)
     inControls->mListBoxes[0]->SetRectangle(theRect);
     inControls->mListBoxes[0]->SetBgOpacity(0.4f);
     inControls->mListBoxes[0]->SetScrollBarBgOpacity(0.4f);
-    theEvent = new EESETSETCAMGModifyObject(this, inControls->mListBoxes[0], inControls->mListBoxes[1]);
+    theEvent = EESEENewObjects(kSEECAMGModifyObject, this, inControls->mListBoxes[0], inControls->mListBoxes[1]);
     inControls->mListBoxes[0]->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theGEText = inControls->mListBoxes[0]->GetGEText();
     theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));

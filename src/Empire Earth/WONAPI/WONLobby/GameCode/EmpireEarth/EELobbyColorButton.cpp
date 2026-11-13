@@ -79,7 +79,7 @@ void EELobbyColorButton::Paint(Graphics& inGraphics)
     inGraphics.SetColor(gEELobbyColors[this->mColor]);
     inGraphics.FillRect(0, 0, this->Width(), this->Height());
     if (!this->IsDisabled())
-        LobbyDraw3DFrame(inGraphics, 0, 0, this->Width(), this->Height(), mButtonFlag5);
+        LobbyDraw3DFrame(inGraphics, 0, 0, this->Width(), this->Height(), this->IsPressed());
 }
 
 // FUNCTION: EXE 0x690669

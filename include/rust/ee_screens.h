@@ -900,6 +900,150 @@ constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
 
 constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
 
+/// `EESEEHideUI`.
+constexpr static const uint32_t EE_SCREENS_SEE_HIDE_UI = 1;
+
+/// `EESEEChangeViewport` (its rectangle and flag: `ee_screens_see_viewport`).
+constexpr static const uint32_t EE_SCREENS_SEE_CHANGE_VIEWPORT = 2;
+
+/// `EESEEQuickLoad` (object: the quick save/load action).
+constexpr static const uint32_t EE_SCREENS_SEE_QUICK_LOAD = 3;
+
+/// `EESEEQuickSave` (object: the quick save/load action).
+constexpr static const uint32_t EE_SCREENS_SEE_QUICK_SAVE = 4;
+
+/// `EESEESliderChange` (its label, format, scale and offset: `ee_screens_see_slider`).
+constexpr static const uint32_t EE_SCREENS_SEE_SLIDER_CHANGE = 5;
+
+/// `EESEECheckDisplay` (its controls: `ee_screens_see_push_control`).
+constexpr static const uint32_t EE_SCREENS_SEE_CHECK_DISPLAY = 6;
+
+/// `EESEEUseObjectArea` (its label, combo box and area control: `ee_screens_see_object_area`).
+constexpr static const uint32_t EE_SCREENS_SEE_USE_OBJECT_AREA = 7;
+
+/// `EESETSETCAMGModifyObject` (the military group type, its two lists: `ee_screens_see_objects`).
+constexpr static const uint32_t EE_SCREENS_SEE_CAMG_MODIFY_OBJECT = 8;
+
+/// `EESETSETMSDCameraScrollChange` (the send-dialogue type, the effect's controls: `ee_screens_see_objects`).
+constexpr static const uint32_t EE_SCREENS_SEE_MSD_CAMERA_SCROLL = 9;
+
+/// `EESETSETSAAAttributeChange` (the set-AI-attribute type, the effect's controls: `ee_screens_see_objects`).
+constexpr static const uint32_t EE_SCREENS_SEE_SAA_ATTRIBUTE = 10;
+
+/// `EESEEUseAreaObject` and `EESEEMoveAreaObject` (one body: ICF folded them): the label 0x96d, the combo box 0x99e,
+/// the area radio 0x988.
+constexpr static const uint32_t EE_SCREENS_SEE_USE_AREA_OBJECT = 11;
+
+/// `EESEEFaceAreaObject`: the label 0x96e, the combo box 0x99f, the area radio 0x98a.
+constexpr static const uint32_t EE_SCREENS_SEE_FACE_AREA_OBJECT = 12;
+
+/// `EEUIFSEEMapType` (object: the map tab, `EEUIFSEMap`).
+constexpr static const uint32_t EE_SCREENS_SEE_MAP_TYPE = 13;
+
+/// `EEUIFSEESortUnitList`.
+constexpr static const uint32_t EE_SCREENS_SEE_SORT_UNIT_LIST = 14;
+
+/// `EESEEChangeStartEpoch` (object: the row's end epoch combo box).
+constexpr static const uint32_t EE_SCREENS_SEE_START_EPOCH = 15;
+
+/// `EESEEGameUnitLimit` (its label, modifier and offset: `ee_screens_see_slider` with the format "%g").
+constexpr static const uint32_t EE_SCREENS_SEE_UNIT_LIMIT = 16;
+
+/// The game page's per-player count label (`kSERBUnitTypesPerPlayerCountLabel`).
+constexpr static const int32_t EE_SCREENS_SEE_PER_PLAYER_LABEL_ID = 354;
+
+/// The military group's "to add" list: a click there adds (`EESETSETCAMGModifyObject`).
+constexpr static const uint32_t EE_SCREENS_SEE_TO_ADD_LIST_ID = 2495;
+
+/// The object p referenced / released.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_REFERENCE = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEE_OP_DEREFERENCE = 2;
+
+/// -> whether the check box p is checked.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_CHECKED = 3;
+
+/// A viewport change to the rectangle f0..f3 (left, top, right, bottom), the UI hidden when i0, posted -> the
+/// post's result.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_POST_VIEWPORT = 4;
+
+/// -> whether the scenario editor's form exists.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_HAS_EDITOR = 5;
+
+/// The editor's game view set to the rectangle f0..f3, its UI shown when i0 (`SetGameView`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SET_GAME_VIEW = 6;
+
+/// Everything redrawn (`gUIManager->RedrawAll`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_REDRAW_ALL = 7;
+
+/// The scenario editor shows the loaded object p (`PostShowLoadedObject`; the event's form is the editor's).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SHOW_LOADED = 8;
+
+/// A quick save action of the quick save/load action p posted.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_QUICK_SAVE = 9;
+
+/// -> the slider p's current value (`GetCurrentRangeValue`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_RANGE = 10;
+
+/// The label p's text set to the value f0 printed by the NUL-terminated format q (`sprintf` into a `UWideString`,
+/// the float passed as a double as through the original's `...`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SLIDER_TEXT = 11;
+
+/// The control p's display mode set to i0.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SET_DISPLAY = 12;
+
+/// The scenario combo box p refilled with the areas (i0 != 0) or the objects, the label q titled
+/// (`FillScenarioComboBox`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_FILL_SCENARIO = 13;
+
+/// The combo box p's selection set to i0.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SET_SELECTION = 14;
+
+/// -> the control p's id (`GetId`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_ENTITY_ID = 15;
+
+/// -> the list box p's selection, -1 for none.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_LIST_SELECTION = 16;
+
+/// The military group type p's `AddObject(i0, q, r)` / `RemoveObject(i0, q, r)` (the lists q and r).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_CAMG_ADD = 17;
+
+constexpr static const uint32_t EE_SCREENS_SEE_OP_CAMG_REMOVE = 18;
+
+/// The send-dialogue type p's `ShowCameraScrollSpeed(q)` (q the effect's controls).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_MSD_SHOW = 19;
+
+/// -> the combo box p's selection, -1 for none.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_COMBO_SELECTION = 20;
+
+/// The set-AI-attribute type p's `ShowAttributeRanges(i0, q)` (q the effect's controls).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_SAA_SHOW = 21;
+
+/// The form p's label i0 and scenario combo box i1 refilled with the areas (i2 != 0) or the objects
+/// (`FillAreaObjectComboBox`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_FILL_AREA_OBJECT = 22;
+
+/// The map tab p's elevation boxes shown (i0 != 0) or hidden (`ShowElevationControls`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_MAP_ELEVATION = 23;
+
+/// The editor form p's unit tab's list rebuilt (`EESEUnit::RefreshUnitList`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_REFRESH_UNIT_LIST = 24;
+
+/// -> the epoch count (`EEEpochCount`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_EPOCH_COUNT = 25;
+
+/// -> the combo box p's line count.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_LINE_COUNT = 26;
+
+/// The combo box p emptied and given the epochs' titles from i0 on (one `AppendStringArray`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_FILL_EPOCHS = 27;
+
+/// -> `gWorld.mMaxPlayers`.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_MAX_PLAYERS = 28;
+
+/// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_LABEL_NUMBER = 29;
+
 /// The ghosts' lock taken (i0 != 0) or let go.
 constexpr static const uint32_t EE_SCREENS_SEP_GHOST_LOCK = 1;
 
@@ -2970,6 +3114,9 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 /// A paint action's record (opaque to C++).
 struct EeScreensSeaPaint;
 
+/// An `EESEERust`'s event (opaque to C++).
+struct EeScreensSeeEvent;
+
 /// An `EESEARust`'s action (opaque to C++).
 struct EeScreensSewAction;
 
@@ -3668,6 +3815,75 @@ void ee_screens_sew_place_push(EeScreensSewAction *action,
                                int32_t unit_type,
                                const float *t,
                                int32_t animation);
+
+/// The event of `kind` (`EE_SCREENS_SEE_*`; `object` the quick save/load action); NULL for an unknown kind. Freed
+/// by `ee_screens_see_free`.
+EeScreensSeeEvent *ee_screens_see_new(uint32_t kind,
+                                      void *object);
+
+/// `ProcessEvent`: the event's `form` and control `entity`.
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+int32_t ee_screens_see_process(const EeScreensSeeEvent *event, void *form, void *entity);
+
+/// The viewport change's rectangle (four floats: left, top, right, bottom) and whether the UI is hidden.
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL); `rectangle` points at four floats.
+void ee_screens_see_viewport(EeScreensSeeEvent *event,
+                             const float *rectangle,
+                             uint8_t hidden);
+
+/// The hide-UI event's views (four floats each: left, top, right, bottom), posted while the box is unchecked and
+/// checked (`EESETriggerScreen::Enter`; the original's inline `SetRectangles` on the event's two rectangles).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL); `unchecked` and `checked` point at four floats.
+void ee_screens_see_hide_ui_views(EeScreensSeeEvent *event,
+                                  const float *unchecked,
+                                  const float *checked);
+
+/// The slider event's label, NUL-terminated format, scale and offset (`EESEESliderChange`'s constructor).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL); `format` is NUL-terminated (or NULL).
+void ee_screens_see_slider(EeScreensSeeEvent *event,
+                           void *label,
+                           const char *format,
+                           float scale,
+                           float offset);
+
+/// A control the check box event shows and hides (`EESEECheckDisplay::mControls.push_back`).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+void ee_screens_see_push_control(EeScreensSeeEvent *event, void *control);
+
+/// The object/area event's label, scenario combo box and area control (`EESEEUseObjectArea`'s constructor).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+void ee_screens_see_object_area(EeScreensSeeEvent *event,
+                                void *label,
+                                void *combo,
+                                void *area);
+
+/// The effect editors' events' objects (`EESETSETCAMGModifyObject`: the type and its two lists;
+/// `EESETSETMSDCameraScrollChange`, `EESETSETSAAAttributeChange`: the type and the effect's controls, `c` NULL).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL).
+void ee_screens_see_objects(EeScreensSeeEvent *event,
+                            void *a,
+                            void *b,
+                            void *c);
+
+/// The `EESEERust`'s destructor.
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL) and is not used after.
+void ee_screens_see_free(EeScreensSeeEvent *event);
 
 /// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
 /// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the

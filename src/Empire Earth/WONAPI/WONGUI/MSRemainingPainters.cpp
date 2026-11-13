@@ -27,7 +27,7 @@ void MSHeaderButton::Paint(Graphics& g)
     else
         x=this->mText->GetWidth()+10+this->mLeftTextPad;
     int y=this->Height()/2-2;
-    int offset=(mButtonFlags&0x20)!=0?1:0;
+    int offset=this->IsPressed()?1:0;
     x+=offset;
     y+=offset;
     if(sortType==ListSortType_Ascending)
@@ -47,7 +47,7 @@ void MSHeaderButton::Paint(Graphics& g)
 void MSCloseButton::Paint(Graphics& g)
 {
     Button::Paint(g);
-    bool down=(mButtonFlags&0x20)!=0;
+    bool down=this->IsPressed();
     int offset=down?1:0;
     g.SetSysColor(StandardColor_3DFace);
     g.FillRect(0,0,this->Width(),this->Height());

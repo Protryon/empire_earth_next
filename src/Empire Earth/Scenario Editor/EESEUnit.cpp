@@ -74,7 +74,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -140,7 +139,6 @@ extern unsigned long& gTexturePixelDepth;
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFSEUpgradePanel.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"
 
 
 
@@ -223,13 +221,8 @@ public:
     virtual void ButtonUp();                // +0x8c 0x19a880
 };
 
-// The sort radio buttons' event (RTTI EEUIFSEESortUnitList > UIEvent; vtable 0x444e88; new 0xc)
-class EEUIFSEESortUnitList : public UIEvent {
-public:
-    EEUIFSEESortUnitList() {}
-    virtual ~EEUIFSEESortUnitList() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x19bada
-};
+// The sort radio buttons' event (RTTI EEUIFSEESortUnitList > UIEvent; vtable 0x444e88; new 0xc): an EESEERust
+// (ee_screens editor_events.rs)
 
 // the unit type mode the six buttons select (EEUIFSEBUnitType::Check; 0x531ff0) (provisional name)
 static long sUnitTypeMode;
@@ -726,7 +719,7 @@ EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* 
     GEText* theGEText;
     long i;
 
-    this->mSortEvent = new EEUIFSEESortUnitList;
+    this->mSortEvent = new EESEERust(kSEESortUnitList);
     this->mPlayerComboBox = inPlayers;
     this->mRhombus.SetColor(GEColor(0.0f, 0.0f, 0.0f));
 
@@ -960,12 +953,8 @@ EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* 
 // (EESEAPlaceWall's scalar deleting destructor)
 
 // FUNCTION: EXE 0x59bada
-// Rebuilds the unit tab's class list after an owner, palette or sort button changed
-long EEUIFSEESortUnitList::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ((EESEUnit*)(static_cast<EEUIFScenarioEditor*>(inForm))->mTabGroups[kEditorTabUnits])->RefreshUnitList();
-    return kErrorOK;
-}
+// Rebuilds the unit tab's class list after an owner, palette or sort button changed (EEUIFSEESortUnitList;
+// ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x59baf1
 // Destroys and frees the sort event (EEUIFSEESortUnitList's scalar deleting destructor, with its vtable)

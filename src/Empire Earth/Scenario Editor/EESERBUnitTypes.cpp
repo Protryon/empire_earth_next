@@ -72,7 +72,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -114,7 +113,8 @@
 #include "ee/EESETSAComboBox.h"
 #include "ee/EESETSAEditBox.h"
 #include "ee/EESERBUnitTypes.h"
-#include "ee/EESEEGameUnitLimit.h"
+#include "lle/UIESliderChange.h"
+#include "ee/EESEARust.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
@@ -1242,7 +1242,7 @@ EESEGamePage::EESEGamePage(unsigned long& ioIndex, unsigned long& ioID, UIForm* 
     inForm->AddControl(this->mUnitLimitCountLabel, 8);
     ++ioIndex;
     this->mUnitLimitCountLabel->SetText(EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault));
-    UIEvent* theEvent = new EESEEGameUnitLimit(this->mUnitLimitCountLabel, 1.0f, 0);
+    UIEvent* theEvent = EESEENewUnitLimit(this->mUnitLimitCountLabel, 1.0f, 0);
     this->mUnitLimit->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
     theEvent->Dereference();
     theLocation.SetXY(this->mUnitLimit->GetRectangle().GetLeft(), this->mUnitLimit->GetRectangle().GetBottom() + 1.0f);
@@ -1554,10 +1554,7 @@ void EESEGamePage::Save()
 // (the scalar deleting destructor, emitted with the vtable; slot EESEEGameUnitLimit+0x0)
 
 // FUNCTION: EXE 0x578582
-// Destroys the unit limit slider event (members only)
-EESEEGameUnitLimit::~EESEEGameUnitLimit()
-{
-}
+// Destroys the unit limit slider event (members only; EESEEGameUnitLimit is an EESEERust)
 
 // TEMPLATE: EXE 0x5785ae
 // ??0?$map@MVUWideString@@U?$less@M@std@@V?$allocator@U?$pair@$$CBMVUWideString@@@std@@@3@@std@@QAE@XZ
@@ -1577,31 +1574,7 @@ EESEEGameUnitLimit::~EESEEGameUnitLimit()
 // FUNCTION: EXE 0x578958
 // On a start epoch change, refills the row's end epoch combo from the new start, keeping the chosen end epoch (or
 // the first when it is now earlier); returns OK
-long EESEEChangeStartEpoch::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theText;
-    std::vector<UWideString> theNames;
-    unsigned long theStart;
-    unsigned long theEnd;
-    static_cast<UIComboBox*>(inEntity)->GetCurrentSelection(theStart);
-    if (UIsNone32(theStart))
-        return kErrorOK;
-    this->mEndEpochComboBox->GetCurrentSelection(theEnd);
-    if (UIsNone32(theEnd))
-        return kErrorOK;
-    theEnd += EEEpochCount() - this->mEndEpochComboBox->GetListBox()->GetLineCount();
-    for (unsigned long i = theStart; i < (unsigned long)EEEpochCount(); i++) {
-        gResource->GetString(EEEpochTitleID(i), theText);
-        theNames.push_back(theText);
-    }
-    this->mEndEpochComboBox->DeleteAllEntries();
-    this->mEndEpochComboBox->AppendStringArray(theNames);
-    if (theStart <= theEnd)
-        this->mEndEpochComboBox->SetCurrentSelection(theEnd - theStart);
-    else
-        this->mEndEpochComboBox->SetCurrentSelection(0);
-    return kErrorOK;
-}
+// (EESEEChangeStartEpoch; ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x578a29
 // Creates a player row: title, five resource caps, epoch and civilization combos, name, color, CPU-only and shared
@@ -1673,8 +1646,7 @@ EESEPlayerRow::EESEPlayerRow(unsigned long& ioID, float inY, GEFont* inFont,
     theGEText->SetIsTransparent(true);
     this->mStartEpoch->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
     this->mStartEpoch->SetCurrentSelection(0);
-    EESEEChangeStartEpoch* theEpochEvent = new EESEEChangeStartEpoch;
-    theEpochEvent->mEndEpochComboBox = this->mEndEpoch;
+    EESEERust* theEpochEvent = new EESEERust(kSEEStartEpoch, this->mEndEpoch);
     this->mStartEpoch->SetTriggerEvent(kControlTriggerSelectionChanged, theEpochEvent);
     theEpochEvent->Dereference();
     inForm->AddControl(this->mStartEpoch, 4);

@@ -81,7 +81,6 @@
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESETSConditionType.h"
 #include "ee/EESETSCondition.h"
-#include "ee/EESEEvents.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
 #include "ee/EEScreenEvent.h"
