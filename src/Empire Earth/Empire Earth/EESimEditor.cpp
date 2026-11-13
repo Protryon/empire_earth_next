@@ -24,6 +24,11 @@
 //   area X0 Y0 X1 Y1                      EESEAPaintArea (the trigger areas' rectangle)
 //   place PLAYER TYPE X Y YAW [ANIMATION] EESEAPlaceUnit with one entry (what Place makes of a placeable ghost)
 //   select|toggle|add UNIT, clear         EESEAMouseClick with the select, toggle, always-add, unselect-all message
+//   mouseclick X Y [ROTATING]             EESEAMouseClick::Execute with the mouse at the screen point (X, Y)
+//   lasso select|add|addremove L T R B [TYPE]   EESEALasso with that EEMSelectUnits over the screen rectangle
+//   lassorect L T R B                     EESEALasso::SelectInRectangle (EE-SIM draws nothing: no unit is picked)
+//   selection                             the editor's selected units
+//   units                                 every unit's id, type, player and tile (the world flushed)
 //   rotate YAW                            EESEARotateUnits (the selection)
 //   delete UNIT | delete PLAYER group|first   EESEADeleteUnit
 //   pickup UNIT, putdown X Y YAW          EESEAMoveUnit: PickUp, then PutDown over its ghosts put on the tile, turned
@@ -766,6 +771,51 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 a->SetMessage(m);
                 gUserInterface->PostAction(a);
                 a->Dereference();
+            };
+        else if (c == "mouseclick")   // mouseclick X Y [ROTATING]: EESEAMouseClick::Execute with the mouse at (X, Y)
+            theCode = [=] {
+                gMouse->mPosition = GE2DPoint(F(1), F(2));
+                EESEAMouseClick* a = new EESEAMouseClick;
+                a->Execute(F(1), F(2), false, 0, L(3) != 0, 0.0f, false);
+                a->Dereference();
+            };
+        else if (c == "lasso")   // lasso select|add|addremove L T R B [TYPE]: EESEALasso with that EEMSelectUnits
+            theCode = [=] {
+                unsigned char theType = w[1] == "select" ? kMessageSelectUnits
+                                        : w[1] == "add" ? kMessageAddUnitsToSelectedGroup
+                                                        : kMessageAddAndRemoveUnitsFromSelectedGroup;
+                EESEALasso* a = new EESEALasso;
+                a->mMessage = new EEMSelectUnits(GERectangle(F(2), F(3), F(4), F(5)), L(6), theType);
+                gUserInterface->PostAction(a);
+                a->Dereference();
+            };
+        else if (c == "lassorect")   // lassorect L T R B: EESEALasso::SelectInRectangle (deselects, posts)
+            theCode = [=] {
+                EESEALasso* a = new EESEALasso;
+                a->SelectInRectangle(GERectangle(F(1), F(2), F(3), F(4)), 0);
+                a->Dereference();
+            };
+        else if (c == "units")   // every unit's id, type, player and tile (no hit points: they follow the epochs)
+            theCode = [=, &theOutput] {
+                gPhysics->FlushWorld();
+                for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
+                    EEPlayer* thePlayer = gWorld.mPlayers[i];
+                    if (thePlayer == NULL)
+                        continue;
+                    for (EEUnit* u = thePlayer->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext))
+                        theOutput.push_back("  unit " + std::to_string(u->GetUnitID()) + " type=" +
+                                            std::to_string((long)u->mUnitClass->mUnitType) + " player=" +
+                                            std::to_string(i) + " tile=" + std::to_string((long)u->mTileX) + "," +
+                                            std::to_string((long)u->mTileY));
+                }
+            };
+        else if (c == "selection")   // the editor's selected units' ids
+            theCode = [=, &theOutput] {
+                EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+                std::string theSelection = "  selection";
+                for (unsigned long i = 0; i < theEditor->GetSelectedUnitCount(); i++)
+                    theSelection += " " + std::to_string(theEditor->GetSelectedUnit(i)->GetUnitID());
+                theOutput.push_back(theSelection);
             };
         else if (c == "rotate")
             theCode = [=] {
