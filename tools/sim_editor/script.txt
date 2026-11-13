@@ -123,3 +123,30 @@ ctl e radio 3
 ui e
 ctl e radio 2                      # back to areas (the area control is this type's third radio)
 ui e
+# the effects' own events (round 18): the military group's object lists, the AI attribute combo, the dialogue's
+# camera scroll slider, the flare's and the camera script's area/object radios
+etype 6 1                          # create AI military group
+ctl e list 0 0                     # an object to the group
+ui e
+ctl e list 1 0                     # and back
+ui e
+etype 6 5                          # set AI attribute
+ctl e combo 1 2
+ui e
+ctl e combo 1 60
+ui e
+etype 4 2                          # send dialogue
+ctl e slide 0 5
+ui e
+etype 2 11                         # minimap flare
+ctl e radio 1
+ui e
+ctl e radio 0
+ui e
+etype 2 1                          # script camera: move to and face
+ctl e radio 1
+ctl e radio 3
+ui e
+ctl e radio 0
+ctl e radio 2
+ui e

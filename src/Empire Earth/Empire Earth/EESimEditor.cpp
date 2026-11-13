@@ -611,6 +611,7 @@ void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
     std::vector<UIControl*> theChecks, theRadios;
     std::vector<UIComboBox*> theCombos;
     std::vector<EESETSEScenarioComboBox*> theScenario;
+    std::vector<UILBString*> theLists;
     if (inCondition) {
         EESETSConditionControls* t = ConditionControls();
         theLabels.assign(t->mLabels, t->mLabels + 5);
@@ -628,6 +629,7 @@ void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
         theRadios.assign(t->mRadioButtons, t->mRadioButtons + 6);
         theCombos.assign(t->mComboBoxes, t->mComboBoxes + 4);
         theScenario.assign(t->mScenarioComboBoxes, t->mScenarioComboBoxes + 4);
+        theLists.assign(t->mListBoxes, t->mListBoxes + 2);
     }
     outLines.push_back(inCondition ? "  condition controls" : "  effect controls");
     for (size_t i = 0; i < theLabels.size(); i++)
@@ -651,6 +653,12 @@ void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
         outLines.push_back(ControlText("scenario", i, theScenario[i]) + " kind=" + std::to_string(theScenario[i]->mMode) +
                            " lines=" + std::to_string(theScenario[i]->GetListBox()->GetLineCount()) + " selection=" +
                            (theSelected ? std::to_string(theSelection) : std::string("none")));
+    }
+    for (size_t i = 0; i < theLists.size(); i++) {
+        std::string theText = ControlText("list", i, theLists[i]) + " lines=" + std::to_string(theLists[i]->GetLineCount());
+        for (unsigned long k = 0; k < theLists[i]->GetLineCount(); k++)
+            theText += std::string(k == 0 ? " '" : ", '") + (const char*)theLists[i]->GetData(k) + "'";
+        outLines.push_back(theText);
     }
 }
 
@@ -914,6 +922,25 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 theScreen->ChangeEffectType();
                 theScreen->mControls->mComboBoxes[0]->SetCurrentSelection(L(2));
                 theScreen->ChangeEffectAction();
+            };
+        else if (c == "ctl" && w.size() > 2 && (w[2] == "list" || w[2] == "combo"))
+            // ctl e list|combo INDEX LINE: an effect list box's line clicked (its selection, then its button-up
+            // event) or a combo box's line picked (its selection, then its selection-changed event)
+            theCode = [=] {
+                EESETSEffectControls* t = EffectControls();
+                UIControl* theControl;
+                unsigned long theTrigger;
+                if (w[2] == "list") {
+                    t->mListBoxes[L(3)]->ChangeSelectionIndex((unsigned long)L(4), false, false);
+                    theControl = t->mListBoxes[L(3)];
+                    theTrigger = kControlTriggerButtonUp;
+                } else {
+                    t->mComboBoxes[L(3)]->SetCurrentSelection((unsigned long)L(4));
+                    theControl = t->mComboBoxes[L(3)];
+                    theTrigger = kControlTriggerSelectionChanged;
+                }
+                if (UIEvent* theEvent = theControl->GetTriggerEvent(theTrigger))
+                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theControl);
             };
         else if (c == "ctl")   // ctl c|e check|slide|radio INDEX [VALUE]: a condition (c) or effect (e) control
             theCode = [=] {

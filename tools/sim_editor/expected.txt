@@ -1150,6 +1150,8 @@ step 110 ui e
   scenario1 mode=0 kind=3 lines=2 selection=0
   scenario2 mode=0 kind=3 lines=0 selection=none
   scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=0
+  list1 mode=0 lines=0
 step 111 etype 5 4
 step 112 ctl e slide 0 17
 step 113 ui e
@@ -1187,6 +1189,8 @@ step 113 ui e
   scenario1 mode=0 kind=3 lines=2 selection=0
   scenario2 mode=0 kind=3 lines=0 selection=none
   scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=0
+  list1 mode=0 lines=0
 step 114 etype 6 1                          # AI effects: a military group's area/object radios
 step 115 ctl e radio 1
 step 116 ui e
@@ -1224,6 +1228,8 @@ step 116 ui e
   scenario1 mode=1 kind=3 lines=2 selection=0
   scenario2 mode=0 kind=3 lines=0 selection=none
   scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=1 lines=1 '<<NONE>>'
+  list1 mode=1 lines=0
 step 117 ctl e radio 0
 step 118 ui e
   effect controls
@@ -1260,6 +1266,8 @@ step 118 ui e
   scenario1 mode=1 kind=4 lines=3 selection=0
   scenario2 mode=0 kind=3 lines=0 selection=none
   scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=1 lines=1 '<<NONE>>'
+  list1 mode=1 lines=0
 step 119 etype 6 0                          # a military target's
 step 120 ctl e radio 2
 step 121 ui e
@@ -1297,6 +1305,8 @@ step 121 ui e
   scenario1 mode=1 kind=4 lines=3 selection=0
   scenario2 mode=0 kind=3 lines=0 selection=none
   scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
 step 122 ctl e radio 3
 step 123 ui e
   effect controls
@@ -1333,6 +1343,8 @@ step 123 ui e
   scenario1 mode=1 kind=3 lines=2 selection=0
   scenario2 mode=0 kind=3 lines=0 selection=none
   scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
 step 124 ctl e radio 2                      # back to areas (the area control is this type's third radio)
 step 125 ui e
   effect controls
@@ -1369,3 +1381,354 @@ step 125 ui e
   scenario1 mode=1 kind=4 lines=3 selection=0
   scenario2 mode=0 kind=3 lines=0 selection=none
   scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
+step 128 etype 6 1                          # create AI military group
+step 129 ctl e list 0 0                     # an object to the group
+step 130 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Object'
+  label4 mode=1 'Objects To Add'
+  label5 mode=1 'ObjectsAdded'
+  label6 mode=0 ''
+  label7 mode=0 ''
+  label8 mode=0 ''
+  label9 mode=0 ''
+  label10 mode=0 ''
+  label11 mode=0 ''
+  label12 mode=0 ''
+  slider0 mode=0 value=17
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=1 checked=0
+  check1 mode=1 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=0 lines=0
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=1 lines=0
+  list1 mode=1 lines=1 '<<NONE>>'
+step 131 ctl e list 1 0                     # and back
+step 132 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Object'
+  label4 mode=1 'Objects To Add'
+  label5 mode=1 'ObjectsAdded'
+  label6 mode=0 ''
+  label7 mode=0 ''
+  label8 mode=0 ''
+  label9 mode=0 ''
+  label10 mode=0 ''
+  label11 mode=0 ''
+  label12 mode=0 ''
+  slider0 mode=0 value=17
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=1 checked=0
+  check1 mode=1 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=0 lines=0
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=1 lines=1 '<<NONE>>'
+  list1 mode=1 lines=0
+step 133 etype 6 5                          # set AI attribute
+step 134 ctl e combo 1 2
+step 135 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Attribute'
+  label4 mode=1 'Set Int Value 1'
+  label5 mode=1 '0:999'
+  label6 mode=1 '0'
+  label7 mode=1 'Set Int Value 2'
+  label8 mode=1 '0:999'
+  label9 mode=1 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:999'
+  label12 mode=0 '0'
+  slider0 mode=1 value=0
+  slider1 mode=1 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=1 lines=75
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
+step 136 ctl e combo 1 60
+step 137 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Attribute'
+  label4 mode=1 'Set Int Value 1'
+  label5 mode=1 '0:100'
+  label6 mode=1 '0'
+  label7 mode=1 'Set Int Value 2'
+  label8 mode=1 '0:100'
+  label9 mode=1 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:999'
+  label12 mode=0 '0'
+  slider0 mode=1 value=0
+  slider1 mode=1 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=1 lines=75
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
+step 138 etype 4 2                          # send dialogue
+step 139 ctl e slide 0 5
+step 140 ui e
+  effect controls
+  label0 mode=1 'Media Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Duration In Seconds'
+  label4 mode=1 'Message'
+  label5 mode=1 'File Name(include ".mp3" or ".wav" extension)'
+  label6 mode=1 'Object'
+  label7 mode=1 'Camera Scroll Speed'
+  label8 mode=1 '4'
+  label9 mode=0 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:999'
+  label12 mode=0 '0'
+  slider0 mode=1 value=5
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=4
+  combo1 mode=0 lines=75
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
+step 141 etype 2 11                         # minimap flare
+step 142 ctl e radio 1
+step 143 ui e
+  effect controls
+  label0 mode=1 'Player Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Object'
+  label4 mode=0 'Message'
+  label5 mode=0 'File Name(include ".mp3" or ".wav" extension)'
+  label6 mode=0 'Object'
+  label7 mode=0 'Camera Scroll Speed'
+  label8 mode=0 '4'
+  label9 mode=0 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:999'
+  label12 mode=0 '0'
+  slider0 mode=0 value=5
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=12
+  combo1 mode=0 lines=75
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
+step 144 ctl e radio 0
+step 145 ui e
+  effect controls
+  label0 mode=1 'Player Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Area'
+  label4 mode=0 'Message'
+  label5 mode=0 'File Name(include ".mp3" or ".wav" extension)'
+  label6 mode=0 'Object'
+  label7 mode=0 'Camera Scroll Speed'
+  label8 mode=0 '4'
+  label9 mode=0 '0'
+  label10 mode=0 'Set Float Value'
+  label11 mode=0 '0:999'
+  label12 mode=0 '0'
+  slider0 mode=0 value=5
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=12
+  combo1 mode=0 lines=75
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=4 lines=3 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
+step 146 etype 2 1                          # script camera: move to and face
+step 147 ctl e radio 1
+step 148 ctl e radio 3
+step 149 ui e
+  effect controls
+  label0 mode=1 'Player Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Object'
+  label4 mode=1 'Object'
+  label5 mode=1 'Move Camera'
+  label6 mode=1 'Face Camera'
+  label7 mode=1 'Scroll Speed'
+  label8 mode=1 'Zoom Level'
+  label9 mode=1 'Snap'
+  label10 mode=1 'Current'
+  label11 mode=0 '0:999'
+  label12 mode=0 '0'
+  slider0 mode=1 value=0
+  slider1 mode=1 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=1 checked=0
+  check1 mode=1 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=1
+  radio3 mode=1
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=12
+  combo1 mode=0 lines=75
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=1 kind=3 lines=2 selection=0
+  scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
+step 150 ctl e radio 0
+step 151 ctl e radio 2
+step 152 ui e
+  effect controls
+  label0 mode=1 'Player Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Area'
+  label4 mode=1 'Area'
+  label5 mode=1 'Move Camera'
+  label6 mode=1 'Face Camera'
+  label7 mode=1 'Scroll Speed'
+  label8 mode=1 'Zoom Level'
+  label9 mode=1 'Snap'
+  label10 mode=1 'Current'
+  label11 mode=0 '0:999'
+  label12 mode=0 '0'
+  slider0 mode=1 value=0
+  slider1 mode=1 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=1 checked=0
+  check1 mode=1 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=1
+  radio3 mode=1
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=12
+  combo1 mode=0 lines=75
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=4 lines=3 selection=0
+  scenario2 mode=1 kind=4 lines=3 selection=0
+  scenario3 mode=0 kind=4 lines=0 selection=none
+  list0 mode=0 lines=1 '<<NONE>>'
+  list1 mode=0 lines=0
