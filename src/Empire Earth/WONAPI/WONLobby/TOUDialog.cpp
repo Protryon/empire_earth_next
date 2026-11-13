@@ -51,7 +51,7 @@ void TOUDialog::Reset()
 // Marks the terms page for rebuilding when a terms of use download finished
 void TOUDialog::HandleHTTPDocEvent(GotHTTPDocumentEvent* inEvent)
 {
-    if(inEvent->mOp->mDocumentType==HTTPDocType_TOU) this->mNeedGenHTML=true;
+    if(inEvent->mOp->GetNum(EE_WON_HTTPDOC_TYPE)==HTTPDocType_TOU) this->mNeedGenHTML=true;
 }
 // FUNCTION: WON 0x7f9bb0
 // Handles terms downloads and enables accept only while the agree box is ticked

@@ -45,11 +45,13 @@ DEFAULTS={175:'Random Map',177:'Small',179:'Continental',181:'Standard - High',1
 
 # Modal forms seen over the game and the deterministic action that closes each without a simulation input.
 # 0x23 (35): in-game civilization selection, pushed by EEProcessTimerExpired (0x67fa40) when the civ timer
-# (EEMCivTimerExpired, 300 game s) expires; its form-open event pauses the game. Control 0 is EEUIEPDCSCancel (UIManager
-# Pop only; no EEMCivUpgradesRequested), control 1 is Ok (would buy a civilization: a simulation input). Cancel.
+# (EEMCivTimerExpired, 300 game s) expires; its form-open event pauses the game. Control 0 is EE_SCREENS_PDCS_CANCEL
+# (ee_screens civ_choice.rs; the original's EEUIEPDCSCancel: UIManager Pop only, no EEMCivUpgradesRequested), control 1
+# is Ok (would buy a civilization: a simulation input). Cancel.
 # 7: the Civilization Builder, which the same timer opens in these offline random-map games (EEProcessTimerExpired's
 # gB531256 branch: Fn280FAF pauses the game, sets mBB4A so the timer does not open it again, and pushes form 7).
-# Seen at game ms 301875 (run1). Control 16 is EEUIECBCancelChanges (0x67cf3d: Fn27FF7C(false): unpause, no Apply, close);
+# Seen at game ms 301875 (run1). Control 16 is EE_SCREENS_CB_CANCEL_CHANGES (ee_screens civ_builder.rs; the original's
+# EEUIECBCancelChanges 0x67cf3d: Fn27FF7C(false): unpause, no Apply, close);
 # control 17 is AcceptChanges (would request the civilization's upgrades: a simulation input). Cancel.
 # An unknown form is recorded (form<id>.txt in the evidence) and, if it stalls physics for 90 s, fails the run.
 DISMISS={35:'click 35 0',7:'click 7 16'}

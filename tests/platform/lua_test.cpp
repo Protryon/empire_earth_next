@@ -12,6 +12,7 @@
 
 #include "ee/EECPLua.h"
 #include "ee/EELuaApi.h"
+#include "rust/ee_ai.h"
 
 static int sChecks;
 static int sFailures;
@@ -410,10 +411,21 @@ static int LuaCost(lua_State* L)
     return 1;
 }
 
+// a per-unit binding's argument reader (ee_ai units_lua.rs): a script's __index may raise through it
+static int LuaOptX(lua_State* L)
+{
+    long v = -1;
+    bool theFound = ee_ai_units_opt_int(L, 1, "x", &v);
+    lua_pushinteger(L, theFound ? (lua_Integer)v : -1);
+    return 1;
+}
+
 static void OpenTest(lua_State* L, void* inContext)
 {
     lua_pushcfunction(L, LuaCost);
     lua_setfield(L, -2, (const char*)inContext);
+    lua_pushcfunction(L, LuaOptX);
+    lua_setfield(L, -2, "optx");
 }
 
 static void TestExtension()
@@ -431,6 +443,12 @@ static void TestExtension()
     CHECK(RunStatus(s, "local ok = pcall(ai.cost, 200000) return 1") == kEECPLuaBudget);
     CHECK(RunStatus(s, "for i = 1, 20 do ai.cost(4000) end return 1") == kEECPLuaOK);
     CHECK(RunStatus(s, "for i = 1, 30 do ai.cost(4000) end return 1") == kEECPLuaBudget);
+    // a Lua error raised inside a Rust helper (an __index of the script's) is the script's error, not an abort
+    CHECK(IsTrue(s, "return ai.optx({x = 4}) == 4 and ai.optx({}) == -1 and ai.optx(5) == -1"));
+    CHECK(RunStatus(s, "return ai.optx(setmetatable({}, {__index = function() error('no x') end}))") == kEECPLuaRuntime);
+    CHECK(strstr(s.LastError().c_str(), "no x") != nullptr);
+    CHECK(IsTrue(s, "local ok = pcall(ai.optx, setmetatable({}, {__index = function() error('no') end})) return not ok"));
+    CHECK(RunStatus(s, "return ai.optx(setmetatable({}, {__index = function() while true do end end}))") == kEECPLuaBudget);
     // an optional entry: found or not, with its own budget
     EECPLuaValue a;
     bool theFound = true;

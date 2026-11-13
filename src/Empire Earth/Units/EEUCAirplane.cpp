@@ -16,6 +16,8 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -39,95 +41,84 @@ static const float kAirplaneNoHeight = -10000.0f;
 // pattern over its home airport (killed when there is none), circling the air control, or leaving the map
 void EEUCAirplane::ActionChanged(EEComplexUnit* inUnit)
 {
-    GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
-    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
-                          inUnit->mPhysicalModel.GetLocation().GetZ());
-    EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionCircle:
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
-        if ((long)inUnit->mWaypoints.size() > 0)
-            inUnit->DropPath();
-        if (::gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
-            float theDistance = inUnit->mStats->GetMaxVelocity() / inUnit->mStats->GetMaxAngularVelocity();
-            theDistance = (float)UMCeil(theDistance);
-            GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-            float theAngle = UMArcTan2(theTransformation.GetElement(1, 0), theTransformation.GetElement(0, 0));
-            float theLeft = theAngle - 1.5707964f;
-            float theRight = theAngle + 1.5707964f;
-            bool theLeftNear = gContinentManager.CanGetTo(inUnit,
-                (long)(theTransformation.GetX() - UMSin(theLeft) * theDistance),
-                (long)(UMCos(theLeft) * theDistance + theTransformation.GetY()));
-            bool theRightNear = gContinentManager.CanGetTo(inUnit,
-                (long)(theTransformation.GetX() - UMSin(theRight) * theDistance),
-                (long)(UMCos(theRight) * theDistance + theTransformation.GetY()));
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs airplane), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_AIRPLANE, this, inUnit);
+}
+
+// New (R5b.4, the fourteenth round): EEUCAirplane::ActionChanged's operations that are more than a call (the original's
+// statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's host calls them): circling's side (on space maps
+// toward the side it can reach; EE_UNITS_ACT_CIRCLE_SIDE), the holding pattern over its home airport (killed when
+// there is none; EE_UNITS_ACT_HOLDING_PATTERN 0)
+void EEAirplaneCircleSide(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    (void)inClass;
+    if (::gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
+        float theDistance = inUnit->mStats->GetMaxVelocity() / inUnit->mStats->GetMaxAngularVelocity();
+        theDistance = (float)UMCeil(theDistance);
+        GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+        float theAngle = UMArcTan2(theTransformation.GetElement(1, 0), theTransformation.GetElement(0, 0));
+        float theLeft = theAngle - 1.5707964f;
+        float theRight = theAngle + 1.5707964f;
+        bool theLeftNear = gContinentManager.CanGetTo(inUnit,
+            (long)(theTransformation.GetX() - UMSin(theLeft) * theDistance),
+            (long)(UMCos(theLeft) * theDistance + theTransformation.GetY()));
+        bool theRightNear = gContinentManager.CanGetTo(inUnit,
+            (long)(theTransformation.GetX() - UMSin(theRight) * theDistance),
+            (long)(UMCos(theRight) * theDistance + theTransformation.GetY()));
+        if (theLeftNear && !theRightNear)
+            inUnit->SetCurrentPhysicsOrder(0);
+        else if (!theLeftNear && theRightNear)
+            inUnit->SetCurrentPhysicsOrder(1);
+        else {
+            theLeftNear = gContinentManager.CanGetTo(inUnit,
+                (long)(theTransformation.GetX() - UMSin(theLeft) * theDistance * 2.0f),
+                (long)(UMCos(theLeft) * theDistance * 2.0f + theTransformation.GetY()));
+            theRightNear = gContinentManager.CanGetTo(inUnit,
+                (long)(theTransformation.GetX() - UMSin(theRight) * theDistance * 2.0f),
+                (long)(UMCos(theRight) * theDistance * 2.0f + theTransformation.GetY()));
             if (theLeftNear && !theRightNear)
                 inUnit->SetCurrentPhysicsOrder(0);
             else if (!theLeftNear && theRightNear)
                 inUnit->SetCurrentPhysicsOrder(1);
-            else {
-                theLeftNear = gContinentManager.CanGetTo(inUnit,
-                    (long)(theTransformation.GetX() - UMSin(theLeft) * theDistance * 2.0f),
-                    (long)(UMCos(theLeft) * theDistance * 2.0f + theTransformation.GetY()));
-                theRightNear = gContinentManager.CanGetTo(inUnit,
-                    (long)(theTransformation.GetX() - UMSin(theRight) * theDistance * 2.0f),
-                    (long)(UMCos(theRight) * theDistance * 2.0f + theTransformation.GetY()));
-                if (theLeftNear && !theRightNear)
-                    inUnit->SetCurrentPhysicsOrder(0);
-                else if (!theLeftNear && theRightNear)
-                    inUnit->SetCurrentPhysicsOrder(1);
-                else if (gPhysics->mRandom.Generate() < 0.5f)
-                    inUnit->SetCurrentPhysicsOrder(0);
-                else
-                    inUnit->SetCurrentPhysicsOrder(1);
-            }
-        } else if (gPhysics->mRandom.Generate() < 0.5f)
-            inUnit->SetCurrentPhysicsOrder(0);
-        else
-            inUnit->SetCurrentPhysicsOrder(1);
-        inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
-        inUnit->mInitialContactHeading = kAirplaneNoHeight;
-        if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind != kGoalExplore)
-            inUnit->ClearGoals(0);
-        break;
-    case kActionHoldingPattern:
-        inUnit->SetCurrentPhysicsAction(0);
-        if (inUnit->mHomeBase == NULL) {
-            if (theControl->GetNumSlots() > 0)
-                inUnit->SetHomeBase(theControl->GetSlot(0).mAirport);
+            else if (gPhysics->mRandom.Generate() < 0.5f)
+                inUnit->SetCurrentPhysicsOrder(0);
             else
-                inUnit->Kill(true, false, false);
-            if (inUnit->mHomeBase == NULL)
-                break;
+                inUnit->SetCurrentPhysicsOrder(1);
         }
-        inUnit->DropPath();
-        theTarget.SetX(inUnit->mHomeBase->GetTileX() + 1.5f);
-        theTarget.SetY(inUnit->mHomeBase->GetTileY() + 1.5f);
-        theTarget.SetZ(this->GetCruiseAltitude());
-        this->PathToward(inUnit, thePosition, theTarget, true);
-        if (gPhysics->mRandom.Generate() < 0.5f)
-            inUnit->SetCurrentPhysicsOrder(0);
-        else
-            inUnit->SetCurrentPhysicsOrder(1);
-        inUnit->SetIsCommandable(false);
-        if (inUnit->GetNextWaypointPoint(thePosition) == 0)
-            inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
-        break;
-    case kActionCircleAirtrafficController:
-        inUnit->SetCurrentPhysicsAction(0);
+    } else if (gPhysics->mRandom.Generate() < 0.5f)
         inUnit->SetCurrentPhysicsOrder(0);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
-        break;
-    case kActionSendParatrooperPlaneOffMap:
-        this->FlyOffMap(inUnit);
-        break;
-    default:
-        EEUCLandable::ActionChanged(inUnit);
-        break;
+    else
+        inUnit->SetCurrentPhysicsOrder(1);
+}
+
+void EEAirplaneHoldingPattern(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEUCAirplane* theClass = static_cast<EEUCAirplane*>(inClass);
+    GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
+    GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
+                          inUnit->mPhysicalModel.GetLocation().GetZ());
+    EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
+    if (inUnit->mHomeBase == NULL) {
+        if (theControl->GetNumSlots() > 0)
+            inUnit->SetHomeBase(theControl->GetSlot(0).mAirport);
+        else
+            inUnit->Kill(true, false, false);
+        if (inUnit->mHomeBase == NULL)
+            return;
     }
+    inUnit->DropPath();
+    theTarget.SetX(inUnit->mHomeBase->GetTileX() + 1.5f);
+    theTarget.SetY(inUnit->mHomeBase->GetTileY() + 1.5f);
+    theTarget.SetZ(theClass->GetCruiseAltitude());
+    theClass->PathToward(inUnit, thePosition, theTarget, true);
+    if (gPhysics->mRandom.Generate() < 0.5f)
+        inUnit->SetCurrentPhysicsOrder(0);
+    else
+        inUnit->SetCurrentPhysicsOrder(1);
+    inUnit->SetIsCommandable(false);
+    if (inUnit->GetNextWaypointPoint(thePosition) == 0)
+        inUnit->SetHeight(theClass->GetHeightAt(inUnit, thePosition));
 }
 
 // TEMPLATE: EXE 0x60b671

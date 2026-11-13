@@ -972,16 +972,6 @@ constexpr static const int32_t EE_WON_HOST_SOCKET_PORT = 95;
 /// an op obj0's `Run(num0, num1)` (mode, timeout) -> out_num (the status)
 constexpr static const int32_t EE_WON_HOST_RUN = 96;
 
-/// `GetNextRequest()` -> out_num, `mRequest` -> the sink
-constexpr static const int32_t EE_WON_HOST_REQ_NEXT = 97;
-
-/// `mResponse = data` (num0 0: NULL), `CheckResponse()` -> out_num; out_addr[0] 1 where it threw
-/// `ReadBufferException`
-constexpr static const int32_t EE_WON_HOST_REQ_CHECK = 98;
-
-/// `Reset()`
-constexpr static const int32_t EE_WON_HOST_REQ_RESET = 99;
-
 /// `AuthContext::GetVerifierKey().IsPublic()` -> out_num
 constexpr static const int32_t EE_WON_HOST_CERT_VERIFIER_PUBLIC = 100;
 
@@ -1073,6 +1063,73 @@ constexpr static const int32_t EE_WON_HOST_CERT_SET_PEER = 128;
 /// ctx obj0's `ClearOneTimeData()`
 constexpr static const int32_t EE_WON_HOST_CERT_CLEAR_ONE_TIME = 129;
 
+/// a socket obj0's `IsConnected()` -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_CONNECTED = 130;
+
+/// a socket obj0's `Kill()`
+constexpr static const int32_t EE_WON_HOST_SOCKET_KILL = 131;
+
+/// a socket obj0's `GetSocketStatus()` -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_STATUS = 132;
+
+/// a socket obj0's `RecvCRMsg(line, num0)` -> out_num (the status), the line (none: NULL)
+constexpr static const int32_t EE_WON_HOST_RECV_CR = 133;
+
+/// `WONFile(data)`'s `Exists()` (num0 0), `GetSize()` (1), `GetModifyTime()` (2) -> out_num
+constexpr static const int32_t EE_WON_HOST_FILE_STAT = 134;
+
+/// `time(NULL)` -> out_num
+constexpr static const int32_t EE_WON_HOST_TIME = 135;
+
+/// a cache obj0's `GetEntry(data)` -> out_obj (a reference taken; none: NULL)
+constexpr static const int32_t EE_WON_HOST_CACHE_ENTRY = 136;
+
+/// a cache entry obj0's `IsValid()` (num0 0), `GetExpirationTime()` (1) -> out_num; `GetLocalPath()` (2),
+/// `GetEntityTag()` (3) -> the bytes
+constexpr static const int32_t EE_WON_HOST_ENTRY_GET = 137;
+
+/// a cache entry obj0's `SetValid(num1)` (num0 0), `SetExpirationTime(num1)` (1), `SetEntityTag(data)` (3)
+constexpr static const int32_t EE_WON_HOST_ENTRY_SET = 138;
+
+/// a cache obj0's `UpdateEntry(obj1)`
+constexpr static const int32_t EE_WON_HOST_CACHE_UPDATE = 139;
+
+/// a receive op obj0's `SetSkipBytes(true)`
+constexpr static const int32_t EE_WON_HOST_RECV_SKIP = 140;
+
+/// a receive op obj0's `SetBinaryFile(num0)`
+constexpr static const int32_t EE_WON_HOST_RECV_BINARY = 141;
+
+/// a receive op obj0's `SetFileModifyTime(num0)`
+constexpr static const int32_t EE_WON_HOST_RECV_MODIFY_TIME = 142;
+
+/// the web proxy file's host (`HTTPGetOp::mStaticProxyHost`) -> the bytes
+constexpr static const int32_t EE_WON_HOST_HTTP_PROXY = 143;
+
+/// `new HTTPGetOp(host, path)` (data: the host's num0 bytes, then the path) -> out_obj (a `RustServerOp`)
+constexpr static const int32_t EE_WON_HOST_NEW_HTTP_GET = 144;
+
+/// a `RustServerOp` obj0's result num0 (element num1) -> out_num
+constexpr static const int32_t EE_WON_HOST_HOSTOP_NUM = 145;
+
+/// a `RustServerOp` obj0's result bytes num0 (element num1) -> the bytes (none: NULL)
+constexpr static const int32_t EE_WON_HOST_HOSTOP_BYTES = 146;
+
+/// a `RustServerOp` obj0's setter num0 (the number num1, data, the object obj1)
+constexpr static const int32_t EE_WON_HOST_HOSTOP_SET = 147;
+
+/// an HTTP get obj0's `GetLastModifiedTime()` (the C++ side's, over its local file) -> out_num
+constexpr static const int32_t EE_WON_HOST_HTTP_MODIFIED = 148;
+
+/// `PlatFOpen(data, "r")` and its `fgetc` -> out_num (-2: no file, -1: EOF)
+constexpr static const int32_t EE_WON_HOST_FILE_FIRST_CHAR = 149;
+
+/// an HTTP session obj0's `AddOp(obj1)`
+constexpr static const int32_t EE_WON_HOST_SESSION_ADD = 150;
+
+/// the op's `mTracker.IsEmpty()` -> out_num
+constexpr static const int32_t EE_WON_HOST_TRACKER_EMPTY = 151;
+
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
 
@@ -1105,6 +1162,99 @@ constexpr static const int32_t EE_WON_URL_FILE = 1;
 constexpr static const int32_t EE_WON_URL_HTTP = 2;
 
 constexpr static const int32_t EE_WON_URL_FTP = 3;
+
+/// `HTTPDocType_MOTD`, `_TOU`, `_ADV`
+constexpr static const int32_t EE_WON_HTTPDOC_MOTD = 0;
+
+constexpr static const int32_t EE_WON_HTTPDOC_TOU = 1;
+
+constexpr static const int32_t EE_WON_HTTPDOC_ADV = 2;
+
+/// `GetDocType()` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_TYPE = 1;
+
+/// `SetExtraConfig` (bytes: the language, lower case as `TryHTTPOp` read it)
+constexpr static const int32_t EE_WON_HTTPDOC_CONFIG = 2;
+
+/// `SetHTTPSession(session)` (the object)
+constexpr static const int32_t EE_WON_HTTPDOC_SESSION = 3;
+
+/// `mIsNew[owner]` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_IS_NEW = 4;
+
+/// `GetDocumentStatus(owner)` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_STATUS = 5;
+
+/// `mHTTPStatus[owner]` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_HTTP_STATUS = 6;
+
+/// `GetModifiedTime(owner)` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_MODIFIED = 7;
+
+/// `GetDocumentPath(owner)` (bytes)
+constexpr static const int32_t EE_WON_HTTPDOC_PATH = 8;
+
+/// `SetLocalPath` / `GetLocalPath()` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_LOCAL_PATH = 1;
+
+/// `SetHTTPCache(cache)` (the object)
+constexpr static const int32_t EE_WON_HTTPGET_CACHE = 2;
+
+/// `SetBinaryFile` (number)
+constexpr static const int32_t EE_WON_HTTPGET_BINARY = 3;
+
+/// `SetOnlySend()` (0), `SetSendAndRecv()` (1), `SetOnlyRecv()` (2) (number)
+constexpr static const int32_t EE_WON_HTTPGET_MODE = 4;
+
+/// `SetDoRangeResume` (number)
+constexpr static const int32_t EE_WON_HTTPGET_RANGE_RESUME = 5;
+
+/// `SetCloseConnection` (number)
+constexpr static const int32_t EE_WON_HTTPGET_CLOSE = 6;
+
+/// `SetSocket(socket)` (the object; none: NULL) / the socket (`ee_won_hostop_num`: the object, 0 for none; the
+/// C++ `GetSocket()` adds the connected test)
+constexpr static const int32_t EE_WON_HTTPGET_SOCKET = 7;
+
+/// `SetRecvChunkCompletion(completion, size)` (the object, the number)
+constexpr static const int32_t EE_WON_HTTPGET_CHUNK = 8;
+
+/// `mNumRedirects` (number)
+constexpr static const int32_t EE_WON_HTTPGET_REDIRECTS = 9;
+
+/// `mLastModified` (number; `GetLastModifiedTime()` is the C++ side's, over the local file's time)
+constexpr static const int32_t EE_WON_HTTPGET_LAST_MODIFIED = 10;
+
+/// `GetHost()` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_HOST = 11;
+
+/// `GetHTTPStatus()` (number)
+constexpr static const int32_t EE_WON_HTTPGET_STATUS = 12;
+
+/// `ContentIsNew()` (number)
+constexpr static const int32_t EE_WON_HTTPGET_IS_NEW = 13;
+
+/// `mContentType` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_CONTENT_TYPE = 14;
+
+/// `mContentLength` (number)
+constexpr static const int32_t EE_WON_HTTPGET_CONTENT_LENGTH = 15;
+
+/// `mContent` (bytes; none: NULL)
+constexpr static const int32_t EE_WON_HTTPGET_CONTENT = 16;
+
+/// `mRedirectHost`, `mRedirectPath` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_REDIRECT_HOST = 17;
+
+constexpr static const int32_t EE_WON_HTTPGET_REDIRECT_PATH = 18;
+
+/// `GetRemotePath()` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_REMOTE_PATH = 19;
+
+/// `GetOnlySend()`, `GetOnlyRecv()` (number)
+constexpr static const int32_t EE_WON_HTTPGET_ONLY_SEND = 20;
+
+constexpr static const int32_t EE_WON_HTTPGET_ONLY_RECV = 21;
 
 /// the finished list's length
 constexpr static const int32_t EE_WON_MULTIPING_COUNT = 1;
@@ -1253,9 +1403,25 @@ constexpr static const int32_t EE_WON_REQHOST_ADDR = -3;
 /// `SetUDPSocket(obj)`: the request sent as one datagram on that socket instead (`ee_won_hostop_set`)
 constexpr static const int32_t EE_WON_REQHOST_UDP_SOCKET = -4;
 
-/// `SetLastServerError(num)` (an op derived in C++: its `CheckResponse`'s own, and `InvalidReplyHeader`'s):
-/// `ee_won_hostop_set`
+/// `SetLastServerError(num)`: `ee_won_hostop_set`
 constexpr static const int32_t EE_WON_REQHOST_LAST_ERROR = -5;
+
+/// `CreateAccountOp`: the user name and password (UTF-16 LE), the email, the profile (as the account ops':
+/// the newsletter count and each id and subscription; the birth month, day and year; the custom action id,
+/// has-data and data)
+constexpr static const int32_t EE_WON_REQOPS_CREATE_ACCOUNT = 14;
+
+/// `RoutingGetGroupListReqOp`: the group list flags (its inner op's `mFlags`)
+constexpr static const int32_t EE_WON_REQOPS_GROUP_LIST = 15;
+
+/// the create account's `mErrorString` (bytes)
+constexpr static const int32_t EE_WON_REQOP_CREATE_ERROR = 48;
+
+/// the group list's replies checked (number)
+constexpr static const int32_t EE_WON_REQOP_GROUP_REPLIES = 49;
+
+/// a reply the group list checked (bytes; the element: its index, in order)
+constexpr static const int32_t EE_WON_REQOP_GROUP_REPLY = 50;
 
 /// [`Checked`] for the C++: the status is the call's result
 constexpr static const int32_t EE_WON_REQOP_STATUS = 0;
@@ -1265,6 +1431,9 @@ constexpr static const int32_t EE_WON_REQOP_INVALID_HEADER = 1;
 
 /// throw `ReadBufferException`
 constexpr static const int32_t EE_WON_REQOP_CUT = 2;
+
+/// `SetLastServerError(status)`, then the next server
+constexpr static const int32_t EE_WON_REQOP_SERVER_ERROR = 3;
 
 /// `ContestCallOp`: the procedure number, whether there is request data, the data
 constexpr static const int32_t EE_WON_REQOPS_CONTEST = 1;
@@ -1781,6 +1950,278 @@ enum class EeWonGuiStringOp {
   RFind,
 };
 
+/// The op codes. `a`..`d` are integers or pointers as each says.
+enum class EeWonGuiOp : uint32_t {
+  /// the field `a` (`EeWonGuiField`).
+  Get = 1,
+  /// the field `a` = `b`.
+  Set,
+  /// `ScrollArea::Virtual08()` (it calls the virtual AdjustPosition back).
+  BaseSizeChanged,
+  /// `ScrollArea::AdjustPosition(a != 0)`.
+  BaseAdjustPosition,
+  /// `ScrollArea::NotifyRootVisibility(a != 0)`.
+  BaseNotifyRootVisibility,
+  /// `ScrollArea::MouseDown(a, b, c)`.
+  BaseMouseDown,
+  /// `ScrollArea::MouseUp(a, b, c)`.
+  BaseMouseUp,
+  /// `ScrollArea::MouseExit()`.
+  BaseMouseExit,
+  /// `ScrollArea::MouseMove(a, b)`.
+  BaseMouseMove,
+  /// `ScrollArea::MouseEnter(a, b)`.
+  BaseMouseEnter,
+  /// `ScrollArea::MouseDrag(a, b)`.
+  BaseMouseDrag,
+  /// `ScrollArea::KeyDown(a)` (0 or 1).
+  BaseKeyDown,
+  /// `ScrollArea::KeyChar(a)` (0 or 1).
+  BaseKeyChar,
+  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollTranslate,
+  /// `Component::GotFocus()` (the input box's base).
+  BaseGotFocus = 20,
+  /// `Component::LostFocus()`.
+  BaseLostFocus,
+  /// `Component::Paint(*a)` (`a` the Graphics).
+  BasePaint,
+  /// `Invalidate()`.
+  Invalidate = 30,
+  /// `RequestTimer(a != 0)`.
+  RequestTimer,
+  /// `RequestFocus()`.
+  RequestFocus,
+  /// `GetMousePos(*a, *b)` (`a`, `b` point at i32s).
+  GetMousePos,
+  /// `GetKeyMod()`.
+  KeyMod,
+  /// `mParent->SetCursor(a)` (`EeWonGuiCursor`).
+  SetParentCursor,
+  /// the selection colours into `*a` (an `EeWonSelColor`).
+  SelColor,
+  /// `mLinkParam = a->GetLinkParam(); DeliverEvent(new TextLinkActivatedEvent(this, a), false)`.
+  LinkActivated,
+  /// the copied text (a GUIString the C++ object keeps) `.append(a->mText, b, c)`.
+  SelTextAppend,
+  /// the copied text `.append("\r\n")`.
+  SelTextBreak,
+  /// `Clipboard::Set(copied text)`, then the copied text emptied.
+  SelTextCopy,
+  /// `SetSize(a, b)`.
+  SetSize = 45,
+  /// `SetDefaultCursor(a)` (`EeWonGuiCursor`).
+  SetDefaultCursor,
+  /// `FireEvent(a, false)` (`EeWonGuiEvent`).
+  FireEvent,
+  /// `Clipboard::Set(text)`, the text `b` units (u32) at `a`.
+  ClipboardSet,
+  /// `Clipboard::Get()`'s units appended to the Rust buffer `a` with `ee_won_gui_sink_units`.
+  ClipboardTake,
+  /// `a->AddRef()`.
+  SegHold = 60,
+  /// `a->Release()`.
+  SegRelease,
+  /// `a->mLineBreak` (0 or 1).
+  SegLineBreak,
+  /// `a->GetLength()`.
+  SegLength,
+  /// `a->CalcDimensions()`'s measures into `*b` (three i32s: the text's width, the font's height and ascent).
+  SegMeasure,
+  /// `a->mFont->GetStringWidth(a->mText, b, c)`.
+  SegStringWidth,
+  /// `a->mFont->GetCharacterWidth(a->mText[b])`.
+  SegCharWidth,
+  /// `a`'s text units appended to the Rust buffer `b` with `ee_won_gui_sink_units`.
+  SegTextTake,
+  /// `a->IsLink()` (0 or 1).
+  SegIsLink,
+  /// `a->Pressed()`.
+  SegPressed,
+  /// `a->Released()` (0 or 1).
+  SegReleased,
+  /// `a->mColor`.
+  SegColor,
+  /// executes the draw operation `*b` (an `EeWonDrawOp`) on the Graphics `a`, its font and string slots the
+  /// segment `c`'s font and text (none when `c` is 0).
+  Draw = 90,
+  /// `mFont->GetHeight()`.
+  FontHeight = 100,
+  /// `mFont->GetCharacterWidth(a)`.
+  FontCharWidth,
+  /// `mFont->GetStringWidth(mText, a, b)` (both cast to unsigned short).
+  TextWidth,
+  /// `mFont->GetStringWidth(mText)`.
+  TextWidthAll,
+  /// `mFont->GetCharacterWidth(mText[a])`.
+  TextCharWidth,
+  /// `mFont->GetStringWidth(GUIString("M"))`.
+  FontStringM,
+  /// the C++ copy of a text (`a`: 0 the shown text `mText`, 1 the real one `GetText()`) = the `c` units (u32)
+  /// at `b`.
+  TextStore,
+  /// `mInputFilter(this, s)` over the string `s` of the `b` units (u32) at `a`: 2 without a filter, else the
+  /// filter's answer (0 or 1) with `s` after it appended to the Rust buffer `c`.
+  Filter,
+  /// `mIcon->mWidth`, or -1 without an icon.
+  IconWidth,
+  /// the C++ members of the paint into `*a` (an `EeWonInputPaint`: the disabled look, the icon and its height,
+  /// the focus, the text colours, the font's height, the selection colours).
+  PaintInputs,
+  /// `mWrappedText->SetMaxWidth(a)`.
+  WrapSetMaxWidth = 130,
+  /// `mWrappedText->SetCentered(a != 0)`.
+  WrapSetCentered,
+  /// `mWrappedText->SetWrap(a != 0)`.
+  WrapSetWrap,
+  /// `mWrappedText->GetWidth()`.
+  WrapWidth,
+  /// `mWrappedText->GetHeight()`.
+  WrapHeight,
+  /// `mBackground.Paint(*a, 0, 0, b, c)`.
+  PaintBackground,
+  /// `a->SetEnabled(b != 0)`.
+  ChildSetEnabled = 150,
+  /// `a->SetVisible(b != 0)`.
+  ChildSetVisible,
+  /// `a->SetPosSize(r.x, r.y, r.w, r.h)` with `r` the `EeWonRect4` at `b`.
+  ChildSetPosSize,
+  /// `a->IsVisible()` (0 or 1).
+  ChildIsVisible,
+  /// `a->Width()`.
+  ChildWidth,
+  /// `a->Height()`.
+  ChildHeight,
+  /// `a->Left()`.
+  ChildLeft,
+  /// `a->Top()`.
+  ChildTop,
+  /// `a->AddRef()` (a `SmartPtr` the Rust object keeps).
+  ChildHold,
+  /// `a->Release()`.
+  ChildRelease,
+  /// `a->ComponentFlagSet(b)` (0 or 1).
+  ChildFlagSet,
+  /// `a->SetComponentFlags(b, c != 0)`.
+  ChildSetFlags,
+  /// `a->GetDefaultCursor() != NULL` (0 or 1).
+  ChildHasDefaultCursor,
+  /// `a->SetDefaultCursor(b)` (`EeWonGuiCursor`).
+  ChildSetDefaultCursor,
+  /// `a->GetMouseChild()`.
+  ChildMouseChild,
+  /// `AddChild(a)`.
+  AddChild,
+  /// `mMouseChild`.
+  MouseChild,
+  /// `a->mControlId` (a button).
+  ButtonControlId,
+  /// `a->mControlId = b`.
+  ButtonSetControlId,
+  /// `a->SetCheck(b != 0, false)`.
+  ButtonSetCheck,
+  /// `a->IsChecked()` (0 or 1).
+  ButtonIsChecked,
+  /// a new `Component` laid over the container `a` (`Fn2F6140(c, 3, a, 0, 0, 0, 0, 0)`) and added to it
+  /// (`AddChildEx(c, 0)`), the creator's reference gone (the container holds it).
+  NewDragComponent,
+  /// a new `Component` sized `a` x `a`, with the creator's reference (given back with `ChildRelease`).
+  NewSizedComponent,
+  /// `a->mType == ComponentEvent_ButtonPressed` (0 or 1).
+  EventIsButtonPress,
+  /// `a->GetControlId()`.
+  EventControlId,
+  /// `dynamic_cast<Button*>(a->mComponent)`.
+  EventButton,
+  /// `Container::HandleComponentEvent(a)`.
+  BaseHandleEvent,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
+enum class EeWonInputCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  GotFocus,
+  LostFocus,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  MouseExit,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `TimerEvent(a)` (0 or 1).
+  TimerEvent,
+  /// `KeyChar(a)` (0 or 1).
+  KeyChar,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  /// `SetText(text a, b, c != 0)`.
+  SetText,
+  /// `SetPasswordChar(a)` (a `char`, sign-extended).
+  SetPasswordChar,
+  /// `SetAllowSelection(a != 0)`.
+  SetAllowSelection,
+  /// `SelectRange(a, b)`.
+  SelectRange,
+  /// `SetIcon`'s steps after the C++ set the icon.
+  IconChanged,
+  /// `SetCharWidth(a)`.
+  SetCharWidth,
+  /// `SetCursorBlinkRate(a, b)`.
+  SetCursorBlinkRate,
+  /// `AdjustPosition()`.
+  AdjustPosition,
+  /// `CopySelection()`.
+  CopySelection,
+  /// `SetSelText(text a, b, c != 0)`.
+  SetSelText,
+  /// `AddInputHistory(text a, b, c != 0)`.
+  AddInputHistory,
+  /// `SetInputHistory(text a, b, c != 0)`.
+  SetInputHistory,
+  /// `mMaxChars = a`.
+  SetMaxChars,
+  /// `mSelectOnFocus = a != 0`.
+  SetSelectOnFocus,
+  /// `mMaxInputHistory = a`.
+  SetMaxInputHistory,
+  /// `mLeftPad = a`.
+  SetLeftPad,
+  /// `mSelStartChar` (the numeric filter reads it).
+  SelStart,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonLabelCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  /// `SetText`'s steps after the C++ set the wrapped text: refit, and repaint when `a != 0`.
+  TextSet,
+  /// `SetHorzAlign(a)`.
+  SetHorzAlign,
+  /// `SetVertAlign(a)`.
+  SetVertAlign,
+  /// `SetWrap(a != 0)`.
+  SetWrap,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `SetVertPad(a, b)`.
+  SetVertPad,
+  /// `SetTextColor(a)`.
+  SetTextColor,
+  /// `mColor`.
+  TextColor,
+};
+
 /// Where a message goes: nowhere, handled by this lobby itself (the host), or queued on a socket.
 enum class EeWonLanRoute {
   Drop = 0,
@@ -2247,6 +2688,43 @@ enum class EeWonResKind {
   Sound = 2,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonSplitCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `CheckMaxButton(a)` (0 or 1).
+  CheckMaxButton,
+  /// `RegisterMaxButton(a, b)`.
+  RegisterMaxButton,
+  /// `AddQuadrant(a, b)`.
+  AddQuadrant,
+  /// `AddSplitter(a, b)`.
+  AddSplitter,
+  /// `AddComplexSplitter(a, b, c)` (`c` the drag handle or NULL).
+  AddComplexSplitter,
+  /// `AddInvisibleSplitter(a, b)`.
+  AddInvisibleSplitter,
+  /// `MaxQuadrant(a)`.
+  MaxQuadrant,
+  UnMaxQuadrant,
+  /// `SetMinLeftRight(a, b)`.
+  SetMinLeftRight,
+  /// `SetMinTopBottom(a, b)`.
+  SetMinTopBottom,
+  /// `SetPercentages(a, b)`.
+  SetPercentages,
+  /// `SetSplitterPos(a, b, c != 0)`.
+  SetSplitterPos,
+};
+
 /// The sound `UpdateReadyState` plays (if the staging sounds are on).
 enum class EeWonReadySound {
   Silent = 0,
@@ -2284,87 +2762,6 @@ enum class EeWonStagingCall : uint32_t {
   LeaveGame,
   NotifyStagingChange,
   NotifyPingChange,
-};
-
-/// The op codes. `a`..`d` are integers or pointers as each says.
-enum class EeWonGuiOp : uint32_t {
-  /// the field `a` (`EeWonGuiField`).
-  Get = 1,
-  /// the field `a` = `b`.
-  Set,
-  /// `ScrollArea::Virtual08()` (it calls the virtual AdjustPosition back).
-  BaseSizeChanged,
-  /// `ScrollArea::AdjustPosition(a != 0)`.
-  BaseAdjustPosition,
-  /// `ScrollArea::NotifyRootVisibility(a != 0)`.
-  BaseNotifyRootVisibility,
-  /// `ScrollArea::MouseDown(a, b, c)`.
-  BaseMouseDown,
-  /// `ScrollArea::MouseUp(a, b, c)`.
-  BaseMouseUp,
-  /// `ScrollArea::MouseExit()`.
-  BaseMouseExit,
-  /// `ScrollArea::MouseMove(a, b)`.
-  BaseMouseMove,
-  /// `ScrollArea::MouseEnter(a, b)`.
-  BaseMouseEnter,
-  /// `ScrollArea::MouseDrag(a, b)`.
-  BaseMouseDrag,
-  /// `ScrollArea::KeyDown(a)` (0 or 1).
-  BaseKeyDown,
-  /// `ScrollArea::KeyChar(a)` (0 or 1).
-  BaseKeyChar,
-  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
-  ScrollTranslate,
-  /// `Invalidate()`.
-  Invalidate = 30,
-  /// `RequestTimer(a != 0)`.
-  RequestTimer,
-  /// `RequestFocus()`.
-  RequestFocus,
-  /// `GetMousePos(*a, *b)` (`a`, `b` point at i32s).
-  GetMousePos,
-  /// `GetKeyMod()`.
-  KeyMod,
-  /// `mParent->SetCursor(a)` (`EeWonGuiCursor`).
-  SetParentCursor,
-  /// the selection colours into `*a` (an `EeWonSelColor`).
-  SelColor,
-  /// `mLinkParam = a->GetLinkParam(); DeliverEvent(new TextLinkActivatedEvent(this, a), false)`.
-  LinkActivated,
-  /// the copied text (a GUIString the C++ object keeps) `.append(a->mText, b, c)`.
-  SelTextAppend,
-  /// the copied text `.append("\r\n")`.
-  SelTextBreak,
-  /// `Clipboard::Set(copied text)`, then the copied text emptied.
-  SelTextCopy,
-  /// `a->AddRef()`.
-  SegHold = 60,
-  /// `a->Release()`.
-  SegRelease,
-  /// `a->mLineBreak` (0 or 1).
-  SegLineBreak,
-  /// `a->GetLength()`.
-  SegLength,
-  /// `a->CalcDimensions()`'s measures into `*b` (three i32s: the text's width, the font's height and ascent).
-  SegMeasure,
-  /// `a->mFont->GetStringWidth(a->mText, b, c)`.
-  SegStringWidth,
-  /// `a->mFont->GetCharacterWidth(a->mText[b])`.
-  SegCharWidth,
-  /// `a`'s text units appended to the Rust buffer `b` with `ee_won_gui_sink_units`.
-  SegTextTake,
-  /// `a->IsLink()` (0 or 1).
-  SegIsLink,
-  /// `a->Pressed()`.
-  SegPressed,
-  /// `a->Released()` (0 or 1).
-  SegReleased,
-  /// `a->mColor`.
-  SegColor,
-  /// executes the draw operation `*b` (an `EeWonDrawOp`) on the Graphics `a`, its font and string slots the
-  /// segment `c`'s font and text (none when `c` is 0).
-  Draw = 90,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). `a`..`d` as each says.
@@ -2502,6 +2899,20 @@ enum class EeWonGuiCursor : uint32_t {
   Hand = 1,
   /// `Cursor::GetStandardCursor(StandardCursor_IBeam)`.
   IBeam = 2,
+  /// `Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest)`.
+  NorthSouthEastWest = 3,
+  /// `Cursor::GetStandardCursor(StandardCursor_EastWest)`.
+  EastWest = 4,
+  /// `Cursor::GetStandardCursor(StandardCursor_NorthSouth)`.
+  NorthSouth = 5,
+};
+
+/// The events a component object fires (`FireEvent`).
+enum class EeWonGuiEvent : uint32_t {
+  /// `ComponentEvent_InputReturn`.
+  InputReturn = 1,
+  /// `ComponentEvent_InputTextChanged`.
+  InputTextChanged = 2,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -2547,8 +2958,14 @@ struct EeWonHttpConn;
 /// length; a host equal but for case finds the first one's connection).
 struct EeWonHttpSession;
 
+/// The Rust InputBox.
+struct EeWonInput;
+
 /// `IPAddr`'s value.
 struct EeWonIpAddr;
+
+/// The Rust Label.
+struct EeWonLabel;
 
 /// LanLogic's scalar state (the original's 0x6c, 0x74, 0xa8, 0xb4, 0xb6).
 struct EeWonLan;
@@ -2585,6 +3002,9 @@ struct EeWonSocketOp;
 
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
 struct EeWonSocketThread;
+
+/// The Rust Splitter.
+struct EeWonSplitter;
 
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
@@ -3732,6 +4152,14 @@ struct EeWonHttpSessionHooks {
   int (*conn_num_ops)(void*);
 };
 
+/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
+using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
+                                    EeWonGuiOp op,
+                                    ptrdiff_t a,
+                                    ptrdiff_t b,
+                                    ptrdiff_t c,
+                                    ptrdiff_t d);
+
 /// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
 struct EeWonAddr {
   uint8_t sockaddr[16];
@@ -4365,14 +4793,6 @@ struct EeWonGameSummary {
   uint32_t read;
   size_t rest;
 };
-
-/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
-using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
-                                    EeWonGuiOp op,
-                                    ptrdiff_t a,
-                                    ptrdiff_t b,
-                                    ptrdiff_t c,
-                                    ptrdiff_t d);
 
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
@@ -8478,6 +8898,19 @@ void ee_won_http_cache_file_name(int32_t id,
 /// `HTTPCache::WriteCacheMap`'s keep rule.
 bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
 
+/// `new GetHTTPDocumentOp(product, type)`: the document type, the product's lower-case name and the two cache
+/// files (the C++ side names them from the WON directory, as `SetDocType` did).
+///
+/// # Safety
+/// The texts hold their lengths' bytes.
+EeWonHostOp *ee_won_httpdoc_new(int32_t doc_type,
+                                const uint8_t *product_lower,
+                                size_t product_len,
+                                const uint8_t *sys_doc,
+                                size_t sys_len,
+                                const uint8_t *game_doc,
+                                size_t game_len);
+
 /// # Safety
 /// `hooks` points to a hook table whose context outlives the connection.
 EeWonHttpConn *ee_won_http_conn_new(const EeWonHttpConnHooks *hooks);
@@ -8529,6 +8962,38 @@ void ee_won_http_session_kill_all(const EeWonHttpSession *s);
 /// # Safety
 /// `s` a session.
 int ee_won_http_session_num_ops(const EeWonHttpSession *s);
+
+/// `new HTTPGetOp(host, path)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// The texts hold their lengths' bytes.
+EeWonHostOp *ee_won_httpget_new(const uint8_t *host,
+                                size_t host_len,
+                                const uint8_t *path,
+                                size_t path_len);
+
+/// `new HTTPGetOp(url)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// `url` holds `len` bytes.
+EeWonHostOp *ee_won_httpget_new_url(const uint8_t *url, size_t len);
+
+/// A new Rust InputBox for the C++ `component`, its calls out through `host`.
+EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `input` came from `ee_won_input_new` (or is NULL) and is not used again.
+void ee_won_input_free(EeWonInput *input);
+
+/// One of InputBox's methods (`EeWonInputCall`).
+///
+/// # Safety
+/// `input` is live; the call's arguments as documented.
+ptrdiff_t ee_won_input_call(const EeWonInput *input,
+                            EeWonInputCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// `IPAddr()`: zero, invalid, no remembered host.
 EeWonIpAddr *ee_won_ipaddr_new();
@@ -8691,6 +9156,23 @@ EeWonAddr ee_won_ipaddr_to_raw(const EeWonIpAddr *a);
 /// # Safety
 /// As `ee_won_ipaddr_clone`; `raw` is valid, its host `host_len` bytes.
 void ee_won_ipaddr_from_raw(EeWonIpAddr *a, const EeWonAddr *raw);
+
+/// A new Rust Label for the C++ `component`, its calls out through `host`.
+EeWonLabel *ee_won_label_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `label` came from `ee_won_label_new` (or is NULL) and is not used again.
+void ee_won_label_free(EeWonLabel *label);
+
+/// One of Label's methods (`EeWonLabelCall`).
+///
+/// # Safety
+/// `label` is live; the call's arguments as documented.
+ptrdiff_t ee_won_label_call(const EeWonLabel *label,
+                            EeWonLabelCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
 
@@ -9780,6 +10262,10 @@ int64_t ee_won_lansocket_last_message_time(const EeWonLanSocket *l);
 /// As `ee_won_lansocket_client`.
 void ee_won_lansocket_set_last_message_time(const EeWonLanSocket *l, int64_t t);
 
+/// From now on [`system_seed`] gives `seed` plus a use counter, the same sequence in every run (0: the clocks
+/// again). For the `tests/won` drivers only: nothing in the game calls it.
+void ee_won_random_test_seed(int64_t seed);
+
 /// `config_name`.
 ///
 /// # Safety
@@ -9824,10 +10310,6 @@ bool ee_won_regkey_root_valid(int32_t root);
 /// # Safety
 /// `op` came from a Rust op constructor and is not used after.
 EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
-
-/// An op derived from `ServerRequestOp` in C++ (`ServerRequestOp`'s constructors): its virtuals answer
-/// `EE_WON_HOST_REQ_*`. Its server context or address are set after the bind.
-EeWonHostOp *ee_won_hostop_cpp_request();
 
 /// Frees an op.
 ///
@@ -9878,6 +10360,16 @@ bool ee_won_reqop_bytes(const EeWonReqOp *op,
                         int32_t which,
                         EeWonByteSink sink,
                         void *context);
+
+/// A result's bytes by number and element (a list's index) into `sink`: false (and no call) when it has none.
+///
+/// # Safety
+/// `op` is a live op; `sink` accepts `context`.
+bool ee_won_reqop_bytes_at(const EeWonReqOp *op,
+                           int32_t which,
+                           int64_t index,
+                           EeWonByteSink sink,
+                           void *context);
 
 /// A result's number (the op's `EE_WON_REQOP_*` number).
 ///
@@ -10737,6 +11229,23 @@ size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
 /// # Safety
 /// `hooks` is valid; `op` is a live op.
 bool ee_won_socket_thread_do_op(const EeWonSocketOpHooks *hooks, void *op);
+
+/// A new Rust Splitter for the C++ `component`, its calls out through `host`.
+EeWonSplitter *ee_won_split_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `split` came from `ee_won_split_new` (or is NULL) and is not used again.
+void ee_won_split_free(EeWonSplitter *split);
+
+/// One of Splitter's methods (`EeWonSplitCall`).
+///
+/// # Safety
+/// `split` is live; the call's arguments as documented.
+ptrdiff_t ee_won_split_call(const EeWonSplitter *split,
+                            EeWonSplitCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///

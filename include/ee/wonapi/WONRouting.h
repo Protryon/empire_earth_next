@@ -617,9 +617,8 @@ public:
 
 // HTTPConnection (partial), RTTI 44d3a4 > RefCount
 // Held only through SmartPtr (maps); never constructed, sized or copied here.
-class HTTPGetOp;
+class RustServerOp; // an HTTPGetOp (httpget.rs)
 class HTTPSession;
-class HTTPGetOp;
 // HTTPConnection: a host's keep-alive connection; its socket, queues, running ops, pipelining and retry state are
 // ee_won's (rust/crates/ee_won/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold
 class HTTPConnection : public RefCount {
@@ -627,13 +626,13 @@ public:
     HTTPConnection(HTTPSession* inSession = NULL); //2d2c80,new64 at2d2a97
     virtual ~HTTPConnection(); //2d2d50, the members
     void Kill(); //2d3600
-    void QueueOp(HTTPGetOp*); //2d33a0,ret4
-    void QueueOp(HTTPGetOp*,int); //2d3290,ret8
+    void QueueOp(RustServerOp*); //2d33a0,ret4
+    void QueueOp(RustServerOp*,int); //2d3290,ret8
     void RunOp(int); //2d3430,ret4
     int GetNumOps();
     static void StaticOpCallback(AsyncOpPtr,SmartPtr<RefCount>); //2d2df0, two owning by-value args
 protected:
-    void OpCallback(HTTPGetOp*); //2d2e80, 1030 bytes; protected in the SDK
+    void OpCallback(RustServerOp*); //2d2e80, 1030 bytes; protected in the SDK
 private:
     friend struct HTTPEngineHooks;
     CriticalSection mDataCrit; //08..20
@@ -648,7 +647,7 @@ class HTTPSession : public RefCount {
 public:
     HTTPSession();                          //2d27b0, out of line
     virtual ~HTTPSession();                 //2d2870, the map
-    void AddOp(HTTPGetOp*);                  //2d28f0, queues a completed op
+    void AddOp(RustServerOp*);               //2d28f0, queues a completed op
     void KillAll();                         //2d2bc0
     int GetNumOps();
 private:
@@ -1762,6 +1761,26 @@ public:
     static RustServerOp* NewGetAccount(ServerContext* inContext, AuthContext* inAuth);
     static RustServerOp* NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
                                           const std::string& inEmail);
+    // the create account and the group list request (ee_won reqlast.rs): the lobby's profile (newsletter 1 and
+    // the birth date); a routing server's group list flags, its replies read again by RouteGroupListOf
+    static RustServerOp* NewCreateAccount(ServerContext* inContext, const std::wstring& inUserName,
+                                          const std::wstring& inPassword, const std::string& inEmail,
+                                          bool inNewsletter, unsigned char inMonth, unsigned char inDay,
+                                          unsigned short inYear);
+    static RustServerOp* NewGroupListReq(const IPAddr& inAddr, unsigned char inFlags);
+    // HTTPGetOp(host, path) and HTTPGetOp(url) (ee_won httpget.rs; the web proxy file read at the first one made),
+    // a bytes setter, and its readers that are the C++ side's: GetSocket() (NULL unless connected) and
+    // GetLastModifiedTime() (the local file's time when the reply had none)
+    static RustServerOp* NewHttpGet(const std::string& inHost, const std::string& inPath);
+    static RustServerOp* NewHttpGet(const std::string& inURL);
+    void SetBytes(int inWhich, const std::string& inBytes);
+    BlockingSocket* GetHttpSocket() const;
+    time_t GetHttpLastModifiedTime();
+    // GetHTTPDocumentOp(product, type) (ee_won httpdoc.rs; the type an HTTPDocType), its language and HTTP session,
+    // and GetDocument(owner): the cache file as a NUL-ended buffer, a MOTD without its leading flag character
+    static RustServerOp* NewHttpDocument(const std::string& inProduct, int inType);
+    void SetHttpDocConfig(const std::string& inLanguage);
+    ByteBufferPtr GetHttpDocument(int inOwner) const;
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
@@ -1807,33 +1826,6 @@ public:
     virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->mSession->Decrypt(inMessage); } //2ad8a0
 };
 
-// ServerRequestOp (2acf60/2ad050): the request/reply exchange is a Rust op on the base (ee_won reqhost.rs: the
-// server list, sessions, peer authentication, the expired-session retry). This class is what the ops still derived
-// in C++ (the directory, account and routing request ops) build on: its virtuals make the request and read the
-// reply (RustServerOp::HostCall's EE_WON_HOST_REQ_*), mRequest and mResponse the exchange's bytes.
-class ServerRequestOp : public RustServerOp {
-public:
-    explicit ServerRequestOp(ServerContext*); //2acf60
-    explicit ServerRequestOp(const IPAddr&); //2ad050
-    void SetLastServerError(WONStatus); //2ad660
-    virtual WONStatus GetNextRequest() { return (WONStatus)100059; } //2ad020, WS_ServerReq_Recv
-    virtual WONStatus CheckResponse() { return (WONStatus)0; } //2c7b10, WS_Success
-    virtual void Reset() {} //326b60
-protected:
-    WONStatus InvalidReplyHeader(); //2ad6a0: the server error, then the next server
-public:
-    ByteBufferPtr mRequest;
-    ByteBufferPtr mResponse;
-};
-
-// 0xf8 bytes, RTTI/VT44d138, functions 2c5ff0/6150/6270.
-class RoutingGetGroupListReqOp : public ServerRequestOp {
-public:
-    RoutingGetGroupListReqOp(const IPAddr&,unsigned char inFlags=0);
-    virtual WONStatus GetNextRequest(); //GetNextRequest
-    virtual WONStatus CheckResponse(); //CheckResponse
-    SmartPtr<RoutingGetGroupListOp> mOp; //f4, implicit destructor releases before base
-};
 
 // The directory server's entity replies: the reading is ee_won's (dir.rs); a list of what it read as DirEntity
 // objects (DirEntityReplyParser.cpp), for RustServerOp::GetEntities. GetEntityRequest, GetDirOp, GetMultiDirOp,
@@ -2031,99 +2023,8 @@ public:
     static void SetGlobalCache(HTTPCache*);
     void UpdateEntry(HTTPCacheEntry*); //2fa500, called with an empty version
 };
-class HTTPGetOp : public AsyncOpWithTracker {
-private:
-    enum TrackType { HTTP_Track_Connect=1,HTTP_Track_RecvStatus=2,HTTP_Track_RecvHeader=3,
-        HTTP_Track_RecvContent=4,HTTP_Track_Redirect=5,HTTP_Track_RecvChunkLength=6,
-        HTTP_Track_RecvChunkCRLF=7,HTTP_Track_RecvFooter=8,HTTP_Track_SendRequest=9 };
-    bool ExtractHeaderLine(const char*); //2d47e0
-    bool SendRequest(); //2d5270
-    void AsyncRecvCRMsg(TrackType); //2d6170
-    bool DoConnect(); //2d5090
-    bool ExtractChunkLength(const char*); //2d6240
-    bool RecvChunkLength(); //2d6430
-    bool DoneRecvContent(RecvBytesOp*); //2d65c0
-    void RecvContent(); //2d6730, full receiver
-    void FinishRedirect(HTTPGetOp*); //2d6d90
-    void FollowRedirect(); //2d6f80
-    void DoneRecvHeader(); //2d7140
-    static std::string mStaticProxyHost; //565fb0
-public:
-    time_t GetLastModifiedTime(); //2d7870, lazy file timestamp cache
-    void SetSocket(BlockingSocket*); //2d77f0, owning assignment of member 78
-    BlockingSocket* GetSocket(); //2d7850, returns NULL unless socket is connected
-    void DoFinish(); //2d4370
-    void SetProxy(const std::string&); //2d4390/325 (WON SDK)
-    bool CheckStatus(WONStatus); //2d4550, forwards the status
-    bool ExtractStatus(const char*); //2d4570
-    bool ExtractRedirect(const char*); //2d45f0
-
-    HTTPGetOp(const std::string& inURL); //2d3f90, called at 3ddd81
-    void Init();
-    HTTPGetOp(const std::string& inHost,const std::string& inPath); //2d3b10
-    void SetRecvChunkCompletion(CompletionBase<AsyncOpPtr>*,DWORD); //2d44e0, 107-byte ownership setter
-    static void ReadProxyHostFile(bool inForce=true); //2d3830
-    static bool WriteProxyHostFile(const std::string&);
-    static const std::string& GetStaticProxyHost();
-    static void SetProxyHostFileName(std::string&);
-    void SetProxy(const std::string&,unsigned short);
-    virtual void RunHook();   //2d7330
-    virtual void CleanupHook(); //2d7770
-    virtual bool CallbackHook(AsyncOp* inOp,int inParam); //2d6a50
-    // Implicit destructor: 2d3d50 (567 bytes) has no own-vptr store; member/base cleanup below.
-    const std::string& GetLocalPath() { return this->mLocalPath; }
-    const std::string& GetHost() {return this->mHost;}
-    const std::string& GetRemotePath() {return this->mRemotePath;}
-    const std::string& GetEndingHost() {return this->mRedirectHost.empty()?this->mHost:this->mRedirectHost;}
-    const std::string& GetEndingPath() {return this->mRedirectPath.empty()?this->mRemotePath:this->mRedirectPath;}
-    int GetHTTPStatus() {return this->mHTTPStatus;}
-    void SetHTTPCache(HTTPCache* inCache) { this->mHTTPCache=inCache; }
-    void SetLocalPath(const std::string& thePath) { this->mLocalPath=thePath; }
-    void SetBinaryFile(bool isBinary) { this->mBinaryFile=isBinary; }
-    void SetOnlySend() { this->mOnlySend=true; this->mOnlyRecv=false; }
-    void SetOnlyRecv() { this->mOnlyRecv=true; this->mOnlySend=false; }
-    void SetSendAndRecv() { this->mOnlySend=false; this->mOnlyRecv=false; }
-    bool GetOnlySend() { return this->mOnlySend; }
-    bool GetOnlyRecv() { return this->mOnlyRecv; }
-    void SetDoRangeResume(bool doRangeResume) { this->mDoRangeResume=doRangeResume; }
-    void SetCloseConnection(bool closeConnection) { this->mCloseConnection=closeConnection; }
-    bool ContentIsNew() { return this->mContentIsNew; }
-    SmartPtr<BlockingSocket> mSocket; //78
-    SmartPtr<HTTPCache> mHTTPCache; //7c
-    SmartPtr<HTTPCacheEntry> mHTTPCacheEntry; //80
-    std::string mHost; //84
-    std::string mRemotePath; //94
-    std::string mLocalPath; //a4
-    bool mIfRange; //b4
-    bool mContentIsChunked; //b5
-    bool mIsFirstChunk; //b6
-    bool mBinaryFile; //b7
-    bool mCloseConnection; //b8
-    bool mDoClose; //b9
-    bool mDoRangeResume; //ba,naturalpadbb
-    std::string mProxyHost; //bc
-    std::string mRedirectHost; //cc
-    std::string mRedirectPath; //dc
-    time_t mServerTime; //ec
-    time_t mExpireTime; //f0
-    time_t mLastModified; //f4
-    time_t mLocalFileModifyTime; //f8
-    size_t mLocalFileSize; //fc
-    std::string mEntityTag; //100
-    std::string mContentType; //110
-    DWORD mContentLength; //120
-    DWORD mChunkLength; //124
-    ByteBufferPtr mContent; //128
-    WriteBuffer mContentAccumulator; //12c..144
-    int mHTTPStatus; //144
-    bool mContentIsNew; //148,naturalpad149..14b
-    OpCompletionBasePtr mRecvChunkCompletion; //14c
-    DWORD mRecvChunkSize; //150
-    bool mOnlySend; //154
-    bool mOnlyRecv; //155
-    bool mAutoRedirect; //156,naturalpad157
-    int mNumRedirects; //158..15c
-};
+// HTTPGetOp is a Rust op on the base (rust/crates/ee_won/src/httpget.rs): RustServerOp::NewHttpGet, its members by
+// EE_WON_HTTPGET_* number
 
 // DNS operation, 0x7c bytes; explicit destructor and borrowed address getter.
 // ThreadBase 0x14 / Thread 0x1c. Event (8 bytes) comes from AsyncOpContainer above.
@@ -2213,46 +2114,8 @@ enum HTTPDocOwner {
     HTTPDocOwner_Count=2
 };
 
-// 0xdc bytes. The implicit dtor cff46 is emitted by its users;
-// it must not be replaced by an explicit empty or out-of-line dtor.
-// vtable 44d378: delete 2d0320, Run 2d1070, Cleanup 2a0290, Callback 2d0810.
-class GetHTTPDocumentOp : public AsyncOpWithTracker {
-public:
-    void SetDocType(HTTPDocType); //2d0340
-    void DoFinish(); //2d06c0
-    void OpFinished(HTTPGetOp*,int); //2d0700
-    void TryHTTPOp(HTTPDocOwner,bool=false); //2d0840
-    static void CheckHostAndPath(HTTPDocType); //2cffb0, static
-
-    GetHTTPDocumentOp(const std::string& inProduct,HTTPDocType inType); //2d0170
-    HTTPDocType GetDocType() { return this->mDocumentType; }
-    void SetExtraConfig(const std::string& theExtraConfig) { this->mPath=theExtraConfig; }
-    const std::string& GetDocumentPath(HTTPDocOwner theOwner) const { return this->mDocuments[theOwner]; }
-    time_t GetModifiedTime(HTTPDocOwner theOwner) const { return this->mLastModified[theOwner]; }
-    WONStatus GetDocumentStatus(HTTPDocOwner theOwner) { return this->mDocumentStatus[theOwner]; }
-    void SetHTTPSession(HTTPSession* theSession) { this->mSession=theSession; }
-    virtual void RunHook();                 //slot04,2d1070
-    virtual bool CallbackHook(AsyncOp* inOp,int inParam); //slot0c,2d0810
-    ByteBufferPtr GetDocument(HTTPDocOwner inOwner) const; //2d10e0
-    HTTPDocType mDocumentType;              //78
-    std::string mProduct;                   //7c
-    std::string mPath;                      //8c
-    HTTPSessionPtr mSession;                //9c
-    bool mIsNew[2];                         //a0
-    bool mRetried[2];                       //a2
-    WONStatus mDocumentStatus[2];           //a4,ac
-    int mHTTPStatus[2];                     //ac,b4
-    time_t mLastModified[2];                //b4,bc; VC6 signed32-bit
-    std::string mDocuments[2];              //bc,cc,dc; FILE PATHS
-};
-
-
-// the message of the day
-class GetMOTDOp : public GetHTTPDocumentOp {
-public:
-    GetMOTDOp(const std::string& inProduct)
-        : GetHTTPDocumentOp(inProduct, HTTPDocType_MOTD) {} //base 4c965b pushes 0
-};
+// GetHTTPDocumentOp (and GetMOTDOp, its MOTD) is a Rust op on the base (rust/crates/ee_won/src/httpdoc.rs):
+// RustServerOp::NewHttpDocument, its members by EE_WON_HTTPDOC_* number and owner, GetHttpDocument
 
 // WONAPI's CD key (dead in AoC; from the base game's Login: ctor base exe 0x68ab90, an 0x1c-byte local;
 // implicit dtor 0x4cff2a: the SmartPtr at +0x14, the string at +4; provisional names)
@@ -2272,30 +2135,6 @@ public:
 };
 
 
-class ProfileData : public RefCount {
-public:
-    ProfileData(); //2cd770, 150 bytes, initializes birth8/9/a=0, mapc, id18=0, data1c=NULL
-    void ClearNewsletterSubs(); //2cdc20, clears the map
-    void ClearNewsletterSub(unsigned short);
-    void SetCustomAction(unsigned short,const ByteBuffer*);
-    void ClearCustomAction();
-    unsigned long GetBirthDate();
-    void AddNewsletterSub(unsigned short inId, bool inSubscribe = false); //2cd9e0
-    bool GetNewsletterSub(unsigned short inId); //2cdae0
-    void PackRequestData(WriteBuffer&,bool); //2cdcc0
-    void UnpackGetData(ReadBuffer&); //2cde20
-    void SetBirthDate(unsigned char inMonth,unsigned char inDay,unsigned short inYear); //2ce070
-    // the Rust profile (ee_won db.rs), for the requests that pack it
-    const EeWonProfile* GetProfile() const { return this->mProfile; }
-protected:
-    virtual ~ProfileData(); //2cd830, explicit own-vtable store at 2cd852
-private:
-    ProfileData(const ProfileData&);
-    ProfileData& operator=(const ProfileData&);
-    static void Append(void*,const uint8_t*,size_t);
-    // the birth date, the newsletter subscriptions and the custom action: a Rust object (ee_won db.rs)
-    EeWonProfile* mProfile;
-};
 // DBProxyOp is a Rust op base (rust/crates/ee_won/src/reqop.rs DbProxy)
 // Patch-server records: VersionData 0x48 / PatchData 0xa4,
 // constructors 2d83a0/2d86f0, allocations 2d93a7/2d9079.
@@ -2395,36 +2234,10 @@ public:
 
 // GetUserIdFromNameOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
 
-// Account creator, 0x1398 bytes. Embedded ElGamal 108..2b0 and Blowfish 2b0..1364.
-class CreateAccountOp : public ServerRequestOp {
-    SmartPtr<ProfileData> mProfileData; //f4
-    std::string mErrorString; //f8
-    ElGamal mPubKey; //108,8aligned
-    Blowfish mSymKey; //2b0
-    enum State { State_GettingPubKey,State_SettingSessionKey,State_CreatingAccount } mState; //1364
-    std::wstring mUserName; //1368
-    std::wstring mPassword; //1378
-    std::string mEmail; //1388..1398
-    void Init(); //2cbe70
-protected:
-    virtual WONStatus GetNextRequest(); //2cc4f0
-    virtual WONStatus CheckResponse(); //2cc8d0,vtable44d254 slot14
-    virtual void Reset();     //2cc4e0, Reset
-public:
-    CreateAccountOp(ServerContext*); //2cbf20
-    void SetProfileData(ProfileData* inProfile) {this->mProfileData=inProfile;}
-    void SetUserName(const std::wstring& inUser) {this->mUserName=inUser;}
-    void SetPassword(const std::wstring& inPassword) {this->mPassword=inPassword;}
-    void SetEmail(const std::string& inEmail) {this->mEmail=inEmail;}
-    const std::wstring& GetUserName() const {return this->mUserName;}
-    const std::wstring& GetPassword() const {return this->mPassword;}
-    const std::string& GetEmail() const {return this->mEmail;}
-    const std::string& GetErrorString() const {return this->mErrorString;}
-    ProfileData* GetProfileData() {return this->mProfileData.get();}
-    // Implicit ordinary dtor 2cc2e0, no own-vtable store; all members destroyed normally.
-};
 
-// GetAccountOp and UpdateAccountOp are Rust ops (rust/crates/ee_won/src/reqdir.rs)
+// GetAccountOp and UpdateAccountOp are Rust ops (rust/crates/ee_won/src/reqdir.rs), CreateAccountOp and
+// RoutingGetGroupListReqOp too (reqlast.rs: RustServerOp::NewCreateAccount, NewGroupListReq), and no C++ op derives
+// from ServerRequestOp any more (its exchange is reqhost.rs's)
 
 // The +20 EEWonNet member is WONAPICore (WONAPICore.h); +24 is a separate window interface.
 class WONLobbyWindow {

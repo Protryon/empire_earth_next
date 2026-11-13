@@ -2,11 +2,14 @@
 // screens that are Rust's whole (rust/crates/ee_screens menus.rs: the main menu, the editors' sub-menu, the single
 // player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
 // 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu; main_game.rs:
-// the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms,
-// and the toolkit's and the game's calls the Rust dispatchers make (ee_screenscpp_*). It replaces
-// EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp, EEUIEEmpireEarthEditorsEvents.cpp,
-// EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp, EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp,
-// EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp, EEUIEChatEvents.cpp and EEUIEHotKeyEvents.cpp.
+// the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys; diplomacy.rs; camera.rs:
+// the camera, scroll and zoom events; civ_builder.rs: the civilization builder's events): EEScreenEvent's
+// ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the game's calls the Rust
+// dispatchers make (ee_screenscpp_*). It replaces EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp,
+// EEUIEEmpireEarthEditorsEvents.cpp, EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp,
+// EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp, EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp,
+// EEUIEChatEvents.cpp, EEUIEHotKeyEvents.cpp, EEUIEDiplomacyEvents.cpp, EEUIECameraEvents.cpp,
+// EEUIEScrollZoomEvents.cpp, EEUIEWheelZoom.cpp, EEUIEFormationChange.cpp and EECBUIEvents.cpp.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -136,6 +139,19 @@
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EESoundObject.h"
+#include "ee/EEGraphicObject.h"
+#include "ee/EECBUIListBox.h"
+#include "ee/EECivilizationManager.h"
+#include "lle/U2DPoint.h"
+#include "lle/UGraph.h"
+#include "lle/UIGraph.h"
+#include "lle/UILineGraph.h"
+#include "lle/UIStatusBar.h"
+#include "lle/UEncryption.h"
+#include "ee/EEUIPGSLineGraph.h"
+#include "ee/EEPGSFormManager.h"
+#include "ee/EEStatisticsHistory.h"
+#include "ee/EEStatisticsRecord.h"
 #include "ee/EEAPlayerEvent.h"
 #include "ee/EECheatCodes.h"
 #include "lle/GETextAlignment.h"
@@ -144,8 +160,13 @@
 #include "ee/EERenderObject.h"
 #include "ee/EECameraControl.h"
 #include "platform/PlatWindow.h"
+#include "ee/EEFormation.h"
+#include "ee/EECivilizationBuilder.h"
+#include "ee/EECBEditableCivilization.h"
+#include "ee/EEScenarioEditorIDs.h"
 #include "rust/ee_screens.h"
 
+extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
 extern GEViewport gU4E8F08;   // 0x4e8f08 (EERenderObject.cpp; the render viewport: the aircraft hot keys' point)
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
 extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);   // lle/SEMixer.h
@@ -563,6 +584,71 @@ static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
     return 0;
 }
 
+// ---- the chat log (chat_log.rs): its C++ entry points, and a saved game's reads and writes
+void EEUIECLEFormManager::AddEntry(const EEChatLogEntry& inEntry)
+{
+    EeScreensChatLogHead theHead = {{inEntry.mColor.mRed, inEntry.mColor.mGreen, inEntry.mColor.mBlue},
+                                    (uint32_t)inEntry.mType, (uint32_t)inEntry.mTime};
+    ee_screens_chat_log_add(&theHead, (const uint8_t*)(const char*)inEntry.mName, inEntry.mName.GetTCHARLength(),
+                            (const uint8_t*)(const char*)inEntry.mText, inEntry.mText.GetTCHARLength());
+}
+void EEUIECLEFormManager::Clear() { ee_screens_chat_log_clear(); }
+unsigned long EEUIECLEFormManager::GetEntryCount() { return ee_screens_chat_log_count(); }
+long EEUIECLEFormManager::Load(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
+{
+    return ee_screens_chat_log_load(&inFile);
+}
+long EEUIECLEFormManager::Save(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
+{
+    return ee_screens_chat_log_save(&inFile);
+}
+
+static UWideString sChatLogString;   // the last read's string and colour (ee_screenscpp_cl_last)
+static GEColor sChatLogColour;
+
+extern "C" long ee_screenscpp_cl_read(void* inFile, uint32_t inKind, uint32_t* outValue)
+{
+    FSFile& theFile = *static_cast<FSFile*>(inFile);
+    if (inKind == 0) {
+        unsigned long theValue = 0;
+        long theResult = theFile.Read(theValue);
+        *outValue = (uint32_t)theValue;
+        return theResult;
+    }
+    if (inKind == 1)
+        return sChatLogString.Load(theFile);
+    return sChatLogColour.Load(theFile);
+}
+
+extern "C" size_t ee_screenscpp_cl_last(uint32_t inKind, uint8_t* outText, size_t inCapacity)
+{
+    if (inKind == 2) {
+        const float theColour[3] = {sChatLogColour.mRed, sChatLogColour.mGreen, sChatLogColour.mBlue};
+        memcpy(outText, theColour, inCapacity < 12 ? inCapacity : 12);
+        return 12;
+    }
+    size_t theLength = sChatLogString.GetTCHARLength();
+    memcpy(outText, (const char*)sChatLogString, theLength < inCapacity ? theLength : inCapacity);
+    return theLength;
+}
+
+extern "C" long ee_screenscpp_cl_write(void* inFile, uint32_t inKind, uint32_t inValue, const uint8_t* inBytes,
+                                       size_t inLength)
+{
+    FSFile& theFile = *static_cast<FSFile*>(inFile);
+    if (inKind == 0) {
+        unsigned long theValue = inValue;
+        return theFile.Write(theValue);
+    }
+    if (inKind == 1)
+        return Text(inBytes, inLength).Save(theFile);
+    GEColor theColour;
+    memcpy(&theColour.mRed, inBytes, 4);
+    memcpy(&theColour.mGreen, inBytes + 4, 4);
+    memcpy(&theColour.mBlue, inBytes + 8, 4);
+    return theColour.Save(theFile);
+}
+
 // ---- the chat forms' (chat.rs): inForm is the chat form or the chat log form (NULL for the log's posted close)
 static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
 {
@@ -615,7 +701,7 @@ static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, u
         break;
     }
     case EE_SCREENS_GAME_CL_COUNT:
-        return EEUIECLEFormManager::Get()->mEntries.size();
+        return ee_screens_chat_log_count();
     case EE_SCREENS_OP_CL_CENTER:
         static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->SetAlignment(kTextAlignCenter);
         break;
@@ -819,6 +905,749 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
     }
     default:
         return EEScreensChatCall(inForm, inOp, inA, inB, inC);
+    }
+    return 0;
+}
+
+// ---- the civilization builder's (civ_builder.rs): inForm is the builder's form or one of its dialogs
+
+static UWideString sCivBuilderText;   // the typed name or the load list's selected file (EE_SCREENS_TEXT_CB_NAME)
+
+// ---- the camera, scroll and zoom events' (camera.rs): inForm is the main game form or the scenario editor's
+
+static UIEvent* sGrabSaved[2];   // each form's grab scroll: the mouse move event it saved (referenced) while grabbing
+
+UIEvent* EECreateGrabScroll(unsigned long inForm)
+{
+    EEReleaseGrabScroll(inForm);
+    return EECreateScreenEvent(inForm ? EE_SCREENS_CAM_GRAB_EDITOR : EE_SCREENS_CAM_GRAB_MAIN);
+}
+
+void EEReleaseGrabScroll(unsigned long inForm)
+{
+    if (sGrabSaved[inForm] != NULL) {
+        sGrabSaved[inForm]->Dereference();
+        sGrabSaved[inForm] = NULL;
+    }
+    ee_screens_camera_grab_reset(inForm);
+}
+
+// the mouse's X axis, Y axis, middle button and wheel (EE_SCREENS_CAM_AXIS_*)
+static ISEntity* EEScreensMouseEntity(uint32_t inAxis)
+{
+    static const unsigned long kAxes[] = {kMouseXAxis, kMouseYAxis, kMouseMiddleButton, kMouseZAxis};
+    ISEntity* theEntity = NULL;
+    gISMouse->GetEntity(kAxes[inAxis & 3], theEntity);
+    return theEntity;
+}
+
+static uint32_t EEScreensCameraCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
+{
+    EECameraControl& theCamera = gWorld.mCameraControl;
+    switch (inOp) {
+    case EE_SCREENS_GAME_CAM_FREEZE:
+        gMouse->mIsFrozen = inA != 0;
+        break;
+    case EE_SCREENS_GAME_CAM_MOUSE_PRESENT:
+        return EEScreensMouseEntity(inA) != NULL;
+    case EE_SCREENS_GAME_CAM_MOUSE_VALUE: {
+        ISEntity* theEntity = EEScreensMouseEntity(inA);
+        return (uint32_t)(inB ? theEntity->GetNormalizedValue() : theEntity->GetValue());
+    }
+    case EE_SCREENS_GAME_CAM_FREE:
+        return gFreeCamera;
+    case EE_SCREENS_GAME_CAM_REVOLVE:
+        theCamera.Revolve(GE3DPoint(Float(inA), Float(inB), 0.0f));
+        break;
+    case EE_SCREENS_GAME_CAM_ROTATE:
+        theCamera.Rotate(GE3DPoint(Float(inA), Float(inB), 0.0f));
+        break;
+    case EE_SCREENS_GAME_CAM_ZOOM:
+        return Bits(theCamera.GetZoom());
+    case EE_SCREENS_GAME_CAM_GRAB_SPEED:
+        return Bits(gGamePreferences.mSettings.GetGrabScrollSpeed());
+    case EE_SCREENS_GAME_CAM_SCROLL:
+        theCamera.Scroll(Float(inA), Float(inB));
+        break;
+    case EE_SCREENS_GAME_CAM_ZOOM_ENABLED:
+        return inA ? gZoomEnabled : gGamePreferences.mSettings.mZoomEnabled;
+    case EE_SCREENS_GAME_CAM_CINEMATIC:
+        return gWorld.mInCinematic;
+    case EE_SCREENS_GAME_CAM_RESET_ZOOM:
+        theCamera.ResetZoom();
+        break;
+    case EE_SCREENS_GAME_CAM_CHANGED:
+        theCamera.SetChanged();
+        break;
+    case EE_SCREENS_GAME_CAM_SET_ZOOM:
+        theCamera.SetZoom(Float(inA));
+        break;
+    case EE_SCREENS_GAME_CAM_MAX_ZOOM:
+        return Bits(gCameraMaxZoom);
+    case EE_SCREENS_GAME_CAM_COS:
+        return Bits(UMCos(Float(inA)));
+    case EE_SCREENS_OP_CAM_GRAB_BEGIN: {
+        // the form's mouse move event saved; the grab its mouse move event while the button is down
+        sGrabSaved[inA] = inForm->GetMouseMoveEvent();
+        if (sGrabSaved[inA])
+            sGrabSaved[inA]->Reference();
+        UIEvent* theGrab = EECreateScreenEvent(inA ? EE_SCREENS_CAM_GRAB_EDITOR : EE_SCREENS_CAM_GRAB_MAIN);
+        inForm->SetMouseMoveEvent(theGrab);
+        theGrab->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_CAM_GRAB_END:
+        inForm->SetMouseMoveEvent(sGrabSaved[inA]);
+        if (sGrabSaved[inA]) {
+            sGrabSaved[inA]->Dereference();
+            sGrabSaved[inA] = NULL;
+        }
+        break;
+    case EE_SCREENS_GAME_MG_SET_FORMATION: {
+        // the selected group's formation, posted; the formation menu closed
+        EEFormation* theFormation = EEFormation::Create((long)inA);
+        gCommunications->ProcessLocalUserInput(new EEMChangeFormation((long)inA), kSlotNone);
+        gUIManager->mMainGameForm->GetEntityGroup(8)->Disable();
+        gUIManager->mMainGameForm->GetBackgroundByID(0x98)->SetVisibility(false);
+        theFormation->mB5C = true;
+        gWorld.mPlayers[gWorld.mCurrentPlayer]->mSelectedGroup->SetFormation(theFormation);
+        theFormation->Dereference();
+        break;
+    }
+    default:
+        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(inForm), inOp, inA, inB, inC);
+    }
+    return 0;
+}
+
+// ---- the diplomacy form's (diplomacy.rs): inForm is the diplomacy form
+
+// player inIndex of the world as the diplomacy form reads it; false for an empty entry
+extern "C" bool ee_screenscpp_diplomacy_player(uint32_t inIndex, EeScreensDiplomacyPlayer* outPlayer)
+{
+    EEPlayer* thePlayer = gWorld.GetPlayer(inIndex);
+    if (thePlayer == NULL)
+        return false;
+    outPlayer->player_id = thePlayer->GetPlayerID();
+    outPlayer->game_result = thePlayer->GetGameResult();
+    outPlayer->observer = thePlayer->GetObserverMode();
+    outPlayer->human = thePlayer->IsHuman();
+    outPlayer->slot = thePlayer->GetSlot();
+    for (long r = 0; r < 5; r++)
+        outPlayer->resources[r] = thePlayer->GetResource(kResourceFood + r);
+    for (unsigned long q = 0; q < 17; q++) {
+        outPlayer->enemies[q] = thePlayer->GetEnemy(q);
+        outPlayer->send_chat[q] = thePlayer->GetSendChatMessage(q);
+    }
+    outPlayer->tribute_fee = thePlayer->GetTributeFee();
+    return true;
+}
+
+// a tribute to player inTo (food, wood, gold, stone, iron) to the local input
+extern "C" void ee_screenscpp_diplomacy_tribute(uint32_t inTo, const uint32_t* inAmounts)
+{
+    gCommunications->ProcessLocalUserInput(new EEMPayTribute((unsigned char)inTo, inAmounts[0], inAmounts[1], inAmounts[2],
+                                                             inAmounts[3], inAmounts[4]), kSlotNone);
+}
+
+static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC,
+                                       uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_DS_PLAYERS:
+        return gWorld.GetNumPlayers();
+    case EE_SCREENS_GAME_DS_CURRENT:
+        return gWorld.mCurrentPlayer;
+    case EE_SCREENS_GAME_DS_TEAMS_LOCKED:
+        return gWorld.GetTeamsLocked();
+    case EE_SCREENS_OP_DS_UV: {
+        GETextureCoordinate theTopLeft, theTopRight, theBottomRight, theBottomLeft;
+        theTopLeft.mU = Float(inB);
+        theTopLeft.mV = 0.0f;
+        theTopRight.mU = Float(inC);
+        theTopRight.mV = 0.0f;
+        theBottomRight.mU = Float(inB);
+        theBottomRight.mV = Float(inD);
+        theBottomLeft.mU = Float(inC);
+        theBottomLeft.mV = Float(inD);
+        static_cast<UIBitmap*>(inForm->GetControl(inA))->GetBitmap()->SetTextureCoordinates(theTopLeft, theTopRight,
+                                                                                            theBottomRight, theBottomLeft);
+        break;
+    }
+    case EE_SCREENS_OP_DS_BG:
+        inForm->GetControl(inA)->SetBgColor(GEColor(Float(inB), Float(inC), Float(inD)));
+        break;
+    case EE_SCREENS_OP_DS_FG: {
+        UIControl* theControl = inForm->GetControl(inA);
+        GEText* theText = inC ? static_cast<UIButton*>(theControl)->GetGEText()
+                              : static_cast<UITextLabel*>(theControl)->GetGEText();
+        theText->SetFgColor(gWorld.GetPlayer(inB)->GetColor());
+        break;
+    }
+    case EE_SCREENS_OP_DS_DISABLE:
+        static_cast<UICheckBox*>(inForm->GetControl(inA))->SetDisabled(true);
+        break;
+    case EE_SCREENS_OP_DS_BUTTON_NUMBER:
+        return (uint32_t)atoi(static_cast<UIButton*>(inForm->GetControl(inA))->GetGEText()->GetText());
+    case EE_SCREENS_OP_DS_LABEL_NUMBER:
+        return (uint32_t)static_cast<UITextLabel*>(inForm->GetControl(inA))->GetTextAsInt(0);
+    case EE_SCREENS_GAME_DS_RESOURCES:
+        gCommunications->ProcessLocalUserInput(new EEMAddRemoveResources(inA, (long)inB, inC, (unsigned char)inD), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_DS_STANCE:
+        gCommunications->ProcessLocalUserInput(new EEMSetDiplomaticStance((long)inA, (long)inB), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_DS_CHAT:
+        gCommunications->ProcessLocalUserInput(new EEMSelectCustomPlayerForChat((long)inA, inB != 0), kSlotNone);
+        break;
+    default:
+        return EEScreensCameraCall(inForm, inOp, inA, inB, inC);
+    }
+    return 0;
+}
+
+static uint32_t EEScreensCivBuilderCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                        uint32_t inC, uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_CB_SHOW_NAME_DIALOG:
+        return (uint32_t)CivBuilderShowNameDialog();
+    case EE_SCREENS_GAME_CB_TYPED:
+        sCivBuilderText = UWideString();
+        return (uint32_t)(inA ? CivBuilderGetTypedFileName(sCivBuilderText) : CivBuilderGetTypedName(sCivBuilderText));
+    case EE_SCREENS_GAME_CB_ACCEPT_NAME:
+        return (uint32_t)CivBuilderAcceptName();
+    case EE_SCREENS_GAME_CB_CLOSE:
+        return (uint32_t)CivBuilderClose(inA != 0);
+    case EE_SCREENS_GAME_CB_SAVE_AS:
+        return (uint32_t)CivBuilderSaveAs();
+    case EE_SCREENS_GAME_CB_SHOW_LOAD:
+        return (uint32_t)CivBuilderShowLoad();
+    case EE_SCREENS_GAME_CB_SHOW_SAVE:
+        return (uint32_t)CivBuilderShowSave();
+    case EE_SCREENS_GAME_CB_SELECTION: {
+        // the load list (the builder's helper finds it) or the event form's save list; the load list's file kept
+        UIFileListBox* theList = inA ? static_cast<UIFileListBox*>(inForm->GetControlById(kCivBuilderIdSaveCivFileListBox))
+                                     : CivBuilderGetLoadFileList();
+        if (theList == NULL)
+            return EE_SCREENS_CB_NO_LIST;
+        unsigned long theSelection;
+        long theResult = theList->GetCurrentSelection(theSelection);
+        if (theResult == kErrorOK && !inA)
+            sCivBuilderText = theList->GetData(theSelection);
+        return (uint32_t)theResult;
+    }
+    case EE_SCREENS_GAME_CB_SET_NAME_FROM_CIVILIZATION:
+        return (uint32_t)CivBuilderSetName(*gEditableCivilization->GetName());
+    case EE_SCREENS_GAME_CB_CLOSE_FORM:
+        return (uint32_t)CivBuilderCloseForm();
+    case EE_SCREENS_GAME_CB_UNCHANGED:
+        return gEditableCivilization->GetIsUnchanged();
+    case EE_SCREENS_GAME_CB_SAVE_NAME_SELECTED:
+        return (uint32_t)CivBuilderSaveNameSelected();
+    case EE_SCREENS_GAME_CB_CAN_CHANGE:
+        return CivBuilderCanChange();
+    case EE_SCREENS_GAME_CB_RESET_AVAILABLE:
+        return (uint32_t)CivBuilderResetAvailableSelection(inForm);
+    case EE_SCREENS_GAME_CB_RESET_BOUGHT:
+        return (uint32_t)CivBuilderResetBoughtSelection(inForm);
+    case EE_SCREENS_GAME_CB_LOCKED:
+        return gB565566;
+    case EE_SCREENS_GAME_CB_BUY:
+        return (uint32_t)CivBuilderBuyUpgrade(0);
+    case EE_SCREENS_GAME_CB_RETURN:
+        return (uint32_t)CivBuilderReturnUpgrade();
+    case EE_SCREENS_GAME_CB_POINTS_LEFT:
+        return (uint32_t)gEditableCivilization->GetPointsLeft();
+    case EE_SCREENS_GAME_CB_ASK_ACCEPT:
+        return (uint32_t)CivBuilderAskAccept(inForm);
+    case EE_SCREENS_GAME_CB_ACCEPT_CHANGES:
+        CivBuilderAcceptChanges(NULL);
+        break;
+    case EE_SCREENS_GAME_CB_FORM_ID:
+        return inForm->GetFormID();
+    case EE_SCREENS_GAME_CB_ASK_DELETE:
+        return (uint32_t)CivBuilderAskDelete(inForm, inEntity);
+    case EE_SCREENS_GAME_CB_CLEAN_UP:
+        delete gEditableCivilization;
+        gEditableCivilization = NULL;
+        break;
+    case EE_SCREENS_OP_CB_SHOW:
+        gUIManager->GetFormByID(kFormCivBuilder)->GetControl(inA >> 1)->SetDisplayMode(inA & 1 ? kDisplayModeShown
+                                                                                                 : kDisplayModeHidden);
+        break;
+    case EE_SCREENS_GAME_CB_HIDE_POINTS:
+        CivBuilderHidePoints();
+        break;
+    default:
+        return EEScreensDiplomacyCall(inForm, inOp, inA, inB, inC, inD);
+    }
+    return 0;
+}
+
+// ---- the post-game summary's (post_game.rs): inForm is the summary's form (25)
+static UString sPgsReportFile("B7B226CDB7B226CD2C112D1E2C99B50E9C2355F6C48226BEB7B2086D");   // 0x563108 (encrypted)
+static float sPgsRectangle[4];          // the rectangle register (left, top, right, bottom)
+static UGraphSeries sPgsSeries;         // the series register (BuildGraphs' series)
+static NEProtocol* sPgsProtocol;        // the reports' protocol
+static EECampaignFormManager* sPgsCampaign;   // Exit's campaign manager
+
+static EEUIPGSLineGraph* EEScreensPgsLineGraph(UIForm* inForm)
+{
+    return static_cast<EEUIPGSLineGraph*>(inForm->GetControl(kPostGameLineGraph));
+}
+
+// the graphs: the line graph's stored 0..30, its shown one (31), the form manager's 32..39
+static UGraph* EEScreensPgsGraph(UIForm* inForm, uint32_t inGraph)
+{
+    EEUIPGSLineGraph* theLineGraph = EEScreensPgsLineGraph(inForm);
+    if (inGraph < 31)
+        return &theLineGraph->GetGraphAt(inGraph);
+    if (inGraph == 31)
+        return const_cast<UGraph*>(&theLineGraph->GetShownGraph());
+    EEPGSFormManager* m = static_cast<EEPGSFormManager*>(inForm->GetFormManager());
+    UGraph* const theGraphs[8] = {&m->mEconomyScoreGraph, &m->mTotalCollectedGraph, &m->mTotalSpentGraph,
+                                  &m->mEpochScoreGraph, &m->mMilitaryScoreGraph, &m->mSpeedRatingGraph,
+                                  &m->mSocietyScoreGraph, &m->mScoreGraph};
+    return theGraphs[inGraph - 32];
+}
+
+extern "C" void ee_screenscpp_pgs_history(EeScreensPgsHistory* outHistory)
+{
+    const EEStatisticsHistory& s = gWorld.mStatistics;
+    *outHistory = EeScreensPgsHistory();
+    outHistory->records = (uint32_t)s.GetRecords().size();
+    outHistory->start_time = s.mStartTime;
+    outHistory->end_time = s.mEndTime;
+    outHistory->current_record = s.mCurrentRecordIndex;
+    outHistory->tile_count = s.mTileCount;
+    outHistory->victory_enabled = s.mVictoryEnabled;
+    outHistory->is_scenario = s.mIsScenario;
+    outHistory->is_campaign = s.mIsCampaign;
+    if ((unsigned long)s.mCurrentRecordIndex < s.GetRecords().size())
+        outHistory->current_slot = s.GetCurrentRecord().mSlot;
+    for (int i = 0; i < 5; i++)
+        outHistory->levels[i] = (uint32_t)EEGetResourceLevel(gGameResources)->mAmounts[i];
+}
+
+extern "C" void ee_screenscpp_pgs_record(uint32_t inIndex, EeScreensPgsRecord* outRecord)
+{
+    EEStatisticsRecord& r = gWorld.mStatistics.mRecords[inIndex];
+    *outRecord = EeScreensPgsRecord();
+    outRecord->colour[0] = r.mColor.mRed;
+    outRecord->colour[1] = r.mColor.mGreen;
+    outRecord->colour[2] = r.mColor.mBlue;
+    outRecord->result = r.mResult;
+    outRecord->team = r.mTeam;
+    outRecord->end_time = r.mEndTime;
+    for (int i = 0; i < 7; i++)
+        outRecord->resources[i] = r.mResources[i];
+    outRecord->score = r.mScore;
+    outRecord->economy_score = r.mEconomyScore;
+    outRecord->epoch_score = r.mEpochScore;
+    outRecord->military_score = r.mMilitaryScore;
+    outRecord->tech_score = r.mTechScore;
+    outRecord->slot = r.mSlot;
+    outRecord->human = r.mIsHuman;
+    for (unsigned long j = 0; j < 31; j++)
+        outRecord->values[j] = r.mStatistics.GetValue(j);
+    outRecord->territory = r.mStatistics.GetLastValue(0x18);
+    outRecord->increases = r.mStatistics.CountIncreases(0x0f);
+    EEStatisticsSeries theEpochs = r.mStatistics.GetSeries(12);
+    outRecord->epoch_points = (uint32_t)theEpochs.mPoints.size();
+    outRecord->epoch_second = theEpochs.mPoints.size() > 1 ? theEpochs.mPoints[1].mValue : 0;
+}
+
+static uint32_t EEScreensPostGameCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                      uint32_t inC, uint32_t inD)
+{
+    auto Ctl = [&](uint32_t inIndex) { return inForm->GetControl(inIndex); };
+    auto Bar = [&](uint32_t inIndex) { return static_cast<UIStatusBar*>(inForm->GetControl(inIndex)); };
+    switch (inOp) {
+    case EE_SCREENS_GAME_PGS_SET_PAGE:
+        gGamePreferences.mSettings.mLastOpenPostGameStatsPage = (long)(int32_t)inA;
+        break;
+    case EE_SCREENS_GAME_PGS_PAGE:
+        return (uint32_t)gGamePreferences.GetSettings().mLastOpenPostGameStatsPage;
+    case EE_SCREENS_OP_PGS_RECT: {
+        const GERectangle& r = Ctl(inA)->GetRectangle();
+        const float theValues[4] = {r.GetLeft(), r.GetTop(), r.GetRight(), r.GetBottom()};
+        return Bits(theValues[inB & 3]);
+    }
+    case EE_SCREENS_OP_PGS_SET_R:
+        sPgsRectangle[inA & 3] = Float(inB);
+        break;
+    case EE_SCREENS_OP_PGS_APPLY_R:
+        Ctl(inA)->SetRectangle(GERectangle(sPgsRectangle[0], sPgsRectangle[1], sPgsRectangle[2], sPgsRectangle[3]));
+        break;
+    case EE_SCREENS_OP_PGS_BG_OPACITY:
+        Ctl(inA)->SetBgOpacity(Float(inB));
+        break;
+    case EE_SCREENS_OP_PGS_DIRTY:
+        Ctl(inA)->SetDirty(true);
+        break;
+    case EE_SCREENS_OP_PGS_SERIES_ENABLED:
+        EEScreensPgsGraph(inForm, inA)->SetIsSeriesEnabled(inB, inC != 0);
+        break;
+    case EE_SCREENS_OP_PGS_SHOW_GRAPH:
+        EEScreensPgsLineGraph(inForm)->ShowGraph(inA);
+        break;
+    case EE_SCREENS_OP_PGS_CLEAR_GRAPH:
+        EEScreensPgsGraph(inForm, inA)->ClearAllSeries();
+        break;
+    case EE_SCREENS_GAME_PGS_ADD_SERIES: {
+        EEStatisticsRecord& r = gWorld.mStatistics.mRecords[inA];
+        EEScreensPgsLineGraph(inForm)->AddGraphSeries(r.mStatistics.GetSeries(inB).mPoints, inB, r.mColor);
+        break;
+    }
+    case EE_SCREENS_OP_PGS_PRUNE:
+        EEScreensPgsGraph(inForm, inA)->PruneGraph();
+        break;
+    case EE_SCREENS_OP_PGS_SERIES_CLEAR:
+        sPgsSeries.ClearAllDataPoints();
+        break;
+    case EE_SCREENS_OP_PGS_SERIES_POINT:
+        sPgsSeries.AddDataPoint(U2DPoint<long>((long)(int32_t)inA, (long)(int32_t)inB));
+        break;
+    case EE_SCREENS_OP_PGS_SERIES_ADD:
+        EEScreensPgsGraph(inForm, inA)->AddSeries(sPgsSeries);
+        break;
+    case EE_SCREENS_GAME_PGS_COMBINE: {
+        // graph 0x17: 0x0e combined with 0x0d, each series in its record's colour
+        UGraph theGraph;
+        UGraph theFirst;
+        UGraph theSecond;
+        UGraph theCombined;
+        UGraphSeries theSeries;
+        EEUIPGSLineGraph* theLineGraph = EEScreensPgsLineGraph(inForm);
+        theGraph = theLineGraph->GetGraphAt(0x17);
+        theGraph.ClearAllSeries();
+        theFirst = theLineGraph->GetGraphAt(0x0d);
+        theSecond = theLineGraph->GetGraphAt(0x0e);
+        theSecond.CombineGraph(theFirst, theGraph);
+        theCombined = theGraph;
+        theCombined.ClearAllSeries();
+        for (unsigned long i = 1; i < gWorld.mStatistics.GetRecords().size(); i++) {
+            theSeries.ClearAllDataPoints();
+            theSeries = theGraph.GetSeries(i - 1);
+            theSeries.SetColor(gWorld.mStatistics.GetRecords()[i].mColor);
+            theCombined.AddSeries(theSeries);
+        }
+        theLineGraph->SetGraphAt(theCombined, 0x17);
+        break;
+    }
+    case EE_SCREENS_OP_PGS_AXES:
+        EEScreensPgsLineGraph(inForm)->SetLabelYAxis(false);
+        EEScreensPgsLineGraph(inForm)->SetLabelXAxis(true);
+        break;
+    case EE_SCREENS_OP_PGS_MAX_Y:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetMaxY();
+    case EE_SCREENS_OP_PGS_MIN_Y:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetMinY();
+    case EE_SCREENS_OP_PGS_SERIES_MAX_Y:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetSeries(inB).GetMaxY();
+    case EE_SCREENS_OP_PGS_SERIES_COUNT:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetSeriesCount();
+    case EE_SCREENS_OP_PGS_POINT_COUNT:
+        return (uint32_t)EEScreensPgsGraph(inForm, inA)->GetSeries(inB).GetDataPointCount();
+    case EE_SCREENS_OP_PGS_POINT: {
+        const U2DPoint<long>& p = EEScreensPgsGraph(inForm, inA)->GetSeries(inB).GetDataPoint(inC);
+        return (uint32_t)(inD ? p.GetY() : p.GetX());
+    }
+    case EE_SCREENS_GAME_PGS_NEW_MANAGER:
+        inForm->SetFormManager(new EEPGSFormManager);
+        sPgsSeries = UGraphSeries();
+        break;
+    case EE_SCREENS_OP_PGS_BG_COLOUR:
+        Ctl(inA)->SetBgColor(GEColor(Float(inB), Float(inC), Float(inD)));
+        break;
+    case EE_SCREENS_GAME_PGS_WINDOW: {
+        GEWindow* theWindow = inForm->GetManager()->GetRasterizer()->GetWindow(inForm->GetManager()->GetScreen());
+        return inA ? theWindow->GetWidth() : theWindow->GetHeight();
+    }
+    case EE_SCREENS_OP_PGS_DESIGNED:
+        return inA ? inForm->GetDesignedWidth() : inForm->GetDesignedHeight();
+    case EE_SCREENS_OP_PGS_IS_BAR:
+        return dynamic_cast<UIStatusBar*>(Ctl(inA)) != NULL;
+    case EE_SCREENS_OP_PGS_IS_BITMAP:
+        return dynamic_cast<UIBitmap*>(Ctl(inA)) != NULL;
+    case EE_SCREENS_OP_PGS_EXISTS:
+        return Ctl(inA) != NULL;
+    case EE_SCREENS_OP_PGS_INDEX:
+        return Ctl(inA)->GetIndex();
+    case EE_SCREENS_OP_PGS_NEW_BAR: {
+        UIControl* theTemplate = Ctl(inA);
+        UIStatusBar* theBar = new UIStatusBar(theTemplate->GetId() + inB - 1,
+                                              GERectangle(sPgsRectangle[0], sPgsRectangle[1], sPgsRectangle[2], sPgsRectangle[3]),
+                                              inForm, theTemplate->GetIndex() + inB - 1, theTemplate->GetBorderThickness());
+        theBar->SetText(UWideString(), gFontTahoma8);
+        inForm->AddControl(theBar, inC);
+        return theBar->GetIndex();
+    }
+    case EE_SCREENS_OP_PGS_TEXT_STYLE:
+        Bar(inB)->SetStringTableID(Ctl(inA)->GetStringTableID());
+        *Bar(inB)->GetGEText() = *Bar(inA)->GetGEText();
+        break;
+    case EE_SCREENS_OP_PGS_NEW_STAR: {
+        // the gold star: the template's rectangle, the texture "textures\gold star"
+        GETextureDescription theDescription;
+        theDescription.mIs3DRenderable = false;
+        theDescription.mIsTransparencyEnabled = false;
+        theDescription.mPixelDepth = inForm->GetManager()->GetUITextureBitDepth();
+        theDescription.mNumMipLevelsToDrop = 0;
+        theDescription.mSurfaceVolatility = 1;
+        theDescription.mFrameFormat = 0;
+        theDescription.mHasAlpha = true;
+        theDescription.mCreateMIPMaps = true;
+        GERectangle theBitmapRectangle = Ctl(kPostGameGoldStar)->GetRectangle();
+        GETexture* theTexture = gTextureManager->LoadTexture("textures\\gold star", theDescription);
+        theTexture->SetStageAlphaMode(kStageOpModulate, -1);
+        theTexture->SetStageColorMode(kStageOpModulate, -1);
+        theTexture->SetStageMinFilterMode(1, -1);
+        theTexture->SetStageMagFilterMode(1, -1);
+        theTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
+        theTexture->SetStageMipMapBias(0.0f, -1);
+        theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
+        GEBitmap* theBitmap = new GEBitmap;
+        theBitmap->SetTexture(theTexture, inForm->GetManager()->GetScreen());
+        theBitmap->ComputeStretchedCoordsAndScale(theBitmapRectangle, theBitmapRectangle, GERectangle(0.0f, 0.0f, 32.0f, 32.0f),
+                                                  inForm->GetManager()->GetScreen());
+        UIBitmap* theStar = new UIBitmap(inA, theBitmap, theBitmapRectangle, inForm, inB);
+        inForm->AddControl(theStar, inC);
+        theBitmap->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_PGS_BAR_OPACITY:
+        Bar(inA)->SetStatusBarOpacity(Float(inB));
+        break;
+    case EE_SCREENS_OP_PGS_BAR_RANGE:
+        Bar(inA)->SetRange(0, inB);
+        Bar(inA)->SetCurrentRangeValue((long)(int32_t)inC);
+        break;
+    case EE_SCREENS_OP_PGS_GET_BG_OPACITY:
+        return Bits(Ctl(inA)->GetBgOpacity());
+    case EE_SCREENS_OP_PGS_BAR_COLOUR:
+        Bar(inA)->SetStatusBarColor(GEColor(Float(inB), Float(inC), Float(inD)));
+        break;
+    case EE_SCREENS_GAME_PGS_PROTOCOL:
+        NEProtocol::GetProtocol(0, sPgsProtocol);
+        break;
+    case EE_SCREENS_GAME_PGS_SCREENSHOTS:
+        return gGamePreferences.GetSettings().mTakeEndGameScreenshots;
+    case EE_SCREENS_GAME_PGS_SCREENSHOT: {
+        // the last end-game screenshot of today as the backdrop
+        UString theFileName;
+        FSFileSpec theSearch;
+        FSFileSpec theFound;
+        GERectangle theRectangle;
+        GETextureDescription theDescription;
+        UILayoutUtility theLayout;
+        TMTime theTime;
+        theDescription.mNumMipLevelsToDrop = 0;
+        theDescription.mIs3DRenderable = false;
+        theDescription.mIsTransparencyEnabled = false;
+        theDescription.mSurfaceVolatility = 1;
+        theDescription.mPixelDepth = 16;
+        theDescription.mFrameFormat = 0;
+        theDescription.mHasAlpha = true;
+        theDescription.mCreateMIPMaps = true;
+        TMGetTimeOfDay(theTime);
+        sprintf(theFileName, "EEPostGame-%lu-%lu-%lu-???.jpg", theTime.mMonth + 1, theTime.mDay, theTime.mYear);
+        theSearch.SetVolume(gStartupVolume);
+        theSearch.SetDirectory(gStartupDirectory);
+        if (theSearch.GetFirstFile(theFileName, theFound) == kErrorOK) {
+            while (theSearch.GetNextFile(theFound) == kErrorOK)
+                ;
+            inForm->LockDrawBackground();
+            UIBackground* theMap = new EEUIBMapBackground(-2, theFound.GetFile(), theDescription, theRectangle, theLayout,
+                                                          inForm, 3, 0, 0, true);
+            theMap->Open();
+            theMap->LoadBackground();
+            inForm->UnlockDrawBackground();
+        }
+        break;
+    }
+    case EE_SCREENS_GAME_PGS_SCI_DELETE:
+        EEUISCIFormManager::Get()->DeleteObjects();
+        break;
+    case EE_SCREENS_OP_PGS_REMOVE: {
+        UIControl* theControl = Ctl(inA);
+        inForm->RemoveControl(theControl, inB);
+        if (theControl)
+            delete theControl;
+        break;
+    }
+    case EE_SCREENS_GAME_PGS_SAVE:
+        gGamePreferences.Save();
+        break;
+    case EE_SCREENS_GAME_PGS_REJOIN:
+        if (gWonNet)
+            gWonNet->RejoinRoom(false);
+        break;
+    case EE_SCREENS_GAME_PGS_CAMPAIGN_SETUP:
+        sPgsCampaign->SetFirstScenario(sPgsCampaign->mCampaign.GetRequiredCiv());
+        sPgsCampaign->SetDescription(sPgsCampaign->mCampaign.GetDescription());
+        sPgsCampaign->mAllScenariosOpen = sPgsCampaign->mCampaignName.EqualsIgnoreCase(gCampaignEEDemo) ||
+                                          sPgsCampaign->mCampaignName.EqualsIgnoreCase(gCampaignEELearning);
+        break;
+    case EE_SCREENS_GAME_PGS_CAMPAIGN_CLEAR:
+        sPgsCampaign->SetCampaignName("");
+        sPgsCampaign->SetFirstScenario("");
+        sPgsCampaign->SetDescription("");
+        break;
+    default:
+        return EEScreensCivBuilderCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+    }
+    return 0;
+}
+
+// ---- the loading screen's (splash.rs): inForm is the loading screen (form 23)
+static uint32_t EEScreensSplashCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                    uint32_t inC, uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_SS_LOCK:
+        if (inA)
+            gWorld.GetLobbyOptions().mLock->ReadLock();
+        else
+            gWorld.GetLobbyOptions().mLock->ReadUnlock();
+        break;
+    case EE_SCREENS_GAME_SS_HUMANS:
+        return gCommunications->GetNumHumanPlayers();
+    case EE_SCREENS_GAME_SS_PLAYER: {
+        const EEGameOptionsPlayer& p = gWorld.GetLobbyOptions().mPlayers[inA];
+        return (uint32_t)(p.mType & 0xff) | (p.mIsLocal == true ? 1u << 8 : 0u);
+    }
+    case EE_SCREENS_GAME_SS_LOCAL:
+        gUserInterface->mLocalPlayer = (long)inA;
+        break;
+    case EE_SCREENS_OP_SS_BAR_PLAYER_COLOUR:
+        static_cast<UIStatusBar*>(inForm->GetControl(inA))
+            ->SetStatusBarColor(EEGetPlayerColor(gWorld.GetLobbyOptions().mPlayers[inB].mColor));
+        break;
+    case EE_SCREENS_OP_SS_BAR_VALUE:
+        static_cast<UIStatusBar*>(inForm->GetControl(inA))->SetCurrentRangeValue((long)(int32_t)inB);
+        break;
+    case EE_SCREENS_OP_SS_BACKGROUND: {
+        UIBackground* theBackground = inForm->GetBackgroundByID(0x84);
+        GERectangle theRectangle = theBackground->GetRectangle();
+        theRectangle.SetBottom(Float(inA));
+        theBackground->SetRectangle(theRectangle);
+        theBackground->SetVisibility(true);
+        break;
+    }
+    default:
+        return EEScreensPostGameCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+    }
+    return 0;
+}
+
+// ---- the civilization choice form's (civ_choice.rs): the form 35 by the manager, or the event's form
+static std::vector<EECivilizationEntry> sPdcsCivs;   // EE_SCREENS_GAME_PDCS_CIVS's, for the names and files
+static UWideString sPdcsName;                        // the last EE_SCREENS_TEXT_PDCS_LOAD's civilization
+static std::vector<EECivUpgrade> sPdcsUpgrades;
+
+static EECBUIListBox* EEScreensPdcsControl(unsigned long inIndex)
+{
+    return static_cast<EECBUIListBox*>(gUIManager->GetFormByID(kFormPredefinedCiv)->GetControl(inIndex));
+}
+
+static uint32_t EEScreensCivChoiceCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                       uint32_t inC, uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_OP_PDCS_STYLE: {
+        EECBUIListBox* theList = static_cast<EECBUIListBox*>(inForm->GetControl(inA));
+        theList->SetAutoSelect(false);
+        if (inB & 2) {
+            theList->mShowPoints = false;
+            theList->mSelectUpgradesOnly = false;
+        }
+        theList->SetSortLines((inB & 1) != 0);
+        theList->mC13C = GEColor(Float(inC), Float(inC), Float(inD));
+        break;
+    }
+    case EE_SCREENS_GAME_PDCS_FILL:
+        gCivilizationManager.FillCivilizationList(static_cast<EECBUIListBox*>(inForm->GetControl(inA)));
+        break;
+    case EE_SCREENS_OP_PDCS_HAS_SELECTION:
+        return static_cast<EECBUIListBox*>(inForm->GetControl(inA))->GetHasSelection();
+    case EE_SCREENS_GAME_PDCS_PAUSE:
+        gWorld.PauseGame();
+        break;
+    case EE_SCREENS_GAME_PDCS_CIVS:
+        sPdcsCivs.clear();
+        gCivilizationManager.GetCivilizations(sPdcsCivs);
+        return (uint32_t)sPdcsCivs.size();
+    case EE_SCREENS_OP_PDCS_CLEAR_STATS:
+        EEScreensPdcsControl(4)->DeleteAllEntries();
+        break;
+    case EE_SCREENS_OP_PDCS_SELECTION: {
+        unsigned long theSelection;
+        return EEScreensPdcsControl(3)->GetCurrentSelection(theSelection) != kErrorOK ? 0 : theSelection + 1;
+    }
+    case EE_SCREENS_OP_PDCS_CONTROLS:
+        return EEScreensPdcsControl(3) && EEScreensPdcsControl(4) && EEScreensPdcsControl(5);
+    case EE_SCREENS_OP_PDCS_SET_UPGRADES:
+        EEScreensPdcsControl(4)->SetCivilizationUpgrades(sPdcsUpgrades);
+        break;
+    case EE_SCREENS_OP_PDCS_HIDE_LABEL:
+        EEScreensPdcsControl(5)->SetDisplayMode(kDisplayModeHidden);
+        break;
+    case EE_SCREENS_OP_PDCS_RESET:
+        EEScreensPdcsControl(3)->ResetSelection();
+        break;
+    case EE_SCREENS_GAME_PDCS_REQUEST: {
+        NEMessage* theRequest = new EEMCivUpgradesRequested(gWorld.mCurrentPlayer, sPdcsUpgrades, sPdcsName, 0);
+        if (gCommunications->GetIsMultiplayerSession())
+            gCommunications->ProcessLocalUserInput(theRequest, kSlotServer);
+        else {
+            theRequest->Execute();
+            theRequest->Dereference();
+        }
+        break;
+    }
+    default:
+        return EEScreensSplashCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+    }
+    return 0;
+}
+
+// ---- the debug sound panel's (debug_sound.rs): the first selected unit's sound of a kind
+static EESoundObject* sDebugSound;   // EE_SCREENS_GAME_DSU_SOUND's, for EE_SCREENS_GAME_DSU_VOLUME
+
+static uint32_t EEScreensDebugSoundCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                        uint32_t inC, uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_DSU_SOUND: {
+        EEComplexUnit* theUnit = NULL;
+        sDebugSound = NULL;
+        if (!EEGetFirstSelectedUnit(theUnit) || theUnit->mComplexUnit == NULL)
+            return 0;
+        EEUnitClass* theClass = theUnit->mComplexUnit->mUnitClass;
+        EEModel* theModel = theClass->mModel;
+        switch (inA) {
+        case 1: sDebugSound = theClass->mAcknowledgeSounds[0]; break;
+        case 2: sDebugSound = theClass->mAcknowledgeSounds[1]; break;
+        case 3: sDebugSound = theClass->mCreationSound; break;
+        case 4: sDebugSound = theClass->mDeathSound; break;
+        case 5: sDebugSound = theClass->mSelectionSounds[0]; break;
+        case 6: sDebugSound = theClass->mSelectionSounds[1]; break;
+        case 7: sDebugSound = theModel->mSounds1[0]; break;
+        case 8: sDebugSound = theModel->mSounds2[0]; break;
+        case 9: sDebugSound = theModel->mSounds1[13]; break;
+        case 10: sDebugSound = theModel->mSounds2[13]; break;
+        }
+        return sDebugSound ? 2 : 1;
+    }
+    case EE_SCREENS_OP_DSU_SLIDER:
+        return dynamic_cast<UISlider*>(inEntity) != NULL;
+    case EE_SCREENS_GAME_DSU_VOLUME:
+        sDebugSound->SetVolume(Float(inA));
+        break;
+    default:
+        return EEScreensCivChoiceCall(inForm, inEntity, inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -1673,7 +2502,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_GO_HIDE_RESIGN:
         return gWorld.GetCurrentPlayer()->GetObserverMode() == true || gWorld.GetGameOptions().GetIsScenarioGame() == true;
     default:
-        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(theForm), inOp, inA, inB, inC);
+        return EEScreensDebugSoundCall(theForm, static_cast<UIEntity*>(inEntity), inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -1691,17 +2520,89 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     UIForm* theForm = static_cast<UIForm*>(inForm);
     std::string theList;   // the lists' texts, each ended by a 0 byte
     switch (inWhich) {
+    // the loading screen's (splash.rs): the decrypted lines, the registered name, a lobby slot's name
+    case EE_SCREENS_TEXT_SS_TITLE:
+    case EE_SCREENS_TEXT_SS_COPYRIGHT: {
+        UString theEncrypted(inWhich == EE_SCREENS_TEXT_SS_TITLE
+                                 ? "B7B2265DB7B2265D2C11B5F7AC114576B5A95DCC84F90596C4116DB6D6B115C626B327BEB7B274D5"
+                                 : "B7B227FDB7B227FD1CC12D1714F15D2EFC610D9EB419BD94242B2506FCD147BEA49B253E24C9BD96AC19859696B327BEB7B25FB5");
+        UString theDecrypted;
+        UEDecryptUString(theEncrypted, theDecrypted);
+        theText = theDecrypted;
+        break;
+    }
+    case EE_SCREENS_TEXT_SS_SUFFIX:
+        theText = gU530BC8;
+        break;
+    case EE_SCREENS_TEXT_SS_NAME:
+        theText = gWorld.GetLobbyOptions().mPlayers[inArg].mName;
+        break;
+    // the post-game summary's (post_game.rs)
+    case EE_SCREENS_TEXT_PGS_NAME:
+        theText = gWorld.mStatistics.GetRecords()[inArg].GetName();
+        break;
+    case EE_SCREENS_TEXT_PGS_CAMPAIGN:
+        theText = gWorld.mStatistics.mCampaignName;
+        break;
+    case EE_SCREENS_TEXT_PGS_SERVER: {
+        // the stats server's host and port from the report file in the install directory: "host\0port"
+        UString theReportFile;
+        FSFileSpec theFile;
+        char theHost[32];
+        char thePort[20];
+        UEDecryptUString(sPgsReportFile, theReportFile);
+        theFile.SetVolume(gStartupVolume);
+        theFile.SetDirectory(gGamePreferences.GetSettings().mInstalledFromDirectory);
+        theFile.SetFile(theReportFile);
+        if (theFile.FOpen("r") != kErrorOK || gCommunications == NULL)
+            return (size_t)-1;
+        fscanf(theFile, "%s%s", theHost, thePort);
+        theFile.Close();
+        theList.append(theHost).push_back('\0');
+        theList.append(thePort);
+        break;
+    }
+    // the civilization choice form's (civ_choice.rs)
+    case EE_SCREENS_TEXT_PDCS_LINE: {
+        unsigned long theSelection;
+        if (EEScreensPdcsControl(3)->GetCurrentSelection(theSelection) != kErrorOK)
+            return (size_t)-1;
+        theText = EEScreensPdcsControl(3)->GetData(theSelection);
+        break;
+    }
+    case EE_SCREENS_TEXT_PDCS_CIV_NAME:
+        gResource->GetString(sPdcsCivs[inArg].mNameID, theText);
+        break;
+    case EE_SCREENS_TEXT_PDCS_CIV_FILE:
+        theText = sPdcsCivs[inArg].GetFileName();
+        break;
     case EE_SCREENS_TEXT_MUSIC_FILE:
         theText = theForm->GetMusicFileName();
         break;
     case EE_SCREENS_TEXT_CL_NAME:
-        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mName;
+    case EE_SCREENS_TEXT_CL_TEXT: {
+        // (ee_screens chat_log.rs)
+        uint32_t theWhich = inWhich == EE_SCREENS_TEXT_CL_TEXT;
+        theList.resize(1024);
+        size_t theLength = ee_screens_chat_log_text(inArg, theWhich, (uint8_t*)&theList[0], theList.size());
+        if (theLength > theList.size()) {
+            theList.resize(theLength);
+            ee_screens_chat_log_text(inArg, theWhich, (uint8_t*)&theList[0], theList.size());
+        }
+        theList.resize(theLength);
         break;
-    case EE_SCREENS_TEXT_CL_TEXT:
-        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mText;
-        break;
+    }
     case EE_SCREENS_TEXT_CL_PLAYER:
         theText = gWorld.GetCurrentPlayer()->mName;
+        break;
+    case EE_SCREENS_TEXT_DS_NAME:
+        theText = gWorld.GetPlayer(inArg)->mName;
+        break;
+    case EE_SCREENS_TEXT_DS_CIVILIZATION:
+        theText = UWideString(gWorld.GetPlayer(inArg)->mCivilization.mName);
+        break;
+    case EE_SCREENS_TEXT_CB_NAME:
+        theText = sCivBuilderText;
         break;
     case EE_SCREENS_TEXT_RASTERIZER_SETTING:
         theText = (inArg ? EEGamePreferences::sDefaultSettings : gGamePreferences.GetSettings()).mRasterizerName;
@@ -2021,6 +2922,18 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
     case EE_SCREENS_TEXT_CL_APPEND:
         static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->AppendText(theText);
         break;
+    case EE_SCREENS_TEXT_DS_BUTTON: {
+        UIButton* theButton = static_cast<UIButton*>(theForm->GetControl(inArg));
+        theButton->SetText(theText, theButton->GetGEText()->GetFont());
+        break;
+    }
+    case EE_SCREENS_TEXT_CB_CIVILIZATION_NAME:
+        CivBuilderSetCivilizationName(theText);
+        break;
+    case EE_SCREENS_TEXT_CB_SET_NAME:
+        return (uint32_t)CivBuilderSetName(theText);
+    case EE_SCREENS_TEXT_CB_LOAD:
+        return (uint32_t)CivBuilderLoadCivilization(UString(std::string((const char*)inText, inLength).c_str()));
     case EE_SCREENS_TEXT_MG_QUICK_LOAD: {
         // the last quick save's (the auto save's when inArg) load; theText shown when its file is not found
         UWideString theName = inArg ? gGamePreferences.mSettings.mLastAutoSave : gGamePreferences.mSettings.mLastQuickSave;
@@ -2239,6 +3152,51 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         theButton->SetText(theText, theButton->GetGEText()->GetFont());
         break;
     }
+    // the debug sound panel's (debug_sound.rs)
+    case EE_SCREENS_TEXT_DSU_LABEL:
+        if (UITextLabel* theLabel = dynamic_cast<UITextLabel*>(gUIManager->GetFormByID(kFormDebugSound)->GetControlById(inArg)))
+            theLabel->SetText(theText);
+        break;
+    // the post-game summary's (post_game.rs)
+    case EE_SCREENS_TEXT_PGS_TITLE:
+        EEScreensPgsGraph(theForm, inArg)->SetTitle(theText);
+        break;
+    case EE_SCREENS_TEXT_PGS_Y_LABEL:
+        EEScreensPgsGraph(theForm, inArg)->SetYLabel(theText);
+        break;
+    case EE_SCREENS_TEXT_PGS_X_LABEL:
+        EEScreensPgsGraph(theForm, inArg)->SetXLabel(theText);
+        break;
+    case EE_SCREENS_TEXT_PGS_BAR:
+        static_cast<UIStatusBar*>(theForm->GetControl(inArg))->SetText(theText, NULL);
+        break;
+    case EE_SCREENS_TEXT_PGS_SEND: {
+        // "host\0payload" to the stats server
+        size_t theHost = strnlen((const char*)inText, inLength);
+        size_t thePayload = theHost < inLength ? theHost + 1 : inLength;
+        sPgsProtocol->SendSingle(UString(std::string((const char*)inText, theHost).c_str()), (unsigned short)inArg,
+                                 inText + thePayload, (unsigned long)(inLength - thePayload));
+        break;
+    }
+    case EE_SCREENS_TEXT_PGS_CAMPAIGN_LOAD: {
+        UWideString theFileName;
+        UWideString theError;
+        gUIManager->GetFormByID(kFormCampaignScenarioSelect);
+        sPgsCampaign = EECampaignFormManager::Get();
+        theFileName = "Campaigns\\" + theText + gCampaignExtension;
+        return sPgsCampaign->mCampaign.Load(theFileName, theError, false);
+    }
+    case EE_SCREENS_TEXT_PGS_CAMPAIGN_NAME:
+        sPgsCampaign->SetCampaignName(theText);
+        break;
+    // the civilization choice form's (civ_choice.rs)
+    case EE_SCREENS_TEXT_PDCS_LOAD:
+        sPdcsName = UWideString();
+        sPdcsUpgrades.clear();
+        return (uint32_t)EELoadCivilization(UString(theText), EEGetCivilizationDirectory(false), sPdcsName, sPdcsUpgrades);
+    case EE_SCREENS_TEXT_PDCS_LABEL:
+        static_cast<UITextLabel*>(static_cast<UIControl*>(EEScreensPdcsControl(5)))->SetText(theText);
+        break;
     }
     return 0;
 }

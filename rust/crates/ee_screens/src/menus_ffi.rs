@@ -203,6 +203,16 @@ impl MenuHost for Form {
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_event(event: u32, form: *mut c_void, entity: *mut c_void) -> c_long {
     let mut host = Form(form, entity);
+    // (first: its posted loads' codes carry a slot in bits 16..23)
+    if let Some(result) = crate::civ_choice_ffi::dispatch(&mut host, event) {
+        return result;
+    }
+    if let Some(result) = crate::splash_ffi::dispatch(&mut host, event) {
+        return result;
+    }
+    if let Some(result) = crate::post_game_ffi::dispatch(&mut host, event) {
+        return result;
+    }
     if let Some(result) = crate::settings_form_ffi::dispatch(&mut host, event) {
         return result;
     }
@@ -228,6 +238,18 @@ pub unsafe extern "C" fn ee_screens_event(event: u32, form: *mut c_void, entity:
         return result;
     }
     if let Some(result) = crate::hot_keys_ffi::dispatch(&mut host, event) {
+        return result;
+    }
+    if let Some(result) = crate::diplomacy_ffi::dispatch(&mut host, event) {
+        return result;
+    }
+    if let Some(result) = crate::camera_ffi::dispatch(&mut host, event) {
+        return result;
+    }
+    if let Some(result) = crate::civ_builder_ffi::dispatch(&mut host, event) {
+        return result;
+    }
+    if let Some(result) = crate::debug_sound_ffi::dispatch(&mut host, event) {
         return result;
     }
     dispatch(&mut host, &MENUS, event);

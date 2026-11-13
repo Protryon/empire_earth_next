@@ -44,12 +44,12 @@ void MOTDCtrl::Paint(Graphics& inGraphics)
 // Only the document type is checked, not whether the download succeeded
 // FUNCTION: WON 0x007c1050
 // Takes the system and game MOTD file paths from a finished MOTD download and repaints
-void MOTDCtrl::ShowMessage(GetHTTPDocumentOp* inOp)
+void MOTDCtrl::ShowMessage(RustServerOp* inOp)
 {
-    if(inOp->GetDocType()!=HTTPDocType_MOTD) return;
+    if(inOp->GetNum(EE_WON_HTTPDOC_TYPE)!=HTTPDocType_MOTD) return;
     this->mNeedGenHTML=true;
-    this->mSysMOTDPath=inOp->GetDocumentPath(HTTPDocOwner_Sys);
-    this->mGameMOTDPath=inOp->GetDocumentPath(HTTPDocOwner_Game);
+    this->mSysMOTDPath=inOp->GetBytes(EE_WON_HTTPDOC_PATH,HTTPDocOwner_Sys);
+    this->mGameMOTDPath=inOp->GetBytes(EE_WON_HTTPDOC_PATH,HTTPDocOwner_Game);
     this->Invalidate();
 }
 // FUNCTION: WON 0x007c1280

@@ -427,50 +427,9 @@ void EEUCBuilding::GetSurroundingTiles(EEComplexUnit* inUnit, std::vector<EETile
 // asks takeoff clearance or launches the next plane; other actions use the common handling
 void EEUCBuilding::ActionChanged(EEComplexUnit* inUnit)
 {
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionSearchForSecondaryTarget: {
-        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
-        if (theGoal != NULL && theGoal->mTarget != NULL) {
-            EEUnit* theTarget = this->FindNearestTargetBuilding(theGoal->mTarget);
-            if (theTarget != NULL)
-                theGoal->SetTarget(theTarget);
-        }
-        return;
-    }
-    case kActionTrackEnemyUnit:
-        return;
-    case kActionDying:
-        inUnit->SetResourceAmount(0);
-        if (inUnit->mNextPart != NULL) {
-            inUnit->mNextPart->StartAction(kActionDying);
-            inUnit->mNextPart->mUnitClass->ActionChanged(inUnit->mNextPart);
-        }
-        this->HandleActionChanged(inUnit);
-        return;
-    case kActionResourcesRotting:
-        inUnit->SetResourceAmount(0);
-        break;
-    case kActionPrepareToMove:
-        if (inUnit->mUnitClass->mAIKind == kAIKindAircraftCarrier)
-            break;
-        if (inUnit->mUnitClass->mUnitType == kUnitTypeSp15SpaceCarrier)
-            break;
-        return;
-    case kActionAirportOpen:
-        inUnit->SetExitingUnitID(-1);
-        return;
-    case kActionWaitForTakeoffClearance:
-        if (inUnit->mExitingUnitID != -1) {
-            EEComplexUnit* theCargo = inUnit->FindPassenger(inUnit->mExitingUnitID);
-            if (theCargo != NULL)
-                theCargo->mPlayer->mAirTraffic[theCargo->mUnitClass->mAirTrafficType - 1]->QueueRequest(inUnit, theCargo, 0);
-        }
-        return;
-    case kActionLaunchNextAirplane:
-        this->ReleaseUnit(inUnit);
-        return;
-    }
-    this->HandleActionChanged(inUnit);
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs building), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_BUILDING, this, inUnit);
 }
 
 // FUNCTION: EXE 0x60f17f
@@ -516,7 +475,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
     GEOrientation theOrientation;
     GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
     GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    std::deque<EEUnitGoal*>::iterator theIterator;
+    EEGoalDeque::const_iterator theIterator;
     long theQueue = 0;
     unsigned long theCargoID = inUnit->mExitingUnitID;
     if (UIsNone32(theCargoID))

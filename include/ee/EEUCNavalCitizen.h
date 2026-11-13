@@ -23,7 +23,6 @@ public:
     virtual void AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth); // +0x0c 0x218539
     virtual EEUnit* CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator); // +0x30 0x218605 (ICF: EEUCNaval, EEUCNavalBuilding...)
     virtual EEUnit* CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator); // +0x34 0x218909 (ICF: EEUCNaval, EEUCNavalBuilding...)
-    virtual void ActionChanged(EEComplexUnit* inUnit); // +0x74 0x218641
     virtual long EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);  // +0xa0 0x218664
     virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x218767
     // members OPEN: a base's sizeof is unknown (no new site), so this class's own members cannot be placed yet

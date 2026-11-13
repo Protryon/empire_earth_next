@@ -102,8 +102,8 @@ every trigger's evaluation, SMOB every scenario object's, SMCP the player choice
 object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile
 scenario plays a retail campaign scenario per seed (SCENARIOS, extracted from the data tree's campaign archives into
 build/sim_capture/scenarios; EE-SIM --scenario); its golden file lists only the SM tags (recorded from the C++
-scenario manager before its logic moved), and its USCK reports without stopping the game (EE_SIM_STORE_CHECK_SOFT:
-the unit store does not follow a loaded scenario's units yet).
+scenario manager before its logic moved); its USCK stops the game on a mismatch like every profile's (a scenario's
+path points, on the map in no list, are the store's unlisted records: R5b.4's fourteenth round).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """
@@ -184,8 +184,6 @@ def one(name, exe, seed, data, profile="oracle"):
     capture, trace, report = d / f"capture-{seed}.bin", d / f"trace-{seed}.txt", d / f"report-{seed}.json"
     capture.unlink(missing_ok=True)
     env = dict(os.environ, EE_SIM_CAPTURE=str(capture.resolve()))
-    if profile == "scenario":   # the unit store does not follow a loaded scenario's units yet: USCK reports, goes on
-        env["EE_SIM_STORE_CHECK_SOFT"] = "1"
     args =[str(scenario_file(seed, data)) if v == "{scenario}" else v for v in PROFILES[profile]]
     r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "sim.py"), "--data", data, "--slot",
                         f"capture-{name}-{seed}", "--exe", str(exe), "--", "--seed", str(seed), *args,

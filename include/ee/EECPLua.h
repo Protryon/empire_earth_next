@@ -147,6 +147,7 @@ struct EECPLuaConfig {
 };
 enum { kEECPLuaHookStep = 1000 };
 
+// The state's body is Rust (ee_ai lua_host.rs, over this same vendored Lua): this class is its handle.
 class EECPLuaState {
 public:
     explicit EECPLuaState(const EECPLuaConfig& inConfig);
@@ -154,7 +155,7 @@ public:
     EECPLuaState(const EECPLuaState&) = delete;
     EECPLuaState& operator=(const EECPLuaState&) = delete;
 
-    bool IsOpen() const { return this->mL != nullptr; }
+    bool IsOpen() const;
 
     // require(inModule), which must return a table with a `step` function (and optionally `init`): the personality.
     bool LoadPersonality(const char* inModule);
@@ -180,45 +181,29 @@ public:
 
     EECPLuaStatus LastStatus() const { return this->mStatus; }
     const std::string& LastError() const { return this->mError; }
-    int64_t LastInstructions() const { return this->mUsed; }    // the last call's count (a multiple of the hook step)
-    int64_t Budget() const { return this->mConfig.mBudget; }    // the instructions a call may use
-    size_t MemoryUsed() const { return this->mBytes; }
-    size_t MemoryPeak() const { return this->mPeak; }
-    uint64_t RngState() const { return this->mRng; }
+    int64_t LastInstructions() const;   // this or the last call's count (a multiple of the hook step, plus charges)
+    int64_t Budget() const;             // the instructions a call may use
+    size_t MemoryUsed() const;
+    size_t MemoryPeak() const;
+    uint64_t RngState() const;
 
-    // ---- for the runtime's C functions (EECPLua.cpp)
+    // ---- for the bindings' C functions
     static EECPLuaState* From(lua_State* inL);
     uint64_t NextRandom();
-    void Write(const char* inText);
-    bool ReadModule(const char* inPath, std::string& outText);
-    void* Allocate(void* inBlock, size_t inOld, size_t inNew);
-    void OnHook(lua_State* inL);
     // A C function's cost in instruction equivalents (docs/AI_LUA_UNITS.md §2.1): added to the call's count, which
     // the budget bounds; over the budget it raises as the hook does
     void Charge(lua_State* inL, int64_t inAmount);
-    void OpenExtension(lua_State* inL);   // the setup's call of mOpen
-    bool mNoFile = false;           // this call: require found no module (or a bad name)
-    bool mSyntax = false;           // this call: a chunk did not compile
-    bool mAllocFailed = false;      // this call: the allocator refused a block
 
 private:
-    bool Fail(EECPLuaStatus inStatus, const std::string& inError);
-    bool Call(void* inJob, EECPLuaValue* outResult, const char* inWhat);
-    bool CallEntry(const char* inName, bool inOptional, const EECPLuaValue& inView, EECPLuaValue& outOrders);
-    bool CheckMemory();
+    bool Sync(bool inOK);   // the Rust state's status and error -> mStatus, mError
 
     EECPLuaConfig mConfig;
-    lua_State* mL = nullptr;
-    uint64_t mRng = 0;
-    size_t mBytes = 0;
-    size_t mPeak = 0;
-    int64_t mUsed = 0;
-    bool mOverBudget = false;
-    int mPersonality = -2;          // registry reference of the personality table (LUA_NOREF: none)
-    int mMemory = -2;               // registry reference of the memory table
-    std::string mModule;
+    void* mHost = nullptr;          // the Rust state (EeAiLuaHost)
     EECPLuaStatus mStatus = kEECPLuaOK;
     std::string mError;
+    std::string mReadText;          // a module's text while it compiles (EECPLuaConfig::mRead's output)
+
+    friend struct EECPLuaStateAccess;
 };
 
 #endif

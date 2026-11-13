@@ -20,6 +20,34 @@ constexpr static const int32_t EE_UNITS_ACTION_SPACESHIP = 5;
 
 constexpr static const int32_t EE_UNITS_ACTION_BASIC_PRIEST = 6;
 
+/// the fourteenth round's: `EEUCBasicCitizen` (and the naval citizen, whose forwarder is gone), `EEUCBuilding` (and
+/// the naval and space buildings'), `EEUCBuildingPriest`, `EEUCGate`, `EEUCMiningBuilding`, `EEUCHelicopter`,
+/// `EEUCHelicopterTransport`, `EEUCHelicopterPriest`, `EEUCAirAnimal`, `EEUCLandable`, `EEUCAirplane`,
+/// `EEUCPlanetSpaceship`
+constexpr static const int32_t EE_UNITS_ACTION_CITIZEN = 7;
+
+constexpr static const int32_t EE_UNITS_ACTION_BUILDING = 8;
+
+constexpr static const int32_t EE_UNITS_ACTION_BUILDING_PRIEST = 9;
+
+constexpr static const int32_t EE_UNITS_ACTION_GATE = 10;
+
+constexpr static const int32_t EE_UNITS_ACTION_MINING_BUILDING = 11;
+
+constexpr static const int32_t EE_UNITS_ACTION_HELICOPTER = 12;
+
+constexpr static const int32_t EE_UNITS_ACTION_HELICOPTER_TRANSPORT = 13;
+
+constexpr static const int32_t EE_UNITS_ACTION_HELICOPTER_PRIEST = 14;
+
+constexpr static const int32_t EE_UNITS_ACTION_AIR_ANIMAL = 15;
+
+constexpr static const int32_t EE_UNITS_ACTION_LANDABLE = 16;
+
+constexpr static const int32_t EE_UNITS_ACTION_AIRPLANE = 17;
+
+constexpr static const int32_t EE_UNITS_ACTION_PLANET_SPACESHIP = 18;
+
 /// `GetAnimation()`, `EEGetAttackFrameSet(inUnit)`, `IsSwimming()`, the class's `IsLandBuilding()`, the class's
 /// `mAttack > 0`, `mStats->mCanFireOverWalls`
 constexpr static const int32_t EE_UNITS_ACT_R_ANIMATION = 130;
@@ -70,6 +98,29 @@ constexpr static const int32_t EE_UNITS_ACT_R_CATEGORY = 151;
 constexpr static const int32_t EE_UNITS_ACT_R_CONTAINER = 152;
 
 constexpr static const int32_t EE_UNITS_ACT_R_RESOURCE_AMOUNT = 153;
+
+/// the fourteenth round's: `mPlayer->IsHuman()`, `mCitizenBuildQueue.size() == 0`, the class's
+/// `mAIKind == kAIKindAircraftCarrier`, `mExitingUnitID`, the class's `mAirTrafficType`, `(long)mWaypoints.size()`,
+/// `mHomeBase != NULL`, `mIsClearanceGranted == true`, the class's `mProjectileClass` a bomb, `mIsCommandable`
+constexpr static const int32_t EE_UNITS_ACT_R_IS_HUMAN = 154;
+
+constexpr static const int32_t EE_UNITS_ACT_R_BUILD_QUEUE_EMPTY = 155;
+
+constexpr static const int32_t EE_UNITS_ACT_R_AIRCRAFT_CARRIER = 156;
+
+constexpr static const int32_t EE_UNITS_ACT_R_EXITING_UNIT = 157;
+
+constexpr static const int32_t EE_UNITS_ACT_R_AIR_TRAFFIC_TYPE = 158;
+
+constexpr static const int32_t EE_UNITS_ACT_R_WAYPOINTS = 159;
+
+constexpr static const int32_t EE_UNITS_ACT_R_HOME_BASE = 160;
+
+constexpr static const int32_t EE_UNITS_ACT_R_CLEARANCE_GRANTED = 161;
+
+constexpr static const int32_t EE_UNITS_ACT_R_BOMBER = 162;
+
+constexpr static const int32_t EE_UNITS_ACT_R_COMMANDABLE = 163;
 
 /// `ReleaseHealEffect()`; the herd's `AttackBack(inUnit, true)`, `HandleUnitHit(inUnit)`
 constexpr static const int32_t EE_UNITS_ACT_RELEASE_HEAL_EFFECT = 200;
@@ -201,6 +252,110 @@ constexpr static const int32_t EE_UNITS_ACT_HIDE_CONVERSION_EFFECTS = 250;
 constexpr static const int32_t EE_UNITS_ACT_SET_CONVERSION_START = 251;
 
 constexpr static const int32_t EE_UNITS_ACT_SET_WORK_TIMER = 252;
+
+/// the citizen's: `FindStorage(inUnit, a != 0)` and a gather goal to the storage found; `SetResourceAmount(a)`,
+/// `SetProductionTime(a)`, `mHasShiftQueuedBuild = false`
+constexpr static const int32_t EE_UNITS_ACT_FIND_STORAGE_GOAL = 253;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_RESOURCE_AMOUNT = 254;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_PRODUCTION_TIME = 255;
+
+constexpr static const int32_t EE_UNITS_ACT_CLEAR_SHIFT_QUEUED = 256;
+
+/// the building's: the attack goal retargeted to the nearest building of its target, `SetExitingUnitID(a)`, the
+/// exiting plane's takeoff request, `ReleaseUnit(inUnit)`
+constexpr static const int32_t EE_UNITS_ACT_RETARGET_NEAREST_BUILDING = 257;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_EXITING_UNIT = 258;
+
+constexpr static const int32_t EE_UNITS_ACT_QUEUE_TAKEOFF = 259;
+
+constexpr static const int32_t EE_UNITS_ACT_RELEASE_UNIT = 260;
+
+/// the gate's: the gate sound played, the next two parts' `StartAction(a)`
+constexpr static const int32_t EE_UNITS_ACT_GATE_SOUND = 261;
+
+constexpr static const int32_t EE_UNITS_ACT_GATE_PARTS_ACTION = 262;
+
+/// `SetCurrentPhysicsOrder(a)`, `SetF220(0.0f)`, `SetHeight(GetHeightAt(inUnit, the unit's location))`, the next
+/// waypoint's height (`GetNextWaypointPoint`, then `SetHeight(GetHeightAt)` when there is one), `inUnit->NextWaypoint()`
+constexpr static const int32_t EE_UNITS_ACT_SET_PHYSICS_ORDER = 263;
+
+constexpr static const int32_t EE_UNITS_ACT_CLEAR_F220 = 264;
+
+constexpr static const int32_t EE_UNITS_ACT_HEIGHT_HERE = 265;
+
+constexpr static const int32_t EE_UNITS_ACT_HEIGHT_AT_NEXT_WAYPOINT = 266;
+
+constexpr static const int32_t EE_UNITS_ACT_UNIT_NEXT_WAYPOINT = 267;
+
+/// `ReturnToAirport(inUnit)`, `SetFlightTime(mStats->mFlightTime)`, `SetAmmunition(the class's mAmmunition)`
+constexpr static const int32_t EE_UNITS_ACT_RETURN_TO_AIRPORT = 268;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_FLIGHT_TIME_STATS = 269;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_AMMUNITION = 270;
+
+/// a falling flyer's roll (a: 0 the air animal's model, 1 the airplane's): `SetF220(ComputeRoll(yaw rate))`, the roll
+/// rate set to the yaw rate
+constexpr static const int32_t EE_UNITS_ACT_DEATH_ROLL = 271;
+
+/// the helicopters' path to the goal (a: 0 helicopter, 1 transport, 2 priest), the air animal's, the landable's
+/// (destination, landing point, `PathToward`)
+constexpr static const int32_t EE_UNITS_ACT_HELICOPTER_PATH = 272;
+
+constexpr static const int32_t EE_UNITS_ACT_AIR_ANIMAL_PATH = 273;
+
+constexpr static const int32_t EE_UNITS_ACT_LANDABLE_PATH = 274;
+
+/// the airplane's circling side (the space map's reach tests and the draws), the holding pattern (a: 0 airplane,
+/// 1 planet spaceship), `FlyOffMap(inUnit)`
+constexpr static const int32_t EE_UNITS_ACT_CIRCLE_SIDE = 275;
+
+constexpr static const int32_t EE_UNITS_ACT_HOLDING_PATTERN = 276;
+
+constexpr static const int32_t EE_UNITS_ACT_FLY_OFF_MAP = 277;
+
+/// the landable's: `ApproachCarrier(inUnit, a != 0)`, boarding the home carrier, `TakeOffFromCarrier(inUnit)`, the
+/// flight's path check (path start, continent, landing point), `FindNearestAirport` (its result; the host keeps it)
+/// and `SetHomeBase` of it, `StartAction(a)`, the class's `ActionChanged` again, the landing approach (a: landing),
+/// the secondary target, the takeoff, the landing request (`QueueRequest` of the home base: its result, else 9)
+constexpr static const int32_t EE_UNITS_ACT_APPROACH_CARRIER = 278;
+
+constexpr static const int32_t EE_UNITS_ACT_BOARD_CARRIER = 279;
+
+constexpr static const int32_t EE_UNITS_ACT_TAKE_OFF_FROM_CARRIER = 280;
+
+constexpr static const int32_t EE_UNITS_ACT_FLY_CHECK_PATH = 281;
+
+constexpr static const int32_t EE_UNITS_ACT_FIND_NEAREST_AIRPORT = 282;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_HOME_BASE_FOUND = 283;
+
+constexpr static const int32_t EE_UNITS_ACT_START_ACTION = 284;
+
+constexpr static const int32_t EE_UNITS_ACT_CLASS_ACTION_CHANGED = 285;
+
+constexpr static const int32_t EE_UNITS_ACT_APPROACH_LANDING = 286;
+
+constexpr static const int32_t EE_UNITS_ACT_SECONDARY_TARGET = 287;
+
+constexpr static const int32_t EE_UNITS_ACT_TAKEOFF = 288;
+
+constexpr static const int32_t EE_UNITS_ACT_QUEUE_LANDING = 289;
+
+/// a bomber's attack: `SetIsCommandable(a != 0)`, an attack ground goal at the drop location; `mIsCommandable = true`;
+/// the initial attack state's cruise height; the contact location here with heading 0 (a: through the setter)
+constexpr static const int32_t EE_UNITS_ACT_SET_COMMANDABLE = 290;
+
+constexpr static const int32_t EE_UNITS_ACT_BOMBER_GROUND_GOAL = 291;
+
+constexpr static const int32_t EE_UNITS_ACT_MAKE_COMMANDABLE = 292;
+
+constexpr static const int32_t EE_UNITS_ACT_INITIAL_ATTACK_HEIGHT = 293;
+
+constexpr static const int32_t EE_UNITS_ACT_CONTACT_HERE = 294;
 
 /// `kActionIdle` (the idle action's id).
 constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
@@ -613,6 +768,12 @@ constexpr static const uint32_t EE_UNIT_FIELD_HEAL_THRESHOLD = 46;
 /// `EE_COMBAT_CLASS_*` bits), fixed once the db's classes are made
 constexpr static const uint32_t EE_UNIT_FIELD_CLASS_FLAGS = 47;
 
+/// the fourteenth round's: `mStats` (the `EEUnitClassUpgrade*`'s address; the stats table's key: stats.rs)
+constexpr static const uint32_t EE_UNIT_FIELD_STATS = 48;
+
+/// the fifteenth round's: the active goal's id (`mGoalState->mID`; 0: no goal), beside its kind
+constexpr static const uint32_t EE_UNIT_FIELD_GOAL_ID = 49;
+
 /// The class flags: `mIsWall`, `mIsProjectile`, `mIsParatrooperBomber`, `mIsMelee`.
 constexpr static const uint8_t EE_UNIT_CLASS_WALL = 1;
 
@@ -629,6 +790,17 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
 constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
 
 constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
+
+/// The records by id, and the ids by object (the combat lane's handle-to-record lookup: RUST_PLAN's combat row, store
+/// field (3); a handle is the `RTSUnit*`'s address, the record's `object`).
+///
+/// The fourteenth round's unlisted table: the units of id 0xffffffff have their record by object here, as records by
+/// id cannot hold them: the shots (made by `CreateUnit` with no list: `EEUnitStoreInsertUnlisted`, until a list takes
+/// one or its destructor) and a scenario's path points (listed, every one of id 0xffffffff: `insert`). The holders'
+/// writes reach them by object, `by_object` answers from both tables, and the out-of-sync checksum's flags and the
+/// on-map check count those on the map (the chain holds them).
+/// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
+constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
 
 constexpr static const int32_t EE_UNITS_UPDATE_LAND = 1;
 
@@ -1026,6 +1198,10 @@ struct EeUnitRecord {
   uint32_t heal_threshold;
   /// the class's `EE_UNIT_CLASS_*` flags (0: no class)
   uint8_t class_flags;
+  /// `mStats`: the unit's stats object (its player's upgrade of the class; 0: none), the stats table's key
+  uint64_t stats;
+  /// the active goal's id (`mGoalState->mID`, the saves' goal id; 0: no goal): the goal queues' ids are goals.rs
+  uint32_t goal_id;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -1146,6 +1322,46 @@ struct EeUnitsPitchIn {
   float rate;
   /// 1: `EEPMNaval`'s (and `EEPMSpaceship`'s) mode, 0: the base model's
   uint8_t naval;
+};
+
+/// One stats object's fields (floats as their bits), as the C++ fills them (`EEUnitStatsFill`).
+struct EeUnitStatsRecord {
+  /// the `EEUnitClassUpgrade*`'s address (the key)
+  uint64_t object;
+  /// the reports that changed this record (1: the first); set by the table, not compared
+  uint32_t version;
+  /// `mUnitClass->mUnitType` (-1: no class)
+  int64_t unit_type;
+  /// `mScale`, `mRange`, `mAreaEffect`, `mLineOfSight`, `mAcceleration`, `mMaxVelocity`, `mMaxAngularVelocity`,
+  /// `mAttack`, `mLeadership` (float bits)
+  uint32_t scale;
+  uint32_t range;
+  uint32_t area_effect;
+  uint32_t line_of_sight;
+  uint32_t acceleration;
+  uint32_t max_velocity;
+  uint32_t max_angular_velocity;
+  uint32_t attack;
+  uint32_t leadership;
+  /// `mArmor[6]` (float bits)
+  uint32_t armor[6];
+  /// `mGatherTimes[7]`
+  int64_t gather_times[7];
+  /// `mPowerRegeneration`, `mFlightTime`, `mWorkRate`, `mReloadTime`, `mMaxHitPoints`, `mPower`, `mHealingPoints`,
+  /// `mRegeneration` (`long`s)
+  int64_t power_regeneration;
+  int64_t flight_time;
+  int64_t work_rate;
+  int64_t reload_time;
+  int64_t max_hit_points;
+  int64_t power;
+  int64_t healing_points;
+  int64_t regeneration;
+  /// `mCanFireOverWalls`, `mConvertsBuildings`, `mConvertsPriests`, `mDeathSound != NULL`
+  uint8_t can_fire_over_walls;
+  uint8_t converts_buildings;
+  uint8_t converts_priests;
+  uint8_t death_sound;
 };
 
 /// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
@@ -1307,6 +1523,27 @@ void ee_units_store_check(const EeUnitRecord *objects,
                           size_t count,
                           EeUnitStoreCheck *out);
 
+/// A unit made out of every list (a shot): its record by object (`Store::insert_unlisted`).
+///
+/// # Safety
+/// `record` points to a valid record.
+void ee_units_store_insert_unlisted(const EeUnitRecord *record);
+
+/// TEST ONLY: the unlisted records' objects into `out` (at most `capacity`); their count.
+///
+/// # Safety
+/// `out` points to `capacity` writable words (or is null with `capacity` 0).
+size_t ee_units_store_unlisted(uint64_t *out, size_t capacity);
+
+/// TEST ONLY: the unlisted records against `objects` (`count` records filled from the objects
+/// `ee_units_store_unlisted` named): the mismatches (`out`'s first id and field when it had none).
+///
+/// # Safety
+/// `objects` points to `count` records (or is null with `count` 0); `out` to a valid result.
+uint32_t ee_units_store_check_unlisted(const EeUnitRecord *objects,
+                                       size_t count,
+                                       EeUnitStoreCheck *out);
+
 /// The out-of-sync checksum's flag 1 over the store's units on the map (`Store::checksum_flag1`).
 uint64_t ee_units_store_checksum_flag1();
 
@@ -1458,6 +1695,33 @@ void ee_units_cast_calamity(void *player,
                             int32_t x,
                             int32_t y,
                             int32_t technology);
+
+/// A container's deque changed: its unit and its goals' ids (`count` at `ids`).
+///
+/// # Safety
+/// `ids` points to `count` words (or is null with `count` 0).
+void ee_units_goal_queue_set(uint64_t container, uint64_t unit, const uint32_t *ids, size_t count);
+
+/// A container's destructor.
+void ee_units_goal_queue_drop(uint64_t container);
+
+/// The length of a unit's queue `index`; -1 when the mirror has no such queue.
+int64_t ee_units_goal_queue_len(uint64_t unit, uint32_t index);
+
+/// TEST ONLY: a unit's `count` containers (their addresses, each with `lens[i]` goal ids, all of them in order at
+/// `ids`) against the mirror: the mismatches (`GoalQueues::check_unit`).
+///
+/// # Safety
+/// `containers` and `lens` point to `count` elements, `ids` to the sum of `lens` (each null when empty).
+uint32_t ee_units_goal_queue_check_unit(uint64_t unit,
+                                        const uint64_t *containers,
+                                        const uint32_t *lens,
+                                        size_t count,
+                                        const uint32_t *ids,
+                                        size_t ids_count);
+
+/// TEST ONLY: the mirrors held (the containers alive).
+uint32_t ee_units_goal_queue_count();
 
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
@@ -1742,6 +2006,32 @@ uint32_t ee_units_player_check(const uint64_t *objects,
                                const uint32_t *ids,
                                const uint32_t *enemies,
                                size_t count);
+
+/// A stats object's report (its fields may have changed). Returns its version.
+///
+/// # Safety
+/// `record` points to a valid record.
+uint32_t ee_units_stats_report(const EeUnitStatsRecord *record);
+
+/// A stats object's destructor.
+void ee_units_stats_remove(uint64_t object);
+
+/// Copies a stats object's record into `out`; false (and `out` untouched) when the table has none.
+///
+/// # Safety
+/// `out` points to a writable record.
+bool ee_units_stats_get(uint64_t object, EeUnitStatsRecord *out);
+
+/// TEST ONLY: the objects of `objects` (`count` records filled from the units' stats) whose record is missing or
+/// differs.
+///
+/// # Safety
+/// `objects` points to `count` records (or is null with `count` 0).
+uint32_t ee_units_stats_check(const EeUnitStatsRecord *objects,
+                              size_t count);
+
+/// The table's records (TEST ONLY: the teardown's leak check).
+uint32_t ee_units_stats_count();
 
 /// `UpdateReloadTimer` / `UpdateTargetSearchTimer` (`which`: `EE_UNITS_STEP_*`) over the store: true and the new
 /// timer in `out` when the C++ writes it.

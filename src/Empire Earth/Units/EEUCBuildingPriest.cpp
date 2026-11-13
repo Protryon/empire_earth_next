@@ -19,6 +19,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitUpdate.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -54,21 +55,9 @@ static const float kBuildingPriestSoundFactor = 4.0f;   // EEUCBasicPriest.cpp's
 // Handles the temple's new action: building actions (targets, dying, airport) as a building, the rest as a priest
 void EEUCBuildingPriest::ActionChanged(EEComplexUnit* inUnit)
 {
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionSearchForSecondaryTarget:
-    case kActionTrackEnemyUnit:
-    case kActionDying:
-    case kActionResourcesRotting:
-    case kActionPrepareToMove:
-    case kActionAirportOpen:
-    case kActionWaitForTakeoffClearance:
-    case kActionLaunchNextAirplane:
-        EEUCBuilding::ActionChanged(inUnit);
-        break;
-    default:
-        this->PriestVirtual74(inUnit);
-        break;
-    }
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs building_priest), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_BUILDING_PRIEST, this, inUnit);
 }
 
 // FUNCTION: EXE 0x6100b5
@@ -187,33 +176,6 @@ void EEUCBuildingPriest::ConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inT
         EEPlayer* theCurrent = ::gWorld.mPlayers[::gWorld.mCurrentPlayer];
         if (inUnit->mPlayer == theCurrent || theOldPlayer == theCurrent)
             gSoundManager->Play(theSound->mSampleID, 1.0f, 0.0f, 1.0f, false, NULL);
-    }
-}
-
-void EEUCBuildingPriest::PriestVirtual74(EEComplexUnit* inUnit)
-{
-    inUnit->ReleaseConversionEffect();
-    inUnit->ReleaseHealEffect();
-    this->HideConversionEffects(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionConvertEnemyUnit:
-        inUnit->SetCurrentPhysicsAction(1);
-        inUnit->SetTargetSearchTimer(0);
-        inUnit->SetAnimation(9, -1, 0);
-        if (inUnit->mConversionStartTime == 0) {
-            if (inUnit->mConversionStartTime != gPhysics->mGameTime)
-                inUnit->mConversionStartTime = gPhysics->mGameTime;
-            inUnit->SetWorkTimer(0);
-            EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
-        }
-        inUnit->DropPath();
-        break;
-    case kActionWaitForReload:
-        inUnit->SetCurrentPhysicsAction(3);
-        break;
-    default:
-        this->HandleActionChanged(inUnit);
-        break;
     }
 }
 
