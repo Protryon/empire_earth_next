@@ -3309,7 +3309,6 @@ void EESMEffect::ChangeAttribute()
 #include "ee/EEUnitCalamityClass.h"
 #include "ee/EEUCTransport.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGHealUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
@@ -3467,7 +3466,7 @@ void EESMEffect::TaskUnitsToObject()
                 for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
                     EEComplexUnit* theUnit = theGroup->GetUnit(u);
                     if (EECanHeal(theUnit, theTarget->GetComplexUnit())) {
-                        EEUGHealUnit* theGoal = new EEUGHealUnit(theTarget->GetComplexUnit(), true);
+                        EEUGRust* theGoal = EEUGRust::NewHealUnit(theTarget->GetComplexUnit(), true);
                         theUnit->ClearGoalQueue(0);
                         theUnit->SetGoal(theGoal, 0, 0);
                         theUnit->StartAction(kActionTurnToFaceHealee);

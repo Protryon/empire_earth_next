@@ -312,17 +312,32 @@ void EEWonNet::ConnectToLobby()
     }
 }
 
+// A finished routing op's data objects and members, copied from the Rust op (routeop.rs)
+static RoutingDataObjectList ObjectsOf(AsyncOp* inOp)
+{
+    RoutingDataObjectList theObjects;
+    static_cast<RoutingOp*>(inOp)->GetDataObjects(theObjects);
+    return theObjects;
+}
+static RoutingMemberMap MembersOf(AsyncOp* inOp)
+{
+    RoutingMemberMap theMembers;
+    static_cast<RoutingOp*>(inOp)->GetMembers(theMembers);
+    return theMembers;
+}
+
 // FUNCTION: EXE 0x4cd8e6
 // Replaces the game list with the game objects read from the server and marks the game and room lists changed
 void EEWonNet::ListGamesCallback(AsyncOp* inOp)
 {
+    RoutingDataObjectList theObjects(ObjectsOf(inOp));
     EEWonNetGameInfo theInfo;
 
     if (inOp->GetStatus() == WS_Success) {
         this->mLock->Enter();
         this->mGames.clear();
-        for (RoutingDataObjectList::iterator theObject = static_cast<RoutingReadDataObjectOp*>(inOp)->mDataObjects.begin();
-             theObject != static_cast<RoutingReadDataObjectOp*>(inOp)->mDataObjects.end(); theObject++) {
+        for (RoutingDataObjectList::iterator theObject = theObjects.begin();
+             theObject != theObjects.end(); theObject++) {
             this->ImportGameInfo((unsigned char*)(*theObject)->GetData(), theInfo);
             this->mGames[(*theObject)->mLinkId] = theInfo;
             this->mGamesChanged = true;
@@ -341,9 +356,10 @@ void EEWonNet::ListGamesCallback(AsyncOp* inOp)
 // from their data objects
 void EEWonNet::ListRoomCallback(AsyncOp* inOp)
 {
+    RoutingDataObjectList theObjects(ObjectsOf(inOp));
     WONStatus theStatus = inOp->GetStatus();
     std::vector<SmartRoutingConnection::GroupInfo> theGroups;
-    RoutingDataObjectList::iterator theObject = static_cast<RoutingReadDataObjectOp*>(inOp)->mDataObjects.begin();
+    RoutingDataObjectList::iterator theObject = theObjects.begin();
     RoutingDataObjectList::iterator theData = theObject;
     char theName[1024];
     UWideString theString;
@@ -369,7 +385,7 @@ void EEWonNet::ListRoomCallback(AsyncOp* inOp)
             theMaxPlayers = theGroup.mMemberCount;
             this->mRooms[theGroup.mId].mMaxPlayers = theMaxPlayers;
         }
-        for (; theData != static_cast<RoutingReadDataObjectOp*>(inOp)->mDataObjects.end(); theData++) {
+        for (; theData != theObjects.end(); theData++) {
             theWide = gEmptyWideString;
             theWide.assign((const wchar_t*)(*theData)->GetData(), (*theData)->GetDataLength() / 2);
             memset(theName, 0, 1024);
@@ -495,19 +511,19 @@ void EEWonNet::JoinGameDataCallback(AsyncOp* inOp)
     EEWonNetGameInfo theInfo;
 
     this->mLock->Enter();
-    RoutingOpTypeToString(static_cast<RoutingCreateDataObjectOp*>(inOp)->GetType());
+    RoutingOpTypeToString(static_cast<RoutingOp*>(inOp)->GetType());
     if (theStatus != WS_Success) {
         this->ClearGames();
         this->RejoinRoom(false);
         gResource->GetString(IDS_FAILED_TO_CREATE_GAME, theMessage);
         gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
     } else {
-        unsigned char* theData = new unsigned char[static_cast<RoutingCreateDataObjectOp*>(inOp)->GetData()->length()];
-        memcpy(theData, static_cast<RoutingCreateDataObjectOp*>(inOp)->GetData()->data(), static_cast<RoutingCreateDataObjectOp*>(inOp)->GetData()->length());
+        unsigned char* theData = new unsigned char[static_cast<RoutingOp*>(inOp)->GetData()->length()];
+        memcpy(theData, static_cast<RoutingOp*>(inOp)->GetData()->data(), static_cast<RoutingOp*>(inOp)->GetData()->length());
         this->ImportGameInfo(theData, theInfo);
-        this->mGames[static_cast<RoutingCreateDataObjectOp*>(inOp)->GetLinkId()] = theInfo;
+        this->mGames[static_cast<RoutingOp*>(inOp)->GetLinkId()] = theInfo;
         delete theData;
-        this->mGameInfo = this->mGames[static_cast<RoutingCreateDataObjectOp*>(inOp)->GetLinkId()];
+        this->mGameInfo = this->mGames[static_cast<RoutingOp*>(inOp)->GetLinkId()];
         this->mGamesChanged = true;
         EEAction* theAction = new EEAJoinOrHostAGame(4, UWideString(this->ToString(this->mUser->GetName()).c_str()), UWideString(this->ToString(this->mGameName).c_str()));
         gUserInterface->PostAction(theAction);
@@ -539,7 +555,7 @@ void EEWonNet::CreateGameCallback(AsyncOp* inOp)
             this->mIgnoreClose = true;
             this->mRouting->UnsubscribeDataObject(0xffff, kWonGameObject, true, NULL);
             this->LeaveGroups();
-            this->mGameGroupId = static_cast<RoutingCreateGroupOp*>(inOp)->GetGroupId();
+            this->mGameGroupId = static_cast<RoutingOp*>(inOp)->GetGroupId();
             if (this->mPassword.length() != 0)
                 theInfo.mPassword = UWideString(this->ToString(this->mPassword).c_str());
             else
@@ -732,9 +748,9 @@ void EEWonNet::JoinGroupCallback(AsyncOp* inOp)
 {
     UWideString theMessage;
 
-    if (static_cast<RoutingJoinGroupOp*>(inOp)->GetGroupId() != this->mJoinGroupId) {
+    if (static_cast<RoutingOp*>(inOp)->GetGroupId() != this->mJoinGroupId) {
         if (inOp->GetStatus() == WS_Success)
-            this->mRouting->LeaveGroup(static_cast<RoutingJoinGroupOp*>(inOp)->GetGroupId(), NULL);
+            this->mRouting->LeaveGroup(static_cast<RoutingOp*>(inOp)->GetGroupId(), NULL);
         return;
     } else {
         this->mJoinGroupId = 0xffff;
@@ -749,7 +765,7 @@ void EEWonNet::JoinGroupCallback(AsyncOp* inOp)
             this->mCurrentRoom = this->mRoomName;
             this->mIgnoreClose = true;
             this->LeaveGroups();
-            this->mGameGroupId = static_cast<RoutingJoinGroupOp*>(inOp)->GetGroupId();
+            this->mGameGroupId = static_cast<RoutingOp*>(inOp)->GetGroupId();
             this->mRouting->ReadDataObject(this->mGameGroupId, kWonGameObject, true,
                                new RoutingCompletion(&EEWonNet::JoinGameObjectsCallback));
             this->mRouting->UnsubscribeDataObject(0xffff, kWonGameObject, true, NULL);
@@ -761,14 +777,15 @@ void EEWonNet::JoinGroupCallback(AsyncOp* inOp)
 // Joins the host of each game object read, or rejoins the room and reports that the game was not found
 void EEWonNet::JoinGameObjectsCallback(AsyncOp* inOp)
 {
+    RoutingDataObjectList theObjects(ObjectsOf(inOp));
     UWideString theMessage;
-    RoutingDataObjectList::iterator theObject = static_cast<RoutingReadDataObjectOp*>(inOp)->mDataObjects.begin();
+    RoutingDataObjectList::iterator theObject = theObjects.begin();
     UWideString theString;
     EEWonNetGameInfo theInfo;
     bool theFound = false;
 
     if (inOp->GetStatus() == WS_Success) {
-        for (; theObject != static_cast<RoutingReadDataObjectOp*>(inOp)->mDataObjects.end(); theObject++) {
+        for (; theObject != theObjects.end(); theObject++) {
             if ((*theObject)->mDataType.compare(0, (*theObject)->mDataType.length(), kWonGameObject,
                                                 strlen(kWonGameObject)) != 0)
                 continue;
@@ -862,9 +879,9 @@ void EEWonNet::JoinRoomCallback(AsyncOp* inOp)
 {
     UWideString theMessage;
 
-    if (static_cast<RoutingJoinGroupOp*>(inOp)->GetGroupId() != this->mJoinRoomId) {
+    if (static_cast<RoutingOp*>(inOp)->GetGroupId() != this->mJoinRoomId) {
         if (inOp->GetStatus() == WS_Success)
-            this->mRouting->LeaveGroup(static_cast<RoutingJoinGroupOp*>(inOp)->GetGroupId(), NULL);
+            this->mRouting->LeaveGroup(static_cast<RoutingOp*>(inOp)->GetGroupId(), NULL);
     } else {
         this->mJoinRoomId = 0xffff;
         if (this->mJoinRoomCancelled == false) {
@@ -879,7 +896,7 @@ void EEWonNet::JoinRoomCallback(AsyncOp* inOp)
                 gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
                 this->mRoomName.erase();
             } else {
-                this->mGameListPort = static_cast<RoutingJoinGroupOp*>(inOp)->GetGroupId();
+                this->mGameListPort = static_cast<RoutingOp*>(inOp)->GetGroupId();
                 UIEvent* theEvent = new EEUIEWNAGOpenScreen;
                 gUIManager->GetFormByID(kFormAvailableGames)->SetFormOpenEvent(theEvent);
                 theEvent->Dereference();
@@ -995,7 +1012,7 @@ void EEWonNet::RefreshGameList(UIControl* inGamesBox)
 void EEWonNet::ClientListCallback(AsyncOp* inOp)
 {
     if (inOp->GetStatus() == WS_Success) {
-        this->mClients = static_cast<RoutingGetClientListOp*>(inOp)->mClientMap;
+        static_cast<RoutingOp*>(inOp)->GetClients(this->mClients);
         this->mRouting->GetMembersOfGroup(this->mGameListPort, new RoutingCompletion(&EEWonNet::MembersCallback));
     } else {
         this->mIsListingPlayers = false;
@@ -1007,7 +1024,7 @@ void EEWonNet::ClientListCallback(AsyncOp* inOp)
 void EEWonNet::MembersCallback(AsyncOp* inOp)
 {
     WONStatus theStatus = inOp->GetStatus();
-    RoutingMemberMap theMembers(static_cast<RoutingGetMembersOfGroupOp*>(inOp)->mMembers);
+    RoutingMemberMap theMembers(MembersOf(inOp));
     RoutingMemberMap::const_iterator theMember = theMembers.begin();
     EEAction* theAction;
 
@@ -1289,15 +1306,15 @@ void EEWonNet::OnChat(AsyncOp* inOp)
     UWideString theU50;
     UWideString theText;
     SmartRoutingConnection::ClientInfo theClient;
-    bool theHasClient = this->mRouting->GetClient(static_cast<RoutingPeerChatOp*>(inOp)->mClientId, theClient);
+    bool theHasClient = this->mRouting->GetClient(static_cast<RoutingOp*>(inOp)->GetClientId(), theClient);
     EEAction* theAction;
 
-    if (theHasClient && !static_cast<RoutingPeerChatOp*>(inOp)->mRecipients.empty()) {
+    if (theHasClient && !static_cast<RoutingOp*>(inOp)->Recipients().empty()) {
         theFrom = UWideString(this->ToString(theClient.mName).c_str());
-        if (static_cast<RoutingPeerChatOp*>(inOp)->IsWhisper()
+        if ((static_cast<RoutingOp*>(inOp)->Num(EE_WON_RTF_FLAGS16) & 4)
             && theClient.mId != this->mRouting->GetMyClientId())
-            this->mReplyClientId = static_cast<RoutingPeerChatOp*>(inOp)->mClientId;
-        theText = UWideString(this->ToString(static_cast<RoutingPeerChatOp*>(inOp)->mText).c_str());
+            this->mReplyClientId = static_cast<RoutingOp*>(inOp)->GetClientId();
+        theText = UWideString(this->ToString(static_cast<RoutingOp*>(inOp)->Text(EE_WON_RTT_TEXT)).c_str());
         if (gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormAvailableGames)) {
             theAction = new EEAWonNet(6, static_cast<UITextLabel*>(gUIManager->GetCurrentForm()->GetControl(15)), theFrom, theText,
                                       theClient.mId == this->mRouting->GetMyClientId());
@@ -1324,14 +1341,14 @@ void EEWonNet::OnDataObjectChanged(AsyncOp* inOp)
 void EEWonNet::OnDataObjectCreated(AsyncOp* inOp)
 {
     this->mLock->Enter();
-    this->ImportGameInfo((unsigned char*)GetBufferData(static_cast<RoutingDataObjectCreatedOp*>(inOp)->GetData()), this->mGames[static_cast<RoutingDataObjectCreatedOp*>(inOp)->GetLinkId()]);
+    this->ImportGameInfo((unsigned char*)GetBufferData(static_cast<RoutingOp*>(inOp)->GetData()), this->mGames[static_cast<RoutingOp*>(inOp)->GetLinkId()]);
     {
-        unsigned short theId = static_cast<RoutingDataObjectCreatedOp*>(inOp)->GetLinkId();
-        this->mGames[static_cast<RoutingDataObjectCreatedOp*>(inOp)->GetLinkId()];
+        unsigned short theId = static_cast<RoutingOp*>(inOp)->GetLinkId();
+        this->mGames[static_cast<RoutingOp*>(inOp)->GetLinkId()];
         this->mGames[theId];
     }
-    if (this->mGameGroupId == static_cast<RoutingDataObjectCreatedOp*>(inOp)->GetLinkId())
-        this->mGameInfo = this->mGames[static_cast<RoutingDataObjectCreatedOp*>(inOp)->GetLinkId()];
+    if (this->mGameGroupId == static_cast<RoutingOp*>(inOp)->GetLinkId())
+        this->mGameInfo = this->mGames[static_cast<RoutingOp*>(inOp)->GetLinkId()];
     this->mGamesChanged = true;
     this->mLock->Leave();
 }
@@ -1342,16 +1359,16 @@ void EEWonNet::OnDataObjectDeleted(AsyncOp* inOp)
 {
     this->mLock->Enter();
     {
-        unsigned short theId = static_cast<RoutingDataObjectDeletedOp*>(inOp)->GetLinkId();
-        this->mGames[static_cast<RoutingDataObjectDeletedOp*>(inOp)->GetLinkId()];
+        unsigned short theId = static_cast<RoutingOp*>(inOp)->GetLinkId();
+        this->mGames[static_cast<RoutingOp*>(inOp)->GetLinkId()];
         this->mGames[theId];
     }
-    if (this->mGameGroupId == static_cast<RoutingDataObjectDeletedOp*>(inOp)->mLinkId) {
+    if (this->mGameGroupId == static_cast<RoutingOp*>(inOp)->GetLinkId()) {
         this->ClearGames();
         this->RejoinRoom(false);
     }
-    if (this->mGames.find(static_cast<RoutingDataObjectDeletedOp*>(inOp)->GetLinkId()) != this->mGames.end())
-        this->mGames.erase(static_cast<RoutingDataObjectDeletedOp*>(inOp)->GetLinkId());
+    if (this->mGames.find(static_cast<RoutingOp*>(inOp)->GetLinkId()) != this->mGames.end())
+        this->mGames.erase(static_cast<RoutingOp*>(inOp)->GetLinkId());
     this->mGamesChanged = true;
     this->mLock->Leave();
 }
@@ -1361,15 +1378,15 @@ void EEWonNet::OnDataObjectDeleted(AsyncOp* inOp)
 void EEWonNet::OnDataObjectModified(AsyncOp* inOp)
 {
     this->mLock->Enter();
-    this->ImportGameInfo((unsigned char*)GetBufferData(static_cast<RoutingDataObjectModifiedOp*>(inOp)->GetData()),
-                   this->mGames[static_cast<RoutingDataObjectModifiedOp*>(inOp)->GetLinkId()]);
+    this->ImportGameInfo((unsigned char*)GetBufferData(static_cast<RoutingOp*>(inOp)->GetData()),
+                   this->mGames[static_cast<RoutingOp*>(inOp)->GetLinkId()]);
     {
-        unsigned short theId = static_cast<RoutingDataObjectModifiedOp*>(inOp)->GetLinkId();
-        this->mGames[static_cast<RoutingDataObjectModifiedOp*>(inOp)->GetLinkId()];
+        unsigned short theId = static_cast<RoutingOp*>(inOp)->GetLinkId();
+        this->mGames[static_cast<RoutingOp*>(inOp)->GetLinkId()];
         this->mGames[theId];
     }
-    if (this->mGameGroupId == static_cast<RoutingDataObjectModifiedOp*>(inOp)->GetLinkId())
-        this->mGameInfo = this->mGames[static_cast<RoutingDataObjectModifiedOp*>(inOp)->GetLinkId()];
+    if (this->mGameGroupId == static_cast<RoutingOp*>(inOp)->GetLinkId())
+        this->mGameInfo = this->mGames[static_cast<RoutingOp*>(inOp)->GetLinkId()];
     this->mGamesChanged = true;
     this->mLock->Leave();
 }
@@ -1379,9 +1396,9 @@ void EEWonNet::OnDataObjectModified(AsyncOp* inOp)
 void EEWonNet::OnGroupMaxPlayersChanged(AsyncOp* inOp)
 {
     this->mLock->Enter();
-    if (this->mRooms.find(static_cast<RoutingGroupMaxPlayersChangedOp*>(inOp)->GetGroupId()) != this->mRooms.end())
-        this->mRooms[static_cast<RoutingGroupMaxPlayersChangedOp*>(inOp)->GetGroupId()].mMaxPlayers = static_cast<RoutingGroupMaxPlayersChangedOp*>(inOp)->mMaxPlayers;
-    if (this->mGameListPort == static_cast<RoutingGroupMaxPlayersChangedOp*>(inOp)->mGroupId)
+    if (this->mRooms.find(static_cast<RoutingOp*>(inOp)->GetGroupId()) != this->mRooms.end())
+        this->mRooms[static_cast<RoutingOp*>(inOp)->GetGroupId()].mMaxPlayers = (unsigned short)static_cast<RoutingOp*>(inOp)->Num(EE_WON_RTF_MAX_PLAYERS);
+    if (this->mGameListPort == static_cast<RoutingOp*>(inOp)->GetGroupId())
         this->mB18E = true;
     this->mLock->Leave();
 }
@@ -1403,7 +1420,7 @@ void EEWonNet::RegisterCallback(AsyncOp* inOp)
         gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
         this->Disconnect();
     } else {
-        gWonClientId = static_cast<RoutingRegisterClientOp*>(inOp)->mReconnectId;
+        gWonClientId = (unsigned long)static_cast<RoutingOp*>(inOp)->Num(EE_WON_RTF_RECONNECT_ID);
         this->mRouting->GetGroupList(0xff, new RoutingCompletion(&EEWonNet::ChatRoomListCallback));
     }
     if (theStatus != WS_Success)

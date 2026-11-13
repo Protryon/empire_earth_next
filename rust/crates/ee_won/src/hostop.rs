@@ -792,6 +792,14 @@ impl EeWonHostOp {
     pub(crate) fn boxed<P: Plan>(plan: P) -> *mut EeWonHostOp {
         Box::into_raw(Box::new(EeWonHostOp { op: Box::new(Host::new(plan)) }))
     }
+    /// A result by number (`ee_won_hostop_num`), for the Rust readers of an op's results.
+    pub(crate) fn num(&self, which: i32, index: i64) -> i64 {
+        self.op.num(which, index)
+    }
+    /// A result's bytes by number (`ee_won_hostop_bytes`).
+    pub(crate) fn bytes(&self, which: i32, index: i64) -> Option<Vec<u8>> {
+        self.op.bytes(which, index)
+    }
 }
 
 /// Binds the C++ side's function (`host` its first argument) before any other call.

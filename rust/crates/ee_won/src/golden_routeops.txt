@@ -1,0 +1,534 @@
+connect WS_Success
+server accept WS_Success
+== register
+server got register 31:03073402006d00650002007000770005000000020000000400000010000000
+hook type 42 WS_Success
+register completed type 42 WS_Success
+ "me!" pw="pw" reconnect=77 af=2 rf=4 cf=10 client=10
+ clients 2
+  client 10 id=10 "me!" f=1 user=0 cd=0 trust=0
+  client 11 id=11 "Alice" f=20 user=0 cd=0 trust=0
+== register ex
+server got register ex 29:030734030079006f007500000000000000000000001000000000000000
+hook type 42 WS_Success
+register ex completed type 42 WS_Success
+ "you" pw="" reconnect=3 af=0 rf=10 cf=0 client=12
+ clients 0
+== register no list
+server got register no list 27:030734010078000100790001000000000000000000000000000000
+hook type 42 WS_Success
+register no list completed type 42 WS_Success
+ "x" pw="y" reconnect=1 af=0 rf=0 cf=0 client=13
+ clients 0
+== register fails
+server got register fails 27:030734010078000100790001000000000000000400000000000000
+hook type 42 WS_RoutingServG2_ClientNotInGroup
+register fails completed type 42 WS_RoutingServG2_ClientNotInGroup
+ "x" pw="y" reconnect=1 af=0 rf=4 cf=0
+ clients 0
+== client list
+server got client list 3:030718
+hook type 20 WS_Success
+client list completed type 20 WS_Success
+ ex=0
+ clients 2
+  client 5 id=5 "Five" f=3 user=0 cd=0 trust=0
+  client 20 id=20 "Twenty" f=0 user=0 cd=0 trust=0
+== client list ex
+server got client list ex 4:03071801
+hook type 20 WS_Success
+client list ex completed type 20 WS_Success
+ ex=1
+ clients 2
+  client 20 id=20 "me2" f=30 user=0 cd=808 trust=0
+  client 40 id=40 "Forty" f=0 user=0 cd=0 trust=0
+== client list fails
+server got client list fails 3:030718
+hook type 20 WS_CommServ_Failure
+client list fails completed type 20 WS_CommServ_Failure
+ ex=0
+ clients 0
+== group list
+server got group list 7:03071aff00ffff
+hook type 21 WS_Success
+group list completed type 21 WS_Success
+ f=ff parent=65535 members=1
+ groups 2
+  group 100 id=100 "Lobby" parent=65535 cap=7 maxc=50 f=800 af=10 obs=3 mp=2
+   members 2
+  member 10 id=10 f=1 c=(none)
+  member 11 id=11 f=0 c=(none)
+  group 102 id=102 "Other" parent=65535 cap=12 maxc=4 f=0 af=0 obs=0 mp=1
+   members 1
+  member 12 id=12 f=2 c=(none)
+== group list 21
+server got group list 21 7:03071a2100ffff
+hook type 21 WS_Success
+group list 21 completed type 21 WS_Success
+ f=21 parent=65535 members=0
+ groups 1
+  group 201 id=201 "New" parent=65535 cap=0 maxc=0 f=0 af=0 obs=0 mp=9
+   members 0
+== group list fails
+server got group list fails 7:03071a0100ffff
+hook type 21 WS_CommServ_NotAllowed
+group list fails completed type 21 WS_CommServ_NotAllowed
+ f=1 parent=65535 members=0
+ groups 0
+== members
+server got members 5:03071e6600
+hook type 22 WS_Success
+members completed type 22 WS_Success
+ group=102 obs=4 names=1 cflags=1
+ members 2
+  member 12 id=12 f=1 c=id=0 "bob" f=4 user=0 cd=0 trust=0
+  member 17 id=17 f=0 c=id=0 "Eve" f=40 user=0 cd=0 trust=0
+== members plain
+server got members plain 5:03071e6700
+hook type 22 WS_Success
+members plain completed type 22 WS_Success
+ group=103 obs=1 names=0 cflags=0
+ members 1
+  member 30 id=30 f=4 c=(none)
+== members fails
+server got members fails 5:03071e6800
+hook type 22 WS_CommServ_AlreadyExists
+members fails completed type 22 WS_CommServ_AlreadyExists
+ group=104
+ members 0
+== join
+server got join 19:03072a64000200700077000200680069000102
+hook type 34 WS_Success
+join completed type 34 WS_Success
+ group=100 pw="pw" "welcome" jf=1 mf=2
+ members 2
+  member 10 id=10 f=1 c=id=0 "me" f=0 user=0 cd=0 trust=0
+  member 13 id=13 f=0 c=id=0 "Bobby" f=0 user=0 cd=0 trust=0
+== join waits
+server got join waits 11:03072a6500000000000000
+hook type 34 WS_Success
+join waits completed type 34 WS_Success
+ group=101 pw="" "ok" jf=0 mf=0
+ members 0
+== join fails
+server got join fails 11:03072a6600000000000000
+hook type 34 WS_RoutingServG2_InvalidPassword
+join fails completed type 34 WS_RoutingServG2_InvalidPassword
+ group=102 pw="" "no" jf=0 mf=0
+ members 0
+== create
+server got create 34:03070dffff0400470061006d0065000200700077000800010200000004000000ffff
+hook type 12 WS_Success
+create completed type 12 WS_Success
+ group=300 parent=65535 "Game!" pw="pw" maxp=8 jf=1 gf=2 af=4 leave=0
+== create no join
+server got create no join 26:03070d050002004700320000000400000000000000000000ffff
+hook type 12 WS_Success
+create no join completed type 12 WS_Success
+ group=301 parent=7 "G2" pw="" maxp=4 jf=0 gf=0 af=0 leave=0
+== create fails
+server got create fails 26:03070d050002004700330000000400000000000000000000ffff
+hook type 12 WS_CommServ_ResourcesLow
+create fails completed type 12 WS_CommServ_ResourcesLow
+ group=5 parent=65535 "G3" pw="" maxp=4 jf=0 gf=0 af=0 leave=0
+== leave
+server got leave 5:03072b6400
+hook type 35 WS_Success
+leave completed type 35 WS_Success
+ group=100
+== cancel join
+server got cancel join 6:030705650000
+hook type 5 WS_CommServ_Failure
+cancel join completed type 5 WS_CommServ_Failure
+ group=101 leave=0
+== group flags
+server got group flags 21:03073d640003000000020000001000000010000000
+hook type 52 WS_Success
+group flags completed type 52 WS_Success
+ group=100 gm=3 gf=2 am=10 af=10
+== alert
+server got alert 21:030738070068006500610072002000790065000000
+hook type 47 WS_Success
+alert completed type 47 WS_Success
+ "hear ye" to=[]
+== alert to
+server got alert to 23:030738060074006f002000740077006f0002000b000140
+hook type 47 WS_Success
+alert to completed type 47 WS_Success
+ "to two" to=[11,16385]
+== start shutdown
+server got start shutdown 15:03074103006200790065002c010000
+hook type 56 WS_Success
+start shutdown completed type 56 WS_Success
+ "bye" secs=300
+== abort shutdown
+server got abort shutdown 3:030701
+hook type 1 WS_Success
+abort shutdown completed type 1 WS_Success
+== client flags
+server got client flags 19:03073c06000000040000004523000040000000
+hook type 51 WS_Success
+client flags completed type 51 WS_Success
+ cm=2345 cf=40 am=6 af=4
+== chat
+server got chat 21:03073605010500680065006c006c006f0001000b00
+hook type 44 WS_Success
+chat completed type 44 WS_Success
+ f=105 "hello" to=[11]
+== chat to
+server got chat to 25:03073603000600680069002000740077006f0002000b000140
+hook type 44 WS_Success
+chat to completed type 44 WS_Success
+ f=3 "hi two" to=[11,16385]
+== data
+server got data 13:03073781030001020301000b00
+hook type 46 WS_Success
+data completed type 46 WS_Success
+ f=81 data=3:010203 to=[11]
+== data to
+server got data to 15:03073701030001020302000b000140
+hook type 46 WS_Success
+data to completed type 46 WS_Success
+ f=1 data=3:010203 to=[11,16385]
+== moderator
+server got moderator 4:03070401
+hook type 4 WS_Success
+moderator completed type 4 WS_Success
+ on=1
+== accept
+server got accept 16:0307022c010b00010300790065007300
+hook type 2 WS_Success
+accept completed type 2 WS_Success
+ group=300 client=11 on=1 "yes"
+== invite
+server got invite 14:0307282c010c0000020067006f00
+hook type 33 WS_Success
+invite completed type 33 WS_Success
+ group=300 client=12 on=0 "go"
+== ban
+server got ban 23:0307036400013c00000004007300700061006d00010b00
+hook type 3 WS_Success
+ban completed type 3 WS_Success
+ group=100 on=1 time=60 "spam" bywon=0 cdkey=0 won=0 client=11
+== ban won
+server got ban won 17:030703ffff000000000000000240e20100
+hook type 3 WS_Success
+ban won completed type 3 WS_Success
+ group=65535 on=0 time=0 "" bywon=1 cdkey=0 won=123456 client=0
+== ban cdkey
+server got ban cdkey 21:030703640001050000000200630064000309030000
+hook type 3 WS_Success
+ban cdkey completed type 3 WS_Success
+ group=100 on=1 time=5 "cd" bywon=1 cdkey=1 won=777 client=0
+== mute
+server got mute 23:03072e6400015802000004006c006f0075006400010c00
+hook type 38 WS_Success
+mute completed type 38 WS_Success
+ group=100 on=1 time=600 "loud" bywon=0 cdkey=0 won=0 client=12
+== mute won
+server got mute won 17:03072e64000000000000000002f1fb0900
+hook type 38 WS_Success
+mute won completed type 38 WS_Success
+ group=100 on=0 time=0 "" bywon=1 cdkey=0 won=654321 client=0
+== mute cdkey
+server got mute cdkey 23:03072e640001090000000300630064006d000378030000
+hook type 38 WS_Success
+mute cdkey completed type 38 WS_Success
+ group=100 on=1 time=9 "cdm" bywon=1 cdkey=1 won=888 client=0
+== create data
+server got create data 19:03070b022c010447616d650167000300010203
+hook type 11 WS_Success
+create data completed type 11 WS_Success
+ f=2 link=300 type="Game" "g" data=3:010203
+== replace data
+server got replace data 13:0307112c010447616d65016700
+hook type 16 WS_Success
+replace data completed type 16 WS_Success
+ link=300 type="Game" "g"
+== modify data
+server got modify data 21:03072d2c010447616d650167000400010300010203
+hook type 37 WS_Success
+modify data completed type 37 WS_Success
+ link=300 type="Game" "g" off=4 ins=1 data=3:010203
+== unsubscribe
+server got unsubscribe 11:030744ffff0447616d6501
+hook type 57 WS_Success
+unsubscribe completed type 57 WS_Success
+ link=65535 type="Game" f=1
+== group name
+server got group name 21:03073f2c010700520065006e0061006d0065006400
+hook type 54 WS_Success
+group name completed type 54 WS_Success
+== group max players
+server got group max players 7:03073e2c010600
+hook type 53 WS_Success
+group max players completed type 53 WS_Success
+== relinquish
+server got relinquish 7:0307352c010c00
+hook type 43 WS_Success
+relinquish completed type 43 WS_Success
+== status fails
+server got status fails 5:03072b0500
+hook type 35 WS_RoutingServG2_GroupDoesNotExist
+status fails completed type 35 WS_RoutingServG2_GroupDoesNotExist
+ group=5
+== read data
+server got read data 11:030732ffff0447616d6501
+hook type 41 WS_Success
+read data completed type 41 WS_Success
+ link=65535 type="Game" f=1 sub=0
+ objects 2
+  object link=300 type="Game" "g" data=2:0a0b
+  object link=301 type="Game" "" data=0:
+== subscribe data
+server got subscribe data 11:030743ffff04526f6f6d01
+hook type 41 WS_Success
+subscribe data completed type 41 WS_Success
+ link=65535 type="Room" f=1 sub=1
+ objects 1
+  object link=12 type="_KeyId" "" data=8:010000002b020000
+== cd key ids
+server got cd key ids 13:030743ffff065f4b6579496400
+hook type 41 WS_Success
+cd key ids completed type 41 WS_Success
+ link=65535 type="_KeyId" f=0 sub=1
+ objects 1
+  object link=12 type="_KeyId" "" data=8:010000002b020000
+== read data fails
+server got read data fails 8:0307320700015800
+hook type 41 WS_CommServ_InvalidParameters
+read data fails completed type 41 WS_CommServ_InvalidParameters
+ link=7 type="X" f=0 sub=0
+ objects 0
+== bad users
+server got bad users 7:0307160264000f
+hook type 19 WS_Success
+bad users completed type 19 WS_Success
+ list=2 group=100 f=15
+ bad users 2
+  bad won=5001 "Mallory" exp=3600 mod=42 "Mod" "spam"
+  bad won=5002 "Trudy" exp=0 mod=0 "" ""
+== bad users plain
+server got bad users plain 7:03071601ffff00
+hook type 19 WS_Success
+bad users plain completed type 19 WS_Success
+ list=1 group=65535 f=0
+ bad users 1
+  bad won=6001 "Eve" exp=0 mod=0 "" ""
+== firewall
+server got firewall 9:030712000005000000
+hook type 17 WS_Success
+firewall completed type 17 WS_Success
+== logic ban
+server got logic ban 23:03070364000178000000030077006800790003b3150000
+hook type 3 WS_Success
+logic ban completed type 3 WS_Success
+ group=100 on=1 time=120 "why" bywon=1 cdkey=1 won=5555 client=0
+server got logic kick 15:0307032c0101010000000000010c00
+hook type 3 WS_Success
+logic kick completed type 3 WS_Success
+ group=300 on=1 time=1 "" bywon=0 cdkey=0 won=0 client=12
+kick group 300 client 12
+== logic unmute
+server got logic unmute 21:03072effff000000000002006f006b00035c110000
+hook type 38 WS_Success
+logic unmute completed type 38 WS_Success
+ group=65535 on=0 time=0 "ok" bywon=1 cdkey=1 won=4444 client=0
+unmute group 65535 muted 0 client 0
+== logic create
+server got logic create 46:03070dffff06004d007900470061006d00650006007300650063007200650074000000010400000000000000ffff
+hook type 12 WS_Success
+logic create completed type 12 WS_Success
+ group=400 parent=65535 "MyGame" pw="secret" maxp=0 jf=1 gf=4 af=0 leave=1
+created group 400
+== logic join retry
+server got logic join 21:03072a90010500770072006f006e00670000000000
+hook type 34 WS_RoutingServG2_InvalidPassword
+logic join completed type 34 WS_RoutingServG2_InvalidPassword
+ group=400 pw="wrong" "" jf=0 mf=0
+ members 0
+server got logic join again 23:03072a9001060073006500630072006500740000000000
+hook type 34 WS_Success
+logic join completed type 34 WS_Success
+ group=400 pw="secret" "" jf=0 mf=0
+ members 0
+joined 400 killed 0
+== logic bad users
+server got logic bad users 7:030716012c010f
+hook type 19 WS_Success
+logic bad users completed type 19 WS_Success
+ list=1 group=300 f=1
+ bad users 1
+  bad won=7001 "Oscar" exp=30 mod=0 "" ""
+== logic register
+server got logic register 23:0307340000000034120000000000001500000044000000
+hook type 42 WS_Success
+logic register completed type 42 WS_Success
+ "anon" pw="" reconnect=22136 af=0 rf=15 cf=44 client=50
+ clients 1
+  client 50 id=50 "anon" f=44 user=0 cd=0 trust=0
+register reconnect 22136 client 50 clients 1
+== logic group list
+server got logic group list 7:03071aff00ffff
+hook type 21 WS_Success
+logic group list completed type 21 WS_Success
+ f=ff parent=65535 members=1
+ groups 1
+  group 400 id=400 "MyGame" parent=65535 cap=50 maxc=8 f=4 af=0 obs=0 mp=1
+   members 1
+  member 50 id=50 f=1 c=(none)
+== chat no reply
+server got chat no reply 41:03073604000f006600690072006500200061006e006400200066006f00720067006500740001000c00
+chat no reply completions 0
+server got disconnect 3:030714
+disconnect completions 0
+alert to none completions 0
+== note client flags
+hook type 6 WS_Success
+default completed type 6 WS_Success
+ client=11 f=20
+== note joined group plain
+hook type 7 WS_Success
+default completed type 7 WS_Success
+ group=100 client=15 mf=1 "" cf=0 has=0
+== note joined group name
+hook type 7 WS_Success
+default completed type 7 WS_Success
+ group=100 client=16 mf=2 "Dave" cf=0 has=0
+== note joined group flags
+hook type 7 WS_Success
+default completed type 7 WS_Success
+ group=100 client=17 mf=3 "" cf=77 has=1
+== note joined group both
+hook type 7 WS_Success
+default completed type 7 WS_Success
+ group=101 client=18 mf=4 "Fred" cf=9 has=1
+== note joined server
+hook type 8 WS_Success
+default completed type 8 WS_Success
+ client id=15 "Dave" f=4 user=0 cd=0 trust=0 name "Dave"
+== note joined server ex
+hook type 8 WS_Success
+default completed type 8 WS_Success
+ client id=16 "Gina" f=0 user=31337 cd=4242 trust=0 name "Gina"
+== note left group
+hook type 9 WS_Success
+default completed type 9 WS_Success
+ group=100 client=15
+== note left server
+hook type 10 WS_Success
+default completed type 10 WS_Success
+ client=15
+== note data created
+hook type 13 WS_Success
+default completed type 13 WS_Success
+ link=300 type="Game" "g" data=2:0102
+== note data deleted
+hook type 14 WS_Success
+default completed type 14 WS_Success
+ link=300 type="Game" "g"
+== note data modified
+hook type 15 WS_Success
+default completed type 15 WS_Success
+ link=300 type="Game" "g" off=2 ins=1 data=1:09
+== note captain
+hook type 23 WS_Success
+default completed type 23 WS_Success
+ group=100 captain=10
+== note group created
+hook type 24 WS_Success
+default completed type 24 WS_Success
+ group=500 "Fresh" maxc=16 f=800 af=3
+ info id=500 "Fresh" parent=65535 cap=0 maxc=16 f=800 af=3 obs=0 mp=0 members 0
+== note group deleted
+hook type 25 WS_Success
+default completed type 25 WS_Success
+ group=500
+== note group flags
+hook type 26 WS_Success
+default completed type 26 WS_Success
+ group=100 f=801 af=5
+== note invitation
+hook type 27 WS_Success
+default completed type 27 WS_Success
+ group=300 client=12 on=1 "come"
+== note join attempt
+hook type 28 WS_Success
+default completed type 28 WS_Success
+ group=300 client=13 "let me in" f=2
+== note max players
+hook type 29 WS_Success
+default completed type 29 WS_Success
+ group=300 maxp=6
+== note member count
+hook type 30 WS_Success
+default completed type 30 WS_Success
+ group=100 count=42
+== note group name
+hook type 31 WS_Success
+default completed type 31 WS_Success
+ group=100 "Lobby2"
+== note observers
+hook type 32 WS_Success
+default completed type 32 WS_Success
+ group=100 obs=7
+== note member flags
+hook type 36 WS_Success
+default completed type 36 WS_Success
+ group=100 client=11 mf=3
+== note peer chat
+hook type 39 WS_Success
+default completed type 39 WS_Success
+ client=12 f=104 whisper=1 "psst" to=[10,11]
+== note peer chat none
+hook type 39 WS_Success
+default completed type 39 WS_Success
+ client=13 f=100 whisper=0 "team" to=[]
+== note peer data
+hook type 40 WS_Success
+default completed type 40 WS_Success
+ client=12 data=3:050607
+== note server alert
+hook type 48 WS_Success
+default completed type 48 WS_Success
+ "alert!"
+== note shutdown aborted
+hook type 49 WS_Success
+default completed type 49 WS_Success
+ ""
+== note shutdown started
+hook type 50 WS_Success
+default completed type 50 WS_Success
+ "going down" secs=120
+== note banned
+hook type 58 WS_Success
+default completed type 58 WS_Success
+ group=100 on=1 secs=5 "bye"
+== note unbanned
+hook type 58 WS_Success
+default completed type 58 WS_Success
+ group=65535 on=0 secs=0 ""
+== note muted
+hook type 59 WS_Success
+default completed type 59 WS_Success
+ group=300 on=1 secs=60 "hush"
+== note derived
+hook type 60 WS_Success
+default completed type 60 WS_Success
+ msg=9 data=3:010203
+== note derived empty
+hook type 60 WS_Success
+default completed type 60 WS_Success
+ msg=4 data=0:
+== parse group list body
+parsed 1 flags 81
+ groups 2
+  group 7 id=7 "Seven" parent=65535 cap=0 maxc=0 f=0 af=0 obs=0 mp=0
+   members 0
+  group 8 id=8 "Eight" parent=65535 cap=0 maxc=0 f=0 af=0 obs=0 mp=0
+   members 0
+parsed cut 0 flags 1
+ groups 1
+  group 9 id=9 "Nine" parent=65535 cap=0 maxc=0 f=0 af=0 obs=0 mp=0
+   members 0
+route ops done

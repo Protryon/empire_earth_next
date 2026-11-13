@@ -4,9 +4,10 @@
 //! connection's message header and reply dispatch rule (`RoutingConnection::MsgCallback`) and its table of
 //! unsolicited messages (`GetUnsolicitedOp`).
 //!
-//! The ops stay C++ objects (they are `AsyncOp`s on a C++ connection); they hand their fields over for a request
-//! and get a reply back as a list of assignments in the order the original made them ([`Event`]), which they
-//! apply to their members and records (`include/ee/wonapi/WONRoutingMsg.h`). A reply cut short ends with the
+//! A request is built from the op's fields and a reply comes back as a list of assignments in the order the
+//! original made them ([`EeWonRouteEvent`]); the routing ops (routeop.rs, Rust objects since net round 18) apply
+//! them to their members and records, as `include/ee/wonapi/WONRoutingMsg.h`'s templates did before (now the test
+//! glue `tests/won/won_routemsg_glue.h`; RoutingGetUserStatusOp, a UDP op, still applies its own). A reply cut short ends with the
 //! assignments made before the original's `ReadBufferException`: a string whose length was read but not its
 //! characters is assigned empty (the original erased it before the read failed). Reached by nothing in the game:
 //! the routing servers are gone.

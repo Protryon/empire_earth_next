@@ -1,7 +1,7 @@
 // WONDB's CreateAccountOp and WONRouting's RoutingGetGroupListReqOp as whole ops: the original's Init, Reset,
 // GetNextRequest and CheckResponse (copied from CreateAccountOp.cpp and RoutingGetGroupListReqOp.cpp before the
 // port, over stand-ins with the ops' members: the real ElGamal, Blowfish and ProfileData classes, the routing
-// reply's records through WONRoutingMsg.h) against the Rust ops (ee_won reqlast.rs) through their C ABI. The
+// reply's records through won_routemsg_glue.h) against the Rust ops (ee_won reqlast.rs) through their C ABI. The
 // random generator's system seed is fixed (ee_won_random_test_seed) and set again before each op is made, so the
 // session key and the key encryption are the same bytes on both sides. Each sequence: generated members and the
 // request, then up to six generated replies (headers right and wrong, statuses, a good and bad server keys, group
@@ -26,7 +26,7 @@
 #include "won_profiledata.h"
 #include "ee/wonapi/WONElGamal.h"
 #include "won_db_msg.h"
-#include "ee/wonapi/WONRoutingMsg.h"
+#include "won_routemsg_glue.h"
 #include "rust/ee_won.h"
 
 // 0 records the golden from the original's half alone

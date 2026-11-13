@@ -165,7 +165,7 @@ bool EEUCSpaceBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
             if (theCargo->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = (theCargo->mGoalQueues.begin() + 1)->GetFront();
                 if (EEAttackUnitCast(theGoal) == 0 &&
-                    EEGoalCast<EEUGLocation>(theGoal) == 0 &&
+                    !EEGoalHasLocation(theGoal) &&
                     EEExploreGoalCast(theGoal) == 0)
                     theGoal = NULL;
                 if (theGoal != NULL)
@@ -174,7 +174,7 @@ bool EEUCSpaceBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
             if (!theReady && inUnit->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = (inUnit->mGoalQueues.begin() + 1)->GetFront();
                 if (EEAttackUnitCast(theGoal) == 0 &&
-                    EEGoalCast<EEUGLocation>(theGoal) == 0 &&
+                    !EEGoalHasLocation(theGoal) &&
                     EEExploreGoalCast(theGoal) == 0)
                     theGoal = NULL;
                 if (theGoal != NULL)

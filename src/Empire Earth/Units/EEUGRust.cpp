@@ -2085,7 +2085,8 @@ void EEUGRust::Step(EEComplexUnit* inUnit)
 
 long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = EEUnitGoal::Load(inMajorVersion, inMinorVersion, inFile);
+    // the heal goal's Save and Load write and read no base goal data (EEUGHealUnit's)
+    long theResult = this->mKind != kGoalHealUnit ? EEUnitGoal::Load(inMajorVersion, inMinorVersion, inFile) : 0;
     if (theResult != 0)
         return theResult;
     return (long)Goal(EE_UNITS_GOAL_LOAD, this, inMajorVersion, inMinorVersion, NULL, &inFile);
@@ -2103,7 +2104,7 @@ void EEUGRust::Start(EEComplexUnit* inUnit)
 
 long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
+    long theResult = this->mKind != kGoalHealUnit ? EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile) : 0;
     if (theResult != 0)
         return theResult;
     return (long)Goal(EE_UNITS_GOAL_SAVE, this, inMajorVersion, inMinorVersion, NULL, &outFile);

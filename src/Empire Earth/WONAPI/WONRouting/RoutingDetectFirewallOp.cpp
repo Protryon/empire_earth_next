@@ -1,5 +1,6 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-// No original address identified: WON SDK routing firewall request/reply lifecycle
+// No original address identified: WON SDK routing firewall request/reply lifecycle. The request and its two
+// replies are the Rust op's (routeop.rs); this class keeps the listening socket
 #include <windows.h>
 #include <string>
 #include <list>
@@ -11,19 +12,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONRoutingDetectFirewallOp.h"
 #include "ee/wonapi/WONStatus.h"
-#include "ee/wonapi/WONRoutingMsg.h"
 namespace WONAPI {
-RoutingDetectFirewallOp::RoutingDetectFirewallOp(RoutingConnection *theConnection) :
-	RoutingOp(theConnection),
-	mListenPort(0),
-	mMaxConnectWaitTime(0),
-	mDoListen(true),
-	mWaitingForStatusReply(false)
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 void RoutingDetectFirewallOp::CleanupHook()
 {
 	RoutingOp::CleanupHook();
@@ -34,45 +23,27 @@ void RoutingDetectFirewallOp::CleanupHook()
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+// Listens first when asked (the listen port becomes the socket's), then sends the request and waits for the status
 void RoutingDetectFirewallOp::SendRequest()
 {
-	this->InitSendMsg(18 /* SDK RoutingDetectFirewallRequest */);
-	if(this->mDoListen)
+	if(this->GetDoListen())
 	{
 		this->mListenSocket = new BlockingSocket(AsyncSocket::TCP);
-		WONStatus aStatus = this->mListenSocket->Fn2B0D90(this->mListenPort,0);
+		WONStatus aStatus = this->mListenSocket->Fn2B0D90(this->GetListenPort(),0);
 		if(aStatus!=0)
 		{
 			this->Finish(aStatus);
 			return;
 		}
-
 		aStatus = this->mListenSocket->Listen(1000);
 		if(aStatus!=0)
 		{
 			this->Finish(aStatus);
 			return;
 		}
-
-		this->mListenPort = this->mListenSocket->GetLocalPort();
+		this->SetListenPort(this->mListenSocket->GetLocalPort());
 	}
-
-
-	this->mWaitingForStatusReply = true;
-	// the message is Rust's (ee_won routemsg.rs)
-	RouteSendFirewall(this, this->mListenPort, this->mMaxConnectWaitTime);
-	this->SendMsg();
-	this->AddOp();
+	this->SetNum(EE_WON_RTF_WAITING, 1);
+	RoutingOp::SendRequest();
 }
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-WONStatus RoutingDetectFirewallOp::HandleReply(unsigned char theMsgType, ReadBuffer &theMsg)
-{
-    // the read is Rust's (ee_won routemsg.rs)
-    return RouteFirewall(this->mWaitingForStatusReply, this->mListenPort, theMsgType, theMsg);
-}
-
 }

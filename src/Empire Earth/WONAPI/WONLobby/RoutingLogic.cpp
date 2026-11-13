@@ -8,7 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONRoutingMsg.h" // RouteGroupListOf
+#include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/EELobbyGameCode.h"
@@ -27,6 +27,8 @@
 // The room flags, Quick Play's pick, the friend search rule, the default server, the settings' client flags and
 // the friends list's limit are ee_won's routing module (rust/crates/ee_won/src/routing.rs); this unit keeps the
 // servers, rooms, connection, ops, dialogs and events (Internet only: the routing servers are gone).
+// Every routing op is a RoutingOp over a Rust op (rust/crates/ee_won/src/routeop.rs): the notification handlers below
+// read its members by number (EE_WON_RTF_*) and text (EE_WON_RTT_*), its records as copies
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in EEWonNet.cpp)
 // Routes one server notification on a routing connection to a RoutingLogic handler for the op's server.
 // The original's RTTI names this class in the global namespace, not in WONAPI.
@@ -386,13 +388,13 @@ void RoutingLogic::SetGameInProgress(bool inClose)
 // Applies a player's new room member flags and notifies the joined room's player list
 void RoutingLogic::MemberFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingMemberFlagsChangedOp* inOp = static_cast<RoutingMemberFlagsChangedOp*>(inBaseOp);
+    RoutingOp* inOp = inBaseOp;
     int aGroupId = inOp->GetGroupId();
     LobbyGroup* aGroup = inServer->GetGroup(aGroupId);
     if (aGroup == NULL) return;
-    LobbyClient* aClient = aGroup->FindClient(inOp->mClientId);
+    LobbyClient* aClient = aGroup->FindClient(inOp->GetClientId());
     if (aClient == NULL) return;
-    aClient->SetMemberFlags(inOp->GetMemberFlags(), aGroup->IsGameGroup());
+    aClient->SetMemberFlags((unsigned char)inOp->Num(EE_WON_RTF_MEMBER_FLAGS), aGroup->IsGameGroup());
     if (inServer != this->mCurrentServer.get()) return;
     unsigned int aRoomSpec = this->GetRoomSpec(aGroup, inServer);
     if (aRoomSpec != 0) LobbyBroadcastEvent(new ClientChangedEvent(aClient, aRoomSpec, 2), true);
@@ -402,10 +404,10 @@ void RoutingLogic::MemberFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer
 // Applies a player's new client flags, notifies the lobby and updates a friend's anonymous state
 void RoutingLogic::ClientFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingClientFlagsChangedOp* inOp = static_cast<RoutingClientFlagsChangedOp*>(inBaseOp);
+    RoutingOp* inOp = inBaseOp;
     LobbyClient* aClient = inServer->GetClient(inOp->GetClientId());
     if (aClient == NULL) return;
-    aClient->SetClientFlags(inOp->mClientFlags);
+    aClient->SetClientFlags((unsigned long)inOp->Num(EE_WON_RTF_CLIENT_FLAGS));
     unsigned int aRoomSpec = 4;
     LobbyBroadcastEvent(new ClientChangedEvent(aClient, aRoomSpec, 2), true);
     if (!aClient->IsFriend()) return;
@@ -461,7 +463,7 @@ announce:
 // Passes staging data from another player in the joined game room to the staging handler
 void RoutingLogic::PeerData(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingPeerDataOp* inOp = static_cast<RoutingPeerDataOp*>(inBaseOp);
+    RoutingOp* inOp = inBaseOp;
     if (inServer != this->mCurrentServer.get() || this->mGameGroup.get() == NULL) return;
     LobbyClient* aClient = this->mGameGroup->FindClient(inOp->GetClientId());
     if (aClient == NULL || aClient->GetClientId() == this->mCurrentServer->GetMyClientId()) return;
@@ -472,13 +474,13 @@ void RoutingLogic::PeerData(RoutingOp* inBaseOp, LobbyServer* inServer)
 // Adds a player to a room, notifies the joined room's list and the room list, and updates the friend entry
 void RoutingLogic::ClientJoinedGroup(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingClientJoinedGroupOp* inOp = static_cast<RoutingClientJoinedGroupOp*>(inBaseOp);
+    RoutingOp* inOp = inBaseOp;
     int aKey = inOp->GetGroupId();
     LobbyGroup* aGroup = inServer->GetGroup(aKey);
     if (aGroup == NULL) return;
     LobbyClient* aClient = inServer->GetClient(inOp->GetClientId());
     if (aClient == NULL) return;
-    inServer->AddClientToGroup(aClient, inOp->GetMemberFlags(), aGroup);
+    inServer->AddClientToGroup(aClient, (unsigned char)inOp->Num(EE_WON_RTF_MEMBER_FLAGS), aGroup);
     unsigned int aRoomSpec = this->GetRoomSpec(aGroup, inServer);
     if (aRoomSpec != 0)
         LobbyBroadcastEvent(new ClientChangedEvent(aClient, aRoomSpec, 0), true);
@@ -490,7 +492,7 @@ void RoutingLogic::ClientJoinedGroup(RoutingOp* inBaseOp, LobbyServer* inServer)
 // Removes a player from a room, notifies the lists (and the staging screen for the game room), updates the friend
 void RoutingLogic::ClientLeftGroup(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingClientLeftGroupOp* inOp = static_cast<RoutingClientLeftGroupOp*>(inBaseOp);
+    RoutingOp* inOp = inBaseOp;
     LobbyGroup* aGroup = inServer->GetGroup(inOp->GetGroupId());
     if (aGroup == NULL) return;
     SmartPtr<LobbyClient> aClient = inServer->RemoveClientFromGroup(inOp->GetClientId(), aGroup);
@@ -507,8 +509,7 @@ void RoutingLogic::ClientLeftGroup(RoutingOp* inBaseOp, LobbyServer* inServer)
 // Adds a newly created room to the server's room list and notifies the lobby
 void RoutingLogic::GroupCreated(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingGroupCreatedOp* inOp = static_cast<RoutingGroupCreatedOp*>(inBaseOp);
-    LobbyGroup* aGroup = inServer->AddGroup(inOp->GetGroupInfo().get());
+    LobbyGroup* aGroup = inServer->AddGroup(inBaseOp->GetGroupInfo().get());
     if (aGroup != NULL)
         LobbyBroadcastEvent(new GroupChangedEvent(aGroup, inServer, 0), true);
 }
@@ -517,8 +518,7 @@ void RoutingLogic::GroupCreated(RoutingOp* inBaseOp, LobbyServer* inServer)
 // Removes a deleted room from the server's room list and notifies the lobby
 void RoutingLogic::GroupDeleted(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingGroupDeletedOp* inOp = static_cast<RoutingGroupDeletedOp*>(inBaseOp);
-    SmartPtr<LobbyGroup> aGroup = inServer->RemoveGroup(inOp->GetGroupId());
+    SmartPtr<LobbyGroup> aGroup = inServer->RemoveGroup(inBaseOp->GetGroupId());
     if (aGroup.get() != NULL)
         LobbyBroadcastEvent(new GroupChangedEvent(aGroup.get(), inServer, 1), true);
 }
@@ -550,8 +550,8 @@ void RoutingLogic::AnnounceFriendLocation(LobbyFriend* inFriend, int inRoomSpec)
 // Adds a player who joined the server; a friend gets a location update, plus a sound and chat notice when visible
 void RoutingLogic::ClientJoinedServer(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingClientJoinedServerOp* inOp = static_cast<RoutingClientJoinedServerOp*>(inBaseOp);
-    LobbyClient* aClient = inServer->AddClient(inOp->mClientInfo.get());
+    RoutingClientInfoPtr anInfo = inBaseOp->GetClientInfo();
+    LobbyClient* aClient = inServer->AddClient(anInfo.get());
     LobbyFriend* aFriend = LobbyFindFriend(aClient->GetWONUserId());
     if (aFriend == NULL) return;
     aClient->SetIsFriend(true);
@@ -567,8 +567,7 @@ void RoutingLogic::ClientJoinedServer(RoutingOp* inBaseOp, LobbyServer* inServer
 // Removes a player who left the server; a friend loses its location, with a sound and chat notice when visible
 void RoutingLogic::ClientLeftServer(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingClientLeftServerOp* inOp = static_cast<RoutingClientLeftServerOp*>(inBaseOp);
-    SmartPtr<LobbyClient> aClient = inServer->RemoveClient(inOp->GetClientId());
+    SmartPtr<LobbyClient> aClient = inServer->RemoveClient(inBaseOp->GetClientId());
     if (aClient.get() != NULL) {
     if (!aClient->IsFriend()) return;
     LobbyFriend* aFriend = LobbyFindFriend(aClient->GetWONUserId());
@@ -587,31 +586,32 @@ void RoutingLogic::ClientLeftServer(RoutingOp* inBaseOp, LobbyServer* inServer)
 // Marks a game as (un)invited from a player who is not ignored or blocked, plays the sound and shows the invitation
 void RoutingLogic::GroupInvitation(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingGroupInvitationOp* inOp = static_cast<RoutingGroupInvitationOp*>(inBaseOp);
+    RoutingOp* inOp = inBaseOp;
+    bool anInvited = inOp->Num(EE_WON_RTF_ON) != 0;
     if (inServer != this->mCurrentServer.get()) return;
     LobbyClient* aClient = inServer->GetClient(inOp->GetClientId());
     if (aClient == NULL || aClient->IsIgnored() || aClient->IsBlocked()) return;
     LobbyGame* aGame = this->mGameList->GetGame(inOp->GetGroupId());
     if (aGame == NULL) return;
-    aGame->SetInvited(inOp->GetInvited());
+    aGame->SetInvited(anInvited);
     LobbyBroadcastEvent(new GameChangedEvent(aGame, 2), true);
     if (LobbyGetStagingSoundEffects()) LobbyPlaySound(::LobbyGlobal_InviteRecv_Sound.get());
     LobbyBroadcastEvent(new GroupInvitationEvent(4, aGame->GetName(), aGame->GetGroupId(),
-        aClient, inOp->GetInvited(), GUIString(new GUIStringData(inOp->mComment)), false), true);
+        aClient, anInvited, GUIString(new GUIStringData(inOp->Text(EE_WON_RTT_COMMENT))), false), true);
 }
 
 // FUNCTION: WON 0x007e92d0
 // Shows the captain a player's request to join the hosted game, with the sound, unless the player is ignored/blocked
 void RoutingLogic::GroupJoinAttempt(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingGroupJoinAttemptOp* inOp = static_cast<RoutingGroupJoinAttemptOp*>(inBaseOp);
+    RoutingOp* inOp = inBaseOp;
     if (inServer != this->mCurrentServer.get() || this->mGameGroup.get() == NULL ||
-        inOp->mGroupId != this->mGameGroup->GetId()) return;
+        inOp->GetGroupId() != this->mGameGroup->GetId()) return;
     LobbyClient* aClient = inServer->GetClient(inOp->GetClientId());
     if (aClient == NULL || aClient->IsIgnored() || aClient->IsBlocked()) return;
     if (LobbyGetStagingSoundEffects()) LobbyPlaySound(::LobbyGlobal_AskToJoinRecv_Sound.get());
     LobbyBroadcastEvent(new GroupJoinAttemptEvent(6, aClient,
-        GUIString(new GUIStringData(inOp->mComment))), true);
+        GUIString(new GUIStringData(inOp->Text(EE_WON_RTT_COMMENT)))), true);
 }
 
 // FUNCTION: WON 0x007e7640
@@ -640,16 +640,18 @@ void RoutingLogic::Reset()
 // Shows a received chat line (room, team or whisper) from a player who is not ignored or blocked, with sounds
 void RoutingLogic::PeerChat(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingPeerChatOp* inOp = static_cast<RoutingPeerChatOp*>(inBaseOp);
+    RoutingOp* inOp = inBaseOp;
+    std::list<unsigned short> aRecipients = inOp->Recipients();
+    unsigned short aFlags = (unsigned short)inOp->Num(EE_WON_RTF_FLAGS16);
     if (inServer != this->mCurrentServer.get() ||
         (this->mChatGroup.get() == NULL && this->mGameGroup.get() == NULL) ||
-        inOp->GetRecipients().empty()) return;
-    int aRecipientId = inOp->GetRecipients().front();
+        aRecipients.empty()) return;
+    int aRecipientId = aRecipients.front();
     LobbyClient* aSender = inServer->GetClient(inOp->GetClientId());
     if (aSender == NULL || aSender->IsIgnored() || aSender->IsBlocked()) return;
     LobbyClient* aTarget = NULL;
     unsigned int aRoomSpec = 4;
-    if (inOp->GetFlags() & 0x100) {
+    if (aFlags & 0x100) {
         if (this->mGameGroup.get() == NULL) return;
         aRoomSpec = 0x16;
     } else if (aRecipientId < 0x4002) {
@@ -659,45 +661,42 @@ void RoutingLogic::PeerChat(RoutingOp* inBaseOp, LobbyServer* inServer)
         aTarget = inServer->GetClient(aRecipientId);
         if (aTarget == NULL) return;
     }
-    if (inOp->IsWhisper() && aTarget != NULL && aTarget->GetClientId() == inServer->GetMyClientId()) {
+    if ((aFlags & 4) && aTarget != NULL && aTarget->GetClientId() == inServer->GetMyClientId()) {
         if (LobbyGetChatSoundEffects()) LobbyPlaySound(::LobbyGlobal_WhisperRecv_Sound.get());
         ChatCommandParser* aParser = LobbyGetChatCommandParser();
         if (aParser != NULL) aParser->SetInput(aSender->GetName());
     }
-    if ((inOp->GetFlags() & 0x10) && LobbyGetLobbySoundEffects())
+    if ((aFlags & 0x10) && LobbyGetLobbySoundEffects())
         LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
-    LobbyBroadcastEvent(new RecvChatEvent(aRoomSpec, inOp->GetFlags(), aSender,
-        GUIString(inOp->GetText()), aTarget), true);
+    LobbyBroadcastEvent(new RecvChatEvent(aRoomSpec, aFlags, aSender,
+        GUIString(inOp->Text(EE_WON_RTT_TEXT)), aTarget), true);
 }
 
 // FUNCTION: WON 0x007e8770
 // Shows a server alert message from the administrators, with the error sound
 void RoutingLogic::ServerAlert(RoutingOp* inBaseOp, LobbyServer*)
 {
-    RoutingServerAlertOp* inOp = static_cast<RoutingServerAlertOp*>(inBaseOp);
     if (LobbyGetLobbySoundEffects()) LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
     LobbyBroadcastEvent(new AlertEvent(4, 0, 0,
-        GUIString(new GUIStringData(inOp->mText))), true);
+        GUIString(new GUIStringData(inBaseOp->Text(EE_WON_RTT_TEXT)))), true);
 }
 
 // FUNCTION: WON 0x007e8890
 // Shows the server's shutdown warning with its countdown, with the error sound
 void RoutingLogic::ServerShutdownStarted(RoutingOp* inBaseOp, LobbyServer*)
 {
-    RoutingServerShutdownStartedOp* inOp = static_cast<RoutingServerShutdownStartedOp*>(inBaseOp);
     if (LobbyGetLobbySoundEffects()) LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
-    LobbyBroadcastEvent(new AlertEvent(4, 1, inOp->GetSeconds(),
-        GUIString(new GUIStringData(inOp->mText))), true);
+    LobbyBroadcastEvent(new AlertEvent(4, 1, (unsigned long)inBaseOp->Num(EE_WON_RTF_TIME),
+        GUIString(new GUIStringData(inBaseOp->Text(EE_WON_RTT_TEXT)))), true);
 }
 
 // FUNCTION: WON 0x007e89b0
 // Shows that the server shutdown was called off, with the error sound
 void RoutingLogic::ServerShutdownAborted(RoutingOp* inBaseOp, LobbyServer*)
 {
-    RoutingServerShutdownAbortedOp* inOp = static_cast<RoutingServerShutdownAbortedOp*>(inBaseOp);
     if (LobbyGetLobbySoundEffects()) LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
     LobbyBroadcastEvent(new AlertEvent(4, 2, 0,
-        GUIString(new GUIStringData(inOp->mText))), true);
+        GUIString(new GUIStringData(inBaseOp->Text(EE_WON_RTT_TEXT)))), true);
 }
 
 inline int ModeratedRoomSpec(int inRoomSpec) { return inRoomSpec | 4; }
@@ -706,8 +705,8 @@ inline int ModeratedRoomSpec(int inRoomSpec) { return inRoomSpec | 4; }
 // Tells the local player they were muted or unmuted on the server, in the game room or in the chat room
 void RoutingLogic::YouWereMuted(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingYouWereMutedOp* inOp = static_cast<RoutingYouWereMutedOp*>(inBaseOp);
-    int aKind = inOp->GetIsMuted() ? 2 : 3;
+    RoutingOp* inOp = inBaseOp;
+    int aKind = inOp->Num(EE_WON_RTF_ON) != 0 ? 2 : 3;
     unsigned short aGroupId = inOp->GetGroupId();
     int aRoomSpec;
     GUIString aRoomName;
@@ -723,8 +722,8 @@ void RoutingLogic::YouWereMuted(RoutingOp* inBaseOp, LobbyServer* inServer)
     } else return;
     LobbyClient* aClient = inServer->GetMyClient();
     LobbyBroadcastEvent(new ClientModeratedEvent(aClient, ModeratedRoomSpec(aRoomSpec),
-        aRoomName, aKind, inOp->GetDuration(), true,
-        GUIString(inOp->GetComment())), true);
+        aRoomName, aKind, (unsigned long)inOp->Num(EE_WON_RTF_TIME), true,
+        GUIString(inOp->Text(EE_WON_RTT_COMMENT))), true);
 }
 
 // FUNCTION: WON 0x007eb1f0
@@ -793,12 +792,12 @@ void RoutingLogic::LeaveServer()
 // Records a room's new captain, refreshes both captains in the list and drops the game when its captain left
 void RoutingLogic::GroupCaptainChanged(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingGroupCaptainChangedOp* inOp = static_cast<RoutingGroupCaptainChangedOp*>(inBaseOp);
+    RoutingOp* inOp = inBaseOp;
     int aKey = inOp->GetGroupId();
     LobbyGroup* aGroup = inServer->GetGroup(aKey);
     if (aGroup == NULL) return;
     LobbyClient* anOldCaptain = NULL;
-    LobbyClient* aNewCaptain = aGroup->SetCaptain(inOp->GetCaptainId(), &anOldCaptain);
+    LobbyClient* aNewCaptain = aGroup->SetCaptain((unsigned short)inOp->Num(EE_WON_RTF_CAPTAIN_ID), &anOldCaptain);
     if (inServer != this->mCurrentServer.get()) return;
     unsigned int aRoomSpec = this->GetRoomSpec(aGroup, inServer);
     if (aRoomSpec == 0) return;
@@ -813,8 +812,8 @@ void RoutingLogic::GroupCaptainChanged(RoutingOp* inBaseOp, LobbyServer* inServe
 // Removes a game from the game list when its room's summary is deleted on the current server
 void RoutingLogic::DataObjectDeleted(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingDataObjectDeletedOp* inOp = static_cast<RoutingDataObjectDeletedOp*>(inBaseOp);
-    if (inServer != this->mCurrentServer.get() || inOp->mDataType != this->mGameDataType) return;
+    RoutingOp* inOp = inBaseOp;
+    if (inServer != this->mCurrentServer.get() || inOp->DataType() != this->mGameDataType) return;
     SmartPtr<LobbyGame> aGame = this->mGameList->RemoveGame(inOp->GetLinkId());
     if (aGame.get() != NULL) {
         LobbyBroadcastEvent(new GameChangedEvent(aGame.get(), 1), true);
@@ -826,8 +825,8 @@ void RoutingLogic::DataObjectDeleted(RoutingOp* inBaseOp, LobbyServer* inServer)
 // Adds or updates a game in the game list from its room's summary, pinging new games; drops unreadable ones
 void RoutingLogic::DataObjectCreated(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingDataObjectCreatedOp* inOp = static_cast<RoutingDataObjectCreatedOp*>(inBaseOp);
-    if (inServer != this->mCurrentServer.get() || inOp->mDataType != this->mGameDataType) return;
+    RoutingOp* inOp = inBaseOp;
+    if (inServer != this->mCurrentServer.get() || inOp->DataType() != this->mGameDataType) return;
     int aLinkId = inOp->GetLinkId();
     LobbyGroup* aGroup = inServer->GetGroup(aLinkId);
     if (aGroup == NULL) return;
@@ -859,12 +858,12 @@ inline bool IsChatRoomSpec(unsigned long inRoomSpec) { return inRoomSpec & 1; }
 // Handles the local player being kicked or banned from the game room, chat room or server and leaves it
 void RoutingLogic::YouWereBanned(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
-    RoutingYouWereBannedOp* inOp = static_cast<RoutingYouWereBannedOp*>(inBaseOp);
-    bool aBanned = inOp->mIsBanned;
+    RoutingOp* inOp = inBaseOp;
+    bool aBanned = inOp->Num(EE_WON_RTF_ON) != 0;
     unsigned short aGroupId = inOp->GetGroupId();
     if (!aBanned) return;
     int aKind;
-    unsigned long aDuration = inOp->GetDuration();
+    unsigned long aDuration = (unsigned long)inOp->Num(EE_WON_RTF_TIME);
     aKind = aDuration != 0 && aDuration < 10 ? 1 : 0;
     GUIString aRoomName;
     int aRoomSpec;
@@ -884,7 +883,7 @@ void RoutingLogic::YouWereBanned(RoutingOp* inBaseOp, LobbyServer* inServer)
         return;
     }
     LobbyBroadcastEvent(new ClientModeratedEvent(aMyClient, aRoomSpec | 4, aRoomName,
-        aKind, inOp->GetDuration(), true, GUIString(inOp->mComment)), true);
+        aKind, aDuration, true, GUIString(inOp->Text(EE_WON_RTT_COMMENT))), true);
     if (IsChatRoomSpec(aRoomSpec)) {
         if (this->mGameGroup.get() == NULL) this->LeaveServer();
         else {
@@ -979,9 +978,10 @@ void RoutingLogic::ReadGameListComplete(RoutingOp* inBaseOp, LobbyServer* inServ
     if (inServer != this->mCurrentServer.get()) return;
     this->mGameList->Clear();
     bool doAlert = LobbyGetAutoPingGames();
-    RoutingReadDataObjectOp* inOp = static_cast<RoutingReadDataObjectOp*>(inBaseOp);
-    for (RoutingDataObjectList::iterator anItr = inOp->mDataObjects.begin();
-         anItr != inOp->mDataObjects.end(); ++anItr) {
+    RoutingDataObjectList anObjects;
+    inBaseOp->GetDataObjects(anObjects);
+    for (RoutingDataObjectList::iterator anItr = anObjects.begin();
+         anItr != anObjects.end(); ++anItr) {
         RoutingDataObject* anObject = anItr->get();
         LobbyGroup* aGroup = inServer->GetGroup(anObject->mLinkId);
         if (aGroup == NULL) continue;
@@ -1478,12 +1478,12 @@ bool RoutingLogic::CreateGroup(LobbyServer* inServer,
     if (inServer != NULL) {
     SmartPtr<RoutingConnection> aConnection = inServer->GetConnection();
     if (aConnection.get() == NULL) return false;
-    SmartPtr<RoutingCreateGroupOp> anOp = new RoutingCreateGroupOp(aConnection.get());
-    anOp->SetGroupPassword(inPassword);
-    anOp->SetGroupName(inName);
-    anOp->SetGroupFlags(inRoomFlags);
-    anOp->SetJoinFlags(1);
-    anOp->SetLeaveGroupOnCancel(true);
+    SmartPtr<RoutingOp> anOp = new RoutingOp(aConnection.get(), RoutingOp_CreateGroup);
+    anOp->SetText(EE_WON_RTT_PASSWORD, inPassword);
+    anOp->SetText(EE_WON_RTT_NAME, inName);
+    anOp->SetNum(EE_WON_RTF_GROUP_FLAGS, (unsigned long)inRoomFlags);
+    anOp->SetNum(EE_WON_RTF_JOIN_FLAGS, 1);
+    anOp->SetNum(EE_WON_RTF_LEAVE_ON_CANCEL, 1);
     LobbyRunOpWithStatus(anOp.get(), ::RoutingLogic_CreateGroupTitle_String, ::RoutingLogic_CreateGroupDetails_String, 1, 0);
     if (anOp->GetStatus() == WS_Success) {
         outGroupId = anOp->GetGroupId();
@@ -1512,9 +1512,9 @@ bool RoutingLogic::JoinGroup(LobbyServer* inServer, int inGroupId)
         aPassword = this->mPasswordDialog->GetPassword();
     }
     if (!aConnection->IsConnected()) return false;
-    SmartPtr<RoutingJoinGroupOp> anOp = new RoutingJoinGroupOp(aConnection.get());
-    anOp->SetGroupId(inGroupId);
-    anOp->SetGroupPassword(aPassword);
+    SmartPtr<RoutingOp> anOp = new RoutingOp(aConnection.get(), RoutingOp_JoinGroup);
+    anOp->SetNum(EE_WON_RTF_GROUP_ID, (unsigned short)inGroupId);
+    anOp->SetText(EE_WON_RTT_PASSWORD, aPassword);
     while (true) {
         if (aGroup.get() != NULL && aGroup->IsAskToJoin())
             LobbyRunOpWithStatus(anOp.get(), ::RoutingLogic_AskingCaptainTitle_String, ::RoutingLogic_AskingCaptainDetails_String, 1, 0);
@@ -1529,7 +1529,7 @@ bool RoutingLogic::JoinGroup(LobbyServer* inServer, int inGroupId)
         if (anOp->GetStatus() == (WONStatus)-2524) {
             this->mPasswordDialog->Reset();
             if (LobbyDoDialog(this->mPasswordDialog.get()) != 0x186a1) return false;
-            anOp->SetGroupPassword(this->mPasswordDialog->GetPassword());
+            anOp->SetText(EE_WON_RTT_PASSWORD, this->mPasswordDialog->GetPassword());
         } else {
             if (anOp->GetStatus() == (WONStatus)-2504) return true;
             return false;
@@ -1560,6 +1560,23 @@ void RoutingLogic::ShowClientOptions(LobbyClient* inClient,int inRoomSpec)
 
 
 namespace WONAPI {
+// A ban or mute names the player by client id when on the server, else by CD key id (or WON user id) as a CD key id
+// (the ops' SetClientId / SetWONId(id, true))
+static void SetModerationTarget(RoutingOp* inOp, LobbyClient* inCurrent, LobbyClient* inClient)
+{
+    if (inCurrent != NULL) {
+        inOp->SetNum(EE_WON_RTF_CLIENT_ID, inCurrent->GetClientId());
+        inOp->SetNum(EE_WON_RTF_BY_WON_ID, 0);
+        return;
+    }
+    unsigned long id = inClient->GetCDKeyId();
+    if (id == 0) id = inClient->GetWONUserId();
+    if (id == 0) return;
+    inOp->SetNum(EE_WON_RTF_WON_ID, id);
+    inOp->SetNum(EE_WON_RTF_BY_WON_ID, 1);
+    inOp->SetNum(EE_WON_RTF_IS_CDKEY, 1);
+}
+
 // FUNCTION: WON 0x007e9440
 // Kicks, bans, mutes, unmutes or warns a player, asking moderators for details in the admin dialog first
 void RoutingLogic::DoAdminAction(int inAction, int inRoomSpec, LobbyClient* inClient)
@@ -1604,50 +1621,34 @@ void RoutingLogic::DoAdminAction(int inAction, int inRoomSpec, LobbyClient* inCl
             LobbyKickClient(inClient, inAction == 2);
             return;
         }
-        SmartPtr<RoutingBanClientOp> ban = new RoutingBanClientOp(connection);
+        SmartPtr<RoutingOp> ban = new RoutingOp(connection, RoutingOp_BanClient);
         if (inAction == 2) {
-            ban->SetBanComment(explanation);
-            ban->SetBanTime(seconds);
+            ban->SetText(EE_WON_RTT_COMMENT, explanation);
+            ban->SetNum(EE_WON_RTF_TIME, seconds);
             title = ::RoutingLogic_BanClientTitle_String;
         } else if (inAction == 7) {
-            ban->SetBanTime(1);
+            ban->SetNum(EE_WON_RTF_TIME, 1);
             title = ::RoutingLogic_KickClientTitle_String;
         }
-        ban->SetGroupId(groupId);
+        ban->SetNum(EE_WON_RTF_GROUP_ID, (unsigned short)groupId);
         op = ban.get();
-        if (currentClient != NULL) {
-            ban->SetClientId(currentClient->GetClientId());
-        } else {
-            unsigned long id = inClient->GetCDKeyId();
-            if (id == 0) id = inClient->GetWONUserId();
-            if (id != 0) {
-                ban->SetWONId(id,true);
-            }
-        }
+        SetModerationTarget(ban.get(), currentClient, inClient);
         break;
     }
     case 8:
     case 14: {
-        SmartPtr<RoutingMuteClientOp> mute = new RoutingMuteClientOp(connection);
-        mute->SetMuteComment(explanation);
-        mute->SetMuteTime(seconds);
-        mute->SetGroupId(groupId);
+        SmartPtr<RoutingOp> mute = new RoutingOp(connection, RoutingOp_MuteClient);
+        mute->SetText(EE_WON_RTT_COMMENT, explanation);
+        mute->SetNum(EE_WON_RTF_TIME, seconds);
+        mute->SetNum(EE_WON_RTF_GROUP_ID, (unsigned short)groupId);
         op = mute.get();
-        if (currentClient != NULL) {
-            mute->SetClientId(currentClient->GetClientId());
-        } else {
-            unsigned long id = inClient->GetCDKeyId();
-            if (id == 0) id = inClient->GetWONUserId();
-            if (id != 0) {
-                mute->SetWONId(id,true);
-            }
-        }
+        SetModerationTarget(mute.get(), currentClient, inClient);
         if (inAction == 14) {
             title = ::RoutingLogic_UnmuteClientTitle_String;
-            mute->SetIsMuted(false);
+            mute->SetNum(EE_WON_RTF_ON, 0);
         } else {
             title = ::RoutingLogic_MuteClientTitle_String;
-            mute->SetIsMuted(true);
+            mute->SetNum(EE_WON_RTF_ON, 1);
         }
         break;
     }
@@ -1680,11 +1681,15 @@ void RoutingLogic::EditBadUserList(bool inMuted, bool inServerWide, int inRoomSp
         if (group == NULL) return;
         groupId = group->GetId();
     }
-    SmartPtr<RoutingGetBadUserListOp> op =
-        new RoutingGetBadUserListOp(connection, listType, groupId, 0x0f);
+    SmartPtr<RoutingOp> op = new RoutingOp(connection, RoutingOp_GetBadUserList);
+    op->SetNum(EE_WON_RTF_LIST_TYPE, listType);
+    op->SetNum(EE_WON_RTF_GROUP_ID, groupId);
+    op->SetNum(EE_WON_RTF_FLAGS8, 0x0f);
     LobbyRunOpWithStatus(op.get(), ::RoutingLogic_GetBadUsersTitle_String, ::RoutingLogic_GetBadUsersDetails_String, 1, 0);
     if (op->GetStatus() != WS_Success) return;
-    this->mBadUserDialog->SetUserList(op->mBadUserList, !moderator);
+    RoutingBadUserList aBadUsers;
+    op->GetBadUsers(aBadUsers);
+    this->mBadUserDialog->SetUserList(aBadUsers, !moderator);
     if (LobbyDoDialog(this->mBadUserDialog.get()) != 100001) return;
     connection = this->GetConnection();
     if (connection == NULL) return;
@@ -1850,26 +1855,31 @@ bool RoutingLogic::ConnectToServer(LobbyServer* inServer, bool inFlag)
 
     unsigned long registerFlags = 0x15;
     if (this->mWantToBeModerator) registerFlags = 0x1d;
-    SmartPtr<RoutingRegisterClientOp> registerOp = new RoutingRegisterClientOp(connection.get());
-    registerOp->mRegisterFlags = registerFlags;
-    registerOp->mReconnectId = LobbyGetReconnectId(inServer->GetAddress());
+    SmartPtr<RoutingOp> registerOp = new RoutingOp(connection.get(), RoutingOp_RegisterClient);
+    registerOp->SetNum(EE_WON_RTF_REGISTER_FLAGS, registerFlags);
+    registerOp->SetNum(EE_WON_RTF_RECONNECT_ID, LobbyGetReconnectId(inServer->GetAddress()));
     unsigned long clientFlags = 0;
     if (!LobbyGetFilterDirtyWords()) clientFlags = 4;
     if (LobbyGetAnonymousToFriends() || inFlag) clientFlags |= 0x40;
-    registerOp->mClientFlags = clientFlags;
+    registerOp->SetNum(EE_WON_RTF_CLIENT_FLAGS, clientFlags);
     LobbyRunOpWithStatus(registerOp.get(), ::RoutingLogic_RegisterTitle_String, ::RoutingLogic_RegisterDetails_String, 1, 0);
     if (registerOp->GetStatus() != WS_Success) return false;
 
-    LobbySetReconnectId(inServer->GetAddress(), registerOp->GetReconnectId());
-    inServer->SyncClients(registerOp->GetClientMap());
+    LobbySetReconnectId(inServer->GetAddress(), (unsigned long)registerOp->Num(EE_WON_RTF_RECONNECT_ID));
+    RoutingClientMap aClients;
+    registerOp->GetClients(aClients);
+    inServer->SyncClients(aClients);
     inServer->SetMyClientId(registerOp->GetClientId());
     connection->SetCloseCompletion(new LogicCompletion<RoutingLogic>(&RoutingLogic::ConnectionClosed, this));
     if (inFlag && !LobbyGetAnonymousToFriends()) connection->SetClientFlags(0x40, 0, 0, 0, NULL);
 
-    SmartPtr<RoutingGetGroupListOp> groupOp = new RoutingGetGroupListOp(connection.get(), 0xff);
+    SmartPtr<RoutingOp> groupOp = new RoutingOp(connection.get(), RoutingOp_GetGroupList);
+    groupOp->SetNum(EE_WON_RTF_FLAGS16, 0xff);
     LobbyRunOpWithStatus(groupOp.get(), ::RoutingLogic_QueryGroupsTitle_String, ::RoutingLogic_QueryGroupsDetails_String, 1, 0);
     if (groupOp->GetStatus() != WS_Success) return false;
-    inServer->SyncGroups(groupOp->mGroupMap, true);
+    RoutingGroupMap aGroups;
+    groupOp->GetGroups(aGroups);
+    inServer->SyncGroups(aGroups, true);
     LobbyBroadcastEvent(new ServerChangedEvent(inServer, 2), true);
     inServer->UpdateFriends();
     LobbyBroadcastLobbyEvent(100056, true);
@@ -1924,9 +1934,12 @@ void RoutingLogic::QueryServerGroupsDone(AsyncOp* inBaseOp)
         this->mLastServerRefresh=0;
         server->SetLastPing(0);
     }
-    SmartPtr<RoutingGetGroupListOp> groups=new RoutingGetGroupListOp; // the op's replies read again (reqlast.rs)
-    RouteGroupListOf(groups.get(),*op);
-    server->SyncGroups(groups->mGroupMap,false);
+    // the op's replies read again (reqlast.rs) into a connection-less group list op (routeop.rs)
+    SmartPtr<RoutingOp> groups=new RoutingOp(NULL,RoutingOp_GetGroupList);
+    ee_won_routeop_read_group_list_of(groups->mRust,op->GetRustOp());
+    RoutingGroupMap aGroups;
+    groups->GetGroups(aGroups);
+    server->SyncGroups(aGroups,false);
     LobbyBroadcastEvent(new ServerChangedEvent(server,2),true);
 }
 // FUNCTION: WON 0x007ed4c0

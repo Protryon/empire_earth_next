@@ -137,7 +137,6 @@
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGHealUnit.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAIContinentManager.h"

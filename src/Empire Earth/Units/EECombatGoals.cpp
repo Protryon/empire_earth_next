@@ -25,7 +25,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGHealUnit.h"
 #include "ee/EEUCProjectile.h"
 #include "ee/EEUCMissile.h"
 #include "ee/EEGraphicObject.h"
@@ -386,8 +385,39 @@ float EEBitsFloat(int32_t inBits)
 EEUnit* EEConditionTarget(EEConditionContext* inContext)
 {
     if (inContext->mKind == EE_COMBAT_GOAL_HEAL)
-        return static_cast<EEUGHealUnit*>(inContext->mGoal)->mTarget;
+        return static_cast<EEUGRust*>(inContext->mGoal)->GetHealTarget();
     return static_cast<EEUGRust*>(inContext->mGoal)->GetAttackTarget();
+}
+
+// The heal goal's fallback, EEUGLocation::EvaluateCondition 0x227da5 of the location goal it derived from (its yaw
+// 0, its facing flag false): facing done is FaceYaw 0x22794d at yaw 0 (within a degree, the unit snapped to it);
+// facing not required is true; any other event the base goal's false
+bool EEHealLocationCondition(EEComplexUnit* inUnit, unsigned long inEvent)
+{
+    if (inEvent == kTriggerUnitFacingNotRequired)
+        return true;
+    if (inEvent != kTriggerCompletedUnitFacing)
+        return false;
+    const float theYaw0 = 0.0f;
+    GEVector theForward(0.0f, 1.0f, 0.0f);
+    GEVector theDirection;
+    const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
+    theTransformation.Apply(theForward, theDirection);
+    float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
+    float theDelta = theYaw - theYaw0;
+    if (theDelta < -3.1415927f)
+        theDelta += 6.2831855f;
+    else if (theDelta > 3.1415927f)
+        theDelta -= 6.2831855f;
+    const float kOneDegree = 0.017453292f;
+    bool theResult = theDelta >= -kOneDegree && theDelta <= kOneDegree;
+    if (theResult) {
+        GETransformation theNewTransformation;
+        theNewTransformation = theTransformation;
+        theNewTransformation.SetOrientationYPR(theYaw0, 0.0f, 0.0f);
+        inUnit->SetTransformation(theNewTransformation, true);
+    }
+    return theResult;
 }
 
 // The lazy reads, each the original's call at the place the test makes it (ee_combat goals.rs EE_COMBAT_READ_*)
@@ -433,7 +463,7 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
     case EE_COMBAT_READ_BASE:
         switch (theContext->mKind) {
         case EE_COMBAT_GOAL_HEAL:
-            return static_cast<EEUGHealUnit*>(theContext->mGoal)->EEUGLocation::EvaluateCondition(theUnit, theContext->mEvent);
+            return EEHealLocationCondition(theUnit, theContext->mEvent);
         case EE_COMBAT_GOAL_TORPEDO:
             return (uint32_t)static_cast<EEUCMissile*>(theContext->mClass)->EEUCMissile::EvaluateCondition(theUnit, theContext->mEvent);
         default:
@@ -446,9 +476,9 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
     case EE_COMBAT_READ_FACES_POINT:
         return theUnit->GetUnitClass()->FacesPoint(theUnit, static_cast<EEUGRust*>(theContext->mGoal)->GetGroundTarget(), true);
     case EE_COMBAT_READ_HEAL_IN_RANGE:
-        return EECombatHealInRange(theUnit, static_cast<EEUGHealUnit*>(theContext->mGoal)->mTarget);
+        return EECombatHealInRange(theUnit, static_cast<EEUGRust*>(theContext->mGoal)->GetHealTarget());
     case EE_COMBAT_READ_REPAIRABLE:
-        return static_cast<EEUGHealUnit*>(theContext->mGoal)->mTarget->IsRepairable();
+        return static_cast<EEUGRust*>(theContext->mGoal)->GetHealTarget()->IsRepairable();
     case EE_COMBAT_READ_IMPACT_UNIT:
         theContext->mImpact = theContext->mClass->FindImpactUnit(theUnit);
         return theContext->mImpact != NULL;
@@ -483,7 +513,7 @@ int32_t EEStepOp(void* inContext, int32_t inOp, int32_t inArg)
         break;
     case EE_COMBAT_STEP_FACES:
         if (theContext->mKind == EE_COMBAT_GOAL_HEAL)
-            return theUnit->GetUnitClass()->FacesTarget(theUnit, static_cast<EEUGHealUnit*>(theContext->mGoal)->mTarget, false);
+            return theUnit->GetUnitClass()->FacesTarget(theUnit, static_cast<EEUGRust*>(theContext->mGoal)->GetHealTarget(), false);
         return theUnit->mUnitClass->FacesTarget(theUnit, static_cast<EEUGRust*>(theContext->mGoal)->GetAttackTarget(), false);
     case EE_COMBAT_STEP_ANIMATION:
         return (int32_t)theUnit->mAnimation;

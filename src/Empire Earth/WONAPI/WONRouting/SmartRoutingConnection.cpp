@@ -13,7 +13,8 @@
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
 // The model, the ignore list, the chat commands and the copies are a Rust object (rust/crates/ee_won/src/
-// smartroute.rs EeWonSmartRoute); this class hands each finished op's fields in and sends the requests chat makes
+// smartroute.rs EeWonSmartRoute); this class hands each finished op (a Rust op, routeop.rs) in and sends the requests
+// chat makes
 #include "rust/ee_won.h"
 namespace WONAPI {
 static std::wstring SmartText(const uint32_t* inUnits, size_t inCount)
@@ -24,35 +25,6 @@ static std::wstring SmartText(const uint32_t* inUnits, size_t inCount)
         s += static_cast<wchar_t>(inUnits[i]);
     return s;
 }
-static void PutClients(EeWonSmartRoute* m, const RoutingClientMap& inMap)
-{
-    for (RoutingClientMap::const_iterator i = inMap.begin(); i != inMap.end(); ++i)
-        if (i->second.get() != NULL)
-            ee_won_smart_put_client(m, i->first, i->second->mName.data(), i->second->mName.length(),
-                                    i->second->mFlags, i->second->mAddress);
-}
-static void PutMembers(EeWonSmartRoute* m, const RoutingMemberMap& inMap, bool inToGroup)
-{
-    for (RoutingMemberMap::const_iterator i = inMap.begin(); i != inMap.end(); ++i) {
-        RoutingClientInfo* c = i->second->mClientInfo.get();
-        ee_won_smart_put_member(m, inToGroup, i->first, i->second->mFlags, c != NULL, c ? c->mName.data() : NULL,
-                                c ? c->mName.length() : 0, c ? c->mFlags : 0);
-    }
-}
-static void OpText(EeWonSmartOp& o, const std::wstring& inText) { o.text = inText.data(); o.text_len = inText.length(); }
-static void OpType(EeWonSmartOp& o, const std::string& inType)
-{
-    o.data_type = reinterpret_cast<const uint8_t*>(inType.data());
-    o.data_type_len = inType.length();
-}
-static void OpData(EeWonSmartOp& o, const ByteBuffer* inData)
-{
-    if (inData == NULL)
-        return;
-    o.data = reinterpret_cast<const uint8_t*>(inData->data());
-    o.data_len = inData->length();
-}
-
 // FUNCTION: WON 0x006bfb00
 // Creates the smart routing connection with the ignore file under the WON directory and the default chat commands
 SmartRoutingConnection::SmartRoutingConnection()
@@ -68,95 +40,7 @@ SmartRoutingConnection::~SmartRoutingConnection() { ee_won_smart_free(this->mMod
 void SmartRoutingConnection::RoutingOpCompleteHook(RoutingOp *theOp)
 {
     AutoCrit aCrit(this->GetDataLock());
-    EeWonSmartOp o;
-    memset(&o, 0, sizeof(o));
-    o.kind = theOp->GetType();
-    o.status = theOp->GetStatus();
-    EeWonSmartRoute* m = this->mModel;
-    switch (o.kind) {
-    case RoutingOp_ClientFlagsChanged: {
-        RoutingClientFlagsChangedOp* op = static_cast<RoutingClientFlagsChangedOp*>(theOp);
-        o.client = op->mClientId; o.a = op->mClientFlags; break; }
-    case RoutingOp_ClientJoinedGroup: {
-        RoutingClientJoinedGroupOp* op = static_cast<RoutingClientJoinedGroupOp*>(theOp);
-        o.group = op->mGroupId; o.client = op->mClientId; o.a = op->mMemberFlags; OpText(o, op->mClientName);
-        o.has = op->mHasClientFlags; o.b = op->mClientFlags; break; }
-    case RoutingOp_ClientJoinedServer: {
-        RoutingClientJoinedServerOp* op = static_cast<RoutingClientJoinedServerOp*>(theOp);
-        RoutingClientInfo* c = op->mClientInfo.get();
-        if (c != NULL)
-            ee_won_smart_put_client(m, c->mClientId, c->mName.data(), c->mName.length(), c->mFlags, c->mAddress);
-        OpText(o, op->GetClientName()); break; }
-    case RoutingOp_ClientLeftGroup: {
-        RoutingClientLeftGroupOp* op = static_cast<RoutingClientLeftGroupOp*>(theOp);
-        o.group = op->mGroupId; o.client = op->mClientId; break; }
-    case RoutingOp_ClientLeftServer: o.client = static_cast<RoutingClientLeftServerOp*>(theOp)->mClientId; break;
-    case RoutingOp_GetClientList: PutClients(m, static_cast<RoutingGetClientListOp*>(theOp)->mClientMap); break;
-    case RoutingOp_GetGroupList: {
-        RoutingGetGroupListOp* op = static_cast<RoutingGetGroupListOp*>(theOp);
-        for (RoutingGroupMap::const_iterator i = op->mGroupMap.begin(); i != op->mGroupMap.end(); ++i) {
-            RoutingGroupInfo* g = i->second.get();
-            ee_won_smart_put_group(m, i->first, g->mName.data(), g->mName.length(), g->mCaptainId, g->mMaxClients,
-                                   g->mFlags, g->mAsyncFlags, g->mObserverCount, g->mMaxPlayers);
-            PutMembers(m, g->mMembers, true);
-        }
-        o.has = op->IncludeMembers(); break; }
-    case RoutingOp_GetMembersOfGroup: {
-        RoutingGetMembersOfGroupOp* op = static_cast<RoutingGetMembersOfGroupOp*>(theOp);
-        o.group = op->GetGroupId(); o.a = op->GetObserverCount(); PutMembers(m, op->mMembers, false); break; }
-    case RoutingOp_GroupCaptainChanged: {
-        RoutingGroupCaptainChangedOp* op = static_cast<RoutingGroupCaptainChangedOp*>(theOp);
-        o.group = op->mGroupId; o.a = op->mCaptainId; break; }
-    case RoutingOp_GroupCreated: {
-        RoutingGroupCreatedOp* op = static_cast<RoutingGroupCreatedOp*>(theOp);
-        o.group = op->mGroupId; OpText(o, op->mName); o.a = op->mFlags; o.b = op->mAsyncFlags; o.c = op->mMaxClients;
-        break; }
-    case RoutingOp_GroupDeleted: o.group = static_cast<RoutingGroupDeletedOp*>(theOp)->mGroupId; break;
-    case RoutingOp_GroupFlagsChanged: {
-        RoutingGroupFlagsChangedOp* op = static_cast<RoutingGroupFlagsChangedOp*>(theOp);
-        o.group = op->mGroupId; o.a = op->mGroupFlags; break; }
-    case RoutingOp_GroupMaxPlayersChanged: {
-        RoutingGroupMaxPlayersChangedOp* op = static_cast<RoutingGroupMaxPlayersChangedOp*>(theOp);
-        o.group = op->mGroupId; o.a = op->mMaxPlayers; break; }
-    case RoutingOp_GroupNameChanged: {
-        RoutingGroupNameChangedOp* op = static_cast<RoutingGroupNameChangedOp*>(theOp);
-        o.group = op->mGroupId; OpText(o, op->mName); break; }
-    case RoutingOp_GroupObserverCount: {
-        RoutingGroupObserverCountOp* op = static_cast<RoutingGroupObserverCountOp*>(theOp);
-        o.group = op->mGroupId; o.a = op->mObserverCount; break; }
-    case RoutingOp_JoinGroup: {
-        RoutingJoinGroupOp* op = static_cast<RoutingJoinGroupOp*>(theOp);
-        o.group = op->mGroupId; o.has = (op->mJoinFlags & 1) != 0; PutMembers(m, op->mMemberMap, false); break; }
-    case RoutingOp_MemberFlagsChanged: {
-        RoutingMemberFlagsChangedOp* op = static_cast<RoutingMemberFlagsChangedOp*>(theOp);
-        o.group = op->mGroupId; o.client = op->mClientId; o.a = op->mMemberFlags; break; }
-    case RoutingOp_RegisterClient: {
-        RoutingRegisterClientOp* op = static_cast<RoutingRegisterClientOp*>(theOp);
-        o.client = op->mClientId; OpText(o, op->mClientName); o.a = op->mClientFlags; o.b = op->mAsyncMessageFlags;
-        PutClients(m, op->mClientMap); break; }
-    case RoutingOp_SetClientFlags: {
-        RoutingSetClientFlagsOp* op = static_cast<RoutingSetClientFlagsOp*>(theOp);
-        o.a = op->mAsyncMessageFlagMask; o.b = op->mAsyncMessageFlags; break; }
-    case RoutingOp_ReadDataObject: {
-        RoutingReadDataObjectOp* op = static_cast<RoutingReadDataObjectOp*>(theOp);
-        OpType(o, op->mDataType);
-        for (RoutingDataObjectList::const_iterator i = op->mDataObjects.begin(); i != op->mDataObjects.end(); ++i) {
-            const ByteBuffer* d = (*i)->mData.get();
-            ee_won_smart_put_object(m, (*i)->mLinkId, d ? reinterpret_cast<const uint8_t*>(d->data()) : NULL,
-                                    d ? d->length() : 0);
-        }
-        break; }
-    case RoutingOp_DataObjectCreated: {
-        RoutingDataObjectCreatedOp* op = static_cast<RoutingDataObjectCreatedOp*>(theOp);
-        o.client = op->mLinkId; OpType(o, op->mDataType); OpData(o, op->mData.get()); break; }
-    case RoutingOp_DataObjectModified: {
-        RoutingDataObjectModifiedOp* op = static_cast<RoutingDataObjectModifiedOp*>(theOp);
-        o.client = op->mLinkId; OpType(o, op->mDataType); OpData(o, op->mData.get()); break; }
-    case RoutingOp_GroupInvitation: o.client = static_cast<RoutingGroupInvitationOp*>(theOp)->mClientId; break;
-    case RoutingOp_GroupJoinAttempt: o.client = static_cast<RoutingGroupJoinAttemptOp*>(theOp)->mClientId; break;
-    case RoutingOp_PeerChat: o.client = static_cast<RoutingPeerChatOp*>(theOp)->mClientId; break;
-    }
-    if (ee_won_smart_op(m, &o))
+    if (ee_won_smart_routeop(this->mModel, theOp->mRust, theOp->GetStatus()))
         theOp->SetCompletion(NULL); // swallow the completion
 }
 

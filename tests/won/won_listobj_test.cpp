@@ -22,6 +22,7 @@
 #include <set>
 #include <algorithm>
 #include "rust/ee_won.h"
+#include "ee/wonapi/WONEventTypes.h"
 
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;
@@ -94,6 +95,11 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
     switch (inOp) {
     case Op::Get: return sFields[a]; // pure reads: not traced
     case Op::Set: sFields[a] = (int)b; break;
+    case Op::FireEvent:
+        // the type listeners receive: the original's enum (a negative code here), the Rust's through
+        // ee_won_gui_event_type, the call GuiHost.cpp's host makes (round 30: traced as the type)
+        Line("%lld fire %lld", n, a < 0 ? -(long long)a : (long long)ee_won_gui_event_type((EeWonGuiEvent)a), 0, 0, 0);
+        return 0;
     case Op::BaseSizeChanged:
         Line("%lld base-size", n, 0, 0, 0, 0);
         sFields[(int)Fd::ScrollWidth] = 20 + (int)R(280);
@@ -276,7 +282,7 @@ struct ListArea {
         if (this->mSelItem != old) {
             this->Invalidate();
             H(Op::FocusChildLost);
-            if (fire) H(Op::FireEvent, (intptr_t)EeWonGuiEvent::ListSelChanged);
+            if (fire) H(Op::FireEvent, -(intptr_t)WONAPI::ComponentEvent_ListSelChanged);
             H(Op::VirtListSelChangedHook);
             return true;
         }
@@ -328,7 +334,7 @@ struct ListArea {
         } else { count = 1; SetSelected(this->mSelItem, false); }
         this->mSelItem = 0;
         this->Invalidate();
-        if (fire) { H(Op::FireEvent, (intptr_t)EeWonGuiEvent::ListSelChanged); H(Op::VirtListSelChangedHook); }
+        if (fire) { H(Op::FireEvent, -(intptr_t)WONAPI::ComponentEvent_ListSelChanged); H(Op::VirtListSelChangedHook); }
         return count;
     }
     int GetItemPos(Item item)

@@ -2,6 +2,7 @@
 // every whole object's C++ shim keeps (UIControl.cpp). Requires rust/ee_ui.h and lle/UIControl.h.
 #ifndef LLE_UIOBJHOST_H
 #define LLE_UIOBJHOST_H
+#include "rust/ee_ui.h"
 
 struct UIObjHost {
     // UIControl's op (EeUiOp 1..12) on the control: true and *outResult set when it was one

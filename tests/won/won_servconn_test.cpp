@@ -71,6 +71,22 @@ static std::string TypeName(const void* inObject, const std::type_info& inType)
     size_t aSpace = s.rfind(' ');
     return aSpace == std::string::npos ? s : s.substr(aSpace + 1);
 }
+// a routing op's class name: the original's op classes by type (the ops are one RoutingOp over a Rust op since net
+// round 18; the golden keeps the names it recorded)
+static std::string RouteName(RoutingOp* inOp)
+{
+#ifdef EE_WON_ROUTE_OPS_RUST
+    switch (inOp->GetType()) {
+    case 5: return "RoutingCancelJoinGroupOp";
+    case 10: return "RoutingClientLeftServerOp";
+    case 20: return "RoutingGetClientListOp";
+    case 35: return "RoutingLeaveGroupOp";
+    case 49: return "RoutingServerShutdownAbortedOp";
+    case 60: return "RoutingDerivedServerOp";
+    }
+#endif
+    return TypeName(inOp, typeid(*inOp));
+}
 #define LOG2(head, first, rest) do { std::string l_ = std::string(head) + (first); l_ += std::string() + rest; Log(l_); } while (0)
 
 // ---- the stand-in peer authentication: PeerAuthOp's constructor and RustServerOp's members
@@ -407,7 +423,7 @@ public:
     virtual void KillHook() { Log(this->mName + " KillHook"); RoutingConnection::KillHook(); }
     virtual void RoutingOpCompleteHook(RoutingOp* inOp)
     {
-        Log(this->mName + " complete hook " + TypeName(inOp, typeid(*inOp)) + " " + St(inOp->GetStatus()));
+        Log(this->mName + " complete hook " + RouteName(inOp) + " " + St(inOp->GetStatus()));
     }
     std::string mName;
 protected:
@@ -425,7 +441,7 @@ public:
             Log(this->mName + " completed a non-routing op");
             return;
         }
-        Log(this->mName + " completed " + TypeName(anOp, typeid(*anOp)) + " type " + N(anOp->GetType()) + " "
+        Log(this->mName + " completed " + RouteName(anOp) + " type " + N(anOp->GetType()) + " "
             + St(anOp->GetStatus()) + " killed " + N(anOp->IsKilled()) + " mode " + N(anOp->GetMode()));
     }
     std::string mName;

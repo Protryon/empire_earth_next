@@ -2,7 +2,8 @@
 // RoutingGetUserStatusOp's datagram, RoutingGetGroupListReqOp's request and reply, ParseGroupListObj, the
 // connection's message header, reply dispatch rule and unsolicited table): the original's statements (copied from
 // the C++ before the port, `this` replaced by a stand-in with the ops' members) against the ops' new code
-// (include/ee/wonapi/WONRoutingMsg.h over ee_won's routemsg module) on a second stand-in. Requests over generated
+// (tests/won/won_routemsg_glue.h, until net round 18 include/ee/wonapi/WONRoutingMsg.h, over ee_won's routemsg
+// module) on a second stand-in. Requests over generated
 // members; replies generated for every kind, read whole, cut at every length and mutated; after each, both
 // stand-ins' members and records, the return or the throw, the reader's position and the factories' calls must
 // agree. The exit code is the number of failed checks.
@@ -19,7 +20,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
-#include "ee/wonapi/WONRoutingMsg.h"
+#include "won_routemsg_glue.h"
 #include "rust/ee_won.h"
 
 using namespace WONAPI;
