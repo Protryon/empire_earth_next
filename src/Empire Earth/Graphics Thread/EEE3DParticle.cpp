@@ -176,18 +176,10 @@ void EEE3DParticle::ReleaseResources()
 // brightness random in [param 2 - param 3, param 2 + param 3] clamped to 0..1; loads its media
 long EEE3DParticle::SetUp()
 {
-    bool theRandom = this->mGraphicEffect->mIntParam1 == 0;
-    this->mAge = 0.0f;
-    this->mYaw = theRandom ? EEEffect::GetRandom() * 6.2831855f : 0.0f;
-    this->mPitch = theRandom ? EEEffect::GetRandom() * 6.2831855f : 0.0f;
-    this->mRoll = theRandom ? EEEffect::GetRandom() * 6.2831855f : 0.0f;
+    EeGfxParticleSetUp theSetUp = {(int32_t)this->mGraphicEffect->mIntParam1, this->mGraphicEffect->GetParam2(),
+                                   this->mGraphicEffect->GetParam3()};
+    ee_gfx_effect_particle_set_up(this->mRecord, &theSetUp);
     this->mBoundingRadius = this->mGraphicEffect->GetSize();
-    float theDifference = this->mGraphicEffect->GetParam2() - this->mGraphicEffect->GetParam3();
-    float theFrom = this->mGraphicEffect->mParam2;
-    float theTo = this->mGraphicEffect->mParam3;
-    this->mBrightness = EEEffect::GetRandom() * (theTo + theFrom - theDifference) + theDifference;
-    this->mBrightness = this->mBrightness > 0.0f ? this->mBrightness : 0.0f;
-    this->mBrightness = min(this->mBrightness, 1.0f);
     this->mGraphicObject = this->GetGraphicObject();
     return this->mGraphicObject->LoadMedia();
 }
@@ -196,22 +188,8 @@ long EEE3DParticle::SetUp()
 // Resets the particle's motion, age, orientation, brightness and timing to zero and drops its graphic object
 void EEE3DParticle::Clear()
 {
-    this->mVelocity.SetX(0.0f);
-    this->mVelocity.SetY(0.0f);
-    this->mVelocity.SetZ(0.0f);
-    this->mPosition.SetX(0.0f);
-    this->mPosition.SetY(0.0f);
-    this->mPosition.SetZ(0.0f);
+    ee_gfx_effect_particle_clear(this->mRecord);
     this->mGraphicObject = NULL;
-    this->mLifeFraction = 0.0f;
-    this->mMoved = false;
-    this->mAge = 0.0f;
-    this->mYaw = 0.0f;
-    this->mPitch = 0.0f;
-    this->mRoll = 0.0f;
-    this->mBrightness = 0.0f;
-    this->mLastTime = 0.0f;
-    this->mDuration = 0.0f;
 }
 
 // FUNCTION: EXE 0x4f50b2
@@ -219,54 +197,10 @@ void EEE3DParticle::Clear()
 // enabled (frozen over an invalid tile); returns 7 once older than the effect's duration
 long EEE3DParticle::Update()
 {
-    float theNow = gPhysics->mGameClock;
-    float theElapsed = theNow - this->mLastTime;
-    long theResult = 0;
-    if (theElapsed < -0.0001f || theElapsed > 0.0001f) {
-        this->mLastTime = theNow;
-        this->mAge += theElapsed;
-        if (this->mAge <= this->mGraphicEffect->mDuration) {
-            float theFall = -this->mGraphicEffect->mParam8;
-            GEVector theWind = gWorld.mWindDirection;
-            GEVector theNormal;
-            GE3DPoint thePosition(this->mTransformation.GetX(), this->mTransformation.GetY(), this->mTransformation.GetZ());
-            float theStep = theElapsed / 1000.0f;
-            float theDrag = -this->mGraphicEffect->mParam11;
-            GEVector theForce(this->mVelocity.mX * theDrag, this->mVelocity.mY * theDrag, this->mVelocity.mZ * theDrag);
-            theFall += theForce.GetZ();
-            this->mVelocity.SetX(theForce.GetX() * theStep + this->mVelocity.GetX());
-            this->mVelocity.SetY(theForce.GetY() * theStep + this->mVelocity.mY);
-            this->mVelocity.SetZ(theFall * theStep + this->mVelocity.mZ);
-            thePosition.SetX(this->mGraphicEffect->GetParam9() * theWind.GetX() * theStep + this->mVelocity.GetX() * theStep + thePosition.GetX());
-            thePosition.SetY(this->mGraphicEffect->GetParam9() * theWind.GetY() * theStep + this->mVelocity.mY * theStep + thePosition.GetY());
-            thePosition.SetZ(this->mGraphicEffect->GetParam9() * theWind.GetZ() * theStep + this->mGraphicEffect->GetParam4() * theStep +
-                             this->mVelocity.mZ * theStep + thePosition.GetZ());
-            if (this->mGraphicEffect->mFlag2) {
-                GETerrainMesh& theMesh = gWorld.mMap->mTerrainMesh;
-                unsigned long theY = UMFloorUnsigned(thePosition.GetY());
-                unsigned long theX = UMFloorUnsigned(thePosition.GetX());
-                if (!theMesh.GetIsValidTile(theX, theY))
-                    return theResult;
-                float theHeight = theMesh.GetMeshZ(thePosition.GetX(), thePosition.GetY());
-                if (thePosition.GetZ() <= theHeight) {
-                    theMesh.GetMeshNormal(thePosition.GetX(), thePosition.GetY(), theNormal);
-                    if (theNormal.DotProduct(this->mVelocity) < 0.0f) {
-                        thePosition.SetZ(theHeight);
-                        float theBounce = theNormal.DotProduct(this->mVelocity) * (-1.0f - this->mGraphicEffect->GetParam10())
-                                          / theNormal.DotProduct(theNormal);
-                        this->mVelocity.SetX(theNormal.mX * theBounce + this->mVelocity.GetX());
-                        this->mVelocity.SetY(theNormal.mY * theBounce + this->mVelocity.GetY());
-                        this->mVelocity.SetZ(theNormal.mZ * theBounce + this->mVelocity.GetZ());
-                    }
-                }
-            }
-            this->mLifeFraction = this->mAge / this->mGraphicEffect->mDuration;
-            this->mPosition = thePosition;
-            this->mMoved = true;
-        } else
-            theResult = 7;
-    }
-    return theResult;
+    GE3DPoint theLocation(this->mTransformation.GetX(), this->mTransformation.GetY(), this->mTransformation.GetZ());
+    EeGfxParticleTick theTick = EEParticleTick(this->mGraphicEffect, theLocation);
+    EeGfxParticleGround theGround = EEParticleGround();
+    return ee_gfx_effect_particle_update(this->mRecord, &theTick, &theGround);
 }
 
 // FUNCTION: EXE 0x4f53a3
@@ -286,27 +220,13 @@ long EEE3DParticle::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
-    long theResult;
-    if (inMajorVersion <= 0 && inMinorVersion <= 0xd9) {
-        theResult = this->mVelocity.Load(inFile);
-        if (theResult == 0 && (theResult = inFile.Read(this->mAge)) == 0 &&
-            (theResult = inFile.Read(this->mYaw)) == 0 && (theResult = inFile.Read(this->mPitch)) == 0 &&
-            (theResult = inFile.Read(this->mRoll)) == 0 && (theResult = inFile.Read(this->mBrightness)) == 0) {
-            this->mLastTime = 0.0f;
-            this->mTransformation.GetPosition(this->mPosition);
-            this->mDuration = this->mGraphicEffect->mDuration;
-            this->mMoved = false;
-        }
-    } else {
-        theResult = this->mVelocity.Load(inFile);
-        if (theResult == 0 && (theResult = inFile.Read(this->mAge)) == 0 &&
-            (theResult = inFile.Read(this->mYaw)) == 0 && (theResult = inFile.Read(this->mPitch)) == 0 &&
-            (theResult = inFile.Read(this->mRoll)) == 0 && (theResult = inFile.Read(this->mBrightness)) == 0) {
-            theResult = inFile.Read(this->mLastTime);
-            this->mTransformation.GetPosition(this->mPosition);
-            this->mDuration = this->mGraphicEffect->mDuration;
-            this->mMoved = false;
-        }
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    bool theLoaded = false;
+    long theResult = ee_gfx_effect_load_particle(this->mRecord, &theFile, (uint32_t)inMajorVersion,
+                                                 (uint32_t)inMinorVersion, &theLoaded);
+    if (theLoaded) {
+        this->mTransformation.GetPosition(this->mPosition);
+        this->mDuration = this->mGraphicEffect->mDuration;
     }
     return theResult;
 }
@@ -369,28 +289,22 @@ long EEE3DParticle::DrawPass6()
 long EEE3DParticle::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
-    long theResult = this->mVelocity.Save(outFile);
-    if (theResult == 0 && (theResult = outFile.Write(this->mAge)) == 0 &&
-        (theResult = outFile.Write(this->mYaw)) == 0 && (theResult = outFile.Write(this->mPitch)) == 0 &&
-        (theResult = outFile.Write(this->mRoll)) == 0 && (theResult = outFile.Write(this->mBrightness)) == 0)
-        theResult = outFile.Write(this->mLastTime);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_particle(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4f588d
 // Returns 7 once the particle has outlived its duration; otherwise moves its transformation to its new position
 long EEE3DParticle::Step()
 {
-    if (!(gPhysics->GetGameClock() - this->mLastTime + this->mAge > this->mDuration)) {
-        if (this->mMoved) {
-            GETransformation theTransformation;
-            this->mMoved = false;
-            theTransformation.SetPosition(this->mPosition);
-            this->SetTransformation(theTransformation);
-        }
-        return 0;
+    bool theMove = false;
+    long theResult = ee_gfx_effect_particle_step(this->mRecord, gPhysics->GetGameClock(), &theMove);
+    if (theMove) {
+        GETransformation theTransformation;
+        theTransformation.SetPosition(this->mPosition);
+        this->SetTransformation(theTransformation);
     }
-    return 7;
+    return theResult;
 }
 
 // Naturally emitted UMemoryPool<EEE3DParticle> family and vector deleting destructor.

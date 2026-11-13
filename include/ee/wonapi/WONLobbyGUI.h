@@ -780,34 +780,31 @@ public:
     int mType; //34
 };
 
+// Label (R6 WON round 22): its colour, alignments, padding, fit to text and paint are the Rust Label
+// (rust/crates/ee_won/src/labelobj.rs); the C++ keeps the wrapped text (the fixture and the lobby read it) and the
+// background.
 class Label : public Component {
 public:
-    Label(); // 0x2f9d80; the class is 0x68 bytes (allocated at 0x300908)
-    virtual ~Label(); // 0x2f9f50: releases the background and the wrapped text
-    virtual void Virtual08(); //2fa020 SizeChanged
-    virtual void GetDesiredSize(int&,int&); //2fa140 GetDesiredSize
-    virtual void Paint(Graphics&); //2fa1a0
-    void SetMaxWidth(); //2f9f20
-    void AdjustHeightToFitText(); //2fa090
-    void SetText(const GUIString& inText, bool inFlag = true); // 0x2fa060
-    void SetHorzAlign(HorzAlign); // 0x2fa040
-    void SetWrap(bool); // 0x2fa120
-    void SetAdjustHeightToFitText(bool); // 0x2fa100
-    void SetVertPad(int inTop, int inBottom) { this->mTopPad=inTop; this->mBottomPad=inBottom; }
+    Label(); // at 0x006f9d80 in the original
+    virtual ~Label();
+    virtual void Virtual08() { this->Call(EeWonLabelCall::SizeChanged); } // SizeChanged
+    virtual void GetDesiredSize(int& w,int& h) { this->Call(EeWonLabelCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); }
+    virtual void Paint(Graphics& g) { this->Call(EeWonLabelCall::Paint,(intptr_t)&g); }
+    void SetText(const GUIString& t,bool invalidate=true) { this->mWrappedText->SetText(t); this->Call(EeWonLabelCall::TextSet,invalidate); }
+    void SetHorzAlign(HorzAlign a) { this->Call(EeWonLabelCall::SetHorzAlign,(intptr_t)a); }
+    void SetWrap(bool w) { this->Call(EeWonLabelCall::SetWrap,w); }
+    void SetAdjustHeightToFitText(bool a) { this->Call(EeWonLabelCall::SetAdjustHeightToFitText,a); }
+    void SetVertPad(int inTop,int inBottom) { this->Call(EeWonLabelCall::SetVertPad,inTop,inBottom); }
     void SetFont(Font* theFont) { this->mWrappedText->SetFont(theFont); }
-    void SetTextColor(int theColor) { this->mColor=theColor; }
+    void SetTextColor(int theColor) { this->Call(EeWonLabelCall::SetTextColor,theColor); }
+    int GetTextColor() { return (int)this->Call(EeWonLabelCall::TextColor); }
     void SetBackground(const Background& theBackground) { this->mBackground=theBackground; }
-    void SetVertAlign(VertAlign theAlign) { this->mAlign3C=theAlign; }
-    SmartPtr<WrappedText> mWrappedText;      // +30
-    int mColor;                            // +34
-    int mAlign38;
-    int mAlign3C;
-    int mLeftPad;                          // +40
-    int mRightPad;                         // +44
-    int mTopPad;                           // +48
-    int mBottomPad;                        // +4c
-    bool mAdjustHeightToFitText; // at +0x50; +0x51..0x53 padding
-    Background mBackground; // at +0x54..0x67
+    void SetVertAlign(VertAlign theAlign) { this->Call(EeWonLabelCall::SetVertAlign,(intptr_t)theAlign); }
+    SmartPtr<WrappedText> mWrappedText;
+    Background mBackground;
+    EeWonLabel* mRust;
+private:
+    intptr_t Call(EeWonLabelCall c,intptr_t a=0,intptr_t b=0) { return ee_won_label_call(this->mRust,c,a,b,0); }
 };
 
 
@@ -833,70 +830,63 @@ public:
 
 // InputBox (0xec bytes): Background values at +0xc4 and +0xd8
 // Constructor 0x2f7fd0 and destructor 0x2f8270 are out of line.
+// InputBox (R6 WON round 22): its text, selection, scroll, cursor, padding, history and paint are the Rust
+// InputBox (rust/crates/ee_won/src/inputobj.rs); this is the type the lobby holds and what its configs set.
 class InputBox : public Component {
 public:
     void SetFont(Font* f) { this->mFont=f; }
     typedef bool (*InputFilter)(InputBox*,GUIString&);
-    static bool NumericFilter(InputBox*,GUIString&); //2f7f70 cdecl
-    InputBox(); // 0x2f7fd0
-    // Implicit virtual destructor (0x2f8270)
-    const GUIString& GetText() const; // 0x2f9960
-    void SetText(const GUIString&,bool); //2f9990
-    void Clear(bool); //2f99c0
-    void AddInputHistory(const GUIString&,bool); // 0x2f9140
-    void SetInputHistory(const GUIString&,bool=false); //2f92f0
-    void SetAllowSelection(bool); // 0x2f84b0
-    void SelectRange(int,int); // 0x2f8aa0 (SDK name SetSel)
-    void AdjustTextRect(); //2f8400
-    void SetIcon(Image*); //2f8450
-    void SetCharWidth(int); //2f8560
-    void CheckSel(int,int,bool); //2f8600
+    static bool NumericFilter(InputBox*,GUIString&); // at 0x006f7f70 in the original
+    InputBox(); // at 0x006f7fd0 in the original
+    virtual ~InputBox();
+    const GUIString& GetText() const { return this->mRealText; }
+    void SetText(const GUIString& t,bool send) { this->CallText(EeWonInputCall::SetText,t,send); }
+    void Clear(bool send) { this->CallText(EeWonInputCall::SetText,gEmptyGUIString,send); }
+    void AddInputHistory(const GUIString& t,bool clear) { this->CallText(EeWonInputCall::AddInputHistory,t,clear); }
+    void SetInputHistory(const GUIString& t,bool clear=false) { this->CallText(EeWonInputCall::SetInputHistory,t,clear); }
+    void SetAllowSelection(bool allow) { this->Call(EeWonInputCall::SetAllowSelection,allow); }
+    void SelectRange(int start,int end) { this->Call(EeWonInputCall::SelectRange,start,end); }
+    void SetIcon(Image* icon) { this->mIcon=icon; this->Call(EeWonInputCall::IconChanged); }
+    void SetCharWidth(int em) { this->Call(EeWonInputCall::SetCharWidth,em); }
     void SetBackground(const Background& b) { this->mBackground=b; }
     void SetDisabledBackground(const Background& b) { this->mDisabledBackground=b; }
-    void SetCursorBlinkRate(int,int=0); //2f87d0
-    void AdjustPosition(); //2f8a20
-    void CopySelection(); // 0x2f8b10
-    void SetSelText(const GUIString&,bool=true); //2f8e10
-    int MoveCursor(bool,bool,const GUIString&,int); //2f90c0
-    void SetPasswordChar(char); //2f9970
-    void SetTextPrv(const GUIString&,bool=true); // 0x2f99e0
-    virtual void Virtual08(); //2f8510
-    virtual void GetDesiredSize(int&,int&); //2f8530
-    virtual void GotFocus();  //2f8590
-    virtual void LostFocus(); //2f85d0
-    virtual void MouseDown(int,int,int); //2f8750
-    virtual void MouseUp(int,int,int);   //2f8790
-    virtual void MouseExit(); //2f87a0
-    virtual void MouseDrag(int,int); //2f87b0
-    virtual bool TimerEvent(int); //2f8800
-    virtual bool KeyChar(int);   // 0x2f8c30
-    virtual bool KeyDown(int);   //2f93b0
-    virtual void Paint(Graphics&); // 0x2f9ac0
-    GUIString mText; //30 display
-    GUIString mPasswordText; // at +0x34, the real text when this is a password box
-    char mPassword; // at +0x38, the password character
-    SmartPtr<Image> mIcon; //3c
-    InputFilter mInputFilter; // at +0x40, input transform
-    std::deque<GUIString> mInputHistory; // at +0x44..0x57, Dinkum deque (allocator, map, map size, offset, size; 0x14 bytes)
-    int mInputHistoryPos; //58
-    int mMaxInputHistory; //5c
-    bool mHaveTraversedHistory; //60
-    bool mBackwardsSel; //61
-    int mSelStartChar; //64
-    int mSelEndChar; //68
-    int mHorzOffset; //6c
-    bool mSelecting; //70
-    int mLeftPad,mTopPad,mRightPad,mBottomPad; //74,78,7c,80
-    int mCursorDelay,mCursorOnTime,mCursorOffTime; //84,88,8c
-    bool mCursorOn,mUnderlineCursor,mAllowSelection,mSelectOnFocus,mUseDisabledColors; //90..94
-    int mMaxChars; //98
-    SmartPtr<Font> mFont; //9c
-    unsigned long mTextColor; // at +0xa0
-    int mDisabledTextColor; //a4
-    SelectionColor mSelColor; // at +0xa8..0xb3
-    WONRectangle mTextRect; // at +0xb4..0xc3
-    Background mBackground; // at +0xc4..0xd7
-    Background mDisabledBackground; // at +0xd8..0xeb
+    void SetCursorBlinkRate(int on,int off=0) { this->Call(EeWonInputCall::SetCursorBlinkRate,on,off); }
+    void AdjustPosition() { this->Call(EeWonInputCall::AdjustPosition); }
+    void CopySelection() { this->Call(EeWonInputCall::CopySelection); }
+    void SetSelText(const GUIString& t,bool send=true) { this->CallText(EeWonInputCall::SetSelText,t,send); }
+    void SetPasswordChar(char c) { this->Call(EeWonInputCall::SetPasswordChar,(intptr_t)c); }
+    void SetMaxChars(int n) { this->Call(EeWonInputCall::SetMaxChars,n); }
+    void SetSelectOnFocus(bool on) { this->Call(EeWonInputCall::SetSelectOnFocus,on); }
+    void SetMaxInputHistory(int n) { this->Call(EeWonInputCall::SetMaxInputHistory,n); }
+    void SetLeftPad(int n) { this->Call(EeWonInputCall::SetLeftPad,n); }
+    int GetSelStart() { return (int)this->Call(EeWonInputCall::SelStart); }
+    virtual void Virtual08() { this->Call(EeWonInputCall::SizeChanged); } // SizeChanged
+    virtual void GetDesiredSize(int& w,int& h) { this->Call(EeWonInputCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); }
+    virtual void GotFocus() { this->Call(EeWonInputCall::GotFocus); }
+    virtual void LostFocus() { this->Call(EeWonInputCall::LostFocus); }
+    virtual void MouseDown(int x,int y,int b) { this->Call(EeWonInputCall::MouseDown,x,y,b); }
+    virtual void MouseUp(int x,int y,int b) { this->Call(EeWonInputCall::MouseUp,x,y,b); }
+    virtual void MouseExit() { this->Call(EeWonInputCall::MouseExit); }
+    virtual void MouseDrag(int x,int y) { this->Call(EeWonInputCall::MouseDrag,x,y); }
+    virtual bool TimerEvent(int delta) { return this->Call(EeWonInputCall::TimerEvent,delta)!=0; }
+    virtual bool KeyChar(int k) { return this->Call(EeWonInputCall::KeyChar,k)!=0; }
+    virtual bool KeyDown(int k) { return this->Call(EeWonInputCall::KeyDown,k)!=0; }
+    virtual void Paint(Graphics& g) { this->Call(EeWonInputCall::Paint,(intptr_t)&g); }
+    GUIString mText; // the shown text (the password characters for a password box): the Rust box's copy
+    GUIString mRealText; // GetText(): the Rust box's copy
+    SmartPtr<Image> mIcon;
+    InputFilter mInputFilter;
+    bool mUseDisabledColors;
+    SmartPtr<Font> mFont;
+    unsigned long mTextColor;
+    int mDisabledTextColor;
+    SelectionColor mSelColor;
+    Background mBackground;
+    Background mDisabledBackground;
+    EeWonInput* mRust;
+private:
+    intptr_t Call(EeWonInputCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_input_call(this->mRust,c,a,b,cc); }
+    void CallText(EeWonInputCall c,const GUIString& t,bool flag) { this->Call(c,(intptr_t)t.mData->mText,t.length(),flag); }
 };
 
 class StretchImage;
@@ -2612,11 +2602,14 @@ public:
     SmartPtr<ListItem> mItem; // at +0x34
 };
 // ListArea (0x164 bytes): ScrollArea (0x110) base plus vectors and SmartPtr members.
+// ListArea (R6 WON round 23): its items, top line, flags, batch, paint width, sort type, selection, keyboard and mouse
+// items and selection walk are the Rust ListArea (rust/crates/ee_won/src/listobj.rs); this is the type the lobby
+// holds and the base of MultiListArea, TreeArea and PopupMenu, with what the configs and paints read (the font, the
+// colours, the selection colours, the sort function, the item tool tip). The items stay C++ data.
 class ListArea : public ScrollArea {
 public:
-    ListArea(); // 0x2fa570: search, font and focus setup
-    virtual ~ListArea(); // 0x2fa860: ends the tooltip, then releases the members
-    void SetSortType(ListSortType); // 0x2facd0
+    ListArea(); // at 0x006fa570 in the original
+    virtual ~ListArea();
     typedef int (*SortFunc)(ListArea*, const ListItem*, const ListItem*);
     static int NumberSortFunc(ListArea*,const ListItem*,const ListItem*); // 0x2faaf0
     struct LineSortPred {
@@ -2625,77 +2618,66 @@ public:
         bool operator()(const ListItem* a,const ListItem* b) { if(this->mAscending) return this->mSortFunc(this->mListArea,a,b)<0; else return this->mSortFunc(this->mListArea,a,b)>0; }
     };
     static int DefaultSortFunc(ListArea* area,const ListItem* a,const ListItem* b) { return a->Compare(b,area); }
-    SortFunc GetSortFunc(); // 0x2fab20
-    int FindInsertPos(ListItem*,int); //2fabe0
-    void DeleteItemPrv(int); //2fca50
-    void CheckMouseSel(ListItem*,int,int,bool=false); //2fb060
-    void ItemMouseAt(int&,int&); //2fb6a0
-    ListItem* FindSelectableItem(int,bool,bool=true); //2fc0a0
-    virtual void AdjustPosition(bool); //2fadf0 AdjustPosition
-    virtual void Virtual08(); //2faef0 SizeChanged
-    virtual void ScrollPaint(Graphics&); //2fafb0 ScrollPaint
-    virtual void MouseEnter(int,int); //2fc010 MouseEnter
-    virtual void MouseExit(); //2fc040 MouseExit
-    virtual void MouseDown(int,int,int); //2fbd00 MouseDown
-    virtual void MouseUp(int,int,int);   //2fbef0 MouseUp
-    virtual void MouseMove(int,int); //2fbad0 MouseMove
-    virtual void MouseDrag(int,int); //2fbc70 MouseDrag
-    virtual bool KeyDown(int);   //2fc160 KeyDown
-    // Added slots +0xd8/+0xdc/+0xe0: ListArea has 57 slots, TreeArea overrides +0xd8 and +0xe0.
-    virtual void NotifyMouseItemGone();     // 0x2fcad0, no args
-    virtual void ListSelChangedHook();      // 0x4142a0, no args
-    virtual bool Sort();                   // 0x2fab50, no args, AL result
-    void BeginUpdate();                     // 0x2faa00 (before the list is refilled)
-    void EndUpdate();                       // 0x2faa10 (after it)
-    void Clear(bool inFlag);                // 0x2faa50 (clears it?)
-    ListItem* GetItem(int inIndex);         // 0x2fc4e0
-    ListItem* InsertItem(ListItem* inItem, int inPos = -1);         // 0x2fc510
-    void RefreshItem(ListItem* inItem);     // 0x2fc730 (an item changed)
-    void DeleteItem(int); //2fcae0 index deletion
-    void SetListFlags(unsigned long,bool); // 0x2fb600: sets or clears list flags
-    void RemoveItem(ListItem* inItem);      // 0x2fcb00
-    ListItem* InsertString(const GUIString& inText, int inPos = -1);    // 0x2fcc30
-    int GetNumItems() const { return this->mItems.size(); }   // 0x290d70 (EELobbyConnectDialog.cpp's COMDAT)
-
-    int GetItemPos(ListItem* inItem);        // 0x2fc450
-    void SetSelItem(int inIndex, bool inFireEvent = true); // 0x2fb410, ret8
-    void EnsureVisible(ListItem* inItem);    // 0x2faf60, ret4
-    void FindNextSelection(); // 0x2fb4d0: scans for the next selected item
-    int ClearSelectionPrv(bool); // 0x2fb560: returns the number of items deselected
-    void ClearSelection(bool = true); // 0x2fb5f0 (forwarder)
-    bool SetSelItem(ListItem*,bool,bool); // 0x2fb200
-    void SelectRange(int,int); //2fb2e0
-    std::vector<SmartPtr<ListItem> >::iterator FindLineAt(int); //2facf0
-    ListItem* FindItemAt(int); //2fad80
-    void FindTopLine(); //2fadc0
-    bool IsItemVisible(ListItem*); //2faf10
-    void EnforceInvariants(); //2fc3c0
-    void DeleteRange(int,int); //2fcb20
-    void RewindSelections();               // 0x2fb480
-    bool HasMoreSelections();              // 0x2fb490
-    ListItem* GetNextSelection();           // 0x2fb530
+    SortFunc GetSortFunc() { return this->mSortFunc==NULL ? ListArea::DefaultSortFunc : this->mSortFunc; }
+    virtual void AdjustPosition(bool b) { this->Call(EeWonListCall::AdjustPosition,b); }
+    virtual void Virtual08() { this->Call(EeWonListCall::SizeChanged); } // SizeChanged
+    virtual void ScrollPaint(Graphics& g) { this->Call(EeWonListCall::ScrollPaint,(intptr_t)&g); }
+    virtual void MouseEnter(int x,int y) { this->Call(EeWonListCall::MouseEnter,x,y); }
+    virtual void MouseExit() { this->Call(EeWonListCall::MouseExit); }
+    virtual void MouseDown(int x,int y,int b) { this->Call(EeWonListCall::MouseDown,x,y,b); }
+    virtual void MouseUp(int x,int y,int b) { this->Call(EeWonListCall::MouseUp,x,y,b); }
+    virtual void MouseMove(int x,int y) { this->Call(EeWonListCall::MouseMove,x,y); }
+    virtual void MouseDrag(int x,int y) { this->Call(EeWonListCall::MouseDrag,x,y); }
+    virtual bool KeyDown(int k) { return this->Call(EeWonListCall::KeyDown,k)!=0; }
+    virtual void NotifyMouseItemGone() { this->Call(EeWonListCall::NotifyMouseItemGone); }
+    virtual void ListSelChangedHook() {}
+    virtual bool Sort() { return this->Call(EeWonListCall::Sort)!=0; }
+    void SetSortType(ListSortType t) { this->Call(EeWonListCall::SetSortType,t); }
+    void BeginUpdate() { this->Call(EeWonListCall::BeginUpdate); }
+    void EndUpdate() { this->Call(EeWonListCall::EndUpdate); }
+    void Clear(bool fire) { this->Call(EeWonListCall::Clear,fire); }
+    ListItem* GetItem(int i) { return (ListItem*)this->Call(EeWonListCall::GetItem,i); }
+    ListItem* InsertItem(ListItem* item,int pos=-1) { return (ListItem*)this->Call(EeWonListCall::InsertItem,(intptr_t)item,pos); }
+    void RefreshItem(ListItem* item) { this->Call(EeWonListCall::RefreshItem,(intptr_t)item); }
+    void DeleteItem(int pos) { this->Call(EeWonListCall::DeleteItem,pos); }
+    void SetListFlags(unsigned long flags,bool on) { this->Call(EeWonListCall::SetListFlags,(intptr_t)(int)flags,on); }
+    void RemoveItem(ListItem* item) { this->Call(EeWonListCall::RemoveItem,(intptr_t)item); }
+    ListItem* InsertString(const GUIString& text,int pos=-1) { return this->InsertItem(new TextListItem(text),pos); }
+    int GetNumItems() const { return (int)const_cast<ListArea*>(this)->Call(EeWonListCall::NumItems); }
+    int GetItemPos(ListItem* item) { return (int)this->Call(EeWonListCall::GetItemPos,(intptr_t)item); }
+    void SetSelItem(int index,bool fire=true) { this->Call(EeWonListCall::SetSelItemAt,index,fire); }
+    void EnsureVisible(ListItem* item) { this->Call(EeWonListCall::EnsureVisible,(intptr_t)item); }
+    void ClearSelection(bool fire=true) { this->Call(EeWonListCall::ClearSelection,fire); }
+    bool SetSelItem(ListItem* item,bool add,bool fire) { return this->Call(EeWonListCall::SetSelItem,(intptr_t)item,add,fire)!=0; }
+    void SelectRange(int start,int end) { this->Call(EeWonListCall::SelectRange,start,end); }
+    ListItem* FindItemAt(int y) { return (ListItem*)this->Call(EeWonListCall::FindItemAt,y); }
+    bool IsItemVisible(ListItem* item) { return this->Call(EeWonListCall::IsItemVisible,(intptr_t)item)!=0; }
+    void EnforceInvariants() { this->Call(EeWonListCall::EnforceInvariants); }
+    void DeleteRange(int start,int end) { this->Call(EeWonListCall::DeleteRange,start,end); }
+    void RewindSelections() { this->Call(EeWonListCall::RewindSelections); }
+    bool HasMoreSelections() { return this->Call(EeWonListCall::HasMoreSelections)!=0; }
+    ListItem* GetNextSelection() { return (ListItem*)this->Call(EeWonListCall::GetNextSelection); }
     int GetTextColor(); //2fb520
-    int GetItemPosAtYPos(int); //2fc4b0
-    bool ListFlagSet(int flags) { return this->mListFlags & flags ? true : false; }
-    ListItem* GetSelItem() { return this->mSelItem; } // inline
+    int GetItemPosAtYPos(int y) { return (int)this->Call(EeWonListCall::GetItemPosAtYPos,y); }
+    ListItem* FindSelectableItem(int start,bool up,bool opposite=true) { return (ListItem*)this->Call(EeWonListCall::FindSelectableItem,start,up,opposite); }
+    bool ListFlagSet(int flags) { return (this->Call(EeWonListCall::ListFlags)&flags)!=0; }
+    ListItem* GetSelItem() { return (ListItem*)this->Call(EeWonListCall::SelItem); }
+    ListItem* GetMouseItem() { return (ListItem*)this->Call(EeWonListCall::MouseItem); }
     const SelectionColor& GetSelColor() { return this->mSelColor; } // inline
     void SetFont(Font* theFont) { this->mFont=theFont; }
-    std::vector<SmartPtr<ListItem> > mItems;          // +0x110
-    int mTopLineVectorPos; // at +0x120 (0x2fadc0)
-    int mListFlags; //124
-    int mDoingMultiChange; // at +0x128 (0x2faa00/0x2faa10)
-    int mPaintWidth;                        // layout width
-    int mSortType; // at +0x130, a ListSortType value
-    SmartPtr<ListAreaToolTip> mItemToolTip; // at +0x134, owned
-    SmartPtr<Font> mFont;                            // +0x138
-    int mTextColor; //13c
-    SelectionColor mSelColor; //140
-    ListItem* mSelItem;                     // +0x14c (a combo box's list: ComboBox::GetSelItem 0x2f3d40)
-    ListItem* mKeyItem; //150, borrowed
-    ListItem* mMouseItem; //154, borrowed
-    int mSelItemItr; //158
-    SmartPtr<ListItem> mSearchLine; //15c
-    SortFunc mSortFunc; // at +0x160; the class is 0x164 bytes
+    int GetPaintWidth() const { return (int)const_cast<ListArea*>(this)->Call(EeWonListCall::PaintWidth); } // the layout width the items paint to
+    void SetPaintWidth(int w) { this->Call(EeWonListCall::SetPaintWidth,w); } // a subclass's own paint
+    ListSortType GetSortType() const { return static_cast<ListSortType>(const_cast<ListArea*>(this)->Call(EeWonListCall::SortType)); }
+    void SetSortTypeOnly(ListSortType t) { this->Call(EeWonListCall::SetSortTypeOnly,t); } // without sorting (MultiListArea::SetSortColumn)
+    void ClearMouseItem() { this->Call(EeWonListCall::ClearMouseItem); } // the field only (not the virtual NotifyMouseItemGone)
+    SmartPtr<ListAreaToolTip> mItemToolTip; // made on the first item tip
+    SmartPtr<Font> mFont;
+    int mTextColor;
+    SelectionColor mSelColor;
+    SortFunc mSortFunc;
+    EeWonList* mRust;
+private:
+    intptr_t Call(EeWonListCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_list_call(this->mRust,c,a,b,cc); }
 };
 
 

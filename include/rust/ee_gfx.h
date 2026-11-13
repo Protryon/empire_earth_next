@@ -36,6 +36,33 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_PLUME = 11;
 /// The velocity particle: a puff thrown along a line's direction, slowing down over the effect's int param 1.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_VELOCITY_PARTICLE = 12;
 
+/// The icons on a circle (the original's `EEE2DCircularMarchingIcons`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_CIRCULAR_ICONS = 16;
+
+/// The icons on a square (the original's `EEE2DSquareMarchingIcons`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SQUARE_ICONS = 15;
+
+/// The 2D particle (a billboard).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_PARTICLE_2D = 46;
+
+/// The 3D particle (a model).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_PARTICLE_3D = 57;
+
+/// The water splash.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_WATER_SPLASH = 27;
+
+/// The shock wave.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SHOCKWAVE = 18;
+
+/// The screen flash.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SCREEN_FLASH = 70;
+
+/// The water ripple.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_WATER_RIPPLE = 34;
+
+/// An aged effect's tick asks the C++ whether the tile under the ripple is blocked (the ripple lives on while it is).
+constexpr static const int32_t EE_GFX_EFFECT_ASK_BLOCKED = 1;
+
 /// `EeGfxMeshVertex::set`: the point was set.
 constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
 
@@ -95,6 +122,10 @@ constexpr static const float BAR_FRACTION = 0.75;
 
 /// The image's side (`textures\Volcano.png`, 19 x 19).
 constexpr static const size_t EE_GFX_VOLCANO_IMAGE_SIDE = 19;
+
+/// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
+/// `mSecondaryEffects`), owned by the record (`EeGfxEffectDamaged::lists`, made on first use, freed with it).
+struct EeGfxEffectLists;
 
 /// The effect manager's containers (opaque to the C++).
 struct EeGfxEffectStore;
@@ -413,6 +444,78 @@ struct EeGfxEffectPlume {
   EeGe3DPoint velocity;
 };
 
+/// `EEE2DParticle`'s and `EEE3DParticle`'s state.
+struct EeGfxEffectParticle {
+  /// `mVelocity` (saved)
+  EeGe3DPoint velocity;
+  /// the renderer's moved position (2D `mDrawPosition`, 3D `mPosition`)
+  EeGe3DPoint draw_position;
+  /// 0..1 (2D `mDrawAge`, 3D `mLifeFraction`)
+  float draw_age;
+  /// `mAge`: ms (saved)
+  float age;
+  /// 2D `mRotation`, 3D `mYaw` (saved), 3D `mPitch`, `mRoll` (saved)
+  float yaw;
+  float pitch;
+  float roll;
+  /// `mBrightness` (saved)
+  float brightness;
+  /// `mLastTime`: the game clock at the last move (saved)
+  float last_time;
+  /// `mDuration`
+  float duration;
+  /// `mMoved`: the renderer moved it (the tick applies the position)
+  bool moved;
+};
+
+/// `EEE2DBattlefieldAmbient`'s state (a ground decal: shell holes, blood stains).
+struct EeGfxEffectAmbient {
+  /// `mType`: the graphic effect's int param 1 (saved)
+  uint32_t kind;
+  /// `mOnSlope`: 1 when the corners are not level (saved)
+  uint32_t on_slope;
+  /// `mCenter` (saved)
+  EeGe3DPoint center;
+  /// `mCorners`: on the terrain (saved)
+  EeGe3DPoint corners[4];
+  /// `mTransformation`: its position is the centre (saved)
+  EeGeTransformation transformation;
+  /// `mAge`: 0..1 over the effect's duration (saved)
+  float age;
+  /// `mRotation`, `mSize` (saved)
+  float rotation;
+  float size;
+  /// `mHidden`: 1 off the map or on a slope
+  float hidden;
+};
+
+/// `EEEDamagedEffect`'s state: its child effects' handles (owned: made on first use, freed with the record) and the
+/// finished flag (the fire functor sets it).
+struct EeGfxEffectDamaged {
+  EeGfxEffectLists *lists;
+  bool finished;
+};
+
+/// `EEE3DParticleEmitter`'s state.
+struct EeGfxEffectEmitter {
+  /// `mVelocity` (saved)
+  EeGe3DPoint velocity;
+  /// `mTagPoint`: the unit's tag point it follows (saved)
+  uint32_t tag_point;
+  /// `mTime`: ms running (saved)
+  float time;
+  /// `mEmitTime`: ms to the next burst (saved)
+  float emit_time;
+};
+
+/// The aged effects' state (water splash, shock wave, screen flash, water ripple).
+struct EeGfxEffectAged {
+  /// `mAge`: 0..1 over the duration (saved)
+  float age;
+  /// the water ripple's own `mTransformation`, at water level (saved)
+  EeGeTransformation transformation;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -440,6 +543,16 @@ struct EeGfxEffectRecord {
   EeGfxEffectSmoke smoke;
   /// `EEE2DSmokePlume`'s
   EeGfxEffectPlume plume;
+  /// the pooled particles'
+  EeGfxEffectParticle particle;
+  /// the battlefield decals'
+  EeGfxEffectAmbient ambient;
+  /// the damage controller's
+  EeGfxEffectDamaged damaged;
+  /// the particle emitter's
+  EeGfxEffectEmitter emitter;
+  /// the aged effects'
+  EeGfxEffectAged aged;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -539,6 +652,109 @@ struct EeGfxPlumeTick {
   int32_t int_param1;
   float param3;
   bool flag1;
+};
+
+/// What a particle's set-up reads from its graphic effect: `mIntParam1` (0: random turn), `GetParam2()`,
+/// `GetParam3()` and (the 3D particle's other spelling of the same values) `mParam2`, `mParam3`.
+struct EeGfxParticleSetUp {
+  int32_t int_param1;
+  float param2;
+  float param3;
+};
+
+/// What a particle's move reads (the C++ fills it per call).
+struct EeGfxParticleTick {
+  /// `gPhysics->mGameClock`, `mGameOver`
+  float now;
+  bool game_over;
+  /// `gWorld.mWindDirection`
+  EeGe3DPoint wind;
+  /// the effect's position (2D: `mPosition`; 3D: the transformation's)
+  EeGe3DPoint position;
+  /// the graphic effect's `mDuration`, `mParam4`, `mParam8`, `GetParam9()`, `GetParam10()`, `mParam11`, `mFlag2`
+  uint32_t duration;
+  float param4;
+  float param8;
+  float param9;
+  float param10;
+  float param11;
+  bool flag2;
+};
+
+/// The terrain a bouncing particle asks (`gWorld.mMap->mTerrainMesh`; `context`: unused).
+struct EeGfxParticleGround {
+  void *context;
+  bool (*is_valid_tile)(void *context, uint32_t x, uint32_t y);
+  bool (*is_space_tile)(void *context, uint32_t x, uint32_t y);
+  float (*mesh_z)(void *context, float x, float y);
+  void (*mesh_normal)(void *context, float x, float y, EeGe3DPoint *normal);
+};
+
+/// What a decal's constructor reads from its graphic effect: `GetStartSize()`, `GetSize()`, `mIntParam1`, `mFlag1`.
+struct EeGfxAmbientNew {
+  float start_size;
+  float size;
+  int32_t int_param1;
+  bool flag1;
+};
+
+/// What the damage controller's tick reads (the C++ fills it from the unit, the head part of a multi-part one).
+struct EeGfxDamagedTick {
+  /// the effect has a unit
+  bool has_unit;
+  /// the damage tag points of linked effect 1's kind (1 without a list)
+  uint32_t tag_count;
+  /// the unit's hit points and its stats' maximum
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// the graphic effect's `GetParam2()` (the health share below which the damage shows) and linked effect 2
+  float param2;
+  bool has_linked2;
+  /// the unit is on the map, cloaked, and the current player is not its ally: no child effects
+  bool hidden;
+};
+
+/// The world the damage controller calls into (`context`: the effect).
+struct EeGfxDamagedHost {
+  void *context;
+  /// `CreateUnitEffect(unit, linked effect 1 (or 2: `secondary`), &handle, 0, index, 0)`: the handle
+  uint32_t (*create)(void *context, bool secondary, uint32_t index);
+  void (*destroy)(void *context, uint32_t handle);
+};
+
+/// What the emitter's move reads: the wind and the graphic effect's `GetParam4()`, `GetParam8()`, `GetParam9()`,
+/// `GetParam10()`, `mParam11`, `mFlag2`.
+struct EeGfxEmitterMove {
+  EeGe3DPoint wind;
+  float param4;
+  float param8;
+  float param9;
+  float param10;
+  float param11;
+  bool flag2;
+};
+
+/// What the emitter's burst reads: the graphic effect's `mIntParam3` (particles a burst), `mEmitPositionSpread`,
+/// `mIsEmitFlat`, `GetParam1()`..`GetParam6()` (pitch, yaw and speed: centre and spread), `mIntParam1`/`mIntParam2`
+/// (the countdown's centre and spread).
+struct EeGfxEmitterBurst {
+  uint32_t count;
+  float position_spread;
+  bool flat;
+  float param1;
+  float param2;
+  float param3;
+  float param4;
+  float param5;
+  float param6;
+  int32_t int_param1;
+  int32_t int_param2;
+};
+
+/// The emitter's line effects (`context`: the effect).
+struct EeGfxEmitterHost {
+  void *context;
+  int32_t (*line)(void *context, const EeGe3DPoint *start, const EeGe3DPoint *direction);
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -1283,6 +1499,177 @@ int32_t ee_gfx_effect_load_plume(EeGfxEffectRecord *r, const EeGfxEffectFile *fi
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_effect_save_plume(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE2DMarchingIcons::ComputeOffsets`' candidates (the C++ keeps those `IsIconShown` takes): up to `capacity`
+/// points into `out`; their count.
+///
+/// # Safety
+/// `out` has room for `capacity` points.
+size_t ee_gfx_effect_marching_offsets(int32_t kind,
+                                      int32_t count,
+                                      float angle,
+                                      float radius,
+                                      float half_side,
+                                      EeGe3DPoint *out,
+                                      size_t capacity);
+
+/// The square icons' bounding radius (`sqrt(2 r r)`).
+float ee_gfx_effect_square_icons_radius(float half_side);
+
+/// The particles' `SetUp` state (their draws).
+///
+/// # Safety
+/// `r` is a live record; `setup` is valid.
+void ee_gfx_effect_particle_set_up(EeGfxEffectRecord *r, const EeGfxParticleSetUp *setup);
+
+/// The particles' `Clear` state.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_effect_particle_clear(EeGfxEffectRecord *r);
+
+/// The particles' `Update` (the renderer's move): 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record; `tick` and `ground` are valid.
+int32_t ee_gfx_effect_particle_update(EeGfxEffectRecord *r,
+                                      const EeGfxParticleTick *tick,
+                                      const EeGfxParticleGround *ground);
+
+/// The particles' `Step`: 7 when it ends; `move_to`: the C++ applies the moved position.
+///
+/// # Safety
+/// `r` is a live record; `move_to` is writable.
+int32_t ee_gfx_effect_particle_step(EeGfxEffectRecord *r, float now, bool *move_to);
+
+/// The particles' own Load reads; `loaded`: the C++ sets the draw position and duration.
+///
+/// # Safety
+/// `r` is a live record; `file` and `loaded` are valid.
+int32_t ee_gfx_effect_load_particle(EeGfxEffectRecord *r,
+                                    const EeGfxEffectFile *file,
+                                    uint32_t major,
+                                    uint32_t minor,
+                                    bool *loaded);
+
+/// The particles' own Save writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_particle(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE2DBattlefieldAmbient`'s constructor at a point (its draws and the terrain's corners).
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+void ee_gfx_effect_ambient_new(EeGfxEffectRecord *r,
+                               const EeGe3DPoint *at,
+                               const EeGfxAmbientNew *n,
+                               const EeGfxParticleGround *ground);
+
+/// `EEE2DBattlefieldAmbient::Step`: 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record.
+int32_t ee_gfx_effect_ambient_step(EeGfxEffectRecord *r, float tick_seconds, uint32_t duration);
+
+/// `EEE2DBattlefieldAmbient::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_ambient(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE2DBattlefieldAmbient::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_ambient(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEEDamagedEffect::Step`: 7 when it ends. The lists are out of the record while the C++ creates and destroys.
+///
+/// # Safety
+/// `r` is a live record; `tick` and `host` are valid.
+int32_t ee_gfx_effect_damaged_step(EeGfxEffectRecord *r,
+                                   const EeGfxDamagedTick *tick,
+                                   const EeGfxDamagedHost *host);
+
+/// `EEEDamagedEffect::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_damaged(EeGfxEffectRecord *r,
+                                   const EeGfxEffectFile *file,
+                                   uint32_t major,
+                                   uint32_t minor);
+
+/// `EEEDamagedEffect::Save`'s own writes (`has_linked2`: the graphic effect's linked effect 2 is set).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_damaged(EeGfxEffectRecord *r,
+                                   const EeGfxEffectFile *file,
+                                   bool has_linked2);
+
+/// `EEE3DParticleEmitter::Step`'s start: the tick in ms, added to the running time.
+///
+/// # Safety
+/// `r` is a live record.
+float ee_gfx_effect_emitter_begin(EeGfxEffectRecord *r, float tick_seconds);
+
+/// `EEE3DParticleEmitter::Move`: 7 off the map; `out` the next position.
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+int32_t ee_gfx_effect_emitter_move(EeGfxEffectRecord *r,
+                                   float seconds,
+                                   const EeGfxEmitterMove *m,
+                                   const EeGfxParticleGround *ground,
+                                   EeGe3DPoint *out);
+
+/// `EEE3DParticleEmitter::Step`'s burst; the last line's result (`result` without one).
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+int32_t ee_gfx_effect_emitter_burst(EeGfxEffectRecord *r,
+                                    float delta,
+                                    const EeGe3DPoint *location,
+                                    const EeGeTransformation *transformation,
+                                    const EeGfxEmitterBurst *burst,
+                                    int32_t result,
+                                    const EeGfxEmitterHost *host);
+
+/// `EEE3DParticleEmitter::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_emitter(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DParticleEmitter::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_emitter(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// The aged effects' `Step`: 7 when it ends; the ripple's `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`.
+///
+/// # Safety
+/// `r` is a live record; `tile` has room for two.
+int32_t ee_gfx_effect_aged_step(EeGfxEffectRecord *r,
+                                float tick_seconds,
+                                uint32_t duration,
+                                int32_t *tile);
+
+/// The aged effects' own Load reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_aged(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// The aged effects' own Save writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_aged(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEEffect::GetRandom`.
 float ee_gfx_effect_random();

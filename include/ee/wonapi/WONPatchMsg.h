@@ -67,24 +67,6 @@ template <class List> void PatchAddVersionType(List& ioList, const std::string& 
     for (size_t i = 0; i < v.size(); i++) ioList.push_back(v[i]);
 }
 
-// VersionBaseOp::BuildVersionFilterSet
-inline void PatchFilterSet(const std::string& theFilterString, std::set<std::string>& theFilterSet)
-{
-    theFilterSet.clear();
-    std::vector<std::string> v = PatchSplit(theFilterString, true);
-    for (size_t i = 0; i < v.size(); i++) theFilterSet.insert(v[i]);
-}
-
-// VersionBaseOp::IsFiltered: a "pt" line of the version's data naming a filter outside the set
-inline bool PatchIsFiltered(const std::set<std::string>& inFilters, const std::string& theVersionData)
-{
-    std::vector<EeWonPatchBytes> f;
-    for (std::set<std::string>::const_iterator i = inFilters.begin(); i != inFilters.end(); ++i)
-        f.push_back(PatchBytes(*i));
-    return ee_won_version_is_filtered(reinterpret_cast<const uint8_t*>(theVersionData.data()), theVersionData.size(),
-                                      f.empty() ? NULL : &f[0], f.size());
-}
-
 // VersionData::ReadFromBuffer
 template <class V> void PatchReadVersion(V& v, ReadBuffer& ioIn)
 {

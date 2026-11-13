@@ -87,11 +87,8 @@
 2f70c0 2f73f4 WONGUI/ContainerTimerCursor.cpp
 2f7990 2f7d69 WONGUI/DialogBehavior.cpp
 2f7d70 2f7f66 WONGUI/ImageButton.cpp
-2f7f70 2f9d80 WONGUI/InputBox.cpp
 2f84b0 306b01 WONGUI/ScreenSelectionState.cpp
 2f8b90 339d15 WONGUI/GUIStringSliceAdapters.cpp
-2f9d80 2fa27d WONGUI/Label.cpp
-2fa280 2fd96c WONGUI/ListArea.cpp
 2fa2c0 2fa478 WONGUI/TextListItem.cpp
 2fa480 2fda7a WONGUI/ComponentListItemAdapters.cpp
 2fa510 300777 WONGUI/MenuSeparator.cpp
@@ -131,7 +128,6 @@
 305760 305c0e WONGUI/ScrollbarScroller.cpp
 305fa0 30683e WONGUI/Scrollbar.cpp
 306870 306e08 WONGUI/ImageComponent.cpp
-307060 30815f WONGUI/Splitter.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp
 309880 3098cd WONGUI/PaletteLifetime.cpp
 30a800 30a803 WONGUI/ListItemDefaults.cpp

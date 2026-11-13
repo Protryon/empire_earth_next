@@ -70,6 +70,29 @@ pub struct EeCombatStoredUnit {
     pub cloak_radius: i64,
     /// `EEUnit::mResourceAmount`
     pub resource_amount: i64,
+    /// `mStats` (the `EEUnitClassUpgrade*`'s address, 0: none): the stats table's key ([`stats_of`])
+    pub stats: u64,
+}
+
+/// A stats object's fields the combat reads take (ee_units stats.rs's `EeUnitStatsRecord`'s, copied by ee_rust's
+/// bridge; floats as their bits).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeCombatStoredStats {
+    /// `mScale`, `mRange`, `mMaxVelocity`, `mAttack`
+    pub scale: u32,
+    pub range: u32,
+    pub max_velocity: u32,
+    pub attack: u32,
+    /// `mFlightTime`, `mReloadTime`, `mMaxHitPoints`, `mHealingPoints`
+    pub flight_time: i64,
+    pub reload_time: i64,
+    pub max_hit_points: i64,
+    pub healing_points: i64,
+    /// `mArmor[6]` (float bits)
+    pub armor: [u32; 6],
+    /// `mCanFireOverWalls`
+    pub can_fire_over_walls: u8,
 }
 
 /// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
@@ -91,8 +114,10 @@ pub struct EeCombatStoredPlayer {
 /// cbindgen:ignore
 #[cfg(not(test))]
 mod bridge {
-    use super::{EeCombatStoredPlayer, EeCombatStoredUnit};
+    use super::{EeCombatStoredPlayer, EeCombatStoredStats, EeCombatStoredUnit};
     extern "C" {
+        /// The stats table's record of the stats object into `out`; false for none.
+        pub fn ee_combat_store_stats_of(object: u64, out: *mut EeCombatStoredStats) -> bool;
         /// The record of the unit object into `out` (the store's, else filled from the object); false for none.
         pub fn ee_combat_store_unit_of(object: u64, out: *mut EeCombatStoredUnit) -> bool;
         /// The table of the player object into `out` (the store's, else read from the object); false for none.
@@ -134,13 +159,37 @@ pub fn player_of(object: EeCombatHandle) -> Option<EeCombatStoredPlayer> {
     }
 }
 
+/// The stats table's record of a stats object (a unit record's `stats`; None for 0 or one the table lacks; in the
+/// unit tests their own map).
+pub fn stats_of(object: u64) -> Option<EeCombatStoredStats> {
+    if object == 0 {
+        return None;
+    }
+    #[cfg(not(test))]
+    {
+        let mut out = EeCombatStoredStats::default();
+        // SAFETY: the bridge writes one record into `out`
+        unsafe { bridge::ee_combat_store_stats_of(object, &mut out) }.then_some(out)
+    }
+    #[cfg(test)]
+    {
+        tests::stats(object)
+    }
+}
+
+/// The stats of a unit object (`GetStats()`): its record's stats object's fields (None without either).
+pub fn unit_stats(object: EeCombatHandle) -> Option<EeCombatStoredStats> {
+    unit_of(object).and_then(|r| stats_of(r.stats))
+}
+
 /// `mEnemies[other] != 0` of the player object (false without its table).
 fn at_war(player: EeCombatHandle, other: u32) -> bool {
     player_of(player).and_then(|p| p.enemies.get(other as usize).copied()).is_some_and(|e| e != 0)
 }
 
 /// `EECombatFillCondition`'s store part: the record zeroed, then the unit's and the target's (`target`; its complex
-/// unit `complex`, 0 for none) fields in the original's order. The C++ adds `human` and the stats' fields.
+/// unit `complex`, 0 for none) fields in the original's order, the unit's and the target's stats from the stats table
+/// (0 without a stats object). The C++ adds `human`.
 pub fn fill_condition(
     i: &mut EeCombatConditionIn,
     kind: i32,
@@ -160,8 +209,18 @@ pub fn fill_condition(
     i.heal_threshold = f32::from_bits(u.heal_threshold);
     i.cloaked = u.cloak_timer as u32;
     i.flight_time = u.flight_time as i32;
+    if let Some(s) = stats_of(u.stats) {
+        i.range = f32::from_bits(s.range);
+        i.reload_time = s.reload_time as i32;
+        i.fire_over_walls = i32::from(s.can_fire_over_walls);
+        i.flight_time_max = s.flight_time as i32;
+    }
     let Some(t) = unit_of(target) else { return };
     i.has_target = 1;
+    if let Some(s) = stats_of(t.stats) {
+        i.target_attack = f32::from_bits(s.attack);
+        i.target_max_hp = s.max_hit_points as i32;
+    }
     i.target_id = t.id;
     i.target_hp = t.hit_points as i32;
     i.target_tile = [t.tile_x as i32, t.tile_y as i32];
@@ -187,26 +246,32 @@ pub fn fill_condition(
     }
 }
 
-/// `EECombatFillStep`'s store part: the record zeroed, the unit's command and id, the target's id (0 without one).
-/// The C++ adds the stats' fields.
+/// `EECombatFillStep`: the record zeroed, the unit's command and id, the target's id (0 without one), the unit's
+/// reload time and fire over walls (its stats).
 pub fn fill_step(i: &mut EeCombatStepIn, kind: i32, unit: EeCombatHandle, target: EeCombatHandle) {
     *i = EeCombatStepIn { kind, ..Default::default() };
     let u = unit_of(unit).unwrap_or_default();
     i.command = u.command as u32;
     i.unit_id = u.id;
     i.target_id = unit_of(target).map_or(0, |t| t.id);
+    if let Some(s) = stats_of(u.stats) {
+        i.reload_time = s.reload_time as i32;
+        i.fire_over_walls = i32::from(s.can_fire_over_walls);
+    }
 }
 
 /// `EEUGHealUnit::Work`'s record, its store part: zeroed, the healer's command, the target's hit points and players
-/// (the enemy table only for another player's target, both players there). The C++ adds the cinematic flag, the
-/// goal's elapsed time, the tick and the stats.
+/// (the enemy table only for another player's target, both players there), the healer's healing points and the
+/// target's max hit points (their stats). The C++ adds the cinematic flag, the goal's elapsed time and the tick.
 pub fn fill_heal_work(i: &mut EeCombatHealWorkIn, unit: EeCombatHandle, target: EeCombatHandle) {
     *i = EeCombatHealWorkIn::default();
     let u = unit_of(unit).unwrap_or_default();
     i.command = u.command as u32;
+    i.healing = stats_of(u.stats).map_or(0, |s| s.healing_points as i32);
     let Some(t) = unit_of(target) else { return };
     i.has_target = 1;
     i.target_hp = t.hit_points as i32;
+    i.max_hp = stats_of(t.stats).map_or(0, |s| s.max_hit_points as i32);
     i.same_player = i32::from(u.player == t.player);
     if i.same_player == 0 && t.player != 0 && u.player != 0 {
         let own = player_of(u.player).unwrap_or_default();

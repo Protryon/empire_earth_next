@@ -103,6 +103,43 @@ pub unsafe extern "C" fn ee_combat_store_unit_of(object: u64, out: *mut ee_comba
     }
 }
 
+/// The bridge of the stats table (ee_combat store.rs, ee_units stats.rs): the record of the stats object (an
+/// `EEUnitClassUpgrade*`'s address, a unit record's `stats`) into `out`. False for none, or one the table lacks (always
+/// in a test binary).
+///
+/// # Safety
+/// `out` must point to a writable record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_store_stats_of(
+    object: u64,
+    out: *mut ee_combat::store::EeCombatStoredStats,
+) -> bool {
+    #[cfg(not(test))]
+    {
+        let Some(s) = ee_units::stats::stats_of(object) else { return false };
+        let stats = ee_combat::store::EeCombatStoredStats {
+            scale: s.scale,
+            range: s.range,
+            max_velocity: s.max_velocity,
+            attack: s.attack,
+            flight_time: s.flight_time,
+            reload_time: s.reload_time,
+            max_hit_points: s.max_hit_points,
+            healing_points: s.healing_points,
+            armor: s.armor,
+            can_fire_over_walls: s.can_fire_over_walls,
+        };
+        // SAFETY: the function's contract
+        unsafe { *out = stats };
+        true
+    }
+    #[cfg(test)]
+    {
+        let _ = (object, out);
+        false
+    }
+}
+
 /// The bridge of the players' tables (ee_combat store.rs): the table of the player object (an `EEPlayer*`'s address)
 /// into `out`; one without a table read from the object by the C++. False for no object (always in a test binary).
 ///
@@ -186,6 +223,7 @@ fn combat_stored(r: &ee_units::store::EeUnitRecord) -> ee_combat::store::EeComba
         family: r.family,
         cloak_radius: r.cloak_radius,
         resource_amount: r.resource_amount,
+        stats: r.stats,
     }
 }
 

@@ -52,3 +52,20 @@ impl PostGameHost for Form {
 pub extern "C" fn ee_screens_post_game_event_for(id: c_ulong) -> u32 {
     crate::post_game::event_for_control(id)
 }
+
+unsafe fn put(text: Vec<u8>, out: *mut u8, capacity: usize) -> usize {
+    core::ptr::copy_nonoverlapping(text.as_ptr(), out, text.len().min(capacity));
+    text.len()
+}
+
+/// `EEUIPGSLineGraph::FormatYValues` of a value (float bits) into `out`; its length in bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_pgs_format_y(value: u32, out: *mut u8, capacity: usize) -> usize {
+    put(crate::post_game::format_y(f32::from_bits(value)), out, capacity)
+}
+
+/// `EEUIPGSLineGraph::FormatXValues` of a value (float bits) with the game's time into `out`; its length in bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_pgs_format_x(value: u32, game_time: u32, out: *mut u8, capacity: usize) -> usize {
+    put(crate::post_game::format_x(f32::from_bits(value), game_time), out, capacity)
+}

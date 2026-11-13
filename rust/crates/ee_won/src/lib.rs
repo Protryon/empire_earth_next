@@ -10,6 +10,7 @@ pub mod asyncop;
 pub mod auth;
 pub mod authctx;
 pub mod authflow;
+pub mod authlogin;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
@@ -66,12 +67,15 @@ pub mod http;
 pub mod httpdoc;
 pub mod httpengine;
 pub mod httpget;
+pub mod inputobj;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod ipobj;
+pub mod labelobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod lanobj;
+pub mod listobj;
 pub mod lobbyhost;
 pub mod lobbymap;
 pub mod md5;
@@ -107,6 +111,7 @@ pub mod sockobj;
 pub mod sockop;
 pub mod sockops;
 pub mod sockthread;
+pub mod splitobj;
 pub mod staging;
 pub mod stagingobj;
 /// cbindgen:ignore
@@ -118,6 +123,7 @@ pub mod thread;
 pub mod titlecfg;
 pub mod udpmgr;
 pub mod udpops;
+pub mod verop;
 pub mod wire;
 
 #[cfg(test)]

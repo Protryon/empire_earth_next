@@ -8,8 +8,9 @@ use std::ffi::c_void;
 use ee_ge::types::Ge3DPoint;
 
 use crate::effect_state::{
-    self, EeGfxEffectLoaded, EeGfxEffectPart, EeGfxEffectRecord, EeGfxPlumeTick, EeGfxSmokeSetUp, EeGfxSmokeTick,
-    EffectFile, EffectParts, SmokeHost,
+    self, DamagedHost, EeGfxAmbientNew, EeGfxDamagedTick, EeGfxEffectLists, EeGfxEffectLoaded, EeGfxEffectPart,
+    EeGfxEffectRecord, EeGfxEmitterBurst, EeGfxEmitterMove, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxPlumeTick,
+    EeGfxSmokeSetUp, EeGfxSmokeTick, EffectFile, EffectParts, EmitterHost, ParticleGround, SmokeHost,
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -138,7 +139,43 @@ pub extern "C" fn ee_gfx_effect_record_new(kind: i32) -> *mut EeGfxEffectRecord 
 pub unsafe extern "C" fn ee_gfx_effect_record_free(r: *mut EeGfxEffectRecord) {
     if !r.is_null() {
         // SAFETY: the function's contract
-        drop(unsafe { Box::from_raw(r) });
+        let record = unsafe { Box::from_raw(r) };
+        if !record.damaged.lists.is_null() {
+            // SAFETY: the lists came from `take_lists`'s Box and are owned by the record
+            drop(unsafe { Box::from_raw(record.damaged.lists) });
+        }
+    }
+}
+
+/// The damage controller's lists taken out of the record for a call (empty when it has none yet).
+///
+/// # Safety
+/// `r` is a live record.
+unsafe fn take_lists(r: *mut EeGfxEffectRecord) -> EeGfxEffectLists {
+    // SAFETY: the function's contract
+    unsafe {
+        let p = (*r).damaged.lists;
+        if p.is_null() {
+            EeGfxEffectLists::default()
+        } else {
+            std::mem::take(&mut *p)
+        }
+    }
+}
+
+/// Puts the lists back into the record (made on first use).
+///
+/// # Safety
+/// `r` is a live record.
+unsafe fn put_lists(r: *mut EeGfxEffectRecord, lists: EeGfxEffectLists) {
+    // SAFETY: the function's contract
+    unsafe {
+        let p = (*r).damaged.lists;
+        if p.is_null() {
+            (*r).damaged.lists = Box::into_raw(Box::new(lists));
+        } else {
+            *p = lists;
+        }
     }
 }
 
@@ -402,6 +439,427 @@ pub unsafe extern "C" fn ee_gfx_effect_save_plume(r: *const EeGfxEffectRecord, f
     unsafe {
         let local = r.read();
         effect_state::save_plume(&local, &mut File(&*file))
+    }
+}
+
+/// `EEE2DMarchingIcons::ComputeOffsets`' candidates (the C++ keeps those `IsIconShown` takes): up to `capacity`
+/// points into `out`; their count.
+///
+/// # Safety
+/// `out` has room for `capacity` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_marching_offsets(
+    kind: i32,
+    count: i32,
+    angle: f32,
+    radius: f32,
+    half_side: f32,
+    out: *mut Ge3DPoint,
+    capacity: usize,
+) -> usize {
+    if out.is_null() || capacity == 0 {
+        return 0;
+    }
+    // SAFETY: the function's contract
+    let out = unsafe { std::slice::from_raw_parts_mut(out, capacity) };
+    effect_state::marching_offsets_into(kind, count, angle, radius, half_side, out)
+}
+
+/// The square icons' bounding radius (`sqrt(2 r r)`).
+#[no_mangle]
+pub extern "C" fn ee_gfx_effect_square_icons_radius(half_side: f32) -> f32 {
+    effect_state::square_radius(half_side)
+}
+
+/// The terrain a bouncing particle asks (`gWorld.mMap->mTerrainMesh`; `context`: unused).
+#[repr(C)]
+pub struct EeGfxParticleGround {
+    pub context: *mut c_void,
+    pub is_valid_tile: extern "C" fn(context: *mut c_void, x: u32, y: u32) -> bool,
+    pub is_space_tile: extern "C" fn(context: *mut c_void, x: u32, y: u32) -> bool,
+    pub mesh_z: extern "C" fn(context: *mut c_void, x: f32, y: f32) -> f32,
+    pub mesh_normal: extern "C" fn(context: *mut c_void, x: f32, y: f32, normal: *mut Ge3DPoint),
+}
+
+struct Ground<'a>(&'a EeGfxParticleGround);
+
+impl ParticleGround for Ground<'_> {
+    fn is_valid_tile(&mut self, x: u32, y: u32) -> bool {
+        (self.0.is_valid_tile)(self.0.context, x, y)
+    }
+    fn is_space_tile(&mut self, x: u32, y: u32) -> bool {
+        (self.0.is_space_tile)(self.0.context, x, y)
+    }
+    fn mesh_z(&mut self, x: f32, y: f32) -> f32 {
+        (self.0.mesh_z)(self.0.context, x, y)
+    }
+    fn mesh_normal(&mut self, x: f32, y: f32) -> Ge3DPoint {
+        let mut n = Ge3DPoint::default();
+        (self.0.mesh_normal)(self.0.context, x, y, &mut n);
+        n
+    }
+}
+
+/// The particles' `SetUp` state (their draws).
+///
+/// # Safety
+/// `r` is a live record; `setup` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_particle_set_up(r: *mut EeGfxEffectRecord, setup: *const EeGfxParticleSetUp) {
+    // SAFETY: the function's contract
+    unsafe {
+        let s = *setup;
+        on_copy(r, |r| effect_state::particle_set_up(r, &s))
+    }
+}
+
+/// The particles' `Clear` state.
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_particle_clear(r: *mut EeGfxEffectRecord) {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, effect_state::particle_clear) }
+}
+
+/// The particles' `Update` (the renderer's move): 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record; `tick` and `ground` are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_particle_update(
+    r: *mut EeGfxEffectRecord,
+    tick: *const EeGfxParticleTick,
+    ground: *const EeGfxParticleGround,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let t = *tick;
+        on_copy(r, |r| effect_state::particle_update(r, &t, &mut Ground(&*ground)))
+    }
+}
+
+/// The particles' `Step`: 7 when it ends; `move_to`: the C++ applies the moved position.
+///
+/// # Safety
+/// `r` is a live record; `move_to` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_particle_step(r: *mut EeGfxEffectRecord, now: f32, move_to: *mut bool) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut m = false;
+        let res = on_copy(r, |r| effect_state::particle_step(r, now, &mut m));
+        *move_to = m;
+        res
+    }
+}
+
+/// The particles' own Load reads; `loaded`: the C++ sets the draw position and duration.
+///
+/// # Safety
+/// `r` is a live record; `file` and `loaded` are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_load_particle(
+    r: *mut EeGfxEffectRecord,
+    file: *const EeGfxEffectFile,
+    major: u32,
+    minor: u32,
+    loaded: *mut bool,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut l = false;
+        let res = on_copy(r, |r| effect_state::load_particle(r, &mut File(&*file), major, minor, &mut l));
+        *loaded = l;
+        res
+    }
+}
+
+/// The particles' own Save writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_save_particle(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let local = r.read();
+        effect_state::save_particle(&local, &mut File(&*file))
+    }
+}
+
+/// `EEE2DBattlefieldAmbient`'s constructor at a point (its draws and the terrain's corners).
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_ambient_new(
+    r: *mut EeGfxEffectRecord,
+    at: *const Ge3DPoint,
+    n: *const EeGfxAmbientNew,
+    ground: *const EeGfxParticleGround,
+) {
+    // SAFETY: the function's contract
+    unsafe {
+        let (p, a) = (*at, *n);
+        on_copy(r, |r| effect_state::ambient_new(r, p, &a, &mut Ground(&*ground)))
+    }
+}
+
+/// `EEE2DBattlefieldAmbient::Step`: 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_ambient_step(
+    r: *mut EeGfxEffectRecord,
+    tick_seconds: f32,
+    duration: u32,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::ambient_step(r, tick_seconds, duration)) }
+}
+
+/// `EEE2DBattlefieldAmbient::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_load_ambient(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::load_ambient(r, &mut File(&*file))) }
+}
+
+/// `EEE2DBattlefieldAmbient::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_save_ambient(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let local = r.read();
+        effect_state::save_ambient(&local, &mut File(&*file))
+    }
+}
+
+/// The world the damage controller calls into (`context`: the effect).
+#[repr(C)]
+pub struct EeGfxDamagedHost {
+    pub context: *mut c_void,
+    /// `CreateUnitEffect(unit, linked effect 1 (or 2: `secondary`), &handle, 0, index, 0)`: the handle
+    pub create: extern "C" fn(context: *mut c_void, secondary: bool, index: u32) -> u32,
+    pub destroy: extern "C" fn(context: *mut c_void, handle: u32),
+}
+
+struct Damaged<'a>(&'a EeGfxDamagedHost);
+
+impl DamagedHost for Damaged<'_> {
+    fn create(&mut self, secondary: bool, index: u32) -> u32 {
+        (self.0.create)(self.0.context, secondary, index)
+    }
+    fn destroy(&mut self, handle: u32) {
+        (self.0.destroy)(self.0.context, handle)
+    }
+}
+
+/// `EEEDamagedEffect::Step`: 7 when it ends. The lists are out of the record while the C++ creates and destroys.
+///
+/// # Safety
+/// `r` is a live record; `tick` and `host` are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_damaged_step(
+    r: *mut EeGfxEffectRecord,
+    tick: *const EeGfxDamagedTick,
+    host: *const EeGfxDamagedHost,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let t = *tick;
+        let mut lists = take_lists(r);
+        let mut finished = (*r).damaged.finished;
+        let res = effect_state::damaged_step(&mut finished, &mut lists, &t, &mut Damaged(&*host));
+        (*r).damaged.finished = finished;
+        put_lists(r, lists);
+        res
+    }
+}
+
+/// `EEEDamagedEffect::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_load_damaged(
+    r: *mut EeGfxEffectRecord,
+    file: *const EeGfxEffectFile,
+    major: u32,
+    minor: u32,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut lists = take_lists(r);
+        let mut finished = (*r).damaged.finished;
+        let res = effect_state::load_damaged(&mut finished, &mut lists, &mut File(&*file), major, minor);
+        (*r).damaged.finished = finished;
+        put_lists(r, lists);
+        res
+    }
+}
+
+/// `EEEDamagedEffect::Save`'s own writes (`has_linked2`: the graphic effect's linked effect 2 is set).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_save_damaged(
+    r: *mut EeGfxEffectRecord,
+    file: *const EeGfxEffectFile,
+    has_linked2: bool,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let lists = take_lists(r);
+        let finished = (*r).damaged.finished;
+        let res = effect_state::save_damaged(finished, &lists, &mut File(&*file), has_linked2);
+        put_lists(r, lists);
+        res
+    }
+}
+
+/// The emitter's line effects (`context`: the effect).
+#[repr(C)]
+pub struct EeGfxEmitterHost {
+    pub context: *mut c_void,
+    pub line: extern "C" fn(context: *mut c_void, start: *const Ge3DPoint, direction: *const Ge3DPoint) -> i32,
+}
+
+struct Emitter<'a>(&'a EeGfxEmitterHost);
+
+impl EmitterHost for Emitter<'_> {
+    fn line(&mut self, s: Ge3DPoint, d: Ge3DPoint) -> i32 {
+        (self.0.line)(self.0.context, &s, &d)
+    }
+}
+
+/// `EEE3DParticleEmitter::Step`'s start: the tick in ms, added to the running time.
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_emitter_begin(r: *mut EeGfxEffectRecord, tick_seconds: f32) -> f32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::emitter_begin(r, tick_seconds)) }
+}
+
+/// `EEE3DParticleEmitter::Move`: 7 off the map; `out` the next position.
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_emitter_move(
+    r: *mut EeGfxEffectRecord,
+    seconds: f32,
+    m: *const EeGfxEmitterMove,
+    ground: *const EeGfxParticleGround,
+    out: *mut Ge3DPoint,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mv = *m;
+        let mut p = Ge3DPoint::default();
+        let res = on_copy(r, |r| effect_state::emitter_move(r, seconds, &mv, &mut Ground(&*ground), &mut p));
+        *out = p;
+        res
+    }
+}
+
+/// `EEE3DParticleEmitter::Step`'s burst; the last line's result (`result` without one).
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_emitter_burst(
+    r: *mut EeGfxEffectRecord,
+    delta: f32,
+    location: *const Ge3DPoint,
+    transformation: *const ee_ge::types::GeTransformation,
+    burst: *const EeGfxEmitterBurst,
+    result: i32,
+    host: *const EeGfxEmitterHost,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let (l, t, b) = (*location, *transformation, *burst);
+        on_copy(r, |r| effect_state::emitter_burst(r, delta, l, &t, &b, result, &mut Emitter(&*host)))
+    }
+}
+
+/// `EEE3DParticleEmitter::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_load_emitter(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::load_emitter(r, &mut File(&*file))) }
+}
+
+/// `EEE3DParticleEmitter::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_save_emitter(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let local = r.read();
+        effect_state::save_emitter(&local, &mut File(&*file))
+    }
+}
+
+/// The aged effects' `Step`: 7 when it ends; the ripple's `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`.
+///
+/// # Safety
+/// `r` is a live record; `tile` has room for two.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_aged_step(
+    r: *mut EeGfxEffectRecord,
+    tick_seconds: f32,
+    duration: u32,
+    tile: *mut i32,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut t = [0i32; 2];
+        let res = on_copy(r, |r| effect_state::aged_step(r, tick_seconds, duration, &mut t));
+        *tile = t[0];
+        *tile.add(1) = t[1];
+        res
+    }
+}
+
+/// The aged effects' own Load reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_load_aged(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::load_aged(r, &mut File(&*file))) }
+}
+
+/// The aged effects' own Save writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_save_aged(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let local = r.read();
+        effect_state::save_aged(&local, &mut File(&*file))
     }
 }
 

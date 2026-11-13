@@ -51,6 +51,10 @@ M.opts = {
                           -- citizens: seed 4 against the classic lost a citizen in each such fight, odds or not) ...
     wave_n = 8,           -- a raid of this many or more (0: off) is a wave: the citizens run away from it, to a
                           -- refuge further from it (the settlements too), not to the nearest tower in its path
+    guard_refuge = false, -- (off; AI_RESEARCH §8.50, the waves after Copper: 60% of their dead were caught running, 1.6
+                          -- tiles from their killer, 15 tiles out) the guard's post is a refuge as a tower is, while the
+                          -- script sets mem.guard_post = {x, y} (a guard of 4 or more) ...
+    guard_refuge_epoch = 0, -- ... from this epoch (2: the Copper Age)
     bait = false,         -- [ageofai tactics.lua tower_bait, upstream early.c] a citizen with an enemy soldier within
                           -- 5 tiles, out of its towers' reach, runs to the spot 1.5 tiles behind the nearest
                           -- shooting building within 25 (to the Copper Age): the raider follows under its fire
@@ -69,6 +73,13 @@ M.opts = {
     boat_max_ms = 180000, -- a boat waits at the dock this long at most
     shore_towers = false, -- (B2, off) the boats' tower spots on the shore between the fish and the open water, not
                           -- by the dock
+    small_raid = false,   -- (S1, off; AI_RESEARCH §8.50: half the Stone deaths against the classic were citizens caught
+                          -- fleeing from 1-2 raiders) a raid of small_n or fewer: the militia at small_odds, ranged
+                          -- raiders too, and the flight goes only to a refuge within short_r, else a hop of 6 tiles
+    small_n = 2,
+    small_odds = 200,
+    short_r = 8,
+    fast_return = true,   -- (S3, on: AI_RESEARCH §8.50) back to work sooner: away_min 2 s, clear_ms 3 s
     camp_ms = 40000,      -- ... unless the raid has camped this long within camp_r of one spot: 1-3 rock throwers
     camp_r = 10,          -- by a food patch for 15 minutes starved two towns that fled them and never fought
                           -- (seeds 18 and 25 against the improved classic, AI_RESEARCH §8.41)
@@ -111,6 +122,9 @@ function M.setup(opts)
     for k, v in pairs(opts or {}) do
         M.opts[k] = v
     end
+    if M.opts.fast_return then   -- (S3)
+        M.opts.away_min, M.opts.clear_ms = 2000, 3000
+    end
     if ai.reflex ~= nil then
         ai.reflex{militia = false, danger = false}   -- this module is the militia and the flight
         if M.opts.boats then
@@ -142,6 +156,8 @@ end
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- The scan: the raiders, clustered; the refuges
+
+local GUARD_POST = nil   -- (guard_refuge) this step's guard post, from the memory
 
 local function scan(tx, ty)
     CLUSTERS, REFUGES = {}, {}
@@ -202,6 +218,9 @@ local function scan(tx, ty)
             end
         end
     end
+    if GUARD_POST ~= nil then
+        REFUGES[#REFUGES + 1] = {id = -1, x = GUARD_POST[1], y = GUARD_POST[2], tower = false, post = true, range = 0}
+    end
     for _, t in ipairs({"b_town_center", "b_capitol", "b_settlement"}) do
         for _, id in ipairs(ai.units{type = t, built = true, limit = 8}) do
             local u = ai.unit(id)
@@ -261,7 +280,7 @@ local function refuge_for(x, y, rx, ry, ship, wave)
         if wave then
             ok = dr >= dc + 16   -- (a wave: only away from it, settlements too)
         else
-            ok = not r.drop and ((r.tower and not ship) or dr >= dc)
+            ok = not r.drop and (((r.tower or r.post) and not ship) or dr >= dc)
         end
         if ok then   -- (from a warship: away from it, a tower outranged)
             local d = d2(x, y, r.x, r.y)
@@ -496,16 +515,18 @@ local function handle(mem, cl, now)
             end
         end
     end
-    if not held and (in_reach or (cl.n <= o.militia_max and (o.militia_ranged or cl.ranged == 0 or (cl.camped or 0) >= o.camp_ms)))
-            and fhp * fatk * 100 < enemy * o.militia_odds then
+    local small = o.small_raid and cl.n <= o.small_n
+    local odds = small and o.small_odds or o.militia_odds
+    if not held and (in_reach or small or (cl.n <= o.militia_max and (o.militia_ranged or cl.ranged == 0 or (cl.camped or 0) >= o.camp_ms)))
+            and fhp * fatk * 100 < enemy * odds then
         local nhp, natk = fhp, fatk
         for _, c in ipairs(danger) do
-            if #militia + #fighters < cl.n * o.militia_per and nhp * natk * 100 < enemy * o.militia_odds then
+            if #militia + #fighters < cl.n * o.militia_per and nhp * natk * 100 < enemy * odds then
                 fighters[#fighters + 1] = c.u
                 nhp, natk = nhp + c.u.hp, natk + (c.u.attack or 0)
             end
         end
-        if nhp * natk * 100 < enemy * o.militia_odds then
+        if nhp * natk * 100 < enemy * odds then
             fighters = {}
         end
     end
@@ -546,6 +567,12 @@ local function handle(mem, cl, now)
             local a = mem.away[u.id]
             if a == nil or now - (a.sent or 0) >= o.reflee_ms then
                 local fx, fy = refuge_for(u.x, u.y, cl.x, cl.y, cl.ship, o.wave_n > 0 and cl.n >= o.wave_n)
+                if small and fx ~= nil and d2(u.x, u.y, fx, fy) > o.short_r * o.short_r then
+                    -- (S1) no long run from a small raid: a hop of 6 tiles straight away from it
+                    local dx, dy = u.x - cl.x, u.y - cl.y
+                    local l = math.max(math.abs(dx), math.abs(dy), 1)
+                    fx, fy = u.x + dx * 6 // l, u.y + dy * 6 // l
+                end
                 if fx ~= nil and d2(u.x, u.y, fx, fy) > 4 then
                     a = go_away(mem, u, "flee", now)
                     a.t, a.sent = now, now
@@ -991,6 +1018,7 @@ function M.micro(mem, events, now, tx, ty, epoch)
         return
     end
     mem.scan_t = now
+    GUARD_POST = M.opts.guard_refuge and (mem.epoch or 0) >= M.opts.guard_refuge_epoch and mem.guard_post or nil
     for _, id in ipairs(ai.keys(mem.attackers)) do
         if now - mem.attackers[id] > M.opts.hostile_ms then
             mem.attackers[id] = nil

@@ -48,7 +48,7 @@ void MultiListHeader::SetColumnItem(int column,Component* item)
         this->mListArea->SetColumnWidth(column,width,false);
         if(this->mListArea->mSortColumn==column) {
             this->mCurSortCol=column;
-            this->mColumnVector[column].mSortType=static_cast<ListSortType>(this->mListArea->mSortType);
+            this->mColumnVector[column].mSortType=this->mListArea->GetSortType();
         }
     } else this->NotifyColumnChange();
 }

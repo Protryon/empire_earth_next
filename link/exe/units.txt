@@ -171,7 +171,6 @@ dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
 ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 de331 df57c Empire Earth/Graphics Thread/EEE2DBattlefieldAmbient.cpp
-df57c df68d Empire Earth/Graphics Thread/EEE2DCircularMarchingIcons.cpp
 df68d dfd03 Empire Earth/Graphics Thread/EEE2DExhaustTrail.cpp
 dfd03 e0389 Empire Earth/Graphics Thread/EEE2DExplosion.cpp
 e0389 e0cf5 Empire Earth/Graphics Thread/EEE2DFire.cpp
@@ -189,7 +188,6 @@ e5c63 e614f Empire Earth/Graphics Thread/EEE2DPulseWave.cpp
 e614f e6621 Empire Earth/Graphics Thread/EEE2DShockwave.cpp
 e6621 e6ef2 Empire Earth/Graphics Thread/EEE2DSmokeMuzzleBlast.cpp
 e6ef2 e72fa Empire Earth/Graphics Thread/EEE2DSmokePlume.cpp
-e72fa e753d Empire Earth/Graphics Thread/EEE2DSquareMarchingIcons.cpp
 e773c e7d67 Empire Earth/Graphics Thread/EEE2DVortex.cpp
 e7d67 e8158 Empire Earth/Graphics Thread/EEE2DWaterRipple.cpp
 e8158 e89c6 Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp
@@ -380,9 +378,6 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 1cba2f 1cdf25 Empire Earth/Tech Tree/EETechTree.cpp
 1cdf25 1cedce Empire Earth/Tech Tree/EETechTreeEpoch.cpp
 1cedce 1cfeef Empire Earth/Tech Tree/EETechTreeNode.cpp
-1cfeef 1d1766 Empire Earth/UI Events/EEUIECampaignEditorEvents.cpp
-1d321b 1d3a77 Empire Earth/UI Events/EEUIEChatLogEvents.cpp
-1e1b8d 1e1e48 Empire Earth/UI Events/EEUIESSEOpen.cpp
 1e71cc 1e853a Empire Earth/UI Events/EEUIEScenarioIntroEvents.cpp
 1e9fed 1eafcb Empire Earth/UI Events/EEUIEWonNetArenaGameEvents.cpp
 1eafcb 1eb5e2 Empire Earth/UI Events/EEUIEWonNetArenaRoomEvents.cpp

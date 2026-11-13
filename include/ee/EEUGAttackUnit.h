@@ -45,8 +45,6 @@ public:
     void UpdateTargetTile();                // 0x21d5a3: the target's tile (provisional name)
     void RetargetGatePart(EEComplexUnit* inUnit);  // 0x21d5b3: a gate target becomes the unit EEGetAttackPart gives
     void SetTarget(EEUnit* inTarget);       // 0x21dbaa (asserts the target is targetable)
-    bool IsGateClosed(EEComplexUnit* inUnit);  // 0x21d7e2 (Virtual64's 0x807)
-    bool IsStillReachable(EEComplexUnit* inUnit);  // 0x21d857 (Virtual64's 0x1396)
 
     GE3DPoint mLocation;                    // +0x20 "The Actual Destination" (the target's tile centre)
     EEComplexUnit* mAttacker;               // +0x2c "The attacking unit" (not referenced; saved by id)

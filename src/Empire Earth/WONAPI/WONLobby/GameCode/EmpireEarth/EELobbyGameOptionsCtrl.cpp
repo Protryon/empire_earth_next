@@ -232,7 +232,7 @@ void EELobbyGameOptionsCtrl::Deactivate()
 void EELobbyGameOptionsCtrl::ChangeGameType()
 {
     ComboBox* theCombo = this->GetComboBox(0);
-    if (theCombo == NULL || theCombo->mListArea->mSelItem == NULL)
+    if (theCombo == NULL || theCombo->mListArea->GetSelItem() == NULL)
         return;
     EELobbyGame* theGame = this->GetGame();
     if (theGame == NULL)
@@ -290,14 +290,14 @@ void EELobbyGameOptionsCtrl::OptionChanged(int inOption)
             }
             case 0: {
                 ComboBox* theCombo = this->GetComboBox(inOption);
-                if (theCombo != NULL && theCombo->mListArea->mSelItem != NULL)
+                if (theCombo != NULL && theCombo->mListArea->GetSelItem() != NULL)
                     theGame->ChangeOption(inOption, theCombo->GetSelItem(), true);
                 break;
             }
             }
         } else {
             ComboBox* theCombo = this->GetComboBox(9);
-            if (theCombo != NULL && theCombo->mListArea->mSelItem != NULL)
+            if (theCombo != NULL && theCombo->mListArea->GetSelItem() != NULL)
                 theGame->ChangeOption(9, (theCombo->GetSelItem() + 1) * 50, true);
         }
     } else

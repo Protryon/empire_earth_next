@@ -326,7 +326,11 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
             EELobbyUnlock();
         }
         if (inDrawMouse) {
-            this->mMouse->RestoreUnder(this->mU38, theOrigin, this->mIsWindowed);
+            // port: this frame's own save-under goes back (the windowed restore) in full screen too. GX presents a
+            // copy of the back buffer and keeps it (Flip swaps no buffers), so the full-screen restore of the previous
+            // record, which a DirectDraw flip chain needs, put back a stale rectangle: the mouse-pointer thread's save
+            // of the screen (white) or the previous frame's save, which held the pointer drawn the frame before
+            this->mMouse->RestoreUnder(this->mU38, theOrigin, true);
             this->mMouse->EndFrame();
         }
     } else if (theResult == kErrorFailed) {

@@ -49,7 +49,7 @@ void UserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
     if(this->mClient.get()==NULL) {
         if(this->mShowSeparator) {
             int width=inArea->mTotalWidth+10;
-            if(inArea->mPaintWidth>width) width=inArea->mPaintWidth;
+            if(inArea->GetPaintWidth()>width) width=inArea->GetPaintWidth();
             int y=this->mHeight>>2;
             inGraphics.SetSysColor(StandardColor_Text);
             inGraphics.DrawLine(0,y,width,y);
@@ -146,13 +146,13 @@ UserListItem* UserListCtrl::FindItem(LobbyClient* inClient)
 // Returns the selected entry, or NULL
 UserListItem* UserListCtrl::GetSelectedItem()
 {
-    return static_cast<UserListItem*>(this->mUserList->mSelItem);
+    return static_cast<UserListItem*>(this->mUserList->GetSelItem());
 }
 // FUNCTION: WON 0x007cb140
 // Returns the client of the selected entry, or NULL
 LobbyClient* UserListCtrl::GetSelectedClient()
 {
-    UserListItem* item=static_cast<UserListItem*>(this->mUserList->mSelItem);
+    UserListItem* item=static_cast<UserListItem*>(this->mUserList->GetSelItem());
     return item==NULL?NULL:item->mClient.get();
 }
 // FUNCTION: WON 0x007cb160

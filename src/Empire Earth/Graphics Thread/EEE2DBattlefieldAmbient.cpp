@@ -195,67 +195,21 @@ static bool AmbientScatter(EEGraphicEffect* inEffect, GE3DPoint& ioLocation)
     return true;
 }
 
-// NEAR: the `theLevel = true` store is scheduled after the mesh pointer in ours
 // FUNCTION: EXE 0x4de74f
 // Creates a ground decal at a point with a random size and optional random rotation; it expires at once (age 1)
-// when a corner is off the map or the corners are not level, so the on-slope branch never runs
+// when a corner is off the map or the corners are not level, so the on-slope branch never runs (ee_gfx
+// effect_state.rs)
 EEE2DBattlefieldAmbient::EEE2DBattlefieldAmbient(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect)
-    : EEEffect2D(0, inGraphicEffect, gU4E8DF4, kEffect2DBattlefieldAmbient, false), mAge(0.0f)
+    : EEEffect2D(0, inGraphicEffect, gU4E8DF4, kEffect2DBattlefieldAmbient, false)
 {
     this->mDrawAge = 0.0f;
-    this->mHidden = 0.0f;
-    this->mType = inGraphicEffect->mIntParam1;
     this->mGraphicObject = NULL;
-    this->mSize = inGraphicEffect->GetStartSize() + EEEffect::GetRandom() * (inGraphicEffect->GetSize() - inGraphicEffect->GetStartSize());
-    this->mCenter = inLocation;
-    this->mCorners[0].SetX(inLocation.GetX() - this->mSize * 0.5f);
-    this->mCorners[0].SetY(inLocation.GetY() - this->mSize * 0.5f);
-    this->mCorners[1].SetX(inLocation.GetX() + this->mSize * 0.5f);
-    this->mCorners[1].SetY(inLocation.GetY() - this->mSize * 0.5f);
-    this->mCorners[2].SetX(inLocation.GetX() + this->mSize * 0.5f);
-    this->mCorners[2].SetY(inLocation.GetY() + this->mSize * 0.5f);
-    this->mCorners[3].SetX(inLocation.GetX() - this->mSize * 0.5f);
-    this->mCorners[3].SetY(inLocation.GetY() + this->mSize * 0.5f);
-    bool theLevel = true;
-    GETerrainMesh& theMesh = gWorld.mMap->mTerrainMesh;
-    float theFirstZ = 0.0f;
-    for (long i = 0; i < 4; i++) {
-        unsigned long theX = UMFloorUnsigned(this->mCorners[i].GetX());
-        unsigned long theY = UMFloorUnsigned(this->mCorners[i].GetY());
-        if (!theMesh.GetIsValidTile(theX, theY)) {
-            this->mHidden = 1.0f;
-            break;
-        }
-        this->mCorners[i].SetZ(theMesh.GetMeshZ(this->mCorners[i].GetX(), this->mCorners[i].GetY()));
-        float theZ = this->mCorners[i].GetZ();
-        if (i == 0) {
-            theFirstZ = this->mCorners[0].GetZ();
-        } else if (theLevel) {
-            float theRise = theZ - theFirstZ;
-            if (theRise > 0.03f || theRise < -0.03f) {
-                theLevel = false;
-                this->mHidden = 1.0f;
-            }
-        }
-    }
-    if (this->mHidden != 0.0f) {
-        this->mAge = 1.0f;
-    } else {
-        if (theLevel) {
-            this->mOnSlope = 0;
-            if (inGraphicEffect->mFlag1)
-                this->mRotation = EEEffect::GetRandom() * 6.2831855f;
-            else
-                this->mRotation = 0.0f;
-        } else {
-            this->mOnSlope = 1;
-            this->mRotation = 0.0f;
-        }
-        this->mTransformation.SetPosition(inLocation);
-    }
+    EeGfxAmbientNew theNew = {inGraphicEffect->GetStartSize(), inGraphicEffect->GetSize(),
+                              (int32_t)inGraphicEffect->mIntParam1, inGraphicEffect->mFlag1};
+    EeGfxParticleGround theGround = EEParticleGround();
+    ee_gfx_effect_ambient_new(this->mRecord, reinterpret_cast<const EeGe3DPoint*>(&inLocation), &theNew, &theGround);
 }
 
-// SYNTHETIC: EXE 0x4dea0b
 // (the scalar deleting destructor, emitted with the vtable)
 
 // FUNCTION: EXE 0x4dea27
@@ -353,91 +307,32 @@ long EEE2DBattlefieldAmbient::DrawPass2()
 }
 
 // FUNCTION: EXE 0x4dec7f
-// Reloads the decal's graphic and reads its placement, age, type, size, slope flag and corners (hidden when on a slope)
-// Returns the first read error; the base class result is ignored
+// Reloads the decal's graphic and reads its placement, age, type, size, slope flag and corners (hidden when on a slope;
+// ee_gfx effect_state.rs); returns the first read error; the base class result is ignored
 long EEE2DBattlefieldAmbient::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long i;
-    long theType;
-    long theOnSlope;
     EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
-    long theResult = this->mTransformation.Load(inFile);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mAge);
-    if (theResult == 0)
-        theResult = this->mCenter.Load(inFile);
-    if (theResult == 0) {
-        theResult = inFile.Read(theType);
-        this->mType = theType;
-    }
-    if (theResult == 0)
-        theResult = inFile.Read(this->mRotation);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mSize);
-    if (theResult == 0) {
-        theResult = inFile.Read(theOnSlope);
-        this->mOnSlope = theOnSlope;
-    }
-    if (theResult == 0) {
-        for (i = 0; i < 4; i++) {
-            theResult = this->mCorners[i].Load(inFile);
-            if (theResult != 0)
-                break;
-        }
-    }
-    this->mHidden = this->mOnSlope != 0;
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_effect_load_ambient(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4ded67
-// Writes the decal's placement, age, type, rotation, size, slope flag and corners; returns the first write error
-// (the base class result is ignored)
+// Writes the decal's placement, age, type, rotation, size, slope flag and corners (ee_gfx effect_state.rs); returns
+// the first write error (the base class result is ignored)
 long EEE2DBattlefieldAmbient::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long i;
-    long theType;
-    long theOnSlope;
     EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
-    long theResult = this->mTransformation.Save(outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mAge);
-    if (theResult == 0)
-        theResult = this->mCenter.Save(outFile);
-    if (theResult == 0)
-    {
-        theType = this->mType;
-        theResult = outFile.Write(theType);
-    }
-    if (theResult == 0)
-        theResult = outFile.Write(this->mRotation);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mSize);
-    if (theResult == 0)
-    {
-        theOnSlope = this->mOnSlope;
-        theResult = outFile.Write(theOnSlope);
-    }
-    if (theResult != 0)
-        return theResult;
-    for (i = 0; i < 4; i++) {
-        theResult = this->mCorners[i].Save(outFile);
-        if (theResult != 0)
-            break;
-    }
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_ambient(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4dee2b
 // Ages the decal by the tick over the effect's duration; returns 7 (remove) once its life is over
 long EEE2DBattlefieldAmbient::Step()
 {
-    long theResult = 0;
-    this->mAge += (gPhysics->GetTickSeconds() * 1000.0f) / this->mGraphicEffect->mDuration;
-    if (this->mAge > 1.0f)
-        theResult = 7;
-    return theResult;
+    return ee_gfx_effect_ambient_step(this->mRecord, gPhysics->GetTickSeconds(), (uint32_t)this->mGraphicEffect->mDuration);
 }
 
 // The first copies of the effect render-queue templates (Virtual24's inQueues[0][theTexture].push_back) and of

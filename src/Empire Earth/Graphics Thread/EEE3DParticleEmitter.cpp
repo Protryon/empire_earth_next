@@ -162,46 +162,13 @@ void EEE3DParticleEmitter::ReleaseSound()
 // the terrain when enabled and returns 7 if that position leaves the map
 long EEE3DParticleEmitter::Move(float inSeconds, GE3DPoint& outPosition)
 {
-    float theGravity = -this->mGraphicEffect->GetParam8();
-    GEVector theWind = gWorld.mWindDirection;
-    GEVector theNormal;
-    long theResult = 0;
-    float theDrag = -this->mGraphicEffect->mParam11;
-    GEVector theForce(this->mVelocity.GetX() * theDrag, this->mVelocity.GetY() * theDrag, this->mVelocity.GetZ() * theDrag);
-    theGravity += theForce.mZ;
-    this->mVelocity.SetX(theForce.mX * inSeconds + this->mVelocity.GetX());
-    this->mVelocity.SetY(theForce.mY * inSeconds + this->mVelocity.GetY());
-    this->mVelocity.SetZ(theGravity * inSeconds + this->mVelocity.GetZ());
-    outPosition.SetX(this->mGraphicEffect->GetParam9() * theWind.GetX() * inSeconds + this->mVelocity.GetX() * inSeconds
-                     + this->mTransformation.GetX());
-    outPosition.SetY(this->mGraphicEffect->GetParam9() * theWind.GetY() * inSeconds + this->mVelocity.GetY() * inSeconds
-                     + this->mTransformation.GetY());
-    outPosition.SetZ(this->mGraphicEffect->GetParam9() * theWind.GetZ() * inSeconds + this->mGraphicEffect->GetParam4() * inSeconds
-                     + this->mVelocity.GetZ() * inSeconds + this->mTransformation.GetZ());
-    if (this->mGraphicEffect->mFlag2) {
-        GETerrainMesh& theMesh = ::gWorld.mMap->mTerrainMesh;
-        unsigned long theTileY = UMFloorUnsigned(outPosition.GetY());
-        unsigned long theTileX = UMFloorUnsigned(outPosition.GetX());
-        if (theMesh.GetIsValidTile(theTileX, theTileY)) {
-            float theGround = theMesh.GetMeshZ(outPosition.GetX(), outPosition.GetY());
-            if (outPosition.GetZ() <= theGround) {
-                theMesh.GetMeshNormal(outPosition.GetX(), outPosition.GetY(), theNormal);
-                if (theNormal.GetZ() * this->mVelocity.GetZ() + theNormal.GetY() * this->mVelocity.GetY()
-                    + theNormal.GetX() * this->mVelocity.GetX() < 0.0f) {
-                    outPosition.SetZ(theGround);
-                    float theBounce = (theNormal.GetZ() * this->mVelocity.GetZ() + theNormal.GetY() * this->mVelocity.GetY()
-                                       + theNormal.GetX() * this->mVelocity.GetX()) * (-1.0f - this->mGraphicEffect->GetParam10())
-                                      / (theNormal.GetZ() * theNormal.GetZ() + theNormal.GetY() * theNormal.GetY()
-                                         + theNormal.GetX() * theNormal.GetX());
-                    this->mVelocity.SetX(theNormal.GetX() * theBounce + this->mVelocity.GetX());
-                    this->mVelocity.SetY(theNormal.GetY() * theBounce + this->mVelocity.GetY());
-                    this->mVelocity.SetZ(theNormal.GetZ() * theBounce + this->mVelocity.GetZ());
-                }
-            }
-        } else
-            theResult = 7;
-    }
-    return theResult;
+    EEGraphicEffect* theEffect = this->mGraphicEffect;
+    const GEVector& theWind = gWorld.mWindDirection;
+    EeGfxEmitterMove theMove = {{theWind.GetX(), theWind.GetY(), theWind.GetZ()}, theEffect->GetParam4(), theEffect->GetParam8(),
+                                theEffect->GetParam9(), theEffect->GetParam10(), theEffect->mParam11, theEffect->mFlag2};
+    EeGfxParticleGround theGround = EEParticleGround();
+    return ee_gfx_effect_emitter_move(this->mRecord, inSeconds, &theMove, &theGround,
+                                      reinterpret_cast<EeGe3DPoint*>(&outPosition));
 }
 
 // FUNCTION: EXE 0x4f634b
@@ -218,51 +185,43 @@ long EEE3DParticleEmitter::SetUp()
 long EEE3DParticleEmitter::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
-    long theResult = this->mVelocity.Load(inFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = inFile.Read(this->mTime);
-    if (theResult != 0)
-        return theResult;
-    theResult = inFile.Read(this->mEmitTime);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mTagPoint);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_effect_load_emitter(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4f63b9
-// Writes the emitter's velocity, running time, emit countdown and tag point; returns the first write error
+// Writes the emitter's velocity, running time, emit countdown and tag point (ee_gfx effect_state.rs); returns the
+// first write error
 long EEE3DParticleEmitter::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
-    long theResult = this->mVelocity.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mTime);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mEmitTime);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mTagPoint);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_emitter(this->mRecord, &theFile);
 }
+
+// The emitter's line particles (CreateLineEffect of mLinkedEffect1) (provisional name)
+struct EEEmitterHost {
+    static int32_t Line(void* inContext, const EeGe3DPoint* inStart, const EeGe3DPoint* inDirection)
+    {
+        EEE3DParticleEmitter* theEmitter = static_cast<EEE3DParticleEmitter*>(inContext);
+        GE3DLine theLine;
+        theLine.SetStart(*reinterpret_cast<const GE3DPoint*>(inStart));
+        theLine.SetDirection(GEVector(inDirection->x, inDirection->y, inDirection->z));
+        return (int32_t)gEffectManager->CreateLineEffect(theLine, theEmitter->mGraphicEffect->mLinkedEffect1, NULL);
+    }
+};
 
 // FUNCTION: EXE 0x4f6417
 // Moves the emitter with its unit's tag point (or by its own motion), updates its sound and, when the countdown
 // runs out, emits a burst of line particles; returns 7 once the unit dies or the duration ends
 long EEE3DParticleEmitter::Step()
 {
-    GE3DLine theLine;
     GE3DPoint theLocation;
-    GEVector theAxis(0.0f, 0.0f, 1.0f);
-    GEVector theDirection;
     GETransformation theTransformation(false);
     GETransformation thePart(false);
-    GETransformation theParticle(false);
     long theResult = 0;
-    float theDelta = gPhysics->GetTickSeconds() * 1000.0f;
+    float theDelta = ee_gfx_effect_emitter_begin(this->mRecord, gPhysics->GetTickSeconds());
     float theSeconds = theDelta / 1000.0f;
-    this->mTime += theDelta;
     if (this->mUnit) {
         EEComplexUnit* theUnit = this->mUnit->mComplexUnit;
         if (theUnit) {
@@ -325,33 +284,15 @@ long EEE3DParticleEmitter::Step()
             if (this->mSound)
                 this->mSound->Dereference();
         }
-        this->mEmitTime -= theDelta;
-        if (this->mEmitTime <= 0.0f) {
-            unsigned long theCount = this->mGraphicEffect->mIntParam3;
-            for (unsigned long i = theCount; i > 0; i--) {
-                GE3DPoint thePosition = theLocation;
-                float theSpreadX = this->mGraphicEffect->mEmitPositionSpread;
-                thePosition.SetX((0.5f - EEEffect::GetRandom()) * theSpreadX + thePosition.mX);
-                float theSpreadY = this->mGraphicEffect->mEmitPositionSpread;
-                thePosition.SetY((0.5f - EEEffect::GetRandom()) * theSpreadY + thePosition.mY);
-                if (!this->mGraphicEffect->mIsEmitFlat) {
-                    float theSpreadZ = this->mGraphicEffect->mEmitPositionSpread;
-                    thePosition.SetZ((0.5f - EEEffect::GetRandom()) * theSpreadZ + thePosition.GetZ());
-                }
-                float thePitch = EEEffect::GetRandomSpread(this->mGraphicEffect->GetParam2(), this->mGraphicEffect->GetParam1());
-                float theYaw = EEEffect::GetRandomSpread(this->mGraphicEffect->GetParam4(), this->mGraphicEffect->GetParam3());
-                float theSpeed = EEEffect::GetRandomSpread(this->mGraphicEffect->GetParam6(), this->mGraphicEffect->GetParam5());
-                theParticle = theTransformation;
-                theParticle.Revolve(theYaw, thePitch, 0.0f);
-                theParticle.Apply(theAxis, theDirection);
-                theDirection.Scale(theSpeed, theDirection);
-                theLine.SetStart(thePosition);
-                theLine.SetDirection(theDirection);
-                EEGraphicEffect* theEffect = this->mGraphicEffect->mLinkedEffect1;
-                theResult = gEffectManager->CreateLineEffect(theLine, theEffect, NULL);
-            }
-            this->mEmitTime = EEEffect::GetRandomSpread(this->mGraphicEffect->mIntParam2, this->mGraphicEffect->mIntParam1);
-        }
+        EEGraphicEffect* theEffect = this->mGraphicEffect;
+        EeGfxEmitterBurst theBurst = {(uint32_t)theEffect->mIntParam3, theEffect->mEmitPositionSpread, theEffect->mIsEmitFlat,
+                                      theEffect->GetParam1(), theEffect->GetParam2(), theEffect->GetParam3(),
+                                      theEffect->GetParam4(), theEffect->GetParam5(), theEffect->GetParam6(),
+                                      (int32_t)theEffect->mIntParam1, (int32_t)theEffect->mIntParam2};
+        EeGfxEmitterHost theHost = {this, EEEmitterHost::Line};
+        theResult = ee_gfx_effect_emitter_burst(this->mRecord, theDelta, reinterpret_cast<const EeGe3DPoint*>(&theLocation),
+                                                reinterpret_cast<const EeGeTransformation*>(&theTransformation), &theBurst,
+                                                (int32_t)theResult, &theHost);
     }
     this->mIsFirstStep = false;
     return theResult;

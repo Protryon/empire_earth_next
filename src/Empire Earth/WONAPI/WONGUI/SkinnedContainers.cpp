@@ -62,7 +62,7 @@ void WONComboBox::Virtual08()
 	int anInputBoxWidth = this->Width()-aButtonWidth-aRightPad;
 
 
-	this->mEdit->mLeftPad = aLeftPad + 2;
+	this->mEdit->SetLeftPad(aLeftPad + 2);
 	this->mEdit->SetPosSize(0,0,anInputBoxWidth,anInputBoxHeight);
 	
 	if(!this->mButton->IsVisible())

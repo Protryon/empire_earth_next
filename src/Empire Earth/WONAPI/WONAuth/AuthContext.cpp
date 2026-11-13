@@ -142,9 +142,9 @@ bool AuthContext::mCheckedVerifierFile=false;
 void AuthContext::Init()
 {
     this->mFlow=AuthContextFlow::New(this);
-    this->mSecrets=ee_won_auth_secrets_new();
+    std::string aSecretFile=WONAPICore::GetDefaultFileDirectory()+"_wonlogin.ks";
+    this->mLogin=ee_won_auth_login_new(reinterpret_cast<const uint8_t*>(aSecretFile.data()),aSecretFile.size());
     this->mPeerData=new AuthPeerData;
-    this->mLoginSecretFile=WONAPICore::GetDefaultFileDirectory()+"_wonlogin.ks";
     this->mServerContext=new ServerContext;
     AutoCrit lock(GetVerifierCrit());
     if(AuthContext::mCheckedVerifierFile) return;
@@ -161,7 +161,7 @@ AuthContext::AuthContext()
 AuthContext::~AuthContext()
 {
     ee_won_auth_flow_free(this->mFlow);
-    ee_won_auth_secrets_free(this->mSecrets);
+    ee_won_auth_login_free(this->mLogin);
 }
 
 // The peer sessions and the certificate flow are ee_won's (authflow.rs): the session map and its clean-up cursor,
@@ -230,59 +230,71 @@ void AuthContext::StartAutoRefresh(bool force)
 }
 
 
-// The login secrets are ee_won's (rust/crates/ee_won/src/authctx.rs): their file (_wonlogin.ks: a count byte, then
-// a 32-bit expiry and 8 bytes each), the order and the commit rule; the lock stays here.
+// The login data is ee_won's (rust/crates/ee_won/src/authlogin.rs): the user name and password, the secrets and their
+// file (_wonlogin.ks: a count byte, then a 32-bit expiry and 8 bytes each), the communities, their CD keys and file
+// hashes, the joins, the user data and the nicknames, and the login request's blocks; its own lock.
 static void AuthAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
 {
     static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
 }
+static std::string AuthUtf16(const std::wstring& inText)
+{
+    std::string aBytes;
+    WideAppendUtf16LE(aBytes,inText);
+    return aBytes;
+}
+std::wstring AuthContext::LoginText(int inWhich) const
+{
+    std::string aBytes;
+    ee_won_auth_login_text(this->mLogin,inWhich,AuthAppendBytes,&aBytes);
+    std::wstring aText;
+    WideAssignUtf16LE(aText,aBytes.data(),(unsigned long)(aBytes.size()/2));
+    return aText;
+}
+void AuthContext::LoginSet(int inWhich, const std::wstring& inKey, const std::string& inValue, long long inNum)
+{
+    std::string aKey=AuthUtf16(inKey);
+    ee_won_auth_login_set(this->mLogin,inWhich,reinterpret_cast<const uint8_t*>(aKey.data()),aKey.size(),
+                          reinterpret_cast<const uint8_t*>(inValue.data()),inValue.size(),inNum);
+}
+static std::string AuthKeyBytes(const CDKey& inKey)
+{
+    return inKey.mKey.get()!=NULL?std::string(inKey.mKey->data(),inKey.mKey->length()):std::string();
+}
+static void AuthAppendBlock(EeWonAuthLogin* inLogin, int inWhich, WriteBuffer& output, const RawBuffer* inChallenge)
+{
+    std::string aBytes;
+    ee_won_auth_login_block(inLogin,inWhich,inChallenge!=NULL?inChallenge->data():NULL,
+                            inChallenge!=NULL?inChallenge->size():0,AuthAppendBytes,&aBytes);
+    output.AppendBytes(aBytes.data(),aBytes.length());
+}
 
 // FUNCTION: WON 0x006e1240
 // Reads the saved login secrets (expiry + 8 bytes each) from the secret file; false when it cannot open
-bool AuthContext::LoadSecretList()
-{
-    AutoCrit lock(this->mDataCrit);
-    return ee_won_auth_secrets_load(this->mSecrets,this->mLoginSecretFile.c_str());
-}
+bool AuthContext::LoadSecretList() { return ee_won_auth_login_secrets(this->mLogin,0,NULL,0,0); }
 // FUNCTION: WON 0x006e1460
 // Writes the login secrets to the secret file; false when it cannot be created
-bool AuthContext::SaveSecretList()
-{
-    AutoCrit lock(this->mDataCrit);
-    return ee_won_auth_secrets_save(this->mSecrets,this->mLoginSecretFile.c_str());
-}
+bool AuthContext::SaveSecretList() { return ee_won_auth_login_secrets(this->mLogin,1,NULL,0,0); }
 // FUNCTION: WON 0x006e1560
 // Appends a count byte and every login secret to the login request
-void AuthContext::AppendLoginSecrets(WriteBuffer& output)
-{
-    AutoCrit lock(this->mDataCrit);
-    std::string aBytes;
-    ee_won_auth_secrets_login(this->mSecrets,AuthAppendBytes,&aBytes);
-    output.AppendBytes(aBytes.data(),aBytes.length());
-}
+void AuthContext::AppendLoginSecrets(WriteBuffer& output) { AuthAppendBlock(this->mLogin,2,output,NULL); }
 // FUNCTION: WON 0x006e1650
 // Adds a new uncommitted 8-byte login secret at the front and saves the list
 void AuthContext::AddSecret(const void* secret)
 {
-    AutoCrit lock(this->mDataCrit);
-    ee_won_auth_secrets_add(this->mSecrets,static_cast<const uint8_t*>(secret));
-    this->SaveSecretList();
+    ee_won_auth_login_secrets(this->mLogin,2,static_cast<const uint8_t*>(secret),0,0);
 }
 // FUNCTION: WON 0x006e1790
 // Removes the matching uncommitted login secret and saves the list
 void AuthContext::RemoveSecret(const void* secret)
 {
-    AutoCrit lock(this->mDataCrit);
-    if(ee_won_auth_secrets_remove(this->mSecrets,static_cast<const uint8_t*>(secret)))
-        this->SaveSecretList();
+    ee_won_auth_login_secrets(this->mLogin,3,static_cast<const uint8_t*>(secret),0,0);
 }
 // FUNCTION: WON 0x006e1890
 // Gives uncommitted secrets an expiry, drops expired ones, caps the list below 256 entries and saves it
 void AuthContext::CommitSecrets(time_t authTime,time_t duration)
 {
-    AutoCrit lock(this->mDataCrit);
-    if(ee_won_auth_secrets_commit(this->mSecrets,(int64_t)authTime,(int64_t)duration))
-        this->SaveSecretList();
+    ee_won_auth_login_secrets(this->mLogin,4,NULL,(int64_t)authTime,(int64_t)duration);
 }
 // FUNCTION: WON 0x006e19e0
 // Returns the current peer data (certificate and keys) under the lock
@@ -308,109 +320,15 @@ void AuthContext::SetPeerData(const AuthPeerData* data)
 }
 
 
-// The login's two blocks are built by ee_won (authctx.rs) from the maps, in their order; the texts cross as UTF-16
-// LE bytes.
-struct AuthEntryText {
-    std::string mName, mValue, mBytes, mExtra;
-};
-static EeWonAuthEntry AuthEntry(AuthEntryText& ioText, bool inPresent)
-{
-    EeWonAuthEntry anEntry;
-    anEntry.name=reinterpret_cast<const uint8_t*>(ioText.mName.data());
-    anEntry.name_len=ioText.mName.size();
-    anEntry.value=reinterpret_cast<const uint8_t*>(ioText.mValue.data());
-    anEntry.value_len=ioText.mValue.size();
-    anEntry.bytes=reinterpret_cast<const uint8_t*>(ioText.mBytes.data());
-    anEntry.bytes_len=ioText.mBytes.size();
-    anEntry.extra=reinterpret_cast<const uint8_t*>(ioText.mExtra.data());
-    anEntry.extra_len=ioText.mExtra.size();
-    anEntry.present=inPresent;
-    return anEntry;
-}
-static std::string AuthUtf16(const std::wstring& inText)
-{
-    std::string aBytes;
-    WideAppendUtf16LE(aBytes,inText);
-    return aBytes;
-}
-static std::string AuthRaw(const ByteBuffer* inBuffer)
-{
-    return inBuffer!=NULL?std::string(inBuffer->data(),inBuffer->length()):std::string();
-}
-static std::string AuthRaw(const RawBuffer& inBuffer)
-{
-    return std::string(reinterpret_cast<const char*>(inBuffer.data()),inBuffer.size());
-}
-static const EeWonAuthEntry* AuthEntries(const std::vector<EeWonAuthEntry>& inEntries)
-{
-    return inEntries.empty()?NULL:&inEntries[0];
-}
-
 // FUNCTION: WON 0x006e0c50
 // Appends each hashed community's file hash and its hash keyed with the server challenge
 void AuthContext::AppendHashes(WriteBuffer& output,const RawBuffer& challenge)
 {
-    AutoCrit lock(this->mDataCrit);
-    std::vector<AuthEntryText> aTexts(this->mCommunityMap.size());
-    std::vector<EeWonAuthEntry> anEntries;
-    size_t anIndex=0;
-    for(std::map<std::wstring,AuthLoginCommunityData>::iterator next=this->mCommunityMap.begin();
-        next!=this->mCommunityMap.end();++next,++anIndex) {
-        AuthEntryText& aText=aTexts[anIndex];
-        aText.mName=AuthUtf16(next->first);
-        aText.mBytes=AuthRaw(next->second.mSimpleHash);
-        aText.mExtra=AuthRaw(next->second.mKeyedHashData);
-        anEntries.push_back(AuthEntry(aText,true));
-    }
-    std::string aBytes;
-    ee_won_auth_hashes(AuthEntries(anEntries),anEntries.size(),challenge.data(),challenge.size(),AuthAppendBytes,
-                       &aBytes);
-    output.AppendBytes(aBytes.data(),aBytes.length());
+    AuthAppendBlock(this->mLogin,1,output,&challenge);
 }
 // FUNCTION: WON 0x006e0e50
 // Appends the login's community names and typed records (CD keys, joins, user data, secrets, nicknames)
-void AuthContext::AppendCommunityData(WriteBuffer& output)
-{
-    AutoCrit lock(this->mDataCrit);
-    std::vector<AuthEntryText> aTexts(this->mCommunityMap.size()+this->mCDKeyCommunityJoinMap.size()+
-                                      this->mSetCommunityUserDataMap.size()+this->mNicknameMap.size());
-    std::vector<EeWonAuthEntry> aCommunities,aJoins,aUserData,aNicknames;
-    size_t anIndex=0;
-    for(std::map<std::wstring,AuthLoginCommunityData>::iterator next=this->mCommunityMap.begin();
-        next!=this->mCommunityMap.end();++next,++anIndex) {
-        AuthEntryText& aText=aTexts[anIndex];
-        aText.mName=AuthUtf16(next->first);
-        const CDKey& aKey=next->second.mCDKey;
-        aText.mBytes=AuthRaw(aKey.mKey.get());
-        aCommunities.push_back(AuthEntry(aText,aKey.mValid && aKey.mKey.get()!=NULL));
-    }
-    for(std::map<std::wstring,CDKey>::iterator next=this->mCDKeyCommunityJoinMap.begin();
-        next!=this->mCDKeyCommunityJoinMap.end();++next,++anIndex) {
-        AuthEntryText& aText=aTexts[anIndex];
-        aText.mName=AuthUtf16(next->first);
-        aText.mBytes=AuthRaw(next->second.mKey.get());
-        aJoins.push_back(AuthEntry(aText,next->second.mKey.get()!=NULL));
-    }
-    for(std::map<std::wstring,ConstSmartPtr<ByteBuffer> >::iterator next=this->mSetCommunityUserDataMap.begin();
-        next!=this->mSetCommunityUserDataMap.end();++next,++anIndex) {
-        AuthEntryText& aText=aTexts[anIndex];
-        aText.mName=AuthUtf16(next->first);
-        aText.mBytes=AuthRaw(next->second.get());
-        aUserData.push_back(AuthEntry(aText,next->second.get()!=NULL));
-    }
-    for(std::map<std::wstring,std::wstring>::iterator next=this->mNicknameMap.begin();
-        next!=this->mNicknameMap.end();++next,++anIndex) {
-        AuthEntryText& aText=aTexts[anIndex];
-        aText.mName=AuthUtf16(next->first);
-        aText.mValue=AuthUtf16(next->second);
-        aNicknames.push_back(AuthEntry(aText,true));
-    }
-    std::string aBytes;
-    ee_won_auth_community_data(AuthEntries(aCommunities),aCommunities.size(),AuthEntries(aJoins),aJoins.size(),
-                               AuthEntries(aUserData),aUserData.size(),AuthEntries(aNicknames),aNicknames.size(),
-                               this->mSecrets,AuthAppendBytes,&aBytes);
-    output.AppendBytes(aBytes.data(),aBytes.length());
-}
+void AuthContext::AppendCommunityData(WriteBuffer& output) { AuthAppendBlock(this->mLogin,0,output,NULL); }
 
 // FUNCTION: WON 0x006de560
 // Forwards the certificate request completion to its context
@@ -441,35 +359,21 @@ WONStatus AuthContext::RefreshBlock(DWORD timeout)
 }
 
 
-// File hashing uses the WONCommon MD5 class (0x58 bytes), not WONCrypt MD5Digest
 // FUNCTION: WON 0x006e0380
 // Sets the CD key sent for a community
 void AuthContext::SetCDKey(const std::wstring& community,const CDKey& key)
 {
-    AutoCrit lock(this->mDataCrit);
-    this->mCommunityMap[community].mCDKey=key;
+    this->LoginSet(EE_WON_AUTH_LOGIN_CDKEY,community,AuthKeyBytes(key),(key.mKey.get()!=NULL?1:0)|(key.mValid?2:0));
 }
 // FUNCTION: WON 0x006e0510
 // Clears the CD-key community joins
-void AuthContext::ClearCDKeyCommunityJoins()
-{
-    AutoCrit lock(this->mDataCrit);
-    this->mCDKeyCommunityJoinMap.clear();
-}
+void AuthContext::ClearCDKeyCommunityJoins() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_JOINS,std::wstring()); }
 // FUNCTION: WON 0x006e05e0
 // Clears the per-community user data to set
-void AuthContext::ClearUserData()
-{
-    AutoCrit lock(this->mDataCrit);
-    this->mSetCommunityUserDataMap.clear();
-}
+void AuthContext::ClearUserData() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_USER_DATA,std::wstring()); }
 // FUNCTION: WON 0x006e06b0
 // Clears the one-time user data and CD-key joins
-void AuthContext::ClearOneTimeData()
-{
-    this->ClearUserData();
-    this->ClearCDKeyCommunityJoins();
-}
+void AuthContext::ClearOneTimeData() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_ONE_TIME,std::wstring()); }
 // FUNCTION: WON 0x006e06d0
 // Hashes the running executable for the community; false when its path is unavailable
 // (GetModuleFileNameA: the data root is the executable's directory, unless EE_DATA_ROOT moves it on POSIX)
@@ -491,86 +395,33 @@ bool AuthContext::SetHashFile(const std::wstring& community,const std::string& f
 // Computes the community's MD5 of the files plus one MD5 per 16 KB section; false when a file cannot open
 bool AuthContext::SetHashFileList(const std::wstring& community,const std::list<std::string>& files)
 {
-    AutoCrit lock(this->mDataCrit);
-    AuthLoginCommunityData& data=this->mCommunityMap[community];
-    data.mSimpleHash.erase();
-    data.mKeyedHashData.erase();
-    MD5 simpleHash;
-    MD5 hashSection;
-    int sectionPosition=0;
-    std::list<std::string>::const_iterator next=files.begin();
-    while(next!=files.end()) {
-        FILE* file=PlatFOpen(next->c_str(),"rb");
-        if(file==NULL) return false;
-        ++next;
-        char buffer[16384];
-        while(!feof(file)) {
-            int count=fread(buffer,1,16384-sectionPosition,file);
-            if(count<=0)
-                continue;
-            sectionPosition+=count;
-            simpleHash.Update(buffer,count);
-            hashSection.Update(buffer,count);
-            unsigned char digest[16];
-            if(sectionPosition!=16384 && (!feof(file) || next!=files.end()))
-                continue;
-            sectionPosition=0;
-            hashSection.Digest(digest);
-            data.mKeyedHashData.append(digest,16);
-            hashSection.Reset();
-        }
-        fclose(file);
-    }
-    unsigned char digest[16];
-    simpleHash.Digest(digest);
-    data.mSimpleHash.assign(digest,16);
-    return true;
+    std::string aCommunity=AuthUtf16(community);
+    std::string aFiles;
+    for(std::list<std::string>::const_iterator next=files.begin();next!=files.end();++next)
+        aFiles.append(next->c_str(),next->size()+1);
+    return ee_won_auth_login_hash_files(this->mLogin,reinterpret_cast<const uint8_t*>(aCommunity.data()),aCommunity.size(),
+                                        reinterpret_cast<const uint8_t*>(aFiles.data()),aFiles.size());
 }
-
-
 // FUNCTION: WON 0x006df620
 // Sets the login user name
-void AuthContext::SetUserName(const std::wstring& name)
-{
-    AutoCrit lock(this->mDataCrit);
-    this->mName=name;
-}
+void AuthContext::SetUserName(const std::wstring& name) { this->LoginSet(EE_WON_AUTH_LOGIN_NAME,std::wstring(),AuthUtf16(name)); }
 // FUNCTION: WON 0x006df760
 // Sets the login password
 void AuthContext::SetPassword(const std::wstring& password)
 {
-    AutoCrit lock(this->mDataCrit);
-    this->mPassword=password;
+    this->LoginSet(EE_WON_AUTH_LOGIN_PASSWORD,std::wstring(),AuthUtf16(password));
 }
 // FUNCTION: WON 0x006df8a0
 // Adds a community to log in to (no change when already present)
-void AuthContext::AddCommunity(const std::wstring& community)
-{
-    AutoCrit lock(this->mDataCrit);
-    this->mCommunityMap.insert(std::map<std::wstring,AuthLoginCommunityData>::value_type(community,AuthLoginCommunityData()));
-}
+void AuthContext::AddCommunity(const std::wstring& community) { this->LoginSet(EE_WON_AUTH_LOGIN_ADD_COMMUNITY,community); }
 // FUNCTION: WON 0x006dfcc0
 // Makes the given community the only one, keeping its data when it was already present
-void AuthContext::SetCommunity(const std::wstring& community)
-{
-    AutoCrit lock(this->mDataCrit);
-    std::map<std::wstring,AuthLoginCommunityData>::iterator found=this->mCommunityMap.find(community);
-    if(found!=this->mCommunityMap.end()) {
-        AuthLoginCommunityData data=found->second;
-        this->mCommunityMap.clear();
-        this->mCommunityMap[community]=data;
-    }
-    else {
-        this->mCommunityMap.clear();
-        this->AddCommunity(community);
-    }
-}
+void AuthContext::SetCommunity(const std::wstring& community) { this->LoginSet(EE_WON_AUTH_LOGIN_SET_COMMUNITY,community); }
 // FUNCTION: WON 0x006e02d0
 // Removes a community from the login
 void AuthContext::RemoveCommunity(const std::wstring& community)
 {
-    AutoCrit lock(this->mDataCrit);
-    this->mCommunityMap.erase(community);
+    this->LoginSet(EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY,community);
 }
 
 // FUNCTION: WON 0x006df440
@@ -612,12 +463,12 @@ namespace WONAPI {
 
 // No original address identified: WON SDK support body
 AuthContext::AuthContext(const std::wstring &theUserName, const std::wstring& theCommunity,
-						 const std::wstring &thePassword) : 
-	mName(theUserName),  
-	mPassword(thePassword)
+                         const std::wstring &thePassword)
 {
-	this->Init();
-	this->AddCommunity(theCommunity);
+    this->Init();
+    this->SetUserName(theUserName);
+    this->SetPassword(thePassword);
+    this->AddCommunity(theCommunity);
 }
 
 // No original address identified: WON SDK support body
@@ -634,54 +485,28 @@ bool AuthContext::AddAddressesFromDir(const DirEntityList &theDir, const wchar_t
 	return this->mServerContext->AddAddressesFromDir(theDir, theNameFilter);
 }
 
-// No original address identified: WON SDK support body
-void AuthContext::RemoveAllCommunity()
-{
-	AutoCrit aCrit(this->mDataCrit);
-	this->mCommunityMap.clear();
-}
-
-// No original address identified: WON SDK support body
+// No original address identified: WON SDK support bodies
+void AuthContext::RemoveAllCommunity() { this->LoginSet(EE_WON_AUTH_LOGIN_REMOVE_ALL_COMMUNITY,std::wstring()); }
 void AuthContext::AddCDKeyCommunityJoin(const std::wstring &theCommunity, const CDKey &theKey)
 {
-	AutoCrit aCrit(this->mDataCrit);
-	this->mCDKeyCommunityJoinMap[theCommunity] = theKey;
+	this->LoginSet(EE_WON_AUTH_LOGIN_ADD_JOIN,theCommunity,AuthKeyBytes(theKey),theKey.mKey.get()!=NULL?1:0);
 }
-
-// No original address identified: WON SDK support body
 void AuthContext::AddUserData(const std::wstring &theCommunity, const ByteBuffer *theData)
 {
-	AutoCrit aCrit(this->mDataCrit);
-	this->mSetCommunityUserDataMap[theCommunity] = theData;
+	this->LoginSet(EE_WON_AUTH_LOGIN_ADD_USER_DATA,theCommunity,
+	               theData!=NULL?std::string(theData->data(),theData->length()):std::string(),theData!=NULL?1:0);
 }
-
-// No original address identified: WON SDK support body
 void AuthContext::SetLoginSecretFile(const std::string &theFile)
 {
-	AutoCrit aCrit(this->mDataCrit);
-	this->mLoginSecretFile = theFile;
+	ee_won_auth_login_set(this->mLogin,EE_WON_AUTH_LOGIN_SECRET_FILE,NULL,0,
+	                      reinterpret_cast<const uint8_t*>(theFile.data()),theFile.size(),0);
 }
-
-// No original address identified: WON SDK support body
-void AuthContext::AddNickname(const std::wstring &theKey)
-{
-	AutoCrit aCrit(this->mDataCrit);
-	this->mNicknameMap[theKey] = L""; 
-}
-
-// No original address identified: WON SDK support body
+void AuthContext::AddNickname(const std::wstring &theKey) { this->LoginSet(EE_WON_AUTH_LOGIN_ADD_NICKNAME,theKey); }
 void AuthContext::SetNickname(const std::wstring &theKey, const std::wstring &theName)
-{ 
-	AutoCrit aCrit(this->mDataCrit);
-	this->mNicknameMap[theKey] = theName; 
-}
-
-// No original address identified: WON SDK support body
-void AuthContext::ClearNicknames()
 {
-	AutoCrit aCrit(this->mDataCrit);
-	this->mNicknameMap.clear();
+	this->LoginSet(EE_WON_AUTH_LOGIN_SET_NICKNAME,theKey,AuthUtf16(theName));
 }
+void AuthContext::ClearNicknames() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_NICKNAMES,std::wstring()); }
 }
 
 namespace WONAPI {
