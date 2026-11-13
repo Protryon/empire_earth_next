@@ -11526,3 +11526,61 @@ the branch's start (round 25's head) -> 84,768 (Container's accessors, +18) -> 8
 - **Left:** TabCtrl / TabBar, ComboBox (its edit box and button over the container: GetFocusChild and
   GetMouseChild are accessors already), and the older input and list goldens' re-recording to trace the delivered
   event type.
+
+## R6: WON's Internet code, round 16 (ServerConnection and RoutingConnection's op list and dispatch as Rust objects)
+
+Branch `rust-won-net16`. Measured by net C++ deletion, as rounds 7 to 15. The servers are gone: only an Internet
+login (RoutingLogic::ConnectToServer, EEWonNet's dead server select) makes a ServerConnection or a RoutingConnection,
+so no LAN step reaches this round's code; the golden driver and the Rust tests exercise it.
+
+- **Where the socket layer stood.** Round 15's premise ("every remaining Internet class waits on the socket
+  objects") was already met: the lobby lane's rounds 14 to 16 made AsyncSocket, SocketOp and its eight ops,
+  QueueSocket, LobbyLanSocket, IPAddr, UDPManager and its two ops Rust objects with C++ shims (their state and every
+  step; the C++ files left are the shims, the hook tables and the `Winsock numbering` asserts). BlockingSocket has no
+  state (each call makes one op and runs it blocking): moving its seven three-line calls would add a hook per op kind
+  and delete nothing. SocketThread's two classes were already shims (round 13). So this round went one level up.
+- **The golden over real loopback sockets.** `won_servconn_test` (new, `xbuild wontest`): a listener on 127.0.0.1
+  and the connection under test, the peer authentication a stand-in that connects the connection's socket for real
+  (or stays pending for port 0; PeerAuthOp is a Rust op that needs certificates, so the driver defines PeerAuthOp's
+  constructor and RustServerOp's members itself and ServerOp.cpp is not linked). 134 lines for ServerConnection and
+  ServerConnectionConnectOp, recorded over the unmodified classes (five runs the same); then 68 for RoutingConnection,
+  recorded over its unmodified class (six runs the same), the first 132 lines unchanged (the plain connection's
+  deferred destruction now lands at the routing part's first pump). Deterministic by construction: every wait is a
+  pump until a completion count (no line depends on the clock but the keep-alive's one-second period, whose
+  no-ops are counted, not timed).
+- **Driver traps.** WON's message framing counts the length field itself and SendMsg sends the bytes as given: a
+  "hello" without its 4-byte length was read as a bad length and closed the connection. RunAsync only queues: a
+  ServerConnectionConnectOp run blocking waits on a peer op whose run the pump starts, so it ran 4 s and stayed
+  pending (it runs async and pumped). A blocking op on a pending connect races two equal time-outs (the op's and its
+  peer op's): left out. A notification cut short is finished in MsgCallback's catch with `status`, a variable no op
+  has set yet when the notification's op is first in the list (the golden showed 1150674430): left out of the
+  golden; the Rust defines it as `EE_WON_RT_UNPACK_FAILURE` (unit test).
+- **ServerConnection** (`servconn.rs`, `EeWonServerConn`): the auth context and type, the peer authentication op, the
+  connect completion, the keep-alive timer and its period (a reference each), and every step: StartKeepAlive,
+  SetAuth, ConnectCallback (the repeat receive and keep-alive on success), KeepAliveCallback and SendNoOp, the close
+  and kill hooks, ConnectAsync and ConnectBlock, under the socket's lock where the C++ held it, references dropped
+  where a `SmartPtr` assignment dropped them. A kill may call back into the object (the timer's completion is
+  KeepAliveCallback, a pending connect's is the connect completion): no borrow lives across a hook and the slot is
+  read again after it. One hook table (19 entries); `ConnectCallback` is no longer virtual (nothing overrode it).
+  ServerConnectionConnectOp stays C++ (four short members over the connection; moving it would add more hooks than it
+  deletes). Mutation: no keep-alive restart fails the golden from line 59.
+- **RoutingConnection** (`routeconn.rs`, `EeWonRouteConn`): the op list, the 61 completions by op type and the
+  default one, and AddOp, CalcCompletion, GetUnsolicitedOp, MsgCallback (the header, the new notification op
+  first, the walk with the original's dispatch rule, the catch path without the complete hook), CloseHook (an op a
+  kill adds is killed too, as the std::list walk did) and KillHook. The completions are set through
+  `SetOpCompletion` / `SetDefaultOpCompletion` (EEWonNet and RoutingLogic wrote the array: mechanical, its own
+  commit). What stays C++: the request helpers (each makes its C++ op class), the notification ops' constructors
+  (one hook with the original's switch), HandleReply over a `ReadBuffer` with its `ReadBufferException` (a flag
+  across the C ABI), `mAllDerivedOpsAreUnsolicited` (read by the C++ virtual GetUnsolicitedDerivedOp). A type past
+  the 61 slots (the original read past its array) has no completion. Mutation: the type's completion ignored fails the
+  golden from line 146. A `c_long` hook return cast to `i32` is a clippy error on Windows (`c_long` is `i32` there)
+  and a needed cast on Linux: such hooks return `i32` (`int32_t` in the C++).
+- **Net C++** (src+include, the generated headers left out): ServerConnection +100 -117; the completion setters
+  +31 -28; RoutingConnection +111 -136; the round +242 -281. Small: each class keeps a hook table (19 and 14
+  entries) because its ops, completions and subclasses are still C++.
+- **LAN reach: none.** Every LAN lobby and game runs on QueueSocket, LobbyLanSocket, the socket ops and UDPManager
+  (the lobby lane's objects, untouched here). ServerConnection and RoutingConnection are made only by an Internet
+  login (the WON servers are gone); the lead's LAN gate does not reach this round's code, and neither does EE-SIM.
+- **Not moved, and why.** TitleConfig: ConfigObject is still C++ (WONGUI's configs derive from it). The RustServerOp
+  host (ServerOp.cpp's HostCall, ServerOp's members): not started this round. SmartRoutingConnection's model,
+  commands and snapshots (~1,600 lines) sit on RoutingConnection's request helpers and its own maps: next.
