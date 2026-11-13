@@ -11033,3 +11033,67 @@ their headers (`EESE*.h`, `EEUIFSE*.h`, `EEUIFScenarioEditor*.h`, `EEAQuickSaveL
   units. Risks seen: `EESEACreateBlankMap` waits on `gGraphics->mIsPaused` (EE-SIM's graphics thread must answer), and
   `EESEAPaintTerrain::PlantTerrainUnits` seeds its random from `TMGetTime()` (a script must use terrains without
   ambient units, or the clock must be pinned).
+
+## R6: the game screens, fifteenth round: the scripted scenario editor gate in EE-SIM; the editor's paint and selection actions in Rust (EESimEditor.cpp, tools/sim_editor.py; ee_screens editor_actions.rs; branch rust-screens15, 2026-11-13)
+
+Round 14's item (b) and the first two groups of the 22 actions behind it. Count: `build/sc14/count.sh`.
+
+- **Round 14's merge, verified first** (acc3a195, built only last round): oracle seeds 2-7 identical, the Rust gate
+  PASS, the test-profile build 0/0.
+- **The gate** (`EE-SIM.exe --editor-script FILE`, `tools/sim_editor.py`, `tools/sim_editor/script.txt` and
+  `expected.txt`, README "The scripted scenario editor gate"): EE-SIM clicks the main menu's Editors and the
+  sub-menu's Scenario Editor (`StartScenarioEditor`: a local server, load type 3), waits for the manager's
+  `mScenarioEditorForm` on top (the form has no form id: `UIForm` id -1, reported as 4294967295), then runs the
+  script in `EESimEditor.cpp`. Each line is a step: an `EEAction` of its own in the UI thread's queue (`actions.rs`),
+  so under the UI copy lock and the world's write lock as the editor's actions run, which builds and posts the line's
+  action as the editor's tabs do, then a marker that posts itself three more times (the queue drains what its
+  actions post in the same pass: the blank map's terrain paint runs before it) and wakes the driver. 47 lines: tabs,
+  a 40 x 40 blank map, four terrain paints (two with ambient units), the three elevation modes, five placements,
+  select / add / toggle, a rotation, deletion by unit and by selection, a pick-up and put-down, a palisade wall and a
+  gate in it, the bulldozer, the trigger area's rectangle, a quick save and its file, a random map; nine digests (the
+  map's tiles and mesh, every unit with its matrix, the selection, the paint area, the save chunks). 888 lines,
+  identical over five runs.
+- **What made it deterministic:**
+  - The editor needs no physics: the game form never shows; the load ends in the editor. `gPlatSimRun` stays clear.
+  - The physics thread still flushes the world (`EEPhysics::FlushWorld`: pending units in, killed units out) on its
+    own clock with the game paused: the first gate run's bulldoze digest listed the killed trees on one run and not
+    the other. A digest flushes first.
+  - `EESEAPaintTerrain::PlantTerrainUnits` seeds its random from `TMGetTime()`: `TMGetTime` answers a thread-local
+    `gTMPinnedTime` when set (`Time Manager.cpp`; -1 by default, so the game and every other thread are untouched);
+    a step pins the UI thread's clock (2000, 3000, ...) and the marker unpins it.
+  - The save chunks: tags 1 (the checksum), 5 (the players: a few words per computer player the AI thread and timers
+    write), 8 (the multiplayer helper's server times) and 12 (one byte of the environment manager) differ by run
+    though the editor writes none of them: printed as "(differs by run)". The header (the date, the time) is not
+    hashed. The quick save's file is read back chunk by chunk and equals the in-memory chunks.
+  - Coordinates: a 40 x 40 blank map is a diamond in an 80 x 80 square; a wall off the diamond crashed in
+    `EEPickWallPieces` (a NULL tile, as in the original). The script stays around (40, 40).
+- **Group 1, the paint actions** (`editor_actions.rs` over `ee_screenscpp_sea*` in `EESEAPaintTerrain.cpp`): the
+  terrain paint (its ambient scatter with `ee_random::URandom` seeded from the host's clock: one draw per tile on the
+  map, one more for the class on a hit), the elevation paint (the three modes' height, slope, plateau and roughness in
+  `f32` as the original; the area as `Raise` leaves it goes on to the cliffs, the minimap and the effects; an empty
+  queue tells the effects a zero area, as the original's default region), the bulldozer (the units of each area's
+  tiles, path points first) and the trigger area's corner rectangle. The actions' deques are a Rust record each
+  (`EeScreensSeaPaint`, made by the action's inline ctor and freed by its dtor: `ee/EESEAPaint.h` declares the two
+  functions so the actions' headers need no Rust header). Count 67,677 -> 67,631 (-46; git over the C++ +177 -286:
+  the host is in the actions' folder).
+- **Group 2, the selection's actions** (`ee_screenscpp_seu`, `ee_screenscpp_seu_pick` in `EESEADeleteUnit.cpp`): the
+  click's message (`EESEAMouseClick::Virtual4`), the lasso's (`SelectUnits`, `Virtual4`), the rotation, the deletion
+  (`Virtual4`, `DeleteComplexUnit`, `RemoveFromContainer`: the cargo count read again each turn, the first part's
+  player for every part). 67,631 -> 67,614 (-17; git over the C++ +146 -163).
+- **Behaviour:** the bulldozer's and the deletion's order is "path points first, the rest in their gathered order"
+  (the original's `std::sort` with that comparator leaves ties to the library); the gate's digests are unchanged.
+- **Tests:** 25 in `editor_actions.rs` (recording hosts: paint order, the ambient draws against `URandom`, the
+  elevation modes' floats, the bulldozer's order, the click and lasso messages, rotation, deletion of a multi-part
+  transport with cargo). No golden driver this round: the gate's digest is the check (it ran on the unmodified C++
+  first, and each group left it unchanged).
+- **Only a person reaches:** the editor's ghosts under the mouse (`EESEAPlaceUnit::Place`, `EESEAMoveUnit::PutDown`,
+  the click's `Execute`, the lasso's picking), the save and test screens, the tech lists. The gate covers the lasso's
+  and the click's message application only through the click (no lasso message is scripted). No tour opens the
+  editor; the gates' games never reach these actions (the oracle is identical by construction).
+- **The oracle** compares identical on every seed except its first line: the shared tree's `Data/ai` was rewritten
+  at 2026-11-12 23:45 (its folder hash 327d5891 -> 1494ba43) while this round ran; `build/sc15/check.sh` compares
+  without that line (and the AIPROF timings the comparison always skips).
+- **Not done:** the placement actions (`EESEAPlaceUnit`, `EESEAMoveUnit`, `EESEAPlaceWall`, `EESEAPlaceGate`: their
+  entries are `GETransformation`s and ghosts), the maps (`EESEACreateBlankMap::CreateMap`'s elevation-file transform,
+  `EESEACreateRandomMap`), the save, quick save, test, exit, tech list and load text actions (one C++ call each: a Rust
+  move adds a host op per line and deletes nothing), and round 14's item (a) rest (the stateful events).
