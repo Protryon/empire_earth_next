@@ -4791,6 +4791,22 @@ centres.
 The next step is a trace of the blocker in a debug build, then the request path itself as a helper if it is the way.
 Results stay within noise (8 balanced seeds: 2-5, 1 close). Determinism (seeds 3 and 12, 90 minutes, --repeat 2,
 4 walls in seed 12) identical. 0 script errors. Both builds 0/0, eedata check PASS.
+### 8.71 Porting everything, 2b closed: what blocks the port's walls (2026-11-13, EE-SIM)
+
+The walls got one more round, time-boxed. A debug build (reverted) named the building that blocks each of the
+port's lines across the way. In 4 balanced games:
+- **The port's own buildings:** settlements 73, Copper guard towers 57, stables 22, temples 13, barracks 12, then
+  Bronze guard towers, archery ranges and houses.
+- **The enemy's:** settlements 46, Prehistoric guard towers 8, temples 5.
+
+So the port's way runs past its own outposts. A whole tile path between the two towns (ai.wall_path over the box of
+the two) instead of the refined route changed nothing: 73 whole paths, 407 blocked lines, 3 wall orders in 8 games.
+The C++'s coarse way comes from the path manager's own request with the wall planner modifier (influence costs). That
+is the one difference left. Porting it needs an asynchronous path request held across steps and saves, more than
+the time box allowed.
+
+The gap is recorded as open in ORIGIN: the port orders 3-9 walls where the C++ orders 21-62. The walls come back in
+stage 3. 2b is closed (the tower sites, the walls, the late-start benches), and 2c (air, space, submarines) is next.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
