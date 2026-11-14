@@ -9,6 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONGUIDraw.h"
 
 using namespace WONAPI;
 
@@ -55,27 +56,15 @@ void ImageComponent::GetDesiredSize(int& width,int& height)
 
 // FUNCTION: WON 0x00706d30
 // Draws the image stretched to the component, once at the origin, or tiled over the component clipped to it
+// (guidraw.rs image_component_paint)
 void ImageComponent::Paint(Graphics& g)
 {
     Component::Paint(g);
-    if(this->mImage.get()==NULL)
-        return;
-    if(this->mStretch)
-    {
-        if(this->mImage->mWidth!=this->Width() || this->mImage->mHeight!=this->Height())
-            this->mImage->SetSize(this->Width(),this->Height());
-        g.DrawImage(this->mImage.get(),0,0);
-    }
-    else if(!this->mTile)
-        g.DrawImage(this->mImage.get(),0,0);
-    else
-    {
-        g.PushClipRect(0,0,this->Width(),this->Height());
-        for(int x=0;x<this->Width();x+=this->mImage->mWidth)
-            for(int y=0;y<this->Height();y+=this->mImage->mHeight)
-                g.DrawImage(this->mImage.get(),x,y);
-        g.PopClipRect();
-    }
+    Image* anImage = this->mImage.get();
+    WONDrawSlots aSlots;
+    aSlots.mImages[0] = anImage;
+    WONDrawRun(g,WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_image_component(anImage!=NULL,this->mStretch,
+        this->mTile,anImage ? anImage->mWidth : 0,anImage ? anImage->mHeight : 0,this->Width(),this->Height(),o,n); }),aSlots);
 }
 
 
@@ -102,21 +91,12 @@ void RectangleComponent::SetOutlineColor(int theOutlineColor)
 }
 
 // FUNCTION: WON 0x00706890
-// Fills the component with the solid colour and draws the outline, each only when set
+// Fills the component with the solid colour and draws the outline, each only when set (guidraw.rs rectangle_paint)
 void RectangleComponent::Paint(Graphics &g)
 {
 	Component::Paint(g);
-	if(this->mSolidColor!=-1)
-	{
-		g.SetColor(this->mSolidColor);
-		g.FillRect(0,0,this->Width(),this->Height());
-	}
-
-	if(this->mOutlineColor!=-1)
-	{
-		g.SetColor(this->mOutlineColor);
-		g.DrawRect(0,0,this->Width(),this->Height());
-	}
+	WONDrawRun(g,WONDrawOps([&](EeWonDrawOp* o, size_t n) {
+		return ee_won_gui_draw_rectangle(this->mSolidColor,this->mOutlineColor,this->Width(),this->Height(),o,n); }),WONDrawSlots());
 }
 }
 
@@ -134,35 +114,12 @@ RectangleComponent3D::RectangleComponent3D(bool up, int theThickness)
 
 // FUNCTION: WON 0x00706930
 // Draws a raised or sunken 3D frame of the given thickness (light/dark edges swapped by mUp), over an
-// optional solid fill
+// optional solid fill (guidraw.rs rectangle_3d_paint)
 void RectangleComponent3D::Paint(Graphics &g)
 {
-	int width = this->Width()-1;
-	int height = this->Height()-1;
-	bool up = this->mUp;
-	if(this->mSolidColor!=COLOR_INVALID)
-	{
-		g.SetColor(this->mSolidColor);
-		g.FillRect(0,0,this->Width(),this->Height());
-	}
-
-	for(int i=0; i<this->mThickness; i++)
-	{
-		if(up)
-			g.SetColor(this->mLightColor);
-		else
-			g.SetColor(this->mDarkColor);
-
-		g.DrawLine(i,i,width-i,i);
-		g.DrawLine(i,i,i,height-i);
-		if(up)
-			g.SetColor(this->mDarkColor);
-		else
-			g.SetColor(this->mLightColor);
-
-		g.DrawLine(width-i,i,width-i,height);
-		g.DrawLine(i,height-i,width,height-i);
-	}
+	static_assert(COLOR_INVALID==0xffffffff,"guidraw.rs rectangle_3d_paint compares with -1");
+	WONDrawRun(g,WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_rectangle_3d(this->mUp,this->mThickness,
+		this->mSolidColor,this->mLightColor,this->mDarkColor,this->Width(),this->Height(),o,n); }),WONDrawSlots());
 }
 }
 

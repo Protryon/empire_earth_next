@@ -500,6 +500,9 @@ WON_TESTS = {
     # the software raster surface as a whole Rust object (surface.rs) against the WON SDK's Surface.cpp
     # (golden: rust/crates/ee_won/src/golden_surface.txt)
     "won_surface_test": [],
+    # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
+    # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
+    "won_compaint_test": [],
     # the image filters' pixel loops (imgfilter.rs) against the original statements over stand-in raw images
     # (golden: rust/crates/ee_won/src/golden_imgfilter.txt)
     "won_imgfilter_test": [],

@@ -12084,6 +12084,39 @@ uint32_t ee_won_gui_sel_foreground(uint32_t background,
                                    int32_t mode,
                                    uint32_t original);
 
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_image_component(bool has,
+                                       bool stretch,
+                                       bool tile,
+                                       int32_t image_width,
+                                       int32_t image_height,
+                                       int32_t width,
+                                       int32_t height,
+                                       EeWonDrawOp *out,
+                                       size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_rectangle(int32_t solid,
+                                 int32_t outline,
+                                 int32_t width,
+                                 int32_t height,
+                                 EeWonDrawOp *out,
+                                 size_t cap);
+
+/// # Safety
+/// `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_rectangle_3d(bool up,
+                                    int32_t thickness,
+                                    int32_t solid,
+                                    int32_t light,
+                                    int32_t dark,
+                                    int32_t width,
+                                    int32_t height,
+                                    EeWonDrawOp *out,
+                                    size_t cap);
+
 /// `move_cursor` over a `GUIString`'s units.
 ///
 /// # Safety
