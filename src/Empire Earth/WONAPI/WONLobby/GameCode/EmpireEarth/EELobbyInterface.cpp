@@ -247,7 +247,7 @@ bool EELobbyHostGame()
         theMe.mIsReady = true;
         theMe.mType = 1;
         gCommunications->ProcessLocalUserInput(
-            new NEMClientConnectionRequest(theMe.mName, gGameVersion, gBinaryChecksum, theFlag), 0xff);
+            new NEMRecord(kNetMessageClientConnectionRequest, {theFlag, gBinaryChecksum}, {gGameVersion, theMe.mName}), 0xff);
         theResult = true;
     }
     return theResult;
@@ -647,8 +647,8 @@ void EELobbyJoinGame()
         theAddress = GetMyLobbyGame()->GetAddress().GetHostString(true).c_str();
         UWideString theName = EELobbyToWideString(GetMyLobbyClient()->GetName());
         if (static_cast<NESynchronousClient*>(gCommunications)->Connect(theAddress, theService, theGameName) == 0) {
-            NEMClientConnectionRequest* theRequest =
-                new NEMClientConnectionRequest(theName, gGameVersion, gBinaryChecksum, theFlag);
+            NEMessage* theRequest =
+                new NEMRecord(kNetMessageClientConnectionRequest, {theFlag, gBinaryChecksum}, {gGameVersion, theName});
             static_cast<NESynchronousClient*>(gCommunications)->SendStartConnectMessage(theRequest);
             gCommunications->ProcessLocalUserInput(theRequest, 0xff);
         }

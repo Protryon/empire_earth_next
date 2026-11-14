@@ -20558,3 +20558,80 @@ Round 6 of the Low-Level Engine lane (rounds 1-5 above). Net C++ over src + incl
 - **What runs it.** EE-SIM has no sound manager or mixer (`EEInitializeSounds` is the windowed game's): the oracle
   is unaffected by construction. The sound objects run only in a windowed game: the lead's tour is their check.
   `FSInitialize` runs at every start (EE-SIM too); `FSGetVolumeAndDirectory` there and in `FSFileSpec`'s callers.
+
+## LLE Network Engine, round 6: the 28 engine messages as one data class (NEMRecord), the factory's builders in Rust (ee_netmsg ne_records.rs; branch rust-ne6, 2026-11-14)
+
+Round 5 named what blocked NEMessage: the 28 engine message classes, read inline by the server's and client's hosts,
+EEServer, EEClient, EEPhysics, the lobby and the capture, and `sConstructors[256]`, which EEMessage wrote directly.
+
+| Commit | What | C++ (src + include, without include/rust) |
+|---|---|---|
+| 31917336 | `ne_message_test` and its golden over the original 28 classes (tests only) | 0 |
+| ab61180c | `NEMRecord` for the 28 classes; the factory's table in Rust; every sender and reader moved | +464 -2,054, net **-1,590** |
+
+The Network Engine's C++ (src + include/lle NE*) is 2,278 lines (3,655 before).
+
+**The data class** (lle/NEMessage.h, NEMessage.cpp; ee_netmsg `ne_records.rs`). `NEMRecord : NEMessage` carries any
+engine type (0x20..0x3c but 0x2c): `mRecord` (new[] of the type's record size) holds the fixed members packed in wire
+order (`NEMXferMessage`'s 1 KB block among them), then the members that never travel (only the physics tick's rate,
+which the physics reads from the local message); `mStrings[2]` the strings by ordinal; `mPlayerInputs` the two ticks'
+inputs (`AddPlayerInput`'s 255 limit, `GetPlayerInput`'s beyond-end, the release in the destructor, as
+`NEMPlayerInput`). `ee_netmsg_ne_type(type)` answers what the classes' one-line overrides did: the codec class, the
+member counts, the record size, the flags (counts towards the input throttle: 8 types; sendable while paused: Remove
+Player), the send-to-all-and-wait member (pause and unpause: their second), the response rule (the tick and the tick
+response's servers' tick; pause/unpause and their response's unique ID) and the label; `ee_netmsg_ne_field(type, i)`
+a member's kind, offset (a string's ordinal) and size. The codec slots are built from the record, so the wire bytes
+are the codec's as before. Members are numbered from 0 after the header in engine.rs's wire order; a sender passes the
+fixed members in record order, then the strings: `new NEMRecord(kNetMessageClientConnectionRequest, {theFirewall,
+gBinaryChecksum}, {gGameVersion, theName})`; a reader `Get<T>(i)` (size verified) or `GetString(i)`; each site says
+which member it reads in a comment.
+
+**The factory** (ee_netmsg `ne_records.rs`): `sConstructors[256]` is a Rust table of builders by type;
+`NEMessage::RegisterBuilder(first, last, builder)` (`ee_netmsg_register_builder`) and `ConvertMemoryToMessage`
+(`ee_netmsg_build`: the builder registered for `data[1]`, NULL for none). The engine registers `BuildNEMessage` for
+0x20..0x3c (0x2c still asserts, line 227), `EEMessage::RegisterKnownMessages` 0x41..0xfd.
+
+**The readers** (the game messages lane being idle, this round owned src/Empire Earth/Communications' message
+plumbing): the server's and client's hosts' typed reads and new messages (their Rust op interfaces unchanged, so the
+round 3-5 goldens and cargo replays needed nothing); `NESynchronousServer::LogChecksumResponse(NEMRecord*)`; EEServer:
+the nine connection-response senders are `SendConnectionResponse`/`NewConnectionResponse`, the two copies of the
+connection-request handling (ProcessSystemMessage, FilterPlayerInput) are `TakeConnectionRequest`; EEClient: the seven
+refusal branches are one local `theLeave` (show, show with the versions, boot action, quiet); EEPhysics (the physics
+tick: `GetNumberOfPlayerInputs` there was the tick's own member 0, not a list: `Get<uint32_t>(0)`), the actions, the
+lobby, the screens; the capture's NMNE members through the record (wire order, which is the order the old switch
+wrote in, member for member).
+
+- **Golden first.** `tests/net/ne_message_test.cpp` (xbuild nettest; linked with NEMessage.cpp and the strings):
+  every type built by its sender's constructor over 9 value patterns (truncation to the members' sizes, bools,
+  strings up to 300 bytes and UTF-8, the transfer block of 0, 5, 0x400 bytes), its label, three flags,
+  send-to-all-and-wait id, ExportSize and exported bytes, and the same for the factory's copy; IsResponse over 16
+  messages pairwise; the inputs (nested game and engine messages through the factory, a tick in a tick, the 255
+  limit, beyond end, the releases); the factory's unknown and unregistered types. 1,900 lines, recorded over the 28
+  classes (commit 31917336); only the test's API adapter (Make, the inputs, the rate, the registration) changed with
+  the move. Equal after it. Mutations caught: a throttle flag, the tick's response member, the paused flag, the
+  unpause's send-to-all-and-wait member, bools stored unconverted, a tick's import skipped (6/6).
+- **Behaviour changes.** A pause or unpause built by the server's host has send-to-all-and-wait id 0 until the server
+  sets it (the original left it uninitialised: the server always sets it before a send); an imported physics tick's
+  rate is 0 (uninitialised before; nothing imports one: the physics tick is local). The `ImportMessage` asserts share
+  one line number. The engine messages' vtables are one. Nothing in a game's simulation changed.
+- **Gates.** ne_message_test equal; nettest all seven equal (msgmgr 20,000, queues 1,500, client 1,500, tune 20,000,
+  server 1,500 sequences, protocol and message equal to their goldens); build `--sim` 0/0; oracle seeds 2-3
+  identical; capture oracle seeds 2-3 PASS (169 digests, NMNE 549 equal with no re-recording); the Rust gate PASS
+  (after a rustfmt fix); the test-profile build 0/0; tcptest passes; `lan_game.py` (under the harness lock, on the
+  test exe of ab61180c) RESULT PASS lan-game PT host=2900 joiner=2903 (CTs within 1 at every 5 s sample, 227/227 at
+  61 s), no FAULT. After the merge of rust (84001ecf: documents only, no conflict; `rust_build.py header` and
+  `rust_includes.py` changed nothing): build `--sim` 0/0; oracle seeds 2-7 identical; captures at seeds 2-3: oracle
+  PASS (169 digests), late (170), space (171), calamity (183), every run exit 0.
+- **What runs it.** Every game: the communications tick, its response and the physics tick (the local server's
+  ticks), the start-game message (EE-SIM and the oracle run them unencoded). Only a LAN game (`lan_game.py`) runs the
+  wire: the connection request and response (EEServer's helpers, EEClient's refusal local: a refusal itself needs a
+  wrong version, checksum, name or a full game, which no gate makes), pause and unpause, checksums, the transfer
+  messages and statuses, reconnection (server migration: no gate), disconnection notices, the lobby's requests.
+- **Not moved, and why.** NEProtocol is forwarders to ee_net_tcp plus its byte counters; the Rust server and client
+  reach it through their hosts' protocol ops, which the goldens' worlds answer: calling ee_net_tcp from Rust needs
+  those ops kept as a seam, so it would move lines, not delete them. The hosts' typed message ops could become field
+  indexes into the record (a one-line answer each), which re-records the cargo goldens' op arguments: a next step.
+  NEMessage's header stays (round 5).
+- **Lesson.** A reader that called a getter by the same name on two classes (`GetNumberOfPlayerInputs`: the tick's
+  input list, the physics tick's own count member) must be checked per class when the classes merge: one name, two
+  meanings.
