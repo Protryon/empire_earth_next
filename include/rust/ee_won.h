@@ -7495,6 +7495,14 @@ using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
                                        ptrdiff_t c,
                                        ptrdiff_t d);
 
+/// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
+struct EeWonEeResource {
+  const char *section;
+  const char *key;
+  const char *name;
+  bool new_section;
+};
+
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
 
@@ -10581,6 +10589,15 @@ ptrdiff_t ee_won_eegame_call(const EeWonEeGame *p,
 
 /// EELobbyPlayer::IsTeammate's rule: team 0 (no team) has no teammates.
 bool ee_won_eegame_is_teammate(uint8_t mine, uint8_t theirs);
+
+/// The number of game lobby strings.
+size_t ee_won_eeresource_count();
+
+/// Row `index` (below `ee_won_eeresource_count`) into `out`; false past the end.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_won_eeresource_row(size_t index, EeWonEeResource *out);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
