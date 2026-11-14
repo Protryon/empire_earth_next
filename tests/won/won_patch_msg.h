@@ -2,8 +2,10 @@
 // (rust/crates/ee_won/src/patch.rs): Rust reads a record or reply into the original's ordered assignments (a cut
 // one keeps what was read, a string cut after its length erased) and writes the records and requests; these apply
 // them through the records' setters. Templates over the record types so that tests/won/won_misc_test.cpp runs the
-// same code over stand-ins.
+// same code over stand-ins. Test glue since WON Internet round 21 (moved from include/ee/wonapi/WONPatchMsg.h): the
+// game's C++ VersionData and PatchData classes, which nothing made, are deleted; the ops are Rust's (verop.rs).
 #pragma once
+#include <list>
 #include <set>
 #include <string>
 #include <vector>
@@ -11,6 +13,13 @@
 #include "rust/ee_won.h"
 
 namespace WONAPI {
+
+// what the statements used from the deleted VersionData class (WONRouting.h before WON Internet round 21)
+enum VersionState { VersionState_Invalid=0, VersionState_Inactive=1, VersionState_Active=2, VersionState_BadState=3 };
+typedef std::list<std::string> VersionTypeList;
+struct VersionData {
+    enum { WriteFlag_AppendState=1, WriteFlag_AppendDescripURL=2 };
+};
 
 inline void PatchFieldSink(void* inContext, const EeWonPatchField* inFields, size_t inCount)
 {

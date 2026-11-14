@@ -600,7 +600,7 @@ WON_TESTS = {
                       WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
     # version filter; the patch ops' requests and replies), the original's statements against
-    # tests/won/won_ftp_msg.h and WONPatchMsg.h over ee_won's ftp and patch modules
+    # tests/won/won_ftp_msg.h and won_patch_msg.h over ee_won's ftp and patch modules
     "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # DetectFirewallOp as a whole op (its steps over scripted sockets and receive ops), the original's statements
     # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won/src/golden_fwop.txt)
@@ -661,7 +661,7 @@ WON_TESTS = {
     # (golden: rust/crates/ee_won/src/golden_miscops.txt)
     "won_miscops_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
     # HTTPCache's index file (cachemap.dat read and written on the Rust file layer, the kept entries and the deleted
-    # files), the original's statements over the real FileReader / FileWriter against WONHttpCacheMsg.h over ee_won's
+    # files), the original's statements over the real FileReader / FileWriter against won_cachemap_glue.h over ee_won's
     # cachemap module
     "won_cachemap_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
                                                              "FileWriter.cpp", "WONFile.cpp", "StringUtil.cpp")],
@@ -703,14 +703,17 @@ WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   *[WON_SRC / "WONServer" / f for f in ("ServerOp.cpp", "ServerContext.cpp")],
                                   *[WON_SRC / "WONCommon" / f for f in ("WONFile.cpp", "StringUtil.cpp")],
                                   *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
-                                  *[WON_SRC / "WONMisc" / f for f in ("HTTPEngine.cpp", "HTTPCache.cpp",
-                                                                     "HTTPCacheDefaults.cpp")],
+                                  WON_SRC / "WONMisc" / "HTTPEngine.cpp",
                                   *[WON_SRC / "WONAuth" / f for f in ("AuthSession.cpp", "AuthContext.cpp")],
                                   *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
 # real certificates (golden: rust/crates/ee_won/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
 # AuthContext.cpp); the same units as won_serverop_test
 WON_TESTS["won_authhost_test"] = WON_TESTS["won_serverop_test"]
+# the HTTP cache and its entries through the HTTP get op's own cache calls (golden:
+# rust/crates/ee_won/src/golden_httpcache.txt, recorded over HTTPCache.cpp and ServerOp.cpp's HostCall, before the
+# classes moved into ee_won httpcache.rs); the same units as won_serverop_test
+WON_TESTS["won_httpcache_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]
