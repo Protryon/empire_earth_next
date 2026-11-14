@@ -552,6 +552,25 @@ function M.step(view, memory)
         if BO.OPT.early_towers and phase == "pre" then
             plan.tower_at = BO.EARLY_TOWERS_AT
         end
+        -- (BO.OPT.cit_parity, the owner's income parity: the Lua classic trains past its saving and stood at 146
+        -- citizens to boom's 91 at 60 minutes, in the same epoch) from the Stone Age's growth, once an enemy town is
+        -- seen bigger than the plan, the citizen target follows it: the most of its citizens seen at once plus
+        -- CIT_PARITY_MARGIN, up to CIT_PARITY_MOST (the Prehistoric keeps the owner's 32)
+        memory.cit_seen = memory.cit_seen or 0
+        for _, e in ipairs(view.enemies or {}) do
+            memory.cit_seen = math.max(memory.cit_seen, e.citizens_seen or 0)
+        end
+        if BO.OPT.cit_parity and phase ~= "pre" and phase ~= "stone_start" then
+            local want = math.min(memory.cit_seen + BO.CIT_PARITY_MARGIN, BO.CIT_PARITY_MOST)
+            if want > plan.citizens_max then
+                if (memory.cit_parity_said or 0) + 10 <= want then
+                    memory.cit_parity_said = want
+                    print(string.format("parity citizens want=%d seen=%d plan=%d", want, memory.cit_seen,
+                        plan.citizens_max))
+                end
+                plan.citizens, plan.citizens_max = math.max(plan.citizens, want), want
+            end
+        end
     end
     PL.afford_retry = ECON.order and (BO.OPT.settle_afford or BO.OPT.mines_early) or false
     PL.blocked_skip = ECON.order and BO.OPT.blocked_skip or false

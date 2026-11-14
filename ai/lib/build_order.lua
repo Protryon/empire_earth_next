@@ -63,6 +63,7 @@ M.OPT = {
     save_developed = false, -- (off until benched) the Copper Age saved for once developed, the raid not waited for
     stone_metal_keep = false,   -- (off until benched) the Copper Age's gold and iron kept from stone_grow, before the save
     recover_cap = false,    -- (off until benched) lib.recover's urgent army only to its need, released once it goes
+    cit_parity = false,     -- (off until benched) from stone_grow the citizen target follows the biggest enemy town seen
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -133,6 +134,8 @@ M.STONE_WOOD_MIN = 12
 M.wood_cap = nil           -- (set by boom each step)
 M.OWNER_BARRACKS_AT = 6    -- (OPT.owner_barracks) citizens
 M.EARLY_TOWERS_AT = 6      -- (OPT.early_towers) citizens
+M.CIT_PARITY_MARGIN = 10   -- (OPT.cit_parity) citizens past the most of an enemy's seen at once
+M.CIT_PARITY_MOST = 200    -- (OPT.cit_parity) the target at most
 M.SAVE_BANK = 300          -- (OPT.save_retarget) a resource is banked past its cost by this much
 M.SAVE_FLOOR = {food = 18, wood = 10, gold = 12, stone = 6}   -- (OPT.save_retarget) the gatherers a donor keeps
 M.PRE_HUNT_MIN = 3         -- (OPT.pre_hunt_patch) the owner's 3-6 hunting
