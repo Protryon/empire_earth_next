@@ -11,7 +11,8 @@
 // nuclear explosion (EEE3DNuclearExplosion, 0xf43c7..0xf4bf3) and 0x47 the energy wave (EEE3DEnergyWave,
 // 0xee1b4..0xee5c0), 0x3b the multi-effect (EEE3DMultiEffect, 0xf4247..0xf43c7), 0x34 the energy wall
 // (EEE3DEnergyWall, 0xed606..0xee1b4), 0x35 the damage vent (EEE3DDamageVent, 0xea9e2..0xebbba), 2 the icon
-// (EEE3DIcon, 0xf2046..0xf2d93) and 0x3c the goal (EEE3DGoal, 0xf1327..0xf1600), all deleted.
+// (EEE3DIcon, 0xf2046..0xf2d93), 0x3c the goal (EEE3DGoal, 0xf1327..0xf1600) and 0x40 the tracer beam
+// (EEE3DTracerBeam, 0xfc382..0xfd330), all deleted.
 // Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
@@ -26,7 +27,7 @@ public:
     EEE3DRust(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind);   // at a point
     // a shot from the unit's weapon point to a point (the pulse cannon ball), the citizen beam towards it
     EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
-    // a shot on inTo from inFrom's weapon point (the tracers, the shells)
+    // a shot on inTo from inFrom's weapon point (the tracers, the shells); the tracer beam from inFrom to inTo
     EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind);
     // from one point to another (the linear projectile)
     EEE3DRust(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind);
@@ -50,6 +51,8 @@ public:
     void SetLocation(const GE3DPoint& inLocation);
     // the energy wall's: also true where the current player holds a doppelganger of its unit (then marked seen)
     virtual bool IsTileVisible(EEMapTile* inTile);
+    // the tracer beam's: its target too unless the effect keeps its unit (EEE3DTracerBeam::ReplaceUnit, 0xfd10f)
+    virtual void ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit);
 
     // inArg: a constructor's unit, point or line (the multi-effect's linked effects are made through it)
     long Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues = NULL, const EeGfxEffectFile* inFile = NULL, long inBase = 0,
@@ -58,6 +61,7 @@ public:
     EEGraphicObject* mGraphicObject = NULL;
     EEGraphicObject* mUnitModel = NULL;     // the additive pass's: its unit's model (EEModel), loaded while it lives
     SESMInstanceNode* mSound = NULL;        // the disease's, virus's and hurricane's animation sound
+    EEUnit* mTarget = NULL;                 // the tracer beam's target unit (referenced; -1 from Load to RepairPointers)
 };
 
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)

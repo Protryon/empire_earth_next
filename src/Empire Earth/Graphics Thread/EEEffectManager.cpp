@@ -75,7 +75,6 @@
 #include "ee/EEEDamagedEffect.h"
 #include "ee/EEE3DRust.h"
 #include "ee/EEE2DRust.h"
-#include "ee/EEE3DTracerBeam.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
 #include "ee/EEE3DVolcano.h"
@@ -203,7 +202,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DGoal: theEffect = new EEE3DRust(0x3c); break;
     case kEffect3DTeleport: theEffect = new EEE3DRust(0x3f); break;
     case kEffect3DTimeWarp: theEffect = new EEE3DRust(0x44); break;
-    case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(0x40); break;
+    case kEffect3DTracerBeam: theEffect = new EEE3DRust(0x40); break;
     case kEffect3DPulseCannonBall: theEffect = new EEE3DRust(0x43); break;
     case kEffect3DShield: theEffect = new EEE3DRust(kEffect3DShield); break;
     case kEffect2DVortex: theEffect = new EEE2DVortex(); break;
@@ -329,7 +328,7 @@ long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEG
     case kEffect3DTracers: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x21); break;
     case kEffect3DShells: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x26); break;
     case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inFrom, inTo, inEffect); break;
-    case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(inFrom, inTo, inEffect, 0x40); break;
+    case kEffect3DTracerBeam: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x40); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
@@ -351,7 +350,7 @@ long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGrap
     case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DSmokeMuzzleBlast(inUnit, inLocation, inEffect); break;
     case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inUnit, inLocation, inEffect); break;
     case kEffect3DCitizenBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x33); break;
-    case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(inUnit, inLocation, inEffect, 0x40); break;
+    case kEffect3DTracerBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x40); break;
     case kEffect3DCommandConfirmation:
         theEffect = new EEE2DRust(inUnit, inLocation, inEffect, inUnknown, 0x41);
         break;

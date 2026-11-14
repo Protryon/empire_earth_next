@@ -13,7 +13,6 @@ use crate::effect_state::{
     EeGfxSmokeSetUp, EeGfxSmokeTick, EffectFile, EffectParts, EmitterHost, ParticleGround, SmokeHost,
 };
 use crate::effect_storm::{self, EeGfxStormDraw, EeGfxStormLists, StormHost};
-use crate::effect_tracer::{self, EeGfxTracerTick};
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
 /// type; `context` is the file).
@@ -1219,48 +1218,6 @@ pub unsafe extern "C" fn ee_gfx_storm_load(r: *mut EeGfxEffectRecord, file: *con
 pub unsafe extern "C" fn ee_gfx_storm_save(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
     // SAFETY: the function's contract
     unsafe { on_storm(r, |r, l| effect_storm::save_storm(r, l, &mut File(&*file))) }
-}
-
-// ---- the tracer beams (effect_tracer.rs)
-
-/// `EEE3DTracerBeam::Step`'s timing after the C++'s aim: its events (`EE_GFX_TRACER_*`).
-///
-/// # Safety
-/// `r` is a live record; `tick` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_tracer_step(r: *mut EeGfxEffectRecord, tick: *const EeGfxTracerTick) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let t = *tick;
-        on_copy(r, |r| effect_tracer::tracer_step(r, &t))
-    }
-}
-
-/// `EEE3DTracerBeam::Load`'s own reads after the media load succeeded (`id`, `read`: the target's saved id).
-///
-/// # Safety
-/// `r` is a live record; `file`, `id` and `read` are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_tracer_load(
-    r: *mut EeGfxEffectRecord,
-    file: *const EeGfxEffectFile,
-    major: u32,
-    minor: u32,
-    id: *mut u32,
-    read: *mut bool,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_tracer::load_tracer(r, &mut File(&*file), major, minor, &mut *id, &mut *read)) }
-}
-
-/// `EEE3DTracerBeam::Save`'s own writes after `EEEffect3D::Save`'s (`id`: the target's, -1 for none).
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_tracer_save(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile, id: u32) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { effect_tracer::save_tracer(&*r, &mut File(&*file), id) }
 }
 
 /// One virtual of an `EEE3DRust` (the effects whole in Rust: `effect_rising.rs`), drawing through `raster`.
