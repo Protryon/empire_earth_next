@@ -191,7 +191,7 @@ EESEUITechListBox::EESEUITechListBox(unsigned long inID, std::vector<UWideString
     : UILBString(inID, inStrings, inFont, inAutoSelect, GERectangle(inLocation, (float)inWidth, (float)inHeight),
                  inForm, inIndex, inBorderThickness)
 {
-    this->mSelectedBackground->SetColor(GEColor(0.0f, 0.38f, 0.0f));
+    this->GetSelectedBackground()->SetColor(GEColor(0.0f, 0.38f, 0.0f));
 }
 
 // FUNCTION: EXE 0x597709
@@ -215,7 +215,7 @@ long EESEUITechListBox::CopyData()
         unsigned long theFirst;
         unsigned long theLast;
         unsigned long theSelection;
-        if (this->mScrollBar != NULL) {
+        if (this->ScrollBarExists()) {
             theFirst = this->GetDisplayLine();
             theLast = this->GetNumberLinesDisplayed() + theFirst;
         } else {
@@ -264,8 +264,8 @@ long EESEUITechListBox::DrawPolygons()
         theRectangle.SetLeft(this->GetCopyTextRectangle().GetLeft());
         theRectangle.SetRight(this->GetCopyTextRectangle().GetRight());
         for (unsigned long i = 0; i < this->mDependents.size(); i++) {
-            theRectangle.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->mDependents[i] * this->mLineHeight));
-            theRectangle.SetBottom(theRectangle.GetTop() + (float)this->mLineHeight);
+            theRectangle.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->mDependents[i] * this->GetLineHeight()));
+            theRectangle.SetBottom(theRectangle.GetTop() + (float)this->GetLineHeight());
             theRhombus.SetRectangle(theRectangle);
             theResult = this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
         }

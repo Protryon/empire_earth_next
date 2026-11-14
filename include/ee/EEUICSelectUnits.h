@@ -28,6 +28,10 @@ public:
     // inline accessors (EERenderObject::FillRenderLists picks the units in the drawn box; provisional names)
     bool GetIsDrawn() const { return this->mD1; }
     const GERectangle& GetSelectionRectangle() const { return this->mRA0; }
+    // New (port), TEST ONLY readers for the UI fixture's box selection (EETestFixture.cpp): the drag state the UI
+    // thread last reached
+    bool GetIsDragging() const { return this->mDragging; }
+    const GE2DPoint& GetDragEnd() const { return this->mDragEnd; }
 protected:
     virtual long MouseLButtonDown() { return 0; }
     virtual long MouseLButtonUp();          // +0x38 0x259bda

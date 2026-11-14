@@ -646,10 +646,16 @@ impl<H: Host> MsgMgr<H> {
             s.current = if s.current == RING - 1 { 0 } else { s.current + 1 };
             s.sent[s.current].msg
         });
-        if old != 0 {
-            self.host.msg_dereference(old);
+        if old == m {
+            // a message resent into the entry that already holds it (a send-to-all-and-wait still unanswered 50
+            // stores later): the original released it there, freeing its last reference, then took the freed
+            // message again; it keeps its one reference
+        } else {
+            if old != 0 {
+                self.host.msg_dereference(old);
+            }
+            self.host.msg_reference(m);
         }
-        self.host.msg_reference(m);
         let time = if guaranteed { self.host.time() } else { 0 };
         self.with_s(|s| {
             let num_clients = s.num_clients;

@@ -70,7 +70,7 @@ EEUICWonNetRoomsBox::EEUICWonNetRoomsBox(unsigned long inId, GEFont* inFont, con
     this->mText = new GEText(inFont);
     this->mText->SetFgColor(GEColor());
     this->mText->SetIsTransparent(true);
-    this->mSelectedBackground->SetColor(GEColor(0.0f, 0.0f, 0.0f));
+    this->GetSelectedBackground()->SetColor(GEColor(0.0f, 0.0f, 0.0f));
     this->SetFocusedRectColor(GEColor(0.0f, 0.0f, 0.0f));
 }
 
@@ -104,8 +104,8 @@ long EEUICWonNetRoomsBox::DrawTextA()
     UIControl::DrawTextA();
     theResult = kErrorOK;
     for (unsigned long i = 0; i < this->GetDrawCount(); i++) {
-        theRect.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->mLineHeight * i));
-        theRect.SetBottom(theRect.GetTop() + (float)this->mLineHeight);
+        theRect.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->GetLineHeight() * i));
+        theRect.SetBottom(theRect.GetTop() + (float)this->GetLineHeight());
         for (unsigned long j = 0; j < 4; j++) {
             switch (j) {
             case 0:

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "platform/PlatThread.h"
+#include "rust/ee_ts.h"
 #include "lle/LowLevelEngine.h"
 #ifdef NE_PROTOCOL_ORIG
 #include "orig_p/lle/NEProtocol.h"   // the original's (tests/net/orig_p: the units before LLE Network Engine round 2)
@@ -64,23 +65,22 @@ unsigned long TMGetTime()
 {
     return 1000;
 }
-long TSScheduler::CreateCriticalSection(TSCriticalSection*& outSection)
+long TSScheduler::CreateCriticalSection(TSCriticalSection*& outSection)   // as TSScheduler.cpp (ee_ts)
 {
-    outSection = new TSCriticalSection;
+    outSection = reinterpret_cast<TSCriticalSection*>(ee_ts_section_new());
     return kErrorOK;
 }
 void TSScheduler::DestroyCriticalSection(TSCriticalSection* inSection)
 {
-    delete inSection;
+    ee_ts_section_free(reinterpret_cast<EeTsSection*>(inSection));
 }
 long TSScheduler::CreateEvent(TSEvent*& outEvent, bool inManualReset)
 {
-    outEvent = new TSEvent(PlatEventCreate(inManualReset, 0), inManualReset);
-    return kErrorOK;
+    return ee_ts_event_new(reinterpret_cast<EeTsEvent**>(&outEvent), inManualReset);
 }
 void TSScheduler::DestroyEvent(TSEvent* inEvent)
 {
-    delete inEvent;
+    ee_ts_event_free(reinterpret_cast<EeTsEvent*>(inEvent));
 }
 float URandom::Generate()   // as GEBitmap.cpp
 {
@@ -402,7 +402,7 @@ static void Run(int inSteps)
     TSEvent* theEvents[3];
     for (int i = 0; i < 3; i++) {
         TSScheduler::CreateEvent(theEvents[i]);
-        Id(theEvents[i]->mHandle);
+        Id(theEvents[i]->GetHandle());
     }
     std::vector<NEServer*> theServers;
     std::vector<NEConnection*> theConnections;

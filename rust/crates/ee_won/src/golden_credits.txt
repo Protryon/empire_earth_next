@@ -1,0 +1,3384 @@
+seq 0 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 2 225 1 4352
+op 3 225 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8312 16384 2
+op 94 8312 0 0 = 40
+op 32 16384 0 0 = 0
+op 33 16384 0 0 = 150
+op 36 16384 60 150 = 0
+op 93 1472 8312 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8216 16384 1
+op 94 8216 0 0 = 200
+op 32 16384 0 0 = 150
+op 33 16384 0 0 = 300
+op 36 16384 220 300 = 0
+op 93 1472 8216 1 = 0
+ret 0
+call 26 8280 16416 1
+op 94 8280 0 0 = 80
+op 32 16416 0 0 = 200
+op 93 1472 8280 1 = 0
+ret 0
+call 26 8272 16384 1
+op 94 8272 0 0 = 0
+op 32 16384 0 0 = 150
+op 93 1472 8272 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 1 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8232 16400 2
+op 94 8232 0 0 = 280
+op 32 16400 0 0 = 300
+op 93 1472 8232 2 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8280 16400 1
+op 94 8280 0 0 = 280
+op 32 16400 0 0 = 200
+op 33 16400 0 0 = 250
+op 36 16400 300 250 = 0
+op 93 1472 8280 1 = 0
+ret 0
+call 2 225 4 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8216 16416 1
+op 94 8216 0 0 = 320
+op 32 16416 0 0 = 350
+op 93 1472 8216 1 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 2 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 2 225 1 4352
+op 3 225 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8208 16416 2
+op 94 8208 0 0 = 120
+op 32 16416 0 0 = 250
+op 93 1472 8208 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 3 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8216 16400 2
+op 94 8216 0 0 = 40
+op 32 16400 0 0 = 150
+op 93 1472 8216 2 = 0
+ret 0
+call 26 8264 16416 0
+op 94 8264 0 0 = 160
+op 32 16416 0 0 = 250
+op 93 1472 8264 0 = 0
+ret 0
+call 26 8192 16416 1
+op 94 8192 0 0 = 320
+op 32 16416 0 0 = 300
+op 33 16416 0 0 = 300
+op 36 16416 340 300 = 0
+op 93 1472 8192 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8272 16400 1
+op 94 8272 0 0 = 240
+op 32 16400 0 0 = 300
+op 93 1472 8272 1 = 0
+ret 0
+call 26 8312 16400 0
+op 94 8312 0 0 = 160
+op 32 16400 0 0 = 100
+op 33 16400 0 0 = 50
+op 36 16400 180 50 = 0
+op 93 1472 8312 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 4 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8304 16416 1
+op 94 8304 0 0 = 280
+op 32 16416 0 0 = 100
+op 33 16416 0 0 = 200
+op 36 16416 300 200 = 0
+op 93 1472 8304 1 = 0
+ret 0
+call 26 8200 16384 2
+op 94 8200 0 0 = 360
+op 32 16384 0 0 = 100
+op 33 16384 0 0 = 150
+op 36 16384 380 150 = 0
+op 93 1472 8200 2 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8248 16384 0
+op 94 8248 0 0 = 40
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 300
+op 36 16384 60 300 = 0
+op 93 1472 8248 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8232 16400 1
+op 94 8232 0 0 = 80
+op 32 16400 0 0 = 300
+op 93 1472 8232 1 = 0
+ret 0
+call 26 8216 16384 2
+op 94 8216 0 0 = 200
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 300
+op 36 16384 220 300 = 0
+op 93 1472 8216 2 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 5 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8224 16400 0
+op 94 8224 0 0 = 120
+op 32 16400 0 0 = 0
+op 33 16400 0 0 = 250
+op 36 16400 140 250 = 0
+op 93 1472 8224 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 2 225 1 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8312 16384 0
+op 94 8312 0 0 = 320
+op 32 16384 0 0 = 150
+op 33 16384 0 0 = 50
+op 36 16384 340 50 = 0
+op 93 1472 8312 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8216 16384 0
+op 94 8216 0 0 = 80
+op 32 16384 0 0 = 100
+op 93 1472 8216 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 6 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8240 16416 0
+op 94 8240 0 0 = 40
+op 32 16416 0 0 = 350
+op 93 1472 8240 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 26 8232 16416 1
+op 94 8232 0 0 = 120
+op 32 16416 0 0 = 150
+op 93 1472 8232 1 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8208 16400 1
+op 94 8208 0 0 = 200
+op 32 16400 0 0 = 300
+op 93 1472 8208 1 = 0
+ret 0
+call 26 8264 16384 0
+op 94 8264 0 0 = 40
+op 32 16384 0 0 = 150
+op 93 1472 8264 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 7 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8192 16416 2
+op 94 8192 0 0 = 280
+op 32 16416 0 0 = 250
+op 33 16416 0 0 = 250
+op 36 16416 300 250 = 0
+op 93 1472 8192 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8200 16384 1
+op 94 8200 0 0 = 200
+op 32 16384 0 0 = 300
+op 93 1472 8200 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 8 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 26 8304 16416 1
+op 94 8304 0 0 = 120
+op 32 16416 0 0 = 200
+op 93 1472 8304 1 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 9 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8264 16416 1
+op 94 8264 0 0 = 360
+op 32 16416 0 0 = 100
+op 33 16416 0 0 = 300
+op 36 16416 380 300 = 0
+op 93 1472 8264 1 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8264 16384 1
+op 94 8264 0 0 = 80
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 300
+op 36 16384 100 300 = 0
+op 93 1472 8264 1 = 0
+ret 0
+call 26 8296 16416 1
+op 94 8296 0 0 = 0
+op 32 16416 0 0 = 350
+op 93 1472 8296 1 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 10 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 26 8232 16384 1
+op 94 8232 0 0 = 280
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 350
+op 36 16384 300 350 = 0
+op 93 1472 8232 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8192 16416 2
+op 94 8192 0 0 = 40
+op 32 16416 0 0 = 150
+op 93 1472 8192 2 = 0
+ret 0
+call 26 8224 16400 2
+op 94 8224 0 0 = 200
+op 32 16400 0 0 = 150
+op 33 16400 0 0 = 0
+op 36 16400 220 0 = 0
+op 93 1472 8224 2 = 0
+ret 0
+call 26 8240 16400 2
+op 94 8240 0 0 = 120
+op 32 16400 0 0 = 300
+op 93 1472 8240 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8224 16400 0
+op 94 8224 0 0 = 80
+op 32 16400 0 0 = 350
+op 93 1472 8224 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 11 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8304 16384 2
+op 94 8304 0 0 = 120
+op 32 16384 0 0 = 350
+op 93 1472 8304 2 = 0
+ret 0
+call 26 8296 16416 1
+op 94 8296 0 0 = 360
+op 32 16416 0 0 = 100
+op 33 16416 0 0 = 250
+op 36 16416 380 250 = 0
+op 93 1472 8296 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8200 16400 0
+op 94 8200 0 0 = 200
+op 32 16400 0 0 = 300
+op 93 1472 8200 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8288 16400 2
+op 94 8288 0 0 = 40
+op 32 16400 0 0 = 150
+op 93 1472 8288 2 = 0
+ret 0
+call 26 8248 16416 1
+op 94 8248 0 0 = 0
+op 32 16416 0 0 = 250
+op 93 1472 8248 1 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 12 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8256 16384 0
+op 94 8256 0 0 = 360
+op 32 16384 0 0 = 300
+op 33 16384 0 0 = 350
+op 36 16384 380 350 = 0
+op 93 1472 8256 0 = 0
+ret 0
+call 26 8216 16416 0
+op 94 8216 0 0 = 320
+op 32 16416 0 0 = 300
+op 33 16416 0 0 = 300
+op 36 16416 340 300 = 0
+op 93 1472 8216 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8296 16416 2
+op 94 8296 0 0 = 360
+op 32 16416 0 0 = 100
+op 33 16416 0 0 = 100
+op 36 16416 380 100 = 0
+op 93 1472 8296 2 = 0
+ret 0
+call 26 8208 16416 1
+op 94 8208 0 0 = 40
+op 32 16416 0 0 = 50
+op 33 16416 0 0 = 350
+op 36 16416 60 350 = 0
+op 93 1472 8208 1 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8224 16416 2
+op 94 8224 0 0 = 240
+op 32 16416 0 0 = 250
+op 33 16416 0 0 = 0
+op 36 16416 260 0 = 0
+op 93 1472 8224 2 = 0
+ret 0
+call 2 225 4 4352
+op 3 225 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 13 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8280 16400 0
+op 94 8280 0 0 = 280
+op 32 16400 0 0 = 200
+op 33 16400 0 0 = 0
+op 36 16400 300 0 = 0
+op 93 1472 8280 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8304 16416 0
+op 94 8304 0 0 = 280
+op 32 16416 0 0 = 0
+op 33 16416 0 0 = 150
+op 36 16416 300 150 = 0
+op 93 1472 8304 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8192 16384 1
+op 94 8192 0 0 = 360
+op 32 16384 0 0 = 150
+op 33 16384 0 0 = 100
+op 36 16384 380 100 = 0
+op 93 1472 8192 1 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 14 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8216 16400 2
+op 94 8216 0 0 = 120
+op 32 16400 0 0 = 100
+op 33 16400 0 0 = 0
+op 36 16400 140 0 = 0
+op 93 1472 8216 2 = 0
+ret 0
+call 26 8296 16400 1
+op 94 8296 0 0 = 240
+op 32 16400 0 0 = 50
+op 33 16400 0 0 = 50
+op 36 16400 260 50 = 0
+op 93 1472 8296 1 = 0
+ret 0
+call 26 8208 16384 0
+op 94 8208 0 0 = 320
+op 32 16384 0 0 = 200
+op 33 16384 0 0 = 100
+op 36 16384 340 100 = 0
+op 93 1472 8208 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8280 16416 1
+op 94 8280 0 0 = 280
+op 32 16416 0 0 = 100
+op 33 16416 0 0 = 300
+op 36 16416 300 300 = 0
+op 93 1472 8280 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8200 16384 0
+op 94 8200 0 0 = 200
+op 32 16384 0 0 = 150
+op 33 16384 0 0 = 300
+op 36 16384 220 300 = 0
+op 93 1472 8200 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 15 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8256 16400 1
+op 94 8256 0 0 = 360
+op 32 16400 0 0 = 50
+op 33 16400 0 0 = 0
+op 36 16400 380 0 = 0
+op 93 1472 8256 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8296 16400 0
+op 94 8296 0 0 = 160
+op 32 16400 0 0 = 150
+op 33 16400 0 0 = 300
+op 36 16400 180 300 = 0
+op 93 1472 8296 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 16 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8224 16384 0
+op 94 8224 0 0 = 200
+op 32 16384 0 0 = 350
+op 93 1472 8224 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8280 16384 1
+op 94 8280 0 0 = 200
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 250
+op 36 16384 220 250 = 0
+op 93 1472 8280 1 = 0
+ret 0
+call 26 8272 16416 0
+op 94 8272 0 0 = 120
+op 32 16416 0 0 = 300
+op 93 1472 8272 0 = 0
+ret 0
+call 26 8264 16400 1
+op 94 8264 0 0 = 360
+op 32 16400 0 0 = 50
+op 33 16400 0 0 = 0
+op 36 16400 380 0 = 0
+op 93 1472 8264 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 17 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8264 16400 0
+op 94 8264 0 0 = 120
+op 32 16400 0 0 = 300
+op 93 1472 8264 0 = 0
+ret 0
+call 26 8208 16416 0
+op 94 8208 0 0 = 360
+op 32 16416 0 0 = 250
+op 33 16416 0 0 = 300
+op 36 16416 380 300 = 0
+op 93 1472 8208 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8200 16384 2
+op 94 8200 0 0 = 80
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 0
+op 36 16384 100 0 = 0
+op 93 1472 8200 2 = 0
+ret 0
+call 26 8192 16400 0
+op 94 8192 0 0 = 0
+op 32 16400 0 0 = 0
+op 33 16400 0 0 = 350
+op 36 16400 20 350 = 0
+op 93 1472 8192 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8296 16416 2
+op 94 8296 0 0 = 40
+op 32 16416 0 0 = 0
+op 33 16416 0 0 = 150
+op 36 16416 60 150 = 0
+op 93 1472 8296 2 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 18 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8272 16384 2
+op 94 8272 0 0 = 360
+op 32 16384 0 0 = 200
+op 33 16384 0 0 = 100
+op 36 16384 380 100 = 0
+op 93 1472 8272 2 = 0
+ret 0
+call 26 8288 16384 1
+op 94 8288 0 0 = 320
+op 32 16384 0 0 = 0
+op 33 16384 0 0 = 300
+op 36 16384 340 300 = 0
+op 93 1472 8288 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8312 16400 1
+op 94 8312 0 0 = 320
+op 32 16400 0 0 = 50
+op 33 16400 0 0 = 0
+op 36 16400 340 0 = 0
+op 93 1472 8312 1 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8216 16416 0
+op 94 8216 0 0 = 40
+op 32 16416 0 0 = 200
+op 93 1472 8216 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 19 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8288 16384 0
+op 94 8288 0 0 = 200
+op 32 16384 0 0 = 150
+op 33 16384 0 0 = 100
+op 36 16384 220 100 = 0
+op 93 1472 8288 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8192 16384 2
+op 94 8192 0 0 = 280
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 150
+op 36 16384 300 150 = 0
+op 93 1472 8192 2 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8288 16400 2
+op 94 8288 0 0 = 280
+op 32 16400 0 0 = 100
+op 33 16400 0 0 = 350
+op 36 16400 300 350 = 0
+op 93 1472 8288 2 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 26 8208 16384 1
+op 94 8208 0 0 = 360
+op 32 16384 0 0 = 0
+op 33 16384 0 0 = 250
+op 36 16384 380 250 = 0
+op 93 1472 8208 1 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 20 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8280 16400 1
+op 94 8280 0 0 = 120
+op 32 16400 0 0 = 50
+op 33 16400 0 0 = 100
+op 36 16400 140 100 = 0
+op 93 1472 8280 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8240 16384 0
+op 94 8240 0 0 = 200
+op 32 16384 0 0 = 150
+op 33 16384 0 0 = 0
+op 36 16384 220 0 = 0
+op 93 1472 8240 0 = 0
+ret 0
+call 26 8208 16416 0
+op 94 8208 0 0 = 240
+op 32 16416 0 0 = 200
+op 33 16416 0 0 = 350
+op 36 16416 260 350 = 0
+op 93 1472 8208 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 26 8216 16416 1
+op 94 8216 0 0 = 360
+op 32 16416 0 0 = 200
+op 33 16416 0 0 = 250
+op 36 16416 380 250 = 0
+op 93 1472 8216 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8192 16400 1
+op 94 8192 0 0 = 360
+op 32 16400 0 0 = 200
+op 33 16400 0 0 = 0
+op 36 16400 380 0 = 0
+op 93 1472 8192 1 = 0
+ret 0
+call 26 8256 16384 0
+op 94 8256 0 0 = 320
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 150
+op 36 16384 340 150 = 0
+op 93 1472 8256 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 21 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8296 16384 1
+op 94 8296 0 0 = 360
+op 32 16384 0 0 = 0
+op 33 16384 0 0 = 150
+op 36 16384 380 150 = 0
+op 93 1472 8296 1 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8232 16384 2
+op 94 8232 0 0 = 160
+op 32 16384 0 0 = 250
+op 93 1472 8232 2 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 22 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 2 225 1 4352
+op 3 225 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 26 8200 16400 2
+op 94 8200 0 0 = 200
+op 32 16400 0 0 = 300
+op 93 1472 8200 2 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8312 16384 1
+op 94 8312 0 0 = 200
+op 32 16384 0 0 = 250
+op 93 1472 8312 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 23 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8264 16400 0
+op 94 8264 0 0 = 40
+op 32 16400 0 0 = 250
+op 93 1472 8264 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8224 16384 1
+op 94 8224 0 0 = 320
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 0
+op 36 16384 340 0 = 0
+op 93 1472 8224 1 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8280 16416 2
+op 94 8280 0 0 = 80
+op 32 16416 0 0 = 150
+op 93 1472 8280 2 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 24 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8296 16400 2
+op 94 8296 0 0 = 360
+op 32 16400 0 0 = 150
+op 33 16400 0 0 = 200
+op 36 16400 380 200 = 0
+op 93 1472 8296 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8208 16384 1
+op 94 8208 0 0 = 0
+op 32 16384 0 0 = 50
+op 93 1472 8208 1 = 0
+ret 0
+call 26 8224 16400 2
+op 94 8224 0 0 = 80
+op 32 16400 0 0 = 350
+op 93 1472 8224 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8264 16384 0
+op 94 8264 0 0 = 160
+op 32 16384 0 0 = 250
+op 93 1472 8264 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8280 16416 2
+op 94 8280 0 0 = 120
+op 32 16416 0 0 = 300
+op 93 1472 8280 2 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 25 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8232 16416 1
+op 94 8232 0 0 = 200
+op 32 16416 0 0 = 50
+op 33 16416 0 0 = 200
+op 36 16416 220 200 = 0
+op 93 1472 8232 1 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8200 16416 2
+op 94 8200 0 0 = 320
+op 32 16416 0 0 = 150
+op 33 16416 0 0 = 150
+op 36 16416 340 150 = 0
+op 93 1472 8200 2 = 0
+ret 0
+call 26 8256 16416 0
+op 94 8256 0 0 = 240
+op 32 16416 0 0 = 50
+op 33 16416 0 0 = 250
+op 36 16416 260 250 = 0
+op 93 1472 8256 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 26 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8192 16384 1
+op 94 8192 0 0 = 40
+op 32 16384 0 0 = 0
+op 33 16384 0 0 = 250
+op 36 16384 60 250 = 0
+op 93 1472 8192 1 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8272 16400 1
+op 94 8272 0 0 = 280
+op 32 16400 0 0 = 250
+op 33 16400 0 0 = 0
+op 36 16400 300 0 = 0
+op 93 1472 8272 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8256 16416 0
+op 94 8256 0 0 = 200
+op 32 16416 0 0 = 150
+op 33 16416 0 0 = 200
+op 36 16416 220 200 = 0
+op 93 1472 8256 0 = 0
+ret 0
+call 26 8216 16400 2
+op 94 8216 0 0 = 360
+op 32 16400 0 0 = 350
+op 33 16400 0 0 = 150
+op 36 16400 380 150 = 0
+op 93 1472 8216 2 = 0
+ret 0
+call 26 8256 16400 2
+op 94 8256 0 0 = 240
+op 32 16400 0 0 = 300
+op 93 1472 8256 2 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 27 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8312 16400 1
+op 94 8312 0 0 = 360
+op 32 16400 0 0 = 300
+op 33 16400 0 0 = 250
+op 36 16400 380 250 = 0
+op 93 1472 8312 1 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 4 1 0 0
+ret 4608
+call 4 1 0 0
+ret 4608
+call 26 8296 16416 1
+op 94 8296 0 0 = 240
+op 32 16416 0 0 = 300
+op 93 1472 8296 1 = 0
+ret 0
+call 26 8208 16400 0
+op 94 8208 0 0 = 0
+op 32 16400 0 0 = 0
+op 33 16400 0 0 = 200
+op 36 16400 20 200 = 0
+op 93 1472 8208 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 28 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8312 16416 0
+op 94 8312 0 0 = 200
+op 32 16416 0 0 = 250
+op 93 1472 8312 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 29 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8192 16416 1
+op 94 8192 0 0 = 40
+op 32 16416 0 0 = 150
+op 93 1472 8192 1 = 0
+ret 0
+call 26 8224 16416 2
+op 94 8224 0 0 = 240
+op 32 16416 0 0 = 250
+op 33 16416 0 0 = 50
+op 36 16416 260 50 = 0
+op 93 1472 8224 2 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8272 16416 2
+op 94 8272 0 0 = 0
+op 32 16416 0 0 = 300
+op 93 1472 8272 2 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 30 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8312 16400 1
+op 94 8312 0 0 = 360
+op 32 16400 0 0 = 100
+op 33 16400 0 0 = 300
+op 36 16400 380 300 = 0
+op 93 1472 8312 1 = 0
+ret 0
+call 26 8296 16400 1
+op 94 8296 0 0 = 80
+op 32 16400 0 0 = 150
+op 93 1472 8296 1 = 0
+ret 0
+call 26 8248 16400 0
+op 94 8248 0 0 = 0
+op 32 16400 0 0 = 50
+op 93 1472 8248 0 = 0
+ret 0
+call 26 8200 16384 1
+op 94 8200 0 0 = 360
+op 32 16384 0 0 = 150
+op 33 16384 0 0 = 200
+op 36 16384 380 200 = 0
+op 93 1472 8200 1 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8248 16384 0
+op 94 8248 0 0 = 0
+op 32 16384 0 0 = 100
+op 93 1472 8248 0 = 0
+ret 0
+call 26 8280 16416 0
+op 94 8280 0 0 = 120
+op 32 16416 0 0 = 50
+op 33 16416 0 0 = 300
+op 36 16416 140 300 = 0
+op 93 1472 8280 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 31 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8208 16416 2
+op 94 8208 0 0 = 200
+op 32 16416 0 0 = 0
+op 33 16416 0 0 = 350
+op 36 16416 220 350 = 0
+op 93 1472 8208 2 = 0
+ret 0
+call 26 8280 16384 1
+op 94 8280 0 0 = 0
+op 32 16384 0 0 = 200
+op 93 1472 8280 1 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 2 225 1 4352
+op 3 225 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 32 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 4 1 0 0
+ret 4608
+call 26 8192 16416 1
+op 94 8192 0 0 = 40
+op 32 16416 0 0 = 350
+op 93 1472 8192 1 = 0
+ret 0
+call 26 8216 16416 1
+op 94 8216 0 0 = 200
+op 32 16416 0 0 = 150
+op 33 16416 0 0 = 300
+op 36 16416 220 300 = 0
+op 93 1472 8216 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8304 16400 0
+op 94 8304 0 0 = 0
+op 32 16400 0 0 = 350
+op 93 1472 8304 0 = 0
+ret 0
+call 26 8208 16400 2
+op 94 8208 0 0 = 0
+op 32 16400 0 0 = 100
+op 93 1472 8208 2 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 33 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8312 16416 2
+op 94 8312 0 0 = 280
+op 32 16416 0 0 = 250
+op 33 16416 0 0 = 350
+op 36 16416 300 350 = 0
+op 93 1472 8312 2 = 0
+ret 0
+call 26 8272 16416 0
+op 94 8272 0 0 = 280
+op 32 16416 0 0 = 0
+op 33 16416 0 0 = 250
+op 36 16416 300 250 = 0
+op 93 1472 8272 0 = 0
+ret 0
+call 26 8264 16400 2
+op 94 8264 0 0 = 80
+op 32 16400 0 0 = 150
+op 93 1472 8264 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 34 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 2 225 1 4352
+op 3 225 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 2 225 1 4352
+op 3 225 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 35 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8280 16384 2
+op 94 8280 0 0 = 40
+op 32 16384 0 0 = 100
+op 93 1472 8280 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8280 16384 2
+op 94 8280 0 0 = 240
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 150
+op 36 16384 260 150 = 0
+op 93 1472 8280 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 4 2 0 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 36 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 2 225 4 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8288 16416 0
+op 94 8288 0 0 = 280
+op 32 16416 0 0 = 50
+op 33 16416 0 0 = 50
+op 36 16416 300 50 = 0
+op 93 1472 8288 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 37 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8216 16400 0
+op 94 8216 0 0 = 200
+op 32 16400 0 0 = 350
+op 93 1472 8216 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8288 16384 2
+op 94 8288 0 0 = 40
+op 32 16384 0 0 = 100
+op 93 1472 8288 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8240 16384 2
+op 94 8240 0 0 = 320
+op 32 16384 0 0 = 150
+op 33 16384 0 0 = 350
+op 36 16384 340 350 = 0
+op 93 1472 8240 2 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 38 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8200 16400 2
+op 94 8200 0 0 = 40
+op 32 16400 0 0 = 250
+op 93 1472 8200 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8296 16400 0
+op 94 8296 0 0 = 200
+op 32 16400 0 0 = 300
+op 93 1472 8296 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 26 8208 16416 2
+op 94 8208 0 0 = 320
+op 32 16416 0 0 = 0
+op 33 16416 0 0 = 100
+op 36 16416 340 100 = 0
+op 93 1472 8208 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 39 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8288 16384 2
+op 94 8288 0 0 = 280
+op 32 16384 0 0 = 200
+op 33 16384 0 0 = 100
+op 36 16384 300 100 = 0
+op 93 1472 8288 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 40 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8248 16416 1
+op 94 8248 0 0 = 120
+op 32 16416 0 0 = 100
+op 33 16416 0 0 = 100
+op 36 16416 140 100 = 0
+op 93 1472 8248 1 = 0
+ret 0
+call 26 8304 16400 2
+op 94 8304 0 0 = 320
+op 32 16400 0 0 = 150
+op 33 16400 0 0 = 150
+op 36 16400 340 150 = 0
+op 93 1472 8304 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8248 16416 0
+op 94 8248 0 0 = 0
+op 32 16416 0 0 = 150
+op 93 1472 8248 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8312 16400 2
+op 94 8312 0 0 = 360
+op 32 16400 0 0 = 350
+op 33 16400 0 0 = 200
+op 36 16400 380 200 = 0
+op 93 1472 8312 2 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 41 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8296 16400 1
+op 94 8296 0 0 = 40
+op 32 16400 0 0 = 50
+op 33 16400 0 0 = 150
+op 36 16400 60 150 = 0
+op 93 1472 8296 1 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8296 16416 1
+op 94 8296 0 0 = 240
+op 32 16416 0 0 = 200
+op 33 16416 0 0 = 0
+op 36 16416 260 0 = 0
+op 93 1472 8296 1 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 42 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8312 16416 0
+op 94 8312 0 0 = 280
+op 32 16416 0 0 = 350
+op 93 1472 8312 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8312 16416 0
+op 94 8312 0 0 = 280
+op 32 16416 0 0 = 50
+op 33 16416 0 0 = 300
+op 36 16416 300 300 = 0
+op 93 1472 8312 0 = 0
+ret 0
+call 26 8280 16416 1
+op 94 8280 0 0 = 280
+op 32 16416 0 0 = 300
+op 93 1472 8280 1 = 0
+ret 0
+call 26 8272 16416 2
+op 94 8272 0 0 = 160
+op 32 16416 0 0 = 300
+op 93 1472 8272 2 = 0
+ret 0
+call 26 8240 16384 0
+op 94 8240 0 0 = 240
+op 32 16384 0 0 = 250
+op 33 16384 0 0 = 350
+op 36 16384 260 350 = 0
+op 93 1472 8240 0 = 0
+ret 0
+call 26 8192 16400 0
+op 94 8192 0 0 = 160
+op 32 16400 0 0 = 200
+op 93 1472 8192 0 = 0
+ret 0
+call 26 8232 16400 0
+op 94 8232 0 0 = 0
+op 32 16400 0 0 = 350
+op 93 1472 8232 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 43 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8240 16400 0
+op 94 8240 0 0 = 120
+op 32 16400 0 0 = 300
+op 93 1472 8240 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 4 0 0 0
+ret 4352
+call 26 8232 16400 2
+op 94 8232 0 0 = 40
+op 32 16400 0 0 = 300
+op 93 1472 8232 2 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 26 8216 16400 0
+op 94 8216 0 0 = 80
+op 32 16400 0 0 = 150
+op 93 1472 8216 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8264 16400 2
+op 94 8264 0 0 = 360
+op 32 16400 0 0 = 350
+op 33 16400 0 0 = 250
+op 36 16400 380 250 = 0
+op 93 1472 8264 2 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 44 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8312 16416 1
+op 94 8312 0 0 = 40
+op 32 16416 0 0 = 200
+op 93 1472 8312 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8224 16416 2
+op 94 8224 0 0 = 160
+op 32 16416 0 0 = 100
+op 33 16416 0 0 = 50
+op 36 16416 180 50 = 0
+op 93 1472 8224 2 = 0
+ret 0
+call 26 8296 16416 1
+op 94 8296 0 0 = 240
+op 32 16416 0 0 = 200
+op 33 16416 0 0 = 0
+op 36 16416 260 0 = 0
+op 93 1472 8296 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 2 225 4 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8216 16400 0
+op 94 8216 0 0 = 280
+op 32 16400 0 0 = 50
+op 33 16400 0 0 = 300
+op 36 16400 300 300 = 0
+op 93 1472 8216 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8192 16416 0
+op 94 8192 0 0 = 320
+op 32 16416 0 0 = 350
+op 93 1472 8192 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 45 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8240 16384 2
+op 94 8240 0 0 = 280
+op 32 16384 0 0 = 150
+op 33 16384 0 0 = 200
+op 36 16384 300 200 = 0
+op 93 1472 8240 2 = 0
+ret 0
+call 26 8280 16400 1
+op 94 8280 0 0 = 360
+op 32 16400 0 0 = 150
+op 33 16400 0 0 = 250
+op 36 16400 380 250 = 0
+op 93 1472 8280 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8192 16384 2
+op 94 8192 0 0 = 0
+op 32 16384 0 0 = 50
+op 93 1472 8192 2 = 0
+ret 0
+call 26 8232 16400 2
+op 94 8232 0 0 = 0
+op 32 16400 0 0 = 50
+op 93 1472 8232 2 = 0
+ret 0
+call 26 8304 16384 0
+op 94 8304 0 0 = 80
+op 32 16384 0 0 = 300
+op 93 1472 8304 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 46 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 4 2 0 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8296 16400 0
+op 94 8296 0 0 = 120
+op 32 16400 0 0 = 50
+op 33 16400 0 0 = 200
+op 36 16400 140 200 = 0
+op 93 1472 8296 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8272 16416 2
+op 94 8272 0 0 = 280
+op 32 16416 0 0 = 200
+op 33 16416 0 0 = 100
+op 36 16416 300 100 = 0
+op 93 1472 8272 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 47 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 2 225 3 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8256 16400 2
+op 94 8256 0 0 = 360
+op 32 16400 0 0 = 0
+op 33 16400 0 0 = 250
+op 36 16400 380 250 = 0
+op 93 1472 8256 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 2 225 1 4352
+op 3 225 0 0 = 0
+ret 0
+call 2 225 4 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 48 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8232 16400 2
+op 94 8232 0 0 = 280
+op 32 16400 0 0 = 300
+op 93 1472 8232 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8256 16384 0
+op 94 8256 0 0 = 280
+op 32 16384 0 0 = 250
+op 33 16384 0 0 = 350
+op 36 16384 300 350 = 0
+op 93 1472 8256 0 = 0
+ret 0
+call 26 8208 16384 0
+op 94 8208 0 0 = 200
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 250
+op 36 16384 220 250 = 0
+op 93 1472 8208 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 49 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8192 16400 1
+op 94 8192 0 0 = 120
+op 32 16400 0 0 = 250
+op 93 1472 8192 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8216 16416 0
+op 94 8216 0 0 = 0
+op 32 16416 0 0 = 50
+op 93 1472 8216 0 = 0
+ret 0
+call 26 8296 16400 0
+op 94 8296 0 0 = 280
+op 32 16400 0 0 = 100
+op 33 16400 0 0 = 200
+op 36 16400 300 200 = 0
+op 93 1472 8296 0 = 0
+ret 0
+call 26 8224 16384 0
+op 94 8224 0 0 = 0
+op 32 16384 0 0 = 150
+op 93 1472 8224 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 4 2 0 0
+ret 0
+call 4 0 0 0
+ret 4352
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 50 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8232 16416 1
+op 94 8232 0 0 = 360
+op 32 16416 0 0 = 150
+op 33 16416 0 0 = 300
+op 36 16416 380 300 = 0
+op 93 1472 8232 1 = 0
+ret 0
+call 26 8248 16416 2
+op 94 8248 0 0 = 80
+op 32 16416 0 0 = 150
+op 93 1472 8248 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8296 16416 2
+op 94 8296 0 0 = 240
+op 32 16416 0 0 = 350
+op 93 1472 8296 2 = 0
+ret 0
+call 26 8296 16416 0
+op 94 8296 0 0 = 360
+op 32 16416 0 0 = 100
+op 33 16416 0 0 = 150
+op 36 16416 380 150 = 0
+op 93 1472 8296 0 = 0
+ret 0
+call 26 8224 16384 2
+op 94 8224 0 0 = 360
+op 32 16384 0 0 = 250
+op 33 16384 0 0 = 250
+op 36 16384 380 250 = 0
+op 93 1472 8224 2 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 51 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8280 16384 0
+op 94 8280 0 0 = 280
+op 32 16384 0 0 = 50
+op 33 16384 0 0 = 300
+op 36 16384 300 300 = 0
+op 93 1472 8280 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8232 16384 0
+op 94 8232 0 0 = 40
+op 32 16384 0 0 = 200
+op 93 1472 8232 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8256 16384 0
+op 94 8256 0 0 = 200
+op 32 16384 0 0 = 100
+op 33 16384 0 0 = 0
+op 36 16384 220 0 = 0
+op 93 1472 8256 0 = 0
+ret 0
+call 26 8296 16416 2
+op 94 8296 0 0 = 160
+op 32 16416 0 0 = 150
+op 33 16416 0 0 = 250
+op 36 16416 180 250 = 0
+op 93 1472 8296 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8304 16400 0
+op 94 8304 0 0 = 320
+op 32 16400 0 0 = 350
+op 93 1472 8304 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 52 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 2 225 1 4352
+op 3 225 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8312 16384 2
+op 94 8312 0 0 = 120
+op 32 16384 0 0 = 0
+op 33 16384 0 0 = 350
+op 36 16384 140 350 = 0
+op 93 1472 8312 2 = 0
+ret 0
+call 26 8240 16416 0
+op 94 8240 0 0 = 360
+op 32 16416 0 0 = 300
+op 33 16416 0 0 = 100
+op 36 16416 380 100 = 0
+op 93 1472 8240 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8192 16416 2
+op 94 8192 0 0 = 280
+op 32 16416 0 0 = 50
+op 33 16416 0 0 = 50
+op 36 16416 300 50 = 0
+op 93 1472 8192 2 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8272 16416 0
+op 94 8272 0 0 = 40
+op 32 16416 0 0 = 50
+op 33 16416 0 0 = 200
+op 36 16416 60 200 = 0
+op 93 1472 8272 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 53 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8192 16384 2
+op 94 8192 0 0 = 360
+op 32 16384 0 0 = 300
+op 33 16384 0 0 = 350
+op 36 16384 380 350 = 0
+op 93 1472 8192 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8296 16416 1
+op 94 8296 0 0 = 320
+op 32 16416 0 0 = 350
+op 93 1472 8296 1 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 2 225 2 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 54 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8208 16416 2
+op 94 8208 0 0 = 280
+op 32 16416 0 0 = 250
+op 33 16416 0 0 = 0
+op 36 16416 300 0 = 0
+op 93 1472 8208 2 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8216 16416 0
+op 94 8216 0 0 = 240
+op 32 16416 0 0 = 50
+op 33 16416 0 0 = 250
+op 36 16416 260 250 = 0
+op 93 1472 8216 0 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 55 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8248 16400 0
+op 94 8248 0 0 = 120
+op 32 16400 0 0 = 150
+op 93 1472 8248 0 = 0
+ret 0
+call 26 8304 16384 1
+op 94 8304 0 0 = 320
+op 32 16384 0 0 = 250
+op 33 16384 0 0 = 150
+op 36 16384 340 150 = 0
+op 93 1472 8304 1 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8272 16416 1
+op 94 8272 0 0 = 160
+op 32 16416 0 0 = 300
+op 93 1472 8272 1 = 0
+ret 0
+call 26 8280 16400 2
+op 94 8280 0 0 = 280
+op 32 16400 0 0 = 0
+op 33 16400 0 0 = 200
+op 36 16400 300 200 = 0
+op 93 1472 8280 2 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8272 16384 0
+op 94 8272 0 0 = 120
+op 32 16384 0 0 = 150
+op 93 1472 8272 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 56 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8272 16384 2
+op 94 8272 0 0 = 360
+op 32 16384 0 0 = 100
+op 33 16384 0 0 = 0
+op 36 16384 380 0 = 0
+op 93 1472 8272 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4608
+call 26 8272 16416 1
+op 94 8272 0 0 = 160
+op 32 16416 0 0 = 200
+op 93 1472 8272 1 = 0
+ret 0
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 57 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8240 16384 1
+op 94 8240 0 0 = 200
+op 32 16384 0 0 = 0
+op 33 16384 0 0 = 50
+op 36 16384 220 50 = 0
+op 93 1472 8240 1 = 0
+ret 0
+call 26 8272 16384 1
+op 94 8272 0 0 = 80
+op 32 16384 0 0 = 300
+op 93 1472 8272 1 = 0
+ret 0
+call 26 8280 16384 2
+op 94 8280 0 0 = 120
+op 32 16384 0 0 = 250
+op 93 1472 8280 2 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 26 8200 16416 1
+op 94 8200 0 0 = 200
+op 32 16416 0 0 = 350
+op 93 1472 8200 1 = 0
+ret 0
+call 26 8208 16400 2
+op 94 8208 0 0 = 200
+op 32 16400 0 0 = 350
+op 93 1472 8208 2 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 4 2 0 0
+ret 0
+call 26 8280 16400 2
+op 94 8280 0 0 = 280
+op 32 16400 0 0 = 250
+op 33 16400 0 0 = 0
+op 36 16400 300 0 = 0
+op 93 1472 8280 2 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 58 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 2 4352 0 0 = 0
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 2 4608 0 0 = 0
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8216 16400 2
+op 94 8216 0 0 = 120
+op 32 16400 0 0 = 350
+op 93 1472 8216 2 = 0
+ret 0
+call 2 225 4 4352
+op 3 225 0 0 = 0
+ret 0
+call 26 8264 16416 1
+op 94 8264 0 0 = 280
+op 32 16416 0 0 = 150
+op 33 16416 0 0 = 350
+op 36 16416 300 350 = 0
+op 93 1472 8264 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8288 16416 1
+op 94 8288 0 0 = 160
+op 32 16416 0 0 = 0
+op 33 16416 0 0 = 0
+op 36 16416 180 0 = 0
+op 93 1472 8288 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4352
+call 2 225 0 4352
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0
+seq 59 kind 14
+call 22 1472 0 0
+op 87 1472 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 CreditsButton CreditsDialog.cpp 271 1 = 4352
+op 1 119 CancelButton CreditsDialog.cpp 272 1 = 4608
+op 88 1472 4352 0 = 0
+op 89 1472 0 0 = 0
+op 7 4352 0 0 = 0
+ret 0
+call 26 8208 16416 2
+op 94 8208 0 0 = 360
+op 32 16416 0 0 = 250
+op 33 16416 0 0 = 50
+op 36 16416 380 50 = 0
+op 93 1472 8208 2 = 0
+ret 0
+call 25 0 0 0
+op 92 1472 0 0 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8216 16384 0
+op 94 8216 0 0 = 0
+op 32 16384 0 0 = 50
+op 93 1472 8216 0 = 0
+ret 0
+call 26 8232 16416 1
+op 94 8232 0 0 = 160
+op 32 16416 0 0 = 150
+op 33 16416 0 0 = 100
+op 36 16416 180 100 = 0
+op 93 1472 8232 1 = 0
+ret 0
+call 24 0 0 0
+op 91 1472 0 0 = 0
+ret 0
+call 26 8248 16416 1
+op 94 8248 0 0 = 160
+op 32 16416 0 0 = 250
+op 93 1472 8248 1 = 0
+ret 0
+call 23 0 0 0
+op 90 1472 0 0 = 0
+ret 0
+call 26 8208 16416 1
+op 94 8208 0 0 = 160
+op 32 16416 0 0 = 100
+op 33 16416 0 0 = 0
+op 36 16416 180 0 = 0
+op 93 1472 8208 1 = 0
+ret 0
+call 26 8224 16416 1
+op 94 8224 0 0 = 40
+op 32 16416 0 0 = 250
+op 93 1472 8224 1 = 0
+ret 0
+free
+op 2 4608 0 0 = 0
+op 2 4352 0 0 = 0
+op 2 1472 0 0 = 0

@@ -3,7 +3,7 @@
 //!
 //! The random map generator, the map's height edits and the scenario editor call the first two while a game is set up
 //! and played, so they are simulation code (RUST_PLAN 2.1): the C++'s `f32` operations in its order, and `unsigned
-//! long` index arithmetic that wraps as the C++'s does. The mesh stays C++; these read and write its rows in place
+//! long` index arithmetic that wraps as the C++'s does. These read and write the mesh's rows (`tmobj.rs`) in place
 //! through the `GeTerrainView` of `terrain.rs`. The file codec goes field by field through the file's own typed reads
 //! and writes (`io.rs`), so the bytes and the error behaviour are the C++'s.
 

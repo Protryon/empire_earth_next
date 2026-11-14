@@ -32,6 +32,9 @@ constexpr static const size_t TERRAIN_POLYGON_CAPACITY = 12000;
 
 constexpr static const size_t WATER_POLYGON_CAPACITY = 5000;
 
+/// `GETM_VISIBLE_POINTS`: the side of the visible point arrays.
+constexpr static const size_t EE_GE_TM_SIDE = 257;
+
 /// The calls a bitmap makes on other objects. `obj` is the object called; `a`, `b` as each says.
 enum class EeGeBmpOp : uint32_t {
   /// `GERasterizer::GetActiveRasterizer()`.
@@ -568,6 +571,62 @@ enum class EeGeTexVal : uint32_t {
   Manager,
 };
 
+/// The calls a terrain mesh makes on other objects. `obj` is the object called; `a`, `b` as each says.
+enum class EeGeTmOp : uint32_t {
+  /// `TMGetTime()`.
+  Time = 1,
+  /// `new U2DFractal(64, 0.0f, 10.5f, a)` -> the fractal.
+  FractalNew,
+  /// `delete (U2DFractal*)obj`.
+  FractalDelete,
+  /// `obj->GetValue(b >> 16, b & 0xffff)` into `*(float*)a`.
+  FractalValue,
+  /// `obj->ComputeFractal(0.0f, 10.5f, a)`.
+  FractalCompute,
+  /// `((const GEVector*)a)->GetQuantizedVersion()` -> the quantized vector.
+  Quantize,
+  /// `delete (GETextureSet*)obj`.
+  SetDelete,
+  /// `obj->GetNumTexturesInWidth()` (a texture set).
+  SetWidth,
+  /// `obj->GetNumTexturesInHeight()`.
+  SetHeight,
+  /// `obj->GetTextureTileCoverage()`.
+  SetCoverage,
+  /// `obj->GetTexture(a, b)`.
+  SetTexture,
+  /// `obj->GetTextureAt(a, b)`.
+  SetTextureAt,
+  /// `obj->Reference()` (a texture).
+  TexReference,
+  /// `obj->Dereference()` (a texture).
+  TexDereference,
+};
+
+/// The mesh's scalars and lists read through `ee_ge_tm_get` (`unsigned long`) and `ee_ge_tm_get_f` (`float`).
+enum class EeGeTmVal : uint32_t {
+  GlobalWaterSetId = 1,
+  NumVisibleTiles,
+  VisibleTileRows,
+  VisiblePolyCount,
+  TerrainMaterialCount,
+  WaterMaterialCount,
+  SpaceCliffTextureCount,
+  EdgeVertexCount,
+  CliffVertexCount,
+  BottomLeftX,
+  BottomLeftY,
+  VisibleTileWidth,
+  VisibleTileHeight,
+  TileRowCount,
+  SpaceTileCount,
+  /// floats
+  MinimumZ,
+  MaximumZ,
+  VisibleWaterPercentage,
+  VisibleSpacePercentage,
+};
+
 /// A texture's field (`EeGeManOp::TexGet` / `TexSet`'s `a`).
 enum class EeGeTexField : uint32_t {
   /// `mIsFromTexturePack` (0 or 1).
@@ -615,14 +674,14 @@ struct EeGeModel;
 /// The model manager.
 struct EeGeModelManager;
 
+/// The terrain mesh.
+struct EeGeTerrainMesh;
+
 /// The texture.
 struct EeGeTexture;
 
 /// The texture manager.
 struct EeGeTextureManager;
-
-/// The plan of one frame.
-struct EeGeVisiblePlan;
 
 /// The host: `owner` is the C++ bitmap of the object calling.
 using EeGeBmpHostFn = ptrdiff_t(*)(void *owner, EeGeBmpOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
@@ -725,56 +784,6 @@ struct EeGeTerrainView {
   const EeGeTmRow *tile_rows;
   unsigned long tile_row_count;
   const EeGe3DPlane *planes;
-};
-
-/// What `UpdateFogOfWar` reads and writes besides the tile rows: the visible area and its point arrays
-/// (`[side][side]`, indexed `[x - bottom left x][y - bottom left y]`), the render vertices reached through a pointer
-/// to the first one's `mVisibility` and the vertex size.
-struct EeGeTerrainFog {
-  size_t visible_row_count;
-  unsigned long bottom_left_x;
-  unsigned long bottom_left_y;
-  unsigned long tile_width;
-  unsigned long tile_height;
-  unsigned long num_visible_tiles;
-  size_t side;
-  const uint8_t *terrain_point_visible;
-  const uint8_t *water_point_visible;
-  float *terrain_visibility;
-  float *water_visibility;
-  size_t vertex_stride;
-  bool all_visible;
-};
-
-/// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
-struct EeGeFieldIo {
-  void *file;
-  long (*read_u8)(void *file, uint8_t *out);
-  long (*read_u16)(void *file, uint16_t *out);
-  long (*read_u32)(void *file, uint32_t *out);
-  long (*read_f32)(void *file, float *out);
-  long (*write_u8)(void *file, uint8_t value);
-  long (*write_u16)(void *file, uint16_t value);
-  long (*write_u32)(void *file, uint32_t value);
-  long (*write_f32)(void *file, float value);
-  /// `Read(char*, length, read)`.
-  long (*read_bytes)(void *file, uint8_t *out, uint32_t length, uint32_t *read);
-  /// `Write(const char*, length, written)`.
-  long (*write_bytes)(void *file, const uint8_t *data, uint32_t length, uint32_t *written);
-  /// `FSFileSpec::GetPosition` (a plain `FSFile` has none: `kErrorFailed`).
-  long (*get_position)(void *file, long *out);
-  /// `FSFileSpec::SetPosition(offset, kFileOriginBegin, false)`.
-  long (*set_position)(void *file, long offset);
-};
-
-/// The mesh's members `load_body` updates.
-struct EeGeTerrainLoad {
-  unsigned long space_tile_count;
-  float minimum_z;
-  float maximum_z;
-  unsigned long fractal_seed;
-  /// The fractal seed was read (successfully or not): the C++ recomputes the fractal from it.
-  bool compute_fractal;
 };
 
 /// The platform's text functions and the font's measure (`PlatUtf8Decode`, `PlatMbsNInc`, `PlatCp1252ByteOf`,
@@ -915,6 +924,23 @@ struct EeGeStoreTarget {
   unsigned long bytes_per_row;
 };
 
+/// The host: `owner` is the C++ terrain mesh of the object calling.
+using EeGeTmHostFn = ptrdiff_t(*)(void *owner, EeGeTmOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
+
+/// `GETerrainMesh::GETMPoint`: height, quantized normal (a pointer into the quantized-vector table), colour index.
+struct EeGeTmPoint {
+  float z;
+  const EeGeVector *normal;
+  uint8_t color_table_index;
+};
+
+/// `GETerrainMesh::GETMTile` (sizeof 4).
+struct EeGeTmTile {
+  uint16_t reference_count;
+  uint8_t texture_set_id;
+  uint8_t water_info;
+};
+
 /// `GEViewport` (sizeof 0x288), in the C++'s member order.
 struct EeGeViewport {
   EeGeRectangle orthographic_rectangle;
@@ -953,93 +979,54 @@ struct EeGeViewport {
   float far_depth;
 };
 
-/// A registered texture set as the plan reads it: its textures as handles (`GETexture*` values, 0 for none) in
-/// column-major order (`mTextures[x][y]` at `x * height + y`), its grid and its tile coverage.
-struct EeGeTextureSetView {
-  const size_t *textures;
-  unsigned long width;
-  unsigned long height;
-  unsigned long coverage;
+/// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
+struct EeGeFieldIo {
+  void *file;
+  long (*read_u8)(void *file, uint8_t *out);
+  long (*read_u16)(void *file, uint16_t *out);
+  long (*read_u32)(void *file, uint32_t *out);
+  long (*read_f32)(void *file, float *out);
+  long (*write_u8)(void *file, uint8_t value);
+  long (*write_u16)(void *file, uint16_t value);
+  long (*write_u32)(void *file, uint32_t value);
+  long (*write_f32)(void *file, float value);
+  /// `Read(char*, length, read)`.
+  long (*read_bytes)(void *file, uint8_t *out, uint32_t length, uint32_t *read);
+  /// `Write(const char*, length, written)`.
+  long (*write_bytes)(void *file, const uint8_t *data, uint32_t length, uint32_t *written);
+  /// `FSFileSpec::GetPosition` (a plain `FSFile` has none: `kErrorFailed`).
+  long (*get_position)(void *file, long *out);
+  /// `FSFileSpec::SetPosition(offset, kFileOriginBegin, false)`.
+  long (*set_position)(void *file, long offset);
 };
 
-/// What `UpdateVisibleTerrain` reads of a `GETerrainMesh`.
-struct EeGeVisibleInput {
-  EeGeTerrainView view;
-  unsigned long point_row_count;
-  long left_edge;
-  long top_edge;
-  long right_edge;
-  long bottom_edge;
-  unsigned long space_tile_count;
-  const EeGeTextureSetView *texture_sets;
-  size_t texture_set_count;
-  const size_t *space_cliff_textures;
-  size_t space_cliff_texture_count;
-  /// `mWaterTextureIndices[33][33]`, row-major.
-  const unsigned long *water_texture_indices;
-  /// `GETM_VISIBLE_POINTS`: the side of the visible point arrays.
-  unsigned long side;
+/// `GETerrainMesh::GETMRenderVertex` (sizeof 0x28 on the original's 32 bits): the rasterizer fills the point and
+/// colour; the mesh writes the fog of war's visibility and, for a cliff vertex, the terrain visibility it copies.
+struct EeGeTmRenderVertex {
+  EeGe3DPoint point;
+  float color[3];
+  float visibility;
+  float fog;
+  unsigned long clip_flags;
+  float *linked_visibility;
 };
 
-/// A polygon corner: a render vertex of the terrain array (`kind` 0, `[a][b]`), of the water array (1), a skirt
-/// vertex (2, index `a`) or a cliff vertex (3, index `a`).
-struct EeGeVisibleVertex {
-  uint32_t kind;
-  uint32_t a;
-  uint32_t b;
-};
-
-/// A planned polygon: its corners, alphas, texture coordinates (left as the polygon slot had them when `uv_set` is
-/// false: the skirts) and material index.
-struct EeGeVisiblePolygon {
-  EeGeVisibleVertex vertices[3];
+/// `GETerrainMesh::GETMPolygon`: a visible triangle.
+struct EeGeTmPolygon {
+  EeGeTmRenderVertex *vertices[3];
   float alpha[3];
   float uv[3][2];
-  uint32_t uv_set;
-  uint32_t material;
 };
 
-/// The plan's arrays, borrowed from the handle until `ee_ge_terrain_visible_free`.
-struct EeGeVisibleOut {
-  /// The visible tile rows, three values each (y, first x, last x).
-  size_t row_count;
-  const long *rows;
-  unsigned long bottom_left_x;
-  unsigned long bottom_left_y;
-  unsigned long tile_width;
-  unsigned long tile_height;
-  unsigned long num_visible_tiles;
-  unsigned long visible_poly_count;
-  /// `side * side` flags each, `[a][b]` at `a * side + b`.
-  const uint8_t *terrain_visible;
-  const uint8_t *water_visible;
-  /// The terrain materials' textures (0 for none), in list order.
-  size_t material_count;
-  const size_t *materials;
-  size_t terrain_polygon_count;
-  const EeGeVisiblePolygon *terrain_polygons;
-  size_t water_polygon_count;
-  const EeGeVisiblePolygon *water_polygons;
-  size_t edge_count;
-  const EeGe3DPoint *edge_points;
-  size_t cliff_count;
-  const EeGe3DPoint *cliff_points;
-  /// Per cliff vertex, the terrain render vertex (`a`, `b`) it follows.
-  const uint32_t *cliff_links;
-};
-
-/// `GETerrainMesh::GETMPoint`: height, quantized normal (a pointer into the quantized-vector table), colour index.
-struct EeGeTmPoint {
-  float z;
-  const EeGeVector *normal;
-  uint8_t color_table_index;
-};
-
-/// `GETerrainMesh::GETMTile` (sizeof 4).
-struct EeGeTmTile {
-  uint16_t reference_count;
-  uint8_t texture_set_id;
-  uint8_t water_info;
+/// `GETerrainMesh::GETMMaterialView`: a material of the frame as the renderer reads it.
+struct EeGeTmMaterialView {
+  void *texture;
+  EeGeTmPolygon **polygons;
+  size_t polygon_count;
+  EeGeTmPolygon **indices;
+  size_t indices_length;
+  EeGeTmPolygon **strips;
+  size_t strips_length;
 };
 
 /// `GETexture::Load`'s arguments but the texture and the screen (`EeGeManOp::TexLoad`'s `a`).
@@ -1651,64 +1638,6 @@ bool ee_ge_terrain_intersects(const EeGeTerrainView *view,
                               const EeGe3DLine *line,
                               float *distance);
 
-/// `GETerrainMesh::ComputeVertexNormal` before the quantization (the C++ stores `GetQuantizedVersion()` of `out`).
-///
-/// # Safety
-/// `point_rows` holds `point_row_count` live rows, the point exists and `out` is valid.
-void ee_ge_terrain_vertex_normal(const EeGeTmRow *point_rows,
-                                 unsigned long point_row_count,
-                                 unsigned long x,
-                                 unsigned long y,
-                                 EeGeVector *out);
-
-/// `GETerrainMesh::ComputeShorelines`: the tile's new shoreline bits for `SetWaterInfo`, or -1 to leave it alone.
-///
-/// # Safety
-/// `view` describes a live mesh and the tile exists.
-int32_t ee_ge_terrain_shoreline(const EeGeTerrainView *view,
-                                bool space_map,
-                                unsigned long x,
-                                unsigned long y);
-
-/// `GETerrainMesh::UpdateFogOfWar`: writes the visible points' visibility and the two shares; false (nothing
-/// written) when no tile row is visible.
-///
-/// # Safety
-/// `view` and `fog` describe a live mesh; the out pointers are valid.
-bool ee_ge_terrain_fog(const EeGeTerrainView *view,
-                       const EeGeTerrainFog *fog,
-                       float *out_water,
-                       float *out_space);
-
-/// `GETerrainMesh::Save`.
-///
-/// # Safety
-/// `io` is a live field stream; `view` and `point_rows` describe a live mesh.
-long ee_ge_terrain_save(const EeGeFieldIo *io,
-                        const EeGeTerrainView *view,
-                        unsigned long point_row_count,
-                        long width,
-                        long height,
-                        unsigned long fractal_seed);
-
-/// `GETerrainMesh::Load`'s map size (each read through the member's old value).
-///
-/// # Safety
-/// `io` is a live field stream; the pointers are valid.
-long ee_ge_terrain_load_size(const EeGeFieldIo *io, long *width, long *height);
-
-/// `GETerrainMesh::Load` after `CreateFlatMesh`: the tiles, the points and the fractal seed. `valid_sets[id]` is
-/// nonzero for a registered texture set.
-///
-/// # Safety
-/// `io` is a live field stream; `view` and `point_rows` describe a live, writable mesh; `valid_sets` holds 256
-/// bytes; `state` is valid.
-long ee_ge_terrain_load_body(const EeGeFieldIo *io,
-                             const EeGeTerrainView *view,
-                             unsigned long point_row_count,
-                             const uint8_t *valid_sets,
-                             EeGeTerrainLoad *state);
-
 /// One triangle of `GEPhysicalModel::Intersects(location, model, frame, line, ...)`; `distance` is written whenever
 /// the C++ wrote it (the triangle's plane was not parallel to the line).
 ///
@@ -1729,51 +1658,6 @@ void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
                                  const EeGe3DPoint *p2,
                                  const EeGe3DPoint *p3,
                                  EeGeBoundingBox *out);
-
-/// `CreateFlatMesh(width, height)`'s rows: `tile_rows` receives `width + height` (start, end) pairs and
-/// `point_rows` one more; the four edge sums go to `edges` (left, top, right, bottom).
-///
-/// # Safety
-/// `tile_rows` holds `2 * (width + height)` values, `point_rows` two more, `edges` four.
-void ee_ge_terrain_flat_mesh(long width,
-                             long height,
-                             unsigned long *tile_rows,
-                             unsigned long *point_rows,
-                             long *edges);
-
-/// `SetGlobalWaterState`'s 33 x 33 water texture grid over `texture_count` textures, row by row into `out`.
-///
-/// # Safety
-/// `out` holds 33 * 33 values.
-void ee_ge_terrain_water_grid(long texture_count,
-                              unsigned long *out);
-
-/// `SetWaterColorSet`'s colour set index of a point of height `z`.
-unsigned long ee_ge_terrain_water_color_index(float texture_scale, float z, unsigned long set_size);
-
-/// `UpdateWaterAnimation`'s step: false before a period has passed, else the new frame and last time are written.
-///
-/// # Safety
-/// `frame` and `last` are valid for reads and writes.
-bool ee_ge_terrain_water_step(unsigned long now,
-                              unsigned long period,
-                              unsigned long frame_count,
-                              unsigned long *frame,
-                              unsigned long *last);
-
-/// `GetTileRowsInVolume`: the tile rows under the convex hull of `volume` (`count` points), clipped to the mesh's
-/// `tile_row_count` tile rows, as (y, first x, last x) triples into `out_rows` (at most `tile_row_count` rows, one
-/// per y), and the bounding box as (min x, min y, max x, max y) into `bounds`; returns the row count.
-///
-/// # Safety
-/// `volume` holds `count` points, `tile_rows` `tile_row_count` rows, `out_rows` `3 * tile_row_count` values, `bounds`
-/// four.
-size_t ee_ge_terrain_rows_in_volume(const EeGe3DPoint *volume,
-                                    size_t count,
-                                    const EeGeTmRow *tile_rows,
-                                    unsigned long tile_row_count,
-                                    long *out_rows,
-                                    long *bounds);
 
 /// `GEText::ComputeTextExtent` with the font (`PlatFont*`, not NULL), its cell height and the text's character count.
 ///
@@ -2566,6 +2450,291 @@ unsigned long ee_ge_material_size_of(size_t object_size,
                                      unsigned long lod_count,
                                      size_t ulong_size);
 
+/// `GETerrainMesh()`.
+///
+/// # Safety
+/// `host` serves `owner` (the C++ mesh) for the object's life.
+EeGeTerrainMesh *ee_ge_tm_new(EeGeTmHostFn host, void *owner);
+
+/// `~GETerrainMesh`.
+///
+/// # Safety
+/// `p` came from `ee_ge_tm_new` and is freed once.
+void ee_ge_tm_destroy(EeGeTerrainMesh *p);
+
+/// A scalar of the mesh (`unsigned long` values; 0 for the float ones).
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_tm_get(const EeGeTerrainMesh *p, EeGeTmVal what);
+
+/// A float of the mesh (0 for the `unsigned long` ones).
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_tm_get_f(const EeGeTerrainMesh *p, EeGeTmVal what);
+
+/// `SetVisibleWaterTilePercentage`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_tm_set_water_percentage(EeGeTerrainMesh *p, float percentage);
+
+/// Map-edge plane `which` (front, back, left, right).
+///
+/// # Safety
+/// `p` is live; `which` < 4.
+const EeGe3DPlane *ee_ge_tm_plane(const EeGeTerrainMesh *p, uint32_t which);
+
+/// `GetIsEdgeTile` (`which` 0), `GetIsLeftEdgeTile` (1), `GetIsTopEdgeTile` (2), `GetIsRightEdgeTile` (3),
+/// `GetIsBottomEdgeTile` (4).
+///
+/// # Safety
+/// `p` is live.
+bool ee_ge_tm_is_edge_tile(const EeGeTerrainMesh *p,
+                           long x,
+                           long y,
+                           uint32_t which);
+
+/// `GetIsValidPoint` (`tile` false) or `GetIsValidTile` (true).
+///
+/// # Safety
+/// `p` is live.
+bool ee_ge_tm_is_valid(const EeGeTerrainMesh *p, unsigned long x, unsigned long y, bool tile);
+
+/// The point at map (x, y) (`GetZ`, `GetColorTableIndex`, `GetVertexNormal` read it).
+///
+/// # Safety
+/// `p` is live and the point exists.
+const EeGeTmPoint *ee_ge_tm_point(const EeGeTerrainMesh *p, unsigned long x, unsigned long y);
+
+/// `GetVertexColor(x, y)`: the colour table's entry of the point's index.
+///
+/// # Safety
+/// `p` is live and the point exists.
+const float *ee_ge_tm_vertex_color(const EeGeTerrainMesh *p, unsigned long x, unsigned long y);
+
+/// `GetWaterColor`: the water colour (white: nothing sets it).
+///
+/// # Safety
+/// `p` is live.
+const float *ee_ge_tm_water_color(const EeGeTerrainMesh *p);
+
+/// The tile at map (x, y) (`GetTextureSetID`, `GetWaterInfo`, `GetIsWaterTile` read it).
+///
+/// # Safety
+/// `p` is live and the tile exists.
+const EeGeTmTile *ee_ge_tm_tile(const EeGeTerrainMesh *p, unsigned long x, unsigned long y);
+
+/// The tile edits of the header: `ReferenceTile` (`what` 0), `DereferenceTile` (1), `SetTileReferenceCount` (2,
+/// `value`), `SetTextureSet` (3, `value`), `SetWaterInfo` (4, `value`), `SetIsWater` (5, `value` != 0),
+/// `SetIsSpace` (6, `value` != 0), `ComputeShorelines` (7).
+///
+/// # Safety
+/// `p` is live and the tile exists.
+void ee_ge_tm_tile_edit(EeGeTerrainMesh *p,
+                        unsigned long x,
+                        unsigned long y,
+                        uint32_t what,
+                        unsigned long value);
+
+/// `GetIsSpaceTile(x, y)`: false off the map.
+///
+/// # Safety
+/// `p` is live.
+bool ee_ge_tm_is_space_tile(const EeGeTerrainMesh *p, unsigned long x, unsigned long y);
+
+/// The point edits: `SetZ` (`what` 0, `z`), `SetColorFromColorTableIndex` (1, `value`), `SetColorSet` (2, `value`
+/// the set), `SetWaterColorSet` (3), `ComputeVertexNormal` (4).
+///
+/// # Safety
+/// `p` is live and the point exists (and for 2 and 3 the colour set).
+void ee_ge_tm_point_edit(EeGeTerrainMesh *p,
+                         unsigned long x,
+                         unsigned long y,
+                         uint32_t what,
+                         unsigned long value,
+                         float z);
+
+/// `CreateFlatMesh(width, height)`.
+///
+/// # Safety
+/// `p` is live; the size makes at least one tile row.
+void ee_ge_tm_create_flat_mesh(EeGeTerrainMesh *p, long width, long height);
+
+/// `GetMeshZ(x, y)`.
+///
+/// # Safety
+/// `p` is live; the tile under the position exists.
+float ee_ge_tm_mesh_z(const EeGeTerrainMesh *p, float x, float y);
+
+/// `GetMeshNormal(x, y, out)`.
+///
+/// # Safety
+/// As `ee_ge_tm_mesh_z`; `out` is valid.
+void ee_ge_tm_mesh_normal(const EeGeTerrainMesh *p, float x, float y, EeGeVector *out);
+
+/// `GetClosestTile(line, x, y)`.
+///
+/// # Safety
+/// `p` is live; the pointers are valid.
+void ee_ge_tm_closest_tile_line(const EeGeTerrainMesh *p,
+                                const EeGe3DLine *line,
+                                long *out_x,
+                                long *out_y);
+
+/// `GetClosestTile(point, x, y)`.
+///
+/// # Safety
+/// `p` is live; the pointers are valid.
+void ee_ge_tm_closest_tile_point(const EeGeTerrainMesh *p,
+                                 const EeGe3DPoint *point,
+                                 long *out_x,
+                                 long *out_y);
+
+/// `Intersects(line, distance)`: `distance` is written whenever the original wrote it.
+///
+/// # Safety
+/// `p` is live; the pointers are valid.
+bool ee_ge_tm_intersects(const EeGeTerrainMesh *p, const EeGe3DLine *line, float *distance);
+
+/// `GetTileRowsInVolume`: the tile rows under the convex hull of `volume` (`count` points) as (y, first x, last x)
+/// triples into `out_rows` (room for `3 * TileRowCount`), the bounding box into `bounds`; returns the row count.
+///
+/// # Safety
+/// `p` is live; the pointers are valid for those sizes.
+size_t ee_ge_tm_rows_in_volume(const EeGeTerrainMesh *p,
+                               const EeGe3DPoint *volume,
+                               size_t count,
+                               long *out_rows,
+                               long *bounds);
+
+/// `RegisterColorSet(set, id)`: returns the new id.
+///
+/// # Safety
+/// `p` is live; `colors` holds `count` values.
+unsigned long ee_ge_tm_register_color_set(EeGeTerrainMesh *p,
+                                          const unsigned long *colors,
+                                          size_t count);
+
+/// `RegisterTextureSet(set, id)`: returns the new id (the mesh deletes the set).
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_tm_register_texture_set(EeGeTerrainMesh *p, void *set);
+
+/// `GetRegisteredTextureSet(id)` (NULL past the registered ones).
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_tm_texture_set(const EeGeTerrainMesh *p, unsigned long id);
+
+/// `SetColorTable(colors)`: `count` colours of three floats.
+///
+/// # Safety
+/// `p` is live; `colors` holds `count` colours.
+void ee_ge_tm_set_color_table(EeGeTerrainMesh *p, const float (*colors)[3], size_t count);
+
+/// `SetGlobalWaterState(set, colors, period, scale)`.
+///
+/// # Safety
+/// `p` is live; the texture set and colour set exist.
+void ee_ge_tm_set_global_water_state(EeGeTerrainMesh *p,
+                                     unsigned long set,
+                                     unsigned long colors,
+                                     unsigned long period,
+                                     float scale);
+
+/// `SetSpaceCliffTextures(textures)`.
+///
+/// # Safety
+/// `p` is live; `textures` holds `count` pointers.
+void ee_ge_tm_set_space_cliff_textures(EeGeTerrainMesh *p, void *const *textures, size_t count);
+
+/// `UpdateFogOfWar(all)`.
+///
+/// # Safety
+/// `p` is live and has rows.
+void ee_ge_tm_update_fog_of_war(EeGeTerrainMesh *p, bool all_visible);
+
+/// `UpdateWaterAnimation()`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_tm_update_water_animation(EeGeTerrainMesh *p);
+
+/// `UpdateVisibleTerrain(camera, viewport, width, height, screen, orthographic)` (the original read only the
+/// viewport and the projection).
+///
+/// # Safety
+/// `p` is live and has rows; `viewport` is valid.
+void ee_ge_tm_update_visible_terrain(EeGeTerrainMesh *p,
+                                     const EeGeViewport *viewport,
+                                     bool orthographic);
+
+/// `Load(major, minor, file)`.
+///
+/// # Safety
+/// `p` is live; `io` is a live field stream.
+long ee_ge_tm_load(EeGeTerrainMesh *p, const EeGeFieldIo *io);
+
+/// `Save(file)`.
+///
+/// # Safety
+/// `p` is live; `io` is a live field stream.
+long ee_ge_tm_save(const EeGeTerrainMesh *p, const EeGeFieldIo *io);
+
+/// The visible tile row `index`: (y, first x, last x) into `out`.
+///
+/// # Safety
+/// `p` is live; the row exists; `out` holds three values.
+void ee_ge_tm_visible_row(const EeGeTerrainMesh *p, unsigned long index, long *out);
+
+/// The render vertex array (`GetTerrainRenderVertexArray`, or with `water` `GetWaterRenderVertexArray`):
+/// `[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS]`.
+///
+/// # Safety
+/// `p` is live.
+EeGeTmRenderVertex *ee_ge_tm_render_vertices(EeGeTerrainMesh *p,
+                                             bool water);
+
+/// The visible point flags (`GetTerrainPointVisibilityArray`, or with `water` the water's), as bytes.
+///
+/// # Safety
+/// `p` is live.
+uint8_t *ee_ge_tm_point_visibility(EeGeTerrainMesh *p,
+                                   bool water);
+
+/// `GetMaterialView(water, index, out)`.
+///
+/// # Safety
+/// `p` is live; the material exists; `out` is valid.
+void ee_ge_tm_material(EeGeTerrainMesh *p,
+                       bool water,
+                       unsigned long index,
+                       EeGeTmMaterialView *out);
+
+/// `GetTerrainMaterialMap`: up to `capacity` (texture, index) entries in texture order; returns the entry count.
+///
+/// # Safety
+/// `p` is live; the out arrays hold `capacity` values.
+size_t ee_ge_tm_material_map(const EeGeTerrainMesh *p,
+                             void **textures,
+                             unsigned long *indices,
+                             size_t capacity);
+
+/// The skirt vertices (`cliff` false: `GetEdgeRenderVertices`) or the cliff vertices, as pointers.
+///
+/// # Safety
+/// `p` is live.
+EeGeTmRenderVertex *const *ee_ge_tm_edge_vertices(const EeGeTerrainMesh *p, bool cliff);
+
+/// The skirt (or cliff) vertices' world points.
+///
+/// # Safety
+/// `p` is live.
+const EeGe3DPoint *ee_ge_tm_edge_points(const EeGeTerrainMesh *p, bool cliff);
+
 /// `GEViewport()`.
 ///
 /// # Safety
@@ -2656,22 +2825,6 @@ bool ee_ge_physical_visible(const EeGeTransformation *location,
                             const EeGeBoundingBox *bbox,
                             const EeGeViewport *viewport,
                             bool orthographic);
-
-/// `UpdateVisibleTerrain`'s plan for a viewport: returns the handle and fills `out` with its arrays.
-///
-/// # Safety
-/// `input` describes a live mesh; `viewport` and `out` are valid. The handle must be freed with
-/// `ee_ge_terrain_visible_free`, after which `out`'s pointers are dead.
-EeGeVisiblePlan *ee_ge_terrain_visible_plan(const EeGeVisibleInput *input,
-                                            const EeGeViewport *viewport,
-                                            bool orthographic,
-                                            EeGeVisibleOut *out);
-
-/// Frees a plan.
-///
-/// # Safety
-/// `plan` came from `ee_ge_terrain_visible_plan` and is freed once.
-void ee_ge_terrain_visible_free(EeGeVisiblePlan *plan);
 
 /// `GERhombus::ComputeRotation`'s corners into `out`.
 ///

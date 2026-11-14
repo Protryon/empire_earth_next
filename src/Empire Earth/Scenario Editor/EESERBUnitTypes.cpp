@@ -171,7 +171,7 @@ void EESECBMaxPlayer::ChangeSelection()
 {
     unsigned long theSelection;
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->GetForm());
-    this->mListBox->GetCurrentSelection(theSelection);
+    this->GetList()->GetCurrentSelection(theSelection);
     theEditor->GetPlayerScreen()->SetPlayerCount(theSelection + 2);
     UIComboBox::ChangeSelection();
 }

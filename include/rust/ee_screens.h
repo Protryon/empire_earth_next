@@ -3220,6 +3220,70 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
 
+/// The flare's colour (`EeScreensMiniMapCopy::flare_color`): none set, `sFlareColor` (red), `sFlareBlinkColor`.
+constexpr static const uint8_t EE_SCREENS_MM_COLOR_NONE = 0;
+
+constexpr static const uint8_t EE_SCREENS_MM_COLOR_FLARE = 1;
+
+constexpr static const uint8_t EE_SCREENS_MM_COLOR_BLINK = 2;
+
+/// `gMiniMap->mTerrainCriticalSection->Enter()`.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_ENTER = 1;
+
+/// `UIControl::DrawPolygons()`.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_BASE = 2;
+
+/// The rasterizer's `Draw(sMapBitmap)` (its result unused).
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_MAP = 3;
+
+/// `Draw(sWorldBitmap)`, `Draw(sFlareBitmap)`: the result.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_WORLD = 4;
+
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_FLARE = 5;
+
+/// The viewport's view rectangle kept, the viewport set to the plan's clip rectangle.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_CLIP = 6;
+
+/// `Draw(&mLines[i], 1)` for i = step - LINE: the result.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_LINE = 7;
+
+/// The viewport's view rectangle put back.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_RESTORE = 11;
+
+/// `mTerrainCriticalSection->Leave()`.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_LEAVE = 12;
+
+/// `GetHasMouseCapture()`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_HAS_CAPTURE = 1;
+
+/// `GetLeftMouseButtonDown()`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_LEFT_DOWN = 2;
+
+/// `gMouse->mPointer`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_POINTER = 3;
+
+/// `CenterCamera()`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_CENTER = 4;
+
+/// `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_DIRTY = 5;
+
+/// The [`EeScreensMiniMapMouse`] at c filled: the form's mouse location, the rectangle, gMiniMap's
+/// pixel-to-map matrix.
+constexpr static const uint32_t EE_SCREENS_MM_OP_READ_MOUSE = 6;
+
+/// `gWorld.mMap->GetTileAtLocation((a, b)) != NULL`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_TILE_EXISTS = 7;
+
+/// `gCommunications->ProcessLocalUserInput(new EEMSendFlare((a, b)), kSlotNone)`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_SEND_FLARE = 8;
+
+/// `gMouse->mPointer = 0`, the form's `SetUIState(0)`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_FLARE_DONE = 9;
+
+/// `ReleaseCapturedMouse()`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_RELEASE = 10;
+
 /// The statistics group (`mGroups[1]`).
 constexpr static const uint32_t EE_SCREENS_GROUP_STATISTICS = 1;
 
@@ -4880,6 +4944,125 @@ constexpr static const int64_t EE_SCREENS_UG_PLAYER_CENTRES = 4;
 
 constexpr static const int64_t EE_SCREENS_UG_PLAYER_TOWN_GROUPS = 5;
 
+/// `RegisterControlEventCallback(EECreateGameEvent)`, `(EECreateWonNetServerSelectEvent)`,
+/// `RegisterFormEventCallback(EECreateFormEvent)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_REGISTER = 1;
+
+/// `LoadDatabase(gDataPath, UString())`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_LOAD_DATABASE = 2;
+
+/// `UIControlsTable::AddControlLike(this, ...)` of the [`EeScreensManagerControl`] at c.
+constexpr static const uint32_t EE_SCREENS_UM_OP_ADD_LIKE = 3;
+
+/// `UIControlsTable::MoveControlsHorizontally(...)` of the [`EeScreensManagerMove`] at c.
+constexpr static const uint32_t EE_SCREENS_UM_OP_MOVE = 4;
+
+/// `EECPEngineChoiceCount()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_ENGINE_COUNT = 5;
+
+/// `mMainGameForm = GetFormByID(kFormMainGame)`, `mInScenarioEditor = false`, `mScenarioEditorForm = NULL`,
+/// `mB13D = false`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_FORMS = 6;
+
+/// `SetMusicVolume(the music setting's volume, 0 when the music is off)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_MUSIC = 7;
+
+/// `mU138 = 0`; the save form's activate event (`EECreateScreenEvent(EE_SCREENS_SL_ACTIVATE)`, set, dereferenced).
+constexpr static const uint32_t EE_SCREENS_UM_OP_SAVE_EVENT = 8;
+
+/// The lobby options' lock: a 1 `WriteLock()`, 0 `WriteUnlock()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_LOBBY_LOCK = 10;
+
+/// `mInScenarioEditor = true`, `gGameStateIsMultiplayer = false`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_EDITOR_ON = 11;
+
+/// The old communications deleted; a local `EEServer` ("EEName", the network adapter) made, its threads started,
+/// no load responses.
+constexpr static const uint32_t EE_SCREENS_UM_OP_NEW_SERVER = 12;
+
+/// The lobby options' map size 1, load type 3, the prehistoric epoch, variant 0.
+constexpr static const uint32_t EE_SCREENS_UM_OP_LOBBY_DEFAULTS = 13;
+
+/// `gResource->GetString(IDS_SE_HUMAN (a 0) or IDS_COMPUTER (a 1), the call's name a)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_NAME = 14;
+
+/// `gWorldTable.GetLongValue(kWorldStartingCitizensDefault)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_CITIZENS = 15;
+
+/// The lobby options' `mPlayers[slot] =` the [`EeScreensManagerPlayer`] at c.
+constexpr static const uint32_t EE_SCREENS_UM_OP_SET_PLAYER = 16;
+
+/// The server's `StopPing()`, `mLoadState = 1`, `ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()))`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_SERVER_LOAD = 17;
+
+/// `gISKeyboard->GetEntity(key a)->JustPressed()` (a an `EE_SCREENS_UM_KEY_*`).
+constexpr static const uint32_t EE_SCREENS_UM_OP_KEY_PRESSED = 20;
+
+/// `gGraphics->mIsMoviePlaying`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_MOVIE_PLAYING = 21;
+
+/// `gGraphics->PostStopMovie()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_STOP_MOVIE = 22;
+
+/// `PlatSleep(a)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_SLEEP = 23;
+
+/// `GetCurrentForm() != NULL && !GetCurrentForm()->GetIsKeyboardCaptured() && !gLoadingSavedGame`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_KEYS_FREE = 24;
+
+/// `EEPostF9Key()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_POST_F9 = 25;
+
+/// `UIManager::UpdateKeyboard()`: its result.
+constexpr static const uint32_t EE_SCREENS_UM_OP_BASE_KEYBOARD = 26;
+
+/// `UIManager::GetLMouseButton()` (a 0) or `GetRMouseButton()` (a 1) `->JustPressed()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_BUTTON_PRESSED = 27;
+
+/// `UIManager::UpdateMouse(the call's mouse location)`: its result.
+constexpr static const uint32_t EE_SCREENS_UM_OP_BASE_MOUSE = 28;
+
+/// The keys `UpdateKeyboard` tests (EE_SCREENS_UM_OP_KEY_PRESSED's a).
+constexpr static const int64_t EE_SCREENS_UM_KEY_ESCAPE = 0;
+
+constexpr static const int64_t EE_SCREENS_UM_KEY_RETURN = 1;
+
+constexpr static const int64_t EE_SCREENS_UM_KEY_SPACE = 2;
+
+constexpr static const int64_t EE_SCREENS_UM_KEY_F9 = 3;
+
+/// `kTextureResolutionControlID`: the settings' added controls' first id.
+constexpr static const int32_t EE_SCREENS_UM_TEXTURE_RESOLUTION_ID = 90001;
+
+/// `kGameSettingsTextureResolutionComboBox`: the settings' added controls' first form index.
+constexpr static const int32_t EE_SCREENS_UM_TEXTURE_RESOLUTION_INDEX = 111;
+
+/// `kTextureResolutionOriginalString`, `kTextureResolutionHelpString`.
+constexpr static const int32_t EE_SCREENS_UM_TEXTURE_RESOLUTION_STRING = 33100;
+
+constexpr static const int32_t EE_SCREENS_UM_TEXTURE_RESOLUTION_HELP = 33103;
+
+/// `kFormLobby`.
+constexpr static const int32_t EE_SCREENS_UM_FORM_LOBBY = 26;
+
+/// `kLobbyEngineControlID`, `kLobbyEngineHeader`, `kLobbyEngineCombo`, `kLobbyEngineLabel`.
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_ID = 90100;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_HEADER = 274;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_COMBO = 275;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_LABEL = 291;
+
+/// `kLobbyEngineClassicString`, `kLobbyEngineRandomString`, `kLobbyEngineHeaderString`, `kLobbyEngineHelpString`.
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_CLASSIC = 33170;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_RANDOM = 33171;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_HEADER_STRING = 33173;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_HELP = 33175;
+
 /// `this->PauseGraphics()`.
 constexpr static const uint32_t EE_SCREENS_UI_OP_PAUSE = 1;
 
@@ -5400,6 +5583,54 @@ struct EeScreensLobbyOptionsRecord {
   bool victory;
 };
 
+/// `CopyData`'s record: what the C++ read (in), what it applies (out).
+struct EeScreensMiniMapCopy {
+  float rect[4];
+  uint32_t window_width;
+  uint32_t window_height;
+  float corners[4][2];
+  float origin[2];
+  float flare_point[2];
+  float map_to_pixel[6];
+  uint32_t flare_texture_height;
+  uint32_t flare_texture_width;
+  float flare_location[2];
+  float flare_width;
+  uint8_t flare_on;
+  uint8_t free_camera;
+  /// in and out: `mShowFlare`, `mFlareBlink`
+  uint8_t show_flare;
+  uint8_t flare_blink;
+  uint8_t flare_color;
+  uint8_t redraw_all;
+  uint8_t set_flare;
+  uint8_t reserved;
+  float map_scale[2];
+  float world_scale[2];
+  float flare_new_location[2];
+  float flare_scale[2];
+  float lines[4][2][2];
+};
+
+/// `DrawPolygons`' plan: its steps (`count` of `steps`) and the clip rectangle (left, top, right, bottom).
+struct EeScreensMiniMapDraw {
+  uint8_t steps[16];
+  uint32_t count;
+  float clip[4];
+};
+
+/// `Update`'s record: the map's width (`mL195614`), height (`mL195610`) and size, the mini map's map-to-pixel
+/// matrix (in); the units texture's coordinate extent and the map's bounds in mini-map units (left, top, right,
+/// bottom) (out).
+struct EeScreensMiniMapUpdate {
+  int32_t width;
+  int32_t height;
+  int32_t size;
+  float map_to_pixel[6];
+  float extent;
+  float bounds[4];
+};
+
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
 struct EeScreensSinglePlayerSlot {
   /// `EE_SCREENS_SP_*`: whose slot (the human's and the computer's take their names; a closed one keeps a new
@@ -5620,6 +5851,52 @@ struct EeScreensHudUnit {
 struct EeScreensMainFormIo {
   float f[4];
   int64_t n[2];
+};
+
+/// One `UIControlsTable::AddControlLike`'s arguments.
+struct EeScreensManagerControl {
+  int32_t template_id;
+  int32_t id;
+  int32_t form_index;
+  uint32_t group;
+  float left;
+  float right;
+  float top;
+  float bottom;
+  int32_t string_begin;
+  int32_t string_end;
+  uint32_t help;
+};
+
+/// One `UIControlsTable::MoveControlsHorizontally`'s arguments.
+struct EeScreensManagerMove {
+  int32_t form;
+  int32_t first;
+  int32_t last;
+  float left_delta;
+  float right_delta;
+};
+
+/// One lobby slot `StartScenarioEditor` sets: the player's fields, its name the call's name `name` (0 the human's,
+/// 1 the computer's).
+struct EeScreensManagerPlayer {
+  uint32_t slot;
+  uint32_t color;
+  uint32_t kind;
+  uint32_t starting_citizens;
+  uint8_t is_local;
+  uint8_t is_ready;
+  uint8_t name;
+  /// 0 (the record's last byte, so that it has no padding)
+  uint8_t reserved;
+};
+
+/// What the left release reads of the form's mouse: its location, the control's rectangle (left, top, right,
+/// bottom) and gMiniMap's pixel-to-map matrix (m00 m01 m03 m10 m11 m13).
+struct EeScreensMiniMapMouse {
+  float mouse[2];
+  float rect[4];
+  float pixel_to_map[6];
 };
 
 /// One control as the host makes it: `new` of the kind's class at the index, the alignment, the opacities, the
@@ -6093,6 +6370,33 @@ long ee_screens_event(uint32_t event,
 /// The menus' event code for a control event id, 0 for another form's.
 uint32_t ee_screens_menus_event_for(unsigned long id);
 
+/// `EEUIMiniMap::CopyData`'s numbers over the record the C++ read (`copy`'s in fields; its out fields written).
+///
+/// # Safety
+/// `copy` points to a valid record.
+void ee_screens_mini_map_copy_data(EeScreensMiniMapCopy *copy);
+
+/// `EEUIMiniMap::DrawPolygons`' plan: the flare shown or not, the lines' draw flags (bit i: line i) and the
+/// copied draw rectangle.
+EeScreensMiniMapDraw ee_screens_mini_map_draw_plan(bool show_flare,
+                                                   uint32_t draw_lines,
+                                                   float left,
+                                                   float top,
+                                                   float right,
+                                                   float bottom);
+
+/// `EEUIMiniMap::Update`'s numbers over the record the C++ read.
+///
+/// # Safety
+/// `update` points to a valid record.
+void ee_screens_mini_map_update(EeScreensMiniMapUpdate *update);
+
+/// `EEUIMiniMap::MouseLButtonUp` on the control `map`: its result.
+int64_t ee_screens_mini_map_mouse_l_up(void *map);
+
+/// `EEUIMiniMap::MouseMove` on the control `map`: its result.
+int64_t ee_screens_mini_map_mouse_move(void *map);
+
 /// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
 void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);
 
@@ -6170,6 +6474,18 @@ void ee_screens_ui_load_saved_game(void *ui, void *file);
 
 /// `EEUserInterface::Run` on the UI object `ui`: the UI thread's loop until it quits.
 int64_t ee_screens_ui_run(void *ui);
+
+/// `EEUIManager`'s constructor's work after its base, on the host's call record `call`.
+void ee_screens_ui_manager_construct(void *call);
+
+/// `EEUIManager::StartScenarioEditor` on the host's call record `call`.
+void ee_screens_ui_manager_start_editor(void *call);
+
+/// `EEUIManager::UpdateKeyboard` on the host's call record `call`: its result.
+int64_t ee_screens_ui_manager_update_keyboard(void *call);
+
+/// `EEUIManager::UpdateMouse` on the host's call record `call`: its result.
+int64_t ee_screens_ui_manager_update_mouse(void *call);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,
