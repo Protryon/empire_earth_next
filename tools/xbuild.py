@@ -383,8 +383,7 @@ WON_TESTS = {
     "won_ops_test": [*[WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
                                                          "AsyncSocketInternet.cpp", "IPAddr.cpp",
                                                          "BlockingSocket.cpp", "QueueSocket.cpp", "SocketOps.cpp",
-                                                         "SocketOperationDispatch.cpp", "SocketRunHooks.cpp",
-                                                         "SocketOpsAccessors.cpp", "RecvCRMsgOp.cpp",
+                                                         "SocketRunHooks.cpp", "SocketOpsAccessors.cpp",
                                                          "SocketThread.cpp", "UDPManager.cpp",
                                                          "UDPManagerDefaults.cpp")],
                      *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpTracker.cpp",
@@ -575,6 +574,9 @@ WON_TESTS = {
     # ClientOptionsPopup, GameOptionsPopup and FriendOptionsPopup as one Rust object (golden:
     # rust/crates/ee_won/src/golden_lobbypopup.txt)
     "won_lobbypopup_test": [],
+    # GameBrowserCtrl, GameStagingCtrl, LobbyOptionsCtrl and GameUserListCtrl as one Rust object (golden:
+    # rust/crates/ee_won/src/golden_lobbyctl.txt)
+    "won_lobbyctl_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
@@ -743,6 +745,12 @@ WON_TESTS["won_httpcache_test"] = WON_TESTS["won_serverop_test"]
 # rust/crates/ee_won/src/golden_authsession.txt, recorded over AuthSession.cpp and ServerOp.cpp's HostCall before
 # the session became an ee_won handle in round 22: hostauth.rs); the same units as won_serverop_test
 WON_TESTS["won_authsession_test"] = WON_TESTS["won_serverop_test"]
+# the op base's socket and op calls over real sockets on 127.0.0.1: the sockets' bind, listen, port, length field,
+# flags, close and kill, the blocking connect, sends and receives, the socket ops' results and settings, the ops'
+# status, kill and runs, the queue (golden: rust/crates/ee_won/src/golden_hostsock.txt, recorded over ServerOp.cpp's
+# HostCall before these calls were answered in Rust in net round 23: hostsock.rs); the same units as
+# won_serverop_test
+WON_TESTS["won_hostsock_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

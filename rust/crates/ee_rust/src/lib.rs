@@ -115,8 +115,8 @@ pub unsafe extern "C" fn ee_combat_store_unit_of(object: u64, out: *mut ee_comba
     }
 }
 
-/// The bridge of the stats table (ee_combat store.rs, ee_units stats.rs): the record of the stats object (an
-/// `EEUnitClassUpgrade*`'s address, a unit record's `stats`) into `out`. False for none, or one the table lacks (always
+/// The bridge of the stats (ee_combat store.rs, ee_units stats.rs): the record of the stats object (an
+/// `EEUnitClassUpgrade*`'s address, a unit record's `stats`), read in place, into `out`. False for none (always
 /// in a test binary).
 ///
 /// # Safety

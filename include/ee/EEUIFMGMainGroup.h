@@ -59,12 +59,8 @@ public:
     EEUnit* GetSelectedUnit();
     void Open(EEUIFMainGame* inForm);       // 0x2681c2 (the main game form's Open; provisional name)
     void ShowCommands(EEUnit* inUnit);      // 0x268806 (EEMSavedGroupSelect; provisional name)
-    // EEUIFMGMainGroup.cpp's other members (provisional names)
-    void SetUnit(EEUnit* inUnit);           // 0x268070 (a new selection: the mode mL0C, the status box, the buttons)
-    // 0x2682ea (ret 0x10): shows command button inControl for EEButtonObject inButton with its hot keys
-    void ShowCommandButton(EEPlayer* inPlayer, EEUnit* inUnit, unsigned long inButton, unsigned long inControl);
-    void ShowSpecialButtons(EEUnit* inUnit);  // 0x268dee (unit type 0x42: the three queue timers)
-    void Update(EEUnit* inUnit);            // 0x268f3f (the same selection again: the queue counts)
+    // (SetUnit 0x268070, ShowCommandButton 0x2682ea, ShowSpecialButtons 0x268dee, Update 0x268f3f: Rust's whole,
+    // ee_screens main_group.rs)
 
     // the ctor 0x267ec8: EEUIFMGGroup(...), the vptr, then these zeroed, +8 = a new object (ctor 0x26ada8)
     EEUIFMGStatusBox* mStatusBox;           // +0x08 (ee/EEUIFMGStatusBox.h)

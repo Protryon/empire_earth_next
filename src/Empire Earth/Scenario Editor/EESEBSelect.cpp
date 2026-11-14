@@ -166,7 +166,7 @@ EESEBSelect::EESEBSelect(unsigned long inId, const GE2DPoint& inLocation, UIForm
 // Moves the selected technology while < or > is held: immediately, again after 500 ms, then every 200 ms
 void EESEBSelect::ButtonDown()
 {
-    if (this->mId >= kSERBUnitTypesAdd && this->mId <= kSERBUnitTypesRemove) {
+    if (this->GetId() >= kSERBUnitTypesAdd && this->GetId() <= kSERBUnitTypesRemove) {
         if (EESEBSelect::sRepeatDelay.GetIsRunning()) {
             if (EESEBSelect::sRepeatDelay.Poll() > 0) {
                 this->Select();
@@ -188,7 +188,7 @@ void EESEBSelect::ButtonDown()
 // Moves every technology across when the << or >> button is released and stops the key repeat
 void EESEBSelect::ButtonUp()
 {
-    if (this->mId >= kSERBUnitTypesAddAll && this->mId <= kSERBUnitTypesRemoveAll)
+    if (this->GetId() >= kSERBUnitTypesAddAll && this->GetId() <= kSERBUnitTypesRemoveAll)
         this->Select();
     EESEBSelect::sRepeatRate.Stop();
     UIButton::ButtonUp();
@@ -203,9 +203,9 @@ void EESEBSelect::Select()
     unsigned long theLast;
     bool theLeft;
 
-    switch (this->mId) {
+    switch (this->GetId()) {
     case kSERBUnitTypesRemoveAll:
-        theLast = ((UIListBox<UWideString>*)this->mForm->GetControlById(kSERBUnitTypesOtherTechList))->GetLineCount();
+        theLast = ((UIListBox<UWideString>*)this->GetForm()->GetControlById(kSERBUnitTypesOtherTechList))->GetLineCount();
         if (theLast <= 0)
             return;
         theFirst = 0;
@@ -213,7 +213,7 @@ void EESEBSelect::Select()
         theLeft = false;
         break;
     case kSERBUnitTypesAddAll:
-        theLast = ((UIListBox<UWideString>*)this->mForm->GetControlById(kSERBUnitTypesTechList))->GetLineCount();
+        theLast = ((UIListBox<UWideString>*)this->GetForm()->GetControlById(kSERBUnitTypesTechList))->GetLineCount();
         if (theLast <= 0)
             return;
         theFirst = 0;
@@ -221,13 +221,13 @@ void EESEBSelect::Select()
         theLeft = true;
         break;
     case kSERBUnitTypesRemove:
-        if (((UIListBox<UWideString>*)this->mForm->GetControlById(kSERBUnitTypesOtherTechList))->GetCurrentSelection(theFirst) != 0)
+        if (((UIListBox<UWideString>*)this->GetForm()->GetControlById(kSERBUnitTypesOtherTechList))->GetCurrentSelection(theFirst) != 0)
             return;
         theLast = theFirst;
         theLeft = false;
         break;
     case kSERBUnitTypesAdd:
-        if (((UIListBox<UWideString>*)this->mForm->GetControlById(kSERBUnitTypesTechList))->GetCurrentSelection(theFirst) != 0)
+        if (((UIListBox<UWideString>*)this->GetForm()->GetControlById(kSERBUnitTypesTechList))->GetCurrentSelection(theFirst) != 0)
             return;
         theLast = theFirst;
         theLeft = true;
@@ -282,8 +282,8 @@ EESETab::EESETab(unsigned long inId, const GE2DPoint& inLocation, GEFont* inFont
 // Switches the player screen to the page of the checked tab
 void EESETab::Check()
 {
-    const EEUIFScenarioEditor* theEditor = static_cast<const EEUIFScenarioEditor*>(this->mForm);
-    switch (this->mId) {
+    const EEUIFScenarioEditor* theEditor = static_cast<const EEUIFScenarioEditor*>(this->GetForm());
+    switch (this->GetId()) {
     case 0x170:
         static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->SelectPage(kPlayerScreenAISettings);
         break;

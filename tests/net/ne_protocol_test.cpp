@@ -1,5 +1,5 @@
-// NEProtocol, NEConnection and NEServer over the TCP plug-in (LLE Network Engine round 2): random calls through the
-// engine's protocol classes over a stand-in plug-in (the ee_tcp_* functions below, each call a trace line with its
+// NEProtocol over the TCP plug-in (LLE Network Engine round 2; round 5 made NEConnection and NEServer the plug-in's
+// handles, the protocol's members taking them): random calls through the engine's protocol over a stand-in plug-in (the ee_tcp_* functions below, each call a trace line with its
 // arguments and an answer from the trace's random stream). The protocol, its connections and servers are the
 // engine's units; the trace is compared with tests/net/golden_protocol.txt, which the original units made: the
 // original NEProtocol.cpp with its table of 30 entry points looked up in the TCP shim's PIMPlugin table, and the
@@ -22,8 +22,6 @@
 #include "orig_p/lle/NEProtocol.h"   // the original's (tests/net/orig_p: the units before LLE Network Engine round 2)
 #endif
 #include "lle/NEProtocol.h"
-#include "lle/NEConnection.h"
-#include "lle/NEServer.h"
 #ifdef NE_PROTOCOL_ORIG
 #include "lle/PIMModule.h"
 #endif
@@ -159,13 +157,19 @@ static std::string Hex(const uint8_t* inData, size_t inSize)
     }
     return theHex.empty() ? "-" : theHex;
 }
-// the plug-in gives a new connection or server a handle on success
+// the plug-in gives a new connection or server a handle on success: the random number the original stand-in gave,
+// made unique by a count in the bits above it (the trace prints the random number). A handle is known by its value
+// (round 5: the engine holds the plug-in's handles, not wrappers with a slot); each open, failed or not, takes the
+// next id, as the original stand-in's slot of a new wrapper did.
+static uintptr_t sOpened;
 static int32_t Open(const char* inWhat, void** outHandle, int32_t inResult)
 {
     if (inResult == 0)
-        *outHandle = (void*)(uintptr_t)(0x100 + Next() % 0x100);
-    sIds.erase(outHandle);
-    Line("  %s h%d = %d (%lx)", inWhat, Id(outHandle), inResult, (unsigned long)(uintptr_t)*outHandle);
+        *outHandle = (void*)((++sOpened << 12) | (uintptr_t)(0x100 + Next() % 0x100));
+    int theID = ++sNextId;
+    if (inResult == 0)
+        sIds[*outHandle] = theID;
+    Line("  %s h%d = %d (%lx)", inWhat, theID, inResult, (unsigned long)((uintptr_t)*outHandle & 0xfff));
     return inResult;
 }
 static void Sink(EeTcpSink inSink, void* inContext)
@@ -204,28 +208,28 @@ int32_t ee_tcp_get_status()
 }
 int32_t ee_tcp_accept(void** server, void** connection)
 {
-    Line("  accept h%d", Id(server));
+    Line("  accept h%d", Id(*server));
     return Open("accept", connection, Answer());
 }
 int32_t ee_tcp_accept_for_xfer(void** server, void** connection)
 {
-    Line("  accept_for_xfer h%d", Id(server));
+    Line("  accept_for_xfer h%d", Id(*server));
     return Open("accept_for_xfer", connection, Answer());
 }
 void ee_tcp_allow_new_connections(void** server, bool allow)
 {
-    Line("  allow_new_connections h%d %d", Id(server), allow);
+    Line("  allow_new_connections h%d %d", Id(*server), allow);
 }
 int32_t ee_tcp_close_connection(void** connection)
 {
     int32_t r = Answer();
-    Line("  close_connection h%d = %d", Id(connection), r);
+    Line("  close_connection h%d = %d", Id(*connection), r);
     return r;
 }
 int32_t ee_tcp_close_server(void** server)
 {
     int32_t r = Answer();
-    Line("  close_server h%d = %d", Id(server), r);
+    Line("  close_server h%d = %d", Id(*server), r);
     return r;
 }
 int32_t ee_tcp_connect(const uint8_t* name, size_t name_length, const uint8_t* host, size_t host_length,
@@ -238,13 +242,13 @@ int32_t ee_tcp_connect(const uint8_t* name, size_t name_length, const uint8_t* h
 }
 int32_t ee_tcp_connect_for_xfer(void** host, int32_t mode, void* event, void** connection)
 {
-    Line("  connect_for_xfer h%d %d e%d", Id(host), mode, Id(event));
+    Line("  connect_for_xfer h%d %d e%d", Id(*host), mode, Id(event));
     return Open("connect_for_xfer", connection, Answer());
 }
 int32_t ee_tcp_get_client_address(void** server, uint32_t index, EeTcpSink sink, void* context)
 {
     int32_t r = Answer();
-    Line("  get_client_address h%d %u = %d", Id(server), index, r);
+    Line("  get_client_address h%d %u = %d", Id(*server), index, r);
     if (r == 0)
         Sink(sink, context);
     return r;
@@ -283,7 +287,7 @@ uint32_t ee_tcp_enumerate_adapters(EeTcpSink sink, void* context)
 bool ee_tcp_is_alive(void** connection)
 {
     bool r = Next() % 3 != 0;
-    Line("  is_alive h%d = %d", Id(connection), r);
+    Line("  is_alive h%d = %d", Id(*connection), r);
     return r;
 }
 int32_t ee_tcp_publish(const uint8_t* name, size_t name_length, const uint8_t* address, size_t address_length,
@@ -308,12 +312,12 @@ static int32_t Receive(const char* inWhat, uint32_t size, uint8_t* buffer, uint3
 }
 int32_t ee_tcp_receive(void** connection, uint32_t size, uint8_t* buffer, uint32_t* received)
 {
-    Line("  receive h%d %u", Id(connection), size);
+    Line("  receive h%d %u", Id(*connection), size);
     return Receive("receive", size, buffer, received);
 }
 int32_t ee_tcp_receive_from(void** server, uint32_t size, uint8_t* buffer, uint32_t* received, uint32_t* index)
 {
-    Line("  receive_from h%d %u in %u", Id(server), size, *index);
+    Line("  receive_from h%d %u in %u", Id(*server), size, *index);
     int32_t r = Receive("receive_from", size, buffer, received);
     if (r == 0)
         *index = Next() % 8;
@@ -321,11 +325,11 @@ int32_t ee_tcp_receive_from(void** server, uint32_t size, uint8_t* buffer, uint3
 }
 void ee_tcp_reset_client_connection(void** server, uint32_t index)
 {
-    Line("  reset_client_connection h%d %u", Id(server), index);
+    Line("  reset_client_connection h%d %u", Id(*server), index);
 }
 void ee_tcp_reset_xfer(void** server)
 {
-    Line("  reset_xfer h%d", Id(server));
+    Line("  reset_xfer h%d", Id(*server));
 }
 int32_t ee_tcp_search_for_game(const uint8_t* name, size_t length, bool start)
 {
@@ -336,7 +340,7 @@ int32_t ee_tcp_search_for_game(const uint8_t* name, size_t length, bool start)
 int32_t ee_tcp_send(void** connection, uint8_t* data, uint32_t length)
 {
     int32_t r = Answer();
-    Line("  send h%d %s = %d", Id(connection), Hex(data, length).c_str(), r);
+    Line("  send h%d %s = %d", Id(*connection), Hex(data, length).c_str(), r);
     return r;
 }
 int32_t ee_tcp_send_single(const uint8_t* host, size_t host_length, uint32_t port, const uint8_t* data,
@@ -351,7 +355,7 @@ int32_t ee_tcp_send_single(const uint8_t* host, size_t host_length, uint32_t por
 int32_t ee_tcp_send_to(void** server, uint32_t index, uint8_t* data, uint32_t length)
 {
     int32_t r = Answer();
-    Line("  send_to h%d %u %s = %d", Id(server), index, Hex(data, length).c_str(), r);
+    Line("  send_to h%d %u %s = %d", Id(*server), index, Hex(data, length).c_str(), r);
     return r;
 }
 int32_t ee_tcp_xfer_receive(uint32_t size, uint8_t* buffer, uint32_t* received)
@@ -362,7 +366,7 @@ int32_t ee_tcp_xfer_receive(uint32_t size, uint8_t* buffer, uint32_t* received)
 int32_t ee_tcp_xfer_send_to(void** server, uint32_t index, const uint8_t* data, uint32_t length)
 {
     int32_t r = Answer();
-    Line("  xfer_send_to h%d %u %s = %d", Id(server), index, Hex(data, length).c_str(), r);
+    Line("  xfer_send_to h%d %u %s = %d", Id(*server), index, Hex(data, length).c_str(), r);
     return r;
 }
 }
@@ -446,7 +450,7 @@ static void Run(int inSteps)
                 continue;
             NEConnection* theNew = NULL;
             Line(theWhat == 2 ? "accept" : "accept_for_xfer");
-            r = theWhat == 2 ? theServer->Accept(theNew) : theServer->AcceptForXfer(theNew);
+            r = theWhat == 2 ? p->Accept(theServer, theNew) : p->AcceptForXfer(theServer, theNew);
             Line("= %ld %d", r, theNew != NULL);
             if (theNew != NULL)
                 theConnections.push_back(theNew);
@@ -456,9 +460,8 @@ static void Run(int inSteps)
             if (theConnection == NULL)
                 continue;
             NEConnection* theNew = NULL;
-            const NEConnection* theFrom = theConnection;
             Line("connect_for_xfer");
-            r = p->ConnectForXfer(theFrom, Below(3), theEvents[Below(3)], theNew);
+            r = p->ConnectForXfer(theConnection, Below(3), theEvents[Below(3)], theNew);
             Line("= %ld %d", r, theNew != NULL);
             if (theNew != NULL)
                 theConnections.push_back(theNew);
@@ -468,7 +471,7 @@ static void Run(int inSteps)
             if (theConnection == NULL)
                 continue;
             Line("close connection");
-            r = theConnection->Close();
+            r = p->Close(theConnection);
             if (r == kErrorOK)
                 for (size_t i = 0; i < theConnections.size(); i++)
                     if (theConnections[i] == theConnection) {
@@ -480,7 +483,7 @@ static void Run(int inSteps)
             if (theServer == NULL)
                 continue;
             Line("close server");
-            r = theServer->Close();
+            r = p->Close(theServer);
             if (r == kErrorOK)
                 for (size_t i = 0; i < theServers.size(); i++)
                     if (theServers[i] == theServer) {
@@ -492,20 +495,20 @@ static void Run(int inSteps)
             if (theServer == NULL)
                 continue;
             Line("allow");
-            theServer->AllowNewConnections(Below(2) != 0);
+            p->AllowNewConnections(theServer, Below(2) != 0);
             break;
         case 8:
             if (theConnection == NULL)
                 continue;
             Line("receive in %lu", theReceived);
-            r = theConnection->Receive(Below(65), theBuffer, theReceived);
+            r = p->Receive(theConnection, Below(65), theBuffer, theReceived);
             Line("received %lu", theReceived);
             break;
         case 9:
             if (theServer == NULL)
                 continue;
             Line("receive_from in %lu %lu", theReceived, theIndex);
-            r = theServer->ReceiveFrom(Below(65), theBuffer, theReceived, theIndex);
+            r = p->ReceiveFrom(theServer, Below(65), theBuffer, theReceived, theIndex);
             Line("received %lu %lu", theReceived, theIndex);
             break;
         case 10:
@@ -517,19 +520,19 @@ static void Run(int inSteps)
             if (theConnection == NULL)
                 continue;
             Line("send");
-            r = theConnection->Send(theData.data(), (unsigned long)theData.size());
+            r = p->Send(theConnection, theData.data(), (unsigned long)theData.size());
             break;
         case 12:
             if (theServer == NULL)
                 continue;
             Line("send_to");
-            r = theServer->SendTo(Below(8), theData.data(), (unsigned long)theData.size());
+            r = p->SendTo(theServer, Below(8), theData.data(), (unsigned long)theData.size());
             break;
         case 13:
             if (theServer == NULL)
                 continue;
             Line("xfer_send_to");
-            r = theServer->XferSendTo(Below(8), theData.data(), (unsigned long)theData.size());
+            r = p->XferSendTo(theServer, Below(8), theData.data(), (unsigned long)theData.size());
             break;
         case 14:
             Line("send_single");
@@ -540,7 +543,7 @@ static void Run(int inSteps)
             if (theConnection == NULL)
                 continue;
             Line("is_alive");
-            r = theConnection->IsAlive();
+            r = p->IsAlive(theConnection);
             break;
         case 16: {
             if (theServer == NULL)
@@ -629,6 +632,7 @@ int main(int argc, char** argv)
         sRandom = (uint32_t)s + 1;
         sIds.clear();
         sNextId = 0;
+        sOpened = 0;
         Run(150);
     }
     if (thePrint != NULL) {

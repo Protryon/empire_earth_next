@@ -360,6 +360,300 @@ pub enum EeUiOp {
     ComboQuery = 197,
     /// The combo box's action `a` (`comboobj::EeUiComboAct`) with `b`, `c`, `d`.
     ComboAct = 198,
+
+    // ---- UIForm (R6 ui round 16): its controls, groups, backgrounds, hot keys, events and the manager by address
+    /// *Pure*: control `a`'s virtual `GetType()`.
+    FormCtlType = 200,
+    /// *Pure*: control `a`'s `UIEntity::GetType()`.
+    FormCtlEntityType = 201,
+    /// *Pure*: control `a`'s `GetDisplayMode()`.
+    FormCtlDisplayMode = 202,
+    /// *Pure*: control `a`'s `GetIsDirty()`.
+    FormCtlDirty = 203,
+    /// *Pure*: control `a`'s `GetDrawCount()`.
+    FormCtlDrawCount = 204,
+    /// *Pure*: control `a`'s `GetIndex()`.
+    FormCtlIndex = 205,
+    /// *Pure*: control `a`'s `GetId()`.
+    FormCtlId = 206,
+    /// *Pure*: control `a`'s virtual `GetTabable()`.
+    FormCtlTabable = 207,
+    /// *Pure*: radio button `a`'s `GetIsChecked()`.
+    FormCtlChecked = 208,
+    /// *Pure*: control `a`'s virtual `GetIMEEnabled()`.
+    FormCtlImeEnabled = 209,
+    /// *Pure*: group `a`'s `GetIsEnabled()`.
+    FormGroupEnabled = 210,
+    /// *Pure*: group `a`'s `GetEntityCount()`.
+    FormGroupCount = 211,
+    /// *Pure*: background `a`'s `GetDrawPriority()`.
+    FormBgPriority = 212,
+    /// *Pure*: background `a`'s `GetBackgroundID()`.
+    FormBgId = 213,
+    /// *Pure*: background `a`'s `GetIsVisible()`.
+    FormBgVisible = 214,
+    /// *Pure*: background `a`'s `GetRectangle()` -> `f`.
+    FormBgRect = 215,
+    /// *Pure*: hot key `a`'s `GetAlwaysFire()`.
+    FormHotKeyAlways = 216,
+    /// *Pure*: hot key `a`'s `GetKeyCount()`.
+    FormHotKeyKeys = 217,
+    /// *Pure*: the manager's `GetNumberOfSurfaces()`.
+    FormSurfaces = 218,
+    /// *Pure*: the manager's screen window's `GetWidth()`.
+    FormWindowWidth = 219,
+    /// *Pure*: the manager's screen window's `GetHeight()`.
+    FormWindowHeight = 220,
+    /// *Pure*: `UIControlsTable::GetUIControlsTable(a)`.
+    FormTable = 221,
+    /// *Pure*: table `a`'s `GetFormIndex()`.
+    FormTableFormIndex = 222,
+    /// *Pure*: table `a`'s `GetGroup()`.
+    FormTableGroup = 223,
+    /// *Pure*: table `a`'s `GetIsVisible() == true`.
+    FormTableVisible = 224,
+    /// *Pure*: table `a`'s `GetControlType()`.
+    FormTableType = 225,
+    /// *Pure*: table `a`'s `GetStringTableID()`.
+    FormTableStringId = 226,
+    /// *Pure*: the manager's `GetDrawCandidateWindow()`.
+    FormCandidateShown = 227,
+    /// *Pure*: the candidate window's `GetIMECopyCandidateRectangle()` -> `f`.
+    FormCandidateRect = 228,
+    /// *Pure*: label `a`'s `GetFitRectToText()`.
+    FormLabelFit = 229,
+    /// *Pure*: `UIManager::GetMouseWheel() != NULL`.
+    FormMouseWheel = 230,
+    /// *Pure*: `UIForm::sTabKey != NULL`.
+    FormKeysReady = 231,
+    /// *Pure*: bitmap `a`'s texture on the manager's screen: `(float)GetWidth()`, `(float)GetHeight()` -> `f[0]`, `f[1]`.
+    FormBitmapTexSize = 232,
+    /// *Pure*: `gISKeyboard->GetEntity(a)`.
+    FormKeyEntity = 233,
+    /// *Pure*: hot key `a`'s `mKey`.
+    FormHotKeyKey = 234,
+    /// *Pure*: hot key `a`'s `mModifiers[0]`.
+    FormHotKeyMod0 = 235,
+    /// *Pure*: hot key `a`'s `mModifiers[1]`.
+    FormHotKeyMod1 = 236,
+    /// *Pure*: hot key `a`'s `mModifiers[2]`.
+    FormHotKeyMod2 = 237,
+    /// Group `a`'s `GetEntity(b)` as a control.
+    FormGroupEntity = 240,
+    /// `new UIEntityGroup` -> the group.
+    FormGroupNew = 241,
+    /// `delete` group `a`.
+    FormGroupDelete = 242,
+    /// Group `a`'s `AddEntity(control b)`.
+    FormGroupAdd = 243,
+    /// Group `a`'s `RemoveEntity(control b)`.
+    FormGroupRemove = 244,
+    /// Control `a`'s virtual `SetDirty(b != 0)`.
+    FormCtlSetDirty = 245,
+    /// Control `a`'s virtual `SetDisplayMode(b)`.
+    FormCtlSetDisplayMode = 246,
+    /// Control `a`'s virtual `HideControl()`.
+    FormCtlHide = 247,
+    /// Control `a`'s `SetStringTableID(b)`.
+    FormCtlSetStringId = 248,
+    /// Control `a`'s virtual `TabbedFrom()`.
+    FormCtlTabbedFrom = 249,
+    /// Control `a`'s virtual `TabbedTo()`.
+    FormCtlTabbedTo = 250,
+    /// Control `a`'s virtual `UpdateKeyboard()` -> its result.
+    FormCtlUpdateKeyboard = 251,
+    /// Control `a`'s `UpdateMouse((f[0], f[1]))` -> its result.
+    FormCtlUpdateMouse = 252,
+    /// Control `a`'s virtual `MouseWheelTurned(b)` -> its result.
+    FormCtlWheelTurned = 253,
+    /// Control `a`'s `FireTriggerEvent(b)`.
+    FormCtlFireTrigger = 254,
+    /// Control `a`'s virtual `ReleaseCapturedMouse()`.
+    FormCtlReleaseMouse = 255,
+    /// Control `a`'s virtual `ReleaseCapturedKeyboard()`.
+    FormCtlReleaseKeyboard = 256,
+    /// Control `a`'s virtual `GetHelpString` into the host's help string (emptied first) -> its result.
+    FormHelpGet = 257,
+    /// Label `a`'s `SetText(the host's help string, true)`.
+    FormHelpSetText = 258,
+    /// Background `a`'s virtual `Open()`.
+    FormBgOpen = 259,
+    /// Background `a`'s virtual `Close()`.
+    FormBgClose = 260,
+    /// `delete` background `a`.
+    FormBgDelete = 261,
+    /// Background `a`'s virtual `DrawBackground(f)` -> its result.
+    FormBgDraw = 262,
+    /// Background `a`'s virtual `LoadBackground()`.
+    FormBgLoad = 263,
+    /// Background `a`'s virtual `UnloadBackground()`.
+    FormBgUnload = 264,
+    /// Background `a`'s virtual `RelayoutBackground()`.
+    FormBgRelayout = 265,
+    /// `new UIHotKey(this, *hot key a)` -> the copy.
+    FormHotKeyCopy = 266,
+    /// `delete` hot key `a`.
+    FormHotKeyDelete = 267,
+    /// Hot key `a`'s `mEnabled = b != 0`.
+    FormHotKeySetEnabled = 268,
+    /// Hot key `a`'s virtual `FireEvents()` -> whether one fired.
+    FormHotKeyFire = 269,
+    /// `new UIHotKey` for `AddHotKey`: `mForm = this`, `GetEntity(a, mKey)`, `CalculateKeyCount()` -> it.
+    FormHotKeyTemp = 270,
+    /// Hot key `a`'s `SetModifier(b, slot c)`.
+    FormHotKeySetModifier = 271,
+    /// Hot key `a`'s event `b` (0 just pressed, 1 pressed, 2 just unpressed, 3 double pressed) set to `c`.
+    FormHotKeySetEvent = 272,
+    /// Hot key `a`'s `mAlwaysFire = b != 0`.
+    FormHotKeySetAlways = 273,
+    /// Event `a`'s `b`: 0 `Uninitialize()`, 1 `Dereference()`, 2 `Reference()`, 3 `Initialize()`.
+    FormEventCall = 274,
+    /// Event `a`'s `ProcessEvent(this, NULL)` -> its result.
+    FormEventProcess = 275,
+    /// `new UIEMouseWheelScroll` -> the event.
+    FormWheelEventNew = 276,
+    /// The manager's `ProcessAllEventsForForm(this)`.
+    FormManagerProcessEvents = 277,
+    /// The manager's `AddDirtyRectangle(f, this)`.
+    FormManagerAddDirty = 278,
+    /// The manager's `StopMusic()`.
+    FormMusicStop = 279,
+    /// The manager's `StartMusic(UWideString((const char*)a))` (the goldens trace the bytes' hash).
+    FormMusicStart = 280,
+    /// The manager's `CreateFormEvent(a)` -> the event.
+    FormCreateFormEvent = 281,
+    /// Table `a`'s `CreateControl(the manager)` -> the control.
+    FormTableCreateControl = 282,
+    /// Table `a`'s `CreateControlEvent(this)`.
+    FormTableCreateEvent = 283,
+    /// Table `a`'s `RelayoutControl(control b, the manager)`.
+    FormTableRelayout = 284,
+    /// `delete` form manager `a`.
+    FormManagerDelete = 285,
+    /// `TSScheduler::CreateCriticalSection` -> the lock.
+    FormLockNew = 286,
+    /// `TSScheduler::DestroyCriticalSection(a)`.
+    FormLockDelete = 287,
+    /// Lock `a`'s `Enter()`.
+    FormLockEnter = 288,
+    /// Lock `a`'s `Leave()`.
+    FormLockLeave = 289,
+    /// `gISKeyboard->GetEntity(kKeyTab, sTabKey)`, then `kKeyShift`'s into `sShiftKey`.
+    FormKeysFetch = 290,
+    /// `sTabKey->JustPressed()`.
+    FormTabJustPressed = 291,
+    /// `sShiftKey->GetValue()`.
+    FormShiftValue = 292,
+    /// `UIManager::GetMouseWheelScrollAmount()`.
+    FormWheelAmount = 293,
+    /// `gISMouse->GetEntity(a)` -> the entity.
+    FormMouseEntity = 294,
+    /// Mouse entity `a`'s query `b` (`mouse::EntityQuery`).
+    FormMouseAsk = 295,
+    /// The virtual `SetHelpTextPopupLocation()`.
+    FormVirtHelpLocation = 296,
+    /// The virtual `DrawBackground(f)` -> its result.
+    FormVirtDrawBackground = 297,
+    /// Bitmap `a`'s `SetTextureCoordinates`: top-left `(f[0], f[1])`, top-right `(f[2], f[1])`, bottom-left `(f[0], f[3])`, bottom-right `(f[2], f[3])`.
+    FormBitmapSetTexCoords = 298,
+    /// The rasterizer's `Draw(bitmap a, the manager's screen)` -> its result.
+    FormBitmapDraw = 299,
+    /// The rasterizer's `Draw(text a, f, the manager's drawing surface)` -> its result.
+    FormTextDraw = 300,
+    /// The rasterizer's `Draw(rhombus a, the manager's screen)` -> its result.
+    FormRhombusDraw = 301,
+    /// Rhombus `a`'s `SetColor(label b's GetGEText()->GetFgColor())`.
+    FormRhombusLabelColor = 302,
+    /// `TMGetTime()`.
+    FormNow = 303,
+
+    // ---- UIManager (R6 ui round 17, managerobj.rs); on the manager's C++ object
+    /// *Pure*: form `a`'s `GetRectangle()` -> `f`.
+    MgrFormRect = 400,
+    /// *Pure*: form `a`'s `GetFormID()`.
+    MgrFormId = 401,
+    /// *Pure*: form `a`'s `GetUseGDIForText()`.
+    MgrFormUseGdi = 402,
+    /// *Pure*: form `a`'s `GetKeyboardCaptured()` -> the control.
+    MgrFormKeyboard = 403,
+    /// *Pure*: form `a`'s `GetMouseCaptured()` -> the control.
+    MgrFormMouse = 404,
+    /// *Pure*: control `a`'s virtual `GetIMEEnabled()`.
+    MgrCtlIme = 405,
+    /// *Pure*: `gISKeyboard->GetShouldUpdate()`.
+    MgrKeyboardShouldUpdate = 406,
+    /// *Pure*: `gISMouse->GetShouldUpdate()`.
+    MgrMouseShouldUpdate = 407,
+    /// *Pure*: the window of the manager's screen: 0 none, else 1 and its client origin in `f[0]`, `f[1]`.
+    MgrWindow = 408,
+    /// *Pure*: that window's width | height << 32.
+    MgrWindowSize = 409,
+    /// *Pure*: texture `a`'s `(float)GetWidth()`, `(float)GetHeight()` -> `f[0]`, `f[1]`.
+    MgrTextureSize = 410,
+    /// *Pure*: the rasterizer's `GetBlending(source, destination, screen)` -> source | destination << 32.
+    MgrBlending = 411,
+    /// `TSScheduler::CreateCriticalSection` (assert line `a`) -> the lock.
+    MgrLockNew = 420,
+    /// `TSScheduler::DestroyCriticalSection(a)`.
+    MgrLockDelete = 421,
+    /// `LoadTexture("textures\UIControls")` (after the rasterizer's `GetScreen(screen)`) -> the referenced texture.
+    MgrTextureLoad = 422,
+    /// Texture `a`'s `Dereference()`.
+    MgrTextureRelease = 423,
+    /// `new GEBitmap` with `SetTexture(texture a, screen)` -> the bitmap.
+    MgrBitmapNew = 424,
+    /// `CreateBitmap`'s first steps on bitmap `a`: `SetOpacity(1)`, `SetTextureCoordinates` from `(f[0], f[1])` to
+    /// `(f[2], f[3])` (top-left, top-right, bottom-left, bottom-right).
+    MgrBitmapCoords = 425,
+    /// `CreateBitmapForScaledControl`'s copy of bitmap `a`: a new bitmap on its texture with its four coordinates.
+    MgrScaledBitmapNew = 426,
+    /// Form `a`'s call `b`: 0 `Open`, 1 `Close`, 2 `Activate`, 3 `Deactivate`, 4 `ClearAllClipRectangles`,
+    /// 5 `SetAllControlsDirty`, 6 `CopyData`, 7 `DrawPolygons`, 8 `DrawTextA`, 9 `UpdateKeyboard`, 10 `UpdateMouse`,
+    /// 11 `delete` -> its result.
+    MgrFormCall = 427,
+    /// Form `a`'s call `b` with `f`: 0 `AddDirtyRectangle`, 1 `RedrawIntersectControls`, 2 `AddClipRectangle`,
+    /// 3 `RelayoutForm`, 4 `UpdateMouseLocation(f[0], f[1])`.
+    MgrFormRectCall = 428,
+    /// Form `a`'s IME call `b` (`manager_media::ImeCall`) with the C++ call's arguments `c` -> its result.
+    MgrFormIme = 429,
+    /// Form `a`'s `UpdateTranslatedKey(the one character at b, repeat c)` -> its result.
+    MgrTranslatedKey = 430,
+    /// Event `a`'s `ProcessEvent(form b, entity c)`.
+    MgrEventProcess = 431,
+    /// Event factory `a`: `b` 0 a form event factory called `(manager, c)`, 1 a control one `(form d, c)` -> the event.
+    MgrCallback = 432,
+    /// `new UIIMECandidate(manager, 0.2, 0.35, font a)` -> the candidate window.
+    MgrCandidateNew = 433,
+    /// Candidate window `a`'s call `b`: 0 `DrawPolygons`, 1 `DrawTextA`, 2 `CloseCandidateWindow`, 3 `CopyData`,
+    /// 4 `delete` -> its result.
+    MgrCandidateCall = 434,
+    /// Candidate window `a`'s `SetCandidateList(*(UIIMECandidateList*)b, f[0])`.
+    MgrCandidateSetList = 435,
+    /// Candidate window `a`'s `OpenCandidateWindow(f, control)`: the control rectangle's bottom and left as float bits
+    /// in `b` (low, high), its right and top in `c`.
+    MgrCandidateOpen = 436,
+    /// The rasterizer's `SetBlending(a, b, screen)`.
+    MgrSetBlending = 437,
+    /// `UIHotKey::UpdatePressedPollAmount()`.
+    MgrHotKeyPoll = 438,
+    /// `UIHotKey::DeleteHotKeys()`.
+    MgrHotKeysDelete = 439,
+    /// The manager's virtual `UpdateKeyboard()` -> its result.
+    MgrVirtUpdateKeyboard = 440,
+    /// The manager's virtual `UpdateMouse(f[0], f[1])` -> its result.
+    MgrVirtUpdateMouse = 441,
+    /// The sound manager's `Stop(instance a, false)`.
+    MgrSoundStop = 442,
+    /// The sound manager's `Unload(a)`.
+    MgrSoundUnload = 443,
+    /// The sound manager's `Load(name a, 0, 1)` -> the id (-1: failed).
+    MgrSoundLoad = 444,
+    /// The sound manager's `PlayAndReturnReferencedNode(a, f[0], 0, 1, true, NULL)` -> the instance.
+    MgrSoundPlay = 445,
+    /// The sound manager's `SetSoundParameters(instance a, f[0], 0, 1)`.
+    MgrSoundParameters = 446,
+    /// Sound instance `a`'s `Reference()` (`b` 0) or `Dereference()` (1).
+    MgrInstanceRef = 447,
 }
 
 impl EeUiOp {
@@ -407,6 +701,56 @@ impl EeUiOp {
                 | TextFgColor
                 | ListNumLines
                 | ComboQuery
+                | FormCtlType
+                | FormCtlEntityType
+                | FormCtlDisplayMode
+                | FormCtlDirty
+                | FormCtlDrawCount
+                | FormCtlIndex
+                | FormCtlId
+                | FormCtlTabable
+                | FormCtlChecked
+                | FormCtlImeEnabled
+                | FormGroupEnabled
+                | FormGroupCount
+                | FormBgPriority
+                | FormBgId
+                | FormBgVisible
+                | FormBgRect
+                | FormHotKeyAlways
+                | FormHotKeyKeys
+                | FormSurfaces
+                | FormWindowWidth
+                | FormWindowHeight
+                | FormTable
+                | FormTableFormIndex
+                | FormTableGroup
+                | FormTableVisible
+                | FormTableType
+                | FormTableStringId
+                | FormCandidateShown
+                | FormCandidateRect
+                | FormLabelFit
+                | FormMouseWheel
+                | FormKeysReady
+                | FormBitmapTexSize
+                | FormKeyEntity
+                | FormHotKeyKey
+                | FormHotKeyMod0
+                | FormHotKeyMod1
+                | FormHotKeyMod2
+                | MgrFormRect
+                | MgrFormId
+                | MgrFormUseGdi
+                | MgrFormKeyboard
+                | MgrFormMouse
+                | MgrCtlIme
+                | MgrKeyboardShouldUpdate
+                | MgrMouseShouldUpdate
+                | MgrWindow
+                | MgrWindowSize
+                | MgrTextureSize
+                | MgrBlending
         )
     }
 }

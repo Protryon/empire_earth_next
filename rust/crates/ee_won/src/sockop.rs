@@ -359,31 +359,6 @@ pub unsafe extern "C" fn ee_won_socketop_set_event_index(o: *const EeWonSocketOp
 pub unsafe extern "C" fn ee_won_socketop_run_hook(o: *const EeWonSocketOp) {
     op!(o).run_hook()
 }
-/// `RecvCRMsgOp::Start`'s buffer reset.
-///
-/// # Safety
-/// As `ee_won_socketop_socket`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socketop_line_reset(o: *const EeWonSocketOp) {
-    op!(o).line_reset()
-}
-/// `RecvCRMsgOp::Continue`: the status, and on success the message in `*message` (a new `EeWonByteBuffer` the
-/// C++ `ByteBuffer` adopts; null otherwise).
-///
-/// # Safety
-/// As `ee_won_socketop_socket`; `message` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socketop_line_continue(
-    o: *const EeWonSocketOp,
-    timing: OpTiming,
-    message: *mut *mut EeWonByteBuffer,
-) -> c_long {
-    let (s, m) = op!(o).line_continue(timing);
-    // SAFETY: the caller's out-parameter
-    unsafe { *message = m.map_or(null_mut(), |m| Box::into_raw(Box::new(m))) };
-    s as c_long
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

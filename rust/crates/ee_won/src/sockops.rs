@@ -92,6 +92,9 @@ pub enum OpKind {
     Connect(EeWonIpAddr),
     /// `AcceptOp::mAcceptedSocket` (an `AsyncSocket`, a reference held)
     Accept(usize),
+    /// `RecvCRMsgOp::mMessage`: the last line received (a `ByteBuffer`, a reference held; net round 23: the line
+    /// buffer was the op's already)
+    Line(usize),
 }
 
 /// The C++ object references a state holds (released with it).
@@ -102,7 +105,7 @@ fn refs(kind: &OpKind) -> Vec<usize> {
         OpKind::SendTo(s) => vec![s.data],
         OpKind::Recv(r) => vec![r.received, r.progress, r.message],
         OpKind::RecvFrom(r) => vec![r.received],
-        OpKind::Accept(a) => vec![*a],
+        OpKind::Accept(a) | OpKind::Line(a) => vec![*a],
     }
 }
 
@@ -232,6 +235,11 @@ impl EeWonSocketOp {
         self.set_kind(OpKind::Accept(0));
     }
 
+    /// `RecvCRMsgOp`: no line yet.
+    pub fn init_line(&self) {
+        self.set_kind(OpKind::Line(0));
+    }
+
     fn set_kind(&self, kind: OpKind) {
         let old = std::mem::replace(self.kind(), kind);
         self.release_kind(old);
@@ -261,7 +269,20 @@ impl EeWonSocketOp {
                 let Some(sock) = self.socket_object() else { return WS_ASYNC_SOCKET_INVALID_SOCKET };
                 sock.connect_to(&a, ipobj::local_host() as u32)
             }
-            _ => self.op_continue(timing),
+            // `RecvCRMsgOp::Start`: the buffer and the last message cleared, then the read
+            OpKind::Line(m) => {
+                let old = std::mem::take(m);
+                self.line_reset();
+                self.drop_ref(old);
+                self.op_continue(timing)
+            }
+            // `SocketOp::Start`: the class's virtual `Continue` (a C++ class's own, e.g. `CloseOp`'s, or this
+            // object's step through the base's); without the hook (the tests' stand-ins), the step itself
+            _ => match self.h().continue_op {
+                // SAFETY: the hooks' contract: the live C++ op
+                Some(h) => (unsafe { h(self.cpp_op()) }) as Status,
+                None => self.op_continue(timing),
+            },
         }
     }
 
@@ -310,6 +331,20 @@ impl EeWonSocketOp {
             }
             OpKind::RecvFrom(_) => self.recv_from_continue(timing),
             OpKind::Connect(_) => sock.wait_for_connect(left()),
+            // `RecvCRMsgOp::Continue`: a whole line becomes the message (a new `ByteBuffer`)
+            OpKind::Line(_) => {
+                let (s, m) = self.line_continue(timing);
+                if let Some(m) = m {
+                    let new = self.adopt(m);
+                    if let OpKind::Line(slot) = self.kind() {
+                        let old = std::mem::replace(slot, new);
+                        self.drop_ref(old);
+                    } else {
+                        self.drop_ref(new);
+                    }
+                }
+                s
+            }
             OpKind::Accept(_) => {
                 sock.wait(WAIT_READ, left());
                 let mut out = null_mut();
@@ -628,9 +663,36 @@ impl EeWonSocketOp {
             _ => 0,
         }
     }
-    /// `RecvMsgOp::GetMsg`.
+    /// `RecvMsgOp::GetMsg`, `RecvCRMsgOp::GetMsg`.
     pub fn message(&self) -> usize {
-        self.recv().map_or(0, |r| r.message)
+        match self.kind() {
+            OpKind::Line(m) => *m,
+            _ => self.recv().map_or(0, |r| r.message),
+        }
+    }
+    /// The bytes an op's class gives back, by the class (the op base's `OP_BYTES`, hostsock.rs): a datagram's
+    /// (`RecvBytesFromOp::GetBytes`), a message (`RecvMsgOp::GetMsg`, `RecvCRMsgOp::GetMsg`), a receive's
+    /// (`RecvBytesOp::GetBytes`); none for another class or no buffer.
+    pub(crate) fn result_bytes(&self) -> Option<Vec<u8>> {
+        let p = match self.kind() {
+            OpKind::RecvFrom(r) => r.received,
+            OpKind::Recv(r) if r.is_msg => r.message,
+            OpKind::Recv(r) => r.received,
+            OpKind::Line(m) => *m,
+            _ => return None,
+        };
+        (p != 0).then(|| self.bytes_of(p).to_vec())
+    }
+    /// A datagram receive's sender in the 6-byte wire form (`RecvBytesFromOp::GetAddr`); none for another class.
+    pub(crate) fn datagram_from(&self) -> Option<[u8; 6]> {
+        match self.kind() {
+            OpKind::RecvFrom(r) => Some(r.from.addr().six_bytes()),
+            _ => None,
+        }
+    }
+    /// Whether the op is a `RecvMsgOp`.
+    pub(crate) fn is_recv_msg(&self) -> bool {
+        matches!(self.kind(), OpKind::Recv(r) if r.is_msg)
     }
     /// `ConnectOp::GetAddr`, `RecvBytesFromOp::GetAddr`.
     pub fn address(&self) -> EeWonIpAddr {
@@ -774,6 +836,14 @@ pub unsafe extern "C" fn ee_won_socketop_init_connect(o: *const EeWonSocketOp, a
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_socketop_init_accept(o: *const EeWonSocketOp) {
     op!(o).init_accept()
+}
+/// `RecvCRMsgOp`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_socketop_init_line(o: *const EeWonSocketOp) {
+    op!(o).init_line()
 }
 /// The op class's `Start`.
 ///

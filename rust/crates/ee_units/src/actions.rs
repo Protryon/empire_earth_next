@@ -393,7 +393,7 @@ impl ActionReads<'_> {
     fn on(&mut self, code: i32) -> bool {
         self.host.read(code) != 0
     }
-    /// a read of the unit's stats: the stats table's record of its stats object (stats.rs), else the host's
+    /// a read of the unit's stats: its stats object's record read in place (stats.rs), else the host's
     fn stat(&mut self, code: i32) -> i64 {
         match (self.record)().and_then(|r| crate::stats::stats_of(r.stats)) {
             Some(s) => crate::update::stat_field(&s, code).unwrap_or_else(|| self.host.read(code)),
@@ -1591,26 +1591,25 @@ mod tests {
     }
 
     #[test]
-    fn the_stats_reads_come_from_the_table() {
-        let object = 0x5157_0000_0001u64;
-        let mut stats = crate::stats::EeUnitStatsRecord { object, can_fire_over_walls: 1, ..Default::default() };
-        stats.gather_times[2] = 1234;
-        // SAFETY: a valid record
-        unsafe { crate::stats::ee_units_stats_report(&stats) };
+    fn the_stats_reads_come_from_the_record() {
+        let mut stats = Box::<crate::stats::EeUnitsUnitClassUpgradeFields>::default();
+        stats.mCanFireOverWalls = true;
+        stats.mGatherTimes[2] = 1234;
+        let object = &*stats as *const crate::stats::EeUnitsUnitClassUpgradeFields as u64;
         let record =
             EeUnitRecord { command: ACTION_GATHER_RESOURCE, goal_kind: -1, stats: object, ..Default::default() };
-        // the mine's work timer: the table's gather time, not the host's (0)
+        // the mine's work timer: the record's gather time, not the host's (0)
         let mut m = unit(ACTION_GATHER_RESOURCE);
         assert!(action_changed(EE_UNITS_ACTION_MINING_BUILDING, &mut m, &mut || Some(record)));
         assert_eq!(m.log, vec![(EE_UNITS_ACT_SET_WORK_TIMER, 1234, 0)]);
         assert!(!m.asked.contains(&EE_UNITS_UPD_R_GATHER_TIME_2));
-        // idling with fire over walls (the table's): stance 7 whatever the draw
+        // idling with fire over walls (the record's): stance 7 whatever the draw
         let mut m = unit(ACTION_IDLE);
         m.reads.insert(EE_UNITS_ACT_R_RANDOM, i64::from(0.75f32.to_bits()));
         let idle = EeUnitRecord { command: ACTION_IDLE, ..record };
         assert!(action_changed(EE_UNITS_ACTION_BASE, &mut m, &mut || Some(idle)));
         assert!(m.log.contains(&(EE_UNITS_ACT_SET_ANIMATION, 7, 0)));
-        crate::stats::ee_units_stats_remove(object);
+        drop(stats);
     }
 
     #[test]

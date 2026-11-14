@@ -131,10 +131,6 @@ enum class EeNetClOp : uint32_t {
   WaitAny = 0,
   /// a thread: SetPriority(PLAT_PRIORITY_TIME_CRITICAL)
   ThreadPriority = 1,
-  /// a field (EeNetClBase) -> the base class's field
-  BaseGet = 2,
-  /// a field, a value: the base class's field set
-  BaseSet = 3,
   /// -> NEProtocol::GetCount()
   ProtocolCount = 4,
   /// an NEProtocol** -> NEProtocol::GetProtocol(0, *out)
@@ -215,6 +211,26 @@ enum class EeNetClOp : uint32_t {
   ProcessLocalUserInput = 41,
 };
 
+/// The base class's fields
+enum class EeNetCommsField : uint32_t {
+  /// mLastTickReceived (a `long`: -2 before the connection, -1 "none"; its 32 bits)
+  LastTickReceived = 0,
+  /// mPlayerNumber
+  PlayerNumber = 1,
+  /// mNumberOfCTsProcessedInPhysics
+  CtsProcessed = 2,
+  /// mAveragePhysicsUpdateTime
+  AveragePhysicsUpdateTime = 3,
+  /// mAverageTimeBetweenPhysicsTicks
+  AverageTimeBetweenPhysicsTicks = 4,
+  /// mNumHumanPlayers (a byte)
+  NumHumanPlayers = 5,
+  /// mIsGamePaused
+  IsGamePaused = 6,
+  /// mIsMultiplayerSession
+  IsMultiplayerSession = 7,
+};
+
 /// The server's calls out; a, b, c, d as each op says, the answer as isize.
 enum class EeNetSvOp : uint32_t {
   /// events, their count, a timeout -> TSEvent::WaitAny (the index, kTSWaitTimeout, kTSWaitFailed)
@@ -225,10 +241,6 @@ enum class EeNetSvOp : uint32_t {
   Sleep = 2,
   /// -> gPlatSimMode
   SimMode = 3,
-  /// a field (EeNetSvBase) -> its value
-  BaseGet = 4,
-  /// a field, a value
-  BaseSet = 5,
   /// -> NEProtocol::GetCount()
   ProtocolCount = 6,
   /// an NEProtocol** -> NEProtocol::GetProtocol(0, out)
@@ -408,16 +420,6 @@ enum class EeNetTuField : uint32_t {
   PTsPerCt = 12,
 };
 
-/// The base class's fields the server reads and writes (NESynchronousCommunications)
-enum class EeNetSvBase : uint32_t {
-  /// mNumHumanPlayers (read, written)
-  NumHumanPlayers = 0,
-  /// mIsMultiplayerSession
-  IsMultiplayerSession = 1,
-  /// mIsGamePaused (written through SetIsGamePaused)
-  IsGamePaused = 2,
-};
-
 /// The typed messages' fields the server reads
 enum class EeNetSvMsgField : uint32_t {
   /// any message: GetOriginatingSlot()
@@ -460,20 +462,6 @@ enum class EeNetSvNewMsg : uint32_t {
   CommunicationsTick = 6,
   /// NEMClientReconnectionRequestResponse(a, b, c)
   ReconnectionRequestResponse = 7,
-};
-
-/// The base class's (`NESynchronousCommunications`) fields this class read and wrote
-enum class EeNetClBase : uint32_t {
-  /// `mLastTickReceived` (a `long`: -2 before the connection, -1 "none")
-  LastTickReceived = 0,
-  /// `mNumberOfCTsProcessedInPhysics`
-  CtsProcessed = 1,
-  /// `GetAveragePhysicsUpdateTime()`
-  AveragePhysicsUpdateTime = 2,
-  /// `mIsGamePaused` (set through `SetIsGamePaused`)
-  IsGamePaused = 3,
-  /// `mIsMultiplayerSession`
-  IsMultiplayerSession = 4,
 };
 
 /// A message's virtual flags
@@ -530,6 +518,9 @@ enum class EeNetClNewMsg : uint32_t {
 
 /// The lock-step client (`NESynchronousClient`).
 struct EeNetClient;
+
+/// NESynchronousCommunications' state, shared by the C++ base class and the Rust server or client
+struct EeNetComms;
 
 /// The client's lag and loss simulator (`NELagLossSimulator`).
 struct EeNetLagLoss;
@@ -707,8 +698,12 @@ void ee_net_rp_set_normal_playback(const EeNetRecPlay *r);
 /// The constructor (protocol 0, the events, the lag simulator, the recorder).
 ///
 /// # Safety
-/// `host` and `qhost` answer every op for `ctx` until `ee_net_cl_free`.
-EeNetClient *ee_net_cl_new(void *ctx, EeNetClHostFn host, EeNetQHostFn qhost);
+/// `host` and `qhost` answer every op for `ctx` until `ee_net_cl_free`; `comms` from `ee_net_comms_new` (the C++
+/// base class's).
+EeNetClient *ee_net_cl_new(void *ctx,
+                           EeNetClHostFn host,
+                           EeNetQHostFn qhost,
+                           const EeNetComms *comms);
 
 /// The destructor's work, then the object freed.
 ///
@@ -792,15 +787,44 @@ void ee_net_cl_set_slow_playback(const EeNetClient *c);
 
 void ee_net_cl_set_normal_playback(const EeNetClient *c);
 
+/// The base class's constructor: the CTs processed given, the rest as the original's.
+EeNetComms *ee_net_comms_new(uint32_t cts_processed);
+
+/// The base class's destructor (the Rust server or client keeps the state while it lives).
+///
+/// # Safety
+/// `c` from `ee_net_comms_new` (or NULL), used by nothing after.
+void ee_net_comms_free(EeNetComms *c);
+
+/// A field's value (the last tick received as its 32 bits, a flag 0 or 1).
+///
+/// # Safety
+/// `c` from `ee_net_comms_new`, not freed.
+uint32_t ee_net_comms_get(const EeNetComms *c, EeNetCommsField f);
+
+/// A field set.
+///
+/// # Safety
+/// `c` from `ee_net_comms_new`, not freed.
+void ee_net_comms_set(const EeNetComms *c, EeNetCommsField f, uint32_t value);
+
+/// IncrementNumberOfCTsProcessedInPhysics.
+///
+/// # Safety
+/// `c` from `ee_net_comms_new`, not freed.
+void ee_net_comms_increment_cts(const EeNetComms *c);
+
 /// The constructor (published or not: `ee_net_sv_get(s, GameWasPublished)`).
 ///
 /// # Safety
-/// `host`, `mmhost` and `qhost` answer every op for `ctx` until `ee_net_sv_free`; `args` points at the arguments.
+/// `host`, `mmhost` and `qhost` answer every op for `ctx` until `ee_net_sv_free`; `args` points at the arguments;
+/// `comms` from `ee_net_comms_new` (the C++ base class's).
 EeNetServer *ee_net_sv_new(void *ctx,
                            EeNetSvHostFn host,
                            EeNetMmHostFn mmhost,
                            EeNetQHostFn qhost,
-                           const EeNetSvArgs *args);
+                           const EeNetSvArgs *args,
+                           const EeNetComms *comms);
 
 /// The destructor's work, then the object freed.
 ///
