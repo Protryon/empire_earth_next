@@ -118,15 +118,15 @@ long EESEUITerrainColorLB::DrawPolygons()
     GERectangle theLineRectangle;
     GERhombus theRhombus;
     for (unsigned long i = 0; i < this->mCopyLineArray.size(); i++) {
-        theLineRectangle.SetTop(this->mCopyTextRectangle.GetTop() + (float)(this->mLineHeight * i));
-        theLineRectangle.SetBottom(theLineRectangle.GetTop() + (float)this->mLineHeight - 1.0f);
-        unsigned long theWidth = (unsigned long)(this->mCopyTextRectangle.GetWidth() / (float)(this->mCopyLineArray[i]).size());
+        theLineRectangle.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->GetLineHeight() * i));
+        theLineRectangle.SetBottom(theLineRectangle.GetTop() + (float)this->GetLineHeight() - 1.0f);
+        unsigned long theWidth = (unsigned long)(this->GetCopyTextRectangle().GetWidth() / (float)(this->mCopyLineArray[i]).size());
         unsigned long theXOffset;
         unsigned long j;
         for (j = 0, theXOffset = 0; j < (this->mCopyLineArray[i]).size(); j++, theXOffset += theWidth) {
-            theLineRectangle.SetLeft(this->mCopyTextRectangle.GetLeft() + (float)theXOffset);
+            theLineRectangle.SetLeft(this->GetCopyTextRectangle().GetLeft() + (float)theXOffset);
             theLineRectangle.SetRight(theLineRectangle.GetLeft() + (float)theWidth - 1.0f);
-            if (theLineRectangle.And(this->mCopyTextRectangle, theRectangle) != true)
+            if (theLineRectangle.And(this->GetCopyTextRectangle(), theRectangle) != true)
                 break;
             theRectangle.SetRight(theRectangle.GetRight() + 1.0f);
             theRectangle.SetBottom(theRectangle.GetBottom() + 1.0f);
@@ -151,10 +151,10 @@ long EESEUITerrainTypeLB::CopyData()
     }
     long theResult = UIListBox<EESEUITTData>::CopyData();
     *this->mCopyText = *this->mText;
-    if (this->mCopiedHasSelection == true) {
-        this->mCopiedHasFocus = false;
+    if (this->GetCopiedHasSelection() == true) {
+        this->SetCopiedHasFocus(false);
         this->mIsSelectionFramed = true;
-        this->mCopiedFocusedRectColor = this->mFocusedRectColor;
+        this->SetCopiedFocusedRectColor(this->GetFocusedRectColor());
     } else
         this->mIsSelectionFramed = false;
     for (unsigned long j = 0; j < this->mCopyLineArray.size(); j++) {
@@ -168,7 +168,7 @@ long EESEUITerrainTypeLB::CopyData()
 // Draws the list box, each line's 16x16 terrain preview and a frame around the selected line
 long EESEUITerrainTypeLB::DrawPolygons()
 {
-    GELine theLine(GE2DPoint(), GE2DPoint(), this->mCopiedFocusedRectColor, this->mCopiedFocusedRectColor, 1.0f);
+    GELine theLine(GE2DPoint(), GE2DPoint(), this->GetCopiedFocusedRectColor(), this->GetCopiedFocusedRectColor(), 1.0f);
     GERectangle theSource;
     GERectangle theDestination;
     long theResult = UIListBox<EESEUITTData>::DrawPolygons();
@@ -178,19 +178,19 @@ long EESEUITerrainTypeLB::DrawPolygons()
             continue;
         this->mBitmap->SetTexture(theTexture, this->GetScreenIndex());
         theSource = GERectangle(0.0f, 0.0f, (float)theTexture->GetWidth(), (float)theTexture->GetHeight());
-        theDestination.SetLeft(this->mCopyTextRectangle.GetLeft());
-        theDestination.SetTop(this->mCopyTextRectangle.GetTop() + (float)(this->mLineHeight * i));
+        theDestination.SetLeft(this->GetCopyTextRectangle().GetLeft());
+        theDestination.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->GetLineHeight() * i));
         theDestination.SetRight(theDestination.GetLeft() + 16.0f - 1.0f);
         theDestination.SetBottom(theDestination.GetTop() + 16.0f - 1.0f);
-        if (!theDestination.And(this->mCopyTextRectangle))
+        if (!theDestination.And(this->GetCopyTextRectangle()))
             continue;
         this->mBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetScreenIndex());
         this->mBitmap->SetLocation(theDestination.GetTopLeft());
         theResult = this->GetRasterizer()->Draw(this->mBitmap, this->GetScreenIndex());
     }
     if (this->mIsSelectionFramed == true) {
-        theDestination = this->mCopiedSelectedBackground->GetRectangle();
-        if (theDestination.And(this->mCopyTextRectangle) == true) {
+        theDestination = this->GetCopiedSelectedBackground()->GetRectangle();
+        if (theDestination.And(this->GetCopyTextRectangle()) == true) {
             theLine.SetStartPoint(theDestination.GetTopLeft());
             theLine.SetEndPoint(theDestination.GetTopRight());
             this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
@@ -222,16 +222,16 @@ long EESEUITerrainTypeLB::DrawTextA()
 {
     GERectangle theRectangle;
     unsigned long theYOffset = 0;
-    unsigned long theHeight = this->mLineHeight;
+    unsigned long theHeight = this->GetLineHeight();
     unsigned long i = 0;
     this->DrawScrollBarText();
     this->mDrawCount--;
-    theRectangle = this->mCopyTextRectangle;
+    theRectangle = this->GetCopyTextRectangle();
     theRectangle.SetRight(theRectangle.GetRight() + 1.0f);
     theRectangle.SetLeft(theRectangle.GetLeft() + 16.0f);
     long theResult = 0;
-    for (; i < this->mDrawLineCount; i++) {
-        theRectangle.SetTop(this->mCopyTextRectangle.GetTop() + (float)theYOffset);
+    for (; i < this->GetDrawCount(); i++) {
+        theRectangle.SetTop(this->GetCopyTextRectangle().GetTop() + (float)theYOffset);
         theRectangle.SetBottom(theRectangle.GetTop() + (float)theHeight);
         this->mCopyText->SetLocation(GE2DPoint(theRectangle.GetLeft(), theRectangle.GetTop()));
         this->mCopyText->SetText(this->mCopyLineArray[i].mName);

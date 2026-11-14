@@ -126,7 +126,7 @@ struct UIComboBox::Rust {
     static EeUiRect RectOf(void* inCombo, int inPart) { return Rect(Part(inCombo, inPart)->GetRectangle()); }
     static unsigned long TextBoxBorder(void* inCombo) { return Combo(inCombo)->mTextBox->GetBorderThickness(); }
     static UILBString* List(void* inCombo) { return Combo(inCombo)->mListBox; }
-    static unsigned long LineHeight(void* inCombo) { return Combo(inCombo)->mListBox->mLineHeight; }
+    static unsigned long LineHeight(void* inCombo) { return Combo(inCombo)->mListBox->GetLineHeight(); }
     static unsigned long ListBorder(void* inCombo) { return Combo(inCombo)->mListBox->GetBorderThickness(); }
     static unsigned long WindowHeight(void* inCombo)
     {

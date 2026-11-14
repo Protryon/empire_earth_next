@@ -153,6 +153,17 @@ protected:
     const std::vector<T>& GetCopyLineArray() const { return this->mCopyLineArray; }
     const GERectangle& GetCopyTextRectangle() const { return this->mCopyTextRectangle; }
     unsigned long GetDrawCount() const { return this->mDrawLineCount; }
+    // the subclasses' reads and writes of the members (R6 ui round 15's census)
+    unsigned long GetLineHeight() const { return this->mLineHeight; }
+    unsigned long GetSelectionIndex() const { return this->mCurrentSelection; }
+    bool GetAutoSelect() const { return this->mAutoSelect; }
+    bool GetCopiedHasSelection() const { return this->mCopiedHasSelection; }
+    void SetCopiedHasSelection(bool inValue) { this->mCopiedHasSelection = inValue; }
+    void SetCopiedHasFocus(bool inValue) { this->mCopiedHasFocus = inValue; }
+    GEColor GetFocusedRectColor() const { return this->mFocusedRectColor; }
+    GEColor GetCopiedFocusedRectColor() const { return this->mCopiedFocusedRectColor; }
+    void SetCopiedFocusedRectColor(const GEColor& inColor) { this->mCopiedFocusedRectColor = inColor; }
+    GERhombus* GetCopiedSelectedBackground() const { return this->mCopiedSelectedBackground; }
     virtual unsigned long GetNumLines() const { return this->mData.size(); }  // slot 0xa8
     virtual long MouseLButtonDown();
     virtual long MouseLButtonUp();

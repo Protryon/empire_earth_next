@@ -40,13 +40,13 @@ long UILBString::DrawTextA()
 {
     GERectangle theRectangle;
     long theResult = kErrorOK;
-    unsigned long theLineHeight = this->mLineHeight;
+    unsigned long theLineHeight = this->GetLineHeight();
     unsigned long i = 0;
     this->DrawScrollBarText();
     this->mDrawCount--;
-    EeUiRect theCopy = {this->mCopyTextRectangle.mBottom, this->mCopyTextRectangle.mLeft, this->mCopyTextRectangle.mRight,
-                        this->mCopyTextRectangle.mTop};
-    for (; i < this->mDrawLineCount; i++) {
+    EeUiRect theCopy = {this->GetCopyTextRectangle().mBottom, this->GetCopyTextRectangle().mLeft, this->GetCopyTextRectangle().mRight,
+                        this->GetCopyTextRectangle().mTop};
+    for (; i < this->GetDrawCount(); i++) {
         // the row, one pixel wider than the text rectangle (ee_ui draw.rs)
         EeUiRect theRow = ee_ui_string_list_row(theCopy, i, theLineHeight);
         theRectangle = GERectangle(theRow.left, theRow.top, theRow.right, theRow.bottom);
@@ -76,11 +76,10 @@ extern "C" int ee_uicpp_string_list_first(void* inList, unsigned long inIndex)
 // (the search is Rust: ee_ui find_key.rs)
 long UILBString::UpdateTranslatedKey(const char* inKey, short inRepeat)
 {
-    long i = ee_ui_string_list_find(this, inKey, this->mCurrentSelection);
+    long i = ee_ui_string_list_find(this, inKey, this->GetSelectionIndex());
     if (i < 0)
         return kErrorNotFound;
-    if (this->mScrollBar)
-        this->mScrollBar->SetCurrentRangeValue(i);
+    this->SetScrollBarCurrentRange(i);
     this->ChangeSelectionIndex(i, true, true);
     this->SetDirty(true);
     return kErrorOK;
