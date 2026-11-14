@@ -31,6 +31,7 @@ pub mod label_fit;
 pub mod labelobj;
 pub mod layout;
 pub mod list;
+pub mod listobj;
 pub mod manager;
 pub mod manager_media;
 pub mod mouse;
@@ -89,9 +90,6 @@ mod layout_ffi;
 #[cfg(not(test))]
 mod mouse_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
-// imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
-#[cfg(not(test))]
-mod list_ffi;
 // imports the C++ manager's lists and the forms' members (UIManager.cpp), absent from a test binary
 #[cfg(not(test))]
 mod manager_ffi;

@@ -33,6 +33,70 @@
 #include "lle/UIScrollBar.h"
 #include "lle/UIListBox.h"
 #include "lle/UILBString.h"
+#include "UIObjHost.h"
+
+// The Rust list box's ops that do not depend on T (ee_ui listobj.rs; UIListBoxRust<T>::Op answers the rest):
+// UIControl's, the scroll bar's (a part by address), the polls', the selection rhombi's and the focus line's, the keys
+intptr_t UIObjHost::List(UIControl* l, EeUiOp inOp, intptr_t a, intptr_t b, float* f)
+{
+    UIScrollBar* theBar = reinterpret_cast<UIScrollBar*>(a);
+    TMPoll* thePoll = reinterpret_cast<TMPoll*>(a);
+    GELine* theLine = reinterpret_cast<GELine*>(a);
+    GERhombus* theRhombus = reinterpret_cast<GERhombus*>(a);
+    intptr_t r = 0;
+    if (UIObjHost::Base(l, inOp, a, f, &r) || UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
+        return r;
+    switch (inOp) {
+    case EeUiOp::EditKey:
+        switch (a) {
+        case 6: return UIControl::HomeKeyPressed();
+        case 7: return UIControl::EndKeyPressed();
+        case 8: return UIControl::UpKeyPressed();
+        case 9: return UIControl::DownKeyPressed();
+        default: return UIControl::EnterKeyPressed();
+        }
+    case EeUiOp::PollCreate: return (intptr_t) new TMPoll((unsigned long)a, 0, false);
+    case EeUiOp::PollDelete: delete thePoll; break;
+    case EeUiOp::PollRunning: return thePoll->GetIsRunning();
+    case EeUiOp::PollPoll: return thePoll->Poll();
+    case EeUiOp::PollStart: thePoll->Start(); break;
+    case EeUiOp::PollStop: thePoll->Stop(); break;
+    case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus();
+    case EeUiOp::RhombusDelete: delete theRhombus; break;
+    case EeUiOp::RhombusRect: UIObjHost::PutRect(f, theRhombus->GetRectangle()); break;
+    case EeUiOp::RhombusSetRect: theRhombus->SetRectangle(UIObjHost::Rect(f)); break;
+    case EeUiOp::RhombusAssign: *theRhombus = *reinterpret_cast<GERhombus*>(b); break;
+    case EeUiOp::RhombusDraw: return l->GetRasterizer()->Draw(theRhombus, l->GetScreenIndex());
+    case EeUiOp::LineCreate:
+        return (intptr_t) new GELine(GE2DPoint(0.0f, 0.0f), GE2DPoint(0.0f, 0.0f), GEColor(0.0f, 0.0f, 0.0f),
+                                     GEColor(0.0f, 0.0f, 0.0f), 1.0f);
+    case EeUiOp::LineDelete: delete theLine; break;
+    case EeUiOp::LineSetPoints:
+        theLine->SetStartPoint(GE2DPoint(f[0], f[1]));
+        theLine->SetEndPoint(GE2DPoint(f[2], f[3]));
+        break;
+    case EeUiOp::LineSetColor: theLine->SetColor(GEColor(f[0], f[1], f[2])); break;
+    case EeUiOp::LineDraw: return l->GetRasterizer()->Draw(theLine, l->GetScreenIndex());
+    case EeUiOp::DrawCountDecrement: l->mDrawCount--; break;
+    case EeUiOp::SetBgRectangle: l->SetBgRectangle(UIObjHost::Rect(f)); break;
+    case EeUiOp::BaseMouseDoublePressed: return l->UIControl::MouseLButtonDoublePressed();
+    case EeUiOp::CreateScrollBar:
+        return (intptr_t) new UIScrollBar(l->mId, GE2DPoint(f[0], f[1]), f[2], 1, l->mForm, l->mIndex,
+                                          l->GetBorderThickness());
+    case EeUiOp::BarSetRange: theBar->SetRange(0, (unsigned long)b); break;
+    case EeUiOp::BarSetPageSize: theBar->SetPageSize((unsigned long)b); break;
+    case EeUiOp::BarValue: return theBar->GetSlider()->GetCurrentRangeValue();
+    case EeUiOp::BarMax: return theBar->GetSlider()->GetMaxRange();
+    case EeUiOp::BarSetValue: theBar->SetCurrentRangeValue((unsigned long)b); break;
+    case EeUiOp::BarIncrementBy: theBar->IncrementBy((long)b); break;
+    default: break;
+    }
+    return 0;
+}
+intptr_t UIListBoxHostOp(UIControl* inList, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
+{
+    return UIObjHost::List(inList, inOp, a, b, f);
+}
 
 // FUNCTION: LLE 0x10078371
 // Draws the scroll bar text and each visible line of the string list box, clipped by the form
@@ -44,8 +108,8 @@ long UILBString::DrawTextA()
     unsigned long i = 0;
     this->DrawScrollBarText();
     this->mDrawCount--;
-    EeUiRect theCopy = {this->GetCopyTextRectangle().mBottom, this->GetCopyTextRectangle().mLeft, this->GetCopyTextRectangle().mRight,
-                        this->GetCopyTextRectangle().mTop};
+    const GERectangle& theCtr = this->GetCopyTextRectangle();
+    EeUiRect theCopy = {theCtr.mBottom, theCtr.mLeft, theCtr.mRight, theCtr.mTop};
     for (; i < this->GetDrawCount(); i++) {
         // the row, one pixel wider than the text rectangle (ee_ui draw.rs)
         EeUiRect theRow = ee_ui_string_list_row(theCopy, i, theLineHeight);
