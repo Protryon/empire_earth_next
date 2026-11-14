@@ -72,6 +72,8 @@
 //!   over the C++ host.
 //! - [`ui_game`]: the UI thread's game starts (the scenario tests, a saved game's load) and its loop (`Run`)
 //!   over the C++ host.
+//! - [`ui_manager`]: the game's UI manager's constructor work (the port's controls), `StartScenarioEditor`,
+//!   `UpdateKeyboard`, `UpdateMouse` over the C++ host.
 //! - [`ui_thread`]: the UI thread's message switch (`EEUserInterface::HandleMessage`) and the game window's event
 //!   handler (`HandleEvent`, with its statics) over the C++ host.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
@@ -182,6 +184,9 @@ mod status_button_ffi;
 pub mod ui_game;
 #[cfg(not(test))]
 mod ui_game_ffi;
+pub mod ui_manager;
+#[cfg(not(test))]
+mod ui_manager_ffi;
 pub mod ui_thread;
 #[cfg(not(test))]
 mod ui_thread_ffi;

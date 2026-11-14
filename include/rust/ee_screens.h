@@ -4476,6 +4476,125 @@ constexpr static const int64_t EE_SCREENS_UG_PLAYER_CENTRES = 4;
 
 constexpr static const int64_t EE_SCREENS_UG_PLAYER_TOWN_GROUPS = 5;
 
+/// `RegisterControlEventCallback(EECreateGameEvent)`, `(EECreateWonNetServerSelectEvent)`,
+/// `RegisterFormEventCallback(EECreateFormEvent)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_REGISTER = 1;
+
+/// `LoadDatabase(gDataPath, UString())`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_LOAD_DATABASE = 2;
+
+/// `UIControlsTable::AddControlLike(this, ...)` of the [`EeScreensManagerControl`] at c.
+constexpr static const uint32_t EE_SCREENS_UM_OP_ADD_LIKE = 3;
+
+/// `UIControlsTable::MoveControlsHorizontally(...)` of the [`EeScreensManagerMove`] at c.
+constexpr static const uint32_t EE_SCREENS_UM_OP_MOVE = 4;
+
+/// `EECPEngineChoiceCount()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_ENGINE_COUNT = 5;
+
+/// `mMainGameForm = GetFormByID(kFormMainGame)`, `mInScenarioEditor = false`, `mScenarioEditorForm = NULL`,
+/// `mB13D = false`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_FORMS = 6;
+
+/// `SetMusicVolume(the music setting's volume, 0 when the music is off)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_MUSIC = 7;
+
+/// `mU138 = 0`; the save form's activate event (`EECreateScreenEvent(EE_SCREENS_SL_ACTIVATE)`, set, dereferenced).
+constexpr static const uint32_t EE_SCREENS_UM_OP_SAVE_EVENT = 8;
+
+/// The lobby options' lock: a 1 `WriteLock()`, 0 `WriteUnlock()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_LOBBY_LOCK = 10;
+
+/// `mInScenarioEditor = true`, `gGameStateIsMultiplayer = false`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_EDITOR_ON = 11;
+
+/// The old communications deleted; a local `EEServer` ("EEName", the network adapter) made, its threads started,
+/// no load responses.
+constexpr static const uint32_t EE_SCREENS_UM_OP_NEW_SERVER = 12;
+
+/// The lobby options' map size 1, load type 3, the prehistoric epoch, variant 0.
+constexpr static const uint32_t EE_SCREENS_UM_OP_LOBBY_DEFAULTS = 13;
+
+/// `gResource->GetString(IDS_SE_HUMAN (a 0) or IDS_COMPUTER (a 1), the call's name a)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_NAME = 14;
+
+/// `gWorldTable.GetLongValue(kWorldStartingCitizensDefault)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_CITIZENS = 15;
+
+/// The lobby options' `mPlayers[slot] =` the [`EeScreensManagerPlayer`] at c.
+constexpr static const uint32_t EE_SCREENS_UM_OP_SET_PLAYER = 16;
+
+/// The server's `StopPing()`, `mLoadState = 1`, `ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()))`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_SERVER_LOAD = 17;
+
+/// `gISKeyboard->GetEntity(key a)->JustPressed()` (a an `EE_SCREENS_UM_KEY_*`).
+constexpr static const uint32_t EE_SCREENS_UM_OP_KEY_PRESSED = 20;
+
+/// `gGraphics->mIsMoviePlaying`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_MOVIE_PLAYING = 21;
+
+/// `gGraphics->PostStopMovie()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_STOP_MOVIE = 22;
+
+/// `PlatSleep(a)`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_SLEEP = 23;
+
+/// `GetCurrentForm() != NULL && !GetCurrentForm()->GetIsKeyboardCaptured() && !gLoadingSavedGame`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_KEYS_FREE = 24;
+
+/// `EEPostF9Key()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_POST_F9 = 25;
+
+/// `UIManager::UpdateKeyboard()`: its result.
+constexpr static const uint32_t EE_SCREENS_UM_OP_BASE_KEYBOARD = 26;
+
+/// `UIManager::GetLMouseButton()` (a 0) or `GetRMouseButton()` (a 1) `->JustPressed()`.
+constexpr static const uint32_t EE_SCREENS_UM_OP_BUTTON_PRESSED = 27;
+
+/// `UIManager::UpdateMouse(the call's mouse location)`: its result.
+constexpr static const uint32_t EE_SCREENS_UM_OP_BASE_MOUSE = 28;
+
+/// The keys `UpdateKeyboard` tests (EE_SCREENS_UM_OP_KEY_PRESSED's a).
+constexpr static const int64_t EE_SCREENS_UM_KEY_ESCAPE = 0;
+
+constexpr static const int64_t EE_SCREENS_UM_KEY_RETURN = 1;
+
+constexpr static const int64_t EE_SCREENS_UM_KEY_SPACE = 2;
+
+constexpr static const int64_t EE_SCREENS_UM_KEY_F9 = 3;
+
+/// `kTextureResolutionControlID`: the settings' added controls' first id.
+constexpr static const int32_t EE_SCREENS_UM_TEXTURE_RESOLUTION_ID = 90001;
+
+/// `kGameSettingsTextureResolutionComboBox`: the settings' added controls' first form index.
+constexpr static const int32_t EE_SCREENS_UM_TEXTURE_RESOLUTION_INDEX = 111;
+
+/// `kTextureResolutionOriginalString`, `kTextureResolutionHelpString`.
+constexpr static const int32_t EE_SCREENS_UM_TEXTURE_RESOLUTION_STRING = 33100;
+
+constexpr static const int32_t EE_SCREENS_UM_TEXTURE_RESOLUTION_HELP = 33103;
+
+/// `kFormLobby`.
+constexpr static const int32_t EE_SCREENS_UM_FORM_LOBBY = 26;
+
+/// `kLobbyEngineControlID`, `kLobbyEngineHeader`, `kLobbyEngineCombo`, `kLobbyEngineLabel`.
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_ID = 90100;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_HEADER = 274;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_COMBO = 275;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_LABEL = 291;
+
+/// `kLobbyEngineClassicString`, `kLobbyEngineRandomString`, `kLobbyEngineHeaderString`, `kLobbyEngineHelpString`.
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_CLASSIC = 33170;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_RANDOM = 33171;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_HEADER_STRING = 33173;
+
+constexpr static const int32_t EE_SCREENS_UM_ENGINE_HELP = 33175;
+
 /// `this->PauseGraphics()`.
 constexpr static const uint32_t EE_SCREENS_UI_OP_PAUSE = 1;
 
@@ -5215,6 +5334,44 @@ struct EeScreensMainFormIo {
   int64_t n[2];
 };
 
+/// One `UIControlsTable::AddControlLike`'s arguments.
+struct EeScreensManagerControl {
+  int32_t template_id;
+  int32_t id;
+  int32_t form_index;
+  uint32_t group;
+  float left;
+  float right;
+  float top;
+  float bottom;
+  int32_t string_begin;
+  int32_t string_end;
+  uint32_t help;
+};
+
+/// One `UIControlsTable::MoveControlsHorizontally`'s arguments.
+struct EeScreensManagerMove {
+  int32_t form;
+  int32_t first;
+  int32_t last;
+  float left_delta;
+  float right_delta;
+};
+
+/// One lobby slot `StartScenarioEditor` sets: the player's fields, its name the call's name `name` (0 the human's,
+/// 1 the computer's).
+struct EeScreensManagerPlayer {
+  uint32_t slot;
+  uint32_t color;
+  uint32_t kind;
+  uint32_t starting_citizens;
+  uint8_t is_local;
+  uint8_t is_ready;
+  uint8_t name;
+  /// 0 (the record's last byte, so that it has no padding)
+  uint8_t reserved;
+};
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
@@ -5707,6 +5864,18 @@ void ee_screens_ui_load_saved_game(void *ui, void *file);
 
 /// `EEUserInterface::Run` on the UI object `ui`: the UI thread's loop until it quits.
 int64_t ee_screens_ui_run(void *ui);
+
+/// `EEUIManager`'s constructor's work after its base, on the host's call record `call`.
+void ee_screens_ui_manager_construct(void *call);
+
+/// `EEUIManager::StartScenarioEditor` on the host's call record `call`.
+void ee_screens_ui_manager_start_editor(void *call);
+
+/// `EEUIManager::UpdateKeyboard` on the host's call record `call`: its result.
+int64_t ee_screens_ui_manager_update_keyboard(void *call);
+
+/// `EEUIManager::UpdateMouse` on the host's call record `call`: its result.
+int64_t ee_screens_ui_manager_update_mouse(void *call);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,

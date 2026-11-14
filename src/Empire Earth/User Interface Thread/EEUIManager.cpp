@@ -174,6 +174,15 @@ UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 #include "lle/UILineGraph.h"
 #include "ee/EEUIPGSLineGraph.h"
 #include "ee/EEStringIDs.h"
+// The host's record of one call of ee_screens ui_manager.rs (the manager, StartScenarioEditor's two names,
+// UpdateMouse's location)
+struct EEUIManagerCall {
+    explicit EEUIManagerCall(EEUIManager* inManager) : mManager(inManager), mMouse(NULL) {}
+    EEUIManager* mManager;
+    UWideString mNames[2];
+    const GE2DPoint* mMouse;
+};
+
 // FUNCTION: EXE 0x671319
 // Creates the game's UI manager: registers the control and form event factories (the game settings one
 // twice), loads the UI database and finds the main game form
@@ -183,88 +192,10 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
 {
     // (the original's one factory per form, registered campaign editor, chat log, civilization builder, game settings,
     // save/load, main game, main screen, post-game summary, scenario intro, scenario load, single player load, game
-    // settings again, WON server select, debug sound: one Rust table in that order but WON's, whose ids are its own)
-    this->RegisterControlEventCallback(EECreateGameEvent);
-    this->RegisterControlEventCallback(EECreateWonNetServerSelectEvent);
-    this->RegisterFormEventCallback(EECreateFormEvent);
-    this->LoadDatabase(gDataPath, UString());
-    // port: the settings' texture resolution combo box (ee_screens settings_form.rs), in the video tab's right column
-    // below the weather effects check box; a copy of the video card combo box (id 151) with the strings 33100..33102
-    UIControlsTable::AddControlLike(this, 151, kTextureResolutionControlID, kGameSettingsTextureResolutionComboBox, 1,
-                                    0.2473f, 0.4614f, 0.325f, 0.325f + 0.025f + 3 * 0.022f, kTextureResolutionOriginalString,
-                                    kTextureResolutionOriginalString + 2, kTextureResolutionHelpString);
-    // port: the modern display settings in the video tab's top block (where the video card, the 3D acceleration and
-    // the resolution list were; those are hidden), the zoom-out in the interface tab, the master volume, the output
-    // device and the background mute in the audio tab. Combo boxes are copies of the video card's (id 151): their
-    // lines are their strings, the rectangles include the open list.
-    struct PortControl { long mTemplate, mIndex; unsigned long mGroup; float mL, mR, mT, mLines; long mBegin, mEnd, mHelp; };
-    static const PortControl kPortControls[] = {
-        {151, kGameSettingsWindowModeComboBox, 1, 0.2473f, 0.4614f, 0.160f, 2, 33110, 33111, 33150},
-        {151, kGameSettingsUIScaleComboBox, 1, 0.2473f, 0.4614f, 0.215f, 8, 33112, 33119, 33151},
-        {151, kGameSettingsRenderResolutionComboBox, 1, 0.2473f, 0.4614f, 0.270f, 4, 33120, 33123, 33152},
-        {151, kGameSettingsFrameRateComboBox, 1, 0.5400f, 0.7540f, 0.160f, 4, 33124, 33127, 33153},
-        {151, kGameSettingsTextureFilteringComboBox, 1, 0.5400f, 0.7540f, 0.215f, 3, 33128, 33130, 33154},
-        {151, kGameSettingsBrightnessComboBox, 1, 0.5400f, 0.7540f, 0.270f, 7, 33131, 33137, 33155},
-        {151, kGameSettingsMaximumZoomOutComboBox, 3, 0.2473f, 0.4614f, 0.340f, 9, 33138, 33146, 33156},
-        {182, kGameSettingsMasterVolumeLabel, 2, 0.2473f, 0.4614f, 0.560f, -1, 33147, 0, 33157},
-        {183, kGameSettingsMasterVolumeSlider, 2, 0.2473f, 0.4614f, 0.587f, -1, 0, 0, 33157},
-        {151, kGameSettingsOutputDeviceComboBox, 2, 0.5400f, 0.7540f, 0.587f, 6, 33148, 33148, 33158},
-        {804, kGameSettingsMuteInBackgroundCheckBox, 2, 0.5400f, 0.7540f, 0.535f, -1, 33149, 0, 33159},
-        {151, kGameSettingsQualityComboBox, 1, 0.3130f, 0.5270f, 0.490f, 6, 33160, 33165, 33166},
-    };
-    for (size_t i = 0; i < sizeof(kPortControls) / sizeof(kPortControls[0]); i++) {
-        const PortControl& c = kPortControls[i];
-        float theBottom = c.mLines >= 0 ? c.mT + 0.025f + c.mLines * 0.022f : c.mT + 0.0245f;
-        UIControlsTable::AddControlLike(this, c.mTemplate, kTextureResolutionControlID + 1 + (long)i, c.mIndex, c.mGroup,
-                                        c.mL, c.mR, c.mT, theBottom, c.mBegin, c.mEnd, c.mHelp);
-    }
-    // port: the lobby's player column narrower (the name combo boxes, form indices 30..45, and the name labels,
-    // 46..61: 0.0587..0.2532 -> ..0.2312) and the columns right of it moved left by as much (the team, citizens,
-    // bonus and ping headers 3..6; per slot the team button and label, the colour button and label, the citizens
-    // combo and label and the ping status, 62..173), so that the engine column below ends before the game options'
-    // frame (about 0.508) instead of under it
-    const float kLobbyPlayerShrink = 0.022f;
-    UIControlsTable::MoveControlsHorizontally(kFormLobby, 30, 61, 0.0f, -kLobbyPlayerShrink);
-    UIControlsTable::MoveControlsHorizontally(kFormLobby, 3, 6, -kLobbyPlayerShrink, -kLobbyPlayerShrink);
-    UIControlsTable::MoveControlsHorizontally(kFormLobby, 62, 173, -kLobbyPlayerShrink, -kLobbyPlayerShrink);
-    // port: the lobby's engine column (EELobbyControl kLobbyEngine*; ee/EECPEngine.h) where the ping column is (a
-    // computer row has no ping), widened into the gap before the game options: the header a copy of the ping label
-    // (2507), per slot a combo box like the citizens combo (2629; its lines the strings Classic and Random, then the
-    // AI manifest's names, which the lobby appends: ee_screens lobby_form.rs fill_engine_box) and a label like the
-    // citizens label (2645), on the slot rows (the database's rows: 0.1043 + slot * 0.0391); moved left with the
-    // columns above (0.4282..0.5200 in the database's places). The open list is as tall as its lines (about 0.034 of
-    // the height each in this lobby), up to 8; more scroll.
-    {
-        const float kLeft = 0.4282f - kLobbyPlayerShrink, kRight = 0.5200f - kLobbyPlayerShrink;
-        const float kRowTop = 0.10430248f, kRowStep = 0.03911343f;
-        const float kRowHeight = 0.02477184f;
-        const float kListLine = 0.034f;
-        const unsigned long kListLinesMax = 8;
-        unsigned long theLines = EECPEngineChoiceCount();
-        if (theLines > kListLinesMax)
-            theLines = kListLinesMax;
-        UIControlsTable::AddControlLike(this, 2507, kLobbyEngineControlID, kLobbyEngineHeader, 0, kLeft, kRight,
-                                        0.058670145f, 0.102998696f, kLobbyEngineHeaderString, 0, kLobbyEngineHelpString);
-        for (long theSlot = 0; theSlot < 16; theSlot++) {
-            float theTop = kRowTop + theSlot * kRowStep;
-            UIControlsTable::AddControlLike(this, 2629, kLobbyEngineControlID + 1 + theSlot, kLobbyEngineCombo + theSlot, 1,
-                                            kLeft, kRight, theTop, theTop + 0.025f + theLines * kListLine,
-                                            kLobbyEngineClassicString, kLobbyEngineRandomString,
-                                            kLobbyEngineHelpString);
-            UIControlsTable::AddControlLike(this, 2645, kLobbyEngineControlID + 17 + theSlot, kLobbyEngineLabel + theSlot, 1,
-                                            kLeft, kRight, theTop, theTop + kRowHeight, kLobbyEngineClassicString, 0,
-                                            kLobbyEngineHelpString);
-        }
-    }
-    this->mMainGameForm = static_cast<EEUIFMainGame*>(this->GetFormByID(kFormMainGame));
-    this->mInScenarioEditor = false;
-    this->mScenarioEditorForm = NULL;
-    this->mB13D = false;
-    this->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume);
-    this->mU138 = 0;
-    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SL_ACTIVATE);   // (ee_screens save_load.rs)
-    this->GetFormByID(kFormSaveGame)->SetFormActivateEvent(theEvent);
-    theEvent->Dereference();
+    // settings again, WON server select, debug sound: one Rust table in that order but WON's, whose ids are its own;
+    // the port's controls, the forms, the music and the save form's event: ee_screens ui_manager.rs)
+    EEUIManagerCall theCall(this);
+    ee_screens_ui_manager_construct(&theCall);
 }
 
 // SYNTHETIC: EXE 0x671552
@@ -550,93 +481,143 @@ void EEUIManager::DisplayYesNoCancel(const UWideString& inMessage, unsigned long
 
 // FUNCTION: EXE 0x674e69
 // Starts the scenario editor: a local server with a human in slot 0 and computers in slots 1..15, then loading
+// (ee_screens ui_manager.rs)
 void EEUIManager::StartScenarioEditor()
 {
-    UWideString theHumanName;
-    UWideString theComputerName;
-    EEGameOptionsPlayer theHuman;
-    EEGameOptionsPlayer theComputer;
-    gWorld.GetLobbyOptions().GetLock()->WriteLock();
-    this->mInScenarioEditor = true;
-    gGameStateIsMultiplayer = false;
-    if (gCommunications != NULL)
-        delete gCommunications;
-    gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
-    static_cast<EEServer*>(gCommunications)->StartThreads();
-    static_cast<EEServer*>(gCommunications)->mNumLoadResponses = 0;
-    gWorld.GetLobbyOptions().mMapSize = 1;
-    gWorld.GetLobbyOptions().mLoadType = 3;
-    gWorld.GetLobbyOptions().mEpochStart = kTechEpochPrehistoric;
-    gWorld.GetLobbyOptions().mVariant = 0;
-    gResource->GetString(IDS_SE_HUMAN, theHumanName);
-    theHuman.mColor = 0;
-    theHuman.mIsLocal = true;
-    theHuman.mName = theHumanName;
-    theHuman.mSlot = 0;
-    theHuman.mIsReady = true;
-    theHuman.mType = 1;
-    theHuman.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-    gWorld.GetLobbyOptions().mPlayers[0] = theHuman;
-    gResource->GetString(IDS_COMPUTER, theComputerName);
-    theComputer.mIsLocal = false;
-    theComputer.mName = theComputerName;
-    theComputer.mType = 0;
-    theComputer.mIsReady = true;
-    for (unsigned long i = 1; i < 16; i++) {
-        theComputer.mSlot = i;
-        theComputer.mColor = i;
-        theComputer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
-        gWorld.GetLobbyOptions().mPlayers[i] = theComputer;
-    }
-    static_cast<EEServer*>(gCommunications)->StopPing();
-    static_cast<EEServer*>(gCommunications)->mLoadState = 1;
-    gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
-    gWorld.GetLobbyOptions().GetLock()->WriteUnlock();
+    EEUIManagerCall theCall(this);
+    ee_screens_ui_manager_start_editor(&theCall);
 }
 
 // FUNCTION: EXE 0x6750a9
 // Skips a playing movie on Escape, Return or Space; handles F9 screenshots outside text entry; then the keys
+// (ee_screens ui_manager.rs)
 long EEUIManager::UpdateKeyboard()
 {
-    UWideString theUnused;
-    ISEntity* theKey;
-    long theResult = kErrorOK;
-    bool theStop = false;
-    gISKeyboard->GetEntity(kKeyEscape, theKey);
-    if (theKey->JustPressed())
-        theStop = true;
-    gISKeyboard->GetEntity(kKeyReturn, theKey);
-    if (theKey->JustPressed())
-        theStop = true;
-    gISKeyboard->GetEntity(kKeySpace, theKey);
-    if (theKey->JustPressed())
-        theStop = true;
-    if (theStop && gGraphics->mIsMoviePlaying) {
-        gGraphics->PostStopMovie();
-        while (gGraphics->mIsMoviePlaying)
-            PlatSleep(1);
-    }
-    if (this->GetCurrentForm() != NULL && !this->GetCurrentForm()->GetIsKeyboardCaptured() && !gLoadingSavedGame) {
-        gISKeyboard->GetEntity(kKeyF9, theKey);
-        if (theKey->JustPressed()) {
-            EEPostF9Key();
-            return theResult;
-        }
-    }
-    theResult = UIManager::UpdateKeyboard();
-    return theResult;
+    EEUIManagerCall theCall(this);
+    return (long)ee_screens_ui_manager_update_keyboard(&theCall);
 }
 
 // FUNCTION: EXE 0x6751ab
-// Skips a playing movie on a mouse click, then handles the mouse
+// Skips a playing movie on a mouse click, then handles the mouse (ee_screens ui_manager.rs)
 long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 {
-    if ((UIManager::GetLMouseButton()->JustPressed() || UIManager::GetRMouseButton()->JustPressed()) && gGraphics->GetIsMoviePlaying()) {
-        gGraphics->PostStopMovie();
-        while (gGraphics->mIsMoviePlaying)
-            PlatSleep(1);
+    EEUIManagerCall theCall(this);
+    theCall.mMouse = &inMouseLocation;
+    return (long)ee_screens_ui_manager_update_mouse(&theCall);
+}
+
+static_assert(EE_SCREENS_UM_TEXTURE_RESOLUTION_ID == kTextureResolutionControlID &&
+              EE_SCREENS_UM_TEXTURE_RESOLUTION_INDEX == kGameSettingsTextureResolutionComboBox &&
+              EE_SCREENS_UM_TEXTURE_RESOLUTION_STRING == kTextureResolutionOriginalString &&
+              EE_SCREENS_UM_TEXTURE_RESOLUTION_HELP == kTextureResolutionHelpString &&
+              EE_SCREENS_UM_FORM_LOBBY == kFormLobby && EE_SCREENS_UM_ENGINE_ID == kLobbyEngineControlID &&
+              EE_SCREENS_UM_ENGINE_HEADER == kLobbyEngineHeader && EE_SCREENS_UM_ENGINE_COMBO == kLobbyEngineCombo &&
+              EE_SCREENS_UM_ENGINE_LABEL == kLobbyEngineLabel && EE_SCREENS_UM_ENGINE_CLASSIC == kLobbyEngineClassicString &&
+              EE_SCREENS_UM_ENGINE_RANDOM == kLobbyEngineRandomString &&
+              EE_SCREENS_UM_ENGINE_HEADER_STRING == kLobbyEngineHeaderString &&
+              EE_SCREENS_UM_ENGINE_HELP == kLobbyEngineHelpString && kGameSettingsQualityComboBox == 123,
+              "ee_screens ui_manager.rs' ids");
+
+// The Rust's calls on the manager, the toolkit, the world and the threads (EE_SCREENS_UM_OP_*), each the original's
+extern "C" int64_t ee_screenscpp_ui_manager(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+{
+    return EEUIManager::HostOp(*static_cast<EEUIManagerCall*>(inCall), inOp, inA, inB, inC);
+}
+
+// (a member: UIManager's UpdateKeyboard and UpdateMouse are protected)
+int64_t EEUIManager::HostOp(EEUIManagerCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+{
+    EEUIManager* theManager = ioCall.mManager;
+    EEGameOptions& theLobby = gWorld.GetLobbyOptions();
+    static const unsigned long kKeys[] = {kKeyEscape, kKeyReturn, kKeySpace, kKeyF9};
+    ISEntity* theKey;
+    switch (inOp) {
+    case EE_SCREENS_UM_OP_REGISTER:
+        theManager->RegisterControlEventCallback(EECreateGameEvent);
+        theManager->RegisterControlEventCallback(EECreateWonNetServerSelectEvent);
+        theManager->RegisterFormEventCallback(EECreateFormEvent);
+        break;
+    case EE_SCREENS_UM_OP_LOAD_DATABASE: theManager->LoadDatabase(gDataPath, UString()); break;
+    case EE_SCREENS_UM_OP_ADD_LIKE: {
+        const EeScreensManagerControl& c = *reinterpret_cast<const EeScreensManagerControl*>(inC);
+        return UIControlsTable::AddControlLike(theManager, c.template_id, c.id, c.form_index, c.group, c.left, c.right,
+                                               c.top, c.bottom, c.string_begin, c.string_end, c.help);
     }
-    return UIManager::UpdateMouse(inMouseLocation);
+    case EE_SCREENS_UM_OP_MOVE: {
+        const EeScreensManagerMove& m = *reinterpret_cast<const EeScreensManagerMove*>(inC);
+        return UIControlsTable::MoveControlsHorizontally(m.form, m.first, m.last, m.left_delta, m.right_delta);
+    }
+    case EE_SCREENS_UM_OP_ENGINE_COUNT: return EECPEngineChoiceCount();
+    case EE_SCREENS_UM_OP_FORMS:
+        theManager->mMainGameForm = static_cast<EEUIFMainGame*>(theManager->GetFormByID(kFormMainGame));
+        theManager->mInScenarioEditor = false;
+        theManager->mScenarioEditorForm = NULL;
+        theManager->mB13D = false;
+        break;
+    case EE_SCREENS_UM_OP_MUSIC:
+        theManager->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume);
+        break;
+    case EE_SCREENS_UM_OP_SAVE_EVENT: {
+        theManager->mU138 = 0;
+        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SL_ACTIVATE);   // (ee_screens save_load.rs)
+        theManager->GetFormByID(kFormSaveGame)->SetFormActivateEvent(theEvent);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_SCREENS_UM_OP_LOBBY_LOCK: inA != 0 ? theLobby.GetLock()->WriteLock() : theLobby.GetLock()->WriteUnlock(); break;
+    case EE_SCREENS_UM_OP_EDITOR_ON:
+        theManager->mInScenarioEditor = true;
+        gGameStateIsMultiplayer = false;
+        break;
+    case EE_SCREENS_UM_OP_NEW_SERVER:
+        if (gCommunications != NULL)
+            delete gCommunications;
+        gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
+        static_cast<EEServer*>(gCommunications)->StartThreads();
+        static_cast<EEServer*>(gCommunications)->mNumLoadResponses = 0;
+        break;
+    case EE_SCREENS_UM_OP_LOBBY_DEFAULTS:
+        theLobby.mMapSize = 1;
+        theLobby.mLoadType = 3;
+        theLobby.mEpochStart = kTechEpochPrehistoric;
+        theLobby.mVariant = 0;
+        break;
+    case EE_SCREENS_UM_OP_NAME: gResource->GetString(inA == 0 ? IDS_SE_HUMAN : IDS_COMPUTER, ioCall.mNames[inA]); break;
+    case EE_SCREENS_UM_OP_CITIZENS: return gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
+    case EE_SCREENS_UM_OP_SET_PLAYER: {
+        const EeScreensManagerPlayer& p = *reinterpret_cast<const EeScreensManagerPlayer*>(inC);
+        EEGameOptionsPlayer thePlayer;
+        thePlayer.mType = p.kind;
+        thePlayer.mName = ioCall.mNames[p.name];
+        thePlayer.mSlot = p.slot;
+        thePlayer.mColor = p.color;
+        thePlayer.mStartingCitizens = p.starting_citizens;
+        thePlayer.mIsLocal = p.is_local != 0;
+        thePlayer.mIsReady = p.is_ready != 0;
+        theLobby.mPlayers[p.slot] = thePlayer;
+        break;
+    }
+    case EE_SCREENS_UM_OP_SERVER_LOAD:
+        static_cast<EEServer*>(gCommunications)->StopPing();
+        static_cast<EEServer*>(gCommunications)->mLoadState = 1;
+        gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
+        break;
+    case EE_SCREENS_UM_OP_KEY_PRESSED:
+        gISKeyboard->GetEntity(kKeys[inA], theKey);
+        return theKey->JustPressed();
+    case EE_SCREENS_UM_OP_MOVIE_PLAYING: return gGraphics->mIsMoviePlaying;
+    case EE_SCREENS_UM_OP_STOP_MOVIE: gGraphics->PostStopMovie(); break;
+    case EE_SCREENS_UM_OP_SLEEP: PlatSleep((unsigned long)inA); break;
+    case EE_SCREENS_UM_OP_KEYS_FREE:
+        return theManager->GetCurrentForm() != NULL && !theManager->GetCurrentForm()->GetIsKeyboardCaptured() &&
+               !gLoadingSavedGame;
+    case EE_SCREENS_UM_OP_POST_F9: EEPostF9Key(); break;
+    case EE_SCREENS_UM_OP_BASE_KEYBOARD: return theManager->UIManager::UpdateKeyboard();
+    case EE_SCREENS_UM_OP_BUTTON_PRESSED:
+        return (inA == 0 ? UIManager::GetLMouseButton() : UIManager::GetRMouseButton())->JustPressed();
+    case EE_SCREENS_UM_OP_BASE_MOUSE: return theManager->UIManager::UpdateMouse(*ioCall.mMouse);
+    }
+    return 0;
 }
 
 // FUNCTION: EXE 0x67535d
