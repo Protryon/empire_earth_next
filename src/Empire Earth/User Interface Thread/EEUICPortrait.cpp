@@ -166,25 +166,10 @@ long EEUICPortrait::MouseMove(const GE2DPoint& inLocation)
 // (inline in the class)
 
 // FUNCTION: EXE 0x658f82
-// Shows a unit's portrait (button face), taking references, and updates the bars
+// Shows a unit's portrait (button face), taking references, and updates the bars (ee_screens portrait.rs)
 void EEUICPortrait::SetUnit(EEUnit* inUnit)
 {
-    if (this->mUnit) {
-        this->mButton->Release();
-        this->mUnit->Dereference();
-    }
-    this->mUnit = inUnit;
-    if (!this->mUnit)
-        return;
-    this->mUnit->Reference();
-    this->mButton = this->mUnit->mStats->mButton;
-    this->mButton->Acquire();
-    this->mPortrait->SetTexture(this->mButton->GetTexture(), gScreenIndex);
-    this->mButton->SetFaceBitmap(this->mPortrait, this->GetRectangle(), gScreenIndex);
-    this->mShowFirstBar = false;
-    this->mShowSecondBar = false;
-    this->SetDirty(true);
-    this->Update();
+    ee_screens_portrait_set_unit(this, inUnit);
 }
 
 // FUNCTION: EXE 0x6594e8
@@ -209,6 +194,21 @@ int64_t EEUICPortrait::HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t 
     uint32_t theBits;
     NEMessage* theMessage = NULL;
     switch (inOp) {
+    case EE_SCREENS_PT_OP_HAS_UNIT: return inPortrait->mUnit != NULL;
+    case EE_SCREENS_PT_OP_RELEASE:
+        inPortrait->mButton->Release();
+        inPortrait->mUnit->Dereference();
+        return 0;
+    case EE_SCREENS_PT_OP_SET_UNIT: inPortrait->mUnit = reinterpret_cast<EEUnit*>(inA); return 0;
+    case EE_SCREENS_PT_OP_ACQUIRE:
+        inPortrait->mUnit->Reference();
+        inPortrait->mButton = inPortrait->mUnit->mStats->mButton;
+        inPortrait->mButton->Acquire();
+        return 0;
+    case EE_SCREENS_PT_OP_FACE:
+        inPortrait->mPortrait->SetTexture(inPortrait->mButton->GetTexture(), gScreenIndex);
+        inPortrait->mButton->SetFaceBitmap(inPortrait->mPortrait, inPortrait->GetRectangle(), gScreenIndex);
+        return 0;
     case EE_SCREENS_PT_OP_STATE:
         return (int64_t)inPortrait->mLevel | (int64_t)inPortrait->mShowFirstBar << 32 | (int64_t)inPortrait->mShowSecondBar << 33;
     case EE_SCREENS_PT_OP_SET_STATE:

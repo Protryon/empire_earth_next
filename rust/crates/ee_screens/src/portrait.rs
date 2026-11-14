@@ -73,6 +73,16 @@ pub const EE_SCREENS_PT_OP_REMOVE_TECHNOLOGY: u32 = 30;
 pub const EE_SCREENS_PT_OP_REMOVE_IMPROVEMENT: u32 = 31;
 /// Plays the button sound.
 pub const EE_SCREENS_PT_OP_SOUND: u32 = 32;
+/// -> the portrait shows a unit (`mUnit != NULL`).
+pub const EE_SCREENS_PT_OP_HAS_UNIT: u32 = 33;
+/// The shown button's `Release()`, the shown unit's `Dereference()`.
+pub const EE_SCREENS_PT_OP_RELEASE: u32 = 34;
+/// `mUnit` = the unit a (0: none).
+pub const EE_SCREENS_PT_OP_SET_UNIT: u32 = 35;
+/// The unit's `Reference()`; `mButton` = its stats' button, `Acquire()`d.
+pub const EE_SCREENS_PT_OP_ACQUIRE: u32 = 36;
+/// The portrait bitmap's texture = the button's; the button's face on it (`SetFaceBitmap`, the portrait's rectangle).
+pub const EE_SCREENS_PT_OP_FACE: u32 = 37;
 
 /// No improvement researched; no technology.
 const NO_IMPROVEMENT: i64 = 0x10;
@@ -218,6 +228,24 @@ pub fn update<H: PortraitHost + ?Sized>(h: &mut H) {
     if old.second != s.second || old.first != s.first {
         h.op(EE_SCREENS_PT_OP_UPDATE_HELP, 0, 0, &mut []);
     }
+}
+
+/// `SetUnit` (0x258f82): the shown unit and button released, the unit (0 none) shown: referenced, its button
+/// acquired and its face on the portrait, both bars off, redrawn and updated.
+pub fn set_unit<H: PortraitHost + ?Sized>(h: &mut H, unit: i64) {
+    if h.op(EE_SCREENS_PT_OP_HAS_UNIT, 0, 0, &mut []) != 0 {
+        h.op(EE_SCREENS_PT_OP_RELEASE, 0, 0, &mut []);
+    }
+    h.op(EE_SCREENS_PT_OP_SET_UNIT, unit, 0, &mut []);
+    if unit == 0 {
+        return;
+    }
+    h.op(EE_SCREENS_PT_OP_ACQUIRE, 0, 0, &mut []);
+    h.op(EE_SCREENS_PT_OP_FACE, 0, 0, &mut []);
+    let state = State { first: false, second: false, ..State::read(h) };
+    state.write(h);
+    h.op(EE_SCREENS_PT_OP_DIRTY, 0, 0, &mut []);
+    update(h);
 }
 
 /// `DrawPolygons`: the portrait, then each shown bar with the background over the rest of its row to the copied

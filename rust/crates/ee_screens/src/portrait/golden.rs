@@ -1,5 +1,6 @@
 //! The portrait against the real C++: a scratch driver (`build/sc27/pt`) ran the unmodified `EEUICPortrait`'s
-//! `GetBarRectangles`, `DrawPolygons`, `GetHelpString`, `MouseLButtonDown` and `Update` (cut from e80deffc) and the new
+//! `GetBarRectangles`, `DrawPolygons`, `GetHelpString`, `MouseLButtonDown` and `Update` (cut from e80deffc; `SetUnit` from
+//! 2cac466f, round 28's `build/sc28/pt`) and the new
 //! ones (forwarders and host over this module) over one fake world per case (the shown unit alive or not, on the map
 //! or not, its complex unit missing, the local player's or not; production times below 0, research of no technology
 //! or of a missing node, nodes that make units with an upgraded class or not and build times of 0; improvements
@@ -71,13 +72,15 @@ fn replays_the_golden() {
     let mut kind = ' ';
     let mut ops: Vec<Op> = Vec::new();
     let (mut cases, mut calls) = (0, 0);
-    let mut kinds = [0u32; 4];
+    let mut kinds = [0u32; 5];
+    let mut arg = 0i64;
     for line in GOLDEN.lines() {
         if line.starts_with("case ") {
             case = line.to_string();
             cases += 1;
         } else if let Some(k) = line.strip_prefix("> ") {
             kind = k.chars().next().unwrap();
+            arg = k.get(2..).map_or(0, |a| a.parse().unwrap());
             ops.clear();
         } else if let Some(r) = line.strip_prefix("= ") {
             let want: i64 = r.parse().unwrap();
@@ -90,11 +93,15 @@ fn replays_the_golden() {
                 'D' => draw(&mut h),
                 'H' => help(&mut h) as i64,
                 'M' => mouse_down(&mut h),
+                'S' => {
+                    set_unit(&mut h, arg);
+                    0
+                }
                 _ => panic!("{kind}"),
             };
             assert!(h.ops.next().is_none(), "{case} {kind}: ops left");
             assert_eq!(got, want, "{case} {kind}");
-            kinds["UDHM".find(kind).unwrap()] += 1;
+            kinds["UDHMS".find(kind).unwrap()] += 1;
             calls += 1;
         } else {
             ops.push(parse_op(line));

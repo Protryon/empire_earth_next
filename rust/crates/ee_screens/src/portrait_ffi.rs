@@ -45,3 +45,9 @@ pub extern "C" fn ee_screens_portrait_help(portrait: *mut c_void) -> bool {
 pub extern "C" fn ee_screens_portrait_mouse_down(portrait: *mut c_void) -> i64 {
     portrait::mouse_down(&mut Portrait(portrait))
 }
+
+/// `EEUICPortrait::SetUnit(unit)` (an `EEUnit*`, NULL for none).
+#[no_mangle]
+pub extern "C" fn ee_screens_portrait_set_unit(portrait: *mut c_void, unit: *mut c_void) {
+    portrait::set_unit(&mut Portrait(portrait), unit as i64);
+}
