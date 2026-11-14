@@ -43,12 +43,13 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 claim_needed), EECPEpochPressure / EECPEpochTimerSpan (civ.lua). The combat state is the script's (1 once
                 another player's unit is seen, 2 under attack, back to 1 a minute after the last hit): the engine's
                 EEPlayer::mCombatState is not readable. ENGINE: WorkOutPopulation, the extra and reveal cheats,
-                ChooseCivilization, UnitStranded's kill, SendToNearestBase, the save. ChooseFavoriteSeaType (main.lua: a random
-                warship class trainable now that passes IsFavoriteSea); ChooseFavoriteSpaceType (likewise
-                with IsFavoriteSpace; no draw while no space class is trainable). The favourite air type: see
-                EECPUnitSelector. NOT STARTED: Regroup's island fishing rule beyond mUsesFishing.
-                DEVIATION: ChooseFavoriteLandType draws among the soldier classes the barracks, archery range, stable
-                and factories train (the favourite screener's AI lines are not exposed).
+                ChooseCivilization, UnitStranded's kill, SendToNearestBase, the save. ChooseFavoriteLandType,
+                ChooseFavoriteSeaType and ChooseFavoriteSpaceType (main.lua): EEAIFOFavoriteUnitScreener with an
+                epoch span of 0 (the current epoch's moving, attacking classes whose node is not obsolete) and
+                IsFavoriteLand / Sea / Space, grouped by AI line; a random line, then a random class of it; kept
+                when none passes (AI_RESEARCH 8.83). The favourite air type: see EECPUnitSelector. NOT STARTED:
+                Regroup's island fishing rule beyond mUsesFishing; the screener's builder test (an obsolete first
+                producer with none standing) and the unit sets 0x73 / 0x75.
   EECPCivilizationManager.cpp
                 PORTED -> civ.lua: the first update (the future research sentinel queued, the wanted citizens' cost in
                 the needs), SetNextEpochAdvanceTime (with the catchup scale), AttemptEpochAdvance (the personality's
