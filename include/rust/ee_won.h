@@ -7529,15 +7529,6 @@ struct EeWonBreak {
   int32_t width;
 };
 
-/// One raw image's pixels: `kind` 0 (1-bit), 1 (8-bit) or 2 (32-bit), its size and its row pitch in bytes.
-struct EeWonRawPixels {
-  int32_t kind;
-  uint8_t *data;
-  int32_t width;
-  int32_t height;
-  int32_t pitch;
-};
-
 /// One call of the op on the C++ side: the code, its inputs, its outputs. Bytes come back through `out_sink`
 /// (not called: NULL).
 struct EeWonHostCall {
@@ -7667,6 +7658,15 @@ struct EeWonHttpSessionHooks {
   void (*conn_kill)(void*);
   /// the connection's `GetNumOps`
   int (*conn_num_ops)(void*);
+};
+
+/// One raw image's pixels: `kind` 0 (1-bit), 1 (8-bit) or 2 (32-bit), its size and its row pitch in bytes.
+struct EeWonRawPixels {
+  int32_t kind;
+  uint8_t *data;
+  int32_t width;
+  int32_t height;
+  int32_t pitch;
 };
 
 /// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
@@ -12874,67 +12874,6 @@ bool ee_won_gui_max_width(int32_t new_width,
                           int32_t *out_width,
                           bool *out_rewrap);
 
-/// `ScaleImageFilter::CheckSize` over the filter's fields (`w`, `h` written back).
-///
-/// # Safety
-/// `w` and `h` point at live ints.
-bool ee_won_imgf_check_size(bool is_percent,
-                            int32_t pw,
-                            int32_t ph,
-                            int32_t *w,
-                            int32_t *h,
-                            int32_t img_w,
-                            int32_t img_h);
-
-/// The nearest-neighbour scale of `src` into `dst` (the same kind).
-///
-/// # Safety
-/// Both describe live images.
-void ee_won_imgf_scale(const EeWonRawPixels *src, const EeWonRawPixels *dst);
-
-/// TintImageFilter over `n` colours (a palette's, or a 32-bit image's pixels with `keep_alpha`).
-///
-/// # Safety
-/// `colors` holds `n` colours (or `n` is 0).
-void ee_won_imgf_tint(uint32_t *colors, size_t n, int32_t r, int32_t g, int32_t b, bool keep_alpha);
-
-/// TransparentImageFilter's 32-bit pass over `n` pixels.
-///
-/// # Safety
-/// `pixels` holds `n` pixels (or `n` is 0).
-void ee_won_imgf_transparent32(uint32_t *pixels, size_t n, uint32_t color);
-
-/// TransparentImageFilter's sample place in a `w` x `h` image.
-///
-/// # Safety
-/// `x` and `y` point at live ints.
-void ee_won_imgf_sample(int32_t sample, int32_t w, int32_t h, int32_t *x, int32_t *y);
-
-/// The first of `n` palette colours equal to `color`, or -1.
-///
-/// # Safety
-/// `colors` holds `n` colours (or `n` is 0).
-int32_t ee_won_imgf_palette_find(const uint32_t *colors, size_t n, uint32_t color);
-
-/// TrimImageFilter's rectangle into `rect` (left, top, width, height); false when every pixel is transparent.
-///
-/// # Safety
-/// `img` describes a live 8- or 32-bit image; `rect` has room for four ints.
-bool ee_won_imgf_trim(const EeWonRawPixels *img,
-                      uint8_t transparent,
-                      int32_t *rect);
-
-/// CropPixels' row copies.
-///
-/// # Safety
-/// Both describe live images holding the rows read and written.
-void ee_won_imgf_crop(const EeWonRawPixels *src,
-                      const EeWonRawPixels *dst,
-                      int32_t x_bytes,
-                      int32_t y,
-                      int32_t row_bytes,
-                      int32_t height);
-
 /// `CryptTransform`'s constructor: one more reference to the session handle.
 ///
 /// # Safety
@@ -13287,6 +13226,67 @@ EeWonHostOp *ee_won_httpget_new(const uint8_t *host,
 /// # Safety
 /// `url` holds `len` bytes.
 EeWonHostOp *ee_won_httpget_new_url(const uint8_t *url, size_t len);
+
+/// `ScaleImageFilter::CheckSize` over the filter's fields (`w`, `h` written back).
+///
+/// # Safety
+/// `w` and `h` point at live ints.
+bool ee_won_imgf_check_size(bool is_percent,
+                            int32_t pw,
+                            int32_t ph,
+                            int32_t *w,
+                            int32_t *h,
+                            int32_t img_w,
+                            int32_t img_h);
+
+/// The nearest-neighbour scale of `src` into `dst` (the same kind).
+///
+/// # Safety
+/// Both describe live images.
+void ee_won_imgf_scale(const EeWonRawPixels *src, const EeWonRawPixels *dst);
+
+/// TintImageFilter over `n` colours (a palette's, or a 32-bit image's pixels with `keep_alpha`).
+///
+/// # Safety
+/// `colors` holds `n` colours (or `n` is 0).
+void ee_won_imgf_tint(uint32_t *colors, size_t n, int32_t r, int32_t g, int32_t b, bool keep_alpha);
+
+/// TransparentImageFilter's 32-bit pass over `n` pixels.
+///
+/// # Safety
+/// `pixels` holds `n` pixels (or `n` is 0).
+void ee_won_imgf_transparent32(uint32_t *pixels, size_t n, uint32_t color);
+
+/// TransparentImageFilter's sample place in a `w` x `h` image.
+///
+/// # Safety
+/// `x` and `y` point at live ints.
+void ee_won_imgf_sample(int32_t sample, int32_t w, int32_t h, int32_t *x, int32_t *y);
+
+/// The first of `n` palette colours equal to `color`, or -1.
+///
+/// # Safety
+/// `colors` holds `n` colours (or `n` is 0).
+int32_t ee_won_imgf_palette_find(const uint32_t *colors, size_t n, uint32_t color);
+
+/// TrimImageFilter's rectangle into `rect` (left, top, width, height); false when every pixel is transparent.
+///
+/// # Safety
+/// `img` describes a live 8- or 32-bit image; `rect` has room for four ints.
+bool ee_won_imgf_trim(const EeWonRawPixels *img,
+                      uint8_t transparent,
+                      int32_t *rect);
+
+/// CropPixels' row copies.
+///
+/// # Safety
+/// Both describe live images holding the rows read and written.
+void ee_won_imgf_crop(const EeWonRawPixels *src,
+                      const EeWonRawPixels *dst,
+                      int32_t x_bytes,
+                      int32_t y,
+                      int32_t row_bytes,
+                      int32_t height);
 
 /// A new Rust InputBox for the C++ `component`, its calls out through `host`.
 EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
