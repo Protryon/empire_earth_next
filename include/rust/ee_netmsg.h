@@ -417,6 +417,24 @@ constexpr static const uint8_t TYPE_GAME_RESTARTING = 145;
 /// `EEMMigrationSlotInfo`: runs on a client whatever its selection id.
 constexpr static const uint8_t TYPE_MIGRATION_SLOT_INFO = 124;
 
+/// `ee_netmsg_field_kind`: no such member.
+constexpr static const uint8_t EE_NETMSG_FIELD_NONE = 0;
+
+/// `ee_netmsg_field_kind`: a fixed member (its slot is the member's address and size).
+constexpr static const uint8_t EE_NETMSG_FIELD_FIXED = 1;
+
+/// `ee_netmsg_field_kind`: a string (the slot's bytes and their count).
+constexpr static const uint8_t EE_NETMSG_FIELD_STRING = 2;
+
+/// `ee_netmsg_field_kind`: records (the slot's first record, a record's size, the count).
+constexpr static const uint8_t EE_NETMSG_FIELD_RECORDS = 3;
+
+/// `ee_netmsg_field_kind`: a blob (the slot's bytes, as many as the member before it says).
+constexpr static const uint8_t EE_NETMSG_FIELD_BLOB = 4;
+
+/// `ee_netmsg_field_kind`: the players' inputs.
+constexpr static const uint8_t EE_NETMSG_FIELD_INPUTS = 5;
+
 /// No message has this type.
 constexpr static const uint8_t EE_NETMSG_KIND_NONE = 0;
 
@@ -520,6 +538,14 @@ void ee_netmsg_import(uint32_t class_id,
                       const uint8_t *data,
                       EeNetMsgSlot *slots,
                       size_t count);
+
+/// How a class's member `index` (after the header) travels: `EE_NETMSG_FIELD_*` (NONE past the last member), so a
+/// reader of the slots (the capture's member records) knows what each slot holds.
+uint8_t ee_netmsg_field_kind(uint32_t class_id,
+                             uint32_t index);
+
+/// How many members (after the header) a class's import reads: all of them but for `EEMChangeFormation`.
+uint32_t ee_netmsg_import_fields(uint32_t class_id);
 
 /// The class the game's or the engine's factory builds for message type `message_type`, or `u32::MAX`.
 uint32_t ee_netmsg_class_of_type(uint8_t message_type);
