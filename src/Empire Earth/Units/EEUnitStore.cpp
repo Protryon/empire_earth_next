@@ -90,30 +90,6 @@ static int64_t CommandOf(EEComplexUnit* inUnit)
 void EEUnitStoreWrote(unsigned int inField, const void* inMember)
 {
     switch (inField) {
-    case kUnitFieldTileX: {
-        RTSUnit* theUnit = OwnerOf<RTSUnit>(inMember, offsetof(RTSUnit, mTileX));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_TILE_X, (int64_t)theUnit->mTileX.Get());
-        break;
-    }
-    case kUnitFieldTileY: {
-        RTSUnit* theUnit = OwnerOf<RTSUnit>(inMember, offsetof(RTSUnit, mTileY));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_TILE_Y, (int64_t)theUnit->mTileY.Get());
-        break;
-    }
-    case kUnitFieldValid: {
-        RTSUnit* theUnit = OwnerOf<RTSUnit>(inMember, offsetof(RTSUnit, mIsValid));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_VALID, theUnit->mIsValid.Get() ? 1 : 0);
-        break;
-    }
-    case kUnitFieldHitPoints: {
-        EEUnit* theUnit = OwnerOf<EEUnit>(inMember, offsetof(EEUnit, mHitPoints));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_HIT_POINTS, (int64_t)theUnit->mHitPoints.Get());
-        break;
-    }
     case kUnitFieldUnitClass: {
         EEUnit* theUnit = OwnerOf<EEUnit>(inMember, offsetof(EEUnit, mUnitClass));
         if (theUnit->mInUnitStore) {
@@ -132,34 +108,10 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
         }
         break;
     }
-    case kUnitFieldResourceAmount: {
-        EEUnit* theUnit = OwnerOf<EEUnit>(inMember, offsetof(EEUnit, mResourceAmount));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_RESOURCE_AMOUNT, (int64_t)theUnit->mResourceAmount.Get());
-        break;
-    }
     case kUnitFieldComplex: {
         EEUnit* theUnit = OwnerOf<EEUnit>(inMember, offsetof(EEUnit, mComplexUnit));
         if (theUnit->mInUnitStore)
             Set(theUnit, EE_UNIT_FIELD_COMPLEX, ComplexOf(theUnit));
-        break;
-    }
-    case kUnitFieldBuilt: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mIsBuilt));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_BUILT, theUnit->mIsBuilt.Get() ? 1 : 0);
-        break;
-    }
-    case kUnitFieldCommandable: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mIsCommandable));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_COMMANDABLE, theUnit->mIsCommandable.Get() ? 1 : 0);
-        break;
-    }
-    case kUnitFieldFormationSlot: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mFormationSlot));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_FORMATION_SLOT, (int64_t)theUnit->mFormationSlot.Get());
         break;
     }
     case kUnitFieldLocation: {
@@ -169,18 +121,6 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             ee_units_store_set_location(static_cast<uint32_t>(theUnit->mUnitID), reinterpret_cast<uintptr_t>(theUnit),
                                         FloatBits(theLocation.GetX()), FloatBits(theLocation.GetY()), FloatBits(theLocation.GetZ()));
         }
-        break;
-    }
-    case kUnitFieldHeight: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mHeight));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_HEIGHT, (int64_t)FloatBits(theUnit->mHeight.Get()));
-        break;
-    }
-    case kUnitFieldTimesUpdated: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mTimesUpdated));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_TIMES_UPDATED, (int64_t)theUnit->mTimesUpdated.Get());
         break;
     }
     case kUnitFieldActiveGroup: {
@@ -193,102 +133,6 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mCommand));
         if (theUnit->mInUnitStore)
             Set(theUnit, EE_UNIT_FIELD_COMMAND, CommandOf(theUnit));
-        break;
-    }
-    case kUnitFieldReloadTimer: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mReloadTimer));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_RELOAD_TIMER, (int64_t)theUnit->mReloadTimer.Get());
-        break;
-    }
-    case kUnitFieldTargetSearchTimer: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mTargetSearchTimer));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_TARGET_SEARCH_TIMER, (int64_t)theUnit->mTargetSearchTimer.Get());
-        break;
-    }
-    case kUnitFieldHealSearchTimer: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mHealSearchTimer));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_HEAL_SEARCH_TIMER, (int64_t)FloatBits(theUnit->mHealSearchTimer.Get()));
-        break;
-    }
-    case kUnitFieldVelocity: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mVelocity));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_VELOCITY, (int64_t)FloatBits(theUnit->mVelocity.Get()));
-        break;
-    }
-    case kUnitFieldPushVelocityX: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPushVelocityX));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_PUSH_VELOCITY_X, (int64_t)FloatBits(theUnit->mPushVelocityX.Get()));
-        break;
-    }
-    case kUnitFieldPushVelocityY: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPushVelocityY));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_PUSH_VELOCITY_Y, (int64_t)FloatBits(theUnit->mPushVelocityY.Get()));
-        break;
-    }
-    case kUnitFieldRoll: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mRoll));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_ROLL, (int64_t)FloatBits(theUnit->mRoll.Get()));
-        break;
-    }
-    case kUnitFieldNextTriggerTime: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mNextTriggerTime));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_NEXT_TRIGGER_TIME, (int64_t)theUnit->mNextTriggerTime.Get());
-        break;
-    }
-    case kUnitFieldRottingAwayTime: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mRottingAwayTime));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_ROTTING_AWAY_TIME, (int64_t)theUnit->mRottingAwayTime.Get());
-        break;
-    }
-    case kUnitFieldPower: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPower));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_POWER, (int64_t)theUnit->mPower.Get());
-        break;
-    }
-    case kUnitFieldPowerRegenTimer: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPowerRegenTimer));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_POWER_REGEN_TIMER, (int64_t)theUnit->mPowerRegenTimer.Get());
-        break;
-    }
-    case kUnitFieldCamouflageTimer: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mCamouflageTimer));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_CAMOUFLAGE_TIMER, (int64_t)theUnit->mCamouflageTimer.Get());
-        break;
-    }
-    case kUnitFieldFlightTime: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mFlightTime));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_FLIGHT_TIME, (int64_t)theUnit->mFlightTime.Get());
-        break;
-    }
-    case kUnitFieldCloakTimer: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mCloaked));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_CLOAK_TIMER, (int64_t)theUnit->mCloaked.Get());
-        break;
-    }
-    case kUnitFieldCloakable: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mIsCloakable));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_CLOAKABLE, theUnit->mIsCloakable.Get() ? 1 : 0);
-        break;
-    }
-    case kUnitFieldCloaked: {
-        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mIsCloaked));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_CLOAKED, theUnit->mIsCloaked.Get() ? 1 : 0);
         break;
     }
     case kUnitFieldHerd: {
@@ -372,17 +216,12 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
     outRecord.object = reinterpret_cast<uintptr_t>(inUnit);
     outRecord.player = reinterpret_cast<uintptr_t>(inPlayer);
     outRecord.object_kind = inUnit->mObjectKind.mValue;
-    outRecord.valid = inUnit->mIsValid.Get() ? 1 : 0;
-    outRecord.tile_x = (int64_t)inUnit->mTileX.Get();
-    outRecord.tile_y = (int64_t)inUnit->mTileY.Get();
     outRecord.on_map = OnMap(inUnit) ? 1 : 0;
     outRecord.goal_kind = -1;
     outRecord.category = -1;
     outRecord.unit_type = -1;
     if (inUnit->mObjectKind.mValue >= EE_OBJECT_UNIT) {
         EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
-        outRecord.hit_points = (int64_t)theUnit->mHitPoints.Get();
-        outRecord.resource_amount = (int64_t)theUnit->mResourceAmount.Get();
         outRecord.complex = (uint8_t)ComplexOf(theUnit);
         outRecord.stats = reinterpret_cast<uintptr_t>(theUnit->mStats);
         EEUnitClass* theClass = theUnit->mUnitClass.Get();
@@ -402,38 +241,20 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
     }
     if (inUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT) {
         EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
-        outRecord.built = theUnit->mIsBuilt.Get() ? 1 : 0;
         outRecord.goal_kind = (int32_t)GoalKind(theUnit->mGoalState.Get());
         outRecord.goal_id = theUnit->mGoalState.Get() != NULL ? (uint32_t)theUnit->mGoalState.Get()->mID : 0;
-        outRecord.commandable = theUnit->mIsCommandable.Get() ? 1 : 0;
-        outRecord.formation_slot = (int64_t)theUnit->mFormationSlot.Get();
         const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
         outRecord.location[0] = FloatBits(theLocation.GetX());
         outRecord.location[1] = FloatBits(theLocation.GetY());
         outRecord.location[2] = FloatBits(theLocation.GetZ());
-        outRecord.height = FloatBits(theUnit->mHeight.Get());
-        outRecord.times_updated = (int64_t)theUnit->mTimesUpdated.Get();
         outRecord.active_group = theUnit->mActiveGroup.Get() != NULL ? 1 : 0;
         outRecord.command = CommandOf(theUnit);
-        outRecord.reload_timer = (int64_t)theUnit->mReloadTimer.Get();
-        outRecord.target_search_timer = (int64_t)theUnit->mTargetSearchTimer.Get();
-        outRecord.heal_search_timer = FloatBits(theUnit->mHealSearchTimer.Get());
-        outRecord.next_trigger_time = (int64_t)theUnit->mNextTriggerTime.Get();
-        outRecord.rotting_away_time = (int64_t)theUnit->mRottingAwayTime.Get();
-        outRecord.power = (int64_t)theUnit->mPower.Get();
-        outRecord.power_regen_timer = (int64_t)theUnit->mPowerRegenTimer.Get();
-        outRecord.camouflage_timer = (int64_t)theUnit->mCamouflageTimer.Get();
-        outRecord.velocity = FloatBits(theUnit->mVelocity.Get());
-        outRecord.push_velocity_x = FloatBits(theUnit->mPushVelocityX.Get());
-        outRecord.push_velocity_y = FloatBits(theUnit->mPushVelocityY.Get());
-        outRecord.roll = FloatBits(theUnit->mRoll.Get());
-        outRecord.flight_time = (int64_t)theUnit->mFlightTime.Get();
-        outRecord.cloak_timer = (int64_t)theUnit->mCloaked.Get();
-        outRecord.cloakable = theUnit->mIsCloakable.Get() ? 1 : 0;
-        outRecord.cloaked = theUnit->mIsCloaked.Get() ? 1 : 0;
         outRecord.herd = theUnit->mHerd.Get() != NULL ? 1 : 0;
         outRecord.container = theUnit->mContainer.Get() != NULL ? 1 : 0;
     }
+    // the object's Rust records, and the plain values the store reads from them
+    ee_units_store_set_fields(&outRecord, inUnit, inUnit->mObjectKind.mValue >= EE_OBJECT_UNIT ? static_cast<EEUnit*>(inUnit) : NULL,
+                              inUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT ? static_cast<EEComplexUnit*>(inUnit) : NULL);
 }
 
 void EEUnitStoreInsertUnlisted(RTSUnit* inUnit)

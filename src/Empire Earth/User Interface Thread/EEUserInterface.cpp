@@ -275,59 +275,179 @@ void EEUserInterface::PostLoginDone()
     this->mThread->Post(0x441, NULL, NULL, true);
 }
 
+// The game starts' and the loop's calls (EE_SCREENS_UG_OP_*) on the UI object inUI (ee_screens ui_game.rs)
+extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+{
+    EEUserInterface* theUI = static_cast<EEUserInterface*>(inUI);
+    FSFile* theFile = reinterpret_cast<FSFile*>(inA);
+    EEServer* theServer = static_cast<EEServer*>(gCommunications);
+    switch (inOp) {
+    case EE_SCREENS_UG_OP_GRAPHICS: inA != 0 ? theUI->PauseGraphics() : theUI->ResumeGraphics(); break;
+    case EE_SCREENS_UG_OP_WORLD_LOCK: inA != 0 ? gWorld.mLock->WriteLock() : gWorld.mLock->WriteUnlock(); break;
+    case EE_SCREENS_UG_OP_SCREEN_ACTIVE: gGameScreenActive = true; break;
+    case EE_SCREENS_UG_OP_CONTINENTS:
+        gContinentManager.Clear(gWorld.mMap);
+        gContinentManager.BuildRegions(gWorld.mMap);
+        break;
+    case EE_SCREENS_UG_OP_NUM_PLAYERS: return gWorld.mNumPlayers;
+    case EE_SCREENS_UG_OP_PLAYER: {
+        EEPlayer* thePlayer = gWorld.mPlayers[inA];
+        switch (inB) {
+        case EE_SCREENS_UG_PLAYER_EXISTS: return thePlayer != NULL;
+        case EE_SCREENS_UG_PLAYER_HERDS: thePlayer->RegisterHerds(); thePlayer->AssignHerds(); break;
+        case EE_SCREENS_UG_PLAYER_TOWNS: thePlayer->RegisterTowns(); thePlayer->AssignTowns(); break;
+        case EE_SCREENS_UG_PLAYER_COMPUTER: return thePlayer->mComputerPlayer != NULL;
+        case EE_SCREENS_UG_PLAYER_CENTRES: thePlayer->mComputerPlayer->RefreshResourceCenters(); break;
+        case EE_SCREENS_UG_PLAYER_TOWN_GROUPS: thePlayer->RefreshTownGroups(); break;
+        }
+        break;
+    }
+    case EE_SCREENS_UG_OP_PATH_RESET: gPathManager.Reset(); break;
+    case EE_SCREENS_UG_OP_SIGHT_ON: gSightUpdatesEnabled = true; break;
+    case EE_SCREENS_UG_OP_RESTART_UNITS: gWorld.RestartUnits(); break;
+    case EE_SCREENS_UG_OP_LAND_CONTINENTS: EEUpdateLandContinents(); break;
+    case EE_SCREENS_UG_OP_RESIZE_GAME: theUI->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, inA != 0, inB != 0); break;
+    case EE_SCREENS_UG_OP_SWAP_MAIN: gUIManager->SwapForm(gUIManager->mMainGameForm); break;
+    case EE_SCREENS_UG_OP_MINI_MAP: gMiniMap->Redraw(); gMiniMap->Refresh(); break;
+    case EE_SCREENS_UG_OP_GAME_VIEW: {
+        GERectangle theRectangle;
+        theRectangle.SetLeft(kGameViewLeft);
+        theRectangle.SetBottom(kGameViewBottom);
+        theRectangle.SetTop(kGameViewTop);
+        theRectangle.SetRight(kGameViewRight);
+        EESetGameViewRectangle(theRectangle);
+        break;
+    }
+    case EE_SCREENS_UG_OP_AMBIENT:
+        gAmbientSoundManager.SetEnabled(gGamePreferences.mSettings.mAmbientSounds);
+        gAmbientSoundManager.Restart();
+        break;
+    case EE_SCREENS_UG_OP_PHYSICS_POST: gPhysics->mThread->Post((unsigned long)inA, NULL, NULL, true); break;
+    case EE_SCREENS_UG_OP_MUSIC: gMusicManager->Start(); break;
+    case EE_SCREENS_UG_OP_PREPARE_SAVE: gWorld.mMap->PrepareSave(); break;
+    case EE_SCREENS_UG_OP_SAVE_SCENARIO:
+        return SaveGame(UString("ScenDefault") + gScenarioExtension, TMGetTime(), true,
+                        UString("data\\") + UString("Scenarios\\"));
+    case EE_SCREENS_UG_OP_SAVE_ERROR: gUIManager->DisplayMessage(gLoadSaveErrorMessage, true, NULL, NULL, true); break;
+    case EE_SCREENS_UG_OP_SCENARIO_OPTIONS: {
+        gWorld.mGameOptions.mLoadType = 1;
+        UWideString theName(UString("ScenDefault") + gScenarioExtension);
+        gWorld.mGameOptions.mMapType = theName;
+        break;
+    }
+    case EE_SCREENS_UG_OP_MAX_PLAYERS: gWorld.SetNumPlayers(gWorld.mMaxPlayers); break;
+    case EE_SCREENS_UG_OP_COLLECT_COMPUTERS: gArtificialIntelligence->CollectComputerPlayers(); break;
+    case EE_SCREENS_UG_OP_LOAD_HEADER: {
+        EEPSaveGameHeader theHeader;
+        theHeader.SetMajorVersion(kSaveGameMajorVersion);
+        theHeader.SetMinorVersion(kSaveGameMinorVersion);
+        return theHeader.LoadFromFile(*theFile) == kErrorOK;
+    }
+    case EE_SCREENS_UG_OP_TIMER_RUNNING: return gPhysics->mTimerRunning;
+    case EE_SCREENS_UG_OP_SLEEP: PlatSleep((unsigned long)inA); break;
+    case EE_SCREENS_UG_OP_NEW_SERVER:
+        if (gCommunications != NULL)
+            delete gCommunications;
+        gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
+        static_cast<EEServer*>(gCommunications)->StartThreads();
+        break;
+    case EE_SCREENS_UG_OP_B13D_OFF: gUIManager->mB13D = false; break;
+    case EE_SCREENS_UG_OP_STATE_CLEAR: gGameState.Clear(); break;
+    case EE_SCREENS_UG_OP_STOP_SOUNDS: EEStopAllSounds(); break;
+    case EE_SCREENS_UG_OP_SWAP_SPLASH: gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash)); break;
+    case EE_SCREENS_UG_OP_SERVER_LOAD:
+        theServer->AllowNewPlayers(false);
+        theServer->mNumLoadResponses = 0;
+        theServer->mLoadState = 1;
+        theServer->SetGameState(2);
+        theServer->SetNumHumanPlayers(1);
+        theServer->SetIsMultiplayerSession(false);
+        break;
+    case EE_SCREENS_UG_OP_OPTIONS_LOCK: inA != 0 ? gGameOptions.mLock->WriteLock() : gGameOptions.mLock->WriteUnlock(); break;
+    case EE_SCREENS_UG_OP_OPTIONS_DEFAULTS: gGameOptions.SetDefaults(); break;
+    case EE_SCREENS_UG_OP_FILE_IS_SCENARIO: {
+        unsigned long theLength = theFile->GetFile().GetLength();
+        return theFile->GetFile().Find(gScenarioExtension, 0) < theLength;
+    }
+    case EE_SCREENS_UG_OP_LOAD_OPTIONS: {
+        gGameOptions.mLoadType = (long)inB;
+        UWideString theName(theFile->GetFile());
+        gGameOptions.mMapType = theName;
+        break;
+    }
+    case EE_SCREENS_UG_OP_POST_LOAD: gDataPreLoading->PostLoadGame(inA != 0, inB != 0); break;
+    case EE_SCREENS_UG_OP_INVALID_SAVE: {
+        UWideString theMessage;
+        gResource->GetString(IDS_SAVE_GAME_ISNT_VALID, theMessage);
+        gUIManager->DisplayMessage(theMessage, true, NULL, NULL, true);
+        break;
+    }
+    case EE_SCREENS_UG_OP_DELETE_FILE: delete theFile; break;
+    case EE_SCREENS_UG_OP_INPUT_RESUME: gISMouse->Resume(); gISKeyboard->Resume(); break;
+    case EE_SCREENS_UG_OP_THREAD_NAME: TSThread::SetThreadName(PlatCurrentThreadId(), gUserInterfaceThreadName); break;
+    case EE_SCREENS_UG_OP_LOCALE: {
+        UWideString theLocale;
+        gResource->GetString(IDS_ENGLISH, theLocale);
+        setlocale(LC_ALL, theLocale);
+        setlocale(LC_NUMERIC, "English");
+        // port (decision D6): game text is UTF-8, so the C runtime's character classes stay the "C" locale's; under
+        // the language's code page tolower/toupper/isalpha would have changed the bytes of a multi-byte character
+        setlocale(LC_CTYPE, "C");
+        setlocale(LC_ALL, NULL);
+        break;
+    }
+    case EE_SCREENS_UG_OP_CREATE_RENDER_OBJECT: return theUI->CreateRenderObject();
+    case EE_SCREENS_UG_OP_POINTER_POST:
+        gMousePointer->mThread->Post((unsigned long)inA, inA == 0x405 ? gRasterizer->GetPrimarySurface(gScreenIndex) : NULL,
+                                     NULL, true);
+        break;
+    case EE_SCREENS_UG_OP_GRAPHICS_START: gGraphics->PostSetFlag54(false); gGraphics->PostResume(); break;
+    case EE_SCREENS_UG_OP_FPU:
+        if (inA == 0) {
+            UMSetFloatingPointPrecision(kFPPrecision53);
+            break;
+        }
+        if (UMGetFloatingPointPrecision() != kFPPrecision53)
+            UMSetFloatingPointPrecision(kFPPrecision53);
+        if (UMGetFloatingPointRoundingMode() != 0)
+            UMSetFloatingPointRoundingMode(0);
+        break;
+    case EE_SCREENS_UG_OP_QUITTING: return theUI->mIsQuitting;
+    case EE_SCREENS_UG_OP_QUEUE_LOCK:
+        inA != 0 ? theUI->mThread->LockMessageQueue() : theUI->mThread->UnlockMessageQueue();
+        break;
+    case EE_SCREENS_UG_OP_RECEIVE: {
+        EEUIThreadMessage theMessage;
+        long theResult = theUI->mThread->Receive(theMessage.mMessage, theMessage.mParameter1, theMessage.mParameter2);
+        int64_t* theOut = reinterpret_cast<int64_t*>(inC);
+        theOut[0] = theMessage.mMessage;
+        theOut[1] = reinterpret_cast<int64_t>(theMessage.mParameter1);
+        theOut[2] = reinterpret_cast<int64_t>(theMessage.mParameter2);
+        return theResult;
+    }
+    case EE_SCREENS_UG_OP_HANDLE: theUI->HandleMessage((unsigned long)inA, (LONG_PTR)inB, (LONG_PTR)inC); break;
+    case EE_SCREENS_UG_OP_UPDATING: return theUI->mIsUpdating != 0;
+    case EE_SCREENS_UG_OP_UPDATE_INTERFACE: theUI->UpdateInterface(); break;
+    case EE_SCREENS_UG_OP_FREE_CAMERA: return gFreeCamera;
+    case EE_SCREENS_UG_OP_TIME: return TMGetTime();
+    case EE_SCREENS_UG_OP_CAMERA: {
+        uint32_t theBits = (uint32_t)inA;
+        float theSeconds;
+        memcpy(&theSeconds, &theBits, 4);
+        gWorld.mCameraControl.Update(theSeconds);
+        break;
+    }
+    case EE_SCREENS_UG_OP_SIM_RUN: return gPlatSimRun;
+    }
+    return 0;
+}
+
 // FUNCTION: EXE 0x676ab0
 // Starts a test of the edited scenario: rebuilds continents, herds, towns and AI centres, restarts units and
-// switches to the main game form
+// switches to the main game form (ee_screens ui_game.rs)
 void EEUserInterface::TestScenario()
 {
-    GERectangle theRectangle;
-    unsigned long i;
-    this->PauseGraphics();
-    theRectangle.SetLeft(kGameViewLeft);
-    theRectangle.SetBottom(kGameViewBottom);
-    theRectangle.SetTop(kGameViewTop);
-    theRectangle.SetRight(kGameViewRight);
-    gWorld.mLock->WriteLock();
-    gGameScreenActive = true;
-    gContinentManager.Clear(gWorld.mMap);
-    gContinentManager.BuildRegions(gWorld.mMap);
-    if (gWorld.mPlayers[0] != NULL) {
-        gWorld.mPlayers[0]->RegisterHerds();
-        gWorld.mPlayers[0]->AssignHerds();
-    }
-    for (i = 1; i < gWorld.mNumPlayers; i++) {
-        if (gWorld.mPlayers[i] != NULL) {
-            gWorld.mPlayers[i]->RegisterTowns();
-            gWorld.mPlayers[i]->AssignTowns();
-        }
-    }
-    gPathManager.Reset();
-    for (unsigned long j = 1; j < gWorld.mNumPlayers; j++) {
-        if (gWorld.mPlayers[j] == NULL)
-            continue;
-        if (gWorld.mPlayers[j]->mComputerPlayer != NULL)
-            gWorld.mPlayers[j]->mComputerPlayer->RefreshResourceCenters();
-        else
-            gWorld.mPlayers[j]->RefreshTownGroups();
-    }
-    if (gWorld.mEnvironmentManager != NULL)
-        gWorld.mEnvironmentManager->FnE123D();
-    gSightUpdatesEnabled = true;
-    gWorld.RestartUnits();
-    EEUpdateLandContinents();
-    gWorld.mLock->WriteUnlock();
-    this->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, true, true);
-    gUIManager->SwapForm(gUIManager->mMainGameForm);
-    gWorld.mLock->WriteLock();
-    gMiniMap->Redraw();
-    gMiniMap->Refresh();
-    gWorld.mLock->WriteUnlock();
-    EESetGameViewRectangle(theRectangle);
-    gAmbientSoundManager.SetEnabled(gGamePreferences.mSettings.mAmbientSounds);
-    gAmbientSoundManager.Restart();
-    this->ResumeGraphics();
-    gPhysics->mThread->Post(0x404, NULL, NULL, true);
-    gMusicManager->Start();
+    ee_screens_ui_test_scenario(this);
 }
 
 // FUNCTION: EXE 0x676cb1
@@ -338,73 +458,11 @@ void EEUserInterface::CloseIMECompositionString()
 }
 
 // FUNCTION: EXE 0x676cbc
-// Saves the edited scenario as ScenDefault and starts testing it like a game (reporting a save error)
+// Saves the edited scenario as ScenDefault and starts testing it like a game (reporting a save error; ee_screens
+// ui_game.rs)
 void EEUserInterface::SaveAndTestScenario()
 {
-    FSFileSpec theSpec;
-    GERectangle theRectangle;
-    UString theFileName;
-    long theResult;
-    this->PauseGraphics();
-    theRectangle.SetLeft(kGameViewLeft);
-    theRectangle.SetBottom(kGameViewBottom);
-    theRectangle.SetTop(kGameViewTop);
-    theRectangle.SetRight(kGameViewRight);
-    gWorld.mLock->WriteLock();
-    gGameScreenActive = true;
-    gWorld.mMap->PrepareSave();
-    gContinentManager.Clear(gWorld.mMap);
-    gContinentManager.BuildRegions(gWorld.mMap);
-    if (gUIManager->mScenarioEditorForm != NULL)
-        gUIManager->mScenarioEditorForm->FnE123D();
-    theFileName = UString("ScenDefault") + gScenarioExtension;
-    theResult = SaveGame(theFileName, TMGetTime(), true, UString("data\\") + UString("Scenarios\\"));
-    if (theResult != kErrorOK)
-        gUIManager->DisplayMessage(gLoadSaveErrorMessage, true, NULL, NULL, true);
-    gWorld.mGameOptions.mLoadType = 1;
-    {
-        UWideString theName(theFileName);
-        gWorld.mGameOptions.mMapType = theName;
-    }
-    gWorld.SetNumPlayers(gWorld.mMaxPlayers);
-    gArtificialIntelligence->CollectComputerPlayers();
-    if (gWorld.mPlayers[0] != NULL) {
-        gWorld.mPlayers[0]->RegisterHerds();
-        gWorld.mPlayers[0]->AssignHerds();
-    }
-    for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
-        if (gWorld.mPlayers[i] != NULL) {
-            gWorld.mPlayers[i]->RegisterTowns();
-            gWorld.mPlayers[i]->AssignTowns();
-        }
-    }
-    gPathManager.Reset();
-    for (unsigned long j = 1; j < gWorld.mNumPlayers; j++) {
-        if (gWorld.mPlayers[j] == NULL)
-            continue;
-        if (gWorld.mPlayers[j]->mComputerPlayer != NULL)
-            gWorld.mPlayers[j]->mComputerPlayer->RefreshResourceCenters();
-        else
-            gWorld.mPlayers[j]->RefreshTownGroups();
-    }
-    if (gWorld.mEnvironmentManager != NULL)
-        gWorld.mEnvironmentManager->FnE123D();
-    gSightUpdatesEnabled = true;
-    gWorld.RestartUnits();
-    EEUpdateLandContinents();
-    gWorld.mLock->WriteUnlock();
-    this->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, false, true);
-    gWorld.mLock->WriteLock();
-    gUIManager->SwapForm(gUIManager->mMainGameForm);
-    EESetGameViewRectangle(theRectangle);
-    gMiniMap->Redraw();
-    gMiniMap->Refresh();
-    gWorld.mLock->WriteUnlock();
-    gAmbientSoundManager.SetEnabled(gGamePreferences.mSettings.mAmbientSounds);
-    gAmbientSoundManager.Restart();
-    this->ResumeGraphics();
-    gPhysics->mThread->Post(0x404, NULL, NULL, true);
-    gMusicManager->Start();
+    ee_screens_ui_save_and_test_scenario(this);
 }
 
 // FUNCTION: EXE 0x677023
@@ -542,50 +600,10 @@ long EEUserInterface::CreateRenderObject()
 
 // FUNCTION: EXE 0x67757c
 // Loads a saved game or scenario file: checks its header, starts a local server and posts the load; reports
-// an invalid file
+// an invalid file (ee_screens ui_game.rs)
 void EEUserInterface::LoadSavedGame(FSFile* inFile)
 {
-    long theResult = kErrorOK;
-    EEPSaveGameHeader theHeader;
-    UWideString theMessage;
-    theHeader.SetMajorVersion(kSaveGameMajorVersion);
-    theHeader.SetMinorVersion(kSaveGameMinorVersion);
-    if (theHeader.LoadFromFile(*inFile) == kErrorOK) {
-        this->PauseGraphics();
-        gPhysics->mThread->Post(0x402, NULL, NULL, true);
-        while (gPhysics->mTimerRunning)
-            PlatSleep(1);
-        if (gCommunications != NULL)
-            delete gCommunications;
-        gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
-        static_cast<EEServer*>(gCommunications)->StartThreads();
-        gUIManager->mB13D = false;
-        gGameState.Clear();
-        EEStopAllSounds();
-        gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash));
-        static_cast<EEServer*>(gCommunications)->AllowNewPlayers(false);
-        static_cast<EEServer*>(gCommunications)->mNumLoadResponses = 0;
-        static_cast<EEServer*>(gCommunications)->mLoadState = 1;
-        static_cast<EEServer*>(gCommunications)->SetGameState(2);
-        static_cast<EEServer*>(gCommunications)->SetNumHumanPlayers(1);
-        static_cast<EEServer*>(gCommunications)->SetIsMultiplayerSession(false);
-        gGameOptions.mLock->WriteLock();
-        gGameOptions.SetDefaults();
-        unsigned long theLength = inFile->GetFile().GetLength();
-        gGameOptions.mLoadType = inFile->GetFile().Find(gScenarioExtension, 0) < theLength ? 1 : 2;
-        {
-            UWideString theName(inFile->GetFile());
-            gGameOptions.mMapType = theName;
-        }
-        gGameOptions.mLock->WriteUnlock();
-        gDataPreLoading->PostLoadGame(true, true);
-        this->ResumeGraphics();
-    } else {
-        gResource->GetString(IDS_SAVE_GAME_ISNT_VALID, theMessage);
-        gUIManager->DisplayMessage(theMessage, true, NULL, NULL, true);
-    }
-    if (inFile != NULL)
-        delete inFile;
+    ee_screens_ui_load_saved_game(this, inFile);
 }
 
 // FUNCTION: EXE 0x6777cd
@@ -629,68 +647,10 @@ void EEUserInterface::OpenSelectServer()
 
 // FUNCTION: EXE 0x6779b8
 // Runs the UI thread: collects and handles its messages, keeps the FPU in 53-bit mode, updates the interface
-// and the free camera each pass until quitting
+// and the free camera each pass until quitting (ee_screens ui_game.rs)
 long EEUserInterface::Run(void* inParameter)
 {
-    std::vector<EEUIThreadMessage> theMessages;
-    UWideString theLocale;
-    static unsigned long sLastTime = TMGetTime();
-    gISMouse->Resume();
-    gISKeyboard->Resume();
-    TSThread::SetThreadName(PlatCurrentThreadId(), gUserInterfaceThreadName);
-    gResource->GetString(IDS_ENGLISH, theLocale);
-    setlocale(LC_ALL, theLocale);
-    setlocale(LC_NUMERIC, "English");
-    // port (decision D6): game text is UTF-8, so the C runtime's character classes stay the "C" locale's; under the
-    // language's code page tolower/toupper/isalpha would have changed the bytes of a multi-byte character
-    setlocale(LC_CTYPE, "C");
-    setlocale(LC_ALL, NULL);
-    if (this->CreateRenderObject() != kErrorOK)
-        return 0;
-    gMousePointer->mThread->Post(0x405, gRasterizer->GetPrimarySurface(gScreenIndex), NULL, true);
-    gMousePointer->mThread->Post(0x404, NULL, NULL, true);
-    gGraphics->PostSetFlag54(false);
-    gGraphics->PostResume();
-    UMSetFloatingPointPrecision(kFPPrecision53);
-    while (!this->mIsQuitting) {
-        EEUIThreadMessage theMessage;
-        long theResult;
-        this->mThread->LockMessageQueue();
-        while (true) {
-            theResult = this->mThread->Receive(theMessage.mMessage, theMessage.mParameter1, theMessage.mParameter2);
-            if (UMGetFloatingPointPrecision() != kFPPrecision53)
-                UMSetFloatingPointPrecision(kFPPrecision53);
-            if (UMGetFloatingPointRoundingMode() != 0)
-                UMSetFloatingPointRoundingMode(0);
-            if (theResult != kErrorOK)
-                break;
-            theMessages.push_back(theMessage);
-            PlatSleep(1);
-        }
-        this->mThread->UnlockMessageQueue();
-        for (unsigned long i = 0; i < theMessages.size(); i++) {
-            EEUIThreadMessage& theEntry = theMessages[i];
-            this->HandleMessage(theEntry.mMessage, reinterpret_cast<LONG_PTR>(theEntry.mParameter1), reinterpret_cast<LONG_PTR>(theEntry.mParameter2));
-        }
-        theMessages.clear();
-        if (UMGetFloatingPointPrecision() != kFPPrecision53)
-            UMSetFloatingPointPrecision(kFPPrecision53);
-        if (UMGetFloatingPointRoundingMode() != 0)
-            UMSetFloatingPointRoundingMode(0);
-        if (this->mIsUpdating && !this->mIsQuitting)
-            this->UpdateInterface();
-        if (!gFreeCamera) {
-            sLastTime = TMGetTime();
-        } else {
-            unsigned long theTime = TMGetTime();
-            gWorld.mCameraControl.Update((theTime - sLastTime) * 0.001f);
-            sLastTime = theTime;
-        }
-        // the headless simulation (platform/PlatSim.h): while its game runs, the interface (whose update takes the
-        // world's read lock) is updated 50 times a second instead of every millisecond
-        PlatSleep(gPlatSimRun ? 20 : 1);
-    }
-    return 0;
+    return (long)ee_screens_ui_run(this);
 }
 
 // FUNCTION: EXE 0x677c1f

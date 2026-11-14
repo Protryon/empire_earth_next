@@ -1,0 +1,10 @@
+[package]
+name = "ee_ustring"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The string classes' algorithms (UString's searches and tokenizers; LLE lane round 3). The classes and their
+# buffers stay C++.
+[lib]
+crate-type = ["rlib"]

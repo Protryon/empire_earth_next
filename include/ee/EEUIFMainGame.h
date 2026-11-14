@@ -22,6 +22,7 @@ class EEUnit;
 class UIBackground;
 class TMPoll;
 class TSCriticalSection;
+struct EeScreensMainFormIo;   // rust/ee_screens.h
 
 // the status buttons' availability tests (+0x520..+0x5cc; cdecl functions in EEUIFMGStatusButton.cpp's range
 // 0x26fe64..0x27115c; argument types inferred)
@@ -89,6 +90,9 @@ public:
     void RefreshSavedGroups();              // 0x26716e (refreshes the saved-group buttons 0xd4..0xdd)
     void UpdateIconBar();                   // 0x2671b0 (control 0xde)
     void FnE123D();                         // (ICF-folded into 0xe123d: an empty body; provisional name)
+    // the host of the per-frame work in Rust (ee_screens main_form.rs: CopyData, RefreshStatus, DisplayChatLine,
+    // ShowInformation); a member for UIForm's protected GetMouseCaptured and CopyData
+    static int64_t HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, EeScreensMainFormIo* ioIo);
 
     UWideString mStrings[0x24];             // +0x1a0 (CopyData copies them into control 0x1b's list while mStringsChanged)
     GE3DPoint mPoint470;                    // +0x470 (the inline ctor's zeros)

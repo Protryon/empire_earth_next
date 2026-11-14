@@ -44,7 +44,7 @@ static void NEToUWide(void* inContext, const uint8_t* inBytes, size_t inLength)
 }
 static void* NEHandle(TSEvent* inEvent)
 {
-    return inEvent->mHandle;
+    return inEvent->GetHandle();
 }
 // the plug-in's view of a wrapper: its handle slot
 static void** NESlot(const NEConnection* inConnection)

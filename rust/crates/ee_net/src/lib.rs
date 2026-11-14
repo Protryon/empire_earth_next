@@ -9,9 +9,15 @@
 //!   loss with its lag thread;
 //! - `recplay`: `NERecordPlayback`, the client's and the server's message recorder and player with its playback
 //!   thread;
+//! - `client`: `NESynchronousClient`, the lock-step client with its main and receive threads, its lag simulator and
+//!   recorder;
+//! - `tune`: the lock-step server's network and CPU tuning and its booting of laggers (NESynchronousServer's
+//!   TuneServer and the members it calls);
 //! - `qhost`: the two queues' calls out, and the timestamped record format;
-//! - `ffi`: the C ABI (`rust/ee_net.h`).
+//! - `ffi`, `ffi_client`, `ffi_tune`: the C ABI (`rust/ee_net.h`).
 
+/// cbindgen:ignore
+pub mod client;
 /// cbindgen:ignore
 pub mod lagloss;
 /// cbindgen:ignore
@@ -22,10 +28,18 @@ pub mod qhost;
 pub mod recplay;
 /// cbindgen:ignore
 pub mod rlock;
+/// cbindgen:ignore
+pub mod tune;
 
 pub mod ffi;
+pub mod ffi_client;
+pub mod ffi_tune;
 
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod tests_client;
+#[cfg(test)]
 mod tests_queues;
+#[cfg(test)]
+mod tests_tune;

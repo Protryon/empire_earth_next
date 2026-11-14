@@ -176,48 +176,20 @@ void EESMArea::GetTiles(std::vector<U2DPoint<long> >& outTiles)
     }
 }
 
-// GetTiles' body (GetTiles adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
+// GetTiles' body (GetTiles adds the simulation capture's SMAR record: ee/EEScenarioCapture.h); the rebuild is
+// ee_scenario area.rs tiles, into mTiles through EE_SCENARIO_WRITE_TILE
 void EESMArea::GetTilesUncaptured(std::vector<U2DPoint<long> >& outTiles)
 {
-    std::vector<EETown*> theTowns;
     if (this->mTiles.size() <= 0 || (unsigned long)(gPhysics->mCurrentTick - this->mTilesTime) >= 3000) {
-        this->mTilesTime = gPhysics->mCurrentTick;
         this->mTiles.clear();
-        switch (this->mSelectMode) {
-        case 0: {
-            for (long x = (long)this->mRect.GetLeft(); (float)x <= this->mRect.GetRight(); ++x) {
-                for (long y = (long)this->mRect.GetTop(); (float)y <= this->mRect.GetBottom(); ++y) {
-                    if (gWorld.mMap->GetTile(x,y) != NULL) {
-                        U2DPoint<long> theTile(x,y);
-                        this->mTiles.push_back(theTile);
-                    }
-                }
-            }
-            break;
-        }
-        case 1:
-            gContinentManager.GetContinentTiles(gContinentManager.GetContinentID(this->mAnchor.GetX(),this->mAnchor.GetY()),this->mTiles);
-            break;
-        case 2:
-            for (long i = gWorld.GetNumPlayers() - 1; i > 0; --i) {
-                EEPlayer* thePlayer = gWorld.GetPlayer(i);
-                for (long j = thePlayer->GetNumTowns() - 1; j >= 0; --j) {
-                    EETown* theTown = *(thePlayer->mTowns.begin() + j);
-                    if (theTown->mHull.BoundedContains(this->mAnchor))
-                        theTowns.push_back(theTown);
-                }
-            }
-            for (long k = (long)theTowns.size() - 1; k >= 0; --k)
-                theTowns[k]->GetTiles(this->mTiles);
-            if (this->mTiles.size() == 0)
-                this->mTiles.push_back(this->mAnchor);
-            break;
-        }
-        outTiles = this->mTiles;
-    } else {
-        outTiles = this->mTiles;
-        this->mTilesTime = gPhysics->mCurrentTick;
+        EESMHostContext theContext = {};
+        theContext.mTiles = &this->mTiles;
+        EeScenarioHost theHost = EESMHost(&theContext);
+        EeScenarioAreaRecord theRecord = EESMAreaRecord(*this);
+        ee_scenario_area_tiles(&theHost, &theRecord);
     }
+    this->mTilesTime = gPhysics->mCurrentTick;
+    outTiles = this->mTiles;
 }
 
 // FUNCTION: EXE 0x5ba670
