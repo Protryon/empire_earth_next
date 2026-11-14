@@ -8,6 +8,7 @@
 
 class EEUnit;
 class UITextLabel;
+struct EEUIBUpgradeCall;
 
 class EEUIBUpgrade : public UIButton {
 public:
@@ -35,6 +36,8 @@ public:
     virtual bool GetCanUpgrade(EEUnit*& outUnit, UWideString* outReason);
     // +0x98: whether the button is greyed out (the improvement can no longer be raised)
     virtual bool GetDisabled();
+    // the button's host (ee_screenscpp_upgrade, EEUIBUpgrade.cpp): a member for the protected toolkit calls
+    static int64_t HostOp(EEUIBUpgradeCall& ioCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);
 
     UWideString mHelpText;                  // +0x104
     long mAttribute;                        // +0x118 the improvement (0x10: help string only, 0xc: no cost)

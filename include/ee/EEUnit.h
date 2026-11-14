@@ -55,6 +55,7 @@ class EEPhysicsModel;                       // ee/EEPhysicsModel.h (EEUnitClass 
 class EESoundObject;
 
 #include "ee/EEUnitClassImprovement.h"
+#include "rust/ee_units.h"              // EeUnitsUnitClassUpgradeFields (EEUnitClassUpgrade's base)
 
 // What +0x34 of a unit points to: the owner's RTTI EEUnitClassUpgrade for the unit's class (vtable 0x449ad8, sizeof
 // 0x16c, ctor 0x23b6ae(EEUnitClass*); EEPlayer's Reset news one per gUnitClassTable entry into its vector at +0x884).
@@ -63,9 +64,12 @@ class EESoundObject;
 // gap-free from the ctor, the dtor 0x23b729 (deletes +0x68..+0x80 through slot +0x08 when mL154 > 0) and Init
 // 0x23b891 (copies from mUnitClass; `layout.py EEUnitClassUpgrade`); member types by those stores, (provisional names)
 // (the names users rely on are kept). EEUnitStats stays as a typedef for the old spelling.
+// New (R5b.4, round 28): the plain members (the stats, their inverses, the counts and flags: names, types and order
+// kept) are the Rust record EeUnitsUnitClassUpgradeFields (ee_units stats.rs), read in place by the Rust readers;
+// Init's copies and SetMaxVelocity are Rust. The volatile busy flags stay here.
 class EEButtonObject;
 class FSFileSpec;
-class EEUnitClassUpgrade {
+class EEUnitClassUpgrade : public EeUnitsUnitClassUpgradeFields {
 public:
     EEUnitClassUpgrade(EEUnitClass* inUnitClass);   // 0x23b6ae (then Init)
     virtual ~EEUnitClassUpgrade();          // +0x00 dtor 0x23b729 (??_G 0x23b70d)
@@ -123,60 +127,13 @@ public:
     EESoundObject* mDeathSound;             // +0x70 (EEUnitClass::UnitDied plays it where the unit dies)
     EESoundObject* mAcknowledgeSounds[2];   // +0x74 (the dtor's loop of two; GetAcknowledgeSound hands one to EEPlayForLocalPlayer, which plays it)
     EESoundObject* mSelectionSounds[2];     // +0x7c (likewise GetSelectionSound)
-    float mAreaEffectScale;                 // +0x84
-    float mConversionResistance;            // +0x88
-    float mConversionRate;                  // +0x8c
-    float mCostScale;                       // +0x90
-    float mBuildTimeScale;                  // +0x94
-    float mScale;                           // +0x98 (Init: mUnitClass +0x130)
-    float mRange;                           // +0x9c (EEUGAttackGround::EvaluateCondition: > 1)
-    float mAreaEffect;                      // +0xa0
-    float mLineOfSight;                     // +0xa4
-    float mAcceleration;                    // +0xa8
-    float mMaxVelocity;                     // +0xac (> 0: the hot keys' unit selection takes the unit)
+    // +0x84 mAreaEffectScale .. +0x168 mIsInitialized: the record EeUnitsUnitClassUpgradeFields (the base above)
     float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEActiveGroup::ComputeValues 0x5ed692 copies it through fld/fstp)
-    float mAngularAcceleration;             // +0xb0
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (mFAC / mFB4 sites read both as values)
     float GetCameraFocus() const { return this->mCameraFocus; }  // inline (EECameraControl::GetUnitPoint 0x52844f: fld; fmulp) (provisional name)
-    float mMaxAngularVelocity;              // +0xb4
-    float mTurretMaxAngularVelocity;        // +0xb8
-    float mBC;                              // +0xbc (EEComplexUnit::SetVelocity keeps +0x21c at least this)
-    float mLaunchSpeed;                     // +0xc0 (EEPMProjectile::Step0 0x15d106: fld, compared with 0.001f)
-    float mInverseAcceleration;             // +0xc4
-    float mInverseAngularAcceleration;      // +0xc8
-    float mInverseMaxAngularVelocity;       // +0xcc
-    float mInverseMaxVelocity;              // +0xd0
-    float mInverseTurretMaxAngularVelocity;  // +0xd4
-    float mAttack;                          // +0xd8
-    float mLeadership;                      // +0xdc
-    float GetArmor(long inKind) const { return this->mArmor[inKind]; }  // inline (0x63a8a8, 0x63afc1) (provisional name)
-    float mArmor[6];                        // +0xe0 per weapon kind (EEPhysicsModel::Push 0x15607f indexes it by the attacker class's mWeapon) (provisional name)
-    float mCameraFocus;                      // +0xf8
-    long mAreaEffectTemplates[4];          // +0xfc..108, indexed independently by Init and SelectedGroup
-    long mWonderUnitSet;                    // +0x10c
-    long mGatherTimes[7];                   // +0x110 (Init's loop copies mUnitClass +0x21c..+0x238)
-    long mPowerRegeneration;                // +0x12c
-    long mFlightTime;                       // +0x130
-    long mWorkRate;                         // +0x134
-    long mReloadTime;                       // +0x138 (EEUGAttackGround::Step passes it to SetRandomReloadTimer)
-    long mMaxObjectCarry;                   // +0x13c
-    long mRepairRate;                       // +0x140
-    long mMaxHitPoints;                     // +0x144 provisional name (aircraft selection)
-    long mPower;                            // +0x148
-    long mCarryAmount;                      // +0x14c
-    long mHealingPoints;                    // +0x150
-    long mMediaCount;                       // +0x154 (EEPlayer::LoadUnitClassMedia: loaded once; the dtor's guard; signed: EEUnitClassUpgrade's `> 0` tests are jle)
     unsigned long GetMediaCount() const { return this->mMediaCount; }  // inline (EEPlayer::LoadAllClassMedia 0x167c16 compares it unsigned: jbe) (provisional name)
-    long mButtonLoadCount;                  // +0x158 (EEPlayer::SwapClassButtonMedia: > 0)
-    long mRegeneration;                     // +0x15c
     unsigned long GetTerrainMask() const { return this->mTerrainMask; }
-    unsigned long mTerrainMask;             // +0x160 (unsigned: `>> 14` is shr in 0x23198b/0x2292c9/0x23b891)
-    bool mCanFireOverWalls;                 // +0x164 (EEUGAttackGround::Step)
-    bool mBuildsOnElevation;                // +0x165
-    bool mConvertsBuildings;                // +0x166
-    bool mConvertsPriests;                  // +0x167
     bool GetIsInitialized() const { return this->mIsInitialized; }
-    bool mIsInitialized;                    // +0x168
     volatile bool mIsLoadingMedia;          // +0x169 (ctor: false; a busy flag polled with Sleep(1): volatile, 0x63bcc3)
     volatile bool mIsLoadingButtons;        // +0x16a (ctor: false; 0x23bc29 sets it while loading the media and the
                                             //  other loaders poll it with Sleep(1): `mov byte ptr`, re-read each pass)
@@ -1277,11 +1234,9 @@ public:
     unsigned char GetDomains() const { return this->mDomains; }
     float GetAcceleration() const { return this->mAcceleration; }  // inline (read as a value)
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (read as a value)
-    float GetTurretMaxAngularVelocity() const { return this->mTurretMaxAngularVelocity; }  // inline (read as a value)
     float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEPMNaval::PitchMode 0x55c146 loads it as a value: fld; fdivp) (provisional name)
     float GetMaxRoll() const { return this->mMaxRoll; }  // inline value getter (0x55da2c / 0x55937a)
     float GetFacingOffset() const { return this->mFacingOffset; }
-    float GetConversionResistance() const { return this->mConversionResistance; }  // inline (EEUnitClassUpgrade::Init 0x63b891 copies with fld/fstp)
     float GetConversionRate() const { return this->mConversionRate; }
     float GetBobHeight() const { return this->mBobHeight; }  // inline (EEPMHelicopter::ApplyBob 0x558ce3 loads it as a value: fld; fmul st(2)) (provisional name)
     float GetBobPitch() const { return this->mBobPitch; }  // inline (EEPMNaval::ApplyBob 0x55b668 loads it as a value before the bob: fld [eax+0x194]) (provisional name)

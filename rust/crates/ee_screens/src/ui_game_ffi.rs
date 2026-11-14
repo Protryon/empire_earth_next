@@ -46,3 +46,11 @@ pub extern "C" fn ee_screens_ui_load_saved_game(ui: *mut c_void, file: *mut c_vo
 pub extern "C" fn ee_screens_ui_run(ui: *mut c_void) -> i64 {
     ui_game::run(&mut GameHost(ui))
 }
+
+/// `EEUserInterface`'s member `which` (`EE_SCREENS_UG_DO_*`: `LeaveMap`, `CancelGame`, `CloseScenarioEditor`,
+/// `EnterScenarioEditor`, `StartLoadingFromEditor`, `RestartGame`, `ShowCivilizationBuilder`) with its arguments on
+/// the UI object `ui`.
+#[no_mangle]
+pub extern "C" fn ee_screens_ui_member(ui: *mut c_void, which: u32, a: i64, b: i64, c: i64) {
+    ui_game::member(&mut GameHost(ui), which, a, b, c);
+}

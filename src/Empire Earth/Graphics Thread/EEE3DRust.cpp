@@ -1,11 +1,12 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
 // effect_beam.rs, effect_aged.rs, effect_additive.rs,
-// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs, effect_wall.rs, effect_vent.rs, effect_icon.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs, effect_wall.rs, effect_vent.rs, effect_icon.rs,
+// effect_tracer.rs, effect_volcano.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
 // EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
 // EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp, EEE3DEnergyWall.cpp, EEE3DDamageVent.cpp,
-// EEE3DIcon.cpp and EEE3DGoal.cpp.
+// EEE3DIcon.cpp, EEE3DGoal.cpp, EEE3DTracerBeam.cpp and EEE3DVolcano.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -56,8 +57,39 @@
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEGamePreferences.h"
+#include "lle/GERectangle.h"
+#include "lle/GEPolygonArray.h"
+#include "lle/GEModelManager.h"
+#include "lle/Graphics Engine.h"
+#include "lle/FSFileSpec.h"
+#include "lle/FSArchive.h"
+#include "lle/FSPath.h"
+#include "ee/EEDatabaseTables.h"
+#include "ee/EEEffectMesh.h"
 
 namespace {
+// the map's questions for ee_gfx volcano.rs (the volcano's build)
+float EEVolcanoZ(void* inMap, uint32_t inX, uint32_t inY)
+{
+    return static_cast<EEMap*>(inMap)->mTerrainMesh.GetZ(inX, inY);
+}
+EeGfxColor EEVolcanoColor(void* inMap, uint32_t inX, uint32_t inY)
+{
+    const GEColor& theColor = EETerrainTable::Get(static_cast<EEMap*>(inMap)->mTerrainMesh.GetTextureSetID(inX, inY))->mColor;
+    EeGfxColor theResult = {theColor.mRed, theColor.mGreen, theColor.mBlue};
+    return theResult;
+}
+bool EEVolcanoValidTile(void* inMap, uint32_t inX, uint32_t inY)
+{
+    return static_cast<EEMap*>(inMap)->mTerrainMesh.GetIsValidTile(inX, inY);
+}
+EeGfxColor EEVolcanoLight(void* inMap, int32_t inX, int32_t inY, int32_t inCorner)
+{
+    const GEColor& theColor = static_cast<EEMap*>(inMap)->GetVertexColor(inX, inY, inCorner);
+    EeGfxColor theResult = {theColor.mRed, theColor.mGreen, theColor.mBlue};
+    return theResult;
+}
+
 // the world's answers for one call
 struct Ask {
     EEE3DRust* mEffect;
@@ -463,6 +495,170 @@ struct Ask {
         GETexture* theTexture = theObject ? theObject->GetTexture(gGamePreferences.mSettings.GetScreenID()) : NULL;
         static_cast<Ask*>(inAsk)->mQueues[inIndex][theTexture].push_back(E(inAsk));
     }
+    // the tracer beam's ends (EEE3DTracerBeam::Aim, 0xfc5a4): from the shooter's weapon tag point (on its turret part
+    // when the tag point's model is one), or its tag point of kind 6 (int param 1 is 1), or its stats' default point,
+    // to the target point on the target's location (scaled by the target's scale when the weapon tag point was used)
+    // or the fixed point
+    static EeGfxTracerEnds TracerEnds(void* inAsk)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        GE3DPoint theEnd;
+        GE3DPoint theStart;
+        GETransformation theFrom(theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation());
+        GETransformation theTo(false);
+        GETransformation thePart(false);
+        EEGraphicObject* theGraphic = theEffect->mUnit->GetModel();
+        EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
+        float theTargetScale = 1.0f;
+        EETagPointList* theTags = theGraphic->mTagPoints[theUnit->GetAnimation()];
+        float theScale = theUnit->mPhysicalModel.GetScale();
+        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
+        unsigned long thePoint = theEffect->mRecord->tracer.weapon_tag_point;
+        EEUnit* theTarget = theEffect->mTarget;
+        GE3DPoint theTargetPoint(theEffect->mRecord->tracer.target_point.x, theEffect->mRecord->tracer.target_point.y,
+                                 theEffect->mRecord->tracer.target_point.z);
+        if (theTarget) {
+            theTo = theTarget->mComplexUnit->mPhysicalModel.GetLocation();
+            theTargetScale = theTarget->mComplexUnit->mPhysicalModel.GetScale();
+        } else
+            theTo.MakeIdentity();
+        if (theEffect->mGraphicEffect->mIntParam1 == 1) {
+            EETagPointList* theOtherTags = theUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), 6);
+            if (theOtherTags && theOtherTags->GetNumTagPoints() != 0) {
+                EETagPointList::Scale(theFrom, theScale);
+                theOtherTags->GetTagPoint(0)->GetPoint(theFrame, theFrom, theStart);
+            }
+        } else if (theEffect->mGraphicEffect->mIntParam1 == 0 && theTags && theTags->GetNumTagPoints() != 0) {
+            EETagPointList::Scale(theFrom, theScale);
+            if (theGraphic->GetNumParts() > 0) {
+                unsigned long thePartIndex;
+                thePart.MakeIdentity();
+                if (theGraphic->FindTurretPart(theTags->GetTagPoint(thePoint)->mModel, thePartIndex) == 0)
+                    thePart.SetOrientationYPR(theUnit->mTurretAngles[thePartIndex], 0.0f, 0.0f);
+                theTags->GetTagPoint(thePoint)->GetPoint(theFrame, theFrom, thePart, theStart);
+            } else
+                theTags->GetTagPoint(thePoint)->GetPoint(theFrame, theFrom, theStart);
+            EETagPointList::Scale(theTo, theTargetScale);
+        } else
+            theFrom.Apply(theEffect->mUnit->mStats->mModel->mDefaultPoint, theStart);
+        if (theTarget)
+            theTo.Apply(theTargetPoint, theEnd);
+        else
+            theEnd = theTargetPoint;
+        return EeGfxTracerEnds{EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ}, EeGe3DPoint{theEnd.mX, theEnd.mY, theEnd.mZ},
+                               theTarget != NULL};
+    }
+    // the tracer beam's impact effect at its target point (EEE3DTracerBeam::Step, 0xfd140)
+    static int32_t TracerImpact(void* inAsk)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        GETransformation theTransformation;
+        GE3DPoint theLocation;
+        GE3DPoint theTargetPoint(theEffect->mRecord->tracer.target_point.x, theEffect->mRecord->tracer.target_point.y,
+                                 theEffect->mRecord->tracer.target_point.z);
+        if (theEffect->mTarget) {
+            theTransformation = theEffect->mTarget->mComplexUnit->mPhysicalModel.GetLocation();
+            theTransformation.Apply(theTargetPoint, theLocation);
+        } else
+            theLocation = theTargetPoint;
+        return gEffectManager->CreatePlacedEffect(theLocation, theEffect->mGraphicEffect->mLinkedEffect1, NULL);
+    }
+    static void TracerHit(void* inAsk)
+    {
+        EEUnit* theTarget = E(inAsk)->mTarget;
+        theTarget->mUnitClass->UnitDamaged(theTarget->mComplexUnit, NULL, 0);
+    }
+    // serialized ID; RepairPointers resolves it through gWorld.GetUnit
+    static void TracerSavedTarget(void* inAsk, uint32_t inID) { E(inAsk)->mTarget = USavedPointer<EEUnit>(inID); }
+    static uint32_t TracerTargetID(void* inAsk)
+    {
+        EEUnit* theTarget = E(inAsk)->mTarget;
+        return theTarget ? (uint32_t)theTarget->GetUnitID() : 0xffffffffu;
+    }
+    // the volcano's model over the record's mesh lists (EEE3DVolcano::BuildModel, 0xfe79d): each tile of its area
+    // split 3x3, following the terrain, coloured by terrain and lighting and blended into textures\Volcano.png near
+    // the centre, and the cone heights from the image's alpha (ee_gfx volcano.rs); the model made and referenced,
+    // placed at its centre, the bounding radius to the cone's top, the texture
+    static int32_t VolcanoBuild(void* inAsk, EeGe3DPoint* outPoints, float* outHeights, uint32_t inCount)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        EeGfxEffectVolcano& theVolcano = theEffect->mRecord->volcano;
+        GETransformation theTransformation;
+        GE3DPoint theTop;
+        FSFileSpec* theFile = NULL;
+        GESurface* theSurface = NULL;
+        GESurfaceDescription theDescription;
+        float theHeightScale = theEffect->mGraphicEffect->mSize;
+        EeGfxVolcanoSizes theSizes = ee_gfx_volcano_sizes(theVolcano.area.right - theVolcano.area.left);
+        std::vector<EeGfxColor> theColors(theSizes.vertices);
+        theDescription.mWidth = 19;
+        theDescription.mHeight = 19;
+        theDescription.mIs3DRenderable = false;
+        theDescription.mIsTransparencyEnabled = false;
+        theDescription.mPixelFormat = kPixelFormatA8R8G8B8;
+        theDescription.mSurfaceVolatility = 0;
+        theDescription.m14 = 0;
+        theDescription.mMipLevelCount = 0;
+        theDescription.mType = kSurfaceSystemMemory;
+        theDescription.mPixelDepth = 32;
+        long theResult = gRasterizer->GetScreen(gScreenIndex)->CreateSurface(theDescription, &theSurface);
+        ESVERIFY_AT(theResult == keseOK, 233);
+
+        UString theFileName = UString("textures\\Volcano.png");   // the original's .tga as PNG (RUST_PLAN D9)
+        theResult = gTextureManager->GetTexturePath()->FindFile(theFileName, theFile);
+        ESVERIFY_AT(theResult == keseOK, 238);
+        ESVERIFY_AT(theFile != NULL, 239);
+        theSurface->Load(*theFile, kImageFilePNG);
+        ESVERIFY_AT(theResult == keseOK, 241);
+        if (theFile != NULL)
+            delete theFile;
+        theSurface->Lock();
+        const uint32_t* thePixels = reinterpret_cast<const uint32_t*>(theSurface->GetMemoryAddress());
+        ee_gfx_volcano_image(theHeightScale, theSizes.side, thePixels, theSurface->GetBytesPerRow() / 4,
+                             theColors.empty() ? NULL : &theColors[0], inCount == 0 ? NULL : outHeights, theColors.size());
+        theSurface->Unlock();
+        theSurface->Dereference();
+        GEModel* theModel = gModelManager->CreateModel(theSizes.polygons, theSizes.vertices, 1, 0, 1, 0, "volcano model", 1);
+        theEffect->mVolcanoModel = theModel;
+        theModel->Reference();
+        theModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
+        theModel->GetMaterial(0)->SetPolygonRangeLength(theSizes.polygons, 0);
+        theModel->GetMaterial(0)->SetVertexStartingIndex(0);
+        theModel->GetMaterial(0)->SetVertexRangeLength(theSizes.vertices);
+        EeGfxVolcanoTerrain theTerrain;
+        theTerrain.context = ::gWorld.mMap;
+        theTerrain.z = EEVolcanoZ;
+        theTerrain.color = EEVolcanoColor;
+        theTerrain.valid_tile = EEVolcanoValidTile;
+        theTerrain.light = EEVolcanoLight;
+        EEEffectMesh theMesh(theSizes.vertices, theSizes.polygons);
+        EeGfxVolcanoArea theArea = theVolcano.area;
+        EeGfxVolcanoBuilt theBuilt = ee_gfx_volcano_build(
+            &theArea, theColors.empty() ? NULL : &theColors[0], theTerrain, inCount == 0 ? NULL : outPoints,
+            inCount == 0 ? NULL : outHeights, theColors.size(), theMesh.Vertices(), theMesh.mVertices.size(),
+            theMesh.Triangles(), theMesh.mTriangles.size());
+        theMesh.Store(theModel);
+        theVolcano.area.center.z = theBuilt.center_z;
+        float theMaximum = theBuilt.maximum;
+        theModel->ComputeModelNormals();
+        theModel->ComputeBoundingVolumes();
+        theModel->SetGraphicsPostModelTransform(theTransformation);
+        theModel->PrepareTransforms();
+        theTransformation.SetPosition(theModel->GetCenterPoint().GetX(), theModel->GetCenterPoint().GetY(),
+                                      theModel->GetCenterPoint().GetZ());
+        theEffect->SetTransformation(theTransformation);
+        theTop.SetX(theModel->GetCenterPoint().GetX());
+        theTop.SetY(theModel->GetCenterPoint().GetY());
+        theTop.SetZ(theHeightScale + theMaximum);
+        float theRadius = theModel->GetCenterPoint().DistanceTo(theTop);
+        if (theRadius <= theModel->GetBoundingRadius(0))
+            theRadius = theModel->GetBoundingRadius(0);
+        theEffect->mBoundingRadius = theRadius;
+        if (theResult == kErrorOK)
+            theModel->GetMaterial(0)->SetTexture(theEffect->mGraphicObject->mTextures[0], gScreenIndex);
+        return (int32_t)theResult;
+    }
+    static void* VolcanoModel(void* inAsk) { return E(inAsk)->mVolcanoModel; }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -502,12 +698,15 @@ EEE3DRust::EEE3DRust(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long in
 }
 
 // the pulse cannon ball (0x43): from the unit's weapon point to the target (EEE3DPulseCannonBall, 0xf6a26); the
-// citizen beam (0x33): towards the target (EEE3DCitizenBeam, 0xe94b7)
+// citizen beam (0x33): towards the target (EEE3DCitizenBeam, 0xe94b7); the tracer beam (0x40) to it
 EEE3DRust::EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect3D(inUnit, inGraphicEffect, inKind)
 {
     EeGe3DPoint theTarget = {inTarget.mX, inTarget.mY, inTarget.mZ};
-    if (inKind == 0x33) {   // the citizen beam
+    if (inKind == 0x40) {   // the tracer beam to a fixed point (EEE3DTracerBeam, 0xfc49d)
+        this->mRecord->tracer.target_point = theTarget;
+        this->mRecord->tracer.weapon_tag_point = inUnit->mComplexUnit->mWeaponTagPoint;
+    } else if (inKind == 0x33) {   // the citizen beam
         this->mRecord->shot.end = theTarget;
     } else {
         ShotStart(6, inUnit, this->mRecord->shot.path.start);
@@ -517,10 +716,22 @@ EEE3DRust::EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect*
 }
 
 // the tracers (0x21) and shells (0x26) on inTo: from inFrom's weapon point to a point of inTo's model, in inFrom's
-// player colour (EEE3DTracers, 0xfd373)
+// player colour (EEE3DTracers, 0xfd373); the tracer beam (0x40) of inFrom on inTo, referenced, aimed at a point picked
+// on its model (EEE3DTracerBeam, 0xfc3c5: the original tested the target for null, then used it)
 EEE3DRust::EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind)
-    : EEEffect3D(inTo, inGraphicEffect, inKind)
+    : EEEffect3D(inKind == 0x40 ? inFrom : inTo, inGraphicEffect, inKind)
 {
+    if (inKind == 0x40) {
+        this->mTarget = inTo;
+        if (this->mTarget) {
+            this->mTarget->Reference();
+            const GE3DPoint& thePick = this->mTarget->GetModel()->PickPoint();
+            this->mRecord->tracer.target_point = EeGe3DPoint{thePick.mX, thePick.mY, thePick.mZ};
+        }
+        this->mRecord->tracer.weapon_tag_point = inFrom->mComplexUnit->mWeaponTagPoint;
+        this->Call(EeGfxEffect3DOp::Create);
+        return;
+    }
     GE3DPoint theEnd;
     GETransformation theToTransformation(inTo->mComplexUnit->mPhysicalModel.GetLocation());
     float theToScale = inTo->mComplexUnit->mPhysicalModel.GetScale();
@@ -549,7 +760,7 @@ EEE3DRust::EEE3DRust(long inKind)
 }
 
 // stops the sound (the disease's and virus's), unloads the graphic object's media and the unit model's (the
-// additive pass's)
+// additive pass's), releases the tracer beam's target
 EEE3DRust::~EEE3DRust()
 {
     if (this->mSound) {
@@ -565,6 +776,10 @@ EEE3DRust::~EEE3DRust()
         this->mUnitModel->UnloadMedia();
         this->mUnitModel = NULL;
     }
+    if (this->mTarget != NULL && this->mTarget != (EEUnit*)-1)
+        this->mTarget->Dereference();
+    if (this->mVolcanoModel)   // the original dereferenced it without a test
+        this->mVolcanoModel->Dereference();
 }
 
 // the facts of an effect's graphic effect (inEffect), unit (inUnit) and the tick the Rust effects read (EEE3DRust's and
@@ -611,6 +826,10 @@ EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
         theFacts.param11 = theEffect->mParam11;
     }
     theFacts.has_effect = theEffect != NULL;
+    if (theEffect != NULL) {
+        theFacts.time1 = (uint32_t)theEffect->mTime1;
+        theFacts.time2 = (int32_t)theEffect->mTime2;
+    }
     return theFacts;
 }
 
@@ -628,7 +847,9 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
                                  Ask::GateOpen, Ask::PlayerColor, Ask::VentLists, Ask::VentUnit, Ask::VentCount,
                                  Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::UnitClassScale,
-                                 Ask::ReloadMedia, Ask::UnitRaisedPosition, Ask::MarketUnbuilt, Ask::QueueScreen};
+                                 Ask::ReloadMedia, Ask::UnitRaisedPosition, Ask::MarketUnbuilt, Ask::QueueScreen,
+                                 Ask::TracerEnds, Ask::TracerImpact, Ask::TracerHit, Ask::TracerSavedTarget,
+                                 Ask::TracerTargetID, Ask::VolcanoBuild, Ask::VolcanoModel};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
@@ -640,15 +861,40 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
 long EEE3DRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     long theBase = EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
+    if (this->mKind == 0x40)
+        this->mTarget = (EEUnit*)-1;   // the tracer beam's: no target saved (RepairPointers)
     EeGfxEffectFile theFile = EEEffectFile(inFile);
     return this->Call(EeGfxEffect3DOp::Load, NULL, &theFile, theBase, inMajorVersion, inMinorVersion);
 }
 
-// after loading: the base effect's pointers, then the kind's own (the media of the teleport and time warp)
+// after loading: the base effect's pointers, then the kind's own (the media of the teleport and time warp); the tracer
+// beam's saved target id back to a referenced unit, 7 when that unit is gone (EEE3DTracerBeam::RepairPointers, 0xfd000)
 long EEE3DRust::RepairPointers()
 {
     long theResult = EEEffect::RepairPointers();
+    if (this->mKind == 0x40) {
+        if (theResult == 0 && this->mTarget != (EEUnit*)-1) {
+            this->mTarget = dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mTarget)));
+            if (this->mTarget == NULL)
+                theResult = 7;
+            else
+                this->mTarget->Reference();
+        } else
+            this->mTarget = NULL;
+        return theResult;
+    }
     return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
+}
+
+// the base's, then the tracer beam's target unless the effect keeps its unit (EEE3DTracerBeam::ReplaceUnit, 0xfd10f)
+void EEE3DRust::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
+{
+    EEEffect::ReplaceUnit(inOldUnit, inNewUnit);
+    if (this->mKind != 0x40 || this->mTarget != inOldUnit || this->mKeepsUnit)
+        return;
+    this->mTarget->Dereference();
+    this->mTarget = inNewUnit;
+    this->mTarget->Reference();
 }
 
 // the icon (2) and goal (0x3c): a fixed one moves to inLocation (EEE3DIcon::SetLocation, 0xf2637); others ignore it

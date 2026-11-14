@@ -29,6 +29,7 @@ public:
     bool GetFileArchiveStatus(const UString& inName, bool& outArchived);        // 0xadfa
     bool GetFileArchiveStatus(const UWideString& inName, bool& outArchived);    // 0xaea1
     long ListFiles(const UString& inPattern, std::set<UString>& outFiles);      // 0xaed9
+    long RemoveArchive(unsigned long inIndex);                                  // 0xb0cd
     long RemoveDirectory(unsigned long inIndex);                                // 0xb136 (exported as RemoveDirectoryA)
 
 protected:

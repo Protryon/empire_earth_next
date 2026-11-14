@@ -65,6 +65,7 @@ public:
 #else
     const UITextLabel* GetTextLabel() const { return reinterpret_cast<const UITextLabel*>(this->PartOf(4)); }
 #endif
+    unsigned long GetTextBoxType() const { return (unsigned long)this->Call(EeUiComboCall::TextBoxType); }
     void InsertLine(const UWideString& inLine, unsigned long inIndex)
     {
         this->Call(EeUiComboCall::InsertLine, (intptr_t)(const char*)inLine, inIndex);

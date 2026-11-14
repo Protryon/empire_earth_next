@@ -17,7 +17,7 @@
 use std::cell::UnsafeCell;
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, AtomicUsize, Ordering::SeqCst};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use crate::ffi::EeNetMmOp;
 use crate::msgmgr::MsgMgr;
@@ -26,10 +26,12 @@ use crate::recplay::RecPlay;
 use crate::rlock::RLock;
 use crate::tune::{f32_to_u32, Field as TuField, Tune, TuneHost};
 
+pub use crate::comms::Comms;
 pub use crate::ffi::{MmCall, MmVia};
+pub use crate::ffi_comms::EeNetCommsField as BaseField;
 pub use crate::ffi_server::{
-    EeNetSvBase as BaseField, EeNetSvEvent as SvEvent, EeNetSvGet as SvGet, EeNetSvMsgField as MsgField,
-    EeNetSvMsgFlag as MsgFlag, EeNetSvNewMsg as NewMsg, EeNetSvSet as SvSet,
+    EeNetSvEvent as SvEvent, EeNetSvGet as SvGet, EeNetSvMsgField as MsgField, EeNetSvMsgFlag as MsgFlag,
+    EeNetSvNewMsg as NewMsg, EeNetSvSet as SvSet,
 };
 
 /// `ESVERIFY_AT`'s unit for this file (QHost::verify)
@@ -76,7 +78,7 @@ const PACKET_SIZE: usize = 0x200;
 const TICK_PACKET: u32 = 0x240;
 
 /// The server's calls out besides the queues' (`QHost`): the engine, the protocol and its server, the messages, the
-/// base class's fields, the message manager's calls that reach the C++ and the C++ class's virtual members.
+/// message manager's calls that reach the C++ and the C++ class's virtual members.
 pub trait ServerHost: QHost {
     /// `TSEvent::WaitAny`: the index of the set event (the lowest), WAIT_ANY_TIMEOUT or WAIT_ANY_FAILED
     fn wait_any(&self, events: &[Ev], timeout: u32) -> i32;
@@ -86,8 +88,6 @@ pub trait ServerHost: QHost {
     fn sleep(&self, ms: u32);
     /// `gPlatSimMode` (TEST ONLY: the headless simulation's physics thread sends the ticks)
     fn sim_mode(&self) -> bool;
-    fn base_get(&self, f: BaseField) -> u32;
-    fn base_set(&self, f: BaseField, value: u32);
     /// the message manager's calls out that reach the C++ (the messages, the protocol server, the base class, the
     /// game, the files): NESynchronousServer::MessageManagerHost's op
     fn mm(&self, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> isize;
@@ -181,6 +181,14 @@ impl<H: ServerHost> MmCall for Back<H> {
                 0
             }
             EeNetMmOp::Time => s.host.time() as isize,
+            // the base class's fields
+            EeNetMmOp::LastTick => s.comms.last_tick_received() as isize,
+            EeNetMmOp::SetLastTick => {
+                s.comms.set(BaseField::LastTickReceived, a as u32);
+                0
+            }
+            EeNetMmOp::CtsProcessed => s.comms.get(BaseField::CtsProcessed) as isize,
+            EeNetMmOp::AvgPhysics => s.comms.get(BaseField::AveragePhysicsUpdateTime) as isize,
             _ => s.host.mm(op, a, b, c, d),
         }
     }
@@ -201,7 +209,7 @@ impl<H: ServerHost> TuneHost for Back<H> {
             TuField::DefaultSendInterval => s.default_send_interval.load(SeqCst),
             TuField::LastCtMessageId => s.last_ct_message_id.load(SeqCst),
             TuField::GameState => s.game_state.load(SeqCst) as u32,
-            TuField::IsMultiplayerSession => s.host.base_get(BaseField::IsMultiplayerSession),
+            TuField::IsMultiplayerSession => s.comms.get(BaseField::IsMultiplayerSession),
             TuField::CurrentCommunicationsTick => s.current_ct.load(SeqCst),
             TuField::PTsPerCt => s.pts_per_ct.load(SeqCst) as u32,
         }
@@ -477,6 +485,8 @@ struct S2aw {
 
 pub struct Server<H: ServerHost + 'static> {
     pub host: H,
+    /// the base class's fields (NESynchronousCommunications, shared with the C++ base)
+    pub comms: Arc<Comms>,
     mm: UnsafeCell<Option<MsgMgr<MmVia<Back<H>>>>>,
     tune: UnsafeCell<Option<Tune<Back<H>>>>,
     rec: UnsafeCell<Option<RecPlay<Back<H>>>>,
@@ -536,9 +546,10 @@ unsafe impl<H: ServerHost + Sync> Sync for Server<H> {}
 impl<H: ServerHost> Server<H> {
     /// The constructor: protocol 0, the fields, the message manager with the server's own slot, the tuning, four
     /// events and Publish ("EEService"); published, the threads' events and the recorder passing.
-    pub fn new(host: H, a: ServerArgs) -> Box<Self> {
+    pub fn new(host: H, comms: Arc<Comms>, a: ServerArgs) -> Box<Self> {
         let s = Box::new(Server {
             host,
+            comms,
             mm: UnsafeCell::new(None),
             tune: UnsafeCell::new(None),
             rec: UnsafeCell::new(None),
@@ -676,7 +687,7 @@ impl<H: ServerHost> Server<H> {
         }
     }
     fn multiplayer(&self) -> bool {
-        self.host.base_get(BaseField::IsMultiplayerSession) != 0
+        self.comms.get(BaseField::IsMultiplayerSession) != 0
     }
     /// The recorder's Process; a server whose Publish failed has none and passes nothing on (it crashed before)
     fn record(&self, m: Msg) {
@@ -849,7 +860,7 @@ impl<H: ServerHost> Server<H> {
     /// checksum, the server's winning a tie, the server's slot first) and the server is out of sync. The ticks before
     /// it are forgotten (the tick itself is kept, as the original's erase left it).
     pub fn log_checksum_response(&self, tick: u32, checksum: u32, slot: u8) {
-        let num_players = self.host.base_get(BaseField::NumHumanPlayers) as u8;
+        let num_players = self.comms.get(BaseField::NumHumanPlayers) as u8;
         let mut c = self.checks();
         if tick == 0 || num_players <= 1 {
             return;
@@ -869,7 +880,7 @@ impl<H: ServerHost> Server<H> {
         }
         if counts.len() != 1 {
             // (the field read again under the lock, as the original did; a getter, no call back)
-            if self.host.base_get(BaseField::NumHumanPlayers) as u8 == 2 {
+            if self.comms.get(BaseField::NumHumanPlayers) as u8 == 2 {
                 for e in &list {
                     if e.1 != SLOT_SERVER {
                         c.oos_slots.push(e.1);
@@ -939,7 +950,7 @@ impl<H: ServerHost> Server<H> {
     /// the recorder
     pub fn process_local_user_input(&self, m: Msg, player: u8) -> i32 {
         let send = (!self.multiplayer()
-            || self.host.base_get(BaseField::IsGamePaused) == 0
+            || self.comms.get(BaseField::IsGamePaused) == 0
             || self.host.msg_flag(m, MsgFlag::CanSendWhilePaused))
             && self.host.msg_flag(m, MsgFlag::IsAvailableToSend);
         if send {
@@ -1043,7 +1054,7 @@ impl<H: ServerHost> Server<H> {
                     self.host.msg_dereference(m);
                     let count = self.reconnect_count.fetch_add(1, SeqCst).wrapping_add(1);
                     if count == self.wait_for_reconnects_time.load(SeqCst) {
-                        self.host.base_set(BaseField::NumHumanPlayers, (count as u8).wrapping_add(1) as u32);
+                        self.comms.set(BaseField::NumHumanPlayers, (count as u8).wrapping_add(1) as u32);
                         self.host.event_set(self.ev(EV_RESUME_MIGRATED));
                     }
                 } else {
@@ -1088,8 +1099,8 @@ impl<H: ServerHost> Server<H> {
                 }
                 if player != SLOT_SERVER && was_booted {
                     self.unregister_slot(slot);
-                    let n = self.host.base_get(BaseField::NumHumanPlayers) as u8;
-                    self.host.base_set(BaseField::NumHumanPlayers, n.wrapping_sub(1) as u32);
+                    let n = self.comms.get(BaseField::NumHumanPlayers) as u8;
+                    self.comms.set(BaseField::NumHumanPlayers, n.wrapping_sub(1) as u32);
                 }
                 found = true;
                 break;
@@ -1338,7 +1349,7 @@ impl<H: ServerHost> Server<H> {
                     self.host.event_clear(events[1]);
                     if wait_state != 2 && self.game_state.load(SeqCst) == STATE_RUNNING {
                         self.game_state.store(STATE_PAUSED, SeqCst);
-                        self.host.base_set(BaseField::IsGamePaused, 1);
+                        self.comms.set(BaseField::IsGamePaused, 1);
                     }
                 }
                 WAIT_ANY_TIMEOUT => timed_out = true,
@@ -1407,7 +1418,7 @@ impl<H: ServerHost> Server<H> {
                 10 => {
                     self.host.event_clear(events[10]);
                     if wait_state != 2 && self.game_state.load(SeqCst) == STATE_PAUSED {
-                        self.host.base_set(BaseField::IsGamePaused, 0);
+                        self.comms.set(BaseField::IsGamePaused, 0);
                         self.game_state.store(STATE_RUNNING, SeqCst);
                     }
                 }

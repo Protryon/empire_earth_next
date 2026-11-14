@@ -31,6 +31,7 @@ public:
     long Create(const FSFileSpec& inRoot, const UString& inPattern, unsigned long inCompression,
                 bool inRecursive);                                              // 0x5429
     long Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression);   // 0x5618
+    long ExtractAll(const FSFileSpec& inDestination);                           // 0x5801
     long FindFile(const UString& inName, FSMemoryFile*& outFile);               // 0x5a79
     long FindFile(const UWideString& inName, FSMemoryFile*& outFile)
         { UString theName((const char*)inName); return this->FindFile(theName, outFile); }
@@ -42,18 +43,8 @@ public:
     long SetTag(const UWideString& inName, const UWideString& inValue);         // 0x612f
 
 private:
-    long BuildFAT(const FSFileSpec& inRoot, const FSFileSpec& inDirectory, const UString& inPattern,
-                  unsigned long inCompression, bool inRecursive);               // 0x4f0e
-    long BuildFAT(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression);   // 0x50c4
-    unsigned long ComputeCompressedFileLength(const FSFileSpec& inFile, unsigned long inCompression);   // 0x5212
-    void ComputeFATFilename(const FSFileSpec& inRoot, const FSFileSpec& inFile, UString& outName);   // 0x52cd
-    long FinishCreate(const FSFileSpec& inRoot, unsigned long inCompression);   // the end of both Creates
-    long ReadFATFile(const ArchivedFile& inFile, FSMemoryFile*& outFile);       // 0x5e83
-    long ReadIntoMemoryFile(FSFileSpec& inFile, FSMemoryFile& outFile);         // 0x5fa3
-    void Reset();                                                               // 0x608e
-    long WriteFATFiles(const FSFileSpec& inRoot, unsigned long inCompression);  // 0x626d
-    void CheckFATAfterCreate();
-
+    // the members' work is Rust's (rust/crates/ee_fs/src/archive_obj.rs): this object from its vtable on is an
+    // EeFsArchiveObj
     FSFileSpec mArchiveFile;                            // +0x04
     EeFsArchive* mTable;                                // the FAT and the tags (rust/crates/ee_fs/src/archive.rs)
     PlatFileMapping* mMapping;                          // PlatFileMap (CreateFileMappingA in the original)

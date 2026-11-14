@@ -11,6 +11,14 @@ public:
     UILayoutUtility();
     ~UILayoutUtility() {}                   // exported, ICF-folded `ret` (0x1000c16a)
     void CalculateRectangle(const GERectangle& inParent, GERectangle& outRectangle, bool inExclusive) const;
+    float GetBottomOffset() const { return this->mBottomOffset; }
+    unsigned long GetBottomOffsetType() const { return this->mBottomOffsetType; }
+    float GetLeftOffset() const { return this->mLeftOffset; }
+    unsigned long GetLeftOffsetType() const { return this->mLeftOffsetType; }
+    float GetRightOffset() const { return this->mRightOffset; }
+    unsigned long GetRightOffsetType() const { return this->mRightOffsetType; }
+    float GetTopOffset() const { return this->mTopOffset; }
+    unsigned long GetTopOffsetType() const { return this->mTopOffsetType; }
     void SetBottom(unsigned long inType, float inOffset)
     {
         this->mBottomOffset = inOffset;

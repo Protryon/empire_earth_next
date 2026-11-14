@@ -1195,35 +1195,6 @@ void NEMXferStatus::ImportMessage(unsigned char* inPayloadPointer)
     ee_netmsg_import(EE_NETMSG_NE_XFER_STATUS, inPayloadPointer, theSlots, Slots(this, theSlots));
 }
 
-// The trivial IsResponse overrides (no message answers these) fold into one body (0x3ed59; at the end, after the
-// asserts)
-bool NEMAddPlayer::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMAddPlayerResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMClientConnectionRequest::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMClientConnectionRequestResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMClientDisconnectionNotification::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMClientDisconnectionNotificationResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMClientReconnectionRequest::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMClientReconnectionRequestResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMClientRequestPause::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMPlayerInput::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMCommunicationsTickResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMPauseGameResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMPhysicsTick::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMPlayerConnectionCheck::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMPlayerConnectionCheckResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMRemovePlayer::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMServerIsAlive::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMStartGame::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMStartGameResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMStopGame::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMStopGameResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMUnPauseGameResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMWorldDatabaseChecksum::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMWorldDatabaseChecksumResponse::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMXferMessage::IsResponse(NEMessage* inMessage) { return false; }
-bool NEMXferStatus::IsResponse(NEMessage* inMessage) { return false; }
-
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // SYNTHETIC: LLE 0x1003ed59
 // SYNTHETIC: LLE 0x100400f7

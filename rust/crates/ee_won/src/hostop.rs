@@ -300,6 +300,20 @@ pub const EE_WON_HOST_PEER_NEW_SESSION: i32 = 160;
 /// a C++ `AuthContext*` obj0 (NULL: the op's `mAuthContext`) -> out_obj: its Rust object (`AuthContext::Core()`,
 /// borrowed; NULL for none). The certificate and auth context calls are answered in Rust over it (hostauth.rs).
 pub const EE_WON_HOST_AUTH_CORE: i32 = 161;
+/// a C++ object obj0 (NULL: the op itself) -> out_obj: its Rust object of the kind num0 (`EE_WON_HOST_CORE_*`,
+/// borrowed; NULL when the object is not of that class). The socket and op calls are answered in Rust over it
+/// (hostsock.rs, net round 23).
+pub const EE_WON_HOST_SOCK_CORE: i32 = 162;
+
+// `EE_WON_HOST_SOCK_CORE`'s kinds (num0):
+/// an `AsyncSocket`'s `EeWonAsyncSocket`
+pub const EE_WON_HOST_CORE_SOCKET: i64 = 0;
+/// a `QueueSocket`'s `EeWonQueueSocket`
+pub const EE_WON_HOST_CORE_QUEUE: i64 = 1;
+/// an `AsyncOp`'s `EeWonAsyncOp`
+pub const EE_WON_HOST_CORE_OP: i64 = 2;
+/// a `SocketOp`'s `EeWonSocketOp`
+pub const EE_WON_HOST_CORE_SOCKET_OP: i64 = 3;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`
@@ -484,6 +498,10 @@ impl<P: Plan> Host<P> {
                 return r;
             }
             if let Some(r) = crate::httpcache::answer(code, obj, num, data) {
+                return r;
+            }
+            let send = |c: i32, o: [Obj; 3], n: [i64; 2], d: &[u8], a: [u8; 6]| self.send(c, o, n, d, a);
+            if let Some(r) = crate::hostsock::answer(code, obj, num, data, addr, &send) {
                 return r;
             }
         }

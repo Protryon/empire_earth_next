@@ -5,10 +5,13 @@
 // first includer of UIIMECandidate.h), the init chain of an unreferenced file-scope UString, then the ctors, the dtor
 // and the members in the original's order (roughly alphabetical), then the template COMDATs (hot key vectors, sort,
 // the dirty-rectangle deque). UIFullBackground.cpp starts at 0x10075330.
+//
+// The class is whole in Rust (rust/crates/ee_ui/src/formobj.rs, R6 ui round 16): the methods are forwarders to the
+// Rust form (UIForm::Call), the ctors and dtor make and free it, and UIForm::HostOp answers its calls out (the
+// controls', groups', backgrounds', hot keys' and events' members and virtuals, the manager, the input keys).
 #define LLE_UIFORM_CPP      // UIForm::sTabKey and UIManager::sMouseWheel are visible here (see UIForm.h) (provisional name)
 #include <windows.h>
 #include <mbstring.h>
-#include <algorithm>
 
 #include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
@@ -48,391 +51,358 @@
 #include "lle/UIControlsTable.h"
 #include "lle/UIManager.h"
 
+// unreferenced (its init chain 0x10070706 is the only user)
+static const UString kUIFormKey("B7B2257DB7B2257DA49985B7B5A18DF4D49327D6B51165F42EB1A52ECC918DA616B16D26B41955F43C190DDE7EB1BD9624F92DDEFC610D9EB4B9559CB4210D84FC29"
+                                "8596249907BE14CB25F6142B25B61C1165C624F9F59696B18D269C2357BEB51955B41C1165C624F9F59696B18D269EB16D26B431B5C4F4F935F6149907CEB7B34FF5");
+
 ISEntity* UIForm::sTabKey;
 ISEntity* UIForm::sShiftKey;
 
-const float kToolTipShadowOffset = 3.0f;
-const float kToolTipShadowOpacity = 0.4f;
-const float kFadeInRate = 1.0f / 700.0f;
-// kHelpTextOffset (32): ee_ui form_state.rs HELP_TEXT_OFFSET
+static GERectangle UIFormRect(const float* inF) { return GERectangle(inF[1], inF[3], inF[2], inF[0]); }
+static void UIFormPutRect(float* outF, const GERectangle& inRectangle)
+{
+    outF[0] = inRectangle.mBottom;
+    outF[1] = inRectangle.mLeft;
+    outF[2] = inRectangle.mRight;
+    outF[3] = inRectangle.mTop;
+}
 
-// Orders the hot keys so that combinations with more keys are tried first (vtable 0x100999d8: ??_G only)
-class UIHotKeySorter {
-public:
-    virtual ~UIHotKeySorter() {}
-    bool operator()(UIHotKey* const& inLeft, UIHotKey* const& inRight) const
-    {
-        return ee_ui_hotkey_before(inLeft->GetAlwaysFire(), inLeft->GetKeyCount(), inRight->GetAlwaysFire(),
-                                   inRight->GetKeyCount());
-    }
-};
+intptr_t UIForm::Call(EeUiFormCall inCall, intptr_t inA, intptr_t inB, float* ioF) const
+{
+    return ee_ui_form_call(this->mRust, inCall, inA, inB, ioF);
+}
 
-// The form's focus walk (Tab, ShiftTab, CheckedRadioButton), the control search of UpdateMouseLocation, its
-// dirty-rectangle bookkeeping and its open, close and copy sequences are Rust (rust/crates/ee_ui/src/form.rs and
-// form_state.rs, docs/RUST_PLAN.md R6); these are its questions about the form, its controls, groups, backgrounds,
-// database records and events, and the calls it makes on them (the controls' virtuals stay C++ virtuals).
-struct UIFormRust {
-    static UIForm* Form(void* inForm) { return static_cast<UIForm*>(inForm); }
-    static UIControl* Control(void* inForm, long inIndex) { return static_cast<UIForm*>(inForm)->mControls[inIndex]; }
-    static long Count(void* inForm) { return static_cast<UIForm*>(inForm)->mControlCount; }
-    static bool ShownEnabled(void* inForm, long inIndex)
-    {
-        UIControl* theControl = UIFormRust::Control(inForm, inIndex);
-        return theControl->GetDisplayMode() == kDisplayModeShown &&
-               static_cast<UIForm*>(inForm)->GetEntityGroupById(theControl->GetId())->GetIsEnabled();
+// The Rust form's calls out (EeUiOp, obj.rs): a is the control, group, background, hot key, event, table or other
+// object the op names; rectangles and points travel in f
+intptr_t UIForm::HostOp(void* inForm, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
+{
+    static UWideString sHelpString;   // FormHelpGet's string, which FormHelpSetText sets (the UI thread's)
+    UIForm* theForm = static_cast<UIForm*>(inForm);
+    UIControl* theControl = reinterpret_cast<UIControl*>(a);
+    UIEntityGroup* theGroup = reinterpret_cast<UIEntityGroup*>(a);
+    UIBackground* theBackground = reinterpret_cast<UIBackground*>(a);
+    UIHotKey* theKey = reinterpret_cast<UIHotKey*>(a);
+    UIEvent* theEvent = reinterpret_cast<UIEvent*>(a);
+    UIControlsTable* theTable = reinterpret_cast<UIControlsTable*>(a);
+    GEBitmap* theBitmap = reinterpret_cast<GEBitmap*>(a);
+    TMPoll* thePoll = reinterpret_cast<TMPoll*>(a);
+    GERhombus* theRhombus = reinterpret_cast<GERhombus*>(a);
+    ISEntity* theEntity = NULL;
+    (void)d;
+    switch (inOp) {
+    // the controls
+    case EeUiOp::FormCtlType: return theControl->GetType();
+    case EeUiOp::FormCtlEntityType: return theControl->UIEntity::GetType();
+    case EeUiOp::FormCtlDisplayMode: return theControl->GetDisplayMode();
+    case EeUiOp::FormCtlDirty: return theControl->GetIsDirty();
+    case EeUiOp::FormCtlDrawCount: return theControl->GetDrawCount();
+    case EeUiOp::FormCtlIndex: return theControl->GetIndex();
+    case EeUiOp::FormCtlId: return theControl->GetId();
+    case EeUiOp::FormCtlTabable: return theControl->GetTabable();
+    case EeUiOp::FormCtlChecked: return static_cast<UIRadioButton*>(theControl)->GetIsChecked();
+    case EeUiOp::FormCtlImeEnabled: return theControl->GetIMEEnabled();
+    case EeUiOp::PartRect: UIFormPutRect(f, theControl->GetRectangle()); return 0;
+    case EeUiOp::PartCopiedDrawRect: UIFormPutRect(f, theControl->GetCopiedDrawRectangle()); return 0;
+    case EeUiOp::PartCopyData: return theControl->CopyData();
+    case EeUiOp::PartDrawPolygons: return theControl->DrawPolygons();
+    case EeUiOp::PartDrawText: return theControl->DrawTextA();
+    case EeUiOp::PartSetLocation: theControl->SetLocation(GE2DPoint(f[0], f[1])); return 0;
+    case EeUiOp::DeletePart: delete theControl; return 0;
+    case EeUiOp::FormCtlSetDirty: theControl->SetDirty(b != 0); return 0;
+    case EeUiOp::FormCtlSetDisplayMode: theControl->SetDisplayMode((unsigned long)b); return 0;
+    case EeUiOp::FormCtlHide: theControl->HideControl(); return 0;
+    case EeUiOp::FormCtlSetStringId: theControl->SetStringTableID((unsigned long)b); return 0;
+    case EeUiOp::FormCtlTabbedFrom: theControl->TabbedFrom(); return 0;
+    case EeUiOp::FormCtlTabbedTo: theControl->TabbedTo(); return 0;
+    case EeUiOp::FormCtlUpdateKeyboard: return theControl->UpdateKeyboard();
+    case EeUiOp::FormCtlUpdateMouse: return theControl->UpdateMouse(theForm->GetMouseLocation());
+    case EeUiOp::FormCtlWheelTurned: return theControl->MouseWheelTurned((long)b);
+    case EeUiOp::FormCtlFireTrigger: theControl->FireTriggerEvent((unsigned long)b); return 0;
+    case EeUiOp::FormCtlReleaseMouse: theControl->ReleaseCapturedMouse(); return 0;
+    case EeUiOp::FormCtlReleaseKeyboard: theControl->ReleaseCapturedKeyboard(); return 0;
+    case EeUiOp::FormHelpGet:
+        sHelpString = "";
+        return theControl->GetHelpString(sHelpString);
+    case EeUiOp::FormHelpSetText: static_cast<UITextLabel*>(theControl)->SetText(sHelpString, true); return 0;
+    case EeUiOp::FormLabelFit: return static_cast<UITextLabel*>(theControl)->GetFitRectToText();
+    // the groups
+    case EeUiOp::FormGroupEnabled: return theGroup->GetIsEnabled();
+    case EeUiOp::FormGroupCount: return theGroup->GetEntityCount();
+    case EeUiOp::FormGroupEntity: return (intptr_t) static_cast<UIControl*>(theGroup->GetEntity((unsigned long)b));
+    case EeUiOp::FormGroupNew: return (intptr_t) new UIEntityGroup;
+    case EeUiOp::FormGroupDelete: delete theGroup; return 0;
+    case EeUiOp::FormGroupAdd: theGroup->AddEntity(reinterpret_cast<UIControl*>(b)); return 0;
+    case EeUiOp::FormGroupRemove: theGroup->RemoveEntity(reinterpret_cast<UIControl*>(b)); return 0;
+    // the backgrounds
+    case EeUiOp::FormBgPriority: return theBackground->GetDrawPriority();
+    case EeUiOp::FormBgId: return theBackground->GetBackgroundID();
+    case EeUiOp::FormBgVisible: return theBackground->GetIsVisible();
+    case EeUiOp::FormBgRect: UIFormPutRect(f, theBackground->GetRectangle()); return 0;
+    case EeUiOp::FormBgOpen: theBackground->Open(); return 0;
+    case EeUiOp::FormBgClose: theBackground->Close(); return 0;
+    case EeUiOp::FormBgDelete: delete theBackground; return 0;
+    case EeUiOp::FormBgDraw: return theBackground->DrawBackground(UIFormRect(f));
+    case EeUiOp::FormBgLoad: theBackground->LoadBackground(); return 0;
+    case EeUiOp::FormBgUnload: theBackground->UnloadBackground(); return 0;
+    case EeUiOp::FormBgRelayout: theBackground->RelayoutBackground(); return 0;
+    // the hot keys
+    case EeUiOp::FormHotKeyAlways: return theKey->GetAlwaysFire();
+    case EeUiOp::FormHotKeyKeys: return theKey->GetKeyCount();
+    case EeUiOp::FormHotKeyKey: return (intptr_t)theKey->mKey;
+    case EeUiOp::FormHotKeyMod0: return (intptr_t)theKey->mModifiers[0];
+    case EeUiOp::FormHotKeyMod1: return (intptr_t)theKey->mModifiers[1];
+    case EeUiOp::FormHotKeyMod2: return (intptr_t)theKey->mModifiers[2];
+    case EeUiOp::FormHotKeyCopy: return (intptr_t) new UIHotKey(theForm, *theKey);
+    case EeUiOp::FormHotKeyDelete: delete theKey; return 0;
+    case EeUiOp::FormHotKeySetEnabled: theKey->mEnabled = b != 0; return 0;
+    case EeUiOp::FormHotKeyFire: return theKey->FireEvents();
+    case EeUiOp::FormHotKeyTemp: {
+        UIHotKey* theHotKey = new UIHotKey;
+        theHotKey->mForm = theForm;
+        gISKeyboard->GetEntity((unsigned long)a, theHotKey->mKey);
+        theHotKey->CalculateKeyCount();
+        return (intptr_t)theHotKey;
     }
-    static UIEntityGroup* Group(void* inForm, long inGroup) { return static_cast<UIForm*>(inForm)->mEntityGroups[inGroup]; }
-    static long GroupCount(void* inForm) { return static_cast<UIForm*>(inForm)->mControlGroupCount; }
-    static UIControl* Entity(void* inForm, long inGroup, unsigned long inEntity)
-    {
-        return static_cast<UIControl*>(UIFormRust::Group(inForm, inGroup)->GetEntity(inEntity));
-    }
-    static EeUiRect Rect(const GERectangle& inRectangle)
-    {
-        return EeUiRect{inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
-    }
-    static GERectangle Rect(const EeUiRect& inRectangle)
-    {
-        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
-    }
-    static std::vector<GERectangle>& Copies(void* inForm) { return Form(inForm)->mCopyDirtyRectangles; }
-    static std::deque<UIDirtyRectangle>& Dirty(void* inForm) { return Form(inForm)->mDirtyRectangles; }
-    static unsigned long Value(void* inForm, int inWhich)
-    {
-        UIForm* theForm = Form(inForm);
-        switch (inWhich) {
-        case 0:
-            return theForm->mManager->GetNumberOfSurfaces();
-        case 1:
-            return theForm->mManager->GetRasterizer()->GetWindow(theForm->mManager->GetScreen())->GetWidth();
-        case 2:
-            return theForm->mManager->GetRasterizer()->GetWindow(theForm->mManager->GetScreen())->GetHeight();
-        case 3:
-            return TMGetTime();
-        case 4:
-            return theForm->mOpenTime;
-        case 5:
-            return theForm->mPopupDrawCount;
-        case 6:
-            return theForm->mDrawToolTipShadow;
-        case 7:
-            return theForm->GetShouldFadeIn();
-        case 8:
-            return theForm->mControlCount;
-        case 9:
-            return theForm->mControlGroupCount;
-        case 10:
-            return (unsigned long)theForm->mBackgrounds.size();
-        case 11:
-            return (unsigned long)theForm->mDatabaseControls.size();
-        default:
-            return (unsigned long)theForm->mEventData.size();
-        }
-    }
-    static void SetValue(void* inForm, int inWhich, unsigned long inValue)
-    {
-        if (inWhich == 0)
-            Form(inForm)->mOpenTime = inValue;
+    case EeUiOp::FormHotKeySetModifier: theKey->SetModifier((unsigned long)b, (unsigned char)c); return 0;
+    case EeUiOp::FormHotKeySetEvent: {
+        UIEvent* theSet = reinterpret_cast<UIEvent*>(c);
+        if (b == 0)
+            theKey->SetJustPressedEvent(theSet);
+        else if (b == 1)
+            theKey->SetPressedEvent(theSet);
+        else if (b == 2)
+            theKey->SetJustUnpressedEvent(theSet);
         else
-            Form(inForm)->mPopupDrawCount = inValue;
+            theKey->SetDoublePressedEvent(theSet);
+        return 0;
     }
-    static void* Pointer(void* inForm, int inWhich)
-    {
-        UIForm* theForm = Form(inForm);
-        switch (inWhich) {
-        case 0:
-            return theForm->mPopup;
-        case 1:
-            return static_cast<UIControl*>(theForm->mHelpTextLabel);
-        default:
-            return theForm->mMouseOverControl;
-        }
+    case EeUiOp::FormHotKeySetAlways: theKey->mAlwaysFire = b != 0; return 0;
+    case EeUiOp::FormKeyEntity: gISKeyboard->GetEntity((unsigned long)a, theEntity); return (intptr_t)theEntity;
+    case EeUiOp::FormKeysReady: return UIForm::sTabKey != NULL;
+    case EeUiOp::FormKeysFetch:
+        gISKeyboard->GetEntity(kKeyTab, UIForm::sTabKey);
+        gISKeyboard->GetEntity(kKeyShift, UIForm::sShiftKey);
+        return 0;
+    case EeUiOp::FormTabJustPressed: return UIForm::sTabKey->JustPressed();
+    case EeUiOp::FormShiftValue: return UIForm::sShiftKey->GetValue();
+    // the events
+    case EeUiOp::FormEventCall:
+        if (b == 0)
+            theEvent->Uninitialize();
+        else if (b == 1)
+            theEvent->Dereference();
+        else if (b == 2)
+            theEvent->Reference();
+        else
+            theEvent->Initialize();
+        return 0;
+    case EeUiOp::FormEventProcess: return theEvent->ProcessEvent(theForm, NULL);
+    case EeUiOp::FormWheelEventNew: return (intptr_t) new UIEMouseWheelScroll;
+    // the mouse
+    case EeUiOp::FormMouseWheel: return UIManager::GetMouseWheel() != NULL;
+    case EeUiOp::FormWheelAmount: return UIManager::GetMouseWheelScrollAmount();
+    case EeUiOp::FormMouseEntity: gISMouse->GetEntity((unsigned long)a, theEntity); return (intptr_t)theEntity;
+    case EeUiOp::FormMouseAsk: {
+        ISEntity* theAsked = reinterpret_cast<ISEntity*>(a);
+        if (b == 0)
+            return theAsked->GetValue() != 0;
+        if (b == 1)
+            return theAsked->JustPressed();
+        if (b == 2)
+            return theAsked->JustUnpressed();
+        return theAsked->JustDoublePressed();
     }
-    static void SetPointer(void* inForm, int inWhich, void* inPointer)
-    {
-        UIForm* theForm = Form(inForm);
-        UIControl* theControl = static_cast<UIControl*>(inPointer);
-        switch (inWhich) {
-        case 0:
-            theForm->mPopup = theControl;
-            break;
-        case 1:
-            theForm->mHelpTextLabel = static_cast<UITextLabel*>(theControl);
-            break;
-        default:
-            theForm->mCopiedPopup = theControl;
-            break;
-        }
+    // the controls table
+    case EeUiOp::FormTable: return (intptr_t)UIControlsTable::GetUIControlsTable((unsigned long)a);
+    case EeUiOp::FormTableFormIndex: return theTable->GetFormIndex();
+    case EeUiOp::FormTableGroup: return theTable->GetGroup();
+    case EeUiOp::FormTableVisible: return theTable->GetIsVisible() == true;
+    case EeUiOp::FormTableType: return theTable->GetControlType();
+    case EeUiOp::FormTableStringId: return theTable->GetStringTableID();
+    case EeUiOp::FormTableCreateControl: return (intptr_t)theTable->CreateControl(theForm->GetManager());
+    case EeUiOp::FormTableCreateEvent: theTable->CreateControlEvent(theForm); return 0;
+    case EeUiOp::FormTableRelayout:
+        theTable->RelayoutControl(reinterpret_cast<UIControl*>(b), theForm->GetManager());
+        return 0;
+    // the manager
+    case EeUiOp::FormSurfaces: return theForm->GetManager()->GetNumberOfSurfaces();
+    case EeUiOp::FormWindowWidth:
+        return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetWidth();
+    case EeUiOp::FormWindowHeight:
+        return theForm->GetManager()->GetRasterizer()->GetWindow(theForm->GetManager()->GetScreen())->GetHeight();
+    case EeUiOp::FormCandidateShown: return theForm->GetManager()->GetDrawCandidateWindow();
+    case EeUiOp::FormCandidateRect:
+        UIFormPutRect(f, theForm->GetManager()->GetCandidateWindow()->GetIMECopyCandidateRectangle());
+        return 0;
+    case EeUiOp::FormManagerProcessEvents: theForm->GetManager()->ProcessAllEventsForForm(theForm); return 0;
+    case EeUiOp::FormManagerAddDirty: theForm->GetManager()->AddDirtyRectangle(UIFormRect(f), theForm); return 0;
+    case EeUiOp::FormMusicStop: theForm->GetManager()->StopMusic(); return 0;
+    case EeUiOp::FormMusicStart: theForm->GetManager()->StartMusic(UWideString((const char*)a)); return 0;
+    case EeUiOp::FormCreateFormEvent: return (intptr_t)theForm->GetManager()->CreateFormEvent((unsigned long)a);
+    case EeUiOp::FormManagerDelete: delete reinterpret_cast<UIFormManager*>(a); return 0;
+    case EeUiOp::FormNow: return TMGetTime();
+    // the draw-background lock, the help-text poll
+    case EeUiOp::FormLockNew: {
+        TSCriticalSection* theLock = NULL;
+        ESVERIFY_AT(TSScheduler::CreateCriticalSection(theLock) == keseOK, 1743);
+        return (intptr_t)theLock;
     }
-    static bool Event(void* inForm, int inWhich, long* outResult)
-    {
-        UIForm* theForm = Form(inForm);
-        UIEvent* theEvent =
-            inWhich == 0 ? theForm->mFormUpdateEvent : inWhich == 1 ? theForm->mFormOpenEvent : theForm->mFormCloseEvent;
-        if (!theEvent)
-            return false;
-        *outResult = theEvent->ProcessEvent(theForm, NULL);
-        return true;
+    case EeUiOp::FormLockDelete: TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); return 0;
+    case EeUiOp::FormLockEnter: reinterpret_cast<TSCriticalSection*>(a)->Enter(); return 0;
+    case EeUiOp::FormLockLeave: reinterpret_cast<TSCriticalSection*>(a)->Leave(); return 0;
+    case EeUiOp::PollCreate: return (intptr_t) new TMPoll((unsigned long)a, 0, false);
+    case EeUiOp::PollDelete: delete thePoll; return 0;
+    case EeUiOp::PollRunning: return thePoll->GetIsRunning();
+    case EeUiOp::PollPoll: return thePoll->Poll();
+    case EeUiOp::PollStart: thePoll->Start(); return 0;
+    case EeUiOp::PollStop: thePoll->Stop(); return 0;
+    case EeUiOp::PollSetDelay: thePoll->SetTimeDelay((unsigned long)b); return 0;
+    // the form's own virtuals, so that a game form's override runs
+    case EeUiOp::FormVirtHelpLocation: theForm->SetHelpTextPopupLocation(); return 0;
+    case EeUiOp::FormVirtDrawBackground: return theForm->DrawBackground(UIFormRect(f));
+    // the draws
+    case EeUiOp::FormBitmapTexSize:
+        f[0] = (float)theBitmap->GetTexture(theForm->GetManager()->GetScreen())->GetWidth();
+        f[1] = (float)theBitmap->GetTexture(theForm->GetManager()->GetScreen())->GetHeight();
+        return 0;
+    case EeUiOp::BitmapSetLocation: theBitmap->SetLocation(GE2DPoint(f[0], f[1])); return 0;
+    case EeUiOp::BitmapSetScale: theBitmap->SetXYScale(f[0], f[1]); return 0;
+    case EeUiOp::FormBitmapSetTexCoords: {
+        GETextureCoordinate theTopLeft;
+        GETextureCoordinate theBottomRight;
+        GETextureCoordinate theTopRight;
+        GETextureCoordinate theBottomLeft;
+        theTopLeft.SetU(f[0]);
+        theTopLeft.SetV(f[1]);
+        theBottomRight.SetU(f[2]);
+        theBottomRight.SetV(f[3]);
+        theTopRight.SetU(theBottomRight.GetU());
+        theTopRight.SetV(theTopLeft.GetV());
+        theBottomLeft.SetU(theTopLeft.GetU());
+        theBottomLeft.SetV(theBottomRight.GetV());
+        theBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
+        return 0;
     }
-    static void Call(void* inForm, int inCall, unsigned long inIndex)
-    {
-        UIForm* theForm = Form(inForm);
-        switch (inCall) {
-        case 0:
-            theForm->mManager->ProcessAllEventsForForm(theForm);
-            break;
-        case 1:
-            theForm->UpdateHelpText(inIndex != 0);
-            break;
-        case 2:
-            theForm->SetTabbing(theForm->mTabbingOn);
-            break;
-        case 3:
-            theForm->mBackgrounds[inIndex]->Open();
-            break;
-        default:
-            theForm->mBackgrounds[inIndex]->Close();
-            break;
-        }
+    case EeUiOp::FormBitmapDraw:
+        return theForm->GetManager()->GetRasterizer()->Draw(theBitmap, theForm->GetManager()->GetScreen());
+    case EeUiOp::FormTextDraw:
+        return theForm->GetManager()->GetRasterizer()->Draw(reinterpret_cast<GEText*>(a), UIFormRect(f),
+                                                            theForm->GetManager()->GetDrawingSurface());
+    case EeUiOp::RhombusCreate: return (intptr_t) new GERhombus;
+    case EeUiOp::RhombusDelete: delete theRhombus; return 0;
+    case EeUiOp::RhombusSetOpacity: theRhombus->SetOpacity(f[0]); return 0;
+    case EeUiOp::RhombusSetRect: theRhombus->SetRectangle(UIFormRect(f)); return 0;
+    case EeUiOp::FormRhombusLabelColor:
+        theRhombus->SetColor(static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(b))->GetGEText()->GetFgColor());
+        return 0;
+    case EeUiOp::FormRhombusDraw:
+        return theForm->GetManager()->GetRasterizer()->Draw(theRhombus, theForm->GetManager()->GetScreen());
+    default:
+        break;
     }
-    static UICDatabase& Database(void* inForm, unsigned long inIndex) { return Form(inForm)->mDatabaseControls[inIndex]; }
-    static const UIEventData& EventData(void* inForm, unsigned long inIndex) { return Form(inForm)->mEventData[inIndex]; }
-    static void SetFormEvent(void* inForm, unsigned long inType, UIEvent* inEvent) { Form(inForm)->SetFormEvent(inType, inEvent); }
-    static void ControlCall(void* inForm, int inCall, UIControl* inControl, unsigned long inGroup)
-    {
-        switch (inCall) {
-        case 0:
-            Form(inForm)->AddControl(inControl, inGroup);
-            break;
-        case 1:
-            Form(inForm)->RemoveControl(inControl, inGroup);
-            break;
-        default:
-            delete inControl;
-            break;
-        }
-    }
-    static GERectangle& FormRectangle(void* inForm) { return Form(inForm)->mRectangle; }
-    static UILayoutUtility& Layout(void* inForm) { return Form(inForm)->mLayout; }
-    static float& FadeOpacity(void* inForm) { return Form(inForm)->mFadeOpacity; }
-    static GERectangle& CopiedPopupRectangle(void* inForm) { return Form(inForm)->mCopiedPopupRectangle; }
-    static UIControl*& DrawControl(void* inForm, long inIndex) { return Form(inForm)->mDrawControls[inIndex]; }
-    static std::vector<std::vector<UIHotKey*> >& HotKeys(void* inForm) { return Form(inForm)->mHotKeys; }
-    static unsigned long KeyboardValue(void* inForm, int inWhich, unsigned long inGroup)
-    {
-        UIForm* theForm = Form(inForm);
-        switch (inWhich) {
-        case 0:
-            return theForm->mKeyboardCaptured != NULL;
-        case 1:
-            return theForm->mKeyboardCaptured->GetIMEEnabled();
-        case 2:
-            return (unsigned long)theForm->mHotKeys.size();
-        case 3:
-            return (unsigned long)theForm->mHotKeys[inGroup].size();
-        default:
-            return theForm->mTabbingOn;
-        }
-    }
-    static long KeyboardCall(void* inForm, int inCall)
-    {
-        UIForm* theForm = Form(inForm);
-        switch (inCall) {
-        case 0:
-            return UIForm::sTabKey->JustPressed();
-        case 1:
-            return UIForm::sShiftKey->GetValue();
-        case 2:
-            theForm->ShiftTab();
-            return 0;
-        case 3:
-            theForm->Tab();
-            return 0;
-        case 4:
-            return theForm->mKeyboardCaptured->UpdateKeyboard();
-        default:
-            return theForm->mControls[theForm->mTabStop]->UpdateKeyboard();
-        }
-    }
-    // the mouse pass (ee_ui mouse.rs)
-    static void* MouseControl(void* inForm, int inWhich)
-    {
-        return inWhich == 0 ? Form(inForm)->mMouseCaptured : Form(inForm)->mMouseOverControl;
-    }
-    static const GE2DPoint& MouseLocation(void* inForm) { return Form(inForm)->mMouseLocation; }
-    static UIEvent* MouseEvent(void* inForm, int inEvent)
-    {
-        UIForm* theForm = Form(inForm);
-        UIEvent* const theEvents[] = {
-            theForm->mMouseMoveEvent, theForm->mMouseWheelMoveEvent, theForm->mMouseLeftButtonPressedEvent,
-            theForm->mMouseLeftButtonUnpressedEvent, theForm->mMouseLeftButtonDoublePressedEvent,
-            theForm->mMouseMiddleButtonPressedEvent, theForm->mMouseMiddleButtonUnpressedEvent,
-            theForm->mMouseMiddleButtonDoublePressedEvent, theForm->mMouseRightButtonPressedEvent,
-            theForm->mMouseRightButtonUnpressedEvent, theForm->mMouseRightButtonDoublePressedEvent,
-        };
-        return theEvents[inEvent];
-    }
-};
+    return 0;
+}
 
 // FUNCTION: LLE 0x1007072c
 // Creates an empty form with the given control and group counts, tool tips and tabbing off
 UIForm::UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, UIManager* inManager,
                unsigned long inFormID, bool inUseGDIForText)
-    : mManager(inManager)
+    : mRust(NULL)
 {
-    this->mControlCount = inControlCount;
-    this->mControlGroupCount = inControlGroupCount;
-    this->mFormID = inFormID;
-    this->mTabbingOn = false;
-    this->mUseToolTips = false;
-    this->mDrawToolTipShadow = false;
-    this->mHelpTextTimeDelay = 0;
-    this->mOpenTime = 0;
-    this->mUseGDIForText = inUseGDIForText;
-    this->mUseExclusiveCoords = false;
-    this->Init();
+    this->mRust = ee_ui_form_new(this, UIForm::HostOp, inControlCount, inControlGroupCount, inManager, inFormID,
+                                 inUseGDIForText);
 }
 
 // FUNCTION: LLE 0x10070879
 // Creates a form from its UI database record: counts, layout, tool-tip settings, music file (lower-cased), tabbing
 UIForm::UIForm(UIManager* inManager, const UIDbDataForms& inData, bool inUseGDIForText)
+    : mRust(NULL)
 {
-    this->mManager = inManager;
-    this->mControlCount = inData.mControlCount;
-    this->mControlGroupCount = inData.mControlGroupCount;
-    this->mFormID = inData.mFormID;
-    this->mDrawToolTipShadow = this->mUseToolTips = inData.mUseToolTips;
-    this->mHelpTextTimeDelay = inData.mHelpTextTimeDelay;
-    this->mMusicFileName = inData.mMusicFile;
-    PlatMbsLwr((unsigned char*)(const char*)this->mMusicFileName);
-    this->Init();
-    this->mLayout.SetLeft(inData.mLeftOffsetType, inData.mLeftOffset);
-    this->mLayout.SetTop(inData.mTopOffsetType, inData.mTopOffset);
-    this->mLayout.SetRight(inData.mRightOffsetType, inData.mRightOffset);
-    this->mLayout.SetBottom(inData.mBottomOffsetType, inData.mBottomOffset);
-    this->mDesignedHeight = inData.mDesignedHeight;
-    this->mDesignedWidth = inData.mDesignedWidth;
-    this->mUseGDIForText = inUseGDIForText;
-    this->mUseExclusiveCoords = inData.mUseExclusiveCoords;
-    this->SetTabbing(inData.mTabbingOn);
+    UWideString theMusic(inData.mMusicFile);
+    PlatMbsLwr((unsigned char*)(const char*)theMusic);
+    this->mRust = ee_ui_form_new_db(this, UIForm::HostOp, inManager, &inData, (const char*)theMusic, inUseGDIForText);
 }
 
 // FUNCTION: LLE 0x10070a67
 // Destroys the form, releasing its events, hot keys, groups, backgrounds, database-created controls and draw lock
 UIForm::~UIForm()
 {
-    long i;
-    this->SetFormCloseEvent(NULL);
-    this->SetFormOpenEvent(NULL);
-    this->SetFormKeyboardCapturedEvent(NULL);
-    this->SetFormUpdateEvent(NULL);
-    this->SetMouseLeftButtonDoublePressedEvent(NULL);
-    this->SetMouseLeftButtonPressedEvent(NULL);
-    this->SetMouseLeftButtonUnpressedEvent(NULL);
-    this->SetMouseMiddleButtonDoublePressedEvent(NULL);
-    this->SetMouseMiddleButtonPressedEvent(NULL);
-    this->SetMouseMiddleButtonUnpressedEvent(NULL);
-    this->SetMouseMoveEvent(NULL);
-    this->SetMouseRightButtonDoublePressedEvent(NULL);
-    this->SetMouseRightButtonPressedEvent(NULL);
-    this->SetMouseRightButtonUnpressedEvent(NULL);
-    this->SetMouseWheelMoveEvent(NULL);
-    this->SetFormActivateEvent(NULL);
-    this->SetFormDeactivateEvent(NULL);
-    this->SetFormOpenEvent(NULL);
-    this->SetFormCloseEvent(NULL);
-    this->mMouseWheelScrollEvent->Dereference();
-    this->RemoveAllHotKeys();
-    for (i = this->mControlGroupCount - 1; i >= 0; i--) {
-        delete this->mEntityGroups[i];
-        this->mEntityGroups[i] = NULL;
-    }
-    delete[] this->mEntityGroups;
-    for (i = 0; i < (long)this->mBackgrounds.size(); i++) {
-        delete this->mBackgrounds[i];
-        this->mBackgrounds[i] = NULL;
-    }
-    for (i = this->mDatabaseControls.size() - 1; i >= 0; i--) {
-        UIControlsTable* theTable = UIControlsTable::GetUIControlsTable(this->mDatabaseControls[i].mTableIndex);
-        if (theTable && theTable->GetFormIndex() < this->mControlCount)
-            delete this->mControls[theTable->GetFormIndex()];
-    }
-    if (this->mHelpTextPoll)
-        delete this->mHelpTextPoll;
-    delete[] this->mControls;
-    delete[] this->mDrawControls;
-    delete this->mFormManager;
-    if (this->mText) {
-        delete this->mText;
-        this->mText = NULL;
-    }
-    TSScheduler::DestroyCriticalSection(this->mDrawBackgroundLock);
+    ee_ui_form_free(this->mRust);
+    this->mRust = NULL;
 }
 
 // FUNCTION: LLE 0x10070cca
 // Starts the form's music (or stops the music for "none"), restores the tab stop and fires the activate event
-void UIForm::Activate()
-{
-    if (this->mMusicFileName.GetLength() > 0) {
-        if (this->mMusicFileName == "none")
-            this->mManager->StopMusic();
-        else
-            this->mManager->StartMusic(this->mMusicFileName);
-    }
-    this->SetTabStop(this->mTabStop);
-    if (this->mFormActivateEvent)
-        this->mFormActivateEvent->ProcessEvent(this, NULL);
-}
+void UIForm::Activate() { this->Call(EeUiFormCall::Activate); }
 
 // FUNCTION: LLE 0x10070d29
 // Inserts a background before the first one with an equal or higher draw priority
-void UIForm::AddBackground(UIBackground* inBackground)
-{
-    unsigned long i;
-    unsigned long thePriority = inBackground->GetDrawPriority();
-    for (i = 0; i < this->mBackgrounds.size(); i++)
-        if (thePriority <= this->mBackgrounds[i]->GetDrawPriority())
-            break;
-    this->mBackgrounds.insert(this->mBackgrounds.begin() + i, inBackground);
-}
+void UIForm::AddBackground(UIBackground* inBackground) { this->Call(EeUiFormCall::AddBackground, (intptr_t)inBackground); }
 
 // FUNCTION: LLE 0x10070d94
 // Adds a rectangle that text drawing must keep out of
 void UIForm::AddClipRectangle(const GERectangle& inRectangle)
 {
-    this->mClipRectangles.push_back(inRectangle);
+    float f[4];
+    UIFormPutRect(f, inRectangle);
+    this->Call(EeUiFormCall::AddClipRectangle, 0, 0, f);
 }
 
 // FUNCTION: LLE 0x10070da3
 // Puts a control into its form slot (when the slot is empty) and adds it to the given group
 void UIForm::AddControl(UIControl* inControl, unsigned long inGroup)
 {
-    if (this->mControls[inControl->GetIndex()] == NULL)
-        this->mControls[inControl->GetIndex()] = inControl;
-    this->mEntityGroups[inGroup]->AddEntity(inControl);
+    this->Call(EeUiFormCall::AddControl, (intptr_t)inControl, (intptr_t)inGroup);
 }
+
+// FUNCTION: LLE 0x10070ddb
+// Adds a rectangle to the background-redraw list, splitting it around listed rectangles so none overlap
+void UIForm::AddCopyDirtyRectangle(const GERectangle& inRectangle)
+{
+    float f[4];
+    UIFormPutRect(f, inRectangle);
+    this->Call(EeUiFormCall::AddCopyDirtyRectangle, 0, 0, f);
+}
+
+void UIForm::AddDatabaseControl(const UICDatabase& inControl)
+{
+    this->Call(EeUiFormCall::AddDatabaseControl, (intptr_t)inControl.mTableIndex, (intptr_t)inControl.mControl);
+}
+
+// FUNCTION: LLE 0x1007110f
+// Lists the control in the given slot for drawing this frame
+void UIForm::AddDrawControl(unsigned long inIndex) { this->Call(EeUiFormCall::AddDrawControl, (intptr_t)inIndex); }
 
 // FUNCTION: LLE 0x1007112b
 // Queues a dirty rectangle for every drawing surface, dropping queued ones it covers; marks an overlapped popup dirty
 void UIForm::AddDirtyRectangle(const GERectangle& inRectangle)
 {
-    if (this->mPopup && inRectangle.Intersects(this->mPopup->GetRectangle()))
-        this->mPopup->SetDirty(true);
-    EeUiRect theRectangle = UIFormRust::Rect(inRectangle);
-    ee_ui_form_add_dirty_rectangle(this, &theRectangle, this->mManager->GetNumberOfSurfaces());
+    float f[4];
+    UIFormPutRect(f, inRectangle);
+    this->Call(EeUiFormCall::AddDirtyRectangle, 0, 0, f);
+}
+
+void UIForm::AddEvent(const UIEventData& inEvent)
+{
+    this->Call(EeUiFormCall::AddEvent, (intptr_t)inEvent.mEventID, (intptr_t)inEvent.mEventType);
 }
 
 // FUNCTION: LLE 0x100712ab
 // Copies a hot key into the given group and the form's list, keeping both sorted by key count, always-fire keys last
 void UIForm::AddHotKey(const UIHotKey& inHotKey, unsigned long inGroup)
 {
-    UIHotKey* theHotKey = new UIHotKey(this, inHotKey);
-    if (this->mHotKeys.size() <= inGroup)
-        this->mHotKeys.resize(inGroup + 1);
-    this->mHotKeys[inGroup].push_back(theHotKey);
-    std::sort(this->mHotKeys[inGroup].begin(), this->mHotKeys[inGroup].end(), UIHotKeySorter());
-    this->mHotKeyList.push_back(theHotKey);
-    std::sort(this->mHotKeyList.begin(), this->mHotKeyList.end(), UIHotKeySorter());
+    this->Call(EeUiFormCall::AddHotKey, (intptr_t)&inHotKey, (intptr_t)inGroup);
+}
+
+// The key and the three modifiers, 16 bits each (a code past 0xffff is no key, as kKeyNone 0x7fff is)
+static intptr_t UIFormKeys(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
+                           unsigned long inModifier3)
+{
+    uint64_t theKeys[4] = {inKey, inModifier1, inModifier2, inModifier3};
+    uint64_t thePacked = 0;
+    for (int i = 0; i < 4; i++)
+        thePacked |= (theKeys[i] < 0xffff ? theKeys[i] : 0xffff) << (16 * i);
+    return (intptr_t)thePacked;
 }
 
 // FUNCTION: LLE 0x100713cf
@@ -442,42 +412,18 @@ void UIForm::AddHotKey(unsigned long inKey, unsigned long inModifier1, unsigned 
                        UIEvent* inJustUnpressedEvent, UIEvent* inDoublePressedEvent, unsigned long inGroup,
                        bool inAlwaysFire)
 {
-    UIHotKey theHotKey;
-    theHotKey.mForm = this;
-    gISKeyboard->GetEntity(inKey, theHotKey.mKey);
-    theHotKey.CalculateKeyCount();
-    if (inModifier1 < kKeyNone)
-        theHotKey.SetModifier(inModifier1, 0);
-    if (inModifier2 < kKeyNone)
-        theHotKey.SetModifier(inModifier2, 1);
-    if (inModifier3 < kKeyNone)
-        theHotKey.SetModifier(inModifier3, 2);
-    if (inJustPressedEvent) {
-        theHotKey.SetJustPressedEvent(inJustPressedEvent);
-        inJustPressedEvent->Dereference();
-    }
-    if (inPressedEvent) {
-        theHotKey.SetPressedEvent(inPressedEvent);
-        inPressedEvent->Dereference();
-    }
-    if (inJustUnpressedEvent) {
-        theHotKey.SetJustUnpressedEvent(inJustUnpressedEvent);
-        inJustUnpressedEvent->Dereference();
-    }
-    if (inDoublePressedEvent) {
-        theHotKey.SetDoublePressedEvent(inDoublePressedEvent);
-        inDoublePressedEvent->Dereference();
-    }
-    theHotKey.mAlwaysFire = inAlwaysFire;
-    this->AddHotKey(theHotKey, inGroup);
+    this->Call(EeUiFormCall::AddHotKeyEvents, (intptr_t)inJustPressedEvent, (intptr_t)inPressedEvent);
+    this->Call(EeUiFormCall::AddHotKeyEvents2, (intptr_t)inJustUnpressedEvent, (intptr_t)inDoublePressedEvent);
+    this->Call(EeUiFormCall::AddHotKeyBuild, UIFormKeys(inKey, inModifier1, inModifier2, inModifier3),
+               (intptr_t)((uint64_t)(uint32_t)inGroup | (uint64_t)inAlwaysFire << 32));
 }
 
 // FUNCTION: LLE 0x100714bd
 // Passes an IME result string to the control holding the keyboard
 void UIForm::AddIMEResultString(const UWideString& inString)
 {
-    if (this->mKeyboardCaptured)
-        this->mKeyboardCaptured->AddIMEResultString(inString);
+    if (UIControl* theControl = this->GetKeyboardCaptured())
+        theControl->AddIMEResultString(inString);
 }
 
 // FUNCTION: LLE 0x100714d3
@@ -485,222 +431,27 @@ void UIForm::AddIMEResultString(const UWideString& inString)
 long UIForm::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                         unsigned long inCursor)
 {
-    long theResult = kErrorOK;
-    if (this->mKeyboardCaptured)
-        theResult = this->mKeyboardCaptured->ChangeIMECompositionString(inString, inAttributes, inCursor);
-    return theResult;
+    UIControl* theControl = this->GetKeyboardCaptured();
+    return theControl ? theControl->ChangeIMECompositionString(inString, inAttributes, inCursor) : kErrorOK;
 }
 
+// FUNCTION: LLE 0x100714f3
+// Moves a radio-button index to the checked button of its run of radio buttons (unchanged if it is checked)
+void UIForm::CheckedRadioButton(long& ioIndex) { ioIndex = (long)this->Call(EeUiFormCall::CheckedRadioButton, ioIndex); }
 
-extern "C" long ee_uicpp_form_count(void* inForm) { return UIFormRust::Count(inForm); }
-extern "C" bool ee_uicpp_form_exists(void* inForm, long inIndex) { return UIFormRust::Control(inForm, inIndex) != NULL; }
-extern "C" unsigned long ee_uicpp_form_kind(void* inForm, long inIndex) { return UIFormRust::Control(inForm, inIndex)->GetType(); }
-extern "C" bool ee_uicpp_form_checked(void* inForm, long inIndex)
-{
-    return static_cast<UIRadioButton*>(UIFormRust::Control(inForm, inIndex))->GetIsChecked();
-}
-extern "C" bool ee_uicpp_form_shown_enabled(void* inForm, long inIndex) { return UIFormRust::ShownEnabled(inForm, inIndex); }
-extern "C" bool ee_uicpp_form_tabable(void* inForm, long inIndex) { return UIFormRust::Control(inForm, inIndex)->GetTabable(); }
-extern "C" bool ee_uicpp_form_set_tab_stop(void* inForm, unsigned long inIndex)
-{
-    return static_cast<UIForm*>(inForm)->SetTabStop(inIndex);
-}
-extern "C" long ee_uicpp_form_group_count(void* inForm) { return UIFormRust::GroupCount(inForm); }
-extern "C" bool ee_uicpp_form_group_enabled(void* inForm, long inGroup) { return UIFormRust::Group(inForm, inGroup)->GetIsEnabled(); }
-extern "C" unsigned long ee_uicpp_form_entity_count(void* inForm, long inGroup)
-{
-    return UIFormRust::Group(inForm, inGroup)->GetEntityCount();
-}
-extern "C" bool ee_uicpp_form_entity_hidden(void* inForm, long inGroup, unsigned long inEntity)
-{
-    return UIFormRust::Entity(inForm, inGroup, inEntity)->GetDisplayMode() == kDisplayModeHidden;
-}
-extern "C" EeUiRect ee_uicpp_form_entity_rect(void* inForm, long inGroup, unsigned long inEntity)
-{
-    const GERectangle& theRectangle = UIFormRust::Entity(inForm, inGroup, inEntity)->GetRectangle();
-    return EeUiRect{theRectangle.mBottom, theRectangle.mLeft, theRectangle.mRight, theRectangle.mTop};
-}
-
-// UIForm's dirty-rectangle bookkeeping and its open, close and copy sequences (ee_ui form_state.rs)
-extern "C" unsigned long ee_uicpp_form_life_copy_len(void* inForm) { return (unsigned long)UIFormRust::Copies(inForm).size(); }
-extern "C" EeUiRect ee_uicpp_form_life_copy_at(void* inForm, unsigned long inIndex)
-{
-    return UIFormRust::Rect(UIFormRust::Copies(inForm)[inIndex]);
-}
-extern "C" void ee_uicpp_form_life_copy_erase(void* inForm, unsigned long inIndex)
-{
-    UIFormRust::Copies(inForm).erase(UIFormRust::Copies(inForm).begin() + inIndex);
-}
-extern "C" void ee_uicpp_form_life_copy_push(void* inForm, const EeUiRect* inRectangle)
-{
-    UIFormRust::Copies(inForm).push_back(UIFormRust::Rect(*inRectangle));
-}
-extern "C" unsigned long ee_uicpp_form_life_dirty_len(void* inForm) { return (unsigned long)UIFormRust::Dirty(inForm).size(); }
-extern "C" void ee_uicpp_form_life_dirty_take(void* inForm, EeUiDirtyRect* outDirty)
-{
-    UIDirtyRectangle theDirty = UIFormRust::Dirty(inForm).front();
-    UIFormRust::Dirty(inForm).pop_front();
-    outDirty->rect = UIFormRust::Rect(theDirty.mRectangle);
-    outDirty->surface_count = theDirty.mSurfaceCount;
-}
-extern "C" void ee_uicpp_form_life_dirty_push(void* inForm, const EeUiDirtyRect* inDirty)
-{
-    UIDirtyRectangle theDirty;
-    theDirty.mRectangle = UIFormRust::Rect(inDirty->rect);
-    theDirty.mSurfaceCount = inDirty->surface_count;
-    UIFormRust::Dirty(inForm).push_back(theDirty);
-}
-extern "C" unsigned long ee_uicpp_form_life_value(void* inForm, int inWhich) { return UIFormRust::Value(inForm, inWhich); }
-extern "C" void ee_uicpp_form_life_set_value(void* inForm, int inWhich, unsigned long inValue)
-{
-    UIFormRust::SetValue(inForm, inWhich, inValue);
-}
-extern "C" void* ee_uicpp_form_life_ptr(void* inForm, int inWhich) { return UIFormRust::Pointer(inForm, inWhich); }
-extern "C" void ee_uicpp_form_life_set_ptr(void* inForm, int inWhich, void* inPointer)
-{
-    UIFormRust::SetPointer(inForm, inWhich, inPointer);
-}
-extern "C" EeUiRect ee_uicpp_form_life_rect(void* inForm) { return UIFormRust::Rect(UIFormRust::FormRectangle(inForm)); }
-extern "C" void ee_uicpp_form_life_layout(void* inForm, const EeUiRect* inScreen)
-{
-    UIFormRust::Layout(inForm).CalculateRectangle(UIFormRust::Rect(*inScreen), UIFormRust::FormRectangle(inForm), false);
-}
-extern "C" void ee_uicpp_form_life_set_fade(void* inForm, float inOpacity) { UIFormRust::FadeOpacity(inForm) = inOpacity; }
-extern "C" void ee_uicpp_form_life_set_copied_popup_rect(void* inForm, const EeUiRect* inRectangle)
-{
-    UIFormRust::CopiedPopupRectangle(inForm) = UIFormRust::Rect(*inRectangle);
-}
-extern "C" bool ee_uicpp_form_life_event(void* inForm, int inWhich, long* outResult)
-{
-    return UIFormRust::Event(inForm, inWhich, outResult);
-}
-extern "C" void ee_uicpp_form_life_manager_dirty(void* inForm, const EeUiRect* inRectangle)
-{
-    UIFormRust::Form(inForm)->GetManager()->AddDirtyRectangle(UIFormRust::Rect(*inRectangle), UIFormRust::Form(inForm));
-}
-extern "C" void ee_uicpp_form_life_call(void* inForm, int inCall, unsigned long inIndex) { UIFormRust::Call(inForm, inCall, inIndex); }
-extern "C" void* ee_uicpp_form_life_control(void* inForm, long inIndex) { return UIFormRust::Control(inForm, inIndex); }
-extern "C" void ee_uicpp_form_life_set_draw(void* inForm, long inIndex, void* inControl)
-{
-    UIFormRust::DrawControl(inForm, inIndex) = static_cast<UIControl*>(inControl);
-}
-extern "C" bool ee_uicpp_form_life_group_enabled(void* inForm, long inGroup) { return UIFormRust::Group(inForm, inGroup)->GetIsEnabled(); }
-extern "C" unsigned long ee_uicpp_form_life_entity_count(void* inForm, long inGroup)
-{
-    return UIFormRust::Group(inForm, inGroup)->GetEntityCount();
-}
-extern "C" void* ee_uicpp_form_life_entity(void* inForm, long inGroup, unsigned long inEntity)
-{
-    return UIFormRust::Entity(inForm, inGroup, inEntity);
-}
-extern "C" void* ee_uicpp_form_life_db_table(void* inForm, unsigned long inIndex)
-{
-    return UIControlsTable::GetUIControlsTable(UIFormRust::Database(inForm, inIndex).mTableIndex);
-}
-extern "C" void* ee_uicpp_form_life_db_control(void* inForm, unsigned long inIndex) { return UIFormRust::Database(inForm, inIndex).mControl; }
-extern "C" void ee_uicpp_form_life_set_db_control(void* inForm, unsigned long inIndex, void* inControl)
-{
-    UIFormRust::Database(inForm, inIndex).mControl = static_cast<UIControl*>(inControl);
-}
-extern "C" void* ee_uicpp_form_life_create_control(void* inForm, void* inTable)
-{
-    return static_cast<UIControlsTable*>(inTable)->CreateControl(UIFormRust::Form(inForm)->GetManager());
-}
-extern "C" void ee_uicpp_form_life_table_create_event(void* inForm, void* inTable)
-{
-    static_cast<UIControlsTable*>(inTable)->CreateControlEvent(UIFormRust::Form(inForm));
-}
-extern "C" unsigned long ee_uicpp_form_life_table_value(void* inTable, int inWhich)
-{
-    UIControlsTable* theTable = static_cast<UIControlsTable*>(inTable);
-    switch (inWhich) {
-    case 0:
-        return theTable->GetGroup();
-    case 1:
-        return theTable->GetIsVisible() == true;
-    case 2:
-        return theTable->GetControlType();
-    default:
-        return theTable->GetStringTableID();
-    }
-}
-extern "C" void ee_uicpp_form_life_control_call(void* inForm, int inCall, void* inControl, unsigned long inGroup)
-{
-    UIFormRust::ControlCall(inForm, inCall, static_cast<UIControl*>(inControl), inGroup);
-}
-extern "C" unsigned long ee_uicpp_form_life_event_data(void* inForm, unsigned long inIndex, unsigned long* outType)
-{
-    *outType = UIFormRust::EventData(inForm, inIndex).mEventType;
-    return UIFormRust::EventData(inForm, inIndex).mEventID;
-}
-extern "C" void* ee_uicpp_form_life_create_form_event(void* inForm, unsigned long inID)
-{
-    return UIFormRust::Form(inForm)->GetManager()->CreateFormEvent(inID);
-}
-extern "C" void ee_uicpp_form_life_set_form_event(void* inForm, unsigned long inType, void* inEvent)
-{
-    UIEvent* theEvent = static_cast<UIEvent*>(inEvent);
-    UIFormRust::SetFormEvent(inForm, inType, theEvent);
-    theEvent->Dereference();
-}
-extern "C" unsigned long ee_uicpp_form_life_ctl_value(void* inControl, int inWhich)
-{
-    UIControl* theControl = static_cast<UIControl*>(inControl);
-    switch (inWhich) {
-    case 0:
-        return theControl->UIEntity::GetType();
-    case 1:
-        return theControl->GetDisplayMode();
-    case 2:
-        return theControl->GetIsDirty();
-    case 3:
-        return theControl->GetDrawCount();
-    default:
-        return theControl->GetIndex();
-    }
-}
-extern "C" EeUiRect ee_uicpp_form_life_ctl_rect(void* inControl)
-{
-    return UIFormRust::Rect(static_cast<UIControl*>(inControl)->GetRectangle());
-}
-extern "C" long ee_uicpp_form_life_ctl_call(void* inControl, int inCall, unsigned long inArgument)
-{
-    UIControl* theControl = static_cast<UIControl*>(inControl);
-    switch (inCall) {
-    case 0:
-        return theControl->CopyData();
-    case 1:
-        theControl->SetDirty(inArgument != 0);
-        break;
-    case 2:
-        theControl->SetDisplayMode(inArgument);
-        break;
-    case 3:
-        theControl->HideControl();
-        break;
-    default:
-        theControl->SetStringTableID(inArgument);
-        break;
-    }
-    return kErrorOK;
-}
+void UIForm::ClearAllClipRectangles() { this->Call(EeUiFormCall::ClearAllClipRectangles); }
 
 // FUNCTION: LLE 0x10071592
 // Closes the form: fires the close event, clears the draw list and popup, closes the backgrounds, flushes its events
 // and deletes the controls created from the database
-void UIForm::Close()
-{
-    ee_ui_form_close(this);
-}
+void UIForm::Close() { this->Call(EeUiFormCall::Close); }
 
 // FUNCTION: LLE 0x100716ae
 // Closes the IME composition string of the control holding the keyboard; kErrorOK when none does
 long UIForm::CloseIMECompositionString()
 {
-    long theResult = kErrorOK;
-    if (this->mKeyboardCaptured)
-        theResult = this->mKeyboardCaptured->CloseIMECompositionString();
-    return theResult;
+    UIControl* theControl = this->GetKeyboardCaptured();
+    return theControl ? theControl->CloseIMECompositionString() : kErrorOK;
 }
 
 // FUNCTION: LLE 0x100716c0
@@ -720,7 +471,7 @@ long UIForm::Create(FSFileSpec& inFile, UIManager* inManager)
                 continue;
             UIForm* theForm = inManager->CreateForm(theData);
             inManager->AddForm(theForm);
-            theForm->mEntityGroups[0]->Enable();
+            theForm->GetEntityGroup(0)->Enable();
         }
     }
     inFile.Close();
@@ -729,78 +480,34 @@ long UIForm::Create(FSFileSpec& inFile, UIManager* inManager)
 
 // FUNCTION: LLE 0x10071764
 // Fires the deactivate event, hides the popup and help text, and releases the captured mouse and keyboard
-void UIForm::Deactivate()
-{
-    if (this->mFormDeactivateEvent)
-        this->mFormDeactivateEvent->ProcessEvent(this, NULL);
-    this->SetPopup(NULL);
-    if (this->mHelpTextLabel)
-        this->mHelpTextLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mHelpTextPoll->Stop();
-    if (this->mMouseCaptured) {
-        this->mMouseCaptured->ReleaseCapturedMouse();
-        this->mMouseCaptured = NULL;
-    }
-    if (this->mKeyboardCaptured) {
-        this->mKeyboardCaptured->ReleaseCapturedKeyboard();
-        this->mKeyboardCaptured = NULL;
-    }
-    this->mMouseOverControl = NULL;
-}
+void UIForm::Deactivate() { this->Call(EeUiFormCall::Deactivate); }
 
 // FUNCTION: LLE 0x100717d1
 // Snapshots the form for drawing: fires the update event, copies every dirty shown control, lists the controls to draw,
 // ages the dirty rectangles and updates the help text
-long UIForm::CopyData()
-{
-    return ee_ui_form_copy_data(this);
-}
+long UIForm::CopyData() { return (long)this->Call(EeUiFormCall::CopyData); }
 
 // FUNCTION: LLE 0x10071a3e
 // Redraws every visible background that overlaps the rectangle; returns the last draw result
 long UIForm::DrawBackground(const GERectangle& inRectangle)
 {
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mBackgrounds.size(); i++) {
-        UIBackground* theBackground = this->mBackgrounds[i];
-        if (theBackground->GetIsVisible() && inRectangle.Intersects(theBackground->GetRectangle()))
-            theResult = theBackground->DrawBackground(inRectangle);
-    }
-    return theResult;
+    float f[4];
+    UIFormPutRect(f, inRectangle);
+    return (long)this->Call(EeUiFormCall::DrawBackground, 0, 0, f);
 }
 
 // FUNCTION: LLE 0x10071aa5
 // Draws the part of a bitmap's texture under a rectangle at a screen location
 long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GE2DPoint& inLocation)
 {
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theBottomRight;
-    GETextureCoordinate theTopRight;
-    GETextureCoordinate theBottomLeft;
-    float theWidth = (float)inBitmap->GetTexture(this->mManager->GetScreen())->GetWidth();
-    float theHeight = (float)inBitmap->GetTexture(this->mManager->GetScreen())->GetHeight();
-    GERectangle theRectangle;
-    theRectangle = inRectangle;
-    theRectangle.SetRight(theRectangle.GetRight() + 1.0f);
-    theRectangle.SetBottom(theRectangle.GetBottom() + 1.0f);
-    theTopLeft.SetU(theRectangle.GetLeft() / theWidth);
-    theTopLeft.SetV(theRectangle.GetTop() / theHeight);
-    theBottomRight.SetU(theRectangle.GetRight() / theWidth);
-    theBottomRight.SetV(theRectangle.GetBottom() / theHeight);
-    theTopRight.SetU(theBottomRight.GetU());
-    theTopRight.SetV(theTopLeft.GetV());
-    theBottomLeft.SetU(theTopLeft.GetU());
-    theBottomLeft.SetV(theBottomRight.GetV());
-    inBitmap->SetLocation(inLocation);
-    inBitmap->SetXYScale(theRectangle.GetWidth() / theWidth, theRectangle.GetHeight() / theHeight);
-    inBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-    return this->mManager->GetRasterizer()->Draw(inBitmap, this->mManager->GetScreen());
-}
-
-// A piece of the Rust tiling of a bitmap (ee_ui background.rs): drawn at its location
-extern "C" void ee_uicpp_form_tile_draw(void* inForm, void* inBitmap, const EeUiRect* inPiece, float inX, float inY)
-{
-    UIFormRust::Form(inForm)->DrawBackground(static_cast<GEBitmap*>(inBitmap), UIFormRust::Rect(*inPiece), GE2DPoint(inX, inY));
+    float f[4];
+    UIFormPutRect(f, inRectangle);
+    float theX = inLocation.GetX(), theY = inLocation.GetY();
+    uint32_t theBits[2];
+    memcpy(&theBits[0], &theX, 4);
+    memcpy(&theBits[1], &theY, 4);
+    return (long)this->Call(EeUiFormCall::DrawBitmap, (intptr_t)inBitmap,
+                            (intptr_t)((uint64_t)theBits[0] | (uint64_t)theBits[1] << 32), f);
 }
 
 // FUNCTION: LLE 0x10071bee
@@ -808,269 +515,85 @@ extern "C" void ee_uicpp_form_tile_draw(void* inForm, void* inBitmap, const EeUi
 long UIForm::DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GERectangle& inDrawRectangle,
                             const GERectangle& inTileRectangle)
 {
-    ee_ui_form_draw_tiles(this, inBitmap, UIFormRust::Rect(inRectangle), UIFormRust::Rect(inDrawRectangle),
-                          UIFormRust::Rect(inTileRectangle));
-    return kErrorOK;
-}
-
-// The text draw of a clipped text (ee_ui draw.rs): the text into one rectangle on the drawing surface
-struct UIFormTextDraw {
-    UIForm* mForm;
-    GEText* mText;
-};
-static long UIFormDrawTextPiece(void* inContext, const EeUiRect* inRectangle)
-{
-    UIFormTextDraw* theDraw = static_cast<UIFormTextDraw*>(inContext);
-    UIManager* theManager = theDraw->mForm->GetManager();
-    return theManager->GetRasterizer()->Draw(theDraw->mText, UIFormRust::Rect(*inRectangle), theManager->GetDrawingSurface());
+    const GERectangle* theRectangles[3] = {&inRectangle, &inDrawRectangle, &inTileRectangle};
+    for (int i = 0; i < 3; i++) {
+        float f[4];
+        UIFormPutRect(f, *theRectangles[i]);
+        this->Call(EeUiFormCall::StageRect, i, 0, f);
+    }
+    return (long)this->Call(EeUiFormCall::DrawTiles, (intptr_t)inBitmap);
 }
 
 // FUNCTION: LLE 0x10071e99
-// Draws text clipped around the form's clip rectangles, the copied popup or the IME candidate window (the pieces
-// are Rust's, ee_ui draw.rs; each piece is drawn here)
+// Draws text clipped around the form's clip rectangles, the copied popup or the IME candidate window
 long UIForm::DrawClippedText(const GERectangle& inRectangle, GEText* inText, UIControl* inControl)
 {
-    EeUiClipInfo theInfo = {};
-    theInfo.clips = reinterpret_cast<const EeUiRect*>(this->mClipRectangles.data());
-    theInfo.clip_count = this->mClipRectangles.size();
-    if (theInfo.clip_count == 0) {
-        if (this->mCopiedPopup != NULL) {
-            theInfo.has_popup = true;
-            theInfo.popup_is_control = inControl && this->mCopiedPopup == this->mControls[inControl->GetIndex()];
-            theInfo.popup_rect = UIFormRust::Rect(this->mCopiedPopup->GetRectangle());
-            theInfo.popup_draw_rect = UIFormRust::Rect(this->mCopiedPopup->GetCopiedDrawRectangle());
-        } else if (this->GetManager()->GetDrawCandidateWindow()) {
-            theInfo.has_candidate = true;
-            theInfo.candidate_rect = UIFormRust::Rect(this->GetManager()->GetCandidateWindow()->GetIMECopyCandidateRectangle());
-        }
-    }
-    UIFormTextDraw theDraw = {this, inText};
-    return ee_ui_form_draw_clipped_text(&theInfo, UIFormRust::Rect(inRectangle), UIFormDrawTextPiece, &theDraw);
+    float f[4];
+    UIFormPutRect(f, inRectangle);
+    return (long)this->Call(EeUiFormCall::DrawClippedText, (intptr_t)inText, (intptr_t)inControl, f);
 }
 
 // FUNCTION: LLE 0x1007229e
 // Redraws the queued background rectangles, then every listed control and the popup (with a shadow under a tool tip)
-long UIForm::DrawPolygons()
-{
-    GERectangle theShadowRectangle;
-    GERhombus theShadow;
-    long theResult = kErrorOK;
-    long i;
-    this->LockDrawBackground();
-    for (i = 0; i < (long)this->mCopyDirtyRectangles.size(); i++)
-        this->DrawBackground(this->mCopyDirtyRectangles[i]);
-    this->mCopyDirtyRectangles.clear();
-    this->UnlockDrawBackground();
-    long theCount = this->mControlCount;
-    for (i = 0; i < theCount; i++)
-        if (this->mDrawControls[i])
-            theResult = this->mDrawControls[i]->DrawPolygons();
-    if (this->mCopiedPopup) {
-        if (this->mDrawToolTipShadow && this->mHelpTextLabel == this->mCopiedPopup) {
-            this->GetToolTipShadowRectangle(this->mCopiedPopup->GetRectangle(), theShadowRectangle);
-            theShadow.SetColor(static_cast<UITextLabel*>(this->mCopiedPopup)->GetGEText()->GetFgColor());
-            theShadow.SetOpacity(kToolTipShadowOpacity);
-            theShadow.SetRectangle(theShadowRectangle);
-            this->mManager->GetRasterizer()->Draw(&theShadow, this->mManager->GetScreen());
-        }
-        theResult = this->mCopiedPopup->DrawPolygons();
-    }
-    return theResult;
-}
+long UIForm::DrawPolygons() { return (long)this->Call(EeUiFormCall::DrawPolygons); }
 
 // FUNCTION: LLE 0x100723dd
 // Draws the text of every listed control, then the popup's, and empties the draw list
-long UIForm::DrawTextA()
-{
-    long theResult = kErrorOK;
-    long i;
-    if (this->mCopiedPopup) {
-        for (i = this->mControlCount - 1; i >= 0; i--)
-            if (this->mDrawControls[i]) {
-                theResult = this->mDrawControls[i]->DrawTextA();
-                this->mDrawControls[i] = NULL;
-            }
-        if (this->mCopiedPopup) {
-            theResult = this->mCopiedPopup->DrawTextA();
-            this->mPopupDrawCount--;
-            this->mCopiedPopup = NULL;
-        }
-    } else
-        for (i = this->mControlCount - 1; i >= 0; i--)
-            if (this->mDrawControls[i]) {
-                theResult = this->mDrawControls[i]->DrawTextA();
-                this->mDrawControls[i] = NULL;
-            }
-    return theResult;
-}
+long UIForm::DrawTextA() { return (long)this->Call(EeUiFormCall::DrawText); }
 
 // FUNCTION: LLE 0x1007248c
 // Returns the background with the given ID, or NULL
 UIBackground* UIForm::GetBackgroundByID(unsigned long inID) const
 {
-    UIBackground* theResult = NULL;
-    for (unsigned long i = 0; i < this->mBackgrounds.size(); i++)
-        if (this->mBackgrounds[i]->GetBackgroundID() == inID) {
-            theResult = this->mBackgrounds[i];
-            break;
-        }
-    return theResult;
+    return reinterpret_cast<UIBackground*>(this->Call(EeUiFormCall::BackgroundById, (intptr_t)inID));
 }
 
 // FUNCTION: LLE 0x100724c6
 // Returns the control with the given ID (NULL: none)
 UIControl* UIForm::GetControlById(unsigned long inId)
 {
-    long i;
-    for (i = this->mControlCount - 1; i >= 0; i--)
-        if (this->mControls[i] && this->mControls[i]->GetId() == inId)
-            break;
-    if (i < 0)
-        return NULL;   // Fixed: with no match it used to return mControls[-1], the word before the array
-    return this->mControls[i];
+    return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::ControlById, (intptr_t)inId));
 }
 
 // FUNCTION: LLE 0x10072500
 // Returns the group holding the control with the given ID; falls back to group 0 when no group holds it
 UIEntityGroup* UIForm::GetEntityGroupById(unsigned long inId) const
 {
-    long theResult = kErrorFailed;
-    UIEntityGroup* theGroup = NULL;
-    for (long i = this->mControlGroupCount - 1; i >= 0 && theResult != kErrorOK; i--) {
-        theGroup = this->mEntityGroups[i];
-        for (long j = theGroup->GetEntityCount() - 1; j >= 0; j--) {
-            UIEntity* theEntity = theGroup->GetEntity(j);
-            if (theEntity->GetType() == kControlTypeButton && static_cast<UIControl*>(theEntity)->GetId() == inId) {
-                theResult = kErrorOK;
-                break;
-            }
-        }
-        if (theResult == kErrorOK)
-            break;
-    }
-    return theGroup;
+    return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroupById, (intptr_t)inId));
 }
 
 // FUNCTION: LLE 0x10072571
 // Returns false: forms never fade in
-bool UIForm::GetShouldFadeIn()
-{
-    return false;
-}
+bool UIForm::GetShouldFadeIn() { return this->Call(EeUiFormCall::ShouldFadeIn) != 0; }
 
-// FUNCTION: LLE 0x10072574
-// Returns the tool-tip shadow rectangle: the given rectangle moved 3 pixels right and down
-void UIForm::GetToolTipShadowRectangle(const GERectangle& inRectangle, GERectangle& outRectangle)
-{
-    outRectangle = UIFormRust::Rect(ee_ui_form_tool_tip_shadow(UIFormRust::Rect(inRectangle)));
-}
+// FUNCTION: LLE 0x100725fd
+// Loads every background's texture
+void UIForm::LoadBackgrounds() { this->Call(EeUiFormCall::LoadBackgrounds); }
 
-// FUNCTION: LLE 0x10072624
-// Initializes the form: clears events and captures, creates the wheel-scroll event, help-text timer, control slots,
-// groups and draw lock
-void UIForm::Init()
-{
-    long i;
-    this->mMouseCaptured = NULL;
-    this->mKeyboardCaptured = NULL;
-    this->mTabStop = 0;
-    this->mPopup = NULL;
-    this->mCopiedPopup = NULL;
-    this->mUnknown19A = false;
-    this->mFormCloseEvent = NULL;
-    this->mFormOpenEvent = NULL;
-    this->mFormUpdateEvent = NULL;
-    this->mFormManager = NULL;
-    this->mMouseLeftButtonPressedEvent = NULL;
-    this->mMouseLeftButtonUnpressedEvent = NULL;
-    this->mMouseLeftButtonDoublePressedEvent = NULL;
-    this->mMouseMiddleButtonPressedEvent = NULL;
-    this->mMouseMiddleButtonUnpressedEvent = NULL;
-    this->mMouseMiddleButtonDoublePressedEvent = NULL;
-    this->mMouseMoveEvent = NULL;
-    this->mMouseRightButtonPressedEvent = NULL;
-    this->mMouseRightButtonUnpressedEvent = NULL;
-    this->mMouseRightButtonDoublePressedEvent = NULL;
-    this->mMouseWheelMoveEvent = NULL;
-    this->mFormActivateEvent = NULL;
-    this->mFormDeactivateEvent = NULL;
-    this->mFormKeyboardCapturedEvent = NULL;
-    this->mMouseWheelScrollEvent = new UIEMouseWheelScroll;
-    this->SetMouseWheelMoveEvent(this->mMouseWheelScrollEvent);
-    this->mHelpTextLabel = NULL;
-    this->mMouseOverControl = NULL;
-    this->mDesignedHeight = 0;
-    this->mDesignedWidth = 0;
-    this->mPopupDrawCount = 0;
-    if (UIForm::sTabKey == NULL) {
-        gISKeyboard->GetEntity(kKeyTab, UIForm::sTabKey);
-        gISKeyboard->GetEntity(kKeyShift, UIForm::sShiftKey);
-    }
-    if (this->mHelpTextTimeDelay == 0)
-        this->mHelpTextTimeDelay = 1;
-    this->mHelpTextPoll = new TMPoll(this->mHelpTextTimeDelay, 0, false);
-    this->mControls = new UIControl*[this->mControlCount];
-    this->mDrawControls = new UIControl*[this->mControlCount];
-    for (i = this->mControlCount - 1; i >= 0; i--) {
-        this->mControls[i] = NULL;
-        this->mDrawControls[i] = NULL;
-    }
-    this->mEntityGroups = new UIEntityGroup*[this->mControlGroupCount];
-    for (i = this->mControlGroupCount - 1; i >= 0; i--)
-        this->mEntityGroups[i] = new UIEntityGroup;
-    this->mText = NULL;
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mDrawBackgroundLock) == keseOK, 1743);
-}
+// FUNCTION: LLE 0x10072624 (Init): the Rust form's init (formobj.rs), run by both ctors
 
 // FUNCTION: LLE 0x10072834
 // Opens the form: lays it out on the screen, opens the backgrounds, creates the database controls and their events,
 // fires the open event and marks every control dirty
-void UIForm::Open()
-{
-    ee_ui_form_open(this);
-}
+void UIForm::Open() { this->Call(EeUiFormCall::Open); }
 
 // FUNCTION: LLE 0x10072b37
 // Opens an IME composition string in the control holding the keyboard; kErrorFailed when none does
 long UIForm::OpenIMECompositionString()
 {
-    long theResult = kErrorFailed;
-    if (this->mKeyboardCaptured)
-        theResult = this->mKeyboardCaptured->OpenIMECompositionString();
-    return theResult;
+    UIControl* theControl = this->GetKeyboardCaptured();
+    return theControl ? theControl->OpenIMECompositionString() : kErrorFailed;
 }
 
 // FUNCTION: LLE 0x10072b4a
 // Deletes every hot key of every group
-void UIForm::RemoveAllHotKeys()
-{
-    for (unsigned long i = 0; i < this->mHotKeys.size(); i++) {
-        for (unsigned long j = 0; j < this->mHotKeys[i].size(); j++)
-            delete this->mHotKeys[i][j];
-        this->mHotKeys[i].clear();
-    }
-    this->mHotKeys.clear();
-    this->mHotKeyList.clear();
-}
+void UIForm::RemoveAllHotKeys() { this->Call(EeUiFormCall::RemoveAllHotKeys); }
 
 // FUNCTION: LLE 0x10072bc4
 // Deletes every hot key of one group
 void UIForm::RemoveAllHotKeysForAGroup(unsigned long inGroup)
 {
-    if (inGroup >= this->mHotKeys.size())
-        return;
-    std::vector<UIHotKey*>::iterator theIterator = this->mHotKeys[inGroup].begin();
-    while (theIterator != this->mHotKeys[inGroup].end()) {
-        std::vector<UIHotKey*>::iterator theListIterator = this->mHotKeyList.begin();
-        while (theListIterator != this->mHotKeyList.end())
-            if (*theIterator == *theListIterator)
-                this->mHotKeyList.erase(theListIterator);
-            else
-                theListIterator++;
-        delete *theIterator;
-        this->mHotKeys[inGroup].erase(theIterator);
-    }
-    this->mHotKeys[inGroup].clear();
+    this->Call(EeUiFormCall::RemoveAllHotKeysForAGroup, (intptr_t)inGroup);
 }
 
 // FUNCTION: LLE 0x10072c82
@@ -1078,649 +601,238 @@ void UIForm::RemoveAllHotKeysForAGroup(unsigned long inGroup)
 void UIForm::RemoveHotKey(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
                           unsigned long inModifier3, unsigned long inGroup)
 {
-    ISEntity* theKey;
-    ISEntity* theModifiers[3];
-    gISKeyboard->GetEntity(inKey, theKey);
-    gISKeyboard->GetEntity(inModifier1, theModifiers[0]);
-    gISKeyboard->GetEntity(inModifier2, theModifiers[1]);
-    gISKeyboard->GetEntity(inModifier3, theModifiers[2]);
-    if (inGroup >= this->mHotKeys.size())
-        return;
-    std::vector<UIHotKey*>::iterator theIterator;
-    for (theIterator = this->mHotKeys[inGroup].begin(); theIterator != this->mHotKeys[inGroup].end(); theIterator++) {
-        UIHotKey* theHotKey = *theIterator;
-        if (theHotKey->mKey != theKey || theHotKey->mModifiers[0] != theModifiers[0] ||
-            theHotKey->mModifiers[1] != theModifiers[1] || theHotKey->mModifiers[2] != theModifiers[2])
-            continue;
-        std::vector<UIHotKey*>::iterator theListIterator = this->mHotKeyList.begin();
-        while (theListIterator != this->mHotKeyList.end())
-            if (*theIterator == *theListIterator)
-                this->mHotKeyList.erase(theListIterator);
-            else
-                theListIterator++;
-        delete *theIterator;
-        this->mHotKeys[inGroup].erase(theIterator);
-        return;
-    }
+    this->Call(EeUiFormCall::RemoveHotKeyKeys, UIFormKeys(inKey, inModifier1, inModifier2, inModifier3), (intptr_t)inGroup);
 }
 
 // FUNCTION: LLE 0x10072da2
 // Deletes the hot key at an index in a group
 void UIForm::RemoveHotKey(unsigned long inIndex, unsigned long inGroup)
 {
-    UIHotKey* theHotKey = this->mHotKeys[inGroup][inIndex];
-    this->mHotKeys[inGroup].erase(this->mHotKeys[inGroup].begin() + inIndex);
-    for (long i = this->mHotKeyList.size() - 1; i >= 0; i--)
-        if (theHotKey == this->mHotKeyList[i])
-            this->mHotKeyList.erase(this->mHotKeyList.begin() + i);
-    delete theHotKey;
+    this->Call(EeUiFormCall::RemoveHotKeyAt, (intptr_t)inIndex, (intptr_t)inGroup);
 }
 
 // FUNCTION: LLE 0x10072e8a
 // Removes and deletes a background found by its ID (nothing happens when it is not listed)
 void UIForm::RemoveBackground(UIBackground* inBackground)
 {
-    unsigned long theID = inBackground->GetBackgroundID();
-    for (unsigned long i = 0; i < this->mBackgrounds.size(); i++)
-        if (theID == this->mBackgrounds[i]->GetBackgroundID()) {
-            this->mBackgrounds.erase(this->mBackgrounds.begin() + i);
-            delete inBackground;
-            break;
-        }
+    this->Call(EeUiFormCall::RemoveBackground, (intptr_t)inBackground);
+}
+
+// (exported 0x100596d9) Empties the control's form slot and takes it out of the group
+void UIForm::RemoveControl(UIControl* inControl, unsigned long inGroup)
+{
+    this->Call(EeUiFormCall::RemoveControl, (intptr_t)inControl, (intptr_t)inGroup);
 }
 
 // FUNCTION: LLE 0x10072efc
 // Marks dirty every visible control of an enabled group that overlaps the rectangle
 void UIForm::RedrawIntersectControls(const GERectangle& inRectangle)
 {
-    EeUiRect theRectangle = UIFormRust::Rect(inRectangle);
-    ee_ui_form_redraw_intersect_controls(this, &theRectangle);
+    float f[4];
+    UIFormPutRect(f, inRectangle);
+    this->Call(EeUiFormCall::RedrawIntersectControls, 0, 0, f);
 }
 
 // FUNCTION: LLE 0x10072f8e
-// Lays the form out again inside a new rectangle, with its backgrounds and database controls, and drops the cached text
+// Lays the form out again inside a new rectangle, with its backgrounds and database controls
 void UIForm::RelayoutForm(const GERectangle& inRectangle)
 {
-    unsigned long i;
-    this->mLayout.CalculateRectangle(inRectangle, this->mRectangle, false);
-    for (i = 0; i < this->mBackgrounds.size(); i++)
-        this->mBackgrounds[i]->RelayoutBackground();
-    for (i = 0; i < this->mDatabaseControls.size(); i++) {
-        UIControlsTable* theTable = UIControlsTable::GetUIControlsTable(this->mDatabaseControls[i].mTableIndex);
-        if (theTable)
-            theTable->RelayoutControl(this->mDatabaseControls[i].mControl, this->mManager);
-    }
-    if (this->mText) {
-        delete this->mText;
-        this->mText = NULL;
-    }
+    float f[4];
+    UIFormPutRect(f, inRectangle);
+    this->Call(EeUiFormCall::RelayoutForm, 0, 0, f);
 }
 
 // FUNCTION: LLE 0x10073022
 // Marks every control of the form dirty
-void UIForm::SetAllControlsDirty()
-{
-    ee_ui_form_set_all_controls_dirty(this);
-}
+void UIForm::SetAllControlsDirty() { this->Call(EeUiFormCall::SetAllControlsDirty); }
 
-// FUNCTION: LLE 0x10073048
-// Replaces the form-activate event, releasing the old one and initializing the new one
-void UIForm::SetFormActivateEvent(UIEvent* inEvent)
-{
-    if (this->mFormActivateEvent) {
-        this->mFormActivateEvent->Uninitialize();
-        this->mFormActivateEvent->Dereference();
-    }
-    this->mFormActivateEvent = inEvent;
-    if (this->mFormActivateEvent) {
-        this->mFormActivateEvent->Reference();
-        this->mFormActivateEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x10073085
-// Replaces the form-close event, releasing the old one and initializing the new one
-void UIForm::SetFormCloseEvent(UIEvent* inEvent)
-{
-    if (this->mFormCloseEvent) {
-        this->mFormCloseEvent->Uninitialize();
-        this->mFormCloseEvent->Dereference();
-    }
-    this->mFormCloseEvent = inEvent;
-    if (this->mFormCloseEvent) {
-        this->mFormCloseEvent->Reference();
-        this->mFormCloseEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x100730c2
-// Replaces the form-deactivate event, releasing the old one and initializing the new one
-void UIForm::SetFormDeactivateEvent(UIEvent* inEvent)
-{
-    if (this->mFormDeactivateEvent) {
-        this->mFormDeactivateEvent->Uninitialize();
-        this->mFormDeactivateEvent->Dereference();
-    }
-    this->mFormDeactivateEvent = inEvent;
-    if (this->mFormDeactivateEvent) {
-        this->mFormDeactivateEvent->Reference();
-        this->mFormDeactivateEvent->Initialize();
-    }
-}
+// FUNCTION: LLE 0x10073048 (SetFormActivateEvent), 0x10073085 (SetFormCloseEvent), 0x100730c2 (SetFormDeactivateEvent),
+// 0x100731cd (SetFormKeyboardCapturedEvent), 0x1007320a (SetFormOpenEvent), 0x10073264 (SetFormUpdateEvent),
+// 0x10073311..0x1007362e (the mouse events): each replaces its event, releasing the old one and initializing the new
+// one (the event's index in the Rust form: formobj.rs EV_*)
+void UIForm::SetFormOpenEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 0, (intptr_t)inEvent); }
+void UIForm::SetFormCloseEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 1, (intptr_t)inEvent); }
+void UIForm::SetMouseMiddleButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 5, (intptr_t)inEvent); }
+void UIForm::SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 6, (intptr_t)inEvent); }
+void UIForm::SetMouseMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 11, (intptr_t)inEvent); }
+void UIForm::SetMouseWheelMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 12, (intptr_t)inEvent); }
+void UIForm::SetFormUpdateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 13, (intptr_t)inEvent); }
+void UIForm::SetFormActivateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 14, (intptr_t)inEvent); }
+void UIForm::SetFormDeactivateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 15, (intptr_t)inEvent); }
+void UIForm::SetFormKeyboardCapturedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 16, (intptr_t)inEvent); }
 
 // FUNCTION: LLE 0x100730ff
 // Sets the form event of the given type (open, close, mouse buttons, move, wheel); other types are ignored
 void UIForm::SetFormEvent(unsigned long inType, UIEvent* inEvent)
 {
-    switch (inType) {
-    case kUIEventFormOpen:
-        this->SetFormOpenEvent(inEvent);
-        break;
-    case kUIEventFormClose:
-        this->SetFormCloseEvent(inEvent);
-        break;
-    case kUIEventMouseLeftButtonPressed:
-        this->SetMouseLeftButtonPressedEvent(inEvent);
-        break;
-    case kUIEventMouseLeftButtonUnpressed:
-        this->SetMouseLeftButtonUnpressedEvent(inEvent);
-        break;
-    case kUIEventMouseLeftButtonDoublePressed:
-        this->SetMouseLeftButtonDoublePressedEvent(inEvent);
-        break;
-    case kUIEventMouseMiddleButtonPressed:
-        this->SetMouseMiddleButtonPressedEvent(inEvent);
-        break;
-    case kUIEventMouseMiddleButtonUnpressed:
-        this->SetMouseMiddleButtonUnpressedEvent(inEvent);
-        break;
-    case kUIEventMouseMiddleButtonDoublePressed:
-        this->SetMouseMiddleButtonDoublePressedEvent(inEvent);
-        break;
-    case kUIEventMouseRightButtonPressed:
-        this->SetMouseRightButtonPressedEvent(inEvent);
-        break;
-    case kUIEventMouseRightButtonUnpressed:
-        this->SetMouseRightButtonUnpressedEvent(inEvent);
-        break;
-    case kUIEventMouseRightButtonDoublePressed:
-        this->SetMouseRightButtonDoublePressedEvent(inEvent);
-        break;
-    case kUIEventMouseMove:
-        this->SetMouseMoveEvent(inEvent);
-        break;
-    case kUIEventMouseWheelMove:
-        this->SetMouseWheelMoveEvent(inEvent);
-        break;
-    }
-}
-
-// FUNCTION: LLE 0x100731cd
-// Replaces the keyboard-captured event, releasing the old one and initializing the new one
-void UIForm::SetFormKeyboardCapturedEvent(UIEvent* inEvent)
-{
-    if (this->mFormKeyboardCapturedEvent) {
-        this->mFormKeyboardCapturedEvent->Uninitialize();
-        this->mFormKeyboardCapturedEvent->Dereference();
-    }
-    this->mFormKeyboardCapturedEvent = inEvent;
-    if (this->mFormKeyboardCapturedEvent) {
-        this->mFormKeyboardCapturedEvent->Reference();
-        this->mFormKeyboardCapturedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x1007320a
-// Replaces the form-open event, releasing the old one and initializing the new one
-void UIForm::SetFormOpenEvent(UIEvent* inEvent)
-{
-    if (this->mFormOpenEvent) {
-        this->mFormOpenEvent->Uninitialize();
-        this->mFormOpenEvent->Dereference();
-    }
-    this->mFormOpenEvent = inEvent;
-    if (this->mFormOpenEvent) {
-        this->mFormOpenEvent->Reference();
-        this->mFormOpenEvent->Initialize();
-    }
+    this->Call(EeUiFormCall::SetFormEvent, (intptr_t)inType, (intptr_t)inEvent);
 }
 
 // FUNCTION: LLE 0x10073247
 // Replaces the form manager, deleting the old one
 void UIForm::SetFormManager(UIFormManager* inFormManager)
 {
-    delete this->mFormManager;
-    this->mFormManager = inFormManager;
-}
-
-// FUNCTION: LLE 0x10073264
-// Replaces the form-update event, releasing the old one and initializing the new one
-void UIForm::SetFormUpdateEvent(UIEvent* inEvent)
-{
-    if (this->mFormUpdateEvent) {
-        this->mFormUpdateEvent->Uninitialize();
-        this->mFormUpdateEvent->Dereference();
-    }
-    this->mFormUpdateEvent = inEvent;
-    if (this->mFormUpdateEvent) {
-        this->mFormUpdateEvent->Reference();
-        this->mFormUpdateEvent->Initialize();
-    }
+    this->Call(EeUiFormCall::SetFormManager, (intptr_t)inFormManager);
 }
 
 // FUNCTION: LLE 0x100732a1
 // Enables or disables every hot key of a group
 void UIForm::SetHotKeyGroupEnabled(unsigned long inGroup, bool inEnabled)
 {
-    if (inGroup < this->mHotKeys.size())
-        for (unsigned long i = 0; i < this->mHotKeys[inGroup].size(); i++)
-            this->mHotKeys[inGroup][i]->mEnabled = inEnabled;
+    this->Call(EeUiFormCall::SetHotKeyGroupEnabled, (intptr_t)inGroup, inEnabled);
 }
 
 // FUNCTION: LLE 0x100732f0
 // Gives the keyboard to a control and fires the keyboard-captured event
 void UIForm::SetKeyboardCaptured(UIControl* inControl)
 {
-    this->mKeyboardCaptured = inControl;
-    if (this->mFormKeyboardCapturedEvent)
-        this->mFormKeyboardCapturedEvent->ProcessEvent(this, NULL);
+    this->Call(EeUiFormCall::SetKeyboardCaptured, (intptr_t)inControl);
 }
 
-// FUNCTION: LLE 0x10073311
-// Replaces the left-button-pressed event, releasing the old one and initializing the new one
-void UIForm::SetMouseLeftButtonPressedEvent(UIEvent* inEvent)
-{
-    if (this->mMouseLeftButtonPressedEvent) {
-        this->mMouseLeftButtonPressedEvent->Uninitialize();
-        this->mMouseLeftButtonPressedEvent->Dereference();
-    }
-    this->mMouseLeftButtonPressedEvent = inEvent;
-    if (this->mMouseLeftButtonPressedEvent) {
-        this->mMouseLeftButtonPressedEvent->Reference();
-        this->mMouseLeftButtonPressedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x1007334e
-// Replaces the left-button-released event, releasing the old one and initializing the new one
-void UIForm::SetMouseLeftButtonUnpressedEvent(UIEvent* inEvent)
-{
-    if (this->mMouseLeftButtonUnpressedEvent) {
-        this->mMouseLeftButtonUnpressedEvent->Uninitialize();
-        this->mMouseLeftButtonUnpressedEvent->Dereference();
-    }
-    this->mMouseLeftButtonUnpressedEvent = inEvent;
-    if (this->mMouseLeftButtonUnpressedEvent) {
-        this->mMouseLeftButtonUnpressedEvent->Reference();
-        this->mMouseLeftButtonUnpressedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x1007338b
-// Replaces the left-button double-click event, releasing the old one and initializing the new one
-void UIForm::SetMouseLeftButtonDoublePressedEvent(UIEvent* inEvent)
-{
-    if (this->mMouseLeftButtonDoublePressedEvent) {
-        this->mMouseLeftButtonDoublePressedEvent->Uninitialize();
-        this->mMouseLeftButtonDoublePressedEvent->Dereference();
-    }
-    this->mMouseLeftButtonDoublePressedEvent = inEvent;
-    if (this->mMouseLeftButtonDoublePressedEvent) {
-        this->mMouseLeftButtonDoublePressedEvent->Reference();
-        this->mMouseLeftButtonDoublePressedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x100733c8
-// Replaces the middle-button-pressed event, releasing the old one and initializing the new one
-void UIForm::SetMouseMiddleButtonPressedEvent(UIEvent* inEvent)
-{
-    if (this->mMouseMiddleButtonPressedEvent) {
-        this->mMouseMiddleButtonPressedEvent->Uninitialize();
-        this->mMouseMiddleButtonPressedEvent->Dereference();
-    }
-    this->mMouseMiddleButtonPressedEvent = inEvent;
-    if (this->mMouseMiddleButtonPressedEvent) {
-        this->mMouseMiddleButtonPressedEvent->Reference();
-        this->mMouseMiddleButtonPressedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x10073405
-// Replaces the middle-button-released event, releasing the old one and initializing the new one
-void UIForm::SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent)
-{
-    if (this->mMouseMiddleButtonUnpressedEvent) {
-        this->mMouseMiddleButtonUnpressedEvent->Uninitialize();
-        this->mMouseMiddleButtonUnpressedEvent->Dereference();
-    }
-    this->mMouseMiddleButtonUnpressedEvent = inEvent;
-    if (this->mMouseMiddleButtonUnpressedEvent) {
-        this->mMouseMiddleButtonUnpressedEvent->Reference();
-        this->mMouseMiddleButtonUnpressedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x10073442
-// Replaces the middle-button double-click event, releasing the old one and initializing the new one
-void UIForm::SetMouseMiddleButtonDoublePressedEvent(UIEvent* inEvent)
-{
-    if (this->mMouseMiddleButtonDoublePressedEvent) {
-        this->mMouseMiddleButtonDoublePressedEvent->Uninitialize();
-        this->mMouseMiddleButtonDoublePressedEvent->Dereference();
-    }
-    this->mMouseMiddleButtonDoublePressedEvent = inEvent;
-    if (this->mMouseMiddleButtonDoublePressedEvent) {
-        this->mMouseMiddleButtonDoublePressedEvent->Reference();
-        this->mMouseMiddleButtonDoublePressedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x1007347f
-// Replaces the mouse-move event, releasing the old one and initializing the new one
-void UIForm::SetMouseMoveEvent(UIEvent* inEvent)
-{
-    if (this->mMouseMoveEvent) {
-        this->mMouseMoveEvent->Uninitialize();
-        this->mMouseMoveEvent->Dereference();
-    }
-    this->mMouseMoveEvent = inEvent;
-    if (this->mMouseMoveEvent) {
-        this->mMouseMoveEvent->Reference();
-        this->mMouseMoveEvent->Initialize();
-    }
-}
+void UIForm::SetMouseCaptured(UIControl* inControl) { this->Call(EeUiFormCall::SetMouseCaptured, (intptr_t)inControl); }
 
 // FUNCTION: LLE 0x100734bc
 // Changes the control under the mouse, firing mouse-out/over triggers, and restarts the help-text timer with its help
 void UIForm::SetMouseOverControl(UIControl* inControl)
 {
-    UWideString theHelpString;
-    if (this->mMouseOverControl)
-        this->mMouseOverControl->FireTriggerEvent(kControlTriggerMouseOut);
-    this->mMouseOverControl = inControl;
-    if (this->mMouseOverControl)
-        this->mMouseOverControl->FireTriggerEvent(kControlTriggerMouseOver);
-    if (!this->mHelpTextLabel)
-        return;
-    this->mHelpTextPoll->Stop();
-    if (this->mUseToolTips && this->mPopup == this->mHelpTextLabel)
-        this->SetPopup(NULL);
-    this->mHelpTextLabel->SetDisplayMode(kDisplayModeHidden);
-    if (this->mMouseOverControl && this->mMouseOverControl->GetHelpString(theHelpString) == true) {
-        this->mHelpTextPoll->Start();
-        this->mHelpTextLabel->SetText(theHelpString, true);
-    }
-}
-
-// FUNCTION: LLE 0x10073577
-// Replaces the right-button-pressed event, releasing the old one and initializing the new one
-void UIForm::SetMouseRightButtonPressedEvent(UIEvent* inEvent)
-{
-    if (this->mMouseRightButtonPressedEvent) {
-        this->mMouseRightButtonPressedEvent->Uninitialize();
-        this->mMouseRightButtonPressedEvent->Dereference();
-    }
-    this->mMouseRightButtonPressedEvent = inEvent;
-    if (this->mMouseRightButtonPressedEvent) {
-        this->mMouseRightButtonPressedEvent->Reference();
-        this->mMouseRightButtonPressedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x100735b4
-// Replaces the right-button-released event, releasing the old one and initializing the new one
-void UIForm::SetMouseRightButtonUnpressedEvent(UIEvent* inEvent)
-{
-    if (this->mMouseRightButtonUnpressedEvent) {
-        this->mMouseRightButtonUnpressedEvent->Uninitialize();
-        this->mMouseRightButtonUnpressedEvent->Dereference();
-    }
-    this->mMouseRightButtonUnpressedEvent = inEvent;
-    if (this->mMouseRightButtonUnpressedEvent) {
-        this->mMouseRightButtonUnpressedEvent->Reference();
-        this->mMouseRightButtonUnpressedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x100735f1
-// Replaces the right-button double-click event, releasing the old one and initializing the new one
-void UIForm::SetMouseRightButtonDoublePressedEvent(UIEvent* inEvent)
-{
-    if (this->mMouseRightButtonDoublePressedEvent) {
-        this->mMouseRightButtonDoublePressedEvent->Uninitialize();
-        this->mMouseRightButtonDoublePressedEvent->Dereference();
-    }
-    this->mMouseRightButtonDoublePressedEvent = inEvent;
-    if (this->mMouseRightButtonDoublePressedEvent) {
-        this->mMouseRightButtonDoublePressedEvent->Reference();
-        this->mMouseRightButtonDoublePressedEvent->Initialize();
-    }
-}
-
-// FUNCTION: LLE 0x1007362e
-// Replaces the mouse-wheel event, releasing the old one and initializing the new one
-void UIForm::SetMouseWheelMoveEvent(UIEvent* inEvent)
-{
-    if (this->mMouseWheelMoveEvent) {
-        this->mMouseWheelMoveEvent->Uninitialize();
-        this->mMouseWheelMoveEvent->Dereference();
-    }
-    this->mMouseWheelMoveEvent = inEvent;
-    if (this->mMouseWheelMoveEvent) {
-        this->mMouseWheelMoveEvent->Reference();
-        this->mMouseWheelMoveEvent->Initialize();
-    }
+    this->Call(EeUiFormCall::SetMouseOverControl, (intptr_t)inControl);
 }
 
 // FUNCTION: LLE 0x1007366b
 // Replaces the popup control, hiding the old one and redrawing what it (and a tool-tip shadow) covered
-void UIForm::SetPopup(UIControl* inControl)
-{
-    ee_ui_form_set_popup(this, inControl);
-}
+void UIForm::SetPopup(UIControl* inControl) { this->Call(EeUiFormCall::SetPopup, (intptr_t)inControl); }
 
 // FUNCTION: LLE 0x1007377d
 // Turns keyboard tabbing on or off; turning it on moves the tab stop to the first tabbable control
-void UIForm::SetTabbing(bool inTabbing)
-{
-    this->mTabbingOn = inTabbing;
-    if (this->mControls[this->mTabStop])
-        this->mControls[this->mTabStop]->TabbedFrom();
-    if (inTabbing)
-        for (unsigned long i = 0; i < this->mControlCount; i++)
-            if (this->mControls[i] && this->mControls[i]->GetTabable()) {
-                this->mTabStop = i;
-                this->mControls[i]->TabbedTo();
-                break;
-            }
-}
+void UIForm::SetTabbing(bool inTabbing) { this->Call(EeUiFormCall::SetTabbing, inTabbing); }
 
 // FUNCTION: LLE 0x100737ed
 // Moves the tab stop to a control if it exists and is tabbable; otherwise keeps the old stop and returns false
-bool UIForm::SetTabStop(unsigned long inTabStop)
-{
-    bool theResult = false;
-    if (this->mControls[this->mTabStop])
-        this->mControls[this->mTabStop]->TabbedFrom();
-    if (this->mControls[inTabStop] && this->mControls[inTabStop]->GetTabable()) {
-        this->mControls[inTabStop]->TabbedTo();
-        this->mTabStop = inTabStop;
-        theResult = true;
-    } else if (this->mControls[this->mTabStop])
-        this->mControls[this->mTabStop]->TabbedTo();
-    return theResult;
-}
+bool UIForm::SetTabStop(unsigned long inTabStop) { return this->Call(EeUiFormCall::SetTabStop, (intptr_t)inTabStop) != 0; }
 
 // FUNCTION: LLE 0x1007385e
 // Moves the tab stop back to the previous shown, enabled, tabbable control, skipping radio-button runs, wrapping round
-void UIForm::ShiftTab()
-{
-    ee_ui_form_shift_tab(this, this->mTabbingOn, this->mTabStop);
-}
+void UIForm::ShiftTab() { this->Call(EeUiFormCall::ShiftTab); }
 
 // FUNCTION: LLE 0x1007395a
 // Moves the tab stop on to the next shown, enabled, tabbable control, skipping radio-button runs, wrapping round
-void UIForm::Tab()
-{
-    ee_ui_form_tab(this, this->mTabbingOn, this->mTabStop);
-}
+void UIForm::Tab() { this->Call(EeUiFormCall::Tab); }
+
+// FUNCTION: LLE 0x10073a61
+// Unloads every background's texture
+void UIForm::UnloadBackgrounds() { this->Call(EeUiFormCall::UnloadBackgrounds); }
 
 // FUNCTION: LLE 0x10073a88
 // Refreshes the help text from the control under the mouse, re-placing a tool tip that sizes itself to its text
-void UIForm::UpdateHelpString()
-{
-    UWideString theHelpString;
-    if (!this->mHelpTextLabel || !this->mMouseOverControl)
-        return;
-    this->mMouseOverControl->GetHelpString(theHelpString);
-    if (this->mUseToolTips && this->mPopup == this->mHelpTextLabel && this->mHelpTextLabel->GetFitRectToText() == true) {
-        this->mHelpTextLabel->SetDisplayMode(kDisplayModeHidden);
-        this->SetPopup(NULL);
-        this->mHelpTextLabel->SetText(theHelpString, true);
-        this->UpdateHelpText(true);
-    } else
-        this->mHelpTextLabel->SetText(theHelpString, true);
-}
+void UIForm::UpdateHelpString() { this->Call(EeUiFormCall::UpdateHelpString); }
 
 // FUNCTION: LLE 0x10073b1d
 // Places the tool tip by the mouse inside the form: shifted left at the right edge, above the cursor near the bottom
-void UIForm::SetHelpTextPopupLocation()
-{
-    // the place is Rust (ee_ui form_state.rs help_popup_location)
-    const GERectangle& theRectangle = this->mHelpTextLabel->GetRectangle();
-    EeUiPoint theLocation = ee_ui_form_help_location(
-        EeUiPoint{this->mMouseLocation.GetX(), this->mMouseLocation.GetY()},
-        EeUiRect{theRectangle.GetBottom(), theRectangle.GetLeft(), theRectangle.GetRight(), theRectangle.GetTop()},
-        EeUiRect{this->mRectangle.GetBottom(), this->mRectangle.GetLeft(), this->mRectangle.GetRight(), this->mRectangle.GetTop()});
-    this->mHelpTextLabel->SetLocation(GE2DPoint(theLocation.x, theLocation.y));
-}
+void UIForm::SetHelpTextPopupLocation() { this->Call(EeUiFormCall::SetHelpTextPopupLocation); }
 
 // FUNCTION: LLE 0x10073c7d
 // Shows the help text once its delay has passed (or when forced), as a popup tool tip when the form uses tool tips
-void UIForm::UpdateHelpText(bool inForce)
-{
-    if (!(inForce == true || this->mHelpTextPoll->GetIsRunning() == true && this->mHelpTextPoll->Poll() > 0))
-        return;
-    if (this->mUseToolTips) {
-        if (this->mPopup == NULL) {
-            this->SetHelpTextPopupLocation();
-            this->mHelpTextPoll->Stop();
-            this->mHelpTextLabel->SetDisplayMode(kDisplayModeShown);
-            this->SetPopup(this->mHelpTextLabel);
-        }
-    } else {
-        this->mHelpTextPoll->Stop();
-        this->mHelpTextLabel->SetDisplayMode(kDisplayModeShown);
-    }
-}
-
-// UIForm's keyboard pass (ee_ui hotkey.rs)
-extern "C" unsigned long ee_uicpp_form_keyboard_value(void* inForm, int inWhich, unsigned long inGroup)
-{
-    return UIFormRust::KeyboardValue(inForm, inWhich, inGroup);
-}
-extern "C" void* ee_uicpp_form_keyboard_hot_key(void* inForm, unsigned long inGroup, unsigned long inIndex)
-{
-    return UIFormRust::HotKeys(inForm)[inGroup][inIndex];
-}
-extern "C" bool ee_uicpp_form_keyboard_always_fire(void* inKey) { return static_cast<UIHotKey*>(inKey)->GetAlwaysFire(); }
-extern "C" bool ee_uicpp_form_keyboard_fire(void* inKey) { return static_cast<UIHotKey*>(inKey)->FireEvents(); }
-extern "C" long ee_uicpp_form_keyboard_call(void* inForm, int inCall) { return UIFormRust::KeyboardCall(inForm, inCall); }
+void UIForm::UpdateHelpText(bool inForce) { this->Call(EeUiFormCall::UpdateHelpText, inForce); }
 
 // FUNCTION: LLE 0x10073cfa
 // Fires hot keys (higher groups first; one non-always-fire key per frame), then Tab/Shift+Tab, else passes the
 // keyboard to the capturing control or the tab stop
-long UIForm::UpdateKeyboard()
-{
-    return ee_ui_form_update_keyboard(this);
-}
-
-// UIForm's mouse pass (ee_ui mouse.rs)
-extern "C" void* ee_uicpp_form_mouse_control(void* inForm, int inWhich) { return UIFormRust::MouseControl(inForm, inWhich); }
-extern "C" long ee_uicpp_form_mouse_call(void* inForm, int inCall, void* inControl, long inArg)
-{
-    UIControl* theControl = static_cast<UIControl*>(inControl);
-    switch (inCall) {
-    case 0:
-        return theControl->UpdateMouse(UIFormRust::MouseLocation(inForm));
-    case 1:
-        return UIManager::GetMouseWheel() != NULL;
-    case 2:
-        return UIManager::GetMouseWheelScrollAmount();
-    default:
-        return theControl->MouseWheelTurned(inArg);
-    }
-}
-extern "C" void* ee_uicpp_form_mouse_entity(int inWhich)
-{
-    ISEntity* theEntity = NULL;
-    gISMouse->GetEntity(inWhich, theEntity);
-    return theEntity;
-}
-extern "C" bool ee_uicpp_mouse_entity_ask(void* inEntity, int inQuery)
-{
-    ISEntity* theEntity = static_cast<ISEntity*>(inEntity);
-    switch (inQuery) {
-    case 0:
-        return theEntity->GetValue() != 0;
-    case 1:
-        return theEntity->JustPressed();
-    case 2:
-        return theEntity->JustUnpressed();
-    default:
-        return theEntity->JustDoublePressed();
-    }
-}
-extern "C" long ee_uicpp_form_mouse_event(void* inForm, int inEvent, bool inProcess)
-{
-    UIEvent* theEvent = UIFormRust::MouseEvent(inForm, inEvent);
-    if (!inProcess)
-        return theEvent != NULL;
-    return theEvent->ProcessEvent(UIFormRust::Form(inForm), NULL);
-}
+long UIForm::UpdateKeyboard() { return (long)this->Call(EeUiFormCall::UpdateKeyboard); }
 
 // FUNCTION: LLE 0x10073efa
 // Passes the mouse to the captured or mouse-over control (wheel included), then fires the form's own mouse events
-// (ee_ui mouse.rs)
-long UIForm::UpdateMouse()
-{
-    return ee_ui_form_update_mouse(this);
-}
+long UIForm::UpdateMouse() { return (long)this->Call(EeUiFormCall::UpdateMouse); }
 
 // FUNCTION: LLE 0x1007419d
 // Records the mouse location, finds the control under it, hides a tool tip the mouse enters, updates the mouse-over
 void UIForm::UpdateMouseLocation(const GE2DPoint& inLocation)
 {
-    UIControl* theControl = NULL;
-    this->mMouseLocation = inLocation;
-    if (this->mMouseCaptured && this->mMouseCaptured->GetRectangle().Contains(inLocation))
-        theControl = this->mMouseCaptured;
-    else {
-        long theGroup;
-        unsigned long theEntity;
-        if (ee_ui_form_hit(this, EeUiPoint{inLocation.GetX(), inLocation.GetY()}, &theGroup, &theEntity))
-            theControl = static_cast<UIControl*>(this->mEntityGroups[theGroup]->GetEntity(theEntity));
-        if (this->mUseToolTips && this->GetHelpTextLabel() && this->mPopup == this->GetHelpTextLabel() &&
-            this->GetHelpTextLabel()->GetRectangle().Contains(this->mMouseLocation)) {
-            this->mHelpTextPoll->Stop();
-            this->mHelpTextLabel->SetDisplayMode(kDisplayModeHidden);
-            this->SetPopup(NULL);
-        }
-    }
-    if (this->mMouseOverControl != theControl)
-        this->SetMouseOverControl(theControl);
+    float f[4] = {inLocation.GetX(), inLocation.GetY(), 0.0f, 0.0f};
+    this->Call(EeUiFormCall::UpdateMouseLocation, 0, 0, f);
 }
 
 // FUNCTION: LLE 0x100742c7
 // Passes a typed character to the control holding the keyboard
 long UIForm::UpdateTranslatedKey(const char* inKey, short inRepeat)
 {
-    long theResult = kErrorOK;
-    if (this->mKeyboardCaptured)
-        theResult = this->mKeyboardCaptured->UpdateTranslatedKey(inKey, inRepeat);
-    return theResult;
+    UIControl* theControl = this->GetKeyboardCaptured();
+    return theControl ? theControl->UpdateTranslatedKey(inKey, inRepeat) : kErrorOK;
 }
+
+// The header's members (inline in the original, emitted first by UIBackground.cpp 0x10059559..0x10059795)
+void UIForm::SetRectangle(const GERectangle& inRectangle)
+{
+    float f[4];
+    UIFormPutRect(f, inRectangle);
+    this->Call(EeUiFormCall::SetRectangle, 0, 0, f);
+}
+UIControl* UIForm::GetControl(unsigned long inIndex) const
+{
+    return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::Control, (intptr_t)inIndex));
+}
+unsigned long UIForm::GetControlCount() const { return (unsigned long)this->Call(EeUiFormCall::ControlCount); }
+unsigned long UIForm::GetControlGroupCount() const { return (unsigned long)this->Call(EeUiFormCall::ControlGroupCount); }
+unsigned long UIForm::GetDesignedHeight() const { return (unsigned long)this->Call(EeUiFormCall::DesignedHeight); }
+unsigned long UIForm::GetDesignedWidth() const { return (unsigned long)this->Call(EeUiFormCall::DesignedWidth); }
+UIEntityGroup* UIForm::GetEntityGroup(unsigned long inIndex) const
+{
+    return reinterpret_cast<UIEntityGroup*>(this->Call(EeUiFormCall::EntityGroup, (intptr_t)inIndex));
+}
+float UIForm::GetFadeOpacity()
+{
+    float f[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    this->Call(EeUiFormCall::FadeOpacity, 0, 0, f);
+    return f[0];
+}
+UIEvent* UIForm::GetFormUpdateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 13)); }
+UIEvent* UIForm::GetMouseMoveEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 11)); }
+unsigned long UIForm::GetFormID() const { return (unsigned long)this->Call(EeUiFormCall::FormId); }
+UIFormManager* UIForm::GetFormManager() const { return reinterpret_cast<UIFormManager*>(this->Call(EeUiFormCall::FormManager)); }
+UITextLabel* UIForm::GetHelpTextLabel() const
+{
+    return static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::HelpTextLabel)));
+}
+bool UIForm::GetUseExclusiveCoords() const { return this->Call(EeUiFormCall::UseExclusiveCoords) != 0; }
+UIManager* UIForm::GetManager() const { return reinterpret_cast<UIManager*>(this->Call(EeUiFormCall::Manager)); }
+const GE2DPoint& UIForm::GetMouseLocation() const
+{
+    return *reinterpret_cast<const GE2DPoint*>(this->Call(EeUiFormCall::MouseLocation));
+}
+UIControl* UIForm::GetMouseOverControl() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::MouseOverControl)); }
+UWideString UIForm::GetMusicFileName() const
+{
+    return UWideString(reinterpret_cast<const char*>(this->Call(EeUiFormCall::MusicFileName)));
+}
+const GERectangle& UIForm::GetRectangle() const
+{
+    return *reinterpret_cast<const GERectangle*>(this->Call(EeUiFormCall::Rectangle));
+}
+bool UIForm::GetTabbingOn() const { return this->Call(EeUiFormCall::TabbingOn) != 0; }
+unsigned long UIForm::GetTabStop() const { return (unsigned long)this->Call(EeUiFormCall::TabStop); }
+bool UIForm::GetUseGDIForText() const { return this->Call(EeUiFormCall::UseGdiForText) != 0; }
+void UIForm::LockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 1); }
+void UIForm::UnlockDrawBackground() { this->Call(EeUiFormCall::LockDraw, 0); }
+void UIForm::SetHelpTextLabel(UITextLabel* inLabel)
+{
+    this->Call(EeUiFormCall::SetHelpTextLabel, (intptr_t) static_cast<UIControl*>(inLabel));
+}
+void UIForm::SetHelpTextTimeDelay(unsigned long inTimeDelay) { this->Call(EeUiFormCall::SetHelpTextTimeDelay, (intptr_t)inTimeDelay); }
+void UIForm::SetLayout(UILayoutUtility& inLayout)
+{
+    unsigned long theTypes[4] = {inLayout.GetLeftOffsetType(), inLayout.GetRightOffsetType(), inLayout.GetTopOffsetType(),
+                                 inLayout.GetBottomOffsetType()};
+    float f[4] = {inLayout.GetLeftOffset(), inLayout.GetRightOffset(), inLayout.GetTopOffset(), inLayout.GetBottomOffset()};
+    uint64_t thePacked = 0;
+    for (int i = 0; i < 4; i++)
+        thePacked |= (uint64_t)(theTypes[i] & 0xffff) << (16 * i);
+    this->Call(EeUiFormCall::SetLayout, (intptr_t)thePacked, 0, f);
+}
+void UIForm::SetMusicFileName(const UWideString& inName) { this->Call(EeUiFormCall::SetMusicFileName, (intptr_t)(const char*)inName); }
+void UIForm::SetUseToolTips(bool inUseToolTips) { this->Call(EeUiFormCall::SetUseToolTips, inUseToolTips); }
+bool UIForm::GetDrawToolTipShadow() const { return this->Call(EeUiFormCall::DrawToolTipShadow) != 0; }
+void UIForm::SetDrawToolTipShadow(bool inDraw) { this->Call(EeUiFormCall::SetDrawToolTipShadow, inDraw); }
+UIControl* UIForm::GetKeyboardCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::KeyboardCaptured)); }
+UIControl* UIForm::GetMouseCaptured() const { return reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::MouseCaptured)); }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // TEMPLATE: LLE 0x10074e05
@@ -1810,20 +922,4 @@ long UIForm::UpdateTranslatedKey(const char* inKey, short inRepeat)
 // TEMPLATE: LLE 0x1007528e
 
 // port: see the header
-void UIForm::ReserveControlIndex(unsigned long inIndex)
-{
-    if ((long)inIndex < this->mControlCount)
-        return;
-    long theCount = (long)inIndex + 1;
-    UIControl** theControls = new UIControl*[theCount];
-    UIControl** theDrawControls = new UIControl*[theCount];
-    for (long i = 0; i < theCount; i++) {
-        theControls[i] = i < this->mControlCount && this->mControls ? this->mControls[i] : NULL;
-        theDrawControls[i] = i < this->mControlCount && this->mDrawControls ? this->mDrawControls[i] : NULL;
-    }
-    delete[] this->mControls;
-    delete[] this->mDrawControls;
-    this->mControls = theControls;
-    this->mDrawControls = theDrawControls;
-    this->mControlCount = theCount;
-}
+void UIForm::ReserveControlIndex(unsigned long inIndex) { this->Call(EeUiFormCall::ReserveControlIndex, (intptr_t)inIndex); }

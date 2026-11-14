@@ -1,7 +1,8 @@
 // C:\EEX\Low-Level Engine\File System\FSPath.cpp (RTTI .?AVFSPath@@; 0x1000a843..0x1000bdb4)
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// A search path of archives and directories (FindFile looks in the directories first). Names of the member
-// functions come from the exports (local names provisional).
+// A search path of archives and directories (FindFile looks in the directories first). The searches are Rust's
+// (rust/crates/ee_fs/src/path.rs, LLE lane round 5) over the vectors' element arrays; the vectors (of C++ objects:
+// GetArchive hands out a reference into one) and their plumbing stay here.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
@@ -10,38 +11,17 @@
 #include "lle/FSMemoryFile.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
+#include "rust/ee_fs.h"
 
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-// TEMPLATE: LLE 0x1000b1c0
-// TEMPLATE: LLE 0x1000b217
-// TEMPLATE: LLE 0x1000b304
-// TEMPLATE: LLE 0x1000b35e
-// TEMPLATE: LLE 0x1000b6f8
-// TEMPLATE: LLE 0x1000bac1
-// SYNTHETIC: LLE 0x1000a880
-// TEMPLATE: LLE 0x1000b18d
-// TEMPLATE: LLE 0x1000b2c6
-// TEMPLATE: LLE 0x1000b40d
-// TEMPLATE: LLE 0x1000b763
-// TEMPLATE: LLE 0x1000b79a
-// TEMPLATE: LLE 0x1000b7d3
-// TEMPLATE: LLE 0x1000bb2c
-// TEMPLATE: LLE 0x1000bb66
-// TEMPLATE: LLE 0x1000bb9f
-// TEMPLATE: LLE 0x1000bbca
-// TEMPLATE: LLE 0x1000bbf5
-// TEMPLATE: LLE 0x1000bc0c
-// TEMPLATE: LLE 0x1000bc35
-// TEMPLATE: LLE 0x1000bc5e
-// TEMPLATE: LLE 0x1000bc8a
-// TEMPLATE: LLE 0x1000bca7
-// TEMPLATE: LLE 0x1000bcd3
-// TEMPLATE: LLE 0x1000bcf7
-// TEMPLATE: LLE 0x1000bd23
-// TEMPLATE: LLE 0x1000bd40
-// TEMPLATE: LLE 0x1000bd6c
-// SYNTHETIC: LLE 0x1000bd90
-// SYNTHETIC: LLE 0x1000bda2
+static EeFsSpec* PathSpec(FSFileSpec* inSpec) { return reinterpret_cast<EeFsSpec*>(inSpec); }
+static const EeFsSpec* PathSpec(const FSFileSpec* inSpec) { return reinterpret_cast<const EeFsSpec*>(inSpec); }
+static const EeFsArchiveObj* PathArchive(const FSArchive* inArchive) { return reinterpret_cast<const EeFsArchiveObj*>(inArchive); }
+static const EeFsString* PathText(const UString* inText) { return reinterpret_cast<const EeFsString*>(inText); }
+
+static void NameSink(void* inContext, const char* inName)
+{
+    static_cast<std::set<UString>*>(inContext)->insert(UString(inName));
+}
 
 // FUNCTION: LLE 0x1000a843
 // Creates an empty search path
@@ -145,37 +125,27 @@ long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile)
 }
 
 // FUNCTION: LLE 0x1000ac48
-// Finds a file in the directories, then the archives: returns a new file spec (an FSMemoryFile from an archive)
-// and, in outDirectory, the found file itself or the archive file it came from
+// Finds a file in the directories, then the archives (Rust's search): returns a new file spec (an FSMemoryFile from
+// an archive) and, in outDirectory, the found file itself or the archive file it came from
 long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile, FSFileSpec& outDirectory)
 {
-    FSMemoryFile* theMemoryFile = NULL;
     FSFileSpec theFile;
-    long theResult = kErrorNotFound;
-    unsigned long i;
-    // Fixed: the search ran on the path's own directory spec, whose search handle every thread shares (the physics
-    // thread loads a finished building's media while the preloading thread loads a unit class's: both closed one
-    // handle, a double free). A copy of the spec searches with a handle of its own (its copy constructor starts
-    // closed; its destructor closes the handle).
-    if (this->mDirectories.size() > 0)
-        for (i = 0; i < this->mDirectories.size(); i++) {
-            FSFileSpec theDirectory(this->mDirectories[i]);
-            if (theDirectory.GetFirstFile(inName, theFile) == kErrorOK) {
-                outFile = new FSFileSpec(theFile);
-                outDirectory = theFile;
-                theDirectory.CloseSearchHandle();
-                theResult = kErrorOK;
-                break;
-            }
-        }
-    if (theResult != kErrorOK && this->mArchives.size() > 0)
-        for (i = 0; i < this->mArchives.size(); i++)
-            if (this->mArchives[i].FindFile(inName, theMemoryFile) == kErrorOK) {
-                outFile = theMemoryFile;
-                outDirectory = this->mArchives[i].GetArchiveFile();
-                theResult = kErrorOK;
-                break;
-            }
+    EeFsMemFile* theMember = NULL;
+    size_t theArchive = 0;
+    long theResult = ee_fs_path_find(PathSpec(this->mDirectories.data()), this->mDirectories.size(),
+                                     PathArchive(this->mArchives.data()), this->mArchives.size(), PathText(&inName),
+                                     PathSpec(&theFile), PathSpec(&outDirectory), &theMember, &theArchive,
+                                     PathText(&gStartupVolume), PathText(&gStartupDirectory));
+    if (theResult == kErrorOK) {
+        if (theMember != NULL) {   // FSArchive::FindFile's member and its names
+            FSMemoryFile* theMemoryFile = new FSMemoryFile(theMember, true);
+            UString theName(inName);
+            theName.ToLower();
+            ee_fs_arch_name_member(PathArchive(&this->mArchives[theArchive]), PathSpec(theMemoryFile), PathText(&theName));
+            outFile = theMemoryFile;
+        } else
+            outFile = new FSFileSpec(theFile);
+    }
     return theResult;
 }
 
@@ -235,34 +205,28 @@ bool FSPath::GetFileArchiveStatus(const UWideString& inName, bool& outArchived)
 }
 
 // FUNCTION: LLE 0x1000aed9
-// Collects the names of the files matching a pattern from every archive and directory (relative to the directory);
-// returns the last search's result, which is the end-of-search code when the path has directories
+// Collects the names of the files matching a pattern from every archive and directory (relative to the directory,
+// Rust's walk); returns the last search's result, which is the end-of-search code when the path has directories
 long FSPath::ListFiles(const UString& inPattern, std::set<UString>& outFiles)
 {
-    UString theRoot(PLAT_MAX_PATH);
-    UString thePath(PLAT_MAX_PATH);
-    UString theName(PLAT_MAX_PATH);
-    FSFileSpec theFile;
     long theResult = kErrorOK;
-    unsigned long i;
     outFiles.clear();
-    for (i = 0; i < this->mArchives.size(); i++)
+    for (unsigned long i = 0; i < this->mArchives.size(); i++)
         theResult = this->mArchives[i].ListFiles(inPattern, outFiles, false);
-    for (i = 0; i < this->mDirectories.size(); i++) {
-        theRoot = this->mDirectories[i].GetVolume() + this->mDirectories[i].GetDirectory();
-        FSFileSpec theDirectory(this->mDirectories[i]);   // a search handle of its own (FindFile)
-        theResult = theDirectory.GetFirstFile(inPattern, theFile);
-        while (theResult == kErrorOK) {
-            thePath = theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile();
-            // one GetLength of the root: a third inline site would leave the first operator[] of each loop too little
-            // budget for _Ptrit::operator+ (the original expands both; 68 -> 86, 531 -> 499 bytes)
-            unsigned long theStart = theRoot.GetLength();
-            theName.Copy(thePath, theStart, thePath.GetLength() - theStart, 0, false);
-            outFiles.insert(theName);
-            theResult = theDirectory.GetNextFile(theFile);
-        }
+    return ee_fs_path_list_directories(PathSpec(this->mDirectories.data()), this->mDirectories.size(), inPattern, theResult,
+                                       NameSink, &outFiles, PathText(&gStartupVolume), PathText(&gStartupDirectory));
+}
+
+// FUNCTION: LLE 0x1000b0cd
+// Closes and removes the archive at an index; kErrorBeyondEnd past the last one
+long FSPath::RemoveArchive(unsigned long inIndex)
+{
+    if (inIndex < this->mArchives.size()) {
+        this->mArchives[inIndex].Close();
+        this->mArchives.erase(this->mArchives.begin() + inIndex);
+        return kErrorOK;
     }
-    return theResult;
+    return kErrorBeyondEnd;
 }
 
 // FUNCTION: LLE 0x1000b136
@@ -275,12 +239,3 @@ long FSPath::RemoveDirectory(unsigned long inIndex)
     }
     return kErrorBeyondEnd;
 }
-
-// Vector COMDATs left ambiguous by match_templates (byte-identical across the two element types except for
-// their callees):
-// TEMPLATE: LLE 0x1000b194
-// TEMPLATE: LLE 0x1000b28b
-// TEMPLATE: LLE 0x1000b2d8
-// TEMPLATE: LLE 0x1000b3d2
-// TEMPLATE: LLE 0x1000b422
-// TEMPLATE: LLE 0x1000b7e7

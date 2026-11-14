@@ -229,7 +229,7 @@ long EEUIFMGStatusBar::DrawTextA()
     if (this->mValue2->GetText(0).GetLength() > 0)
         theResult = this->mValue2->DrawTextA();
     if (this->mShowCount)
-        theResult = this->mForm->DrawClippedText(theRectangle, this->mCount, this);
+        theResult = this->GetForm()->DrawClippedText(theRectangle, this->mCount, this);
     return theResult;
 }
 
@@ -240,7 +240,7 @@ long EEUIFMGStatusBar::MouseLButtonDown()
     GE2DPoint theOffset(1.0f, 1.0f);
     long theResult = 0;
     if (this->mEnabled) {
-        if (this->GetRectangle().Contains(this->mForm->GetMouseLocation()) && !this->mPressed) {
+        if (this->GetRectangle().Contains(this->GetForm()->GetMouseLocation()) && !this->mPressed) {
             this->MoveIcon(theOffset);
             this->mPressed = true;
         }
@@ -256,7 +256,7 @@ long EEUIFMGStatusBar::MouseLButtonUp()
     GE2DPoint theOffset(-1.0f, -1.0f);
     long theResult = 0;
     if (this->mEnabled) {
-        if (this->GetRectangle().Contains(this->mForm->GetMouseLocation()) && this->mPressed) {
+        if (this->GetRectangle().Contains(this->GetForm()->GetMouseLocation()) && this->mPressed) {
             this->MoveIcon(theOffset);
             this->mPressed = false;
         }
@@ -292,7 +292,7 @@ long EEUIFMGStatusBar::MouseRButtonDown()
     GE2DPoint theOffset(1.0f, 1.0f);
     long theResult = 0;
     if (this->mEnabled) {
-        if (this->GetRectangle().Contains(this->mForm->GetMouseLocation()) && !this->mPressed) {
+        if (this->GetRectangle().Contains(this->GetForm()->GetMouseLocation()) && !this->mPressed) {
             this->MoveIcon(theOffset);
             this->mPressed = true;
         }
@@ -308,7 +308,7 @@ long EEUIFMGStatusBar::MouseRButtonUp()
     GE2DPoint theOffset(-1.0f, -1.0f);
     long theResult = 0;
     if (this->mEnabled) {
-        if (this->GetRectangle().Contains(this->mForm->GetMouseLocation()) && this->mPressed) {
+        if (this->GetRectangle().Contains(this->GetForm()->GetMouseLocation()) && this->mPressed) {
             this->MoveIcon(theOffset);
             this->mPressed = false;
         }

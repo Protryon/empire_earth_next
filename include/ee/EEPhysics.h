@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <deque>
+#include "rust/ee_units.h"             // EeUnitsPhysicsSaved (EEPhysics' saved block)
 
 class FSFile;
 class RTSGraphics;
@@ -95,7 +96,10 @@ public:
     bool mSlowPlayback;                     // +0x69 (= true before CreateThread)
 };
 
-class EEPhysics : public RTSPhysics {       // sizeof 0xfc; EEPhysics.cpp (__FILE__ 0x151cb4), ctor 0x151c5a
+// New (R5b.4, round 28): the plain block +0x080 .. +0x0e8 (the clocks, tick counters, timing averages and the civ
+// timer's flags; names, types and order kept) is the Rust record EeUnitsPhysicsSaved (ee_units physics_save.rs), the
+// second base; Load and Save are Rust over it.
+class EEPhysics : public RTSPhysics, public EeUnitsPhysicsSaved {       // sizeof 0xfc; EEPhysics.cpp (__FILE__ 0x151cb4), ctor 0x151c5a
 public:
     EEPhysics(EEGraphics* inGraphics, TMTimer* inTimer);   // 0x151c5a (new 0xfc at 0x14392b)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);    // +0x00 0x152a4d
@@ -150,46 +154,11 @@ public:
 
     std::vector<NEMessage*> mLoadSaveRequests;  // +0x06c (queued under mSaveGameLock, referenced; Init dereferences them)
     TSCriticalSection* mSaveGameLock;       // +0x07c
-    unsigned long mCurrentTick;             // +0x080 (saved)
-    float mF84;                             // +0x084 (saved; EEMEdictProposal clears it)
-    float mTicksPerGameSecond;              // +0x088 (saved)
+    // +0x080 mCurrentTick .. +0x0e8 mResourceTimerPending: the record EeUnitsPhysicsSaved (the base above)
     float GetTickSeconds() const { return this->mTickSeconds; }  // inline (EEWheel::Update 0x23c99e loads it as a value) (provisional name)
-    float mTickSeconds;                     // +0x08c (saved)
-    float mTimeOfDayStep;                   // +0x090 (saved)
-    // inline (EEE2DParticle::Create copies it into the particle through the FP stack) (provisional name)
     float GetGameClock() const { return this->mGameClock; }
-    float mGameClock;                       // +0x094 (saved)
-    // inline: the 3D effects age by it loaded as a value (EEE3DBlastWave::Step 0xe943f: fld, then fidiv the
-    // duration) (provisional name)
     float GetTickTime() const { return this->mTickTime; }
-    float mTickTime;                        // +0x098 (saved)
-    float mAreaEffectsClock;                // +0x09c (saved)
-    float mShiftModeClock;                  // +0x0a0
-    long mTickTimeMs;                       // +0x0a4
-    long mTickStartTime;                    // +0x0a8 (saved)
-    long mPreviousTickStartTime;            // +0x0ac (saved)
-    long mTickRandom;                       // +0x0b0
-    unsigned long mNumTicksDone;            // +0x0b4 (saved)
-    unsigned long mTicksToProcess;          // +0x0b8 (saved)
-    unsigned long mTickGapSum;              // +0x0bc (saved)
-    unsigned long mTickGapCount;            // +0x0c0 (saved)
-    unsigned long mTickWorkSum;             // +0x0c4 (saved)
-    unsigned long mTickWorkCount;           // +0x0c8 (saved)
-    long mAutoSaveClock;                    // +0x0cc (untouched by the ctor, its init 0x152909 and Load/Save)
     long GetGameTime() const { return this->mGameTime; }
-    long mGameTime;                         // +0x0d0
-    long mLD4;                              // +0x0d4
-    long mAveragePhysicsUpdateTime;         // +0x0d8
-    long mAverageTimeBetweenPhysicsTicks;   // +0x0dc
-    bool mTimeOfDayRuns;                    // +0x0e0 (saved)
-    bool mGameStarted;                      // +0x0e1
-    bool mBE2;                              // +0x0e2
-    bool mCivTimerRuns;                     // +0x0e3 (saved)
-    bool mCivTimerFirstWarning;             // +0x0e4 (saved)
-    bool mCivTimerSecondWarning;            // +0x0e5 (saved)
-    bool mGameOver;                         // +0x0e6 (saved)
-    bool mBE7;                              // +0x0e7
-    bool mResourceTimerPending;             // +0x0e8 (saved)
     std::vector<EEPUnitSwap> mUnitSwaps;    // +0x0ec (QueueUnitSwap; the `_Buy` is vector<EETileCoordinate>'s ICF twin)
     // New members (R5a.5): the physics totals that were the globals 0x531cf0 / 0x531cf4 (gU531CF0 / gU531CF4)
     long mInputMessagesProcessed;           // the user-input messages executed (Init clears it; part of the out-of-synch checksum)

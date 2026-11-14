@@ -7,7 +7,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include "lle/TSCriticalSection.h"
 #include "rust/ee_net.h"
 
 class NEMessage;
@@ -20,7 +19,10 @@ enum NERecordPlaybackMode {
     kRecordModePlaying = 3,
 };
 
-class LLE_API NESynchronousCommunications {   // proven sizeof 0x30 (implicit copy ctor 0x40167)
+// Its state is Rust's (ee_net comms.rs; PORT_LEARNINGS "LLE Network Engine, round 5"): the class keeps the type the
+// game holds, its pure virtuals and one-line forwarders. The original layout (sizeof 0x30) went with its fields;
+// the debug lock and the two bytes-per-second meters (no caller) went too.
+class LLE_API NESynchronousCommunications {
 public:
     NESynchronousCommunications(unsigned long inNumberOfCTsProcessedInPhysics = 0);   // default arg: ??_F 0x4021b
     // vtable 0x988f4: the dtor, then pure virtuals in alphabetical order (slots 2, 5..8 are named by the server's
@@ -47,41 +49,35 @@ public:
     virtual long SearchForGame(bool inStart) = 0;                               // slot 7
     virtual void SetCurrentCommunicationsTick(unsigned long inTick) = 0;        // slot 8
 
-    unsigned long GetAveragePhysicsUpdateTime() { return this->mAveragePhysicsUpdateTime; }  // 0x40123 (ICF-folded)
-    bool GetIsGamePaused() { return this->mIsGamePaused; }
-    bool GetIsMultiplayerSession() { return this->mIsMultiplayerSession; }
-    unsigned long GetLastTickReceived() { return this->mLastTickReceived; }    // ICF-folded (0x4380)
-    unsigned char GetNumHumanPlayers() const { return this->mNumHumanPlayers; }
-    unsigned long GetNumberOfCTsProcessedInPhysics() { return this->mNumberOfCTsProcessedInPhysics; }  // 0x4012b (folded)
-    unsigned long GetPlayerNumber() { return this->mPlayerNumber; }            // ICF-folded (0x4495)
-    void IncrementNumberOfCTsProcessedInPhysics() { this->mNumberOfCTsProcessedInPhysics++; }
-    // exported setters, all ICF-folded elsewhere (0xdfc9, 0x124c1, 0xc56c, 0x572e7, 0x4c3eb, 0xe773)
-    void SetAveragePhysicsUpdateTime(unsigned long inTime) { this->mAveragePhysicsUpdateTime = inTime; }
-    void SetAverageTimeBetweenPhysicsTicks(unsigned long inTime) { this->mAverageTimeBetweenPhysicsTicks = inTime; }
-    void SetIsMultiplayerSession(bool inIsMultiplayerSession) { this->mIsMultiplayerSession = inIsMultiplayerSession; }
-    void SetLastTickReceived(unsigned long inTick) { this->mLastTickReceived = inTick; }
-    void SetNumHumanPlayers(unsigned char inNumHumanPlayers) { this->mNumHumanPlayers = inNumHumanPlayers; }
-    void SetNumberOfCTsProcessedInPhysics(unsigned long inNumber) { this->mNumberOfCTsProcessedInPhysics = inNumber; }
-    void SetPlayerNumber(unsigned long inPlayerNumber) { this->mPlayerNumber = inPlayerNumber; }
+    // the fields (ee_net comms.rs, shared with the Rust server or client)
+    unsigned long GetAveragePhysicsUpdateTime() { return this->Get(EeNetCommsField::AveragePhysicsUpdateTime); }
+    bool GetIsGamePaused() { return this->Get(EeNetCommsField::IsGamePaused) != 0; }
+    bool GetIsMultiplayerSession() { return this->Get(EeNetCommsField::IsMultiplayerSession) != 0; }
+    // a `long` (-2 before the connection, -1 "none") returned as the original's unsigned long
+    unsigned long GetLastTickReceived() { return (unsigned long)(long)(int32_t)this->Get(EeNetCommsField::LastTickReceived); }
+    unsigned char GetNumHumanPlayers() const { return (unsigned char)this->Get(EeNetCommsField::NumHumanPlayers); }
+    unsigned long GetNumberOfCTsProcessedInPhysics() { return this->Get(EeNetCommsField::CtsProcessed); }
+    unsigned long GetPlayerNumber() { return this->Get(EeNetCommsField::PlayerNumber); }
+    void IncrementNumberOfCTsProcessedInPhysics() { ee_net_comms_increment_cts(this->mComms); }
+    void SetAveragePhysicsUpdateTime(unsigned long inTime) { this->Set(EeNetCommsField::AveragePhysicsUpdateTime, inTime); }
+    void SetAverageTimeBetweenPhysicsTicks(unsigned long inTime) { this->Set(EeNetCommsField::AverageTimeBetweenPhysicsTicks, inTime); }
+    void SetIsMultiplayerSession(bool inIsMultiplayerSession) { this->Set(EeNetCommsField::IsMultiplayerSession, inIsMultiplayerSession); }
+    void SetLastTickReceived(unsigned long inTick) { this->Set(EeNetCommsField::LastTickReceived, inTick); }
+    void SetNumHumanPlayers(unsigned char inNumHumanPlayers) { this->Set(EeNetCommsField::NumHumanPlayers, inNumHumanPlayers); }
+    void SetNumberOfCTsProcessedInPhysics(unsigned long inNumber) { this->Set(EeNetCommsField::CtsProcessed, inNumber); }
+    void SetPlayerNumber(unsigned long inPlayerNumber) { this->Set(EeNetCommsField::PlayerNumber, inPlayerNumber); }
 protected:
-    void SetIsGamePaused(bool inIsGamePaused) { this->mIsGamePaused = inIsGamePaused; }
     // the calls out of the lag simulator and the recorder (ee_net's EeNetQOp) that do not reach their owner: the
     // clock, events, threads, floating-point control, messages and record files (the owner answers Deliver)
     static ptrdiff_t QueueHostCommon(EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
 
-    long mLastTickReceived;                 // +0x04 (-2 at construction) the last tick received (accessor names)
-    TSCriticalSection* mDebugInfoLock;      // +0x08
-    unsigned long mPlayerNumber;            // +0x0c the player number (accessor names)
-    volatile unsigned long mNumberOfCTsProcessedInPhysics;   // +0x10 (volatile: the increment is load/inc/store)
-    unsigned long mAveragePhysicsUpdateTime;  // +0x14 the average physics update time (accessor names)
-    unsigned long mAverageTimeBetweenPhysicsTicks;  // +0x18 the average time between physics ticks (accessor names)
-    unsigned long mLastReceiveBytes;        // +0x1c protocol 0's byte count at the last GetCurrentReceiveBytesPerSec
-    unsigned long mLastReceiveTime;         // +0x20
-    unsigned long mLastSendBytes;           // +0x24
-    unsigned long mLastSendTime;            // +0x28
-    unsigned char mNumHumanPlayers;         // +0x2c
-    bool mIsGamePaused;                     // +0x2d
-    bool mIsMultiplayerSession;             // +0x2e
+    EeNetComms* mComms;                     // the fields (the subclass hands them to its Rust server or client)
+
+private:
+    NESynchronousCommunications(const NESynchronousCommunications&);
+    NESynchronousCommunications& operator=(const NESynchronousCommunications&);
+    uint32_t Get(EeNetCommsField inField) const { return ee_net_comms_get(this->mComms, inField); }
+    void Set(EeNetCommsField inField, unsigned long inValue) { ee_net_comms_set(this->mComms, inField, (uint32_t)inValue); }
 };
 
 #endif
