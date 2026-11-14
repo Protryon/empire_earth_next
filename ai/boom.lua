@@ -560,6 +560,22 @@ function M.step(view, memory)
         for _, e in ipairs(view.enemies or {}) do
             memory.cit_seen = math.max(memory.cit_seen, e.citizens_seen or 0)
         end
+        if (BO.OPT.cit_parity or BO.OPT.army_parity) and view.time - (memory.parity_seen_t or -300000) >= 300000 then
+            memory.parity_seen_t = view.time
+            local parts = {}
+            for _, e in ipairs(view.enemies or {}) do
+                parts[#parts + 1] = string.format("p%d:cit=%d,army=%d,last=%d", e.player, e.citizens_seen or -1,
+                    e.seen_army or -1, (e.last_seen or 0) // 1000)
+            end
+            print("parity seen " .. table.concat(parts, " "))
+        end
+        -- (BO.OPT.cit_grow: scouting sees the enemy town only in passing, citizens_seen 0-12 all game against the Lua
+        -- classic's 140-180, so cit_parity never fires; the owner's income parity without the sighting) the developed
+        -- Stone town and the Copper town grow on to CIT_GROW[phase], the citizens past the plan trained from the food
+        -- above the reserve as citizens_max already is
+        if BO.OPT.cit_grow and BO.CIT_GROW[phase] ~= nil and BO.CIT_GROW[phase] > plan.citizens_max then
+            plan.citizens_max = BO.CIT_GROW[phase]
+        end
         if BO.OPT.cit_parity and phase ~= "pre" and phase ~= "stone_start" then
             local want = math.min(memory.cit_seen + BO.CIT_PARITY_MARGIN, BO.CIT_PARITY_MOST)
             if want > plan.citizens_max then
