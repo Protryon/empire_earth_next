@@ -1,7 +1,8 @@
 // Low-Level Engine\Sound Engine\Mixer\Mixer.cpp
 // The sound mixer plug-in's shim (' snd'). The mixing and the sample/channel logic are Rust
-// (rust/crates/ee_mixer); this file keeps the miniaudio device and decoder, the SESample access Rust needs, and the
-// SPIM entry points the engine looks up by name.
+// (rust/crates/ee_mixer); this file keeps the miniaudio device and decoder and the SPIM entry points the engine
+// looks up by name. The samples are Rust's (rust/crates/ee_sound objects.rs, which also serves ee_mixer's
+// ee_mixer_host_* sample access).
 #include <windows.h>
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
@@ -33,57 +34,6 @@ static HWND gWindowHandle;
 static ma_context gContext;
 static ma_device gDevice;
 static std::string gOutputDevice;
-
-// ---- what Rust needs from the C++ SESample
-
-extern "C" uint32_t ee_mixer_host_mixer_channel(void* inSample)
-{
-    return (uint32_t)static_cast<SESample*>(inSample)->GetMixerChannel();
-}
-extern "C" void ee_mixer_host_set_mixer_channel(void* inSample, uint32_t inChannel)
-{
-    static_cast<SESample*>(inSample)->SetMixerChannel(inChannel == 0xffffffffu ? (unsigned long)-1 : inChannel);
-}
-extern "C" const void* ee_mixer_host_data(void* inSample)
-{
-    return static_cast<SESample*>(inSample)->GetData();
-}
-extern "C" void ee_mixer_host_set_data(void* inSample, const void* inData)
-{
-    static_cast<SESample*>(inSample)->SetData(const_cast<void*>(inData));
-}
-extern "C" bool ee_mixer_host_is_looping(void* inSample)
-{
-    return static_cast<SESample*>(inSample)->GetIsLooping();
-}
-extern "C" float ee_mixer_host_pan(void* inSample)
-{
-    return static_cast<SESample*>(inSample)->GetPan();
-}
-extern "C" float ee_mixer_host_pitch(void* inSample)
-{
-    return static_cast<SESample*>(inSample)->GetPitch();
-}
-extern "C" float ee_mixer_host_volume(void* inSample)
-{
-    return static_cast<SESample*>(inSample)->GetVolume();
-}
-extern "C" void ee_mixer_host_set_is_looping(void* inSample, bool inLooping)
-{
-    static_cast<SESample*>(inSample)->SetTheIsLooping(inLooping);
-}
-extern "C" void ee_mixer_host_set_pan(void* inSample, float inPan)
-{
-    static_cast<SESample*>(inSample)->SetThePan(inPan);
-}
-extern "C" void ee_mixer_host_set_pitch(void* inSample, float inPitch)
-{
-    static_cast<SESample*>(inSample)->SetThePitch(inPitch);
-}
-extern "C" void ee_mixer_host_set_volume(void* inSample, float inVolume)
-{
-    static_cast<SESample*>(inSample)->SetTheVolume(inVolume);
-}
 
 // ---- the device and the decoder (miniaudio)
 
@@ -234,7 +184,7 @@ extern "C" void SPIMDeleteWaveData(SESample* inSample)
 extern "C" long SPIMDuplicateSample(SESample* inSample, SESample** outSample)
 {
     void* theWaveData = inSample->GetData();
-    SESample* theSample = new SESample(*inSample);
+    SESample* theSample = SESample::Duplicate(*inSample);
     if (theWaveData)   // the original sample's wave did not load: the copy is silent too
         ee_mixer_sample_reference(theWaveData);
     theSample->SetData(theWaveData);
