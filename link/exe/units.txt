@@ -262,16 +262,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 17ef10 181792 Empire Earth/Scenario Editor/EESETSConditionType.cpp
 181792 182629 Empire Earth/Scenario Editor/EESETSEComboBox.cpp
 182629 182dda Empire Earth/Scenario Editor/EESETSEffect.cpp
-182dda 1843c7 Empire Earth/Scenario Editor/EESETSETAI.cpp
-1843c7 185d31 Empire Earth/Scenario Editor/EESETSETGame.cpp
-185d31 185f75 Empire Earth/Scenario Editor/EESETSETLogObject.cpp
-185f75 185fed Empire Earth/Scenario Editor/EESETSETMaintainObject.cpp
-185fed 186e1f Empire Earth/Scenario Editor/EESETSETMedia.cpp
-186e1f 18849c Empire Earth/Scenario Editor/EESETSETMSDCameraScrollChange.cpp
-18849c 189904 Empire Earth/Scenario Editor/EESETSETObject.cpp
-189904 18c72e Empire Earth/Scenario Editor/EESETSETPlayer.cpp
-18c72e 18e4a4 Empire Earth/Scenario Editor/EESETSETSAAAttributeChange.cpp
-18e4a4 18efb7 Empire Earth/Scenario Editor/EESETSETSetObjectStance.cpp
 18efb7 19393b Empire Earth/Scenario Editor/EESETSObject.cpp
 19393b 196ebe Empire Earth/Scenario Editor/EESETSTrigger.cpp
 196ebe 197261 Empire Earth/Scenario Editor/EESETSUICBPlayer.cpp
