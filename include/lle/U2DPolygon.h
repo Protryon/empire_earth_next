@@ -4,11 +4,6 @@
 
 #include "lle/U2DRectangle.h"
 
-#ifndef LLE_EXE_HEADERS   // the exe has one U2DPolygon-PointCount key chain (0x1160, its first unit), not one per
-                          // includer (EECPILocation.cpp has only its own chain)
-const UString kU2DPolygonPointCountKey("U2DPolygon-PointCount");
-#endif
-
 // Engine templates in the original (GETerrainMesh.cpp instantiated U2DPolygon<float>/U2DConvexHull<float>: vtables
 // 0x10098010, 0x1009804c; the exe U2DPolygon<long>/U2DConvexHull<long>: EEAIArea::mHull, U2DPolygon<long> ctor
 // 0x11251, Contains 0xd16e). Slot order from the vtables; member names are provisional (no export names them).

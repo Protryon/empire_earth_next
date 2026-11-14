@@ -9,8 +9,8 @@ use ee_ge::types::Ge3DPoint;
 
 use crate::effect_state::{
     self, DamagedHost, EeGfxAmbientNew, EeGfxDamagedTick, EeGfxEffectLists, EeGfxEffectLoaded, EeGfxEffectPart,
-    EeGfxEffectRecord, EeGfxEmitterBurst, EeGfxEmitterMove, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxPlumeTick,
-    EeGfxSmokeSetUp, EeGfxSmokeTick, EffectFile, EffectParts, EmitterHost, ParticleGround, SmokeHost,
+    EeGfxEffectRecord, EeGfxEmitterBurst, EeGfxEmitterMove, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxSmokeSetUp,
+    EeGfxSmokeTick, EffectFile, EffectParts, EmitterHost, ParticleGround, SmokeHost,
 };
 use crate::effect_storm::{self, EeGfxStormDraw, EeGfxStormLists, StormHost};
 
@@ -394,68 +394,6 @@ pub unsafe extern "C" fn ee_gfx_effect_smoke_set_up(
     unsafe {
         let local = r.read();
         effect_state::smoke_set_up(&local, &*setup, &mut Host(&*host))
-    }
-}
-
-/// `EEE2DSmokePlume`'s constructor at a point (its draws; `velocity`: the velocity particle's, else zero).
-///
-/// # Safety
-/// `r` is a live record; the points are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_plume_new(
-    r: *mut EeGfxEffectRecord,
-    start: *const Ge3DPoint,
-    param1: f32,
-    param2: f32,
-    velocity: *const Ge3DPoint,
-) {
-    // SAFETY: the function's contract
-    unsafe {
-        let (s, v) = (*start, *velocity);
-        on_copy(r, |r| effect_state::plume_new(r, s, param1, param2, v))
-    }
-}
-
-/// `EEE2DSmokePlume::Step` (both kinds): 7 when it ends; `moved`: the C++ sets the effect's position to the point.
-///
-/// # Safety
-/// `r` is a live record; `tick` and `moved` are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_plume_step(
-    r: *mut EeGfxEffectRecord,
-    tick: *const EeGfxPlumeTick,
-    moved: *mut bool,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let t = *tick;
-        let mut m = false;
-        let res = on_copy(r, |r| effect_state::plume_step(r, &t, &mut m));
-        *moved = m;
-        res
-    }
-}
-
-/// `EEE2DSmokePlume::Load`'s own reads (and the velocity particle's velocity).
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_load_plume(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_state::load_plume(r, &mut File(&*file))) }
-}
-
-/// `EEE2DSmokePlume::Save`'s own writes.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_save_plume(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let local = r.read();
-        effect_state::save_plume(&local, &mut File(&*file))
     }
 }
 
@@ -853,50 +791,6 @@ pub unsafe extern "C" fn ee_gfx_effect_timed_step(
     }
 }
 
-/// The aged effects' `Step`: 7 when it ends; the ripple's `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`.
-///
-/// # Safety
-/// `r` is a live record; `tile` has room for two.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_aged_step(
-    r: *mut EeGfxEffectRecord,
-    tick_seconds: f32,
-    duration: u32,
-    tile: *mut i32,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let mut t = [0i32; 2];
-        let res = on_copy(r, |r| effect_state::aged_step(r, tick_seconds, duration, &mut t));
-        *tile = t[0];
-        *tile.add(1) = t[1];
-        res
-    }
-}
-
-/// The aged effects' own Load reads.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_load_aged(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_state::load_aged(r, &mut File(&*file))) }
-}
-
-/// The aged effects' own Save writes.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_save_aged(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let local = r.read();
-        effect_state::save_aged(&local, &mut File(&*file))
-    }
-}
-
 /// `EEEffect::GetRandom`.
 #[no_mangle]
 pub extern "C" fn ee_gfx_effect_random() -> f32 {
@@ -1273,13 +1167,15 @@ pub unsafe extern "C" fn ee_gfx_effect2d_file(
     op: crate::effect_rising::EeGfxEffect3DOp,
     r: *mut EeGfxEffectRecord,
     file: *const EeGfxEffectFile,
+    major: u32,
+    minor: u32,
     host: *const crate::effect_2d::EeGfxEffect2DHost,
 ) -> i32 {
     // SAFETY: the function's contract; the record is a copy while Rust reads or writes it (the host's media load
     // does not read it)
     unsafe {
         let mut h = &*host;
-        on_copy(r, |r| crate::effect_2d::effect2d_file(op, r, &mut File(&*file), &mut h))
+        on_copy(r, |r| crate::effect_2d::effect2d_file(op, r, &mut File(&*file), major, minor, &mut h))
     }
 }
 

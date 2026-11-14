@@ -27,12 +27,10 @@ public:
                             GEModel* inParent);
     void DumpAllLoadedMedia(FSFileSpec& inFile);
     unsigned long GetMemoryFootprint();     // exported, ICF-folded (0x10040123); the sum of the cached models' SizeOf()
-    unsigned long GetModelCount();          // exported, ICF-folded (0x10044c71)
     GEModel* LoadModel(const UString& inName, std::map<unsigned long, long>& ioTextures);
     long RemoveAllModels();
     long RemoveModel(GEModel* inModel);
     void SetModelPath(FSPath* inPath);
-    void VerifyModels();
 private:
     // the calls the Rust object makes on other objects (GEModelManager.cpp)
     static intptr_t Host(void* inOwner, EeGeManOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);

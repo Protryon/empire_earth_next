@@ -65,16 +65,6 @@ public:
         theRegions.mTop = inTiles.mTop / this->mRegionSize;
         return theRegions;
     }
-    // 0x6bf74 (ret 0xc; COMDAT in EECPBuildManager.cpp's range; defined below the class, never expanded): the values in
-    // the regions under inTiles, sorted with inLess and without duplicates (EECPBuildManager 0x67e10, EECPCombatManager
-    // Update 0x47219a; the third argument is the sort predicate: its byte is pushed by value to sort 0xe181)
-    // (provisional name)
-    void CollectValues(const U2DRectangle<long>& inTiles, std::vector<T>& outValues, const std::less<T>& inLess);
-    // 0x6c76b (ret 8): every value in the regions under inTiles, last region and last value first (provisional name)
-    void GetValues(const U2DRectangle<long>& inTiles, std::vector<T>& outValues);
-    // 0x6d0b5 (ret 8): the regions under inTiles (the corners through U2DRectangle's GetTopLeft / GetBottomRight)
-    // (provisional name)
-    void GetRegions(const U2DRectangle<long>& inTiles, std::vector<RTSRegion<T>*>& outRegions);
     void Add(unsigned long inX, unsigned long inY, const T& inValue)
     {
         RTSRegion<T>* theRegion = this->GetRegion(inX, inY);
@@ -88,50 +78,5 @@ public:
     unsigned long mRegionsX;                // +0x10 (unsigned: `jae` in GetRegion)
     unsigned long mRegionsY;                // +0x14
 };
-
-// out of line (never expanded: COMDATs 0x6bf74 / 0x6c76b / 0x6d0b5 in EECPBuildManager.cpp's range)
-template <class T>
-void RTSRegionTable<T>::CollectValues(const U2DRectangle<long>& inTiles, std::vector<T>& outValues, const std::less<T>& inLess)
-{
-    this->GetValues(inTiles, outValues);
-    std::sort(outValues.begin(), outValues.end(), inLess);
-    std::vector<T>::iterator it = std::unique(outValues.begin(), outValues.end());
-    if (it != outValues.end())
-        outValues.erase(it, outValues.end());
-}
-template <class T>
-void RTSRegionTable<T>::GetValues(const U2DRectangle<long>& inTiles, std::vector<T>& outValues)
-{
-    std::vector<RTSRegion<T>*> theRegions;
-    outValues.clear();
-    this->GetRegions(inTiles, theRegions);
-    for (long i = theRegions.size() - 1; i >= 0; i--) {
-        RTSRegion<T>* theRegion = theRegions[i];
-        for (long j = theRegion->size() - 1; j >= 0; j--)
-            outValues.push_back((*theRegion)[j]);
-    }
-}
-template <class T>
-void RTSRegionTable<T>::GetRegions(const U2DRectangle<long>& inTiles, std::vector<RTSRegion<T>*>& outRegions)
-{
-    long theMinX = inTiles.GetTopLeft().mX / this->mRegionSize;
-    long theMinY = inTiles.GetTopLeft().mY / this->mRegionSize;
-    long theMaxX = inTiles.GetBottomRight().mX / this->mRegionSize;
-    long theMaxY = inTiles.GetBottomRight().mY / this->mRegionSize;
-    if (theMinX <= 0)
-        theMinX = 0;
-    if (theMinY <= 0)
-        theMinY = 0;
-    long theCount = (theMaxY - theMinY) * (theMaxX - theMinX);
-    if (theCount > 0)
-        outRegions.reserve(theCount);
-    for (long x = theMinX; x <= theMaxX; x++) {
-        for (long y = theMinY; y <= theMaxY; y++) {
-            RTSRegion<T>* theRegion = this->GetRegion(x, y);
-            if (theRegion)
-                outRegions.push_back(theRegion);
-        }
-    }
-}
 
 #endif

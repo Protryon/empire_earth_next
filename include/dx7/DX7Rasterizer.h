@@ -196,12 +196,6 @@ protected:
                                      unsigned long inScreen);                               // slot 0x140
     virtual long GetVideoMemory(unsigned long inScreen, unsigned long& outTotal, unsigned long& outFree);   // 0x144
 
-    float ComputePolyAreaOfCurrentVB(unsigned long inScreen);
-    void ConvertToD3DMatrix(const GETransformation& inTransformation, GXMATRIX& outMatrix);
-    void CopyAndSmoothStdColorVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices);
-    void CopyAndSmoothStdVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices);
-    void CopyStdColorVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices);
-    void CopyStdVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices);
     long LockVB(unsigned long inCount, unsigned long inScreen, GXVERTEX_STD_COLOR*& outVertices);
     long Set2DMode(unsigned long inScreen);
     long Set3DMode(unsigned long inScreen);

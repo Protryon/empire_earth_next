@@ -52,7 +52,6 @@ public:
     void UpdateSelection();                 // 0x192ad3 (EESEEObjectDetail; resizes mUnitIDs to the editor's selection)
     void CheckChanged(UIEntity* inCheckBox);    // 0x192ee0 (EESEEObjectCheck: the check box, by its id 0x846..)
 
-    unsigned long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<unsigned long> mUnitIDs;    // +0x0c (0x192b39 resizes it to the editor's mSelectedUnits and copies the
                                             // units' mUnitID)
     std::vector<unsigned long> mUnitTypes;  // +0x1c (Virtual20: 0, then the unit classes of the type combo box)

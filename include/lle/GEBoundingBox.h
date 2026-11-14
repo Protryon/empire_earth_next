@@ -35,8 +35,6 @@ public:
     bool Intersects(const GE3DLine& inLine, float& outDistance) const;
     long Load(FSFileSpec& inFile);
     long Save(FSFileSpec& inFile);
-    void SetBottomLeftFront(const GE3DPoint& inPoint) { this->mBottomLeftFront = inPoint; this->ComputeDimensions(); }
-    void SetTopRightBack(const GE3DPoint& inPoint) { this->mTopRightBack = inPoint; this->ComputeDimensions(); }
     void Transform(const GETransformation& inTransformation, GEBoundingBox& outBox) const;
 private:
     friend struct GERustLayout;             // the Rust mirror's layout check (Graphics Engine/GERustMath.h)

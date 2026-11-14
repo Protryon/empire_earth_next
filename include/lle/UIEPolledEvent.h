@@ -13,7 +13,6 @@ class LLE_API UIEPolledEvent : public UIEvent {
 public:
     UIEPolledEvent(unsigned long inInterval);
     virtual ~UIEPolledEvent();
-    TMPoll* GetTimer() const { return this->mPoll; }  // exported, ICF-folded (0x4495)
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
 protected:
     virtual long ProcessPolledEvent(UIForm* inForm, UIEntity* inEntity) = 0;   // slot 0x10 (provisional name)

@@ -1,7 +1,11 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GERasterizer.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// (Unit notes follow GERasterizer::GERasterizer: its ESVERIFY is the original's line 41.)
+//
+// GERasterizer's base state is whole in Rust (rust/crates/ee_ge rastobj.rs, R4.3 part 12): the members, the screen
+// records, the statics and every method below. The class keeps its vtable (the plug-in's base) and one member,
+// mRust; the methods forward, and GERasterizerHost makes the calls on other objects Rust asks for.
 #include <windows.h>
+#include <stddef.h>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -31,67 +35,108 @@
 #include "lle/GEText.h"
 #include "lle/GEModel.h"
 #include "lle/GEPhysicalModel.h"
+#include "rust/ee_ge.h"
+#include "GERustMath.h"
+#include "GERustViewport.h"
 
-std::vector<GERasterizer*> GERasterizer::sRasterizers;
-std::vector<GERasterizer::TransformStack> GERasterizer::sTransformStack;
-GERasterizer* GERasterizer::sActiveRasterizer = NULL;
-// FUNCTION: LLE 0x10023807
-// Creates a rasterizer with its drawing lock and a white-on-black Arial 9 debug text, not yet activated
-GERasterizer::GERasterizer(const UString& inName) : mName(inName)
+// The screen record is the Rust record (the plug-in reads its fields through GetScreenState).
+static_assert(sizeof(GERScreenState) == sizeof(EeGeRastScreen), "GERScreenState is EeGeRastScreen");
+static_assert(offsetof(GERScreenState, mFog) == offsetof(EeGeRastScreen, fog), "mFog");
+static_assert(offsetof(GERScreenState, mScreen) == offsetof(EeGeRastScreen, screen), "mScreen");
+static_assert(offsetof(GERScreenState, mAlphaTestingRefValue) == offsetof(EeGeRastScreen, alpha_testing_ref_value), "ref");
+static_assert(offsetof(GERScreenState, mAlphaTesting) == offsetof(EeGeRastScreen, alpha_testing), "mAlphaTesting");
+static_assert(offsetof(GERScreenState, mZCompare) == offsetof(EeGeRastScreen, z_compare), "mZCompare");
+static_assert(offsetof(GERScreenState, m32C) == offsetof(EeGeRastScreen, counters), "m32C");
+static_assert(offsetof(GERScreenState, mWaitForVSync) == offsetof(EeGeRastScreen, wait_for_vsync), "mWaitForVSync");
+static_assert(sizeof(GERFogAttributes) == sizeof(EeGeRastFog) && sizeof(GEColor) == sizeof(EeGeRastColor), "fog");
+
+static intptr_t GEFloatBits(float inValue)
 {
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mDrawingAccess) == keseOK, 41);
-    this->mDebugFont = new GEFont("Arial Bold", 9, 0, kFontQualityAntialiased);
-    this->mDebugText = new GEText(this->mDebugFont);
-    this->mDebugText->SetAlignment(kTextAlignLeft);
-    this->mDebugText->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
-    this->mDebugText->SetBgColor(GEColor(0.0f, 0.0f, 0.0f));
-    this->mDebugText->SetFont(this->mDebugFont);
-    this->mDebugText->SetIsTransparent(false);
-    this->mDebugText->SetLocation(0.0f, 0.0f);
-    this->mIsActivated = false;
-    this->mIsPolyAreaProfiling = false;
-    this->mCulling = kCullCCW;
-    this->mScreenID = 1;
-    this->mWaterRipple0 = 0.0f;
-    this->mWaterRipple1 = 0.0f;
-    this->mWaterRipple2 = 0.0f;
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
 }
 
-// 0x10023655..0x100246a7: the U2D key init chains (U2DPoint.h, U2DRectangle.h), sRasterizers' and sTransformStack's
-// init chains (dtors share one guard byte), the GERasterizer members with the inline COMDATs each pulls in right
-// after it (GEText's scalar deleting dtor, GERScreenState's ctor/dtor, GERFogAttributes' ctor), then the
-// vector<GERScreenState*>::push_back / vector<TransformStack>::_Buy COMDATs and the template-static init wrapper
-// (three UList sNodePool $D calls kept in GEBoundingBox.cpp, plus this unit's atexit registrars). The accessors are
-// header-inline (GEBitmap.cpp emits them).
-// GERasterizer::TransformStack is defined in GERasterizer.h (its layout is proven by the DX7 plug-in's
-// DrawModelHierarchy). The ESVERIFY is the original's line 41.
+static float GEBitsFloat(intptr_t inBits)
+{
+    uint32_t theBits = (uint32_t)inBits;
+    float theValue;
+    memcpy(&theValue, &theBits, 4);
+    return theValue;
+}
 
-// The original calls GEText's scalar deleting dtor out of line (0x1002398a, ~GEText inlined into it): that needs
-// ~GEText inline in GEText.h (its exported COMDAT 0x1001337b sits in GEBoundingBox.cpp's inline block)
+// The calls the Rust rasterizer makes on other objects (EeGeRastOp), in the original's order.
+struct GERasterizerHost {
+    static intptr_t Call(void* inOwner, EeGeRastOp inOp, void* inObj, intptr_t a, intptr_t b)
+    {
+        GEModel* theModel = static_cast<GEModel*>(inObj);
+        const GEPhysicalModel* thePlaced = static_cast<const GEPhysicalModel*>(inObj);
+        GEText* theText = static_cast<GEText*>(inObj);
+        switch (inOp) {
+        case EeGeRastOp::NameNew: return (intptr_t) new UString(*reinterpret_cast<const UString*>(a));
+        case EeGeRastOp::NameDelete: delete static_cast<UString*>(inObj); return 0;
+        case EeGeRastOp::LockCreate: return TSScheduler::CreateCriticalSection(*reinterpret_cast<TSCriticalSection**>(a));
+        case EeGeRastOp::LockDestroy: TSScheduler::DestroyCriticalSection(static_cast<TSCriticalSection*>(inObj)); return 0;
+        case EeGeRastOp::Verify: ESVERIFY_AT(a != 0, (unsigned long)b); return 0;
+        case EeGeRastOp::FontNew: return (intptr_t) new GEFont("Arial Bold", 9, 0, kFontQualityAntialiased);
+        case EeGeRastOp::FontDereference: static_cast<GEFont*>(inObj)->Dereference(); return 0;
+        case EeGeRastOp::TextNew: return (intptr_t) new GEText(reinterpret_cast<GEFont*>(a));
+        case EeGeRastOp::TextDelete: delete theText; return 0;
+        case EeGeRastOp::TextSetAlignment: theText->SetAlignment((unsigned long)a); return 0;
+        case EeGeRastOp::TextSetFgColor: theText->SetFgColor(*reinterpret_cast<const GEColor*>(a)); return 0;
+        case EeGeRastOp::TextSetBgColor: theText->SetBgColor(*reinterpret_cast<const GEColor*>(a)); return 0;
+        case EeGeRastOp::TextSetFont: theText->SetFont(reinterpret_cast<GEFont*>(a)); return 0;
+        case EeGeRastOp::TextSetIsTransparent: theText->SetIsTransparent(a != 0); return 0;
+        case EeGeRastOp::TextSetLocation: theText->SetLocation(GEBitsFloat(a), GEBitsFloat(b)); return 0;
+        case EeGeRastOp::ActivateRasterizer: return static_cast<GERasterizer*>(inOwner)->ActivateRasterizer();
+        case EeGeRastOp::FontBitmapNew:
+            new GEFontBitmap(static_cast<GERasterizer*>(inOwner), reinterpret_cast<GEFont*>(a), (unsigned long)b);
+            return 0;
+        case EeGeRastOp::SurfaceDereference: static_cast<GESurface*>(inObj)->Dereference(); return 0;
+        case EeGeRastOp::TextureDereference: static_cast<GETexture*>(inObj)->Dereference(); return 0;
+        case EeGeRastOp::ModelCenter: *reinterpret_cast<GE3DPoint*>(a) = theModel->GetCenterPoint(); return 0;
+        case EeGeRastOp::ModelBoundingRadius: return GEFloatBits(theModel->GetBoundingRadius((unsigned long)a));
+        case EeGeRastOp::ModelGraphicsRadius: return GEFloatBits(theModel->GetGraphicsBoundingRadius());
+        case EeGeRastOp::ModelGraphicsBox: *reinterpret_cast<GEBoundingBox*>(a) = theModel->GetGraphicsBoundingBox(); return 0;
+        case EeGeRastOp::ModelSetClip: theModel->SetClipToPlane((unsigned long)a, b != 0); return 0;
+        case EeGeRastOp::ModelInternalTransform:
+            *reinterpret_cast<GETransformation*>(b) = theModel->GetInternalTransform((unsigned long)a);
+            return 0;
+        case EeGeRastOp::PlacedScale: return GEFloatBits(thePlaced->GetScale());
+        case EeGeRastOp::PlacedFrame: return (intptr_t)thePlaced->GetFrame();
+        case EeGeRastOp::PlacedModel: return (intptr_t)thePlaced->GetModel();
+        case EeGeRastOp::PlacedLocation: *reinterpret_cast<GETransformation*>(a) = thePlaced->GetLocation(); return 0;
+        default: return 0;
+        }
+    }
+};
+
+// FUNCTION: LLE 0x10023807
+// Creates a rasterizer with its drawing lock and a white-on-black Arial 9 debug text, not yet activated
+GERasterizer::GERasterizer(const UString& inName)
+{
+    this->mRust = ee_ge_rast_new(&GERasterizerHost::Call, this, &inName);
+}
+
 // FUNCTION: LLE 0x10023950
 // Destroys the rasterizer, releasing the debug font and text and its drawing lock
 GERasterizer::~GERasterizer()
 {
-    this->mDebugFont->Dereference();
-    delete this->mDebugText;
-    TSScheduler::DestroyCriticalSection(this->mDrawingAccess);
+    ee_ge_rast_destroy(this->mRust);
 }
 
 // FUNCTION: LLE 0x100239b1
 // Activates the rasterizer and makes it the active one on success (no active rasterizer on failure)
 long GERasterizer::Activate()
 {
-    long theResult = this->ActivateRasterizer();
-    this->mIsActivated = theResult == kErrorOK;
-    GERasterizer::sActiveRasterizer = this->mIsActivated ? this : NULL;
-    return theResult;
+    return (long)ee_ge_rast_activate(this->mRust);
 }
 
 // FUNCTION: LLE 0x100239d2
 // Adds a render state block for another screen; always succeeds
 long GERasterizer::AddValidScreen(GEScreen* inScreen)
 {
-    this->mScreenStates.push_back(new GERScreenState(inScreen));
+    ee_ge_rast_add_screen(this->mRust, inScreen);
     return kErrorOK;
 }
 
@@ -99,7 +144,7 @@ long GERasterizer::AddValidScreen(GEScreen* inScreen)
 // Creates a font bitmap of the font for the given screen (the bitmap registers itself); always succeeds
 long GERasterizer::CreateFontBitmap(GEFont* inFont, unsigned long inScreen)
 {
-    new GEFontBitmap(this, inFont, inScreen);
+    ee_ge_rast_create_font_bitmap(this->mRust, inFont, inScreen);
     return kErrorOK;
 }
 
@@ -107,12 +152,7 @@ long GERasterizer::CreateFontBitmap(GEFont* inFont, unsigned long inScreen)
 // Deactivates the rasterizer: deletes every screen's render state and clears the active rasterizer
 long GERasterizer::Deactivate()
 {
-    unsigned long i;
-    for (i = 0; i < this->mScreenStates.size(); i++)
-        delete this->mScreenStates[i];
-    this->mScreenStates.clear();
-    GERasterizer::sActiveRasterizer = NULL;
-    this->mIsActivated = false;
+    ee_ge_rast_deactivate(this->mRust);
     return kErrorOK;
 }
 
@@ -121,85 +161,14 @@ long GERasterizer::Deactivate()
 float GERasterizer::GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation,
                                  float inScale, bool inOrthographic)
 {
-    GE3DPoint theCameraPoint;
-    GE3DPoint thePoint;
-    float theW;
-    float theRadius;
-    float theX;
-    float theLeft;
-    float theWidth;
-
-    inTransformation.Apply(inModel->GetCenterPoint(), thePoint);
-    inViewport->GetCameraInverse().Apply(thePoint, theCameraPoint);
-    theRadius = inModel->GetBoundingRadius(0) * inScale;
-    theX = theCameraPoint.GetX();
-    theCameraPoint.SetX(theX - theRadius);
-    if (!inOrthographic) {
-        inViewport->NormalizePerspectiveCameraPoint(theCameraPoint, thePoint, theW);
-        theLeft = (theW != 0.0f) ? thePoint.GetX() / theW : 0.0f;
-        theCameraPoint.SetX(theX + theRadius);
-        inViewport->NormalizePerspectiveCameraPoint(theCameraPoint, thePoint, theW);
-        theWidth = (theW != 0.0f) ? thePoint.GetX() / theW - theLeft : 0.0f;
-    } else {
-        inViewport->NormalizeOrthographicCameraPoint(theCameraPoint, thePoint, theW);
-        theLeft = thePoint.GetX();
-        theCameraPoint.SetX(theX + theRadius);
-        inViewport->NormalizeOrthographicCameraPoint(theCameraPoint, thePoint, theW);
-        theWidth = thePoint.GetX() - theLeft;
-    }
-    if (theWidth >= 0.0f)
-        theWidth *= inViewport->GetHalfWidth();
-    else
-        theWidth = inViewport->GetHalfWidth() * 2.0f;
-    return theWidth;
+    return ee_ge_rast_pixel_size(this->mRust, inModel, GERust(*inViewport), GERust(inTransformation), inScale, inOrthographic);
 }
 
 // FUNCTION: LLE 0x10023cde
 // Returns a placed model's on-screen width in pixels, from its location, frame and scale
 float GERasterizer::GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic)
 {
-    GE3DPoint theCameraPoint;
-    GE3DPoint thePoint;
-    float theW;
-    float theScale = inModel.GetScale();
-    unsigned long theFrame = inModel.GetFrame();
-    GEModel* theModel = inModel.GetModel();
-    float theRadius;
-    float theX;
-    float theLeft;
-    float theWidth;
-    GETransformation theTransformation(false);
-
-    inModel.GetLocation().Apply(theModel->GetInternalTransform(theFrame), theTransformation);
-    if (theScale != 1.0f) {
-        theTransformation.Scale(theScale, theScale, theScale);
-        theTransformation.SetX(inModel.GetLocation().GetX());
-        theTransformation.SetY(inModel.GetLocation().GetY());
-        theTransformation.SetZ(inModel.GetLocation().GetZ());
-    }
-    theTransformation.Apply(theModel->GetCenterPoint(), thePoint);
-    inViewport.GetCameraInverse().Apply(thePoint, theCameraPoint);
-    theRadius = theModel->GetBoundingRadius(theFrame) * theScale;
-    theX = theCameraPoint.GetX();
-    theCameraPoint.SetX(theX - theRadius);
-    if (!inOrthographic) {
-        inViewport.NormalizePerspectiveCameraPoint(theCameraPoint, thePoint, theW);
-        theLeft = (theW != 0.0f) ? thePoint.GetX() / theW : 0.0f;
-        theCameraPoint.SetX(theX + theRadius);
-        inViewport.NormalizePerspectiveCameraPoint(theCameraPoint, thePoint, theW);
-        theWidth = (theW != 0.0f) ? thePoint.GetX() / theW - theLeft : 0.0f;
-    } else {
-        inViewport.NormalizeOrthographicCameraPoint(theCameraPoint, thePoint, theW);
-        theLeft = thePoint.GetX();
-        theCameraPoint.SetX(theX + theRadius);
-        inViewport.NormalizeOrthographicCameraPoint(theCameraPoint, thePoint, theW);
-        theWidth = thePoint.GetX() - theLeft;
-    }
-    if (theWidth >= 0.0f)
-        theWidth *= inViewport.GetHalfWidth();
-    else
-        theWidth = inViewport.GetHalfWidth() * 2.0f;
-    return theWidth;
+    return ee_ge_rast_placed_pixel_size(this->mRust, &inModel, GERust(inViewport), inOrthographic);
 }
 
 // FUNCTION: LLE 0x10023e6f
@@ -207,77 +176,8 @@ float GERasterizer::GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inV
 void GERasterizer::IsOrthographicModelVisible(GEModel* inModel, GEViewport* inViewport,
                                               GETransformation& inTransformation, bool& outVisible, bool& outClipped)
 {
-    GEBoundingBox theBox;
-    float theFront = inViewport->GetFrontClippingDistance();
-    float theRear = inViewport->GetRearClippingDistance();
-    GETransformation theTransformation(false);
-
-    outVisible = true;
-    outClipped = false;
-    inViewport->GetCameraInverse().Apply(inTransformation, theTransformation);
-    inModel->GetGraphicsBoundingBox().Transform(theTransformation, theBox);
-    GERectangle theRectangle;
-    theRectangle = inViewport->GetOrthographicRectangle();
-    float theLeft = theRectangle.GetLeft();
-    float theRight = theRectangle.GetRight();
-    float theYClippingPlane = -inViewport->GetYClippingPlane();
-    float theTop = theRectangle.GetTop() * theYClippingPlane;
-    float theBottom = theRectangle.GetBottom() * theYClippingPlane;
-
-    if (theBox.GetTopRightBack().GetY() >= theFront) {
-        if (theBox.GetBottomLeftFront().GetY() >= theFront)
-            inModel->SetClipToPlane(kClipPlaneFront, false);
-        else {
-            inModel->SetClipToPlane(kClipPlaneFront, true);
-            outClipped = true;
-        }
-        if (theBox.GetBottomLeftFront().GetY() <= theRear) {
-            if (theBox.GetTopRightBack().GetY() <= theRear)
-                inModel->SetClipToPlane(kClipPlaneRear, false);
-            else {
-                inModel->SetClipToPlane(kClipPlaneRear, true);
-                outClipped = true;
-            }
-            if (theBox.GetTopRightBack().GetX() >= theLeft) {
-                if (theBox.GetBottomLeftFront().GetX() >= theLeft)
-                    inModel->SetClipToPlane(kClipPlaneLeft, false);
-                else {
-                    inModel->SetClipToPlane(kClipPlaneLeft, true);
-                    outClipped = true;
-                }
-                if (theBox.GetBottomLeftFront().GetX() <= theRight) {
-                    if (theBox.GetTopRightBack().GetX() <= theRight)
-                        inModel->SetClipToPlane(kClipPlaneRight, false);
-                    else {
-                        inModel->SetClipToPlane(kClipPlaneRight, true);
-                        outClipped = true;
-                    }
-                    if (theBox.GetTopRightBack().GetZ() >= theBottom) {
-                        if (theBox.GetBottomLeftFront().GetZ() >= theBottom)
-                            inModel->SetClipToPlane(kClipPlaneBottom, false);
-                        else {
-                            inModel->SetClipToPlane(kClipPlaneBottom, true);
-                            outClipped = true;
-                        }
-                        if (theBox.GetBottomLeftFront().GetZ() <= theTop) {
-                            if (theBox.GetTopRightBack().GetZ() <= theTop)
-                                inModel->SetClipToPlane(kClipPlaneTop, false);
-                            else {
-                                inModel->SetClipToPlane(kClipPlaneTop, true);
-                                outClipped = true;
-                            }
-                        } else
-                            outVisible = false;
-                    } else
-                        outVisible = false;
-                } else
-                    outVisible = false;
-            } else
-                outVisible = false;
-        } else
-            outVisible = false;
-    } else
-        outVisible = false;
+    ee_ge_rast_model_visible(this->mRust, inModel, 1.0f, GERust(*inViewport), GERust(inTransformation), true, &outVisible,
+                             &outClipped);
 }
 
 // FUNCTION: LLE 0x10024007
@@ -285,150 +185,58 @@ void GERasterizer::IsOrthographicModelVisible(GEModel* inModel, GEViewport* inVi
 void GERasterizer::IsPerspectiveModelVisible(GEModel* inModel, float inScale, GEViewport* inViewport,
                                              GETransformation& inTransformation, bool& outVisible, bool& outClipped)
 {
-    float theRadius;
-    GE3DPoint theCenter;
-    GE3DPoint thePoint;
-    GEVector theLeftNormal = inViewport->GetLeftPlane().GetNormal();
-    GEVector theRightNormal = inViewport->GetRightPlane().GetNormal();
-    GEVector theTopNormal = inViewport->GetTopPlane().GetNormal();
-    GEVector theBottomNormal = inViewport->GetBottomPlane().GetNormal();
-    bool theClip;
-    unsigned long theClipCount;
-
-    outVisible = false;
-    outClipped = false;
-    inTransformation.Apply(inModel->GetCenterPoint(), thePoint);
-    inViewport->GetCameraInverse().Apply(thePoint, theCenter);
-    theRadius = inModel->GetGraphicsBoundingRadius() * inScale;
-    theLeftNormal.Scale(theRadius, theLeftNormal);
-    theRightNormal.Scale(theRadius, theRightNormal);
-    theTopNormal.Scale(theRadius, theTopNormal);
-    theBottomNormal.Scale(theRadius, theBottomNormal);
-    if (!(theCenter.GetY() + theRadius >= inViewport->GetFrontClippingDistance()) ||
-        !(theCenter.GetY() - theRadius <= inViewport->GetRearClippingDistance()))
-        return;
-    thePoint.SetX(theCenter.mX + theLeftNormal.GetX());
-    thePoint.SetY(theCenter.mY + theLeftNormal.GetY());
-    thePoint.SetZ(theCenter.mZ + theLeftNormal.GetZ());
-    if (!inViewport->GetLeftPlane().IsPointOnOrAbovePlane(thePoint))
-        return;
-    thePoint.SetX(theCenter.mX + theRightNormal.GetX());
-    thePoint.SetY(theCenter.mY + theRightNormal.GetY());
-    thePoint.SetZ(theCenter.mZ + theRightNormal.GetZ());
-    if (!inViewport->GetRightPlane().IsPointOnOrAbovePlane(thePoint))
-        return;
-    thePoint.SetX(theCenter.mX + theTopNormal.GetX());
-    thePoint.SetY(theCenter.mY + theTopNormal.GetY());
-    thePoint.SetZ(theCenter.mZ + theTopNormal.GetZ());
-    if (!inViewport->GetTopPlane().IsPointOnOrAbovePlane(thePoint))
-        return;
-    thePoint.SetX(theCenter.mX + theBottomNormal.GetX());
-    thePoint.SetY(theCenter.mY + theBottomNormal.GetY());
-    thePoint.SetZ(theCenter.mZ + theBottomNormal.GetZ());
-    if (!inViewport->GetBottomPlane().IsPointOnOrAbovePlane(thePoint))
-        return;
-    outVisible = true;
-    theClip = theCenter.GetY() - theRadius < inViewport->GetFrontClippingDistance();
-    inModel->SetClipToPlane(kClipPlaneFront, theClip);
-    theClipCount = theClip;
-    theClip = theCenter.GetY() + theRadius > inViewport->GetRearClippingDistance();
-    inModel->SetClipToPlane(kClipPlaneRear, theClip);
-    theClipCount += theClip;
-    thePoint.SetX(theCenter.mX - theLeftNormal.GetX());
-    thePoint.SetY(theCenter.mY - theLeftNormal.GetY());
-    thePoint.SetZ(theCenter.mZ - theLeftNormal.GetZ());
-    theClip = inViewport->GetLeftPlane().IsPointOnOrBelowPlane(thePoint);
-    inModel->SetClipToPlane(kClipPlaneLeft, theClip);
-    theClipCount += theClip;
-    thePoint.SetX(theCenter.mX - theRightNormal.GetX());
-    thePoint.SetY(theCenter.mY - theRightNormal.GetY());
-    thePoint.SetZ(theCenter.mZ - theRightNormal.GetZ());
-    theClip = inViewport->GetRightPlane().IsPointOnOrBelowPlane(thePoint);
-    inModel->SetClipToPlane(kClipPlaneRight, theClip);
-    theClipCount += theClip;
-    thePoint.SetX(theCenter.mX - theTopNormal.GetX());
-    thePoint.SetY(theCenter.mY - theTopNormal.GetY());
-    thePoint.SetZ(theCenter.mZ - theTopNormal.GetZ());
-    theClip = inViewport->GetTopPlane().IsPointOnOrBelowPlane(thePoint);
-    inModel->SetClipToPlane(kClipPlaneTop, theClip);
-    theClipCount += theClip;
-    thePoint.SetX(theCenter.mX - theBottomNormal.GetX());
-    thePoint.SetY(theCenter.mY - theBottomNormal.GetY());
-    thePoint.SetZ(theCenter.mZ - theBottomNormal.GetZ());
-    theClip = inViewport->GetBottomPlane().IsPointOnOrBelowPlane(thePoint);
-    inModel->SetClipToPlane(kClipPlaneBottom, theClip);
-    theClipCount += theClip;
-    outClipped = theClipCount != 0;
+    ee_ge_rast_model_visible(this->mRust, inModel, inScale, GERust(*inViewport), GERust(inTransformation), false,
+                             &outVisible, &outClipped);
 }
 
-// FUNCTION: LLE 0x10024352
-// Sets a screen's alpha-testing state
+// The base's render state setters (0x10024352..0x100245e9): each records the state in the screen's record.
 void GERasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mAlphaTesting = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::AlphaTesting, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x10024369
-// Sets a screen's alpha-test comparison function
 void GERasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mAlphaTestingCompareState = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::AlphaTestingCompareState, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x10024380
-// Sets a screen's alpha-test reference value
 void GERasterizer::SetAlphaTestingRefValue(float inValue, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mAlphaTestingRefValue = inValue;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::AlphaTestingRefValue, GEFloatBits(inValue));
 }
 
 // FUNCTION: LLE 0x10024397
 // Sets the ambient light colour and recomputes the effective ambient colour (the screen is ignored)
 void GERasterizer::SetAmbientColor(const GEColor& inColor, unsigned long inScreen)
 {
-    this->mAmbientColor = inColor;
-    this->mComputedAmbientColor.SetRed(inColor.GetRed() * this->mAmbientIntensity);
-    this->mComputedAmbientColor.SetGreen(inColor.GetGreen() * this->mAmbientIntensity);
-    this->mComputedAmbientColor.SetBlue(inColor.GetBlue() * this->mAmbientIntensity);
+    ee_ge_rast_set_ambient_color(this->mRust, reinterpret_cast<const EeGeRastColor*>(&inColor));
 }
 
 // FUNCTION: LLE 0x100243c9
 // Sets the ambient light intensity and recomputes the effective ambient colour (the screen is ignored)
 void GERasterizer::SetAmbientIntensity(float inIntensity, unsigned long inScreen)
 {
-    this->mAmbientIntensity = inIntensity;
-    this->mComputedAmbientColor.SetRed(this->mAmbientColor.GetRed() * inIntensity);
-    this->mComputedAmbientColor.SetGreen(this->mAmbientColor.GetGreen() * inIntensity);
-    this->mComputedAmbientColor.SetBlue(this->mAmbientColor.GetBlue() * inIntensity);
+    ee_ge_rast_set_ambient_intensity(this->mRust, inIntensity);
 }
 
-// FUNCTION: LLE 0x100243ed
-// Sets a screen's anti-aliasing state
 void GERasterizer::SetAntiAliasing(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mAntiAliasing = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::AntiAliasing, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x10024404
-// Sets a screen's source and destination blend factors
 void GERasterizer::SetBlending(unsigned long inSource, unsigned long inDestination, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mBlendSource = inSource;
-    this->mScreenStates[inScreen]->mBlendDestination = inDestination;
+    ee_ge_rast_set_blending(this->mRust, inScreen, inSource, inDestination);
 }
 
-// FUNCTION: LLE 0x10024430
-// Sets a screen's colour-keying state
 void GERasterizer::SetColorKeying(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mColorKeying = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ColorKeying, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x10024447
-// Sets the face-culling mode
 void GERasterizer::SetCulling(unsigned long inState)
 {
-    this->mCulling = inState;
+    ee_ge_rast_set(this->mRust, EeGeRastVal::Culling, (intptr_t)inState);
 }
 
 // FUNCTION: LLE 0x10024451
@@ -442,119 +250,129 @@ void GERasterizer::SetDisplayOverdrawMode(bool inState, unsigned long inScreen)
 {
 }
 
-// FUNCTION: LLE 0x10024454
-// Sets a screen's dithering state
 void GERasterizer::SetDithering(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mDithering = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::Dithering, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x1002446b
-// Sets a screen's draw style
 void GERasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mDrawStyle = inStyle;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::DrawStyle, (intptr_t)inStyle);
 }
 
-// FUNCTION: LLE 0x10024482
-// Turns a screen's fog on or off
 void GERasterizer::SetFog(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mFogState = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogState, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x10024499
-// Sets a screen's fog colour
 void GERasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mFog.mColor = inColor;
+    ee_ge_rast_set_fog_color(this->mRust, inScreen, reinterpret_cast<const EeGeRastColor*>(&inColor));
 }
 
-// FUNCTION: LLE 0x100244bf
-// Sets a screen's fog start and end distances and the derived 1/(end - start) scale
 void GERasterizer::SetFogRange(float inStart, float inEnd, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mFog.mStart = inStart;
-    this->mScreenStates[inScreen]->mFog.mEnd = inEnd;
-    this->mScreenStates[inScreen]->mFog.mScale = 1.0f / (inEnd - inStart);
+    ee_ge_rast_set_fog_range(this->mRust, inScreen, inStart, inEnd);
 }
 
-// FUNCTION: LLE 0x10024504
-// Sets a screen's fog type
 void GERasterizer::SetFogType(unsigned long inType, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mFog.mType = inType;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogType, (intptr_t)inType);
 }
 
-// FUNCTION: LLE 0x1002451b
-// Sets a screen's fog density
 void GERasterizer::SetFogValue(float inValue, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mFog.mDensity = inValue;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::FogDensity, GEFloatBits(inValue));
 }
 
-// FUNCTION: LLE 0x10024532
-// Turns a screen's lighting on or off
 void GERasterizer::SetLighting(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mLighting = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::Lighting, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x10024549
-// Sets a screen's projection mode
 void GERasterizer::SetProjectionMode(unsigned long inMode, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mProjectionMode = inMode;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ProjectionMode, (intptr_t)inMode);
 }
 
-// FUNCTION: LLE 0x10024560
-// Sets a screen's shading mode
 void GERasterizer::SetShading(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mShading = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::Shading, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x10024577
-// Sets a screen's shading colour source
 void GERasterizer::SetShadingColorSource(unsigned long inSource, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mShadingColorSource = inSource;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ShadingColorSource, (intptr_t)inSource);
 }
 
-// FUNCTION: LLE 0x1002458e
-// Turns a screen's specular highlights on or off
 void GERasterizer::SetSpecular(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mSpecular = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::Specular, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x100245a5
-// Sets a screen's viewport
 void GERasterizer::SetViewport(const GEViewport& inViewport, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mViewport = inViewport;
+    ee_ge_rast_set_viewport(this->mRust, inScreen, GERust(inViewport));
 }
 
-// FUNCTION: LLE 0x100245bb
-// Sets whether a screen waits for vertical sync
 void GERasterizer::SetWaitForVSync(bool inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mWaitForVSync = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::WaitForVSync, inState);
 }
 
-// FUNCTION: LLE 0x100245d2
-// Sets a screen's z-buffer state
 void GERasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mZBuffer = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ZBuffer, (intptr_t)inState);
 }
 
-// FUNCTION: LLE 0x100245e9
-// Sets a screen's z-buffer comparison function
 void GERasterizer::SetZCompare(unsigned long inState, unsigned long inScreen)
 {
-    this->mScreenStates[inScreen]->mZCompare = inState;
+    ee_ge_rast_screen_set(this->mRust, inScreen, EeGeRastState::ZCompare, (intptr_t)inState);
 }
+
+// ---- the header's accessors (inline in the original) and the statics
+GERScreenState* GERasterizer::GetScreenState(unsigned long inScreen) const
+{
+    return reinterpret_cast<GERScreenState*>(ee_ge_rast_screen(this->mRust, inScreen));
+}
+
+const GEColor& GERasterizer::GetAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, false)); }
+const GEColor& GERasterizer::GetComputedAmbientColor() const { return *reinterpret_cast<const GEColor*>(ee_ge_rast_color(this->mRust, true)); }
+float GERasterizer::GetAmbientIntensity() const { return GEBitsFloat(ee_ge_rast_get(this->mRust, EeGeRastVal::AmbientIntensity)); }
+unsigned long GERasterizer::GetCulling() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::Culling); }
+bool GERasterizer::GetIsActivated() const { return ee_ge_rast_get(this->mRust, EeGeRastVal::IsActivated) != 0; }
+bool GERasterizer::GetIsPolyAreaProfiling() { return ee_ge_rast_get(this->mRust, EeGeRastVal::IsPolyAreaProfiling) != 0; }
+const UString& GERasterizer::GetName() const { return *reinterpret_cast<const UString*>(ee_ge_rast_get(this->mRust, EeGeRastVal::Name)); }
+unsigned long GERasterizer::GetScreenCount() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenCount); }
+unsigned long GERasterizer::GetScreenID() const { return (unsigned long)ee_ge_rast_get(this->mRust, EeGeRastVal::ScreenId); }
+TSCriticalSection* GERasterizer::GetDrawingAccess() const
+{
+    return reinterpret_cast<TSCriticalSection*>(ee_ge_rast_get(this->mRust, EeGeRastVal::DrawingAccess));
+}
+void GERasterizer::SetPolyAreaProfiling(bool inState) { ee_ge_rast_set(this->mRust, EeGeRastVal::IsPolyAreaProfiling, inState); }
+void GERasterizer::SetScreenID(unsigned long inID) { ee_ge_rast_set(this->mRust, EeGeRastVal::ScreenId, (intptr_t)inID); }
+
+void GERasterizer::SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2)
+{
+    float theRipple[3] = {inWaterRipple0, inWaterRipple1, inWaterRipple2};
+    ee_ge_rast_ripple(this->mRust, &theRipple, true);
+}
+
+void GERasterizer::GetWaterRippleEffect(float& outRipple0, float& outRipple1, float& outRipple2) const
+{
+    float theRipple[3];
+    ee_ge_rast_ripple(this->mRust, &theRipple, false);
+    outRipple0 = theRipple[0];
+    outRipple1 = theRipple[1];
+    outRipple2 = theRipple[2];
+}
+
+GERasterizer* GERasterizer::GetActiveRasterizer() { return static_cast<GERasterizer*>(ee_ge_rast_active()); }
+void GERasterizer::SetActiveRasterizer(GERasterizer* inRasterizer) { ee_ge_rast_set_active(inRasterizer); }
+void GERasterizer::ClearRasterizers() { ee_ge_rast_list(0, NULL, 0); }
+void GERasterizer::AddRasterizer(GERasterizer* inRasterizer) { ee_ge_rast_list(1, inRasterizer, 0); }
+unsigned long GERasterizer::GetRasterizerCount() { return (unsigned long)(uintptr_t)ee_ge_rast_list(2, NULL, 0); }
+GERasterizer* GERasterizer::GetRasterizer(unsigned long inIndex) { return static_cast<GERasterizer*>(ee_ge_rast_list(3, NULL, inIndex)); }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // SYNTHETIC: LLE 0x10023655

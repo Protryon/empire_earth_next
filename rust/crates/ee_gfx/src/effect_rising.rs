@@ -66,6 +66,11 @@ pub enum EeGfxEffect3DOp {
     Save = 12,
     /// the constructor along a line (the multi-effect's)
     CreateLine = 13,
+    /// the constructor at a transformation (the 2D water ripple's: the C++ put it in the record's `aged.transformation`)
+    CreateTransformation = 14,
+    /// the constructor between two units or from a unit to a point (the 2D muzzle blast's: the C++ put the start in the
+    /// record's `sprite.start`, the end in `sprite.draw_position`)
+    CreateBetween = 15,
 }
 
 /// What the effects read of their graphic effect and the tick, gathered by the C++ for each call.
@@ -121,6 +126,8 @@ pub struct EeGfxGraphicFacts {
     /// `mTime1`, `mTime2` (ms)
     pub time1: u32,
     pub time2: i32,
+    /// `mAlpha` (the 2D smoke's opacity and trail spacing)
+    pub alpha: f32,
 }
 
 /// The C++'s answers for an `EEE3DRust`.

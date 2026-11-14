@@ -69,8 +69,6 @@ public:
     // proven import ?InterpolateTo@GE2DPoint@@QBEXABV1@MAAV?$vector@... (Default.dll CMUDrawShallows 0x3633)
     void InterpolateTo(const GE2DPoint& inPoint, float inStep, std::vector<GE2DPoint>& outPoints) const;
     long Load(FSFile& inFile);
-    void RotatePoint(float inAngle, const GE2DPoint& inCenter);
-    void RotatePoint(float inAngle, const GE2DPoint& inCenter, GE2DPoint& outPoint) const;
     long Save(FSFile& inFile);
 
     float mX;                               // +0x00 (fld [p]; GE2DPoint(float, float))

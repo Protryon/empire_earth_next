@@ -480,13 +480,6 @@ UIEvent* UIManager::CreateFormEvent(unsigned long inEventID)
     return reinterpret_cast<UIEvent*>(this->Call(EeUiManagerCall::CreateFormEvent, (intptr_t)inEventID));
 }
 
-// FUNCTION: LLE 0x1007a5c2
-// Creates the IME candidate window with the given font
-void UIManager::CreateIMECandidateWindow(GEFont* inFont)
-{
-    this->Call(EeUiManagerCall::CreateCandidateWindow, (intptr_t)inFont);
-}
-
 // FUNCTION: LLE 0x1007a602
 // Draws the snapshotted forms with alpha blending (their text too, unless drawn by GDI) and the candidate window
 long UIManager::DrawPolygons() { return (long)this->Call(EeUiManagerCall::DrawPolygons); }
@@ -557,10 +550,6 @@ UResourceFile* UIManager::GetStringTable() const
 unsigned long UIManager::GetUITextureBitDepth() const
 {
     return (unsigned long)this->Call(EeUiManagerCall::TextureBitDepth);
-}
-unsigned long UIManager::GetVisibleFormCount() const
-{
-    return (unsigned long)this->Call(EeUiManagerCall::VisibleFormCount);
 }
 bool UIManager::IsFormOnStack(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormOnStack, (intptr_t)inForm) != 0; }
 bool UIManager::IsFormVisible(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormVisible, (intptr_t)inForm) != 0; }

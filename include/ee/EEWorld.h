@@ -118,7 +118,6 @@ public:
     void DumpMedia(FSFileSpec& inFile, bool inLeaks);   // 0x13913e
     void AddComputerPlayers(EEGameState* inState);   // 0x139264 (fills the free slots up to 17)
     void SetCamera(const GETransformation& inTransformation, bool inForce);   // 0x1394b2 (Virtual18's)
-    void CopyPlayers(std::vector<EEPlayer*>& outPlayers);  // 0x139631
     void SetMap(EEMap* inMap);              // 0x13a1fb (deletes the old map through its vtable)
     void CreateMiniMap(EEGameState* inState);   // 0x13a285
     void CreatePlayers(EEGameState* inState);   // 0x13a312

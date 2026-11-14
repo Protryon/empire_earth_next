@@ -131,7 +131,6 @@ public:
     float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEActiveGroup::ComputeValues 0x5ed692 copies it through fld/fstp)
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (mFAC / mFB4 sites read both as values)
     float GetCameraFocus() const { return this->mCameraFocus; }  // inline (EECameraControl::GetUnitPoint 0x52844f: fld; fmulp) (provisional name)
-    float GetArmor(long inKind) const { return this->mArmor[inKind]; }  // inline (0x63a8a8, 0x63afc1) (provisional name)
     unsigned long GetMediaCount() const { return this->mMediaCount; }  // inline (EEPlayer::LoadAllClassMedia 0x167c16 compares it unsigned: jbe) (provisional name)
     unsigned long GetTerrainMask() const { return this->mTerrainMask; }
     bool GetIsInitialized() const { return this->mIsInitialized; }
@@ -823,7 +822,6 @@ public:
     float GetPushVelocityX() const { return this->mPushVelocityX; }  // inline value getters
     float GetPushVelocityY() const { return this->mPushVelocityY; }
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
-    float GetCollisionRadius() const { return this->mCollisionRadius; }
     // inline value getter (the Physics Virtual0C family: `fld [F98]; fld [ecx]; faddp`, ecx = &mF24C kept from the
     // `!= 0` test; a member read gives `fadd [ecx]`)
     float GetF24C() const { return this->mF24C; }
@@ -1056,7 +1054,6 @@ public:
     unsigned long GetWeapon() const { return this->mWeapon; }  // unsigned: the assert compiles to one `cmp 6; jb`
     // inline: the garrison goal's ComputeUpgrade loads both before its tech-tree lookups (0x226bfa) (provisional names)
     long GetTechnology() const { return this->mTechnology; }
-    long GetGarrisonTechnology() const { return this->mGarrisonTechnology; }
     bool IsPriest();                        // 0x6ef9 (EEUGAttackUnit's ctor; provisional name)
     long GetNumResearchTechnologies() { return this->mResearchTechnologies.size(); }      // 0x196dff (EECPDefenseCommander 0x78dc8: mResearchTechnologies's count) (provisional name)
     // 0x7028: gUnitClassTable[inUnitType]'s +0x1d0 is non-zero and one of mCounterKind1/mCounterKind2/mL1DC
@@ -1237,11 +1234,9 @@ public:
     unsigned char GetDomains() const { return this->mDomains; }
     float GetAcceleration() const { return this->mAcceleration; }  // inline (read as a value)
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (read as a value)
-    float GetTurretMaxAngularVelocity() const { return this->mTurretMaxAngularVelocity; }  // inline (read as a value)
     float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEPMNaval::PitchMode 0x55c146 loads it as a value: fld; fdivp) (provisional name)
     float GetMaxRoll() const { return this->mMaxRoll; }  // inline value getter (0x55da2c / 0x55937a)
     float GetFacingOffset() const { return this->mFacingOffset; }
-    float GetConversionResistance() const { return this->mConversionResistance; }  // inline (EEUnitClassUpgrade::Init 0x63b891 copies with fld/fstp)
     float GetConversionRate() const { return this->mConversionRate; }
     float GetBobHeight() const { return this->mBobHeight; }  // inline (EEPMHelicopter::ApplyBob 0x558ce3 loads it as a value: fld; fmul st(2)) (provisional name)
     float GetBobPitch() const { return this->mBobPitch; }  // inline (EEPMNaval::ApplyBob 0x55b668 loads it as a value before the bob: fld [eax+0x194]) (provisional name)
@@ -1256,7 +1251,6 @@ public:
     bool GetCanEnterAirTransports() const { return this->mCanEnterAirTransports; }
     bool GetCanEnterSeaTransports() const { return this->mCanEnterSeaTransports; }
     bool GetCanEnterSpaceTransports() const { return this->mCanEnterSpaceTransports; }
-    bool GetIsCollidable() const { return this->mIsCollidable; }
     bool GetIsWall() const { return this->mIsWall; }
     bool GetIsAttackUnit() const { return this->mIsAttackUnit; }
     bool GetIsDefenseUnit() const { return this->mIsDefenseUnit; }
