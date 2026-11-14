@@ -707,6 +707,10 @@ WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
 # real certificates (golden: rust/crates/ee_won/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
 # AuthContext.cpp); the same units as won_serverop_test
 WON_TESTS["won_authhost_test"] = WON_TESTS["won_serverop_test"]
+# the HTTP cache and its entries through the HTTP get op's own cache calls (golden:
+# rust/crates/ee_won/src/golden_httpcache.txt, recorded over HTTPCache.cpp and ServerOp.cpp's HostCall); the same
+# units as won_serverop_test
+WON_TESTS["won_httpcache_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]
