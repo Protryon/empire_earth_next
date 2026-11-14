@@ -46,7 +46,6 @@
 38527 38abf Graphics Engine/Graphics Engine.cpp
 38abf 39715 Input System/Input System.cpp
 3e05c 40123 Network Engine/NEMessage.cpp
-4440f 44c71 Network Engine/NEProtocol.cpp
 45c00 47301 Network Engine/NESynchronousClient.cpp
 47301 47400 Network Engine/NESynchronousCommunications.cpp
 47400 4b04f Network Engine/NESynchronousServer.cpp

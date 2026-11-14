@@ -14,7 +14,8 @@
 // FUNCTION: LLE 0x1004607d
 NESynchronousClient::NESynchronousClient()
 {
-    this->mRust = ee_net_cl_new(this, NESynchronousClient::Host, NESynchronousClient::QueueHost, this->mComms);
+    // the client calls the protocol itself (ee_net ffi_protocol.rs)
+    this->mRust = ee_net_cl_new(this, NESynchronousClient::Host, NESynchronousClient::QueueHost, this->mComms, true);
 }
 
 // FUNCTION: LLE 0x10046401
@@ -26,8 +27,11 @@ NESynchronousClient::~NESynchronousClient()
 // FUNCTION: LLE 0x10046513
 long NESynchronousClient::Connect(const UString& inName, const UString& inHost, const UWideString& inAddress)
 {
-    const void* theStrings[3] = {&inName, &inHost, &inAddress};
-    return ee_net_cl_connect(this->mRust, theStrings);
+    const char* theAddress = inAddress;
+    EeNetClStrings theStrings = {reinterpret_cast<const uint8_t*>(static_cast<const char*>(inName)), inName.GetLength(),
+                                 reinterpret_cast<const uint8_t*>(static_cast<const char*>(inHost)), inHost.GetLength(),
+                                 reinterpret_cast<const uint8_t*>(theAddress), strlen(theAddress)};
+    return ee_net_cl_connect(this->mRust, &theStrings);
 }
 
 // FUNCTION: LLE 0x10046562
@@ -40,8 +44,9 @@ long NESynchronousClient::Disconnect()
 long NESynchronousClient::GetDetectedGame(unsigned long inIndex, UString& outName, UString& outHost,
                                           UWideString& outAddress)
 {
-    void* theStrings[3] = {&outName, &outHost, &outAddress};
-    return ee_net_cl_detected_game(this->mRust, (uint32_t)inIndex, theStrings);
+    EeNetClSinks theSinks = {NEProtocol::SetTo<UString>, &outName, NEProtocol::SetTo<UString>, &outHost,
+                             NEProtocol::SetTo<UWideString>, &outAddress};
+    return ee_net_cl_detected_game(this->mRust, (uint32_t)inIndex, &theSinks);
 }
 
 // FUNCTION: LLE 0x1004687f
@@ -150,64 +155,20 @@ ptrdiff_t NESynchronousClient::QueueHost(void*, EeNetQOp inOp, size_t a, size_t 
     return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d);
 }
 
-// The client's calls out, each the statement NESynchronousClient.cpp made (the protocol is the client's, protocol 0)
+// The client's calls out, each the statement NESynchronousClient.cpp made (the protocol ops are the Rust's own:
+// ee_net ffi_protocol.rs)
 ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, size_t b, size_t c, size_t d)
 {
     NESynchronousClient* theClient = static_cast<NESynchronousClient*>(inClient);
     NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
     NEMRecord* theRecord = static_cast<NEMRecord*>(theMessage);   // an engine message (the ops that read members)
-    NEConnection* theConnection = reinterpret_cast<NEConnection*>(a);   // the plug-in's handle
     FSFile* theFile = reinterpret_cast<FSFile*>(a);
-    // the client's protocol, protocol 0 (no op the constructor makes reads it)
-    NEProtocol* theProtocol = NULL;
-    if (inOp >= EeNetClOp::Connect && inOp <= EeNetClOp::XferReceive)
-        theProtocol = static_cast<NEProtocol*>(ee_net_cl_protocol(theClient->mRust));
     switch (inOp) {
     case EeNetClOp::WaitAny:
         return TSEvent::WaitAny(reinterpret_cast<TSEvent* const*>(a), (unsigned long)b, (unsigned long)c);
     case EeNetClOp::ThreadPriority:
         reinterpret_cast<TSThread*>(a)->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
         return 0;
-    case EeNetClOp::ProtocolCount:
-        return (ptrdiff_t)NEProtocol::GetCount();
-    case EeNetClOp::ProtocolGet:
-        return NEProtocol::GetProtocol(0, *reinterpret_cast<NEProtocol**>(a));
-    case EeNetClOp::Connect: {
-        const void* const* theStrings = reinterpret_cast<const void* const*>(a);
-        return theProtocol->Connect(*static_cast<const UString*>(theStrings[0]), *static_cast<const UString*>(theStrings[1]),
-                                    *static_cast<const UWideString*>(theStrings[2]), 2, reinterpret_cast<TSEvent*>(b),
-                                    *reinterpret_cast<NEConnection**>(c), (unsigned long)d);
-    }
-    case EeNetClOp::ConnectForXfer:
-        return theProtocol->ConnectForXfer(theConnection, 1, reinterpret_cast<TSEvent*>(b), *reinterpret_cast<NEConnection**>(c));
-    case EeNetClOp::ConnClose:
-        return theProtocol->Close(theConnection);
-    case EeNetClOp::ConnReceive: {
-        unsigned long theLength = *reinterpret_cast<uint32_t*>(d);
-        long theResult = theProtocol->Receive(theConnection, (unsigned long)c, reinterpret_cast<unsigned char*>(b), theLength);
-        *reinterpret_cast<uint32_t*>(d) = (uint32_t)theLength;
-        return theResult;
-    }
-    case EeNetClOp::ConnSend:
-        return theProtocol->Send(theConnection, reinterpret_cast<const unsigned char*>(b), (unsigned long)c);
-    case EeNetClOp::DetectedGameCount:
-        return (ptrdiff_t)theProtocol->GetDetectedGameCount();
-    case EeNetClOp::DetectedGame: {
-        void* const* theStrings = reinterpret_cast<void* const*>(b);
-        return theProtocol->GetDetectedGame((unsigned long)a, *static_cast<UString*>(theStrings[0]),
-                                            *static_cast<UString*>(theStrings[1]), *static_cast<UWideString*>(theStrings[2]));
-    }
-    case EeNetClOp::SearchForGame: {
-        UString theName("EEService");
-        UString theHost("Anything");
-        return theProtocol->SearchForGame(theHost, theName, a != 0);
-    }
-    case EeNetClOp::XferReceive: {
-        unsigned long theReceived = *reinterpret_cast<uint32_t*>(c);
-        long theResult = theProtocol->XferReceive((unsigned long)b, reinterpret_cast<unsigned char*>(a), theReceived);
-        *reinterpret_cast<uint32_t*>(c) = (uint32_t)theReceived;
-        return theResult;
-    }
     case EeNetClOp::XferExportSize:
         return (ptrdiff_t)NEMRecord::XferExportSize();
     case EeNetClOp::MsgType:

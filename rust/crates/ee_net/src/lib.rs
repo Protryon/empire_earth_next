@@ -18,6 +18,7 @@
 //! - `server`: `NESynchronousServer`, the lock-step server with its main, send and transfer threads, its message
 //!   manager, tuning and recorder;
 //! - `qhost`: the two queues' calls out, and the timestamped record format;
+//! - `ffi_protocol`: `NEProtocol` whole, over the TCP plug-in (`ee_net_tcp`'s C ABI), with its C ABI;
 //! - `ffi`, `ffi_comms`, `ffi_client`, `ffi_tune`, `ffi_server`: the C ABI (`rust/ee_net.h`).
 
 /// cbindgen:ignore
@@ -42,6 +43,7 @@ pub mod tune;
 pub mod ffi;
 pub mod ffi_client;
 pub mod ffi_comms;
+pub mod ffi_protocol;
 pub mod ffi_server;
 pub mod ffi_tune;
 
@@ -49,6 +51,8 @@ pub mod ffi_tune;
 mod tests;
 #[cfg(test)]
 mod tests_client;
+#[cfg(test)]
+mod tests_protocol;
 #[cfg(test)]
 mod tests_queues;
 #[cfg(test)]

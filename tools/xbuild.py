@@ -311,7 +311,7 @@ def cmd_fonttest(a):
 TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
 # the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
 TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
-    "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")]   # (TSEvent and
+    "Utilities/UString.cpp", "Utilities/UWideString.cpp")]   # (NEProtocol is ee_net's; TSEvent and
 # TSCriticalSection are header classes over ee_ts since the Thread System moved to Rust)
 
 
@@ -837,10 +837,10 @@ NET_TESTS = {
     "ne_server_test": [],
     # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the
     # original units with the TCP shim's entry table)
-    # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp instead
-    # of NEProtocol.cpp, `--print FILE`)
+    # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp, `--print
+    # FILE`; since round 7 the class is ee_net's Rust, driven through tests/net/ne_protocol_members.h)
     "ne_protocol_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
-        "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
+        "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
     # the engine messages as their senders and the factory see them (golden: tests/net/golden_message.txt, made over
     # the original 28 classes)
     "ne_message_test": [ROOT / "src" / "Low-Level Engine" / p for p in (

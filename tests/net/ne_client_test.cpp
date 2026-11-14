@@ -34,6 +34,7 @@ CNet* gNet;
 static bool sVerbose = false;   // --verbose: each trace line to stderr as it is made
 #include "orig_c/NESynchronousClient.cpp"
 #include "rust/ee_net.h"
+#include "ne_tcp_host.h"
 
 int QWorld::IdOf(NEMessage* inMessage)
 {
@@ -800,7 +801,7 @@ struct Sequence {
         sComms = ee_net_comms_new(0);
         this->Call("new");
         if (this->mRust) {
-            sRust = ee_net_cl_new(NULL, RustClHost, RustQHost, sComms);
+            sRust = ee_net_cl_new(NULL, RustClHost, RustQHost, sComms, false);
             sDisconnect = [] { return (long)ee_net_cl_disconnect(sRust); };
         } else {
             this->mOrig = new OrigClient;

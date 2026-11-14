@@ -528,6 +528,9 @@ struct EeNetLagLoss;
 /// The server's message manager (`NEMessageManager`).
 struct EeNetMsgMgr;
 
+/// A protocol: the traffic counters (`mBytesSent`, `mBytesReceived`)
+struct EeNetProtocol;
+
 /// The client's and the server's message recorder (`NERecordPlayback`).
 struct EeNetRecPlay;
 
@@ -543,10 +546,14 @@ using EeNetQHostFn = ptrdiff_t(*)(void *ctx, EeNetQOp op, size_t a, size_t b, si
 
 using EeNetClHostFn = ptrdiff_t(*)(void *ctx, EeNetClOp op, size_t a, size_t b, size_t c, size_t d);
 
+/// The plug-in's sink for a text answer (`ee_net_tcp`'s `EeTcpSink`)
+using EeNetPrSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
 using EeNetSvHostFn = ptrdiff_t(*)(void *ctx, EeNetSvOp op, size_t a, size_t b, size_t c, size_t d);
 
-/// The constructor's arguments (NESynchronousServer's; the name, the announcement and the network adapter stay the
-/// C++ constructor's, for Publish)
+/// The constructor's arguments (NESynchronousServer's; with `tcp` the server calls the protocol itself (ffi_protocol)
+/// and publishes under the name (bytes), the announcement and the network adapter; without it the host answers the
+/// protocol ops (the goldens' worlds) and the last four are not read)
 struct EeNetSvArgs {
   uint8_t max_players;
   uint32_t default_send_interval;
@@ -560,9 +567,34 @@ struct EeNetSvArgs {
   uint32_t current_communications_tick;
   uint32_t current_physics_tick;
   bool allow_new_connections;
+  bool tcp;
+  const uint8_t *name;
+  size_t name_length;
+  bool announce;
+  uint32_t network_adapter;
 };
 
 using EeNetTuHostFn = ptrdiff_t(*)(void *ctx, EeNetTuOp op, size_t a, size_t b, size_t c, size_t d);
+
+/// `Connect`'s strings as bytes (the client calling the protocol itself: `ee_net_cl_new`'s `tcp`)
+struct EeNetClStrings {
+  const uint8_t *name;
+  size_t name_length;
+  const uint8_t *host;
+  size_t host_length;
+  const uint8_t *address;
+  size_t address_length;
+};
+
+/// `GetDetectedGame`'s answers: the name, the host and the address to their sinks (with `tcp`)
+struct EeNetClSinks {
+  EeNetPrSink name;
+  void *name_context;
+  EeNetPrSink host;
+  void *host_context;
+  EeNetPrSink address;
+  void *address_context;
+};
 
 extern "C" {
 
@@ -699,11 +731,13 @@ void ee_net_rp_set_normal_playback(const EeNetRecPlay *r);
 ///
 /// # Safety
 /// `host` and `qhost` answer every op for `ctx` until `ee_net_cl_free`; `comms` from `ee_net_comms_new` (the C++
-/// base class's).
+/// base class's). With `tcp` the client calls the protocol itself (`ee_net_cl_connect` then takes an
+/// `EeNetClStrings*`, `ee_net_cl_detected_game` an `EeNetClSinks*`); without it the host answers the protocol ops.
 EeNetClient *ee_net_cl_new(void *ctx,
                            EeNetClHostFn host,
                            EeNetQHostFn qhost,
-                           const EeNetComms *comms);
+                           const EeNetComms *comms,
+                           bool tcp);
 
 /// The destructor's work, then the object freed.
 ///
@@ -734,8 +768,10 @@ void ee_net_cl_send_start_connect_message(const EeNetClient *c, void *msg);
 
 void ee_net_cl_send_end_connect_message(const EeNetClient *c);
 
-/// `Connect(name, host, address)`: `strings` points at the three, handed to the host's Connect.
-int32_t ee_net_cl_connect(const EeNetClient *c, const void *strings);
+/// `Connect(name, host, address)`: `strings` points at the three (an `EeNetClStrings` with `tcp`), handed to the
+/// host's Connect without.
+int32_t ee_net_cl_connect(const EeNetClient *c,
+                          const void *strings);
 
 int32_t ee_net_cl_connect_for_xfer(const EeNetClient *c);
 
@@ -743,7 +779,8 @@ int32_t ee_net_cl_disconnect(const EeNetClient *c);
 
 int32_t ee_net_cl_disconnect_from_xfer(const EeNetClient *c);
 
-/// `GetDetectedGame(index, name, host, address)`: `strings` points at the three, handed to the host.
+/// `GetDetectedGame(index, name, host, address)`: `strings` points at the three (an `EeNetClSinks` with `tcp`),
+/// handed to the host without.
 int32_t ee_net_cl_detected_game(const EeNetClient *c,
                                 uint32_t index,
                                 const void *strings);
@@ -813,6 +850,246 @@ void ee_net_comms_set(const EeNetComms *c, EeNetCommsField f, uint32_t value);
 /// # Safety
 /// `c` from `ee_net_comms_new`, not freed.
 void ee_net_comms_increment_cts(const EeNetComms *c);
+
+/// The constructor: registers the protocol and activates its plug-in.
+EeNetProtocol *ee_net_pr_new();
+
+/// The destructor: deactivates the plug-in while it is valid and unregisters the protocol.
+///
+/// # Safety
+/// `p` from `ee_net_pr_new`, used by nothing after.
+void ee_net_pr_free(EeNetProtocol *p);
+
+/// `NEInitialize`'s protocols (after its shutdown hook): TCP/IP, freed again when its plug-in is not usable ->
+/// kErrorOK, or kErrorNotFound for no protocol.
+int32_t ee_net_pr_initialize();
+
+/// `NEShutdown`: every registered protocol freed.
+void ee_net_pr_shutdown();
+
+/// `NEProtocol::GetCount()`
+uint32_t ee_net_pr_count();
+
+/// `NEProtocol::GetProtocol(index, out)`: kErrorBeyondEnd (out unchanged) past the last.
+///
+/// # Safety
+/// `out` is valid.
+int32_t ee_net_pr_get(uint32_t index, EeNetProtocol **out);
+
+/// `GetName()` (its bytes, `length` out) and `GetProtocolType()`
+///
+/// # Safety
+/// `length` is valid.
+const uint8_t *ee_net_pr_name(size_t *length);
+
+uint32_t ee_net_pr_type();
+
+/// `GetBytesSent()` (`sent`) or `GetBytesReceived()`
+///
+/// # Safety
+/// `p` is a live protocol.
+uint32_t ee_net_pr_bytes(const EeNetProtocol *p, bool sent);
+
+/// `Accept(server, out)` / `AcceptForXfer(server, out)` (`xfer`): the new connection's handle, NULL on failure.
+///
+/// # Safety
+/// `out` is valid.
+int32_t ee_net_pr_accept(const EeNetProtocol *_p,
+                         void *server,
+                         bool xfer,
+                         void **out);
+
+/// `AllowNewConnections(server, allow)`
+///
+/// # Safety
+/// `server` is the plug-in's.
+void ee_net_pr_allow_new_connections(const EeNetProtocol *_p, void *server, bool allow);
+
+/// `Close(connection)` (`server` false) or `Close(server)`: the plug-in frees it when the close succeeds.
+///
+/// # Safety
+/// `handle` is the plug-in's.
+int32_t ee_net_pr_close(const EeNetProtocol *_p,
+                        void *handle,
+                        bool server);
+
+/// `Connect(name, host, address, port, event, out, timeout)`: the plug-in takes the timeout in its adapter argument,
+/// as the original's entry point did.
+///
+/// # Safety
+/// The strings are valid for their lengths; `event` is a `TSEvent*`; `out` is valid.
+int32_t ee_net_pr_connect(const EeNetProtocol *_p,
+                          const uint8_t *name,
+                          size_t name_length,
+                          const uint8_t *host,
+                          size_t host_length,
+                          const uint8_t *address,
+                          size_t address_length,
+                          uint32_t port,
+                          const void *event,
+                          void **out,
+                          uint32_t timeout);
+
+/// `ConnectForXfer(connection, port, event, out)`
+///
+/// # Safety
+/// `event` is a `TSEvent*`; `out` is valid.
+int32_t ee_net_pr_connect_for_xfer(const EeNetProtocol *_p,
+                                   void *connection,
+                                   uint32_t port,
+                                   const void *event,
+                                   void **out);
+
+/// `EnumerateNetworkAdapters(out)`: each adapter's description to the sink (the caller cleared its list) -> how many
+///
+/// # Safety
+/// `sink` takes `context`.
+uint32_t ee_net_pr_enumerate_adapters(const EeNetProtocol *_p,
+                                      EeNetPrSink sink,
+                                      void *context);
+
+/// `GetClientAddress(server, index, out)`
+///
+/// # Safety
+/// `server` is the plug-in's; `sink` takes `context`.
+int32_t ee_net_pr_client_address(const EeNetProtocol *_p,
+                                 void *server,
+                                 uint32_t index,
+                                 EeNetPrSink sink,
+                                 void *context);
+
+/// `GetDetectedGame(index, name, host, address)`: the three answers to their sinks
+///
+/// # Safety
+/// Each sink takes its context.
+int32_t ee_net_pr_detected_game(const EeNetProtocol *_p,
+                                uint32_t index,
+                                EeNetPrSink sink_name,
+                                void *name,
+                                EeNetPrSink sink_host,
+                                void *host,
+                                EeNetPrSink sink_address,
+                                void *address);
+
+/// `GetDetectedGameCount()`
+///
+/// # Safety
+/// None beyond the plug-in's.
+uint32_t ee_net_pr_detected_game_count(const EeNetProtocol *_p);
+
+/// `GetLocalAddress(adapter)` to the sink
+///
+/// # Safety
+/// `sink` takes `context`.
+void ee_net_pr_local_address(const EeNetProtocol *_p,
+                             uint32_t adapter,
+                             EeNetPrSink sink,
+                             void *context);
+
+/// `GetStatus(name, port)` (the plug-in reads neither)
+///
+/// # Safety
+/// None beyond the plug-in's.
+int32_t ee_net_pr_status(const EeNetProtocol *_p);
+
+/// `IsAlive(connection)`
+///
+/// # Safety
+/// `connection` is the plug-in's.
+bool ee_net_pr_is_alive(const EeNetProtocol *_p, void *connection);
+
+/// `Publish(name, address, port, accept event, receive event, xfer event, out, allow, announce, max connections)`
+///
+/// # Safety
+/// The strings are valid for their lengths; the events are `TSEvent*`s; `out` is valid.
+int32_t ee_net_pr_publish(const EeNetProtocol *_p,
+                          const uint8_t *name,
+                          size_t name_length,
+                          const uint8_t *address,
+                          size_t address_length,
+                          uint32_t port,
+                          const void *const *events,
+                          void **out,
+                          bool allow,
+                          bool announce,
+                          uint32_t max_connections);
+
+/// `Receive(connection, size, buffer, received)`: the received count added to the total
+///
+/// # Safety
+/// `buffer` holds `size` bytes; `received` is valid.
+int32_t ee_net_pr_receive(const EeNetProtocol *p,
+                          void *connection,
+                          uint32_t size,
+                          uint8_t *buffer,
+                          uint32_t *received);
+
+/// `ReceiveFrom(server, size, buffer, received, index)`: the received count added to the total
+///
+/// # Safety
+/// `buffer` holds `size` bytes; `received` and `index` are valid.
+int32_t ee_net_pr_receive_from(const EeNetProtocol *p,
+                               void *server,
+                               uint32_t size,
+                               uint8_t *buffer,
+                               uint32_t *received,
+                               uint32_t *index);
+
+/// `ResetClientConnection(server, index)` (`index` Some) or `ResetXfer(server)`
+///
+/// # Safety
+/// `server` is the plug-in's.
+void ee_net_pr_reset(const EeNetProtocol *_p, void *server, bool xfer, uint32_t index);
+
+/// `SearchForGame(host, name, start)`: the plug-in takes the service name; the host is not used
+///
+/// # Safety
+/// `name` is valid for its length.
+int32_t ee_net_pr_search_for_game(const EeNetProtocol *_p,
+                                  const uint8_t *name,
+                                  size_t name_length,
+                                  bool start);
+
+/// `Send(connection, data, length)`: the plug-in enciphers the bytes in place; the length added to the sent total
+///
+/// # Safety
+/// `data` holds `length` writable bytes.
+int32_t ee_net_pr_send(const EeNetProtocol *p,
+                       void *connection,
+                       uint8_t *data,
+                       uint32_t length);
+
+/// `SendSingle(host, port, data, length)`: one datagram; the length added to the sent total
+///
+/// # Safety
+/// `host` and `data` are valid for their lengths.
+int32_t ee_net_pr_send_single(const EeNetProtocol *p,
+                              const uint8_t *host,
+                              size_t host_length,
+                              uint16_t port,
+                              const uint8_t *data,
+                              uint32_t length);
+
+/// `SendTo(server, index, data, length)` (`xfer` false, enciphered in place) or `XferSendTo`: the length added to
+/// the sent total
+///
+/// # Safety
+/// `data` holds `length` writable bytes.
+int32_t ee_net_pr_send_to(const EeNetProtocol *p,
+                          void *server,
+                          bool xfer,
+                          uint32_t index,
+                          uint8_t *data,
+                          uint32_t length);
+
+/// `XferReceive(size, buffer, received)`: the received count added to the total
+///
+/// # Safety
+/// `buffer` holds `size` bytes; `received` is valid.
+int32_t ee_net_pr_xfer_receive(const EeNetProtocol *p,
+                               uint32_t size,
+                               uint8_t *buffer,
+                               uint32_t *received);
 
 /// The constructor (published or not: `ee_net_sv_get(s, GameWasPublished)`).
 ///
