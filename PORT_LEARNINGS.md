@@ -20364,8 +20364,8 @@ conscription, drop object and special location live under five seconds, so CALK 
 | 63b4adfe | the six functor classes as one `EEContagionFunctor` over `EeContagionFunctorFields` | +270 -910, net -640 |
 | b30baf18 | `EECalamity::Save` through the Rust save (round 1 had left the C++ chain) | +4 -78, net -74 |
 
-The round's C++: net -2,751 for the moves. The directory went from 6,293 to 5,000 lines (with the 439-line test
-capture), 40 headers and 26 units fewer (`include/ee/EECC*.h`, `EECC*.cpp`, `EE*Functor.cpp`).
+The round's C++: net -2,751 for the moves. The directory's units went from 6,293 to 4,172 lines (with the 439-line
+test capture), 40 headers and 26 units fewer (`include/ee/EECC*.h`, `EECC*.cpp`, `EE*Functor.cpp`).
 
 **The measure.** After round 1 every `EECC*` class held only its world steps: a static `StartStep` (the
 `EeCalamityOp::ClassStep` calls of the Rust `Start`/`Stop`, by index) and `UpdateStep` (the class's own update ops),

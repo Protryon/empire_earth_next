@@ -9,7 +9,7 @@ kind is made as (`calamity_class.rs`); an active calamity's record, `Reset`, che
 (`calamity_record.rs`); the contagion helpers' record and saves (`contagion_save.rs`); the contagion functors as one
 record, their getters, `Update`'s discrete time and `Apply`'s hit (`contagion_functor.rs`).
 
-**C++ left** (5,000 lines in the directory with the 439-line test capture; 7,969 before round 1):
+**C++ left** (the directory's units: 4,172 lines with the 439-line test capture; 7,969 before round 1):
 - `EECalamityUpdate.cpp` (1,350): the host every Rust run asks, one switch over `EeCalamityOp`: the shared calls and
   every class's own world steps (the effects, sounds, units, orders, the camera shake), keyed by the class enum for
   the start steps (`ClassStep`). This is where the twenty `EECC*` classes' bodies live now; they move further only as
