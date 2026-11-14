@@ -88,6 +88,7 @@ public:
     bool IsAsync() const { return this->GetMode()==1; }
     //: 0x291983 (an inline COMDAT of EELobbyFileTransfer.cpp): finished without error
     bool Succeeded() { return this->GetStatus()==0 && !this->IsKilled(); }
+    EeWonAsyncOp* GetOpObject() const { return this->mOp; }
 
 private:
     AsyncOp(const AsyncOp&);
@@ -333,18 +334,17 @@ public:
     ByteBufferPtr GetMsg() const; //2ab770, owning return by value
 };
 
-// vtable 44ca78, six slots
+// vtable 44ca78, six slots. The line so far (the original's WriteBuffer at 0x5c) and the message (+0x74) are the
+// op's Rust object's (sockop.rs, sockops.rs)
 class RecvCRMsgOp : public SocketOp {
 public:
-    RecvCRMsgOp(AsyncSocket* inSocket=NULL) : SocketOp(inSocket) {this->SetWaitForEvent(0,true);}
+    RecvCRMsgOp(AsyncSocket* inSocket=NULL) : SocketOp(inSocket)
+    { this->SetWaitForEvent(0,true); ee_won_socketop_init_line(this->GetSocketOpObject()); }
     virtual WONStatus Start();     //2b5970,62
     virtual WONStatus Continue();  //2b59b0,330 ending ret2b5af9, excludes6align
     virtual AsyncOp* Duplicate() {return new RecvCRMsgOp(this->GetSocket());} //2b2180, 209 bytes
-    ByteBufferPtr GetMsg() const {return this->mMessage;} //accessor 2b1df0 (ICF-folded)
-private:
-    // the line so far (the original's WriteBuffer at 0x5c) is the op's Rust object's (sockop.rs)
-    ByteBufferPtr mMessage; //74, total78
-    //Implicit normal2b2280/157 has NO own-vptr store: SP74,Buffer5c,SocketSP54,AsyncBase.
+    ByteBufferPtr GetMsg() const //accessor 2b1df0 (ICF-folded)
+    { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_message(this->GetSocketOpObject()))); }
 };
 
 // what a RecvBytesOp's progress completion (+0xa0) gets: 0x2b520d news one (0x48 bytes; RTTI RecvChunkOp : AsyncOp,
@@ -409,6 +409,7 @@ public:
     void SetRepeatOp(SocketOp*); //2b4500, repeat op84; never broad AsyncOp*
     void QueueOp(SocketOp*,long inTimeout);  //2b4740, accesses/rebinds op54
     void QueueClose(long inTimeout); //2b4a70, distinct from Close() 2b1b50
+    EeWonQueueSocket* GetQueueObject() const { return this->mQueue; }
 
 private:
     // A Rust object since round 14 (rust/crates/ee_won/src/qsock.rs EeWonQueueSocket): the default, current, repeat

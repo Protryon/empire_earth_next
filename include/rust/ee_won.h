@@ -1220,6 +1220,23 @@ constexpr static const int32_t EE_WON_HOST_PEER_NEW_SESSION = 160;
 /// borrowed; NULL for none). The certificate and auth context calls are answered in Rust over it (hostauth.rs).
 constexpr static const int32_t EE_WON_HOST_AUTH_CORE = 161;
 
+/// a C++ object obj0 (NULL: the op itself) -> out_obj: its Rust object of the kind num0 (`EE_WON_HOST_CORE_*`,
+/// borrowed; NULL when the object is not of that class). The socket and op calls are answered in Rust over it
+/// (hostsock.rs, net round 23).
+constexpr static const int32_t EE_WON_HOST_SOCK_CORE = 162;
+
+/// an `AsyncSocket`'s `EeWonAsyncSocket`
+constexpr static const int64_t EE_WON_HOST_CORE_SOCKET = 0;
+
+/// a `QueueSocket`'s `EeWonQueueSocket`
+constexpr static const int64_t EE_WON_HOST_CORE_QUEUE = 1;
+
+/// an `AsyncOp`'s `EeWonAsyncOp`
+constexpr static const int64_t EE_WON_HOST_CORE_OP = 2;
+
+/// a `SocketOp`'s `EeWonSocketOp`
+constexpr static const int64_t EE_WON_HOST_CORE_SOCKET_OP = 3;
+
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
 
@@ -15129,21 +15146,6 @@ void ee_won_socketop_set_event_index(const EeWonSocketOp *o, int32_t i, int32_t 
 /// As `ee_won_socketop_socket`.
 void ee_won_socketop_run_hook(const EeWonSocketOp *o);
 
-/// `RecvCRMsgOp::Start`'s buffer reset.
-///
-/// # Safety
-/// As `ee_won_socketop_socket`.
-void ee_won_socketop_line_reset(const EeWonSocketOp *o);
-
-/// `RecvCRMsgOp::Continue`: the status, and on success the message in `*message` (a new `EeWonByteBuffer` the
-/// C++ `ByteBuffer` adopts; null otherwise).
-///
-/// # Safety
-/// As `ee_won_socketop_socket`; `message` is valid.
-long ee_won_socketop_line_continue(const EeWonSocketOp *o,
-                                   EeWonOpTiming timing,
-                                   EeWonByteBuffer **message);
-
 /// `SendBytesOp(data)` (`message` null) / `SendMsgOp(message)` (`is_msg`).
 ///
 /// # Safety
@@ -15182,6 +15184,12 @@ void ee_won_socketop_init_connect(const EeWonSocketOp *o, const EeWonIpAddr *add
 /// # Safety
 /// As `ee_won_socketop_init_send`.
 void ee_won_socketop_init_accept(const EeWonSocketOp *o);
+
+/// `RecvCRMsgOp`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_line(const EeWonSocketOp *o);
 
 /// The op class's `Start`.
 ///

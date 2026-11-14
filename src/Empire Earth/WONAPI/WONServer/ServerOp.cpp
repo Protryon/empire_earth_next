@@ -107,15 +107,10 @@ BlockingSocket* Sock(void* inObj) { return inObj ? static_cast<BlockingSocket*>(
 AsyncOp* Op(void* inObj) { return static_cast<AsyncOp*>(Obj(inObj)); }
 void* Out(RefCount* inObj) { inObj->AddRef(); return inObj; } // a new object: the Rust op's reference
 IPAddr Addr(const EeWonHostCall* c) { IPAddr a; a.SetSixByte(c->addr); return a; }
-void GiveAddr(EeWonHostCall* c, const IPAddr& inAddr) { memcpy(c->out_addr, inAddr.GetSixByte(), 6); }
 ByteBufferPtr Buf(const EeWonHostCall* c) { return new ByteBuffer(c->data, (unsigned long)c->len, false); }
 void Give(EeWonHostCall* c, const void* inData, size_t inLength)
 {
     c->out_sink(c->out_context, static_cast<const uint8_t*>(inData), inLength);
-}
-void Give(EeWonHostCall* c, const ByteBuffer* inBytes)
-{
-    if (inBytes != NULL) Give(c, inBytes->data(), inBytes->length());
 }
 SocketOp* NewSocketOp(const EeWonHostCall* c)
 {
@@ -410,65 +405,8 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         c->out_obj = Out(anOp);
         break;
     }
-    case EE_WON_HOST_OP_STATUS: c->out_num = Op(o0)->GetStatus(); break;
-    case EE_WON_HOST_OP_BYTES: {
-        AsyncOp* anOp = Op(o0);
-        if (RecvBytesFromOp* f = dynamic_cast<RecvBytesFromOp*>(anOp)) Give(c, f->GetBytes().get());
-        else if (RecvMsgOp* m = dynamic_cast<RecvMsgOp*>(anOp)) Give(c, m->GetMsg().get());
-        else if (RecvCRMsgOp* l = dynamic_cast<RecvCRMsgOp*>(anOp)) Give(c, l->GetMsg().get());
-        else if (RecvBytesOp* b = dynamic_cast<RecvBytesOp*>(anOp)) Give(c, b->GetBytes().get());
-        break;
-    }
-    case EE_WON_HOST_OP_ADDR:
-        if (RecvBytesFromOp* f = dynamic_cast<RecvBytesFromOp*>(Op(o0))) GiveAddr(c, f->GetAddr());
-        break;
-    case EE_WON_HOST_OP_SOCKET:
-        if (SocketOp* s = dynamic_cast<SocketOp*>(Op(o0))) c->out_obj = s->GetSocket() ? Obj(s->GetSocket()) : NULL;
-        break;
-    case EE_WON_HOST_OP_KILLED: c->out_num = (o0 != NULL ? Op(o0) : o)->IsKilled() ? 1 : 0; break;
-    case EE_WON_HOST_RECV_PROGRESS:
-        static_cast<RecvBytesOp*>(Op(o0))->SetProgressCompletion(static_cast<CompletionBase<AsyncOpPtr>*>(Obj(c->obj[1])),
-                                                                 (long)n0);
-        break;
-    case EE_WON_HOST_RECV_FILE: {
-        RecvBytesOp* anOp = static_cast<RecvBytesOp*>(Op(o0));
-        anOp->SetFilePath(std::string(reinterpret_cast<const char*>(c->data), c->len));
-        anOp->SetAppendFile(n0 != 0);
-        break;
-    }
-    case EE_WON_HOST_CONNECT: c->out_num = Sock(o0)->Connect(Addr(c), (unsigned long)n0); break;
-    case EE_WON_HOST_SOCKET_BIND: c->out_num = Sock(o0)->Fn2B0D90((unsigned short)n0, n1 != 0); break;
-    case EE_WON_HOST_SOCKET_SET_LFS: Sock(o0)->SetLengthFieldSize((unsigned char)n0); break;
-    case EE_WON_HOST_SEND_BYTES_TO: c->out_num = Sock(o0)->SendBytesTo(Buf(c), Addr(c), (unsigned long)n0); break;
-    case EE_WON_HOST_RECV_BYTES_FROM: {
-        ByteBufferPtr aBytes;
-        IPAddr anAddr;
-        c->out_num = Sock(o0)->RecvBytesFrom(aBytes, (unsigned short)n0, anAddr, (unsigned long)n1);
-        Give(c, aBytes.get());
-        GiveAddr(c, anAddr);
-        break;
-    }
-    case EE_WON_HOST_SEND_BYTES: c->out_num = Sock(o0)->SendBytes(Buf(c), (unsigned long)n0); break;
-    case EE_WON_HOST_SEND_MSG: c->out_num = Sock(o0)->SendMsg(Buf(c), (unsigned long)n0); break;
-    case EE_WON_HOST_RECV_BYTES: {
-        ByteBufferPtr aBytes;
-        c->out_num = Sock(o0)->RecvBytes(aBytes, (DWORD)n0, (DWORD)n1);
-        Give(c, aBytes.get());
-        break;
-    }
-    case EE_WON_HOST_RECV_MSG: {
-        ByteBufferPtr aBytes;
-        c->out_num = Sock(o0)->RecvMsg(aBytes, (unsigned long)n0);
-        Give(c, aBytes.get());
-        break;
-    }
-    case EE_WON_HOST_RUN_BLOCK: c->out_num = Op(o0)->RunBlock((unsigned long)n0) ? 1 : 0; break;
     case EE_WON_HOST_FINISH: o->Finish((WONStatus)n0); break;
-    case EE_WON_HOST_KILL: (o0 != NULL ? Op(o0) : o)->Kill(n0 != 0); break;
     case EE_WON_HOST_TRACK: o->Track(Op(o0), (int)n0); break;
-    case EE_WON_HOST_QUEUE: Sock(o0)->QueueOp(static_cast<SocketOp*>(Op(c->obj[1])), (long)n0); break;
-    case EE_WON_HOST_RUN_ASYNC: Op(o0)->RunAsync((long)n0); break;
-    case EE_WON_HOST_CLOSE: Sock(o0)->Close(); break;
     case EE_WON_HOST_SET_REPEAT:
         Sock(o0)->SetRepeatCompletion(NewHostCompletion(o, (int)n0));
         Sock(o0)->SetRepeatOp(static_cast<SocketOp*>(Op(c->obj[1])));
@@ -496,22 +434,9 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         break;
     case EE_WON_HOST_KILL_ALL: o->mTracker.KillAll(); break;
     case EE_WON_HOST_PEER_AUTH_CERT: c->out_num = static_cast<PeerAuthOp*>(Op(o0))->GetGetCertStatus(); break;
-    case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = dynamic_cast<RecvMsgOp*>(Op(o0)) != NULL; break;
     // DetectFirewallOp's (ee_won fwhost.rs)
     // HTTPGetOp's (ee_won httpget.rs)
-    case EE_WON_HOST_SOCKET_CONNECTED: c->out_num = Sock(o0)->IsConnected() ? 1 : 0; break;
-    case EE_WON_HOST_SOCKET_KILL: Sock(o0)->Kill(); break;
-    case EE_WON_HOST_SOCKET_STATUS: c->out_num = Sock(o0)->GetSocketStatus(); break;
-    case EE_WON_HOST_RECV_CR: {
-        ByteBufferPtr aLine;
-        c->out_num = Sock(o0)->RecvCRMsg(aLine, (unsigned long)n0);
-        Give(c, aLine.get());
-        break;
-    }
     // the HTTP cache's calls are the Rust op's (ee_won httpcache.rs) on the Rust cache
-    case EE_WON_HOST_RECV_SKIP: static_cast<RecvBytesOp*>(Op(o0))->SetSkipBytes(true); break;
-    case EE_WON_HOST_RECV_BINARY: static_cast<RecvBytesOp*>(Op(o0))->SetBinaryFile(n0 != 0); break;
-    case EE_WON_HOST_RECV_MODIFY_TIME: static_cast<RecvBytesOp*>(Op(o0))->SetFileModifyTime((time_t)n0); break;
     case EE_WON_HOST_NEW_HTTP_GET: {
         std::string aTarget(reinterpret_cast<const char*>(c->data), c->len);
         c->out_obj = Out(NewHttpGet(aTarget.substr(0, (size_t)n0), aTarget.substr((size_t)n0)));
@@ -531,9 +456,6 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         static_cast<HTTPSession*>(Obj(o0))->AddOp(static_cast<RustServerOp*>(Op(c->obj[1])));
         break;
     case EE_WON_HOST_TRACKER_EMPTY: c->out_num = o->mTracker.IsEmpty() ? 1 : 0; break;
-    case EE_WON_HOST_SOCKET_LISTEN: c->out_num = Sock(o0)->Listen(1000); break;
-    case EE_WON_HOST_SOCKET_PORT: c->out_num = Sock(o0)->GetLocalPort(); break;
-    case EE_WON_HOST_RUN: c->out_num = Op(o0)->Run((long)n0, (unsigned long)n1); break;
     // the certificate and auth context calls are the Rust op's (ee_won hostauth.rs) over the Rust auth context
     case EE_WON_HOST_AUTH_CORE: {
         AuthContext* aContext = o0 != NULL ? static_cast<AuthContext*>(Obj(o0)) : o->mAuthContext.get();
@@ -542,9 +464,21 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     }
     // PeerAuthOp's and PeerAuthServerOp's (ee_won peerop.rs)
     case EE_WON_HOST_OWN_SOCKET: c->out_obj = static_cast<RefCount*>(o->mSocket.get()); break;
-    case EE_WON_HOST_SOCKET_LFS: c->out_num = Sock(o0)->GetLengthFieldSize(); break;
     case EE_WON_HOST_CLIENT_KEY: c->out_num = o->mClientKeySize | (o->mUseClientKey ? 0x100 : 0); break;
     case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = Out(new AsyncOp); break;
+    // the socket and op calls are the Rust op's (ee_won hostsock.rs) over the objects' Rust objects
+    case EE_WON_HOST_SOCK_CORE: {
+        RefCount* r = o0 != NULL ? Obj(o0) : o;
+        AsyncSocket* s = dynamic_cast<AsyncSocket*>(r);
+        QueueSocket* q = dynamic_cast<QueueSocket*>(r);
+        SocketOp* so = dynamic_cast<SocketOp*>(r);
+        AsyncOp* op = dynamic_cast<AsyncOp*>(r);
+        c->out_obj = n0 == EE_WON_HOST_CORE_SOCKET ? (s != NULL ? (void*)s->GetSocketObject() : NULL)
+                     : n0 == EE_WON_HOST_CORE_QUEUE ? (q != NULL ? (void*)q->GetQueueObject() : NULL)
+                     : n0 == EE_WON_HOST_CORE_OP ? (op != NULL ? (void*)op->GetOpObject() : NULL)
+                     : (so != NULL ? (void*)so->GetSocketOpObject() : NULL);
+        break;
+    }
     default: break;
     }
 }

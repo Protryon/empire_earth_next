@@ -71,6 +71,7 @@ pub mod guiwrap;
 pub mod hostauth;
 pub mod hostnative;
 pub mod hostop;
+pub mod hostsock;
 pub mod http;
 pub mod httpcache;
 pub mod httpdoc;
