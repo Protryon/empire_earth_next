@@ -5430,6 +5430,71 @@ granaries, universities, hospitals, stables and towers. The C++'s FindCenterSite
 
 Open: the explorer timing in the Stone Age, the late-start boats without the Prehistoric farms' cost, and the
 docks' placement on the islands.
+### 8.85 Stage 3: citizens before the epoch reserve (2026-11-15, EE-SIM)
+
+**The decision.** From every start, the port's citizens stalled for 15-20 minutes behind the epoch reserve
+(EEComputerPlayer::CanAfford): the pending advance held the food long before the economy could fill it.
+
+On a Stone Age start the port asked for the Copper Age from minute 5 with epoch_pressure.safe_bonus (§8.84). It lost
+2-46 on land. On the islands from the Copper Age the same reserve held the food while the C++ fished.
+
+Two changes, both in the port only (the C++ classic reads the same personality and is unchanged):
+- **citizens past the reserve below 50 workers** (units.lua RESERVE_FREE_WORKERS; the C++ below 12, its recovery
+  rule);
+- **no safe bonus** (civ.lua SAFE_BONUS).
+
+The advance then waits for an economy that carries it.
+
+Tried on a Stone Age start on land (32 seeds, 60 minutes, port won-lost-close):
+
+| variant | result |
+|---|---|
+| as before | 2-21-9 |
+| no safe bonus | 7-13-12 |
+| the bonus only from 30 / 45 workers | 3-25-4 / 5-15-12 |
+| no bonus, citizens free below 30 / 40 / 50 workers | 8-14-10 / 10-8-14 / **14-9-9** |
+| bonus kept, citizens free below 40 | 8-14-10 |
+
+**The cross-epoch bench again** (§8.84's: 32 seeds, 60 minutes, Continental and Small Islands). Citizens are at 60
+minutes, port/C++:
+
+| start | land | water |
+|---|---|---|
+| Prehistoric | 22-3-7 (was 13-13-6), 117/77 | 21-0-11 (was 14-3-15), 85/48 |
+| Stone | 14-9-9 (was 2-21-9), 99/103 | 27-0-5 (was 12-2-18), 95/42 |
+| Copper | 27-2-3 (was 12-6-14), 101/42 | 19-0-13 (was 3-18-11), 98/55 |
+| Bronze | 25-1-6 (was 15-10-7) | 32-0-0 (was 15-3-14) |
+| Dark | 29-1-2 (was 17-2-13) | 27-0-5 (was 6-14-12) |
+| Middle Ages | 25-1-6 (was 12-9-11) | 25-0-7 (was 6-10-16) |
+| Renaissance | 26-1-5 (was 17-8-7) | 29-0-3 (was 4-5-23) |
+| Imperial | 29-0-3 (was 13-5-14) | 28-0-4 (was 4-8-20) |
+| Industrial | 25-0-7 (was 13-8-11) | 19-2-11 (was 3-13-16) |
+| Atomic WW1 | 30-0-2 (was 11-5-16) | 22-0-10 (was 0-15-17) |
+| Atomic WW2 | 31-0-1 (was 9-4-19) | 32-0-0 (was 1-4-27) |
+| Atomic Modern | 29-0-3 (was 6-7-19) | 28-0-4 (was 1-4-27) |
+| Digital | 26-3-3 (was 11-6-15) | 21-1-10 (was 3-15-14) |
+| Nano | 27-0-5 (was 12-6-14) | 19-0-13 (was 1-8-23) |
+| Space | 29-0-3 (unchanged) | 31-0-1 (unchanged) |
+
+The port is ahead in every cell. 0 script errors. The Prehistoric rows are this round's own 60-minute baselines.
+
+Confirmed on 64 seeds, the closest cell: a Stone Age start on land, 30-17-17. The standard bench (Prehistoric, land,
+90 minutes, seeds 2-33):
+- 25-3-4 against the C++ (16-10-6 before, the same seeds);
+- citizens at 80 minutes 143.6 against 86.6;
+- the Copper Age in 25 games against the C++'s 16.
+
+Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
+
+The cost is a slower first advance from a Prehistoric start: the Stone Age at a median 29 minutes on land (was 25)
+and 34.5 on the islands. The port then advances with the larger economy: from a late start it makes 16-31 advances
+a cell against the C++'s 0-14.
+
+The water cells came without a fishing change. Both of these, tried with this rule, are not kept:
+- the late-start fishing (§8.84's two C++ behaviours: the map's fish through the fog from a start past the
+  Prehistoric, boats as the coast keeps them): Copper water 3-11-18, Dark water 7-15-10, without the reserve rule;
+- fog-free dock sites (ai.water_sites through the fog): no site is placeable until the coast is explored
+  (EECanPlaceOnTile tests the player's visibility).
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
