@@ -19114,6 +19114,308 @@ and line of sight (`mStats->`: the unit picker, light glows, render objects). On
   `EETechTree`'s (137) once its nodes' state is a record; the unit save host's primitives onto `EESavePrimitive` (its
   io type is the same shape); `EEPWorldHelper`'s plain reads (mostly sub-object loads).
 
+## R6: WON's Internet code, round 23 (the op base's socket and op calls answered in Rust; the socket ops' forwarders)
+
+Branch `rust-won-net23`. Measured by net C++ deletion over src + include (without include/rust), as rounds 7 to 22.
+Round 22 recommended WONSocket (1,996 lines in 13 units) bottom-up, so that ServerOp.cpp's remaining socket host
+calls could be answered in Rust.
+
+- **What WONSocket was at the start.** Every class was already a shim over a Rust object (the lobby lane's rounds
+  13-16): IPAddr over `EeWonIpAddr` (a value handle, copied at every copy), AsyncSocket over `EeWonAsyncSocket`,
+  QueueSocket over `EeWonQueueSocket`, the socket ops over `EeWonSocketOp`, UDPManager and its ops over
+  `EeWonUdpManager` / `EeWonUdpRecvOp` / `EeWonUdpSendRecvOp`, the socket thread over `sockthread.rs`. What is left
+  in the units is (a) the classes callers hold (IPAddr in 42 files, AsyncSocket 9, QueueSocket 6, BlockingSocket 8,
+  UDPManager 9, the ops 2-5 each: LanLogic, EELobbyFileTransfer, PingLogic, the routing and server connections),
+  (b) one-line forwarders, (c) the hook tables through which the Rust objects call back into the C++ objects they
+  hold (AsyncOp's virtuals, completions, ByteBuffers, transforms, the ops a queue runs) and (d) BlockingSocket's
+  blocking calls (a C++ op made, run blocking, read). Deleting a class needs its callers to hold the Rust object
+  instead, which is the WONLobby lane's ground (LanLogic, the file transfer, PingLogic) and AsyncOp's (every op class
+  derives from it). So this round deleted what no caller holds: ServerOp's socket and op host calls, and the socket
+  op classes' Start/Continue forwarders.
+- **The golden first** (`won_hostsock_test`, its own commit, over ServerOp.cpp's unmodified `HostCall`): a real
+  HTTP get op as the call path (`ee_won_hostop_call`), real `BlockingSocket`s from `EE_WON_HOST_NEW_SOCKET` over
+  127.0.0.1 (a listener bound to the local host, a client connected through `EE_WON_HOST_CONNECT`, the server side
+  accepted by an `AcceptOp` queued through `EE_WON_HOST_QUEUE`; two datagram sockets), and every socket and op call:
+  bind, port, listen, the length field set to 2, 1 and 4, the connected flag and status; messages, bytes and a
+  CR-LF line each way through the blocking calls, the three time-outs with nothing to read; ops of each kind from
+  `EE_WON_HOST_NEW_OP` run blocking, run (mode 2), run async and pumped, queued and pumped, killed without and with
+  finish; their bytes, sender, socket and kind; a connect op without a socket; a timer (a plain AsyncOp); a receive
+  into a file (binary with its modify time, then appended as text), a skipped receive, a receive with progress;
+  datagrams sent and received with their sender, a receive op's sender, a closed datagram socket reopened by a
+  send; a stream closed (read to the end, then the shutdown, a send on the closed socket), a killed socket, a
+  refused connect; the op's own killed flag and kill (obj NULL). 103 lines, six runs the same; 0 failures after the
+  move.
+  - **Waits on events, not time** (round 22's lesson): a blocking call returns when its data arrives; an async op is
+    pumped until it is no longer pending (`PumpUntilDone`, at most ten seconds); the only time-outs are of calls that
+    can get no data.
+  - **Driver traps met again.** Naming objects by address: a released op's address came back for the next one, and
+    three first runs differed only in names; objects are named by the answer that made them (`Fresh`), as round 21
+    said. One effect per statement: `Log("x " + N(Run()) + " " + Bytes(OpBytes()))` may read the bytes before the
+    run (round 22's lesson); every run is its own statement. Platform-dependent answers left out: a datagram larger
+    than the receive (WSAEMSGSIZE on Windows, truncation on POSIX) and a connect to 0.0.0.0:0.
+- **What moved** (`hostsock.rs`): the C++ side answers one call for all of them, `EE_WON_HOST_SOCK_CORE` (an object,
+  or NULL for the op itself, and a kind: `EE_WON_HOST_CORE_SOCKET`, `_QUEUE`, `_OP`, `_SOCKET_OP` -> its Rust object
+  by `dynamic_cast`, or NULL), as round 20's `EE_WON_HOST_AUTH_CORE` did for the auth context, and the op base
+  answers 33 codes on the Rust objects when the op is bound natively: the sockets' `SOCKET_CONNECTED`, `_STATUS`,
+  `_LFS`, `_SET_LFS`, `_PORT`, `_LISTEN` (1000), `_BIND` (`Fn2B0D90`: the local host and the port), `CLOSE`,
+  `SOCKET_KILL`; BlockingSocket's `CONNECT`, `SEND_BYTES`, `SEND_MSG`, `SEND_BYTES_TO`, `RECV_BYTES`, `RECV_MSG`,
+  `RECV_CR`, `RECV_BYTES_FROM` (the op is still made by the C++ side, `EE_WON_HOST_NEW_OP`, then run blocking, read
+  when it succeeded and released here, as BlockingSocket's methods did); the socket ops' `OP_BYTES` (by class: a
+  datagram's, a message, a line, a receive's), `OP_ADDR` (a datagram's sender only), `OP_SOCKET`, `OP_IS_RECV_MSG`,
+  `RECV_PROGRESS`, `RECV_FILE`, `RECV_BINARY`, `RECV_SKIP`, `RECV_MODIFY_TIME`; the ops' `OP_STATUS`, `OP_KILLED`,
+  `KILL`, `RUN`, `RUN_ASYNC`, `RUN_BLOCK`; the queue socket's `QUEUE`. `HostCall` went from 76 cases to 44.
+  RecvCRMsgOp's message became its Rust object's (`OpKind::Line`: the line buffer was already there), so its bytes
+  are answered by kind like the others; `ee_won_socketop_line_reset` / `_line_continue` are gone. The drivers'
+  stand-ins (`ee_won_hostop_bind`) still see every call, so every op golden is unchanged. src+include +26 -102.
+- **The socket ops' Start and Continue.** `SocketOp::Start` and `Continue` (the base's, which every socket op class
+  overrode with a one-line forwarder to `ee_won_socketop_start` / `_continue`) are now those forwarders; the Rust
+  `op_start` of a class without a start of its own (`OpKind::Base`, the datagram ops, accept) calls the op's virtual
+  `Continue` through the hook, so a C++ class that overrides only `Continue` (CloseOp, QueueSocket's close op, the
+  lobby's SendFileOp, won_asyncop_test's ScriptOp) still starts by its own `Continue`, as the original's base `Start`
+  (0x29151c) did. ConnectOp, AcceptOp, SendBytesOp, SendMsgOp, SendBytesToOp, RecvBytesOp, RecvMsgOp,
+  RecvBytesFromOp and RecvCRMsgOp lose 15 overrides; SocketOperationDispatch.cpp and RecvCRMsgOp.cpp are deleted
+  (`SocketOp::CleanupHook` moved to SocketRunHooks.cpp; both lines gone from `link/won/units.txt`, which build.py
+  reads: a deleted unit left there stops the build with "unit ... does not exist"). src+include +13 -136.
+- **Mutations** (`won_hostsock_test`): the killed flag read on the op itself instead of the object, 4 failures; a
+  run async run blocking, 5; the length field not set, 2. Two did not show and are equivalent here: the bind's reuse
+  flag inverted (no port is contended) and the blocking calls' bytes read after a failure too (a failed receive
+  holds no buffer: the receive's buffer is set only when it completes). Unit tests (`hostsock_tests.rs`, 3, real
+  sockets on 127.0.0.1 behind a stand-in C++ side): the socket answers and the core asked once per call, zeros and
+  no call for no object; the socket ops' answers by kind and the progress completion's reference; a line op's
+  message kept, dropped by the next start and kept from a time-out, a blocking call's call sequence (`NEW_OP` with
+  the kind, length, data and address, the op's and the socket op's core, `RELEASE`) and each blocking call's kind
+  and length (the length's cast: `DWORD`, `unsigned short`).
+- **Behaviour.** None on defined paths. A socket or op call with no object answers 0 where the C++ dereferenced NULL.
+  The blocking calls make one more host call per call (the core of the new op, then of its socket op), as round 20's
+  core call did.
+- **Reach.** The ops of the Internet path make these calls (the request ops' connect, sends and receives, the
+  routing connection's, the HTTP get, the firewall detection, the peer authentication); the LAN game's direct connect
+  with the CD key check runs a peer authentication (round 22). The socket op classes' Start and Continue are every
+  socket op's, the LAN lobby's included (discovery's SendBytesToOp and RecvBytesFromOp, the game channel, the file
+  transfer). EE-SIM makes no op. Gates: the LAN game after each socket commit (below).
+- **What is left in WONSocket** (1,875 lines in 11 units, mostly classes callers hold and hook tables): IPAddr (a value
+  handle in 42 files: replacing it is a callers' change), AsyncSocket/QueueSocket/BlockingSocket (held by the LAN
+  lobby, the routing and server connections; their hooks call back into AsyncOp's virtuals and completions),
+  UDPManager and its ops (PingLogic, RoutingGetUserStatusOp derive from them), the socket thread. BlockingSocket's
+  seven blocking calls now have no game caller (only the tests' drivers use them: won_ops_test, won_sockobj_test and
+  more); deleting them means moving those drivers to the host calls. The next real step is AsyncOp itself: while the
+  ops are C++ classes with virtual hooks, every Rust socket object needs its hook table back into them.
+
+### Gates
+
+| Gate | 7210398b (host calls) | a7a2c32f (Start/Continue) | Merged with rust |
+|---|---|---|---|
+| `build.py -j 3 --sim` | 0 / 0 | 0 / 0 | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | clippy failed (`useless_conversion` x4), then rustfmt; fixed before the commit, PASS | PASS | PASS |
+| `build.py --test-profile windowed-software` | 0 / 0 | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | won_hostsock_test, won_sockobj_test, won_ops_test, won_serverop_test exit 0 | won_hostsock_test, won_sockobj_test, won_asyncop_test, won_servconn_test, won_authsession_test exit 0 | all 105 programs exit 0 |
+| `lan_game.py` (harness lock) | `RESULT PASS lan-game PT host=2876 joiner=2871` | `RESULT PASS lan-game PT host=2943 joiner=2943` | `RESULT PASS lan-game PT host=3091 joiner=3093` |
+
+The merge of rust (92 commits, at 354fde6a) needed nothing: no conflict, `rust_build.py header` current,
+`rust_includes.py` changed nothing.
+
+## LLE lane, round 5: the File System's walk in Rust: FSBasicFile, FSFileSpec and FSArchive whole, FSPath's searches (ee_fs spec.rs, archive_obj.rs, path.rs; branch rust-lle5, 2026-11-14)
+
+Round 5 of the Low-Level Engine lane (rounds 1-4 above). Net C++ over src + include without the generated
+`include/rust` (`git diff --numstat`), per commit: FSBasicFile/FSFileSpec -565; FSArchive -330; FSPath -57:
+-952 in all. The Sound Engine's objects (item 2 of the round) were not started.
+
+- **Step 0 dropped** on the lead's word: the Network Engine lane fixed `tools/xbuild.py`'s tcptest/nettest unit
+  lists (the deleted `TSCriticalSection.cpp`/`TSEvent.cpp`) in commit 5684cefe (branch `rust-ne4`).
+- **FSBasicFile and FSFileSpec whole in Rust** (`ee_fs` `spec.rs`). Round 4's by-value pattern one level up: the C++
+  classes keep their vtables (`FSMemoryFile` derives from `FSFileSpec` and overrides most virtuals) and their members
+  (three `UString`s, the access, version and open flag, the handle and the stream; `sizeof(FSFileSpec)` is in every
+  embedding class), and each member is one line handing the object, from its vtable pointer on, to Rust as an
+  `EeFsSpec` (`EeFsString` mirrors a `UString` member: its vtable pointer, then round 4's `EeUString`).
+  `static_assert`s pin the size and five offsets. The strings are worked through `ee_ustring`'s record functions in
+  the original's order (an `operator+` is a fresh record, `operator=` an assignment), so capacities and the bytes past
+  a terminator are the original's; every platform call is the original's, in its order, with the same native errors.
+  - Stays C++: `operator<` and `GetLengthFromClosedFile` (they call `Open`/`GetLength`/`Close`, which `FSMemoryFile`
+    overrides), the names' getters and setters (one assignment each). `CloseSearchHandle` (inline in the header) is
+    an out-of-line forwarder.
+  - **The golden** (`tests/fs/fs_spec_golden.cpp` over `fs_spec_orig.h`, the two classes copied verbatim): 5,000
+    sequences on four specs in a real directory emptied before each (names near `PLAT_MAX_PATH`, invalid and blank
+    names, read-only files, every open mode, short and long reads and writes, the scalar overloads, seeks past the
+    end, searches with eleven patterns, parents, copies), printing every result, every spec's names, capacities and
+    flags and the last native error: 340,440 lines. cargo replays them all (`golden_spec.rs`, 60 sequences checked in,
+    Windows only: native error numbers and the search order are the system's) in a directory of its own whose path
+    has the same length; the driver relinked over the forwarders prints the same 340,440 lines. 12 mutations: 11 fail
+    it (sequences 1..1705), 1 is equivalent (the path constructor's empty file name assigned to a member that is
+    always freshly empty).
+  - Driver lessons: the root's parent is reachable through `GetParentDirectory`, and an early version wrote into the
+    scratch folder above it (a file made read-only, the driver's own exe overwritten): the driver now resets a spec
+    that leaves the root. An `operator+` chain is not sequenced in C++17, so `Line("x" + to_string(f()) + State())`
+    printed the state before the call: results are computed first. The original crashes or leaks on some sequences
+    (Create on an open file drops its handle and Close then `fclose(NULL)`s; an assignment or search into an open spec
+    leaks its handle): the driver skips those, said in its comments.
+- **FSArchive whole in Rust** (`archive_obj.rs`): open (header, tables, mapping), close, find (the member decompressed;
+  the C++ wraps it in an `FSMemoryFile` and Rust names it), both `Create`s (the directory walk with pattern and
+  recursion, or a name list; compressed lengths, offsets, the write and the reopen check with the original's
+  verifications), `ExtractAll` (its progress lines through a CR LF text-mode writer, as the C runtime's stdout wrote
+  them), `SetArchive`, assignment, copy. The archive file is a by-value `FSFileSpec`: its calls are `spec.rs`'s; the
+  compression's memory files are Rust `EeFsMemFile`s. Stays C++: `GetTag`, `SetTag`, `ListFiles` (they fill a
+  `UWideString` and a `std::set` through the table's sinks), `FindFile`'s `new FSMemoryFile`.
+- **FSPath's searches in Rust** (`path.rs`): `FindFile` (directories first, each through a copy of its spec, then the
+  archives with the name lower-cased) and `ListFiles`' directory walk run over the vectors' element arrays. The
+  `std::vector`s of `FSArchive`/`FSFileSpec` stay C++ members (`GetArchive` hands out a reference into one) with their
+  plumbing (`AddArchive`'s close/insert/reopen, the removals, copies).
+- **The archive golden** (`tests/fs/fs_archive_golden.cpp` over `fs_archive_orig.h` and `fs_archive_orig_class.h`,
+  the original units and class): 2,000 sequences, each on a fresh source tree of 3-12 random files (compressible runs
+  or noise, up to 20 KB, empty ones) under five directories: builds from the walk (four roots, seven patterns,
+  recursive or not, three dictionary sizes) and from name lists, opens, finds in any case, tags, listings, extractions
+  with and without the target's subdirectories, assignments, `SetArchive`; the even sequences also drive a search path
+  (archives and directories added in front or behind, finds with `GetFileArchiveStatus`, listings, removals, copies
+  and assignment of the path): 83,801 lines (902 archive finds and 254 path finds succeed, 1,903 members extracted).
+  The driver relinked over the new units prints the same 83,801 lines; cargo replays the 1,000 archive-only sequences
+  (`golden_archive.rs`, 20 checked in; the path's sequences need the C++ vectors and are the relinked driver's
+  check). Mutations: 9 of 10 in `archive_obj.rs` fail the cargo replay (two by the original's verification or a replay panic), the tenth (a failed open leaving the file open) only shows on a corrupt archive, which the golden never opens; 5 of 5 in `path.rs` fail the relinked driver (first 300 sequences).
+- **Behaviour changes:** ExtractAll's lines are written by Rust (same bytes, CR LF on Windows, after a flush of the C
+  runtime's stdout); a member whose decompression fails during an `FSPath` search is freed (the original leaked it).
+- **What runs it.** Every data load and save goes through `FSFileSpec` (EE-SIM too: oracle seeds 2-3 identical after
+  each commit, the saveload matrix PASS, `sim_editor.py` PASS); `.ssa` archives are only the campaigns (`EECampaign`
+  Load/Save, the campaign editor) and `gDataPath`'s archives (none in the open data tree): the tour does not open a
+  campaign, so only the golden covers `FSArchive`'s build and extraction.
+- **Left:** `operator<`/`GetLengthFromClosedFile` (virtual dispatch), the `FSPath` vectors (a Rust-owned list of C++
+  objects needs C++ construction callbacks), `File System.cpp`'s startup paths; then the Sound Engine's objects.
+
+## R6 WONLobby, round 4: the LAN screen's controls and the EE room's options panel as one Rust control object (ee_won lobbyctl.rs; branch rust-wonlobby4, 2026-11-14)
+
+Round 3's list, top-down, biggest deletion first: the controls every LAN game builds (the LAN screen's tabs and the
+game room's buttons and player list), then the EE room's options panel. Each commit has its golden over the original
+statements (copied from the units before their deletion), mutations of the Rust that the golden catches, and a cargo
+replay of a recorded subset.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 8e426691 | GameBrowserCtrl, GameStagingCtrl, LobbyOptionsCtrl (both tabs), GameUserListCtrl as `lobbyctl.rs` kinds; four units deleted | +473 -870 = -397 (72,410 -> 72,013) |
+| 62aafdda | EELobbyGameOptionsCtrl (the EE game room's options panel) as kind `GameOptions`; its unit deleted | +53 -379 = -326 (72,013 -> 71,687) |
+
+- **One control object over a table of look-ups.** The five classes were `Container`s whose members were their
+  controls (`SmartPtr`s filled by `SafeGetComponent`) and a few flags. `lobbyctl.rs` holds one table (`SLOTS`, 55
+  entries) of every look-up in the originals' order: the resource name, the original's file and line for the
+  missing-control report, the `dynamic_cast` type, the control id `SafeGetComponent` set and the member it fills.
+  The `Find` op is the original template's statements (the cast and the report) and returns the control without a
+  reference; the Rust then does `ConstSmartPtr::operator=` (nothing for the same pointer, else release the old one,
+  reference the new one) and sets the id, so a second InitComponent and LobbyOptionsCtrl's one local `SmartPtr<Button>`
+  (the reset, restore and remove buttons in turn, released at the end) make the original's reference traffic.
+  GameUserListCtrl's Kick button is the optional `Fn386860` look-up (no report).
+- **What stays C++.** One shell, `LobbyRustCtrl : Container` (WONLobbyRustCtrl.h; InitComponent and
+  HandleComponentEvent forward, the event's type mapped to `EeWonLobbyCtlEvent`), and the class names as one-line
+  subclasses, so the resource factories (WONLobbyPrv.cpp, EELobbyInit.cpp), RootScreen's `ResetBrowser` and the
+  browser config's `SetHomeLocation` did not change. GameBrowserCtrl keeps its home location (a `GUIString` member)
+  and its `Paint` override (one forward; the Rust goes home once after a reset, then calls `Container::Paint`).
+  GameUserListItem (the player row: paint, size, order) stays a C++ list row in LobbyCtrlHost.cpp; its icon rule
+  (`UpdateIcon`: the first of ignored, blocked, muted, away, admin, moderator, captain) is Rust over one op per test.
+  The two config readers (GameBrowserCtrlConfig, GameUserListCtrlConfig) moved into LobbyCtrlHost.cpp unchanged.
+- **The host** (`LobbyCtrlHost`, `EeWonLobbyCtlOp`, 117 ops, 99 of them in the first commit; its own enums for the strings, pictures, client tests
+  and settings, `EeWonLobbyCtlPref` naming the twelve `LobbyGet*`/`LobbySet*` pairs): each op is the original's
+  statements on a control, an event, the lobby's model, its settings, a sound or a resource with no decision between
+  them. Two reads became two calls where the original made one: RefreshPublicAddress's `LobbyGetPublicAddress()`
+  (asked for `IsValid`, then again for the label's text; it returns a copy of a stored address) and nothing else.
+- **Re-entry.** A check box set with its event (`SetCheck(x, true)`: RefreshOptions sets nine), a combo box or list
+  cleared with its event, and the saved game's file dialog (`LobbyDoDialog`, a modal loop) deliver events back into
+  the same control: the state is in `Cell`s behind a shared reference and nothing is borrowed across an op.
+- **EELobbyGameOptionsCtrl** is the sixth kind: the campaign label and boxes, the 16 options (`sOptionTable`'s
+  eleven combo boxes and five check boxes, a `Component` look-up each, then the type check with its "Invalid type for"
+  report, then the id), the unit limit list (50..1200), the map types, Activate/Deactivate, UpdateOption/UpdateAll
+  (the unit limit shown in steps of 50, the options enabled for the host of a random map), OptionChanged (a
+  captain's change sent with `ChangeOption`, anyone else's control restored) and ChangeGameType (the saved game's
+  file dialog; a random map reopens the slots reserved by name). Its `mIsActive` is the object's in-game flag.
+
+### Goldens, mutations, replays
+
+`tests/won/won_lobbyctl_test.cpp` (`xbuild.py wontest won_lobbyctl_test`): the units' statements before the
+deletion, every call on another object replaced by its op, against the Rust over one scripted host whose answers come
+from a seeded stream; a notifying set or clear, and the file dialog, re-enter the control with a matching (or random)
+event a third of the time, two deep at most. The table is checked name, file, line, type and id against the original
+`SafeGetComponent` arguments.
+
+| Commit | Sequences | Trace lines | Replayed by cargo |
+|---|---|---|---|
+| 8e426691 | 40,000 (five kinds) | 2,595,339 | `golden_lobbyctl.txt` (123 sequences) |
+| 62aafdda | 50,000 (six kinds) | 4,230,291 | `golden_lobbyctl.txt` (137 sequences) |
+
+All identical on the first run. Each replay test also fails on one changed op.
+
+| Mutation of the Rust | Sequences that change |
+|---|---|
+| UpdateStartButton asks `LobbyIAmReady` once (the original asks twice) | 185 of 40,000 |
+| the dirty-word check set with its event | 615 |
+| Ban for a LAN room (flag 2, not 4) | 383 |
+| the refresh and home buttons' ids swapped | 7,255 |
+| a saved speed's entry one higher at the boundary (`>=`) | 98 |
+| away tested before muted | 136 |
+| the options' local button never released | 13,600 |
+| the unit limit shown without the -1 | 794 of 50,000 |
+| a guest's options enabled on a random map | 55 |
+| only slots of state 3 reopened | 13 |
+| the type check skipped for the check boxes | 7,496 |
+| a cancelled saved game still sent (generator below) | 2 of 50,000 |
+| a non-captain's change sent | 146 |
+
+The cancelled saved game was not caught at first (0 of 50,000): the generator rarely activated the options panel and
+the control ids reached only options 0-8. It now joins a game room first in half of the panel's sequences and draws
+the ids over all 17 options; the recorded golden is that generator's. The second commit's first five rows ran while the generator
+changed (the first rows with the first generator, the type-check row with the new one).
+
+Unit tests (11, the two replays among them): the connection speeds and their entries; each kind's look-ups fill each
+member once; a host may start only a startable game and a guest relabels on ready; the Kick button is never for the
+captain; the icon is the first match; the dirty-word and AFK checks are set without their event; the browser goes home
+on its first paint only and releases its members in reverse; the unit limit shown and sent in steps of 50; a
+cancelled saved game restores the combo box and sends nothing.
+
+### Behaviour changes
+
+None on a defined path. The missing-control reports name the unit's file without the original's staged path (as in
+rounds 1-3). EELobbyGameOptionsCtrl's UpdateOption let option 16 through and read `sOptionTable[16]` (past the table);
+its getters answered NULL for 16 whatever that held, so it did nothing, as the Rust does.
+
+### What runs it
+
+EE-SIM never builds the lobby (the oracle is unchanged by construction). Every LAN game builds the LAN screen's
+options tab (`LobbyOptionsCtrl(true)`: its look-ups, the local address, the 100014/100050/100055 refreshes),
+the help browser tab (GameBrowserCtrl: look-ups, EnableButtons, RootScreen's ResetBrowser on entering the
+screen; its paint, and so GoHome, only when the help tab is shown, which the harness does not do), the game room's
+GameStagingCtrl (JoinedGame, the host's Start Game and the joiner's Ready/Not Ready, UpdateStartButton on 100061),
+GameUserListCtrl (HandleJoinedGame's rows and icons, PlayerChanged adds, ClientChanged refreshes, LeftGame) and
+EELobbyGameOptionsCtrl (Activate, UpdateAll, the 100065 and SyncOption updates). Only a person reaches the options
+tab's buttons and combo boxes, the browser's navigation and find, the Kick button, a right click or double click on a
+player, and the options panel's changes (a captain's ChangeOption, the saved game's file dialog). Only the Internet
+path reaches the Internet options tab (`LobbyOptionsCtrl(false)`), the news tab and the Ban label (room flag 4).
+
+### Gates
+
+| Gate | 8e426691 (the four controls) | 62aafdda (the options panel) | final tree 61a9d843 (merged with rust f2813578) |
+|---|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | tests passed; clippy (one cast) and rustfmt failed on the first runs, fixed and re-run in the commit; after the commit one run crashed in `ee_gx`'s tests (0xC0000409, not this lane's crate), which then passed alone (175 tests) | tests passed, clippy failed on two lints (a range loop, a collapsible `if`); fixed before the commit (`cargo clippy -p ee_won -D warnings` clean, the golden and cargo replay re-run) | PASS |
+| `build.py --test-profile windowed-software` | 0 / 0 | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | `won_lobbyctl_test` exits 0 | `won_lobbyctl_test` exits 0 | the lobby set exits 0: won_lobbyctl_test, won_lobbydlg_test, won_dlglogic_test, won_lobbyscr_test, won_credits_test, won_lobbypopup_test, won_lanobj_test, won_stagingobj_test, won_dialogobj_test, won_dialogs_test. The full set (about 100 programs) was started on this tree with a 3-hour limit: see the end of this section |
+| `lan_game.py` (harness lock, the test exe of that tree) | `RESULT PASS lan-game` (PT 2980 / 2954) | `RESULT PASS lan-game` (PT 3006 / 3010; the exe built before the two clippy refactors) | `RESULT PASS lan-game` (PT 3006 / 3006) |
+
+The merge of rust (f2813578) brought documentation only (RUST_PLAN's Progress rows moved to `docs/progress/`); no
+conflict. This lane's state is now `docs/progress/r6-won-the-lobby-screens.md`.
+
+### Left for the next rounds
+
+- ChatCommandParser: not moved. Its parsing and state are Rust already (`chat.rs`, `chatobj.rs`); what is left is
+  `InitCommands`' 24 resource strings, `AddCommands`' StringParser list read (WONCommon's `StringParser::ReadValue`,
+  another lane's), the help strings' table and the client-list glue. Moving them would trade the resource string
+  switches for the same switches in a host: little C++ deleted for a new op set.
+- The EE room: EELobbyGame (1,086 lines), EELobbyPlayerOptionsCtrl and EELobbyPlayer, EELobbyColorButton, the
+  connect and file dialogs; then the logics (LanLogic's and StagingLogic's hosts, AccountLogic, InitLogic, PingLogic),
+  RoutingLogic (Internet) last, and the resource tables and factories.
+- The list rows kept in C++ (BadUserItem, NetworkAdapterListItem, GameUserListItem) go with the WON GUI lane's list
+  widgets.
+
+### The full `wontest` set on the final tree
+
+Started on the final tree (61a9d843) with a 3-hour limit, in the background; when this section was written 13 of the 106 programs had run and all 13 exited 0 (0 failures). The loaded machine runs one program every 2-10 minutes, so the set may hit the limit before its end: its log is `build/wl4/wontest_all.log` in the worktree (`ALL EXIT` ends it; 124 means the limit).
+
 ## The physics models, round 1: the twelve EEPM* models whole in Rust (ee_units pm.rs, pm_ground.rs, pm_air.rs, pm_host.rs; branch rust-physics1, 2026-11-14)
 
 - **Stateless singletons move as a dispatch.** `gPhysicsModels[12]` held one empty object per model class; every value
