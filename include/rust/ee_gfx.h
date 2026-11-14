@@ -160,11 +160,17 @@ constexpr static const int32_t EE_GFX_TRACER_HIT = 2;
 /// The beam ends (7).
 constexpr static const int32_t EE_GFX_TRACER_OVER = 4;
 
+/// `kEffect2DWinterBreath`, `kEffect2DLinearProjectile`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_WINTER_BREATH = 22;
+
 /// `kEffect3DDamageVent`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_DAMAGE_VENT = 53;
 
 /// `kEffect3DVolcano`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_VOLCANO = 32;
+
+/// `kEffect2DVortex`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_VORTEX = 49;
 
 /// `kEffect3DEnergyWall`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_ENERGY_WALL = 52;
@@ -1066,6 +1072,11 @@ struct EeGfxEffectSprite {
   bool flag;
   /// `mLastPart`: the fire's last burning part (saved)
   int32_t last_part;
+  /// the winter breath's `mDuration` (ms), `mSpeed`, `mSlowDownTime` and `mFade` (saved); the projectile's speed
+  uint32_t duration;
+  float speed;
+  float slow_down;
+  float fade;
 };
 
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
@@ -1856,6 +1867,11 @@ struct EeGfxEffect2DHost {
   int32_t (*max_hit_points)(void *context);
   /// `EEEffect::GetUnitLocation` (the complex unit's location, else its tile's centre)
   EeGe3DPoint (*unit_point)(void *context);
+  /// the kept graphic object's model (`mModel`)
+  EeGfxModel (*object_model)(void *context);
+  /// the kept graphic object's orbitals (`GetOrbitalCount`, `GetOrbital`: model, speed and angle)
+  uint32_t (*orbital_count)(void *context);
+  EeGfxOrbital (*orbital)(void *context, uint32_t index);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.

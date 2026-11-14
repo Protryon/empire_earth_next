@@ -3,7 +3,7 @@
 // Replaces EEE3DCommandConfirmation.cpp, EEE2DShockwave.cpp, EEE2DImpact.cpp (but EETagPointList::Scale, below),
 // EEE2DImpactBlood.cpp, EEE2DMuzzleFlash.cpp, EEE2DLightning.cpp, EEE2DPlasmaPulse.cpp, EEE2DPulseWave.cpp,
 // EEE2DWaterRipple.cpp, EEE2DFireTrail.cpp, EEE2DExplosion.cpp, EEE2DFire.cpp, EEE2DExhaustTrail.cpp, EEE2DSmokePlume.cpp
-// and EEE2DSmokeMuzzleBlast.cpp.
+// EEE2DSmokeMuzzleBlast.cpp, EEE2DWinterBreath.cpp, EEE2DLinearProjectile.cpp and EEE2DVortex.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -323,7 +323,40 @@ struct Ask2D {
         const GE3DPoint& thePoint = E(inAsk)->GetUnitLocation();
         return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
     }
+    // the vortex's: the kept object's own model and orbitals (EEE2DVortex::DrawPass5 0xe7949, Load 0xe7b50)
+    static void* ObjectModel(void* inAsk) { return E(inAsk)->mGraphicObject->mModel; }
+    static uint32_t OrbitalCount(void* inAsk) { return (uint32_t)E(inAsk)->mGraphicObject->GetOrbitalCount(); }
+    static EeGfxOrbital Orbital(void* inAsk, uint32_t inIndex)
+    {
+        EEOrbital* theOrbital = E(inAsk)->mGraphicObject->GetOrbital(inIndex);
+        return EeGfxOrbital{theOrbital->mModel, theOrbital->mSpeed, theOrbital->mAngle};
+    }
 };
+
+// the unit's mouth through the transformation, with the offsets of the cavalry archer, chariot archer, bronze spear
+// cavalry and knight (EEE2DWinterBreath::GetMouthPoint)
+GE3DPoint EEMouthPoint(EEUnit* inUnit, const GETransformation& inTransformation)
+{
+    GE3DPoint theOffset(0.0f, 0.4f, 0.405f);
+    GE3DPoint theResult;
+    switch (inUnit->mUnitClass->mUnitType) {
+    case kUnitTypeArch06CavalryArcher:
+        theOffset.SetY(0.465f);
+        theOffset.SetZ(0.385f);
+        break;
+    case kUnitTypeArch04ChariotArcher:
+        theOffset.SetY(0.872f);
+        theOffset.SetZ(0.465f);
+        break;
+    case kUnitTypeCav04BronzeSpearCavalry:
+    case kUnitTypeCav06Knight:
+        theOffset.SetY(0.272f);
+        theOffset.SetZ(0.235f);
+        break;
+    }
+    inTransformation.Apply(theOffset, theResult);
+    return theResult;
+}
 
 // the kind's shared model: the shockwave's, confirmation's, pulse wave's, ripple's and vortex's 0x4e8df4, the
 // others' 0x4e8df8
@@ -386,12 +419,34 @@ EEE2DRust::EEE2DRust(const GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, l
     this->Call(EeGfxEffect3DOp::CreateLine);
 }
 
-// from the shooter's weapon tag point (turret-aware) to the target's model point on its scaled location, 15 higher for
-// a high-arc shooter (EEE2DSmokeMuzzleBlast 0xe6664): the two ends for Rust
+// from the shooter's weapon tag point (turret-aware) to the target's model point on its scaled location, the muzzle
+// blast's 15 higher for a high-arc shooter (EEE2DSmokeMuzzleBlast 0xe6664, EEE2DLinearProjectile 0xe2f58): the two
+// ends for Rust; the winter breath (0xe819b) at the unit's mouth tag point (or its mouth by unit type, the breath then
+// inert), the unit's scaled location, whether the tag list was found and whether the unit moves
 EEE2DRust::EEE2DRust(EEUnit* inUnit, EEUnit* inTarget, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect2D(0, inGraphicEffect, EE2DModel(inKind), inKind, false)
 {
     static const float kTargetLift = 15.0f;   // 0x440014
+    if (inKind == 0x16) {
+        GE3DPoint thePosition;
+        GETransformation theTransformation(inUnit->mComplexUnit->mPhysicalModel.GetLocation());
+        EEComplexUnit* theBreather = inUnit->mComplexUnit;
+        EETagPointList* theMouths = inUnit->GetModel()->GetTagPoints(theBreather->GetAnimation(), 0x16);
+        float theScale = inUnit->mComplexUnit->mPhysicalModel.GetScale();
+        unsigned long theFrame = theBreather->mPhysicalModel.GetFrame();
+        EETagPointList::Scale(theTransformation, theScale);
+        if (theMouths)
+            theMouths->GetTagPoint(0)->GetPoint(theFrame, theTransformation, thePosition);
+        else
+            thePosition = EEMouthPoint(inUnit, theTransformation);
+        this->mRecord->sprite.start = EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
+        this->mRecord->aged.transformation = *reinterpret_cast<const EeGeTransformation*>(&theTransformation);
+        this->mRecord->sprite.flag = theMouths != NULL;
+        this->mRecord->sprite.shrinking = inUnit->mComplexUnit->mVelocity != 0.0f;
+        this->Call(EeGfxEffect3DOp::CreateBetween);
+        return;
+    }
+    bool theProjectile = inKind == 0x30;
     GE3DPoint theStart;
     GE3DPoint theEnd;
     GE3DPoint theOffset;
@@ -400,18 +455,21 @@ EEE2DRust::EEE2DRust(EEUnit* inUnit, EEUnit* inTarget, EEGraphicEffect* inGraphi
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
     EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->mAnimation];
     float theTargetScale = inTarget->mComplexUnit->mPhysicalModel.GetScale();
-    EECombatEffectWeaponPoint(4, theUnit, theModel, theList, true, theStart);
+    // the projectile's target point is on its scaled model whatever the shooter has (the same scaling either way)
+    EECombatEffectWeaponPoint(theProjectile ? 1 : 4, theUnit, theModel, theList,
+                              theProjectile ? theList && theList->mPoints.size() : true, theStart);
     EETagPointList::Scale(theTargetTransformation, theTargetScale);
     theOffset = inTarget->GetModel()->mDefaultPoint;
     theTargetTransformation.Apply(theOffset, theEnd);
-    if (inUnit->mUnitClass->mShootsHigh || (inUnit->mStats->mCanFireOverWalls && inUnit->mComplexUnit->mIsFiringHigh))
+    if (!theProjectile
+        && (inUnit->mUnitClass->mShootsHigh || (inUnit->mStats->mCanFireOverWalls && inUnit->mComplexUnit->mIsFiringHigh)))
         theEnd.SetZ(theEnd.GetZ() + kTargetLift);
     this->mRecord->sprite.start = EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
     this->mRecord->sprite.draw_position = EeGe3DPoint{theEnd.mX, theEnd.mY, theEnd.mZ};
     this->Call(EeGfxEffect3DOp::CreateBetween);
 }
 
-// to a point (EEE2DSmokeMuzzleBlast 0xe6a07)
+// to a point (EEE2DSmokeMuzzleBlast 0xe6a07, EEE2DLinearProjectile 0xe31dd)
 EEE2DRust::EEE2DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect2D(0, inGraphicEffect, EE2DModel(inKind), inKind, false)
 {
@@ -419,7 +477,10 @@ EEE2DRust::EEE2DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect*
     EEModel* theModel = inUnit->GetModel();
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
     EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->mAnimation];
-    EECombatEffectWeaponPoint(5, theUnit, theModel, theList, true, theStart);
+    if (inKind == 0x30)
+        EECombatEffectWeaponPoint(2, theUnit, theModel, theList, theList && theList->mPoints.size(), theStart);
+    else
+        EECombatEffectWeaponPoint(5, theUnit, theModel, theList, true, theStart);
     this->mRecord->sprite.start = EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
     this->mRecord->sprite.draw_position = EeGe3DPoint{inTarget.mX, inTarget.mY, inTarget.mZ};
     this->Call(EeGfxEffect3DOp::CreateBetween);
@@ -457,7 +518,8 @@ long EEE2DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask2D::HasComplex, Ask2D::DefaultPoint, Ask2D::StatsScale, Ask2D::TileBlocked,
                                  Ask2D::Wind, Ask2D::CreateParts, Ask2D::PartCount, Ask2D::Part, Ask2D::SetPart,
                                  Ask2D::PartFrames, Ask2D::PartTexture, Ask2D::PartsSnapshot, Ask2D::PartFollow,
-                                 Ask2D::MaxHitPoints, Ask2D::UnitPoint};
+                                 Ask2D::MaxHitPoints, Ask2D::UnitPoint, Ask2D::ObjectModel, Ask2D::OrbitalCount,
+                                 Ask2D::Orbital};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect2d_file(inOp, this->mRecord, inFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion,

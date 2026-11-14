@@ -2,7 +2,8 @@
 //! `EEE3DRust` over `EEEffect2D`, calls these by the record's kind; the C++ answers the world through
 //! `EeGfxEffect2DHost` and draws through the rasterizer table (`raster.rs`). Kinds: 0x41 the command confirmation
 //! (`effect_confirm.rs`), 0x12 the shockwave (`effect_shockwave.rs`), the sprites of `effect_sprite.rs` (6, 7, 8, 9, 0xa,
-//! 0xe, 0x22, 0x2f) and of `effect_parts.rs` (3, 4, 5, 0xb, 0xc, 0x14). The ops are `EEE3DRust`'s (`EeGfxEffect3DOp`), the facts the same `EeGfxGraphicFacts`.
+//! 0xe, 0x22, 0x2f), of `effect_parts.rs` (3, 4, 5, 0xb, 0xc, 0x14), of `effect_trail.rs` (0x16, 0x30) and the vortex
+//! (0x31, `effect_vortex.rs`). The ops are `EEE3DRust`'s (`EeGfxEffect3DOp`), the facts the same `EeGfxGraphicFacts`.
 //!
 //! The record is reached through its raw pointer field by field: the C++ reads it (the position, the radius) during
 //! the host calls, so no Rust reference to it lives across one.
@@ -12,12 +13,15 @@ use std::ffi::c_void;
 use ee_ge::types::{Ge3DPoint, GeTransformation};
 
 use crate::effect_confirm::{confirm, EeGfxConfirmGoal, EeGfxConfirmUnit, EE_GFX_EFFECT_KIND_COMMAND_CONFIRMATION};
+use crate::effect_orbit::EeGfxOrbital;
 use crate::effect_parts::{parts, parts_file, EeGfx2DPart, EeGfx2DPlace};
 use crate::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts};
 use crate::effect_shockwave::{shockwave, shockwave_file};
 use crate::effect_sprite::{sprite, sprite_file, EeGfx2DPoint};
 use crate::effect_state::{EeGfxEffectRecord, EffectFile, EE_GFX_EFFECT_KIND_SHOCKWAVE};
+use crate::effect_trail::{trail, trail_file};
 use crate::effect_vent::EeGfxFrames;
+use crate::effect_vortex::{vortex, vortex_file};
 use crate::raster::{EeGfxModel, Raster};
 
 /// The C++'s answers for an `EEE2DRust`.
@@ -97,6 +101,11 @@ pub struct EeGfxEffect2DHost {
     pub max_hit_points: extern "C" fn(context: *mut c_void) -> i32,
     /// `EEEffect::GetUnitLocation` (the complex unit's location, else its tile's centre)
     pub unit_point: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
+    /// the kept graphic object's model (`mModel`)
+    pub object_model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
+    /// the kept graphic object's orbitals (`GetOrbitalCount`, `GetOrbital`: model, speed and angle)
+    pub orbital_count: extern "C" fn(context: *mut c_void) -> u32,
+    pub orbital: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxOrbital,
 }
 
 /// The world as the 2D effects ask it.
@@ -178,6 +187,15 @@ pub trait Effect2DHost {
     }
     fn unit_point(&mut self) -> Ge3DPoint {
         Ge3DPoint::default()
+    }
+    fn object_model(&mut self) -> EeGfxModel {
+        std::ptr::null_mut()
+    }
+    fn orbital_count(&mut self) -> u32 {
+        0
+    }
+    fn orbital(&mut self, _index: u32) -> EeGfxOrbital {
+        EeGfxOrbital { model: std::ptr::null_mut(), speed: 0.0, angle: 0.0 }
     }
 }
 
@@ -290,6 +308,15 @@ impl Effect2DHost for &EeGfxEffect2DHost {
     fn unit_point(&mut self) -> Ge3DPoint {
         (self.unit_point)(self.context)
     }
+    fn object_model(&mut self) -> EeGfxModel {
+        (self.object_model)(self.context)
+    }
+    fn orbital_count(&mut self) -> u32 {
+        (self.orbital_count)(self.context)
+    }
+    fn orbital(&mut self, index: u32) -> EeGfxOrbital {
+        (self.orbital)(self.context, index)
+    }
 }
 
 /// One virtual of an `EEE2DRust` of the record's kind (0 for a kind without one).
@@ -309,6 +336,8 @@ pub unsafe fn effect2d<H: Effect2DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_COMMAND_CONFIRMATION => unsafe { confirm(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_SHOCKWAVE => unsafe { shockwave(op, r, g, h, x) },
         3 | 4 | 5 | 0xb | 0xc | 0x14 => unsafe { parts(op, r, g, h, x) },
+        0x16 | 0x30 => unsafe { trail(op, r, g, h, x) },
+        0x31 => unsafe { vortex(op, r, g, h, x) },
         _ => unsafe { sprite(op, r, g, h, x) },
     }
 }
@@ -325,6 +354,8 @@ pub fn effect2d_file<H: Effect2DHost, F: EffectFile>(
     match r.kind {
         EE_GFX_EFFECT_KIND_SHOCKWAVE => shockwave_file(op == EeGfxEffect3DOp::Load, r, f, h),
         3 | 4 | 5 | 0xb | 0xc | 0x14 => parts_file(op == EeGfxEffect3DOp::Load, r, f, h),
+        0x16 | 0x30 => trail_file(op == EeGfxEffect3DOp::Load, r, f, h),
+        0x31 => vortex_file(op == EeGfxEffect3DOp::Load, r, f, h),
         _ => sprite_file(op == EeGfxEffect3DOp::Load, r, f, major, minor, h),
     }
 }

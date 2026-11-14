@@ -72,6 +72,11 @@ pub struct EeGfxEffectSprite {
     pub flag: bool,
     /// `mLastPart`: the fire's last burning part (saved)
     pub last_part: i32,
+    /// the winter breath's `mDuration` (ms), `mSpeed`, `mSlowDownTime` and `mFade` (saved); the projectile's speed
+    pub duration: u32,
+    pub speed: f32,
+    pub slow_down: f32,
+    pub fade: f32,
 }
 
 /// A point the host may not have (`has` false: no complex unit).

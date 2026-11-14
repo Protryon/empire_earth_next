@@ -5,7 +5,8 @@
 // since the twentieth round the sprites of ee_gfx effect_sprite.rs: 6 the impact, 7 the blood impact, 8 the lightning,
 // 9 the muzzle flash, 0xa the plasma pulse, 0xe the fire trail, 0x22 the water ripple, 0x2f the pulse wave (their
 // classes deleted), and those of ee_gfx effect_parts.rs: 3 the exhaust trail, 4 the explosion, 5 the fire, 0xb and 0xc
-// the smoke puffs, 0x14 the smoke muzzle blast.
+// the smoke puffs, 0x14 the smoke muzzle blast; of effect_trail.rs: 0x16 the winter breath, 0x30 the 2D projectile; 0x31
+// the vortex (effect_vortex.rs).
 // Requires ee/EEEffect2D.h and rust/ee_gfx.h.
 #ifndef EE_EEE2DRUST_H
 #define EE_EEE2DRUST_H
@@ -33,8 +34,9 @@ public:
     EEE2DRust(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(const GETransformation& inTransformation, EEGraphicEffect* inGraphicEffect, long inKind);
     // along a line (the velocity particle: the start and direction in the record's sprite.start and sprite.velocity);
-    // from a shooter's weapon point to its target's model point or to a point (the muzzle blast: the two ends in the
-    // record's sprite.start and sprite.draw_position)
+    // from a shooter's weapon point to its target's model point or to a point (the muzzle blast and the projectile: the
+    // two ends in the record's sprite.start and sprite.draw_position); the winter breath at its unit's mouth (the
+    // target unused)
     EEE2DRust(const GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(EEUnit* inUnit, EEUnit* inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind);

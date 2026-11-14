@@ -51,9 +51,6 @@
 #include "ee/EEE2DLightGlow.h"
 #include "ee/EEE2DMarchingIcons.h"
 #include "ee/EEE2DParticle.h"
-#include "ee/EEE2DWinterBreath.h"
-#include "ee/EEE2DLinearProjectile.h"
-#include "ee/EEE2DVortex.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
 #include "ee/EEE3DSmokeGenerator.h"
 #include "ee/EEE3DFarm.h"
@@ -168,8 +165,8 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect2DCircularMarchingIcons: theEffect = new EEE2DMarchingIcons(EE_GFX_EFFECT_KIND_CIRCULAR_ICONS); break;
     case kEffect2DPulseWave: theEffect = new EEE2DRust(0x2f); break;
     case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DRust(0x14); break;
-    case kEffect2DWinterBreath: theEffect = new EEE2DWinterBreath(); break;
-    case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(); break;
+    case kEffect2DWinterBreath: theEffect = new EEE2DRust(0x16); break;
+    case kEffect2DLinearProjectile: theEffect = new EEE2DRust(0x30); break;
     case kEffect2DWaterRipple: theEffect = new EEE2DRust(0x22); break;
     case kEffect3DEarthquake: theEffect = new EEE3DEarthquake(); break;
     case kEffect3DTracers: theEffect = new EEE3DRust(0x21); break;
@@ -191,7 +188,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DTracerBeam: theEffect = new EEE3DRust(0x40); break;
     case kEffect3DPulseCannonBall: theEffect = new EEE3DRust(0x43); break;
     case kEffect3DShield: theEffect = new EEE3DRust(kEffect3DShield); break;
-    case kEffect2DVortex: theEffect = new EEE2DVortex(); break;
+    case kEffect2DVortex: theEffect = new EEE2DRust(0x31); break;
     case kEffect3DBlastWave: theEffect = new EEE3DRust(0x18); break;
     case kEffect3DVirus: theEffect = new EEE3DRust(0x42); break;
     case kEffect2DBattlefieldAmbient: theEffect = new EEE2DBattlefieldAmbient(); break;
@@ -310,10 +307,10 @@ long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEG
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
     case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DRust(inFrom, inTo, inEffect, 0x14); break;
-    case kEffect2DWinterBreath: theEffect = new EEE2DWinterBreath(inFrom, inEffect); break;
+    case kEffect2DWinterBreath: theEffect = new EEE2DRust(inFrom, inTo, inEffect, 0x16); break;
     case kEffect3DTracers: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x21); break;
     case kEffect3DShells: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x26); break;
-    case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inFrom, inTo, inEffect); break;
+    case kEffect2DLinearProjectile: theEffect = new EEE2DRust(inFrom, inTo, inEffect, 0x30); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x40); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
@@ -334,7 +331,7 @@ long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGrap
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
     case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DRust(inUnit, inLocation, inEffect, 0x14); break;
-    case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inUnit, inLocation, inEffect); break;
+    case kEffect2DLinearProjectile: theEffect = new EEE2DRust(inUnit, inLocation, inEffect, 0x30); break;
     case kEffect3DCitizenBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x33); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x40); break;
     case kEffect3DCommandConfirmation:
@@ -366,7 +363,7 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 0x22: theEffect = new EEE2DRust(inLocation, inEffect, 0x22); break;
     case 0x2b: theEffect = new EEE3DSmokeGenerator(inLocation, inEffect, 0x2b); break;
     case 0x2e: theEffect = EEE2DParticle::Create(inLocation, inEffect); break;
-    case 0x31: theEffect = new EEE2DVortex(inLocation, inEffect); break;
+    case 0x31: theEffect = new EEE2DRust(inLocation, inEffect, 0x31); break;
     case 0x32: theEffect = new EEE2DBattlefieldAmbient(inLocation, inEffect); break;
     case 0x39: theEffect = EEE3DParticle::Create(inLocation, inEffect); break;
     case 0x3a: theEffect = new EEE3DParticleEmitter(inLocation, inEffect, 0x3a); break;
