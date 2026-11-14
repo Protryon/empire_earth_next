@@ -154,7 +154,7 @@ void Window::Create(const WONRectangle& theWindowRectR)
 // Returns the default window manager's default window
 Window* Window::GetDefaultWindow()
 {
-	return WONAPI::WindowManager::GetDefaultWindowManager()->mDefaultWindow;
+	return WONAPI::WindowManager::GetDefaultWindowManager()->GetDefaultWindow();
 }
 
 // FUNCTION: WON 0x0072a8c0

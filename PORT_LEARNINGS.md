@@ -15192,3 +15192,101 @@ keys and peer data) because AuthContext was a C++ class with its lock and login 
   check run in the lead's LAN gate. The host calls (GetCertOp, the request ops' auth context) run only for an Internet
   login or a direct-connect game with the CD key check (its certificate refresh); the gate's LAN-listed game does
   not reach them. EE-SIM makes no AuthContext.
+
+## R6 WON round 33: WindowManager's popup stack, modal dialog, message loop, focus and caches in Rust (ee_won wmobj.rs, wmcache.rs; branch rust-r6-won33, 2026-11-13)
+
+Measured as rounds 18-32 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+75,946 at the branch's start (round 32 merged with rust) -> 75,954 (the census's accessors, +8) -> 75,604 (the popup
+stack, -350) -> 75,576 (the caches, -28). This round's own net: -370. WindowManager.cpp went from 1,502 to
+1,134 lines.
+
+- **The census first** (its own commit). Outside WindowManager.cpp the test fixture (three reads of
+  `mModalComponent`), DialogBehavior (`mModalComponent`), Container's host (`mFocusWindow`), PlatGUIWindow
+  (`mPopupFlags`), DialogLogic and EELobbyInterface (`mBA5`, the popups' own-window default), RoutingLogic
+  (`mLastInputTick`) and Window (`mDefaultWindow`) read or wrote the manager's fields; they now use accessors. The
+  colour scheme, the image decoder, the sound decoder and the default window icon are C++ objects and stay members.
+- **The NULL-receiver audit.** Every caller of a moved method (`mManager->`, `GetRoot()->mManager->`,
+  `GetDefaultWindowManager()->`, `GetLobbyWindow()->`, the platform window's `theManager->`, LobbyRunState's
+  `manager->`) goes through a window's manager (set at the window's construction, never cleared) or tests NULL
+  (DialogLogic, the fixture, LobbyRunState's exit). The round-30 hazard is a method whose original body read nothing
+  of a NULL `this` on some path: only `AdjustPopupPosition` with `inOwnWindow` false reads nothing of `this`, and its
+  one caller is DoPopup on a live manager. No guard was needed.
+- **The popup stack move** (`wmobj.rs`): the popup list and flags, the in-DoPopup / in-EndPopup / end-pending flags,
+  the own-window default, the capture support, the message loop's depths and the dialog result, the modal window
+  and dialog, the saved popup window, the popup's owner window, input and owner components, the focus and mouse-down
+  windows and the lost-focus tick, with NotifyLostFocus/GotFocus, GetPopupWindow, CalcModality and the static
+  SetModal, NotModalWindow, DoDialog, EndDialog, ExitMessageLoop, MessageLoop, AdjustPopupPosition, DoPopup,
+  EndPopup, CheckEndPopup, FindMouseWindow, CheckPopupClick and CheckModalValid.
+  - Nine ops (590-598): the tick, a component's method (`WmComp` with an `EeWonWmComp`: flags, parent, modal,
+    focus, place and bounds, root window, colour schemes, the end-popup event, bits, root container, the click
+    child, the container cast, references), a window's (`WmWin` with an `EeWonWmWin`: focus, capture, rectangles,
+    the popup flag, show, close, parent, add component, modal, mouse, the root's focus and children, state,
+    visibility, references), the screen rectangle, DoPopup's new popup window (CreateNativeWindow and its set-up in
+    one op, answered held), the platform's next event, the manager's own reference and the window set's n-th
+    window.
+  - The original's `SmartPtr`s (the held members and the locals of DoDialog, DoPopup and EndPopup) are mirrored as
+    hold/release ops in the original's order: an assignment releases the old object and then holds the new one;
+    locals go back in reverse order of their making. MessageLoop reads the result before the manager's reference is
+    given back (the last one deletes the manager, and the Rust object with it).
+  - The event loop (ProcessEvents, DeliverEvent, RemoveWindow, PostEvent) stays C++ and reads and sets the state
+    through `WmField` / `WmSet`; `PopupWindowSave`'s setter is the `SmartPtr`'s assignment.
+  - The Rust object is the C++ manager's first member (`mWmObj`), so it is freed after every other member; its held
+    members (and the caches) are given back then.
+- **The caches move** (`wmcache.rs`): the named fonts, the default font, the native, raw and delay-load image caches
+  (a `BTreeMap` keyed as `StringLessNoCase`, `strcase::compare_no_case`, keeping the first spelling as the
+  original's map kept its first key) and the caching count, with SetNamedFont, GetNamedFont, GetDefaultFont,
+  SetDefaultFont (the header's inline), SetCacheImages, DecodeImage, DecodeImageRaw and DecodeDelayImage.
+  - Five ops (599-603): a cached object's reference (`WmRef` with an `EeWonWmRefKind`), the two decoders, the new
+    delay-load image (NULL when the attributes cannot be read) and the default window's Tahoma 8; each answers an
+    object with one reference. An image the Rust answers carries the caller's reference (the C++ forwarder adopts
+    it into the `SmartPtr` it returns); fonts are answered raw, as the original did.
+  - GetDefaultFontMod, GetNamedFontMod, the static GetDefaultFont(descriptor), DecodeImage(path) (the default
+    window's context) and DecodeSound stay C++ over the forwarders.
+- **Behaviour changes, on undefined or teardown paths only:**
+  - GetPopupWindow while popups are flagged up but the list is empty (a popup's end event asking mid-EndPopup) answers
+    NULL; the original read the front of an empty list.
+  - The caching count starts at 0 (the original left it unset).
+  - SetCacheImages' clear and the destructor give the images back in name order (the original's tree went in its own
+    order), and the manager's held members and caches are given back after its other members (the original's
+    members went in reverse declaration order, the caches after the popup members; that order is kept among them).
+- **The golden** (`tests/won/won_wmobj_test.cpp`): the original statements, copied before the change, over a world
+  that models the platform as logged host ops: eight windows (1..4 open, 5..8 made by DoPopup), each with a root
+  container (component 100 + id), a rectangle, the popup flag, a pressed button, a mouse place, a parent, a state,
+  visibility, a modal flag and references; twelve components under the roots, each other or nothing, with flags,
+  bounds, schemes, a container flag, a modal level and references; fonts and images as ids with references, the
+  decoders failing for some names. The platform's next event and a popup's end event run nested calls on the side's
+  own manager (traced between the op and its answer), so the message loop ends (ExitMessageLoop or EndDialog after a
+  few events, always after 60) and a popup's listener can close popups. A popup listed twice would make the
+  original's EndPopup loop forever, so the driver opens only components not already popups.
+  - 20,000 sequences of 40 calls: 10,992,026 trace lines, all identical, every reference given back (the first
+    run of the popup stack alone: 11,525,565 lines, identical at once).
+  - The popup stack's mutations (each restored with `git checkout` after the commit; the restored source: 0): EndPopup's locals given
+    back in their making order (4,861 sequences), CalcModality never seeing the dialog as a window's root (7,447),
+    DoDialog not restoring the previous modal window (1,326), CheckPopupClick recording the mouse-down window for
+    every button (4,026), NotifyLostFocus keeping a tick of 0 (1: the clock wraps through 0 rarely), DoPopup
+    clearing the end flag only for a first popup (99), EndDialog keeping the previous result (16,948). FindMouseWindow
+    taking the first rather than the topmost popup window passed (0): its mouse events rarely fell inside two popup
+    windows. The driver now often aims inside a popup window and turns capture support on more often, and that mutation fails 5
+    sequences.
+  - The caches' mutations: names compared with case (3,904), SetCacheImages emptying the raw images first (63), the
+    cached decode keeping the decoder's temporary reference (4,336), DecodeDelayImage making an image for an empty
+    entry too (7), the destructor giving the fonts back before the images (3,020), GetNamedFont without the default
+    for a missing name (12,317). The restored source: 0.
+  - `golden_wmobj.txt` (34 sequences) is replayed by cargo: each op must be the next op line and is answered by its
+    `=` line; nested "call" lines are run on the replay's manager; the state, popup list and cache lines are compared.
+    It fails on a popup list entry changed.
+- **Lessons:**
+  - A test-profile build started while a mutation script had a mutated `.rs` in the tree reused the cargo
+    artifacts the mutation's own build had just made ("Finished in 0.45s"): the exe would have linked the mutant.
+    Never run build.py while a mutation script runs in the same worktree (they share `build/rust`).
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction (seeds 2-7 identical).
+  The lead's LAN game (`lan_game.py`, RESULT PASS after each move) reaches the lobby's message loop (LobbyRunState's
+  MessageLoop / ExitMessageLoop), focus (every click), the dialogs' DoDialog/EndDialog (the login and create-game
+  dialogs), CalcModality, the popups of the combo boxes and options it opens, and every image and font the lobby
+  loads through the caches. The lobby captures reach the fonts (named and default) and every image drawn. Only a
+  person runs popups over popups, clicks outside a popup with the capture support (it is never turned on in the
+  lobby), or resizes a window while a popup is open; those run only in the golden.
+- **Left:** the rest of WindowManager (the window set, the event list and PostEvent, the timer events, the broadcast
+  set, ProcessEvents, DeliverEvent, CloseAllWindows, Add/RemoveWindow, the screen resolution). PostEvent locks
+  `mDataCrit` because events may come from other threads: the event list needs a lock in Rust (a `Mutex`, never held
+  across a call out), not the `RefCell` the other state uses. Then the skins' Button subclasses (draw ops).
