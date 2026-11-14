@@ -24,7 +24,7 @@ public:
     // +0x50 (ICF-folded 0x18aa9: true, not EECCAreaEffect's false)
     virtual bool AffectsOwnUnits();
 
-private:
+protected:   // (the capture reads it: ee/EECalamityCapture.h)
     long mEffect2Time;                      // +0x48 (provisional name)
 };
 

@@ -79,6 +79,12 @@ start's placed effects and sounds), CONT (every contagion helper update: the spr
 distances, the new, applied and removed units, the functors' damage) and TNWK (the tech tree's walks and tests:
 Unlock, ResearchAll, ResearchKind, ObsoleteOutdatedNodes, MakeObsolete, SetObsolete, NeedsUnitMedia, GetBuildTime,
 SetEpoch, AdvanceEpoch, SetNodeAvailable) were recorded from the C++ before those moved (R5b.2, round 3).
+CALI (every calamity class as Initialize left it: the base fields, the effects and sounds by table index, the functor,
+the class's own numbers; once, at the calamity game's first cast) and CALK (an active calamity's out-of-sync checksum,
+its Save's bytes and the state a fresh calamity loads from them, and the contagion manager's checksum, Save bytes and
+reload; every five game minutes and whenever a calamity's time alive crosses a multiple of five seconds) are the
+calamity profile's (ee/EECalamityCapture.h), recorded from the C++ before the classes' data, Initialize, media,
+Reset and the saves moved (calamities lane, round 1; golden for seeds 2-3).
 GetBuildTime and NeedsUnitMedia, asked from the media loader's thread too, are TNMT: their records' order and count
 depend on timing, so TNMT has no golden (TNWK was recorded again without them from the unmodified C++).
 NM** are the game messages' records (ee/EEMessageCapture.h, R5b.4): NMIM every message the game's factory builds (the

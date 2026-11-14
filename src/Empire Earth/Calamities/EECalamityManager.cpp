@@ -51,6 +51,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EETechCapture.h"
+#include "ee/EECalamityCapture.h"
 // FUNCTION: EXE 0x4adf97
 // Creates the calamity manager with no classes or active calamities
 EECalamityManager::EECalamityManager()
@@ -496,6 +497,7 @@ void EECalamityManager::Update(float inElapsedTime)
             theRecord.I32(theUpdate);
             theRecord.Commit();
         }
+        EECalamityCaptureAged(*theIterator, (unsigned long)(theIterator - this->mCalamities.begin()), theBefore);   // CALK (TEST ONLY)
         if (theUpdate == 7)
             theIterator = this->DestroyCalamity(theIterator);
         else

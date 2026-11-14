@@ -21,7 +21,7 @@ public:
     // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
     static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
 
-private:
+protected:   // (the capture reads it: ee/EECalamityCapture.h)
     long mEffect2Time;                      // +0x48 (mGraphicEffect2's duration after mGraphicEffect1's) (provisional name)
 };
 
