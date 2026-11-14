@@ -60,6 +60,11 @@
 //   sm text | sm export | sm import FILE KIND VALIDATE   the trigger text file (EESEIAExport, EESEIAImport): the
 //                                         effects' and conditions' texts set, ExportText's file, ImportTriggerText
 //                                         over a fixed file (ScenarioTextStep)
+//   enter ID                              an edit box's Enter key (its ProcessEnterKey); an ID "%N" anywhere is the
+//                                         form's control N (the trigger screens repeat ids)
+//   tscreen select N|new|dup|delete|up|down|sort|name   the trigger tab's list and its buttons (EESETriggerScreen)
+//   tsclick select|add UNIT               the object screen's click (EESETSAMouseClick: the selection, then its list)
+//   object                                the trigger tab's open scenario object (ObjectDigest)
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -107,6 +112,7 @@
 #include "lle/GELine.h"
 #include "lle/UITextLabel.h"
 #include "lle/UIEditBox.h"
+#include "lle/UITriStateCheckBox.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GETransformation.h"
@@ -203,6 +209,7 @@
 #include "ee/EEScenarioEditorIDs.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
+#include "ee/EESETSAMouseClick.h"
 #include "ee/EESETSCondition.h"
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESETSEffect.h"
@@ -903,6 +910,8 @@ void WriteElevationFile(const std::string& inName, long inWidth, long inHeight)
 // an editor control by its id (decimal or 0x)
 UIControl* EditorControl(const std::string& inId)
 {
+    if (!inId.empty() && inId[0] == '%')   // %N: the form's control N (ids repeat on the trigger screens)
+        return gUIManager->mScenarioEditorForm->GetControl(strtoul(inId.c_str() + 1, NULL, 0));
     return gUIManager->mScenarioEditorForm->GetControlById(strtoul(inId.c_str(), NULL, 0));
 }
 
@@ -1168,6 +1177,37 @@ struct ButtonAccess : UIButton {
 struct ComboAccess : UIComboBox {
     static void Change(UIComboBox* inBox) { (inBox->*(&ComboAccess::ChangeSelection))(); }
 };
+struct EditAccess : UIEditBox {
+    static void Enter(UIEditBox* inBox) { (inBox->*(&EditAccess::ProcessEnterKey))(); }
+};
+
+// the trigger tab's open object (TEST ONLY): the sub-screen's selection, then the scenario object's fields
+void ObjectDigest(std::vector<std::string>& outLines)
+{
+    EESETSBaseObject* theScreen = gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenObject);
+    EESMObject* o = gWorld.mScenarioManager->GetScenarioObject(theScreen->mSelection + 1);
+    char theText[512];
+    snprintf(theText, sizeof(theText), "  object selection=%ld has=%d", (long)theScreen->mSelection,
+             theScreen->mHasSelection ? 1 : 0);
+    outLines.push_back(theText);
+    if (o == NULL) {
+        outLines.push_back("  object none");
+        return;
+    }
+    std::string theUnits;
+    for (unsigned long i = 0; i < o->GetUnitCount(); i++)
+        theUnits += (i == 0 ? "" : ",") + std::to_string(o->GetUnitAt(i));
+    snprintf(theText, sizeof(theText),
+             "  object '%s' map=%d units=%s count=%lu,%lu dynamic=%d owner=%lu family=%lu class=%lu parent=%lu "
+             "checks=%lu,%lu,%lu,%lu,%lu,%lu area=%lu near=%lu,%lu attribute=%lu,%lu,%lu,%d visible=%lu state=%lu "
+             "selected=%lu",
+             (const char*)o->mName, o->mIsSelectOnMap ? 1 : 0, theUnits.c_str(), o->mMinCount, o->mMaxCount,
+             o->mIsDynamic ? 1 : 0, o->mOwner, o->mFamily, o->mClass, o->mParent, o->mInAreaCheck, o->mNearCheck,
+             o->mHasAttributeCheck, o->mVisibleByCheck, o->mHasStateCheck, o->mSelectedByCheck, o->mArea,
+             o->mNearMode, o->mNearObject, o->mAttribute, o->mAttributeMin, o->mAttributeMax,
+             o->mIsAttributePercent ? 1 : 0, o->mVisibleByPlayer, o->mState, o->mSelectedByPlayer);
+    outLines.push_back(theText);
+}
 
 }   // namespace
 
@@ -1433,7 +1473,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "check")   // check ID 0|1
             theCode = [=] {
-                UIControl* theBox = gUIManager->mScenarioEditorForm->GetControlById(strtoul(w[1].c_str(), NULL, 0));
+                UIControl* theBox = EditorControl(w[1]);
                 static_cast<UICheckBox*>(theBox)->SetChecked(L(2) != 0);
             };
         else if (c == "view")
@@ -1552,6 +1592,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                         UITextLabel* theLabel = static_cast<UITextLabel*>(theControl);
                         theText += std::string(" '") + (theLabel->GetLineCount() > 0 ? (const char*)theLabel->GetText(0) : "") + "'";
                     }
+                    if (theControl->GetType() == kControlTypeTriStateCheckBox)
+                        theText += " state=" + std::to_string(static_cast<UITriStateCheckBox*>(theControl)->GetCheckState());
                     theOutput.push_back(theText);
                 }
             };
@@ -1595,6 +1637,33 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 theBox->SetCurrentSelection((unsigned long)L(2));
                 ComboAccess::Change(theBox);
             };
+        else if (c == "enter")   // enter ID: an editor edit box's Enter key (its ProcessEnterKey)
+            theCode = [=] { EditAccess::Enter(static_cast<UIEditBox*>(EditorControl(w[1]))); };
+        else if (c == "tscreen")   // tscreen select N|new|dup|delete|up|down|sort|name: the trigger tab's list buttons
+            theCode = [=] {
+                EESETriggerScreen* s = gUIManager->mScenarioEditorForm->GetTriggerScreen();
+                if (w[1] == "select") {
+                    s->mList->ChangeSelectionIndex((unsigned long)L(2), false, false);
+                    s->SelectEntry();
+                } else if (w[1] == "new") s->NewEntry();
+                else if (w[1] == "dup") s->DuplicateEntry();
+                else if (w[1] == "delete") s->DeleteEntry();
+                else if (w[1] == "up") s->IncPriority();
+                else if (w[1] == "down") s->DecPriority();
+                else if (w[1] == "sort") s->AlphaSort();
+                else s->SelectName();
+            };
+        else if (c == "tsclick")   // tsclick select|add UNIT: the object screen's click (EESETSAMouseClick) posted
+            theCode = [=] {
+                EESETSAMouseClick* a = new EESETSAMouseClick;
+                unsigned long theID = UnitRef(w[2]);
+                a->SetMessage(w[1] == "select" ? static_cast<EEMessage*>(new EEMRecord(kMessageSelectUnit, {theID}))
+                                               : static_cast<EEMessage*>(new EEMAlwaysAddUnitToSelectedGroup(theID)));
+                gUserInterface->PostAction(a);
+                a->Dereference();
+            };
+        else if (c == "object")   // the trigger tab's open scenario object (ObjectDigest)
+            theCode = [=, &theOutput] { ObjectDigest(theOutput); };
         else if (c == "sm")   // sm OP LIST [INDEX] | sm fill | sm state: the scenario lists (ScenarioListStep)
             theCode = [=, &theOutput] { ScenarioListStep(w, theOutput); };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise

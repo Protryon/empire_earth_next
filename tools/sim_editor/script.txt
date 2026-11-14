@@ -346,3 +346,88 @@ controls 0x149
 radio 0x12d
 radio 0x15a                        # options
 controls 0x149
+# editor screens round 2: the trigger tab's object screen (EESETSObject, the form's controls 227..263): its two
+# modes, the generated names, the counts' clamp, the filter check boxes, two objects stored and loaded, the units
+# picked on the map, the list's buttons, the tab left and entered
+tab 4
+trigger 3
+form 227 263
+object
+tscreen new                        # the first object (none yet: the screen's group disabled)
+form 227 263
+object
+radio %229                        # object specification: owner, family, class, parent, counts
+form 227 263
+object
+changesel %238 3                   # a family (EESETSAComboBox::ChangeSelection: the generated name)
+object
+changesel %240 5                   # a class
+object
+changesel %236 2                   # an owner
+check %234 0                      # not dynamic
+changesel %240 0                   # any class: the family names it
+object
+changesel %238 0                   # any family: the owner names it
+object
+edit %231 3
+edit %233 2
+enter %233                        # Store (the counts clamped), the name
+form 230 234
+object
+buttonup %245                     # the filters: each check box's controls shown
+buttonup %247
+buttonup %250
+buttonup %258
+buttonup %260
+buttonup %262
+controls %245 %247 %250 %258 %260 %262
+form 245 263
+buttonup %250                     # a second click: the third state
+controls %250
+form 250 257
+changesel %251 4                   # an attribute, its range, percent
+edit %253 50
+edit %255 10
+check %257 1
+changesel %261 3                   # a state, the players
+changesel %259 1
+changesel %263 2
+changesel %248 2                   # near
+tscreen new                        # the first object stored, a second one
+object
+tscreen select 0                   # the first one loaded
+form 227 263
+object
+changesel %242 2                   # the second object as the parent: the name
+object
+tscreen select 1
+radio %228                        # select on map
+place 1 32 40.5 40.5 0
+place 1 32 41.5 40.5 1.5
+tsclick select @40,40              # EESETSAMouseClick: the unit list, the name
+form 243 244
+object
+tsclick add @41,40
+form 243 244
+object
+tscreen new                        # the units stored
+tscreen select 1
+form 227 263
+object
+tscreen dup
+object
+tscreen up
+object
+tscreen down
+object
+tscreen sort
+object
+tscreen name
+object
+tscreen delete
+object
+tab 0                              # left: Deactivate (the selection cleared)
+selection
+tab 4                              # entered: Activate
+form 227 263
+object

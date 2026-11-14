@@ -5579,3 +5579,393 @@ step 346 radio 0x12d
 step 347 radio 0x15a                        # options
 step 348 controls 0x149
   0x149 mode=0
+step 352 tab 4
+step 353 trigger 3
+step 354 form 227 263
+  c227 EESEUICTriggerSelectUnits id=0x855 ix=227 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c228 UIRadioButton id=0x834 ix=228 g=10d r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select On Map' btn fg=none e1=EEScreenEvent
+  c229 UIRadioButton id=0x835 ix=229 g=10d r=329,524,528,543 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Object Specification' btn fg=none e1=EEScreenEvent
+  c230 UITextLabel id=0x839 ix=230 g=10d r=329,566,403,581 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c231 EESETSAEditBox id=0x837 ix=231 g=10d r=341,583,390,604 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c232 UITextLabel id=0x83a ix=232 g=10d r=429,566,503,581 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c233 EESETSAEditBox id=0x838 ix=233 g=10d r=441,583,490,604 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c234 UICheckBox id=0x844 ix=234 g=10d r=379,545,478,564 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Dynamic'
+  c235 UITextLabel id=0x83e ix=235 g=10d r=589,458,788,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Owner'
+  c236 EESETSUICBPlayer id=0x841 ix=236 g=10d r=589,474,788,493 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=9 sel=none 'World'|'Any Human'|'Any Computer'|'Any Player'|'Any Exclude World'|'Player 1'
+  c237 UITextLabel id=0x83e ix=237 g=10d r=589,496,788,511 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family'
+  c238 EESETSAComboBox id=0x841 ix=238 g=10d r=589,512,788,531 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Family' n=199 sel=0 'Any Family'|'Epoch 1'|'Epoch 2'|'Epoch 3'|'Epoch 4'|'Epoch 5'
+  c239 UITextLabel id=0x83e ix=239 g=10d r=589,534,788,549 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Class'
+  c240 EESETSAComboBox id=0x841 ix=240 g=10d r=589,550,788,569 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Class' n=625 sel=none 'Any Class'|''Bulldog' Ramsey'|'120mm AT Gun'|'57mm AT Gun'|'88mm AA Gun'|'A-10 Anti-Tank'
+  c241 UITextLabel id=0x83e ix=241 g=10d r=589,572,788,587 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Use Object'
+  c242 EESETSAComboBox id=0x859 ix=242 g=10d r=589,588,788,607 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'<NONE>'
+  c243 UITextLabel id=0x845 ix=243 g=10d r=589,458,788,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Unit Selected List'
+  c244 EESETSOUnitList id=0x836 ix=244 g=10d r=589,474,788,603 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=0 sel=none e3=EEScreenEvent
+  c245 UITriStateCheckBox id=0x846 ix=245 g=10d r=4,616,103,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c246 EESETSEScenarioComboBox id=0x847 ix=246 g=10d r=114,616,383,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=2 sel=none 'Off Map'|'Previous Location'
+  c247 UITriStateCheckBox id=0x848 ix=247 g=10d r=4,652,25,671 m=1 bg=0,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c248 UIComboBox id=0x849 ix=248 g=10d r=27,652,106,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'LOS' n=3 sel=0 'LOS'|'Range'|'Near'
+  c249 UIComboBox id=0x849 ix=249 g=10d r=114,652,383,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'<NONE>'
+  c250 UITriStateCheckBox id=0x84a ix=250 g=10d r=4,688,113,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c251 UIComboBox id=0x84b ix=251 g=10d r=4,708,228,727 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'HitPoints' n=75 sel=0 'HitPoints'|'Any Resource'|'Stone'|'Gold'|'Wood'|'Food'
+  c252 UITextLabel id=0x84b ix=252 g=10d r=243,688,287,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c253 UIEditBox id=0x84a ix=253 g=10d r=243,708,287,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c254 UITextLabel id=0x84d ix=254 g=10d r=293,688,337,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c255 UIEditBox id=0x84c ix=255 g=10d r=293,708,337,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c256 UITextLabel id=0x856 ix=256 g=10d r=343,688,362,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '%'
+  c257 UICheckBox id=0x857 ix=257 g=10d r=343,708,362,727 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 label=none
+  c258 UITriStateCheckBox id=0x84e ix=258 g=10d r=404,616,503,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c259 EESETSUICBPlayer id=0x84f ix=259 g=10d r=508,616,657,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=7 sel=none 'Any Human'|'Any Computer'|'Any Exclude World'|'Player 1'|'Player 2'|'Player 3'
+  c260 UITriStateCheckBox id=0x850 ix=260 g=10d r=404,652,503,671 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c261 UIComboBox id=0x851 ix=261 g=10d r=508,652,657,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=24 sel=none 'Takeoff'|'Taxi'|'ContinueToTaxi'|'Fly'|'Circle'|'WaitForLandingClearance'
+  c262 UITriStateCheckBox id=0x852 ix=262 g=10d r=404,688,503,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c263 EESETSUICBPlayer id=0x853 ix=263 g=10d r=508,688,657,707 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=5 sel=none 'Any Human'|'Player 1'|'Player 2'|'Player 3'|'Player 4'
+step 355 object
+  object selection=0 has=0
+  object none
+step 356 tscreen new                        # the first object (none yet: the screen's group disabled)
+step 357 form 227 263
+  c227 EESEUICTriggerSelectUnits id=0x855 ix=227 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c228 UIRadioButton id=0x834 ix=228 g=10 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select On Map' btn fg=none e1=EEScreenEvent
+  c229 UIRadioButton id=0x835 ix=229 g=10 r=329,524,528,543 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Object Specification' btn fg=none e1=EEScreenEvent
+  c230 UITextLabel id=0x839 ix=230 g=10 r=329,566,403,581 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c231 EESETSAEditBox id=0x837 ix=231 g=10 r=341,583,390,604 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c232 UITextLabel id=0x83a ix=232 g=10 r=429,566,503,581 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c233 EESETSAEditBox id=0x838 ix=233 g=10 r=441,583,490,604 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c234 UICheckBox id=0x844 ix=234 g=10 r=379,545,478,564 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Dynamic'
+  c235 UITextLabel id=0x83e ix=235 g=10 r=589,458,788,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Owner'
+  c236 EESETSUICBPlayer id=0x841 ix=236 g=10 r=589,474,788,493 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 1' n=9 sel=5 'World'|'Any Human'|'Any Computer'|'Any Player'|'Any Exclude World'|'Player 1'
+  c237 UITextLabel id=0x83e ix=237 g=10 r=589,496,788,511 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family'
+  c238 EESETSAComboBox id=0x841 ix=238 g=10 r=589,512,788,531 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Family' n=199 sel=0 'Any Family'|'Epoch 1'|'Epoch 2'|'Epoch 3'|'Epoch 4'|'Epoch 5'
+  c239 UITextLabel id=0x83e ix=239 g=10 r=589,534,788,549 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Class'
+  c240 EESETSAComboBox id=0x841 ix=240 g=10 r=589,550,788,569 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Class' n=625 sel=none 'Any Class'|''Bulldog' Ramsey'|'120mm AT Gun'|'57mm AT Gun'|'88mm AA Gun'|'A-10 Anti-Tank'
+  c241 UITextLabel id=0x83e ix=241 g=10 r=589,572,788,587 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Use Object'
+  c242 EESETSAComboBox id=0x859 ix=242 g=10 r=589,588,788,607 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'<NONE>'
+  c243 UITextLabel id=0x845 ix=243 g=10 r=589,458,788,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Unit Selected List'
+  c244 EESETSOUnitList id=0x836 ix=244 g=10 r=589,474,788,603 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=0 sel=none e3=EEScreenEvent
+  c245 UITriStateCheckBox id=0x846 ix=245 g=10 r=4,616,103,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c246 EESETSEScenarioComboBox id=0x847 ix=246 g=10 r=114,616,383,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Off Map' n=2 sel=none 'Off Map'|'Previous Location'
+  c247 UITriStateCheckBox id=0x848 ix=247 g=10 r=4,652,25,671 m=1 bg=0,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c248 UIComboBox id=0x849 ix=248 g=10 r=27,652,106,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'LOS' n=3 sel=0 'LOS'|'Range'|'Near'
+  c249 UIComboBox id=0x849 ix=249 g=10 r=114,652,383,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'<NONE>'
+  c250 UITriStateCheckBox id=0x84a ix=250 g=10 r=4,688,113,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c251 UIComboBox id=0x84b ix=251 g=10 r=4,708,228,727 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'HitPoints' n=75 sel=0 'HitPoints'|'Any Resource'|'Stone'|'Gold'|'Wood'|'Food'
+  c252 UITextLabel id=0x84b ix=252 g=10 r=243,688,287,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c253 UIEditBox id=0x84a ix=253 g=10 r=243,708,287,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c254 UITextLabel id=0x84d ix=254 g=10 r=293,688,337,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c255 UIEditBox id=0x84c ix=255 g=10 r=293,708,337,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c256 UITextLabel id=0x856 ix=256 g=10 r=343,688,362,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '%'
+  c257 UICheckBox id=0x857 ix=257 g=10 r=343,708,362,727 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 label=none
+  c258 UITriStateCheckBox id=0x84e ix=258 g=10 r=404,616,503,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c259 EESETSUICBPlayer id=0x84f ix=259 g=10 r=508,616,657,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Human' n=7 sel=none 'Any Human'|'Any Computer'|'Any Exclude World'|'Player 1'|'Player 2'|'Player 3'
+  c260 UITriStateCheckBox id=0x850 ix=260 g=10 r=404,652,503,671 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c261 UIComboBox id=0x851 ix=261 g=10 r=508,652,657,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Takeoff' n=24 sel=none 'Takeoff'|'Taxi'|'ContinueToTaxi'|'Fly'|'Circle'|'WaitForLandingClearance'
+  c262 UITriStateCheckBox id=0x852 ix=262 g=10 r=404,688,503,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c263 EESETSUICBPlayer id=0x853 ix=263 g=10 r=508,688,657,707 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 1' n=5 sel=1 'Any Human'|'Player 1'|'Player 2'|'Player 3'|'Player 4'
+step 358 object
+  object selection=0 has=1
+  object '<<NONE>>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=0 state=0 selected=7
+step 359 radio %229                        # object specification: owner, family, class, parent, counts
+step 360 form 227 263
+  c227 EESEUICTriggerSelectUnits id=0x855 ix=227 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c228 UIRadioButton id=0x834 ix=228 g=10 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select On Map' btn fg=none e1=EEScreenEvent
+  c229 UIRadioButton id=0x835 ix=229 g=10 r=329,524,528,543 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Object Specification' btn fg=none e1=EEScreenEvent
+  c230 UITextLabel id=0x839 ix=230 g=10 r=329,566,403,581 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c231 EESETSAEditBox id=0x837 ix=231 g=10 r=341,583,390,604 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c232 UITextLabel id=0x83a ix=232 g=10 r=429,566,503,581 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c233 EESETSAEditBox id=0x838 ix=233 g=10 r=441,583,490,604 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c234 UICheckBox id=0x844 ix=234 g=10 r=379,545,478,564 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Dynamic'
+  c235 UITextLabel id=0x83e ix=235 g=10 r=589,458,788,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Owner'
+  c236 EESETSUICBPlayer id=0x841 ix=236 g=10 r=589,474,788,493 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 1' n=9 sel=5 'World'|'Any Human'|'Any Computer'|'Any Player'|'Any Exclude World'|'Player 1'
+  c237 UITextLabel id=0x83e ix=237 g=10 r=589,496,788,511 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family'
+  c238 EESETSAComboBox id=0x841 ix=238 g=10 r=589,512,788,531 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Family' n=199 sel=0 'Any Family'|'Epoch 1'|'Epoch 2'|'Epoch 3'|'Epoch 4'|'Epoch 5'
+  c239 UITextLabel id=0x83e ix=239 g=10 r=589,534,788,549 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Class'
+  c240 EESETSAComboBox id=0x841 ix=240 g=10 r=589,550,788,569 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Class' n=625 sel=none 'Any Class'|''Bulldog' Ramsey'|'120mm AT Gun'|'57mm AT Gun'|'88mm AA Gun'|'A-10 Anti-Tank'
+  c241 UITextLabel id=0x83e ix=241 g=10 r=589,572,788,587 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Use Object'
+  c242 EESETSAComboBox id=0x859 ix=242 g=10 r=589,588,788,607 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'<NONE>'
+  c243 UITextLabel id=0x845 ix=243 g=10 r=589,458,788,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Unit Selected List'
+  c244 EESETSOUnitList id=0x836 ix=244 g=10 r=589,474,788,603 m=0 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=0 sel=none e3=EEScreenEvent
+  c245 UITriStateCheckBox id=0x846 ix=245 g=10 r=4,616,103,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c246 EESETSEScenarioComboBox id=0x847 ix=246 g=10 r=114,616,383,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Off Map' n=2 sel=none 'Off Map'|'Previous Location'
+  c247 UITriStateCheckBox id=0x848 ix=247 g=10 r=4,652,25,671 m=1 bg=0,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c248 UIComboBox id=0x849 ix=248 g=10 r=27,652,106,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'LOS' n=3 sel=0 'LOS'|'Range'|'Near'
+  c249 UIComboBox id=0x849 ix=249 g=10 r=114,652,383,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'<NONE>'
+  c250 UITriStateCheckBox id=0x84a ix=250 g=10 r=4,688,113,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c251 UIComboBox id=0x84b ix=251 g=10 r=4,708,228,727 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'HitPoints' n=75 sel=0 'HitPoints'|'Any Resource'|'Stone'|'Gold'|'Wood'|'Food'
+  c252 UITextLabel id=0x84b ix=252 g=10 r=243,688,287,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c253 UIEditBox id=0x84a ix=253 g=10 r=243,708,287,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c254 UITextLabel id=0x84d ix=254 g=10 r=293,688,337,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c255 UIEditBox id=0x84c ix=255 g=10 r=293,708,337,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c256 UITextLabel id=0x856 ix=256 g=10 r=343,688,362,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '%'
+  c257 UICheckBox id=0x857 ix=257 g=10 r=343,708,362,727 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 label=none
+  c258 UITriStateCheckBox id=0x84e ix=258 g=10 r=404,616,503,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c259 EESETSUICBPlayer id=0x84f ix=259 g=10 r=508,616,657,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Human' n=7 sel=none 'Any Human'|'Any Computer'|'Any Exclude World'|'Player 1'|'Player 2'|'Player 3'
+  c260 UITriStateCheckBox id=0x850 ix=260 g=10 r=404,652,503,671 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c261 UIComboBox id=0x851 ix=261 g=10 r=508,652,657,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Takeoff' n=24 sel=none 'Takeoff'|'Taxi'|'ContinueToTaxi'|'Fly'|'Circle'|'WaitForLandingClearance'
+  c262 UITriStateCheckBox id=0x852 ix=262 g=10 r=404,688,503,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c263 EESETSUICBPlayer id=0x853 ix=263 g=10 r=508,688,657,707 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 1' n=5 sel=1 'Any Human'|'Player 1'|'Player 2'|'Player 3'|'Player 4'
+step 361 object
+  object selection=0 has=1
+  object '<Player 1 Units*>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=0 state=0 selected=7
+step 362 changesel %238 3                   # a family (EESETSAComboBox::ChangeSelection: the generated name)
+step 363 object
+  object selection=0 has=1
+  object '<Epoch 3*>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=0 state=0 selected=7
+step 364 changesel %240 5                   # a class
+step 365 object
+  object selection=0 has=1
+  object '<A-10 Anti-Tank*>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=0 state=0 selected=7
+step 366 changesel %236 2                   # an owner
+step 367 check %234 0                      # not dynamic
+step 368 changesel %240 0                   # any class: the family names it
+step 369 object
+  object selection=0 has=1
+  object '<Epoch 3>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=0 state=0 selected=7
+step 370 changesel %238 0                   # any family: the owner names it
+step 371 object
+  object selection=0 has=1
+  object '<Any Computer Units>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=0 state=0 selected=7
+step 372 edit %231 3
+step 373 edit %233 2
+step 374 enter %233                        # Store (the counts clamped), the name
+step 375 form 230 234
+  c230 UITextLabel id=0x839 ix=230 g=10 r=329,566,403,581 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c231 EESETSAEditBox id=0x837 ix=231 g=10 r=341,583,390,604 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '3'
+  c232 UITextLabel id=0x83a ix=232 g=10 r=429,566,503,581 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c233 EESETSAEditBox id=0x838 ix=233 g=10 r=441,583,490,604 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '3'
+  c234 UICheckBox id=0x844 ix=234 g=10 r=379,545,478,564 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Dynamic'
+step 376 object
+  object selection=0 has=1
+  object '<Any Computer Units>' map=0 units= count=3,3 dynamic=0 owner=2 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
+step 377 buttonup %245                     # the filters: each check box's controls shown
+step 378 buttonup %247
+step 379 buttonup %250
+step 380 buttonup %258
+step 381 buttonup %260
+step 382 buttonup %262
+step 383 controls %245 %247 %250 %258 %260 %262
+  %245 mode=1 state=1
+  %247 mode=1 state=1
+  %250 mode=1 state=1
+  %258 mode=1 state=1
+  %260 mode=1 state=1
+  %262 mode=1 state=1
+step 384 form 245 263
+  c245 UITriStateCheckBox id=0x846 ix=245 g=10 r=4,616,103,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c246 EESETSEScenarioComboBox id=0x847 ix=246 g=10 r=114,616,383,635 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Off Map' n=2 sel=none 'Off Map'|'Previous Location'
+  c247 UITriStateCheckBox id=0x848 ix=247 g=10 r=4,652,25,671 m=1 bg=0,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c248 UIComboBox id=0x849 ix=248 g=10 r=27,652,106,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'LOS' n=3 sel=0 'LOS'|'Range'|'Near'
+  c249 UIComboBox id=0x849 ix=249 g=10 r=114,652,383,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=2 sel=none '<NONE>'|'<NONE>'
+  c250 UITriStateCheckBox id=0x84a ix=250 g=10 r=4,688,113,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c251 UIComboBox id=0x84b ix=251 g=10 r=4,708,228,727 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'HitPoints' n=75 sel=0 'HitPoints'|'Any Resource'|'Stone'|'Gold'|'Wood'|'Food'
+  c252 UITextLabel id=0x84b ix=252 g=10 r=243,688,287,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c253 UIEditBox id=0x84a ix=253 g=10 r=243,708,287,727 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c254 UITextLabel id=0x84d ix=254 g=10 r=293,688,337,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c255 UIEditBox id=0x84c ix=255 g=10 r=293,708,337,727 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c256 UITextLabel id=0x856 ix=256 g=10 r=343,688,362,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '%'
+  c257 UICheckBox id=0x857 ix=257 g=10 r=343,708,362,727 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 label=none
+  c258 UITriStateCheckBox id=0x84e ix=258 g=10 r=404,616,503,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c259 EESETSUICBPlayer id=0x84f ix=259 g=10 r=508,616,657,635 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Human' n=7 sel=none 'Any Human'|'Any Computer'|'Any Exclude World'|'Player 1'|'Player 2'|'Player 3'
+  c260 UITriStateCheckBox id=0x850 ix=260 g=10 r=404,652,503,671 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c261 UIComboBox id=0x851 ix=261 g=10 r=508,652,657,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Takeoff' n=24 sel=none 'Takeoff'|'Taxi'|'ContinueToTaxi'|'Fly'|'Circle'|'WaitForLandingClearance'
+  c262 UITriStateCheckBox id=0x852 ix=262 g=10 r=404,688,503,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c263 EESETSUICBPlayer id=0x853 ix=263 g=10 r=508,688,657,707 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 1' n=5 sel=1 'Any Human'|'Player 1'|'Player 2'|'Player 3'|'Player 4'
+step 385 buttonup %250                     # a second click: the third state
+step 386 controls %250
+  %250 mode=1 state=2
+step 387 form 250 257
+  c250 UITriStateCheckBox id=0x84a ix=250 g=10 r=4,688,113,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c251 UIComboBox id=0x84b ix=251 g=10 r=4,708,228,727 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'HitPoints' n=75 sel=0 'HitPoints'|'Any Resource'|'Stone'|'Gold'|'Wood'|'Food'
+  c252 UITextLabel id=0x84b ix=252 g=10 r=243,688,287,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c253 UIEditBox id=0x84a ix=253 g=10 r=243,708,287,727 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c254 UITextLabel id=0x84d ix=254 g=10 r=293,688,337,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c255 UIEditBox id=0x84c ix=255 g=10 r=293,708,337,727 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c256 UITextLabel id=0x856 ix=256 g=10 r=343,688,362,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '%'
+  c257 UICheckBox id=0x857 ix=257 g=10 r=343,708,362,727 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 label=none
+step 388 changesel %251 4                   # an attribute, its range, percent
+step 389 edit %253 50
+step 390 edit %255 10
+step 391 check %257 1
+step 392 changesel %261 3                   # a state, the players
+step 393 changesel %259 1
+step 394 changesel %263 2
+step 395 changesel %248 2                   # near
+step 396 tscreen new                        # the first object stored, a second one
+step 397 object
+  object selection=1 has=1
+  object '<<NONE>>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=0 state=0 selected=7
+step 398 tscreen select 0                   # the first one loaded
+step 399 form 227 263
+  c227 EESEUICTriggerSelectUnits id=0x855 ix=227 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c228 UIRadioButton id=0x834 ix=228 g=10 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select On Map' btn fg=none e1=EEScreenEvent
+  c229 UIRadioButton id=0x835 ix=229 g=10 r=329,524,528,543 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Object Specification' btn fg=none e1=EEScreenEvent
+  c230 UITextLabel id=0x839 ix=230 g=10 r=329,566,403,581 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c231 EESETSAEditBox id=0x837 ix=231 g=10 r=341,583,390,604 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '3'
+  c232 UITextLabel id=0x83a ix=232 g=10 r=429,566,503,581 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c233 EESETSAEditBox id=0x838 ix=233 g=10 r=441,583,490,604 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '3'
+  c234 UICheckBox id=0x844 ix=234 g=10 r=379,545,478,564 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Dynamic'
+  c235 UITextLabel id=0x83e ix=235 g=10 r=589,458,788,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Owner'
+  c236 EESETSUICBPlayer id=0x841 ix=236 g=10 r=589,474,788,493 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Computer' n=9 sel=2 'World'|'Any Human'|'Any Computer'|'Any Player'|'Any Exclude World'|'Player 1'
+  c237 UITextLabel id=0x83e ix=237 g=10 r=589,496,788,511 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family'
+  c238 EESETSAComboBox id=0x841 ix=238 g=10 r=589,512,788,531 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Family' n=199 sel=0 'Any Family'|'Epoch 1'|'Epoch 2'|'Epoch 3'|'Epoch 4'|'Epoch 5'
+  c239 UITextLabel id=0x83e ix=239 g=10 r=589,534,788,549 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Class'
+  c240 EESETSAComboBox id=0x841 ix=240 g=10 r=589,550,788,569 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Class' n=625 sel=0 'Any Class'|''Bulldog' Ramsey'|'120mm AT Gun'|'57mm AT Gun'|'88mm AA Gun'|'A-10 Anti-Tank'
+  c241 UITextLabel id=0x83e ix=241 g=10 r=589,572,788,587 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Use Object'
+  c242 EESETSAComboBox id=0x859 ix=242 g=10 r=589,588,788,607 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=3 sel=none '<NONE>'|'<Any Computer Units>'|'<<NONE>>'
+  c243 UITextLabel id=0x845 ix=243 g=10 r=589,458,788,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Unit Selected List'
+  c244 EESETSOUnitList id=0x836 ix=244 g=10 r=589,474,788,603 m=0 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=0 sel=none e3=EEScreenEvent
+  c245 UITriStateCheckBox id=0x846 ix=245 g=10 r=4,616,103,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c246 EESETSEScenarioComboBox id=0x847 ix=246 g=10 r=114,616,383,635 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Off Map' n=2 sel=none 'Off Map'|'Previous Location'
+  c247 UITriStateCheckBox id=0x848 ix=247 g=10 r=4,652,25,671 m=1 bg=0,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c248 UIComboBox id=0x849 ix=248 g=10 r=27,652,106,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Near' n=3 sel=2 'LOS'|'Range'|'Near'
+  c249 UIComboBox id=0x849 ix=249 g=10 r=114,652,383,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=3 sel=none '<NONE>'|'<Any Computer Units>'|'<<NONE>>'
+  c250 UITriStateCheckBox id=0x84a ix=250 g=10 r=4,688,113,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c251 UIComboBox id=0x84b ix=251 g=10 r=4,708,228,727 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Wood' n=75 sel=4 'HitPoints'|'Any Resource'|'Stone'|'Gold'|'Wood'|'Food'
+  c252 UITextLabel id=0x84b ix=252 g=10 r=243,688,287,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c253 UIEditBox id=0x84a ix=253 g=10 r=243,708,287,727 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '50'
+  c254 UITextLabel id=0x84d ix=254 g=10 r=293,688,337,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c255 UIEditBox id=0x84c ix=255 g=10 r=293,708,337,727 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '50'
+  c256 UITextLabel id=0x856 ix=256 g=10 r=343,688,362,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '%'
+  c257 UICheckBox id=0x857 ix=257 g=10 r=343,708,362,727 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 label=none
+  c258 UITriStateCheckBox id=0x84e ix=258 g=10 r=404,616,503,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c259 EESETSUICBPlayer id=0x84f ix=259 g=10 r=508,616,657,635 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Computer' n=7 sel=1 'Any Human'|'Any Computer'|'Any Exclude World'|'Player 1'|'Player 2'|'Player 3'
+  c260 UITriStateCheckBox id=0x850 ix=260 g=10 r=404,652,503,671 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c261 UIComboBox id=0x851 ix=261 g=10 r=508,652,657,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Fly' n=24 sel=3 'Takeoff'|'Taxi'|'ContinueToTaxi'|'Fly'|'Circle'|'WaitForLandingClearance'
+  c262 UITriStateCheckBox id=0x852 ix=262 g=10 r=404,688,503,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c263 EESETSUICBPlayer id=0x853 ix=263 g=10 r=508,688,657,707 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 2' n=5 sel=2 'Any Human'|'Player 1'|'Player 2'|'Player 3'|'Player 4'
+step 400 object
+  object selection=0 has=1
+  object '<Any Computer Units>' map=0 units= count=3,3 dynamic=0 owner=2 family=0 class=0 parent=0 checks=1,1,2,1,1,1 area=0 near=2,0 attribute=4,50,50,1 visible=2 state=1006 selected=8
+step 401 changesel %242 2                   # the second object as the parent: the name
+step 402 object
+  object selection=0 has=1
+  object '<#:<<NONE>>>' map=0 units= count=3,3 dynamic=0 owner=2 family=0 class=0 parent=0 checks=1,1,2,1,1,1 area=0 near=2,0 attribute=4,50,50,1 visible=2 state=1006 selected=8
+step 403 tscreen select 1
+step 404 radio %228                        # select on map
+step 405 place 1 32 40.5 40.5 0
+step 406 place 1 32 41.5 40.5 1.5
+step 407 tsclick select @40,40              # EESETSAMouseClick: the unit list, the name
+step 408 form 243 244
+  c243 UITextLabel id=0x845 ix=243 g=10 r=589,458,788,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Unit Selected List'
+  c244 EESETSOUnitList id=0x836 ix=244 g=10 r=589,474,788,603 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=1 sel=none 'Citizen' e3=EEScreenEvent
+step 409 object
+  object selection=1 has=1
+  object '<Citizen243>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
+step 410 tsclick add @41,40
+step 411 form 243 244
+  c243 UITextLabel id=0x845 ix=243 g=10 r=589,458,788,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Unit Selected List'
+  c244 EESETSOUnitList id=0x836 ix=244 g=10 r=589,474,788,603 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=2 sel=none 'Citizen'|'Citizen' e3=EEScreenEvent
+step 412 object
+  object selection=1 has=1
+  object '<Citizen243+>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
+step 413 tscreen new                        # the units stored
+step 414 tscreen select 1
+step 415 form 227 263
+  c227 EESEUICTriggerSelectUnits id=0x855 ix=227 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c228 UIRadioButton id=0x834 ix=228 g=10 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select On Map' btn fg=none e1=EEScreenEvent
+  c229 UIRadioButton id=0x835 ix=229 g=10 r=329,524,528,543 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Object Specification' btn fg=none e1=EEScreenEvent
+  c230 UITextLabel id=0x839 ix=230 g=10 r=329,566,403,581 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c231 EESETSAEditBox id=0x837 ix=231 g=10 r=341,583,390,604 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c232 UITextLabel id=0x83a ix=232 g=10 r=429,566,503,581 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c233 EESETSAEditBox id=0x838 ix=233 g=10 r=441,583,490,604 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c234 UICheckBox id=0x844 ix=234 g=10 r=379,545,478,564 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Dynamic'
+  c235 UITextLabel id=0x83e ix=235 g=10 r=589,458,788,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Owner'
+  c236 EESETSUICBPlayer id=0x841 ix=236 g=10 r=589,474,788,493 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 1' n=9 sel=5 'World'|'Any Human'|'Any Computer'|'Any Player'|'Any Exclude World'|'Player 1'
+  c237 UITextLabel id=0x83e ix=237 g=10 r=589,496,788,511 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family'
+  c238 EESETSAComboBox id=0x841 ix=238 g=10 r=589,512,788,531 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Family' n=199 sel=0 'Any Family'|'Epoch 1'|'Epoch 2'|'Epoch 3'|'Epoch 4'|'Epoch 5'
+  c239 UITextLabel id=0x83e ix=239 g=10 r=589,534,788,549 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Class'
+  c240 EESETSAComboBox id=0x841 ix=240 g=10 r=589,550,788,569 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Class' n=625 sel=0 'Any Class'|''Bulldog' Ramsey'|'120mm AT Gun'|'57mm AT Gun'|'88mm AA Gun'|'A-10 Anti-Tank'
+  c241 UITextLabel id=0x83e ix=241 g=10 r=589,572,788,587 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Use Object'
+  c242 EESETSAComboBox id=0x859 ix=242 g=10 r=589,588,788,607 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=4 sel=none '<NONE>'|'<#:<<NONE>>>'|'<Citizen243+>'|'<<NONE>>'
+  c243 UITextLabel id=0x845 ix=243 g=10 r=589,458,788,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Unit Selected List'
+  c244 EESETSOUnitList id=0x836 ix=244 g=10 r=589,474,788,603 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=2 sel=none 'Citizen'|'Citizen' e3=EEScreenEvent
+  c245 UITriStateCheckBox id=0x846 ix=245 g=10 r=4,616,103,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c246 EESETSEScenarioComboBox id=0x847 ix=246 g=10 r=114,616,383,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Off Map' n=2 sel=none 'Off Map'|'Previous Location'
+  c247 UITriStateCheckBox id=0x848 ix=247 g=10 r=4,652,25,671 m=1 bg=0,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c248 UIComboBox id=0x849 ix=248 g=10 r=27,652,106,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'LOS' n=3 sel=0 'LOS'|'Range'|'Near'
+  c249 UIComboBox id=0x849 ix=249 g=10 r=114,652,383,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=4 sel=none '<NONE>'|'<#:<<NONE>>>'|'<Citizen243+>'|'<<NONE>>'
+  c250 UITriStateCheckBox id=0x84a ix=250 g=10 r=4,688,113,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c251 UIComboBox id=0x84b ix=251 g=10 r=4,708,228,727 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'HitPoints' n=75 sel=0 'HitPoints'|'Any Resource'|'Stone'|'Gold'|'Wood'|'Food'
+  c252 UITextLabel id=0x84b ix=252 g=10 r=243,688,287,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c253 UIEditBox id=0x84a ix=253 g=10 r=243,708,287,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c254 UITextLabel id=0x84d ix=254 g=10 r=293,688,337,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c255 UIEditBox id=0x84c ix=255 g=10 r=293,708,337,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c256 UITextLabel id=0x856 ix=256 g=10 r=343,688,362,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '%'
+  c257 UICheckBox id=0x857 ix=257 g=10 r=343,708,362,727 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 label=none
+  c258 UITriStateCheckBox id=0x84e ix=258 g=10 r=404,616,503,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c259 EESETSUICBPlayer id=0x84f ix=259 g=10 r=508,616,657,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Human' n=7 sel=0 'Any Human'|'Any Computer'|'Any Exclude World'|'Player 1'|'Player 2'|'Player 3'
+  c260 UITriStateCheckBox id=0x850 ix=260 g=10 r=404,652,503,671 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c261 UIComboBox id=0x851 ix=261 g=10 r=508,652,657,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Takeoff' n=24 sel=0 'Takeoff'|'Taxi'|'ContinueToTaxi'|'Fly'|'Circle'|'WaitForLandingClearance'
+  c262 UITriStateCheckBox id=0x852 ix=262 g=10 r=404,688,503,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c263 EESETSUICBPlayer id=0x853 ix=263 g=10 r=508,688,657,707 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 1' n=5 sel=1 'Any Human'|'Player 1'|'Player 2'|'Player 3'|'Player 4'
+step 416 object
+  object selection=1 has=1
+  object '<Citizen243+>' map=1 units=16777243,16777244 count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
+step 417 tscreen dup
+step 418 object
+  object selection=3 has=1
+  object '<Citizen243+>' map=1 units=16777243,16777244 count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
+step 419 tscreen up
+step 420 object
+  object selection=2 has=1
+  object '<Citizen243+>' map=1 units=16777243,16777244 count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
+step 421 tscreen down
+step 422 object
+  object selection=3 has=1
+  object '<Citizen243+>' map=1 units=16777243,16777244 count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
+step 423 tscreen sort
+step 424 object
+  object selection=0 has=1
+  object '<#:<Citizen243+>>' map=0 units= count=3,3 dynamic=0 owner=2 family=0 class=0 parent=3 checks=1,1,2,1,1,1 area=0 near=2,0 attribute=4,50,50,1 visible=2 state=1006 selected=8
+step 425 tscreen name
+step 426 object
+  object selection=0 has=1
+  object '<#:<Citizen243+>>' map=0 units= count=3,3 dynamic=0 owner=2 family=0 class=0 parent=3 checks=1,1,2,1,1,1 area=0 near=2,0 attribute=4,50,50,1 visible=2 state=1006 selected=8
+step 427 tscreen delete
+step 428 object
+  object selection=0 has=1
+  object '<<NONE>>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
+step 429 tab 0                              # left: Deactivate (the selection cleared)
+step 430 selection
+  selection
+step 431 tab 4                              # entered: Activate
+step 432 form 227 263
+  c227 EESEUICTriggerSelectUnits id=0x855 ix=227 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c228 UIRadioButton id=0x834 ix=228 g=10 r=329,504,528,523 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Select On Map' btn fg=none e1=EEScreenEvent
+  c229 UIRadioButton id=0x835 ix=229 g=10 r=329,524,528,543 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Object Specification' btn fg=none e1=EEScreenEvent
+  c230 UITextLabel id=0x839 ix=230 g=10 r=329,566,403,581 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c231 EESETSAEditBox id=0x837 ix=231 g=10 r=341,583,390,604 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c232 UITextLabel id=0x83a ix=232 g=10 r=429,566,503,581 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c233 EESETSAEditBox id=0x838 ix=233 g=10 r=441,583,490,604 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '1'
+  c234 UICheckBox id=0x844 ix=234 g=10 r=379,545,478,564 m=0 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Dynamic'
+  c235 UITextLabel id=0x83e ix=235 g=10 r=589,458,788,473 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Owner'
+  c236 EESETSUICBPlayer id=0x841 ix=236 g=10 r=589,474,788,493 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 1' n=9 sel=5 'World'|'Any Human'|'Any Computer'|'Any Player'|'Any Exclude World'|'Player 1'
+  c237 UITextLabel id=0x83e ix=237 g=10 r=589,496,788,511 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family'
+  c238 EESETSAComboBox id=0x841 ix=238 g=10 r=589,512,788,531 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Family' n=199 sel=0 'Any Family'|'Epoch 1'|'Epoch 2'|'Epoch 3'|'Epoch 4'|'Epoch 5'
+  c239 UITextLabel id=0x83e ix=239 g=10 r=589,534,788,549 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Class'
+  c240 EESETSAComboBox id=0x841 ix=240 g=10 r=589,550,788,569 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Class' n=625 sel=0 'Any Class'|''Bulldog' Ramsey'|'120mm AT Gun'|'57mm AT Gun'|'88mm AA Gun'|'A-10 Anti-Tank'
+  c241 UITextLabel id=0x83e ix=241 g=10 r=589,572,788,587 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Use Object'
+  c242 EESETSAComboBox id=0x859 ix=242 g=10 r=589,588,788,607 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=4 sel=none '<NONE>'|'<<NONE>>'|'<Citizen243+>'|'<Citizen243+>'
+  c243 UITextLabel id=0x845 ix=243 g=10 r=589,458,788,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Unit Selected List'
+  c244 EESETSOUnitList id=0x836 ix=244 g=10 r=589,474,788,603 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=0 sel=none e3=EEScreenEvent
+  c245 UITriStateCheckBox id=0x846 ix=245 g=10 r=4,616,103,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c246 EESETSEScenarioComboBox id=0x847 ix=246 g=10 r=114,616,383,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Off Map' n=2 sel=none 'Off Map'|'Previous Location'
+  c247 UITriStateCheckBox id=0x848 ix=247 g=10 r=4,652,25,671 m=1 bg=0,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c248 UIComboBox id=0x849 ix=248 g=10 r=27,652,106,671 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'LOS' n=3 sel=0 'LOS'|'Range'|'Near'
+  c249 UIComboBox id=0x849 ix=249 g=10 r=114,652,383,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<NONE>' n=4 sel=none '<NONE>'|'<<NONE>>'|'<Citizen243+>'|'<Citizen243+>'
+  c250 UITriStateCheckBox id=0x84a ix=250 g=10 r=4,688,113,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c251 UIComboBox id=0x84b ix=251 g=10 r=4,708,228,727 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'HitPoints' n=75 sel=0 'HitPoints'|'Any Resource'|'Stone'|'Gold'|'Wood'|'Food'
+  c252 UITextLabel id=0x84b ix=252 g=10 r=243,688,287,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Min'
+  c253 UIEditBox id=0x84a ix=253 g=10 r=243,708,287,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c254 UITextLabel id=0x84d ix=254 g=10 r=293,688,337,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Max'
+  c255 UIEditBox id=0x84c ix=255 g=10 r=293,708,337,727 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '0'
+  c256 UITextLabel id=0x856 ix=256 g=10 r=343,688,362,707 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '%'
+  c257 UICheckBox id=0x857 ix=257 g=10 r=343,708,362,727 m=0 bg=0.4,0,0,0 b=0 h=0 k=0 label=none
+  c258 UITriStateCheckBox id=0x84e ix=258 g=10 r=404,616,503,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c259 EESETSUICBPlayer id=0x84f ix=259 g=10 r=508,616,657,635 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Any Human' n=7 sel=none 'Any Human'|'Any Computer'|'Any Exclude World'|'Player 1'|'Player 2'|'Player 3'
+  c260 UITriStateCheckBox id=0x850 ix=260 g=10 r=404,652,503,671 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c261 UIComboBox id=0x851 ix=261 g=10 r=508,652,657,671 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Takeoff' n=24 sel=none 'Takeoff'|'Taxi'|'ContinueToTaxi'|'Fly'|'Circle'|'WaitForLandingClearance'
+  c262 UITriStateCheckBox id=0x852 ix=262 g=10 r=404,688,503,707 m=1 bg=0.4,0,0,0 b=0 h=0 fg=none e1=EEScreenEvent e2=EEScreenEvent
+  c263 EESETSUICBPlayer id=0x853 ix=263 g=10 r=508,688,657,707 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Player 1' n=5 sel=1 'Any Human'|'Player 1'|'Player 2'|'Player 3'|'Player 4'
+step 433 object
+  object selection=0 has=1
+  object '<<NONE>>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
