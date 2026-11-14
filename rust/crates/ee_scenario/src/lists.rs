@@ -280,7 +280,10 @@ pub fn remap<L: Lists + ?Sized>(l: &mut L, list: u32, map: &[(c_ulong, c_ulong)]
                 for i in 0..l.count(EE_SCENARIO_LIST_CONDITIONS) {
                     let e = l.at(EE_SCENARIO_LIST_CONDITIONS, i);
                     let c = l.condition(e);
-                    remap_id(if list == EE_SCENARIO_LIST_TRIGGERS { &mut c.mTrigger } else { &mut c.mObjectIndex }, map);
+                    remap_id(
+                        if list == EE_SCENARIO_LIST_TRIGGERS { &mut c.mTrigger } else { &mut c.mObjectIndex },
+                        map,
+                    );
                 }
             }
             for effects in [EE_SCENARIO_LIST_EFFECTS, EE_SCENARIO_LIST_OBJECTS, EE_SCENARIO_LIST_PENDING] {
@@ -434,7 +437,11 @@ pub fn new<L: Lists + ?Sized>(l: &mut L, list: u32) -> Element {
             let id = bump(l, EE_SCENARIO_LIST_CONDITIONS);
             let exists = l.resource(true);
             let object_name = l.name(list, o);
-            l.set_name(EE_SCENARIO_LIST_CONDITIONS, c, &cat(&[b"<", &num(id), b":", &object_name, b" ", &exists, b">"]));
+            l.set_name(
+                EE_SCENARIO_LIST_CONDITIONS,
+                c,
+                &cat(&[b"<", &num(id), b":", &object_name, b" ", &exists, b">"]),
+            );
             l.set_id(EE_SCENARIO_LIST_CONDITIONS, c, id);
             let n = l.count(list);
             let f = l.condition(c);
@@ -571,7 +578,11 @@ pub fn duplicate<L: Lists + ?Sized>(l: &mut L, list: u32, index: c_ulong) -> Ele
         // the original's own strip: a name without its closing bracket keeps its opening one
         let stripped = after_first(&name);
         let n = chars(stripped);
-        let stem = if char_at(stripped, n.wrapping_sub(1)) == b'>' { first_chars(stripped, n - 1).to_vec() } else { name.clone() };
+        let stem = if char_at(stripped, n.wrapping_sub(1)) == b'>' {
+            first_chars(stripped, n - 1).to_vec()
+        } else {
+            name.clone()
+        };
         cat(&[b"<", &stem, b"_", &copy, b">"])
     } else {
         cat(&[b"<", &stem(&name), b"_", &copy, b">"])
@@ -614,6 +625,43 @@ pub fn find<L: Lists + ?Sized>(l: &mut L, list: u32, id: c_long) -> Element {
         }
     }
     std::ptr::null_mut()
+}
+
+/// `EESMObject::SetName`'s second half (the object's name already set): every object condition (from 1) of the
+/// object's index renamed "name Exists". An object not in the list has index -1, which matches a condition of index
+/// `0xffffffff` (the original's `unsigned long == long`).
+pub fn rename_object_conditions<L: Lists + ?Sized>(l: &mut L, object: Element) {
+    let index = index_of(l, EE_SCENARIO_LIST_OBJECTS, object) as c_ulong;
+    let name = cat(&[&l.name(EE_SCENARIO_LIST_OBJECTS, object), b" Exists"]);
+    for i in 1..l.count(EE_SCENARIO_LIST_CONDITIONS) {
+        let c = l.at(EE_SCENARIO_LIST_CONDITIONS, i);
+        let f = l.condition(c);
+        if f.mType == CONDITION_OBJECT && f.mObjectIndex == index {
+            l.set_name(EE_SCENARIO_LIST_CONDITIONS, c, &name);
+        }
+    }
+}
+
+/// `EESMObject::SetParent`: the parent set, unless following parents from it (to None, object 0, or past the list)
+/// comes back to an object already met, the object itself included: then the parent is 0.
+pub fn set_parent<L: Lists + ?Sized>(l: &mut L, object: Element, parent: c_long) {
+    l.object(object).mParent = parent as c_ulong;
+    let root = l.at(EE_SCENARIO_LIST_OBJECTS, 0);
+    let mut visited = vec![object];
+    let mut next = parent as c_ulong;
+    loop {
+        let o = l.at(EE_SCENARIO_LIST_OBJECTS, next as usize);
+        if o.is_null() || o == root {
+            break;
+        }
+        if visited.contains(&o) {
+            l.object(object).mParent = 0;
+            return;
+        }
+        visited.push(o);
+        next = l.object(o).mParent;
+    }
+    l.object(object).mParent = parent as c_ulong;
 }
 
 /// `GetObjectIndex`: the element's place in the list, -1 when it is not there.
@@ -878,6 +926,33 @@ pub unsafe extern "C" fn ee_scenario_list_names(host: *const EeScenarioListHost,
     names(&mut HostLists(unsafe { &*host }), which);
 }
 
+/// `EESMObject::SetName`'s conditions ([`rename_object_conditions`]).
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`]; `object` a live scenario object.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_list_rename_object_conditions(
+    host: *const EeScenarioListHost,
+    object: *mut c_void,
+) {
+    // SAFETY: the caller's contract
+    rename_object_conditions(&mut HostLists(unsafe { &*host }), object);
+}
+
+/// `EESMObject::SetParent` ([`set_parent`]).
+///
+/// # Safety
+/// As [`ee_scenario_list_rename_object_conditions`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_list_set_parent(
+    host: *const EeScenarioListHost,
+    object: *mut c_void,
+    parent: c_long,
+) {
+    // SAFETY: the caller's contract
+    set_parent(&mut HostLists(unsafe { &*host }), object, parent);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -993,7 +1068,11 @@ mod tests {
             &mut self.entries[un(trigger)][effects as usize][index]
         }
         fn resource(&mut self, exists: bool) -> Vec<u8> {
-            if exists { b"Exists".to_vec() } else { b"Copy".to_vec() }
+            if exists {
+                b"Exists".to_vec()
+            } else {
+                b"Copy".to_vec()
+            }
         }
         fn out_name(&mut self, name: &[u8]) {
             self.out.push(name.to_vec());
@@ -1189,6 +1268,32 @@ mod tests {
         m.out.clear();
         names(&mut m, EE_SCENARIO_NAMES_USER_AREAS);
         assert!(m.out.is_empty());
+    }
+
+    #[test]
+    fn parents_never_loop_and_conditions_follow_a_rename() {
+        let mut m = base();
+        new(&mut m, O);
+        new(&mut m, O);
+        new(&mut m, O);
+        let (a, b, c) = (m.at(O, 1), m.at(O, 2), m.at(O, 3));
+        set_parent(&mut m, a, 2);
+        set_parent(&mut m, b, 3);
+        assert_eq!(m.objects[un(b)].mParent, 3);
+        set_parent(&mut m, c, 1);
+        assert_eq!(m.objects[un(c)].mParent, 0);
+        set_parent(&mut m, c, 0);
+        assert_eq!(m.objects[un(c)].mParent, 0);
+        set_parent(&mut m, a, 3);
+        assert_eq!(m.objects[un(a)].mParent, 3);
+        set_parent(&mut m, a, 1);
+        assert_eq!(m.objects[un(a)].mParent, 0);
+        set_parent(&mut m, a, 77);
+        assert_eq!(m.objects[un(a)].mParent, 77);
+        m.names[un(b)] = b"bee".to_vec();
+        rename_object_conditions(&mut m, b);
+        assert_eq!(m.list_names(C)[2], "bee Exists");
+        assert_eq!(m.list_names(C)[1], "<1:None Exists>");
     }
 
     #[test]

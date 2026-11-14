@@ -91,6 +91,7 @@ public:
     bool DeleteEntry(unsigned long inList, unsigned long inIndex);
     void* DuplicateEntry(unsigned long inList, unsigned long inIndex);
     void GetNames(unsigned long inWhich, std::vector<UWideString>& outNames);
+    void ObjectChanged(EESMObject* inObject, bool inParent, long inValue);   // EESMObject::SetName, SetParent
     void AddMessage(const EESMDialogMessage& inMessage);    // 0x1afffb
     void AddV134Effect(const EESMEffect& inEffect);   // 0x1b000d (not while mB234)
     void AddTimedEffect(long inEffect, unsigned long inTime, bool inIsInCinematic);  // 0x1b005b (EESMTrigger 0x1c9c84)

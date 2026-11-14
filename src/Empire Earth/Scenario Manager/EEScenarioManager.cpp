@@ -1534,3 +1534,13 @@ long EEScenarioManager::GetObjectIndex(EESMObject* inObject)
     EESMLists theLists(this);
     return ee_scenario_list_index_of(&theLists.mHost, EE_SCENARIO_LIST_OBJECTS, inObject);
 }
+
+// EESMObject::SetName's conditions (inParent false) or SetParent (true) over the lists
+void EEScenarioManager::ObjectChanged(EESMObject* inObject, bool inParent, long inValue)
+{
+    EESMLists theLists(this);
+    if (inParent)
+        ee_scenario_list_set_parent(&theLists.mHost, inObject, inValue);
+    else
+        ee_scenario_list_rename_object_conditions(&theLists.mHost, inObject);
+}

@@ -1507,6 +1507,18 @@ long ee_scenario_list_index_of(const EeScenarioListHost *host, uint32_t list, vo
 /// As [`ee_scenario_list_sort`].
 void ee_scenario_list_names(const EeScenarioListHost *host, uint32_t which);
 
+/// `EESMObject::SetName`'s conditions ([`rename_object_conditions`]).
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`]; `object` a live scenario object.
+void ee_scenario_list_rename_object_conditions(const EeScenarioListHost *host, void *object);
+
+/// `EESMObject::SetParent` ([`set_parent`]).
+///
+/// # Safety
+/// As [`ee_scenario_list_rename_object_conditions`].
+void ee_scenario_list_set_parent(const EeScenarioListHost *host, void *object, long parent);
+
 }  // extern "C"
 
 #endif  // EE_RUST_EE_SCENARIO_H

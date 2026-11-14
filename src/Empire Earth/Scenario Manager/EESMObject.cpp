@@ -842,48 +842,22 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
 }
 
 // FUNCTION: EXE 0x5c9628
-// Renames the object and renames its object conditions to "<name> Exists"
+// Renames the object and renames its object conditions to "<name> Exists" (ee_scenario lists.rs)
 void EESMObject::SetName(const UWideString& inName)
 {
-    UWideString theConditionName = inName + " Exists";
     this->mName = inName;
-    if (gWorld.mScenarioManager != NULL) {
-        long theIndex = gWorld.mScenarioManager->GetObjectIndex(this);
-        std::vector<EESMCondition*>& theConditions = gWorld.mScenarioManager->mConditions;
-        for (unsigned long i = 1; i < theConditions.size(); i++) {
-            EESMCondition* theCondition = theConditions[i];
-            if (theCondition->mType == kSMConditionObject && theCondition->mObjectIndex == theIndex)
-                theCondition->mName = theConditionName;
-        }
-    }
+    if (gWorld.mScenarioManager != NULL)
+        gWorld.mScenarioManager->ObjectChanged(this, false, 0);
 }
 
 // FUNCTION: EXE 0x5c96b7
-// Sets the parent object; a parent chain that loops back to this object resets the parent to 0
+// Sets the parent object; a parent chain that loops back to this object resets the parent to 0 (ee_scenario
+// lists.rs set_parent)
 void EESMObject::SetParent(long inParent)
 {
-    std::vector<EESMObject*> theVisited;
-    EESMObject* theObject = gWorld.GetScenarioManager()->GetScenarioObject(this->mParent);
     this->mParent = inParent;
-    if (gWorld.mScenarioManager != NULL) {
-        EESMObject* theThis = this;
-        theVisited.push_back(theThis);
-        long theParent = inParent;
-        EESMObject* theRoot = gWorld.mScenarioManager->GetScenarioObject(0);
-        while (true) {
-            theObject = gWorld.mScenarioManager->GetScenarioObject(theParent);
-            if (theObject == NULL || theObject == theRoot)
-                break;
-            if (std::find(theVisited.begin(), theVisited.end(), theObject) != theVisited.end()) {
-                this->mParent = 0;
-                theObject = NULL;
-                return;
-            }
-            theVisited.push_back(theObject);
-            theParent = theObject->mParent;
-        }
-        this->mParent = inParent;
-    }
+    if (gWorld.mScenarioManager != NULL)
+        gWorld.mScenarioManager->ObjectChanged(this, true, inParent);
 }
 
 // FUNCTION: EXE 0x5c97a8
