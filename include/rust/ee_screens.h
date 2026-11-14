@@ -1599,6 +1599,118 @@ constexpr static const uint32_t EE_SCREENS_HK_F_C_PREVIOUS_PART = 256;
 
 constexpr static const uint32_t EE_SCREENS_HK_F_C_GOAL = 512;
 
+/// -> the local player's selected group's unit count (-1: no group).
+constexpr static const uint32_t EE_SCREENS_IB_OP_GROUP_COUNT = 0;
+
+/// (i) -> the group's unit i.
+constexpr static const uint32_t EE_SCREENS_IB_OP_GROUP_UNIT = 1;
+
+/// (unit) -> its cargo count.
+constexpr static const uint32_t EE_SCREENS_IB_OP_CARGO_COUNT = 2;
+
+/// (unit, j) -> its cargo unit j.
+constexpr static const uint32_t EE_SCREENS_IB_OP_CARGO = 3;
+
+/// (unit) -> its id.
+constexpr static const uint32_t EE_SCREENS_IB_OP_UNIT_ID = 4;
+
+/// (unit) -> its class's unit type.
+constexpr static const uint32_t EE_SCREENS_IB_OP_UNIT_TYPE = 5;
+
+/// (unit) -> its class: `EE_SCREENS_IB_CLASS_*` flags | the family << 8.
+constexpr static const uint32_t EE_SCREENS_IB_OP_CLASS = 6;
+
+/// (unit, k) -> whether its queued goal k is set.
+constexpr static const uint32_t EE_SCREENS_IB_OP_QUEUED_GOAL = 7;
+
+/// (unit) -> whether its goal queue 1 is empty or has no front.
+constexpr static const uint32_t EE_SCREENS_IB_OP_NO_GOALS = 8;
+
+/// (unit) -> its tile: x (low 32 bits) | y << 32.
+constexpr static const uint32_t EE_SCREENS_IB_OP_TILE = 9;
+
+/// (unit) -> its hit points.
+constexpr static const uint32_t EE_SCREENS_IB_OP_HIT_POINTS = 10;
+
+/// (unit) -> its stats' maximum hit points.
+constexpr static const uint32_t EE_SCREENS_IB_OP_MAX_HIT_POINTS = 11;
+
+/// (unit) -> its stats' button.
+constexpr static const uint32_t EE_SCREENS_IB_OP_BUTTON = 12;
+
+/// (ids, count) sends "select these units" (a pointer to `count` i32 ids).
+constexpr static const uint32_t EE_SCREENS_IB_OP_SELECT_THESE = 13;
+
+/// (id) sends "select the unit".
+constexpr static const uint32_t EE_SCREENS_IB_OP_SELECT = 14;
+
+/// (transport id, cargo id) sends the immediate cargo unload.
+constexpr static const uint32_t EE_SCREENS_IB_OP_UNLOAD = 15;
+
+/// (id, tile as [`EE_SCREENS_IB_OP_TILE`]) sends "scramble the aircraft".
+constexpr static const uint32_t EE_SCREENS_IB_OP_SCRAMBLE = 16;
+
+/// (id) sends "remove the unit from the selection".
+constexpr static const uint32_t EE_SCREENS_IB_OP_REMOVE = 17;
+
+/// (0 the press sound, 1 the collect sound) plays it.
+constexpr static const uint32_t EE_SCREENS_IB_OP_SOUND = 18;
+
+/// `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_IB_OP_DIRTY = 19;
+
+/// -> Ctrl held.
+constexpr static const uint32_t EE_SCREENS_IB_OP_CTRL = 20;
+
+/// -> Shift held.
+constexpr static const uint32_t EE_SCREENS_IB_OP_SHIFT = 21;
+
+/// -> f[0] the mouse's x.
+constexpr static const uint32_t EE_SCREENS_IB_OP_MOUSE = 22;
+
+/// -> whether the bar's rectangle contains the mouse.
+constexpr static const uint32_t EE_SCREENS_IB_OP_CONTAINS = 23;
+
+/// -> f[0..4] the bar's rectangle (left, top, right, bottom).
+constexpr static const uint32_t EE_SCREENS_IB_OP_RECT = 24;
+
+/// Releases the captured mouse.
+constexpr static const uint32_t EE_SCREENS_IB_OP_RELEASE_MOUSE = 25;
+
+/// (button) `Acquire`.
+constexpr static const uint32_t EE_SCREENS_IB_OP_ACQUIRE = 26;
+
+/// (button) `Release`.
+constexpr static const uint32_t EE_SCREENS_IB_OP_RELEASE = 27;
+
+/// -> `UIControl::CopyData()`.
+constexpr static const uint32_t EE_SCREENS_IB_OP_COPY_BASE = 28;
+
+/// -> `UIControl::DrawPolygons()`.
+constexpr static const uint32_t EE_SCREENS_IB_OP_DRAW_BASE = 29;
+
+/// -> f[0..4] the copied draw rectangle.
+constexpr static const uint32_t EE_SCREENS_IB_OP_DRAW_RECT = 30;
+
+/// (button) the icon bitmap in the button's texture and face over the rectangle f[2..6], at f[0..2], drawn.
+constexpr static const uint32_t EE_SCREENS_IB_OP_ICON = 31;
+
+/// (colour: 0 black, 1 red, 2 green) a rhombus over the rectangle f[0..4] drawn.
+constexpr static const uint32_t EE_SCREENS_IB_OP_RHOMBUS = 32;
+
+/// -> the frame bitmap at f[0..2] drawn: the draw's result.
+constexpr static const uint32_t EE_SCREENS_IB_OP_FRAME = 33;
+
+/// -> a red line from f[0..2] to f[2..4] drawn: the draw's result.
+constexpr static const uint32_t EE_SCREENS_IB_OP_LINE = 34;
+
+/// The class flags of [`EE_SCREENS_IB_OP_CLASS`].
+constexpr static const int64_t EE_SCREENS_IB_CLASS_TRANSPORT = 1;
+
+constexpr static const int64_t EE_SCREENS_IB_CLASS_AIR_BASE = 2;
+
+constexpr static const int64_t EE_SCREENS_IB_CLASS_PARATROOPER_BOMBER = 4;
+
 /// A display mode as `UIControl::SetDisplayMode` takes it: 0 hidden, 1 shown.
 constexpr static const unsigned long EE_SCREENS_HIDDEN = 0;
 
@@ -5867,6 +5979,32 @@ uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
                                            bool idle_workers,
                                            bool idle_military,
                                            bool select_all);
+
+/// The state of a bar `width` x `height`; `icon` (four floats: left, top, right, bottom) gets one icon's rectangle.
+void *ee_screens_icon_bar_new(float width,
+                              float height,
+                              float *icon);
+
+/// The destructor: the snapshot's buttons released, the state freed.
+void ee_screens_icon_bar_free(void *state, void *bar);
+
+/// `CopyData`.
+int64_t ee_screens_icon_bar_copy_data(void *state, void *bar);
+
+/// `DrawPolygons`.
+int64_t ee_screens_icon_bar_draw(void *state, void *bar);
+
+/// `MouseLButtonUp`.
+int64_t ee_screens_icon_bar_mouse_l_up(void *state, void *bar);
+
+/// `MouseRButtonUp`.
+int64_t ee_screens_icon_bar_mouse_r_up(void *state, void *bar);
+
+/// `MouseMove`.
+int64_t ee_screens_icon_bar_mouse_move(void *state, void *bar);
+
+/// `Update`.
+void ee_screens_icon_bar_update(void *state, void *bar);
 
 /// A slot of `source` (`EE_SCREENS_LE_SOURCE_*`) into `out`, its name into `name` (up to `capacity` bytes); the
 /// name's length.

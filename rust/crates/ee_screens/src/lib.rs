@@ -82,6 +82,8 @@
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 //! - [`status_box`]: the status box's `Fill`, `Refresh`, `UpdateQueuedCounts`, `LoadIcons` (its icon cells) over
 //!   the C++ host.
+//! - [`icon_bar`]: the selected-units icon bar whole (its state, refill, snapshot, drawing and clicks) over the
+//!   C++ host.
 
 pub mod actions;
 #[cfg(not(test))]
@@ -135,6 +137,9 @@ pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;
 pub mod hud;
+pub mod icon_bar;
+#[cfg(not(test))]
+mod icon_bar_ffi;
 pub mod lobby;
 pub mod lobby_form;
 #[cfg(not(test))]
