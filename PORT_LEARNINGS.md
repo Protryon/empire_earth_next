@@ -19486,3 +19486,66 @@ Round 6 of the Low-Level Engine lane (rounds 1-5 above). Net C++ over src + incl
 - **What runs it.** EE-SIM has no sound manager or mixer (`EEInitializeSounds` is the windowed game's): the oracle
   is unaffected by construction. The sound objects run only in a windowed game: the lead's tour is their check.
   `FSInitialize` runs at every start (EE-SIM too); `FSGetVolumeAndDirectory` there and in `FSFileSpec`'s callers.
+
+## LLE lane, round 7: the Utilities whole in Rust (ee_util), the mixer's SPIM entry points, Input System.cpp's entry points, the subsystems' shutdown registration (branch rust-lle7, 2026-11-14)
+
+Round 7 of the Low-Level Engine lane (rounds 1-6 above). Net C++ over src + include without the generated `include/rust`
+(`git diff --numstat`): about -900 (per commit in the round's report). The lane's list is near its end: what stays is
+glue over C++ objects (see the progress file's "Left").
+
+- **A new crate, `ee_util`** (the Utilities):
+  - `UGraphSeries`/`UGraph` (graph.rs): the classes the post-game statistics fill and `UIGraph`/`UILineGraph` draw were
+    by-value objects handing out references (`GetSeries`, `GetDataPoint`, `GetColor`). Design: a Rust store under C++
+    views. A `UGraphSeries` is one `EeUtilSeries*`; a graph's series are a `Vec<*mut EeUtilSeries>` (boxed series),
+    so `GetSeries(i)` returns the address of slot i reinterpreted as `const UGraphSeries&` (a class whose only member
+    is that pointer); points are `#[repr(C)]` `{c_long x, y}` (the build's `long`, as `U2DPoint<long>`) and the colour
+    three floats (as `GEColor`), returned by address. Such a reference lives until its container changes, as the C++
+    vector's did. `UWideString` has a vtable, so the title and the labels stay C++ members of `UGraph` next to its
+    `EeUtilGraph*`. Every member is inline in `lle/UGraph.h`; `UGraph.cpp` (398 lines) is gone.
+  - `U2DFractal` (fractal.rs): simulation code (`EERandomMap::PaintTiles`, the terrain mesh's 64x64 noise). Its virtual
+    `GenerateFractalValue` had one override, Default.dll's `HMUFractal`, which is ee_rmap's now: the class lost its
+    vtable and holds an `EeUtilFractal*`. The stream is seeded raw (`theRandom.mSeed = inSeed`, not `URandom::new`'s
+    0 -> 1), the clamp keeps the `min(max(v, 0), 1)` macros' comparisons (a NaN becomes 0). Values never computed are
+    0 (they were uninitialised `new float[]`); an index past the map panics (it wrote past it; the game's sizes are
+    powers of two).
+  - `Utilities.cpp` (system.rs): the shutdown list (each function popped before it runs, so one may register another),
+    `UShutdown`'s end through the C runtime's `exit`/`abort` (not Rust's `process::exit`, which skips `atexit` on
+    Windows), `UGetOSType`'s decoding. Exported names stay one-line C++ forwarders (mangled names).
+  - `UMath.cpp`'s floating-point control (fp.rs): `_controlfp(mode, _MCW_RC)` on Windows, `fegetround`/`fesetround`
+    elsewhere with each architecture's `FE_*` values (x86-64 0x400/0x800/0xc00, AArch64 0x800000/0x400000/0xc00000);
+    the precision reads `_PC_53` and setting it does nothing (no x87).
+- **The golden** (`tests/util/util_golden.cpp`) over the unmodified `UGraph.cpp`, `U2DFractal.cpp` and `Utilities.cpp`:
+  2,000 sequences of random operations on pools of six series and four graphs (copies, assignments, points with
+  repeated x, colours, enabled flags, removals that leave the range stale, combining into an input, pruning, series
+  copied out of graphs), 200 fractals of every power-of-two size to 64 (both constructors, computed twice, ranges
+  including random small floats, seeds 0-2), the shutdown list: 154,948 lines. `URandom::Generate` lives in
+  `GEBitmap.cpp`: without that object `/force:unresolved` turned the call into a jump to 0 (the first run crashed in
+  the fractals). cargo replays it over the C interface (`golden.rs`, 3,889 lines checked in; `EE_UTIL_GOLDEN=<file>`
+  replays all 63,432 operations); the driver relinked over the new units prints the same. Mutations
+  (`build/lle7/mutate.py`): 9 of 12 caught; the 3 missed are equivalent (prune's `<` vs `<=` on identical points,
+  `* 0.25` vs `/ 4.0`, the clamp's `>` vs `>=` without NaN or -0).
+- **The mixer's SPIM entry points** (ee_mixer ffi.rs): the 30 entry points that only reached the Rust mixer are its
+  exports now, under their SPIM names with the plug-in's C types (`unsigned long`, `long`), and the no-op ones
+  (CPU usage, DirectSound, timer delay, mix ahead, messages, latency) with them; `Mixer.cpp` keeps the miniaudio device
+  and decoder, the entries over C++ objects (`SPIMDuplicateSample`, `SPIMLoadWaveData`, the name) and the entry table.
+  Golden `tests/sound/mixer_entries_golden.cpp`: every name looked up in `gPIMPluginMixer` as `SEMixer` does, and 300
+  random sequences of the sample-free entries on the null backend (`gPlatSimMode`): 7,756 lines, the same before and
+  after.
+- **Input System.cpp's entry points** (ee_input system.rs): `ISInitialize`'s devices and objects (C++ still reads the
+  key names from the resources), `ISShutdown` (registered with ee_util; it clears the C++ globals `gISKeyboard`/
+  `gISMouse`, whose addresses `ee_input_initialize` takes), and the members that read `TMGetTime` (ee_time) or set the
+  window's relative mode (`PlatMouseSetRelative`). The members are inline in `ISKeyboard.h`/`ISMouse.h`. Golden
+  `tests/input/is_system_golden.cpp` (60 init/shutdown cycles with and without a window, events, refreshes,
+  resumes, the double-press delay, a pinned clock, the relative-mode calls through a fake): 13,008 lines, the same.
+  - cbindgen exports an `extern "C"` block's declarations into the header: `PlatMouseSetRelative(void*, int)` clashed
+    with `PlatWindow.h`'s. Imports go in a `/// cbindgen:ignore` module.
+- **The subsystems register their own shutdowns**: `TSInitialize` (inline in `TSScheduler.h`, whose statics are
+  inline forwarders now: `TSScheduler.cpp` and `Thread System.cpp` deleted), `TMInitialize`, `ESInitialize` and
+  `SEInitialize` call `ee_ts_system_initialize`, `ee_time_system_initialize`, `ee_error_initialize`,
+  `ee_sound_initialize`, each registering its Rust hook with ee_util in the original's order (`ESShutdown` and
+  `SEShutdown` are gone as C++ functions; round 6's `tests/sound/se_golden.cpp` calls `ee_sound_shutdown(false)` under
+  `SE_NEW`).
+- **What runs it.** EE-SIM runs `U2DFractal` (random maps), the shutdown list, the Thread System and Time Manager
+  initialisation: the oracle covers them. The graphs (post-game statistics screens), the mixer and the Input System
+  run only in a windowed game: the goldens and a tour are their checks; the statistics graphs need a game played to
+  its end screen.
