@@ -62,6 +62,7 @@ M.OPT = {
     stone_mines = false,    -- (off until benched) copper_mines from the Stone Age's growth (stone_grow on)
     save_developed = false, -- (off until benched) the Copper Age saved for once developed, the raid not waited for
     stone_metal_keep = false,   -- (off until benched) the Copper Age's gold and iron kept from stone_grow, before the save
+    recover_cap = false,    -- (off until benched) lib.recover's urgent army only to its need, released once it goes
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }

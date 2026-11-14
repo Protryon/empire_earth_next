@@ -653,7 +653,13 @@ function M.step(view, memory)
     -- force it can build, to retake the lost site)
     local recover_urgent = ECON.order and BO.OPT.iron_recover and RC.urgent(memory)
     if recover_urgent then
-        soldiers_wanted = math.max(soldiers_wanted, plan.soldiers_max)
+        -- (BO.OPT.recover_cap: only the force check's need; every K3f operation was existential, and the whole
+        -- soldiers_max cost 6 citizens at 60 minutes against K0 on 64 seeds)
+        local cap = plan.soldiers_max
+        if BO.OPT.recover_cap and RC.need(memory) ~= nil then
+            cap = math.min(cap, RC.need(memory))
+        end
+        soldiers_wanted = math.max(soldiers_wanted, cap)
     end
     local army_short = view.army_count < soldiers_wanted
     -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
@@ -1748,6 +1754,7 @@ function M.step(view, memory)
     memory.epoch_now = view.epoch
     if ECON.order and BO.OPT.iron_recover then
         RC.parity = BO.OPT.metal_parity == true
+        RC.cap_need = BO.OPT.recover_cap == true
         RC.step(view, memory, view.sites)   -- (before the guard: the operation's soldiers are committed)
     end
     GD.step(view, memory, {zone = view.claim_range})

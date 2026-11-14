@@ -96,6 +96,14 @@ function M.urgent(mem)
     return state(mem).urgent == true
 end
 
+-- (M.cap_need) the soldiers the urgent operation needs: the army is trained up to this, not to the plan's most
+function M.need(mem)
+    return state(mem).need
+end
+
+M.cap_need = false     -- (BO.OPT.recover_cap) urgent: train to the force check's need only, and release the urgency
+                       -- once the force goes (the citizens are trained again at once)
+
 function M.replace(mem, r)
     return state(mem).replace[r] == true
 end
@@ -235,7 +243,7 @@ function M.step(view, mem, sites)
             best = {idx = idx, r = l.r, x = l.x, y = l.y}
         end
     end
-    S.urgent = nil
+    S.urgent, S.need = nil, nil
     if best == nil and M.parity and S.behind ~= nil and S.targets ~= nil then
         -- (M.parity, the owner: behind on metal sites, take one: the weakest enemy-held or contested site of a
         -- resource the town is behind on, the nearest of equal defence first; only the free soldiers go, and only when
@@ -276,11 +284,15 @@ function M.step(view, mem, sites)
     local ids = existential and all_soldiers(mem) or G.free_soldiers(best.x, best.y)
     if existential then
         S.urgent = true   -- (the army spends the stockpile while it gathers its force)
+        S.need = need
     end
     if #ids >= need then
         local g = G.create(mem, {task = "recover", manual = true, units = ids, x = best.x, y = best.y})
         S.op = {group = g.id, site = best.idx, r = best.r, x = best.x, y = best.y, t = now, n = #ids,
                 last_enemy = now}
+        if M.cap_need then
+            S.urgent, S.need = nil, nil   -- (the force is out: the stockpile goes back to the citizens)
+        end
         print(string.format("recover go r=%s site=%d n=%d need=%d enemy=%d towers=%d existential=%s working=%d",
             best.r, best.idx, #ids, need, #units, #towers, tostring(existential), working[best.r]))
     elseif not S.lost[best.idx].no_force and now - S.lost[best.idx].t >= (existential and 180000 or 60000) then
