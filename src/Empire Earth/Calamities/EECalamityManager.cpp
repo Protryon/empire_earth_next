@@ -353,9 +353,10 @@ void EECalamityManager::AddCalamity(EECalamity* inCalamity)
         theRecord.U32(theStarted ? 1 : 0);
         theRecord.Commit();
     }
-    if (theStarted)
+    if (theStarted) {
         this->mCalamities.push_back(inCalamity);
-    else
+        EECalamityCaptureSave(inCalamity, this->mCalamities.size() - 1);   // CALK (TEST ONLY): each calamity at its start
+    } else
         delete inCalamity;  // releases its caster/target references and the media its ctor loaded
 }
 
