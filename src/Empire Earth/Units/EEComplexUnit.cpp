@@ -1568,7 +1568,7 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     std::deque<EEUnitGoal*> theGoals;
     fprintf(inFile, "\n");
     fprintf(inFile, "OUT OF SYNCH DUMP:  **************  Unit ID: %08lx  *************\n", this->GetComplexUnit()->mUnitID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Times Updated:      %ld\n", this->GetComplexUnit()->mTimesUpdated.Get());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Times Updated:      %ld\n", this->GetComplexUnit()->mTimesUpdated);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Owner:              %2ld\n", this->mPlayer->mPlayerID);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Object Type:        %4ld\n", this->GetUnitClass()->GetUnitType());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (x):           %4ld\n", this->GetTileX());
@@ -1624,11 +1624,11 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (y): %6ld\n", this->GetComplexUnit()->mCollisionTile.GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Crew Hit Points:    %6ld\n", this->GetComplexUnit()->mCrewHitPoints);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Current Frame:      %6ld\n", this->GetComplexUnit()->mPhysicalModel.GetFrame());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Flight Time:        %6ld\n", this->GetComplexUnit()->mFlightTime.Get());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Flight Time:        %6ld\n", this->GetComplexUnit()->mFlightTime);
     fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart X:  %6.6f\n", (double)this->GetComplexUnit()->mProjectileStart.GetX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Y:  %6.6f\n", (double)this->GetComplexUnit()->mProjectileStart.GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Z:  %6.6f\n", (double)this->GetComplexUnit()->mProjectileStart.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Rotting Away Time:  %6ld\n", this->GetComplexUnit()->mRottingAwayTime.Get());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Rotting Away Time:  %6ld\n", this->GetComplexUnit()->mRottingAwayTime);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Velocity:           %6.6f\n", (double)this->GetComplexUnit()->mVelocity);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Affected by Grav:   %2ld\n", (unsigned long)this->GetUnitClass()->mIsAffectedByGravity);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Ammunition:         %6ld\n", this->GetUnitClass()->mAmmunition);
@@ -1957,7 +1957,7 @@ void EEComplexUnit::Describe(UWideString& ioString)
         ioString += theString;
     }
     ioString += ":";
-    sprintf(theString, "vel %.4f:", this->mVelocity.Get());
+    sprintf(theString, "vel %.4f:", this->mVelocity);
     ioString += theString;
     if (!theGoal)
         return;
@@ -4057,7 +4057,7 @@ bool EEComplexUnit::CanReachTile(long inX, long inY)
 static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
 {
     ioWords[7] = (uint32_t)(inUnit->mCommand ? inUnit->mCommand->mType : 0);
-    ioWords[8] = (uint32_t)inUnit->mNextTriggerTime.Get();
+    ioWords[8] = (uint32_t)inUnit->mNextTriggerTime;
     EEUnitStateNote(kUnitStateAIStep, inUnit->mUnitID, ioWords, 9);
 }
 
@@ -4069,7 +4069,7 @@ static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
 void EEComplexUnit::AIStep()
 {
     bool theNoting = EEUnitStepNoting();   // TEST ONLY (USST)
-    uint32_t theWords[9] = {(uint32_t)(this->mCommand ? this->mCommand->mType : 0), (uint32_t)this->mNextTriggerTime.Get(),
+    uint32_t theWords[9] = {(uint32_t)(this->mCommand ? this->mCommand->mType : 0), (uint32_t)this->mNextTriggerTime,
                             (uint32_t)gPhysics->mGameTime, 0, 0, 0xffffffffu, 0xffffffffu, 0, 0};
     EeUnitsAIHost theHost;
     EEUnitAIHostFor(this, theHost);

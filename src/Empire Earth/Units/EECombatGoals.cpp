@@ -296,7 +296,7 @@ void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTa
     theRecord[4] = EECombatCommandOf(inUnit);
     theRecord[5] = (uint32_t)inUnit->mAnimation;
     theRecord[6] = (uint32_t)inUnit->GetHitPoints();
-    theRecord[7] = (uint32_t)inUnit->mReloadTimer.Get();
+    theRecord[7] = (uint32_t)inUnit->mReloadTimer;
     theRecord[8] = (uint32_t)inUnit->mWeaponTagPoint;
     theRecord[9] = (uint32_t)inUnit->mAmmunition;
     theRecord[10] = (uint32_t)inUnit->mFlightTime;
@@ -310,7 +310,7 @@ void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTa
     theRecord[16] = inTarget != NULL ? (uint32_t)inTarget->GetHitPoints() : 0;
     theRecord[17] = inTarget != NULL ? (uint32_t)inTarget->GetResourceAmount() : 0;
     theRecord[18] = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;
-    theRecord[19] = (uint32_t)inUnit->mTargetSearchTimer.Get();
+    theRecord[19] = (uint32_t)inUnit->mTargetSearchTimer;
     sXActions.Add(theRecord, sizeof(theRecord));
 }
 

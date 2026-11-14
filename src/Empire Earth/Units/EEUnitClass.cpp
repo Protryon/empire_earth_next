@@ -4032,7 +4032,7 @@ void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
     theNote.mCount = 0;
     bool theNoting = EESimCaptureRecord::Active()
                      && ((inUnit->mCamouflageTimer & 0x7fffffff) > 0 || inUnit->mU32C > 0);
-    theNote.Add((uint32_t)inUnit->mCamouflageTimer.Get());
+    theNote.Add((uint32_t)inUnit->mCamouflageTimer);
     theNote.Add((uint32_t)inUnit->mU32C);
     theNote.Add(inUnit->mPlayer->mNumVitalBuildings < 1 ? 1u : 0u);
     theNote.Add((uint32_t)gPhysics->mTickTimeMs);
@@ -4100,7 +4100,7 @@ void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
                               (long)theOriginal.mCount);
     }
     if (theNoting) {   // TEST ONLY (USTM)
-        theNote.Add((uint32_t)inUnit->mCamouflageTimer.Get());
+        theNote.Add((uint32_t)inUnit->mCamouflageTimer);
         theNote.Add((uint32_t)inUnit->mU32C);
         EEUnitStepNote(kUnitStepCamouflage, inUnit->mUnitID, theNote.mWords, theNote.mCount);
     }
@@ -4160,7 +4160,7 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
 {
     uint32_t theWords[13] = {(uint32_t)inUnit->mStats->mPowerRegeneration, (uint32_t)inUnit->mStats->mPower,
                              ::gWorld.mInCinematic ? 1u : 0u, this->IsLandBuilding() ? 1u : 0u, inUnit->mIsBuilt ? 1u : 0u,
-                             (uint32_t)inUnit->mPower.Get(), (uint32_t)inUnit->mPowerRegenTimer.Get(),
+                             (uint32_t)inUnit->mPower, (uint32_t)inUnit->mPowerRegenTimer,
                              (uint32_t)gPhysics->mTickTimeMs, (uint32_t)EEGetRules().mCombat.mPowerRegenerationInterval,
                              0, 0, 0, 0};
     // New (R5b.4 leaf 6): the regeneration is Rust over the unit store (ee_units step.rs regenerate_power); the
@@ -4172,8 +4172,8 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
     theIn.interval = EEGetRules().mCombat.mPowerRegenerationInterval;
     theIn.tick_ms = gPhysics->mTickTimeMs;
     EeUnitsPowerOut theOut;
-    ee_units_step_power(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), inUnit->mPower.Get(),
-                        inUnit->mPowerRegenTimer.Get(), inUnit->mIsBuilt ? 1 : 0, this->IsLandBuilding() ? 1 : 0, &theIn,
+    ee_units_step_power(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), inUnit->mPower,
+                        inUnit->mPowerRegenTimer, inUnit->mIsBuilt ? 1 : 0, this->IsLandBuilding() ? 1 : 0, &theIn,
                         &theOut);
     if (theOut.write) {
         if (theOut.set_power)
@@ -4202,8 +4202,8 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
                               theWrite ? theRemaining : -1);
         theWords[9] = theOut.write;
         theWords[10] = theOut.set_power;
-        theWords[11] = theWords[10] ? (uint32_t)inUnit->mPower.Get() : 0u;
-        theWords[12] = theWords[9] ? (uint32_t)inUnit->mPowerRegenTimer.Get() : 0u;
+        theWords[11] = theWords[10] ? (uint32_t)inUnit->mPower : 0u;
+        theWords[12] = theWords[9] ? (uint32_t)inUnit->mPowerRegenTimer : 0u;
         EEUnitStepNote(kUnitStepPower, inUnit->mUnitID, theWords, 13);
     }
 }

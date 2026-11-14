@@ -518,8 +518,8 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     }
     if (thePartsResult != 0)
         goto LoadFlags;
-    if ((theResult = EEUnitStoreRead(inFile, this->mHeight)) != 0
-        || (theResult = EEUnitStoreRead(inFile, this->mVelocity)) != 0
+    if ((theResult = inFile.Read(this->mHeight)) != 0
+        || (theResult = inFile.Read(this->mVelocity)) != 0
         || (theResult = inFile.Read(this->mF220)) != 0
         || (theResult = inFile.Read(this->mF21C)) != 0
         || (theResult = inFile.Read(this->mCurrentResearch)) != 0
@@ -541,13 +541,13 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     memcpy(&this->mFlightTime, &theFraction, sizeof(theFraction));
     if (theResult != 0)
         goto LoadFlags;
-    if ((theResult = EEUnitStoreRead(inFile, this->mReloadTimer)) != 0
+    if ((theResult = inFile.Read(this->mReloadTimer)) != 0
         || (theResult = inFile.Read(this->mCargoRoom)) != 0
-        || (theResult = EEUnitStoreRead(inFile, this->mRottingAwayTime)) != 0
-        || (theResult = EEUnitStoreRead(inFile, this->mTargetSearchTimer)) != 0
+        || (theResult = inFile.Read(this->mRottingAwayTime)) != 0
+        || (theResult = inFile.Read(this->mTargetSearchTimer)) != 0
         || (theResult = inFile.Read(this->mWorkTimer)) != 0
         || (theResult = inFile.Read(this->mRegenerationTimer)) != 0
-        || (theResult = EEUnitStoreRead(inFile, this->mHealSearchTimer)) != 0
+        || (theResult = inFile.Read(this->mHealSearchTimer)) != 0
         || (theResult = inFile.Read(this->mCollisionResolutionCount)) != 0
         || (theResult = inFile.Read(this->mWakeTimer)) != 0
         || (theResult = inFile.Read(this->mTrailEffectTimer)) != 0
@@ -556,20 +556,20 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
         || (theResult = inFile.Read(theValue)) != 0
         || (theResult = inFile.Read(this->mWeaponTagPoint)) != 0)
         goto LoadFlags;
-    EEUnitStoreRead(inFile, this->mTimesUpdated);
+    inFile.Read(this->mTimesUpdated);
 
 LoadFlags:
     if ((theResult = inFile.Read(this->mConversionStartTime)) != 0
         || (theResult = inFile.Read(this->mCollisionState)) != 0
         || (theResult = inFile.Read(this->mIsDisabled)) != 0
         || (theResult = inFile.Read(this->mIsDeletable)) != 0
-        || (theResult = EEUnitStoreRead(inFile, this->mIsCommandable)) != 0
+        || (theResult = inFile.Read(this->mIsCommandable)) != 0
         || (theResult = inFile.Read(this->mIsAnimationPaused)) != 0
         || (theResult = inFile.Read(this->mHasArrived)) != 0
         || (theResult = inFile.Read(this->mIsPathDone)) != 0
         || (theResult = inFile.Read(this->mIsClearanceGranted)) != 0)
         goto LoadLegacy;
-    theResult = EEUnitStoreRead(inFile, this->mIsBuilt);   // a unit store holder (ee/EEUnitStore.h)
+    theResult = inFile.Read(this->mIsBuilt);   // a unit store holder (ee/EEUnitStore.h)
 LoadLegacy:
     if (inMinorVersion <= 0x1b) {
         if (theResult == 0)
@@ -580,7 +580,7 @@ LoadLegacy:
         if (theResult == 0)
             theResult = inFile.Read(this->mOpacity);
         if (theResult == 0)
-            theResult = EEUnitStoreRead(inFile, this->mIsCloaked);
+            theResult = inFile.Read(this->mIsCloaked);
     }
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
@@ -670,8 +670,8 @@ LoadLegacy:
     memcpy(&this->mPower, &theFraction, sizeof(theFraction));
     if (theResult != 0)
         goto LoadLateVersions;
-    if ((theResult = EEUnitStoreRead(inFile, this->mPowerRegenTimer)) != 0
-        || (theResult = EEUnitStoreRead(inFile, this->mIsCloakable)) != 0
+    if ((theResult = inFile.Read(this->mPowerRegenTimer)) != 0
+        || (theResult = inFile.Read(this->mIsCloakable)) != 0
         || (theResult = inFile.Read(this->mInitialContactLocation.mX)) != 0
         || (theResult = inFile.Read(this->mInitialContactLocation.mY)) != 0
         || (theResult = inFile.Read(this->mInitialContactLocation.mZ)) != 0
@@ -698,9 +698,9 @@ LoadLateVersions:
     if (inMinorVersion >= 0xd5 && theResult == 0)
         theResult = this->mLastMapPosition.Load(inFile);
     if (inMinorVersion >= 0xe2 && theResult == 0)
-        theResult = EEUnitStoreRead(inFile, this->mCloaked);
+        theResult = inFile.Read(this->mCloaked);
     if (inMinorVersion >= 0xe8 && theResult == 0)
-        theResult = EEUnitStoreRead(inFile, this->mCamouflageTimer);
+        theResult = inFile.Read(this->mCamouflageTimer);
 LoadFinalVersions:
     if (inMajorVersion == 0 && inMinorVersion <= 0xea) {
         this->mIsSpecialAttack = false;
@@ -1242,7 +1242,7 @@ long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVers
             goto SaveGoals;
         theResult = outFile.Write(this->mTurretAngles[q]);
     }
-    if (theResult != 0 || (theResult = outFile.Write(this->mHeight.Get())) != 0
+    if (theResult != 0 || (theResult = outFile.Write(this->mHeight)) != 0
         || (theResult = outFile.Write(this->mVelocity)) != 0 || (theResult = outFile.Write(this->mF220)) != 0
         || (theResult = outFile.Write(this->mF21C)) != 0 || (theResult = outFile.Write(this->mCurrentResearch)) != 0
         || (theResult = outFile.Write(this->mAnimation)) != 0 || (theResult = outFile.Write(this->mCurrentPhysicsAction)) != 0
@@ -1254,14 +1254,14 @@ long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVers
         || (theResult = outFile.Write(this->mCrewHitPoints)) != 0 || (theResult = outFile.Write(this->mProductionTime)) != 0)
         goto SaveGoals;
     theFraction = this->mFlightTime < 1 || this->mStats->mFlightTime < 1 ? 0.0f : (float)this->mFlightTime / this->mStats->mFlightTime;
-    if ((theResult = outFile.Write(theFraction)) != 0 || (theResult = outFile.Write(this->mReloadTimer.Get())) != 0
-        || (theResult = outFile.Write(this->mCargoRoom)) != 0 || (theResult = outFile.Write(this->mRottingAwayTime.Get())) != 0
-        || (theResult = outFile.Write(this->mTargetSearchTimer.Get())) != 0 || (theResult = outFile.Write(this->mWorkTimer)) != 0
-        || (theResult = outFile.Write(this->mRegenerationTimer)) != 0 || (theResult = outFile.Write(this->mHealSearchTimer.Get())) != 0
+    if ((theResult = outFile.Write(theFraction)) != 0 || (theResult = outFile.Write(this->mReloadTimer)) != 0
+        || (theResult = outFile.Write(this->mCargoRoom)) != 0 || (theResult = outFile.Write(this->mRottingAwayTime)) != 0
+        || (theResult = outFile.Write(this->mTargetSearchTimer)) != 0 || (theResult = outFile.Write(this->mWorkTimer)) != 0
+        || (theResult = outFile.Write(this->mRegenerationTimer)) != 0 || (theResult = outFile.Write(this->mHealSearchTimer)) != 0
         || (theResult = outFile.Write(this->mCollisionResolutionCount)) != 0 || (theResult = outFile.Write(this->mWakeTimer)) != 0
         || (theResult = outFile.Write(this->mTrailEffectTimer)) != 0 || (theResult = outFile.Write(this->mAmmunition)) != 0
         || (theResult = outFile.Write(this->mAnimationTime)) != 0 || (theResult = outFile.Write(theZero)) != 0
-        || (theResult = outFile.Write(this->mWeaponTagPoint)) != 0 || (theResult = outFile.Write(this->mTimesUpdated.Get())) != 0
+        || (theResult = outFile.Write(this->mWeaponTagPoint)) != 0 || (theResult = outFile.Write(this->mTimesUpdated)) != 0
         || (theResult = outFile.Write(this->mConversionStartTime)) != 0 || (theResult = outFile.Write(this->mCollisionState)) != 0
         || (theResult = outFile.Write(this->mIsDisabled)) != 0 || (theResult = outFile.Write(this->mIsDeletable)) != 0
         || (theResult = outFile.Write(this->mIsCommandable)) != 0 || (theResult = outFile.Write(this->mIsAnimationPaused)) != 0
@@ -1333,7 +1333,7 @@ SaveGoals:
         || (theResult = outFile.Write(this->mPositiveMorale)) != 0 || (theResult = outFile.Write(this->mNegativeMorale)) != 0)
         goto SaveFinalFields;
     theFraction = this->mStats->mPower < 1 ? 0.0f : (float)this->mPower / this->mStats->mPower;
-    if ((theResult = outFile.Write(theFraction)) != 0 || (theResult = outFile.Write(this->mPowerRegenTimer.Get())) != 0
+    if ((theResult = outFile.Write(theFraction)) != 0 || (theResult = outFile.Write(this->mPowerRegenTimer)) != 0
         || (theResult = outFile.Write(this->mIsCloakable)) != 0)
         goto SaveFinalFields;
     theScale = this->mInitialContactLocation.GetX();
@@ -1365,7 +1365,7 @@ SaveFinalFields:
     }
     if (theResult == 0 && (theResult = outFile.Write(this->mFormationRank)) == 0
         && (theResult = outFile.Write(this->mWaterState)) == 0 && (theResult = this->mLastMapPosition.Save(outFile)) == 0
-        && (theResult = outFile.Write(this->mCloaked)) == 0 && (theResult = outFile.Write(this->mCamouflageTimer.Get())) == 0
+        && (theResult = outFile.Write(this->mCloaked)) == 0 && (theResult = outFile.Write(this->mCamouflageTimer)) == 0
         && (theResult = outFile.Write(this->mIsSpecialAttack)) == 0 && (theResult = outFile.Write(this->mDisabledReason)) == 0
         && (theResult = outFile.Write(this->mPlanetID)) == 0 && (theResult = outFile.Write(this->mSight)) == 0)
         theResult = outFile.Write(this->mU32C);
@@ -1375,7 +1375,7 @@ SaveFinalFields:
         if ((theResult = outFile.Write(this->mAnimationFraction)) == 0 && (theResult = outFile.Write(this->mNextFrame)) == 0
             && (theResult = outFile.Write(this->mCollisionRadius)) == 0 && (theResult = outFile.Write(this->mPushVelocityX)) == 0
             && (theResult = outFile.Write(this->mPushVelocityY)) == 0 && (theResult = outFile.Write(this->mF24C)) == 0
-            && (theResult = outFile.Write(this->mAIState)) == 0 && (theResult = outFile.Write(this->mNextTriggerTime.Get())) == 0)
+            && (theResult = outFile.Write(this->mAIState)) == 0 && (theResult = outFile.Write(this->mNextTriggerTime)) == 0)
             theResult = outFile.Write((unsigned long)this->mIgnoredTargets.size());
         for (size_t k = 0; k < this->mIgnoredTargets.size() && theResult == 0; k++) {
             const EEComplexUnitAttacker& theAttacker = this->mIgnoredTargets[k];
@@ -1394,9 +1394,9 @@ SaveFinalFields:
         // contact list's unit ids, head first (Load; sLoadedContacts)
         if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
             if ((theResult = outFile.Write(this->mPhysicalModel.GetFrame())) == 0 && (theResult = outFile.Write(this->mFlightTime)) == 0
-                && (theResult = outFile.Write(this->mRottingAwayTime.Get())) == 0 && (theResult = outFile.Write(this->mCurrentResearch)) == 0
+                && (theResult = outFile.Write(this->mRottingAwayTime)) == 0 && (theResult = outFile.Write(this->mCurrentResearch)) == 0
                 && (theResult = outFile.Write(this->mLastHitPoints)) == 0 && (theResult = outFile.Write(this->mGarrisonCount)) == 0
-                && (theResult = outFile.Write(this->mPower.Get())) == 0)
+                && (theResult = outFile.Write(this->mPower)) == 0)
                 theResult = outFile.Write((unsigned long)this->mContacts.mCount);
             for (UListNode<EEComplexUnit*>* theNode = this->mContacts.mHead; theNode != NULL && theResult == 0; theNode = theNode->mNext)
                 theResult = outFile.Write(theNode->mData->mUnitID);

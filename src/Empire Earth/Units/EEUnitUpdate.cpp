@@ -145,7 +145,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_UPD_R_BUILT:
         return theUnit->mIsBuilt ? 1 : 0;
     case EE_UNITS_UPD_R_FLIGHT_TIME:
-        return (int64_t)theUnit->mFlightTime.Get();
+        return (int64_t)theUnit->mFlightTime;
     // the others
     case EE_UNITS_UPD_R_CONVERSION_START:
         return (int64_t)theUnit->mConversionStartTime;

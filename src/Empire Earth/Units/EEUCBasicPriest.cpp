@@ -344,7 +344,7 @@ void EEComplexUnit::UpdateReloadTimer()
         if ((theOriginal >= 0) != theWritten || (theWritten && theOriginal != (long)theTime))
             EEUnitStepDiffers("UpdateReloadTimer", this->mUnitID, theWritten ? (long)theTime : -1, theOriginal);
         uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
-                                (uint32_t)this->mReloadTimer.Get()};
+                                (uint32_t)this->mReloadTimer};
         EEUnitStepNote(kUnitStepReload, this->mUnitID, theWords, 4);
     }
 }
@@ -365,7 +365,7 @@ void EEComplexUnit::UpdateTargetSearchTimer()
         if ((theOriginal >= 0) != theWritten || (theWritten && theOriginal != (long)theTime))
             EEUnitStepDiffers("UpdateTargetSearchTimer", this->mUnitID, theWritten ? (long)theTime : -1, theOriginal);
         uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
-                                (uint32_t)this->mTargetSearchTimer.Get()};
+                                (uint32_t)this->mTargetSearchTimer};
         EEUnitStepNote(kUnitStepTargetSearch, this->mUnitID, theWords, 4);
     }
 }
@@ -401,7 +401,7 @@ void EEComplexUnit::UpdateHealSearchTimer()
             EEUnitStepDiffers("UpdateHealSearchTimer (float bits)", this->mUnitID, theWritten ? (long)HealBits(theTime) : -1,
                               theOriginal ? (long)HealBits(theValue) : -1);
         uint32_t theWords[4] = {HealBits(theBefore), HealBits(gPhysics->mTickTime), theWritten ? 1u : 0u,
-                                HealBits(this->mHealSearchTimer.Get())};
+                                HealBits(this->mHealSearchTimer)};
         EEUnitStepNote(kUnitStepHealSearch, this->mUnitID, theWords, 4);
     }
 }
@@ -422,7 +422,7 @@ long EEComplexUnit::UpdateRottingAwayTime()
             theOriginal = 0;
         if (theOriginal != theTime)
             EEUnitStepDiffers("UpdateRottingAwayTime", this->mUnitID, theTime, theOriginal);
-        uint32_t theWords[3] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, (uint32_t)this->mRottingAwayTime.Get()};
+        uint32_t theWords[3] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, (uint32_t)this->mRottingAwayTime};
         EEUnitStepNote(kUnitStepRotting, this->mUnitID, theWords, 3);
     }
     return theTime;
@@ -455,7 +455,7 @@ void EEComplexUnit::UpdateResourcesRotting()
             || (theLost && theOriginalAmount != (long)theAmount))
             EEUnitStepDiffers("UpdateResourcesRotting", this->mUnitID, (long)theTime, theOriginal);
         uint32_t theWords[5] = {(uint32_t)theBefore, (uint32_t)theAmountBefore, (uint32_t)gPhysics->mTickTimeMs,
-                                (uint32_t)this->mRottingAwayTime.Get(), (uint32_t)this->mResourceAmount};
+                                (uint32_t)this->mRottingAwayTime, (uint32_t)this->mResourceAmount};
         EEUnitStepNote(kUnitStepResourcesRotting, this->mUnitID, theWords, 5);
     }
 }

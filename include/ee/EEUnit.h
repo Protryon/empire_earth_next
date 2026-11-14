@@ -370,7 +370,11 @@ public:
     }
 };
 
-class EEComplexUnit : public EEUnit {
+// New (R5b.4, round 26): the plain members from mHeight (+0x210) to mRoll (+0x360) and the port's
+// mHasShiftQueuedBuild (their names, types and order; not mSound and the three effect handles, which stay here) are the
+// Rust record EeUnitsComplexUnitFields (ee_units unit_fields.rs), the second base after EEUnit (RTSUnit still at offset
+// 0). The unit store reads the record directly.
+class EEComplexUnit : public EEUnit, public EeUnitsComplexUnitFields {
 public:
     // the save keys and the pool (EEComplexUnit.cpp's `$E` chains 0x1f5805..0x1f5954, one guard byte 0x963210;
     // definition order as listed). Provisional names (from the keys)
@@ -858,131 +862,30 @@ public:
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     EEUnitBehavior* mBehavior;              // +0x208 the unit's behaviour (EEUnitAI 0x22d9b5 reads its mB09; EEUIFMGMainGroup compares it with EEUnitBehavior::sTable[i])
     RTSUnit* mBlockingUnit;                 // +0x20c
-    EEUnitStoreField<float, kUnitFieldHeight> mHeight;   // +0x210 provisional name (SetHeight; saved; the unit store's)
-    float mInitialContactHeading;           // +0x214 (saved)
-    float mOpacity;                         // +0x218 (saved)
-    float mF21C;                            // +0x21c (SetVelocity; saved)
-    float mF220;                            // +0x220 (saved; 2*pi by 0x1fac37)
-    float mLaunchYaw;                       // +0x224 (saved)
-    float mOpenFraction;                    // +0x228 (saved)
-    EEUnitStoreField<float, kUnitFieldHealSearchTimer> mHealSearchTimer;   // +0x22c (saved; the unit store's)
     float GetPushVelocityX() const { return this->mPushVelocityX; }  // inline value getters
     float GetPushVelocityY() const { return this->mPushVelocityY; }
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
-    EEUnitStoreField<float, kUnitFieldPushVelocityX> mPushVelocityX;   // +0x230 (the unit store's)
-    EEUnitStoreField<float, kUnitFieldPushVelocityY> mPushVelocityY;   // +0x234 (the unit store's)
-    EEUnitStoreField<float, kUnitFieldVelocity> mVelocity;   // +0x238 (SetVelocity; saved; the unit store's)
-    float mAnimationFraction;               // +0x23c
-    float mGrowth;                          // +0x240 (saved)
     float GetCollisionRadius() const { return this->mCollisionRadius; }
-    float mCollisionRadius;                 // +0x244
-    float mCollisionResolutionCount;        // +0x248 (saved)
     // inline value getter (the Physics Virtual0C family: `fld [F98]; fld [ecx]; faddp`, ecx = &mF24C kept from the
     // `!= 0` test; a member read gives `fadd [ecx]`)
     float GetF24C() const { return this->mF24C; }
-    float mF24C;                            // +0x24c
-    float mSight;                           // +0x250 provisional name (the line-of-sight calamity adds to it; saved)
-    unsigned long mCalamityFlags;           // +0x254 the EECalamityClass::mClassFlags of the contagions on it (provisional name)
-    EEUnitStoreField<unsigned long, kUnitFieldNextTriggerTime> mNextTriggerTime;   // +0x258 (unsigned: AIStep compares it with gPhysics->mLD0 by jb; the unit store's)
     SESMInstanceNode* mSound;               // +0x25c
-    long mCurrentResearch;                  // +0x260 (= 100000; saved)
-    unsigned long mAnimation;               // +0x264 (= 7; saved)
-    unsigned long mCurrentPhysicsAction;    // +0x268 (= 6; saved)
-    unsigned long mCurrentPhysicsOrder;     // +0x26c (= 5; saved)
-    unsigned long mFacing;                  // +0x270 (saved)
-    unsigned long mGateDirection;           // +0x274 (saved)
-    long mNumBuilders;                      // +0x278 (saved)
-    long mCrewHitPoints;                    // +0x27c (saved)
-    long mProductionTime;                   // +0x280 (saved)
-    long mTrailEffectTimer;                 // +0x284 (saved)
-    long mGarrisonCount;                    // +0x288
-    long mGarrisonPopulation;               // +0x28c (saved)
-    EEUnitStoreField<long, kUnitFieldFlightTime> mFlightTime;   // +0x290 (the unit store's)
-    long mRegenerationTimer;                // +0x294 (saved)
-    long mExitingUnitID;                    // +0x298 (saved)
-    EEUnitStoreField<unsigned long, kUnitFieldFormationSlot> mFormationSlot;   // +0x29c (the unit store's)
-    long mLastHitPoints;                    // +0x2a0
-    EEUnitStoreField<long, kUnitFieldReloadTimer> mReloadTimer;   // +0x2a4 (saved; the unit store's)
-    long mCargoRoom;                        // +0x2a8 (saved)
-    EEUnitStoreField<long, kUnitFieldRottingAwayTime> mRottingAwayTime;   // +0x2ac (saved; the unit store's)
-    EEUnitStoreField<long, kUnitFieldTargetSearchTimer> mTargetSearchTimer;   // +0x2b0 (saved; the unit store's)
-    unsigned long mNumAreaEffects;          // +0x2b4 (saved)
-    long mWakeTimer;                        // +0x2b8 (saved)
-    long mWorkTimer;                        // +0x2bc (saved)
     EEEffectHandle mConversionEffect;       // +0x2c0 (saved; -1: none, ReleaseConversionEffect)
     EEEffectHandle mHealEffect;             // +0x2c4 (saved; -1: none, ReleaseHealEffect)
-    long mPositiveMorale;                   // +0x2c8 provisional name (the morale calamity counts itself in; saved)
-    long mNegativeMorale;                   // +0x2cc provisional name (saved)
-    EEUnitStoreField<long, kUnitFieldPowerRegenTimer> mPowerRegenTimer;   // +0x2d0 (saved; the unit store's)
-    EEUnitStoreField<long, kUnitFieldPower> mPower;   // +0x2d4 (calamities compare it with EECalamityClass::GetCost; the unit store's)
-    long mNumPathRequests;                  // +0x2d8
-    long mIsCollidable;                     // +0x2dc
     long GetFormationRank() const { return this->mFormationRank; }
-    long mFormationRank;                    // +0x2e0 (saved)
-    long mWaterState;                       // +0x2e4 (saved)
-    unsigned long mAmmunition;              // +0x2e8 (saved)
-    unsigned long mWeaponTagPoint;          // +0x2ec (saved)
-    unsigned long mNumOrbitals;             // +0x2f0 (the orbital count)
-    unsigned long mNumWheels;               // +0x2f4 (the wheel count)
-    long mNumTurretAngles;                  // +0x2f8
-    unsigned long mU2FC;                    // +0x2fc (saved)
-    unsigned long mAnimationTime;           // +0x300 (saved)
-    unsigned long mConversionStartTime;     // +0x304 (saved)
-    EEUnitStoreField<unsigned long, kUnitFieldTimesUpdated> mTimesUpdated;   // +0x308 (saved; the unit store's)
-    long mNextFrame;                        // +0x30c
     EEEffectHandle mFireEffect;             // +0x310 provisional name (the fire functor's effect on the unit; saved)
     unsigned long GetGrazeTime() const { return this->mGrazeTime; }
-    unsigned long mGrazeTime;               // +0x314 (saved)
-    unsigned long mGrowTime;                // +0x318 (saved)
-    unsigned long mNumAttackers;            // +0x31c (saved)
-    EEUnitStoreField<unsigned long, kUnitFieldCloakTimer> mCloaked;   // +0x320 provisional name (the cloaking calamity sets it; saved as unsigned long; the unit store's)
-    unsigned long mPushImmuneUntil;         // +0x324 (a game time: mLD0 + 5000; compared unsigned)
-    EEUnitStoreField<unsigned long, kUnitFieldCamouflageTimer> mCamouflageTimer;   // +0x328 (saved; the unit store's)
-    unsigned long mU32C;                    // +0x32c (saved)
     long GetAIState() const { return this->mAIState; }
-    long mAIState;                          // +0x330
-    long mL334;                             // +0x334
-    long mL338;                             // +0x338
-    unsigned short mCollisionState;         // +0x33c (saved)
     unsigned short GetExperience() const { return this->mExperience; }
-    unsigned short mExperience;             // +0x33e (saved)
-    bool mIsDeletable;                      // +0x340 (the contagion functors set it from EEUnitClass::mIsDeletable; provisional name)
     bool GetIsCommandable() const { return this->mIsCommandable; }  // inline (0x61c806 budget) r37_big B2
     bool GetIsDisabled() const { return this->mIsDisabled; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     bool GetIsBuilt() const { return this->mIsBuilt; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
-    EEUnitStoreField<bool, kUnitFieldCommandable> mIsCommandable;   // +0x341 (the unit store's) (set: selectable by the aircraft hot key; provisional name)
-    bool mIsClearanceGranted;               // +0x342 (+0x340..+0x351 saved)
-    bool mIsAnimationPaused;                // +0x343
-    bool mIsPaidFor;                        // +0x344
-    EEUnitStoreField<bool, kUnitFieldCloakable> mIsCloakable;   // +0x345 (the unit store's)
-    EEUnitStoreField<bool, kUnitFieldCloaked> mIsCloaked;   // +0x346 (the unit store's)
-    bool mIsDisabled;                       // +0x347 (set: not selectable by the aircraft hot key; provisional name)
-    bool mIsLocked;                         // +0x348
-    bool mIsTinted;                         // +0x349
-    bool mIsPathDone;                       // +0x34a
-    bool mHasArrived;                       // +0x34b
-    EEUnitStoreField<bool, kUnitFieldBuilt> mIsBuilt;   // +0x34c (the unit store's) (drop object: a valid target)
     bool GetIsDetachedFromAI() const { return this->mIsDetachedFromAI; }
-    bool mIsDetachedFromAI;                 // +0x34d
-    bool mIsFiringHigh;                     // +0x34e
-    bool mB34F;                             // +0x34f
     bool GetIsRegrowing() const { return this->mIsRegrowing; }
-    bool mIsRegrowing;                      // +0x350
-    bool mIsFoundation;                     // +0x351 (NotifyRootVisibility sets it)
-    bool mCanBeHidden;                      // +0x352
-    bool mIsCitizen;                        // +0x353
-    bool mIsPacked;                         // +0x354
-    bool mIsSpecialAttack;                  // +0x355 (special attack sets it; saved)
-    unsigned short mU356;                   // +0x356 (untouched by the ctor and Load/Save)
-    unsigned long mDisabledReason;          // +0x358 (saved)
-    unsigned short mPlanetID;               // +0x35c (saved)
-    unsigned short mU35E;                   // +0x35e (untouched)
     float GetRoll() const { return this->mRoll; }
-    EEUnitStoreField<float, kUnitFieldRoll> mRoll;   // +0x360 (the unit store's)
     // Port (not in the original, not saved): a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit),
     // so the citizen idles at the end of its build queue instead of taking a smart task (EEUGBuildRepair::Step).
     // OrderRepair and ClearBuildTargets clear it, and so does going idle with an empty build queue.
-    bool mHasShiftQueuedBuild;
 };
 
 // 0x241419 (cdecl): the model a unit of inClass shows for inPlayer (EEComplexUnit::GetModel when +0x351 is set;
