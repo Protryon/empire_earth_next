@@ -4367,6 +4367,9 @@ uint64_t ee_units_patrol_group(int32_t op,
                                EeUnitsPgArgs args);
 
 /// `SetPatrolPoints`'s tiles (`inPoints`, U2DPoint<long> pairs) for the group of player `player`.
+///
+/// # Safety
+/// `tiles` holds `count` (x, y) pairs of 32-bit integers (or is null with `count` 0), valid for the call.
 void ee_units_patrol_group_set_points(uint64_t group,
                                       const int32_t *tiles,
                                       uint32_t count,

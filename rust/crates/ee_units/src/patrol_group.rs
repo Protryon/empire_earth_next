@@ -594,13 +594,16 @@ pub fn run(op: i32, group: u64, args: EeUnitsPgArgs, host: &mut dyn PatrolGroupH
 }
 
 /// `SetPatrolPoints`'s tiles (`inPoints`, U2DPoint<long> pairs) for the group of player `player`.
+///
+/// # Safety
+/// `tiles` holds `count` (x, y) pairs of 32-bit integers (or is null with `count` 0), valid for the call.
 #[cfg(not(test))]
 #[no_mangle]
-pub extern "C" fn ee_units_patrol_group_set_points(group: u64, tiles: *const i32, count: u32, player: u32) {
+pub unsafe extern "C" fn ee_units_patrol_group_set_points(group: u64, tiles: *const i32, count: u32, player: u32) {
     let pairs: Vec<(i64, i64)> = if tiles.is_null() || count == 0 {
         Vec::new()
     } else {
-        // SAFETY: the C++ hands `count` (x, y) pairs of 32-bit integers that live for the call
+        // SAFETY: the function's contract
         let raw = unsafe { std::slice::from_raw_parts(tiles, count as usize * 2) };
         raw.chunks(2).map(|c| (i64::from(c[0]), i64::from(c[1]))).collect()
     };
