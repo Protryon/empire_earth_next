@@ -48,11 +48,11 @@ M.OPT = {
     pre_lean = false,       -- (off until benched) the owner's Prehistoric settlements: two patches while two home patches
                             -- stand, one settlement a site (any kind touched), none for wood
     mines_after_barracks = false, -- (off until benched) a Prehistoric mine settlement waits for the barracks and a tower
-    owner_barracks = false, -- (off until benched) the Prehistoric barracks at OWNER_BARRACKS_AT citizens (his: 2.4 min)
+    owner_barracks = false, -- (on in boom_order) the Prehistoric barracks at OWNER_BARRACKS_AT citizens (his: 2.4 min)
     pre_hunt_patch = false, -- (off until benched) with pre_lean, the third patch when the game near home holds fewer than
                             -- PRE_HUNT_MIN hunters
     pre_wood_cap = false,   -- (off until benched) the Prehistoric wood at most PRE_WOOD_MOST, its leftover idle (exact = 2)
-    early_towers = false,   -- (off until benched) the Prehistoric towers from EARLY_TOWERS_AT citizens (his: 1.1 min)
+    early_towers = false,   -- (on in boom_order) the Prehistoric towers from EARLY_TOWERS_AT citizens (his: 1.1 min)
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
