@@ -20,8 +20,7 @@ class TSCriticalSection;
 class UIControl;
 class UITextLabel;
 
-struct EeWonAuthLogin; // rust/ee_won.h
-struct EeWonAuthFlow; // rust/ee_won.h (authflow.rs)
+struct EeWonAuthCtx; // rust/ee_won.h (authobj.rs: AuthContext)
 struct EeWonLightCert; // rust/ee_won.h (authflow.rs: LightGetCertOp's member)
 struct EeWonIpAddr; // rust/ee_rust.h (ipobj.rs)
 struct EeWonAddr; // rust/ee_rust.h (servctx.rs)
@@ -323,10 +322,11 @@ class WriteBuffer;
 class AuthSession; //actual borrowed session API identity
 class ElGamal;
 class ServerContext; //actual complete3c owner in Routing
+// AuthContext (0xc0 bytes in the original) is ee_won's (rust/crates/ee_won/src/authobj.rs): its lock, sessions and
+// certificate flow, peer data, login data, server list and the class's verifier key (0x566018, its checked flag
+// 0x5661e1). This class is a RefCount shim holding one reference to it; every method forwards.
 class AuthContext : public RefCount {
-    static ElGamal mVerifierKey; //actual PRIVATE SDK static owner566018..5661c0, external only
-    static bool mCheckedVerifierFile; //actual PRIVATE SDK checked flag5661e1, external only
-    void Init(); //2ddb70 original private SDK initializer; no local initializer/lifetime body
+    void Init(); //2ddb70 original private SDK initializer
 public:
 protected:
     virtual ~AuthContext(); //2de370 original external493, scalar2ddf90/30; genuine SDK protected access
@@ -345,7 +345,6 @@ public:
     bool RemoveAddress(const IPAddr&);
     void RemoveAllAddresses();
     bool AddAddressesFromDir(const std::map<std::wstring,DirEntityList>&,const std::wstring&,const wchar_t* = NULL);
-    static const ElGamal& GetVerifierKey() { return mVerifierKey; } //genuine SDK accessor; native GetCert2e3f5a directly uses566018
     static bool LoadVerifierKey(const std::string&); //2df440 actual cdecl/ret0
     void SetServerContext(ServerContext*); //2df330 support0
     SmartPtr<ServerContext> GetServerContext(); //2df3e0 support0
@@ -392,20 +391,13 @@ public:
     long RefreshBlock(DWORD = INFINITE); //2dedf0, actual WONStatus=long alias expansion before Routing typedef
     void GetCertCallback(GetCertOp*); //2de5f0
     static void StaticGetCertCallback(SmartPtr<AsyncOp>,SmartPtr<RefCount>); //2de560 support0
-    // All actualc0 owner fields follow constructor/dtor graph; no unmodeled tail.
     friend struct AuthContextFlow;
-    CriticalSection mDataCrit; //08..20
-    // the peer sessions and the certificate flow (0x20..0x4c: the refresh set, the GetCertOp, the auto-refresh
-    // timer, the refresh status and flag, the session map and its clean-up cursor) and the peer data (0x4c):
-    // ee_won's (authflow.rs), owned
-    EeWonAuthFlow* mFlow;
-    // the login data (0x50..0xbc: the user name and password, the secret file and secrets, the communities with
-    // their CD keys and file hashes, the CD-key joins, the user data and the nicknames): ee_won's (authlogin.rs),
-    // owned, its own lock
-    EeWonAuthLogin* mLogin;
+    // the Rust object (the certificate ops' host calls answer on it: ee_won hostauth.rs)
+    const EeWonAuthCtx* Core() const { return this->mCore; }
+private:
+    const EeWonAuthCtx* mCore; // one reference
     std::wstring LoginText(int inWhich) const;
     void LoginSet(int inWhich, const std::wstring& inKey, const std::string& inValue = std::string(), long long inNum = 0);
-    SmartPtr<ServerContext> mServerContext; //bc..c0, genuine last owner; actual completec0 allocation
 };
 } //namespace WONAPI
 

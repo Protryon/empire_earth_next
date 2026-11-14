@@ -13,6 +13,7 @@
 
 #include "ee/EESMDialogMessage.h"
 #include "ee/EESMIDMap.h"               // (the remap slots +0x20..+0x40)
+#include "rust/ee_scenario.h"           // EeScenarioManagerFields, the timed effects' queue
 
 class EESMArea;
 class FSFileSpec;
@@ -20,16 +21,6 @@ class EESMCondition;
 class EESMEffect;
 class EESMObject;
 class EESMTrigger;
-// the +0x164 vector's 0xc-byte elements (_Buy 0x150afb; +0 indexes mEffects; 0x1b005b builds one and stable-sorts the
-// vector by mTime; provisional names)
-struct EESMTimedEffect {
-    EESMTimedEffect(long inEffect, unsigned long inTime, bool inIsInCinematic) { this->mEffectIndex = inEffect; this->mTime = inTime; this->mIsInCinematic = inIsInCinematic; this->mHasRun = false; }
-    unsigned long mEffectIndex;             // +0x00 (an mEffects index; Load/Save: unsigned long)
-    unsigned long mTime;                    // +0x04 (the sort key)
-    bool mIsInCinematic;                    // +0x08
-    bool mHasRun;                           // +0x09
-};
-
 // One element of the +0xd4 vector (8 bytes): a player and a unit class whose media the scenario loaded; the dtor
 // 0x1afe66 and 0x1b28c0 unload each through gWorld.mPlayers[mPlayer]->mUnitClassUpgrades[mUnitClass] (0x23c24f); 0x1b2b43 appends
 // one (provisional names)
@@ -43,7 +34,9 @@ struct EESMUnitClassMedia {
 // scenario's dialogs, and the cinematics that wait for them, then follow the game's ticks, not the wall clock
 extern bool gScenarioSimDialogs;
 
-class EEScenarioManager : public FSPersistent {   // RTTI base; vtable 0x445fd8, sizeof 0x23c
+// The numbers (+0x200..+0x238: the clocks, id counters, cinematic and dialog flags) are the Rust record
+// EeScenarioManagerFields (ee_scenario manager.rs), with the members' names and C++ types
+class EEScenarioManager : public FSPersistent, public EeScenarioManagerFields {   // RTTI base; vtable 0x445fd8, sizeof 0x23c
 public:
     EEScenarioManager();                    // 0x1afa90
     // FSPersistent's slots (vtable 0x445fd8; EEPTPRestorable<EEScenarioManager> in Empire Earth.cpp needs the class
@@ -161,6 +154,8 @@ public:
     long ParseEffectID(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest);  // 0x1b46bf
     long ParsePlayerName(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest);    // 0x1b4796
     EESMEffect* GetTimedEffect(unsigned long inIndex);     // 0x1b9f8f (mEffects[mTimedEffects[i].mEffectIndex], 0 past the end)
+    unsigned long GetNumTimedEffects() { return (unsigned long)ee_scenario_timed_count(this->mTimedEffects); }
+    EeScenarioTimedEntry GetTimedEntry(unsigned long inIndex) { return ee_scenario_timed_at(this->mTimedEffects, inIndex); }
     void ApplyPendingEffects();             // 0x1b286d (EEWorld 0x13a0e6; runs every mPendingEffects effect, clears mB234)
     // inline (COMDATs 0x17da08 / 0x188edd / 0x18ef8a, emitted by the editor's area / object / trigger screens;
     // GetCondition's shape; provisional names)
@@ -208,26 +203,11 @@ public:
     EESMDialogMessage& GetDialogMessage(unsigned long inIndex) { return this->mMessages[inIndex]; }
     std::vector<EESMDialogMessage> mMessages;    // +0x144 (0x40-byte elements by value)
     std::vector<UWideString> mImportErrors;  // +0x154 (_Buy 0x6ba94)
-    std::vector<EESMTimedEffect> mTimedEffects;  // +0x164
+    EeScenarioTimedQueue* mTimedEffects;    // +0x164 (the timed effects, sorted by time: owned by the Rust queue)
     EESMMediaStrings mMediaStrings;         // +0x174 (sizeof 0x8c)
-    long mGameResult;                       // +0x200
-    float mSavedZoom;                       // +0x204 (the camera zoom StartCinematic saves; fld/fstp)
-    float mStartX;                          // +0x208 (saved)
-    float mStartY;                          // +0x20c
-    float mTime;                            // +0x210
-    float mTriggerTimer;                    // +0x214
-    float mCinematicStartTime;              // +0x218 (Reset: fldz)
-    long mSavedCameraMode;                  // +0x21c
-    unsigned long mNextTriggerID;           // +0x220 (saved)
-    unsigned long mNextConditionID;         // +0x224
-    unsigned long mNextEffectID;            // +0x228
-    unsigned long mNextObjectID;            // +0x22c
-    unsigned long mNextAreaID;              // +0x230
-    bool mB234;                             // +0x234
-    bool mIsMovingCamera;                   // +0x235 (saved)
-    bool mShowDebugIDs;                     // +0x236 (saved; EESEEShowDebugIDs toggles it; provisional name)
-    bool mIsShowingDialog;                  // +0x237
-    bool mIsEndingCinematic;                // +0x238 (Reset: and byte)
+    // +0x200..+0x238: EeScenarioManagerFields (mGameResult, mSavedZoom, mStartX, mStartY, mTime, mTriggerTimer,
+    // mCinematicStartTime, mSavedCameraMode, mNext{Trigger,Condition,Effect,Object,Area}ID, mB234, mIsMovingCamera,
+    // mShowDebugIDs, mIsShowingDialog, mIsEndingCinematic)
 };
 
 #endif

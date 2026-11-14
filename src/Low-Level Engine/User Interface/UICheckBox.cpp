@@ -6,10 +6,9 @@
 // key init chains (0x1005fb21, the rasterizer header comes next), UIRadioButton's inline members (0x1005fc41); then
 // its own code (0x1005fdef: the ctor, then the members) and the vector<UWideString*>::_Tidy COMDAT.
 //
-// The check logic and the label's geometry are Rust (rust/crates/ee_ui/src/button.rs, docs/RUST_PLAN.md R6): the box
-// rectangle, SetChecked, ToggleCheck, SetDisabled, SetLocation, SetText and the disabled box's ignored input forward
-// to it (UIButtonRust.h; the record from mTextLabel on is EeUiCheckFields). The label object, the bitmaps and drawing
-// stay here.
+// UICheckBox is whole in Rust (rust/crates/ee_ui/src/checkobj.rs, R6 ui round 12): its record is the Rust button's
+// and every method below forwards to it; the label is a part the Rust button holds (UIButton.cpp's host makes it).
+// The constructor's UIButton part (the box rectangle, the manager's check bitmaps) stays here.
 #include <windows.h>
 #include <stddef.h>
 
@@ -49,33 +48,8 @@
 #include "lle/UIManager.h"
 #include "UIButtonRust.h"
 
-void* UIButtonRust::CheckFields(UICheckBox* inBox)
-{
-#define EE_UI_CHECK_FIELD(member, field)                                                                              \
-    static_assert(offsetof(UICheckBox, member) - offsetof(UICheckBox, mTextLabel) == offsetof(EeUiCheckFields, field), \
-                  "ee_ui/src/button.rs")
-    EE_UI_CHECK_FIELD(mTextLabel, text_label);
-    EE_UI_CHECK_FIELD(mIsChecked, is_checked);
-    EE_UI_CHECK_FIELD(mHasText, has_text);
-    EE_UI_CHECK_FIELD(mScaleBitmap, scale_bitmap);
-    EE_UI_CHECK_FIELD(mIsDisabled, is_disabled);
-#undef EE_UI_CHECK_FIELD
-    static_assert(sizeof(UICheckBox) - offsetof(UICheckBox, mTextLabel) >= sizeof(EeUiCheckFields), "ee_ui/src/button.rs");
-    return &inBox->mTextLabel;
-}
-UITextLabel** UIButtonRust::CheckLabel(UICheckBox* inBox) { return &inBox->mTextLabel; }
-
-// The check box's own host call (ee_ui/src/button_ffi.rs): the manager's check bitmaps, on or off
-extern "C" void ee_uicpp_check_set_bitmaps(void* inButton, bool inOn)
-{
-    UIButton* theButton = UIButtonRust::Button(inButton);
-    UIManager* theManager = theButton->GetForm()->GetManager();
-    theButton->SetNormalBitmap(inOn ? theManager->GetCheckOn() : theManager->GetCheckOff());
-    theButton->SetPressedBitmap(inOn ? theManager->GetCheckDownOn() : theManager->GetCheckDownOff());
-}
-
-// The Rust view of this check box, with a label context for SetText/SetLocation
-#define EE_UI_CHECK_REFS(label) UIButtonRust::Refs(this, UIButtonRust::CheckFields(this), label)
+typedef EeUiButtonCall C;
+#define EE_UI_CHECK(c, ...) UIButtonRust::Call(this, C::c, ##__VA_ARGS__)
 
 // FUNCTION: LLE 0x1005fdef
 // Creates an unchecked check box with an optional text label to the right of the box bitmap
@@ -85,154 +59,64 @@ UICheckBox::UICheckBox(unsigned long inId, const UWideString& inText, GEFont* in
                UIButtonRust::Rect(ee_ui_button_box_rect(UIButtonRust::Rect(inRectangle), inScaleBitmap)),
                inForm, inIndex, inBorderThickness)
 {
-    this->mIsChecked = false;
-    this->mIsDisabled = false;
-    this->mTextLabel = NULL;
-    this->mHasText = false;
-    this->mScaleBitmap = inScaleBitmap;
-    UIButtonRust::BitmapOffset(this, inRectangle.GetHeight(), inBorderThickness, this->mScaleBitmap, true);
-    this->SetText(inText, inFont);
+    EE_UI_CHECK(CheckInit, (intptr_t)&inText, (intptr_t)inFont, inRectangle.GetHeight(), inScaleBitmap ? 1.0f : 0.0f);
 }
 
 // Resizes the check box and its label to a new width. No marker: ICF-folded into UITriStateCheckBox::ChangeWidth
 // (0x10080916), the same body over the same offsets.
-void UICheckBox::ChangeWidth(unsigned long inWidth)
-{
-    GERectangle theRectangle;
-    if (this->mTextLabel) {
-        theRectangle = this->mTextLabel->GetRectangle();
-        theRectangle.SetRight(theRectangle.GetLeft() + inWidth - kScrollBarWidth);
-        this->mTextLabel->SetRectangle(theRectangle);
-    }
-    theRectangle = this->mRectangle;
-    theRectangle.SetRight(theRectangle.GetLeft() + inWidth - 1.0f);
-    UIControl::SetRectangle(theRectangle);
-}
-
+void UICheckBox::ChangeWidth(unsigned long inWidth) { EE_UI_CHECK(CheckChangeWidth, (intptr_t)inWidth); }
 // FUNCTION: LLE 0x1005ff2c
 // Copies the button and its label for the draw pass, deleting the label once the text was cleared
-long UICheckBox::CopyData()
-{
-    long theResult = UIButton::CopyData();
-    if (this->mHasText)
-        theResult = this->mTextLabel->CopyData();
-    else if (this->mTextLabel) {
-        delete this->mTextLabel;
-        this->mTextLabel = NULL;
-    }
-    return theResult;
-}
-
+long UICheckBox::CopyData() { return (long)EE_UI_CHECK(CheckCopyData); }
 // FUNCTION: LLE 0x1005ff6d
 // Draws the box bitmap (scaled to the control height when scaling) and the label
-long UICheckBox::DrawPolygons()
-{
-    long theResult;
-    GEBitmap* theBitmap = this->GetCopiedBitmap();
-    if (this->mScaleBitmap && theBitmap) {
-        float theXScale = theBitmap->GetXScale();
-        float theYScale = theBitmap->GetYScale();
-        float theScale[2];   // the box's inner height over 20 pixels (ee_ui draw.rs)
-        ee_ui_box_bitmap_scale(theXScale, theYScale, this->GetCopiedDrawRectangle().GetHeight(), true,
-                               this->GetBorderThickness(), theScale);
-        theBitmap->SetXYScale(theScale[0], theScale[1]);
-        theResult = UIButton::DrawPolygons();
-        theBitmap->SetXYScale(theXScale, theYScale);
-    } else
-        theResult = UIButton::DrawPolygons();
-    if (this->mTextLabel)
-        theResult = this->mTextLabel->DrawPolygons();
-    return theResult;
-}
-
+long UICheckBox::DrawPolygons() { return (long)EE_UI_CHECK(CheckDrawPolygons); }
 // Draws the control's text and the label. No marker: ICF-folded into UITriStateCheckBox::DrawTextA (0x10080a05).
-long UICheckBox::DrawTextA()
-{
-    long theResult = UIControl::DrawTextA();
-    if (this->mTextLabel)
-        theResult = this->mTextLabel->DrawTextA();
-    return theResult;
-}
-
+long UICheckBox::DrawTextA() { return (long)EE_UI_CHECK(CheckDrawText); }
+bool UICheckBox::GetIsChecked() const { return EE_UI_CHECK(CheckIsChecked) != 0; }
+UITextLabel* UICheckBox::GetTextLabel() const { return (UITextLabel*)EE_UI_CHECK(TextLabel); }
 // FUNCTION: LLE 0x10060019
 // Checks or unchecks the box (unless disabled), swapping its bitmaps and firing the checked or unchecked trigger
-void UICheckBox::SetChecked(bool inChecked)
-{
-    ee_ui_check_set_checked(EE_UI_CHECK_REFS(NULL), inChecked);
-}
-
+void UICheckBox::SetChecked(bool inChecked) { EE_UI_CHECK(CheckSetChecked, inChecked); }
 // FUNCTION: LLE 0x1006009b
 // Enables or disables the box; a disabled box shows pressed, an enabled one normal
-void UICheckBox::SetDisabled(bool inDisabled)
-{
-    // Fixed (kept): enabling shows the box normal, not pressed
-    ee_ui_check_set_disabled(EE_UI_CHECK_REFS(NULL), inDisabled);
-}
-
+// Fixed (kept): enabling shows the box normal, not pressed
+void UICheckBox::SetDisabled(bool inDisabled) { EE_UI_CHECK(CheckSetDisabled, inDisabled); }
 // FUNCTION: LLE 0x100600c2
 // Moves the check box and its label
 void UICheckBox::SetLocation(const GE2DPoint& inLocation)
 {
-    UIButtonRust::Label theLabel = {UIButtonRust::CheckLabel(this), NULL, NULL};
-    ee_ui_check_set_location(EE_UI_CHECK_REFS(&theLabel), UIButtonRust::Point(inLocation));
+    EE_UI_CHECK(CheckSetLocation, 0, 0, inLocation.GetX(), inLocation.GetY());
 }
-
 // FUNCTION: LLE 0x1006013e
 // Sets the label text, creating the label on first use; empty text hides the label
 void UICheckBox::SetText(const UWideString& inText, GEFont* inFont)
 {
-    UIButtonRust::Label theLabel = {UIButtonRust::CheckLabel(this), &inText, inFont};
-    ee_ui_check_set_text(EE_UI_CHECK_REFS(&theLabel), inText);
+    EE_UI_CHECK(CheckSetText, (intptr_t)&inText, (intptr_t)inFont);
 }
-
+// Toggles the check, then releases the button
+void UICheckBox::ButtonUp() { EE_UI_CHECK(CheckButtonUp); }
 // FUNCTION: LLE 0x10060256
 // Flips the check state unless the box is disabled
-void UICheckBox::ToggleCheck()
-{
-    ee_ui_check_toggle(EE_UI_CHECK_REFS(NULL));
-}
-
+void UICheckBox::ToggleCheck() { EE_UI_CHECK(CheckToggle); }
 // FUNCTION: LLE 0x10060270
 // Presses the box unless it is disabled
-void UICheckBox::ButtonDown()
-{
-    if (ee_ui_check_enabled(EE_UI_CHECK_REFS(NULL)))
-        UIButton::ButtonDown();
-}
-
+void UICheckBox::ButtonDown() { EE_UI_CHECK(CheckButtonDown); }
 // FUNCTION: LLE 0x1006027f
 // Handles a left-button press unless the box is disabled
-long UICheckBox::MouseLButtonDown()
-{
-    if (ee_ui_check_enabled(EE_UI_CHECK_REFS(NULL)))
-        return UIButton::MouseLButtonDown();
-    return kErrorOK;
-}
-
+long UICheckBox::MouseLButtonDown() { return (long)EE_UI_CHECK(CheckMouseLButtonDown); }
 // FUNCTION: LLE 0x10060290
 // Handles a left-button release unless the box is disabled
-long UICheckBox::MouseLButtonUp()
-{
-    if (ee_ui_check_enabled(EE_UI_CHECK_REFS(NULL)))
-        return UIButton::MouseLButtonUp();
-    return kErrorOK;
-}
-
+long UICheckBox::MouseLButtonUp() { return (long)EE_UI_CHECK(CheckMouseLButtonUp); }
 // FUNCTION: LLE 0x100602a1
 // Handles mouse movement unless the box is disabled
 long UICheckBox::MouseMove(const GE2DPoint& inLocation)
 {
-    if (ee_ui_check_enabled(EE_UI_CHECK_REFS(NULL)))
-        return UIButton::MouseMove(inLocation);
-    return kErrorOK;
+    return (long)EE_UI_CHECK(CheckMouseMove, 0, 0, inLocation.GetX(), inLocation.GetY());
 }
-
 // FUNCTION: LLE 0x100602ba
 // Shows the box pressed
-void UICheckBox::MouseOver()
-{
-    UIButton::MouseOver();
-}
+void UICheckBox::MouseOver() { UIButton::MouseOver(); }
 
 // Header-inline members first emitted here (bodies in lle/UISlider.h, UIScrollButton.h, UIScrollBar.h, UITextLabel.h,
 // UICheckBox.h, UIRadioButton.h)

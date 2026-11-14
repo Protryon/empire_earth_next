@@ -3739,168 +3739,85 @@ void EEUnitClass::TurnTurrets(EEComplexUnit* inUnit)
 // Advances a unit's animation by this tick, plays the frame sounds and returns the number of frames stepped
 long EEUnitClass::Animate(EEComplexUnit* inUnit)
 {
+    // port (R5b.4): the clock's decisions are Rust (ee_units animate.rs) over the unit's and its model's numbers
+    // for the current state; the C++ applies them in the original's order and keeps the idle pick's random draw,
+    // the horse's breath and the sound
     EESoundObject* theSound = NULL;
-    unsigned long theSteps = 0;
-    unsigned long theFrame;
-    if (inUnit->mIsAnimationPaused) {
-        unsigned long theTime = gPhysics->mTickTimeMs + inUnit->mAnimationTime;
-        unsigned long theState = inUnit->GetAnimation();
-        if (theTime < inUnit->GetModel()->mHoldTimes[theState]) {
-            inUnit->SetAnimationTime(theTime);
-        } else {
-            EEGraphicObject* theObject = inUnit->GetModel();
-            theState = inUnit->GetAnimation();
-            if (theObject->mLoops[theState]) {
-                if (theState != 7 && (inUnit->mStats->mCanFireOverWalls || theState != 8)) {
-                    theFrame = theObject->mStartFrames[theState];
-                    inUnit->SetIsAnimationPaused(false);
-                    inUnit->SetAnimationFrame(theFrame);
-                    inUnit->SetAnimationTime(0);
-                    if (theFrame == theObject->mSound1Frames[theState])
-                        theSound = theObject->mSounds1[theState];
-                    else if (theFrame == theObject->mSound2Frames[theState])
-                        theSound = theObject->mSounds2[theState];
-                } else {
-                    if (!(gPhysics->GetRandom() >= 0.5f) || inUnit->mStats->mCanFireOverWalls)
-                        inUnit->SetAnimation(7, -1, 0);
-                    else
-                        inUnit->SetAnimation(8, -1, 0);
-                    if (this->mIsHorse && theObject->GetTagPoints(theState, 0x16) != NULL) {
-                        bool theAllowed = true;
-                        RTSTile* theTile = inUnit->mTile;
-                        if (gWorld.mTimeOfDay < 0.45f && gWorld.mTimeOfDay > 0.075f &&
-                            (theTile == NULL || theTile->mTerrainType != kTerrainSnow)) {
-                            U2DPoint<long> theTile(inUnit->GetTileX(), inUnit->GetTileY());
-                            theAllowed = gWorld.mEnvironmentManager->IsInStorm(theTile, false, true);
-                        }
-                        if (theAllowed && EEIsSeen(inUnit)) {
-                            EEEffectManager* theManager = gEffectManager;
-                            theManager->CreateEffectBetweenUnits(inUnit, inUnit, EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits), NULL);
-                        }
-                    }
-                }
-            } else {
-                SESMInstanceNode* theInstance = inUnit->mSound;
-                if (theInstance != NULL) {
-                    gSoundManager->Stop(theInstance, !gSoundManager->GetIsLooping(theInstance));
-                    inUnit->ReleaseSound();
-                }
-            }
-        }
-    } else {
-        EEGraphicObject* theObject = inUnit->GetModel();
-        unsigned long theState = inUnit->GetAnimation();
-        float theFraction = 0.0f;
-        unsigned long theCount = theObject->mFrameCounts[theState];
-        unsigned long theTime = gPhysics->mTickTimeMs + inUnit->mAnimationTime;
-        bool theLoop = theObject->mLoops[theState];
-        unsigned long theStart = theObject->mStartFrames[theState];
-        unsigned long theLast = theObject->mLastFrames[theState];
-        unsigned long theOldFrame = inUnit->mPhysicalModel.GetFrame();
-        theFrame = theOldFrame;
-        unsigned long theFrameTime;
-        if (!theObject->mIsSpeedScaled[theState]) {
-            theFrameTime = theObject->mFrameTimes[theState];
-        } else {
-            float theSpeed = inUnit->GetVelocity() / this->GetMaxVelocity();
-            if (!(theSpeed >= 0.5f))
-                theSpeed = 0.5f;
-            float theTurn = inUnit->mAngularVelocity.GetYaw();
-            theTurn = (theTurn >= 0.0f ? theTurn : -theTurn) / this->mMaxAngularVelocity;
-            if (!(theSpeed >= 0.5f))
-                theSpeed = 0.5f;
-            if (!(theTurn >= 0.5f))
-                theTurn = 0.5f;
-            if (theSpeed > theTurn)
-                theFrameTime = UMFloatToLong((float)theObject->mFrameTimes[theState] / theSpeed);
-            else
-                theFrameTime = UMFloatToLong((float)theObject->mFrameTimes[theState] / theTurn);
-        }
-        unsigned long theRemainder;
-        if (theTime < theFrameTime) {
-            inUnit->SetAnimationTime(theTime);
-            theRemainder = theTime;
-        } else {
-            if (theFrameTime > 0) {
-                theSteps = theTime / theFrameTime;
-                theRemainder = theTime - theFrameTime * theSteps;
-            } else {
-                theRemainder = 0;
-                theSteps = 1;
-            }
-            if (theLoop) {
-                theFrame = (theOldFrame - theStart + theSteps) % theCount + theStart;
-                if (theFrame > theOldFrame || theObject->mHoldTimes[theState] == 0) {
-                    inUnit->SetAnimationFrame(theFrame);
-                    inUnit->SetAnimationTime(theRemainder);
-                    if (theFrame == theObject->mSound1Frames[theState])
-                        theSound = theObject->mSounds1[theState];
-                    else if (theFrame == theObject->mSound2Frames[theState])
-                        theSound = theObject->mSounds2[theState];
-                } else {
-                    inUnit->SetIsAnimationPaused(true);
-                    inUnit->SetAnimationFrame(theStart);
-                    inUnit->SetAnimationTime(0);
-                    SESMInstanceNode* theInstance = inUnit->mSound;
-                    if (theInstance != NULL) {
-                        gSoundManager->Stop(theInstance, !gSoundManager->GetIsLooping(theInstance));
-                        inUnit->ReleaseSound();
-                    }
-                }
-            } else if (!inUnit->IsFoundation()) {
-                unsigned long theOffset = theOldFrame - theStart + theSteps;
-                theFrame = theStart + theOffset;
-                if (theOffset < theCount) {
-                    inUnit->SetAnimationFrame(theFrame);
-                    inUnit->SetAnimationTime(theRemainder);
-                    if (theFrame == theObject->mSound1Frames[theState])
-                        theSound = theObject->mSounds1[theState];
-                    else if (theFrame == theObject->mSound2Frames[theState])
-                        theSound = theObject->mSounds2[theState];
-                } else {
-                    inUnit->SetIsAnimationPaused(true);
-                    inUnit->SetAnimationFrame(theLast);
-                    inUnit->SetAnimationTime(0);
-                    theFrame = theLast;
-                    SESMInstanceNode* theInstance = inUnit->mSound;
-                    if (theInstance != NULL) {
-                        gSoundManager->Stop(theInstance, !gSoundManager->GetIsLooping(theInstance));
-                        inUnit->ReleaseSound();
-                    }
-                }
-            }
-        }
-        if (theFrameTime != 0)
-            theFraction = (float)theRemainder / (float)(long)theFrameTime;
-        unsigned long theNext;
-        if (theStart == theLast)
-            theNext = theStart;
-        else if (theFrame == theLast)
-            theNext = theLoop ? theStart : theFrame;
-        else
-            theNext = theFrame + 1;
-        if (theCount > 4 && theObject->mSharesFrames[theState]) {
-            bool theEven = (~theCount & 1) != 0;
-            if (theFrame == theLast) {
-                theNext = theLoop ? theStart : theFrame;
-            } else {
-                theNext = theFrame + 1;
-                if (theNext != theLast) {
-                    theNext = theFrame + 2;
-                } else {
-                    if (theEven && theLoop)
-                        theNext = theStart;
-                }
-            }
-            if (theFrame != theLast || theEven)
-                theFraction *= 0.5f;
-            if (((theFrame - theStart) & 1) == 1)
-                theFraction += 0.5f;
-        }
-        if (inUnit->mAnimationFraction != theFraction)
-            inUnit->mAnimationFraction = theFraction;
-        inUnit->SetNextFrame(theNext);
+    EEGraphicObject* theObject = inUnit->GetModel();
+    unsigned long theState = inUnit->GetAnimation();
+    EeUnitsAnimateIn theIn;
+    theIn.paused = inUnit->mIsAnimationPaused;
+    theIn.loops = theObject->mLoops[theState];
+    theIn.speed_scaled = theObject->mIsSpeedScaled[theState];
+    theIn.shares_frames = theObject->mSharesFrames[theState];
+    // read where the original read it: a paused idle loop's state 8 test
+    theIn.can_fire_over_walls = theIn.paused && theIn.loops && theState == 8 ? inUnit->mStats->mCanFireOverWalls : false;
+    theIn.foundation = !theIn.paused && !theIn.loops ? inUnit->IsFoundation() : false;
+    theIn.state = (uint32_t)theState;
+    theIn.tick_ms = (uint32_t)gPhysics->mTickTimeMs;
+    theIn.time = (uint32_t)inUnit->mAnimationTime;
+    theIn.frame = (uint32_t)inUnit->mPhysicalModel.GetFrame();
+    theIn.hold_time = (uint32_t)theObject->mHoldTimes[theState];
+    theIn.start_frame = (uint32_t)theObject->mStartFrames[theState];
+    theIn.last_frame = (uint32_t)theObject->mLastFrames[theState];
+    theIn.frame_count = (uint32_t)theObject->mFrameCounts[theState];
+    theIn.frame_time = (uint32_t)theObject->mFrameTimes[theState];
+    theIn.sound1_frame = (uint32_t)theObject->mSound1Frames[theState];
+    theIn.sound2_frame = (uint32_t)theObject->mSound2Frames[theState];
+    theIn.velocity = 0.0f;
+    theIn.max_velocity = 0.0f;
+    theIn.yaw_velocity = 0.0f;
+    theIn.max_angular_velocity = 0.0f;
+    if (!theIn.paused && theIn.speed_scaled) {
+        theIn.velocity = inUnit->GetVelocity();
+        theIn.max_velocity = this->GetMaxVelocity();
+        theIn.yaw_velocity = inUnit->mAngularVelocity.GetYaw();
+        theIn.max_angular_velocity = this->mMaxAngularVelocity;
     }
+    EeUnitsAnimateOut theOut;
+    ee_units_animate(&theIn, &theOut);
+    if (theOut.set_paused)
+        inUnit->SetIsAnimationPaused(theOut.paused);
+    if (theOut.set_frame)
+        inUnit->SetAnimationFrame(theOut.frame);
+    if (theOut.set_time)
+        inUnit->SetAnimationTime(theOut.time);
+    if (theOut.stop_sound) {
+        SESMInstanceNode* theInstance = inUnit->mSound;
+        if (theInstance != NULL) {
+            gSoundManager->Stop(theInstance, !gSoundManager->GetIsLooping(theInstance));
+            inUnit->ReleaseSound();
+        }
+    }
+    if (theOut.idle_pick) {
+        if (!(gPhysics->GetRandom() >= 0.5f) || inUnit->mStats->mCanFireOverWalls)
+            inUnit->SetAnimation(7, -1, 0);
+        else
+            inUnit->SetAnimation(8, -1, 0);
+        if (this->mIsHorse && theObject->GetTagPoints(theState, 0x16) != NULL) {
+            bool theAllowed = true;
+            RTSTile* theTile = inUnit->mTile;
+            if (gWorld.mTimeOfDay < 0.45f && gWorld.mTimeOfDay > 0.075f &&
+                (theTile == NULL || theTile->mTerrainType != kTerrainSnow)) {
+                U2DPoint<long> theTile(inUnit->GetTileX(), inUnit->GetTileY());
+                theAllowed = gWorld.mEnvironmentManager->IsInStorm(theTile, false, true);
+            }
+            if (theAllowed && EEIsSeen(inUnit)) {
+                EEEffectManager* theManager = gEffectManager;
+                theManager->CreateEffectBetweenUnits(inUnit, inUnit, EEGraphicEffect::Get(kGraphicEffectHorseBreathUnits), NULL);
+            }
+        }
+    }
+    if (theOut.sound == 1)
+        theSound = theObject->mSounds1[theState];
+    else if (theOut.sound == 2)
+        theSound = theObject->mSounds2[theState];
+    if (!theIn.paused) {
+        if (inUnit->mAnimationFraction != theOut.fraction)
+            inUnit->mAnimationFraction = theOut.fraction;
+        inUnit->SetNextFrame(theOut.next_frame);
+    }
+    unsigned long theSteps = theOut.steps;
     if (theSound == NULL)
         return theSteps;
     SESMInstanceNode* theInstance = inUnit->mSound;

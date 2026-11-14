@@ -45,14 +45,11 @@
 38020 38527 Graphics Engine/GEWindow.cpp
 38527 38abf Graphics Engine/Graphics Engine.cpp
 38abf 39715 Input System/Input System.cpp
-3bc2d 3e05c Network Engine/NELagLossSimulator.cpp
 3e05c 40123 Network Engine/NEMessage.cpp
 4440f 44c71 Network Engine/NEProtocol.cpp
-45535 45c00 Network Engine/NERecordPlayback.cpp
 45c00 47301 Network Engine/NESynchronousClient.cpp
 47301 47400 Network Engine/NESynchronousCommunications.cpp
 47400 4b04f Network Engine/NESynchronousServer.cpp
-4b04f 4b190 Network Engine/NETimestampedMessage.cpp
 4b190 4b275 Network Engine/Network Engine.cpp
 4b275 4b4b7 PIMModule.cpp
 4bbce 4e8aa Sound Engine/SEConductor.cpp

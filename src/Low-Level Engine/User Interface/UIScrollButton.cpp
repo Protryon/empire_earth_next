@@ -4,8 +4,8 @@
 // 0x1007d013..0x1007d139: the ctor and ButtonDown only. No U2D key init chains: the unit does not include the
 // rasterizer header. The header-inline members are emitted first by UICheckBox.cpp (0x1005f272..).
 //
-// ButtonDown's stepping is Rust (rust/crates/ee_ui/src/button.rs, docs/RUST_PLAN.md R6); the polls and the slider
-// stay here, reached through the ee_uicpp_scroll_button_* host calls.
+// UIScrollButton is whole in Rust (rust/crates/ee_ui/src/variantobj.rs, R6 ui round 12): the constructor's UIButton
+// part stays here; the record, the polls and the stepping are the Rust button's.
 #include <windows.h>
 #include <stddef.h>
 
@@ -24,31 +24,7 @@
 #include "lle/UITextLabel.h"
 #include "UIButtonRust.h"
 
-void* UIButtonRust::ScrollFields(UIScrollButton* inButton)
-{
-    static_assert(sizeof(inButton->mDecrement) == sizeof(unsigned long), "ee_ui/src/button_ffi.rs");
-    return &inButton->mDecrement;
-}
-TMPoll* UIButtonRust::ScrollDelay(void* inButton) { return static_cast<UIScrollButton*>(Button(inButton))->mDelayPoll; }
-TMPoll* UIButtonRust::ScrollRepeat(void* inButton) { return static_cast<UIScrollButton*>(Button(inButton))->mRepeatPoll; }
-UISlider* UIButtonRust::ScrollSlider(void* inButton) { return static_cast<UIScrollButton*>(Button(inButton))->mSlider; }
-
-// The scroll button's own host calls (ee_ui/src/button_ffi.rs)
-extern "C" bool ee_uicpp_scroll_button_delay_running(void* inButton) { return UIButtonRust::ScrollDelay(inButton)->GetIsRunning(); }
-extern "C" bool ee_uicpp_scroll_button_delay_poll(void* inButton) { return UIButtonRust::ScrollDelay(inButton)->Poll() != 0; }
-extern "C" void ee_uicpp_scroll_button_delay_start(void* inButton) { UIButtonRust::ScrollDelay(inButton)->Start(); }
-extern "C" void ee_uicpp_scroll_button_delay_stop(void* inButton) { UIButtonRust::ScrollDelay(inButton)->Stop(); }
-extern "C" bool ee_uicpp_scroll_button_repeat_running(void* inButton) { return UIButtonRust::ScrollRepeat(inButton)->GetIsRunning(); }
-extern "C" bool ee_uicpp_scroll_button_repeat_poll(void* inButton) { return UIButtonRust::ScrollRepeat(inButton)->Poll() != 0; }
-extern "C" void ee_uicpp_scroll_button_repeat_start(void* inButton) { UIButtonRust::ScrollRepeat(inButton)->Start(); }
-extern "C" long ee_uicpp_scroll_button_slider_value(void* inButton)
-{
-    return UIButtonRust::ScrollSlider(inButton)->GetCurrentRangeValue();
-}
-extern "C" void ee_uicpp_scroll_button_set_slider_value(void* inButton, long inValue)
-{
-    UIButtonRust::ScrollSlider(inButton)->SetCurrentRangeValue(inValue);
-}
+typedef EeUiButtonCall C;
 
 // FUNCTION: LLE 0x1007d013
 // Creates a 20x20 scroll arrow button that steps a slider down or up, with a 500 ms delay and 100 ms repeat
@@ -60,15 +36,11 @@ UIScrollButton::UIScrollButton(unsigned long inId, GEBitmap* inNormalBitmap, GEB
                                                  inLocation.GetY() + 19.0f)),
                inForm, inIndex, 0)
 {
-    this->mDecrement = inDecrement;
-    this->mSlider = inSlider;
-    this->mDelayPoll = new TMPoll(500, 0, false);
-    this->mRepeatPoll = new TMPoll(100, 0, false);
+    UIButtonRust::Call(this, C::ScrollInit, (intptr_t)inSlider, (intptr_t)inDecrement);
 }
 
 // FUNCTION: LLE 0x1007d0c3
 // Steps the slider while held: once on press, again after the 500 ms delay, then every 100 ms
-void UIScrollButton::ButtonDown()
-{
-    ee_ui_scroll_button_button_down(UIButtonRust::Refs(this, UIButtonRust::ScrollFields(this)));
-}
+void UIScrollButton::ButtonDown() { UIButtonRust::Call(this, C::ScrollButtonDown); }
+// Stops the delay and the repeat, then releases the button
+void UIScrollButton::ButtonUp() { UIButtonRust::Call(this, C::ScrollButtonUp); }
