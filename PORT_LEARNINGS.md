@@ -14295,3 +14295,55 @@ over the unmodified unit with traced fakes, mutations, a cargo replay).
   line of sight, reach: host reads, next), `GetTiles` (the area's tile cache), `GetUnitAttribute` (a 474-line switch
   of unit and class reads: a table of reads by attribute would move it), `FindPlacement` (SMFP is its golden), the
   world-glue effect bodies.
+
+## R5b.5, fourth round: ExpandTokens and GetUnitAttribute in Rust (ee_scenario tokens.rs, attribute.rs; branch rust-triggers4, 2026-11-13)
+
+| Function | Was (C++) | Now (Rust) |
+|---|---|---|
+| `EESMEffect::ExpandTokens` | a 60-line scan over `UWideString` (`Find`, `GetIndexedSubstring`, `atoi`, `sprintf`) | tokens.rs `expand_tokens` over UTF-8 bytes; the replacements through `EE_SCENARIO_READ_TOKEN_OBJECT`, `_VALUE`, `_CONDITION`; the player choice and value are the Rust `choose_player_recorded` and `player_value` |
+| `EESMObject::GetUnitAttribute` | a 474-line switch of unit, complex unit, upgrade and class members | attribute.rs `unit_attribute`: one match over the 75 attributes, the members through one read (`EE_SCENARIO_READ_UNIT_FIELD`, `EESMUnitField` in EESMObject.cpp: integers as they are, floats as bits) |
+
+- **UWideString's semantics in the crate.** ee_scenario now depends on ee_plat_core and uses its `utf8` module, the
+  same code behind `PlatMbsLen`, `PlatMbsNInc`, `PlatMbsNCmp` (decision D6): a character is a code point, a stray byte
+  one character, every count clamped at the end as `_mbsninc` is. `Find` is the original's (the last start
+  `(long)(mLength - inLength) > 0 ? ... : 0`, the length when not found); `GetIndexedSubstring(first, last)` is
+  inclusive, so the number after a tag is 5 characters and the 5th stays in the text after the replacement
+  (`"/#OC00071"` asks object 71 and leaves `"1"`): kept. The result goes back as a C string the Rust allocates and
+  `ee_scenario_text_free` frees.
+- **The hang, fixed (the one behaviour change).** For a text under 4 characters `Find(...) < GetLength() - 4` is
+  true for every tag (the unsigned subtraction wraps); the original then read the number past the end (empty: id 0),
+  appended the replacement to the whole text and looked again. When the replacement is empty (no object or condition
+  with id 0, an object without an attribute check or units, a condition that is not a Player Attribute) the text is
+  unchanged and the loop never ends: the simulation thread spins forever, a hang of the original. The port goes on to
+  the next tag after making that pass's reads (an object's `Evaluate`, a player choice). A short text whose
+  replacement is not empty still grows by it until it has 4 characters, as the original. Any Send Dialogue or Send
+  Chat Message effect with a message under 4 characters ("Go!", "OK") reached the hang; none of the six capture
+  scenarios has one (SMTK: 60 calls, none changed).
+- **Read order is free in GetUnitAttribute.** Every read is a member read with no side effect, so the Rust reads the
+  three presences (complex unit, upgrade, class) first and the values where it needs them. Where the original
+  dereferenced a NULL upgrade or class (the bonus and total attributes 20..61 never test them) the host dereferences
+  it too: the same crash, no new check.
+- **The types decide the arithmetic.** The upgrade's armor, attack and leadership are `float`s, the class's `long`s:
+  a bonus is `float - (float)long` cut toward zero (`ftol`), a percentage `(float)result * 100.0f / capacity` in that
+  order (no FMA) and cut; the flight times are `long` milliseconds divided by `1000.0f`; Ammunition's capacity is
+  zero-extended before its conversion but compared as a `long`; Power+ compares the class's power as a `long`, Total
+  Power as its `float`; the scale without a complex unit is `UMFloatToLong` (aivar.rs `lrintf`: half to even, the
+  UCRT's 0 out of range).
+- **Checked against the original on real units (a shadow run, TEST ONLY, not committed).** The original body was
+  kept for one build as a static function and every call compared all 77 attributes x both percent flags of the unit
+  asked against the Rust (`EE_SM_ATTR_SHADOW=file`): about 35,800 calls on scenario seeds 2, 3, 5, 6 and 7 (5.5 million comparisons), no difference. The shadow build also ran the scenario capture check: PASS (54 digests equal to the golden). The unit tests cover the paths no scenario unit
+  reaches (no upgrade, no complex unit, zero capacities, out-of-range casts).
+- **cbindgen and generics.** A private `struct Unit<'a, H: Host>` in the crate stopped the header generator ("cannot
+  name the header item `template<typename H = void>`"): the reader is `&mut dyn Host` instead (the `Host` trait is
+  object-safe).
+- **Coverage.** ExpandTokens: SMTK (60 calls in six scenarios, the text never has a tag), the unit tests for every
+  tag, the 5th character, the short texts and multi-byte text. GetUnitAttribute: SMOB's attribute checks (50,005
+  evaluations) and the shadow run above; the token's `/#OA` path only in the unit tests.
+- **C++ lines** (src and include, include/rust aside): ExpandTokens -44 (EESMEffect.cpp -61, the host +18, the
+  header -1), GetUnitAttribute -383 (EESMObject.cpp 466 deleted, 80 added for the field read and the entry; the host
+  +1, its header +2): net -427.
+- **Not moved, and why.** `FindPlacement` (SMFP is its golden; its tile lists, `EEGetTilesNearPoint`, the side and
+  corner tiles and `EEPlayerBlockTakes` are world calls: a list host is the next step), `IsNearUnit`/`IsNearTile` and
+  `GetTiles` (thin: the host operations they need are as long as their bodies, so they move with FindPlacement, their
+  main caller), the world-glue effect bodies (`CreateUnits`, `TaskUnitsTo*`, the calamity and graphic effects,
+  `ScriptCamera`): not started this round.
