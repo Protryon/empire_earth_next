@@ -18127,3 +18127,55 @@ op cases); the final tree's LAN run covers it.
   room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic, RoutingLogic last) and the
   resource tables and factories.
 - The list rows kept in C++ (BadUserItem, NetworkAdapterListItem) go with the WON GUI lane's list widgets.
+
+## Dead code, round 2 (branch rust-dead2, 2026-11-14)
+
+The first round's census and fixpoint, rerun after about 60 port rounds; out of scope as before: WON (WONAPI,
+include/ee/wonapi, EEWonNet and what only it reaches), the C++ classic AI (AI Thread and its EEAI*/EECP* headers),
+verbatim original copies (tests/*/orig*, *_orig.h) and ThirdParty. `python -I tools/dead_census.py --lines`:
+365,292 -> 363,651 (-1,641) in five code commits; docs/dead_census regenerated on the result.
+
+- **The linker census found almost nothing new.** 552 of 15,566 first-party functions in no map (593 of 17,094 last
+  time; 537 of 15,363 and 2,837 lines in their definitions after the deletions); diffed against the first round's report, the new entries were inlined live code again, plus seven true
+  callerless members (EEWorld::CopyPlayers, EESMObject::AcceptsClass, EEScenarioManager::GetTimedEffect,
+  EEUIFMainGame::SetHotKeyMode/RefreshStatus, EEActiveGroup::IsInFormationSlot, EESMCaptureInObject).
+- **The yield is in the headers, and a grep finds it, not the linker.** Inline accessors and forwarders that nothing
+  calls emit no symbol at all, so no map can miss them; out-of-line methods with no caller are still kept when a
+  vtable or an ICF leader keeps them. The method that worked (build/dc2 scripts, not committed): every function name
+  declared in a first-party header, each occurrence over src, include, tests, tools, rust and ai (comments
+  stripped) classified as declaration, definition (`Type Class::Name(` at a line start) or use; a name with no use
+  in any file is dead whatever class declares it (overloads and same-named members of other classes count as uses,
+  so it errs on keeping). 454 names of 8,085 had no use; kept on purpose: 84 virtuals (removing a slot shifts the
+  vtable, and Rust reads some C++ vtables: ee_astar hull.rs, the toolkit's objects), 9 WON, 13 classic-AI
+  accessors, 4 platform declarations of Rust exports (PlatWindowSetTitle, PlatWindowSetPosition, PlatMouseConfine,
+  PlatTextInputStop). A second pass after the deletions found the fixpoint's three (RTSRegionTable::GetValues and
+  GetRegions under CollectValues, GERustPushRectangle) and a scan of column-0 free functions and file statics one
+  more each (EECanEnterUnit, UIForm.cpp's kUIFormKey). One false positive the classifier had to be checked for:
+  `&& Class::Name(` at a line start reads as a definition (EEDoppelgangerManager::IsOutOfSight).
+- **Deleted, by commit** (src + include, include/rust excluded): Graphics Engine and DX7 rasterizer -509
+  (GETerrainMesh's edge-tile and statistics forwarders, GEBitmap/GERhombus corner getters, GEVector/GE3DPoint
+  helpers, GETransformation::ZeroOrientation and MakeLookAtTransform, GELight's model-space and GERasterizer's
+  statistics accessors, six DX7Rasterizer helpers declared with no definition, GEWindow::GetNativeHandle); UI toolkit
+  -327 (UIForm, UIManager, UIEditBox, UITextLabel, UITLScrolling, UIButton, UIStatusBar, UIControl, UIControlsTable,
+  UILayoutUtility, UIGraph, UIListBox members, UIManager's four undefined clip-list declarations,
+  UICreateMultilineTextFromString); file, network, sound and utilities -544 (FSArchive::ExtractAll, the
+  NESynchronousServer forwarders no one calls, NEMessage's header copies, SEConductor/SESoundManager/SEScore getters,
+  six of UEncryption's eight forwarders, UGetOSType, UMQuadraticEquation, ISSetDoublePressTimeDelta,
+  UList::InsertBefore, the U2DPoint/U2DPolygon/U2DRectangle key UStrings every includer constructed and nobody read);
+  game -201 (the goal record's accessors no C++ reads since the goals moved to Rust, four EECombatFormulas wrappers,
+  the scenario forwarders above, inline accessors); the fixpoint -60. Most are port-made: forwarders whose callers
+  moved into Rust (the toolkit, the terrain mesh, the network server, the goals, the scenario manager); the rest were
+  exported LLE API the game never called. The Rust functions the deleted forwarders called stay (ee_ge_tm_*,
+  ee_net_sv_*, ee_ue_*, ...): Rust was not touched, and some of them now only serve their own tests.
+- **Kept, called only by tests or tools:** EECPLuaState::GetMemory, MemoryUsed, MemoryPeak, RngState,
+  LastInstructions and EECPLuaEncode (tests/platform/lua_test.cpp; the Lua host is live, the tests are not
+  obsolete); EERules::SetMusicFromDbmusicFile (the eedata gate); the GX methods tools/gx_test and the SDL test call.
+- **Kept, dead since the original:** reconstructed globals nothing reads but whose construction mirrors an original
+  init chain: EECDKeyStrings.cpp's eight key strings, EEAAddChatMessage.cpp's five unit keys, the comm/thread name
+  UStrings and five db table objects of Empire Earth.cpp, gStormColorLight/Dark, User Interface.cpp's
+  sBackgroundTable, about 40 objects in all (~150 lines with their SYNTHETIC notes). Deleting them is safe for UStrings
+  and colours; the table objects have constructors, so each would need a look. The next yield is there and in the
+  84 callerless virtuals of classes Rust never sees.
+- **What only the renderer or UI reaches** (no oracle or EE-SIM run draws): every deletion is a function with no
+  caller, so the build is the proof; the header-only removals that touch drawn classes (GERasterizer, GEBitmap,
+  GERhombus, the UI toolkit headers, UIControl's LLE_EXE_HEADERS block) change no layout and no vtable.
