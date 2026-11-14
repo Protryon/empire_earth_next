@@ -650,6 +650,9 @@ void EEEffectCaptureSweep()
         // model has a tag point list at its animation holding its weapon tag point; none: the cases are skipped)
         {0x09, kOnUnit, 0, true},  {0x14, kBetweenUnits, 0, true}, {0x14, kUnitToPoint, 0, true},
         {0x30, kBetweenUnits, 0, true}, {0x30, kUnitToPoint, 0, true},
+        // R4.4, twenty-first round: the square marching icons with the circular ones' graphic effects (their own rows'
+        // media fail to load, so the square never lived to its save)
+        {0x0f, kOnUnit, 0x10},
     };
     EEEffectManager* theManager = gEffectManager;
     if (theManager == NULL)
