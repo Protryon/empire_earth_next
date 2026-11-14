@@ -272,6 +272,11 @@ struct PlayerSample {
     long mCitizens = 0;
     long mArmy = 0;             // live units that are neither citizens nor buildings (priests and heroes too)
     long mBuildings = 0;
+    long mNaval = 0;            // of the army: warships, submarines and naval transports
+    long mAir = 0;              // of the army: planes, helicopters and helicopter transports
+    long mTowers = 0;           // of the buildings: the towers and space turrets
+    long mWalls = 0;            // of the buildings: wall pieces and gates (EEUnitClass::mIsWall)
+    long mWonders = 0;          // EEPlayer::GetNumWonderUnits
     long mStrength = 0;         // the army's hit points x attack, summed (soldiers, ships, heroes)
     long mValue = 0;            // the cost of every live unit and building, all resources summed
     long mResources[5] = {0, 0, 0, 0, 0};
@@ -328,6 +333,7 @@ Sample TakeSample()
         p.mPopulation = thePlayer->mPopulationCount;
         p.mVictoryUnits = thePlayer->mEndOfGameCount;
         p.mResult = thePlayer->mGameResult;
+        p.mWonders = (long)thePlayer->GetNumWonderUnits();
         for (long r = 0; r < 5; r++)
             p.mResources[r] = thePlayer->mResourceCaps[kResourceFood + r];
         for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
@@ -339,10 +345,21 @@ Sample TakeSample()
                 continue;   // the AI's path points (ambient units), resources, shots
             if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
                 p.mCitizens++;
-            else if (IsBuildingCategory(theCategory))
+            else if (IsBuildingCategory(theCategory)) {
                 p.mBuildings++;
-            else {
+                unsigned long theFamily = theUnit->mUnitClass->GetFamily();
+                if (theFamily == kUnitFamilyTowers || theFamily == kUnitFamilyTowerSpaceTurret)
+                    p.mTowers++;
+                if (theUnit->mUnitClass->mIsWall)
+                    p.mWalls++;
+            } else {
                 p.mArmy++;
+                if (theCategory == kUnitCategoryNaval || theCategory == kUnitCategorySubmergedNaval
+                    || theCategory == kUnitCategoryNavalTransport)
+                    p.mNaval++;
+                else if (theCategory == kUnitCategoryAirplane || theCategory == kUnitCategoryHelicopter
+                    || theCategory == kUnitCategoryHelicopterTransport)
+                    p.mAir++;
                 if (theUnit->mStats != NULL)
                     p.mStrength += (long)(theUnit->mHitPoints * theUnit->mStats->mAttack);
             }
@@ -769,13 +786,15 @@ void WriteReport(int inCode, const std::string& inError)
         std::string o = "[";
         for (size_t k = 0; k < s.mPlayers.size(); k++) {
             const PlayerSample& p = s.mPlayers[k];
-            char b[512];
+            char b[768];
             snprintf(b, sizeof(b),
                      "%s{\"index\": %lu, \"human\": %s, \"result\": %lu, \"epoch\": %ld, \"population\": %ld, "
                      "\"victory_units\": %ld, \"citizens\": %ld, \"army\": %ld, \"buildings\": %ld, "
+                     "\"naval\": %ld, \"air\": %ld, \"towers\": %ld, \"walls\": %ld, \"wonders\": %ld, "
                      "\"strength\": %ld, \"value\": %ld, \"resources\": {\"food\": %ld, \"wood\": %ld, \"stone\": %ld, \"gold\": %ld, \"iron\": %ld}}",
                      k ? ", " : "", p.mIndex, p.mHuman ? "true" : "false", p.mResult, p.mEpoch, p.mPopulation,
-                     p.mVictoryUnits, p.mCitizens, p.mArmy, p.mBuildings, p.mStrength, p.mValue, p.mResources[0], p.mResources[1],
+                     p.mVictoryUnits, p.mCitizens, p.mArmy, p.mBuildings,
+                     p.mNaval, p.mAir, p.mTowers, p.mWalls, p.mWonders, p.mStrength, p.mValue, p.mResources[0], p.mResources[1],
                      p.mResources[2], p.mResources[3], p.mResources[4]);
             o += b;
         }
