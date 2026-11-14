@@ -54,30 +54,7 @@
 // EEAIContinentManager.cpp's inline (out of line here: 0x29ced)
 long EEAIHasResourceUnit(EETile* inTile);
 
-// EEAIContinent's inline kind-id adders (COMDATs 0x1887f..0x189a2 after AssignKindIDs)
-inline void EEAIContinent::AddIDBC(unsigned short inID)
-{
-    if (std::find(this->mIDsBC.begin(), this->mIDsBC.end(), inID) == this->mIDsBC.end())
-        this->mIDsBC.push_back(inID);
-}
-
-inline void EEAIContinent::AddIDCC(unsigned short inID)
-{
-    if (std::find(this->mIDsCC.begin(), this->mIDsCC.end(), inID) == this->mIDsCC.end())
-        this->mIDsCC.push_back(inID);
-}
-
-inline void EEAIContinent::AddIDDC(unsigned short inID)
-{
-    if (std::find(this->mIDsDC.begin(), this->mIDsDC.end(), inID) == this->mIDsDC.end())
-        this->mIDsDC.push_back(inID);
-}
-
-inline void EEAIContinent::AddIDEC(unsigned short inID)
-{
-    if (std::find(this->mIDsEC.begin(), this->mIDsEC.end(), inID) == this->mIDsEC.end())
-        this->mIDsEC.push_back(inID);
-}
+// EEAIContinent's inline kind-id adders (COMDATs 0x1887f..0x189a2 after AssignKindIDs): ee_astar continent.rs
 
 // FUNCTION: EXE 0x4173cc
 // Creates the path-area flood-fill goal with no area grid, no owner, no tiles and the area/forest ids starting at 1

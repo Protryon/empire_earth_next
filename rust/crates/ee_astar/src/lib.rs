@@ -36,6 +36,7 @@ pub mod area;
 pub mod area_geom;
 pub mod area_goals;
 pub mod choke;
+pub mod continent;
 pub mod continent_grid;
 pub mod ffi;
 pub mod goals;

@@ -16,7 +16,24 @@
 
 class EEAIPathArea;
 
-class EEAIContinent : public EEAIArea, public AStarGraphableObjectBase {
+// New (port): a read-only view of one of the record's lists (valid until that list next changes); it converts to a
+// std::vector copy
+template <class T> class EEAIListView {
+public:
+    EEAIListView(const T* inData, size_t inSize) : mData(inData), mSize(inSize) {}
+    const T* begin() const { return this->mData; }
+    const T* end() const { return this->mData + this->mSize; }
+    size_t size() const { return this->mSize; }
+    bool empty() const { return this->mSize == 0; }
+    const T& operator[](size_t inIndex) const { return this->mData[inIndex]; }
+    operator std::vector<T>() const { return std::vector<T>(this->begin(), this->end()); }
+
+private:
+    const T* mData;
+    size_t mSize;
+};
+
+class EEAIContinent : public EEAIArea, public AStarGraphableObjectBase, private EeAStarContinentRecord {
 public:
     EEAIContinent();                        // 0x1d846
     virtual ~EEAIContinent();               // +0x00 dtor 0x1d94d
@@ -32,19 +49,25 @@ public:
     virtual void GetShoreInRegions(const std::vector<unsigned short>& inIDs, std::vector<U2DPoint<long> >& outTiles,
                            long inKind);
 
-    void AddPathAreaID(unsigned short inID);   // 0x1d9e0: unless present (0x1e5bd), push_back + sort (0x1e6ac)
+    // 0x1d9e0: unless present (0x1e5bd), push_back + sort (0x1e6ac) (Rust: ee_astar continent.rs, as the rest)
+    void AddPathAreaID(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::PathAreas, inID); }
     EEAIPathArea* GetPathAreaAt(const U2DPoint<long>& inPoint);   // 0x1dbf4: as EEAIPathSector's
-    void RemovePathAreaID(unsigned short inID);   // 0x1e4a1: lower_bound + erase when equal
-    void AddChokePoint(long inIndex);       // 0x26d84: push_back + sort (EEAIContinentManager::AddChokePoint)
-    void AddForestID(unsigned short inID);  // 0x26dca: push_back + sort (0x208cc, the forest's +0x82)
-    void AddHillID(unsigned short inID);    // 0x26e13: push_back + sort (0x2033f, the hill's +0x6a)
-    void RemoveForestID(unsigned short inID);   // 0x26ea4 (EEAIContinentManager 0x25325) (provisional name)
+    // 0x1e4a1: lower_bound + erase when equal
+    void RemovePathAreaID(unsigned short inID) { ee_astar_continent_remove_id(this, EeAStarContinentList::PathAreas, inID); }
+    // 0x26d84: push_back + sort (EEAIContinentManager::AddChokePoint)
+    void AddChokePoint(long inIndex) { ee_astar_continent_add_choke_point(this, inIndex); }
+    // 0x26dca: push_back + sort (0x208cc, the forest's +0x82)
+    void AddForestID(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::Forests, inID); }
+    // 0x26e13: push_back + sort (0x2033f, the hill's +0x6a)
+    void AddHillID(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::Hills, inID); }
+    // 0x26ea4 (EEAIContinentManager 0x25325) (provisional name)
+    void RemoveForestID(unsigned short inID) { ee_astar_continent_remove_id(this, EeAStarContinentList::Forests, inID); }
     // inline (COMDATs after their first user EEAIAStarPathAreaGoal::AssignKindIDs 0x17a4b; bodies in
     // EEAIAStarPathAreaGoal.cpp): push_back unless std::find finds it (provisional names)
-    void AddIDBC(unsigned short inID);      // 0x188e0
-    void AddIDCC(unsigned short inID);      // 0x1887f
-    void AddIDDC(unsigned short inID);      // 0x189a2
-    void AddIDEC(unsigned short inID);      // 0x18941
+    void AddIDBC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsBc, inID); }   // 0x188e0
+    void AddIDCC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsCc, inID); }   // 0x1887f
+    void AddIDDC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsDc, inID); }   // 0x189a2
+    void AddIDEC(unsigned short inID) { ee_astar_continent_add_id(this, EeAStarContinentList::IdsEc, inID); }   // 0x18941
     // inline (COMDAT 0x26e7b in EEAIContinentManager.cpp's range): inContinent is in mNeighbors
     bool HasNeighbor(EEAIContinent* inContinent)
     {
@@ -59,67 +82,82 @@ public:
     unsigned long GetNumNeighbors() const { return this->mNeighbors.size(); }
     const U2DPoint<long>& GetGraphLocation() const { return this->GetHullCenter(); }
 
-    // New (port): the members behind accessors (R5b.1 blocker (b))
-    const std::vector<U2DPoint<long> >& GetShoreTiles() const { return this->mShoreTiles; }
-    void AddShoreTile(const U2DPoint<long>& inTile) { this->mShoreTiles.push_back(inTile); }
-    void ClearShoreTiles() { this->mShoreTiles.clear(); }
-    const std::vector<long>& GetChokePoints() const { return this->mChokePoints; }
-    long GetChokePointsAt(unsigned long inIndex) const { return this->mChokePoints[inIndex]; }
-    const std::vector<unsigned short>& GetForestIDs() const { return this->mForestIDs; }
-    const std::vector<unsigned short>& GetPathAreaIDs() const { return this->mPathAreaIDs; }
-    const std::vector<unsigned short>& GetHillIDs() const { return this->mHillIDs; }
-    const std::vector<unsigned short>& GetIDsBC() const { return this->mIDsBC; }
-    unsigned short GetIDsBCAt(unsigned long inIndex) const { return this->mIDsBC[inIndex]; }
-    const std::vector<unsigned short>& GetIDsCC() const { return this->mIDsCC; }
-    const std::vector<unsigned short>& GetIDsDC() const { return this->mIDsDC; }
-    unsigned short GetIDsDCAt(unsigned long inIndex) const { return this->mIDsDC[inIndex]; }
-    const std::vector<unsigned short>& GetIDsEC() const { return this->mIDsEC; }
+    // New (port): the members behind accessors (R5b.1 blocker (b)); the lists, counts, category and id are the
+    // record's (EeAStarContinentRecord, ee_astar continent.rs), the neighbours stay here
+    EEAIListView<U2DPoint<long> > GetShoreTiles() const
+    {
+        size_t theCount;
+        const EeHullPoint* theTiles = ee_astar_continent_shore(this, &theCount);
+        return EEAIListView<U2DPoint<long> >(reinterpret_cast<const U2DPoint<long>*>(theTiles), theCount);
+    }
+    void AddShoreTile(const U2DPoint<long>& inTile) { ee_astar_continent_add_shore_tile(this, U2DHullPointOf(inTile)); }
+    void ClearShoreTiles() { ee_astar_continent_clear_shore(this); }
+    EEAIListView<long> GetChokePoints() const
+    {
+        size_t theCount;
+        const long* theIndices = ee_astar_continent_choke_points(this, &theCount);
+        return EEAIListView<long>(theIndices, theCount);
+    }
+    long GetChokePointsAt(unsigned long inIndex) const { return this->GetChokePoints()[inIndex]; }
+    EEAIListView<unsigned short> GetIDs(EeAStarContinentList inList) const
+    {
+        size_t theCount;
+        const uint16_t* theIDs = ee_astar_continent_ids(this, inList, &theCount);
+        return EEAIListView<unsigned short>(theIDs, theCount);
+    }
+    EEAIListView<unsigned short> GetForestIDs() const { return this->GetIDs(EeAStarContinentList::Forests); }
+    EEAIListView<unsigned short> GetPathAreaIDs() const { return this->GetIDs(EeAStarContinentList::PathAreas); }
+    EEAIListView<unsigned short> GetHillIDs() const { return this->GetIDs(EeAStarContinentList::Hills); }
+    EEAIListView<unsigned short> GetIDsBC() const { return this->GetIDs(EeAStarContinentList::IdsBc); }
+    unsigned short GetIDsBCAt(unsigned long inIndex) const { return this->GetIDsBC()[inIndex]; }
+    EEAIListView<unsigned short> GetIDsCC() const { return this->GetIDs(EeAStarContinentList::IdsCc); }
+    EEAIListView<unsigned short> GetIDsDC() const { return this->GetIDs(EeAStarContinentList::IdsDc); }
+    unsigned short GetIDsDCAt(unsigned long inIndex) const { return this->GetIDsDC()[inIndex]; }
+    EEAIListView<unsigned short> GetIDsEC() const { return this->GetIDs(EeAStarContinentList::IdsEc); }
     const std::vector<EEAIContinent*>& GetNeighbors() const { return this->mNeighbors; }
     void AddNeighbor(EEAIContinent* inContinent) { this->mNeighbors.push_back(inContinent); }
     void ClearNeighbors() { this->mNeighbors.clear(); }
-    unsigned short GetCount(long inKind) const { return this->mCounts[inKind]; }
-    void SetCount(long inKind, unsigned short inCount) { this->mCounts[inKind] = inCount; }
-    unsigned char GetCategory() const { return this->mCategory; }  // inline (GetRandomContinent 0x422dc8) (provisional name)
-    void SetCategory(unsigned char inCategory) { this->mCategory = inCategory; }
-    unsigned short GetID() const { return this->mID; }
-    void SetID(unsigned short inID) { this->mID = inID; }
+    unsigned short GetCount(long inKind) const { return this->counts[inKind]; }
+    void SetCount(long inKind, unsigned short inCount) { this->counts[inKind] = inCount; }
+    unsigned char GetCategory() const { return this->category; }  // inline (GetRandomContinent 0x422dc8) (provisional name)
+    void SetCategory(unsigned char inCategory) { this->category = inCategory; }
+    unsigned short GetID() const { return this->id; }
+    void SetID(unsigned short inID) { this->id = inID; }
     // the lists in a saved game (EEAIContinentSave.cpp's writer and reader: Points, Longs, Shorts), in this order
     template <class W> void WriteLists(W& ioWriter) const
     {
-        ioWriter.Points(this->mShoreTiles);
-        ioWriter.Longs(this->mChokePoints);
-        ioWriter.Shorts(this->mForestIDs);
-        ioWriter.Shorts(this->mPathAreaIDs);
-        ioWriter.Shorts(this->mHillIDs);
-        ioWriter.Shorts(this->mIDsBC);
-        ioWriter.Shorts(this->mIDsCC);
-        ioWriter.Shorts(this->mIDsDC);
-        ioWriter.Shorts(this->mIDsEC);
+        ioWriter.Points(std::vector<U2DPoint<long> >(this->GetShoreTiles()));
+        ioWriter.Longs(std::vector<long>(this->GetChokePoints()));
+        for (int i = 0; i < 7; i++)
+            ioWriter.Shorts(std::vector<unsigned short>(this->GetIDs((EeAStarContinentList)i)));
     }
     template <class R> bool ReadLists(R& ioReader)
     {
-        return ioReader.Points(this->mShoreTiles) && ioReader.Longs(this->mChokePoints)
-            && ioReader.Shorts(this->mForestIDs) && ioReader.Shorts(this->mPathAreaIDs) && ioReader.Shorts(this->mHillIDs)
-            && ioReader.Shorts(this->mIDsBC) && ioReader.Shorts(this->mIDsCC) && ioReader.Shorts(this->mIDsDC)
-            && ioReader.Shorts(this->mIDsEC);
+        std::vector<U2DPoint<long> > theShore;
+        std::vector<long> theChokePoints;
+        std::vector<unsigned short> theIDs[7];
+        if (!ioReader.Points(theShore) || !ioReader.Longs(theChokePoints))
+            return false;
+        const uint16_t* theLists[7];
+        size_t theCounts[7];
+        for (int i = 0; i < 7; i++) {
+            if (!ioReader.Shorts(theIDs[i]))
+                return false;
+            theLists[i] = theIDs[i].empty() ? NULL : &theIDs[i][0];
+            theCounts[i] = theIDs[i].size();
+        }
+        ee_astar_continent_set_lists(this, U2DHullPoints(theShore), theShore.size(),
+                                     theChokePoints.empty() ? NULL : &theChokePoints[0], theChokePoints.size(), theLists,
+                                     theCounts);
+        return true;
     }
 
 private:
-    // +0x6c (0x208cc/0x1fa5c push_back tiles; 8-byte elements, sar 3). U2DPoint<long> (GetClosestPoints 0x1da61 is
-    // EEAIArea's 0xd8fe over it, the manager's 0x22ad9 takes its elements as EETileLocation)
-    std::vector<U2DPoint<long> > mShoreTiles;
-    std::vector<long> mChokePoints;         // +0x7c EEAIContinentManager::mChokePoints indices (push_back<long>)
-    std::vector<unsigned short> mForestIDs; // +0x8c
-    std::vector<unsigned short> mPathAreaIDs;  // +0x9c
-    std::vector<unsigned short> mHillIDs;   // +0xac
-    std::vector<unsigned short> mIDsBC;     // +0xbc (0x188e0, from the path-area unit's 0x17a4b, as are the next three)
-    std::vector<unsigned short> mIDsCC;     // +0xcc (0x1887f)
-    std::vector<unsigned short> mIDsDC;     // +0xdc (0x189a2)
-    std::vector<unsigned short> mIDsEC;     // +0xec (0x18941)
     std::vector<EEAIContinent*> mNeighbors; // +0xfc the adjacent continents (the chain machine's graph edges)
-    unsigned short mCounts[7];              // +0x10c (ctor body `for (i = 6; i >= 0; i--) mCounts[i] = 0;`, proven)
-    unsigned char mCategory;                // +0x11a kind (byte; the factory copies its +0x50 byte; compared with 1, 2, 4 at 0xabfda/0xac2b6)
-    unsigned short mID;                     // +0x11c the id (EEAIContinentManager::FindContinentID returns it)
+    // +0x6c..+0x11c: the shore tiles, the choke point indices (EEAIContinentManager::mChokePoints), the forest, path
+    // area and hill ids, the four region id lists (from the path-area unit's 0x17a4b), mCounts (ctor body
+    // `for (i = 6; i >= 0; i--) mCounts[i] = 0;`, proven), mCategory (byte; the factory copies its +0x50 byte) and
+    // mID (+0x11c, the mContinents index): EeAStarContinentRecord
 };
 
 #endif

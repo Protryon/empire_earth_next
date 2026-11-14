@@ -154,32 +154,8 @@ inline EEAIPathSector* EEAIContinentManager::GetPathSectorByID(unsigned short in
     return this->mPathSectors[inID];
 }
 
-// 0x26d84/0x26dca/0x26e13/0x26ea4 (COMDATs; declared in ee/EEAIContinent.h, out of line in this unit's range: inline in
-// the real header)
-inline void EEAIContinent::AddChokePoint(long inIndex)
-{
-    this->mChokePoints.push_back(inIndex);
-    std::sort(this->mChokePoints.begin(), this->mChokePoints.end());
-}
-
-inline void EEAIContinent::AddForestID(unsigned short inID)
-{
-    this->mForestIDs.push_back(inID);
-    std::sort(this->mForestIDs.begin(), this->mForestIDs.end());
-}
-
-inline void EEAIContinent::AddHillID(unsigned short inID)
-{
-    this->mHillIDs.push_back(inID);
-    std::sort(this->mHillIDs.begin(), this->mHillIDs.end());
-}
-
-inline void EEAIContinent::RemoveForestID(unsigned short inID)
-{
-    std::vector<unsigned short>::iterator theID = std::lower_bound(this->mForestIDs.begin(), this->mForestIDs.end(), inID);
-    if (theID != this->mForestIDs.end() && *theID == inID)
-        this->mForestIDs.erase(theID);
-}
+// 0x26d84/0x26dca/0x26e13/0x26ea4: EEAIContinent's AddChokePoint, AddForestID, AddHillID and RemoveForestID (ee_astar
+// continent.rs, inline in ee/EEAIContinent.h)
 
 // 0x273c9/0x273f1: GetPathSubSectorAt/GetPathSubSectorID(long, long) are inline in ee/EEAIContinentManager.h
 

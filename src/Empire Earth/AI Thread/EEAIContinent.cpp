@@ -48,27 +48,15 @@
 // FUNCTION: EXE 0x41d846
 // Creates an empty continent with no category, id 0 and all seven counts zero
 EEAIContinent::EEAIContinent()
-    : mCategory(false), mID(0)
 {
-    for (long i = 6; i >= 0; i--) {
-        this->mCounts[i] = 0;
-    }
+    ee_astar_continent_init(this);
 }
 
 // FUNCTION: EXE 0x41d94d
 // Destroys the continent (members only)
 EEAIContinent::~EEAIContinent()
 {
-}
-
-// FUNCTION: EXE 0x41d9e0
-// Adds a path area id to the continent's sorted id list unless it is already there
-void EEAIContinent::AddPathAreaID(unsigned short inID)
-{
-    if (!std::binary_search(this->mPathAreaIDs.begin(), this->mPathAreaIDs.end(), inID)) {
-        this->mPathAreaIDs.push_back(inID);
-        std::sort(this->mPathAreaIDs.begin(), this->mPathAreaIDs.end());
-    }
+    ee_astar_continent_free(this);
 }
 
 // Port: the closest points' loop and GetShoreInRegions' walk are Rust (ee_astar area_geom.rs, docs/RUST_PLAN.md
@@ -111,7 +99,7 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
     EeHullPoint theThis;
     EeHullPoint theOtherPoint;
     bool theResult;
-    if (this->mShoreTiles.size() != 0 && theOther && theOther->mShoreTiles.size() != 0)
+    if (this->GetShoreTiles().size() != 0 && theOther && theOther->GetShoreTiles().size() != 0)
         theResult = true;
     else
         theResult = false;
@@ -121,7 +109,7 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
     outOther.mY = 0;
     if (theOther) {
         if (theResult) {
-            ee_area_closest_points_to_hull(U2DHullPoints(this->mShoreTiles), this->mShoreTiles.size(),
+            ee_area_closest_points_to_hull(reinterpret_cast<const EeHullPoint*>(this->GetShoreTiles().begin()), this->GetShoreTiles().size(),
                                            reinterpret_cast<const EeHullPoint*>(theOther->GetHullPointData()), theOther->GetHullPointCount(),
                                            &theThis, &theOtherPoint);
             outThis = U2DHullPoint(theThis);
@@ -132,7 +120,7 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
         theResult = EEAIArea::GetClosestPoints(inOther, outThis, outOther);
     if (theScope.mOuter) {   // TEST ONLY: AREA 2
         EEGeomCaptureBegin(kGeomCaptureArea, 2);
-        EEGeomCapturePoints(this->mShoreTiles, false);
+        EEGeomCapturePoints(this->GetShoreTiles().begin(), this->GetShoreTiles().size(), false);
         EEGeomCaptureValue(theOther != NULL);
         EEGeomCaptureValue(inOther->GetNumTiles());
         EEGeomCapturePoints(inOther->GetHullPoints(), false);
@@ -149,8 +137,9 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
 EEAIPathArea* EEAIContinent::GetPathAreaAt(const U2DPoint<long>& inPoint)
 {
     EEAIPathArea* theResult = NULL;
-    for (long i = this->mPathAreaIDs.size() - 1; i >= 0; i--) {
-        EEAIPathArea* theArea = gContinentManager.GetPathArea(this->mPathAreaIDs[i]);
+    EEAIListView<unsigned short> theIDs = this->GetPathAreaIDs();
+    for (long i = theIDs.size() - 1; i >= 0; i--) {
+        EEAIPathArea* theArea = gContinentManager.GetPathArea(theIDs[i]);
         if (theArea && theArea->Contains(inPoint)) {
             theResult = theArea;
             break;
@@ -163,10 +152,11 @@ EEAIPathArea* EEAIContinent::GetPathAreaAt(const U2DPoint<long>& inPoint)
 // Appends the continent's shore tiles next to area inID (all of them for id 0)
 void EEAIContinent::GetShoreNextTo(unsigned short inID, std::vector<U2DPoint<long> >& outTiles)
 {
-    outTiles.reserve(this->mShoreTiles.size());
-    for (long i = this->mShoreTiles.size() - 1; i >= 0; i--) {
-        if (inID == 0 || gContinentManager.IsNextToArea(this->mShoreTiles[i].GetX(), this->mShoreTiles[i].GetY(), inID))
-            outTiles.push_back(this->mShoreTiles[i]);
+    EEAIListView<U2DPoint<long> > theShore = this->GetShoreTiles();
+    outTiles.reserve(theShore.size());
+    for (long i = theShore.size() - 1; i >= 0; i--) {
+        if (inID == 0 || gContinentManager.IsNextToArea(theShore[i].GetX(), theShore[i].GetY(), inID))
+            outTiles.push_back(theShore[i]);
     }
 }
 
@@ -188,12 +178,12 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
     theHost.map_width = (uint32_t)gMapWidth;
     theHost.map_height = (uint32_t)gMapHeight;
     outTiles.clear();
-    ee_area_shore_in_regions(U2DHullPoints(this->mShoreTiles), this->mShoreTiles.size(),
+    ee_area_shore_in_regions(reinterpret_cast<const EeHullPoint*>(this->GetShoreTiles().begin()), this->GetShoreTiles().size(),
                              inIDs.empty() ? NULL : &inIDs[0], inIDs.size(), inKind == kAIPathSpaceRegion, &theHost,
                              &outTiles, EEAIContinentPushTile);
     if (theScope.mOuter) {   // TEST ONLY: AREA 6
         EEGeomCaptureBegin(kGeomCaptureArea, 6);
-        EEGeomCapturePoints(this->mShoreTiles, false);
+        EEGeomCapturePoints(this->GetShoreTiles().begin(), this->GetShoreTiles().size(), false);
         EEGeomCaptureValue((long)inIDs.size());
         for (size_t i = 0; i < inIDs.size(); i++)
             EEGeomCaptureValue(inIDs[i]);
@@ -210,15 +200,6 @@ void EEAIContinent::GetShoreInRegion(unsigned short inID, std::vector<U2DPoint<l
     std::vector<unsigned short> theIDs;
     theIDs.push_back(inID);
     this->GetShoreInRegions(theIDs, outTiles, inKind);
-}
-
-// FUNCTION: EXE 0x41e4a1
-// Removes a path area id from the continent's sorted id list if present
-void EEAIContinent::RemovePathAreaID(unsigned short inID)
-{
-    std::vector<unsigned short>::iterator theID = std::lower_bound(this->mPathAreaIDs.begin(), this->mPathAreaIDs.end(), inID);
-    if (theID != this->mPathAreaIDs.end() && *theID == inID)
-        this->mPathAreaIDs.erase(theID);
 }
 
 // Compiler-generated for this unit (names in analysis/exe/names.txt):

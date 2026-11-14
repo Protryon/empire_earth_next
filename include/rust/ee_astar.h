@@ -10,6 +10,9 @@
 /// A tile of an area of its own (`0x36`).
 constexpr static const int32_t KIND_AREA = 54;
 
+/// The id lists, by `EeAStarContinentList`'s numbers.
+constexpr static const size_t EE_ASTAR_CONTINENT_LISTS = 7;
+
 /// A terrain grid's entry where the map has no tile (`RTSMap::GetTile` gives NULL).
 constexpr static const int32_t NO_TILE = -1;
 
@@ -46,6 +49,21 @@ constexpr static const int32_t REPAIR_SINGLE = 2;
 
 /// The tile gets a new area.
 constexpr static const int32_t REPAIR_NEW = 3;
+
+/// Which id list (`EEAIContinent`'s members in their order).
+enum class EeAStarContinentList {
+  /// `mForestIDs` (sorted, duplicates kept)
+  Forests = 0,
+  /// `mPathAreaIDs` (sorted, unique)
+  PathAreas = 1,
+  /// `mHillIDs` (sorted, duplicates kept)
+  Hills = 2,
+  /// `mIDsBC`..`mIDsEC` (unique, in the order added)
+  IdsBc = 3,
+  IdsCc = 4,
+  IdsDc = 5,
+  IdsEc = 6,
+};
 
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
@@ -110,6 +128,9 @@ enum class EeAStarGraphList {
 /// The hull's points (opaque to C++).
 struct EeAStarAreaHull;
 
+/// The lists (opaque to C++).
+struct EeAStarContinentLists;
+
 /// One graph storage (opaque to C++): `EEAIAStarGraphStorage` owns one.
 struct EeAStarGraphStorage;
 
@@ -156,6 +177,18 @@ struct EeAStarAreaRecord {
   unsigned long serial;
   /// `mAreaType`: the area kind (`kAIArea*`)
   long area_type;
+};
+
+/// `EEAIContinent`'s own members (`ee_astar_continent_init` / `ee_astar_continent_free` in its ctor and dtor).
+struct EeAStarContinentRecord {
+  /// the lists (`ee_astar_continent_*`)
+  EeAStarContinentLists *lists;
+  /// `mCounts`: the continental chain numbers by chain kind (`NumberContinentChains`)
+  uint16_t counts[7];
+  /// `mCategory`: land, water, space, cliff, map edge (`kContinentCategory*`)
+  uint8_t category;
+  /// `mID`: the index in the manager's `mContinents`
+  uint16_t id;
 };
 
 /// A node as the goals and the capture see it.
@@ -766,6 +799,82 @@ void ee_astar_area_update_hull(EeAStarAreaRecord *r, const EeSparseArray *tiles,
 /// # Safety
 /// `r` a live record, `tiles` a live set.
 bool ee_astar_area_remove_tile(EeAStarAreaRecord *r, EeSparseArray *tiles, int32_t x, int32_t y);
+
+/// The record of a new continent: no lists, counts zero, category 0, id 0 (the ctor 0x41d846).
+///
+/// # Safety
+/// `r` points to writable memory for a record.
+void ee_astar_continent_init(EeAStarContinentRecord *r);
+
+/// The record's lists freed (the dtor).
+///
+/// # Safety
+/// `r` a record from `ee_astar_continent_init`.
+void ee_astar_continent_free(EeAStarContinentRecord *r);
+
+/// The shore tiles and their count (NULL and 0 without any); valid until the shore next changes.
+///
+/// # Safety
+/// `r` a live record, `count` valid.
+const EeHullPoint *ee_astar_continent_shore(const EeAStarContinentRecord *r, size_t *count);
+
+/// The choke point indices and their count; valid until they next change.
+///
+/// # Safety
+/// `r` a live record, `count` valid.
+const long *ee_astar_continent_choke_points(const EeAStarContinentRecord *r, size_t *count);
+
+/// One id list and its count; valid until that list next changes.
+///
+/// # Safety
+/// `r` a live record, `count` valid.
+const uint16_t *ee_astar_continent_ids(const EeAStarContinentRecord *r,
+                                       EeAStarContinentList list,
+                                       size_t *count);
+
+/// A shore tile appended.
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_continent_add_shore_tile(EeAStarContinentRecord *r, EeHullPoint tile);
+
+/// The shore emptied.
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_continent_clear_shore(EeAStarContinentRecord *r);
+
+/// `AddChokePoint(index)`.
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_continent_add_choke_point(EeAStarContinentRecord *r, long index);
+
+/// `AddForestID`, `AddPathAreaID`, `AddHillID`, `AddIDBC`..`AddIDEC` by list.
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_continent_add_id(EeAStarContinentRecord *r, EeAStarContinentList list, uint16_t id);
+
+/// `RemovePathAreaID` / `RemoveForestID` by list.
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_continent_remove_id(EeAStarContinentRecord *r,
+                                  EeAStarContinentList list,
+                                  uint16_t id);
+
+/// The lists of a saved game: the shore, the choke points and the seven id lists (`ids[i]` holds `id_counts[i]`).
+///
+/// # Safety
+/// `r` a live record; each pointer holds its count (NULL when 0).
+void ee_astar_continent_set_lists(EeAStarContinentRecord *r,
+                                  const EeHullPoint *shore,
+                                  size_t shore_count,
+                                  const long *choke_points,
+                                  size_t choke_count,
+                                  const uint16_t *const *ids,
+                                  const size_t *id_counts);
 
 /// The storage as bytes (`storage_save`): writes them to `out` when `capacity` holds them; returns their length.
 ///
