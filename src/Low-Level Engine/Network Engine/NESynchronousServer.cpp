@@ -41,7 +41,7 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
     theArgs.current_physics_tick = (uint32_t)inCurrentPhysicsTick;
     theArgs.allow_new_connections = inAllowNewConnections;
     this->mRust = ee_net_sv_new(this, NESynchronousServer::Host, NESynchronousServer::MessageManagerHost,
-                                NESynchronousServer::QueueHost, &theArgs);
+                                NESynchronousServer::QueueHost, &theArgs, this->mComms);
 }
 
 // FUNCTION: LLE 0x10047c65
@@ -290,15 +290,6 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
         theResponse->SetOriginatingSlot(kSlotServer);
         return reinterpret_cast<ptrdiff_t>(theResponse);
     }
-    case EeNetMmOp::LastTick:
-        return theServer->mLastTickReceived;
-    case EeNetMmOp::SetLastTick:
-        theServer->mLastTickReceived = (long)a;
-        return 0;
-    case EeNetMmOp::CtsProcessed:
-        return (uint32_t)theServer->mNumberOfCTsProcessedInPhysics;
-    case EeNetMmOp::AvgPhysics:
-        return (uint32_t)theServer->GetAveragePhysicsUpdateTime();
     case EeNetMmOp::ProcessSystemMessage:
         theServer->ProcessSystemMessage(theMessage);
         return 0;
@@ -380,22 +371,6 @@ ptrdiff_t NESynchronousServer::Host(void* inServer, EeNetSvOp inOp, size_t a, si
         return 0;
     case EeNetSvOp::SimMode:
         return gPlatSimMode;
-    case EeNetSvOp::BaseGet:
-        switch ((EeNetSvBase)a) {
-        case EeNetSvBase::NumHumanPlayers:
-            return theServer->mNumHumanPlayers;
-        case EeNetSvBase::IsMultiplayerSession:
-            return theServer->mIsMultiplayerSession;
-        case EeNetSvBase::IsGamePaused:
-            return theServer->mIsGamePaused;
-        }
-        return 0;
-    case EeNetSvOp::BaseSet:
-        if ((EeNetSvBase)a == EeNetSvBase::NumHumanPlayers)
-            theServer->mNumHumanPlayers = (unsigned char)b;
-        else if ((EeNetSvBase)a == EeNetSvBase::IsGamePaused)
-            theServer->SetIsGamePaused(b != 0);
-        return 0;
     case EeNetSvOp::ProtocolCount:
         return (ptrdiff_t)NEProtocol::GetCount();
     case EeNetSvOp::ProtocolGet:

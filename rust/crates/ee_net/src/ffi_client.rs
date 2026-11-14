@@ -6,6 +6,7 @@ use std::ffi::c_void;
 
 use crate::client::*;
 use crate::ffi::{EeNetQHostFn, QFfiHost};
+use crate::ffi_comms::{comms_of, EeNetComms};
 use crate::lagloss::LagLoss;
 use crate::qhost::{Ev, FileH, Msg, QHost, Thr};
 use crate::recplay::RecPlay;
@@ -19,10 +20,6 @@ pub enum EeNetClOp {
     WaitAny = 0,
     /// a thread: SetPriority(PLAT_PRIORITY_TIME_CRITICAL)
     ThreadPriority = 1,
-    /// a field (EeNetClBase) -> the base class's field
-    BaseGet = 2,
-    /// a field, a value: the base class's field set
-    BaseSet = 3,
     /// -> NEProtocol::GetCount()
     ProtocolCount = 4,
     /// an NEProtocol** -> NEProtocol::GetProtocol(0, *out)
@@ -101,22 +98,6 @@ pub enum EeNetClOp {
     HandleConnectionTimeoutWarning = 40,
     /// a message, a player -> the virtual ProcessLocalUserInput
     ProcessLocalUserInput = 41,
-}
-
-/// The base class's (`NESynchronousCommunications`) fields this class read and wrote
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeNetClBase {
-    /// `mLastTickReceived` (a `long`: -2 before the connection, -1 "none")
-    LastTickReceived = 0,
-    /// `mNumberOfCTsProcessedInPhysics`
-    CtsProcessed = 1,
-    /// `GetAveragePhysicsUpdateTime()`
-    AveragePhysicsUpdateTime = 2,
-    /// `mIsGamePaused` (set through `SetIsGamePaused`)
-    IsGamePaused = 3,
-    /// `mIsMultiplayerSession`
-    IsMultiplayerSession = 4,
 }
 
 /// A message's virtual flags
@@ -285,12 +266,6 @@ impl ClientHost for ClFfiHost {
     fn thread_priority(&self, t: Thr) {
         self.call(EeNetClOp::ThreadPriority, t, 0, 0, 0);
     }
-    fn base_get(&self, f: BaseField) -> u32 {
-        self.call(EeNetClOp::BaseGet, f as usize, 0, 0, 0) as u32
-    }
-    fn base_set(&self, f: BaseField, value: u32) {
-        self.call(EeNetClOp::BaseSet, f as usize, value as usize, 0, 0);
-    }
     fn protocol_count(&self) -> u32 {
         self.call(EeNetClOp::ProtocolCount, 0, 0, 0, 0) as u32
     }
@@ -423,11 +398,17 @@ fn cl<'a>(c: *const EeNetClient) -> &'a Client<ClFfiHost> {
 /// The constructor (protocol 0, the events, the lag simulator, the recorder).
 ///
 /// # Safety
-/// `host` and `qhost` answer every op for `ctx` until `ee_net_cl_free`.
+/// `host` and `qhost` answer every op for `ctx` until `ee_net_cl_free`; `comms` from `ee_net_comms_new` (the C++
+/// base class's).
 #[no_mangle]
-pub unsafe extern "C" fn ee_net_cl_new(ctx: *mut c_void, host: EeNetClHostFn, qhost: EeNetQHostFn) -> *mut EeNetClient {
+pub unsafe extern "C" fn ee_net_cl_new(
+    ctx: *mut c_void,
+    host: EeNetClHostFn,
+    qhost: EeNetQHostFn,
+    comms: *const EeNetComms,
+) -> *mut EeNetClient {
     let h = ClFfiHost { ctx, f: host, q: QFfiHost { ctx, f: qhost } };
-    Box::into_raw(Box::new(EeNetClient(Client::new(h))))
+    Box::into_raw(Box::new(EeNetClient(Client::new(h, comms_of(comms)))))
 }
 
 /// The destructor's work, then the object freed.

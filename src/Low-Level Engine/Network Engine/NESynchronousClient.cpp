@@ -14,7 +14,7 @@
 // FUNCTION: LLE 0x1004607d
 NESynchronousClient::NESynchronousClient()
 {
-    this->mRust = ee_net_cl_new(this, NESynchronousClient::Host, NESynchronousClient::QueueHost);
+    this->mRust = ee_net_cl_new(this, NESynchronousClient::Host, NESynchronousClient::QueueHost, this->mComms);
 }
 
 // FUNCTION: LLE 0x10046401
@@ -167,26 +167,6 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
         return TSEvent::WaitAny(reinterpret_cast<TSEvent* const*>(a), (unsigned long)b, (unsigned long)c);
     case EeNetClOp::ThreadPriority:
         reinterpret_cast<TSThread*>(a)->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
-        return 0;
-    case EeNetClOp::BaseGet:
-        switch ((EeNetClBase)a) {
-        case EeNetClBase::LastTickReceived:
-            return (ptrdiff_t)(uint32_t)theClient->mLastTickReceived;
-        case EeNetClBase::CtsProcessed:
-            return (ptrdiff_t)(uint32_t)theClient->mNumberOfCTsProcessedInPhysics;
-        case EeNetClBase::AveragePhysicsUpdateTime:
-            return (ptrdiff_t)(uint32_t)theClient->GetAveragePhysicsUpdateTime();
-        case EeNetClBase::IsGamePaused:
-            return theClient->mIsGamePaused;
-        case EeNetClBase::IsMultiplayerSession:
-            return theClient->mIsMultiplayerSession;
-        }
-        return 0;
-    case EeNetClOp::BaseSet:
-        if ((EeNetClBase)a == EeNetClBase::LastTickReceived)
-            theClient->mLastTickReceived = (long)(int32_t)(uint32_t)b;
-        else if ((EeNetClBase)a == EeNetClBase::IsGamePaused)
-            theClient->SetIsGamePaused(b != 0);
         return 0;
     case EeNetClOp::ProtocolCount:
         return (ptrdiff_t)NEProtocol::GetCount();
