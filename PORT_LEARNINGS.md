@@ -18318,6 +18318,20 @@ at the branch's start (2cac466f, rust merged) -> 19,834 (-304; git over `src` an
   the predefined civilization choice), `CancelGame`'s lost-server path (multiplayer), the airport's timers and the
   market's cloak, `Pause`/`ResumeInformation` and `HideMessages` (scenario dialogs), the behaviour and formation
   buttons' faces, the hot keys of the command and research buttons.
+- **Gates**: the four commits were built and gated together (one tree, then split into commits with the generated
+  header in the first; the intermediate trees were not rebuilt one by one): the build `--sim` 0/0 (EE-AOC and
+  EE-SIM), the editor gate PASS (2686 lines), the oracle identical on seeds 2-3 (twice: before and after the main
+  group), the Rust gate PASS (its first runs failed on clippy's single-range array and rustfmt's module order,
+  fixed before the commits). At the end (rust unchanged since the round's merge, 2cac466f; `rust_build.py header`
+  and `rust_includes.py` changed nothing): the build `--sim` 0/0, the test profile 0/0, the editor gate PASS, the
+  oracle identical on seeds 2-7, the Rust gate PASS. Tours (`fixture_game.py`, the harness lock held, the test
+  profile): `--exercise tour --play-seconds 60` `RESULT PASS tour`, `gx_errors` {}; `--exercise random-game
+  --play-seconds 60 --orders --box-select` `RESULT PASS random-game`, `BOX SELECT PASS` (4 steps, the add grew the
+  group), `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped: no button, no unit),
+  `gx_errors` {}. The `box-selected` frame shows the portrait (a female citizen, 65/65), the status box, the
+  citizen's command buttons and the icon bar's four citizens: the main group's `Refresh`, `SetUnit` and `Update`,
+  the main form's `Open`, `Activate`, `DrawPolygons` and `UpdateBackgroundMedia` ran in Rust there. No simulation
+  code changed: no capture profile ran.
 - **Left**: `ShowCommands` (its reads), the main form's small members (`SetStatusText`, `DisplayChat`,
   `IsInGameView`, `SetErrorString`, `Load`/`Save`, `CreateGroup`) and its two hosts (`HostOp` 560 lines, the
   cursor's 140); the UI manager's factories (C++ `new`s of C++ classes: moving their switch to Rust adds lines until
