@@ -5066,6 +5066,54 @@ before WW1, and the late starts begin after it.
 
 **Stage 2 is complete.** Everything of the C++ classic's decision code is ported or recorded in ORIGIN as a deviation
 or not ported. Stage 3 is next: the benches beyond Small land, with the late-start economy first (§8.63).
+### 8.78 Stage 3: script errors on large maps, the late-start economy, the ICBM (2026-11-13, EE-SIM)
+
+**The old "budget exceeded" errors.** They came from older benches. Six Large games with 4 players (2 ports, 2 C++)
+and 120 minutes were run on current code: 2 without cheats and 4 with them. They gave no script errors.
+
+**The late-start economy** (WW2 start with the cheats; at 10 minutes the port had 22 citizens against 33). The gap
+has three parts:
+- **The second town centre came late.** Only the capitol and town centres train citizens; settlements do not. At 5
+  minutes both players turn a settlement into a town centre with the garrison cheat (ChooseGarrison).
+  - The C++'s idle citizens are at hand, so its centre stands before the next batch of 10 citizens is queued, and
+    the batch is shared (a batch every ~142 s).
+  - The port seldom has idle citizens. Its garrison waited, and its next batch went to the capitol alone, so it got a
+    batch only every ~283 s until minute 10.
+  - Two new rules:
+    - with the garrison cheat and no idle citizen, the nearest gatherer goes in, so the rest is topped up and the
+      settlement turns at once;
+    - a citizen batch waits up to 30 s while a settlement is being filled, so both centres share it.
+  - The port's batches now come at the C++'s times: 30, 313, 455, 597 s.
+- **Carrier fighters without a carrier.** The port filled CheckNaval's carrier fighters (15 Corsairs) at its
+  airports. The C++'s request waits for a carrier that seldom comes. Those fighters cannot hit the ground, yet they
+  counted as army, so KeepStandingArmy raised no soldiers. DEVIATION: the carrier fighters are kept only with an own
+  carrier.
+- **Not closed: the losses and the army.** The C++ raids from minute 3. The port loses 6 citizens by 10 minutes
+  against the C++'s 1, its army is 7 against 21, and later its citizens stay at 33-37 against the C++'s ~50. That is
+  the next item: the military side of late starts (KeepStandingArmy's count, the defence of the gatherers).
+
+| WW2 + cheats, 32 seeds, 45 min | citizens/army 5 / 10 / 20 / 30 min | won-lost |
+|---|---|---|
+| C++ (before) | 15.2/4.7 / 34.9/21.4 / 51.1/24.8 / 47.4/27.4 | 13-1, 18 close |
+| port before | 14.0/6.0 / 21.8/8.8 / 26.6/10.9 / 31.0/11.3 | |
+| C++ (after) | 15.1/4.7 / 34.5/20.9 / 49.2/22.7 / 46.5/27.2 | 11-0, 21 close |
+| port after | 14.2/6.1 / 25.1/7.2 / 32.5/10.2 / 33.3/11.3 | |
+
+**The ICBM** had never fired, for two reasons:
+- **It is a missile.** No script list holds it, so the port never saw it and asked for a new one every two minutes
+  (21 in one game). The port now reads its missile bases' cargo and gives the loaded base the attack.
+- **The attacks went for the sims' idle human.** In EE-SIM the attack choice prefers humans, and the sims keep an
+  idle human (player 1) with nothing to hit. This holds for the C++ too, and every bench has it. It is noted here
+  for the bench design.
+
+A Digital Age start with cheats and a scratch copy that left the human out of the choice (not committed) confirmed
+the fire. Seed 3 queued a missile base at once, fired at minute 22 at the C++'s largest building, and killed 10
+citizens. The target list now takes remembered buildings too, which ai.attack accepts. DEVIATION: the C++ needs the
+tile seen now.
+
+On land (balanced, 32 seeds, 90 minutes) the C++ won 15, the port 11, with 6 close (17-10 with 5 close in §8.77). Determinism (seeds 2 and 5, --repeat 2) is identical on land and at the WW2 start.
+
+0 script errors. Next: the late-start army, then the wall count (§8.70).
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
