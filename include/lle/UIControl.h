@@ -175,8 +175,8 @@ protected:
     void SetBgRectangle(const GERectangle& inRectangle);
     // port: the display mode stored without SetDisplayMode's dirtying (two game controls' hides)
     void StoreDisplayMode(unsigned long inMode) { this->mDisplayMode = inMode; }
-
-    unsigned long mDisplayMode;             // +0x08 (1 at construction)
+private:
+    unsigned long mDisplayMode;            // +0x08 (1 at construction)
     std::map<unsigned long, UIEvent*> mTriggerEvents;   // +0x0c event id -> event (referenced)
     GERectangle mRectangle;                 // +0x18
     GERectangle mCopiedDrawRectangle;       // +0x28 mRectangle as of the last CopyData
@@ -203,7 +203,8 @@ protected:
     bool mAlwaysDirty;                      // +0x9e
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
-    static ISEntity* sSpaceKey;             // 0x1012e2f4
+protected:
+    static ISEntity* sSpaceKey;            // 0x1012e2f4
     static ISEntity* sAltKey;
     static ISEntity* sEnterKey;
     static ISEntity* sControlKey;

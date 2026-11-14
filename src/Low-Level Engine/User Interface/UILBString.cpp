@@ -107,7 +107,7 @@ long UILBString::DrawTextA()
     unsigned long theLineHeight = this->GetLineHeight();
     unsigned long i = 0;
     this->DrawScrollBarText();
-    this->mDrawCount--;
+    UIControl::DrawTextA();
     const GERectangle& theCtr = this->GetCopyTextRectangle();
     EeUiRect theCopy = {theCtr.mBottom, theCtr.mLeft, theCtr.mRight, theCtr.mTop};
     for (; i < this->GetDrawCount(); i++) {
@@ -116,7 +116,7 @@ long UILBString::DrawTextA()
         theRectangle = GERectangle(theRow.left, theRow.top, theRow.right, theRow.bottom);
         this->mCopiedText->SetLocation(GE2DPoint(theRectangle.mLeft, theRectangle.mTop));
         this->mCopiedText->SetText(this->mCopyLineArray[i]);
-        theResult = this->mForm->DrawClippedText(theRectangle, this->mCopiedText, this);
+        theResult = this->GetForm()->DrawClippedText(theRectangle, this->mCopiedText, this);
     }
     return theResult;
 }

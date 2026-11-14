@@ -96,9 +96,9 @@ struct UIEditBoxRust {
         case EeUiOp::PollStop: thePoll->Stop(); break;
         case EeUiOp::TextSetBytes: theText->SetText(UWideString(reinterpret_cast<const char*>(b))); break;
         case EeUiOp::TextFontHeight: return theText->GetFont()->GetHeight();
-        case EeUiOp::DrawCountDecrement: e->mDrawCount--; break;
+        case EeUiOp::DrawCountDecrement: e->UIControl::DrawTextA(); break;
         case EeUiOp::CreateScrollBar:
-            return (intptr_t) new UIScrollBar(e->mId, GE2DPoint(f[0], f[1]), f[2], 1, e->mForm, e->mIndex,
+            return (intptr_t) new UIScrollBar(e->GetId(), GE2DPoint(f[0], f[1]), f[2], 1, e->GetForm(), e->GetIndex(),
                                               e->GetBorderThickness());
         case EeUiOp::BarSetRange: theBar->SetRange(0, (unsigned long)b); break;
         case EeUiOp::BarSetPageSize: theBar->SetPageSize((unsigned long)b); break;
@@ -113,7 +113,7 @@ struct UIEditBoxRust {
             free(sClipboard);
             sClipboard = PlatClipboardGetText();
             return (intptr_t)sClipboard;
-        case EeUiOp::TranslatedKey: e->mForm->GetManager()->UpdateTranslatedKey(reinterpret_cast<const char*>(a), 1); break;
+        case EeUiOp::TranslatedKey: e->GetForm()->GetManager()->UpdateTranslatedKey(reinterpret_cast<const char*>(a), 1); break;
         case EeUiOp::TextInputCancel:
             // ImmNotifyIME(NI_COMPOSITIONSTR, CPS_CANCEL)
             PlatTextInputCancel(e->GetRasterizer()->GetWindow(e->GetScreenIndex())->GetOSRepresentation());
@@ -121,8 +121,8 @@ struct UIEditBoxRust {
         case EeUiOp::BaseReleaseKeyboard: e->UIControl::ReleaseCapturedKeyboard(); break;
         case EeUiOp::BaseMouseDoublePressed: return e->UIControl::MouseLButtonDoublePressed();
         case EeUiOp::FormMouseLocation:
-            f[0] = e->mForm->GetMouseLocation().GetX();
-            f[1] = e->mForm->GetMouseLocation().GetY();
+            f[0] = e->GetForm()->GetMouseLocation().GetX();
+            f[1] = e->GetForm()->GetMouseLocation().GetY();
             break;
         case EeUiOp::LineCreate:
             if (a == 1)

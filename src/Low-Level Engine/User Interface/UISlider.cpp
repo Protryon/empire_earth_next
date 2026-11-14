@@ -38,7 +38,7 @@ struct UISliderHost {
     static intptr_t Op(void* inSlider, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
     {
         UISlider* s = static_cast<UISlider*>(inSlider);
-        UIManager* theManager = s->mForm->GetManager();
+        UIManager* theManager = s->GetForm()->GetManager();
         intptr_t r = 0;
         if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Media(s, inOp, a, b, f, &r))
             return r;
@@ -74,7 +74,7 @@ UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned 
                    unsigned long inIndex, unsigned long inBorderThickness)
     : UIControl(kControlTypeSlider, inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
-    this->mBorderType = 0;
+    this->SetBorderType(0);
     this->mRust = ee_ui_slider_new(this, UISliderHost::Op, inSliderStyle);
 }
 
