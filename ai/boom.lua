@@ -632,6 +632,32 @@ function M.step(view, memory)
     if soldiers_wanted > plan.soldiers_max then
         soldiers_wanted = plan.soldiers_max
     end
+    -- (BO.OPT.army_parity, the owner's parity: the Lua classic's army stood at 46 at 75 minutes and 72 at 90 to boom's
+    -- 19-21, and its attacks from 75 minutes finished boom) from the Stone Age, the army follows the largest enemy army
+    -- seen at once in the last ARMY_PARITY_MS: ARMY_PARITY_PCT percent of it, up to ARMY_PARITY_MOST, past soldiers_max
+    if ECON.order and BO.OPT.army_parity and age >= 2 then
+        memory.army_seen = memory.army_seen or {}
+        local big = 0
+        for _, e in ipairs(view.enemies) do
+            local k = tostring(e.player)
+            local a = memory.army_seen[k]
+            if e.last_seen > 0 and (a == nil or e.seen_army >= a.n or view.time - a.t > BO.ARMY_PARITY_MS) then
+                memory.army_seen[k] = {n = e.seen_army, t = view.time}
+                a = memory.army_seen[k]
+            end
+            if a ~= nil and view.time - a.t <= BO.ARMY_PARITY_MS then
+                big = math.max(big, a.n)
+            end
+        end
+        local want = math.min(big * BO.ARMY_PARITY_PCT // 100, BO.ARMY_PARITY_MOST)
+        if want > soldiers_wanted then
+            if (memory.army_parity_said or 0) + 10 <= want then
+                memory.army_parity_said = want
+                print(string.format("parity army want=%d seen=%d army=%d", want, big, view.army_count))
+            end
+            soldiers_wanted = want
+        end
+    end
     -- (plan.soldier_pace, off; the owner's Stone Age: 3 soldiers at +2 min, 6 at +5.5, 9 at +8.5 - boom-econ found the 8
     -- trained at once took a third of the Stone food) in the Stone Age, one soldier per soldier_pace ms after the advance,
     -- all at once while enemy soldiers are in sight or under a threat
