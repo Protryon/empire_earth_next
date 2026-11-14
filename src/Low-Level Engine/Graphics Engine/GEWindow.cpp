@@ -34,14 +34,6 @@ GEWindow::~GEWindow()
         PlatWindowDestroy(this->mWindow);
 }
 
-void* GEWindow::GetNativeHandle() const
-{
-    PlatNativeWindow theNative = {};
-    if (this->mWindow == NULL || !PlatWindowGetNative(this->mWindow, &theNative))
-        return NULL;
-    return theNative.mWindow;
-}
-
 // FUNCTION: LLE 0x100380f3
 // Returns the screen position of the window's client area
 const GE2DPoint& GEWindow::GetClientOrigin()

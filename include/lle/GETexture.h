@@ -65,7 +65,6 @@ public:
     const GETStage* GetStage() const { return (const GETStage*)ee_ge_tex_stage(this->mRust); }
     GESurface* GetSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::Surface); }
 
-    long Demote();
     void Dereference();
     unsigned long GetAllocatedSize();
     long Lock(unsigned char*& outMemory, unsigned long& outBytesPerRow);
@@ -79,7 +78,6 @@ public:
     void SetStageMipFilterMode(unsigned long inMode, unsigned long inStage);
     void SetStageMipMapBias(float inBias, unsigned long inStage);
     void SetStageTextureAddressingMode(unsigned long inMode, unsigned long inStage);
-    void SetStageTexture(GETexture* inTexture, unsigned long inStage);
     long SetSurface(GESurface* inSurface);
     long Unlock();
 protected:

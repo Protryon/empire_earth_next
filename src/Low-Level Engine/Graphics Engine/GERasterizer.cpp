@@ -95,14 +95,6 @@ long GERasterizer::AddValidScreen(GEScreen* inScreen)
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10023af3
-// Creates a font bitmap of the font for the given screen (the bitmap registers itself); always succeeds
-long GERasterizer::CreateFontBitmap(GEFont* inFont, unsigned long inScreen)
-{
-    new GEFontBitmap(this, inFont, inScreen);
-    return kErrorOK;
-}
-
 // FUNCTION: LLE 0x10023b18
 // Deactivates the rasterizer: deletes every screen's render state and clears the active rasterizer
 long GERasterizer::Deactivate()

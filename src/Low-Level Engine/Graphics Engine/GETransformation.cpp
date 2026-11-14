@@ -207,15 +207,6 @@ void GETransformation::MakeInverse(GETransformation& outInverse) const
     ee_ge_t_make_inverse(GERust(*this), GERust(outInverse));
 }
 
-// NEAR: only the sqrt argument differs (the original keeps x and y on the FPU stack); tried float/double sums,
-// accessor/member operands in both orders, UMFastMath::Sqrt
-// FUNCTION: LLE 0x10034f87
-// Builds a camera transformation at the eye looking toward the target (special case for straight up or down)
-void GETransformation::MakeLookAtTransform(GE3DPoint& inEye, GE3DPoint& inTarget)
-{
-    ee_ge_t_make_look_at(GERust(*this), GERust(inEye), GERust(inTarget));
-}
-
 // FUNCTION: LLE 0x100350e5
 // Rescales the three rotation columns to unit length
 void GETransformation::Normalize()
@@ -325,47 +316,6 @@ void GETransformation::SetScale(float inX, float inY, float inZ)
 bool GETransformation::Verify() const
 {
     return true;
-}
-
-// FUNCTION: LLE 0x100358a7
-// Resets the rotation to identity, keeping the position
-void GETransformation::ZeroOrientation()
-{
-    this->mMatrix[0][0] = 1.0f;
-    this->mMatrix[0][1] = 0.0f;
-    this->mMatrix[0][2] = 0.0f;
-    this->mMatrix[1][0] = 0.0f;
-    this->mMatrix[1][1] = 1.0f;
-    this->mMatrix[1][2] = 0.0f;
-    this->mMatrix[2][0] = 0.0f;
-    this->mMatrix[2][1] = 0.0f;
-    this->mMatrix[2][2] = 1.0f;
-    this->mMatrix[3][0] = 0.0f;
-    this->mMatrix[3][1] = 0.0f;
-    this->mMatrix[3][2] = 0.0f;
-    this->mMatrix[3][3] = 1.0f;
-}
-
-// FUNCTION: LLE 0x100358e8
-// Writes a copy with identity rotation and this transformation's position into outTransformation
-void GETransformation::ZeroOrientation(GETransformation& outTransformation) const
-{
-    outTransformation.mMatrix[0][0] = 1.0f;
-    outTransformation.mMatrix[0][1] = 0.0f;
-    outTransformation.mMatrix[0][2] = 0.0f;
-    outTransformation.mMatrix[0][3] = this->mMatrix[0][3];
-    outTransformation.mMatrix[1][0] = 0.0f;
-    outTransformation.mMatrix[1][1] = 1.0f;
-    outTransformation.mMatrix[1][2] = 0.0f;
-    outTransformation.mMatrix[1][3] = this->mMatrix[1][3];
-    outTransformation.mMatrix[2][0] = 0.0f;
-    outTransformation.mMatrix[2][1] = 0.0f;
-    outTransformation.mMatrix[2][2] = 1.0f;
-    outTransformation.mMatrix[2][3] = this->mMatrix[2][3];
-    outTransformation.mMatrix[3][0] = 0.0f;
-    outTransformation.mMatrix[3][1] = 0.0f;
-    outTransformation.mMatrix[3][2] = 0.0f;
-    outTransformation.mMatrix[3][3] = 1.0f;
 }
 
 // ---- Exported members with no address of their own (ICF-folded: GetChecksum's `return 0` 0x32e79, Dump's empty

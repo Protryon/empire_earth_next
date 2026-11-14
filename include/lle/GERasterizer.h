@@ -217,36 +217,20 @@ public:
     virtual long UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen) = 0;
 
     long Activate();
-    long CreateFontBitmap(GEFont* inFont, unsigned long inScreen);
     long Draw(GELine* inLine, unsigned long inScreen) { return this->Draw(inLine, 1, inScreen); }
     long Draw(GEPoint* inPoint, unsigned long inScreen) { return this->Draw(inPoint, 1, inScreen); }
     static GERasterizer* GetActiveRasterizer() { return GERasterizer::sActiveRasterizer; }
     unsigned long GetAlphaTesting(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mAlphaTesting; }
-    unsigned long GetAlphaTestingCompareState(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mAlphaTestingCompareState; }
     float GetAlphaTestingRefValue(unsigned long inScreen) const
         { return this->mScreenStates[inScreen]->mAlphaTestingRefValue; }
     const GEColor& GetAmbientColor() const { return this->mAmbientColor; }
     float GetAmbientIntensity() const { return this->mAmbientIntensity; }
-    unsigned long GetAntiAliasing(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mAntiAliasing; }
     void GetBlending(unsigned long& outSource, unsigned long& outDestination, unsigned long inScreen) const
     {
         outSource = this->mScreenStates[inScreen]->mBlendSource;
         outDestination = this->mScreenStates[inScreen]->mBlendDestination;
     }
-    unsigned long GetColorKeying(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mColorKeying; }
-    const GEColor& GetComputedAmbientColor() const { return this->mComputedAmbientColor; }
     unsigned long GetCulling() const { return this->mCulling; }
-    unsigned long GetDithering(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mDithering; }
-    unsigned long GetDrawStyle(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mDrawStyle; }
-    float GetDrawnPolyAreaPerFrame(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mDrawnPolyAreaPerFrame; }
-    float GetDrawnPolyAreaPerSecond(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mDrawnPolyAreaPerSecond; }
-    float GetDrawnPolysPerFrame(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mDrawnPolysPerFrame; }
-    float GetDrawnPolysPerSecond(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mDrawnPolysPerSecond; }
     unsigned long GetFog(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mFogState; }
     void GetFogAttributes(GERFogAttributes& outAttributes, unsigned long inScreen) const
     {
@@ -261,7 +245,6 @@ public:
     bool GetIsActivated() const { return this->mIsActivated; }
     bool GetIsScreenActivated(unsigned long inScreen) const
         { return this->mScreenStates[inScreen]->mIsScreenActivated; }
-    bool GetIsPolyAreaProfiling() { return this->mIsPolyAreaProfiling; }
     unsigned long GetLighting(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mLighting; }
     const UString& GetName() const { return this->mName; }
     float GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation, float inScale,
@@ -274,23 +257,14 @@ public:
     GEScreen* GetScreen(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mScreen; }
     unsigned long GetScreenCount() const { return this->mScreenStates.size(); }
     unsigned long GetScreenID() const { return this->mScreenID; }
-    float GetScenePolysPerFrame(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mScenePolysPerFrame; }
-    float GetScenePolysPerSecond(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mScenePolysPerSecond; }
     GESurface* GetSecondarySurface(unsigned long inScreen) const
         { return this->mScreenStates[inScreen]->mSecondarySurface; }
-    unsigned long GetShading(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mShading; }
-    unsigned long GetSpecular(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mSpecular; }
     GETextureManager* GetTextureManager(unsigned long inScreen) const
         { return this->mScreenStates[inScreen]->mScreen->GetTextureManager(); }
-    float GetTotalTextureChangesPerFrame(unsigned long inScreen) const
-        { return this->mScreenStates[inScreen]->mTotalTextureChangesPerFrame; }
     GEViewport& GetViewport(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mViewport; }
     GEWindow* GetWindow(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mWindow; }
     unsigned long GetZBuffer(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mZBuffer; }
     unsigned long GetZCompare(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mZCompare; }
-    void SetPolyAreaProfiling(bool inState) { this->mIsPolyAreaProfiling = inState; }
     void SetScreenID(unsigned long inID) { this->mScreenID = inID; }
     void SetWaterRippleEffect(float inWaterRipple0, float inWaterRipple1, float inWaterRipple2)
     {
@@ -300,10 +274,6 @@ public:
     }
 protected:
     GERasterizer(const UString& inName);
-    void AddToDrawnPolyArea(float inArea, unsigned long inScreen)
-        { this->mScreenStates[inScreen]->mDrawnPolyArea += inArea; }
-    void AddToDrawnPolyCount(unsigned long inCount, unsigned long inScreen)
-        { this->mScreenStates[inScreen]->mDrawnPolyCount += inCount; }
     void IsOrthographicModelVisible(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation,
                                     bool& outVisible, bool& outClipped);
     void IsPerspectiveModelVisible(GEModel* inModel, float inScale, GEViewport* inViewport,

@@ -152,11 +152,6 @@ unsigned long GEModelManager::GetMemoryFootprint()
     return ee_ge_modman_footprint(this->mRust);
 }
 
-unsigned long GEModelManager::GetModelCount()
-{
-    return ee_ge_modman_count(this->mRust);
-}
-
 // FUNCTION: LLE 0x100208b0
 // Returns the loaded model of that name, else finds its glTF (.glb, .gltf), stores it and registers it under the
 // name; NULL when there is none or it does not load. The cache's key is the name as given ("models\x"; the
@@ -185,11 +180,4 @@ long GEModelManager::RemoveModel(GEModel* inModel)
 void GEModelManager::SetModelPath(FSPath* inPath)
 {
     ee_ge_modman_set_path(this->mRust, inPath);
-}
-
-// FUNCTION: LLE 0x10020af2
-// Runs the self check on every loaded model (results ignored)
-void GEModelManager::VerifyModels()
-{
-    ee_ge_modman_verify(this->mRust);
 }

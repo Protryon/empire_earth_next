@@ -207,35 +207,6 @@ long DX7Rasterizer::ClearZBuffer(float inZ, const GERectangle& inRectangle, unsi
     return ee_dx7r_clear_z(this->mDX7ScreenStates[inScreen]->GetDevice(), theRect, inZ);
 }
 
-// FUNCTION: DX7HR 0x1000a973
-// Returns 0: this rasterizer does not measure the polygon area of the vertex buffer
-float DX7Rasterizer::ComputePolyAreaOfCurrentVB(unsigned long inScreen)
-{
-    return 0.0f;
-}
-
-// FUNCTION: DX7HR 0x1000a97c
-// Converts an engine transformation to a Direct3D matrix (transposed)
-void DX7Rasterizer::ConvertToD3DMatrix(const GETransformation& inTransformation, GXMATRIX& outMatrix)
-{
-    outMatrix._11 = inTransformation.GetElement(0, 0);
-    outMatrix._12 = inTransformation.GetElement(1, 0);
-    outMatrix._13 = inTransformation.GetElement(2, 0);
-    outMatrix._14 = inTransformation.GetElement(3, 0);
-    outMatrix._21 = inTransformation.GetElement(0, 1);
-    outMatrix._22 = inTransformation.GetElement(1, 1);
-    outMatrix._23 = inTransformation.GetElement(2, 1);
-    outMatrix._24 = inTransformation.GetElement(3, 1);
-    outMatrix._31 = inTransformation.GetElement(0, 2);
-    outMatrix._32 = inTransformation.GetElement(1, 2);
-    outMatrix._33 = inTransformation.GetElement(2, 2);
-    outMatrix._34 = inTransformation.GetElement(3, 2);
-    outMatrix._41 = inTransformation.GetElement(0, 3);
-    outMatrix._42 = inTransformation.GetElement(1, 3);
-    outMatrix._43 = inTransformation.GetElement(2, 3);
-    outMatrix._44 = inTransformation.GetElement(3, 3);
-}
-
 // FUNCTION: DX7HR 0x1000a9e5
 // Creates a movie player for a file on the given screen
 GEMovie* DX7Rasterizer::CreateMovie(const FSFileSpec& inFile, unsigned long inScreen)
