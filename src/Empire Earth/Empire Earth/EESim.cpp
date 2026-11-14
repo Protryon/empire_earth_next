@@ -277,7 +277,7 @@ struct PlayerSample {
     long mNaval = 0;            // of the army: warships, submarines and naval transports
     long mAir = 0;              // of the army: planes, helicopters and helicopter transports
     long mTowers = 0;           // of the buildings: the towers and space turrets
-    long mWalls = 0;            // of the buildings: wall pieces and gates (EEUnitClass::mIsWall)
+    long mWalls = 0;            // of the buildings: wall pieces and gates (EEUnitClass::mIsWall, not mIsTower: the towers are walls too)
     long mWonders = 0;          // EEPlayer::GetNumWonderUnits
     long mStrength = 0;         // the army's hit points x attack, summed (soldiers, ships, heroes)
     long mValue = 0;            // the cost of every live unit and building, all resources summed
@@ -352,7 +352,7 @@ Sample TakeSample()
                 unsigned long theFamily = theUnit->mUnitClass->GetFamily();
                 if (theFamily == kUnitFamilyTowers || theFamily == kUnitFamilyTowerSpaceTurret)
                     p.mTowers++;
-                if (theUnit->mUnitClass->mIsWall)
+                if (theUnit->mUnitClass->mIsWall && !theUnit->mUnitClass->mIsTower)
                     p.mWalls++;
             } else {
                 p.mArmy++;
