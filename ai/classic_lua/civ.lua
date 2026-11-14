@@ -74,13 +74,18 @@ function M.set_next_advance(view, memory, t, actual)
     civ.next_advance = t + minutes_k * 60
 end
 
+-- New (AI_RESEARCH 8.85): the personality's epoch_pressure.safe_bonus is not applied. It brought the next advance
+-- forward by 11 minutes whenever no stronger army was near; at a Stone Age start the port then held its food for the
+-- Copper Age from minute 5 (2-46 on land, where the C++, under the port's first explorer, mostly ran without it)
+local SAFE_BONUS = false
+
 -- EECPEpochPressure in thousandths: the Prehistoric's schedule (the game time over stone_span minutes), else the
--- elapsed share of the epoch timer; plus the safe bonus from the Stone Age while no stronger army is near
+-- elapsed share of the epoch timer; plus the safe bonus from the Stone Age while no stronger army is near (SAFE_BONUS)
 function M.epoch_pressure_k(view, memory)
     local civ = M.state(memory)
     local p = memory.t.personality
     local bonus = 0
-    if (p.safe_bonus_k or 0) > 0 and view.epoch >= 1 and not U.army_threat(view, memory) then
+    if SAFE_BONUS and (p.safe_bonus_k or 0) > 0 and view.epoch >= 1 and not U.army_threat(view, memory) then
         bonus = p.safe_bonus_k
     end
     if view.epoch <= 0 and (p.stone_span_k or 0) > 0 then
@@ -115,7 +120,7 @@ local function attempt_advance(view, memory)
             due = p.epoch_pressure_start_k * p.stone_span_k * 60 // 1000
         end
         local bonus = 0
-        if (p.safe_bonus_k or 0) > 0 and view.epoch >= 1 and not U.army_threat(view, memory) then
+        if SAFE_BONUS and (p.safe_bonus_k or 0) > 0 and view.epoch >= 1 and not U.army_threat(view, memory) then
             bonus = p.safe_bonus_k
         end
         if bonus > 0 then

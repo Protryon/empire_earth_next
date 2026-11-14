@@ -201,6 +201,12 @@ end
 -- makes the classic's checks before it orders: docs/AI_LUA_UNITS.md decision 1)
 
 local RECOVERY = 12   -- kCPRecoveryCitizens
+-- New (AI_RESEARCH 8.85): citizens are trained past the epoch reserve while the player has fewer workers than this
+-- (the C++: below RECOVERY only). The reserve had held the food for the next epoch while the economy was too small to
+-- fill it, and the port's citizens stalled for 15-20 minutes; the advance now waits for an economy that carries it
+-- (32 seeds: Prehistoric land 22-3 against 13-13, a Stone Age start on land 14-9 against 2-21, a Copper Age start on
+-- the islands 19-0 against 3-18)
+local RESERVE_FREE_WORKERS = 50
 
 -- EECPArmyThreat: enemy soldiers within 40 tiles of the town centre stronger (hit points x attack) than the own army;
 -- for 4 minutes. DEVIATION (fog): the soldiers seen (the original reads every player's units)
@@ -285,7 +291,7 @@ function M.can_afford(view, memory, cost, n, class, is_epoch)
     end
     local citizen = class == C.citizen or class == C.female_citizen
     local few = M.workers(view, memory) < RECOVERY
-    if citizen and few then
+    if citizen and (few or M.workers(view, memory) < RESERVE_FREE_WORKERS) then
         return true
     end
     -- military.prehistoric_army: the Prehistoric army cap unless a stronger enemy army is near
