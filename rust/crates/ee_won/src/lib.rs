@@ -39,6 +39,7 @@ pub mod dirops;
 pub mod dlglogic;
 pub mod eecolor;
 pub mod eegame;
+pub mod eeglue;
 pub mod eeresource;
 pub mod elgamal;
 pub mod ffi;

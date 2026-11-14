@@ -583,6 +583,9 @@ WON_TESTS = {
     "won_eedlg_test": [],
     # EELobbyColorButton and its chooser as Rust objects (golden: rust/crates/ee_won/src/golden_eecolor.txt)
     "won_eecolor_test": [],
+    # the EE lobby's glue (EELobbyInit, EELobbyMisc, EELobbyInterface's decisions) in Rust (golden:
+    # rust/crates/ee_won/src/golden_eeglue.txt)
+    "won_eeglue_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",

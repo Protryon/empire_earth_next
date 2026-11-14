@@ -67,24 +67,7 @@ intptr_t EELobbyGame::RCall(EeWonEeGameCall inCall, intptr_t a, intptr_t b, intp
     return ee_won_eegame_call(this->mRust, inCall, a, b, c, d);
 }
 
-int EELobbyGame::GetNumFiles() { return (int)this->RCall(GC::GetNumFiles); }
-GUIString EELobbyGame::GetFile(int inIndex) { return EELobbyStr(this->RCall(GC::GetFile, inIndex)); }
-void EELobbyGame::SetGameFile(const GUIString& inName, unsigned long inSize, unsigned long inChecksum, bool inFlag)
-{
-    this->RCall(GC::SetGameFile, (intptr_t)inName.mData.get(), (intptr_t)(uint32_t)inSize, (intptr_t)(uint32_t)inChecksum,
-                inFlag);
-}
-const GUIString& EELobbyGame::GetGameFileName()
-{
-    EELobbyFileTransfer* aTransfer = reinterpret_cast<EELobbyFileTransfer*>(this->RCall(GC::Field, 0));
-    if (aTransfer != NULL)
-        return aTransfer->mName;
-    return gEmptyGUIString;
-}
-void EELobbyGame::StopTransfer() { this->RCall(GC::StopTransfer); }
 void EELobbyGame::UpdateTransferProgress(int inDone, int inTotal) { this->RCall(GC::UpdateTransferProgress, inDone, inTotal); }
-void EELobbyGame::SetTransferPercent(unsigned char inPercent) { this->RCall(GC::SetTransferPercent, inPercent); }
-void EELobbyGame::StartTransfer() { this->RCall(GC::StartTransfer); }
 bool EELobbyGame::CanReadyHook() { return this->RCall(GC::CanReadyHook) != 0; }
 bool EELobbyGame::CanStartGameHook() { return this->RCall(GC::CanStartGameHook) != 0; }
 bool EELobbyGame::TryStartGameHook() { return this->RCall(GC::TryStartGameHook) != 0; }
@@ -125,32 +108,6 @@ GUIString EELobbyGame::GetStatusStringHook(short inStatus)
     }
     return gEmptyGUIString;
 }
-void EELobbyGame::ResetSlots() { this->RCall(GC::ResetSlots); }
-void EELobbyGame::CountPlayers(bool inNotify) { this->RCall(GC::CountPlayers, inNotify); }
-EELobbyPlayerSlot* EELobbyGame::GetPlayerSlot(int inSlot)
-{
-    if (inSlot >= 0 && inSlot < 8)
-        return &this->mSlots[inSlot];
-    return NULL;
-}
-bool EELobbyGame::HasGameFile() { return this->RCall(GC::HasGameFile) != 0; }
-long EELobbyGame::GetOption(int inOption) { return (long)this->RCall(GC::GetOption, inOption); }
-void EELobbyGame::SetOption(int inOption, unsigned long inValue) { this->RCall(GC::SetOption, inOption, (intptr_t)(uint32_t)inValue); }
-void EELobbyGame::ChangeOption(int inOption, unsigned long inValue, bool inFlag)
-{
-    this->RCall(GC::ChangeOption, inOption, (intptr_t)(uint32_t)inValue, inFlag);
-}
-void EELobbyGame::SendGameState() { this->RCall(GC::SendGameState); }
-void EELobbyGame::ChangePlayerOption(int inSlot, int inWhat, unsigned char inValue) { this->RCall(GC::ChangePlayerOption, inSlot, inWhat, inValue); }
-void EELobbyGame::SendConnectStatus(bool inConnected) { this->RCall(GC::SendConnectStatus, inConnected); }
-void EELobbyGame::SendCancelConnect() { this->RCall(GC::SendCancelConnect); }
-void EELobbyGame::SendOption(int inOption) { this->RCall(GC::SendOption, inOption); }
-unsigned char EELobbyGame::GetFreeColor(int inExcept, unsigned char inColor) { return (unsigned char)this->RCall(GC::GetFreeColor, inExcept, inColor); }
-void EELobbyGame::MakeColorsDistinct() { this->RCall(GC::MakeColorsDistinct); }
-int EELobbyGame::GetMySlot() { return (int)this->RCall(GC::GetMySlot); }
-int EELobbyGame::GetMyTeam() { return (int)this->RCall(GC::GetMyTeam); }
-void EELobbyGame::GetTakenColors(bool* outTaken, int inExcept) { this->RCall(GC::GetTakenColors, (intptr_t)outTaken, inExcept); }
-bool EELobbyGame::IsColorFree(unsigned char inColor) { return this->RCall(GC::IsColorFree, inColor) != 0; }
 
 // ---- the slot view (EELobbyPlayerSlot's methods on the Rust game's slot)
 
@@ -158,23 +115,7 @@ intptr_t EELobbyPlayerSlot::RCall(EeWonEeGameCall inCall, intptr_t b, intptr_t c
 {
     return this->mGame->RCall(inCall, this->mIndex, b, c);
 }
-void EELobbyPlayerSlot::Reset() { this->RCall(GC::SlotReset); }
-GUIString EELobbyPlayerSlot::GetName() { return EELobbyStr(this->RCall(GC::SlotGetName)); }
-void EELobbyPlayerSlot::SetState(int inState) { this->RCall(GC::SlotSetState, (unsigned char)inState); }
-unsigned char EELobbyPlayerSlot::GetOption(int inOption) { return (unsigned char)this->RCall(GC::SlotGetOption, inOption); }
-void EELobbyPlayerSlot::SetOption(int inOption, unsigned char inValue) { this->RCall(GC::SlotSetOption, inOption, inValue); }
-void EELobbyPlayerSlot::ClearPlayer() { this->RCall(GC::SlotClearPlayer); }
-void EELobbyPlayerSlot::SetOpen() { this->RCall(GC::SlotSetOpen); }
-void EELobbyPlayerSlot::SetClosed() { this->RCall(GC::SlotSetClosed); }
-void EELobbyPlayerSlot::SetComputer() { this->RCall(GC::SlotSetComputer); }
-void EELobbyPlayerSlot::SetName(const GUIString& inName) { this->RCall(GC::SlotSetName, (intptr_t)inName.mData.get()); }
-void EELobbyPlayerSlot::SetPlayer(LobbyClient* inClient, EELobbyPlayer* inPlayer)
-{
-    this->RCall(GC::SlotSetPlayer, (intptr_t)inClient, (intptr_t)inPlayer);
-}
 unsigned char EELobbyPlayerSlot::Option(int inOption) { return (unsigned char)this->RCall(GC::SlotRawOption, inOption); }
-void EELobbyPlayerSlot::SetRawOption(int inOption, unsigned char inValue) { this->RCall(GC::SlotSetRawOption, inOption, inValue); }
-LobbyClient* EELobbyPlayerSlot::GetClient() { return reinterpret_cast<LobbyClient*>(this->RCall(GC::SlotClient)); }
 
 // ---- the lobby player (EELobbyPlayer.cpp's)
 
