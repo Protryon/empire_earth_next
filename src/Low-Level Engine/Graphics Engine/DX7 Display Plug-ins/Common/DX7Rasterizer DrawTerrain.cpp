@@ -160,7 +160,7 @@ float ee_dx7cpp_um_cos(float inAngle) { return UMCos(inAngle); }
 long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->mScreenStates[inScreen]->mViewport);
+    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
     std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh, false);
     std::vector<EeDx7MaterialMapEntry> theMap;
     std::vector<std::pair<GETexture*, unsigned long> > theSource;
@@ -180,7 +180,7 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
                                   GETexture* inTexture, float inWidth, unsigned long inScreen, bool inOrthographic)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->mScreenStates[inScreen]->mViewport);
+    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
     return ee_dx7r_draw_grid_lines(this, inScreen, DX7DrawState(this, inScreen), &theMesh,
                                    reinterpret_cast<const long(*)[4]>(inLines.data()), inLines.size(), inTexture, inWidth, &theViewport,
                                    inOrthographic);
@@ -191,7 +191,7 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
 long DX7Rasterizer::DrawTerrainGrid(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->mScreenStates[inScreen]->mViewport);
+    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
     return ee_dx7r_draw_terrain_grid(this, inScreen, DX7DrawState(this, inScreen), &theMesh, &theViewport, inOrthographic);
 }
 
@@ -202,7 +202,7 @@ long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectang
                                          float inOpacity)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->mScreenStates[inScreen]->mViewport);
+    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
     const long theRect[4] = {inRectangle.mLeft, inRectangle.mTop, inRectangle.mRight, inRectangle.mBottom};
     const float theColor[3] = {inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue()};
     return ee_dx7r_draw_terrain_highlight(this, inScreen, DX7DrawState(this, inScreen), &theMesh, theRect, theColor, inOpacity,
@@ -224,7 +224,7 @@ long DX7Rasterizer::DrawTerrainMaterial(GEViewport* inViewport, std::vector<GETe
 long DX7Rasterizer::DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->mScreenStates[inScreen]->mViewport);
+    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
     std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh, true);
     return ee_dx7r_draw_water(this, inScreen, DX7DrawState(this, inScreen), &theMesh, theMaterials.data(), theMaterials.size(),
                               &theViewport, inOrthographic);
@@ -236,8 +236,8 @@ long DX7Rasterizer::DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, boo
 void DX7Rasterizer::Light(GETerrainMesh& inMesh, unsigned long inScreen)
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
-    const float theAmbient[3] = {this->mComputedAmbientColor.GetRed(), this->mComputedAmbientColor.GetGreen(),
-                                 this->mComputedAmbientColor.GetBlue()};
+    const float theAmbient[3] = {this->GetComputedAmbientColor().GetRed(), this->GetComputedAmbientColor().GetGreen(),
+                                 this->GetComputedAmbientColor().GetBlue()};
     ee_dx7r_light_terrain(this, inScreen, DX7DrawState(this, inScreen), &theMesh, theAmbient);
 }
 
@@ -254,7 +254,8 @@ void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewp
     EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(inViewport);
     std::vector<EeDx7MaterialView> theTerrainMaterials = DX7MaterialViewsOf(inMesh, false);
     std::vector<EeDx7MaterialView> theWaterMaterials = DX7MaterialViewsOf(inMesh, true);
-    EeDx7WaterRipple theRipple = {this->mWaterRipple0, this->mWaterRipple1, this->mWaterRipple2};
+    EeDx7WaterRipple theRipple;
+    this->GetWaterRippleEffect(theRipple.time_rate, theRipple.water_height, theRipple.terrain_height);
     ee_dx7r_transform_to_camera(&theMesh, theTerrainMaterials.data(), theTerrainMaterials.size(), theWaterMaterials.data(),
                                 theWaterMaterials.size(), &theViewport, inScale, inWaterOnly, inOrthographic, theRipple, &sWaterTime);
 }

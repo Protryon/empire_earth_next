@@ -264,6 +264,8 @@ public:
     bool GetIsPolyAreaProfiling() { return this->mIsPolyAreaProfiling; }
     unsigned long GetLighting(unsigned long inScreen) const { return this->mScreenStates[inScreen]->mLighting; }
     const UString& GetName() const { return this->mName; }
+    unsigned long GetProjectionMode(unsigned long inScreen) const
+        { return this->mScreenStates[inScreen]->mProjectionMode; }
     float GetPixelSize(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation, float inScale,
                        bool inOrthographic);
     float GetPixelSize(const GEPhysicalModel& inModel, GEViewport& inViewport, bool inOrthographic);
@@ -304,6 +306,16 @@ protected:
         { this->mScreenStates[inScreen]->mDrawnPolyArea += inArea; }
     void AddToDrawnPolyCount(unsigned long inCount, unsigned long inScreen)
         { this->mScreenStates[inScreen]->mDrawnPolyCount += inCount; }
+    // The plug-in's access to the base's state (the census of R4.3's twelfth part: no member is read directly)
+    GERScreenState* GetScreenState(unsigned long inScreen) const { return this->mScreenStates[inScreen]; }
+    TSCriticalSection* GetDrawingAccess() const { return this->mDrawingAccess; }
+    void GetWaterRippleEffect(float& outRipple0, float& outRipple1, float& outRipple2) const
+    {
+        outRipple0 = this->mWaterRipple0;
+        outRipple1 = this->mWaterRipple1;
+        outRipple2 = this->mWaterRipple2;
+    }
+    static void SetActiveRasterizer(GERasterizer* inRasterizer) { GERasterizer::sActiveRasterizer = inRasterizer; }
     void IsOrthographicModelVisible(GEModel* inModel, GEViewport* inViewport, GETransformation& inTransformation,
                                     bool& outVisible, bool& outClipped);
     void IsPerspectiveModelVisible(GEModel* inModel, float inScale, GEViewport* inViewport,
@@ -342,6 +354,8 @@ protected:
     static std::vector<TransformStack> sTransformStack;
     friend LLE_API long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance);   // Graphics Engine.cpp
     friend void GEShutdown(bool inForced);
+    static void ClearRasterizers() { GERasterizer::sRasterizers.clear(); }
+    static void AddRasterizer(GERasterizer* inRasterizer) { GERasterizer::sRasterizers.push_back(inRasterizer); }
     friend class GETexture;                 // calls CreateTextureHandle/DestroyTextureHandle (GETexture.cpp)
     static std::vector<GERasterizer*> sRasterizers;
     static GERasterizer* sActiveRasterizer;
