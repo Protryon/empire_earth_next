@@ -742,6 +742,13 @@ WON_TESTS["won_authsession_test"] = WON_TESTS["won_serverop_test"]
 # HostCall before these calls were answered in Rust in net round 23: hostsock.rs); the same units as
 # won_serverop_test
 WON_TESTS["won_hostsock_test"] = WON_TESTS["won_serverop_test"]
+# the op base's own calls and the AsyncOp machinery behind them over real sockets on 127.0.0.1: the op's status, mode,
+# time left, timeout and Finish, ServerOp's members, the tracker, the timers' and repeating receives' completions, a
+# completion called, references, another Rust op's numbers and bytes, a server context's addresses, an HTTP session's
+# AddOp, a new peer authentication op (golden: rust/crates/ee_won/src/golden_opcore.txt, recorded over ServerOp.cpp's
+# HostCall, AsyncOp.cpp and AsyncOpWithTracker.cpp before they moved into Rust in net round 24); the same units as
+# won_serverop_test
+WON_TESTS["won_opcore_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]
