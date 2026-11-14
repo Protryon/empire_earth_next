@@ -19415,3 +19415,129 @@ conflict. This lane's state is now `docs/progress/r6-won-the-lobby-screens.md`.
 ### The full `wontest` set on the final tree
 
 Started on the final tree (61a9d843) with a 3-hour limit, in the background; when this section was written 13 of the 106 programs had run and all 13 exited 0 (0 failures). The loaded machine runs one program every 2-10 minutes, so the set may hit the limit before its end: its log is `build/wl4/wontest_all.log` in the worktree (`ALL EXIT` ends it; 124 means the limit).
+
+## R6: UIControlsTable and UIFontTable whole in Rust (ee_ui tableobj.rs, fonttableobj.rs; branch rust-r6-ui18, 2026-11-14)
+
+Round 4 had put the controls table's arithmetic in Rust (the record's fields, colours, layout and texture
+rectangles, `AddControlLike`, `MoveControlsHorizontally`, the font sizes, the string range, the rectangles a control
+is laid out with) behind a record FFI over the C++ members; round 5 the font table's record reading and shared-font
+search. The factories that turn a database record into a control (`CreateControl` and its fifteen `Create*`), `Create`
+(the database file), `SetupFont`, `RelayoutControl` and `CreateControlEvent` were the toolkit's biggest C++ left
+(`UIControlsTable.cpp`, 1,133 lines). This round moves both tables whole.
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 022a1a28 | `UIControlsTable` whole (`tableobj.rs`); `controls_table_ffi.rs` deleted | -611 |
+| e17a2492 | `UIFontTable` whole (`fonttableobj.rs`); `font_ffi.rs` deleted | -63 |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`, the unit's own headers included): 13,132 at
+the branch's start ->
+12,459 (after the merge of `rust`). The round's net C++ is -674, short of the 1,500 the rules ask for (see "What is
+left").
+
+- **The controls table object.** `EeUiControlsTable` holds the record (round 4's `TableFields`, the layout, the three
+  texture rectangles, the four colours), the five file and sound names (NUL-terminated bytes), the form events and
+  the font it holds while it makes a control; the static array (`sUIControlsArray`) is a Rust `Mutex<Vec>` of the
+  Rust tables, never held across a call out. Every method of `UIControlsTable.cpp` is Rust but the four that only
+  call GE objects (`CreateBitmap`'s texture load, `CreateMovie`, `SetupGEText`, `SetupStringArray`), which stay C++
+  and are reached through ops. The C++ class keeps every getter the game's user-defined controls read
+  (`EECBUIListBox`, `EEUIBSavedGroup`, `EEUICChatLine`, `EEUICUnitIconBar`, `EEUIFMGStatusButton`,
+  `EEUIManager::CreateUserDefinedControl`): each reads `EeUiControlsTableData` in place (`D()`; the object is boxed
+  and never moves; the colours, rectangles and layout are reinterpreted, as their layouts are asserted equal). The
+  members, the private `Create*` declarations, `CalculateColor`, `UIDbControl` (the record is Rust's `DbControl`),
+  `UIControlsTableRust` and its three `ee_uicpp_controls_table_*` host calls are gone; the copy constructor and
+  assignment are private and undefined (the Rust table is owned; nothing copied a table but `AddControlLike`, now
+  Rust).
+- **The factories.** One op makes a control (`TblMake` over `EeUiTableMake`: the kind, the arguments every
+  constructor takes and the fields some take), one sets it up (`TblSet` with an `EeUiTableSet` selector: 45 setters,
+  from `SetText` to `SetTriggerEvent`); the strings (`UWideString`, `std::vector<UWideString>`) are made and deleted
+  by ops and passed by address. The host (`UIControlsTableHost`, UIControlsTable.cpp) is the constructors' switch
+  (18 kinds), the setters' switch and the ops on files, forms, fonts, strings, bitmaps and events.
+- **Construction.** A table `Create` or `AddControlLike` makes is made in Rust first, then wrapped (`TblWrap`: the
+  private `UIControlsTable(EeUiControlsTable*)`, which only sets `mRust`); the Rust table learns its C++ table from
+  the op's answer. No op reaches a forwarder before `mRust` is set (round 17's lesson). `DeleteAll` takes the array
+  first, then deletes each C++ table (`TblDelete`), whose destructor frees the Rust table (its font released first),
+  the host copied out before the call (a `&self` must not outlive the object it names).
+- **The font table.** `UIFontTable` was static members over two vectors; now the records (a face as a C++ `UString`
+  by address, style, quality, size) and the shared fonts (`GEFont`s by address) are Rust statics under a `Mutex` never
+  held across a call out; the class is five forwarders and a host (`UIFontTableHost`: the file, the face names, the
+  fonts' `CompareFont`, `Reference`, construction and `Dereference`). The file ops are the controls table's
+  (`TblFile*`).
+- **Behaviour.** No change on any path the original defined. Differences, none visible to callers:
+  - the radio button's pressed and normal bitmaps were released unchecked: a texture that failed to load was a NULL
+    read; none is released now;
+  - `GetNormal`/`GetPressed`/`GetFocused` answer NULL (the original's members were never set: no caller);
+  - `GetUIControlsTable` and the font table's `GetFont`/`CreateClosestFont` past the array, and `GetFont` of a record
+    without a font, answer NULL (the original read past the vector or through NULL);
+  - `Create`'s record buffer starts zeroed (the original's was uninitialized: only a failed first read sees it);
+  - the font table's face string is one static of the host (the original's was `Create`'s local, kept between the
+    records of one call; only a string table that fails to write it could tell).
+- **The goldens** (`build/ui18`). The controls table (`table_driver.cpp` over `world.h`): the world is the manager,
+  forms (exclusive coordinates, designed height, GDI text, changed between calls), fonts (height, font bitmap),
+  strings (length), string vectors, bitmaps (10% fail to load), controls, events (30% none), the database file (random
+  records over every control type, the user types and an unknown one; names, sounds, ranges, colours, layouts; 5% of
+  reads fail, keeping the last record) and the C++ tables; a C++ table's deletion frees the Rust table (`do 21`).
+  Each sequence reads the file, then 30 random calls (`CreateControl`, `CreateControlEvent`, `RelayoutControl`,
+  `SetupFont`, `AddEvent`, `AddControlLike`, `MoveControlsHorizontally`, `GetUIControlsTable`, a digest of a table's
+  data as the getters read it), the data of every table, then `DeleteAll`. `orig` is UIControlsTable.cpp/.h at the
+  round's base (2fcdaaa2) transcribed over the world's ops, calling that commit's record FFI (`controls_table_ffi`,
+  `layout_ffi`) in its library; `cur` is the Rust object. 20,000 sequences (seed 7): 8,894,239 trace lines, orig = cur
+  byte for byte (sha256 db1579ca...); seed 1, 2,000 sequences, equal too.
+
+  | Mutation | Sequences failing of 2,000 |
+  |---|---|
+  | a button without a string gets no text even with a font | 294 |
+  | the combo box's text box types swapped | 360 |
+  | `SetupFont` ignores scale-to-window | 1,999 |
+  | the background opacity from the text box's | 1,708 |
+  | `RelayoutControl` sizes the font from the exclusive font rectangle | 663 |
+  | the radio button's text set up when empty | 261 |
+  | the number multi-line edit box single-line | 209 |
+  | `Create` registers the next slot | 1,786 |
+  | `DeleteAll` last to first | 1,638 |
+  | `CreateControlEvent` keeps the event's reference | 550 |
+  | the help labels keep their text | 406 |
+  | the vertical scroll bar's length from its width | 230 |
+  | the slider's page size not capped | 232 |
+  | `AddControlLike` reserves the next index | 517 |
+
+  The first 25 sequences are `golden_tableobj.txt` (11,809 lines), replayed by cargo (`tableobj_tests.rs`), with a
+  changed record count and changed window widths that must fail. The replay learned two things for it
+  (`obj/replay.rs`): a `mem` line (the bytes an op wrote at its `b`, a zero run as `.N.`: the file's records) and
+  `host_current`, a host for objects whose host object is their C++ object rather than the replay.
+  The font table (`font_driver.cpp`): the world is the manager, the font database file (random records,
+  20% without a face; 5% of reads fail), the string table's faces (four, two equal but for case, as `CompareFont`
+  compares them), the names the game passes and the shared fonts (`CompareFont` answers from their face, style,
+  quality and size). Each sequence reads the file, then 30 random calls (`CreateClosestFont`, `GetFont` of a record
+  with a face, `FindOrCreateFont`, now and then `DeleteAll` and a new `Create`), then `DeleteAll`. `orig` is
+  UIFontTable.cpp at the round's base transcribed over the world's ops, calling that commit's `font_ffi` search;
+  `cur` the Rust statics. 20,000 sequences (seed 7): 8,339,642 lines, orig = cur (sha256 521a374d...); seed 1, 2,000
+  sequences, equal too. Mutations caught (of 2,000): `Create` takes the size from the quality (1,758),
+  `CreateClosestFont` keeps the record's size (1,756), a matching font not referenced (1,565), `CompareFont` asked
+  with quality and size swapped (2,000), `DeleteAll` keeps the faces (1,809). The first 25 sequences are
+  `golden_fonttableobj.txt` (10,683 lines), replayed by cargo (`fonttableobj_tests.rs`), with every match answered
+  false, which must fail.
+- **What the driver avoids.** A layout whose left or top edge is of type 5 (`kLayoutFromStartEdge`) recurses for
+  ever in `CalculateRectangle` (round 4's note: no table uses it); the driver's records never have one.
+- **NULL-receiver audit** (WON rounds 30-31). Every original method read a member of `this` first (`mFormID`, `mFont`,
+  `mControlType`, `mEventData`), so a NULL receiver crashed the original as the forwarders' `mRust` read does; the
+  getters read `mRust` too. The font table has no receiver (statics).
+- **Lessons.**
+  - `pub const`s in a private module of `ee_ui` are still exported by cbindgen: the control types (`BITMAP`, ...) in
+    `tableobj.rs`'s `mod ty` reached `rust/ee_ui.h` and clashed with wingdi's `BITMAP` in every unit; they are
+    `pub(crate)`.
+  - In this environment a bash heredoc's backslashes reach Python already unescaped: `'\\n'` in a heredoc script
+    arrives as a newline. Scripts that edit sources with backslashes go to a file first (or use `chr(92)`).
+- **What runs it.** Every screen makes its controls through the table (`UIForm::Open`) and relays them out on a
+  window resize; EE-SIM's games make no form (the oracle, seeds 2-3, identical); the scenario editor gate
+  (`sim_editor.py`, 2,686 lines unchanged) makes the editor's forms and controls through it. **Only the tour shows**
+  the menus' controls: their bitmaps, fonts (scaled to the window), texts, sounds, combo and list boxes, the
+  user-defined controls of the main game screen (the orders game).
+- **Gates.** After the controls table commit: `build.py -j 3 --sim` 0/0 (EE-AOC and EE-SIM), the driver over the new object equal to the reference (seed 1, 2,000 and seed 7, 20,000 sequences), the oracle seeds 2-3 identical, `sim_editor.py` PASS (2,686 lines), the `ee_ui` tests, clippy and rustfmt (the full Rust gate's first run failed clippy only: three same-type casts in the test digest and a missing `# Safety` section; fixed in the commit). After the font table commit: build `--sim` 0/0 (its first build failed: the header edit left a second `};` and `#endif`; the oracle that chain started on the stale exe was stopped and discarded), the oracle seeds 2-3 identical, the editor gate PASS. On the result merged with `rust` (7670a3fe; one conflict, the cbindgen `include` list, both sides' names kept; `rust_build.py header` current, `rust_includes.py` nothing to narrow): build `--sim` 0/0, the oracle seeds 2-7 identical, the editor gate PASS (5,560 lines: the merge brought the editor lane's form dumps, which record control setup and match their reference), the Rust gate PASS, the test-profile build 0/0, the tour (`fixture_game.py --exercise tour --play-seconds 60 --data <main tree>` under the harness lock) `RESULT PASS tour`, the orders game (`--exercise random-game --play-seconds 60 --orders`) `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped by the driver: no button, no unit) and `RESULT PASS random-game`. EE-SIM makes no form, so the sim_capture profiles were not run.
+- **Round size.** Net C++ -674 of the 1,500 asked: the factories' constructor calls and setters stay C++ (one op
+  each, about a line per original line), so only the bridges, the records, the members and the decisions went; the
+  fixed costs (two goldens, a 15-minute build under load, the 40-minute Rust gate) took the rest of the round.
+- **What is left.** `UIControl` toward a base record (rounds 16-17's plan: the members private, then the record inside
+  each Rust object and `UIObjHost::Base` shrinking op by op), `UIGraph`/`UILineGraph` (the game's
+  `EEUIPGSLineGraph` reads `mGraph`: a census first), `UIBackgroundTable` and `UIManager::CreateBackgrounds` (the same
+  pattern as the controls table, smaller), `UIHotKey`, `UIIMECandidate`, `UIBFull`.
