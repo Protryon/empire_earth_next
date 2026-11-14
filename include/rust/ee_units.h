@@ -2390,6 +2390,34 @@ struct EeUnitsTickHost {
   void (*step)(void *ctx, uint32_t index, uint32_t id);
 };
 
+/// The unit's numbers for the tick.
+struct EeUnitsTurretsIn {
+  /// true: the goal is an attack, heal or calamity goal and `target_x`, `target_y` its point; false: turn back
+  bool aim;
+  /// `mHitPoints > 0` (turning back only)
+  bool alive;
+  /// `mStats->mTurretMaxAngularVelocity`
+  float turn_rate;
+  /// `gPhysics->mTickSeconds`
+  float tick_seconds;
+  /// `mStats->GetScale()`
+  float scale;
+  /// `mPhysicalModel.GetLocation()`
+  float location[4][4];
+  float target_x;
+  float target_y;
+};
+
+/// One turret part.
+struct EeUnitsTurretPart {
+  /// the part's `mPosition` (model space, before the stats' scale)
+  float position[3];
+  /// the part's `mTransformation`
+  float transform[4][4];
+  /// the unit's `mTurretAngles[i]`: the angle before the tick in, after it out
+  float angle;
+};
+
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
 /// a complex unit).
 struct EeUnitsBuildUnit {
@@ -3374,6 +3402,12 @@ float ee_units_step_cloak_fade(float opacity,
 /// # Safety
 /// `host` points to a valid table whose calls are valid for its `ctx`.
 uint32_t ee_units_update_units(const EeUnitsTickHost *host);
+
+/// `TurnTurrets` / `TurnTurretsBack` for one unit (see [`turn_turrets`]).
+///
+/// # Safety
+/// `input` is valid; `parts` holds `count` parts (NULL when `count` is 0).
+void ee_units_turn_turrets(const EeUnitsTurretsIn *input, EeUnitsTurretPart *parts, uint32_t count);
 
 /// A class's `Update` of the unit `id` (`object`: its address, the record's check) over the store and `host`.
 ///
