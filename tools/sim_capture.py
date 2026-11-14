@@ -107,6 +107,11 @@ outputs. Its golden lines come from the C++ bodies (late 3, space 2); late 2, 6,
 games), late 4, 5, the oracle and space 3, 6, 7 (main's AI changes, the merge of a2c4347e), space 4, 5 and calamity
 from the Rust bodies, whose every call the original's statements recheck while the capture runs (EE-SIM exits 3 on a
 difference).
+PMST is the physics models' step (EEPhysicsModel.cpp, the physics models' lane): one record per physics tick, the
+count and FNV-1a of every EEPhysicsModel::Step call's unit, model, physics action before the step and the state the
+models write after it (the location's matrix, velocities, push, roll, bob phase, collision time, state and blocker,
+tile, arrival, animation, hit points, orientation, height). Its golden lines come from the C++ models (seeds 2-3 of
+the oracle, late, space and calamity profiles, before the models moved to Rust).
 SM** are the scenario manager's records (ee/EEScenarioCapture.h, R5b.5): SMCE every trigger condition's test, SMTE
 every trigger's evaluation, SMOB every scenario object's, SMCP the player choices and SMAR the area queries outside an
 object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile

@@ -256,18 +256,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 14e839 151c28 Empire Earth/Physics Thread/EEAirTrafficControl.cpp
 151c28 15439f Empire Earth/Physics Thread/EEPhysics.cpp
 1543b7 156df8 Empire Earth/Physics Thread/EEPhysicsModel.cpp
-156df8 15726c Empire Earth/Physics Thread/EEPMAirAnimal.cpp
-15726c 1587c7 Empire Earth/Physics Thread/EEPMAirplane.cpp
-1587c7 158a24 Empire Earth/Physics Thread/EEPMBuilding.cpp
-158a24 15a0cf Empire Earth/Physics Thread/EEPMHelicopter.cpp
-15a0cf 15a0db Empire Earth/Physics Thread/EEPMHovercraft.cpp
-15a0db 15aff0 Empire Earth/Physics Thread/EEPMLand.cpp
-15aff0 15b473 Empire Earth/Physics Thread/EEPMMissile.cpp
-15b473 15d015 Empire Earth/Physics Thread/EEPMNaval.cpp
-15d015 15d44f Empire Earth/Physics Thread/EEPMProjectile.cpp
-15d44f 15dd66 Empire Earth/Physics Thread/EEPMSeaAnimal.cpp
-15dd66 15f49d Empire Earth/Physics Thread/EEPMSpaceship.cpp
-15f49d 16066d Empire Earth/Physics Thread/EEPMSubmergedNaval.cpp
 16066d 16100f Empire Earth/Physics Thread/EEPPatrolGroup.cpp
 16100f 161825 RTS Engine/Physics/RTSPhysics.cpp
 161825 16d346 Empire Earth/Player/EEPlayer.cpp
