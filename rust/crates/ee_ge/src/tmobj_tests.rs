@@ -123,6 +123,8 @@ fn creation_reads_the_clock_and_seeds_the_fractal_and_destruction_releases_in_or
     unsafe {
         let p = ee_ge_tm_new(host, std::ptr::null_mut());
         assert_eq!(take_log(), vec!["fractal new 5000"]);
+        assert_eq!(obj(p).water_animation_period, 80);
+        assert_eq!(obj(p).water_texture_scale, -0.71428573);
         assert_eq!(ee_ge_tm_get(p, EeGeTmVal::SpaceTileCount), 0);
         assert_eq!(ee_ge_tm_get_f(p, EeGeTmVal::MinimumZ), f32::MAX);
         assert_eq!(ee_ge_tm_get_f(p, EeGeTmVal::MaximumZ), -f32::MAX);
@@ -452,6 +454,34 @@ fn a_saved_mesh_loads_back_with_its_heights_tiles_and_normals() {
         // a truncated file fails and keeps what it read
         let mut short = BufferIo::reader(out.bytes[..20].to_vec());
         assert_eq!(ee_ge_tm_load(q, &table(&mut short)), crate::io::END_OF_FILE);
+        ee_ge_tm_destroy(p);
+        ee_ge_tm_destroy(q);
+        take_log();
+    }
+}
+
+#[test]
+fn a_loaded_tile_naming_an_unregistered_set_reads_zero() {
+    let p = mesh(3, 3);
+    // SAFETY: `p` and `q` are live
+    unsafe {
+        ee_ge_tm_register_texture_set(p, 0x1111 as *mut c_void);
+        ee_ge_tm_register_texture_set(p, std::ptr::null_mut());
+        ee_ge_tm_register_texture_set(p, 0x1221 as *mut c_void);
+        let tiles: Vec<(c_ulong, c_ulong)> =
+            valid_points(p, 8).into_iter().filter(|&(x, y)| ee_ge_tm_is_valid(p, x, y, true)).collect();
+        ee_ge_tm_tile_edit(p, tiles[0].0, tiles[0].1, 3, 1);
+        ee_ge_tm_tile_edit(p, tiles[1].0, tiles[1].1, 3, 2);
+        let mut out = BufferIo::writer();
+        assert_eq!(ee_ge_tm_save(p, &table(&mut out)), 0);
+        let q = mesh(1, 1);
+        ee_ge_tm_register_texture_set(q, 0x1111 as *mut c_void);
+        ee_ge_tm_register_texture_set(q, std::ptr::null_mut());
+        ee_ge_tm_register_texture_set(q, 0x1221 as *mut c_void);
+        let mut input = BufferIo::reader(out.bytes);
+        assert_eq!(ee_ge_tm_load(q, &table(&mut input)), 0);
+        assert_eq!((*ee_ge_tm_tile(q, tiles[0].0, tiles[0].1)).texture_set_id, 0, "the NULL slot is not registered");
+        assert_eq!((*ee_ge_tm_tile(q, tiles[1].0, tiles[1].1)).texture_set_id, 2);
         ee_ge_tm_destroy(p);
         ee_ge_tm_destroy(q);
         take_log();
