@@ -9,7 +9,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousServer.h"
-#include "lle/NEServer.h"
 #include "rust/ee_net.h"
 #include "platform/PlatSim.h"
 
@@ -269,7 +268,7 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
         unsigned char* theData;
         unsigned long theSize;
         reinterpret_cast<NEMessage*>(b)->ExportMessage(&theData, theSize);
-        long theResult = theServer->Server()->SendTo(a, theData, theSize);
+        long theResult = theServer->Protocol()->SendTo(theServer->Server(), a, theData, theSize);
         delete[] theData;
         return (uint32_t)theResult;
     }
@@ -309,7 +308,7 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
         unsigned char* theData = NULL;
         theXfer->ExportMessage(&theData, theSize);
         theXfer->Dereference();
-        long theResult = theServer->Server()->XferSendTo(a, theData, theSize);
+        long theResult = theServer->Protocol()->XferSendTo(theServer->Server(), a, theData, theSize);
         delete[] theData;
         return theResult == kErrorOK;
     }
@@ -359,7 +358,7 @@ ptrdiff_t NESynchronousServer::Host(void* inServer, EeNetSvOp inOp, size_t a, si
     NESynchronousServer* theServer = static_cast<NESynchronousServer*>(inServer);
     NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
     NEProtocol* theProtocol = reinterpret_cast<NEProtocol*>(a);
-    NEServer* theNEServer = reinterpret_cast<NEServer*>(a);
+    NEServer* theNEServer = reinterpret_cast<NEServer*>(a);   // the plug-in's handle (the server ops)
     switch (inOp) {
     case EeNetSvOp::WaitAny:
         return TSEvent::WaitAny(reinterpret_cast<TSEvent* const*>(a), (unsigned long)b, (unsigned long)c);
@@ -395,16 +394,17 @@ ptrdiff_t NESynchronousServer::Host(void* inServer, EeNetSvOp inOp, size_t a, si
         return theProtocol->SearchForGame(theHost, theName, b != 0);
     }
     case EeNetSvOp::ServerSendTo:
-        return theNEServer->SendTo(b, reinterpret_cast<const unsigned char*>(c), (unsigned long)d);
+        return theServer->Protocol()->SendTo(theNEServer, b, reinterpret_cast<const unsigned char*>(c), (unsigned long)d);
     case EeNetSvOp::ServerReceiveFrom: {
         unsigned long theSize = 0, theIndex = 0;
-        long theResult = theNEServer->ReceiveFrom(0x200, reinterpret_cast<unsigned char*>(b), theSize, theIndex);
+        long theResult =
+            theServer->Protocol()->ReceiveFrom(theNEServer, 0x200, reinterpret_cast<unsigned char*>(b), theSize, theIndex);
         *reinterpret_cast<uint32_t*>(c) = (uint32_t)theSize;
         *reinterpret_cast<uint32_t*>(d) = (uint32_t)theIndex;
         return theResult;
     }
     case EeNetSvOp::ServerClose:
-        theNEServer->Close();
+        theServer->Protocol()->Close(theNEServer);
         return 0;
     case EeNetSvOp::MsgType:
         return theMessage->GetType();

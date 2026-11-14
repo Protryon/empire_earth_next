@@ -155,12 +155,11 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
 {
     NESynchronousClient* theClient = static_cast<NESynchronousClient*>(inClient);
     NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
-    NEConnection* theConnection = reinterpret_cast<NEConnection*>(a);
+    NEConnection* theConnection = reinterpret_cast<NEConnection*>(a);   // the plug-in's handle
     FSFile* theFile = reinterpret_cast<FSFile*>(a);
-    // (not during the constructor: no op the constructor makes reads it)
+    // the client's protocol, protocol 0 (no op the constructor makes reads it)
     NEProtocol* theProtocol = NULL;
-    if (inOp == EeNetClOp::Connect || inOp == EeNetClOp::ConnectForXfer || inOp == EeNetClOp::DetectedGameCount ||
-        inOp == EeNetClOp::DetectedGame || inOp == EeNetClOp::SearchForGame || inOp == EeNetClOp::XferReceive)
+    if (inOp >= EeNetClOp::Connect && inOp <= EeNetClOp::XferReceive)
         theProtocol = static_cast<NEProtocol*>(ee_net_cl_protocol(theClient->mRust));
     switch (inOp) {
     case EeNetClOp::WaitAny:
@@ -178,20 +177,18 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
                                     *static_cast<const UWideString*>(theStrings[2]), 2, reinterpret_cast<TSEvent*>(b),
                                     *reinterpret_cast<NEConnection**>(c), (unsigned long)d);
     }
-    case EeNetClOp::ConnectForXfer: {
-        const NEConnection* theFrom = theConnection;
-        return theProtocol->ConnectForXfer(theFrom, 1, reinterpret_cast<TSEvent*>(b), *reinterpret_cast<NEConnection**>(c));
-    }
+    case EeNetClOp::ConnectForXfer:
+        return theProtocol->ConnectForXfer(theConnection, 1, reinterpret_cast<TSEvent*>(b), *reinterpret_cast<NEConnection**>(c));
     case EeNetClOp::ConnClose:
-        return theConnection->Close();
+        return theProtocol->Close(theConnection);
     case EeNetClOp::ConnReceive: {
         unsigned long theLength = *reinterpret_cast<uint32_t*>(d);
-        long theResult = theConnection->Receive((unsigned long)c, reinterpret_cast<unsigned char*>(b), theLength);
+        long theResult = theProtocol->Receive(theConnection, (unsigned long)c, reinterpret_cast<unsigned char*>(b), theLength);
         *reinterpret_cast<uint32_t*>(d) = (uint32_t)theLength;
         return theResult;
     }
     case EeNetClOp::ConnSend:
-        return theConnection->Send(reinterpret_cast<const unsigned char*>(b), (unsigned long)c);
+        return theProtocol->Send(theConnection, reinterpret_cast<const unsigned char*>(b), (unsigned long)c);
     case EeNetClOp::DetectedGameCount:
         return (ptrdiff_t)theProtocol->GetDetectedGameCount();
     case EeNetClOp::DetectedGame: {
