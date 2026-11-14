@@ -86,6 +86,7 @@ pub mod lanlogic;
 pub mod lanobj;
 pub mod layoutobj;
 pub mod listobj;
+pub mod lobbydlg;
 pub mod lobbyhost;
 pub mod lobbymap;
 pub mod md5;
@@ -151,6 +152,7 @@ pub mod verop;
 pub mod winobj;
 pub mod wire;
 pub mod wmcache;
+pub mod wmloop;
 pub mod wmobj;
 
 #[cfg(test)]

@@ -1,10 +1,11 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
 // effect_beam.rs, effect_aged.rs, effect_additive.rs,
-// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs, effect_wall.rs, effect_vent.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
 // EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
-// EEE3DNuclearExplosion.cpp and EEE3DEnergyWave.cpp.
+// EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp, EEE3DEnergyWall.cpp and
+// EEE3DDamageVent.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -48,7 +49,12 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DRust.h"
+#include "ee/EEE2DRust.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EEUCBuilding.h"
+#include "ee/EEUCGate.h"
+#include "ee/EEDoppelgangerManager.h"
+#include "ee/EEUnitUtilities.h"
 
 namespace {
 // the world's answers for one call
@@ -56,6 +62,10 @@ struct Ask {
     EEE3DRust* mEffect;
     EEEffectQueue* mQueues;
     EETagPointList* mSpawn;   // the hurricane's spawn list, read once by SpawnCount for SpawnAt
+    EeGfxEffect3DOp mOp;
+    void* mArg;               // a constructor's unit (Create), point (CreateAt) or line (CreateLine)
+    EETagPointList* mVentFrom;   // the damage vent's tag point lists, read once a step by VentLists
+    EETagPointList* mVentTo;
     static EEE3DRust* E(void* inAsk) { return static_cast<Ask*>(inAsk)->mEffect; }
     static EeGe3DPoint UnitPosition(void* inAsk)
     {
@@ -280,6 +290,140 @@ struct Ask {
     {
         return gWorld.mMap->mTerrainMesh.GetIsSpaceTile((unsigned long)inX, (unsigned long)inY);
     }
+    // the multi-effect's linked effect inIndex through its constructor's entry point (EEE3DMultiEffect's three
+    // constructors, 0xf4247, 0xf42c3, 0xf4339)
+    static int32_t CreateLinked(void* inAsk, uint32_t inIndex)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        EEGraphicEffect* theEffect = theAsk->mEffect->mGraphicEffect;
+        EEGraphicEffect* theLinked = inIndex == 1 ? theEffect->mLinkedEffect1
+                                     : inIndex == 2 ? theEffect->mLinkedEffect2 : theEffect->mLinkedEffect3;
+        if (theAsk->mOp == EeGfxEffect3DOp::CreateLine)
+            return gEffectManager->CreateLineEffect(*static_cast<GE3DLine*>(theAsk->mArg), theLinked, NULL);
+        if (theAsk->mOp == EeGfxEffect3DOp::CreateAt)
+            return gEffectManager->CreatePlacedEffect(*static_cast<GE3DPoint*>(theAsk->mArg), theLinked, NULL);
+        return gEffectManager->CreateUnitEffect(static_cast<EEUnit*>(theAsk->mArg), theLinked, NULL, 0, 0, 0);
+    }
+    // the energy wall's posts on a gate: its two end parts (EEE3DEnergyWall::Place, 0xed784)
+    static bool WallGatePosts(void* inAsk, EeGe3DPoint* outFirst, EeGe3DPoint* outSecond)
+    {
+        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
+        if (theUnit->GetClass()->mCategory != kUnitCategoryGate)
+            return false;
+        EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetClass());
+        EEComplexUnit* theFirst = theGate->GetPart(theUnit, 0);
+        EEComplexUnit* theSecond = theGate->GetPart(theUnit, 4);
+        GE3DPoint theFrom;
+        GE3DPoint theTo;
+        theFirst->GetPosition(theFrom);
+        theSecond->GetPosition(theTo);
+        *outFirst = EeGe3DPoint{theFrom.mX, theFrom.mY, theFrom.mZ};
+        *outSecond = EeGe3DPoint{theTo.mX, theTo.mY, theTo.mZ};
+        return true;
+    }
+    // the height of the last living, finished wall piece or gate side part of the wall's owner on a tile (0xee00c)
+    static bool WallPiece(void* inAsk, int32_t inX, int32_t inY, float* outZ)
+    {
+        unsigned long theOwner = E(inAsk)->mUnit->mComplexUnit->mPlayer->mPlayerID;
+        bool theFound = false;
+        std::vector<EEUnit*> theUnits;
+        EEGetUnitsOnTile(inX, inY, theUnits);
+        for (unsigned long j = 0; j < theUnits.size(); j++) {
+            EEComplexUnit* theOther = dynamic_cast<EEComplexUnit*>(theUnits[j]);
+            if (!theOther || theOther->mPlayer->mPlayerID != theOwner || !(theOther->mHitPoints > 0) ||
+                theOther->IsFoundation())
+                continue;
+            long theType = theOther->GetClass()->mUnitType;
+            if (theType == kUnitTypeWallSpace
+                || (theType == kUnitTypeGateSpace && static_cast<EEUCGate*>(theOther->GetClass())->IsSidePart(theOther))) {
+                GE3DPoint thePosition;
+                theOther->GetPosition(thePosition);
+                *outZ = thePosition.GetZ();
+                theFound = true;
+            }
+        }
+        return theFound;
+    }
+    // a gate's opening (EEE3DEnergyWall::Queue, 0xed9d0)
+    static bool GateOpen(void* inAsk, float* outOpen)
+    {
+        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
+        if (theUnit->GetClass()->mCategory != kUnitCategoryGate)
+            return false;
+        *outOpen = theUnit->GetOpenFraction();
+        return true;
+    }
+    static EeGfxColor PlayerColor(void* inAsk)
+    {
+        const GEColor& theColor = E(inAsk)->mUnit->mComplexUnit->mPlayer->mColor;
+        return EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue};
+    }
+    // the damage vent's vents (kind 5) and aims (0x38) on the unit's model at its animation (EEE3DDamageVent::Step,
+    // 0xeae33)
+    static void VentLists(void* inAsk)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        EEUnit* theUnit = theAsk->mEffect->mUnit;
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        theAsk->mVentFrom = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 5);
+        theAsk->mVentTo = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0x38);
+    }
+    static EeGfxVentUnit VentUnit(void* inAsk)
+    {
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        return EeGfxVentUnit{(theComplex->mCommand ? theComplex->mCommand->mType : 0) == kActionDead,
+                             (float)theUnit->mStats->mMaxHitPoints};
+    }
+    // the vents' count; none on a model without both tag lists (the original read the first list's count through a
+    // null pointer there: a crash the effects sweep met on seed 4, a unit without vents; no vent, no jet now)
+    static uint32_t VentCount(void* inAsk)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        if (theAsk->mVentFrom == NULL || theAsk->mVentTo == NULL)
+            return 0;
+        return (uint32_t)theAsk->mVentFrom->GetNumTagPoints();
+    }
+    // a jet's vent's and aim's offsets (EEE3DDamageVentPart::Aim, 0xeb4e9)
+    static void VentOffsets(void* inAsk, int32_t inTag, EeGe3DPoint* outPoints)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        GE3DPoint theFrom;
+        GE3DPoint theTo;
+        theAsk->mVentFrom->mPoints[inTag]->GetOffset(0, theFrom);
+        theAsk->mVentTo->mPoints[inTag]->GetOffset(0, theTo);
+        outPoints[0] = EeGe3DPoint{theFrom.mX, theFrom.mY, theFrom.mZ};
+        outPoints[1] = EeGe3DPoint{theTo.mX, theTo.mY, theTo.mZ};
+    }
+    // a jet's vent and aim at frame 0 around the unit's location scaled by its stats, and the vent's offset from the
+    // model's centre turned by that location (EEE3DDamageVent::Step)
+    static EeGfxVentPoints VentPoints(void* inAsk, int32_t inTag)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        EEComplexUnit* theComplex = theAsk->mEffect->mUnit->mComplexUnit;
+        GETransformation theUnitTransformation(theComplex->mPhysicalModel.GetLocation());
+        theAsk->mVentFrom->Scale(theUnitTransformation, theComplex->mStats->GetScale());
+        GE3DPoint theFrom;
+        GE3DPoint theTo;
+        (theAsk->mVentFrom->GetTagPoint(inTag))->GetPoint(0, theUnitTransformation, theFrom);
+        (theAsk->mVentTo->GetTagPoint(inTag))->GetPoint(0, theUnitTransformation, theTo);
+        GEModel* theModel = theComplex->GetModel()->mModels[0];
+        GE3DPoint theOffset;
+        theAsk->mVentFrom->mPoints[inTag]->GetOffset(0, theOffset);
+        GE3DPoint theCenter = theModel->GetCenterPoint();
+        GEVector theTranslation;
+        theUnitTransformation.Apply(GEVector(theOffset.GetX() - theCenter.GetX(), theOffset.GetY() - theCenter.GetY(),
+                                             theOffset.GetZ() - theCenter.GetZ()), theTranslation);
+        return EeGfxVentPoints{EeGe3DPoint{theFrom.mX, theFrom.mY, theFrom.mZ}, EeGe3DPoint{theTo.mX, theTo.mY, theTo.mZ},
+                               EeGeVector{theTranslation.mX, theTranslation.mY, theTranslation.mZ}};
+    }
+    static EeGfxFrames Frames(void* inAsk, uint32_t inIndex)
+    {
+        EEGraphicObject* theObject = E(inAsk)->mGraphicObject;
+        return EeGfxFrames{(uint32_t)theObject->mStartFrames[inIndex], (uint32_t)theObject->mFrameTimes[inIndex],
+                           (uint32_t)theObject->mFrameCounts[inIndex], (uint32_t)theObject->mLastFrames[inIndex]};
+    }
+    static float UnitClassScale(void* inAsk) { return E(inAsk)->mUnit->GetClass()->GetScale(); }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -297,17 +441,25 @@ bool ShotStart(long inMode, EEUnit* inUnit, EeGe3DPoint& outStart)
 }
 }
 
+// on a unit (the multi-effect's own unit is none: its linked effects are made on inUnit)
 EEE3DRust::EEE3DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind)
-    : EEEffect3D(inUnit, inGraphicEffect, inKind)
+    : EEEffect3D(inKind == 0x3b ? NULL : inUnit, inGraphicEffect, inKind)
 {
-    this->Call(EeGfxEffect3DOp::Create);
+    this->Call(EeGfxEffect3DOp::Create, NULL, NULL, 0, 0, 0, inUnit);
 }
 
 EEE3DRust::EEE3DRust(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect3D(0, inGraphicEffect, inKind)
 {
     this->mRecord->aged.location = EeGe3DPoint{inLocation.mX, inLocation.mY, inLocation.mZ};
-    this->Call(EeGfxEffect3DOp::CreateAt);
+    this->Call(EeGfxEffect3DOp::CreateAt, NULL, NULL, 0, 0, 0, const_cast<GE3DPoint*>(&inLocation));
+}
+
+// the multi-effect (0x3b) along a line (EEE3DMultiEffect, 0xf42c3)
+EEE3DRust::EEE3DRust(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect3D(0, inGraphicEffect, inKind)
+{
+    this->Call(EeGfxEffect3DOp::CreateLine, NULL, NULL, 0, 0, 0, &inLine);
 }
 
 // the pulse cannon ball (0x43): from the unit's weapon point to the target (EEE3DPulseCannonBall, 0xf6a26); the
@@ -376,22 +528,11 @@ EEE3DRust::~EEE3DRust()
     }
 }
 
-long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
-                     unsigned long inMajorVersion, unsigned long inMinorVersion)
+// the facts of an effect's graphic effect (inEffect), unit (inUnit) and the tick the Rust effects read (EEE3DRust's and
+// EEE2DRust's)
+EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
 {
-    Ask theAsk = {this, inQueues, NULL};
-    EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
-                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
-                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
-                                 Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitScale, Ask::UnitLocation,
-                                 Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
-                                 Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
-                                 Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
-                                 Ask::SpaceTile};
-    // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
-    if (inFile != NULL)
-        return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
-    EEGraphicEffect* theEffect = this->mGraphicEffect;
+    EEGraphicEffect* theEffect = inEffect;
     EEGraphicObject* theObject = theEffect ? theEffect->mGraphicObject : NULL;
     EeGfxGraphicFacts theFacts = {};
     if (theEffect != NULL) {
@@ -404,21 +545,48 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
         theFacts.param5 = theEffect->mParam5;
         theFacts.param6 = theEffect->mParam6;
         theFacts.flag1 = theEffect->mFlag1;
+        theFacts.flag2 = theEffect->mFlag2;
+        theFacts.param7 = theEffect->mParam7;
+        theFacts.param8 = theEffect->mParam8;
         theFacts.duration = (uint32_t)theEffect->mDuration;
         theFacts.has_object = theObject != NULL;
         theFacts.alpha_ref = theObject != NULL ? theObject->mAlphaReference : 0.0f;
     }
     theFacts.tick_seconds = gPhysics->GetTickSeconds();
     theFacts.tick_time = gPhysics->GetTickTime();
-    theFacts.has_unit = this->mUnit != NULL;
-    theFacts.unit_hit_points = this->mUnit != NULL ? (int32_t)this->mUnit->mHitPoints : 0;
+    theFacts.has_unit = inUnit != NULL;
+    theFacts.unit_hit_points = inUnit != NULL ? (int32_t)inUnit->mHitPoints : 0;
     if (theEffect != NULL) {
         theFacts.int_param1 = (int32_t)theEffect->mIntParam1;
         theFacts.int_param2 = (int32_t)theEffect->mIntParam2;
         theFacts.int_param3 = (int32_t)theEffect->mIntParam3;
         theFacts.has_linked1 = theEffect->mLinkedEffect1 != NULL;
+        theFacts.has_linked3 = theEffect->mLinkedEffect3 != NULL;
     }
     theFacts.game_time_bits = (uint32_t)(unsigned long)gPhysics->mGameTime;
+    theFacts.free_camera = gFreeCamera;
+    theFacts.speed = gPhysics->mSpeed;
+    return theFacts;
+}
+
+long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
+                     unsigned long inMajorVersion, unsigned long inMinorVersion, void* inArg)
+{
+    Ask theAsk = {this, inQueues, NULL, inOp, inArg, NULL, NULL};
+    EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
+                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
+                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
+                                 Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitScale, Ask::UnitLocation,
+                                 Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
+                                 Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
+                                 Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
+                                 Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
+                                 Ask::GateOpen, Ask::PlayerColor, Ask::VentLists, Ask::VentUnit, Ask::VentCount,
+                                 Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::UnitClassScale};
+    // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
+    if (inFile != NULL)
+        return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
+    EeGfxGraphicFacts theFacts = EEEffectFacts(this->mGraphicEffect, this->mUnit);
     return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
 }
 
@@ -435,6 +603,21 @@ long EEE3DRust::RepairPointers()
 {
     long theResult = EEEffect::RepairPointers();
     return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
+}
+
+// the energy wall (0x34): the current player sees the tile or holds a doppelganger of the unit there (then the wall
+// is marked seen: its texture frame restarts) (EEE3DEnergyWall::IsTileVisible, 0xed98d); the others: the base's
+bool EEE3DRust::IsTileVisible(EEMapTile* inTile)
+{
+    bool theResult = inTile->IsSeenBy(gWorld.GetCurrentPlayer());
+    if (theResult || this->mKind != 0x34)
+        return theResult;
+    long thePlayer = gWorld.mCurrentPlayer;
+    EEUnit* theUnit = this->mUnit;
+    theResult = gDoppelgangerManager.HasDoppelganger(inTile, theUnit, thePlayer);
+    if (theResult)
+        this->mRecord->wall.seen = true;
+    return theResult;
 }
 
 long EEE3DRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)

@@ -2237,8 +2237,11 @@ constexpr static const int32_t EE_WON_WIN_CLOSED = 2;
 /// The last field.
 constexpr static const int32_t EE_WON_WIN_FIELD_COUNT = 38;
 
-/// The last field (`EeWonWmField::PopupFront`; a number, as a cbindgen constant from an enum does not compile).
-constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 22;
+/// The last field (`EeWonWmField::BroadcastCount`; a number, as a cbindgen constant from an enum does not compile).
+constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
+
+/// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
+constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
 
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
@@ -2904,7 +2907,7 @@ enum class EeWonGuiOp : uint32_t {
   WmSelfHold,
   /// `Release()` on the manager.
   WmSelfRelease,
-  /// the window set's `a`-th window (0 past the end; a pure read).
+  /// not made since round 34 (the window set is the Rust manager's, `wmloop`); the number stays taken
   WmWindowAt,
   /// a cache's reference: `b` (an `EeWonWmRefKind` `a`) held (`c != 0`) or given back.
   WmRef,
@@ -2917,6 +2920,14 @@ enum class EeWonGuiOp : uint32_t {
   WmDelayImage,
   /// `mDefaultWindow->GetFont(FontDescriptor("Tahoma", 0, 8))` (a `Font*` with one reference).
   WmDefaultWindowFont,
+  /// a window event's field or method (`a` an `EeWonWmEvent`, `b` the `WindowEventBase*`; `c`, `d` its
+  /// arguments; R6 WON round 34, `wmloop`).
+  WmEvent = 604,
+  /// the screen resolution hooks (virtual): `a` 0 `GetScreenResolutionHook(*(int*)b, *(int*)c)`, 1
+  /// `SetScreenResolutionHook(b, c)`.
+  WmResolution,
+  /// `Signal()` (virtual; any thread: PostEvent's wake-up).
+  WmSignal,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3954,6 +3965,120 @@ enum class EeWonListCall : uint32_t {
   SetPaintWidth,
 };
 
+/// The dialog kinds (each one of the original classes).
+enum class EeWonLobbyDlgKind : uint32_t {
+  LanName = 0,
+  Password = 1,
+  AddFriend = 2,
+  DirectConnect = 3,
+  LanPort = 4,
+  CreateRoom = 5,
+  CreateGame = 6,
+  AdminAction = 7,
+};
+
+/// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
+enum class EeWonLobbyDlgOp : uint32_t {
+  /// `SafeGetComponent(a, aPtr, b->name, b->file, b->line)` into a `SmartPtr` of `b->ty`; the control with a
+  /// reference added (or NULL).
+  Find = 1,
+  /// `a->Release()` (a held control or game).
+  Release,
+  /// `Dialog::HandleComponentEvent(a)` on the dialog.
+  BaseEvent,
+  /// `Relayout()` on the dialog.
+  Relayout,
+  /// `a->RequestFocus()`.
+  RequestFocus,
+  /// `a->SetEnabled(b != 0)`.
+  SetEnabled,
+  /// `a->SetVisible(b != 0)`.
+  SetVisible,
+  /// `a->IsVisible()` (0 or 1).
+  IsVisible,
+  /// `((InputBox*)a)->Clear(b != 0)`.
+  InputClear,
+  /// `((InputBox*)a)->GetText().length()`.
+  InputTextLength,
+  /// `((InputBox*)a)->mText.length()` (the shown text: a password box's stars).
+  InputShownLength,
+  /// `((InputBox*)a)->GetText().mData->ToInt(0)`.
+  InputToInt,
+  /// `((InputBox*)a)->mInputFilter = InputBox::NumericFilter`.
+  InputSetNumeric,
+  /// `sprintf(aBuf, "%d", b); ((InputBox*)a)->SetText(GUIString(new GUIStringData(aBuf)), c != 0)`.
+  InputSetNumber,
+  /// `((InputBox*)a)->SetText(GUIString(""), b != 0)`.
+  InputSetEmpty,
+  /// `((InputBox*)a)->SelectRange(b, c)`.
+  InputSelectRange,
+  /// `sprintf(aBuf, "%d", b); ((Label*)a)->SetText(GUIString(new GUIStringData(aBuf)), true)`.
+  LabelSetNumber,
+  /// `((Label*)a)->SetText(the string b, true)` (`EeWonLobbyDlgString`).
+  LabelSetString,
+  /// `((Button*)a)->SetText(the string b, true)`.
+  ButtonSetString,
+  /// `aTitle = the string b; aTitle.append(" "); aTitle.append(((LobbyClient*)c)->GetName());
+  /// ((Label*)a)->SetText(aTitle, true)`.
+  AdminTitle,
+  /// `((Button*)a)->IsDisabled()` (0 or 1).
+  ButtonIsDisabled,
+  /// `((Button*)a)->IsChecked()` (0 or 1).
+  ButtonIsChecked,
+  /// `((Button*)a)->SetCheck(b != 0, c != 0)`.
+  ButtonSetCheck,
+  /// `((ComboBox*)a)->GetSelItem()`.
+  ComboGetSel,
+  /// `((ComboBox*)a)->SetSelItem(b, c != 0)`.
+  ComboSetSel,
+  /// `LobbyGame::CreateGame((LobbyGameType)b)` with a reference added (the original's local `SmartPtr`).
+  GameCreate,
+  /// `((LobbyGame*)a)->SetName(((InputBox*)b)->GetText())`.
+  GameSetName,
+  /// `((LobbyGame*)a)->SetPassword(((InputBox*)b)->GetText())`.
+  GameSetPassword,
+  /// `((LobbyGame*)a)->SetAskToJoin(b != 0)`.
+  GameSetAskToJoin,
+  /// `((LobbyGame*)a)->SetInviteOnly(b != 0)`.
+  GameSetInviteOnly,
+  /// `((LobbyGame*)a)->SetSkill(b)`.
+  GameSetSkill,
+};
+
+/// The inward calls (the shells' methods).
+enum class EeWonLobbyDlgCall : uint32_t {
+  /// `InitComponent` of a config init (`a` the `ComponentConfig*`).
+  Init = 1,
+  /// `HandleComponentEvent(a)`: `b` the `EeWonLobbyDlgEvent`, `c` the event's component.
+  Event,
+  /// `Reset()`; CreateRoom and CreateGame: `Reset(a != 0)`; AdminAction: `Reset(a, (LobbyClient*)b)`.
+  Reset,
+  /// the control `a` (member order) as held, or NULL (the getters read its text in C++).
+  Slot,
+  /// `CheckInput()` (AdminAction: `UpdateDoActionButton()`).
+  CheckInput,
+  /// `UpdatePasswordVisibility()` (CreateRoom, CreateGame).
+  UpdatePasswordVisibility,
+  /// LanPort: `SetPort(a)`.
+  SetPort,
+  /// LanPort: `SetGamePort(a)`.
+  SetGamePort,
+  /// LanPort: `GetPort()`.
+  GetPort,
+  /// CreateGame: `SetGameType(a)`.
+  SetGameType,
+  /// CreateGame: `GetGame()`, the game with a reference added.
+  GetGame,
+  /// CreateRoom: `GetPassword()`'s input box, or NULL for the empty string.
+  GetPassword,
+  /// AdminAction: `GetApplyToServer()` (0 or 1).
+  ApplyToServer,
+  /// AdminAction: `GetNumSeconds()`.
+  NumSeconds,
+  /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional.
+  Field,
+};
+
 /// A container's key kind (its comparator).
 enum class EeWonLobbyKeyKind {
   /// `unsigned short` / `unsigned long` ids
@@ -4723,6 +4848,31 @@ enum class EeWonWmCall : uint32_t {
   DecodeImageRaw,
   /// `DecodeDelayImage(path a of b bytes)` (an `Image*` with the caller's reference).
   DecodeDelayImage,
+  /// `SetScreenResolution(a, b)`.
+  SetScreenResolution,
+  RestoreScreenResolution,
+  CloseAllWindows,
+  /// `AddWindow((Window*)a)` (always 1).
+  AddWindow,
+  /// `RemoveWindow((Window*)a)` (0 or 1).
+  RemoveWindow,
+  /// `PostEvent((WindowEventBase*)a, b != 0)` (any thread).
+  PostEvent,
+  /// `AddTimerEvent((WindowEventBase*)a)`.
+  AddTimerEvent,
+  /// `RemoveTimerEvent((WindowEventBase*)a)`.
+  RemoveTimerEvent,
+  RemoveAllTimerEvents,
+  /// `SubscribeToBroadcast((Component*)a, b != 0)`.
+  SubscribeToBroadcast,
+  ClearSubscriptions,
+  /// `BroadcastEvent((ComponentEvent*)a)`.
+  BroadcastEvent,
+  /// `PeekNextEvent()` (a `WindowEventBase*`, or 0; any thread).
+  PeekNextEvent,
+  ProcessEvents,
+  /// `DeliverEvent((WindowEventBase*)a)`.
+  DeliverEvent,
 };
 
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
@@ -5081,6 +5231,10 @@ enum class EeWonWmComp : uint32_t {
   Hold,
   /// `Release()`.
   Release,
+  /// `MouseWheel(c)` (virtual; DeliverEvent's wheel to the topmost popup).
+  MouseWheel,
+  /// `HandleComponentEvent((ComponentEvent*)c)` (virtual; a broadcast).
+  HandleComponentEvent,
 };
 
 /// A window's methods the manager calls (`WmWin`'s `a`; `b` the window, `c`, `d` the arguments).
@@ -5130,6 +5284,26 @@ enum class EeWonWmWin : uint32_t {
   Hold,
   /// `Release()`.
   Release,
+  /// `GetMinimizeOnResolutionRestore()` (a pure read).
+  MinimizeOnRestore,
+  /// `Minimize(c != 0)`.
+  Minimize,
+  /// `IsMouseInClientArea()` (a pure read).
+  InClient,
+  /// `HandleMouseEvent((MouseEvent*)c)`.
+  HandleMouse,
+  /// `HandleKeyEvent((KeyEvent*)c)`.
+  HandleKey,
+  /// `HandleInputEvent((InputEvent*)c)`.
+  HandleInput,
+  /// `PlatformClose()` (virtual).
+  PlatformClose,
+  /// `mCloseEvent.get()` (a raw `WindowEventBase*`; a pure read).
+  CloseEvent,
+  /// `TimerEvent(c)` (virtual; the elapsed ticks).
+  TimerEvent,
+  /// `IdleUpdate()` (virtual).
+  IdleUpdate,
 };
 
 /// The fields (the accessors, the goldens and the unit tests).
@@ -5165,6 +5339,29 @@ enum class EeWonWmField : uint32_t {
   PopupCount,
   PopupBack,
   PopupFront,
+  /// `mDefaultWindow` (the window set's first, or 0)
+  DefaultWindow,
+  /// `mWindowCount`
+  WindowCount,
+  /// `mIsFullScreen` (settable)
+  FullScreen,
+  /// `mFullScreenWidth`, `mFullScreenHeight` (settable)
+  FullScreenWidth,
+  FullScreenHeight,
+  /// `mOriginalScreenWidth`, `mOriginalScreenHeight`
+  OriginalWidth,
+  OriginalHeight,
+  /// `mLastTimerTick` (settable: the constructor's tick)
+  LastTimerTick,
+  LastInputTick,
+  CallingTimers,
+  /// the sizes of the window set, the event list, the timer events, the deferred timer removals and the
+  /// broadcast set (their entries: `ee_won_wm_set_at`)
+  WindowSetCount,
+  EventCount,
+  TimerCount,
+  RemoveTimerCount,
+  BroadcastCount,
 };
 
 /// Which kind of object a reference op is on (`WmRef`'s `a`).
@@ -5174,6 +5371,72 @@ enum class EeWonWmRefKind : uint32_t {
   RawImage,
   /// a delay-load image (an `Image`)
   Image,
+};
+
+/// A window event's fields and methods (`WmEvent`'s `a`; `b` the `WindowEventBase*`, `c`, `d` the arguments).
+enum class EeWonWmEvent : uint32_t {
+  /// `mEventType` (a pure read).
+  Type = 1,
+  /// `mWindow` (a pure read).
+  Window,
+  /// `mWindow = (Window*)c`.
+  SetWindow,
+  /// a `MouseEvent`'s `mWindow`, `mx`, `my` and `mButtonOrAmount` into `*(EeWonWmMouse*)c` (a pure read).
+  Mouse,
+  /// a `MouseEvent`'s `mWindow`, `mx` and `my` from `*(EeWonWmMouse*)c`.
+  SetMouse,
+  /// a `MouseEvent`'s `mButtonOrAmount` (a pure read).
+  Button,
+  /// a `KeyEvent`'s `mKey` (a pure read).
+  Key,
+  /// a `SizeEvent`'s `mx`, `my`, `mWidth`, `mHeight` into `*(EeWonRect4*)c` (a pure read).
+  Size,
+  /// a `SizeEvent`'s fields from `*(EeWonRect4*)c`.
+  SetSize,
+  /// `Deliver()` (virtual).
+  Deliver,
+  /// `AddRef()` (a `SmartPtr<WindowEventBase>`).
+  Hold,
+  /// `Release()`.
+  Release,
+};
+
+/// Which set `ee_won_wm_set_at` reads.
+enum class EeWonWmSet : uint32_t {
+  Windows = 0,
+  Events,
+  Timers,
+  RemoveTimers,
+  Broadcast,
+};
+
+/// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
+enum class EeWonLobbyDlgType : uint32_t {
+  Input = 0,
+  Button = 1,
+  Label = 2,
+  Combo = 3,
+};
+
+/// The texts AdminActionDialog sets (the lobby's resource strings).
+enum class EeWonLobbyDlgString : uint32_t {
+  /// an empty `GUIString` (an action the original's switch did not name)
+  Empty = 0,
+  Warn = 1,
+  Mute = 2,
+  UnMute = 3,
+  Kick = 4,
+  Ban = 5,
+  ExplanationOpt = 6,
+  ExplanationReq = 7,
+};
+
+/// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
+enum class EeWonLobbyDlgEvent : uint32_t {
+  Other = 0,
+  InputTextChanged = 1,
+  ButtonPressed = 2,
+  ComboSelChanged = 3,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -5270,6 +5533,9 @@ struct EeWonLightCert;
 
 /// The Rust ListArea.
 struct EeWonList;
+
+/// One lobby dialog's Rust half.
+struct EeWonLobbyDlg;
 
 /// An ordered container of the lobby (see the module).
 struct EeWonLobbyMap;
@@ -5383,6 +5649,11 @@ struct EeWonUserStatus;
 struct EeWonWindow;
 
 /// The Rust WindowManager.
+///
+/// Every method runs on the GUI thread but PostEvent and PeekNextEvent, which other threads call (the original
+/// locked `mDataCrit` there): they touch only `events` (a `Mutex`, never held across a call out) and
+/// `cur_depth` (an atomic: the message loop's depth PostEvent reads), and make the event's `Hold` and the
+/// `Signal` ops, which the C++ answers on any thread.
 struct EeWonWm;
 
 /// `WriteBuffer`'s state.
@@ -6586,6 +6857,13 @@ struct EeWonLayoutInit {
   bool vert;
 };
 
+/// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
+using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
+                                         EeWonLobbyDlgOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c);
+
 /// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
 /// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
 struct EeWonLobbyMapHooks {
@@ -7525,6 +7803,14 @@ struct EeWonWmPopup {
   int32_t x;
   int32_t y;
   EeWonRect4 avoid;
+};
+
+/// One control of a kind: its resource name, the original's file and line (for the missing-control report) and type.
+struct EeWonLobbyDlgSlot {
+  const char *name;
+  const char *file;
+  int32_t line;
+  EeWonLobbyDlgType ty;
 };
 
 extern "C" {
@@ -12370,6 +12656,25 @@ ptrdiff_t ee_won_list_call(const EeWonList *list,
                            ptrdiff_t b,
                            ptrdiff_t c);
 
+/// A new dialog object for the C++ `dialog` of `kind`.
+EeWonLobbyDlg *ee_won_lobbydlg_new(void *dialog, EeWonLobbyDlgKind kind, EeWonLobbyDlgHostFn host);
+
+/// Releases the controls (reverse member order) and frees the object.
+///
+/// # Safety
+/// `dlg` came from `ee_won_lobbydlg_new` (or is NULL) and is not used again.
+void ee_won_lobbydlg_free(EeWonLobbyDlg *dlg);
+
+/// One inward call (`EeWonLobbyDlgCall`).
+///
+/// # Safety
+/// `dlg` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lobbydlg_call(const EeWonLobbyDlg *dlg,
+                               EeWonLobbyDlgCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c);
+
 /// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
 ///
 /// # Safety
@@ -15787,10 +16092,17 @@ void ee_won_win_free(EeWonWindow *win);
 /// `win` is live; the call's arguments as documented.
 ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
 
+/// A set's `i`-th entry (`which` an `EeWonWmSet`; 0 past the end; the goldens' trace).
+///
+/// # Safety
+/// `wm` is live.
+ptrdiff_t ee_won_wm_set_at(const EeWonWm *wm, uint32_t which, size_t i);
+
 /// A new Rust WindowManager for the C++ `manager`, its calls out through `host`.
 EeWonWm *ee_won_wm_new(void *manager, EeWonGuiHostFn host);
 
-/// The manager's object freed, its held members given back first (the popup members, then the caches: the
+/// The manager's object freed, its held members given back first (the broadcast set, the deferred timer
+/// removals, the timer events, the event list and the window set; then the popup members; then the caches: the
 /// original's members in reverse order).
 ///
 /// # Safety

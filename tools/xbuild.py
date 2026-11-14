@@ -550,6 +550,8 @@ WON_TESTS = {
     # the lobby dialogs' decisions (the create and OK buttons, the skill, the LAN port, the adapters' order, the
     # status dialog's sizes), the original's statements against ee_won's dialogs module
     "won_dialogs_test": [],
+    # the lobby's eight small dialogs as one Rust object (golden: rust/crates/ee_won/src/golden_lobbydlg.txt)
+    "won_lobbydlg_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
@@ -800,6 +802,11 @@ NET_TESTS = {
     "ne_msgmgr_test": [],
     # NELagLossSimulator, NERecordPlayback, NETimestampedMessage (golden: rust/crates/ee_net/src/golden_queues.txt)
     "ne_queues_test": [],
+    # NESynchronousClient (golden: rust/crates/ee_net/src/golden_client.txt; the original unit is tests/net/orig_c)
+    "ne_client_test": [],
+    # NESynchronousServer's tuning and booting (golden: rust/crates/ee_net/src/golden_tune.txt; the original members are
+    # tests/net/orig_s/NESynchronousServerTune.inc)
+    "ne_tune_test": [],
     # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the
     # original units with the TCP shim's entry table)
     # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp instead
