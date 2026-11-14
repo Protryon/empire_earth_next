@@ -90,431 +90,8 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
-// The last nine controls set their position with SetXY (one inline expansion each): with SetX/SetY pairs the inline
-// budget refuses GEColor::operator= at label 0x9e5 (mSecondConditionLabel), which the original expands.
-// FUNCTION: EXE 0x59393b
-// Builds the trigger sub-screen: if/then labels, two condition and two effect rows (not, combo, and/or,
-// delay, remove), scroll buttons and the is-on, condition timer, looping and cinematic check boxes
-EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
-{
-    UWideString theText;
-    GE2DPoint thePosition(3.0f, 664.0f);
-    GEText* theGEText;
-    UIEvent* theEvent;
-    gResource->GetString(IDS_IF, theText);
-    this->mIfLabel = new UITextLabel(theText, inFont, 0x9c4, GERectangle(thePosition, 40.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mIfLabel->SetBgOpacity(0.4f);
-    theGEText = this->mIfLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mIfLabel, 9);
-    ioIndex++;
-    thePosition.SetX(3.0f);
-    thePosition.SetY(711.0f);
-    gResource->GetString(IDS_THEN, theText);
-    this->mThenLabel = new UITextLabel(theText, inFont, 0x9c5, GERectangle(thePosition, 40.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mThenLabel->SetBgOpacity(0.4f);
-    theGEText = this->mThenLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mThenLabel, 9);
-    ioIndex++;
-    thePosition.SetX(0.0f);
-    thePosition.SetY(616.0f);
-    gResource->GetString(IDS_TRIGGER_STATEMENT, theText);
-    this->mTriggerStatementLabel = new UITextLabel(theText, inFont, 0x9c6, GERectangle(thePosition, 150.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mTriggerStatementLabel->SetBgOpacity(0.4f);
-    theGEText = this->mTriggerStatementLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mTriggerStatementLabel, 9);
-    ioIndex++;
-    thePosition.SetX(45.0f);
-    thePosition.SetY(689.0f);
-    gResource->GetString(IDS_DELAY, theText);
-    this->mFirstDelayLabel = new UITextLabel(theText, inFont, 0x9c7, GERectangle(thePosition, 45.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mFirstDelayLabel->SetBgOpacity(0.4f);
-    theGEText = this->mFirstDelayLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mFirstDelayLabel, 9);
-    ioIndex++;
-    thePosition.SetX(353.0f);
-    thePosition.SetY(689.0f);
-    gResource->GetString(IDS_DELAY, theText);
-    this->mSecondDelayLabel = new UITextLabel(theText, inFont, 0x9c8, GERectangle(thePosition, 45.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mSecondDelayLabel->SetBgOpacity(0.4f);
-    theGEText = this->mSecondDelayLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mSecondDelayLabel, 9);
-    ioIndex++;
-    thePosition.SetX(45.0f);
-    thePosition.SetY(641.0f);
-    gResource->GetString(IDS_NOT, theText);
-    this->mFirstNotLabel = new UITextLabel(theText, inFont, 0x9c9, GERectangle(thePosition, 45.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mFirstNotLabel->SetBgOpacity(0.4f);
-    this->mFirstNotLabel->SetAlignment(kTextAlignCenter);
-    theGEText = this->mFirstNotLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mFirstNotLabel, 9);
-    ioIndex++;
-    thePosition.SetX(353.0f);
-    thePosition.SetY(641.0f);
-    gResource->GetString(IDS_NOT, theText);
-    this->mSecondNotLabel = new UITextLabel(theText, inFont, 0x9ca, GERectangle(thePosition, 45.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mSecondNotLabel->SetBgOpacity(0.4f);
-    this->mSecondNotLabel->SetAlignment(kTextAlignCenter);
-    theGEText = this->mSecondNotLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mSecondNotLabel, 9);
-    ioIndex++;
-    thePosition.SetX(411.0f);
-    thePosition.SetY(557.0f);
-    gResource->GetString(IDS_SECONDS, theText);
-    this->mSecondsLabel = new UITextLabel(theText, inFont, kSETSTriggerSecondsLabel, GERectangle(thePosition, 100.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mSecondsLabel->SetBgOpacity(0.4f);
-    theGEText = this->mSecondsLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mSecondsLabel, 9);
-    ioIndex++;
-    thePosition.SetX(103.0f);
-    thePosition.SetY(641.0f);
-    this->mFirstConditionLabel = new UITextLabel(theText, inFont, 0x9e4, GERectangle(thePosition, 200.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mFirstConditionLabel->SetBgOpacity(0.4f);
-    this->mFirstConditionLabel->SetAlignment(kTextAlignCenter);
-    theGEText = this->mFirstConditionLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mFirstConditionLabel, 9);
-    ioIndex++;
-    thePosition.SetX(411.0f);
-    thePosition.SetY(641.0f);
-    this->mSecondConditionLabel = new UITextLabel(theText, inFont, 0x9e5, GERectangle(thePosition, 200.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mSecondConditionLabel->SetBgOpacity(0.4f);
-    this->mSecondConditionLabel->SetAlignment(kTextAlignCenter);
-    theGEText = this->mSecondConditionLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mSecondConditionLabel, 9);
-    ioIndex++;
-    thePosition.SetX(103.0f);
-    thePosition.SetY(689.0f);
-    this->mFirstEffectLabel = new UITextLabel(theText, inFont, 0x9e6, GERectangle(thePosition, 200.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mFirstEffectLabel->SetBgOpacity(0.4f);
-    this->mFirstEffectLabel->SetAlignment(kTextAlignCenter);
-    theGEText = this->mFirstEffectLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mFirstEffectLabel, 9);
-    ioIndex++;
-    thePosition.SetX(411.0f);
-    thePosition.SetY(689.0f);
-    this->mSecondEffectLabel = new UITextLabel(theText, inFont, 0x9e7, GERectangle(thePosition, 200.0f, 20.0f), inForm, 0, ioIndex, 0);
-    this->mSecondEffectLabel->SetBgOpacity(0.4f);
-    this->mSecondEffectLabel->SetAlignment(kTextAlignCenter);
-    theGEText = this->mSecondEffectLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mSecondEffectLabel, 9);
-    ioIndex++;
-    theText = "";
-    thePosition.SetX(56.0f);
-    thePosition.SetY(664.0f);
-    this->mFirstNotCheckBox = new UICheckBox(0x9cc, theText, inFont, GERectangle(thePosition, 22.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mFirstNotCheckBox, 9);
-    ioIndex++;
-    theText = "";
-    thePosition.SetX(364.0f);
-    thePosition.SetY(664.0f);
-    this->mSecondNotCheckBox = new UICheckBox(0x9cd, theText, inFont, GERectangle(thePosition, 22.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mSecondNotCheckBox, 9);
-    ioIndex++;
-    thePosition.SetX(92.0f);
-    thePosition.SetY(664.0f);
-    this->mFirstConditionComboBox = new EESETSTriggerUIComboBox(kSETriggerScreenCondition, 0x9ce, 1, std::vector<UWideString>(), gU531930, thePosition, 200.0f, 400,
-                                           inForm, ioIndex, 0, 2);
-    this->mFirstConditionComboBox->SetTextBoxBgOpacity(0.4f);
-    this->mFirstConditionComboBox->SetListBoxAlwaysDirty(true);
-    theGEText = this->mFirstConditionComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mFirstConditionComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mFirstConditionComboBox->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mFirstConditionComboBox, 9);
-    ioIndex++;
-    thePosition.SetX(400.0f);
-    thePosition.SetY(664.0f);
-    this->mSecondConditionComboBox = new EESETSTriggerUIComboBox(kSETriggerScreenCondition, 0x9cf, 1, std::vector<UWideString>(), gU531930, thePosition, 200.0f, 400,
-                                           inForm, ioIndex, 0, 2);
-    this->mSecondConditionComboBox->SetTextBoxBgOpacity(0.4f);
-    this->mSecondConditionComboBox->SetListBoxAlwaysDirty(true);
-    theGEText = this->mSecondConditionComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mSecondConditionComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mSecondConditionComboBox->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mSecondConditionComboBox, 9);
-    ioIndex++;
-    thePosition.SetX(294.0f);
-    thePosition.SetY(664.0f);
-    this->mFirstConditionOperatorComboBox = new UIComboBox(0x9d0, 1, std::vector<UWideString>(), gU531930, GERectangle(thePosition, 55.0f, 20.0f), 400,
-                              inForm, ioIndex, 0, 2);
-    this->mFirstConditionOperatorComboBox->SetTextBoxBgOpacity(0.4f);
-    this->mFirstConditionOperatorComboBox->SetListBoxAlwaysDirty(true);
-    theGEText = this->mFirstConditionOperatorComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mFirstConditionOperatorComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mFirstConditionOperatorComboBox->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mFirstConditionOperatorComboBox, 9);
-    ioIndex++;
-    gResource->GetString(IDS_AND, theText);
-    this->mFirstConditionOperatorComboBox->AppendLine(theText);
-    gResource->GetString(IDS_OR, theText);
-    this->mFirstConditionOperatorComboBox->AppendLine(theText);
-    thePosition.SetX(602.0f);
-    thePosition.SetY(664.0f);
-    this->mSecondConditionOperatorComboBox = new UIComboBox(0x9d1, 1, std::vector<UWideString>(), gU531930, GERectangle(thePosition, 55.0f, 20.0f), 400,
-                              inForm, ioIndex, 0, 2);
-    this->mSecondConditionOperatorComboBox->SetTextBoxBgOpacity(0.4f);
-    this->mSecondConditionOperatorComboBox->SetListBoxAlwaysDirty(true);
-    theGEText = this->mSecondConditionOperatorComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mSecondConditionOperatorComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mSecondConditionOperatorComboBox->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mSecondConditionOperatorComboBox, 9);
-    ioIndex++;
-    gResource->GetString(IDS_AND, theText);
-    this->mSecondConditionOperatorComboBox->AppendLine(theText);
-    gResource->GetString(IDS_OR, theText);
-    this->mSecondConditionOperatorComboBox->AppendLine(theText);
-    thePosition.SetX(45.0f);
-    thePosition.SetY(711.0f);
-    this->mFirstDelayEditBox = new UIEditBox(0x9d2, inFont, 4, true, GERectangle(thePosition, 45.0f, 20.0f), inForm, ioIndex, 2, false, false);
-    this->mFirstDelayEditBox->SetBgOpacity(0.4f);
-    theGEText = this->mFirstDelayEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mFirstDelayEditBox, 9);
-    ioIndex++;
-    thePosition.SetX(353.0f);
-    thePosition.SetY(711.0f);
-    this->mSecondDelayEditBox = new UIEditBox(0x9d3, inFont, 4, true, GERectangle(thePosition, 45.0f, 20.0f), inForm, ioIndex, 2, false, false);
-    this->mSecondDelayEditBox->SetBgOpacity(0.4f);
-    theGEText = this->mSecondDelayEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mSecondDelayEditBox, 9);
-    ioIndex++;
-    thePosition.SetX(92.0f);
-    thePosition.SetY(711.0f);
-    this->mFirstEffectComboBox = new EESETSTriggerUIComboBox(kSETriggerScreenEffect, 0x9d4, 1, std::vector<UWideString>(), gU531930, thePosition, 200.0f, 400,
-                                           inForm, ioIndex, 0, 2);
-    this->mFirstEffectComboBox->SetTextBoxBgOpacity(0.4f);
-    this->mFirstEffectComboBox->SetListBoxAlwaysDirty(true);
-    theGEText = this->mFirstEffectComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mFirstEffectComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mFirstEffectComboBox->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mFirstEffectComboBox, 9);
-    ioIndex++;
-    thePosition.SetX(400.0f);
-    thePosition.SetY(711.0f);
-    this->mSecondEffectComboBox = new EESETSTriggerUIComboBox(kSETriggerScreenEffect, 0x9d5, 1, std::vector<UWideString>(), gU531930, thePosition, 200.0f, 400,
-                                           inForm, ioIndex, 0, 2);
-    this->mSecondEffectComboBox->SetTextBoxBgOpacity(0.4f);
-    this->mSecondEffectComboBox->SetListBoxAlwaysDirty(true);
-    theGEText = this->mSecondEffectComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mSecondEffectComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mSecondEffectComboBox->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mSecondEffectComboBox, 9);
-    ioIndex++;
-    thePosition.SetX(294.0f);
-    thePosition.SetY(711.0f);
-    this->mFirstEffectOperatorComboBox = new UIComboBox(0x9d6, 1, std::vector<UWideString>(), gU531930, GERectangle(thePosition, 55.0f, 20.0f), 400,
-                              inForm, ioIndex, 0, 2);
-    this->mFirstEffectOperatorComboBox->SetTextBoxBgOpacity(0.4f);
-    this->mFirstEffectOperatorComboBox->SetListBoxAlwaysDirty(true);
-    theGEText = this->mFirstEffectOperatorComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mFirstEffectOperatorComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mFirstEffectOperatorComboBox->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mFirstEffectOperatorComboBox, 9);
-    ioIndex++;
-    gResource->GetString(IDS_AND, theText);
-    this->mFirstEffectOperatorComboBox->AppendLine(theText);
-    gResource->GetString(IDS_OR, theText);
-    this->mFirstEffectOperatorComboBox->AppendLine(theText);
-    thePosition.SetX(602.0f);
-    thePosition.SetY(711.0f);
-    this->mSecondEffectOperatorComboBox = new UIComboBox(0x9d7, 1, std::vector<UWideString>(), gU531930, GERectangle(thePosition, 55.0f, 20.0f), 400,
-                              inForm, ioIndex, 0, 2);
-    this->mSecondEffectOperatorComboBox->SetTextBoxBgOpacity(0.4f);
-    this->mSecondEffectOperatorComboBox->SetListBoxAlwaysDirty(true);
-    theGEText = this->mSecondEffectOperatorComboBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    this->mSecondEffectOperatorComboBox->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mSecondEffectOperatorComboBox->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mSecondEffectOperatorComboBox, 9);
-    ioIndex++;
-    gResource->GetString(IDS_AND, theText);
-    this->mSecondEffectOperatorComboBox->AppendLine(theText);
-    gResource->GetString(IDS_OR, theText);
-    this->mSecondEffectOperatorComboBox->AppendLine(theText);
-    thePosition.SetX(180.0f);
-    thePosition.SetY(616.0f);
-    gResource->GetString(IDS_SE_REMOVE, theText);
-    this->mRemoveFirstConditionButton = new UIButton(0x9d8, NULL, NULL, NULL, GERectangle(thePosition, 115.0f, 20.0f), inForm, ioIndex, 2);
-    this->mRemoveFirstConditionButton->SetBgOpacity(0.4f);
-    this->mRemoveFirstConditionButton->SetText(theText, inFont);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_REMOVE);
-    this->mRemoveFirstConditionButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    theGEText = this->mRemoveFirstConditionButton->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mRemoveFirstConditionButton, 9);
-    ioIndex++;
-    thePosition.SetX(this->mRemoveFirstConditionButton->GetRectangle().GetRight() + 2.0f);
-    thePosition.SetY(616.0f);
-    gResource->GetString(IDS_SE_REMOVE, theText);
-    this->mRemoveSecondConditionButton = new UIButton(0x9d9, NULL, NULL, NULL, GERectangle(thePosition, 115.0f, 20.0f), inForm, ioIndex, 2);
-    this->mRemoveSecondConditionButton->SetBgOpacity(0.4f);
-    this->mRemoveSecondConditionButton->SetText(theText, inFont);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_REMOVE);
-    this->mRemoveSecondConditionButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    theGEText = this->mRemoveSecondConditionButton->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mRemoveSecondConditionButton, 9);
-    ioIndex++;
-    thePosition.SetX(this->mRemoveSecondConditionButton->GetRectangle().GetRight() + 2.0f);
-    thePosition.SetY(616.0f);
-    gResource->GetString(IDS_SE_REMOVE, theText);
-    this->mRemoveFirstEffectButton = new UIButton(0x9da, NULL, NULL, NULL, GERectangle(thePosition, 115.0f, 20.0f), inForm, ioIndex, 2);
-    this->mRemoveFirstEffectButton->SetBgOpacity(0.4f);
-    this->mRemoveFirstEffectButton->SetText(theText, inFont);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_REMOVE);
-    this->mRemoveFirstEffectButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    theGEText = this->mRemoveFirstEffectButton->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mRemoveFirstEffectButton, 9);
-    ioIndex++;
-    thePosition.SetX(this->mRemoveFirstEffectButton->GetRectangle().GetRight() + 2.0f);
-    thePosition.SetY(616.0f);
-    theText = UWideString("--------------");
-    this->mRemoveSecondEffectButton = new UIButton(0x9db, NULL, NULL, NULL, GERectangle(thePosition, 115.0f, 20.0f), inForm, ioIndex, 2);
-    this->mRemoveSecondEffectButton->SetBgOpacity(0.4f);
-    this->mRemoveSecondEffectButton->SetText(theText, inFont);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_REMOVE);
-    this->mRemoveSecondEffectButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    theGEText = this->mRemoveSecondEffectButton->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mRemoveSecondEffectButton, 9);
-    ioIndex++;
-    thePosition.SetXY(3.0f, 641.0f);
-    this->mPrevConditionsButton = new UIButton(kSETSTriggerPrevConditionsButton, inForm->GetManager()->GetSBBitmapLeftNormal(), NULL,
-                             inForm->GetManager()->GetSBBitmapLeftPressed(), GERectangle(thePosition, 20.0f, 20.0f), inForm,
-                             ioIndex, 0);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CHANGE_INDEX);
-    this->mPrevConditionsButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mPrevConditionsButton, 9);
-    ioIndex++;
-    thePosition.SetXY(this->mSecondConditionOperatorComboBox->GetRectangle().GetRight() - 20.0f, 641.0f);
-    this->mNextConditionsButton = new UIButton(kSETSTriggerNextConditionsButton, inForm->GetManager()->GetSBBitmapRightNormal(), NULL,
-                             inForm->GetManager()->GetSBBitmapRightPressed(), GERectangle(thePosition, 20.0f, 20.0f), inForm,
-                             ioIndex, 0);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CHANGE_INDEX);
-    this->mNextConditionsButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mNextConditionsButton, 9);
-    ioIndex++;
-    thePosition.SetXY(3.0f, 689.0f);
-    this->mPrevEffectsButton = new UIButton(kSETSTriggerPrevEffectsButton, inForm->GetManager()->GetSBBitmapLeftNormal(), NULL,
-                             inForm->GetManager()->GetSBBitmapLeftPressed(), GERectangle(thePosition, 20.0f, 20.0f), inForm,
-                             ioIndex, 0);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CHANGE_INDEX);
-    this->mPrevEffectsButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mPrevEffectsButton, 9);
-    ioIndex++;
-    thePosition.SetXY(this->mSecondConditionOperatorComboBox->GetRectangle().GetRight() - 20.0f, 689.0f);
-    this->mNextEffectsButton = new UIButton(kSETSTriggerNextEffectsButton, inForm->GetManager()->GetSBBitmapRightNormal(), NULL,
-                             inForm->GetManager()->GetSBBitmapRightPressed(), GERectangle(thePosition, 20.0f, 20.0f), inForm,
-                             ioIndex, 0);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CHANGE_INDEX);
-    this->mNextEffectsButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    theEvent->Dereference();
-    inForm->AddControl(this->mNextEffectsButton, 9);
-    ioIndex++;
-    gResource->GetString(IDS_TRIGGER_IS_ON, theText);
-    thePosition.SetXY(329.0f, 510.0f);
-    this->mIsOnCheckBox = new UICheckBox(0x9e0, theText, inFont, GERectangle(thePosition, 250.0f, 20.0f), inForm, ioIndex, 0, false);
-    this->mIsOnCheckBox->SetBgOpacity(0.4f);
-    theGEText = this->mIsOnCheckBox->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mIsOnCheckBox, 9);
-    ioIndex++;
-    gResource->GetString(IDS_CONDITIONS_TRUE_FOR, theText);
-    thePosition.SetXY(329.0f, 535.0f);
-    this->mConditionTimerCheckBox = new UICheckBox(0x9e1, theText, inFont, GERectangle(thePosition, 250.0f, 20.0f), inForm, ioIndex, 0, false);
-    this->mConditionTimerCheckBox->SetBgOpacity(0.4f);
-    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CONDITION_TIMER);
-    this->mConditionTimerCheckBox->SetTriggerEvent(kControlTriggerChecked, theEvent);
-    this->mConditionTimerCheckBox->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
-    theEvent->Dereference();
-    theGEText = this->mConditionTimerCheckBox->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mConditionTimerCheckBox, 9);
-    ioIndex++;
-    thePosition.SetXY(349.0f, 557.0f);
-    this->mConditionDurationEditBox = new UIEditBox(kSETSTriggerConditionDurationEditBox, inFont, 5, true, GERectangle(thePosition, 60.0f, 20.0f), inForm, ioIndex, 2, false, false);
-    this->mConditionDurationEditBox->SetBgOpacity(0.4f);
-    theGEText = this->mConditionDurationEditBox->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mConditionDurationEditBox, 9);
-    ioIndex++;
-    gResource->GetString(IDS_LOOPING, theText);
-    thePosition.SetXY(329.0f, 586.0f);
-    this->mLoopingCheckBox = new UICheckBox(0x9e3, theText, inFont, GERectangle(thePosition, 250.0f, 20.0f), inForm, ioIndex, 0, false);
-    this->mLoopingCheckBox->SetBgOpacity(0.4f);
-    theGEText = this->mLoopingCheckBox->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mLoopingCheckBox, 9);
-    ioIndex++;
-    gResource->GetString(IDS_INCLUDE_IN_CINEMATIC, theText);
-    thePosition.SetXY(this->mLoopingCheckBox->GetRectangle().GetRight() + 5.0f, 586.0f);
-    this->mInCinematicCheckBox = new UICheckBox(0x9e8, theText, inFont, GERectangle(thePosition, 250.0f, 20.0f), inForm, ioIndex, 0, false);
-    this->mInCinematicCheckBox->SetBgOpacity(0.4f);
-    theGEText = this->mInCinematicCheckBox->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mInCinematicCheckBox, 9);
-    ioIndex++;
-    this->mOperatorEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_OPERATOR);
-    this->mFirstCondition = 0;
-    this->mFirstEffect = 0;
-}
+#include "ee/EESMTConditionWrapper.h"
+#include "ee/EESMTEffectWrapper.h"
 
 // FUNCTION: EXE 0x595c35
 // Creates a trigger combo box whose right click opens the picked entry's tab (kind: condition or effect)
@@ -625,419 +202,201 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
 // SYNTHETIC: EXE 0x595fc2
 // (EESETSTrigger's scalar deleting destructor)
 
+
+// The trigger screen whole in Rust (ee_screens editor_trigger.rs): the constructor (0x59393b), the destructor
+// (0x595fde), Sort, MoveDown, MoveUp, Delete, UpdateSecondConditionRow, UpdateSecondEffectRow, Duplicate, Activate,
+// Store (0x596415), ChangeOperator, GetNames, Hide, Load (0x596785), New, RemoveEntry, ShowOperator, Show and the
+// rows' steps are its members; the class forwards. EESETSTriggerUIComboBox stays C++ (above), and this unit is the
+// screen's host (ee_screenscpp_setr).
+
+extern GEFont* gSeplScreenFont;   // the screen's font while the object makes its controls (EESERBUnitTypes.cpp)
+
+// FUNCTION: EXE 0x59393b
+// Builds the trigger sub-screen: if/then labels, two condition and two effect rows (not, combo, and/or,
+// delay, remove), scroll buttons and the is-on, condition timer, looping and cinematic check boxes (editor_trigger.rs)
+EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
+{
+    gSeplScreenFont = inFont;
+    uint32_t theIndex = (uint32_t)ioIndex;
+    this->mRust = ee_screens_setr_new(inForm, &theIndex);
+    ioIndex = theIndex;
+}
+
 // FUNCTION: EXE 0x595fde
-// Destroys the trigger sub-screen's controls and releases its operator event
+// Destroys the trigger sub-screen's controls and releases its operator event (editor_trigger.rs)
 EESETSTrigger::~EESETSTrigger()
 {
-    delete this->mIfLabel;
-    delete this->mThenLabel;
-    delete this->mTriggerStatementLabel;
-    delete this->mFirstDelayLabel;
-    delete this->mSecondDelayLabel;
-    delete this->mFirstNotLabel;
-    delete this->mSecondNotLabel;
-    delete this->mSecondsLabel;
-    delete this->mFirstNotCheckBox;
-    delete this->mSecondNotCheckBox;
-    delete this->mFirstConditionComboBox;
-    delete this->mSecondConditionComboBox;
-    delete this->mFirstConditionOperatorComboBox;
-    delete this->mSecondConditionOperatorComboBox;
-    delete this->mFirstDelayEditBox;
-    delete this->mSecondDelayEditBox;
-    delete this->mFirstEffectComboBox;
-    delete this->mSecondEffectComboBox;
-    delete this->mFirstEffectOperatorComboBox;
-    delete this->mSecondEffectOperatorComboBox;
-    delete this->mRemoveFirstConditionButton;
-    delete this->mRemoveSecondConditionButton;
-    delete this->mRemoveFirstEffectButton;
-    delete this->mRemoveSecondEffectButton;
-    delete this->mPrevConditionsButton;
-    delete this->mNextConditionsButton;
-    delete this->mPrevEffectsButton;
-    delete this->mNextEffectsButton;
-    delete this->mFirstConditionLabel;
-    delete this->mSecondConditionLabel;
-    delete this->mFirstEffectLabel;
-    delete this->mSecondEffectLabel;
-    delete this->mConditionDurationEditBox;
-    delete this->mLoopingCheckBox;
-    delete this->mIsOnCheckBox;
-    delete this->mConditionTimerCheckBox;
-    delete this->mInCinematicCheckBox;
-    this->mOperatorEvent->Dereference();
+    ee_screens_setr_free(this->mRust);
 }
 
-// FUNCTION: EXE 0x5961d4
-// Sorts the scenario's triggers by name
-void EESETSTrigger::Sort()
+static void EESETSTriggerCall(EESETSTrigger* inScreen, uint32_t inWhat, uint32_t inA = 0)
 {
-    gWorld.mScenarioManager->SortList(EE_SCENARIO_LIST_TRIGGERS);
+    ee_screens_setr_call(inScreen->mRust, inWhat, (uint32_t)inScreen->mSelection, inA);
 }
 
-// FUNCTION: EXE 0x5961df
-// Moves the selected trigger one place down
-void EESETSTrigger::MoveDown()
-{
-    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_TRIGGERS, this->mSelection, false);
-}
-
-// FUNCTION: EXE 0x5961ee
-// Moves the selected trigger one place up
-void EESETSTrigger::MoveUp()
-{
-    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_TRIGGERS, this->mSelection, true);
-}
-
-// FUNCTION: EXE 0x5961fd
-// Deletes the selected trigger and scrolls the condition and effect rows back to the start
-void EESETSTrigger::Delete()
-{
-    this->mFirstCondition = 0;
-    this->mFirstEffect = 0;
-    gWorld.mScenarioManager->DeleteEntry(EE_SCENARIO_LIST_TRIGGERS, this->mSelection);
-}
-
-// FUNCTION: EXE 0x59621a
-// Hides the second condition row when the trigger has a single condition, else shows it
-void EESETSTrigger::UpdateSecondConditionRow(bool inSingle)
-{
-    unsigned long theMode = inSingle != true;
-    this->mSecondNotLabel->SetDisplayMode(theMode);
-    this->mSecondNotCheckBox->SetDisplayMode(theMode);
-    this->mSecondConditionComboBox->SetDisplayMode(theMode);
-    this->mSecondConditionOperatorComboBox->SetDisplayMode(theMode);
-    this->mRemoveSecondConditionButton->SetDisplayMode(theMode);
-    this->mSecondConditionLabel->SetDisplayMode(theMode);
-}
-
-// FUNCTION: EXE 0x596265
-// Hides the second effect row when the trigger has a single effect, else shows it
-void EESETSTrigger::UpdateSecondEffectRow(bool inSingle)
-{
-    unsigned long theMode = inSingle != true;
-    this->mSecondDelayLabel->SetDisplayMode(theMode);
-    this->mSecondDelayEditBox->SetDisplayMode(theMode);
-    this->mSecondEffectComboBox->SetDisplayMode(theMode);
-    this->mSecondEffectOperatorComboBox->SetDisplayMode(theMode);
-    this->mRemoveSecondEffectButton->SetDisplayMode(theMode);
-    this->mSecondEffectLabel->SetDisplayMode(theMode);
-}
-
-// FUNCTION: EXE 0x5962b0
-// Duplicates the selected trigger and scrolls the condition and effect rows back to the start
-void EESETSTrigger::Duplicate()
-{
-    this->mFirstCondition = 0;
-    this->mFirstEffect = 0;
-    gWorld.mScenarioManager->DuplicateEntry(EE_SCENARIO_LIST_TRIGGERS, this->mSelection);
-}
-
-// FUNCTION: EXE 0x5962cd
-// Fills the condition and effect combo boxes with every condition and effect name and hides the
-// description and sort button
-void EESETSTrigger::Activate()
-{
-    std::vector<UWideString> theNames;
-    unsigned long i;
-    this->mFirstConditionComboBox->DeleteAllEntries();
-    this->mSecondConditionComboBox->DeleteAllEntries();
-    this->mFirstEffectComboBox->DeleteAllEntries();
-    this->mSecondEffectComboBox->DeleteAllEntries();
-    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_CONDITIONS, theNames);
-    for (i = 0; i < theNames.size(); i++) {
-        this->mFirstConditionComboBox->AppendLine(theNames[i]);
-        this->mSecondConditionComboBox->AppendLine(theNames[i]);
-    }
-    theNames.clear();
-    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_EFFECTS, theNames);
-    for (i = 0; i < theNames.size(); i++) {
-        this->mFirstEffectComboBox->AppendLine(theNames[i]);
-        this->mSecondEffectComboBox->AppendLine(theNames[i]);
-    }
-    gUIManager->mScenarioEditorForm->GetTriggerScreen()->HideText();
-    gUIManager->mScenarioEditorForm->GetTriggerScreen()->HideAlphaSort();
-}
-
-// NEAR: inline budget (the original expands GetTriggerScreen with operator[] refused at the first site)
-// FUNCTION: EXE 0x596415
-// Writes the name, description, flags, condition timer and the shown condition and effect rows into the
-// selected trigger and detaches the operator events
-void EESETSTrigger::Store()
-{
-    UWideString theText;
-    unsigned long theSelection;
-    unsigned long theTriggerIndex = this->mSelection;
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    EESMTrigger* theTrigger = theManager->GetTrigger(theTriggerIndex);
-    if (theTrigger != NULL) {
-        theTrigger->SetName(UWideString(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetName()));
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetTextEditBox()->GetAllText(theText);
-        theTrigger->SetText(theText);
-        theTrigger->SetIsOn(this->mIsOnCheckBox->GetIsChecked());
-        if (this->mConditionTimerCheckBox->GetIsChecked())
-            theTrigger->SetConditionDuration(this->mConditionDurationEditBox->GetTextAsInt(0));
-        else
-            theTrigger->SetConditionDuration(0);
-        theTrigger->SetIsLooping(this->mLoopingCheckBox->GetIsChecked());
-        theTrigger->SetIsInCinematic(this->mInCinematicCheckBox->GetIsChecked());
-        if (this->mFirstConditionComboBox->GetCurrentSelection(theSelection) == kErrorOK && theTrigger->GetCondition(this->mFirstCondition) != NULL)
-            theTrigger->SetCondition(this->mFirstCondition, this->mFirstNotCheckBox->GetIsChecked(), theSelection);
-        if (this->mFirstCondition < theTrigger->GetConditionCount() - 1) {
-            if (this->mSecondConditionComboBox->GetCurrentSelection(theSelection) == kErrorOK && theTrigger->GetCondition(this->GetFirstCondition() + 1) != NULL)
-                theTrigger->SetCondition(this->GetFirstCondition() + 1, this->mSecondNotCheckBox->GetIsChecked(), theSelection);
-            this->mSecondConditionOperatorComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-        }
-        if (this->mFirstEffectComboBox->GetCurrentSelection(theSelection) == kErrorOK && theTrigger->GetEffect(this->mFirstEffect) != NULL)
-            theTrigger->SetEffect(this->mFirstEffect, this->mFirstDelayEditBox->GetTextAsInt(0), theSelection);
-        unsigned long theIndex = this->mFirstEffect;
-        if (theIndex < theTrigger->GetEffectCount() - 1) {
-            if (this->mSecondEffectComboBox->GetCurrentSelection(theSelection) == kErrorOK && theTrigger->GetEffect(theIndex + 1) != NULL)
-                theTrigger->SetEffect(this->mFirstEffect + 1, this->mSecondDelayEditBox->GetTextAsInt(0), theSelection);
-            this->mSecondEffectOperatorComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-        }
-        this->mFirstConditionOperatorComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-        this->mFirstEffectOperatorComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-    }
-}
-
-// FUNCTION: EXE 0x59666d
-// Stores the trigger, sets the and/or of the changed condition or effect row (a second-row change also
-// scrolls on by one) and reloads
-void EESETSTrigger::ChangeOperator(unsigned long inControlID)
-{
-    unsigned long theSelection;
-    unsigned long theTriggerIndex = this->mSelection;
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    EESMTrigger* theTrigger = theManager->GetTrigger(theTriggerIndex);
-    this->Store();
-    switch (inControlID) {
-    case 0x9d0:
-        this->mFirstConditionOperatorComboBox->GetCurrentSelection(theSelection);
-        theTrigger->SetConditionOperator(this->mFirstCondition, theSelection + 1);
-        break;
-    case 0x9d1:
-        this->mSecondConditionOperatorComboBox->GetCurrentSelection(theSelection);
-        theTrigger->SetConditionOperator(this->mFirstCondition + 1, theSelection + 1);
-        this->mFirstCondition++;
-        break;
-    case 0x9d6:
-        this->mFirstEffectOperatorComboBox->GetCurrentSelection(theSelection);
-        theTrigger->SetEffectOperator(this->mFirstEffect, theSelection + 1);
-        break;
-    case 0x9d7:
-        this->mSecondEffectOperatorComboBox->GetCurrentSelection(theSelection);
-        theTrigger->SetEffectOperator(this->mFirstEffect + 1, theSelection + 1);
-        this->mFirstEffect++;
-        break;
-    }
-    this->Load();
-}
-
-// FUNCTION: EXE 0x596725
-// Returns the scenario's trigger names
-void EESETSTrigger::GetNames(std::vector<UWideString>& outNames)
-{
-    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, outNames);
-}
-
-// FUNCTION: EXE 0x596737
-// Hides the trigger's flag check boxes and the condition timer controls
-void EESETSTrigger::Hide()
-{
-    this->mConditionTimerCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mLoopingCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mConditionDurationEditBox->SetDisplayMode(kDisplayModeHidden);
-    this->mIsOnCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mSecondsLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mInCinematicCheckBox->SetDisplayMode(kDisplayModeHidden);
-}
-
-// NEAR: register choice (the original keeps the trigger in ebx and the import in edi) and a 4-byte smaller frame
-// FUNCTION: EXE 0x596785
-// Loads the selected trigger into the controls: name, description, flags, timer, the shown condition and
-// effect pair with their labels and remove buttons, and the scroll buttons
-void EESETSTrigger::Load()
-{
-    UWideString theFormat;
-    UWideString theText;
-    EESMTrigger* theTrigger;
-    bool theSingle;
-    EESMTConditionWrapper* theCondition;
-    EESMTEffectWrapper* theEffect;
-    this->mFirstConditionOperatorComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-    this->mFirstEffectOperatorComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-    this->mSecondConditionOperatorComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-    this->mSecondEffectOperatorComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-    unsigned long theTriggerIndex = this->mSelection;
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    theTrigger = theManager->GetTrigger(theTriggerIndex);
-    if (theTrigger == NULL)
-        return;
-    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->ShowText();
-    gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetNameEditBox()->SetText(theTrigger->mName);
-    gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetTextEditBox()->SetText(theTrigger->mText);
-    this->mIsOnCheckBox->SetChecked(theTrigger->mIsOn);
-    this->mConditionDurationEditBox->SetText(theTrigger->mConditionDuration);
-    this->mConditionTimerCheckBox->SetChecked(theTrigger->mConditionDuration > 0);
-    this->mLoopingCheckBox->SetChecked(theTrigger->mIsLooping);
-    this->mInCinematicCheckBox->SetChecked(theTrigger->mIsInCinematic);
-    if (this->mFirstCondition >= theTrigger->GetConditionCount() - 1)
-        this->mFirstCondition = 0;
-    if (this->mFirstEffect >= theTrigger->GetEffectCount() - 1)
-        this->mFirstEffect = 0;
-    theSingle = theTrigger->GetConditionCount() - 1 == 0;
-    this->UpdateSecondConditionRow(theSingle);
-    if (!theSingle) {
-        theCondition = theTrigger->GetCondition(this->mFirstCondition + 1);
-        this->mSecondNotCheckBox->SetChecked(theCondition->mIsNot);
-        this->mSecondConditionComboBox->SetCurrentSelection(theCondition->mValue);
-        this->ShowOperator(this->mSecondConditionOperatorComboBox, theCondition->mOperator);
-    }
-    theSingle = theTrigger->GetEffectCount() - 1 == 0;
-    this->UpdateSecondEffectRow(theSingle);
-    if (!theSingle) {
-        theEffect = theTrigger->GetEffect(this->mFirstEffect + 1);
-        this->mSecondDelayEditBox->SetText(theEffect->mDelay);
-        this->mSecondEffectComboBox->SetCurrentSelection(theEffect->mEffectIndex);
-        this->ShowOperator(this->mSecondEffectOperatorComboBox, theEffect->mOperator);
-    }
-    this->mPrevConditionsButton->SetDisplayMode(this->mFirstCondition != 0);
-    this->mPrevEffectsButton->SetDisplayMode(this->mFirstEffect != 0);
-    this->mNextConditionsButton->SetDisplayMode(this->mFirstCondition < (long)(theTrigger->GetConditionCount() - 2));
-    this->mNextEffectsButton->SetDisplayMode(this->mFirstEffect < (long)(theTrigger->GetEffectCount() - 2));
-    theCondition = theTrigger->GetCondition(this->mFirstCondition);
-    this->mFirstNotCheckBox->SetChecked(theCondition->mIsNot);
-    this->mFirstConditionComboBox->SetCurrentSelection(theCondition->mValue);
-    this->ShowOperator(this->mFirstConditionOperatorComboBox, theCondition->mOperator);
-    theEffect = theTrigger->GetEffect(this->mFirstEffect);
-    this->mFirstDelayEditBox->SetText(theEffect->mDelay);
-    this->mFirstEffectComboBox->SetCurrentSelection(theEffect->mEffectIndex);
-    this->ShowOperator(this->mFirstEffectOperatorComboBox, theEffect->mOperator);
-    gResource->GetString(IDS_CONDITION, theFormat);
-    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstCondition);
-    this->mFirstConditionLabel->SetText(theText);
-    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstCondition + 1);
-    this->mSecondConditionLabel->SetText(theText);
-    gResource->GetString(IDS_EFFECT, theFormat);
-    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstEffect);
-    this->mFirstEffectLabel->SetText(theText);
-    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstEffect + 1);
-    this->mSecondEffectLabel->SetText(theText);
-    gResource->GetString(IDS_DEL, theFormat);
-    if (this->mFirstCondition == 0 && theTrigger->GetConditionCount() == 1)
-        this->mRemoveFirstConditionButton->SetDisplayMode(kDisplayModeHidden);
-    else {
-        sprintf(theText, "%s %s", (const char*)theFormat, (const char*)this->mFirstConditionLabel->GetText(0));
-        this->mRemoveFirstConditionButton->SetText(theText, gU531934);
-        this->mRemoveFirstConditionButton->SetDisplayMode(kDisplayModeShown);
-    }
-    if (this->mFirstEffect == 0 && theTrigger->GetEffectCount() == 1)
-        this->mRemoveFirstEffectButton->SetDisplayMode(kDisplayModeHidden);
-    else {
-        sprintf(theText, "%s %s", (const char*)theFormat, (const char*)this->mFirstEffectLabel->GetText(0));
-        this->mRemoveFirstEffectButton->SetText(theText, gU531934);
-        this->mRemoveFirstEffectButton->SetDisplayMode(kDisplayModeShown);
-    }
-    sprintf(theText, "%s %s", (const char*)theFormat, (const char*)this->mSecondConditionLabel->GetText(0));
-    this->mRemoveSecondConditionButton->SetText(theText, gU531934);
-    sprintf(theText, "%s %s", (const char*)theFormat, (const char*)this->mSecondEffectLabel->GetText(0));
-    this->mRemoveSecondEffectButton->SetText(theText, gU531934);
-}
-
-// FUNCTION: EXE 0x596c50
-// Adds a new trigger and scrolls the condition and effect rows back to the start
-void EESETSTrigger::New()
-{
-    this->mFirstCondition = 0;
-    this->mFirstEffect = 0;
-    gWorld.mScenarioManager->NewEntry(EE_SCENARIO_LIST_TRIGGERS);
-}
-
-// FUNCTION: EXE 0x596c69
-// Stores the trigger, removes the condition or effect of the clicked remove button, steps the rows back
-// when the pair ran past the end and reloads
-void EESETSTrigger::RemoveEntry(unsigned long inControlID)
-{
-    unsigned long theIndex;
-    unsigned long theTriggerIndex = this->mSelection;
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    EESMTrigger* theTrigger = theManager->GetTrigger(theTriggerIndex);
-    this->Store();
-    switch (inControlID) {
-    case 0x9d8:
-        theTrigger->DeleteCondition(this->mFirstCondition);
-        theIndex = this->mFirstCondition;
-        if (theIndex + 1 == theTrigger->GetConditionCount() && theIndex > 0)
-            this->mFirstCondition = theIndex - 1;
-        break;
-    case 0x9d9:
-        theTrigger->DeleteCondition(this->mFirstCondition + 1);
-        theIndex = this->mFirstCondition;
-        if (theIndex + 1 == theTrigger->GetConditionCount() && theIndex > 0)
-            this->mFirstCondition = theIndex - 1;
-        break;
-    case 0x9da:
-        theTrigger->DeleteEffect(this->mFirstEffect);
-        theIndex = this->mFirstEffect;
-        if (theIndex + 1 == theTrigger->GetEffectCount() && theIndex > 0)
-            this->mFirstEffect = theIndex - 1;
-        break;
-    case 0x9db:
-        theTrigger->DeleteEffect(this->mFirstEffect + 1);
-        theIndex = this->mFirstEffect;
-        if (theIndex + 1 == theTrigger->GetEffectCount() && theIndex > 0)
-            this->mFirstEffect = theIndex - 1;
-        break;
-    }
-    this->Load();
-}
-
-// FUNCTION: EXE 0x596d15
-// Shows a row's operator in its combo box ('end', and, or) and reattaches the operator event
-void EESETSTrigger::ShowOperator(UIComboBox* inComboBox, long inOperator)
-{
-    UWideString theText;
-    switch (inOperator) {
-    case kSMTriggerOperatorEnd:
-        gResource->GetString(IDS_TRIGGER_EDITOR_END, theText);
-        static_cast<UITextLabel*>(inComboBox->GetTextLabel())->SetText(theText);
-        inComboBox->SetCurrentSelection(-1);
-        break;
-    case kSMTriggerOperatorAnd:
-        inComboBox->SetCurrentSelection(0);
-        break;
-    case kSMTriggerOperatorOr:
-        inComboBox->SetCurrentSelection(1);
-        break;
-    }
-    inComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, this->mOperatorEvent);
-}
-
-// FUNCTION: EXE 0x596d94
-// Shows the trigger's flag check boxes and, while the timer is checked, the duration box and seconds label
-void EESETSTrigger::Show()
-{
-    if (this->mConditionTimerCheckBox->GetIsChecked() == true) {
-        this->mConditionDurationEditBox->SetDisplayMode(kDisplayModeShown);
-        this->mSecondsLabel->SetDisplayMode(kDisplayModeShown);
-    } else {
-        this->mConditionDurationEditBox->SetDisplayMode(kDisplayModeHidden);
-        this->mSecondsLabel->SetDisplayMode(kDisplayModeHidden);
-    }
-    this->mConditionTimerCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mLoopingCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mIsOnCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mInCinematicCheckBox->SetDisplayMode(kDisplayModeShown);
-}
-
-// FUNCTION: EXE 0x596dff
-// Returns the trigger's number of conditions (the address is also bound to EEUnitClass::GetNumResearchTechnologies)
-// EESMTrigger::GetConditionCount (inline, ee/EESMTrigger.h)
+void EESETSTrigger::Sort() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_SORT); }
+void EESETSTrigger::MoveDown() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_DOWN); }
+void EESETSTrigger::MoveUp() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_UP); }
+void EESETSTrigger::Delete() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_DELETE); }
+void EESETSTrigger::Duplicate() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_DUPLICATE); }
+void EESETSTrigger::New() { EESETSTriggerCall(this, EE_SCREENS_SETR_LIST_OP, EE_SCREENS_SEOB_SM_NEW); }
+void EESETSTrigger::Activate() { EESETSTriggerCall(this, EE_SCREENS_SETR_ACTIVATE); }
+void EESETSTrigger::Store() { EESETSTriggerCall(this, EE_SCREENS_SETR_STORE); }
+void EESETSTrigger::Load() { EESETSTriggerCall(this, EE_SCREENS_SETR_LOAD); }
+void EESETSTrigger::Hide() { EESETSTriggerCall(this, EE_SCREENS_SETR_HIDE); }
+void EESETSTrigger::Show() { EESETSTriggerCall(this, EE_SCREENS_SETR_SHOW); }
+void EESETSTrigger::ChangeOperator(unsigned long inControlID) { EESETSTriggerCall(this, EE_SCREENS_SETR_CHANGE_OPERATOR, (uint32_t)inControlID); }
+void EESETSTrigger::RemoveEntry(unsigned long inControlID) { EESETSTriggerCall(this, EE_SCREENS_SETR_REMOVE_ENTRY, (uint32_t)inControlID); }
+void EESETSTrigger::DecrementA4() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 0); }
+void EESETSTrigger::IncrementA4() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 1); }
+void EESETSTrigger::DecrementA8() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 2); }
+void EESETSTrigger::IncrementA8() { EESETSTriggerCall(this, EE_SCREENS_SETR_STEP, 3); }
+void EESETSTrigger::GetNames(std::vector<UWideString>& outNames) { ee_screens_setr_get_names(this->mRust, &outNames); }
 
 // ICF-FOLDED: EXE 0x4e123d
 // (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EESETSTrigger::Deactivate()
 {
+}
+
+// ---- the host (editor_trigger.rs: the ops from 200)
+
+static_assert(EE_SCREENS_SETR_IDS_SE_REMOVE == IDS_SE_REMOVE && EE_SCREENS_SETR_IDS_CONDITION == IDS_CONDITION &&
+                  EE_SCREENS_SETR_IDS_EFFECT == IDS_EFFECT && EE_SCREENS_SETR_IDS_SECONDS == IDS_SECONDS &&
+                  EE_SCREENS_SETR_IDS_IF == IDS_IF && EE_SCREENS_SETR_IDS_IF + 1 == IDS_THEN &&
+                  EE_SCREENS_SETR_IDS_IF + 2 == IDS_NOT && EE_SCREENS_SETR_IDS_IF + 3 == IDS_DELAY &&
+                  EE_SCREENS_SETR_IDS_IF + 4 == IDS_AND && EE_SCREENS_SETR_IDS_IF + 5 == IDS_OR &&
+                  EE_SCREENS_SETR_IDS_IF + 6 == IDS_TRIGGER_STATEMENT && EE_SCREENS_SETR_IDS_IF + 7 == IDS_TRIGGER_IS_ON &&
+                  EE_SCREENS_SETR_IDS_IF + 8 == IDS_CONDITIONS_TRUE_FOR && EE_SCREENS_SETR_IDS_IF + 9 == IDS_LOOPING &&
+                  EE_SCREENS_SETR_IDS_INCLUDE_IN_CINEMATIC == IDS_INCLUDE_IN_CINEMATIC,
+              "the strings");
+static_assert(EE_SCREENS_SETR_END == kSMTriggerOperatorEnd && EE_SCREENS_SETR_AND == kSMTriggerOperatorAnd &&
+                  EE_SCREENS_SETR_OR == kSMTriggerOperatorOr,
+              "the operators");
+
+extern "C" int32_t ee_screenscpp_setr(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    (void)f;
+    EESMTrigger* t = NULL;
+    if (inOp >= EE_SCREENS_SETR_OP_EXISTS && inOp <= EE_SCREENS_SETR_OP_DELETE) {
+        t = gWorld.mScenarioManager->GetTrigger((unsigned long)i[0]);
+        if (t == NULL)
+            return 0;
+    }
+    auto theScreen = [] { return gUIManager->mScenarioEditorForm->GetTriggerScreen(); };
+    switch (inOp) {
+    case EE_SCREENS_SETR_OP_SM:
+        switch (i[0]) {
+        case EE_SCREENS_SEOB_SM_SORT: gWorld.mScenarioManager->SortList(EE_SCENARIO_LIST_TRIGGERS); break;
+        case EE_SCREENS_SEOB_SM_DOWN: gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_TRIGGERS, i[1], false); break;
+        case EE_SCREENS_SEOB_SM_UP: gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_TRIGGERS, i[1], true); break;
+        case EE_SCREENS_SEOB_SM_DELETE: gWorld.mScenarioManager->DeleteEntry(EE_SCENARIO_LIST_TRIGGERS, i[1]); break;
+        case EE_SCREENS_SEOB_SM_DUPLICATE: gWorld.mScenarioManager->DuplicateEntry(EE_SCENARIO_LIST_TRIGGERS, i[1]); break;
+        default: gWorld.mScenarioManager->NewEntry(EE_SCENARIO_LIST_TRIGGERS); break;
+        }
+        return 0;
+    case EE_SCREENS_SETR_OP_APPEND_NAMES: {
+        std::vector<UWideString> theNames;
+        gWorld.mScenarioManager->GetNames(i[0] == 0 ? EE_SCENARIO_NAMES_CONDITIONS : EE_SCENARIO_NAMES_EFFECTS, theNames);
+        for (size_t k = 0; k < theNames.size(); k++) {
+            static_cast<UIComboBox*>(p[0])->AppendLine(theNames[k]);
+            static_cast<UIComboBox*>(p[1])->AppendLine(theNames[k]);
+        }
+        return 0;
+    }
+    case EE_SCREENS_SETR_OP_GET_NAMES:
+        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, *static_cast<std::vector<UWideString>*>(p[0]));
+        return 0;
+    case EE_SCREENS_SETR_OP_HIDE_TEXT:
+        theScreen()->HideText();
+        theScreen()->HideAlphaSort();
+        return 0;
+    case EE_SCREENS_SETR_OP_SHOW_TEXT: theScreen()->ShowText(); return 0;
+    case EE_SCREENS_SETR_OP_EXISTS: return 1;
+    case EE_SCREENS_SETR_OP_GET:
+        switch (i[1]) {
+        case EE_SCREENS_SETR_V_ON: return t->mIsOn;
+        case EE_SCREENS_SETR_V_DURATION: return (int32_t)t->mConditionDuration;
+        case EE_SCREENS_SETR_V_LOOPING: return t->mIsLooping;
+        case EE_SCREENS_SETR_V_CINEMATIC: return t->mIsInCinematic;
+        case EE_SCREENS_SETR_V_CONDITIONS: return (int32_t)t->GetConditionCount();
+        default: return (int32_t)t->GetEffectCount();
+        }
+    case EE_SCREENS_SETR_OP_SET:
+        switch (i[1]) {
+        case EE_SCREENS_SETR_V_ON: t->SetIsOn(i[2] != 0); break;
+        case EE_SCREENS_SETR_V_DURATION: t->SetConditionDuration((unsigned long)(long)i[2]); break;
+        case EE_SCREENS_SETR_V_LOOPING: t->SetIsLooping(i[2] != 0); break;
+        case EE_SCREENS_SETR_V_CINEMATIC: t->SetIsInCinematic(i[2] != 0); break;
+        }
+        return 0;
+    case EE_SCREENS_SETR_OP_TEXTS_FROM_SCREEN: {
+        UWideString theText;
+        t->SetName(UWideString(theScreen()->GetName()));
+        theScreen()->GetTextEditBox()->GetAllText(theText);
+        t->SetText(theText);
+        return 0;
+    }
+    case EE_SCREENS_SETR_OP_TEXTS_TO_SCREEN:
+        theScreen()->GetNameEditBox()->SetText(t->mName);
+        theScreen()->GetTextEditBox()->SetText(t->mText);
+        return 0;
+    case EE_SCREENS_SETR_OP_ENTRY:
+        if (i[1] == 0) {
+            EESMTConditionWrapper* c = t->GetCondition((unsigned long)i[2]);
+            if (c == NULL)
+                return 0;
+            switch (i[3]) {
+            case EE_SCREENS_SETR_W_FIRST: return c->mIsNot;
+            case EE_SCREENS_SETR_W_VALUE: return (int32_t)c->mValue;
+            case EE_SCREENS_SETR_W_OPERATOR: return (int32_t)c->mOperator;
+            default: return 1;
+            }
+        } else {
+            EESMTEffectWrapper* e = t->GetEffect((unsigned long)i[2]);
+            if (e == NULL)
+                return 0;
+            switch (i[3]) {
+            case EE_SCREENS_SETR_W_FIRST: return (int32_t)e->mDelay;
+            case EE_SCREENS_SETR_W_VALUE: return (int32_t)e->mEffectIndex;
+            case EE_SCREENS_SETR_W_OPERATOR: return (int32_t)e->mOperator;
+            default: return 1;
+            }
+        }
+    case EE_SCREENS_SETR_OP_SET_CONDITION: t->SetCondition((unsigned long)i[1], i[2] != 0, (unsigned long)i[3]); return 0;
+    case EE_SCREENS_SETR_OP_SET_EFFECT: t->SetEffect((unsigned long)i[1], (long)i[2], (unsigned long)i[3]); return 0;
+    case EE_SCREENS_SETR_OP_SET_OPERATOR:
+        if (i[1] == 0)
+            t->SetConditionOperator((unsigned long)i[2], (long)i[3]);
+        else
+            t->SetEffectOperator((unsigned long)i[2], (long)i[3]);
+        return 0;
+    case EE_SCREENS_SETR_OP_DELETE:
+        if (i[1] == 0)
+            t->DeleteCondition((unsigned long)i[2]);
+        else
+            t->DeleteEffect((unsigned long)i[2]);
+        return 0;
+    case EE_SCREENS_SETR_OP_NEW_EVENT:
+        *static_cast<UIEvent**>(p[0]) = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_OPERATOR);
+        return 0;
+    case EE_SCREENS_SETR_OP_RELEASE_EVENT: static_cast<UIEvent*>(p[0])->Dereference(); return 0;
+    case EE_SCREENS_SETR_OP_SET_EVENT:
+        static_cast<UIControl*>(p[0])->SetTriggerEvent(kControlTriggerSelectionChanged, static_cast<UIEvent*>(p[1]));
+        return 0;
+    case EE_SCREENS_SETR_OP_REMOVE_TEXT: {
+        UWideString theFormat, theText;
+        gResource->GetString(IDS_DEL, theFormat);
+        sprintf(theText, "%s %s", (const char*)theFormat, (const char*)static_cast<UITextLabel*>(p[1])->GetText(0));
+        static_cast<UIButton*>(p[0])->SetText(theText, gU531934);
+        return 0;
+    }
+    case EE_SCREENS_SETR_OP_END_TEXT: {
+        UWideString theText;
+        gResource->GetString(IDS_TRIGGER_EDITOR_END, theText);
+        static_cast<UITextLabel*>(static_cast<UIComboBox*>(p[0])->GetTextLabel())->SetText(theText);
+        return 0;
+    }
+    }
+    return 0;
 }

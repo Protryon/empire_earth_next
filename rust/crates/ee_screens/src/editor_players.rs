@@ -49,6 +49,10 @@ pub const EE_SCREENS_SEPL_OBJ_EDIT: u32 = 16;
 pub const EE_SCREENS_SEPL_LIST_COMBO: u32 = 17;
 /// `EESETSOUnitList` (the object screen's picked units).
 pub const EE_SCREENS_SEPL_UNIT_LIST: u32 = 18;
+/// `UIButton` with a text (extra: the border): its opacity, text in the font, text colour.
+pub const EE_SCREENS_SEPL_BUTTON: u32 = 19;
+/// `UIButton` with the manager's scroll bar arrows (extra: 0 left, 1 right).
+pub const EE_SCREENS_SEPL_ARROW: u32 = 20;
 
 /// A combo box's first lines: none, the epochs' titles.
 pub const EE_SCREENS_SEPL_LINES_NONE: i32 = 0;
@@ -61,7 +65,7 @@ pub const EE_SCREENS_SEPL_TEXT_STRING: u32 = 1;
 pub const EE_SCREENS_SEPL_TEXT_NUMBER: u32 = 2;
 pub const EE_SCREENS_SEPL_TEXT_STRING_NUMBER: u32 = 3;
 pub const EE_SCREENS_SEPL_TEXT_NUMBER_STRING: u32 = 4;
-/// The one character `number`.
+/// The character `number & 0xff`, `number >> 8` times (at least once).
 pub const EE_SCREENS_SEPL_TEXT_CHAR: u32 = 5;
 
 /// The fonts: the screen's, `gU531930`, `gU531934`, `gU531938`, `gFontArial18`.
@@ -287,6 +291,8 @@ pub const EE_SCREENS_SEPL_OP_EDIT_ATOI: u32 = 62;
 /// The control p0 given one screen event (`EECreateScreenEvent(i0)`) on the triggers of the bits i1 (checked,
 /// unchecked, selection changed).
 pub const EE_SCREENS_SEPL_OP_SCREEN_EVENT: u32 = 63;
+/// The label p0's text set to a text (i0 as `EE_SCREENS_SEPL_TEXT_*`, i1 the string, i2 the number).
+pub const EE_SCREENS_SEPL_OP_LABEL_TEXT: u32 = 64;
 
 /// The trigger events: the start epoch's (`EESEERust` start epoch over the end epoch combo box p1), a slider's
 /// label (`UIESliderChange(p1, 1, 0)`), the unit limit's (`EESEENewUnitLimit(p1, 1, 0)`), the display epochs box's

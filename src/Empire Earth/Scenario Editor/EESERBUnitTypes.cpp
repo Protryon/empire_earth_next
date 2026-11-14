@@ -135,6 +135,7 @@
 #include "ee/EESETSOUnitList.h"
 #include "ee/EESETSAEditBox.h"
 #include "ee/EESETSAComboBox.h"
+#include "ee/EESETSTriggerUIComboBox.h"
 #include "ee/EEUnitSetManager.h"
 
 GEBitmap* EESEUIBDiplomacy::sNormalBitmaps[2];
@@ -424,7 +425,7 @@ UWideString SeplText(uint32_t inKind, uint32_t inString, long inNumber)
     else if (inKind == EE_SCREENS_SEPL_TEXT_NUMBER_STRING)
         sprintf(theText, "%ld %s", inNumber, (const char*)theString);
     else if (inKind == EE_SCREENS_SEPL_TEXT_CHAR)
-        theText = UWideString(std::string(1, (char)inNumber).c_str());
+        theText = UWideString(std::string((size_t)(std::max)(1L, inNumber >> 8), (char)(inNumber & 0xff)).c_str());
     else if (inKind == EE_SCREENS_SEPL_TEXT_NONE)
         theText = "";
     return theText;
@@ -616,6 +617,10 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
             t = new EESETSUICBPlayer(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w, 400, inForm, c.index,
                                      0, theBorder);
             break;
+        case EE_SCREENS_SEPL_COMBO_TRIGGER:   // its kind in number
+            t = new EESETSTriggerUIComboBox((unsigned long)c.number, c.id, 1, theLines, theFont, theLocation, c.w, 400,
+                                            inForm, c.index, 0, theBorder);
+            break;
         case EE_SCREENS_SEPL_COMBO_SCENARIO:   // its screen and mode in number and string
             t = new EESETSEScenarioComboBox(c.number, c.string, c.id, 1, theLines, theFont, theLocation, c.w, 400,
                                             inForm, c.index, 0, theBorder);
@@ -630,6 +635,22 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         t->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
         if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
         theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_BUTTON: {
+        UIButton* t = new UIButton(c.id, NULL, NULL, NULL, theRect, inForm, c.index, (unsigned long)c.extra[0]);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        t->SetText(theText, theFont);
+        if (theFg) SeplYellow(t->GetGEText());
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_ARROW: {
+        UIManager* theManager = inForm->GetManager();
+        bool theRight = c.extra[0] != 0;
+        theControl = new UIButton(c.id, theRight ? theManager->GetSBBitmapRightNormal() : theManager->GetSBBitmapLeftNormal(),
+                                  NULL, theRight ? theManager->GetSBBitmapRightPressed() : theManager->GetSBBitmapLeftPressed(),
+                                  theRect, inForm, c.index, 0);
         break;
     }
     case EE_SCREENS_SEPL_UNIT_LIST: {
@@ -1026,11 +1047,15 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
     case EE_SCREENS_SEPL_OP_LIST_CLEAR: static_cast<UILBString*>(c)->DeleteAllEntries(); return 0;
     case EE_SCREENS_SEPL_OP_LINE_COUNT: return (int32_t)theCombo->GetListBox()->GetLineCount();
     case EE_SCREENS_SEPL_OP_EDIT_ATOI: return atoi(static_cast<UIEditBox*>(c)->GetText(0));
+    case EE_SCREENS_SEPL_OP_LABEL_TEXT:
+        static_cast<UITextLabel*>(c)->SetText(SeplText((uint32_t)i[0], (uint32_t)i[1], i[2]));
+        return 0;
     case EE_SCREENS_SEPL_OP_SCREEN_EVENT: {
         UIEvent* theEvent = EECreateScreenEvent((uint32_t)i[0]);
         if (i[1] & EE_SCREENS_SEPL_ON_CHECKED) c->SetTriggerEvent(kControlTriggerChecked, theEvent);
         if (i[1] & EE_SCREENS_SEPL_ON_UNCHECKED) c->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
         if (i[1] & EE_SCREENS_SEPL_ON_SELECTION) c->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+        if (i[1] & EE_SCREENS_SEPL_ON_BUTTON_UP) c->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
         theEvent->Dereference();
         return 0;
     }

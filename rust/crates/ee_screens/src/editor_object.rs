@@ -186,16 +186,20 @@ pub const EE_SCREENS_SEPL_COMBO_PLAIN: i32 = 0;
 pub const EE_SCREENS_SEPL_COMBO_OBJECT: i32 = 1;
 pub const EE_SCREENS_SEPL_COMBO_PLAYER: i32 = 2;
 pub const EE_SCREENS_SEPL_COMBO_SCENARIO: i32 = 3;
+/// `EESETSTriggerUIComboBox` (its kind in `number`).
+pub const EE_SCREENS_SEPL_COMBO_TRIGGER: i32 = 4;
 /// Its lines (extra[1]): none, the unit families and the listed unit sets, the resource strings from `string`
 /// (`number` of them).
 pub const EE_SCREENS_SEPL_COMBO_LINES_NONE: i32 = 0;
 pub const EE_SCREENS_SEPL_COMBO_LINES_FAMILIES: i32 = 1;
 pub const EE_SCREENS_SEPL_COMBO_LINES_STRINGS: i32 = 2;
 
-/// The trigger screens' screen event triggers (`EE_SCREENS_SEPL_OP_SCREEN_EVENT`'s i1 bits).
+/// The trigger screens' screen event triggers (`EE_SCREENS_SEPL_OP_SCREEN_EVENT`'s i1 bits): checked, unchecked,
+/// selection changed, button up.
 pub const EE_SCREENS_SEPL_ON_CHECKED: i32 = 1;
 pub const EE_SCREENS_SEPL_ON_UNCHECKED: i32 = 2;
 pub const EE_SCREENS_SEPL_ON_SELECTION: i32 = 4;
+pub const EE_SCREENS_SEPL_ON_BUTTON_UP: i32 = 8;
 
 /// The object screen (`EESETSObject`).
 #[derive(Debug, Default)]
@@ -289,7 +293,7 @@ fn tri_state(id: u32, string: u32, x: f32, y: f32, w: f32, yellow: bool) -> EeSc
     }
 }
 
-fn screen_event<H: SeplHost + ?Sized>(h: &mut H, control: usize, code: u32, on: i32) {
+pub(crate) fn screen_event<H: SeplHost + ?Sized>(h: &mut H, control: usize, code: u32, on: i32) {
     call(h, EE_SCREENS_SEPL_OP_SCREEN_EVENT, [control, 0, 0], [code as i32, on, 0, 0]);
 }
 
@@ -313,12 +317,12 @@ fn atoi<H: SeplHost + ?Sized>(h: &mut H, edit: usize) -> i32 {
     call(h, EE_SCREENS_SEPL_OP_EDIT_ATOI, [edit, 0, 0], [0; 4])
 }
 
-fn text_as_int<H: SeplHost + ?Sized>(h: &mut H, edit: usize) -> i32 {
+pub(crate) fn text_as_int<H: SeplHost + ?Sized>(h: &mut H, edit: usize) -> i32 {
     call(h, EE_SCREENS_SEPL_OP_EDIT_INT, [edit, 0, 0], [0; 4])
 }
 
 /// `UIEditBox::SetText(unsigned long)` ("%lu" of the value as the original's conversion).
-fn edit_number<H: SeplHost + ?Sized>(h: &mut H, edit: usize, value: i32) {
+pub(crate) fn edit_number<H: SeplHost + ?Sized>(h: &mut H, edit: usize, value: i32) {
     call(h, EE_SCREENS_SEPL_OP_EDIT_NUMBER, [edit, 0, 0], [value, 0, 0, 0]);
 }
 
