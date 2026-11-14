@@ -7,12 +7,26 @@
 #ifndef EE_EECONTAGIONHELPER_H
 #define EE_EECONTAGIONHELPER_H
 
+#include "rust/ee_tech.h"   // EeContagionHelperFields
+
 class EECalamity;
 class EEComplexUnit;
 class EEContagionFunctor;
 class EEUnit;
 
 class EEContagionHelper;
+class EEContagionManager;
+class FSFile;
+// New (port): the file and the helper or manager of a Rust Load or Save (ee_tech contagion_save.rs), and its I/O
+// callback (EEContagionHelper.cpp)
+struct EEContagionIo {
+    FSFile* mFile;
+    EEContagionHelper* mHelper;
+    EEContagionManager* mManager;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+};
+long EEContagionIoCall(void* inContext, uint32_t inOp, void* ioValue);
 struct EeContagionCall;
 struct EeContagionReply;
 // New (port): the host of a helper's Rust update (ee_tech contagion.rs): the helper, the near units of the held unit
@@ -24,7 +38,9 @@ struct EEContagionHelperHost {
     static void Call(void* inContext, const EeContagionCall* inCall, EeContagionReply* outReply);
 };
 
-class EEContagionHelper : public FSRestorable {
+// New (port): its numbers are the Rust record EeContagionHelperFields (ee_tech contagion_save.rs: Load, Save,
+// the checksum)
+class EEContagionHelper : public FSRestorable, public EeContagionHelperFields {
 public:
     EEContagionHelper();                    // 0xb5c89 (EEContagionManager::Load)
     EEContagionHelper(EEContagionFunctor* inFunctor, EECalamity* inCalamity);   // 0xb5ce9
@@ -51,16 +67,9 @@ public:
     std::vector<EEUnit*> mUnits;            // +0x04 (each referenced)
     EEContagionFunctor* mFunctor;           // +0x14
     EECalamity* mCalamity;                  // +0x18
-    long mHelperID;                         // +0x1c
-    float mTimeSinceLastSpread;             // +0x20
-    float mTimeSinceLastUpdate;             // +0x24
+    unsigned long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<unsigned long> mUnitIDs;    // +0x28 (Load; RestorePointers turns them into mUnits)
 
-    // the save keys (init chains 0xb5b7d..0xb5c89; guard 0x4e6008; not used by Load/Save)
-    static const UString mNumUnitsStringID;
-    static const UString mUnitIDStringID;
-    static const UString mHelperIDStringID;
-    static const UString mLastSpreadTimeIDStringID;
 };
 
 #endif

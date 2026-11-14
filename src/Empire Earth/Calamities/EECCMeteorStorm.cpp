@@ -37,92 +37,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
-// FUNCTION: EXE 0x4b2634
-// Creates the meteor storm calamity class
-EECCMeteorStorm::EECCMeteorStorm()
-{
-}
-
-// SYNTHETIC: EXE 0x4b2646
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b2662
-// Destroys the calamity class
-EECCMeteorStorm::~EECCMeteorStorm()
-{
-}
-
-// FUNCTION: EXE 0x4b266d
-// Starts a meteor storm: the first meteor falls at time 100, the first sound at once
-bool EECCMeteorStorm::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, NULL);
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCMeteorStorm::Stop(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4b2684
-// Reads the calamity data: sound, lifetime, meteor unit class, radius and the minimum and maximum launch intervals
-void EECCMeteorStorm::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    this->mSound = EESoundObject::Get(inData->mSoundID);
-    this->mLifeTime = (float)inData->mLifeTime;
-    this->mUnitClassIndex = inData->mUnitClassIndex;
-    this->mRadius = inData->mFloatParam1;
-    this->mMinimumInterval = (float)inData->mIntParam2;
-    this->mMaximumInterval = (float)inData->mIntParam3;
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCMeteorStorm::Reset(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4b26d0
-// Loads the sound and the meteor unit class's media
-void EECCMeteorStorm::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    this->mSound->LoadMedia();
-    if (inIsOnDemand == true)
-        inPlayer->LoadUnitClassMedia(this->mUnitClassIndex);
-    inPlayer->SetUnitClassMedia(this->mUnitClassIndex, 0x7f);
-}
-
-// FUNCTION: EXE 0x4b2700
-// Plays the storm sound once at the target location
-void EECCMeteorStorm::PlaySound(EECalamity* inCalamity)
-{
-    GE3DPoint theLocation;
-    float theVolume;
-    float thePan;
-    float thePitch;
-    theLocation = inCalamity->mTargetLocation;
-    EEComputeSoundParameters(this->mSound->GetVolume(), theLocation, theVolume, thePan, thePitch, kCalamitySoundFalloff);
-    gSoundManager->Play(this->mSound->GetSampleID(), theVolume, thePan, thePitch, false, NULL);
-}
-
-// ICF-FOLDED: EXE 0x4ac98e
-// (empty: folded into a shared `ret 0xc`)
-void EECCMeteorStorm::Place(EEUnit*, unsigned long, unsigned long)
-{
-}
-
-// FUNCTION: EXE 0x4b277a
-// Unloads the sound and the meteor unit class's media
-void EECCMeteorStorm::UnloadMedia(EEPlayer* inPlayer)
-{
-    this->mSound->UnloadMedia();
-    inPlayer->UnloadUnitClassMedia(this->mUnitClassIndex);
-}
-
 // FUNCTION: EXE 0x4b2795
 // Creates a nature-owned meteor 7 tiles north of and above a random point near the target and sends it diving onto
 // that point; always returns true
@@ -179,18 +93,6 @@ bool EECCMeteorStorm::LaunchMeteor(EECalamity* inCalamity)
 // TEMPLATE: EXE 0x4b2a9d
 // TEMPLATE: EXE 0x4b2aa7
 
-// FUNCTION: EXE 0x4b2abe
-// Ages the storm: launches meteors at random intervals, replays the sound every 500 to 2000, and returns 7 at the end
-// of its lifetime (Rust)
-long EECCMeteorStorm::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    theParams.meteor_minimum_interval = this->mMinimumInterval;
-    theParams.meteor_maximum_interval = this->mMaximumInterval;
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, &EECCMeteorStorm::UpdateStep);
-}
-
 // New (port): EECCMeteorStorm's world steps for its Rust update (ee/EECalamityUpdate.h)
 bool EECCMeteorStorm::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
 {
@@ -205,14 +107,4 @@ bool EECCMeteorStorm::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityC
     default:
         return false;
     }
-}
-
-// FUNCTION: EXE 0x4b2b62
-// Accepts only space tiles
-bool EECCMeteorStorm::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
-    theCast.space_terrain = kTerrainSpace;
-    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }

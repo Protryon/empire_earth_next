@@ -24,59 +24,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
-// FUNCTION: EXE 0x4b3217
-// Creates the special-attack calamity class (class flags 4)
-EECCSpecialAttack::EECCSpecialAttack()
-{
-    this->mClassFlags = 4;
-}
-
-// SYNTHETIC: EXE 0x4b3230
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b324c
-// Destroys the calamity class
-EECCSpecialAttack::~EECCSpecialAttack()
-{
-}
-
-// FUNCTION: EXE 0x4b3257
-// Always starts (returns true; also the special-location Start, by ICF)
-bool EECCSpecialAttack::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, NULL);
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCSpecialAttack::Stop(EECalamity* inCalamity)
-{
-}
-
-// ICF-FOLDED: EXE 0x4afea3
-// (identical to EECCConscription::Initialize)
-void EECCSpecialAttack::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCSpecialAttack::Reset(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4b325c
-// Orders the caster to make a special attack on the live target unit; always returns 7 (done)
-long EECCSpecialAttack::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, &EECCSpecialAttack::UpdateStep);
-}
-
 // New (port): EECCSpecialAttack's world steps for its Rust update (ee/EECalamityUpdate.h)
 bool EECCSpecialAttack::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
 {
@@ -109,12 +56,4 @@ long EECCSpecialAttack::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, 
     EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
     return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
                              EECalamityCanCastAt(this, EeCalamityCastMode::SpecialAttack, inUnit, inX, inY, inCheck, inTargetUnit));
-}
-
-// FUNCTION: EXE 0x4b333f
-// Accepts an enemy unit in the class's unit set
-bool EECCSpecialAttack::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }
