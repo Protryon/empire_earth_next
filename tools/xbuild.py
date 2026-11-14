@@ -492,6 +492,9 @@ WON_TESTS = {
     # MSButtonBase and the check box and radio button over it as whole Rust objects (msbtnobj.rs) over a logged draw
     # world (golden: rust/crates/ee_won/src/golden_msbtnobj.txt)
     "won_msbtnobj_test": [],
+    # WONButton as a whole Rust object (wonbtnobj.rs) over a logged world of texts, images and fonts with reference
+    # counts (golden: rust/crates/ee_won/src/golden_wonbtnobj.txt)
+    "won_wonbtnobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
