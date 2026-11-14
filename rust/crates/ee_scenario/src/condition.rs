@@ -74,7 +74,7 @@ pub fn compare(value: u32, op: u32, target: u32) -> bool {
 
 /// `EEAIRandomShuffle` (Dinkum's `random_shuffle` with the AI's generator): element k swaps with a draw of
 /// `GetRandom(0, k)` for k from 1, the first element left alone.
-pub fn shuffle<H: Host>(host: &mut H, values: &mut [i32]) {
+pub fn shuffle<H: Host, T>(host: &mut H, values: &mut [T]) {
     for at in 1..values.len() {
         // the generator's `max(n - 1, 0)` of n = at + 1
         let pick = host.read(EE_SCENARIO_READ_RANDOM, 0, at as i32) as usize;

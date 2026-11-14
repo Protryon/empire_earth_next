@@ -13,6 +13,7 @@ use crate::condition::choose_player_recorded;
 use crate::fields::EeScenarioObjectFields;
 use crate::host::*;
 use crate::object::{accepts_class, EeScenarioObjectFilter};
+use crate::placement::near_unit;
 
 /// The context object's `mUnits.size()`.
 pub const EE_SCENARIO_READ_OBJ_UNIT_COUNT: u32 = 53;
@@ -37,8 +38,6 @@ pub const EE_SCENARIO_READ_UNIT_SELECTED_BY: u32 = 61;
 pub const EE_SCENARIO_READ_UNIT_SEEN_BY: u32 = 62;
 /// `GetArea(a)`: -1 without the area, else its `ContainsUnit(unit b)` (1/0).
 pub const EE_SCENARIO_READ_AREA_CONTAINS_UNIT: u32 = 63;
-/// `GetScenarioObject(a)`: -1 without the object, else its `IsNearUnit(unit b, c, false)` (1/0).
-pub const EE_SCENARIO_READ_OBJ_NEAR_UNIT: u32 = 64;
 /// Player `a`'s first unit (`mFirstUnit`, the context's cursor set to it), the next (`mNext`) when `b` is 1: its id
 /// in the low 32 bits and its `mUnitClass->mUnitType` in the high, -1 at the end.
 pub const EE_SCENARIO_READ_PLAYER_UNIT: u32 = 65;
@@ -186,7 +185,12 @@ pub fn evaluate<H: ObjectHost>(h: &mut H, include_dead: bool) -> bool {
             }
             if keep && h.fields().mNearCheck != 0 {
                 let mode = h.fields().mNearMode as i32;
-                let near = h.read4(EE_SCENARIO_READ_OBJ_NEAR_UNIT, target, id, mode, 0);
+                // the target's IsNearUnit (placement.rs), -1 without the target
+                let near = if h.read(EE_SCENARIO_READ_OBJECT_EXISTS, target, 0) == 0 {
+                    -1
+                } else {
+                    near_unit(h, target, id, mode, false) as i64
+                };
                 keep = if h.fields().mNearCheck == 1 { near == 1 } else { near == 0 };
             }
         }
@@ -235,6 +239,9 @@ impl Host for ObjectTable {
     fn write(&mut self, op: u32, player: c_long, b: i64, c: i64, d: i64) {
         self.host.write(op, player, b, c, d)
     }
+    fn tiles(&mut self, op: u32, a: i32, b: i32, c: i32) -> Vec<(i32, i32)> {
+        self.host.tiles(op, a, b, c)
+    }
 }
 
 impl ObjectHost for ObjectTable {
@@ -251,6 +258,7 @@ impl ObjectHost for ObjectTable {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::placement::*;
 
     /// Units by id: (flags, class type, player, command, attribute); players' unit chains; the object's list; a
     /// log of the parent's evaluations and the shuffles.
@@ -319,7 +327,17 @@ mod tests {
                         (b == 0) as i64
                     }
                 }
-                EE_SCENARIO_READ_OBJ_NEAR_UNIT => (b == 3) as i64,
+                // the target object's one unit 1 at (5, 1), unit 3 at (5, 0), the rest further; sight 1.5
+                EE_SCENARIO_READ_OBJECT_EXISTS => 1,
+                EE_SCENARIO_READ_OBJECT_UNIT_COUNT => 1,
+                EE_SCENARIO_READ_OBJECT_UNIT_AT => 1,
+                EE_SCENARIO_READ_UNIT_TILE_OF | EE_SCENARIO_READ_UNIT_NEAREST_TILE => match a {
+                    0 => 0,
+                    1 => 5 | 1 << 32,
+                    3 => 5,
+                    _ => 20 | 20 << 32,
+                },
+                EE_SCENARIO_READ_UNIT_LINE_OF_SIGHT => 1.5f32.to_bits() as i64,
                 EE_SCENARIO_READ_PLAYER_UNIT => {
                     if b == 0 {
                         self.cursor = (a as usize, 0);

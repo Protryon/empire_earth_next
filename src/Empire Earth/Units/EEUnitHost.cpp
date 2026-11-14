@@ -1394,7 +1394,7 @@ extern "C" void ee_units_host_unit_clear_goals(uint32_t inUnit)
 extern "C" int64_t ee_units_host_object_hit_points(uint32_t inUnit)
 {
     EEUnit* theUnit = UnitOf(inUnit);
-    return theUnit != NULL ? (int64_t)theUnit->mHitPoints.Get() : 0;
+    return theUnit != NULL ? (int64_t)theUnit->mHitPoints : 0;
 }
 
 // ---- EEMSetAirportCommand's and EEMSetRallyGoal's calls (rally.rs) ----
@@ -1531,7 +1531,7 @@ extern "C" uint8_t ee_units_host_object_record(uint32_t inUnit, EeUnitRecord* ou
         return 0;
     memset(outRecord, 0, sizeof(*outRecord));
     outRecord->id = inUnit;
-    outRecord->hit_points = (int64_t)theUnit->mHitPoints.Get();
+    outRecord->hit_points = (int64_t)theUnit->mHitPoints;
     EEUnitClass* theClass = theUnit->mUnitClass.Get();
     outRecord->category = theClass != NULL ? (int64_t)theClass->mCategory : -1;
     outRecord->unit_type = theClass != NULL ? (int64_t)theClass->mUnitType : -1;

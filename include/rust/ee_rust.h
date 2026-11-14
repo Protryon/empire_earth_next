@@ -27,8 +27,11 @@
 #include "ee_screens.h"
 #include "ee_sound.h"
 #include "ee_tech.h"
+#include "ee_time.h"
+#include "ee_ts.h"
 #include "ee_ui.h"
 #include "ee_units.h"
+#include "ee_ustring.h"
 #include "ee_won.h"
 
 #endif  // EE_RUST_H

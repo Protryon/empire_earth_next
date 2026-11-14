@@ -1,18 +1,12 @@
 // C:\EEX\Low-Level Engine\Thread System\TSThread.h (RECONSTRUCTION; TSThread.cpp 0x54203..0x545ff, operator
-// new(0x3c) in TSScheduler::CreateThread). Member names are provisional.
+// new(0x3c) in TSScheduler::CreateThread). A platform thread with its message queues. Whole in Rust
+// (rust/crates/ee_ts, LLE lane round 3): the class has no data; a TSThread* is the Rust thread object TSScheduler
+// made, and every member forwards. The message-id queue is under the thread's message lock (LockMessageQueue), the
+// posted messages (the original's Win32 thread messages) under a lock of their own.
 #ifndef LLE_TSTHREAD_H
 #define LLE_TSTHREAD_H
 
-#include <deque>
-
-class TSCriticalSection;
-
-// a message posted to a thread (TSThread::Post: the original's Win32 thread message)
-struct TSPostedMessage {
-    unsigned long mMessage;
-    void* mParameter1;
-    void* mParameter2;
-};
+#include "rust/ee_ts.h"
 
 // winbase.h's `#define Yield()` would swallow TSThread::Yield (exported ?Yield@TSThread@@SAXK@Z)
 #ifdef Yield
@@ -22,58 +16,47 @@ struct TSPostedMessage {
 class LLE_API TSThread {
     friend class TSScheduler;
 public:
-    unsigned long GetExitCode();
-    long GetPriority();
-    long SetPriority(long inPriority);
-    long Post(unsigned long inMessage, void* inParameter1, void* inParameter2, bool inQueue);
-    long Receive(unsigned long& outMessage, void*& outParameter1, void*& outParameter2);
-    long Resume();
-    long Suspend();
-    long Terminate();
-    void SetName(UString& inName);
-#ifdef __clang__
-    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
-    // forward to them (clang build only; remove once the parameters themselves are const).
-    void SetName(const UString& inName) { SetName(const_cast<UString&>(inName)); }
-#endif
-    static void SetThreadName(unsigned long inThreadID, const char* inName);
-    // proven inline: exported COMDATs kept in NELagLossSimulator.cpp's range (0x3d78b..0x3d7ba, declaration
-    // order), i.e. the first unit in link order that includes this header after the Network Engine headers.
-    // Requires TSCriticalSection (TSScheduler.h includes it first).
-    static void ForceYield() {}             // exported, empty: ICF-folded into the bare ret at 0x1000c16a
-    UString& GetName() { return this->mName; }
-    bool IsSuspended() const { return this->mSuspended; }
+    unsigned long GetExitCode() { return ee_ts_thread_exit_code(this->Rust()); }
+    long GetPriority() { return ee_ts_thread_priority(this->Rust()); }
+    long SetPriority(long inPriority) { return ee_ts_thread_set_priority(this->Rust(), (int32_t)inPriority); }
+    // Posts a message (optionally queuing its id too)
+    long Post(unsigned long inMessage, void* inParameter1, void* inParameter2, bool inQueue)
+    {
+        return ee_ts_thread_post(this->Rust(), inMessage, inParameter1, inParameter2, inQueue);
+    }
+    // Takes one message off the queue, else (on the window thread) dispatches one window event; kErrorNotFound if
+    // none is left. A posted message counts when it is WM_QUIT (0x12) or a WM_USER (0x400) one, as a window-less
+    // Win32 thread message did; a dispatched event counts only while queued ids are left (Post inQueue).
+    long Receive(unsigned long& outMessage, void*& outParameter1, void*& outParameter2)
+    {
+        return ee_ts_thread_receive(this->Rust(), &outMessage, &outParameter1, &outParameter2);
+    }
+    long Resume() { return ee_ts_thread_resume(this->Rust()); }
+    long Suspend() { return ee_ts_thread_suspend(this->Rust()); }
+    long Terminate() { return ee_ts_thread_terminate(this->Rust()); }
+    // stores the name (the debugger's thread name is a no-op in this build; nothing reads the name back)
+    void SetName(const char* inName) { ee_ts_thread_set_name(this->Rust(), inName); }
+    static void SetThreadName(unsigned long inThreadID, const char* inName) {}
+    static void ForceYield() {}
+    bool IsSuspended() const { return ee_ts_thread_is_suspended(this->Rust()); }
     bool IsTerminated() { return this->GetExitCode() != PLAT_THREAD_STILL_ACTIVE; }
-    void LockMessageQueue() { this->mMessageLock->Enter(); }
-    void UnlockMessageQueue() { this->mMessageLock->Leave(); }
+    void LockMessageQueue() { ee_ts_section_enter(ee_ts_thread_message_lock(this->Rust())); }
+    void UnlockMessageQueue() { ee_ts_section_leave(ee_ts_thread_message_lock(this->Rust())); }
     static void Yield(unsigned long inMilliseconds) { PlatSleep(inMilliseconds); }
     // The window events' pump (platform/PlatWindow.h): Receive on inThreadID (the thread that runs the window system)
     // dispatches one window event per call once its posted messages are drained, as the original's PeekMessage
     // dispatched window messages. inPump returns true when it dispatched one.
-    static void SetEventPump(bool (*inPump)(), unsigned long inThreadID);
+    static void SetEventPump(bool (*inPump)(), unsigned long inThreadID)
+    {
+        ee_ts_set_event_pump(inPump, (uint32_t)inThreadID);
+    }
     // Dispatches the window events waiting now (on the event thread; elsewhere nothing): what Win32 sent a new window
     // during its creation (activation, focus) is handled before the game knows the window, as it was
-    static void DispatchWindowEvents();
+    static void DispatchWindowEvents() { ee_ts_dispatch_window_events(); }
 private:
-    TSThread(unsigned long (*inFunction)(void*), void* inParameter, unsigned long inStackSize, bool inSuspended);
-    TSThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended);
-    ~TSThread();
-    long StartThread(unsigned long inStackSize);
-    static uint32_t ThreadMain(void* inThread);
-
-    TSCriticalSection* mMessageLock;        // +0x00 (ESVERIFY text: this->mMessageLock)
-    std::deque<unsigned long> mMessages;    // +0x04 queued message ids (Post inQueue / Receive)
-    UString mName;                          // +0x18
-    unsigned long (*mFunction)(void*);      // +0x28
-    void* mParameter;                       // +0x2c
-    PlatThread* mHandle;                    // +0x30 (a Win32 thread HANDLE in the original)
-    unsigned long mThreadID;                // +0x34
-    bool mSuspended;                        // +0x38
-    // the thread's message queue (Post/Receive; the original used the Win32 thread message queue)
-    PlatMutex* mPostLock;
-    std::deque<TSPostedMessage> mPosted;
-    static bool (*sEventPump)();
-    static unsigned long sEventThread;
+    TSThread() = delete;
+    ~TSThread() = delete;
+    const EeTsThread* Rust() const { return reinterpret_cast<const EeTsThread*>(this); }
 };
 
 // TSThread::Post message ids. Only the id every thread shares is named: the other ids mean different things per receiving thread.

@@ -22,7 +22,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
-#include "ee/wonapi/WONPatchMsg.h"
+#include "won_patch_msg.h"
 #include "won_version_msg.h"
 #include "rust/ee_won.h"
 

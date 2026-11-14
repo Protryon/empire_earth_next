@@ -4,7 +4,7 @@
 
 use core::ffi::{c_long, c_ulong, c_void};
 
-use crate::draw::{self, BorderLine, Clipping, LineRange, TextDraw};
+use crate::draw::{self, BorderLine, Clipping, TextDraw};
 use crate::rect::{UiPoint, UiRect};
 
 /// `UIControl::DrawBorder`'s line `i` of side `side` (0 top, 1 bottom, 2 left, 3 right).
@@ -58,43 +58,6 @@ pub unsafe extern "C" fn ee_ui_form_draw_clipped_text(
         Clipping::Plain { candidate: info.has_candidate.then_some(info.candidate_rect) }
     };
     draw::draw_clipped_text(&mut Draws { f: draw_text, ctx }, r, &clipping)
-}
-
-/// `UITextLabel::CopyData`'s one-line text location.
-#[no_mangle]
-pub extern "C" fn ee_ui_label_one_line_location(alignment: c_ulong, fit: bool, tr: UiRect, w: f32, h: f32) -> UiPoint {
-    draw::label_one_line_location(alignment, fit, &tr, w, h)
-}
-
-/// `UITextLabel::CopyData`'s copied lines of a multi-line label (`has_scroll`: it has a scroll bar at `value`).
-#[no_mangle]
-pub extern "C" fn ee_ui_label_line_range(has_scroll: bool, value: c_long, shown: c_ulong, lines: c_ulong) -> LineRange {
-    draw::label_line_range(has_scroll.then_some(value), shown, lines)
-}
-
-/// A line of `UITextLabel::DrawTextA`: the text's location and clip rectangle.
-#[repr(C)]
-pub struct EeUiLabelLine {
-    pub at: UiPoint,
-    pub rect: UiRect,
-}
-
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub extern "C" fn ee_ui_label_line(
-    alignment: c_ulong,
-    fit: bool,
-    rect: UiRect,
-    ctr: UiRect,
-    w: f32,
-    has_scroll: bool,
-    scroll_width: f32,
-    offset: c_ulong,
-    line_height: c_ulong,
-) -> EeUiLabelLine {
-    let (at, rect) =
-        draw::label_line(alignment, fit, &rect, &ctr, w, has_scroll.then_some(scroll_width), offset, line_height);
-    EeUiLabelLine { at, rect }
 }
 
 /// `UIListBox::CopyData`'s copied lines `first .. end` and the count drawn.
