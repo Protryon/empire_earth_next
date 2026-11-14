@@ -49,6 +49,9 @@ M.OPT = {
                             -- stand, one settlement a site (any kind touched), none for wood
     mines_after_barracks = false, -- (off until benched) a Prehistoric mine settlement waits for the barracks and a tower
     owner_barracks = false, -- (off until benched) the Prehistoric barracks at OWNER_BARRACKS_AT citizens (his: 2.4 min)
+    pre_hunt_patch = false, -- (off until benched) with pre_lean, the third patch when the game near home holds fewer than
+                            -- PRE_HUNT_MIN hunters
+    pre_wood_cap = false,   -- (off until benched) the Prehistoric wood at most PRE_WOOD_MOST, its leftover idle (exact = 2)
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -118,6 +121,9 @@ M.STONE_WOOD = 7           -- (OPT.owner_mines) wood gatherers at most until STO
 M.STONE_WOOD_MIN = 12
 M.wood_cap = nil           -- (set by boom each step)
 M.OWNER_BARRACKS_AT = 6    -- (OPT.owner_barracks) citizens
+M.PRE_HUNT_MIN = 3         -- (OPT.pre_hunt_patch) the owner's 3-6 hunting
+M.MINES_TOWER_MS = 60000   -- (OPT.mines_after_barracks) the tower waited for at most this long after the barracks
+M.PRE_WOOD_MOST = 8        -- (OPT.pre_wood_cap) the owner's 5-8
 M.BUILDER_POOL = 11        -- (OPT.builder_pool) the Stone Age's citizens building on top of the fill's places, at most
 M.STONE_MOST = 86          -- ... and the Stone Age's citizens at most (the owner's 35 -> 86)
 M.BUILDER_IDLE = 4         -- (OPT.builder_pool) no citizen trained while this many stand idle
