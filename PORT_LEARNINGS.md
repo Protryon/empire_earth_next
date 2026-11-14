@@ -15290,3 +15290,106 @@ stack, -350) -> 75,576 (the caches, -28). This round's own net: -370. WindowMana
   set, ProcessEvents, DeliverEvent, CloseAllWindows, Add/RemoveWindow, the screen resolution). PostEvent locks
   `mDataCrit` because events may come from other threads: the event list needs a lock in Rust (a `Mutex`, never held
   across a call out), not the `RefCell` the other state uses. Then the skins' Button subclasses (draw ops).
+
+## R6 WON round 34: WindowManager whole in Rust: the window set, the event list and PostEvent, the timers, the broadcasts and the event loop (ee_won wmloop.rs; branch rust-r6-won34, 2026-11-13)
+
+Measured as rounds 18-33 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+75,576 at the branch's start (round 33's head; the merge of rust touched no WON file) -> 75,241; merged with rust (itself 75,346) 75,011 (the move). This
+round's own net: -335. WindowManager.cpp went from 1,134 to 810 lines; what is left there is the colour scheme,
+the decoders' set-up, the font helpers and the one-line forwarders.
+
+- **No census was needed.** Outside WindowManager.cpp nothing read the moved fields but the header's own accessors
+  (`GetDefaultWindow`, `GetLastInputTick`, now `WmField` reads); the move's build (the fields, the typedefs and
+  `mDataCrit` removed) found nothing else.
+- **The NULL-receiver audit.** Every moved method's original body read `this` on every path (the lock `mDataCrit`,
+  a member set, or a virtual call), so none had the round-30 hazard. Their callers go through a window's manager
+  (`mManager`, `GetRoot()->GetWindowManager()`: rounds 32-33's audits), `GetDefaultWindowManager()` (set by the
+  constructor) or test NULL (`EELobbyPostConnectStatus`'s `GetLobbyWindow()`). No guard was added.
+- **The move** (`wmloop.rs`): the window set (a `BTreeSet` of addresses, as `SmartPtr<Window>::Comp` ordered it,
+  each held), the default window and the window count, the event list, the timer events and the deferred removals,
+  the timers' flag, the broadcast set, the full-screen flag and sizes, the remembered mode, the timer and input
+  ticks; with SetScreenResolution, RestoreScreenResolution, CloseAllWindows, AddWindow, RemoveWindow, PostEvent,
+  PeekNextEvent, Add/Remove/RemoveAllTimerEvents, SubscribeToBroadcast, ClearSubscriptions, BroadcastEvent,
+  ProcessEvents and DeliverEvent. CalcModality and MessageLoop (round 33) walk the Rust set now; the `WmWindowAt` op
+  (598) is no longer made. The C++ `FindMouseWindow(MouseEvent*)` / `CheckPopupClick(MouseEvent*)` forwarders went:
+  their one caller was DeliverEvent.
+  - **Threads.** PostEvent comes from other threads (`EELobbyPostConnectStatus`, a network thread's
+    `QueueEvent`). The event list is a `Mutex<VecDeque>` that is never held across a call out: the event is held
+    (`Hold` op) before the lock, Signal is called after it, ProcessEvents pops under the lock and delivers with it
+    released, and RemoveWindow reads each queued event's window with the lock released and takes a match out under
+    it (the original held `mDataCrit` through those calls; it was recursive, a Rust `Mutex` is not). The message
+    loop's depth, which PostEvent reads, is an `AtomicI32` (it was round 33's `RefCell` state). Everything else is
+    the GUI thread's, in a `RefCell`.
+  - Three ops (604-606): `WmEvent` with an `EeWonWmEvent` (type, window and its setter, a mouse event's fields in
+    and out, the button, the key, a size event's fields in and out, Deliver, references), `WmResolution` (the two
+    virtual hooks) and `WmSignal`. Ten window calls (`EeWonWmWin`: minimize-on-restore, Minimize, the client-area
+    flag, the three handlers, PlatformClose, the close event, TimerEvent, IdleUpdate) and two component calls
+    (`MouseWheel`, `HandleComponentEvent`) were added to round 33's enums. RemoveWindow is virtual; no subclass
+    overrides it, so DeliverEvent's close calls the Rust one directly.
+  - The containers' references are `Hold` / `Release` ops: a set's insert holds a new entry, an erase gives it back;
+    the original's temporary `SmartPtr` made from the raw argument (its AddRef / Release pair could not free
+    anything: the inserted node or the caller holds the object) is not mirrored, nor is ProcessEvents' copy-and-pop
+    (the list's reference becomes the local's).
+  - The sets are walked as the original's iterators walked a live `std::set`: the next entry after the one visited
+    (`BTreeSet::range`), so an entry a call out adds after the current one is visited and one it erases is skipped,
+    as in the original's tree.
+- **Behaviour changes, on undefined, threaded or teardown paths only:**
+  - A walk whose call out erases the entry being visited (a broadcast listener unsubscribing itself, a window's tick
+    removing its window) carries on from its key; the original's iterator was invalidated.
+  - The wheel sent to the topmost popup while popups are flagged up but the list is empty (mid-EndPopup) goes
+    nowhere; the original read the back of an empty list (round 33 answered GetPopupWindow NULL there too).
+  - The full-screen size starts at 0 (the original left it unset; nothing in the port sets full screen).
+  - Another thread's PostEvent may now land while CloseAllWindows closes the windows or while RemoveWindow walks
+    the queue (the original blocked it on `mDataCrit`); the event is queued either way, and RemoveWindow drops only
+    the events queued when it started.
+  - Clears and the destructor give entries back in address order (the original's trees went in their own order);
+    the manager's containers are given back after its C++ members (the colour scheme, the decoders, the icon), as
+    round 33's caches are.
+- **The golden** (`tests/won/won_wmobj_test.cpp`, round 33's extended): the original statements of the moved
+  methods, copied before the move, with the event's fields (read directly by the C++) as `WmEvent` ops on both sides
+  (reads with no call between them made once), over round 33's world plus events (a type, a window, a mouse place
+  and button, a key, a size and references; posted events start unreferenced, two windows in four have a close event
+  the world holds), the windows' client-area, minimize and close-event state, the screen mode and the wake-ups. A
+  window's Close posts its close event (a nested PostEvent, as `QueueEvent` does); an event's Deliver, the windows'
+  handlers, a broadcast and a window's timer tick make nested calls (PostEvent, ProcessEvents, RemoveWindow,
+  timers, subscriptions, popups, DoDialog), never one that erases the entry a set walk is on (the original's copy
+  would be undefined); the platform's next event often posts an event and runs ProcessEvents, as
+  `PlatWindowManager::GetNextEvent` does. Each sequence starts with the constructor's tick and AddWindow of windows
+  1..4; DoPopup's new window adds itself (a nested AddWindow). After each top-level call the loop's fields and sets
+  are traced; at the end every event's references must be back at the world's.
+  - 20,000 sequences of 40 calls: 13,921,050 trace lines, all identical on the first run, every reference back.
+  - Mutations (each restored with `git checkout` after the commit; the restored source: 0):
+    RemoveWindow keeping the loop depth when the last window goes (832 sequences), PostEvent signalling only when
+    asked (18,097), the deferred timer removals never applied (420), the close event given back before RemoveWindow
+    (8,298), a mouse move dropped for any next move (306), the default window replaced on every AddWindow (20,000),
+    RemoveAllTimerEvents clearing the timers at once while they run (378), RestoreScreenResolution minimizing without
+    asking the window's state (5,951), a key for the popup kept on its own window (208), the input tick not recorded
+    (16,366), a removed window's queued events all dropped (10,197). All eleven failed it at once.
+  - `golden_wmobj.txt` (35 sequences) is replayed by cargo, now also answering the event, mode and wake-up ops (a
+    mouse event's or a size's fields written back) and comparing the loop and set lines. It fails on a window set
+    entry changed. A mismatch found inside the replay's host aborts the test process (the host is an `extern "C"`
+    function and cannot unwind), so the negative test changes a line compared outside it.
+- **The multi-threaded PostEvent test** (`wmloop_tests.rs`, cargo): four threads post 500 events each (released
+  together by a barrier) while the test's thread runs ProcessEvents until all 2,000 are delivered. Whatever the
+  interleaving, it checks what must hold: every event delivered once, each thread's events in its posting order,
+  2,000 holds and 2,000 releases, a wake-up per post (no message loop runs), deliveries and releases on the GUI
+  thread only, the list empty. A second test posts from inside a delivery (the same thread): no deadlock, delivered
+  in the same pass.
+- **Lessons:**
+  - A cbindgen enum used by no exported signature (`EeWonWmEvent`, matched by the C++ host only) is not emitted:
+    name it in `rust/cbindgen.toml`'s `include`, as round 33's `EeWonWmComp` is.
+  - rustfmt after the build rewrapped a mutation's anchor line; check the mutation strings against the formatted
+    file (the script stops when one does not apply).
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction (seeds 2-7
+  identical). Every lobby event goes through this code: the lead's LAN game (`lan_game.py`, `lan_game.py` RESULT PASS on the merged tree (PT host 2865, joiner 2865; no fault line in either game.log)) reaches
+  AddWindow / RemoveWindow (the lobby's windows and the popups' windows), PostEvent from the GUI thread and from
+  `EELobbyPostConnectStatus`, ProcessEvents every frame, DeliverEvent's mouse, key, focus, size and close paths,
+  the timer events, the broadcasts (`LobbyBroadcastEvent`) and CloseAllWindows at the lobby's close. Only the lobby
+  captures show the idle updates' painting; only a person drags with the capture support, resizes, or leaves full
+  screen (which the port never enters); those run only in the golden.
+- **Left:** the skins' Button subclasses (MSButtonBase, MSCheckbox, MSRadioButton, WONButton) with their draw ops.
+  Their census: the text pads, alignment, colours and the transparent and height-fitting flags are read outside
+  their classes in MSButton, MSControlConstructors, MSControlPainters, MSRemainingPainters, MSScrollComposition,
+  MSTabComposition, SkinControlConstructors, SkinListControls, SkinTab, WONButtonSetup, WONControlDuplicates and the
+  headers WONLobbyMSExtraConfig.h, WONLobbySkinTab.h, WONLobbyWONButton.h, WONLobbyWONListConfig.h; that census is
+  the next round's first commit.
