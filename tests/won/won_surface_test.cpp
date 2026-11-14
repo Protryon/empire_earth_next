@@ -1,20 +1,248 @@
+// The software raster surface as a whole Rust object (R6 WON round 37): the WON SDK's WONSurface.h and Surface.cpp,
+// copied unmodified from the C++ before the port (their includes left out; a RefCount and SmartPtr stand in for
+// EEWonNet.h's), against ee_won's Rust surface (surface.rs) called as the C++ shell (WONSurface.h) calls it.
+//
+// Each of 20,000 sequences makes three surface slots of random formats (32-bit, 555, 565) and sizes (0..40, now and
+// then 1 or 64), clears the original's pixels as the port's only creator does (PlatNativeImage's NewSurface; the
+// Rust's are 0), and runs 60 random operations on both: colours, clip rectangles (set, cleared), filled and framed
+// rectangles, horizontal, vertical and free lines (inside, across and outside the clip), circles and filled circles,
+// ellipses and filled ellipses, arcs (start -400..800, arc -50..500), pixels put and set, pixels read, copies from
+// another slot of the same format or a 32-bit into a 16-bit one (with and without a transparency mask, the source
+// rectangle inside the source as the original needs), copies within one surface, duplicates, re-creates and frees.
+// After every operation each slot's fields (size, pitch, clip, colour, whether it has pixels) and every pixel byte
+// are compared. The first 150 sequences are rust/crates/ee_won/src/golden_surface.txt (each operation with the
+// FNV-1a hash of its slot's pixels after it), which the Rust tests replay; `--print` prints them.
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include "rust/ee_won.h"
+
+typedef uint32_t DWORD;
+namespace WONAPI {
+class RefCount {
+public:
+    RefCount() : mRefCount(0) {}
+    virtual ~RefCount() {}
+    void AddRef() { mRefCount++; }
+    void Release() { if (--mRefCount <= 0) delete this; }
+    int mRefCount;
+};
+template <class T> class SmartPtr {
+public:
+    SmartPtr(T* p = NULL) : mPtr(p) { if (mPtr) mPtr->AddRef(); }
+    SmartPtr(const SmartPtr& o) : mPtr(o.mPtr) { if (mPtr) mPtr->AddRef(); }
+    template <class U> SmartPtr(const SmartPtr<U>& o) : mPtr(o.get()) { if (mPtr) mPtr->AddRef(); }
+    ~SmartPtr() { if (mPtr) mPtr->Release(); }
+    SmartPtr& operator=(T* p) { if (p) p->AddRef(); if (mPtr) mPtr->Release(); mPtr = p; return *this; }
+    SmartPtr& operator=(const SmartPtr& o) { return *this = o.mPtr; }
+    T* get() const { return mPtr; }
+    T* operator->() const { return mPtr; }
+    T* mPtr;
+};
+}
+
+// ---- WONSurface.h (the original, its includes left out)
+// Software surface classes (optional; not identified in the original exe).
+// The SDK's WIN32_NOT_XBOX conditional is kept.
+//
+namespace WONAPI
+{
+	
+//class SFont;
+//class SNativeMask;
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+enum SurfaceFormat
+{
+	SurfaceFormat_32,
+	SurfaceFormat_555,
+	SurfaceFormat_565
+};
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+class SurfaceBase;
+typedef SmartPtr<SurfaceBase> SurfaceBasePtr;
+class SurfaceBase : public RefCount
+{
+protected:
+	SurfaceFormat mFormat;
+	void *mImageBase;
+	int mWidth, mHeight;
+	int mBytesPerRow;
+	int mPixelsPerRow;
+
+#ifndef WIN32_NOT_XBOX
+	struct BITMAPINFO
+	{
+		DWORD unused;
+	};
+#endif
+
+	char mBitmapInfoBuffer[sizeof(BITMAPINFO) + sizeof(DWORD)*2];
+	BITMAPINFO &mBitmapInfo;
+	int mClipX1, mClipY1, mClipX2, mClipY2;
+
+	inline void DoClipRect(int &x, int &y, int &width, int &height);
+	inline void DoClipRect(int &x, int &y, int &left, int &top, int &width, int &height);
+
+	inline int CalcClipCode(int x, int y);
+
+	SurfaceBase& operator=(const SurfaceBase&) { assert(false); return *this; }
+	virtual ~SurfaceBase();
+
+public:
+	virtual void CopySurface(SurfaceBase *theSurface, int x, int y, int left, int top, int width, int height)=0;
+	virtual void CopySurface(SurfaceBase *theSurface, const char *theMaskData, int x, int y, int left, int top, int width, int height)=0;
+//	virtual void DrawString(SFont *theFont, const GUIString &theStr, unsigned short theOffset, unsigned short theLength, int x, int y)=0;
+
+	virtual DWORD GetPixel(int x, int y) = 0;
+	virtual void PutPixel(int x, int y) = 0;
+	virtual void SetPixel(int x, int y, DWORD theColor) = 0;
+	virtual void DrawCircle(int x, int y, int r) = 0;
+	virtual void FillCircle(int x, int y, int r) = 0;
+	virtual void DrawEllipse(int x, int y, int width, int height) = 0;
+	virtual void FillEllipse(int x, int y, int width, int height) = 0;
+	virtual void DrawArc(int x, int y, int width, int height, int startAngle, int arcAngle) = 0;
+
+	virtual void DrawHorzLine(int x1, int x2, int y) = 0;
+	virtual void DrawVertLine(int x, int y1, int y2) = 0;
+	virtual void DrawLine(int x1, int y1, int x2, int y2) = 0;
+
+	virtual void DrawRect(int x, int y, int width, int height) = 0;
+	virtual void FillRect(int x, int y, int width, int height) = 0;
+	virtual void SetColor(DWORD theColor) = 0;
+
+public:
+	SurfaceBase();
+
+	virtual void Create(int theWidth, int theHeight);
+	virtual void Free();
+	virtual int GetPixelSize()=0;
+	SurfaceFormat GetSurfaceFormat() { return this->mFormat; }
+	int GetBytesPerRow() { return this->mBytesPerRow; }
+	int GetPixelsPerRow() { return this->mPixelsPerRow; }
+
+#ifdef WIN32_NOT_XBOX
+	void BlitToDC(HDC theDC, int x, int y, int left, int top, int width, int height);
+	void BlitToDC(HDC theDC);
+#endif
+
+	int GetWidth() { return this->mWidth; }
+	int GetHeight() { return this->mHeight; }
+
+	void SetClipRect(int x, int y, int width, int height);
+	void ClearClipRect();
+
+	void* GetPixelsBase() { return this->mImageBase; }
+
+	virtual SurfaceBasePtr Duplicate()=0;
+
+	static void SetDefaultSurfaceFormat(SurfaceFormat theFormat);
+	static SurfaceBasePtr GetNewSurface(SurfaceFormat theFormat);
+	static SurfaceBasePtr GetNewDefaultSurface();
+
+	int GetClipX1() { return this->mClipX1; }
+	int GetClipX2() { return this->mClipX2; }
+	int GetClipY1() { return this->mClipY1; }
+	int GetClipY2() { return this->mClipY2; }
+	void GetClipRect(int &cx1, int &cy1, int &cx2, int &cy2) { cx1 = this->mClipX1; cx2 = this->mClipX2; cy1 = this->mClipY1; cy2 = this->mClipY2; }
+	inline bool NotClipped(int x, int y) { 	return x>=this->mClipX1 && y>=this->mClipY1 && x<=this->mClipX2 && y<=this->mClipY2; }
+};
+typedef SmartPtr<SurfaceBase> SurfaceBasePtr;
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+template <class PixelType>
+class Surface : public SurfaceBase
+{
+protected:
+//	typedef unsigned short PixelType;
+//	typedef DWORD PixelType;
+
+	PixelType *mImage;
+	PixelType mColor;
+	
+	void DrawLineClip(int x1, int y1, int x2, int y2);
+	virtual ~Surface();
+
+public:
+	Surface(SurfaceFormat theFormat);
+
+	virtual void Create(int theWidth, int theHeight);
+	virtual void Free();
+	virtual int GetPixelSize() { return sizeof(PixelType); }
+	
+	virtual void CopySurface(SurfaceBase *theSurface, int x, int y, int left, int top, int width, int height);
+	virtual void CopySurface(SurfaceBase *theSurface, const char *theMaskData, int x, int y, int left, int top, int width, int height);
+//	virtual void DrawString(SFont *theFont, const GUIString &theStr, unsigned short theOffset, unsigned short theLength, int x, int y);
+
+	DWORD GetPixel(int x, int y);
+	void PutPixel(int x, int y);
+	void SetPixel(int x, int y, DWORD theColor);
+	void DrawCircle(int x, int y, int r);
+	void FillCircle(int x, int y, int r);
+	void DrawEllipse(int x, int y, int width, int height);
+	void FillEllipse(int x, int y, int width, int height);
+	void DrawArc(int x, int y, int width, int height, int startAngle, int arcAngle);
+
+	void DrawHorzLine(int x1, int x2, int y);
+	void DrawVertLine(int x, int y1, int y2);
+	void DrawLine(int x1, int y1, int x2, int y2);
+
+	PixelType* GetPixels() { return this->mImage; }
+	PixelType GetColor() { return this->mColor; }
+
+	void DrawRect(int x, int y, int width, int height);
+	void FillRect(int x, int y, int width, int height);
+	void SetColor(DWORD theColor);
+
+	inline void PutPixel(int x, int y, PixelType *thePtr)
+	{
+		if(this->NotClipped(x,y))
+			*thePtr = this->mColor;
+	}
+
+	SurfaceBasePtr Duplicate();
+};
+typedef Surface<unsigned short> Surface16;
+typedef Surface<DWORD> Surface32;
+
+typedef SmartPtr<Surface16> Surface16Ptr;
+typedef SmartPtr<Surface32> Surface32Ptr;
+
+#define SURFACE_32_TO_555(x) ((((x)>>3)&0x1f) | ((((x)>>11)&0x1f)<<5) | ((((x)>>19)&0x1f)<<10))
+#define SURFACE_555_TO_32(x) ((((x)&0x1f)<<3) | ((((x)>>5)&0x1f)<<11) | ((((x)>>10)&0x1f)<<19))
+
+#define SURFACE_32_TO_565(x) ((((x)>>3)&0x1f) | ((((x)>>10)&0x3f)<<5) | ((((x)>>19)&0x1f)<<11))
+#define SURFACE_565_TO_32(x) ((((x)&0x1f)<<3) | ((((x)>>5)&0x3f)<<10) | ((((x)>>11)&0x1f)<<19))
+
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+/*
+class Surface32 : public Surface<DWORD>
+{
+public:
+	Surface32();
+};
+typedef SmartPtr<Surface32> Surface32Ptr;
+*/
+
+} // namespace WONAPI;
+
+
+// ---- Surface.cpp (the original, its includes left out)
 // Software raster surface: pixel, line, circle, rectangle and image drawing into a pixel buffer
 // (not identified in the original exe)
-// UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-#include <windows.h>
-#include <string>
-#include <string.h>
-#include <list>
-#include <map>
-#include <set>
-#include <vector>
-#include "lle/LowLevelEngine.h"
-#include "ee/EEWonNet.h"
-#include "ee/wonapi/WONSurface.h"
 
-#include <math.h>
 
-#include <algorithm>
 
 using namespace WONAPI;
 
@@ -1144,4 +1372,239 @@ DWORD Surface<PixelType>::GetPixel(int x, int y)
 		return 0;
 
 	return *(this->mImage + y*this->mPixelsPerRow + x);
+}
+
+// ---- the driver
+using namespace WONAPI;
+
+static unsigned sSeed;
+static unsigned Rand() { sSeed = sSeed * 1103515245u + 12345u; return (sSeed >> 16) & 0x7fff; }
+static unsigned R(unsigned n) { return n ? Rand() % n : 0; }
+static int RI(int lo, int hi) { return lo + (int)R((unsigned)(hi - lo + 1)); }
+
+struct Slot {
+    SmartPtr<SurfaceBase> o;
+    EeWonSurface* r;
+    int fmt;
+};
+static Slot sSlot[3];
+
+static DWORD OrigColor(Slot& s)
+{
+    return s.fmt == SurfaceFormat_32 ? ((Surface32*)s.o.get())->GetColor() : ((Surface16*)s.o.get())->GetColor();
+}
+static uint64_t Fnv(const unsigned char* p, size_t n)
+{
+    uint64_t h = 1469598103934665603ull;
+    for (size_t i = 0; i < n; i++) { h ^= p[i]; h *= 1099511628211ull; }
+    return h;
+}
+static std::string Fields(int w, int h, int bpr, int ppr, int c1, int c2, int c3, int c4, DWORD color, bool pixels, uint64_t hash)
+{
+    char aLine[200];
+    snprintf(aLine, sizeof(aLine), "= %d %d %d %d %d %d %d %d %x %d %016llx", w, h, bpr, ppr, c1, c2, c3, c4, (unsigned)color,
+             pixels ? 1 : 0, (unsigned long long)hash);
+    return aLine;
+}
+static std::string OrigState(Slot& s)
+{
+    SurfaceBase* o = s.o.get();
+    size_t n = o->GetPixelsBase() ? (size_t)o->GetBytesPerRow() * o->GetHeight() : 0;
+    return Fields(o->GetWidth(), o->GetHeight(), o->GetBytesPerRow(), o->GetPixelsPerRow(), o->GetClipX1(), o->GetClipY1(),
+                  o->GetClipX2(), o->GetClipY2(), OrigColor(s), o->GetPixelsBase() != NULL,
+                  Fnv((const unsigned char*)o->GetPixelsBase(), n));
+}
+static int G(EeWonSurface* r, EeWonSurfaceField f) { return ee_won_surface_get(r, f); }
+static std::string RustState(Slot& s)
+{
+    EeWonSurface* r = s.r;
+    void* p = ee_won_surface_pixels(r);
+    size_t n = p ? (size_t)G(r, EeWonSurfaceField::BytesPerRow) * G(r, EeWonSurfaceField::Height) : 0;
+    return Fields(G(r, EeWonSurfaceField::Width), G(r, EeWonSurfaceField::Height), G(r, EeWonSurfaceField::BytesPerRow),
+                  G(r, EeWonSurfaceField::PixelsPerRow), G(r, EeWonSurfaceField::ClipX1), G(r, EeWonSurfaceField::ClipY1),
+                  G(r, EeWonSurfaceField::ClipX2), G(r, EeWonSurfaceField::ClipY2), (DWORD)G(r, EeWonSurfaceField::Color),
+                  p != NULL, Fnv((const unsigned char*)p, n));
+}
+
+static int Size()
+{
+    switch (R(20)) {
+    case 0: return 0;
+    case 1: return 1;
+    case 2: return 64;
+    default: return (int)R(41);
+    }
+}
+static void Create(Slot& s, int w, int h)
+{
+    s.o->Create(w, h);
+    if (s.o->GetPixelsBase() != NULL) memset(s.o->GetPixelsBase(), 0, (size_t)s.o->GetBytesPerRow() * h);
+    ee_won_surface_create(s.r, w, h);
+}
+static void New(Slot& s, int fmt)
+{
+    s.o = SurfaceBase::GetNewSurface((SurfaceFormat)fmt);
+    if (s.r) ee_won_surface_free(s.r);
+    s.r = ee_won_surface_new(fmt);
+    s.fmt = fmt;
+}
+static std::vector<unsigned char> Mask(int srcW, int srcH, int salt)
+{
+    int bpr = srcW / 8 + (srcW % 8 != 0 ? 1 : 0);
+    std::vector<unsigned char> m((size_t)(bpr * srcH > 0 ? bpr * srcH : 0) + 1);
+    for (size_t k = 0; k < m.size(); k++) {
+        unsigned v = (unsigned)(k * 37 + salt * 11 + (k >> 3) * 5) & 0xff;
+        m[k] = (unsigned char)((salt & 3) == 0 ? v & (v >> 1) : (salt & 3) == 1 ? v | (v << 3) : v);
+    }
+    return m;
+}
+
+int main(int argc, char** argv)
+{
+    bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
+    long long aChecks = 0;
+    int aFailures = 0;
+    char aLine[300];
+    const int kSequences = 20000;
+    for (int seq = 0; seq < kSequences; seq++) {
+        sSeed = 7919u * (unsigned)seq + 17u;
+        bool aShow = aPrint && seq < 150;
+        if (aShow) printf("S %d\n", seq);
+        for (int k = 0; k < 3; k++) {
+            int fmt = (int)R(3), w = Size(), h = Size();
+            New(sSlot[k], fmt);
+            Create(sSlot[k], w, h);
+            snprintf(aLine, sizeof(aLine), "N %d %d %d %d", k, fmt, w, h);
+            std::string a = OrigState(sSlot[k]), b = RustState(sSlot[k]);
+            aChecks++;
+            if (a != b && ++aFailures < 20) printf("FAIL %d %s\n orig %s\n rust %s\n", seq, aLine, a.c_str(), b.c_str());
+            if (aShow) printf("%s %s\n", aLine, a.c_str());
+        }
+        for (int op = 0; op < 60; op++) {
+            int k = (int)R(3);
+            Slot& s = sSlot[k];
+            SurfaceBase* o = s.o.get();
+            int W = o->GetWidth(), H = o->GetHeight();
+            int a = RI(-20, W + 20), b = RI(-20, H + 20), c = RI(-20, W + 20), d = RI(-20, H + 20);
+            std::string extra;
+            unsigned which = R(100);
+            if (which < 6) {
+                DWORD col = (DWORD)(R(0x8000) | (R(0x8000) << 15) | (R(4) << 30));
+                o->SetColor(col);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::SetColor, (int)col, 0, 0, 0, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d", k, (int)EeWonSurfaceDraw::SetColor, (int)col);
+            } else if (which < 12) {
+                int cw = RI(-5, W + 10), ch = RI(-5, H + 10);
+                o->SetClipRect(a, b, cw, ch);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::SetClipRect, a, b, cw, ch, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d %d", k, (int)EeWonSurfaceDraw::SetClipRect, a, b, cw, ch);
+            } else if (which < 14) {
+                o->ClearClipRect();
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::ClearClipRect, 0, 0, 0, 0, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d", k, (int)EeWonSurfaceDraw::ClearClipRect);
+            } else if (which < 20) {
+                int w = RI(-5, W + 10), h = RI(-5, H + 10);
+                o->FillRect(a, b, w, h);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::FillRect, a, b, w, h, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d %d", k, (int)EeWonSurfaceDraw::FillRect, a, b, w, h);
+            } else if (which < 26) {
+                int w = R(4) == 0 ? (int)R(3) : RI(-5, W + 10), h = R(4) == 0 ? (int)R(3) : RI(-5, H + 10);
+                o->DrawRect(a, b, w, h);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::DrawRect, a, b, w, h, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d %d", k, (int)EeWonSurfaceDraw::DrawRect, a, b, w, h);
+            } else if (which < 30) {
+                o->DrawHorzLine(a, c, b);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::HorzLine, a, c, b, 0, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d", k, (int)EeWonSurfaceDraw::HorzLine, a, c, b);
+            } else if (which < 34) {
+                o->DrawVertLine(a, b, d);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::VertLine, a, b, d, 0, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d", k, (int)EeWonSurfaceDraw::VertLine, a, b, d);
+            } else if (which < 46) {
+                if (R(4) == 0) c = a;
+                else if (R(4) == 0) d = b;
+                o->DrawLine(a, b, c, d);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::Line, a, b, c, d, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d %d", k, (int)EeWonSurfaceDraw::Line, a, b, c, d);
+            } else if (which < 52) {
+                int r = RI(-5, 40);
+                bool fill = R(2);
+                if (fill) o->FillCircle(a, b, r); else o->DrawCircle(a, b, r);
+                EeWonSurfaceDraw dk = fill ? EeWonSurfaceDraw::FillCircle : EeWonSurfaceDraw::Circle;
+                ee_won_surface_draw(s.r, dk, a, b, r, 0, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d", k, (int)dk, a, b, r);
+            } else if (which < 60) {
+                int w = RI(-5, 60), h = RI(-5, 60);
+                bool fill = R(2);
+                if (fill) o->FillEllipse(a, b, w, h); else o->DrawEllipse(a, b, w, h);
+                EeWonSurfaceDraw dk = fill ? EeWonSurfaceDraw::FillEllipse : EeWonSurfaceDraw::Ellipse;
+                ee_won_surface_draw(s.r, dk, a, b, w, h, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d %d", k, (int)dk, a, b, w, h);
+            } else if (which < 68) {
+                int w = RI(-5, 60), h = RI(-5, 60), st = RI(-400, 800), ar = RI(-50, 500);
+                if (R(3) == 0) st = 45 * RI(-2, 9);
+                if (R(3) == 0) ar = 45 * RI(0, 9);
+                o->DrawArc(a, b, w, h, st, ar);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::Arc, a, b, w, h, st, ar);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d %d %d %d", k, (int)EeWonSurfaceDraw::Arc, a, b, w, h, st, ar);
+            } else if (which < 72) {
+                o->PutPixel(a, b);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::PutPixel, a, b, 0, 0, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d", k, (int)EeWonSurfaceDraw::PutPixel, a, b);
+            } else if (which < 76) {
+                DWORD col = (DWORD)(R(0x8000) | (R(0x8000) << 15) | (R(4) << 30));
+                o->SetPixel(a, b, col);
+                ee_won_surface_draw(s.r, EeWonSurfaceDraw::SetPixel, a, b, (int)col, 0, 0, 0);
+                snprintf(aLine, sizeof(aLine), "D %d %d %d %d %d", k, (int)EeWonSurfaceDraw::SetPixel, a, b, (int)col);
+            } else if (which < 82) {
+                DWORD va = o->GetPixel(a, b), vb = ee_won_surface_pixel(s.r, a, b);
+                aChecks++;
+                if (va != vb && ++aFailures < 20) printf("FAIL %d pixel %d %d: %x %x\n", seq, a, b, (unsigned)va, (unsigned)vb);
+                snprintf(aLine, sizeof(aLine), "P %d %d %d %x", k, a, b, (unsigned)va);
+            } else if (which < 92) {
+                // a copy from another slot of the same format (or a 32-bit one into a 16-bit one), or within this one
+                int from = (int)R(3);
+                Slot& f = sSlot[from];
+                bool ok = from == k || f.fmt == s.fmt || (f.fmt == SurfaceFormat_32 && s.fmt != SurfaceFormat_32);
+                int SW = f.o->GetWidth(), SH = f.o->GetHeight();
+                if (!ok || SW <= 0 || SH <= 0 || f.o->GetPixelsBase() == NULL || o->GetPixelsBase() == NULL) {
+                    op--;
+                    continue;
+                }
+                int l = (int)R(SW), t = (int)R(SH), w = RI(-2, SW - l), h = RI(-2, SH - t);
+                bool masked = R(2);
+                int salt = (int)R(256);
+                std::vector<unsigned char> m = Mask(SW, SH, salt);
+                if (masked) o->CopySurface(f.o.get(), (const char*)&m[0], a, b, l, t, w, h);
+                else o->CopySurface(f.o.get(), a, b, l, t, w, h);
+                ee_won_surface_copy(s.r, f.r, masked ? &m[0] : NULL, a, b, l, t, w, h);
+                snprintf(aLine, sizeof(aLine), "K %d %d %d %d %d %d %d %d %d %d", k, from, masked ? 1 : 0, salt, a, b, l, t, w, h);
+            } else if (which < 95) {
+                int from = (int)R(3);
+                if (from == k) { op--; continue; }
+                SurfaceBasePtr dup = sSlot[from].o->Duplicate();
+                s.o = dup;
+                if (s.r) ee_won_surface_free(s.r);
+                s.r = ee_won_surface_duplicate(sSlot[from].r);
+                s.fmt = sSlot[from].fmt;
+                snprintf(aLine, sizeof(aLine), "U %d %d", k, from);
+            } else if (which < 98) {
+                int w = Size(), h = Size();
+                Create(s, w, h);
+                snprintf(aLine, sizeof(aLine), "C %d %d %d", k, w, h);
+            } else {
+                o->Free();
+                ee_won_surface_release(s.r);
+                snprintf(aLine, sizeof(aLine), "F %d", k);
+            }
+            std::string sa = OrigState(s), sb = RustState(s);
+            aChecks++;
+            if (sa != sb && ++aFailures < 20) printf("FAIL %d %s\n orig %s\n rust %s\n", seq, aLine, sa.c_str(), sb.c_str());
+            if (aShow) printf("%s %s\n", aLine, sa.c_str());
+        }
+    }
+    for (int k = 0; k < 3; k++) { sSlot[k].o = NULL; ee_won_surface_free(sSlot[k].r); sSlot[k].r = NULL; }
+    if (aPrint) return 0;
+    printf("won_surface_test: %lld checks, %d failures\n", aChecks, aFailures);
+    return aFailures ? 1 : 0;
 }

@@ -2233,6 +2233,13 @@ constexpr static const int32_t EE_WON_SMART_ACT_BAN = 6;
 /// `BanClientByCDKeyId(group, on, seconds, text, value, NULL)`
 constexpr static const int32_t EE_WON_SMART_ACT_BAN_CDKEY = 7;
 
+/// `SurfaceFormat`.
+constexpr static const int32_t EE_WON_SURFACE_32 = 0;
+
+constexpr static const int32_t EE_WON_SURFACE_555 = 1;
+
+constexpr static const int32_t EE_WON_SURFACE_565 = 2;
+
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
 
@@ -5430,6 +5437,58 @@ enum class EeWonStagingCall : uint32_t {
   NotifyPingChange,
 };
 
+/// A surface's field (`ee_won_surface_get`).
+enum class EeWonSurfaceField : uint32_t {
+  /// `GetSurfaceFormat()`.
+  Format = 1,
+  Width,
+  Height,
+  BytesPerRow,
+  PixelsPerRow,
+  /// `GetPixelSize()` (4 or 2).
+  PixelSize,
+  ClipX1,
+  ClipY1,
+  ClipX2,
+  ClipY2,
+  /// `GetColor()` (the pixel value: a 16-bit surface's converted colour).
+  Color,
+};
+
+/// A drawing method (`ee_won_surface_draw`; its arguments in the original's order).
+enum class EeWonSurfaceDraw : uint32_t {
+  /// `SetColor(a)`.
+  SetColor = 1,
+  /// `FillRect(a, b, c, d)`.
+  FillRect,
+  /// `DrawRect(a, b, c, d)`.
+  DrawRect,
+  /// `DrawHorzLine(a, b, c)` (x1, x2, y).
+  HorzLine,
+  /// `DrawVertLine(a, b, c)` (x, y1, y2).
+  VertLine,
+  /// `DrawLine(a, b, c, d)`.
+  Line,
+  /// `DrawCircle(a, b, c)`.
+  Circle,
+  /// `FillCircle(a, b, c)`.
+  FillCircle,
+  /// `DrawEllipse(a, b, c, d)`.
+  Ellipse,
+  /// `FillEllipse(a, b, c, d)`.
+  FillEllipse,
+  /// `DrawArc(a, b, c, d, e, f)`.
+  Arc,
+  /// `PutPixel(a, b)`.
+  PutPixel,
+  /// `SetPixel(a, b, c)`.
+  SetPixel,
+  /// `SetClipRect(a, b, c, d)`.
+  SetClipRect,
+  /// `ClearClipRect()`.
+  ClearClipRect,
+};
+
 /// The inward calls of the C++ `TabBar` shell.
 enum class EeWonTabBarCall : uint32_t {
   /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
@@ -6858,6 +6917,9 @@ struct EeWonSplitter;
 
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
+
+/// The Rust surface.
+struct EeWonSurface;
 
 /// The Rust TreeItem.
 struct EeWonTNode;
@@ -16934,6 +16996,96 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
+
+/// `SurfaceBase::GetNewSurface(format)`: a new surface, or null for an unknown format.
+EeWonSurface *ee_won_surface_new(int32_t format);
+
+/// `GetNewSurface(gDefaultSurfaceFormat)`.
+EeWonSurface *ee_won_surface_new_default();
+
+/// `SetDefaultSurfaceFormat(format)`.
+void ee_won_surface_set_default_format(int32_t format);
+
+/// `SURFACE_32_TO_555` / `SURFACE_32_TO_565` (`SurfaceColorFrom32`).
+uint32_t ee_won_surface_color_from32(uint32_t c, int32_t format);
+
+/// `SURFACE_555_TO_32` / `SURFACE_565_TO_32`.
+uint32_t ee_won_surface_color_to32(uint32_t p, int32_t format);
+
+/// The surface's destruction (its pixels freed).
+///
+/// # Safety
+/// `s` is null or from `ee_won_surface_new` / `ee_won_surface_duplicate`, not freed before.
+void ee_won_surface_free(EeWonSurface *s);
+
+/// `Create(width, height)`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_create(EeWonSurface *s, int32_t width, int32_t height);
+
+/// `Free()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_release(EeWonSurface *s);
+
+/// A field (`EeWonSurfaceField`).
+///
+/// # Safety
+/// `s` is a live surface.
+int32_t ee_won_surface_get(const EeWonSurface *s, EeWonSurfaceField f);
+
+/// `GetPixelsBase()`.
+///
+/// # Safety
+/// `s` is a live surface.
+void *ee_won_surface_pixels(EeWonSurface *s);
+
+/// A drawing method (`EeWonSurfaceDraw` with its arguments in the original's order).
+///
+/// # Safety
+/// `s` is a live surface.
+void ee_won_surface_draw(EeWonSurface *s,
+                         EeWonSurfaceDraw op,
+                         int32_t a,
+                         int32_t b,
+                         int32_t c,
+                         int32_t d,
+                         int32_t e,
+                         int32_t f);
+
+/// `GetPixel(x, y)`.
+///
+/// # Safety
+/// `s` is a live surface.
+uint32_t ee_won_surface_pixel(EeWonSurface *s, int32_t x, int32_t y);
+
+/// `CopySurface(src, mask, x, y, left, top, width, height)` (`mask` null: the copy without a mask).
+///
+/// # Safety
+/// `s` and `src` are live surfaces (possibly the same); `mask` is null or covers the source's rows.
+void ee_won_surface_copy(EeWonSurface *s,
+                         const EeWonSurface *src,
+                         const uint8_t *mask,
+                         int32_t x,
+                         int32_t y,
+                         int32_t left,
+                         int32_t top,
+                         int32_t width,
+                         int32_t height);
+
+/// `Duplicate()`: a new surface.
+///
+/// # Safety
+/// `s` is a live surface.
+EeWonSurface *ee_won_surface_duplicate(const EeWonSurface *s);
+
+/// The BITMAPINFO header's fields (`EeWonSurface::bitmap_info`) into `out` (eight ints).
+///
+/// # Safety
+/// `s` is a live surface, `out` points at eight ints.
+void ee_won_surface_bitmap_info(const EeWonSurface *s, int32_t *out);
 
 /// A new Rust TabBar for the C++ `component` over its container's Rust object `ct`, the bar of the control `ctrl`
 /// (NULL for none), its calls out through `host`.

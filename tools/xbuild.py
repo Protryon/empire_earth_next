@@ -497,6 +497,9 @@ WON_TESTS = {
     # the Windows skin's drawing helpers and MS control paints as Rust plans (mspaint.rs) against the original
     # statements over a logged Graphics (golden: rust/crates/ee_won/src/golden_mspaint.txt)
     "won_mspaint_test": [],
+    # the software raster surface as a whole Rust object (surface.rs) against the WON SDK's Surface.cpp
+    # (golden: rust/crates/ee_won/src/golden_surface.txt)
+    "won_surface_test": [],
     # the image filters' pixel loops (imgfilter.rs) against the original statements over stand-in raw images
     # (golden: rust/crates/ee_won/src/golden_imgfilter.txt)
     "won_imgfilter_test": [],
