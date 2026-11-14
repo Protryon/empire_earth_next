@@ -15290,3 +15290,117 @@ stack, -350) -> 75,576 (the caches, -28). This round's own net: -370. WindowMana
   set, ProcessEvents, DeliverEvent, CloseAllWindows, Add/RemoveWindow, the screen resolution). PostEvent locks
   `mDataCrit` because events may come from other threads: the event list needs a lock in Rust (a `Mutex`, never held
   across a call out), not the `RefCell` the other state uses. Then the skins' Button subclasses (draw ops).
+
+## R6: UITextLabel and UITLScrolling whole in Rust (ee_ui labelobj.rs; branch rust-r6-ui13, 2026-11-13)
+
+Round 12 finished the buttons; this round moves the text label, the toolkit's most used control (every menu's
+captions, the form's help text, the check and radio buttons' labels, the combo box's text, the chat windows), and
+its scrolling subclass (the credits, the main game's dialog message). One Rust object, `EeUiLabel`
+(`labelobj.rs`), holds the label's state and, after the scrolling constructor's init call, a scrolling label's own
+(`Scroll`, a `OnceCell`). Every method of both classes, the header's inline ones included, is a one-line forwarder;
+the C++ constructors keep their `UIControl` part and make the object; UITLScrolling has no destructor, the label's
+frees the scrolling part first (the original's order).
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| b0be4adb | UITextLabel whole (`labelobj.rs`); `label_fit_ffi.rs`, `wrap_ffi.rs` and draw_ffi's label functions deleted | -353 |
+| 543c691c | UITLScrolling whole (the label's scrolling part); `scrolling_ffi.rs` deleted | -214 |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 16,541 at the branch's start
+-> 15,974 (-567).
+
+- **The census.** No census commit: UITextLabel's members were private and its friends (the form, the slider change
+  event, the combo box, the check and radio buttons, the tri-state box) call only its methods (the private
+  `SetText(text, bool)`, `MouseLButtonDown`); UITLScrolling's members were private too. No game class derives from
+  either (`EEUIFMainGame` and the editor hold a UITLScrolling by pointer). Nothing under `src/Empire Earth` changed.
+  The outside callers of `SetText` (dozens: the editor's tabs, the game screens, the actions' chat lines) keep its
+  signatures: `SetText(const UWideString&)` and `SetText(long)` stay inline over the private forwarder.
+- **The lines (the decision for this round).** The lines stay C++ `UWideString`s: `GetText(i)` answers a
+  `const UWideString&` (the combo box, the editor's resource caps through `GetTextAsInt`, the chat windows read them),
+  so each line is a string the host makes (`StringNew` from the bytes the wrap produced) and the Rust object holds by
+  address, beside a copy of its bytes. The vector is Rust's; the re-wrap of `RecomputeDisplayRange` reads the copies
+  instead of the strings. The display copies (`mDisplayLines`, a `new UWideString[n]`) and a scrolling label's draw
+  lines (`std::vector<UWideString>`) are strings held by address too, assigned with `StringAssign`. The rectangle
+  getters (`GetTextRectangle` and the others, `const GERectangle&`) answer the address of the Rust object's `Cell`
+  (`UiRect` is `GERectangle`'s layout, the object is boxed). The UWideString stays only at this boundary, which the
+  LLE lane's UString work can replace without touching the label's logic.
+- **The host.** `UITextLabelRust::Op` answers the shared ops (`UIObjHost::Base`, `Media`, `Part`: the scroll bar is
+  a part held by address, as the scroll bar holds its slider) and the new ones, 150-170: the strings (new from bytes,
+  delete, assign), a text set from bytes (the wrap's measure, `SetText("")`), a text's font height (pure), `mDrawCount--`,
+  `SetBgRectangle`, the form's `RedrawIntersectControls`, the scroll bar's creation, range, page size, value (pure),
+  step and value set, a part's copied draw rectangle (pure), the polls' pause and resume (the other poll ops are
+  round 12's), and the label's own four virtuals (`CheckScrollBar`, `RecomputeDisplayRange`, `SetLocation`,
+  `SetRectangle`) called through the C++ object so an override runs. The scrolling label overrides none of them in
+  C++ any more: its `CopyData`, `DrawTextA` and empty `CheckScrollBar` are the Rust object's, chosen by the scrolling
+  part; during the base constructor (before the init call) the label's own `CheckScrollBar` runs, as the original's
+  vtable did.
+- **What went.** `label_fit_ffi.rs` (the `ee_uicpp_label_fit_*` host calls), `wrap_ffi.rs` (`ee_ui_label_wrap` and its
+  two host calls), draw_ffi's `ee_ui_label_one_line_location`, `ee_ui_label_line_range`, `ee_ui_label_line`,
+  `scrolling_ffi.rs` (the `ee_uicpp_scrolling_*` calls); the C++ `ComputeTextLabelRect`, `kTextLabelMargin`, the
+  wrap context. The round-1, -5 and -7 algorithms (`wrap.rs`, `label_fit.rs`, `draw.rs`, `scrolling.rs`) stay with
+  their goldens; the object is their host.
+- **Behaviour.** No change on any path the original defined. Where the original read past a vector (a display copy
+  or draw line past its array, a line the fit measures past the lines, `DeleteLine` past the end, `GetText` past the
+  end), the Rust object stops or skips (a missing `GetText` line answers NULL, which the caller's dereference
+  crashes on, as the garbage pointer would have). The drivers' worlds reached such states 721 times in the label's
+  20,000 sequences (171 display copies, 550 draw rows) and 519 in the scrolling label's (10 draw-line copies, 509 draw
+  rows), each time with both sides stopping alike; they follow from the driver's direct calls and its slider model,
+  and no game path is known to reach them. The constructor's line for a label of type 0 copied the `UWideString`;
+  the Rust object makes it from the bytes (the same for any text without an embedded NUL). `delete[]` destroyed the
+  display copies last to first; the Rust object deletes them first to last (no observer).
+- **The goldens** (`build/ui13`: `label_driver.cpp`, KIND 1; `scroll_driver.cpp`, KIND 2, made by
+  `make_scroll_driver.py` with `scroll_orig.inc`). The world: the control's rectangle, border and mouse, 16 sample
+  texts (empty, words, newlines, tabs, a 34-letter word, UTF-8 accents, numbers), strings (handles, their bytes),
+  texts (font, content; the extent from a fake per-byte width), three fonts, the scroll bar (value clamped to its
+  range, rectangles, its mouse handlers moving the value), polls (running, paused, random tick counts), the label's
+  virtuals answered by calling the object back (variant 1: a subclass reading the line count first). The string ops'
+  bytes are traced as their FNV-1a hash (`world.h`; the cargo replay does the same, `replay::fnv`). `orig` for the
+  label is UITextLabel.cpp at 6d6beda0 over the record FFI it called (label_fit, wrap, draw) in that commit's
+  library (`lib_orig.lib`, `orig_include`); for the scrolling label, UITLScrolling.cpp at b0be4adb over the scrolling
+  FFI and that commit's Rust label (`lib_orig2.lib`, `orig2_include`). 20,000 sequences of 40 calls each:
+
+  | Golden | Trace lines | orig = cur | Mutations (sequences failing of 20,000) |
+  |---|---|---|---|
+  | label | 13,455,173 | yes (sha256 c80e99d5...) | SetText dirtying after the scroll bar check 20,000; the display copy assigned the other way 19,103; the re-wrap dropping the first line 19,925; the copied text deleted before the text 20,000; the button down without the capture 931; the draw rows not advanced 3,496; a fitted SetRectangle keeping the pending re-wrap 19,817; DeleteLine without the scroll bar check 19,979; the scroll bar moved to the text rectangle 7,766; the one-line text placed as if fitted 7,864 |
+  | scrolling label | 15,637,922 | yes (sha256 f50fcfc5...) | the polls deleted in reverse 20,000; the first pixel offset without the +1 19,188; the lines drawn in the label's text rectangle 5,658; CopyData without the draw text's copy 19,982; a shrink keeping the dropped strings 9,316; the scroll bar checked for a scrolling label 19,997; Pause resuming 19,970 |
+
+  The first 25 sequences of each are `golden_labelobj.txt` (15,325 lines) and `golden_scrollingobj.txt` (19,270),
+  replayed by cargo (`labelobj_tests.rs`), with a changed-measure and a changed-poll test.
+- **NULL-receiver audit** (WON rounds 30-31). Every original method of both classes read a member of `this` first
+  (the header's getters, `ChangeFont`'s `mText` test, `SetText`'s `mFitRectToText`, the scrolling getters) or called
+  through the vtable, so a NULL receiver crashed the original as it crashes the forwarder's `mRust` read: no early
+  return needed keeping. `GetTabable`, `UpdateKeyboard`, `MouseRButtonDown`/`Up`, `TabbedFrom`/`To` stay inline.
+- **Lessons.**
+  - The first orig run wrote 4 GB in a minute: a fitted one-line label with no lines has a rectangle of height 0,
+    and a direct `RecomputeDisplayRange` then makes `UMFloor` negative, so `new UWideString[n]` asks for billions
+    (the original's behaviour too). Nothing outside the label calls it; the driver skips that call when the rectangle
+    is under twice the border. A driver should cap its trace size.
+  - A pointer the object answers (the rectangle getters) cannot go into a trace compared across two executables:
+    the driver dereferences it and traces the rectangle; the cargo replay's dispatch does the same.
+  - Bytes an op passes by address are traced as a hash, so orig and cur (and the replay) compare their contents.
+  - A mutation run takes about four minutes per mutation here (the release library's rebuild under load).
+- **What runs it.** EE-SIM never builds a label: the oracle is unchanged by construction (seeds 2-3 identical after
+  each commit). The scenario editor gate (`sim_editor.py`, 1,820 lines unchanged after each commit) builds the
+  editor's labels (every tab's captions, the unit-type table's column and row labels, the player names, the
+  resource caps read back through `GetTextAsInt`), the check and radio buttons' labels and the combo boxes' text
+  labels, so the constructors, `SetText`, the wrap, the fit and the destructors run there through the shim.
+  **Only the tour shows:** every label draw (one line placed by its alignment, a multi-line label's rows and its
+  scroll bar), the form's help text label (fit to its text, moved under the mouse), the main menu's and settings'
+  captions, the scroll bar on a long label (mouse and wheel), the scrolling label's credits scroll and the main game's
+  dialog message (`EEUIFMainGame`), the chat windows' `AppendText` and `SetStartingDisplayLine`.
+- **Gates.** Per commit: `build.py -j 3 --sim` 0/0, the Rust gate PASS, the oracle seeds 2-3 identical, `sim_editor.py`
+  PASS (1,820 lines), the test-profile build 0/0 and the tour (`fixture_game.py --exercise tour --play-seconds 60
+  --data <main tree>` under the harness lock): `RESULT PASS tour`, `gx_errors` {} both times. On the result merged
+  with `rust` (5523e0ee, a clean merge; `rust_includes.py`'s re-added `rust/ee_screens.h` in `EESEUICCommandUnits.cpp`
+  and `EESEUnit.cpp` reverted): build 0/0 (EE-AOC and EE-SIM), the Rust gate PASS, the oracle seeds 2-7 identical,
+  the editor gate PASS (1,820 lines), the test-profile build 0/0, the tour `RESULT PASS tour` (`gx_errors` {}). The
+  lead's newest chain log ended in `GATES FAIL` without `CHAIN DONE`, which kept this lane's tour script waiting:
+  it now also takes `GATES PASS`/`GATES FAIL` as the end of the lead's harness half.
+- **UIEditBox: the lines' decision, not started.** Its lines can move to Rust storage when the class moves whole:
+  `GetText(i)` answers a `const char*` (not a `UWideString&` as the label's does), so NUL-terminated byte lines owned
+  by the Rust object serve every reader, and `edit.rs` would run over them instead of the `ee_uicpp_edit_line*` host
+  calls. `UWideString` would stay only at the boundary: `SetText`, `GetAllText`/`GetSelectedText`'s out strings, the
+  IME strings and attributes, the clipboard. The move itself (the constructor, `CopyData`, the two draws, the mouse
+  and keyboard handlers, the polls, the cursor line, the selection rhombus; about 700 lines of C++) and its golden
+  did not fit this round; the list boxes did not start either.
+- **Left:** `UIEditBox`, the list boxes, the combo box, the form and the manager; then `UIControl`.
