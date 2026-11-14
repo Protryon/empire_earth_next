@@ -396,6 +396,7 @@ dependencies = [
  "ee_ts",
  "ee_ui",
  "ee_units",
+ "ee_ustring",
  "ee_won",
 ]
 
@@ -457,6 +458,10 @@ dependencies = [
  "ee_astar",
  "ee_ge",
 ]
+
+[[package]]
+name = "ee_ustring"
+version = "0.1.0"
 
 [[package]]
 name = "ee_won"

@@ -13,6 +13,8 @@ use ee_error as _;
 use ee_time as _;
 // the Thread System (ee_ts): the locks, the events, the threads and their registry
 use ee_ts as _;
+// the string classes' searches and tokenizers (ee_ustring)
+use ee_ustring as _;
 // the Graphics Engine's math and the table trigonometry (ee_ge/src/ffi.rs), called by the C++ GE classes and UMath.cpp
 use ee_ge as _;
 // the Graphics Thread's and the camera's math (ee_gfx/src/ffi.rs), called by EECameraControl.cpp
