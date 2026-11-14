@@ -84,18 +84,10 @@ public:
     bool GetIsWaterTile(unsigned long inX, unsigned long inY) const;
     bool GetIsSpaceMap() const;
     bool GetIsSpaceTile(unsigned long inX, unsigned long inY) const;
-    bool GetIsEdgeTile(long inX, long inY) const;
-    bool GetIsLeftEdgeTile(long inX, long inY) const;
-    bool GetIsTopEdgeTile(long inX, long inY) const;
-    bool GetIsRightEdgeTile(long inX, long inY) const;
-    bool GetIsBottomEdgeTile(long inX, long inY) const;
     const GE3DPlane& GetLeftPlane() const;
-    float GetMaximumZ() const;
     void GetMeshNormal(float inX, float inY, GEVector& outNormal) const;
     float GetMeshZ(float inX, float inY) const;
-    float GetMinimumZ() const;
     unsigned long GetNumVisibleTiles() const;
-    unsigned long GetNumVisibleUnitTiles() const;
     unsigned long GetNumVisibleTileRows() const;
     GETextureSet* GetRegisteredTextureSet(unsigned long inID) const;
     const GE3DPlane& GetRightPlane() const;
@@ -109,12 +101,8 @@ public:
     void GetTerrainVisibleBottomLeftIndices(unsigned long& outX, unsigned long& outY) const;
     void GetTerrainVisibleTileDimensions(unsigned long& outWidth, unsigned long& outHeight) const;
     unsigned long GetTextureSetID(unsigned long inX, unsigned long inY) const;
-    void GetTileRowsInVolume(const std::vector<GE3DPoint>& inVolume,
-                             std::vector<std::pair<long, std::pair<long, long> > >& outRows,
-                             U2DPoint<long>& outMinimum, U2DPoint<long>& outMaximum);
     const GEColor& GetVertexColor(unsigned long inX, unsigned long inY) const;
     GEVector* GetVertexNormal(unsigned long inX, unsigned long inY) const;
-    unsigned long GetVisiblePolyCount() const;
     void GetVisibleTileRow(unsigned long inIndex, long& outY, long& outStartX, long& outEndX) const;
     float GetVisibleSpaceTilePercentage() const;
     float GetVisibleWaterTilePercentage() const;
@@ -141,9 +129,7 @@ public:
     void SetSpaceCliffTextures(std::vector<GETexture*>& inTextures);
     void SetTextureSet(unsigned long inX, unsigned long inY, unsigned long inTextureSetID);
     void SetTileReferenceCount(unsigned long inX, unsigned long inY, unsigned long inCount);
-    void SetVisibleWaterTilePercentage(float inPercentage);
     void SetWaterColorSet(unsigned long inX, unsigned long inY);
-    void SetWaterInfo(unsigned long inX, unsigned long inY, unsigned char inWaterInfo);
     void SetZ(unsigned long inX, unsigned long inY, float inZ);
     void UpdateFogOfWar(bool inVisible);
     void UpdateVisibleTerrain(const GETransformation& inCamera, GEViewport& inViewport, unsigned long inWidth,

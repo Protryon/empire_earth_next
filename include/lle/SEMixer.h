@@ -41,8 +41,6 @@ public:
 #endif
     SEConductor& GetConductor() { return this->mConductor; }
     static unsigned long GetCount();        // (the registry is Rust's: rust/crates/ee_sound mixers.rs)
-    float GetCPUUsage() { return (*this->mGetCPUUsage)(); }
-    IDirectSound* GetDirectSoundInterface() { return (*this->mGetDirectSoundInterface)(); }
     static long GetMixer(unsigned long inIndex, SEMixer*& outMixer);
     const UString& GetName() { return this->mModule->GetName(); }
     bool IsValid() { return this->mModule->IsValid(); }

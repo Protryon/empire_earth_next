@@ -20,8 +20,6 @@ public:
     virtual long DrawBackground(const GERectangle& inRectangle);
     GEBitmap* GetBackgroundBitmap(unsigned long inColumn, unsigned long inRow) const
         { return this->mBitmaps[this->mColumns * inRow + inColumn]; }
-    unsigned long GetNumberColumns() const { return this->mColumns; }
-    unsigned long GetNumberRows() const { return this->mRows; }
     virtual long LoadBackground();
     virtual void SetBitmapTexture(GETexture* inTexture, unsigned long inColumn, unsigned long inRow);   // slot 0x1c
     void SetNumberColumnsAndRows(unsigned long inColumns, unsigned long inRows);

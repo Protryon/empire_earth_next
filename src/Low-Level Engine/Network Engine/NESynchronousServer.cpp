@@ -77,13 +77,6 @@ unsigned char NESynchronousServer::GetNumberOfPlayers() const
 {
     return (unsigned char)ee_net_sv_get(this->mRust, EeNetSvGet::NumberOfPlayers);
 }
-bool NESynchronousServer::GetProcessingSendToAllAndWait() const
-{
-    return ee_net_sv_get(this->mRust, EeNetSvGet::ProcessingSendToAllAndWait) != 0;
-}
-unsigned long NESynchronousServer::GetPTsPerCT() const { return ee_net_sv_get(this->mRust, EeNetSvGet::PTsPerCt); }
-unsigned long NESynchronousServer::GetRestartCT() const { return ee_net_sv_get(this->mRust, EeNetSvGet::RestartCt); }
-unsigned long NESynchronousServer::GetSendInterval() const { return ee_net_sv_get(this->mRust, EeNetSvGet::SendInterval); }
 void NESynchronousServer::LockSendCommunicationsTick() { ee_net_sv_lock_send_communications_tick(this->mRust); }
 void NESynchronousServer::UnlockSendCommunicationsTick() { ee_net_sv_unlock_send_communications_tick(this->mRust); }
 void NESynchronousServer::ResetClientConnection(unsigned long inIndex)
@@ -92,7 +85,6 @@ void NESynchronousServer::ResetClientConnection(unsigned long inIndex)
 }
 void NESynchronousServer::ResetXfer() { ee_net_pr_reset(this->Protocol(), this->Server(), true, 0); }
 void NESynchronousServer::ResumeMigratedGame() { ee_net_sv_set_event(this->mRust, EeNetSvEvent::ResumeMigratedGame); }
-void NESynchronousServer::SendExitMessage() { ee_net_sv_send_exit_message(this->mRust); }
 void NESynchronousServer::SetCurrentCommunicationsTick(unsigned long inTick)
 {
     ee_net_sv_set(this->mRust, EeNetSvSet::CurrentCommunicationsTick, (uint32_t)inTick);
@@ -102,15 +94,6 @@ void NESynchronousServer::SetCurrentPhysicsTick(unsigned long& inTick)
     ee_net_sv_set(this->mRust, EeNetSvSet::CurrentPhysicsTick, (uint32_t)inTick);
 }
 void NESynchronousServer::SetGameState(unsigned char inState) { ee_net_sv_set(this->mRust, EeNetSvSet::GameState, inState); }
-void NESynchronousServer::SetLastCTMessageID(unsigned long inID)
-{
-    ee_net_sv_set(this->mRust, EeNetSvSet::LastCtMessageId, (uint32_t)inID);
-}
-void NESynchronousServer::SetLoadParams(unsigned long inTick)
-{
-    ee_net_sv_set(this->mRust, EeNetSvSet::CurrentPhysicsTick, (uint32_t)inTick);
-}
-void NESynchronousServer::SetRestartCT(unsigned long inCT) { ee_net_sv_set(this->mRust, EeNetSvSet::RestartCt, (uint32_t)inCT); }
 void NESynchronousServer::SetSendInterval(unsigned long inInterval) { ee_net_sv_set_send_interval(this->mRust, (uint32_t)inInterval); }
 void NESynchronousServer::SetSendToSlotForPlayer(unsigned char inPlayer, unsigned char inSlot)
 {
@@ -124,7 +107,6 @@ void NESynchronousServer::StartWaitingForReconnects(unsigned long inTime)
     ee_net_sv_start_waiting_for_reconnects(this->mRust, (uint32_t)inTime);
 }
 void NESynchronousServer::StopGame() { ee_net_sv_set_event(this->mRust, EeNetSvEvent::StopGame); }
-void NESynchronousServer::SetTempOutOfSynchPTs(unsigned char inPTs) { ee_net_sv_set(this->mRust, EeNetSvSet::TempOutOfSynchPTs, inPTs); }
 void NESynchronousServer::ForceNextCT() { ee_net_sv_set_event(this->mRust, EeNetSvEvent::ForceNextCt); }
 unsigned char NESynchronousServer::GetRecordPlaybackMode() const { return ee_net_sv_record_playback_mode(this->mRust); }
 
@@ -214,12 +196,6 @@ unsigned long NESynchronousServer::SendToAllAndWait(NEMessage* inMessage, unsign
 void NESynchronousServer::SetMessageManagerLowestCTs(unsigned long inCT)
 {
     ee_net_sv_set_message_manager_lowest_cts(this->mRust, (uint32_t)inCT);
-}
-
-// FUNCTION: LLE 0x10048ec6
-void NESynchronousServer::SetMessageManagerCurrentMessageNumber(unsigned long inNumber)
-{
-    ee_net_sv_set_message_manager_current_number(this->mRust, (uint32_t)inNumber);
 }
 
 // FUNCTION: LLE 0x10048ed9

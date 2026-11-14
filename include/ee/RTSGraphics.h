@@ -80,7 +80,6 @@ public:
     float mSavedConductorVolume;            // +0x4c (the conductor's volume, saved likewise)
     long mL50;                              // +0x50
     bool mB54;                              // +0x54
-    bool GetIsMoviePlaying() const { return this->mIsMoviePlaying; }  // (EEUIManager::UpdateMouse 0x6751ab: `mov al; test al, al`)
     volatile bool mIsMoviePlaying;          // +0x55 (a movie is playing; volatile: `mov byte ptr [x], 0`, 0x11a63b)
     volatile bool mIsPaused;                // +0x56 (= true; volatile: `mov byte ptr [x], 0`, 0x11a530)
     volatile bool mIsPausePending;          // +0x57 (PostResume waits for it to clear)

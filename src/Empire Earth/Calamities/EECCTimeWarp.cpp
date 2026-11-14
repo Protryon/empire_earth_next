@@ -40,131 +40,6 @@
 static GEColor sWarpColor(0.484375f, 0.0f, 0.734375f);
 static GEColor sBlackColor(0.0f, 0.0f, 0.0f);
 
-// FUNCTION: EXE 0x4b3b42
-// Creates the time warp calamity class with no effects, sounds, away time or placement range
-EECCTimeWarp::EECCTimeWarp()
-{
-    this->mGraphicEffect1 = NULL;
-    this->mGraphicEffect2 = NULL;
-    this->mGraphicEffect3 = NULL;
-    this->mGraphicEffect4 = NULL;
-    this->mAwayTime = 0;
-    this->mPlacementRange = 0;
-    this->mSound = NULL;
-    this->mSecondarySound = NULL;
-}
-
-// SYNTHETIC: EXE 0x4b3b6e
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b3b8a
-// Destroys the calamity class, releasing its four effects
-EECCTimeWarp::~EECCTimeWarp()
-{
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Dereference();
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Dereference();
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Dereference();
-    if (this->mGraphicEffect4 != NULL)
-        this->mGraphicEffect4->Dereference();
-}
-
-// FUNCTION: EXE 0x4b3bd0
-// Starts a time warp on the live target: disables and halts it and sends the launch effect from the caster above it;
-// a dead target marks the calamity finished
-bool EECCTimeWarp::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
-    if (this->mGraphicEffect1 != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCTimeWarp::StartStep);
-}
-
-// FUNCTION: EXE 0x4b3c89
-// Gives the live target back control (goals cleared, idle or circling if it flies), removes the effect and stops the
-// sounds; otherwise marks the calamity finished
-void EECCTimeWarp::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
-    if (this->mGraphicEffect1 != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    EECalamityRunStop(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCTimeWarp::StartStep);
-}
-
-// FUNCTION: EXE 0x4b3d7c
-// Reads the calamity data: sounds, placement range and four effects; depart and away times follow the first two
-// effects' durations (away 3000 without one)
-void EECCTimeWarp::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    this->mSound = EESoundObject::Get(inData->mSoundID);
-    this->mSecondarySound = EESoundObject::Get(inData->mSecondarySoundID);
-    this->mPlacementRange = inData->mIntParam1;
-    this->mAwayTime = inData->mIntParam2;
-    if (inData->mGraphicEffectID1 != 0) {
-        this->mGraphicEffect1 = EEGraphicEffect::Get(inData->mGraphicEffectID1);
-        this->mGraphicEffect1->Reference();
-        this->mDepartTime = this->mGraphicEffect1->mDuration;
-    }
-    if (inData->mGraphicEffectID2 != 0) {
-        this->mGraphicEffect2 = EEGraphicEffect::Get(inData->mGraphicEffectID2);
-        this->mGraphicEffect2->Reference();
-        this->mAwayTime = this->mGraphicEffect2->mDuration;
-    } else
-        this->mAwayTime = 3000;
-    if (inData->mGraphicEffectID3 != 0) {
-        this->mGraphicEffect3 = EEGraphicEffect::Get(inData->mGraphicEffectID3);
-        this->mGraphicEffect3->Reference();
-    }
-    if (inData->mGraphicEffectID4 != 0) {
-        this->mGraphicEffect4 = EEGraphicEffect::Get(inData->mGraphicEffectID4);
-        this->mGraphicEffect4->Reference();
-    }
-}
-
-// FUNCTION: EXE 0x4b3e36
-// Remembers the target's tile to return it there, or marks the calamity finished if the target is off the map or dead
-void EECCTimeWarp::Reset(EECalamity* inCalamity)
-{
-    EEUnit* theTargetUnit = NULL;
-    if (inCalamity->GetTargetUnit(theTargetUnit)) {
-        EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
-        long theTileX = theUnit->mTileX;
-        if (theTileX != -10000 && theUnit->mHitPoints > 0) {
-            inCalamity->mTilePlaceHolder1.SetXY(theTileX, theUnit->mTileY);
-            inCalamity->mBoolPlaceHolder1 = false;
-            inCalamity->mBoolPlaceHolder2 = false;
-        } else {
-            inCalamity->mIntPlaceHolder2 = -1;
-            inCalamity->mBoolPlaceHolder1 = true;
-            inCalamity->mBoolPlaceHolder2 = true;
-        }
-    }
-    inCalamity->mFloatPlaceHolder1 = 0.0f;
-}
-
-// FUNCTION: EXE 0x4b3e9d
-// Loads the four effects and both sounds (all assumed present)
-void EECCTimeWarp::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    this->mGraphicEffect1->Load(inIsOnDemand);
-    this->mGraphicEffect2->Load(inIsOnDemand);
-    this->mGraphicEffect3->Load(inIsOnDemand);
-    this->mGraphicEffect4->Load(inIsOnDemand);
-    this->mSound->LoadMedia();
-    this->mSecondarySound->LoadMedia();
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCTimeWarp::PlaySound(EECalamity* inCalamity)
-{
-}
-
 // FUNCTION: EXE 0x4b3ede
 // Places the departure or arrival effect at the location and plays the main sound when departing (as the calamity's
 // main sound), the secondary sound when arriving
@@ -282,30 +157,6 @@ void EECCTimeWarp::Depart(EECalamity* inCalamity)
     }
 }
 
-// FUNCTION: EXE 0x4b432a
-// Unloads the four effects and both sounds
-void EECCTimeWarp::UnloadMedia(EEPlayer* inPlayer)
-{
-    this->mGraphicEffect1->Unload();
-    this->mGraphicEffect2->Unload();
-    this->mGraphicEffect3->Unload();
-    this->mGraphicEffect4->Unload();
-    this->mSound->UnloadMedia();
-    this->mSecondarySound->UnloadMedia();
-}
-
-// FUNCTION: EXE 0x4b4361
-// Ages the calamity: tints and departs the target, brings it back before the end, blinks its colour while tinted
-// (Rust); returns 7 once the target is dead or the calamity is marked finished
-long EECCTimeWarp::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
-    theParams.warp_depart_time = (int32_t)this->mDepartTime;
-    theParams.warp_away_time = (int32_t)this->mAwayTime;
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, this->mSecondarySound, &EECCTimeWarp::UpdateStep);
-}
-
 // New (port): EECCTimeWarp's world steps for its Rust update (ee/EECalamityUpdate.h)
 bool EECCTimeWarp::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
 {
@@ -362,14 +213,6 @@ bool EECCTimeWarp::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall
 
 // Compiler-generated for this unit (EEComplexUnit::SetColor, inline, first emitted here):
 // TEMPLATE: EXE 0x4b45b0
-
-// FUNCTION: EXE 0x4b45fa
-// Accepts another unit on the map that is in the class's unit set
-bool EECCTimeWarp::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    return EECalamityValidTarget(this, inUnit, inTargetUnit);
-}
 
 // SYNTHETIC: EXE 0x4b3ade
 // SYNTHETIC: EXE 0x4b3ae8

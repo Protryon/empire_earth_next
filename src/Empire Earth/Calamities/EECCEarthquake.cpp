@@ -46,36 +46,6 @@ extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 
 
 
-// FUNCTION: EXE 0x4b037f
-// Creates the earthquake calamity class with no crack or source effect
-EECCEarthquake::EECCEarthquake()
-    : mGraphicEffect2(NULL), mGraphicEffect1(NULL)
-{
-}
-
-// SYNTHETIC: EXE 0x4b0399
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b03b5
-// Destroys the calamity class, releasing its two effects
-EECCEarthquake::~EECCEarthquake()
-{
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Dereference();
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Dereference();
-}
-
-// FUNCTION: EXE 0x4b03e1
-// Starts an earthquake: sends the source effect from the caster and plays the sound; the quake itself waits
-bool EECCEarthquake::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.quake_source_speed = this->mSourceSpeed;
-    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCEarthquake::StartStep);
-}
-
 // FUNCTION: EXE 0x4b0502
 // Draws the quake's cracks radiating from the target at roughly even, randomly jittered angles;
 // returns false when a crack effect could not be created
@@ -103,28 +73,6 @@ bool EECCEarthquake::CreateCracks(EECalamity* inCalamity)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4b0621
-// Loads the quake's two effects and sound
-void EECCEarthquake::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Load(inIsOnDemand);
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Load(inIsOnDemand);
-    if (this->mSound != NULL)
-        this->mSound->LoadMedia();
-}
-
-// FUNCTION: EXE 0x4b0654
-// Plays the quake's sound for the calamity at its default volume
-void EECCEarthquake::PlaySound(EECalamity* inCalamity)
-{
-    inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(), 0.0f,
-                                                                    1.0f, this->mSound->GetLooping(), NULL));
-    if (inCalamity->mSound != NULL)
-        inCalamity->mSound->Dereference();
-}
-
 // FUNCTION: EXE 0x4b06b5
 // Sets the calamity's affected rectangle to the quake radius around its target; returns true
 bool EECCEarthquake::SetAffectedArea(EECalamity* inCalamity)
@@ -147,75 +95,6 @@ long EECCEarthquake::CreateCrack(GE3DPoint& inFrom, float inX, float inY)
 {
     GE3DPoint theTo(inX, inY, 0.0f);
     return gWorld.GetEffectManager()->CreateEffectBetween(inFrom, theTo, this->mGraphicEffect1, NULL);
-}
-
-// FUNCTION: EXE 0x4b0750
-// Stops the quake's sounds
-void EECCEarthquake::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.quake_source_speed = this->mSourceSpeed;
-    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCEarthquake::StartStep);
-}
-
-// FUNCTION: EXE 0x4b0765
-// Reads the calamity data: crack and source effects (the radius and duration come from the crack effect),
-// volumes, falloff, damage per tick, shake, tick time, crack count and sound
-void EECCEarthquake::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    this->mGraphicEffect1 = EEGraphicEffect::Get(inData->mGraphicEffectID1);
-    this->mGraphicEffect1->Reference();
-    this->mGraphicEffect2 = EEGraphicEffect::Get(inData->mGraphicEffectID2);
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Reference();
-    this->mRadius = this->mGraphicEffect1->GetSize();
-    this->mMinimumFactor = inData->mFloatParam1;
-    this->mVolume = inData->mFloatParam2;
-    this->mQuakeMinimumFactor = inData->mQuakeMinimumStrength;
-    this->mQuakeVolume = inData->mQuakeStrength;
-    this->mSourceSpeed = this->mGraphicEffect2->mDuration * 0.01f;
-    this->mFalloff = 1.0f / inData->mIntParam1;
-    this->mDamage = inData->mIntParam2;
-    this->mShake = inData->mIntParam3;
-    this->mShakeInterval = 1.0f / inData->mIntParam4;
-    this->mTickTime = inData->mIntParam5;
-    this->mCrackCount = inData->mIntParam6;
-    this->mDuration = this->mGraphicEffect1->mDuration * 0.001f;
-    this->mSpeed = this->mRadius / this->mDuration;
-    this->mSound = EESoundObject::Get(inData->mSoundID);
-}
-
-// FUNCTION: EXE 0x4b0850
-// Restarts the camera shake timer
-void EECCEarthquake::Reset(EECalamity* inCalamity)
-{
-    inCalamity->mFloatPlaceHolder1 = 0.0f;
-}
-
-// FUNCTION: EXE 0x4b0a60
-// Runs the quake in Rust: after the source delay draws the cracks, then each tick damages the living land
-// buildings on the caster's continent within the growing radius, shakes the camera, sets the epicenter factor and
-// the sound; returns 7 once the quake is over
-long EECCEarthquake::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.quake_damage = (int32_t)this->mDamage;
-    theParams.quake_tick_time = (int32_t)this->mTickTime;
-    theParams.quake_shake = (int32_t)this->mShake;
-    theParams.quake_duration = this->mDuration;
-    theParams.quake_radius = this->mRadius;
-    theParams.quake_shake_interval = this->mShakeInterval;
-    theParams.quake_volume = this->mVolume;
-    theParams.quake_quake_volume = this->mQuakeVolume;
-    theParams.quake_minimum_factor = this->mMinimumFactor;
-    theParams.quake_quake_minimum_factor = this->mQuakeMinimumFactor;
-    theParams.quake_speed = this->mSpeed;
-    theParams.quake_falloff = this->mFalloff;
-    theParams.quake_damage_factor = EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->GetEarthquakeDamageFactor();
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCEarthquake::UpdateStep);
 }
 
 // New (port): EECCEarthquake's world steps for its Rust update (ee/EECalamityUpdate.h)
@@ -260,27 +139,6 @@ bool EECCEarthquake::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCa
     default:
         return false;
     }
-}
-
-// FUNCTION: EXE 0x4b0da5
-// Accepts a map tile, on a space map only one on the caster's continent
-bool EECCEarthquake::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
-    return EECalamityValidLocation(this, theCast, inUnit, 0);
-}
-
-// ICF-FOLDED: EXE 0x4b10c9
-// (folded into EECCFire's identical Virtual34)
-void EECCEarthquake::UnloadMedia(EEPlayer* inPlayer)
-{
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Unload();
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Unload();
-    if (this->mSound != NULL)
-        this->mSound->UnloadMedia();
 }
 
 // FUNCTION: EXE 0x4b0e20

@@ -67,10 +67,8 @@ public:
     virtual void CloseSearchHandle() {}                                         // +0xd8 (folded 0x0c16a)
 
     const unsigned char* GetData() const;                                       // 0x4630
-    void GetTemporaryFileName(UString& outName) { outName = this->mTemporaryFileName; }  // 0x4634
     long Compact();                                                             // 0x9ff6
     long Compress(unsigned long inMethod, unsigned long& outLength);            // 0xa05e (provisional names)
-    long Decompress(unsigned long& outLength);                                  // 0xa20b
     long Load(FSFile& inFile, unsigned long inLength);                          // 0xa4e9
     long Load(FSFile& inFile);                                                  // 0xa55c
     long Save(FSFile& outFile, unsigned long inLength);                         // 0xa68c

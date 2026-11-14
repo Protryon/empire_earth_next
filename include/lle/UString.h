@@ -18,7 +18,6 @@ class FSFile;
 // Windows-1252 when it is not well-formed UTF-8, or always while a file written before the switch loads (a save of
 // version < 0.255: the loader that read the version sets the flag around the load).
 inline void USetLegacyTextLoad(bool inLegacy) { ee_ustring_set_legacy_text_load(inLegacy); }
-inline bool UIsLegacyTextLoad() { return ee_ustring_is_legacy_text_load(); }
 
 class LLE_API UString {                    // proven sizeof 0x10 (TCP DetectedGame: UStrings at +0x20, +0x30)
 public:

@@ -9,43 +9,20 @@
 #include "lle/UString.h"
 #include "lle/FSFileSpec.h"
 #include "lle/GETextureCoordinate.h"
+#include "GERustIO.h"
 
 // FUNCTION: LLE 0x10033b1f
 // Reads the U and V coordinates from an open file; on failure rewinds to where it started
 long GETextureCoordinate::Load(FSFileSpec& inFile)
 {
-    long theResult;
-    long thePosition;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.GetPosition(thePosition);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(this->mU);
-            if (theResult == kErrorOK)
-                theResult = inFile.Read(this->mV);
-            if (theResult != kErrorOK)
-                inFile.SetPosition(thePosition, kFileOriginBegin, false);
-        }
-    } else
-        theResult = kErrorNotOpen;
-    return theResult;
+    const float* theFields[] = {&this->mU, &this->mV};
+    return GERustFields(inFile, theFields, 2, inFile.GetIsOpen(), false, true);
 }
 
 // FUNCTION: LLE 0x10033b87
 // Writes the U and V coordinates to an open file; on failure rewinds to where it started
 long GETextureCoordinate::Save(FSFileSpec& inFile)
 {
-    long theResult;
-    long thePosition;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.GetPosition(thePosition);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Write(this->mU);
-            if (theResult == kErrorOK)
-                theResult = inFile.Write(this->mV);
-            if (theResult != kErrorOK)
-                inFile.SetPosition(thePosition, kFileOriginBegin, false);
-        }
-    } else
-        theResult = kErrorNotOpen;
-    return theResult;
+    const float* theFields[] = {&this->mU, &this->mV};
+    return GERustFields(inFile, theFields, 2, inFile.GetIsOpen(), true, true);
 }

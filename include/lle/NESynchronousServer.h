@@ -49,23 +49,15 @@ public:
     unsigned long GetLastCTMessageID() const;
     unsigned long GetMaxPlayers() const;
     unsigned char GetNumberOfPlayers() const;
-    bool GetProcessingSendToAllAndWait() const;
-    unsigned long GetPTsPerCT() const;
-    unsigned long GetRestartCT() const;
-    unsigned long GetSendInterval() const;
     void LockSendCommunicationsTick();
     virtual long ProcessGuaranteedLocalUserInput(NEMessage* inMessage, unsigned char inPlayer)
         { return this->ProcessLocalUserInput(inMessage, inPlayer); }
     void ResetClientConnection(unsigned long inIndex);
     void ResetXfer();
     void ResumeMigratedGame();
-    void SendExitMessage();
     virtual void SetCurrentCommunicationsTick(unsigned long inTick);
     void SetCurrentPhysicsTick(unsigned long& inTick);
     void SetGameState(unsigned char inState);
-    void SetLastCTMessageID(unsigned long inID);
-    void SetLoadParams(unsigned long inTick);
-    void SetRestartCT(unsigned long inCT);
     void SetSendInterval(unsigned long inInterval);
     void SetSendToSlotForPlayer(unsigned char inPlayer, unsigned char inSlot);
     void StartGame();
@@ -74,7 +66,6 @@ public:
     void StopGame();
     void StopPing();
     void UnlockSendCommunicationsTick();
-    void SetTempOutOfSynchPTs(unsigned char inPTs);
     // TEST ONLY: the headless simulation (platform/PlatSim.h). The physics thread sends the next communications tick
     // itself; the send thread sends none while the game runs.
     void SimCommunicationsTick();
@@ -92,7 +83,6 @@ public:
     virtual long SearchForGame(bool inStart);
     unsigned long SendToAllAndWait(NEMessage* inMessage, unsigned long inTimeout, unsigned long inRetries);
     void SetMessageManagerLowestCTs(unsigned long inCT);
-    void SetMessageManagerCurrentMessageNumber(unsigned long inNumber);
     void UnpauseGame();
     long XferFileToClient(FSFileSpec& inFile, unsigned long inUserData, unsigned char inSlot, unsigned long& outXferID,
                           bool inP5);

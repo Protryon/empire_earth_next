@@ -31,28 +31,6 @@ static void UIShutdown(bool inForced);
 
 long gUIInitialized;                        // 0x1012ed00 (provisional name)
 
-// FUNCTION: LLE 0x100829f5
-// Splits a string into lines that fit the given pixel width; a newline ends a line
-void UICreateMultilineTextFromString(const UWideString& inString, GEFont* inFont, unsigned long inWidth,
-                                     std::vector<UWideString>& outLines)
-{
-    UWideString theLine;
-    const char* theCurrent = inString;
-    while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"") != 0) {
-        unsigned long theCount = UIGetStringCutOffIndex(theCurrent, inFont, inWidth, true, true);
-        bool theAtNewline = PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0;
-        if (theCount == 0 && !theAtNewline)
-            theCount = 1;   // always make progress
-        theLine.CopyString(theCurrent, theCount);
-        outLines.push_back(theLine);
-        theCurrent = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>(theCurrent), theCount);
-        // Fixed: the cut-off index stops before a newline without counting it, so the loop used to stay on the
-        // newline forever (pushing empty lines); the newline that ends a line is skipped now
-        if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0)
-            theCurrent = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCurrent));
-    }
-}
-
 // FUNCTION: LLE 0x10082a85
 // Returns how many characters fit the pixel width (tab = 4 spaces), cutting at a space or newline; all if none fit
 unsigned long UIGetStringCutOffIndex(const UWideString& inString, GEFont* inFont, unsigned long inWidth,

@@ -74,8 +74,59 @@ pub unsafe fn fnv(p: isize) -> isize {
     h as isize
 }
 
+/// A `mem` line's bytes written at `p`.
+///
+/// # Safety
+/// `p` points at as many writable bytes as the line has.
+unsafe fn write_mem(p: *mut u8, hex: &str) {
+    let b = hex.as_bytes();
+    let (mut i, mut at) = (0, 0usize);
+    while i < b.len() {
+        if b[i] == b'.' {
+            let end = i + 1 + b[i + 1..].iter().position(|&c| c == b'.').expect("a zero run's end");
+            let n: usize = hex[i + 1..end].parse().expect("a zero run");
+            for k in 0..n {
+                // SAFETY: the contract
+                unsafe { *p.add(at + k) = 0 };
+            }
+            at += n;
+            i = end + 1;
+        } else {
+            // SAFETY: the contract
+            unsafe { *p.add(at) = u8::from_str_radix(&hex[i..i + 2], 16).expect("a hex byte") };
+            at += 1;
+            i += 2;
+        }
+    }
+}
+
 fn int(w: &str) -> isize {
     w.parse().expect("integer")
+}
+
+std::thread_local! {
+    /// The replay [`Replay::run`] is running on this thread (for [`host_current`]).
+    static CURRENT: Cell<*const c_void> = const { Cell::new(core::ptr::null()) };
+}
+
+/// The host for objects whose host object is their C++ object, not the replay (round 18's controls tables): it
+/// answers from the replay running on this thread.
+///
+/// # Safety
+/// Called inside [`Replay::run`] on its thread, with `f` four live floats.
+pub unsafe extern "C" fn host_current(
+    _obj: *mut c_void,
+    op: EeUiOp,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+    f: *mut f32,
+) -> isize {
+    let r = CURRENT.with(|c| c.get());
+    assert!(!r.is_null(), "no replay running on this thread");
+    // SAFETY: set by run for its duration
+    unsafe { host(r as *mut c_void, op, a, b, c, d, f) }
 }
 
 unsafe extern "C" fn host(obj: *mut c_void, op: EeUiOp, a: isize, b: isize, c: isize, d: isize, f: *mut f32) -> isize {
@@ -184,6 +235,19 @@ impl<'a> Replay<'a> {
                 _ => (a, b),
             }
         };
+        // the controls table's (R6 ui round 18): TblWrap's Rust table and TblFileRead's buffer as 0, TblMake's record
+        // as its digest, the sound setters' names as their hash
+        let (ta, tb) = match op {
+            EeUiOp::TblWrap => (0, tb),
+            EeUiOp::TblFileRead => (ta, 0),
+            // SAFETY: TblMake passes its record
+            EeUiOp::TblMake => {
+                (crate::tableobj::make_digest(unsafe { &*(a as *const crate::tableobj::EeUiTableMake) }), tb)
+            }
+            _ => (ta, tb),
+        };
+        // SAFETY: those setters pass NUL-terminated bytes
+        let c = if op == EeUiOp::TblSet && (b == 2 || b == 3) { unsafe { fnv(c) } } else { c };
         // a combo box's typed key (R6 ui round 15)
         // SAFETY: that action passes NUL-terminated bytes
         let tc = if op == EeUiOp::ComboAct && a == 13 { unsafe { fnv(c) } } else { c };
@@ -195,6 +259,9 @@ impl<'a> Replay<'a> {
                 "set" => self.set(&w),
                 // SAFETY: the contract
                 "do" => unsafe { self.call(&w) },
+                // the bytes the op wrote at b (round 18's TblFileRead): hex, a run of zeros as .N.
+                // SAFETY: the op's b is a buffer that long
+                "mem" => unsafe { write_mem(b as *mut u8, w[1]) },
                 "=" => {
                     let out = floats(&w[2..]);
                     // SAFETY: the contract
@@ -218,6 +285,7 @@ impl<'a> Replay<'a> {
 
     /// Runs the whole golden: `other` handles the class's own lines (`new`, `free`) and says whether it did.
     pub fn run(&self, mut other: impl FnMut(&Self, &[&str]) -> bool) {
+        CURRENT.with(|c| c.set(self as *const Replay as *const c_void));
         while let Some(l) = self.peek() {
             self.next();
             let w: Vec<&str> = l.split(' ').collect();

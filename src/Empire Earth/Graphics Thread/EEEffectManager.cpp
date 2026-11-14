@@ -48,25 +48,9 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EEWorld.h"
 #include "ee/EEEffectManager.h"
-#include "ee/EEE2DExplosion.h"
-#include "ee/EEE2DFire.h"
-#include "ee/EEE2DMuzzleFlash.h"
-#include "ee/EEE2DImpact.h"
-#include "ee/EEE2DImpactBlood.h"
-#include "ee/EEE2DExhaustTrail.h"
-#include "ee/EEE2DFireTrail.h"
-#include "ee/EEE2DPlasmaPulse.h"
 #include "ee/EEE2DLightGlow.h"
-#include "ee/EEE2DLightning.h"
 #include "ee/EEE2DMarchingIcons.h"
 #include "ee/EEE2DParticle.h"
-#include "ee/EEE2DPulseWave.h"
-#include "ee/EEE2DSmokePlume.h"
-#include "ee/EEE2DSmokeMuzzleBlast.h"
-#include "ee/EEE2DWinterBreath.h"
-#include "ee/EEE2DLinearProjectile.h"
-#include "ee/EEE2DWaterRipple.h"
-#include "ee/EEE2DVortex.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
 #include "ee/EEE3DSmokeGenerator.h"
 #include "ee/EEE3DFarm.h"
@@ -161,29 +145,29 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DParticleEmitter: theEffect = new EEE3DParticleEmitter(0x3a); break;
     case kEffect2DParticle: theEffect = EEE2DParticle::Create(); break;
     case kEffect3DDestructionSmoke: theEffect = new EEE3DSmokeGenerator(0x1e); break;
-    case kEffect2DVelocityParticle: theEffect = new EEE2DSmokePlume(EE_GFX_EFFECT_KIND_VELOCITY_PARTICLE); break;
+    case kEffect2DVelocityParticle: theEffect = new EEE2DRust(0xc); break;
     case kEffect3DWaterSplash: theEffect = new EEE3DRust(0x1b); break;
     case kEffect3DDamageSmoke: theEffect = new EEE3DSmokeGenerator(0x2c); break;
     case kEffect3DSmokeGenerator: theEffect = new EEE3DSmokeGenerator(0x2b); break;
-    case kEffect2DExplosion: theEffect = new EEE2DExplosion(); break;
-    case kEffect2DSmokePlume: theEffect = new EEE2DSmokePlume(0xb); break;
+    case kEffect2DExplosion: theEffect = new EEE2DRust(4); break;
+    case kEffect2DSmokePlume: theEffect = new EEE2DRust(0xb); break;
     case kEffect2DShockwave: theEffect = new EEE2DRust(0x12); break;
-    case kEffect2DFire: theEffect = new EEE2DFire(); break;
-    case kEffect2DMuzzleFlash: theEffect = new EEE2DMuzzleFlash(); break;
-    case kEffect2DImpact: theEffect = new EEE2DImpact(6); break;
-    case kEffect2DImpactBlood: theEffect = new EEE2DImpactBlood(); break;
-    case kEffect2DExhaustTrail: theEffect = new EEE2DExhaustTrail(); break;
-    case kEffect2DPlasmaPulse: theEffect = new EEE2DPlasmaPulse(); break;
+    case kEffect2DFire: theEffect = new EEE2DRust(5); break;
+    case kEffect2DMuzzleFlash: theEffect = new EEE2DRust(9); break;
+    case kEffect2DImpact: theEffect = new EEE2DRust(6); break;
+    case kEffect2DImpactBlood: theEffect = new EEE2DRust(7); break;
+    case kEffect2DExhaustTrail: theEffect = new EEE2DRust(3); break;
+    case kEffect2DPlasmaPulse: theEffect = new EEE2DRust(0xa); break;
     case kEffect2DLightGlow: theEffect = new EEE2DLightGlow(); break;
-    case kEffect2DLightning: theEffect = new EEE2DLightning(); break;
-    case kEffect2DFireTrail: theEffect = new EEE2DFireTrail(); break;
+    case kEffect2DLightning: theEffect = new EEE2DRust(8); break;
+    case kEffect2DFireTrail: theEffect = new EEE2DRust(0xe); break;
     case kEffect2DSquareMarchingIcons: theEffect = new EEE2DMarchingIcons(EE_GFX_EFFECT_KIND_SQUARE_ICONS); break;
     case kEffect2DCircularMarchingIcons: theEffect = new EEE2DMarchingIcons(EE_GFX_EFFECT_KIND_CIRCULAR_ICONS); break;
-    case kEffect2DPulseWave: theEffect = new EEE2DPulseWave(); break;
-    case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DSmokeMuzzleBlast(); break;
-    case kEffect2DWinterBreath: theEffect = new EEE2DWinterBreath(); break;
-    case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(); break;
-    case kEffect2DWaterRipple: theEffect = new EEE2DWaterRipple(); break;
+    case kEffect2DPulseWave: theEffect = new EEE2DRust(0x2f); break;
+    case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DRust(0x14); break;
+    case kEffect2DWinterBreath: theEffect = new EEE2DRust(0x16); break;
+    case kEffect2DLinearProjectile: theEffect = new EEE2DRust(0x30); break;
+    case kEffect2DWaterRipple: theEffect = new EEE2DRust(0x22); break;
     case kEffect3DEarthquake: theEffect = new EEE3DEarthquake(); break;
     case kEffect3DTracers: theEffect = new EEE3DRust(0x21); break;
     case kEffect3DVolcano: theEffect = new EEE3DRust(0x20); break;
@@ -204,7 +188,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DTracerBeam: theEffect = new EEE3DRust(0x40); break;
     case kEffect3DPulseCannonBall: theEffect = new EEE3DRust(0x43); break;
     case kEffect3DShield: theEffect = new EEE3DRust(kEffect3DShield); break;
-    case kEffect2DVortex: theEffect = new EEE2DVortex(); break;
+    case kEffect2DVortex: theEffect = new EEE2DRust(0x31); break;
     case kEffect3DBlastWave: theEffect = new EEE3DRust(0x18); break;
     case kEffect3DVirus: theEffect = new EEE3DRust(0x42); break;
     case kEffect2DBattlefieldAmbient: theEffect = new EEE2DBattlefieldAmbient(); break;
@@ -267,17 +251,17 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
         return thePlan.result;
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
-    case 4: theEffect = new EEE2DExplosion(inUnit, inEffect); break;
-    case 5: theEffect = new EEE2DFire(inUnit, inEffect); break;
-    case 9: theEffect = new EEE2DMuzzleFlash(inUnit, inEffect); break;
-    case 6: theEffect = new EEE2DImpact(inUnit, inEffect, 6); break;
-    case 7: theEffect = new EEE2DImpactBlood(inUnit, inEffect); break;
+    case 4: theEffect = new EEE2DRust(inUnit, inEffect, 4); break;
+    case 5: theEffect = new EEE2DRust(inUnit, inEffect, 5); break;
+    case 9: theEffect = new EEE2DRust(inUnit, inEffect, 9); break;
+    case 6: theEffect = new EEE2DRust(inUnit, inEffect, 6); break;
+    case 7: theEffect = new EEE2DRust(inUnit, inEffect, 7); break;
     case 18: theEffect = new EEE2DRust(inUnit, inEffect, 0x12); break;
-    case 3: theEffect = new EEE2DExhaustTrail(inUnit, inEffect); break;
-    case 14: theEffect = new EEE2DFireTrail(inUnit, inEffect); break;
-    case 10: theEffect = new EEE2DPlasmaPulse(inUnit, inEffect); break;
+    case 3: theEffect = new EEE2DRust(inUnit, inEffect, 3); break;
+    case 14: theEffect = new EEE2DRust(inUnit, inEffect, 0xe); break;
+    case 10: theEffect = new EEE2DRust(inUnit, inEffect, 0xa); break;
     case 13: theEffect = new EEE2DLightGlow(inUnit, inEffect, inKeepsUnit); break;
-    case 8: theEffect = new EEE2DLightning(inUnit, inEffect); break;
+    case 8: theEffect = new EEE2DRust(inUnit, inEffect, 8); break;
     case 16: theEffect = new EEE2DMarchingIcons(inUnit, inEffect, EE_GFX_EFFECT_KIND_CIRCULAR_ICONS); break;
     case 15: theEffect = new EEE2DMarchingIcons(inUnit, inEffect, EE_GFX_EFFECT_KIND_SQUARE_ICONS); break;
     case 2: theEffect = new EEE3DRust(inUnit, inEffect, 2); break;
@@ -289,7 +273,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x1e: theEffect = EEE3DSmokeGenerator::CreateDestructionSmoke(inUnit, inEffect); break;
     case 0x29: theEffect = new EEE3DFarm(inUnit, inEffect); break;
     case 0x34: theEffect = new EEE3DRust(inUnit, inEffect, 0x34); break;
-    case 0x2f: theEffect = new EEE2DPulseWave(inUnit, inEffect); break;
+    case 0x2f: theEffect = new EEE2DRust(inUnit, inEffect, 0x2f); break;
     case 0x2e: theEffect = EEE2DParticle::Create(inUnit, inEffect); break;
     case 0x2c: theEffect = new EEE3DSmokeGenerator(inUnit, inEffect, 0x2c); break;
     case 0x2b: theEffect = new EEE3DSmokeGenerator(inUnit, inEffect, 0x2b); break;
@@ -322,11 +306,11 @@ long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEG
         return thePlan.result;
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
-    case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DSmokeMuzzleBlast(inFrom, inTo, inEffect); break;
-    case kEffect2DWinterBreath: theEffect = new EEE2DWinterBreath(inFrom, inEffect); break;
+    case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DRust(inFrom, inTo, inEffect, 0x14); break;
+    case kEffect2DWinterBreath: theEffect = new EEE2DRust(inFrom, inTo, inEffect, 0x16); break;
     case kEffect3DTracers: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x21); break;
     case kEffect3DShells: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x26); break;
-    case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inFrom, inTo, inEffect); break;
+    case kEffect2DLinearProjectile: theEffect = new EEE2DRust(inFrom, inTo, inEffect, 0x30); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x40); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
@@ -346,8 +330,8 @@ long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGrap
         return thePlan.result;
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
-    case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DSmokeMuzzleBlast(inUnit, inLocation, inEffect); break;
-    case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inUnit, inLocation, inEffect); break;
+    case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DRust(inUnit, inLocation, inEffect, 0x14); break;
+    case kEffect2DLinearProjectile: theEffect = new EEE2DRust(inUnit, inLocation, inEffect, 0x30); break;
     case kEffect3DCitizenBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x33); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x40); break;
     case kEffect3DCommandConfirmation:
@@ -369,17 +353,17 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
     case 2: theEffect = new EEE3DRust(inLocation, inEffect, 2); break;
-    case 6: theEffect = new EEE2DImpact(inLocation, inEffect, 6); break;
-    case 8: theEffect = new EEE2DLightning(inLocation, inEffect); break;
-    case 0xb: theEffect = new EEE2DSmokePlume(inLocation, inEffect, 0xb); break;
+    case 6: theEffect = new EEE2DRust(inLocation, inEffect, 6); break;
+    case 8: theEffect = new EEE2DRust(inLocation, inEffect, 8); break;
+    case 0xb: theEffect = new EEE2DRust(inLocation, inEffect, 0xb); break;
     case 0x12: theEffect = new EEE2DRust(inLocation, inEffect, 0x12); break;
     case 0x18: theEffect = new EEE3DRust(inLocation, inEffect, 0x18); break;
     case 0x1b: theEffect = new EEE3DRust(inLocation, inEffect, 0x1b); break;
     case 0x20: theEffect = new EEE3DRust(inLocation, inEffect, 0x20); break;
-    case 0x22: theEffect = new EEE2DWaterRipple(inLocation, inEffect); break;
+    case 0x22: theEffect = new EEE2DRust(inLocation, inEffect, 0x22); break;
     case 0x2b: theEffect = new EEE3DSmokeGenerator(inLocation, inEffect, 0x2b); break;
     case 0x2e: theEffect = EEE2DParticle::Create(inLocation, inEffect); break;
-    case 0x31: theEffect = new EEE2DVortex(inLocation, inEffect); break;
+    case 0x31: theEffect = new EEE2DRust(inLocation, inEffect, 0x31); break;
     case 0x32: theEffect = new EEE2DBattlefieldAmbient(inLocation, inEffect); break;
     case 0x39: theEffect = EEE3DParticle::Create(inLocation, inEffect); break;
     case 0x3a: theEffect = new EEE3DParticleEmitter(inLocation, inEffect, 0x3a); break;
@@ -400,7 +384,7 @@ long EEEffectManager::CreateTransformationEffect(const GETransformation& inTrans
         return thePlan.result;
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
-    case kEffect2DWaterRipple: theEffect = new EEE2DWaterRipple(inTransformation, inEffect); break;
+    case kEffect2DWaterRipple: theEffect = new EEE2DRust(inTransformation, inEffect, 0x22); break;
     case kEffect2DBattlefieldAmbient: theEffect = new EEE2DBattlefieldAmbient(inTransformation, inEffect); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
@@ -416,7 +400,7 @@ long EEEffectManager::CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffe
         return thePlan.result;
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
-    case kEffect2DVelocityParticle: theEffect = new EEE2DSmokePlume(inLine, inEffect); break;
+    case kEffect2DVelocityParticle: theEffect = new EEE2DRust(inLine, inEffect, 0xc); break;
     case kEffect2DParticle: theEffect = EEE2DParticle::Create(inLine, inEffect); break;
     case kEffect3DParticle: theEffect = EEE3DParticle::Create(inLine, inEffect); break;
     case kEffect3DParticleEmitter: theEffect = new EEE3DParticleEmitter(inLine, inEffect, 0x3a); break;
@@ -636,6 +620,7 @@ void EEEffectCaptureSweep()
         long mKind;
         int mEntry;
         long mBorrowed;   // the kind whose graphic effects it borrows (0: its own)
+        bool mArmed;      // made by the armed unit (a weapon tag point at its animation) as A, B as before
     };
     static const Case kSweep[] = {
         {0x18, kOnUnit, 0},        {0x18, kAtPoint, 0},       {0x1b, kAtPoint, 0},       {0x21, kBetweenUnits, 0},
@@ -661,6 +646,10 @@ void EEEffectCaptureSweep()
         {0x08, kAtPoint, 0},       {0x0b, kAtPoint, 0},       {0x12, kAtPoint, 0},       {0x22, kAtPoint, 0},
         {0x2e, kAtPoint, 0},       {0x31, kAtPoint, 0},       {0x32, kAtPoint, 0},       {0x16, kBetweenUnits, 0},
         {0x22, kTransformation, 0}, {0x32, kTransformation, 0}, {0x0c, kLine, 0},       {0x2e, kLine, 0},
+        // R4.4, twentieth round: the three weapon-point kinds on the armed unit (the newest unit of any player whose
+        // model has a tag point list at its animation holding its weapon tag point; none: the cases are skipped)
+        {0x09, kOnUnit, 0, true},  {0x14, kBetweenUnits, 0, true}, {0x14, kUnitToPoint, 0, true},
+        {0x30, kBetweenUnits, 0, true}, {0x30, kUnitToPoint, 0, true},
     };
     EEEffectManager* theManager = gEffectManager;
     if (theManager == NULL)
@@ -681,12 +670,29 @@ void EEEffectCaptureSweep()
         if (theNewest != NULL)
             theUnits[theUnits[0] == NULL ? 0 : 1] = theNewest;
     }
+    EEUnit* theArmed = NULL;
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL;
+             theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* theComplex = theUnit->mComplexUnit;
+            if (theComplex == NULL || theUnit->mHitPoints <= 0 || theUnit->mStats == NULL || theComplex->mTileNode == NULL
+                || theComplex->GetTileX() == -10000 || theUnit->GetModel() == NULL)
+                continue;
+            EETagPointList* theList = theUnit->GetModel()->mTagPoints[theComplex->mAnimation];
+            if (theList != NULL && theComplex->mWeaponTagPoint < theList->mPoints.size())
+                theArmed = theUnit;
+        }
+    }
     if (theUnits[0] != NULL) {
-        EEUnit* a = theUnits[0];
-        EEUnit* b = theUnits[1] != NULL ? theUnits[1] : a;
+        EEUnit* theFirst = theUnits[0];
+        EEUnit* b = theUnits[1] != NULL ? theUnits[1] : theFirst;
         unsigned long theDetail = gEffectDetail;
         gEffectDetail = 0xff;   // every detail level
         for (const Case& theCase : kSweep) {
+            if (theCase.mArmed && theArmed == NULL)
+                continue;
+            EEUnit* a = theCase.mArmed ? theArmed : theFirst;
             long theSource = theCase.mBorrowed != 0 ? theCase.mBorrowed : theCase.mKind;
             unsigned long theRows = 0;
             for (unsigned long theRow = 0; theRow < EEGraphicEffect::GetCount() && theRows < 2; theRow++) {

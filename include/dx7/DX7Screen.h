@@ -14,9 +14,6 @@
 class DX7_API DX7Screen : public GEScreen {
     friend class DX7Rasterizer;
     friend class DX7TnLRasterizer;
-    // the rasterizer's DirectDraw enumeration callbacks create and delete the screens (DX7Rasterizer.cpp)
-    friend BOOL WINAPI DX7DirectDrawEnumerateExCallback(GUID* inGUID, LPSTR inDescription, LPSTR inName,
-                                                        LPVOID inContext, void* inMonitor);
 public:
     operator GXDirectDraw*() { return this->mDirectDraw; }
 

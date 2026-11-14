@@ -282,22 +282,10 @@ unsigned long GEModel::GetPolygonCount(unsigned long inLOD) const
     return ee_ge_mod_polygon_count(this->mRust, inLOD);
 }
 
-// FUNCTION: LLE 0x1001fade
-unsigned long GEModel::GetPolygonCountOfHierarchy(unsigned long inLOD) const
-{
-    return ee_ge_mod_polygon_count_of_hierarchy(this->mRust, inLOD);
-}
-
 // FUNCTION: LLE 0x1001fb1d
 void GEModel::PrepareTransforms()
 {
     ee_ge_mod_prepare_transforms(this->mRust);
-}
-
-// FUNCTION: LLE 0x1002004b
-void GEModel::RemoveScale()
-{
-    ee_ge_mod_remove_scale(this->mRust);
 }
 
 // FUNCTION: LLE 0x1002009b
