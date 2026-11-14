@@ -276,7 +276,13 @@ impl EeWonSocketOp {
                 self.drop_ref(old);
                 self.op_continue(timing)
             }
-            _ => self.op_continue(timing),
+            // `SocketOp::Start`: the class's virtual `Continue` (a C++ class's own, e.g. `CloseOp`'s, or this
+            // object's step through the base's); without the hook (the tests' stand-ins), the step itself
+            _ => match self.h().continue_op {
+                // SAFETY: the hooks' contract: the live C++ op
+                Some(h) => (unsafe { h(self.cpp_op()) }) as Status,
+                None => self.op_continue(timing),
+            },
         }
     }
 

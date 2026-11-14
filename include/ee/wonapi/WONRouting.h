@@ -240,9 +240,12 @@ public:
     virtual ~SocketOp(); // the Rust object (the original's was implicit, 29153d)
     virtual void RunHook();                 // +0x04 0x2b6070 RunHook
     virtual void CleanupHook();             // +0x08 0x2b60c0
-    //: +0x0c starts the operation, +0x10 continues it (SendFileOp 0x2915d2 / 0x291613 return a WONStatus)
-    virtual WONStatus Start() { return this->Continue(); }  // +0x0c 0x29151c
-    virtual WONStatus Continue() = 0;       // +0x10 (_purecall)
+    //: +0x0c starts the operation, +0x10 continues it (SendFileOp 0x2915d2 / 0x291613 return a WONStatus). Since net
+    // round 23 the socket op classes' own Start and Continue (ConnectOp, AcceptOp, the send and receive ops,
+    // RecvCRMsgOp: one-line forwarders each) are these: the op's Rust object runs its class's step (sockops.rs); a
+    // class without one of its own starts by the virtual Continue, as the original's Start (0x29151c) did
+    virtual WONStatus Start() { return ee_won_socketop_start(this->mSockOp,this->GetTiming()); }
+    virtual WONStatus Continue() { return ee_won_socketop_continue(this->mSockOp,this->GetTiming()); }
     // +0x14 (vtable 0x84c424: 0x1ad67e `xor eax, eax`, ICF): a fresh copy of the op, none by default (AcceptOp's
     // 0x291ab7 news one on the same socket; provisional name)
     virtual AsyncOp* Duplicate() { return NULL; }
@@ -277,7 +280,6 @@ public:
     { this->SetWaitForEvent(0,true); ee_won_socketop_init_accept(this->GetSocketOpObject()); }
     AsyncSocket* GetAcceptedSocket()
     { return static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_socketop_accepted(this->GetSocketOpObject()))); }
-    virtual WONStatus Continue();           // +0x10 0x2b0310 (WONAPI)
     virtual AsyncOp* Duplicate() { return new AcceptOp(this->GetSocket()); }  // +0x14 0x291ab7
 };
 
@@ -292,9 +294,6 @@ public:
         this->SetWaitForEvent(2,true);
         ee_won_socketop_init_connect(this->GetSocketOpObject(),inAddr.GetValue());
     }
-    virtual WONStatus Start();              // +0x0c 0x2b2320 (WONAPI)
-    virtual WONStatus Continue();           // +0x10 0x2b2330 (WONAPI)
-
     // a copy (the original returned a reference to the member)
     IPAddr GetAddr() const { return IPAddr::FromValue(ee_won_socketop_address(this->GetSocketOpObject())); }
 };
@@ -308,8 +307,6 @@ class RecvBytesOp : public SocketOp {
 public:
     RecvBytesOp(unsigned long inLength, AsyncSocket* inSocket = NULL); //2b4de0
     virtual void CleanupHook(); //2b5580
-    virtual WONStatus Start();     //2b4ee0
-    virtual WONStatus Continue();  //2b4ef0
     virtual AsyncOp* Duplicate(); //2b4f00
     void SetProgressCompletion(CompletionBase<AsyncOpPtr>*, long inInterval);
     ByteBufferPtr GetBytes() const; //2b1df0, owning return by value
@@ -328,8 +325,6 @@ protected:
 class RecvMsgOp : public RecvBytesOp {
 public:
     RecvMsgOp(AsyncSocket* inSocket = NULL) : RecvBytesOp(inSocket, MessageTag()) {}
-    virtual WONStatus Start();     //2b5b00
-    virtual WONStatus Continue();  //2b5e20
     virtual AsyncOp* Duplicate(); //2ab3d0
     ByteBufferPtr GetMsg() const; //2ab770, owning return by value
 };
@@ -340,8 +335,6 @@ class RecvCRMsgOp : public SocketOp {
 public:
     RecvCRMsgOp(AsyncSocket* inSocket=NULL) : SocketOp(inSocket)
     { this->SetWaitForEvent(0,true); ee_won_socketop_init_line(this->GetSocketOpObject()); }
-    virtual WONStatus Start();     //2b5970,62
-    virtual WONStatus Continue();  //2b59b0,330 ending ret2b5af9, excludes6align
     virtual AsyncOp* Duplicate() {return new RecvCRMsgOp(this->GetSocket());} //2b2180, 209 bytes
     ByteBufferPtr GetMsg() const //accessor 2b1df0 (ICF-folded)
     { return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_message(this->GetSocketOpObject()))); }
@@ -441,23 +434,18 @@ public:
 class SendBytesOp : public SocketOp {
 public:
     SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket = NULL); // SendMsgOp passes NULL
-    virtual WONStatus Start();     //2b5e50
-    virtual WONStatus Continue();  //2b5e70
 };
 
 // TD4d41c0, VT44c9a0, total70 (the message +0x6c is the Rust object's)
 class SendMsgOp : public SendBytesOp {
 public:
     SendMsgOp(const ByteBuffer* inMessage, AsyncSocket* inSocket = NULL);
-    virtual WONStatus Start();     //2b5fa0
-    virtual WONStatus Continue();  //2b6020
 };
 
 // TD4d4040, VT44c948, total88 (the bytes +0x5c and the address +0x60 are the Rust object's)
 class SendBytesToOp : public SocketOp {
 public:
     SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress, AsyncSocket* inSocket = NULL);
-    virtual WONStatus Continue();  //2b5f10
 };
 
 // TD4d4440, VT44caf4, total90. Original out-of-line constructor2b55a0. A Rust object since round 15 (sockops.rs:
@@ -467,7 +455,6 @@ public:
     RecvBytesFromOp(unsigned short inMaxLength, AsyncSocket* inSocket = NULL);
     virtual ~RecvBytesFromOp(); //2b56f0
     virtual void RunHook();   //2b57d0
-    virtual WONStatus Continue();  //2b5820
     virtual AsyncOp* Duplicate(); //2b5660, fresh allocation of the same class
     SmartPtr<ByteBuffer> GetBytes() const; //2aa920, owning51B sret/AddRef, field60
     IPAddr GetAddr() const; // a copy (the original returned a reference to the member)
