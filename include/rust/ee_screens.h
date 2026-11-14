@@ -3302,6 +3302,206 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 
+/// The icons `mIcons[0..9]` are controls 0..8.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_ICON = 0;
+
+/// The labels `mLabels[0..9]` are controls 9..17.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_LABEL = 9;
+
+/// `mC84`: the hit points bar (control 0x1e).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_LEFT_BAR = 18;
+
+/// `mC88`: the second bar (control 0x1f).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_MIDDLE_BAR = 19;
+
+/// `mC8C`: the portrait.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_PORTRAIT = 20;
+
+/// `mC90`: the unit's name.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_NAME = 21;
+
+/// `mC94`: the civilization's name (absent in the scenario editor).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_CIV = 22;
+
+/// `mC98`: the armor title.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_ARMOR_TITLE = 23;
+
+/// `mCA8`: the third bar (control 0x33; absent in the scenario editor).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_THIRD_BAR = 24;
+
+/// `mCAC`: the fourth bar (control 0x32; absent in the scenario editor).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_FOURTH_BAR = 25;
+
+/// `mAttributeCount`.
+constexpr static const int64_t EE_SCREENS_BOX_FIELD_COUNT = 0;
+
+/// `mArmorAttributeCount`.
+constexpr static const int64_t EE_SCREENS_BOX_FIELD_ARMOR_COUNT = 1;
+
+/// `mIsResourceShown`.
+constexpr static const int64_t EE_SCREENS_BOX_FIELD_RESOURCE_SHOWN = 2;
+
+/// `mAttributes[i]` is field 16 + i.
+constexpr static const int64_t EE_SCREENS_BOX_FIELD_ATTRIBUTES = 16;
+
+/// The member a (`EE_SCREENS_BOX_FIELD_*`).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_GET = 1;
+
+/// The member a = b.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET = 2;
+
+/// Whether control a is set.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_PRESENT = 3;
+
+/// Control a's `GetDisplayMode()`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_MODE = 4;
+
+/// Control a's `SetDisplayMode(b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_MODE = 5;
+
+/// Button a's queued count b: `SetDirty(true)` when it changes, then `mNumQueued = b`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_QUEUED = 6;
+
+/// Button a's `mAttribute`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_ATTRIBUTE = 7;
+
+/// Button a's `mAttribute = b`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_ATTRIBUTE = 8;
+
+/// Button a's `mCostLabel` = control b (-1: NULL).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_COST_LABEL = 9;
+
+/// The held text = the unit's name with the gate's lock state (a = 0: `Fill`'s test of the stats' name, 1:
+/// `Refresh`'s).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_NAME = 10;
+
+/// The held text = the unit's owner's civilization's name.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_CIV = 11;
+
+/// Label a's `SetText(held)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_TEXT = 12;
+
+/// Whether label a's first line differs from the held text.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_TEXT_DIFFERS = 13;
+
+/// Bar a's `SetIconBitmap` with icon bitmap b.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_ICON = 14;
+
+/// Bar a's `mBar->SetRange(0, b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_RANGE = 15;
+
+/// Bar a's `mBar->SetCurrentRangeValue(b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_VALUE = 16;
+
+/// Control a's `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_DIRTY = 17;
+
+/// Bar a's `mBar->SetStatusBarColor` of the box's colour b (1 blue, 2 yellow, 3 green).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_COLOR = 18;
+
+/// Bar a's `mEnabled = b`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_ENABLED = 19;
+
+/// Control a's `SetStringTableID(b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_STRING_ID = 20;
+
+/// Icon bitmap a's `ComputeStretchedCoordsAndScale` over the icon rectangle of attribute b, on control c's screen.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_STRETCH = 21;
+
+/// Button a's normal (b = 0) or pressed (b = 1) bitmap = icon bitmap c.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_BITMAP = 22;
+
+/// Whether button a's normal (b = 0) or pressed (b = 1) bitmap is icon bitmap c.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BITMAP_IS = 23;
+
+/// The portrait's `SetUnit` (a = 1: the call's unit, 0: NULL).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_PORTRAIT = 24;
+
+/// The portrait's `Update()`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_PORTRAIT_UPDATE = 25;
+
+/// The original's `ESVerify` at line a (367: the armor count, 708: the attribute count).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_VERIFY = 26;
+
+/// `gWorld.mInCinematic`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_IN_CINEMATIC = 27;
+
+/// The main game form's background a made visible (b != 0) or hidden, when it has one.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BACKGROUND = 28;
+
+/// The held text = format a (`EE_SCREENS_BOX_FMT_*`) of b and c.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_FORMAT = 29;
+
+/// Whether bar a's value label b (0 the first, 1 the second) differs from the held text.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_VALUE_DIFFERS = 30;
+
+/// Bar a's value label b's `SetText(held)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_VALUE = 31;
+
+/// Button a's `UpdateCost(held)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_UPDATE_COST = 32;
+
+/// Armor kind a of the unit's stats (b = 0, f32 bits), its class (1) or the stats' class (2).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_ARMOR = 33;
+
+/// The complex unit's class's `mUnitType`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_UNIT_TYPE = 34;
+
+/// The complex unit's player's `CountQueuedImprovements(a, b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_COUNT_QUEUED = 35;
+
+/// `sIconBitmaps[a].mBitmap = new GEBitmap`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_NEW_BITMAP = 36;
+
+/// `LoadIcons`' texture description (the pixel depth, the primary surface's width).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_DESCRIPTION = 37;
+
+/// Texture a (1..3) loaded with the description, its seven stage modes set.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_LOAD_TEXTURE = 38;
+
+/// `sIconBitmaps[a].mRectangle` from the corners b and c (two f32s each, x low).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_RECT = 39;
+
+/// Texture a's surface's width (high 32 bits) and height (low).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_TEXTURE_SIZE = 40;
+
+/// `sIconBitmaps[a & 0xff]`'s `SetTexture(texture a >> 8, gScreenIndex)` and `SetTextureCoordinates` of the top
+/// left b and bottom right c (u low, v high).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BITMAP_TEXTURE = 41;
+
+/// `sIconBitmaps[a]`'s `SetXYScale` (b: x low, y high).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BITMAP_SCALE = 42;
+
+/// `sIconsLoaded = true`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_ICONS_LOADED = 43;
+
+/// "%ld/%ld".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_PAIR = 0;
+
+/// "+ %ld".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_BONUS = 1;
+
+/// "%ld+%ld".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_SUM = 2;
+
+/// "%ld".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_ONE = 3;
+
+/// "".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_EMPTY = 4;
+
+/// `kImprovementFlightTimeOrPower`.
+constexpr static const int64_t EE_SCREENS_BOX_IMPROVEMENT_FLIGHT_OR_POWER = 8;
+
+/// `kImprovementHitPoints`.
+constexpr static const int64_t EE_SCREENS_BOX_IMPROVEMENT_HIT_POINTS = 9;
+
+/// `kImprovementTransport`.
+constexpr static const int64_t EE_SCREENS_BOX_IMPROVEMENT_TRANSPORT = 15;
+
+/// `IDS_IMPROVEMENT_GARRISON`.
+constexpr static const int64_t EE_SCREENS_BOX_IDS_GARRISON = 30023;
+
 /// The button's `mIsCommand`.
 constexpr static const uint32_t EE_SCREENS_SB_OP_IS_COMMAND = 1;
 
@@ -4035,126 +4235,6 @@ struct EeScreensPanelButton {
   unsigned long control;
 };
 
-/// What the status box's `Fill` and `Refresh` read of the selected unit: its class (`theClass`), its stats
-/// (`theStats`), the stats' own class (`theStats->mUnitClass`: an upgraded unit's stats keep their class), the unit
-/// and its complex unit. The C++ reads them under the world's read lock and hands them over.
-struct EeScreensHudUnit {
-  unsigned long category;
-  unsigned long unit_type;
-  /// Hit points: the class's, the unit's, the stats' maximum, the stats' class's.
-  long class_hit_points;
-  long hit_points;
-  long max_hit_points;
-  long stats_class_hit_points;
-  /// Attack: the class's (a `long`), the stats' (a `float`), the stats' class's.
-  long class_attack;
-  float stats_attack;
-  long stats_class_attack;
-  float class_range;
-  float stats_range;
-  float stats_class_range;
-  float class_speed;
-  float stats_speed;
-  float stats_class_speed;
-  float class_area_effect;
-  float stats_area_effect;
-  float stats_class_area_effect;
-  long class_repair;
-  long stats_repair;
-  long stats_class_repair;
-  /// The class's upgrade flags: range, area effect, repair, then the armor kinds in `mAttributes[4..9]`' order
-  /// (shock, pierce, arrow, gun, missile, laser).
-  bool upgrades_range;
-  bool upgrades_area_effect;
-  bool upgrades_repair;
-  bool upgrades_armor[6];
-  long class_transport;
-  long class_flight_time;
-  long class_garrison;
-  /// The unit's owner is the local player or not at war with it (read only when the class carries or garrisons).
-  bool friendly;
-  /// The unit is a complex unit: the rest is its (zero otherwise).
-  bool complex;
-  long complex_class_transport;
-  long complex_class_garrison;
-  long cargo_room;
-  long flight_time;
-  long stats_flight_time;
-  long stats_class_flight_time;
-  long power;
-  long stats_power;
-  long stats_class_power;
-  long garrison_count;
-  /// The box has its third and fourth bars (controls 0x33 and 0x32).
-  bool two_bars;
-  unsigned long resource_type;
-  long resource_amount;
-  long carry_amount;
-  /// `gUsingCarbon`: the wood icon's variant.
-  bool using_carbon;
-};
-
-/// One attribute icon `Fill` shows: `mAttributes[slot] = icon` (-1: not shown, nothing else done), the icon's
-/// bitmaps `bitmap` and `bitmap + 1` (`sIconBitmaps`) stretched over the icon rectangle of `rect_icon` (the armor
-/// icons all take the first armor icon's, as the original), and its improvement.
-struct EeScreensHudIcon {
-  uint32_t slot;
-  long icon;
-  long rect_icon;
-  uint32_t bitmap;
-  long improvement;
-};
-
-/// A group of attribute icons in the order the C++ shows them; `next` the next free icon after them.
-struct EeScreensHudIcons {
-  uint32_t count;
-  long next;
-  EeScreensHudIcon icons[6];
-};
-
-/// The bars `Fill` sets up: the hit points bar, the first complex bar (flight time on the second bar, or power on
-/// the bar [`power_bar`] picks) and the garrison bar (the second bar), each with its range and current value.
-struct EeScreensHudFillBars {
-  bool hit_points;
-  /// 0 none, 1 flight time, 2 power.
-  uint32_t kind;
-  /// 0 the second bar (control 0x1f), 1 the third (0x33), 2 the fourth (0x32).
-  uint32_t bar;
-  long max;
-  long current;
-  bool garrison;
-  long garrison_max;
-  long garrison_current;
-};
-
-/// What `Refresh` shows: each text's numbers (the C++ formats them: "%ld/%ld", "+ %ld", "%ld+%ld", "%ld") and
-/// each bar's range and current value.
-struct EeScreensHudRefresh {
-  bool hit_points;
-  long hit_points_text[2];
-  long hit_points_bonus;
-  /// The attack, range, speed, area effect and repair icons' "base+bonus".
-  long attributes[5][2];
-  long cargo[2];
-  /// 0 none, 1 flight time (the second bar), 2 power (on `bar`, as [`power_bar`]).
-  uint32_t kind;
-  uint32_t bar;
-  long bar_text[2];
-  long bar_bonus;
-  long bar_max;
-  long bar_current;
-  bool garrison;
-  long garrison_text[2];
-  long garrison_max;
-  long garrison_current;
-  /// The carried resource: shown, its icon's bitmap (-1: the icon left as it is), "%ld/%ld" of the amount and
-  /// the capacity (a citizen) or "%ld" of the amount.
-  bool resource;
-  long resource_bitmap;
-  bool resource_pair;
-  long resource_text[2];
-};
-
 /// A lobby slot (`EEGameOptionsPlayer`) but its name.
 struct EeScreensLobbyPlayerRecord {
   unsigned long kind;
@@ -4348,6 +4428,65 @@ struct EeScreensFramePiece {
   uint32_t cell;
   uint32_t orders[3];
   bool swap_scale;
+};
+
+/// What the status box's `Fill` and `Refresh` read of the selected unit: its class (`theClass`), its stats
+/// (`theStats`), the stats' own class (`theStats->mUnitClass`: an upgraded unit's stats keep their class), the unit
+/// and its complex unit. The C++ reads them under the world's read lock and hands them over.
+struct EeScreensHudUnit {
+  unsigned long category;
+  unsigned long unit_type;
+  /// Hit points: the class's, the unit's, the stats' maximum, the stats' class's.
+  long class_hit_points;
+  long hit_points;
+  long max_hit_points;
+  long stats_class_hit_points;
+  /// Attack: the class's (a `long`), the stats' (a `float`), the stats' class's.
+  long class_attack;
+  float stats_attack;
+  long stats_class_attack;
+  float class_range;
+  float stats_range;
+  float stats_class_range;
+  float class_speed;
+  float stats_speed;
+  float stats_class_speed;
+  float class_area_effect;
+  float stats_area_effect;
+  float stats_class_area_effect;
+  long class_repair;
+  long stats_repair;
+  long stats_class_repair;
+  /// The class's upgrade flags: range, area effect, repair, then the armor kinds in `mAttributes[4..9]`' order
+  /// (shock, pierce, arrow, gun, missile, laser).
+  bool upgrades_range;
+  bool upgrades_area_effect;
+  bool upgrades_repair;
+  bool upgrades_armor[6];
+  long class_transport;
+  long class_flight_time;
+  long class_garrison;
+  /// The unit's owner is the local player or not at war with it (read only when the class carries or garrisons).
+  bool friendly;
+  /// The unit is a complex unit: the rest is its (zero otherwise).
+  bool complex;
+  long complex_class_transport;
+  long complex_class_garrison;
+  long cargo_room;
+  long flight_time;
+  long stats_flight_time;
+  long stats_class_flight_time;
+  long power;
+  long stats_power;
+  long stats_class_power;
+  long garrison_count;
+  /// The box has its third and fourth bars (controls 0x33 and 0x32).
+  bool two_bars;
+  unsigned long resource_type;
+  long resource_amount;
+  long carry_amount;
+  /// `gUsingCarbon`: the wood icon's variant.
+  bool using_carbon;
 };
 
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
@@ -4733,40 +4872,6 @@ uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
                                            bool idle_military,
                                            bool select_all);
 
-/// `GetAttributeText`: the base and the bonus "base+bonus" shows.
-void ee_screens_hud_attribute_text(float base, float bonus, long *out_base, long *out_bonus);
-
-/// The armor kind armor attribute `slot` (0..5: `mAttributes[4 + slot]`) shows; 0 past them.
-uint32_t ee_screens_hud_armor_kind(uint32_t slot);
-
-/// One armor attribute's `GetAttributeText` arguments from the stats' armor, the unit class's base and the stats'
-/// own class's base.
-void ee_screens_hud_armor_attribute(float stat,
-                                    long class_base,
-                                    long stats_class_base,
-                                    float *out_base,
-                                    float *out_bonus);
-
-/// `Fill`'s first attribute icons (attack, range, speed, area effect, repair) from icon 0.
-void ee_screens_hud_fill_icons(const EeScreensHudUnit *unit, EeScreensHudIcons *out);
-
-/// `FillArmorAttributes`' icons from icon `start`; `upgrades` the six armor flags (shock, pierce, arrow, gun,
-/// missile, laser).
-void ee_screens_hud_armor_icons(long start,
-                                const bool *upgrades,
-                                EeScreensHudIcons *out);
-
-/// `Fill`'s transport icon at icon `start` (one entry, its icon -1 when not shown).
-void ee_screens_hud_transport_icon(long start,
-                                   const EeScreensHudUnit *unit,
-                                   EeScreensHudIcons *out);
-
-/// `Fill`'s bars.
-void ee_screens_hud_fill_bars(const EeScreensHudUnit *unit, EeScreensHudFillBars *out);
-
-/// `Refresh`'s numbers and bars.
-void ee_screens_hud_refresh(const EeScreensHudUnit *unit, EeScreensHudRefresh *out);
-
 /// A slot of `source` (`EE_SCREENS_LE_SOURCE_*`) into `out`, its name into `name` (up to `capacity` bytes); the
 /// name's length.
 extern size_t ee_screenscpp_lobby_player(uint32_t source,
@@ -4843,6 +4948,21 @@ uint32_t ee_screens_settings_event_for(unsigned long id);
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+
+/// `EEUIFMGStatusBox::Fill` (`unit`: the call's unit is set).
+void ee_screens_status_box_fill(void *call, bool unit);
+
+/// `EEUIFMGStatusBox::Refresh`.
+void ee_screens_status_box_refresh(void *call);
+
+/// `EEUIFMGStatusBox::UpdateQueuedCounts`.
+void ee_screens_status_box_update_queued(void *call);
+
+/// `EEUIFMGStatusBox::HideBackgrounds`.
+void ee_screens_status_box_hide_backgrounds(void *call);
+
+/// `EEUIFMGStatusBox::LoadIcons`.
+void ee_screens_status_box_load_icons(void *call);
 
 /// `EEUIFMGStatusButton::ButtonUp` over the host's press record.
 void ee_screens_status_button_up(void *press);

@@ -74,6 +74,8 @@
 //!   handler (`HandleEvent`, with its statics) over the C++ host.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
+//! - [`status_box`]: the status box's `Fill`, `Refresh`, `UpdateQueuedCounts`, `LoadIcons` (its icon cells) over
+//!   the C++ host.
 
 pub mod actions;
 #[cfg(not(test))]
@@ -127,7 +129,6 @@ pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;
 pub mod hud;
-mod hud_ffi;
 pub mod lobby;
 pub mod lobby_form;
 #[cfg(not(test))]
@@ -167,6 +168,9 @@ mod single_player_ffi;
 pub mod splash;
 #[cfg(not(test))]
 mod splash_ffi;
+pub mod status_box;
+#[cfg(not(test))]
+mod status_box_ffi;
 pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
