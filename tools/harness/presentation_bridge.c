@@ -72,10 +72,6 @@ static void ui_test(void) {
 #ifndef EE_OFF_MOUSE_POS
 #define EE_OFF_MOUSE_POS 0x4            /* EEMouse::mPosition */
 #define EE_OFF_MOUSE_BOUNDS 0x14        /* EEMouse::mBounds */
-#define EE_OFF_RAST_STATES_FIRST 0x20   /* DX7Rasterizer::mScreenStates first */
-#define EE_OFF_STATE_SECONDARY 0x2b0    /* GERScreenState::mViewport.mSecondarySurface */
-#define EE_OFF_STATE_WINDOW 0x2bc       /* GERScreenState::mViewport.mWindow */
-#define EE_OFF_SURFACE_DD 0x48          /* DX7Surface::mSurface */
 #define EE_SHOWSCENE_RVA 0xc99e         /* DX7Rasterizer::ShowScene in the retail DX7HRDisplay.dll */
 #endif
 #define EE_UI_MANAGER_RVA 0x53191c /* gUIManager (retail 0x93191c); the session passes its map RVA */
