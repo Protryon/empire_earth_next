@@ -1854,12 +1854,13 @@ public:
     void ClearSubscriptions(); //32f5d0
     WindowEventBase* PeekNextEvent(); //32f700
     void ProcessEvents(); //32f760
-    // R6 WON round 33's census: the state read or written outside WindowManager.cpp
-    Component* GetModalComponent() const { return this->mModalComponent; }
-    Window* GetFocusWindow() const { return this->mFocusWindow; }
-    int GetPopupFlags() const { return this->mPopupFlags; }
-    bool GetPopupsInOwnWindow() const { return this->mBA5; }
-    void SetPopupsInOwnWindow(bool inOwn) { this->mBA5 = inOwn; }
+    // R6 WON round 33: the popup stack, the modal dialog, the message loop's depths and the focus are the Rust
+    // manager (rust/crates/ee_won/src/wmobj.rs); these read and set it
+    Component* GetModalComponent() const { return (Component*)this->WmField(EeWonWmField::ModalComponent); }
+    Window* GetFocusWindow() const { return (Window*)this->WmField(EeWonWmField::FocusWindow); }
+    int GetPopupFlags() const { return (int)this->WmField(EeWonWmField::PopupFlags); }
+    bool GetPopupsInOwnWindow() const { return this->WmField(EeWonWmField::OwnWindow) != 0; }
+    void SetPopupsInOwnWindow(bool inOwn) { this->WmSet(EeWonWmField::OwnWindow, inOwn ? 1 : 0); }
     DWORD GetLastInputTick() const { return this->mLastInputTick; }
     Window* GetDefaultWindow() const { return this->mDefaultWindow; }
 
@@ -1867,11 +1868,18 @@ public:
     typedef std::map<std::string,SmartPtr<NativeImage>,StringLessNoCase> NativeImageMap;
     typedef std::map<std::string,SmartPtr<RawImage>,StringLessNoCase> RawImageMap;
     typedef std::map<std::string,SmartPtr<Image>,StringLessNoCase> DelayImageMap;
-    typedef std::list<Component*> PopupList;
     typedef std::set<SmartPtr<Window>,SmartPtr<Window>::Comp> WindowSet;
     typedef std::list<SmartPtr<WindowEventBase> > WindowEventList;
     typedef std::set<SmartPtr<WindowEventBase> > WindowEventSet;
     typedef std::set<SmartPtr<Component> > BroadcastSet;
+    // the Rust manager, freed after every other member (a window's or component's destruction may still call the
+    // manager); its held members (the saved popup window, the popup's input and owner components) go back then
+    struct WmObj { EeWonWm* p; WmObj() : p(NULL) {} ~WmObj() { ee_won_wm_free(this->p); } };
+    WmObj mWmObj;
+    intptr_t WmCall(EeWonWmCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0, intptr_t d = 0) const
+    { return ee_won_wm_call(this->mWmObj.p, c, a, b, cc, d); }
+    intptr_t WmField(EeWonWmField f) const { return this->WmCall(EeWonWmCall::GetField, (intptr_t)f); }
+    void WmSet(EeWonWmField f, intptr_t v) { this->WmCall(EeWonWmCall::SetField, (intptr_t)f, v); }
     CriticalSection mDataCrit; //08..1f
     SmartPtr<ColorScheme> mColorScheme; //20
     MultiImageDecoder mImageDecoder; // at +0x24..0x57 (0x34 bytes)
@@ -1884,20 +1892,9 @@ public:
     DelayImageMap mDelayImageMap; //88
     int mCacheImageCount; //94
     DWORD mLastTimerTick,mLastInputTick; //98/9c
-    bool mEndPopup,mIsValid,mInDoPopup,mInEndPopup,mPopupIsUp,mBA5; //a0..a5, mBA5=popup-own-window default
-    int mPopupFlags; //a8; target has no later SDK PauseEvents field
-    bool mDoMouseCapturePopupSupport,mIsFullScreen; //ac/ad
+    bool mIsValid; //a1
+    bool mIsFullScreen; //ad
     int mFullScreenWidth,mFullScreenHeight,mOriginalScreenWidth,mOriginalScreenHeight; //b0..bc
-    DWORD mLastLoseFocusTick; //c0
-    int mCurMsgLoopDepth,mTargetMsgLoopDepth,mDialogResult; //c4/c8/cc
-    Window* mModalWindow; //d0
-    Component* mModalComponent; //d4
-    SmartPtr<Window> mPopupWindowSave; //d8
-    Window* mPopupOwnerWindow; //dc
-    SmartPtr<Component> mPopupInputComponent,mPopupOwnerComponent; //e0/e4
-    PopupList mPopupList; //e8
-    Window* mFocusWindow; //f4
-    Window* mMouseDownWindow; //f8
     Window* mDefaultWindow; //fc
     DWORD mWindowCount; //100
     WindowSet mWindowSet; //104
