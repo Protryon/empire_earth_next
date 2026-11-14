@@ -15391,3 +15391,71 @@ stack, -350) -> 75,576 (the caches, -28). This round's own net: -370. WindowMana
   drop C++. The calamity effect also passes one shared `GE3DPoint` to every `CanCastAt`, which a host local would not
   reproduce. `ScriptCamera` only draws (a harness tour reaches it, no gate here). Next: the task effects' source
   filter and bucket split (pure lists) with the actions as writes, if the lead wants the bodies smaller still.
+
+## R5b.5, sixth round: the manager's element lists whole in Rust; the census of what is left (ee_scenario lists.rs; branch rust-triggers6, 2026-11-13)
+
+| Function | Was (C++) | Now (Rust) |
+|---|---|---|
+| `EEScenarioManager::Sort*`, `New*`, `Move*Up`/`Move*Down`, `Delete*`, `Duplicate*` (5 x 6 members) | 30 bodies, ~560 lines over the five vectors, five `std::stable_sort` predicates | lists.rs `sort`, `new`, `move_entry`, `delete`, `duplicate`; the C++ API is `SortList`, `NewEntry`, `MoveEntry`, `DeleteEntry`, `DuplicateEntry` by `EE_SCENARIO_LIST_*` (the editor screens call them) |
+| the nine `Get*Names` | 9 bodies | lists.rs `names`; `GetNames(EE_SCENARIO_NAMES_*, out)` |
+| `FindConditionByID`, `FindEffectByID`, `FindObjectByID`, `GetObjectIndex` | 4 bodies | lists.rs `find`, `index_of` (the C++ members forward) |
+| `EESMObject::SetName`'s conditions, `EESMObject::SetParent` | 14 + 25 lines | lists.rs `rename_object_conditions`, `set_parent` (`EEScenarioManager::ObjectChanged`) |
+| the manager's ten `Renumber*`/`Remap*` broadcasts, the condition's, effect's, object's and trigger's own (14), the entry wrappers' `Virtual0`/`Virtual4`, `EERemapID`, `EESMIDMap.h`, `RemoveTimedEffects`, `EraseTimedEffect` | 30 bodies and a header | lists.rs `renumber`, `remap` over the elements' field records, an effect's object list and the triggers' entries; the map is a sorted pair list (`EERemapID`: 0 when unmapped) |
+
+- **The census (what is left per class, lines of the .cpp after this round).**
+  - `EESMCondition` (106): the constructor, `Copy` (three strings) and forwarders (Evaluate, GetPlayerValue,
+    Compare, Load, Save). Its numbers are a Rust record already; the strings are what the condition screen edits
+    (`mName`, `mText`, `mChatText`). Whole means the strings in Rust: every editor screen that reads them would change
+    for a few lines; not worth it alone.
+  - `EESMArea` (232): about 60 lines are the TEST ONLY SMAR wrappers; the members are a `U2DPoint<long>` anchor and a
+    `GERectangle` that the area screen (`SetRectangle`, `SetAnchor`) and `EEAIContinentManager::CreateScenarioAreas`
+    use as such; the logic (containment, centre, tiles, save) is Rust. A Rust record base would drop the
+    `EESMAreaRecord` copy and `SaveIO`'s copy back (~40 lines) at the cost of the callers' typed members.
+  - `EESMMediaStrings` (203): `GetMediaFile` (73: paths through `FSFileSpec` and the campaign archive) and the text
+    import's `Import`/`Validate`/`Export`: file and resource glue.
+  - `EESMObject.cpp` (1,125, with `EESMTrigger` and the wrappers): the operation hosts of Evaluate and FindPlacement,
+    the unit field read, the trigger's entry lists. The decisions are Rust.
+  - `EEEvent.cpp` (816): the tech tree's events (every game: the oracle). The handler choice is ee_tech's already
+    (`ee_tech_effect_handler`); what is left is member writes per attribute on the player's upgrades and units
+    (`ApplyEventAttribute` 242), the media, button and sound setters: the R5b.2 lane's world glue, not this lane's.
+  - `EEScenarioManager.cpp` (2,351 -> 1,536): the trigger text import and export (`ImportTriggerText`, `ImportText`,
+    `ValidateText`, `ExportText`, the three `Parse*`: ~290 lines of file reads, `UString::Tokenize`, resource formats
+    through `sprintf`), the cinematics (`StartCinematic`, `EndCinematic`, `ExitCinematic`, `MoveCameraToStart`),
+    `ShowDialogMessage`, `Prepare`, the Load/Save stream host, `Reset`'s built-ins.
+  - `EESMEffect.cpp` (2,441): `Execute` and its helpers. **Why the effect's dispatch did not move:** each effect
+    kind's parameters are already the Rust record (`EeScenarioEffectFields`), and the type switch's cases are world
+    calls (calamities, graphic effects, the camera, goals, groups, the tech tree, sounds, the UI): a Rust switch
+    calling back one host operation per case keeps every case's C++ and adds the switch twice. The only parts that
+    are data (the trigger state writes, the player loop's choice) are ~20 lines. Nothing of it was moved this round.
+- **Golden first, from the unmodified C++.** The editor gate's script gained an `sm` command (TEST ONLY,
+  `EESimEditor.cpp` `ScenarioListStep`): new entries of every list, `sm fill` (every element's index references set
+  from its place, two entries per trigger, a timed entry per effect, a pending copy), then duplicates, sorts, moves
+  (at the built-ins, the first, the last), deletes (built-ins included) and `sm state` after each group: every
+  element's name, id and references, the trigger entries, the timed effects, the counters, the nine name lists with
+  and without debug ids, `Find*ByID` and `GetObjectIndex`. Recorded on the C++ build (commit 632c131b: the old 1,820
+  lines unchanged, 522 new); after the move `sim_editor.py` PASS, 2,342 lines identical. `SetParent` is the editor's object screen only: the unit tests reach it, no gate.
+- **The first golden run crashed the original.** Three `sm down LIST N` lines named an index one past the end:
+  `MoveAreaDown` (and the object's, effect's) read `mAreas[inIndex]` before their test and wrote
+  `mAreas[inIndex + 1]` past the vector; the heap check failed at EE-SIM's exit (`c0000374` in `_free_base`). The
+  script names the last index now; the Rust does nothing for an index past the end (`move_entry`, `delete`,
+  `duplicate`). The editor's screens never pass one. This is the round's one behaviour change.
+- **One host for the lists.** `EESMListOp` (EEScenarioManager.cpp) answers 20 operations: the vectors' count, at,
+  set, insert, erase, push (one template over the six `std::vector<T*>`), an element's create, copy, delete, name,
+  id (an object's `mL64`), field record (an overload set picks the base by implicit conversion: no casts), an
+  effect's object list, a trigger's entries, the `IDS_COPY`/`IDS_EXISTS` strings and the name list output. Elements
+  are opaque pointers on the Rust side; a field record is borrowed for one statement (`&mut self` ends it).
+  Renaming an object goes through `EESMObject::SetName` (it renames the object's Exists condition), as the original.
+- **Names count characters.** `Duplicate*`'s stem is the original's (`GetLength() > 2`, `[0] == '<'`, the first
+  character dropped with `PlatMbsNInc`, a closing `>` dropped with `CopyString(n - 1)`), over ee_plat_core's UTF-8
+  character counts (D6). The object's own variant is kept: an unclosed "<name" keeps its bracket ("<<name_Copy>"),
+  an unbracketed name gets none ("None_Copy", its condition "None_Copy Exists"). Sorting is `PlatMbsCmp`'s byte order
+  through Rust's stable sort (the same order `std::stable_sort` gives for a strict weak order).
+- **Coverage.** The editor gate's `sm` steps reach every operation of every list (the editor's screens call the same
+  members); the six capture scenarios reach `FindObjectByID`/`FindConditionByID` only through the token reads (SMTK).
+  No game reaches the list operations: they are the editor's. Unit tests: 11 in lists.rs (the built-in limits, the
+  object condition moves and deletes, the map's default, the names' stems, multi-byte names, debug ids).
+- **C++ lines** (src and include, include/rust aside): the lists +221 -1,346, net **-1,125** (EEScenarioManager.cpp
+  2,351 -> 1,536); SetName/SetParent +18 -33 (-15); the round's moves -1,140; the TEST ONLY golden command +213.
+- **Not moved, and why.** See the census: the effect bodies and the event effects are world glue; the text import
+  and export (file and resource glue, no gate reaches them) and the condition's and area's typed members are the
+  candidates for a next round, each with its own golden (an `sm export`/`sm import` step would record the first).
