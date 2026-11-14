@@ -2,10 +2,10 @@
 //! `EEUIFMGMainGroup.cpp`): plain values in and out, no host calls.
 #![allow(clippy::missing_safety_doc)]
 
-use core::ffi::{c_long, c_ulong};
+use core::ffi::c_ulong;
 
 use crate::command_panel::{
-    self, EeScreensCommandMode, EeScreensPanelButton, EeScreensPanelResearch, EeScreensPanelView, EeScreensTechHelp,
+    self, EeScreensCommandMode, EeScreensPanelButton, EeScreensPanelResearch, EeScreensPanelView,
 };
 
 unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
@@ -14,33 +14,6 @@ unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
     } else {
         core::slice::from_raw_parts(p, n)
     }
-}
-
-/// A command button's first tooltip string.
-#[no_mangle]
-pub extern "C" fn ee_screens_command_help_string(button: c_ulong) -> c_long {
-    command_panel::command_help_string(button)
-}
-
-/// Whether a command's tooltip adds the selected priest's conversion cost.
-#[no_mangle]
-pub extern "C" fn ee_screens_command_help_priest(button: c_ulong) -> bool {
-    command_panel::command_help_priest(button)
-}
-
-/// A technology button's tooltip plan.
-#[no_mangle]
-pub unsafe extern "C" fn ee_screens_button_tech_help(
-    has_class: bool,
-    upgrade_named: bool,
-    population: c_long,
-    kind: c_long,
-    calamity_cost: c_long,
-    makes_unit: bool,
-    name_id: c_long,
-    out: *mut EeScreensTechHelp,
-) {
-    out.write(command_panel::tech_help(has_class, upgrade_named, population, kind, calamity_cost, makes_unit, name_id));
 }
 
 /// The targeting mode of command `button`: false when it starts none.

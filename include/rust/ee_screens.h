@@ -3886,7 +3886,7 @@ constexpr static const uint32_t EE_SCREENS_SB_OP_CHAT_STRING = 24;
 /// `EECanAffordTrade(a)`.
 constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_AFFORD_TRADE = 25;
 
-/// `EEDecodeTradeButton(a, ...)`: -1 when it fails, else the resource * 2 + the sell flag.
+/// `EEDecodeTradeButton(a, ...)`: -1 when it fails (b 0), else (or b 1) the resource * 2 + the sell flag.
 constexpr static const uint32_t EE_SCREENS_SB_OP_DECODE_TRADE = 26;
 
 /// `UIControl::ShiftKeyPressed()`.
@@ -4069,6 +4069,71 @@ constexpr static const int64_t EE_SCREENS_SB_WORLD_REFUSAL_INTERVAL = 75;
 constexpr static const int64_t EE_SCREENS_SB_IDS_JIT_NOT_YET = 31892;
 
 constexpr static const int64_t EE_SCREENS_SB_IDS_INSUFFICIENT_POWER = 10062;
+
+/// The help text's held text = a text of kind a (`EE_SCREENS_SB_TEXT_*`) with b; its length in bytes, -1 when there is
+/// none (a button without a hot key).
+constexpr static const uint32_t EE_SCREENS_SB_OP_HELP_TEXT = 65;
+
+/// The held text's bytes copied to a (b bytes at most); its length.
+constexpr static const uint32_t EE_SCREENS_SB_OP_HELP_TEXT_READ = 66;
+
+/// The help string = the b bytes at a (UTF-8).
+constexpr static const uint32_t EE_SCREENS_SB_OP_HELP_OUT = 67;
+
+/// `EEGetTradePrice(current player, a, b != 0)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_TRADE_PRICE = 68;
+
+/// The selected group's unit a exists and its class is a priest.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNIT_PRIEST = 69;
+
+/// `EEGetConversionCost` of the selected group's unit a.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CONVERSION_COST = 70;
+
+/// The button's tech tree node exists.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_PRESENT = 71;
+
+/// The node's `mData->mNameID`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_NAME_ID = 72;
+
+/// The current player's upgrade of the class at table index a has a name.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CLASS_UPGRADE_NAMED = 73;
+
+/// The class at table index a's `GetPopulationCost()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CLASS_POPULATION = 74;
+
+/// The class at table index a's `mNameStringID`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CLASS_NAME_ID = 75;
+
+/// `gResource->GetString(b)`.
+constexpr static const int64_t EE_SCREENS_SB_TEXT_STRING = 1;
+
+/// The command's button object's hot key's name (none without an object or hot key).
+constexpr static const int64_t EE_SCREENS_SB_TEXT_OBJECT_HOT_KEY = 2;
+
+/// The node's hot key's name (none without one).
+constexpr static const int64_t EE_SCREENS_SB_TEXT_NODE_HOT_KEY = 3;
+
+/// The current player's upgrade name of the class at table index b.
+constexpr static const int64_t EE_SCREENS_SB_TEXT_UPGRADE_NAME = 4;
+
+/// The node's `GetCostString(mUnitType, 1.0f)`.
+constexpr static const int64_t EE_SCREENS_SB_TEXT_COST = 5;
+
+/// `IDS_TRADE_BUY`, `IDS_TRADE_SELL`, `IDS_TRADE_FOR`, `IDS_RESOURCE_NAME_BASE`, `IDS_RESOURCE_NAME_GOLD`,
+/// `IDS_IMPROVEMENT_POWER`, `IDS_POP_COST`.
+constexpr static const int64_t EE_SCREENS_SB_IDS_TRADE_BUY = 5538;
+
+constexpr static const int64_t EE_SCREENS_SB_IDS_TRADE_SELL = 5539;
+
+constexpr static const int64_t EE_SCREENS_SB_IDS_TRADE_FOR = 5540;
+
+constexpr static const int64_t EE_SCREENS_SB_IDS_RESOURCE_NAME_BASE = 30114;
+
+constexpr static const int64_t EE_SCREENS_SB_IDS_RESOURCE_NAME_GOLD = 30119;
+
+constexpr static const int64_t EE_SCREENS_SB_IDS_IMPROVEMENT_POWER = 30024;
+
+constexpr static const int64_t EE_SCREENS_SB_IDS_POP_COST = 30469;
 
 /// `this->PauseGraphics()`.
 constexpr static const uint32_t EE_SCREENS_UI_OP_PAUSE = 1;
@@ -4496,18 +4561,6 @@ struct EeScreensChatLogHead {
   uint32_t time;
 };
 
-/// A technology button's tooltip: where the name comes from, the cost, the population cost, the unit's name.
-struct EeScreensTechHelp {
-  /// 0 the class's name string, 1 the player's upgrade name, 2 the node's name string.
-  uint32_t name;
-  /// The cost as "Power: <cost>" (a calamity with a cost), else the node's cost string.
-  bool power;
-  /// " Pop Cost: <n>" (a class costing more than one).
-  bool population;
-  /// The node's name after the cost (a node that makes a unit and has a name).
-  bool unit_name;
-};
-
 /// A targeting mode a command starts (`Command`): the main game form's UI state, and for the attack ground and
 /// rally commands the cursor locked to a pointer first. The form then shows its cancel button and refreshes.
 struct EeScreensCommandMode {
@@ -4877,22 +4930,6 @@ long ee_screens_chat_log_load(void *file);
 
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
-
-/// A command button's first tooltip string.
-long ee_screens_command_help_string(unsigned long button);
-
-/// Whether a command's tooltip adds the selected priest's conversion cost.
-bool ee_screens_command_help_priest(unsigned long button);
-
-/// A technology button's tooltip plan.
-void ee_screens_button_tech_help(bool has_class,
-                                 bool upgrade_named,
-                                 long population,
-                                 long kind,
-                                 long calamity_cost,
-                                 bool makes_unit,
-                                 long name_id,
-                                 EeScreensTechHelp *out);
 
 /// The targeting mode of command `button`: false when it starts none.
 bool ee_screens_command_mode(unsigned long button, EeScreensCommandMode *out);
@@ -5293,6 +5330,9 @@ void ee_screens_status_button_right_up(void *press);
 
 /// `EEUIFMGStatusButton::CopyData` over the host's press record: `UIButton::CopyData`'s result.
 int64_t ee_screens_status_button_copy_data(void *press);
+
+/// `EEUIFMGStatusButton::GetHelpString` over the host's press record (its result string): always true.
+bool ee_screens_status_button_help(void *press);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,
