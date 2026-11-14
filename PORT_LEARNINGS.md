@@ -14266,3 +14266,54 @@ keys and peer data) because AuthContext was a C++ class with its lock and login 
   check run in the lead's LAN gate. The host calls (GetCertOp, the request ops' auth context) run only for an Internet
   login or a direct-connect game with the CD key check (its certificate refresh); the gate's LAN-listed game does
   not reach them. EE-SIM makes no AuthContext.
+
+## R6: WON's Internet code, round 21 (HTTPCache whole in Rust; the patch records' dead C++ classes)
+
+Branch `rust-won-net21`. Measured by net C++ deletion over src + include (without include/rust), as rounds 7 to 20.
+Round 20 left the HTTP get op's cache calls as the last object calls of group 4 (`EE_WON_HOST_CACHE_ENTRY`,
+`_ENTRY_GET`, `_ENTRY_SET`, `_CACHE_UPDATE`), answered by ServerOp.cpp on the C++ `HTTPCache` and `HTTPCacheEntry`.
+
+- **What moved.** `httpcache.rs`: the cache (its directory, made up front from the path as given; the path absolute
+  when asked, through path.rs and `PlatGetCurrentDirectory`; a separator added; its maps by location and by id; the
+  free id; the index read when the path is set and written when the cache drops, through cachemap.rs with the 14-day
+  keep rule, a dropped entry's file deleted, read-only bit cleared first as `WONFile::Delete(true)` did) and its
+  entries (a numbered file name, `http::cache_file_name`; a stale file at that name deleted; the last access). Both
+  are op base handles: two new `hostauth::Item` variants, so round 20's tagged `Arc<Item>` numbers carry them and the
+  generic `ADD_REF` / `RELEASE` calls already count them; an entry lives in the maps as the same `Arc`, so
+  `GetEntry` answers the same number every time (`handle_of`). `Host::call` asks `httpcache::answer` after
+  hostauth's and hostnative's answers when the op is bound natively. HTTPCache.cpp and HTTPCacheDefaults.cpp
+  deleted, the classes gone from WONRouting.h, the four cases gone from `HostCall`; `WONHttpCacheMsg.h` is test glue
+  now (`tests/won/won_cachemap_glue.h`: won_cachemap_test still compares the original's statements with cachemap.rs
+  over stand-ins). src+include +7 -366.
+- **The global cache.** `ee_won_http_cache_global(dir)` (the WON directory, which the C++ caller passes, as
+  AuthContext's verifier file) makes it at the first call; it is released at exit by an `atexit` handler the first
+  call registers, as the original's static `SmartPtr` destructor did (its index is written then unless an op still
+  holds it). `ee_won_http_cache_reset_global` is `SetGlobalCache(NULL)`. `InitLogic::ParseCrossPromotion` sets it on
+  its op with `ee_won_hostop_set` (the one WONLobby line touched, a mechanical swap).
+- **The golden over the real classes.** `won_httpcache_test` (new, `xbuild wontest`, won_serverop_test's units): a
+  real HTTP get op, every cache call through the op's own call path (`ee_won_hostop_call`); only three statements
+  name the class (a new cache, the global getter, the reset). Caches in a new directory, with and without a final
+  separator, a full path, a directory whose parent is missing (no index written); entries' paths, validity,
+  expiries (-1, 0, 2^32+3: the file keeps 32 bits), tags with NUL and 0xff; the same entry twice; the index after
+  release with entries still held (they keep answering); a hand-written index (an entry 14 days and a minute old,
+  one a minute short, an invalid one, two for one location, a file name with `..`), another version, a cut index;
+  the global cache held by an op past its reset. 143 lines, recorded over the unmodified C++ (six runs the same, its
+  own commit); 0 failures over Rust. Mutation: one entry's expiry +1 fails from line 15. Driver traps: name objects
+  by the answer that returned them, never by address (a freed entry's address came back for the next one); times
+  as "now"/"now-~N" (rounded to tens), never raw.
+- **The original's undefined corner, defined.** A cache made with an empty path never set its next free id (heap
+  garbage in the C++); it starts at 1 here.
+- **Dead C++ removed: the patch records.** `VersionData` and `PatchData` (PatchTypes.cpp, 144 lines, and their 80
+  header lines) had no maker left in the game since the version and patch ops became Rust's (verop.rs, round 13);
+  their wire forms are patch.rs (golden_miscops, golden_verop). Deleted; `WONPatchMsg.h`, which only the tests'
+  stand-ins used, moved to `tests/won/won_patch_msg.h` with the enum and list type its statements name. src+include
+  +3 -401.
+- **Reach.** Only the lobby's cross-promotion image after an Internet login reaches the cache; a LAN lobby never
+  calls `ParseCrossPromotion`. The one change every op sees is `Host::call` asking `httpcache::answer` (it returns at
+  once for an object that is not a handle). EE-SIM makes no op.
+- **Measured for the next round.** What is left in ServerOp.cpp's `HostCall` (79 cases): the socket and socket op
+  calls (shared with the LAN lobby: they move with WONSocket), the AsyncOp machinery, and the peer sessions:
+  `AuthSession` (AuthSession.cpp 65 lines, its shim in WONRouting.h, AuthContext's `GetSession`/`PutSession` with no
+  C++ caller left, the flow's `session_last_use` hook) can become a handle like the cache's; `CryptTransform` then
+  holds the handle. Its golden needs a socket pair on 127.0.0.1 to see the transform (`ADD_CRYPT`) work; that is
+  why it was not this round's.
