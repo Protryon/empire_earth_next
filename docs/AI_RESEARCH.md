@@ -5285,6 +5285,59 @@ the 64 games, the port in 64. The port's army is still larger: 5.8 against 3.5 a
 with its citizens 17 behind at 80 minutes. That is the next look, with the raids at 20-25 minutes.
 
 0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
+### 8.83 Stage 3: the favourite land unit of the current epoch, and where the late gap comes from (2026-11-14, EE-SIM)
+
+**The citizens after 30 minutes.** The port's land citizens stall between 31 and 48 minutes in many seeds, with
+food piling up. The cause is the epoch reserve. The port asks for the Copper Age at 33 minutes on average, the C++
+at 38 (32 seeds). Both use the same rules:
+- the epoch timer draws the same 37.5-52.5 minutes after the Stone Age (Hard), traced in both;
+- epoch_pressure.safe_bonus (0.25) brings the request 11 minutes forward while no stronger enemy army is near.
+
+The C++ is mostly without the bonus: the port's larger army stands near its town, so EECPArmyThreat holds. The port
+then holds its food for the Copper Age, and the C++ keeps training citizens. That is emergent, not a missing rule.
+
+**Mirrors.** Port against port and C++ against C++ (16 seeds each, 80 minutes) separate the engines from their
+opponent:
+
+| mirror | citizens at 40 / 60 / 80 min | army at 60 / 80 min |
+|---|---|---|
+| C++ | 44.4 / 72.0 / 93.1 | 4.3 / 7.6 |
+| port | 42.4 / 70.2 / 99.2 | 8.5 / 22.9 |
+
+The citizens are at parity. The army is not. Ruled out by trace, against the C++:
+- the attack and defence group sizes (count = share x strength x the Hard modifier; the same formula in both);
+- military in production in GetUnitsAvailable: no change in 32 games;
+- the demand's standing-army shortfall: the C++ counts it against nothing (CountMilitaryUnits(false, false) returns
+  0). Copied, it raised the army further.
+
+**The missing rule.** The port's citizens were killed by Stone Age spearmen and slingers, the C++'s by Prehistoric
+clubmen: the port kept training Prehistoric units in the Stone Age. ChooseFavoriteLandType runs
+EEAIFOFavoriteUnitScreener with an epoch span of 0: only the current epoch's classes, grouped by AI line, then a random
+line and a random class of it. The port drew among every soldier class it could train, so in the Stone Age about half
+its favourites were clubmen and rock throwers, which the standing army and the demand's growth tier then asked for.
+
+**The fix.** choose_favorite (main.lua) applies the screener for the land, sea and space favourites:
+- the current epoch's moving, attacking classes, their node not obsolete;
+- IsFavoriteLand / IsFavoriteSea / IsFavoriteSpace;
+- grouped by AI line, a random line and then a random class of it.
+
+The favourite stays as it was when no class passes.
+
+| land, balanced, 64 seeds, 90 min | port won-lost (close) | citizens/army at 40 min | at 60 min | at 80 min | Bronze |
+|---|---|---|---|---|---|
+| before | 29-25 (10) | port 46.4/5.8, C++ 46.7/3.6 | port 69.8/8.8, C++ 85.3/5.3 | port 95.3/22.6, C++ 112.7/7.5 | port 9, C++ 5 |
+| **after** | **32-22 (10)** | port 48.1/5.2, C++ 44.7/3.6 | port 75.3/9.7, C++ 85.9/5.3 | port 102.5/22.8, C++ 115.8/7.6 | port 15, C++ 3 |
+
+The port's citizens lost from 35 to 60 minutes fall from 10.1 to 7.4 a game. The late army is unchanged (22.8
+against 7.6). In the mirrors it is twice the C++'s at the same group sizes, so its cause lies in the fights, not in
+the requests. That is open, with the reserve timing above.
+
+The raids at 20-25 minutes do not show on this bench: from 20 to 25 minutes the port loses 0.7 citizens a game, the
+C++ 0.8.
+
+The `cp unit.death` trace line covers only the C++ seats' citizens. A script's seat has its `next.death` line.
+
+0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
