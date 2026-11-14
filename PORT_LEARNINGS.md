@@ -14427,3 +14427,75 @@ verbatim into an `*_orig.h` beside it) replayed by cargo.
   overwrites: a microsecond poll changes every millisecond poll's scale; keep that or fix it knowingly), the thread
   system over PlatThread, then the File System's walk and the Sound Engine's objects (they need `UString` and the
   FSFile virtuals across first), the string classes last.
+
+## R5b.4, twenty-fourth round: the player's saved state as a Rust record with its Load and Save; the animation clock in Rust (ee_units player_save.rs, animate.rs; branch rust-r5b4-core24, 2026-11-13)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| c5a78ad9 | `EEPlayer::Load` (722 lines, four era bodies) and `Save` (206) in Rust over the record `EeUnitsPlayerSaved` | +251 -934, net -683 |
+| 7778631b | `EEUnitClass::Animate`'s clock (frame time, steps, frame, pause, fraction, next frame, sound slot) in Rust | +73 -156, net -83 |
+
+The round's C++: net -766. Order: the player's Load/Save first (the largest body on round 23's list, and the
+saveload matrix gates it exactly); `Animate` second (192 lines, pure arithmetic over numbers once the world's parts
+stay in C++). `EEUnitClass`'s constructor (477 lines: field copies from the database record, each read by C++
+callers), `FindPath`/`AdjustPath` (path requests and A* glue) and `EEComplexUnit`'s `CopyFrom`/`ResetEEComplexUnit`
+(field-by-field copies of C++ members and containers) were left: as Rust they would be one host operation per
+statement, no algorithm moved.
+
+- **The player's saved numbers are a Rust record the class derives from** (`class EEPlayer : public RTSPlayer,
+  public EeUnitsPlayerSaved`, as the triggers lane's `EESMEffect : public EeScenarioEffectFields`): the 24 fields
+  Load and Save read and write as plain values (`mScenarioVariables`, `mEnemies`, `mTributes`, `mResourceCaps`,
+  `mPopLimit`, the chat, combat and game-result words, the free-unit counter and interval, the trade and refunds,
+  the vital buildings, the high-ground bonus and heal timer, the chat and civilization flags) keep their names and
+  C++ types (`c_ulong`, `c_long`, `f32`, `bool`), so none of their ~300 readers changed. RTSPlayer stays the
+  first base (offset 0); the record goes after it. `ee/EEPlayer.h` includes `rust/ee_units.h`, which every
+  `RTSUnit.h` includer had already.
+- **One Load for four eras.** The original's four bodies (minor < 0xd7, < 0xe1, < 0xe8, the rest) were the same
+  reads, each era appending its own (units off the map; the wonder ids and the 0xe1 wonder clear; the free-unit
+  counter, the trade, refunds, vital buildings and interval by their minors). `player_save::load` is that one
+  sequence with the eras' returns; the stand-in upgrade's assertion keeps each era's line (4282, 4610, 4960, 5331).
+  Kept quirks: the results the original ignored, `theCount`/`theColumns`/the scratch words carried across reads
+  with their old values (era 4's trade loops run on `theColumns` from the tributes, and its free-unit counter read
+  is unguarded), the queued improvements' loop that goes on after a failed id read, the tribute bounds compared
+  unsigned. One difference: a count from the file past an array (resource caps 7, tributes 10, trade/refunds 5)
+  reads its extra words into a scratch word where the original wrote past the array; every save writes 7, 2 x 5 and 5.
+- **The host** (`EEPlayerSaveOperation`, EEPlayer.cpp, one callback, its own operation numbers 1-67, not the goal
+  host's): the primitives with the overload the original called (io holds the old value in and the read value out,
+  so the 4-byte adapters' read-into-the-old-value semantics hold; a bool crosses as 0 or 1, so a hand-edited byte
+  other than 0/1 becomes true) and the player's parts by operation (upgrades, `RTSPlayer`'s record, the tech tree,
+  patrol, saved and hot-key groups, air traffic, civilization, herds, events, off-map units, the id lists, the queued
+  improvements' map by key order). A primitive read copies the record, reads into the copy and stores it back before
+  the next call: no Rust reference to the record lives across a call into C++ (the sub-objects' loads may read the
+  player).
+- **Save files are not byte-deterministic between runs**, so no byte golden was possible: two runs of the
+  unmodified exe at the same tick differ in ~143,000 bytes and in size (the header's wall-clock date, floats and
+  strings that depend on the run). The gate is the matrix: every loaded game continues as before.
+- **The animation clock** (`animate.rs`): the C++ gathers the unit's and its model's numbers for the current state
+  (`EeUnitsAnimateIn`; the stats' fire-over-walls bit only for a paused state 8 and `IsFoundation()` only for a
+  running one-shot, where the original read them), the Rust decides (`EeUnitsAnimateOut`: pause, frame, time, the
+  sound's stop, the idle pick, the sound slot, the fraction, the next frame, the steps) and the C++ applies in the
+  original's order, compares the fraction itself after the setters, and keeps the idle pick's `GetRandom()` with the
+  horse's breath and the sound's play. `UMFloatToLong` is ee_ge's `lrintf` (the UCRT's); the arithmetic wraps as
+  the original's `unsigned long`; a zero frame count still divides by zero (the original's `div` faulted).
+- **Golden in game (temporary, removed):** the original body transliterated with each setter recorded, compared with
+  the Rust on every call over oracle seeds 2-7: about 27 million calls, 0 differences, every branch but a
+  speed-scaled animation reaching its end (paused waits 1.24 M, idle picks 14 k, paused stops 282 k, paused
+  restarts 47 k, speed-scaled 530 k, running 2.8 M, running ends 63 k in the last game's sample).
+- **Coverage.** Every save and load of the matrix runs `save` and `load`'s era 4 at 0.280 with the 0.254+ patrol
+  order; the older eras, the pre-0.254 patrol order (towns left out, written backwards) and short files are unit
+  tests only (player_save_tests.rs, 7 tests). `Animate` runs for every animated unit every tick (9 unit tests).
+- **Behaviour:** none. Tour only: nothing drawn changed (the fraction and next frame feed the renderer's
+  interpolation with the same values).
+- **Gates.** Commit 1: build `--sim` 0/0; oracle seeds 2-3 identical to `ref`; the saveload matrix (`--settings
+  all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS, no load fault (matrix oracle 4/4,
+  plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next
+  0/4: the expect file's rows); the Rust gate PASS after rustfmt (one `ee_plat_core` timer test failed once alone
+  under load and passed inside the gate). Commit 2: on the shadow build oracle seeds 2-7 identical; on the final
+  build oracle seeds 2-3 identical, the Rust gate PASS (ee_units 220 tests, 16 new; clippy wanted `allow`s for the
+  original's `!(x >= 0.5)` and zero-divisor forms); captures at seeds 2-3: oracle (169 digests), late (170), space
+  (171), calamity (183), scenario (18) PASS, every run exit 0, no extra executed message. At the end (rust had not
+  moved: no merge needed): oracle seeds 2-7 identical to `ref` on the final build, the test profile 0/0.
+- **For the next round:** the player's other bodies that read the record (`Reset`'s zeroing of these fields,
+  `RepairPointers`, `UpdatePlayer`) can now work on `EeUnitsPlayerSaved` from Rust. `Animate`'s remaining C++ is
+  the sound's play (sound manager glue). Still open from round 23's list: `EEUnitClass`'s constructor, `FindPath`/
+  `AdjustPath`, `EEComplexUnit`'s copy, reset and `UpdateHidden` (tile walks over the unit lists).
