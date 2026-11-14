@@ -10,6 +10,8 @@
 //! - [`tree`]: a node's and an epoch's availability, prerequisites, research decisions, costs and research counters
 //!   toward the next epoch; the tree's checksum, `DependsOn` and `SumCosts` over a view of the tree.
 //! - [`calamity`]: a calamity's age against its class's lifetime.
+//! - [`calamity_class`]: the calamity classes' data as one record and their per-class virtuals as tables.
+//! - [`calamity_record`]: an active calamity's numbers as one record, its `Reset`, checksum, `Load` and `Save`.
 //! - [`calamity_cast`]: `CanCastAt` and the classes' target and location tests.
 //! - [`calamity_update`]: every calamity class's own update over a host of world calls.
 //! - [`calamity_start`]: every calamity class's `Start` and `Stop` over the same host.
@@ -18,6 +20,8 @@
 
 pub mod calamity;
 pub mod calamity_cast;
+pub mod calamity_class;
+pub mod calamity_record;
 pub mod calamity_start;
 pub mod calamity_update;
 pub mod capture;

@@ -26,6 +26,162 @@ constexpr static const uint32_t EE_CALAMITY_TARGET_DISABLED = 128;
 
 constexpr static const uint32_t EE_CALAMITY_TARGET_VOLCANO = 256;
 
+/// [`EeCalamityClassMedia::present`]: effect 1 (effect `i` is this shifted by `i - 1`).
+constexpr static const uint32_t EE_CALAMITY_MEDIA_EFFECT1 = 1;
+
+/// [`EeCalamityClassMedia::present`]: the sound.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_SOUND = 16;
+
+/// [`EeCalamityClassMedia::present`]: the secondary sound.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_SECONDARY_SOUND = 32;
+
+/// How `Initialize` fetched a slot ([`get_mode`]).
+constexpr static const uint32_t EE_CALAMITY_GET_NONE = 0;
+
+/// `Get(id)` whatever the id (`Get(0)` is the table's first entry).
+constexpr static const uint32_t EE_CALAMITY_GET_ALWAYS = 1;
+
+/// `if (id != 0)`.
+constexpr static const uint32_t EE_CALAMITY_GET_NONZERO = 2;
+
+/// `if (id > 0)`.
+constexpr static const uint32_t EE_CALAMITY_GET_POSITIVE = 3;
+
+/// The contagion functor `Initialize` made ([`functor_kind`]).
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_NONE = 0;
+
+/// `EEAreaEffectFunctor(effect 2, effect 3, mDamageFactor, mSpreadTime, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_AREA = 1;
+
+/// `EEAEExtraDamageFunctor(unit set, mode, mFunctorFlag)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_EXTRA_DAMAGE = 2;
+
+/// `EEAEMindControlFunctor(effect 3, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_MIND_CONTROL = 3;
+
+/// `EEFireFunctor(effect 2, mBurn, mRadius, mChance, mDamage, mSpreadTime, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_FIRE = 4;
+
+/// `EELeprosyFunctor(mDamage, mSpreadTime, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_LEPROSY = 5;
+
+/// `EEPlagueFunctor(mRadius, mChance, mDamage, mSpreadTime, unit set, mode)`.
+constexpr static const uint32_t EE_CALAMITY_FUNCTOR_PLAGUE = 6;
+
+/// The step lists of [`media_step`]: `LoadMedia(player, on demand)`.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_LOAD = 0;
+
+/// `UnloadMedia(player)`.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_UNLOAD = 1;
+
+/// The class's destructor.
+constexpr static const uint32_t EE_CALAMITY_MEDIA_DESTROY = 2;
+
+/// A step ([`media_step`]) after the last one.
+constexpr static const uint32_t EE_CALAMITY_STEP_END = 0;
+
+/// Effect 1..4 (`EE_CALAMITY_STEP_EFFECT1 + i - 1`): `Load(on demand)`, `Unload()` or `Dereference()` when it is
+/// set.
+constexpr static const uint32_t EE_CALAMITY_STEP_EFFECT1 = 1;
+
+/// The sound: `LoadMedia()` or `UnloadMedia()` when it is set.
+constexpr static const uint32_t EE_CALAMITY_STEP_SOUND = 5;
+
+/// The secondary sound, as the sound.
+constexpr static const uint32_t EE_CALAMITY_STEP_SECONDARY_SOUND = 6;
+
+/// The unit class `mUnitClassIndex`'s media: loaded when on demand and its media mask set to 0x7f, or unloaded.
+constexpr static const uint32_t EE_CALAMITY_STEP_UNIT_MEDIA = 7;
+
+/// The unit class `mUnitClassIndex`'s buttons: loaded or unloaded.
+constexpr static const uint32_t EE_CALAMITY_STEP_UNIT_BUTTONS = 8;
+
+/// The sound manager's `Unload` of the sound's sample (the volcano's destructor).
+constexpr static const uint32_t EE_CALAMITY_STEP_SAMPLE = 9;
+
+/// `delete mFunctor`.
+constexpr static const uint32_t EE_CALAMITY_STEP_FUNCTOR = 10;
+
+/// `PlaySound(calamity)`: nothing.
+constexpr static const uint32_t EE_CALAMITY_PLAY_NONE = 0;
+
+/// The class's sound as the calamity's referenced main sound, from the start (`SetSound(PlayAndReturnReferencedNode
+/// (sample, volume, 0, 1, looping))`).
+constexpr static const uint32_t EE_CALAMITY_PLAY_NODE = 1;
+
+/// The class's sound once at the target location (`EEComputeSoundParameters` with the calamities' falloff).
+constexpr static const uint32_t EE_CALAMITY_PLAY_AT_TARGET = 2;
+
+/// [`run`]'s `which`: `Start`.
+constexpr static const uint32_t EE_CALAMITY_RUN_START = 0;
+
+/// `Stop`.
+constexpr static const uint32_t EE_CALAMITY_RUN_STOP = 1;
+
+/// `Update`.
+constexpr static const uint32_t EE_CALAMITY_RUN_UPDATE = 2;
+
+/// [`EeCalamityClassRun::sounds`]: the run gets the class's sound.
+constexpr static const uint32_t EE_CALAMITY_RUN_SOUND = 1;
+
+/// [`EeCalamityClassRun::sounds`]: the run gets the class's secondary sound.
+constexpr static const uint32_t EE_CALAMITY_RUN_SECONDARY_SOUND = 2;
+
+/// `FSFile::Read(unsigned long&)` into `*value` (a `c_ulong`; the old value in, the read value out).
+constexpr static const uint32_t EE_CALAMITY_IO_READ_ULONG = 0;
+
+/// `FSFile::Read(long&)` into `*value` (a `c_long`).
+constexpr static const uint32_t EE_CALAMITY_IO_READ_LONG = 1;
+
+/// `FSFile::Read(float&)` into `*value` (an `f32`).
+constexpr static const uint32_t EE_CALAMITY_IO_READ_FLOAT = 2;
+
+/// `FSFile::Read(bool&)` into `*value` (a `bool`).
+constexpr static const uint32_t EE_CALAMITY_IO_READ_BOOL = 3;
+
+/// `FSFile::Write(const unsigned long&)` of `*value`.
+constexpr static const uint32_t EE_CALAMITY_IO_WRITE_ULONG = 4;
+
+/// `FSFile::Write(const long&)` of `*value`.
+constexpr static const uint32_t EE_CALAMITY_IO_WRITE_LONG = 5;
+
+/// `FSFile::Write(const float&)` of `*value`.
+constexpr static const uint32_t EE_CALAMITY_IO_WRITE_FLOAT = 6;
+
+/// `FSFile::Write(const bool&)` of `*value`.
+constexpr static const uint32_t EE_CALAMITY_IO_WRITE_BOOL = 7;
+
+/// `mRectangle.Load` / `Save` (`value` unused).
+constexpr static const uint32_t EE_CALAMITY_IO_RECTANGLE = 8;
+
+/// `mTargetLocation.Load` / `Save`.
+constexpr static const uint32_t EE_CALAMITY_IO_TARGET_LOCATION = 9;
+
+/// `mShakeLocation.Load` / `Save`.
+constexpr static const uint32_t EE_CALAMITY_IO_SHAKE_LOCATION = 10;
+
+/// `FSLoadVector` / `FSSaveVector` of `mEffectGeneration`.
+constexpr static const uint32_t EE_CALAMITY_IO_EFFECT_GENERATION = 11;
+
+/// Load: a `long` class id read and the class it names set (`GetCalamityClass(unsigned long)`); save: the class's
+/// `mID` written as an `unsigned long`.
+constexpr static const uint32_t EE_CALAMITY_IO_CLASS = 12;
+
+/// Save: the target unit's id (-1 without one) into `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CALAMITY_IO_TARGET_ID = 13;
+
+/// Save: the caster unit's id (-1 without one) into `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CALAMITY_IO_CASTER_ID = 14;
+
+/// Load: a `long` read into the remembered tile's x; save: the tile's x written as a `long`.
+constexpr static const uint32_t EE_CALAMITY_IO_TILE_X = 15;
+
+/// The same for its y.
+constexpr static const uint32_t EE_CALAMITY_IO_TILE_Y = 16;
+
+/// `mEffectHandle.mValue` read or written (a `uint32_t` through `FSFile`'s own overload).
+constexpr static const uint32_t EE_CALAMITY_IO_EFFECT_HANDLE = 17;
+
 /// [`EeCalamityParams::flags`]: the morale class counts positive morale (`EECCMorale::mPositive`).
 constexpr static const uint32_t EE_CALAMITY_POSITIVE = 32;
 
@@ -104,6 +260,20 @@ constexpr static const int32_t RESULT_RESEARCHED = 0;
 constexpr static const int32_t RESULT_ALREADY = 2;
 
 constexpr static const int32_t RESULT_REFUSED = 9;
+
+/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
+enum class EeCalamityCastMode : int32_t {
+  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
+  Base = 0,
+  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
+  Global,
+  /// `EELocationCalamityClass`: the base, then the class's location.
+  Location,
+  /// `EEUnitCalamityClass`: the base, then the class's target.
+  Unit,
+  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
+  SpecialAttack,
+};
 
 /// What an attribute effect (`ApplyEventAttribute`, kind 2) changes. The player's attributes (23, 38, 39) apply once,
 /// the others to the upgrade of every unit class the effect names.
@@ -367,20 +537,6 @@ enum class EeCalamityOp : int32_t {
   ClassStep = 80,
 };
 
-/// Which `CanCastAt` runs (`EeCalamityCast::mode`).
-enum class EeCalamityCastMode : int32_t {
-  /// `EECalamityClass::CanCastAt`: the caster, its power, the tile, its sight, the area effects.
-  Base = 0,
-  /// `EEGlobalCalamityClass` and `EECCLineOfSight`: always 0.
-  Global,
-  /// `EELocationCalamityClass`: the base, then the class's location.
-  Location,
-  /// `EEUnitCalamityClass`: the base, then the class's target.
-  Unit,
-  /// `EECCSpecialAttack`: the base with 2 allowed, then the target.
-  SpecialAttack,
-};
-
 /// One step of `EETechTree::ResearchToEpoch` (`EeTechEpochStep::step`).
 enum class EeTechEpochStepKind : uint32_t {
   /// `mEpochs[epoch].Unlock()`.
@@ -459,6 +615,258 @@ enum class EeTechMakeObsolete : int32_t {
   Epoch = 2,
   /// The epoch itself, obsolete already or reached: nothing.
   Nothing = 3,
+};
+
+/// A calamity class's numbers (`EECalamityClass` derives from it). The base members first, in their order.
+struct EeCalamityClassFields {
+  float mLifeTime;
+  long mClassEnum;
+  /// Each class's calamity flag bit (set on the units it holds).
+  unsigned long mClassFlags;
+  unsigned long mUnitSet;
+  long mNameID;
+  /// The record's id (`EECalamityKind`).
+  long mID;
+  long mRange;
+  long mCost;
+  bool mB24;
+  bool mIsBlockedByImmunity;
+  bool mIsCastByAllSelected;
+  bool mOverWater;
+  bool mPositive;
+  bool mFunctorFlag;
+  /// The earthquake's, the hurricane's, the leprosy's, the plague's and the fire's damage.
+  long mDamage;
+  /// The earthquake's and the hurricane's tick time.
+  long mTickTime;
+  long mShake;
+  long mCrackCount;
+  long mArea;
+  /// The hurricane's, the volcano's, the meteor storm's and the drop object's unit class.
+  long mUnitClassIndex;
+  /// The time warp's and the teleport's `EEFindPlacement` range.
+  long mPlacementRange;
+  long mDepartTime;
+  long mAwayTime;
+  long mHoldTime;
+  /// The morale's effect duration.
+  long mEffectDuration;
+  /// The area effects' and the leprosy's first effect's duration.
+  unsigned long mEffect1Duration;
+  long mEffect2Time;
+  unsigned long mEffectTime2;
+  unsigned long mEffectTime3;
+  /// The area effects' and the leprosy's radius in tiles (their `mRadius`).
+  unsigned long mRadiusTiles;
+  /// The area effect's damage factor.
+  long mDamageFactor;
+  long mBurn;
+  /// The functors' spread, update or damage time (a local of the classes' `Initialize`).
+  long mSpreadTime;
+  long mL3C;
+  long mL40;
+  long mL48;
+  /// The teleport's share of the caster's hit points (its `mDamageFactor`).
+  float mDamageShare;
+  float mDuration;
+  /// The earthquake's, the hurricane's, the fire's, the meteor storm's (and the plague functor's) radius.
+  float mRadius;
+  float mShakeInterval;
+  float mVolume;
+  float mQuakeVolume;
+  float mMinimumFactor;
+  float mQuakeMinimumFactor;
+  float mSpeed;
+  float mSourceSpeed;
+  float mFalloff;
+  /// The fire's (and the plague functor's) chance.
+  float mChance;
+  float mMaximumRadius;
+  float mMinimumRadius;
+  float mMinimumInterval;
+  float mMaximumInterval;
+  float mSightBonus;
+};
+
+/// One record of `db\dbcalamity.dat` as `EECalamityManager::LoadCalamityClasses` reads it (`EECalamityData`,
+/// `ee/EECalamityClass.h`; 236 bytes on every target).
+struct EeCalamityData {
+  uint8_t mLabel[100];
+  float mFloatParam1;
+  float mFloatParam2;
+  float mQuakeMinimumStrength;
+  float mQuakeStrength;
+  float mUnused1;
+  float mRange;
+  int32_t mUnusedDatabaseID;
+  int32_t mID;
+  int32_t mClassEnum;
+  int32_t mUnusedTargetKind;
+  int32_t mLifeTime;
+  int32_t mUnused2;
+  int32_t mGraphicEffectID1;
+  int32_t mGraphicEffectID2;
+  int32_t mGraphicEffectID3;
+  int32_t mGraphicEffectID4;
+  int32_t mUnused3;
+  int32_t mUnused4;
+  int32_t mUnused5;
+  int32_t mUnitClassIndex;
+  int32_t mIntParam1;
+  int32_t mIntParam2;
+  int32_t mIntParam3;
+  int32_t mIntParam4;
+  int32_t mIntParam5;
+  int32_t mIntParam6;
+  bool mUnused6;
+  bool mBoolParam1;
+  bool mUnused7;
+  bool mUnused8;
+  bool mIsCastByAllSelected;
+  bool mIsBlockedByImmunity;
+  int32_t mSoundID;
+  int32_t mSecondarySoundID;
+  int32_t mCost;
+  uint32_t mUnitSet;
+  int32_t mNameID;
+  bool mUnusedClassFlag;
+};
+
+/// What the C++ knows of the class's effects and sounds when it asks: which are set
+/// (`EE_CALAMITY_MEDIA_EFFECT1 << i`, `EE_CALAMITY_MEDIA_SOUND`, `EE_CALAMITY_MEDIA_SECONDARY_SOUND`), each
+/// effect's `mDuration`, `GetSize()` and `mTime1`, and the game variant's earthquake damage factor.
+struct EeCalamityClassMedia {
+  uint32_t present;
+  uint32_t duration[4];
+  float size[4];
+  uint32_t time1[4];
+  float quake_damage_factor;
+};
+
+/// The class's members its update reads (`EECalamityClass` and the subclass's), read before the update.
+struct EeCalamityParams {
+  int32_t class_enum;
+  float lifetime;
+  /// `EE_CALAMITY_*` bits.
+  uint32_t flags;
+  int32_t quake_damage;
+  int32_t quake_tick_time;
+  int32_t quake_shake;
+  float quake_duration;
+  float quake_radius;
+  float quake_shake_interval;
+  float quake_volume;
+  float quake_quake_volume;
+  float quake_minimum_factor;
+  float quake_quake_minimum_factor;
+  float quake_speed;
+  float quake_falloff;
+  /// The game variant's earthquake damage factor.
+  float quake_damage_factor;
+  int32_t storm_damage;
+  uint32_t storm_tick_time;
+  float storm_radius;
+  /// Its first effect's duration (the storm's delay).
+  uint32_t storm_delay;
+  float meteor_minimum_interval;
+  float meteor_maximum_interval;
+  /// The volcano's first effect's delay (`mTime1`).
+  uint32_t volcano_delay;
+  int32_t warp_depart_time;
+  int32_t warp_away_time;
+  /// The teleport's hold time.
+  int32_t teleport_hold_time;
+  uint32_t bomb_time2;
+  uint32_t bomb_time3;
+  /// The area effects' and the leprosy's first effect's duration.
+  uint32_t area_delay;
+  /// The extra damage's and the mind control's second time.
+  int32_t area_time2;
+  /// The morale's effect duration.
+  int32_t morale_delay;
+  /// The hurricane's second effect's size, the volcano's first's (the calamity's height above its ground).
+  float start_size;
+  /// The line of sight's bonus.
+  float sight_bonus;
+  /// The earthquake's source effect speed.
+  float quake_source_speed;
+};
+
+/// What one of the class's `Start`, `Stop` or `Update` hands its Rust body: the parameters, which of the class's
+/// sounds (`EE_CALAMITY_RUN_*`), and whether it runs at all (the classes whose `Stop` was empty).
+struct EeCalamityClassRun {
+  EeCalamityParams params;
+  uint32_t sounds;
+  bool runs;
+};
+
+/// The calamity's members a class's `Reset(calamity)` reads and sets, in and out, and the target unit's view.
+struct EeCalamityReset {
+  /// In: the calamity has a target unit; its tile (x -10000 off the map) and hit points.
+  bool has_target;
+  long target_tile_x;
+  long target_tile_y;
+  long target_hit_points;
+  /// In and out: the calamity's placeholders and remembered tile.
+  bool bool1;
+  bool bool2;
+  float float1;
+  long int1;
+  long int2;
+  long tile_x;
+  long tile_y;
+  /// Out: `int1` is to be a new contagion helper of the class's functor for the calamity and its target.
+  bool create_helper;
+};
+
+/// One `CanCastAt`, `IsValidLocation` or `IsValidTarget` question.
+struct EeCalamityCast {
+  EeCalamityCastMode mode;
+  int32_t class_enum;
+  uint32_t x;
+  uint32_t y;
+  /// `GetCost()`.
+  int32_t cost;
+  /// The area effects' and the leprosy's radius in tiles (unsigned), the hurricane's `mArea`.
+  uint32_t radius;
+  int32_t area;
+  /// `kTerrainSpace` (the meteor storm's tiles).
+  int32_t space_terrain;
+  bool check;
+  bool has_caster;
+  bool blocked_by_immunity;
+  /// The hurricane only over water (`mOverWater`).
+  bool over_water;
+};
+
+/// An active calamity's plain members (`EECalamity` derives from it).
+struct EeCalamityFields {
+  /// 1.0 after `Reset`.
+  float mEpicenterFactor;
+  float mFloatPlaceHolder1;
+  float mFloatPlaceHolder2;
+  float mHeight;
+  float mTimeAlive;
+  float mDiscreteUpdateTime;
+  float mTimeElapsedSinceLastUpdate;
+  /// The area effect classes keep their contagion helper id here.
+  long mIntPlaceHolder1;
+  long mIntPlaceHolder2;
+  unsigned long mTargetUnitID;
+  /// The caster unit's id.
+  unsigned long mOriginatingUnitID;
+  unsigned long mPlayerNumber;
+  bool mBoolPlaceHolder1;
+  bool mBoolPlaceHolder2;
+  bool mInitialized;
+  bool mHasTargetLocation;
+  bool mHasTargetUnit;
+};
+
+/// The C++'s I/O callback: `call(ctx, op, value)`.
+struct EeCalamityIoFfi {
+  void *ctx;
+  long (*call)(void *ctx, uint32_t op, void *value);
 };
 
 /// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
@@ -607,55 +1015,6 @@ struct EeCalamityAge {
   uint8_t pad[3];
 };
 
-/// The class's members its update reads (`EECalamityClass` and the subclass's), read before the update.
-struct EeCalamityParams {
-  int32_t class_enum;
-  float lifetime;
-  /// `EE_CALAMITY_*` bits.
-  uint32_t flags;
-  int32_t quake_damage;
-  int32_t quake_tick_time;
-  int32_t quake_shake;
-  float quake_duration;
-  float quake_radius;
-  float quake_shake_interval;
-  float quake_volume;
-  float quake_quake_volume;
-  float quake_minimum_factor;
-  float quake_quake_minimum_factor;
-  float quake_speed;
-  float quake_falloff;
-  /// The game variant's earthquake damage factor.
-  float quake_damage_factor;
-  int32_t storm_damage;
-  uint32_t storm_tick_time;
-  float storm_radius;
-  /// Its first effect's duration (the storm's delay).
-  uint32_t storm_delay;
-  float meteor_minimum_interval;
-  float meteor_maximum_interval;
-  /// The volcano's first effect's delay (`mTime1`).
-  uint32_t volcano_delay;
-  int32_t warp_depart_time;
-  int32_t warp_away_time;
-  /// The teleport's hold time.
-  int32_t teleport_hold_time;
-  uint32_t bomb_time2;
-  uint32_t bomb_time3;
-  /// The area effects' and the leprosy's first effect's duration.
-  uint32_t area_delay;
-  /// The extra damage's and the mind control's second time.
-  int32_t area_time2;
-  /// The morale's effect duration.
-  int32_t morale_delay;
-  /// The hurricane's second effect's size, the volcano's first's (the calamity's height above its ground).
-  float start_size;
-  /// The line of sight's bonus.
-  float sight_bonus;
-  /// The earthquake's source effect speed.
-  float quake_source_speed;
-};
-
 /// The calamity's members an update reads and writes (`EECalamity`).
 struct EeCalamityState {
   float time_alive;
@@ -703,26 +1062,6 @@ struct EeCalamityReply {
 struct EeCalamityHostFfi {
   void *ctx;
   void (*call)(void *ctx, EeCalamityState *state, const EeCalamityCall *call, EeCalamityReply *reply);
-};
-
-/// One `CanCastAt`, `IsValidLocation` or `IsValidTarget` question.
-struct EeCalamityCast {
-  EeCalamityCastMode mode;
-  int32_t class_enum;
-  uint32_t x;
-  uint32_t y;
-  /// `GetCost()`.
-  int32_t cost;
-  /// The area effects' and the leprosy's radius in tiles (unsigned), the hurricane's `mArea`.
-  uint32_t radius;
-  int32_t area;
-  /// `kTerrainSpace` (the meteor storm's tiles).
-  int32_t space_terrain;
-  bool check;
-  bool has_caster;
-  bool blocked_by_immunity;
-  /// The hurricane only over water (`mOverWater`).
-  bool over_water;
 };
 
 /// One step of `ResearchToEpoch`, on the epoch at index `epoch`.
@@ -839,6 +1178,89 @@ struct EeTechAdvance {
 constexpr static const uint8_t PREREQUISITE_BITS[4] = { 2, 4, 8, 16, };
 
 extern "C" {
+
+/// [`get_mode`].
+uint32_t ee_calamity_class_get_mode(int32_t class_enum, uint32_t slot);
+
+/// [`fetches`].
+bool ee_calamity_class_fetches(uint32_t mode, int32_t id);
+
+/// [`initialize_base`] into `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads and writes, `data` for reads.
+void ee_calamity_class_initialize_base(EeCalamityClassFields *fields, const EeCalamityData *data);
+
+/// [`fill`] into `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads and writes, `data` and `media` for reads.
+void ee_calamity_class_fill(EeCalamityClassFields *fields,
+                            const EeCalamityData *data,
+                            const EeCalamityClassMedia *media);
+
+/// [`functor_kind`].
+uint32_t ee_calamity_class_functor_kind(int32_t class_enum);
+
+/// [`media_step`].
+uint32_t ee_calamity_class_media_step(int32_t class_enum, uint32_t list, uint32_t index);
+
+/// [`sound_mode`].
+uint32_t ee_calamity_class_sound_mode(int32_t class_enum);
+
+/// [`run`].
+///
+/// # Safety
+/// `fields` and `media` valid for reads.
+EeCalamityClassRun ee_calamity_class_run(const EeCalamityClassFields *fields,
+                                         const EeCalamityClassMedia *media,
+                                         uint32_t which);
+
+/// [`reset`] over `*state`.
+///
+/// # Safety
+/// `state` valid for reads and writes.
+void ee_calamity_class_reset(int32_t class_enum, EeCalamityReset *state);
+
+/// [`targets_by_functor`].
+bool ee_calamity_class_targets_by_functor(int32_t class_enum);
+
+/// [`cast_fields`] into `*cast`; the unit class it places.
+///
+/// # Safety
+/// `fields` valid for reads, `cast` for reads and writes.
+long ee_calamity_class_cast_fields(const EeCalamityClassFields *fields,
+                                   EeCalamityCast *cast,
+                                   int32_t space_terrain);
+
+/// [`reset`] of `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads and writes.
+void ee_calamity_record_reset(EeCalamityFields *fields);
+
+/// [`checksum`].
+///
+/// # Safety
+/// `fields` valid for reads.
+long ee_calamity_record_checksum(const EeCalamityFields *fields,
+                                 float target_x,
+                                 float target_y,
+                                 float target_z,
+                                 unsigned long tile_x,
+                                 unsigned long tile_y);
+
+/// [`load`] into `*fields` over `io`; the first error.
+///
+/// # Safety
+/// `fields` valid for reads and writes; `io`'s callback valid, not touching `*fields`.
+long ee_calamity_record_load(EeCalamityFields *fields, EeCalamityIoFfi io);
+
+/// [`save`] of `*fields` over `io`; the first error.
+///
+/// # Safety
+/// `fields` valid for reads; `io`'s callback valid.
+long ee_calamity_record_save(const EeCalamityFields *fields, EeCalamityIoFfi io);
 
 /// `EEApplyEventEffect(float, float, EEEventEffect*)`.
 ///

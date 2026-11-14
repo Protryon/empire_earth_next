@@ -163,7 +163,7 @@ struct AreaPeek : EECCAreaEffect {
         Media(r, p->mGraphicEffect1, p->mGraphicEffect2, p->mGraphicEffect3, NULL, p->mSound, NULL, p->mFunctor);
         r.I32(p->mDamageFactor);
         r.U32(p->mEffect1Duration);
-        r.U32(p->mRadius);
+        r.U32(p->mRadiusTiles);
         r.I32(e2t);
     }
 };
@@ -177,7 +177,7 @@ struct CloakPeek : EECCCloaking {
     static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
     {
         CloakPeek* p = static_cast<CloakPeek*>(c);
-        Media(r, p->mGraphicEffect, NULL, NULL, NULL, p->mSound, NULL, NULL);
+        Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, NULL, NULL);
     }
 };
 struct DropPeek : EECCDropObject {
@@ -240,7 +240,7 @@ struct LeprosyPeek : EECCLeprosy {
         Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, NULL, p->mFunctor);
         r.I32(p->mDamage);
         r.U32(p->mEffect1Duration);
-        r.U32(p->mRadius);
+        r.U32(p->mRadiusTiles);
     }
 };
 struct SightPeek : EECCLineOfSight {
@@ -275,7 +275,7 @@ struct MoralePeek : EECCMorale {
     static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
     {
         MoralePeek* p = static_cast<MoralePeek*>(c);
-        Media(r, p->mGraphicEffect, NULL, NULL, NULL, p->mSound, p->mSecondarySound, NULL);
+        Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, p->mSecondarySound, NULL);
         r.I32(p->mEffectDuration);
         r.U32(p->mPositive ? 1 : 0);
     }
@@ -284,7 +284,7 @@ struct PlaguePeek : EECCPlague {
     static void Rec(EESimCaptureRecord& r, EECalamityClass* c)
     {
         PlaguePeek* p = static_cast<PlaguePeek*>(c);
-        Media(r, p->mGraphicEffect, NULL, NULL, NULL, p->mSound, p->mSecondarySound, p->mFunctor);
+        Media(r, p->mGraphicEffect1, NULL, NULL, NULL, p->mSound, p->mSecondarySound, p->mFunctor);
         r.I32(p->mDamage);
     }
 };
@@ -293,7 +293,7 @@ struct TeleportPeek : EECCTeleport {
     {
         TeleportPeek* p = static_cast<TeleportPeek*>(c);
         Media(r, p->mGraphicEffect1, p->mGraphicEffect2, NULL, NULL, p->mSound, p->mSecondarySound, NULL);
-        r.F32(p->mDamageFactor);
+        r.F32(p->mDamageShare);
         r.I32(p->mPlacementRange);
         r.I32(p->mHoldTime);
     }
