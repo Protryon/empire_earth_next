@@ -361,65 +361,6 @@ void EEScenarioManager::Update()
     ee_scenario_manager_update(&theHost);
 }
 
-// FUNCTION: EXE 0x5b23dc
-// Writes the trigger text file (EESEIAExport): the media strings, then the effect, condition and player name
-// entries; 9 on a write error
-// Called by EESEIAExport 0x16ffd0
-long EEScenarioManager::ExportText(FSFileSpec& inFile)
-{
-    UWideString theText;
-    long theResult = this->mMediaStrings.Export(inFile);
-    if (theResult == 0) {
-        unsigned long i;
-        for (i = 0; i < this->mEffects.size() && theResult == 0; i++) {
-            EESMEffect* theEffect = this->mEffects[i];
-            if (theEffect == NULL)
-                continue;
-            theText = "";
-            if (theEffect->GetType() == kSMEffectMedia) {
-                switch (theEffect->mMediaAction) {
-                case kSMMediaActionChangeText:
-                    theText = theEffect->mDescription;
-                    break;
-                case kSMMediaActionSendDialogue:
-                case kSMMediaActionSendChatMessage:
-                    theText = theEffect->mMessage;
-                    break;
-                }
-            } else if (theEffect->GetType() == kSMEffectObject && theEffect->mObjectAction == kSMObjectActionClassName) {
-                theText = theEffect->mNewName;
-            }
-            if (!(theText.GetLength() > 0))
-                continue;
-            if (fprintf(inFile, "{%ld_Effect:%s}\n", theEffect->GetID(), (const char*)theEffect->GetName()) < 0
-                || fprintf(inFile, "%s\n\n", (const char*)theText) < 0)
-                theResult = 9;
-        }
-        for (i = 0; i < this->mConditions.size() && theResult == 0; i++) {
-            EESMCondition* theCondition = this->mConditions[i];
-            if (theCondition == NULL)
-                continue;
-            theText = "";
-            if (theCondition->GetType() == kSMConditionChatMessageContains)
-
-                theText = theCondition->mChatText;
-            if (!(theText.GetLength() > 0))
-                continue;
-            if (fprintf(inFile, "{%ld_Condition:%s}\n", theCondition->GetID(),
-                        (const char*)theCondition->GetName()) < 0
-                || fprintf(inFile, "%s\n\n", (const char*)theText) < 0)
-                theResult = 9;
-        }
-        for (unsigned long p = 1; p < gWorld.mNumPlayers; p++) {
-            if (gWorld.GetPlayer(p) != NULL) {
-                if (fprintf(inFile, "{%ld_Player Name:%s}\n", p, (const char*)gWorld.GetPlayer(p)->mName) < 0)
-                    theResult = 9;
-            }
-        }
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5b260a
 // Resolves a scenario player choice (0 nature, 1/3 a random/every human, 2/4 a random/every computer, 5/6 a random
 // player with/without nature, 7+ player n-6) into a list; returns the chosen player, -1 for none or a group
@@ -500,79 +441,6 @@ void EEScenarioManager::ReplaceUnit(long inOldUnit, long inNewUnit)
     unsigned long theCount = this->mObjects.size();
     for (unsigned long i = 0; i < theCount; i++)
         this->mObjects[i]->ReplaceUnit(inOldUnit, inNewUnit);
-}
-
-// FUNCTION: EXE 0x5b3ae9
-// Reads a trigger text file (EESEIAImport) of "{id_Kind:name}" lines, each followed by its text; with inValidate
-// checks the entries first (ValidateText), then applies them (ImportText); 9 on a malformed file
-// Called by EESEIAImport 0x170439
-long EEScenarioManager::ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate)
-{
-    EESMMediaStrings theMediaStrings;
-    std::vector<UString> theTokens;
-    UWideString theText;
-    std::vector<UString> theLines;
-    std::vector<UWideString> theTexts;
-    UString theLine;
-    UString theSeparators("{}");
-    char theBuffer[0x200];
-    long theResult = 0;
-    bool theInEntry = false;
-    while (!feof((FILE*)inFile) && theResult == 0) {
-        char* theRead = fgets(theBuffer, 0x200, inFile);
-        if (theRead != NULL) {
-            theLine = theRead;
-            theLine.Tokenize(theSeparators, theTokens);
-            if (theTokens.size() == 2) {
-                if (theInEntry == true) {
-                    if (theText.GetLength() > 0 && theText[(int)(theText.GetLength() - 1)] == '\n') {
-                        if (theText.GetLength() > 1)
-                            theText = theText.GetIndexedSubstring(0, theText.GetLength() - 2);
-                        else
-                            theText = "";
-                    }
-                    if (theText.GetLength() > 0 && theText[(int)(theText.GetLength() - 1)] == '\n') {
-                        if (theText.GetLength() > 1)
-                            theText = theText.GetIndexedSubstring(0, theText.GetLength() - 2);
-                        else
-                            theText = "";
-                    }
-                    theTexts.push_back(theText);
-                    theResult = theTexts.size() != theLines.size() ? 9 : 0;
-                }
-                theLines.push_back(theTokens[0]);
-                theText = "";
-                theInEntry = true;
-            } else if (theTokens.size() <= 2) {
-                if (theInEntry == true)
-                    theText += theRead;
-            }
-        } else {
-            if (theInEntry == true) {
-                if (theText.GetLength() > 0 && theText[(int)(theText.GetLength() - 1)] == '\n') {
-                    if (theText.GetLength() > 1)
-                        theText = theText.GetIndexedSubstring(0, theText.GetLength() - 2);
-                    else
-                        theText = "";
-                }
-                if (theText.GetLength() > 0 && theText[(int)(theText.GetLength() - 1)] == '\n') {
-                    if (theText.GetLength() > 1)
-                        theText = theText.GetIndexedSubstring(0, theText.GetLength() - 2);
-                    else
-                        theText = "";
-                }
-                theTexts.push_back(theText);
-            }
-            theResult = theTexts.size() != theLines.size() ? 9 : 0;
-        }
-    }
-    if (theResult == 0) {
-        if (inValidate == true)
-            theResult = this->ValidateText(theLines, inKind, theTexts);
-        if (theResult == 0)
-            theResult = this->ImportText(theLines, inKind, theTexts);
-    }
-    return theResult;
 }
 
 // FUNCTION: EXE 0x5b404a
@@ -672,70 +540,6 @@ void EEScenarioManager::SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag)
                                   inFlag);
 }
 
-// FUNCTION: EXE 0x5b463b
-// Parses "<id>_Condition:<name>" into the ID and the name; 9 when the line is not a condition entry
-long EEScenarioManager::ParseConditionID(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest)
-{
-    UWideString theNumber;
-    long theResult;
-    unsigned long theIndex = inLine.Find("_Condition:", 0);
-    if (theIndex <= 0 || theIndex >= inLine.GetLength())
-        theResult = 9;
-    else {
-        theNumber.CopyString((const char*)inLine, theIndex);
-        *outID = atoi(theNumber);
-        if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 11);
-        theResult = 0;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x5b46bf
-// Parses "<id>_Effect:<name>" (kind 0: "<id>_<name>") into the ID and the name; 9 when it is not an effect entry
-long EEScenarioManager::ParseEffectID(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest)
-{
-    UWideString theNumber;
-    unsigned long theIndex;
-    if (inKind <= 0) {
-        theIndex = inLine.Find("_", 0);
-        if (theIndex <= 0 || theIndex >= inLine.GetLength())
-            return 9;
-        theNumber.CopyString((const char*)inLine, theIndex);
-        *outID = atoi(theNumber);
-        if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 1);
-    } else {
-        theIndex = inLine.Find("_Effect:", 0);
-        if (theIndex <= 0 || theIndex >= inLine.GetLength())
-            return 9;
-        theNumber.CopyString((const char*)inLine, theIndex);
-        *outID = atoi(theNumber);
-        if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 8);
-    }
-    return 0;
-}
-
-// FUNCTION: EXE 0x5b4796
-// Parses "<id>_Player Name:<name>" into the player number and the name; 9 when it is not a player entry
-long EEScenarioManager::ParsePlayerName(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest)
-{
-    UWideString theNumber;
-    long theResult;
-    unsigned long theIndex = inLine.Find("_Player Name:", 0);
-    if (theIndex <= 0 || theIndex >= inLine.GetLength())
-        theResult = 9;
-    else {
-        theNumber.CopyString((const char*)inLine, theIndex);
-        *outID = atoi(theNumber);
-        if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 13);
-        theResult = 0;
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5b481a
 // Shows the next queued dialog message (in a cinematic the next cinematic one), stopping one-shot sounds for a
 // voiced one and moving the camera to its unit; none left: hides the messages; nothing while paused
@@ -786,71 +590,6 @@ void EEScenarioManager::ShowDialogMessage()
     gSoundManager->StopAllOneShotSounds();
 }
 
-// FUNCTION: EXE 0x5b4a95
-// Applies the trigger text entries: each goes to the media strings, else renames the effect / condition / player
-// it names and sets its text; stops with 9 at an unknown ID or an entry whose kind takes no text
-// The trigger text import's second pass (after ValidateText)
-long EEScenarioManager::ImportText(const std::vector<UString>& inLines, unsigned long inKind,
-                                   const std::vector<UWideString>& inTexts)
-{
-    UWideString theName;
-    long theResult = 0;
-    long theID;
-    for (unsigned long i = 0; i < inLines.size() && theResult == 0; i++) {
-        theResult = this->mMediaStrings.Import(*(inLines.begin() + i), inKind, inTexts[i]);
-        if (theResult == 0)
-            continue;
-        theResult = this->ParseEffectID(inLines[i], inKind, &theID, theName);
-        if (theResult == 0) {
-            EESMEffect* theEffect = this->FindEffectByID(theID);
-            if (theEffect == NULL) {
-                theResult = 9;
-                continue;
-            }
-            theEffect->mName = theName;
-            if (theEffect->mType == kSMEffectMedia) {
-                switch (theEffect->mMediaAction) {
-                case kSMMediaActionChangeText:
-                    theEffect->mDescription = *(inTexts.begin() + i);
-                    break;
-                case kSMMediaActionSendDialogue:
-                case kSMMediaActionSendChatMessage:
-                    theEffect->mMessage = *(inTexts.begin() + i);
-                    break;
-                default:
-                    theResult = 9;
-                    break;
-                }
-            } else if (theEffect->mType == kSMEffectObject) {
-                if (theEffect->mObjectAction == kSMObjectActionClassName)
-                    theEffect->mNewName = UWideString(*(inTexts.begin() + i));
-                else
-                    theResult = 9;
-            }
-            continue;
-        }
-        theResult = this->ParseConditionID(*(inLines.begin() + i), inKind, &theID, theName);
-        if (theResult == 0) {
-            EESMCondition* theCondition = this->FindConditionByID(theID);
-            if (theCondition != NULL && theCondition->mType == kSMConditionChatMessageContains) {
-                theCondition->mName = theName;
-                theCondition->mChatText = inTexts[i];
-            } else {
-                theResult = 9;
-            }
-            continue;
-        }
-        theResult = this->ParsePlayerName(inLines[i], inKind, &theID, theName);
-        if (theResult != 0 || (unsigned long)theID <= 0 || !((unsigned long)theID < gWorld.mNumPlayers))
-            continue;
-        if (gWorld.GetPlayer(theID) != NULL)
-            gWorld.GetPlayer(theID)->mName = theName;
-        else
-            theResult = 9;
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5b4d1a
 // Writes triggers, conditions, effects, objects and areas (not the built-ins), timed and pending effects, ID
 // counters, clocks, media strings, start camera and dialog messages; returns the first write error (ee_scenario
@@ -891,65 +630,6 @@ void EEScenarioManager::MoveCameraToStart()
     theLocation.SetX(theLocation.GetX() + theStepX);
     theLocation.SetY(theLocation.GetY() + theStepY);
     gWorld.mCameraControl.SetLocation(theLocation, false, true);
-}
-
-// FUNCTION: EXE 0x5b52bb
-// Checks the trigger text entries: lists an error (mImportErrors) for each unknown token, ID or player number,
-// wrong effect / condition kind or name that differs from the scenario's; 9 when there are any
-// The trigger text import's first pass
-long EEScenarioManager::ValidateText(std::vector<UString>& inLines, unsigned long inKind,
-                                     const std::vector<UWideString>& inTexts)
-{
-    UWideString theFormat;
-    UWideString theMessage;
-    UWideString theName;
-    long theID;
-    this->mImportErrors.clear();
-    for (unsigned long i = 0; i < inLines.size(); i++) {
-        if (this->mMediaStrings.Validate(inLines[i], inKind) == 0)
-            continue;
-        if (this->ParseEffectID(inLines[i], inKind, &theID, theName) == 0) {
-            EESMEffect* theEffect = this->FindEffectByID(theID);
-            if (theEffect == NULL) {
-                gResource->GetString(IDS_IS_INVALID_EFFECT_ID_FOR_TOKEN, theFormat);
-                sprintf(theMessage, theFormat, theID, (const char*)inLines[i]);
-            } else if (theEffect->GetType() == kSMEffectMedia
-                       && (theEffect->mMediaAction == kSMMediaActionChangeText || theEffect->mMediaAction == kSMMediaActionSendDialogue || theEffect->mMediaAction == kSMMediaActionSendChatMessage)
-                       || theEffect->GetType() == kSMEffectObject && theEffect->mObjectAction == kSMObjectActionClassName) {
-                if (!(theName != theEffect->GetName()))
-                    continue;
-                gResource->GetString(IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS, theFormat);
-                sprintf(theMessage, theFormat, (const char*)inLines[i], (const char*)theEffect->GetName());
-            } else {
-                gResource->GetString(IDS_IS_INVALID_EFFECT_TYPE_TO_BE_TOKEN, theFormat);
-                sprintf(theMessage, theFormat, (const char*)inLines[i]);
-            }
-        } else if (this->ParseConditionID(inLines[i], inKind, &theID, theName) == 0) {
-            EESMCondition* theCondition = this->FindConditionByID(theID);
-            if (theCondition == NULL) {
-                gResource->GetString(IDS_IS_INVALID_CONDITION_ID_FOR_TOKEN, theFormat);
-                sprintf(theMessage, theFormat, theID, (const char*)inLines[i]);
-            } else if (theCondition->GetType() == kSMConditionChatMessageContains) {
-                if (!(theName != theCondition->GetName()))
-                    continue;
-                gResource->GetString(IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS_2747, theFormat);
-                sprintf(theMessage, theFormat, (const char*)inLines[i], (const char*)theCondition->GetName());
-            } else {
-                gResource->GetString(IDS_IS_INVALID_CONDITION_TYPE_TO_BE_TOKEN, theFormat);
-                sprintf(theMessage, theFormat, (const char*)inLines[i]);
-            }
-        } else if (this->ParsePlayerName(inLines[i], inKind, &theID, theName) == 0) {
-            if (theID != 0 && (unsigned long)theID < gWorld.mNumPlayers)
-                continue;
-            gResource->GetString(IDS_INVALID_PLAYER_NUMBER_FOR_THIS_SCENARIO, theFormat);
-            sprintf(theMessage, theFormat, theID);
-        } else {
-            gResource->GetString(IDS_IS_INVALID_TOKEN, theFormat);
-            sprintf(theMessage, theFormat, (const char*)inLines[i]);
-        }
-        this->mImportErrors.push_back(theMessage);
-    }
-    return this->mImportErrors.size() > 0 ? 9 : 0;
 }
 
 // FUNCTION: EXE 0x5b5652
@@ -1543,4 +1223,105 @@ void EEScenarioManager::ObjectChanged(EESMObject* inObject, bool inParent, long 
         ee_scenario_list_set_parent(&theLists.mHost, inObject, inValue);
     else
         ee_scenario_list_rename_object_conditions(&theLists.mHost, inObject);
+}
+
+// ------------------------------------------------------------------------------------------------ the text file
+// The trigger text file of the instructions tab (EESEIAExport, EESEIAImport) is ee_scenario text.rs: ExportText
+// 0x1b23dc, ImportTriggerText 0x1b3ae9 with ValidateText 0x1b52bb, ImportText 0x1b4a95 and the line parsers
+// (ParseConditionID 0x1b463b, ParseEffectID 0x1b46bf, ParsePlayerName 0x1b4796). The elements' texts, the players'
+// names, the file and the language's error formats stay here, reached by operation (EESMTextOp)
+
+namespace {
+struct EESMTextContext {
+    EEScenarioManager* mManager;
+    FSFileSpec* mFile;
+    char mBuffer[0x200];
+};
+
+// an element's text by slot (EE_SCENARIO_TEXT_*: an effect's three, a condition's chat text)
+UWideString& EESMText(void* inElement, uint32_t inSlot)
+{
+    EESMEffect* theEffect = static_cast<EESMEffect*>(inElement);
+    switch (inSlot) {
+    case EE_SCENARIO_TEXT_DESCRIPTION: return theEffect->mDescription;
+    case EE_SCENARIO_TEXT_MESSAGE: return theEffect->mMessage;
+    case EE_SCENARIO_TEXT_NEW_NAME: return theEffect->mNewName;
+    }
+    return static_cast<EESMCondition*>(inElement)->mChatText;
+}
+
+// the import's messages by EE_SCENARIO_TEXT_ERROR_*
+const unsigned long kSMTextErrors[] = {IDS_IS_INVALID_TOKEN, IDS_IS_INVALID_EFFECT_ID_FOR_TOKEN,
+                                       IDS_IS_INVALID_EFFECT_TYPE_TO_BE_TOKEN,
+                                       IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS,
+                                       IDS_IS_INVALID_CONDITION_ID_FOR_TOKEN, IDS_IS_INVALID_CONDITION_TYPE_TO_BE_TOKEN,
+                                       IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS_2747,
+                                       IDS_INVALID_PLAYER_NUMBER_FOR_THIS_SCENARIO};
+
+void* EESMTextOp(void* inContext, uint32_t inOp, uint32_t inSlot, long inValue, void* inElement, const char* inText,
+                 const char* inText2)
+{
+    EESMTextContext* theContext = static_cast<EESMTextContext*>(inContext);
+    EEScenarioManager* m = theContext->mManager;
+    FILE* theFile = *theContext->mFile;
+    EEPlayer* thePlayer;
+    switch (inOp) {
+    case EE_SCENARIO_TEXT_OP_GET: return (void*)(const char*)EESMText(inElement, inSlot);
+    case EE_SCENARIO_TEXT_OP_SET: EESMText(inElement, inSlot) = inText; break;
+    case EE_SCENARIO_TEXT_OP_PLAYERS: return (void*)(uintptr_t)gWorld.mNumPlayers;
+    case EE_SCENARIO_TEXT_OP_PLAYER_NAME:
+        thePlayer = gWorld.GetPlayer(inValue);
+        return thePlayer != NULL ? (void*)(const char*)thePlayer->mName : NULL;
+    case EE_SCENARIO_TEXT_OP_SET_PLAYER_NAME: gWorld.GetPlayer(inValue)->mName = inText; break;
+    case EE_SCENARIO_TEXT_OP_WRITE: return fprintf(theFile, "%s", inText) < 0 ? NULL : theContext;
+    case EE_SCENARIO_TEXT_OP_EOF: return feof(theFile) ? theContext : NULL;
+    case EE_SCENARIO_TEXT_OP_READ: return fgets(theContext->mBuffer, sizeof(theContext->mBuffer), theFile);
+    case EE_SCENARIO_TEXT_OP_CLEAR_ERRORS: m->mImportErrors.clear(); break;
+    case EE_SCENARIO_TEXT_OP_ERROR: {
+        UWideString theFormat;
+        UWideString theMessage;
+        gResource->GetString(kSMTextErrors[inSlot], theFormat);
+        if (inSlot == EE_SCENARIO_TEXT_ERROR_EFFECT_ID || inSlot == EE_SCENARIO_TEXT_ERROR_CONDITION_ID
+            || inSlot == EE_SCENARIO_TEXT_ERROR_PLAYER)
+            sprintf(theMessage, theFormat, inValue, inText);
+        else
+            sprintf(theMessage, theFormat, inText, inText2);
+        m->mImportErrors.push_back(theMessage);
+        break;
+    }
+    case EE_SCENARIO_TEXT_OP_MEDIA_EXPORT: return (void*)(intptr_t)m->mMediaStrings.Export(*theContext->mFile);
+    case EE_SCENARIO_TEXT_OP_MEDIA_IMPORT:
+        return (void*)(intptr_t)m->mMediaStrings.Import(inText, (unsigned long)inValue, inText2);
+    case EE_SCENARIO_TEXT_OP_MEDIA_VALIDATE: return (void*)(intptr_t)m->mMediaStrings.Validate(inText, (unsigned long)inValue);
+    }
+    return NULL;
+}
+
+struct EESMTextFile {
+    EESMTextContext mContext;
+    EESMLists mLists;
+    EeScenarioTextHost mHost;
+    EESMTextFile(EEScenarioManager* inManager, FSFileSpec& inFile) : mContext{inManager, &inFile}, mLists(inManager)
+    {
+        this->mHost = {&this->mLists.mHost, &this->mContext, EESMTextOp};
+    }
+};
+}   // namespace
+
+// FUNCTION: EXE 0x5b23dc
+// Writes the trigger text file (EESEIAExport): the media strings, then the effect, condition and player name
+// entries; 9 on a write error
+long EEScenarioManager::ExportText(FSFileSpec& inFile)
+{
+    EESMTextFile theText(this, inFile);
+    return ee_scenario_text_export(&theText.mHost);
+}
+
+// FUNCTION: EXE 0x5b3ae9
+// Reads a trigger text file (EESEIAImport) of "{id_Kind:name}" lines, each followed by its text; with inValidate
+// lists the bad entries first (mImportErrors), then applies them; 9 on a bad entry
+long EEScenarioManager::ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate)
+{
+    EESMTextFile theText(this, inFile);
+    return ee_scenario_text_import(&theText.mHost, inKind, inValidate);
 }

@@ -57,10 +57,9 @@ public:
     void Update();                          // 0x1b20e6 (EEPhysics 0x153265: the per-tick clock and trigger update)
     long ExportText(FSFileSpec& inFile);    // 0x1b23dc (EESEIAExport 0x16ffd0; `ret 4`)
     void MoveCameraToStart();               // 0x1b5173 (Update, while mIsMovingCamera; `ret`)
-    // the trigger text import (EESEIAImport 0x170439; provisional names; `ret 0xc` each)
+    // the trigger text import (EESEIAImport 0x170439; provisional name; `ret 0xc`; ee_scenario text.rs with
+    // ValidateText 0x1b52bb, ImportText 0x1b4a95 and the line parsers 0x1b463b, 0x1b46bf, 0x1b4796)
     long ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate);   // 0x1b3ae9
-    long ImportText(const std::vector<UString>& inLines, unsigned long inKind, const std::vector<UWideString>& inTexts);  // 0x1b4a95
-    long ValidateText(std::vector<UString>& inLines, unsigned long inKind, const std::vector<UWideString>& inTexts);    // 0x1b52bb (errors into mImportErrors)
     // 0x1b33d7 / 0x1b396b: fill outNames with the scenario's area / object names (EESEEvents' combo helper;
     // provisional names)
     // inline (COMDAT 0x17cadf, emitted by EESETriggerScreen.cpp): condition inIndex, 0 past the end
@@ -104,10 +103,6 @@ public:
     long GetObjectIndex(EESMObject* inObject);  // 0x1b32e4 (-1 if none; EESMObject::SetName)
     // the editor's name lists ("[id]" prefixes while mShowDebugIDs; provisional names)
     void SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag);  // 0x1b45cb (EESMEffect 0x1bd860)
-    // the trigger import's line parsers (0x1b4a95 / 0x1b52bb call them; 9 when the key is missing; provisional names)
-    long ParseConditionID(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest);   // 0x1b463b
-    long ParseEffectID(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest);  // 0x1b46bf
-    long ParsePlayerName(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest);    // 0x1b4796
     EESMEffect* GetTimedEffect(unsigned long inIndex);     // 0x1b9f8f (mEffects[mTimedEffects[i].mEffectIndex], 0 past the end)
     unsigned long GetNumTimedEffects() { return (unsigned long)ee_scenario_timed_count(this->mTimedEffects); }
     EeScenarioTimedEntry GetTimedEntry(unsigned long inIndex) { return ee_scenario_timed_at(this->mTimedEffects, inIndex); }

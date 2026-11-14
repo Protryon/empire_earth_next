@@ -726,7 +726,7 @@ pub struct EeScenarioListHost {
 }
 
 /// [`Lists`] over the C++ host. Every borrow it hands out ends before the next operation.
-struct HostLists<'a>(&'a EeScenarioListHost);
+pub(crate) struct HostLists<'a>(pub(crate) &'a EeScenarioListHost);
 
 impl HostLists<'_> {
     fn call(&mut self, op: u32, list: u32, index: usize, element: Element) -> *mut c_void {

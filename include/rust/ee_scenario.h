@@ -816,6 +816,75 @@ constexpr static const uint32_t EE_SCENARIO_ENTRIES_CONDITIONS = 0;
 
 constexpr static const uint32_t EE_SCENARIO_ENTRIES_EFFECTS = 1;
 
+/// An element's text by slot: an effect's `mDescription`, `mMessage`, `mNewName`; a condition's `mChatText`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_DESCRIPTION = 0;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_MESSAGE = 1;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_NEW_NAME = 2;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_CHAT = 3;
+
+/// The import's error messages (`mImportErrors`), each the language's format (`IDS_IS_INVALID_TOKEN`,
+/// `IDS_IS_INVALID_EFFECT_ID_FOR_TOKEN`, `IDS_IS_INVALID_EFFECT_TYPE_TO_BE_TOKEN`,
+/// `IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS`, the condition's three, `IDS_INVALID_PLAYER_NUMBER_FOR_THIS_
+/// SCENARIO`). The id kinds format (id, line), the others (line, the scenario's name).
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_TOKEN = 0;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_EFFECT_ID = 1;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_EFFECT_TYPE = 2;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_EFFECT_NAME = 3;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_CONDITION_ID = 4;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_CONDITION_TYPE = 5;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_CONDITION_NAME = 6;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_PLAYER = 7;
+
+/// The host's operations (`EESMTextOp`, EEScenarioManager.cpp).
+/// An element's text `slot` as a C string.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_GET = 0;
+
+/// An element's text `slot` set to `text`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_SET = 1;
+
+/// `gWorld.mNumPlayers` (in the answer).
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_PLAYERS = 2;
+
+/// Player `value`'s name, NULL when there is no such player.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_PLAYER_NAME = 3;
+
+/// Player `value`'s name set to `text`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_SET_PLAYER_NAME = 4;
+
+/// `text` written to the file (`fprintf("%s")`): NULL on a write error.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_WRITE = 5;
+
+/// The file's end flag (`feof`): not NULL when set.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_EOF = 6;
+
+/// The next line, 511 bytes at most (`fgets` into 0x200 bytes): NULL at the end.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_READ = 7;
+
+/// `mImportErrors.clear()`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_CLEAR_ERRORS = 8;
+
+/// Error `slot` (`EE_SCENARIO_TEXT_ERROR_*`) formatted with `value` (an id) or `text2`, and `text` (the line).
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_ERROR = 9;
+
+/// The media strings' `Export` (the answer its result).
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_MEDIA_EXPORT = 10;
+
+/// The media strings' `Import(text, value, text2)` (the answer its result).
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_MEDIA_IMPORT = 11;
+
+/// The media strings' `Validate(text, value)` (the answer its result).
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_MEDIA_VALIDATE = 12;
+
 /// `FindObjectByID(a)`: -1 without the object or (when `b` is 1) when its `mHasAttributeCheck` is 0, else its
 /// `Evaluate(0)` and then `mUnits.size()`.
 constexpr static const uint32_t EE_SCENARIO_READ_TOKEN_OBJECT = 66;
@@ -1115,6 +1184,21 @@ struct EeScenarioListHost {
   EeScenarioManagerFields *manager;
   EeScenarioTimedQueue *timed;
   void *(*op)(void *ctx, uint32_t op, uint32_t list, size_t index, void *element, const char *text);
+};
+
+/// The C++ host of the text file (`EESMTextOp` in EEScenarioManager.cpp): the lists' host and one operation
+/// callback (`EE_SCENARIO_TEXT_OP_*`: `slot` a text slot or an error kind, `value` a player, an id or the file's
+/// version, `text` and `text2` NUL-terminated strings).
+struct EeScenarioTextHost {
+  const EeScenarioListHost *lists;
+  void *ctx;
+  void *(*op)(void *ctx,
+              uint32_t op,
+              uint32_t slot,
+              long value,
+              void *element,
+              const char *text,
+              const char *text2);
 };
 
 /// One trigger entry: the NOT flag (0/1) or the delay, the operator, the condition or effect index.
@@ -1518,6 +1602,18 @@ void ee_scenario_list_rename_object_conditions(const EeScenarioListHost *host, v
 /// # Safety
 /// As [`ee_scenario_list_rename_object_conditions`].
 void ee_scenario_list_set_parent(const EeScenarioListHost *host, void *object, long parent);
+
+/// `ExportText` ([`export`]).
+///
+/// # Safety
+/// `host` must be a valid host table over the live manager and an open file.
+long ee_scenario_text_export(const EeScenarioTextHost *host);
+
+/// `ImportTriggerText` ([`import`]): `kind` the file's version, `validate` the editor's first pass.
+///
+/// # Safety
+/// As [`ee_scenario_text_export`].
+long ee_scenario_text_import(const EeScenarioTextHost *host, unsigned long kind, bool validate);
 
 }  // extern "C"
 
