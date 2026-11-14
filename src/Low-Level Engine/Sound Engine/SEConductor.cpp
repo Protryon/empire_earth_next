@@ -27,6 +27,10 @@ SEConductor::SEConductor()
     this->mMusicFolder = "";
     this->mVolume = 1.0f;
     this->mReverbState = 1;
+    this->mReverbGain = 0.0f;
+    this->mReverbMix = -10.0f;
+    this->mReverbTime = 1000.0f;
+    this->mReverbHighFreqRTRatio = 0.001f;
     this->mMixer = NULL;
     this->mPerformance = NULL;
     this->mLoader = NULL;
@@ -67,6 +71,13 @@ void* SEConductor::Resolve(void* inConductor, const char* inFile, size_t* outLen
         snprintf(thePath, MAX_PATH, "%s", inFile);
     thePath[MAX_PATH - 1] = 0;
     FILE* theStream = PlatFOpen(thePath, "rb");
+#ifdef _WIN32
+    // the general MIDI collection is the system's own (a song's GM and GS instruments come from it)
+    if (theStream == NULL && !_stricmp(inFile, "gm.dls") && GetSystemDirectoryA(thePath, MAX_PATH - 16) != 0) {
+        strcat(thePath, "\drivers\gm.dls");
+        theStream = PlatFOpen(thePath, "rb");
+    }
+#endif
     if (theStream == NULL)
         return NULL;
     fseek(theStream, 0, SEEK_END);
@@ -135,6 +146,7 @@ long SEConductor::InitializeConductor()
             this->mPlayingID = -1;
             this->SetVolume(this->mVolume);
             this->SetIntensity(this->mIntensity, true);
+            this->SetReverb(this->mReverbState);
             theResult = kErrorOK;
             for (unsigned long i = 0; i < this->mScores.size() && theResult == kErrorOK; i++) {
                 long theID;
@@ -268,7 +280,7 @@ long SEConductor::SetIntensity(unsigned long inIntensity, bool inImmediate)
     if (inIntensity != this->mIntensity || inImmediate) {
         this->mIntensity = inIntensity;
         if (this->mConductorState == 1)
-            DmPerformance_setMasterGrooveLevel(this->mPerformance, (int8_t)inIntensity);
+            DmPerformance_setGrooveLevel(this->mPerformance, (uint8_t)inIntensity);
     }
     this->mLock->Leave();
     return kErrorOK;
@@ -285,19 +297,29 @@ long SEConductor::SetMusicFolder(const UWideString& inFolder)
     return kErrorOK;
 }
 
-// Turns the reverb on (1) or off; dmusic's synthesizer has no reverb, so only the state is kept
+// Turns the reverb on (1) or off, in the style last set; while not running the state is kept for the start
 long SEConductor::SetReverb(unsigned long inReverb)
 {
     this->mLock->Enter();
     this->mReverbState = inReverb;
+    if (this->mConductorState == 1)
+        DmPerformance_setReverb(this->mPerformance, inReverb == 1, this->mReverbGain, this->mReverbMix, this->mReverbTime,
+                                this->mReverbHighFreqRTRatio);
     this->mLock->Leave();
     return kErrorOK;
 }
 
-// The original set the DirectMusic port's Waves reverb; dmusic's synthesizer has none
+// Sets the reverb's style (each song has its own: input gain and mix in dB, decay time in ms, high-frequency decay
+// ratio) and applies it in the reverb's current state
 long SEConductor::SetReverbStyle(float inGain, float inHighFreqRTRatio, float inMix, float inTime)
 {
-    return kErrorOK;
+    this->mLock->Enter();
+    this->mReverbGain = inGain;
+    this->mReverbHighFreqRTRatio = inHighFreqRTRatio;
+    this->mReverbMix = inMix;
+    this->mReverbTime = inTime;
+    this->mLock->Leave();
+    return this->SetReverb(this->mReverbState);
 }
 
 // Sets the music volume (0..1; quieter than 0.01 is silent). The original set the port to 1000 * ln(volume)
@@ -312,14 +334,14 @@ long SEConductor::SetVolume(float inVolume)
     return kErrorOK;
 }
 
-// Stops all music now while running; returns 1 on a dmusic error
+// Stops all music while running: what is due within the next 100 ms still sounds (a score started just before
+// plays its first notes), then every note is released
 long SEConductor::Stop()
 {
     long theResult = kErrorOK;
     this->mLock->Enter();
     if (this->mConductorState == 1) {
-        if (DmPerformance_playSegment(this->mPerformance, NULL, DmTiming_INSTANT) != DmResult_SUCCESS)
-            theResult = 1;
+        DmPerformance_stop(this->mPerformance, 100);
         this->mPlayingID = -1;
     }
     this->mLock->Leave();

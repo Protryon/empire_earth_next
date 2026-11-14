@@ -48,8 +48,10 @@ DmDlsInstrument* DmInstrument_getDlsInstrument(DmInstrument* slf) {
 		return NULL;
 	}
 
-	uint32_t bank = (slf->patch & 0xFF00U) >> 8;
-	uint32_t patch = slf->patch & 0xFFU;
+	// (EE patch) DLS bank: drum flag in bit 31, MSB in bits 8-14, LSB in bits 0-6; the band patch: MSB 16-22, LSB 8-14,
+	// drum 31. Upstream compared the LSB alone, so an instrument in bank MSB 1 / LSB 2 matched as bank 2.
+	uint32_t bank = (slf->patch & 0x80000000U) | (((slf->patch >> 16) & 0x7FU) << 8) | ((slf->patch >> 8) & 0x7FU);
+	uint32_t patch = slf->patch & 0x7FU;
 
 	DmDlsInstrument* ins = NULL;
 	for (long long i = slf->dls->instrument_count-1; i >= 0; --i) {
@@ -61,7 +63,7 @@ DmDlsInstrument* DmInstrument_getDlsInstrument(DmInstrument* slf) {
 		//                   thus prevents problems where the same channel is re-used multiple times, specifically in
 		//                   Gothic 1, which assigns a drum kit and melodic instrument to the same channel. This works
 		//                   in conjunction with the TSF creation in Dm_createHydra to prevent drum kit issues in G1.
-		if ((ins->bank & 127) == bank && ins->patch == patch) {
+		if ((ins->bank & 0x80007F7FU) == bank && ins->patch == patch) {
 			return ins;
 		}
 	}
@@ -104,15 +106,13 @@ DmResult DmBand_download(DmBand* slf, DmLoader* loader) {
 			Dm_report(DmLogLevel_INFO,
 			          "DmBand: Trying to download instrument '%s' from the general MIDI collection (gm.dls)",
 			          instrument->reference.name);
-		} else if (instrument->options & DmInstrument_ROLAND_GS) {
-			instrument->reference.file = "gs.dls";
+		} else if (instrument->options & (DmInstrument_ROLAND_GS | DmInstrument_YAMAHA_XG)) {
+			// (EE patch) The original has one built-in collection, gm.dls (the Roland GM/GS sound set, its GS variations
+			// in their own banks): a GS or XG instrument comes from it too. Upstream asked for gs.dls / xg.dls, which do
+			// not exist, and the part stayed silent (Pawns.sgt's vibraphone and orchestra hit).
+			instrument->reference.file = "gm.dls";
 			Dm_report(DmLogLevel_INFO,
-			          "DmBand: Trying to download instrument '%s' from the Roland GS collection (gs.dls)",
-			          instrument->reference.name);
-		} else if (instrument->options & DmInstrument_YAMAHA_XG) {
-			instrument->reference.file = "xg.dls";
-			Dm_report(DmLogLevel_INFO,
-			          "DmBand: Trying to download instrument '%s' from the Yamaha XG collection (xg.dls)",
+			          "DmBand: Trying to download GS/XG instrument '%s' from the default collection (gm.dls)",
 			          instrument->reference.name);
 		}
 

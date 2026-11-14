@@ -13,6 +13,15 @@ enum {
 
 #define DmInt_PAN_CENTER 0.5F
 #define DmInt_VOLUME_MAX 1.0F
+#define DmInt_VOLUME_GM_DEFAULT (100.0F / 127.0F)
+
+// (EE patch) DLS level 1 default connections, as the original's synth applies them: CC7 volume and CC11 expression each
+// attenuate by 40 * log10(value), the concave curve, a gain of value^2 each. TSF's channel volume is a plain linear gain,
+// and upstream let CC11 overwrite CC7.
+static void DmSynth_applyVolume(DmSynthChannel* chan) {
+	float g = chan->volume * chan->expression;
+	tsf_channel_set_volume(chan->font->syn, chan->channel, g * g);
+}
 
 void DmSynth_init(DmSynth* slf, uint32_t sample_rate) {
 	if (slf == NULL) {
@@ -47,7 +56,9 @@ void DmSynth_reset(DmSynth* slf) {
 			continue;
 		}
 
-		tsf_channel_set_volume(chan->font->syn, chan->channel, chan->reset_volume);
+		chan->volume = chan->reset_volume;
+		chan->expression = chan->reset_expression;
+		DmSynth_applyVolume(chan);
 		tsf_channel_set_pan(chan->font->syn, chan->channel, chan->reset_pan);
 		tsf_channel_set_pitchwheel(chan->font->syn, chan->channel, chan->reset_pitch);
 	}
@@ -158,7 +169,10 @@ static DmResult DmSynth_assignInstrumentChannels(DmSynth* slf, DmBand* band) {
 		// If this is the first time we're initializing the channel,
 		// set the reset fields to the default values.
 		if (chan->font == NULL) {
-			chan->reset_volume = DmInt_VOLUME_MAX;
+			chan->reset_volume = DmInt_VOLUME_GM_DEFAULT;   // (EE patch) a General MIDI reset: volume 100, expression 127
+			chan->reset_expression = DmInt_VOLUME_MAX;
+			chan->volume = chan->reset_volume;
+			chan->expression = chan->reset_expression;
 			chan->reset_pan = DmInt_PAN_CENTER;
 			chan->reset_pitch = DmInt_PITCH_BEND_NEUTRAL;
 			chan->transpose = 0;
@@ -172,8 +186,11 @@ static DmResult DmSynth_assignInstrumentChannels(DmSynth* slf, DmBand* band) {
 			continue;
 		}
 
-		uint32_t bank = (ins->patch & 0xFF00U) >> 8;
-		uint32_t patch = ins->patch & 0xFFU;
+		// (EE patch) The presets carry the DLS bank (MSB << 8 | LSB, drum kits 128); the band patch holds MSB in bits
+		// 16-22, LSB in bits 8-14 and the drum flag in bit 31. Upstream asked for the LSB alone: no preset matched, and
+		// the channel kept preset 0, so most instruments played as the collection's first one.
+		uint32_t bank = (ins->patch & 0x80000000U) ? 128U : (((ins->patch >> 16) & 0x7FU) << 8) | ((ins->patch >> 8) & 0x7FU);
+		uint32_t patch = ins->patch & 0x7FU;
 
 		tsf_set_volume(fnt->syn, slf->volume);
 		tsf_channel_set_bank_preset(fnt->syn, (int) ins->channel, (int) bank, (int) patch);
@@ -187,9 +204,10 @@ static DmResult DmSynth_assignInstrumentChannels(DmSynth* slf, DmBand* band) {
 
 		if (ins->options & DmInstrument_VALID_VOLUME) {
 			float vol = (float) ins->volume / (float) DmInt_MIDI_MAX;
-			tsf_channel_set_volume(fnt->syn, (int) ins->channel, vol);
+			chan->volume = vol;
 			chan->reset_volume = vol;
 		}
+		DmSynth_applyVolume(chan);   // (EE patch) also for a band without a volume: the font's channel starts at full gain
 
 		if (ins->options & DmInstrument_VALID_TRANSPOSE) {
 			chan->transpose = ins->transpose;
@@ -229,8 +247,12 @@ void DmSynth_sendControl(DmSynth* slf, uint32_t channel, uint8_t control, float 
 		return;
 	}
 
-	if (control == DmInt_MIDI_CC_VOLUME || control == DmInt_MIDI_CC_EXPRESSION) {
-		tsf_channel_set_volume(chan->font->syn, chan->channel, value);
+	if (control == DmInt_MIDI_CC_VOLUME) {
+		chan->volume = value;
+		DmSynth_applyVolume(chan);
+	} else if (control == DmInt_MIDI_CC_EXPRESSION) {
+		chan->expression = value;
+		DmSynth_applyVolume(chan);
 	} else if (control == DmInt_MIDI_CC_PAN) {
 		tsf_channel_set_pan(chan->font->syn, chan->channel, value);
 	} else {
@@ -248,8 +270,10 @@ void DmSynth_sendControlReset(DmSynth* slf, uint32_t channel, uint8_t control, f
 		return;
 	}
 
-	if (control == DmInt_MIDI_CC_VOLUME || control == DmInt_MIDI_CC_EXPRESSION) {
+	if (control == DmInt_MIDI_CC_VOLUME) {
 		chan->reset_volume = reset;
+	} else if (control == DmInt_MIDI_CC_EXPRESSION) {
+		chan->reset_expression = reset;
 	} else if (control == DmInt_MIDI_CC_PAN) {
 		chan->reset_pan = reset;
 	} else {
@@ -349,6 +373,13 @@ void DmSynth_setVolume(DmSynth* slf, float vol) {
 
 size_t DmSynth_render(DmSynth* slf, void* buf, size_t len, DmRenderOptions fmt) {
 	int channels = (fmt & DmRender_STEREO) ? 2 : 1;
+
+	// (EE patch) No instruments yet (before the first band): silence. Upstream left the buffer as it was, so a
+	// caller's reused buffer played again (and with the reverb fed back on itself, rose to full scale).
+	if (slf->fonts.length == 0) {
+		memset(buf, 0, fmt & DmRender_FLOAT ? len * 4 : len * 2);
+	}
+
 	for (size_t i = 0; i < slf->fonts.length; ++i) {
 		DmSynthFont* fnt = &slf->fonts.data[i];
 

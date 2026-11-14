@@ -105,42 +105,49 @@ static uint32_t Dm_toEmbellishmentFlagset(DmCommandType cmd) {
 DmPattern* DmStyle_getRandomPattern(DmStyle* slf, uint32_t groove, DmCommandType cmd) {
 	uint32_t embellishment = Dm_toEmbellishmentFlagset(cmd);
 
-	// Select a random pattern according to the current groove level.
-	// TODO(lmichaelis): This behaviour seems to be associated with DX < 8 only, newer versions should
-	//                   have some way of defining how to select the pattern if more than 1 choice is available
-	//                   but I couldn't find it.
-
-	int64_t index = Dm_rand() % (uint32_t) slf->patterns.length;
-	bool found_one = false;
-	do {
+	// (EE patch) As the original chooses, measured against it on Empire Earth's Pawns.sgt: of the patterns
+	// whose groove range holds the level, the longest (the original played the 12-measure "Mid - Vibe12bar" every time,
+	// the same every run, where upstream drew any groove-2 pattern at random); a random one only among equals. When no
+	// range holds the level, the patterns of the nearest range (the original does not fall silent; upstream did).
+	// Patterns with a differing embellishment are not supported; neither are one-measure groove patterns (a fix for
+	// Gothic 2, in which some are empty with a groove range of 1-100).
+	uint32_t best_distance = UINT32_MAX;
+	uint32_t best_length = 0;
+	size_t candidates = 0;
+	for (int pass = 0; pass < 2; ++pass) {
+		size_t pick = pass == 1 ? (size_t) (Dm_rand() % (uint32_t) candidates) : 0;
 		for (size_t i = 0; i < slf->patterns.length; ++i) {
 			DmPattern* pttn = &slf->patterns.data[i];
-
-			// Ignore patterns outside the current groove level.
-			if (groove < pttn->groove_bottom || groove > pttn->groove_top) {
-				continue;
-			}
-
-			// Patterns with a differing embellishment are not supported
 			if (pttn->embellishment != embellishment && !(pttn->embellishment & embellishment)) {
 				continue;
 			}
-
-			// Fix for Gothic 2 in which some patterns are empty but have a groove range of 1-100 with no embellishment
-			// set.
 			if (pttn->embellishment == DmCommand_GROOVE && pttn->length_measures == 1) {
 				continue;
 			}
-
-			if (index == 0) {
-				return pttn;
+			uint32_t d = groove < pttn->groove_bottom ? pttn->groove_bottom - groove
+			           : groove > pttn->groove_top    ? groove - pttn->groove_top
+			                                          : 0;
+			uint32_t len = pttn->length_measures;
+			if (pass == 0) {
+				if (d < best_distance || (d == best_distance && len > best_length)) {
+					best_distance = d;
+					best_length = len;
+					candidates = 0;
+				}
+				if (d == best_distance && len == best_length) {
+					candidates += 1;
+				}
+			} else if (d == best_distance && len == best_length) {
+				if (pick == 0) {
+					return pttn;
+				}
+				pick -= 1;
 			}
-
-			index -= 1;
-			found_one = true;
 		}
-	} while (found_one);
-
+		if (candidates == 0) {
+			return NULL;
+		}
+	}
 	return NULL;
 }
 

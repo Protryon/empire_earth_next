@@ -72,7 +72,11 @@ private:
     DmLoader* mLoader;                      // while running
     float mVolume;                          // 1.0
     unsigned long mConductorState;          // 0 stopped, 1 running
-    unsigned long mReverbState;             // 1 (kept; the synthesizer has no reverb)
+    unsigned long mReverbState;             // 1: the reverb is on
+    float mReverbGain;                      // the reverb's style (SetReverbStyle): input gain, dB
+    float mReverbMix;                       // its mix, dB
+    float mReverbTime;                      // its decay time, ms
+    float mReverbHighFreqRTRatio;           // its high-frequency decay ratio
     long mNextScoreID;                      // wraps -1 to 0
     long mPlayingID;                        // the score last started (-1: none)
     unsigned long mIntensity;               // the master groove level
