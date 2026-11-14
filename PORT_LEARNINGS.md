@@ -20354,3 +20354,75 @@ conscription, drop object and special location live under five seconds, so CALK 
   and buttons) and `PlaySound` run in EE-SIM but draw and sound nothing there: the lead should cast an earthquake,
   hurricane, volcano and meteor storm in a tour and see and hear them.
 - **Gates.** Commit 1 (on the unmodified code): build `--sim` 0/0, calamity capture seeds 2-3 PASS (183 digests; CALI/CALK recorded), oracle seeds 2-3 identical. Commit 2: build `--sim` 0/0, calamity capture seeds 2-3 PASS (187 digests, CALI/CALK included), oracle 2-3 identical; the Rust gate's one failure was ee_gx's timing test `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags` under load (passes alone), ee_tech clippy and rustfmt clean. Commits 3-4 (built together): calamity capture 2-3 PASS (CALK: every save byte and reload equal), oracle 2-3 identical, saveload `oracle,calamity` 4/4 each with `--expect` PASS. Commit 5: calamity capture 2-3 PASS, oracle 2-3 identical. Merged with `rust` 024b9ef2 (no conflict; headers current, no include to narrow): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle (169 digests), late (170), space (171), calamity (187), scenario (22) PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS (tests, clippy, rustfmt, headers); the test profile 0/0.
+
+## R5b.4, thirtieth round: the air traffic control whole in Rust; the saved world's running state, the groups' Load/Save and the tech nodes' assignment in Rust (ee_units atc.rs, atc_save.rs, world_save.rs, group_save.rs; ee_tech nodes.rs; branch rust-r5b4-core30, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| ebafb0e3 | `EEAirTrafficControl` whole in Rust (atc.rs; atc_save.rs over the Rust state); readers on `GetSlotAirport`, `GetMaxCargo`/`GetUsedCargo` | +134 -750, net -616 |
+| a2f24080 | `EEPWorldHelper`'s running state (0.254-0.279) in Rust (world_save.rs) | +296 -624, net -328 |
+| 7c41b820 | `EEGroup`'s Load and Save in Rust (group_save.rs) | +33 -35, net -2 |
+| ffd78e30 | the tech node's and epoch's `operator=` field copies (ee_tech `assign`) | +4 -26, net -22 |
+| ae0a1981 | (merge) `rust` 0853699a: no conflict; `rust_build.py header` and `rust_includes.py` changed nothing | |
+| 2b32b5bc | the new modules' clippy (`write_with_newline`, `needless_borrow`, the original's negated float comparisons allowed) and rustfmt | 0 |
+
+The round's C++: net -968 (+467 -1435).
+
+- **`EEAirTrafficControl` whole** (atc.rs): the airports, their landing and takeoff queues and the cargo totals are
+  a Rust state (`EeUnitsAtc`) behind the C++ object's `mRust`; every method is the C++ body in its order over one
+  host (`EEATCHost`, 24 operations: the units' class weights, capacity, family, air traffic type and cruise altitude,
+  references, the clearance flag, hit points, cargo room and cargo test, command, the exiting unit, tiles, locations,
+  container, `Kill`, the reroute (`SetHomeBase`, `StartAction`, `ActionChanged`), the home base, ids, the world's
+  unit by id, the dump's lines). The host may come back into the same control while a body runs (a plane's `Kill`
+  takes its weight off the used cargo through `RemoveCargoWeight`; a rerouted plane's `ActionChanged` queues it at its
+  new airport), so no Rust reference to the state lives across a host call: each access borrows it anew through the
+  raw pointer and the queues are walked by index. `IsTakeOffDone`'s distance is ee_ge's `distance_squared_to` over the
+  host's positions. `GetCandidates`' `std::sort` is a stable sort (the original's few candidates were sorted by
+  insertion, which keeps equal distances in slot order; with more than 16-32 airports the original's introsort was
+  not stable and platform-dependent). The class's other readers use `GetNumSlots`/`GetSlotAirport` and
+  `GetMaxCargo`/`GetUsedCargo` (EEUCAirplane, EEUCPlanetSpaceship, EEUCLandable, EEUnitClass, EEComplexUnit).
+  atc_save.rs reads and writes the Rust state over the file's primitives only; a loaded unit is its saved id until
+  `RepairPointers` (as the original's `reinterpret_cast`).
+- **The saved world's running state** (world_save.rs): `EEPWorldHelper`'s port parts (0.254 to 0.279) are one Rust
+  sequence each for Load and Save after the world's settings: the unit chain's and the stepped lists' order, the
+  forests' renewals, the computer players' schedule, the tiles' and regions' unit order, the ghosts, the players'
+  unit lists, with the other systems' parts (path manager, area effects, experiment timers, towns, continent regions,
+  resource state, searches, active groups, graph searches) as host operations in their places and the version's
+  predicates asked by index. A loaded part is a Rust record handed to `EEAfterLoad` at the point the original
+  registered it (so the first tick's restores keep their order among the other systems'), and `ee_units_world_restore`
+  puts it back over host operations on the units by address (relink, list set, references, tile nodes, buckets).
+  The ghosts' records and the units made from them are Rust's until the first tick; `EEFindLoadedGhostUnit` still
+  makes the unit in C++. The ghosts' gathering (attackers, gatherers, goals) stays C++ (`GatherGhosts`).
+- **`EEGroup`'s Load and Save** (group_save.rs) over player_save.rs's host (operations 320-324). Two defined cases: a
+  failed kind read keeps the formation (the original used an uninitialised word), a failed id read pushes 0.
+- **The tech nodes' `operator=`**: the record fields a node and an epoch copy are `ee_tech_node_assign` (nodes.rs
+  `assign`); the original node copy's `mData->mMakesUnit` self-assignment (the data is shared) is dropped.
+
+**For the legacy harness and the renderer.** `EEAirTrafficControl`'s layout changed (the vector of airports and the
+two totals are behind `mRust`); nothing in tools reads it. No renderer code reads the air traffic. Only a tour would
+show the holding patterns' and takeoffs' home airport choice (`GetSlotAirport`), which the space and late profiles'
+games also run.
+
+- **Coverage.** The air traffic runs in every game with an airport (late, space profiles: the out-of-sync checksum
+  sums every control, so the oracle and the captures check it); the saveload matrix runs its Load, Save and
+  `RepairPointers`, and the world's running state save, load and restores (every part) and the groups' Load/Save.
+  The reroutes, `ClearAirportQueue`'s kinds, `ReplaceUnits`, a lost airport's planes, the dump, the tile-order
+  mismatch and the loads' failures are unit tests (atc_tests.rs 13, atc_save.rs 4, world_save_tests.rs 5,
+  group_save.rs 2, nodes_tests.rs 1 new).
+- **Behaviour:** none seen (the oracle identical; the captures equal their goldens; the saveload matrix equals its
+  expect file with the same first divergent ticks as before the round). Defined where the original was not: a group's
+  failed formation-kind read keeps its formation, a failed id read pushes 0; the air traffic's candidates sorted stably.
+- **Gates.** Commit 1: build `--sim` 0/0; oracle seeds 2-3 identical to `ref`; the saveload matrix (`--settings all
+  --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains
+  2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4).
+  Commits 2-4 (one build): build `--sim` 0/0; oracle seeds 2-3 identical; the matrix PASS with the same rows. On the
+  result merged with rust (0853699a): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3:
+  oracle 171, late 172, space 173, calamity 189 digests PASS (the SMSV/TNMT/CBGO digests without a golden are as on
+  `rust`); the matrix PASS with the same rows; the test profile links 0/0; the Rust gate failed on the new modules'
+  clippy, fixed (2b32b5bc), then PASS (3,386 tests). After the fix commit: build `--sim` 0/0, oracle seeds 2-3
+  identical.
+- **For the next round.** The round reached about -970 of the 1,500 aimed for: the tech tree's leftovers (the
+  captured entry points, the cost inputs, the media loads, `GetCostString`, the db `Load`'s containers) are C++
+  container and world calls with no decision in them; moving them over a host would not shrink the C++. Better
+  candidates: the tech tree's containers Rust-owned (`mNodes`, `mUnitClasses`, `mClassCosts`, which removes the host's
+  container operations and the C++ Load loops), the ghosts' gathering, `EEPlayer`'s `RepairPointers` and unit lists.
