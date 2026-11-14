@@ -10,11 +10,15 @@
 //! - the mouse's motion since the last state read (X, Y, the wheel Z in `WHEEL_DELTA` units) and its four buttons.
 //!
 //! `golden_input.txt` is the trace of the original C++ class (`tests/input/is_device_golden.cpp`); `golden.rs`
-//! replays it.
+//! replays it. The keyboard and the mouse that read the devices are `devices.rs` (round 2), with their own golden
+//! (`golden_keyboard.txt`, `tests/input/is_keyboard_golden.cpp`, replayed by `golden_keyboard.rs`).
 
+pub mod devices;
 pub mod ffi;
 #[cfg(test)]
 mod golden;
+#[cfg(test)]
+mod golden_keyboard;
 
 use std::collections::VecDeque;
 use std::os::raw::{c_long, c_ulong};

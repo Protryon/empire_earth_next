@@ -15,6 +15,5 @@ LLE_API void ISSetDoublePressTimeDelta(unsigned long inDelta);
 
 extern LLE_API ISKeyboard* gISKeyboard;     // 0x1012d94c
 extern LLE_API ISMouse* gISMouse;           // 0x1012d950
-extern LLE_API unsigned long gDoublePressTimeDelta;  // 0x100d9fec (= 250 ms)
 
 #endif

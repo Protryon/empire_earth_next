@@ -1395,7 +1395,11 @@ extern "C" uint8_t ee_units_host_unit_seen_by(uint32_t inUnit, void* inPlayer)
 extern "C" uint8_t ee_units_host_unit_ghost_seen(uint32_t inUnit)
 {
     EEUnit* theUnit = UnitOf(inUnit);
-    EETile* theTile = static_cast<EETile*>(theUnit->mTile);
+    // a unit off the tiles (inside a carrier, a transport or a garrison) has no doppelganger: the original read its
+    // NULL tile (EEMSetRallyGoal at such a unit crashed; the USGC sweep met one in a carrier scenario)
+    EETile* theTile = theUnit != NULL ? static_cast<EETile*>(theUnit->mTile) : NULL;
+    if (theTile == NULL)
+        return 0;
     for (unsigned long i = 0; i < theTile->GetNumDoppelgangers(); i++)
         if (theTile->mDoppelgangers[i]->mUnit == theUnit)
             return 1;

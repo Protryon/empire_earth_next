@@ -311,7 +311,7 @@ def cmd_fonttest(a):
 TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
 # the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
 TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
-    "Utilities/UString.cpp", "Utilities/UWideString.cpp",
+    "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp",
     "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")]
 
 
@@ -717,6 +717,9 @@ def build_won_test(t, name, units, folder="won"):
     game = [ROOT / "tests" / folder / f"{name}.cpp", *units]
     inc = [ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
     defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
+    # an engine unit gets the engine's module define (tools/ee.py MODULE_FLAGS "lle"), as tcptest's do
+    lle = ROOT / "src" / "Low-Level Engine"
+    unit_defs = lambda src: [*defs, *(["LOWLEVELENGINE_EXPORTS"] if lle in pathlib.Path(src).parents else [])]
     objs = []
     if t.os == "windows":
         env = windows_env()
@@ -726,8 +729,10 @@ def build_won_test(t, name, units, folder="won"):
         for src in [*game, *platform_sources(t)]:
             obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".obj")
             flags = WIN_CXX + (game_flags if src in game else [])
-            run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in defs], f"/Fo{obj}", src],
-                env=env)
+            if lle in pathlib.Path(src).parents:   # no exported inline members of the classes it does not link
+                flags = flags + ["/Zc:dllexportInlines-"]
+            run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in unit_defs(src)],
+                 f"/Fo{obj}", src], env=env)
             objs.append(obj)
         run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, *rust_libs(t), "libcmt.lib",
              "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
@@ -738,7 +743,7 @@ def build_won_test(t, name, units, folder="won"):
             if src in game:
                 # -O0: with __OPTIMIZE__ glibc's inline string.h needs the GNU macros -fms-compatibility hides
                 flags = ["-std=c++17", "-O0", "-g", *game_dialect_flags(t, True), "-fno-strict-aliasing", "-fwrapv",
-                         "-w", f"-I{COMPAT}", *[f"-I{i}" for i in inc], *[f"-D{d}" for d in defs]]
+                         "-w", f"-I{COMPAT}", *[f"-I{i}" for i in inc], *[f"-D{d}" for d in unit_defs(src)]]
             else:
                 flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}"]
             run([t.clang(), *base, *flags, "-c", "-o", obj, src])
@@ -778,6 +783,15 @@ def cmd_wontest(a):
 NET_TESTS = {
     # NEMessageManager (golden: rust/crates/ee_net/src/golden_msgmgr.txt; `--print FILE` writes it)
     "ne_msgmgr_test": [],
+    # NELagLossSimulator, NERecordPlayback, NETimestampedMessage (golden: rust/crates/ee_net/src/golden_queues.txt)
+    "ne_queues_test": [],
+    # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the
+    # original units with the TCP shim's entry table)
+    # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp instead
+    # of NEProtocol.cpp, `--print FILE`)
+    "ne_protocol_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
+        "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp",
+        "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")],
 }
 
 
