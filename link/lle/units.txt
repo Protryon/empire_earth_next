@@ -62,8 +62,6 @@
 532d9 53675 Sound Engine/Sound Engine.cpp
 53675 53701 Thread System/Thread System.cpp
 53701 53819 Time Manager/Time Manager.cpp
-53819 53ad3 Time Manager/TMPoll.cpp
-53ad3 53ca1 Time Manager/TMTimer.cpp
 53ca1 53cee Thread System/TSCriticalSection.cpp
 53cee 53d8b Thread System/TSEvent.cpp
 53d8b 53e55 Thread System/TSReadWriteLock.cpp

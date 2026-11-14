@@ -392,6 +392,7 @@ dependencies = [
  "ee_screens",
  "ee_sound",
  "ee_tech",
+ "ee_time",
  "ee_ui",
  "ee_units",
  "ee_won",
@@ -422,6 +423,13 @@ name = "ee_tech"
 version = "0.1.0"
 dependencies = [
  "ee_ge",
+]
+
+[[package]]
+name = "ee_time"
+version = "0.1.0"
+dependencies = [
+ "ee_plat_core",
 ]
 
 [[package]]

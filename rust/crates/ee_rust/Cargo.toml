@@ -26,6 +26,7 @@ ee_codec = { path = "../ee_codec" }
 ee_fs = { path = "../ee_fs" }
 ee_input = { path = "../ee_input" }
 ee_error = { path = "../ee_error" }
+ee_time = { path = "../ee_time" }
 ee_ge = { path = "../ee_ge" }
 ee_gfx = { path = "../ee_gfx" }
 ee_gx = { path = "../ee_gx" }
