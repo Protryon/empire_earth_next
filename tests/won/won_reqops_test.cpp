@@ -22,7 +22,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "won_db_msg.h"
-#include "ee/wonapi/WONPatchMsg.h"
+#include "won_patch_msg.h"
 #include "rust/ee_won.h"
 
 // 0 records the golden from the original's half alone

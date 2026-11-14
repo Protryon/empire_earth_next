@@ -1149,88 +1149,9 @@ public:
 
 
 // DBProxyOp is a Rust op base (rust/crates/ee_won/src/reqop.rs DbProxy)
-// Patch-server records: VersionData 0x48 / PatchData 0xa4,
-// constructors 2d83a0/2d86f0, allocations 2d93a7/2d9079.
-enum VersionState { VersionState_Invalid=0, VersionState_Inactive=1, VersionState_Active=2, VersionState_BadState=3 };
-typedef std::list<std::string> VersionTypeList;
-class VersionData : public RefCount {
-protected:
-    virtual ~VersionData(); //2d8510, explicit ownVT; clears list then owns members
-private:
-    std::string mConfigName; //08
-    std::string mVersion; //18
-    std::string mDescriptionURL; //28
-    VersionState mState; //38
-    VersionTypeList mVersionTypeList; //3c..48
-public:
-    VersionData(); //2d83a0
-    void WriteToBuffer(WriteBuffer&,DWORD inFlags=0); //2d8660
-    enum { WriteFlag_AppendState=1, WriteFlag_AppendDescripURL=2 };
-    void AddVersionType(const std::string&);
-    void ReadFromBuffer(ReadBuffer&);
-    bool operator==(const VersionData&) const;
-    bool operator!=(const VersionData&) const;
-    void SetDescriptionURL	(const std::string& theDescriptionURL)	{ this->mDescriptionURL	= theDescriptionURL;}
-    const std::string& GetDescriptionURL()		const { return this->mDescriptionURL;	 }
-    const VersionState GetState()				const { return this->mState;			 }
-    const VersionTypeList& GetVersionTypeList() const { return this->mVersionTypeList; }
-    void SetConfigName(const std::string& inName) { this->mConfigName=inName; }
-    void SetVersion(const std::string& inVersion) { this->mVersion=inVersion; }
-    void SetState(VersionState inState) { this->mState=inState; }
-    const std::string& GetConfigName() const { return this->mConfigName; }
-    const std::string& GetVersion() const { return this->mVersion; }
-};
-class PatchData : public RefCount {
-protected:
-    virtual ~PatchData(); //2d8a50, explicit own vtable store, then 9 string members
-private:
-    std::string mConfigName; //08
-    std::string mFromVersion; //18
-    std::string mToVersion; //28
-    std::string mDisplayName; //38
-    std::string mNetAddress; //48
-    unsigned long mCheckSum; //58
-    unsigned long mPatchSize; //5c
-    std::string mHostName; //60
-    std::string mHostURL; //70
-    std::string mHostText; //80
-    std::string mHostImageURL; //90
-    bool mMustVisitHost; //a0
-    bool mIsActive; //a1, naturalpaddinga2..a3
-public:
-    PatchData(); //2d86f0
-    void ReadFromBuffer(ReadBuffer&,bool inGetPatchList=false); //2d8bc0
-    void WriteToBuffer(WriteBuffer&,bool inUpdateOnly=false);
-    bool operator==(const PatchData&) const;
-    bool operator!=(const PatchData&) const;
-    void SetDisplayName	(const std::string& theDisplayName)	{ this->mDisplayName = theDisplayName;	}
-    void SetNetAddress	(const std::string& theNetAddress)	{ this->mNetAddress = theNetAddress;		}
-    void SetCheckSum	(unsigned long theCheckSum)			{ this->mCheckSum = theCheckSum;			}
-    void SetPatchSize	(unsigned long thePatchSize)		{ this->mPatchSize = thePatchSize;		}
-    void SetHostName	(const std::string& theHostName)	{ this->mHostName = theHostName;			}
-    void SetHostURL		(const std::string& theHostURL)		{ this->mHostURL = theHostURL;			}
-    void SetHostText	(const std::string& theHostText)	{ this->mHostText = theHostText;			}
-    void SetHostImageURL(const std::string& theHostImageURL){ this->mHostImageURL = theHostImageURL;	}
-    void SetMustVisitHost(bool theMustVisitHost)			{ this->mMustVisitHost = theMustVisitHost;}
-    const std::string&  GetConfigName()		const	{ return this->mConfigName;	}
-    const std::string&  GetFromVersion()	const	{ return this->mFromVersion;	}
-    const std::string&  GetToVersion()		const	{ return this->mToVersion;	}
-    const std::string&  GetDisplayName()	const	{ return this->mDisplayName;	}
-    const std::string&  GetNetAddress()		const	{ return this->mNetAddress;	}
-    const unsigned long GetCheckSum()		const	{ return this->mCheckSum;		}
-    const unsigned long GetPatchSize()		const	{ return this->mPatchSize;	}
-    const std::string&  GetHostName()		const	{ return this->mHostName;		}
-    const std::string&  GetHostURL()		const	{ return this->mHostURL;		}
-    const std::string&  GetHostText()		const	{ return this->mHostText;		}
-    const std::string&  GetHostImageURL()	const	{ return this->mHostImageURL; }
-    bool  GetMustVisitHost()				const	{ return this->mMustVisitHost;}
-    bool  GetIsActive()						const	{ return this->mIsActive;		}
-    void SetConfigName(const std::string& inName) { this->mConfigName=inName; }
-    void SetFromVersion(const std::string& inVersion) { this->mFromVersion=inVersion; }
-    void SetToVersion(const std::string& inVersion) { this->mToVersion=inVersion; }
-    void SetIsActive(bool inActive) { this->mIsActive=inActive; }
-};
-typedef std::list<SmartPtr<PatchData> > PatchDataList;
+// The patch server's records (VersionData 0x48, PatchData 0xa4; constructors 2d83a0/2d86f0) are Rust's: their wire
+// forms are ee_won patch.rs, the ops that read them verop.rs; no game code made the C++ classes, deleted in WON
+// Internet round 21 (their statements are tests/won/won_patch_msg.h, over the drivers' stand-ins)
 // CheckValidVersionOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
 // DetectFirewallOp (2cf600): a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step);
 // the class is its constructor (ServerOp.cpp) and the setters and the public address the lobby uses.
