@@ -68,8 +68,14 @@
 //!   groups (one C++ class `EEUIFMGGRust` by kind): the statistics' texts.
 //! - [`unit_hack`]: the main game form's developer unit hack whole in Rust (the placeable classes' sorted list,
 //!   the object combo box, the class reload, the Shift/Ctrl placement).
+//! - [`status_button`]: the main game form's command buttons' presses (`ButtonUp`, `Command`, `MouseRButtonUp`)
+//!   over the C++ host.
+//! - [`ui_thread`]: the UI thread's message switch (`EEUserInterface::HandleMessage`) and the game window's event
+//!   handler (`HandleEvent`, with its statics) over the C++ host.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
+//! - [`status_box`]: the status box's `Fill`, `Refresh`, `UpdateQueuedCounts`, `LoadIcons` (its icon cells) over
+//!   the C++ host.
 
 pub mod actions;
 #[cfg(not(test))]
@@ -123,7 +129,6 @@ pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;
 pub mod hud;
-mod hud_ffi;
 pub mod lobby;
 pub mod lobby_form;
 #[cfg(not(test))]
@@ -163,6 +168,15 @@ mod single_player_ffi;
 pub mod splash;
 #[cfg(not(test))]
 mod splash_ffi;
+pub mod status_box;
+#[cfg(not(test))]
+mod status_box_ffi;
+pub mod status_button;
+#[cfg(not(test))]
+mod status_button_ffi;
+pub mod ui_thread;
+#[cfg(not(test))]
+mod ui_thread_ffi;
 pub mod unit_hack;
 #[cfg(not(test))]
 mod unit_hack_ffi;

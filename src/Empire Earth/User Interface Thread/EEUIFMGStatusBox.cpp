@@ -90,27 +90,10 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"   // ee_screens_hud_*: the attribute texts, Fill's icons and bars, Refresh's numbers (ee_screens hud.rs)
+#include "rust/ee_screens.h"   // ee_screens_status_box_*: the status box over its host (ee_screens status_box.rs)
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
 extern bool& gUsingCarbon;  // Existing EERandomMapClass global; selected-unit resource icon variant
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
-
-// the attribute icon cells of the three unit-improvement textures (provisional names): the cell's texture rectangle
-// corners, the bitmap's texture size and whether it is in texture 3 (0x26c4fe)
-struct EEUIFMGIconCell {
-    // 0x26ad5f (out of line after the init chains: the table's last elements call it)
-    EEUIFMGIconCell(long inIndex, const GE2DPoint& inTopLeft, const GE2DPoint& inBottomRight, long inWidth,
-                    long inHeight, bool inFlag)
-        : mIndex(inIndex), mTopLeft(inTopLeft), mBottomRight(inBottomRight), mWidth(inWidth), mHeight(inHeight),
-          mFlag(inFlag) {}
-
-    long mIndex;                            // +0x00 (the index into sIconBitmaps)
-    GE2DPoint mTopLeft;                     // +0x04
-    GE2DPoint mBottomRight;                 // +0x0c
-    long mWidth;                            // +0x14
-    long mHeight;                           // +0x18
-    bool mFlag;                             // +0x1c
-};
 
 // one loaded icon (0x14 bytes) (provisional name)
 struct EEUIFMGIconBitmap {
@@ -122,58 +105,7 @@ static GEColor kStatusColor1(0.0f, 0.0f, 1.0f);    // 0x5652e0
 static GEColor kStatusColor2(1.0f, 1.0f, 0.0f);    // 0x5652d0
 static GEColor kStatusColor3(0.0f, 1.0f, 0.5f);    // 0x5652c0
 EEUIFMGIconBitmap EEUIFMGStatusBox::sIconBitmaps[50];   // 0x564ed8
-static EEUIFMGIconCell sIconCells[50] = {           // 0x564890
-    EEUIFMGIconCell(0, GE2DPoint(1.0f, 1.0f), GE2DPoint(80.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(1, GE2DPoint(0.0f, 0.0f), GE2DPoint(79.0f, 79.0f), 80, 80, true),
-    EEUIFMGIconCell(2, GE2DPoint(161.0f, 1.0f), GE2DPoint(240.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(3, GE2DPoint(160.0f, 0.0f), GE2DPoint(239.0f, 79.0f), 80, 80, true),
-    EEUIFMGIconCell(4, GE2DPoint(81.0f, 1.0f), GE2DPoint(160.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(5, GE2DPoint(80.0f, 0.0f), GE2DPoint(159.0f, 79.0f), 80, 80, true),
-    EEUIFMGIconCell(6, GE2DPoint(161.0f, 161.0f), GE2DPoint(240.0f, 240.0f), 80, 80, true),
-    EEUIFMGIconCell(7, GE2DPoint(160.0f, 160.0f), GE2DPoint(239.0f, 239.0f), 80, 80, true),
-    EEUIFMGIconCell(8, GE2DPoint(1.0f, 81.0f), GE2DPoint(80.0f, 160.0f), 80, 80, true),
-    EEUIFMGIconCell(9, GE2DPoint(0.0f, 80.0f), GE2DPoint(79.0f, 159.0f), 80, 80, true),
-    EEUIFMGIconCell(10, GE2DPoint(161.0f, 81.0f), GE2DPoint(240.0f, 160.0f), 80, 80, true),
-    EEUIFMGIconCell(11, GE2DPoint(160.0f, 80.0f), GE2DPoint(239.0f, 159.0f), 80, 80, true),
-    EEUIFMGIconCell(12, GE2DPoint(81.0f, 81.0f), GE2DPoint(160.0f, 160.0f), 80, 80, true),
-    EEUIFMGIconCell(13, GE2DPoint(80.0f, 80.0f), GE2DPoint(159.0f, 159.0f), 80, 80, true),
-    EEUIFMGIconCell(14, GE2DPoint(1.0f, 161.0f), GE2DPoint(80.0f, 240.0f), 80, 80, true),
-    EEUIFMGIconCell(15, GE2DPoint(0.0f, 160.0f), GE2DPoint(79.0f, 239.0f), 80, 80, true),
-    EEUIFMGIconCell(16, GE2DPoint(0.0f, 40.0f), GE2DPoint(35.0f, 57.0f), 35, 17, true),
-    EEUIFMGIconCell(17, GE2DPoint(35.0f, 40.0f), GE2DPoint(70.0f, 57.0f), 35, 17, true),
-    EEUIFMGIconCell(18, GE2DPoint(81.0f, 161.0f), GE2DPoint(160.0f, 240.0f), 80, 80, true),
-    EEUIFMGIconCell(19, GE2DPoint(80.0f, 160.0f), GE2DPoint(159.0f, 239.0f), 80, 80, true),
-    EEUIFMGIconCell(20, GE2DPoint(96.0f, 0.0f), GE2DPoint(131.0f, 17.0f), 35, 17, true),
-    EEUIFMGIconCell(21, GE2DPoint(131.0f, 0.0f), GE2DPoint(166.0f, 17.0f), 35, 17, true),
-    EEUIFMGIconCell(22, GE2DPoint(96.0f, 0.0f), GE2DPoint(131.0f, 17.0f), 35, 17, true),
-    EEUIFMGIconCell(23, GE2DPoint(131.0f, 0.0f), GE2DPoint(166.0f, 17.0f), 35, 17, true),
-    EEUIFMGIconCell(24, GE2DPoint(1.0f, 81.0f), GE2DPoint(63.0f, 143.0f), 63, 63, true),
-    EEUIFMGIconCell(25, GE2DPoint(0.0f, 80.0f), GE2DPoint(62.0f, 142.0f), 63, 63, true),
-    EEUIFMGIconCell(26, GE2DPoint(1.0f, 144.0f), GE2DPoint(63.0f, 206.0f), 63, 63, true),
-    EEUIFMGIconCell(27, GE2DPoint(0.0f, 143.0f), GE2DPoint(62.0f, 205.0f), 63, 63, true),
-    EEUIFMGIconCell(28, GE2DPoint(160.0f, 1.0f), GE2DPoint(239.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(29, GE2DPoint(160.0f, 1.0f), GE2DPoint(239.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(30, GE2DPoint(1.0f, 80.0f), GE2DPoint(80.0f, 159.0f), 80, 80, true),
-    EEUIFMGIconCell(31, GE2DPoint(1.0f, 80.0f), GE2DPoint(80.0f, 159.0f), 80, 80, true),
-    EEUIFMGIconCell(32, GE2DPoint(81.0f, 1.0f), GE2DPoint(160.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(33, GE2DPoint(81.0f, 1.0f), GE2DPoint(160.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(34, GE2DPoint(1.0f, 1.0f), GE2DPoint(80.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(35, GE2DPoint(1.0f, 1.0f), GE2DPoint(80.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(36, GE2DPoint(81.0f, 80.0f), GE2DPoint(160.0f, 159.0f), 80, 80, true),
-    EEUIFMGIconCell(37, GE2DPoint(81.0f, 80.0f), GE2DPoint(160.0f, 159.0f), 80, 80, true),
-    EEUIFMGIconCell(38, GE2DPoint(196.0f, 143.0f), GE2DPoint(218.0f, 160.0f), 22, 17, true),
-    EEUIFMGIconCell(39, GE2DPoint(196.0f, 143.0f), GE2DPoint(218.0f, 160.0f), 22, 17, true),
-    EEUIFMGIconCell(40, GE2DPoint(196.0f, 41.0f), GE2DPoint(218.0f, 58.0f), 22, 17, true),
-    EEUIFMGIconCell(41, GE2DPoint(196.0f, 41.0f), GE2DPoint(218.0f, 58.0f), 22, 17, true),
-    EEUIFMGIconCell(42, GE2DPoint(81.0f, 1.0f), GE2DPoint(160.0f, 81.0f), 80, 80, true),
-    EEUIFMGIconCell(43, GE2DPoint(80.0f, 0.0f), GE2DPoint(159.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(44, GE2DPoint(1.0f, 1.0f), GE2DPoint(80.0f, 81.0f), 80, 80, true),
-    EEUIFMGIconCell(45, GE2DPoint(0.0f, 0.0f), GE2DPoint(79.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(46, GE2DPoint(1.0f, 1.0f), GE2DPoint(80.0f, 81.0f), 80, 80, true),
-    EEUIFMGIconCell(47, GE2DPoint(0.0f, 0.0f), GE2DPoint(79.0f, 80.0f), 80, 80, true),
-    EEUIFMGIconCell(48, GE2DPoint(160.0f, 80.0f), GE2DPoint(239.0f, 159.0f), 80, 80, true),
-    EEUIFMGIconCell(49, GE2DPoint(160.0f, 80.0f), GE2DPoint(239.0f, 159.0f), 80, 80, true),
-};
+// (the icon cells' table, 0x564890, is Rust's: ee_screens status_box.rs CELLS)
 bool sIconsLoaded;                                  // 0x5652ec; cross-TU flag, original name/ordinary-global ownership provisional
 
 // SYNTHETIC: EXE 0x669ca8
@@ -200,7 +132,7 @@ bool sIconsLoaded;                                  // 0x5652ec; cross-TU flag, 
 
 // FUNCTION: EXE 0x66ad5f
 // Creates an icon cell table entry (texture index, corners, size, texture flag)
-// (EEUIFMGIconCell's ctor, out of line)
+// (EEUIFMGIconCell's ctor, out of line; the table is Rust's)
 
 // FUNCTION: EXE 0x66ada8
 // Creates the main panel's status box with no controls bound and no attributes shown
@@ -289,222 +221,306 @@ static void EEStatusBoxView(EEUnit* inUnit, const EEUIFMGStatusBox* inBox, bool 
     outView.using_carbon = gUsingCarbon;
 }
 
-// Shows one attribute icon of a Fill plan (ee_screens hud.rs EeScreensHudIcon): its bitmaps stretched over the
-// plan's icon rectangle, its improvement, no queued count, its cost label
-static void EEStatusBoxShowIcon(EEUIFMGStatusBox* inBox, const EeScreensHudIcon& inIcon)
-{
-    inBox->mAttributes[inIcon.slot] = inIcon.icon;
-    if (inIcon.icon == -1)
-        return;
-    EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(inBox->mIcons[inIcon.icon]);
-    EEUIFMGAttribute* theRectangle = static_cast<EEUIFMGAttribute*>(inBox->mIcons[inIcon.rect_icon]);
-    EEUIFMGIconBitmap& theNormal = EEUIFMGStatusBox::sIconBitmaps[inIcon.bitmap];
-    EEUIFMGIconBitmap& thePressed = EEUIFMGStatusBox::sIconBitmaps[inIcon.bitmap + 1];
-    theNormal.mBitmap->ComputeStretchedCoordsAndScale(theRectangle->GetIconRectangle(), theRectangle->GetIconRectangle(),
-                                                      theNormal.mRectangle, theIcon->GetScreenIndex());
-    thePressed.mBitmap->ComputeStretchedCoordsAndScale(theRectangle->GetIconRectangle(), theRectangle->GetIconRectangle(),
-                                                       thePressed.mRectangle, theIcon->GetScreenIndex());
-    theIcon->SetNormalBitmap(theNormal.mBitmap);
-    theIcon->SetPressedBitmap(thePressed.mBitmap);
-    theIcon->mAttribute = inIcon.improvement;
-    if (theIcon->mNumQueued != 0)
-        theIcon->SetDirty(true);
-    theIcon->mNumQueued = 0;
-    theIcon->SetDisplayMode(kDisplayModeShown);
-    theIcon->mCostLabel = static_cast<UITextLabel*>(inBox->mLabels[inIcon.icon]);
-}
-
-// FUNCTION: EXE 0x66ae16
-// Shows the selected unit's improvable armor kinds (shock, pierce, arrow, gun, missile, laser) after the other
-// attribute buttons, each with its icon and cost label
-void EEUIFMGStatusBox::FillArmorAttributes(EEUnit* inUnit)
-{
-    // the icons are Rust's (ee_screens hud.rs armor_icons)
-    long theCount = this->mAttributeCount;
-    this->mArmorAttributeCount = theCount;
-    if (inUnit != NULL) {
-        EeScreensHudUnit theView;
-        EEStatusBoxView(inUnit, this, false, theView);
-        EeScreensHudIcons theIcons;
-        ee_screens_hud_armor_icons(theCount, theView.upgrades_armor, &theIcons);
-        for (unsigned long i = 0; i < theIcons.count; i++)
-            EEStatusBoxShowIcon(this, theIcons.icons[i]);
-        this->mArmorAttributeCount = theIcons.next;
-    }
-    this->mAttributeCount = this->mArmorAttributeCount;
-    if (static_cast<unsigned long>(this->mAttributeCount) > 9)
-
-        ESVerify(__FILE__, 367, "this->mArmorAttributeCount <= keeuifmgsbMaxAttributes");
-}
-
 // Existing pooled empty byte string, original reference26b6d9; no equal-content alias.
 extern char gEmptyString[];
+
+// The host's record of one status box call (ee_screens status_box.rs): the box, the unit (Fill, Refresh), the
+// complex unit (UpdateQueuedCounts), the held text (the original's `theText`), LoadIcons' description and textures
+struct EEUIFMGStatusBoxCall {
+    EEUIFMGStatusBox* mBox;
+    EEUnit* mUnit;
+    EEComplexUnit* mComplex;
+    UWideString mText;
+    GETextureDescription mDescription;
+    GETexture* mTextures[4];
+};
+static_assert(EE_SCREENS_BOX_IMPROVEMENT_FLIGHT_OR_POWER == kImprovementFlightTimeOrPower &&
+                  EE_SCREENS_BOX_IMPROVEMENT_HIT_POINTS == kImprovementHitPoints &&
+                  EE_SCREENS_BOX_IMPROVEMENT_TRANSPORT == kImprovementTransport &&
+                  EE_SCREENS_BOX_IDS_GARRISON == IDS_IMPROVEMENT_GARRISON && kDisplayModeHidden == 0 &&
+                  kDisplayModeShown == 1,
+              "status_box.rs's constants");
+
+// The control an EE_SCREENS_BOX_CTL_* names
+UIControl* EEUIFMGStatusBox::GetBoxControl(int64_t inControl) const
+{
+    if (inControl < EE_SCREENS_BOX_CTL_LABEL)
+        return this->mIcons[inControl];
+    if (inControl < EE_SCREENS_BOX_CTL_LEFT_BAR)
+        return this->mLabels[inControl - EE_SCREENS_BOX_CTL_LABEL];
+    UIControl* const theControls[8] = {this->mC84, this->mC88, this->mC8C, this->mC90,
+                                       this->mC94, this->mC98, this->mCA8, this->mCAC};
+    return theControls[inControl - EE_SCREENS_BOX_CTL_LEFT_BAR];
+}
+
+// two f32s of one host argument (status_box.rs pack: the first in the low 32 bits)
+static float EEBoxFloat(int64_t inPair, int inHigh)
+{
+    uint32_t theBits = (uint32_t)(inHigh ? (uint64_t)inPair >> 32 : (uint64_t)inPair);
+    float theValue;
+    memcpy(&theValue, &theBits, 4);
+    return theValue;
+}
+
+// ee_screens status_box.rs's host (EE_SCREENS_BOX_OP_*): one read or call of the original's status box functions
+int64_t EEUIFMGStatusBox::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+{
+    EEUIFMGStatusBoxCall& theCall = *static_cast<EEUIFMGStatusBoxCall*>(inCall);
+    EEUIFMGStatusBox* theBox = theCall.mBox;
+    switch (inOp) {
+    case EE_SCREENS_BOX_OP_GET:
+        if (inA == EE_SCREENS_BOX_FIELD_COUNT)
+            return theBox->mAttributeCount;
+        if (inA == EE_SCREENS_BOX_FIELD_ARMOR_COUNT)
+            return theBox->mArmorAttributeCount;
+        if (inA == EE_SCREENS_BOX_FIELD_RESOURCE_SHOWN)
+            return theBox->mIsResourceShown;
+        return theBox->mAttributes[inA - EE_SCREENS_BOX_FIELD_ATTRIBUTES];
+    case EE_SCREENS_BOX_OP_SET:
+        if (inA == EE_SCREENS_BOX_FIELD_COUNT)
+            theBox->mAttributeCount = (long)inB;
+        else if (inA == EE_SCREENS_BOX_FIELD_ARMOR_COUNT)
+            theBox->mArmorAttributeCount = (long)inB;
+        else if (inA == EE_SCREENS_BOX_FIELD_RESOURCE_SHOWN)
+            theBox->mIsResourceShown = inB != 0;
+        else
+            theBox->mAttributes[inA - EE_SCREENS_BOX_FIELD_ATTRIBUTES] = (long)inB;
+        return 0;
+    case EE_SCREENS_BOX_OP_PRESENT:
+        return theBox->GetBoxControl(inA) != NULL;
+    case EE_SCREENS_BOX_OP_MODE:
+        return theBox->GetBoxControl(inA)->GetDisplayMode();
+    case EE_SCREENS_BOX_OP_SET_MODE:
+        theBox->GetBoxControl(inA)->SetDisplayMode((unsigned long)inB);
+        return 0;
+    case EE_SCREENS_BOX_OP_QUEUED: {
+        EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA));
+        if (theButton->mNumQueued != (long)inB)
+            theButton->SetDirty(true);
+        theButton->mNumQueued = (long)inB;
+        return 0;
+    }
+    case EE_SCREENS_BOX_OP_ATTRIBUTE:
+        return static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA))->mAttribute;
+    case EE_SCREENS_BOX_OP_SET_ATTRIBUTE:
+        static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA))->mAttribute = (long)inB;
+        return 0;
+    case EE_SCREENS_BOX_OP_COST_LABEL:
+        static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA))->mCostLabel =
+            inB < 0 ? NULL : static_cast<UITextLabel*>(theBox->GetBoxControl(inB));
+        return 0;
+    case EE_SCREENS_BOX_OP_NAME: {
+        // Fill compares the stats' name with the pooled empty string, Refresh with ""
+        EEUnit* theUnit = theCall.mUnit;
+        UWideString theSuffix;
+        EEUnitClass* theClass = theUnit->GetUnitClass();
+        if (inA == 0 ? theUnit->mStats->mName == gEmptyString : theUnit->GetStats()->mName == "")
+            gResource->GetString(theClass->mNameStringID, theCall.mText);
+        else
+            theCall.mText = theUnit->GetStats()->mName;
+        if ((inA == 0 ? theUnit->mUnitClass->mCategory : theUnit->GetUnitClass()->mCategory) == kUnitCategoryGate) {
+            if (theUnit->mComplexUnit->mIsLocked)
+                gResource->GetString(IDS_MSG_LOCKED, theSuffix);
+            else
+                gResource->GetString(IDS_MSG_UNLOCKED, theSuffix);
+            theCall.mText += theSuffix;
+        }
+        return 0;
+    }
+    case EE_SCREENS_BOX_OP_CIV:
+        theCall.mText = theCall.mUnit->GetPlayer()->mCivilization.mName;
+        return 0;
+    case EE_SCREENS_BOX_OP_SET_TEXT:
+        static_cast<UITextLabel*>(theBox->GetBoxControl(inA))->SetText(theCall.mText);
+        return 0;
+    case EE_SCREENS_BOX_OP_TEXT_DIFFERS:
+        return !(static_cast<UITextLabel*>(theBox->GetBoxControl(inA))->GetText(0) == theCall.mText);
+    case EE_SCREENS_BOX_OP_BAR_ICON:
+        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))
+            ->SetIconBitmap(sIconBitmaps[inB].mBitmap, sIconBitmaps[inB].mRectangle);
+        return 0;
+    case EE_SCREENS_BOX_OP_BAR_RANGE:
+        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))->mBar->SetRange(0, (unsigned long)(long)inB);
+        return 0;
+    case EE_SCREENS_BOX_OP_BAR_VALUE:
+        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))->mBar->SetCurrentRangeValue((long)inB);
+        return 0;
+    case EE_SCREENS_BOX_OP_DIRTY:
+        theBox->GetBoxControl(inA)->SetDirty(true);
+        return 0;
+    case EE_SCREENS_BOX_OP_BAR_COLOR:
+        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))
+            ->mBar->SetStatusBarColor(inB == 1 ? kStatusColor1 : inB == 2 ? kStatusColor2 : kStatusColor3);
+        return 0;
+    case EE_SCREENS_BOX_OP_BAR_ENABLED:
+        static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA))->mEnabled = inB != 0;
+        return 0;
+    case EE_SCREENS_BOX_OP_STRING_ID:
+        theBox->GetBoxControl(inA)->SetStringTableID((unsigned long)inB);
+        return 0;
+    case EE_SCREENS_BOX_OP_STRETCH: {
+        EEUIFMGAttribute* theRectangle = static_cast<EEUIFMGAttribute*>(theBox->GetBoxControl(inB));
+        sIconBitmaps[inA].mBitmap->ComputeStretchedCoordsAndScale(theRectangle->GetIconRectangle(),
+                                                                  theRectangle->GetIconRectangle(),
+                                                                  sIconBitmaps[inA].mRectangle,
+                                                                  theBox->GetBoxControl(inC)->GetScreenIndex());
+        return 0;
+    }
+    case EE_SCREENS_BOX_OP_SET_BITMAP: {
+        UIButton* theButton = static_cast<UIButton*>(theBox->GetBoxControl(inA));
+        if (inB == 0)
+            theButton->SetNormalBitmap(sIconBitmaps[inC].mBitmap);
+        else
+            theButton->SetPressedBitmap(sIconBitmaps[inC].mBitmap);
+        return 0;
+    }
+    case EE_SCREENS_BOX_OP_BITMAP_IS: {
+        UIButton* theButton = static_cast<UIButton*>(theBox->GetBoxControl(inA));
+        return (inB == 0 ? theButton->GetNormalBitmap() : theButton->GetPressedBitmap()) == sIconBitmaps[inC].mBitmap;
+    }
+    case EE_SCREENS_BOX_OP_PORTRAIT:
+        static_cast<EEUICPortrait*>(theBox->mC8C)->SetUnit(inA != 0 ? theCall.mUnit : NULL);
+        return 0;
+    case EE_SCREENS_BOX_OP_PORTRAIT_UPDATE:
+        static_cast<EEUICPortrait*>(theBox->mC8C)->Update();
+        return 0;
+    case EE_SCREENS_BOX_OP_VERIFY:
+        if (inA == 367)
+            ESVerify(__FILE__, 367, "this->mArmorAttributeCount <= keeuifmgsbMaxAttributes");
+        else
+            ESVerify(__FILE__, 708, "this->mAttributeCount <= keeuifmgsbMaxAttributes");
+        return 0;
+    case EE_SCREENS_BOX_OP_IN_CINEMATIC:
+        return gWorld.mInCinematic;
+    case EE_SCREENS_BOX_OP_BACKGROUND: {
+        UIBackground* theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID((unsigned long)inA);
+        if (theBackground != NULL)
+            theBackground->SetVisibility(inB != 0);
+        return 0;
+    }
+    case EE_SCREENS_BOX_OP_FORMAT:
+        if (inA == EE_SCREENS_BOX_FMT_PAIR)
+            sprintf(theCall.mText, "%ld/%ld", (long)inB, (long)inC);
+        else if (inA == EE_SCREENS_BOX_FMT_BONUS)
+            sprintf(theCall.mText, "+ %ld", (long)inB);
+        else if (inA == EE_SCREENS_BOX_FMT_SUM)
+            sprintf(theCall.mText, "%ld+%ld", (long)inB, (long)inC);
+        else if (inA == EE_SCREENS_BOX_FMT_ONE)
+            sprintf(theCall.mText, "%ld", (long)inB);
+        else
+            theCall.mText = "";
+        return 0;
+    case EE_SCREENS_BOX_OP_VALUE_DIFFERS: {
+        EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA));
+        return theCall.mText != (inB == 0 ? theBar->GetValueText() : theBar->GetValue2Text());
+    }
+    case EE_SCREENS_BOX_OP_SET_VALUE: {
+        EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theBox->GetBoxControl(inA));
+        (inB == 0 ? theBar->mValue : theBar->mValue2)->SetText(theCall.mText);
+        return 0;
+    }
+    case EE_SCREENS_BOX_OP_UPDATE_COST:
+        static_cast<EEUIBUpgrade*>(theBox->GetBoxControl(inA))->UpdateCost(theCall.mText);
+        return 0;
+    case EE_SCREENS_BOX_OP_ARMOR: {
+        EEUnitClassUpgrade* theStats = theCall.mUnit->mStats;
+        if (inB == 1)
+            return theCall.mUnit->GetUnitClass()->mArmor[inA];
+        if (inB == 2)
+            return theStats->mUnitClass->mArmor[inA];
+        float theArmor = theStats->mArmor[inA];
+        uint32_t theBits;
+        memcpy(&theBits, &theArmor, 4);
+        return theBits;
+    }
+    case EE_SCREENS_BOX_OP_UNIT_TYPE:
+        return theCall.mComplex->GetUnitClass()->mUnitType;
+    case EE_SCREENS_BOX_OP_COUNT_QUEUED:
+        return theCall.mComplex->GetPlayer()->CountQueuedImprovements((unsigned long)inA, (long)inB);
+    case EE_SCREENS_BOX_OP_NEW_BITMAP:
+        sIconBitmaps[inA].mBitmap = new GEBitmap;
+        return 0;
+    case EE_SCREENS_BOX_OP_DESCRIPTION: {
+        GETextureDescription theDescription = {1, 0, 0x10, 0, false, false, true, true};
+        theDescription.mCreateMIPMaps = false;
+        theDescription.mPixelDepth = gTexturePixelDepth;
+        theDescription.mHasAlpha = true;
+        theDescription.mNumMipLevelsToDrop = gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth() <= 800;
+        theCall.mDescription = theDescription;
+        return 0;
+    }
+    case EE_SCREENS_BOX_OP_LOAD_TEXTURE: {
+        static const char* const kNames[4] = {"", "textures\\unit improvements_01", "textures\\unit improvements_02",
+                                              "textures\\unit upgrades_03"};
+        GETexture* theTexture = gTextureManager->LoadTexture(UString(kNames[inA]), theCall.mDescription);
+        theTexture->SetStageAlphaMode(kStageOpModulate, -1);
+        theTexture->SetStageColorMode(kStageOpModulate, -1);
+        theTexture->SetStageMinFilterMode(1, -1);
+        theTexture->SetStageMagFilterMode(1, -1);
+        theTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
+        theTexture->SetStageMipMapBias(-0.75f, -1);
+        theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
+        theCall.mTextures[inA] = theTexture;
+        return 0;
+    }
+    case EE_SCREENS_BOX_OP_SET_RECT:
+        sIconBitmaps[inA].mRectangle =
+            GERectangle(EEBoxFloat(inB, 0), EEBoxFloat(inB, 1), EEBoxFloat(inC, 0), EEBoxFloat(inC, 1));
+        return 0;
+    case EE_SCREENS_BOX_OP_TEXTURE_SIZE: {
+        GETexture* theTexture = theCall.mTextures[inA];
+        uint64_t theWidth = (uint32_t)theTexture->GetSurface()->GetWidth();
+        return (int64_t)(theWidth << 32 | (uint32_t)theTexture->GetSurface()->GetHeight());
+    }
+    case EE_SCREENS_BOX_OP_BITMAP_TEXTURE: {
+        GETextureCoordinate theTopLeft;
+        GETextureCoordinate theTopRight;
+        GETextureCoordinate theBottomLeft;
+        GETextureCoordinate theBottomRight;
+        theTopLeft.mU = EEBoxFloat(inB, 0);
+        theTopLeft.mV = EEBoxFloat(inB, 1);
+        theBottomRight.mU = EEBoxFloat(inC, 0);
+        theBottomRight.mV = EEBoxFloat(inC, 1);
+        theTopRight.mU = theBottomRight.mU;
+        theTopRight.mV = theTopLeft.mV;
+        theBottomLeft.mU = theTopLeft.mU;
+        theBottomLeft.mV = theBottomRight.mV;
+        GEBitmap* theBitmap = sIconBitmaps[inA & 0xff].mBitmap;
+        theBitmap->SetTexture(theCall.mTextures[inA >> 8], gScreenIndex);
+        theBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
+        return 0;
+    }
+    case EE_SCREENS_BOX_OP_BITMAP_SCALE:
+        sIconBitmaps[inA].mBitmap->SetXYScale(EEBoxFloat(inB, 0), EEBoxFloat(inB, 1));
+        return 0;
+    case EE_SCREENS_BOX_OP_ICONS_LOADED:
+        sIconsLoaded = true;
+        return 0;
+    }
+    return 0;
+}
+
+extern "C" int64_t ee_screenscpp_status_box(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+{
+    return EEUIFMGStatusBox::HostOp(inCall, inOp, inA, inB, inC);
+}
+
+extern "C" void ee_screenscpp_status_box_view(void* inCall, bool inFill, EeScreensHudUnit* outView)
+{
+    EEUIFMGStatusBoxCall& theCall = *static_cast<EEUIFMGStatusBoxCall*>(inCall);
+    EEStatusBoxView(theCall.mUnit, theCall.mBox, inFill, *outView);
+}
+
+// (FillArmorAttributes 0x66ae16, UpdateArmorTexts 0x66c91d and GetAttributeText 0x66cb84 are Rust's: status_box.rs
+// fill_armor_attributes, update_armor_texts; hud.rs attribute_text)
 
 // FUNCTION: EXE 0x66b593
 // Fills the status box for a unit: name (gate lock state), civilization, hit point / power / flight / garrison
 // bars, the improvable attribute buttons and the background panels; clears it without a unit
 void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
 {
-    UWideString theText(0x100);
-    UWideString theSuffix;
-    this->mAttributeCount = 0;
-    this->mIsResourceShown = false;
-    this->mC84->SetDisplayMode(kDisplayModeHidden);
-    EEUIBUpgrade* theA = static_cast<EEUIBUpgrade*>(this->mC84);
-    if (theA->mNumQueued != 0)
-        theA->SetDirty(true);
-    theA->mNumQueued = 0;
-    this->mC88->SetDisplayMode(kDisplayModeHidden);
-    EEUIBUpgrade* theB = static_cast<EEUIBUpgrade*>(this->mC88);
-    if (theB->mNumQueued != 0)
-        theB->SetDirty(true);
-    theB->mNumQueued = 0;
-    if (this->mCA8 != NULL) {
-        this->mCA8->SetDisplayMode(kDisplayModeHidden);
-        EEUIBUpgrade* theC = static_cast<EEUIBUpgrade*>(this->mCA8);
-        if (theC->mNumQueued != 0)
-            theC->SetDirty(true);
-        theC->mNumQueued = 0;
-    }
-    if (this->mCAC != NULL) {
-        this->mCAC->SetDisplayMode(kDisplayModeHidden);
-        EEUIBUpgrade* theD = static_cast<EEUIBUpgrade*>(this->mCAC);
-        if (theD->mNumQueued != 0)
-            theD->SetDirty(true);
-        theD->mNumQueued = 0;
-    }
-    this->mC8C->SetDisplayMode(kDisplayModeHidden);
-    this->mC90->SetDisplayMode(kDisplayModeHidden);
-    if (this->mC94 != NULL)
-        this->mC94->SetDisplayMode(kDisplayModeHidden);
-    this->mC98->SetDisplayMode(kDisplayModeHidden);
-    for (long i = 0; i < 9; i++) {
-        this->mIcons[i]->SetDisplayMode(kDisplayModeHidden);
-        this->mLabels[i]->SetDisplayMode(kDisplayModeHidden);
-    }
-    if (inUnit != NULL) {
-        EEUnitClass* theClass = inUnit->GetUnitClass();
-        EEUnitClassUpgrade* theStats = inUnit->mStats;
-        if (theStats->mName == gEmptyString)
-            gResource->GetString(theClass->mNameStringID, theText);
-        else
-            theText = inUnit->mStats->mName;
-        if (inUnit->mUnitClass->mCategory == kUnitCategoryGate) {
-            if (inUnit->mComplexUnit->mIsLocked)
-                gResource->GetString(IDS_MSG_LOCKED, theSuffix);
-            else
-                gResource->GetString(IDS_MSG_UNLOCKED, theSuffix);
-            theText += theSuffix;
-        }
-        static_cast<UITextLabel*>(this->mC90)->SetText(theText);
-        this->mC90->SetDisplayMode(kDisplayModeShown);
-        if (this->mC94 != NULL) {
-            theText = inUnit->mPlayer->mCivilization.mName;
-            static_cast<UITextLabel*>(this->mC94)->SetText(theText);
-            this->mC94->SetDisplayMode(kDisplayModeShown);
-        }
-        // the icons and bars are Rust's (ee_screens hud.rs fill_icons, transport_icon, fill_bars)
-        EeScreensHudUnit theView;
-        EEStatusBoxView(inUnit, this, true, theView);
-        EeScreensHudFillBars theBars;
-        ee_screens_hud_fill_bars(&theView, &theBars);
-        if (theBars.hit_points) {
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[24].mBitmap, EEUIFMGStatusBox::sIconBitmaps[24].mRectangle);
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetRange(0, theView.max_hit_points);
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetCurrentRangeValue(theView.hit_points);
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->SetDirty(true);
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mAttribute = kImprovementHitPoints;
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->SetDisplayMode(kDisplayModeShown);
-        }
-        EeScreensHudIcons theIcons;
-        ee_screens_hud_fill_icons(&theView, &theIcons);
-        for (unsigned long i = 0; i < theIcons.count; i++)
-            EEStatusBoxShowIcon(this, theIcons.icons[i]);
-        this->mAttributeCount = theIcons.next;
-        this->mAttributes[11] = -1;
-        this->FillArmorAttributes(inUnit);
-        ee_screens_hud_transport_icon(this->mAttributeCount, &theView, &theIcons);
-        EEStatusBoxShowIcon(this, theIcons.icons[0]);
-        this->mAttributeCount = theIcons.next;
-        this->mC8C->SetDisplayMode(kDisplayModeShown);
-        static_cast<EEUICPortrait*>(this->mC8C)->SetUnit(inUnit);
-        if (theBars.kind == 1) {
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[26].mBitmap, EEUIFMGStatusBox::sIconBitmaps[26].mRectangle);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetStatusBarColor(kStatusColor3);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetRange(0, theBars.max);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theBars.current);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mAttribute = kImprovementFlightTimeOrPower;
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mEnabled = true;
-        } else if (theBars.kind == 2) {
-            UIControl* theBars3[3] = {this->mC88, this->mCA8, this->mCAC};
-            EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theBars3[theBars.bar]);
-            theBar->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[42].mBitmap, EEUIFMGStatusBox::sIconBitmaps[42].mRectangle);
-            theBar->mBar->SetStatusBarColor(kStatusColor1);
-            theBar->mBar->SetRange(0, theBars.max);
-            theBar->mBar->SetCurrentRangeValue(theBars.current);
-            theBar->SetAttribute(kImprovementFlightTimeOrPower);
-            theBar->SetDisplayMode(kDisplayModeShown);
-            theBar->mEnabled = true;
-            theBar->SetStringTableID(IDS_IMPROVEMENT_GARRISON);
-        }
-        if (theBars.garrison) {
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[44].mBitmap, EEUIFMGStatusBox::sIconBitmaps[44].mRectangle);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetStatusBarColor(kStatusColor2);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetRange(0, theBars.garrison_max);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theBars.garrison_current);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mAttribute = kImprovementTransport;
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->mEnabled = false;
-            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetStringTableID(IDS_IMPROVEMENT_GARRISON);
-        }
-        if (static_cast<unsigned long>(this->mAttributeCount) > 9)
-
-            ESVerify(__FILE__, 708, "this->mAttributeCount <= keeuifmgsbMaxAttributes");
-        for (unsigned long j = this->mAttributeCount; j < 5; j++) {
-            this->mIcons[j]->SetDisplayMode(kDisplayModeHidden);
-            this->mLabels[j]->SetDisplayMode(kDisplayModeHidden);
-            static_cast<EEUIBUpgrade*>(this->mIcons[j])->mCostLabel = NULL;
-        }
-        this->Refresh(inUnit);
-    }
-    if (!gWorld.mInCinematic) {
-        UIBackground* theBackground;
-        if (inUnit == NULL) {
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(100);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(false);
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(111);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(false);
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(112);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(false);
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(113);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(false);
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(124);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(true);
-            static_cast<EEUICPortrait*>(this->mC8C)->SetUnit(NULL);
-        } else {
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(100);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(true);
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(111);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(true);
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(112);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(true);
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(113);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(true);
-            theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(124);
-            if (theBackground != NULL)
-                theBackground->SetVisibility(true);
-        }
-    }
+    EEUIFMGStatusBoxCall theCall = {this, inUnit, NULL};
+    ee_screens_status_box_fill(&theCall, inUnit != NULL);   // ee_screens status_box.rs fill
 }
 
 // FUNCTION: EXE 0x66c42a
@@ -522,110 +538,16 @@ void EEUIFMGStatusBar::SetIconBitmap(GEBitmap* inBitmap, const GERectangle& inTe
 // Hides the status box's background panels (all but panel 0x7c)
 void EEUIFMGStatusBox::HideBackgrounds()
 {
-    UIBackground* theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(100);
-    if (theBackground)
-        theBackground->SetVisibility(false);
-    theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(0x6f);
-    if (theBackground)
-        theBackground->SetVisibility(false);
-    theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(0x70);
-    if (theBackground)
-        theBackground->SetVisibility(false);
-    theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(0x71);
-    if (theBackground)
-        theBackground->SetVisibility(false);
-    theBackground = gUIManager->GetMainGameForm()->GetBackgroundByID(0x7c);
-    if (theBackground)
-        theBackground->SetVisibility(true);
+    EEUIFMGStatusBoxCall theCall = {this, NULL, NULL};
+    ee_screens_status_box_hide_backgrounds(&theCall);   // ee_screens status_box.rs hide_backgrounds
 }
 
 // FUNCTION: EXE 0x66c4fe
 // Loads the three unit improvement textures and points the 50 attribute icons at their cells
-// NEAR: the original's texture choice is a switch compare tree on the index with extra texture-1 ranges
-// (16-17, 18-19, 20-23); with those labels VC6 builds a jump table here, without them a different tree
 void EEUIFMGStatusBox::LoadIcons()
 {
-    GETextureDescription theDescription = { 1, 0, 0x10, 0, false, false, true, true };
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theTopRight;
-    GETextureCoordinate theBottomLeft;
-    GETextureCoordinate theBottomRight;
-    GETexture* theTexture1;
-    GETexture* theTexture2;
-    GETexture* theTexture3;
-    GETexture* theTexture;
-    for (long i = 0; i < 50; i++)
-        EEUIFMGStatusBox::sIconBitmaps[i].mBitmap = new GEBitmap;
-    theDescription.mCreateMIPMaps = false;
-    theDescription.mPixelDepth = gTexturePixelDepth;
-    theDescription.mHasAlpha = true;
-    theDescription.mNumMipLevelsToDrop = gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth() <= 800;
-    theTexture1 = gTextureManager->LoadTexture(UString("textures\\unit improvements_01"), theDescription);
-    theTexture1->SetStageAlphaMode(kStageOpModulate, -1);
-    theTexture1->SetStageColorMode(kStageOpModulate, -1);
-    theTexture1->SetStageMinFilterMode(1, -1);
-    theTexture1->SetStageMagFilterMode(1, -1);
-    theTexture1->SetStageMipFilterMode(kMipFilterPoint, -1);
-    theTexture1->SetStageMipMapBias(-0.75f, -1);
-    theTexture1->SetStageTextureAddressingMode(kAddressingClamp, -1);
-    theTexture2 = gTextureManager->LoadTexture(UString("textures\\unit improvements_02"), theDescription);
-    theTexture2->SetStageAlphaMode(kStageOpModulate, -1);
-    theTexture2->SetStageColorMode(kStageOpModulate, -1);
-    theTexture2->SetStageMinFilterMode(1, -1);
-    theTexture2->SetStageMagFilterMode(1, -1);
-    theTexture2->SetStageMipFilterMode(kMipFilterPoint, -1);
-    theTexture2->SetStageMipMapBias(-0.75f, -1);
-    theTexture2->SetStageTextureAddressingMode(kAddressingClamp, -1);
-    theTexture3 = gTextureManager->LoadTexture(UString("textures\\unit upgrades_03"), theDescription);
-    theTexture3->SetStageAlphaMode(kStageOpModulate, -1);
-    theTexture3->SetStageColorMode(kStageOpModulate, -1);
-    theTexture3->SetStageMinFilterMode(1, -1);
-    theTexture3->SetStageMagFilterMode(1, -1);
-    theTexture3->SetStageMipFilterMode(kMipFilterPoint, -1);
-    theTexture3->SetStageMipMapBias(-0.75f, -1);
-    theTexture3->SetStageTextureAddressingMode(kAddressingClamp, -1);
-    for (long j = 0; j < 50; j++) {
-        EEUIFMGIconCell* theCell = &sIconCells[j];
-        EEUIFMGIconBitmap& theIcon = EEUIFMGStatusBox::sIconBitmaps[theCell->mIndex];
-        GEBitmap* theBitmap = theIcon.mBitmap;
-        theIcon.mRectangle = GERectangle(theCell->mTopLeft.GetX(), theCell->mTopLeft.GetY(),
-                                         theCell->mBottomRight.GetX(), theCell->mBottomRight.GetY());
-        if (theCell->mFlag) {
-            switch (j) {
-            case 24: case 25: case 26: case 27:
-                theTexture = theTexture2;
-                break;
-            case 28: case 29: case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
-                theTexture = theTexture3;
-                break;
-            case 42: case 43: case 44: case 45: case 46: case 47:
-                theTexture = theTexture2;
-                break;
-            case 48: case 49:
-                theTexture = theTexture3;
-                break;
-            default:
-                theTexture = theTexture1;
-                break;
-            }
-        } else {
-            theTexture = theTexture1;
-        }
-        float theWidth = (float)theTexture->GetSurface()->GetWidth();
-        float theHeight = (float)theTexture->GetSurface()->GetHeight();
-        theTopLeft.mU = theCell->mTopLeft.GetX() / theWidth;
-        theTopLeft.mV = theCell->mTopLeft.GetY() / theHeight;
-        theBottomRight.mU = theCell->mBottomRight.GetX() / theWidth;
-        theBottomRight.mV = theCell->mBottomRight.GetY() / theHeight;
-        theTopRight.mU = theBottomRight.mU;
-        theTopRight.mV = theTopLeft.mV;
-        theBottomLeft.mU = theTopLeft.mU;
-        theBottomLeft.mV = theBottomRight.mV;
-        theBitmap->SetTexture(theTexture, gScreenIndex);
-        theBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
-        theBitmap->SetXYScale((float)theCell->mWidth / theWidth, (float)theCell->mHeight / theHeight);
-    }
-    sIconsLoaded = true;
+    EEUIFMGStatusBoxCall theCall = {NULL, NULL, NULL};
+    ee_screens_status_box_load_icons(&theCall);   // ee_screens status_box.rs load_icons (the cells, the texture choice)
 }
 
 // FUNCTION: EXE 0x66c8f4
@@ -641,165 +563,13 @@ void EEUIFMGStatusBox::UnloadIcons()
     }
     sIconsLoaded = false;
 }
-
-// FUNCTION: EXE 0x66c91d
-// Updates the armor buttons' "base+bonus" texts from the unit's armor
-void EEUIFMGStatusBox::UpdateArmorTexts(EEUnit* inUnit)
-{
-    // the values are Rust's (ee_screens hud.rs armor_attribute): attributes 4..9 show the armor kinds
-    // ee_screens_hud_armor_kind names
-    UWideString theText;
-    EEUnitClass* theClass = inUnit->GetUnitClass();
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    for (unsigned long i = 0; i < 6; i++) {
-        long theIndex = this->mAttributes[4 + i];
-        if (theIndex == -1)
-            continue;
-        unsigned long theKind = ee_screens_hud_armor_kind(i);
-        float theBase, theBonus;
-        ee_screens_hud_armor_attribute(theStats->mArmor[theKind], theClass->mArmor[theKind],
-                                       theStats->mUnitClass->mArmor[theKind], &theBase, &theBonus);
-        this->GetAttributeText(theBase, theBonus, theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-}
-
-// FUNCTION: EXE 0x66cb84
-// Formats an attribute as "base+bonus" (a negative bonus is taken off the base)
-void EEUIFMGStatusBox::GetAttributeText(float inBase, float inBonus, UWideString& outText)
-{
-    long theBase, theBonus;
-    ee_screens_hud_attribute_text(inBase, inBonus, &theBase, &theBonus);   // ee_screens hud.rs attribute_text
-    sprintf(outText, "%ld+%ld", theBase, theBonus);
-}
-
 // FUNCTION: EXE 0x66cbe1
 // Refreshes the status box texts for the unit: name, civilization, hit points, attributes, cargo, flight time
 // or power, garrison, and the resource it carries
 void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
 {
-    UWideString theText;
-    UWideString theSuffix;
-    EEUnitClass* theClass = inUnit->GetUnitClass();
-    EEUnitClassUpgrade* theStats = inUnit->GetStats();
-    if (theStats->mName == "")
-        gResource->GetString(theClass->mNameStringID, theText);
-    else
-        theText = inUnit->GetStats()->mName;
-    if (inUnit->GetUnitClass()->mCategory == kUnitCategoryGate) {
-        if (inUnit->mComplexUnit->mIsLocked)
-            gResource->GetString(IDS_MSG_LOCKED, theSuffix);
-        else
-            gResource->GetString(IDS_MSG_UNLOCKED, theSuffix);
-        theText += theSuffix;
-    }
-    if (!(static_cast<UITextLabel*>(this->mC90)->GetText(0) == theText))
-        static_cast<UITextLabel*>(this->mC90)->SetText(theText);
-    if (this->mC94 != NULL) {
-        theText = inUnit->GetPlayer()->mCivilization.mName;
-        if (!(static_cast<UITextLabel*>(this->mC94)->GetText(0) == theText))
-            static_cast<UITextLabel*>(this->mC94)->SetText(theText);
-    }
-    this->UpdateArmorTexts(inUnit);
-    // the numbers are Rust's (ee_screens hud.rs refresh); the C++ formats them and keeps the controls
-    EeScreensHudUnit theView;
-    EEStatusBoxView(inUnit, this, false, theView);
-    EeScreensHudRefresh thePlan;
-    ee_screens_hud_refresh(&theView, &thePlan);
-    if (thePlan.hit_points) {
-        EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(this->mC84);
-        sprintf(theText, "%ld/%ld", thePlan.hit_points_text[0], thePlan.hit_points_text[1]);
-        if (theText != theBar->GetValueText()) {
-            theBar->mValue->SetText(theText);
-            theBar->mBar->SetCurrentRangeValue(theView.hit_points);
-        }
-        sprintf(theText, "+ %ld", thePlan.hit_points_bonus);
-        if (theText != theBar->GetValue2Text()) {
-            theBar->mValue2->SetText(theText);
-            theBar->mBar->SetRange(0, theView.max_hit_points);
-            theBar->mBar->SetCurrentRangeValue(theView.hit_points);
-        }
-        theBar->UpdateCost(theText);
-    }
-    // attack, range, speed, area effect, repair
-    static const long kSlots[5] = {0, 1, 2, 3, 10};
-    long theIndex;
-    for (unsigned long i = 0; i < 5; i++) {
-        if ((theIndex = this->mAttributes[kSlots[i]]) != -1) {
-            sprintf(theText, "%ld+%ld", thePlan.attributes[i][0], thePlan.attributes[i][1]);
-            static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-        }
-    }
-    static_cast<EEUICPortrait*>(this->mC8C)->Update();
-    if (theView.complex) {
-        if ((theIndex = this->mAttributes[12]) != -1) {
-            sprintf(theText, "%ld/%ld", thePlan.cargo[0], thePlan.cargo[1]);
-            static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-        }
-        if (thePlan.kind != 0) {
-            UIControl* theBars[3] = {this->mC88, this->mCA8, this->mCAC};
-            EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theBars[thePlan.bar]);
-            sprintf(theText, "%ld/%ld", thePlan.bar_text[0], thePlan.bar_text[1]);
-            if (theText != theBar->GetValueText()) {
-                theBar->mValue->SetText(theText);
-                theBar->mBar->SetCurrentRangeValue(thePlan.bar_current);
-            }
-            sprintf(theText, "+ %ld", thePlan.bar_bonus);
-            if (theText != theBar->GetValue2Text()) {
-                theBar->mValue2->SetText(theText);
-                theBar->mBar->SetRange(0, thePlan.bar_max);
-                theBar->mBar->SetCurrentRangeValue(thePlan.bar_current);
-            }
-            theBar->UpdateCost(theText);
-        }
-        if (thePlan.garrison) {
-            EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(this->mC88);
-            sprintf(theText, "%ld/%ld", thePlan.garrison_text[0], thePlan.garrison_text[1]);
-            if (theText != theBar->GetValueText()) {
-                theBar->mValue->SetText(theText);
-                theBar->mBar->SetCurrentRangeValue(thePlan.garrison_current);
-            }
-            theText = "";
-            if (theText != theBar->GetValue2Text()) {
-                theBar->mValue2->SetText(theText);
-                theBar->mBar->SetRange(0, thePlan.garrison_max);
-                theBar->mBar->SetCurrentRangeValue(thePlan.garrison_current);
-            }
-            theBar->UpdateCost(theText);
-        }
-    }
-    if (thePlan.resource) {
-        EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount]);
-        if (!this->mIsResourceShown) {
-            theIcon->mAttribute = kImprovementTransport;
-            theIcon->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mAttributeCount]);
-            this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            this->mLabels[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            this->mIsResourceShown = true;
-        }
-        long theBitmap = thePlan.resource_bitmap;
-        if (theBitmap != -1) {
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap->ComputeStretchedCoordsAndScale(
-                theIcon->GetIconRectangle(), theIcon->GetIconRectangle(), EEUIFMGStatusBox::sIconBitmaps[theBitmap].mRectangle,
-                theIcon->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap->ComputeStretchedCoordsAndScale(
-                theIcon->GetIconRectangle(), theIcon->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mRectangle, theIcon->GetScreenIndex());
-            if (theIcon->GetNormalBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap)
-                theIcon->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap);
-            if (theIcon->GetPressedBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap)
-                theIcon->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap);
-        }
-        if (thePlan.resource_pair)
-            sprintf(theText, "%ld/%ld", thePlan.resource_text[0], thePlan.resource_text[1]);
-        else
-            sprintf(theText, "%ld", thePlan.resource_text[0]);
-        theIcon->UpdateCost(theText);
-    } else if (this->mIsResourceShown) {
-        this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeHidden);
-        this->mLabels[this->mAttributeCount]->SetDisplayMode(kDisplayModeHidden);
-        this->mIsResourceShown = false;
-    }
+    EEUIFMGStatusBoxCall theCall = {this, inUnit, NULL};
+    ee_screens_status_box_refresh(&theCall);   // ee_screens status_box.rs refresh
 }
 
 // FUNCTION: EXE 0x66dac9
@@ -814,60 +584,8 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
 // Shows on each visible improvement button how many of its improvements the player has queued
 void EEUIFMGStatusBox::UpdateQueuedCounts(EEComplexUnit* inUnit, long inImprovement)
 {
-    unsigned long theType = inUnit->GetUnitClass()->mUnitType;
-    if (this->mC84->GetDisplayMode() != kDisplayModeHidden) {
-        long theAttribute = static_cast<EEUIBUpgrade*>(this->mC84)->mAttribute;
-        long theLevel = inUnit->GetPlayer()->CountQueuedImprovements(theType, theAttribute);
-        EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(this->mC84);
-        if (theButton->mNumQueued != theLevel)
-            theButton->SetDirty(true);
-        theButton->mNumQueued = theLevel;
-    }
-    if (this->mC88->GetDisplayMode() != kDisplayModeHidden) {
-        long theAttribute = static_cast<EEUIBUpgrade*>(this->mC88)->mAttribute;
-        long theLevel = inUnit->GetPlayer()->CountQueuedImprovements(theType, theAttribute);
-        EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(this->mC88);
-        if (theButton->mNumQueued != theLevel)
-            theButton->SetDirty(true);
-        theButton->mNumQueued = theLevel;
-    }
-    if (this->mCA8 != NULL && this->mCA8->GetDisplayMode() != kDisplayModeHidden) {
-        long theAttribute = static_cast<EEUIBUpgrade*>(this->mCA8)->mAttribute;
-        long theLevel = inUnit->GetPlayer()->CountQueuedImprovements(theType, theAttribute);
-        EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(this->mCA8);
-        if (theButton->mNumQueued != theLevel)
-            theButton->SetDirty(true);
-        theButton->mNumQueued = theLevel;
-    }
-    if (this->mCAC != NULL && this->mCAC->GetDisplayMode() != kDisplayModeHidden) {
-        long theAttribute = static_cast<EEUIBUpgrade*>(this->mCAC)->mAttribute;
-        long theLevel = inUnit->GetPlayer()->CountQueuedImprovements(theType, theAttribute);
-        EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(this->mCAC);
-        if (theButton->mNumQueued != theLevel)
-            theButton->SetDirty(true);
-        theButton->mNumQueued = theLevel;
-    }
-    unsigned long theIndex;
-    for (theIndex = 0; theIndex < this->mAttributeCount; theIndex++) {
-        if (this->mIcons[theIndex]->GetDisplayMode() == kDisplayModeHidden)
-            continue;
-        long theAttribute = static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->mAttribute;
-        long theLevel = inUnit->GetPlayer()->CountQueuedImprovements(theType, theAttribute);
-        EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(this->mIcons[theIndex]);
-        if (theButton->mNumQueued != theLevel)
-            theButton->SetDirty(true);
-        theButton->mNumQueued = theLevel;
-    }
-    for (theIndex = 5; theIndex < this->mArmorAttributeCount; theIndex++) {
-        if (this->mIcons[theIndex]->GetDisplayMode() == kDisplayModeHidden)
-            continue;
-        long theAttribute = static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->mAttribute;
-        long theLevel = inUnit->GetPlayer()->CountQueuedImprovements(theType, theAttribute);
-        EEUIBUpgrade* theButton = static_cast<EEUIBUpgrade*>(this->mIcons[theIndex]);
-        if (theButton->mNumQueued != theLevel)
-            theButton->SetDirty(true);
-        theButton->mNumQueued = theLevel;
-    }
+    EEUIFMGStatusBoxCall theCall = {this, NULL, inUnit};
+    ee_screens_status_box_update_queued(&theCall);   // ee_screens status_box.rs update_queued_counts
 }
 
 // FUNCTION: EXE 0x66dcd9
