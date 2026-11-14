@@ -13,6 +13,7 @@
 #include <vector>
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -197,16 +198,29 @@ static void PMStepCommit()
     sPMStepCalls = 0;
 }
 
+// TEST ONLY: the steps per model so far (the lane's coverage of the capture's games), printed to stderr every 20000
+// ticks while the capture runs: "EE-PM-COUNT <tick> <land> <airplane> .. <spaceship>"
+static uint32_t sPMStepKinds[12];
+
 static void PMStepNote(EEPhysicsModel* inModel, EEComplexUnit* inUnit, unsigned long inAction)
 {
     if (gPhysics->mNumTicksDone != sPMStepTick) {
         PMStepCommit();
         sPMStepTick = gPhysics->mNumTicksDone;
+        if (sPMStepTick % 20000 == 0) {
+            fprintf(stderr, "EE-PM-COUNT %lu", sPMStepTick);
+            for (int i = 0; i < 12; i++)
+                fprintf(stderr, " %u", sPMStepKinds[i]);
+            fprintf(stderr, "
+");
+        }
     }
     uint32_t theModel = 0xff;
     for (uint32_t i = 0; i < 12; i++)
         if (gPhysicsModels[i] == inModel)
             theModel = i;
+    if (theModel < 12)
+        sPMStepKinds[theModel]++;
     PMStepFNV((uint32_t)inUnit->mUnitID);
     PMStepFNV(theModel);
     PMStepFNV((uint32_t)inAction);
