@@ -10,6 +10,8 @@
 
 #include <vector>
 
+#include "rust/ee_ui.h"
+
 class FSFileSpec;
 class GEBitmap;
 class GEFont;
@@ -17,15 +19,17 @@ class GEText;
 class UIControl;
 class UIForm;
 class UIManager;
-struct UIDbControl;
 
+// The class is whole in Rust (rust/crates/ee_ui/src/tableobj.rs, R6 ui round 18): its record, layout, colours, names,
+// events and font, the static array of tables, Create, AddControlLike, MoveControlsHorizontally, DeleteAll,
+// CreateControl and its factories, CreateControlEvent, RelayoutControl and SetupFont are the Rust object mRust; the
+// getters read its data in place. UIControlsTable.cpp keeps the four members that only call GE objects (CreateBitmap,
+// CreateMovie, SetupGEText, SetupStringArray) and the host, UIControlsTable::HostOp.
 class LLE_API UIControlsTable {
-    friend struct UIControlsTableRust;      // UIControlsTable.cpp: the Rust logic's view of the record (ee_ui controls_table.rs)
 public:
     UIControlsTable();
-    UIControlsTable(const UIDbControl& inControl);
     virtual ~UIControlsTable();
-    void AddEvent(const UIEventData& inEvent) { this->mEventData.push_back(inEvent); }
+    void AddEvent(const UIEventData& inEvent);
     static long Create(FSFileSpec& inFile, UIManager* inManager);
     // port: adds a control the database does not have (after Create), described as a copy of the database control
     // inTemplateID (its type, font, colours, sounds and offset types; not its events) with its own id, form index,
@@ -45,111 +49,71 @@ public:
     UIControl* CreateControl(UIManager* inManager);
     void CreateControlEvent(UIForm* inForm);
     GEBitmap* CreateFocusedBitmap(UIManager* inManager, const GERectangle& inRectangle) const
-        { return this->CreateBitmap(inManager, inRectangle, this->mFocusedFileName, this->mFocusedHasAlpha, this->mFocusedTextureRect); }
+        { return this->CreateBitmap(inManager, inRectangle, this->GetFocusedFileName(), this->GetFocusedHasAlpha(), this->GetFocusedTextureRect()); }
     GEBitmap* CreateNormalBitmap(UIManager* inManager, const GERectangle& inRectangle) const
-        { return this->CreateBitmap(inManager, inRectangle, this->mNormalFileName, this->mNormalHasAlpha, this->mNormalTextureRect); }
+        { return this->CreateBitmap(inManager, inRectangle, this->GetNormalFileName(), this->GetNormalHasAlpha(), this->GetNormalTextureRect()); }
     GEBitmap* CreatePressedBitmap(UIManager* inManager, const GERectangle& inRectangle) const
-        { return this->CreateBitmap(inManager, inRectangle, this->mPressedFileName, this->mPressedHasAlpha, this->mPressedTextureRect); }
+        { return this->CreateBitmap(inManager, inRectangle, this->GetPressedFileName(), this->GetPressedHasAlpha(), this->GetPressedTextureRect()); }
     UIControl* CreateMovie(UIManager* inManager, GERectangle inRectangle) const;
     static void DeleteAll();
-    unsigned long GetFontTableIndex() const { return this->mFontTableIndex; }
-#ifdef LOWLEVELENGINE_EXPORTS                   // reads the guarded static below (the exe imports neither)
-    static UIControlsTable* GetUIControlsTable(unsigned long inIndex) { return UIControlsTable::sUIControlsArray[inIndex]; }
-#endif
-    GEColor GetBackground() const { return this->mBackground; }
-    GEColor GetTextForeground() const { return this->mTextForeground; }
-    UString GetNormalFileName() const { return this->mNormalFileName; }
-    GEFont* GetFont() const { return this->mFont; }
-    GEBitmap* GetNormal() const { return this->mNormal; }
-    float GetBackgroundOpacity() const { return this->mBackgroundOpacity; }
-    long GetID() const { return this->mID; }
-    long GetFormID() const { return this->mFormID; }
-    unsigned long GetGroup() const { return this->mGroup; }
-    unsigned long GetControlType() const { return this->mControlType; }
-    long GetFormIndex() const { return this->mFormIndex; }
-    long GetBorderThickness() const { return this->mBorderThickness; }
-    unsigned long GetStringTableID() const { return this->mStringTableID; }
-    const UILayoutUtility& GetLayout() const { return this->mLayout; }
-    bool GetIsVisible() const { return this->mIsVisible; }
-    bool GetStartChecked() const { return this->mStartChecked; }
-    bool GetAlwaysDirty() const { return this->mAlwaysDirty; }
-    bool GetLoopMovie() const { return this->mLoopMovie; }
+    unsigned long GetFontTableIndex() const { return this->F().font_table_index; }
+    static UIControlsTable* GetUIControlsTable(unsigned long inIndex);
+    GEColor GetBackground() const { return reinterpret_cast<const GEColor&>(this->D().background); }
+    GEColor GetTextForeground() const { return reinterpret_cast<const GEColor&>(this->D().text_foreground); }
+    GEColor GetSeletedListBox() const { return reinterpret_cast<const GEColor&>(this->D().selected_list_box); }
+    GEColor GetFocusedLineColor() const { return reinterpret_cast<const GEColor&>(this->D().focused_line); }
+    UString GetNormalFileName() const { return UString(this->D().names[0]); }
+    UString GetPressedFileName() const { return UString(this->D().names[1]); }
+    UString GetFocusedFileName() const { return UString(this->D().names[2]); }
+    GEFont* GetFont() const { return static_cast<GEFont*>(this->D().font); }
+    GEBitmap* GetNormal() const { return NULL; }    // never set (the original left these members uninitialized)
+    GEBitmap* GetPressed() const { return NULL; }
+    GEBitmap* GetFocused() const { return NULL; }
+    float GetBackgroundOpacity() const { return this->F().background_opacity; }
+    float GetTextBoxOpacity() const { return this->F().text_box_opacity; }
+    float GetScrollBarBgOpacity() const { return this->F().scroll_bar_bg_opacity; }
+    long GetID() const { return this->F().id; }
+    long GetFormID() const { return this->F().form_id; }
+    unsigned long GetGroup() const { return this->F().group; }
+    long GetGroupID() const { return this->F().group; }
+    unsigned long GetControlType() const { return this->F().control_type; }
+    long GetFormIndex() const { return this->F().form_index; }
+    long GetBorderThickness() const { return this->F().border_thickness; }
+    unsigned long GetStringTableID() const { return this->F().string_table_id; }
+    long GetStringTableBegin() const { return this->F().string_table_begin; }
+    long GetStringTableEnd() const { return this->F().string_table_end; }
+    long GetTextAlignment() const { return this->F().text_alignment; }
+    long GetMaxChars() const { return this->F().max_chars; }
+    long GetStartCurrentSelection() const { return this->F().start_current_selection; }
+    long GetStartRange() const { return this->F().start_range; }
+    long GetEndRange() const { return this->F().end_range; }
+    long GetCurrentRange() const { return this->F().current_range; }
+    const UILayoutUtility& GetLayout() const { return reinterpret_cast<const UILayoutUtility&>(this->D().layout); }
+    const GERectangle& GetNormalTextureRect() const { return reinterpret_cast<const GERectangle&>(this->D().normal_rect); }
+    const GERectangle& GetPressedTextureRect() const { return reinterpret_cast<const GERectangle&>(this->D().pressed_rect); }
+    const GERectangle& GetFocusedTextureRect() const { return reinterpret_cast<const GERectangle&>(this->D().focused_rect); }
+    bool GetIsVisible() const { return this->F().is_visible; }
+    bool GetStartChecked() const { return this->F().start_checked; }
+    bool GetListBoxAlwaysDirty() const { return this->F().list_box_always_dirty; }
+    bool GetSortListBox() const { return this->F().sort_list_box; }
+    bool GetFocusedHasAlpha() const { return this->F().focused_has_alpha; }
+    bool GetPressedHasAlpha() const { return this->F().pressed_has_alpha; }
+    bool GetNormalHasAlpha() const { return this->F().normal_has_alpha; }
+    bool GetAlwaysDirty() const { return this->F().always_dirty; }
+    bool GetLoopMovie() const { return this->F().loop_movie; }
     void RelayoutControl(UIControl* inControl, UIManager* inManager);
     void SetupFont(UIManager* inManager, const GERectangle& inRectangle, bool inScaleToWindow);
     void SetupGEText(GEText* inText) const;
     void SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const;
 private:
-    UIControl* CreateBitmap(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateButton(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateCheckBox(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateComboBox(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateEditBox(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateFileComboBox(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateFileListBox(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateGraph(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateListBox(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateRadioButton(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateScrollBar(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateScrollingTextLabel(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateSlider(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateStatusBar(UIManager* inManager, const GERectangle& inRectangle);
-    UIControl* CreateTextLabel(UIManager* inManager, const GERectangle& inRectangle);
+    friend struct UIControlsTableHost;      // UIControlsTable.cpp: the Rust table's calls out
+    UIControlsTable(EeUiControlsTable* inRust) : mRust(inRust) {}
+    UIControlsTable(const UIControlsTable&);             // not copied (the Rust table is owned)
+    UIControlsTable& operator=(const UIControlsTable&);
+    const EeUiControlsTableData& D() const { return *ee_ui_controls_table_data(this->mRust); }
+    const EeUiControlsTableFields& F() const { return this->D().fields; }
 
-    std::vector<UIEventData> mEventData;    // +0x004 (AddEvent)
-    UILayoutUtility mLayout;                // +0x014
-    GERectangle mNormalTextureRect;         // +0x034
-    GERectangle mPressedTextureRect;        // +0x044
-    GERectangle mFocusedTextureRect;        // +0x054
-    GEColor mBackground;                    // +0x064
-    GEColor mTextForeground;                // +0x070
-    GEColor mSelectedListBox;               // +0x07c
-    GEColor mFocusedLineColor;              // +0x088
-    UString mNormalFileName;                // +0x094
-    UString mPressedFileName;               // +0x0a4
-    UString mFocusedFileName;               // +0x0b4
-    UString mButtonDownSound;               // +0x0c4
-    UString mButtonUpSound;                 // +0x0d4
-    GEBitmap* mNormal;                      // +0x0e4
-    GEBitmap* mPressed;                     // +0x0e8
-    GEBitmap* mFocused;                     // +0x0ec
-    GEFont* mFont;                          // +0x0f0 SetupFont; released after each CreateControl/RelayoutControl
-    float mBackgroundOpacity;               // +0x0f4
-    float mTextBoxOpacity;                  // +0x0f8
-    float mScrollBarBgOpacity;              // +0x0fc
-    long mUnknown100;                       // +0x100 (provisional name; copied from the record, never read here)
-    long mID;                               // +0x104 (Create skips records with a negative id)
-    long mFormID;                           // +0x108
-    unsigned long mGroup;                   // +0x10c
-    unsigned long mControlType;             // +0x110 CreateControl's switch; >= 1000: UIManager::CreateUserDefinedControl
-    long mFormIndex;                        // +0x114
-    long mBorderThickness;                  // +0x118
-    unsigned long mStringTableID;           // +0x11c (negative record values become 0)
-    unsigned long mFontTableIndex;          // +0x120 0: no font
-    long mBlinkRate;                        // +0x124 provisional name (UIBlinkingButton's last argument)
-    long mStringTableBegin;                 // +0x128
-    long mStringTableEnd;                   // +0x12c
-    long mTextAlignment;                    // +0x130
-    long mMaxChars;                         // +0x134
-    long mStartCurrentSelection;            // +0x138
-    long mStartRange;                       // +0x13c
-    long mEndRange;                         // +0x140
-    long mCurrentRange;                     // +0x144
-    long mPageSize;                         // +0x148 provisional name (UISlider +0xd4, clamped below the range)
-    bool mIsVisible;                        // +0x14c
-    bool mStartChecked;                     // +0x14d
-    bool mListBoxAlwaysDirty;               // +0x14e
-    bool mSortListBox;                      // +0x14f
-    bool mFocusedHasAlpha;                  // +0x150
-    bool mPressedHasAlpha;                  // +0x151
-    bool mNormalHasAlpha;                   // +0x152
-    bool mAlwaysDirty;                      // +0x153
-    bool mFitRectToText;                 // +0x154 provisional name (UITextLabel::SetFitRectToText)
-    bool mScaleToControl;                 // +0x155 provisional name (scaled fonts; check boxes/radio buttons)
-    bool mLoopMovie;                 // +0x156 (UIMovie: loop)
-#ifdef LOWLEVELENGINE_EXPORTS
-    // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
-    static std::vector<UIControlsTable*> sUIControlsArray;   // 0x1012e3c0
-#endif
+    EeUiControlsTable* mRust;
 };
 
 // UI database control type (UIControlsTable::CreateControl; >= 1000: EEUIManager::CreateUserDefinedControl)

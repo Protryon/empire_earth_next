@@ -654,6 +654,91 @@ pub enum EeUiOp {
     MgrSoundParameters = 446,
     /// Sound instance `a`'s `Reference()` (`b` 0) or `Dereference()` (1).
     MgrInstanceRef = 447,
+
+    // ---- UIControlsTable (R6 ui round 18, tableobj.rs): `d` is the manager where the op needs one
+    /// *Pure*: the manager's window's `GetWidth()`.
+    TblWindowWidth = 460,
+    /// *Pure*: the manager's window's `GetHeight()`.
+    TblWindowHeight = 461,
+    /// *Pure*: the manager's `GetFormByID(a)`.
+    TblFormById = 462,
+    /// *Pure*: form `a`'s `GetUseExclusiveCoords()`.
+    TblFormExclusive = 463,
+    /// *Pure*: form `a`'s `GetDesignedHeight()`.
+    TblFormDesignedHeight = 464,
+    /// *Pure*: form `a`'s `GetUseGDIForText()`.
+    TblFormGdi = 465,
+    /// *Pure*: font `a`'s `GetHeight()`.
+    TblFontHeight = 466,
+    /// *Pure*: whether font `a` has its `GetFontBitmap()`.
+    TblFontHasBitmap = 467,
+    /// *Pure*: string `a`'s `GetLength()`.
+    TblStringLength = 468,
+    /// File `a`'s `Open(kFileAccessRead)`.
+    TblFileOpen = 470,
+    /// File `a`'s `Read(count)` -> the count in the high 32 bits, the result in the low.
+    TblFileReadCount = 471,
+    /// File `a`'s `Read(b, c bytes)` -> its result (the bytes at `b`).
+    TblFileRead = 472,
+    /// File `a`'s `Close()`.
+    TblFileClose = 473,
+    /// `new UIControlsTable(the Rust table a)` -> the C++ table.
+    TblWrap = 474,
+    /// `delete` the C++ table `a` (its destructor frees the Rust table).
+    TblDelete = 475,
+    /// Form `a`'s `AddDatabaseControl({b, NULL})`.
+    TblAddDatabaseControl = 476,
+    /// Form `a`'s `ReserveControlIndex(b)`.
+    TblReserveIndex = 477,
+    /// A new `UWideString`: the string table's string `a`, empty for 0 -> the string.
+    TblStringNew = 478,
+    /// `delete` string `a`.
+    TblStringDelete = 479,
+    /// A new `std::vector<UWideString>` filled by `SetupStringArray` -> the strings.
+    TblStringsNew = 480,
+    /// `delete` strings `a`.
+    TblStringsDelete = 481,
+    /// `UIFontTable::GetFont(a)` -> the font (referenced).
+    TblFontGet = 482,
+    /// `UIFontTable::CreateClosestFont(a, b)` -> the font.
+    TblFontClosest = 483,
+    /// Font `a`'s `Dereference()`.
+    TblFontRelease = 484,
+    /// `new GEFontBitmap(the rasterizer, font a, the screen)`.
+    TblFontBitmapNew = 485,
+    /// The table's `CreateNormalBitmap` (a 0), `CreatePressedBitmap` (1) or `CreateFocusedBitmap` (2) over `f` -> the
+    /// bitmap or NULL.
+    TblBitmapNew = 486,
+    /// Bitmap `a`'s `Dereference()` (none for NULL).
+    TblBitmapRelease = 487,
+    /// A control's constructor, its arguments at `a` ([`crate::tableobj::EeUiTableMake`]) -> the control.
+    TblMake = 488,
+    /// Control `a`'s setter `b` ([`crate::tableobj::EeUiTableSet`]) with `c`, `d` and `f`.
+    TblSet = 489,
+    /// The manager's virtual `CreateUserDefinedControl(the table)` -> the control or NULL.
+    TblUserDefined = 490,
+    /// The table's `CreateMovie(the manager, f)` -> the control.
+    TblMovie = 491,
+    /// Form `a`'s manager's `CreateControlEvent(a, b)` -> the event or NULL.
+    TblEventNew = 492,
+    /// Event `a`'s `Dereference()`.
+    TblEventRelease = 493,
+    /// Form `a`'s `GetControl(b)`.
+    TblFormControl = 494,
+
+    // ---- UIFontTable (R6 ui round 18, fonttableobj.rs; its file ops are the controls table's TblFile*)
+    /// The manager `a`'s string table's string `b` as a new `UString` (a font's face) -> the string.
+    FontName = 500,
+    /// `delete` the face `a`.
+    FontNameDelete = 501,
+    /// Font `a`'s `CompareFont(face b, style c, quality d & 0xffffffff, size d >> 32)`.
+    FontCompare = 502,
+    /// Font `a`'s `Reference()`.
+    FontReference = 503,
+    /// `new GEFont(face a, size d, style b, quality c)`, referenced -> the font.
+    FontNew = 504,
+    /// Font `a`'s `Dereference()`.
+    FontRelease = 505,
 }
 
 impl EeUiOp {
@@ -751,6 +836,15 @@ impl EeUiOp {
                 | MgrWindowSize
                 | MgrTextureSize
                 | MgrBlending
+                | TblWindowWidth
+                | TblWindowHeight
+                | TblFormById
+                | TblFormExclusive
+                | TblFormDesignedHeight
+                | TblFormGdi
+                | TblFontHeight
+                | TblFontHasBitmap
+                | TblStringLength
         )
     }
 }
