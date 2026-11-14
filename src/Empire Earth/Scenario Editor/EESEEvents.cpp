@@ -161,7 +161,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         gWorld.mScenarioManager->mShowDebugIDs = !gWorld.mScenarioManager->mShowDebugIDs;
         break;
     case EE_SCREENS_SE_OP_OBJECT_SET_MAP:
-        Object()->mIsSelectOnMap = inA != 0;
+        Object()->SetIsSelectOnMap(inA != 0);
         break;
     case EE_SCREENS_SE_OP_OBJECT_REFRESH:
         Object()->Refresh();
@@ -178,7 +178,7 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
         theEditor->ClearSelection();
         break;
     case EE_SCREENS_SE_OP_OBJECT_CLEAR_IDS:
-        Object()->mUnitIDs.clear();
+        Object()->ClearUnitIDs();
         break;
     case EE_SCREENS_SE_OP_OBJECT_UPDATE_SELECTION:
         Object()->UpdateSelection();
