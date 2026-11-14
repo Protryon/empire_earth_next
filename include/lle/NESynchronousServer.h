@@ -23,6 +23,8 @@ enum class EeNetMmOp : uint32_t;
 class NEMCommunicationsTickResponse;
 class NEMWorldDatabaseChecksumResponse;
 struct EeNetRecPlay;                        // NERecordPlayback, whole in Rust (rust/ee_net.h)
+struct EeNetTune;                           // the tuning and booting (ee_net tune.rs)
+enum class EeNetTuOp : uint32_t;
 class NEServer;
 class FSFileSpec;
 class TSEvent;
@@ -199,11 +201,8 @@ protected:
 
 private:
     void BootAllLaggers(unsigned long inTime);
-    void BootTheSlowestClientCPU();
-    void BootTheSlowestResponder();
     unsigned long GetApplicationStartTime() const { return this->mApplicationStartTime; }
     unsigned long GetGameStartTime() const { return this->mGameStartTime; }
-    unsigned char GetSlowestClientCPU();
     static unsigned long Main(void* inServerObject);
     void ProcessCommunicationsTickResponse(NEMCommunicationsTickResponse* inMessage);
     long ProcessLocalUserInput2(NEMessage* inMessage);
@@ -213,14 +212,14 @@ private:
     void RemovePlayer(unsigned char inPlayer, bool inA);
     static unsigned long Send(void* inServerObject);
     void SendCommunicationsTick(bool inGenerateChecksum, bool inB);
-    bool TuneForSlowCPU();
-    bool TuneForSlowNetwork();
     bool TuneServer();
     static unsigned long Xfer(void* inServerObject);
     // the message manager's calls out (ee_net's EeNetMmOp): the messages, this server, its protocol, the files
     static ptrdiff_t MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d);
     // the recorder's calls out (ee_net's EeNetQOp): its callback, then the common ones
     static ptrdiff_t QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
+    // the tuning's and booting's calls out (ee_net's EeNetTuOp): the server's fields, its manager, the game
+    static ptrdiff_t TuneHost(void* inServer, EeNetTuOp inOp, size_t a, size_t b, size_t c, size_t d);
 
     NECDIServer mDebugInfo;                 // +0x30
     UWideString mName;                      // +0x70
@@ -229,7 +228,7 @@ private:
     std::map<unsigned char, unsigned char> mSendToSlotArray;            // +0xa8
     std::map<unsigned long, std::multimap<unsigned long, unsigned char> > mChecksumResponses;   // +0xb4
     std::vector<unsigned char> mOOSSlots;   // +0xc0
-    std::vector<unsigned char> mSlotsD0;    // +0xd0 (provisional name; TuneServer hands it to slot +0x68)
+    EeNetTune* mTune;                       // the tuning and booting (ee_net tune.rs: mSlotsD0 +0xd0, the counts)
     EeNetMsgMgr* mMessageManager;           // +0xe0 NEMessageManager, whole in Rust (ee_net msgmgr.rs)
     NEProtocol* mProtocol;                  // +0xe4 protocol 0
     NEServer* mServer;                      // +0xe8
@@ -285,19 +284,10 @@ private:
     unsigned long mSendToAllAndWaitRetries; // +0x1b0 (40)
     unsigned long mMaxPhysicsTicksPerSecond;  // +0x1b4
     unsigned long mMinPhysicsTicksPerSecond;  // +0x1b8
-    unsigned long mSlowCPUCount;            // +0x1bc
     unsigned long mWaitForReconnectsTime;   // +0x1c0
     unsigned long mMaxSendInterval;         // +0x1c4
     unsigned long mSendIntervalIncrement;   // +0x1c8
-    unsigned long mSendIntervalDecrement;   // +0x1cc
     unsigned long mU1D0;                    // +0x1d0 (1)
-    unsigned long mNetTuneState;
-    unsigned long mNetConsecutiveLate;
-    unsigned long mNetResendCount;
-    unsigned long mNetLateEpisodes;
-    unsigned long mNetAtMaxCount;
-    unsigned long mHighestResponseTime;
-    unsigned long mNetLateCount;
     unsigned long mReconnectCount;          // +0x1f0
     unsigned long mLowestReconnectCT;       // +0x1f4 (-1)
     unsigned char mSendToAllAndWaitType;    // +0x1f8
@@ -312,10 +302,8 @@ private:
     bool mGameWasPublished;                 // +0x201
     bool mPing;                             // +0x202
     bool mIsOOS;                            // +0x203
-    bool mLagReportActive;                  // +0x204
     bool mB205;                             // +0x205 (true)
     bool mProcessingSendToAllAndWait;       // +0x206
-    bool mLagWarning;                       // +0x207
 };
 
 // NESynchronousServer::mGameState (GetGameState); 2 is compared by EEServer only and stays unnamed

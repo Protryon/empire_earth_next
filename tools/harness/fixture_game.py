@@ -247,6 +247,10 @@ def tour(g, a, summary):
         summary['box_select'] = fixture_driver.box_select(g, GAME)
         g.note(f'BOX SELECT PASS: {len(summary["box_select"]["steps"])} steps (add grew the group: '
                f'{summary["box_select"]["grew"]})')
+        try:   # the status box and command buttons with the selection (evidence only)
+            summary['box_select']['capture'] = str(fixture_driver.capture_frame(g, 'box-selected'))
+        except RuntimeError as error:
+            g.note(f'CAPTURE box-selected skipped: {error}')
     if a.orders:
         summary['orders'] = fixture_driver.orders(g, GAME)
         g.note(f'ORDERS PASS: ran {summary["orders"]["ran"]} skipped {summary["orders"]["skipped"]}')

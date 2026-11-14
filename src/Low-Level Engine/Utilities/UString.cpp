@@ -1,10 +1,16 @@
 // C:\EEX\Low-Level Engine\Utilities\UString.cpp
+// The searches and tokenizers are Rust (rust/crates/ee_ustring, LLE lane round 3): they hand back indices, the
+// class keeps its buffer and builds its substrings.
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "lle/LowLevelEngine.h"
+#include "rust/ee_ustring.h"
+
+// a string's bytes for ee_ustring
+static const uint8_t* Bytes(const char* inString) { return reinterpret_cast<const uint8_t*>(inString); }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // TEMPLATE: LLE 0x100836e3
@@ -362,60 +368,31 @@ UString& UString::Copy(const char* inString, unsigned long inStart, unsigned lon
 // Returns the first position at or after inStart where a string occurs, or the length when not found
 unsigned long UString::Find(const UString& inString, unsigned long inStart) const
 {
-    unsigned long theIndex = this->mLength;
-    if (inString.mLength <= this->mLength - inStart)
-        for (unsigned long i = inStart; i <= this->mLength - inString.mLength; i++)
-            if (strncmp(this->mString + i, inString.mString, inString.mLength) == 0) {
-                theIndex = i;
-                break;
-            }
-    return theIndex;
+    return ee_ustring_find(Bytes(this->mString), this->mLength, Bytes(inString.mString), inString.mLength,
+                           inStart);
 }
 
 // FUNCTION: LLE 0x10083297
 // Returns the first position at or after inStart where a C string occurs, or the length when not found
 unsigned long UString::Find(const char* inString, unsigned long inStart) const
 {
-    unsigned long theLength = strlen(inString);
-    unsigned long theIndex = this->mLength;
-    if (theLength <= this->mLength - inStart)
-        for (unsigned long i = inStart; i <= this->mLength - theLength; i++)
-            if (strncmp(this->mString + i, inString, theLength) == 0) {
-                theIndex = i;
-                break;
-            }
-    return theIndex;
+    return ee_ustring_find(Bytes(this->mString), this->mLength, Bytes(inString), strlen(inString), inStart);
 }
 
 // FUNCTION: LLE 0x100832f6
 // Returns the last position at or before inStart where a string starts, or the length when not found
 unsigned long UString::FindBackwards(const UString& inString, unsigned long inStart) const
 {
-    unsigned long theIndex = this->mLength;
-    if (inStart > this->mLength)
-        inStart = this->mLength;
-    for (long i = inStart - inString.mLength; i >= 0; i--)
-        if (strncmp(this->mString + i, inString.mString, inString.mLength) == 0) {
-            theIndex = i;
-            break;
-        }
-    return theIndex;
+    return ee_ustring_find_backwards(Bytes(this->mString), this->mLength, Bytes(inString.mString),
+                                     inString.mLength, inStart);
 }
 
 // FUNCTION: LLE 0x10083343
 // Returns the last position at or before inStart where a C string starts, or the length when not found
 unsigned long UString::FindBackwards(const char* inString, unsigned long inStart) const
 {
-    unsigned long theLength = strlen(inString);
-    unsigned long theIndex = this->mLength;
-    if (inStart > this->mLength)
-        inStart = this->mLength;
-    for (long i = inStart - theLength; i >= 0; i--)
-        if (strncmp(this->mString + i, inString, theLength) == 0) {
-            theIndex = i;
-            break;
-        }
-    return theIndex;
+    return ee_ustring_find_backwards(Bytes(this->mString), this->mLength, Bytes(inString), strlen(inString),
+                                     inStart);
 }
 
 // FUNCTION: LLE 0x10083394
@@ -480,45 +457,14 @@ long UString::Load(FSFile& inFile)
 bool UString::NestedTokenize(const UString& inSeparators, const UString& inBrackets,
                              std::vector<UString>& outTokens) const
 {
-    bool theQuoted = false;
-    unsigned long theNotFound = inSeparators.mLength;
-    unsigned long i = 0;
-    unsigned long theDepth = 0;
-    unsigned long theStart = 0;
-    bool theBetweenTokens = true;
-    char theCharacter[2];
+    std::vector<uint32_t> thePairs(2 * (this->mLength + 1));
+    uint32_t theCount = ee_ustring_nested_tokenize(Bytes(this->mString), this->mLength,
+                                                   Bytes(inSeparators.mString), inSeparators.mLength,
+                                                   (uint8_t)inBrackets.mString[0], (uint8_t)inBrackets.mString[1],
+                                                   thePairs.data());
     outTokens.clear();
-    theCharacter[1] = 0;
-    for (; i < this->mLength + 1; i++) {
-        if (theBetweenTokens) {
-            theCharacter[0] = this->mString[i];
-            if (inSeparators.Find(theCharacter, 0) == theNotFound) {
-                theBetweenTokens = false;
-                theStart = i;
-                theQuoted = theCharacter[0] == inBrackets.mString[0];
-                if (theQuoted)
-                    theDepth = 1;
-            }
-        } else {
-            theCharacter[0] = this->mString[i];
-            if (theCharacter[0] == inBrackets.mString[0] &&
-                (inBrackets.mString[1] != inBrackets.mString[0] || theDepth == 0))
-                theDepth++;
-            else if (theCharacter[0] == inBrackets.mString[1] && theDepth > 0)
-                theDepth--;
-            if (theDepth == 0 && (inSeparators.Find(theCharacter, 0) != theNotFound || i == this->mLength)) {
-                unsigned long theEnd = i - 1;
-                if (theQuoted && this->mString[theEnd] == inBrackets.mString[1]) {
-                    theStart++;
-                    theEnd--;
-                }
-                if (theStart <= theEnd)
-                    outTokens.push_back(this->GetIndexedSubstring(theStart, theEnd));
-                theQuoted = false;
-                theBetweenTokens = true;
-            }
-        }
-    }
+    for (uint32_t i = 0; i < theCount; i++)
+        outTokens.push_back(this->GetIndexedSubstring(thePairs[2 * i], thePairs[2 * i + 1]));
     return true;
 }
 
@@ -539,31 +485,13 @@ long UString::Save(FSFile& inFile) const
 
 // FUNCTION: LLE 0x10083642
 // Splits the string at any of the separator characters into outTokens, skipping empty tokens; always true
-// The character load is written in each branch (VC6 hoists the common head; the [base+index] order of the merged
-// load is the tell: one load before the if gave [edi+eax]).
 bool UString::Tokenize(const UString& inSeparators, std::vector<UString>& outTokens) const
 {
-    unsigned long theNotFound = inSeparators.mLength;
-    unsigned long i = 0;
-    unsigned long theStart = 0;
-    bool theBetweenTokens = true;
-    char theCharacter[2];
+    std::vector<uint32_t> thePairs(2 * (this->mLength + 1));
+    uint32_t theCount = ee_ustring_tokenize(Bytes(this->mString), this->mLength, Bytes(inSeparators.mString),
+                                            inSeparators.mLength, thePairs.data());
     outTokens.clear();
-    theCharacter[1] = 0;
-    for (; i < this->mLength + 1; i++) {
-        if (theBetweenTokens) {
-            theCharacter[0] = this->mString[i];
-            if (inSeparators.Find(theCharacter, 0) == theNotFound) {
-                theBetweenTokens = false;
-                theStart = i;
-            }
-        } else {
-            theCharacter[0] = this->mString[i];
-            if (inSeparators.Find(theCharacter, 0) != theNotFound || i == this->mLength) {
-                    outTokens.push_back(this->GetIndexedSubstring(theStart, i - 1));
-                theBetweenTokens = true;
-            }
-        }
-    }
+    for (uint32_t i = 0; i < theCount; i++)
+        outTokens.push_back(this->GetIndexedSubstring(thePairs[2 * i], thePairs[2 * i + 1]));
     return true;
 }

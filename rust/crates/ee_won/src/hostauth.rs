@@ -39,6 +39,10 @@ pub(crate) enum Item {
     Peer { peer: Arc<PeerData>, block: Obj },
     /// a private key (`new ElGamal`)
     Key(Box<Mutex<ElGamal>>),
+    /// an HTTP cache (httpcache.rs; round 21)
+    HttpCache(crate::httpcache::HttpCache),
+    /// an HTTP cache's entry (its maps hold the same `Arc`, so a handle to it is the same number every time)
+    CacheEntry(Mutex<crate::httpcache::CacheEntry>),
 }
 
 impl Drop for Item {
@@ -57,6 +61,11 @@ pub(crate) fn is_handle(o: Obj) -> bool {
 /// A new handle (one reference).
 pub(crate) fn handle(i: Item) -> Obj {
     Obj(Arc::into_raw(Arc::new(i)) as usize | 1)
+}
+
+/// A new handle reference to an item already shared (the same number as every other handle to it).
+pub(crate) fn handle_of(i: &Arc<Item>) -> Obj {
+    Obj(Arc::into_raw(i.clone()) as usize | 1)
 }
 
 fn raw(o: Obj) -> *const Item {

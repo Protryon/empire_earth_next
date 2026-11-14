@@ -471,6 +471,9 @@ impl<P: Plan> Host<P> {
             if let Some(r) = crate::hostnative::answer(&self.file, code, num, data) {
                 return r;
             }
+            if let Some(r) = crate::httpcache::answer(code, obj, num, data) {
+                return r;
+            }
         }
         self.send(code, obj, num, data, addr)
     }

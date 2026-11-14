@@ -17,6 +17,7 @@ pub mod draw;
 pub mod edit;
 pub mod edit_draw;
 pub mod edit_keys;
+pub mod editobj;
 pub mod entity_group;
 pub mod event;
 pub mod find_key;
@@ -27,6 +28,7 @@ pub mod graph;
 pub mod hotkey;
 pub mod ime;
 pub mod label_fit;
+pub mod labelobj;
 pub mod layout;
 pub mod list;
 pub mod manager;
@@ -58,9 +60,6 @@ mod combo_ffi;
 // imports the C++ controls table's static array (UIControlsTable.cpp), absent from a test binary
 #[cfg(not(test))]
 mod controls_table_ffi;
-// imports the C++ edit box's lines, measuring and scroll bar (UIEditBox.cpp), absent from a test binary
-#[cfg(not(test))]
-mod edit_ffi;
 // imports the C++ form questions (UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod form_ffi;
@@ -80,23 +79,16 @@ mod graph_ffi;
 // imports the C++ candidate list's walk (UIIMECandidate.cpp), absent from a test binary
 #[cfg(not(test))]
 mod ime_ffi;
-// imports the C++ text label's members, text and scroll bar (UITextLabel.cpp), absent from a test binary
-#[cfg(not(test))]
-mod label_fit_ffi;
 // imports the C++ hot keys' keys and events and the form's lists (UIHotKey.cpp, UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod hotkey_ffi;
 // imports nothing: the clipped text draw takes the C++'s draw as a function
 mod draw_ffi;
-// imports nothing: the edit box's measures and draws come as a function table
-mod edit_draw_ffi;
 mod layout_ffi;
 // imports the C++ controls' and form's mouse calls (UIControl.cpp, UIForm.cpp), absent from a test binary
 #[cfg(not(test))]
 mod mouse_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
-#[cfg(not(test))]
-mod scrolling_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
 mod list_ffi;
@@ -107,8 +99,6 @@ mod manager_ffi;
 #[cfg(not(test))]
 mod manager_media_ffi;
 // imports the C++ text measuring (UITextLabel.cpp)
-#[cfg(not(test))]
-mod wrap_ffi;
 
 pub use layout::{Edge, Layout};
 pub use rect::{float_to_long, um_floor, um_floor_unsigned, UiPoint, UiRect};

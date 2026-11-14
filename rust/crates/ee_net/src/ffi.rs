@@ -410,8 +410,8 @@ pub type EeNetQHostFn =
     unsafe extern "C" fn(ctx: *mut c_void, op: EeNetQOp, a: usize, b: usize, c: usize, d: usize) -> isize;
 
 pub struct QFfiHost {
-    ctx: *mut c_void,
-    f: EeNetQHostFn,
+    pub(crate) ctx: *mut c_void,
+    pub(crate) f: EeNetQHostFn,
 }
 
 // The context is the C++ client or server, used from its threads as the original's objects were.

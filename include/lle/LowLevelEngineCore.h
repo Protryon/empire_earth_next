@@ -88,7 +88,7 @@ LLE_API int64_t TMGetMicroTime();
 LLE_API void TMGetTimeOfDay(TMTime& outTime);
 // TMPoll.h / TMTimer.h are NOT included here: every static data member of a class a unit sees consumes a VC6
 // `$E` number (probe: one per member; extern objects consume none), and the plug-ins' $E numbering proves they
-// saw no engine-class static data members (TMPoll::sCounterFrequency is one). Engine units include them directly.
+// saw no engine-class static data members (TMPoll::sCounterFrequency was one; it is ee_time's state now). Engine units include them directly.
 
 // ---- Shutdown registry (Utilities): engine subsystems register cleanup functions
 LLE_API long URegisterShutdown(void (*inFunction)(bool));

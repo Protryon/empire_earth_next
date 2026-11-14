@@ -198,9 +198,9 @@
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESEPlayerScreen.h"
 #include "ee/EESEPlayerControls.h"
+#include "rust/ee_time.h"
 
-// TEST ONLY: the time TMGetTime answers on this thread (-1: the clock; Time Manager.cpp)
-extern thread_local long long gTMPinnedTime;
+// TEST ONLY: ee_time_pin sets the time TMGetTime answers on this thread (-1: the clock; rust/crates/ee_time)
 
 // EESaveLoad.cpp: the save's chunks (the map, the scenario, the players, the world, ...), in their order
 void BuildSaveGameChunks(std::vector<FSPersistent*>& outList);
@@ -219,7 +219,7 @@ class EESimEditorDone : public UIEvent {
 public:
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     {
-        gTMPinnedTime = -1;
+        ee_time_pin(-1);
         std::lock_guard<std::mutex> theGuard(sStepLock);
         sStepFinished = true;
         sStepDone.notify_all();
@@ -256,7 +256,7 @@ public:
     EESimEditorStep(const std::function<void()>& inCode) : EEAction(false), mCode(inCode) {}
     virtual void Virtual4()
     {
-        gTMPinnedTime = sStepClock;
+        ee_time_pin(sStepClock);
         this->mCode();
         EESimEditorMarker* theMarker = new EESimEditorMarker(3);
         gUserInterface->PostAction(theMarker);
