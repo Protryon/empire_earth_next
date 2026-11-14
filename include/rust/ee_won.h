@@ -2236,8 +2236,11 @@ constexpr static const int32_t EE_WON_WIN_CLOSED = 2;
 /// The last field.
 constexpr static const int32_t EE_WON_WIN_FIELD_COUNT = 38;
 
-/// The last field (`EeWonWmField::PopupFront`; a number, as a cbindgen constant from an enum does not compile).
-constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 22;
+/// The last field (`EeWonWmField::BroadcastCount`; a number, as a cbindgen constant from an enum does not compile).
+constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 37;
+
+/// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
+constexpr static const int32_t EE_WON_WM_FIELD_POPUP_LAST = 22;
 
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
@@ -2903,7 +2906,7 @@ enum class EeWonGuiOp : uint32_t {
   WmSelfHold,
   /// `Release()` on the manager.
   WmSelfRelease,
-  /// the window set's `a`-th window (0 past the end; a pure read).
+  /// not made since round 34 (the window set is the Rust manager's, `wmloop`); the number stays taken
   WmWindowAt,
   /// a cache's reference: `b` (an `EeWonWmRefKind` `a`) held (`c != 0`) or given back.
   WmRef,
@@ -2916,6 +2919,14 @@ enum class EeWonGuiOp : uint32_t {
   WmDelayImage,
   /// `mDefaultWindow->GetFont(FontDescriptor("Tahoma", 0, 8))` (a `Font*` with one reference).
   WmDefaultWindowFont,
+  /// a window event's field or method (`a` an `EeWonWmEvent`, `b` the `WindowEventBase*`; `c`, `d` its
+  /// arguments; R6 WON round 34, `wmloop`).
+  WmEvent = 604,
+  /// the screen resolution hooks (virtual): `a` 0 `GetScreenResolutionHook(*(int*)b, *(int*)c)`, 1
+  /// `SetScreenResolutionHook(b, c)`.
+  WmResolution,
+  /// `Signal()` (virtual; any thread: PostEvent's wake-up).
+  WmSignal,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -4722,6 +4733,31 @@ enum class EeWonWmCall : uint32_t {
   DecodeImageRaw,
   /// `DecodeDelayImage(path a of b bytes)` (an `Image*` with the caller's reference).
   DecodeDelayImage,
+  /// `SetScreenResolution(a, b)`.
+  SetScreenResolution,
+  RestoreScreenResolution,
+  CloseAllWindows,
+  /// `AddWindow((Window*)a)` (always 1).
+  AddWindow,
+  /// `RemoveWindow((Window*)a)` (0 or 1).
+  RemoveWindow,
+  /// `PostEvent((WindowEventBase*)a, b != 0)` (any thread).
+  PostEvent,
+  /// `AddTimerEvent((WindowEventBase*)a)`.
+  AddTimerEvent,
+  /// `RemoveTimerEvent((WindowEventBase*)a)`.
+  RemoveTimerEvent,
+  RemoveAllTimerEvents,
+  /// `SubscribeToBroadcast((Component*)a, b != 0)`.
+  SubscribeToBroadcast,
+  ClearSubscriptions,
+  /// `BroadcastEvent((ComponentEvent*)a)`.
+  BroadcastEvent,
+  /// `PeekNextEvent()` (a `WindowEventBase*`, or 0; any thread).
+  PeekNextEvent,
+  ProcessEvents,
+  /// `DeliverEvent((WindowEventBase*)a)`.
+  DeliverEvent,
 };
 
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
@@ -5080,6 +5116,10 @@ enum class EeWonWmComp : uint32_t {
   Hold,
   /// `Release()`.
   Release,
+  /// `MouseWheel(c)` (virtual; DeliverEvent's wheel to the topmost popup).
+  MouseWheel,
+  /// `HandleComponentEvent((ComponentEvent*)c)` (virtual; a broadcast).
+  HandleComponentEvent,
 };
 
 /// A window's methods the manager calls (`WmWin`'s `a`; `b` the window, `c`, `d` the arguments).
@@ -5129,6 +5169,26 @@ enum class EeWonWmWin : uint32_t {
   Hold,
   /// `Release()`.
   Release,
+  /// `GetMinimizeOnResolutionRestore()` (a pure read).
+  MinimizeOnRestore,
+  /// `Minimize(c != 0)`.
+  Minimize,
+  /// `IsMouseInClientArea()` (a pure read).
+  InClient,
+  /// `HandleMouseEvent((MouseEvent*)c)`.
+  HandleMouse,
+  /// `HandleKeyEvent((KeyEvent*)c)`.
+  HandleKey,
+  /// `HandleInputEvent((InputEvent*)c)`.
+  HandleInput,
+  /// `PlatformClose()` (virtual).
+  PlatformClose,
+  /// `mCloseEvent.get()` (a raw `WindowEventBase*`; a pure read).
+  CloseEvent,
+  /// `TimerEvent(c)` (virtual; the elapsed ticks).
+  TimerEvent,
+  /// `IdleUpdate()` (virtual).
+  IdleUpdate,
 };
 
 /// The fields (the accessors, the goldens and the unit tests).
@@ -5164,6 +5224,29 @@ enum class EeWonWmField : uint32_t {
   PopupCount,
   PopupBack,
   PopupFront,
+  /// `mDefaultWindow` (the window set's first, or 0)
+  DefaultWindow,
+  /// `mWindowCount`
+  WindowCount,
+  /// `mIsFullScreen` (settable)
+  FullScreen,
+  /// `mFullScreenWidth`, `mFullScreenHeight` (settable)
+  FullScreenWidth,
+  FullScreenHeight,
+  /// `mOriginalScreenWidth`, `mOriginalScreenHeight`
+  OriginalWidth,
+  OriginalHeight,
+  /// `mLastTimerTick` (settable: the constructor's tick)
+  LastTimerTick,
+  LastInputTick,
+  CallingTimers,
+  /// the sizes of the window set, the event list, the timer events, the deferred timer removals and the
+  /// broadcast set (their entries: `ee_won_wm_set_at`)
+  WindowSetCount,
+  EventCount,
+  TimerCount,
+  RemoveTimerCount,
+  BroadcastCount,
 };
 
 /// Which kind of object a reference op is on (`WmRef`'s `a`).
@@ -5173,6 +5256,43 @@ enum class EeWonWmRefKind : uint32_t {
   RawImage,
   /// a delay-load image (an `Image`)
   Image,
+};
+
+/// A window event's fields and methods (`WmEvent`'s `a`; `b` the `WindowEventBase*`, `c`, `d` the arguments).
+enum class EeWonWmEvent : uint32_t {
+  /// `mEventType` (a pure read).
+  Type = 1,
+  /// `mWindow` (a pure read).
+  Window,
+  /// `mWindow = (Window*)c`.
+  SetWindow,
+  /// a `MouseEvent`'s `mWindow`, `mx`, `my` and `mButtonOrAmount` into `*(EeWonWmMouse*)c` (a pure read).
+  Mouse,
+  /// a `MouseEvent`'s `mWindow`, `mx` and `my` from `*(EeWonWmMouse*)c`.
+  SetMouse,
+  /// a `MouseEvent`'s `mButtonOrAmount` (a pure read).
+  Button,
+  /// a `KeyEvent`'s `mKey` (a pure read).
+  Key,
+  /// a `SizeEvent`'s `mx`, `my`, `mWidth`, `mHeight` into `*(EeWonRect4*)c` (a pure read).
+  Size,
+  /// a `SizeEvent`'s fields from `*(EeWonRect4*)c`.
+  SetSize,
+  /// `Deliver()` (virtual).
+  Deliver,
+  /// `AddRef()` (a `SmartPtr<WindowEventBase>`).
+  Hold,
+  /// `Release()`.
+  Release,
+};
+
+/// Which set `ee_won_wm_set_at` reads.
+enum class EeWonWmSet : uint32_t {
+  Windows = 0,
+  Events,
+  Timers,
+  RemoveTimers,
+  Broadcast,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -5382,6 +5502,11 @@ struct EeWonUserStatus;
 struct EeWonWindow;
 
 /// The Rust WindowManager.
+///
+/// Every method runs on the GUI thread but PostEvent and PeekNextEvent, which other threads call (the original
+/// locked `mDataCrit` there): they touch only `events` (a `Mutex`, never held across a call out) and
+/// `cur_depth` (an atomic: the message loop's depth PostEvent reads), and make the event's `Hold` and the
+/// `Signal` ops, which the C++ answers on any thread.
 struct EeWonWm;
 
 /// `WriteBuffer`'s state.
@@ -15742,10 +15867,17 @@ void ee_won_win_free(EeWonWindow *win);
 /// `win` is live; the call's arguments as documented.
 ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
 
+/// A set's `i`-th entry (`which` an `EeWonWmSet`; 0 past the end; the goldens' trace).
+///
+/// # Safety
+/// `wm` is live.
+ptrdiff_t ee_won_wm_set_at(const EeWonWm *wm, uint32_t which, size_t i);
+
 /// A new Rust WindowManager for the C++ `manager`, its calls out through `host`.
 EeWonWm *ee_won_wm_new(void *manager, EeWonGuiHostFn host);
 
-/// The manager's object freed, its held members given back first (the popup members, then the caches: the
+/// The manager's object freed, its held members given back first (the broadcast set, the deferred timer
+/// removals, the timer events, the event list and the window set; then the popup members; then the caches: the
 /// original's members in reverse order).
 ///
 /// # Safety

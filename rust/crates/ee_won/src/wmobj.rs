@@ -14,13 +14,17 @@
 //! same; locals are given back in the reverse order of their making.
 
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::ffi::c_void;
+use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::Mutex;
 
 use crate::guictl::EeWonRect4;
 use crate::guievent;
 use crate::guihost::{EeWonGuiHostFn, EeWonGuiOp as Op};
 use crate::guiwin;
 use crate::wmcache::Caches;
+use crate::wmloop::Loop;
 
 /// `PopupFlag_*` (`WONLobbyGUI.h`).
 const POPUP_WANT_INPUT: i32 = 0x0080;
@@ -79,6 +83,10 @@ pub enum EeWonWmComp {
     Hold,
     /// `Release()`.
     Release,
+    /// `MouseWheel(c)` (virtual; DeliverEvent's wheel to the topmost popup).
+    MouseWheel,
+    /// `HandleComponentEvent((ComponentEvent*)c)` (virtual; a broadcast).
+    HandleComponentEvent,
 }
 
 /// A window's methods the manager calls (`WmWin`'s `a`; `b` the window, `c`, `d` the arguments).
@@ -127,6 +135,56 @@ pub enum EeWonWmWin {
     /// `PlatformIsVisible()` (virtual; 0 or 1).
     IsVisible,
     /// `AddRef()` (a `SmartPtr<Window>`).
+    Hold,
+    /// `Release()`.
+    Release,
+    /// `GetMinimizeOnResolutionRestore()` (a pure read).
+    MinimizeOnRestore,
+    /// `Minimize(c != 0)`.
+    Minimize,
+    /// `IsMouseInClientArea()` (a pure read).
+    InClient,
+    /// `HandleMouseEvent((MouseEvent*)c)`.
+    HandleMouse,
+    /// `HandleKeyEvent((KeyEvent*)c)`.
+    HandleKey,
+    /// `HandleInputEvent((InputEvent*)c)`.
+    HandleInput,
+    /// `PlatformClose()` (virtual).
+    PlatformClose,
+    /// `mCloseEvent.get()` (a raw `WindowEventBase*`; a pure read).
+    CloseEvent,
+    /// `TimerEvent(c)` (virtual; the elapsed ticks).
+    TimerEvent,
+    /// `IdleUpdate()` (virtual).
+    IdleUpdate,
+}
+
+/// A window event's fields and methods (`WmEvent`'s `a`; `b` the `WindowEventBase*`, `c`, `d` the arguments).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonWmEvent {
+    /// `mEventType` (a pure read).
+    Type = 1,
+    /// `mWindow` (a pure read).
+    Window,
+    /// `mWindow = (Window*)c`.
+    SetWindow,
+    /// a `MouseEvent`'s `mWindow`, `mx`, `my` and `mButtonOrAmount` into `*(EeWonWmMouse*)c` (a pure read).
+    Mouse,
+    /// a `MouseEvent`'s `mWindow`, `mx` and `my` from `*(EeWonWmMouse*)c`.
+    SetMouse,
+    /// a `MouseEvent`'s `mButtonOrAmount` (a pure read).
+    Button,
+    /// a `KeyEvent`'s `mKey` (a pure read).
+    Key,
+    /// a `SizeEvent`'s `mx`, `my`, `mWidth`, `mHeight` into `*(EeWonRect4*)c` (a pure read).
+    Size,
+    /// a `SizeEvent`'s fields from `*(EeWonRect4*)c`.
+    SetSize,
+    /// `Deliver()` (virtual).
+    Deliver,
+    /// `AddRef()` (a `SmartPtr<WindowEventBase>`).
     Hold,
     /// `Release()`.
     Release,
@@ -185,6 +243,32 @@ pub enum EeWonWmCall {
     DecodeImageRaw,
     /// `DecodeDelayImage(path a of b bytes)` (an `Image*` with the caller's reference).
     DecodeDelayImage,
+    // ---- R6 WON round 34 (`wmloop`)
+    /// `SetScreenResolution(a, b)`.
+    SetScreenResolution,
+    RestoreScreenResolution,
+    CloseAllWindows,
+    /// `AddWindow((Window*)a)` (always 1).
+    AddWindow,
+    /// `RemoveWindow((Window*)a)` (0 or 1).
+    RemoveWindow,
+    /// `PostEvent((WindowEventBase*)a, b != 0)` (any thread).
+    PostEvent,
+    /// `AddTimerEvent((WindowEventBase*)a)`.
+    AddTimerEvent,
+    /// `RemoveTimerEvent((WindowEventBase*)a)`.
+    RemoveTimerEvent,
+    RemoveAllTimerEvents,
+    /// `SubscribeToBroadcast((Component*)a, b != 0)`.
+    SubscribeToBroadcast,
+    ClearSubscriptions,
+    /// `BroadcastEvent((ComponentEvent*)a)`.
+    BroadcastEvent,
+    /// `PeekNextEvent()` (a `WindowEventBase*`, or 0; any thread).
+    PeekNextEvent,
+    ProcessEvents,
+    /// `DeliverEvent((WindowEventBase*)a)`.
+    DeliverEvent,
 }
 
 /// The fields (the accessors, the goldens and the unit tests).
@@ -222,10 +306,36 @@ pub enum EeWonWmField {
     PopupCount,
     PopupBack,
     PopupFront,
+    // ---- R6 WON round 34 (`wmloop`)
+    /// `mDefaultWindow` (the window set's first, or 0)
+    DefaultWindow,
+    /// `mWindowCount`
+    WindowCount,
+    /// `mIsFullScreen` (settable)
+    FullScreen,
+    /// `mFullScreenWidth`, `mFullScreenHeight` (settable)
+    FullScreenWidth,
+    FullScreenHeight,
+    /// `mOriginalScreenWidth`, `mOriginalScreenHeight`
+    OriginalWidth,
+    OriginalHeight,
+    /// `mLastTimerTick` (settable: the constructor's tick)
+    LastTimerTick,
+    LastInputTick,
+    CallingTimers,
+    /// the sizes of the window set, the event list, the timer events, the deferred timer removals and the
+    /// broadcast set (their entries: `ee_won_wm_set_at`)
+    WindowSetCount,
+    EventCount,
+    TimerCount,
+    RemoveTimerCount,
+    BroadcastCount,
 }
 
-/// The last field (`EeWonWmField::PopupFront`; a number, as a cbindgen constant from an enum does not compile).
-pub const EE_WON_WM_FIELD_COUNT: i32 = 22;
+/// The last field (`EeWonWmField::BroadcastCount`; a number, as a cbindgen constant from an enum does not compile).
+pub const EE_WON_WM_FIELD_COUNT: i32 = 37;
+/// The last of round 33's fields (`EeWonWmField::PopupFront`; the goldens' first state line).
+pub const EE_WON_WM_FIELD_POPUP_LAST: i32 = 22;
 
 /// A mouse event's fields FindMouseWindow and CheckPopupClick read and change (`MouseEvent`'s `mWindow`, `mx`,
 /// `my`, `mButtonOrAmount`).
@@ -261,7 +371,6 @@ struct State {
     own_window: bool,
     popup_flags: i32,
     capture_support: bool,
-    cur_depth: i32,
     target_depth: i32,
     dialog_result: i32,
     modal_window: isize,
@@ -285,11 +394,22 @@ enum Held {
 }
 
 /// The Rust WindowManager.
+///
+/// Every method runs on the GUI thread but PostEvent and PeekNextEvent, which other threads call (the original
+/// locked `mDataCrit` there): they touch only `events` (a `Mutex`, never held across a call out) and
+/// `cur_depth` (an atomic: the message loop's depth PostEvent reads), and make the event's `Hold` and the
+/// `Signal` ops, which the C++ answers on any thread.
 pub struct EeWonWm {
     comp: *mut c_void,
     host: EeWonGuiHostFn,
     st: RefCell<State>,
     pub(crate) caches: RefCell<Caches>,
+    /// the window set, the timers, the broadcasts and the screen state (`wmloop.rs`)
+    pub(crate) lp: RefCell<Loop>,
+    /// `mWindowEventList`: the queued events, each held
+    pub(crate) events: Mutex<VecDeque<isize>>,
+    /// `mCurMsgLoopDepth`
+    pub(crate) cur_depth: AtomicI32,
 }
 
 impl EeWonWm {
@@ -300,6 +420,9 @@ impl EeWonWm {
             host,
             st: RefCell::new(State { own_window: true, ..State::default() }),
             caches: RefCell::new(Caches::default()),
+            lp: RefCell::new(Loop::default()),
+            events: Mutex::new(VecDeque::new()),
+            cur_depth: AtomicI32::new(0),
         }
     }
 
@@ -310,10 +433,10 @@ impl EeWonWm {
             None => 0,
         }
     }
-    fn cm(&self, call: EeWonWmComp, comp: isize, c: isize, d: isize) -> isize {
+    pub(crate) fn cm(&self, call: EeWonWmComp, comp: isize, c: isize, d: isize) -> isize {
         self.op(Op::WmComp, call as isize, comp, c, d)
     }
-    fn wn(&self, call: EeWonWmWin, win: isize, c: isize, d: isize) -> isize {
+    pub(crate) fn wn(&self, call: EeWonWmWin, win: isize, c: isize, d: isize) -> isize {
         self.op(Op::WmWin, call as isize, win, c, d)
     }
     fn win_rect(&self, win: isize, client: bool) -> EeWonRect4 {
@@ -322,24 +445,24 @@ impl EeWonWm {
         r
     }
     /// A `SmartPtr<Component>` local made from a raw pointer.
-    fn hold_comp(&self, c: isize) -> isize {
+    pub(crate) fn hold_comp(&self, c: isize) -> isize {
         if c != 0 {
             self.cm(EeWonWmComp::Hold, c, 0, 0);
         }
         c
     }
-    fn release_comp(&self, c: isize) {
+    pub(crate) fn release_comp(&self, c: isize) {
         if c != 0 {
             self.cm(EeWonWmComp::Release, c, 0, 0);
         }
     }
-    fn hold_win(&self, w: isize) -> isize {
+    pub(crate) fn hold_win(&self, w: isize) -> isize {
         if w != 0 {
             self.wn(EeWonWmWin::Hold, w, 0, 0);
         }
         w
     }
-    fn release_win(&self, w: isize) {
+    pub(crate) fn release_win(&self, w: isize) {
         if w != 0 {
             self.wn(EeWonWmWin::Release, w, 0, 0);
         }
@@ -478,12 +601,10 @@ impl EeWonWm {
                 self.assign(Held::Input, 0);
             }
         }
-        let mut i = 0;
-        loop {
-            let w = self.op(Op::WmWindowAt, i, 0, 0, 0);
-            if w == 0 {
-                break;
-            }
+        // the window set walked as the original's iterator: the window after the last one visited
+        let mut at = None;
+        while let Some(w) = self.next_window(at) {
+            at = Some(w);
             let (modal_window, up, dialog) = {
                 let s = self.st.borrow();
                 (s.modal_window, s.popup_is_up, s.modal_component)
@@ -491,7 +612,6 @@ impl EeWonWm {
             let root = self.wn(EeWonWmWin::Root, w, 0, 0);
             let on = guiwin::window_modal(w == modal_window, up, dialog == root, modal);
             self.wn(EeWonWmWin::SetModal, w, isize::from(on), 0);
-            i += 1;
         }
     }
 
@@ -560,30 +680,20 @@ impl EeWonWm {
     /// `MessageLoop`: the platform's events until the loop is exited; the dialog result, or -1 without windows.
     /// The result is read before the manager's reference is given back (the last one deletes the manager).
     pub fn message_loop(&self) -> i32 {
-        if self.op(Op::WmWindowAt, 0, 0, 0, 0) == 0 {
+        if self.lp.borrow().windows.is_empty() {
             return -1;
         }
         self.op(Op::WmSelfHold, 0, 0, 0, 0);
         {
-            let mut s = self.st.borrow_mut();
-            s.cur_depth = s.cur_depth.wrapping_add(1);
-            s.target_depth = s.cur_depth;
+            let depth = self.cur_depth.load(Ordering::SeqCst).wrapping_add(1);
+            self.cur_depth.store(depth, Ordering::SeqCst);
+            self.st.borrow_mut().target_depth = depth;
         }
-        loop {
-            let go = {
-                let s = self.st.borrow();
-                s.cur_depth <= s.target_depth
-            };
-            if !go {
-                break;
-            }
+        while self.cur_depth.load(Ordering::SeqCst) <= self.st.borrow().target_depth {
             self.op(Op::WmNextEvent, 0, 0, 0, 0);
         }
-        let result = {
-            let mut s = self.st.borrow_mut();
-            s.cur_depth = s.cur_depth.wrapping_sub(1);
-            s.dialog_result
-        };
+        self.cur_depth.store(self.cur_depth.load(Ordering::SeqCst).wrapping_sub(1), Ordering::SeqCst);
+        let result = self.st.borrow().dialog_result;
         self.op(Op::WmSelfRelease, 0, 0, 0, 0);
         result
     }
@@ -967,6 +1077,9 @@ impl EeWonWm {
 
     pub fn field(&self, f: i32) -> isize {
         use EeWonWmField as F;
+        if f > F::PopupFront as i32 {
+            return self.loop_field(f);
+        }
         let s = self.st.borrow();
         let b = isize::from;
         if !(F::EndPopup as i32..=F::PopupFront as i32).contains(&f) {
@@ -982,7 +1095,7 @@ impl EeWonWm {
             F::OwnWindow => b(s.own_window),
             F::PopupFlags => s.popup_flags as isize,
             F::CaptureSupport => b(s.capture_support),
-            F::CurDepth => s.cur_depth as isize,
+            F::CurDepth => self.cur_depth.load(Ordering::SeqCst) as isize,
             F::TargetDepth => s.target_depth as isize,
             F::DialogResult => s.dialog_result as isize,
             F::ModalWindow => s.modal_window,
@@ -997,6 +1110,7 @@ impl EeWonWm {
             F::PopupCount => s.popups.len() as isize,
             F::PopupBack => s.popups.last().copied().unwrap_or(0),
             F::PopupFront => s.popups.first().copied().unwrap_or(0),
+            _ => 0,
         }
     }
 
@@ -1006,6 +1120,10 @@ impl EeWonWm {
         use EeWonWmField as F;
         if f == F::PopupWindowSave as i32 {
             self.assign(Held::WindowSave, v);
+            return;
+        }
+        if f > F::PopupFront as i32 {
+            self.set_loop_field(f, v);
             return;
         }
         let mut s = self.st.borrow_mut();
@@ -1087,6 +1205,21 @@ impl EeWonWm {
             C::CheckModalValid => return isize::from(self.check_modal_valid()),
             C::GetField => return self.field(a as i32),
             C::SetField => self.set_field(a as i32, b),
+            C::SetScreenResolution => self.set_screen_resolution(a as i32, b as i32),
+            C::RestoreScreenResolution => self.restore_screen_resolution(),
+            C::CloseAllWindows => self.close_all_windows(),
+            C::AddWindow => return isize::from(self.add_window(a)),
+            C::RemoveWindow => return isize::from(self.remove_window(a)),
+            C::PostEvent => self.post_event(a, b != 0),
+            C::AddTimerEvent => self.add_timer_event(a),
+            C::RemoveTimerEvent => self.remove_timer_event(a),
+            C::RemoveAllTimerEvents => self.remove_all_timer_events(),
+            C::SubscribeToBroadcast => self.subscribe_to_broadcast(a, b != 0),
+            C::ClearSubscriptions => self.clear_subscriptions(),
+            C::BroadcastEvent => self.broadcast_event(a),
+            C::PeekNextEvent => return self.peek_next_event(),
+            C::ProcessEvents => self.process_events(),
+            C::DeliverEvent => self.deliver_event(a),
         }
         0
     }
@@ -1098,7 +1231,8 @@ pub extern "C" fn ee_won_wm_new(manager: *mut c_void, host: EeWonGuiHostFn) -> *
     Box::into_raw(Box::new(EeWonWm::new(manager, host)))
 }
 
-/// The manager's object freed, its held members given back first (the popup members, then the caches: the
+/// The manager's object freed, its held members given back first (the broadcast set, the deferred timer
+/// removals, the timer events, the event list and the window set; then the popup members; then the caches: the
 /// original's members in reverse order).
 ///
 /// # Safety
@@ -1108,6 +1242,7 @@ pub unsafe extern "C" fn ee_won_wm_free(wm: *mut EeWonWm) {
     if !wm.is_null() {
         // SAFETY: the contract
         unsafe {
+            (*wm).release_loop();
             (*wm).release_members();
             (*wm).release_caches();
             drop(Box::from_raw(wm));
