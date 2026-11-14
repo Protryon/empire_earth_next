@@ -85,6 +85,8 @@
 //! - [`icon_bar`]: the selected-units icon bar whole (its state, refill, snapshot, drawing and clicks) over the
 //!   C++ host.
 //! - [`portrait`]: the selected unit's portrait's bars, level, drawing, tooltip and click over the C++ host.
+//! - [`main_group`]: the main game form's main panel group (the shown unit, its refresh and update, a command
+//!   button, the airport's buttons) over the C++ host.
 //! - [`upgrade`]: the improvement button's availability, tooltip, presses and cost update over the C++ host.
 
 pub mod actions;
@@ -156,6 +158,9 @@ mod main_game_ffi;
 pub mod main_game_options;
 #[cfg(not(test))]
 mod main_game_options_ffi;
+pub mod main_group;
+#[cfg(not(test))]
+mod main_group_ffi;
 pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
