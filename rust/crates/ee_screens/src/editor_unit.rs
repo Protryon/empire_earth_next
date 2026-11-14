@@ -182,8 +182,6 @@ const IDS_FAMILY: u32 = EE_SCREENS_SEUN_IDS_ALPHA + 2;
 
 /// The tab's control group.
 const GROUP: u32 = 6;
-/// The trigger the radios fire their event on (`kControlTriggerChecked`), the type buttons (`ButtonUp`).
-const TRIGGER_BUTTON_UP: i32 = 0;
 
 /// The six unit type buttons: the palette, its normal and pressed cells in the button texture, its help string
 /// (0x8c4458).
