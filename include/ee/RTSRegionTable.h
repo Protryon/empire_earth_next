@@ -65,11 +65,6 @@ public:
         theRegions.mTop = inTiles.mTop / this->mRegionSize;
         return theRegions;
     }
-    // 0x6bf74 (ret 0xc; COMDAT in EECPBuildManager.cpp's range; defined below the class, never expanded): the values in
-    // the regions under inTiles, sorted with inLess and without duplicates (EECPBuildManager 0x67e10, EECPCombatManager
-    // Update 0x47219a; the third argument is the sort predicate: its byte is pushed by value to sort 0xe181)
-    // (provisional name)
-    void CollectValues(const U2DRectangle<long>& inTiles, std::vector<T>& outValues, const std::less<T>& inLess);
     // 0x6c76b (ret 8): every value in the regions under inTiles, last region and last value first (provisional name)
     void GetValues(const U2DRectangle<long>& inTiles, std::vector<T>& outValues);
     // 0x6d0b5 (ret 8): the regions under inTiles (the corners through U2DRectangle's GetTopLeft / GetBottomRight)
@@ -90,15 +85,6 @@ public:
 };
 
 // out of line (never expanded: COMDATs 0x6bf74 / 0x6c76b / 0x6d0b5 in EECPBuildManager.cpp's range)
-template <class T>
-void RTSRegionTable<T>::CollectValues(const U2DRectangle<long>& inTiles, std::vector<T>& outValues, const std::less<T>& inLess)
-{
-    this->GetValues(inTiles, outValues);
-    std::sort(outValues.begin(), outValues.end(), inLess);
-    std::vector<T>::iterator it = std::unique(outValues.begin(), outValues.end());
-    if (it != outValues.end())
-        outValues.erase(it, outValues.end());
-}
 template <class T>
 void RTSRegionTable<T>::GetValues(const U2DRectangle<long>& inTiles, std::vector<T>& outValues)
 {

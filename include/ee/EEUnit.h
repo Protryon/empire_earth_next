@@ -865,7 +865,6 @@ public:
     float GetPushVelocityX() const { return this->mPushVelocityX; }  // inline value getters
     float GetPushVelocityY() const { return this->mPushVelocityY; }
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
-    float GetCollisionRadius() const { return this->mCollisionRadius; }
     // inline value getter (the Physics Virtual0C family: `fld [F98]; fld [ecx]; faddp`, ecx = &mF24C kept from the
     // `!= 0` test; a member read gives `fadd [ecx]`)
     float GetF24C() const { return this->mF24C; }
@@ -1098,7 +1097,6 @@ public:
     unsigned long GetWeapon() const { return this->mWeapon; }  // unsigned: the assert compiles to one `cmp 6; jb`
     // inline: the garrison goal's ComputeUpgrade loads both before its tech-tree lookups (0x226bfa) (provisional names)
     long GetTechnology() const { return this->mTechnology; }
-    long GetGarrisonTechnology() const { return this->mGarrisonTechnology; }
     bool IsPriest();                        // 0x6ef9 (EEUGAttackUnit's ctor; provisional name)
     long GetNumResearchTechnologies() { return this->mResearchTechnologies.size(); }      // 0x196dff (EECPDefenseCommander 0x78dc8: mResearchTechnologies's count) (provisional name)
     // 0x7028: gUnitClassTable[inUnitType]'s +0x1d0 is non-zero and one of mCounterKind1/mCounterKind2/mL1DC
@@ -1298,7 +1296,6 @@ public:
     bool GetCanEnterAirTransports() const { return this->mCanEnterAirTransports; }
     bool GetCanEnterSeaTransports() const { return this->mCanEnterSeaTransports; }
     bool GetCanEnterSpaceTransports() const { return this->mCanEnterSpaceTransports; }
-    bool GetIsCollidable() const { return this->mIsCollidable; }
     bool GetIsWall() const { return this->mIsWall; }
     bool GetIsAttackUnit() const { return this->mIsAttackUnit; }
     bool GetIsDefenseUnit() const { return this->mIsDefenseUnit; }

@@ -38,13 +38,6 @@ inline float EECombatAttackFactor(const EeCombatAttackFactorIn& in)
     EECombatCapture(EE_COMBAT_TAG('C', 'B', 'A', 'F'), in, theOut);
     return theOut;
 }
-inline float EECombatHitFactor(const EeCombatDamageIn& in) { return ee_combat_hit_factor(&in); }
-inline EeCombatDamageOut EECombatDamage(const EeCombatDamageIn& in)
-{
-    EeCombatDamageOut theOut = ee_combat_damage(&in);
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'M'), in, theOut);
-    return theOut;
-}
 inline float EECombatElevation(const EeCombatElevationIn& in)
 {
     float theOut = ee_combat_elevation(&in);
@@ -123,12 +116,6 @@ inline int32_t EECombatRange(const EeCombatRangeIn& in)
     EECombatCapture(EE_COMBAT_TAG('C', 'B', 'R', 'H'), in, theOut);
     return theOut;
 }
-inline int32_t EECombatCanReach(const EeCombatReachIn& in)
-{
-    int32_t theOut = ee_combat_can_reach(&in);
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'R', 'C'), in, theOut);
-    return theOut;
-}
 inline int32_t EECombatWorkReach(const EeCombatReachIn& in)
 {
     int32_t theOut = ee_combat_work_reach(&in);
@@ -147,11 +134,6 @@ inline int32_t EECombatWithinRange(float inDistanceSquared, float inRange)
     float theIn[2] = {inDistanceSquared, inRange};
     EECombatCapture(EE_COMBAT_TAG('C', 'B', 'H', 'R'), theIn, theOut);
     return theOut;
-}
-inline void EECombatDamageRow(const EeCombatDamageRowIn& in, EeCombatDamageRowOut& out)
-{
-    ee_combat_damage_row(&in, &out);
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'T'), in, out);
 }
 
 // ---- the weapon point's other users, the flight steps, the screens (round 4)

@@ -239,7 +239,6 @@ public:
     // by EEAGIncreasingVelocityUnitSorter
     void Fill(EESelectedGroup* inGroup, long inSort, long inSlot);
     void Finish();                          // 0x1edaf3: ClearGoal, into the player's mFinishedGroups (referenced), mBB4 = true
-    bool IsInFormationSlot(EEComplexUnit* inUnit, long inSlot);  // 0x1edb21: inUnit belongs to formation slot inSlot (0..5)
     void KeepAttackers();                   // 0x1eec0b (SpreadAroundUnit: keeps the units that can attack)
     bool IsReserved(const GE3DPoint& inLocation);  // 0x1efaf0: a mU3C location at (or near) inLocation
     bool IsCellTaken(const GE3DPoint& inLocation);  // 0x1efba8: a mU3C location in inLocation's unit region
@@ -1072,10 +1071,8 @@ public:
     std::vector<EEGroup*> mPendingGroups;   // +0x854 (the command messages push their new EEActiveGroups)
     std::vector<EEGroup*> mFinishedGroups;  // +0x864 (EEActiveGroup::Finish pushes itself)
     std::vector<EEPPatrolGroup*> mPatrolGroups;  // +0x874 (AddPatrolGroup: push_back 0x16c986)
-    EEUnitClassUpgrade* GetUnitClassUpgradesAt(unsigned long inIndex) const { return this->mUnitClassUpgrades[inIndex]; }
     std::vector<EEUnitClassUpgrade*> mUnitClassUpgrades; // +0x884 (resized to EEUnitClassCount() by Reset: one per unit class; the forwarders
                                             // 0x163db9.. index it
-    EEPlayer* GetAlliesAt(unsigned long inIndex) const { return this->mAllies[inIndex]; }
     std::vector<EEPlayer*> mAllies;         // +0x894 (EEPPlayerHelper push_backs into it; EEMSendFlare copies it with
                                             // vector<EEPlayer*>::operator= 0x1119ec and flares each)
     std::vector<EEComplexUnit*> mUnitsToRepatrol;  // +0x8a4 (AddUnitToRepatrol pushes a referenced unit unless std::find has it; ClearUnitsToRepatrol dereferences and clears)

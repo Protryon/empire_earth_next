@@ -1057,16 +1057,6 @@ void EESMDialogMessage::operator=(const EESMDialogMessage& inMessage)
     this->mIsCinematic = inMessage.mIsCinematic;
 }
 
-// FUNCTION: EXE 0x5b9f8f
-// Returns the effect of the timed entry at an index, or NULL past the end
-EESMEffect* EEScenarioManager::GetTimedEffect(unsigned long inIndex)
-{
-    EESMEffect* theEffect = NULL;
-    if (inIndex < this->GetNumTimedEffects())
-        theEffect = this->mEffects[this->GetTimedEntry(inIndex).mEffectIndex];
-    return theEffect;
-}
-
 // TEMPLATE: EXE 0x5ba01a
 // ??H?$_Ptrit@UEESMTimedEffect@@HPAU1@AAU1@PAU1@AAU1@@std@@QBE?AV01@H@Z (Dinkum COMDAT)
 
