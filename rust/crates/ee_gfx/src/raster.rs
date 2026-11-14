@@ -130,6 +130,15 @@ pub struct EeGfxRaster {
     pub model_stretch: extern "C" fn(model: EeGfxModel, length: f32, width: f32, scroll: f32),
     /// puts back the vertices and sub-model ys `model_stretch` kept
     pub model_unstretch: extern "C" fn(model: EeGfxModel),
+    /// vertex array 0's size (`GetVertexArray(0)->GetSize()`)
+    pub vertex_count: extern "C" fn(model: EeGfxModel) -> u32,
+    /// vertex array 0's point `index` (`GetPoint`)
+    pub vertex_point: extern "C" fn(model: EeGfxModel, index: u32) -> Ge3DPoint,
+    /// vertex array 0's point `index` set (`SetPoint`)
+    pub set_vertex_point: extern "C" fn(model: EeGfxModel, index: u32, point: *const Ge3DPoint),
+    /// `ComputeBoundingVolumes`, `ComputeModelNormals`
+    pub model_bounds: extern "C" fn(model: EeGfxModel),
+    pub model_normals: extern "C" fn(model: EeGfxModel),
 }
 
 /// The rasterizer as the draws call it.
@@ -202,6 +211,11 @@ pub trait Raster {
     fn draw_text(&mut self, x: f32, y: f32, text: &str, color: EeGfxColor);
     fn model_stretch(&mut self, model: EeGfxModel, length: f32, width: f32, scroll: f32);
     fn model_unstretch(&mut self, model: EeGfxModel);
+    fn vertex_count(&mut self, model: EeGfxModel) -> u32;
+    fn vertex_point(&mut self, model: EeGfxModel, index: u32) -> Ge3DPoint;
+    fn set_vertex_point(&mut self, model: EeGfxModel, index: u32, point: &Ge3DPoint);
+    fn model_bounds(&mut self, model: EeGfxModel);
+    fn model_normals(&mut self, model: EeGfxModel);
 }
 
 impl Raster for &EeGfxRaster {
@@ -365,6 +379,21 @@ impl Raster for &EeGfxRaster {
     fn model_unstretch(&mut self, model: EeGfxModel) {
         (self.model_unstretch)(model)
     }
+    fn vertex_count(&mut self, model: EeGfxModel) -> u32 {
+        (self.vertex_count)(model)
+    }
+    fn vertex_point(&mut self, model: EeGfxModel, index: u32) -> Ge3DPoint {
+        (self.vertex_point)(model, index)
+    }
+    fn set_vertex_point(&mut self, model: EeGfxModel, index: u32, point: &Ge3DPoint) {
+        (self.set_vertex_point)(model, index, point)
+    }
+    fn model_bounds(&mut self, model: EeGfxModel) {
+        (self.model_bounds)(model)
+    }
+    fn model_normals(&mut self, model: EeGfxModel) {
+        (self.model_normals)(model)
+    }
 }
 
 /// A rasterizer that logs every call (the tests').
@@ -377,6 +406,8 @@ pub struct LogRaster {
     pub fog_value: f32,
     pub camera: GeTransformation,
     pub culling: u32,
+    /// vertex array 0's points
+    pub vertices: Vec<Ge3DPoint>,
 }
 
 #[cfg(test)]
@@ -544,5 +575,21 @@ impl Raster for LogRaster {
     }
     fn model_unstretch(&mut self, _model: EeGfxModel) {
         self.calls.push("unstretch".into());
+    }
+    fn vertex_count(&mut self, _model: EeGfxModel) -> u32 {
+        self.vertices.len() as u32
+    }
+    fn vertex_point(&mut self, _model: EeGfxModel, index: u32) -> Ge3DPoint {
+        self.vertices[index as usize]
+    }
+    fn set_vertex_point(&mut self, _model: EeGfxModel, index: u32, p: &Ge3DPoint) {
+        self.vertices[index as usize] = *p;
+        self.calls.push(format!("point {index} {} {} {}", p.x, p.y, p.z));
+    }
+    fn model_bounds(&mut self, _model: EeGfxModel) {
+        self.calls.push("bounds".into());
+    }
+    fn model_normals(&mut self, _model: EeGfxModel) {
+        self.calls.push("normals".into());
     }
 }

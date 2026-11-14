@@ -45,6 +45,7 @@ pub mod effect_store;
 pub mod effect_storm;
 pub mod effect_tracer;
 pub mod effect_vent;
+pub mod effect_volcano;
 pub mod effect_wall;
 pub mod effects;
 pub mod farm;

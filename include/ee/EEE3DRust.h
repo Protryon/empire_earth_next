@@ -11,8 +11,8 @@
 // nuclear explosion (EEE3DNuclearExplosion, 0xf43c7..0xf4bf3) and 0x47 the energy wave (EEE3DEnergyWave,
 // 0xee1b4..0xee5c0), 0x3b the multi-effect (EEE3DMultiEffect, 0xf4247..0xf43c7), 0x34 the energy wall
 // (EEE3DEnergyWall, 0xed606..0xee1b4), 0x35 the damage vent (EEE3DDamageVent, 0xea9e2..0xebbba), 2 the icon
-// (EEE3DIcon, 0xf2046..0xf2d93), 0x3c the goal (EEE3DGoal, 0xf1327..0xf1600) and 0x40 the tracer beam
-// (EEE3DTracerBeam, 0xfc382..0xfd330), all deleted.
+// (EEE3DIcon, 0xf2046..0xf2d93), 0x3c the goal (EEE3DGoal, 0xf1327..0xf1600), 0x40 the tracer beam
+// (EEE3DTracerBeam, 0xfc382..0xfd330) and 0x20 the volcano (EEE3DVolcano, 0xfe553..0x101c34), all deleted.
 // Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
@@ -20,6 +20,7 @@
 
 class EEGraphicObject;
 class SESMInstanceNode;
+class GEModel;
 
 class EEE3DRust : public EEEffect3D {
 public:
@@ -62,6 +63,7 @@ public:
     EEGraphicObject* mUnitModel = NULL;     // the additive pass's: its unit's model (EEModel), loaded while it lives
     SESMInstanceNode* mSound = NULL;        // the disease's, virus's and hurricane's animation sound
     EEUnit* mTarget = NULL;                 // the tracer beam's target unit (referenced; -1 from Load to RepairPointers)
+    GEModel* mVolcanoModel = NULL;          // the volcano's model (referenced by its build)
 };
 
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)

@@ -74,10 +74,10 @@
 #include "ee/EEE3DParticleEmitter.h"
 #include "ee/EEEDamagedEffect.h"
 #include "ee/EEE3DRust.h"
+#include "ee/EEEffectKindIDs.h"
 #include "ee/EEE2DRust.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
-#include "ee/EEE3DVolcano.h"
 #include "ee/EEE3DStorm.h"
 #include "ee/EEE3DSnow.h"
 #include "ee/EEE3DRain.h"
@@ -187,7 +187,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect2DWaterRipple: theEffect = new EEE2DWaterRipple(); break;
     case kEffect3DEarthquake: theEffect = new EEE3DEarthquake(); break;
     case kEffect3DTracers: theEffect = new EEE3DRust(0x21); break;
-    case kEffect3DVolcano: theEffect = new EEE3DVolcano(); break;
+    case kEffect3DVolcano: theEffect = new EEE3DRust(0x20); break;
     case kEffect3DDisease: theEffect = new EEE3DRust(0x23); break;
     case kEffect3DFarm: theEffect = new EEE3DFarm(); break;
     case kEffect3DHurricane: theEffect = new EEE3DRust(0x24); break;
@@ -376,7 +376,7 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 0x12: theEffect = new EEE2DShockwave(inLocation, inEffect); break;
     case 0x18: theEffect = new EEE3DRust(inLocation, inEffect, 0x18); break;
     case 0x1b: theEffect = new EEE3DRust(inLocation, inEffect, 0x1b); break;
-    case 0x20: theEffect = new EEE3DVolcano(inLocation, inEffect); break;
+    case 0x20: theEffect = new EEE3DRust(inLocation, inEffect, 0x20); break;
     case 0x22: theEffect = new EEE2DWaterRipple(inLocation, inEffect); break;
     case 0x2b: theEffect = new EEE3DSmokeGenerator(inLocation, inEffect, 0x2b); break;
     case 0x2e: theEffect = EEE2DParticle::Create(inLocation, inEffect); break;

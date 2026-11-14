@@ -139,6 +139,9 @@ constexpr static const int32_t EE_GFX_TRACER_OVER = 4;
 /// `kEffect3DDamageVent`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_DAMAGE_VENT = 53;
 
+/// `kEffect3DVolcano`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_VOLCANO = 32;
+
 /// `kEffect3DEnergyWall`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_ENERGY_WALL = 52;
 
@@ -335,6 +338,9 @@ struct EeGfxStormLists;
 
 /// The jets (`mParts`).
 struct EeGfxVentParts;
+
+/// The mesh's terrain points (`mPoints`) and cone heights (`mHeights`).
+struct EeGfxVolcanoMesh;
 
 /// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
 /// end (a move shorter than 0.001).
@@ -961,6 +967,33 @@ struct EeGfxEffectConfirm {
   uint32_t goal_index;
 };
 
+/// A volcano: its area (`mArea`) and centre (`mCenter`).
+struct EeGfxVolcanoArea {
+  float left;
+  float top;
+  float right;
+  float bottom;
+  EeGe3DPoint center;
+};
+
+/// The volcano's state.
+struct EeGfxEffectVolcano {
+  /// `mArea` and `mCenter` (saved)
+  EeGfxVolcanoArea area;
+  /// `mGrowth`: 0 on the terrain .. 1 the cone (saved)
+  float growth;
+  /// `mTimeLeft` (saved)
+  int32_t time_left;
+  /// `mTime`: ms since the last jitter (saved)
+  int32_t time;
+  /// `mGrown` (saved)
+  bool grown;
+  /// `mDone`: the mesh is at its growth
+  bool done;
+  /// the mesh (made on first use; owned by the record)
+  EeGfxVolcanoMesh *mesh;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -1020,6 +1053,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectVent vent;
   /// the command confirmation's (`effect_confirm.rs`)
   EeGfxEffectConfirm confirm;
+  /// the volcano's (`effect_volcano.rs`)
+  EeGfxEffectVolcano volcano;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1309,6 +1344,9 @@ struct EeGfxGraphicFacts {
   float param11;
   /// the effect has its graphic effect
   bool has_effect;
+  /// `mTime1`, `mTime2` (ms)
+  uint32_t time1;
+  int32_t time2;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1507,6 +1545,12 @@ struct EeGfxEffect3DHost {
   void (*tracer_saved_target)(void *context, uint32_t id);
   /// the tracer beam's target unit's id, 0xffffffff for none (`Save`)
   uint32_t (*tracer_target_id)(void *context);
+  /// the volcano's `BuildModel` (0xfe79d) over the record's mesh lists (`count` points and heights): the image's
+  /// colours and cone heights and the mesh (`volcano.rs`), the model made and referenced, the centre's height, the
+  /// placement, the radius and the texture; its result
+  int32_t (*volcano_build)(void *context, EeGe3DPoint *points, float *heights, uint32_t count);
+  /// the volcano's model
+  EeGfxModel (*volcano_model)(void *context);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1609,6 +1653,15 @@ struct EeGfxRaster {
   void (*model_stretch)(EeGfxModel model, float length, float width, float scroll);
   /// puts back the vertices and sub-model ys `model_stretch` kept
   void (*model_unstretch)(EeGfxModel model);
+  /// vertex array 0's size (`GetVertexArray(0)->GetSize()`)
+  uint32_t (*vertex_count)(EeGfxModel model);
+  /// vertex array 0's point `index` (`GetPoint`)
+  EeGe3DPoint (*vertex_point)(EeGfxModel model, uint32_t index);
+  /// vertex array 0's point `index` set (`SetPoint`)
+  void (*set_vertex_point)(EeGfxModel model, uint32_t index, const EeGe3DPoint *point);
+  /// `ComputeBoundingVolumes`, `ComputeModelNormals`
+  void (*model_bounds)(EeGfxModel model);
+  void (*model_normals)(EeGfxModel model);
 };
 
 /// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it
@@ -1739,15 +1792,6 @@ struct EeGfxVolcanoBuilt {
   float maximum;
   float center_z;
   uint32_t dropped;
-};
-
-/// A volcano: its area (`mArea`) and centre (`mCenter`).
-struct EeGfxVolcanoArea {
-  float left;
-  float top;
-  float right;
-  float bottom;
-  EeGe3DPoint center;
 };
 
 /// The terrain under a volcano, as C++ callbacks over `context` (the `EEMap`).

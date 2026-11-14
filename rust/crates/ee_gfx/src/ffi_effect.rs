@@ -157,6 +157,10 @@ pub unsafe extern "C" fn ee_gfx_effect_record_free(r: *mut EeGfxEffectRecord) {
             // SAFETY: the jets came from `effect_vent`'s Box and are owned by the record
             drop(unsafe { Box::from_raw(record.vent.parts) });
         }
+        if !record.volcano.mesh.is_null() {
+            // SAFETY: the mesh came from `effect_volcano`'s Box and is owned by the record
+            drop(unsafe { Box::from_raw(record.volcano.mesh) });
+        }
     }
 }
 

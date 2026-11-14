@@ -1813,7 +1813,19 @@ const EeGfxRaster gEERustRaster = {
             theModelTransform.SetY(sKeptBeamYs[j]);
             theSubModel->SetInternalTransform(0, theModelTransform);
         }
-    }
+    },
+    // the volcano's morph (EEE3DVolcano::Queue, 0x10068a): vertex array 0's points, the bounds and normals
+    [](void* inModel) -> uint32_t { return (uint32_t)static_cast<GEModel*>(inModel)->GetVertexArray(0)->GetSize(); },
+    [](void* inModel, uint32_t inIndex) {
+        GE3DPoint thePoint;
+        static_cast<GEModel*>(inModel)->GetVertexArray(0)->GetPoint(thePoint, inIndex);
+        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
+    },
+    [](void* inModel, uint32_t inIndex, const EeGe3DPoint* inPoint) {
+        static_cast<GEModel*>(inModel)->GetVertexArray(0)->SetPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), inIndex);
+    },
+    [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeBoundingVolumes(); },
+    [](void* inModel) { static_cast<GEModel*>(inModel)->ComputeModelNormals(); }
 };
 
 // FUNCTION: EXE 0x50f60f
