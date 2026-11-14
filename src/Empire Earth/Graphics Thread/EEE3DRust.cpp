@@ -1,11 +1,11 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
 // effect_beam.rs, effect_aged.rs, effect_additive.rs,
-// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs, effect_wall.rs, effect_vent.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs, effect_wall.rs, effect_vent.rs, effect_icon.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
 // EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
-// EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp, EEE3DEnergyWall.cpp and
-// EEE3DDamageVent.cpp.
+// EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp, EEE3DEnergyWall.cpp, EEE3DDamageVent.cpp,
+// EEE3DIcon.cpp and EEE3DGoal.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -55,6 +55,7 @@
 #include "ee/EEUCGate.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEUnitUtilities.h"
+#include "ee/EEGamePreferences.h"
 
 namespace {
 // the world's answers for one call
@@ -424,6 +425,44 @@ struct Ask {
                            (uint32_t)theObject->mFrameCounts[inIndex], (uint32_t)theObject->mLastFrames[inIndex]};
     }
     static float UnitClassScale(void* inAsk) { return E(inAsk)->mUnit->GetClass()->GetScale(); }
+    // the icon's set-up: the graphic effect's object loaded, then the one it replaces unloaded (EEE3DIcon::SetUp,
+    // 0xf23e2: after the new load, so shared media stays loaded)
+    static int32_t ReloadMedia(void* inAsk)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        EEGraphicObject* thePrevious = theEffect->mGraphicObject;
+        theEffect->mGraphicObject = theEffect->GetGraphicObject();
+        long theResult = theEffect->mGraphicObject->LoadMedia();
+        if (thePrevious)
+            thePrevious->UnloadMedia();
+        return theResult;
+    }
+    // the icon's place at its unit (EEE3DIcon::UpdatePosition, 0xf2c95)
+    static EeGe3DPoint UnitRaisedPosition(void* inAsk)
+    {
+        GE3DPoint theLocation;
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        if (theUnit) {
+            theUnit->GetPosition(theLocation);
+            if (theUnit->mTileNode && theUnit->mHitPoints > 0)
+                theLocation.SetZ(theLocation.GetZ() + theUnit->GetComplexUnit()->GetEffectHeight(false));
+        }
+        return EeGe3DPoint{theLocation.mX, theLocation.mY, theLocation.mZ};
+    }
+    // the icon is not shown over an unbuilt market (EEE3DIcon::Queue, 0xf21e5)
+    static bool MarketUnbuilt(void* inAsk)
+    {
+        EEUnit* theOwner = E(inAsk)->mUnit;
+        EEComplexUnit* theUnit;
+        return theOwner && (theUnit = dynamic_cast<EEComplexUnit*>(theOwner)) != 0
+            && theUnit->mUnitClass->mUnitType == kUnitTypeMarketCP && !theUnit->mIsBuilt && !theUnit->IsFoundation();
+    }
+    static void QueueScreen(void* inAsk, uint32_t inIndex)
+    {
+        EEGraphicObject* theObject = E(inAsk)->GetGraphicObject();
+        GETexture* theTexture = theObject ? theObject->GetTexture(gGamePreferences.mSettings.GetScreenID()) : NULL;
+        static_cast<Ask*>(inAsk)->mQueues[inIndex][theTexture].push_back(E(inAsk));
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -566,6 +605,12 @@ EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
     theFacts.game_time_bits = (uint32_t)(unsigned long)gPhysics->mGameTime;
     theFacts.free_camera = gFreeCamera;
     theFacts.speed = gPhysics->mSpeed;
+    if (theEffect != NULL) {
+        theFacts.param9 = theEffect->mParam9;
+        theFacts.param10 = theEffect->mParam10;
+        theFacts.param11 = theEffect->mParam11;
+    }
+    theFacts.has_effect = theEffect != NULL;
     return theFacts;
 }
 
@@ -582,7 +627,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
                                  Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
                                  Ask::GateOpen, Ask::PlayerColor, Ask::VentLists, Ask::VentUnit, Ask::VentCount,
-                                 Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::UnitClassScale};
+                                 Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::UnitClassScale,
+                                 Ask::ReloadMedia, Ask::UnitRaisedPosition, Ask::MarketUnbuilt, Ask::QueueScreen};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
@@ -603,6 +649,13 @@ long EEE3DRust::RepairPointers()
 {
     long theResult = EEEffect::RepairPointers();
     return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
+}
+
+// the icon (2) and goal (0x3c): a fixed one moves to inLocation (EEE3DIcon::SetLocation, 0xf2637); others ignore it
+void EEE3DRust::SetLocation(const GE3DPoint& inLocation)
+{
+    if ((this->mKind == 2 || this->mKind == 0x3c) && !this->mRecord->icon.follow_unit)
+        this->mRecord->icon.location = EeGe3DPoint{inLocation.mX, inLocation.mY, inLocation.mZ};
 }
 
 // the energy wall (0x34): the current player sees the tile or holds a doppelganger of the unit there (then the wall

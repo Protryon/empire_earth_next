@@ -33,6 +33,11 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
 /// `kEffect3DHurricane`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_HURRICANE = 36;
 
+/// `kEffect3DIcon`, `kEffect3DGoal`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_ICON = 2;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_GOAL = 60;
+
 /// `kEffect3DMultiEffect`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_MULTI_EFFECT = 59;
 
@@ -749,7 +754,7 @@ struct EeGfxEffectStorm {
   float rumble_delay;
 };
 
-/// `EEE3DIcon`'s state.
+/// `EEE3DIcon`'s state (and `EEE3DGoal`'s time left).
 struct EeGfxEffectIcon {
   /// `mLocation`: where a fixed icon stands (saved when it does not follow its unit)
   EeGe3DPoint location;
@@ -773,6 +778,12 @@ struct EeGfxEffectIcon {
   bool follow_unit;
   /// `mGrowing`: the scale grows towards the size
   bool growing;
+  /// the draw's copies (`Queue`): `mDrawTransformation`, `mDrawFrame`, `mDrawScroll`
+  EeGeTransformation draw_transformation;
+  uint32_t draw_frame;
+  float draw_scroll;
+  /// the goal's `mTimeLeft` in ms (saved; its label shows it as m:ss while positive)
+  uint32_t time_left;
 };
 
 /// `EEE3DEnergyWall`'s state.
@@ -1242,19 +1253,6 @@ struct EeGfxStormDraw {
   bool water;
 };
 
-/// What the icon's tick reads: the tick, the physics' speed and the graphic effect's duration, size, start size,
-/// `mParam7` (the scale's rate), `mIntParam2` (it scrolls when positive) and `mParam11` (the scroll's rate).
-struct EeGfxIconTick {
-  float tick_time;
-  float speed;
-  uint32_t duration;
-  float size;
-  float start_size;
-  float rate;
-  int32_t int_param2;
-  float param11;
-};
-
 /// The friendly wall pieces a segment reaches (`context`: the effect).
 struct EeGfxWallHost {
   void *context;
@@ -1320,6 +1318,12 @@ struct EeGfxGraphicFacts {
   float param8;
   /// `gPhysics->mSpeed` (the game speed)
   float speed;
+  /// `mParam9` .. `mParam11`
+  float param9;
+  float param10;
+  float param11;
+  /// the effect has its graphic effect
+  bool has_effect;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1488,6 +1492,16 @@ struct EeGfxEffect3DHost {
   EeGfxFrames (*frames)(void *context, uint32_t index);
   /// the unit's class's scale (`GetClass()->GetScale()`)
   float (*unit_class_scale)(void *context);
+  /// the graphic object is the graphic effect's; its `LoadMedia`, then the media of the one it replaces unloaded
+  int32_t (*reload_media)(void *context);
+  /// the unit's position, raised by its complex unit's effect height while on the map and alive (the origin
+  /// without a unit)
+  EeGe3DPoint (*unit_raised_position)(void *context);
+  /// the unit is an unbuilt market (a complex unit of type market, not built, not a foundation)
+  bool (*market_unbuilt)(void *context);
+  /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
+  /// screen (none without an object)
+  void (*queue_screen)(void *context, uint32_t index);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1576,6 +1590,14 @@ struct EeGfxRaster {
                        float alpha,
                        float brightness,
                        float alpha_ref);
+  /// `SetGraphicsNextFrame(next)` then `SetFractionalFramePosition(fraction)` (the tween between two frames)
+  void (*model_tween)(EeGfxModel model, uint32_t next, float fraction);
+  /// `GetScreenPoint`: the world point's place on the screen (the camera, then the main viewport)
+  void (*screen_point)(const EeGe3DPoint *point, float *x, float *y);
+  /// a `GEText` in Tahoma 10, transparent and centred at (`x`, `y`) in `color`, its text the NUL-terminated UTF-8
+  /// `text`, drawn by `DrawClippedText` clipped to the viewport's view rectangle on the main game form (the scenario
+  /// editor's under a free camera)
+  void (*draw_text)(float x, float y, const uint8_t *text, EeGfxColor color);
 };
 
 /// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it
@@ -2855,36 +2877,6 @@ int32_t ee_gfx_storm_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_storm_save(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
-
-/// `EEE3DIcon::Clear`'s part of the record.
-///
-/// # Safety
-/// `r` is a live record.
-void ee_gfx_icon_clear(EeGfxEffectRecord *r);
-
-/// `EEE3DIcon::Step`'s part: 7 once a set duration is up.
-///
-/// # Safety
-/// `r` is a live record; `tick` is valid.
-int32_t ee_gfx_icon_step(EeGfxEffectRecord *r, const EeGfxIconTick *tick);
-
-/// `EEE3DIcon::Queue`'s opacity and fractional frame.
-///
-/// # Safety
-/// `r` is a live record.
-void ee_gfx_icon_queue(EeGfxEffectRecord *r, float param8, float param9, float param10);
-
-/// `EEE3DIcon::Load`'s own reads after `EEEffect3D::Load`'s.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_icon_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
-
-/// `EEE3DIcon::Save`'s own writes after `EEEffect3D::Save`'s.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_icon_save(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEE3DEnergyWall::Place`'s segment ends after the C++ set the posts.
 ///

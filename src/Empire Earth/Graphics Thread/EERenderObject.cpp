@@ -40,6 +40,8 @@
 #include "lle/UIControl.h"
 #include "lle/UIEvent.h"
 #include "lle/UIForm.h"
+#include "lle/GEText.h"
+#include "lle/GERectangle.h"
 #include "lle/UIManager.h"
 
 #include "ee/EmpireEarth.h"
@@ -1607,6 +1609,9 @@ void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeig
               const GETextureCoordinate& inOrigin, const GETextureCoordinate& inSize, float inAlpha, float inBrightness,
               float inAlphaReference);
 
+// EEROUnits.cpp's screen point (0x118676; the goal's countdown)
+void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint);
+
 // the rasterizer as the Rust draws call it (ee_gfx raster.rs), on the current screen
 extern const EeGfxRaster gEERustRaster;
 static std::vector<float> sKeptV;      // the texture coordinates' v that model_scroll_v changed
@@ -1737,6 +1742,33 @@ const EeGfxRaster gEERustRaster = {
         AddGroundStrip(GE3DPoint(inFrom->x, inFrom->y, inFrom->z), GE3DPoint(inTo->x, inTo->y, inTo->z), inWidth,
                        GEColor(inColor.red, inColor.green, inColor.blue), theOffset, theSize, inAlpha, inBrightness,
                        inAlphaReference);
+    },
+    [](void* inModel, uint32_t inNext, float inFraction) {
+        static_cast<GEModel*>(inModel)->SetGraphicsNextFrame(inNext);
+        static_cast<GEModel*>(inModel)->SetFractionalFramePosition(inFraction);
+    },
+    [](const EeGe3DPoint* inPoint, float* outX, float* outY) {
+        GE2DPoint theScreenPoint;
+        GetScreenPoint(GE3DPoint(inPoint->x, inPoint->y, inPoint->z), theScreenPoint);
+        *outX = theScreenPoint.GetX();
+        *outY = theScreenPoint.GetY();
+    },
+    // EEE3DGoal::DrawPass3's text (0xf13db)
+    [](float inX, float inY, const uint8_t* inText, EeGfxColor inColor) {
+        GERectangle theRectangle = gRasterizer->GetViewport(gScreenIndex).GetViewRectangle();
+        GEText theText(gFontTahoma10);
+        theText.SetIsTransparent(true);
+        theText.SetFgColor(GEColor(inColor.red, inColor.green, inColor.blue));
+        theText.SetAlignment(kTextAlignCenter);
+        theText.SetText(UWideString(reinterpret_cast<const char*>(inText)));
+        GE2DPoint thePoint;
+        thePoint.SetX(inX);
+        thePoint.SetY(inY);
+        theText.SetLocation(thePoint);
+        if (!gFreeCamera)
+            gUIManager->mMainGameForm->DrawClippedText(theRectangle, &theText, NULL);
+        else
+            gUIManager->mScenarioEditorForm->DrawClippedText(theRectangle, &theText, NULL);
     }
 };
 

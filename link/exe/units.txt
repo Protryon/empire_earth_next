@@ -193,8 +193,6 @@ e7d67 e8158 Empire Earth/Graphics Thread/EEE2DWaterRipple.cpp
 e8158 e89c6 Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp
 ec6e4 ed606 Empire Earth/Graphics Thread/EEE3DEarthquake.cpp
 ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
-f1327 f1600 Empire Earth/Graphics Thread/EEE3DGoal.cpp
-f2046 f2d93 Empire Earth/Graphics Thread/EEE3DIcon.cpp
 f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
 f5d94 f69e3 Empire Earth/Graphics Thread/EEE3DParticleEmitter.cpp
 f7394 f8ceb Empire Earth/Graphics Thread/EEE3DRain.cpp
