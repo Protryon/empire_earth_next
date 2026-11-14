@@ -63,6 +63,15 @@ pub struct EeGfxEffectSprite {
     pub hit_points: i32,
     /// `mShrinking` (pulse wave; saved)
     pub shrinking: bool,
+    /// `mVelocity`: the muzzle blast's direction (saved); the velocity particle's line direction while it is made
+    pub velocity: Ge3DPoint,
+    /// `mAngle` (exhaust trail; saved) and the queue's copy
+    pub angle: f32,
+    pub draw_angle: f32,
+    /// `mClockwise` (exhaust trail; saved)
+    pub flag: bool,
+    /// `mLastPart`: the fire's last burning part (saved)
+    pub last_part: i32,
 }
 
 /// A point the host may not have (`has` false: no complex unit).
@@ -516,7 +525,7 @@ unsafe fn impact_step<H: Effect2DHost>(r: *mut EeGfxEffectRecord, g: &EeGfxGraph
             s.frame = frame;
             s.time = time;
         }
-        h.animation_sound(location, frame, start || frame != old);
+        h.animation_sound(location, frame, start || frame != old, false);
     }
     res
 }
@@ -620,7 +629,7 @@ unsafe fn lightning<H: Effect2DHost, R: Raster>(
                 s.time = time;
                 s.frame = frame;
             }
-            h.animation_sound(location, frame, start || frame != old);
+            h.animation_sound(location, frame, start || frame != old, false);
             0
         }
         _ => 0,
@@ -716,7 +725,7 @@ unsafe fn plasma<H: Effect2DHost, R: Raster>(
                 s.time = time;
                 s.frame = frame;
             }
-            h.animation_sound(location, frame, start || frame != old);
+            h.animation_sound(location, frame, start || frame != old, false);
             0
         }
         _ => 0,

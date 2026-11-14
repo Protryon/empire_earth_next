@@ -4,7 +4,8 @@
 // (EEE3DCommandConfirmation, 0xe9bee..0xea703, deleted; an EEEffect2D despite its name), 0x12 the shockwave, and
 // since the twentieth round the sprites of ee_gfx effect_sprite.rs: 6 the impact, 7 the blood impact, 8 the lightning,
 // 9 the muzzle flash, 0xa the plasma pulse, 0xe the fire trail, 0x22 the water ripple, 0x2f the pulse wave (their
-// classes deleted).
+// classes deleted), and those of ee_gfx effect_parts.rs: 3 the exhaust trail, 4 the explosion, 5 the fire, 0xb and 0xc
+// the smoke puffs, 0x14 the smoke muzzle blast.
 // Requires ee/EEEffect2D.h and rust/ee_gfx.h.
 #ifndef EE_EEE2DRUST_H
 #define EE_EEE2DRUST_H
@@ -31,6 +32,12 @@ public:
     EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(const GETransformation& inTransformation, EEGraphicEffect* inGraphicEffect, long inKind);
+    // along a line (the velocity particle: the start and direction in the record's sprite.start and sprite.velocity);
+    // from a shooter's weapon point to its target's model point or to a point (the muzzle blast: the two ends in the
+    // record's sprite.start and sprite.draw_position)
+    EEE2DRust(const GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind);
+    EEE2DRust(EEUnit* inUnit, EEUnit* inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
+    EEE2DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(long inKind);
     virtual ~EEE2DRust();
     virtual long DrawPass2() { return this->Call(EeGfxEffect3DOp::DrawPass2); }

@@ -54,6 +54,22 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_DISEASE = 35;
 
 constexpr static const int32_t EE_GFX_EFFECT_KIND_VIRUS = 66;
 
+/// `kEffect2DExhaustTrail` .. the kinds of this file.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_EXHAUST_TRAIL = 3;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_EXPLOSION = 4;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_FIRE = 5;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_MUZZLE_BLAST = 20;
+
+/// The tracers, the shells (a tracer with a pass-5 draw) and the pulse cannon ball.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_TRACERS = 33;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SHELLS = 38;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_PULSE_CANNON_BALL = 67;
+
 /// `kEffect2DImpact` .. the kinds of this file.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_IMPACT = 6;
 
@@ -68,13 +84,6 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_PLASMA_PULSE = 10;
 constexpr static const int32_t EE_GFX_EFFECT_KIND_FIRE_TRAIL = 14;
 
 constexpr static const int32_t EE_GFX_EFFECT_KIND_PULSE_WAVE = 47;
-
-/// The tracers, the shells (a tracer with a pass-5 draw) and the pulse cannon ball.
-constexpr static const int32_t EE_GFX_EFFECT_KIND_TRACERS = 33;
-
-constexpr static const int32_t EE_GFX_EFFECT_KIND_SHELLS = 38;
-
-constexpr static const int32_t EE_GFX_EFFECT_KIND_PULSE_CANNON_BALL = 67;
 
 /// The plain smoke generator (on a unit or at a point).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_GENERATOR = 43;
@@ -253,6 +262,9 @@ enum class EeGfxEffect3DOp : uint32_t {
   CreateLine = 13,
   /// the constructor at a transformation (the 2D water ripple's: the C++ put it in the record's `aged.transformation`)
   CreateTransformation = 14,
+  /// the constructor between two units or from a unit to a point (the 2D muzzle blast's: the C++ put the start in the
+  /// record's `sprite.start`, the end in `sprite.draw_position`)
+  CreateBetween = 15,
 };
 
 /// The set-ups, one per C++ function.
@@ -1045,6 +1057,15 @@ struct EeGfxEffectSprite {
   int32_t hit_points;
   /// `mShrinking` (pulse wave; saved)
   bool shrinking;
+  /// `mVelocity`: the muzzle blast's direction (saved); the velocity particle's line direction while it is made
+  EeGe3DPoint velocity;
+  /// `mAngle` (exhaust trail; saved) and the queue's copy
+  float angle;
+  float draw_angle;
+  /// `mClockwise` (exhaust trail; saved)
+  bool flag;
+  /// `mLastPart`: the fire's last burning part (saved)
+  int32_t last_part;
 };
 
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
@@ -1195,20 +1216,6 @@ struct EeGfxSmokeSetUp {
   float param1;
   float param2;
   int32_t int_param1;
-};
-
-/// What a puff's tick reads.
-struct EeGfxPlumeTick {
-  /// `gPhysics->GetTickSeconds()` (the puff) and `GetTickTime()` (the velocity particle)
-  float tick_seconds;
-  float tick_time;
-  /// `gWorld.mWindDirection`
-  EeGe3DPoint wind;
-  /// the graphic effect's `mDuration`, `mIntParam1`, `GetParam3()`, `mFlag1`
-  uint32_t duration;
-  int32_t int_param1;
-  float param3;
-  bool flag1;
 };
 
 /// What a particle's set-up reads from its graphic effect: `mIntParam1` (0: random turn), `GetParam2()`,
@@ -1402,6 +1409,8 @@ struct EeGfxGraphicFacts {
   /// `mTime1`, `mTime2` (ms)
   uint32_t time1;
   int32_t time2;
+  /// `mAlpha` (the 2D smoke's opacity and trail spacing)
+  float alpha;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1749,6 +1758,23 @@ struct EeGfx2DPoint {
   EeGe3DPoint point;
 };
 
+/// `CreateParts`' place: the position and the height (the farthest part plus the effect's size).
+struct EeGfx2DPlace {
+  EeGe3DPoint position;
+  float height;
+};
+
+/// One part as the host reads and writes it (`EEEffect2DPart` without its graphic object).
+struct EeGfx2DPart {
+  EeGe3DPoint position;
+  /// the tag point's index (10000: the unit's own position)
+  uint32_t tag;
+  uint32_t frame;
+  uint32_t draw_frame;
+  float time;
+  bool done;
+};
+
 /// The C++'s answers for an `EEE2DRust`.
 struct EeGfxEffect2DHost {
   void *context;
@@ -1795,9 +1821,13 @@ struct EeGfxEffect2DHost {
   EeGfx2DPoint (*tag_point)(void *context, uint32_t kind, uint32_t index);
   /// the unit's weapon tag point (`EECombatEffectWeaponPoint` with its capture `site`)
   EeGe3DPoint (*weapon_point)(void *context, int32_t site);
-  /// the kept graphic object's animation 0 sound for `frame` at `location` (`PlayAnimationSound`), kept as the
-  /// effect's (`SetSound`) and dereferenced
-  void (*animation_sound)(void *context, EeGe3DPoint location, uint32_t frame, bool changed);
+  /// the kept graphic object's (`part0`: the first part's) animation 0 sound for `frame` at `location`
+  /// (`PlayAnimationSound`), kept as the effect's (`SetSound`) and dereferenced
+  void (*animation_sound)(void *context,
+                          EeGe3DPoint location,
+                          uint32_t frame,
+                          bool changed,
+                          bool part0);
   /// `gDrawBlood`
   bool (*draw_blood)(void *context);
   /// the effect has a unit with a complex unit
@@ -1809,6 +1839,23 @@ struct EeGfxEffect2DHost {
   bool (*tile_blocked)(void *context, int32_t x, int32_t y);
   /// `gWorld.mWindDirection`
   EeGe3DPoint (*wind)(void *context);
+  /// `CreateParts(position, height, lift)`: one part per tag point of the effect's kind on the unit
+  EeGfx2DPlace (*create_parts)(void *context, float lift);
+  /// the parts: their count, part `index` read and written, its graphic object's animation 0 and texture 0
+  uint32_t (*part_count)(void *context);
+  EeGfx2DPart (*part)(void *context, uint32_t index);
+  void (*set_part)(void *context, uint32_t index, const EeGfx2DPart *part);
+  EeGfxFrames (*part_frames)(void *context, uint32_t index);
+  EeGfxModel (*part_texture)(void *context, uint32_t index);
+  /// every part's frame copied for the draw
+  void (*parts_snapshot)(void *context);
+  /// part `index` on the unit's current frame: its model's tag point (the unit itself for tag 10000) under the
+  /// unit's location (not without a complex unit)
+  EeGfx2DPoint (*part_follow)(void *context, uint32_t index);
+  /// the unit's stats' maximum hit points
+  int32_t (*max_hit_points)(void *context);
+  /// `EEEffect::GetUnitLocation` (the complex unit's location, else its tile's centre)
+  EeGe3DPoint (*unit_point)(void *context);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
@@ -2707,36 +2754,6 @@ int32_t ee_gfx_effect_smoke_set_up(const EeGfxEffectRecord *r,
                                    const EeGfxSmokeSetUp *setup,
                                    const EeGfxSmokeHost *host);
 
-/// `EEE2DSmokePlume`'s constructor at a point (its draws; `velocity`: the velocity particle's, else zero).
-///
-/// # Safety
-/// `r` is a live record; the points are valid.
-void ee_gfx_effect_plume_new(EeGfxEffectRecord *r,
-                             const EeGe3DPoint *start,
-                             float param1,
-                             float param2,
-                             const EeGe3DPoint *velocity);
-
-/// `EEE2DSmokePlume::Step` (both kinds): 7 when it ends; `moved`: the C++ sets the effect's position to the point.
-///
-/// # Safety
-/// `r` is a live record; `tick` and `moved` are valid.
-int32_t ee_gfx_effect_plume_step(EeGfxEffectRecord *r,
-                                 const EeGfxPlumeTick *tick,
-                                 bool *moved);
-
-/// `EEE2DSmokePlume::Load`'s own reads (and the velocity particle's velocity).
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_effect_load_plume(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
-
-/// `EEE2DSmokePlume::Save`'s own writes.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_effect_save_plume(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
-
 /// `EEE2DMarchingIcons::ComputeOffsets`' candidates (the C++ keeps those `IsIconShown` takes): up to `capacity`
 /// points into `out`; their count.
 ///
@@ -2894,27 +2911,6 @@ int32_t ee_gfx_effect_save_emitter(const EeGfxEffectRecord *r, const EeGfxEffect
 /// `r` is a live record; `t` is readable.
 int32_t ee_gfx_effect_timed_step(EeGfxEffectRecord *r,
                                  const EeGfxTimedTick *t);
-
-/// The aged effects' `Step`: 7 when it ends; the ripple's `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`.
-///
-/// # Safety
-/// `r` is a live record; `tile` has room for two.
-int32_t ee_gfx_effect_aged_step(EeGfxEffectRecord *r,
-                                float tick_seconds,
-                                uint32_t duration,
-                                int32_t *tile);
-
-/// The aged effects' own Load reads.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_effect_load_aged(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
-
-/// The aged effects' own Save writes.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_effect_save_aged(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEEffect::GetRandom`.
 float ee_gfx_effect_random();

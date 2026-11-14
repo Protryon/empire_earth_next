@@ -38,6 +38,7 @@ pub mod effect_manager;
 pub mod effect_multi;
 pub mod effect_nuclear;
 pub mod effect_orbit;
+pub mod effect_parts;
 pub mod effect_rising;
 pub mod effect_shockwave;
 pub mod effect_shot;

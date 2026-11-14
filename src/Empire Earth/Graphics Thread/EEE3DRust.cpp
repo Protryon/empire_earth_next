@@ -821,6 +821,7 @@ EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
     theFacts.free_camera = gFreeCamera;
     theFacts.speed = gPhysics->mSpeed;
     if (theEffect != NULL) {
+        theFacts.alpha = theEffect->mAlpha;
         theFacts.param9 = theEffect->mParam9;
         theFacts.param10 = theEffect->mParam10;
         theFacts.param11 = theEffect->mParam11;

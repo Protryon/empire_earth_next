@@ -84,7 +84,7 @@ impl Effect2DHost for Host {
         self.calls.push(format!("weapon {site}"));
         Ge3DPoint { x: 9.0, y: 8.0, z: 7.0 }
     }
-    fn animation_sound(&mut self, l: Ge3DPoint, frame: u32, changed: bool) {
+    fn animation_sound(&mut self, l: Ge3DPoint, frame: u32, changed: bool, _part0: bool) {
         self.calls.push(format!("sound {} {} {} {frame} {changed}", l.x, l.y, l.z));
     }
     fn draw_blood(&mut self) -> bool {

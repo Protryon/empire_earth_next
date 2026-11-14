@@ -2,7 +2,8 @@
 // effect_sprite.rs): EEE2DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DCommandConfirmation.cpp, EEE2DShockwave.cpp, EEE2DImpact.cpp (but EETagPointList::Scale, below),
 // EEE2DImpactBlood.cpp, EEE2DMuzzleFlash.cpp, EEE2DLightning.cpp, EEE2DPlasmaPulse.cpp, EEE2DPulseWave.cpp,
-// EEE2DWaterRipple.cpp and EEE2DFireTrail.cpp.
+// EEE2DWaterRipple.cpp, EEE2DFireTrail.cpp, EEE2DExplosion.cpp, EEE2DFire.cpp, EEE2DExhaustTrail.cpp, EEE2DSmokePlume.cpp
+// and EEE2DSmokeMuzzleBlast.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -227,12 +228,12 @@ struct Ask2D {
     }
     // the kept object's animation sound for the frame at the location, kept as the effect's (EEE2DImpact::Step and
     // SetSound, 0xe166b / 0xe17ed)
-    static void AnimationSound(void* inAsk, EeGe3DPoint inLocation, uint32_t inFrame, bool inChanged)
+    static void AnimationSound(void* inAsk, EeGe3DPoint inLocation, uint32_t inFrame, bool inChanged, bool inPart0)
     {
         EEE2DRust* theEffect = E(inAsk);
         GE3DPoint theLocation(inLocation.x, inLocation.y, inLocation.z);
-        SESMInstanceNode* theSound =
-            PlayAnimationSound(theLocation, theEffect->mGraphicObject, 0, theEffect->mSound, inFrame, inChanged);
+        EEGraphicObject* theObject = inPart0 ? theEffect->mParts[0].mGraphicObject : theEffect->mGraphicObject;
+        SESMInstanceNode* theSound = PlayAnimationSound(theLocation, theObject, 0, theEffect->mSound, inFrame, inChanged);
         if (theSound != theEffect->mSound) {
             if (theEffect->mSound)
                 theEffect->mSound->Dereference();
@@ -256,6 +257,71 @@ struct Ask2D {
     {
         const GEVector& theWind = gWorld.mWindDirection;
         return EeGe3DPoint{theWind.mX, theWind.mY, theWind.mZ};
+    }
+    // the parts (EEEffect2D::mParts): made by CreateParts (0x104623), read and written one at a time
+    static EeGfx2DPlace CreateParts(void* inAsk, float inLift)
+    {
+        GE3DPoint thePosition;
+        float theHeight;
+        E(inAsk)->CreateParts(thePosition, theHeight, inLift);
+        return EeGfx2DPlace{EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ}, theHeight};
+    }
+    static uint32_t PartCount(void* inAsk) { return (uint32_t)E(inAsk)->mParts.size(); }
+    static EeGfx2DPart Part(void* inAsk, uint32_t inIndex)
+    {
+        const EEEffect2DPart& thePart = E(inAsk)->mParts[inIndex];
+        return EeGfx2DPart{EeGe3DPoint{thePart.mPosition.mX, thePart.mPosition.mY, thePart.mPosition.mZ}, (uint32_t)thePart.mTag,
+                           (uint32_t)thePart.mFrame, (uint32_t)thePart.mDrawFrame, thePart.mTime, thePart.mIsDone};
+    }
+    static void SetPart(void* inAsk, uint32_t inIndex, const EeGfx2DPart* inPart)
+    {
+        EEEffect2DPart& thePart = E(inAsk)->mParts[inIndex];
+        thePart.mPosition = GE3DPoint(inPart->position.x, inPart->position.y, inPart->position.z);
+        thePart.mTag = inPart->tag;
+        thePart.mFrame = inPart->frame;
+        thePart.mDrawFrame = inPart->draw_frame;
+        thePart.mTime = inPart->time;
+        thePart.mIsDone = inPart->done;
+    }
+    static EeGfxFrames PartFrames(void* inAsk, uint32_t inIndex)
+    {
+        EEGraphicObject* theObject = E(inAsk)->mParts[inIndex].mGraphicObject;
+        return EeGfxFrames{(uint32_t)theObject->mStartFrames[0], (uint32_t)theObject->mFrameTimes[0],
+                           (uint32_t)theObject->mFrameCounts[0], (uint32_t)theObject->mLastFrames[0]};
+    }
+    static void* PartTexture(void* inAsk, uint32_t inIndex) { return E(inAsk)->mParts[inIndex].mGraphicObject->mTextures[0]; }
+    static void PartsSnapshot(void* inAsk)
+    {
+        std::vector<EEEffect2DPart>& theParts = E(inAsk)->mParts;
+        for (unsigned long i = 0; i < theParts.size(); i++)
+            theParts[i].mDrawFrame = theParts[i].mFrame;
+    }
+    // the part's tag point on the unit's model at its frame (the unit itself for tag 10000) under the unit's location
+    // (EEE2DFire::UpdatePart, 0xe0a22)
+    static EeGfx2DPoint PartFollow(void* inAsk, uint32_t inIndex)
+    {
+        EeGfx2DPoint thePoint = {};
+        EEE2DRust* theEffect = E(inAsk);
+        EEComplexUnit* theUnit = theEffect->mUnit->GetComplexUnit();
+        if (theUnit == NULL)
+            return thePoint;
+        GE3DPoint theOffset;
+        if (theEffect->mParts[inIndex].mTag != 10000) {
+            GEModel* theModel = theUnit->GetModel()->mModel;
+            unsigned long theModelFrame = theUnit->mPhysicalModel.GetFrame();
+            theOffset = theModel->GetTagPoint(theEffect->mParts[inIndex].mTag, theModelFrame);
+        }
+        GE3DPoint thePosition;
+        theUnit->GetPhysicalModel().GetLocation().Apply(theOffset, thePosition);
+        thePoint.has = true;
+        thePoint.point = EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
+        return thePoint;
+    }
+    static int32_t MaxHitPoints(void* inAsk) { return (int32_t)E(inAsk)->mUnit->mStats->mMaxHitPoints; }
+    static EeGe3DPoint UnitPoint(void* inAsk)
+    {
+        const GE3DPoint& thePoint = E(inAsk)->GetUnitLocation();
+        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
     }
 };
 
@@ -309,6 +375,56 @@ EEE2DRust::EEE2DRust(const GETransformation& inTransformation, EEGraphicEffect* 
     this->Call(EeGfxEffect3DOp::CreateTransformation);
 }
 
+// along a line (the velocity particle, the original's EEE2DVelocityParticle): its start and direction for Rust
+EEE2DRust::EEE2DRust(const GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect2D(0, inGraphicEffect, EE2DModel(inKind), inKind, false)
+{
+    GE3DPoint theStart = inLine.GetStart();
+    GEVector theDirection = inLine.GetDirection();
+    this->mRecord->sprite.start = EeGe3DPoint{theStart.GetX(), theStart.GetY(), theStart.GetZ()};
+    this->mRecord->sprite.velocity = EeGe3DPoint{theDirection.GetX(), theDirection.GetY(), theDirection.GetZ()};
+    this->Call(EeGfxEffect3DOp::CreateLine);
+}
+
+// from the shooter's weapon tag point (turret-aware) to the target's model point on its scaled location, 15 higher for
+// a high-arc shooter (EEE2DSmokeMuzzleBlast 0xe6664): the two ends for Rust
+EEE2DRust::EEE2DRust(EEUnit* inUnit, EEUnit* inTarget, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect2D(0, inGraphicEffect, EE2DModel(inKind), inKind, false)
+{
+    static const float kTargetLift = 15.0f;   // 0x440014
+    GE3DPoint theStart;
+    GE3DPoint theEnd;
+    GE3DPoint theOffset;
+    GETransformation theTargetTransformation(inTarget->mComplexUnit->mPhysicalModel.GetLocation());
+    EEModel* theModel = inUnit->GetModel();
+    EEComplexUnit* theUnit = inUnit->mComplexUnit;
+    EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->mAnimation];
+    float theTargetScale = inTarget->mComplexUnit->mPhysicalModel.GetScale();
+    EECombatEffectWeaponPoint(4, theUnit, theModel, theList, true, theStart);
+    EETagPointList::Scale(theTargetTransformation, theTargetScale);
+    theOffset = inTarget->GetModel()->mDefaultPoint;
+    theTargetTransformation.Apply(theOffset, theEnd);
+    if (inUnit->mUnitClass->mShootsHigh || (inUnit->mStats->mCanFireOverWalls && inUnit->mComplexUnit->mIsFiringHigh))
+        theEnd.SetZ(theEnd.GetZ() + kTargetLift);
+    this->mRecord->sprite.start = EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
+    this->mRecord->sprite.draw_position = EeGe3DPoint{theEnd.mX, theEnd.mY, theEnd.mZ};
+    this->Call(EeGfxEffect3DOp::CreateBetween);
+}
+
+// to a point (EEE2DSmokeMuzzleBlast 0xe6a07)
+EEE2DRust::EEE2DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect2D(0, inGraphicEffect, EE2DModel(inKind), inKind, false)
+{
+    GE3DPoint theStart;
+    EEModel* theModel = inUnit->GetModel();
+    EEComplexUnit* theUnit = inUnit->mComplexUnit;
+    EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->mAnimation];
+    EECombatEffectWeaponPoint(5, theUnit, theModel, theList, true, theStart);
+    this->mRecord->sprite.start = EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
+    this->mRecord->sprite.draw_position = EeGe3DPoint{inTarget.mX, inTarget.mY, inTarget.mZ};
+    this->Call(EeGfxEffect3DOp::CreateBetween);
+}
+
 // for loading (EEE2DShockwave 0xe621f, ...)
 EEE2DRust::EEE2DRust(long inKind)
     : EEEffect2D(EE2DModel(inKind), inKind, false)
@@ -339,7 +455,9 @@ long EEE2DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask2D::SpawnPoint, Ask2D::ObjectMedia, Ask2D::ObjectTexture, Ask2D::TagCount,
                                  Ask2D::TagPoint, Ask2D::WeaponPoint, Ask2D::AnimationSound, Ask2D::DrawBlood,
                                  Ask2D::HasComplex, Ask2D::DefaultPoint, Ask2D::StatsScale, Ask2D::TileBlocked,
-                                 Ask2D::Wind};
+                                 Ask2D::Wind, Ask2D::CreateParts, Ask2D::PartCount, Ask2D::Part, Ask2D::SetPart,
+                                 Ask2D::PartFrames, Ask2D::PartTexture, Ask2D::PartsSnapshot, Ask2D::PartFollow,
+                                 Ask2D::MaxHitPoints, Ask2D::UnitPoint};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect2d_file(inOp, this->mRecord, inFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
@@ -354,6 +472,9 @@ long EEE2DRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
 {
     if (this->mKind == 0x41)
         return this->Call(EeGfxEffect3DOp::Load);
+    // the explosion has no state of its own: the base's result (EEE2DExplosion::Load)
+    if (this->mKind == 4)
+        return EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
     EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
     EeGfxEffectFile theFile = EEEffectFile(inFile);
     return this->Call(EeGfxEffect3DOp::Load, NULL, &theFile, inMajorVersion, inMinorVersion);
@@ -370,6 +491,8 @@ long EEE2DRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
 {
     if (this->mKind == 0x41)
         return this->Call(EeGfxEffect3DOp::Save);
+    if (this->mKind == 4)
+        return EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
     EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
     EeGfxEffectFile theFile = EEEffectFile(outFile);
     return this->Call(EeGfxEffect3DOp::Save, NULL, &theFile);
