@@ -14,6 +14,7 @@ mod chunk;
 pub mod ffi;
 mod file;
 mod memfile;
+pub mod path;
 pub mod persistent_list;
 pub mod spec;
 

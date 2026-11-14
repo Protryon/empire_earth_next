@@ -94,6 +94,9 @@ using EeFsFatVisitor = void(*)(void *context,
                                int32_t end,
                                int32_t length);
 
+/// A name handed to `ListFiles`' sink (the C++ inserts it into its `std::set<UString>`).
+using EeFsPathNameSink = void(*)(void *context, const char *name);
+
 extern "C" {
 
 /// `FSArchive()`'s body: empty tables, nothing mapped (the archive file is the C++ member's `FSFileSpec()`).
@@ -521,6 +524,42 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
                                   int32_t start,
                                   int32_t length,
                                   EeFsMemFile **out_file);
+
+/// `FindFile(name, outFile, outDirectory)`'s search: the directories in order (each searched by a copy of its spec,
+/// so no search handle is shared between threads), then the archives (the name lower-cased). A file found in a
+/// directory is left in `found` (the C++ copies it into a new `FSFileSpec`) and in `out_directory`; a member found in
+/// archive `*out_archive` is handed back in `*out_member` (the C++ wraps and names it) and `out_directory` becomes
+/// that archive's file. kErrorNotFound when neither has it.
+///
+/// # Safety
+/// `directories` holds `directory_count` live spec records, `archives` `archive_count` live archive records; `name`
+/// is a live `UString` record; `found` and `out_directory` are live spec records; the outputs are writable.
+long ee_fs_path_find(const EeFsSpec *directories,
+                     size_t directory_count,
+                     const EeFsArchiveObj *archives,
+                     size_t archive_count,
+                     const EeFsString *name,
+                     EeFsSpec *found,
+                     EeFsSpec *out_directory,
+                     EeFsMemFile **out_member,
+                     size_t *out_archive,
+                     const EeFsString *startup_volume,
+                     const EeFsString *startup_directory);
+
+/// `ListFiles`' walk of the directories: every match of `pattern` in each directory, named relative to it (as a
+/// `PLAT_MAX_PATH` string's `Copy` keeps it), handed to `sink`. Returns the last search's result (the end-of-search
+/// code when there is a directory), or `previous` (the archives' result) when there is none.
+///
+/// # Safety
+/// `directories` holds `directory_count` live spec records, `pattern` is a C string, `sink` takes `context`.
+long ee_fs_path_list_directories(const EeFsSpec *directories,
+                                 size_t directory_count,
+                                 const char *pattern,
+                                 long previous,
+                                 EeFsPathNameSink sink,
+                                 void *context,
+                                 const EeFsString *startup_volume,
+                                 const EeFsString *startup_directory);
 
 /// Registers a prototype under its tag -> whether it was taken (false: the tag was already registered, the caller
 /// deletes the prototype).
