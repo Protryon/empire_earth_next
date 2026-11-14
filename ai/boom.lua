@@ -545,6 +545,11 @@ function M.step(view, memory)
         if BO.OPT.owner_barracks and phase == "pre" then
             plan.barracks_at = BO.OWNER_BARRACKS_AT
         end
+        -- (BO.OPT.early_towers, the owner's log: towers at 1.1 and 6.9 minutes; the classic's first raid came at 4-8
+        -- minutes against 0-2 towers) the Prehistoric towers from EARLY_TOWERS_AT citizens
+        if BO.OPT.early_towers and phase == "pre" then
+            plan.tower_at = BO.EARLY_TOWERS_AT
+        end
     end
     PL.afford_retry = ECON.order and (BO.OPT.settle_afford or BO.OPT.mines_early) or false
     PL.blocked_skip = ECON.order and BO.OPT.blocked_skip or false

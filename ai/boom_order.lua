@@ -6,7 +6,8 @@
 -- boom_order; the old default configuration is retired, 2026-11-13.)
 return require("boom").configure{
     econ = {order = true},
-    order = {shore_scout = true, boat_wood = true, lua_farms = true, soldiers_after_boats = true, blocked_skip = true},
+    order = {shore_scout = true, boat_wood = true, lua_farms = true, soldiers_after_boats = true, blocked_skip = true,
+             early_towers = true, owner_barracks = true},
     plan = {tower_up_ships = true, boat_guard = 2, iron_lean = 50},
     defence = {boats = true},
 }
