@@ -16866,3 +16866,66 @@ The game messages lane's third round (RUST_PLAN R5b.4 leaf 4 (c)). Its aim was t
   Lua AI's stack messages with members (KillUnit, LockUnlock, ExchangeResources, RemoveTechnology, SmartFarmers,
   HackANewUnit), the out-of-line constructors elsewhere (ReplantFarms, ReportStatistics, ExitShiftMode,
   CivTimerExpired), then the record bodies themselves in Rust.
+
+## Box selection: the intermittent failure (the fixture's boxselect drag; branch rust-boxsel, 2026-11-14)
+
+`fixture_game.py --exercise random-game --play-seconds 60 --box-select` failed now and then at any of its steps:
+the Shift box ("add-right": the selection became the box's one unit, or "no box selection message was built"), the
+dead-unit box (the disbanded unit outside the box's ids, or already dying), and here also the first box ("caught
+none of the local player's units"). It was the fixture's timing, not the game.
+
+- **Rates before the fix** (5 runs each, test-profile exes, the machine saturated by other lanes' builds): `origin/rust`
+  57ae2ad1 (before LLE round 2): 4/5, one of the passes with late-press boxes of 1 unit; the main checkout's exe of 20:47 (5523e0ee + d8551990's tooling): 2/5;
+  this branch (ef44ea2d, game messages round 3): 1/5 (an instrumented build of it passed once more). The failures
+  spread over the steps (select 2, dead 5 of the 7 failures in the last two builds), none was the add step in these
+  runs, and the earlier 3/3 add failures on this branch had the same cause. The 57ae runs came last (02:35-02:53,
+  with the new driver; the failing step was the fixture's drag, which the driver change does not touch), so the
+  rates mix build and load: no build is shown to have made the UI's frames slower, and every failure in every build
+  was the same fixture race.
+- **Cause.** The UI thread reads the input devices once a frame (`EEUserInterface::UpdateInterface`: keyboard and
+  mouse `Refresh`, then `UpdateUI` under the world's read lock). The fixture drove the drag from its own thread with
+  fixed sleeps (Shift, 150 ms, pointer, 300 ms, press, 250 ms, 12 moves 50 ms apart, 300 ms, release, 400 ms, Shift
+  up). Under load a UI frame took 300-900 ms (measured: press to `StartSelection` 426 ms, release to `MouseLButtonUp`
+  320 ms and 894 ms), so:
+  - the press was taken with the pointer already 4 steps along the drag (`StartSelection at 552,328` for a box from
+    276,176): a smaller box, which caught no unit or missed the unit the dead step disbands;
+  - the release was read after Shift's release: `GetModifierState()` was 0 at `MouseLButtonUp`, the lasso built
+    EEMSelectUnits instead of EEMAddUnitsToSelectedGroup, and the group became the box's one unit (exactly the
+    original's behaviour for a player who lets go of Shift that early: DirectInput was polled the same way);
+  - the press, the moves and the release fell into one frame: no drag, no box message;
+  - the dead step's select and kill (UI actions posted just before the release) ran a frame before the release was
+    read, and the physics could kill the unit before the box's pick, which then left it out.
+- **Not the cause** (instrumented, then removed): EEMEnterShiftMode/EEMExitShiftMode (records since game messages
+  round 3) are stamped with the current fast-selection id and run (`ExecuteMessage ... runs 1`); no command was
+  dropped by its selection id and no group was cleared by `UnselectAllUnits`; the lasso sees Shift whenever the
+  release is read while Shift is held (`flags 1 -> 0x4f`); `ee_input`'s modifiers follow the key records exactly.
+  "EEMEnterShiftMode executing during the drag" is the Shift hot key's normal effect.
+- **A second race in the dead step's check**: once the disbanded unit is dying the game may drop it from the selected
+  group (`EEPlayer::DeselectUnit`, unless it is the viewed unit) before or after the box's message put it there, while
+  the original's rule (the fixture's expected group) counts it until it leaves the player's list, about 26 s later at
+  Very Fast. The group matched the rule either at once (it stayed) or only when the unit was gone, close to the
+  driver's 30 s limit.
+- **The fix** (EETestFixture.cpp, fixture_driver.py; commit "Box selection fixture: each stage waits ..."): the drag
+  thread waits for each state the UI thread must reach (polled every 5 ms, 20 s at most): no Shift or Control seen
+  (Shift seen in mode 1, `GetModifierState`), the form's mouse held by the selection control (the press taken at
+  x0, y0), the control dragging at the end point clamped as `MouseMove` clamps it (`ee_gfx_select_drag_end`), the
+  mouse let go (the release taken), Shift's release seen. A stage not reached gives the verdict `box-stalled` and
+  `BOXSELECT seq N stalled at <stage>`; `BOXSELECT seq N waits (ms): ...` logs each stage's time. The dead unit's
+  EEMSelectTheseUnits and EEMKillUnit(0) are posted by the box message's own hook (`gEESelectUnitsTestHook`, on the
+  UI thread, after the pick and before the lasso posts its action), so they run before the box's message and after
+  its ids were picked. The driver waits up to 150 s for the drag, settles the dead step once its unit is gone (120 s)
+  and records the states each wait saw (`seen` in the step's row). `EEUICSelectUnits` has two test-only readers
+  (`GetIsDragging`, `GetDragEnd`). Nothing the steps check was loosened; the dead step now checks the final group.
+- **Proof**: 10 consecutive runs of the box-select exercise on the fixed test exe (1f5a4121) passed (01:47 to 02:35,
+  interleaved with other lanes' harness sessions and builds): every first box caught all 5 units, every Shift box grew
+  the group, every dead unit was in the box's ids and gone at the check. The longest stage waits in those runs:
+  press 689 ms, drag end 1321 ms, release 894 ms, i.e. more than the old fixed sleeps allowed.
+- **Other lanes' reports** match these mechanisms: "caught none" with the fixture's own expected group empty (the box
+  started late, so its ids were empty: the projection is computed from those ids), the dead unit "still alive at the
+  check" (the old driver settled while the kill had not run), "no box selection message was built" (the press and
+  release read in one frame). If a first box still catches none with the waits in place, the camera really holds
+  none of the player's units at that time: the driver does not move the camera.
+- **Also seen**: one run failed before the game ("main-menu: the window capture is blank"), a capture glitch of
+  another kind. Before the merge of rust the self test's `probe` part failed here (`game_state_probe` read `EEPlayer`
+  0xb49 past the record, fixed on rust by d53fca8d); after it the whole self test passes (its fixture part runs the
+  box selection against the stand-in).
