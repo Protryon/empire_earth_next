@@ -4648,6 +4648,24 @@ enum class EeWonLobbyCtlCall : uint32_t {
   Field,
 };
 
+/// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
+enum class EeWonLobbyDlgType : uint32_t {
+  Input = 0,
+  Button = 1,
+  Label = 2,
+  Combo = 3,
+  /// a plain `Component` (round 2)
+  Component = 4,
+  /// a `WONFrameComponent` (round 2)
+  Frame = 5,
+  /// a `BrowserComponent` (round 3)
+  Browser = 6,
+  /// a `MultiListArea` (round 3)
+  MultiList = 7,
+  /// a `ListArea` (round 3)
+  List = 8,
+};
+
 /// The dialog kinds (each one of the original classes).
 enum class EeWonLobbyDlgKind : uint32_t {
   LanName = 0,
@@ -4672,6 +4690,8 @@ enum class EeWonLobbyDlgKind : uint32_t {
   ChooseAdapter = 13,
   /// CreditsDialog (round 3): AccountLogic's credits, with the scrolling text it holds.
   Credits = 14,
+  /// EELobbyConnectDialog (round 5): the players' connection wait before a launch.
+  Connect = 15,
 };
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -4869,6 +4889,32 @@ enum class EeWonLobbyDlgOp : uint32_t {
   ScrollAddLine,
   /// `this->GetDefaultFont()->GetStringWidth(t, 0, t.length())` of the string `a`.
   DefaultFontStringWidth,
+  /// `((EELobbyGame*)a)->GetIsHost()` (0 or 1).
+  GameIsHost,
+  /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
+  GameSlot,
+  /// `((EELobbyPlayerSlot*)a)->Option(0)` (the slot's state).
+  SlotState,
+  /// `((ListArea*)a)->InsertItem(new ConnectListItem(((EELobbyPlayerSlot*)b)->GetName(), image, c & 0xff), -1)`,
+  /// the image `GameUserListCtrl_Ready_Image` for `c >> 8` 0, else `LobbyGlobal_Searching_Image`; 1 when that
+  /// image is not the ready one.
+  ConnectInsert,
+  /// `LobbyDoDialog(this)`.
+  DoDialog,
+  /// `this->GetRootWindow()`.
+  RootWindow,
+  /// `((Window*)a)->EndDialog(b, this)`.
+  EndDialog,
+  /// `((ListArea*)a)->GetItem(b)`.
+  ListGetItem,
+  /// `((ConnectListItem*)a)->mSlot`.
+  ConnectItemSlot,
+  /// `((ConnectListItem*)a)->mImage = ` `GameUserListCtrl_Ready_Image` (`b` 0) or `ServerListCtrl_PingFailed_Image`.
+  ConnectItemSetImage,
+  /// `((ConnectListItem*)a)->mImage.mPtr != GameUserListCtrl_Ready_Image.mPtr` (0 or 1).
+  ConnectItemNotReady,
+  /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
+  ListRefresh,
 };
 
 /// The inward calls (the shells' methods).
@@ -4902,7 +4948,8 @@ enum class EeWonLobbyDlgCall : uint32_t {
   /// AdminAction: `GetNumSeconds()`.
   NumSeconds,
   /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional,
-  /// 4 StatusDialog's start tick, 5 TOUDialog's need-to-rebuild flag, 6 BadUserDialog's simple flag.
+  /// 4 StatusDialog's start tick, 5 TOUDialog's need-to-rebuild flag, 6 BadUserDialog's simple flag, 7
+  /// EELobbyConnectDialog's running flag, 8 its ended flag.
   Field,
   /// StatusDialog: `SetText(*(GUIString*)a, *(GUIString*)b, c != 0)`; OkCancelDialog: `SetText(title a, body b,
   /// ((GUIString**)c)[0], ((GUIString**)c)[1])`.
@@ -4927,6 +4974,12 @@ enum class EeWonLobbyDlgCall : uint32_t {
   ResetScrolling,
   /// CreditsDialog: `AddLine(*(const GUIString*)a, (Component*)b, (unsigned long)c)`.
   AddLine,
+  /// EELobbyConnectDialog: `Run((EELobbyGame*)a)` (0 or 1).
+  ConnectRun,
+  /// EELobbyConnectDialog: `End(a != 0)`.
+  ConnectEnd,
+  /// EELobbyConnectDialog: `SetConnected(a, b != 0)`.
+  ConnectSetConnected,
 };
 
 /// A container's key kind (its comparator).
@@ -6507,24 +6560,6 @@ enum class EeWonWmSet : uint32_t {
   Broadcast,
 };
 
-/// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
-enum class EeWonLobbyDlgType : uint32_t {
-  Input = 0,
-  Button = 1,
-  Label = 2,
-  Combo = 3,
-  /// a plain `Component` (round 2)
-  Component = 4,
-  /// a `WONFrameComponent` (round 2)
-  Frame = 5,
-  /// a `BrowserComponent` (round 3)
-  Browser = 6,
-  /// a `MultiListArea` (round 3)
-  MultiList = 7,
-  /// a `ListArea` (round 3)
-  List = 8,
-};
-
 /// The texts AdminActionDialog sets (the lobby's resource strings).
 enum class EeWonLobbyDlgString : uint32_t {
   /// an empty `GUIString` (an action the original's switch did not name)
@@ -6540,6 +6575,10 @@ enum class EeWonLobbyDlgString : uint32_t {
   Ok = 8,
   /// `LobbyGlobal_Cancel_String` (round 2)
   Cancel = 9,
+  /// `gEELobbyConnectDialog_AbortLaunch` (round 5)
+  AbortLaunch = 10,
+  /// `gEELobbyConnectDialog_LeaveGame` (round 5)
+  LeaveGame = 11,
 };
 
 /// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
@@ -8306,6 +8345,14 @@ using EeWonLobbyCtlHostFn = ptrdiff_t(*)(void *ctl,
                                          ptrdiff_t b,
                                          ptrdiff_t c);
 
+/// One control of a kind: its resource name, the original's file and line (for the missing-control report) and type.
+struct EeWonLobbyDlgSlot {
+  const char *name;
+  const char *file;
+  int32_t line;
+  EeWonLobbyDlgType ty;
+};
+
 /// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
 using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
                                          EeWonLobbyDlgOp op,
@@ -9269,14 +9316,6 @@ struct EeWonWmPopup {
   int32_t x;
   int32_t y;
   EeWonRect4 avoid;
-};
-
-/// One control of a kind: its resource name, the original's file and line (for the missing-control report) and type.
-struct EeWonLobbyDlgSlot {
-  const char *name;
-  const char *file;
-  int32_t line;
-  EeWonLobbyDlgType ty;
 };
 
 extern "C" {
@@ -14190,6 +14229,10 @@ ptrdiff_t ee_won_lobbyctl_call(const EeWonLobbyCtl *p,
                                ptrdiff_t a,
                                ptrdiff_t b,
                                ptrdiff_t c);
+
+/// The control `index` of a kind's table (member order; its name, file, line and type), NULL past its end.
+const EeWonLobbyDlgSlot *ee_won_lobbydlg_slot(EeWonLobbyDlgKind kind,
+                                              uint32_t index);
 
 /// A new dialog object for the C++ `dialog` of `kind`.
 EeWonLobbyDlg *ee_won_lobbydlg_new(void *dialog, EeWonLobbyDlgKind kind, EeWonLobbyDlgHostFn host);

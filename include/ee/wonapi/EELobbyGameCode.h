@@ -8,6 +8,7 @@
 #include "ee/wonapi/WONLobbyEvents.h" // the shared LobbyEvent base (0x20 bytes)
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONLobbyRustCtrl.h"
+#include "ee/wonapi/WONLobbyDialogs.h"
 #include "rust/ee_won.h"
 
 namespace WONAPI {
@@ -186,20 +187,19 @@ public:
     SmartPtr<EELobbyColorChooser> mChooser; // +0x48
 };
 
-// the players' connection state before a game starts (EELobbyConnectDialog.cpp; 0xa4 bytes; vtable 0x84c1f0)
-class EELobbyConnectDialog : public Dialog {
+// the players' connection state before a game starts (EELobbyConnectDialog.cpp; 0xa4 bytes; vtable 0x84c1f0).
+// R6 WONLobby round 5: a lobbydlg.rs kind (the list and cancel button held, the running and ended flags, Run, End,
+// SetConnected); the host and its list line are WONLobby/LobbyDialogHost.cpp's
+class EELobbyConnectDialog : public LobbyRustDialog {
 public:
-    EELobbyConnectDialog();                 // 0x2909a1 (0xa4 bytes)
-    virtual ~EELobbyConnectDialog();        // 0x2909f6
-    virtual void InitComponent(ComponentInit& inInit);         // +0x1c 0x290a41
-    bool Run(EELobbyGame* inGame);          // 0x290a8a (runs the dialog: true when every player connected)
-    void End(bool inOK);                    // 0x290c85 (ends it: 100001 / 100002)
-    void SetConnected(unsigned char inSlot, bool inConnected);  // 0x290cb3 (a player's state)
-
-    SmartPtr<ListArea> mConnectList;        // +0x98 "ConnectList"
-    SmartPtr<Button> mCancelButton;         // +0x9c "CancelButton"
-    bool mIsRunning;                        // +0xa0 (the dialog is running)
-    bool mIsEnded;                          // +0xa1 (it was ended by End)
+    EELobbyConnectDialog() : LobbyRustDialog(EeWonLobbyDlgKind::Connect) {}
+    // runs the dialog: true when every player connected (0x290a8a)
+    bool Run(EELobbyGame* inGame) { return this->LCall(EeWonLobbyDlgCall::ConnectRun, (intptr_t)inGame) != 0; }
+    void End(bool inOK) { this->LCall(EeWonLobbyDlgCall::ConnectEnd, inOK); }  // 0x290c85 (100001 / 100002)
+    void SetConnected(unsigned char inSlot, bool inConnected)  // 0x290cb3 (a player's state)
+    { this->LCall(EeWonLobbyDlgCall::ConnectSetConnected, inSlot, inConnected); }
+    bool IsRunning() { return this->LCall(EeWonLobbyDlgCall::Field, 7) != 0; }  // mIsRunning
+    bool IsEnded() { return this->LCall(EeWonLobbyDlgCall::Field, 8) != 0; }    // mIsEnded (ended by End)
 };
 
 // the saved-games dialog (EELobbyFileDialog.cpp; 0xc8 bytes; vtable 0x84c338)
