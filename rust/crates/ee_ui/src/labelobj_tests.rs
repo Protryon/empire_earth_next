@@ -109,3 +109,25 @@ fn rows_at_least_one() {
     assert_eq!(rows(5.0, 1, 12), 1);
     assert_eq!(rows(100.0, 3, 16), 5);
 }
+
+// ---- the scrolling label (`golden_scrollingobj.txt`): the round's first commit's UITLScrolling.cpp statements over
+// the scrolling FFI and its Rust label; the scrolling part made by the init call (`call 50`), its CheckScrollBar a
+// `do` that does nothing
+
+const GOLDEN_SCROLLING: &str = include_str!("golden_scrollingobj.txt");
+
+#[test]
+fn scrolling_golden_replays() {
+    assert!(replay(GOLDEN_SCROLLING) > 1_000);
+}
+
+#[test]
+#[should_panic(expected = "golden line")]
+fn a_changed_poll_fails() {
+    // the scroll timer's first tick count (the first poll made) answered otherwise: the offsets no longer match
+    let at = GOLDEN_SCROLLING.find("\nop 133 262144 ").expect("a scroll poll");
+    let eq = at + 1 + GOLDEN_SCROLLING[at + 1..].find("\n= ").unwrap() + 1;
+    let rest = &GOLDEN_SCROLLING[eq + 2..];
+    let g = format!("{}= 37{}", &GOLDEN_SCROLLING[..eq], &rest[rest.find(' ').unwrap()..]);
+    replay(&g);
+}

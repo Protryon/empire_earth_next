@@ -6,7 +6,8 @@
 // The class is whole in Rust (rust/crates/ee_ui/src/labelobj.rs, R6 ui round 13): its state (the lines, the display
 // copies, the rectangles, the scroll bar and its colours, the flags) and every method are the Rust object mRust;
 // UITextLabel.cpp holds the forwarders, the ctor and dtor and the host (the op switch). The lines are still
-// UWideStrings (GetText answers a reference), made and held by address by the Rust object. Requires lle/UIControl.h.
+// UWideStrings (GetText answers a reference), made and held by address by the Rust object. A UITLScrolling's own
+// state is the same object's scrolling part. Requires lle/UIControl.h.
 #ifndef LLE_UITEXTLABEL_H
 #define LLE_UITEXTLABEL_H
 #include "platform/PlatString.h"

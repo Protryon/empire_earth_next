@@ -2172,32 +2172,6 @@ long ee_ui_control_update_mouse(void *control,
 /// `UIForm::UpdateMouse` -> its result.
 long ee_ui_form_update_mouse(void *form);
 
-/// `UITLScrolling::CopyData` (after the C++ copied the label's text into the draw text) -> its result.
-long ee_ui_scrolling_copy_data(void *label);
-
-/// `UITLScrolling::ScrollText(speed, start delay, end delay, start offset, end offset)`.
-void ee_ui_scrolling_scroll_text(void *label,
-                                 float speed,
-                                 long start_delay,
-                                 long end_delay,
-                                 long start_offset,
-                                 long end_offset);
-
-/// `UITLScrolling::ScrollText(time, end delay)`.
-void ee_ui_scrolling_scroll_text_for(void *label, unsigned long time, unsigned long end_delay);
-
-/// `PauseScrolling` (`resume` false) or `ResumeScrolling`.
-void ee_ui_scrolling_pause(void *label, bool resume);
-
-/// `StopScrolling`.
-void ee_ui_scrolling_stop(void *label);
-
-/// `DrawTextA`'s place for snapshot line `i`.
-EeUiPoint ee_ui_scrolling_line_at(float draw_left,
-                                  unsigned long font_height,
-                                  unsigned long i,
-                                  unsigned long offset);
-
 /// `UIListBox::ChangeSelectionIndex`.
 void ee_ui_list_change_selection_index(const EeUiListRefs *refs,
                                        unsigned long index,

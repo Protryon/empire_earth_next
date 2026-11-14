@@ -94,8 +94,6 @@ mod layout_ffi;
 #[cfg(not(test))]
 mod mouse_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
-#[cfg(not(test))]
-mod scrolling_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
 mod list_ffi;
