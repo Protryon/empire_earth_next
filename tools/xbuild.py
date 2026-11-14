@@ -393,6 +393,10 @@ WON_TESTS = {
     "won_asyncop_test": "won_ops_test",
     # the socket classes' events (golden: rust/crates/ee_won/src/golden_sockobj.txt, recorded over the C++ classes)
     "won_sockobj_test": "won_ops_test",
+    # the references and lifetimes of the queue socket, the UDP manager and its ops, the timer, the op container and
+    # the socket thread (golden: rust/crates/ee_won/src/golden_core.txt, recorded over QueueSocket.cpp, UDPManager.cpp,
+    # SocketThread.cpp and AsyncOp.cpp before their hooks were answered in Rust, net round 25)
+    "won_core_test": "won_ops_test",
     # ServerConnection and ServerConnectionConnectOp over 127.0.0.1 with a stand-in peer authentication (golden:
     # rust/crates/ee_won/src/golden_servconn.txt, recorded over the C++ classes), then RoutingConnection's op list
     # and reply dispatch; its units (won_ops_test's, WONServer's ServerConnection, WONRouting's but the smart
