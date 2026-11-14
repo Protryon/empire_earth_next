@@ -139,7 +139,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_UPD_R_UNIT_TYPE:
         return (int64_t)theUnit->mUnitClass->mUnitType;
     case EE_UNITS_UPD_R_HIT_POINTS:
-        return (int64_t)theUnit->mHitPoints.Get();
+        return (int64_t)theUnit->mHitPoints;
     case EE_UNITS_UPD_R_FAMILY:
         return (int64_t)theUnit->mUnitClass->mFamily;
     case EE_UNITS_UPD_R_BUILT:
@@ -236,7 +236,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_ACT_R_CONTAINER:
         return theUnit->mContainer != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_RESOURCE_AMOUNT:
-        return (int64_t)theUnit->mResourceAmount.Get();
+        return (int64_t)theUnit->mResourceAmount;
     // the fourteenth round's
     case EE_UNITS_ACT_R_IS_HUMAN:
         return theUnit->mPlayer->IsHuman() ? 1 : 0;

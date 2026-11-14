@@ -23,14 +23,12 @@ class RTSPlayer;
 
 // the fields a holder reports (store.rs EE_UNIT_FIELD_*: the same values)
 enum EEUnitStoreFieldID {
-    kUnitFieldHitPoints = 4,    // EEUnit::mHitPoints
     kUnitFieldUnitClass = 5,    // EEUnit::mUnitClass (the record's category and unit type)
     kUnitFieldComplex = 7,      // EEUnit::mComplexUnit
     kUnitFieldBuilt = 8,        // EEComplexUnit::mIsBuilt
     kUnitFieldGoal = 9,         // EEComplexUnit::mGoalState (the record's goal kind)
     kUnitFieldCommandable = 12, // EEComplexUnit::mIsCommandable
     kUnitFieldFormationSlot = 13,  // EEComplexUnit::mFormationSlot
-    kUnitFieldResourceAmount = 15, // EEUnit::mResourceAmount
     kUnitFieldLocation = 17,    // EEComplexUnit::mPhysicalModel's location (EEUnitStoreModel; the record's x, y, z)
     kUnitFieldHeight = 20,      // EEComplexUnit::mHeight
     kUnitFieldTimesUpdated = 21,   // EEComplexUnit::mTimesUpdated

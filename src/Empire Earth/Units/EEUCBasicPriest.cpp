@@ -455,7 +455,7 @@ void EEComplexUnit::UpdateResourcesRotting()
             || (theLost && theOriginalAmount != (long)theAmount))
             EEUnitStepDiffers("UpdateResourcesRotting", this->mUnitID, (long)theTime, theOriginal);
         uint32_t theWords[5] = {(uint32_t)theBefore, (uint32_t)theAmountBefore, (uint32_t)gPhysics->mTickTimeMs,
-                                (uint32_t)this->mRottingAwayTime.Get(), (uint32_t)this->mResourceAmount.Get()};
+                                (uint32_t)this->mRottingAwayTime.Get(), (uint32_t)this->mResourceAmount};
         EEUnitStepNote(kUnitStepResourcesRotting, this->mUnitID, theWords, 5);
     }
 }

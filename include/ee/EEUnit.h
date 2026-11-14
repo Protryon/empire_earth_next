@@ -189,7 +189,10 @@ typedef EEUnitClassUpgrade EEUnitStats;
 
 #include "ee/RTSUnit.h"                // RTSUnitLink, RTSUnit (the RTS layer's header since R5a.6)
 
-class EEUnit : public RTSUnit {
+// New (R5b.4, round 26): the plain members (mResourceType, mHitPoints, mResourceAmount, mHiddenFlags: their names, types
+// and order) are the Rust record EeUnitsUnitFields (ee_units unit_fields.rs), the second base after RTSUnit (still at
+// offset 0). The unit store reads the record directly.
+class EEUnit : public RTSUnit, public EeUnitsUnitFields {
 public:
     // the save keys (EEUnit.cpp's `$E` chains 0x228c4c/0x228c8f, one guard byte 0x963630 bits 1/2)
     static const UString sData;             // "EEUnit-Data" (0x963620) (provisional name)
@@ -299,10 +302,8 @@ public:
     // goals through it: 0xafe2c, 0xb1a5d) (provisional name)
     EEUnitStoreField<EEComplexUnit*, kUnitFieldComplex> mComplexUnit;   // (the unit store's)
     EEUnitClassUpgrade* mStats;             // +0x34 (provisional name)
-    unsigned long mResourceType;            // +0x38 (saved)
-    EEUnitStoreField<long, kUnitFieldHitPoints> mHitPoints;   // +0x3c (the unit store's) (> 0: alive) (provisional name)
-    EEUnitStoreField<long, kUnitFieldResourceAmount> mResourceAmount;   // +0x40 (saved) (the unit store's)
-    unsigned char mHiddenFlags;             // +0x44 flags (0x10: MoveTo moved it; 0x20 and the low 2 bits: Virtual40 0x228f90)
+    // +0x38 mResourceType (saved), +0x3c mHitPoints (> 0: alive), +0x40 mResourceAmount (saved), +0x44 mHiddenFlags
+    // (0x10: MoveTo moved it; 0x20 and the low 2 bits: Virtual40 0x228f90): EeUnitsUnitFields
 };
 
 // EEComplexUnit::mWaypoints's element: a waypoint of the unit's path (0x14 bytes: AddWaypoint builds one from a

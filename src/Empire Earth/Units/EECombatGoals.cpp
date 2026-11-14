@@ -207,7 +207,7 @@ void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t 
     theRecord[3] = EECombatCommandOf(inUnit);
     theRecord[4] = (uint32_t)inUnit->mAnimation;
     theRecord[5] = (uint32_t)inUnit->mCurrentPhysicsAction;
-    theRecord[6] = (uint32_t)inUnit->mHitPoints.Get();
+    theRecord[6] = (uint32_t)inUnit->mHitPoints;
     EEUnitGoal* theGoal = inUnit->mGoalState;
     theRecord[7] = theGoal != NULL ? (uint32_t)theGoal->mKind : 0xffffffffu;
     if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit) {
@@ -239,7 +239,7 @@ void EECombatCaptureHealWork(const EEComplexUnit* inUnit, const EEUnit* inTarget
         return;
     uint32_t theRecord[5] = {EE_COMBAT_SO_HEAL_WORK, (uint32_t)inUnit->mUnitID,
                              inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0,
-                             inTarget != NULL ? (uint32_t)inTarget->mHitPoints.Get() : 0, (uint32_t)inElapsed};
+                             inTarget != NULL ? (uint32_t)inTarget->mHitPoints : 0, (uint32_t)inElapsed};
     sShots.Add(theRecord, sizeof(theRecord));
 }
 
