@@ -6,6 +6,7 @@
 // the conductor is stopped, played, stopped and transitioned to; the intensity is the master groove level.
 #include <windows.h>
 #include "platform/PlatFile.h"
+#include "platform/PlatString.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,15 +72,19 @@ void* SEConductor::Resolve(void* inConductor, const char* inFile, size_t* outLen
         snprintf(thePath, MAX_PATH, "%s", inFile);
     thePath[MAX_PATH - 1] = 0;
     FILE* theStream = PlatFOpen(thePath, "rb");
-#ifdef _WIN32
-    // the general MIDI collection is the system's own (a song's GM and GS instruments come from it)
-    if (theStream == NULL && !_stricmp(inFile, "gm.dls") && GetSystemDirectoryA(thePath, MAX_PATH - 16) != 0) {
-        strcat(thePath, "\drivers\gm.dls");
-        theStream = PlatFOpen(thePath, "rb");
+    if (theStream == NULL) {
+        if (PlatStrICmp(inFile, "gm.dls") != 0)
+            return NULL;
+        // port: a song's general MIDI instruments are the set built into the program (the original took them from
+        // the system's general MIDI collection); a gm.dls in the music folder is read above and takes its place
+        size_t theSetLength = 0;
+        const unsigned char* theSet = SEGeneralMIDISet(&theSetLength);
+        void* theCopy = malloc(theSetLength);
+        if (theCopy)
+            memcpy(theCopy, theSet, theSetLength);
+        *outLength = theCopy ? theSetLength : 0;
+        return theCopy;
     }
-#endif
-    if (theStream == NULL)
-        return NULL;
     fseek(theStream, 0, SEEK_END);
     long theLength = ftell(theStream);
     fseek(theStream, 0, SEEK_SET);

@@ -5,6 +5,7 @@
 #ifndef LLE_SECONDUCTOR_H
 #define LLE_SECONDUCTOR_H
 
+#include <stddef.h>
 #include <vector>
 
 struct DmLoader;
@@ -12,6 +13,9 @@ struct DmPerformance;
 class SEMixer;
 class SEScore;
 class TSCriticalSection;
+
+// The general MIDI instruments built into the program (SEGeneralMIDI.c: EE.sf2) and their length in bytes
+extern "C" const unsigned char* SEGeneralMIDISet(size_t* outLength);
 
 // One loaded score (SEConductor::mScores)
 struct SEConductorScore {
