@@ -595,27 +595,14 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
 
 // Load stores the saved fractions as floats in the longs.
 // FUNCTION: EXE 0x5f3395
-// Turns the saved hit point, flight, garrison and power fractions back into amounts (at least 1 if nonzero); marks an
-// old save's (<= 200) unbuilt land building at 1 hit point as a foundation, reloading its media
+// Turns the saved hit point, flight, garrison and power fractions back into amounts (at least 1 if nonzero; port,
+// R5b.4 round 27: ee_units unit_load.rs finish_fractions over the record); marks an old save's (<= 200) unbuilt land
+// building at 1 hit point as a foundation, reloading its media
 long EEComplexUnit::FinishLoad(long inMajorVersion, long inMinorVersion)
 {
-    float theFraction;
-    memcpy(&theFraction, &this->mLastHitPoints, 4);
-    this->mLastHitPoints = (long)(this->mStats->mMaxHitPoints * theFraction + 0.00001f);
-    if (theFraction != 0.0f && this->mLastHitPoints == 0)
-        this->mLastHitPoints = 1;
-    memcpy(&theFraction, &this->mFlightTime, 4);
-    this->mFlightTime = (long)(theFraction * this->mStats->mFlightTime + 0.00001f);
-    if (theFraction != 0.0f && this->mFlightTime == 0)
-        this->mFlightTime = 1;
-    memcpy(&theFraction, &this->mGarrisonCount, 4);
-    this->mGarrisonCount = (long)(theFraction * this->GetUnitClass()->mGarrisonCapacity + 0.00001f);
-    if (theFraction != 0.0f && this->mGarrisonCount == 0)
-        this->mGarrisonCount = 1;
-    memcpy(&theFraction, &this->mPower, 4);
-    this->mPower = (long)(theFraction * this->mStats->mPower + 0.00001f);
-    if (theFraction != 0.0f && this->mPower == 0)
-        this->mPower = 1;
+    EeUnitsFinishLoadIn theMaxima = {this->mStats->mMaxHitPoints, this->mStats->mFlightTime,
+                                     this->GetUnitClass()->mGarrisonCapacity, this->mStats->mPower};
+    ee_units_unit_finish_fractions(this, &theMaxima);
     if (inMajorVersion == 0 && (unsigned long)inMinorVersion <= 200) {
         this->mIsFoundation = this->GetUnitClass()->IsLandBuilding() && this->GetUnitClass()->GetUnitType() != kUnitTypeFarm && !this->mIsBuilt && this->GetHitPoints() == 1;
         if (this->mIsFoundation == true) {

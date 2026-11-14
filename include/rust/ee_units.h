@@ -3135,6 +3135,19 @@ struct EeUnitsUnitSaveIn {
   uint8_t running_state;
 };
 
+/// The maxima `EEComplexUnit::FinishLoad` turns the saved fractions back into amounts with (the unit's stats' and
+/// class's).
+struct EeUnitsFinishLoadIn {
+  /// `mStats->mMaxHitPoints` (the last hit points' fraction)
+  long max_hit_points;
+  /// `mStats->mFlightTime`
+  long flight_time;
+  /// `GetUnitClass()->mGarrisonCapacity`
+  long garrison_capacity;
+  /// `mStats->mPower`
+  long power;
+};
+
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
 /// a complex unit).
 struct EeUnitsBuildUnit {
@@ -4251,6 +4264,18 @@ int32_t ee_units_unit_load(void *ctx,
                            EeUnitsUnitFields *unit,
                            EeUnitsComplexUnitFields *complex,
                            const EeUnitsUnitSaveIn *inp);
+
+/// `EEComplexUnit::FinishLoad`'s four fractions over the unit's record.
+///
+/// # Safety
+/// `cx` is the unit's live record; `input` readable.
+void ee_units_unit_finish_fractions(EeUnitsComplexUnitFields *cx, const EeUnitsFinishLoadIn *input);
+
+/// `EEUnit::FinishLoad`'s hit points over the unit's record.
+///
+/// # Safety
+/// `unit` is the unit's live record.
+void ee_units_unit_finish_hit_points(EeUnitsUnitFields *unit, long max_hit_points);
 
 /// The C ABI: `RTSUnit::Save` (`unit`, `complex` null), `EEUnit::Save` (`complex` null) or `EEComplexUnit::Save`
 /// (all three) of one unit over the host callback.
