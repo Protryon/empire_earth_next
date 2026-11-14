@@ -70,5 +70,6 @@ pub mod unit_save;
 pub mod unload;
 pub mod update;
 pub mod world;
+pub mod world_save;
 
 pub use registry::Registry;

@@ -2331,6 +2331,173 @@ constexpr static const int32_t EE_UNITS_UPD_DEPLETE_MINE = 60;
 /// every next part's `SetRottingAwayTime(a)`
 constexpr static const int32_t EE_UNITS_UPD_SET_PARTS_ROTTING = 61;
 
+/// `a` = whether the save has the part `HAS_*` (ee/EESaveGameFiles.h's predicates of the file's version)
+constexpr static const int32_t EE_UNITS_WORLD_HAS = 20;
+
+/// another system's part `PART_*` loaded (`b`: `EESaveHasTownAreas` for the towns); its result
+constexpr static const int32_t EE_UNITS_WORLD_PART_LOAD = 21;
+
+/// another system's part `PART_*` saved
+constexpr static const int32_t EE_UNITS_WORLD_PART_SAVE = 22;
+
+/// `EEAfterLoad` of [`ee_units_world_restore`] with the record at `a`
+constexpr static const int32_t EE_UNITS_WORLD_AFTER_LOAD = 23;
+
+/// `ESDebugOut` of the NUL-terminated text at `list`
+constexpr static const int32_t EE_UNITS_WORLD_DEBUG = 24;
+
+/// a unit's `mUnitID` (`a`: the unit)
+constexpr static const int32_t EE_UNITS_WORLD_UNIT_ID = 25;
+
+/// the world's unit chain (`gWorld.mUnits`, by `mTileNode->mNext`): its units
+constexpr static const int32_t EE_UNITS_WORLD_CHAIN = 30;
+
+/// `gWorld.GetUnit(a)`
+constexpr static const int32_t EE_UNITS_WORLD_UNIT = 31;
+
+/// the unit `a` is linked in the chain: a tile node, with a previous unit or the chain's first
+constexpr static const int32_t EE_UNITS_WORLD_IN_CHAIN = 32;
+
+/// the unit `a`'s `mTileX`
+constexpr static const int32_t EE_UNITS_WORLD_TILE_X = 33;
+
+/// `a->Link(b)`, `b` 0 for the chain's head (`&gWorld.mUnits`)
+constexpr static const int32_t EE_UNITS_WORLD_LINK = 34;
+
+/// the stepped units (`a` 0), the activation (1) or the deactivation queue (2): its units
+constexpr static const int32_t EE_UNITS_WORLD_STEP_LIST = 35;
+
+/// the complex unit of id `a` in the loaded game (`dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(a))`)
+constexpr static const int32_t EE_UNITS_WORLD_COMPLEX = 36;
+
+/// the unit `b` leaves list `a`: `Dereference`, for the stepped units a second one and `mActiveUnits.erase`
+constexpr static const int32_t EE_UNITS_WORLD_STEP_DROP = 37;
+
+/// the unit `b` joins list `a`: `Reference`, for the stepped units a second one and `mActiveUnits[id]`
+constexpr static const int32_t EE_UNITS_WORLD_STEP_ADD = 38;
+
+/// list `a` = the `cap` units at `list`
+constexpr static const int32_t EE_UNITS_WORLD_STEP_SET = 39;
+
+/// the continent manager's forests (null entries kept)
+constexpr static const int32_t EE_UNITS_WORLD_FORESTS = 40;
+
+/// the forest `a`'s `mNextRenewal`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_RENEWAL = 41;
+
+/// the forest `a`'s tiles (`BuildPointList(.., 1)`), each `x | y << 32` as two 32-bit words
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_TILES = 42;
+
+/// `gContinentManager.GetForestAt(a, b)`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_AT = 43;
+
+/// the forest `a`'s `mNextRenewal` = `b`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_SET_RENEWAL = 44;
+
+/// the forest `a`'s `mTiles.Size()`
+constexpr static const int32_t EE_UNITS_WORLD_FOREST_SIZE = 45;
+
+/// the computer players' schedule: `a` = `mNextPlayer`, `b` = `mNextUpdateTime`, the answer the players' count
+constexpr static const int32_t EE_UNITS_WORLD_AI_SCHEDULE = 46;
+
+/// the schedule = `a`, `b`
+constexpr static const int32_t EE_UNITS_WORLD_AI_SET_SCHEDULE = 47;
+
+/// the map's tile count (`mSize * mSize`, 0 without a map)
+constexpr static const int32_t EE_UNITS_WORLD_TILE_COUNT = 48;
+
+/// tile `a`'s unit nodes (`mUnits`, by `mNext`): each node's unit (0 for none); none for a NULL tile
+constexpr static const int32_t EE_UNITS_WORLD_TILE_UNITS = 49;
+
+/// tile `a`'s node `b` holds the unit at `list[0]`
+constexpr static const int32_t EE_UNITS_WORLD_TILE_SET = 50;
+
+/// the map regions' order (`ee_combat_regions_order`), the 32-bit words
+constexpr static const int32_t EE_UNITS_WORLD_REGION_ORDER = 51;
+
+/// `ee_combat_regions_restore` of region `a` with the `cap` ids at `list`
+constexpr static const int32_t EE_UNITS_WORLD_REGION_RESTORE = 52;
+
+/// the units the ghosts are saved for (`EESaveGhosts`' gathering): the complex ones first, `a` = their count
+constexpr static const int32_t EE_UNITS_WORLD_GHOSTS = 53;
+
+/// the ghost unit `a` (complex when `b`): `v` = its id, class type (-1 without a class), player (-1 without one),
+/// hit points, tile x, tile y, built flag, resource type; `a` = its resource amount; `m` its placement
+constexpr static const int32_t EE_UNITS_WORLD_GHOST_FIELDS = 54;
+
+/// `Dereference` of the unit `a` (a made ghost at the first tick)
+constexpr static const int32_t EE_UNITS_WORLD_DEREFERENCE = 55;
+
+/// `gWorld.mNumPlayers`
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_COUNT = 56;
+
+/// player `a`'s units (`mFirstUnit`, by `mNext`); none for a NULL player
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_UNITS = 57;
+
+/// player `a`'s `GetUnit(b)`
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_UNIT = 58;
+
+/// player `a`'s list = the `cap` units at `list` (`mPrevious`, `mNext`, `mFirstUnit`, `mLastUnit`)
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_SET_LIST = 59;
+
+/// player `a`'s bucket `b`'s first = the unit at `list[0]`
+constexpr static const int32_t EE_UNITS_WORLD_PLAYER_SET_BUCKET = 60;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_RUNNING_STATE = 1;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_REGION_ORDER = 2;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_EXPERIMENT_TIMERS = 3;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_TOWNS = 4;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_TOWN_AREAS = 5;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GHOSTS = 6;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GHOST_RESOURCES = 7;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GOAL_GHOSTS = 8;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_CONTINENT_REGIONS = 9;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_RESOURCE_STATE = 10;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_PLAYER_UNIT_ORDER = 11;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_PATH_SEARCHES = 12;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_ACTIVE_GROUPS = 13;
+
+constexpr static const int64_t EE_UNITS_WORLD_HAS_GRAPH_SEARCHES = 14;
+
+/// `gPathManager.LoadRunningState` / `SaveRunningState`
+constexpr static const int64_t EE_UNITS_WORLD_PART_PATH_RUNNING = 1;
+
+/// `EEAELoadRunningState` / `EEAESaveRunningState`
+constexpr static const int64_t EE_UNITS_WORLD_PART_AREA_EFFECTS = 2;
+
+/// `EECPLoadExperimentTimers` / `EECPSaveExperimentTimers`
+constexpr static const int64_t EE_UNITS_WORLD_PART_EXPERIMENT_TIMERS = 3;
+
+/// `EELoadTowns(file, b)` / `EESaveTowns`
+constexpr static const int64_t EE_UNITS_WORLD_PART_TOWNS = 4;
+
+/// `EELoadContinentRegions` / `EESaveContinentRegions`
+constexpr static const int64_t EE_UNITS_WORLD_PART_CONTINENT_REGIONS = 5;
+
+/// `EECPLoadResourceState` / `EECPSaveResourceState`
+constexpr static const int64_t EE_UNITS_WORLD_PART_RESOURCE_STATE = 6;
+
+/// `gPathManager.LoadSearches` / `SaveSearches`
+constexpr static const int64_t EE_UNITS_WORLD_PART_PATH_SEARCHES = 7;
+
+/// `EELoadActiveGroups` / `EESaveActiveGroups`
+constexpr static const int64_t EE_UNITS_WORLD_PART_ACTIVE_GROUPS = 8;
+
+/// `gPathManager.LoadGraphSearches` / `SaveGraphSearches`
+constexpr static const int64_t EE_UNITS_WORLD_PART_GRAPH_SEARCHES = 9;
+
 /// The class's state (`mSlots`, `mMaxCargo`, `mUsedCargo`).
 struct EeUnitsAtc;
 
@@ -3439,6 +3606,38 @@ struct EeUnitsFinishLoadIn {
   long garrison_capacity;
   /// `mStats->mPower`
   long power;
+};
+
+/// One host operation's values: numbers, a placement, and a list the host fills (up to `cap`, answering the full
+/// count) or reads (`cap` entries).
+struct EeUnitsWorldIo {
+  int64_t a;
+  int64_t b;
+  float f;
+  int64_t v[8];
+  float m[16];
+  uint64_t *list;
+  size_t cap;
+};
+
+/// The host: `(ctx, op, io) -> the answer`.
+using EeUnitsWorldFn = int64_t(*)(void*, int32_t, EeUnitsWorldIo*);
+
+/// A dead unit the living still hold, as saved (`EESavedGhost`).
+struct EeUnitsWorldGhost {
+  unsigned long id;
+  unsigned long unit_type;
+  unsigned long player;
+  long hit_points;
+  long tile_x;
+  long tile_y;
+  float placement[4][4];
+  /// 0.272: -1 before (the class's own)
+  unsigned long resource_type;
+  long resource_amount;
+  bool is_built;
+  /// 0.275: false for a simple unit; true before
+  bool is_complex;
 };
 
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
@@ -4737,6 +4936,39 @@ bool ee_units_update(int32_t kind,
                      uint32_t id,
                      uint64_t object,
                      const EeUnitsUpdateHost *host);
+
+/// `EEPWorldHelper::Load`'s running state over the host.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+void ee_units_world_load_live(void *ctx, EeUnitsWorldFn f);
+
+/// `EEPWorldHelper::Save`'s running state over the host.
+///
+/// # Safety
+/// As [`ee_units_world_load_live`].
+void ee_units_world_save_live(void *ctx, EeUnitsWorldFn f);
+
+/// The part `pending` (an `EE_UNITS_WORLD_AFTER_LOAD`'s `a`) put back, then freed.
+///
+/// # Safety
+/// `pending` is an `EE_UNITS_WORLD_AFTER_LOAD` record not restored before; `f` is valid with `ctx`.
+void ee_units_world_restore(void *pending, void *ctx, EeUnitsWorldFn f);
+
+/// The loaded ghost of id `id` into `out`: false when no record has the id.
+///
+/// # Safety
+/// `out` is writable.
+bool ee_units_world_ghost_find(unsigned long id, EeUnitsWorldGhost *out);
+
+/// A unit made from a loaded ghost (one reference, dropped at the first tick).
+void ee_units_world_ghost_made(void *unit);
+
+/// The made ghost unit whose id `unit_id` answers `id`, or null.
+///
+/// # Safety
+/// `unit_id` is valid for every made unit.
+void *ee_units_world_ghost_made_find(unsigned long id, unsigned long (*unit_id)(void*));
 
 }  // extern "C"
 
