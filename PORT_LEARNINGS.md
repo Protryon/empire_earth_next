@@ -14284,3 +14284,70 @@ accounts: ~4,500 code lines that only a routing server reaches), (b) the resourc
 controls (~1,560), and (e) about twenty small dialogs and popups. (e) has the best deletion-to-risk: each dialog
 is created only by the lobby's resource factory (`WONLobbyPrv.cpp`'s allocator table), held by one logic, and
 its code is widget look-ups, a Reset, an input check and getters.
+
+### The move: eight dialogs as one Rust object over a table of their controls
+
+Measured as the WON rounds (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 75,946 at
+the branch's start -> 75,387 (the eight dialogs, -559). The eight units (796 lines with their headers' declarations)
+became one host unit (`LobbyDialogHost.cpp`, 168) and the shells (69).
+
+- **A data-driven builder, chosen over eight ports.** The eight dialogs (LanNameDialog, PasswordDialog,
+  AddFriendDialog, DirectConnectDialog, LanPortDialog, CreateRoomDialog, CreateGameDialog, AdminActionDialog) were
+  `Dialog` subclasses whose code was the same four things: their controls looked up by name in the resource config
+  (`SafeGetComponent`), a Reset, an input check, getters. `lobbydlg.rs` holds one table per kind (each control's
+  resource name, the original's file and line for the missing-control report, its type for the `dynamic_cast`), in
+  the original's member order; AdminActionDialog looked its title up last, which is the one look-up order that is
+  not the member order. One object per dialog holds the controls (by reference: the `SmartPtr` members), the
+  scalars (LanPortDialog's game port, CreateGameDialog's game type, AdminActionDialog's action and reason flag) and
+  every method of the eight units, keyed on the kind.
+- **What stays C++.** One shell, `LobbyRustDialog : Dialog` (InitComponent and HandleComponentEvent forward to the
+  object; the event's type is mapped to a four-value enum in C++, so the Rust needs no `ComponentEvent` constant),
+  and the eight class names as subclasses with one-line forwarders (`Reset`, `GetName`, `SetPort`, ...), so their
+  holders (LanLogic's and StagingLogic's hosts, RoutingLogic, AccountLogic's factories in WONLobbyPrv.cpp) did not
+  change. The getters returning `const GUIString&` read the held input box's `GetText()` in C++ (the object answers
+  the control's address); CreateRoomDialog's GetPassword answers NULL for `gEmptyGUIString`. CreateGameDialog's
+  GetGame returns the game with a reference added, which the shell hands to a `SmartPtr` and releases.
+- **The host** (`LobbyDialogHost`, given to `ee_won_lobbydlg_new` so the tests pass a scripted one; 31 ops, `EeWonLobbyDlgOp`): Find (the typed `SafeGetComponent` into a local
+  `SmartPtr`, then a reference for the Rust), Release, the dialog's base handler and Relayout, the control calls
+  (RequestFocus, SetEnabled, SetVisible, IsVisible, the input box's Clear, text lengths (shown and real), ToInt, the
+  numeric filter, SetText of a number or of "", SelectRange; the label's and the button's texts; IsDisabled,
+  IsChecked, SetCheck; the combo's selection), AdminActionDialog's title and resource strings, and the five
+  LobbyGame setters with `CreateGame`. Separate ops where the original read `mText` (the shown text, a password
+  box's stars) and where it read `GetText()`.
+- **Re-entry.** A text set with its event (AddFriendDialog's `Clear(true)`, LanPortDialog's `SetPort`) fires the
+  input box's event into the dialog's HandleComponentEvent, which is this object again: the state is in `Cell`s
+  behind a shared reference and nothing is borrowed across an op.
+- **The golden** (`tests/won/won_lobbydlg_test.cpp`, `xbuild.py wontest won_lobbydlg_test`): the eight units'
+  statements copied before the deletion, each call on another object replaced by its op, against the Rust object
+  over one scripted host (each op's answer from a seeded stream; an input's evented text set re-enters the dialog
+  half of the time). The Rust's control table is checked name by name, line by line and type by type against the
+  original `SafeGetComponent` arguments. 20,000 sequences of a random kind's InitComponent and 12 random calls
+  (every Reset argument, AdminActionDialog's five actions and an unknown one, events of every type on members and
+  on other components, the ports, game types and games, a second InitComponent now and then), then the free:
+  1,346,007 trace lines, 105 distinct ops and calls, identical on the first run. `golden_lobbydlg.txt` (80
+  sequences, 6,037 lines) is replayed by cargo (`lobbydlg_tests.rs`): every op the Rust makes must be the next
+  line, a `reenter` line re-enters the object, every call's return is compared; it fails on one changed op.
+
+  | Mutation of the Rust | Sequences of 20,000 that change |
+  |---|---|
+  | CreateGameDialog's button press not passed on to the dialog | 1,259 |
+  | LanPortDialog rechecks on any input's text change | 969 |
+  | AdminActionDialog looks its title up first | 2,517 |
+  | Kick's reason required | 752 |
+  | AddFriendDialog's Reset clears without its event | 2,245 |
+  | the controls released in member order | 20,000 |
+
+  Unit tests (6): the tables' names distinct, AdminActionDialog's look-up and release orders, LanPortDialog's filter
+  and range and its unsigned short, CreateGameDialog's button press reaching the dialog after the update and a text
+  change not, the ban seconds' fall-through, the reason flag per action.
+- **Behaviour changes, on undefined paths only:** AdminActionDialog's action type and reason flag start 0 / false
+  (the constructor left them unset); an action outside the five (the original's switch left its three locals unset
+  and its text empty) hides the duration and scope, disables the reason and keeps the reason flag. No caller passes
+  one.
+- **What runs it.** EE-SIM never builds the lobby (the oracle is unchanged by construction; seeds 2-3 identical).
+  The real LAN game (`lan_game.py`) reaches LanNameDialog (both instances set their name through it: Add, type, OK:
+  InitComponent, Reset, the input's events, GetName) and CreateGameDialog (the host: SetGameType, Reset, the name's
+  text events and the create button's check, GetGame with the name, password radio, access radios and skill).
+  Only a person reaches LanPortDialog (the Options tab's port), DirectConnectDialog, PasswordDialog (joining a LAN
+  game with a password; RoutingLogic's rooms); only the Internet path reaches AddFriendDialog, CreateRoomDialog and
+  AdminActionDialog (a routing server's moderator). Those run only in the golden.

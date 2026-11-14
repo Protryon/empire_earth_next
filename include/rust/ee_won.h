@@ -3911,6 +3911,120 @@ enum class EeWonListCall : uint32_t {
   SetPaintWidth,
 };
 
+/// The dialog kinds (each one of the original classes).
+enum class EeWonLobbyDlgKind : uint32_t {
+  LanName = 0,
+  Password = 1,
+  AddFriend = 2,
+  DirectConnect = 3,
+  LanPort = 4,
+  CreateRoom = 5,
+  CreateGame = 6,
+  AdminAction = 7,
+};
+
+/// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
+enum class EeWonLobbyDlgOp : uint32_t {
+  /// `SafeGetComponent(a, aPtr, b->name, b->file, b->line)` into a `SmartPtr` of `b->ty`; the control with a
+  /// reference added (or NULL).
+  Find = 1,
+  /// `a->Release()` (a held control or game).
+  Release,
+  /// `Dialog::HandleComponentEvent(a)` on the dialog.
+  BaseEvent,
+  /// `Relayout()` on the dialog.
+  Relayout,
+  /// `a->RequestFocus()`.
+  RequestFocus,
+  /// `a->SetEnabled(b != 0)`.
+  SetEnabled,
+  /// `a->SetVisible(b != 0)`.
+  SetVisible,
+  /// `a->IsVisible()` (0 or 1).
+  IsVisible,
+  /// `((InputBox*)a)->Clear(b != 0)`.
+  InputClear,
+  /// `((InputBox*)a)->GetText().length()`.
+  InputTextLength,
+  /// `((InputBox*)a)->mText.length()` (the shown text: a password box's stars).
+  InputShownLength,
+  /// `((InputBox*)a)->GetText().mData->ToInt(0)`.
+  InputToInt,
+  /// `((InputBox*)a)->mInputFilter = InputBox::NumericFilter`.
+  InputSetNumeric,
+  /// `sprintf(aBuf, "%d", b); ((InputBox*)a)->SetText(GUIString(new GUIStringData(aBuf)), c != 0)`.
+  InputSetNumber,
+  /// `((InputBox*)a)->SetText(GUIString(""), b != 0)`.
+  InputSetEmpty,
+  /// `((InputBox*)a)->SelectRange(b, c)`.
+  InputSelectRange,
+  /// `sprintf(aBuf, "%d", b); ((Label*)a)->SetText(GUIString(new GUIStringData(aBuf)), true)`.
+  LabelSetNumber,
+  /// `((Label*)a)->SetText(the string b, true)` (`EeWonLobbyDlgString`).
+  LabelSetString,
+  /// `((Button*)a)->SetText(the string b, true)`.
+  ButtonSetString,
+  /// `aTitle = the string b; aTitle.append(" "); aTitle.append(((LobbyClient*)c)->GetName());
+  /// ((Label*)a)->SetText(aTitle, true)`.
+  AdminTitle,
+  /// `((Button*)a)->IsDisabled()` (0 or 1).
+  ButtonIsDisabled,
+  /// `((Button*)a)->IsChecked()` (0 or 1).
+  ButtonIsChecked,
+  /// `((Button*)a)->SetCheck(b != 0, c != 0)`.
+  ButtonSetCheck,
+  /// `((ComboBox*)a)->GetSelItem()`.
+  ComboGetSel,
+  /// `((ComboBox*)a)->SetSelItem(b, c != 0)`.
+  ComboSetSel,
+  /// `LobbyGame::CreateGame((LobbyGameType)b)` with a reference added (the original's local `SmartPtr`).
+  GameCreate,
+  /// `((LobbyGame*)a)->SetName(((InputBox*)b)->GetText())`.
+  GameSetName,
+  /// `((LobbyGame*)a)->SetPassword(((InputBox*)b)->GetText())`.
+  GameSetPassword,
+  /// `((LobbyGame*)a)->SetAskToJoin(b != 0)`.
+  GameSetAskToJoin,
+  /// `((LobbyGame*)a)->SetInviteOnly(b != 0)`.
+  GameSetInviteOnly,
+  /// `((LobbyGame*)a)->SetSkill(b)`.
+  GameSetSkill,
+};
+
+/// The inward calls (the shells' methods).
+enum class EeWonLobbyDlgCall : uint32_t {
+  /// `InitComponent` of a config init (`a` the `ComponentConfig*`).
+  Init = 1,
+  /// `HandleComponentEvent(a)`: `b` the `EeWonLobbyDlgEvent`, `c` the event's component.
+  Event,
+  /// `Reset()`; CreateRoom and CreateGame: `Reset(a != 0)`; AdminAction: `Reset(a, (LobbyClient*)b)`.
+  Reset,
+  /// the control `a` (member order) as held, or NULL (the getters read its text in C++).
+  Slot,
+  /// `CheckInput()` (AdminAction: `UpdateDoActionButton()`).
+  CheckInput,
+  /// `UpdatePasswordVisibility()` (CreateRoom, CreateGame).
+  UpdatePasswordVisibility,
+  /// LanPort: `SetPort(a)`.
+  SetPort,
+  /// LanPort: `SetGamePort(a)`.
+  SetGamePort,
+  /// LanPort: `GetPort()`.
+  GetPort,
+  /// CreateGame: `SetGameType(a)`.
+  SetGameType,
+  /// CreateGame: `GetGame()`, the game with a reference added.
+  GetGame,
+  /// CreateRoom: `GetPassword()`'s input box, or NULL for the empty string.
+  GetPassword,
+  /// AdminAction: `GetApplyToServer()` (0 or 1).
+  ApplyToServer,
+  /// AdminAction: `GetNumSeconds()`.
+  NumSeconds,
+  /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional.
+  Field,
+};
+
 /// A container's key kind (its comparator).
 enum class EeWonLobbyKeyKind {
   /// `unsigned short` / `unsigned long` ids
@@ -4945,6 +5059,35 @@ enum class EeWonWinField : uint32_t {
   ChildCount,
 };
 
+/// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
+enum class EeWonLobbyDlgType : uint32_t {
+  Input = 0,
+  Button = 1,
+  Label = 2,
+  Combo = 3,
+};
+
+/// The texts AdminActionDialog sets (the lobby's resource strings).
+enum class EeWonLobbyDlgString : uint32_t {
+  /// an empty `GUIString` (an action the original's switch did not name)
+  Empty = 0,
+  Warn = 1,
+  Mute = 2,
+  UnMute = 3,
+  Kick = 4,
+  Ban = 5,
+  ExplanationOpt = 6,
+  ExplanationReq = 7,
+};
+
+/// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
+enum class EeWonLobbyDlgEvent : uint32_t {
+  Other = 0,
+  InputTextChanged = 1,
+  ButtonPressed = 2,
+  ComboSelChanged = 3,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -5036,6 +5179,9 @@ struct EeWonLightCert;
 
 /// The Rust ListArea.
 struct EeWonList;
+
+/// One lobby dialog's Rust half.
+struct EeWonLobbyDlg;
 
 /// An ordered container of the lobby (see the module).
 struct EeWonLobbyMap;
@@ -6351,6 +6497,13 @@ struct EeWonLayoutInit {
   bool vert;
 };
 
+/// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
+using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
+                                         EeWonLobbyDlgOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c);
+
 /// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
 /// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
 struct EeWonLobbyMapHooks {
@@ -7269,6 +7422,14 @@ struct EeWonWinEvent {
   /// a size event's
   int32_t width;
   int32_t height;
+};
+
+/// One control of a kind: its resource name, the original's file and line (for the missing-control report) and type.
+struct EeWonLobbyDlgSlot {
+  const char *name;
+  const char *file;
+  int32_t line;
+  EeWonLobbyDlgType ty;
 };
 
 extern "C" {
@@ -11938,6 +12099,25 @@ ptrdiff_t ee_won_list_call(const EeWonList *list,
                            ptrdiff_t a,
                            ptrdiff_t b,
                            ptrdiff_t c);
+
+/// A new dialog object for the C++ `dialog` of `kind`.
+EeWonLobbyDlg *ee_won_lobbydlg_new(void *dialog, EeWonLobbyDlgKind kind, EeWonLobbyDlgHostFn host);
+
+/// Releases the controls (reverse member order) and frees the object.
+///
+/// # Safety
+/// `dlg` came from `ee_won_lobbydlg_new` (or is NULL) and is not used again.
+void ee_won_lobbydlg_free(EeWonLobbyDlg *dlg);
+
+/// One inward call (`EeWonLobbyDlgCall`).
+///
+/// # Safety
+/// `dlg` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lobbydlg_call(const EeWonLobbyDlg *dlg,
+                               EeWonLobbyDlgCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c);
 
 /// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
 ///
