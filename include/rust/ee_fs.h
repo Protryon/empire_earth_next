@@ -55,6 +55,30 @@ using EeFsFatVisitor = void(*)(void *context,
                                int32_t end,
                                int32_t length);
 
+/// A `UString` member as the C++ object lays it out: its vtable pointer, then the Rust record (`EeUString`).
+struct EeFsString {
+  const void *vtable;
+  char *string;
+  unsigned long length;
+  unsigned long capacity;
+};
+
+/// `FSFileSpec` (and its base `FSBasicFile`) from the vtable pointer on, as the C++ object lays it out.
+struct EeFsSpec {
+  const void *vtable;
+  EeFsString volume;
+  EeFsString directory;
+  EeFsString file;
+  /// `mFileAccess`: Open's access, 1 = read
+  unsigned long file_access;
+  unsigned long version;
+  bool is_open;
+  /// `mHandle`: the open `PlatFile*`, or a search's `PlatFind*`
+  void *handle;
+  /// `mStream`: FOpen's stream
+  void *stream;
+};
+
 extern "C" {
 
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
@@ -393,6 +417,222 @@ void *ee_fs_persistent_find(int32_t tag);
 /// Takes one prototype out of the registry for the caller to delete (the lowest tag first), NULL when empty: the
 /// shutdown loops until NULL.
 void *ee_fs_persistent_take();
+
+/// `FSBasicFile()`'s body (the strings are the C++ members' `UString(256)`): read access, version 0, closed.
+///
+/// # Safety
+/// `s` is a live record (its strings constructed).
+void ee_fs_basic_init(EeFsSpec *s);
+
+/// `FSBasicFile(const FSBasicFile&)`'s body: the names assigned, version 0, closed, read access.
+///
+/// # Safety
+/// Both are live records.
+void ee_fs_basic_init_copy(EeFsSpec *s, const EeFsSpec *from);
+
+/// `FSBasicFile::Delete`: deletes the file; kErrorAlreadyOpen when open, kErrorBadPath past `PLAT_MAX_PATH`.
+///
+/// # Safety
+/// `s` is a live record.
+long ee_fs_basic_delete(const EeFsSpec *s);
+
+/// `FSFileSpec()`'s body: the startup volume and directory, no file name, closed, read access.
+///
+/// # Safety
+/// `s` is a live record; `startup_volume`/`startup_directory` the live `gStartupVolume`/`gStartupDirectory`.
+void ee_fs_spec_init(EeFsSpec *s,
+                     const EeFsString *startup_volume,
+                     const EeFsString *startup_directory);
+
+/// `FSFileSpec(const FSFileSpec&)`: the base's copy, then no handle or stream.
+///
+/// # Safety
+/// Both are live records.
+void ee_fs_spec_init_copy(EeFsSpec *s, const EeFsSpec *from);
+
+/// `FSFileSpec(const UString&)`'s body: a full path split into volume (2 bytes), directory (through the last
+/// backslash) and file name; the startup directory when the path has 2 bytes or less or no backslash (the volume
+/// then stays the path's first two bytes overwritten by the startup volume, the file name empty).
+///
+/// # Safety
+/// `s` is a live record, `in_path` a live `UString` record, the startup strings as [`ee_fs_spec_init`].
+void ee_fs_spec_init_path(EeFsSpec *s,
+                          const EeFsString *in_path,
+                          const EeFsString *startup_volume,
+                          const EeFsString *startup_directory);
+
+/// `~FSFileSpec()`'s body: an open file closed (this class's Close: the destructor's dispatch), else a search
+/// handle closed.
+///
+/// # Safety
+/// `s` is a live record.
+void ee_fs_spec_finish(EeFsSpec *s);
+
+/// `operator=`: the names copied, closed, no handle or stream, read access (an open file's handle is dropped, as
+/// the original dropped it).
+///
+/// # Safety
+/// Both are live records (the same one allowed).
+void ee_fs_spec_assign(EeFsSpec *s,
+                       const EeFsSpec *from);
+
+/// `CloseSearchHandle`
+///
+/// # Safety
+/// `s` is a live record whose handle is a search's (or NULL).
+void ee_fs_spec_close_search(EeFsSpec *s);
+
+/// `Create`: an empty new file; kErrorFailed for a name with `:*?"<>|` or only spaces, kErrorAlreadyExists when it
+/// exists, kErrorBadPath past `PLAT_MAX_PATH`. The handle is dropped (set NULL) first, as the original did.
+///
+/// # Safety
+/// `s` is a live record.
+long ee_fs_spec_create(EeFsSpec *s);
+
+/// `CreateDirectory`: the spec's directory; kErrorAlreadyExists when present.
+///
+/// # Safety
+/// `s` is a live record.
+long ee_fs_spec_create_directory(const EeFsSpec *s);
+
+/// `Close`: the file handle, else the stdio stream; a native error (still open) when that fails, OK when closed.
+///
+/// # Safety
+/// `s` is a live record (when open without a handle its stream is a live `FILE*`).
+long ee_fs_spec_close(EeFsSpec *s);
+
+/// `Copy`: the file copied to `destination`; unless `keep_attributes`, the copy gets the source's attributes less
+/// read-only.
+///
+/// # Safety
+/// `s` is a live record, `destination` a C string.
+long ee_fs_spec_copy(const EeFsSpec *s,
+                     const char *destination,
+                     bool fail_if_exists,
+                     bool keep_attributes);
+
+/// `DeleteDirectory`: the (empty) directory removed; kErrorFailed for the root `\`.
+///
+/// # Safety
+/// `s` is a live record.
+long ee_fs_spec_delete_directory(const EeFsSpec *s);
+
+/// `FOpen`: the file as a stdio stream (`PlatFOpen` with `mode`); open meanwhile, closed again on failure.
+///
+/// # Safety
+/// `s` is a live record, `mode` a C string.
+long ee_fs_spec_fopen(EeFsSpec *s,
+                      const char *mode);
+
+/// `GetFirstFile(pattern, outFile)`: a search of the spec's directory for `pattern`; the first entry that is not
+/// `.` or `..` into `out`. kErrorNotFound when nothing matches, kErrorFailed when the spec is not a directory.
+///
+/// # Safety
+/// `s` and `out` are live records (different ones), `pattern` a C string, the startup strings as
+/// [`ee_fs_spec_init`].
+long ee_fs_spec_first_file(EeFsSpec *s,
+                           const char *pattern,
+                           EeFsSpec *out,
+                           const EeFsString *startup_volume,
+                           const EeFsString *startup_directory);
+
+/// `GetNextFile`: the search's next entry that is not `.` or `..` into `out`; at the end the search is closed and
+/// kErrorNoMoreFiles returned. kErrorFailed without a search or when the spec is not a directory.
+///
+/// # Safety
+/// `s` and `out` are live records (different ones); `s`'s handle is a search's or NULL.
+long ee_fs_spec_next_file(EeFsSpec *s,
+                          EeFsSpec *out);
+
+/// `GetLength` of the open file; kErrorFailed for a stream, kErrorNotOpen when closed.
+///
+/// # Safety
+/// `s` is a live record, `out` writable.
+long ee_fs_spec_get_length(const EeFsSpec *s, unsigned long *out);
+
+/// `GetParentDirectory`: the directory above the spec's (the root stays the root), no file name, closed.
+///
+/// # Safety
+/// `s` and `out` are live records (different ones).
+void ee_fs_spec_parent(const EeFsSpec *s,
+                       EeFsSpec *out);
+
+/// `GetPosition` in the open file; kErrorFailed for a stream, kErrorNotOpen when closed.
+///
+/// # Safety
+/// `s` is a live record, `out` writable.
+long ee_fs_spec_get_position(const EeFsSpec *s, long *out);
+
+/// `IsDirectory`: the spec names an existing directory and no file.
+///
+/// # Safety
+/// `s` is a live record.
+bool ee_fs_spec_is_directory(const EeFsSpec *s);
+
+/// `Lock`
+///
+/// # Safety
+/// `s` is a live record.
+long ee_fs_spec_lock(const EeFsSpec *s);
+
+/// `Unlock`
+///
+/// # Safety
+/// `s` is a live record.
+long ee_fs_spec_unlock(const EeFsSpec *s);
+
+/// `Open`: the existing file for reading (1), writing (2), appending (4, at its end) or both (anything else).
+///
+/// # Safety
+/// `s` is a live record.
+long ee_fs_spec_open(EeFsSpec *s,
+                     unsigned long access);
+
+/// `Read(unsigned char*, length, outRead)`: up to `length` bytes; kErrorEndOfFile when none are left.
+///
+/// # Safety
+/// `s` is a live record, `out` writable for `length` bytes, `read` writable.
+long ee_fs_spec_read(const EeFsSpec *s,
+                     uint8_t *out,
+                     unsigned long length,
+                     unsigned long *read);
+
+/// The scalar `Read`s: `size` bytes into `out`; kErrorFailed on a short read that reported OK.
+///
+/// # Safety
+/// As [`ee_fs_spec_read`], `out` writable for `size` bytes.
+long ee_fs_spec_read_value(const EeFsSpec *s, uint8_t *out, unsigned long size);
+
+/// `SetLength`: the open file ends at `length` (the truncate flag is ignored, as in the original).
+///
+/// # Safety
+/// `s` is a live record.
+long ee_fs_spec_set_length(const EeFsSpec *s, unsigned long length);
+
+/// `SetPosition`: `offset` from the start (0), the current position (2) or the end (anything else); past the end
+/// only when `extend` on a file opened for writing (else kErrorBeyondEnd). The target's test wraps in 32 bits.
+///
+/// # Safety
+/// `s` is a live record.
+long ee_fs_spec_set_position(const EeFsSpec *s,
+                             long offset,
+                             unsigned long origin,
+                             bool extend);
+
+/// `Write(const unsigned char*, length, outWritten)`: a native error on a short write.
+///
+/// # Safety
+/// `s` is a live record, `data` readable for `length` bytes, `written` writable.
+long ee_fs_spec_write(const EeFsSpec *s,
+                      const uint8_t *data,
+                      unsigned long length,
+                      unsigned long *written);
+
+/// The scalar `Write`s: `size` bytes of `data`.
+///
+/// # Safety
+/// As [`ee_fs_spec_write`].
+long ee_fs_spec_write_value(const EeFsSpec *s, const uint8_t *data, unsigned long size);
 
 }  // extern "C"
 

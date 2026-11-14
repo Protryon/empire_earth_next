@@ -22,11 +22,7 @@ public:
     // Members in alphabetical order, as the first unit's emission order shows (CloseSearchHandle 0x13d6, GetFirstFile
     // 0x13e8, Read 0x1420, Write 0x1434); the new virtuals keep their relative order (vtable slots unchanged).
     virtual long Close();                                                       // +0x08 0x91cd
-    void CloseSearchHandle()                          // 0x13d6 (inline)
-    {
-        PlatFindClose(static_cast<PlatFind*>(this->mHandle));
-        this->mHandle = NULL;
-    }
+    void CloseSearchHandle();                         // 0x13d6 (inline in the original; Rust's now)
     virtual long Copy(const UString& inDestination, bool inOverwrite, bool inKeepTimes);   // +0x0c 0x921c
     virtual long Create();                                                      // +0x04 0x901a
     virtual long CreateDirectory();                                             // +0xa0 0x9142

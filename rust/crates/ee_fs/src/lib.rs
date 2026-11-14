@@ -14,6 +14,10 @@ pub mod ffi;
 mod file;
 mod memfile;
 pub mod persistent_list;
+pub mod spec;
+
+// the platform layer's files, which `spec` calls by their C names (linked into the tests here)
+use ee_plat_sys as _;
 
 pub use archive::{tokenize_star, Archive, FatEntry, ARCHIVE_IDENTIFIER, ARCHIVE_RESERVED, ARCHIVE_VERSION};
 pub use chunk::EeFsChunk;
@@ -34,3 +38,5 @@ pub mod status {
 
 #[cfg(test)]
 mod golden;
+#[cfg(all(test, windows))]
+mod golden_spec;
