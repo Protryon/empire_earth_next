@@ -103,8 +103,7 @@ impl EeAStarAreaRecord {
             return;
         }
         let (outline, shape) = hull::set_points(points, false);
-        let bounds =
-            EeHullRect { bottom: shape.bottom, left: shape.left, right: shape.right, top: shape.top };
+        let bounds = EeHullRect { bottom: shape.bottom, left: shape.left, right: shape.right, top: shape.top };
         self.set_hull_raw(&outline, bounds, shape.center, shape.area);
     }
 
@@ -183,7 +182,10 @@ pub unsafe extern "C" fn ee_astar_area_free(r: *mut EeAStarAreaRecord) {
 /// # Safety
 /// `r` a live record, `count` valid.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_area_hull_points(r: *const EeAStarAreaRecord, count: *mut usize) -> *const EeHullPoint {
+pub unsafe extern "C" fn ee_astar_area_hull_points(
+    r: *const EeAStarAreaRecord,
+    count: *mut usize,
+) -> *const EeHullPoint {
     // SAFETY: the caller's contract
     let points = unsafe { (*r).hull_points() };
     // SAFETY: the caller's contract
@@ -251,7 +253,11 @@ pub unsafe extern "C" fn ee_astar_area_update_bounds(r: *mut EeAStarAreaRecord, 
 /// # Safety
 /// `r` a live record, `tiles` a live set.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_area_update_hull(r: *mut EeAStarAreaRecord, tiles: *const EeSparseArray, region_size: c_long) {
+pub unsafe extern "C" fn ee_astar_area_update_hull(
+    r: *mut EeAStarAreaRecord,
+    tiles: *const EeSparseArray,
+    region_size: c_long,
+) {
     // SAFETY: the caller's contract
     unsafe { (*r).update_hull(&(*tiles).set, region_size) };
 }
@@ -261,7 +267,12 @@ pub unsafe extern "C" fn ee_astar_area_update_hull(r: *mut EeAStarAreaRecord, ti
 /// # Safety
 /// `r` a live record, `tiles` a live set.
 #[no_mangle]
-pub unsafe extern "C" fn ee_astar_area_remove_tile(r: *mut EeAStarAreaRecord, tiles: *mut EeSparseArray, x: i32, y: i32) -> bool {
+pub unsafe extern "C" fn ee_astar_area_remove_tile(
+    r: *mut EeAStarAreaRecord,
+    tiles: *mut EeSparseArray,
+    x: i32,
+    y: i32,
+) -> bool {
     // SAFETY: the caller's contract
     unsafe { (*r).remove_tile(&mut (*tiles).set, EePoint { x, y }) }
 }
@@ -317,7 +328,10 @@ mod tests {
         r.set_hull(&input);
         let (outline, shape) = hull::set_points(&input, false);
         assert_eq!(r.hull_points(), &outline[..]);
-        assert_eq!(r.hull_bounds, EeHullRect { bottom: shape.bottom, left: shape.left, right: shape.right, top: shape.top });
+        assert_eq!(
+            r.hull_bounds,
+            EeHullRect { bottom: shape.bottom, left: shape.left, right: shape.right, top: shape.top }
+        );
         assert_eq!((r.hull_center, r.hull_area), (shape.center, shape.area));
         assert_eq!(r.hull_bounds, EeHullRect { bottom: 4, left: 0, right: 4, top: 0 });
         // no points: the C++'s Clear (bounds, center and area zero), then nothing
@@ -350,12 +364,15 @@ mod tests {
         r.update_hull(&set, 2);
         let mut extremes = Vec::new();
         set.points(PointList::Extremes, &mut extremes);
-        let expected: Vec<EeHullPoint> = extremes.iter().map(|q| p(q.x.into(), q.y.into())).collect();
+        let expected: Vec<EeHullPoint> = extremes.iter().map(|q| p(c_long::from(q.x), c_long::from(q.y))).collect();
         let mut by_hand = EeAStarAreaRecord::default();
         by_hand.set_hull(&expected);
         by_hand.update_bounds(2);
         assert_eq!(r.hull_points(), by_hand.hull_points());
-        assert_eq!((r.hull_bounds, r.bounds, r.hull_center), (by_hand.hull_bounds, by_hand.bounds, by_hand.hull_center));
+        assert_eq!(
+            (r.hull_bounds, r.bounds, r.hull_center),
+            (by_hand.hull_bounds, by_hand.bounds, by_hand.hull_center)
+        );
         assert_eq!(r.hull_area.to_bits(), by_hand.hull_area.to_bits());
         r.free();
         by_hand.free();
@@ -382,9 +399,7 @@ mod tests {
         let mut r = EeAStarAreaRecord::default();
         let bounds = EeHullRect { bottom: 9, left: 1, right: 8, top: 2 };
         // SAFETY: a live record and three points
-        unsafe {
-            ee_astar_area_set_hull_raw(&mut r, [p(1, 2), p(8, 2), p(5, 9)].as_ptr(), 3, bounds, p(4, 4), 24.5)
-        };
+        unsafe { ee_astar_area_set_hull_raw(&mut r, [p(1, 2), p(8, 2), p(5, 9)].as_ptr(), 3, bounds, p(4, 4), 24.5) };
         assert_eq!(r.hull_points(), &[p(1, 2), p(8, 2), p(5, 9)]);
         assert_eq!((r.hull_bounds, r.hull_center, r.hull_area), (bounds, p(4, 4), 24.5));
         r.free();

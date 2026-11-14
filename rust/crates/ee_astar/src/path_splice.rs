@@ -259,5 +259,4 @@ mod tests {
         assert_eq!(merge_waypoints(&[], &waypoints), None);
         assert_eq!(merge_waypoints(&path, &[]), None);
     }
-
 }
