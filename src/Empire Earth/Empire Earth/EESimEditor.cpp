@@ -1421,7 +1421,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                     theGhost->mCanPlace = true;
                 }
                 gWorld.mGhostUnitsLock->Leave();
-                gUIManager->mScenarioEditorForm->GetUnitScreen()->mUnitUnderMouse = -1;
+                gUIManager->mScenarioEditorForm->GetUnitScreen()->SetUnitUnderMouse(-1);
                 ee_screens_sew_put_down(sMove->mAction);
             };
         else if (c == "wall")   // wall PLAYER TECHNOLOGY X0 Y0 X1 Y1
@@ -1482,7 +1482,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 gPhysics->FlushWorld();   // the units placed before are in the world, as a person finds them
                 EESEUnit* theScreen = gUIManager->mScenarioEditorForm->GetUnitScreen();
                 size_t theUnitWord = c == "drop" ? 1 : 2;
-                theScreen->mUnitUnderMouse = w.size() > theUnitWord ? (long)UnitRef(w[theUnitWord]) : -1;
+                theScreen->SetUnitUnderMouse(w.size() > theUnitWord ? (long)UnitRef(w[theUnitWord]) : -1);
                 bool thePlaced = true;
                 if (c == "drop") {
                     if (sMove != NULL)
@@ -1492,7 +1492,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                         sPlace = new EESEARust(kSEAPlaceUnit);
                     thePlaced = ee_screens_sew_place_unit(sPlace->mAction, L(1)) != 0;
                 }
-                theScreen->mUnitUnderMouse = -1;
+                theScreen->SetUnitUnderMouse(-1);
                 gWorld.mGhostUnitsLock->Enter();
                 gWorld.ClearGhostUnits();
                 gWorld.mGhostUnitsLock->Leave();

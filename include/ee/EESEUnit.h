@@ -64,6 +64,24 @@ public:
     void UpdateSelection();
     void RefreshUnitList();                 // 0x19c64b (the unit classes for the mode, sort and layer)
 
+    // the placement state read from outside the tab (the move and placement actions, the boarding finder, the
+    // render's lasso, the editor gate): the unit under the mouse while placing (-1: none), the selection tool
+    long GetUnitUnderMouse() const { return this->mUnitUnderMouse; }
+    void SetUnitUnderMouse(long inUnit) { this->mUnitUnderMouse = inUnit; }
+    EEUICSelectUnits* GetSelectUnits() const { return this->mSelectUnits; }
+    // the editor gate's: 1 placing, 2 a wall, 4 a gate, 8 a held gate; the palette, sort and owner last listed
+    long GetPlacingFlags() const
+    {
+        return (this->mPlacing ? 1 : 0) | (this->mPlacingWall ? 2 : 0) | (this->mPlacingGate ? 4 : 0) |
+               (this->mIsGateHeld ? 8 : 0);
+    }
+    void GetListState(long& outMode, long& outSort, long& outLayer) const
+    {
+        outMode = this->mUnitTypeMode;
+        outSort = this->mSortMode;
+        outLayer = this->mLayer;
+    }
+
     GERhombus mRhombus;                     // +0x04
     EESEUIBuildWall mBuildWall;             // +0x1c
     EESEUIBuildGate mBuildGate;             // +0x3c

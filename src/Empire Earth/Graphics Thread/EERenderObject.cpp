@@ -1333,7 +1333,7 @@ void EERenderObject::FillRenderLists()
         } else {
             EESEUnit* theScreen = gUIManager->mScenarioEditorForm != NULL ?
                 gUIManager->mScenarioEditorForm->GetUnitScreen() : NULL;
-            EEUICSelectUnits* theEditorSelection = theScreen != NULL ? theScreen->mSelectUnits : NULL;
+            EEUICSelectUnits* theEditorSelection = theScreen != NULL ? theScreen->GetSelectUnits() : NULL;
             EESEUICTriggerSelectUnits* theTriggerSelection = dynamic_cast<EESEUICTriggerSelectUnits*>(
                 gUIManager->mScenarioEditorForm->GetControlById(kSETSObjectSelectUnits));
             if (theEditorSelection != NULL && theEditorSelection->GetIsDrawn())
