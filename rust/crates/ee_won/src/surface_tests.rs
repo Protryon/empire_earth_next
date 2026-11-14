@@ -236,3 +236,28 @@ fn arc_of_a_full_turn_is_the_ellipse() {
     let n = |s: &EeWonSurface| s.bytes().iter().filter(|&&x| x != 0).count();
     assert!(n(&q) > 0 && n(&q) < n(&b));
 }
+
+#[test]
+fn arc_start_far_below_zero_keeps_the_c_remainder() {
+    // -800 + 360 = -440, whose C remainder by 360 is -80: the arc from -80 to 40 degrees, which draws in the first
+    // octant (kept at -440, the arc would end at -320 and draw nothing); -1160 comes to the same -80
+    let draw = |start: i32| {
+        let mut s = new(EE_WON_SURFACE_32, 30, 30);
+        s.draw(EeWonSurfaceDraw::SetColor, 1, 0, 0, 0, 0, 0);
+        s.draw(EeWonSurfaceDraw::Arc, 1, 1, 27, 25, start, 120);
+        s.bytes().to_vec()
+    };
+    assert!(draw(-800).iter().any(|&b| b != 0));
+    assert_eq!(draw(-800), draw(-1160));
+}
+
+#[test]
+fn pixel_past_the_right_edge_is_zero() {
+    // a 32-bit row's pixel at x == width would be the next row's first: the original read 0 there
+    let mut s = new(EE_WON_SURFACE_32, 3, 2);
+    s.draw(EeWonSurfaceDraw::SetColor, 0x123456, 0, 0, 0, 0, 0);
+    s.draw(EeWonSurfaceDraw::FillRect, 0, 0, 3, 2, 0, 0);
+    assert_eq!(s.pixel(2, 0), 0x123456);
+    assert_eq!(s.pixel(3, 0), 0);
+    assert_eq!(s.pixel(0, 2), 0);
+}
