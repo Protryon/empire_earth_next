@@ -275,6 +275,15 @@ void EEUserInterface::PostLoginDone()
     this->mThread->Post(0x441, NULL, NULL, true);
 }
 
+// FUNCTION: EXE 0x677023
+// FUNCTION: EXE 0x677170
+// FUNCTION: EXE 0x677290
+// FUNCTION: EXE 0x677315
+// FUNCTION: EXE 0x6777cd
+// FUNCTION: EXE 0x677c1f
+// FUNCTION: EXE 0x679013
+// LeaveMap, CancelGame, CloseScenarioEditor, EnterScenarioEditor, StartLoadingFromEditor, ShowCivilizationBuilder and
+// RestartGame are Rust's whole (ee_screens ui_game.rs; the thread's messages run them by ee_screens_ui_member).
 // The game starts' and the loop's calls (EE_SCREENS_UG_OP_*) on the UI object inUI (ee_screens ui_game.rs)
 extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
 {
@@ -438,6 +447,94 @@ extern "C" int64_t ee_screenscpp_ui_game(void* inUI, uint32_t inOp, int64_t inA,
         break;
     }
     case EE_SCREENS_UG_OP_SIM_RUN: return gPlatSimRun;
+    case EE_SCREENS_UG_OP_RELEASE_SCENE: gGraphics->PostReleaseScene(); gGraphics->PostMessage50AAndWait(); break;
+    case EE_SCREENS_UG_OP_ACTIONS_CLEAR: ee_screens_actions_clear((uint32_t)inA); break;
+    case EE_SCREENS_UG_OP_WAIT_PRELOAD: gDataPreLoading->WaitForMessageQueue(); break;
+    case EE_SCREENS_UG_OP_WORLD_CLEAR: gWorld.Clear(); break;
+    case EE_SCREENS_UG_OP_PHYSICS_INIT:
+        if (inA == 0) {
+            gPhysics->PostInit();
+        } else {
+            gPhysics->RunOwedTicks();
+            gPhysics->Init();
+        }
+        break;
+    case EE_SCREENS_UG_OP_SCREEN_INACTIVE: gGameScreenActive = false; break;
+    case EE_SCREENS_UG_OP_RESIZE_MENU: theUI->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), inA != 0, inB != 0); break;
+    case EE_SCREENS_UG_OP_NOT_MAIN: return gUIManager->GetCurrentForm() != gUIManager->GetMainGameForm();
+    case EE_SCREENS_UG_OP_POP: gUIManager->Pop(); break;
+    case EE_SCREENS_UG_OP_SWAP: gUIManager->SwapForm(reinterpret_cast<UIForm*>(inA)); break;
+    case EE_SCREENS_UG_OP_FORM: return reinterpret_cast<int64_t>(gUIManager->GetFormByID((unsigned long)inA));
+    case EE_SCREENS_UG_OP_ONE_RECORD: return gWorld.mStatistics.GetRecords().size() == 1;
+    case EE_SCREENS_UG_OP_PUSH: gUIManager->Push(reinterpret_cast<UIForm*>(inA)); break;
+    case EE_SCREENS_UG_OP_SERVER_LOST:
+        return gCommunications != NULL && gCommunications->IsClient() &&
+               static_cast<EEClient*>(gCommunications)->mServerLostAfterLoading;
+    case EE_SCREENS_UG_OP_UNLOAD_MEDIA: EEUnloadGameMedia(); break;
+    case EE_SCREENS_UG_OP_NEW_CLIENT:
+        if (gCommunications != NULL) {
+            delete gCommunications;
+            gCommunications = new EEClient;
+            static_cast<EEClient*>(gCommunications)->StartThreads();
+        }
+        break;
+    case EE_SCREENS_UG_OP_LOBBY_OPEN: return EEIsLobbyOpen();
+    case EE_SCREENS_UG_OP_QUIT_FLAG: EESetQuitFlag(); break;
+    case EE_SCREENS_UG_OP_BOOT_CLIENT: {
+        EEABootClientFromCanceledGame* theAction = new EEABootClientFromCanceledGame((long)inA, true);
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        break;
+    }
+    case EE_SCREENS_UG_OP_CREATE_EDITOR: gUIManager->CreateScenarioEditor(); break;
+    case EE_SCREENS_UG_OP_LOAD_SCENDEFAULT:
+        return EELoadSavedGameFile(UString("ScenDefault") + gScenarioExtension, true, true,
+                                   UString("data\\") + UString("Scenarios\\"), 0);
+    case EE_SCREENS_UG_OP_STOP_ONE_SHOTS: gSoundManager->StopAllOneShotSounds(); break;
+    case EE_SCREENS_UG_OP_SWAP_EDITOR: gUIManager->SwapForm(gUIManager->mScenarioEditorForm); break;
+    case EE_SCREENS_UG_OP_LOAD_ERROR: {
+        UWideString theMessage;
+        gResource->GetString(IDS_THERE_WAS_ERROR_TRYING_TO_LOAD, theMessage);
+        gUIManager->DisplayMessage(theMessage, true, NULL, NULL, true);
+        break;
+    }
+    case EE_SCREENS_UG_OP_EDITOR_PAUSES:
+        dynamic_cast<EEServer*>(gCommunications)->PauseGame();
+        gMusicManager->Pause();
+        gAmbientSoundManager.StopSounds();
+        gAmbientSoundManager.Pause();
+        EEUIECLEFormManager::Clear();
+        break;
+    case EE_SCREENS_UG_OP_GRAPHICS_PAUSED: return gGraphics->mIsPaused;
+    case EE_SCREENS_UG_OP_CB_MUSIC: {
+        static UWideString sMusic;   // (the UI thread's: kept across the builder's run)
+        UIForm* theBuilder = gUIManager->GetFormByID(kFormCivBuilder);
+        if (inA == 0)
+            sMusic = theBuilder->GetMusicFileName();
+        else
+            theBuilder->SetMusicFileName(inA == 1 ? UWideString("") : sMusic);
+        break;
+    }
+    case EE_SCREENS_UG_OP_COPY_LOCK: inA != 0 ? gUIManager->LockUIForCopyData() : gUIManager->UnlockUIForCopyData(); break;
+    case EE_SCREENS_UG_OP_CAN_BUY_CIV: return gWorld.mGameOptions.CanBuyCivilization();
+    case EE_SCREENS_UG_OP_CUSTOM_CIVS: return gWorld.mGameOptions.mAllowCustomCivs;
+    case EE_SCREENS_UG_OP_CIV_CHOSEN: return gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationChosen;
+    case EE_SCREENS_UG_OP_CIV_CHOOSE: {
+        UIForm* theForm = gUIManager->GetFormByID(kFormPredefinedCiv);
+        EESetCivBuilderButtonBlinking(false);
+        gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationChosen = true;
+        gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationLocked = true;
+        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_OPEN);   // (ee_screens civ_choice.rs)
+        theForm->SetFormOpenEvent(theEvent);
+        theEvent->Dereference();
+        theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_CLOSE);
+        theForm->SetFormCloseEvent(theEvent);
+        theEvent->Dereference();
+        gUIManager->Push(theForm);
+        break;
+    }
+    case EE_SCREENS_UG_OP_CIV_EDIT: CivBuilderEditCivilization(); break;
+    case EE_SCREENS_UG_OP_CIV_CREATE: CivBuilderCreateCivilization(reinterpret_cast<EECivilization*>(inA), inB != 0); break;
     }
     return 0;
 }
@@ -465,130 +562,6 @@ void EEUserInterface::SaveAndTestScenario()
     ee_screens_ui_save_and_test_scenario(this);
 }
 
-// FUNCTION: EXE 0x677023
-// Leaves the current map: clears the action queues, the world and the game state, optionally resizes to
-// 1024x768, then pops back to a form (the post-game summary, or the previous form)
-void EEUserInterface::LeaveMap(UIForm* inForm, bool inFlag)
-{
-    gGraphics->PostReleaseScene();
-    gGraphics->PostMessage50AAndWait();
-    ee_screens_actions_clear(0);
-    ee_screens_actions_clear(1);
-    ee_screens_actions_clear(2);
-    gWorld.mLock->WriteLock();
-    gDataPreLoading->WaitForMessageQueue();
-    gWorld.Clear();
-    gGameState.Clear();
-    gPhysics->PostInit();
-    gGameScreenActive = false;
-    gWorld.mLock->WriteUnlock();
-    if (inFlag)
-        this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false);
-    if (inForm != NULL) {
-        while (gUIManager->GetCurrentForm() != gUIManager->GetMainGameForm())
-            gUIManager->Pop();
-        if (inForm == gUIManager->GetFormByID(kFormPostGameSummary) && gWorld.mStatistics.GetRecords().size() == 1)
-            gUIManager->Pop();
-        else
-            gUIManager->SwapForm(inForm);
-    } else {
-        gUIManager->Pop();
-    }
-    gUIManager->mB13D = false;
-}
-
-// FUNCTION: EXE 0x677170
-// Cancels the running game: stops physics, unloads the game media, makes a fresh client, and leaves to the
-// post-game summary (or boots the client when the host was lost)
-void EEUserInterface::CancelGame()
-{
-    bool theFlag = false;
-    if (gCommunications != NULL && gCommunications->IsClient())
-        theFlag = static_cast<EEClient*>(gCommunications)->mServerLostAfterLoading;
-    this->PauseGraphics();
-    gPhysics->mThread->Post(0x402, NULL, NULL, true);
-    while (gPhysics->mTimerRunning)
-        PlatSleep(1);
-    EEUnloadGameMedia();
-    if (gCommunications != NULL) {
-        delete gCommunications;
-        gCommunications = new EEClient;
-        static_cast<EEClient*>(gCommunications)->StartThreads();
-    }
-    if (theFlag) {
-        bool theLobby = false;
-        if (EEIsLobbyOpen()) {
-            EESetQuitFlag();
-            theLobby = true;
-        }
-        this->LeaveMap(NULL, true);
-        EEABootClientFromCanceledGame* theAction = new EEABootClientFromCanceledGame(theLobby ? 0 : IDS_HOST_OF_THIS_GAME_HAS_GONE, true);
-        gUserInterface->PostAction(theAction);
-        theAction->Dereference();
-    } else {
-        this->LeaveMap(gUIManager->GetFormByID(kFormPostGameSummary), true);
-    }
-    this->ResumeGraphics();
-}
-
-// FUNCTION: EXE 0x677290
-// Closes the scenario editor: unloads media, makes a fresh client and leaves the map
-void EEUserInterface::CloseScenarioEditor()
-{
-    this->PauseGraphics();
-    EEUnloadGameMedia();
-    gPhysics->mThread->Post(0x402, NULL, NULL, true);
-    while (gPhysics->mTimerRunning)
-        PlatSleep(1);
-    if (gCommunications != NULL) {
-        delete gCommunications;
-        gCommunications = new EEClient;
-        static_cast<EEClient*>(gCommunications)->StartThreads();
-    }
-    this->LeaveMap(NULL, true);
-    this->ResumeGraphics();
-}
-
-// FUNCTION: EXE 0x677315
-// Enters the scenario editor (reloading ScenDefault when asked), pausing the game, music and ambient sounds
-void EEUserInterface::EnterScenarioEditor(bool inLoad)
-{
-    long theResult = kErrorOK;
-    UWideString theMessage;
-    UWideString theUnused;
-    UString theFileName;
-    this->PauseGraphics();
-    gUIManager->CreateScenarioEditor();
-    this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), false, true);
-    gWorld.mLock->WriteLock();
-    gGameScreenActive = false;
-    if (inLoad == true) {
-        gPhysics->RunOwedTicks();
-        gPhysics->Init();
-        theFileName = UString("ScenDefault") + gScenarioExtension;
-        theResult = EELoadSavedGameFile(theFileName, true, true, UString("data\\") + UString("Scenarios\\"), 0);
-    } else {
-        gSoundManager->StopAllOneShotSounds();
-    }
-    if (gUIManager->GetCurrentForm() != gUIManager->GetMainGameForm())
-        gUIManager->Pop();
-    gUIManager->SwapForm(gUIManager->mScenarioEditorForm);
-    if (theResult != kErrorOK) {
-        gResource->GetString(IDS_THERE_WAS_ERROR_TRYING_TO_LOAD, theMessage);
-        gUIManager->DisplayMessage(theMessage, true, NULL, NULL, true);
-    }
-    gMiniMap->Redraw();
-    gMiniMap->Refresh();
-    gWorld.mLock->WriteUnlock();
-    dynamic_cast<EEServer*>(gCommunications)->PauseGame();
-    gMusicManager->Pause();
-    gAmbientSoundManager.StopSounds();
-    gAmbientSoundManager.Pause();
-    EEUIECLEFormManager::Clear();
-    if (gGraphics->mIsPaused)
-        this->ResumeGraphics();
-}
-
 // FUNCTION: EXE 0x67754b
 // Creates the UI's render object and pushes it on the graphics thread
 long EEUserInterface::CreateRenderObject()
@@ -604,20 +577,6 @@ long EEUserInterface::CreateRenderObject()
 void EEUserInterface::LoadSavedGame(FSFile* inFile)
 {
     ee_screens_ui_load_saved_game(this, inFile);
-}
-
-// FUNCTION: EXE 0x6777cd
-// Starts loading the edited scenario as a game, behind the splash form
-void EEUserInterface::StartLoadingFromEditor()
-{
-    this->PauseGraphics();
-    this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, true);
-    gUIManager->Push(gUIManager->GetFormByID(kFormSplash));
-    gWorld.mLock->WriteLock();
-    gGameScreenActive = false;
-    gWorld.mLock->WriteUnlock();
-    gDataPreLoading->PostLoadGame(false, false);
-    this->ResumeGraphics();
 }
 
 // FUNCTION: EXE 0x67783c
@@ -651,44 +610,6 @@ void EEUserInterface::OpenSelectServer()
 long EEUserInterface::Run(void* inParameter)
 {
     return (long)ee_screens_ui_run(this);
-}
-
-// FUNCTION: EXE 0x677c1f
-// Opens the civilization builder (or the predefined civilization selection) without the builder's music
-void EEUserInterface::ShowCivilizationBuilder(long inX, bool inFlag1, bool inFlag2)
-{
-    UWideString theMusic(gUIManager->GetFormByID(kFormCivBuilder)->GetMusicFileName());
-    UIForm* theForm = gUIManager->GetFormByID(kFormPredefinedCiv);
-    UIEvent* theEvent;
-    this->PauseGraphics();
-    gUIManager->LockUIForCopyData();
-    gWorld.mLock->WriteLock();
-    if (inFlag1 || inFlag2) {
-        gUIManager->GetFormByID(kFormCivBuilder)->SetMusicFileName("");
-    }
-    if (inFlag2) {
-        if (gWorld.mGameOptions.CanBuyCivilization() && !gWorld.mGameOptions.mAllowCustomCivs &&
-            !gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationChosen) {
-            EESetCivBuilderButtonBlinking(false);
-            gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationChosen = true;
-            gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationLocked = true;
-            theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_OPEN);   // (ee_screens civ_choice.rs)
-            theForm->SetFormOpenEvent(theEvent);
-            theEvent->Dereference();
-            theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_CLOSE);
-            theForm->SetFormCloseEvent(theEvent);
-            theEvent->Dereference();
-            gUIManager->Push(theForm);
-        } else {
-            CivBuilderEditCivilization();
-        }
-    } else {
-        CivBuilderCreateCivilization(reinterpret_cast<EECivilization*>(inX), inFlag1);
-    }
-    gUIManager->GetFormByID(kFormCivBuilder)->SetMusicFileName(theMusic);
-    gWorld.mLock->WriteUnlock();
-    gUIManager->UnlockUIForCopyData();
-    this->ResumeGraphics();
 }
 
 // FUNCTION: EXE 0x677e63
@@ -850,10 +771,10 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
         break;
     }
     case EE_SCREENS_UI_OP_POST_GFX_ALL: EEPostGraphicsAll(); break;
-    case EE_SCREENS_UI_OP_CLOSE_EDITOR: theUI->CloseScenarioEditor(); break;
-    case EE_SCREENS_UI_OP_ENTER_EDITOR: theUI->EnterScenarioEditor(inA != 0); break;
-    case EE_SCREENS_UI_OP_CANCEL_GAME: theUI->CancelGame(); break;
-    case EE_SCREENS_UI_OP_LOAD_FROM_EDITOR: theUI->StartLoadingFromEditor(); break;
+    case EE_SCREENS_UI_OP_CLOSE_EDITOR: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_CLOSE_EDITOR, 0, 0, 0); break;
+    case EE_SCREENS_UI_OP_ENTER_EDITOR: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_ENTER_EDITOR, inA != 0, 0, 0); break;
+    case EE_SCREENS_UI_OP_CANCEL_GAME: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_CANCEL_GAME, 0, 0, 0); break;
+    case EE_SCREENS_UI_OP_LOAD_FROM_EDITOR: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_LOAD_FROM_EDITOR, 0, 0, 0); break;
     case EE_SCREENS_UI_OP_TEST_SCENARIO: theUI->TestScenario(); break;
     case EE_SCREENS_UI_OP_REFRESH_GROUP: theMain->mRefreshGroup = true; break;
     case EE_SCREENS_UI_OP_ERROR_HAS_CALLBACK: return reinterpret_cast<EEUIFErrorCallbackData*>(inA)->mCallback != NULL;
@@ -913,13 +834,13 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
         theMain->Rust(EE_SCREENS_MF_DO_INFO_PAUSE, inA != 0);
         break;
     case EE_SCREENS_UI_OP_CIV_BUILDER:
-        if (inC != 0) theUI->ShowCivilizationBuilder(0, false, true);
-        else theUI->ShowCivilizationBuilder(inA, *reinterpret_cast<bool*>(&inB), false);  // STAND-IN (owner 2026-11-01): re-typing read, 0x278b46 pushes the raw dword
+        // (STAND-IN, owner 2026-11-01: the flag is the low byte of the raw dword 0x278b46 pushes)
+        ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_CIV_BUILDER, inC != 0 ? 0 : inA, inC != 0 ? 0 : (uint8_t)inB, inC != 0);
         break;
     case EE_SCREENS_UI_OP_POST_EVENT: gUserInterface->PostEvent(reinterpret_cast<UIEvent*>(inA), NULL); break;
     case EE_SCREENS_UI_OP_HIDE_MESSAGES: theMain->Rust(EE_SCREENS_MF_DO_HIDE_MESSAGES); break;
     case EE_SCREENS_UI_OP_SELECT_TAB: gUIManager->mScenarioEditorForm->SelectTab((unsigned char)inA, inB); break;
-    case EE_SCREENS_UI_OP_RESTART: theUI->RestartGame(); break;
+    case EE_SCREENS_UI_OP_RESTART: ee_screens_ui_member(theUI, EE_SCREENS_UG_DO_RESTART, 0, 0, 0); break;
     case EE_SCREENS_UI_OP_SAVED_GROUP: static_cast<EEUIBSavedGroup*>(theMain->GetControl(inA))->Refresh(); break;
     case EE_SCREENS_UI_OP_SELECT_SERVER: theUI->OpenSelectServer(); break;
     case EE_SCREENS_UI_OP_MOTD:
@@ -978,30 +899,6 @@ void EEUserInterface::OpenIMECompositionString()
 long EEUserInterface::Redo()
 {
     return ee_screens_actions_redo();
-}
-
-// FUNCTION: EXE 0x679013
-// Restarts the single player game: a fresh local server, the splash form, then reloads the game
-void EEUserInterface::RestartGame()
-{
-    this->PauseGraphics();
-    gPhysics->mThread->Post(0x402, NULL, NULL, true);
-    while (gPhysics->mTimerRunning)
-        PlatSleep(1);
-    if (gCommunications != NULL)
-        delete gCommunications;
-    gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
-    static_cast<EEServer*>(gCommunications)->StartThreads();
-    this->LeaveMap(gUIManager->GetFormByID(kFormSplash), false);
-    gGameScreenActive = true;
-    static_cast<EEServer*>(gCommunications)->AllowNewPlayers(false);
-    static_cast<EEServer*>(gCommunications)->mNumLoadResponses = 0;
-    static_cast<EEServer*>(gCommunications)->mLoadState = 1;
-    static_cast<EEServer*>(gCommunications)->SetGameState(2);
-    static_cast<EEServer*>(gCommunications)->SetNumHumanPlayers(1);
-    static_cast<EEServer*>(gCommunications)->SetIsMultiplayerSession(false);
-    gDataPreLoading->PostLoadGame(true, false);
-    this->ResumeGraphics();
 }
 
 // FUNCTION: EXE 0x679139
