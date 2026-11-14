@@ -5155,6 +5155,38 @@ Better on land, still far from the C++. The walls stay OPEN.
 
 The trace prints `wall.way route|cells tiles=`. 0 script errors. Determinism with the asynchronous route (land, seeds
 2 and 6, 90 minutes, --repeat 2, walls in both) is identical.
+### 8.80 Stage 3: the baselines without the idle human, and the standing army counted as the C++ counts it (2026-11-13, EE-SIM)
+
+EE-SIM now allies the idle human seat with every computer at the start, so no AI attacks it (main d9a854ff). Every
+earlier port-against-C++ number had that seat soaking up attacks. The three KeepStandingArmy counts of §8.79 were
+benched again:
+- the port's (the units standing);
+- the C++'s (CountMilitaryUnits(false, true): only the military asked for and being made);
+- the C++'s plus the free soldiers.
+
+The C++ was unchanged, the setup balanced, with 32 seeds, and 64 for the land deciding pair.
+
+| | land, 90 min: port won-lost (close) | port's citizens/army at 40 min | WW2 + cheats, 45 min: won-lost (close) | port's citizens/army at 20 min |
+|---|---|---|---|---|
+| the port's count, seeds 2-33 | 13-12 (7) | 46.9/7.9 | 0-6 (26) | 47.3/23.6 |
+| the port's count, seeds 34-65 | 7-21 (4) | 40.8/8.2 | | |
+| **the port's count, 64 seeds** | **20-33 (11)** | | | |
+| the C++'s count, seeds 2-33 | 12-14 (6) | 43.3/9.2 | 0-3 (29) | 44.7/28.7 |
+| the C++'s count, seeds 34-65 | 10-18 (4) | 39.8/8.0 | | |
+| **the C++'s count, 64 seeds** | **22-32 (10)** | | | |
+| the C++'s plus the free soldiers, seeds 2-33 | 12-14 (6) | 43.1/8.1 | 0-1 (31) | 45.6/25.1 |
+
+Readings:
+- **The idle human was most of the late-start gap.** With the seat out of reach, the port at the WW2 start has
+  47.3 citizens at 20 minutes against the C++'s 52.3, where §8.78 had 32.5 against 49.2. Most games end close.
+- **Counting as the C++ does is no worse on land** (64 seeds: 22-32 against 20-33). At the late start it takes the
+  port's army past the C++'s (28.7 against 24.8 at 20 minutes) and loses fewer games (0-3 against 0-6).
+- **Kept, by the rule** (parity with the C++ we are replacing): the port's KeepStandingArmy counts the military asked
+  for and being made, as the C++'s does.
+- **On land the C++ still leads the port over 64 seeds**, about 22-32. The port's citizens fall behind after 30
+  minutes (40 against 56 at 40 minutes in seeds 34-65). That is the next stage-3 item, now on a true 1v1 bench.
+
+0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
