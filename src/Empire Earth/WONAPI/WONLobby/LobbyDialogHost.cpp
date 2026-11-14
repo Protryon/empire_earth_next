@@ -389,6 +389,26 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::AdaptersFree: delete reinterpret_cast<std::vector<LobbyNetAddress>*>(a); return 0;
     case Op::ListGetSel: return (intptr_t)aList->GetSelItem();
     case Op::AdapterHost: return (intptr_t)reinterpret_cast<NetworkAdapterListItem*>(a)->mHost;
+    // round 3: CreditsDialog
+    case Op::AddRef: aComp->AddRef(); return 0;
+    case Op::CreditsPlace: {
+        Component* aButton = reinterpret_cast<Component*>(b);
+        Component* aParent = aButton->mParent;
+        aDialog->Fn2F6140(reinterpret_cast<Component*>(a), 0x5003, aButton, aParent->Left(), aParent->Top(), 0, 0, 0);
+        return 0;
+    }
+    case Op::AddChild: aDialog->AddChild(reinterpret_cast<Component*>(a)); return 0;
+    case Op::ScrollStart: reinterpret_cast<ScrollingTextComponent*>(a)->Start(); return 0;
+    case Op::ScrollStop: reinterpret_cast<ScrollingTextComponent*>(a)->Stop(); return 0;
+    case Op::ScrollReset: reinterpret_cast<ScrollingTextComponent*>(a)->Reset(); return 0;
+    case Op::ScrollAddLine:
+        reinterpret_cast<ScrollingTextComponent*>(a)->AddLine(*reinterpret_cast<const GUIString*>(b),
+                                                             (unsigned long)(uint32_t)c);
+        return 0;
+    case Op::DefaultFontStringWidth: {
+        const GUIString& aText = *reinterpret_cast<const GUIString*>(a);
+        return aDialog->GetDefaultFont()->GetStringWidth(aText, 0, aText.length());
+    }
     }
     return 0;
 }

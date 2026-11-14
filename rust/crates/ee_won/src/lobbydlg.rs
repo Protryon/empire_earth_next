@@ -46,6 +46,8 @@ pub enum EeWonLobbyDlgKind {
     BadUser = 12,
     /// ChooseNetworkAdapterDialog (round 3): InitLogic's adapter choice.
     ChooseAdapter = 13,
+    /// CreditsDialog (round 3): AccountLogic's credits, with the scrolling text it holds.
+    Credits = 14,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -293,6 +295,24 @@ pub enum EeWonLobbyDlgOp {
     ListGetSel,
     /// `((NetworkAdapterListItem*)a)->mHost`.
     AdapterHost,
+    // ---- round 3: CreditsDialog
+    /// `a->AddRef()` (a `SmartPtr` assignment's).
+    AddRef,
+    /// `Component* aParent = ((Component*)b)->mParent; this->Fn2F6140((Component*)a, 0x5003, (Component*)b,
+    /// aParent->Left(), aParent->Top(), 0, 0, 0)` (the scrolling text `a` in place of the credits button `b`).
+    CreditsPlace,
+    /// `this->AddChild((Component*)a)`.
+    AddChild,
+    /// `((ScrollingTextComponent*)a)->Start()`.
+    ScrollStart,
+    /// `((ScrollingTextComponent*)a)->Stop()`.
+    ScrollStop,
+    /// `((ScrollingTextComponent*)a)->Reset()`.
+    ScrollReset,
+    /// `((ScrollingTextComponent*)a)->AddLine(*(const GUIString*)b, (unsigned long)c)`.
+    ScrollAddLine,
+    /// `this->GetDefaultFont()->GetStringWidth(t, 0, t.length())` of the string `a`.
+    DefaultFontStringWidth,
 }
 
 /// The inward calls (the shells' methods).
@@ -343,6 +363,16 @@ pub enum EeWonLobbyDlgCall {
     GetIds,
     /// ChooseNetworkAdapterDialog: `GetSelectedAddress()`.
     SelectedAddress,
+    /// CreditsDialog's constructor: `mScrollingText = (ScrollingTextComponent*)a` (held).
+    HoldScrollText,
+    /// CreditsDialog: `StartScrolling()`.
+    StartScrolling,
+    /// CreditsDialog: `StopScrolling()`.
+    StopScrolling,
+    /// CreditsDialog: `ResetScrolling()`.
+    ResetScrolling,
+    /// CreditsDialog: `AddLine(*(const GUIString*)a, (Component*)b, (unsigned long)c)`.
+    AddLine,
 }
 
 /// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
@@ -431,6 +461,10 @@ static OK_CANCEL: [EeWonLobbyDlgSlot; 7] = [
     slot!(c"Back", c"OkCancelDialog.cpp", 33, Frame),
 ];
 static ROOM: [EeWonLobbyDlgSlot; 0] = [];
+static CREDITS: [EeWonLobbyDlgSlot; 2] = [
+    slot!(c"CreditsButton", c"CreditsDialog.cpp", 271, Button),
+    slot!(c"CancelButton", c"CreditsDialog.cpp", 272, Button),
+];
 static TOU: [EeWonLobbyDlgSlot; 4] = [
     slot!(c"Browser", c"TOUDialog.cpp", 30, Browser),
     slot!(c"AgreeCheck", c"TOUDialog.cpp", 31, Button),
@@ -471,6 +505,7 @@ pub fn slots(kind: EeWonLobbyDlgKind) -> &'static [EeWonLobbyDlgSlot] {
         EeWonLobbyDlgKind::Tou => &TOU,
         EeWonLobbyDlgKind::BadUser => &BAD_USER,
         EeWonLobbyDlgKind::ChooseAdapter => &CHOOSE_ADAPTER,
+        EeWonLobbyDlgKind::Credits => &CREDITS,
     }
 }
 
@@ -531,6 +566,7 @@ const BU_SIMPLE_LIST: usize = 1;
 const BU_BOX: usize = 2;
 const BU_SIMPLE_BOX: usize = 3;
 const AD_LIST: usize = 0;
+const CD_CREDITS: usize = 0;
 /// `HTTPDocType_TOU` (WONRouting.h): the terms of use document.
 const HTTPDOC_TYPE_TOU: isize = 1;
 
@@ -554,6 +590,8 @@ pub struct EeWonLobbyDlg {
     need_gen_html: Cell<bool>,
     /// BadUserDialog's `mIsSimple` (false from its constructor).
     is_simple: Cell<bool>,
+    /// CreditsDialog's `mScrollingText` (its first member: released after the controls).
+    scroll_text: Cell<isize>,
 }
 
 impl EeWonLobbyDlg {
@@ -570,6 +608,7 @@ impl EeWonLobbyDlg {
             start_tick: Cell::new(0),
             need_gen_html: Cell::new(false),
             is_simple: Cell::new(false),
+            scroll_text: Cell::new(0),
         }
     }
 
@@ -616,6 +655,12 @@ impl EeWonLobbyDlg {
         }
         if self.kind == EeWonLobbyDlgKind::CreateRoom {
             self.check_input();
+        }
+        if self.kind == EeWonLobbyDlgKind::Credits {
+            // the scrolling text in place of the hidden credits button (UpdateCredits was empty)
+            self.op(Op::CreditsPlace, self.scroll_text.get(), self.ctl(CD_CREDITS), 0);
+            self.op(Op::AddChild, self.scroll_text.get(), 0, 0);
+            self.on(CD_CREDITS, Op::SetVisible, 0, 0);
         }
         if self.kind == EeWonLobbyDlgKind::Tou {
             self.on(TOU_ACCEPT, Op::ButtonSetControlId, 1, 0);
@@ -796,7 +841,8 @@ impl EeWonLobbyDlg {
             EeWonLobbyDlgKind::Status
             | EeWonLobbyDlgKind::OkCancel
             | EeWonLobbyDlgKind::Room
-            | EeWonLobbyDlgKind::BadUser => {}
+            | EeWonLobbyDlgKind::BadUser
+            | EeWonLobbyDlgKind::Credits => {}
         }
     }
 
@@ -1011,6 +1057,29 @@ impl EeWonLobbyDlg {
                     return self.selected_address() as isize;
                 }
             }
+            C::HoldScrollText => {
+                // the SmartPtr assignment: nothing for the same pointer, else the old one released, the new one held
+                let old = self.scroll_text.get();
+                if old != a {
+                    if old != 0 {
+                        self.op(Op::Release, old, 0, 0);
+                    }
+                    self.scroll_text.set(a);
+                    if a != 0 {
+                        self.op(Op::AddRef, a, 0, 0);
+                    }
+                }
+            }
+            C::StartScrolling => {
+                self.op(Op::ScrollStart, self.scroll_text.get(), 0, 0);
+            }
+            C::StopScrolling => {
+                self.op(Op::ScrollStop, self.scroll_text.get(), 0, 0);
+            }
+            C::ResetScrolling => {
+                self.op(Op::ScrollReset, self.scroll_text.get(), 0, 0);
+            }
+            C::AddLine => self.credits_add_line(a, b, c as u32),
         }
         0
     }
@@ -1162,13 +1231,29 @@ impl EeWonLobbyDlg {
         );
     }
 
-    /// The destructor: the controls released in reverse member order (the `SmartPtr` members' destruction).
+    /// CreditsDialog::AddLine: the component `comp` widened to the line (its default font's width and 20), the line
+    /// added to the scrolling text.
+    fn credits_add_line(&self, text: isize, comp: isize, color: u32) {
+        let width = (self.op(Op::DefaultFontStringWidth, text, 0, 0) as i32).wrapping_add(20);
+        if width > self.op(Op::Width, comp, 0, 0) as i32 {
+            let height = self.op(Op::Height, comp, 0, 0);
+            self.op(Op::SetSize, comp, width as isize, height);
+        }
+        self.op(Op::ScrollAddLine, self.scroll_text.get(), text, color as isize);
+    }
+
+    /// The destructor: the controls released in reverse member order (the `SmartPtr` members' destruction), then
+    /// CreditsDialog's scrolling text (its first member).
     fn release_all(&self) {
         for i in (0..slots(self.kind).len()).rev() {
             let c = self.controls[i].replace(0);
             if c != 0 {
                 self.op(Op::Release, c, 0, 0);
             }
+        }
+        let s = self.scroll_text.replace(0);
+        if s != 0 {
+            self.op(Op::Release, s, 0, 0);
         }
     }
 }

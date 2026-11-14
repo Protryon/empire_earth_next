@@ -4105,6 +4105,8 @@ enum class EeWonLobbyDlgKind : uint32_t {
   BadUser = 12,
   /// ChooseNetworkAdapterDialog (round 3): InitLogic's adapter choice.
   ChooseAdapter = 13,
+  /// CreditsDialog (round 3): AccountLogic's credits, with the scrolling text it holds.
+  Credits = 14,
 };
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -4285,6 +4287,23 @@ enum class EeWonLobbyDlgOp : uint32_t {
   ListGetSel,
   /// `((NetworkAdapterListItem*)a)->mHost`.
   AdapterHost,
+  /// `a->AddRef()` (a `SmartPtr` assignment's).
+  AddRef,
+  /// `Component* aParent = ((Component*)b)->mParent; this->Fn2F6140((Component*)a, 0x5003, (Component*)b,
+  /// aParent->Left(), aParent->Top(), 0, 0, 0)` (the scrolling text `a` in place of the credits button `b`).
+  CreditsPlace,
+  /// `this->AddChild((Component*)a)`.
+  AddChild,
+  /// `((ScrollingTextComponent*)a)->Start()`.
+  ScrollStart,
+  /// `((ScrollingTextComponent*)a)->Stop()`.
+  ScrollStop,
+  /// `((ScrollingTextComponent*)a)->Reset()`.
+  ScrollReset,
+  /// `((ScrollingTextComponent*)a)->AddLine(*(const GUIString*)b, (unsigned long)c)`.
+  ScrollAddLine,
+  /// `this->GetDefaultFont()->GetStringWidth(t, 0, t.length())` of the string `a`.
+  DefaultFontStringWidth,
 };
 
 /// The inward calls (the shells' methods).
@@ -4333,6 +4352,73 @@ enum class EeWonLobbyDlgCall : uint32_t {
   GetIds,
   /// ChooseNetworkAdapterDialog: `GetSelectedAddress()`.
   SelectedAddress,
+  /// CreditsDialog's constructor: `mScrollingText = (ScrollingTextComponent*)a` (held).
+  HoldScrollText,
+  /// CreditsDialog: `StartScrolling()`.
+  StartScrolling,
+  /// CreditsDialog: `StopScrolling()`.
+  StopScrolling,
+  /// CreditsDialog: `ResetScrolling()`.
+  ResetScrolling,
+  /// CreditsDialog: `AddLine(*(const GUIString*)a, (Component*)b, (unsigned long)c)`.
+  AddLine,
+};
+
+/// The ops (`a` the `Graphics*` of a paint or a `GUIString*`; `b` a `GUIString*`; `x`, `y`, `w`, `h` as named).
+enum class EeWonScrollTextOp : uint32_t {
+  /// `Width()` of the component.
+  Width = 1,
+  /// `Height()` of the component.
+  Height,
+  /// `Invalidate()`.
+  Invalidate,
+  /// `RequestTimer(x != 0)`.
+  RequestTimer,
+  /// `new GUIString(*(const GUIString*)a)`: a line's copy (freed by `LineFree`).
+  LineNew,
+  /// `delete (GUIString*)a`.
+  LineFree,
+  /// `Component::Paint(*(Graphics*)a)`.
+  BasePaint,
+  /// `g.SetFont(GetDefaultFont())`.
+  SetDefaultFont,
+  /// `g.SetColor((DWORD)x)`.
+  SetColor,
+  /// `g.SetSysColor(StandardColor_3DHilight)`.
+  SysHilight,
+  /// `g.SetSysColor(StandardColor_3DShadow)`.
+  SysShadow,
+  /// `g.FillRect(x, y, w, h)`.
+  FillRect,
+  /// `g.DrawRect(x, y, w, h)`.
+  DrawRect,
+  /// `g.mFont->GetHeight()`.
+  FontHeight,
+  /// `g.mColor`.
+  Color,
+  /// `g.mFont->GetStringWidth(*(const GUIString*)b)`.
+  StringWidth,
+  /// `g.DrawString(*(const GUIString*)b, x, y)`.
+  DrawString,
+};
+
+/// The inward calls.
+enum class EeWonScrollTextCall : uint32_t {
+  /// `AddLine(*(const GUIString*)a, (unsigned long)b)`.
+  AddLine = 1,
+  /// `TimerEvent(a)`: 1 (the original always answered true).
+  Timer,
+  /// `Paint(*(Graphics*)a)`.
+  Paint,
+  /// `Start()`.
+  Start,
+  /// `Stop()`.
+  Stop,
+  /// `Reset()`.
+  Reset,
+  /// a member: 0 the scroll top, 1 the text's height, 2 the time since the last scroll, 3 the last colour, 4 the
+  /// number of lines, 5 the scroll period.
+  Field,
 };
 
 /// A container's key kind (its comparator).
@@ -5862,6 +5948,9 @@ struct EeWonRouteOp;
 /// The Rust ScrollArea.
 struct EeWonScrollPane;
 
+/// One scrolling text's Rust half.
+struct EeWonScrollText;
+
 /// The Rust Scrollbar.
 struct EeWonScrollbar;
 
@@ -7148,6 +7237,16 @@ using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
                                          ptrdiff_t a,
                                          ptrdiff_t b,
                                          ptrdiff_t c);
+
+/// The host: `(component, op, a, b, x, y, w, h) -> result`.
+using EeWonScrollTextHostFn = ptrdiff_t(*)(void *comp,
+                                           EeWonScrollTextOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           int32_t x,
+                                           int32_t y,
+                                           int32_t w,
+                                           int32_t h);
 
 /// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
 /// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
@@ -12961,6 +13060,24 @@ ptrdiff_t ee_won_lobbydlg_call(const EeWonLobbyDlg *dlg,
                                ptrdiff_t a,
                                ptrdiff_t b,
                                ptrdiff_t c);
+
+/// A new scrolling text for the C++ component `comp`.
+EeWonScrollText *ee_won_scrolltext_new(void *comp, EeWonScrollTextHostFn host);
+
+/// Frees the lines (front to back) and the object.
+///
+/// # Safety
+/// `st` came from `ee_won_scrolltext_new` (or is NULL) and is not used again.
+void ee_won_scrolltext_free(EeWonScrollText *st);
+
+/// One inward call (`EeWonScrollTextCall`).
+///
+/// # Safety
+/// `st` is live; the call's arguments as documented.
+ptrdiff_t ee_won_scrolltext_call(const EeWonScrollText *st,
+                                 EeWonScrollTextCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b);
 
 /// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
 ///

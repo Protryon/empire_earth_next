@@ -78,51 +78,39 @@ public:
     const GUIString& GetExplanation() { return this->InputText(2); }
     unsigned long GetNumSeconds() { return (unsigned long)this->LCall(EeWonLobbyDlgCall::NumSeconds); }
 };
-// Credits: CreditLineInfo is one line of text with its colour; ScrollingTextComponent (0x54 bytes) scrolls them.
-class CreditLineInfo {
-protected:
-    GUIString mLine; // 0x00
-    DWORD mColor; // 0x04
-public:
-    CreditLineInfo(const GUIString& text,DWORD color) {this->mLine=text;this->mColor=color;}
-    GUIString GetLine(); // 0x7f7450; returns a copy
-    DWORD GetColor() {return this->mColor;}
-};
-typedef std::list<CreditLineInfo> CreditsList;
+// Credits (R6 WONLobby round 3): ScrollingTextComponent's lines (each a GUIString copy and its colour), scroll clock,
+// paint and fades are ee_won scrolltext.rs (its host is in CreditsDialog.cpp); CreditsDialog is the lobby dialog kind
+// Credits (its two buttons, the scrolling text it holds and places, AddLine's widening).
 class ScrollingTextComponent : public Component {
-protected:
-    SmartPtr<Font> mFont; // 0x30
-    CreditsList mLines; // 0x34 allocator, 0x38 head, 0x3c count
-    DWORD mLastColor; // 0x40
-    int mTimeSinceLastScroll; // 0x44
-    int mScrollSpeed; // 0x48
-    int mScrollTop; // 0x4c
-    int mTotalTextHeight; // 0x50
 public:
     ScrollingTextComponent(); // 0x7f6de0
     virtual ~ScrollingTextComponent(); // 0x7f6e90
-    virtual void Paint(Graphics&); // slot 0x18: 0x7f71b0
-    virtual bool TimerEvent(int); // slot 0x44: 0x7f70b0
-    void Start(); // 0x7f6f50; starts the scroll timer
-    void Stop(); // 0x7f6f70; stops the scroll timer
-    void Reset(); // 0x7f6f80; sets the scroll position to the component height
-    void AddLine(const GUIString&,unsigned long); // 0x7f6f90
+    virtual void Paint(Graphics& inGraphics) { this->SCall(EeWonScrollTextCall::Paint, (intptr_t)&inGraphics); }
+    virtual bool TimerEvent(int inDelta) { return this->SCall(EeWonScrollTextCall::Timer, inDelta) != 0; }
+    void Start() { this->SCall(EeWonScrollTextCall::Start); }
+    void Stop() { this->SCall(EeWonScrollTextCall::Stop); }
+    void Reset() { this->SCall(EeWonScrollTextCall::Reset); }
+    void AddLine(const GUIString& inText, unsigned long inColor)
+    {
+        this->SCall(EeWonScrollTextCall::AddLine, (intptr_t)&inText, (intptr_t)(uint32_t)inColor);
+    }
+    EeWonScrollText* mScroll;
+private:
+    intptr_t SCall(EeWonScrollTextCall c, intptr_t a = 0, intptr_t b = 0) { return ee_won_scrolltext_call(this->mScroll, c, a, b); }
 };
-// CreditsDialog: 0xa4 bytes; the destructor is implicit.
-class CreditsDialog : public Dialog {
-protected:
-    void UpdateCredits(); // empty: InitComponent calls the shared empty function at 0x8142a0
+class CreditsDialog : public LobbyRustDialog {
 public:
-    CreditsDialog();
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x7fa1f0, shared with ChooseNetworkAdapterDialog
-    void StartScrolling();
-    void StopScrolling();
-    void ResetScrolling();
-    void AddLine(const GUIString&,Component*,unsigned long);
-    SmartPtr<ScrollingTextComponent> mScrollingText; // 0x98
-    SmartPtr<Button> mCreditsButton; // 0x9c
-    SmartPtr<Button> mCloseButton; // 0xa0
+    CreditsDialog() : LobbyRustDialog(EeWonLobbyDlgKind::Credits)
+    {
+        this->LCall(EeWonLobbyDlgCall::HoldScrollText, (intptr_t) new ScrollingTextComponent);
+    }
+    void StartScrolling() { this->LCall(EeWonLobbyDlgCall::StartScrolling); }
+    void StopScrolling() { this->LCall(EeWonLobbyDlgCall::StopScrolling); }
+    void ResetScrolling() { this->LCall(EeWonLobbyDlgCall::ResetScrolling); }
+    void AddLine(const GUIString& inText, Component* inComponent, unsigned long inColor)
+    {
+        this->LCall(EeWonLobbyDlgCall::AddLine, (intptr_t)&inText, (intptr_t)inComponent, (intptr_t)(uint32_t)inColor);
+    }
 };
 // R6 WONLobby round 3: TOUDialog, ChooseNetworkAdapterDialog, RoomDialog and BadUserDialog are lobby dialog kinds
 // (their controls, flags and methods in ee_won lobbydlg.rs; the list rows BadUserItem and NetworkAdapterListItem stay

@@ -10,6 +10,8 @@ const GOLDEN: &str = include_str!("golden_lobbydlg.txt");
 /// round 3's kinds (RoomDialog, TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog), recorded by
 /// tests/won/won_lobbyscr_test.cpp the same way
 const GOLDEN_SCR: &str = include_str!("golden_lobbyscr.txt");
+/// CreditsDialog (kind 14), recorded by tests/won/won_credits_test.cpp (`--print-dialog`)
+const GOLDEN_CREDITS: &str = include_str!("golden_credits.txt");
 
 struct Replay {
     lines: Vec<&'static str>,
@@ -114,6 +116,11 @@ fn call_of(n: u32) -> EeWonLobbyDlgCall {
         C::SetUserList,
         C::GetIds,
         C::SelectedAddress,
+        C::HoldScrollText,
+        C::StartScrolling,
+        C::StopScrolling,
+        C::ResetScrolling,
+        C::AddLine,
     ][n as usize - 1]
 }
 
@@ -134,6 +141,7 @@ fn kind_of(n: u32) -> EeWonLobbyDlgKind {
         K::Tou,
         K::BadUser,
         K::ChooseAdapter,
+        K::Credits,
     ][n as usize]
 }
 
@@ -186,6 +194,16 @@ fn golden_replay() {
 fn golden_replay_of_the_screens() {
     let n = replay(GOLDEN_SCR).unwrap();
     assert!(n >= 60, "{n} sequences");
+}
+
+#[test]
+fn golden_replay_of_the_credits() {
+    let n = replay(GOLDEN_CREDITS).unwrap();
+    assert!(n >= 60, "{n} sequences");
+    // the scrolling text placed and its button hidden, as recorded
+    let place = format!("op {} ", EeWonLobbyDlgOp::CreditsPlace as u32);
+    let changed = GOLDEN_CREDITS.replacen(&place, &format!("op {} ", EeWonLobbyDlgOp::AddChild as u32), 1);
+    assert!(replay(Box::leak(changed.into_boxed_str())).is_err());
 }
 
 #[test]
@@ -263,7 +281,7 @@ fn ops() -> Vec<EeWonLobbyDlgOp> {
 
 #[test]
 fn every_table_has_distinct_names_within_its_kind() {
-    for k in 0..14 {
+    for k in 0..15 {
         let t = slots(kind_of(k));
         assert!(t.len() <= MAX_SLOTS);
         let mut names: Vec<&str> = t.iter().map(slot_name).collect();
