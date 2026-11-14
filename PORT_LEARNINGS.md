@@ -14208,3 +14208,84 @@ over the unmodified unit with traced fakes, mutations, a cargo replay).
   renderer, the effects and the graphic objects: a census commit first; 'GEModel Load.cpp'), GETerrainMesh,
   GERasterizer, GEBitmap, GEFontBitmap, GETransformation's member copies. GETexture.cpp keeps 113 logic lines, the
   host's switch.
+
+## R4.4, sixteenth round: the effects sweep over every 3D kind an entry point makes; the hurricane, the nuclear explosion and the energy wave whole in Rust on EEE3DRust (ee_gfx effect_hurricane.rs, effect_nuclear.rs; branch rust-gfx22, 2026-11-13)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 20,627 lines before the round; 20,635 after the sweep
+(+8 TEST ONLY); 20,322 after the hurricane (-313); 19,868 after the nuclear explosion and energy wave (-454).
+`EEE3DHurricane`, `EEE3DNuclearExplosion` and `EEE3DEnergyWave` (`.cpp` and `.h`) deleted.
+
+| Commit | What | Graphics Thread C++ |
+|---|---|---|
+| 97cad877 | the effects sweep extended (23 cases more), its golden from f839d277 | +8 (TEST ONLY) |
+| 55d8714f | the hurricane whole in Rust | -313 |
+| f2d80231 | merge of `rust` 94898cb2 (clean; the two scenario-editor includes `rust_includes.py` re-adds not committed) | |
+| b6daf9f6 | the nuclear explosion and the energy wave whole in Rust | -454 |
+
+- **The sweep first, over every 3D kind an entry point makes.** `EEEffectCaptureSweep`'s list gains, after round
+  14's fifteen cases (their records unchanged): the hurricane (0x24), nuclear explosion (0x28) and energy wave (0x47)
+  on a unit, the goal (0x3c) at a point, the icon (2) on a unit and at a point, the tracer beam (0x40) between units
+  and unit to point, the command confirmation (0x41) on a unit and unit to point, the energy wall (0x34), damage vent
+  (0x35), farm (0x29), the smoke generators (0x2b on a unit and at a point, 0x2c, 0x1e), the particle emitter (0x3a on
+  a unit and at a point), the multi-effect (0x3b on a unit and at a point) and the volcano (0x20) at a point: 65
+  records a seed, 2,860 updates. The kinds made by other paths (rain, snow, storm, earthquake, marching line) are
+  not entry-point kinds and stay to the calamity and late profiles.
+  - 0x39 (the 3D particle at a point) is left out: its first row (6, "NOT IN USE HoolaHoop") faults in
+    `EEGraphicEffect::GetMedia` from `EEE3DParticle::SetUp` (the sweep's first run, EE-SIM FAULT c0000005; not tried
+    on the original). The game makes 0x39 only through the emitters, which the oracle profile covers.
+  - **The golden** is the original C++'s again: the sweep applied to f839d277 in a temporary worktree
+    (`../empire_earth_next-gfx22old`, its staging root under its own `build/`, removed after; the applied diff kept
+    as `build/gx22/sweep_old.patch`). Every EFSW record (each case's creation, save bytes, load, repair, second
+    save), EFST and EFMU byte-equal to the current tree's before any move.
+  - **Trap:** round 14's `build/gx20/sweep.patch` is the sweep's first version, without the first save's bytes in
+    EFSW; the golden must come from the sweep function as committed (the first old run gave equal EFMU/EFST and
+    different EFSW only because the records were shorter). Copy the whole `EEEffectCaptureSweep` into the old tree,
+    not the patch. And the old tree's build needs `build/clang/exe` made first (`link.rsp` is written there).
+- **The hurricane (0x24, `effect_hurricane.rs`).** The disease's shape (animation 13 and its sound through the
+  host's `animation`/`animation_sound`, the orbitals through `effect_orbit.rs`'s helpers, now `pub(crate)`), plus the
+  scale from a tenth growing over the first 30% of the duration and shrinking after the unit dies (7 at a tenth; the
+  original's `mHitPoints == 0`, `max`/`min` as its macros), and the linked effect 1 placed at a random tag point of
+  kind 6 of the graphic every `(0.5 - r) x int param 2 + int param 1` ms. Host: `spawn_count` (the list, read once a
+  call and kept in `Ask` for `spawn_at`), `spawn_at` (the point at the old frame around the unit, scaled by the size),
+  `spawn` (`CreatePlacedEffect`: its result is `Step`'s, as the original's). Facts gain `has_linked1` (the draws
+  happen only when the graphic effect has one). Pass 6 with clockwise culling restored after (table entries
+  `get_culling`/`set_culling`). Load and Save of time, frame, spawn timer, age and scale (format unchanged).
+- **The nuclear explosion (0x28) and the energy wave (0x47) (`effect_nuclear.rs`, record part `blast`).** The
+  explosion stands on the ground at its unit, or its tile's centre off the map (host `unit_tile`: on the map, the
+  class's tile size, the tile; `terrain_z`), flashes over the duration, rises over param 1 (7 once risen), and its
+  last step's scroll (param 2) is taken and cleared by the queue. Pass 6: the cloud (part 11) squashed by ee_ge's
+  `scale` (the engine's `GETransformation::Scale`) and lifted, the stem (part 9), both fading, their v coordinates
+  shifted for good in opposite directions (table entry `model_shift_v`: unlike the shield's and virus's scrolls there
+  is no restore, as the original), then the additive flash on the standing plane at the camera in front of
+  everything; fog, depth range, z buffer and compare restored. The wave: at the unit's complex position, its phase
+  over param 1 wrapped, its age over the duration; the queue takes the cloak test (host `unit_hidden`: the port's
+  R5a.3 test on `mComplexUnit`, not the beam's `dynamic_cast`) and the corners' heights (`floor_unsigned`, host
+  `space_tile`); pass 6 through `AddGroundQuad` (table entry `ground_quad`, its four heights copied for the
+  non-const C++ parameter). Load and Save as the originals: the explosion returns the first error, the wave only
+  the phase read's or write's result (the age's is ignored).
+- **Golden drivers** (`build/gx22/drv/make.py COMMIT|WORKTREE OUT KINDS`, round 15's generator patched by
+  `patch_make.py` and `patch2.py`: the world gains models 9 and 11 with vertex arrays, texture 9, the graphic's spawn
+  tag points, the unit's tile and class tile size, a map with mesh heights and space tiles, culling, the cloak and
+  players, `AddGroundQuad`, a placement that sometimes fails). Identical bytes: hurricane 300 effects (6,678 lines)
+  and 3,000 on seed 2 (67,490; 1,839 placements, 6,589 sounds); nuclear explosion and energy wave 300 (6,801) and
+  3,000 (65,901; 1,478 explosions, 1,522 waves, 4,725 ground quads).
+  - The first hurricane run differed only by a second `GetTagPoints` read in the stub's log (the host read the list
+    for the count and again for the point): the host now reads it once a call. A pure read, but keeping the call
+    sequence equal keeps the driver a byte compare.
+- **Lesson (tests):** the effects' random generator is one global the parallel cargo tests share, so asserting that
+  a call drew nothing (`random_seed()` unchanged) is racy: the Rust gate failed once on it. The hurricane's tests no
+  longer assert it; round 15's `effect_orbit_tests.rs` still does in two places (not changed this round).
+- **Not moved: the goal (0x3c).** `EEE3DGoal` derives from `EEE3DIcon` (still a C++ class over `effect_icon.rs`'s
+  record) and adds a countdown label drawn through `GEText` and the forms' `DrawClippedText`: it moves with the icon,
+  which needs the text draw in the table. The sweep records both from the C++ now.
+- **Behaviour:** none intended (each move's effects capture equals the golden of f839d277).
+- **Gates.** On the result merged with rust (94898cb2, at b6daf9f6): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,781 tests), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169 digests, late 170, calamity 183, effects 6), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected), and the tour (`fixture_game.py --exercise tour --play-seconds 60` on the open tree, under the harness lock) `RESULT PASS tour`. Per commit: the sweep's build 0/0 and its capture equal to the C++ run; the hurricane the build 0/0, the oracle at seeds 2-3 identical, the effects capture PASS, the Rust gate PASS (2,686 tests, after a rustfmt fix), rebuilt with the host's one-read spawn list and the effects capture PASS again; the nuclear explosion and energy wave (on the merged tree) the same, the Rust gate PASS (2,781) after the racy seed assertion was dropped. The tour's 60 s random map is not known to make any of the three moved kinds: it checks that the table and `EEE3DRust` changes leave the game drawing, not their draws.
+- **Only a tour or a person reaches:** the three kinds' draws through the new table entries (the hurricane's
+  clockwise culling and its restore: a missing restore would cull every later model's back faces; the explosion's
+  permanently shifted cloud and stem coordinates, its in-front flash and the depth range it restores; the wave's
+  ground quad), the hurricane's sound, and loading a saved game holding one (the sweep loads copies). Where they
+  appear: the hurricane and the anti-matter storm (calamities on a unit), the nuclear explosion (a nuclear bomb's
+  hit), the energy wave (the cloaking capitol).
+- **Next:** the icon with the goal (the table needs the text draw), the command confirmation, damage vent, energy
+  wall, multi-effect, tracer beam, farm and volcano (all now in the sweep, so each move is checked against the
+  original in a game world); the 2D twin (`EEE2DRust` over `EEEffect2D`) with a 2D sweep.
