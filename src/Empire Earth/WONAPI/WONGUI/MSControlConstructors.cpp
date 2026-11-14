@@ -140,11 +140,7 @@ namespace WONAPI {
 // Sets a check box's left-aligned text after the box, its focus rectangle around the text, and focus
 void MSCheckbox::Init()
 {
-    this->SetStandardTextColor(StandardColor_Text);
-    this->SetHorzAlignField(HorzAlign_Left);
-    this->SetFocusStyle(FocusStyle_AroundText);
-    this->SetLeftTextPad(MSCheckbox::mCheckboxWidth+4);
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
+    this->MCall(EeWonMsBtnCall::BoxInit,(intptr_t)EeWonMsBox::Checkbox,MSCheckbox::mCheckboxWidth);
 }
 // FUNCTION: WON 0x006ff3e0
 // Creates a check box

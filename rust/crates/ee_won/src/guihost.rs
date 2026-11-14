@@ -802,6 +802,9 @@ pub enum EeWonGuiOp {
     // text's calls are the label's `Wrap*` ops on `mText`, its paint the `Draw` op's text slot)
     /// a button's or component's method (`a` an `EeWonSkinBtn`; `b`, `c` its arguments).
     SkinBtn = 607,
+    /// the check box's or radio button's painter function on the Graphics `a` (`b` an `EeWonMsBox`):
+    /// `MSCheckbox::CheckboxPainter(*(Graphics*)a, this)` / `MSRadioButton::RadioPainter`.
+    SkinBoxPainter,
 }
 
 /// The button's and component's methods a skin button calls (`SkinBtn`).

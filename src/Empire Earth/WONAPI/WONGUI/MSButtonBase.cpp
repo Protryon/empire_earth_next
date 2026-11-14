@@ -35,6 +35,9 @@ static intptr_t SkinBtnOp(MSButtonBase* t, intptr_t which, intptr_t b, intptr_t 
     }
 }
 
+// the Rust's check box colour is StandardColor_Text (msbtnobj.rs SYS_TEXT)
+static_assert(StandardColor_Text==14,"msbtnobj.rs SYS_TEXT");
+
 extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
     (void)d;
@@ -52,6 +55,9 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
     case Op::WrapWidth: return t->mText->GetWidth();
     case Op::WrapHeight: return t->mText->GetHeight();
     case Op::SkinBtn: return SkinBtnOp(t,a,b,c);
+    case Op::SkinBoxPainter: // the subclass's replaceable painter function
+        if ((EeWonMsBox)b == EeWonMsBox::Checkbox) MSCheckbox::CheckboxPainter(*(Graphics*)a,(MSCheckbox*)t);
+        return 0;
     case Op::Draw: {
         WONDrawSlots aSlots;
         aSlots.mText = t->mText.get();

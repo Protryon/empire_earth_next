@@ -2929,6 +2929,9 @@ enum class EeWonGuiOp : uint32_t {
   WmSignal,
   /// a button's or component's method (`a` an `EeWonSkinBtn`; `b`, `c` its arguments).
   SkinBtn = 607,
+  /// the check box's or radio button's painter function on the Graphics `a` (`b` an `EeWonMsBox`):
+  /// `MSCheckbox::CheckboxPainter(*(Graphics*)a, this)` / `MSRadioButton::RadioPainter`.
+  SkinBoxPainter,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -4040,6 +4043,10 @@ enum class EeWonMsBtnCall : uint32_t {
   IncrementHorzTextPad,
   /// `IncrementVertTextPad(a, b)`.
   IncrementVertTextPad,
+  /// the subclass `a`'s (`EeWonMsBox`) `Init()`, its box `b` pixels wide.
+  BoxInit,
+  /// the subclass `a`'s `Paint(*b)`, its box `c` pixels high.
+  BoxPaint,
 };
 
 /// The inward calls of the list (`MultiListArea`'s virtuals and methods).
@@ -5374,6 +5381,13 @@ enum class EeWonMsBtnField : uint32_t {
   Transparent,
   /// `mAdjustHeightToFitText` (the flag alone).
   AdjustHeight,
+};
+
+/// The subclass whose box a `BoxInit` / `BoxPaint` call makes (`MSCheckbox`, `MSRadioButton`); the painter op's
+/// `b`.
+enum class EeWonMsBox : uint32_t {
+  /// `MSCheckbox`: its `CheckboxPainter`.
+  Checkbox = 0,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.

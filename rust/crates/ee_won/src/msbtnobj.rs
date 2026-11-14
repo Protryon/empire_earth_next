@@ -14,7 +14,8 @@ use std::cell::RefCell;
 use std::ffi::c_void;
 
 use crate::guidraw::{
-    EeWonDrawOp, EE_WON_DRAW_DOTTED_RECT, EE_WON_DRAW_SET_COLOR, EE_WON_DRAW_SET_SYS_COLOR, EE_WON_DRAW_TEXT,
+    EeWonDrawOp, EE_WON_DRAW_DOTTED_RECT, EE_WON_DRAW_FILL_RECT, EE_WON_DRAW_SET_COLOR, EE_WON_DRAW_SET_SYS_COLOR,
+    EE_WON_DRAW_TEXT, EE_WON_DRAW_TRANSLATE,
 };
 use crate::guihost::{EeWonGuiField as F, EeWonGuiHostFn, EeWonGuiOp as Op, EeWonSkinBtn as Sb};
 
@@ -24,10 +25,21 @@ const ALIGN_FAR: u8 = 2;
 /// `FocusStyle_AroundWindow`, `FocusStyle_AroundText`.
 const FOCUS_AROUND_WINDOW: u8 = 1;
 const FOCUS_AROUND_TEXT: u8 = 2;
-/// `StandardColor_3DHilight`, `_ButtonText`, `_GrayText`.
+/// `StandardColor_3DFace`, `_3DHilight`, `_ButtonText`, `_GrayText`, `_Text` (the C++ host asserts `_Text`).
+const SYS_3D_FACE: i32 = 1;
 const SYS_3D_HILIGHT: i32 = 2;
 const SYS_BUTTON_TEXT: i32 = 5;
 const SYS_GRAY_TEXT: i32 = 6;
+const SYS_TEXT: i32 = 14;
+
+/// The subclass whose box a `BoxInit` / `BoxPaint` call makes (`MSCheckbox`, `MSRadioButton`); the painter op's
+/// `b`.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonMsBox {
+    /// `MSCheckbox`: its `CheckboxPainter`.
+    Checkbox = 0,
+}
 
 /// A field of the button base (`Get` / `Set` calls). A set stores what the original's member held: the
 /// alignments, focus style and pads as `unsigned char`.
@@ -88,6 +100,10 @@ pub enum EeWonMsBtnCall {
     IncrementHorzTextPad,
     /// `IncrementVertTextPad(a, b)`.
     IncrementVertTextPad,
+    /// the subclass `a`'s (`EeWonMsBox`) `Init()`, its box `b` pixels wide.
+    BoxInit,
+    /// the subclass `a`'s `Paint(*b)`, its box `c` pixels high.
+    BoxPaint,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -328,6 +344,48 @@ impl EeWonMsButton {
         self.op(Op::WrapSetCentered, centered as isize, 0, 0);
     }
 
+    /// `MSCheckbox::Init`: left-aligned text after the box in the text colour, the focus around the text, and
+    /// focus wanted.
+    pub fn box_init(&self, kind: EeWonMsBox, box_width: i32) {
+        match kind {
+            EeWonMsBox::Checkbox => {
+                {
+                    let mut s = self.st.borrow_mut();
+                    s.standard_text_color = SYS_TEXT;
+                    s.text_color = -1;
+                    s.h_align = 0;
+                    s.focus_style = FOCUS_AROUND_TEXT;
+                    s.left_pad = box_width.wrapping_add(4) as u8;
+                }
+                self.sb(Sb::SetWantFocus, 1, 0);
+            }
+        }
+    }
+
+    /// `MSCheckbox::Paint`: the base's, the face unless transparent, the box placed by the vertical alignment
+    /// between the vertical pads and drawn by the subclass's painter function, then the text.
+    pub fn box_paint(&self, kind: EeWonMsBox, g: isize, box_height: i32) {
+        self.op(Op::BasePaint, g, 0, 0);
+        self.draw(g, EE_WON_DRAW_SET_SYS_COLOR, &[SYS_3D_FACE]);
+        if !self.st().transparent {
+            let (w, h) = (self.width(), self.height());
+            self.draw(g, EE_WON_DRAW_FILL_RECT, &[0, 0, w, h]);
+        }
+        let s = self.st();
+        let (t, b) = (s.top_pad as i32, s.bottom_pad as i32);
+        let rest = self.height().wrapping_sub(box_height).wrapping_sub(t).wrapping_sub(b);
+        let y = match s.v_align {
+            ALIGN_CENTER => rest / 2,
+            ALIGN_FAR => rest,
+            _ => 0,
+        };
+        self.draw(g, EE_WON_DRAW_TRANSLATE, &[0, t.wrapping_add(y)]);
+        self.op(Op::SkinBoxPainter, g, kind as isize, 0);
+        let t = self.st().top_pad as i32;
+        self.draw(g, EE_WON_DRAW_TRANSLATE, &[0, y.wrapping_neg().wrapping_sub(t)]);
+        self.draw_button_text(g, 0, 0);
+    }
+
     /// One inward call.
     pub fn call(&self, call: EeWonMsBtnCall, a: isize, b: isize, c: isize) -> isize {
         type C = EeWonMsBtnCall;
@@ -371,8 +429,25 @@ impl EeWonMsButton {
                 s.top_pad = s.top_pad.wrapping_add(ai as u8);
                 s.bottom_pad = s.bottom_pad.wrapping_add(bi as u8);
             }
+            C::BoxInit => {
+                if let Some(k) = box_of(ai) {
+                    self.box_init(k, bi);
+                }
+            }
+            C::BoxPaint => {
+                if let Some(k) = box_of(ai) {
+                    self.box_paint(k, b, c as i32);
+                }
+            }
         }
         0
+    }
+}
+
+fn box_of(v: i32) -> Option<EeWonMsBox> {
+    match v {
+        0 => Some(EeWonMsBox::Checkbox),
+        _ => None,
     }
 }
 

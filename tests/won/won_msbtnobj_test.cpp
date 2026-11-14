@@ -72,6 +72,7 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
         if (aChanged) sSizeChanged();
         return 0;
     }
+    case Op::SkinBoxPainter: break; // the painter function: traced with its Graphics and subclass
     case Op::WrapSetMaxWidth: sMaxWidth = (int)a; break;
     case Op::WrapSetCentered: sCentered = a != 0; break;
     case Op::WrapWidth: r = TextWidth(); break;
@@ -118,7 +119,8 @@ namespace orig {
 static const intptr_t kG = 0x6;
 enum { HorzAlign_Left, HorzAlign_Center, HorzAlign_Right };
 enum { VertAlign_Top, VertAlign_Center, VertAlign_Bottom };
-enum { StandardColor_3DFace = 1, StandardColor_3DHilight = 2, StandardColor_ButtonText = 5, StandardColor_GrayText = 6 };
+enum { StandardColor_3DFace = 1, StandardColor_3DHilight = 2, StandardColor_ButtonText = 5, StandardColor_GrayText = 6,
+       StandardColor_Text = 14 };
 enum FocusStyle { FocusStyle_None, FocusStyle_AroundWindow, FocusStyle_AroundText };
 static void Draw(int kind, int a = 0, int b = 0, int c = 0, int d = 0)
 {
@@ -253,6 +255,30 @@ struct MSButtonBase {
         case FocusStyle_AroundText: g.DrawDottedRect(x - 1, y - 1, textWidth + 2, textHeight + 2); break;
         }
     }
+    // MSControlConstructors.cpp's MSCheckbox::Init and MSCheckbox.cpp's Paint (the painter function through the host)
+    void CheckboxInit(int checkboxWidth)
+    {
+        this->mStandardTextColor = StandardColor_Text;
+        this->mTextColor = -1;
+        this->mHAlign = HorzAlign_Left;
+        this->mFocusStyle = FocusStyle_AroundText;
+        this->mLeftTextPad = checkboxWidth + 4;
+        S(Sb::SetWantFocus, 1);
+    }
+    void CheckboxPaint(Graphics& g, int checkboxHeight)
+    {
+        H(Op::BasePaint, kG);
+        g.SetSysColor(StandardColor_3DFace);
+        if (!this->mIsTransparent) g.FillRect(0, 0, this->Width(), this->Height());
+        int height = checkboxHeight;
+        int y = 0;
+        if (this->mVAlign == VertAlign_Center) y = (this->Height() - height - this->mTopTextPad - this->mBottomTextPad) / 2;
+        else if (this->mVAlign == VertAlign_Bottom) y = this->Height() - height - this->mTopTextPad - this->mBottomTextPad;
+        g.Translate(0, this->mTopTextPad + y);
+        H(Op::SkinBoxPainter, kG, 0);
+        g.Translate(0, -y - this->mTopTextPad);
+        this->DrawButtonText(g, 0, 0);
+    }
     int GetField(int f)
     {
         switch ((Bf)f) {
@@ -279,16 +305,16 @@ static void OrigSizeChanged() { sOrig->Virtual08(); }
 static void RustSizeChanged() { ee_won_msbtn_call(sRust, EeWonMsBtnCall::SizeChanged, 0, 0, 0); }
 
 enum { kText, kHorz, kVert, kFocusStyle, kHPad, kVPad, kIncH, kIncV, kColor, kStdColor, kTransparent, kAdjust,
-       kAdjustNow, kSize, kDesired, kDrawText, kGet, kWorld, kCalls };
+       kAdjustNow, kSize, kDesired, kDrawText, kGet, kWorld, kBoxInit, kBoxPaint, kCalls };
 static const char* kCallNames[kCalls] = {"text", "horz", "vert", "focus-style", "hpad", "vpad", "inc-h", "inc-v",
                                          "color", "std-color", "transparent", "adjust", "adjust-now", "size",
-                                         "desired", "draw-text", "get", "world"};
+                                         "desired", "draw-text", "get", "world", "box-init", "box-paint"};
 static unsigned sDriverSeed;
 static unsigned DR(unsigned n) { sDriverSeed = sDriverSeed * 69069u + 1u; return n ? (sDriverSeed >> 16) % n : 0; }
 
 static void Run(bool inRust)
 {
-    static const int kWeights[kCalls] = {5, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 3, 1, 4, 2, 6, 3, 4};
+    static const int kWeights[kCalls] = {5, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 3, 1, 4, 2, 6, 3, 4, 2, 5};
     int aTotal = 0;
     for (int i = 0; i < kCalls; i++) aTotal += kWeights[i];
     int r0 = (int)DR(aTotal), k = 0;
@@ -306,6 +332,8 @@ static void Run(bool inRust)
     case kDrawText: a = (int)DR(2); b = (int)DR(2); break;
     case kGet: a = 1 + (int)DR(11); break;
     case kWorld: a = (int)DR(64); break;
+    case kBoxInit: a = 0; b = DR(4) == 0 ? (int)DR(300) : 13; break; // the subclass, its box width
+    case kBoxPaint: a = 0; b = DR(4) == 0 ? (int)DR(40) : 13; break; // the subclass, its box height
     default: break;
     }
     char aLine[100];
@@ -341,6 +369,8 @@ static void Run(bool inRust)
         case kDesired: { int w = 0, h = 0; ee_won_msbtn_call(t, C::DesiredSize, (intptr_t)&w, (intptr_t)&h, 0); r = w * 1000 + h; break; }
         case kDrawText: ee_won_msbtn_call(t, C::DrawButtonText, orig::kG, a, b); break;
         case kGet: r = ee_won_msbtn_call(t, C::Get, a, 0, 0); break;
+        case kBoxInit: ee_won_msbtn_call(t, C::BoxInit, a, b, 0); break;
+        case kBoxPaint: ee_won_msbtn_call(t, C::BoxPaint, a, orig::kG, b); break;
         default: break;
         }
     } else {
@@ -363,6 +393,8 @@ static void Run(bool inRust)
         case kDesired: { int w = 0, h = 0; t->GetDesiredSize(w, h); r = w * 1000 + h; break; }
         case kDrawText: t->DrawButtonText(g, a, b); break;
         case kGet: r = t->GetField(a); break;
+        case kBoxInit: t->CheckboxInit(b); break;
+        case kBoxPaint: t->CheckboxPaint(g, b); break;
         default: break;
         }
     }

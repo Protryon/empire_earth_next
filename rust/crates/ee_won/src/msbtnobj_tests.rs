@@ -158,6 +158,8 @@ fn replay(lines: &[String]) -> Option<String> {
             "draw-text" => t.call(C::DrawButtonText, 6, a, b),
             "get" => t.call(C::Get, a, 0, 0),
             "world" => 0,
+            "box-init" => t.call(C::BoxInit, a, b, 0),
+            "box-paint" => t.call(C::BoxPaint, a, 6, b),
             name => return Some(format!("unknown call '{name}'")),
         };
         if let Some(w) = want {
