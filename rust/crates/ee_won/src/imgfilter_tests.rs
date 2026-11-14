@@ -274,3 +274,13 @@ fn scale_of_one_bit_rows_walks_the_bits() {
     assert_eq!(dst.bytes[0], 0b1100_1100);
     assert_eq!(dst.bytes[4], 0b1100_1100);
 }
+
+#[test]
+fn trim_of_a_single_filled_row_at_the_top() {
+    let mut img = Img::new(1, 4, 3);
+    img.bytes.iter_mut().for_each(|b| *b = 9);
+    img.bytes[1] = 2;
+    let px = img.px();
+    // SAFETY: the image's buffer
+    assert_eq!(unsafe { trim(&px, 9) }, Some((1, 0, 1, 1)));
+}
