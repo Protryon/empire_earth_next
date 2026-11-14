@@ -211,6 +211,7 @@ void Write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t i
     case EE_SCENARIO_WRITE_STATISTIC_ADD: thePlayer->mSavedGroups.Reset((long)inB, (long)inC); break;
     case EE_SCENARIO_WRITE_STATISTIC_SET: thePlayer->mSavedGroups.Set((long)inB, (long)inC); break;
     case EE_SCENARIO_WRITE_MINING_LIMIT: thePlayer->mMiningLimit = (long)inB; break;
+    case EE_SCENARIO_WRITE_CREATE_UNIT: EESMCreateUnit(theContext, inPlayer, (long)inB, inC != 0, (unsigned long)inD); break;
     case EE_SCENARIO_WRITE_TILE: theContext->mTiles->push_back(U2DPoint<long>((long)inB, (long)inC)); break;
     default: EESMObjectWrite(theContext, inOp, inB); break;   // the object's list
     }

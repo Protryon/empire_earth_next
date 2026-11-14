@@ -582,106 +582,76 @@ void EEChangeUnit(unsigned long, bool, EEUnit*, long, unsigned long, bool, long)
 
 // FUNCTION: EXE 0x5bd099
 // Creates units for the scenario object (a random min..max count per chosen owner) or copies of its existing ones,
-// placed by the object's rules and finished; a newly created set becomes the object's units
+// placed by the object's rules and finished; a newly created set becomes the object's units (the counts, owners and
+// classes: ee_scenario create.rs create_units; each unit EESMCreateUnit below)
 void EESMEffect::CreateUnits()
 {
-    std::vector<EEUnit*> theWallPieces;
-    std::vector<long> thePlayers;
-    std::vector<unsigned long> theCreatedUnits;
-    GE2DPoint theLocation;
-    GEVector theDirection;
     EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObject);
-    bool theCreate = false;
-    EEMap* theMap = gWorld.mMap;
     if (theObject == NULL)
         return;
-    unsigned long theCount;
-    if (!theObject->mIsSelectOnMap && (theObject->mUnits.size() <= 0 || theObject->mIsDynamic)) {
-        theCreatedUnits.clear();
-        theCount = gPhysics->GetRandom((long)theObject->GetMinCount(),(long)theObject->GetMaxCount());
-        theCreate = true;
-    } else
-        theCount = theObject->mUnits.size();
-    for (unsigned long i = 0; i < theCount; ++i) {
-        thePlayers.clear();
-        if (theCreate == true)
-            gWorld.mScenarioManager->ChoosePlayer(theObject->GetOwner(),&thePlayers,true);
-        else {
-            for (unsigned long j = 0; j < theCount; ++j) {
-                if (gWorld.GetUnit(theObject->mUnits[j]) == NULL)
-                    continue;
-                long thePlayerID = gWorld.GetUnit(theObject->mUnits[j])->mPlayer->mPlayerID;
-                thePlayers.push_back(thePlayerID);
-                break;
-            }
-        }
-        for (unsigned long p = 0; p < thePlayers.size(); ++p) {
-            long thePlayerID = thePlayers[p];
-            EEPlayer* thePlayer = gWorld.GetPlayer(thePlayerID);
-            if (thePlayer == NULL)
-                continue;
-            EEUnitClass* theClass;
-            long theUnitType;
-            if (theCreate == true) {
-                theUnitType = theObject->PickUnitType();
-                if (theUnitType < 0)
-                    continue;
-                theClass = gUnitClassTable[theUnitType];
-            } else {
-                EEUnit* theUnit = gWorld.GetUnit(theObject->mUnits[i]);
-                if (theUnit == NULL || theUnit->GetHitPoints() <= 0)
-                    continue;
-                theClass = theUnit->GetUnitClass();
-                theUnitType = theClass->GetUnitType();
-            }
-            if (theClass == NULL || !theObject->FindPlacement(theUnitType,theLocation,true))
-                continue;
-            EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(theClass->GetTechnology());
-            EEUnit* theUnit;
-            if (theNode != NULL && thePlayer->GetTechTree()->Get(theClass->GetTechnology())->mData->mKind == 6) {
-                theLocation.mX += 0.5f;
-                theLocation.mY += 0.5f;
-                EEPlanWall(theLocation, theLocation, theClass, thePlayer, false, 1, theWallPieces);
-                theUnit = *(theWallPieces.begin());
-                theWallPieces.clear();
-            } else {
-                theClass->IsLandBuilding();
-                theUnit = theClass->CreateUnit((long)theLocation.GetX(),(long)theLocation.GetY(),thePlayerID,false,NULL);
-            }
-            if (theUnit->mTileNode != NULL)
-                theUnit->GetComplexUnit()->SetBuilt(1,0,1);
-            if ((theUnit->GetUnitClass()->mDomains & kMovementAir) != 0) {
-                theUnit->GetComplexUnit()->SetFlightTime(theUnit->GetStats()->mFlightTime);
-                theUnit->GetComplexUnit()->SetAmmunition(theUnit->GetUnitClass()->mAmmunition);
-                theDirection.mX = (float)theMap->mSize * 0.5f - theLocation.GetX();
-                theDirection.mY = (float)theMap->mSize * 0.5f - theLocation.GetY();   // towards the map centre
-                theDirection.mZ = 0.0f;
-                theDirection.Normalize();
-                float theHeading = UMArcTan2(-theDirection.GetX(),theDirection.GetY());
-                GETransformation theTransformation(false);
-                theTransformation = theUnit->GetComplexUnit()->mPhysicalModel.GetLocation();
-                theTransformation.SetOrientationYPR(theHeading,0.0f,0.0f);
-                theUnit->GetComplexUnit()->SetTransformation(theTransformation,true);
-            }
-            if (theUnit->mTileNode != NULL && theUnit->GetComplexUnit()->GetStats()->mPower > 0)
-                theUnit->GetComplexUnit()->SetPower(theUnit->GetStats()->mPower);
-            thePlayer->AddPendingUnits(false,true);
-            gWorld.FlushQueuedPlacements();
-            gWorld.mMap->PlaceUnitOnGround(theUnit);
-            if (theObject->mHasAttributeCheck != 0)
-                EEChangeUnit(theObject->mAttribute,theObject->mIsAttributePercent,theUnit,theObject->mAttributeMin,
-                            theObject->mAttributeMax,theObject->mHasAttributeCheck == 2,kSMAttributeModeExactly);
-            if (theCreate == true) {
-                unsigned long theID = theUnit->GetUnitID();
-                theCreatedUnits.push_back(theID);
-            }
-            EESoundObject* theSound = theUnit->GetStats()->mCreationSound;
-            if (theSound != NULL && theUnit->GetPlayer()->mPlayerID == gWorld.mCurrentPlayer)
-                gSoundManager->Play(theSound->mSampleID,theSound->mVolume,0.0f,1.0f,false,NULL);
-        }
-    }
-    if (theCreate == true && theCreatedUnits.size() > 0)
+    std::vector<unsigned long> theCreatedUnits;
+    GE2DPoint theLocation;   // one for the loop, as the original's (a placement may answer true without writing it)
+    EESMHostContext theContext = {NULL, NULL, this, theObject};
+    theContext.mCreated = &theCreatedUnits;
+    theContext.mLocation = &theLocation;
+    EeScenarioHost theHost = EESMHost(&theContext);
+    if (ee_scenario_create_units(&theHost, (int32_t)this->mObject, theObject) && theCreatedUnits.size() > 0)
         theObject->SetUnits(theCreatedUnits);
+}
+
+// CreateUnits' unit for player inPlayerID (create.rs EE_SCENARIO_WRITE_CREATE_UNIT): of class gUnitClassTable[inUnitType]
+// when inCreate, else of the object's unit inIndex's class; placed, finished and kept when created
+void EESMCreateUnit(EESMHostContext* inContext, long inPlayerID, long inUnitType, bool inCreate, unsigned long inIndex)
+{
+    std::vector<EEUnit*> theWallPieces;
+    GEVector theDirection;
+    EESMObject* theObject = inContext->mObject;
+    GE2DPoint& theLocation = *inContext->mLocation;
+    EEPlayer* thePlayer = gWorld.GetPlayer(inPlayerID);
+    EEMap* theMap = gWorld.mMap;
+    EEUnitClass* theClass = inCreate ? gUnitClassTable[inUnitType] : gWorld.GetUnit(theObject->mUnits[inIndex])->GetUnitClass();
+    if (!theObject->FindPlacement(inUnitType, theLocation, true))
+        return;
+    EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(theClass->GetTechnology());
+    EEUnit* theUnit;
+    if (theNode != NULL && thePlayer->GetTechTree()->Get(theClass->GetTechnology())->mData->mKind == 6) {
+        theLocation.mX += 0.5f;
+        theLocation.mY += 0.5f;
+        EEPlanWall(theLocation, theLocation, theClass, thePlayer, false, 1, theWallPieces);
+        theUnit = *(theWallPieces.begin());
+        theWallPieces.clear();
+    } else {
+        theClass->IsLandBuilding();
+        theUnit = theClass->CreateUnit((long)theLocation.GetX(),(long)theLocation.GetY(),inPlayerID,false,NULL);
+    }
+    if (theUnit->mTileNode != NULL)
+        theUnit->GetComplexUnit()->SetBuilt(1,0,1);
+    if ((theUnit->GetUnitClass()->mDomains & kMovementAir) != 0) {
+        theUnit->GetComplexUnit()->SetFlightTime(theUnit->GetStats()->mFlightTime);
+        theUnit->GetComplexUnit()->SetAmmunition(theUnit->GetUnitClass()->mAmmunition);
+        theDirection.mX = (float)theMap->mSize * 0.5f - theLocation.GetX();
+        theDirection.mY = (float)theMap->mSize * 0.5f - theLocation.GetY();   // towards the map centre
+        theDirection.mZ = 0.0f;
+        theDirection.Normalize();
+        float theHeading = UMArcTan2(-theDirection.GetX(),theDirection.GetY());
+        GETransformation theTransformation(false);
+        theTransformation = theUnit->GetComplexUnit()->mPhysicalModel.GetLocation();
+        theTransformation.SetOrientationYPR(theHeading,0.0f,0.0f);
+        theUnit->GetComplexUnit()->SetTransformation(theTransformation,true);
+    }
+    if (theUnit->mTileNode != NULL && theUnit->GetComplexUnit()->GetStats()->mPower > 0)
+        theUnit->GetComplexUnit()->SetPower(theUnit->GetStats()->mPower);
+    thePlayer->AddPendingUnits(false,true);
+    gWorld.FlushQueuedPlacements();
+    gWorld.mMap->PlaceUnitOnGround(theUnit);
+    if (theObject->mHasAttributeCheck != 0)
+        EEChangeUnit(theObject->mAttribute,theObject->mIsAttributePercent,theUnit,theObject->mAttributeMin,
+                    theObject->mAttributeMax,theObject->mHasAttributeCheck == 2,kSMAttributeModeExactly);
+    if (inCreate)
+        inContext->mCreated->push_back(theUnit->GetUnitID());
+    EESoundObject* theSound = theUnit->GetStats()->mCreationSound;
+    if (theSound != NULL && theUnit->GetPlayer()->mPlayerID == gWorld.mCurrentPlayer)
+        gSoundManager->Play(theSound->mSampleID,theSound->mVolume,0.0f,1.0f,false,NULL);
 }
 
 

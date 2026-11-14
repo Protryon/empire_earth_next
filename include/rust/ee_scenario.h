@@ -198,6 +198,10 @@ constexpr static const uint32_t EE_SCENARIO_CONDITION_GAME_ATTRIBUTE = 6;
 
 constexpr static const uint32_t EE_SCENARIO_CONDITION_CHAT_CONTAINS = 7;
 
+/// One unit made for player `player` (the C++ `CreateUnits`' loop body): type `b`; `c` 1 for a created unit (the
+/// class `gUnitClassTable[b]`, the id kept for the object), 0 for a copy of the object's unit `d` (its class).
+constexpr static const uint32_t EE_SCENARIO_WRITE_CREATE_UNIT = 18;
+
 /// The most players a choice can list (`EEScenarioManager::ChoosePlayer`'s out buffer; the world has at most 17).
 constexpr static const size_t EE_SCENARIO_MAX_PLAYERS = 64;
 
@@ -1398,6 +1402,15 @@ uint32_t ee_scenario_find_placement(const EeScenarioHost *host,
 /// `host` and `area` must be valid for the call.
 void ee_scenario_area_tiles(const EeScenarioHost *host,
                             const EeScenarioAreaRecord *area);
+
+/// `EESMEffect::CreateUnits` over object `object` with its numbers `fields` (create.rs): whether it created units;
+/// each unit through `EE_SCENARIO_WRITE_CREATE_UNIT`.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` for a read.
+bool ee_scenario_create_units(const EeScenarioHost *host,
+                              int32_t object,
+                              const EeScenarioObjectFields *fields);
 
 /// Appends tile (x, y) to a list the host is filling.
 ///

@@ -8,6 +8,7 @@ use crate::aivar::{self, EeScenarioAiWrite, EE_SCENARIO_AI_MAX_WRITES};
 use crate::area::{self, EeScenarioAreaRecord};
 use crate::attribute;
 use crate::condition::{self, EeScenarioCondition};
+use crate::create;
 use crate::fields::{
     self, EeScenarioAreaSave, EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields,
     EeScenarioTriggerFields,
@@ -827,4 +828,20 @@ pub unsafe extern "C" fn ee_scenario_area_tiles(host: *const EeScenarioHost, are
     for (x, y) in area::tiles(&mut h, &a) {
         h.write(area::EE_SCENARIO_WRITE_TILE, 0, x as i64, y as i64, 0);
     }
+}
+
+/// `EESMEffect::CreateUnits` over object `object` with its numbers `fields` (create.rs): whether it created units;
+/// each unit through `EE_SCENARIO_WRITE_CREATE_UNIT`.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` for a read.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_create_units(
+    host: *const EeScenarioHost,
+    object: i32,
+    fields: *const EeScenarioObjectFields,
+) -> bool {
+    // SAFETY: the caller's contract; the numbers are copied before the first read
+    let (mut h, f) = unsafe { (host_of(host), *fields) };
+    create::create_units(&mut h, object, &f)
 }

@@ -19,6 +19,7 @@
 //! - [`manager`]: the manager's own numbers as a record the C++ class derives from, its timed effects' queue, and
 //!   its `Load` and `Save`.
 //! - [`round`]: `EEScenarioManager::Update`, the clocks and the trigger round with the timed effects.
+//! - [`create`]: the Create Units effect's counts, owners and classes (`EESMEffect::CreateUnits`).
 //! - [`placement`]: where a Create effect places a unit (`EESMObject::FindPlacement`), `IsNearTile`, `IsNearUnit`.
 //! - [`player`]: the Set Player Attribute effect as a plan of writes (`EESMEffect::SetPlayerAttribute`).
 //! - [`attribute`]: a unit's value for an object's attribute filter (`EESMObject::GetUnitAttribute`) as a table.
@@ -30,6 +31,7 @@ pub mod aivar;
 pub mod area;
 pub mod attribute;
 pub mod condition;
+pub mod create;
 pub mod ffi;
 pub mod fields;
 pub mod host;
