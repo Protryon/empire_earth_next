@@ -1264,6 +1264,25 @@ pub unsafe extern "C" fn ee_gfx_effect2d(
     }
 }
 
+/// `Load` (`op` Load) or `Save` of an `EEE2DRust` after `EEEffect2D`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid; `host` is readable and its functions valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect2d_file(
+    op: crate::effect_rising::EeGfxEffect3DOp,
+    r: *mut EeGfxEffectRecord,
+    file: *const EeGfxEffectFile,
+    host: *const crate::effect_2d::EeGfxEffect2DHost,
+) -> i32 {
+    // SAFETY: the function's contract; the record is a copy while Rust reads or writes it (the host's media load
+    // does not read it)
+    unsafe {
+        let mut h = &*host;
+        on_copy(r, |r| crate::effect_2d::effect2d_file(op, r, &mut File(&*file), &mut h))
+    }
+}
+
 /// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s (its result `base`).
 ///
 /// # Safety

@@ -1681,7 +1681,7 @@ struct EeGfxConfirmUnit {
 /// The C++'s answers for an `EEE2DRust`.
 struct EeGfxEffect2DHost {
   void *context;
-  /// `EEEffect::Queue` (the confirmation's base: not `EEEffect2D`'s projection)
+  /// the base's queue: `EEEffect::Queue` for the confirmation (not `EEEffect2D`'s projection), else `EEEffect2D`'s
   int32_t (*base_queue)(void *context);
   /// pushes the effect on render queue `index` under its graphic's texture for the current screen
   void (*queue)(void *context, uint32_t index);
@@ -1710,6 +1710,13 @@ struct EeGfxEffect2DHost {
   float (*terrain_z)(void *context, float x, float y);
   /// one of the command textures (0 `sTexture4E0`, 1 `sTexture4E4`, 2 `sTexture4E8`)
   EeGfxModel (*command_texture)(void *context, uint32_t index);
+  /// a random one of the unit's tag points of `kind` at its animation and frame (`EEEffect::GetRandom`), the unit's
+  /// position without any (the shockwave's `SetUp`, 0xe6259)
+  EeGe3DPoint (*spawn_point)(void *context, uint32_t kind);
+  /// the graphic object (`GetGraphicObject`, kept as the effect's) loaded; its result
+  int32_t (*object_media)(void *context);
+  /// the kept graphic object's texture `index`
+  EeGfxModel (*object_texture)(void *context, uint32_t index);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
@@ -2946,6 +2953,15 @@ int32_t ee_gfx_effect2d(EeGfxEffect3DOp op,
                         const EeGfxGraphicFacts *g,
                         const EeGfxEffect2DHost *host,
                         const EeGfxRaster *raster);
+
+/// `Load` (`op` Load) or `Save` of an `EEE2DRust` after `EEEffect2D`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid; `host` is readable and its functions valid.
+int32_t ee_gfx_effect2d_file(EeGfxEffect3DOp op,
+                             EeGfxEffectRecord *r,
+                             const EeGfxEffectFile *file,
+                             const EeGfxEffect2DHost *host);
 
 /// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s (its result `base`).
 ///

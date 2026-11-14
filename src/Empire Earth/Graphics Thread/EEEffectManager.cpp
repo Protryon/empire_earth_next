@@ -53,7 +53,6 @@
 #include "ee/EEE2DMuzzleFlash.h"
 #include "ee/EEE2DImpact.h"
 #include "ee/EEE2DImpactBlood.h"
-#include "ee/EEE2DShockwave.h"
 #include "ee/EEE2DExhaustTrail.h"
 #include "ee/EEE2DFireTrail.h"
 #include "ee/EEE2DPlasmaPulse.h"
@@ -168,7 +167,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DSmokeGenerator: theEffect = new EEE3DSmokeGenerator(0x2b); break;
     case kEffect2DExplosion: theEffect = new EEE2DExplosion(); break;
     case kEffect2DSmokePlume: theEffect = new EEE2DSmokePlume(0xb); break;
-    case kEffect2DShockwave: theEffect = new EEE2DShockwave(); break;
+    case kEffect2DShockwave: theEffect = new EEE2DRust(0x12); break;
     case kEffect2DFire: theEffect = new EEE2DFire(); break;
     case kEffect2DMuzzleFlash: theEffect = new EEE2DMuzzleFlash(); break;
     case kEffect2DImpact: theEffect = new EEE2DImpact(6); break;
@@ -273,7 +272,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 9: theEffect = new EEE2DMuzzleFlash(inUnit, inEffect); break;
     case 6: theEffect = new EEE2DImpact(inUnit, inEffect, 6); break;
     case 7: theEffect = new EEE2DImpactBlood(inUnit, inEffect); break;
-    case 18: theEffect = new EEE2DShockwave(inUnit, inEffect); break;
+    case 18: theEffect = new EEE2DRust(inUnit, inEffect, 0x12); break;
     case 3: theEffect = new EEE2DExhaustTrail(inUnit, inEffect); break;
     case 14: theEffect = new EEE2DFireTrail(inUnit, inEffect); break;
     case 10: theEffect = new EEE2DPlasmaPulse(inUnit, inEffect); break;
@@ -373,7 +372,7 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 6: theEffect = new EEE2DImpact(inLocation, inEffect, 6); break;
     case 8: theEffect = new EEE2DLightning(inLocation, inEffect); break;
     case 0xb: theEffect = new EEE2DSmokePlume(inLocation, inEffect, 0xb); break;
-    case 0x12: theEffect = new EEE2DShockwave(inLocation, inEffect); break;
+    case 0x12: theEffect = new EEE2DRust(inLocation, inEffect, 0x12); break;
     case 0x18: theEffect = new EEE3DRust(inLocation, inEffect, 0x18); break;
     case 0x1b: theEffect = new EEE3DRust(inLocation, inEffect, 0x1b); break;
     case 0x20: theEffect = new EEE3DRust(inLocation, inEffect, 0x20); break;

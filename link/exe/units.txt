@@ -185,7 +185,6 @@ e4529 e4729 Empire Earth/Graphics Thread/EEE2DMuzzleFlash.cpp
 e4729 e56d0 Empire Earth/Graphics Thread/EEE2DParticle.cpp
 e56d0 e5c63 Empire Earth/Graphics Thread/EEE2DPlasmaPulse.cpp
 e5c63 e614f Empire Earth/Graphics Thread/EEE2DPulseWave.cpp
-e614f e6621 Empire Earth/Graphics Thread/EEE2DShockwave.cpp
 e6621 e6ef2 Empire Earth/Graphics Thread/EEE2DSmokeMuzzleBlast.cpp
 e6ef2 e72fa Empire Earth/Graphics Thread/EEE2DSmokePlume.cpp
 e773c e7d67 Empire Earth/Graphics Thread/EEE2DVortex.cpp
