@@ -14285,7 +14285,7 @@ that moves it.
   2-7 PASS against the new goldens (500 digests) on the fixed build, `saveload --settings all --seeds 2-3 --at
   1000,1900` expect PASS, the test-profile build 0/0, `lan_game.py` RESULT PASS lan-game (host PT 2823, joiner
   2826). The orders game (`fixture_game.py --exercise random-game --orders --box-select`) failed once at the box
-  selection of an empty area ("no box selection message was built", before any order); see the report for the
-  rerun. Not run: a tour or a played game sending these four messages, macOS or Linux builds.
+  selection of an empty area ("no box selection message was built", before any order) and passed alone on the
+  rerun: BOX SELECT PASS, ORDERS PASS (gather, repair, repair queued, move; patrol and attack ground skipped). Not run: a tour or a played game sending these four messages, macOS or Linux builds.
 - **Left:** EEMPayTribute's chat line (its decisions are ee_netmsg's already), EEMChangeSelectedUnitCollisionSphere
   (debug), the smaller bodies, the UI ones (EEMGameOptions, EEMInGameChat), and the members as records (above).
