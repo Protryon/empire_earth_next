@@ -1239,6 +1239,21 @@ function M.step(view, memory)
                 local k = math.max(math.min(18 - want.iron, want.food - 12, (room.iron or 0) - want.iron), 0)
                 want.food, want.iron = want.food - k, want.iron + k
             end
+            -- (BO.OPT.save_retarget, the owner's Copper log: food 6975, wood 9095, gold 4319 banked while iron sat at 6-21
+            -- and the Bronze save never paid) while saving from the Copper Age, the gatherers of a resource banked past its
+            -- cost go to one the advance still lacks, within its places
+            if ECON.order and BO.OPT.save_retarget and age >= 3 and saving then
+                for _, r in ipairs({"iron", "gold", "stone"}) do
+                    if view.stock[r] < (cost[r] or 0) then
+                        for _, d in ipairs({"food", "wood", "gold", "stone"}) do
+                            if d ~= r and view.stock[d] >= (cost[d] or 0) + BO.SAVE_BANK then
+                                local k = math.max(math.min((room[r] or 0) - want[r], want[d] - (BO.SAVE_FLOOR[d] or 0)), 0)
+                                want[d], want[r] = want[d] - k, want[r] + k
+                            end
+                        end
+                    end
+                end
+            end
             -- (a mine's settlement waits on wood: up to 4 more on wood until it is paid)
             local settle = V.cost(view, "b_settlement")
             if false and memory.settle_short and settle ~= nil and view.stock.wood < settle.cost.wood * 2 then
