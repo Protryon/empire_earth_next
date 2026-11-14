@@ -661,7 +661,7 @@ DMINT void DmStyle_release(DmStyle* slf);
 DMINT DmResult DmStyle_parse(DmStyle* slf, void* buf, size_t len);
 DMINT DmResult DmStyle_download(DmStyle* slf, DmLoader* loader);
 DMINT DmPart* DmStyle_findPart(DmStyle* slf, DmPartReference* pref);
-DMINT DmPattern* DmStyle_getRandomPattern(DmStyle* slf, uint32_t groove, DmCommandType cmd);
+DMINT DmPattern* DmStyle_getRandomPattern(DmStyle* slf, uint32_t groove, DmCommandType cmd, uint32_t measures_left);
 
 // (EE patch) The original's synth reverb, src/Reverb.c
 DMINT DmReverb* DmReverb_create(float rate);

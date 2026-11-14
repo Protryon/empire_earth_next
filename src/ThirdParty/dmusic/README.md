@@ -26,8 +26,9 @@ Changes made here (each marked "(EE patch)" at its place in the source):
 - Stop (`DmPerformance_stop`): what is due within the given time still sounds, then every note is released.
 - Note order at the same time (`Message.c`): a note's end before a note's start.
 - Silence before the first band (`Synth.c`): with no instruments loaded the output is cleared.
-- Pattern choice (`Style.c`): of the patterns whose groove range holds the level, the longest (random only among
-  equals); with none in range, the nearest range's. Upstream drew any at random, or fell silent.
+- Pattern choice (`Style.c`): of the patterns whose groove range holds the level, the longest that fits the measures
+  left before the song ends or starts over (random only among equals), else the longest, cut short; with none in
+  range, the nearest range's. Upstream drew any at random, or fell silent.
 - Note timing (`Performance.c`): a note placed before its pattern's start plays at the start; the random ranges of
   duration and velocity vary the duration and the velocity.
 - The clock (`Performance.c` `DmPerformance_renderPcm`, `time_carry`): the fraction of a tick is carried from one

@@ -102,20 +102,24 @@ static uint32_t Dm_toEmbellishmentFlagset(DmCommandType cmd) {
 }
 
 // See: https://documentation.help/DirectMusic/howmusicvariesduringplayback.htm
-DmPattern* DmStyle_getRandomPattern(DmStyle* slf, uint32_t groove, DmCommandType cmd) {
+DmPattern* DmStyle_getRandomPattern(DmStyle* slf, uint32_t groove, DmCommandType cmd, uint32_t measures_left) {
 	uint32_t embellishment = Dm_toEmbellishmentFlagset(cmd);
 
 	// (EE patch) As the original chooses, measured against it on Empire Earth's Pawns.sgt: of the patterns
-	// whose groove range holds the level, the longest (the original played the 12-measure "Mid - Vibe12bar" every time,
-	// the same every run, where upstream drew any groove-2 pattern at random); a random one only among equals. When no
-	// range holds the level, the patterns of the nearest range (the original does not fall silent; upstream did).
-	// Patterns with a differing embellishment are not supported; neither are one-measure groove patterns (a fix for
-	// Gothic 2, in which some are empty with a groove range of 1-100).
+	// whose groove range holds the level, the longest that fits the measures left before the song ends or starts
+	// over, a random one only among equals; when none fits, the longest, which is then cut short. (163 measures at
+	// level 2: the 12-measure "Mid - Vibe12bar" thirteen times, the same every run; with 7 left one of the 4-measure
+	// patterns, any of them; with 3 left "Mid - Vibe12bar" again. Upstream drew any groove-2 pattern at random.)
+	// When no range holds the level, the patterns of the nearest range (the original does not fall silent; upstream
+	// did). Patterns with a differing embellishment are not supported; neither are one-measure groove patterns (a fix
+	// for Gothic 2, in which some are empty with a groove range of 1-100).
 	uint32_t best_distance = UINT32_MAX;
-	uint32_t best_length = 0;
+	uint32_t best_length = 0;   // the longest of the nearest range
+	uint32_t best_fit = 0;      // the longest of them that fits (0: none does)
 	size_t candidates = 0;
-	for (int pass = 0; pass < 2; ++pass) {
-		size_t pick = pass == 1 ? (size_t) (Dm_rand() % (uint32_t) candidates) : 0;
+	for (int pass = 0; pass < 3; ++pass) {
+		uint32_t length = best_fit != 0 ? best_fit : best_length;
+		size_t pick = pass == 2 ? (size_t) (Dm_rand() % (uint32_t) candidates) : 0;
 		for (size_t i = 0; i < slf->patterns.length; ++i) {
 			DmPattern* pttn = &slf->patterns.data[i];
 			if (pttn->embellishment != embellishment && !(pttn->embellishment & embellishment)) {
@@ -129,22 +133,30 @@ DmPattern* DmStyle_getRandomPattern(DmStyle* slf, uint32_t groove, DmCommandType
 			                                          : 0;
 			uint32_t len = pttn->length_measures;
 			if (pass == 0) {
-				if (d < best_distance || (d == best_distance && len > best_length)) {
+				if (d < best_distance) {
 					best_distance = d;
-					best_length = len;
-					candidates = 0;
+					best_length = 0;
+					best_fit = 0;
 				}
-				if (d == best_distance && len == best_length) {
+				if (d == best_distance) {
+					if (len > best_length) {
+						best_length = len;
+					}
+					if (len <= measures_left && len > best_fit) {
+						best_fit = len;
+					}
+				}
+			} else if (d == best_distance && len == length) {
+				if (pass == 1) {
 					candidates += 1;
-				}
-			} else if (d == best_distance && len == best_length) {
-				if (pick == 0) {
+				} else if (pick == 0) {
 					return pttn;
+				} else {
+					pick -= 1;
 				}
-				pick -= 1;
 			}
 		}
-		if (candidates == 0) {
+		if (pass == 1 && candidates == 0) {
 			return NULL;
 		}
 	}

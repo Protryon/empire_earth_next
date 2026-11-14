@@ -695,7 +695,14 @@ static void DmPerformance_handleCommandMessage(DmPerformance* slf, DmMessage_Com
 		Dm_report(DmLogLevel_WARN, "DmPerformance: Command message with command %d not implemented", msg->command);
 	}
 
-	DmPattern* pttn = DmStyle_getRandomPattern(slf->style, slf->groove, msg->command);
+	// (EE patch) The measures left before the song ends or starts over: the pattern is chosen to fit them.
+	uint32_t measures_left = UINT32_MAX;
+	if (slf->segment != NULL) {
+		uint32_t end = slf->segment_start + slf->segment->length;
+		measures_left = end > slf->time ? (end - slf->time) / Dm_getMeasureLength(slf->time_signature) : 0;
+	}
+
+	DmPattern* pttn = DmStyle_getRandomPattern(slf->style, slf->groove, msg->command, measures_left);
 	if (pttn == NULL) {
 		Dm_report(DmLogLevel_INFO, "DmPerformance: No suitable pattern found. Silence ensues ...", msg->command);
 		return;
