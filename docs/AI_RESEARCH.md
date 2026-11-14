@@ -5234,6 +5234,33 @@ the C++ puts into citizens.
 - The collapses: the raids at 20-25 minutes, and a reserve that does not starve a town of 13-21 workers. A reserve
   sized to the income, not a worker line.
 - The land army's size against the citizens.
+### 8.82 Stage 3: the peace rule on every group, and the land army at parity (2026-11-13, EE-SIM)
+
+**The parity bug.** On land the port's army was about twice the C++'s under the same standing-army count (§8.81).
+The count was not the cause. Traced in seed 34:
+- The port's count was dominated by its groups' requests: 30 units at 9 minutes. Its counter-attack groups asked for
+  82 units in 10 groups.
+- The C++'s groups asked for 16 units in the whole game.
+- A debug build (reverted) traced the C++'s CounterAttack: 27 calls, and not one group.
+
+EECPACPrehistoricPeace, the personality's Prehistoric and Stone Age peace (§8.26, §8.29), sits in the C++ attack
+commander's CreateGroup and CreateGroupFromStrategy. So it refuses every group against an enemy in those epochs:
+counter-attacks, aid, naval groups. Only CreateDefendGroup's (kAGModeDefense) and groups for an own or allied target
+pass. The port had kept the rule to its attacks and CheckNaval.
+
+**The fix.** create_group applies the rule as the C++ does. Every group but the defend group is refused against an
+enemy while the peace holds.
+
+| land, balanced, 64 seeds, 90 min | port won-lost (close) | citizens/army at 30 min | at 40 min | at 80 min |
+|---|---|---|---|---|
+| before (§8.81 bench) | 22-32 (10) | port 33.7/8.2, C++ 35.2/4.6 | port 42.4/8.5, C++ 52.0/3.4 | port 86.1/21.4, C++ 120.1/9.1 |
+| **after** | **29-25 (10)** | port 36.0/6.5, C++ 29.8/4.3 | port 46.4/5.8, C++ 46.6/3.5 | port 95.2/22.5, C++ 112.1/7.4 |
+
+The port now leads on land, and its citizens match the C++'s to 40 minutes. The C++ reaches the Stone Age in 59 of
+the 64 games, the port in 64. The port's army is still larger: 5.8 against 3.5 at 40 minutes, 22.5 against 7.4 at 80,
+with its citizens 17 behind at 80 minutes. That is the next look, with the raids at 20-25 minutes.
+
+0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
