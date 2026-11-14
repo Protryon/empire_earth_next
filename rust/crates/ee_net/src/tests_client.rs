@@ -387,7 +387,18 @@ impl ClientHost for Replay {
         self.num(format!("c34 {state}"));
     }
     fn handle_message(&self, m: Msg) {
-        self.num(format!("c35 m{m}"));
+        let want = format!("op c35 m{m}");
+        let line = self.pop();
+        if line != want {
+            self.fail(format!("the record has `{line}`, the Rust made `{want}`"));
+        }
+        // the game disconnected from inside (its ops are the record's next ones)
+        let next = self.0.lines.lock().unwrap().front().cloned().unwrap_or_default();
+        if next.starts_with("op c8 ") {
+            let c = *self.0.client.lock().unwrap();
+            unsafe { &*(c as *const Client<Replay>) }.disconnect();
+        }
+        self.answer();
     }
     fn handle_user_input(&self, m: Msg) {
         self.num(format!("c36 m{m}"));

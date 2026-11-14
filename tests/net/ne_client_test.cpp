@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -88,11 +89,16 @@ static bool VIgnoreConnectionTimeout()
 }
 static void VSetConnectionState(long inState) { gQ->Line("v connectionstate %ld", inState); }
 // takes the message's reference, except a tick's (the client gives that back after its reply)
+// (a message the game does not know: half the time the game disconnects, from inside the client's main thread)
+static std::function<long()> sDisconnect;
 static void VHandleMessage(NEMessage* inMessage)
 {
     gQ->Line("v handlemessage m%d %02x", inMessage->mID, inMessage->mType);
+    bool theDisconnect = inMessage->mType == 0x29 && gQ->Next() % 2 == 0;
     if (inMessage->mType != kNetMessageCommunicationsTick)
         inMessage->Dereference();
+    if (theDisconnect)
+        gQ->Line("v disconnect = %ld", sDisconnect());
 }
 static void VHandleUserInput(NEMessage* inMessage) { gQ->Line("v handleuserinput m%d", inMessage->mID); }
 static void VHandleConnectionLost() { gQ->Line("v connectionlost"); }
@@ -688,18 +694,24 @@ struct Sequence {
             static const unsigned char kTypes[] = {0x40, 0x40, 0x40, kNetMessageClientRequestPause,
                                                    kNetMessageClientReconnectionRequest,
                                                    kNetMessageClientDisconnectionNotification};
-            NEMessage* m = new NEMessage(kTypes[this->mRandom.Below(6)]);
-            m->mCounts = this->mRandom.Below(4) != 0;
-            m->mWhilePaused = this->mRandom.Below(5) == 0;
-            m->mAvailable = this->mRandom.Below(8) != 0;
-            bool theGuaranteed = this->mRandom.Below(3) == 0;
-            unsigned char thePlayer = (unsigned char)(this->mRandom.Below(4) == 0 ? kSlotNone : this->mRandom.Below(4));
-            snprintf(theCall, sizeof(theCall), "input m%d %d %d", m->mID, (int)theGuaranteed, thePlayer);
-            this->Call(theCall);
-            if (this->mRust)
-                r = ee_net_cl_process_user_input(sRust, m, thePlayer, theGuaranteed);
-            else
-                r = theGuaranteed ? o->ProcessGuaranteedLocalUserInput(m, thePlayer) : o->ProcessLocalUserInput(m, thePlayer);
+            // (a burst sometimes: the throttle's ten a second)
+            uint32_t theInputs = this->mRandom.Below(5) == 0 ? 8 + this->mRandom.Below(8) : 1;
+            for (uint32_t i = 0; i < theInputs; i++) {
+                if (i > 0)
+                    this->Result(r);
+                NEMessage* m = new NEMessage(kTypes[this->mRandom.Below(6)]);
+                m->mCounts = this->mRandom.Below(4) != 0;
+                m->mWhilePaused = this->mRandom.Below(5) == 0;
+                m->mAvailable = this->mRandom.Below(8) != 0;
+                bool theGuaranteed = this->mRandom.Below(3) == 0;
+                unsigned char thePlayer = (unsigned char)(this->mRandom.Below(4) == 0 ? kSlotNone : this->mRandom.Below(4));
+                snprintf(theCall, sizeof(theCall), "input m%d %d %d", m->mID, (int)theGuaranteed, thePlayer);
+                this->Call(theCall);
+                if (this->mRust)
+                    r = ee_net_cl_process_user_input(sRust, m, thePlayer, theGuaranteed);
+                else
+                    r = theGuaranteed ? o->ProcessGuaranteedLocalUserInput(m, thePlayer) : o->ProcessLocalUserInput(m, thePlayer);
+            }
         } else if (theWhat < 54) {
             this->Call("connect");
             UString theName("player"), theHost("server");
@@ -810,10 +822,14 @@ struct Sequence {
         this->mUniqueID = 0;
         sBase = RBase();
         this->Call("new");
-        if (this->mRust)
+        if (this->mRust) {
             sRust = ee_net_cl_new(NULL, RustClHost, RustQHost);
-        else
+            sDisconnect = [] { return (long)ee_net_cl_disconnect(sRust); };
+        } else {
             this->mOrig = new OrigClient;
+            OrigClient* o = this->mOrig;
+            sDisconnect = [o] { return o->Disconnect(); };
+        }
         this->Result(0);
         this->Call("start");
         if (this->mRust)
