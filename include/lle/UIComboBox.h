@@ -11,6 +11,7 @@
 // lle/GERhombus.h.
 #ifndef LLE_UICOMBOBOX_H
 #define LLE_UICOMBOBOX_H
+#include "rust/ee_ui.h"
 
 class UIButton;
 class UIEditBox;
