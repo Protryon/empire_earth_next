@@ -1,16 +1,28 @@
-//! The string classes' algorithms (LLE lane round 3): `UString`'s searches (`Find`, `FindBackwards`) and splits
-//! (`Tokenize`, `NestedTokenize`). The classes, their buffers and their substrings stay C++ (`UString` is held by
-//! value in hundreds of records and read inline through `operator const char*`): each method hands its bytes here
-//! and builds its result from the indices that come back.
+//! `UString` whole in Rust (LLE lane rounds 3-4). Round 3 moved its searches (`Find`, `FindBackwards`) and splits
+//! (`Tokenize`, `NestedTokenize`); round 4 its storage (`record.rs`): the C++ class holds an [`EeUString`] by value
+//! (the original's buffer, length and capacity, so every record embedding a `UString` keeps its layout and
+//! `operator const char*` stays an inline read) and every member forwards here. C++ keeps what touches C++: the
+//! `FSFile` virtuals of `Load`/`Save`, the token vectors and `sprintf`'s varargs formatting.
 //!
-//! A string is passed as its bytes up to its length (`mLength`); the comparisons are the original's `strncmp`, so a
-//! NUL inside the length ends a comparison as it did. Arithmetic is the Windows build's: 32-bit `unsigned long`
-//! that wraps, and `FindBackwards`' 32-bit `long` index.
+//! A string is searched as its bytes up to its length (`mLength`); the comparisons are the original's `strncmp`, so
+//! a NUL inside the length ends a comparison as it did. Arithmetic is the build's `unsigned long` (32 bits on
+//! Windows) that wraps, and `FindBackwards`' 32-bit `long` index.
 //!
-//! `golden_us.txt` is the trace of the original class (`tests/string/us_golden.cpp`); `golden.rs` replays it.
+//! Goldens: `golden_us.txt` (the searches, `tests/string/us_golden.cpp`, replayed by `golden.rs`) and
+//! `golden_store.txt` (every member, `tests/string/us_store_golden.cpp`, replayed by `golden_store.rs`), both
+//! traces of the original class.
+
+// `c_ulong` is the build's `unsigned long`: u32 on Windows, u64 on LP64, so its casts are needed on one of them
+#![allow(clippy::unnecessary_cast)]
 
 #[cfg(test)]
 mod golden;
+#[cfg(test)]
+mod golden_store;
+mod record;
+
+pub use record::*;
+use std::ffi::{c_char, c_ulong};
 
 /// `strncmp(a, b, n) == 0` over strings whose bytes past their slices read as the terminator.
 fn strneq(a: &[u8], b: &[u8], n: u32) -> bool {
@@ -133,44 +145,40 @@ pub fn nested_tokenize(text: &[u8], separators: &[u8], open: u8, close: u8) -> V
 
 // ------------------------------------------------------------------------------------------- the C interface
 
+/// A record's text up to its length.
+///
+/// # Safety
+/// `s` is a live record.
+unsafe fn record_text<'a>(s: *const EeUString) -> &'a [u8] {
+    counted((*s).string, (*s).length)
+}
+
 /// # Safety
 /// `p` points at `n` readable bytes (or `n` is 0).
-unsafe fn bytes<'a>(p: *const u8, n: u32) -> &'a [u8] {
+unsafe fn counted<'a>(p: *const c_char, n: c_ulong) -> &'a [u8] {
     if n == 0 || p.is_null() {
         &[]
     } else {
-        std::slice::from_raw_parts(p, n as usize)
+        std::slice::from_raw_parts(p.cast(), n as usize)
     }
 }
 
-/// `UString::Find` on `text` (`length` bytes) for `needle` (`needle_length` bytes).
+/// `UString::Find` (`backwards`: `FindBackwards`) on `s` for `needle_length` bytes of `needle` (a `UString`'s
+/// text and length, or a C string and its `strlen`).
 ///
 /// # Safety
-/// Both point at their lengths' readable bytes.
+/// `s` is a live record, `needle` holds `needle_length` readable bytes.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ustring_find(
-    text: *const u8,
-    length: u32,
-    needle: *const u8,
-    needle_length: u32,
-    start: u32,
-) -> u32 {
-    find(bytes(text, length), bytes(needle, needle_length), start)
-}
-
-/// `UString::FindBackwards`.
-///
-/// # Safety
-/// As [`ee_ustring_find`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_ustring_find_backwards(
-    text: *const u8,
-    length: u32,
-    needle: *const u8,
-    needle_length: u32,
-    start: u32,
-) -> u32 {
-    find_backwards(bytes(text, length), bytes(needle, needle_length), start)
+    s: *const EeUString,
+    needle: *const c_char,
+    needle_length: c_ulong,
+    start: c_ulong,
+    backwards: bool,
+) -> c_ulong {
+    let (text, needle) = (record_text(s), counted(needle, needle_length));
+    let start = start as u32;
+    c_ulong::from(if backwards { find_backwards(text, needle, start) } else { find(text, needle, start) })
 }
 
 /// Writes the token pairs (first, last) to `out` (room for `length + 1` pairs: 2 x that many u32) -> the count.
@@ -182,36 +190,25 @@ unsafe fn write_tokens(tokens: &[(u32, u32)], out: *mut u32) -> u32 {
     tokens.len() as u32
 }
 
-/// `UString::Tokenize`: the tokens' (first, last) pairs -> their count (at most `length + 1`).
+/// `UString::Tokenize` (`brackets` NULL) or `NestedTokenize` (`brackets` the pair's string): the tokens' (first,
+/// last) pairs -> their count (at most `length + 1`).
 ///
 /// # Safety
-/// The strings point at their lengths' readable bytes; `out` has room for `2 * (length + 1)` values.
+/// `s` and `separators` are live records, `brackets` one or NULL; `out` has room for `2 * (length + 1)` values.
 #[no_mangle]
 pub unsafe extern "C" fn ee_ustring_tokenize(
-    text: *const u8,
-    length: u32,
-    separators: *const u8,
-    separators_length: u32,
+    s: *const EeUString,
+    separators: *const EeUString,
+    brackets: *const EeUString,
     out: *mut u32,
 ) -> u32 {
-    write_tokens(&tokenize(bytes(text, length), bytes(separators, separators_length)), out)
-}
-
-/// `UString::NestedTokenize` with the bracket pair's two bytes -> the count of pairs written.
-///
-/// # Safety
-/// As [`ee_ustring_tokenize`].
-#[no_mangle]
-pub unsafe extern "C" fn ee_ustring_nested_tokenize(
-    text: *const u8,
-    length: u32,
-    separators: *const u8,
-    separators_length: u32,
-    open: u8,
-    close: u8,
-    out: *mut u32,
-) -> u32 {
-    write_tokens(&nested_tokenize(bytes(text, length), bytes(separators, separators_length), open, close), out)
+    let (text, separators) = (record_text(s), record_text(separators));
+    if brackets.is_null() {
+        write_tokens(&tokenize(text, separators), out)
+    } else {
+        let pair = (*brackets).string.cast::<u8>();
+        write_tokens(&nested_tokenize(text, separators, *pair, *pair.add(1)), out)
+    }
 }
 
 #[cfg(test)]

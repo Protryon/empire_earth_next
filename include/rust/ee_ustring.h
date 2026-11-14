@@ -7,49 +7,244 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// A `UString`'s state, held by value in the C++ class (after its vtable pointer).
+struct EeUString {
+  /// The buffer (`mString`): `capacity` bytes, at least 1.
+  char *string;
+  /// The bytes before the terminator (`mLength`).
+  unsigned long length;
+  /// The bytes allocated, the terminator included (`mCapacity`).
+  unsigned long capacity;
+};
+
 extern "C" {
 
-/// `UString::Find` on `text` (`length` bytes) for `needle` (`needle_length` bytes).
+/// `UString::Find` (`backwards`: `FindBackwards`) on `s` for `needle_length` bytes of `needle` (a `UString`'s
+/// text and length, or a C string and its `strlen`).
 ///
 /// # Safety
-/// Both point at their lengths' readable bytes.
-uint32_t ee_ustring_find(const uint8_t *text,
-                         uint32_t length,
-                         const uint8_t *needle,
-                         uint32_t needle_length,
-                         uint32_t start);
+/// `s` is a live record, `needle` holds `needle_length` readable bytes.
+unsigned long ee_ustring_find(const EeUString *s,
+                              const char *needle,
+                              unsigned long needle_length,
+                              unsigned long start,
+                              bool backwards);
 
-/// `UString::FindBackwards`.
+/// `UString::Tokenize` (`brackets` NULL) or `NestedTokenize` (`brackets` the pair's string): the tokens' (first,
+/// last) pairs -> their count (at most `length + 1`).
 ///
 /// # Safety
-/// As [`ee_ustring_find`].
-uint32_t ee_ustring_find_backwards(const uint8_t *text,
-                                   uint32_t length,
-                                   const uint8_t *needle,
-                                   uint32_t needle_length,
-                                   uint32_t start);
-
-/// `UString::Tokenize`: the tokens' (first, last) pairs -> their count (at most `length + 1`).
-///
-/// # Safety
-/// The strings point at their lengths' readable bytes; `out` has room for `2 * (length + 1)` values.
-uint32_t ee_ustring_tokenize(const uint8_t *text,
-                             uint32_t length,
-                             const uint8_t *separators,
-                             uint32_t separators_length,
+/// `s` and `separators` are live records, `brackets` one or NULL; `out` has room for `2 * (length + 1)` values.
+uint32_t ee_ustring_tokenize(const EeUString *s,
+                             const EeUString *separators,
+                             const EeUString *brackets,
                              uint32_t *out);
 
-/// `UString::NestedTokenize` with the bracket pair's two bytes -> the count of pairs written.
+/// `UString()`: empty, the default capacity.
 ///
 /// # Safety
-/// As [`ee_ustring_tokenize`].
-uint32_t ee_ustring_nested_tokenize(const uint8_t *text,
-                                    uint32_t length,
-                                    const uint8_t *separators,
-                                    uint32_t separators_length,
-                                    uint8_t open,
-                                    uint8_t close,
-                                    uint32_t *out);
+/// `s` points at a record to initialise (its old contents are ignored).
+void ee_ustring_init(EeUString *s);
+
+/// `UString(unsigned long)`: empty, `capacity` bytes.
+///
+/// # Safety
+/// As [`ee_ustring_init`].
+void ee_ustring_init_capacity(EeUString *s, unsigned long capacity);
+
+/// `UString(const UString&)`: the source's length and capacity, its text up to the terminator.
+///
+/// # Safety
+/// As [`ee_ustring_init`]; `source` is a live record.
+void ee_ustring_init_copy(EeUString *s, const EeUString *source);
+
+/// `UString(const char*)`: sized to fit.
+///
+/// # Safety
+/// As [`ee_ustring_init`]; `source` is a C string.
+void ee_ustring_init_text(EeUString *s, const char *source);
+
+/// `~UString()`.
+///
+/// # Safety
+/// `s` is a live record; it is dead afterwards.
+void ee_ustring_free(EeUString *s);
+
+/// `UString::SetDefaultAllocationLength`.
+void ee_ustring_set_default_allocation(unsigned long length);
+
+/// `operator=(const UString&)`: grows to the source's capacity if that is larger, then copies the source's whole
+/// buffer (bytes past its terminator too) and measures.
+///
+/// # Safety
+/// Both are live records (the same one allowed).
+void ee_ustring_assign(EeUString *s,
+                       const EeUString *source);
+
+/// `operator=(const char*)`: copies into the buffer when the text is shorter than the capacity less one, else
+/// replaces the buffer with one that fits exactly.
+///
+/// # Safety
+/// `s` is a live record, `source` a C string (inside the string's own buffer only if it fits).
+void ee_ustring_assign_text(EeUString *s,
+                            const char *source);
+
+/// `operator[]`: the byte at `index`, 0 outside the length.
+///
+/// # Safety
+/// `s` is a live record.
+char ee_ustring_at(const EeUString *s, int index);
+
+/// `SizeOf`: the capacity plus the three members.
+///
+/// # Safety
+/// `s` is a live record.
+unsigned long ee_ustring_size_of(const EeUString *s);
+
+/// `GetBytesUsedToSave`: a 4-byte length, the text and its terminator.
+///
+/// # Safety
+/// `s` is a live record.
+unsigned long ee_ustring_bytes_to_save(const EeUString *s);
+
+/// `strcmp(a, b)`'s sign: the comparison operators and `Equals`.
+///
+/// # Safety
+/// Both are C strings.
+int ee_ustring_compare(const char *a, const char *b);
+
+/// `strncmp(a, b, count)`'s sign: `Equals` with a count.
+///
+/// # Safety
+/// Both are C strings.
+int ee_ustring_compare_count(const char *a, const char *b, unsigned long count);
+
+/// `EqualsIgnoreCase`: `PlatStrNICmp` over `count` bytes when `counted`, else `PlatStrICmp`.
+///
+/// # Safety
+/// Both are C strings.
+bool ee_ustring_equals_ignore_case(const char *a, const char *b, bool counted, unsigned long count);
+
+/// `ToLower` / `ToUpper` (the platform's in-place case change of UTF-8; the length is not re-measured).
+///
+/// # Safety
+/// `s` is a live record.
+void ee_ustring_change_case(EeUString *s,
+                            bool upper);
+
+/// `operator+=(const UString&)`.
+///
+/// # Safety
+/// Both are live records (the same one allowed).
+void ee_ustring_append(EeUString *s, const EeUString *source);
+
+/// `operator+=(const char*)`.
+///
+/// # Safety
+/// `s` is a live record, `source` a C string.
+void ee_ustring_append_text(EeUString *s, const char *source);
+
+/// `Compact`: a buffer of exactly the length plus the terminator.
+///
+/// # Safety
+/// `s` is a live record.
+void ee_ustring_compact(EeUString *s);
+
+/// `Copy(const UString&, start, count, destination, resize)`: `count` bytes from `start` of the source's buffer
+/// (clamped to its capacity) to `destination`, clamped to the space before the last byte.
+///
+/// # Safety
+/// Both are live records (the same one allowed: it is read through its pointer, after a resize too, as the
+/// original read it).
+void ee_ustring_copy(EeUString *s,
+                     const EeUString *source,
+                     unsigned long start,
+                     unsigned long count,
+                     unsigned long destination,
+                     bool resize);
+
+/// `Copy(const char*, start, count, destination, resize)`: as [`ee_ustring_copy`] from a C string (clamped to its
+/// length); a copy that reaches the last byte grows the buffer by what it needs (the port's fix of the original's
+/// terminator written past the buffer).
+///
+/// # Safety
+/// `s` is a live record, `source` a C string.
+void ee_ustring_copy_text(EeUString *s,
+                          const char *source,
+                          unsigned long start,
+                          unsigned long count,
+                          unsigned long destination,
+                          bool resize);
+
+/// `GetSubstring(start, length)`: `out` (uninitialised) becomes `length` bytes from `start`.
+///
+/// # Safety
+/// `out` is a record to initialise, `s` a live record.
+void ee_ustring_substring(EeUString *out,
+                          const EeUString *s,
+                          unsigned long start,
+                          unsigned long length);
+
+/// `GetIndexedSubstring(first, last)`: `out` (uninitialised) becomes the bytes from `first` through `last`.
+///
+/// # Safety
+/// As [`ee_ustring_substring`].
+void ee_ustring_indexed_substring(EeUString *out,
+                                  const EeUString *s,
+                                  unsigned long first,
+                                  unsigned long last);
+
+/// `operator+(const UString&, const UString&)`: `out` (uninitialised) becomes `left` then `right`.
+///
+/// # Safety
+/// `out` is a record to initialise, `left` and `right` live records.
+void ee_ustring_concat(EeUString *out, const EeUString *left, const EeUString *right);
+
+/// `operator+(const UString&, const char*)`.
+///
+/// # Safety
+/// As [`ee_ustring_concat`]; `right` is a C string.
+void ee_ustring_concat_text(EeUString *out, const EeUString *left, const char *right);
+
+/// `USetLegacyTextLoad` (decision D6).
+void ee_ustring_set_legacy_text_load(bool legacy);
+
+/// `UIsLegacyTextLoad`.
+bool ee_ustring_is_legacy_text_load();
+
+/// `Load`'s buffer for a stored length `length` (the length's bytes follow): a fresh buffer of `length + 1`.
+///
+/// # Safety
+/// `s` is a live record; the result holds `length + 1` bytes until the next call on `s`.
+char *ee_ustring_load_buffer(EeUString *s,
+                             unsigned long length);
+
+/// `Load`'s end: with `read` the `length` bytes are in the buffer: terminated, converted from Windows-1252 when
+/// they are not UTF-8 or a legacy load runs (`UConvertLoadedText`), measured. Without, the string is emptied (also
+/// a failed read of the length).
+///
+/// # Safety
+/// `s` is a live record (after [`ee_ustring_load_buffer`] with `length` when `read`).
+void ee_ustring_load_end(EeUString *s,
+                         bool read,
+                         unsigned long length);
+
+/// `sprintf(UString&, ...)`'s buffer for a text of `size` bytes with its terminator: the string's own when it fits,
+/// else a larger one holding the old bytes (the arguments may point into the old buffer, which stays until
+/// [`ee_ustring_format_end`]).
+///
+/// # Safety
+/// `s` is a live record.
+char *ee_ustring_format_buffer(EeUString *s,
+                               unsigned long size);
+
+/// `sprintf(UString&, ...)`'s end: adopts `buffer` (of `size` bytes) if it is not the string's own, measures.
+///
+/// # Safety
+/// `s` is a live record, `buffer` what [`ee_ustring_format_buffer`] gave for `size`, now terminated.
+void ee_ustring_format_end(EeUString *s,
+                           char *buffer,
+                           unsigned long size);
 
 }  // extern "C"
 
