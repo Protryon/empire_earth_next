@@ -784,6 +784,17 @@ mod tests {
         start.elapsed().as_millis()
     }
 
+    /// Polls `done` every real millisecond until it holds or `deadline_ms` real ms passed -> the real ms waited. The
+    /// timer tests wait on what they check instead of a fixed sleep: a loaded machine (a build beside the gate)
+    /// can keep the timer thread off the CPU for a long time, so a fixed 200 ms window saw no tick at all.
+    fn wait_until(deadline_ms: u64, done: impl Fn() -> bool) -> u128 {
+        let start = std::time::Instant::now();
+        while !done() && start.elapsed() < std::time::Duration::from_millis(deadline_ms) {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        real_ms(start)
+    }
+
     #[test]
     fn the_harness_clock_runs_factor_times_faster_and_sleeps_shorter() {
         with_factor(20, 1, || {
@@ -795,7 +806,8 @@ mod tests {
             let start = std::time::Instant::now();
             PlatSleep(1000); // 50 real ms
             let real = real_ms(start);
-            assert!((40..600).contains(&real), "{real} real ms");
+            // scaled: under the unscaled 1,000 ms even when a loaded machine oversleeps
+            assert!((40..900).contains(&real), "{real} real ms");
             let virtual_ms = PlatTimeMilliseconds().wrapping_sub(ms);
             assert!(virtual_ms >= 950 && u128::from(virtual_ms) <= (real + 20) * 20, "{virtual_ms} virtual ms");
             assert!(PlatTimeMilliseconds64() - ms64 >= 950);
@@ -825,20 +837,25 @@ mod tests {
     fn timers_under_a_factor_fire_at_the_scaled_rate_until_stopped() {
         with_factor(50, 1, || {
             SCALED_TICKS.store(0, Ordering::SeqCst);
-            // 25 virtual ms = 0.5 real ms: 200 real ms are 400 periods (a loaded machine reaches fewer)
+            // 25 virtual ms = 0.5 real ms: at most 2 periods a real ms (+ slack for the timer's start), and 40 ticks
+            // reached however long a loaded machine takes (a 1 ms timer would need 40 real ms)
             let id = unsafe { PlatTimerStartCallback(25, 1, Some(scaled_tick), std::ptr::null_mut()) };
             assert_ne!(id, 0);
-            std::thread::sleep(std::time::Duration::from_millis(200));
+            let start = std::time::Instant::now();
+            wait_until(20_000, || SCALED_TICKS.load(Ordering::SeqCst) >= 40);
             assert_eq!(PlatTimerStop(id), 1);
+            let real = real_ms(start);
             let count = SCALED_TICKS.load(Ordering::SeqCst);
-            assert!((40..=420).contains(&count), "{count} ticks: more than a 1 ms timer could fire");
+            assert!(count >= 40, "{count} ticks in {real} real ms");
+            assert!(u128::from(count) <= real * 2 + 20, "{count} ticks in {real} real ms: faster than the factor");
             std::thread::sleep(std::time::Duration::from_millis(30));
             assert!(SCALED_TICKS.load(Ordering::SeqCst) - count <= 1, "stopped");
             assert_eq!(PlatTimerStop(id), 0);
             // a one-shot timer fires once and its id is gone
             SCALED_TICKS.store(0, Ordering::SeqCst);
             let id = unsafe { PlatTimerStartCallback(100, 0, Some(scaled_tick), std::ptr::null_mut()) };
-            std::thread::sleep(std::time::Duration::from_millis(100));
+            wait_until(20_000, || SCALED_TICKS.load(Ordering::SeqCst) >= 1);
+            std::thread::sleep(std::time::Duration::from_millis(100)); // 50 periods: a second firing would show
             assert_eq!(SCALED_TICKS.load(Ordering::SeqCst), 1);
             assert_eq!(PlatTimerStop(id), 0);
         });
@@ -859,14 +876,16 @@ mod tests {
             let start = std::time::Instant::now();
             assert_eq!(sim_wait(&[event], 5000), Some(WAIT_TIMEOUT)); // 50 real ms
             let real = real_ms(start);
-            assert!((40..1000).contains(&real), "{real} real ms");
+            // scaled: well under the unscaled 5,000 ms even when a loaded machine oversleeps
+            assert!((40..4000).contains(&real), "{real} real ms");
             SetEvent(event);
             assert_eq!(sim_wait(&[event], 5000), Some(WAIT_OBJECT_0));
             assert!(sim_wait(&[event], 0).is_none() && sim_wait(&[event], u32::MAX).is_none(), "0 and INFINITE");
             // an event timer under the factor
             let id = PlatTimerStartEvent(1000, 0, event);
             assert_ne!(id, 0);
-            assert_eq!(sim_wait(&[event], 100_000), Some(WAIT_OBJECT_0), "set after 10 real ms");
+            // set after 10 real ms; the wait allows 20 real s (a loaded machine keeps the timer thread off the CPU)
+            assert_eq!(sim_wait(&[event], 2_000_000), Some(WAIT_OBJECT_0), "set after 10 real ms");
             CloseHandle(event);
         });
     }
@@ -911,10 +930,14 @@ mod tests {
         TICKS.store(0, Ordering::SeqCst);
         let id = unsafe { PlatTimerStartCallback(10, 1, Some(tick), 0x1234 as *mut c_void) };
         assert_ne!(id, 0);
-        PlatSleep(200);
+        let start = std::time::Instant::now();
+        wait_until(20_000, || TICKS.load(Ordering::SeqCst) >= 5);
+        PlatSleep(100); // keeps ticking (about 10 more periods)
         assert_eq!(PlatTimerStop(id), 1);
+        let real = real_ms(start);
         let count = TICKS.load(Ordering::SeqCst);
-        assert!((5..=40).contains(&count), "{count} ticks");
+        // at least the 5 waited for, at most one a period of 10 ms (the start's tick and slack: 2x + 5)
+        assert!(count >= 5 && u128::from(count) <= real / 5 + 5, "{count} ticks in {real} ms");
         PlatSleep(60);
         assert!(TICKS.load(Ordering::SeqCst) - count <= 1, "stopped (one may have been in flight)");
         assert_eq!(PlatTimerStop(id), 0, "not a running timer any more");
@@ -926,7 +949,8 @@ mod tests {
         TICKS.store(0, Ordering::SeqCst);
         let id = unsafe { PlatTimerStartCallback(5, 0, Some(tick), 0x1234 as *mut c_void) };
         assert_ne!(id, 0);
-        PlatSleep(200);
+        wait_until(20_000, || TICKS.load(Ordering::SeqCst) >= 1);
+        PlatSleep(200); // 40 periods: a second firing would show
         assert_eq!(TICKS.load(Ordering::SeqCst), 1);
         assert_eq!(PlatTimerStop(id), 0);
     }

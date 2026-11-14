@@ -7,8 +7,9 @@
 //
 // UIButton is whole in Rust (rust/crates/ee_ui/src/buttonobj.rs, R6 ui round 11): the members below forward to the
 // Rust object, which calls out through UIButtonHost::Op (UIControl's members, the virtuals ButtonDown, ButtonUp,
-// MouseOver, MouseMove, SetDirty and the captures, the bitmaps, the texts, the sound manager). The check box's, radio
-// button's and scroll arrow's algorithms reach it through UIButtonRust.h.
+// MouseOver, MouseMove, SetDirty and the captures, the bitmaps, the texts, the sound manager). Its subclasses' records
+// are the Rust button's too (R6 ui round 12: checkobj.rs, variantobj.rs); the host answers their ops (the label, the
+// radio walk and Check/UnCheck, the polls, the slider) and the subclasses forward through UIButtonRust.h.
 #include <windows.h>
 #include <stddef.h>
 
@@ -34,15 +35,19 @@
 #include "lle/UIForm.h"
 #include "lle/UIButton.h"
 #include "lle/UITextLabel.h"
+#include "lle/UIRadioButton.h"
+#include "lle/TMPoll.h"
+#include "lle/UISlider.h"
 #include "UIButtonRust.h"
 #include "UIObjHost.h"
 
 struct UIButtonHost {
-    static intptr_t Op(void* inButton, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
+    static intptr_t Op(void* inButton, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
     {
         UIButton* s = static_cast<UIButton*>(inButton);
         intptr_t r = 0;
-        if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Media(s, inOp, a, b, f, &r))
+        if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Media(s, inOp, a, b, f, &r) ||
+            UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
             return r;
         switch (inOp) {
         case EeUiOp::ButtonDown: s->ButtonDown(); break;
@@ -52,6 +57,38 @@ struct UIButtonHost {
         case EeUiOp::SoundLoad: return (intptr_t)s->GetSoundManager()->Load(*reinterpret_cast<const UString*>(a), 0, 1);
         case EeUiOp::SoundUnload: s->GetSoundManager()->Unload((unsigned long)a); break;
         case EeUiOp::SoundPlay: s->GetSoundManager()->Play((unsigned long)a, 1.0f, 0.0f, 1.0f, false, NULL); break;
+        case EeUiOp::LabelCreate:
+            return (intptr_t) new UITextLabel(*reinterpret_cast<const UWideString*>(a), reinterpret_cast<GEFont*>(b),
+                                              s->GetId(), UIObjHost::Rect(f), s->GetForm(), 0, s->GetIndex(), 0);
+        case EeUiOp::RadioCheck: static_cast<UIRadioButton*>(s)->Check(); break;
+        case EeUiOp::RadioUnCheckAt: static_cast<UIRadioButton*>(s->GetForm()->GetControl((unsigned long)a))->UnCheck(); break;
+        case EeUiOp::RadioOf: {
+            UIControl* c = s->GetForm()->GetControl((unsigned long)a);
+            return c && c->GetType() == kControlTypeRadioButton ? (intptr_t) static_cast<UIButton*>(c)->mRust : 0;
+        }
+        case EeUiOp::PollCreate: return (intptr_t) new TMPoll((unsigned long)a, 0, false);
+        case EeUiOp::PollDelete: delete reinterpret_cast<TMPoll*>(a); break;
+        case EeUiOp::PollRunning: return reinterpret_cast<TMPoll*>(a)->GetIsRunning();
+        case EeUiOp::PollPoll: return (intptr_t)reinterpret_cast<TMPoll*>(a)->Poll();
+        case EeUiOp::PollStart: reinterpret_cast<TMPoll*>(a)->Start(); break;
+        case EeUiOp::PollStop: reinterpret_cast<TMPoll*>(a)->Stop(); break;
+        case EeUiOp::PollTimeLeft: return (intptr_t)reinterpret_cast<TMPoll*>(a)->GetTimeLeft();
+        case EeUiOp::PollSetDelay: reinterpret_cast<TMPoll*>(a)->SetTimeDelay((unsigned long)b); break;
+        case EeUiOp::SliderValue: return reinterpret_cast<UISlider*>(a)->GetCurrentRangeValue();
+        case EeUiOp::SliderSetValue: reinterpret_cast<UISlider*>(a)->SetCurrentRangeValue((long)b); break;
+        case EeUiOp::BitmapStretch: {
+            // the source rectangle's floats, two per integer (variantobj.rs)
+            uint32_t theBits[4] = {(uint32_t)((uint64_t)c >> 32), (uint32_t)c, (uint32_t)((uint64_t)d >> 32), (uint32_t)d};
+            float theSource[4];
+            memcpy(theSource, theBits, sizeof(theSource));
+            GERectangle theDestination = UIObjHost::Rect(f);
+            reinterpret_cast<GEBitmap*>(a)->ComputeStretchedCoordsAndScale(theDestination, theDestination,
+                                                                           UIObjHost::Rect(theSource), s->GetScreenIndex());
+            break;
+        }
+        case EeUiOp::LabelSetText:
+            reinterpret_cast<UITextLabel*>(a)->SetText(*reinterpret_cast<const UWideString*>(b));   // SetText(text, true)
+            break;
         default: break;
         }
         return 0;
@@ -161,25 +198,6 @@ void UIButton::SetTextRectangle(const GERectangle& inRectangle)
 }
 void UIButton::ReplaceNormalBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplaceNormalBitmap, (intptr_t)inBitmap); }
 void UIButton::ReplacePressedBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplacePressedBitmap, (intptr_t)inBitmap); }
-
-// The check box's and radio button's label (UICheckBox.cpp, UIRadioButton.cpp): the context names it
-extern "C" void ee_uicpp_label_set_text(void* inButton, void* inLabel)
-{
-    UIButtonRust::Label* theLabel = static_cast<UIButtonRust::Label*>(inLabel);
-    (*theLabel->mLabel)->SetText(*theLabel->mText);   // the public SetText(text, true)
-}
-extern "C" void ee_uicpp_label_create(void* inButton, void* inLabel, const EeUiRect* inRectangle)
-{
-    UIButtonRust::Label* theLabel = static_cast<UIButtonRust::Label*>(inLabel);
-    UIButton* theButton = UIButtonRust::Button(inButton);
-    *theLabel->mLabel = new UITextLabel(*theLabel->mText, theLabel->mFont, theButton->GetId(),
-                                        *reinterpret_cast<const GERectangle*>(inRectangle), theButton->GetForm(), 0,
-                                        theButton->GetIndex(), 0);
-}
-extern "C" void ee_uicpp_label_set_location(void* inButton, void* inLabel, float inX, float inY)
-{
-    (*static_cast<UIButtonRust::Label*>(inLabel)->mLabel)->SetLocation(GE2DPoint(inX, inY));
-}
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
 // SYNTHETIC: LLE 0x1005e47c

@@ -4,6 +4,7 @@
 //! draw), so the logic makes each read exactly where and as often as the original did.
 
 use std::ffi::c_void;
+use std::os::raw::c_long;
 
 /// `gWorld.mNumPlayers`.
 pub const EE_SCENARIO_READ_NUM_PLAYERS: u32 = 0;
@@ -110,7 +111,14 @@ pub const EE_SCENARIO_READ_OBJECT_FIRST_UNIT_TYPE: u32 = 47;
 /// `GetScenarioObject(a)->PickUnitType()`.
 pub const EE_SCENARIO_READ_OBJECT_PICK: u32 = 48;
 
-/// The world's reads.
+/// `gWorld.mPlayers[a]->mShareBonus`.
+pub const EE_SCENARIO_READ_SHARE_BONUS: u32 = 50;
+/// `gWorld.mPlayerPopulationLimit`.
+pub const EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: u32 = 51;
+/// `gWorld.mPlayers[a]->mPlayerID`.
+pub const EE_SCENARIO_READ_PLAYER_ID: u32 = 52;
+
+/// The world's reads, and the writes of the logic that plans them (`EE_SCENARIO_WRITE_*`, player.rs).
 pub trait Host {
     fn read4(&mut self, op: u32, a: i32, b: i32, c: i32, d: i32) -> i64;
     /// TEST ONLY: a player choice's capture record (SMCP: the choice, the single flag, the result, the players or
@@ -120,6 +128,8 @@ pub trait Host {
     fn read(&mut self, op: u32, a: i32, b: i32) -> i64 {
         self.read4(op, a, b, 0, 0)
     }
+    /// One write of a plan (`EE_SCENARIO_WRITE_*`) on player `player`.
+    fn write(&mut self, _op: u32, _player: c_long, _b: i64, _c: i64, _d: i64) {}
 }
 
 /// The C ABI's host: a context and the read callback.
@@ -138,6 +148,8 @@ pub struct EeScenarioHost {
         count: usize,
         seed: u32,
     ),
+    /// [`Host::write`].
+    pub write: unsafe extern "C" fn(ctx: *mut c_void, op: u32, player: c_long, b: i64, c: i64, d: i64),
 }
 
 impl Host for EeScenarioHost {
@@ -153,5 +165,9 @@ impl Host for EeScenarioHost {
         };
         // SAFETY: as `read`; `at` points to `count` players for the call
         unsafe { (self.players)(self.ctx, kind, single, result, listed, at, count, seed) }
+    }
+    fn write(&mut self, op: u32, player: c_long, b: i64, c: i64, d: i64) {
+        // SAFETY: as `read`
+        unsafe { (self.write)(self.ctx, op, player, b, c, d) }
     }
 }

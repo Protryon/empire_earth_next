@@ -178,92 +178,194 @@ EEUIFMGStatusButton::~EEUIFMGStatusButton()
     this->ReleaseButton();
 }
 
+// One press of a command button (ee_screens status_button.rs asks its reads and calls through
+// ee_screenscpp_status_button): the button, the first selected unit (the unload's transport), CanProduce's reason
+struct EEUIFMGStatusButtonPress {
+    EEUIFMGStatusButton* mButton;
+    EEComplexUnit* mTransport;
+    UWideString mReason;
+};
+static_assert(EE_SCREENS_SB_TYPE_TELEPORTER == kUnitTypeTeleporter && EE_SCREENS_SB_CATEGORY_FORTRESS == kUnitCategoryFortress &&
+                  EE_SCREENS_SB_SOUND_BUTTON1 == kSoundButton1 && EE_SCREENS_SB_SOUND_BUTTON2 == kSoundButton2 &&
+                  EE_SCREENS_SB_WORLD_JIT_DELAY == kWorldDeathmatchJitManufacturingDelay &&
+                  EE_SCREENS_SB_WORLD_REFUSAL_INTERVAL == kWorldRefusalMessageInterval &&
+                  EE_SCREENS_SB_IDS_JIT_NOT_YET == IDS_JUST_IN_TIME_MANUFACTURING_IS_NOT &&
+                  EE_SCREENS_SB_IDS_INSUFFICIENT_POWER == IDS_INSUFFICIENT_POWER,
+              "status_button.rs's constants");
+
+// The press's reads and calls (EE_SCREENS_SB_OP_*); the selected group's units by index, the button's node by its
+// technology, a unit class by its table index
+extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC)
+{
+    EEUIFMGStatusButtonPress& thePress = *static_cast<EEUIFMGStatusButtonPress*>(inPress);
+    EEUIFMGStatusButton* theButton = thePress.mButton;
+    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(theButton->GetForm());
+    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+    EESelectedGroup* theGroup = thePlayer != NULL ? thePlayer->mSelectedGroup : NULL;   // read only by the ops that use it
+    EEComplexUnit* theUnit = inOp >= EE_SCREENS_SB_OP_UNIT && inOp <= EE_SCREENS_SB_OP_UNIT_POWER ? theGroup->GetUnit(inA) : NULL;
+    bool theNodeOp = (inOp >= EE_SCREENS_SB_OP_NODE_KIND && inOp <= EE_SCREENS_SB_OP_MOUSE_INSIDE) ||
+                     inOp == EE_SCREENS_SB_OP_NODE_CALAMITY;
+    EETechTreeNode* theNode = theNodeOp && !theButton->mIsCommand ? thePlayer->GetTechTree()->Get(theButton->mTechnology) : NULL;
+    EEUnitClass* theClass = inOp >= EE_SCREENS_SB_OP_CLASS_PRESENT && inOp <= EE_SCREENS_SB_OP_CLASS_GATE ? gUnitClassTable[inA] : NULL;
+    EESoundObject* theSound;
+    switch (inOp) {
+    case EE_SCREENS_SB_OP_IS_COMMAND: return theButton->mIsCommand;
+    case EE_SCREENS_SB_OP_BUTTON: return theButton->mButton;
+    case EE_SCREENS_SB_OP_PANEL:
+        if (inC != 0) gUIManager->GetMainGameForm()->GetEntityGroup(inA)->Enable();
+        else gUIManager->GetMainGameForm()->GetEntityGroup(inA)->Disable();
+        gUIManager->GetMainGameForm()->GetBackgroundByID(inB)->SetVisibility(inC != 0);
+        break;
+    case EE_SCREENS_SB_OP_MAIN_GROUP:
+        if (inA == 0) gUIManager->Fn26FA6A();
+        else gUIManager->Fn26FA55();
+        break;
+    case EE_SCREENS_SB_OP_GROUP_COUNT: return theGroup == NULL ? -1 : (int64_t)theGroup->GetNumUnits();
+    case EE_SCREENS_SB_OP_UNIT: return theUnit != NULL;
+    case EE_SCREENS_SB_OP_UNIT_TYPE: return theUnit->GetUnitClass()->mUnitType;
+    case EE_SCREENS_SB_OP_UNIT_POWER: return inB != 0 ? theUnit->GetPower() : (long)theUnit->mPower;
+    case EE_SCREENS_SB_OP_UNLOAD_COST: return gFortressUnloadCost;
+    case EE_SCREENS_SB_OP_FIRST_SELECTED: return EEGetFirstSelectedUnit(thePress.mTransport) == true;
+    case EE_SCREENS_SB_OP_FIRST_CATEGORY: return thePress.mTransport->GetUnitClass()->mCategory;
+    case EE_SCREENS_SB_OP_FIRST_TYPE: return thePress.mTransport->GetUnitClass()->mUnitType;
+    case EE_SCREENS_SB_OP_SEND: {
+        NEMessage* theMessage;
+        switch (inA) {
+        case EE_SCREENS_SB_SEND_UNLOAD:
+            theMessage = new EEMUnloadTransport(thePress.mTransport->mUnitID, thePress.mTransport->GetTileX(),
+                                                thePress.mTransport->GetTileY());
+            break;
+        case EE_SCREENS_SB_SEND_STOP: theMessage = new EEMStopActiveGroup; break;
+        case EE_SCREENS_SB_SEND_DISBAND: theMessage = new EEMDisband; break;
+        case EE_SCREENS_SB_SEND_SELF_DESTRUCT: theMessage = new EEMSelfDestruct; break;
+        case EE_SCREENS_SB_SEND_PATROL: theMessage = new EEMPatrol(-1); break;
+        case EE_SCREENS_SB_SEND_REPLANT: theMessage = new EEMReplantFarms(-1); break;
+        case EE_SCREENS_SB_SEND_CLEAR_AIRPORT: theMessage = new EEMClearAirportCommands; break;
+        case EE_SCREENS_SB_SEND_EXPLORE: theMessage = new EEMExplore; break;
+        case EE_SCREENS_SB_SEND_LOCK: theMessage = new EEMLockUnlock(inB != 0); break;
+        case EE_SCREENS_SB_SEND_PACK: theMessage = new EEMPackUnpack(inB != 0); break;
+        case EE_SCREENS_SB_SEND_FANATIC: theMessage = new EEMGoFanatic; break;
+        case EE_SCREENS_SB_SEND_JIT: theMessage = new EEMJITManufacturing; break;
+        case EE_SCREENS_SB_SEND_EXCHANGE: theMessage = new EEMExchangeResources((inB & 1) != 0, (long)(inB >> 1), inC != 0); break;
+        case EE_SCREENS_SB_SEND_RESEARCH:
+            theMessage = new EEMResearchTechnology(theButton->mUnitID, theButton->mTechnology, inB != 0);
+            break;
+        default:
+            theMessage = new EEMRemoveTechnology(theButton->mUnitID, theButton->mTechnology, false, inB != 0);
+            break;
+        }
+        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
+        break;
+    }
+    case EE_SCREENS_SB_OP_LOCK_CURSOR: theForm->mIsCursorLocked = true; break;
+    case EE_SCREENS_SB_OP_POINTER: gMouse->mPointer = inA; break;
+    case EE_SCREENS_SB_OP_UI_STATE: theForm->SetUIState(inA); break;
+    case EE_SCREENS_SB_OP_SHOW_CANCEL: theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown); break;
+    case EE_SCREENS_SB_OP_REFRESH_GROUP:
+        if (gUIManager->GetMainGameForm())
+            gUIManager->GetMainGameForm()->mRefreshGroup = true;
+        break;
+    case EE_SCREENS_SB_OP_START_PATROL: theForm->StartPatrol(); break;
+    case EE_SCREENS_SB_OP_START_FLARE: theForm->StartFlare(); break;
+    case EE_SCREENS_SB_OP_GAME_RESOURCES: return gGameResources;
+    case EE_SCREENS_SB_OP_GAME_CLOCK: {
+        float theClock = gPhysics->GetGameClock();
+        uint32_t theBits;
+        memcpy(&theBits, &theClock, 4);
+        return theBits;
+    }
+    case EE_SCREENS_SB_OP_WORLD_LONG: return gWorldTable.GetLongValue((EEWorldConstant)inA);
+    case EE_SCREENS_SB_OP_CHAT_STRING: {
+        UWideString theString;
+        gResource->GetString(inA, theString);
+        gUserInterface->AddChatLogEntry(theString, 0);
+        break;
+    }
+    case EE_SCREENS_SB_OP_CAN_AFFORD_TRADE: return EECanAffordTrade(inA);
+    case EE_SCREENS_SB_OP_DECODE_TRADE: {
+        long theResource;
+        bool theSell;
+        if (!EEDecodeTradeButton(inA, theResource, theSell))
+            return -1;
+        return (int64_t)theResource * 2 + (theSell ? 1 : 0);
+    }
+    case EE_SCREENS_SB_OP_SHIFT: return UIControl::ShiftKeyPressed();
+    case EE_SCREENS_SB_OP_SOUND:
+        theSound = EESoundObject::Get(inA);
+        gSoundManager->Play(theSound->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+        break;
+    case EE_SCREENS_SB_OP_NODE_KIND: return theNode->mData->mKind;
+    case EE_SCREENS_SB_OP_NODE_CLASS: return theNode->mData->mUnitClass;
+    case EE_SCREENS_SB_OP_CLASS_PRESENT: return theClass != NULL;
+    case EE_SCREENS_SB_OP_CLASS_LAND_BUILDING: return theClass->IsLandBuilding() && theClass->mCategory != kUnitCategoryNavalBuilding;
+    case EE_SCREENS_SB_OP_CLASS_GATE: return theClass->mCategory == kUnitCategoryGate;
+    case EE_SCREENS_SB_OP_NODE_MAKES_UNIT: return theNode->mData->mMakesUnit;
+    case EE_SCREENS_SB_OP_BUILD_UNIT: theForm->BuildUnit(theButton->mUnitID, theButton->mTechnology); break;
+    case EE_SCREENS_SB_OP_START_WALL: theForm->StartWall(theButton->mTechnology); break;
+    case EE_SCREENS_SB_OP_START_GATE: theForm->StartGate(theButton->mTechnology); break;
+    case EE_SCREENS_SB_OP_CAN_PRODUCE:
+        return thePlayer->CanProduce(theButton->mTechnology, theButton->mUnitType, inA, true, 3, &thePress.mReason) == true;
+    case EE_SCREENS_SB_OP_TIME: return (uint32_t)TMGetTime();
+    case EE_SCREENS_SB_OP_LAST_ERROR: return (uint32_t)theButton->mLastErrorTime;
+    case EE_SCREENS_SB_OP_SET_LAST_ERROR: theButton->mLastErrorTime = (unsigned long)inA; break;
+    case EE_SCREENS_SB_OP_CHAT_REASON: gUserInterface->AddChatLogEntry(thePress.mReason, 0); break;
+    case EE_SCREENS_SB_OP_REASON_STRING: gResource->GetString(inA, thePress.mReason); break;
+    case EE_SCREENS_SB_OP_CALAMITY_COST: {
+        EECalamityClass* theCalamity = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(
+            (EECalamityEnum)theNode->mData->mCalamity);
+        return theCalamity != NULL ? theCalamity->GetCost() : 0;
+    }
+    case EE_SCREENS_SB_OP_NODE_CONTAINS: return theNode->Contains(inA);
+    case EE_SCREENS_SB_OP_START_CALAMITY: theForm->StartCalamity(theButton->mTechnology); break;
+    case EE_SCREENS_SB_OP_BASE_BUTTON_UP: theButton->BaseButtonUp(); break;
+    case EE_SCREENS_SB_OP_RELEASE_MOUSE: theButton->ReleaseCapturedMouse(); break;
+    case EE_SCREENS_SB_OP_BUTTON_UP: theButton->ButtonUp(); break;
+    case EE_SCREENS_SB_OP_MOUSE_INSIDE: return theButton->IsMouseInside();
+    case EE_SCREENS_SB_OP_SET_SHOW_COUNT: theButton->mShowCount = inA != 0; break;
+    case EE_SCREENS_SB_OP_COUNT: return theButton->mCount;
+    case EE_SCREENS_SB_OP_COUNT_TEXT: {
+        UWideString theString;
+        sprintf(theString, "%ld", (long)inA);
+        theButton->mBuildQueue->SetText(theString);
+        break;
+    }
+    case EE_SCREENS_SB_OP_NODE_CALAMITY: return theNode->mData->GetCalamity();
+    case EE_SCREENS_SB_OP_CALAMITY_CLASS_COST:
+        return USingleton<EECalamityManager>::GetInstance()->GetCalamityClass((EECalamityEnum)inA)->GetCost();
+    case EE_SCREENS_SB_OP_IN_FANATIC_SET: return gUnitSetManager.GetSet(0x2f)->Contains((unsigned long)inA);
+    case EE_SCREENS_SB_OP_UNIT_CLOAKED: return theGroup->GetUnit(inA)->IsCloaked();
+    case EE_SCREENS_SB_OP_SET_AVAILABLE: theButton->mAvailable = inA != 0; break;
+    case EE_SCREENS_SB_OP_HAS_OBJECT: return theButton->mButtonObject != NULL;
+    case EE_SCREENS_SB_OP_STATE: return theButton->GetState();
+    case EE_SCREENS_SB_OP_BITMAPS:
+        return (theButton->GetNormalBitmap() == theButton->GetPressedBitmap() ? 1 : 0) |
+               (theButton->GetFocusedBitmap() == theButton->GetPressedBitmap() ? 2 : 0) | (theButton->GetPressedBitmap() == NULL ? 4 : 0);
+    case EE_SCREENS_SB_OP_ICON:
+        if (inA == EE_SCREENS_BUTTON_ICON_NONE) {
+            theButton->mDrawIcon = false;
+        } else {
+            if (inA == EE_SCREENS_BUTTON_ICON_PRESSED)
+                theButton->mButtonObject->SetPressedBitmap(theButton->mIcon, theButton->GetRectangle(), theButton->GetScreenIndex());
+            else
+                theButton->mButtonObject->SetFaceBitmap(theButton->mIcon, theButton->GetRectangle(), theButton->GetScreenIndex());
+            theButton->mDrawIcon = true;
+        }
+        break;
+    case EE_SCREENS_SB_OP_BASE_COPY_DATA: return theButton->UIButton::CopyData();
+    case EE_SCREENS_SB_OP_CAN_PRODUCE_QUIET:
+        return thePlayer->CanProduce(theButton->mTechnology, theButton->mUnitType, 1, true, 3, NULL) == true;
+    }
+    return 0;
+}
+
 // FUNCTION: EXE 0x66e274
 // Presses a command or tech button: runs the command, starts placing a building, wall or gate, queues the
 // research (Shift: five), or starts a calamity when a selected unit can pay it; refusals beep and explain in the chat
-/// The tech-node branch (build, wall, gate, patrol, shift-research, research) comes first, the calamity branch
-// (a selected unit that can pay the calamity's cost) second
+// (ee_screens status_button.rs)
 void EEUIFMGStatusButton::ButtonUp()
 {
-    UWideString theReason;
-    bool theFound = false;
-    gUIManager->GetMainGameForm()->GetEntityGroup(9)->Disable();
-    gUIManager->GetMainGameForm()->GetBackgroundByID(0x97)->SetVisibility(false);
-    gUIManager->GetMainGameForm()->GetEntityGroup(8)->Disable();
-    gUIManager->GetMainGameForm()->GetBackgroundByID(0x98)->SetVisibility(false);
-    if (this->mIsCommand) {
-        this->Command();
-    } else {
-        EETechTreeNode* theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(this->mTechnology);
-        if (theNode->mData->mKind != 5) {
-            long theClassIndex = theNode->mData->mUnitClass;
-            if (theClassIndex > 0) {
-                EEUnitClass* theClass = gUnitClassTable[theClassIndex];
-                if (theClass == NULL)
-                    goto done;
-                if (theClass->IsLandBuilding() && theClass->mCategory != kUnitCategoryNavalBuilding) {
-                    if (theNode->mData->mKind != 6 && (!theNode->mData->mMakesUnit || theClass->mCategory != kUnitCategoryGate))
-                        (static_cast<EEUIFMainGame*>(this->GetForm()))->BuildUnit(this->mUnitID, this->mTechnology);
-                    else if (theNode->mData->mKind == 6)
-                        (static_cast<EEUIFMainGame*>(this->GetForm()))->StartWall(this->mTechnology);
-                    else if (theNode->mData->mMakesUnit && theClass->mCategory == kUnitCategoryGate)
-                        (static_cast<EEUIFMainGame*>(this->GetForm()))->StartGate(this->mTechnology);
-                    else if (theNode->mData->mKind == 10)
-                        (static_cast<EEUIFMainGame*>(this->GetForm()))->StartPatrol();
-                    goto done;
-                }
-                if (UIControl::ShiftKeyPressed()) {
-                    if (gWorld.GetCurrentPlayer()->CanProduce(this->mTechnology, this->mUnitType, 5, true, 3, &theReason) == true) {
-                        gCommunications->ProcessLocalUserInput(new EEMResearchTechnology(this->mUnitID, this->mTechnology, true), kSlotNone);
-                        gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-                    }
-                    goto done;
-                }
-            }
-            if (gWorld.GetCurrentPlayer()->CanProduce(this->mTechnology, this->mUnitType, 1, true, 3, &theReason) == true) {
-                gCommunications->ProcessLocalUserInput(new EEMResearchTechnology(this->mUnitID, this->mTechnology, false), kSlotNone);
-                gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-            } else {
-                gSoundManager->Play(EESoundObject::Get(kSoundButton2)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-                unsigned long theDelay = gWorldTable.GetLongValue(kWorldRefusalMessageInterval);
-                if (TMGetTime() - this->mLastErrorTime > theDelay) {
-                    gUserInterface->AddChatLogEntry(theReason, 0);
-                    this->mLastErrorTime = TMGetTime();
-                }
-            }
-        } else {
-            EECalamityEnum theCalamity = (EECalamityEnum)theNode->mData->mCalamity;
-            EECalamityClass* theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theCalamity);
-            EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-            if (theGroup) {
-                unsigned long theCount = theGroup->GetNumUnits();
-                for (unsigned long i = 0; i < theCount; i++) {
-                    if (theFound)
-                        break;
-                    EEComplexUnit* theUnit = theGroup->GetUnit(i);
-                    if (theUnit && theUnit->GetPower() >= theClass->GetCost() &&
-                        theNode->Contains(theUnit->GetUnitClass()->GetUnitType()))
-                        theFound = true;
-                    else
-                        theFound = false;
-                }
-            }
-            if (theFound) {
-                gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-                static_cast<EEUIFMainGame*>(this->GetForm())->StartCalamity(this->mTechnology);
-            } else {
-                gResource->GetString(IDS_INSUFFICIENT_POWER, theReason);
-                gSoundManager->Play(EESoundObject::Get(kSoundButton2)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-                unsigned long theDelay = gWorldTable.GetLongValue(kWorldRefusalMessageInterval);
-                if (TMGetTime() - this->mLastErrorTime > theDelay) {
-                    gUserInterface->AddChatLogEntry(theReason, 0);
-                    this->mLastErrorTime = TMGetTime();
-                }
-            }
-        }
-    }
-done:
-    UIButton::ButtonUp();
+    EEUIFMGStatusButtonPress thePress = {this, NULL};
+    ee_screens_status_button_up(&thePress);
 }
 
 // FUNCTION: EXE 0x66e71d
@@ -283,90 +385,8 @@ void EEUIFMGStatusButton::ReleaseButton()
 // mAvailable; VC6 merges the stores)
 long EEUIFMGStatusButton::CopyData()
 {
-    // the test, the availability and the icon are Rust's (ee_screens command_panel.rs); the C++ reads what the
-    // test needs and keeps every call
-    UWideString theString;
-    EeScreensButtonFacts theFacts;
-    memset(&theFacts, 0, sizeof(theFacts));
-    std::vector<EeScreensButtonUnit> theUnits;
-    EETechTreeNode* theNode = NULL;
-    unsigned long theTest;
-    this->mShowCount = false;
-    if (this->mIsCommand) {
-        theTest = ee_screens_button_command_test(this->mButton);
-    } else {
-        theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(this->mTechnology);
-        if (this->mCount) {
-            sprintf(theString, "%ld", this->mCount);
-            this->mBuildQueue->SetText(theString);
-            this->mShowCount = true;
-        }
-        RTSTechTreeNodeData* theData = theNode->mData;
-        bool theCalamity = ee_screens_button_tech_is_calamity(theData->mKind, theData->GetCalamity());
-        if (theCalamity) {
-            EECalamityEnum theEnum = (EECalamityEnum)theData->GetCalamity();
-            theFacts.calamity_cost = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theEnum)->GetCost();
-        }
-        theTest = ee_screens_button_tech_test(theCalamity, theFacts.calamity_cost);
-    }
-    switch (theTest) {
-    case EE_SCREENS_BUTTON_FANATIC:
-    case EE_SCREENS_BUTTON_UNLOAD:
-    case EE_SCREENS_BUTTON_POWER: {
-        EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-        theFacts.has_group = theGroup != NULL;
-        theFacts.unload_cost = gFortressUnloadCost;
-        unsigned long theCount = theGroup ? theGroup->GetNumUnits() : 0;
-        for (unsigned long i = 0; i < theCount; i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            EeScreensButtonUnit theView;
-            memset(&theView, 0, sizeof(theView));
-            theView.present = theUnit != NULL;
-            if (theUnit) {
-                theView.unit_type = theUnit->GetUnitClass()->GetUnitType();
-                theView.power = theUnit->GetPower();
-                if (theTest == EE_SCREENS_BUTTON_FANATIC) {
-                    theView.in_set = gUnitSetManager.GetSet(0x2f)->Contains(theView.unit_type);
-                    theView.cloaked = theUnit->IsCloaked();
-                } else if (theTest == EE_SCREENS_BUTTON_POWER) {
-                    theView.in_node = theNode->Contains(theView.unit_type);
-                }
-            }
-            theUnits.push_back(theView);
-        }
-        break;
-    }
-    case EE_SCREENS_BUTTON_TRADE:
-        theFacts.affordable = EECanAffordTrade(this->mButton);
-        break;
-    case EE_SCREENS_BUTTON_JIT:
-        theFacts.game_resources = gGameResources;
-        theFacts.clock = gPhysics->GetGameClock();
-        theFacts.jit_delay = gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay);
-        break;
-    case EE_SCREENS_BUTTON_PRODUCE:
-        theFacts.can_produce = gWorld.GetCurrentPlayer()->CanProduce(this->mTechnology, this->mUnitType, 1, true, 3, NULL);
-        break;
-    default:
-        break;
-    }
-    this->mAvailable = ee_screens_button_available(theTest, &theFacts, theUnits.empty() ? NULL : &theUnits[0],
-                                                   theUnits.size());
-    // the icon: none for the two group buttons
-    unsigned long theIcon = ee_screens_button_icon(this->mButtonObject != NULL, this->mButton, this->GetState(),
-                                                   this->GetNormalBitmap() == this->GetPressedBitmap(),
-                                                   this->GetFocusedBitmap() == this->GetPressedBitmap(),
-                                                   this->GetPressedBitmap() == NULL);
-    if (theIcon == EE_SCREENS_BUTTON_ICON_NONE) {
-        this->mDrawIcon = false;
-    } else {
-        if (theIcon == EE_SCREENS_BUTTON_ICON_PRESSED)
-            this->mButtonObject->SetPressedBitmap(this->mIcon, this->GetRectangle(), this->GetScreenIndex());
-        else
-            this->mButtonObject->SetFaceBitmap(this->mIcon, this->GetRectangle(), this->GetScreenIndex());
-        this->mDrawIcon = true;
-    }
-    return UIButton::CopyData();
+    EEUIFMGStatusButtonPress thePress = {this, NULL};
+    return (long)ee_screens_status_button_copy_data(&thePress);   // ee_screens status_button.rs copy_data
 }
 
 // FUNCTION: EXE 0x66eaf4
@@ -531,31 +551,11 @@ long EEUIFMGStatusButton::MouseRButtonDown()
 
 // FUNCTION: EXE 0x66f1a4
 // Runs a command button on a right release, or cancels one queued tech (Shift: five, for units only)
+// (ee_screens status_button.rs)
 long EEUIFMGStatusButton::MouseRButtonUp()
 {
-    bool theShift = false;
-    this->ReleaseCapturedMouse();
-    if (this->mIsCommand) {
-        this->ButtonUp();
-        return 0;
-    }
-    if (this->GetRectangle().Contains(this->GetMouseLocation())) {
-        EETechTreeNode* theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(this->mTechnology);
-        if (theNode->mData->mKind != 5) {
-            long theClassIndex = theNode->mData->mUnitClass;
-            EEUnitClass* theClass;
-            if (theClassIndex > 0 && (theClass = gUnitClassTable[theClassIndex]) != NULL) {
-                if ((!theClass->IsLandBuilding() || theClass->mCategory == kUnitCategoryNavalBuilding) && theNode->mData->mKind != 6 &&
-                    theClass->mCategory != kUnitCategoryGate && theNode->mData->mKind != 10)
-                    theShift = true;
-                else
-                    theShift = false;
-            }
-            gCommunications->ProcessLocalUserInput(
-                new EEMRemoveTechnology(this->mUnitID, this->mTechnology, false, theShift && UIControl::ShiftKeyPressed()), kSlotNone);
-        }
-        UIButton::ButtonUp();
-    }
+    EEUIFMGStatusButtonPress thePress = {this, NULL};
+    ee_screens_status_button_right_up(&thePress);
     return 0;
 }
 
@@ -563,160 +563,6 @@ long EEUIFMGStatusButton::MouseRButtonUp()
 // Creates a remove-technology message
 // (inline ctor, out of line after its first user)
 
-// FUNCTION: EXE 0x66f2f2
-// Runs a command button: unload, stop, disband, self-destruct, the targeting modes (attack, heal, convert,
-// garrison, rally ...), patrol, replant, flare, airport commands, explore, market trades and the civ power toggles
-// The command buttons (case bodies in the original's source order; VC6 merges the repeated state/refresh tails)
-void EEUIFMGStatusButton::Command()
-{
-    EEUIFMainGame* theForm;
-    unsigned long theButton = this->mButton;
-    EEComplexUnit* theTransport;
-    {
-        switch (theButton) {
-        case 0:
-            gUIManager->Fn26FA6A();
-            break;
-        case 1:
-            gUIManager->Fn26FA55();
-            break;
-        case 2: {
-            EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-            bool theFound = false;
-            if (theGroup == NULL)
-                break;
-            unsigned long theCount = theGroup->GetNumUnits();
-            for (unsigned long i = 0; i < theCount; i++) {
-                if (theFound)
-                    break;
-                EEComplexUnit* theUnit = theGroup->GetUnit(i);
-                if (theUnit == NULL ||
-                    (theUnit->GetUnitClass()->mUnitType == kUnitTypeTeleporter && theUnit->mPower < gFortressUnloadCost))
-                    theFound = false;
-                else
-                    theFound = true;
-            }
-            if (!theFound)
-                break;
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            if (EEGetFirstSelectedUnit(theTransport) == true && theTransport->GetUnitClass()->mCategory == kUnitCategoryFortress &&
-                theTransport->GetUnitClass()->mUnitType != kUnitTypeTeleporter) {
-                gCommunications->ProcessLocalUserInput(
-                    new EEMUnloadTransport(theTransport->mUnitID, theTransport->GetTileX(), theTransport->GetTileY()), kSlotNone);
-                break;
-            }
-            theForm->mIsCursorLocked = true;
-            gMouse->mPointer = 0xc;
-            theForm->SetUIState(3);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        }
-        case 3:
-            gCommunications->ProcessLocalUserInput(new EEMStopActiveGroup, kSlotNone);
-            static_cast<EEUIFMainGame*>(this->GetForm())->SetUIState(0);
-            break;
-        case 0x1f:
-            gCommunications->ProcessLocalUserInput(new EEMDisband, kSlotNone);
-            static_cast<EEUIFMainGame*>(this->GetForm())->SetUIState(0);
-            break;
-        case 0x1c:
-            gCommunications->ProcessLocalUserInput(new EEMSelfDestruct, kSlotNone);
-            static_cast<EEUIFMainGame*>(this->GetForm())->SetUIState(0);
-            break;
-        case 0x1b:
-        case 0x22:
-            static_cast<EEUIFMainGame*>(this->GetForm())->mIsCursorLocked = true;
-            static_cast<EEUIFMainGame*>(this->GetForm())->StartPatrol();
-            break;
-        case 0x12:
-            gCommunications->ProcessLocalUserInput(new EEMPatrol(-1), kSlotNone);
-            break;
-        case 0x13:
-            gCommunications->ProcessLocalUserInput(new EEMReplantFarms(-1), kSlotNone);
-            break;
-        case 0x14:
-        case 0x23:
-            static_cast<EEUIFMainGame*>(this->GetForm())->mIsCursorLocked = true;
-            static_cast<EEUIFMainGame*>(this->GetForm())->StartFlare();
-            break;
-        case 0x16:
-            gCommunications->ProcessLocalUserInput(new EEMClearAirportCommands, kSlotNone);
-            break;
-        case 0x17:
-            gCommunications->ProcessLocalUserInput(new EEMExplore, kSlotNone);
-            break;
-        case 0x19:
-            gCommunications->ProcessLocalUserInput(new EEMLockUnlock(true), kSlotNone);
-            break;
-        case 0x1a:
-            gCommunications->ProcessLocalUserInput(new EEMLockUnlock(false), kSlotNone);
-            break;
-        case 0x1d:
-            gUIManager->GetMainGameForm()->GetEntityGroup(9)->Enable();
-            gUIManager->GetMainGameForm()->GetBackgroundByID(0x97)->SetVisibility(true);
-            break;
-        case 0x1e:
-            gUIManager->GetMainGameForm()->GetEntityGroup(8)->Enable();
-            gUIManager->GetMainGameForm()->GetBackgroundByID(0x98)->SetVisibility(true);
-            break;
-        case 0x24:
-            gCommunications->ProcessLocalUserInput(new EEMPackUnpack(true), kSlotNone);
-            break;
-        case 0x25:
-            gCommunications->ProcessLocalUserInput(new EEMPackUnpack(false), kSlotNone);
-            break;
-        case 0x28:
-            gCommunications->ProcessLocalUserInput(new EEMGoFanatic, kSlotNone);
-            break;
-        case 0x29:
-        case 0x2a:
-            if (gGameResources == 4 && gPhysics->GetGameClock() < (float)(long)(gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay) * 1000)) {
-                UWideString theString;
-                gResource->GetString(IDS_JUST_IN_TIME_MANUFACTURING_IS_NOT, theString);
-                gUserInterface->AddChatLogEntry(theString, 0);
-                break;
-            }
-            gCommunications->ProcessLocalUserInput(new EEMJITManufacturing, kSlotNone);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 0x5dc:
-        case 0x5dd:
-        case 0x5de:
-        case 0x5df:
-        case 0x5e0:
-        case 0x5e1:
-        case 0x5e2:
-        case 0x5e3: {
-            long theResource;
-            bool theSell;
-            if (EECanAffordTrade(theButton) && EEDecodeTradeButton(this->mButton, theResource, theSell))
-                gCommunications->ProcessLocalUserInput(
-                    new EEMExchangeResources(theSell, theResource, UIControl::ShiftKeyPressed()), kSlotNone);
-            break;
-        }
-        default: {
-            // the targeting modes: the UI state, the locked cursor's pointer (ee_screens command_panel.rs command_mode)
-            EeScreensCommandMode theMode;
-            if (!ee_screens_command_mode(theButton, &theMode))
-                break;
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            if (theMode.lock_cursor) {
-                theForm->mIsCursorLocked = true;
-                gMouse->mPointer = theMode.pointer;
-            }
-            theForm->SetUIState(theMode.ui_state);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        }
-        }
-    }
-    gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-}
 
 // FUNCTION: EXE 0x66f927
 // Creates a clear-airport-commands message

@@ -8,3 +8,4 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
+ee_random = { path = "../ee_random" }

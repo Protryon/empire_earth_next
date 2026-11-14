@@ -1,51 +1,33 @@
 // C:\EEX\Low-Level Engine\Error System\ESChecksum.h (file name inferred): named checksums of the world database,
-// compared between network peers. ESChecksum.cpp 0x28ca..0x36c5. Requires <vector> and UString.
+// saved with a game (EEPChecksum) and compared between network peers. The set is Rust's (rust/crates/ee_error
+// checksum.rs, LLE lane round 2; a vector of ESChecksumEntry before): ESChecksum keeps its vtable (EEPChecksum
+// derives from it) and owns a pointer to the Rust set; copies clone it. Requires UString.
 #ifndef LLE_ESCHECKSUM_H
 #define LLE_ESCHECKSUM_H
 
 #include <stdint.h>
 #include <vector>
 
-// Every member inline: emitted at the head of ESChecksum.cpp (0x28ca..0x2921) in this order; the accessors are
-// ICF-folded into identical bodies elsewhere (GetDescription 0x1093c, GetChecksum 0x4012b, SetChecksum 0x4c3eb).
-class LLE_API ESChecksumEntry {             // proven sizeof 0x14 (vector stride, idiv 0x14)
+struct EeErrorChecksum;
+
+class LLE_API ESChecksum {
 public:
-    ESChecksumEntry(const ESChecksumEntry& inEntry)
-        : mDescription(inEntry.mDescription), mChecksum(inEntry.mChecksum) {}
-    ESChecksumEntry() : mChecksum(0) {}
-    void SetDescription(const UString& inDescription) { this->mDescription = inDescription; }
-    const UString& GetDescription() const { return this->mDescription; }
-    unsigned long GetChecksum() const { return this->mChecksum; }
-    void SetChecksum(unsigned long inChecksum) { this->mChecksum = inChecksum; }
-    // implicit operator= (0x2901) and dtor (0x291c): an implicit dtor is what lets vector<ESChecksumEntry>'s
-    // _Destroy call ~UString directly (a user-declared `~ESChecksumEntry() {}` turns it into ??_G(0), insert 0x2f8d)
+    ESChecksum(bool inVerbose = true);
+    ESChecksum(const ESChecksum& inOther);
+    ESChecksum& operator=(const ESChecksum& inOther);
+    virtual ~ESChecksum();
 
-private:
-    friend class ESChecksum;
-    bool Compare(const ESChecksumEntry& inOther, UString& outError) const;   // 0x29f3
-
-    UString mDescription;                   // +0x00
-    uint32_t mChecksum;                     // +0x10 (32 bits on every data model: saved and compared between peers)
-};
-
-class LLE_API ESChecksum {                  // vtable 0x10097520 (dtor only); sizeof 0x18
-public:
-    ESChecksum(bool inVerbose = true);      // 0x2a50; default proven by the closure ??_F (0x2977: push 1)
-    virtual ~ESChecksum() {}                // 0x2921 (inline)
-    // implicit copy ctor (0x292f) and operator= (0x2956)
-
-    void AddChecksum(const UString& inDescription, unsigned long inChecksum);   // 0x2a78
-    bool Compare(const ESChecksum& inOther, std::vector<UString>& outErrors) const;   // 0x2b1b
-    bool GetIsVerboseMode() const;          // 0x2c3e
-    unsigned long GetTotalChecksum() const; // 0x2c42
-    void PrintReport() const;               // 0x2c57
+    // a described entry in a verbose set; else the value is added to the one sum
+    void AddChecksum(const UString& inDescription, unsigned long inChecksum);
+    // whether inOther matches entry by entry; one error text per mismatch into outErrors
+    bool Compare(const ESChecksum& inOther, std::vector<UString>& outErrors) const;
+    bool GetIsVerboseMode() const;
+    unsigned long GetTotalChecksum() const; // the entries' 32-bit sum
 
 protected:
-    void AddChecksum(unsigned long inChecksum);   // 0x2ac9: added to the last entry (one anonymous entry when
-                                                  // not verbose)
+    void AddChecksum(unsigned long inChecksum);   // added to the last entry (one anonymous entry when not verbose)
 
-    std::vector<ESChecksumEntry> mEntries;  // +0x04
-    bool mVerbose;                          // +0x14
+    EeErrorChecksum* mRust;                 // owned
 };
 
 #endif

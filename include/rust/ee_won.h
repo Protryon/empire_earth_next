@@ -2236,6 +2236,9 @@ constexpr static const int32_t EE_WON_WIN_CLOSED = 2;
 /// The last field.
 constexpr static const int32_t EE_WON_WIN_FIELD_COUNT = 38;
 
+/// The last field (`EeWonWmField::PopupFront`; a number, as a cbindgen constant from an enum does not compile).
+constexpr static const int32_t EE_WON_WM_FIELD_COUNT = 22;
+
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
   /// the field `a` (`EeWonGuiField`).
@@ -2883,6 +2886,36 @@ enum class EeWonGuiOp : uint32_t {
   WinStdArrow,
   /// `((Cursor*)a)->GetNative()`.
   WinCursorNative,
+  /// `WONTickCount()`.
+  WmTick = 590,
+  /// a component's method (`a` an `EeWonWmComp`, `b` the component; `c`, `d` its arguments).
+  WmComp,
+  /// a window's method (`a` an `EeWonWmWin`, `b` the window; `c`, `d` its arguments).
+  WmWin,
+  /// `GetScreenRect(*(WONRectangle*)a)` (virtual).
+  WmScreenRect,
+  /// DoPopup's new popup window: `CreateNativeWindow()` held once (the Rust's reference), one-component, style
+  /// 0x20, parent `a`, a popup, created at `*(WONRectangle*)b`.
+  WmNewPopupWindow,
+  /// `GetNextEvent()` (virtual).
+  WmNextEvent,
+  /// `AddRef()` on the manager.
+  WmSelfHold,
+  /// `Release()` on the manager.
+  WmSelfRelease,
+  /// the window set's `a`-th window (0 past the end; a pure read).
+  WmWindowAt,
+  /// a cache's reference: `b` (an `EeWonWmRefKind` `a`) held (`c != 0`) or given back.
+  WmRef,
+  /// `mImageDecoder.Decode((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with one reference, or 0).
+  WmDecode,
+  /// `mImageDecoder.DecodeRaw(path a of b bytes)` (a `RawImage*` with one reference, or 0).
+  WmDecodeRaw,
+  /// `new DelayLoadImage(path a of b bytes, its width, its height)` with one reference, or 0 when the file's
+  /// attributes cannot be read.
+  WmDelayImage,
+  /// `mDefaultWindow->GetFont(FontDescriptor("Tahoma", 0, 8))` (a `Font*` with one reference).
+  WmDefaultWindowFont,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -4638,6 +4671,59 @@ enum class EeWonWinCall : uint32_t {
   SetField,
 };
 
+/// The inward calls (`ee_won_wm_call`).
+enum class EeWonWmCall : uint32_t {
+  NotifyLostFocus = 1,
+  /// `NotifyGotFocus((Window*)a)`.
+  NotifyGotFocus,
+  /// `GetPopupWindow()` (a `Window*`).
+  PopupWindow,
+  CalcModality,
+  /// `NotModalWindow((Window*)a)` (0 or 1).
+  NotModalWindow,
+  /// `DoDialog((Window*)a, (Component*)b)` (the result).
+  DoDialog,
+  /// `EndDialog(a, (Window*)b, (Component*)c)`.
+  EndDialog,
+  ExitMessageLoop,
+  /// `MessageLoop()` (the result).
+  MessageLoop,
+  /// `AdjustPopupPosition((Window*)a, (Component*)b, c != 0, *(EeWonRect4*)d)`.
+  AdjustPopupPosition,
+  /// `DoPopup` of `*(EeWonWmPopup*)a`.
+  DoPopup,
+  /// `EndPopup((Component*)a)`.
+  EndPopup,
+  /// `CheckEndPopup((Component*)a)`.
+  CheckEndPopup,
+  /// `FindMouseWindow` over `*(EeWonWmMouse*)a` (changed in place).
+  FindMouseWindow,
+  /// `CheckPopupClick` over `*(EeWonWmMouse*)a` (changed in place; 0 or 1).
+  CheckPopupClick,
+  /// `CheckModalValid()` (0 or 1).
+  CheckModalValid,
+  /// the field `a` (`EeWonWmField`).
+  GetField,
+  /// the field `a` set to `b`.
+  SetField,
+  /// `SetNamedFont` of the name `a` (`b` bytes) to the font `c`.
+  SetNamedFont,
+  /// `GetNamedFont` of the name `a` (`b` bytes; a raw `Font*`).
+  GetNamedFont,
+  /// `GetDefaultFont()` (a raw `Font*`).
+  GetDefaultFont,
+  /// `SetDefaultFont((Font*)a)`.
+  SetDefaultFont,
+  /// `SetCacheImages(a != 0)`.
+  SetCacheImages,
+  /// `DecodeImage((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with the caller's reference).
+  DecodeImage,
+  /// `DecodeImageRaw(path a of b bytes)` (a `RawImage*` with the caller's reference).
+  DecodeImageRaw,
+  /// `DecodeDelayImage(path a of b bytes)` (an `Image*` with the caller's reference).
+  DecodeDelayImage,
+};
+
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
 /// caught it in `HandleMessage` and did nothing more); outside every `short` status.
 enum class EeWonLobbyResult {
@@ -4954,6 +5040,141 @@ enum class EeWonWinField : uint32_t {
   ChildCount,
 };
 
+/// A component's methods the manager calls (`WmComp`'s `a`; `b` the component, `c`, `d` the arguments).
+enum class EeWonWmComp : uint32_t {
+  /// `SetComponentFlags(c, d != 0)`.
+  SetFlags = 1,
+  /// `mParent` (a pure read).
+  Parent,
+  /// `((Container*)b)->EnterModal()`.
+  EnterModal,
+  /// `((Container*)b)->LeaveModal()`.
+  LeaveModal,
+  RequestFocus,
+  /// `SetPos(c, d)`.
+  SetPos,
+  /// the bounds' reads (pure)
+  Left,
+  Top,
+  Width,
+  Height,
+  /// `GetRoot()` (a `Window*`; a pure read).
+  Root,
+  /// `GetOwnColorScheme()` (a pure read).
+  OwnScheme,
+  /// `GetColorScheme()` (a pure read).
+  Scheme,
+  /// `SetColorScheme((ColorScheme*)c)`.
+  SetScheme,
+  /// `Fn2F5380(ComponentEvent_EndPopup, 0)`.
+  FireEndPopup,
+  /// `mComponentBits` (a pure read).
+  Bits,
+  /// `GetRootContainer()` (a pure read).
+  RootContainer,
+  /// `((Container*)b)->FindClickChildAt(c, d)` (virtual).
+  ClickChildAt,
+  /// `dynamic_cast<Container*>(b)` as a `Component*` (0 when not a container; a pure read).
+  AsContainer,
+  /// `AddRef()` (a `SmartPtr<Component>`).
+  Hold,
+  /// `Release()`.
+  Release,
+};
+
+/// A window's methods the manager calls (`WmWin`'s `a`; `b` the window, `c`, `d` the arguments).
+enum class EeWonWmWin : uint32_t {
+  /// `PlatformSetFocus()`.
+  SetFocus = 1,
+  /// `PlatformSetMouseCapture(c != 0)`.
+  SetCapture,
+  /// `GetRect(*(WONRectangle*)c, d != 0)` (virtual).
+  GetRect,
+  /// `IsPopup()` (a pure read).
+  IsPopup,
+  /// `SetIsPopup(c != 0)`.
+  SetIsPopup,
+  /// `Show(c != 0)` (virtual).
+  Show,
+  /// `Close()`.
+  Close,
+  /// `SetPosSize` of `*(WONRectangle*)c` (virtual).
+  SetPosSize,
+  /// `GetParent()` (a pure read).
+  Parent,
+  /// `AddComponent((Component*)c)`.
+  AddComponent,
+  /// `SetModal(c != 0)`.
+  SetModal,
+  /// `IsMouseDown(c)` (a pure read).
+  IsMouseDown,
+  /// `GetMouseX()` / `GetMouseY()` (pure reads).
+  MouseX,
+  MouseY,
+  /// `mRoot.get()` as a `Component*` (a pure read).
+  Root,
+  /// `mRoot->LostFocus()`.
+  RootLostFocus,
+  /// `mRoot->GotFocus()`.
+  RootGotFocus,
+  /// `mRoot->RemoveAllChildren()`.
+  RootRemoveAll,
+  /// `mRoot->RemoveChild((Component*)c)` (virtual).
+  RootRemoveChild,
+  /// `GetWindowState()` (a pure read).
+  State,
+  /// `PlatformIsVisible()` (virtual; 0 or 1).
+  IsVisible,
+  /// `AddRef()` (a `SmartPtr<Window>`).
+  Hold,
+  /// `Release()`.
+  Release,
+};
+
+/// The fields (the accessors, the goldens and the unit tests).
+enum class EeWonWmField : uint32_t {
+  /// `mEndPopup`
+  EndPopup = 1,
+  InDoPopup,
+  InEndPopup,
+  PopupIsUp,
+  /// `mBA5`: popups in their own window by default
+  OwnWindow,
+  PopupFlags,
+  /// `mDoMouseCapturePopupSupport`
+  CaptureSupport,
+  /// `mCurMsgLoopDepth`
+  CurDepth,
+  /// `mTargetMsgLoopDepth`
+  TargetDepth,
+  DialogResult,
+  ModalWindow,
+  ModalComponent,
+  /// `mPopupWindowSave` (held; set with the `SmartPtr`'s assignment)
+  PopupWindowSave,
+  PopupOwnerWindow,
+  /// `mPopupInputComponent` (held)
+  PopupInput,
+  /// `mPopupOwnerComponent` (held)
+  PopupOwner,
+  FocusWindow,
+  MouseDownWindow,
+  LastLoseFocusTick,
+  /// the popup list's length, last and first entries (0 when empty)
+  PopupCount,
+  PopupBack,
+  PopupFront,
+};
+
+/// Which kind of object a reference op is on (`WmRef`'s `a`).
+enum class EeWonWmRefKind : uint32_t {
+  Font = 1,
+  NativeImage,
+  RawImage,
+  /// a delay-load image (an `Image`)
+  Image,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -5159,6 +5380,9 @@ struct EeWonUserStatus;
 
 /// The Rust Window.
 struct EeWonWindow;
+
+/// The Rust WindowManager.
+struct EeWonWm;
 
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
@@ -7281,6 +7505,27 @@ struct EeWonWinEvent {
   /// a size event's
   int32_t width;
   int32_t height;
+};
+
+/// A mouse event's fields FindMouseWindow and CheckPopupClick read and change (`MouseEvent`'s `mWindow`, `mx`,
+/// `my`, `mButtonOrAmount`).
+struct EeWonWmMouse {
+  ptrdiff_t window;
+  int32_t x;
+  int32_t y;
+  int32_t button;
+};
+
+/// `PopupParams`.
+struct EeWonWmPopup {
+  ptrdiff_t parent;
+  ptrdiff_t popup;
+  ptrdiff_t input;
+  ptrdiff_t owner;
+  int32_t flags;
+  int32_t x;
+  int32_t y;
+  EeWonRect4 avoid;
 };
 
 extern "C" {
@@ -15523,6 +15768,41 @@ void ee_won_win_free(EeWonWindow *win);
 /// # Safety
 /// `win` is live; the call's arguments as documented.
 ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a, ptrdiff_t b);
+
+/// A new Rust WindowManager for the C++ `manager`, its calls out through `host`.
+EeWonWm *ee_won_wm_new(void *manager, EeWonGuiHostFn host);
+
+/// The manager's object freed, its held members given back first (the popup members, then the caches: the
+/// original's members in reverse order).
+///
+/// # Safety
+/// `wm` came from `ee_won_wm_new` (or is NULL) and is not used again.
+void ee_won_wm_free(EeWonWm *wm);
+
+/// One of WindowManager's methods (`EeWonWmCall`).
+///
+/// # Safety
+/// `wm` is live; the call's arguments as documented.
+ptrdiff_t ee_won_wm_call(const EeWonWm *wm,
+                         EeWonWmCall call,
+                         ptrdiff_t a,
+                         ptrdiff_t b,
+                         ptrdiff_t c,
+                         ptrdiff_t d);
+
+/// The popup list's `i`-th entry (0 past the end; the goldens' trace of the list).
+///
+/// # Safety
+/// `wm` is live.
+ptrdiff_t ee_won_wm_popup_at(const EeWonWm *wm, size_t i);
+
+/// The caches as one line (the goldens' trace) into `buf` (at most `cap` bytes); the length written.
+///
+/// # Safety
+/// `wm` is live; `buf` has room for `cap` bytes.
+size_t ee_won_wm_cache_line(const EeWonWm *wm,
+                            uint8_t *buf,
+                            size_t cap);
 
 }  // extern "C"
 

@@ -404,7 +404,7 @@ void LobbyWork(int)
         long a = 0, b = 0;
         sscanf(theCommand.c_str(), "%31s %ld %ld", theOp, &a, &b);
         const char* theVerdict = "lobby-rejected";
-        Component* theScope = (theManager != NULL && theManager->mModalComponent != NULL) ? theManager->mModalComponent : theRoot;
+        Component* theScope = (theManager != NULL && theManager->GetModalComponent() != NULL) ? theManager->GetModalComponent() : theRoot;
         if (!strcmp(theOp, "wonclick") || !strcmp(theOp, "wonactivate")) {
             Component* theTarget = LobbyFindById(theScope, a);
             if (theTarget == NULL)
@@ -457,14 +457,14 @@ void LobbyWork(int)
     char theLine[300];
     snprintf(theLine, sizeof(theLine), "lobby shown %d screen %d lan %d login %d modal %d game %d host %d clients %d ready %d allready %d name %s\n",
              EELobbyIsShown() ? 1 : 0, LobbyGetGameScreenType(), LobbyOnLanScreen() ? 1 : 0, LobbyOnLoginScreen() ? 1 : 0,
-             (theManager != NULL && theManager->mModalComponent != NULL) ? 1 : 0, theGame != NULL ? 1 : 0,
+             (theManager != NULL && theManager->GetModalComponent() != NULL) ? 1 : 0, theGame != NULL ? 1 : 0,
              (theGame != NULL && theGame->GetIsHost()) ? 1 : 0,
              (theGame != NULL && theGame->GetClients().get() != NULL) ? (int)theGame->GetClients()->GetCount() : 0,
              (theClient != NULL && theClient->IsReady()) ? 1 : 0, (theGame != NULL && theGame->AreAllReady()) ? 1 : 0,
              theGame != NULL ? GUIText(theGame->GetName()).c_str() : "-");
     theText += theLine;
     std::vector<ListArea*> theLists;
-    sLobbyModal = theManager != NULL ? theManager->mModalComponent : NULL;
+    sLobbyModal = theManager != NULL ? theManager->GetModalComponent() : NULL;
     sLobbyInModal = false;
     LobbyWalk(theRoot, theText, theLists);
     {
@@ -984,6 +984,31 @@ void DebugToStderr(const char* inText)
     fprintf(stderr, "debugstring %s%s", inText ? inText : "", theLength && inText[theLength - 1] == '\n' ? "" : "\n");
     fflush(stderr);
 }
+
+#ifdef _WIN32
+// TEST ONLY: a fault under the fixture prints its code, place and return addresses (exe addresses: EE-AOC.map) on
+// stderr, which the harness keeps as game.log, as EE-SIM's own handler does: an intermittent crash in a harness run
+// otherwise leaves only its exit code.
+LONG CALLBACK FixtureFault(EXCEPTION_POINTERS* inInfo)
+{
+    DWORD theCode = inInfo->ExceptionRecord->ExceptionCode;
+    if (theCode < 0xC0000000UL || theCode == 0xE06D7363UL)   // not a fault (thread names, debug strings, C++)
+        return EXCEPTION_CONTINUE_SEARCH;
+    static volatile LONG sOnce = 0;
+    if (InterlockedExchange(&sOnce, 1))
+        return EXCEPTION_CONTINUE_SEARCH;
+    void* theFrames[48];
+    USHORT theCount = RtlCaptureStackBackTrace(0, 48, theFrames, NULL);
+    char theText[2048];
+    int n = snprintf(theText, sizeof(theText), "EE-AOC FAULT %08lx at %p thread %lu; frames:", (unsigned long)theCode,
+                     inInfo->ExceptionRecord->ExceptionAddress, (unsigned long)GetCurrentThreadId());
+    for (USHORT k = 0; k < theCount && n < (int)sizeof(theText) - 24; k++)
+        n += snprintf(theText + n, sizeof(theText) - n, " %p", theFrames[k]);
+    fprintf(stderr, "%s\n", theText);
+    fflush(stderr);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
 }   // namespace
 
 // The test switches, when EE_TEST_UI names a directory (EERun, first, before the engine starts its clocks and threads):
@@ -999,6 +1024,9 @@ void EETestFixtureConfigure()
     if (!theDirectory || !*theDirectory)
         return;
     PlatDebugSetHandler(DebugToStderr);
+#ifdef _WIN32
+    AddVectoredExceptionHandler(1, FixtureFault);
+#endif
     if (const char* theFactor = getenv("EE_TEST_TIME_FACTOR")) {
         unsigned long theNum = 0, theDen = 1, theWhole = 0;
         char theRest[8] = {0};
