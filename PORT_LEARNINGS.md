@@ -16822,3 +16822,68 @@ The merge of rust met `rust/cbindgen.toml`'s export list (both sides added names
 - **Not moved, and why.** See the census: the effect bodies and the event effects are world glue; the text import
   and export (file and resource glue, no gate reaches them) and the condition's and area's typed members are the
   candidates for a next round, each with its own golden (an `sm export`/`sm import` step would record the first).
+
+## R5b.5, seventh round: the trigger text file's export and import and the media strings' sections in Rust; the census of the rest (ee_scenario text.rs; branch rust-triggers7, 2026-11-14)
+
+| Function | Was (C++) | Now (Rust) |
+|---|---|---|
+| `EEScenarioManager::ExportText` | 57 lines of `fprintf` over the effects, conditions and players | text.rs `export`; each `fprintf("%s")` one host write |
+| `ImportTriggerText`, `ValidateText`, `ImportText`, `ParseConditionID`, `ParseEffectID`, `ParsePlayerName` | 72 + 57 + 64 + 3 x 18 lines (the last five gone from the class) | text.rs `read_entries`, `validate`, `apply`, `parse` |
+| `EESMMediaStrings::Export`, `Import`, `Validate` | 59 lines (gone from the class) | text.rs `media_export`, `media_slot`; the class keeps one accessor, `GetSection(slot)` |
+
+- **Golden first, from the unmodified C++.** The editor gate's script gained `sm text` (types and texts on the
+  effects and conditions the earlier steps left: a Change Text, a Send Dialogue, a Class-Name, a Send Chat Message,
+  chat conditions with and without a text, UTF-8 texts), `sm export` (ExportText into data\Scenarios, the file's
+  lines printed) and `sm import FILE KIND VALIDATE` over five fixed files (TEST ONLY, `EESimEditor.cpp`
+  `ScenarioTextStep`): a valid file (media sections, effect, condition and player entries), a file with every
+  error kind (validated: the list of messages; not validated: applied up to the first), version 0 entries, an empty
+  file, and lines past `fgets`' 511 bytes (an entry starting inside a long line, a UTF-8 character split at the
+  boundary). Each import prints the result, `mImportErrors` and every effect's and condition's name and texts and
+  every player's name. Recorded on the C++ build (commit b68b6df5: the old 2,342 lines unchanged, 344 new); after
+  each move `sim_editor.py` PASS, 2,686 lines identical. `sim_editor.py` now prints a failing diff's UTF-8 with
+  `errors="replace"` (the console's code page threw on it).
+- **The original's quirks kept.** A text line is appended raw (braces included) when it splits into fewer than two
+  tokens and dropped when it splits into three or more; two tokens start an entry, so "x{y" is an entry named "x"
+  and a long line's second 511-byte piece can be one. A text loses at most two final new lines (by character, as
+  `theText[GetLength() - 1]`). The parsers take the tag's byte index (`UString::Find`) as a character count
+  (`CopyString`, `PlatMbsNInc`): "ü3_Effect:x" reads id `atoi("ü3_")` = 0 (ee_plat_core's `utf8` helpers, the same
+  as the `PlatMbs*` functions). A version 0 effect entry is "<id>_<name>", so a condition entry reads as an effect
+  ("9_Condition:x" is effect 9). An entry whose tag ends the line ("<id>_") keeps the name of the entry before.
+  Import renames an effect before it finds its kind takes no text; a player number 0 or out of range is skipped
+  (no error) when applying, an error when validating; a player in range without a player stops the import. Export's
+  player loop goes on after a write error. `atoi` saturates as the Windows C runtime's.
+- **One behaviour change.** A file whose last text has no final new line: `fgets` reads the last piece and sets
+  the end flag, the loop ends before the end branch, and the text list is one short; the original's `ImportText`
+  then read `inTexts[i]` past the vector (undefined). The Rust gives that entry an empty text. The golden's files
+  all end with a new line for that reason (round 6's lesson: keep the driver inside what the original survives).
+- **The host.** `EeScenarioTextHost` = the lists' host (`EESMListOp`, for `Find*ByID`, names and the field
+  records) and one more operation callback (`EESMTextOp`): an element's text by slot (an effect's `mDescription`,
+  `mMessage`, `mNewName`, a condition's `mChatText`), the player count and names, the media sections, write, eof,
+  read (`fgets` into the context's 0x200 bytes), the error list (clear, and one message: the language's format
+  through `UResourceFile::GetString` and the original `sprintf` with (id, line) or (line, name)). The messages stay
+  C++ because the formats are the language's (a Rust printf would have to match the CRT's on any localised format).
+- **Coverage.** Only the editor's instructions tab (Export / Import buttons, `EESEIAExport`, `EESEIAImport`)
+  reaches this code; no game, capture or oracle does. The editor gate's `sm` steps reach every branch of export,
+  validation and import above. Unit tests: 14 in text.rs (export format and write errors, a round trip, the trim,
+  511-byte reads, token counts, every validation error, the stop of the apply, version 0, a missing final new line,
+  `atoi`, the media tags).
+- **C++ lines** (src and include, include/rust aside): the text file +103 -327, net **-224** (EEScenarioManager.cpp
+  1,546 -> 1,326); the media sections +13 -71, net **-58**; the TEST ONLY golden steps +141.
+- **Not moved, and why (the census asked for items 3 and 4).**
+  - The condition's three strings (`mName`, `mText`, `mChatText`): they are `UWideString` members that the
+    condition screen (`EESETSCondition`, `EESETSConditionType`, the chat control), the trigger screen's combos, the
+    list host, the capture and the save stream read and write as `UWideString` (by reference: `GetName()` returns
+    `const UWideString&`). A Rust-owned string would need a C++ copy kept in step for every such reader, more C++
+    than the ~10 lines it would remove. Not worth it.
+  - The area's typed members (`U2DPoint<long> mAnchor`, `GERectangle mRectangle`): 51 call sites outside
+    EESMArea.cpp use them as those types (the area screen, `EEAIContinentManager::CreateScenarioAreas`, the editor's
+    paint area, the capture). The logic is Rust already; a record would trade the ~40 lines of copies for accessors
+    at every site. Not worth it alone.
+  - `Reset`'s built-ins: four `new`s with a language string each and two anchors; its numbers are Rust since
+    round 3. Through the list host it would be as long. `Prepare` and the destructor: media loads and unloads on
+    the players' upgrades (world glue, the loop over triggers is 20 lines). The Load/Save stream host
+    (`EESMManagerIO`, `EESMLoadElement`): element construction and the elements' own `Load`/`Save` (C++ objects).
+    None of these is net negative; left.
+  - What is left in EEScenarioManager.cpp (1,326 lines): the cinematics, `ShowDialogMessage`, `Prepare`, `Reset`,
+    the destructor, the stream host, the list and text hosts, and the forwarders. The effect bodies
+    (`EESMEffect::Execute`, world calls) and `EEEvent`'s attribute writes stay as round 6's census says.
