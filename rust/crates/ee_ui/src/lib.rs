@@ -13,6 +13,7 @@ pub mod buttonobj;
 pub mod checkobj;
 pub mod combo;
 pub mod comboobj;
+pub mod controlobj;
 pub mod controls_table;
 pub mod draw;
 pub mod edit;
