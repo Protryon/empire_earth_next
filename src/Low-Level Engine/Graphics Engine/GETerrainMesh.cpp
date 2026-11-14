@@ -367,22 +367,6 @@ void GETerrainMesh::GetClosestTile(const GE3DPoint& inPoint, long& outX, long& o
 // FUNCTION: LLE 0x1002a942
 bool GETerrainMesh::Intersects(const GE3DLine& inLine, float& outDistance) const { return ee_ge_tm_intersects(this->mRust, GERust(inLine), &outDistance); }
 
-// FUNCTION: LLE 0x1002ac2d
-void GETerrainMesh::GetTileRowsInVolume(const std::vector<GE3DPoint>& inVolume,
-                                        std::vector<std::pair<long, std::pair<long, long> > >& outRows,
-                                        U2DPoint<long>& outMinimum, U2DPoint<long>& outMaximum)
-{
-    std::vector<long> theRows(3 * ee_ge_tm_get(this->mRust, EeGeTmVal::TileRowCount));   // at most one row per y
-    long theBounds[4];
-    size_t theCount = ee_ge_tm_rows_in_volume(this->mRust, inVolume.empty() ? NULL : GERust(inVolume[0]), inVolume.size(), theRows.data(), theBounds);
-    for (size_t i = 0; i < theCount; i++)
-        outRows.push_back(std::make_pair(theRows[3 * i], std::make_pair(theRows[3 * i + 1], theRows[3 * i + 2])));
-    outMinimum.mX = theBounds[0];
-    outMinimum.mY = theBounds[1];
-    outMaximum.mX = theBounds[2];
-    outMaximum.mY = theBounds[3];
-}
-
 // FUNCTION: LLE 0x1002ae1f
 long GETerrainMesh::RegisterColorSet(std::vector<unsigned long>& inColorSet, unsigned long& outID)
 {
@@ -448,7 +432,6 @@ void GETerrainMesh::DereferenceTile(unsigned long inX, unsigned long inY) { ee_g
 void GETerrainMesh::ReferenceTile(unsigned long inX, unsigned long inY) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 0, 0); }
 void GETerrainMesh::SetTileReferenceCount(unsigned long inX, unsigned long inY, unsigned long inCount) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 2, inCount); }
 void GETerrainMesh::SetTextureSet(unsigned long inX, unsigned long inY, unsigned long inTextureSetID) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 3, inTextureSetID); }
-void GETerrainMesh::SetWaterInfo(unsigned long inX, unsigned long inY, unsigned char inWaterInfo) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 4, inWaterInfo); }
 void GETerrainMesh::SetIsWater(unsigned long inX, unsigned long inY, bool inIsWater) { ee_ge_tm_tile_edit(this->mRust, inX, inY, 5, inIsWater); }
 void GETerrainMesh::SetZ(unsigned long inX, unsigned long inY, float inZ) { ee_ge_tm_point_edit(this->mRust, inX, inY, 0, 0, inZ); }
 float GETerrainMesh::GetZ(unsigned long inX, unsigned long inY) const { return ee_ge_tm_point(this->mRust, inX, inY)->z; }
@@ -462,25 +445,15 @@ bool GETerrainMesh::GetIsWaterTile(unsigned long inX, unsigned long inY) const {
 bool GETerrainMesh::GetIsValidPoint(unsigned long inX, unsigned long inY) const { return ee_ge_tm_is_valid(this->mRust, inX, inY, false); }
 bool GETerrainMesh::GetIsValidTile(unsigned long inX, unsigned long inY) const { return ee_ge_tm_is_valid(this->mRust, inX, inY, true); }
 bool GETerrainMesh::GetIsSpaceMap() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::SpaceTileCount) > 0; }
-bool GETerrainMesh::GetIsEdgeTile(long inX, long inY) const { return ee_ge_tm_is_edge_tile(this->mRust, inX, inY, 0); }
-bool GETerrainMesh::GetIsLeftEdgeTile(long inX, long inY) const { return ee_ge_tm_is_edge_tile(this->mRust, inX, inY, 1); }
-bool GETerrainMesh::GetIsTopEdgeTile(long inX, long inY) const { return ee_ge_tm_is_edge_tile(this->mRust, inX, inY, 2); }
-bool GETerrainMesh::GetIsRightEdgeTile(long inX, long inY) const { return ee_ge_tm_is_edge_tile(this->mRust, inX, inY, 3); }
-bool GETerrainMesh::GetIsBottomEdgeTile(long inX, long inY) const { return ee_ge_tm_is_edge_tile(this->mRust, inX, inY, 4); }
 const GE3DPlane& GETerrainMesh::GetFrontPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 0)); }
 const GE3DPlane& GETerrainMesh::GetBackPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 1)); }
 const GE3DPlane& GETerrainMesh::GetLeftPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 2)); }
 const GE3DPlane& GETerrainMesh::GetRightPlane() const { return *reinterpret_cast<const GE3DPlane*>(ee_ge_tm_plane(this->mRust, 3)); }
-float GETerrainMesh::GetMinimumZ() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::MinimumZ); }
-float GETerrainMesh::GetMaximumZ() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::MaximumZ); }
 float GETerrainMesh::GetVisibleSpaceTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleSpacePercentage); }
 float GETerrainMesh::GetVisibleWaterTilePercentage() const { return ee_ge_tm_get_f(this->mRust, EeGeTmVal::VisibleWaterPercentage); }
-void GETerrainMesh::SetVisibleWaterTilePercentage(float inPercentage) { ee_ge_tm_set_water_percentage(this->mRust, inPercentage); }
 unsigned long GETerrainMesh::GetGlobalWaterSetID() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::GlobalWaterSetId); }
 unsigned long GETerrainMesh::GetNumVisibleTiles() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::NumVisibleTiles); }
-unsigned long GETerrainMesh::GetNumVisibleUnitTiles() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::NumVisibleTiles); }
 unsigned long GETerrainMesh::GetNumVisibleTileRows() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::VisibleTileRows); }
-unsigned long GETerrainMesh::GetVisiblePolyCount() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::VisiblePolyCount); }
 unsigned long GETerrainMesh::GetTerrainMaterialCount() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::TerrainMaterialCount); }
 unsigned long GETerrainMesh::GetWaterMaterialCount() const { return ee_ge_tm_get(this->mRust, EeGeTmVal::WaterMaterialCount); }
 unsigned int GETerrainMesh::NumSpaceCliffTextures() { return ee_ge_tm_get(this->mRust, EeGeTmVal::SpaceCliffTextureCount); }

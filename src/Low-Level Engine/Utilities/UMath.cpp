@@ -55,13 +55,6 @@ unsigned long UMGetFloatingPointPrecision() { return ee_util_fp_precision(); }
 // Returns the FPU rounding mode (float.h's _RC_* value)
 unsigned long UMGetFloatingPointRoundingMode() { return ee_util_fp_rounding(); }
 
-// FUNCTION: LLE 0x10080f14
-// Solves a*x^2 + b*x + c = 0 into two roots (a negative discriminant is not checked); false when a and b are 0
-bool UMQuadraticEquation(float inA, float inB, float inC, float& outRoot1, float& outRoot2)
-{
-    return ee_ge_um_quadratic(inA, inB, inC, &outRoot1, &outRoot2);
-}
-
 // FUNCTION: LLE 0x10080fab
 // Sets the FPU precision (nothing to set without an x87)
 void UMSetFloatingPointPrecision(unsigned long inPrecision) { ee_util_fp_set_precision(inPrecision); }

@@ -19,9 +19,6 @@ public:
 
     static void CleanupMemoryPoolAndDestroyCriticalSections();
     static void DumpMemoryPoolInfo() {}     // empty in this build
-    SESMInstanceNode* GetAndReferenceSoundInstance(unsigned long inInstanceID);
-    unsigned long GetAvailableChannels() const;
-    TSCriticalSection* GetCriticalSection() const;
     unsigned long GetHighestTimerDelay() const;
     unsigned long GetInstanceID(SESMInstanceNode* inNode);
     bool GetIsLooping(unsigned long inInstanceID);
@@ -39,7 +36,6 @@ public:
     unsigned long GetSampleID(unsigned long inInstanceID);
     unsigned long GetSampleID(SESMInstanceNode* inNode);
     unsigned long GetSampleRate(unsigned long inSampleID);
-    long GetTimeLeftInMilli(unsigned long inInstanceID);
     long GetTotalPlayTimeInMilli(unsigned long inInstanceID);
     float GetVolume(unsigned long inInstanceID);
     // the node pool's chunk sizes: the pool is Rust's, sized as it grows (kept for the interface)

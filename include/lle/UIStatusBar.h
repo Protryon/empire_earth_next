@@ -29,7 +29,6 @@ public:
     long GetCurrentRangeValue() const;
     GEText* GetGEText();
     long GetMaxRange() const;
-    long GetMinRange() const;
     unsigned long GetRange() const;
     virtual bool GetTabable() const { return false; }
     void SetCurrentRangeValue(long inValue);

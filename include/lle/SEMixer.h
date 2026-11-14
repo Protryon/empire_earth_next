@@ -27,8 +27,6 @@ public:
     static SEMixer* GetActiveMixer();
     SEConductor& GetConductor();
     static unsigned long GetCount();
-    float GetCPUUsage();
-    IDirectSound* GetDirectSoundInterface();
     static long GetMixer(unsigned long inIndex, SEMixer*& outMixer);
     const UString& GetName();
     bool IsValid();

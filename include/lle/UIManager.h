@@ -22,6 +22,7 @@ class SESMInstanceNode;
 class SESoundManager;
 class UIBackground;
 class UIBackgroundTable;
+class TSCriticalSection;
 class UIControl;
 class UIControlsTable;
 class UIForm;
@@ -79,7 +80,6 @@ public:
     GEBitmap* CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle);
     UIEvent* CreateControlEvent(UIForm* inForm, unsigned long inEventID);
     UIEvent* CreateFormEvent(unsigned long inEventID);
-    void CreateIMECandidateWindow(GEFont* inFont);
     virtual UIBackground* CreateUserDefinedBackground(const UIBackgroundTable& inTable) { return NULL; }
     virtual UIControl* CreateUserDefinedControl(UIControlsTable& inTable) { return NULL; }
     // inline: exported 0x1005a028 (UIBackground.cpp's inline block)
@@ -102,6 +102,7 @@ public:
     UIForm* GetFormByID(unsigned long inID) const;
     unsigned long GetFormCount() const;
     UIForm* GetStackedForm(unsigned long inIndex) const;   // port (test fixture)
+    TSCriticalSection* GetUILock() const;                  // port (the harness's bridge: the lock UpdateUI holds)
     GEBitmap* GetDragBarBitmap() const;
     GESurface* GetDrawingSurface() const;
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sLMouseButton inline (0x17d6a9, 37 sites)
@@ -109,7 +110,6 @@ public:
 #endif
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
-    static bool GetMouseLeftHanded() { return UIManager::sMouseLeftHanded; }
     static ISEntity* GetMouseWheel() { return UIManager::sMouseWheel; }
 #endif
 #endif
@@ -135,7 +135,6 @@ public:
     SESoundManager* GetSoundManager() const;
     UResourceFile* GetStringTable() const;
     unsigned long GetUITextureBitDepth() const;
-    unsigned long GetVisibleFormCount() const;
     bool IsFormOnStack(UIForm* inForm);
     bool IsFormVisible(UIForm* inForm);
     void LoadDatabase(FSPath* inPath, const UString& inDirectory);

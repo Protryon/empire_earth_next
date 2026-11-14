@@ -56,13 +56,6 @@ long ISInitialize(HINSTANCE inInstance, GEWindow* inWindow, UResourceFile* inRes
                                (const EeInputMouse**)&gISMouse);
 }
 
-// FUNCTION: LLE 0x10039691
-// Sets the maximum time between two presses that counts as a double press
-void ISSetDoublePressTimeDelta(unsigned long inDelta)
-{
-    ee_input_set_double_press_delay(inDelta);
-}
-
 // FUNCTION: LLE 0x1003969b
 // (ISShutdown, the shutdown hook ISInitialize registers: ee_input_shutdown)
 

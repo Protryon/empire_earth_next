@@ -25,7 +25,7 @@ use crate::effect_tracer::EeGfxEffectTracer;
 use crate::effect_wall::EeGfxEffectWall;
 
 /// `kErrorOK`.
-const OK: i32 = 0;
+pub(crate) const OK: i32 = 0;
 
 /// `EEE3DSmokeGenerator`'s state (and the destruction smoke's radius, kind 0x1e).
 #[repr(C)]
@@ -258,6 +258,8 @@ pub struct EeGfxEffectRecord {
     pub confirm: crate::effect_confirm::EeGfxEffectConfirm,
     /// the volcano's (`effect_volcano.rs`)
     pub volcano: crate::effect_volcano::EeGfxEffectVolcano,
+    /// the 2D sprites' (`effect_sprite.rs`)
+    pub sprite: crate::effect_sprite::EeGfxEffectSprite,
 }
 
 /// The identity (`GETransformation()`).
@@ -303,6 +305,7 @@ impl EeGfxEffectRecord {
             vent: crate::effect_vent::EeGfxEffectVent::default(),
             confirm: crate::effect_confirm::EeGfxEffectConfirm::default(),
             volcano: crate::effect_volcano::EeGfxEffectVolcano::default(),
+            sprite: crate::effect_sprite::EeGfxEffectSprite::default(),
         }
     }
 

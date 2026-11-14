@@ -31,7 +31,6 @@ public:
     UIEditBox& operator=(const UIEditBox&) = delete;
     virtual ~UIEditBox();
     virtual void AddIMEResultString(const UWideString& inString);
-    void CalculateCaretFromMouseLocation(unsigned long& outLine, long& outIndex, const GE2DPoint& inLocation) const;
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                             unsigned long inCursor);
     virtual void ChangeFont(GEFont* inFont);
@@ -47,16 +46,12 @@ public:
     virtual long DrawPolygons();
     virtual long DrawTextA();
     void GetAllText(UWideString& outString) const;
-    void GetCaretLocation(GE2DPoint& outLocation) const;
     bool GetCursorOn() const;
     GEText* GetGEText() const;
     virtual bool GetIMEEnabled() const;
     bool GetIsPasswordBox() const;
     bool GetIsTextSelected() const;
     unsigned long GetLineCount() const;
-    void GetSelectedText(UWideString& outString) const;
-    void GetSelectedTextIndices(unsigned long& outStart, unsigned long& outEnd) const;
-    long GetStartingDisplayIndex() const;
     const char* GetText(unsigned long inLine) const;
     long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }
     void Paste();
@@ -68,7 +63,6 @@ public:
     void SetCaretLocation(unsigned long inIndex, unsigned long inLine);
     void SetCharScroll(unsigned long inCharScroll);
     void SetCursorColor(const GEColor& inColor);
-    void SetIMETextColor(const GEColor& inColor);
     void SetIsPasswordBox(bool inPasswordBox);
     virtual void SetLocation(const GE2DPoint& inLocation);
     void SetSelectedBgColor(const GEColor& inColor);

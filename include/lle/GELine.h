@@ -25,24 +25,10 @@ public:
         this->mVertices->GetColor(outStart, 0);
         this->mVertices->GetColor(outEnd, 1);
     }
-    void GetEndPoint(GE2DPoint& outPoint) const
-    {
-        GE3DPoint thePoint;
-        this->mVertices->GetPoint(thePoint, 1);
-        outPoint.SetX(thePoint.GetX());
-        outPoint.SetY(thePoint.GetY());
-    }
     void GetOpacityPerVertex(float& outStart, float& outEnd) const
     {
         outStart = this->mVertices->GetOpacity(0);
         outEnd = this->mVertices->GetOpacity(1);
-    }
-    void GetStartPoint(GE2DPoint& outPoint) const
-    {
-        GE3DPoint thePoint;
-        this->mVertices->GetPoint(thePoint, 0);
-        outPoint.SetX(thePoint.GetX());
-        outPoint.SetY(thePoint.GetY());
     }
     GETexture* GetTexture(unsigned long inScreen) const { return this->mTextures[inScreen]; }
     void GetTextureCoordinatesPerVertex(GETextureCoordinate& outStart, GETextureCoordinate& outEnd) const

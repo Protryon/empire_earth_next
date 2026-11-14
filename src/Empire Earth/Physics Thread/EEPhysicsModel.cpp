@@ -2,9 +2,18 @@
 // unit per physics-model class, alphabetical link order). Range 0x1543b7..0x156df8 (each unit ends with its own
 // inline-COMDAT cluster).
 // The singletons' creation/destruction (0x1543b7 / 0x1550ba) open the unit: they `new` every subclass.
+//
+// New (the physics models' lane, round 1): the models are whole in Rust (ee_units pm.rs, pm_ground.rs, pm_air.rs),
+// with every EEPM* class (EEPMLand.cpp .. EEPMSubmergedNaval.cpp, deleted). This unit keeps the singletons, the three
+// forwarders, the unit's group-aware rates it always held, the TEST ONLY PMST record and the C++ the models call
+// (ee_units_pm_host_*, pm_host.rs): the unit's location and setters, its path and goals, the map's tiles and terrain,
+// the effects, the projectile's and missile's steps (ee_combat's arithmetic with the combat lane's captures) and the
+// carrier planes' deck walk (the carrier model's tag points).
 #include <windows.h>
 #include <vector>
 #include <math.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -16,6 +25,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 #include "lle/FSFileSpec.h"
+#include "lle/GEQuaternion.h"
 
 #include "ee/EEUnitKind.h"
 #include "ee/RTSWorld.h"
@@ -28,117 +38,50 @@
 #include "ee/EERules.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEAreaUtilities.h"
+#include "ee/EETileCoordinate.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EECombatGoals.h"
-#include "ee/EEUGRust.h"
+#include "ee/EECombatFormulas.h"
+#include "ee/EEEffectManager.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EEGlobalConstants.h"
 #include "ee/EEUnitBehavior.h"
+#include "ee/EEUnitStore.h"
+#include "ee/EESimCapture.h"
 #include "rust/ee_units.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
-EEPhysicsModel* gPhysicsModels[12];            // 0x531d58: one `new` of each EEPM* class (EEUnitClass +0x110 points at one)
+EEPhysicsModel* gPhysicsModels[12];            // 0x531d58: one model per kind (EEUnitClass +0x110 points at one)
 // This unit's .data is 0x4c2368..0x4c2380 (after EEPhysics.cpp's RTTI, before the EEPMProjectile type descriptor):
 // 0.5f, 0.75f, 1.0f, 4000, 2000, 1. 0x4c236c/0x4c2370 have no reader in the exe and stay undefined here.
 float gPhysicsModelsF = 0.5f;       // 0x4c2368: world table entry 79's float, set with the singletons (provisional name)
-static const float kPMTurnEpsilon = 0.001f;   // 0x442384 (unit-local const; provisional name)
 long gUnitAIWaitScale = 4000;               // 0x4c2374 (EEUnitAI 0x22eca0's wait scale; provisional name)
 unsigned long gCollisionDetectionUnit = 2000;   // 0x4c2378 (EmpireEarth.h; EEWorld resets it to 2000)
 unsigned long gCollisionPeriod = 1;         // 0x4c237c (EEPhysics.cpp's collision period; provisional name)
-static const float kPMEdgeOffset = 0.001f;    // 0x44237c (unit-local const: Virtual58 reloads it per use; provisional name)
-static const float kPMFiveDegrees = 0.08726647f;   // 0x442394 (unit-local const: Virtual44's heading test; provisional name)
-static const float kPMMoveDistance = 0.03f;   // 0x442388 (unit-local const; provisional name)
-static const float kPMMinimumSpeed = 1.0f;   // 0x442390 (a unit-local const: Virtual3C reloads it per use; provisional name)
-static const float kPMContactWindow = 0.25f;  // 0x442398 (unit-local const: Virtual44's two contact-time tests; provisional name)
-static uint32_t PMBits(float inValue);
 
 // FUNCTION: EXE 0x5543b7
 // Creates the twelve physics model singletons (land to spaceship) and reads world table entry 79's float
 void EEInitPhysicsModels()
 {
-    gPhysicsModels[0] = new EEPMLand;
-    gPhysicsModels[1] = new EEPMAirplane;
-    gPhysicsModels[2] = new EEPMHelicopter;
-    gPhysicsModels[3] = new EEPMHovercraft;
-    gPhysicsModels[4] = new EEPMNaval;
-    gPhysicsModels[5] = new EEPMSubmergedNaval;
-    gPhysicsModels[6] = new EEPMProjectile;
-    gPhysicsModels[7] = new EEPMMissile;
-    gPhysicsModels[8] = new EEPMBuilding;
-    gPhysicsModels[9] = new EEPMSeaAnimal;
-    gPhysicsModels[10] = new EEPMAirAnimal;
-    gPhysicsModels[11] = new EEPMSpaceship;
+    for (long theIndex = 0; theIndex < 12; ++theIndex)
+        gPhysicsModels[theIndex] = new EEPhysicsModel(theIndex);
     gPhysicsModelsF = gWorldTable.GetFloatValue(kWorldTrampleMinDistanceSquared);
 }
 
-// the turn's values: the tick, the unit's turn rates (its active group's when it is in one), its yaw rate; the heading,
-// the target and the facing are the caller's
-static EeUnitsTurnIn PMTurnIn(EEComplexUnit* inUnit)
+// FUNCTION: EXE 0x5550ba
+// Destroys the twelve physics model singletons
+void EEFreePhysicsModels()
 {
-    EeUnitsTurnIn theIn;
-    memset(&theIn, 0, sizeof(theIn));
-    theIn.tick_seconds = gPhysics->mTickSeconds;
-    theIn.ticks_per_second = gPhysics->mTicksPerGameSecond;
-    theIn.accel = inUnit->GetAngularAcceleration();
-    theIn.max = inUnit->GetMaxAngularVelocity();
-    theIn.inverse_accel = inUnit->GetInverseAngularAcceleration();
-    theIn.rate = inUnit->mAngularVelocity.mYaw;
-    return theIn;
-}
-
-// FUNCTION: EXE 0x55453a
-// Accelerates or brakes the unit's pitch rate toward the target pitch (capped at its top turn rate) and
-// returns the new rate and pitch
-void EEPhysicsModel::ApproachPitch(EEComplexUnit* inUnit, float inCurrent, float inTarget, float* outRate, float* outNew)
-{
-    long theMode = this->PitchMode(inUnit, inUnit->mAngularVelocity.mPitch, inTarget - inCurrent);
-    EEPMApproachPitch(inUnit, false, theMode, inCurrent, inTarget, outRate, outNew);
-}
-
-// the pitch's values: the unit's (its active group's) or, naval, the class's rates
-static EeUnitsPitchIn PMPitchIn(EEComplexUnit* inUnit, bool inNaval)
-{
-    EeUnitsPitchIn theIn;
-    theIn.tick_seconds = gPhysics->mTickSeconds;
-    theIn.ticks_per_second = gPhysics->mTicksPerGameSecond;
-    theIn.accel = inNaval ? inUnit->mUnitClass->GetAngularAcceleration() : inUnit->GetAngularAcceleration();
-    theIn.max = inNaval ? inUnit->mUnitClass->GetMaxAngularVelocity() : inUnit->GetMaxAngularVelocity();
-    theIn.inverse_accel = inNaval ? 0.0f : inUnit->GetInverseAngularAcceleration();
-    theIn.rate = inUnit->mAngularVelocity.mPitch;
-    theIn.naval = inNaval ? 1 : 0;
-    return theIn;
-}
-
-void EEPMApproachPitch(EEComplexUnit* inUnit, bool inNaval, long inMode, float inCurrent, float inTarget, float* outRate,
-                       float* outNew)
-{
-    EeUnitsPitchIn theIn = PMPitchIn(inUnit, inNaval);
-    EeUnitsTurn thePitch = ee_units_pm_approach_pitch(&theIn, inCurrent, inTarget, (int32_t)inMode);
-    *outRate = thePitch.rate;
-    *outNew = thePitch.heading;
-    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-        uint32_t theWords[10] = {theIn.naval, EEPMBits(theIn.tick_seconds), EEPMBits(theIn.accel), EEPMBits(theIn.max),
-                                 EEPMBits(theIn.rate), EEPMBits(inCurrent), EEPMBits(inTarget), (uint32_t)inMode,
-                                 EEPMBits(*outRate), EEPMBits(*outNew)};
-        EEUnitStateNote(kUnitStateApproachPitch, inUnit->mUnitID, theWords, 10);
+    for (long theIndex = 0; theIndex < 12; ++theIndex) {
+        if (gPhysicsModels[theIndex])
+            delete gPhysicsModels[theIndex];
+        gPhysicsModels[theIndex] = NULL;
     }
-}
-
-long EEPMPitchMode(EEComplexUnit* inUnit, bool inNaval, float inRate, float inAngle)
-{
-    EeUnitsPitchIn theIn = PMPitchIn(inUnit, inNaval);
-    long theMode = ee_units_pm_pitch_mode(&theIn, inRate, inAngle);
-    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-        uint32_t theWords[8] = {theIn.naval, EEPMBits(theIn.tick_seconds), EEPMBits(theIn.ticks_per_second),
-                                EEPMBits(theIn.accel), EEPMBits(theIn.inverse_accel), EEPMBits(inRate), EEPMBits(inAngle),
-                                (uint32_t)theMode};
-        EEUnitStateNote(kUnitStatePitchMode, inUnit->mUnitID, theWords, 8);
-    }
-    return theMode;
 }
 
 // FUNCTION: EXE 0x55463e
@@ -159,117 +102,6 @@ float EEComplexUnit::GetAngularAcceleration()
     return this->mStats->mAngularAcceleration;
 }
 
-// FUNCTION: EXE 0x554678
-// Pitches the unit toward the slope from inFrom to inTo (over inDistance); with no distance it keeps its pitch
-// and stops pitching
-void EEPhysicsModel::PitchTowardSlope(EEComplexUnit* inUnit, const GE3DPoint& inFrom, const GE3DPoint& inTo, float inDistance, float* outYaw, float* outPitch)
-{
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theResult;
-    inUnit->mPhysicalModel.GetLocation().Apply(theForward, theResult);
-    float theAngle = UMArcCos(-theResult.mZ) - 1.5707964f;
-    if (inDistance > 0.0f) {
-        float theTarget = UMArcCos(-((inTo.GetZ() - inFrom.GetZ()) / inDistance)) - 1.5707964f;
-        this->ApproachPitch(inUnit, theAngle, theTarget, outYaw, outPitch);
-    } else {
-        *outYaw = 0.0f;
-        *outPitch = theAngle;
-    }
-}
-
-// FUNCTION: EXE 0x554738
-// Accelerates or brakes the unit's yaw rate toward a target heading; returns the angle left, the new rate and
-// heading (inFlag: aim the class's facing offset, or either side for a broadside ship)
-void EEPhysicsModel::TurnTowardAngle(EEComplexUnit* inUnit, float inCurrent, float inTarget, float* outA, float* outB, float* outC, bool inFlag)
-{
-    EeUnitsTurnIn theIn = PMTurnIn(inUnit);
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    theIn.current = inCurrent;
-    theIn.target = inTarget;
-    theIn.use_facing = inFlag ? 1 : 0;
-    theIn.broadside = inFlag && theClass->mFiresBroadside ? 1 : 0;
-    theIn.facing_offset = inFlag ? theClass->GetFacingOffset() : 0.0f;
-    EeUnitsTurn theTurn = ee_units_pm_turn(&theIn);
-    *outA = theTurn.delta;
-    *outB = theTurn.rate;
-    *outC = theTurn.heading;
-    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-        uint32_t theWords[14] = {EEPMBits(theIn.tick_seconds), EEPMBits(theIn.ticks_per_second), EEPMBits(theIn.accel),
-                                 EEPMBits(theIn.max), EEPMBits(theIn.inverse_accel), EEPMBits(theIn.rate),
-                                 EEPMBits(inCurrent), EEPMBits(inTarget), theIn.use_facing, theIn.broadside,
-                                 inFlag ? EEPMBits(theIn.facing_offset) : 0u, EEPMBits(*outA), EEPMBits(*outB), EEPMBits(*outC)};
-        EEUnitStateNote(kUnitStateTurn, inUnit->mUnitID, theWords, 14);
-    }
-}
-
-// FUNCTION: EXE 0x554a25
-// Turns the unit from its current heading toward the bearing from inFrom to inTo (as TurnTowardAngle)
-void EEPhysicsModel::TurnToward(EEComplexUnit* inUnit, const GE3DPoint& inFrom, const GE3DPoint& inTo, float* outA, float* outB, float* outC, bool inUseFacingOffset)
-{
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theResult;
-    float theBearing = UMArcTan2(-(inTo.GetX() - inFrom.GetX()), inTo.GetY() - inFrom.GetY());
-    inUnit->mPhysicalModel.GetLocation().Apply(theForward, theResult);
-    float theHeading = UMArcTan2(-theResult.mX, theResult.mY);
-    this->TurnTowardAngle(inUnit, theHeading, theBearing, outA, outB, outC, inUseFacingOffset);
-}
-
-// FUNCTION: EXE 0x554ada
-// Turns the unit at a steady rate (one way in physics order 0, the other way else), at most 20 degrees/s
-// unless it faces an enemy; returns 0, the new rate and the new heading
-void EEPhysicsModel::SteadyTurn(EEComplexUnit* inUnit, float* outA, float* outB, float* outC)
-{
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theResult;
-    float theStep = gPhysics->mTickSeconds;
-    float theAccel = inUnit->mStats->mAngularAcceleration;
-    float theMax = inUnit->mStats->GetMaxAngularVelocity();
-    float theRate = inUnit->mAngularVelocity.mYaw;
-    long theState = inUnit->mCurrentPhysicsOrder;
-    uint32_t theCommand = (uint32_t)(inUnit->mCommand ? inUnit->mCommand->mType : 0);
-    inUnit->mPhysicalModel.GetLocation().Apply(theForward, theResult);
-    float theHeading = UMArcTan2(-theResult.mX, theResult.mY);
-    EeUnitsTurn theTurn = ee_units_pm_steady_turn(theRate, theHeading, theStep, theAccel, theMax, (int32_t)theState, theCommand);
-    *outA = 0.0f;
-    *outB = theTurn.rate;
-    *outC = theTurn.heading;
-    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-        uint32_t theWords[9] = {EEPMBits(theStep), EEPMBits(theAccel), EEPMBits(theMax), EEPMBits(theRate),
-                                EEPMBits(theHeading), (uint32_t)theState, theCommand, EEPMBits(*outB), EEPMBits(*outC)};
-        EEUnitStateNote(kUnitStateSteadyTurn, inUnit->mUnitID, theWords, 9);
-    }
-}
-
-// FUNCTION: EXE 0x554bde
-// Returns the unit's new speed: accelerates (not past its top speed or its last waypoint), holds, or brakes
-// to a stop, as SpeedMode decides
-float EEPhysicsModel::Accelerate(EEComplexUnit* inUnit, float inDistance, float inTurn)
-{
-    float theSpeed = inUnit->GetVelocity();
-    float theMaxSpeed = inUnit->GetMaxVelocity();
-    float theAccel = inUnit->GetAcceleration();
-    long theMode = this->SpeedMode(inUnit, inDistance, inTurn);
-    return EEPMAccelerate(inUnit, theSpeed, theMaxSpeed, theAccel, inDistance, theMode);
-}
-
-float EEPMAccelerate(EEComplexUnit* inUnit, float inSpeed, float inMaxSpeed, float inAccel, float inDistance, long inMode)
-{
-    EeUnitsSpeedIn theIn;
-    memset(&theIn, 0, sizeof(theIn));
-    theIn.tick_seconds = gPhysics->mTickSeconds;
-    theIn.speed = inSpeed;
-    theIn.max_speed = inMaxSpeed;
-    theIn.accel = inAccel;
-    theIn.waypoints = (int32_t)inUnit->mWaypoints.size();
-    float theResult = ee_units_pm_accelerate(&theIn, inDistance, (int32_t)inMode);
-    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-        uint32_t theWords[8] = {EEPMBits(theIn.tick_seconds), EEPMBits(inSpeed), EEPMBits(inMaxSpeed), EEPMBits(inAccel),
-                                (uint32_t)theIn.waypoints, EEPMBits(inDistance), (uint32_t)inMode, EEPMBits(theResult)};
-        EEUnitStateNote(kUnitStateAccelerate, inUnit->mUnitID, theWords, 8);
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x554c95
 // Returns the unit's acceleration (its active group's when it is in one)
 float EEComplexUnit::GetAcceleration()
@@ -277,53 +109,6 @@ float EEComplexUnit::GetAcceleration()
     if (this->mActiveGroup)
         return this->mActiveGroup->GetAcceleration(this);
     return this->mStats->GetAcceleration();
-}
-
-// TEST ONLY (USST): a speed mode's inputs and result (the remaining distance and the terrain pitch as read)
-void EEPMNoteSpeedMode(EEComplexUnit* inUnit, bool inHelicopter, float inRemaining, float inPitch, float inDistance,
-                       float inTurn, long inMode)
-{
-    if (!EEUnitStepNoting())
-        return;
-    uint32_t theWords[15] = {inHelicopter ? 1u : 0u, EEPMBits(gPhysics->mTickSeconds), EEPMBits(gPhysics->mTicksPerGameSecond),
-                             EEPMBits(inUnit->GetVelocity()), EEPMBits(inUnit->GetMaxVelocity()), EEPMBits(inUnit->GetAcceleration()),
-                             EEPMBits(inUnit->GetInverseAcceleration()), EEPMBits(inUnit->mAngularVelocity.GetYaw()),
-                             inHelicopter ? 0u : EEPMBits(inUnit->mUnitClass->mSlopeSpeedPenalty), (uint32_t)inUnit->mWaypoints.size(),
-                             EEPMBits(inRemaining), EEPMBits(inPitch), EEPMBits(inDistance), EEPMBits(inTurn), (uint32_t)inMode};
-    EEUnitStateNote(kUnitStateSpeedMode, inUnit->mUnitID, theWords, 15);
-}
-
-// FUNCTION: EXE 0x554cb2
-// Returns the unit's speed mode: 3 accelerate, 2 hold, 4 brake (a sharp turn, within braking distance of the
-// path's end, or faster than the slope allows)
-long EEPhysicsModel::SpeedMode(EEComplexUnit* inUnit, float inDistance, float inTurn)
-{
-    return EEPMSpeedMode(inUnit, false, inDistance, inTurn);
-}
-
-long EEPMSpeedMode(EEComplexUnit* inUnit, bool inHelicopter, float inDistance, float inTurn)
-{
-    EeUnitsSpeedIn theIn;
-    theIn.tick_seconds = gPhysics->mTickSeconds;
-    theIn.ticks_per_second = gPhysics->mTicksPerGameSecond;
-    theIn.speed = inUnit->GetVelocity();
-    theIn.max_speed = inUnit->GetMaxVelocity();
-    theIn.accel = inUnit->GetAcceleration();
-    theIn.inverse_accel = inUnit->GetInverseAcceleration();
-    theIn.yaw_rate = inUnit->mAngularVelocity.GetYaw();
-    theIn.slope_penalty = inHelicopter ? 0.0f : inUnit->mUnitClass->mSlopeSpeedPenalty;
-    theIn.waypoints = (int32_t)inUnit->mWaypoints.size();
-    // the reads the mode makes only when it needs them: the path's length, the terrain's pitch under the unit
-    theIn.path_length = 0.0f;
-    if (theIn.waypoints >= 2)
-        inUnit->GetPathLength(theIn.path_length);
-    theIn.terrain_pitch = 0.0f;
-    if (!inHelicopter && theIn.slope_penalty < 1.0f)
-        theIn.terrain_pitch = ::gWorld.mMap->GetTerrainPitch(inUnit->mPhysicalModel.GetLocation());
-    long theMode = ee_units_pm_speed_mode(&theIn, inDistance, inTurn, inHelicopter);
-    EEPMNoteSpeedMode(inUnit, inHelicopter, theIn.waypoints >= 2 ? theIn.path_length : inDistance, theIn.terrain_pitch,
-                      inDistance, inTurn, theMode);   // TEST ONLY (USST)
-    return theMode;
 }
 
 // FUNCTION: EXE 0x554e7b
@@ -335,13 +120,6 @@ float EEComplexUnit::GetInverseAcceleration()
     return this->mStats->mInverseAcceleration;
 }
 
-// FUNCTION: EXE 0x554e98
-// Returns 4 (brake) when the pitch rate needs the whole remaining angle to stop, else 3 (accelerate)
-long EEPhysicsModel::PitchMode(EEComplexUnit* inUnit, float inRate, float inAngle)
-{
-    return EEPMPitchMode(inUnit, false, inRate, inAngle);
-}
-
 // FUNCTION: EXE 0x554f39
 // Returns the inverse of the unit's turn acceleration (its active group's when it is in one)
 float EEComplexUnit::GetInverseAngularAcceleration()
@@ -349,523 +127,6 @@ float EEComplexUnit::GetInverseAngularAcceleration()
     if (this->mActiveGroup)
         return this->mActiveGroup->GetInverseAngularAcceleration(this);
     return this->mStats->mInverseAngularAcceleration;
-}
-
-// FUNCTION: EXE 0x554f56
-// Returns the yaw rate's mode: 4 brake (turning away, or too close to stop otherwise), 2 hold (on target
-// and still), else 3 accelerate
-long EEPhysicsModel::YawMode(EEComplexUnit* inUnit, float inRate, float inAngle)
-{
-    EeUnitsTurnIn theIn = PMTurnIn(inUnit);
-    return ee_units_pm_yaw_mode(&theIn, inRate, inAngle);
-}
-
-// FUNCTION: EXE 0x5550ba
-// Destroys the twelve physics model singletons
-void EEFreePhysicsModels()
-{
-    for (long theIndex = 0; theIndex < 12; ++theIndex) {
-        if (gPhysicsModels[theIndex])
-            delete gPhysicsModels[theIndex];
-        gPhysicsModels[theIndex] = NULL;
-    }
-}
-
-// FUNCTION: EXE 0x5550dc
-// Re-bobs a unit that stands still (except under the helicopter model), else brakes it as Step4
-void EEPhysicsModel::Step3(EEComplexUnit* inUnit)
-{
-    if (inUnit->GetVelocity() == 0.0f && inUnit->mAngularVelocity.mYaw == 0.0f && this != gPhysicsModels[2]) {
-        this->RemoveBob(inUnit);
-        this->ApplyBob(inUnit);
-    } else {
-        this->Step4(inUnit);
-    }
-}
-
-// FUNCTION: EXE 0x55512b
-// Brakes the unit's yaw rate toward zero (within its top turn rate) and returns the new rate and heading
-void EEPhysicsModel::SpinDown(EEComplexUnit* inUnit, float* outRate, float* outNew)
-{
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theResult;
-    float theStep = gPhysics->mTickSeconds;
-    float theRate = inUnit->mAngularVelocity.mYaw;
-    inUnit->mPhysicalModel.GetLocation().Apply(theForward, theResult);
-    float theHeading = UMArcTan2(-theResult.mX, theResult.mY);
-    float theAccel = inUnit->GetAngularAcceleration();
-    float theMax = inUnit->GetMaxAngularVelocity();
-    EeUnitsTurn theTurn = ee_units_pm_spin_down(theRate, theHeading, theStep, theAccel, theMax);
-    *outRate = theTurn.rate;
-    *outNew = theTurn.heading;
-    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-        uint32_t theWords[7] = {EEPMBits(theStep), EEPMBits(theAccel), EEPMBits(theMax), EEPMBits(theRate),
-                                EEPMBits(theHeading), EEPMBits(*outRate), EEPMBits(*outNew)};
-        EEUnitStateNote(kUnitStateSpinDown, inUnit->mUnitID, theWords, 7);
-    }
-}
-
-// Twin of EEPMNaval::PushMoving 0x55c1cb
-// FUNCTION: EXE 0x555247
-// Resolves a moving unit running into another: pushes the smaller unit aside, or stops, slows or backs off
-// this unit (sending a stuck one idle); returns true when it gave up its goals
-bool EEPhysicsModel::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
-{
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theDirection;
-    GEVector theOtherDirection;
-    GE3DLine theLine;
-    GE3DLine theOtherLine;
-    GE3DLine theCrossLine;
-    GE3DPoint theLocation;
-    GE3DPoint theOtherLocation;
-    bool theResult = false;
-    float theSpeed = inUnit->mCollisionRadius;
-    float theOtherSpeed = inOther->mCollisionRadius;
-    float theSlow = 0.75f;
-    float theT = 0.0f;
-    float theOtherT = 0.0f;
-    float theSign = 1.0f;
-    float theOtherSign = 1.0f;
-    float theCrossT;
-    float theOtherLeft = 0.0f;
-    float theLeft = 0.0f;
-    float theCrossOtherT;
-    const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
-    theTransformation.Apply(theForward, theDirection);
-    const GETransformation& theOtherTransformation = inOther->mPhysicalModel.GetLocation();
-    theOtherTransformation.Apply(theForward, theOtherDirection);
-    theDirection.Normalize();
-    theOtherDirection.Normalize();
-    float theAngle = UMAbs(UMArcCos(theDirection.DotProduct(theOtherDirection)));
-    while (theAngle > 3.1415927f)
-        theAngle -= 3.1415927f;
-    if (theAngle > 1.5707964f)
-        theAngle = 3.1415927f - theAngle;
-    theDirection.mX = theDirection.mX * theSpeed;
-    theDirection.mY = theDirection.mY * theSpeed;
-    theDirection.mZ = theDirection.mZ * theSpeed;
-    theOtherDirection.mX = theOtherDirection.mX * theOtherSpeed;
-    theOtherDirection.mY = theOtherDirection.mY * theOtherSpeed;
-    theOtherDirection.mZ = theOtherDirection.mZ * theOtherSpeed;
-    theLocation.mX = theTransformation.GetX();
-    theLocation.mY = theTransformation.GetY();
-    theLocation.mZ = theTransformation.GetZ();
-    theOtherLocation.mX = theOtherTransformation.GetX();
-    theOtherLocation.mY = theOtherTransformation.GetY();
-    theOtherLocation.mZ = theOtherTransformation.GetZ();
-    theLine.SetStart(theLocation);
-    theOtherLine.SetStart(theOtherLocation);
-    theLine.SetDirection(theDirection);
-    theOtherLine.SetDirection(theOtherDirection);
-    bool theCrossing = theLine.IntersectsIn2D(theOtherLine, theT, theOtherT);
-    theCrossLine.SetStart(theOtherLine.GetStart());
-    theCrossLine.SetDirection(theOtherLine.GetDirection());
-    float theX = -theOtherDirection.mX;
-    theOtherDirection.mX = theOtherDirection.GetY();
-    theOtherDirection.mY = theX;
-    theCrossLine.SetDirection(theOtherDirection);
-    bool theNear;
-    if (theLine.IntersectsIn2D(theCrossLine, theCrossT, theCrossOtherT)
-        && (theCrossOtherT < 0.0f ? -theCrossOtherT : theCrossOtherT) * theOtherSpeed <= 0.5f
-        && ((theCrossT > 0.0f && theCrossT <= (theOtherSpeed + theSpeed) * 0.5) || inUnit->GetVelocity() == 0.0f) && theAngle <= kPMFiveDegrees) {
-        theNear = true;
-        if (theCrossT > 0.0f)
-            theT = 0.5f;
-        else
-            theT = -0.5f;
-    } else {
-        theNear = false;
-    }
-    if (theCrossing) {
-        if (theT > 0.0f && theT < kPMContactWindow)
-            theT = -theT;
-        if (theOtherT > 0.0f && theOtherT < kPMContactWindow)
-            theOtherT = -theOtherT;
-        if (theT > 0.0f)
-            theSign = -1.0f;
-        else
-            theSign = 1.0f;
-        if (theOtherT > 0.0f)
-            theOtherSign = -1.0f;
-        else
-            theOtherSign = 1.0f;
-        if (theT < 0.0f)
-            theT = -theT;
-        if (theOtherT < 0.0f)
-            theOtherT = -theOtherT;
-    }
-    if (theNear || (theCrossing && theT < 0.75f && theOtherT < 0.75f)) {
-        float theDX;
-        if (theOtherSpeed <= theSpeed && !theNear && inOther->GetMaxVelocity() > 0.0f) {
-            if (inUnit->GetVelocity() > 0.0f && inOther->GetVelocity() > 0.0f && theOtherSpeed == theSpeed) {
-                if ((long) inOther->mWaypoints.size() > 0)
-                    inOther->GetPathLength(theOtherLeft);
-                if ((long) inUnit->mWaypoints.size() > 0)
-                    inUnit->GetPathLength(theLeft);
-                if (theLeft > theOtherLeft || (theOtherLeft == theLeft && inOther->mUnitID < inUnit->mUnitID)) {
-                    inUnit->SetVelocity(inUnit->GetVelocity() * 0.25f);
-                    inUnit->mCollisionResolutionCount = 0.0f;
-                }
-            }
-            theDX = theOtherLine.GetDirection().GetX();
-            theDX = inOther->GetMaxVelocity() * (1.25f - theT) * theDX * theOtherSign;
-            float theDirY = theOtherLine.GetDirection().GetY();
-            float theDY = inOther->GetMaxVelocity() * (1.25f - theT) * theDirY * theOtherSign;
-            inOther->SetPushVelocityX(inOther->GetPushVelocityX() + theDX);
-            inOther->SetPushVelocityY(inOther->GetPushVelocityY() + theDY);
-        } else {
-            if (inUnit->GetVelocity() > 0.0f && theNear) {
-                if (inUnit->mCollisionState == 2) {
-                    inUnit->SetBlockingUnit(NULL);
-                    inUnit->mCollisionResolutionCount = 0.0f;
-                    inUnit->SetVelocity(0.0f);
-                    inUnit->SetCurrentPhysicsAction(6);
-                    inUnit->ClearGoalQueue(0);
-                    if (inUnit->mCollisionState != 0)
-                        inUnit->mCollisionState = 0;
-                    theResult = true;
-                    EEUnitGoal* theOwnGoal = inUnit->mGoalState;
-                    if (theOwnGoal && theOwnGoal->mKind == kGoalGather && static_cast<EEUGRust*>(theOwnGoal)->GetGatherResource()
-                        && static_cast<EEUGRust*>(theOwnGoal)->GetGatherResource()->mResourceType == kResourceWood)
-                        inUnit->StartAction(kActionFindNewResource);
-                    else
-                        inUnit->StartAction(kActionIdle);
-                    inUnit->mUnitClass->ActionChanged(inUnit);
-                } else if (inUnit->mCollisionState == 0 && inOther->GetVelocity() == 0.0f) {
-                    inUnit->SetBlockingUnit(inOther);
-                } else {
-                    theSlow = (inUnit->GetVelocity() < theT ? theT : inUnit->GetVelocity()) - 0.5f;
-                }
-            }
-            float theSpeedNext = theSlow + 0.5f;
-            theDX = theLine.GetDirection().GetX();
-            theDX = inUnit->GetMaxVelocity() * (theSpeedNext - theT) * theDX * theSign;
-            theOtherSign = theLine.GetDirection().GetY();
-            float theDY = inUnit->GetMaxVelocity() * (theSpeedNext - theT) * theOtherSign * theSign;
-            inUnit->SetPushVelocityX(inUnit->GetPushVelocityX() + theDX);
-            inUnit->SetPushVelocityY(inUnit->GetPushVelocityY() + theDY);
-            if (theSlow > 0.0f) {
-                inUnit->SetVelocity(inUnit->GetVelocity() * 0.5f);
-            } else {
-                inUnit->SetVelocity(0.0f);
-                inUnit->mCollisionResolutionCount += gPhysics->GetTickTime();
-            }
-            float theAbsX = UMAbs(inOther->GetPushVelocityX());
-            if (theAbsX < kPMTurnEpsilon && UMAbs(inOther->GetPushVelocityY()) < kPMTurnEpsilon) {
-                inOther->SetPushVelocityX(kPMTurnEpsilon);
-                inOther->SetPushVelocityY(kPMTurnEpsilon);
-            }
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x555984
-// Pushes inOther off an overlapping unit (by the overlap times the radius ratio, less for its attack target);
-// stops the unit at its last waypoint under inOther; lets a large enemy trample a small one (world flag 2)
-// Overlap: closer than the mean radius; the push is split by the squared x share. A melee attacker as large as
-// inOther that runs into it (both attacking, inOther reloading, ahead of it) slides off; a stopped inOther
-// that is larger or immobile pushes the unit back. Always returns false
-bool EEPhysicsModel::Push(EEComplexUnit* inUnit, EEComplexUnit* inOther)
-{
-    GE3DPoint thePosition;
-    float theRadius = inUnit->mCollisionRadius;
-    float theOtherRadius = inOther->mCollisionRadius;
-    float theDX = inUnit->mPhysicalModel.GetLocation().GetX() - inOther->mPhysicalModel.GetLocation().GetX();
-    float theDY = inUnit->mPhysicalModel.GetLocation().GetY() - inOther->mPhysicalModel.GetLocation().GetY();
-    float theReach = (theOtherRadius + theRadius) * 0.5f;
-    float theReachSquared = theReach * theReach;
-    float theXSquared = theDX * theDX;
-    float theYSquared = theDY * theDY;
-    if (theYSquared + theXSquared > theReachSquared)
-        return false;
-    if (theXSquared == 0.0f && theYSquared == 0.0f)
-        theXSquared = theYSquared = 0.1f;
-    float theDistanceSquared = theYSquared + theXSquared;
-    float theShare = theXSquared / theDistanceSquared;
-    float thePush = (theReachSquared - theDistanceSquared) * (theRadius / theOtherRadius);
-    float theMoveX = theDX < 0.0f ? thePush * theShare : -(thePush * theShare);
-    float theMoveY = theDY < 0.0f ? (1.0f - theShare) * thePush : -((1.0f - theShare) * thePush);
-    if (inUnit->mWaypoints.size() == 1) {
-        GE3DPoint theNext;
-        float theArg;
-        inUnit->GetPathStart(theNext, theArg);
-        const GETransformation& theOtherTransformation = inOther->mPhysicalModel.GetLocation();
-        GE3DPoint theOtherPosition(theOtherTransformation.GetX(), theOtherTransformation.GetY(),
-                                   theOtherTransformation.GetZ());
-        GE2DPoint theOther2D(theOtherPosition.mX, theOtherPosition.GetY());
-        GE2DPoint theNext2D(theNext.mX, theNext.GetY());
-        float theHalf = theOtherRadius * 0.5f;
-        if (theNext2D.DistanceToSquared(theOther2D) < theHalf * theHalf) {
-            inUnit->SetVelocity(0.0f);
-            if (inUnit->mCollisionState != 8)
-                inUnit->mCollisionState = 8;
-        }
-    }
-    if (!(theOtherRadius > theRadius) && inOther->GetMaxVelocity() > 0.0f) {
-        if (theOtherRadius == theRadius && inUnit->mUnitClass->mIsMelee
-            && (inOther->mPlayer == inUnit->mPlayer || inUnit->mPlayer->mEnemies[inOther->mPlayer->mPlayerID] == 0)
-            && inUnit->GetVelocity() > 0.0f && inOther->mReloadTimer != 0
-            && inOther->mGoalState != NULL && inOther->mGoalState->mKind == kGoalAttackUnit
-            && inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalAttackUnit) {
-            GE3DPoint theGoal;
-            const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
-            GE3DPoint theLocation(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-            inUnit->mGoalState->GetGoalLocation(theGoal);
-            if (theLocation.DistanceToSquared(theGoal) < theRadius + theRadius + 4.0f) {
-                GEVector theUp(0.0f, 1.0f, 0.0f);
-                GEVector theVelocity;
-                GEVector theToOther;
-                GEVector theForward;
-                theLocation.mX = theTransformation.GetX();
-                theLocation.mY = theTransformation.GetY();
-                theLocation.mZ = theTransformation.GetZ();
-                const GETransformation& theOtherTransformation = inOther->mPhysicalModel.GetLocation();
-                GE3DPoint theOtherLocation(theOtherTransformation.GetX(), theOtherTransformation.GetY(),
-                                           theOtherTransformation.GetZ());
-                theToOther.SetX(theOtherLocation.mX - theLocation.mX);
-                theToOther.SetY(theOtherLocation.GetY() - theLocation.GetY());
-                theToOther.SetZ(theOtherLocation.mZ - theLocation.mZ);
-                theToOther.Normalize();
-                inUnit->mPhysicalModel.GetLocation().Apply(theUp, theForward);
-                theForward.Normalize();
-                float theSpeed = inUnit->GetVelocity();
-                theForward.mX = theSpeed * theForward.mX;
-                theForward.mY = theSpeed * theForward.mY;
-                theForward.mZ = theSpeed * theForward.mZ;
-                float theDot = theToOther.GetX() * theForward.mX + theToOther.mZ * theForward.mZ + theToOther.mY * theForward.mY;
-                if (theDot > 0.0f) {
-                    GETransformation theTurn(false);
-                    theTurn.SetOrientationYPR(UMArcTan2(inUnit->mPhysicalModel.GetLocation().mMatrix[1][0],
-                                                        inUnit->mPhysicalModel.GetLocation().mMatrix[0][0]),
-                                              0.0f, 0.0f);
-                    theTurn.mMatrix[0][3] = 0.0f;
-                    theTurn.mMatrix[1][3] = 0.0f;
-                    theTurn.mMatrix[2][3] = 0.0f;
-                    theTurn.mMatrix[3][0] = 0.0f;
-                    theTurn.mMatrix[3][1] = 0.0f;
-                    theTurn.mMatrix[3][2] = 0.0f;
-                    theTurn.mMatrix[3][3] = 1.0f;
-                    theUp.mY = inUnit->GetVelocity();
-                    theTurn.Apply(theUp, theVelocity);
-                    inUnit->SetPushVelocityX(inUnit->GetPushVelocityX() - theVelocity.mX);
-                    inUnit->SetPushVelocityY(inUnit->GetPushVelocityY() - theVelocity.GetY());
-                    float theScale = theDot / (theToOther.GetX() * theToOther.GetX() + theToOther.GetZ() * theToOther.GetZ() + theToOther.GetY() * theToOther.GetY());
-                    inUnit->SetPushVelocityX(inUnit->GetPushVelocityX() - theToOther.mX * theScale);
-                    inUnit->SetPushVelocityY(inUnit->GetPushVelocityY() - theToOther.GetY() * theScale);
-                }
-            }
-        }
-        float theOtherMoveX = theMoveX;
-        float theOtherMoveY = theMoveY;
-        if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalAttackUnit
-            && inOther == static_cast<EEUGRust*>(inUnit->mGoalState)->GetAttackTarget()) {
-            theOtherMoveX = theMoveX * 0.25f;
-            theOtherMoveY = theMoveY * 0.25f;
-        }
-        inOther->SetPushVelocityX(inOther->GetPushVelocityX() + theOtherMoveX);
-        inOther->SetPushVelocityY(inOther->GetPushVelocityY() + theOtherMoveY);
-    } else if ((inOther->GetPushVelocityX() < 0.0f ? -inOther->GetPushVelocityX() : inOther->GetPushVelocityX()) < kPMTurnEpsilon
-               && (inOther->GetPushVelocityY() < 0.0f ? -inOther->GetPushVelocityY() : inOther->GetPushVelocityY()) < kPMTurnEpsilon) {
-        inOther->SetPushVelocityX(kPMTurnEpsilon);
-        inOther->SetPushVelocityY(kPMTurnEpsilon);
-    }
-    if (inOther->GetVelocity() == 0.0f && (theOtherRadius > theRadius || inOther->GetMaxVelocity() == 0.0f)) {
-        inUnit->SetPushVelocityX(inUnit->GetPushVelocityX() - (theMoveX + theMoveX));
-        inUnit->SetPushVelocityY(inUnit->GetPushVelocityY() - (theMoveY + theMoveY));
-    }
-    if ((!(gWorld.mCollisionDetectionFlags & 2)) || !(inUnit->GetVelocity() > 0.0f) || inOther->GetVelocity() != 0.0f || inOther->mUnitClass->mTileSize != 1
-        || !(theOtherRadius < theRadius) || !(theDistanceSquared > gPhysicsModelsF) || inOther->mPlayer == inUnit->mPlayer
-        || inUnit->mPlayer->mEnemies[inOther->mPlayer->mPlayerID] == 0)
-        return false;
-    // the trample: the shared damage function (ee_combat damage.rs; combat.yaml trample_damage/_threshold)
-    long theAmount;
-    if (EECombatComputeDamage(kDamageTrample, inUnit, inOther, inUnit->mStats->GetAttack(), inUnit->mUnitClass->mAmmoType,
-                              inUnit->mUnitClass->mWeapon, 0.0f, theAmount))
-        inOther->TakeHit(inUnit, theAmount, inUnit->mPlayer->mPlayerID, 1);
-    return false;
-}
-
-// FUNCTION: EXE 0x5560cf
-// Pushes the unit against each unit it touches (PushMoving for two large mobile units, else Push) until one
-// is handled; skips closed gates and citizens working elsewhere
-void EEPhysicsModel::Collide(EEComplexUnit* inUnit)
-{
-    float theSpeed = inUnit->mCollisionRadius;
-    bool theCollide;
-    for (UListNode<EEComplexUnit*>* theNode = inUnit->mContacts.mHead; theNode; theNode = theNode->mNext) {
-        // each contact is judged on its own: a skip does not carry over to the next contact
-        theCollide = true;
-        if (theNode->mData->mIsCitizen) {
-            unsigned char theKind = theNode->mData->mGoalState ? theNode->mData->mGoalState->mKind : 0;
-            if (theKind == 6 || theKind == 4) {
-                if (!inUnit->mIsCitizen) {
-                    theCollide = false;
-                } else {
-                    unsigned char theOwnKind = inUnit->mGoalState ? inUnit->mGoalState->mKind : 0;
-                    if (theOwnKind != theKind)
-                        theCollide = false;
-                    else if (theOwnKind == kGoalGather)
-                        theCollide = static_cast<EEUGRust*>(inUnit->mGoalState)->GetGatherResource()
-                            == static_cast<EEUGRust*>(theNode->mData->mGoalState)->GetGatherResource();
-                    else
-                        theCollide = static_cast<EEUGRust*>(inUnit->GetGoalState())->GetBuildTarget()
-                            == static_cast<EEUGRust*>(theNode->mData->GetGoalState())->GetBuildTarget();
-                }
-            }
-        }
-        if (theNode->mData->mUnitClass->mCategory == kUnitCategoryGate) {
-            if (EEUnitClassCast<EEUCGate>(theNode->mData->mUnitClass)
-                && (theNode->mData->mCommand ? theNode->mData->mCommand->mType : 0) != 0x3a99) {
-                theCollide = false;
-                continue;
-            }
-            theCollide = true;
-        }
-        if (!theCollide)
-            continue;
-        if (theSpeed >= kPMMinimumSpeed && theNode->mData->mCollisionRadius >= kPMMinimumSpeed && theNode->mData->GetMaxVelocity() > 0.0f) {
-            if (this->PushMoving(inUnit, theNode->mData))
-                return;
-        } else {
-            if (this->Push(inUnit, theNode->mData))
-                return;
-        }
-    }
-}
-
-// TEST ONLY (USST): a float's bits
-static uint32_t PMBits(float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    return theBits;
-}
-
-uint32_t EEPMBits(float inValue)
-{
-    return PMBits(inValue);
-}
-
-void EEPMNotePush(EEComplexUnit* inUnit, float inSpeed, bool inMoving, float inDX, float inDY, float inX, float inY)
-{
-    if (!EEUnitStepNoting())
-        return;
-    uint32_t theWords[13] = {PMBits(inUnit->mPushVelocityX), PMBits(inUnit->mPushVelocityY),
-                             (uint32_t)gCollisionPeriod, PMBits(inSpeed), PMBits(gPhysics->GetTickSeconds()),
-                             PMBits(inUnit->mPhysicalModel.GetLocation().GetX()),
-                             PMBits(inUnit->mPhysicalModel.GetLocation().GetY()), 0, 0, 0, 0, 0, 0};
-    if (inMoving) {
-        theWords[7] = 1;
-        theWords[8] = inDY + inDX > kPMMoveDistance ? 1u : 0u;
-        theWords[9] = PMBits(inDX);
-        theWords[10] = PMBits(inDY);
-        theWords[11] = PMBits(inX);
-        theWords[12] = PMBits(inY);
-    }
-    EEUnitStateNote(kUnitStatePush, inUnit->mUnitID, theWords, 13);
-}
-
-bool EEPMPush(EEComplexUnit* inUnit, float inSpeed, float& outX, float& outY, bool& outPast)
-{
-    EeUnitsPushIn theIn;
-    theIn.push_x = inUnit->mPushVelocityX;
-    theIn.push_y = inUnit->mPushVelocityY;
-    theIn.loc_x = inUnit->mPhysicalModel.GetLocation().GetX();
-    theIn.loc_y = inUnit->mPhysicalModel.GetLocation().GetY();
-    theIn.period = (uint32_t)gCollisionPeriod;
-    theIn.max_velocity = inSpeed;
-    theIn.tick_seconds = gPhysics->GetTickSeconds();
-    EeUnitsPush thePush = ee_units_step_push(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), &theIn);
-    EEPMNotePush(inUnit, inSpeed, thePush.moving != 0, thePush.dx, thePush.dy, thePush.x, thePush.y);   // TEST ONLY (USST)
-    outX = thePush.x;
-    outY = thePush.y;
-    outPast = thePush.past_move != 0;
-    return thePush.moving != 0;
-}
-
-// FUNCTION: EXE 0x556213
-// Applies the collision push to the unit (times the collision period, capped at its speed) onto a tile it
-// can stand on, puts it on the ground, and starts or stops an idle unit's shuffle animation
-// NEAR: x87 scheduling of the sign/abs/limit block (as Helicopter V0C), the frame layout and the flag threading
-void EEPhysicsModel::Move(EEComplexUnit* inUnit)
-{
-    this->MoveByPush(inUnit, true);
-}
-
-void EEPhysicsModel::MoveByPush(EEComplexUnit* inUnit, bool inOnGround)
-{
-    EETileCoordinate theTile(0, 0);
-    bool theStopped = false;
-    float theX, theY;
-    bool thePast;
-    // New (R5b.4 leaf 6): the push's arithmetic up to the new point is Rust over the unit store (ee_units motion.rs push)
-    if (EEPMPush(inUnit, inUnit->GetMaxVelocity(), theX, theY, thePast)) {
-        long theTileY = UMFloor(theY);
-        long theTileX = UMFloor(theX);
-        theTile.mX = theTileX;
-        theTile.mY = theTileY;
-        bool theFree = EECanStandOn(theTile, inUnit);
-        if (theFree && UMAbs(inUnit->GetTileX() - theTile.mX) == 1 && UMAbs(inUnit->GetTileY() - theTile.mY) == 1) {
-            EETileCoordinate theSideX;
-            theSideX.mX = theTile.mX;
-            theSideX.mY = inUnit->GetTileY();
-            if (!EECanStandOn(theSideX, inUnit)) {
-                EETileCoordinate theSideY;
-                theSideY.mX = inUnit->GetTileX();
-                theSideY.mY = theTile.mY;
-                if (!EECanStandOn(theSideY, inUnit))
-                    theFree = false;
-            }
-        }
-        if (theFree) {
-            float theTime = inUnit->mCollisionResolutionCount;
-            if ((theTile.mX != inUnit->mTileX || theTile.mY != inUnit->mTileY) && theTime == 0.0f
-                && inUnit->mF24C != 0.0f)
-                theTime = gPhysics->GetTickTime() + inUnit->GetF24C();
-            inUnit->SetLocationXY(theX, theY, true);
-            inUnit->mCollisionResolutionCount = theTime;
-            if (inUnit->mCurrentPhysicsAction == 5 && inUnit->mCollisionRadius >= kPMMinimumSpeed) {
-                inUnit->mAngularVelocity = GEOrientation(0.0f, 0.0f, 0.0f);
-                EEPhysicsTrace("Collision: Turning Unit %08x angular velocity set to %f\n", inUnit->GetUnitID(), GEOrientation(0.0f, 0.0f, 0.0f));
-            }
-            if (inUnit->mCurrentPhysicsAction != 5 && inUnit->mCurrentPhysicsAction != 0) {
-                if (thePast) {
-                    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle
-                        && (inUnit->mAnimation == 0 || inUnit->mAnimation == 7 || inUnit->mAnimation == 8)) {
-                        inUnit->SetAnimation(0xd, -1, 1);
-                        if (inUnit->mIsAnimationPaused)
-                            inUnit->mIsAnimationPaused = false;
-                        unsigned long theFrameTime = inUnit->GetModel()->mFrameTimes[13];
-                        if (inUnit->mAnimationTime != theFrameTime)
-                            inUnit->mAnimationTime = theFrameTime;
-                    } else if (inUnit->mAnimation == 0xd && inUnit->mIsAnimationPaused) {
-                        inUnit->mIsAnimationPaused = false;
-                    }
-                } else {
-                    theStopped = true;
-                }
-            }
-            inUnit->mCollisionResolutionCount = gPhysics->GetTickTime() + inUnit->mCollisionResolutionCount;
-            if (inOnGround && !inUnit->IsSwimming()) {
-                const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
-                GE3DPoint theGround(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-                inUnit->PlaceOnGround(theGround);
-            }
-            inUnit->SetTransformation(inUnit->mPhysicalModel.GetLocation(), true);
-        } else {
-            theStopped = true;
-        }
-    } else {
-        theStopped = true;
-    }
-    if (theStopped && (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle && inUnit->mAnimation == 0xd)
-        inUnit->SetAnimation(7, -1, 1);
-    if (inUnit->mPushVelocityX != 0.0f)
-        inUnit->mPushVelocityX = 0.0f;
-    if (inUnit->mPushVelocityY != 0.0f)
-        inUnit->mPushVelocityY = 0.0f;
 }
 
 // NEAR: register choice only (ecx vs eax for the class pointer)
@@ -885,196 +146,912 @@ bool EEComplexUnit::HasSwimAnimation()
     return this->mUnitClass->CanMoveOnTerrain(this, 1) && this->GetModel()->mFrameCounts[2] > 1;
 }
 
-// NEAR: the original compares members against a 0.0f kept in st(1) (fld member; fcomp st(1)); ours fcom [member]
-// FUNCTION: EXE 0x556710
-// Levels the unit's roll toward zero, then resolves its collisions (Collide, Move) unless it rests with no
-// push; a resting or non-collidable unit gets its collision timer cleared
-void EEPhysicsModel::AfterStep(EEComplexUnit* inUnit)
+// the unit's records for Rust (its three bases)
+static EeUnitsPmUnit PMView(EEComplexUnit* inUnit)
 {
-    if (inUnit->GetRoll() != 0.0f) {
-        // New (R5b.4 leaf 6): the decay is Rust over the unit store (ee_units motion.rs roll_decay). TEST ONLY: while the
-        // capture runs, the original's statements check it (USST)
-        float theRollBefore = inUnit->GetRoll();
-        float theRoll = ee_units_step_roll(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
-                                           theRollBefore, gPhysics->mTickSeconds);
-        inUnit->mRoll = theRoll;
-        if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-            float theOriginal;
-            if (theRollBefore > 0.0f) {
-                theOriginal = theRollBefore;
-                theOriginal -= gPhysics->mTickSeconds * 0.5f;
-                if (theOriginal <= 0.0f)
-                    theOriginal = 0.0f;
-            } else {
-                theOriginal = gPhysics->mTickSeconds * 0.5f + theRollBefore;
-                if (theOriginal >= 0.0f)
-                    theOriginal = 0.0f;
-            }
-            if (PMBits(theOriginal) != PMBits(theRoll))
-                EEUnitStepDiffers("EEPhysicsModel::AfterStep (the roll's bits)", inUnit->mUnitID, (long)PMBits(theRoll),
-                                  (long)PMBits(theOriginal));
-            uint32_t theWords[3] = {PMBits(theRollBefore), PMBits(gPhysics->mTickSeconds), PMBits(inUnit->mRoll)};
-            EEUnitStateNote(kUnitStateRoll, inUnit->mUnitID, theWords, 3);
+    EeUnitsPmUnit theView;
+    theView.obj = reinterpret_cast<uintptr_t>(inUnit);
+    theView.rts = static_cast<EeUnitsRtsUnitFields*>(inUnit);
+    theView.unit = static_cast<EeUnitsUnitFields*>(inUnit);
+    theView.cx = static_cast<EeUnitsComplexUnitFields*>(inUnit);
+    return theView;
+}
+
+// TEST ONLY: a float's bits
+static uint32_t PMBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+// TEST ONLY: the physics models' step record (PMST, the physics models' lane, round 1). Every Step call folds the
+// unit's id, its model's index, its physics action before the step and the state the models write after it (the
+// location's matrix, the velocity, the angular velocity, the push, the roll, the bob phase, the collision time, state
+// and blocking unit, the physics action, the tile, the arrival flag, the animation, its pause and time, the hit
+// points, the contact location, the push immunity, the orientation, the height; floats as bits) into the tick's
+// FNV-1a 64; the record (the tick, the calls, the digest) is written when the next tick's first step comes. Nothing
+// is noted unless the capture runs. Its golden came from the C++ models (tools/sim_capture.py).
+static uint64_t sPMStepDigest = 0xcbf29ce484222325ull;
+static uint32_t sPMStepCalls = 0;
+static unsigned long sPMStepTick = 0;
+
+static void PMStepFNV(uint32_t inWord)
+{
+    for (int i = 0; i < 4; i++) {
+        sPMStepDigest ^= (inWord >> (8 * i)) & 0xff;
+        sPMStepDigest *= 0x100000001b3ull;
+    }
+}
+
+static void PMStepCommit()
+{
+    if (sPMStepCalls != 0) {
+        EESimCaptureRecord theRecord(0x54534d50u);   // "PMST"
+        theRecord.U32((unsigned int)sPMStepTick);
+        theRecord.U32(sPMStepCalls);
+        theRecord.U32((unsigned int)(sPMStepDigest & 0xffffffffu));
+        theRecord.U32((unsigned int)(sPMStepDigest >> 32));
+        theRecord.Commit();
+    }
+    sPMStepDigest = 0xcbf29ce484222325ull;
+    sPMStepCalls = 0;
+}
+
+// TEST ONLY: the steps per model so far (the lane's coverage of the capture's games), printed to stderr every 20000
+// ticks while the capture runs: "EE-PM-COUNT <tick> <land> <airplane> .. <spaceship>"
+static uint32_t sPMStepKinds[12];
+
+static void PMStepNote(EEPhysicsModel* inModel, EEComplexUnit* inUnit, unsigned long inAction)
+{
+    if (gPhysics->mNumTicksDone != sPMStepTick) {
+        PMStepCommit();
+        sPMStepTick = gPhysics->mNumTicksDone;
+        if (sPMStepTick % 20000 == 0) {
+            fprintf(stderr, "EE-PM-COUNT %lu", sPMStepTick);
+            for (int i = 0; i < 12; i++)
+                fprintf(stderr, " %u", sPMStepKinds[i]);
+            fprintf(stderr, "\n");
         }
     }
-    if ((!inUnit->mIsCollidable || !(inUnit->mContacts.mCount > 0)) && inUnit->GetCollisionResolutionCount() == 0.0f)
-        return;
-    if (inUnit->mIsCollidable) {
-        if (inUnit->GetVelocity() == 0.0f && inUnit->mAngularVelocity.GetYaw() == 0.0f
-            && (inUnit->mUnitClass->GetMaxVelocity() <= 0.0f
-                || (UMAbs(inUnit->mPushVelocityX) < kPMTurnEpsilon
-                    && UMAbs(inUnit->mPushVelocityY) < kPMTurnEpsilon))
-            && !(inUnit->mUnitClass->mIsMelee && inUnit->mGoalState && inUnit->mGoalState->mKind == kGoalAttackUnit)) {
-            inUnit->mCollisionResolutionCount = 0.0f;
-            if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle && inUnit->mAnimation == 0xd)
-                inUnit->SetAnimation(7, -1, 1);
-        } else {
-            this->Collide(inUnit);
-            this->Move(inUnit);
-        }
-    } else {
-        inUnit->mCollisionResolutionCount = 0.0f;
-    }
+    uint32_t theModel = 0xff;
+    for (uint32_t i = 0; i < 12; i++)
+        if (gPhysicsModels[i] == inModel)
+            theModel = i;
+    if (theModel < 12)
+        sPMStepKinds[theModel]++;
+    PMStepFNV((uint32_t)inUnit->mUnitID);
+    PMStepFNV(theModel);
+    PMStepFNV((uint32_t)inAction);
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
+    for (int r = 0; r < 4; r++)
+        for (int c = 0; c < 4; c++)
+            PMStepFNV(PMBits(theLocation.mMatrix[r][c]));
+    const float theFloats[] = {inUnit->mVelocity, inUnit->mAngularVelocity.mYaw, inUnit->mAngularVelocity.mPitch,
+                               inUnit->mAngularVelocity.mRoll, inUnit->mPushVelocityX, inUnit->mPushVelocityY,
+                               inUnit->mRoll, inUnit->mF220, inUnit->mCollisionResolutionCount,
+                               inUnit->mInitialContactLocation.mX, inUnit->mInitialContactLocation.mY,
+                               inUnit->mInitialContactLocation.mZ, inUnit->mOrientation.mYaw,
+                               inUnit->mOrientation.mPitch, inUnit->mOrientation.mRoll, inUnit->mHeight};
+    for (size_t i = 0; i < sizeof(theFloats) / sizeof(theFloats[0]); i++)
+        PMStepFNV(PMBits(theFloats[i]));
+    PMStepFNV((uint32_t)inUnit->mCollisionState);
+    PMStepFNV(inUnit->mBlockingUnit ? (uint32_t)inUnit->mBlockingUnit->mUnitID : 0xfffffffeu);
+    PMStepFNV((uint32_t)inUnit->mCurrentPhysicsAction);
+    PMStepFNV((uint32_t)inUnit->mTileX);
+    PMStepFNV((uint32_t)inUnit->mTileY);
+    PMStepFNV(inUnit->mHasArrived ? 1u : 0u);
+    PMStepFNV((uint32_t)inUnit->mAnimation);
+    PMStepFNV(inUnit->mIsAnimationPaused ? 1u : 0u);
+    PMStepFNV((uint32_t)inUnit->mAnimationTime);
+    PMStepFNV((uint32_t)inUnit->mHitPoints);
+    PMStepFNV((uint32_t)inUnit->mPushImmuneUntil);
+    sPMStepCalls++;
 }
 
 // FUNCTION: EXE 0x556897
 // Runs the step for the unit's physics action (0..5), then the after-step work (not after action 2, nor for
-// a dead unit in another action)
+// a dead unit in another action): Rust (ee_units pm.rs step)
 void EEPhysicsModel::Step(EEComplexUnit* inUnit)
 {
-    switch (inUnit->mCurrentPhysicsAction) {
-    case 0:
-        this->Step0(inUnit);
-        break;
-    case 1:
-        this->Step1(inUnit);
-        break;
-    case 2:
-        this->Step2(inUnit);
-        return;
-    case 3:
-        this->Step3(inUnit);
-        break;
-    case 4:
-        this->Step4(inUnit);
-        break;
-    case 5:
-        this->Step5(inUnit);
-        break;
-    default:
-        if (inUnit->mHitPoints <= 0)
-            return;
-    }
-    this->AfterStep(inUnit);
+    unsigned long theAction = inUnit->mCurrentPhysicsAction;   // TEST ONLY (PMST)
+    ee_units_pm_step((int32_t)this->mKind, PMView(inUnit));
+    if (EESimCaptureRecord::Active())   // TEST ONLY (PMST)
+        PMStepNote(this, inUnit, theAction);
 }
 
-// NEAR: the original refuses some GE3DPoint assignment inlines in a different order
-// FUNCTION: EXE 0x556908
-// Keeps the unit's new location on the map: undoes a move off the map; a move through one of the terrain's
-// edge planes is cut back to it and slid inside; returns false when the move was changed
-// (cut back to kPMEdgeOffset inside the plane, then slid along the plane's normal)
-bool EEPhysicsModel::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3DPoint& ioLocation, float* outDistance)
+void EEPhysicsModel::Step0(EEComplexUnit* inUnit)
 {
-    GE3DLine theEdgeLine;
-    GE3DLine theMoveLine;
-    GE3DPlane thePlane;
-    EEMap* theMap = ::gWorld.mMap;
-    long theX = UMFloor(ioLocation.GetX());
-    long theY = UMFloor(ioLocation.GetY());
-    bool theResult = true;
-    float theT;
-    if (inMove.GetX() != 0.0f || inMove.GetY() != 0.0f || inMove.GetZ() != 0.0f) {
-        theMoveLine.SetStart(ioLocation);
-        theMoveLine.SetDirection(inMove);
-        if (theMap->GetTile(theX, theY)) {
-            if (!theMap->GetTile(theX - 1, theY - 1)) {
-                if (theMap->mTerrainMesh.GetLeftPlane().IsPointOnOrBelowPlane(ioLocation)) {
-                    theResult = false;
-                    if (!theMoveLine.Intersects(theMap->mTerrainMesh.GetLeftPlane(), theT) || theT > 0.0f || theT < -1.0f)
-                        theT = -1.0f;
-                    theMoveLine.GetPointAt(theT, ioLocation);
-                    ioLocation.SetX(ioLocation.GetX() + kPMEdgeOffset);
-                    ioLocation.SetY(ioLocation.GetY() + kPMEdgeOffset);
-                    if (theMap->mTerrainMesh.GetLeftPlane().IsPointOnOrBelowPlane(ioLocation)) {
-                        theEdgeLine.SetStart(ioLocation);
-                        theEdgeLine.SetDirection(theMap->mTerrainMesh.GetLeftPlane().GetNormal());
-                        theEdgeLine.Intersects(theMap->mTerrainMesh.GetLeftPlane(), theT);
-                        theEdgeLine.GetPointAt(theT, ioLocation);
-                        ioLocation.SetX(ioLocation.GetX() + kPMEdgeOffset);
-                        ioLocation.SetY(ioLocation.GetY() + kPMEdgeOffset);
-                    }
-                    theMoveLine.SetStart(ioLocation);
-                }
-            } else if (!theMap->GetTile(theX + 1, theY + 1)) {
-                if (theMap->mTerrainMesh.GetRightPlane().IsPointOnOrBelowPlane(ioLocation)) {
-                    theResult = false;
-                    if (!theMoveLine.Intersects(theMap->mTerrainMesh.GetRightPlane(), theT) || theT > 0.0f || theT < -1.0f)
-                        theT = -1.0f;
-                    theMoveLine.GetPointAt(theT, ioLocation);
-                    ioLocation.SetX(ioLocation.GetX() - kPMEdgeOffset);
-                    ioLocation.SetY(ioLocation.GetY() - kPMEdgeOffset);
-                    if (theMap->mTerrainMesh.GetRightPlane().IsPointOnOrBelowPlane(ioLocation)) {
-                        theEdgeLine.SetStart(ioLocation);
-                        theEdgeLine.SetDirection(theMap->mTerrainMesh.GetRightPlane().GetNormal());
-                        theEdgeLine.Intersects(theMap->mTerrainMesh.GetRightPlane(), theT);
-                        theEdgeLine.GetPointAt(theT, ioLocation);
-                        ioLocation.SetX(ioLocation.GetX() - kPMEdgeOffset);
-                        ioLocation.SetY(ioLocation.GetY() - kPMEdgeOffset);
-                    }
-                    theMoveLine.SetStart(ioLocation);
-                }
-            }
-            if (!theMap->GetTile(theX - 1, theY + 1)) {
-                if (theMap->mTerrainMesh.GetFrontPlane().IsPointOnOrBelowPlane(ioLocation)) {
-                    theResult = false;
-                    if (!theMoveLine.Intersects(theMap->mTerrainMesh.GetFrontPlane(), theT) || theT > 0.0f || theT < -1.0f)
-                        theT = -1.0f;
-                    theMoveLine.GetPointAt(theT, ioLocation);
-                    ioLocation.SetX(ioLocation.GetX() + kPMEdgeOffset);
-                    ioLocation.SetY(ioLocation.GetY() - kPMEdgeOffset);
-                    if (theMap->mTerrainMesh.GetFrontPlane().IsPointOnOrBelowPlane(ioLocation)) {
-                        theEdgeLine.SetStart(ioLocation);
-                        theEdgeLine.SetDirection(theMap->mTerrainMesh.GetFrontPlane().GetNormal());
-                        theEdgeLine.Intersects(theMap->mTerrainMesh.GetFrontPlane(), theT);
-                        theEdgeLine.GetPointAt(theT, ioLocation);
-                        ioLocation.SetX(ioLocation.GetX() + kPMEdgeOffset);
-                        ioLocation.SetY(ioLocation.GetY() - kPMEdgeOffset);
-                    }
-                }
-            } else if (!theMap->GetTile(theX + 1, theY - 1)) {
-                if (theMap->mTerrainMesh.GetBackPlane().IsPointOnOrBelowPlane(ioLocation)) {
-                    theResult = false;
-                    if (!theMoveLine.Intersects(theMap->mTerrainMesh.GetBackPlane(), theT) || theT > 0.0f || theT < -1.0f)
-                        theT = -1.0f;
-                    theMoveLine.GetPointAt(theT, ioLocation);
-                    ioLocation.SetX(ioLocation.GetX() - kPMEdgeOffset);
-                    ioLocation.SetY(ioLocation.GetY() + kPMEdgeOffset);
-                    if (theMap->mTerrainMesh.GetBackPlane().IsPointOnOrBelowPlane(ioLocation)) {
-                        theEdgeLine.Define(ioLocation, theMap->mTerrainMesh.GetBackPlane().GetNormal());
-                        theEdgeLine.Intersects(theMap->mTerrainMesh.GetBackPlane(), theT);
-                        theEdgeLine.GetPointAt(theT, ioLocation);
-                        ioLocation.SetX(ioLocation.GetX() - kPMEdgeOffset);
-                        ioLocation.SetY(ioLocation.GetY() + kPMEdgeOffset);
-                    }
-                }
-            }
+    ee_units_pm_step0((int32_t)this->mKind, PMView(inUnit));
+}
+
+float EEPhysicsModel::ComputeRoll(EEComplexUnit* inUnit, float inValue)
+{
+    return ee_units_pm_compute_roll((int32_t)this->mKind, PMView(inUnit), inValue);
+}
+
+// ---- the projectile's and the missile's steps (the arithmetic is ee_combat's flight.rs; the captures are the
+// combat lane's CBPJ, CBPS, CBMA, CBMH)
+
+// NEAR: frame/float slot order; the original calls vector<long>::operator[] out of line (0x11e2a5) for the first lookup
+// FUNCTION: EXE 0x55d015
+// Places the launched projectile on its ballistic arc from the launch point for its flight time so far,
+// nose along the arc; a meteor flies straight at its top speed, without gravity (new: the arc and the placement are
+// ee_combat's arc and projectile_launch)
+// Fields: start point (+0x10c), yaw/pitch (+0x188/+0x18c), the launcher class's launch speed (else its own) for
+// +0x290 ms of flight under the class's gravity (+0x13c); a type 0x325 flies straight at its speed
+static void PMProjectileStep0(EEComplexUnit* inUnit)
+{
+    long theTileX;
+    long theTileY;
+    inUnit->mInitialContactLocation = inUnit->mPhysicalModel.GetLocation().GetPosition();
+    EeCombatArcIn theIn = {};
+    theIn.flight_time_ms = (int32_t)inUnit->mFlightTime;
+    theIn.gravity = inUnit->mUnitClass->mAcceleration;
+    theIn.pitch = inUnit->mOrientation.mPitch;
+    theIn.meteor = inUnit->mUnitClass->mUnitType == kUnitTypeMeteor;
+    if (theIn.meteor) {
+        theIn.max_velocity = inUnit->GetMaxVelocity();
+    } else {
+        theIn.launcher_speed = inUnit->mPlayer->mUnitClassUpgrades[inUnit->mLauncherClass->mUnitType]->mLaunchSpeed;
+        if (!(theIn.launcher_speed > 0.001f))   // read only for the fallback
+            theIn.own_speed = inUnit->mPlayer->mUnitClassUpgrades[inUnit->mUnitClass->mUnitType]->mLaunchSpeed;
+    }
+    EeCombatArcOut theArc = EECombatArc(theIn);
+    // the placement on the arc is ee_combat's projectile_launch (flight.rs)
+    EeCombatFlightIn in = {};
+    in.start[0] = inUnit->mProjectileStart.GetX();
+    in.start[1] = inUnit->mProjectileStart.GetY();
+    in.start[2] = inUnit->mProjectileStart.GetZ();
+    in.yaw = inUnit->mOrientation.mYaw;
+    in.move_y = theArc.move_y;
+    in.move_z = theArc.move_z;
+    in.pitch = theArc.pitch;
+    EeCombatFlightOut theOut = ee_combat_projectile_launch(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'P', 'J'), in, theOut);
+    GETransformation theTransformation(false);
+    memcpy(theTransformation.mMatrix, theOut.matrix, sizeof(theOut.matrix));
+    EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
+}
+
+// NEAR: frame layout (the original keeps the step in the dead inUnit slot; 0x94 vs our 0xa0)
+// FUNCTION: EXE 0x55d259
+// Moves the projectile one tick along its heading and pulls its nose down by its class's gravity; only
+// while it is at or below height 0 and above the ground point (new: ee_combat's projectile_step)
+// Class gravity +0x13c; the height-0 test is the original's (bytes 0x55d2e4: `fcomp 0.0`, `ja` returns)
+static void PMProjectileStep2(EEComplexUnit* inUnit)
+{
+    // the tick is ee_combat's projectile_step (flight.rs); the ground point is read only at or below height 0
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
+    long theTileX;
+    long theTileY;
+    EeCombatFlightIn in = {};
+    memcpy(in.location, theLocation.mMatrix, sizeof(in.location));
+    in.gravity = inUnit->mUnitClass->mAcceleration;
+    in.step = gPhysics->mTickSeconds;
+    in.speed = inUnit->mVelocity;
+    if (!(theLocation.GetZ() > 0.0f)) {
+        GE3DPoint thePosition = theLocation.GetPosition();
+        GE3DPoint theGround;
+        ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
+        in.ground_read = 1;
+        in.ground_z = theGround.GetZ();
+    }
+    EeCombatFlightOut theOut = ee_combat_projectile_step(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'P', 'S'), in, theOut);
+    if (!theOut.moved)
+        return;
+    GETransformation theTransformation(false);
+    memcpy(theTransformation.mMatrix, theOut.matrix, sizeof(theOut.matrix));
+    EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
+}
+
+// FUNCTION: EXE 0x55b041
+// Speeds the missile up along its heading (capped at its top speed) and moves it by one tick (new: ee_combat's
+// missile_accelerate)
+static void PMMissileAccelerate(EEComplexUnit* inUnit)
+{
+    EEUnitClassUpgrade* theStats = inUnit->mStats;
+    EeCombatFlightIn in = {};
+    memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
+    in.step = gPhysics->mTickSeconds;
+    in.speed = inUnit->GetVelocity();
+    in.max_speed = theStats->GetMaxVelocity();
+    in.accel = theStats->GetAcceleration();
+    EeCombatFlightOut theOut = ee_combat_missile_accelerate(&in);
+    inUnit->SetVelocity(theOut.speed);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'M', 'A'), in, theOut);
+    GETransformation theTransformation(false);
+    memcpy(theTransformation.mMatrix, theOut.matrix, sizeof(theOut.matrix));
+    long theTileX;
+    long theTileY;
+    EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
+}
+
+// FUNCTION: EXE 0x55b103
+// Turns the missile toward its drop target by at most its turn rate per tick, slows it the further it
+// points off target (down to 1/4 of top speed) and moves it by one tick (new: ee_combat's missile_home; the drop
+// target stays here)
+static void PMMissileHome(EEComplexUnit* inUnit)
+{
+    GE3DPoint theTarget;
+    EEUnitClassUpgrade* theStats = inUnit->mStats;
+    EEUnit* theDropTarget;
+    EEFindDropLocation(inUnit, &theDropTarget, &theTarget, NULL);
+    EeCombatFlightIn in = {};
+    memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
+    in.target[0] = theTarget.GetX();
+    in.target[1] = theTarget.GetY();
+    in.target[2] = theTarget.GetZ();
+    in.step = gPhysics->mTickSeconds;
+    in.speed = inUnit->mVelocity;
+    in.max_speed = theStats->GetMaxVelocity();
+    in.accel = theStats->GetAcceleration();
+    in.max_angular = theStats->GetMaxAngularVelocity();
+    EeCombatFlightOut theOut = ee_combat_missile_home(&in);
+    inUnit->SetVelocity(theOut.speed);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'M', 'H'), in, theOut);
+    GETransformation theNew(false);
+    memcpy(theNew.mMatrix, theOut.matrix, sizeof(theOut.matrix));
+    long theTileX;
+    long theTileY;
+    EEUpdateUnitTile(&theNew, inUnit, &theTileX, &theTileY);
+}
+
+// FUNCTION: EXE 0x55aff0
+// Records the missile's position as its contact point, then flies it straight on while its boost time
+// lasts, else homes it on its target
+static void PMMissileStep0(EEComplexUnit* inUnit)
+{
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
+    inUnit->mInitialContactLocation = GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
+    if (inUnit->mFlightTime > 0)
+        PMMissileAccelerate(inUnit);
+    else
+        PMMissileHome(inUnit);
+}
+
+// ---- the carrier planes' deck walk (EEPMAirplane's; the carrier model's tag points)
+
+// FUNCTION: EXE 0x5582d6
+// Puts the plane at an offset along the carrier from a deck point, facing as the carrier, and routes it on
+static void PMOrientOnCarrier(const GETransformation& inCarrier, const GE3DPoint& inPoint, EEComplexUnit* inUnit, float inOffset)
+{
+    GEOrientation theOrientation;
+    GETransformation theTransformation(inCarrier);
+    GE3DPoint theResult;
+    GE3DPoint theOffset(0.0f, inOffset, 0.0f);
+    theTransformation.SetPosition(inPoint.GetX(), inPoint.GetY(), inPoint.GetZ());
+    theTransformation.Apply(theOffset, theResult);
+    theTransformation = inUnit->mHomeBase->mPhysicalModel.GetLocation();
+    theTransformation.SetPosition(theResult.GetX(), theResult.GetY(), theResult.GetZ());
+    long theTileX;
+    long theTileY;
+    EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
+    theTransformation.ConvertToOrientation(theOrientation);
+    inUnit->mOrientation = theOrientation;
+    inUnit->mUnitClass->RouteDockWaypoint(inUnit);
+}
+
+// NEAR: frame slot assignment (the original keeps theIndex in the dead inUnit slot); vector<EETagPoint*>::begin binds to 0x22eb7, the original calls the ICF copy 0x17a952
+// FUNCTION: EXE 0x557999
+// Keeps a docked plane on its carrier's deck between the deck tag points, at its path distance
+static void PMFollowCarrier(EEComplexUnit* inUnit)
+{
+    GE3DPoint thePosition;
+    GE3DPoint theNext;
+    GE3DPoint theStart;
+    EEComplexUnit* theCarrier = inUnit->mHomeBase;
+    GETransformation theTransformation(inUnit->mHomeBase->mPhysicalModel.GetLocation());
+    EEUnitClassUpgrade* theStats = theCarrier->mStats;
+    EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
+    float theScale = theStats->GetScale();
+    if (!theTags || theTags->mPoints.size() == 0)
+        return;
+    float theIndex;
+    inUnit->GetPathStart(theNext, theIndex);
+    inUnit->mPhysicalModel.GetLocation().GetPosition(thePosition);
+    float theDistance = thePosition.DistanceTo(theNext);
+    EETagPointList::Scale(theTransformation, theScale);
+    theTags->mPoints[2]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theNext);
+    theTags->mPoints[0]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theStart);
+    theDistance = theStart.DistanceTo(theNext) - theDistance;
+    PMOrientOnCarrier(theCarrier->mPhysicalModel.GetLocation(), theStart, inUnit, theDistance);
+}
+
+// NEAR: 98: the original loads mPoints[2] (ebx reused) before pushing GetPoint's arguments
+// FUNCTION: EXE 0x5581a0
+// Returns whether a carrier plane taxiing or braking with clearance on its carrier has not yet reached
+// the deck tag point
+static bool PMIsDocked(EEComplexUnit* inUnit)
+{
+    GETransformation theTransformation(false);
+    float theIndex;
+    GE3DPoint theDeck;
+    GE3DPoint theNext;
+    EEComplexUnit* theCarrier = inUnit->mHomeBase;
+    bool theResult = false;
+    if ((inUnit->mUnitClass->mAirTrafficType == 2 || inUnit->mUnitClass->mAirTrafficType == 4) && theCarrier
+        && ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionTaxi
+            || (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionBrake)
+        && inUnit->mIsClearanceGranted == true) {
+        theTransformation = theCarrier->mPhysicalModel.GetLocation();
+        EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->GetAnimation()];
+        inUnit->GetPathStart(theNext, theIndex);
+        if (theTags) {
+            theTags->Scale(theTransformation, theCarrier->mStats->mScale);
+            const std::vector<EETagPoint*>& thePoints = theTags->mPoints;
+            thePoints[2]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theDeck);
         } else {
-            theMoveLine.GetPointAt(-1.0f, ioLocation);
-            theResult = false;
+            theDeck.mX = theTransformation.GetX();
+            theDeck.mY = theTransformation.GetY();
+            theDeck.mZ = 1.0f;
         }
+        if (theNext != theDeck)
+            theResult = true;
     }
     return theResult;
 }
 
+// ---- the C++ the Rust models call (ee_units pm_host.rs; each the original statement it replaces)
 
-// SYNTHETIC: EXE 0x556ddb
-// (the scalar deleting destructor, emitted with the vtable)
-
-// the ICF-shared copy LINK kept in this unit's range
-// SYNTHETIC: EXE 0x556dd8
-
-// ICF-FOLDED: EXE 0x5720c6
-// (no address of its own: folded into the shared `ret` body of EEABuild::Virtual8)
-void EEPhysicsTrace(char const *,unsigned long,class GEOrientation)
+static EEComplexUnit* PMUnit(uint64_t inObject)
 {
+    return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(inObject));
+}
+
+static uint64_t PMObject(const void* inPointer)
+{
+    return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(inPointer));
+}
+
+static void PMSetMatrix(GETransformation& outTransformation, const float* inMatrix)
+{
+    memcpy(outTransformation.mMatrix, inMatrix, 16 * sizeof(float));
+}
+
+extern "C" void ee_units_pm_host_tick(EeUnitsPmTick* outTick)
+{
+    outTick->tick_seconds = gPhysics->mTickSeconds;
+    outTick->ticks_per_second = gPhysics->mTicksPerGameSecond;
+    outTick->tick_time = gPhysics->GetTickTime();
+    outTick->game_time = (int32_t)gPhysics->mGameTime;
+    outTick->collision_period = (uint32_t)gCollisionPeriod;
+    outTick->detection_flags = (uint32_t)gWorld.mCollisionDetectionFlags;
+    outTick->trample_min = gPhysicsModelsF;
+    outTick->height_epsilon = kHeightEpsilon;
+}
+
+extern "C" float ee_units_pm_host_random()
+{
+    return gPhysics->GetRandom();
+}
+
+extern "C" uint8_t ee_units_pm_host_noting()
+{
+    return EEUnitStepNoting() ? 1 : 0;
+}
+
+extern "C" void ee_units_pm_host_note(uint32_t inKind, uint32_t inID, const uint32_t* inWords, uint32_t inCount)
+{
+    EEUnitStateNote(inKind, inID, inWords, inCount);
+}
+
+extern "C" void ee_units_pm_host_view(uint64_t inObject, EeUnitsPmUnit* outView)
+{
+    *outView = PMView(PMUnit(inObject));
+}
+
+extern "C" void ee_units_pm_host_class(uint64_t inObject, EeUnitsPmClass* outClass)
+{
+    EEUnitClass* theClass = PMUnit(inObject)->mUnitClass;
+    outClass->category = (uint32_t)theClass->mCategory;
+    outClass->unit_type = (uint32_t)theClass->mUnitType;
+    outClass->air_traffic_type = (int32_t)theClass->mAirTrafficType;
+    outClass->tile_size = (int32_t)theClass->mTileSize;
+    outClass->pitches_with_terrain = theClass->mPitchesWithTerrain ? 1 : 0;
+    outClass->rolls_with_terrain = theClass->mRollsWithTerrain ? 1 : 0;
+    outClass->fires_broadside = theClass->mFiresBroadside ? 1 : 0;
+    outClass->is_melee = theClass->mIsMelee ? 1 : 0;
+    outClass->has_splash_effect = theClass->mSplashEffect ? 1 : 0;
+    outClass->has_death_effect = theClass->mDeathEffect ? 1 : 0;
+    outClass->has_shell_hole_effect = theClass->mShellHoleEffect ? 1 : 0;
+    outClass->cruise_altitude = theClass->GetCruiseAltitude();
+    outClass->slope_penalty = theClass->mSlopeSpeedPenalty;
+    outClass->bob_pitch = theClass->GetBobPitch();
+    outClass->bob_height = theClass->GetBobHeight();
+    outClass->scale = theClass->GetScale();
+    outClass->max_velocity = theClass->GetMaxVelocity();
+    outClass->max_roll = theClass->GetMaxRoll();
+    outClass->inner_collision_sphere = theClass->mInnerCollisionSphere;
+    outClass->facing_offset = theClass->GetFacingOffset();
+    outClass->angular_acceleration = theClass->GetAngularAcceleration();
+    outClass->max_angular_velocity = theClass->GetMaxAngularVelocity();
+}
+
+extern "C" void ee_units_pm_host_stats(uint64_t inObject, EeUnitsPmStats* outStats)
+{
+    EEUnitClassUpgrade* theStats = PMUnit(inObject)->mStats;
+    outStats->max_velocity = theStats->GetMaxVelocity();
+    outStats->acceleration = theStats->GetAcceleration();
+    outStats->angular_acceleration = theStats->mAngularAcceleration;
+    outStats->max_angular_velocity = theStats->mMaxAngularVelocity;
+    outStats->scale = theStats->GetScale();
+}
+
+extern "C" void ee_units_pm_host_location(uint64_t inObject, float* outMatrix)
+{
+    memcpy(outMatrix, PMUnit(inObject)->mPhysicalModel.GetLocation().mMatrix, 16 * sizeof(float));
+}
+
+extern "C" void ee_units_pm_host_set_transformation(uint64_t inObject, const float* inMatrix)
+{
+    GETransformation theTransformation(false);
+    PMSetMatrix(theTransformation, inMatrix);
+    PMUnit(inObject)->SetTransformation(theTransformation, true);
+}
+
+extern "C" void ee_units_pm_host_refresh_transformation(uint64_t inObject)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    theUnit->SetTransformation(theUnit->mPhysicalModel.GetLocation(), true);
+}
+
+extern "C" void ee_units_pm_host_set_location(uint64_t inObject, const float* inMatrix)
+{
+    GETransformation theTransformation(false);
+    PMSetMatrix(theTransformation, inMatrix);
+    PMUnit(inObject)->mPhysicalModel.SetLocation(theTransformation);
+}
+
+extern "C" void ee_units_pm_host_set_location_point(uint64_t inObject, float inX, float inY, float inZ)
+{
+    PMUnit(inObject)->SetLocation(GE3DPoint(inX, inY, inZ), true);
+}
+
+extern "C" void ee_units_pm_host_set_location_xy(uint64_t inObject, float inX, float inY)
+{
+    PMUnit(inObject)->SetLocationXY(inX, inY, true);
+}
+
+extern "C" void ee_units_pm_host_update_tile(uint64_t inObject, const float* inMatrix)
+{
+    GETransformation theTransformation(false);
+    PMSetMatrix(theTransformation, inMatrix);
+    long theTileX;
+    long theTileY;
+    EEUpdateUnitTile(&theTransformation, PMUnit(inObject), &theTileX, &theTileY);
+}
+
+extern "C" void ee_units_pm_host_set_scale(uint64_t inObject, float inScale)
+{
+    PMUnit(inObject)->mPhysicalModel.SetScale(inScale);
+}
+
+extern "C" void ee_units_pm_host_angular_velocity(uint64_t inObject, float* outOrientation)
+{
+    const GEOrientation& theRate = PMUnit(inObject)->mAngularVelocity;
+    outOrientation[0] = theRate.mYaw;
+    outOrientation[1] = theRate.mPitch;
+    outOrientation[2] = theRate.mRoll;
+}
+
+extern "C" void ee_units_pm_host_set_angular_velocity(uint64_t inObject, float inYaw, float inPitch, float inRoll)
+{
+    PMUnit(inObject)->mAngularVelocity = GEOrientation(inYaw, inPitch, inRoll);
+}
+
+extern "C" void ee_units_pm_host_orientation(uint64_t inObject, float* outOrientation)
+{
+    const GEOrientation& theOrientation = PMUnit(inObject)->mOrientation;
+    outOrientation[0] = theOrientation.mYaw;
+    outOrientation[1] = theOrientation.mPitch;
+    outOrientation[2] = theOrientation.mRoll;
+}
+
+extern "C" void ee_units_pm_host_set_orientation(uint64_t inObject, float inYaw, float inPitch, float inRoll)
+{
+    PMUnit(inObject)->mOrientation = GEOrientation(inYaw, inPitch, inRoll);
+}
+
+// the unit's (its active group's) rates: pm_host.rs RATE_*
+extern "C" float ee_units_pm_host_rate(uint64_t inObject, int32_t inWhich)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    switch (inWhich) {
+    case 0:
+        return theUnit->GetMaxVelocity();
+    case 1:
+        return theUnit->GetAcceleration();
+    case 2:
+        return theUnit->GetInverseAcceleration();
+    case 3:
+        return theUnit->GetAngularAcceleration();
+    case 4:
+        return theUnit->GetMaxAngularVelocity();
+    default:
+        return theUnit->GetInverseAngularAcceleration();
+    }
+}
+
+extern "C" int32_t ee_units_pm_host_waypoint_count(uint64_t inObject)
+{
+    return (int32_t)(long)PMUnit(inObject)->mWaypoints.size();
+}
+
+extern "C" int32_t ee_units_pm_host_next_waypoint(uint64_t inObject, float* ioPoint)
+{
+    GE3DPoint thePoint(ioPoint[0], ioPoint[1], ioPoint[2]);
+    long theResult = PMUnit(inObject)->GetNextWaypointPoint(thePoint);
+    ioPoint[0] = thePoint.mX;
+    ioPoint[1] = thePoint.mY;
+    ioPoint[2] = thePoint.mZ;
+    return (int32_t)theResult;
+}
+
+extern "C" float ee_units_pm_host_first_waypoint_z(uint64_t inObject)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    return theUnit->mWaypoints.empty() ? 0.0f : (*theUnit->mWaypoints.begin()).mLocation.GetZ();
+}
+
+extern "C" void ee_units_pm_host_path_length(uint64_t inObject, float* ioLength)
+{
+    PMUnit(inObject)->GetPathLength(*ioLength);
+}
+
+extern "C" uint32_t ee_units_pm_host_command_type(uint64_t inObject)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    return (uint32_t)(theUnit->mCommand ? theUnit->mCommand->mType : 0);
+}
+
+extern "C" int32_t ee_units_pm_host_model_parts(uint64_t inObject)
+{
+    return (int32_t)PMUnit(inObject)->GetModel()->GetNumParts();
+}
+
+extern "C" uint32_t ee_units_pm_host_frame_time(uint64_t inObject, uint32_t inAnimation)
+{
+    return (uint32_t)PMUnit(inObject)->GetModel()->mFrameTimes[inAnimation];
+}
+
+extern "C" uint64_t ee_units_pm_host_tile_of(uint64_t inObject)
+{
+    return PMObject(static_cast<RTSTile*>(PMUnit(inObject)->mTile));
+}
+
+extern "C" uint8_t ee_units_pm_host_goal_kind(uint64_t inObject)
+{
+    EEUnitGoal* theGoal = PMUnit(inObject)->mGoalState;
+    return theGoal ? (uint8_t)theGoal->mKind : 0;
+}
+
+// the goal's units: pm_host.rs GOAL_* (the attack target and gather resource as EEUnit*, the healed unit and the home
+// base as EEComplexUnit*, the cast goal set or not, the build target as EEUnit*)
+extern "C" uint64_t ee_units_pm_host_goal_unit(uint64_t inObject, int32_t inWhich)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    EEUnitGoal* theGoal = theUnit->mGoalState;
+    switch (inWhich) {
+    case 0: {
+        EEUGRust* theAttack = EEAttackUnitCast(theGoal);
+        return theAttack ? PMObject(theAttack->GetAttackTarget()) : 0;
+    }
+    case 1: {
+        EEUGRust* theHeal = EEHealGoalCast(theGoal);
+        return theHeal ? PMObject(theHeal->GetHealTarget()) : 0;
+    }
+    case 2:
+        return EECastCalamityGoalCast(theGoal) ? 1 : 0;
+    case 3:
+        return theGoal && theGoal->mKind == kGoalGather ? PMObject(static_cast<EEUGRust*>(theGoal)->GetGatherResource()) : 0;
+    case 4:
+        return theGoal && theGoal->mKind == kGoalBuildRepair ? PMObject(static_cast<EEUGRust*>(theGoal)->GetBuildTarget()) : 0;
+    default:
+        return PMObject(theUnit->mHomeBase);
+    }
+}
+
+// the goal's points: pm_host.rs POINT_* (the goal's location, the cast goal's calamity target, the path's start)
+extern "C" void ee_units_pm_host_goal_point(uint64_t inObject, int32_t inWhich, float* outPoint)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    GE3DPoint thePoint;
+    if (inWhich == 0) {
+        if (theUnit->mGoalState)
+            theUnit->mGoalState->GetGoalLocation(thePoint);
+    } else if (inWhich == 1) {
+        EEUGRust* theCast = EECastCalamityGoalCast(theUnit->mGoalState);
+        if (theCast)
+            theCast->GetCalamityTargetLocation(thePoint);
+    } else {
+        float theLength;
+        theUnit->GetPathStart(thePoint, theLength);
+    }
+    outPoint[0] = thePoint.mX;
+    outPoint[1] = thePoint.mY;
+    outPoint[2] = thePoint.mZ;
+}
+
+extern "C" uint8_t ee_units_pm_host_goal_facing(uint64_t inObject, float* outYaw)
+{
+    EEUnitGoal* theGoal = PMUnit(inObject)->GetGoal();   // a location goal or a heal goal (yaw 0)
+    if (!EEGoalHasLocation(theGoal))
+        return 0;
+    *outYaw = EELocationGoalYaw(theGoal);
+    return 1;
+}
+
+// an EEUnit's values: pm_host.rs UNIT_*
+extern "C" uint64_t ee_units_pm_host_unit_value(uint64_t inUnit, int32_t inWhich)
+{
+    EEUnit* theUnit = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit));
+    switch (inWhich) {
+    case 0:
+        return (uint64_t)theUnit->mResourceType;
+    case 1:
+        return PMObject(theUnit->mComplexUnit);
+    case 2:
+        return (uint64_t)(int64_t)theUnit->GetTileX();
+    case 3:
+        return (uint64_t)(int64_t)theUnit->GetTileY();
+    case 4:
+        return (uint64_t)theUnit->mUnitClass->mCategory;
+    default:
+        return theUnit->mUnitClass->FliesOver() == true ? 1 : 0;
+    }
+}
+
+extern "C" uint8_t ee_units_pm_host_has_arrived(uint64_t inObject, float inDistance)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    return theUnit->mUnitClass->HasArrived(theUnit, inDistance) ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_pm_host_is_swimming(uint64_t inObject)
+{
+    return PMUnit(inObject)->IsSwimming() ? 1 : 0;
+}
+
+extern "C" void ee_units_pm_host_place_on_ground(uint64_t inObject, float inX, float inY, float inZ)
+{
+    GE3DPoint theGround(inX, inY, inZ);
+    PMUnit(inObject)->PlaceOnGround(theGround);
+}
+
+extern "C" float ee_units_pm_host_height_at(uint64_t inObject, float inX, float inY, float inZ)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    return theUnit->GetUnitClass()->GetHeightAt(theUnit, GE3DPoint(inX, inY, inZ));
+}
+
+extern "C" void ee_units_pm_host_set_animation(uint64_t inObject, int32_t inA, int32_t inB, uint8_t inPaused)
+{
+    PMUnit(inObject)->SetAnimation(inA, inB, inPaused != 0);
+}
+
+extern "C" void ee_units_pm_host_set_blocking_unit(uint64_t inObject, uint64_t inBlocker)
+{
+    // an EEUnit or EEComplexUnit: RTSUnit is the first base of both
+    PMUnit(inObject)->SetBlockingUnit(reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inBlocker)));
+}
+
+extern "C" void ee_units_pm_host_clear_goal_queue(uint64_t inObject)
+{
+    PMUnit(inObject)->ClearGoalQueue(0);
+}
+
+extern "C" void ee_units_pm_host_start_action(uint64_t inObject, int32_t inAction)
+{
+    PMUnit(inObject)->StartAction(inAction);
+}
+
+extern "C" void ee_units_pm_host_action_changed(uint64_t inObject)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    theUnit->mUnitClass->ActionChanged(theUnit);
+}
+
+extern "C" uint8_t ee_units_pm_host_can_stand_on(uint64_t inObject, int32_t inX, int32_t inY)
+{
+    EETileCoordinate theTile(inX, inY);
+    return EECanStandOn(theTile, PMUnit(inObject)) ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_pm_host_friendly(uint64_t inObject, uint64_t inOther)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    EEComplexUnit* theOther = PMUnit(inOther);
+    return theOther->mPlayer == theUnit->mPlayer || theUnit->mPlayer->mEnemies[theOther->mPlayer->mPlayerID] == 0 ? 1 : 0;
+}
+
+// the trample: the shared damage function (ee_combat damage.rs; combat.yaml trample_damage/_threshold)
+extern "C" void ee_units_pm_host_trample(uint64_t inObject, uint64_t inOther)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    EEComplexUnit* theOther = PMUnit(inOther);
+    long theAmount;
+    if (EECombatComputeDamage(kDamageTrample, theUnit, theOther, theUnit->mStats->GetAttack(), theUnit->mUnitClass->mAmmoType,
+                              theUnit->mUnitClass->mWeapon, 0.0f, theAmount))
+        theOther->TakeHit(theUnit, theAmount, theUnit->mPlayer->mPlayerID, 1);
+}
+
+// the lists the models walk live: pm_host.rs LIST_* (the contacts' nodes and units, a tile's unit nodes and units)
+extern "C" uint64_t ee_units_pm_host_list(int32_t inWhich, uint64_t inOf)
+{
+    uintptr_t theOf = static_cast<uintptr_t>(inOf);
+    switch (inWhich) {
+    case 0:
+        return PMObject(reinterpret_cast<EEComplexUnit*>(theOf)->mContacts.mHead);
+    case 1:
+        return PMObject(reinterpret_cast<UListNode<EEComplexUnit*>*>(theOf)->mNext);
+    case 2:
+        return PMObject(reinterpret_cast<UListNode<EEComplexUnit*>*>(theOf)->mData);
+    case 3:
+        return PMObject(reinterpret_cast<RTSTile*>(theOf)->mUnits);
+    case 4:
+        return PMObject(reinterpret_cast<RTSTileUnitNode*>(theOf)->mNext);
+    default:
+        return PMObject(reinterpret_cast<RTSTileUnitNode*>(theOf)->mUnit);
+    }
+}
+
+extern "C" int32_t ee_units_pm_host_contact_count(uint64_t inObject)
+{
+    return (int32_t)PMUnit(inObject)->mContacts.mCount;
+}
+
+// a contact's gate: 0 none, 1 a gate the unit collides with, 2 a closed gate
+extern "C" int32_t ee_units_pm_host_contact_gate(uint64_t inObject)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    if (theUnit->mUnitClass->mCategory != kUnitCategoryGate)
+        return 0;
+    if (EEUnitClassCast<EEUCGate>(theUnit->mUnitClass) && (theUnit->mCommand ? theUnit->mCommand->mType : 0) != 0x3a99)
+        return 2;
+    return 1;
+}
+
+extern "C" uint64_t ee_units_pm_host_tile(int32_t inX, int32_t inY)
+{
+    return PMObject(static_cast<RTSTile*>(::gWorld.mMap->GetTile(inX, inY)));
+}
+
+extern "C" void ee_units_pm_host_tile_info(uint64_t inTile, EeUnitsPmTile* outTile)
+{
+    RTSTile* theTile = reinterpret_cast<RTSTile*>(static_cast<uintptr_t>(inTile));
+    outTile->terrain_type = 0;
+    outTile->ai_value = 0;
+    outTile->height = 0.0f;
+    if (theTile == NULL)
+        return;
+    outTile->terrain_type = (int32_t)theTile->mTerrainType;
+    outTile->ai_value = (int8_t)static_cast<EETile*>(theTile)->mAIValue;
+    outTile->height = theTile->GetHeight();
+}
+
+extern "C" uint8_t ee_units_pm_host_is_edge_tile(int32_t inX, int32_t inY)
+{
+    return ::gWorld.mMap->IsEdgeTile(inX, inY) ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_pm_host_can_move_on_terrain(uint64_t inObject, int32_t inTerrain)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    return theUnit->mUnitClass->CanMoveOnTerrain(theUnit, inTerrain) ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_pm_host_passable_by(uint64_t inUnit, uint64_t inObject)
+{
+    EEUnit* theUnit = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit));
+    return theUnit->IsPassableBy(PMUnit(inObject)) ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_pm_host_unbuilt_land_building(uint64_t inUnit)
+{
+    EEUnit* theUnit = reinterpret_cast<EEUnit*>(static_cast<uintptr_t>(inUnit));
+    return theUnit->mUnitClass->IsLandBuilding() && !theUnit->mComplexUnit->mIsBuilt ? 1 : 0;
+}
+
+extern "C" void ee_units_pm_host_ground_point(float inX, float inY, float inZ, float* outPoint)
+{
+    GE3DPoint theGround;
+    ::gWorld.mMap->GetGroundPoint(GE3DPoint(inX, inY, inZ), theGround);
+    outPoint[0] = theGround.mX;
+    outPoint[1] = theGround.mY;
+    outPoint[2] = theGround.mZ;
+}
+
+extern "C" float ee_units_pm_host_terrain_tilt(const float* inMatrix, uint8_t inRoll)
+{
+    GETransformation theTransformation(false);
+    PMSetMatrix(theTransformation, inMatrix);
+    return inRoll ? ::gWorld.mMap->GetTerrainRoll(theTransformation) : ::gWorld.mMap->GetTerrainPitch(theTransformation);
+}
+
+// the terrain mesh's left, right, front and back planes: each its point and normal
+extern "C" void ee_units_pm_host_edge_planes(float* outPlanes)
+{
+    const GETerrainMesh& theMesh = ::gWorld.mMap->mTerrainMesh;
+    const GE3DPlane* thePlanes[4] = {&theMesh.GetLeftPlane(), &theMesh.GetRightPlane(), &theMesh.GetFrontPlane(),
+                                     &theMesh.GetBackPlane()};
+    for (int i = 0; i < 4; i++) {
+        outPlanes[i * 6 + 0] = thePlanes[i]->GetPoint().mX;
+        outPlanes[i * 6 + 1] = thePlanes[i]->GetPoint().mY;
+        outPlanes[i * 6 + 2] = thePlanes[i]->GetPoint().mZ;
+        outPlanes[i * 6 + 3] = thePlanes[i]->GetNormal().mX;
+        outPlanes[i * 6 + 4] = thePlanes[i]->GetNormal().mY;
+        outPlanes[i * 6 + 5] = thePlanes[i]->GetNormal().mZ;
+    }
+}
+
+// the descending plane's floor: the mesh's height at the point, 0 off its tiles
+extern "C" float ee_units_pm_host_mesh_ground(float inX, float inY)
+{
+    unsigned long theY = UMFloorUnsigned(inY);
+    unsigned long theX = UMFloorUnsigned(inX);
+    if (::gWorld.GetMap()->mTerrainMesh.GetIsValidTile(theX, theY))
+        return ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(inX, inY);
+    return 0.0f;
+}
+
+extern "C" void ee_units_pm_host_adjust_dive_depth(uint64_t inObject, float* ioPoint)
+{
+    GE3DPoint thePoint(ioPoint[0], ioPoint[1], ioPoint[2]);
+    EEAdjustDiveDepth(PMUnit(inObject), thePoint);
+    ioPoint[0] = thePoint.mX;
+    ioPoint[1] = thePoint.mY;
+    ioPoint[2] = thePoint.mZ;
+}
+
+// the effects: pm_host.rs EFFECT_* (the class's splash placed at the point, its death effect on the unit, the impact
+// decal, the land ripple)
+extern "C" void ee_units_pm_host_effect(uint64_t inObject, int32_t inWhich, float inX, float inY, float inZ)
+{
+    GE3DPoint thePoint(inX, inY, inZ);
+    if (inWhich == 3) {
+        gWorld.GetEffectManager()->CreatePlacedEffect(thePoint, EEGraphicEffect::Get(kGraphicEffectLandRipple), NULL);
+        return;
+    }
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    if (inWhich == 0)
+        gEffectManager->CreatePlacedEffect(thePoint, theUnit->mUnitClass->mSplashEffect, NULL);
+    else if (inWhich == 1)
+        gEffectManager->CreateUnitEffect(theUnit, theUnit->mUnitClass->mDeathEffect, NULL, 0, 0, 0);
+    else
+        EEPlaceImpactDecal(theUnit, thePoint);
+}
+
+extern "C" uint8_t ee_units_pm_host_docked(uint64_t inObject)
+{
+    return PMIsDocked(PMUnit(inObject)) == true ? 1 : 0;
+}
+
+extern "C" void ee_units_pm_host_follow_carrier(uint64_t inObject)
+{
+    PMFollowCarrier(PMUnit(inObject));
+}
+
+// a gate's first part (no previous part, a next one): its last linked carrier and last linked part
+extern "C" uint8_t ee_units_pm_host_gate_links(uint64_t inObject, uint64_t* outCarrier, uint64_t* outLast)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    if (!(theUnit->mPreviousPart == NULL && theUnit->mNextPart != NULL))
+        return 0;
+    *outCarrier = PMObject(EEUnitClassCast<EEUCGate>(theUnit->GetUnitClass())->GetLastLinkedCarrier(theUnit));
+    *outLast = PMObject(EEUnitClassCast<EEUCGate>(theUnit->GetUnitClass())->GetLastLinked(theUnit));
+    return 1;
+}
+
+// the projectile's and the missile's steps: pm_host.rs KIND_*
+extern "C" void ee_units_pm_host_kind_step(uint64_t inObject, int32_t inWhich)
+{
+    EEComplexUnit* theUnit = PMUnit(inObject);
+    if (inWhich == 0)
+        PMProjectileStep0(theUnit);
+    else if (inWhich == 1)
+        PMProjectileStep2(theUnit);
+    else
+        PMMissileStep0(theUnit);
 }

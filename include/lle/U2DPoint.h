@@ -3,14 +3,6 @@
 #ifndef LLE_U2DPOINT_H
 #define LLE_U2DPOINT_H
 
-// Serialization keys: header-scope const objects (internal linkage), so every includer constructs its own copy
-// in its dynamic initializers (mixer 0x1000.., every Default.dll unit but one). Names are provisional.
-#ifndef LLE_EXE_HEADERS   // the exe has one U2DPoint-X/Y key chain (0x1035, its first unit), not one per includer
-                          // (EEMessage.cpp uses U2DPoint<long> and has no init chain)
-const UString kU2DPointXKey("U2DPoint-X");
-const UString kU2DPointYKey("U2DPoint-Y");
-#endif
-
 // LLE exports use U2DPoint<long> (?$U2DPoint@J@@) and U2DPoint<float>; no member is exported (all inline).
 // Default.dll EEClumps keeps a vector<U2DPoint<long> > (8-byte elements, x then y, trivial dtor: 0x8e6d).
 template <class T> class U2DPoint {
@@ -157,17 +149,6 @@ public:
     // (U2DSparseArray.cpp 0x10055899: x and y kept in eax/edx, inPoint in esi)
     T DistanceToSquared(const U2DPoint& inPoint) const   // 0x1002fe6c
         { return (this->mX - inPoint.GetX()) * (this->mX - inPoint.GetX()) + (this->mY - inPoint.GetY()) * (this->mY - inPoint.GetY()); }
-    // 0x10030047: which side of the line inStart..inEnd the point lies on (1 left, -1 right, 0 on it)
-    long GetSide(const U2DPoint& inStart, const U2DPoint& inEnd) const
-    {
-        // each difference converted on its own (exe 0x412a8a fild/fild/fmulp per product)
-        double theCross = (double)(inEnd.mX - inStart.mX) * (double)(this->mY - inStart.mY) - (double)(this->mX - inStart.mX) * (double)(inEnd.mY - inStart.mY);
-        if (theCross > 0.0)
-            return 1;
-        if (theCross < 0.0)
-            return -1;
-        return 0;
-    }
     long Load(FSFile& inFile)               // 0x10030515
     {
         long theResult;

@@ -30,8 +30,6 @@ public:
     long GetMaxY() const { return ee_util_series_range(this->mSeries)->max_y; }
     long GetMinX() const { return ee_util_series_range(this->mSeries)->min_x; }
     long GetMinY() const { return ee_util_series_range(this->mSeries)->min_y; }
-    // min/max are not updated
-    void RemoveDataPoint(unsigned long inIndex) { ee_util_series_remove_point(this->mSeries, inIndex); }
     void SetColor(const GEColor& inColor)
         { ee_util_series_set_color(this->mSeries, reinterpret_cast<const EeUtilColor*>(&inColor)); }
     void SetIsEnabled(bool inIsEnabled) { ee_util_series_set_enabled(this->mSeries, inIsEnabled); }
@@ -82,8 +80,6 @@ public:
     const UWideString& GetYLabel() const { return this->mYLabel; }
     // reduces every series to one point per x, keeping the highest y
     void PruneGraph() { ee_util_graph_prune(this->mGraph); }
-    // min/max are not updated
-    void RemoveSeries(unsigned long inIndex) { ee_util_graph_remove_series(this->mGraph, inIndex); }
     void SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled)
         { ee_util_graph_set_enabled(this->mGraph, inIndex, inIsEnabled); }
     void SetTitle(const UWideString& inTitle) { this->mTitle = inTitle; }

@@ -1366,6 +1366,41 @@ constexpr static const int32_t EE_WON_HTTPGET_ONLY_SEND = 20;
 
 constexpr static const int32_t EE_WON_HTTPGET_ONLY_RECV = 21;
 
+/// `Graphics::SetPixel(a, b, g.GetStandardColor(c))`: a pixel in a standard colour.
+constexpr static const int32_t EE_WON_DRAW_SYS_PIXEL = 22;
+
+/// `Graphics::FillEllipse(a, b, c, d)`.
+constexpr static const int32_t EE_WON_DRAW_FILL_ELLIPSE = 23;
+
+/// `Graphics::DrawArc(a, b, c, d, e, f)` (the start and arc angles in degrees).
+constexpr static const int32_t EE_WON_DRAW_ARC = 24;
+
+/// The `EE_WON_DRAW_CALL` of a button's paint: `DrawButtonText(g, b, c)`.
+constexpr static const int32_t EE_WON_MSPAINT_CALL_TEXT = 1;
+
+/// The state bits of an [`EeWonMsPaint`].
+constexpr static const uint32_t EE_WON_MSPAINT_PRESSED = 1;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DISABLED = 2;
+
+constexpr static const uint32_t EE_WON_MSPAINT_TRANSPARENT = 4;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DEFAULT = 8;
+
+constexpr static const uint32_t EE_WON_MSPAINT_FRAME2 = 16;
+
+constexpr static const uint32_t EE_WON_MSPAINT_CHECKED = 32;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DRAW_FRAME = 64;
+
+constexpr static const uint32_t EE_WON_MSPAINT_DRAW_3D = 128;
+
+constexpr static const uint32_t EE_WON_MSPAINT_VERT = 256;
+
+constexpr static const uint32_t EE_WON_MSPAINT_HORZ = 512;
+
+constexpr static const uint32_t EE_WON_MSPAINT_INVALID = 1024;
+
 /// the finished list's length
 constexpr static const int32_t EE_WON_MULTIPING_COUNT = 1;
 
@@ -4871,6 +4906,64 @@ enum class EeWonMsBtnCall : uint32_t {
   BoxPaint,
 };
 
+/// What is drawn; the arguments per kind are [`EeWonMsPaint`]'s.
+enum class EeWonMsPaintKind : int32_t {
+  /// `LobbyDraw3DFrame(g, a, b, width, height, PRESSED)`.
+  Frame3D = 1,
+  /// `LobbyDrawFrame(g, a, b, width, height, PRESSED)`.
+  Frame,
+  /// `MSGraphicsUtil::DrawFrame3(g, a, b, width, height, _)` (the down flag is not read).
+  Frame3,
+  /// `MSGraphicsUtil::DrawArrow(g, a, _, _, width, height, DISABLED)` (the offsets are not read).
+  Arrow,
+  /// `MSGraphicsUtil::DrawCheck(g, a, b, width, height, PRESSED, CHECKED)`.
+  Check,
+  /// `MSGraphicsUtil::DrawRadio(g, a, b, width, height, PRESSED, CHECKED)`.
+  Radio,
+  /// `MSGraphicsUtil::DrawTab(g, a, b, width, height)`.
+  Tab,
+  /// `MSGraphicsUtil::DrawCloseX(g, a, b, width, height)`.
+  CloseX,
+  /// `MSButton::Paint` after `Component::Paint` (PRESSED, TRANSPARENT, DEFAULT: `IsDefaultButton`, FRAME2).
+  Button,
+  /// `MSTabButton::Paint` after `Component::Paint`.
+  TabButton,
+  /// `MSLabel::Paint` after `MSButtonBase::Paint` (TRANSPARENT).
+  Label,
+  /// `MSHeaderButton::Paint` after `MSButton::Paint`: the sort arrow (`a` the sort type, `b` the text's width,
+  /// `c` the left pad, PRESSED).
+  HeaderSort,
+  /// `MSCloseButton::Paint` after `Button::Paint` (PRESSED).
+  CloseButton,
+  /// `MSScrollThumb::Paint` after `Component::Paint`.
+  ScrollThumb,
+  /// `MSArrowButton::Paint` after `Component::Paint` (`a` the direction, PRESSED, DISABLED).
+  ArrowButton,
+  /// `MS3DFrame::Paint` after `Component::Paint` (`a` the type, PRESSED: not `mIsUp`).
+  Frame3DComponent,
+  /// `MSPopup::Paint` after `Component::Paint`.
+  Popup,
+  /// `MSDlgBack::Paint` after `Component::Paint`.
+  DlgBack,
+  /// `MSEtchedFrame::Paint` after `Component::Paint`.
+  EtchedFrame,
+  /// `MSInputBox::Paint` after `InputBox::Paint`.
+  InputBox,
+  /// `MSScrollbar::Paint` before `Container::Paint` (INVALID: the scroll rectangle's invalid state, TRANSPARENT,
+  /// `a`..`d` the rectangle's left, top, width and height).
+  Scrollbar,
+  /// `MSComboBox::Paint` after `ComboBox::Paint` (DRAW_FRAME).
+  ComboBox,
+  /// `MSScrollContainer::Paint` after `Container::Paint` (VERT / HORZ: the scrollbars visible, TRANSPARENT,
+  /// DRAW_FRAME, DRAW_3D; `a`, `b`, `c`, `d` the vertical bar's left, top, width and height, `e` the horizontal
+  /// bar's height).
+  ScrollContainer,
+  /// `MSEtchedFrameGroup::Paint` after `Container::Paint` (`a` the label's height, `b` its left, `c` its right).
+  EtchedGroup,
+  /// `WONMSSkin::MSImage::Paint` (`a` the image type, `b` the image flags; the size is the image's).
+  SkinImage,
+};
+
 /// The inward calls of the list (`MultiListArea`'s virtuals and methods).
 enum class EeWonMultiCall : uint32_t {
   /// `AdjustPosition(a != 0)`.
@@ -7964,6 +8057,15 @@ struct EeWonHttpSessionHooks {
   int (*conn_num_ops)(void*);
 };
 
+/// One raw image's pixels: `kind` 0 (1-bit), 1 (8-bit) or 2 (32-bit), its size and its row pitch in bytes.
+struct EeWonRawPixels {
+  int32_t kind;
+  uint8_t *data;
+  int32_t width;
+  int32_t height;
+  int32_t pitch;
+};
+
 /// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
 struct EeWonAddr {
   uint8_t sockaddr[16];
@@ -8131,6 +8233,19 @@ struct EeWonMemberReady {
   bool has_player;
   bool game_captain;
   bool ready;
+};
+
+/// One paint's inputs: the kind, the state bits (`EE_WON_MSPAINT_*`), the size and the kind's arguments.
+struct EeWonMsPaint {
+  EeWonMsPaintKind kind;
+  uint32_t flags;
+  int32_t width;
+  int32_t height;
+  int32_t a;
+  int32_t b;
+  int32_t c;
+  int32_t d;
+  int32_t e;
 };
 
 /// A C++ call on an op (`AsyncOp*`).
@@ -13527,6 +13642,67 @@ EeWonHostOp *ee_won_httpget_new(const uint8_t *host,
 /// `url` holds `len` bytes.
 EeWonHostOp *ee_won_httpget_new_url(const uint8_t *url, size_t len);
 
+/// `ScaleImageFilter::CheckSize` over the filter's fields (`w`, `h` written back).
+///
+/// # Safety
+/// `w` and `h` point at live ints.
+bool ee_won_imgf_check_size(bool is_percent,
+                            int32_t pw,
+                            int32_t ph,
+                            int32_t *w,
+                            int32_t *h,
+                            int32_t img_w,
+                            int32_t img_h);
+
+/// The nearest-neighbour scale of `src` into `dst` (the same kind).
+///
+/// # Safety
+/// Both describe live images.
+void ee_won_imgf_scale(const EeWonRawPixels *src, const EeWonRawPixels *dst);
+
+/// TintImageFilter over `n` colours (a palette's, or a 32-bit image's pixels with `keep_alpha`).
+///
+/// # Safety
+/// `colors` holds `n` colours (or `n` is 0).
+void ee_won_imgf_tint(uint32_t *colors, size_t n, int32_t r, int32_t g, int32_t b, bool keep_alpha);
+
+/// TransparentImageFilter's 32-bit pass over `n` pixels.
+///
+/// # Safety
+/// `pixels` holds `n` pixels (or `n` is 0).
+void ee_won_imgf_transparent32(uint32_t *pixels, size_t n, uint32_t color);
+
+/// TransparentImageFilter's sample place in a `w` x `h` image.
+///
+/// # Safety
+/// `x` and `y` point at live ints.
+void ee_won_imgf_sample(int32_t sample, int32_t w, int32_t h, int32_t *x, int32_t *y);
+
+/// The first of `n` palette colours equal to `color`, or -1.
+///
+/// # Safety
+/// `colors` holds `n` colours (or `n` is 0).
+int32_t ee_won_imgf_palette_find(const uint32_t *colors, size_t n, uint32_t color);
+
+/// TrimImageFilter's rectangle into `rect` (left, top, width, height); false when every pixel is transparent.
+///
+/// # Safety
+/// `img` describes a live 8- or 32-bit image; `rect` has room for four ints.
+bool ee_won_imgf_trim(const EeWonRawPixels *img,
+                      uint8_t transparent,
+                      int32_t *rect);
+
+/// CropPixels' row copies.
+///
+/// # Safety
+/// Both describe live images holding the rows read and written.
+void ee_won_imgf_crop(const EeWonRawPixels *src,
+                      const EeWonRawPixels *dst,
+                      int32_t x_bytes,
+                      int32_t y,
+                      int32_t row_bytes,
+                      int32_t height);
+
 /// A new Rust InputBox for the C++ `component`, its calls out through `host`.
 EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
 
@@ -14228,6 +14404,15 @@ ptrdiff_t ee_won_msbtn_call(const EeWonMsButton *btn,
                             ptrdiff_t a,
                             ptrdiff_t b,
                             ptrdiff_t c);
+
+/// The plan of `p` (an [`EeWonMsPaintKind`] paint) into `out` (`cap` entries); answers the plan's length, which
+/// may be more than `cap` (the C++ asks again with room).
+///
+/// # Safety
+/// `p` is live; `out` has room for `cap` operations (or is NULL with `cap` 0).
+size_t ee_won_mspaint_plan(const EeWonMsPaint *p,
+                           EeWonDrawOp *out,
+                           size_t cap);
 
 /// A new Rust MultiListArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
 EeWonMulti *ee_won_multi_new(void *component,

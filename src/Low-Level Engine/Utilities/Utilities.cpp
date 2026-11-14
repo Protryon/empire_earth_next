@@ -11,10 +11,6 @@
 // Returns the user's default language id
 unsigned short UGetOSLanguage() { return ee_util_os_language(); }
 
-// FUNCTION: LLE 0x100837eb
-// Returns the Windows family: 1 = 95, 2 = 98/ME, 3 = NT 5 or later, 4 = NT 4 or older (or a 9x major below 4)
-unsigned long UGetOSType() { return ee_util_os_type(); }
-
 // FUNCTION: LLE 0x10083826
 // Registers a function to call at engine shutdown; always returns kErrorOK
 long URegisterShutdown(void (*inFunction)(bool)) { return ee_util_register_shutdown(inFunction); }

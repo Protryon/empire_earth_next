@@ -34,7 +34,6 @@ public:
     bool operator==(const GEVector& inVector) const;
     bool operator!=(const GEVector& inVector) const;
     void Add(const GEVector& inVector, GEVector& outVector) const;
-    void CrossProduct(const GEVector& inVector, GEVector& outVector) const;
     // inline (GE3DPlane::IsPointOnPlane 0xd4c3 expands it; the plug-ins never call it)
     float DotProduct(const GEVector& inVector) const { return inVector.mZ * this->mZ + inVector.mY * this->mY + inVector.mX * this->mX; }
     float GetMagnitude() const;
@@ -44,7 +43,6 @@ public:
     float GetZ() const { return this->mZ; }
     // GEVector.cpp (0x35f0e..0x367fc): the vector's cube-face quantization (sQuantizedVectorArray)
     GEVector* GetQuantizedVersion() const;
-    static long LoadQuantizedIndex(FSFile& inFile, GEVector*& outVector);
     void Normalize()
     {
         float theMagnitude = this->GetMagnitude();
@@ -70,8 +68,6 @@ public:
     void SetX(float inX) { this->mX = inX; }  // inline (exported 0x54ae4 / 0xc56c / 0xc576)
     void SetY(float inY) { this->mY = inY; }
     void SetZ(float inZ) { this->mZ = inZ; }
-    long SaveQuantizedIndex(FSFile& inFile) const;
-    void Subtract(const GEVector& inVector, GEVector& outVector) const;
     long Load(FSFile& inFile);
     long Save(FSFile& inFile) const;
 

@@ -13,7 +13,6 @@ public:
     virtual ~GEFont();
     bool CompareFont(const UString& inName, unsigned long inStyle, unsigned long inQuality, unsigned long inSize)
         { return this->mQuality == inQuality && this->mStyle == inStyle && this->mSize == inSize && this->mName == inName; }
-    bool GetHasFontBitmap() const { return this->mFontBitmap != NULL; }
     void SetFontBitmap(GEFontBitmap* inBitmap) { this->mFontBitmap = inBitmap; inBitmap->Reference(); }
     GEFontBitmap* GetFontBitmap() const { return this->mFontBitmap; }
     const UString& GetFontName() const { return this->mName; }

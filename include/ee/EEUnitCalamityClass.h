@@ -15,7 +15,9 @@ public:
     // +0x3c 0xb7157: EECalamityClass's, then 1 unless Virtual4C accepts the target
     virtual long CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                            bool inCheck, EEUnit* inTargetUnit);
-    virtual bool IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit) = 0;  // +0x4c
+    // +0x4c: the class's functor's CanInfect for the fire and the plague, else the shared rule (ee_tech
+    // calamity_cast.rs)
+    virtual bool IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit);
 };
 
 #endif

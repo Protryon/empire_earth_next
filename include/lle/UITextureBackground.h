@@ -17,11 +17,7 @@ public:
     {
     }
     virtual ~UITextureBackground() {}
-    const GETextureDescription& GetTextureDescription() const { return this->mTextureDescription; }
     const UString& GetTextureFileName() const { return this->mTextureFileName; }
-    const GERectangle& GetTextureRectangle() const { return this->mTextureRectangle; }
-    void SetTextureDescription(GETextureDescription& inDescription) { this->mTextureDescription = inDescription; }
-    void SetTextureRectangle(GERectangle& inRectangle) { this->mTextureRectangle = inRectangle; }
 protected:
     GERectangle mTextureRectangle;          // +0x44
     UString mTextureFileName;               // +0x54

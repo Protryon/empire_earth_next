@@ -12,7 +12,6 @@ public:
     GEPolygonGroup() : mName(32) {}
     GEPolygonGroup(const UString& inName) : mName(32) { this->mName = inName; }
     ~GEPolygonGroup() {}
-    void AddPolygon(GEPolygon* inPolygon) { this->mPolygons.push_back(inPolygon); }
     bool Contains(GEPolygon* inPolygon)
     {
         bool theFound = false;
@@ -24,7 +23,6 @@ public:
         return theFound;
     }
     const UString& GetName() const { return this->mName; }
-    GEPolygon* GetPolygon(unsigned long inIndex) const { return this->mPolygons[inIndex]; }
     unsigned long GetPolygonCount() const { return this->mPolygons.size(); }
     void SetName(const UString& inName) { this->mName = inName; }
 private:

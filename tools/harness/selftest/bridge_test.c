@@ -2,9 +2,9 @@
  * image: the GX test hooks (GXTestSetPresentHook / GXTestReadFrame), a UI manager with one form of two controls (a
  * plain control with a 0x3f0 trigger event and a check box), and the member functions the bridge calls by RVA
  * (TSCriticalSection::TryEnter/Leave, UIControl::GetTriggerEvent/FireTriggerEvent, UICheckBox::SetChecked/
- * GetIsChecked). selftest_inproc.py compiles TestPresentation.dll with this exe's RVAs (nm) and
- * offsets (`bridge_test.exe --offsets`), then runs it in build/boot/selftest_stage: the exe loads the bridge, presents
- * two frames and checks what the bridge did. */
+ * GetIsChecked, and UIManager.cpp's EETestUI* for the UI lock, the form stack and a form's id and controls).
+ * selftest_inproc.py compiles TestPresentation.dll with this exe's RVAs (nm), then runs it in
+ * build/boot/selftest_stage: the exe loads the bridge, presents two frames and checks what the bridge did. */
 #include <windows.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -40,6 +40,16 @@ HOOK void *selftest_get_trigger(Control *self, unsigned long id) { return self->
 HOOK void selftest_fire_trigger(Control *self, unsigned long id) { fired = (int)(self - controls) + 1; fired_id = (int)id; }
 HOOK void selftest_set_checked(Control *self, unsigned char on) { self->checked = on; }
 HOOK unsigned char selftest_get_checked(Control *self) { return (unsigned char)self->checked; }
+/* UIManager.cpp's EETestUI* (the manager's and forms' state is not at offsets) */
+HOOK void *selftest_ui_lock(Manager *m) { return m->critical; }
+HOOK unsigned long selftest_ui_form_count(Manager *m) { return (unsigned long)(m->forms_last - m->forms_first); }
+HOOK Form *selftest_ui_form(Manager *m, unsigned long i) { return m->forms_first[i]; }
+HOOK unsigned long selftest_form_id(Form *f) { return f->id; }
+HOOK unsigned long selftest_form_control_count(Form *f) { return f->count; }
+HOOK Control *selftest_form_control(Form *f, unsigned long i) { return f->controls[i]; }
+/* EETestFixture.cpp's EETestCommsRefresh (the probe's communications mirror): nothing to mirror here */
+static int comms_refreshes;
+HOOK void selftest_comms_refresh(void) { comms_refreshes++; }
 
 typedef void (*PresentHook)(HWND, void *);
 static PresentHook present;
@@ -73,12 +83,8 @@ static int contains(const char *file, const char *text)
 
 int main(int argc, char **argv)
 {
-    if (argc > 1 && !strcmp(argv[1], "--offsets")) {
-        printf("EE_OFF_UIM_CRITICAL %zu\nEE_OFF_UIM_FORMS_FIRST %zu\nEE_OFF_UIM_FORMS_LAST %zu\nEE_OFF_FORM_COUNT %zu\n"
-               "EE_OFF_FORM_ID %zu\nEE_OFF_FORM_CONTROLS %zu\n", offsetof(Manager, critical), offsetof(Manager, forms_first),
-               offsetof(Manager, forms_last), offsetof(Form, count), offsetof(Form, id), offsetof(Form, controls));
-        return 0;
-    }
+    if (argc > 1 && !strcmp(argv[1], "--offsets"))
+        return 0;   /* no offsets: the bridge asks the EETestUI* functions */
     DeleteFileA("test.command"); DeleteFileA("ui-state.txt"); DeleteFileA("render.bmp");
     command("1 click 7 0\n");
     HMODULE bridge = LoadLibraryA("TestPresentation.dll");

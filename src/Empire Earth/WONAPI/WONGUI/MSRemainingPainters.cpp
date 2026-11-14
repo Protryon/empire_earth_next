@@ -1,4 +1,5 @@
-// Paint methods of the Windows-style header button, close button, scroll thumb and label
+// Paint methods of the Windows-style header button, close button, scroll thumb and label (R6 WON round 36: the
+// Rust plans of mspaint.rs)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -9,37 +10,18 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyMSRemainingPainters.h"
+#include "ee/wonapi/WONGUIDraw.h"
 
 namespace WONAPI {
 // FUNCTION: WON 0x006ff000
-// Paints a list header button and, when its column is sorted, a small up or down triangle after the text
-// (shifted by one pixel while pressed)
+// Paints a list header button and, when its column is sorted, a small up or down triangle after the text (shifted
+// by one pixel while pressed)
 void MSHeaderButton::Paint(Graphics& g)
 {
     MSButton::Paint(g);
-    ListSortType sortType=MultiListHeader::GetSortTypeForButton(this);
-    if(sortType==ListSortType_None)
-        return;
-    g.SetSysColor(StandardColor_ButtonText);
-    int x;
-    if(this->mText->GetWidth()==0)
-        x=(this->Width()-4)/2;
-    else
-        x=this->mText->GetWidth()+10+this->GetLeftTextPad();
-    int y=this->Height()/2-2;
-    int offset=this->IsPressed()?1:0;
-    x+=offset;
-    y+=offset;
-    if(sortType==ListSortType_Ascending)
-    {
-        for(int i=0;i<4;i++)
-            g.DrawLine(x-i,y+i,x+i,y+i);
-    }
-    else if(sortType==ListSortType_Descending)
-    {
-        for(int i=0;i<4;i++)
-            g.DrawLine(x-(3-i),y+i,x+(3-i),y+i);
-    }
+    static_assert(ListSortType_Ascending==0 && ListSortType_Descending==1 && ListSortType_None==2,"mspaint.rs SORT_*");
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::HeaderSort,this->Width(),this->Height(),this->IsPressed()?EE_WON_MSPAINT_PRESSED:0,
+                              (int)MultiListHeader::GetSortTypeForButton(this),this->mText->GetWidth(),this->GetLeftTextPad()));
 }
 
 // FUNCTION: WON 0x006ff2a0
@@ -47,12 +29,7 @@ void MSHeaderButton::Paint(Graphics& g)
 void MSCloseButton::Paint(Graphics& g)
 {
     Button::Paint(g);
-    bool down=this->IsPressed();
-    int offset=down?1:0;
-    g.SetSysColor(StandardColor_3DFace);
-    g.FillRect(0,0,this->Width(),this->Height());
-    LobbyDraw3DFrame(g,0,0,this->Width(),this->Height(),down);
-    MSGraphicsUtil::DrawCloseX(g,offset,offset,this->Width(),this->Height());
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::CloseButton,this->Width(),this->Height(),this->IsPressed()?EE_WON_MSPAINT_PRESSED:0));
 }
 
 // FUNCTION: WON 0x006ff360
@@ -60,9 +37,7 @@ void MSCloseButton::Paint(Graphics& g)
 void MSScrollThumb::Paint(Graphics& g)
 {
     Component::Paint(g);
-    g.SetSysColor(StandardColor_3DFace);
-    g.FillRect(0,0,this->Width(),this->Height());
-    LobbyDrawFrame(g,0,0,this->Width(),this->Height(),false);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::ScrollThumb,this->Width(),this->Height()));
 }
 
 // FUNCTION: WON 0x006ff7d0
@@ -70,9 +45,6 @@ void MSScrollThumb::Paint(Graphics& g)
 void MSLabel::Paint(Graphics& g)
 {
     MSButtonBase::Paint(g);
-    g.SetSysColor(StandardColor_3DFace);
-    if(!this->IsTransparent())
-        g.FillRect(0,0,this->Width(),this->Height());
-    this->DrawButtonText(g,0,0);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::Label,this->Width(),this->Height(),this->IsTransparent()?EE_WON_MSPAINT_TRANSPARENT:0),this);
 }
 }

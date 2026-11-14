@@ -29,7 +29,6 @@ public:
     void ComputeFractal(float inCornerValue, float inRange, unsigned long inSeed)
         { ee_util_fractal_compute(this->mFractal, inCornerValue, inRange, inSeed); }
     float GetValue(unsigned long inX, unsigned long inY) { return ee_util_fractal_value(this->mFractal, inX, inY); }
-    unsigned long GetSquareDimension() { return ee_util_fractal_dimension(this->mFractal); }
 
 private:
     EeUtilFractal* mFractal;

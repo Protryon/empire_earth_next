@@ -21,14 +21,10 @@ public:
     void ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectangle, const GERectangle& inSourceRectangle,
                                         const GERectangle& inDestinationRectangle, unsigned long inScreen);
     void FlipHorizontally();
-    void FlipVertically();
     void GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
                            GEColor& outBottomLeft) const;
     float GetHeight() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::Height); }
     const GE2DPoint& GetLocation() const { return *(const GE2DPoint*)ee_ge_bmp_location(this->mRust); }  // exported, ICF-folded (0x38b41)
-    void GetLocationPerVertex(GE2DPoint& outTopLeft, GE2DPoint& outTopRight, GE2DPoint& outBottomRight,
-                              GE2DPoint& outBottomLeft) const;
-    float GetRotation() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::Rotation); }  // exported, ICF-folded (0x4c369)
     void GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
                              float& outBottomLeft) const;
     GETexture* GetTexture(unsigned long inScreen) const { return (GETexture*)ee_ge_bmp_texture(this->mRust, inScreen); }  // 0xf4eb
@@ -39,7 +35,6 @@ public:
     float GetWidth() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::Width); }
     float GetXScale() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::XScale); }  // exported (ICF-folded 0x100112ce)
     float GetYScale() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::YScale); }  // 0xf53e
-    void GetZPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight, float& outBottomLeft) const;
     void SetColor(const GEColor& inColor);
     void SetColorPerVertex(const GEColor& inTopLeft, const GEColor& inTopRight, const GEColor& inBottomRight,
                            const GEColor& inBottomLeft);

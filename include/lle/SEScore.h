@@ -8,10 +8,6 @@
 
 class LLE_API SEScore {
 public:
-    bool GetIsSecondaryScore() const;
-    unsigned long GetRepeatCount();
-    SEScore* GetSecondaryScore(unsigned long inIndex) const { return NULL; }   // there are none
-    unsigned long GetSecondaryScoreCount() const { return 0; }
     void SetRepeatCount(unsigned long inCount);
 private:
     SEScore() = delete;

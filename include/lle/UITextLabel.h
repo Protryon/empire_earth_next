@@ -41,17 +41,14 @@ public:
     void DeleteLine(unsigned long inLine);
     virtual long DrawPolygons();
     virtual long DrawTextA();
-    const GERectangle& GetCopiedTextRectangle() const;
     bool GetFitRectToText() const;
     GEText* GetGEText() const;
     unsigned long GetLineCount() const;
     unsigned long GetNumberLinesDisplayed() const;
     const UIScrollBar* GetScrollBar() const;   // NULL while it is marked removed
-    const GERectangle& GetScrollBarRectangle() const;
     virtual bool GetTabable() const { return false; }                // 0x1005efa4 (ICF)
     const UWideString& GetText(unsigned long inLine) const;
     long GetTextAsInt(unsigned long inLine) const { return atoi(this->GetText(inLine)); }  // 0x1005f584
-    const GERectangle& GetTextRectangle() const;
     virtual long MouseWheelTurned(long inDelta);
     virtual void RecomputeDisplayRange();   // slot 0x8c
     bool ScrollBarExists() const;

@@ -20,24 +20,19 @@ use std::ffi::c_void;
 
 use crate::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
 
-/// One operation's values: a number (`long`/`unsigned long`/`unsigned short`/an id/a count), a float, a bool (0 or 1).
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct EeUnitsUnitSaveIo {
-    pub i: i64,
-    pub f: f32,
-    pub b: u8,
-}
+/// One operation's values: a number (`long`/`unsigned long`/`unsigned short`/an id/a count), a float, a bool (0 or 1):
+/// the player's saves' io, so the file's primitives are `EESavePrimitive`'s (ee/EEPlayer.h).
+pub type EeUnitsUnitSaveIo = crate::player_save::EeUnitsPlayerSaveIo;
 
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer in `io`).
 pub type EeUnitsUnitSaveFn = unsafe extern "C" fn(*mut c_void, i32, u32, *mut EeUnitsUnitSaveIo) -> i32;
 
 // ---- the file's primitives (io holds the value)
-pub const EE_UNITS_UNIT_SAVE_WRITE_LONG: i32 = 1;
-pub const EE_UNITS_UNIT_SAVE_WRITE_ULONG: i32 = 2;
-pub const EE_UNITS_UNIT_SAVE_WRITE_FLOAT: i32 = 3;
-pub const EE_UNITS_UNIT_SAVE_WRITE_BOOL: i32 = 4;
-pub const EE_UNITS_UNIT_SAVE_WRITE_USHORT: i32 = 5;
+pub const EE_UNITS_UNIT_SAVE_WRITE_LONG: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_WRITE_LONG;
+pub const EE_UNITS_UNIT_SAVE_WRITE_ULONG: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_WRITE_ULONG;
+pub const EE_UNITS_UNIT_SAVE_WRITE_FLOAT: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_WRITE_FLOAT;
+pub const EE_UNITS_UNIT_SAVE_WRITE_BOOL: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_WRITE_BOOL;
+pub const EE_UNITS_UNIT_SAVE_WRITE_USHORT: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_WRITE_USHORT;
 // ---- queries (the answer in io.i)
 /// `mStats->mMaxHitPoints`, `mStats->mFlightTime`, `mStats->mPower`, `GetUnitClass()->mGarrisonCapacity`
 pub const EE_UNITS_UNIT_SAVE_MAX: i32 = 20;
