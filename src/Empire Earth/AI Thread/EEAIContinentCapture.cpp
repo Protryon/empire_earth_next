@@ -101,11 +101,11 @@ static void EEAICaptureRectangle(EESimCaptureRecord& ioRecord, const U2DRectangl
 // the EEAIArea base: serial, type, bounds, the hull's center, the tiles
 static void EEAICaptureArea(EESimCaptureRecord& ioRecord, const EEAIArea& inArea)
 {
-    ioRecord.U32((unsigned int)inArea.mSerial);
-    ioRecord.I32((int)inArea.mAreaType);
-    EEAICaptureRectangle(ioRecord, inArea.mBounds);
-    EEAICapturePoint(ioRecord, inArea.mHull.GetCenter());
-    EEAICaptureTiles(ioRecord, inArea.mTiles);
+    ioRecord.U32((unsigned int)inArea.GetSerial());
+    ioRecord.I32((int)inArea.GetAreaType());
+    EEAICaptureRectangle(ioRecord, inArea.GetBounds());
+    EEAICapturePoint(ioRecord, inArea.GetHullCenter());
+    EEAICaptureTiles(ioRecord, inArea.GetTileSet());
 }
 
 template <class T>
@@ -113,7 +113,7 @@ static void EEAICaptureIDs(EESimCaptureRecord& ioRecord, const std::vector<T*>& 
 {
     ioRecord.I32((int)inObjects.size());
     for (size_t i = 0; i < inObjects.size(); i++)
-        ioRecord.I32(inObjects[i] ? (int)inObjects[i]->mID : -1);
+        ioRecord.I32(inObjects[i] ? (int)inObjects[i]->GetID() : -1);
 }
 
 void EEAIContinentCapture(unsigned long inTag)
@@ -175,20 +175,20 @@ void EEAIContinentCapture(unsigned long inTag)
         if (!theContinent)
             continue;
         EEAICaptureArea(theRecord, *theContinent);
-        theRecord.U32(theContinent->mID);
-        theRecord.I32(theContinent->mCategory);
-        EEAICapturePoints(theRecord, theContinent->mShoreTiles);
-        EEAICaptureLongs(theRecord, theContinent->mChokePoints);
-        EEAICaptureShorts(theRecord, theContinent->mForestIDs);
-        EEAICaptureShorts(theRecord, theContinent->mPathAreaIDs);
-        EEAICaptureShorts(theRecord, theContinent->mHillIDs);
-        EEAICaptureShorts(theRecord, theContinent->mIDsBC);
-        EEAICaptureShorts(theRecord, theContinent->mIDsCC);
-        EEAICaptureShorts(theRecord, theContinent->mIDsDC);
-        EEAICaptureShorts(theRecord, theContinent->mIDsEC);
-        EEAICaptureIDs(theRecord, theContinent->mNeighbors);
+        theRecord.U32(theContinent->GetID());
+        theRecord.I32(theContinent->GetCategory());
+        EEAICapturePoints(theRecord, theContinent->GetShoreTiles());
+        EEAICaptureLongs(theRecord, theContinent->GetChokePoints());
+        EEAICaptureShorts(theRecord, theContinent->GetForestIDs());
+        EEAICaptureShorts(theRecord, theContinent->GetPathAreaIDs());
+        EEAICaptureShorts(theRecord, theContinent->GetHillIDs());
+        EEAICaptureShorts(theRecord, theContinent->GetIDsBC());
+        EEAICaptureShorts(theRecord, theContinent->GetIDsCC());
+        EEAICaptureShorts(theRecord, theContinent->GetIDsDC());
+        EEAICaptureShorts(theRecord, theContinent->GetIDsEC());
+        EEAICaptureIDs(theRecord, theContinent->GetNeighbors());
         for (j = 0; j < 7; j++)
-            theRecord.U32(theContinent->mCounts[j]);
+            theRecord.U32(theContinent->GetCount(j));
     }
 
     // the path areas
@@ -199,15 +199,15 @@ void EEAIContinentCapture(unsigned long inTag)
         if (!theArea)
             continue;
         EEAICaptureArea(theRecord, *theArea);
-        theRecord.U32(theArea->mID);
-        theRecord.U32(theArea->mContinentID);
-        theRecord.I32((int)theArea->mKind);
-        theRecord.I32((int)theArea->mUnitID);
-        theRecord.U32(theArea->mSurfaceRegionID);
-        theRecord.U32(theArea->mWaterBodyID);
-        theRecord.U32(theArea->mLandMassID);
-        theRecord.U32(theArea->mSpaceRegionID);
-        EEAICaptureShorts(theRecord, theArea->mSectorIDs);
+        theRecord.U32(theArea->GetID());
+        theRecord.U32(theArea->GetContinentID());
+        theRecord.I32((int)theArea->GetKind());
+        theRecord.I32((int)theArea->GetUnitID());
+        theRecord.U32(theArea->GetSurfaceRegionID());
+        theRecord.U32(theArea->GetWaterBodyID());
+        theRecord.U32(theArea->GetLandMassID());
+        theRecord.U32(theArea->GetSpaceRegionID());
+        EEAICaptureShorts(theRecord, theArea->GetSectorIDs());
     }
 
     // the path sectors
@@ -265,9 +265,9 @@ void EEAIContinentCapture(unsigned long inTag)
         if (!theChokePoint)
             continue;
         EEAICaptureArea(theRecord, *theChokePoint);
-        theRecord.I32((int)theChokePoint->mIndex);
-        theRecord.U32(theChokePoint->mContinentID);
-        EEAICaptureULongs(theRecord, theChokePoint->mAreaSerials);
+        theRecord.I32((int)theChokePoint->GetIndex());
+        theRecord.U32(theChokePoint->GetContinentID());
+        EEAICaptureULongs(theRecord, theChokePoint->GetAreaSerials());
     }
 
     // the hills
@@ -278,8 +278,8 @@ void EEAIContinentCapture(unsigned long inTag)
         if (!theHill)
             continue;
         EEAICaptureArea(theRecord, *theHill);
-        theRecord.U32(theHill->mContinentID);
-        theRecord.U32(theHill->mID);
+        theRecord.U32(theHill->GetContinentID());
+        theRecord.U32(theHill->GetID());
     }
 
     // the forests
@@ -290,13 +290,13 @@ void EEAIContinentCapture(unsigned long inTag)
         if (!theForest)
             continue;
         EEAICaptureArea(theRecord, *theForest);
-        theRecord.I32((int)theForest->mResourceKind);
-        theRecord.I32((int)theForest->mNumResources1);
-        theRecord.I32((int)theForest->mNumResources2);
-        theRecord.I32((int)theForest->mNumResources3);
-        theRecord.U32((unsigned int)theForest->mNextRenewal);
-        theRecord.U32(theForest->mContinentID);
-        theRecord.U32(theForest->mID);
+        theRecord.I32((int)theForest->GetResourceKind());
+        theRecord.I32((int)theForest->GetNumResources1());
+        theRecord.I32((int)theForest->GetNumResources2());
+        theRecord.I32((int)theForest->GetNumResources3());
+        theRecord.U32((unsigned int)theForest->GetNextRenewal());
+        theRecord.U32(theForest->GetContinentID());
+        theRecord.U32(theForest->GetID());
     }
 
     // the rectangle areas (the scenario's)
@@ -323,7 +323,7 @@ void EEAIContinentCapture(unsigned long inTag)
     for (std::map<unsigned long, EEAIArea*>::const_iterator theIt = theManager.mAreas.begin();
          theIt != theManager.mAreas.end(); ++theIt) {
         theRecord.U32((unsigned int)theIt->first);
-        theRecord.I32(theIt->second ? (int)theIt->second->mAreaType : -1);
+        theRecord.I32(theIt->second ? (int)theIt->second->GetAreaType() : -1);
     }
     theRecord.Commit();
 }

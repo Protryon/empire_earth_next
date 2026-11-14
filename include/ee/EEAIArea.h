@@ -50,13 +50,41 @@ public:
     void UpdateBounds(EEInfluenceTable* inTable);       // 0xd763 (mBounds = the hull's bounds in inTable's cells) (provisional name)
     void GetTiles(std::vector<U2DPoint<long> >& outTiles);   // 0xdaae (every tile of the hull's scan lines) (provisional name)
 
+    // New (port): the members behind accessors (R5b.1 blocker (b): the AI and the units read an area only
+    // through these, so the record can live elsewhere)
+    // the tile set (U2DSparseArrayPointContainer: ee_astar sparse.rs)
+    U2DSparseArrayPointContainer& GetTileSet() { return this->mTiles; }
+    const U2DSparseArrayPointContainer& GetTileSet() const { return this->mTiles; }
+    long GetNumTiles() const { return this->mTiles.Size(); }
+    // the hull
+    const U2DPoint<long>& GetHullCenter() const { return this->mHull.GetCenter(); }
+    const U2DRectangle<long>& GetHullBounds() const { return this->mHull.GetBounds(); }
+    bool HullContains(const U2DPoint<long>& inPoint) { return this->mHull.BoundedContains(inPoint); }
+    unsigned long GetHullPointCount() { return this->mHull.GetPointCount(); }
+    const U2DPoint<long>& GetHullPoint(long inIndex) { return *this->mHull.GetPoint(inIndex); }
+    const std::vector<U2DPoint<long> >& GetHullPoints() const { return this->mHull.GetPoints(); }
+    U2DPoint<long> GetHullClosestPoint(const U2DPoint<long>& inPoint) { return this->mHull.GetClosestPoint(inPoint); }
+    U2DPoint<long> GetHullClosestOutlinePoint(const U2DPoint<long>& inPoint)
+        { return this->mHull.GetClosestOutlinePoint(inPoint); }
+    void SetHullPoints(const std::vector<U2DPoint<long> >& inPoints) { this->mHull.SetPoints(inPoints, false); }
+    void ClearHull() { this->mHull.Clear(); }
+    template <class W> void WriteHull(W& ioWriter) const { this->mHull.PortWrite(ioWriter); }
+    template <class R> bool ReadHull(R& ioReader) { return this->mHull.PortRead(ioReader); }
+    // the tiles' bounds in influence-table regions
+    U2DRectangle<long>& GetBounds() { return this->mBounds; }
+    const U2DRectangle<long>& GetBounds() const { return this->mBounds; }
+    unsigned long GetSerial() const { return this->mSerial; }
+    void SetSerial(unsigned long inSerial) { this->mSerial = inSerial; }
+    long GetAreaType() const { return this->mAreaType; }
+    void SetAreaType(long inType) { this->mAreaType = inType; }
+
+private:
     U2DSparseArrayPointContainer mTiles;    // +0x04 (0x1c; imported ctor, inline dtor: vptr + Clear + _Tidy)
     U2DConvexHull<long> mHull;              // +0x20 (0x30; U2DPolygon<long> ctor 0x11251, then vtable 0x439d9c)
     // +0x50: the tiles' bounds (the ctor's zero stores +0x5c, +0x54, +0x50, +0x58 are U2DRectangle()'s order;
     // EECPIArmy 0x80296 calls U2DRectangle<long>::Contains 0xd190 on this + 0x50, 0x8019d calls 0x123d1 = the shape
     // of U2DRectangle<long>::Extend)
     U2DRectangle<long> mBounds;
-    unsigned long GetSerial() const { return this->mSerial; }
     unsigned long mSerial;                  // +0x60 EEAIContinentManager::mLastSerial; the key of its mAreas
     long mAreaType;                         // +0x64 (ctor 0; the continent factory 0x156b2 sets 1)
 };

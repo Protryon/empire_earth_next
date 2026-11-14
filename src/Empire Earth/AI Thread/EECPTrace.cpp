@@ -818,7 +818,7 @@ void EECPOutOfSynchDump(FILE* inFile)
                 gContinentManager.mChokePoints.size(), gContinentManager.mForests.size(), gContinentManager.mAreas.size());
         for (std::map<unsigned long, EEAIArea*>::const_iterator theIt = gContinentManager.mAreas.begin();
              theIt != gContinentManager.mAreas.end(); ++theIt)
-            fprintf(inFile, " %lu/%ld", (unsigned long)theIt->first, theIt->second != NULL ? (long)theIt->second->mAreaType : -1L);
+            fprintf(inFile, " %lu/%ld", (unsigned long)theIt->first, theIt->second != NULL ? (long)theIt->second->GetAreaType() : -1L);
         fprintf(inFile, "\n");
     }
     for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {

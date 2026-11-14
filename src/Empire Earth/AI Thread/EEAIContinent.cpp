@@ -83,14 +83,14 @@ static bool EEAIShorePathAreaRegion(void*, long inX, long inY, bool inSpace, uin
     EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(U2DPoint<long>(inX, inY));
     if (theArea == NULL)
         return false;
-    *outID = inSpace ? theArea->mSpaceRegionID : theArea->mWaterBodyID;
+    *outID = inSpace ? theArea->GetSpaceRegionID() : theArea->GetWaterBodyID();
     return true;
 }
 
 static bool EEAIShoreIsLand(void*, long inX, long inY)
 {
     EEAIContinent* theContinent = gContinentManager.GetContinentAt(inX, inY);
-    return theContinent != NULL && theContinent->mCategory == kContinentCategoryLand;
+    return theContinent != NULL && theContinent->GetCategory() == kContinentCategoryLand;
 }
 
 static uint16_t EEAIShoreRegion(void*, long inX, long inY, bool inSpace)
@@ -122,7 +122,7 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
     if (theOther) {
         if (theResult) {
             ee_area_closest_points_to_hull(U2DHullPoints(this->mShoreTiles), this->mShoreTiles.size(),
-                                           U2DHullPoints(theOther->mHull.GetPoints()), theOther->mHull.GetPointCount(),
+                                           U2DHullPoints(theOther->GetHullPoints()), theOther->GetHullPointCount(),
                                            &theThis, &theOtherPoint);
             outThis = U2DHullPoint(theThis);
             outOther = U2DHullPoint(theOtherPoint);
@@ -134,8 +134,8 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
         EEGeomCaptureBegin(kGeomCaptureArea, 2);
         EEGeomCapturePoints(this->mShoreTiles, false);
         EEGeomCaptureValue(theOther != NULL);
-        EEGeomCaptureValue(inOther->mTiles.Size());
-        EEGeomCapturePoints(inOther->mHull.GetPoints(), false);
+        EEGeomCaptureValue(inOther->GetNumTiles());
+        EEGeomCapturePoints(inOther->GetHullPoints(), false);
         EEGeomCaptureValue(theResult);
         EEGeomCapturePoint(outThis);
         EEGeomCapturePoint(outOther);

@@ -53,7 +53,7 @@ EETown::EETown(EEPlayer* inPlayer, long inTownID)
 {
     this->mPlayer = inPlayer;
     this->mTownID = inTownID;
-    this->mAreaType = kAIAreaTown;
+    this->SetAreaType(kAIAreaTown);
     this->mContinent = 0;
     this->mPatrolGroup = NULL;
     this->mNearWater = false;
@@ -84,12 +84,12 @@ bool EETown::AddUnit(EEUnit* inUnit)
     unsigned long theValue = theClass->GetInfluence();
     long theCount = 1;
     bool theResult = false;
-    if (this->mTiles.Size() != 0 || this->CanTake(inUnit)) {
+    if (this->GetNumTiles() != 0 || this->CanTake(inUnit)) {
         theTile = inUnit->FindAreaTile(true, 1);
         theResult = true;
         this->AddTile(theTile);
         if (!gLoadingSavedGame) {
-            if (this->GetPatrolGroup() == NULL && this->mHull.GetPointCount() > 1) {
+            if (this->GetPatrolGroup() == NULL && this->GetHullPointCount() > 1) {
                 this->FindPatrolGroup();
                 if (this->GetPatrolGroup() == NULL) {
                     this->mPatrolGroup = new EEPPatrolGroup;
@@ -98,8 +98,8 @@ bool EETown::AddUnit(EEUnit* inUnit)
                 }
             }
             if (this->GetPatrolGroup() != NULL) {
-                for (unsigned long i = 0; i < this->mHull.GetPointCount(); i++)
-                    thePoints.push_back(*this->mHull.GetPoint(i));
+                for (unsigned long i = 0; i < this->GetHullPointCount(); i++)
+                    thePoints.push_back(this->GetHullPoint(i));
                 this->GetPatrolGroup()->SetPatrolPoints(thePoints, this->GetPlayer()->GetPlayerID());
             }
         }
@@ -139,23 +139,23 @@ bool EETown::AddTile(const U2DPoint<long>& inTile)
     bool theOnHull = false;
     if (this->mContinent == 0)
         this->mContinent = gContinentManager.GetContinentID(inTile.GetX(), inTile.GetY());
-    if (this->mHull.BoundedContains(inTile)) {
-        for (unsigned long i = 0; i < this->mHull.GetPointCount(); i++) {
-            if (*this->mHull.GetPoint(i) == inTile) {
+    if (this->HullContains(inTile)) {
+        for (unsigned long i = 0; i < this->GetHullPointCount(); i++) {
+            if (this->GetHullPoint(i) == inTile) {
                 theOnHull = true;
                 break;
             }
         }
-        this->mTiles.Insert(inTile);
+        this->GetTileSet().Insert(inTile);
         if (theOnHull) {
-            this->mTiles.BuildPointList(thePoints, 1);
+            this->GetTileSet().BuildPointList(thePoints, 1);
             this->Create(thePoints);
             if (!gLoadingSavedGame)
                 this->UpdateNearWater();
         }
     } else {
-        this->mTiles.Insert(inTile);
-        this->mTiles.BuildPointList(thePoints, 1);
+        this->GetTileSet().Insert(inTile);
+        this->GetTileSet().BuildPointList(thePoints, 1);
         this->Create(thePoints);
         if (!gLoadingSavedGame)
             this->UpdateNearWater();
@@ -168,7 +168,7 @@ bool EETown::AddTile(const U2DPoint<long>& inTile)
 void EETown::Merge(EETown* inOther)
 {
     std::vector<U2DPoint<long> > thePoints;
-    inOther->mTiles.BuildPointList(thePoints, 1);
+    inOther->GetTileSet().BuildPointList(thePoints, 1);
     this->mNumAirports += inOther->mNumAirports;
     this->mNumUnits += inOther->mNumUnits;
     this->mL80 += inOther->mL80;
@@ -177,7 +177,7 @@ void EETown::Merge(EETown* inOther)
     this->mNumWalls += inOther->mNumWalls;
     this->mNumWonders += inOther->mNumWonders;
     for (long i = thePoints.size() - 1; i >= 0; i--)
-        this->mTiles.Insert(thePoints[i]);
+        this->GetTileSet().Insert(thePoints[i]);
 }
 
 // FUNCTION: EXE 0x4abf8f
@@ -210,7 +210,7 @@ bool EETown::UpdateNearWater()
     U2DPoint<long> theOther;
     this->mNearWater = false;
     this->mNearMapEdge = false;
-    if (this->mContinent != 0 && this->mTiles.Size() > 0) {
+    if (this->mContinent != 0 && this->GetNumTiles() > 0) {
         gContinentManager.GetConnectedIDs(theIDs, this->mContinent);
         for (long i = theIDs.size() - 1; i >= 0 && !this->mNearWater; i--) {
             EEAIContinent* theContinent = gContinentManager.GetContinentFromID(theIDs[i]);
@@ -233,8 +233,8 @@ bool EETown::UpdateNearWater()
 // Adopts (references) the patrol group of one of the owner's path-point units on a hull vertex, if any
 void EETown::FindPatrolGroup()
 {
-    for (unsigned long i = 0; i < this->mHull.GetPointCount() && this->GetPatrolGroup() == NULL; i++) {
-        EEMapTile* theTile = gWorld.GetMap()->GetTile(this->mHull.GetPoint(i)->GetX(), this->mHull.GetPoint(i)->GetY());
+    for (unsigned long i = 0; i < this->GetHullPointCount() && this->GetPatrolGroup() == NULL; i++) {
+        EEMapTile* theTile = gWorld.GetMap()->GetTile(this->GetHullPoint(i).GetX(), this->GetHullPoint(i).GetY());
         if (theTile == NULL)
             continue;
         for (RTSTileUnitNode* theNode = theTile->GetUnits(); theNode != NULL && this->GetPatrolGroup() == NULL;
@@ -259,12 +259,12 @@ U2DPoint<long> EETown::GetRandomPoint()
     EEMap* theMap = gWorld.mMap;
     if (theMap != NULL) {
         for (long i = 15; i >= 0 && !theFound; i--) {
-            long theX = gPhysics->GetRandom(0L, this->mHull.GetBounds().mRight - this->mHull.GetBounds().mLeft);
-            theResult.mX = this->mHull.GetBounds().mLeft + theX;
-            long theY = gPhysics->GetRandom(0L, this->mHull.GetBounds().mBottom - this->mHull.GetBounds().mTop);
-            theResult.mY = this->mHull.GetBounds().mTop + theY;
+            long theX = gPhysics->GetRandom(0L, this->GetHullBounds().mRight - this->GetHullBounds().mLeft);
+            theResult.mX = this->GetHullBounds().mLeft + theX;
+            long theY = gPhysics->GetRandom(0L, this->GetHullBounds().mBottom - this->GetHullBounds().mTop);
+            theResult.mY = this->GetHullBounds().mTop + theY;
             if (theMap->GetTileAtLocation(theResult))
-                theFound = this->mHull.BoundedContains(theResult);
+                theFound = this->HullContains(theResult);
         }
     }
     if (!theFound)
@@ -286,7 +286,7 @@ bool EETown::IsTownUnit(EEUnit* inUnit)
         if (theTile.mX < gMapWidth && theTile.mY < gMapHeight) {
             EEAIContinent* theContinent = gContinentManager.GetContinentAt(theTile.mX, theTile.mY);
             if (theContinent != NULL)
-                theResult = theContinent->mCategory == kContinentCategoryLand;
+                theResult = theContinent->GetCategory() == kContinentCategoryLand;
         }
     }
     return theResult;
@@ -340,7 +340,7 @@ bool EETown::RemoveUnit(EEUnit* inUnit)
 void EETown::RefreshPatrolGroup()
 {
     std::vector<U2DPoint<long> > thePoints;
-    if (this->mPatrolGroup == NULL && this->mHull.GetPointCount() > 1) {
+    if (this->mPatrolGroup == NULL && this->GetHullPointCount() > 1) {
         this->FindPatrolGroup();
         if (this->mPatrolGroup == NULL) {
             this->mPatrolGroup = new EEPPatrolGroup;
@@ -350,8 +350,8 @@ void EETown::RefreshPatrolGroup()
     }
     if (this->mPatrolGroup == NULL)
         return;
-    for (long i = 0; i < (long)this->mHull.GetPointCount(); i++)
-        thePoints.push_back(*this->mHull.GetPoint(i));
+    for (long i = 0; i < (long)this->GetHullPointCount(); i++)
+        thePoints.push_back(this->GetHullPoint(i));
     this->mPatrolGroup->SetPatrolPoints(thePoints, this->mPlayer->mPlayerID);
 }
 
@@ -364,31 +364,31 @@ bool EETown::RemoveHullTile(const U2DPoint<long>& inTile)
     std::vector<U2DPoint<long> > thePoints;
     bool theOnHull = false;
     bool theResult = false;
-    for (unsigned long i = 0; i < this->mHull.GetPointCount(); i++) {
-        if (*this->mHull.GetPoint(i) == inTile) {
+    for (unsigned long i = 0; i < this->GetHullPointCount(); i++) {
+        if (this->GetHullPoint(i) == inTile) {
             theOnHull = true;
             break;
         }
     }
-    if (this->mTiles.Contains(inTile)) {
+    if (this->GetTileSet().Contains(inTile)) {
         theResult = true;
-        this->mTiles.Remove(inTile);
+        this->GetTileSet().Remove(inTile);
     }
     if (theOnHull) {
-        this->mTiles.BuildPointList(thePoints, 1);
+        this->GetTileSet().BuildPointList(thePoints, 1);
         if (thePoints.size() > 0) {
-            this->mHull.SetPoints(thePoints, false);
+            this->SetHullPoints(thePoints);
             if (!gLoadingSavedGame && !gWorldClearing)
                 this->UpdateNearWater();
-            this->mHull.GetPointCount();
+            this->GetHullPointCount();
         } else
-            this->mHull.Clear();
+            this->ClearHull();
         if (!gLoadingSavedGame) {
             if (this->mPatrolGroup == NULL)
                 this->FindPatrolGroup();
             if (this->mPatrolGroup != NULL) {
-                for (unsigned long j = 0; j < this->mHull.GetPointCount(); j++)
-                    thePatrol.push_back(*this->mHull.GetPoint(j));
+                for (unsigned long j = 0; j < this->GetHullPointCount(); j++)
+                    thePatrol.push_back(this->GetHullPoint(j));
                 this->mPatrolGroup->SetPatrolPoints(thePatrol, this->mPlayer->mPlayerID);
             }
         }
@@ -406,12 +406,12 @@ bool EETown::CanTake(EEUnit* inUnit)
     U2DPoint<long> theClosest;
     bool theResult = false;
     if (inUnit->mPlayer == this->mPlayer && EETown::IsTownUnit(inUnit)) {
-        theResult = this->mTiles.Size() == 0;
+        theResult = this->GetNumTiles() == 0;
         if (!theResult) {
             theTile = inUnit->FindAreaTile(true, 1);
             unsigned short theID = gContinentManager.GetContinentID(theTile.mX, theTile.mY);
             if (theID == this->mContinent || this->mContinent == 0) {
-                theResult = this->mHull.BoundedContains(theTile);
+                theResult = this->HullContains(theTile);
                 if (!theResult) {
                     theClosest = this->GetClosestHullPoint(theTile);
                     theResult = theClosest.DistanceToSquared(theTile) <= this->mReach;

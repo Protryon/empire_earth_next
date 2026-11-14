@@ -112,29 +112,29 @@ void EEAIAStarPathAreaGoal::CreateAreas()
 {
     if (this->mMode == kAIPathNone) {
         EEAIPathArea* theArea = new EEAIPathArea;
-        theArea->mID = this->mNextPathAreaID;
-        theArea->mContinentID = this->mContinentID;
-        theArea->mAreaType = kAIAreaPathArea;
-        theArea->mKind = this->mKind;
+        theArea->SetID(this->mNextPathAreaID);
+        theArea->SetContinentID(this->mContinentID);
+        theArea->SetAreaType(kAIAreaPathArea);
+        theArea->SetKind(this->mKind);
         theArea->Create(this->mTiles);
         theArea->UpdateBounds(gWorld.mInfluenceTable);
         this->mPathAreas.insert(std::map<unsigned short, EEAIPathArea*>::value_type(this->mNextPathAreaID, theArea));
         this->mNextPathAreaID++;
         if (this->mKind == kAITileForest) {
             EEAIForest* theForest = new EEAIForest;
-            theForest->mID = this->mNextForestID;
-            theForest->mContinentID = this->mContinentID;
-            theForest->mAreaType = kAIAreaForest;
+            theForest->SetID(this->mNextForestID);
+            theForest->SetContinentID(this->mContinentID);
+            theForest->SetAreaType(kAIAreaForest);
             theForest->Create(this->mTiles);
             theForest->UpdateBounds(gWorld.mInfluenceTable);
-            theForest->mNumResources1 = this->mResources1;
-            theForest->mNumResources3 = this->mResources3;
-            theForest->mNumResources2 = this->mResources2;
+            theForest->SetNumResources1(this->mResources1);
+            theForest->SetNumResources3(this->mResources3);
+            theForest->SetNumResources2(this->mResources2);
             theForest->UpdateResourceKind();
             this->mForests.insert(std::map<unsigned short, EEAIForest*>::value_type(this->mNextForestID, theForest));
             this->mNextForestID++;
         } else if (this->mKind == kAITileUnitObstacle)
-            theArea->mUnitID = this->mOwnerID;
+            theArea->SetUnitID(this->mOwnerID);
     } else {
         this->mNextKindID++;
         this->AssignKindIDs();
@@ -166,13 +166,13 @@ void EEAIAStarPathAreaGoal::AssignKindIDs()
         EEAIPathArea* theArea = this->GetArea((*(this->mTiles.begin() + i)).GetX(), (*(this->mTiles.begin() + i)).GetY());
         theAreas.insert(theArea);
         if (this->mMode == kAIPathWaterBody)
-            theArea->mWaterBodyID = this->GetNextKindID();
+            theArea->SetWaterBodyID(this->GetNextKindID());
         else if (this->mMode == kAIPathSpaceRegion)
-            theArea->mSpaceRegionID = this->GetNextKindID();
+            theArea->SetSpaceRegionID(this->GetNextKindID());
         else if (this->mMode == kAIPathLandMass)
-            theArea->mLandMassID = this->GetNextKindID();
+            theArea->SetLandMassID(this->GetNextKindID());
         else
-            theArea->mSurfaceRegionID = this->GetNextKindID();
+            theArea->SetSurfaceRegionID(this->GetNextKindID());
     }
     for (std::set<EEAIPathArea*>::iterator theIt = theAreas.begin(); theIt != theAreas.end(); theIt++) {
         EEAIContinent* theContinent = gContinentManager.GetContinentFromID((*theIt)->GetContinentID());

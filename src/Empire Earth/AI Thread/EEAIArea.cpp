@@ -55,7 +55,7 @@ struct EEAIAreaContainsUnit {
 struct EEAIAreaHullContainsUnit {
     EEAIAreaHullContainsUnit(EEAIArea* inArea) : mArea(inArea) {}
     bool operator()(EEUnit* inUnit) const
-        { return this->mArea->mHull.BoundedContains(U2DPoint<long>(inUnit->mTileX, inUnit->mTileY)); }
+        { return this->mArea->HullContains(U2DPoint<long>(inUnit->mTileX, inUnit->mTileY)); }
     EEAIArea* mArea;
 };
 

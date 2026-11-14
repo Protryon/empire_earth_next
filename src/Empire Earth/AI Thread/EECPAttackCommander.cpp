@@ -101,7 +101,7 @@ bool EECPAttackCommander::TakeUnit(EEComplexUnit* inUnit)
     if (theContinent == NULL || this->mPlayer->mObserverMode)
         return theResult;
     for (long i = this->mGroups.size() - 1; i >= 0; i--) {
-        if (this->mGroups[i]->mContinentID != theContinent->mID || !(this->mGroups[i]->GetNumSubGroups() > 0))
+        if (this->mGroups[i]->mContinentID != theContinent->GetID() || !(this->mGroups[i]->GetNumSubGroups() > 0))
             continue;
         theResult = this->mGroups[i]->PlaceInSubGroup(inUnit);
         if (theResult)
@@ -110,7 +110,7 @@ bool EECPAttackCommander::TakeUnit(EEComplexUnit* inUnit)
     if (theResult)
         return theResult;
     EECPAttackGroup* theGroup = new EECPAttackGroup(this);
-    theGroup->mContinentID = theContinent->mID;
+    theGroup->mContinentID = theContinent->GetID();
     theResult = theGroup->PlaceInSubGroup(inUnit);
     if (theResult)
         this->mGroups.push_back(theGroup);

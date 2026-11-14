@@ -120,9 +120,9 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
         return Pack(theTile.mX, theTile.mY);
     }
     case EE_SCENARIO_READ_TOWN_COUNT: return gWorld.GetPlayer(inA)->GetNumTowns();
-    case EE_SCENARIO_READ_TOWN_CONTAINS: return gWorld.GetPlayer(inA)->mTowns[inB]->mHull.BoundedContains(U2DPoint<long>(inC, inD));
+    case EE_SCENARIO_READ_TOWN_CONTAINS: return gWorld.GetPlayer(inA)->mTowns[inB]->HullContains(U2DPoint<long>(inC, inD));
     case EE_SCENARIO_READ_TOWN_CENTER: {
-        U2DPoint<long> theCenter = gWorld.GetPlayer(inA)->mTowns[inB]->mHull.GetCenter();
+        U2DPoint<long> theCenter = gWorld.GetPlayer(inA)->mTowns[inB]->GetHullCenter();
         return Pack(theCenter.mX, theCenter.mY);
     }
     case EE_SCENARIO_READ_UNIT_TILE: return Pack(theContext->mUnit->GetTileX(), theContext->mUnit->GetTileY());

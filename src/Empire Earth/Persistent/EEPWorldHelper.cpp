@@ -248,16 +248,16 @@ static void SaveForests(FSFile& outFile)
 {
     unsigned long theCount = 0;
     for (size_t f = 0; f < gContinentManager.mForests.size(); f++)
-        if (gContinentManager.mForests[f] != NULL && gContinentManager.mForests[f]->mNextRenewal != 0)
+        if (gContinentManager.mForests[f] != NULL && gContinentManager.mForests[f]->GetNextRenewal() != 0)
             theCount++;
     long theResult = outFile.Write(theCount);
     for (size_t f = 0; f < gContinentManager.mForests.size() && theResult == kErrorOK; f++) {
         EEAIForest* theForest = gContinentManager.mForests[f];
-        if (theForest == NULL || theForest->mNextRenewal == 0)
+        if (theForest == NULL || theForest->GetNextRenewal() == 0)
             continue;
         std::vector<U2DPoint<long> > theTiles;
-        theForest->mTiles.BuildPointList(theTiles, 1);
-        theResult = outFile.Write(theForest->mNextRenewal);
+        theForest->GetTileSet().BuildPointList(theTiles, 1);
+        theResult = outFile.Write(theForest->GetNextRenewal());
         if (theResult == kErrorOK)
             theResult = outFile.Write((unsigned long)theTiles.size());
         for (size_t t = 0; t < theTiles.size() && theResult == kErrorOK; t++) {
@@ -299,8 +299,8 @@ static long LoadForests(FSFile& inFile)
                     if (theForest == NULL || std::find(theDone.begin(), theDone.end(), theForest) != theDone.end())
                         continue;
                     theDone.push_back(theForest);
-                    theForest->mNextRenewal = theForests[f].first;
-                    theSame = theSame && (unsigned long)theForest->mTiles.Size() == theForests[f].second.size();
+                    theForest->SetNextRenewal(theForests[f].first);
+                    theSame = theSame && (unsigned long)theForest->GetNumTiles() == theForests[f].second.size();
                 }
             }
             if (!theSame)
