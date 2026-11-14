@@ -785,6 +785,8 @@ NET_TESTS = {
     "ne_msgmgr_test": [],
     # NELagLossSimulator, NERecordPlayback, NETimestampedMessage (golden: rust/crates/ee_net/src/golden_queues.txt)
     "ne_queues_test": [],
+    # NESynchronousClient (golden: rust/crates/ee_net/src/golden_client.txt; the original unit is tests/net/orig_c)
+    "ne_client_test": [],
     # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the
     # original units with the TCP shim's entry table)
     # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp instead

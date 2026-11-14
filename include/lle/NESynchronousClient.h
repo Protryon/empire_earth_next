@@ -2,81 +2,43 @@
 // The lock-step multiplayer client: a main thread (connect retries, outgoing/incoming message dispatch) and a receive
 // thread over one NEConnection, plus an xfer connection for file transfer; messages pass through the lag/loss
 // simulator and the record/playback stage. Abstract: the game implements the pure virtual callbacks.
-// Inline members are exported COMDATs emitted by NESynchronousClient.cpp's own inline block (0x45c00..0x45d1c);
-// several getters are ICF-folded with other classes' (0x403c8, 0x5a058, 0x5a11f, 0x5a126, 0x61137).
+// Whole in Rust (ee_net client.rs; PORT_LEARNINGS "LLE Network Engine, round 3"): the class keeps the type callers
+// hold, its virtual members and one-line forwarders; the original is tests/net/orig_c (the golden's reference).
 #ifndef LLE_NESYNCHRONOUSCLIENT_H
 #define LLE_NESYNCHRONOUSCLIENT_H
 
-#include <deque>
 #include "lle/NESynchronousCommunications.h"
 #include "lle/NEProtocol.h"
 #include "lle/NEConnection.h"
 
 class FSFile;
-struct EeNetLagLoss;                        // NELagLossSimulator, whole in Rust (rust/ee_net.h)
-struct EeNetRecPlay;                        // NERecordPlayback, whole in Rust (rust/ee_net.h)
-class NEMCommunicationsTick;
+struct EeNetClient;                         // the client, whole in Rust (rust/ee_net.h, ee_net client.rs)
+enum class EeNetClOp : uint32_t;            // its calls out
 class NEMessage;
-class TSEvent;
-class TSThread;
 
-struct NECDIClient {                        // client debug info (GetDebugInfo: this + 0x30); layout inferred
-    NECDIClient() : mU00(0) {}              // the client ctor zeroes +0x30 before its vptr store
-    unsigned long mU00;
-};
-
-class LLE_API NESynchronousClient : public NESynchronousCommunications {   // proven sizeof 0xdc (??_E: imul 0xdc)
+class LLE_API NESynchronousClient : public NESynchronousCommunications {
 public:
     NESynchronousClient();
     virtual ~NESynchronousClient();
 
-    void ClearIncomingMessages()
-    {
-        this->mIncomingMessagesLock->Enter();
-        while (this->mIncomingMessages.size() > 0) {
-            NEMessage* theMessage = this->mIncomingMessages.front();
-            this->mIncomingMessages.pop_front();
-            theMessage->Dereference();
-        }
-        this->mIncomingMessagesLock->Leave();
-    }
-    NEConnection* GetConnection() const { return this->mConnection; }
-    virtual unsigned long GetCurrentCommunicationsTick() const { return this->mCurrentCommunicationsTick; }
-    unsigned long GetCurrentPhysicsTick() const { return this->mCurrentPhysicsTick; }
-    const NECDIClient& GetDebugInfo() const { return this->mDebugInfo; }
-    unsigned long GetDetectedGameCount() const { return this->mProtocol->GetDetectedGameCount(); }
-    unsigned char GetMySendToSlot() const { return this->mMySendToSlot; }
-    unsigned long GetNumConnectionTrys() const { return this->mNumConnectionTrys; }
+    NEConnection* GetConnection() const;
+    virtual unsigned long GetCurrentCommunicationsTick() const;
+    unsigned long GetCurrentPhysicsTick() const;
+    unsigned long GetDetectedGameCount() const;
+    unsigned char GetMySendToSlot() const;
+    unsigned long GetNumConnectionTrys() const;
     // the recorder's mode (NERecordPlaybackMode) and its playback speed (ee_net recplay.rs)
     unsigned char GetRecordPlaybackMode() const;
     void SetSlowPlayback();
     void SetNormalPlayback();
-    void SendExitMessage()
-    {
-        this->mReceiveThreadExitEvent->Set();
-        this->mReceiveThreadFinishedEvent->Wait(kTSWaitInfinite);
-        this->mMainThreadExitEvent->Set();
-        this->mMainThreadFinishedEvent->Wait(kTSWaitInfinite);
-    }
-    void SendStartConnectMessage(NEMessage* inMessage)
-    {
-        this->mMainThreadStartConnectEvent->Set();
-        this->SetConnectionState(1);
-        this->mStartConnectMessage = inMessage;
-        inMessage->Reference();
-    }
-    void SendEndConnectMessage() { this->mMainThreadEndConnectEvent->Set(); }
-    virtual void SetCurrentCommunicationsTick(unsigned long inTick) { this->mCurrentCommunicationsTick = inTick; }
-    void SetCurrentPhysicsTick(unsigned long& inTick) { this->mCurrentPhysicsTick = inTick; }
-    void SetMaxNumConnectionTrys(unsigned long inMax) { this->mMaxNumConnectionTrys = inMax; }
-    void SetMySendToSlot(unsigned char inSlot) { this->mMySendToSlot = inSlot; }
-    long XferReceive(unsigned long inSize, unsigned char* outBuffer, unsigned long& outReceived)
-        { return this->mProtocol->XferReceive(inSize, outBuffer, outReceived); }
+    void SendStartConnectMessage(NEMessage* inMessage);
+    virtual void SetCurrentCommunicationsTick(unsigned long inTick);
+    void SetCurrentPhysicsTick(unsigned long& inTick);
+    void SetMaxNumConnectionTrys(unsigned long inMax);
+    void SetMySendToSlot(unsigned char inSlot);
 
     long Connect(const UString& inName, const UString& inHost, const UWideString& inAddress);
-    long ConnectForXfer();
     long Disconnect();
-    long DisconnectFromXfer();
     long GetDetectedGame(unsigned long inIndex, UString& outName, UString& outHost, UWideString& outAddress);
     virtual long ProcessGuaranteedLocalUserInput(NEMessage* inMessage, unsigned char inPlayer);
     virtual long ProcessLocalUserInput(NEMessage* inMessage, unsigned char inPlayer);
@@ -100,53 +62,14 @@ public:
     virtual void HandleConnectionTimeoutWarning(unsigned long inRemaining) = 0;  // +0x58 (Receive: ms left before the 75 s timeout)
 
 private:
-    static void LagReceiveLossCallback(NEMessage* inMessage, void* inThisPointer);
-    static long LagSendLossCallback(NEMessage* inMessage, void* inThisPointer);
-    static unsigned long Main(void* inClientObject);
-    long ProcessUserInputMessage(NEMessage* inMessage, unsigned char inPlayer, bool inGuaranteed);
-    void ProcessCommunicationsTickMessage(NEMCommunicationsTick* inMessage);
-    void ProcessMessage(NEMessage* inMessage);
-    static unsigned long Receive(void* inClientObject);
-    static void RecordPlaybackCallback(NEMessage* inMessage, void* inThisPointer);
-    // the lag simulator's and the recorder's calls out (ee_net's EeNetQOp): their callbacks, then the common ones
+    NESynchronousClient(const NESynchronousClient&);
+    NESynchronousClient& operator=(const NESynchronousClient&);
+    // the client's calls out (ee_net's EeNetClOp): the protocol, the messages, the base class's fields, the virtuals
+    static ptrdiff_t Host(void* inClient, EeNetClOp inOp, size_t a, size_t b, size_t c, size_t d);
+    // the lag simulator's and the recorder's common calls out (ee_net's EeNetQOp)
     static ptrdiff_t QueueHost(void* inClient, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
-    long SendAMessage(NEMessage* inMessage);
 
-    NECDIClient mDebugInfo;                 // +0x30
-    std::deque<NEMessage*> mOutgoingMessages;   // +0x34 (mOutgoingMessagesLock)
-    std::deque<NEMessage*> mIncomingMessages;   // +0x48 (mIncomingMessagesLock)
-    NEMessage* mLastCommunicationsTickResponse;   // +0x5c (resent for a repeated tick)
-    NEProtocol* mProtocol;                  // +0x60 protocol 0
-    NEConnection* mConnection;              // +0x64
-    NEConnection* mXferConnection;          // +0x68
-    NEMessage* mStartConnectMessage;        // +0x6c
-    TSThread* mMainThread;                  // +0x70
-    TSEvent* mIncomingMessageAvailableEvent;    // +0x74
-    TSEvent* mMainThreadExitEvent;          // +0x78
-    TSEvent* mMainThreadStartedEvent;       // +0x7c
-    TSEvent* mMainThreadFinishedEvent;      // +0x80
-    TSEvent* mMainThreadStartConnectEvent;  // +0x84
-    TSEvent* mMainThreadEndConnectEvent;    // +0x88
-    TSThread* mReceiveThread;               // +0x8c
-    TSEvent* mIncomingPacketAvailableEvent; // +0x90
-    TSEvent* mXferIncomingAvailableEvent;   // +0x94
-    TSEvent* mReceiveThreadCanGoEvent;      // +0x98
-    TSEvent* mReceiveThreadExitEvent;       // +0x9c
-    TSEvent* mReceiveThreadStartedEvent;    // +0xa0
-    TSEvent* mReceiveThreadFinishedEvent;   // +0xa4
-    TSCriticalSection* mIncomingMessagesLock;   // +0xa8
-    TSCriticalSection* mOutgoingMessagesLock;   // +0xac
-    EeNetLagLoss* mLagLossSimulator;        // +0xb0 NELagLossSimulator, whole in Rust (ee_net lagloss.rs)
-    EeNetRecPlay* mRecordPlayback;          // +0xb4 NERecordPlayback, whole in Rust (ee_net recplay.rs)
-    unsigned long mUB8;                     // +0xb8 (provisional name)
-    unsigned long mCurrentPhysicsTick;      // +0xbc
-    unsigned long mCurrentCommunicationsTick;   // +0xc0
-    unsigned long mLastUserInputTime;       // +0xc4 (ProcessUserInputMessage: once a second)
-    unsigned long mUserInputsThisSecond;    // +0xc8 (at most 10)
-    unsigned long mLastPlaybackTick;        // +0xcc (RecordPlaybackCallback)
-    unsigned long mMaxNumConnectionTrys;    // +0xd0
-    unsigned long mNumConnectionTrys;       // +0xd4
-    unsigned char mMySendToSlot;            // +0xd8 (0xff: none)
+    EeNetClient* mRust;                     // NESynchronousClient's state and members (ee_net client.rs)
 };
 
 #endif
