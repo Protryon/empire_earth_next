@@ -124,32 +124,22 @@ public:
     SmartPtr<Button> mCreditsButton; // 0x9c
     SmartPtr<Button> mCloseButton; // 0xa0
 };
-class GotHTTPDocumentEvent;
-class TOUDialog : public Dialog {
+// R6 WONLobby round 3: TOUDialog, ChooseNetworkAdapterDialog, RoomDialog and BadUserDialog are lobby dialog kinds
+// (their controls, flags and methods in ee_won lobbydlg.rs; the list rows BadUserItem and NetworkAdapterListItem stay
+// C++ in LobbyDialogHost.cpp).
+// TOUDialog: the terms of use (a GotHTTPDocumentEvent for the terms marks the page for rebuilding).
+class TOUDialog : public LobbyRustDialog {
 public:
-    TOUDialog(); // object size 0xac
-    // The destructor is implicit.
-    virtual void Paint(Graphics&); // slot 0x18
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    void HandleHTTPDocEvent(GotHTTPDocumentEvent*);
-    void Reset();
-    SmartPtr<BrowserComponent> mBrowser; // 0x98
-    SmartPtr<Button> mAgreeCheck; // 0x9c
-    SmartPtr<Button> mAcceptButton; // 0xa0
-    SmartPtr<Button> mRejectButton; // 0xa4
-    bool mNeedGenHTML; // 0xa8, padded to 0xac
+    TOUDialog() : LobbyRustDialog(EeWonLobbyDlgKind::Tou) {}
+    virtual void Paint(Graphics& inGraphics) { Container::Paint(inGraphics); } // the original skipped Dialog's
+    void Reset() { this->LCall(EeWonLobbyDlgCall::Reset); }
 };
-class ChooseNetworkAdapterDialog : public Dialog {
+// ChooseNetworkAdapterDialog: InitLogic's choice of the lobby's local address.
+class ChooseNetworkAdapterDialog : public LobbyRustDialog {
 public:
-    ChooseNetworkAdapterDialog(); // object size 0xa0
-    virtual ~ChooseNetworkAdapterDialog(); // 0x7f9c80; explicit
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x7fa1f0, shared with CreditsDialog
-    void Reset();
-    unsigned long GetSelectedAddress(); // raw IPv4 address
-    SmartPtr<MultiListArea> mAdapterList; // 0x98
-    SmartPtr<Button> mActivateButton; // 0x9c
+    ChooseNetworkAdapterDialog() : LobbyRustDialog(EeWonLobbyDlgKind::ChooseAdapter) {}
+    void Reset() { this->LCall(EeWonLobbyDlgCall::Reset); }
+    unsigned long GetSelectedAddress() { return (unsigned long)(uint32_t)this->LCall(EeWonLobbyDlgCall::SelectedAddress); }
 };
 class LobbyGame;
 
@@ -215,32 +205,23 @@ public:
 
 
 
-class RoomCtrl; // 0x90 bytes, declared in WONLobbyRoomServer.h
-// RoomDialog: 0x9c bytes.
-class RoomDialog : public Dialog {
-protected:
-    SmartPtr<RoomCtrl> mRoomCtrl; // 0x98
-    virtual ~RoomDialog();
+// RoomDialog: RoutingLogic's room chooser, shown and ended by its holder (its RoomCtrl member was never set).
+class RoomDialog : public LobbyRustDialog {
 public:
-    RoomDialog(); // 0x7f90d0
-    virtual void InitComponent(ComponentInit&); // slot 0x1c: the shared empty one-argument function at 0x6fa500
+    RoomDialog() : LobbyRustDialog(EeWonLobbyDlgKind::Room) {}
 };
 
 struct RoutingBadUser; // defined in WONRouting.h
-// BadUserDialog (0xac bytes): the muted/banned user list; 51 vtable slots, its own entries at 0x00 and 0x1c.
-// The destructor is implicit (it does not write its own vtable pointer).
-class BadUserDialog : public Dialog {
+// BadUserDialog: the muted/banned user list (the full list for moderators, the simple one for others).
+class BadUserDialog : public LobbyRustDialog {
 public:
     typedef std::list<unsigned long> IdList;
-    BadUserDialog();
-    virtual void InitComponent(ComponentInit& inInit); // 0x7f5a90
-    void SetUserList(const std::list<RoutingBadUser>& inList, bool inSimple); // 0x7f5b20
-    void GetIds(IdList& outIds); // 0x7f5c20
-    SmartPtr<MultiListArea> mUserList; // 0x98
-    SmartPtr<ListArea> mSimpleUserList; // 0x9c
-    SmartPtr<Component> mUserListBox; // 0xa0
-    SmartPtr<Component> mSimpleUserListBox; // 0xa4
-    bool mIsSimple; // 0xa8, padded to 0xac
+    BadUserDialog() : LobbyRustDialog(EeWonLobbyDlgKind::BadUser) {}
+    void SetUserList(const std::list<RoutingBadUser>& inList, bool inSimple)
+    {
+        this->LCall(EeWonLobbyDlgCall::SetUserList, (intptr_t)&inList, inSimple);
+    }
+    void GetIds(IdList& outIds) { this->LCall(EeWonLobbyDlgCall::GetIds, (intptr_t)&outIds); }
 };
 
 // CreditsDialogConfig: reads the credits dialog's resource configuration; 14 vtable slots (partial declaration).

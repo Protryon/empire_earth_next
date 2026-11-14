@@ -7,6 +7,9 @@ use std::cell::RefCell;
 // object; every call's result must be its "ret" line.
 
 const GOLDEN: &str = include_str!("golden_lobbydlg.txt");
+/// round 3's kinds (RoomDialog, TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog), recorded by
+/// tests/won/won_lobbyscr_test.cpp the same way
+const GOLDEN_SCR: &str = include_str!("golden_lobbyscr.txt");
 
 struct Replay {
     lines: Vec<&'static str>,
@@ -105,13 +108,33 @@ fn call_of(n: u32) -> EeWonLobbyDlgCall {
         C::ApplyToServer,
         C::NumSeconds,
         C::Field,
+        C::SetText,
+        C::SetStatus,
+        C::SetStartTick,
+        C::SetUserList,
+        C::GetIds,
+        C::SelectedAddress,
     ][n as usize - 1]
 }
 
 fn kind_of(n: u32) -> EeWonLobbyDlgKind {
     use EeWonLobbyDlgKind as K;
-    [K::LanName, K::Password, K::AddFriend, K::DirectConnect, K::LanPort, K::CreateRoom, K::CreateGame, K::AdminAction]
-        [n as usize]
+    [
+        K::LanName,
+        K::Password,
+        K::AddFriend,
+        K::DirectConnect,
+        K::LanPort,
+        K::CreateRoom,
+        K::CreateGame,
+        K::AdminAction,
+        K::Status,
+        K::OkCancel,
+        K::Room,
+        K::Tou,
+        K::BadUser,
+        K::ChooseAdapter,
+    ][n as usize]
 }
 
 /// Replays every sequence; the number replayed.
@@ -123,7 +146,8 @@ fn replay(golden: &'static str) -> Result<usize, String> {
     for w in starts.windows(2) {
         let head: Vec<&str> = lines[w[0]].split(' ').collect();
         let kind = kind_of(head[3].parse().unwrap());
-        let dlg = ee_won_lobbydlg_new(std::ptr::dangling_mut::<c_void>(), kind, Some(replay_host));
+        // the C++ dialog's address as the golden's driver gave it (the ops on the dialog itself name it)
+        let dlg = ee_won_lobbydlg_new(0xD1A as *mut c_void, kind, Some(replay_host));
         REPLAY.with(|r| {
             *r.borrow_mut() = Some(Replay { lines: lines[w[0] + 1..w[1]].to_vec(), at: 0, dlg, failed: None })
         });
@@ -156,6 +180,22 @@ fn replay(golden: &'static str) -> Result<usize, String> {
 fn golden_replay() {
     let n = replay(GOLDEN).unwrap();
     assert!(n >= 60, "{n} sequences");
+}
+
+#[test]
+fn golden_replay_of_the_screens() {
+    let n = replay(GOLDEN_SCR).unwrap();
+    assert!(n >= 60, "{n} sequences");
+}
+
+#[test]
+fn golden_replay_of_the_screens_fails_on_a_changed_op() {
+    // the first BrowserTop recorded as a BrowserShowTou
+    let top = format!("op {} ", EeWonLobbyDlgOp::BrowserTop as u32);
+    let show = format!("op {} ", EeWonLobbyDlgOp::BrowserShowTou as u32);
+    let changed = GOLDEN_SCR.replacen(&top, &show, 1);
+    assert_ne!(changed, GOLDEN_SCR);
+    assert!(replay(Box::leak(changed.into_boxed_str())).is_err());
 }
 
 #[test]
@@ -223,7 +263,7 @@ fn ops() -> Vec<EeWonLobbyDlgOp> {
 
 #[test]
 fn every_table_has_distinct_names_within_its_kind() {
-    for k in 0..8 {
+    for k in 0..14 {
         let t = slots(kind_of(k));
         assert!(t.len() <= MAX_SLOTS);
         let mut names: Vec<&str> = t.iter().map(slot_name).collect();
@@ -293,6 +333,97 @@ fn admin_action_seconds_fall_through_the_segments() {
         });
         assert_eq!(call(d, EeWonLobbyDlgCall::NumSeconds, 0, 0), want);
     }
+    free(d);
+}
+
+#[test]
+fn tou_rebuilds_the_page_only_after_a_terms_download() {
+    let d = made(EeWonLobbyDlgKind::Tou);
+    // InitComponent: the button ids, the reset (no rebuild), the broadcast subscription last
+    let o = ops();
+    assert!(!o.contains(&EeWonLobbyDlgOp::BrowserShowTou));
+    assert_eq!(o.last(), Some(&EeWonLobbyDlgOp::SubscribeBroadcast));
+    // a message of the day download (type 0) does not mark the page; the terms (type 1) do, once
+    for (doc, rebuilt) in [(0, false), (1, true)] {
+        set_answer(move |op, _| if op == EeWonLobbyDlgOp::HttpDocType { doc } else { 0 });
+        event(d, EeWonLobbyDlgEvent::GotHttpDocument, 0);
+        assert_eq!(call(d, EeWonLobbyDlgCall::Field, 5, 0), rebuilt as isize);
+        clear_log();
+        call(d, EeWonLobbyDlgCall::Reset, 0, 0);
+        assert_eq!(ops().contains(&EeWonLobbyDlgOp::BrowserShowTou), rebuilt);
+        assert_eq!(call(d, EeWonLobbyDlgCall::Field, 5, 0), 0);
+    }
+    free(d);
+}
+
+#[test]
+fn tou_accept_follows_the_agree_box_only() {
+    let d = made(EeWonLobbyDlgKind::Tou);
+    let agree = call(d, EeWonLobbyDlgCall::Slot, 1, 0);
+    let accept = call(d, EeWonLobbyDlgCall::Slot, 2, 0);
+    set_answer(|op, _| (op == EeWonLobbyDlgOp::ButtonIsChecked) as isize);
+    clear_log();
+    event(d, EeWonLobbyDlgEvent::ButtonPressed, agree);
+    let log = LOG.with(|l| l.borrow().clone());
+    assert_eq!(log.last().map(|x| (x.0, x.1, x.2)), Some((EeWonLobbyDlgOp::SetEnabled, accept, 1)));
+    clear_log();
+    event(d, EeWonLobbyDlgEvent::ButtonPressed, accept);
+    assert_eq!(ops(), [EeWonLobbyDlgOp::BaseEvent]);
+    free(d);
+}
+
+#[test]
+fn bad_user_ids_come_from_the_list_in_use() {
+    let d = made(EeWonLobbyDlgKind::BadUser);
+    let full = call(d, EeWonLobbyDlgCall::Slot, 0, 0);
+    let simple = call(d, EeWonLobbyDlgCall::Slot, 1, 0);
+    for (flag, list) in [(1, simple), (0, full)] {
+        call(d, EeWonLobbyDlgCall::SetUserList, 0x8800, flag);
+        assert_eq!(call(d, EeWonLobbyDlgCall::Field, 6, 0), flag);
+        // two selections, then none
+        let left = std::rc::Rc::new(Cell::new(2));
+        let l = left.clone();
+        set_answer(move |op, _| match op {
+            EeWonLobbyDlgOp::ListHasMore => {
+                let n = l.get();
+                l.set(n - 1);
+                (n > 0) as isize
+            }
+            EeWonLobbyDlgOp::BadUserId => 77,
+            _ => 0,
+        });
+        clear_log();
+        call(d, EeWonLobbyDlgCall::GetIds, 0x8900, 0);
+        let log = LOG.with(|l| l.borrow().clone());
+        assert_eq!(log[1], (EeWonLobbyDlgOp::ListRewind, list, 0, 0));
+        assert_eq!(log.iter().filter(|x| x.0 == EeWonLobbyDlgOp::IdsPush && x.2 == 77).count(), 2);
+    }
+    free(d);
+}
+
+#[test]
+fn adapter_rows_select_the_local_host() {
+    let d = made(EeWonLobbyDlgKind::ChooseAdapter);
+    let local = 0x0a00_0001isize;
+    // two unnamed adapters, both on the local host's address
+    set_answer(move |op, _| match op {
+        EeWonLobbyDlgOp::LocalHost => local,
+        EeWonLobbyDlgOp::AdaptersGet => 0x7000,
+        EeWonLobbyDlgOp::AdaptersCount => 2,
+        EeWonLobbyDlgOp::AdapterHandle => local,
+        EeWonLobbyDlgOp::ListNumItems => 3,
+        _ => 0,
+    });
+    clear_log();
+    call(d, EeWonLobbyDlgCall::Reset, 0, 0);
+    let log = LOG.with(|l| l.borrow().clone());
+    // the default row is not selected (the local host is not 0); the rows are named "unknown"
+    assert!(!log.iter().any(|x| x.0 == EeWonLobbyDlgOp::ListSetSel && x.2 == 0 && x.3 == 0));
+    assert_eq!(log.iter().filter(|x| x.0 == EeWonLobbyDlgOp::AdapterSetUnknownName).count(), 2);
+    assert_eq!(log.iter().filter(|x| x.0 == EeWonLobbyDlgOp::ListSetSel && x.2 == 2 && x.3 == 1).count(), 2);
+    assert_eq!(log.last().map(|x| x.0), Some(EeWonLobbyDlgOp::ListEndUpdate));
+    // nothing selected: the local host
+    assert_eq!(call(d, EeWonLobbyDlgCall::SelectedAddress, 0, 0), local);
     free(d);
 }
 

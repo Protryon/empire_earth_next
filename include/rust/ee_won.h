@@ -4097,6 +4097,14 @@ enum class EeWonLobbyDlgKind : uint32_t {
   Status = 8,
   /// OkCancelDialog (round 2): DialogLogic's OK/Cancel and Yes/No box.
   OkCancel = 9,
+  /// RoomDialog (round 3): no control (its RoomCtrl member was never set).
+  Room = 10,
+  /// TOUDialog (round 3): the terms of use.
+  Tou = 11,
+  /// BadUserDialog (round 3): the moderators' banned and muted users.
+  BadUser = 12,
+  /// ChooseNetworkAdapterDialog (round 3): InitLogic's adapter choice.
+  ChooseAdapter = 13,
 };
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -4215,6 +4223,68 @@ enum class EeWonLobbyDlgOp : uint32_t {
   SetDragging,
   /// `&((Label*)a)->mWrappedText->mText` (the title's own text, as SetStatus passed it on).
   TitleText,
+  /// `((Button*)a)->mControlId = b`.
+  ButtonSetControlId,
+  /// `((Component*)a)->SubscribeToBroadcast(b != 0)` (the dialog).
+  SubscribeBroadcast,
+  /// `((BrowserComponent*)a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false)`.
+  BrowserShowTou,
+  /// `((BrowserComponent*)a)->GetHTMLView()->SetOffsets(0, 0)`.
+  BrowserTop,
+  /// `((GotHTTPDocumentEvent*)a)->mOp->GetNum(EE_WON_HTTPDOC_TYPE)`.
+  HttpDocType,
+  /// `((ListArea*)a)->BeginUpdate()`.
+  ListBeginUpdate,
+  /// `((ListArea*)a)->EndUpdate()`.
+  ListEndUpdate,
+  /// `((ListArea*)a)->Clear(b != 0)`.
+  ListClear,
+  /// `for (each user of *(const RoutingBadUserList*)b) ((ListArea*)a)->InsertItem(new BadUserItem(user, c != 0),
+  /// -1)`.
+  BadUsersInsert,
+  /// `((BadUserDialog::IdList*)a)->clear()`.
+  IdsClear,
+  /// `((ListArea*)a)->RewindSelections()`.
+  ListRewind,
+  /// `((ListArea*)a)->HasMoreSelections()` (0 or 1).
+  ListHasMore,
+  /// `((ListArea*)a)->GetNextSelection()`.
+  ListNextSel,
+  /// `((BadUserItem*)a)->mValues[1]` (the user's WON id).
+  BadUserId,
+  /// `((BadUserDialog::IdList*)a)->push_back((unsigned long)b)`.
+  IdsPush,
+  /// `InsertItem(new NetworkAdapterListItem(0), -1); SetString(0, 0, ChooseNetworkAdapterDialog_Default_String,
+  /// NULL)` on the list `a`.
+  AdapterAddDefault,
+  /// `IPAddr::GetLocalHost()`.
+  LocalHost,
+  /// `((ListArea*)a)->SetSelItem(b, c != 0)`.
+  ListSetSel,
+  /// `((ListArea*)a)->GetNumItems()`.
+  ListNumItems,
+  /// `LobbyGetNetAddresses(aList, true)` into a new list; the list (freed by `AdaptersFree`).
+  AdaptersGet,
+  /// the number of addresses in the list `a`.
+  AdaptersCount,
+  /// the `b`-th address's `mHandle` of the list `a`.
+  AdapterHandle,
+  /// the `b`-th address's `GUIString(mName).length()` of the list `a`.
+  AdapterNameLength,
+  /// `((MultiListArea*)a)->InsertItem(new NetworkAdapterListItem(b), -1)`.
+  AdapterInsertRow,
+  /// `SetString(GetNumItems() - 1, 0, GUIString(the c-th address of the list b's mName), NULL)` on the list `a`.
+  AdapterSetName,
+  /// `SetString(GetNumItems() - 1, 0, ChooseNetworkAdapterDialog_Unknown_String, NULL)` on the list `a`.
+  AdapterSetUnknownName,
+  /// `SetString(GetNumItems() - 1, 1, IPAddr(b, 0).GetHostString(true), NULL)` on the list `a`.
+  AdapterSetAddress,
+  /// frees the list `a` (the original's local list).
+  AdaptersFree,
+  /// `((ListArea*)a)->GetSelItem()`.
+  ListGetSel,
+  /// `((NetworkAdapterListItem*)a)->mHost`.
+  AdapterHost,
 };
 
 /// The inward calls (the shells' methods).
@@ -4248,7 +4318,7 @@ enum class EeWonLobbyDlgCall : uint32_t {
   /// AdminAction: `GetNumSeconds()`.
   NumSeconds,
   /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional,
-  /// 4 StatusDialog's start tick.
+  /// 4 StatusDialog's start tick, 5 TOUDialog's need-to-rebuild flag, 6 BadUserDialog's simple flag.
   Field,
   /// StatusDialog: `SetText(*(GUIString*)a, *(GUIString*)b, c != 0)`; OkCancelDialog: `SetText(title a, body b,
   /// ((GUIString**)c)[0], ((GUIString**)c)[1])`.
@@ -4257,6 +4327,12 @@ enum class EeWonLobbyDlgCall : uint32_t {
   SetStatus,
   /// StatusDialog: `mStartTick = a`.
   SetStartTick,
+  /// BadUserDialog: `SetUserList(*(const RoutingBadUserList*)a, b != 0)`.
+  SetUserList,
+  /// BadUserDialog: `GetIds(*(IdList*)a)`.
+  GetIds,
+  /// ChooseNetworkAdapterDialog: `GetSelectedAddress()`.
+  SelectedAddress,
 };
 
 /// A container's key kind (its comparator).
@@ -5600,6 +5676,12 @@ enum class EeWonLobbyDlgType : uint32_t {
   Component = 4,
   /// a `WONFrameComponent` (round 2)
   Frame = 5,
+  /// a `BrowserComponent` (round 3)
+  Browser = 6,
+  /// a `MultiListArea` (round 3)
+  MultiList = 7,
+  /// a `ListArea` (round 3)
+  List = 8,
 };
 
 /// The texts AdminActionDialog sets (the lobby's resource strings).
@@ -5625,6 +5707,8 @@ enum class EeWonLobbyDlgEvent : uint32_t {
   InputTextChanged = 1,
   ButtonPressed = 2,
   ComboSelChanged = 3,
+  /// `LobbyEvent_GotHTTPDocument` (round 3: a `GotHTTPDocumentEvent`, broadcast when a download finished)
+  GotHttpDocument = 4,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
