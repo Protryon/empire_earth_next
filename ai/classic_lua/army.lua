@@ -645,6 +645,7 @@ local function favorite_land_ok(name)
         and ak ~= KIND_ANTI_TANK and ak ~= KIND_SPECIAL and ak ~= KIND_SIEGE and ak ~= KIND_ANTI_AIR
         and ak ~= KIND_ARTILLERY and not k.is_transport and not k.mine
 end
+M.favorite_land_ok = favorite_land_ok
 
 -- the military share of the population limit: 1 - the citizen share, 95% in a wonder race (kCMFactor)
 local function military_share_k(memory)
