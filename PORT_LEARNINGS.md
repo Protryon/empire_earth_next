@@ -15342,3 +15342,52 @@ stack, -350) -> 75,576 (the caches, -28). This round's own net: -370. WindowMana
   `GetTiles` (thin: the host operations they need are as long as their bodies, so they move with FindPlacement, their
   main caller), the world-glue effect bodies (`CreateUnits`, `TaskUnitsTo*`, the calamity and graphic effects,
   `ScriptCamera`): not started this round.
+
+## R5b.5, fifth round: FindPlacement, IsNearUnit, IsNearTile, the area's GetTiles and Create Units' decisions in Rust (ee_scenario placement.rs, create.rs, area.rs tiles; branch rust-triggers5, 2026-11-13)
+
+| Function | Was (C++) | Now (Rust) |
+|---|---|---|
+| `EESMObject::FindPlacement` | a 170-line body over five tile vectors, `std::find`, the shuffle | placement.rs `find_placement`: the same candidates, walks and tests over host reads; the world's tile lists through a new host callback |
+| `EESMObject::IsNearUnit`, `IsNearTile` | 39 + 29 lines, members of the class | placement.rs `near_unit`, `near_tile` (the C++ members are gone; objeval.rs calls `near_unit` itself) |
+| `EESMArea::GetTiles`' rebuild | a 36-line switch (rectangle, continent, towns) | area.rs `tiles`, each tile back through `EE_SCENARIO_WRITE_TILE`; the cache test stays C++ |
+| `EESMEffect::CreateUnits`' decisions | the count, owners, classes and loop (50 lines) | create.rs `create_units`; each unit one write to `EESMCreateUnit` (the original's placement and finishing) |
+
+- **Tile lists through a callback.** `EeScenarioHost` gained `tiles(ctx, op, a, b, c, list)`: the C++ builds its
+  `std::vector<U2DPoint<long> >` with the original call (`EEGetTilesNearPoint` with the radius's bits, `EEGetSideTiles`,
+  `EEGetCornerTiles(0, ...)`, an area's `GetTiles` with its cache and SMAR record, `GetContinentTiles`, a town's
+  `GetTiles`) and hands it over with `ee_scenario_tiles_push`. The other direction (the area's rebuilt cache) is one
+  write per tile into the context's `mTiles`. `EESMHostContext` grew `mTiles`, `mCreated` and `mLocation`; the
+  zero-initialised `= {}` / `{NULL, NULL}` initialisers stay valid.
+- **The original's quirks kept.** A missing or dead unit of the near object appends the previous unit's tile lists
+  again, and at first the area's own tiles (`theTiles` held them in the 'not in the area' branch); the area walk adds
+  each tile and its (x + 1, y) neighbour, the nearness walk only the tile; an unset area answers (-10000, -10000)
+  only after the nearness work (the near object's `Evaluate`); type 0x41 runs the dry-land test whether or not its
+  far corner is a candidate, and a dry tile makes it answer true without writing the location (the caller's previous
+  one stays: `CreateUnits` therefore keeps one location for its whole loop, in the context); random tries pass
+  `(long)(float)` coordinates to the area. The retry without random tries goes back through the C++ entry
+  (`EE_SCENARIO_PLACEMENT_RETRY`), so SMFP keeps its record per call.
+- **Sets for `std::find`.** The membership tests over vectors (the area's tiles in the map walk, the near tiles, the
+  far corner among the candidates) are `HashSet` lookups: the same answers, never iterated, and the 'not near' walk
+  is no longer quadratic.
+- **Read in order, by object id.** The near object's units are read by id (`EE_SCENARIO_READ_OBJECT_UNIT_COUNT/_AT`),
+  live at each use: its `Evaluate` (or this object's own, when it is its own near object) can change the list.
+  `IsNearTile`'s count is read before the units, as the original; `IsNearUnit`'s after its `Evaluate(0)`.
+  `GetNearestFootprintTile` and `EEGetFootprintDistance` write their outputs before reading them, so the host's
+  fresh locals give the original's values.
+- **How it was checked.** FindPlacement against SMFP (recorded from the unmodified C++ in round 3): 2,529 placements
+  in the six scenarios (seed 7 alone 2,327), with SMAR (the area queries inside it) and SMOB (the near objects'
+  evaluations, IsNearUnit's 20,768 nearness checks). Create Units: the scenario capture PASS and all 504 digests of
+  the six games (the unit store, units, AI and everything without a golden) identical to the previous commit's run,
+  byte sizes equal: the effect creates the same units in the same order with the same draws.
+- **Coverage.** Reached by the six scenarios: placements with and without random tries, the retry (SMFP's random flag
+  0 records), Create Units' create and copy branches. Unit tests only: the coastal types 0x24/0x41, larger units' far
+  corner, the stale-list quirk, area check 2 per mode, near modes 1 and 2 of `near_tile`, `tiles`' three modes (which
+  of these the scenarios reach the records cannot tell; no temporary print was added).
+- **C++ lines** (src and include, include/rust aside): FindPlacement, the nearness and GetTiles +121 -329 (net -208);
+  Create Units +70 -94 (net -24); the round -232. EESMObject.cpp 1,395 -> 1,218 lines.
+- **Not moved, and why.** `TaskUnitsToObject`/`TaskUnitsToArea`, the calamity and graphic effects inside `Execute`,
+  `ScriptCamera`, `FreezeUnits`, `SetUnitsStance`: their statements are world calls (goals, groups, effects, the
+  camera), one host operation each; the decisions between them are a few conditions. A host per statement does not
+  drop C++. The calamity effect also passes one shared `GE3DPoint` to every `CanCastAt`, which a host local would not
+  reproduce. `ScriptCamera` only draws (a harness tour reaches it, no gate here). Next: the task effects' source
+  filter and bucket split (pure lists) with the actions as writes, if the lead wants the bodies smaller still.
