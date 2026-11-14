@@ -254,6 +254,22 @@ static void Queue()
         Log("fast 3 done: wait refs " + N(Refs(w)) + " op refs " + N(Refs(f)) + " client refs " + N(Refs(c)));
     }
     PumpUntil(aRepeat, 5);
+    // QueueOpFast of an op run at once that finishes in its run: never the queue's op, its own completion called
+    // through the fast completion's original
+    SmartPtr<Done> aFastNow = new Done("fast now");
+    {
+        SmartPtr<CoreSendMsgOp> f = new CoreSendMsgOp("fast now op", Bytes("\x05\0\0\0i", 5));
+        f->SetRunAsyncImmediately(true);
+        f->SetCompletion(aFastNow);
+        c->QueueOpFast(f, 5000);
+        Log("fast now: status " + St(f->GetStatus()) + " op refs " + N(Refs(f)) + " client refs " + N(Refs(c))
+            + " fast now refs " + N(Refs(aFastNow)));
+        PumpUntil(aFastNow, 1);
+        Settle();
+        Log("fast now done: op refs " + N(Refs(f)) + " client refs " + N(Refs(c)) + " fast now refs "
+            + N(Refs(aFastNow)));
+    }
+    PumpUntil(aRepeat, 6);
     Settle();
     Log("server refs " + N(Refs(s)) + " client refs " + N(Refs(c)));
 
@@ -269,7 +285,7 @@ static void Queue()
     PumpUntil(aClose, 1);
     Settle();
     Log("timer fired: client refs " + N(Refs(c)) + " close refs " + N(Refs(aClose)) + " valid " + N(c->IsValid()));
-    PumpUntil(aRepeat, 6);
+    PumpUntil(aRepeat, 7);
     Settle();
     Log("server after peer close: server refs " + N(Refs(s)) + " valid " + N(s->IsValid()));
     // the kill hook drops every completion

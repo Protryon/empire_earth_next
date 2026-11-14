@@ -34,6 +34,11 @@ repeat completed WS_Success killed 0 op refs 4
 fast 3 done: wait refs 1 op refs 1 client refs 5
 fast op 3 destroyed
 client wait destroyed
+fast now: status WS_Success op refs 2 client refs 3 fast now refs 2
+fast now completed WS_Success killed 0 op refs 5
+repeat completed WS_Success killed 0 op refs 4
+fast now done: op refs 1 client refs 3 fast now refs 2
+fast now op destroyed
 server refs 3 client refs 1
 timer started: client refs 2
 timer cancelled: client refs 1
@@ -83,6 +88,7 @@ sent2 destroyed
 repeat2 destroyed
 close2 destroyed
 close destroyed
+fast now destroyed
 client default destroyed
 fast destroyed
 repeat destroyed
