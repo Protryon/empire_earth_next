@@ -18855,3 +18855,180 @@ shockwave (-138). `EEE3DTracerBeam`, `EEE3DVolcano` and `EEE2DShockwave` (`.cpp`
   other 2D sprites on `EEE2DRust` one at a time (each now checked by the 2D sweep against the original: the aged and
   simple ones first, the vortex, pulse wave, fire trail, water ripple); a sweep unit with weapon tag points for the
   three weapon-point sprites.
+
+## R6: the scenario editor screens, round 1: the editor measured; the editor gate dumps every control; the player tab whole in Rust (ee_screens editor_players.rs; branch rust-editor1, 2026-11-14)
+
+A new lane on `src/Empire Earth/Scenario Editor` (46 units, 23,366 lines at the branch's start, 7afd0531 merged with
+rust 008e14c0). The earlier screens rounds (15-20) moved the editor's actions and events; this lane takes the screens.
+
+### The measure
+
+"Body" is the lines inside function bodies (no blank or comment lines) of functions that are not forwarders (a
+forwarder: at most three statements, one of them a Rust call); "reached" is the part of it in functions the editor
+gate enters, measured by a temporary instrumented build (every function's first statement wrote its name once to a
+file; the gate run on it; the sources restored): `build/ed1/measure.py`. Of 12,871 body lines, the 2,686-line gate
+reached 8,310 (273 of 633 functions). "Classes" lists each class's body lines / reached lines. Every class of the
+folder is created only by the editor (a `new` outside the folder: none), so each is a whole-class candidate, except
+`EEUIFScenarioEditor` itself (the UI manager makes it).
+
+| Unit | Lines | Body | Reached | Classes (body / reached) |
+|---|---|---|---|---|
+| EESERBUnitTypes | 2112 | 1568 | 1445 |  EESEPlayerScreen 745/725, EESEPlayerRow 447/385, EESEGamePage 310/287, EESEUIBDiplomacy 58/47, EESECBMaxPlayer 5/0, EESERBUnitTypes 2/0, EESEAChangeWorldPlayerCount 1/1  |
+| EEUIFScenarioEditor | 1497 | 770 | 460 |  EEUIFScenarioEditor 581/460, EEUIESaveScenarioTriggersOnly 154/0, (free) 35/0  |
+| EESEUnit | 1475 | 820 | 518 |  EESEUnit 579/389, EEUIFSEBRotation 129/59, EEUIFSELBUnitList 47/38, EEUIFSEBUnitType 27/6, EEUIFSELBCargoList 21/16, (free) 15/10, EEUIFSEBRemoveCargo 2/0  |
+| EESETSObject | 1333 | 880 | 798 |  EESETSObject 869/798, EESETSAEditBox 3/0, EESETSOUnitList 2/0, EESETSAMouseClick 2/0, EESETSALasso 2/0, EESETSAComboBox 2/0  |
+| EESETSETPlayer | 1228 | 840 | 490 |  EESETSETPlayerView 290/290, EESETSETPlayer 145/126, EESETSETPlayerResource 106/0, EESETSETPlayerTechnology 96/0, EESETSETPlayerDiplomacy 74/0, EESETSETSetAIAttribute 46/39, EESETSETPlayerCivPoint 28/0, (free) 24/24, EESETSETPlayerVictory 11/11, EESETSETPCameraFadeIn 10/0, EESETSETPCameraFadeOut 10/0  |
+| EESETSTrigger | 1044 | 800 | 454 |  EESETSTrigger 709/454, EESETSTriggerUIComboBox 91/0  |
+| EESETSConditionType | 889 | 508 | 259 |  EESETSCTGame 143/123, EESETSCTPlayerResource 143/136, EESETSCTPlayerResearch 66/0, EESETSCTDiplomacy 64/0, EESETSCTTriggerAttribute 58/0, EESETSCTChatMessage 20/0, EESETSCTAlwaysTrue 14/0  |
+| EEUIFSETerrain | 858 | 361 | 178 |  EEUIFSETerrain 187/157, EESEUITerrainTypeLB 79/5, EESEUITerrainColorLB 22/0, EEUIFSETerrainPaint 20/0, EEUIETerrainTypeChange 20/0, EEUIFSETRBPaintType 17/0, EEUIETerrainColorChange 16/16  |
+| EESETriggerScreen | 767 | 448 | 345 |  EESETriggerScreen 448/345  |
+| EEUIFSEMap | 746 | 508 | 401 |  EEUIFSEMap 452/401, UIRBMap 54/0, UIBMap 2/0  |
+| EESETSETSAAAttributeChange | 739 | 502 | 192 |  EESETSETSetAIAttribute 192/192, EESETSETSetFavoriteUnit 96/0, EESETSETSetObjectAttribute 80/0, EESETSETSetObjectClassAttribute 76/0, EESETSETSetObjectOwner 36/0, EESETSETSetObjectName 22/0  |
+| EESETSETGame | 720 | 411 | 138 |  EESETSETGameGraphicEffect 107/0, EESETSETGameCalamity 90/0, EESETSETGame 83/67, EESETSETGameStartCinematic 38/37, EESETSETGameDayNight 35/34, EESETSETGameCycleTime 28/0, EESETSETGameAmbientWeather 15/0, (free) 13/0, EESETSETMaintainObject 2/0  |
+| EESEUITechListBox | 597 | 143 | 48 |  EESEUITechListBox 139/48, EESEPlayerScreen 3/0, (free) 1/0  |
+| EESETSETMSDCameraScrollChange | 583 | 386 | 292 |  EESETSETModifyAIMilitaryTarget 122/109, (free) 93/93, EESETSETMiniMapFlare 89/79, EESETSETMediaSendMessage 57/0, EESETSETNoEffect 14/0, EESETSETMediaSendDialog 11/11  |
+| EESETSETAI | 566 | 329 | 269 |  EESETSETCreateAIMilitaryGroup 192/178, EESETSETAI 108/91, EESETSETBuildObject 29/0  |
+| EESETSETObject | 532 | 316 | 73 |  EESETSETObject 161/73, EESETSETObjectToArea 73/0, EESETSETObjectToObject 72/0, EESETSETPVisibility 10/0  |
+| EESEInstructions | 502 | 335 | 225 |  EESEInstructions 302/225, EESEIEImport 30/0, (free) 3/0, EEABuild 0/0  |
+| EESETSArea | 486 | 234 | 127 |  EESETSArea 233/126, EEUIFScenarioEditor 1/1  |
+| EESETSETMedia | 445 | 236 | 125 |  EESETSETMediaChangeText 83/0, EESETSETMedia 75/62, EESETSETMediaSendDialog 49/38, EESETSETMediaPlayGraphic 29/25  |
+| EESETSETSetObjectStance | 393 | 195 | 1 |  EESETSETTrigger 96/0, EESETSETToggleAI 56/0, EESETSETSetObjectStance 43/1  |
+| EESELoadThread | 386 | 179 | 167 |  EESELoadThread 179/167  |
+| EESETSCondition | 364 | 152 | 133 |  EESETSCondition 152/133  |
+| EEUIFSETRBPaintType | 357 | 158 | 117 |  (free) 117/117, EESMDialogMessage 41/0  |
+| EESEEvents | 351 | 206 | 194 |  (free) 206/194  |
+| EESETSEffect | 326 | 112 | 91 |  EESETSEffect 112/91  |
+| EESETSUICBPlayer | 317 | 84 | 73 |  EESETSUICBPlayer 75/73, EESEUIBuildWall 5/0, EESEUIBuildGate 4/0  |
+| EESETSEComboBox | 317 | 207 | 180 |  EESETSEffectControls 205/180, EESETSEComboBox 2/0  |
+| EESEBSelect | 305 | 122 | 64 |  EESEBSelect 77/19, EESETab 45/45  |
+| EEUIFSEElevation | 287 | 126 | 105 |  EEUIFSEElevation 126/105  |
+| EEUIFSEPaintElevation | 276 | 88 | 0 |  EEUIFSEPaintElevation 88/0  |
+| EEUIEOpenCivBuilder | 261 | 80 | 62 |  EEUIFSEBrushGroup 80/62  |
+| EESEIAExport | 257 | 99 | 0 |  EESEIAImport 45/0, EESEIAExport 26/0, EESEIEExport 25/0, (free) 3/0  |
+| EEUIFSEUpgradePanel | 251 | 102 | 92 |  EEUIFSEUpgradePanel 102/92  |
+| EESETSCComboBox | 249 | 127 | 108 |  EESETSConditionControls 123/106, EESETSEScenarioComboBox 2/2, EESETSCComboBox 2/0  |
+| EESESCComboBox | 245 | 106 | 0 |  EESETSEScenarioComboBox 88/0, (free) 18/0  |
+| EEUIFSEPaint | 233 | 100 | 15 |  EEUIFSEPaint 100/15  |
+| EESEUICTriggerSelectUnits | 173 | 62 | 1 |  EESEUICTriggerSelectUnits 62/1  |
+| EESETSETLogObject | 148 | 36 | 0 |  EESETSETLogObject 36/0  |
+| EESETSETMaintainObject | 147 | 32 | 0 |  EESETSETMaintainObject 30/0, EESETSETBuildObject 2/0  |
+| EEUIFSEMainButton | 126 | 56 | 54 |  EEUIFSEMainButton 56/54  |
+| EESEUICCommandUnits | 118 | 20 | 0 |  EESEUICCommandUnits 21/0  |
+| EEUIFSERedo | 92 | 5 | 1 |  EEUIFSERedo 4/1, EEARedo 1/0  |
+| EEUIFSEUndo | 86 | 4 | 1 |  EEUIFSEUndo 3/1, EEAUndo 1/0  |
+| EESEPSSetPlayers | 84 | 8 | 6 |  EESEPSSetPlayers 8/6  |
+| EEUIFSEESElevation | 51 | 7 | 7 |  EEUIFSEESElevation 7/7  |
+| EEUIFSERBBrush | 47 | 3 | 1 |  EEUIFSERBBrush 3/1  |
+
+What it says: the player tab's unit (EESERBUnitTypes: EESEPlayerScreen, EESEPlayerRow, EESEGamePage) was the biggest
+and the best reached (1,445 of 1,568); then the editor form itself (770, most of it its constructor and tab
+switching), the unit tab (EESEUnit, 820), the trigger tab's object screen (EESETSObject, 880, 91% reached), the
+player effects (EESETSETPlayer, 840) and the trigger screen (EESETSTrigger, 800). About 40% of every screen is
+control construction (the same seven statements per label); the rest is page switching, load and store.
+
+### The editor gate dumps every control (two commits, recorded on the unmodified editor, lines only added)
+
+- `form FIRST LAST [GROUP]` (`FormDigest`): every control of the editor form by index, or those of one control
+  group: its class (RTTI), id, index, groups (a `d` for a disabled group), rectangle, display mode, background
+  opacity and colour, border, help string, text colour, transparency, font height and text, the label's lines, the
+  check state, a combo box's text box type, lines (the first six) and selection, an edit box's text, a slider's
+  value and maximum, and the trigger events by kind (their class). 1,394 controls at the editor's start.
+- `players` (`PlayersDigest`): each player's name, colour, civilization, epochs, resource caps, shared line of
+  sight, upgrades, points, stances, game options and computer player flags; the world's options.
+- `edit ID TEXT`, `buttonup ID` and `changesel ID LINE` (the protected `ButtonUp` and `ChangeSelection` a person's
+  mouse reaches, through a derived class's member pointer).
+- The script's new tail: the form whole, then the player tab driven: four players through the max-players combo,
+  each page (its headers and rows' controls by group), the tech tree page's type button and display epochs, the
+  options page's diplomacy grid, wonders and teams locked, page 1's all-players row copied to all (Set All Players),
+  the AI page's cheat and citizens copied, a cap edited, the tab left (Store) and the world printed, the tab entered
+  and a blank map made on it (its Load), the controls and the world again. 2,686 -> 5,560 lines.
+- **The load thread's timing.** The first recording was identical twice, yet the move's first run differed in
+  two lines of the unit tab's attribute panel, and a rerun of the same exe in the load text: the editor's load
+  thread (`EESELoadThread`) loads epochs and tech trees on its own clock (the player tab's Store and the epoch steps
+  post it work), and posts its progress text and panel changes back. A `form` or `players` step now drains it
+  first (posts 0x40a and waits for `mMessageQueueDone`, as `EEDataPreLoading::WaitForMessageQueue`), and prints
+  the load text label and the attribute values without their text (the load text's last post wins; the panel
+  refreshes on a later frame). Re-recorded on the unmodified editor (the first 2,686 lines unchanged), identical
+  over two runs; any further digest of what that thread loads needs the same drain.
+
+### The move: the player tab whole in Rust (`editor_players.rs`)
+
+- **The object** (`Players`, behind `EeScreensSePlayers`): every control the tab, its 17 rows and its game page
+  made, as handles (the rows and the page are records of the object now), its page, the 17 change flags and the
+  dirty flag (`Cell`s: a page tab's `Check` re-enters `SelectPage` from inside `Enter`, so the object is only used
+  through `&self`). All the members moved: the constructor and its two control builders, the destructor (its
+  delete order kept), SetPlayerCount, Leave, GetPlayerCount, Refresh, Load, Enter, MarkPlayerChanged, Store,
+  CopyFirstPlayerToAll, ApplyPlayerSettings, BuildTechTypeLists, FillTechLists, SelectPage, RebuildTechLists; the
+  rows' constructor, destructor, CopyFrom, Show, Hide, Save, Load and ApplySettings; the page's constructor,
+  destructor, SetPlayerCount, PairIndex (`f32` as the original), CreateDiplomacyRow, Load, CreateLabels, Save.
+- **The controls as records.** Each control is one `EeScreensSeplCtl` (kind, id, index, font, text: none / a
+  resource string / a number / "%s %ld" / "%ld %s", rectangle as point and size or as edges, the height a font's,
+  alignment, opacities, the yellow text, the control groups as bits, four kind arguments) that the host makes with
+  the kind's constructor and setters (13 kinds: label, edit box, combo box, the max-players combo, check box,
+  slider, unit type button, tech list, arrow button, page tab, Set All Players, colour button, diplomacy button).
+  The original's statements per label (seven) became one record built by a helper; a place read from another
+  control (below the all-players label, right of the previous tab, the options column) is read back through the
+  host (`RECT`), so the layout is the toolkit's arithmetic, not a copy of it.
+- **What stays C++**: the control classes (`EESERBUnitTypes`, `EESECBMaxPlayer`, `EESEUIBDiplomacy`, `EESETab`,
+  `EESEBSelect`, `EESEPSSetPlayers`, `EESEUITechListBox`, `EEUIBColor`: toolkit subclasses with vtables), the
+  player-count action, `EESEPlayerScreen` as a shell of one-line forwarders (the editor's tab groups are
+  `EEUIFSEMainGroup`s), and the host `ee_screenscpp_sepl` (57 ops) in `EESERBUnitTypes.cpp`: the control ops, the
+  player and world fields by number, the civilization combo's fill / pick / apply, the tech type lists and the tech
+  lists' fill (lifted whole: they walk the tech tree and the editor's static lists), the load thread's posts.
+  `ee/EESEPlayerControls.h` deleted; `EESEPlayerScreen.h` is the shell (`mRust`, `GetPlayerSelection`,
+  `GetRowEpochs` for the gate's `epoch` step, which read the rows' members).
+- **C++ lines** (src and include, include/rust aside): +602 -1,923, net **-1,321** (EESERBUnitTypes.cpp 2,112 ->
+  934, of which ~520 are the host). The gate's own commits: +214 TEST ONLY.
+- **Tests** (10 in `editor_players.rs`, a recording host): the control count, indexes and ids (rows from 400 with
+  the title's own 0x13d, the page from 1200, the grid 1245..1364 at its places), Build/Repair's font, the tabs'
+  groups and places, the 17 start-epoch events; SelectPage's once-only switch and groups; the rows' page controls by
+  player kind; CopyFrom's shown-only copy and end-epoch shift; Store's 406/403/407 posts in the original's three
+  passes; a moved start epoch marking a reload; the grid's shown pairs and the per-player limit; every control
+  deleted once.
+- **Mutations of the Rust against the editor gate**: three, each built and run through the editor gate (`build/ed1/mut.py`): CopyFrom copying a hidden
+  slider changes 80 lines; the game page saving teams locked into the cheats changes 2 (the world line); SelectPage
+  leaving the player combo shown on pages 1, 2 and AI changes **none**: the combo is in no control group, so the
+  group dumps miss it, and the tab's Leave hides it before any full dump. `select_page_switches_groups_once` catches
+  that one; the gate's next extension should print the player combo's mode after each page step..
+
+### Behaviour
+
+None intended on the paths a person reaches. On the original's undefined paths only: the rows' show and hide loops
+stop at row 16 when a selection would have indexed past `mPlayers[17]`; the per-player limit's division by a zero
+player count shows 0; `UIComboBox`'s friend `EESEPlayerRow` (the toolkit's header) is now unused: the host uses the
+public `GetTextLabel()` and `GetListBox()`.
+
+### Only a person reaches
+
+- The destructor (closing the editor: the gate cannot go on after `ExitEditor`).
+- The arrow buttons' moves of technologies (`EESEBSelect`, unchanged C++), a tech list's own sort and drawing.
+- The colour button's clicks (`EEUIBColor`), the civilization combo's choice of a custom civilization file and its
+  "unknown civilization" title (no such file in the gate's data), the diplomacy buttons' bitmaps and help text as
+  drawn. EE-SIM draws nothing; no tour opens the editor.
+
+### Gates
+
+| Gate | The gate commits and the move (per commit) | Merged with rust (ab7be57f, rust f2813578) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| `tools/sim_editor.py` | PASS: 2,686 -> 5,560 lines recorded on the unmodified editor (old lines unchanged, twice identical); the move PASS 5,560 | PASS 5,560 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | PASS (3,082 tests; the first run failed rustfmt on the new files: formatted) | PASS (3,177 tests) |
+| `build.py --test-profile windowed-software` | | EE-AOC 0 unresolved, 0 duplicates |
+| captures | not run: nothing the scenario manager reads changed (the player tab writes players only in the editor) | |
+
+The merge met `rust/cbindgen.toml`'s export list (both sides added names), the regenerated `ee_screens.h`, and
+`EESERBUnitTypes.cpp` (rust's UIComboBox round had renamed `mListBox` / `mTextLabel` reads in the code this round
+moved: the kept `EESECBMaxPlayer::ChangeSelection` takes rust's `GetList()`, the host already used
+`GetTextLabel()`). The editor gate passes on the merged tree, so the Rust UIComboBox and UString of rust drive the
+moved tab unchanged. RUST_PLAN's Progress rows moved to `docs/progress/` on rust: this lane's state is
+`docs/progress/r6-scenario-editor-screens.md`.
+
+### Left
+
+The next screens by size and reach: the editor form itself (EEUIFScenarioEditor, 770 body lines; its constructor
+builds every tab), EESETSObject (880, 798 reached), EESEUnit (820), EESETSETPlayer (840), EESETSTrigger (800). Each
+is a control table plus page logic like the player tab: the `EeScreensSeplCtl` maker and its host kinds can be
+shared (move it to an editor-wide module when the second screen needs it). The gate's `form` dump already records
+every control those screens make; their logic needs steps like this round's (the trigger tab's object screen's
+lasso and lists, the unit tab's sort and cargo).

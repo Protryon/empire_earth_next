@@ -591,6 +591,6 @@ void EESEUITechListBox::Rebuild()
 EEPlayer* EESEPlayerScreen::GetCurrentPlayer()
 {
     unsigned long theSelection;
-    this->mPlayerSelection->GetCurrentSelection(theSelection);
+    this->GetPlayerSelection()->GetCurrentSelection(theSelection);
     return gWorld.mPlayers[theSelection + 1];
 }
