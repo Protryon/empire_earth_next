@@ -1,7 +1,11 @@
 // C:\EEX\Empire Earth\Physics Thread\EEPPatrolGroup.cpp (name from RTTI EEPPatrolGroup; no __FILE__). 0x16066d..0x16100f:
-// the patrol points a group of units walks. No key chains; ctor, ??_G, dtor, the members in address order, the
-// ID counter reset (0x160cdc) and the point-matching functor. EEPMLand.cpp's last function ends at 0x16066d,
-// RTSPhysics.cpp starts at 0x16100f. Unit flags: the exe's module set.
+// the patrol points a group of units walks. EEPMLand.cpp's last function ended at 0x16066d, RTSPhysics.cpp starts at
+// 0x16100f. Unit flags: the exe's module set.
+//
+// New (the physics models' lane, round 2): every member's body is Rust (ee_units patrol_group.rs, by the group's
+// object: ee_units_patrol_group), the id counter too; the class keeps its fields (its holders read them) and these
+// one-line forwarders. Below them, the C++ the bodies call (ee_units_pg_host_*), each the original statement it
+// replaced. The ctor's ??_G (0x5606b0), the find_if functor (0x160fba..0x16100f) went with the bodies.
 #include <windows.h>
 #include <vector>
 #include <algorithm>
@@ -26,90 +30,76 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/ee_units.h"
 
-static unsigned long sPatrolGroupID = 0;    // 0x531d8c
+static uint64_t PGObject(const void* inPointer)
+{
+    return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(inPointer));
+}
 
-// 0x160ff3 (find_if's functor 0x160fcc): the unit standing on a point's tile (GetTile() == mTile: U2DPoint's
-// operator== loads both coordinates before the first branch; the nested inlines make find_if call it out of line)
-struct EEPatrolTileIs {
-    EEPatrolTileIs(U2DPoint<long> inTile) { this->mTile.mX = inTile.mX; this->mTile.mY = inTile.mY; }  // 0x160fba (by value: ret 8)
-    bool operator()(EEComplexUnit* inUnit) const
-    {
-        if (inUnit->GetTile() == this->mTile)
-            return true;
-        return false;
-    }
-    U2DPoint<long> mTile;
-};
+static EEComplexUnit* PGUnit(uint64_t inObject)
+{
+    return reinterpret_cast<EEComplexUnit*>(static_cast<uintptr_t>(inObject));
+}
+
+static EEPPatrolGroup* PGGroup(uint64_t inObject)
+{
+    return reinterpret_cast<EEPPatrolGroup*>(static_cast<uintptr_t>(inObject));
+}
+
+static uint64_t PGRun(int32_t inOp, const EEPPatrolGroup* inGroup, EeUnitsPgArgs inArgs)
+{
+    return ee_units_patrol_group(inOp, PGObject(inGroup), inArgs);
+}
+
+static EeUnitsPgArgs PGArgs(const void* inUnit = NULL, float inX = 0.0f, float inY = 0.0f, float inZ = 0.0f,
+                            int32_t inA = 0, int32_t inB = 0)
+{
+    EeUnitsPgArgs theArgs = {};
+    theArgs.unit = PGObject(inUnit);
+    theArgs.point[0] = inX;
+    theArgs.point[1] = inY;
+    theArgs.point[2] = inZ;
+    theArgs.a = inA;
+    theArgs.b = inB;
+    return theArgs;
+}
 
 // FUNCTION: EXE 0x56066d
 // Creates an empty, open patrol group with the next patrol group id
 EEPPatrolGroup::EEPPatrolGroup()
 {
     this->mIsLoop = false;
-    this->mID = sPatrolGroupID++;
+    this->mID = (unsigned long)PGRun(EE_UNITS_PG_OP_NEW_ID, NULL, PGArgs());
     this->mIsTownPatrol = false;
 }
-
-// Compiler-generated: the ??_G of the virtual dtor (calls it out of line):
-// TEMPLATE: EXE 0x5606b0
 
 // FUNCTION: EXE 0x5606cc
 // Destroys the patrol group, detaching and killing every patrol point unit
 EEPPatrolGroup::~EEPPatrolGroup()
 {
-    for (unsigned long i = 0; i < this->mPatrolPoints.size(); i++) {
-        EEComplexUnit* theUnit = this->mPatrolPoints[i];
-        theUnit->SetPatrolGroup(NULL);
-        theUnit->GetPlayer()->KillUnit(theUnit, false);
-    }
-    this->mPatrolPoints.clear();
+    PGRun(EE_UNITS_PG_OP_DESTROY, this, PGArgs());
 }
 
 // FUNCTION: EXE 0x560727
 // Adds a patrol point at the end at ground height; a point on the first point's tile closes the loop instead
 void EEPPatrolGroup::AddPoint(const GE2DPoint& inPoint, unsigned long inPlayerID)
 {
-    GE3DPoint thePoint;
-    EEMap* theMap = ::gWorld.mMap;
-    EEMapTile* theTile = theMap->GetTile((long)inPoint.GetX(), (long)inPoint.GetY());
-    if (this->mPatrolPoints.size() > 0 && theTile->HasUnit(this->mPatrolPoints[0])) {
-        this->mIsLoop = true;
-    } else {
-        thePoint.SetX(inPoint.GetX());
-        thePoint.SetY(inPoint.GetY());
-        thePoint.SetZ(theTile->GetHeight());
-        this->AppendPatrolPoint(thePoint, inPlayerID);
-    }
+    PGRun(EE_UNITS_PG_OP_ADD_POINT, this, PGArgs(NULL, inPoint.GetX(), inPoint.GetY(), 0.0f, (int32_t)inPlayerID));
 }
 
 // FUNCTION: EXE 0x5607c8
 // Creates a patrol point at the given spot after the last one
 void EEPPatrolGroup::AppendPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID)
 {
-    EEComplexUnit* theLast = NULL;
-    if (this->mPatrolPoints.size() > 0)
-        theLast = this->mPatrolPoints.back();
-    this->InsertPatrolPoint(inPoint, inPlayerID, theLast);
+    PGRun(EE_UNITS_PG_OP_APPEND, this, PGArgs(NULL, inPoint.GetX(), inPoint.GetY(), inPoint.GetZ(), (int32_t)inPlayerID));
 }
 
 // FUNCTION: EXE 0x5607f4
 // Returns the patrol point nearest to the tile (the first of equals), or NULL when there are none
 EEComplexUnit* EEPPatrolGroup::GetNearest(long inTileX, long inTileY)
 {
-    EEComplexUnit* theResult = NULL;
-    if (this->mPatrolPoints.size() > 0) {
-        theResult = this->mPatrolPoints[0];
-        std::vector<EEComplexUnit*>::iterator theIterator = this->mPatrolPoints.begin() + 1;
-        while (theIterator != this->mPatrolPoints.end()) {
-            EEComplexUnit* theUnit = *theIterator;
-            float theDistance = theUnit->DistanceSquaredToTileXY(inTileX, inTileY);
-            if (theResult->DistanceSquaredToTileXY(inTileX, inTileY) > theDistance)
-                theResult = theUnit;
-            ++theIterator;
-        }
-    }
-    return theResult;
+    return PGUnit(PGRun(EE_UNITS_PG_OP_NEAREST, this, PGArgs(NULL, 0.0f, 0.0f, 0.0f, (int32_t)inTileX, (int32_t)inTileY)));
 }
 
 // FUNCTION: EXE 0x56085d
@@ -117,32 +107,14 @@ EEComplexUnit* EEPPatrolGroup::GetNearest(long inTileX, long inTileY)
 // one-point patrol, else NULL at the end
 EEComplexUnit* EEPPatrolGroup::GetNext(EEComplexUnit* inUnit)
 {
-    EEComplexUnit* theResult = NULL;
-    if (inUnit == NULL) {
-        if (this->mPatrolPoints.size() > 0)
-            theResult = this->mPatrolPoints[0];
-    } else if (this->mPatrolPoints.size() > 0) {
-        unsigned long theIndex = this->IndexOf(inUnit);
-        if (theIndex + 1 < this->mPatrolPoints.size())
-            theResult = this->mPatrolPoints[theIndex + 1];
-        else if (this->mIsLoop || this->mPatrolPoints.size() == 1)
-            theResult = this->mPatrolPoints[0];
-    }
-    return theResult;
+    return PGUnit(PGRun(EE_UNITS_PG_OP_NEXT, this, PGArgs(inUnit)));
 }
 
 // FUNCTION: EXE 0x5608db
 // Returns the index of the patrol point, or of the point nearest to the unit's tile when it is not one
 unsigned long EEPPatrolGroup::IndexOf(EEComplexUnit* inUnit)
 {
-    EEComplexUnit* theNearest;
-    std::vector<EEComplexUnit*>::iterator theIterator = std::find(this->mPatrolPoints.begin(), this->mPatrolPoints.end(), inUnit);
-    if (theIterator == this->mPatrolPoints.end()) {
-        theNearest = this->GetNearest(inUnit->GetTileX(), inUnit->GetTileY());
-        if (theNearest != NULL)
-            theIterator = std::find(this->mPatrolPoints.begin(), this->mPatrolPoints.end(), theNearest);
-    }
-    return theIterator - this->mPatrolPoints.begin();
+    return (unsigned long)PGRun(EE_UNITS_PG_OP_INDEX_OF, this, PGArgs(inUnit));
 }
 
 // FUNCTION: EXE 0x56098a
@@ -150,31 +122,14 @@ unsigned long EEPPatrolGroup::IndexOf(EEComplexUnit* inUnit)
 // NULL at the start
 EEComplexUnit* EEPPatrolGroup::GetPrevious(EEComplexUnit* inUnit)
 {
-    EEComplexUnit* theResult = NULL;
-    if (inUnit == NULL) {
-        if (this->mPatrolPoints.size() > 0)
-            theResult = this->mPatrolPoints[0];
-    } else if (this->mPatrolPoints.size() > 0) {
-        unsigned long theIndex = this->IndexOf(inUnit);
-        if (theIndex > 0)
-            theResult = this->mPatrolPoints[theIndex - 1];
-        else if (this->mIsLoop)
-            theResult = this->mPatrolPoints.back();
-    }
-    return theResult;
+    return PGUnit(PGRun(EE_UNITS_PG_OP_PREVIOUS, this, PGArgs(inUnit)));
 }
 
 // FUNCTION: EXE 0x5609e4
 // Creates a patrol point at a map position (at ground height) after the given point
 void EEPPatrolGroup::InsertPatrolPointAt(const GE2DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inUnit)
 {
-    GE3DPoint thePoint;
-    thePoint.SetX(inPoint.GetX());
-    thePoint.SetY(inPoint.GetY());
-    EEMap* theMap = ::gWorld.mMap;
-    EEMapTile* theTile = theMap->GetTile((long)thePoint.GetX(), (long)thePoint.GetY());
-    thePoint.SetZ(theTile->GetHeight());
-    this->InsertPatrolPoint(thePoint, inPlayerID, inUnit);
+    PGRun(EE_UNITS_PG_OP_INSERT_AT, this, PGArgs(inUnit, inPoint.GetX(), inPoint.GetY(), 0.0f, (int32_t)inPlayerID));
 }
 
 // FUNCTION: EXE 0x560a58
@@ -182,15 +137,7 @@ void EEPPatrolGroup::InsertPatrolPointAt(const GE2DPoint& inPoint, unsigned long
 // for NULL)
 void EEPPatrolGroup::InsertPatrolPoint(const GE3DPoint& inPoint, unsigned long inPlayerID, EEComplexUnit* inAfter)
 {
-    EEUnit* theCreated = gUnitClassTable[kUnitTypePathPoint]->CreateUnit((long)inPoint.GetX(), (long)inPoint.GetY(), inPlayerID, 0, NULL);
-    EEComplexUnit* theUnit = theCreated->GetComplexUnit();
-    theUnit->SetPatrolGroup(this);
-    std::vector<EEComplexUnit*>::iterator theWhere;
-    if (inAfter != NULL)
-        theWhere = this->mPatrolPoints.begin() + this->IndexOf(inAfter) + 1;
-    else
-        theWhere = this->mPatrolPoints.end();
-    this->mPatrolPoints.insert(theWhere, theUnit);
+    PGRun(EE_UNITS_PG_OP_INSERT, this, PGArgs(inAfter, inPoint.GetX(), inPoint.GetY(), inPoint.GetZ(), (int32_t)inPlayerID));
 }
 
 // FUNCTION: EXE 0x560ade
@@ -198,80 +145,31 @@ void EEPPatrolGroup::InsertPatrolPoint(const GE3DPoint& inPoint, unsigned long i
 // from the saved game; returns the first read error
 long EEPPatrolGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theUnitID = (unsigned long)-1;
-    long theResult = inFile->Read(this->mID);
-    if (theResult == kErrorOK) {
-        theResult = inFile->Read(theCount);
-        if (theResult == kErrorOK) {
-            this->mPatrolPoints.clear();
-            for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
-                theResult = inFile->Read(theUnitID);
-                if (theResult == kErrorOK)
-                    this->mPatrolPoints.push_back(reinterpret_cast<EEComplexUnit*>(theUnitID));
-            }
-            if (theResult == kErrorOK)
-                theResult = inFile->Read(this->mIsLoop);
-            // port (0.254): the town patrol flag (town patrols are saved from then on) and the id counter as saved
-            if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
-                theResult = inFile->Read(this->mIsTownPatrol);
-                unsigned long theNextID = 0;
-                if (theResult == kErrorOK)
-                    theResult = inFile->Read(theNextID);
-                if (theResult == kErrorOK && theNextID > sPatrolGroupID)
-                    sPatrolGroupID = theNextID;
-            }
-        }
-    }
-    return theResult;
+    EeUnitsPgArgs theArgs = PGArgs(NULL, 0.0f, 0.0f, 0.0f, (int32_t)inMajorVersion, (int32_t)inMinorVersion);
+    theArgs.file = PGObject(inFile);
+    return (long)(int32_t)(uint32_t)PGRun(EE_UNITS_PG_OP_LOAD, this, theArgs);
 }
 
 // FUNCTION: EXE 0x560b72
 // Removes a patrol point; the player drops the group once it has none left
 void EEPPatrolGroup::RemoveUnit(EEComplexUnit* inUnit)
 {
-    EEPlayer* thePlayer = inUnit->GetPlayer();
-    std::vector<EEComplexUnit*>::iterator theIterator = std::find(this->mPatrolPoints.begin(), this->mPatrolPoints.end(), inUnit);
-    this->mPatrolPoints.erase(theIterator);
-    if (this->mPatrolPoints.size() == 0)
-        thePlayer->RemovePatrolGroup(this);
+    PGRun(EE_UNITS_PG_OP_REMOVE, this, PGArgs(inUnit));
 }
 
-// NEAR: the first v[i] of the function is expanded here, the original calls _Ptrit::operator+ out of line;
-// frame 0x1c vs 0x24
 // FUNCTION: EXE 0x560bf2
 // Turns the loaded unit ids back into patrol point units, claiming those that point at another group;
 // returns 3 at the first id with no unit
 long EEPPatrolGroup::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    std::vector<long> theIDs;
-    EEComplexUnit* theUnit;
-    long theResult = 0;
-    for (unsigned long i = 0; i < this->mPatrolPoints.size(); i++) {
-        theUnit = this->mPatrolPoints[i];
-        theIDs.push_back((int32_t)USavedID(theUnit));
-    }
-    this->mPatrolPoints.clear();
-    for (unsigned long j = 0; j < theIDs.size() && theResult == 0; j++) {
-        long theID = theIDs[j];
-        theUnit = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(theID));
-        if (theUnit != NULL) {
-            // port: a point without a group is this group's too (path points are saved from 0.254 on)
-            if (theUnit->GetPatrolGroup() != this)
-                theUnit->SetPatrolGroup(this);
-            this->mPatrolPoints.push_back(theUnit);
-        } else {
-            theResult = 3;
-        }
-    }
-    return theResult;
+    return (long)(int32_t)(uint32_t)PGRun(EE_UNITS_PG_OP_REPAIR, this, PGArgs());
 }
 
 // FUNCTION: EXE 0x560cdc
 // Restarts patrol group ids at 0
 void EEPPatrolGroup::ResetIDs()
 {
-    sPatrolGroupID = 0;
+    PGRun(EE_UNITS_PG_OP_RESET_IDS, NULL, PGArgs());
 }
 
 // FUNCTION: EXE 0x560ce4
@@ -279,87 +177,150 @@ void EEPPatrolGroup::ResetIDs()
 // write error
 long EEPPatrolGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theUnitID;
-    long theResult = inFile->Write(this->mID);
-    if (theResult != 0)
-        return theResult;
-    theCount = this->mPatrolPoints.size();
-    theResult = inFile->Write(theCount);
-    if (theResult != 0)
-        return theResult;
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        theUnitID = this->mPatrolPoints[i]->mUnitID;
-        theResult = inFile->Write(theUnitID);
-    }
-    if (theResult == 0)
-        theResult = inFile->Write(this->mIsLoop);
-    // port (0.254): the town patrol flag and the id counter (Load)
-    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
-        theResult = inFile->Write(this->mIsTownPatrol);
-        if (theResult == 0)
-            theResult = inFile->Write(sPatrolGroupID);
-    }
-    return theResult;
+    EeUnitsPgArgs theArgs = PGArgs(NULL, 0.0f, 0.0f, 0.0f, (int32_t)inMajorVersion, (int32_t)inMinorVersion);
+    theArgs.file = PGObject(inFile);
+    return (long)(int32_t)(uint32_t)PGRun(EE_UNITS_PG_OP_SAVE, this, theArgs);
 }
 
 // FUNCTION: EXE 0x560d70
 // Selects the patrol points for the player, stopping at the first that cannot be selected
 void EEPPatrolGroup::Select(EEPlayer* inPlayer, bool inFlag)
 {
-    bool theOK = true;
-    for (unsigned long i = 0; i < this->mPatrolPoints.size() && theOK; i++)
-        theOK = inPlayer->TrySelectUnit(this->mPatrolPoints[i], inFlag);
+    PGRun(EE_UNITS_PG_OP_SELECT, this, PGArgs(inPlayer, 0.0f, 0.0f, 0.0f, inFlag ? 1 : 0));
 }
 
-// NEAR: the locals' order/slots and the three loops' iterator temporaries differ (the original keeps theTile and
-// theOther at [ebp-0x24]/[ebp-0x1c], the iterators in registers); behaviour is the same by reading
 // FUNCTION: EXE 0x560da9
 // Replaces the patrol route with the given tiles: kills points on no listed tile, adds missing ones and
 // orders the points as listed, as a closed loop
 void EEPPatrolGroup::SetPatrolPoints(std::vector<U2DPoint<long> > inPoints, unsigned long inPlayerID)
 {
-    std::vector<EEComplexUnit*> theKept;
-    U2DPoint<long> theTile;
-    U2DPoint<long> theOther;
-    std::vector<EEComplexUnit*>::iterator theIterator = this->mPatrolPoints.begin();
-    while (theIterator != this->mPatrolPoints.end()) {
-        EEComplexUnit* theUnit = *theIterator;
-        theTile.mX = theUnit->GetTileX();
-        theTile.mY = theUnit->GetTileY();
-        if (std::find(inPoints.begin(), inPoints.end(), theTile) == inPoints.end()) {
-            theUnit->SetPatrolGroup(NULL);
-            theUnit->Kill(1, 0, 0);
-            theUnit->GetPlayer()->KillUnit(theUnit, false);
-            theIterator = this->mPatrolPoints.erase(theIterator);
-        } else {
-            ++theIterator;
-        }
+    std::vector<int32_t> theTiles;
+    for (size_t i = 0; i < inPoints.size(); i++) {
+        theTiles.push_back((int32_t)inPoints[i].mX);
+        theTiles.push_back((int32_t)inPoints[i].mY);
     }
-    std::vector<U2DPoint<long> >::iterator thePoint;
-    for (thePoint = inPoints.begin(); thePoint != inPoints.end(); ++thePoint) {
-        theOther.mX = thePoint->mX;
-        theOther.mY = thePoint->mY;
-        if (std::find_if(this->mPatrolPoints.begin(), this->mPatrolPoints.end(), EEPatrolTileIs(theOther)) == this->mPatrolPoints.end()) {
-            GE2DPoint theNew((float)theOther.mX, (float)theOther.mY);
-            this->AddPoint(theNew, inPlayerID);
-        }
-    }
-    for (thePoint = inPoints.begin(); thePoint != inPoints.end(); ++thePoint) {
-        theOther.mX = thePoint->mX;
-        theOther.mY = thePoint->mY;
-        theKept.push_back(*std::find_if(this->mPatrolPoints.begin(), this->mPatrolPoints.end(), EEPatrolTileIs(theOther)));
-    }
-    this->mPatrolPoints.clear();
-    this->mPatrolPoints = theKept;
-    this->mIsLoop = true;
+    ee_units_patrol_group_set_points(PGObject(this), theTiles.empty() ? NULL : &theTiles[0], (uint32_t)inPoints.size(),
+                                     (uint32_t)inPlayerID);
 }
 
-// TEMPLATE: EXE 0x560fba
-// (EEPatrolTileIs's constructor, emitted by this unit)
+// ---- the C++ the Rust bodies call (ee_units patrol_group.rs; each the original statement it replaced)
 
-// TEMPLATE: EXE 0x560fcc
-// (std::find_if<_Ptrit<EEComplexUnit*>, EEPatrolTileIs>, SetPatrolPoints's two searches)
+extern "C" uint32_t ee_units_pg_host_points(uint64_t inGroup, uint64_t* outPoints, uint32_t inCapacity)
+{
+    const std::vector<EEComplexUnit*>& thePoints = PGGroup(inGroup)->mPatrolPoints;
+    for (uint32_t i = 0; i < inCapacity && i < thePoints.size(); i++)
+        outPoints[i] = PGObject(thePoints[i]);
+    return (uint32_t)thePoints.size();
+}
 
-// TEMPLATE: EXE 0x560ff3
-// (EEPatrolTileIs::operator(), find_if's predicate)
+extern "C" void ee_units_pg_host_set_points(uint64_t inGroup, const uint64_t* inPoints, uint32_t inCount)
+{
+    std::vector<EEComplexUnit*>& thePoints = PGGroup(inGroup)->mPatrolPoints;
+    thePoints.clear();
+    for (uint32_t i = 0; i < inCount; i++)
+        thePoints.push_back(PGUnit(inPoints[i]));
+}
+
+extern "C" void ee_units_pg_host_fields(uint64_t inGroup, uint8_t inSet, EeUnitsPgFields* ioFields)
+{
+    EEPPatrolGroup* theGroup = PGGroup(inGroup);
+    if (inSet) {
+        theGroup->mID = ioFields->id;
+        theGroup->mIsLoop = ioFields->is_loop != 0;
+        theGroup->mIsTownPatrol = ioFields->is_town_patrol != 0;
+    } else {
+        ioFields->id = (uint32_t)theGroup->mID;
+        ioFields->is_loop = theGroup->mIsLoop ? 1 : 0;
+        ioFields->is_town_patrol = theGroup->mIsTownPatrol ? 1 : 0;
+    }
+}
+
+// a point's GetTile() (EEPatrolTileIs) and GetTileX/GetTileY (SetPatrolPoints, IndexOf)
+extern "C" void ee_units_pg_host_unit_tile(uint64_t inUnit, int32_t* outX, int32_t* outY)
+{
+    EEComplexUnit* theUnit = PGUnit(inUnit);
+    *outX = (int32_t)theUnit->GetTileX();
+    *outY = (int32_t)theUnit->GetTileY();
+}
+
+extern "C" float ee_units_pg_host_distance(uint64_t inUnit, int32_t inX, int32_t inY)
+{
+    return PGUnit(inUnit)->DistanceSquaredToTileXY(inX, inY);
+}
+
+// the map's tile at ((long)x, (long)y): its height; whether it HasUnit(probe) (AddPoint's first point)
+extern "C" uint8_t ee_units_pg_host_tile_at(float inX, float inY, uint64_t inProbe, float* outHeight)
+{
+    EEMapTile* theTile = ::gWorld.mMap->GetTile((long)inX, (long)inY);
+    *outHeight = theTile->GetHeight();
+    return inProbe != 0 && theTile->HasUnit(PGUnit(inProbe)) ? 1 : 0;
+}
+
+extern "C" uint64_t ee_units_pg_host_create_point(uint64_t inGroup, float inX, float inY, uint32_t inPlayerID)
+{
+    EEUnit* theCreated = gUnitClassTable[kUnitTypePathPoint]->CreateUnit((long)inX, (long)inY, (long)inPlayerID, 0, NULL);
+    EEComplexUnit* theUnit = theCreated->GetComplexUnit();
+    theUnit->SetPatrolGroup(PGGroup(inGroup));
+    return PGObject(theUnit);
+}
+
+// the unit-side calls: patrol_group.rs EE_UNITS_PG_*
+extern "C" uint64_t ee_units_pg_host_unit(int32_t inWhich, uint64_t inUnit, uint64_t inOther)
+{
+    EEComplexUnit* theUnit = PGUnit(inUnit);
+    switch (inWhich) {
+    case EE_UNITS_PG_SET_GROUP:
+        theUnit->SetPatrolGroup(PGGroup(inOther));
+        return 0;
+    case EE_UNITS_PG_GROUP_OF:
+        return PGObject(theUnit->GetPatrolGroup());
+    case EE_UNITS_PG_KILL:
+        theUnit->Kill(1, 0, 0);
+        theUnit->GetPlayer()->KillUnit(theUnit, false);
+        return 0;
+    case EE_UNITS_PG_KILL_UNIT:
+        theUnit->GetPlayer()->KillUnit(theUnit, false);
+        return 0;
+    case EE_UNITS_PG_REMOVE_GROUP:
+        theUnit->GetPlayer()->RemovePatrolGroup(PGGroup(inOther));
+        return 0;
+    case EE_UNITS_PG_UNIT_ID:
+        return (uint64_t)(uint32_t)theUnit->mUnitID;
+    case EE_UNITS_PG_FIND_UNIT:
+        return PGObject(EEUnitCast<EEComplexUnit>(::gWorld.GetUnit((long)(int32_t)(uint32_t)inOther)));
+    case EE_UNITS_PG_SELECT:
+    case EE_UNITS_PG_SELECT_FLAG:
+        return reinterpret_cast<EEPlayer*>(static_cast<uintptr_t>(inOther))->TrySelectUnit(theUnit, inWhich == EE_UNITS_PG_SELECT_FLAG) ? 1 : 0;
+    default:
+        return 0;
+    }
+}
+
+extern "C" uint8_t ee_units_pg_host_live_state(uint32_t inMajorVersion, uint32_t inMinorVersion)
+{
+    return EESaveHasLiveState(inMajorVersion, inMinorVersion) ? 1 : 0;
+}
+
+// the saved game's typed calls (unsigned long, bool): a read takes the value and gives back what the file left
+extern "C" int32_t ee_units_pg_host_file(uint64_t inFile, int32_t inWhich, uint32_t* ioValue)
+{
+    FSFile* theFile = reinterpret_cast<FSFile*>(static_cast<uintptr_t>(inFile));
+    switch (inWhich) {
+    case EE_UNITS_PG_WRITE_U32:
+        return (int32_t)theFile->Write((unsigned long)*ioValue);
+    case EE_UNITS_PG_WRITE_BOOL:
+        return (int32_t)theFile->Write(*ioValue != 0);
+    case EE_UNITS_PG_READ_U32: {
+        unsigned long theValue = *ioValue;
+        long theResult = theFile->Read(theValue);
+        *ioValue = (uint32_t)theValue;
+        return (int32_t)theResult;
+    }
+    default: {
+        bool theValue = *ioValue != 0;
+        long theResult = theFile->Read(theValue);
+        *ioValue = theValue ? 1 : 0;
+        return (int32_t)theResult;
+    }
+    }
+}

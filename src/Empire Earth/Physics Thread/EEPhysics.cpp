@@ -192,6 +192,7 @@ void EEPhysics::FlushWorld()
         if (gWorld.mPlayers[i] != NULL)
             gWorld.mPlayers[i]->AddPendingUnits(0, 1);
     }
+    gWorld.QueueBornDeactivations();   // port: the units given an id just now (EEWorld::DeactivateUnit)
     this->ProcessUnitSwaps();
     for (i = 0; i < theNumPlayers; i++) {
         if (gWorld.mPlayers[i] != NULL)
