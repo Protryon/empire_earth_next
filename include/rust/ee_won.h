@@ -6001,44 +6001,6 @@ enum class EeWonLobbyDlgEvent : uint32_t {
   GotHttpDocument = 4,
 };
 
-/// The menu entries' texts (the lobby's resource strings).
-enum class EeWonLobbyPopupString : uint32_t {
-  Whisper = 0,
-  Invite,
-  Uninvite,
-  /// `FriendOptionsCtrl_Locate_String` (the client menu's and the friend menu's)
-  Locate,
-  AddToFriends,
-  RemoveFromFriends,
-  ClearAfk,
-  SetAfk,
-  Ignore,
-  Unignore,
-  Block,
-  Unblock,
-  Warn,
-  UnMute,
-  Mute,
-  Kick,
-  Ban,
-  GameJoin,
-  GamePing,
-  GameQueryDetails,
-  GameHideDetails,
-  GameShowDetails,
-  GameRemove,
-  FriendRefreshList,
-  /// `FriendOptionsCtrl_RemoveFromFriends_String`
-  FriendRemove,
-};
-
-/// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
-enum class EeWonLobbyPopupEvent : uint32_t {
-  Other = 0,
-  /// `ComponentEvent_ListItemUpClicked` (a `ListItemClickedEvent`)
-  ItemUpClicked = 1,
-};
-
 /// The button's and component's methods a skin button calls (`SkinBtn`).
 enum class EeWonSkinBtn : uint32_t {
   /// `IsDisabled()` (0 or 1).
@@ -6183,6 +6145,44 @@ enum class EeWonWbField : uint32_t {
   HAlign,
   VAlign,
   FocusStyle,
+};
+
+/// The menu entries' texts (the lobby's resource strings).
+enum class EeWonLobbyPopupString : uint32_t {
+  Whisper = 0,
+  Invite,
+  Uninvite,
+  /// `FriendOptionsCtrl_Locate_String` (the client menu's and the friend menu's)
+  Locate,
+  AddToFriends,
+  RemoveFromFriends,
+  ClearAfk,
+  SetAfk,
+  Ignore,
+  Unignore,
+  Block,
+  Unblock,
+  Warn,
+  UnMute,
+  Mute,
+  Kick,
+  Ban,
+  GameJoin,
+  GamePing,
+  GameQueryDetails,
+  GameHideDetails,
+  GameShowDetails,
+  GameRemove,
+  FriendRefreshList,
+  /// `FriendOptionsCtrl_RemoveFromFriends_String`
+  FriendRemove,
+};
+
+/// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
+enum class EeWonLobbyPopupEvent : uint32_t {
+  Other = 0,
+  /// `ComponentEvent_ListItemUpClicked` (a `ListItemClickedEvent`)
+  ItemUpClicked = 1,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
