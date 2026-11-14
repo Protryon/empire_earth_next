@@ -19511,7 +19511,7 @@ completions could go.
 | oracle against the main checkout's `ref` | seeds 2-3 identical | (with the merge) | seeds 2-7 identical |
 | `rust_build.py gate` | clippy (`useless_conversion`, a test-only method) and rustfmt failed, fixed before the commit; PASS | PASS (no Rust change) | PASS |
 | `build.py --test-profile windowed-software` | 0 / 0 | (with the merge) | 0 / 0 |
-| `xbuild.py wontest` | 65 programs exit 0 before the full run hit its 50-minute limit; then the 25 that link the op base, the sockets or the drivers changed, exit 0 (the 16 wire-format and crypto programs left for the merged run) | the seven changed drivers and won_hostsock_test, won_asyncop_test, won_socket_test exit 0 | see the final report |
+| `xbuild.py wontest` | 65 programs exit 0 before the full run hit its 50-minute limit; then the 25 that link the op base, the sockets or the drivers changed, exit 0 (the 16 wire-format and crypto programs left for the merged run) | the seven changed drivers and won_hostsock_test, won_asyncop_test, won_socket_test exit 0 | all 107 programs exit 0 |
 | `lan_game.py` (harness lock) | `RESULT PASS lan-game PT host=2869 joiner=2873` | (with the merge) | `RESULT PASS lan-game PT host=2862 joiner=2862` |
 
 The merge of rust (at 84001ecf) needed nothing: no conflict, `rust_build.py header` current, `rust_includes.py`
