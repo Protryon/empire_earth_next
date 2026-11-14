@@ -625,6 +625,92 @@ enum class EeUiOp : uint32_t {
   FormRhombusLabelColor = 302,
   /// `TMGetTime()`.
   FormNow = 303,
+  /// *Pure*: form `a`'s `GetRectangle()` -> `f`.
+  MgrFormRect = 400,
+  /// *Pure*: form `a`'s `GetFormID()`.
+  MgrFormId = 401,
+  /// *Pure*: form `a`'s `GetUseGDIForText()`.
+  MgrFormUseGdi = 402,
+  /// *Pure*: form `a`'s `GetKeyboardCaptured()` -> the control.
+  MgrFormKeyboard = 403,
+  /// *Pure*: form `a`'s `GetMouseCaptured()` -> the control.
+  MgrFormMouse = 404,
+  /// *Pure*: control `a`'s virtual `GetIMEEnabled()`.
+  MgrCtlIme = 405,
+  /// *Pure*: `gISKeyboard->GetShouldUpdate()`.
+  MgrKeyboardShouldUpdate = 406,
+  /// *Pure*: `gISMouse->GetShouldUpdate()`.
+  MgrMouseShouldUpdate = 407,
+  /// *Pure*: the window of the manager's screen: 0 none, else 1 and its client origin in `f[0]`, `f[1]`.
+  MgrWindow = 408,
+  /// *Pure*: that window's width | height << 32.
+  MgrWindowSize = 409,
+  /// *Pure*: texture `a`'s `(float)GetWidth()`, `(float)GetHeight()` -> `f[0]`, `f[1]`.
+  MgrTextureSize = 410,
+  /// *Pure*: the rasterizer's `GetBlending(source, destination, screen)` -> source | destination << 32.
+  MgrBlending = 411,
+  /// `TSScheduler::CreateCriticalSection` (assert line `a`) -> the lock.
+  MgrLockNew = 420,
+  /// `TSScheduler::DestroyCriticalSection(a)`.
+  MgrLockDelete = 421,
+  /// `LoadTexture("textures\UIControls")` (after the rasterizer's `GetScreen(screen)`) -> the referenced texture.
+  MgrTextureLoad = 422,
+  /// Texture `a`'s `Dereference()`.
+  MgrTextureRelease = 423,
+  /// `new GEBitmap` with `SetTexture(texture a, screen)` -> the bitmap.
+  MgrBitmapNew = 424,
+  /// `CreateBitmap`'s first steps on bitmap `a`: `SetOpacity(1)`, `SetTextureCoordinates` from `(f[0], f[1])` to
+  /// `(f[2], f[3])` (top-left, top-right, bottom-left, bottom-right).
+  MgrBitmapCoords = 425,
+  /// `CreateBitmapForScaledControl`'s copy of bitmap `a`: a new bitmap on its texture with its four coordinates.
+  MgrScaledBitmapNew = 426,
+  /// Form `a`'s call `b`: 0 `Open`, 1 `Close`, 2 `Activate`, 3 `Deactivate`, 4 `ClearAllClipRectangles`,
+  /// 5 `SetAllControlsDirty`, 6 `CopyData`, 7 `DrawPolygons`, 8 `DrawTextA`, 9 `UpdateKeyboard`, 10 `UpdateMouse`,
+  /// 11 `delete` -> its result.
+  MgrFormCall = 427,
+  /// Form `a`'s call `b` with `f`: 0 `AddDirtyRectangle`, 1 `RedrawIntersectControls`, 2 `AddClipRectangle`,
+  /// 3 `RelayoutForm`, 4 `UpdateMouseLocation(f[0], f[1])`.
+  MgrFormRectCall = 428,
+  /// Form `a`'s IME call `b` (`manager_media::ImeCall`) with the C++ call's arguments `c` -> its result.
+  MgrFormIme = 429,
+  /// Form `a`'s `UpdateTranslatedKey(the one character at b, repeat c)` -> its result.
+  MgrTranslatedKey = 430,
+  /// Event `a`'s `ProcessEvent(form b, entity c)`.
+  MgrEventProcess = 431,
+  /// Event factory `a`: `b` 0 a form event factory called `(manager, c)`, 1 a control one `(form d, c)` -> the event.
+  MgrCallback = 432,
+  /// `new UIIMECandidate(manager, 0.2, 0.35, font a)` -> the candidate window.
+  MgrCandidateNew = 433,
+  /// Candidate window `a`'s call `b`: 0 `DrawPolygons`, 1 `DrawTextA`, 2 `CloseCandidateWindow`, 3 `CopyData`,
+  /// 4 `delete` -> its result.
+  MgrCandidateCall = 434,
+  /// Candidate window `a`'s `SetCandidateList(*(UIIMECandidateList*)b, f[0])`.
+  MgrCandidateSetList = 435,
+  /// Candidate window `a`'s `OpenCandidateWindow(f, control)`: the control rectangle's bottom and left as float bits
+  /// in `b` (low, high), its right and top in `c`.
+  MgrCandidateOpen = 436,
+  /// The rasterizer's `SetBlending(a, b, screen)`.
+  MgrSetBlending = 437,
+  /// `UIHotKey::UpdatePressedPollAmount()`.
+  MgrHotKeyPoll = 438,
+  /// `UIHotKey::DeleteHotKeys()`.
+  MgrHotKeysDelete = 439,
+  /// The manager's virtual `UpdateKeyboard()` -> its result.
+  MgrVirtUpdateKeyboard = 440,
+  /// The manager's virtual `UpdateMouse(f[0], f[1])` -> its result.
+  MgrVirtUpdateMouse = 441,
+  /// The sound manager's `Stop(instance a, false)`.
+  MgrSoundStop = 442,
+  /// The sound manager's `Unload(a)`.
+  MgrSoundUnload = 443,
+  /// The sound manager's `Load(name a, 0, 1)` -> the id (-1: failed).
+  MgrSoundLoad = 444,
+  /// The sound manager's `PlayAndReturnReferencedNode(a, f[0], 0, 1, true, NULL)` -> the instance.
+  MgrSoundPlay = 445,
+  /// The sound manager's `SetSoundParameters(instance a, f[0], 0, 1)`.
+  MgrSoundParameters = 446,
+  /// Sound instance `a`'s `Reference()` (`b` 0) or `Dereference()` (1).
+  MgrInstanceRef = 447,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -1304,6 +1390,98 @@ enum class EeUiListCall : uint32_t {
   DrawCount = 47,
 };
 
+/// The inward calls (the C++ shim's methods). Rectangles and points travel in `f`.
+enum class EeUiManagerCall : uint32_t {
+  /// `AddDirtyRectangle(f, form a)`.
+  AddDirtyRectangle = 1,
+  /// `AddEventToTrigger(event a, form b, entity c)`.
+  AddEventToTrigger = 2,
+  /// `AddForm(a)` (winspool.h maps the name AddForm).
+  AppendForm = 3,
+  /// `AddIMEResultString(*(const UWideString*)a)`.
+  AddImeResult = 4,
+  /// `ChangeIMECandidateWindow(*(const UIIMECandidateList*)a)`: its style `b`, its count `c` -> OK.
+  ChangeCandidateWindow = 5,
+  /// `ChangeIMECompositionString`: `a` the host's record of its three arguments -> the form's result.
+  ChangeComposition = 6,
+  CloseCandidateWindow = 7,
+  CloseComposition = 8,
+  /// -> the last copy's result.
+  CopyData = 9,
+  /// `CreateBitmapForScaledControl(bitmap a, f)` -> the new bitmap.
+  ScaledBitmap = 10,
+  /// `CreateControlEvent(form a, id b)` -> the event or NULL.
+  CreateControlEvent = 11,
+  /// `CreateFormEvent(id a)` -> the event or NULL.
+  CreateFormEvent = 12,
+  /// `CreateIMECandidateWindow(font a)`.
+  CreateCandidateWindow = 13,
+  DrawPolygons = 14,
+  DrawText = 15,
+  /// The control bitmap `a` ([`Bitmap`]).
+  Bitmap = 16,
+  CandidateWindow = 17,
+  CurrentForm = 18,
+  DrawCandidateWindow = 19,
+  /// `GetFont(a)`.
+  Font = 20,
+  /// `GetFormByID(a)` -> the form or NULL.
+  FormById = 21,
+  /// The stack's size.
+  FormCount = 22,
+  /// `GetStackedForm(a)`.
+  StackedForm = 23,
+  NumberOfSurfaces = 24,
+  Rasterizer = 25,
+  Screen = 26,
+  SoundManager = 27,
+  StringTable = 28,
+  TextureBitDepth = 29,
+  VisibleFormCount = 30,
+  IsFormOnStack = 31,
+  IsFormVisible = 32,
+  /// `LockUIForCopyData` (`a` 0) / `UnlockUIForCopyData` (1).
+  LockForCopy = 33,
+  OpenCandidateWindow = 34,
+  OpenComposition = 35,
+  Pop = 36,
+  PopTo = 37,
+  ProcessAllEventsForForm = 38,
+  Push = 39,
+  RedrawAll = 40,
+  /// `RegisterControlEventCallback(a)`.
+  RegisterControlCallback = 41,
+  /// `RegisterFormEventCallback(a)`.
+  RegisterFormCallback = 42,
+  RelayoutAllForms = 43,
+  /// `SetFont(a, font b)`.
+  SetFont = 44,
+  SwapForm = 45,
+  /// `SetMusicVolume(f[0])`.
+  SetMusicVolume = 46,
+  SetNumberOfFonts = 47,
+  /// `StartMusic`: `a` the name's NUL-terminated bytes.
+  StartMusic = 48,
+  StopMusic = 49,
+  /// `UpdateUI(f[0], f[1])` -> the mouse's result.
+  UpdateUi = 50,
+  /// `UpdateTranslatedKey(a, repeat b)` -> the form's result.
+  UpdateTranslatedKey = 51,
+  /// The virtual `UpdateKeyboard()`'s base body.
+  UpdateKeyboard = 52,
+  /// The virtual `UpdateMouse(f[0], f[1])`'s base body.
+  UpdateMouse = 53,
+  RemoveAndStopSoundInstance = 54,
+  RemoveSoundInstance = 55,
+  SetSoundInstance = 56,
+  ResetClippedForms = 57,
+  ChangeRasterizer = 58,
+  ForceUiUpdate = 59,
+  /// The constructor's work after `ee_ui_manager_new` (the C++ constructor's, once `mRust` is set: the host's ops
+  /// read the manager through its forwarders).
+  Init = 60,
+};
+
 /// The inward calls (the C++ shim's methods).
 enum class EeUiScrollBarCall : uint32_t {
   /// `CopyData()` -> the slider's result.
@@ -1571,6 +1749,9 @@ struct EeUiLabel;
 
 /// The Rust UIListBox.
 struct EeUiList;
+
+/// The Rust UIManager.
+struct EeUiManager;
 
 /// The Rust UIScrollBar.
 struct EeUiScrollBar;
@@ -2177,6 +2358,38 @@ ptrdiff_t ee_ui_list_call(const EeUiList *list,
 /// Both are NUL-terminated bytes.
 bool ee_ui_text_less_no_case(const char *left, const char *right);
 
+/// A new Rust manager for the C++ `manager`: `UIManager(rasterizer, sound, surfaces, depth, string table, screen)`'s
+/// members; the C++ constructor then sets `mRust` and calls [`EeUiManagerCall::Init`].
+EeUiManager *ee_ui_manager_new(void *manager,
+                               EeUiHostFn host,
+                               void *rasterizer,
+                               void *sound,
+                               unsigned long surfaces,
+                               unsigned long depth,
+                               void *string_table,
+                               unsigned long screen);
+
+/// The destructor's work (the C++ then deletes the database tables); the object freed.
+///
+/// # Safety
+/// `manager` came from `ee_ui_manager_new` (or is NULL) and is not used after this returns (it is during: the forms'
+/// destructors may call the manager).
+void ee_ui_manager_free(EeUiManager *manager);
+
+/// One of UIManager's methods ([`EeUiManagerCall`]).
+///
+/// # Safety
+/// `manager` is live; `f` is NULL or four live floats; see [`EeUiManager::call`].
+ptrdiff_t ee_ui_manager_call(const EeUiManager *manager,
+                             EeUiManagerCall call,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             ptrdiff_t c,
+                             float *f);
+
+/// `UIManager::GetMouseWheelScrollAmount`'s step from the wheel's normalized value.
+long ee_ui_manager_wheel_scroll_amount(long value);
+
 /// The constructor's geometry ([`scrollbar::layout`]): the C++ needs the rectangle for `UIControl`'s constructor,
 /// before this object is made.
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at,
@@ -2563,87 +2776,6 @@ void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigne
 /// `UIControl::UpdateMouse(*location)` (`location` a `GE2DPoint*`, handed back to `MouseMove`) -> its result.
 long ee_ui_control_update_mouse(void *control,
                                 const void *location);
-
-/// `UIManager::AddDirtyRectangle(rect, form)`.
-void ee_ui_manager_add_dirty_rectangle(void *manager, const EeUiRect *rect, void *form);
-
-/// `UIManager::Pop`'s body (inside the locks).
-void ee_ui_manager_pop(void *manager);
-
-/// `UIManager::PopTo`'s body (inside the locks).
-void ee_ui_manager_pop_to(void *manager, void *form);
-
-/// `UIManager::Push`'s body (inside the locks).
-void ee_ui_manager_push(void *manager, void *form);
-
-/// `UIManager::SwapForm`'s body (inside the locks).
-void ee_ui_manager_swap_form(void *manager, void *form);
-
-/// `UIManager::RedrawAll`'s body (inside the lock).
-void ee_ui_manager_redraw_all(void *manager);
-
-/// `UIManager::RelayoutAllForms`.
-void ee_ui_manager_relayout_all_forms(void *manager,
-                                      unsigned long window_width,
-                                      unsigned long window_height);
-
-/// `UIManager::ResetClippedForms`.
-void ee_ui_manager_reset_clipped_forms(void *manager);
-
-/// `UIManager::GetFormByID` -> the form, or NULL.
-void *ee_ui_manager_form_by_id(void *manager, unsigned long id);
-
-/// `UIManager::GetMouseWheelScrollAmount`'s step from the wheel's normalized value.
-long ee_ui_manager_wheel_scroll_amount(long value);
-
-/// `UpdateUI`'s event loop.
-void ee_ui_manager_process_all_events(void *manager);
-
-/// `UIManager::ProcessAllEventsForForm(form)`.
-void ee_ui_manager_process_all_events_for_form(void *manager, void *form);
-
-/// `UIManager::SetMusicVolume(volume)`.
-void ee_ui_manager_set_music_volume(void *manager, float volume);
-
-/// `UIManager::StartMusic(name)` (the name as a C string).
-void ee_ui_manager_start_music(void *manager, const char *name);
-
-/// `UIManager::StopMusic`.
-void ee_ui_manager_stop_music(void *manager);
-
-/// `UIManager::SetSoundInstance(instance)`.
-void ee_ui_manager_set_sound_instance(void *manager, void *instance);
-
-/// `UIManager::RemoveSoundInstance`.
-void ee_ui_manager_remove_sound_instance(void *manager);
-
-/// `UIManager::RemoveAndStopSoundInstance`.
-void ee_ui_manager_remove_and_stop_sound_instance(void *manager);
-
-/// `UIManager::UpdateUI`'s music step (inside the lock).
-void ee_ui_manager_update_music(void *manager);
-
-/// `UIManager::AddIMEResultString` (call 0), `ChangeIMECompositionString` (1), `CloseIMECompositionString` (2),
-/// `OpenIMECompositionString` (3): `args` are the call's arguments for the host -> the form's result.
-long ee_ui_manager_ime_form_call(void *manager,
-                                 int call,
-                                 const void *args);
-
-/// `UIManager::ChangeIMECandidateWindow(list)`: `list` is the C++ list (for `SetCandidateList`), with its style and
-/// count.
-long ee_ui_manager_change_candidate_window(void *manager,
-                                           const void *list,
-                                           unsigned long style,
-                                           unsigned long count);
-
-/// `UIManager::OpenIMECandidateWindow`.
-long ee_ui_manager_open_candidate_window(void *manager);
-
-/// `UIManager::CloseIMECandidateWindow`.
-long ee_ui_manager_close_candidate_window(void *manager);
-
-/// `UIManager::CopyData`'s candidate window, after the forms (`result`: theirs) -> the result.
-long ee_ui_manager_copy_candidate_window(void *manager, long result);
 
 }  // extern "C"
 

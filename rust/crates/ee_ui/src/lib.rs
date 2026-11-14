@@ -36,6 +36,7 @@ pub mod list;
 pub mod listobj;
 pub mod manager;
 pub mod manager_media;
+pub mod managerobj;
 pub mod mouse;
 pub mod obj;
 pub mod rect;
@@ -83,12 +84,6 @@ mod layout_ffi;
 #[cfg(not(test))]
 mod mouse_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
-// imports the C++ manager's lists and the forms' members (UIManager.cpp), absent from a test binary
-#[cfg(not(test))]
-mod manager_ffi;
-// imports the C++ manager's music and IME members, the sound manager's calls (UIManager.cpp), absent from a test binary
-#[cfg(not(test))]
-mod manager_media_ffi;
 // imports the C++ text measuring (UITextLabel.cpp)
 
 pub use layout::{Edge, Layout};

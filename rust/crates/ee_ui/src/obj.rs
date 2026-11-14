@@ -566,6 +566,94 @@ pub enum EeUiOp {
     FormRhombusLabelColor = 302,
     /// `TMGetTime()`.
     FormNow = 303,
+
+    // ---- UIManager (R6 ui round 17, managerobj.rs); on the manager's C++ object
+    /// *Pure*: form `a`'s `GetRectangle()` -> `f`.
+    MgrFormRect = 400,
+    /// *Pure*: form `a`'s `GetFormID()`.
+    MgrFormId = 401,
+    /// *Pure*: form `a`'s `GetUseGDIForText()`.
+    MgrFormUseGdi = 402,
+    /// *Pure*: form `a`'s `GetKeyboardCaptured()` -> the control.
+    MgrFormKeyboard = 403,
+    /// *Pure*: form `a`'s `GetMouseCaptured()` -> the control.
+    MgrFormMouse = 404,
+    /// *Pure*: control `a`'s virtual `GetIMEEnabled()`.
+    MgrCtlIme = 405,
+    /// *Pure*: `gISKeyboard->GetShouldUpdate()`.
+    MgrKeyboardShouldUpdate = 406,
+    /// *Pure*: `gISMouse->GetShouldUpdate()`.
+    MgrMouseShouldUpdate = 407,
+    /// *Pure*: the window of the manager's screen: 0 none, else 1 and its client origin in `f[0]`, `f[1]`.
+    MgrWindow = 408,
+    /// *Pure*: that window's width | height << 32.
+    MgrWindowSize = 409,
+    /// *Pure*: texture `a`'s `(float)GetWidth()`, `(float)GetHeight()` -> `f[0]`, `f[1]`.
+    MgrTextureSize = 410,
+    /// *Pure*: the rasterizer's `GetBlending(source, destination, screen)` -> source | destination << 32.
+    MgrBlending = 411,
+    /// `TSScheduler::CreateCriticalSection` (assert line `a`) -> the lock.
+    MgrLockNew = 420,
+    /// `TSScheduler::DestroyCriticalSection(a)`.
+    MgrLockDelete = 421,
+    /// `LoadTexture("textures\UIControls")` (after the rasterizer's `GetScreen(screen)`) -> the referenced texture.
+    MgrTextureLoad = 422,
+    /// Texture `a`'s `Dereference()`.
+    MgrTextureRelease = 423,
+    /// `new GEBitmap` with `SetTexture(texture a, screen)` -> the bitmap.
+    MgrBitmapNew = 424,
+    /// `CreateBitmap`'s first steps on bitmap `a`: `SetOpacity(1)`, `SetTextureCoordinates` from `(f[0], f[1])` to
+    /// `(f[2], f[3])` (top-left, top-right, bottom-left, bottom-right).
+    MgrBitmapCoords = 425,
+    /// `CreateBitmapForScaledControl`'s copy of bitmap `a`: a new bitmap on its texture with its four coordinates.
+    MgrScaledBitmapNew = 426,
+    /// Form `a`'s call `b`: 0 `Open`, 1 `Close`, 2 `Activate`, 3 `Deactivate`, 4 `ClearAllClipRectangles`,
+    /// 5 `SetAllControlsDirty`, 6 `CopyData`, 7 `DrawPolygons`, 8 `DrawTextA`, 9 `UpdateKeyboard`, 10 `UpdateMouse`,
+    /// 11 `delete` -> its result.
+    MgrFormCall = 427,
+    /// Form `a`'s call `b` with `f`: 0 `AddDirtyRectangle`, 1 `RedrawIntersectControls`, 2 `AddClipRectangle`,
+    /// 3 `RelayoutForm`, 4 `UpdateMouseLocation(f[0], f[1])`.
+    MgrFormRectCall = 428,
+    /// Form `a`'s IME call `b` (`manager_media::ImeCall`) with the C++ call's arguments `c` -> its result.
+    MgrFormIme = 429,
+    /// Form `a`'s `UpdateTranslatedKey(the one character at b, repeat c)` -> its result.
+    MgrTranslatedKey = 430,
+    /// Event `a`'s `ProcessEvent(form b, entity c)`.
+    MgrEventProcess = 431,
+    /// Event factory `a`: `b` 0 a form event factory called `(manager, c)`, 1 a control one `(form d, c)` -> the event.
+    MgrCallback = 432,
+    /// `new UIIMECandidate(manager, 0.2, 0.35, font a)` -> the candidate window.
+    MgrCandidateNew = 433,
+    /// Candidate window `a`'s call `b`: 0 `DrawPolygons`, 1 `DrawTextA`, 2 `CloseCandidateWindow`, 3 `CopyData`,
+    /// 4 `delete` -> its result.
+    MgrCandidateCall = 434,
+    /// Candidate window `a`'s `SetCandidateList(*(UIIMECandidateList*)b, f[0])`.
+    MgrCandidateSetList = 435,
+    /// Candidate window `a`'s `OpenCandidateWindow(f, control)`: the control rectangle's bottom and left as float bits
+    /// in `b` (low, high), its right and top in `c`.
+    MgrCandidateOpen = 436,
+    /// The rasterizer's `SetBlending(a, b, screen)`.
+    MgrSetBlending = 437,
+    /// `UIHotKey::UpdatePressedPollAmount()`.
+    MgrHotKeyPoll = 438,
+    /// `UIHotKey::DeleteHotKeys()`.
+    MgrHotKeysDelete = 439,
+    /// The manager's virtual `UpdateKeyboard()` -> its result.
+    MgrVirtUpdateKeyboard = 440,
+    /// The manager's virtual `UpdateMouse(f[0], f[1])` -> its result.
+    MgrVirtUpdateMouse = 441,
+    /// The sound manager's `Stop(instance a, false)`.
+    MgrSoundStop = 442,
+    /// The sound manager's `Unload(a)`.
+    MgrSoundUnload = 443,
+    /// The sound manager's `Load(name a, 0, 1)` -> the id (-1: failed).
+    MgrSoundLoad = 444,
+    /// The sound manager's `PlayAndReturnReferencedNode(a, f[0], 0, 1, true, NULL)` -> the instance.
+    MgrSoundPlay = 445,
+    /// The sound manager's `SetSoundParameters(instance a, f[0], 0, 1)`.
+    MgrSoundParameters = 446,
+    /// Sound instance `a`'s `Reference()` (`b` 0) or `Dereference()` (1).
+    MgrInstanceRef = 447,
 }
 
 impl EeUiOp {
@@ -651,6 +739,18 @@ impl EeUiOp {
                 | FormHotKeyMod0
                 | FormHotKeyMod1
                 | FormHotKeyMod2
+                | MgrFormRect
+                | MgrFormId
+                | MgrFormUseGdi
+                | MgrFormKeyboard
+                | MgrFormMouse
+                | MgrCtlIme
+                | MgrKeyboardShouldUpdate
+                | MgrMouseShouldUpdate
+                | MgrWindow
+                | MgrWindowSize
+                | MgrTextureSize
+                | MgrBlending
         )
     }
 }

@@ -85,8 +85,7 @@ struct EeUiForm;                           // rust/ee_ui.h: the Rust form (formo
 // GE2DPoint's layouts); GetMusicFileName answers a copy.
 class LLE_API UIForm {
     friend class UIControl;                 // CaptureMouse/CaptureKeyboard call SetMouseCaptured/SetKeyboardCaptured
-    friend class UIManager;                 // calls the protected Close/CopyData/DrawPolygons/Open and AddDirtyRectangle
-    friend struct UIManagerRust;            // UIManager.cpp: the Rust form stack's calls on a form (ee_ui manager.rs)
+    friend class UIManager;                 // UIManager::HostOp: the protected Close/CopyData/DrawPolygons/Open, AddDirtyRectangle
 public:
     UIForm(unsigned long inControlCount, unsigned long inControlGroupCount, UIManager* inManager,
            unsigned long inFormID, bool inUseGDIForText);
