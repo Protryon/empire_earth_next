@@ -40,7 +40,9 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 thresholds, the shuffled "other" managers, max_enabled_managers + 1), FlagGroup on the expansion
                 timer, KeepStandingArmy every 30 s (its count as the C++'s CountMilitaryUnits(false, true): the military asked for and being made, AI_RESEARCH 8.80), ChooseFavoriteLandType at each epoch, CanAfford (units.lua: the
                 epoch reserve by the pressure, the recovery citizens, the Prehistoric army cap with EECPArmyThreat,
-                claim_needed), EECPEpochPressure / EECPEpochTimerSpan (civ.lua). The combat state is the script's (1 once
+                claim_needed), EECPEpochPressure / EECPEpochTimerSpan (civ.lua). New (AI_RESEARCH 8.85): citizens are
+                trained past the epoch reserve below 50 workers (the C++: below 12), and epoch_pressure.safe_bonus is
+                not applied. The combat state is the script's (1 once
                 another player's unit is seen, 2 under attack, back to 1 a minute after the last hit): the engine's
                 EEPlayer::mCombatState is not readable. ENGINE: WorkOutPopulation, the extra and reveal cheats,
                 ChooseCivilization, UnitStranded's kill, SendToNearestBase, the save. ChooseFavoriteLandType,
