@@ -168,6 +168,7 @@ struct Options {
     double mWallTimeout = 3600;
     long mPTRate = 40;
     bool mNoHumanDefeat = true;
+    bool mHumanOut = true;                               // --keep-human: off
     std::string mReport;                                 // the JSON report ("-": stdout)
     std::string mTrace;                                  // the EE-AI lines ("" stdout)
     std::string mLog;                                    // every debug string
@@ -714,7 +715,8 @@ void WriteReport(int inCode, const std::string& inError)
     j += "  \"setup\": {\"seed\": " + std::to_string(sOptions.mSeed) + ", \"computers\": " +
          std::to_string(sOptions.mComputers) + ", \"game_seconds\": " + std::to_string((long)sOptions.mGameSeconds) +
          ", \"pt_rate\": " + std::to_string(sOptions.mPTRate) + ", \"no_human_defeat\": " +
-         (sOptions.mNoHumanDefeat ? "true" : "false") + ", \"cheats\": " +
+         (sOptions.mNoHumanDefeat ? "true" : "false") + ", \"human_out\": " +
+         (sOptions.mHumanOut ? "true" : "false") + ", \"cheats\": " +
          JsonString(sOptions.mCheats.empty() ? "all" : sOptions.mCheats) + ", \"personality\": " +
          JsonString(sOptions.mPersonality) + ", \"engine\": " +
          JsonString(sOptions.mEngine.empty() ? "classic" : sOptions.mEngine) + ", \"sets\": [";
@@ -864,6 +866,20 @@ void Drive()
             EEPlayer* theHuman = gWorld.GetCurrentPlayer();
             theHuman->mCivilizationChosen = true;
             theHuman->mCivilizationLocked = true;
+            // (the idle human out of the fighting from the start: the computers' attack choice prefers a human, and the
+            // classic's early raids went to this seat, which never fights back, in 60 of 64 games against boom from
+            // minute 4. Allied both ways with every computer it is no AI's enemy (the classic's and the Lua view's
+            // target lists skip allies); the computers stay at war with each other. An observer seat, or its units
+            // removed, ends the single-player game at once. --keep-human: the old seat)
+            if (sOptions.mHumanOut) {
+                for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++) {
+                    EEPlayer* theOther = gWorld.GetPlayer(i);
+                    if (theOther == NULL || theOther == theHuman)
+                        continue;
+                    theHuman->SetDiplomaticStance(theOther, 0, gWorld.GetMap());
+                    theOther->SetDiplomaticStance(theHuman, 0, gWorld.GetMap());
+                }
+            }
             sResults.assign(gWorld.GetNumPlayers(), 0);
             gWorld.mLock->WriteUnlock();
         }
@@ -921,6 +937,8 @@ const char* kUsage =
     "  --wall-timeout S       give up after this wall time (default 3600)\n"
     "  --pt-rate N            Min = Max PTs per Second (default 40, the harness's pin)\n"
     "  --human-defeat         let the idle human be defeated (default: kept in, the harness's --no-human-defeat)\n"
+    "  --keep-human           keep the idle human at war (default: allied with every computer from the start, so no\n"
+    "                         computer attacks it)\n"
     "  --cheats SETS          EE_AI_CHEATS (e.g. none, all, none/all)\n"
     "  --personality NAMES    EE_AI_PERSONALITY (e.g. balanced)\n"
     "  --engine LIST          the computer seats' engine through the lobby's engine boxes: classic, random, an AI's\n"
@@ -1128,6 +1146,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mNoHumanDefeat = false;
         else if (a == "--no-human-defeat")
             sOptions.mNoHumanDefeat = true;
+        else if (a == "--keep-human")
+            sOptions.mHumanOut = false;
         else if (a == "--cheats")
             sOptions.mCheats = value();
         else if (a == "--personality")
