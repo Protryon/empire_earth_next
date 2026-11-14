@@ -19987,3 +19987,303 @@ velocity particle, kind 0xc), `EEE2DSmokeMuzzleBlast`, `EEE2DWinterBreath`, `EEE
 - **Next:** the battlefield decals and the marching icons on `EEE2DRust` (their records already Rust), the light
   glow, the 2D particle (a pooled `EEE2DRust` or a pool of records); then the table's bulk vertex and polygon-range
   entries with `EEROGroundShadows`, then the farm.
+
+## R6 WON round 36: the Windows skin's painters and drawing helpers in Rust; WONGUI measured (ee_won mspaint.rs; branch rust-r6-won36, 2026-11-14)
+
+### WONGUI measured (at 354fde6a, rust's head with round 35 merged)
+
+`build/r36/measure.py` over the 194 units of `src/Empire Earth/WONAPI/WONGUI` (21,370 lines with comments and
+includes; 13,350 code lines). "Code": lines that are not blank, comments or preprocessor lines. Each function
+definition `Class::Method` is a **forwarder** when its body is at most three lines and calls Rust (`ee_won_`,
+`mRust`), or is one line; its lines and the rest of the functions' are counted apart ("Logic": what is not a
+forwarder). "Classes": the unit's most defined classes; "Subclasses": classes declared over them anywhere in
+`src/Empire Earth` and `include/ee`; "Files naming them": the other files that name one of them (callers,
+holders, configs). Templates are not matched by the parser: Surface.cpp (the software raster surface,
+`Surface<T>`) has 754 code lines of which it counts 78. GuiHost.cpp is the Rust objects' C++ host (its switch,
+not logic to move). Units with 20 logic lines or more, by logic:
+
+| Unit | Code | Forwarders | Logic | Rust lines | Classes | Subclasses | Files naming them |
+|---|---|---|---|---|---|---|---|
+| PlatWindowManager | 603 | 6 | 421 | 0 | PlatWindowManager | - | 5 |
+| ComponentConfigResource | 418 | 4 | 326 | 5 | ComponentConfig | ButtonConfig, ColorSchemeConfig, ContainerConfig, FontConfig, ImageButtonConfig, ImageComponentConfig | 110 |
+| PlatGraphics | 291 | 8 | 212 | 0 | PlatGraphics | - | 3 |
+| PlatGUIWindow | 260 | 8 | 190 | 0 | PlatGUIWindow | - | 3 |
+| PlatNativeImage | 420 | 10 | 183 | 0 | PlatNativeImage, RawImage1, RawImage8, DisplayContext | - | 23 |
+| ImageFilters | 370 | 0 | 169 | 0 | ScaleImageFilter, MultiImageFilter, CropImageFilter, TintImageFilter | TrimImageFilter | 3 |
+| ComponentConfigRead | 218 | 2 | 141 | 8 | ComponentConfig | ButtonConfig, ColorSchemeConfig, ContainerConfig, FontConfig, ImageButtonConfig, ImageComponentConfig | 110 |
+| MSGraphicsUtil | 221 | 0 | 136 | 0 | MSGraphicsUtil | - | 10 |
+| ResourceConfigRead | 178 | 0 | 130 | 0 | ResourceConfig | - | 15 |
+| WONButtonConfig | 156 | 4 | 118 | 4 | WONSimpleButtonConfig, WONButtonConfig | - | 2 |
+| ContainerConfigInstructions | 147 | 0 | 117 | 3 | ContainerConfig | BrowserComponentConfig, ChatCtrlConfig, ComboBoxConfig, DialogConfig, GameBrowserCtrlConfig, GameUserListCtrlConfig | 35 |
+| ComponentConfigValueReaders | 144 | 2 | 111 | 3 | ComponentConfig | ButtonConfig, ColorSchemeConfig, ContainerConfig, FontConfig, ImageButtonConfig, ImageComponentConfig | 110 |
+| Graphics | 189 | 1 | 110 | 0 | Graphics | PlatGraphics | 186 |
+| ComponentTraversal | 198 | 19 | 103 | 1 | Component | Button, Container, EELobbyColorChooser, ImageComponent, InputBox, Label | 152 |
+| SplitterConfig | 129 | 0 | 95 | 3 | SplitterConfig | - | 2 |
+| ImageConfig | 166 | 12 | 95 | 4 | ImageConfig, ImageFilterConfig, StretchImageConfig, StretchCenterImageConfig | ImageFilterConfig, StretchCenterImageConfig, StretchImageConfig | 4 |
+| BackgroundGrabber | 155 | 3 | 95 | 0 | BackgroundGrabber | - | 5 |
+| Image | 192 | 18 | 88 | 0 | Image, RawImage32, RawImage8, ProgramImage | DelayLoadImage, ImagePiece, MSImage, NativeImage, ProgramImage, RawImage | 71 |
+| ContainerConfigLayouts | 110 | 0 | 82 | 1 | ContainerConfig | BrowserComponentConfig, ChatCtrlConfig, ComboBoxConfig, DialogConfig, GameBrowserCtrlConfig, GameUserListCtrlConfig | 35 |
+| WONSkinConfig | 113 | 4 | 79 | 2 | WONSkinConfig | - | 2 |
+| ResourceTableQueries | 138 | 12 | 78 | 4 | ResourceConfigTable, ScrollbarScrollerConfig, ScrollAreaConfig, ScrollerConfig | ListAreaConfig, MSScrollContainerConfig, ScrollbarScrollerConfig, TextAreaConfig, WONScrollContainerConfig | 35 |
+| SkinnedContainers | 95 | 0 | 77 | 2 | WONComboBox, WONScrollContainer | WONListCtrl | 14 |
+| WindowManager | 425 | 66 | 75 | 2 | WindowManager | PlatWindowManager | 24 |
+| Component | 135 | 7 | 72 | 2 | Component | Button, Container, EELobbyColorChooser, ImageComponent, InputBox, Label | 152 |
+| Surface | 754 | 8 | 70 | 0 | SurfaceBase | Surface | 6 |
+| StretchImageConfig | 97 | 0 | 70 | 2 | StretchImageConfig, StretchCenterImageConfig | - | 2 |
+| ImageDecoder | 125 | 0 | 70 | 0 | MultiImageDecoder, ImageDecoder | JPGDecoder, MultiImageDecoder, PNGDecoder | 5 |
+| WrappedText | 106 | 2 | 68 | 4 | WrappedText | - | 7 |
+| MSComponentConfig | 97 | 0 | 68 | 5 | MSButtonConfig, MSArrowButtonConfig, MSTabButtonConfig, MS3DFrameConfig | MSHeaderButtonConfig, MSTabButtonConfig, MaxSplitterButtonConfig | 4 |
+| ComponentLayoutConfigs | 78 | 0 | 65 | 2 | PercentLayoutConfig, ColorSchemeConfig | - | 3 |
+| StretchImage | 195 | 4 | 63 | 3 | StretchImage, StretchCenterImage, StretchImageFilter | - | 9 |
+| ConfigComponentBindings | 111 | 2 | 63 | 0 | ComponentConfig, ButtonConfig, ContainerConfig, DialogConfig | BrowserComponentConfig, ButtonConfig, ChatCtrlConfig, ColorSchemeConfig, ComboBoxConfig, ContainerConfig | 120 |
+| PlatGUIFont | 118 | 8 | 62 | 0 | PlatGUIFont | - | 2 |
+| ImageComponent | 116 | 4 | 59 | 0 | ImageComponent, RectangleComponent, RectangleComponent3D | - | 9 |
+| GuiHost | 801 | 12 | 57 | 45 | TextArea, MultiListHeader, ListItem, InputBox | BadUserItem, ComponentListItem, GameUserListItem, MSHeaderControl, MSInputBox, MultiListItem | 44 |
+| MSControlPainters | 76 | 0 | 56 | 0 | MSComboBox, MSScrollContainer, MSScrollbar | MSListCtrl | 8 |
+| JPGDecoder | 138 | 2 | 56 | 0 | JPGDecoder | - | 2 |
+| Window | 212 | 48 | 52 | 2 | Window | PlatGUIWindow | 38 |
+| ResourceConfigQueries | 84 | 0 | 52 | 0 | ResourceConfig | - | 15 |
+| MSSkinImage | 64 | 0 | 50 | 0 | MSImage | - | 4 |
+| ComponentConfigLoad | 74 | 0 | 50 | 0 | ComponentConfig | ButtonConfig, ColorSchemeConfig, ContainerConfig, FontConfig, ImageButtonConfig, ImageComponentConfig | 110 |
+| BrowserComponent | 99 | 0 | 49 | 1 | BrowserComponent | - | 6 |
+| FontConfig | 81 | 6 | 45 | 3 | FontConfig | - | 3 |
+| MSExtraConfig | 60 | 0 | 44 | 7 | MSComboBoxConfig, MSScrollbarConfig, MSEtchedFrameGroupConfig, MSTabCtrlConfig | - | 5 |
+| MSEtchedFrameGroup | 48 | 2 | 43 | 0 | MSEtchedFrameGroup | - | 4 |
+| TextAreaConfig | 49 | 0 | 42 | 2 | TextAreaConfig | - | 2 |
+| ListAreaConfig | 56 | 0 | 42 | 3 | ListAreaConfig | MultiListAreaConfig, TreeAreaConfig | 7 |
+| ButtonConfig | 54 | 0 | 42 | 2 | ButtonConfig | MSArrowButtonConfig, MSButtonConfig, MSCloseButtonConfig, WONButtonConfig, WONSimpleButtonConfig | 9 |
+| GUIStringDataMutations | 88 | 2 | 41 | 1 | GUIStringData | - | 23 |
+| SimpleComponentConfig | 76 | 8 | 40 | 4 | RectangleComponentConfig, RectangleComponent3DConfig, ImageComponentConfig, ScreenContainerConfig | - | 2 |
+| MSRemainingPainters | 54 | 0 | 40 | 0 | MSHeaderButton, MSCloseButton, MSScrollThumb, MSLabel | - | 7 |
+| WONListConfig | 48 | 0 | 39 | 3 | WONScrollbarConfig, WONHeaderControlConfig, WONListCtrlConfig | - | 5 |
+| SkinListControls | 63 | 0 | 39 | 1 | WONListCtrl, WONHeaderButton, WONHeaderControl | - | 12 |
+| PNGDecoder | 49 | 2 | 37 | 0 | PNGDecoder | - | 2 |
+| MultiListBoxConfig | 43 | 0 | 37 | 3 | MultiListAreaConfig, MultiListHeaderConfig | MSHeaderControlConfig, WONHeaderControlConfig | 9 |
+| ComboBoxConfig | 47 | 0 | 37 | 2 | ComboBoxConfig | MSComboBoxConfig, WONComboBoxConfig | 7 |
+| WONSkinComposition | 46 | 0 | 35 | 0 | WONSkin | WONMSSkin | 12 |
+| ListAreaToolTip | 39 | 0 | 34 | 0 | ListAreaToolTip | - | 2 |
+| ResourceConfigHandlers | 73 | 0 | 33 | 0 | ResourceConfig | - | 15 |
+| WONSimpleButton | 40 | 0 | 30 | 1 | WONSimpleButton | WONScrollThumb | 12 |
+| TabCtrlConfig | 41 | 0 | 30 | 2 | TabCtrlConfig | MSTabCtrlConfig, WONTabCtrlConfig | 9 |
+| Background | 60 | 2 | 30 | 1 | Background | - | 18 |
+| BrowserComponentConfig | 55 | 6 | 29 | 3 | BrowserComponentConfig | - | 2 |
+| ComponentListItemAdapters | 52 | 4 | 28 | 0 | ComponentListItem | - | 3 |
+| TextListItem | 37 | 2 | 27 | 2 | TextListItem | ConnectListItem, FilterListItem, FriendsListItem, MenuItem, UserListItem | 13 |
+| InputBoxConfig | 35 | 0 | 27 | 1 | InputBoxConfig | MSInputBoxConfig | 6 |
+| WONFrameValueConfig | 53 | 0 | 26 | 3 | WONComboBoxConfig, WONTabCtrlConfig, WONScrollContainerConfig | WONListCtrlConfig | 7 |
+| StringLocalize | 36 | 0 | 26 | 0 | StringLocalize | - | 2 |
+| WONControlDuplicates | 34 | 0 | 24 | 0 | WONSimpleButton, WONComboBox, WONScrollContainer, WONTabCtrl | WONListCtrl, WONScrollThumb | 25 |
+| ImageButton | 34 | 0 | 24 | 0 | ImageButton | ImageTextButton | 5 |
+| WONFrameConfig | 32 | 2 | 23 | 2 | WONFrameComponentConfig | - | 2 |
+| ScrollbarConfig | 37 | 0 | 23 | 2 | ScrollbarConfig | MSScrollbarConfig, WONScrollbarConfig | 7 |
+| ChildLayoutsAdvanced | 41 | 0 | 23 | 1 | PercentLayoutParam | - | 4 |
+| MenuBehavior | 31 | 3 | 22 | 2 | MenuItem | - | 6 |
+| SkinTab | 30 | 0 | 20 | 0 | WONTabCtrl | - | 10 |
+| PlatClipboard | 26 | 0 | 20 | 0 | Clipboard | - | 2 |
+| ComponentResourceAdapters | 64 | 16 | 20 | 0 | Component | Button, Container, EELobbyColorChooser, ImageComponent, InputBox, Label | 152 |
+| the other 117 units | 2822 | 454 | 490 | | | | |
+| total | 13350 | 785 | 5995 | 228 | | | |
+
+What it says: WONGUI's remaining logic (about 6,000 lines by the parser, plus Surface's templates) is (a) the
+platform layer (PlatWindowManager, PlatGraphics, PlatGUIWindow, PlatNativeImage, PlatGUIFont, PlatClipboard:
+about 1,100, the SDL/Win32 seam), (b) the resource configs that build the widgets from the skin files
+(ComponentConfig and its 40-odd subclasses, ResourceConfig, the WON/MS configs: about 2,300; every one is made
+by the lobby's config table and read by the screens' configs, 110 files name ComponentConfig), (c) the images
+(ImageFilters, Image, ImageDecoder, JPG/PNG decoders, StretchImage, BackgroundGrabber, MSSkinImage: about 700),
+(d) the Windows skin's painters (MSGraphicsUtil and the MS paint units: about 330, no subclass but MSListCtrl /
+MSHeaderButton; the best deletion for the risk: pure drawing over `Graphics`) and (e) the widgets' own remains
+(Component, ComponentTraversal, WrappedText, ImageComponent, BrowserComponent, ListAreaToolTip: about 450).
+This round takes (d) first.
+
+### The Windows skin's drawing (commit 5f7fb11e; ee_won mspaint.rs)
+
+WON C++ (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 72,410 at the branch's start
+(rust's head 354fde6a: round 35 and WONLobby round 3 merged) -> 72,025 (+95 -480, net -385).
+
+- **No census was needed.** MSGraphicsUtil is a class of statics (never made) and `LobbyDraw3DFrame` /
+  `LobbyDrawFrame` free functions; their callers keep calling them (the C++ functions are one-line forwarders, so the
+  lobby code and WONLobby's controls that call them did not change). The painted classes keep their C++ types,
+  members and vtables; only their `Paint` bodies changed. WONMSSkin::MSImage's `DrawPushButton`, `DrawArrowButton`,
+  `DrawCloseButton` and `FlagSet` had no caller outside MSSkinImage.cpp and went from the header.
+- **The move.** `mspaint.rs` holds the eight helpers (`Plan::frame_3d`, `frame`, `frame3`, `arrow`, `check`,
+  `radio`, `tab`, `close_x`) and one entry, `ee_won_mspaint_plan(EeWonMsPaint*, out, cap)`, whose
+  `EeWonMsPaintKind` names what is drawn: the eight helpers, then the paints of MSButton, MSTabButton, MSLabel,
+  MSHeaderButton (the sort arrow after MSButton's paint), MSCloseButton, MSScrollThumb, MSArrowButton, MS3DFrame,
+  MSPopup, MSDlgBack, MSEtchedFrame, MSInputBox (its frame), MSScrollbar (the track), MSComboBox (its frame),
+  MSScrollContainer (the corner and frame), MSEtchedFrameGroup (the etched frame around the title) and
+  WONMSSkin::MSImage (every image type of the MS skin, with the push button, arrow and close faces). The inputs are
+  the state bits (pressed, disabled, transparent, default, frame2, checked, draw frame, 3D frame, the scrollbars
+  visible, the track invalid) and the size plus five kind arguments, read by the C++ before the plan as the
+  original read them (all pure reads). Each paint's C++ is now its base class's paint (the first statement, or
+  MSScrollbar's last) and `WONMsPaint(g, WONMsPaintOf(...), this)`; a plan's `EE_WON_DRAW_CALL` 1 is the button's
+  `DrawButtonText(g, x, y)` (round 35's Rust). `WONGUIDraw.h` executes three new draw kinds: a pixel in a standard
+  colour (`EE_WON_DRAW_SYS_PIXEL`: `SetPixel(x, y, g.GetStandardColor(c))`, the tab's corners and the disabled
+  arrows' highlight), `FillEllipse` and `DrawArc` (the radio circle). The colours, directions, sort types and image
+  types the Rust names are `static_assert`ed in the units that pass them.
+- **The NULL-receiver audit.** None of the moved bodies tested a pointer. The C++ now reads, before the plan, a few
+  values the original read only on one branch: MSScrollbar's track rectangle (the original read its invalid state
+  on every path, so the rectangle is never NULL), MSScrollContainer's two scrollbars' places (the original read
+  both bars' visibility on every path), MSHeaderButton's text width and left pad (the text is made by the
+  constructor). No guard was needed.
+- **The golden** (`tests/won/won_mspaint_test.cpp`, `xbuild.py wontest won_mspaint_test`): MSGraphicsUtil.cpp and
+  the paints' statements copied unmodified (the base class's paint left out: the C++ makes it around the plan),
+  over a logged Graphics (every call one trace line; `GetStandardColor` answers a token per colour, so a
+  standard-colour pixel is told from a raw one) and a world of the components' reads, drawn at random for each
+  paint (sizes -3..60, now and then near `INT_MAX` or large negative; every state bit; directions, sort types,
+  frame types -1..4, image types 0..18 and now and then 0..255, flags 0..15), against the plan executed as
+  `WONDrawOne` executes it. 300,000 paints, 3,202,176 trace lines, identical on the first run.
+  `golden_mspaint.txt` (the first 400 paints, every kind) is replayed by cargo (`mspaint_tests.rs`), with unit
+  tests of the corners (the text call last and shifted while pressed, the default pressed button's flat frame,
+  the arrow's ignored offsets and highlight pixel, the header's none and unknown sort types, the unknown image
+  types, the C entry's length past its room).
+- **Mutations** (`build/r36/mutate.py`: each applied to the committed file alone, the driver rebuilt and run, cargo's
+  tests run, the file restored with `git checkout`; of 300,000 paints; the restored source: 0):
+
+  | Mutation of the Rust | Paints / filters that change | cargo |
+  |---|---|---|
+  | the sunken 3D frame's inner bottom line from x 1 | 18,496 | replay |
+  | the right arrow's highlight pixel one left | 2,277 | unit test, replay |
+  | the tick's second stroke one pixel lower | 6,303 | replay |
+  | the radio's highlight arc from 225 degrees | 12,523 | replay |
+  | the header's sort arrow 9 pixels after the text | 3,976 | replay |
+  | the scroll container's corner at the bar's top | 1,439 | replay |
+  | the etched group's offset a shift (negative heights) | 461 | unit test (added after: d5a779ec) |
+  | the list header image with the 3D frame | 556 | unit test (added after: d5a779ec) |
+  | the close X's second stroke one pixel longer | 24,706 | replay |
+  | MS3DFrame's type 3 as the flat frame | 2,007 | replay |
+  | the label's face filled when transparent | 5,940 | replay |
+  | the default button's frame not flat when pressed | 1,399 | replay |
+
+- **Behaviour changes:** none. The plans are the original's calls in the original's order; ints wrap as the C++
+  did under -fwrapv.
+- **What runs it: only the lobby.** EE-SIM never builds the lobby (the oracle is unchanged by construction; seeds
+  2-3 identical). Every MS-skin control of the lobby screens and dialogs paints through these plans in a LAN game:
+  push buttons (MSButton, with the default button's outline), tabs, labels, list headers with their sort arrows,
+  check boxes and radio buttons (their boxes through `DrawCheck` / `DrawRadio`), scrollbars (arrows, thumb,
+  track), combo boxes, input boxes, scroll containers, popups, dialog backgrounds, etched frames and groups, close
+  buttons, and the WON skin's MS images (`WONMSSkin`'s state images of push buttons, check boxes, radios, arrows,
+  scroll parts, headers, tabs and the combo popup). `lan_game.py` reaches the paints; only the lobby captures show
+  whether they look the same.
+
+### The image filters' pixel loops (ee_won imgfilter.rs)
+
+ImageFilters.cpp is the biggest image unit of the measure with no subclass outside it (TrimImageFilter is its own
+CropImageFilter's); its 476 lines were the filters' pixel loops: the nearest-neighbour scale of 1-, 8- and 32-bit
+images, the crop's row copies, the tint's channel percentages, the transparent colour's sample, palette search and
+alpha pass, and the trim's border search. WON C++ 72,025 -> 71,759 (+60 -326, net -266; ImageFilters.cpp 476 -> 210 lines).
+
+- **No census was needed.** The filter classes keep their members (ImageConfig.cpp's readers set them; the image
+  configs hold the filters) and their virtual `Filter`; only the loops moved.
+- **The move.** `imgfilter.rs`: `check_size` (ScaleImageFilter::CheckSize, the size written back), `scale` (over an
+  `EeWonRawPixels`: kind, data, size, row pitch in bytes), `crop_rows`, `tint_color` / `tint` (a palette's colours,
+  or a 32-bit image's pixels with their alpha kept), `transparent32`, `sample_place`, `palette_find` and `trim` (the
+  smallest rectangle of pixels that are not transparent; None for the original's NULL). The C++ keeps the new
+  images (`new RawImage1/8/32`, the palette's Duplicate, the reference counts), the dispatch on the type and the
+  `HasTransparency` check; each loop is one call. The 1-bit scale (ScaleBits) is now the same template as the 8- and
+  32-bit ones (an empty `CopyInfo` for RawImage1, as the original copied nothing).
+- **The original's integer types.** TintColor multiplied a channel (a `DWORD`) by the int percentage: the product
+  and the quotient are unsigned, so a negative percentage wraps to a large channel that the clamp makes 255. The
+  first golden run failed on exactly that (two tints with a negative percentage among the first 40); the Rust
+  computes in `u32` as the original did.
+- **The NULL audit.** No moved loop tested a pointer; the C++ still dereferences the 8-bit image's palette where
+  the original did (TintImageFilter's Duplicate, TransparentImageFilter's search), unguarded as before.
+- **The golden** (`tests/won/won_imgfilter_test.cpp`, `xbuild.py wontest won_imgfilter_test`): ImageFilters.cpp's
+  statements copied unmodified over stand-in raw images with the original's members and row walks (Image.cpp's
+  StartRowTraversal, PlatNativeImage.cpp's CalcBytesPerRow; zeroed buffers, a spare 32-bit pixel), against the Rust
+  called as the ported unit calls it over copies of the same images. 200,000 filters (40,000 each of crop, scale,
+  tint, transparent and trim) over 0 x 0 to 24 x 24 images of every kind, sparse images for the trim, scale sizes
+  absolute and in percent (-50..349), tints -20..279, colours from the image and the palette; the filter's fields,
+  the new image's size, flags and every byte, and the palette compared. 0 failures. `golden_imgfilter.txt` (the
+  first 400 filters, as hex dumps) is replayed by cargo over images rebuilt from the dumps (`imgfilter_tests.rs`),
+  with unit tests of the corners (CheckSize's minimum, the clamp and alpha, the transparent pass, the sample
+  corners, the palette's first match, a trim and an all-transparent one, the 1-bit scale's bit walk).
+  - **A driver trap:** a 32-bit image 0 pixels wide never ends the original's row walk (`NextRow` adds the width,
+    0): the first driver hung in the original's Tint. The driver tints and makes transparent only images at least
+    one pixel wide; the Rust's pass over 0 pixels returns (a behaviour change on a path the original never left).
+- **Mutations** (as above; of 200,000 filters; the restored source: 0):
+
+  | Mutation of the Rust | Paints / filters that change | cargo |
+  |---|---|---|
+  | CheckSize keeping a zero height | 2,697 | replay |
+  | the scale's row step without the remainder | 19,410 | replay |
+  | the scale's column advance one short | 7,142 | replay |
+  | the 1-bit scale LSB first | 12,060 | replay, unit test |
+  | the tint not clamped in green | 12,868 | replay |
+  | the 32-bit tint dropping alpha | 12,551 | replay, unit test |
+  | the transparent pass keeping the colour's alpha | 6,252 | replay |
+  | the lower left sample at the top | 1,609 | replay |
+  | the palette search taking the last match | 1,047 | replay, unit test |
+  | the trim's bottom search one row short | 130 | unit test (added after) |
+  | the 32-bit trim testing the low byte | 2,376 | replay |
+  | the crop from row 0 | 18,559 | replay |
+
+- **Behaviour changes, on undefined paths only:** the scale no longer reads the pixel past each row's end after
+  the row's last pixel (the original read it and never used it; past the buffer on a 32-bit image's last row); a
+  32-bit image 0 pixels wide is tinted or made transparent at once (the original looped without end).
+- **What runs it: the lobby's images only.** EE-SIM never loads a lobby image. The skin and lobby resource files'
+  image filters (`ImageConfig.cpp`: scale, crop, tint, transparent colour, trim, chains) run when the lobby loads
+  its images, in every LAN game; which filters the shipped lobby resources name decides which loops run there (the
+  golden covers them all).
+
+### Commits, gates, what only the lobby reaches, what is left
+
+| Commit | What | WON C++ (`wc -l`, src/Empire Earth/WONAPI + include/ee/wonapi) |
+|---|---|---|
+| 3b903e4d | WONGUI measured (this section's table) | 72,410 (docs only) |
+| 5f7fb11e | the Windows skin's drawing (`mspaint.rs`) | 72,025 (+95 -480, -385) |
+| d5a779ec | mspaint unit tests for two mutations the replay missed | 72,025 |
+| 982a4183 | the image filters' pixel loops (`imgfilter.rs`) | 71,759 (+60 -326, -266) |
+| 2c42032b | imgfilter unit test for the mutation the replay missed | 71,759 |
+| 2e6fd1d5, 0a401eb9 | the merge of rust (f2813578: the progress files) and the regenerated `ee_won.h` | 71,759 |
+
+The round's own net: -651. WONGUI's units: 21,370 -> 20,704 lines.
+
+| Gate | Per commit | The merged result (0a401eb9) |
+|---|---|---|
+| `build.py -j 3 --sim` | 0 unresolved, 0 duplicates (EE-AOC, EE-SIM) at 5f7fb11e and 982a4183 | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical at both | seeds 2-7 identical |
+| `rust_build.py gate` | tests and clippy pass at both; rustfmt failed once each (a test file, `lib.rs`'s module order), fixed before the commit (`cargo fmt --check` clean) | PASS |
+| `build.py --test-profile windowed-software` | | 0 / 0 |
+| `xbuild.py wontest` | `won_mspaint_test`, `won_imgfilter_test` exit 0 | all 106 programs exit 0 (about two and a half hours under load) |
+| `lan_game.py` (harness lock, the test-profile exe) | | `RESULT PASS lan-game` (PT host 2888, joiner 2895; no fault line in either game.log) |
+
+The merge of rust (f2813578, RUST_PLAN's rows moved to `docs/progress/`) merged without a conflict;
+`rust_build.py header` current, `rust_includes.py` changed nothing. This round's state is in
+`docs/progress/r6-won-the-rest.md`.
+
+- **Draws that changed path (for the lobby screenshots):** every MS-skin control's frame, face and glyph
+  (`LobbyDraw3DFrame`, `LobbyDrawFrame`, `DrawFrame3`, `DrawArrow`, `DrawCheck`, `DrawRadio`, `DrawTab`,
+  `DrawCloseX`) and the paints of MSButton (face, default outline, frames; the text call unchanged), MSTabButton,
+  MSLabel, MSHeaderButton's sort arrow, MSCloseButton, MSScrollThumb, MSArrowButton, MS3DFrame, MSPopup (the popup
+  menus' background and border), MSDlgBack (the dialogs' background), MSEtchedFrame, MSInputBox's frame,
+  MSScrollbar's track, MSComboBox's frame, MSScrollContainer's corner and frame, MSEtchedFrameGroup's frame, and
+  WONMSSkin's MS images (the WON skin's state images of push buttons, check boxes, radios, arrows, scroll parts,
+  headers, tabs, the combo popup frame and the close button) now run as Rust plans through `WONDrawOne`; the tab's
+  corner pixels and the disabled arrows' highlight pixel through the new `EE_WON_DRAW_SYS_PIXEL`, the radio circle
+  through the new ellipse and arc kinds. The lobby images built through image filters (`ImageFilter` entries of
+  the resource files) are scaled, cropped, tinted, made transparent and trimmed by `imgfilter.rs`.
+- **What only the lobby captures reach:** whether these draws look the same. The goldens prove the calls and the
+  pixels' bytes; `WONDrawOne`'s three new cases (one line each) and the image filters' call sites are reached only
+  by the lobby (`lan_game.py` runs them; it does not compare pixels).
+- **Lessons:**
+  - A heredoc ate a `\n` in a C++ string again (the driver did not compile): write C++ with escapes through the
+    editor tool, or Python with the file's bytes, never a shell heredoc.
+  - Copy the original's integer types with its statements: a `DWORD` channel times an `int` percentage is
+    unsigned arithmetic; the first golden run found it.
+  - A driver over the original's loops must keep away from the original's endless loops (a 0-wide 32-bit image's
+    row walk): it hung in the original, not in the port.
+  - A plan's replay golden made from the first N paints can miss a kind's rare branch (a negative odd label
+    height, one image type): the mutations found both; unit tests pin them.
+- **Left (by the measure):** the MS skin's layouts (MSComboBox's and MSScrollContainer's `Virtual08`), the WON
+  skin's compositions (WONMSSkinComposition, WONSkinComposition, SkinnedContainers, SkinListControls,
+  SkinControlConstructors); then the images (Image, StretchImage, BackgroundGrabber, ImageComponent, the decoders),
+  the widgets' remains (Component, ComponentTraversal, WrappedText, BrowserComponent, ListAreaToolTip), the resource
+  configs (ComponentConfig and about forty subclasses, ResourceConfig: about 2,300 logic lines, 110 files name
+  ComponentConfig; a census first) and the platform layer (PlatWindowManager, PlatGraphics, PlatGUIWindow,
+  PlatNativeImage, PlatGUIFont: the SDL/Win32 seam). The LAN screen's controls stay the WONLobby lane's.
+- **The second merge of rust** (186301af: WONLobby round 4, WON Internet round 23, LLE round 5, screens 27-28, the
+  editor round 1, UI rounds 16-17, renderer round 19, core round 28): PORT_LEARNINGS.md's end conflicted (both
+  sections kept, this one last); `rust_build.py header` current, `rust_includes.py` changed nothing. On the merged
+  tree: build `--sim` 0/0 (EE-AOC, EE-SIM), the oracle at seeds 2-7 identical, the Rust gate PASS, the test profile
+  0/0, `lan_game.py` `RESULT PASS lan-game` (PT host 3000, joiner 3000; no fault line). `xbuild.py wontest` was not
+  rerun after this merge (it passed, 106 programs, on 0a401eb9).

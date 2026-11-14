@@ -69,10 +69,6 @@ public:
         MSImage(unsigned char t,unsigned char f=0,int w=0,int h=0) : ProgramImage(w,h),mImageType(t),mImageFlags(f) {} // inline: 0x14 bytes, ProgramImage constructor 0x00728790, then the bytes at +0x10/+0x11
         virtual SmartPtr<Image> Duplicate(); // at 0x00715a10
         virtual void Paint(Graphics&); // slot 0x14, at 0x007172b0
-        void DrawPushButton(Graphics&,bool,bool=false);
-        void DrawArrowButton(Graphics&,Direction);
-        void DrawCloseButton(Graphics&);
-        bool FlagSet(unsigned char flags) { return this->mImageFlags&flags?true:false; }
     };
 };
 }

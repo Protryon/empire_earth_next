@@ -72,6 +72,9 @@ template <class Call> inline void WONDrawOne(Graphics& g, const EeWonDrawOp& o, 
             break;
         }
         case EE_WON_DRAW_PIXEL: g.SetPixel(o.a, o.b, (DWORD)(unsigned int)o.c); break;
+        case EE_WON_DRAW_SYS_PIXEL: g.SetPixel(o.a, o.b, g.GetStandardColor(o.c)); break;
+        case EE_WON_DRAW_FILL_ELLIPSE: g.FillEllipse(o.a, o.b, o.c, o.d); break;
+        case EE_WON_DRAW_ARC: g.DrawArc(o.a, o.b, o.c, o.d, o.e, o.f); break;
         default: break;
     }
 }
@@ -88,6 +91,22 @@ template <class Call> inline void WONDrawRun(Graphics& g, const WONDrawOps& ops,
 inline void WONDrawRun(Graphics& g, const WONDrawOps& ops, const WONDrawSlots& s)
 {
     WONDrawRun(g, ops, s, WONDrawNoCall());
+}
+
+// the Windows skin's drawing (mspaint.rs): one paint's inputs, its plan run on the Graphics; the plan's text call is
+// the button's DrawButtonText
+inline EeWonMsPaint WONMsPaintOf(EeWonMsPaintKind k, int w, int h, uint32_t flags = 0, int a = 0, int b = 0,
+                                 int c = 0, int d = 0, int e = 0)
+{
+    EeWonMsPaint p;
+    p.kind = k; p.flags = flags; p.width = w; p.height = h;
+    p.a = a; p.b = b; p.c = c; p.d = d; p.e = e;
+    return p;
+}
+inline void WONMsPaint(Graphics& g, const EeWonMsPaint& p, MSButtonBase* text = NULL)
+{
+    WONDrawRun(g, WONDrawOps([&](EeWonDrawOp* o, size_t n) { return ee_won_mspaint_plan(&p, o, n); }), WONDrawSlots(),
+               [&](const EeWonDrawOp& o) { if (text != NULL && o.a == EE_WON_MSPAINT_CALL_TEXT) text->DrawButtonText(g, o.b, o.c); });
 }
 
 // the font measures a plan asks for (Font::GetStringWidth over a text, GetCharacterWidth of one of its units or
