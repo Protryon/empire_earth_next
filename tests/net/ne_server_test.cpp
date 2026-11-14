@@ -713,6 +713,12 @@ struct Sequence {
         if (this->mRust)
             gQ->Op("state " + theState + " " + std::to_string(inputs) + " " + std::to_string(s2aw));
     }
+    // an input's export size: a quarter of them sizes that fill a tick's packet to its last byte (12 + 536 + 0x1c)
+    unsigned long InputSize()
+    {
+        static const unsigned long kExact[] = {268, 268, 524, 134};
+        return this->mRandom.Below(4) == 0 ? kExact[this->mRandom.Below(4)] : 8 + this->mRandom.Below(300);
+    }
     NEMessage* NewMessage(unsigned char inType, unsigned long inSize = 12)
     {
         return new NEMessage(inType, inSize);
@@ -730,7 +736,7 @@ struct Sequence {
             r->mAverage = this->mRandom.Below(4) == 0 ? 600 + this->mRandom.Below(400) : this->mRandom.Below(200);
             uint32_t theInputs = this->mRandom.Below(4) == 0 ? 1 + this->mRandom.Below(3) : 0;
             for (uint32_t i = 0; i < theInputs; i++)
-                r->mInputs.push_back(this->NewMessage(0x40, 8 + this->mRandom.Below(100))->mID);
+                r->mInputs.push_back(this->NewMessage(0x40, this->InputSize())->mID);
             if (this->mRandom.Below(10) == 0)
                 r->mExtraInputs = 1;
             m = r;
@@ -755,7 +761,7 @@ struct Sequence {
                                                    kNetMessageStopGameResponse};
             m = this->NewMessage(kTypes[this->mRandom.Below(3)]);
         } else {
-            m = this->NewMessage(0x40, 8 + this->mRandom.Below(300));
+            m = this->NewMessage(0x40, this->InputSize());
             m->mAvailable = this->mRandom.Below(6) != 0;
         }
         return m;
@@ -808,7 +814,7 @@ struct Sequence {
             gQ->Set(gS->mInputEvent);
         } else if (theWhat < 44) {   // the server's own input
             static const unsigned char kTypes[] = {0x40, 0x40, 0x40, 0x7c, 0x91};
-            NEMessage* m = this->NewMessage(kTypes[this->mRandom.Below(5)], 8 + this->mRandom.Below(300));
+            NEMessage* m = this->NewMessage(kTypes[this->mRandom.Below(5)], this->InputSize());
             m->mWhilePaused = this->mRandom.Below(4) == 0;
             m->mAvailable = this->mRandom.Below(6) != 0;
             unsigned char thePlayer = (unsigned char)(this->mRandom.Below(4) == 0 ? kSlotNone : this->mRandom.Below(4));
@@ -879,6 +885,19 @@ struct Sequence {
             snprintf(theCall, sizeof(theCall), "reconnects %lu", theTime);
             this->Call(theCall);
             if (R) ee_net_sv_start_waiting_for_reconnects(s, (uint32_t)theTime); else o->StartWaitingForReconnects(theTime);
+            if (this->mRandom.Below(2) == 0) {   // (the resume near the 3.5 s the wait is cut to 3 s from)
+                this->Result(0);
+                this->Call("run");
+                gQ->LetRun();
+                this->Result(0);
+                unsigned long theWait = 16000 + this->mRandom.Below(1200);
+                snprintf(theCall, sizeof(theCall), "pass %lu", theWait);
+                this->Call(theCall);
+                gQ->Pass(theWait);
+                this->Result(0);
+                this->Call("resume");
+                if (R) ee_net_sv_set_event(s, EeNetSvEvent::ResumeMigratedGame); else o->ResumeMigratedGame();
+            }
         } else if (theWhat < 69) {
             this->Call("resume");
             if (R) ee_net_sv_set_event(s, EeNetSvEvent::ResumeMigratedGame); else o->ResumeMigratedGame();
