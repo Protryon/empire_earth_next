@@ -445,6 +445,33 @@ constexpr static const uint8_t EE_NETMSG_KIND_ENGINE = 1;
 /// the types every `EEMessage` class takes (`EEMEndCinematic`'s 0x9d too, which the factory does not build).
 constexpr static const uint8_t EE_NETMSG_KIND_GAME = 2;
 
+/// `GetCanSendWhilePaused` answers true.
+constexpr static const uint8_t EE_NETMSG_RECORD_PAUSED = 1;
+
+/// A sender's message may be sent while the local player is out (`EEMessage::mCanSendWhenOut`; an imported one never).
+constexpr static const uint8_t EE_NETMSG_RECORD_WHEN_OUT = 2;
+
+/// The record's room: at least the largest record type's members after the selection id (`EEMPayTribute`'s 21 bytes).
+constexpr static const size_t EE_NETMSG_RECORD_BYTES = 32;
+
+/// No such member.
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_NONE = 0;
+
+/// An integer (U8, U16, I32, U32): a sender's value is truncated to its size.
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_INTEGER = 1;
+
+/// A `bool`: a sender's value is stored as value != 0.
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_BOOL = 2;
+
+/// A `float`.
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_FLOAT = 3;
+
+/// A `GE2DPoint` (two floats).
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_POINT = 4;
+
+/// A `GEVector` (three floats).
+constexpr static const uint8_t EE_NETMSG_RECORD_FIELD_VECTOR = 5;
+
 /// The header's size: reserved, type, target slot, originating slot.
 constexpr static const size_t HEADER_SIZE = 4;
 
@@ -472,6 +499,14 @@ struct EeNetMsgSlot {
 
 /// Builds one nested input from the bytes at `data`: its `ExportSize`, or 0 when no message has its type.
 using EeNetMsgBuildInput = uint32_t(*)(void *context, const uint8_t *data);
+
+/// A record member: its kind (`EE_NETMSG_RECORD_FIELD_*`, NONE past the last member), its offset in the record and
+/// its size.
+struct EeNetMsgRecordField {
+  uint8_t kind;
+  uint32_t offset;
+  uint32_t size;
+};
 
 extern "C" {
 
@@ -597,6 +632,18 @@ size_t ee_netmsg_decompress_units(const uint8_t *buffer,
                                   uint8_t size,
                                   int32_t *out,
                                   size_t capacity);
+
+/// The codec class of a record message type, or `u32::MAX` for a type with a class of its own (or none).
+uint32_t ee_netmsg_record_class(uint8_t message_type);
+
+/// A record type's flags (`EE_NETMSG_RECORD_PAUSED`, `EE_NETMSG_RECORD_WHEN_OUT`); 0 for any other type.
+uint8_t ee_netmsg_record_flags(uint8_t message_type);
+
+/// A record type's debug label (`GetMessageLabel`), a static C string; "" for any other type.
+const char *ee_netmsg_record_label(uint8_t message_type);
+
+/// Member `index` of a record class (1 = the first after the selection id; NONE past the last).
+EeNetMsgRecordField ee_netmsg_record_field(uint32_t class_id, uint32_t index);
 
 }  // extern "C"
 

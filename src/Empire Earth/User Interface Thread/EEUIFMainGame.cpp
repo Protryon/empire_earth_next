@@ -284,7 +284,7 @@ extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t 
         return 0;
     }
     case EE_SCREENS_UH_OP_SEND_LOAD:
-        gCommunications->ProcessLocalUserInput(new EEMLoadUnitData(inA, true), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadUnitData, {inA, true}), kSlotNone);
         return 0;
     case EE_SCREENS_UH_OP_IN_VIEW:
         return gViewport.GetViewRectangle().Contains(GE2DPoint(ioPoint[0], ioPoint[1]));

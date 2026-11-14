@@ -371,7 +371,7 @@ long EEUIMiniMap::MouseLButtonUp()
         if (::gWorld.mMap->GetTileAtLocation(theTile) != NULL) {
             long theX = theWorld.GetX();
             long theY = theWorld.GetY();
-            gCommunications->ProcessLocalUserInput(new EEMSendFlare(U2DPoint<long>(theX, theY)), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSendFlare, {theX, theY}), kSlotNone);
             gMouse->mPointer = 0;
             static_cast<EEUIFMainGame*>(this->GetForm())->SetUIState(0);
         }

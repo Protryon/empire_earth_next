@@ -761,7 +761,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             theCode = [=] {
                 EESEAMouseClick* a = new EESEAMouseClick;
                 unsigned long theID = c == "clear" ? 0 : UnitRef(w[1]);
-                EEMessage* m = c == "select" ? static_cast<EEMessage*>(new EEMSelectUnit(theID))
+                EEMessage* m = c == "select" ? static_cast<EEMessage*>(new EEMRecord(kMessageSelectUnit, {theID}))
                                : c == "toggle" ? static_cast<EEMessage*>(new EEMAddUnitToSelectedGroup(theID))
                                : c == "add" ? static_cast<EEMessage*>(new EEMAlwaysAddUnitToSelectedGroup(theID))
                                : static_cast<EEMessage*>(new EEMUnselectAllUnits);

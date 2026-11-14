@@ -883,7 +883,7 @@ long EEModeAirport(void* inLocation, void* inForm, long inCommand, long inKind)
         } else {
             sB5652F0 = theShift;
             gCommunications->ProcessLocalUserInput(
-                new EEMSetAirportCommand(inCommand, GE2DPoint(thePoint.GetX(), thePoint.GetY()), theTarget, theShift),
+                new EEMRecord(kMessageSetAirportCommand, {GE2DPoint(thePoint.GetX(), thePoint.GetY()), inCommand, theTarget, theShift}),
                 kSlotNone);
             if (theShift)
                 return false;
@@ -1088,7 +1088,7 @@ long EEModeFlare(void* inLocation, void* inForm)
         return false;
     if (EEPointUnitOrTileXY(theLocation, theTile, theX, theY, true)) {
         EEOrderAtCursor(theLocation, NULL);
-        gCommunications->ProcessLocalUserInput(new EEMSendFlare(U2DPoint<long>(theX, theY)), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSendFlare, {theX, theY}), kSlotNone);
     }
     theForm->SetUIState(0);
     gMouse->mPointer = 0;

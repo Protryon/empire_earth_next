@@ -1557,7 +1557,7 @@ void EEUserInterface::SetLoadProgress(float inFraction)
         inFraction = 1.0f;
     unsigned long thePercent = (unsigned long)(inFraction * 100.0f);
     if (sLastLoadPercent / 20 < thePercent / 20 && gCommunications != NULL && gCommunications->GetNumHumanPlayers() > 1)
-        gCommunications->ProcessLocalUserInput(new EEMLoadPercent(this->mLocalPlayer, thePercent), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadPercent, {this->mLocalPlayer, thePercent}), kSlotNone);
     sLastLoadPercent = thePercent;
     this->mThread->Post(0x40a, reinterpret_cast<void*>(thePercent), NULL, true);
 }
