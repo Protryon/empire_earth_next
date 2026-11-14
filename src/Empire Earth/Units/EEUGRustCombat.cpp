@@ -148,7 +148,7 @@ int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inCode, uint64_t inUnit, uint
     }
     case EE_COMBAT_G_FIND_GHOST: return (int64_t)Handle(EEFindLoadedGhostUnit((unsigned long)a[0]));
     case EE_COMBAT_G_ID: return (int64_t)(uint32_t)reinterpret_cast<EEUnit*>(theUnit)->mUnitID;
-    case EE_COMBAT_G_HIT_POINTS: return reinterpret_cast<EEUnit*>(theUnit)->mHitPoints.Get();
+    case EE_COMBAT_G_HIT_POINTS: return reinterpret_cast<EEUnit*>(theUnit)->mHitPoints;
     case EE_COMBAT_G_VELOCITY: return Bits(theUnit->mVelocity);
     case EE_COMBAT_G_POSITION: {
         EEUnit* theTarget = reinterpret_cast<EEUnit*>(UnitOf((uint64_t)a[0]));

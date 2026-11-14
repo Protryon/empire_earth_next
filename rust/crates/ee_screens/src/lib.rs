@@ -70,6 +70,8 @@
 //!   the object combo box, the class reload, the Shift/Ctrl placement).
 //! - [`status_button`]: the main game form's command buttons' presses (`ButtonUp`, `Command`, `MouseRButtonUp`)
 //!   over the C++ host.
+//! - [`ui_game`]: the UI thread's game starts (the scenario tests, a saved game's load) and its loop (`Run`)
+//!   over the C++ host.
 //! - [`ui_thread`]: the UI thread's message switch (`EEUserInterface::HandleMessage`) and the game window's event
 //!   handler (`HandleEvent`, with its statics) over the C++ host.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
@@ -134,6 +136,9 @@ pub mod lobby_form;
 #[cfg(not(test))]
 mod lobby_form_ffi;
 pub mod lobby_options;
+pub mod main_form;
+#[cfg(not(test))]
+mod main_form_ffi;
 pub mod main_game;
 #[cfg(not(test))]
 mod main_game_ffi;
@@ -174,6 +179,9 @@ mod status_box_ffi;
 pub mod status_button;
 #[cfg(not(test))]
 mod status_button_ffi;
+pub mod ui_game;
+#[cfg(not(test))]
+mod ui_game_ffi;
 pub mod ui_thread;
 #[cfg(not(test))]
 mod ui_thread_ffi;

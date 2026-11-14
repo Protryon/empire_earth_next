@@ -252,6 +252,10 @@ pub struct EeGfxEffectRecord {
     pub orbit: crate::effect_orbit::EeGfxEffectOrbit,
     /// the nuclear explosion's and energy wave's (`effect_nuclear.rs`)
     pub blast: crate::effect_nuclear::EeGfxEffectBlast,
+    /// the damage vent's (`effect_vent.rs`)
+    pub vent: crate::effect_vent::EeGfxEffectVent,
+    /// the command confirmation's (`effect_confirm.rs`)
+    pub confirm: crate::effect_confirm::EeGfxEffectConfirm,
 }
 
 /// The identity (`GETransformation()`).
@@ -294,6 +298,8 @@ impl EeGfxEffectRecord {
             pass: crate::effect_additive::EeGfxEffectPass::default(),
             orbit: crate::effect_orbit::EeGfxEffectOrbit::default(),
             blast: crate::effect_nuclear::EeGfxEffectBlast::default(),
+            vent: crate::effect_vent::EeGfxEffectVent::default(),
+            confirm: crate::effect_confirm::EeGfxEffectConfirm::default(),
         }
     }
 

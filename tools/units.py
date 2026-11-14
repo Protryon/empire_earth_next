@@ -35,7 +35,7 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                "dx7hrtnl": DX7_TRAMPOLINES,
                "exe": ["Empire Earth/Database/EEDataTextFile.cpp", "Empire Earth/Database/EERules.cpp",
                        # the 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs)
-                       "Empire Earth/Graphics Thread/EEE3DRust.cpp",
+                       "Empire Earth/Graphics Thread/EEE3DRust.cpp", "Empire Earth/Graphics Thread/EEE2DRust.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)

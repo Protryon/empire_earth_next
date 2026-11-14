@@ -184,13 +184,20 @@ struct EEUIFMGStatusButtonPress {
     EEUIFMGStatusButton* mButton;
     EEComplexUnit* mTransport;
     UWideString mReason;
+    UWideString mText;          // GetHelpString's held text
+    UWideString* mOut;          // GetHelpString's result
 };
 static_assert(EE_SCREENS_SB_TYPE_TELEPORTER == kUnitTypeTeleporter && EE_SCREENS_SB_CATEGORY_FORTRESS == kUnitCategoryFortress &&
                   EE_SCREENS_SB_SOUND_BUTTON1 == kSoundButton1 && EE_SCREENS_SB_SOUND_BUTTON2 == kSoundButton2 &&
                   EE_SCREENS_SB_WORLD_JIT_DELAY == kWorldDeathmatchJitManufacturingDelay &&
                   EE_SCREENS_SB_WORLD_REFUSAL_INTERVAL == kWorldRefusalMessageInterval &&
                   EE_SCREENS_SB_IDS_JIT_NOT_YET == IDS_JUST_IN_TIME_MANUFACTURING_IS_NOT &&
-                  EE_SCREENS_SB_IDS_INSUFFICIENT_POWER == IDS_INSUFFICIENT_POWER,
+                  EE_SCREENS_SB_IDS_INSUFFICIENT_POWER == IDS_INSUFFICIENT_POWER &&
+                  EE_SCREENS_SB_IDS_TRADE_BUY == IDS_TRADE_BUY && EE_SCREENS_SB_IDS_TRADE_SELL == IDS_TRADE_SELL &&
+                  EE_SCREENS_SB_IDS_TRADE_FOR == IDS_TRADE_FOR &&
+                  EE_SCREENS_SB_IDS_RESOURCE_NAME_BASE == IDS_RESOURCE_NAME_BASE &&
+                  EE_SCREENS_SB_IDS_RESOURCE_NAME_GOLD == IDS_RESOURCE_NAME_GOLD &&
+                  EE_SCREENS_SB_IDS_IMPROVEMENT_POWER == IDS_IMPROVEMENT_POWER && EE_SCREENS_SB_IDS_POP_COST == IDS_POP_COST,
               "status_button.rs's constants");
 
 // The press's reads and calls (EE_SCREENS_SB_OP_*); the selected group's units by index, the button's node by its
@@ -202,11 +209,18 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(theButton->GetForm());
     EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
     EESelectedGroup* theGroup = thePlayer != NULL ? thePlayer->mSelectedGroup : NULL;   // read only by the ops that use it
-    EEComplexUnit* theUnit = inOp >= EE_SCREENS_SB_OP_UNIT && inOp <= EE_SCREENS_SB_OP_UNIT_POWER ? theGroup->GetUnit(inA) : NULL;
+    EEComplexUnit* theUnit = (inOp >= EE_SCREENS_SB_OP_UNIT && inOp <= EE_SCREENS_SB_OP_UNIT_POWER) ||
+                                     inOp == EE_SCREENS_SB_OP_UNIT_PRIEST || inOp == EE_SCREENS_SB_OP_CONVERSION_COST
+                                 ? theGroup->GetUnit(inA)
+                                 : NULL;
     bool theNodeOp = (inOp >= EE_SCREENS_SB_OP_NODE_KIND && inOp <= EE_SCREENS_SB_OP_MOUSE_INSIDE) ||
-                     inOp == EE_SCREENS_SB_OP_NODE_CALAMITY;
+                     inOp == EE_SCREENS_SB_OP_NODE_CALAMITY || inOp == EE_SCREENS_SB_OP_HELP_TEXT ||
+                     inOp == EE_SCREENS_SB_OP_NODE_PRESENT || inOp == EE_SCREENS_SB_OP_NODE_NAME_ID;
     EETechTreeNode* theNode = theNodeOp && !theButton->mIsCommand ? thePlayer->GetTechTree()->Get(theButton->mTechnology) : NULL;
-    EEUnitClass* theClass = inOp >= EE_SCREENS_SB_OP_CLASS_PRESENT && inOp <= EE_SCREENS_SB_OP_CLASS_GATE ? gUnitClassTable[inA] : NULL;
+    EEUnitClass* theClass = (inOp >= EE_SCREENS_SB_OP_CLASS_PRESENT && inOp <= EE_SCREENS_SB_OP_CLASS_GATE) ||
+                                    (inOp >= EE_SCREENS_SB_OP_CLASS_UPGRADE_NAMED && inOp <= EE_SCREENS_SB_OP_CLASS_NAME_ID)
+                                ? gUnitClassTable[inA]
+                                : NULL;
     EESoundObject* theSound;
     switch (inOp) {
     case EE_SCREENS_SB_OP_IS_COMMAND: return theButton->mIsCommand;
@@ -285,7 +299,7 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     case EE_SCREENS_SB_OP_DECODE_TRADE: {
         long theResource;
         bool theSell;
-        if (!EEDecodeTradeButton(inA, theResource, theSell))
+        if (!EEDecodeTradeButton(inA, theResource, theSell) && inB == 0)   // (GetHelpString, b 1, ignores the result)
             return -1;
         return (int64_t)theResource * 2 + (theSell ? 1 : 0);
     }
@@ -335,6 +349,48 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     case EE_SCREENS_SB_OP_IN_FANATIC_SET: return gUnitSetManager.GetSet(0x2f)->Contains((unsigned long)inA);
     case EE_SCREENS_SB_OP_UNIT_CLOAKED: return theGroup->GetUnit(inA)->IsCloaked();
     case EE_SCREENS_SB_OP_SET_AVAILABLE: theButton->mAvailable = inA != 0; break;
+    case EE_SCREENS_SB_OP_HELP_TEXT: {
+        UIHotKey* theHotKey = NULL;
+        switch (inA) {
+        case EE_SCREENS_SB_TEXT_STRING: gResource->GetString((unsigned long)inB, thePress.mText); break;
+        case EE_SCREENS_SB_TEXT_OBJECT_HOT_KEY: {
+            EEButtonObject* theObject = EEButtonObject::Get(theButton->mButton);
+            if (theObject == NULL || (theHotKey = theObject->GetHotKey()) == NULL)
+                return -1;
+            theHotKey->GetHotKeyName(thePress.mText);
+            break;
+        }
+        case EE_SCREENS_SB_TEXT_NODE_HOT_KEY:
+            if ((theHotKey = theNode->GetHotKey()) == NULL)
+                return -1;
+            theHotKey->GetHotKeyName(thePress.mText);
+            break;
+        case EE_SCREENS_SB_TEXT_UPGRADE_NAME:
+            thePress.mText = thePlayer->mUnitClassUpgrades[gUnitClassTable[inB]->mUnitType]->mName;
+            break;
+        case EE_SCREENS_SB_TEXT_COST: theNode->GetCostString(thePress.mText, theButton->mUnitType, 1.0f); break;
+        }
+        return (int64_t)strlen(thePress.mText);
+    }
+    case EE_SCREENS_SB_OP_HELP_TEXT_READ: {
+        size_t theLength = strlen(thePress.mText);
+        memcpy(reinterpret_cast<char*>(inA), (const char*)thePress.mText, theLength < (size_t)inB ? theLength : (size_t)inB);
+        return (int64_t)theLength;
+    }
+    case EE_SCREENS_SB_OP_HELP_OUT: {
+        std::vector<char> theBytes(reinterpret_cast<const char*>(inA), reinterpret_cast<const char*>(inA) + inB);
+        theBytes.push_back(0);
+        *thePress.mOut = &theBytes[0];
+        break;
+    }
+    case EE_SCREENS_SB_OP_TRADE_PRICE: return EEGetTradePrice(thePlayer, (long)inA, inB != 0);
+    case EE_SCREENS_SB_OP_UNIT_PRIEST: return theUnit != NULL && theUnit->GetUnitClass()->IsPriest();
+    case EE_SCREENS_SB_OP_CONVERSION_COST: return EEGetConversionCost(theUnit->mComplexUnit);
+    case EE_SCREENS_SB_OP_NODE_PRESENT: return theNode != NULL;
+    case EE_SCREENS_SB_OP_NODE_NAME_ID: return theNode->mData->mNameID;
+    case EE_SCREENS_SB_OP_CLASS_UPGRADE_NAMED: return thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName.GetLength() != 0;
+    case EE_SCREENS_SB_OP_CLASS_POPULATION: return theClass->GetPopulationCost();
+    case EE_SCREENS_SB_OP_CLASS_NAME_ID: return theClass->mNameStringID;
     case EE_SCREENS_SB_OP_HAS_OBJECT: return theButton->mButtonObject != NULL;
     case EE_SCREENS_SB_OP_STATE: return theButton->GetState();
     case EE_SCREENS_SB_OP_BITMAPS:
@@ -417,110 +473,14 @@ long EEUIFMGStatusButton::DrawTextA()
 
 // FUNCTION: EXE 0x66ebdf
 // Builds the button's help text: market trade prices, command help (with conversion cost for priests) and
-// hot key, or a tech's name, cost and description
-// NEAR: string-building order and temporaries
+// hot key, or a tech's name, cost and description (ee_screens status_button.rs help_string)
 bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
 {
-    UWideString theName;
-    UWideString theCost;
-    UWideString theString;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    if (this->mIsCommand) {
-        unsigned long theButton = this->mButton;
-        if (theButton >= 0x5dc && theButton <= 0x5e3) {
-            long theResource;
-            bool theSell;
-            EEDecodeTradeButton(theButton, theResource, theSell);
-            gResource->GetString(theSell ? IDS_TRADE_SELL : IDS_TRADE_BUY, theName);
-            long thePrice = EEGetTradePrice(thePlayer, theResource, theSell);
-            gResource->GetString(theResource + IDS_RESOURCE_NAME_BASE, theCost);
-            sprintf(outString, "%s %d %s", (const char*)theName, 100, (const char*)theCost);
-            gResource->GetString(IDS_TRADE_FOR, theCost);
-            outString += UWideString(" ") + theCost;
-            gResource->GetString(IDS_RESOURCE_NAME_GOLD, theCost);
-            sprintf(theName, " %ld %s", thePrice, (const char*)theCost);
-            outString += theName;
-        } else {
-            gResource->GetString(ee_screens_command_help_string(theButton), outString);
-            if (ee_screens_command_help_priest(this->mButton)) {
-                if (thePlayer->mSelectedGroup->GetNumUnits() > 0) {
-                    EEComplexUnit* theUnit = thePlayer->mSelectedGroup->GetUnit(0);
-                    if (theUnit && theUnit->GetUnitClass()->IsPriest()) {
-                        outString += ": ";
-                        gResource->GetString(IDS_IMPROVEMENT_POWER, theName);
-                        outString += theName;
-                        outString += ": ";
-                        sprintf(theCost, "%ld", EEGetConversionCost(theUnit->mComplexUnit));
-                        outString += theCost;
-                    }
-                }
-            }
-        }
-        EEButtonObject* theObject = EEButtonObject::Get(this->mButton);
-        if (theObject && theObject->GetHotKey()) {
-            theObject->GetHotKey()->GetHotKeyName(theString);
-            outString = outString + " (" + theString + ")";
-        }
-    } else {
-        outString = UWideString("");
-        EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(this->mTechnology);
-        if (theNode == NULL)
-            return true;
-        // the plan is Rust's (ee_screens command_panel.rs tech_help)
-        long theClassIndex = theNode->mData->mUnitClass;
-        EEUnitClass* theClass = theClassIndex > 0 ? gUnitClassTable[theClassIndex] : NULL;
-        long thePopulation = 0;
-        bool theNamed = false;
-        if (theClass != NULL) {
-            // (no size() here: the original reads the record vector through begin() + type only)
-            theNamed = thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName.GetLength() != 0;
-            thePopulation = theClass->GetPopulationCost();
-        }
-        EECalamityClass* theCalamityClass = NULL;
-        long theCalamityCost = 0;
-        if (theNode->mData->mKind == 5) {
-            EECalamityEnum theCalamity = (EECalamityEnum)theNode->mData->mCalamity;
-            theCalamityClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theCalamity);
-            theCalamityCost = theCalamityClass->GetCost();
-        }
-        EeScreensTechHelp thePlan;
-        ee_screens_button_tech_help(theClass != NULL, theNamed, thePopulation, theNode->mData->mKind, theCalamityCost,
-                                    theNode->mData->mMakesUnit, theNode->mData->mNameID, &thePlan);
-        if (thePlan.name == 1)
-            outString = thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName;
-        else if (thePlan.name == 0)
-            gResource->GetString(gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID, outString);
-        else {
-            gResource->GetString(theNode->mData->mNameID, theName);
-            sprintf(outString, "%s", (const char*)theName);
-        }
-        outString += ": ";
-        if (thePlan.power) {
-            gResource->GetString(IDS_IMPROVEMENT_POWER, theName);
-            theCost = theName;
-            theCost += ": ";
-            sprintf(theName, "%ld", theCalamityCost);
-            theCost += theName;
-        } else {
-            theNode->GetCostString(theCost, this->mUnitType, 1.0f);
-        }
-        outString += theCost;
-        if (thePlan.population) {
-            gResource->GetString(IDS_POP_COST, theName);
-            sprintf(theCost, " %s: %ld", (const char*)theName, (unsigned long)thePopulation);
-            outString += theCost;
-        }
-        if (thePlan.unit_name) {
-            gResource->GetString(theNode->mData->mNameID, theName);
-            outString += " ";
-            outString += theName;
-        }
-        if (theNode->GetHotKey()) {
-            theNode->GetHotKey()->GetHotKeyName(theString);
-            outString = outString + " (" + theString + ")";
-        }
-    }
-    return true;
+    EEUIFMGStatusButtonPress thePress;
+    thePress.mButton = const_cast<EEUIFMGStatusButton*>(this);
+    thePress.mTransport = NULL;
+    thePress.mOut = &outString;
+    return ee_screens_status_button_help(&thePress);
 }
 
 // FUNCTION: EXE 0x66f16c

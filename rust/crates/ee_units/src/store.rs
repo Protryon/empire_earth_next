@@ -213,6 +213,81 @@ pub struct EeUnitRecord {
     pub stats: u64,
     /// the active goal's id (`mGoalState->mID`, the saves' goal id; 0: no goal): the goal queues' ids are goals.rs
     pub goal_id: u32,
+    /// the twenty-sixth round's: the addresses of the object's Rust records (unit_fields.rs: its
+    /// `EeUnitsRtsUnitFields`, `EeUnitsUnitFields`, `EeUnitsComplexUnitFields` base subobjects; 0 for a record its
+    /// class does not have). Every read of the store refreshes the mirrored plain values from them ([`refresh`]).
+    pub rts_fields: u64,
+    pub unit_fields: u64,
+    pub complex_fields: u64,
+}
+
+/// Reads one plain member of a record at `$p` (a raw pointer to the record).
+macro_rules! member {
+    ($p:expr, $f:ident) => {
+        // SAFETY: the caller's pointer names a live record
+        unsafe { std::ptr::read_volatile(std::ptr::addr_of!((*$p).$f)) }
+    };
+}
+
+/// A `bool` member's byte (0 or 1) of a record at `$p`.
+macro_rules! flag {
+    ($p:expr, $f:ident) => {
+        // SAFETY: the caller's pointer names a live record
+        unsafe { crate::unit_fields::bool_byte(std::ptr::addr_of!((*$p).$f)) }
+    };
+}
+
+/// The mirrored plain values of `r` read again from its object's records (`rts_fields`, `unit_fields`,
+/// `complex_fields`; a zero address leaves those values as they are). The conversions are the ones the holders'
+/// reports made: `long`s and `unsigned long`s widened to 64 bits (an `unsigned long` zero-extended), floats as
+/// their bits, bools as 0 or 1.
+///
+/// The addresses are live while the record is in the store: a record leaves the store before its object goes
+/// (`RTSPlayer::RemoveKilledUnits`, `RTSUnit::FreeNode` and `~RTSUnit`, `~RTSPlayer`'s by the player).
+pub fn refresh(r: &mut EeUnitRecord) {
+    use crate::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
+    if r.rts_fields != 0 {
+        let p = r.rts_fields as usize as *const EeUnitsRtsUnitFields;
+        r.tile_x = member!(p, mTileX) as i64;
+        r.tile_y = member!(p, mTileY) as i64;
+        r.valid = flag!(p, mIsValid);
+    }
+    if r.unit_fields != 0 {
+        let p = r.unit_fields as usize as *const EeUnitsUnitFields;
+        r.hit_points = member!(p, mHitPoints) as i64;
+        r.resource_amount = member!(p, mResourceAmount) as i64;
+    }
+    if r.complex_fields != 0 {
+        let p = r.complex_fields as usize as *const EeUnitsComplexUnitFields;
+        r.built = flag!(p, mIsBuilt);
+        r.commandable = flag!(p, mIsCommandable);
+        r.formation_slot = member!(p, mFormationSlot) as i64;
+        r.height = member!(p, mHeight).to_bits();
+        r.times_updated = member!(p, mTimesUpdated) as i64;
+        r.reload_timer = member!(p, mReloadTimer) as i64;
+        r.target_search_timer = member!(p, mTargetSearchTimer) as i64;
+        r.heal_search_timer = member!(p, mHealSearchTimer).to_bits();
+        r.next_trigger_time = member!(p, mNextTriggerTime) as i64;
+        r.rotting_away_time = member!(p, mRottingAwayTime) as i64;
+        r.power = member!(p, mPower) as i64;
+        r.power_regen_timer = member!(p, mPowerRegenTimer) as i64;
+        r.camouflage_timer = member!(p, mCamouflageTimer) as i64;
+        r.velocity = member!(p, mVelocity).to_bits();
+        r.push_velocity_x = member!(p, mPushVelocityX).to_bits();
+        r.push_velocity_y = member!(p, mPushVelocityY).to_bits();
+        r.roll = member!(p, mRoll).to_bits();
+        r.flight_time = member!(p, mFlightTime) as i64;
+        r.cloak_timer = member!(p, mCloaked) as i64;
+        r.cloakable = flag!(p, mIsCloakable);
+        r.cloaked = flag!(p, mIsCloaked);
+    }
+}
+
+/// `r` with its mirrored values read again ([`refresh`]).
+pub fn fresh(r: &EeUnitRecord) -> EeUnitRecord {
+    let mut copy = *r;
+    refresh(&mut copy);
+    copy
 }
 
 impl EeUnitRecord {
@@ -289,6 +364,9 @@ impl EeUnitRecord {
     pub fn first_difference(&self, other: &EeUnitRecord) -> Option<u32> {
         if self.id != other.id
             || self.owner != other.owner
+            || self.rts_fields != other.rts_fields
+            || self.unit_fields != other.unit_fields
+            || self.complex_fields != other.complex_fields
             || self.object != other.object
             || self.player != other.player
             || self.object_kind != other.object_kind
@@ -352,11 +430,11 @@ impl EeUnitRecord {
 
 /// What a decision reads: a unit's record by id. The store implements it; tests use plain maps.
 pub trait UnitView {
-    fn unit(&self, id: u32) -> Option<&EeUnitRecord>;
+    fn unit(&mut self, id: u32) -> Option<&EeUnitRecord>;
 }
 
 impl UnitView for BTreeMap<u32, EeUnitRecord> {
-    fn unit(&self, id: u32) -> Option<&EeUnitRecord> {
+    fn unit(&mut self, id: u32) -> Option<&EeUnitRecord> {
         self.get(&id)
     }
 }
@@ -396,8 +474,8 @@ pub struct Store {
 }
 
 impl UnitView for Store {
-    fn unit(&self, id: u32) -> Option<&EeUnitRecord> {
-        self.records.get(&id)
+    fn unit(&mut self, id: u32) -> Option<&EeUnitRecord> {
+        self.get(id)
     }
 }
 
@@ -478,11 +556,14 @@ impl Store {
     }
 
     /// The record of an object (its `RTSUnit*`'s address), when the store has one of that object.
-    pub fn by_object(&self, object: u64) -> Option<&EeUnitRecord> {
-        match self.by_object.get(&object) {
-            Some(id) => self.records.get(id).filter(|r| r.object == object),
-            None => self.unlisted.get(&object),
-        }
+    /// (Its mirrored values read again from the object: [`refresh`].)
+    pub fn by_object(&mut self, object: u64) -> Option<&EeUnitRecord> {
+        let r = match self.by_object.get(&object) {
+            Some(id) => self.records.get_mut(id).filter(|r| r.object == object),
+            None => self.unlisted.get_mut(&object),
+        }?;
+        refresh(r);
+        Some(r)
     }
 
     /// TEST ONLY: the object index against the records: the records it does not name, plus its entries that name
@@ -502,8 +583,16 @@ impl Store {
         }
     }
 
-    pub fn get(&self, id: u32) -> Option<&EeUnitRecord> {
-        self.records.get(&id)
+    /// The record under `id`, its mirrored values read again from the object ([`refresh`]).
+    pub fn get(&mut self, id: u32) -> Option<&EeUnitRecord> {
+        let r = self.records.get_mut(&id)?;
+        refresh(r);
+        Some(r)
+    }
+
+    /// Whether a record is under `id` (no read of the object).
+    pub fn contains(&self, id: u32) -> bool {
+        self.records.contains_key(&id)
     }
 
     pub fn len(&self) -> usize {
@@ -523,6 +612,7 @@ impl Store {
             .values()
             .chain(self.unlisted.values())
             .filter(|r| r.on_map != 0 && r.object_kind == crate::kinds::EE_OBJECT_COMPLEX_UNIT)
+            .map(fresh)
             .fold(0u64, |sum, r| sum.wrapping_add(r.hit_points.wrapping_add(r.tile_y).wrapping_add(r.tile_x) as u64))
     }
 
@@ -535,6 +625,7 @@ impl Store {
             .values()
             .chain(self.unlisted.values())
             .filter(|r| r.on_map != 0 && r.object_kind == crate::kinds::EE_OBJECT_COMPLEX_UNIT)
+            .map(fresh)
             .fold(0u64, |sum, r| sum.wrapping_add(r.flag2() as u64))
     }
 
@@ -570,7 +661,7 @@ impl Store {
         let mut bad = 0u32;
         for o in unlisted {
             let differs = match self.unlisted.get(&o.object) {
-                Some(r) => r.first_difference(o),
+                Some(r) => fresh(r).first_difference(&fresh(o)),
                 None => Some(0xfd),
             };
             if let Some(f) = differs {
@@ -600,14 +691,14 @@ impl Store {
             let field = if o.id == EE_UNIT_ID_UNLISTED {
                 // (by object, in the unlisted table: not one of `records`)
                 match self.unlisted.get(&o.object) {
-                    Some(r) => r.first_difference(o),
+                    Some(r) => fresh(r).first_difference(&fresh(o)),
                     None => Some(0xff),
                 }
             } else {
                 match self.records.get(&o.id) {
                     Some(r) => {
                         named += 1;
-                        r.first_difference(o)
+                        fresh(r).first_difference(&fresh(o))
                     }
                     None => Some(0xff),
                 }
@@ -1010,5 +1101,52 @@ mod tests {
         with_store(|s| s.insert(rec(id, 0xfd)));
         assert_eq!(with_store(|s| s.get(id).copied()).unwrap().unit_type, 42);
         assert_eq!(with_store(|s| s.clear_player(0x5000 + 0xfd)), 1);
+    }
+
+    #[test]
+    fn reads_take_the_plain_values_from_the_object_records() {
+        use crate::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
+        let mut rts = Box::new(EeUnitsRtsUnitFields { mTileX: 3, mTileY: -4, mIsValid: true, ..Default::default() });
+        let mut unit = Box::new(EeUnitsUnitFields { mHitPoints: 7, mResourceAmount: 9, ..Default::default() });
+        let mut cx = Box::new(EeUnitsComplexUnitFields {
+            mIsBuilt: true,
+            mFormationSlot: 0xffff_fff0,
+            mHeight: 1.5,
+            mCloaked: 12,
+            mReloadTimer: -3,
+            ..Default::default()
+        });
+        let mut s = Store::new();
+        let mut r = EeUnitRecord { on_map: 1, ..rec(0x0300_0001, 3) };
+        r.rts_fields = std::ptr::addr_of!(*rts) as usize as u64;
+        r.unit_fields = std::ptr::addr_of!(*unit) as usize as u64;
+        r.complex_fields = std::ptr::addr_of!(*cx) as usize as u64;
+        s.insert(r);
+        let g = *s.get(0x0300_0001).unwrap();
+        assert_eq!((g.tile_x, g.tile_y, g.valid), (3, -4, 1));
+        assert_eq!((g.hit_points, g.resource_amount), (7, 9));
+        assert_eq!(
+            (g.built, g.formation_slot, g.height, g.cloak_timer, g.reload_timer),
+            (1, 0xffff_fff0, 1.5f32.to_bits(), 12, -3)
+        );
+        assert_eq!(s.checksum_flag1(), (7i64 - 4 + 3) as u64);
+        // the objects change: the next read has the new values, with no report
+        rts.mTileX = 10;
+        rts.mIsValid = false;
+        unit.mHitPoints = 0;
+        cx.mIsCloaked = true;
+        cx.mRoll = -0.0;
+        cx.mIsBuilt = false;
+        let g = *s.by_object(r.object).unwrap();
+        assert_eq!(
+            (g.tile_x, g.valid, g.hit_points, g.cloaked, g.roll, g.built),
+            (10, 0, 0, 1, (-0.0f32).to_bits(), 0)
+        );
+        assert_eq!(s.checksum_flag1(), (10i64 - 4) as u64);
+        // a fill of the same object compares equal (USCK)
+        assert_eq!(s.check(&[fresh(&r)]).mismatches, 0);
+        // a record with no object records keeps its values
+        s.insert(rec(0x0300_0002, 3));
+        assert_eq!(s.get(0x0300_0002).unwrap().hit_points, 100);
     }
 }

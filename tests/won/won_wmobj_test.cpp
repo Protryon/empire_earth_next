@@ -22,6 +22,19 @@
 // names; the default window's font is a new font. A cache is traced as one line after each call; the maps' clears
 // give their images back in name order on both sides (the original's tree went in its own order).
 //
+// Round 34 adds the rest of the manager (wmloop.rs): the window set, the event list and PostEvent, the timer
+// events, the broadcast set, ProcessEvents, DeliverEvent, CloseAllWindows, Add/RemoveWindow and the screen
+// resolution, the original statements copied from WindowManager.cpp before the move (the event's fields, which the
+// C++ read directly, are WmEvent ops on both sides; reads with no call between them are made once). The world adds
+// events (ids from 0x6001: a type, a window, a mouse place and button, a key, a size, references; posted events
+// start unreferenced, a window's close event is the world's), the windows' client-area, minimize and close-event
+// state, the screen mode and the loop's wake-ups. A window's Close posts its close event (a nested PostEvent); an
+// event's Deliver, the windows' handlers, a broadcast and a window's timer tick may make nested calls (never one
+// that erases the entry a set walk is on: the original's iterator would be undefined there); the platform's next
+// event often posts an event and runs ProcessEvents. Each sequence starts with AddWindow of windows 1..4; DoPopup's
+// new window adds itself (a nested AddWindow). After each top-level call the loop's fields and sets are traced too;
+// at the end every event's references must be back at what the world holds.
+//
 // Each of 20,000 sequences makes 40 random calls (every method, the setters, world changes). The traces must be
 // the same. The first 30 sequences and every later one that makes an op or a call none before made are
 // rust/crates/ee_won/src/golden_wmobj.txt, which the Rust tests replay; `--print` prints them.
@@ -51,10 +64,20 @@ enum { kWins = 8, kComps = 12, kRoot = 100 };
 // ---- the world
 struct Rect { int x, y, w, h; };
 struct WinW {
-    bool exists, inSet, isPopup, mouseDown, visible, modal;
+    bool exists, isPopup, mouseDown, visible, modal, inClient, minOnRestore, minimized;
     int state, mouseX, mouseY, parent, refs;
+    intptr_t closeEvent;
     Rect rect;
 };
+// an event (round 34): ids kEv0 + 1 .. kEv0 + kEvMax
+struct EvW {
+    int type, x, y, button, key, refs, base;
+    intptr_t window;
+    Rect size;
+};
+enum { kEv0 = 0x6000, kEvMax = 3000 };
+static EvW sEv[kEvMax + 1];
+static int sEvCount, sSignals, sResW, sResH;
 struct CompW {
     int parent, refs, modalLevel;
     unsigned bits;
@@ -134,34 +157,67 @@ enum { kArgs = 12 };
 static intptr_t SideCall(bool rust, int call, const int* v);
 static void TraceCall(bool rust, int call, const int* v, bool dump);
 static void Nested(bool rust, bool fromEvent);
-enum { kExitLoop = 7, kEndDialog = 6 };
+static void NestedFrom(bool rust, int kind);
+enum { kExitLoop = 7, kEndDialog = 6, kPostEventCall = 36, kSubscribeCall = 40, kProcessCall = 44, kAddWindowCall = 34 };
+enum { kFromDeliver, kFromHandler };
+static bool EvOk(intptr_t e) { return e > kEv0 && e <= kEv0 + sEvCount; }
+// a new event: the type, a window 1..8 (mostly an open one), the fields at random
+static intptr_t NewEvent(Rng& g, int type)
+{
+    if (sEvCount >= kEvMax) return 0;
+    EvW& e = sEv[++sEvCount];
+    e = EvW();
+    e.type = type;
+    e.window = g.Int(5) == 0 ? 5 + g.Int(4) : 1 + g.Int(4);
+    e.x = g.Int(500) - 50; e.y = g.Int(500) - 50;
+    e.button = g.Int(4) == 0 ? g.Int(5) - 1 : 0;
+    static const int keys[] = {27, 13, 65, 9, 40};
+    e.key = keys[g.Int(5)];
+    e.size.x = g.Int(3) == 0 ? -1 : g.Int(300); e.size.y = g.Int(3) == 0 ? -1 : g.Int(300);
+    e.size.w = g.Int(3) == 0 ? -1 : 50 + g.Int(300); e.size.h = g.Int(3) == 0 ? -1 : 50 + g.Int(300);
+    return kEv0 + sEvCount;
+}
+static int RandomType(Rng& g)
+{
+    int t = g.Int(18);
+    return t < 15 ? t : t == 15 ? 2 : t == 16 ? 3 : 20; // 0 and 15..: no input event (Deliver); moves and presses often
+}
 
 static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
+    typedef EeWonWmEvent EE;
     bool rectA = op == Op::WmScreenRect;
-    bool rectC = op == Op::WmWin && (a == (intptr_t)WW::GetRect || a == (intptr_t)WW::SetPosSize);
-    bool rectB = op == Op::WmNewPopupWindow;
+    bool evPtr = op == Op::WmEvent && (a == (intptr_t)EE::Mouse || a == (intptr_t)EE::SetMouse ||
+                                       a == (intptr_t)EE::Size || a == (intptr_t)EE::SetSize);
+    bool resGet = op == Op::WmResolution && a == 0;
+    bool rectC = (op == Op::WmWin && (a == (intptr_t)WW::GetRect || a == (intptr_t)WW::SetPosSize)) || evPtr || resGet;
+    bool rectB = op == Op::WmNewPopupWindow || resGet;
     bool strB = op == Op::WmDecode, strA = op == Op::WmDecodeRaw || op == Op::WmDelayImage;
     char extra[64] = "";
     if (strA || strB) {
         std::string s(strB ? (const char*)b : (const char*)a, (size_t)(strB ? c : b));
         snprintf(extra, sizeof extra, " s %s", s.c_str());
     }
-    if (op == Op::WmWin && a == (intptr_t)WW::SetPosSize) {
+    if ((op == Op::WmWin && a == (intptr_t)WW::SetPosSize) || (op == Op::WmEvent && a == (intptr_t)EE::SetSize)) {
         const Rect& r = *(const Rect*)c;
         snprintf(extra, sizeof extra, " r %d %d %d %d", r.x, r.y, r.w, r.h);
-    } else if (rectB) {
+    } else if (op == Op::WmEvent && a == (intptr_t)EE::SetMouse) {
+        const EeWonWmMouse& m = *(const EeWonWmMouse*)c;
+        snprintf(extra, sizeof extra, " m %ld %d %d", (long)m.window, m.x, m.y);
+    } else if (op == Op::WmNewPopupWindow) {
         const Rect& r = *(const Rect*)b;
         snprintf(extra, sizeof extra, " r %d %d %d %d", r.x, r.y, r.w, r.h);
     }
     Line("op %d %ld %ld %ld %ld%s", (int)op, (rectA || strA) ? 0L : (long)a, (rectB || strB) ? 0L : (long)b,
          rectC ? 0L : (long)c, (long)d, extra);
     char key[32];
-    snprintf(key, sizeof key, "op %d %ld", (int)op, (op == Op::WmComp || op == Op::WmWin) ? (long)a : 0L);
+    snprintf(key, sizeof key, "op %d %ld", (int)op, (op == Op::WmComp || op == Op::WmWin || op == Op::WmEvent) ? (long)a : 0L);
     sMet.insert(key);
     intptr_t r = 0;
     Rect out = {0, 0, 0, 0};
     bool hasOut = false;
+    int outKind = 0; // 1 a mouse (window x y button), 2 the screen mode (w h)
+    EeWonWmMouse outMouse = {0, 0, 0, 0};
     switch (op) {
     case Op::WmTick: r = (intptr_t)sClock; break;
     case Op::WmComp: {
@@ -197,6 +253,16 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
         case CC::AsContainer: r = (x->container || b > kRoot) ? b : 0; break;
         case CC::Hold: x->refs++; break;
         case CC::Release: x->refs--; break;
+        case CC::MouseWheel: break;
+        case CC::HandleComponentEvent:
+            // a listener (un)subscribes another component (never itself: the original's walk would break)
+            if (sNest < 3 && sRng->Int(4) == 0) {
+                int v[kArgs] = {0};
+                v[0] = 1 + sRng->Int(kComps);
+                v[1] = sRng->Bool();
+                if (v[0] != b) { sNest++; TraceCall(rust, kSubscribeCall, v, false); sNest--; }
+            }
+            break;
         }
         break;
     }
@@ -207,7 +273,7 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
             break;
         }
         switch ((WW)a) {
-        case WW::SetFocus: case WW::SetCapture: case WW::RootLostFocus: case WW::RootGotFocus: break;
+        case WW::SetFocus: case WW::SetCapture: case WW::RootLostFocus: case WW::RootGotFocus: case WW::IdleUpdate: break;
         case WW::GetRect:
             out = w->rect;
             if (d) { out.x += 4; out.y += 20; out.w -= 8; out.h -= 24; }
@@ -217,7 +283,17 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
         case WW::IsPopup: r = w->isPopup; break;
         case WW::SetIsPopup: w->isPopup = c != 0; break;
         case WW::Show: w->visible = c != 0; break;
-        case WW::Close: if (w->state == 0) w->state = 1; break;
+        case WW::Close:
+            // Window::Close: an open window queues its close event (QueueEvent, a nested PostEvent)
+            if (w->state == 0) {
+                w->state = 1;
+                int v[kArgs] = {0};
+                v[0] = (int)NewEvent(*sRng, 14);
+                if (v[0]) sEv[v[0] - kEv0].window = b;
+                v[1] = 1;
+                if (v[0]) { sNest++; TraceCall(rust, kPostEventCall, v, false); sNest--; }
+            }
+            break;
         case WW::SetPosSize: w->rect = *(const Rect*)c; break;
         case WW::Parent: r = w->parent; break;
         case WW::AddComponent: if (IsComp(c) && c <= kComps) sComp[c].parent = kRoot + (int)b; break;
@@ -234,20 +310,74 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
         case WW::IsVisible: r = w->visible; break;
         case WW::Hold: w->refs++; break;
         case WW::Release: w->refs--; break;
+        case WW::MinimizeOnRestore: r = w->minOnRestore; break;
+        case WW::Minimize: w->minimized = c != 0; break;
+        case WW::InClient: r = w->inClient; break;
+        case WW::HandleMouse: case WW::HandleKey: case WW::HandleInput:
+            if (sNest < 3 && sRng->Int(5) == 0) NestedFrom(rust, kFromHandler);
+            break;
+        case WW::PlatformClose: w->state = 2; break;
+        case WW::CloseEvent: r = w->closeEvent; break;
+        case WW::TimerEvent:
+            // a window's tick sometimes queues an event
+            if (sNest < 3 && sRng->Int(8) == 0) {
+                int v[kArgs] = {0};
+                v[0] = (int)NewEvent(*sRng, RandomType(*sRng));
+                if (v[0]) { sNest++; TraceCall(rust, kPostEventCall, v, false); sNest--; }
+            }
+            break;
         }
         break;
     }
+    case Op::WmEvent: {
+        EvW* e = EvOk(b) ? &sEv[b - kEv0] : NULL;
+        if (e == NULL) {
+            if (a == (intptr_t)EE::Mouse) { *(EeWonWmMouse*)c = outMouse; outKind = 1; }
+            if (a == (intptr_t)EE::Size) { *(Rect*)c = out; hasOut = true; }
+            break;
+        }
+        switch ((EE)a) {
+        case EE::Type: r = e->type; break;
+        case EE::Window: r = e->window; break;
+        case EE::SetWindow: e->window = c; break;
+        case EE::Mouse:
+            outMouse.window = e->window; outMouse.x = e->x; outMouse.y = e->y; outMouse.button = e->button;
+            *(EeWonWmMouse*)c = outMouse;
+            outKind = 1;
+            break;
+        case EE::SetMouse: { const EeWonWmMouse& m = *(const EeWonWmMouse*)c; e->window = m.window; e->x = m.x; e->y = m.y; break; }
+        case EE::Button: r = e->button; break;
+        case EE::Key: r = e->key; break;
+        case EE::Size: out = e->size; *(Rect*)c = out; hasOut = true; break;
+        case EE::SetSize: e->size = *(const Rect*)c; break;
+        case EE::Deliver:
+            if (sNest < 3 && sRng->Int(4) == 0) NestedFrom(rust, kFromDeliver);
+            break;
+        case EE::Hold: e->refs++; break;
+        case EE::Release: e->refs--; break;
+        }
+        break;
+    }
+    case Op::WmResolution:
+        if (a == 0) { *(int*)b = sResW; *(int*)c = sResH; outKind = 2; }
+        else { sResW = (int)b; sResH = (int)c; r = 1; }
+        break;
+    case Op::WmSignal: sSignals++; break;
     case Op::WmScreenRect: out = sScreen; *(Rect*)a = out; hasOut = true; break;
     case Op::WmNewPopupWindow: {
         int id = 5 + sNextNew;
         sNextNew = (sNextNew + 1) % 4;
         WinW& w = sWin[id];
-        w.exists = true; w.inSet = true; w.isPopup = true; w.mouseDown = false; w.visible = false; w.modal = false;
+        w = WinW();
+        w.exists = true; w.isPopup = true; w.mouseDown = false; w.visible = false; w.modal = false;
+        w.inClient = true;
         w.state = 0; w.mouseX = w.mouseY = 0; w.parent = (int)a; w.refs = 1; w.rect = *(const Rect*)b;
         sComp[kRoot + id] = CompW();
         sComp[kRoot + id].container = true;
         sComp[kRoot + id].b.w = w.rect.w; sComp[kRoot + id].b.h = w.rect.h;
         for (int k = 1; k <= kComps; k++) if (sComp[k].parent == kRoot + id) sComp[k].parent = 0;
+        // Window::Create adds the window to its manager
+        { int v[kArgs] = {0}; v[0] = id; sNest++; TraceCall(rust, kAddWindowCall, v, false); sNest--; }
         r = id;
         break;
     }
@@ -259,7 +389,17 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
             if (!exit) v[0] = sRng->Int(5) - 1;
             TraceCall(rust, exit ? kExitLoop : kEndDialog, v, false);
         } else if (sNest < 2) {
-            Nested(rust, true);
+            // the platform's events: often one queued and the loop run (PlatWindowManager::GetNextEvent)
+            if (sRng->Int(2) == 0) {
+                int v[kArgs] = {0};
+                v[0] = (int)NewEvent(*sRng, RandomType(*sRng));
+                sNest++;
+                if (v[0]) TraceCall(rust, kPostEventCall, v, false);
+                int none[kArgs] = {0};
+                TraceCall(rust, kProcessCall, none, false);
+                sNest--;
+            } else
+                Nested(rust, true);
         }
         break;
     case Op::WmRef: sObj[b] += c ? 1 : -1; break;
@@ -269,15 +409,11 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
     case Op::WmDefaultWindowFont: r = NewObj(); break;
     case Op::WmSelfHold: sSelfRefs++; break;
     case Op::WmSelfRelease: sSelfRefs--; break;
-    case Op::WmWindowAt: {
-        int n = 0;
-        for (int w = 1; w <= kWins; w++)
-            if (sWin[w].exists && sWin[w].inSet) { if (n == a) { r = w; break; } n++; }
-        break;
-    }
     default: break;
     }
     if (hasOut) Line("= %ld %d %d %d %d", (long)r, out.x, out.y, out.w, out.h);
+    else if (outKind == 1) Line("= %ld %ld %d %d %d", (long)r, (long)outMouse.window, outMouse.x, outMouse.y, outMouse.button);
+    else if (outKind == 2) Line("= %ld %d %d", (long)r, sResW, sResH);
     else Line("= %ld", (long)r);
     return r;
 }
@@ -285,6 +421,7 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
 static intptr_t Wo(Op op, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intptr_t d = 0) { return World(false, op, a, b, c, d); }
 static intptr_t C(CC call, intptr_t comp, intptr_t c = 0, intptr_t d = 0) { return Wo(Op::WmComp, (intptr_t)call, comp, c, d); }
 static intptr_t Wn(WW call, intptr_t win, intptr_t c = 0, intptr_t d = 0) { return Wo(Op::WmWin, (intptr_t)call, win, c, d); }
+static intptr_t Ev(EeWonWmEvent call, intptr_t ev, intptr_t c = 0, intptr_t d = 0) { return Wo(Op::WmEvent, (intptr_t)call, ev, c, d); }
 
 // the original's SmartPtr over the world's references
 template <bool kWindow> struct Ptr {
@@ -329,6 +466,22 @@ enum { ComponentFlag_GrabBG = 0x100, ComponentFlag_NoInput = 0x800, ComponentFla
 
 struct PopupParams { intptr_t mParent, mPopup, mInputComponent, mOwnerComponent; int mFlags, mx, my; Rect mAvoidRect; };
 struct MouseEv { intptr_t mWindow; int mx, my, mButtonOrAmount; };
+typedef EeWonWmEvent EE;
+static void EvHold(intptr_t e) { if (e) Ev(EE::Hold, e); }
+static void EvRel(intptr_t e) { if (e) Ev(EE::Release, e); }
+// the round-33 forwarders' copy of a mouse event's fields in and out
+static MouseEv EvMouse(intptr_t e)
+{
+    EeWonWmMouse m = {0, 0, 0, 0};
+    Ev(EE::Mouse, e, (intptr_t)&m);
+    MouseEv r = { m.window, m.x, m.y, m.button };
+    return r;
+}
+static void EvSetMouse(intptr_t e, const MouseEv& m)
+{
+    EeWonWmMouse o = { m.mWindow, m.mx, m.my, m.mButtonOrAmount };
+    Ev(EE::SetMouse, e, (intptr_t)&o);
+}
 
 static EeWonRect4 R4(const Rect& r) { EeWonRect4 a = { r.x, r.y, r.w, r.h }; return a; }
 
@@ -351,6 +504,15 @@ struct OrigWm {
     std::map<std::string, RawPtr, StringLessNoCase> mRawImageMap;
     std::map<std::string, ImagePtr, StringLessNoCase> mDelayImageMap;
     int mCacheImageCount;
+    // round 34: the containers hold their entries (SmartPtrs: Hold on an insert, Release on an erase)
+    std::set<intptr_t> mWindowSet;
+    std::list<intptr_t> mWindowEventList;
+    std::set<intptr_t> mTimerEvents, mRemoveTimerEvents;
+    std::set<intptr_t> mBroadcastSet;
+    intptr_t mDefaultWindow;
+    DWORD mWindowCount, mLastTimerTick, mLastInputTick;
+    bool mIsFullScreen, mCallingTimers;
+    int mFullScreenWidth, mFullScreenHeight, mOriginalScreenWidth, mOriginalScreenHeight;
 
     // a map's clear (and its destruction): the entries given back in name order
     template <class M> static void Clear(M& m)
@@ -484,10 +646,30 @@ struct OrigWm {
         mDefaultFont.p = 0;
         mNamedFontMap.clear(); mNativeImageMap.clear(); mRawImageMap.clear(); mDelayImageMap.clear();
         mCacheImageCount = 0; // the original left it unset
+        mWindowSet.clear(); mWindowEventList.clear(); mTimerEvents.clear(); mRemoveTimerEvents.clear();
+        mBroadcastSet.clear();
+        mDefaultWindow = 0; mWindowCount = 0; mLastTimerTick = 0; mLastInputTick = 0;
+        mIsFullScreen = false; mCallingTimers = false;
+        mFullScreenWidth = mFullScreenHeight = 0; // the original left them unset
+        mOriginalScreenWidth = mOriginalScreenHeight = 0;
+    }
+    template <bool kWindow> static void ReleaseSet(std::set<intptr_t>& theSet)
+    {
+        for (std::set<intptr_t>::iterator i = theSet.begin(); i != theSet.end(); ++i)
+            if (kWindow) Wn(WW::Release, *i); else EvRel(*i);
+        theSet.clear();
     }
     void Destruct()
     {
-        // the members in reverse order
+        // the members in reverse order: the broadcast set, the timer sets, the event list, the window set
+        for (std::set<intptr_t>::iterator i = mBroadcastSet.begin(); i != mBroadcastSet.end(); ++i) C(CC::Release, *i);
+        mBroadcastSet.clear();
+        ReleaseSet<false>(mRemoveTimerEvents);
+        ReleaseSet<false>(mTimerEvents);
+        for (std::list<intptr_t>::iterator i = mWindowEventList.begin(); i != mWindowEventList.end(); ++i) EvRel(*i);
+        mWindowEventList.clear();
+        ReleaseSet<true>(mWindowSet);
+        // then the round-33 members
         mPopupOwnerComponent = 0;
         mPopupInputComponent = 0;
         mPopupWindowSave = 0;
@@ -563,10 +745,9 @@ struct OrigWm {
                 this->mPopupInputComponent = 0;
         }
 
-        for (intptr_t i = 0;; i++)
+        for (std::set<intptr_t>::iterator anItr = this->mWindowSet.begin(); anItr != this->mWindowSet.end(); ++anItr)
         {
-            intptr_t aWindow = Wo(Op::WmWindowAt, i);
-            if (aWindow == 0) break;
+            intptr_t aWindow = *anItr;
             Wn(WW::SetModal, aWindow, ee_won_gui_window_modal(aWindow == this->mModalWindow, this->mPopupIsUp,
                                                                this->mModalComponent == Wn(WW::Root, aWindow), modal));
         }
@@ -619,7 +800,7 @@ struct OrigWm {
     void ExitMessageLoop() { this->mTargetMsgLoopDepth--; }
     int MessageLoop()
     {
-        if (Wo(Op::WmWindowAt, 0) == 0)
+        if (this->mWindowSet.empty())
             return -1;
         Wo(Op::WmSelfHold);
         this->mTargetMsgLoopDepth = ++this->mCurMsgLoopDepth;
@@ -970,6 +1151,421 @@ struct OrigWm {
         return true;
     }
 
+
+    // ---- round 34: WindowManager.cpp's event loop, window set, timers, broadcasts and screen resolution
+    void SetScreenResolution(int theWidth, int theHeight)
+    {
+        int aWidth = 0, aHeight = 0;
+        Wo(Op::WmResolution, 0, (intptr_t)&aWidth, (intptr_t)&aHeight);
+        if (aWidth == theWidth || aHeight == theHeight)
+            return;
+        Wo(Op::WmResolution, 1, theWidth, theHeight);
+        this->mOriginalScreenWidth = aWidth;
+        this->mOriginalScreenHeight = aHeight;
+    }
+    void RestoreScreenResolution()
+    {
+        std::set<intptr_t>::iterator anItr = this->mWindowSet.begin();
+        while (anItr != this->mWindowSet.end())
+        {
+            intptr_t aWindow = *anItr;
+            if (Wn(WW::State, aWindow) == 0 && Wn(WW::MinimizeOnRestore, aWindow))
+                Wn(WW::Minimize, aWindow, true);
+            ++anItr;
+        }
+        if (this->mOriginalScreenWidth == 0 || this->mOriginalScreenHeight == 0)
+            return;
+        this->SetScreenResolution(this->mOriginalScreenWidth, this->mOriginalScreenHeight);
+        this->mOriginalScreenWidth = 0;
+        this->mOriginalScreenHeight = 0;
+    }
+    void CloseAllWindows()
+    {
+        bool hadWindows = !this->mWindowSet.empty();
+        std::set<intptr_t>::iterator anItr = this->mWindowSet.begin();
+        while (anItr != this->mWindowSet.end())
+        {
+            Wn(WW::Close, *anItr);
+            ++anItr;
+        }
+        if (hadWindows)
+            this->ProcessEvents();
+        if (this->mIsFullScreen)
+            this->RestoreScreenResolution();
+    }
+    bool AddWindow(intptr_t theWindow)
+    {
+        if (this->mWindowSet.empty())
+            this->mDefaultWindow = theWindow;
+        if (this->mWindowSet.insert(theWindow).second)
+        {
+            Wn(WW::Hold, theWindow);
+            this->mWindowCount++;
+        }
+        return true;
+    }
+    bool RemoveWindow(intptr_t theWindow)
+    {
+        if (this->mWindowSet.erase(theWindow) > 0)
+        {
+            Wn(WW::Release, theWindow);
+            this->mWindowCount--;
+            if (this->mWindowCount <= 0)
+                this->mTargetMsgLoopDepth = 0;
+            if (this->mWindowSet.empty())
+                this->mDefaultWindow = 0;
+            else
+                this->mDefaultWindow = *this->mWindowSet.begin();
+            std::list<intptr_t>::iterator anItr = this->mWindowEventList.begin();
+            while (anItr != this->mWindowEventList.end())
+            {
+                intptr_t anEvent = *anItr;
+                if (Ev(EE::Window, anEvent) == theWindow)
+                {
+                    this->mWindowEventList.erase(anItr++);
+                    EvRel(anEvent);
+                }
+                else
+                    ++anItr;
+            }
+            if (theWindow == this->mModalWindow)
+                this->EndDialog(-1, 0, 0);
+            if (theWindow == this->mPopupWindowSave.get())
+                this->mPopupWindowSave = 0;
+            return true;
+        }
+        return false;
+    }
+    void PostEvent(intptr_t theEvent, bool needSignal)
+    {
+        EvHold(theEvent);
+        this->mWindowEventList.push_back(theEvent);
+        if (this->mCurMsgLoopDepth <= 0)
+            needSignal = true;
+        if (needSignal)
+            Wo(Op::WmSignal);
+    }
+    void AddTimerEvent(intptr_t theEvent)
+    {
+        if (this->mTimerEvents.insert(theEvent).second) EvHold(theEvent);
+    }
+    void RemoveTimerEvent(intptr_t theEvent)
+    {
+        if (this->mCallingTimers)
+        {
+            if (this->mRemoveTimerEvents.insert(theEvent).second) EvHold(theEvent);
+        }
+        else if (this->mTimerEvents.erase(theEvent))
+            EvRel(theEvent);
+    }
+    void RemoveAllTimerEvents()
+    {
+        if (this->mCallingTimers)
+        {
+            // mRemoveTimerEvents = mTimerEvents: the old entries given back, the copies held
+            ReleaseSet<false>(this->mRemoveTimerEvents);
+            for (std::set<intptr_t>::iterator i = this->mTimerEvents.begin(); i != this->mTimerEvents.end(); ++i)
+                EvHold(*i);
+            this->mRemoveTimerEvents = this->mTimerEvents;
+        }
+        else
+            ReleaseSet<false>(this->mTimerEvents);
+    }
+    void SubscribeToBroadcast(intptr_t theComponent, bool subscribe)
+    {
+        if (subscribe)
+        {
+            if (this->mBroadcastSet.insert(theComponent).second) C(CC::Hold, theComponent);
+        }
+        else if (this->mBroadcastSet.erase(theComponent))
+            C(CC::Release, theComponent);
+    }
+    void ClearSubscriptions()
+    {
+        for (std::set<intptr_t>::iterator i = mBroadcastSet.begin(); i != mBroadcastSet.end(); ++i) C(CC::Release, *i);
+        this->mBroadcastSet.clear();
+    }
+    void BroadcastEvent(intptr_t theEvent)
+    {
+        std::set<intptr_t>::iterator anItr = this->mBroadcastSet.begin();
+        while (anItr != this->mBroadcastSet.end())
+        {
+            C(CC::HandleComponentEvent, *anItr, theEvent);
+            ++anItr;
+        }
+    }
+    intptr_t PeekNextEvent()
+    {
+        if (this->mWindowEventList.empty())
+            return 0;
+        else
+            return this->mWindowEventList.front();
+    }
+    void ProcessEvents()
+    {
+        DWORD aTick = (DWORD)Wo(Op::WmTick);
+        uint32_t anElapsed;
+        if (ee_won_gui_wm_timer_step(aTick, this->mLastTimerTick, &anElapsed))
+        {
+            this->mLastTimerTick = aTick;
+            bool aFocusIsPopup = this->mFocusWindow != 0 && Wn(WW::IsPopup, this->mFocusWindow) != 0;
+            switch (ee_won_gui_wm_popup_focus_step(this->mPopupIsUp, this->mFocusWindow == this->mPopupOwnerWindow,
+                                                   this->mPopupFlags, this->mFocusWindow != 0, aFocusIsPopup,
+                                                   this->mEndPopup))
+            {
+                case 1:
+                    this->mEndPopup = false;
+                    Wn(WW::SetFocus, this->mPopupOwnerWindow);
+                    break;
+                case 2:
+                    this->EndPopup(0);
+                    break;
+                case 3:
+                    this->mEndPopup = true;
+                    break;
+                default:
+                    this->mEndPopup = false;
+                    break;
+            }
+            if (ee_won_gui_wm_restore_due(this->mLastLoseFocusTick, this->mFocusWindow != 0, aTick))
+            {
+                this->mLastLoseFocusTick = 0;
+                if (this->mIsFullScreen)
+                    this->RestoreScreenResolution();
+            }
+            std::set<intptr_t>::iterator anItr = this->mWindowSet.begin();
+            while (anItr != this->mWindowSet.end())
+            {
+                Wn(WW::TimerEvent, *anItr, anElapsed);
+                ++anItr;
+            }
+            if (!this->mTimerEvents.empty())
+            {
+                this->mCallingTimers = true;
+                for (std::set<intptr_t>::iterator aTimerItr = this->mTimerEvents.begin(); aTimerItr != this->mTimerEvents.end(); ++aTimerItr)
+                    Ev(EE::Deliver, *aTimerItr);
+                this->mCallingTimers = false;
+            }
+            if (!this->mRemoveTimerEvents.empty())
+            {
+                for (std::set<intptr_t>::iterator aTimerItr = this->mRemoveTimerEvents.begin(); aTimerItr != this->mRemoveTimerEvents.end(); ++aTimerItr)
+                    if (this->mTimerEvents.erase(*aTimerItr)) EvRel(*aTimerItr);
+            }
+        }
+        while (!this->mWindowEventList.empty() && this->mCurMsgLoopDepth <= this->mTargetMsgLoopDepth)
+        {
+            // the copy and pop_front: the list's reference moves to the local
+            intptr_t anEvent = this->mWindowEventList.front();
+            this->mWindowEventList.pop_front();
+            this->DeliverEvent(anEvent);
+            EvRel(anEvent);
+        }
+        std::set<intptr_t>::iterator anItr = this->mWindowSet.begin();
+        while (anItr != this->mWindowSet.end())
+        {
+            Wn(WW::IdleUpdate, *anItr);
+            ++anItr;
+        }
+    }
+    // the round-33 C++ forwarder: the event's fields in, the window and place back
+    void FindMouseOn(intptr_t theEvent)
+    {
+        MouseEv m = EvMouse(theEvent);
+        this->FindMouseWindow(&m);
+        EvSetMouse(theEvent, m);
+    }
+    void DeliverEvent(intptr_t theEvent)
+    {
+        long aType = (long)Ev(EE::Type, theEvent);
+        switch (aType)
+        {
+            case 4: // InputEvent_MouseDoubleClick
+            case 5: // InputEvent_MouseDownCheckDoubleClick
+            case 3: // InputEvent_MouseDown
+            {
+                if (this->mPopupIsUp)
+                {
+                    MouseEv m = EvMouse(theEvent);
+                    bool eat = this->CheckPopupClick(&m);
+                    EvSetMouse(theEvent, m);
+                    if (eat)
+                        break;
+                }
+                intptr_t aWindow = Ev(EE::Window, theEvent);
+                bool aPopup = Wn(WW::IsPopup, aWindow) != 0;
+                if (ee_won_gui_wm_press_focuses(this->mFocusWindow == aWindow, aPopup,
+                                                this->mFocusWindow != aWindow && !aPopup && this->NotModalWindow(aWindow)))
+                    Wn(WW::SetFocus, aWindow);
+                int aButton = (int)Ev(EE::Button, theEvent);
+                if (ee_won_gui_wm_capture_changes(aButton, this->mPopupIsUp, this->mDoMouseCapturePopupSupport))
+                    Wn(WW::SetCapture, Ev(EE::Window, theEvent), true);
+            }
+            {
+                intptr_t aWindow = Ev(EE::Window, theEvent);
+                if (Wn(WW::InClient, aWindow))
+                    Wn(WW::HandleMouse, aWindow, theEvent);
+            }
+            break;
+
+            case 2: // InputEvent_MouseMove
+            {
+                intptr_t nextEvent = this->PeekNextEvent();
+                if (nextEvent != 0 && Ev(EE::Type, nextEvent) == 2 && Ev(EE::Window, nextEvent) == Ev(EE::Window, theEvent))
+                    return;
+                this->FindMouseOn(theEvent);
+                if (ee_won_gui_wm_move_ends_popup(this->mPopupIsUp, this->mPopupFlags))
+                    this->EndPopup(0);
+                Wn(WW::HandleMouse, Ev(EE::Window, theEvent), theEvent);
+                break;
+            }
+
+            case 6: // InputEvent_MouseUp
+            {
+                this->FindMouseOn(theEvent);
+                int aButton = (int)Ev(EE::Button, theEvent);
+                if (aButton == 0)
+                    this->mMouseDownWindow = 0;
+                if (ee_won_gui_wm_capture_changes(aButton, this->mPopupIsUp, this->mDoMouseCapturePopupSupport))
+                    Wn(WW::SetCapture, Ev(EE::Window, theEvent), false);
+                Wn(WW::HandleMouse, Ev(EE::Window, theEvent), theEvent);
+                break;
+            }
+
+            case 7: // InputEvent_MouseWheel
+            {
+                this->FindMouseOn(theEvent);
+                if (ee_won_gui_wm_wheel_to_popup(this->mPopupIsUp, this->mPopupFlags))
+                {
+                    // the back of an empty list (popups flagged up mid-EndPopup): undefined in the original
+                    intptr_t aPopupComponent = this->mPopupList.empty() ? 0 : this->mPopupList.back();
+                    intptr_t anAmount = Ev(EE::Button, theEvent);
+                    if (aPopupComponent != 0)
+                        C(CC::MouseWheel, aPopupComponent, anAmount);
+                    return;
+                }
+                Wn(WW::HandleMouse, Ev(EE::Window, theEvent), theEvent);
+                break;
+            }
+
+            case 8: // InputEvent_KeyDown
+            case 9: // InputEvent_KeyUp
+            case 10: // InputEvent_KeyChar
+            {
+                int aKey = (int)Ev(EE::Key, theEvent);
+                uint8_t aKeyStep = ee_won_gui_wm_popup_key(this->mPopupIsUp, (int)aType, this->mPopupFlags, aKey);
+                if (aKeyStep == 1)
+                {
+                    this->EndPopup(0);
+                    break;
+                }
+                if (aKeyStep == 2)
+                {
+                    intptr_t aPopupWindow = C(CC::Root, this->mPopupList.empty() ? 0 : this->mPopupList.back());
+                    if (aPopupWindow != Ev(EE::Window, theEvent))
+                        Ev(EE::SetWindow, theEvent, aPopupWindow);
+                }
+            }
+            Wn(WW::HandleKey, Ev(EE::Window, theEvent), theEvent);
+            break;
+
+            case 11: // InputEvent_GotFocus
+            {
+                if (this->mIsFullScreen)
+                    this->SetScreenResolution(this->mFullScreenWidth, this->mFullScreenHeight);
+                intptr_t aWindow = Ev(EE::Window, theEvent);
+                this->NotifyGotFocus(aWindow);
+                Wn(WW::HandleInput, aWindow, theEvent);
+                if (this->NotModalWindow(Ev(EE::Window, theEvent)))
+                    Wn(WW::SetFocus, this->mModalWindow);
+                return;
+            }
+
+            case 12: // InputEvent_LostFocus
+                this->NotifyLostFocus();
+                Wn(WW::HandleInput, Ev(EE::Window, theEvent), theEvent);
+                return;
+
+            case 1: // InputEvent_SizeChange
+            {
+                intptr_t aWindow = Ev(EE::Window, theEvent);
+                if (aWindow == this->mPopupOwnerWindow)
+                    this->EndPopup(0);
+                else
+                {
+                    intptr_t nextEvent = this->PeekNextEvent();
+                    if (nextEvent != 0 && Ev(EE::Type, nextEvent) == 1 && Ev(EE::Window, nextEvent) == aWindow)
+                    {
+                        Rect s1, s2;
+                        Ev(EE::Size, theEvent, (intptr_t)&s1);
+                        Ev(EE::Size, nextEvent, (intptr_t)&s2);
+                        int32_t a1[4] = { s1.x, s1.y, s1.w, s1.h };
+                        int32_t a2[4] = { s2.x, s2.y, s2.w, s2.h };
+                        ee_won_gui_wm_size_merge(a1, a2);
+                        Rect m = { a2[0], a2[1], a2[2], a2[3] };
+                        Ev(EE::SetSize, nextEvent, (intptr_t)&m);
+                        return;
+                    }
+                }
+                Wn(WW::HandleInput, Ev(EE::Window, theEvent), theEvent);
+                return;
+            }
+
+            case 13: // InputEvent_MouseExit
+                Wn(WW::HandleInput, Ev(EE::Window, theEvent), theEvent);
+                return;
+
+            case 14: // InputEvent_WindowClose
+            {
+                intptr_t aWindow = Ev(EE::Window, theEvent);
+                bool aPopup = Wn(WW::IsPopup, aWindow) != 0;
+                if (ee_won_gui_wm_close_ends_popup(this->mPopupIsUp, aWindow == this->mPopupOwnerWindow, aPopup))
+                    this->EndPopup(0);
+                aWindow = Ev(EE::Window, theEvent);
+                if (this->mFocusWindow == aWindow)
+                    this->NotifyLostFocus();
+                if (this->mMouseDownWindow == aWindow)
+                    this->mMouseDownWindow = 0;
+                Wn(WW::PlatformClose, aWindow);
+                aWindow = Ev(EE::Window, theEvent);
+                intptr_t aCloseEvent = Wn(WW::CloseEvent, aWindow); // SmartPtr<WindowEventBase> aCloseEvent = ...
+                EvHold(aCloseEvent);
+                if (aCloseEvent != 0)
+                {
+                    Ev(EE::SetWindow, aCloseEvent, aWindow);
+                    Ev(EE::Deliver, aCloseEvent);
+                }
+                this->RemoveWindow(Ev(EE::Window, theEvent));
+                EvRel(aCloseEvent);
+            }
+            return;
+
+            default:
+                Ev(EE::Deliver, theEvent);
+                return;
+        }
+        this->mLastInputTick = (DWORD)Wo(Op::WmTick);
+    }
+    void DumpLoop()
+    {
+        Line("loop %ld %u %d %d %d %d %d %u %u %d", (long)mDefaultWindow, (unsigned)mWindowCount, mIsFullScreen,
+             mFullScreenWidth, mFullScreenHeight, mOriginalScreenWidth, mOriginalScreenHeight, (unsigned)mLastTimerTick,
+             (unsigned)mLastInputTick, mCallingTimers);
+        std::string l = "sets";
+        const std::set<intptr_t>* sets[] = { &mWindowSet, NULL, &mTimerEvents, &mRemoveTimerEvents, &mBroadcastSet };
+        for (int k = 0; k < 5; k++) {
+            l += " |";
+            if (k == 1) {
+                for (std::list<intptr_t>::iterator i = mWindowEventList.begin(); i != mWindowEventList.end(); ++i) {
+                    char b[16]; snprintf(b, sizeof b, " %ld", (long)*i); l += b;
+                }
+                continue;
+            }
+            for (std::set<intptr_t>::const_iterator i = sets[k]->begin(); i != sets[k]->end(); ++i) {
+                char b[16]; snprintf(b, sizeof b, " %ld", (long)*i); l += b;
+            }
+        }
+        Line("%s", l.c_str());
+    }
     void Dump()
     {
         Line("state %d %d %d %d %d %d %d %d %d %d %ld %ld %ld %ld %ld %ld %ld %ld %u %u %ld %ld", mEndPopup, mInDoPopup,
@@ -986,6 +1582,7 @@ struct OrigWm {
         }
         Line("%s", l.c_str());
         DumpCache();
+        DumpLoop();
     }
 };
 
@@ -1018,8 +1615,19 @@ static void DumpRust()
     size_t n2 = ee_won_wm_cache_line(sRust, (uint8_t*)aCache, sizeof aCache - 1);
     aCache[n2] = 0;
     Line("%s", aCache);
-    return;
-    Line("%s", l.c_str());
+    Line("loop %ld %u %d %d %d %d %d %u %u %d", (long)f[23], (unsigned)f[24], (int)f[25], (int)f[26], (int)f[27],
+         (int)f[28], (int)f[29], (unsigned)f[30], (unsigned)f[31], (int)f[32]);
+    std::string s = "sets";
+    for (int k = 0; k < 5; k++) {
+        s += " |";
+        int n = (int)f[33 + k];
+        for (int i = 0; i < n; i++) {
+            char b[16];
+            snprintf(b, sizeof b, " %ld", (long)ee_won_wm_set_at(sRust, (uint32_t)k, (size_t)i));
+            s += b;
+        }
+    }
+    Line("%s", s.c_str());
 }
 
 // ---- the calls (the "call" lines' numbers; the Rust replay maps the same numbers)
@@ -1028,8 +1636,14 @@ enum Call {
     kMessageLoop, kAdjust, kDoPopup, kEndPopup, kCheckEndPopup, kFindMouse, kCheckClick, kCheckModalValid,
     kSetOwnWindow, kSetCapture, kSetEndPopup, kSetMouseDown, kSetTarget, kSetLastLose, kSetWindowSave,
     kSetNamedFont, kGetNamedFont, kGetDefaultFont, kSetDefaultFont, kSetCacheImages, kDecodeImage, kDecodeRaw,
-    kDecodeDelay, kWorld, kCallCount
+    kDecodeDelay,
+    // round 34
+    kSetScreenRes, kRestoreScreenRes, kCloseAll, kAddWindow, kRemoveWindow, kPostEvent, kAddTimer, kRemoveTimer,
+    kRemoveAllTimers, kSubscribe, kClearSubs, kBroadcast, kPeek, kProcess, kDeliver, kSetFullScreen, kSetLastTimer,
+    kWorld, kCallCount
 };
+static_assert(kPostEvent == kPostEventCall && kSubscribe == kSubscribeCall && kProcess == kProcessCall &&
+              kAddWindow == kAddWindowCall, "the world's nested call numbers");
 
 static intptr_t SideCall(bool rust, int call, const int* v)
 {
@@ -1109,6 +1723,29 @@ static intptr_t SideCall(bool rust, int call, const int* v)
     case kGetDefaultFont: return rust ? RC(K::GetDefaultFont, 0, 0, 0, 0) : o.GetDefaultFont();
     case kSetDefaultFont: if (rust) RC(K::SetDefaultFont, v[0], 0, 0, 0); else o.SetDefaultFont(v[0]); return 0;
     case kSetCacheImages: if (rust) RC(K::SetCacheImages, v[0], 0, 0, 0); else o.SetCacheImages(v[0] != 0); return 0;
+    case kSetScreenRes: if (rust) RC(K::SetScreenResolution, v[0], v[1], 0, 0); else o.SetScreenResolution(v[0], v[1]); return 0;
+    case kRestoreScreenRes: if (rust) RC(K::RestoreScreenResolution, 0, 0, 0, 0); else o.RestoreScreenResolution(); return 0;
+    case kCloseAll: if (rust) RC(K::CloseAllWindows, 0, 0, 0, 0); else o.CloseAllWindows(); return 0;
+    case kAddWindow: return rust ? RC(K::AddWindow, v[0], 0, 0, 0) : o.AddWindow(v[0]);
+    case kRemoveWindow: return rust ? RC(K::RemoveWindow, v[0], 0, 0, 0) : o.RemoveWindow(v[0]);
+    case kPostEvent: if (rust) RC(K::PostEvent, v[0], v[1], 0, 0); else o.PostEvent(v[0], v[1] != 0); return 0;
+    case kAddTimer: if (rust) RC(K::AddTimerEvent, v[0], 0, 0, 0); else o.AddTimerEvent(v[0]); return 0;
+    case kRemoveTimer: if (rust) RC(K::RemoveTimerEvent, v[0], 0, 0, 0); else o.RemoveTimerEvent(v[0]); return 0;
+    case kRemoveAllTimers: if (rust) RC(K::RemoveAllTimerEvents, 0, 0, 0, 0); else o.RemoveAllTimerEvents(); return 0;
+    case kSubscribe: if (rust) RC(K::SubscribeToBroadcast, v[0], v[1], 0, 0); else o.SubscribeToBroadcast(v[0], v[1] != 0); return 0;
+    case kClearSubs: if (rust) RC(K::ClearSubscriptions, 0, 0, 0, 0); else o.ClearSubscriptions(); return 0;
+    case kBroadcast: if (rust) RC(K::BroadcastEvent, v[0], 0, 0, 0); else o.BroadcastEvent(v[0]); return 0;
+    case kPeek: return rust ? RC(K::PeekNextEvent, 0, 0, 0, 0) : o.PeekNextEvent();
+    case kProcess: if (rust) RC(K::ProcessEvents, 0, 0, 0, 0); else o.ProcessEvents(); return 0;
+    case kDeliver: if (rust) RC(K::DeliverEvent, v[0], 0, 0, 0); else o.DeliverEvent(v[0]); return 0;
+    case kSetFullScreen:
+        if (rust) {
+            RC(K::SetField, EeWonWmField::FullScreen, v[0], 0, 0);
+            RC(K::SetField, EeWonWmField::FullScreenWidth, v[1], 0, 0);
+            RC(K::SetField, EeWonWmField::FullScreenHeight, v[2], 0, 0);
+        } else { o.mIsFullScreen = v[0] != 0; o.mFullScreenWidth = v[1]; o.mFullScreenHeight = v[2]; }
+        return 0;
+    case kSetLastTimer: if (rust) RC(K::SetField, EeWonWmField::LastTimerTick, v[0], 0, 0); else o.mLastTimerTick = (DWORD)v[0]; return 0;
     }
 #undef RC
     return 0;
@@ -1182,6 +1819,22 @@ static bool Args(Rng& g, int call, int* v)
     case kSetDefaultFont: v[0] = g.Int(4) == 0 ? 0 : 0x3001 + g.Int(4); break;
     case kSetCacheImages: v[0] = g.Int(5) < 3; break;
     case kDecodeImage: v[0] = g.Int(6) == 0 ? 0 : 0x7777; v[1] = g.Int(kNameCount); break;
+    case kSetScreenRes: case kSetFullScreen: {
+        static const int ws[] = {640, 800, 1024}, hs[] = {480, 600, 768};
+        int k = 0;
+        if (call == kSetFullScreen) v[k++] = g.Int(3) == 0;
+        v[k] = ws[g.Int(3)]; v[k + 1] = hs[g.Int(3)];
+        break;
+    }
+    case kAddWindow: v[0] = 1 + g.Int(kWins); if (!sWin[v[0]].exists) v[0] = 1 + g.Int(4); break;
+    case kRemoveWindow: v[0] = AnyWin(g); break;
+    case kPostEvent: v[0] = (int)NewEvent(g, RandomType(g)); v[1] = g.Int(3) == 0; if (!v[0]) return false; break;
+    case kAddTimer: v[0] = (int)NewEvent(g, 20); if (!v[0]) return false; break;
+    case kDeliver: v[0] = (int)NewEvent(g, RandomType(g)); if (!v[0]) return false; break;
+    case kRemoveTimer: v[0] = sEvCount == 0 || g.Int(6) == 0 ? 0 : kEv0 + 1 + g.Int(sEvCount); break;
+    case kSubscribe: v[0] = g.Int(8) == 0 ? kRoot + 1 + g.Int(4) : 1 + g.Int(kComps); v[1] = g.Int(3) != 0; break;
+    case kBroadcast: v[0] = 0x7000 + g.Int(16); break;
+    case kSetLastTimer: v[0] = (int)(sClock - (uint32_t)g.Int(100)); break;
     }
     return true;
 }
@@ -1209,6 +1862,29 @@ static void Nested(bool rust, bool fromEvent)
     static const int fromEnd[] = {kEndPopup, kCheckEndPopup, kDoPopup, kPopupWindow, kCalcModality};
     Rng& g = *sRng;
     int call = fromEvent ? fromEvents[g.Int(14)] : fromEnd[g.Int(5)];
+    if (fromEvent && g.Int(3) == 0) {
+        static const int more[] = {kPostEvent, kProcess, kSubscribe, kAddTimer, kRemoveTimer, kBroadcast};
+        call = more[g.Int(6)];
+    }
+    if (call == kDoDialog && sNest > 0) call = kExitLoop;
+    int v[kArgs];
+    if (!Args(g, call, v)) return;
+    sNest++;
+    TraceCall(rust, call, v, false);
+    sNest--;
+}
+
+// a nested call from an event's Deliver or a window's handler (never one that erases the entry a set walk is on:
+// the windows' and the broadcasts' walks call no handler that removes a window or the walked component)
+static void NestedFrom(bool rust, int kind)
+{
+    static const int fromDeliver[] = {kPostEvent, kPostEvent, kRemoveTimer, kAddTimer, kRemoveAllTimers, kSubscribe,
+                                      kRemoveWindow, kEndPopup, kDoPopup, kNotifyGot, kBroadcast, kDoDialog, kProcess,
+                                      kPeek};
+    static const int fromHandler[] = {kDoPopup, kEndPopup, kPostEvent, kNotifyGot, kNotifyLost, kSubscribe,
+                                      kRemoveWindow, kDoDialog, kCalcModality, kAddTimer, kCheckEndPopup};
+    Rng& g = *sRng;
+    int call = kind == kFromDeliver ? fromDeliver[g.Int(14)] : fromHandler[g.Int(11)];
     if (call == kDoDialog && sNest > 0) call = kExitLoop;
     int v[kArgs];
     if (!Args(g, call, v)) return;
@@ -1227,12 +1903,20 @@ static std::vector<std::string> RunSide(bool rust, unsigned seed, int calls)
     sClock = g.Int(4) == 0 ? 0xFFFFFF00u : 1000;
     sScreen.x = g.Int(20); sScreen.y = g.Int(20); sScreen.w = 640 + g.Int(400); sScreen.h = 480 + g.Int(300);
     sSelfRefs = 1; sNextNew = 0; sEvents = 0; sNest = 0;
+    sEvCount = 0; sSignals = 0; sResW = 800; sResH = 600;
     sObj.clear(); sNextObj = 0;
     for (intptr_t f = 0x3001; f <= 0x3004; f++) sObj[f] = 1;
     for (int w = 1; w <= kWins; w++) {
         WinW& x = sWin[w];
         x = WinW();
-        x.exists = x.inSet = w <= 4;
+        x.exists = w <= 4;
+        x.inClient = g.Int(5) != 0; x.minOnRestore = g.Int(3) == 0; x.minimized = false;
+        x.closeEvent = 0;
+        if (w <= 4 && g.Bool()) {
+            // the window's close event: the world's (one reference)
+            x.closeEvent = NewEvent(g, 20);
+            if (x.closeEvent) { sEv[x.closeEvent - kEv0].window = 0; sEv[x.closeEvent - kEv0].refs = sEv[x.closeEvent - kEv0].base = 1; }
+        }
         x.isPopup = false; x.mouseDown = g.Int(4) == 0; x.visible = g.Int(5) != 0; x.modal = false;
         x.state = g.Int(6) == 0 ? 1 + g.Int(2) : 0; x.mouseX = g.Int(300); x.mouseY = g.Int(300);
         x.parent = w > 1 && g.Int(3) == 0 ? 1 + g.Int(w - 1) : 0; x.refs = 1;
@@ -1255,18 +1939,31 @@ static std::vector<std::string> RunSide(bool rust, unsigned seed, int calls)
     }
     if (rust) sRust = ee_won_wm_new((void*)(intptr_t)1, RustHost);
     else sOrig.Construct();
+    {
+        // the constructor's tick, then the four windows open (Window::Create adds each)
+        int v[kArgs] = {0};
+        v[0] = (int)sClock;
+        TraceCall(rust, kSetLastTimer, v, true);
+        for (int w = 1; w <= 4; w++) { v[0] = w; TraceCall(rust, kAddWindow, v, true); }
+    }
     for (int i = 0; i < calls; i++) {
         sClock += g.Int(5) == 0 ? 0 : (uint32_t)g.Int(1500);
-        int call = g.Int(kCallCount + 6);
-        // the focus first, and popups often
-        if (call >= kCallCount) call = call < kCallCount + 3 ? kNotifyGot : kDoPopup;
+        int call = g.Int(kCallCount + 10);
+        // the focus first, popups, posted events and the loop often
+        if (call >= kCallCount) {
+            int k = call - kCallCount;
+            call = k < 3 ? kNotifyGot : k < 6 ? kDoPopup : k < 8 ? kPostEvent : kProcess;
+        }
         if (call == kWorld) {
-            int which = g.Int(6);
+            int which = g.Int(9);
             if (which == 0) { int w = 1 + g.Int(kWins); sWin[w].mouseDown = !sWin[w].mouseDown; }
             else if (which == 1) { int w = 1 + g.Int(kWins); sWin[w].visible = !sWin[w].visible; }
             else if (which == 2) { int w = 1 + g.Int(kWins); sWin[w].state = g.Int(3); }
             else if (which == 3) { int c = 1 + g.Int(kComps); sComp[c].bits ^= 1; }
             else if (which == 4) { int c = 1 + g.Int(kComps); sComp[c].container = !sComp[c].container; }
+            else if (which == 5) { int w = 1 + g.Int(kWins); sWin[w].inClient = !sWin[w].inClient; }
+            else if (which == 6) { int w = 1 + g.Int(kWins); sWin[w].minOnRestore = !sWin[w].minOnRestore; }
+            else if (which == 7) { static const int ws[] = {640, 800, 1024}, hs[] = {480, 600, 768}; sResW = ws[g.Int(3)]; sResH = hs[g.Int(3)]; }
             else { int w = 1 + g.Int(kWins); sWin[w].mouseX = g.Int(300); sWin[w].mouseY = g.Int(300); }
             Line("set %d", which);
             continue;
@@ -1286,7 +1983,10 @@ static std::vector<std::string> RunSide(bool rust, unsigned seed, int calls)
     int aBad = 0;
     for (std::map<intptr_t, int>::iterator i = sObj.begin(); i != sObj.end(); ++i)
         if (i->second != (i->first < 0x4000 ? 1 : 0)) aBad++;
-    Line("objs %u %d", (unsigned)sObj.size(), aBad);
+    // every event's references back at the world's (0, or 1 for a window's close event)
+    for (int e = 1; e <= sEvCount; e++)
+        if (sEv[e].refs != sEv[e].base) aBad++;
+    Line("objs %u %d", (unsigned)(sObj.size() + (size_t)sEvCount), aBad);
     return trace;
 }
 

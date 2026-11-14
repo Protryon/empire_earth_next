@@ -3,12 +3,13 @@
 // RTSPlayer::InsertUnit inserts it (EEUnitStoreInsert: seeded whole from the object), RTSPlayer::RemoveKilledUnits
 // removes it, ~RTSPlayer drops the player's records.
 //
-// The C++ members it mirrors are write-through holders: EEUnitStoreField<T, F> has T's size and layout (the offsets,
-// a memcpy and the save code's bytes are unchanged), reads as T, and every assignment form stores the value and then
-// reports it (EEUnitStoreWrote: the record of a unit in the store, the object checked). A holder has no conversion to
-// T& or T*, so the compiler finds every writer; a memcpy into one bypasses it (the hit points' load: a hooked write
-// follows, and the load runs before the insert). Derived fields are reported where they change: the class's category,
-// type, domains and land-building flag at mUnitClass, the goal's kind at mGoalState, the complex flag at mComplexUnit.
+// The plain members it mirrors are the Rust records the unit classes derive from (R5b.4, round 26: ee_units
+// unit_fields.rs EeUnitsRtsUnitFields, EeUnitsUnitFields, EeUnitsComplexUnitFields): a record keeps its object's record
+// addresses and every read of the store takes the values from them (store.rs refresh). The pointer members it mirrors
+// are write-through holders: EEUnitStoreField<T, F> has T's size and layout, reads as T, and every assignment stores
+// the value and then reports it (EEUnitStoreWrote: the record of a unit in the store, the object checked); what the
+// store keeps of them is derived: the class's category, type, domains and land-building flag at mUnitClass, the goal's
+// kind at mGoalState, the complex flag at mComplexUnit, set or not for the group, container, herd and command.
 //
 // TEST ONLY: EEUnitStoreCheck compares every unit of every player's list with its record (the simulation capture's
 // USCK record; a mismatch stops EE-SIM, exit code 3).
@@ -23,41 +24,12 @@ class RTSPlayer;
 
 // the fields a holder reports (store.rs EE_UNIT_FIELD_*: the same values)
 enum EEUnitStoreFieldID {
-    kUnitFieldTileX = 1,        // RTSUnit::mTileX
-    kUnitFieldTileY = 2,        // RTSUnit::mTileY
-    kUnitFieldValid = 3,        // RTSUnit::mIsValid
-    kUnitFieldHitPoints = 4,    // EEUnit::mHitPoints
     kUnitFieldUnitClass = 5,    // EEUnit::mUnitClass (the record's category and unit type)
     kUnitFieldComplex = 7,      // EEUnit::mComplexUnit
-    kUnitFieldBuilt = 8,        // EEComplexUnit::mIsBuilt
     kUnitFieldGoal = 9,         // EEComplexUnit::mGoalState (the record's goal kind)
-    kUnitFieldCommandable = 12, // EEComplexUnit::mIsCommandable
-    kUnitFieldFormationSlot = 13,  // EEComplexUnit::mFormationSlot
-    kUnitFieldResourceAmount = 15, // EEUnit::mResourceAmount
     kUnitFieldLocation = 17,    // EEComplexUnit::mPhysicalModel's location (EEUnitStoreModel; the record's x, y, z)
-    kUnitFieldHeight = 20,      // EEComplexUnit::mHeight
-    kUnitFieldTimesUpdated = 21,   // EEComplexUnit::mTimesUpdated
     kUnitFieldActiveGroup = 22, // EEComplexUnit::mActiveGroup (the record's: set or not)
     kUnitFieldCommand = 23,     // EEComplexUnit::mCommand (the record's: its mType, 0 for none)
-    // the step's timers and power (R5b.4 leaf 6; the step's leaves read them from the record: ee_units step.rs)
-    kUnitFieldReloadTimer = 24,         // EEComplexUnit::mReloadTimer
-    kUnitFieldTargetSearchTimer = 25,   // EEComplexUnit::mTargetSearchTimer
-    kUnitFieldHealSearchTimer = 26,     // EEComplexUnit::mHealSearchTimer (float bits)
-    kUnitFieldNextTriggerTime = 27,     // EEComplexUnit::mNextTriggerTime
-    kUnitFieldRottingAwayTime = 28,     // EEComplexUnit::mRottingAwayTime
-    kUnitFieldPower = 29,               // EEComplexUnit::mPower
-    kUnitFieldPowerRegenTimer = 30,     // EEComplexUnit::mPowerRegenTimer
-    kUnitFieldCamouflageTimer = 31,     // EEComplexUnit::mCamouflageTimer
-    // the velocities the physics models' arithmetic reads (R5b.4 leaf 6; float bits; ee_units step.rs)
-    kUnitFieldVelocity = 32,            // EEComplexUnit::mVelocity
-    kUnitFieldPushVelocityX = 33,       // EEComplexUnit::mPushVelocityX
-    kUnitFieldPushVelocityY = 34,       // EEComplexUnit::mPushVelocityY
-    kUnitFieldRoll = 35,                // EEComplexUnit::mRoll
-    // the combat reads' fields (R5b.4, twelfth round: the combat lane's trigger record; store.rs)
-    kUnitFieldFlightTime = 36,          // EEComplexUnit::mFlightTime
-    kUnitFieldCloakTimer = 37,          // EEComplexUnit::mCloaked (the cloak's timer)
-    kUnitFieldCloakable = 38,           // EEComplexUnit::mIsCloakable
-    kUnitFieldCloaked = 39,             // EEComplexUnit::mIsCloaked
     kUnitFieldHerd = 40,                // EEComplexUnit::mHerd (the record's: set or not)
     kUnitFieldContainer = 41            // EEComplexUnit::mContainer (the record's: set or not)
 };
@@ -92,28 +64,10 @@ public:
         return *this;
     }
     EEUnitStoreField& operator=(const EEUnitStoreField& inOther) { return *this = inOther.mValue; }
-    EEUnitStoreField& operator+=(T inValue) { return *this = (T)(this->mValue + inValue); }
-    EEUnitStoreField& operator-=(T inValue) { return *this = (T)(this->mValue - inValue); }
-    EEUnitStoreField& operator++() { return *this = (T)(this->mValue + 1); }
-    EEUnitStoreField& operator--() { return *this = (T)(this->mValue - 1); }
-    EEUnitStoreField& operator|=(T inValue) { return *this = (T)(this->mValue | inValue); }
-    EEUnitStoreField& operator&=(T inValue) { return *this = (T)(this->mValue & inValue); }
-    T operator++(int) { T theOld = this->mValue; *this = (T)(theOld + 1); return theOld; }
-    T operator--(int) { T theOld = this->mValue; *this = (T)(theOld - 1); return theOld; }
 
 private:
     T mValue;
 };
-
-// a load's read into a holder: read as the plain value, then written through the holder (reported)
-template <class File, class Field>
-long EEUnitStoreRead(File& inFile, Field& ioField)
-{
-    typename Field::ValueType theValue = ioField.Get();
-    long theResult = inFile.Read(theValue);
-    ioField = theValue;
-    return theResult;
-}
 
 // the unit enters inPlayer's list (its id inOwner; after the unit's mPlayer and id are final) / leaves it (also at
 // RTSUnit::FreeNode, a no-op unless a teardown dropped the list's reference first)

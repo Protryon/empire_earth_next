@@ -207,7 +207,7 @@ void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t 
     theRecord[3] = EECombatCommandOf(inUnit);
     theRecord[4] = (uint32_t)inUnit->mAnimation;
     theRecord[5] = (uint32_t)inUnit->mCurrentPhysicsAction;
-    theRecord[6] = (uint32_t)inUnit->mHitPoints.Get();
+    theRecord[6] = (uint32_t)inUnit->mHitPoints;
     EEUnitGoal* theGoal = inUnit->mGoalState;
     theRecord[7] = theGoal != NULL ? (uint32_t)theGoal->mKind : 0xffffffffu;
     if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit) {
@@ -229,7 +229,7 @@ void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t 
     theRecord[18] = EEShotBits(inUnit->mOpacity);
     theRecord[19] = EEShotBits(inUnit->mVelocity);
     theRecord[20] = inUnit->mPlayer != NULL ? (uint32_t)inUnit->mPlayer->mPopulationCount : 0;
-    theRecord[21] = (uint32_t)inUnit->mTileX.Get();
+    theRecord[21] = (uint32_t)inUnit->mTileX;
     sShots.Add(theRecord, sizeof(theRecord));
 }
 
@@ -239,7 +239,7 @@ void EECombatCaptureHealWork(const EEComplexUnit* inUnit, const EEUnit* inTarget
         return;
     uint32_t theRecord[5] = {EE_COMBAT_SO_HEAL_WORK, (uint32_t)inUnit->mUnitID,
                              inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0,
-                             inTarget != NULL ? (uint32_t)inTarget->mHitPoints.Get() : 0, (uint32_t)inElapsed};
+                             inTarget != NULL ? (uint32_t)inTarget->mHitPoints : 0, (uint32_t)inElapsed};
     sShots.Add(theRecord, sizeof(theRecord));
 }
 
@@ -296,7 +296,7 @@ void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTa
     theRecord[4] = EECombatCommandOf(inUnit);
     theRecord[5] = (uint32_t)inUnit->mAnimation;
     theRecord[6] = (uint32_t)inUnit->GetHitPoints();
-    theRecord[7] = (uint32_t)inUnit->mReloadTimer.Get();
+    theRecord[7] = (uint32_t)inUnit->mReloadTimer;
     theRecord[8] = (uint32_t)inUnit->mWeaponTagPoint;
     theRecord[9] = (uint32_t)inUnit->mAmmunition;
     theRecord[10] = (uint32_t)inUnit->mFlightTime;
@@ -310,7 +310,7 @@ void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTa
     theRecord[16] = inTarget != NULL ? (uint32_t)inTarget->GetHitPoints() : 0;
     theRecord[17] = inTarget != NULL ? (uint32_t)inTarget->GetResourceAmount() : 0;
     theRecord[18] = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;
-    theRecord[19] = (uint32_t)inUnit->mTargetSearchTimer.Get();
+    theRecord[19] = (uint32_t)inUnit->mTargetSearchTimer;
     sXActions.Add(theRecord, sizeof(theRecord));
 }
 
