@@ -841,6 +841,10 @@ NET_TESTS = {
     # of NEProtocol.cpp, `--print FILE`)
     "ne_protocol_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
         "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
+    # the engine messages as their senders and the factory see them (golden: tests/net/golden_message.txt, made over
+    # the original 28 classes)
+    "ne_message_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
+        "Network Engine/NEMessage.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
 }
 
 
