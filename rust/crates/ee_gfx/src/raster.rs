@@ -95,6 +95,8 @@ pub struct EeGfxRaster {
         brightness: f32,
         alpha_ref: f32,
     ),
+    /// `SetFrame(frame)` of a texture (`GETexture*`)
+    pub texture_frame: extern "C" fn(texture: EeGfxModel, frame: u32),
     /// `AddGroundStrip(from, to, width, color, offset, size, alpha, brightness, alpha reference)`
     pub ground_strip: extern "C" fn(
         from: *const Ge3DPoint,
@@ -171,6 +173,7 @@ pub trait Raster {
         brightness: f32,
         alpha_ref: f32,
     );
+    fn texture_frame(&mut self, texture: EeGfxModel, frame: u32);
 }
 
 impl Raster for &EeGfxRaster {
@@ -301,6 +304,9 @@ impl Raster for &EeGfxRaster {
         alpha_ref: f32,
     ) {
         (self.ground_strip)(from, to, width, color, offset.0, offset.1, size.0, size.1, alpha, brightness, alpha_ref)
+    }
+    fn texture_frame(&mut self, texture: EeGfxModel, frame: u32) {
+        (self.texture_frame)(texture, frame)
     }
 }
 
@@ -453,5 +459,8 @@ impl Raster for LogRaster {
             "strip {} {} {} to {} {} {} width {width} color {} {} {} offset {offset:?} size {size:?} {alpha} {brightness} {alpha_ref}",
             a.x, a.y, a.z, b.x, b.y, b.z, k.red, k.green, k.blue
         ));
+    }
+    fn texture_frame(&mut self, _texture: EeGfxModel, frame: u32) {
+        self.calls.push(format!("frame {frame}"));
     }
 }

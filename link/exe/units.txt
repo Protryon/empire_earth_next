@@ -192,7 +192,6 @@ e773c e7d67 Empire Earth/Graphics Thread/EEE2DVortex.cpp
 e7d67 e8158 Empire Earth/Graphics Thread/EEE2DWaterRipple.cpp
 e8158 e89c6 Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp
 e9bee ea703 Empire Earth/Graphics Thread/EEE3DCommandConfirmation.cpp
-ea9e2 ebbba Empire Earth/Graphics Thread/EEE3DDamageVent.cpp
 ec6e4 ed606 Empire Earth/Graphics Thread/EEE3DEarthquake.cpp
 ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
 f1327 f1600 Empire Earth/Graphics Thread/EEE3DGoal.cpp

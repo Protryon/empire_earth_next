@@ -1,10 +1,11 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
 // effect_beam.rs, effect_aged.rs, effect_additive.rs,
-// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs, effect_wall.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs, effect_wall.rs, effect_vent.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
 // EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
-// EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp and EEE3DEnergyWall.cpp.
+// EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp, EEE3DEnergyWall.cpp and
+// EEE3DDamageVent.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -62,6 +63,8 @@ struct Ask {
     EETagPointList* mSpawn;   // the hurricane's spawn list, read once by SpawnCount for SpawnAt
     EeGfxEffect3DOp mOp;
     void* mArg;               // a constructor's unit (Create), point (CreateAt) or line (CreateLine)
+    EETagPointList* mVentFrom;   // the damage vent's tag point lists, read once a step by VentLists
+    EETagPointList* mVentTo;
     static EEE3DRust* E(void* inAsk) { return static_cast<Ask*>(inAsk)->mEffect; }
     static EeGe3DPoint UnitPosition(void* inAsk)
     {
@@ -354,6 +357,64 @@ struct Ask {
         const GEColor& theColor = E(inAsk)->mUnit->mComplexUnit->mPlayer->mColor;
         return EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue};
     }
+    // the damage vent's vents (kind 5) and aims (0x38) on the unit's model at its animation (EEE3DDamageVent::Step,
+    // 0xeae33)
+    static void VentLists(void* inAsk)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        EEUnit* theUnit = theAsk->mEffect->mUnit;
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        theAsk->mVentFrom = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 5);
+        theAsk->mVentTo = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0x38);
+    }
+    static EeGfxVentUnit VentUnit(void* inAsk)
+    {
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        return EeGfxVentUnit{(theComplex->mCommand ? theComplex->mCommand->mType : 0) == kActionDead,
+                             (float)theUnit->mStats->mMaxHitPoints};
+    }
+    static uint32_t VentCount(void* inAsk) { return (uint32_t)static_cast<Ask*>(inAsk)->mVentFrom->GetNumTagPoints(); }
+    // a jet's vent's and aim's offsets (EEE3DDamageVentPart::Aim, 0xeb4e9)
+    static void VentOffsets(void* inAsk, int32_t inTag, EeGe3DPoint* outPoints)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        GE3DPoint theFrom;
+        GE3DPoint theTo;
+        theAsk->mVentFrom->mPoints[inTag]->GetOffset(0, theFrom);
+        theAsk->mVentTo->mPoints[inTag]->GetOffset(0, theTo);
+        outPoints[0] = EeGe3DPoint{theFrom.mX, theFrom.mY, theFrom.mZ};
+        outPoints[1] = EeGe3DPoint{theTo.mX, theTo.mY, theTo.mZ};
+    }
+    // a jet's vent and aim at frame 0 around the unit's location scaled by its stats, and the vent's offset from the
+    // model's centre turned by that location (EEE3DDamageVent::Step)
+    static EeGfxVentPoints VentPoints(void* inAsk, int32_t inTag)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        EEComplexUnit* theComplex = theAsk->mEffect->mUnit->mComplexUnit;
+        GETransformation theUnitTransformation(theComplex->mPhysicalModel.GetLocation());
+        theAsk->mVentFrom->Scale(theUnitTransformation, theComplex->mStats->GetScale());
+        GE3DPoint theFrom;
+        GE3DPoint theTo;
+        (theAsk->mVentFrom->GetTagPoint(inTag))->GetPoint(0, theUnitTransformation, theFrom);
+        (theAsk->mVentTo->GetTagPoint(inTag))->GetPoint(0, theUnitTransformation, theTo);
+        GEModel* theModel = theComplex->GetModel()->mModels[0];
+        GE3DPoint theOffset;
+        theAsk->mVentFrom->mPoints[inTag]->GetOffset(0, theOffset);
+        GE3DPoint theCenter = theModel->GetCenterPoint();
+        GEVector theTranslation;
+        theUnitTransformation.Apply(GEVector(theOffset.GetX() - theCenter.GetX(), theOffset.GetY() - theCenter.GetY(),
+                                             theOffset.GetZ() - theCenter.GetZ()), theTranslation);
+        return EeGfxVentPoints{EeGe3DPoint{theFrom.mX, theFrom.mY, theFrom.mZ}, EeGe3DPoint{theTo.mX, theTo.mY, theTo.mZ},
+                               EeGeVector{theTranslation.mX, theTranslation.mY, theTranslation.mZ}};
+    }
+    static EeGfxFrames Frames(void* inAsk, uint32_t inIndex)
+    {
+        EEGraphicObject* theObject = E(inAsk)->mGraphicObject;
+        return EeGfxFrames{(uint32_t)theObject->mStartFrames[inIndex], (uint32_t)theObject->mFrameTimes[inIndex],
+                           (uint32_t)theObject->mFrameCounts[inIndex], (uint32_t)theObject->mLastFrames[inIndex]};
+    }
+    static float UnitClassScale(void* inAsk) { return E(inAsk)->mUnit->GetClass()->GetScale(); }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -461,7 +522,7 @@ EEE3DRust::~EEE3DRust()
 long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
                      unsigned long inMajorVersion, unsigned long inMinorVersion, void* inArg)
 {
-    Ask theAsk = {this, inQueues, NULL, inOp, inArg};
+    Ask theAsk = {this, inQueues, NULL, inOp, inArg, NULL, NULL};
     EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
                                  Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
                                  Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
@@ -470,7 +531,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
                                  Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
                                  Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
-                                 Ask::GateOpen, Ask::PlayerColor};
+                                 Ask::GateOpen, Ask::PlayerColor, Ask::VentLists, Ask::VentUnit, Ask::VentCount,
+                                 Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::UnitClassScale};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
@@ -487,6 +549,9 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
         theFacts.param5 = theEffect->mParam5;
         theFacts.param6 = theEffect->mParam6;
         theFacts.flag1 = theEffect->mFlag1;
+        theFacts.flag2 = theEffect->mFlag2;
+        theFacts.param7 = theEffect->mParam7;
+        theFacts.param8 = theEffect->mParam8;
         theFacts.duration = (uint32_t)theEffect->mDuration;
         theFacts.has_object = theObject != NULL;
         theFacts.alpha_ref = theObject != NULL ? theObject->mAlphaReference : 0.0f;

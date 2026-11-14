@@ -125,6 +125,9 @@ constexpr static const int32_t EE_GFX_TRACER_HIT = 2;
 /// The beam ends (7).
 constexpr static const int32_t EE_GFX_TRACER_OVER = 4;
 
+/// `kEffect3DDamageVent`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_DAMAGE_VENT = 53;
+
 /// `kEffect3DEnergyWall`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_ENERGY_WALL = 52;
 
@@ -302,6 +305,9 @@ struct EeGfxOrbitals;
 
 /// A storm's tiles (`mTiles`) and its drops or flakes (`mDrops`, `mFlakes`).
 struct EeGfxStormLists;
+
+/// The jets (`mParts`).
+struct EeGfxVentParts;
 
 /// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
 /// end (a move shorter than 0.001).
@@ -887,6 +893,16 @@ struct EeGfxEffectBlast {
   bool hidden;
 };
 
+/// The damage vent's state.
+struct EeGfxEffectVent {
+  /// `mParts` (made on first use; owned by the record)
+  EeGfxVentParts *parts;
+  /// `mDrawCount`: the queue's jet count
+  uint32_t draw_count;
+  /// `mNextCountCheckTime`: ms to the next match of the jets to the damage
+  float next_count_time;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -942,6 +958,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectOrbit orbit;
   /// the nuclear explosion's and energy wave's (`effect_nuclear.rs`)
   EeGfxEffectBlast blast;
+  /// the damage vent's (`effect_vent.rs`)
+  EeGfxEffectVent vent;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1255,6 +1273,10 @@ struct EeGfxGraphicFacts {
   bool has_linked3;
   /// `gFreeCamera`
   bool free_camera;
+  /// `mFlag2`, `mParam7`, `mParam8`
+  bool flag2;
+  float param7;
+  float param8;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1296,6 +1318,28 @@ struct EeGfxUnitTile {
   float size;
   float x;
   float y;
+};
+
+/// The damage vent's unit: its command is to die; its maximum hit points.
+struct EeGfxVentUnit {
+  bool dead;
+  float max_hit_points;
+};
+
+/// A jet's places on the unit (the C++'s tag points at frame 0 around the unit's location scaled by its stats): its
+/// vent, its aim, and the vent's offset from the model's centre turned by that location.
+struct EeGfxVentPoints {
+  EeGe3DPoint from;
+  EeGe3DPoint to;
+  EeGeVector translation;
+};
+
+/// A graphic object's animation `index`: its start frame, frame time (ms), frame count and last frame.
+struct EeGfxFrames {
+  uint32_t start;
+  uint32_t time;
+  uint32_t count;
+  uint32_t last;
 };
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -1387,6 +1431,20 @@ struct EeGfxEffect3DHost {
   bool (*gate_open)(void *context, float *open);
   /// the unit's complex unit's player's colour
   EeGfxColor (*player_color)(void *context);
+  /// the damage vent's tag point lists (kinds 5 and 0x38 of the unit's model at its animation), kept for the call
+  void (*vent_lists)(void *context);
+  /// the damage vent's unit: its command is to die, its maximum hit points
+  EeGfxVentUnit (*vent_unit)(void *context);
+  /// the number of vents (kind 5 tag points; after `vent_lists`)
+  uint32_t (*vent_count)(void *context);
+  /// vent `tag`'s and its aim's offsets at frame 0 into `points[0]` and `points[1]` (after `vent_lists`)
+  void (*vent_offsets)(void *context, int32_t tag, EeGe3DPoint *points);
+  /// vent `tag`'s places on the unit (after `vent_lists`)
+  EeGfxVentPoints (*vent_points)(void *context, int32_t tag);
+  /// the kept graphic object's animation `index`
+  EeGfxFrames (*frames)(void *context, uint32_t index);
+  /// the unit's class's scale (`GetClass()->GetScale()`)
+  float (*unit_class_scale)(void *context);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1456,6 +1514,8 @@ struct EeGfxRaster {
                       const float *heights,
                       float brightness,
                       float alpha_ref);
+  /// `SetFrame(frame)` of a texture (`GETexture*`)
+  void (*texture_frame)(EeGfxModel texture, uint32_t frame);
   /// `AddGroundStrip(from, to, width, color, offset, size, alpha, brightness, alpha reference)`
   void (*ground_strip)(const EeGe3DPoint *from,
                        const EeGe3DPoint *to,

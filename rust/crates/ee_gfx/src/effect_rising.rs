@@ -31,6 +31,7 @@ use crate::effect_state::{
     EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_SCREEN_FLASH, EE_GFX_EFFECT_KIND_TELEPORT,
     EE_GFX_EFFECT_KIND_TIME_WARP, EE_GFX_EFFECT_KIND_WATER_SPLASH, EE_GFX_EFFECT_MOVED,
 };
+use crate::effect_vent::{damage_vent, EeGfxFrames, EeGfxVentPoints, EeGfxVentUnit, EE_GFX_EFFECT_KIND_DAMAGE_VENT};
 use crate::effect_wall::{wall, wall_file, EE_GFX_EFFECT_KIND_ENERGY_WALL};
 use crate::effects::EeGfxColor;
 use crate::lighting::EeGfxLighting;
@@ -102,6 +103,10 @@ pub struct EeGfxGraphicFacts {
     pub has_linked3: bool,
     /// `gFreeCamera`
     pub free_camera: bool,
+    /// `mFlag2`, `mParam7`, `mParam8`
+    pub flag2: bool,
+    pub param7: f32,
+    pub param8: f32,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -192,6 +197,20 @@ pub struct EeGfxEffect3DHost {
     pub gate_open: extern "C" fn(context: *mut c_void, open: *mut f32) -> bool,
     /// the unit's complex unit's player's colour
     pub player_color: extern "C" fn(context: *mut c_void) -> EeGfxColor,
+    /// the damage vent's tag point lists (kinds 5 and 0x38 of the unit's model at its animation), kept for the call
+    pub vent_lists: extern "C" fn(context: *mut c_void),
+    /// the damage vent's unit: its command is to die, its maximum hit points
+    pub vent_unit: extern "C" fn(context: *mut c_void) -> EeGfxVentUnit,
+    /// the number of vents (kind 5 tag points; after `vent_lists`)
+    pub vent_count: extern "C" fn(context: *mut c_void) -> u32,
+    /// vent `tag`'s and its aim's offsets at frame 0 into `points[0]` and `points[1]` (after `vent_lists`)
+    pub vent_offsets: extern "C" fn(context: *mut c_void, tag: i32, points: *mut Ge3DPoint),
+    /// vent `tag`'s places on the unit (after `vent_lists`)
+    pub vent_points: extern "C" fn(context: *mut c_void, tag: i32) -> EeGfxVentPoints,
+    /// the kept graphic object's animation `index`
+    pub frames: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxFrames,
+    /// the unit's class's scale (`GetClass()->GetScale()`)
+    pub unit_class_scale: extern "C" fn(context: *mut c_void) -> f32,
 }
 
 /// The world as the effects ask it.
@@ -288,6 +307,26 @@ pub trait Effect3DHost {
     }
     fn player_color(&mut self) -> EeGfxColor {
         EeGfxColor::default()
+    }
+    /// the tests' hosts that make no damage vent have no vents
+    fn vent_lists(&mut self) {}
+    fn vent_unit(&mut self) -> EeGfxVentUnit {
+        EeGfxVentUnit::default()
+    }
+    fn vent_count(&mut self) -> u32 {
+        0
+    }
+    fn vent_offsets(&mut self, _tag: i32) -> (Ge3DPoint, Ge3DPoint) {
+        (Ge3DPoint::default(), Ge3DPoint::default())
+    }
+    fn vent_points(&mut self, _tag: i32) -> EeGfxVentPoints {
+        EeGfxVentPoints::default()
+    }
+    fn frames(&mut self, _index: u32) -> EeGfxFrames {
+        EeGfxFrames::default()
+    }
+    fn unit_class_scale(&mut self) -> f32 {
+        0.0
     }
 }
 
@@ -415,6 +454,29 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn player_color(&mut self) -> EeGfxColor {
         (self.player_color)(self.context)
     }
+    fn vent_lists(&mut self) {
+        (self.vent_lists)(self.context)
+    }
+    fn vent_unit(&mut self) -> EeGfxVentUnit {
+        (self.vent_unit)(self.context)
+    }
+    fn vent_count(&mut self) -> u32 {
+        (self.vent_count)(self.context)
+    }
+    fn vent_offsets(&mut self, tag: i32) -> (Ge3DPoint, Ge3DPoint) {
+        let mut points = [Ge3DPoint::default(); 2];
+        (self.vent_offsets)(self.context, tag, points.as_mut_ptr());
+        (points[0], points[1])
+    }
+    fn vent_points(&mut self, tag: i32) -> EeGfxVentPoints {
+        (self.vent_points)(self.context, tag)
+    }
+    fn frames(&mut self, index: u32) -> EeGfxFrames {
+        (self.frames)(self.context, index)
+    }
+    fn unit_class_scale(&mut self) -> f32 {
+        (self.unit_class_scale)(self.context)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -445,6 +507,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION | EE_GFX_EFFECT_KIND_ENERGY_WAVE => unsafe { blast(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_MULTI_EFFECT => unsafe { multi(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_ENERGY_WALL => unsafe { wall(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_DAMAGE_VENT => unsafe { damage_vent(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -535,6 +598,14 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
         // the base's alone
         EE_GFX_EFFECT_KIND_MULTI_EFFECT => base,
         EE_GFX_EFFECT_KIND_ENERGY_WALL => wall_file(load, base, r, f, major, minor, h),
+        // the base's result ignored on loading: the media's
+        EE_GFX_EFFECT_KIND_DAMAGE_VENT => {
+            if load {
+                h.load_media()
+            } else {
+                base
+            }
+        }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
             // the base's result is ignored; the media's stops the load
             let res = h.load_media();

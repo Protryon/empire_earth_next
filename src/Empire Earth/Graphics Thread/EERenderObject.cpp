@@ -1722,6 +1722,7 @@ const EeGfxRaster gEERustRaster = {
         AddGroundQuad(GE3DPoint(inCenter->x, inCenter->y, inCenter->z), GEColor(inColor.red, inColor.green, inColor.blue),
                       inYaw, inSize, theHeights, inBrightness, inAlphaReference);
     },
+    [](void* inTexture, uint32_t inFrame) { static_cast<GETexture*>(inTexture)->SetFrame(inFrame); },
     [](const EeGe3DPoint* inFrom, const EeGe3DPoint* inTo, float inWidth, EeGfxColor inColor, float inOffsetU, float inOffsetV,
        float inSizeU, float inSizeV, float inAlpha, float inBrightness, float inAlphaReference) {
         GETextureCoordinate theOffset;
