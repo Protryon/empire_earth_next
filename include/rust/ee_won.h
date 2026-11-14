@@ -839,6 +839,38 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
 
+/// `mSocket` (an object: a `BlockingSocket*`, a reference held)
+constexpr static const int32_t EE_WON_HOSTBASE_SOCKET = 0;
+
+/// `mAuthContext` (an object: an `AuthContext*`, a reference held)
+constexpr static const int32_t EE_WON_HOSTBASE_AUTH_CONTEXT = 1;
+
+/// `mAuthType`
+constexpr static const int32_t EE_WON_HOSTBASE_AUTH_TYPE = 2;
+
+/// `mLengthFieldSize`
+constexpr static const int32_t EE_WON_HOSTBASE_LFS = 3;
+
+/// `mClientKeySize`
+constexpr static const int32_t EE_WON_HOSTBASE_CLIENT_KEY_SIZE = 4;
+
+/// `mUseClientKey`
+constexpr static const int32_t EE_WON_HOSTBASE_USE_CLIENT_KEY = 5;
+
+/// `mMaxConnectTime`, `mMaxSendTime`, `mMaxRecvTime`
+constexpr static const int32_t EE_WON_HOSTBASE_MAX_CONNECT = 6;
+
+constexpr static const int32_t EE_WON_HOSTBASE_MAX_SEND = 7;
+
+constexpr static const int32_t EE_WON_HOSTBASE_MAX_RECV = 8;
+
+/// `ConnectTime()`, `SendTime()`, `RecvTime()` (read only: the limits, capped by the time left when blocking)
+constexpr static const int32_t EE_WON_HOSTBASE_CONNECT_TIME = 9;
+
+constexpr static const int32_t EE_WON_HOSTBASE_SEND_TIME = 10;
+
+constexpr static const int32_t EE_WON_HOSTBASE_RECV_TIME = 11;
+
 /// `GetStatus()` -> out_num
 constexpr static const int32_t EE_WON_HOST_STATUS = 1;
 
@@ -1236,6 +1268,12 @@ constexpr static const int64_t EE_WON_HOST_CORE_OP = 2;
 
 /// a `SocketOp`'s `EeWonSocketOp`
 constexpr static const int64_t EE_WON_HOST_CORE_SOCKET_OP = 3;
+
+/// a `RustServerOp`'s Rust op (`EeWonHostOp`)
+constexpr static const int64_t EE_WON_HOST_CORE_HOSTOP = 4;
+
+/// a `ServerContext`'s server list
+constexpr static const int64_t EE_WON_HOST_CORE_CONTEXT = 5;
 
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
@@ -7021,6 +7059,12 @@ struct EeWonChatParser;
 /// The Rust ComboBox.
 struct EeWonComboBox;
 
+/// A completion's call in Rust (round 24): what the C++ `RustCompletion` runs when completed (with the op, an
+/// `AsyncOp*`, the caller holding a reference for the call), and what it frees when deleted. The tracker's
+/// completion (`TrackerCompletion`, deleted) and the op base's timer and repeat completions (`HostCompletion`,
+/// deleted) are these.
+struct EeWonCompletion;
+
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
 
@@ -8612,6 +8656,14 @@ struct EeWonAsyncOpHooks {
   EeWonAsyncOpFn op_add_ref;
   EeWonAsyncOpFn op_release;
   EeWonAsyncOpFn op_kill;
+  /// `object->AddRef()`, `object->Release()` on any `RefCount*` (the op base's objects: sockets, contexts)
+  EeWonAsyncOpFn ref_add;
+  EeWonAsyncOpFn ref_release;
+  /// `new RustCompletion(body)`: a C++ completion (no reference taken yet, as a `new` one) whose `Complete` runs
+  /// [`ee_won_completion_run`] and whose deletion frees the body ([`ee_won_completion_free`])
+  void *(*new_completion)(EeWonCompletion *body);
+  /// the virtual `AsyncOpWithTracker::CallbackHook(child, param)` of `op`
+  bool (*callback_hook)(void *op, void *child, int32_t param);
 };
 
 /// An op's run timing (`AsyncOp`'s `mRunMode`, `mStartTime`, `mTimeout`).
@@ -13677,6 +13729,18 @@ int32_t ee_won_session_crypt(void *session,
                              void *context,
                              bool *replaced);
 
+/// The op's member by number (`ServerOp`'s accessors).
+///
+/// # Safety
+/// `op` is a live op.
+int64_t ee_won_hostop_base_get(const EeWonHostOp *op, int32_t which);
+
+/// Sets the op's member by number (an object member: `obj`, a reference taken; others: `num`).
+///
+/// # Safety
+/// `op` is a live, natively bound op; `obj` NULL or a live `RefCount*`.
+void ee_won_hostop_base(const EeWonHostOp *op, int32_t which, int64_t num, void *obj);
+
 /// `HTTPGetOp`'s constructors' proxy file read (`dir`: `WONAPICore::GetDefaultFileDirectory()`, `len` bytes).
 ///
 /// # Safety
@@ -13692,13 +13756,18 @@ void ee_won_hostop_bind(const EeWonHostOp *op, EeWonHostFn f, void *host);
 
 /// Binds the game's C++ side (`RustServerOp::HostCall`): as [`ee_won_hostop_bind`], and the calls that need no
 /// C++ object (the clock, `rand`, an address resolved, the op's file, the files it measures, the web proxy host) are
-/// answered in Rust (hostnative.rs) instead of sent.
+/// answered in Rust (hostnative.rs) instead of sent; so are the op's own calls (hostbase.rs: its status and the
+/// like, `ServerOp`'s members, the tracker, its completions, references), on its own objects: `self_op` (the
+/// `AsyncOp*`), its `EeWonAsyncOp` and its tracker.
 ///
 /// # Safety
-/// `op` is a live op.
+/// `op` is a live op; `self_op`, `self_obj` and `tracker` the C++ op's own, alive as long as it.
 void ee_won_hostop_bind_native(const EeWonHostOp *op,
                                EeWonHostFn f,
-                               void *host);
+                               void *host,
+                               void *self_op,
+                               const EeWonAsyncOp *self_obj,
+                               const EeWonOpTracker *tracker);
 
 /// One call made as the op makes its own (`Host::call`): `call`'s inputs in, its `out_obj`, `out_num` and `out_addr`
 /// written, its bytes (if any) to `call`'s `out_sink`. For the drivers (won_serverop_test): the C++ side's answers
@@ -13769,15 +13838,6 @@ void ee_won_hostop_set(const EeWonHostOp *op,
                        size_t len,
                        const uint8_t *addr,
                        void *obj);
-
-/// The C++ side's `ServerOp` members the op's constructor set (`RustServerOp`'s constructor reads them): the
-/// length field size and the connect, send and receive limits.
-///
-/// # Safety
-/// `op` is a live op; `lfs` is writable, `times` three writable values.
-void ee_won_hostop_setup(const EeWonHostOp *op,
-                         uint8_t *lfs,
-                         uint32_t *times);
 
 /// The members, one line (the drivers' form).
 ///
@@ -15024,6 +15084,28 @@ size_t ee_won_op_tracker_len(const EeWonOpTracker *t);
 /// # Safety
 /// `t` is valid.
 void *ee_won_op_tracker_at(const EeWonOpTracker *t, size_t index);
+
+/// `AsyncOpWithTracker::Track(child, param)` (see [`EeWonAsyncOp::track`]); returns the child.
+///
+/// # Safety
+/// `o` is the op's object, `tracker` its tracker; `child` is a live op whose object is `child_obj`.
+void *ee_won_asyncop_track(const EeWonAsyncOp *o,
+                           const EeWonOpTracker *tracker,
+                           void *child,
+                           const EeWonAsyncOp *child_obj,
+                           int32_t param);
+
+/// A `RustCompletion`'s `Complete(op)`: its Rust call.
+///
+/// # Safety
+/// `c` is a live body (a `RustCompletion`'s); `op` the op it completes.
+void ee_won_completion_run(const EeWonCompletion *c, void *op);
+
+/// A `RustCompletion`'s deletion: its body (and the references the body holds) freed.
+///
+/// # Safety
+/// `c` came from [`EeWonCompletion::make`] (or is null), not used after.
+void ee_won_completion_free(EeWonCompletion *c);
 
 /// A new Rust ScrollArea for the C++ `component`, its calls out through `host`.
 EeWonScrollPane *ee_won_pane_new(void *component, EeWonGuiHostFn host);

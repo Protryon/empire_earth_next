@@ -464,7 +464,7 @@ void EEWonNet::ConnectCallback(AsyncOp* inOp)
 {
     UWideString theMessage;
 
-    if (static_cast<PeerAuthOp*>(inOp)->mSocket.get() == this->mRouting.get() && inOp->GetStatus() != WS_Killed && this->mCancelled == false) {
+    if (static_cast<PeerAuthOp*>(inOp)->GetSocket() == this->mRouting.get() && inOp->GetStatus() != WS_Killed && this->mCancelled == false) {
         if (inOp->GetStatus() != WS_Success) {
             this->Disconnect();
             WONStatusToString(inOp->GetStatus());
