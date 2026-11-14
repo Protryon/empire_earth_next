@@ -6,8 +6,8 @@
 //! stores (`model_store.rs`, decoded from a glTF by `ee_openformats`; the `.cem` reader and writer were retired under
 //! D9), the pixel formats and a frame's store into a surface (`pixel.rs`), `GETexture`'s surface planning and
 //! `GETextureSet`'s grid (`texture.rs`), and the texture and model managers' decisions, names and texture pack
-//! (`managers.rs`) and the two managers, `GETexture` and `GEModel` whole (`manobj.rs`, `texobj.rs`, `texobj_tex.rs`,
-//! `modobj.rs`), `GEViewport`'s matrices, planes and
+//! (`managers.rs`) and the two managers, `GETexture`, `GEModel` and `GEBitmap` whole (`manobj.rs`, `texobj.rs`,
+//! `texobj_tex.rs`, `modobj.rs`, `bmpobj.rs`), `GEViewport`'s matrices, planes and
 //! frustum (`viewport.rs`), `UpdateVisibleTerrain` as a plan the
 //! C++ fills its lists from (`terrain_visible.rs`), `GEPhysicalModel`'s viewport test and its walks over the C++ models
 //! (`physical_walk.rs`), `GEBitmap`'s and
@@ -31,6 +31,7 @@
 /// cbindgen:ignore
 pub mod bbox;
 pub mod bitmap;
+pub mod bmpobj;
 pub mod ffi;
 pub mod font;
 pub mod font_ffi;
