@@ -73,7 +73,7 @@ EEUICWonNetGamesBox::EEUICWonNetGamesBox(unsigned long inId, GEFont* inFont, con
     this->mText = new GEText(inFont);
     this->mText->SetFgColor(GEColor());
     this->mText->SetIsTransparent(true);
-    this->mSelectedBackground->SetColor(GEColor(0.0f, 0.0f, 0.0f));
+    this->GetSelectedBackground()->SetColor(GEColor(0.0f, 0.0f, 0.0f));
     this->SetFocusedRectColor(GEColor(0.0f, 0.0f, 0.0f));
     gResource->GetString(IDS_CIV_POWER_PASSWORD, theText);
     this->mPasswordLabel = UWideString("[") + theText + UWideString("]");
@@ -127,8 +127,8 @@ long EEUICWonNetGamesBox::DrawTextA()
     UIControl::DrawTextA();
     theResult = kErrorOK;
     for (unsigned long i = 0; i < this->GetDrawCount(); i++) {
-        theRect.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->mLineHeight * i));
-        theRect.SetBottom(theRect.GetTop() + (float)this->mLineHeight);
+        theRect.SetTop(this->GetCopyTextRectangle().GetTop() + (float)(this->GetLineHeight() * i));
+        theRect.SetBottom(theRect.GetTop() + (float)this->GetLineHeight());
         GEFont* theFont;
         if (!this->mCopyLineArray[i].mIsInProgress
             && this->mCopyLineArray[i].mHumans != this->mCopyLineArray[i].mPlayers) {
