@@ -176,6 +176,7 @@ def link_exe(out, objs, extra_libs, name="EE-AOC", entry=None):
     if entry is not None:   # --sim: the console entry first among the game's objects
         inputs.insert(len(first), entry)
     tag = "" if name == "EE-AOC" else f"-{name}"
+    dst.mkdir(parents=True, exist_ok=True)   # a fresh worktree has no exe directory yet
     rsp = dst / f"link{tag}.rsp"
     rsp.write_text("".join(f'"{x}"\n' for x in inputs))
     exe = dst / f"{name}.exe"

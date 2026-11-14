@@ -7,37 +7,23 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/// An opaque device (`ISDeviceInput` before).
-using EeInputDevice = void;
+/// An input entity (`ISEntity`): a keyboard index (a key by `DIK_*` scan code, 0xe0..0xe2 the either-side keys) or a
+/// mouse index (0..2 the axes, 3..6 the buttons). The records never change; the state is the device's.
+struct EeInputEntity;
 
-/// A buffered record (`ISInputRecord`: `DIDEVICEOBJECTDATA`'s two fields the engine reads).
-/// The fields keep DirectInput's names: C++ uses this struct as `ISInputRecord`.
-struct EeInputRecord {
-  /// The `DIK_*` code (keyboard) or the `DIMOFS_*` offset (mouse).
-  unsigned long dwOfs;
-  /// 0x80 / 0 for a press / release, the motion for an axis.
-  unsigned long dwData;
-};
+/// The system keyboard (`ISKeyboard`; C++ holds a pointer to this static as `gISKeyboard`).
+struct EeInputKeyboard;
 
-/// The mouse state (`ISMouseState`, DirectInput 7's `DIMOUSESTATE`: the axes are `long`; `ISMouseAxis` points at
-/// them). The fields keep DirectInput's names: C++ uses this struct as `ISMouseState`.
-struct EeInputMouseState {
-  long lX;
-  long lY;
-  long lZ;
-  uint8_t rgbButtons[4];
-};
+/// The system mouse (`ISMouse`, `gISMouse`).
+struct EeInputMouse;
 
 extern "C" {
 
 /// Creates the system keyboard's and mouse's devices (`ISInitialize`); a second call keeps the first ones.
 void ee_input_system_init();
 
-/// The system device: 0 the keyboard's, 1 the mouse's (NULL before `ee_input_system_init` or after the shutdown).
-EeInputDevice *ee_input_system_device(int32_t which);
-
-/// Destroys both system devices (`ISShutdown`, after the keyboard and the mouse that read them are gone). As in the
-/// original, the window thread must not be inside `ee_input_handle_event` meanwhile.
+/// Destroys both system devices (`ISShutdown`, after the keyboard and the mouse that read them). As in the original,
+/// the window thread must not be inside `ee_input_handle_event` meanwhile.
 void ee_input_system_shutdown();
 
 /// `ISHandleEvent`: a window event's type and the fields the Input System reads (the key's scan code, the mouse's
@@ -49,39 +35,107 @@ void ee_input_handle_event(uint32_t kind,
                            uint32_t button,
                            float wheel);
 
-/// `Acquire`: the device buffers records from now on (a newly acquired device starts empty, with no motion).
-///
-/// # Safety
-/// `d` is a system device or NULL.
-void ee_input_acquire(const EeInputDevice *d);
+/// `ISSetDoublePressTimeDelta` (and `ISInitialize`'s delay): the longest time between two presses of a double press.
+void ee_input_set_double_press_delay(unsigned long delay_ms);
 
-/// `Unacquire`.
-///
-/// # Safety
-/// `d` is a system device or NULL.
-void ee_input_unacquire(const EeInputDevice *d);
+/// `ISKeyboard::ComputeModifierState`: a scan code's modifier bit (1 Shift, 2 Control, 4 Alt).
+unsigned long ee_input_modifier_state(unsigned long key);
 
-/// `GetData`: up to `*io_count` records, oldest first, into `out` (NULL discards them); `*io_count` becomes how many
-/// -> 0 OK, 1 overflow (records were lost since the last call), -1 not acquired.
-///
-/// # Safety
-/// `d` is a system device or NULL; `io_count` is valid; `out` is NULL or holds `*io_count` records.
-int32_t ee_input_get_data(const EeInputDevice *d,
-                          EeInputRecord *out,
-                          unsigned long *io_count);
+/// How many key names `ee_input_keyboard_create` takes (the keys the keyboard creates, in their resource order).
+unsigned long ee_input_keyboard_key_count();
 
-/// `GetKeyState`: the keyboard's 256 key bytes into `out` (untouched when not acquired) -> 0 or -1.
+/// Creates the system keyboard on the system device (`ISKeyboard`'s constructor; `time` is `TMGetTime`): `names`
+/// holds `ee_input_keyboard_key_count()` UTF-8 names, or is NULL for the English table. A second call replaces it.
 ///
 /// # Safety
-/// `d` is a system device or NULL; `out` holds 256 bytes.
-int32_t ee_input_get_key_state(const EeInputDevice *d, uint8_t *out);
+/// `names` is NULL or holds that many pointers, each NULL or a NUL-terminated string.
+const EeInputKeyboard *ee_input_keyboard_create(const char *const *names,
+                                                unsigned long time);
 
-/// `GetMouseState`: the motion since the last call and the buttons (untouched when not acquired) -> 0 or -1.
+/// Destroys the system keyboard (its entities read as released from now on).
+void ee_input_keyboard_destroy(const EeInputKeyboard *_k);
+
+/// `GetEntity`: the entity at a scan code into `*out` (NULL for a code without a key) -> 0, or 0xa past 255.
 ///
 /// # Safety
-/// `d` is a system device or NULL; `out` is valid.
-int32_t ee_input_get_mouse_state(const EeInputDevice *d,
-                                 EeInputMouseState *out);
+/// `out` is valid.
+long ee_input_keyboard_entity(const EeInputKeyboard *k,
+                              unsigned long index,
+                              const EeInputEntity **out);
+
+/// `GetModifierState`: the modifiers held (1 Shift, 2 Control, 4 Alt).
+unsigned long ee_input_keyboard_modifiers(const EeInputKeyboard *k);
+
+/// `GetShouldUpdate`: events were read, or a key is or was held.
+bool ee_input_keyboard_should_update(const EeInputKeyboard *k);
+
+/// `Refresh` (`time` is `TMGetTime`).
+void ee_input_keyboard_refresh(const EeInputKeyboard *k, unsigned long time);
+
+/// `Resume`: the device acquired and the whole state read again.
+void ee_input_keyboard_resume(const EeInputKeyboard *k, unsigned long time);
+
+/// `Suspend`: the device's events no longer buffered.
+void ee_input_keyboard_suspend(const EeInputKeyboard *k);
+
+/// Creates the system mouse on the system device (`ISMouse`'s constructor, without the window's relative mode, which
+/// C++ sets). A second call replaces it.
+const EeInputMouse *ee_input_mouse_create();
+
+/// Destroys the system mouse.
+void ee_input_mouse_destroy(const EeInputMouse *_m);
+
+/// `GetEntity`: the axis or button at an index into `*out` -> 0, or 0xa (and NULL) past 6.
+///
+/// # Safety
+/// `out` is valid.
+long ee_input_mouse_entity(const EeInputMouse *m, unsigned long index, const EeInputEntity **out);
+
+/// `GetShouldUpdate`: events were read, a button changed or the mouse moved.
+bool ee_input_mouse_should_update(const EeInputMouse *m);
+
+/// `Refresh` (`time` is `TMGetTime`).
+void ee_input_mouse_refresh(const EeInputMouse *m, unsigned long time);
+
+/// `RefreshXY`: the motion since the last read.
+void ee_input_mouse_refresh_xy(const EeInputMouse *m);
+
+/// `Resume`: the device acquired and the state read again (C++ puts the window's pointer in relative mode first).
+void ee_input_mouse_resume(const EeInputMouse *m);
+
+/// `Suspend` (C++ takes the window's pointer out of relative mode after it).
+void ee_input_mouse_suspend(const EeInputMouse *m);
+
+/// `SetUseBufferedMovement`: false keeps the motion at zero.
+void ee_input_mouse_set_use_buffered_movement(const EeInputMouse *m, bool used);
+
+/// `GetValue`: a key or button 1 held, 0 not; an axis its motion since the last refresh.
+long ee_input_entity_value(const EeInputEntity *e);
+
+/// `GetNormalizedValue`: a key or button 0x7fff held; an axis its motion over its granularity (the wheel in notches).
+long ee_input_entity_normalized_value(const EeInputEntity *e);
+
+/// `JustPressed`: pressed since the last refresh.
+bool ee_input_entity_just_pressed(const EeInputEntity *e);
+
+/// `JustUnpressed`: released since the last refresh.
+bool ee_input_entity_just_unpressed(const EeInputEntity *e);
+
+/// `JustDoublePressed`: the press of the last refresh was a double press.
+bool ee_input_entity_just_double_pressed(const EeInputEntity *e);
+
+/// `GetIndex`: a key's scan code (a mouse entity's index).
+///
+/// # Safety
+/// `e` is NULL or an entity from `ee_input_keyboard_entity` / `ee_input_mouse_entity`.
+unsigned long ee_input_entity_index(const EeInputEntity *e);
+
+/// `GetName`: the entity's UTF-8 name ("A key", "SHIFT key (left) and SHIFT key (right)", "Left button"), valid while
+/// its keyboard lives; "" for NULL.
+///
+/// # Safety
+/// As `ee_input_entity_index`.
+const char *ee_input_entity_name(const EeInputEntity *e);
 
 }  // extern "C"
 
