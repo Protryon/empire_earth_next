@@ -19415,3 +19415,196 @@ conflict. This lane's state is now `docs/progress/r6-won-the-lobby-screens.md`.
 ### The full `wontest` set on the final tree
 
 Run on the final tree (61a9d843) in the background: all 105 programs exit 0 (`ALL EXIT 0`, inside the 3-hour limit).
+
+## R6 WONLobby, round 5: the EE game room's game and slots as one Rust object, its player rows, connect dialog and resource strings (ee_won eegame.rs, lobbyctl.rs, lobbydlg.rs, eeresource.rs; branch rust-wonlobby5, 2026-11-14)
+
+Round 4's list, the EE room first: EELobbyGame with its slots (the biggest unit left in the lane), then the player
+rows panel on round 4's control object, then the connect dialog on round 1's dialog object, then the EE lobby's
+resource strings on round 7's resource table pattern. Each commit has its
+golden over the original statements (copied from the units before their deletion), mutations of the Rust that the
+golden catches, and a cargo replay of a recorded subset.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| e08656c6 | EELobbyGame and EELobbyPlayerSlot as one Rust object (`eegame.rs`, host `EELobbyGameHost.cpp`); EELobbyGame.cpp and EELobbyPlayer.cpp deleted | +421 -1,387 = -966 (71,687 -> 70,721) |
+| bdb22fce (+ 98d85532, a clippy fix) | EELobbyPlayerOptionsCtrl as `lobbyctl.rs` kind `PlayerOptions`; its unit deleted | -262 (70,721 -> 70,459) |
+| 93a17b9c | EELobbyConnectDialog as `lobbydlg.rs` kind `Connect`; its unit deleted | -107 (70,459 -> 70,352) |
+| 7ac4bf34 | EELobbyResource's loader and reset over `eeresource.rs` rows | -132 (70,352 -> 70,220) |
+
+Round total: WON C++ 71,687 -> 70,220 (-1,467); four units deleted (EELobbyGame.cpp, EELobbyPlayer.cpp,
+EELobbyPlayerOptionsCtrl.cpp, EELobbyConnectDialog.cpp).
+
+- **EELobbyGame as a Rust object** (`eegame.rs`). The class was a `LobbyGame` whose virtual hooks the lobby's game
+  code calls (host, join request and reply, the game list's summary and details, the game room's messages
+  0x64..0x6a, start and ready checks), with sixteen options (their wire types and limits in two static tables set
+  by the first game made), eight `EELobbyPlayerSlot`s (six option bytes, a client, a player and a reserved name
+  each), three counts, the saved game's `EELobbyFileTransfer` and the details' player names. All of it is Rust
+  state now; every method and hook is the originals' statements over one host (`EELobbyGameHost.cpp`, 72 ops: a
+  buffer read or append, a message buffer made, sent and freed, a client's name, id, player or captain test, a
+  player's slot, team, attach or detach, the transfer's calls and members, the lobby's events and globals, a
+  reference added or released). The C++ class keeps its vtable (each hook one forward) and holds the Rust object;
+  `EELobbyPlayerSlot` is a view (the game and the slot's number) whose methods forward, so `GetPlayerSlot` callers
+  and `EELobbyPlayer::mPlayerSlot` keep working. Callers that read or wrote a slot's members directly
+  (EELobbyMisc's saved game set-up, EELobbyInterface's player conversion, the connect dialog, the player rows,
+  LobbyCtrlHost) use the view's `Option`/`SetRawOption`/`GetClient` (accessor-level edits, all in this lane's
+  files). `GetName` and `GetFile` return a `GUIString` by value (their data is the Rust's pointer).
+- **References.** A `SmartPtr` member is a pointer with the original's `ConstSmartPtr::operator=` traffic (nothing
+  for the same pointer, else the old released, the new referenced); a slot's name is its `GUIStringData`, 0 for the
+  shared empty string (whose reference traffic nobody can observe). Strings the original made on the stack (a read
+  wide string, the version) come back from their op with one reference, released where the original's local went
+  out of scope.
+- **Exceptions.** A read past a message's end threw `ReadBufferException`, which the lobby's handlers catch
+  (LobbyLogicHost.cpp). A C++ exception must not cross the Rust frames: the read op catches it and answers
+  `isize::MIN`, the Rust method stops there releasing what the original's unwinding released (the version, a read
+  name), and the shell throws `ReadBufferException` again. The golden checks this with real C++ exceptions on the
+  original's side.
+- **Re-entry.** The sync events (a slot's, an option's, 100065), the staging change, the default options
+  (`EELobbySetDefaultGameOptions` calls back into `SetOption`), the message boxes and the connect dialog run lobby
+  code that reads or changes the game again: the state is `Cell`s behind a shared reference, re-read after every
+  op.
+- **EELobbyPlayer** keeps its two members (`mPlayerSlot` the view, `mSlot`); its methods moved into the host unit,
+  `IsTeammate`'s rule is `ee_won_eegame_is_teammate`.
+- **EELobbyPlayerOptionsCtrl** (the game room's eight player rows) is round 4's control object's seventh kind,
+  `PlayerOptions`: 48 look-ups (`SLOTS` 55..102: each slot's name combo, team combo, colour button, citizen combo,
+  observe check and transfer label, the names `sprintf`'d by the original, control ids slot * 6 + column + 1; the
+  colour button is a new look-up type, `EELobbyColorButton`), its own slot and host flag, UpdatePlayer (the name or
+  state, the reserved name in red, the observe check, the colour, the transfer percent, each control enabled by
+  role), Activate/Deactivate, PlayerOptionChanged (the row control's value sent with `ChangePlayerOption`; the
+  transfer label's column sends 0) and the event dispatch (a player change falls through into the slot update with
+  its change kind read as the slot, as the original did). Eleven new ops on the slot view, the combo's text colour,
+  the local player, the colour button and the transfer label; the members grew to 48 (`Field` 0..47).
+- **EELobbyConnectDialog** (the wait for every player's connection before a launch) is round 1's dialog object's
+  sixteenth kind, `Connect`: its list and cancel button, its running and ended flags, Run (the seated players
+  listed, the host ready and the others searching; unless all are ready, the modal loop), End and SetConnected (a
+  line marked connected or failed, the launch once all are ready). The list line `ConnectListItem` moved into
+  `LobbyDialogHost.cpp` (a C++ list row, as rounds 3 and 4 kept theirs); EELobbyInit reads the two flags through
+  `IsRunning`/`IsEnded`.
+- **EELobbyResource's loads**: the 73 game lobby strings' sections and keys are ee_won's `eeresource.rs` rows, in
+  the original's order (its globals' definition order, which was also its index table's and its loads'); the C++
+  keeps the globals and the index table (`EELobbyResource_GetString`; the lobby's code uses them by name) and runs
+  the loader and the reset as one loop each over the rows, the global of row `i` the table's entry `i` (the program
+  stops when the counts differ). The rows are checked against the original's 153 statements
+  (`golden_eeresource.txt`, read from the C++ before the port), as round 7's `resource.rs` was.
+
+### Goldens, mutations, replays
+
+| Golden | Sequences | Trace lines | Replayed by cargo | First run |
+|---|---|---|---|---|
+| `won_eegame_test` (new: EELobbyGame, its slots) | 60,000 | 4,795,684 | `golden_eegame.txt` (87 sequences) | identical |
+| `won_lobbyctl_test` (seven kinds now) | 70,000 | 7,931,551 | `golden_lobbyctl.txt` (220 sequences) | 269 differed: the Rust read the name combo for the transfer column's change (the original's switch had no case 5: the value stays 0); fixed, then identical |
+| `won_eedlg_test` (new: the connect dialog) | 30,000 | 1,365,335 | `golden_eedlg.txt` (60 sequences) | identical |
+| `golden_eeresource.txt` (the original's 153 statements) | - | 153 | the table's own test | identical |
+
+`won_eegame_test` drives the original's statements with real C++ exceptions: a read in forty throws, and the
+original's locals (`Held`, the read name, the version) release on the unwinding; the Rust side answers
+`INTPTR_MIN` and must make the same releases. The events, the default options, the boxes and dialogs re-enter the
+game a third of the time (two deep). `won_eedlg_test`'s modal loop and `EndDialog` re-enter the dialog with
+`SetConnected`, `End` or `Run` half of the time.
+
+| Mutation of the Rust | Sequences that change |
+|---|---|
+| eegame: a state change by the host does not fall through to the host check | 531 of 60,000 |
+| eegame: the wanted colour taken anyway | 233 |
+| eegame: an observing reserved slot counted | 26 |
+| eegame: the epoch rule without its 15 exception | 12 |
+| eegame: computers not on a team (TryStartGame) | 354 |
+| eegame: the version not released when the read threw | 177 |
+| eegame: the saved game's name released before the host is set | 1,067 |
+| eegame: the destructor releases the transfer first | 17,133 |
+| eegame: a slot state 5 accepted | 12 |
+| eegame: the details' player count from 1 | 6,136 |
+| eegame: the transfer percent rounded | 87 |
+| eegame: a joining client of a random map keeps its old options | 12 |
+| eegame: the team change flags swapped (generator below) | 20 |
+| eegame: a team change leaving our team not announced (generator below) | 11 |
+| eegame: a byte option read unsigned | 0: equivalent (a byte at or above 128 is past every byte option's limit either way) |
+| players: the citizen shown without the -1 | 3,492 of 70,000 |
+| players: a ready player may still change its row | 1,537 |
+| players: a reserved name in the normal colour | 944 |
+| players: the transfer shown at 100 | 18 |
+| players: the host may rename its own slot | 356 |
+| players: a taken slot's team editable by the host | 780 |
+| players: the citizen sent without the +1 | 281 |
+| players: a player change does not fall through | 663 |
+| players: the colour button's changes ignored | 643 |
+| players: the control id not less one | 1,362 |
+| players: our slot kept after leaving | 21 |
+| connect: a running dialog run again | 3,170 of 30,000 |
+| connect: every player searching, the host too | 10,989 |
+| connect: the running flag kept after the loop | 10,696 |
+| connect: the ended flag set without a window | 239 |
+| connect: the changed line not held | 708 |
+| connect: the launch ended before the refresh | 195 |
+| connect: a failed player shown ready | 356 |
+| eeresource: two keys swapped | both table tests fail |
+
+The team change mutations were not caught at first (0 of 60,000): the game room's messages were one call in sixty
+and a captain's team change of a seated player on our team needs a seated slot with a team. The generator now makes
+a quarter of the calls game room messages, seats two players on a team in a third of the sequences and answers
+small bytes more often; the recorded golden is that generator's. The first twelve eegame rows ran with the first
+generator, the two team rows and the equivalent one with the final one.
+
+Unit tests: eegame 11 (the two replays among them: the refusal texts and the team rule, an option set below its
+limit and the map types read once, the epoch rule, a hosted game seating the host and counting, the colours taken
+by playing slots, a read that throws stopping the hook with the version released, a join refused for another
+version or checksum, the details' names, a player asking the host and the host telling everyone); lobbyctl 12 (one
+new: a player row shown and our own change sent); lobbydlg 17 (two new: the connect replay and its changed-op
+check); eeresource 2.
+
+### Behaviour changes
+
+- A game option number past 15 from a message (`HandleOptionChange` reads it from the wire): the original read
+  past its 16 option types (undefined: the next static was the initialized flag); nothing is read or set now.
+  A slot option number past 5 from a captain's message: the original wrote past the slot's six option bytes into
+  its client pointer (undefined); nothing is written now.
+- The counts the original's constructor left unset start at 0.
+- 64-bit and LP64: the options and limits are the original's 32-bit `long`/`unsigned long` (i32/u32), so a POSIX
+  build compares as the Windows one did.
+None of these is reachable from a well-formed game room message.
+
+### What runs it
+
+EE-SIM never builds the lobby (the oracle is unchanged by construction). Every LAN game makes EELobbyGames: the
+server list's (summary and details read, `GetNumFiles`/`GetFile` painted in the details), the host's
+(`HandleHostGameHook`, `SetDefaultGameOptions`, the slots reset and the host seated, `WriteSummaryHook` /
+`WriteDetailsHook` for the advertisement, the join request's version check and seat, the join reply, the player
+joined/left hooks with their sync events), the joiner's (`GetJoinGameRequestHook`, `HandleJoinGameReplyHook`, the
+colour picked, the player rows' updates) and the start (`TryStartGameHook`, the connect status messages 0x68/0x69
+when the connect dialog runs). Single-player games never reach any of it. Only a person reaches the player rows'
+combo boxes, the colour chooser and the observe check (the 0x65/0x66 option messages), the saved game's file
+transfer and its percent, the kick of a slot's client, and a connect dialog that waits (a joiner slower than the
+host, or cancelled).
+
+### Gates
+
+| Gate | e08656c6 (the game) | bdb22fce (the player rows) | 93a17b9c + 7ac4bf34 (the connect dialog, the resource rows; gated together) | final tree df8a286c (merged with rust 84001ecf) |
+|---|---|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same | the same | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | PASS | one `ee_gx` test failed under load (not this lane's crate); `ee_gx` alone passed (175 tests) | clippy denied `identity_op` in the new rows' `(P_NAME + 0) as i32` (bdb22fce's): fixed in 98d85532, `cargo clippy -p ee_won --all-targets -D warnings` clean | PASS (3,265 tests) |
+| `build.py --test-profile windowed-software` | 0 / 0 | 0 / 0 | (the final tree's) | 0 / 0 |
+| `xbuild.py wontest` (the lobby programs) | won_eegame_test, won_lobbyctl_test, won_lobbydlg_test, won_dlglogic_test, won_lobbyscr_test, won_lanobj_test, won_stagingobj_test exit 0 | won_eegame_test, won_lobbyctl_test, won_lobbydlg_test, won_dlglogic_test, won_lobbyscr_test exit 0 | won_eedlg_test, won_lobbydlg_test, won_lobbyscr_test, won_credits_test, won_lobbypopup_test, won_eegame_test, won_lobbyctl_test, won_dlglogic_test exit 0 | won_eegame_test, won_lobbyctl_test, won_eedlg_test, won_lobbydlg_test, won_dlglogic_test, won_lobbyscr_test, won_credits_test, won_lobbypopup_test, won_lanobj_test, won_stagingobj_test, won_dialogobj_test, won_dialogs_test exit 0 |
+| `lan_game.py` (harness lock, the test exe) | `RESULT PASS lan-game` (PT 3216 / 3209) | `RESULT PASS lan-game` (PT 3141 / 3137) | (the final tree's) | `RESULT PASS lan-game` (PT 3296 / 3295) |
+
+The merge of rust (84001ecf) conflicted in PORT_LEARNINGS.md only: the round 4 section's last paragraph, which this
+branch's copy had updated with the full `wontest` result (105 programs, `ALL EXIT 0`); resolved to rust's file with
+that paragraph. Headers current after it, `rust_includes.py` changed nothing. The full `wontest` set of round 4's
+final tree (started by round 4, finished during this round) ended `ALL EXIT 0`: all 105 programs exit 0. Simulation
+code did not change, so the sim_capture profiles were not run.
+
+### Left for the next rounds
+
+- The EE room's last classes: EELobbyColorButton (the button and its 4 x 4 colour chooser popup: paint, hover,
+  the popup's placement) and EELobbyFileDialog (the saved games' listing through PlatFind, the delete prompt, the
+  load); both are mostly widget calls, and the WON lobby lane's widgets are their natural hosts.
+- EELobbyFileTransfer (the saved game's transfer over the socket ops: after the WON Internet lane's Rust-owned
+  AsyncOp) and the EE glue (EELobbyInit's factories and dialogs, EELobbyInterface's game options to and from the
+  lobby game, EELobbyMisc's saved game set-up).
+- The control objects call the EE game through C++ ops (GameOption, GameSlot, SlotOption, GameChangePlayerOption,
+  ...) that forward back into `eegame.rs`: a direct Rust path would delete those host cases.
+- The logics (LanLogic's and StagingLogic's hosts, AccountLogic, InitLogic, PingLogic: async ops, after the WON
+  Internet lane's AsyncOp work), RoutingLogic (Internet) last; ChatCommandParser's resource-string glue (round 4's
+  note) and the list rows (BadUserItem, NetworkAdapterListItem, GameUserListItem, ConnectListItem) with the WON GUI
+  lane's list widgets.
