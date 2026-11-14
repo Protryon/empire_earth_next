@@ -4647,9 +4647,9 @@ extern void ee_units_pm_host_adjust_dive_depth(uint64_t obj, float *io);
 
 extern void ee_units_pm_host_effect(uint64_t obj, int32_t which, float x, float y, float z);
 
-extern uint8_t ee_units_pm_host_docked(uint64_t obj);
+extern int32_t ee_units_pm_host_carrier_tag(uint64_t carrier, int32_t index, float *out);
 
-extern void ee_units_pm_host_follow_carrier(uint64_t obj);
+extern void ee_units_pm_host_route_dock_waypoint(uint64_t obj);
 
 extern uint8_t ee_units_pm_host_gate_links(uint64_t obj, uint64_t *carrier, uint64_t *last);
 
