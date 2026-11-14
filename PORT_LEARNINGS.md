@@ -19709,3 +19709,9 @@ The merge of rust (f2813578, RUST_PLAN's rows moved to `docs/progress/`) merged 
   configs (ComponentConfig and about forty subclasses, ResourceConfig: about 2,300 logic lines, 110 files name
   ComponentConfig; a census first) and the platform layer (PlatWindowManager, PlatGraphics, PlatGUIWindow,
   PlatNativeImage, PlatGUIFont: the SDL/Win32 seam). The LAN screen's controls stay the WONLobby lane's.
+- **The second merge of rust** (186301af: WONLobby round 4, WON Internet round 23, LLE round 5, screens 27-28, the
+  editor round 1, UI rounds 16-17, renderer round 19, core round 28): PORT_LEARNINGS.md's end conflicted (both
+  sections kept, this one last); `rust_build.py header` current, `rust_includes.py` changed nothing. On the merged
+  tree: build `--sim` 0/0 (EE-AOC, EE-SIM), the oracle at seeds 2-7 identical, the Rust gate PASS, the test profile
+  0/0, `lan_game.py` `RESULT PASS lan-game` (PT host 3000, joiner 3000; no fault line). `xbuild.py wontest` was not
+  rerun after this merge (it passed, 106 programs, on 0a401eb9).
