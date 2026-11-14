@@ -13,7 +13,7 @@ extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
 # seam records only C++ fills (referenced by no exported function)
-include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields", "ScrollBarFields", "TableKey", "Trigger", "DirtyRect", "EeGoalSpec", "EeCombatConditionIn", "EeCombatConditionOut", "EeCombatStepIn", "EeScreensSinglePlayerSlot", "EeWonLobbyResult", "EeWonLobbyText", "EeWonLobbySound", "EeWonGuiField", "EeWonGuiCursor", "EeScreensSettingsRecord", "EeScreensVideoMode", "EeScreensLobbyPlayerRecord", "EeScreensLobbyOptionsRecord", "EeScreensHotKeyUnit", "EeScreensDiplomacyPlayer", "EeScreensPgsHistory", "EeScreensPgsRecord", "EeWonGuiEvent", "EeScreensChatLogHead", "EeWonItemClick", "EeScreensFramePiece", "EeWonCtVirt", "EeWonCtField", "EeWonDlgField", "EeUnitsBuildUnit", "EeWonTabField", "EeWonComboField", "EeWonRootField", "EeWonRootGrab", "EeWonBtnField", "EeWonLayoutKind", "EeScenarioEntry", "EeGeTexLoad", "EeGeTexField", "EeGeTexStage", "EeGeSurfaceDescription", "EeWonWinRoot", "EeWonWinPlat", "EeWonWinField", "EeWonWinEvent", "EeGeTexCopy", "EeScreensHudUnit", "EeWonWmComp", "EeWonWmWin", "EeWonWmField", "EeWonWmMouse", "EeWonWmPopup", "EeWonWmRefKind", "EeScreensMainFormIo", "EeNetTuField", "EeNetSvBase", "EeNetSvMsgField", "EeNetSvMsgFlag", "EeNetSvNewMsg", "EeNetClBase", "EeNetClMsgFlag", "EeNetClMsgField", "EeNetClNewMsg", "EeWonWmEvent", "EeWonWmSet", "EeWonLobbyDlgSlot", "EeWonLobbyDlgType", "EeWonLobbyDlgString", "EeWonLobbyDlgEvent"]
+include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields", "ScrollBarFields", "TableKey", "Trigger", "DirtyRect", "EeGoalSpec", "EeCombatConditionIn", "EeCombatConditionOut", "EeCombatStepIn", "EeScreensSinglePlayerSlot", "EeWonLobbyResult", "EeWonLobbyText", "EeWonLobbySound", "EeWonGuiField", "EeWonGuiCursor", "EeScreensSettingsRecord", "EeScreensVideoMode", "EeScreensLobbyPlayerRecord", "EeScreensLobbyOptionsRecord", "EeScreensHotKeyUnit", "EeScreensDiplomacyPlayer", "EeScreensPgsHistory", "EeScreensPgsRecord", "EeWonGuiEvent", "EeScreensChatLogHead", "EeWonItemClick", "EeScreensFramePiece", "EeWonCtVirt", "EeWonCtField", "EeWonDlgField", "EeUnitsBuildUnit", "EeWonTabField", "EeWonComboField", "EeWonRootField", "EeWonRootGrab", "EeWonBtnField", "EeWonLayoutKind", "EeScenarioEntry", "EeGeTexLoad", "EeGeTexField", "EeGeTexStage", "EeGeSurfaceDescription", "EeWonWinRoot", "EeWonWinPlat", "EeWonWinField", "EeWonWinEvent", "EeGeTexCopy", "EeScreensHudUnit", "EeWonWmComp", "EeWonWmWin", "EeWonWmField", "EeWonWmMouse", "EeWonWmPopup", "EeWonWmRefKind", "EeScreensMainFormIo", "EeNetTuField", "EeNetSvBase", "EeNetSvMsgField", "EeNetSvMsgFlag", "EeNetSvNewMsg", "EeNetClBase", "EeNetClMsgFlag", "EeNetClMsgField", "EeNetClNewMsg", "EeWonWmEvent", "EeWonWmSet", "EeWonLobbyDlgSlot", "EeWonLobbyDlgType", "EeWonLobbyDlgString", "EeWonLobbyDlgEvent", "EeUiComboQuery", "EeUiComboAct"]
 # Rust-to-Rust bridges no C++ calls (ee_rust defines them for a crate that imports them; listed twice otherwise)
 exclude = ["ee_combat_store_unit_of", "ee_combat_store_player_of", "ee_combat_store_stats_of"]
 
@@ -147,17 +147,12 @@ exclude = ["ee_combat_store_unit_of", "ee_combat_store_player_of", "ee_combat_st
 "LineRange" = "EeUiLineRange"
 "Layout" = "EeUiLayout"
 "Edge" = "EeUiEdge"
-"ListFields" = "EeUiListFields"
-"ListRefs" = "EeUiListRefs"
-"ListHostTable" = "EeUiListHost"
 "ButtonFields" = "EeUiButtonFields"
 "ButtonRefs" = "EeUiButtonRefs"
 "UiColor" = "EeUiColor"
 "CheckFields" = "EeUiCheckFields"
 "RadioFields" = "EeUiRadioFields"
 "ScrollBarLayout" = "EeUiScrollBarLayout"
-"ComboFields" = "EeUiComboFields"
-"ComboRefs" = "EeUiComboRefs"
 "ComboPart" = "EeUiComboPart"
 "ComboKey" = "EeUiComboKey"
 "DbControl" = "EeUiDbControl"

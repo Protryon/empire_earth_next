@@ -183,7 +183,7 @@ EESETSUICBPlayer::~EESETSUICBPlayer()
 // n + 1 (0 when nothing is picked)
 unsigned long EESETSUICBPlayer::GetSelectedPlayer()
 {
-    unsigned long theSelection = this->mCurrentSelection;
+    unsigned long theSelection = this->GetSelectionIndex();
     unsigned long theIndex = 0;
     unsigned long thePlayer = 0;
     if (!UIsNone32(theSelection)) {

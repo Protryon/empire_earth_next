@@ -13,6 +13,8 @@ struct UIObjHost {
     static bool Media(UIControl* inControl, EeUiOp inOp, intptr_t a, intptr_t b, float* f, intptr_t* outResult);
     // a part's op (EeUiOp 43..53, 61, 62) on the control at its address
     static bool Part(UIControl* inPart, EeUiOp inOp, float* f, intptr_t* outResult);
+    // the list box's ops that do not depend on T (UILBString.cpp; lle/UIListBox.h's UIListBoxHostOp)
+    static intptr_t List(UIControl* inList, EeUiOp inOp, intptr_t a, intptr_t b, float* f);
     static GERectangle Rect(const float* f) { return GERectangle(f[1], f[3], f[2], f[0]); }
     static void PutRect(float* f, const GERectangle& r)
     {

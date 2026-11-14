@@ -34,7 +34,7 @@ public:
     virtual long CopyData()
     {
         long theResult = UIListBox<std::vector<GEColor> >::CopyData();
-        this->mCopiedHasFocus = true;
+        this->SetCopiedHasFocus(true);
         return theResult;
     }
     virtual long DrawPolygons();            // +0x18 0x1aaad4 (each line's colours as rhombi)
