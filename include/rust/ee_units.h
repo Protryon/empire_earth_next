@@ -2639,257 +2639,6 @@ struct EeUnitsImproveClass {
   float step_factors[16];
 };
 
-/// An upgrade's stats a level change moves.
-struct EeUnitsImproveStats {
-  float area_effect;
-  float attack;
-  float armor[6];
-  int32_t flight_time;
-  int32_t power;
-  int32_t max_hit_points;
-  float leadership;
-  float range;
-  float line_of_sight;
-  int32_t repair_rate;
-  float max_velocity;
-  int32_t carry_amount;
-  /// the upgrade's own class has a flight time (a flight-time-or-power change moves the flight time)
-  bool upgrade_has_flight_time;
-};
-
-/// A location goal's state (`EEUGLocation`'s members).
-struct EeUnitsLocationGoal {
-  /// `mLocation`
-  float location[3];
-  /// `mYaw`: the heading to face on arrival
-  float yaw;
-  /// `mIsForcedMove`, `mShouldFace`, `mIsAutoWaypoint`, `mUseGroupMovement`
-  bool forced_move;
-  bool should_face;
-  bool auto_waypoint;
-  bool group_movement;
-  /// `mGroupPathState`
-  uint8_t group_path_state;
-};
-
-/// What `Move`'s arithmetic gives: whether the unit moves (the push is past the stop distance), whether the move is
-/// past the move distance (the shuffle animation's test), the push's size per axis after the clamp, the new point.
-struct EeUnitsPush {
-  uint8_t moving;
-  uint8_t past_move;
-  float dx;
-  float dy;
-  float x;
-  float y;
-};
-
-/// The members `step_push` reads from the record (the push velocities, the location's x and y).
-struct EeUnitsPushIn {
-  float push_x;
-  float push_y;
-  float loc_x;
-  float loc_y;
-  /// `gCollisionPeriod`
-  uint32_t period;
-  /// the unit's `GetMaxVelocity()`
-  float max_velocity;
-  float tick_seconds;
-};
-
-/// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
-struct EeUnitsTurn {
-  float delta;
-  float rate;
-  float heading;
-};
-
-/// The unit's values a turn reads (`TurnTowardAngle`, `YawMode`).
-struct EeUnitsTurnIn {
-  /// `gPhysics->mTickSeconds`, `gPhysics->mTicksPerGameSecond`
-  float tick_seconds;
-  float ticks_per_second;
-  /// `GetAngularAcceleration()`, `GetMaxAngularVelocity()`, `GetInverseAngularAcceleration()`
-  float accel;
-  float max;
-  float inverse_accel;
-  /// `mAngularVelocity.mYaw`
-  float rate;
-  /// the heading and the bearing to turn to
-  float current;
-  float target;
-  /// `inFlag`: aim the class's facing offset (`GetFacingOffset()`), either side for a broadside ship
-  /// (`mFiresBroadside`); both 0 without the flag
-  uint8_t use_facing;
-  uint8_t broadside;
-  float facing_offset;
-};
-
-/// The unit's values a speed reads (`Accelerate`, `SpeedMode`).
-struct EeUnitsSpeedIn {
-  float tick_seconds;
-  float ticks_per_second;
-  /// `GetVelocity()`, `GetMaxVelocity()`, `GetAcceleration()`, `GetInverseAcceleration()`
-  float speed;
-  float max_speed;
-  float accel;
-  float inverse_accel;
-  /// `mAngularVelocity.GetYaw()`
-  float yaw_rate;
-  /// the class's `mSlopeSpeedPenalty` (the helicopter's has none)
-  float slope_penalty;
-  /// `mWaypoints.size()`
-  int32_t waypoints;
-  /// `GetPathLength` (read when the mode needs it: two waypoints or more), `GetTerrainPitch` of the location
-  /// (read when the penalty is under 1)
-  float path_length;
-  float terrain_pitch;
-};
-
-/// The unit's values a pitch reads (`ApproachPitch`, `PitchMode`): the base model's are the unit's (its active
-/// group's), the naval model's the class's.
-struct EeUnitsPitchIn {
-  float tick_seconds;
-  float ticks_per_second;
-  float accel;
-  float max;
-  /// the base model's `GetInverseAngularAcceleration()` (the naval model divides by `accel`)
-  float inverse_accel;
-  /// `mAngularVelocity.mPitch`
-  float rate;
-  /// 1: `EEPMNaval`'s (and `EEPMSpaceship`'s) mode, 0: the base model's
-  uint8_t naval;
-};
-
-/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
-struct EeUnitsPlayerSaveIo {
-  int64_t i;
-  float f;
-  uint8_t b;
-};
-
-/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
-using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
-
-/// `EEPlayer`'s saved numbers (their C++ names and types).
-struct EeUnitsPlayerSaved {
-  /// the scenario's player variables (zeroed together; saved)
-  unsigned long mScenarioVariables[10];
-  /// non-zero: at war with that player (calamity targets; the store's diplomacy table)
-  unsigned long mEnemies[17];
-  /// the tributes given and received by resource (two rows of 5)
-  unsigned long mTributes[10];
-  /// 0..3 (the chat form's radio buttons 3, 2, 4, 5)
-  unsigned long mChatType;
-  unsigned long mCombatState;
-  unsigned long mGameResult;
-  unsigned long mFreeUnitCounter;
-  unsigned long mFreeUnitInterval;
-  /// indexed by a resource (2..6 used)
-  long mResourceCaps[7];
-  long mPopLimit;
-  long mPopulationCount;
-  long mEndOfGameCount;
-  /// written, never read back (a load reads and drops the word)
-  long mNumCapitols;
-  /// indexed by a resource 2..6 as `[resource - 2]`
-  long mResourceTrade[5];
-  long mInsuranceRefunds[5];
-  long mNumVitalBuildings;
-  float mHighGroundBonus;
-  float mHealTimer;
-  bool mSendChatMessage[17];
-  bool mSharedLOS;
-  bool mDisconnected;
-  bool mCivilizationLocked;
-  bool mCivilizationChosen;
-  bool mCivUpgradesPurchased;
-};
-
-/// The host: `(ctx, op, index, io) -> the operation's result`.
-using EeUnitsPlayerTickFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
-
-/// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
-struct EeUnitsGoalIo {
-  int64_t i[8];
-  float f[8];
-  const uint8_t *text;
-  size_t len;
-  /// a `Vec<(i32, i32)>` the host pushes tiles onto (`ee_units_goal_push_tile`)
-  void *sink;
-  /// handles (units) handed with the operation: the load goals' units
-  const uint64_t *list;
-  size_t list_len;
-};
-
-/// The host: `op(context, operation, a, b, io)` (`EE_UNITS_GOAL_HOST_*`).
-struct EeUnitsGoalHost {
-  void *context;
-  int64_t (*op)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
-};
-
-/// The C++ reader of a script's file: `read(ctx, name, len, sink)` pushes the bytes (`ee_units_script_push`) and
-/// answers whether the file was found and opened.
-struct EeUnitsScriptReader {
-  void *ctx;
-  bool (*read)(void*, const uint8_t*, size_t, void*);
-};
-
-/// `EEUnitClassUpgrade`'s plain members (ee/EEUnit.h), in the class's order.
-struct EeUnitsUnitClassUpgradeFields {
-  float mAreaEffectScale;
-  float mConversionResistance;
-  float mConversionRate;
-  float mCostScale;
-  float mBuildTimeScale;
-  float mScale;
-  float mRange;
-  float mAreaEffect;
-  float mLineOfSight;
-  float mAcceleration;
-  float mMaxVelocity;
-  float mAngularAcceleration;
-  float mMaxAngularVelocity;
-  float mTurretMaxAngularVelocity;
-  /// `EEComplexUnit::SetVelocity` keeps `mF21C` at least this (`Init`: the smaller of acceleration and top speed)
-  float mBC;
-  /// the projectile's launch speed (`SetRange`)
-  float mLaunchSpeed;
-  float mInverseAcceleration;
-  float mInverseAngularAcceleration;
-  float mInverseMaxAngularVelocity;
-  float mInverseMaxVelocity;
-  float mInverseTurretMaxAngularVelocity;
-  float mAttack;
-  float mLeadership;
-  /// per weapon kind
-  float mArmor[6];
-  float mCameraFocus;
-  long mAreaEffectTemplates[4];
-  long mWonderUnitSet;
-  long mGatherTimes[7];
-  long mPowerRegeneration;
-  long mFlightTime;
-  long mWorkRate;
-  long mReloadTime;
-  long mMaxObjectCarry;
-  long mRepairRate;
-  long mMaxHitPoints;
-  long mPower;
-  long mCarryAmount;
-  long mHealingPoints;
-  /// the media loads (`EEPlayer::LoadUnitClassMedia`; signed: the `> 0` tests)
-  long mMediaCount;
-  long mButtonLoadCount;
-  long mRegeneration;
-  /// the terrains the unit crosses, a bit per terrain type (0x4000: forest)
-  unsigned long mTerrainMask;
-  bool mCanFireOverWalls;
-  bool mBuildsOnElevation;
-  bool mConvertsBuildings;
-  bool mConvertsPriests;
-  bool mIsInitialized;
-};
-
 /// `EEUnitClass`'s plain members (ee/EEUnit.h), in the class's order.
 struct EeUnitsUnitClassFields {
   long mAirTrafficType;
@@ -3072,6 +2821,239 @@ struct EeUnitsUnitClassFields {
   /// port (not in the original): the class's `IsLandBuilding()`, set by `CreateUnitClasses` once the class's
   /// vtable is final; the unit store reads it (store.rs)
   bool mIsLandBuildingClass;
+};
+
+/// `EEUnitClassUpgrade`'s plain members (ee/EEUnit.h), in the class's order.
+struct EeUnitsUnitClassUpgradeFields {
+  float mAreaEffectScale;
+  float mConversionResistance;
+  float mConversionRate;
+  float mCostScale;
+  float mBuildTimeScale;
+  float mScale;
+  float mRange;
+  float mAreaEffect;
+  float mLineOfSight;
+  float mAcceleration;
+  float mMaxVelocity;
+  float mAngularAcceleration;
+  float mMaxAngularVelocity;
+  float mTurretMaxAngularVelocity;
+  /// `EEComplexUnit::SetVelocity` keeps `mF21C` at least this (`Init`: the smaller of acceleration and top speed)
+  float mBC;
+  /// the projectile's launch speed (`SetRange`)
+  float mLaunchSpeed;
+  float mInverseAcceleration;
+  float mInverseAngularAcceleration;
+  float mInverseMaxAngularVelocity;
+  float mInverseMaxVelocity;
+  float mInverseTurretMaxAngularVelocity;
+  float mAttack;
+  float mLeadership;
+  /// per weapon kind
+  float mArmor[6];
+  float mCameraFocus;
+  long mAreaEffectTemplates[4];
+  long mWonderUnitSet;
+  long mGatherTimes[7];
+  long mPowerRegeneration;
+  long mFlightTime;
+  long mWorkRate;
+  long mReloadTime;
+  long mMaxObjectCarry;
+  long mRepairRate;
+  long mMaxHitPoints;
+  long mPower;
+  long mCarryAmount;
+  long mHealingPoints;
+  /// the media loads (`EEPlayer::LoadUnitClassMedia`; signed: the `> 0` tests)
+  long mMediaCount;
+  long mButtonLoadCount;
+  long mRegeneration;
+  /// the terrains the unit crosses, a bit per terrain type (0x4000: forest)
+  unsigned long mTerrainMask;
+  bool mCanFireOverWalls;
+  bool mBuildsOnElevation;
+  bool mConvertsBuildings;
+  bool mConvertsPriests;
+  bool mIsInitialized;
+};
+
+/// A location goal's state (`EEUGLocation`'s members).
+struct EeUnitsLocationGoal {
+  /// `mLocation`
+  float location[3];
+  /// `mYaw`: the heading to face on arrival
+  float yaw;
+  /// `mIsForcedMove`, `mShouldFace`, `mIsAutoWaypoint`, `mUseGroupMovement`
+  bool forced_move;
+  bool should_face;
+  bool auto_waypoint;
+  bool group_movement;
+  /// `mGroupPathState`
+  uint8_t group_path_state;
+};
+
+/// What `Move`'s arithmetic gives: whether the unit moves (the push is past the stop distance), whether the move is
+/// past the move distance (the shuffle animation's test), the push's size per axis after the clamp, the new point.
+struct EeUnitsPush {
+  uint8_t moving;
+  uint8_t past_move;
+  float dx;
+  float dy;
+  float x;
+  float y;
+};
+
+/// The members `step_push` reads from the record (the push velocities, the location's x and y).
+struct EeUnitsPushIn {
+  float push_x;
+  float push_y;
+  float loc_x;
+  float loc_y;
+  /// `gCollisionPeriod`
+  uint32_t period;
+  /// the unit's `GetMaxVelocity()`
+  float max_velocity;
+  float tick_seconds;
+};
+
+/// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
+struct EeUnitsTurn {
+  float delta;
+  float rate;
+  float heading;
+};
+
+/// The unit's values a turn reads (`TurnTowardAngle`, `YawMode`).
+struct EeUnitsTurnIn {
+  /// `gPhysics->mTickSeconds`, `gPhysics->mTicksPerGameSecond`
+  float tick_seconds;
+  float ticks_per_second;
+  /// `GetAngularAcceleration()`, `GetMaxAngularVelocity()`, `GetInverseAngularAcceleration()`
+  float accel;
+  float max;
+  float inverse_accel;
+  /// `mAngularVelocity.mYaw`
+  float rate;
+  /// the heading and the bearing to turn to
+  float current;
+  float target;
+  /// `inFlag`: aim the class's facing offset (`GetFacingOffset()`), either side for a broadside ship
+  /// (`mFiresBroadside`); both 0 without the flag
+  uint8_t use_facing;
+  uint8_t broadside;
+  float facing_offset;
+};
+
+/// The unit's values a speed reads (`Accelerate`, `SpeedMode`).
+struct EeUnitsSpeedIn {
+  float tick_seconds;
+  float ticks_per_second;
+  /// `GetVelocity()`, `GetMaxVelocity()`, `GetAcceleration()`, `GetInverseAcceleration()`
+  float speed;
+  float max_speed;
+  float accel;
+  float inverse_accel;
+  /// `mAngularVelocity.GetYaw()`
+  float yaw_rate;
+  /// the class's `mSlopeSpeedPenalty` (the helicopter's has none)
+  float slope_penalty;
+  /// `mWaypoints.size()`
+  int32_t waypoints;
+  /// `GetPathLength` (read when the mode needs it: two waypoints or more), `GetTerrainPitch` of the location
+  /// (read when the penalty is under 1)
+  float path_length;
+  float terrain_pitch;
+};
+
+/// The unit's values a pitch reads (`ApproachPitch`, `PitchMode`): the base model's are the unit's (its active
+/// group's), the naval model's the class's.
+struct EeUnitsPitchIn {
+  float tick_seconds;
+  float ticks_per_second;
+  float accel;
+  float max;
+  /// the base model's `GetInverseAngularAcceleration()` (the naval model divides by `accel`)
+  float inverse_accel;
+  /// `mAngularVelocity.mPitch`
+  float rate;
+  /// 1: `EEPMNaval`'s (and `EEPMSpaceship`'s) mode, 0: the base model's
+  uint8_t naval;
+};
+
+/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
+struct EeUnitsPlayerSaveIo {
+  int64_t i;
+  float f;
+  uint8_t b;
+};
+
+/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
+using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
+/// `EEPlayer`'s saved numbers (their C++ names and types).
+struct EeUnitsPlayerSaved {
+  /// the scenario's player variables (zeroed together; saved)
+  unsigned long mScenarioVariables[10];
+  /// non-zero: at war with that player (calamity targets; the store's diplomacy table)
+  unsigned long mEnemies[17];
+  /// the tributes given and received by resource (two rows of 5)
+  unsigned long mTributes[10];
+  /// 0..3 (the chat form's radio buttons 3, 2, 4, 5)
+  unsigned long mChatType;
+  unsigned long mCombatState;
+  unsigned long mGameResult;
+  unsigned long mFreeUnitCounter;
+  unsigned long mFreeUnitInterval;
+  /// indexed by a resource (2..6 used)
+  long mResourceCaps[7];
+  long mPopLimit;
+  long mPopulationCount;
+  long mEndOfGameCount;
+  /// written, never read back (a load reads and drops the word)
+  long mNumCapitols;
+  /// indexed by a resource 2..6 as `[resource - 2]`
+  long mResourceTrade[5];
+  long mInsuranceRefunds[5];
+  long mNumVitalBuildings;
+  float mHighGroundBonus;
+  float mHealTimer;
+  bool mSendChatMessage[17];
+  bool mSharedLOS;
+  bool mDisconnected;
+  bool mCivilizationLocked;
+  bool mCivilizationChosen;
+  bool mCivUpgradesPurchased;
+};
+
+/// The host: `(ctx, op, index, io) -> the operation's result`.
+using EeUnitsPlayerTickFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
+/// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
+struct EeUnitsGoalIo {
+  int64_t i[8];
+  float f[8];
+  const uint8_t *text;
+  size_t len;
+  /// a `Vec<(i32, i32)>` the host pushes tiles onto (`ee_units_goal_push_tile`)
+  void *sink;
+  /// handles (units) handed with the operation: the load goals' units
+  const uint64_t *list;
+  size_t list_len;
+};
+
+/// The host: `op(context, operation, a, b, io)` (`EE_UNITS_GOAL_HOST_*`).
+struct EeUnitsGoalHost {
+  void *context;
+  int64_t (*op)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
+};
+
+/// The C++ reader of a script's file: `read(ctx, name, len, sink)` pushes the bytes (`ee_units_script_push`) and
+/// answers whether the file was found and opened.
+struct EeUnitsScriptReader {
+  void *ctx;
+  bool (*read)(void*, const uint8_t*, size_t, void*);
 };
 
 /// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
@@ -3953,12 +3935,6 @@ extern size_t ee_units_host_transport_filter(uint32_t transport,
                                              size_t count,
                                              uint32_t *rejected);
 
-/// `CanUpgrade`
-///
-/// # Safety
-/// `c` points to a valid record.
-bool ee_units_improve_can_upgrade(const EeUnitsImproveClass *c, int32_t improvement);
-
 /// `GetBaseValue`
 ///
 /// # Safety
@@ -3968,26 +3944,45 @@ float ee_units_improve_base_value(const EeUnitsImproveClass *c, int32_t improvem
 /// `GetCost`
 int32_t ee_units_improve_cost(int32_t improvement);
 
-/// `ChangeLevel` on the records: `levels` the 16 words, `total_cost` the points spent; true when the stats moved.
+/// `CanUpgrade` over the class's record.
 ///
 /// # Safety
-/// The pointers are valid; `levels` points to 16 words.
-bool ee_units_improve_change_level(const EeUnitsImproveClass *c,
-                                   EeUnitsImproveStats *s,
-                                   int32_t *levels,
-                                   int32_t *total_cost,
-                                   int32_t improvement,
-                                   int32_t delta);
+/// `class` points to a live record.
+bool ee_units_improve_can_upgrade_class(const EeUnitsUnitClassFields *class_, int32_t improvement);
 
-/// `GetGainText`'s number
+/// `SetRange` ([`set_range`]).
 ///
 /// # Safety
-/// The pointers are valid; `levels` points to 16 words.
-int32_t ee_units_improve_gain(const EeUnitsImproveClass *c,
-                              const EeUnitsImproveStats *s,
-                              const int32_t *levels,
-                              int32_t level,
-                              int32_t improvement);
+/// `upgrade` and `own` point to live records, `projectile` to one or null; no other reference to them is held.
+void ee_units_upgrade_set_range(EeUnitsUnitClassUpgradeFields *upgrade,
+                                const EeUnitsUnitClassFields *own,
+                                const EeUnitsUnitClassFields *projectile,
+                                float value);
+
+/// `ChangeLevel` over the records ([`change_level_records`]); `step_factors` the class's table's 16 (null: none).
+///
+/// # Safety
+/// The pointers name live records (`projectile`, `step_factors` may be null); `levels` points to 16 words.
+void ee_units_improve_change_level_records(const EeUnitsUnitClassFields *class_,
+                                           const float *step_factors,
+                                           EeUnitsUnitClassUpgradeFields *upgrade,
+                                           const EeUnitsUnitClassFields *own,
+                                           const EeUnitsUnitClassFields *projectile,
+                                           int32_t *levels,
+                                           int32_t *total_cost,
+                                           int32_t improvement,
+                                           int32_t delta);
+
+/// `GetGainText`'s number over the records (the class is the upgrade's own).
+///
+/// # Safety
+/// As [`ee_units_improve_change_level_records`].
+int32_t ee_units_improve_gain_records(const EeUnitsUnitClassFields *class_,
+                                      const float *step_factors,
+                                      const EeUnitsUnitClassUpgradeFields *upgrade,
+                                      const int32_t *levels,
+                                      int32_t level,
+                                      int32_t improvement);
 
 /// The goal's record into `out` (zeros for a goal that has none).
 ///

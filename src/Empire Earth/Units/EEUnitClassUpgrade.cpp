@@ -358,19 +358,7 @@ void EEUnitClassUpgrade::SetButton(EEButtonObject* inButton)
 // Legionnaire aims for its heal range; no projectile: 0)
 void EEUnitClassUpgrade::SetRange(float inValue)
 {
-    float theCosine = UMCos(0.78539819f);
-    this->mRange = inValue;
-    EEUnitClass* theProjectile = this->mUnitClass->mProjectileClass;
-    if (theProjectile != NULL) {
-        if (theProjectile->mCategory == kUnitCategoryBomb)
-            this->mLaunchSpeed = theProjectile->GetMaxVelocity();
-        else {
-            if (this->mUnitClass->mUnitType == kUnitTypeX04RomanLegionnaire)
-                inValue = this->mUnitClass->mHealRange;
-            this->mLaunchSpeed = (float)sqrt(theProjectile->GetAcceleration() * inValue / (theCosine * theCosine * 2.0f));
-        }
-    } else
-        this->mLaunchSpeed = 0.0f;
+    ee_units_upgrade_set_range(this, this->mUnitClass, this->mUnitClass->mProjectileClass, inValue);   // New (R5b.4, round 28): ee_units improve.rs
 }
 
 // FUNCTION: EXE 0x63c185
