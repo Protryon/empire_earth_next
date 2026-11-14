@@ -11610,3 +11610,64 @@ step 1084 effectstate
   effect 0 'Do Nothing' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 0 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
   effect 1 '<Set>' n 19 0 8 1 2 7 3 6 8 3 3 0 b 2 6 c 1 2714 ffc00000 5b 77 ffffffff 0 1 4 0 1 c 78 6 3 1 16 7 0 ffffffff 49 2 4 1 1 9 1 12c 0 1 0 1 10000 0 10001 new 'Class Y' msg 'chat text' file 'talk.mp3' desc 'a line' text '' objects 1
   effect 2 '<Effect1>' n 0 0 8 7 7 7 8 0 0 0 0 0 0 0 1 0 0 0 0 0 0 ffffffff 0 0 0 0 0 f 0 0 14 0 0 0 0 ffffffff 0 0 0 0 0 1 0 0 0 0 0 2 0 1010001 10100 new '' msg '' file '' desc '' text '' objects
+step 1088 tab 4
+step 1089 trigger 1
+step 1090 tscreen new
+step 1091 tscreen new
+step 1092 tscreen new
+step 1093 tscreen select 2
+step 1094 tscreenstate
+  tscreen screen=1 storing=0 list 3: '<Player-Attribute Player 1>' '<Player-Attribute Player 1>' '<Player-Attribute Player 1>' selected 2 s0=0+ s1=2+ s2=0+ s3=0+ s4=0+
+step 1095 trigger 0
+step 1096 sm delete 1 3
+  delete 1 3
+  deleted 1
+step 1097 trigger 1
+step 1098 tscreenstate
+  tscreen screen=1 storing=0 list 2: '<Player-Attribute Player 1>' '<Player-Attribute Player 1>' selected 1 s0=0+ s1=1+ s2=0+ s3=0+ s4=0+
+step 1099 form 97 113
+  c97 UILBString id=0x7da ix=97 g=14 r=4,480,303,584 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=2 sel=1 '<Player-Attribute Player 1>'|'<Player-Attribute Player 1>' e3=EEScreenEvent
+  c98 UIRadioButton id=0x7d0 ix=98 g=14 r=4,458,61,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Trigger' btn fg=none e1=EEScreenEvent
+  c99 UIRadioButton id=0x7d1 ix=99 g=14 r=64,458,121,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Condition' btn fg=none e1=EEScreenEvent
+  c100 UIRadioButton id=0x7d2 ix=100 g=14 r=124,458,181,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Effect' btn fg=none e1=EEScreenEvent
+  c101 UIRadioButton id=0x7d3 ix=101 g=14 r=184,458,241,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Object' btn fg=none e1=EEScreenEvent
+  c102 UIRadioButton id=0x7d4 ix=102 g=14 r=244,458,301,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Area' btn fg=none e1=EEScreenEvent
+  c103 UIButton id=0x7d5 ix=103 g=14 r=4,586,93,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'New' e8=EEScreenEvent
+  c104 UIButton id=0x7d6 ix=104 g=14 r=104,586,193,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Duplicate' e8=EEScreenEvent
+  c105 UIButton id=0x7d7 ix=105 g=14 r=204,586,293,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Delete' e8=EEScreenEvent
+  c106 UIButton id=0x7dd ix=106 g=14 r=305,480,324,499 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c107 UIButton id=0x7d8 ix=107 g=14 r=305,500,324,519 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c108 UIButton id=0x7d9 ix=108 g=14 r=305,520,324,539 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c109 EESETSShowIDsCheckBox id=0x7de ix=109 g=14 r=305,540,324,559 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none e8=EEScreenEvent
+  c110 UITextLabel id=0x7dc ix=110 g=14 r=329,458,578,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Name'
+  c111 UIEditBox id=0x7db ix=111 g=14 r=329,480,578,496 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<Player-Attribute Player 1>'
+  c112 UITextLabel id=0x962 ix=112 g=14 r=589,458,808,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
+  c113 UIEditBox id=0x963 ix=113 g=14 r=589,478,808,575 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''
+step 1100 tscreen select 1
+step 1101 trigger 4
+step 1102 trigger 0
+step 1103 sm delete 1 2
+  delete 1 2
+  deleted 1
+step 1104 radio %101
+step 1105 radio %99
+step 1106 tscreenstate
+  tscreen screen=1 storing=0 list 1: '<Player-Attribute Player 1>' selected 0 s0=0+ s1=0+ s2=0+ s3=0+ s4=0-
+step 1107 form 97 113
+  c97 UILBString id=0x7da ix=97 g=14 r=4,480,303,584 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=1 sel=0 '<Player-Attribute Player 1>' e3=EEScreenEvent
+  c98 UIRadioButton id=0x7d0 ix=98 g=14 r=4,458,61,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Trigger' btn fg=none e1=EEScreenEvent
+  c99 UIRadioButton id=0x7d1 ix=99 g=14 r=64,458,121,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Condition' btn fg=none e1=EEScreenEvent
+  c100 UIRadioButton id=0x7d2 ix=100 g=14 r=124,458,181,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Effect' btn fg=none e1=EEScreenEvent
+  c101 UIRadioButton id=0x7d3 ix=101 g=14 r=184,458,241,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Object' btn fg=none e1=EEScreenEvent
+  c102 UIRadioButton id=0x7d4 ix=102 g=14 r=244,458,301,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Area' btn fg=none e1=EEScreenEvent
+  c103 UIButton id=0x7d5 ix=103 g=14 r=4,586,93,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'New' e8=EEScreenEvent
+  c104 UIButton id=0x7d6 ix=104 g=14 r=104,586,193,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Duplicate' e8=EEScreenEvent
+  c105 UIButton id=0x7d7 ix=105 g=14 r=204,586,293,605 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Delete' e8=EEScreenEvent
+  c106 UIButton id=0x7dd ix=106 g=14 r=305,480,324,499 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c107 UIButton id=0x7d8 ix=107 g=14 r=305,500,324,519 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c108 UIButton id=0x7d9 ix=108 g=14 r=305,520,324,539 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c109 EESETSShowIDsCheckBox id=0x7de ix=109 g=14 r=305,540,324,559 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none e8=EEScreenEvent
+  c110 UITextLabel id=0x7dc ix=110 g=14 r=329,458,578,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Name'
+  c111 UIEditBox id=0x7db ix=111 g=14 r=329,480,578,496 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<Player-Attribute Player 1>'
+  c112 UITextLabel id=0x962 ix=112 g=14 r=589,458,808,473 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Description'
+  c113 UIEditBox id=0x963 ix=113 g=14 r=589,478,808,575 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 ''

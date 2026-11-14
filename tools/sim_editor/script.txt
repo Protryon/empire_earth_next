@@ -1082,3 +1082,26 @@ tscreen select 1
 tscreen select 0
 form 0 999 13
 effectstate
+# round 4: a sub-tab entered with its stored selection past its list (ShowTab's fallback to the list's last line):
+# three conditions, the last selected, the trigger sub-tab entered, the last deleted behind it, the condition sub-tab
+# entered by ShowTab; then the second selected and deleted behind the area and trigger sub-tabs, entered by its radio
+tab 4
+trigger 1
+tscreen new
+tscreen new
+tscreen new
+tscreen select 2
+tscreenstate
+trigger 0
+sm delete 1 3
+trigger 1
+tscreenstate
+form 97 113
+tscreen select 1
+trigger 4
+trigger 0
+sm delete 1 2
+radio %101
+radio %99
+tscreenstate
+form 97 113
