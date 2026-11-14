@@ -44,6 +44,7 @@ pub mod motion;
 pub mod order;
 pub mod patrol;
 pub mod physics;
+pub mod physics_save;
 pub mod player_save;
 pub mod player_tick;
 pub mod players;

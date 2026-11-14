@@ -516,164 +516,35 @@ void EEAfterLoadLast(std::function<void()> inFixup)
     sAfterLoadLast.push_back(inFixup);
 }
 
+// New (R5b.4, round 28): the C++ parts of EEPhysics::Load and Save (ee_units physics_save.rs): the file's primitives
+// (EESavePrimitive) and RTSPhysics' part
+struct EEPhysicsSaveContext {
+    EEPhysics* mPhysics;
+    FSFile* mFile;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+};
+
+static int32_t EEPhysicsSaveOperation(void* inContext, int32_t inOp, uint32_t, EeUnitsPlayerSaveIo* io)
+{
+    EEPhysicsSaveContext& theContext = *static_cast<EEPhysicsSaveContext*>(inContext);
+    if (inOp == EE_UNITS_PHYSICS_SAVE_RTS_LOAD)
+        return theContext.mPhysics->RTSPhysics::Load(theContext.mMajorVersion, theContext.mMinorVersion, *theContext.mFile);
+    if (inOp == EE_UNITS_PHYSICS_SAVE_RTS_SAVE)
+        return theContext.mPhysics->RTSPhysics::Save(theContext.mMajorVersion, theContext.mMinorVersion, *theContext.mFile);
+    return EESavePrimitive(*theContext.mFile, inOp, io);
+}
+
 // FUNCTION: EXE 0x552a4d
 // Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
 // flag after version 0.0xce, the resource timer from 0xfa); returns the first read error
 long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
-    unsigned long theValue = 0;
-    if (inMajorVersion == 0 && inMinorVersion <= 0xce) {
-        theResult = RTSPhysics::Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(this->mCurrentTick);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(this->mF84);
-                if (theResult == kErrorOK) {
-                    theResult = inFile.Read(this->mTicksPerGameSecond);
-                    if (theResult == kErrorOK) {
-                        theResult = inFile.Read(this->mTickSeconds);
-                        if (theResult == kErrorOK) {
-                            theResult = inFile.Read(this->mTimeOfDayStep);
-                            if (theResult == kErrorOK) {
-                                theResult = inFile.Read(this->mTickTime);
-                                this->mTickTimeMs = UMFloatToLong(this->mTickTime);   // port: as UpdateTiming rounds it (the cast truncated)
-                                if (theResult == kErrorOK) {
-                                    theResult = inFile.Read(this->mTickStartTime);
-                                    if (theResult == kErrorOK) {
-                                        theResult = inFile.Read(this->mPreviousTickStartTime);
-                                        if (theResult == kErrorOK) {
-                                            theResult = inFile.Read(this->mNumTicksDone);
-                                            if (theResult == kErrorOK) {
-                                                theResult = inFile.Read(this->mTicksToProcess);
-                                                if (theResult == kErrorOK) {
-                                                    theResult = inFile.Read(this->mTickGapSum);
-                                                    if (theResult == kErrorOK) {
-                                                        theResult = inFile.Read(this->mTickGapCount);
-                                                        if (theResult == kErrorOK) {
-                                                            theResult = inFile.Read(this->mTickWorkSum);
-                                                            if (theResult == kErrorOK) {
-                                                                theResult = inFile.Read(this->mTickWorkCount);
-                                                                if (theResult == kErrorOK) {
-                                                                    theResult = inFile.Read(this->mGameClock);
-                                                                    this->mGameTime = (long)this->mGameClock;
-                                                                    if (theResult == kErrorOK) {
-                                                                        theResult = inFile.Read(theValue);
-                                                                        this->mAveragePhysicsUpdateTime = theValue;
-                                                                        if (theResult == kErrorOK) {
-                                                                            theResult = inFile.Read(theValue);
-                                                                            this->mAverageTimeBetweenPhysicsTicks = theValue;
-                                                                            if (theResult == kErrorOK) {
-                                                                                theResult = inFile.Read(this->mTimeOfDayRuns);
-                                                                                if (theResult == kErrorOK) {
-                                                                                    theResult = inFile.Read(this->mAreaEffectsClock);
-                                                                                    if (theResult == kErrorOK) {
-                                                                                        theResult = inFile.Read(this->mCivTimerRuns);
-                                                                                        if (theResult == kErrorOK) {
-                                                                                            theResult = inFile.Read(this->mCivTimerFirstWarning);
-                                                                                            if (theResult == kErrorOK) {
-                                                                                                theResult = inFile.Read(this->mCivTimerSecondWarning);
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            this->mGameOver = false;
-        }
-    } else {
-        theResult = RTSPhysics::Load(inMajorVersion, inMinorVersion, inFile);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(this->mCurrentTick);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(this->mF84);
-                if (theResult == kErrorOK) {
-                    theResult = inFile.Read(this->mTicksPerGameSecond);
-                    if (theResult == kErrorOK) {
-                        theResult = inFile.Read(this->mTickSeconds);
-                        if (theResult == kErrorOK) {
-                            theResult = inFile.Read(this->mTimeOfDayStep);
-                            if (theResult == kErrorOK) {
-                                theResult = inFile.Read(this->mTickTime);
-                                this->mTickTimeMs = UMFloatToLong(this->mTickTime);   // port: as UpdateTiming rounds it (the cast truncated)
-                                if (theResult == kErrorOK) {
-                                    theResult = inFile.Read(this->mTickStartTime);
-                                    if (theResult == kErrorOK) {
-                                        theResult = inFile.Read(this->mPreviousTickStartTime);
-                                        if (theResult == kErrorOK) {
-                                            theResult = inFile.Read(this->mNumTicksDone);
-                                            if (theResult == kErrorOK) {
-                                                theResult = inFile.Read(this->mTicksToProcess);
-                                                if (theResult == kErrorOK) {
-                                                    theResult = inFile.Read(this->mTickGapSum);
-                                                    if (theResult == kErrorOK) {
-                                                        theResult = inFile.Read(this->mTickGapCount);
-                                                        if (theResult == kErrorOK) {
-                                                            theResult = inFile.Read(this->mTickWorkSum);
-                                                            if (theResult == kErrorOK) {
-                                                                theResult = inFile.Read(this->mTickWorkCount);
-                                                                if (theResult == kErrorOK) {
-                                                                    theResult = inFile.Read(this->mGameClock);
-                                                                    this->mGameTime = (long)this->mGameClock;
-                                                                    if (theResult == kErrorOK) {
-                                                                        theResult = inFile.Read(theValue);
-                                                                        this->mAveragePhysicsUpdateTime = theValue;
-                                                                        if (theResult == kErrorOK) {
-                                                                            theResult = inFile.Read(theValue);
-                                                                            this->mAverageTimeBetweenPhysicsTicks = theValue;
-                                                                            if (theResult == kErrorOK) {
-                                                                                theResult = inFile.Read(this->mTimeOfDayRuns);
-                                                                                if (theResult == kErrorOK) {
-                                                                                    theResult = inFile.Read(this->mAreaEffectsClock);
-                                                                                    if (theResult == kErrorOK) {
-                                                                                        theResult = inFile.Read(this->mCivTimerRuns);
-                                                                                        if (theResult == kErrorOK) {
-                                                                                            theResult = inFile.Read(this->mCivTimerFirstWarning);
-                                                                                            if (theResult == kErrorOK) {
-                                                                                                theResult = inFile.Read(this->mCivTimerSecondWarning);
-                                                                                                if (theResult == kErrorOK) {
-                                                                                                    theResult = inFile.Read(this->mGameOver);
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if (inMinorVersion >= 0xfa && theResult == kErrorOK)
-                theResult = inFile.Read(this->mResourceTimerPending);
-        }
-    }
+    // port (R5b.4, round 28): the original's two era bodies are Rust (ee_units physics_save.rs) over the record this
+    // class derives from (EeUnitsPhysicsSaved) and EEPhysicsSaveOperation's parts
+    EEPhysicsSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion};
+    long theResult = ee_units_physics_load(&theContext, &EEPhysicsSaveOperation, static_cast<EeUnitsPhysicsSaved*>(this),
+                                           (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
     if (theResult == kErrorOK) {   // port: the loaded seed comes back at the first tick (sLoadedSeed)
         sLoadedSeed = this->mRandom.GetSeed();
         sLoadedSeedPending = true;
@@ -1339,56 +1210,8 @@ void EEPhysics::CreateGameTimer()
 // to the saved game; returns the first write error
 long EEPhysics::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = RTSPhysics::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCurrentTick);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mF84);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTicksPerGameSecond);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTickSeconds);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTimeOfDayStep);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTickTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTickStartTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPreviousTickStartTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNumTicksDone);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTicksToProcess);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTickGapSum);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTickGapCount);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTickWorkSum);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTickWorkCount);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGameClock);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write((unsigned long)this->mAveragePhysicsUpdateTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write((unsigned long)this->mAverageTimeBetweenPhysicsTicks);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTimeOfDayRuns);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAreaEffectsClock);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCivTimerRuns);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCivTimerFirstWarning);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCivTimerSecondWarning);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGameOver);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mResourceTimerPending);
-    return theResult;
+    EEPhysicsSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion};   // port: ee_units physics_save.rs
+    return ee_units_physics_save(&theContext, &EEPhysicsSaveOperation, static_cast<EeUnitsPhysicsSaved*>(this));
 }
 
 // FUNCTION: EXE 0x553b8d

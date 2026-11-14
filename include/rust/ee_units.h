@@ -666,6 +666,11 @@ constexpr static const int32_t EE_UNITS_MODE_ACCELERATE = 3;
 
 constexpr static const int32_t EE_UNITS_MODE_BRAKE = 4;
 
+/// `RTSPhysics::Load` (the base's part, first) and `RTSPhysics::Save`.
+constexpr static const int32_t EE_UNITS_PHYSICS_SAVE_RTS_LOAD = 101;
+
+constexpr static const int32_t EE_UNITS_PHYSICS_SAVE_RTS_SAVE = 102;
+
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_ULONG = 1;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_LONG = 2;
@@ -2992,6 +2997,44 @@ struct EeUnitsPlayerSaveIo {
 /// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
 using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
+/// `EEPhysics`' plain members (ee/EEPhysics.h), in the class's order.
+struct EeUnitsPhysicsSaved {
+  unsigned long mCurrentTick;
+  float mF84;
+  float mTicksPerGameSecond;
+  float mTickSeconds;
+  float mTimeOfDayStep;
+  float mGameClock;
+  float mTickTime;
+  float mAreaEffectsClock;
+  float mShiftModeClock;
+  long mTickTimeMs;
+  long mTickStartTime;
+  long mPreviousTickStartTime;
+  long mTickRandom;
+  unsigned long mNumTicksDone;
+  unsigned long mTicksToProcess;
+  unsigned long mTickGapSum;
+  unsigned long mTickGapCount;
+  unsigned long mTickWorkSum;
+  unsigned long mTickWorkCount;
+  /// untouched by the constructor, its init and Load/Save
+  long mAutoSaveClock;
+  long mGameTime;
+  long mLD4;
+  long mAveragePhysicsUpdateTime;
+  long mAverageTimeBetweenPhysicsTicks;
+  bool mTimeOfDayRuns;
+  bool mGameStarted;
+  bool mBE2;
+  bool mCivTimerRuns;
+  bool mCivTimerFirstWarning;
+  bool mCivTimerSecondWarning;
+  bool mGameOver;
+  bool mBE7;
+  bool mResourceTimerPending;
+};
+
 /// `EEPlayer`'s saved numbers (their C++ names and types).
 struct EeUnitsPlayerSaved {
   /// the scenario's player variables (zeroed together; saved)
@@ -4064,6 +4107,22 @@ EeUnitsTurn ee_units_pm_approach_pitch(const EeUnitsPitchIn *input,
                                        float current,
                                        float target,
                                        int32_t mode);
+
+/// `EEPhysics::Load` over the physics' record `rec`: the file's primitives and the base's part through `f`.
+///
+/// # Safety
+/// `rec` points to the physics' live record; `f` is valid with `ctx` for the call.
+int32_t ee_units_physics_load(void *ctx,
+                              EeUnitsPlayerSaveFn f,
+                              EeUnitsPhysicsSaved *rec,
+                              uint32_t major,
+                              uint32_t minor);
+
+/// `EEPhysics::Save`: as [`ee_units_physics_load`].
+///
+/// # Safety
+/// As [`ee_units_physics_load`].
+int32_t ee_units_physics_save(void *ctx, EeUnitsPlayerSaveFn f, EeUnitsPhysicsSaved *rec);
 
 /// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base) and its C++ parts through `f`.
 ///
