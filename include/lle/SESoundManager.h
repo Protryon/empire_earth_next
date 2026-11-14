@@ -28,9 +28,6 @@ public:
 
     static void CleanupMemoryPoolAndDestroyCriticalSections();
     static void DumpMemoryPoolInfo();
-    SESMInstanceNode* GetAndReferenceSoundInstance(unsigned long inInstanceID);
-    unsigned long GetAvailableChannels() const;
-    TSCriticalSection* GetCriticalSection() const { return this->mLock; }
     unsigned long GetHighestTimerDelay() const { return this->mMixer->GetHighestTimerDelay(); }
     unsigned long GetInstanceID(SESMInstanceNode* inNode);
     bool GetIsLooping(unsigned long inInstanceID);
@@ -48,7 +45,6 @@ public:
     unsigned long GetSampleID(unsigned long inInstanceID);
     unsigned long GetSampleID(SESMInstanceNode* inNode);
     unsigned long GetSampleRate(unsigned long inSampleID);
-    long GetTimeLeftInMilli(unsigned long inInstanceID);
     long GetTotalPlayTimeInMilli(unsigned long inInstanceID);
     float GetVolume(unsigned long inInstanceID);
     static void InitializeSoundsPool(unsigned long inChunkSize, unsigned long inMaxChunks, unsigned long inChunkCount);
@@ -83,7 +79,6 @@ public:
     struct Rust;
 protected:
     static long CreateSoundPoolLock();
-    static void DestroySoundInstance(SESMInstanceNode* inNode);
     static SESMInstanceNode* GetNewSoundInstance();
 private:
     static unsigned long Scavenger(void* inManager);

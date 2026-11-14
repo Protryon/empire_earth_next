@@ -28,24 +28,6 @@ long UDataCompression::Compress(const char* inData, unsigned long inLength, char
     return theResult;
 }
 
-long UDataCompression::Decompress(const char* inData, unsigned long inLength, char* outData,
-                                  unsigned long inCapacity, unsigned long& outLength)
-{
-    uint32_t theLength = 0;
-    long theResult = ee_decompress(reinterpret_cast<const uint8_t*>(inData), (uint32_t)inLength,
-                                   reinterpret_cast<uint8_t*>(outData), (uint32_t)inCapacity, &theLength);
-    outLength = theLength;
-    return theResult;
-}
-
-long UDataCompression::GetDecompressedSize(const char* inData, unsigned long inLength, unsigned long& outSize)
-{
-    uint32_t theSize = 0;
-    long theResult = ee_decompressed_size(reinterpret_cast<const uint8_t*>(inData), (uint32_t)inLength, &theSize);
-    outSize = theSize;
-    return theResult;
-}
-
 bool UDataCompression::GetIsCompressed(const char* inData, unsigned long inLength)
 {
     return ee_is_compressed(reinterpret_cast<const uint8_t*>(inData), (uint32_t)inLength);

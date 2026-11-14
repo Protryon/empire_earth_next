@@ -85,13 +85,6 @@ const U2DPoint<long>& UGraphSeries::GetDataPoint(unsigned long inIndex) const
     return this->mDataPoints[inIndex];
 }
 
-// FUNCTION: LLE 0x10057505
-// Removes the data point at the given index (min/max are not updated)
-void UGraphSeries::RemoveDataPoint(unsigned long inIndex)
-{
-    this->mDataPoints.erase(this->mDataPoints.begin() + inIndex);
-}
-
 // FUNCTION: LLE 0x1005753b
 // Recomputes the series' min/max x and y from its points
 void UGraphSeries::RecomputeMinMaxValues()
@@ -287,13 +280,6 @@ void UGraph::PruneGraph()
     }
     *this = theGraph;
     this->RecomputeMinMaxValues();
-}
-
-// FUNCTION: LLE 0x10057bc5
-// Removes the series at the given index (min/max are not updated)
-void UGraph::RemoveSeries(unsigned long inIndex)
-{
-    this->mSeries.erase(this->mSeries.begin() + inIndex);
 }
 
 // FUNCTION: LLE 0x10057bfb

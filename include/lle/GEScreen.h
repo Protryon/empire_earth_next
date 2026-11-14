@@ -55,14 +55,11 @@ public:
     virtual long SetMode(unsigned long inIndex) = 0;
 
     GETextureManager* GetTextureManager() const { return this->mTextureManager; }
-    unsigned long GetRasterizerIndex() const { return this->mRasterizerIndex; }
     void SetTextureManager(GETextureManager* inManager) { this->mTextureManager = inManager; }
-    void SetRasterizerIndex(unsigned long inIndex) { this->mRasterizerIndex = inIndex; }
 protected:
     GEScreen() {}                           // 0xe311
     virtual ~GEScreen() {}                  // 0xe31a, slot 0x4c
     static HINSTANCE__* GetInstance() { return GEScreen::sInstance; }
-    static void SetInstance(HINSTANCE__* inInstance) { GEScreen::sInstance = inInstance; }
 
     GETextureManager* mTextureManager;      // +0x04
     unsigned long mRasterizerIndex;         // +0x08

@@ -22,7 +22,6 @@ public:
     unsigned long GetReferenceCount() const { return this->mReferenceCount; }  // ICF-folded (0x4380)
     // reference tracking (UReferenceCounter.cpp): per-caller counts keyed by (line, file)
     static void DumpAllLeakedReferences(FSFileSpec& inFile);
-    void DereferenceWithoutDecrementingCount(unsigned long inLine, const char* inFile);
     void Dereference(unsigned long inLine, const char* inFile);
     void Reference(unsigned long inLine, const char* inFile);
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_EXE_HEADERS)

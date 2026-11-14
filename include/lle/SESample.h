@@ -46,12 +46,10 @@ public:
     void* GetData() const { return this->mData; }
     const UString& GetFilename() const { return this->mFilename; }
     bool GetIsLooping() const { return this->mIsLooping; }
-    unsigned long GetLengthInBytes() const { return this->mLengthInBytes; }
     unsigned long GetLengthInSamples() const { return this->mLengthInSamples; }
     unsigned long GetMixerChannel() const { return this->mMixerChannel; }
     float GetPan() const { return this->mPan; }
     float GetPitch() const { return this->mPitch; }
-    unsigned long GetSampleBits() const { return this->mSampleBits; }
     unsigned long GetSampleOffset() { return this->mMixer->GetSampleOffset(this); }
     unsigned long GetSampleRate() const { return this->mSampleRate; }
     float GetVolume() const { return this->mVolume; }

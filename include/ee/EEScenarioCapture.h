@@ -58,7 +58,6 @@ struct EESMCaptureObjectState {
 };
 EESMCaptureObjectState EESMCaptureObjectBegin(EESMObject* inObject);
 void EESMCaptureObjectEnd(EESMObject* inObject, bool inIncludeDead, bool inResult, const EESMCaptureObjectState& inBefore);
-bool EESMCaptureInObject();               // inside an object's Evaluate on this thread
 void EESMCapturePlayers(long inType, bool inSingle, long inResult, const void* inPlayers, unsigned int inSeed);
 // kind 0 ContainsUnit (unit id), 1 ContainsTile (x, y), 2 GetCenterTile, 3 GetTiles; the result's x, y (or bool in x;
 // GetTiles: count and hash)

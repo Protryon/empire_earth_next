@@ -26,7 +26,6 @@ public:
     void LastDereference();
     void Reference() { UReferenceCounter::Reference(); }   // exported, ICF-folded into UReferenceCounter's (0x436c)
 private:
-    void DeleteThis() { this->mIsFree = true; }
     SESMInstanceNode& operator=(const SESMInstanceNode& inNode) { return *this; }   // exported, ICF-folded (0xd5a1)
 
     unsigned long mCategory;                // +0x08 (-1; SESoundManager::GetCategory) provisional names from here on

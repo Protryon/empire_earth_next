@@ -86,6 +86,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Calamities/EECalamityUpdate.cpp",
                        # the host of the calamity classes' Rust cast tests (ee_tech calamity_cast.rs)
                        "Empire Earth/Calamities/EECalamityCast.cpp",
+                       # TEST ONLY: the calamity lane's capture records (ee/EECalamityCapture.h: CALI, CALK)
+                       "Empire Earth/Calamities/EECalamityCapture.cpp",
                        # TEST ONLY: the game messages' capture records (ee/EEMessageCapture.h; RUST_PLAN R5b.4)
                        "Empire Earth/Communications/EEMessageCapture.cpp",
                        # the unit store's C++ side: the holders' reports, the insert, the check (ee/EEUnitStore.h)

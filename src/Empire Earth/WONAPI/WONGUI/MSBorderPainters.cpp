@@ -9,6 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyMSBorderPainters.h"
+#include "ee/wonapi/WONGUIDraw.h"
 
 namespace WONAPI {
 // FUNCTION: WON 0x00700860
@@ -16,11 +17,7 @@ namespace WONAPI {
 void MSEtchedFrame::Paint(Graphics& g)
 {
     Component::Paint(g);
-    g.SetSysColor(StandardColor_3DHilight);
-    g.DrawRect(0,0,this->Width(),this->Height());
-    g.DrawRect(1,1,this->Width()-1,this->Height()-1);
-    g.SetSysColor(StandardColor_3DShadow);
-    g.DrawRect(0,0,this->Width()-1,this->Height()-1);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::EtchedFrame,this->Width(),this->Height()));
 }
 
 // FUNCTION: WON 0x006ffad0

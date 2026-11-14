@@ -821,15 +821,6 @@ void EEWorld::ScreenToWorld(const GE2DPoint& inPoint, GE3DPoint& outPoint)
     outPoint.SetZ(-(thePoint.GetY() * theSize));
 }
 
-// FUNCTION: EXE 0x539631
-// Copies the world's player pointers, up to the maximum player count, into a vector
-void EEWorld::CopyPlayers(std::vector<EEPlayer*>& outPlayers)
-{
-    outPlayers.resize(this->mMaxPlayers, 0);
-    for (unsigned long i = 0; i < (unsigned long)this->mMaxPlayers; i++)
-        outPlayers[i] = this->mPlayers[i];
-}
-
 // FUNCTION: EXE 0x539670
 // Returns the player (Gaia excluded) in a lobby slot, or NULL
 EEPlayer* EEWorld::GetPlayerBySlot(unsigned char inSlot)

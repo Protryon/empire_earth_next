@@ -83,7 +83,6 @@ long UIStatusBar::DrawTextA() { return (long)UIStatusBarHost::Call(this, C::Draw
 long UIStatusBar::GetCurrentRangeValue() const { return (long)UIStatusBarHost::Call(this, C::CurrentRangeValue); }
 GEText* UIStatusBar::GetGEText() { return reinterpret_cast<GEText*>(UIStatusBarHost::Call(this, C::Text)); }
 long UIStatusBar::GetMaxRange() const { return (long)UIStatusBarHost::Call(this, C::MaxRange); }
-long UIStatusBar::GetMinRange() const { return (long)UIStatusBarHost::Call(this, C::MinRange); }
 unsigned long UIStatusBar::GetRange() const { return (unsigned long)UIStatusBarHost::Call(this, C::Range); }
 void UIStatusBar::SetCurrentRangeValue(long inValue) { UIStatusBarHost::Call(this, C::SetCurrentRangeValue, inValue); }
 void UIStatusBar::SetFocusedTextColor(const GEColor& inColor)

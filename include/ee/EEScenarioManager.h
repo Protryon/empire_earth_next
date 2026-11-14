@@ -103,7 +103,6 @@ public:
     long GetObjectIndex(EESMObject* inObject);  // 0x1b32e4 (-1 if none; EESMObject::SetName)
     // the editor's name lists ("[id]" prefixes while mShowDebugIDs; provisional names)
     void SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag);  // 0x1b45cb (EESMEffect 0x1bd860)
-    EESMEffect* GetTimedEffect(unsigned long inIndex);     // 0x1b9f8f (mEffects[mTimedEffects[i].mEffectIndex], 0 past the end)
     unsigned long GetNumTimedEffects() { return (unsigned long)ee_scenario_timed_count(this->mTimedEffects); }
     EeScenarioTimedEntry GetTimedEntry(unsigned long inIndex) { return ee_scenario_timed_at(this->mTimedEffects, inIndex); }
     void ApplyPendingEffects();             // 0x1b286d (EEWorld 0x13a0e6; runs every mPendingEffects effect, clears mB234)

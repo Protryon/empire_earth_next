@@ -77,7 +77,7 @@ long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance)
     URegisterShutdown(GEShutdown);
     PlatFontRegisterBuiltIn();   // the faces the fonts are made from (GDI's system fonts before)
     GEScreen::sInstance = inInstance;
-    GERasterizer::sRasterizers.clear();
+    GERasterizer::ClearRasterizers();
     DeleteRasterizerWrappers();
     theResult = PIMModule::GetFirstModule(inDirectory, 'rast', theModule);
     while (theResult == kErrorOK) {
@@ -85,7 +85,7 @@ long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance)
         if (theModule->IsValid()) {
             theWrapper = new RasterizerWrapper(theModule);
             sRasterizerWrappers.push_back(theWrapper);
-            GERasterizer::sRasterizers.push_back(theWrapper->mGetRasterizer());
+            GERasterizer::AddRasterizer(theWrapper->mGetRasterizer());
             theModule->GetName();
         } else {
             theModule->GetName();
@@ -125,7 +125,7 @@ unsigned long GEPackColor(unsigned long inFormat, unsigned long inRed, unsigned 
 // Shuts the graphics engine down: forgets the rasterizers and unloads their plug-ins
 void GEShutdown(bool inForced)
 {
-    GERasterizer::sRasterizers.clear();
+    GERasterizer::ClearRasterizers();
     DeleteRasterizerWrappers();
 }
 

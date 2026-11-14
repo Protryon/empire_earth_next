@@ -43,28 +43,6 @@
 const float kTwoPi = 6.2831855f;
 const float kPi = 3.1415927f;
 
-// FUNCTION: EXE 0x4b4634
-// Creates the volcano calamity class with no effects
-EECCVolcano::EECCVolcano()
-    : mGraphicEffect1(NULL), mGraphicEffect2(NULL), mGraphicEffect3(NULL), mGraphicEffect4(NULL)
-{
-}
-
-// SYNTHETIC: EXE 0x4b4654
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b4670
-// Destroys the calamity class, unloading its sound sample and releasing its effects
-EECCVolcano::~EECCVolcano()
-{
-    gSoundManager->Unload(this->mSound->GetSampleID());
-    this->mGraphicEffect1->Dereference();
-    this->mGraphicEffect2->Dereference();
-    this->mGraphicEffect3->Dereference();
-    if (this->mGraphicEffect4 != NULL)
-        this->mGraphicEffect4->Dereference();
-}
-
 // FUNCTION: EXE 0x4b46bc
 // Moves movable units off the volcano's footprint: to their next waypoint outside it, else onto the first free ring
 // tile (nearest the sort corner), dropping its path
@@ -140,17 +118,6 @@ void EECCVolcano::ClearArea(EEUnitClass* inClass, long inX, long inY)
     }
 }
 
-// FUNCTION: EXE 0x4b4af3
-// Starts a volcano: places the eruption effect at the target and sets the calamity height above the highest terrain
-// nearby; always returns true
-bool EECCVolcano::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.start_size = this->mGraphicEffect1->GetSize();
-    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCVolcano::StartStep);
-}
-
 // FUNCTION: EXE 0x4b4b62
 // Returns the highest terrain mesh height in the 7 by 7 tile block around the location
 float EECCVolcano::GetMaximumHeight(const GE3DPoint& inLocation)
@@ -200,16 +167,6 @@ bool EECCVolcano::CreateVolcano(EECalamity* inCalamity)
     return theResult;
 }
 
-// FUNCTION: EXE 0x4b4e2d
-// Stops the volcano's sound and kills and deselects its volcano unit
-void EECCVolcano::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.start_size = this->mGraphicEffect1->GetSize();
-    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCVolcano::StartStep);
-}
-
 // FUNCTION: EXE 0x4b4e74
 // Picks a random point on the map between the minimum and maximum radius around the centre, at the tile's height
 void EECCVolcano::GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLocation)
@@ -230,74 +187,6 @@ void EECCVolcano::GetRandomLocation(const GE3DPoint& inCenter, GE3DPoint& outLoc
     outLocation.SetZ(theTile->mHeight);
 }
 
-// FUNCTION: EXE 0x4b4f72
-// Reads the calamity data: three effects, sound, volcano unit class and radii; the lifetime is the eruption effect's
-// duration plus its delay
-void EECCVolcano::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    this->mGraphicEffect1 = EEGraphicEffect::Get(inData->mGraphicEffectID1);
-    this->mGraphicEffect2 = EEGraphicEffect::Get(inData->mGraphicEffectID2);
-    this->mGraphicEffect3 = EEGraphicEffect::Get(inData->mGraphicEffectID3);
-    this->mGraphicEffect1->Reference();
-    this->mGraphicEffect2->Reference();
-    this->mGraphicEffect3->Reference();
-    this->mSound = EESoundObject::Get(inData->mSoundID);
-    this->mLifeTime = (float)(this->mGraphicEffect1->mDuration + this->mGraphicEffect1->mTime1);
-    this->mL48 = inData->mIntParam6;
-    this->mUnitClassIndex = inData->mUnitClassIndex;
-    this->mL3C = inData->mIntParam2;
-    this->mL40 = inData->mIntParam3;
-    this->mMinimumRadius = (float)inData->mIntParam4;
-    this->mMaximumRadius = (float)inData->mIntParam5;
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCVolcano::Reset(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4b5023
-// Loads the effects, the sound and the volcano unit class's media and buttons
-void EECCVolcano::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    this->mGraphicEffect1->Load(inIsOnDemand);
-    this->mGraphicEffect2->Load(inIsOnDemand);
-    this->mGraphicEffect3->Load(inIsOnDemand);
-    if (this->mGraphicEffect4 != NULL)
-        this->mGraphicEffect4->Load(inIsOnDemand);
-    this->mSound->LoadMedia();
-    if (inIsOnDemand == true)
-        inPlayer->LoadUnitClassMedia(this->mUnitClassIndex);
-    inPlayer->SetUnitClassMedia(this->mUnitClassIndex, 0x7f);
-    inPlayer->LoadUnitClassButtons(this->mUnitClassIndex);
-}
-
-// FUNCTION: EXE 0x4b508b
-// Starts the volcano's sound as the calamity's sound
-void EECCVolcano::PlaySound(EECalamity* inCalamity)
-{
-    inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(), 0.0f,
-                                                                    1.0f, this->mSound->GetLooping(), NULL));
-    if (inCalamity->mSound != NULL)
-        inCalamity->mSound->Dereference();
-}
-
-// FUNCTION: EXE 0x4b50ec
-// Unloads the effects, the sound and the volcano unit class's media and buttons
-void EECCVolcano::UnloadMedia(EEPlayer* inPlayer)
-{
-    this->mGraphicEffect1->Unload();
-    this->mGraphicEffect2->Unload();
-    this->mGraphicEffect3->Unload();
-    if (this->mGraphicEffect4 != NULL)
-        this->mGraphicEffect4->Unload();
-    this->mSound->UnloadMedia();
-    inPlayer->UnloadUnitClassMedia(this->mUnitClassIndex);
-    inPlayer->UnloadUnitClassButtons(this->mUnitClassIndex);
-}
-
 // FUNCTION: EXE 0x4b5137
 // Makes units step aside from the volcano's site at the tile
 void EECCVolcano::Place(EEUnit* inUnit, unsigned long inX, unsigned long inY)
@@ -306,17 +195,6 @@ void EECCVolcano::Place(EEUnit* inUnit, unsigned long inX, unsigned long inY)
     theTile.mX = inX;
     theTile.mY = inY;
     EEStepAsideFromSite(NULL, gUnitClassTable[this->mUnitClassIndex], inUnit->mPlayer, theTile, 1);
-}
-
-// FUNCTION: EXE 0x4b516c
-// Ages the volcano; after the eruption delay creates the volcano unit with its two effects (returning the last effect's
-// result); returns 7 at the end of its lifetime (Rust)
-long EECCVolcano::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.volcano_delay = (uint32_t)this->mGraphicEffect1->mTime1;
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCVolcano::UpdateStep);
 }
 
 // New (port): EECCVolcano's world steps for its Rust update (ee/EECalamityUpdate.h)
@@ -338,15 +216,6 @@ bool EECCVolcano::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall&
     default:
         return false;
     }
-}
-
-// FUNCTION: EXE 0x4b523e
-// Accepts a site whose whole footprint is on the map, off the map edge and unblocked for the volcano unit class
-bool EECCVolcano::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
-    return EECalamityValidLocation(this, theCast, inUnit, this->mUnitClassIndex);
 }
 
 // Compiler-generated for this unit (std::sort of ClearArea's tiles with EETileDistanceLess; Dinkum 2.33):

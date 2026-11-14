@@ -83,6 +83,12 @@ start's placed effects and sounds), CONT (every contagion helper update: the spr
 distances, the new, applied and removed units, the functors' damage) and TNWK (the tech tree's walks and tests:
 Unlock, ResearchAll, ResearchKind, ObsoleteOutdatedNodes, MakeObsolete, SetObsolete, NeedsUnitMedia, GetBuildTime,
 SetEpoch, AdvanceEpoch, SetNodeAvailable) were recorded from the C++ before those moved (R5b.2, round 3).
+CALI (every calamity class as Initialize left it: the base fields, the effects and sounds by table index, the functor,
+the class's own numbers; once, at the calamity game's first cast) and CALK (an active calamity's out-of-sync checksum,
+its Save's bytes and the state a fresh calamity loads from them, and the contagion manager's checksum, Save bytes and
+reload; every five game minutes and whenever a calamity's time alive crosses a multiple of five seconds) are the
+calamity profile's (ee/EECalamityCapture.h), recorded from the C++ before the classes' data, Initialize, media,
+Reset and the saves moved (calamities lane, round 1; golden for seeds 2-3).
 GetBuildTime and NeedsUnitMedia, asked from the media loader's thread too, are TNMT: their records' order and count
 depend on timing, so TNMT has no golden (TNWK was recorded again without them from the unmodified C++).
 NM** are the game messages' records (ee/EEMessageCapture.h, R5b.4): NMIM every message the game's factory builds (the
@@ -110,6 +116,11 @@ outputs. Its golden lines come from the C++ bodies (late 3, space 2); late 2, 6,
 games), late 4, 5, the oracle and space 3, 6, 7 (main's AI changes, the merge of a2c4347e), space 4, 5 and calamity
 from the Rust bodies, whose every call the original's statements recheck while the capture runs (EE-SIM exits 3 on a
 difference).
+PMST is the physics models' step (EEPhysicsModel.cpp, the physics models' lane): one record per physics tick, the
+count and FNV-1a of every EEPhysicsModel::Step call's unit, model, physics action before the step and the state the
+models write after it (the location's matrix, velocities, push, roll, bob phase, collision time, state and blocker,
+tile, arrival, animation, hit points, orientation, height). Its golden lines come from the C++ models (seeds 2-3 of
+the oracle, late, space and calamity profiles, before the models moved to Rust).
 SM** are the scenario manager's records (ee/EEScenarioCapture.h, R5b.5): SMCE every trigger condition's test, SMTE
 every trigger's evaluation, SMOB every scenario object's, SMCP the player choices and SMAR the area queries outside an
 object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile
