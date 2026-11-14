@@ -815,7 +815,7 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
     case EE_SCREENS_UI_OP_SCREEN_ACTIVE: gGameScreenActive = true; break;
     case EE_SCREENS_UI_OP_POST_LOAD_GAME: gDataPreLoading->PostLoadGame(false, false); break;
     case EE_SCREENS_UI_OP_SHOW_EPOCH_NAME: theUI->ShowEpochName(); break;
-    case EE_SCREENS_UI_OP_BACKGROUND_MEDIA: theMain->UpdateBackgroundMedia(true); break;
+    case EE_SCREENS_UI_OP_BACKGROUND_MEDIA: theMain->Rust(EE_SCREENS_MF_DO_UPDATE_MEDIA, 1); break;
     case EE_SCREENS_UI_OP_SET_UPDATING: theUI->mIsUpdating = inA; break;
     case EE_SCREENS_UI_OP_SET_QUITTING: theUI->mIsQuitting = true; break;
     case EE_SCREENS_UI_OP_LOAD_SAVED_GAME: theUI->LoadSavedGame(reinterpret_cast<FSFile*>(inA)); break;
@@ -905,20 +905,19 @@ extern "C" int64_t ee_screenscpp_ui_message(void* inUI, uint32_t inOp, int64_t i
         break;
     }
     case EE_SCREENS_UI_OP_UPDATE_ICON_BAR:
-        theMain->UpdateIconBar();
+        theMain->Rust(EE_SCREENS_MF_DO_ICON_BAR);
         theUI->mIconBarUpdatePosted = false;
         break;
     case EE_SCREENS_UI_OP_CHANGE_RASTERIZER: theUI->ChangeRasterizer(inA, inB); break;
     case EE_SCREENS_UI_OP_INFORMATION:
-        if (inA != 0) theMain->PauseInformation();
-        else theMain->ResumeInformation();
+        theMain->Rust(EE_SCREENS_MF_DO_INFO_PAUSE, inA != 0);
         break;
     case EE_SCREENS_UI_OP_CIV_BUILDER:
         if (inC != 0) theUI->ShowCivilizationBuilder(0, false, true);
         else theUI->ShowCivilizationBuilder(inA, *reinterpret_cast<bool*>(&inB), false);  // STAND-IN (owner 2026-11-01): re-typing read, 0x278b46 pushes the raw dword
         break;
     case EE_SCREENS_UI_OP_POST_EVENT: gUserInterface->PostEvent(reinterpret_cast<UIEvent*>(inA), NULL); break;
-    case EE_SCREENS_UI_OP_HIDE_MESSAGES: theMain->HideMessages(); break;
+    case EE_SCREENS_UI_OP_HIDE_MESSAGES: theMain->Rust(EE_SCREENS_MF_DO_HIDE_MESSAGES); break;
     case EE_SCREENS_UI_OP_SELECT_TAB: gUIManager->mScenarioEditorForm->SelectTab((unsigned char)inA, inB); break;
     case EE_SCREENS_UI_OP_RESTART: theUI->RestartGame(); break;
     case EE_SCREENS_UI_OP_SAVED_GROUP: static_cast<EEUIBSavedGroup*>(theMain->GetControl(inA))->Refresh(); break;
