@@ -40,57 +40,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
-// FUNCTION: EXE 0x4b18e2
-// Creates the leprosy calamity class with no effect, functor, damage or radius
-EECCLeprosy::EECCLeprosy()
-{
-    this->mGraphicEffect1 = NULL;
-    this->mFunctor = NULL;
-    this->mDamage = 0;
-    this->mEffect1Duration = 0;
-    this->mRadius = 0;
-    this->mClassFlags = 2;
-}
-
-// SYNTHETIC: EXE 0x4b190c
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b1928
-// Destroys the calamity class, releasing its effect and deleting its leprosy functor
-EECCLeprosy::~EECCLeprosy()
-{
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Dereference();
-    delete this->mFunctor;
-    this->mFunctor = NULL;
-}
-
-// FUNCTION: EXE 0x4b1958
-// Starts leprosy: registers a contagion helper, shows the effects over the area and plays the sound; returns false if
-// the helper could not be created
-bool EECCLeprosy::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCLeprosy::StartStep);
-}
-
-// FUNCTION: EXE 0x4b1a07
-// Stops the leprosy's sounds and removes its contagion helper (asserts that it existed)
-void EECCLeprosy::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCLeprosy::StartStep);
-}
-
-// FUNCTION: EXE 0x4b1a4e
-// Returns the leprosy functor that spreads the disease
-EEContagionFunctor* EECCLeprosy::GetContagionFunctor()
-{
-    return this->mFunctor;
-}
-
 // FUNCTION: EXE 0x4b1a52
 // Returns the caster's position, or the target location without a caster
 void EECCLeprosy::GetSourceLocation(EECalamity* inCalamity, GE3DPoint& outLocation)
@@ -115,68 +64,11 @@ void EECCLeprosy::GetAffectedTiles(EECalamity* inCalamity, std::vector<EETileCoo
     inCalamity->GetTargetLocation(theLocation);
     long theX = UMFloor(theLocation.GetX());
     long theY = UMFloor(theLocation.GetY());
-    EEGetTilesInRadius(theX, theY, this->mRadius, true, theTiles);
+    EEGetTilesInRadius(theX, theY, this->mRadiusTiles, true, theTiles);
     for (std::vector<EETileCoordinate>::iterator it = theTiles.begin(); it != theTiles.end(); it++) {
         if (::gWorld.mMap->GetTile(it->mX, it->mY) != NULL)
             outTiles.push_back(*it);
     }
-}
-
-// FUNCTION: EXE 0x4b1b7c
-// Reads the calamity data: sound, radius, damage, spread time and effect (assumed present), and builds the leprosy
-// functor
-void EECCLeprosy::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    this->mSound = EESoundObject::Get(inData->mSoundID);
-    this->mRadius = inData->mIntParam1;
-    this->mDamage = inData->mIntParam2;
-    long theSpreadTime = inData->mIntParam3;
-    this->mGraphicEffect1 = EEGraphicEffect::Get(inData->mGraphicEffectID1);
-    this->mGraphicEffect1->Reference();
-    this->mEffect1Duration = this->mGraphicEffect1->mDuration;
-    this->mFunctor = new EELeprosyFunctor(this->mDamage, theSpreadTime, this->GetUnitSet(), this->mIsBlockedByImmunity ? 2 : 3);
-}
-
-// FUNCTION: EXE 0x4b1c06
-// Clears the calamity's applied flag (also the morale calamity's Reset, by ICF)
-void EECCLeprosy::Reset(EECalamity* inCalamity)
-{
-    inCalamity->mBoolPlaceHolder1 = false;
-}
-
-// FUNCTION: EXE 0x4b1c14
-// Loads the leprosy effect and sound (both assumed present)
-void EECCLeprosy::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    this->mGraphicEffect1->Load(inIsOnDemand);
-    this->mSound->LoadMedia();
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCLeprosy::PlaySound(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4b1c2f
-// Unloads the leprosy effect and sound
-void EECCLeprosy::UnloadMedia(EEPlayer* inPlayer)
-{
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Unload();
-    if (this->mSound != NULL)
-        this->mSound->UnloadMedia();
-}
-
-// FUNCTION: EXE 0x4b1c4e
-// Ages the calamity with its contagion helper, infects the area once the effect has played and updates the sound
-long EECCLeprosy::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.area_delay = (uint32_t)this->mEffect1Duration;
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCLeprosy::UpdateStep);
 }
 
 // New (port): EECCLeprosy's world steps for its Rust update (ee/EECalamityUpdate.h)
@@ -230,7 +122,7 @@ void EECCLeprosy::ApplyEffect(EECalamity* inCalamity)
     theLocation = inCalamity->mTargetLocation;
     this->GetAffectedTiles(inCalamity, theTiles);
     the2DLocation = theLocation.Get2DPoint();
-    EEGetUnitsInRadius(the2DLocation, (float)this->mRadius, theUnits);
+    EEGetUnitsInRadius(the2DLocation, (float)this->mRadiusTiles, theUnits);
     EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inCalamity->GetIntPlaceHolder1());
     for (long i = theUnits.size() - 1; i >= 0; i--) {
         EEUnit* theUnit = theUnits[i];
@@ -242,16 +134,6 @@ void EECCLeprosy::ApplyEffect(EECalamity* inCalamity)
         } else
             theHelper->AddUnit(theUnit, true);
     }
-}
-
-// FUNCTION: EXE 0x4b1f32
-// Accepts a tile whose surrounding area (half the radius, rounded up) is on the map
-bool EECCLeprosy::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
-    theCast.radius = (uint32_t)this->mRadius;
-    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }
 
 // New (port): EECCLeprosy's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)

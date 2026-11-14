@@ -41,73 +41,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
-// FUNCTION: EXE 0x4af1ce
-// Creates an area-effect calamity class with no effects, sound, functor or radius
-EECCAreaEffect::EECCAreaEffect()
-{
-    this->mGraphicEffect2 = NULL;
-    this->mGraphicEffect1 = NULL;
-    this->mGraphicEffect3 = NULL;
-    this->mFunctor = NULL;
-    this->mDamageFactor = 0;
-    this->mEffect1Duration = 0;
-    this->mRadius = 0;
-    this->mSound = NULL;
-}
-
-// SYNTHETIC: EXE 0x4af1fa
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4af216
-// Destroys the calamity class, releasing its three effects and deleting its functor
-EECCAreaEffect::~EECCAreaEffect()
-{
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Dereference();
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Dereference();
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Dereference();
-    delete this->mFunctor;
-    this->mFunctor = NULL;
-}
-
-// FUNCTION: EXE 0x4af260
-// Starts the calamity when it has a launch effect and a caster: plays it at the target (height from the
-// target's tile) with the sound; returns whether it started
-bool EECCAreaEffect::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    if (this->mGraphicEffect1 != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCAreaEffect::StartStep);
-}
-
-// FUNCTION: EXE 0x4af3a8
-// Stops the calamity: destroys its effect, stops both sounds and removes its contagion helper
-void EECCAreaEffect::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    if (this->mGraphicEffect1 != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCAreaEffect::StartStep);
-}
-
-// ICF-FOLDED: EXE 0x52c734
-// (ICF-folded into another class's identical accessor)
-EEContagionFunctor* EECCAreaEffect::GetContagionFunctor()
-{
-    return this->mFunctor;
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (ICF-folded into a shared empty function)
-void EECCAreaEffect::Reset(EECalamity* inCalamity)
-{
-}
-
 // FUNCTION: EXE 0x4af411
 // Lists the map tiles within the radius of the target, skipping tiles immune to it when immunity applies
 void EECCAreaEffect::GetAffectedTiles(EECalamity* inCalamity, std::vector<EETileCoordinate>& outTiles)
@@ -119,80 +52,13 @@ void EECCAreaEffect::GetAffectedTiles(EECalamity* inCalamity, std::vector<EETile
     inCalamity->GetTargetLocation(theLocation);
     long theX = UMFloor(theLocation.GetX());
     long theY = UMFloor(theLocation.GetY());
-    EEGetTilesInRadius(theX, theY, this->mRadius, true, theTiles);
+    EEGetTilesInRadius(theX, theY, this->mRadiusTiles, true, theTiles);
     for (std::vector<EETileCoordinate>::iterator it = theTiles.begin(); it != theTiles.end(); it++) {
         if (::gWorld.mMap->GetTile(it->mX, it->mY) != NULL) {
             if (!this->mIsBlockedByImmunity || !gAEManager.HasAreaEffect(3, it->mX, it->mY, inCalamity->GetPlayerNumber()))
                 outTiles.push_back(*it);
         }
     }
-}
-
-// FUNCTION: EXE 0x4af521
-// Reads the calamity data: sound, radius, damage, update time and three effects (no launch effect:
-// 600 delay), and builds the area-effect functor
-void EECCAreaEffect::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    if (inData->mSoundID != 0)
-        this->mSound = EESoundObject::Get(inData->mSoundID);
-    this->mRadius = inData->mIntParam1;
-    this->mDamageFactor = inData->mIntParam2;
-    long theUpdateTime = inData->mIntParam3;
-    if (inData->mGraphicEffectID1 != 0) {
-        this->mGraphicEffect1 = EEGraphicEffect::Get(inData->mGraphicEffectID1);
-        this->mGraphicEffect1->Reference();
-        this->mEffect1Duration = this->mGraphicEffect1->mDuration;
-    } else
-        this->mEffect1Duration = 600;
-    if (inData->mGraphicEffectID2 != 0) {
-        this->mGraphicEffect2 = EEGraphicEffect::Get(inData->mGraphicEffectID2);
-        this->mGraphicEffect2->Reference();
-    }
-    if (inData->mGraphicEffectID3 != 0) {
-        this->mGraphicEffect3 = EEGraphicEffect::Get(inData->mGraphicEffectID3);
-        this->mGraphicEffect3->Reference();
-    }
-    this->mFunctor = new EEAreaEffectFunctor(this->mGraphicEffect2, this->mGraphicEffect3, this->mDamageFactor, theUpdateTime, this->GetUnitSet(), this->mIsBlockedByImmunity ? 2 : 3);
-}
-
-// FUNCTION: EXE 0x4af5f2
-// Loads the calamity's effects and sound
-void EECCAreaEffect::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Load(inIsOnDemand);
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Load(inIsOnDemand);
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Load(inIsOnDemand);
-    if (this->mSound != NULL)
-        this->mSound->LoadMedia();
-}
-
-// FUNCTION: EXE 0x4af632
-// Unloads the calamity's effects and sound
-void EECCAreaEffect::UnloadMedia(EEPlayer* inPlayer)
-{
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Unload();
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Unload();
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Unload();
-    if (this->mSound != NULL)
-        this->mSound->UnloadMedia();
-}
-
-// FUNCTION: EXE 0x4af669
-// Ages the calamity and updates its sound; once the launch effect is over, registers the contagion
-// helper and applies the effect to the units in range, once. Returns the time-alive result
-long EECCAreaEffect::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.area_delay = (uint32_t)this->mEffect1Duration;
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCAreaEffect::UpdateStep);
 }
 
 // New (port): EECCAreaEffect's world steps for its Rust update (ee/EECalamityUpdate.h)
@@ -231,7 +97,7 @@ void EECCAreaEffect::ApplyEffect(EECalamity* inCalamity)
     inCalamity->GetTargetLocation(theLocation);
     this->GetAffectedTiles(inCalamity, theTiles);
     the2DLocation = theLocation.Get2DPoint();
-    EEGetUnitsInRadius(the2DLocation, (float)this->mRadius, theUnits);
+    EEGetUnitsInRadius(the2DLocation, (float)this->mRadiusTiles, theUnits);
     EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inCalamity->GetIntPlaceHolder1());
     for (long i = theUnits.size() - 1; i >= 0; i--) {
         EEUnit* theUnit = theUnits[i];
@@ -248,16 +114,6 @@ void EECCAreaEffect::ApplyEffect(EECalamity* inCalamity)
                 theHelper->AddUnit(theUnit, true);
         }
     }
-}
-
-// FUNCTION: EXE 0x4af8a3
-// Returns whether the calamity's area around the tile fits on the map
-bool EECCAreaEffect::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
-    theCast.radius = (uint32_t)this->mRadius;
-    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }
 
 // ICF-FOLDED: EXE 0x4ac9f3

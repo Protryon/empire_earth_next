@@ -11,19 +11,11 @@ struct EeCalamityCall;
 struct EeCalamityReply;
 class EECCSpecialAttack : public EEUnitCalamityClass {
 public:
-    EECCSpecialAttack();                    // 0xb3217
-    virtual ~EECCSpecialAttack();           // 0xb324c
-    virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xb3257: true
-    virtual void Stop(EECalamity* inCalamity);                   // +0x08 (empty: ICF-folded 0x157269)
-    virtual void Initialize(EECalamityData* inData);             // +0x20 (ICF-folded 0xafea3)
-    virtual void Reset(EECalamity* inCalamity);                  // +0x24 (empty: ICF-folded 0x157269)
-    virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb325c (the attack; then over)
     // the class's own world steps of its Rust update (ee/EECalamityUpdate.h)
     static bool UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     // +0x3c 0xb32da: as EEUnitCalamityClass's, an area-effect refusal (2) counting as fine
     virtual long CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                            bool inCheck, EEUnit* inTargetUnit);
-    virtual bool IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit);  // +0x4c 0xb333f
 };
 
 #endif

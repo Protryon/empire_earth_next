@@ -8,15 +8,12 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
 // FUNCTION: WON 0x006ff150
 // Draws the arrow button: face, frame and arrow, shifted one pixel while pressed and greyed when disabled
 void MSArrowButton::Paint(Graphics& g) {
     Component::Paint(g);
-    bool down=this->IsPressed();
-    g.SetSysColor(StandardColor_3DFace);
-    g.FillRect(0,0,this->Width(),this->Height());
-    LobbyDrawFrame(g,0,0,this->Width(),this->Height(),down);
-    if(down) MSGraphicsUtil::DrawArrow(g,this->mDirection,1,1,this->Width(),this->Height(),this->IsDisabled());
-    else MSGraphicsUtil::DrawArrow(g,this->mDirection,0,0,this->Width(),this->Height(),this->IsDisabled());
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::ArrowButton,this->Width(),this->Height(),
+                              (this->IsPressed()?EE_WON_MSPAINT_PRESSED:0)|(this->IsDisabled()?EE_WON_MSPAINT_DISABLED:0),this->mDirection));
 }

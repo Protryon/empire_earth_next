@@ -27,9 +27,18 @@ pub unsafe fn shockwave<H: Effect2DHost, R: Raster>(
 ) -> i32 {
     // SAFETY (every access below): the function's contract; no reference to the record is kept across a host call
     match op {
-        // both constructors (0xe6192 on a unit, 0xe61e2 at a point: the C++ placed it)
-        EeGfxEffect3DOp::Create | EeGfxEffect3DOp::CreateAt => {
+        // 0xe6192 on a unit
+        EeGfxEffect3DOp::Create => {
             unsafe { (*r).aged.draw_age = 0.0 };
+            0
+        }
+        // 0xe61e2 at a point (the C++ put it in the record's `sprite.start`): `SetPosition`
+        EeGfxEffect3DOp::CreateAt => {
+            unsafe {
+                (*r).aged.draw_age = 0.0;
+                (*r).position = (*r).sprite.start;
+            }
+            h.move_to_point();
             0
         }
         // 0xe6259: a unit's at one of its kind 4 tag points; the radius; the media

@@ -17,11 +17,8 @@ public:
     const GEVector& GetNormal() const { return this->mNormal; }
     const GE3DPoint& GetPoint() const { return this->mPoint; }
     bool Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const;
-    bool IsPointAbovePlane(const GE3DPoint& inPoint) const;
-    bool IsPointBelowPlane(const GE3DPoint& inPoint) const;
     bool IsPointOnOrAbovePlane(const GE3DPoint& inPoint) const;
     bool IsPointOnOrBelowPlane(const GE3DPoint& inPoint) const;
-    bool IsPointOnPlane(const GE3DPoint& inPoint) const;
     long Load(FSFile& inFile);
     long Save(FSFile& inFile);
 private:

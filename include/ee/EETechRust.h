@@ -1,56 +1,42 @@
-// New (port): the views the tech tree, EEEvent.cpp and the calamity classes hand to the Rust tech logic
-// (rust/crates/ee_tech; docs/RUST_PLAN.md R5b.2). Include after ee/EEPlayer.h (and ee/EEEvent.h for the effect
-// view). The C++ classes keep their members; these copy what a decision reads, in the C++'s widths (long is 32 bits
-// in the Windows build; the values are tech ids, epochs and flags).
+// New (port): the C++ side of the Rust tech tree (rust/crates/ee_tech nodes.rs; docs/RUST_PLAN.md R5b.2, R5b.4 round
+// 29). The tree's, the epochs' and the nodes' plain members are Rust records the classes derive from (ee/EEPlayer.h);
+// the bodies are Rust, over one host (EETechHost, EETechTree.cpp) for the containers, the captured entry points, the
+// events, the interface, the player, the media and the file. Include after ee/EEPlayer.h (and ee/EEEvent.h for the
+// effect view).
 #ifndef EE_EETECHRUST_H
 #define EE_EETECHRUST_H
 
 #include "rust/ee_tech.h"
 
-inline EeTechTreeState EETechTreeView(const EETechTree* inTree)
+// the host of every walk (ctx: the tree)
+int32_t EETechHost(void* inTree, int32_t inOp, EeTechHostIo* io);
+
+// a node (or an epoch) as the walks take it: the object and its two records
+inline EeTechNodeRef EETechRef(EETechTreeNode* inNode)
 {
-    EeTechTreeState theState;
-    theState.current_epoch = (int32_t)inTree->mCurrentEpoch;
-    theState.start_epoch = (int32_t)inTree->mStartEpoch;
-    theState.end_epoch = (int32_t)inTree->mEndEpoch;
-    theState.epochs_before_wonders = (int32_t)inTree->mEpochsBeforeWonders;
-    theState.epoch_count = (int32_t)gEpochCount;
-    return theState;
+    EeTechNodeRef theRef = {inNode, inNode, inNode->mData};
+    return theRef;
 }
 
-inline EeTechNode EETechNodeView(const EETechTreeNode* inNode)
+// the walks of a node, an epoch and a tree (ee_tech_walk_node/_epoch/_tree over the node's tree)
+inline int32_t EETechNodeWalk(EETechTreeNode* inNode, EeTechNodeOp inOp, long inA = 0, bool inB = false,
+                              EEComplexUnit* inUnit = NULL)
 {
-    const RTSTechTreeNodeData* d = inNode->mData;
-    EeTechNode theNode;
-    theNode.id = (int32_t)d->mID;
-    theNode.kind = (int32_t)d->mKind;
-    theNode.epoch = (int32_t)inNode->mEpoch;
-    theNode.obsolete_epoch = (int32_t)inNode->mObsoleteEpoch;
-    theNode.research_delay = (int32_t)inNode->mResearchDelay;
-    theNode.prerequisites[0] = (int32_t)d->mPrerequisite1;
-    theNode.prerequisites[1] = (int32_t)d->mPrerequisite2;
-    theNode.prerequisites[2] = (int32_t)d->mPrerequisite3;
-    theNode.prerequisites[3] = (int32_t)d->mPrerequisite4;
-    theNode.prerequisite_flags = inNode->mPrerequisiteFlags;
-    theNode.researched = inNode->mIsResearched;
-    theNode.obsolete = inNode->mIsObsolete;
-    theNode.available = inNode->mIsAvailable;
-    theNode.editor_obsoleted = inNode->mScenEditorObsoleted;
-    theNode.makes_unit = d->mMakesUnit;
-    theNode.counts_toward_epoch = d->mCountsTowardEpoch;
-    theNode.pad = 0;
-    return theNode;
+    return ee_tech_walk_node(inNode->mTree, &EETechHost, inOp, inNode->mTree, EETechRef(inNode), (int32_t)inA, inB,
+                             inUnit);
 }
 
-inline EeTechEpochCounter EETechEpochCounterView(const EETechTreeEpoch* inEpoch)
+inline int32_t EETechEpochWalk(EETechTreeEpoch* inEpoch, EeTechEpochOp inOp, long inA = 0, bool inB = false,
+                               EEComplexUnit* inUnit = NULL)
 {
-    EeTechEpochCounter theCounter;
-    theCounter.required = (int32_t)inEpoch->mRequiredSOL;
-    theCounter.current = (int32_t)inEpoch->mCurrentSOL;
-    theCounter.counting = inEpoch->mIsCountingSOL;
-    theCounter.available = inEpoch->mIsAvailable;
-    theCounter.pad[0] = theCounter.pad[1] = 0;
-    return theCounter;
+    return ee_tech_walk_epoch(inEpoch->mTree, &EETechHost, inOp, inEpoch->mTree, EETechRef(inEpoch), (int32_t)inA,
+                              inB, inUnit);
+}
+
+inline int32_t EETechTreeWalk(EETechTree* inTree, EeTechTreeOp inOp, long inA = 0, long inB = 0,
+                              EEComplexUnit* inUnit = NULL)
+{
+    return ee_tech_walk_tree(inTree, &EETechHost, inOp, inTree, (int32_t)inA, (int32_t)inB, inUnit);
 }
 
 #ifdef EE_EVENT_H

@@ -24,6 +24,10 @@ pub(crate) const COMPARE_LESS: u32 = 1;
 pub(crate) const COMPARE_LESS_EQUAL: u32 = 2;
 /// `kCullCW` (the culling).
 pub(crate) const CULL_CW: u32 = 1;
+/// The effect quads of `sprite`: `AddGlowSprite` (the camera batch), `AddGroundSprite`, `AddBlendedSprite`.
+pub const EE_GFX_SPRITE_GLOW: u32 = 0;
+pub const EE_GFX_SPRITE_GROUND: u32 = 1;
+pub const EE_GFX_SPRITE_BLENDED: u32 = 2;
 
 /// A model to draw (`GEModel*`), opaque to Rust.
 pub type EeGfxModel = *mut c_void;
@@ -139,6 +143,18 @@ pub struct EeGfxRaster {
     /// `ComputeBoundingVolumes`, `ComputeModelNormals`
     pub model_bounds: extern "C" fn(model: EeGfxModel),
     pub model_normals: extern "C" fn(model: EeGfxModel),
+    /// one effect quad (`EE_GFX_SPRITE_GLOW`, `_GROUND`, `_BLENDED`: `AddGlowSprite`, `AddGroundSprite`,
+    /// `AddBlendedSprite` of `EEEffect.cpp`) at `position` turned by `rotation`
+    pub sprite: extern "C" fn(
+        kind: u32,
+        position: *const Ge3DPoint,
+        color: EeGfxColor,
+        rotation: f32,
+        size: f32,
+        alpha: f32,
+        brightness: f32,
+        alpha_ref: f32,
+    ),
 }
 
 /// The rasterizer as the draws call it.
@@ -216,6 +232,18 @@ pub trait Raster {
     fn set_vertex_point(&mut self, model: EeGfxModel, index: u32, point: &Ge3DPoint);
     fn model_bounds(&mut self, model: EeGfxModel);
     fn model_normals(&mut self, model: EeGfxModel);
+    #[allow(clippy::too_many_arguments)]
+    fn sprite(
+        &mut self,
+        kind: u32,
+        position: &Ge3DPoint,
+        color: EeGfxColor,
+        rotation: f32,
+        size: f32,
+        alpha: f32,
+        brightness: f32,
+        alpha_ref: f32,
+    );
 }
 
 impl Raster for &EeGfxRaster {
@@ -393,6 +421,19 @@ impl Raster for &EeGfxRaster {
     }
     fn model_normals(&mut self, model: EeGfxModel) {
         (self.model_normals)(model)
+    }
+    fn sprite(
+        &mut self,
+        kind: u32,
+        position: &Ge3DPoint,
+        color: EeGfxColor,
+        rotation: f32,
+        size: f32,
+        alpha: f32,
+        brightness: f32,
+        alpha_ref: f32,
+    ) {
+        (self.sprite)(kind, position, color, rotation, size, alpha, brightness, alpha_ref)
     }
 }
 
@@ -591,5 +632,21 @@ impl Raster for LogRaster {
     }
     fn model_normals(&mut self, _model: EeGfxModel) {
         self.calls.push("normals".into());
+    }
+    fn sprite(
+        &mut self,
+        kind: u32,
+        p: &Ge3DPoint,
+        k: EeGfxColor,
+        rotation: f32,
+        size: f32,
+        alpha: f32,
+        brightness: f32,
+        alpha_ref: f32,
+    ) {
+        self.calls.push(format!(
+            "sprite {kind} {} {} {} color {} {} {} rotation {rotation} size {size} {alpha} {brightness} {alpha_ref}",
+            p.x, p.y, p.z, k.red, k.green, k.blue
+        ));
     }
 }

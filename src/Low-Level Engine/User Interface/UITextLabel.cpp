@@ -114,10 +114,6 @@ void UITextLabel::DeleteArray() { UITextLabelRust::Call(this, C::DeleteArray); }
 void UITextLabel::DeleteLine(unsigned long inLine) { UITextLabelRust::Call(this, C::DeleteLine, inLine); }
 long UITextLabel::DrawPolygons() { return (long)UITextLabelRust::Call(this, C::DrawPolygons); }
 long UITextLabel::DrawTextA() { return (long)UITextLabelRust::Call(this, C::DrawText); }
-const GERectangle& UITextLabel::GetCopiedTextRectangle() const
-{
-    return UITextLabelRust::RectAt(UITextLabelRust::Call(this, C::CopiedTextRectangle));
-}
 bool UITextLabel::GetFitRectToText() const { return UITextLabelRust::Call(this, C::FitRectToText) != 0; }
 GEText* UITextLabel::GetGEText() const { return reinterpret_cast<GEText*>(UITextLabelRust::Call(this, C::Text)); }
 unsigned long UITextLabel::GetLineCount() const { return (unsigned long)UITextLabelRust::Call(this, C::LineCount); }
@@ -129,17 +125,9 @@ const UIScrollBar* UITextLabel::GetScrollBar() const
 {
     return reinterpret_cast<const UIScrollBar*>(UITextLabelRust::Call(this, C::ScrollBar));
 }
-const GERectangle& UITextLabel::GetScrollBarRectangle() const
-{
-    return UITextLabelRust::RectAt(UITextLabelRust::Call(this, C::ScrollBarRectangle));
-}
 const UWideString& UITextLabel::GetText(unsigned long inLine) const
 {
     return *reinterpret_cast<const UWideString*>(UITextLabelRust::Call(this, C::Line, inLine));
-}
-const GERectangle& UITextLabel::GetTextRectangle() const
-{
-    return UITextLabelRust::RectAt(UITextLabelRust::Call(this, C::TextRectangle));
 }
 long UITextLabel::MouseLButtonDown() { return (long)UITextLabelRust::Call(this, C::MouseLButtonDown); }
 long UITextLabel::MouseLButtonUp() { return (long)UITextLabelRust::Call(this, C::MouseLButtonUp); }

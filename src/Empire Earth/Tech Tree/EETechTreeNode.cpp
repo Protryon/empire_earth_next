@@ -30,15 +30,15 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEAEManager.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EETechTreeRecord.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechCapture.h"
 #include "ee/EETechRust.h"
 // FUNCTION: EXE 0x5cedce
 // Creates an empty tech node, allowed and obsolete only after the space epoch
 EETechTreeNode::EETechTreeNode()
-    : mTree(NULL), mButton(NULL), mEpoch(0), mObsoleteEpoch(kTechEpochSpace), mResearchDelay(0), mIsAllowed(true), mScenEditorObsoleted(false), mIsUnitMediaLoaded(false)
+    : mTree(NULL), mButton(NULL)
 {
+    // the record's values (allowed, obsolete after the space epoch): RTSTechTreeNode's ee_tech_node_fields_init
 }
 
 // FUNCTION: EXE 0x5cee02
@@ -205,45 +205,17 @@ long EETechTreeNode::Load(FSFile& inFile, EETechTree* inTree)
 {
     unsigned long theRead = 0;
     unsigned long theCount = 0;
-    EETechTreeRecord theRecord;
+    EeTechTreeRecord theRecord;
     this->mData = new RTSTechTreeNodeData;
-    for (long i = 0; i < 7; i++)
-        this->mData->mCosts[i] = 0;
     this->mTree = inTree;
     inFile.Read(reinterpret_cast<char*>(&theRecord), sizeof(theRecord), theRead);
     long theResult = inFile.Read(theCount);
     this->mData->mUnitClasses.resize(theCount, 0);
     for (unsigned long j = 0; j < theCount; j++)
         inFile.Read(this->mData->mUnitClasses[j]);
-    this->mData->mCosts[kResourceStone] = theRecord.mCost4;
-    this->mData->mCosts[kResourceGold] = theRecord.mCost5;
-    this->mData->mCosts[kResourceWood] = theRecord.mCost3;
-    this->mData->mCosts[kResourceFood] = theRecord.mCost2;
-    this->mData->mCosts[kResourceIron] = theRecord.mCost6;
-    this->mData->mID = theRecord.mID;
-    this->mObsoleteEpoch = theRecord.mObsoleteEpoch;
-    this->mData->mResearchedEvent = theRecord.mResearchedEvent;
-    this->mData->mObsoleteEvent = theRecord.mObsoleteEvent;
-    this->mData->mBuildTime = theRecord.mBuildTime;
-    this->mData->mPrerequisite1 = theRecord.mPrerequisite1;
-    this->mData->mPrerequisite2 = theRecord.mPrerequisite2;
-    this->mData->mPrerequisite3 = theRecord.mPrerequisite3;
-    this->mData->mPrerequisite4 = theRecord.mPrerequisite4;
-    this->mData->mUnitClass = theRecord.mUnitClass;
-    this->mData->mMakesUnit = theRecord.mMakesUnit;
-    this->mData->mDefaultUnitClass = theRecord.mDefaultUnitClass;
-    this->mData->mCountsTowardEpoch = theRecord.mCountsTowardEpoch;
-    this->mData->mNameID = theRecord.mNameID;
-    this->mData->mKind = theRecord.mKind;
-    this->mData->mCostResource = theRecord.mCostResource;
-    this->mData->mRequiredStatistic = theRecord.mRequiredStatistic;
-    this->mData->mRequiredStatisticValue = theRecord.mRequiredStatisticValue;
-    this->mData->mCalamity = theRecord.mCalamity;
-    this->mData->mHotKey = theRecord.mHotKey;
-    this->mData->mObsoletedByDefault = theRecord.mObsoletedByDefault;
-    this->mData->mShowInEditor = theRecord.mShowInEditor;
-    this->mData->mAvailableWithEpoch = theRecord.mAvailableWithEpoch;
-    this->mData->mResearchedWithEpoch = theRecord.mResearchedWithEpoch;
+    // the record fields, the obsolete epoch, the editor flag of a node obsoleted by default, the empty
+    // prerequisites flags, no research delay (ee_tech nodes.rs fill_data, fill_node)
+    ee_tech_fill_from_record(this, this->mData, &theRecord, false);
     for (unsigned long k = 0; k < this->mData->mUnitClasses.size(); k++) {
         // the k-th class's table: every cost times the record's factor of that class (ee_tech class_costs)
         long* theCosts = new long[7];
@@ -257,13 +229,8 @@ long EETechTreeNode::Load(FSFile& inFile, EETechTree* inTree)
             theCosts[r] = theTable[r];
         this->mData->mClassCosts.insert(std::map<long, long*>::value_type(this->mData->mUnitClasses[k], theCosts));
     }
-    if (this->mData->mObsoletedByDefault == true)
-        this->mScenEditorObsoleted = true;
     this->mEpoch = EETechTreeEpochOf(this->mData->mID);   // a node's: set by its epoch's Load (the block holding it)
     this->mButton = EEButtonObject::Get(theRecord.mButton);
-    this->mPrerequisiteFlags = ee_tech_initial_prerequisite_flags((int32_t)this->mData->mPrerequisite1,
-        (int32_t)this->mData->mPrerequisite2, (int32_t)this->mData->mPrerequisite3, (int32_t)this->mData->mPrerequisite4);
-    this->mResearchDelay = 0;
     return theResult;
 }
 
@@ -271,9 +238,7 @@ long EETechTreeNode::Load(FSFile& inFile, EETechTree* inTree)
 // Tells whether the node can be researched now (wonders only after enough epochs or in the last epoch)
 bool EETechTreeNode::GetIsAvailable()
 {
-    EeTechNode theNode = EETechNodeView(this);
-    EeTechTreeState theTree = EETechTreeView(this->mTree);
-    return ee_tech_node_is_available(&theNode, &theTree);
+    return EETechNodeWalk(this, EeTechNodeOp::IsAvailable) != 0;
 }
 
 // FUNCTION: EXE 0x5cf6e5
@@ -289,9 +254,7 @@ bool EETechTreeNode::Contains(long inUnitClass)
 // Tells whether the node is obsolete, by flag or because its obsolete epoch has passed
 bool EETechTreeNode::GetIsObsolete()
 {
-    EeTechNode theNode = EETechNodeView(this);
-    EeTechTreeState theTree = EETechTreeView(this->mTree);
-    return ee_tech_node_is_obsolete(&theNode, &theTree);
+    return EETechNodeWalk(this, EeTechNodeOp::IsObsolete) != 0;
 }
 
 // FUNCTION: EXE 0x5cf75b
@@ -316,26 +279,11 @@ bool EETechTreeNode::NeedsUnitMediaUncaptured()
                                     (int32_t)this->mObsoleteEpoch, (int32_t)this->mTree->mStartEpoch);
 }
 
-// the tree for the Rust DependsOn: a node's four prerequisites (false without a node)
-static bool EETechTreePrerequisitesOf(void* inTree, int32_t inID, int32_t* outPrerequisites)
-{
-    EETechTreeNode* theNode = static_cast<EETechTree*>(inTree)->Get(inID);
-    if (theNode == NULL)
-        return false;
-    outPrerequisites[0] = (int32_t)theNode->mData->mPrerequisite1;
-    outPrerequisites[1] = (int32_t)theNode->mData->mPrerequisite2;
-    outPrerequisites[2] = (int32_t)theNode->mData->mPrerequisite3;
-    outPrerequisites[3] = (int32_t)theNode->mData->mPrerequisite4;
-    return true;
-}
-
 // FUNCTION: EXE 0x5cf79a
-// Tells whether the node depends on a tech, directly or through its prerequisites (the walk: ee_tech depends_on)
+// Tells whether the node depends on a tech, directly or through its prerequisites (ee_tech depends_on)
 bool EETechTreeNode::DependsOn(long inID)
 {
-    return ee_tech_depends_on(this->mTree, EETechTreePrerequisitesOf, (int32_t)this->mData->mID,
-        (int32_t)this->mData->mPrerequisite1, (int32_t)this->mData->mPrerequisite2, (int32_t)this->mData->mPrerequisite3,
-        (int32_t)this->mData->mPrerequisite4, (int32_t)inID);
+    return EETechNodeWalk(this, EeTechNodeOp::DependsOn, inID) != 0;
 }
 
 // FUNCTION: EXE 0x5cf882
@@ -389,36 +337,19 @@ void EETechTreeNode::SetPrerequisite(long inID)
         theRecord.I32(EETechCapturePlayerIndex(this->mTree));
         EETechCaptureNode(theRecord, this);
         theRecord.I32(inID);
-        this->SetPrerequisiteUncaptured(inID);
+        EETechNodeWalk(this, EeTechNodeOp::SetPrerequisite, inID);
         EETechCaptureNode(theRecord, this);
         theRecord.Commit();
         return;
     }
-    this->SetPrerequisiteUncaptured(inID);
-}
-
-void EETechTreeNode::SetPrerequisiteUncaptured(long inID)
-{
-    EeTechNode theNode = EETechNodeView(this);
-    EeTechPrerequisite theOutcome = ee_tech_set_prerequisite(&theNode, (int32_t)inID, (int32_t)gEpochCount);
-    this->mPrerequisiteFlags = theOutcome.flags;
-    if (!theOutcome.becomes_available)
-        return;
-    this->mIsAvailable = true;
-    EEEvent::Trigger(kEventHookTechResearched, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
-    EEPlayer* thePlayer = this->mTree->GetPlayer();
-    thePlayer->mSavedGroups.Reset(0x16, 1);
-    this->mTree->UpdateInterface(false);
+    EETechNodeWalk(this, EeTechNodeOp::SetPrerequisite, inID);
 }
 
 // FUNCTION: EXE 0x5cfa3c
 // Makes the node available with every prerequisite met
 void EETechTreeNode::MakeAvailable()
 {
-    this->mIsObsolete = false;
-    this->mPrerequisiteFlags = kPrerequisiteAll;
-    this->mIsAvailable = true;
-    this->mTree->UpdateInterface(false);
+    EETechNodeWalk(this, EeTechNodeOp::MakeAvailable);
 }
 
 // FUNCTION: EXE 0x5cfa53
@@ -431,28 +362,13 @@ long EETechTreeNode::ResearchNode(EEComplexUnit* inUnit)
         theRecord.U32(0);
         theRecord.I32(EETechCapturePlayerIndex(this->mTree));
         EETechCaptureNode(theRecord, this);
-        long theResult = this->ResearchNodeUncaptured(inUnit);
+        long theResult = EETechNodeWalk(this, EeTechNodeOp::Research, 0, false, inUnit);
         theRecord.I32(theResult);
         EETechCaptureNode(theRecord, this);
         theRecord.Commit();
         return theResult;
     }
-    return this->ResearchNodeUncaptured(inUnit);
-}
-
-long EETechTreeNode::ResearchNodeUncaptured(EEComplexUnit* inUnit)
-{
-    EeTechNode theNode = EETechNodeView(this);
-    EeTechResearch theDecision = ee_tech_research_node(&theNode);
-    if (theDecision.research) {
-        this->mIsResearched = true;
-        EEEvent::Trigger(this->mData->mResearchedEvent, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, inUnit);
-        this->mTree->UpdateInterface(false);
-        this->mTree->OnResearched(this->mData->mID, NULL);
-    }
-    // the delay as the event left it
-    this->mResearchDelay = ee_tech_research_delay_after((int32_t)this->mResearchDelay);
-    return theDecision.result;
+    return EETechNodeWalk(this, EeTechNodeOp::Research, 0, false, inUnit);
 }
 
 // FUNCTION: EXE 0x5cfae9
@@ -460,64 +376,14 @@ long EETechTreeNode::ResearchNodeUncaptured(EEComplexUnit* inUnit)
 // its prerequisites
 void EETechTreeNode::SetScenEditorObsoleted(bool inValue, bool inRecurse)
 {
-    std::vector<long> theIDs;
-    if (inValue != this->mScenEditorObsoleted) {
-        if (inRecurse == true && this->mData->mID != kTechEpochPrehistoric) {
-            this->mTree->GetNodeIDs(theIDs);
-            if (inValue == true) {
-                for (unsigned long i = 0; i < theIDs.size(); i++) {
-                    EETechTreeNode* theNode = this->mTree->Get(theIDs[i]);
-                    if (theNode == NULL)
-                        continue;
-                    RTSTechTreeNodeData* theData = theNode->mData;
-                    long theID = this->mData->mID;
-                    if (theData->mID != theID
-                        && (theData->mPrerequisite1 == theID || theData->mPrerequisite2 == theID
-                            || theData->mPrerequisite3 == theID || theData->mPrerequisite4 == theID)) {
-                        theNode->SetScenEditorObsoleted(true, true);
-                    }
-                }
-            } else {
-                for (unsigned long i = 0; i < theIDs.size(); i++) {
-                    EETechTreeNode* theNode = this->mTree->Get(theIDs[i]);
-                    if (theNode == NULL)
-                        continue;
-                    RTSTechTreeNodeData* theData = this->mData;
-                    long theID = theNode->mData->mID;
-                    if (theID != theData->mID
-                        && (theData->mPrerequisite1 == theID || theData->mPrerequisite2 == theID
-                            || theData->mPrerequisite3 == theID || theData->mPrerequisite4 == theID)) {
-                        theNode->SetScenEditorObsoleted(inValue, true);
-                    }
-                }
-            }
-        }
-        this->mScenEditorObsoleted = inValue;
-    }
+    EETechNodeWalk(this, EeTechNodeOp::SetEditorObsoleted, inValue ? 1 : 0, inRecurse);
 }
 
 // FUNCTION: EXE 0x5cfbfe
 // Makes the node obsolete (obsolete event, unloading its unit media unless kept) or clears the flag
 void EETechTreeNode::SetObsolete(bool inValue, bool inKeepMedia)
 {
-    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
-    long theAction = inValue ? 0 : 4;   // TNWK (TEST ONLY): 1 obsoleted, 2 its media unloaded, 4 cleared
-    // the decision is Rust (ee_tech tree.rs set_obsolete); the event, the interface and the media stay here
-    EeTechSetObsolete theDecision = ee_tech_set_obsolete(inValue, inKeepMedia, this->mIsObsolete);
-    this->mIsObsolete = theDecision.obsolete;
-    if (theDecision.fires) {
-        theAction |= 1;
-        EEEvent::Trigger(this->mData->mObsoleteEvent, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
-        this->mTree->UpdateInterface(false);
-        if (theDecision.check_media) {
-            if (this->NeedsUnitMedia() == true && this->mIsUnitMediaLoaded == true) {
-                theAction |= 2;
-                this->mTree->GetPlayer()->UnloadUnitClassMedia(this->mData->mUnitClass);
-                this->mIsUnitMediaLoaded = false;
-            }
-        }
-    }
-    EETechCaptureWalk(5, this->mTree, this, inValue ? 1 : 0, inKeepMedia ? 1 : 0, theAction);   // TNWK (TEST ONLY)
+    EETechNodeWalk(this, EeTechNodeOp::SetObsolete, inValue ? 1 : 0, inKeepMedia);
 }
 
 // FUNCTION: EXE 0x5cfc72

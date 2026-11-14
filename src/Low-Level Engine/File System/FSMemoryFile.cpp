@@ -143,16 +143,6 @@ long FSMemoryFile::Copy(const UString& inDestination, bool inFailIfExists, bool 
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000a20b
-// Decompresses the contents in place when they are compressed and closes the file; outLength is the new length
-long FSMemoryFile::Decompress(unsigned long& outLength)
-{
-    uint32_t theLength = 0;
-    long theResult = ee_fs_mem_decompress(this->mState, &theLength);
-    outLength = theLength;
-    return theResult;
-}
-
 // FUNCTION: LLE 0x1000a315
 // Frees the buffer and leaves the memory file empty and closed
 long FSMemoryFile::Delete()

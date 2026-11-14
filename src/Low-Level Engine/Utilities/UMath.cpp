@@ -88,13 +88,6 @@ unsigned long UMGetFloatingPointRoundingMode()
 #endif
 }
 
-// FUNCTION: LLE 0x10080f14
-// Solves a*x^2 + b*x + c = 0 into two roots (a negative discriminant is not checked); false when a and b are 0
-bool UMQuadraticEquation(float inA, float inB, float inC, float& outRoot1, float& outRoot2)
-{
-    return ee_ge_um_quadratic(inA, inB, inC, &outRoot1, &outRoot2);
-}
-
 // FUNCTION: LLE 0x10080fab
 // Sets the FPU precision
 void UMSetFloatingPointPrecision(unsigned long inPrecision)

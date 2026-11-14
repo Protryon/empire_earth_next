@@ -54,7 +54,6 @@ public:
     void DumpOutOfSynch(FILE* inFile);                         // +0x14
     long GetOutOfSynchChecksum();                              // +0x18
     void GetDebugLine(UWideString& ioText);                    // +0x1c
-    void GetDebugText(UWideString& ioText);                    // +0x20
     bool IsLoadGoal();                                         // +0x24
     void GetGoalLocation(GE3DPoint& outLocation);              // +0x28
     long GetMaxPathAttempts();                                 // +0x2c (the base: 3)
@@ -161,12 +160,9 @@ public:
     void SetAttacker(EEComplexUnit* inAttacker);
     void SetAttackTarget(EEUnit* inTarget);           // the old SetTarget (the reference moved, the tile)
     void RetargetGatePart(EEComplexUnit* inUnit);     // a gate target becomes the part EEGetAttackPart gives
-    void UpdateTargetTile();
     long GetAttackTileX() const;
     long GetAttackTileY() const;
     bool IsConvertAttack() const;
-    GE3DPoint GetAttackLocation() const;
-    void SetAttackLocation(const GE3DPoint& inLocation);
     unsigned long GetSidestepCount() const;
     void SetSidestepCount(unsigned long inCount);
     // a heal (kGoalHealUnit; EEUGHealUnit(inTarget, inArg): the location goal at the healee's position, the healee
@@ -218,7 +214,6 @@ public:
     EEUnit* GetGatherStorage();
     bool IsGathering();
     bool IsGatherWaiting();
-    void GetGatherDestination(GE3DPoint& outLocation);
     void SetGatherResource(EEUnit* inResource);
     void SetGatherStorage(EEUnit* inStorage);
     // a waiting area by the resource (true when found); an unfinished living settlement within twice the

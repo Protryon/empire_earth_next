@@ -37,7 +37,6 @@ public:
     // stores the name (the debugger's thread name is a no-op in this build; nothing reads the name back)
     void SetName(const char* inName) { ee_ts_thread_set_name(this->Rust(), inName); }
     static void SetThreadName(unsigned long inThreadID, const char* inName) {}
-    static void ForceYield() {}
     bool IsSuspended() const { return ee_ts_thread_is_suspended(this->Rust()); }
     bool IsTerminated() { return this->GetExitCode() != PLAT_THREAD_STILL_ACTIVE; }
     void LockMessageQueue() { ee_ts_section_enter(ee_ts_thread_message_lock(this->Rust())); }

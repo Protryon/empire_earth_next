@@ -21,21 +21,11 @@ class LLE_API SEConductor {
     friend class SEMixer;
     friend class SEScore;
 public:
-    unsigned long GetChannelGroupCount() { return this->mChannelGroupCount; }
     unsigned long GetConductorState() const { return this->mConductorState; }
-    unsigned long GetIntensity() const { return this->mIntensity; }
-    const UWideString& GetMusicFolder() const { return this->mMusicFolder; }
-    unsigned long GetReverbState() const { return this->mReverbState; }
     float GetVolume() const { return this->mVolume; }
     long LoadScore(const UWideString& inName, long& outID) { return this->LoadScore(inName, outID, false); }
-    // the events (0 segment aborted, 1 almost ended, 2 ended, 3 started, 4 music started, 5 music stopped): kept for
-    // the interface; dmusic reports none, and the game registers no callback
-    void SetNotificationCallback(unsigned long inEvent, void (*inCallback)(SEConductor&, long))
-        { this->mCallbacks[inEvent] = inCallback; }
 
-    long GetCurrentlyPlayingScore();
     SEScore* GetScore(long inID) const;
-    long GetScoreID(SEScore* inScore) const;
     long Play(long inID);
     long Queue(long inID);
     long SetChannelGroupCount(unsigned long inCount);
@@ -56,7 +46,6 @@ private:
 
     SEConductor();
     virtual ~SEConductor();
-    long InitializeConductor();
     long LoadScore(const UWideString& inName, long& outID, bool inSecondary);
     long UninitializeConductor();
     static void Render(void* inConductor, float* outFrames, unsigned long inCount);

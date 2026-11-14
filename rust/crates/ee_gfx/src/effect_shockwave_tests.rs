@@ -204,12 +204,12 @@ fn load_and_save_the_age() {
     r.aged.age = 0.375;
     let mut h = Host::default();
     let mut f = Mem(Vec::new(), 0);
-    assert_eq!(effect2d_file(EeGfxEffect3DOp::Save, &mut r, &mut f, &mut h), 0);
+    assert_eq!(effect2d_file(EeGfxEffect3DOp::Save, &mut r, &mut f, 0, 0, &mut h), 0);
     assert_eq!(f.0, [0.375f32.to_bits()]);
     let mut back = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_SHOCKWAVE);
-    assert_eq!(effect2d_file(EeGfxEffect3DOp::Load, &mut back, &mut f, &mut h), 0);
+    assert_eq!(effect2d_file(EeGfxEffect3DOp::Load, &mut back, &mut f, 0, 0, &mut h), 0);
     assert_eq!((back.aged.age, h.calls.as_slice()), (0.375, ["media".to_string()].as_slice()));
     // a short file: the read's error (the media's result ignored)
     let mut h = Host { media: 5, ..Default::default() };
-    assert_eq!(effect2d_file(EeGfxEffect3DOp::Load, &mut back, &mut f, &mut h), 3);
+    assert_eq!(effect2d_file(EeGfxEffect3DOp::Load, &mut back, &mut f, 0, 0, &mut h), 3);
 }

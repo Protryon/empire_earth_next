@@ -159,7 +159,6 @@ public:                                     // GetBottomLeft 0xe5e4 = (+4, +0));
     bool And(const GERectangle& inRectangle);
     bool And(const GERectangle& inRectangle, GERectangle& outRectangle) const;
     long Load(FSFile& inFile);
-    void RemoveIntersectingRectangle(const GERectangle& inRectangle, std::vector<GERectangle>& outRectangles) const;
     long Save(FSFile& inFile) const;
 
     float mBottom;                          // +0x00

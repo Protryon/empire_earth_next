@@ -13,11 +13,7 @@ use crate::effects::{
     self, EeTechAttribute, EeTechConversion, EeTechEffectHandler, EeTechEffectValues, EeTechUnitStep, EeTechUnitView,
     EeTechUnitWalk,
 };
-use crate::tree::{
-    self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochStep, EeTechEpochUpdate,
-    EeTechMakeObsolete, EeTechNode, EeTechPrerequisite, EeTechResearch, EeTechSetObsolete, EeTechTreeResearchAfter,
-    EeTechTreeState, EeTechUnlockAction, PrerequisiteView, SumCostsNode, SumCostsView,
-};
+use crate::tree::{self, EeTechCostInput, SumCostsNode, SumCostsView};
 use std::ffi::c_void;
 
 // SAFETY (every function taking pointers below): the caller passes valid, aligned pointers for the documented reads
@@ -120,127 +116,6 @@ pub extern "C" fn ee_tech_effect_handler(
     effects::effect_handler(known, kind, loading, run_on_load, events_enabled)
 }
 
-/// `EETechTreeNode::GetIsObsolete`.
-///
-/// # Safety
-/// `node` and `tree` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_node_is_obsolete(node: *const EeTechNode, tree: *const EeTechTreeState) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { tree::node_is_obsolete(&*node, &*tree) }
-}
-
-/// `EETechTreeNode::GetIsAvailable`.
-///
-/// # Safety
-/// `node` and `tree` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_node_is_available(node: *const EeTechNode, tree: *const EeTechTreeState) -> bool {
-    // SAFETY: the caller's contract
-    unsafe { tree::node_is_available(&*node, &*tree) }
-}
-
-/// `EETechTreeEpoch::GetIsAvailable`.
-///
-/// # Safety
-/// `epoch` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_epoch_is_available(epoch: *const EeTechNode) -> bool {
-    // SAFETY: the caller's contract
-    tree::epoch_is_available(unsafe { &*epoch })
-}
-
-/// A loaded node's prerequisite flags: the bits of its empty prerequisites.
-#[no_mangle]
-pub extern "C" fn ee_tech_initial_prerequisite_flags(p1: i32, p2: i32, p3: i32, p4: i32) -> u8 {
-    tree::initial_prerequisite_flags(&[p1, p2, p3, p4])
-}
-
-/// `EETechTreeNode::SetPrerequisite`.
-///
-/// # Safety
-/// `node` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_set_prerequisite(
-    node: *const EeTechNode,
-    id: i32,
-    epoch_count: i32,
-) -> EeTechPrerequisite {
-    // SAFETY: the caller's contract
-    tree::set_prerequisite(unsafe { &*node }, id, epoch_count)
-}
-
-/// `EETechTreeNode::ResearchNode`'s decision.
-///
-/// # Safety
-/// `node` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_research_node(node: *const EeTechNode) -> EeTechResearch {
-    // SAFETY: the caller's contract
-    tree::research_node(unsafe { &*node })
-}
-
-/// The research delay after a `ResearchNode`.
-#[no_mangle]
-pub extern "C" fn ee_tech_research_delay_after(delay: i32) -> i32 {
-    tree::research_delay_after(delay)
-}
-
-/// `EETechTreeEpoch::Research` of the epoch itself.
-///
-/// # Safety
-/// `epoch` and `tree` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_research_epoch(
-    epoch: *const EeTechNode,
-    tree: *const EeTechTreeState,
-) -> EeTechResearch {
-    // SAFETY: the caller's contract
-    unsafe { tree::research_epoch(&*epoch, &*tree) }
-}
-
-/// `EETechTreeEpoch::AddSOL`.
-///
-/// # Safety
-/// `counter` and `tree` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_add_sol(
-    epoch_id: i32,
-    counter: *const EeTechEpochCounter,
-    tree: *const EeTechTreeState,
-) -> EeTechEpochUpdate {
-    // SAFETY: the caller's contract
-    unsafe { tree::add_sol(epoch_id, &*counter, &*tree) }
-}
-
-/// `EETechTreeEpoch::UpdateAvailability`.
-///
-/// # Safety
-/// `counter` and `tree` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_update_availability(
-    epoch_id: i32,
-    counter: *const EeTechEpochCounter,
-    tree: *const EeTechTreeState,
-) -> EeTechEpochUpdate {
-    // SAFETY: the caller's contract
-    unsafe { tree::update_availability(epoch_id, &*counter, &*tree) }
-}
-
-/// `EETechTree::Research`'s end; `counts_toward_epoch` is -1 without a node, else 0 or 1.
-#[no_mangle]
-pub extern "C" fn ee_tech_tree_research_after(
-    id: i32,
-    result: i32,
-    epoch_count: i32,
-    counts_toward_epoch: i32,
-    next_epoch: i32,
-    epoch_slots: i32,
-) -> EeTechTreeResearchAfter {
-    let counts = if counts_toward_epoch < 0 { None } else { Some(counts_toward_epoch != 0) };
-    tree::tree_research_after(id, result, epoch_count, counts, next_epoch, epoch_slots)
-}
-
 /// `EETechTreeNode::GetCost`.
 ///
 /// # Safety
@@ -276,53 +151,6 @@ pub unsafe extern "C" fn ee_tech_class_costs(costs: *const i32, k: u32, factors:
         let table = tree::class_costs(&*(costs as *const [i32; 7]), factor);
         std::ptr::copy_nonoverlapping(table.as_ptr(), out, 7);
     }
-}
-
-/// `EETechTree::GetChecksum`'s value over `count` entries.
-///
-/// # Safety
-/// `entries` must be valid for `count` reads (or `count` 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_checksum(entries: *const EeTechChecksumEntry, count: u32) -> u32 {
-    if count == 0 {
-        return tree::checksum(&[]);
-    }
-    // SAFETY: the caller's contract
-    tree::checksum(unsafe { std::slice::from_raw_parts(entries, count as usize) })
-}
-
-/// The C++ tree for `DependsOn`: writes the four prerequisites of `id`'s node to `out`, false without a node.
-pub type EeTechPrerequisitesFn = unsafe extern "C" fn(ctx: *mut c_void, id: i32, out: *mut i32) -> bool;
-
-struct CPrerequisites {
-    ctx: *mut c_void,
-    get: EeTechPrerequisitesFn,
-}
-
-impl PrerequisiteView for CPrerequisites {
-    fn prerequisites(&self, id: i32) -> Option<[i32; 4]> {
-        let mut out = [0i32; 4];
-        // SAFETY: the C++ callback writes four ints to a local
-        unsafe { (self.get)(self.ctx, id, out.as_mut_ptr()) }.then_some(out)
-    }
-}
-
-/// `EETechTreeNode::DependsOn` of the node `own` with its prerequisites `p1..p4`.
-///
-/// # Safety
-/// `get` must be callable with `ctx` for the call's duration.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_depends_on(
-    ctx: *mut c_void,
-    get: EeTechPrerequisitesFn,
-    own: i32,
-    p1: i32,
-    p2: i32,
-    p3: i32,
-    p4: i32,
-    id: i32,
-) -> bool {
-    tree::depends_on(&CPrerequisites { ctx, get }, own, &[p1, p2, p3, p4], id)
 }
 
 /// A node as `SumCosts` reads it (the C++ fills it; false without a node).
@@ -512,26 +340,6 @@ pub unsafe extern "C" fn ee_calamity_valid_location(
     calamity_cast::valid_location(&mut FfiCalamityHost(host), &cast)
 }
 
-/// `ResearchToEpoch`'s steps (`tree::research_to_epoch_steps`) into `out` (up to `capacity`); the number of steps.
-///
-/// # Safety
-/// `out` must be valid for `capacity` writes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_research_to_epoch(
-    epoch: i32,
-    count: i32,
-    local: bool,
-    out: *mut EeTechEpochStep,
-    capacity: u32,
-) -> u32 {
-    let steps = tree::research_to_epoch_steps(epoch, count, local);
-    for (i, step) in steps.iter().take(capacity as usize).enumerate() {
-        // SAFETY: the caller's contract
-        unsafe { *out.add(i) = *step };
-    }
-    steps.len() as u32
-}
-
 /// One unit of a hit point or flight time rescale walk (`effects::unit_step`).
 ///
 /// # Safety
@@ -588,27 +396,6 @@ pub unsafe extern "C" fn ee_tech_conversion_unit(unit: *const EeTechUnitView) ->
 mod tests {
     use super::*;
 
-    unsafe extern "C" fn prereqs(_ctx: *mut c_void, id: i32, out: *mut i32) -> bool {
-        let p: [i32; 4] = match id {
-            1000 => [0, 0, 0, 0],
-            1001 => [1000, 0, 0, 0],
-            0 => [0, 0, 0, 0],
-            _ => return false,
-        };
-        // SAFETY: four ints
-        unsafe { std::ptr::copy_nonoverlapping(p.as_ptr(), out, 4) };
-        true
-    }
-
-    #[test]
-    fn depends_on_through_the_callback() {
-        // SAFETY: the callback above
-        unsafe {
-            assert!(ee_tech_depends_on(std::ptr::null_mut(), prereqs, 1002, 1001, 0, 0, 0, 1000));
-            assert!(!ee_tech_depends_on(std::ptr::null_mut(), prereqs, 1002, 1001, 0, 0, 0, 1003));
-        }
-    }
-
     unsafe extern "C" fn node(_ctx: *mut c_void, id: i32, out: *mut EeTechSumNode) -> bool {
         if id != 1000 {
             return false;
@@ -652,7 +439,7 @@ mod tests {
     }
 
     #[test]
-    fn class_costs_and_checksum_through_the_abi() {
+    fn class_costs_through_the_abi() {
         let mut out = [0i32; 7];
         // SAFETY: valid arrays
         unsafe {
@@ -664,10 +451,6 @@ mod tests {
             )
         };
         assert_eq!(out, [5, 10, 15, 20, 25, 30, 35]);
-        // SAFETY: no entries
-        assert_eq!(unsafe { ee_tech_checksum(std::ptr::null(), 0) }, 0);
-        assert_eq!(ee_tech_tree_research_after(1500, 0, 15, -1, 4, 15), EeTechTreeResearchAfter::Nothing);
-        assert_eq!(ee_tech_tree_research_after(1500, 0, 15, 1, 4, 15), EeTechTreeResearchAfter::CountTowardNextEpoch);
     }
 }
 
@@ -739,60 +522,6 @@ pub extern "C" fn ee_contagion_area_damage(damage: i32, updates: u32, attack: f3
     contagion::area_damage(damage, updates, attack)
 }
 
-/// `EETechTreeEpoch::Unlock`'s step for one node (`tree::unlock_action`).
-///
-/// # Safety
-/// `node` and `tree` must be valid for reads.
-#[no_mangle]
-pub unsafe extern "C" fn ee_tech_unlock_action(
-    node: *const EeTechNode,
-    tree: *const EeTechTreeState,
-    available_with_epoch: bool,
-) -> EeTechUnlockAction {
-    // SAFETY: the caller's contract
-    unsafe { tree::unlock_action(&*node, &*tree, available_with_epoch) }
-}
-
-/// `EETechTreeEpoch::ResearchAll`: whether a node is researched (`tree::research_all_takes`).
-#[no_mangle]
-pub extern "C" fn ee_tech_research_all_takes(researched_with_epoch: bool, all_nodes: bool) -> bool {
-    tree::research_all_takes(researched_with_epoch, all_nodes)
-}
-
-/// `EETechTreeEpoch::ResearchKind`: whether a node is researched (`tree::research_kind_takes`).
-#[no_mangle]
-pub extern "C" fn ee_tech_research_kind_takes(
-    node_kind: i32,
-    kind: i32,
-    epoch_only: bool,
-    researched_with_epoch: bool,
-) -> bool {
-    tree::research_kind_takes(node_kind, kind, epoch_only, researched_with_epoch)
-}
-
-/// `EETechTreeEpoch::ObsoleteOutdatedNodes`: whether a node is past its obsolete epoch (`tree::node_is_outdated`).
-#[no_mangle]
-pub extern "C" fn ee_tech_node_is_outdated(obsolete: bool, obsolete_epoch: i32, current_epoch: i32) -> bool {
-    tree::node_is_outdated(obsolete, obsolete_epoch, current_epoch)
-}
-
-/// `EETechTreeEpoch::MakeObsolete`'s choice (`tree::epoch_make_obsolete`).
-#[no_mangle]
-pub extern "C" fn ee_tech_epoch_make_obsolete(
-    epoch_id: i32,
-    id: i32,
-    epoch_obsolete: bool,
-    current_epoch: i32,
-) -> EeTechMakeObsolete {
-    tree::epoch_make_obsolete(epoch_id, id, epoch_obsolete, current_epoch)
-}
-
-/// `EETechTreeNode::SetObsolete`'s decision (`tree::set_obsolete`).
-#[no_mangle]
-pub extern "C" fn ee_tech_set_obsolete(value: bool, keep_media: bool, obsolete: bool) -> EeTechSetObsolete {
-    tree::set_obsolete(value, keep_media, obsolete)
-}
-
 /// `EETechTreeNode::NeedsUnitMedia` (`tree::needs_unit_media`).
 #[no_mangle]
 pub extern "C" fn ee_tech_needs_unit_media(
@@ -811,12 +540,6 @@ pub extern "C" fn ee_tech_epoch_build_time(is_human: i32, build_time: i32) -> i3
     tree::epoch_build_time(is_human, build_time)
 }
 
-/// `EETechTree::SetEpoch`'s test (`tree::set_epoch_allowed`).
-#[no_mangle]
-pub extern "C" fn ee_tech_set_epoch_allowed(epoch: i32, epoch_count: i32, current_epoch: i32) -> bool {
-    tree::set_epoch_allowed(epoch, epoch_count, current_epoch)
-}
-
 /// `EETechTree::AdvanceEpoch` (`tree::advance_epoch`): whether the tree advances, and to which epoch.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -824,18 +547,4 @@ pub struct EeTechAdvance {
     pub advances: bool,
     pub pad: [u8; 3],
     pub epoch: i32,
-}
-
-#[no_mangle]
-pub extern "C" fn ee_tech_advance_epoch(current_epoch: i32, end_epoch: i32) -> EeTechAdvance {
-    match tree::advance_epoch(current_epoch, end_epoch) {
-        Some(epoch) => EeTechAdvance { advances: true, pad: [0; 3], epoch },
-        None => EeTechAdvance::default(),
-    }
-}
-
-/// `EETechTree::SetNodeAvailable`'s test (`tree::node_availability_settable`).
-#[no_mangle]
-pub extern "C" fn ee_tech_node_availability_settable(research_delay: i32) -> bool {
-    tree::node_availability_settable(research_delay)
 }

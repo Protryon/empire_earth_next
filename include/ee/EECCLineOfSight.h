@@ -8,19 +8,9 @@
 
 class EECCLineOfSight : public EEGlobalCalamityClass {
 public:
-    EECCLineOfSight();                      // 0xb1f4f
-    virtual ~EECCLineOfSight();             // 0xb1f7d
-    virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xb1f88
-    virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xb1fc4
-    virtual void Initialize(EECalamityData* inData);             // +0x20 0xb2000
-    virtual void Reset(EECalamity* inCalamity);                  // +0x24 (empty: ICF-folded 0x157269)
-    virtual long Update(EECalamity* inCalamity, float inElapsedTime);   // +0x38 0xb2019
     // +0x3c 0xb202f: 0 (the cloaking class's slot is folded into this copy)
     virtual long CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
                            bool inCheck, EEUnit* inTargetUnit);
-
-protected:
-    float mSightBonus;                      // +0x28 (record +0x64; added to the caster's +0x250) (provisional name)
 };
 
 #endif

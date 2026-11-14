@@ -15,7 +15,7 @@ impl SaveHost for File {
     fn op(&mut self, op: i32, index: u32, io: &mut EeUnitsUnitSaveIo) -> i32 {
         self.log.push((op, index, io.i));
         match op {
-            EE_UNITS_UNIT_SAVE_WRITE_LONG..=EE_UNITS_UNIT_SAVE_WRITE_USHORT => {
+            w if crate::player_save::is_save_write(w) => {
                 self.data.push_back((io.i, io.f.to_bits(), io.b));
                 0
             }
@@ -45,7 +45,7 @@ impl SaveHost for File {
                 self.data.pop_front();
                 0
             }
-            EE_UNITS_UNIT_LOAD_READ_LONG..=EE_UNITS_UNIT_LOAD_READ_USHORT => {
+            r if crate::player_save::is_save_read(r) => {
                 self.reads += 1;
                 if self.fail_at == Some(self.reads) {
                     return 1;
@@ -191,17 +191,11 @@ fn a_failed_read_goes_on_at_the_original_labels() {
     let base = unsafe { unit_load(&mut f, &mut r2, &mut u2) };
     // SAFETY: a live record
     unsafe { complex_load_rest(&mut f, &mut c2, &NOW, base) };
-    let reads: Vec<usize> = f
-        .log
-        .iter()
-        .enumerate()
-        .filter(|(_, e)| (EE_UNITS_UNIT_LOAD_READ_LONG..=EE_UNITS_UNIT_LOAD_READ_USHORT).contains(&e.0))
-        .map(|(i, _)| i)
-        .collect();
+    let reads: Vec<usize> =
+        f.log.iter().enumerate().filter(|(_, e)| crate::player_save::is_save_read(e.0)).map(|(i, _)| i).collect();
     let after = &f.log[reads[height_at - 1] + 1..];
     // no further reads of the height's chain: the next read is LoadFlags' unsigned long
-    let next =
-        after.iter().find(|e| (EE_UNITS_UNIT_LOAD_READ_LONG..=EE_UNITS_UNIT_LOAD_READ_USHORT).contains(&e.0)).unwrap();
+    let next = after.iter().find(|e| crate::player_save::is_save_read(e.0)).unwrap();
     assert_eq!(next.0, EE_UNITS_UNIT_LOAD_READ_ULONG);
     assert_eq!(c2.mVelocity, 0.0);
     // EEUnit::Load failing: straight to LoadFinalVersions (no section)

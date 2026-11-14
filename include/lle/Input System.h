@@ -11,7 +11,6 @@ class UResourceFile;
 
 LLE_API long ISInitialize(HINSTANCE inInstance, GEWindow* inWindow, UResourceFile* inResources,
                           unsigned long inFirstStringID, unsigned long inDoublePressTimeDelta);
-LLE_API void ISSetDoublePressTimeDelta(unsigned long inDelta);
 
 extern LLE_API ISKeyboard* gISKeyboard;     // 0x1012d94c
 extern LLE_API ISMouse* gISMouse;           // 0x1012d950
