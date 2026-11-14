@@ -38,6 +38,17 @@ pub const EE_SCREENS_SEPL_SET_PLAYERS: u32 = 11;
 pub const EE_SCREENS_SEPL_COLOR: u32 = 12;
 /// `EESEUIBDiplomacy`.
 pub const EE_SCREENS_SEPL_DIPLOMACY: u32 = 13;
+/// `UIRadioButton` (extra: checked).
+pub const EE_SCREENS_SEPL_RADIO: u32 = 14;
+/// `UITriStateCheckBox`.
+pub const EE_SCREENS_SEPL_TRISTATE: u32 = 15;
+/// `EESETSAEditBox` (the object screen's counts; extra: max characters, numeric).
+pub const EE_SCREENS_SEPL_OBJ_EDIT: u32 = 16;
+/// A combo box of the trigger screens (extra: the class, the lines, the border, always dirty): its text box's
+/// opacity, always dirty, the text colour, the selected line's colour, its opacity, in that order.
+pub const EE_SCREENS_SEPL_LIST_COMBO: u32 = 17;
+/// `EESETSOUnitList` (the object screen's picked units).
+pub const EE_SCREENS_SEPL_UNIT_LIST: u32 = 18;
 
 /// A combo box's first lines: none, the epochs' titles.
 pub const EE_SCREENS_SEPL_LINES_NONE: i32 = 0;
@@ -50,6 +61,8 @@ pub const EE_SCREENS_SEPL_TEXT_STRING: u32 = 1;
 pub const EE_SCREENS_SEPL_TEXT_NUMBER: u32 = 2;
 pub const EE_SCREENS_SEPL_TEXT_STRING_NUMBER: u32 = 3;
 pub const EE_SCREENS_SEPL_TEXT_NUMBER_STRING: u32 = 4;
+/// The one character `number`.
+pub const EE_SCREENS_SEPL_TEXT_CHAR: u32 = 5;
 
 /// The fonts: the screen's, `gU531930`, `gU531934`, `gU531938`, `gFontArial18`.
 pub const EE_SCREENS_SEPL_FONT_SCREEN: u32 = 0;
@@ -96,7 +109,7 @@ pub struct EeScreensSeplCtl {
 }
 
 impl EeScreensSeplCtl {
-    fn new(kind: u32, id: u32, x: f32, y: f32, w: f32, h: f32) -> Self {
+    pub(crate) fn new(kind: u32, id: u32, x: f32, y: f32, w: f32, h: f32) -> Self {
         EeScreensSeplCtl {
             kind,
             id,
@@ -117,42 +130,42 @@ impl EeScreensSeplCtl {
             extra: [0; 4],
         }
     }
-    fn font(mut self, f: u32) -> Self {
+    pub(crate) fn font(mut self, f: u32) -> Self {
         self.font = f;
         self
     }
-    fn string(mut self, id: u32) -> Self {
+    pub(crate) fn string(mut self, id: u32) -> Self {
         self.text = EE_SCREENS_SEPL_TEXT_STRING;
         self.string = id;
         self
     }
-    fn text(mut self, kind: u32, id: u32, n: i32) -> Self {
+    pub(crate) fn text(mut self, kind: u32, id: u32, n: i32) -> Self {
         self.text = kind;
         self.string = id;
         self.number = n;
         self
     }
-    fn flags(mut self, f: u32) -> Self {
+    pub(crate) fn flags(mut self, f: u32) -> Self {
         self.flags |= f;
         self
     }
-    fn align(mut self, a: i32) -> Self {
+    pub(crate) fn align(mut self, a: i32) -> Self {
         self.align = a;
         self
     }
-    fn bg(mut self, bg: f32) -> Self {
+    pub(crate) fn bg(mut self, bg: f32) -> Self {
         self.bg = bg;
         self
     }
-    fn bg2(mut self, bg: f32) -> Self {
+    pub(crate) fn bg2(mut self, bg: f32) -> Self {
         self.bg2 = bg;
         self
     }
-    fn group(mut self, g: u32) -> Self {
+    pub(crate) fn group(mut self, g: u32) -> Self {
         self.groups |= 1 << g;
         self
     }
-    fn extra(mut self, e: [i32; 4]) -> Self {
+    pub(crate) fn extra(mut self, e: [i32; 4]) -> Self {
         self.extra = e;
         self
     }
@@ -260,6 +273,20 @@ pub const EE_SCREENS_SEPL_OP_LOAD_THREAD: u32 = 54;
 /// The mini-map redrawn (if any) / recoloured.
 pub const EE_SCREENS_SEPL_OP_MINIMAP_REDRAW: u32 = 55;
 pub const EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR: u32 = 56;
+/// The tri-state check box p0's state -> / set to i0.
+pub const EE_SCREENS_SEPL_OP_TRI_STATE: u32 = 57;
+pub const EE_SCREENS_SEPL_OP_SET_TRI_STATE: u32 = 58;
+/// -> whether the radio button p0 is checked.
+pub const EE_SCREENS_SEPL_OP_RADIO_IS_CHECKED: u32 = 59;
+/// The list box p0 emptied.
+pub const EE_SCREENS_SEPL_OP_LIST_CLEAR: u32 = 60;
+/// -> the combo box p0's line count.
+pub const EE_SCREENS_SEPL_OP_LINE_COUNT: u32 = 61;
+/// -> the edit box p0's first line as `atoi` reads it.
+pub const EE_SCREENS_SEPL_OP_EDIT_ATOI: u32 = 62;
+/// The control p0 given one screen event (`EECreateScreenEvent(i0)`) on the triggers of the bits i1 (checked,
+/// unchecked, selection changed).
+pub const EE_SCREENS_SEPL_OP_SCREEN_EVENT: u32 = 63;
 
 /// The trigger events: the start epoch's (`EESEERust` start epoch over the end epoch combo box p1), a slider's
 /// label (`UIESliderChange(p1, 1, 0)`), the unit limit's (`EESEENewUnitLimit(p1, 1, 0)`), the display epochs box's
@@ -354,7 +381,7 @@ const IDS_UNIT_IMPROVEMENTS: u32 = EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT + 6;
 const IDS_CPU: u32 = EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT + 7;
 
 /// The yellow texts' background opacity.
-const YELLOW_BG: f32 = 0.4;
+pub(crate) const YELLOW_BG: f32 = 0.4;
 
 /// `kControlTriggerRangeChanged`, `kControlTriggerChecked`, `kControlTriggerUnchecked`,
 /// `kControlTriggerSelectionChanged`.
@@ -441,100 +468,100 @@ pub struct Players {
     pub dirty: Cell<bool>,
 }
 
-fn call<H: SeplHost + ?Sized>(h: &mut H, op: u32, p: [usize; 3], ints: [i32; 4]) -> i32 {
+pub(crate) fn call<H: SeplHost + ?Sized>(h: &mut H, op: u32, p: [usize; 3], ints: [i32; 4]) -> i32 {
     let (mut i, mut f) = (ints, [0.0f32; 4]);
     h.op(op, p, &mut i, &mut f)
 }
 
-fn display<H: SeplHost + ?Sized>(h: &mut H, control: usize, shown: bool) {
+pub(crate) fn display<H: SeplHost + ?Sized>(h: &mut H, control: usize, shown: bool) {
     let mode = if shown { EE_SCREENS_SEPL_SHOWN } else { EE_SCREENS_SEPL_HIDDEN };
     call(h, EE_SCREENS_SEPL_OP_SET_DISPLAY, [control, 0, 0], [mode, 0, 0, 0]);
 }
 
-fn is_shown<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> bool {
+pub(crate) fn is_shown<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> bool {
     call(h, EE_SCREENS_SEPL_OP_DISPLAY, [control, 0, 0], [0; 4]) == EE_SCREENS_SEPL_SHOWN
 }
 
-fn checked<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> bool {
+pub(crate) fn checked<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> bool {
     call(h, EE_SCREENS_SEPL_OP_CHECKED, [control, 0, 0], [0; 4]) != 0
 }
 
-fn set_checked<H: SeplHost + ?Sized>(h: &mut H, control: usize, on: bool) {
+pub(crate) fn set_checked<H: SeplHost + ?Sized>(h: &mut H, control: usize, on: bool) {
     call(h, EE_SCREENS_SEPL_OP_SET_CHECKED, [control, 0, 0], [on as i32, 0, 0, 0]);
 }
 
 /// A combo box's selection (`GetCurrentSelection`), u32::MAX for none.
-fn selection<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> u32 {
+pub(crate) fn selection<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> u32 {
     call(h, EE_SCREENS_SEPL_OP_COMBO_SELECTION, [control, 0, 0], [0; 4]) as u32
 }
 
 /// Its list box's (`GetListBox()->GetCurrentSelection`).
-fn list_selection<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> u32 {
+pub(crate) fn list_selection<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> u32 {
     call(h, EE_SCREENS_SEPL_OP_LIST_SELECTION, [control, 0, 0], [0; 4]) as u32
 }
 
-fn set_selection<H: SeplHost + ?Sized>(h: &mut H, control: usize, line: u32) {
+pub(crate) fn set_selection<H: SeplHost + ?Sized>(h: &mut H, control: usize, line: u32) {
     call(h, EE_SCREENS_SEPL_OP_SET_SELECTION, [control, 0, 0], [line as i32, 0, 0, 0]);
 }
 
-fn slider<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> i32 {
+pub(crate) fn slider<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> i32 {
     call(h, EE_SCREENS_SEPL_OP_SLIDER, [control, 0, 0], [0; 4])
 }
 
-fn set_slider<H: SeplHost + ?Sized>(h: &mut H, control: usize, value: i32) {
+pub(crate) fn set_slider<H: SeplHost + ?Sized>(h: &mut H, control: usize, value: i32) {
     call(h, EE_SCREENS_SEPL_OP_SET_SLIDER, [control, 0, 0], [value, 0, 0, 0]);
 }
 
-fn label_number<H: SeplHost + ?Sized>(h: &mut H, control: usize, value: i32, unsigned: bool) {
+pub(crate) fn label_number<H: SeplHost + ?Sized>(h: &mut H, control: usize, value: i32, unsigned: bool) {
     call(h, EE_SCREENS_SEPL_OP_LABEL_NUMBER, [control, 0, 0], [value, unsigned as i32, 0, 0]);
 }
 
-fn group<H: SeplHost + ?Sized>(h: &mut H, control: usize, group: i32, enable: bool) {
+pub(crate) fn group<H: SeplHost + ?Sized>(h: &mut H, control: usize, group: i32, enable: bool) {
     call(h, EE_SCREENS_SEPL_OP_GROUP, [control, 0, 0], [group, enable as i32, 0, 0]);
 }
 
-fn rect<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> [f32; 4] {
+pub(crate) fn rect<H: SeplHost + ?Sized>(h: &mut H, control: usize) -> [f32; 4] {
     let (mut i, mut f) = ([0i32; 4], [0.0f32; 4]);
     h.op(EE_SCREENS_SEPL_OP_RECT, [control, 0, 0], &mut i, &mut f);
     f
 }
 
-fn event<H: SeplHost + ?Sized>(h: &mut H, control: usize, trigger: i32, kind: i32, over: usize) {
+pub(crate) fn event<H: SeplHost + ?Sized>(h: &mut H, control: usize, trigger: i32, kind: i32, over: usize) {
     call(h, EE_SCREENS_SEPL_OP_EVENT, [control, over, 0], [trigger, kind, 0, 0]);
 }
 
-fn player_get<H: SeplHost + ?Sized>(h: &mut H, player: u32, value: i32, arg: i32) -> i32 {
+pub(crate) fn player_get<H: SeplHost + ?Sized>(h: &mut H, player: u32, value: i32, arg: i32) -> i32 {
     call(h, EE_SCREENS_SEPL_OP_PLAYER_GET, [0; 3], [player as i32, value, arg, 0])
 }
 
-fn player_set<H: SeplHost + ?Sized>(h: &mut H, player: u32, value: i32, arg: i32, to: i32) {
+pub(crate) fn player_set<H: SeplHost + ?Sized>(h: &mut H, player: u32, value: i32, arg: i32, to: i32) {
     call(h, EE_SCREENS_SEPL_OP_PLAYER_SET, [0; 3], [player as i32, value, arg, to]);
 }
 
-fn num_players<H: SeplHost + ?Sized>(h: &mut H) -> u32 {
+pub(crate) fn num_players<H: SeplHost + ?Sized>(h: &mut H) -> u32 {
     call(h, EE_SCREENS_SEPL_OP_NUM_PLAYERS, [0; 3], [0; 4]) as u32
 }
 
-fn player_exists<H: SeplHost + ?Sized>(h: &mut H, player: u32) -> bool {
+pub(crate) fn player_exists<H: SeplHost + ?Sized>(h: &mut H, player: u32) -> bool {
     call(h, EE_SCREENS_SEPL_OP_PLAYER_EXISTS, [0; 3], [player as i32, 0, 0, 0]) != 0
 }
 
-fn delete<H: SeplHost + ?Sized>(h: &mut H, control: usize) {
+pub(crate) fn delete<H: SeplHost + ?Sized>(h: &mut H, control: usize) {
     if control != 0 {
         call(h, EE_SCREENS_SEPL_OP_DELETE, [control, 0, 0], [0; 4]);
     }
 }
 
 /// The controls' maker: the host, the form, the next control index.
-struct Maker<'a, H: SeplHost + ?Sized> {
-    h: &'a mut H,
-    form: usize,
-    index: u32,
+pub(crate) struct Maker<'a, H: SeplHost + ?Sized> {
+    pub(crate) h: &'a mut H,
+    pub(crate) form: usize,
+    pub(crate) index: u32,
 }
 
 impl<H: SeplHost + ?Sized> Maker<'_, H> {
     /// One control made at the next index; the host answers its handle in p0.
-    fn make(&mut self, mut c: EeScreensSeplCtl) -> usize {
+    pub(crate) fn make(&mut self, mut c: EeScreensSeplCtl) -> usize {
         c.index = self.index;
         self.index += 1;
         let (mut i, mut f) = ([0i32; 4], [0.0f32; 4]);
@@ -886,7 +913,7 @@ fn world_set<H: SeplHost + ?Sized>(h: &mut H, what: i32, to: i32) {
 }
 
 /// u32::MAX: a combo box with no selection (`UIsNone32`).
-const NONE: u32 = u32::MAX;
+pub(crate) const NONE: u32 = u32::MAX;
 
 impl Row {
     /// `Hide`: every control hidden.

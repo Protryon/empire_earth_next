@@ -128,6 +128,14 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EESEAChangeLoadText.h"
 #include "ee/EESELoadThread.h"
+#include "lle/UIRadioButton.h"
+#include "lle/UITriStateCheckBox.h"
+#include "ee/EESETSUICBPlayer.h"
+#include "ee/EESETSEScenarioComboBox.h"
+#include "ee/EESETSOUnitList.h"
+#include "ee/EESETSAEditBox.h"
+#include "ee/EESETSAComboBox.h"
+#include "ee/EEUnitSetManager.h"
 
 GEBitmap* EESEUIBDiplomacy::sNormalBitmaps[2];
 GEBitmap* EESEUIBDiplomacy::sFocusedBitmaps[2];
@@ -184,14 +192,15 @@ void EESECBMaxPlayer::ChangeSelection()
 // (0x5760ad), SelectPage (0x5761c8), RebuildTechLists (0x5766ed); the game options page EESEGamePage (0x576be4 ..
 // 0x578342) and the player rows EESEPlayerRow (0x578a29 .. 0x57a53e) are the object's records.
 
-static GEFont* sPlayerScreenFont;   // the screen's font while the object makes its controls
+// the screen's font while a screen's object makes its controls (the player tab, the trigger screens' objects)
+GEFont* gSeplScreenFont;
 
 // FUNCTION: EXE 0x573313
 // Creates the player tab: player page, tech tree page and game options page controls (editor_players.rs)
 EESEPlayerScreen::EESEPlayerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont,
                                    UIComboBox* inPlayerSelection)
 {
-    sPlayerScreenFont = inFont;
+    gSeplScreenFont = inFont;
     uint32_t theIndex = (uint32_t)ioIndex;
     this->mRust = ee_screens_sepl_new(inForm, inPlayerSelection, &theIndex);
     ioIndex = theIndex;
@@ -414,6 +423,8 @@ UWideString SeplText(uint32_t inKind, uint32_t inString, long inNumber)
         sprintf(theText, "%s %ld", (const char*)theString, inNumber);
     else if (inKind == EE_SCREENS_SEPL_TEXT_NUMBER_STRING)
         sprintf(theText, "%ld %s", inNumber, (const char*)theString);
+    else if (inKind == EE_SCREENS_SEPL_TEXT_CHAR)
+        theText = UWideString(std::string(1, (char)inNumber).c_str());
     else if (inKind == EE_SCREENS_SEPL_TEXT_NONE)
         theText = "";
     return theText;
@@ -426,7 +437,7 @@ GEFont* SeplFont(uint32_t inFont)
     case EE_SCREENS_SEPL_FONT_534: return gU531934;
     case EE_SCREENS_SEPL_FONT_538: return gU531938;
     case EE_SCREENS_SEPL_FONT_ARIAL18: return gFontArial18;
-    default: return sPlayerScreenFont;
+    default: return gSeplScreenFont;
     }
 }
 
@@ -443,7 +454,7 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
     GE2DPoint theLocation(c.x, c.y);
     float theHeight = c.h;
     if (c.flags & EE_SCREENS_SEPL_FONT_HEIGHT)   // gU531930's one label takes the screen font's height
-        theHeight = (float)(c.font == EE_SCREENS_SEPL_FONT_530 ? sPlayerScreenFont : theFont)->GetHeight() + c.h;
+        theHeight = (float)(c.font == EE_SCREENS_SEPL_FONT_530 ? gSeplScreenFont : theFont)->GetHeight() + c.h;
     GERectangle theRect = (c.flags & EE_SCREENS_SEPL_LTRB) ? GERectangle(c.x, c.y, c.w, c.h)
                                                             : GERectangle(theLocation, c.w, theHeight);
     UWideString theText = SeplText(c.text, c.string, c.number);
@@ -551,6 +562,87 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
     case EE_SCREENS_SEPL_DIPLOMACY:
         theControl = new EESEUIBDiplomacy(c.id, theLocation, inForm, c.index, 0);
         break;
+    case EE_SCREENS_SEPL_RADIO: {
+        UIRadioButton* t = new UIRadioButton(c.id, theText, theFont, theRect, inForm, c.index, 0, false, c.extra[0] != 0,
+                                             false);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (theFg) SeplYellow(t->GetTextLabel()->GetGEText());
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_TRISTATE: {
+        UITriStateCheckBox* t = new UITriStateCheckBox(c.id, theText, theFont, theRect, inForm, c.index, 0);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (theFg) SeplYellow(t->GetTextLabel()->GetGEText());
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_OBJ_EDIT: {
+        EESETSAEditBox* t = new EESETSAEditBox(c.id, theFont, c.extra[0], c.extra[1] != 0, theLocation, c.w,
+                                               (unsigned long)theHeight, inForm, c.index, 2, false, false);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (theFg) SeplYellow(t->GetGEText());
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_LIST_COMBO: {
+        std::vector<UWideString> theLines;
+        if (c.extra[1] == EE_SCREENS_SEPL_COMBO_LINES_FAMILIES) {
+            // the unit groups, then the unit sets listed in the editor ("Set: %s")
+            UWideString theFormat;
+            theLines.resize(EE_SCREENS_SEOB_FAMILIES);
+            for (unsigned long k = 0; k < EE_SCREENS_SEOB_FAMILIES; k++)
+                gResource->GetString(k + IDS_UNIT_FAMILY_FIRST, theLines[k]);
+            gResource->GetString(IDS_SET, theFormat);
+            for (long j = 0; j < gUnitSetManager.GetSize(); j++) {
+                if (gUnitSetManager.GetSet(j) == NULL || gUnitSetManager.GetSet(j)->mShowInEditor != true)
+                    continue;
+                theLines.push_back(UWideString());
+                sprintf(theLines.back(), theFormat, (const char*)gUnitSetManager.GetSet(j)->GetName());
+            }
+        } else if (c.extra[1] == EE_SCREENS_SEPL_COMBO_LINES_STRINGS) {
+            theLines.resize((size_t)c.number);
+            for (long k = 0; k < c.number; k++)
+                gResource->GetString(c.string + k, theLines[k]);
+        }
+        unsigned long theBorder = (unsigned long)c.extra[2];
+        UIComboBox* t = NULL;
+        switch (c.extra[0]) {
+        case EE_SCREENS_SEPL_COMBO_OBJECT:
+            t = new EESETSAComboBox(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w, 400, inForm, c.index, 0,
+                                    theBorder);
+            break;
+        case EE_SCREENS_SEPL_COMBO_PLAYER:
+            t = new EESETSUICBPlayer(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w, 400, inForm, c.index,
+                                     0, theBorder);
+            break;
+        case EE_SCREENS_SEPL_COMBO_SCENARIO:   // its screen and mode in number and string
+            t = new EESETSEScenarioComboBox(c.number, c.string, c.id, 1, theLines, theFont, theLocation, c.w, 400,
+                                            inForm, c.index, 0, theBorder);
+            break;
+        default:
+            t = new UIComboBox(c.id, 1, theLines, theFont, theRect, 400, inForm, c.index, 0, theBorder);
+            break;
+        }
+        if (c.bg2 >= 0.0f) t->SetTextBoxBgOpacity(c.bg2);
+        if (c.extra[3] != 0) t->SetListBoxAlwaysDirty(true);
+        if (theFg) SeplYellow(t->GetGEText());
+        t->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_UNIT_LIST: {
+        std::vector<UWideString> theNone;
+        EESETSOUnitList* t = new EESETSOUnitList(c.id, theNone, theFont, false, theLocation, c.w, (unsigned long)c.h,
+                                                 inForm, c.index, 3);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (c.bg2 >= 0.0f) t->SetScrollBarBgOpacity(c.bg2);
+        if (theFg) SeplYellow(t->GetGEText());
+        t->GetSelectedBackground()->SetColor(GEColor(0.0f, 0.0f, 1.0f));
+        theControl = t;
+        break;
+    }
     }
     for (unsigned long g = 0; g < 32; g++)
         if (theControl != NULL && (c.groups >> g) & 1)
@@ -928,6 +1020,20 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
         if (gMiniMap) gMiniMap->Redraw();
         return 0;
     case EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR: gMiniMap->Recolor(); return 0;
+    case EE_SCREENS_SEPL_OP_TRI_STATE: return (int32_t) static_cast<UITriStateCheckBox*>(c)->GetCheckState();
+    case EE_SCREENS_SEPL_OP_SET_TRI_STATE: static_cast<UITriStateCheckBox*>(c)->SetCheckState((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SEPL_OP_RADIO_IS_CHECKED: return static_cast<UIRadioButton*>(c)->GetIsChecked();
+    case EE_SCREENS_SEPL_OP_LIST_CLEAR: static_cast<UILBString*>(c)->DeleteAllEntries(); return 0;
+    case EE_SCREENS_SEPL_OP_LINE_COUNT: return (int32_t)theCombo->GetListBox()->GetLineCount();
+    case EE_SCREENS_SEPL_OP_EDIT_ATOI: return atoi(static_cast<UIEditBox*>(c)->GetText(0));
+    case EE_SCREENS_SEPL_OP_SCREEN_EVENT: {
+        UIEvent* theEvent = EECreateScreenEvent((uint32_t)i[0]);
+        if (i[1] & EE_SCREENS_SEPL_ON_CHECKED) c->SetTriggerEvent(kControlTriggerChecked, theEvent);
+        if (i[1] & EE_SCREENS_SEPL_ON_UNCHECKED) c->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
+        if (i[1] & EE_SCREENS_SEPL_ON_SELECTION) c->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+        theEvent->Dereference();
+        return 0;
+    }
     }
     return 0;
 }

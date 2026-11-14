@@ -61,6 +61,8 @@
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
 //!   paints' queued areas and runs, the trigger area's rectangle.
+//! - [`editor_object`]: the scenario editor's trigger tab object screen whole in Rust (`EESETSObject`): its controls,
+//!   modes, filters, store, load and generated names.
 //! - [`editor_players`]: the scenario editor's player tab whole in Rust (`EESEPlayerScreen`, its player rows and
 //!   game options page): the controls it makes as tables, its pages, rows, diplomacy grid, load and store.
 //! - [`editor_whole`]: the scenario editor's actions whole in Rust behind one C++ action (`EESEARust`): save, test,
@@ -125,6 +127,9 @@ pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
 pub mod editor_events;
+pub mod editor_object;
+#[cfg(not(test))]
+mod editor_object_ffi;
 pub mod editor_place;
 pub mod editor_players;
 #[cfg(not(test))]

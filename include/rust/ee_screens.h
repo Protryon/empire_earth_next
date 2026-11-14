@@ -1192,6 +1192,277 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_MAX_PLAYERS = 28;
 /// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
 constexpr static const uint32_t EE_SCREENS_SEE_OP_LABEL_NUMBER = 29;
 
+/// The selection tool: p0 -> three handles (the click, the lasso, the `EESEUICTriggerSelectUnits` made at the
+/// index i0 on the form p2, added to group 0).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_SELECT_UNITS = 100;
+
+/// The click p0 and the lasso p1 released (`Dereference`).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_RELEASE = 101;
+
+/// -> the unit set manager's size / whether its set i0 is listed in the editor.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_UNIT_SET_COUNT = 102;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_UNIT_SET_SHOWN = 103;
+
+/// The class list: the scenario-selectable unit classes (no projectile or missile) after class 0, sorted by name
+/// (the original's `std::sort` and comparator), into the buffer p0 of i0 entries -> their count.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_UNIT_TYPES = 104;
+
+/// The combo box p0 emptied, then "Any Class" and the names of the classes p1[1..i0].
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_CLASS_NAMES = 105;
+
+/// The unit action i0's name appended to the combo box p0 (none for an unknown action).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_ACTION_APPEND = 106;
+
+/// The scenario objects' list: i0 the operation (`EE_SCREENS_SEOB_SM_*`) on the entry i1.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_SM = 107;
+
+/// The editor's unit selection cleared (the form of the control p0).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_CLEAR_SELECTION = 108;
+
+/// -> the player tab's player count (the form of the control p0).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_PLAYER_COUNT = 109;
+
+/// The trigger screen's description hidden and its alphabetical sort shown.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_TRIGGER_TEXT = 110;
+
+/// The player combo p0: i0 the member (`EE_SCREENS_SEOB_PC_*`), i1 its value -> the selected player.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_PLAYER_COMBO = 111;
+
+/// The scenario's names i0 (`EE_SCREENS_SEOB_NAMES_*`) appended to the combo boxes p0 and p1 (p1 may be none) /
+/// set into the vector p0 (`GetNames`).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_APPEND_NAMES = 112;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_GET_NAMES = 113;
+
+/// The scenario object i0 (1 from the first): its field i1 (`EE_SCREENS_SEOB_F_*`) -> / set to i2.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_OBJ_GET = 114;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_OBJ_SET = 115;
+
+/// The scenario object i0 named from the trigger screen's name / given the units p0[..i1] / -> whether it exists.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_OBJ_NAME_FROM_SCREEN = 116;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_OBJ_SET_UNITS = 117;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_OBJ_EXISTS = 118;
+
+/// The trigger screen's name box set to the scenario object i0's name.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_NAME_TO_EDIT = 119;
+
+/// The scenario object i0's existing units selected in the editor (the form of the control p0).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_SELECT_OBJECT_UNITS = 120;
+
+/// -> the unit action named by the action combo p0's selected line.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_ACTION_ID = 121;
+
+/// -> the first line of the action combo p0 naming the action i0 (its line count when none does).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_ACTION_INDEX = 122;
+
+/// The unit list p0 refilled with the names of the editor's selected units (the form p1) -> their count.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_UNIT_LIST_FILL = 123;
+
+/// -> the editor's (the form p0) selected unit i0's id / the number of selected units.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_SELECTED_UNIT_ID = 124;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_SELECTED_COUNT = 125;
+
+/// A text (`EE_SCREENS_SEOB_TEXT_*` i0 with i1, the control p1) into the buffer p0 of i2 bytes -> its length
+/// (the whole length even when longer than the buffer; -1 for none).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_TEXT = 126;
+
+/// The scenario object i0 named the bytes p0[..i1] (`SetName`), the trigger screen's name box set to it.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_OBJ_SET_NAME = 127;
+
+/// -> whether the game view holds the point (f0, f1) and a mouse button was just pressed.
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_VIEW_PRESS = 128;
+
+/// The selection tool p0's selection started at (f0, f1).
+constexpr static const uint32_t EE_SCREENS_SEOB_OP_START_SELECTION = 129;
+
+/// The scenario list operations: sort, move down, move up, delete, duplicate, new.
+constexpr static const int32_t EE_SCREENS_SEOB_SM_SORT = 0;
+
+constexpr static const int32_t EE_SCREENS_SEOB_SM_DOWN = 1;
+
+constexpr static const int32_t EE_SCREENS_SEOB_SM_UP = 2;
+
+constexpr static const int32_t EE_SCREENS_SEOB_SM_DELETE = 3;
+
+constexpr static const int32_t EE_SCREENS_SEOB_SM_DUPLICATE = 4;
+
+constexpr static const int32_t EE_SCREENS_SEOB_SM_NEW = 5;
+
+/// The player combo's members: `SetPlayerCount`, `SetFlags`, `GetSelectedPlayer`, `SetSelectedPlayer`.
+constexpr static const int32_t EE_SCREENS_SEOB_PC_COUNT = 0;
+
+constexpr static const int32_t EE_SCREENS_SEOB_PC_FLAGS = 1;
+
+constexpr static const int32_t EE_SCREENS_SEOB_PC_GET = 2;
+
+constexpr static const int32_t EE_SCREENS_SEOB_PC_SET = 3;
+
+/// The scenario's names: the areas, every object, the user's objects.
+constexpr static const int32_t EE_SCREENS_SEOB_NAMES_AREAS = 0;
+
+constexpr static const int32_t EE_SCREENS_SEOB_NAMES_OBJECTS = 1;
+
+constexpr static const int32_t EE_SCREENS_SEOB_NAMES_USER_OBJECTS = 2;
+
+/// The texts: the scenario object i1's name (by its own index, not from the selection), the editor's selected
+/// unit i1's class name, the resource string i1, the line i1 of the combo box p1.
+constexpr static const int32_t EE_SCREENS_SEOB_TEXT_OBJECT_NAME = 0;
+
+constexpr static const int32_t EE_SCREENS_SEOB_TEXT_UNIT_CLASS = 1;
+
+constexpr static const int32_t EE_SCREENS_SEOB_TEXT_STRING = 2;
+
+constexpr static const int32_t EE_SCREENS_SEOB_TEXT_LINE = 3;
+
+/// The scenario object's fields (`EESMObject`): owner, family, class, min and max counts, area, near mode, near
+/// object, parent (`SetParent`), attribute, its min and max, visible by, state, selected by; the six checks (in
+/// area, near, has attribute, visible by, has state, selected by); select on map, dynamic, attribute percent.
+constexpr static const int32_t EE_SCREENS_SEOB_F_OWNER = 0;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_FAMILY = 1;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_CLASS = 2;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_MIN = 3;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_MAX = 4;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_AREA = 5;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_NEAR_MODE = 6;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_NEAR_OBJECT = 7;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_PARENT = 8;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_ATTRIBUTE = 9;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_ATTRIBUTE_MIN = 10;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_ATTRIBUTE_MAX = 11;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_VISIBLE_BY = 12;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_STATE = 13;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_SELECTED_BY = 14;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_IN_AREA_CHECK = 15;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_NEAR_CHECK = 16;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_HAS_ATTRIBUTE_CHECK = 17;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_VISIBLE_BY_CHECK = 18;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_HAS_STATE_CHECK = 19;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_SELECTED_BY_CHECK = 20;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_SELECT_ON_MAP = 21;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_DYNAMIC = 22;
+
+constexpr static const int32_t EE_SCREENS_SEOB_F_PERCENT = 23;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_IDS_ANY_CLASS = 13000;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_IDS_NONE = 13001;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_IDS_SE_UNIT_GROUP_UNITS = 20531;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_IDS_FAMILY = 20538;
+
+/// Select On Map, Object Specification, Owner, Class, -, Min, Max, Dynamic, In Area, Visible By, Has State,
+/// Selected By, Has Attribute: 30308..30320.
+constexpr static const uint32_t EE_SCREENS_SEOB_IDS_SELECT_ON_MAP = 30308;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_IDS_UNIT_SELECTED_LIST = 30322;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_IDS_TRIGGER_EDITOR_USE_OBJECT = 30375;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_IDS_TRIGGER_PROXIMITY_FIRST = 29001;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_IDS_TRIGGER_ATTRIBUTE_FIRST = 29100;
+
+/// The unit groups listed before the unit sets in the family combo box.
+constexpr static const uint32_t EE_SCREENS_SEOB_FAMILIES = 117;
+
+/// The control ids (`kSETSObject*`; the ones the check boxes are told apart by).
+constexpr static const uint32_t EE_SCREENS_SEOB_AREA_CHECK = 2118;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_NEAR_CHECK = 2120;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_ATTRIBUTE_CHECK = 2122;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_VISIBLE_BY_CHECK = 2126;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_HAS_STATE_CHECK = 2128;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_SELECTED_BY_CHECK = 2130;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_SELECT_UNITS = 2133;
+
+/// The trigger screens' combo box classes (`EE_SCREENS_SEPL_LIST_COMBO`'s extra[0]).
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_PLAIN = 0;
+
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_OBJECT = 1;
+
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_PLAYER = 2;
+
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_SCENARIO = 3;
+
+/// Its lines (extra[1]): none, the unit families and the listed unit sets, the resource strings from `string`
+/// (`number` of them).
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_LINES_NONE = 0;
+
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_LINES_FAMILIES = 1;
+
+constexpr static const int32_t EE_SCREENS_SEPL_COMBO_LINES_STRINGS = 2;
+
+/// The trigger screens' screen event triggers (`EE_SCREENS_SEPL_OP_SCREEN_EVENT`'s i1 bits).
+constexpr static const int32_t EE_SCREENS_SEPL_ON_CHECKED = 1;
+
+constexpr static const int32_t EE_SCREENS_SEPL_ON_UNCHECKED = 2;
+
+constexpr static const int32_t EE_SCREENS_SEPL_ON_SELECTION = 4;
+
+/// `Refresh`, `Show`, `Hide`, `CheckChanged(a: id, b: state)`, `ClearUnitList`, `Deactivate`, a list operation
+/// (`a`: `EE_SCREENS_SEOB_SM_*`, `b`: the selection), `Activate`, `Store(a)`, `Load(a)`, `UpdateSelection(a)`,
+/// `GetIsSelectOnMap` (answered), the mode set (`a`), the picked units' ids cleared.
+constexpr static const uint32_t EE_SCREENS_SEOB_REFRESH = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_SHOW = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_HIDE = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_CHECK_CHANGED = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_CLEAR_UNIT_LIST = 5;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_DEACTIVATE = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_LIST_OP = 7;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_ACTIVATE = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_STORE = 9;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_LOAD = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_UPDATE_SELECTION = 11;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_IS_SELECT_ON_MAP = 12;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_SET_SELECT_ON_MAP = 13;
+
+constexpr static const uint32_t EE_SCREENS_SEOB_CLEAR_UNIT_IDS = 14;
+
 /// The ghosts' lock taken (i0 != 0) or let go.
 constexpr static const uint32_t EE_SCREENS_SEP_GHOST_LOCK = 1;
 
@@ -1331,6 +1602,22 @@ constexpr static const uint32_t EE_SCREENS_SEPL_COLOR = 12;
 /// `EESEUIBDiplomacy`.
 constexpr static const uint32_t EE_SCREENS_SEPL_DIPLOMACY = 13;
 
+/// `UIRadioButton` (extra: checked).
+constexpr static const uint32_t EE_SCREENS_SEPL_RADIO = 14;
+
+/// `UITriStateCheckBox`.
+constexpr static const uint32_t EE_SCREENS_SEPL_TRISTATE = 15;
+
+/// `EESETSAEditBox` (the object screen's counts; extra: max characters, numeric).
+constexpr static const uint32_t EE_SCREENS_SEPL_OBJ_EDIT = 16;
+
+/// A combo box of the trigger screens (extra: the class, the lines, the border, always dirty): its text box's
+/// opacity, always dirty, the text colour, the selected line's colour, its opacity, in that order.
+constexpr static const uint32_t EE_SCREENS_SEPL_LIST_COMBO = 17;
+
+/// `EESETSOUnitList` (the object screen's picked units).
+constexpr static const uint32_t EE_SCREENS_SEPL_UNIT_LIST = 18;
+
 /// A combo box's first lines: none, the epochs' titles.
 constexpr static const int32_t EE_SCREENS_SEPL_LINES_NONE = 0;
 
@@ -1347,6 +1634,9 @@ constexpr static const uint32_t EE_SCREENS_SEPL_TEXT_NUMBER = 2;
 constexpr static const uint32_t EE_SCREENS_SEPL_TEXT_STRING_NUMBER = 3;
 
 constexpr static const uint32_t EE_SCREENS_SEPL_TEXT_NUMBER_STRING = 4;
+
+/// The one character `number`.
+constexpr static const uint32_t EE_SCREENS_SEPL_TEXT_CHAR = 5;
 
 /// The fonts: the screen's, `gU531930`, `gU531934`, `gU531938`, `gFontArial18`.
 constexpr static const uint32_t EE_SCREENS_SEPL_FONT_SCREEN = 0;
@@ -1528,6 +1818,27 @@ constexpr static const uint32_t EE_SCREENS_SEPL_OP_LOAD_THREAD = 54;
 constexpr static const uint32_t EE_SCREENS_SEPL_OP_MINIMAP_REDRAW = 55;
 
 constexpr static const uint32_t EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR = 56;
+
+/// The tri-state check box p0's state -> / set to i0.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_TRI_STATE = 57;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SET_TRI_STATE = 58;
+
+/// -> whether the radio button p0 is checked.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_RADIO_IS_CHECKED = 59;
+
+/// The list box p0 emptied.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_LIST_CLEAR = 60;
+
+/// -> the combo box p0's line count.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_LINE_COUNT = 61;
+
+/// -> the edit box p0's first line as `atoi` reads it.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_EDIT_ATOI = 62;
+
+/// The control p0 given one screen event (`EECreateScreenEvent(i0)`) on the triggers of the bits i1 (checked,
+/// unchecked, selection changed).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SCREEN_EVENT = 63;
 
 /// The trigger events: the start epoch's (`EESEERust` start epoch over the end epoch combo box p1), a slider's
 /// label (`UIESliderChange(p1, 1, 0)`), the unit limit's (`EESEENewUnitLimit(p1, 1, 0)`), the display epochs box's
@@ -5470,6 +5781,9 @@ constexpr static const uint32_t EE_SCREENS_UH_OP_LEFT_BUTTON = 18;
 /// `EEPointUnitOrTile(f, ..., true)`: whether a point was found; its x and y into f.
 constexpr static const uint32_t EE_SCREENS_UH_OP_POINT = 19;
 
+/// The object screen (opaque to C++).
+struct EeScreensSeObject;
+
 /// The player tab (opaque to C++).
 struct EeScreensSePlayers;
 
@@ -5923,6 +6237,9 @@ struct EeScreensSeplCtl {
   int32_t extra[4];
 };
 
+/// The unit actions the state combo box lists (those with a name), in id order.
+constexpr static const int32_t EE_SCREENS_SEOB_ACTIONS[24] = { 1000, 1002, 1003, 1006, 1008, 1009, 1012, 1013, 1017, 2001, 2004, 2011, 2017, 2021, 4002, 4004, 4012, 4026, 5000, 6001, 6002, 10003, 15000, 15001, };
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
@@ -6062,6 +6379,41 @@ void ee_screens_seu_lasso_select(const void *rectangle,
 
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
+
+/// `EESETSObject`'s constructor: every control made on `form` from the control index `*index` (advanced).
+/// Freed by `ee_screens_seob_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeObject *ee_screens_seob_new(void *form,
+                                       uint32_t *index);
+
+/// The destructor: every control deleted (the original's order), the object freed.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_seob_new` (or is NULL) and is not used again.
+void ee_screens_seob_free(EeScreensSeObject *screen);
+
+/// One of the screen's members (`EE_SCREENS_SEOB_REFRESH` ...) with its arguments; `GetIsSelectOnMap`'s answer.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_seob_new` (or is NULL).
+uint32_t ee_screens_seob_call(const EeScreensSeObject *screen,
+                              uint32_t what,
+                              uint32_t a,
+                              uint32_t b);
+
+/// `MouseMove` at (x, y).
+///
+/// # Safety
+/// `screen` comes from `ee_screens_seob_new` (or is NULL).
+void ee_screens_seob_mouse_move(const EeScreensSeObject *screen, float x, float y);
+
+/// `GetNames`: the user's objects' names into the C++ `std::vector<UWideString>` `out`.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_seob_new` (or is NULL); `out` is a vector.
+void ee_screens_seob_get_names(const EeScreensSeObject *screen, void *out);
 
 /// `EESEPlayerScreen`'s constructor: every control made on `form` from the control index `*index` (advanced);
 /// `player_selection` is the editor's player combo box. Freed by `ee_screens_sepl_free`.
