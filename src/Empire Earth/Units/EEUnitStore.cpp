@@ -90,24 +90,6 @@ static int64_t CommandOf(EEComplexUnit* inUnit)
 void EEUnitStoreWrote(unsigned int inField, const void* inMember)
 {
     switch (inField) {
-    case kUnitFieldTileX: {
-        RTSUnit* theUnit = OwnerOf<RTSUnit>(inMember, offsetof(RTSUnit, mTileX));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_TILE_X, (int64_t)theUnit->mTileX.Get());
-        break;
-    }
-    case kUnitFieldTileY: {
-        RTSUnit* theUnit = OwnerOf<RTSUnit>(inMember, offsetof(RTSUnit, mTileY));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_TILE_Y, (int64_t)theUnit->mTileY.Get());
-        break;
-    }
-    case kUnitFieldValid: {
-        RTSUnit* theUnit = OwnerOf<RTSUnit>(inMember, offsetof(RTSUnit, mIsValid));
-        if (theUnit->mInUnitStore)
-            Set(theUnit, EE_UNIT_FIELD_VALID, theUnit->mIsValid.Get() ? 1 : 0);
-        break;
-    }
     case kUnitFieldHitPoints: {
         EEUnit* theUnit = OwnerOf<EEUnit>(inMember, offsetof(EEUnit, mHitPoints));
         if (theUnit->mInUnitStore)
@@ -372,9 +354,6 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
     outRecord.object = reinterpret_cast<uintptr_t>(inUnit);
     outRecord.player = reinterpret_cast<uintptr_t>(inPlayer);
     outRecord.object_kind = inUnit->mObjectKind.mValue;
-    outRecord.valid = inUnit->mIsValid.Get() ? 1 : 0;
-    outRecord.tile_x = (int64_t)inUnit->mTileX.Get();
-    outRecord.tile_y = (int64_t)inUnit->mTileY.Get();
     outRecord.on_map = OnMap(inUnit) ? 1 : 0;
     outRecord.goal_kind = -1;
     outRecord.category = -1;
@@ -434,6 +413,8 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.herd = theUnit->mHerd.Get() != NULL ? 1 : 0;
         outRecord.container = theUnit->mContainer.Get() != NULL ? 1 : 0;
     }
+    // the object's Rust records, and the plain values the store reads from them
+    ee_units_store_set_fields(&outRecord, inUnit, NULL, NULL);
 }
 
 void EEUnitStoreInsertUnlisted(RTSUnit* inUnit)

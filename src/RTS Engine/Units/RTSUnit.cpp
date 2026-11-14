@@ -84,7 +84,7 @@ static void RTSUnitListFailed(const char* inWhere, const char* inWhat, const RTS
             inUnit && inUnit->mTileNode ? (void*)inUnit->mTileNode->mNext : NULL);
     if (inOther != NULL && RTSDummyHead(const_cast<RTSUnit*>(inOther)) == NULL)
         fprintf(stderr, "; other %p id %08lx x %ld valid %d prev %p next %p", (const void*)inOther, inOther->mUnitID,
-                inOther->mTileX.Get(), (int)inOther->mIsValid, inOther->mTileNode ? (void*)inOther->mTileNode->mPrev : NULL,
+                inOther->mTileX, (int)inOther->mIsValid, inOther->mTileNode ? (void*)inOther->mTileNode->mPrev : NULL,
                 inOther->mTileNode ? (void*)inOther->mTileNode->mNext : NULL);
     else if (inOther != NULL)
         fprintf(stderr, "; other: the chain's head %p", (const void*)inOther);
@@ -163,6 +163,7 @@ RTSUnit::~RTSUnit()
 {
     this->mObjectKind.mValue = 0;   // New (port): an RTSUnit again (ee/EEUnitKind.h)
     ESVERIFY_AT(this->mIsValid == false, 62);
+    EEUnitStoreRemove(this);   // New (R5b.4, round 26): the store reads this object's records; none outlives it
     delete this->mTileNode;
 }
 
@@ -195,7 +196,7 @@ void RTSUnit::FreeNode()
 void RTSUnit::Describe(UWideString& ioString)
 {
     UWideString theString;
-    sprintf(theString, "uid %ld, at %ld,%ld:", this->mUnitID & 0xffffff, this->mTileX.Get(), this->mTileY.Get());
+    sprintf(theString, "uid %ld, at %ld,%ld:", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
     ioString += theString;
 }
 
@@ -204,7 +205,7 @@ void RTSUnit::Describe(UWideString& ioString)
 void RTSUnit::DescribeLong(UWideString& ioString)
 {
     UWideString theString;
-    sprintf(theString, "UnitID:%ld\nTile:(%ld,%ld)\n", this->mUnitID & 0xffffff, this->mTileX.Get(), this->mTileY.Get());
+    sprintf(theString, "UnitID:%ld\nTile:(%ld,%ld)\n", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
     ioString += theString;
 }
 
@@ -300,10 +301,10 @@ void RTSUnit::LastDereference()
 // Reads the unit's tile, id and flags (the editor selection is cleared); returns the first read error
 long RTSUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = EEUnitStoreRead(inFile, this->mTileX);   // the unit store's holders (ee/EEUnitStore.h)
+    long theResult = inFile.Read(this->mTileX);
     if (theResult != kErrorOK)
         return theResult;
-    theResult = EEUnitStoreRead(inFile, this->mTileY);
+    theResult = inFile.Read(this->mTileY);
     if (theResult != kErrorOK)
         return theResult;
     theResult = inFile.Read(this->mUnitID);
@@ -315,7 +316,7 @@ long RTSUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, F
     theResult = inFile.Read(this->mIsEditorSelected);
     this->mIsEditorSelected = false;
     if (theResult == kErrorOK) {
-        theResult = EEUnitStoreRead(inFile, this->mIsValid);
+        theResult = inFile.Read(this->mIsValid);
     }
     return theResult;
 }

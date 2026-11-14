@@ -229,7 +229,7 @@ void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t 
     theRecord[18] = EEShotBits(inUnit->mOpacity);
     theRecord[19] = EEShotBits(inUnit->mVelocity);
     theRecord[20] = inUnit->mPlayer != NULL ? (uint32_t)inUnit->mPlayer->mPopulationCount : 0;
-    theRecord[21] = (uint32_t)inUnit->mTileX.Get();
+    theRecord[21] = (uint32_t)inUnit->mTileX;
     sShots.Add(theRecord, sizeof(theRecord));
 }
 

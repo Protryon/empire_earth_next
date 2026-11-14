@@ -131,7 +131,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_UPD_R_OWNER:
         return (int64_t)theUnit->mPlayer->mPlayerID;
     case EE_UNITS_UPD_R_TILE_X:
-        return (int64_t)theUnit->mTileX.Get();
+        return (int64_t)theUnit->mTileX;
     case EE_UNITS_UPD_R_COMMAND:
         return theUnit->mCommand ? (int64_t)theUnit->mCommand->mType : 0;
     case EE_UNITS_UPD_R_GOAL_KIND:

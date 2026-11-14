@@ -2126,6 +2126,156 @@ struct EeUnitRecord {
   uint64_t stats;
   /// the active goal's id (`mGoalState->mID`, the saves' goal id; 0: no goal): the goal queues' ids are goals.rs
   uint32_t goal_id;
+  /// the twenty-sixth round's: the addresses of the object's Rust records (unit_fields.rs: its
+  /// `EeUnitsRtsUnitFields`, `EeUnitsUnitFields`, `EeUnitsComplexUnitFields` base subobjects; 0 for a record its
+  /// class does not have). Every read of the store refreshes the mirrored plain values from them ([`refresh`]).
+  uint64_t rts_fields;
+  uint64_t unit_fields;
+  uint64_t complex_fields;
+};
+
+/// `RTSUnit`'s plain members (ee/RTSUnit.h; RTSUnit.cpp's `Reset` sets them).
+struct EeUnitsRtsUnitFields {
+  /// the unit's tile (-10000: off the map)
+  long mTileX;
+  long mTileY;
+  /// the unit's id (0xffffffff: none; the owner in its top byte)
+  unsigned long mUnitID;
+  /// saved
+  bool mIsQueuedForDelete;
+  /// saved as false; Load clears it
+  bool mIsEditorSelected;
+  /// true after the constructor
+  bool mIsNodeFreed;
+  /// named by the asserts "this->mIsValid == true"
+  bool mIsValid;
+};
+
+/// `EEUnit`'s plain members (ee/EEUnit.h).
+struct EeUnitsUnitFields {
+  /// saved
+  unsigned long mResourceType;
+  /// > 0: alive (a load holds the saved fraction's float bits here until `FinishLoad`)
+  long mHitPoints;
+  /// what a resource has left (saved)
+  long mResourceAmount;
+  /// 0x10: `MoveTo` moved it; 0x20 and the low 2 bits: `UpdateHidden`
+  uint8_t mHiddenFlags;
+};
+
+/// `EEComplexUnit`'s plain members (ee/EEUnit.h), in the class's order; its pointers (`mSound`), effect handles
+/// (`mConversionEffect`, `mHealEffect`, `mFireEffect`), points, containers and parts stay C++ members.
+struct EeUnitsComplexUnitFields {
+  float mHeight;
+  float mInitialContactHeading;
+  float mOpacity;
+  float mF21C;
+  float mF220;
+  float mLaunchYaw;
+  float mOpenFraction;
+  float mHealSearchTimer;
+  float mPushVelocityX;
+  float mPushVelocityY;
+  float mVelocity;
+  float mAnimationFraction;
+  float mGrowth;
+  float mCollisionRadius;
+  float mCollisionResolutionCount;
+  float mF24C;
+  float mSight;
+  unsigned long mCalamityFlags;
+  /// unsigned: AIStep compares it with the game time unsigned
+  unsigned long mNextTriggerTime;
+  long mCurrentResearch;
+  unsigned long mAnimation;
+  unsigned long mCurrentPhysicsAction;
+  unsigned long mCurrentPhysicsOrder;
+  unsigned long mFacing;
+  unsigned long mGateDirection;
+  long mNumBuilders;
+  long mCrewHitPoints;
+  long mProductionTime;
+  long mTrailEffectTimer;
+  /// a load holds the saved fraction's float bits here until `FinishLoad`
+  long mGarrisonCount;
+  long mGarrisonPopulation;
+  /// a load holds the saved fraction's float bits here until `FinishLoad`
+  long mFlightTime;
+  long mRegenerationTimer;
+  long mExitingUnitID;
+  unsigned long mFormationSlot;
+  /// a load holds the saved fraction's float bits here until `FinishLoad`
+  long mLastHitPoints;
+  long mReloadTimer;
+  long mCargoRoom;
+  long mRottingAwayTime;
+  long mTargetSearchTimer;
+  unsigned long mNumAreaEffects;
+  long mWakeTimer;
+  long mWorkTimer;
+  long mPositiveMorale;
+  long mNegativeMorale;
+  long mPowerRegenTimer;
+  /// a load holds the saved fraction's float bits here until `FinishLoad`
+  long mPower;
+  long mNumPathRequests;
+  long mIsCollidable;
+  long mFormationRank;
+  long mWaterState;
+  unsigned long mAmmunition;
+  unsigned long mWeaponTagPoint;
+  unsigned long mNumOrbitals;
+  unsigned long mNumWheels;
+  long mNumTurretAngles;
+  unsigned long mU2FC;
+  unsigned long mAnimationTime;
+  unsigned long mConversionStartTime;
+  unsigned long mTimesUpdated;
+  long mNextFrame;
+  unsigned long mGrazeTime;
+  unsigned long mGrowTime;
+  unsigned long mNumAttackers;
+  /// the cloak's timer (the cloaking calamity sets it)
+  unsigned long mCloaked;
+  /// a game time (compared unsigned)
+  unsigned long mPushImmuneUntil;
+  unsigned long mCamouflageTimer;
+  unsigned long mU32C;
+  long mAIState;
+  long mL334;
+  long mL338;
+  uint16_t mCollisionState;
+  uint16_t mExperience;
+  bool mIsDeletable;
+  bool mIsCommandable;
+  bool mIsClearanceGranted;
+  bool mIsAnimationPaused;
+  bool mIsPaidFor;
+  bool mIsCloakable;
+  bool mIsCloaked;
+  bool mIsDisabled;
+  bool mIsLocked;
+  bool mIsTinted;
+  bool mIsPathDone;
+  bool mHasArrived;
+  bool mIsBuilt;
+  bool mIsDetachedFromAI;
+  bool mIsFiringHigh;
+  bool mB34F;
+  bool mIsRegrowing;
+  bool mIsFoundation;
+  bool mCanBeHidden;
+  bool mIsCitizen;
+  bool mIsPacked;
+  bool mIsSpecialAttack;
+  /// untouched by the constructor and Load/Save
+  uint16_t mU356;
+  unsigned long mDisabledReason;
+  uint16_t mPlanetID;
+  uint16_t mU35E;
+  float mRoll;
+  /// port: a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit)
+  bool mHasShiftQueuedBuild;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -2618,6 +2768,16 @@ void *ee_units_resolve(uint32_t id);
 /// # Safety
 /// `record` points to a valid record.
 void ee_units_store_insert(const EeUnitRecord *record);
+
+/// The twenty-sixth round's: a record's object records (the C++ `Fill` passes its unit's base subobjects, null for
+/// a record its class does not have) and its mirrored values read from them (`store::refresh`).
+///
+/// # Safety
+/// `record` points to a writable record; each other pointer is null or a live object's record.
+void ee_units_store_set_fields(EeUnitRecord *record,
+                               const EeUnitsRtsUnitFields *rts,
+                               const EeUnitsUnitFields *unit,
+                               const EeUnitsComplexUnitFields *complex);
 
 /// A unit leaves its player's list (or is freed): the record of that object, if it is the one under the id.
 bool ee_units_store_remove(uint32_t id,

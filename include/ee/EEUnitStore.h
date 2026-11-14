@@ -23,9 +23,6 @@ class RTSPlayer;
 
 // the fields a holder reports (store.rs EE_UNIT_FIELD_*: the same values)
 enum EEUnitStoreFieldID {
-    kUnitFieldTileX = 1,        // RTSUnit::mTileX
-    kUnitFieldTileY = 2,        // RTSUnit::mTileY
-    kUnitFieldValid = 3,        // RTSUnit::mIsValid
     kUnitFieldHitPoints = 4,    // EEUnit::mHitPoints
     kUnitFieldUnitClass = 5,    // EEUnit::mUnitClass (the record's category and unit type)
     kUnitFieldComplex = 7,      // EEUnit::mComplexUnit
