@@ -1,73 +1,34 @@
 // C:\EEX\Low-Level Engine\Network Engine\NESynchronousServer.h (RECONSTRUCTION; NESynchronousServer.cpp 0x47400..0x4b04f).
 // The lock-step multiplayer server: three threads (main: incoming player inputs and responses; send: the
-// communications tick; xfer: file transfers) over one published NEServer, plus an NEMessageManager that tracks which
+// communications tick; xfer: file transfers) over one published NEServer, plus a message manager that tracks which
 // client has answered which message. Abstract: the game implements the pure virtual callbacks.
-// Inline members are exported COMDATs emitted by NEMessageManager.cpp (0x40369..0x4058a, then the implicit copy
-// ctor 0x40591, operator= 0x40ab6 and ??_E 0x4103b). Layout proven by the implicit copy ctor (member types in order)
-// and the ctor 0x47400 (event names from its ESVERIFY strings). Unnamed fields are provisional (named by offset).
+// Whole in Rust (ee_net server.rs; PORT_LEARNINGS "LLE Network Engine, round 4"): the class keeps the type callers
+// hold, its virtual members, the base class's fields and Publish's name; every other member forwards to the Rust
+// object. The original layout (sizeof 0x208) is gone with its fields.
 #ifndef LLE_NESYNCHRONOUSSERVER_H
 #define LLE_NESYNCHRONOUSSERVER_H
 
 #include <stddef.h>
 #include <stdint.h>
-#include <deque>
-#include <map>
 #include <vector>
 #include "lle/NESynchronousCommunications.h"
 #include "lle/NEProtocol.h"
 #include "rust/ee_net.h"
 
 class NEMessage;
-struct EeNetMsgMgr;                         // the message manager, a Rust object (rust/ee_net.h)
-enum class EeNetMmOp : uint32_t;
-class NEMCommunicationsTickResponse;
-class NEMWorldDatabaseChecksumResponse;
-struct EeNetRecPlay;                        // NERecordPlayback, whole in Rust (rust/ee_net.h)
-struct EeNetTune;                           // the tuning and booting (ee_net tune.rs)
-enum class EeNetTuOp : uint32_t;
-struct EeNetServer;                         // the server's Rust part (ee_net server.rs)
+struct EeNetServer;                         // the server, whole in Rust (rust/ee_net.h)
 enum class EeNetSvOp : uint32_t;
+enum class EeNetMmOp : uint32_t;
+class NEMWorldDatabaseChecksumResponse;
 class NEServer;
 class FSFileSpec;
-class TSEvent;
-class TSThread;
 
 enum {                                      // slot values (ctor ESVERIFY text "inMaxPlayers < knessPlayerSlotNotAvailable+1")
     kSlotNotAvailable = 0xff,      // Provisional enum name; 0xfe is the server's own slot
     knessPlayerSlotNotAvailable = kSlotNotAvailable   // spelled this way in the original's assert strings
 };
 
-struct NECDIServerClient {                  // value of NECDIServer's map (pair 0x20 bytes, POD: _Copy uses rep movsd)
-    unsigned long mU00[7];                  // (provisional name)
-};
-
-struct NECDIServer {                        // server debug info (GetDebugInfo: this + 0x30), sizeof 0x40; (provisional name)
-    NECDIServer();                          // 0x47c20, out of line in NESynchronousServer.cpp (zeroes the counters)
-
-    std::map<unsigned long, NECDIServerClient> mClients;    // +0x00 (node 0x30)
-    unsigned long mU0C;                     // +0x0c
-    unsigned long mU10;
-    unsigned long mU14;
-    unsigned long mU18;
-    unsigned long mU1C;
-    unsigned long mU20;
-    unsigned long mU24;
-    unsigned long mU28;
-    unsigned long mU2C;
-    unsigned long mU30;
-    unsigned long mU34;
-    unsigned long mU38;
-    unsigned long mU3C;                     // +0x3c
-};
-
-struct NESendToAllAndWaitRequest {          // element of mSendToAllAndWaitRequests (16 bytes, POD)
-    NEMessage* mMessage;                    // +0x00
-    unsigned long mTimeout;                 // +0x04 (provisional name)
-    unsigned long mRetries;                 // +0x08 (provisional name)
-    unsigned long mU0C;                     // +0x0c (provisional name)
-};
-
-class LLE_API NESynchronousServer : public NESynchronousCommunications {   // proven sizeof 0x208 (??_E: imul 0x208)
+class LLE_API NESynchronousServer : public NESynchronousCommunications {
 public:
     NESynchronousServer(unsigned char inMaxPlayers, unsigned long inDefaultSendInterval, unsigned char inPTsPerCT, unsigned long inMaxPhysicsTicksPerSecond,
                         unsigned long inMinPhysicsTicksPerSecond, float inPhysicsTickCostFactor, unsigned long inMaxSendInterval, unsigned long inSendIntervalIncrement, unsigned long inSendIntervalDecrement,
@@ -75,72 +36,48 @@ public:
                         UWideString& inName, bool inAllowNewConnections, bool inAnnounce, unsigned long inNetworkAdapter);
     virtual ~NESynchronousServer();
 
-    void AllowNewPlayers(bool inAllow)
-    {
-        if (inAllow == true)
-            this->mGameState = 0;
-        if (inAllow == false)
-            this->mGameState = 1;
-        this->mProtocol->AllowNewConnections(this->mServer, inAllow);
-    }
-    void ClearSendToSlotArray() { this->mSendToSlotArray.clear(); }
-    long GetClientAddress(unsigned long inIndex, UWideString& outAddress)
-        { return this->mProtocol->GetClientAddress(this->mServer, inIndex, outAddress); }
-    virtual unsigned long GetCurrentCommunicationsTick() const { return this->mCurrentCommunicationsTick; }
-    unsigned long GetCurrentPhysicsTick() const { return this->mCurrentPhysicsTick; }
-    const NECDIServer& GetDebugInfo() const { return this->mDebugInfo; }
-    unsigned char GetGameState() const { return this->mGameState; }
-    bool GetGameWasPublished() const { return this->mGameWasPublished; }
+    void AllowNewPlayers(bool inAllow);
+    void ClearSendToSlotArray();
+    long GetClientAddress(unsigned long inIndex, UWideString& outAddress);
+    virtual unsigned long GetCurrentCommunicationsTick() const;
+    unsigned long GetCurrentPhysicsTick() const;
+    unsigned char GetGameState() const;
+    bool GetGameWasPublished() const;
     // the recorder's mode (NERecordPlaybackMode; ee_net recplay.rs)
     unsigned char GetRecordPlaybackMode() const;
-    unsigned long GetLastCTMessageID() const { return this->mLastCTMessageID; }
-    unsigned long GetMaxPlayers() const { return this->mMaxPlayers; }
-    unsigned char GetNumberOfPlayers() const { return this->mNumberOfPlayers; }
-    bool GetProcessingSendToAllAndWait() const { return this->mProcessingSendToAllAndWait; }
-    unsigned long GetPTsPerCT() const { return this->mPTsPerCT; }
-    unsigned long GetRestartCT() const { return this->mRestartCT; }
-    unsigned long GetSendInterval() const { return this->mSendInterval; }
-    void LockSendCommunicationsTick() { this->mSendCommunicationsTickLock->Enter(); }
+    unsigned long GetLastCTMessageID() const;
+    unsigned long GetMaxPlayers() const;
+    unsigned char GetNumberOfPlayers() const;
+    bool GetProcessingSendToAllAndWait() const;
+    unsigned long GetPTsPerCT() const;
+    unsigned long GetRestartCT() const;
+    unsigned long GetSendInterval() const;
+    void LockSendCommunicationsTick();
     virtual long ProcessGuaranteedLocalUserInput(NEMessage* inMessage, unsigned char inPlayer)
         { return this->ProcessLocalUserInput(inMessage, inPlayer); }
-    void ResetClientConnection(unsigned long inIndex) { this->mProtocol->ResetClientConnection(this->mServer, inIndex); }
-    void ResetXfer() { this->mProtocol->ResetXfer(this->mServer); }
-    void ResumeMigratedGame() { this->mResumeMigratedGame->Set(); }
-    void SendExitMessage()
-    {
-        this->mSendThreadExitEvent->Set();
-        this->mSendThreadFinishedEvent->Wait(kTSWaitInfinite);
-        this->mMainThreadExitEvent->Set();
-        this->mMainThreadFinishedEvent->Wait(kTSWaitInfinite);
-    }
-    virtual void SetCurrentCommunicationsTick(unsigned long inTick) { this->mCurrentCommunicationsTick = inTick; }
-    void SetCurrentPhysicsTick(unsigned long& inTick) { this->mCurrentPhysicsTick = inTick; }
-    void SetGameState(unsigned char inState) { this->mGameState = inState; }
-    void SetLastCTMessageID(unsigned long inID) { this->mLastCTMessageID = inID; }
-    void SetLoadParams(unsigned long inTick) { this->mCurrentPhysicsTick = inTick; }
-    void SetRestartCT(unsigned long inCT) { this->mRestartCT = inCT; }
-    void SetSendInterval(unsigned long inInterval)
-    {
-        this->mSendInterval = inInterval;
-        this->mChangeSendIntervalEvent->Set();
-    }
-    void SetSendToSlotForPlayer(unsigned char inPlayer, unsigned char inSlot)
-        { this->mSendToSlotArray.insert(std::map<unsigned char, unsigned char>::value_type(inPlayer, inSlot)); }
-    void StartGame() { this->mStartGameEvent->Set(); }
-    void StartPing() { this->mPing = true; }
-    void StartWaitingForReconnects(unsigned long inTime)
-    {
-        this->mWaitForReconnectsTime = inTime;
-        this->mWaitForReconnectsEvent->Set();
-    }
-    void StopGame() { this->mStopGameEvent->Set(); }
-    void StopPing() { this->mPing = false; }
-    void UnlockSendCommunicationsTick() { this->mSendCommunicationsTickLock->Leave(); }
-    void SetTempOutOfSynchPTs(unsigned char inPTs) { this->mTempOutOfSynchPTs = inPTs; }
+    void ResetClientConnection(unsigned long inIndex);
+    void ResetXfer();
+    void ResumeMigratedGame();
+    void SendExitMessage();
+    virtual void SetCurrentCommunicationsTick(unsigned long inTick);
+    void SetCurrentPhysicsTick(unsigned long& inTick);
+    void SetGameState(unsigned char inState);
+    void SetLastCTMessageID(unsigned long inID);
+    void SetLoadParams(unsigned long inTick);
+    void SetRestartCT(unsigned long inCT);
+    void SetSendInterval(unsigned long inInterval);
+    void SetSendToSlotForPlayer(unsigned char inPlayer, unsigned char inSlot);
+    void StartGame();
+    void StartPing();
+    void StartWaitingForReconnects(unsigned long inTime);
+    void StopGame();
+    void StopPing();
+    void UnlockSendCommunicationsTick();
+    void SetTempOutOfSynchPTs(unsigned char inPTs);
     // TEST ONLY: the headless simulation (platform/PlatSim.h). The physics thread sends the next communications tick
     // itself; the send thread sends none while the game runs.
     void SimCommunicationsTick();
-    bool SimGameRunning() const { return this->mGameState == 3 || this->mGameState == 4; }   // running, paused
+    bool SimGameRunning() const;   // running, paused
 
     void AbortXfer(unsigned long inXferID);
     unsigned long GetMessageManagerCurrentMessageNumber();
@@ -195,118 +132,29 @@ public:
 
 protected:
     long BroadcastMessage(NEMessage* inMessage);
-    void ForceNextCT() { this->mSendThreadForceCTEvent->Set(); }
+    void ForceNextCT();
     long SendMessageTo(unsigned char inSlot, NEMessage* inMessage, bool inGuaranteed);
     long SendMessageToAll(NEMessage* inMessage, bool inGuaranteed);
     void UnregisterSlot(unsigned char inSlot);
 
 private:
-    void BootAllLaggers(unsigned long inTime);
-    unsigned long GetApplicationStartTime() const { return this->mApplicationStartTime; }
-    unsigned long GetGameStartTime() const { return this->mGameStartTime; }
-    static unsigned long Main(void* inServerObject);
-    void ProcessCommunicationsTickResponse(NEMCommunicationsTickResponse* inMessage);
-    long ProcessLocalUserInput2(NEMessage* inMessage);
-    void ProcessPendingPlayerInputs();
-    void ProcessPendingPlayerInputs2(NEMessage* inMessage);
-    static void RecordPlaybackCallback(NEMessage* inMessage, void* inThisPointer);
-    static unsigned long Send(void* inServerObject);
-    void SendCommunicationsTick(bool inGenerateChecksum, bool inB);
-    bool TuneServer();
-    static unsigned long Xfer(void* inServerObject);
-    // the message manager's calls out (ee_net's EeNetMmOp): the messages, this server, its protocol, the files
+    NEProtocol* Protocol() const;
+    NEServer* Server() const;
+    // the server's calls out (ee_net's EeNetSvOp): the engine, the protocol and its server, the messages, the base
+    // class's fields, the game's virtual members
+    static ptrdiff_t Host(void* inServer, EeNetSvOp inOp, size_t a, size_t b, size_t c, size_t d);
+    // the message manager's calls out that reach the C++ (ee_net's EeNetMmOp): the messages, the server, the files
     static ptrdiff_t MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d);
-    // the recorder's calls out (ee_net's EeNetQOp): its callback, then the common ones
+    // the queues' common calls out (ee_net's EeNetQOp)
     static ptrdiff_t QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
-    // the tuning's and booting's calls out (ee_net's EeNetTuOp): the server's fields, its manager, the game
-    static ptrdiff_t TuneHost(void* inServer, EeNetTuOp inOp, size_t a, size_t b, size_t c, size_t d);
-    // the calls out of the Rust part (ee_net's EeNetSvOp): the server's fields, the game, the message manager
-    static ptrdiff_t ServerHost(void* inServer, EeNetSvOp inOp, size_t a, size_t b, size_t c, size_t d);
 
-    NECDIServer mDebugInfo;                 // +0x30
-    UWideString mName;                      // +0x70
-    std::deque<NEMessage*> mIncomingPlayerInputs;   // +0x84 (mIncomingPlayerInputsLock)
-    std::vector<NESendToAllAndWaitRequest> mSendToAllAndWaitRequests;   // +0x98
-    std::map<unsigned char, unsigned char> mSendToSlotArray;            // +0xa8
-    EeNetServer* mRust;                     // the Rust part (ee_net server.rs: mChecksumResponses +0xb4, mOOSSlots +0xc0,
-                                            // mChecksumResponsesLock +0x158, mIsOOS +0x203)
-    EeNetTune* mTune;                       // the tuning and booting (ee_net tune.rs: mSlotsD0 +0xd0, the counts)
-    EeNetMsgMgr* mMessageManager;           // +0xe0 NEMessageManager, whole in Rust (ee_net msgmgr.rs)
-    NEProtocol* mProtocol;                  // +0xe4 protocol 0
-    NEServer* mServer;                      // +0xe8
-    TSThread* mMainThread;                  // +0xec
-    TSThread* mSendThread;                  // +0xf0
-    TSThread* mXferThread;                  // +0xf4
-    TSEvent* mChangeSendIntervalEvent;      // +0xf8
-    TSEvent* mInputAvailableEvent;          // +0xfc
-    TSEvent* mXferInputAvailableEvent;      // +0x100
-    TSEvent* mXferAcceptEvent;              // +0x104
-    TSEvent* mXferStuffWaitingToGoEvent;    // +0x108
-    TSEvent* mXferThreadStartedEvent;       // +0x10c
-    TSEvent* mXferThreadExitEvent;          // +0x110
-    TSEvent* mXferThreadFinishedEvent;      // +0x114
-    TSEvent* mMainThreadExitEvent;          // +0x118
-    TSEvent* mMainThreadStartedEvent;       // +0x11c
-    TSEvent* mMainThreadFinishedEvent;      // +0x120
-    TSEvent* mPauseGameEvent;               // +0x124
-    TSEvent* mUnpauseGameEvent;             // +0x128
-    TSEvent* mResumeMigratedGame;           // +0x12c
-    TSEvent* mSendThreadExitEvent;          // +0x130
-    TSEvent* mSendThreadStartedEvent;       // +0x134
-    TSEvent* mSendThreadFinishedEvent;      // +0x138
-    TSEvent* mSendThreadForceCTEvent;       // +0x13c
-    TSEvent* mStartGameEvent;               // +0x140
-    TSEvent* mStopGameEvent;                // +0x144
-    TSEvent* mWaitForResponseEvent;         // +0x148
-    TSEvent* mWaitForReconnectsEvent;       // +0x14c
-    TSEvent* mStartPingEvent;               // +0x150
-    TSEvent* mStopPingEvent;                // +0x154
-    TSCriticalSection* mIncomingPlayerInputsLock;   // +0x15c
-    TSCriticalSection* mPauseUnpauseLock;   // +0x160
-    TSCriticalSection* mSendToAllLock;      // +0x164
-    TSCriticalSection* mSendCommunicationsTickLock; // +0x168
-    EeNetRecPlay* mRecordPlayback;          // +0x16c NERecordPlayback, whole in Rust (ee_net recplay.rs)
-    float mPhysicsTickCostFactor;           // +0x170
-    unsigned char mGameState;               // +0x174 (0 open, 1 closed, 3 playing, 4 ...)
-    unsigned long mCurrentPhysicsTick;      // +0x178
-    unsigned long mU17C;                    // +0x17c (100)
-    unsigned long mChecksumInterval;        // +0x180 (1)
-    unsigned long mNextChecksumCT;          // +0x184 (40)
-    unsigned long mRestartCT;               // +0x188
-    unsigned long mApplicationStartTime;    // +0x18c
-    unsigned long mCurrentCommunicationsTick;   // +0x190
-    unsigned long mGameStartTime;           // +0x194
-    unsigned long mSendInterval;            // +0x198
-    unsigned long mDefaultSendInterval;     // +0x19c
-    unsigned long mLastCTMessageID;         // +0x1a0
-    unsigned long mLastPingTime;            // +0x1a4
-    unsigned long mSendToAllAndWaitMessageNumber;   // +0x1a8
-    unsigned long mSendToAllAndWaitTimeout; // +0x1ac (3000)
-    unsigned long mSendToAllAndWaitRetries; // +0x1b0 (40)
-    unsigned long mMaxPhysicsTicksPerSecond;  // +0x1b4
-    unsigned long mMinPhysicsTicksPerSecond;  // +0x1b8
-    unsigned long mWaitForReconnectsTime;   // +0x1c0
-    unsigned long mMaxSendInterval;         // +0x1c4
-    unsigned long mSendIntervalIncrement;   // +0x1c8
-    unsigned long mU1D0;                    // +0x1d0 (1)
-    unsigned long mReconnectCount;          // +0x1f0
-    unsigned long mLowestReconnectCT;       // +0x1f4 (-1)
-    unsigned char mSendToAllAndWaitType;    // +0x1f8
-    unsigned char mPTsPerCT;                // +0x1f9
-    unsigned char mInitialPTsPerCT;         // +0x1fa
-    unsigned char mPTsPerSecond;            // +0x1fb
-    unsigned char mMaxPlayers;              // +0x1fc
-    unsigned char mNumberOfPlayers;         // +0x1fd
-    unsigned char mTempOutOfSynchPTs;       // +0x1fe
-    bool mAllowNewConnections;              // +0x1ff
-    bool mB200;                             // +0x200
-    bool mGameWasPublished;                 // +0x201
-    bool mPing;                             // +0x202
-    bool mB205;                             // +0x205 (true)
-    bool mProcessingSendToAllAndWait;       // +0x206
+    UWideString mName;                      // Publish's name (+0x70)
+    bool mAnnounce;                         // Publish's announcement
+    unsigned long mNetworkAdapter;          // Publish's adapter
+    EeNetServer* mRust;                     // the server, whole in Rust (ee_net server.rs)
 };
 
-// NESynchronousServer::mGameState (GetGameState); 2 is compared by EEServer only and stays unnamed
+// NESynchronousServer's game state (GetGameState); 2 is compared by EEServer only and stays unnamed
 enum NEServerGameState {
     kServerStateOpen = 0,   // setrilo ne_synchronous.h gameState_ (0 lobby, 1 closed, 3 running, 4 paused); AllowNewPlayers(true); Main start
     kServerStateClosed = 1,  // setrilo ne_synchronous.h gameState_ (0 lobby, 1 closed, 3 running, 4 paused); AllowNewPlayers(false)

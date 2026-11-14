@@ -109,12 +109,34 @@ static unsigned long NEClientReceiveThread(void* inClient)
     return ee_net_cl_receive_thread(static_cast<const EeNetClient*>(inClient));
 }
 
+static unsigned long NEServerPlaybackThread(void* inRecorder)
+{
+    return ee_net_sv_playback_thread(inRecorder);
+}
+
+static unsigned long NEServerMainThread(void* inServer)
+{
+    return ee_net_sv_main_thread(static_cast<const EeNetServer*>(inServer));
+}
+
+static unsigned long NEServerSendThread(void* inServer)
+{
+    return ee_net_sv_send_thread(static_cast<const EeNetServer*>(inServer));
+}
+
+static unsigned long NEServerXferThread(void* inServer)
+{
+    return ee_net_sv_xfer_thread(static_cast<const EeNetServer*>(inServer));
+}
+
 ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
 {
     static const char* const kUnits[] = {"NELagLossSimulator.cpp", "NERecordPlayback.cpp", "NETimestampedMessage.cpp",
-                                         "NESynchronousClient.cpp"};
+                                         "NESynchronousClient.cpp", "NESynchronousServer.cpp"};
     static unsigned long (*const kThreads[])(void*) = {NEQueueLagThread, NEQueuePlaybackThread, NEClientLagThread,
-                                                       NEClientPlaybackThread, NEClientMainThread, NEClientReceiveThread};
+                                                       NEClientPlaybackThread, NEClientMainThread, NEClientReceiveThread,
+                                                       NEServerPlaybackThread, NEServerMainThread, NEServerSendThread,
+                                                       NEServerXferThread};
     NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
     TSEvent* theEvent = reinterpret_cast<TSEvent*>(a);
     FSFileSpec* theFile = reinterpret_cast<FSFileSpec*>(a);
@@ -122,7 +144,7 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
     case EeNetQOp::Time:
         return (ptrdiff_t)TMGetTime();
     case EeNetQOp::Verify:
-        ESVerify(kUnits[a < 4 ? a : 0], (unsigned long)b, "(ee_net)");
+        ESVerify(kUnits[a < 5 ? a : 0], (unsigned long)b, "(ee_net)");
         return 0;
     case EeNetQOp::FpuStart:
         UMSetFloatingPointPrecision(kFPPrecision53);
@@ -151,7 +173,7 @@ ptrdiff_t NESynchronousCommunications::QueueHostCommon(EeNetQOp inOp, size_t a, 
     case EeNetQOp::EventWait:
         return theEvent->Wait((unsigned long)b);
     case EeNetQOp::ThreadNew:
-        return TSScheduler::CreateThread(*reinterpret_cast<TSThread**>(c), kThreads[a < 6 ? a : 0],
+        return TSScheduler::CreateThread(*reinterpret_cast<TSThread**>(c), kThreads[a < 10 ? a : 0],
                                          reinterpret_cast<void*>(b), 0, false);
     case EeNetQOp::ThreadName:
         reinterpret_cast<TSThread*>(a)->SetName(UString(std::string(reinterpret_cast<const char*>(b), c).c_str()));

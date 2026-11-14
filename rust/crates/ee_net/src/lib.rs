@@ -13,8 +13,8 @@
 //!   recorder;
 //! - `tune`: the lock-step server's network and CPU tuning and its booting of laggers (NESynchronousServer's
 //!   TuneServer and the members it calls);
-//! - `server`: the rest of NESynchronousServer as it moves (the world checksums, the out-of-sync slots, the removal
-//!   of players from a running game);
+//! - `server`: `NESynchronousServer`, the lock-step server with its main, send and transfer threads, its message
+//!   manager, tuning and recorder;
 //! - `qhost`: the two queues' calls out, and the timestamped record format;
 //! - `ffi`, `ffi_client`, `ffi_tune`, `ffi_server`: the C ABI (`rust/ee_net.h`).
 
