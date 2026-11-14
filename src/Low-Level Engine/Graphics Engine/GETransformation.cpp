@@ -121,15 +121,6 @@ void GETransformation::MakeInverse(GETransformation& outInverse) const
     ee_ge_t_make_inverse(GERust(*this), GERust(outInverse));
 }
 
-// NEAR: only the sqrt argument differs (the original keeps x and y on the FPU stack); tried float/double sums,
-// accessor/member operands in both orders, UMFastMath::Sqrt
-// FUNCTION: LLE 0x10034f87
-// Builds a camera transformation at the eye looking toward the target (special case for straight up or down)
-void GETransformation::MakeLookAtTransform(GE3DPoint& inEye, GE3DPoint& inTarget)
-{
-    ee_ge_t_make_look_at(GERust(*this), GERust(inEye), GERust(inTarget));
-}
-
 // FUNCTION: LLE 0x100350e5
 // Rescales the three rotation columns to unit length
 void GETransformation::Normalize()
@@ -222,20 +213,6 @@ void GETransformation::SetScale(float inX, float inY, float inZ)
 bool GETransformation::Verify() const
 {
     return true;
-}
-
-// FUNCTION: LLE 0x100358a7
-// Resets the rotation to identity, keeping the position
-void GETransformation::ZeroOrientation()
-{
-    ee_ge_t_zero_orientation(GERust(*this), GERust(*this));
-}
-
-// FUNCTION: LLE 0x100358e8
-// Writes a copy with identity rotation and this transformation's position into outTransformation
-void GETransformation::ZeroOrientation(GETransformation& outTransformation) const
-{
-    ee_ge_t_zero_orientation(GERust(*this), GERust(outTransformation));
 }
 
 // ---- Exported members with no address of their own (ICF-folded: GetChecksum's `return 0` 0x32e79, Dump's empty
