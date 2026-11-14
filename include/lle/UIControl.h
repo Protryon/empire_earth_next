@@ -2,12 +2,20 @@
 // UIControl.cpp holds the ctor, dtor and the out-of-line members; the inline members are emitted first by
 // UIBackground.cpp (0x10058f73..0x100594ef, declaration order). Virtual slot order from the vtable (0x10098a74,
 // 34 slots; the pure slots named from the UIButton/UIDualButton overrides). sizeof 0xa0 (??_E stride 0x100594a5).
-// Requires lle/UIEntity.h, lle/GEColor.h, lle/GERhombus.h, <map>.
+// Requires lle/UIEntity.h, lle/GEColor.h, lle/GERhombus.h.
+//
+// The members are EeUiControlFields (rust/crates/ee_ui/src/controlobj.rs, R6 ui round 19), the class's private base:
+// the record's field names are the members', the inline getters read them in place, and the base's logic (the
+// constructor's state, CopyData, SetDirty, SetDisplayMode, SetLocation, SetRectangle, the trigger events, the captures,
+// the help string) runs in Rust over it, calling out through HostOp. The two background rhombi are C++ GERhombus
+// objects the record holds by address; the trigger events a Rust map. A Rust caller reaches a control's record
+// through GetFields().
 #ifndef LLE_UICONTROL_H
 #define LLE_UICONTROL_H
 
 #include <map>
 
+#include "rust/ee_ui.h"
 #include "lle/ISEntity.h"
 #include "lle/UIEntity.h"
 
@@ -24,7 +32,7 @@ class UIHotKey;
 #undef GetForm
 #endif
 
-class LLE_API UIControl : public UIEntity {
+class LLE_API UIControl : public UIEntity, private EeUiControlFields {
     friend class UIForm;                    // the form's tabbing calls TabbedTo/TabbedFrom (protected)
     friend class UIComboBox;                // drives its parts' protected mouse/tab handlers (ui-edit)
     friend struct UIControlRust;            // UIControl.cpp: the Rust mouse dispatch's calls (ee_ui mouse.rs)
@@ -62,28 +70,31 @@ public:
     float GetBgOpacity() const
     {
         float theOpacity;
-        this->mBgRhombus.GetOpacityPerVertex(theOpacity, theOpacity, theOpacity, theOpacity);
+        this->BgRhombus()->GetOpacityPerVertex(theOpacity, theOpacity, theOpacity, theOpacity);
         return theOpacity;
     }
-    void GetBgColor(GEColor& outColor) const { this->mBgRhombus.GetColorPerVertex(outColor, outColor, outColor, outColor); }
-    const GERectangle& GetBgRectangle() const { return this->mBgRhombus.GetRectangle(); }
-    const GERectangle& GetCopiedDrawRectangle() const { return this->mCopiedDrawRectangle; }
+    void GetBgColor(GEColor& outColor) const { this->BgRhombus()->GetColorPerVertex(outColor, outColor, outColor, outColor); }
+    const GERectangle& GetBgRectangle() const { return this->BgRhombus()->GetRectangle(); }
+    const GERectangle& GetCopiedDrawRectangle() const { return UIControl::AsRect(this->mCopiedDrawRectangle); }
     unsigned long GetDisplayMode() const { return this->mDisplayMode; }
     unsigned long GetDrawCount() const { return this->mDrawCount; }
     GESurface* GetDrawingSurface() const;
-    UIForm* GetForm() const { return this->mForm; }
+    // the record (ee_ui controlobj.rs): the members and the base's logic, for Rust callers
+    EeUiControlFields* GetFields() { return this; }
+    const EeUiControlFields* GetFields() const { return this; }
+    UIForm* GetForm() const { return static_cast<UIForm*>(this->mForm); }
     bool GetHasKeyboardCapture() const;
     bool GetHasMouseCapture() const;
-    unsigned long GetHeight() const { return UMFloor(this->mRectangle.GetBottom() - this->mRectangle.GetTop() + 1.0f); }
+    unsigned long GetHeight() const { return UMFloor(this->GetRectangle().GetBottom() - this->GetRectangle().GetTop() + 1.0f); }
     virtual bool GetHelpString(UWideString& outString) const;
-    UIHotKey* GetHotKey() const { return this->mHotKey; }
+    UIHotKey* GetHotKey() const { return static_cast<UIHotKey*>(this->mHotKey); }
     unsigned long GetId() const { return this->mId; }
     virtual bool GetIMEEnabled() const { return false; }
     unsigned long GetIndex() const { return this->mIndex; }
     bool GetIsDirty() const { return this->mIsDirty; }
     bool GetLeftMouseButtonDown() const;
     GERasterizer* GetRasterizer() const;
-    const GERectangle& GetRectangle() const { return this->mRectangle; }
+    const GERectangle& GetRectangle() const { return UIControl::AsRect(this->mRectangle); }
     bool GetRightMouseButtonDown() const;
     unsigned long GetScreenIndex() const;
     SESoundManager* GetSoundManager() const;
@@ -91,7 +102,7 @@ public:
     virtual bool GetTabable() const { return true; }
     UIEvent* GetTriggerEvent(unsigned long inEvent);
     virtual unsigned long GetType() const { return this->mControlType; }
-    unsigned long GetWidth() const { return UMFloor(this->mRectangle.GetWidth() + 1.0f); }
+    unsigned long GetWidth() const { return UMFloor(this->GetRectangle().GetWidth() + 1.0f); }
     virtual void HideControl() {}
     static bool HomeKeyPressed();
     static bool LeftKeyPressed();
@@ -121,13 +132,13 @@ public:
     void SetAlwaysDirty(bool inAlwaysDirty) { this->mAlwaysDirty = inAlwaysDirty; }
     virtual void SetBgColor(const GEColor& inColor)
     {
-        this->mBgRhombus.SetColor(inColor);
+        this->BgRhombus()->SetColor(inColor);
         this->SetDirty(true);
     }
     virtual void SetBgOpacity(float inOpacity)
     {
         this->mHasBgOpacity = inOpacity != 0.0f;
-        this->mBgRhombus.SetOpacity(inOpacity);
+        this->BgRhombus()->SetOpacity(inOpacity);
     }
     static void SetBorderColors(const GEColor& inDark, const GEColor& inLight)
     {
@@ -176,31 +187,14 @@ protected:
     // port: the display mode stored without SetDisplayMode's dirtying (two game controls' hides)
     void StoreDisplayMode(unsigned long inMode) { this->mDisplayMode = inMode; }
 private:
-    unsigned long mDisplayMode;            // +0x08 (1 at construction)
-    std::map<unsigned long, UIEvent*> mTriggerEvents;   // +0x0c event id -> event (referenced)
-    GERectangle mRectangle;                 // +0x18
-    GERectangle mCopiedDrawRectangle;       // +0x28 mRectangle as of the last CopyData
-    GERhombus mBgRhombus;                   // +0x38
-    GERhombus mCopiedBgRhombus;             // +0x50
-    UIForm* mForm;                          // +0x68
-    UIHotKey* mHotKey;                      // +0x6c
-    unsigned long mControlType;             // +0x70 (GetType)
-    unsigned long mBorderType;              // +0x74
-    unsigned long mCopiedBorderType;        // +0x78
-    unsigned long mIndex;                   // +0x7c
-    unsigned long mId;                      // +0x80
-    unsigned long mDrawCount;               // +0x84
-    unsigned long mBorderThickness;         // +0x88
-    unsigned long mStringTableID;           // +0x8c
-    float mBorderOpacity;                   // +0x90
-    float mCopiedBorderOpacity;             // +0x94
-    bool mIsDirty;                          // +0x98
-    bool mLeftButtonDown;                   // +0x99
-    bool mRightButtonDown;                  // +0x9a
-    bool mCopiedHasBgOpacity;               // +0x9b
-    bool mUnknown9C;                        // +0x9c
-    bool mHasBgOpacity;                     // +0x9d
-    bool mAlwaysDirty;                      // +0x9e
+    // the original's members (+0x08 mDisplayMode .. +0x9e mAlwaysDirty, sizeof 0xa0) are EeUiControlFields'; the
+    // rectangles are GERectangle's layout (bottom, left, right, top), the rhombi GERhombus* the constructor makes
+    static const GERectangle& AsRect(const EeUiRect& inRect) { return *reinterpret_cast<const GERectangle*>(&inRect); }
+    GERhombus* BgRhombus() const { return static_cast<GERhombus*>(this->mBgRhombus); }
+    GERhombus* CopiedBgRhombus() const { return static_cast<GERhombus*>(this->mCopiedBgRhombus); }
+    intptr_t Call(EeUiControlCall inCall, intptr_t a = 0, intptr_t b = 0, float* f = NULL) const;
+    // the record's calls out (EeUiOp 5, 16, 17, 71..74, 169, 218, 245, 274, 520..533)
+    static intptr_t HostOp(void* inControl, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f);
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
 protected:
