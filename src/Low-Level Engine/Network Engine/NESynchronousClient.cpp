@@ -7,10 +7,9 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
-#include "lle/NETimestampedMessage.h"
-#include "lle/NELagLossSimulator.h"
 #include "lle/FSFile.h"
 #include "lle/NESynchronousClient.h"
+#include "rust/ee_net.h"
 
 // FUNCTION: LLE 0x1004607d
 // Creates the game client on protocol 0 with its thread events, locks, lag/loss simulator and pass-through recorder
@@ -48,15 +47,13 @@ NESynchronousClient::NESynchronousClient()
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mIncomingMessagesLock) == keseOK, 71);
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mOutgoingMessagesLock) == keseOK, 72);
 
-    this->mLagLossSimulator = new NELagLossSimulator(NESynchronousClient::LagReceiveLossCallback, NESynchronousClient::LagSendLossCallback, this);
-    ESVERIFY_AT(this->mLagLossSimulator != NULL, 76);
-    this->mLagLossSimulator->DisableLag(false);
-    this->mLagLossSimulator->DisableReceiveLoss();
-    this->mLagLossSimulator->DisableSendLoss();
+    this->mLagLossSimulator = ee_net_ll_new(this, NESynchronousClient::QueueHost);
+    ee_net_ll_disable_lag(this->mLagLossSimulator, false);
+    ee_net_ll_disable_receive_loss(this->mLagLossSimulator);
+    ee_net_ll_disable_send_loss(this->mLagLossSimulator);
 
-    this->mRecordPlayback = new NERecordPlayback(NESynchronousClient::RecordPlaybackCallback, this);
-    ESVERIFY_AT(this->mRecordPlayback != NULL, 83);
-    this->mRecordPlayback->PassMode();
+    this->mRecordPlayback = ee_net_rp_new(this, NESynchronousClient::QueueHost);
+    ee_net_rp_pass_mode(this->mRecordPlayback);
     this->mReceiveThreadCanGoEvent->Set();
 }
 
@@ -69,8 +66,8 @@ NESynchronousClient::~NESynchronousClient()
     this->SearchForGame(false);
     TSScheduler::DestroyThread(this->mReceiveThread);
     TSScheduler::DestroyThread(this->mMainThread);
-    delete this->mRecordPlayback;
-    delete this->mLagLossSimulator;
+    ee_net_rp_free(this->mRecordPlayback);
+    ee_net_ll_free(this->mLagLossSimulator);
     TSScheduler::DestroyEvent(this->mIncomingMessageAvailableEvent);
     TSScheduler::DestroyEvent(this->mMainThreadExitEvent);
     TSScheduler::DestroyEvent(this->mMainThreadStartedEvent);
@@ -143,7 +140,7 @@ void NESynchronousClient::LagReceiveLossCallback(NEMessage* inMessage, void* inT
 {
     NESynchronousClient* theClient = static_cast<NESynchronousClient*>(inThisPointer);
     ESVERIFY_AT(inThisPointer != NULL, 259);
-    theClient->mRecordPlayback->Process(inMessage);
+    ee_net_rp_process(theClient->mRecordPlayback, inMessage);
 }
 
 // FUNCTION: LLE 0x100465f4
@@ -156,7 +153,7 @@ long NESynchronousClient::LagSendLossCallback(NEMessage* inMessage, void* inThis
     long theSendResult = kErrorOK;
     NESynchronousClient* theClient = static_cast<NESynchronousClient*>(inThisPointer);
     ESVERIFY_AT(inThisPointer != NULL, 284);
-    if (theClient->mRecordPlayback->GetMode() == kRecordModePlaying)
+    if (ee_net_rp_mode(theClient->mRecordPlayback) == kRecordModePlaying)
         theResult = kErrorOK;
     else {
         inMessage->ExportMessage(&thePayload, thePayloadSize);
@@ -201,7 +198,7 @@ unsigned long NESynchronousClient::Main(void* inClientObject)
                 if (theClient->mConnection == NULL)
                     theMessage->Dereference();
                 else
-                    theClient->mLagLossSimulator->Process(theMessage);
+                    ee_net_ll_process(theClient->mLagLossSimulator, theMessage);
             }
             theClient->mIncomingMessagesLock->Leave();
             theClient->mReceiveThreadCanGoEvent->Set();
@@ -593,7 +590,39 @@ long NESynchronousClient::SearchForGame(bool inStart)
 // Sends a message through the lag/loss simulator
 long NESynchronousClient::SendAMessage(NEMessage* inMessage)
 {
-    return this->mLagLossSimulator->Send(inMessage);
+    return ee_net_ll_send(this->mLagLossSimulator, inMessage);
+}
+
+// The recorder's mode and playback speed (ee_net recplay.rs)
+unsigned char NESynchronousClient::GetRecordPlaybackMode() const
+{
+    return ee_net_rp_mode(this->mRecordPlayback);
+}
+
+void NESynchronousClient::SetSlowPlayback()
+{
+    ee_net_rp_set_slow_playback(this->mRecordPlayback);
+}
+
+void NESynchronousClient::SetNormalPlayback()
+{
+    ee_net_rp_set_normal_playback(this->mRecordPlayback);
+}
+
+// The lag simulator's and the recorder's calls out: their callbacks are this client's (the receive callback hands
+// a message on to the recorder; the send callback sends it), the rest common
+ptrdiff_t NESynchronousClient::QueueHost(void* inClient, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
+{
+    if (inOp != EeNetQOp::Deliver)
+        return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d);
+    NEMessage* theMessage = reinterpret_cast<NEMessage*>(b);
+    if (a == 0)
+        NESynchronousClient::LagReceiveLossCallback(theMessage, inClient);
+    else if (a == 1)
+        return NESynchronousClient::LagSendLossCallback(theMessage, inClient);
+    else
+        NESynchronousClient::RecordPlaybackCallback(theMessage, inClient);
+    return 0;
 }
 
 // FUNCTION: LLE 0x100471f7
