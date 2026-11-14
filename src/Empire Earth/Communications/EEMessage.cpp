@@ -591,6 +591,9 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageSmartFarmers:
         theMessage = new EEMSmartFarmers(inMemory);
         break;
+    case kMessageStartLoading:
+        theMessage = new EEMStartLoading(inMemory);
+        break;
     case kMessageStartLoadingResponse:
         theMessage = new EEMStartLoadingResponse(inMemory);
         break;
@@ -3419,21 +3422,32 @@ char* EEMSmartFarmers::GetMessageLabel() const
     return "Smart Farmers";
 }
 
+// EEMStartLoading's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
+size_t EEMStartLoading::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
+{
+    outClass = EE_NETMSG_START_LOADING;
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    outSlots[5] = EENetMsgField(this->mNumHumanPlayers);
+    outSlots[6] = EENetMsgField(this->mSeed);
+    return 7;
+}
+
 // FUNCTION: EXE 0x4c7cdc
 // Starts loading the game: seeds the random generator, sets the human player count and multiplayer flag
-static void ExecuteStartLoading(EEMRecord* m)
+void EEMStartLoading::Execute()
 {
     FSFileSpec theFile;
     UString theName;
     if (gPlatSimSeedSet)   // TEST ONLY: the headless simulation's seed (platform/PlatSim.h; the harness's --seed pin)
-        m->Set<int32_t>(2, (long)gPlatSimSeed);
+        this->mSeed = (long)gPlatSimSeed;
     gGameOptions.mLock->ReadLock();
     gGameOptions.Fn130272();
     gGameOptions.mLock->ReadUnlock();
-    gPhysics->mRandom.SetSeed(m->Get<int32_t>(2));
-    gUserInterface->mRandomSeed = m->Get<int32_t>(2);
-    gCommunications->SetNumHumanPlayers(m->Get<unsigned char>(1));
-    gCommunications->SetIsMultiplayerSession(m->Get<unsigned char>(1) > 1);
+    gPhysics->mRandom.SetSeed(this->mSeed);
+    gUserInterface->mRandomSeed = this->mSeed;
+    gCommunications->SetNumHumanPlayers(this->mNumHumanPlayers);
+    gCommunications->SetIsMultiplayerSession(this->mNumHumanPlayers > 1);
     gUserInterface->PostStartLoading();
 }
 
@@ -3821,7 +3835,6 @@ static const struct {
     {kMessageSetAirportCommand, ExecuteSetAirportCommand},
     {kMessageSetDiplomaticStance, ExecuteSetDiplomaticStance},
     {kMessageSnapToDaylight, ExecuteSnapToDaylight},
-    {kMessageStartLoading, ExecuteStartLoading},
     {kMessageStopActiveGroup, ExecuteStopActiveGroup},
     {kMessageToggleCollisionDetection, ExecuteToggleCollisionDetection},
     {kMessageToggleDayNight, ExecuteToggleDayNight},

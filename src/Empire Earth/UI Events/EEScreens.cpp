@@ -2283,7 +2283,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false;
         static_cast<EEServer*>(gCommunications)->StopPing();
         static_cast<EEServer*>(gCommunications)->mLoadState = true;
-        NEMessage* theMessage = new EEMRecord(kMessageStartLoading, {1, TMGetTime()});
+        NEMessage* theMessage = new EEMStartLoading(1, TMGetTime());
         gLocalPlayerOut = false;
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
         break;
@@ -2467,7 +2467,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     }
     case EE_SCREENS_GAME_LE_START_LOADING:
-        gCommunications->ProcessGuaranteedLocalUserInput(new EEMRecord(kMessageStartLoading, {(unsigned char)inA, (long)(int32_t)inB}),
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMStartLoading((unsigned char)inA, (long)(int32_t)inB),
                                                          kSlotNone);
         break;
     case EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS:
@@ -3225,7 +3225,7 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
             gGameStateLoadType = 2;
             static_cast<EEServer*>(gCommunications)->StopPing();
             static_cast<EEServer*>(gCommunications)->SetLoadState(true);
-            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
             return 1;
         }
         if (theFile != NULL)

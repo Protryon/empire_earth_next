@@ -83,7 +83,7 @@ struct EEMRecordValue {
 };
 
 // New (game messages lane, round 3): the game messages whose members only their senders' constructors, their own
-// Execute and the capture touched (54 types: the census in PORT_LEARNINGS "R5b.4 game messages, round 3"). One class
+// Execute and the capture touched (53 types: the census in PORT_LEARNINGS "R5b.4 game messages, round 3"). One class
 // carries any of them: its codec class's members after the selection id, packed in wire order in mRecord, the layout,
 // flags and label the Rust's (ee_netmsg records.rs). A sender passes the members in wire order:
 // new EEMRecord(kMessageCheatCode, {theCode, theParameter}); Execute runs the type's body (EEMessage.cpp).
@@ -1007,6 +1007,21 @@ public:
 
     int32_t mTargetID;                      // +0x10
     unsigned char mIsQueued;                // +0x14
+};
+
+// vtable 0x43d278; sizeof 0x18
+class EEMStartLoading : public EEMessage {
+public:
+    EEMStartLoading(unsigned char* inData) { this->ImportMessage(inData); }
+    // inline: the lobby's Start 0x1da7dd (rand() first, then the stores)
+    EEMStartLoading(unsigned char inHumans, long inSeed) : EEMessage(kMessageStartLoading, false), mNumHumanPlayers(inHumans), mSeed(inSeed) {}
+    virtual bool GetCanSendWhilePaused() const { return true; }
+    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
+    virtual void Execute();
+    virtual char* GetMessageLabel() const { return "Start Loading"; }
+
+    unsigned char mNumHumanPlayers;         // +0x10
+    int32_t mSeed;                          // +0x14
 };
 
 // vtable 0x43d244; sizeof 0x14,None

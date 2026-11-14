@@ -590,7 +590,7 @@ void EEUIManager::StartScenarioEditor()
     }
     static_cast<EEServer*>(gCommunications)->StopPing();
     static_cast<EEServer*>(gCommunications)->mLoadState = 1;
-    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
+    gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
     gWorld.GetLobbyOptions().GetLock()->WriteUnlock();
 }
 

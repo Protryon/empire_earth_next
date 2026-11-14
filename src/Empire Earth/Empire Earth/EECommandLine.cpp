@@ -146,7 +146,7 @@ long EELoadGameFromCommandLine(const UString& inName)
         static_cast<EEServer*>(gCommunications)->StopPing();
         static_cast<EEServer*>(gCommunications)->mLoadState = 1;
         gUIManager->mInScenarioEditor = false;
-        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStartLoading, {1, TMGetTime()}), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
     } else {
         gCommunications = new EEClient;
         static_cast<EEClient*>(gCommunications)->StartThreads();
