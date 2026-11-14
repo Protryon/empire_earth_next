@@ -164,10 +164,9 @@ enum class EeNetClOp : uint32_t {
   MsgSetSlot = 18,
   /// a message, an uint32_t* -> GetSendToAllAndWaitMessageID(*out)
   MsgS2awId = 19,
-  /// a message, a field (EeNetClMsgField) -> the typed message's field
+  /// an engine message, a member (NEMRecord's numbering) -> its value (a block: its address)
   MsgGet = 20,
-  /// a kind (EeNetClNewMsg), then its arguments (the transfer status: slot | percent << 8 | status << 16, the id)
-  /// -> the new message
+  /// a type, its fixed members' values (const uint32_t*), their count -> new NEMRecord(type, values)
   MsgNew = 21,
   /// a tick response, an input -> AddPlayerInput(input)
   MsgAddInput = 22,
@@ -209,6 +208,8 @@ enum class EeNetClOp : uint32_t {
   HandleConnectionTimeoutWarning = 40,
   /// a message, a player -> the virtual ProcessLocalUserInput
   ProcessLocalUserInput = 41,
+  /// received bytes -> new NEMRecord(bytes) (the transfer message)
+  MsgImport = 42,
 };
 
 /// The base class's fields
@@ -265,9 +266,9 @@ enum class EeNetSvOp : uint32_t {
   MsgSetSlot = 16,
   /// a message, a flag (EeNetSvMsgFlag)
   MsgFlag = 17,
-  /// a message, a field (EeNetSvMsgField)
+  /// an engine message, a member (NEMRecord's numbering) -> its value (the players' inputs: their count)
   MsgGet = 18,
-  /// kind (EeNetSvNewMsg), a, b, c -> the new message
+  /// a type, its fixed members' values (const uint32_t*), their count -> new NEMRecord(type, values)
   MsgNew = 19,
   /// a tick response, an index, an NEMessage** -> GetPlayerInput(i, out)
   MsgTickResponseInput = 20,
@@ -303,6 +304,8 @@ enum class EeNetSvOp : uint32_t {
   ProcessSystemMessage = 35,
   /// a message, a player -> the virtual ProcessLocalUserInput
   ProcessLocalUserInput = 36,
+  /// a message -> GetOriginatingSlot()
+  MsgSlot = 37,
 };
 
 /// The fields the accessors read (`ee_net_sv_get`)
@@ -420,48 +423,10 @@ enum class EeNetTuField : uint32_t {
   PTsPerCt = 12,
 };
 
-/// The typed messages' fields the server reads
-enum class EeNetSvMsgField : uint32_t {
-  /// any message: GetOriginatingSlot()
-  OriginatingSlot = 0,
-  /// NEMCommunicationsTickResponse: GetNumberOfPlayerInputs()
-  NumberOfPlayerInputs = 1,
-  /// NEMCommunicationsTickResponse: GetLastCommunicationsTickProcessed()
-  LastCtProcessed = 2,
-  /// NEMCommunicationsTickResponse: GetAveragePhysicsTickTime()
-  AveragePhysicsTickTime = 3,
-  /// NEMClientReconnectionRequest: GetCurrentCT()
-  ReconnectionCt = 4,
-  /// NEMWorldDatabaseChecksumResponse: GetCommunicationsTick()
-  ChecksumTick = 5,
-  /// NEMWorldDatabaseChecksumResponse: GetWorldDatabaseChecksum()
-  Checksum = 6,
-};
-
 /// The messages' flags the server reads
 enum class EeNetSvMsgFlag : uint32_t {
   CanSendWhilePaused = 0,
   IsAvailableToSend = 1,
-};
-
-/// The messages the server makes (`EeNetSvOp::MsgNew`)
-enum class EeNetSvNewMsg : uint32_t {
-  /// NEMRemovePlayer(a, b & 1, b & 2, b & 4)
-  RemovePlayer = 0,
-  /// NEMPauseGame(a)
-  PauseGame = 1,
-  /// NEMUnPauseGame(a)
-  UnPauseGame = 2,
-  /// NEMServerIsAlive()
-  ServerIsAlive = 3,
-  /// NEMStopGame()
-  StopGame = 4,
-  /// NEMPlayerConnectionCheck(a)
-  PlayerConnectionCheck = 5,
-  /// NEMCommunicationsTick(a, b & 0xff, (b >> 8) & 0xff, b >> 16 & 1, c)
-  CommunicationsTick = 6,
-  /// NEMClientReconnectionRequestResponse(a, b, c)
-  ReconnectionRequestResponse = 7,
 };
 
 /// A message's virtual flags
@@ -469,51 +434,6 @@ enum class EeNetClMsgFlag : uint32_t {
   CountsTowardsPlayerInputThrottle = 0,
   CanSendWhilePaused = 1,
   IsAvailableToSend = 2,
-};
-
-/// The fields of the typed messages this class read (each a `static_cast` and a getter)
-enum class EeNetClMsgField : uint32_t {
-  /// NEMCommunicationsTick::GetCurrentCommunicationsTick
-  TickCt = 0,
-  /// NEMCommunicationsTickResponse::GetServersCommunicationTick
-  ServersTick = 1,
-  /// NEMStartGame::GetOffsetStartTime
-  OffsetStartTime = 2,
-  /// NEMClientConnectionRequestResponse::GetSendToSlot
-  SendToSlot = 3,
-  /// NEMClientConnectionRequestResponse::GetError
-  ConnectionError = 4,
-  /// NEMClientConnectionRequestResponse::GetCurrentCT
-  ConnectionCt = 5,
-  /// NEMClientReconnectionRequestResponse::GetNewSendToSlot
-  NewSendToSlot = 6,
-  /// NEMClientReconnectionRequestResponse::GetCurrentCT
-  ReconnectionCt = 7,
-  /// NEMPauseGame / NEMUnPauseGame::GetUniqueID
-  UniqueId = 8,
-  /// NEMXferMessage::GetID
-  XferId = 9,
-  /// NEMXferMessage::GetData (a pointer)
-  XferData = 10,
-  /// NEMXferMessage::GetDataSize
-  XferDataSize = 11,
-};
-
-/// The messages this class made (`new`, one reference)
-enum class EeNetClNewMsg : uint32_t {
-  /// NEMCommunicationsTickResponse(CTs processed, the tick, the average physics update time)
-  TickResponse = 0,
-  StopGameResponse = 1,
-  /// NEMStartGameResponse(time)
-  StartGameResponse = 2,
-  /// NEMUnPauseGameResponse(id)
-  UnPauseGameResponse = 3,
-  /// NEMPauseGameResponse(id)
-  PauseGameResponse = 4,
-  /// NEMXferMessage(the received bytes)
-  XferMessage = 5,
-  /// NEMXferStatus(slot, percent done, transfer id, status)
-  XferStatus = 6,
 };
 
 /// The lock-step client (`NESynchronousClient`).

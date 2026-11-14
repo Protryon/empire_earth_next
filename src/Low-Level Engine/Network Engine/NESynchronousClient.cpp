@@ -196,52 +196,11 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
         return theResult;
     }
     case EeNetClOp::MsgGet:
-        switch ((EeNetClMsgField)b) {
-        case EeNetClMsgField::TickCt:   // the communications tick's tick
-            return (ptrdiff_t)theRecord->Get<uint32_t>(0);
-        case EeNetClMsgField::ServersTick:   // the tick response's servers' tick
-            return (ptrdiff_t)theRecord->Get<uint32_t>(1);
-        case EeNetClMsgField::OffsetStartTime:   // the start game's
-            return (ptrdiff_t)theRecord->Get<uint32_t>(0);
-        case EeNetClMsgField::SendToSlot:   // the connection response's: error, UI slot, send-to slot, tick
-            return theRecord->Get<uint8_t>(2);
-        case EeNetClMsgField::ConnectionError:
-            return (ptrdiff_t)(uint32_t)theRecord->Get<int32_t>(0);
-        case EeNetClMsgField::ConnectionCt:
-            return (ptrdiff_t)theRecord->Get<uint32_t>(3);
-        case EeNetClMsgField::NewSendToSlot:   // the reconnection response's: error, new send-to slot, tick
-            return theRecord->Get<uint8_t>(1);
-        case EeNetClMsgField::ReconnectionCt:
-            return (ptrdiff_t)theRecord->Get<uint32_t>(2);
-        case EeNetClMsgField::UniqueId:   // the pause's or the unpause's
-            return (ptrdiff_t)theRecord->Get<uint32_t>(0);
-        case EeNetClMsgField::XferId:   // the transfer's: id, size, block
-            return theRecord->Get<uint8_t>(0);
-        case EeNetClMsgField::XferData:
-            return (ptrdiff_t)theRecord->Field(2, 0x400);
-        case EeNetClMsgField::XferDataSize:
-            return (ptrdiff_t)theRecord->Get<uint32_t>(1);
-        }
-        return 0;
+        return (ptrdiff_t)theRecord->Value((uint32_t)b);
     case EeNetClOp::MsgNew:
-        switch ((EeNetClNewMsg)a) {
-        case EeNetClNewMsg::TickResponse:   // the last tick processed, the servers' tick, the physics time
-            return (ptrdiff_t) new NEMRecord(kNetMessageCommunicationsTickResponse, {b, c, (unsigned short)d});
-        case EeNetClNewMsg::StopGameResponse:
-            return (ptrdiff_t) new NEMRecord(kNetMessageStopGameResponse);
-        case EeNetClNewMsg::StartGameResponse:
-            return (ptrdiff_t) new NEMRecord(kNetMessageStartGameResponse, {b});
-        case EeNetClNewMsg::UnPauseGameResponse:
-            return (ptrdiff_t) new NEMRecord(kNetMessageUnPauseGameResponse, {b});
-        case EeNetClNewMsg::PauseGameResponse:
-            return (ptrdiff_t) new NEMRecord(kNetMessagePauseGameResponse, {b});
-        case EeNetClNewMsg::XferMessage:   // received bytes
-            return (ptrdiff_t) new NEMRecord(reinterpret_cast<unsigned char*>(b));
-        case EeNetClNewMsg::XferStatus:   // the slot, percent done and status in b, the transfer's id
-            return (ptrdiff_t) new NEMRecord(kNetMessageXferStatus,
-                                             {b & 0xff, (b >> 8) & 0xff, (uint32_t)c, (b >> 16) & 0xff});
-        }
-        return 0;
+        return (ptrdiff_t) new NEMRecord((unsigned char)a, reinterpret_cast<const uint32_t*>(b), c);
+    case EeNetClOp::MsgImport:
+        return (ptrdiff_t) new NEMRecord(reinterpret_cast<unsigned char*>(a));
     case EeNetClOp::MsgAddInput:
         return theRecord->AddPlayerInput(reinterpret_cast<NEMessage*>(b));
     case EeNetClOp::MsgExportNew: {

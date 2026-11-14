@@ -55,10 +55,9 @@ pub enum EeNetClOp {
     MsgSetSlot = 18,
     /// a message, an uint32_t* -> GetSendToAllAndWaitMessageID(*out)
     MsgS2awId = 19,
-    /// a message, a field (EeNetClMsgField) -> the typed message's field
+    /// an engine message, a member (NEMRecord's numbering) -> its value (a block: its address)
     MsgGet = 20,
-    /// a kind (EeNetClNewMsg), then its arguments (the transfer status: slot | percent << 8 | status << 16, the id)
-    /// -> the new message
+    /// a type, its fixed members' values (const uint32_t*), their count -> new NEMRecord(type, values)
     MsgNew = 21,
     /// a tick response, an input -> AddPlayerInput(input)
     MsgAddInput = 22,
@@ -100,6 +99,8 @@ pub enum EeNetClOp {
     HandleConnectionTimeoutWarning = 40,
     /// a message, a player -> the virtual ProcessLocalUserInput
     ProcessLocalUserInput = 41,
+    /// received bytes -> new NEMRecord(bytes) (the transfer message)
+    MsgImport = 42,
 }
 
 /// A message's virtual flags
@@ -109,55 +110,6 @@ pub enum EeNetClMsgFlag {
     CountsTowardsPlayerInputThrottle = 0,
     CanSendWhilePaused = 1,
     IsAvailableToSend = 2,
-}
-
-/// The fields of the typed messages this class read (each a `static_cast` and a getter)
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeNetClMsgField {
-    /// NEMCommunicationsTick::GetCurrentCommunicationsTick
-    TickCt = 0,
-    /// NEMCommunicationsTickResponse::GetServersCommunicationTick
-    ServersTick = 1,
-    /// NEMStartGame::GetOffsetStartTime
-    OffsetStartTime = 2,
-    /// NEMClientConnectionRequestResponse::GetSendToSlot
-    SendToSlot = 3,
-    /// NEMClientConnectionRequestResponse::GetError
-    ConnectionError = 4,
-    /// NEMClientConnectionRequestResponse::GetCurrentCT
-    ConnectionCt = 5,
-    /// NEMClientReconnectionRequestResponse::GetNewSendToSlot
-    NewSendToSlot = 6,
-    /// NEMClientReconnectionRequestResponse::GetCurrentCT
-    ReconnectionCt = 7,
-    /// NEMPauseGame / NEMUnPauseGame::GetUniqueID
-    UniqueId = 8,
-    /// NEMXferMessage::GetID
-    XferId = 9,
-    /// NEMXferMessage::GetData (a pointer)
-    XferData = 10,
-    /// NEMXferMessage::GetDataSize
-    XferDataSize = 11,
-}
-
-/// The messages this class made (`new`, one reference)
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeNetClNewMsg {
-    /// NEMCommunicationsTickResponse(CTs processed, the tick, the average physics update time)
-    TickResponse = 0,
-    StopGameResponse = 1,
-    /// NEMStartGameResponse(time)
-    StartGameResponse = 2,
-    /// NEMUnPauseGameResponse(id)
-    UnPauseGameResponse = 3,
-    /// NEMPauseGameResponse(id)
-    PauseGameResponse = 4,
-    /// NEMXferMessage(the received bytes)
-    XferMessage = 5,
-    /// NEMXferStatus(slot, percent done, transfer id, status)
-    XferStatus = 6,
 }
 
 pub type EeNetClHostFn =
@@ -390,15 +342,14 @@ impl ClientHost for ClFfiHost {
     fn msg_s2aw_id(&self, m: Msg, out: &mut u32) -> bool {
         self.call(EeNetClOp::MsgS2awId, m, out as *mut u32 as usize, 0, 0) != 0
     }
-    fn msg_get(&self, m: Msg, f: MsgField) -> usize {
-        self.call(EeNetClOp::MsgGet, m, f as usize, 0, 0) as usize
+    fn msg_get(&self, m: Msg, i: u32) -> usize {
+        self.call(EeNetClOp::MsgGet, m, i as usize, 0, 0) as usize
     }
-    fn msg_new(&self, kind: NewMsg, a: usize, b: usize, c: usize, d: usize) -> Msg {
-        if kind == NewMsg::XferStatus {
-            let packed = (a & 0xff) | (b & 0xff) << 8 | (d & 0xff) << 16;
-            return self.call(EeNetClOp::MsgNew, kind as usize, packed, c, 0) as Msg;
-        }
-        self.call(EeNetClOp::MsgNew, kind as usize, a, b, c) as Msg
+    fn msg_new(&self, message_type: u8, values: &[u32]) -> Msg {
+        self.call(EeNetClOp::MsgNew, message_type as usize, values.as_ptr() as usize, values.len(), 0) as Msg
+    }
+    fn msg_import(&self, data: usize) -> Msg {
+        self.call(EeNetClOp::MsgImport, data, 0, 0, 0) as Msg
     }
     fn msg_add_input(&self, response: Msg, input: Msg) -> i32 {
         self.call(EeNetClOp::MsgAddInput, response, input, 0, 0) as i32

@@ -341,63 +341,73 @@ static ptrdiff_t RustClHost(void*, EeNetClOp inOp, size_t a, size_t b, size_t c,
         return Answer(r, std::to_string((int)r) + " " + std::to_string(*(uint32_t*)b));
     }
     case EeNetClOp::MsgGet: {
+        // an engine message's member by NEMRecord's numbering, read from the original's class with its getter
         OpLine(theArgs + " " + MsgTok(a) + " " + std::to_string(b));
-        switch ((EeNetClMsgField)b) {
-        case EeNetClMsgField::TickCt: return Answer((ptrdiff_t)((NEMCommunicationsTick*)m)->GetCurrentCommunicationsTick());
-        case EeNetClMsgField::ServersTick: return Answer((ptrdiff_t)((NEMCommunicationsTickResponse*)m)->GetServersCommunicationTick());
-        case EeNetClMsgField::OffsetStartTime: return Answer((ptrdiff_t)((NEMStartGame*)m)->GetOffsetStartTime());
-        case EeNetClMsgField::SendToSlot: return Answer(((NEMClientConnectionRequestResponse*)m)->GetSendToSlot());
-        case EeNetClMsgField::ConnectionError: return Answer((ptrdiff_t)(uint32_t)((NEMClientConnectionRequestResponse*)m)->GetError());
-        case EeNetClMsgField::ConnectionCt: return Answer((ptrdiff_t)((NEMClientConnectionRequestResponse*)m)->GetCurrentCT());
-        case EeNetClMsgField::NewSendToSlot: return Answer(((NEMClientReconnectionRequestResponse*)m)->GetNewSendToSlot());
-        case EeNetClMsgField::ReconnectionCt: return Answer((ptrdiff_t)((NEMClientReconnectionRequestResponse*)m)->GetCurrentCT());
-        case EeNetClMsgField::UniqueId:
-            return Answer((ptrdiff_t)(m->GetType() == kNetMessagePauseGame ? ((NEMPauseGame*)m)->GetUniqueID()
-                                                                           : ((NEMUnPauseGame*)m)->GetUniqueID()));
-        case EeNetClMsgField::XferId: return Answer(((NEMXferMessage*)m)->GetID());
-        case EeNetClMsgField::XferData:
-            return Answer((ptrdiff_t)((NEMXferMessage*)m)->GetData(), CHex(((NEMXferMessage*)m)->GetData(), kCXferRecord - 2));
-        case EeNetClMsgField::XferDataSize: return Answer((ptrdiff_t)((NEMXferMessage*)m)->GetDataSize());
-        }
+        unsigned char t = m->GetType();
+        if (t == kNetMessageCommunicationsTick && b == 0)
+            return Answer((ptrdiff_t)((NEMCommunicationsTick*)m)->GetCurrentCommunicationsTick());
+        if (t == kNetMessageCommunicationsTickResponse && b == 1)
+            return Answer((ptrdiff_t)((NEMCommunicationsTickResponse*)m)->GetServersCommunicationTick());
+        if (t == kNetMessageStartGame && b == 0)
+            return Answer((ptrdiff_t)((NEMStartGame*)m)->GetOffsetStartTime());
+        if (t == kNetMessageClientConnectionRequestResponse && b == 0)
+            return Answer((ptrdiff_t)(uint32_t)((NEMClientConnectionRequestResponse*)m)->GetError());
+        if (t == kNetMessageClientConnectionRequestResponse && b == 2)
+            return Answer(((NEMClientConnectionRequestResponse*)m)->GetSendToSlot());
+        if (t == kNetMessageClientConnectionRequestResponse && b == 3)
+            return Answer((ptrdiff_t)((NEMClientConnectionRequestResponse*)m)->GetCurrentCT());
+        if (t == kNetMessageClientReconnectionRequestResponse && b == 1)
+            return Answer(((NEMClientReconnectionRequestResponse*)m)->GetNewSendToSlot());
+        if (t == kNetMessageClientReconnectionRequestResponse && b == 2)
+            return Answer((ptrdiff_t)((NEMClientReconnectionRequestResponse*)m)->GetCurrentCT());
+        if (t == kNetMessagePauseGame && b == 0)
+            return Answer((ptrdiff_t)((NEMPauseGame*)m)->GetUniqueID());
+        if (t == kNetMessageUnPauseGame && b == 0)
+            return Answer((ptrdiff_t)((NEMUnPauseGame*)m)->GetUniqueID());
+        if (t == kNetMessageXferMessage && b == 0)
+            return Answer(((NEMXferMessage*)m)->GetID());
+        if (t == kNetMessageXferMessage && b == 1)
+            return Answer((ptrdiff_t)((NEMXferMessage*)m)->GetDataSize());
+        if (t == kNetMessageXferMessage && b == 2)   // the block: "x" and its bytes
+            return Answer((ptrdiff_t)((NEMXferMessage*)m)->GetData(),
+                          "x" + CHex(((NEMXferMessage*)m)->GetData(), kCXferRecord - 2));
+        gQ->Line("unexpected member %02x %d", t, (int)b);
         return Answer(0);
     }
     case EeNetClOp::MsgNew: {
+        // a new engine message by type and fixed members (record order), made with the original's constructor
+        const uint32_t* v = (const uint32_t*)b;
+        std::string theValues;
+        for (size_t i = 0; i < c; i++)
+            theValues += " " + std::to_string(v[i]);
+        OpLine(theArgs + " " + std::to_string(a) + theValues);
         NEMessage* theNew = NULL;
-        switch ((EeNetClNewMsg)a) {
-        case EeNetClNewMsg::TickResponse:
-            OpLine(theArgs + " 0 " + std::to_string(b) + " " + std::to_string(c) + " " + std::to_string(d));
-            theNew = new NEMCommunicationsTickResponse((unsigned long)b, (unsigned long)c, (unsigned long)d);
+        switch (a) {
+        case kNetMessageCommunicationsTickResponse:   // the last tick processed, the servers' tick, the physics time
+            theNew = new NEMCommunicationsTickResponse((unsigned long)v[0], (unsigned long)v[1], (unsigned long)v[2]);
             break;
-        case EeNetClNewMsg::StopGameResponse:
-            OpLine(theArgs + " 1");
-            theNew = new NEMStopGameResponse();
-            break;
-        case EeNetClNewMsg::StartGameResponse: {
-            OpLine(theArgs + " 2 " + std::to_string(b));
-            unsigned long theTime = (unsigned long)b;
+        case kNetMessageStopGameResponse: theNew = new NEMStopGameResponse(); break;
+        case kNetMessageStartGameResponse: {
+            unsigned long theTime = (unsigned long)v[0];
             theNew = new NEMStartGameResponse(theTime);
             break;
         }
-        case EeNetClNewMsg::UnPauseGameResponse:
-            OpLine(theArgs + " 3 " + std::to_string(b));
-            theNew = new NEMUnPauseGameResponse((unsigned long)b);
-            break;
-        case EeNetClNewMsg::PauseGameResponse:
-            OpLine(theArgs + " 4 " + std::to_string(b));
-            theNew = new NEMPauseGameResponse((unsigned long)b);
-            break;
-        case EeNetClNewMsg::XferMessage:
-            OpLine(theArgs + " 5 " + CHex((unsigned char*)b, kCXferRecord));
-            theNew = new NEMXferMessage((unsigned char*)b);
-            break;
-        case EeNetClNewMsg::XferStatus: {
-            OpLine(theArgs + " 6 " + std::to_string(b) + " " + std::to_string(c));
-            unsigned char theSlot = (unsigned char)b, thePercent = (unsigned char)(b >> 8), theStatus = (unsigned char)(b >> 16);
-            uint32_t theID = (uint32_t)c;
+        case kNetMessageUnPauseGameResponse: theNew = new NEMUnPauseGameResponse((unsigned long)v[0]); break;
+        case kNetMessagePauseGameResponse: theNew = new NEMPauseGameResponse((unsigned long)v[0]); break;
+        case kNetMessageXferStatus: {   // the slot, the percent done, the id, the status
+            unsigned char theSlot = (unsigned char)v[0], thePercent = (unsigned char)v[1], theStatus = (unsigned char)v[3];
+            uint32_t theID = v[2];
             theNew = new NEMXferStatus(theSlot, thePercent, theID, theStatus);
             break;
         }
+        default:
+            gQ->Line("unexpected new %02x", (int)a);
         }
+        return Answer((ptrdiff_t)theNew, MsgTok((size_t)theNew));
+    }
+    case EeNetClOp::MsgImport: {
+        OpLine(theArgs + " " + CHex((unsigned char*)a, kCXferRecord));
+        NEMessage* theNew = new NEMXferMessage((unsigned char*)a);
         return Answer((ptrdiff_t)theNew, MsgTok((size_t)theNew));
     }
     case EeNetClOp::MsgAddInput:

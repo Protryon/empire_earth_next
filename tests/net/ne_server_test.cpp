@@ -358,42 +358,56 @@ static ptrdiff_t RustSvHost(void*, EeNetSvOp inOp, size_t a, size_t b, size_t c,
         OpLine(theArgs + " " + MsgTok(a) + " " + std::to_string(b));
         return Answer((EeNetSvMsgFlag)b == EeNetSvMsgFlag::CanSendWhilePaused ? m->GetCanSendWhilePaused()
                                                                                 : m->GetIsAvailableToSend());
+    case EeNetSvOp::MsgSlot:
+        OpLine(theArgs + " " + MsgTok(a));
+        return Answer(m->GetOriginatingSlot());
     case EeNetSvOp::MsgGet: {
+        // an engine message's member by NEMRecord's numbering, read from the original's class with its getter
         OpLine(theArgs + " " + MsgTok(a) + " " + std::to_string(b));
         ptrdiff_t r = 0;
-        switch ((EeNetSvMsgField)b) {
-        case EeNetSvMsgField::OriginatingSlot: r = m->GetOriginatingSlot(); break;
-        case EeNetSvMsgField::NumberOfPlayerInputs: r = (uint32_t)((NEMCommunicationsTickResponse*)m)->GetNumberOfPlayerInputs(); break;
-        case EeNetSvMsgField::LastCtProcessed: r = (uint32_t)((NEMCommunicationsTickResponse*)m)->GetLastCommunicationsTickProcessed(); break;
-        case EeNetSvMsgField::AveragePhysicsTickTime: r = (uint32_t)((NEMCommunicationsTickResponse*)m)->GetAveragePhysicsTickTime(); break;
-        case EeNetSvMsgField::ReconnectionCt: r = (uint32_t)((NEMClientReconnectionRequest*)m)->GetCurrentCT(); break;
-        case EeNetSvMsgField::ChecksumTick: r = (uint32_t)((NEMWorldDatabaseChecksumResponse*)m)->GetCommunicationsTick(); break;
-        case EeNetSvMsgField::Checksum: r = (uint32_t)((NEMWorldDatabaseChecksumResponse*)m)->GetWorldDatabaseChecksum(); break;
-        }
+        unsigned char t = m->GetType();
+        if (t == kNetMessageCommunicationsTickResponse && b == 0)
+            r = (uint32_t)((NEMCommunicationsTickResponse*)m)->GetLastCommunicationsTickProcessed();
+        else if (t == kNetMessageCommunicationsTickResponse && b == 2)
+            r = (uint32_t)((NEMCommunicationsTickResponse*)m)->GetAveragePhysicsTickTime();
+        else if (t == kNetMessageCommunicationsTickResponse && b == 3)
+            r = (uint32_t)((NEMCommunicationsTickResponse*)m)->GetNumberOfPlayerInputs();
+        else if (t == kNetMessageClientReconnectionRequest && b == 0)
+            r = (uint32_t)((NEMClientReconnectionRequest*)m)->GetCurrentCT();
+        else if (t == kNetMessageWorldDatabaseChecksumResponse && b == 0)
+            r = (uint32_t)((NEMWorldDatabaseChecksumResponse*)m)->GetCommunicationsTick();
+        else if (t == kNetMessageWorldDatabaseChecksumResponse && b == 1)
+            r = (uint32_t)((NEMWorldDatabaseChecksumResponse*)m)->GetWorldDatabaseChecksum();
+        else
+            gQ->Line("unexpected member %02x %d", t, (int)b);
         return Answer(r);
     }
     case EeNetSvOp::MsgNew: {
-        OpLine(theArgs + " " + std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(c) + " " +
-               std::to_string(d));
+        // a new engine message by type and fixed members (record order), made with the original's constructor
+        const uint32_t* v = (const uint32_t*)b;
+        std::string theValues;
+        for (size_t i = 0; i < c; i++)
+            theValues += " " + std::to_string(v[i]);
+        OpLine(theArgs + " " + std::to_string(a) + theValues);
         NEMessage* theNew = NULL;
-        switch ((EeNetSvNewMsg)a) {
-        case EeNetSvNewMsg::RemovePlayer: {
-            unsigned char thePlayer = (unsigned char)b;
-            theNew = new NEMRemovePlayer(thePlayer, (c & 1) != 0, (c & 2) != 0, (c & 4) != 0);
+        switch (a) {
+        case kNetMessageRemovePlayer:   // the player, out of synch, exiting, booted
+            theNew = new NEMRemovePlayer((unsigned char)v[0], v[3] != 0, v[1] != 0, v[2] != 0);
             break;
-        }
-        case EeNetSvNewMsg::PauseGame: theNew = new NEMPauseGame((unsigned long)b); break;
-        case EeNetSvNewMsg::UnPauseGame: theNew = new NEMUnPauseGame((unsigned long)b); break;
-        case EeNetSvNewMsg::ServerIsAlive: theNew = new NEMServerIsAlive(); break;
-        case EeNetSvNewMsg::StopGame: theNew = new NEMStopGame(); break;
-        case EeNetSvNewMsg::PlayerConnectionCheck: theNew = new NEMPlayerConnectionCheck((unsigned long)b); break;
-        case EeNetSvNewMsg::CommunicationsTick:
-            theNew = new NEMCommunicationsTick((unsigned long)b, (unsigned char)c, (unsigned char)(c >> 8),
-                                               ((c >> 16) & 1) != 0, d != 0);
+        case kNetMessagePauseGame: theNew = new NEMPauseGame((unsigned long)v[0]); break;
+        case kNetMessageUnPauseGame: theNew = new NEMUnPauseGame((unsigned long)v[0]); break;
+        case kNetMessageServerIsAlive: theNew = new NEMServerIsAlive(); break;
+        case kNetMessageStopGame: theNew = new NEMStopGame(); break;
+        case kNetMessagePlayerConnectionCheck: theNew = new NEMPlayerConnectionCheck((unsigned long)v[0]); break;
+        case kNetMessageCommunicationsTick:
+            theNew = new NEMCommunicationsTick((unsigned long)v[0], (unsigned char)v[1], (unsigned char)v[2], v[3] != 0,
+                                               v[4] != 0);
             break;
-        case EeNetSvNewMsg::ReconnectionRequestResponse:
-            theNew = new NEMClientReconnectionRequestResponse((long)(int32_t)b, (unsigned char)c, (unsigned long)d);
+        case kNetMessageClientReconnectionRequestResponse:
+            theNew = new NEMClientReconnectionRequestResponse((long)(int32_t)v[0], (unsigned char)v[1], (unsigned long)v[2]);
             break;
+        default:
+            gQ->Line("unexpected new %02x", (int)a);
         }
         return Answer((ptrdiff_t)theNew, MsgTok((size_t)theNew));
     }

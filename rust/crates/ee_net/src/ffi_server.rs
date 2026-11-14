@@ -12,54 +12,12 @@ use crate::qhost::*;
 use crate::recplay::RecPlay;
 use crate::server::{Back, Server, ServerArgs, ServerHost};
 
-/// The typed messages' fields the server reads
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeNetSvMsgField {
-    /// any message: GetOriginatingSlot()
-    OriginatingSlot = 0,
-    /// NEMCommunicationsTickResponse: GetNumberOfPlayerInputs()
-    NumberOfPlayerInputs = 1,
-    /// NEMCommunicationsTickResponse: GetLastCommunicationsTickProcessed()
-    LastCtProcessed = 2,
-    /// NEMCommunicationsTickResponse: GetAveragePhysicsTickTime()
-    AveragePhysicsTickTime = 3,
-    /// NEMClientReconnectionRequest: GetCurrentCT()
-    ReconnectionCt = 4,
-    /// NEMWorldDatabaseChecksumResponse: GetCommunicationsTick()
-    ChecksumTick = 5,
-    /// NEMWorldDatabaseChecksumResponse: GetWorldDatabaseChecksum()
-    Checksum = 6,
-}
-
 /// The messages' flags the server reads
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EeNetSvMsgFlag {
     CanSendWhilePaused = 0,
     IsAvailableToSend = 1,
-}
-
-/// The messages the server makes (`EeNetSvOp::MsgNew`)
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EeNetSvNewMsg {
-    /// NEMRemovePlayer(a, b & 1, b & 2, b & 4)
-    RemovePlayer = 0,
-    /// NEMPauseGame(a)
-    PauseGame = 1,
-    /// NEMUnPauseGame(a)
-    UnPauseGame = 2,
-    /// NEMServerIsAlive()
-    ServerIsAlive = 3,
-    /// NEMStopGame()
-    StopGame = 4,
-    /// NEMPlayerConnectionCheck(a)
-    PlayerConnectionCheck = 5,
-    /// NEMCommunicationsTick(a, b & 0xff, (b >> 8) & 0xff, b >> 16 & 1, c)
-    CommunicationsTick = 6,
-    /// NEMClientReconnectionRequestResponse(a, b, c)
-    ReconnectionRequestResponse = 7,
 }
 
 /// The server's calls out; a, b, c, d as each op says, the answer as isize.
@@ -98,9 +56,9 @@ pub enum EeNetSvOp {
     MsgSetSlot = 16,
     /// a message, a flag (EeNetSvMsgFlag)
     MsgFlag = 17,
-    /// a message, a field (EeNetSvMsgField)
+    /// an engine message, a member (NEMRecord's numbering) -> its value (the players' inputs: their count)
     MsgGet = 18,
-    /// kind (EeNetSvNewMsg), a, b, c -> the new message
+    /// a type, its fixed members' values (const uint32_t*), their count -> new NEMRecord(type, values)
     MsgNew = 19,
     /// a tick response, an index, an NEMessage** -> GetPlayerInput(i, out)
     MsgTickResponseInput = 20,
@@ -136,6 +94,8 @@ pub enum EeNetSvOp {
     ProcessSystemMessage = 35,
     /// a message, a player -> the virtual ProcessLocalUserInput
     ProcessLocalUserInput = 36,
+    /// a message -> GetOriginatingSlot()
+    MsgSlot = 37,
 }
 
 /// The fields the accessors read (`ee_net_sv_get`)
@@ -433,11 +393,14 @@ impl ServerHost for SvFfiHost {
     fn msg_flag(&self, m: Msg, f: EeNetSvMsgFlag) -> bool {
         self.call(EeNetSvOp::MsgFlag, m, f as usize, 0, 0) != 0
     }
-    fn msg_get(&self, m: Msg, f: EeNetSvMsgField) -> u32 {
-        self.call(EeNetSvOp::MsgGet, m, f as usize, 0, 0) as u32
+    fn msg_slot(&self, m: Msg) -> u8 {
+        self.call(EeNetSvOp::MsgSlot, m, 0, 0, 0) as u8
     }
-    fn msg_new(&self, kind: EeNetSvNewMsg, a: u32, b: u32, c: u32) -> Msg {
-        self.call(EeNetSvOp::MsgNew, kind as usize, a as usize, b as usize, c as usize) as Msg
+    fn msg_get(&self, m: Msg, i: u32) -> u32 {
+        self.call(EeNetSvOp::MsgGet, m, i as usize, 0, 0) as u32
+    }
+    fn msg_new(&self, message_type: u8, values: &[u32]) -> Msg {
+        self.call(EeNetSvOp::MsgNew, message_type as usize, values.as_ptr() as usize, values.len(), 0) as Msg
     }
     fn msg_tick_response_input(&self, m: Msg, i: u32, out: &mut Msg) -> i32 {
         self.call(EeNetSvOp::MsgTickResponseInput, m, i as usize, out as *mut Msg as usize, 0) as i32
