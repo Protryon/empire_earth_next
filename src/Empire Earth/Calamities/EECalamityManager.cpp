@@ -76,6 +76,39 @@ void EECalamityManager::DestroyCalamities()
     ESVERIFY_AT(theNumCalamitiesDeleted == theNumActiveCalamities, 77);
 }
 
+namespace {
+
+// New (port): the calamity class of a record's kind, as LoadCalamityClasses's switch made it (its ESVERIFYs on
+// `new`'s result, lines 128..235, could never fail)
+EECalamityClass* NewCalamityClass(long inClassEnum)
+{
+    switch (inClassEnum) {
+    case kCalamityEarthquake: return new EECCEarthquake;
+    case kCalamityHurricane: return new EECCHurricane;
+    case kCalamityPlague: return new EECCPlague;
+    case kCalamityLeprosy: return new EECCLeprosy;
+    case kCalamityVolcano: return new EECCVolcano;
+    case kCalamityFire: return new EECCFire;
+    case kCalamityMorale: return new EECCMorale;
+    case kCalamityTimeWarp: return new EECCTimeWarp;
+    case kCalamityTeleport: return new EECCTeleport;
+    case kCalamityAreaEffect: return new EECCAreaEffect;
+    case kCalamityAEExtraDamage: return new EECCAEExtraDamage;
+    case kCalamitySpecialAttack: return new EECCSpecialAttack;
+    case kCalamityAEMindControl: return new EECCAEMindControl;
+    case kCalamityConscription: return new EECCConscription;
+    case kCalamityLogicBomb: return new EECCLogicBomb;
+    case kCalamityDropObject: return new EECCDropObject;
+    case kCalamityCloaking: return new EECCCloaking;
+    case kCalamityMeteorStorm: return new EECCMeteorStorm;
+    case kCalamityLineOfSight: return new EECCLineOfSight;
+    case kCalamitySpecialLocation: return new EECCSpecialLocation;
+    }
+    return NULL;
+}
+
+}   // namespace
+
 // FUNCTION: EXE 0x4ae070
 // Reads the calamity class records from the file and creates and initializes the class each one names (NULL for
 // unknown kinds); returns the record-count read result
@@ -91,130 +124,10 @@ long EECalamityManager::LoadCalamityClasses(FSFileSpec* inFile)
             unsigned long theRead;
             EECalamityData theData;
             theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theData), sizeof(EECalamityData), theRead);
-            EECalamityClass* theCalamity = NULL;
-            if (theData.mID >= 0) {
-                switch (theData.mClassEnum) {
-                case 1:
-                     break;
-
-                case 2:
-                     break;
-
-                case kCalamityEarthquake:
-                    theCalamity = new EECCEarthquake;
-                    ESVERIFY_AT(theCalamity, 128);
-                    break;
-
-                case kCalamityHurricane:
-                    theCalamity = new EECCHurricane;
-                    ESVERIFY_AT(theCalamity, 133);
-                    break;
-
-                case 5:
-                    break;
-
-                case 6:
-                    break;
-
-                case kCalamityPlague:
-                    theCalamity = new EECCPlague;
-                    ESVERIFY_AT(theCalamity, 144);
-                    break;
-
-                case kCalamityLeprosy:
-                    theCalamity = new EECCLeprosy;
-                    ESVERIFY_AT(theCalamity, 149);
-                    break;
-
-                case kCalamityVolcano:
-                    theCalamity = new EECCVolcano;
-                    ESVERIFY_AT(theCalamity, 154);
-                    break;
-
-                case kCalamityFire:
-                    theCalamity = new EECCFire;
-                    ESVERIFY_AT(theCalamity, 159);
-                    break;
-
-                case 11:
-                    break;
-
-                case 12:
-                    break;
-
-                case kCalamityMorale:
-                    theCalamity = new EECCMorale;
-                    ESVERIFY_AT(theCalamity, 170);
-                    break;
-
-                case kCalamityTimeWarp:
-                    theCalamity = new EECCTimeWarp;
-                    ESVERIFY_AT(theCalamity, 175);
-                    break;
-
-                case kCalamityTeleport:
-                    theCalamity = new EECCTeleport;
-                    ESVERIFY_AT(theCalamity, 180);
-                    break;
-
-                case kCalamityAreaEffect:
-                    theCalamity = new EECCAreaEffect;
-                    ESVERIFY_AT(theCalamity, 185);
-                    break;
-
-                case kCalamityAEExtraDamage:
-                    theCalamity = new EECCAEExtraDamage;
-                    ESVERIFY_AT(theCalamity, 190);
-                    break;
-
-                case kCalamitySpecialAttack:
-                    theCalamity = new EECCSpecialAttack;
-                    ESVERIFY_AT(theCalamity, 195);
-                    break;
-
-                case kCalamityAEMindControl:
-                    theCalamity = new EECCAEMindControl;
-                    ESVERIFY_AT(theCalamity, 200);
-                    break;
-
-                case kCalamityConscription:
-                    theCalamity = new EECCConscription;
-                    ESVERIFY_AT(theCalamity, 205);
-                    break;
-
-                case kCalamityLogicBomb:
-                    theCalamity = new EECCLogicBomb;
-                    ESVERIFY_AT(theCalamity, 210);
-                    break;
-
-                case kCalamityDropObject:
-                    theCalamity = new EECCDropObject;
-                    ESVERIFY_AT(theCalamity, 215);
-                    break;
-
-                case kCalamityCloaking:
-                    theCalamity = new EECCCloaking;
-                    ESVERIFY_AT(theCalamity, 220);
-                    break;
-
-                case kCalamityMeteorStorm:
-                    theCalamity = new EECCMeteorStorm;
-                    ESVERIFY_AT(theCalamity, 225);
-                    break;
-
-                case kCalamityLineOfSight:
-                    theCalamity = new EECCLineOfSight;
-                    ESVERIFY_AT(theCalamity, 230);
-                    break;
-
-                case kCalamitySpecialLocation:
-                    theCalamity = new EECCSpecialLocation;
-                    ESVERIFY_AT(theCalamity, 235);
-                    break;
-                }
-                if (theCalamity != NULL)
-                    theCalamity->Initialize(&theData);
-            }
+            // the class of the record's kind (none for kinds 1, 2, 5, 6, 11, 12, unknown ones or a negative id)
+            EECalamityClass* theCalamity = theData.mID >= 0 ? NewCalamityClass(theData.mClassEnum) : NULL;
+            if (theCalamity != NULL)
+                theCalamity->Initialize(&theData);
             this->mCalamityClasses[i] = theCalamity;
         }
     }
