@@ -2177,6 +2177,114 @@ constexpr static const uint32_t EE_SCREENS_MF_OP_CHAT_TOP = 75;
 /// `HideMessages()`.
 constexpr static const uint32_t EE_SCREENS_MF_OP_HIDE_MESSAGES = 76;
 
+/// `TSScheduler::CreateCriticalSection(mErrorCriticalSection)`, verified (`ESVERIFY_AT(..., 633)`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_CREATE_ERROR_LOCK = 77;
+
+/// `CreateGroup(a)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CREATE_GROUP = 78;
+
+/// `mUnitHack = new EEUIFMGUnitHack(form)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_NEW_UNIT_HACK = 79;
+
+/// `mPoll = new TMPoll(a, 0, false)`, then `mPoll->Start()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_NEW_POLL = 80;
+
+/// The game window's size into io.n: a 0 `gGameWindowWidth`, `gGameWindowHeight`; a 1 `gGameWindow`'s
+/// `GetWidth()`, `GetHeight()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_WINDOW_SIZE = 81;
+
+/// `mScroll = new EEAScroll` with `mEdges` io.f (left, top, right, bottom).
+constexpr static const uint32_t EE_SCREENS_MF_OP_NEW_SCROLL = 82;
+
+/// a 0: `mMouseClick = new EEAMouseClick`; 1: `mLasso = new EEALasso`; 2: `mBuild = new EEABuild`; 3: `mCalamity =
+/// new EEACalamity`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_NEW_ACTION = 83;
+
+/// `GetEntityGroup(a)->Enable()` (b 1) or `Disable()` (b 0).
+constexpr static const uint32_t EE_SCREENS_MF_OP_ENTITY_GROUP = 84;
+
+/// `mMouseTests[a]` = the host's mouse test b (`EE_SCREENS_MF_MOUSE_*`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_MOUSE_TEST = 85;
+
+/// `mKeyboardTests[a]` = the host's keyboard test b (`EE_SCREENS_MF_KEYBOARD_*`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_KEYBOARD_TEST = 86;
+
+/// `mWheelZoom = EECreateScreenEvent(a)`; `SetMouseWheelMoveEvent(mWheelZoom)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_WHEEL_ZOOM = 87;
+
+/// `mGrabScroll = EECreateGrabScroll(a)`; the middle button's pressed and unpressed event.
+constexpr static const uint32_t EE_SCREENS_MF_OP_GRAB_SCROLL = 88;
+
+/// `AddHotKey`: a the key and three modifiers (16 bits each, low first), b the group (low 32 bits) and the always
+/// flag (bit 32), io.n[0] the just pressed (low) and pressed events, io.n[1] the just unpressed (low) and double
+/// pressed events (each `EECreateScreenEvent(code)`, none for [`EE_SCREENS_MF_NO_EVENT`]).
+constexpr static const uint32_t EE_SCREENS_MF_OP_ADD_HOT_KEY = 89;
+
+/// `SetHotKeyGroupEnabled(a, b != 0)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_HOT_KEY_GROUP = 90;
+
+/// `GetManager()->ForceUIUpdate()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_FORCE_UI_UPDATE = 91;
+
+/// `gUserInterface->UpdateJITManufacturing()` when there is a `gUserInterface`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_UPDATE_JIT = 92;
+
+/// a 0: `mBuildWall.Terminate()`; a 1: `mBuildGate.Terminate()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_BUILD_TERMINATE = 93;
+
+/// `SetAllControlsDirty()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_ALL_DIRTY = 94;
+
+/// The current player's tech tree node a, held: != NULL.
+constexpr static const uint32_t EE_SCREENS_MF_OP_NODE = 95;
+
+/// `gUnitClassTable[node->mData->mUnitClass] != NULL` of the held node (0 without one).
+constexpr static const uint32_t EE_SCREENS_MF_OP_NODE_CLASS = 96;
+
+/// The current player's unit a, held: 0 none, 1 no complex unit, 2 a complex unit.
+constexpr static const uint32_t EE_SCREENS_MF_OP_UNIT = 97;
+
+/// `CanProduce(a, the held unit's complex class's type, 1, true, 3, &error)`, the error the held text.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CAN_PRODUCE = 98;
+
+/// `gSoundManager->Play(EESoundObject::Get(a)->GetSampleID(), 1, 0, 1, false, NULL)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_PLAY_SOUND = 99;
+
+/// `EEGhostUnit::Create(GetMouseLocation(), class, player, 0, false)`: a 0 the held node's unit class, a 1 the held
+/// calamity's volcano class.
+constexpr static const uint32_t EE_SCREENS_MF_OP_GHOST = 100;
+
+/// `gUserInterface->AddChatLogEntry(held text, 0)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CHAT_LOG_ERROR = 101;
+
+/// The gate placement of tech a: `mBuildGate`'s tech, wall type (the node's `GetUnitClass(0)`), class (the node's),
+/// `Initialize(the player's id)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_GATE_BEGIN = 102;
+
+/// The wall placement of tech a: `mBuildWall.mTechnology`, `Initialize(the player's id)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_WALL_BEGIN = 103;
+
+/// The current player's selected group's `GetNumUnits()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_SELECTED_COUNT = 104;
+
+/// The caster (the selected group's first unit when it has units), held: != NULL.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CASTER = 105;
+
+/// The held node's `mData->mCalamity`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_NODE_CALAMITY = 106;
+
+/// The calamity manager's class of calamity a, held: != NULL.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CALAMITY_CLASS = 107;
+
+/// `mCalamity->SetCalamity(a, class)`, `SetCasterID(the caster's id)`: the class's `GetTargetKind()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CALAMITY_SET = 108;
+
+/// `mCalamity->Cast(GetMouseLocation())`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CALAMITY_CAST = 109;
+
+/// `gUIManager->mMainGameForm->mRefreshGroup = true` when there is a main game form.
+constexpr static const uint32_t EE_SCREENS_MF_OP_REFRESH_MAIN_FORM = 110;
+
 /// `mStringsChanged`.
 constexpr static const int64_t EE_SCREENS_MF_FIELD_STRINGS_CHANGED = 1;
 
@@ -2257,6 +2365,54 @@ constexpr static const int64_t EE_SCREENS_MF_IDS_GAME_PAUSED = 30614;
 constexpr static const int64_t EE_SCREENS_MF_HIDDEN = 0;
 
 constexpr static const int64_t EE_SCREENS_MF_SHOWN = 1;
+
+/// `mInfoBlinking`, `mIsButtonBlinking`, `mDrawToolTipShadow`, `mEntityGroup`, `mCurrentGroup`, `mMediaID`,
+/// `mEntityGroupSet`, `mB5F0`, `mHotKeyMode`, `mBuild->mTechnology`.
+constexpr static const int64_t EE_SCREENS_MF_FIELD_INFO_BLINKING = 9;
+
+constexpr static const int64_t EE_SCREENS_MF_FIELD_BUTTON_BLINKING = 10;
+
+constexpr static const int64_t EE_SCREENS_MF_FIELD_TOOLTIP_SHADOW = 11;
+
+constexpr static const int64_t EE_SCREENS_MF_FIELD_ENTITY_GROUP = 12;
+
+constexpr static const int64_t EE_SCREENS_MF_FIELD_CURRENT_GROUP = 13;
+
+constexpr static const int64_t EE_SCREENS_MF_FIELD_MEDIA_ID = 14;
+
+constexpr static const int64_t EE_SCREENS_MF_FIELD_ENTITY_GROUP_SET = 15;
+
+constexpr static const int64_t EE_SCREENS_MF_FIELD_B5F0 = 16;
+
+constexpr static const int64_t EE_SCREENS_MF_FIELD_HOT_KEY_MODE = 17;
+
+constexpr static const int64_t EE_SCREENS_MF_FIELD_BUILD_TECH = 18;
+
+/// The panel group's `Select()` (EE_SCREENS_MF_OP_GROUP).
+constexpr static const int64_t EE_SCREENS_MF_GROUP_SELECT = 3;
+
+/// No event in a hot key's slot (EE_SCREENS_MF_OP_ADD_HOT_KEY).
+constexpr static const uint32_t EE_SCREENS_MF_NO_EVENT = 4294967295;
+
+/// The cancel-mode button (`kMainGameCancelUIMode`).
+constexpr static const int64_t EE_SCREENS_MF_CTL_CANCEL_UI_MODE = 244;
+
+/// `kSoundButton1`, `kSoundButton2`.
+constexpr static const int64_t EE_SCREENS_MF_SOUND_BUTTON1 = 519;
+
+constexpr static const int64_t EE_SCREENS_MF_SOUND_BUTTON2 = 520;
+
+/// `mUIState`: the build, calamity, patrol and flare modes.
+constexpr static const int64_t EE_SCREENS_MF_STATE_BUILD = 1;
+
+constexpr static const int64_t EE_SCREENS_MF_STATE_CALAMITY = 5;
+
+constexpr static const int64_t EE_SCREENS_MF_STATE_PATROL = 16;
+
+constexpr static const int64_t EE_SCREENS_MF_STATE_FLARE = 21;
+
+/// The volcano's tech (its calamity mode shows a volcano ghost).
+constexpr static const int64_t EE_SCREENS_MF_TECH_VOLCANO = 1017;
 
 constexpr static const uint32_t EE_SCREENS_MG_CANCEL_UI_MODE = 2817;
 
@@ -5259,6 +5415,27 @@ void ee_screens_main_form_chat_line(void *call);
 
 /// `EEUIFMainGame::ShowInformation` of the host's call record's dialog message.
 void ee_screens_main_form_show_information(void *call);
+
+/// `EEUIFMainGame`'s constructor after `UIForm`'s, over the host's call record (it reads no control).
+void ee_screens_main_form_construct(void *call);
+
+/// `EEUIFMainGame::SetHotKeyMode(mode)`.
+void ee_screens_main_form_hot_key_mode(void *call, int64_t mode);
+
+/// `EEUIFMainGame::SetUIState(state)`.
+void ee_screens_main_form_ui_state(void *call, int64_t state);
+
+/// `EEUIFMainGame::SetEntityGroup(group)`.
+void ee_screens_main_form_entity_group(void *call, int64_t group);
+
+/// `EEUIFMainGame::BuildUnit(unit, tech)`.
+void ee_screens_main_form_build_unit(void *call, int64_t unit, int64_t tech);
+
+/// The start of a mode: `StartGate(tech)` (kind 0), `StartWall(tech)` (1), `StartCalamity(tech)` (2),
+/// `StartFlare()` (3), `StartPatrol()` (4).
+void ee_screens_main_form_start(void *call,
+                                uint32_t kind,
+                                int64_t tech);
 
 /// `EEScreenEvent::ProcessEvent`: the screen event `event` on `form` (`UIForm*`) from `entity`; `kErrorOK` (0).
 long ee_screens_event(uint32_t event,

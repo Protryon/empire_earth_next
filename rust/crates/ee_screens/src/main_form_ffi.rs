@@ -67,3 +67,47 @@ pub extern "C" fn ee_screens_main_form_chat_line(call: *mut c_void) {
 pub extern "C" fn ee_screens_main_form_show_information(call: *mut c_void) {
     main_form::show_information(&mut Host(call));
 }
+
+/// `EEUIFMainGame`'s constructor after `UIForm`'s, over the host's call record (it reads no control).
+#[no_mangle]
+pub extern "C" fn ee_screens_main_form_construct(call: *mut c_void) {
+    main_form::construct(&mut Host(call));
+}
+
+/// `EEUIFMainGame::SetHotKeyMode(mode)`.
+#[no_mangle]
+pub extern "C" fn ee_screens_main_form_hot_key_mode(call: *mut c_void, mode: i64) {
+    main_form::set_hot_key_mode(&mut Host(call), mode);
+}
+
+/// `EEUIFMainGame::SetUIState(state)`.
+#[no_mangle]
+pub extern "C" fn ee_screens_main_form_ui_state(call: *mut c_void, state: i64) {
+    main_form::set_ui_state(&mut Host(call), state);
+}
+
+/// `EEUIFMainGame::SetEntityGroup(group)`.
+#[no_mangle]
+pub extern "C" fn ee_screens_main_form_entity_group(call: *mut c_void, group: i64) {
+    main_form::set_entity_group(&mut Host(call), group);
+}
+
+/// `EEUIFMainGame::BuildUnit(unit, tech)`.
+#[no_mangle]
+pub extern "C" fn ee_screens_main_form_build_unit(call: *mut c_void, unit: i64, tech: i64) {
+    main_form::build_unit(&mut Host(call), unit, tech);
+}
+
+/// The start of a mode: `StartGate(tech)` (kind 0), `StartWall(tech)` (1), `StartCalamity(tech)` (2),
+/// `StartFlare()` (3), `StartPatrol()` (4).
+#[no_mangle]
+pub extern "C" fn ee_screens_main_form_start(call: *mut c_void, kind: u32, tech: i64) {
+    let h = &mut Host(call);
+    match kind {
+        0 => main_form::start_gate(h, tech),
+        1 => main_form::start_wall(h, tech),
+        2 => main_form::start_calamity(h, tech),
+        3 => main_form::start_targeting(h, main_form::EE_SCREENS_MF_STATE_FLARE),
+        _ => main_form::start_targeting(h, main_form::EE_SCREENS_MF_STATE_PATROL),
+    }
+}

@@ -9,6 +9,9 @@
 //! asked where and as often as the original asked it. Texts cross as UTF-8 bytes through the host's one held text
 //! (a `UWideString`): [`FormHost::set_text`] fills it, [`FormHost::text`] reads it, the label ops show it.
 
+use crate::camera::*;
+use crate::hot_keys::*;
+use crate::main_game::*;
 use ee_ge::types::Ge2DPoint;
 use ee_ge::um::lrintf;
 
@@ -166,6 +169,83 @@ pub const EE_SCREENS_MF_OP_INFO_RECT: u32 = 74;
 pub const EE_SCREENS_MF_OP_CHAT_TOP: u32 = 75;
 /// `HideMessages()`.
 pub const EE_SCREENS_MF_OP_HIDE_MESSAGES: u32 = 76;
+
+// ---- the form's construction and modes (round 25)
+
+/// `TSScheduler::CreateCriticalSection(mErrorCriticalSection)`, verified (`ESVERIFY_AT(..., 633)`).
+pub const EE_SCREENS_MF_OP_CREATE_ERROR_LOCK: u32 = 77;
+/// `CreateGroup(a)`.
+pub const EE_SCREENS_MF_OP_CREATE_GROUP: u32 = 78;
+/// `mUnitHack = new EEUIFMGUnitHack(form)`.
+pub const EE_SCREENS_MF_OP_NEW_UNIT_HACK: u32 = 79;
+/// `mPoll = new TMPoll(a, 0, false)`, then `mPoll->Start()`.
+pub const EE_SCREENS_MF_OP_NEW_POLL: u32 = 80;
+/// The game window's size into io.n: a 0 `gGameWindowWidth`, `gGameWindowHeight`; a 1 `gGameWindow`'s
+/// `GetWidth()`, `GetHeight()`.
+pub const EE_SCREENS_MF_OP_WINDOW_SIZE: u32 = 81;
+/// `mScroll = new EEAScroll` with `mEdges` io.f (left, top, right, bottom).
+pub const EE_SCREENS_MF_OP_NEW_SCROLL: u32 = 82;
+/// a 0: `mMouseClick = new EEAMouseClick`; 1: `mLasso = new EEALasso`; 2: `mBuild = new EEABuild`; 3: `mCalamity =
+/// new EEACalamity`.
+pub const EE_SCREENS_MF_OP_NEW_ACTION: u32 = 83;
+/// `GetEntityGroup(a)->Enable()` (b 1) or `Disable()` (b 0).
+pub const EE_SCREENS_MF_OP_ENTITY_GROUP: u32 = 84;
+/// `mMouseTests[a]` = the host's mouse test b (`EE_SCREENS_MF_MOUSE_*`).
+pub const EE_SCREENS_MF_OP_MOUSE_TEST: u32 = 85;
+/// `mKeyboardTests[a]` = the host's keyboard test b (`EE_SCREENS_MF_KEYBOARD_*`).
+pub const EE_SCREENS_MF_OP_KEYBOARD_TEST: u32 = 86;
+/// `mWheelZoom = EECreateScreenEvent(a)`; `SetMouseWheelMoveEvent(mWheelZoom)`.
+pub const EE_SCREENS_MF_OP_WHEEL_ZOOM: u32 = 87;
+/// `mGrabScroll = EECreateGrabScroll(a)`; the middle button's pressed and unpressed event.
+pub const EE_SCREENS_MF_OP_GRAB_SCROLL: u32 = 88;
+/// `AddHotKey`: a the key and three modifiers (16 bits each, low first), b the group (low 32 bits) and the always
+/// flag (bit 32), io.n[0] the just pressed (low) and pressed events, io.n[1] the just unpressed (low) and double
+/// pressed events (each `EECreateScreenEvent(code)`, none for [`EE_SCREENS_MF_NO_EVENT`]).
+pub const EE_SCREENS_MF_OP_ADD_HOT_KEY: u32 = 89;
+/// `SetHotKeyGroupEnabled(a, b != 0)`.
+pub const EE_SCREENS_MF_OP_HOT_KEY_GROUP: u32 = 90;
+/// `GetManager()->ForceUIUpdate()`.
+pub const EE_SCREENS_MF_OP_FORCE_UI_UPDATE: u32 = 91;
+/// `gUserInterface->UpdateJITManufacturing()` when there is a `gUserInterface`.
+pub const EE_SCREENS_MF_OP_UPDATE_JIT: u32 = 92;
+/// a 0: `mBuildWall.Terminate()`; a 1: `mBuildGate.Terminate()`.
+pub const EE_SCREENS_MF_OP_BUILD_TERMINATE: u32 = 93;
+/// `SetAllControlsDirty()`.
+pub const EE_SCREENS_MF_OP_ALL_DIRTY: u32 = 94;
+/// The current player's tech tree node a, held: != NULL.
+pub const EE_SCREENS_MF_OP_NODE: u32 = 95;
+/// `gUnitClassTable[node->mData->mUnitClass] != NULL` of the held node (0 without one).
+pub const EE_SCREENS_MF_OP_NODE_CLASS: u32 = 96;
+/// The current player's unit a, held: 0 none, 1 no complex unit, 2 a complex unit.
+pub const EE_SCREENS_MF_OP_UNIT: u32 = 97;
+/// `CanProduce(a, the held unit's complex class's type, 1, true, 3, &error)`, the error the held text.
+pub const EE_SCREENS_MF_OP_CAN_PRODUCE: u32 = 98;
+/// `gSoundManager->Play(EESoundObject::Get(a)->GetSampleID(), 1, 0, 1, false, NULL)`.
+pub const EE_SCREENS_MF_OP_PLAY_SOUND: u32 = 99;
+/// `EEGhostUnit::Create(GetMouseLocation(), class, player, 0, false)`: a 0 the held node's unit class, a 1 the held
+/// calamity's volcano class.
+pub const EE_SCREENS_MF_OP_GHOST: u32 = 100;
+/// `gUserInterface->AddChatLogEntry(held text, 0)`.
+pub const EE_SCREENS_MF_OP_CHAT_LOG_ERROR: u32 = 101;
+/// The gate placement of tech a: `mBuildGate`'s tech, wall type (the node's `GetUnitClass(0)`), class (the node's),
+/// `Initialize(the player's id)`.
+pub const EE_SCREENS_MF_OP_GATE_BEGIN: u32 = 102;
+/// The wall placement of tech a: `mBuildWall.mTechnology`, `Initialize(the player's id)`.
+pub const EE_SCREENS_MF_OP_WALL_BEGIN: u32 = 103;
+/// The current player's selected group's `GetNumUnits()`.
+pub const EE_SCREENS_MF_OP_SELECTED_COUNT: u32 = 104;
+/// The caster (the selected group's first unit when it has units), held: != NULL.
+pub const EE_SCREENS_MF_OP_CASTER: u32 = 105;
+/// The held node's `mData->mCalamity`.
+pub const EE_SCREENS_MF_OP_NODE_CALAMITY: u32 = 106;
+/// The calamity manager's class of calamity a, held: != NULL.
+pub const EE_SCREENS_MF_OP_CALAMITY_CLASS: u32 = 107;
+/// `mCalamity->SetCalamity(a, class)`, `SetCasterID(the caster's id)`: the class's `GetTargetKind()`.
+pub const EE_SCREENS_MF_OP_CALAMITY_SET: u32 = 108;
+/// `mCalamity->Cast(GetMouseLocation())`.
+pub const EE_SCREENS_MF_OP_CALAMITY_CAST: u32 = 109;
+/// `gUIManager->mMainGameForm->mRefreshGroup = true` when there is a main game form.
+pub const EE_SCREENS_MF_OP_REFRESH_MAIN_FORM: u32 = 110;
 
 // ---- the form's fields (EE_SCREENS_MF_OP_FIELD / _SET_FIELD)
 
@@ -573,6 +653,486 @@ pub fn show_information(h: &mut impl FormHost) {
     }
     let rect = h.io(EE_SCREENS_MF_OP_INFO_RECT, 0, 0, EeScreensMainFormIo::default()).f;
     h.a(EE_SCREENS_MF_OP_CHAT_TOP, lrintf(rect[0] - rect[1] + 5.0) as i64);
+}
+
+// ---- the form's construction and modes: its fields, the panel group's select, the tests, the hot keys
+
+/// `mInfoBlinking`, `mIsButtonBlinking`, `mDrawToolTipShadow`, `mEntityGroup`, `mCurrentGroup`, `mMediaID`,
+/// `mEntityGroupSet`, `mB5F0`, `mHotKeyMode`, `mBuild->mTechnology`.
+pub const EE_SCREENS_MF_FIELD_INFO_BLINKING: i64 = 9;
+pub const EE_SCREENS_MF_FIELD_BUTTON_BLINKING: i64 = 10;
+pub const EE_SCREENS_MF_FIELD_TOOLTIP_SHADOW: i64 = 11;
+pub const EE_SCREENS_MF_FIELD_ENTITY_GROUP: i64 = 12;
+pub const EE_SCREENS_MF_FIELD_CURRENT_GROUP: i64 = 13;
+pub const EE_SCREENS_MF_FIELD_MEDIA_ID: i64 = 14;
+pub const EE_SCREENS_MF_FIELD_ENTITY_GROUP_SET: i64 = 15;
+pub const EE_SCREENS_MF_FIELD_B5F0: i64 = 16;
+pub const EE_SCREENS_MF_FIELD_HOT_KEY_MODE: i64 = 17;
+pub const EE_SCREENS_MF_FIELD_BUILD_TECH: i64 = 18;
+/// The panel group's `Select()` (EE_SCREENS_MF_OP_GROUP).
+pub const EE_SCREENS_MF_GROUP_SELECT: i64 = 3;
+/// No event in a hot key's slot (EE_SCREENS_MF_OP_ADD_HOT_KEY).
+pub const EE_SCREENS_MF_NO_EVENT: u32 = 0xffff_ffff;
+/// The cancel-mode button (`kMainGameCancelUIMode`).
+pub const EE_SCREENS_MF_CTL_CANCEL_UI_MODE: i64 = 244;
+/// `kSoundButton1`, `kSoundButton2`.
+pub const EE_SCREENS_MF_SOUND_BUTTON1: i64 = 0x207;
+pub const EE_SCREENS_MF_SOUND_BUTTON2: i64 = 0x208;
+/// `mUIState`: the build, calamity, patrol and flare modes.
+pub const EE_SCREENS_MF_STATE_BUILD: i64 = 1;
+pub const EE_SCREENS_MF_STATE_CALAMITY: i64 = 5;
+pub const EE_SCREENS_MF_STATE_PATROL: i64 = 0x10;
+pub const EE_SCREENS_MF_STATE_FLARE: i64 = 0x15;
+/// The volcano's tech (its calamity mode shows a volcano ghost).
+pub const EE_SCREENS_MF_TECH_VOLCANO: i64 = 0x3f9;
+
+// the host's mouse tests, in its table's order (EE_SCREENS_MF_OP_MOUSE_TEST's b): EEModeNormal, EEModeBomberRally,
+// EEModeFighterRally, EEModeAtomicBomberRally, EEModeBuild, EEModeRally, EEModeUnload, EEModeGarrison,
+// EEModeCalamity, EEModeWall, EEModeGate, EEModeTimedAtomicBomberRally, EEModeTimedBomberRally,
+// EEModeTimedFighterRally, EEModeTimedRally, EEModeCamera, EEModeHeal, EEModeMouseNone, EEModeFlare,
+// EEModeAttackGround, EEModeParatrooperRally, EEModeConvert; its keyboard tests: EEModeKeyboardNone, EEFn27C0B4B,
+// EEModeKeyboardCinematic
+/// Each interface mode's mouse test (mode, the host's test), in the constructor's order.
+const MOUSE_TESTS: [(i64, i64); 22] = [
+    (0, 0),
+    (9, 1),
+    (8, 2),
+    (10, 3),
+    (1, 4),
+    (2, 5),
+    (3, 6),
+    (7, 7),
+    (5, 8),
+    (6, 9),
+    (11, 10),
+    (12, 11),
+    (13, 12),
+    (14, 13),
+    (15, 14),
+    (4, 15),
+    (16, 16),
+    (17, 17),
+    (18, 18),
+    (19, 19),
+    (20, 20),
+    (21, 21),
+];
+/// Each interface mode's keyboard test: none, but the camera's (its own `return false`) and the cinematic's.
+const KEYBOARD_TESTS: [(i64, i64); 22] = [
+    (0, 0),
+    (9, 0),
+    (8, 0),
+    (10, 0),
+    (1, 0),
+    (2, 0),
+    (3, 0),
+    (7, 0),
+    (5, 0),
+    (6, 0),
+    (11, 0),
+    (12, 0),
+    (13, 0),
+    (14, 0),
+    (15, 0),
+    (4, 1),
+    (16, 0),
+    (17, 2),
+    (18, 0),
+    (19, 0),
+    (20, 0),
+    (21, 0),
+];
+
+// the keys (ISKeyCode.h: DirectInput's codes and the three modifiers)
+const K_ESCAPE: u16 = 0x01;
+const K_BACK: u16 = 0x0e;
+const K_TAB: u16 = 0x0f;
+const K_Q: u16 = 0x10;
+const K_W: u16 = 0x11;
+const K_R: u16 = 0x13;
+const K_Y: u16 = 0x15;
+const K_U: u16 = 0x16;
+const K_I: u16 = 0x17;
+const K_LBRACKET: u16 = 0x1a;
+const K_RBRACKET: u16 = 0x1b;
+const K_RETURN: u16 = 0x1c;
+const K_A: u16 = 0x1e;
+const K_S: u16 = 0x1f;
+const K_D: u16 = 0x20;
+const K_F: u16 = 0x21;
+const K_G: u16 = 0x22;
+const K_H: u16 = 0x23;
+const K_GRAVE: u16 = 0x29;
+const K_BACKSLASH: u16 = 0x2b;
+const K_Z: u16 = 0x2c;
+const K_X: u16 = 0x2d;
+const K_C: u16 = 0x2e;
+const K_V: u16 = 0x2f;
+const K_B: u16 = 0x30;
+const K_N: u16 = 0x31;
+const K_M: u16 = 0x32;
+const K_COMMA: u16 = 0x33;
+const K_PERIOD: u16 = 0x34;
+const K_SLASH: u16 = 0x35;
+const K_SPACE: u16 = 0x39;
+const K_F1: u16 = 0x3b;
+const K_F2: u16 = 0x3c;
+const K_F3: u16 = 0x3d;
+const K_F4: u16 = 0x3e;
+const K_F5: u16 = 0x3f;
+const K_F10: u16 = 0x44;
+const K_SUBTRACT: u16 = 0x4a;
+const K_ADD: u16 = 0x4e;
+const K_F11: u16 = 0x57;
+const K_NUMPAD_ENTER: u16 = 0x9c;
+const K_UP: u16 = 0xc8;
+const K_PRIOR: u16 = 0xc9;
+const K_LEFT: u16 = 0xcb;
+const K_RIGHT: u16 = 0xcd;
+const K_DOWN: u16 = 0xd0;
+const K_DELETE: u16 = 0xd3;
+const K_CONTROL: u16 = 0xe0;
+const K_SHIFT: u16 = 0xe1;
+const K_ALT: u16 = 0xe2;
+const K_NONE: u16 = 0x7fff;
+
+// the unit types of the selection hot keys (EEUnitClassIDs.h)
+const T_CITIZEN: i32 = 0x20;
+const T_BARRACKS: i32 = 0x22;
+const T_TOWN_CENTER: i32 = 0x23;
+const T_TEMPLE: i32 = 0x27;
+const T_SETTLEMENT: i32 = 0x2b;
+const T_GRANARY: i32 = 0x34;
+const T_ARCHERY_RANGE: i32 = 0x36;
+const T_UNIVERSITY: i32 = 0x3c;
+const T_HOSPITAL: i32 = 0x3e;
+const T_SIEGE_FACTORY: i32 = 0x3f;
+const T_STABLE: i32 = 0x40;
+const T_NAVY_YARD: i32 = 0x41;
+const T_AIRPORT: i32 = 0x42;
+const T_MISSILE_BASE: i32 = 0x43;
+const T_TANK_FACTORY: i32 = 0x44;
+const T_CYBER_FACTORY: i32 = 0x45;
+const T_CYBER_LABORATORY: i32 = 0x24a;
+const T_CP_MISSILE_BASE: i32 = 0x2ed;
+const T_PRIEST_TOWER: i32 = 0x2f0;
+const T_MARKET_CP: i32 = 0x321;
+
+/// One hot key of the form: the key, its three modifiers, its four events (just pressed, pressed, just unpressed,
+/// double pressed; [`EE_SCREENS_MF_NO_EVENT`] for none) and whether it always fires (group 0).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FormHotKey {
+    pub key: u16,
+    pub modifiers: [u16; 3],
+    pub events: [u32; 4],
+    pub always: bool,
+}
+
+/// The main game form's hot keys in the constructor's order: the ten control groups' four keys each, then the rest.
+pub fn hot_keys() -> Vec<FormHotKey> {
+    const NO: u32 = EE_SCREENS_MF_NO_EVENT;
+    let key = |key: u16, m1: u16, m2: u16, events: [u32; 4], always: bool| FormHotKey {
+        key,
+        modifiers: [m1, m2, K_NONE],
+        events,
+        always,
+    };
+    let press = |k: u16, m: u16, event: u32| key(k, m, K_NONE, [event, NO, NO, NO], false);
+    let held = |k: u16, event: u32| key(k, K_NONE, K_NONE, [NO, event, NO, NO], true);
+    let select =
+        |t: i32, workers: bool, military: bool, all: bool| ee_screens_hot_key_unit_selection(t, workers, military, all);
+    let mut out = Vec::new();
+    for i in 0..10u16 {
+        let g = i as u32;
+        out.push(key(
+            i + 2,
+            K_NONE,
+            K_NONE,
+            [EE_SCREENS_HK_SELECT_GROUP + g, NO, NO, EE_SCREENS_HK_SELECT_GROUP_ADD + g],
+            false,
+        ));
+        out.push(press(i + 2, K_SHIFT, EE_SCREENS_HK_ADD_TO_GROUP + g));
+        out.push(press(i + 2, K_CONTROL, EE_SCREENS_HK_CREATE_GROUP + g));
+        out.push(press(i + 2, K_ALT, EE_SCREENS_HK_SELECT_GROUP_ADD + g));
+    }
+    out.push(press(K_S, K_ALT, EE_SCREENS_MG_BEHAVIOR_SCOUT));
+    out.push(press(K_D, K_ALT, EE_SCREENS_MG_BEHAVIOR_STAND_GROUND));
+    out.push(press(K_G, K_ALT, EE_SCREENS_MG_BEHAVIOR_GUARD));
+    out.push(press(K_A, K_ALT, EE_SCREENS_MG_BEHAVIOR_AGGRESSIVE));
+    let aircraft = [K_B, K_A, K_F, K_D, K_S, K_W];
+    for (n, k) in aircraft.iter().enumerate() {
+        out.push(press(*k, K_NONE, EE_SCREENS_HK_AIRCRAFT + n as u32));
+    }
+    out.push(key(K_PRIOR, K_NONE, K_NONE, [EE_SCREENS_MG_PREVIOUS_MESSAGES, NO, NO, NO], true));
+    for (n, k) in aircraft.iter().enumerate() {
+        out.push(press(*k, K_SHIFT, EE_SCREENS_HK_AIRCRAFT + n as u32));
+    }
+    out.push(held(K_UP, EE_SCREENS_CAM_SCROLL_UP));
+    out.push(held(K_DOWN, EE_SCREENS_CAM_SCROLL_DOWN));
+    out.push(held(K_LEFT, EE_SCREENS_CAM_SCROLL_LEFT));
+    out.push(held(K_RIGHT, EE_SCREENS_CAM_SCROLL_RIGHT));
+    out.push(key(K_SHIFT, K_NONE, K_NONE, [EE_SCREENS_MG_ENTER_SHIFT, NO, EE_SCREENS_MG_EXIT_SHIFT, NO], true));
+    out.push(press(K_DELETE, K_NONE, EE_SCREENS_MG_KILL));
+    out.push(press(K_DELETE, K_SHIFT, EE_SCREENS_MG_KILL_ALL));
+    // New: Backspace deletes too (a Mac keyboard's "delete" key is Backspace; it has no forward Delete key)
+    out.push(press(K_BACK, K_NONE, EE_SCREENS_MG_KILL));
+    out.push(press(K_BACK, K_SHIFT, EE_SCREENS_MG_KILL_ALL));
+    out.push(press(K_ADD, K_NONE, EE_SCREENS_MG_FASTER));
+    out.push(press(K_SUBTRACT, K_NONE, EE_SCREENS_MG_SLOWER));
+    out.push(press(K_ESCAPE, K_NONE, EE_SCREENS_MG_CANCEL_UPDATE_STATE));
+    out.push(press(K_RETURN, K_NONE, EE_SCREENS_MG_DISPLAY_CHAT));
+    out.push(press(K_NUMPAD_ENTER, K_NONE, EE_SCREENS_MG_DISPLAY_CHAT));
+    out.push(held(K_RBRACKET, EE_SCREENS_CAM_ZOOM_IN));
+    out.push(held(K_LBRACKET, EE_SCREENS_CAM_ZOOM_OUT));
+    out.push(press(K_COMMA, K_NONE, select(0, false, true, false)));
+    out.push(press(K_COMMA, K_SHIFT, select(0, false, true, false)));
+    out.push(press(K_COMMA, K_CONTROL, select(0, false, true, true)));
+    out.push(key(
+        K_GRAVE,
+        K_NONE,
+        K_NONE,
+        [EE_SCREENS_CAM_DISABLE_MOUSE_MOVE, EE_SCREENS_CAM_ROTATE, EE_SCREENS_CAM_ENABLE_MOUSE_MOVE, NO],
+        true,
+    ));
+    out.push(press(K_PERIOD, K_NONE, EE_SCREENS_MG_FOLLOW));
+    let building = |k: u16, t: i32| press(k, K_CONTROL, select(t, false, false, false));
+    out.push(building(K_A, T_ARCHERY_RANGE));
+    out.push(building(K_B, T_BARRACKS));
+    out.push(building(K_C, T_SIEGE_FACTORY));
+    out.push(press(K_F, K_ALT, EE_SCREENS_MG_FLARE));
+    out.push(building(K_F, T_TANK_FACTORY));
+    out.push(building(K_G, T_GRANARY));
+    out.push(press(K_H, K_NONE, select(T_TOWN_CENTER, false, false, false)));
+    out.push(building(K_I, T_MISSILE_BASE));
+    out.push(building(K_N, T_SETTLEMENT));
+    out.push(building(K_Q, T_AIRPORT));
+    out.push(building(K_R, T_CYBER_FACTORY));
+    out.push(building(K_S, T_STABLE));
+    out.push(building(K_V, T_NAVY_YARD));
+    out.push(building(K_X, T_CYBER_LABORATORY));
+    out.push(building(K_Y, T_TEMPLE));
+    out.push(key(K_Z, K_CONTROL, K_ALT, [EE_SCREENS_MG_ATTACK, NO, NO, NO], false));
+    out.push(key(K_Z, K_CONTROL, K_SHIFT, [EE_SCREENS_MG_ATTACK_ALLIES, NO, NO, NO], false));
+    out.push(press(K_TAB, K_NONE, select(T_CITIZEN, true, false, false)));
+    out.push(press(K_TAB, K_SHIFT, select(T_CITIZEN, true, false, false)));
+    out.push(press(K_TAB, K_CONTROL, select(T_CITIZEN, true, false, true)));
+    out.push(press(K_SPACE, K_NONE, EE_SCREENS_HK_PLAYER_EVENT));
+    out.push(press(K_F1, K_NONE, EE_SCREENS_MG_ENTER_EDITOR));
+    out.push(press(K_F2, K_NONE, EE_SCREENS_MG_PERSPECTIVE));
+    out.push(press(K_F3, K_NONE, EE_SCREENS_MG_PAUSE));
+    out.push(building(K_BACKSLASH, T_CP_MISSILE_BASE));
+    out.push(building(K_SLASH, T_PRIEST_TOWER));
+    out.push(building(K_M, T_MARKET_CP));
+    out.push(building(K_U, T_UNIVERSITY));
+    out.push(building(K_Z, T_HOSPITAL));
+    out.push(press(K_F4, K_NONE, EE_SCREENS_MG_QUICK_SAVE));
+    out.push(press(K_F4, K_SHIFT, EE_SCREENS_MG_QUICK_LOAD));
+    out.push(press(K_F4, K_CONTROL, EE_SCREENS_MG_AUTO_LOAD));
+    out.push(press(K_F5, K_NONE, EE_SCREENS_MG_TOGGLE_HIDDEN));
+    out.push(key(K_F10, K_NONE, K_NONE, [NO, NO, EE_SCREENS_MG_DISPLAY_OPTIONS, NO], false));
+    out.push(press(K_F11, K_NONE, EE_SCREENS_MG_TOGGLE_CLOCK));
+    out
+}
+
+/// The host's io of one hot key (EE_SCREENS_MF_OP_ADD_HOT_KEY's a, b and io).
+fn add_hot_key(h: &mut impl FormHost, k: &FormHotKey) {
+    let a =
+        k.key as i64 | (k.modifiers[0] as i64) << 16 | (k.modifiers[1] as i64) << 32 | (k.modifiers[2] as i64) << 48;
+    let b = (k.always as i64) << 32;
+    let mut io = EeScreensMainFormIo::default();
+    io.n[0] = (k.events[0] as u64 | (k.events[1] as u64) << 32) as i64;
+    io.n[1] = (k.events[2] as u64 | (k.events[3] as u64) << 32) as i64;
+    h.op(EE_SCREENS_MF_OP_ADD_HOT_KEY, a, b, &mut io);
+}
+
+/// `EEUIFMainGame`'s constructor (0x262e73) after `UIForm`'s: the error lock, the flags, the six panel groups, the
+/// unit hack, the 200 ms poll, the mouse actions, the entity groups, every mode's mouse and keyboard test, the wheel
+/// zoom and grab scroll, the hot keys. It reads no control (the form's controls are made after it).
+pub fn construct(h: &mut impl FormHost) {
+    h.a(EE_SCREENS_MF_OP_CREATE_ERROR_LOCK, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_INFO_BLINKING, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_BUTTON_BLINKING, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_TOOLTIP_SHADOW, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_CURSOR_LOCKED, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_UI_STATE, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_ENTITY_GROUP, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_CURRENT_GROUP, 0);
+    for i in 0..6 {
+        h.a(EE_SCREENS_MF_OP_CREATE_GROUP, i);
+    }
+    h.a(EE_SCREENS_MF_OP_NEW_UNIT_HACK, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_ELAPSED, 0);
+    h.a(EE_SCREENS_MF_OP_NEW_POLL, 200);
+    let size = h.io(EE_SCREENS_MF_OP_WINDOW_SIZE, 0, 0, EeScreensMainFormIo::default()).n;
+    let edges = EeScreensMainFormIo {
+        f: [0.0, 0.0, size[0] as u32 as f32 - 1.0, size[1] as u32 as f32 - 1.0],
+        ..Default::default()
+    };
+    h.io(EE_SCREENS_MF_OP_NEW_SCROLL, 0, 0, edges);
+    for action in 0..4 {
+        h.a(EE_SCREENS_MF_OP_NEW_ACTION, action);
+    }
+    h.set_field(EE_SCREENS_MF_FIELD_MEDIA_ID, -1);
+    h.set_field(EE_SCREENS_MF_FIELD_ENTITY_GROUP_SET, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_STRINGS_CHANGED, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_CLOCK_MODE, 0);
+    h.ab(EE_SCREENS_MF_OP_ENTITY_GROUP, 0, 1);
+    set_entity_group(h, 1);
+    h.ab(EE_SCREENS_MF_OP_ENTITY_GROUP, 9, 0);
+    h.ab(EE_SCREENS_MF_OP_ENTITY_GROUP, 8, 0);
+    for (mode, test) in MOUSE_TESTS {
+        h.ab(EE_SCREENS_MF_OP_MOUSE_TEST, mode, test);
+    }
+    for (mode, test) in KEYBOARD_TESTS {
+        h.ab(EE_SCREENS_MF_OP_KEYBOARD_TEST, mode, test);
+    }
+    h.a(EE_SCREENS_MF_OP_WHEEL_ZOOM, EE_SCREENS_CAM_WHEEL_ZOOM as i64);
+    h.a(EE_SCREENS_MF_OP_GRAB_SCROLL, 0);
+    for k in hot_keys() {
+        add_hot_key(h, &k);
+    }
+    set_hot_key_mode(h, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_B5F0, 0);
+    h.set_field(EE_SCREENS_MF_FIELD_REFRESH_GROUP, 1);
+}
+
+/// `EEUIFMainGame::SetHotKeyMode` (0x2668a0): group 2 always, groups 0 and 1 by the mode (0 the first, 1 the second,
+/// 2 both).
+pub fn set_hot_key_mode(h: &mut impl FormHost, mode: i64) {
+    h.set_field(EE_SCREENS_MF_FIELD_HOT_KEY_MODE, mode);
+    h.ab(EE_SCREENS_MF_OP_HOT_KEY_GROUP, 2, 1);
+    let (first, second) = match h.field(EE_SCREENS_MF_FIELD_HOT_KEY_MODE) as u32 {
+        0 => (1, 0),
+        1 => (0, 1),
+        2 => (1, 1),
+        _ => return,
+    };
+    h.ab(EE_SCREENS_MF_OP_HOT_KEY_GROUP, 0, first);
+    h.ab(EE_SCREENS_MF_OP_HOT_KEY_GROUP, 1, second);
+}
+
+/// `EEUIFMainGame::SetUIState` (0x2668ee): the ghosts cleared, the manager's update forced, the JIT manufacturing
+/// updated, a wall or gate placement ended, the new mode.
+pub fn set_ui_state(h: &mut impl FormHost, state: i64) {
+    h.a(EE_SCREENS_MF_OP_GHOST_LOCK, 1);
+    h.a(EE_SCREENS_MF_OP_CLEAR_GHOSTS, 0);
+    h.a(EE_SCREENS_MF_OP_GHOST_LOCK, 0);
+    h.a(EE_SCREENS_MF_OP_FORCE_UI_UPDATE, 0);
+    h.a(EE_SCREENS_MF_OP_UPDATE_JIT, 0);
+    match h.field(EE_SCREENS_MF_FIELD_UI_STATE) {
+        EE_SCREENS_MF_STATE_WALL => {
+            h.a(EE_SCREENS_MF_OP_BUILD_TERMINATE, 0);
+        }
+        EE_SCREENS_MF_STATE_GATE => {
+            h.a(EE_SCREENS_MF_OP_BUILD_TERMINATE, 1);
+        }
+        _ => {}
+    }
+    h.set_field(EE_SCREENS_MF_FIELD_UI_STATE, state);
+}
+
+/// `EEUIFMainGame::SetEntityGroup` (0x2655da): the old entity group off (once one was set), the new one on, the
+/// current panel group selected, mode 0, the bottom panel redrawn.
+pub fn set_entity_group(h: &mut impl FormHost, group: i64) {
+    if h.field(EE_SCREENS_MF_FIELD_ENTITY_GROUP_SET) != 0 {
+        let old = h.field(EE_SCREENS_MF_FIELD_ENTITY_GROUP);
+        h.ab(EE_SCREENS_MF_OP_ENTITY_GROUP, old, 0);
+    }
+    h.ab(EE_SCREENS_MF_OP_ENTITY_GROUP, group, 1);
+    h.set_field(EE_SCREENS_MF_FIELD_ENTITY_GROUP_SET, 1);
+    h.set_field(EE_SCREENS_MF_FIELD_ENTITY_GROUP, group);
+    h.a(EE_SCREENS_MF_OP_GROUP, EE_SCREENS_MF_GROUP_SELECT);
+    set_ui_state(h, 0);
+    let view = h.io(EE_SCREENS_MF_OP_VIEW_RECT, 0, 0, EeScreensMainFormIo::default()).f;
+    let size = h.io(EE_SCREENS_MF_OP_WINDOW_SIZE, 1, 0, EeScreensMainFormIo::default()).n;
+    let dirty =
+        EeScreensMainFormIo { f: [0.0, view[3], size[0] as u32 as f32, size[1] as u32 as f32], ..Default::default() };
+    h.io(EE_SCREENS_MF_OP_ADD_DIRTY, 0, 0, dirty);
+    h.a(EE_SCREENS_MF_OP_ALL_DIRTY, 0);
+}
+
+/// `EEUIFMainGame::BuildUnit` (0x266384): the build mode for a unit's tech when the player can produce it (a click,
+/// the tech, mode 1, the building's ghost at the mouse), else the refusal's sound and its text in the chat log.
+pub fn build_unit(h: &mut impl FormHost, unit: i64, tech: i64) {
+    let node = h.a(EE_SCREENS_MF_OP_NODE, tech) != 0;
+    let unit = h.a(EE_SCREENS_MF_OP_UNIT, unit);
+    if unit != 2 || !node {
+        return;
+    }
+    if h.a(EE_SCREENS_MF_OP_CAN_PRODUCE, tech) != 0 {
+        h.a(EE_SCREENS_MF_OP_PLAY_SOUND, EE_SCREENS_MF_SOUND_BUTTON1);
+        h.set_field(EE_SCREENS_MF_FIELD_BUILD_TECH, tech);
+        set_ui_state(h, EE_SCREENS_MF_STATE_BUILD);
+        h.a(EE_SCREENS_MF_OP_GHOST, 0);
+    } else {
+        h.a(EE_SCREENS_MF_OP_PLAY_SOUND, EE_SCREENS_MF_SOUND_BUTTON2);
+        h.a(EE_SCREENS_MF_OP_CHAT_LOG_ERROR, 0);
+    }
+}
+
+/// `EEUIFMainGame::StartGate` (0x2664b4): the gate placement (mode 0xb) of a tech whose node has a unit class.
+pub fn start_gate(h: &mut impl FormHost, tech: i64) {
+    let node = h.a(EE_SCREENS_MF_OP_NODE, tech) != 0;
+    if !h.t(EE_SCREENS_MF_OP_NODE_CLASS) || !node {
+        return;
+    }
+    h.set_field(EE_SCREENS_MF_FIELD_BUILD_TECH, tech);
+    h.a(EE_SCREENS_MF_OP_GATE_BEGIN, tech);
+    set_ui_state(h, EE_SCREENS_MF_STATE_GATE);
+    h.a(EE_SCREENS_MF_OP_PLAY_SOUND, EE_SCREENS_MF_SOUND_BUTTON1);
+}
+
+/// `EEUIFMainGame::StartWall` (0x266594): the wall placement (mode 6) of a tech whose node has a unit class.
+pub fn start_wall(h: &mut impl FormHost, tech: i64) {
+    let node = h.a(EE_SCREENS_MF_OP_NODE, tech) != 0;
+    if !h.t(EE_SCREENS_MF_OP_NODE_CLASS) || !node {
+        return;
+    }
+    h.set_field(EE_SCREENS_MF_FIELD_BUILD_TECH, tech);
+    h.a(EE_SCREENS_MF_OP_WALL_BEGIN, tech);
+    set_ui_state(h, EE_SCREENS_MF_STATE_WALL);
+    h.a(EE_SCREENS_MF_OP_PLAY_SOUND, EE_SCREENS_MF_SOUND_BUTTON1);
+}
+
+/// The cancel-mode button shown and the main game form's panel group refreshed (the targeting modes' start).
+fn show_cancel(h: &mut impl FormHost) {
+    h.ab(EE_SCREENS_MF_OP_SET_MODE, EE_SCREENS_MF_CTL_CANCEL_UI_MODE, EE_SCREENS_MF_SHOWN);
+    h.a(EE_SCREENS_MF_OP_REFRESH_MAIN_FORM, 0);
+}
+
+/// `EEUIFMainGame::StartCalamity` (0x26662d): a tech's calamity with the selection's first unit as its caster, cast
+/// at once at the mouse when it targets its caster's spot (kind 1), else the calamity mode (5) with the cancel
+/// button (and the volcano's ghost).
+pub fn start_calamity(h: &mut impl FormHost, tech: i64) {
+    let node = h.a(EE_SCREENS_MF_OP_NODE, tech) != 0;
+    if !h.t(EE_SCREENS_MF_OP_CASTER) || !node {
+        return;
+    }
+    let calamity = h.a(EE_SCREENS_MF_OP_NODE_CALAMITY, 0) as i32;
+    if calamity <= 0 || h.a(EE_SCREENS_MF_OP_CALAMITY_CLASS, calamity as i64) == 0 {
+        return;
+    }
+    if h.a(EE_SCREENS_MF_OP_CALAMITY_SET, tech) as i32 == 1 {
+        h.a(EE_SCREENS_MF_OP_CALAMITY_CAST, 0);
+        return;
+    }
+    set_ui_state(h, EE_SCREENS_MF_STATE_CALAMITY);
+    h.ab(EE_SCREENS_MF_OP_SET_MODE, EE_SCREENS_MF_CTL_CANCEL_UI_MODE, EE_SCREENS_MF_SHOWN);
+    if tech == EE_SCREENS_MF_TECH_VOLCANO {
+        h.a(EE_SCREENS_MF_OP_GHOST, 1);
+    }
+    h.a(EE_SCREENS_MF_OP_REFRESH_MAIN_FORM, 0);
+}
+
+/// `EEUIFMainGame::StartFlare` (0x26679a) and `StartPatrol` (0x26681d): the targeting mode when units are
+/// selected.
+pub fn start_targeting(h: &mut impl FormHost, state: i64) {
+    if h.a(EE_SCREENS_MF_OP_SELECTED_COUNT, 0) as u32 == 0 {
+        return;
+    }
+    set_ui_state(h, state);
+    h.a(EE_SCREENS_MF_OP_PLAY_SOUND, EE_SCREENS_MF_SOUND_BUTTON1);
+    show_cancel(h);
 }
 
 #[cfg(test)]

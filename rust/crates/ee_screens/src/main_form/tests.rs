@@ -188,3 +188,51 @@ fn wall_drag_previews_the_line() {
     copy_data(&mut h);
     assert_eq!(h.walls, [vec![[2, 2], [3, 2], [4, 2], [5, 2]]]);
 }
+
+const GOLDEN_MODES: &str = include_str!("../golden_main_form_modes.txt");
+
+/// `build/sc25/mf/driver.cpp 1 N golden`: per call (K the constructor, E `SetEntityGroup`, U `SetUIState`, H
+/// `SetHotKeyMode`, B `BuildUnit`, G `StartGate`, W `StartWall`, A `StartCalamity`, F `StartFlare`, P `StartPatrol`)
+/// with its arguments, the new host's ops and answers; the driver checked them against the original's calls (cut
+/// from 7f5a8b0a).
+#[test]
+fn golden_main_form_modes() {
+    let mut kinds = std::collections::BTreeMap::new();
+    for (k, line) in GOLDEN_MODES.lines().enumerate() {
+        let mut fields = line.split('|');
+        let head: Vec<&str> = fields.next().unwrap().split(' ').collect();
+        let (kind, a, b) = (head[0], head[1].parse::<i64>().unwrap(), head[2].parse::<i64>().unwrap());
+        let ops = fields.map(parse).collect();
+        let mut h = Replay { ops, at: 0, line: k + 1 };
+        match kind {
+            "K" => construct(&mut h),
+            "E" => set_entity_group(&mut h, a),
+            "U" => set_ui_state(&mut h, a),
+            "H" => set_hot_key_mode(&mut h, a),
+            "B" => build_unit(&mut h, a, b),
+            "G" => start_gate(&mut h, a),
+            "W" => start_wall(&mut h, a),
+            "A" => start_calamity(&mut h, a),
+            "F" => start_targeting(&mut h, EE_SCREENS_MF_STATE_FLARE),
+            _ => start_targeting(&mut h, EE_SCREENS_MF_STATE_PATROL),
+        }
+        assert_eq!(h.at, h.ops.len(), "line {}: ops missing", k + 1);
+        *kinds.entry(kind.to_string()).or_insert(0) += 1;
+    }
+    for kind in ["K", "E", "U", "H", "B", "G", "W", "A", "F", "P"] {
+        assert!(kinds.get(kind).copied().unwrap_or(0) >= 20, "{kinds:?}");
+    }
+}
+
+/// The hot key table: 40 control group keys, then 73 more, every event a code or none.
+#[test]
+fn hot_key_table() {
+    let keys = hot_keys();
+    assert_eq!(keys.len(), 113);
+    assert_eq!(
+        keys[0].events,
+        [EE_SCREENS_HK_SELECT_GROUP, EE_SCREENS_MF_NO_EVENT, EE_SCREENS_MF_NO_EVENT, EE_SCREENS_HK_SELECT_GROUP_ADD]
+    );
+    assert!(keys.iter().all(|k| k.modifiers[2] == 0x7fff));
+    assert_eq!(keys.iter().filter(|k| k.always).count(), 9);
+}

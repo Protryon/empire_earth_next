@@ -333,174 +333,34 @@ void EEUIFMGUnitHack::Update(const GE2DPoint& inLocation)
     ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_UPDATE, inLocation.GetX(), inLocation.GetY());
 }
 
+// One call of the form's work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the form, the
+// picked unit, the held text, the chat line's colour, name, text and flags, the dialog message
+struct EEUIFMGFormCall {
+    EEUIFMainGame* mForm;
+    EEUnit* mPicked;
+    UWideString mText;
+    const GEColor* mColor;
+    UWideString mName;
+    UWideString mChat;
+    unsigned long mFlags;
+    const EESMDialogMessage* mMessage;
+    EETechTreeNode* mNode;                  // the start modes' tech tree node, unit, caster, calamity
+    EEUnit* mUnit;
+    EEUnit* mCaster;
+    EECalamityClass* mCalamity;
+    explicit EEUIFMGFormCall(EEUIFMainGame* inForm)
+        : mForm(inForm), mPicked(NULL), mColor(NULL), mFlags(0), mMessage(NULL), mNode(NULL), mUnit(NULL),
+          mCaster(NULL), mCalamity(NULL) {}
+};
+
 // FUNCTION: EXE 0x662e73
 // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity),
-// the mouse and keyboard tests of every interface mode, the unit hack and the error strings
+// the mouse and keyboard tests of every interface mode, the unit hack, the hot keys (ee_screens main_form.rs
+// construct; it reads no control: they are made after it)
 EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) : UIForm(inManager, inData, true)
 {
-    unsigned long i;
-
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mErrorCriticalSection) == keseOK, 633);
-    this->mInfoBlinking = false;
-    this->mIsButtonBlinking = false;
-    this->mDrawToolTipShadow = false;
-    this->mIsCursorLocked = false;
-    this->mUIState = 0;
-    this->mEntityGroup = 0;
-    this->mCurrentGroup = 0;
-    for (i = 0; i < 6; i++)
-        this->CreateGroup(i);
-    this->mUnitHack = new EEUIFMGUnitHack(this);
-    this->mElapsed = 0;
-    this->mPoll = new TMPoll(200, 0, false);
-    this->mPoll->Start();
-    this->mScroll = new EEAScroll;
-    this->mScroll->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindowWidth - 1.0f, (float)gGameWindowHeight - 1.0f);
-    this->mMouseClick = new EEAMouseClick;
-    this->mLasso = new EEALasso;
-    this->mBuild = new EEABuild;
-    this->mCalamity = new EEACalamity;
-    this->mMediaID = -1;
-    this->mEntityGroupSet = false;
-    this->mStringsChanged = false;
-    this->mClockMode = 0;
-    this->GetEntityGroup(0)->Enable();
-    this->SetEntityGroup(1);
-    this->GetEntityGroup(9)->Disable();
-    this->GetEntityGroup(8)->Disable();
-    this->mMouseTests[0] = EEModeNormal;
-    this->mMouseTests[9] = EEModeBomberRally;
-    this->mMouseTests[8] = EEModeFighterRally;
-    this->mMouseTests[10] = EEModeAtomicBomberRally;
-    this->mMouseTests[1] = EEModeBuild;
-    this->mMouseTests[2] = EEModeRally;
-    this->mMouseTests[3] = EEModeUnload;
-    this->mMouseTests[7] = EEModeGarrison;
-    this->mMouseTests[5] = EEModeCalamity;
-    this->mMouseTests[6] = EEModeWall;
-    this->mMouseTests[11] = EEModeGate;
-    this->mMouseTests[12] = EEModeTimedAtomicBomberRally;
-    this->mMouseTests[13] = EEModeTimedBomberRally;
-    this->mMouseTests[14] = EEModeTimedFighterRally;
-    this->mMouseTests[15] = EEModeTimedRally;
-    this->mMouseTests[4] = EEModeCamera;
-    this->mMouseTests[16] = EEModeHeal;
-    this->mMouseTests[17] = EEModeMouseNone;
-    this->mMouseTests[18] = EEModeFlare;
-    this->mMouseTests[19] = EEModeAttackGround;
-    this->mMouseTests[20] = EEModeParatrooperRally;
-    this->mMouseTests[21] = EEModeConvert;
-    this->mKeyboardTests[0] = EEModeKeyboardNone;
-    this->mKeyboardTests[9] = EEModeKeyboardNone;
-    this->mKeyboardTests[8] = EEModeKeyboardNone;
-    this->mKeyboardTests[10] = EEModeKeyboardNone;
-    this->mKeyboardTests[1] = EEModeKeyboardNone;
-    this->mKeyboardTests[2] = EEModeKeyboardNone;
-    this->mKeyboardTests[3] = EEModeKeyboardNone;
-    this->mKeyboardTests[7] = EEModeKeyboardNone;
-    this->mKeyboardTests[5] = EEModeKeyboardNone;
-    this->mKeyboardTests[6] = EEModeKeyboardNone;
-    this->mKeyboardTests[11] = EEModeKeyboardNone;
-    this->mKeyboardTests[12] = EEModeKeyboardNone;
-    this->mKeyboardTests[13] = EEModeKeyboardNone;
-    this->mKeyboardTests[14] = EEModeKeyboardNone;
-    this->mKeyboardTests[15] = EEModeKeyboardNone;
-    this->mKeyboardTests[4] = EEFn27C0B4B;
-    this->mKeyboardTests[16] = EEModeKeyboardNone;
-    this->mKeyboardTests[17] = EEModeKeyboardCinematic;
-    this->mKeyboardTests[18] = EEModeKeyboardNone;
-    this->mKeyboardTests[19] = EEModeKeyboardNone;
-    this->mKeyboardTests[20] = EEModeKeyboardNone;
-    this->mKeyboardTests[21] = EEModeKeyboardNone;
-    this->mWheelZoom = EECreateScreenEvent(EE_SCREENS_CAM_WHEEL_ZOOM);
-    this->SetMouseWheelMoveEvent(this->mWheelZoom);
-    this->mGrabScroll = EECreateGrabScroll(0);
-    this->SetMouseMiddleButtonPressedEvent(this->mGrabScroll);
-    this->SetMouseMiddleButtonUnpressedEvent(this->mGrabScroll);
-    for (i = 0; i < 10; i++) {
-        this->AddHotKey(i + 2, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_SELECT_GROUP + i), NULL, NULL, EECreateScreenEvent(EE_SCREENS_HK_SELECT_GROUP_ADD + i),
-                  0, false);
-        this->AddHotKey(i + 2, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_ADD_TO_GROUP + i), NULL, NULL, NULL, 0, false);
-        this->AddHotKey(i + 2, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_CREATE_GROUP + i), NULL, NULL, NULL, 0, false);
-        this->AddHotKey(i + 2, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_SELECT_GROUP_ADD + i), NULL, NULL, NULL, 0, false);
-    }
-    this->AddHotKey(kKeyS, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_SCOUT), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyD, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_STAND_GROUND), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyG, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_GUARD), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyA, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_AGGRESSIVE), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyB, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 0), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyA, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 1), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 2), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyD, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 3), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyS, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 4), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyW, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 5), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyPrior, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_PREVIOUS_MESSAGES), NULL, NULL, NULL, 0, true);
-    this->AddHotKey(kKeyB, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 0), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyA, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 1), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 2), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyD, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 3), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyS, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 4), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyW, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 5), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyUp, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_SCROLL_UP), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyDown, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_SCROLL_DOWN), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyLeft, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_SCROLL_LEFT), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyRight, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_SCROLL_RIGHT), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyShift, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_ENTER_SHIFT), NULL, EECreateScreenEvent(EE_SCREENS_MG_EXIT_SHIFT), NULL, 0, true);
-    this->AddHotKey(kKeyDelete, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_KILL), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyDelete, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_KILL_ALL), NULL, NULL, NULL, 0, false);
-    // New: Backspace deletes too (a Mac keyboard's "delete" key is Backspace; it has no forward Delete key)
-    this->AddHotKey(kKeyBack, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_KILL), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyBack, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_KILL_ALL), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyAdd, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_FASTER), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeySubtract, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_SLOWER), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyEscape, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_CANCEL_UPDATE_STATE), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyReturn, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_CHAT), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyNumpadEnter, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_CHAT), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyRBracket, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_ZOOM_IN), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyLBracket, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_ZOOM_OUT), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyComma, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyComma, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyComma, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, true)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyGrave, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_CAM_DISABLE_MOUSE_MOVE), EECreateScreenEvent(EE_SCREENS_CAM_ROTATE), EECreateScreenEvent(EE_SCREENS_CAM_ENABLE_MOUSE_MOVE), NULL, 0, true);
-    this->AddHotKey(kKeyPeriod, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_FOLLOW), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyA, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeArcheryRange, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyB, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeBarracks, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyC, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeSiegeFactory, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_FLARE), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeTankFactory, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyG, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeGranary, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyH, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeTownCenter, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyI, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeMissileBase, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyN, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeSettlement, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyQ, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeAirport, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyR, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCyberFactory, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyS, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeStable, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyV, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeNavyYard, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyX, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCyberLaboratory, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyY, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeTemple, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyZ, kKeyControl, kKeyAlt, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_ATTACK), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyZ, kKeyControl, kKeyShift, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_ATTACK_ALLIES), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyTab, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCitizen, true, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyTab, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCitizen, true, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyTab, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCitizen, true, false, true)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeySpace, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_PLAYER_EVENT), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF1, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_ENTER_EDITOR), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF2, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_PERSPECTIVE), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF3, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_PAUSE), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyBackslash, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCpMissileBase, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeySlash, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypePriestTower, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyM, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeMarketCP, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyU, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeUniversity, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyZ, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeHospital, false, false, false)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF4, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_QUICK_SAVE), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF4, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_QUICK_LOAD), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF4, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_AUTO_LOAD), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF5, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_TOGGLE_HIDDEN), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF10, kKeyNone, kKeyNone, kKeyNone, NULL, NULL, EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_OPTIONS), NULL, 0, false);
-    this->AddHotKey(kKeyF11, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_TOGGLE_CLOCK), NULL, NULL, NULL, 0, false);
-    this->SetHotKeyMode(0);
-    this->mB5F0 = false;
-    this->mRefreshGroup = true;
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_construct(&theCall);
 }
 
 // FUNCTION: EXE 0x66443e
@@ -608,20 +468,6 @@ void EEUIFMainGame::Activate()
     this->RefreshSavedGroups();
 }
 
-// One call of the form's per-frame work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the form,
-// the picked unit, the held text, the chat line's colour, name, text and flags, the dialog message
-struct EEUIFMGFormCall {
-    EEUIFMainGame* mForm;
-    EEUnit* mPicked;
-    UWideString mText;
-    const GEColor* mColor;
-    UWideString mName;
-    UWideString mChat;
-    unsigned long mFlags;
-    const EESMDialogMessage* mMessage;
-    explicit EEUIFMGFormCall(EEUIFMainGame* inForm)
-        : mForm(inForm), mPicked(NULL), mColor(NULL), mFlags(0), mMessage(NULL) {}
-};
 
 // FUNCTION: EXE 0x6649a2
 // Shows a chat message in the next free chat line (scrolling the lines up when full), wrapping the rest of a
@@ -795,19 +641,11 @@ long EEUIFMainGame::DrawPolygons()
 }
 
 // FUNCTION: EXE 0x6655da
-// Switches the bottom panel to another entity group and selects its panel group
+// Switches the bottom panel to another entity group and selects its panel group (ee_screens main_form.rs)
 void EEUIFMainGame::SetEntityGroup(long inGroup)
 {
-    if (this->mEntityGroupSet)
-        this->GetEntityGroup(this->mEntityGroup)->Disable();
-    this->GetEntityGroup(inGroup)->Enable();
-    this->mEntityGroupSet = true;
-    this->mEntityGroup = inGroup;
-    this->mGroups[this->mCurrentGroup]->Select();
-    this->SetUIState(0);
-    this->GetManager()->AddDirtyRectangle(GERectangle(0.0f, gViewport.GetViewRectangle().GetBottom(),
-                                            (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()), this);
-    this->SetAllControlsDirty();
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_entity_group(&theCall, inGroup);
 }
 
 // FUNCTION: EXE 0x66568e
@@ -964,48 +802,19 @@ void EEUIFMainGame::ResumeInformation()
 
 // FUNCTION: EXE 0x666384
 // Starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in
-// the chat log
+// the chat log (ee_screens main_form.rs, as the other start modes)
 void EEUIFMainGame::BuildUnit(unsigned long inUnitID, long inTechnology)
 {
-    UWideString theError;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EETechTreeNode* theNode = thePlayer->mTechnologies->Get(inTechnology);
-    RTSUnit* theUnit = thePlayer->GetUnit(inUnitID);
-
-    if (theUnit == NULL || theNode == NULL || static_cast<EEUnit*>(theUnit)->mComplexUnit == NULL)
-        return;
-    if (thePlayer->CanProduce(inTechnology, static_cast<EEUnit*>(theUnit)->mComplexUnit->mUnitClass->GetUnitType(), 1, true, 3,
-                            &theError)) {
-        gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-        this->mBuild->mTechnology = inTechnology;
-        this->SetUIState(1);
-        EEGhostUnit::Create(this->GetMouseLocation(), theNode->mData->mUnitClass, thePlayer, 0.0f, false);
-    } else {
-        gSoundManager->Play(EESoundObject::Get(kSoundButton2)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-        gUserInterface->AddChatLogEntry(theError, 0);
-    }
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_build_unit(&theCall, (int64_t)inUnitID, inTechnology);
 }
 
 // FUNCTION: EXE 0x6664b4
 // Starts placing a gate for a tech (gate placement mode)
 void EEUIFMainGame::StartGate(long inTechnology)
 {
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EETechTreeNode* theNode = thePlayer->mTechnologies->Get(inTechnology);
-    EEUnitClass* theClass = gUnitClassTable[theNode->mData->mUnitClass];
-    long theWallType = theNode->GetUnitClass(0);
-
-    if (theClass == NULL || theNode == NULL)
-        return;
-    this->mBuild->mTechnology = inTechnology;
-    this->mBuildGate.mTechnology = inTechnology;
-    this->mBuildGate.mWallType = theWallType;
-    this->mBuildGate.SetUnitClass(theClass);
-    EEUIBuildGate* theTool = &this->mBuildGate;
-    theTool->Initialize(thePlayer->mPlayerID);
-
-    this->SetUIState(0xb);
-    gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_start(&theCall, 0, inTechnology);
 }
 
 // FUNCTION: EXE 0x666572
@@ -1021,18 +830,8 @@ EEABuild::EEABuild()
 // Starts placing a wall for a tech (wall placement mode)
 void EEUIFMainGame::StartWall(long inTechnology)
 {
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EETechTreeNode* theNode = thePlayer->mTechnologies->Get(inTechnology);
-
-    if (gUnitClassTable[theNode->mData->mUnitClass] == NULL || theNode == NULL)
-        return;
-    this->mBuild->mTechnology = inTechnology;
-    this->mBuildWall.mTechnology = inTechnology;
-    EEUIBuildWall* theTool = &this->mBuildWall;
-    theTool->Initialize(thePlayer->mPlayerID);
-
-    this->SetUIState(6);
-    gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_start(&theCall, 1, inTechnology);
 }
 
 // FUNCTION: EXE 0x66662d
@@ -1040,31 +839,8 @@ void EEUIFMainGame::StartWall(long inTechnology)
 // otherwise in calamity mode (with a volcano ghost for tech 0x3f9)
 void EEUIFMainGame::StartCalamity(long inTechnology)
 {
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EETechTreeNode* theNode = thePlayer->mTechnologies->Get(inTechnology);
-    EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
-    EEUnit* theCaster;
-
-    theCaster = theGroup->GetNumUnits() != 0 ? theGroup->GetUnit(0) : NULL;
-    if (theCaster != NULL && theNode != NULL && theNode->mData->mCalamity > 0) {
-        EECalamityEnum theType = (EECalamityEnum)theNode->mData->mCalamity;
-        EECalamityClass* theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theType);
-        if (theClass != NULL) {
-            this->mCalamity->SetCalamity(inTechnology, theClass);
-            this->mCalamity->SetCasterID(theCaster->mUnitID);
-            if (theClass->GetTargetKind() == 1) {
-                this->mCalamity->Cast(this->GetMouseLocation());
-            } else {
-                this->SetUIState(5);
-                this->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-                if (inTechnology == 0x3f9)
-                    EEGhostUnit::Create(this->GetMouseLocation(),
-                                        dynamic_cast<EECCVolcano*>(theClass)->GetUnitClassIndex(), thePlayer, 0.0f, false);
-                if (gUIManager->mMainGameForm != NULL)
-                    gUIManager->mMainGameForm->mRefreshGroup = true;
-            }
-        }
-    }
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_start(&theCall, 2, inTechnology);
 }
 
 // FUNCTION: EXE 0x66676e
@@ -1084,65 +860,32 @@ void EEUIFMainGame::SetChatTop(long inTop)
 // Enters flare mode when units are selected
 void EEUIFMainGame::StartFlare()
 {
-    if (!(gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits() > 0))
-        return;
-    this->SetUIState(0x15);
-    gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-    this->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-    if (gUIManager->mMainGameForm != NULL)
-        gUIManager->mMainGameForm->mRefreshGroup = true;
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_start(&theCall, 3, 0);
 }
 
 // FUNCTION: EXE 0x66681d
 // Enters patrol mode when units are selected
 void EEUIFMainGame::StartPatrol()
 {
-    if (!(gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits() > 0))
-        return;
-    this->SetUIState(0x10);
-    gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-    this->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-    if (gUIManager->mMainGameForm != NULL)
-        gUIManager->mMainGameForm->mRefreshGroup = true;
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_start(&theCall, 4, 0);
 }
 
 // FUNCTION: EXE 0x6668a0
 // Enables the hot key groups of a hot key mode
 void EEUIFMainGame::SetHotKeyMode(long inMode)
 {
-    this->mHotKeyMode = inMode;
-    this->SetHotKeyGroupEnabled(2, true);
-    switch (this->mHotKeyMode) {
-    case 0:
-        this->SetHotKeyGroupEnabled(0, true);
-        this->SetHotKeyGroupEnabled(1, false);
-        break;
-    case 1:
-        this->SetHotKeyGroupEnabled(0, false);
-        this->SetHotKeyGroupEnabled(1, true);
-        break;
-    case 2:
-        this->SetHotKeyGroupEnabled(0, true);
-        this->SetHotKeyGroupEnabled(1, true);
-        break;
-    }
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_hot_key_mode(&theCall, inMode);
 }
 
 // FUNCTION: EXE 0x6668ee
 // Switches the interface mode, clearing ghosts and ending a wall or gate placement
 void EEUIFMainGame::SetUIState(long inUIState)
 {
-    gWorld.mGhostUnitsLock->Enter();
-    gWorld.ClearGhostUnits();
-    gWorld.mGhostUnitsLock->Leave();
-    this->GetManager()->ForceUIUpdate();
-    if (gUserInterface != NULL)
-        gUserInterface->UpdateJITManufacturing();
-    if (this->mUIState == 6)
-        ((EEUIBuildWall&)this->mBuildWall).Terminate();
-    else if (this->mUIState == 0xb)
-        ((EEUIBuildGate&)this->mBuildGate).Terminate();
-    this->mUIState = inUIState;
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_ui_state(&theCall, inUIState);
 }
 
 // FUNCTION: EXE 0x666960
@@ -1186,7 +929,8 @@ void EEUIFMainGame::HideMessages()
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUIEChatLogEvents.h"
 
-static_assert(EE_SCREENS_MF_CTL_WIN_LOSE == kMainGameWinLose && EE_SCREENS_MF_CTL_POPULATION == kMainGamePopulation &&
+static_assert(EE_SCREENS_MF_CTL_WIN_LOSE == kMainGameWinLose && EE_SCREENS_MF_CTL_CANCEL_UI_MODE == kMainGameCancelUIMode &&
+                  EE_SCREENS_MF_SOUND_BUTTON1 == kSoundButton1 && EE_SCREENS_MF_SOUND_BUTTON2 == kSoundButton2 && EE_SCREENS_MF_CTL_POPULATION == kMainGamePopulation &&
                   EE_SCREENS_MF_CTL_MINI_MAP == kMainGameMiniMap && EE_SCREENS_MF_CTL_CHAT_LINE1 == kMainGameChatLine1 &&
                   EE_SCREENS_MF_CTL_CHAT_LINE7 == kMainGameChatLine7 && EE_SCREENS_MF_CTL_GAME_CLOCK == kMainGameGameClock &&
                   EE_SCREENS_MF_CTL_BRIEFING == kMainGameGameInfoBriefing &&
@@ -1245,6 +989,16 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_WALL_STATE, theForm->mBuildWall.mState)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_CLOCK_MODE, theForm->mClockMode)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_CURSOR_LOCKED, theForm->mIsCursorLocked)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_INFO_BLINKING, theForm->mInfoBlinking)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_BUTTON_BLINKING, theForm->mIsButtonBlinking)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_TOOLTIP_SHADOW, theForm->mDrawToolTipShadow)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_ENTITY_GROUP, theForm->mEntityGroup)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_CURRENT_GROUP, theForm->mCurrentGroup)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_MEDIA_ID, theForm->mMediaID)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_ENTITY_GROUP_SET, theForm->mEntityGroupSet)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_B5F0, theForm->mB5F0)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_HOT_KEY_MODE, theForm->mHotKeyMode)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_BUILD_TECH, theForm->mBuild->mTechnology)
         }
 #undef EE_MF_FIELD
         return 0;
@@ -1270,6 +1024,8 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
             theGroup->Reset();
         else if (inA == EE_SCREENS_MF_GROUP_REFRESH)
             theGroup->Refresh();
+        else if (inA == EE_SCREENS_MF_GROUP_SELECT)
+            theGroup->Select();
         else
             return theGroup->WantsRefresh() == true;
         return 0;
@@ -1441,6 +1197,132 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     }
     case EE_SCREENS_MF_OP_CHAT_TOP: theForm->SetChatTop((long)inA); return 0;
     case EE_SCREENS_MF_OP_HIDE_MESSAGES: theForm->HideMessages(); return 0;
+    case EE_SCREENS_MF_OP_CREATE_ERROR_LOCK:
+        ESVERIFY_AT(TSScheduler::CreateCriticalSection(theForm->mErrorCriticalSection) == keseOK, 633);
+        return 0;
+    case EE_SCREENS_MF_OP_CREATE_GROUP: theForm->CreateGroup((unsigned long)inA); return 0;
+    case EE_SCREENS_MF_OP_NEW_UNIT_HACK: theForm->mUnitHack = new EEUIFMGUnitHack(theForm); return 0;
+    case EE_SCREENS_MF_OP_NEW_POLL:
+        theForm->mPoll = new TMPoll((unsigned long)inA, 0, false);
+        theForm->mPoll->Start();
+        return 0;
+    case EE_SCREENS_MF_OP_WINDOW_SIZE:
+        ioIo->n[0] = inA == 0 ? gGameWindowWidth : gGameWindow->GetWidth();
+        ioIo->n[1] = inA == 0 ? gGameWindowHeight : gGameWindow->GetHeight();
+        return 0;
+    case EE_SCREENS_MF_OP_NEW_SCROLL:
+        theForm->mScroll = new EEAScroll;
+        theForm->mScroll->mEdges = GERectangle(ioIo->f[0], ioIo->f[1], ioIo->f[2], ioIo->f[3]);
+        return 0;
+    case EE_SCREENS_MF_OP_NEW_ACTION:
+        if (inA == 0)
+            theForm->mMouseClick = new EEAMouseClick;
+        else if (inA == 1)
+            theForm->mLasso = new EEALasso;
+        else if (inA == 2)
+            theForm->mBuild = new EEABuild;
+        else
+            theForm->mCalamity = new EEACalamity;
+        return 0;
+    case EE_SCREENS_MF_OP_ENTITY_GROUP:
+        inB != 0 ? theForm->GetEntityGroup(inA)->Enable() : theForm->GetEntityGroup(inA)->Disable();
+        return 0;
+    case EE_SCREENS_MF_OP_MOUSE_TEST: {
+        // (main_form.rs' order)
+        static const EEUIFMGMouseTest kTests[22] = {
+            EEModeNormal, EEModeBomberRally, EEModeFighterRally, EEModeAtomicBomberRally, EEModeBuild, EEModeRally,
+            EEModeUnload, EEModeGarrison, EEModeCalamity, EEModeWall, EEModeGate, EEModeTimedAtomicBomberRally,
+            EEModeTimedBomberRally, EEModeTimedFighterRally, EEModeTimedRally, EEModeCamera, EEModeHeal,
+            EEModeMouseNone, EEModeFlare, EEModeAttackGround, EEModeParatrooperRally, EEModeConvert};
+        theForm->mMouseTests[inA] = kTests[inB];
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_KEYBOARD_TEST: {
+        static const EEUIFMGKeyboardTest kTests[3] = {EEModeKeyboardNone, EEFn27C0B4B, EEModeKeyboardCinematic};
+        theForm->mKeyboardTests[inA] = kTests[inB];
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_WHEEL_ZOOM:
+        theForm->mWheelZoom = EECreateScreenEvent((unsigned long)inA);
+        theForm->SetMouseWheelMoveEvent(theForm->mWheelZoom);
+        return 0;
+    case EE_SCREENS_MF_OP_GRAB_SCROLL:
+        theForm->mGrabScroll = EECreateGrabScroll((unsigned long)inA);
+        theForm->SetMouseMiddleButtonPressedEvent(theForm->mGrabScroll);
+        theForm->SetMouseMiddleButtonUnpressedEvent(theForm->mGrabScroll);
+        return 0;
+    case EE_SCREENS_MF_OP_ADD_HOT_KEY: {
+        UIEvent* theEvents[4];
+        for (int i = 0; i < 4; i++) {
+            uint32_t theCode = (uint32_t)((uint64_t)ioIo->n[i / 2] >> (i % 2 * 32));
+            theEvents[i] = theCode == EE_SCREENS_MF_NO_EVENT ? NULL : EECreateScreenEvent(theCode);
+        }
+        theForm->AddHotKey(inA & 0xffff, inA >> 16 & 0xffff, inA >> 32 & 0xffff, inA >> 48 & 0xffff, theEvents[0],
+                           theEvents[1], theEvents[2], theEvents[3], (unsigned long)(uint32_t)inB, (inB >> 32) != 0);
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_HOT_KEY_GROUP: theForm->SetHotKeyGroupEnabled((unsigned long)inA, inB != 0); return 0;
+    case EE_SCREENS_MF_OP_FORCE_UI_UPDATE: theForm->GetManager()->ForceUIUpdate(); return 0;
+    case EE_SCREENS_MF_OP_UPDATE_JIT:
+        if (gUserInterface != NULL)
+            gUserInterface->UpdateJITManufacturing();
+        return 0;
+    case EE_SCREENS_MF_OP_BUILD_TERMINATE:
+        inA == 0 ? ((EEUIBuildWall&)theForm->mBuildWall).Terminate() : ((EEUIBuildGate&)theForm->mBuildGate).Terminate();
+        return 0;
+    case EE_SCREENS_MF_OP_ALL_DIRTY: theForm->SetAllControlsDirty(); return 0;
+    case EE_SCREENS_MF_OP_NODE:
+        theCall.mNode = gWorld.GetCurrentPlayer()->mTechnologies->Get((long)inA);
+        return theCall.mNode != NULL;
+    case EE_SCREENS_MF_OP_NODE_CLASS:
+        return theCall.mNode != NULL && gUnitClassTable[theCall.mNode->mData->mUnitClass] != NULL;
+    case EE_SCREENS_MF_OP_UNIT: {
+        RTSUnit* theUnit = gWorld.GetCurrentPlayer()->GetUnit((unsigned long)inA);
+        theCall.mUnit = static_cast<EEUnit*>(theUnit);
+        return theUnit == NULL ? 0 : theCall.mUnit->mComplexUnit == NULL ? 1 : 2;
+    }
+    case EE_SCREENS_MF_OP_CAN_PRODUCE:
+        return gWorld.GetCurrentPlayer()->CanProduce((long)inA, theCall.mUnit->mComplexUnit->mUnitClass->GetUnitType(), 1,
+                                                     true, 3, &theCall.mText);
+    case EE_SCREENS_MF_OP_PLAY_SOUND:
+        gSoundManager->Play(EESoundObject::Get((unsigned long)inA)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+        return 0;
+    case EE_SCREENS_MF_OP_GHOST:
+        EEGhostUnit::Create(theForm->GetMouseLocation(),
+                            inA == 0 ? theCall.mNode->mData->mUnitClass
+                                     : dynamic_cast<EECCVolcano*>(theCall.mCalamity)->GetUnitClassIndex(),
+                            gWorld.GetCurrentPlayer(), 0.0f, false);
+        return 0;
+    case EE_SCREENS_MF_OP_CHAT_LOG_ERROR: gUserInterface->AddChatLogEntry(theCall.mText, 0); return 0;
+    case EE_SCREENS_MF_OP_GATE_BEGIN:
+        theForm->mBuildGate.mTechnology = (long)inA;
+        theForm->mBuildGate.mWallType = theCall.mNode->GetUnitClass(0);
+        theForm->mBuildGate.SetUnitClass(gUnitClassTable[theCall.mNode->mData->mUnitClass]);
+        theForm->mBuildGate.Initialize(gWorld.GetCurrentPlayer()->mPlayerID);
+        return 0;
+    case EE_SCREENS_MF_OP_WALL_BEGIN:
+        theForm->mBuildWall.mTechnology = (long)inA;
+        theForm->mBuildWall.Initialize(gWorld.GetCurrentPlayer()->mPlayerID);
+        return 0;
+    case EE_SCREENS_MF_OP_SELECTED_COUNT: return gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits();
+    case EE_SCREENS_MF_OP_CASTER: {
+        EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
+        theCall.mCaster = theGroup->GetNumUnits() != 0 ? theGroup->GetUnit(0) : NULL;
+        return theCall.mCaster != NULL;
+    }
+    case EE_SCREENS_MF_OP_NODE_CALAMITY: return theCall.mNode->mData->mCalamity;
+    case EE_SCREENS_MF_OP_CALAMITY_CLASS:
+        theCall.mCalamity = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass((EECalamityEnum)inA);
+        return theCall.mCalamity != NULL;
+    case EE_SCREENS_MF_OP_CALAMITY_SET:
+        theForm->mCalamity->SetCalamity((long)inA, theCall.mCalamity);
+        theForm->mCalamity->SetCasterID(theCall.mCaster->mUnitID);
+        return theCall.mCalamity->GetTargetKind();
+    case EE_SCREENS_MF_OP_CALAMITY_CAST: theForm->mCalamity->Cast(theForm->GetMouseLocation()); return 0;
+    case EE_SCREENS_MF_OP_REFRESH_MAIN_FORM:
+        if (gUIManager->mMainGameForm != NULL)
+            gUIManager->mMainGameForm->mRefreshGroup = true;
+        return 0;
     }
     return 0;
 }
