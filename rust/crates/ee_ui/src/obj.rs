@@ -247,6 +247,11 @@ pub enum EeUiOp {
     SetBorderOpacity = 146,
     /// Bitmap `a`'s `SetOpacity(f[0])`.
     BitmapSetOpacity = 147,
+    /// *Pure*: bitmap `a`'s `GetTexture(GetScreenIndex())->GetWidth()`.
+    BitmapTextureWidth = 148,
+    /// Bitmap `a`'s `ComputeStretchedCoordsAndScale(f, f, source, GetScreenIndex())`: `f` the destination, the source
+    /// rectangle's bottom and left float bits in `c` (high, low), its right and top in `d`.
+    BitmapStretch = 149,
 }
 
 impl EeUiOp {
@@ -277,6 +282,7 @@ impl EeUiOp {
                 | AlwaysDirty
                 | BgOpacity
                 | BorderOpacity
+                | BitmapTextureWidth
                 | PartRect
                 | SliderStyle
                 | SliderValue

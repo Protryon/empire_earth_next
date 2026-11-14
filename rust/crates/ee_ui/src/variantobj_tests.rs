@@ -1,6 +1,6 @@
-//! The scroll arrow's and blinking button's goldens (`golden_scrollobj.txt`, `golden_blinkobj.txt`): the first
-//! sequences the round-12 driver (`build/ui12`)
-//! printed over round 11's UIScrollButton.cpp statements and record FFI (the polls and the slider by handle, the
+//! The scroll arrow's, blinking button's and scalable button's goldens (`golden_scrollobj.txt`,
+//! `golden_blinkobj.txt`, `golden_scalableobj.txt`): the first sequences the round-12 driver (`build/ui12`)
+//! printed over round 11's UIScrollButton.cpp, UIBlinkingButton.cpp and UIScalableButton.cpp statements and record FFI (the polls and the slider by handle, the
 //! virtual ButtonDown and ButtonUp dispatched by the world), replayed op for op against the Rust button.
 
 use core::ffi::c_void;
@@ -63,4 +63,20 @@ const GOLDEN_BLINK: &str = include_str!("golden_blinkobj.txt");
 #[test]
 fn blink_golden_replays() {
     assert!(replay(GOLDEN_BLINK) > 1_000);
+}
+
+// ---- the scalable button (`golden_scalableobj.txt`)
+
+const GOLDEN_SCALABLE: &str = include_str!("golden_scalableobj.txt");
+
+#[test]
+fn scalable_golden_replays() {
+    assert!(replay(GOLDEN_SCALABLE) > 1_000);
+}
+
+#[test]
+fn a_packed_source_comes_back() {
+    let (c, d) = (super::pack(19.5, -2.0), super::pack(64.0, 0.25));
+    let bits = |v: isize, high: bool| f32::from_bits(if high { (v as u64 >> 32) as u32 } else { v as u64 as u32 });
+    assert_eq!((bits(c, true), bits(c, false), bits(d, true), bits(d, false)), (19.5, -2.0, 64.0, 0.25));
 }

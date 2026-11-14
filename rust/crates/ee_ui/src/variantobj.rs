@@ -1,6 +1,6 @@
-//! The scroll arrow (`UIScrollButton`) and the blinking button (`UIBlinkingButton`) whole in the Rust button (R6 ui
-//! round 12): their records ([`ScrollFields`], [`BlinkObj`]) are the button object's [`Sub`] and every method is
-//! here.
+//! The scroll arrow (`UIScrollButton`), the blinking button (`UIBlinkingButton`) and the scalable button
+//! (`UIScalableButton`) whole in the Rust button (R6 ui round 12): their records ([`ScrollFields`], [`BlinkObj`],
+//! [`ScalableFields`]) are the button object's [`Sub`] and every method is here.
 //!
 //! The arrow's two polls (`TMPoll`s, the 500 ms delay and the 100 ms repeat) are C++ objects the Rust button holds
 //! by address, made and deleted by [`Op::PollCreate`]/[`Op::PollDelete`] and driven by the poll ops; its slider is
@@ -9,6 +9,9 @@
 //! The blinking button's poll was an embedded `TMPoll` member; it is now made by [`Op::PollCreate`] at construction
 //! and deleted with the button. Its fade is round 6's ([`button_variants::blink_copy_data`]); the opacities it reads
 //! and sets are the control's (`UIControl` ops) and the bitmaps' ([`Op::BitmapSetOpacity`]).
+//!
+//! The scalable button's three-slice draw is round 6's ([`button_variants::scalable_slices`]); each slice is a
+//! [`Op::BitmapStretch`] (the source rectangle's four floats packed two per integer), a location and a draw.
 
 use core::ffi::{c_long, c_ulong, c_void};
 
@@ -16,6 +19,7 @@ use crate::button::{self, ScrollButtonHost};
 use crate::button_variants::{self, BlinkFields};
 use crate::buttonobj::{Btn, EeUiButton, EeUiButtonCall, Sub};
 use crate::obj::EeUiOp as Op;
+use crate::rect::UiRect;
 
 /// The scroll arrow's delay before repeating and its repeat period (milliseconds).
 const SCROLL_DELAY_MS: isize = 500;
@@ -32,6 +36,18 @@ pub(crate) struct ScrollFields {
     pub slider: *mut c_void,
     pub repeat_poll: *mut c_void,
     pub delay_poll: *mut c_void,
+}
+
+/// `UIScalableButton`'s members: the normal, focused and pressed source rectangles and the copied one.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ScalableFields {
+    pub rects: [UiRect; 3],
+    pub copied: UiRect,
+}
+
+/// Two floats' bits in one integer (`BitmapStretch`'s source rectangle).
+fn pack(a: f32, b: f32) -> isize {
+    (((a.to_bits() as u64) << 32) | b.to_bits() as u64) as isize
 }
 
 /// `UIBlinkingButton`'s members: its poll and round 6's record.
@@ -103,6 +119,48 @@ impl EeUiButton {
         button::copy_data(&mut Btn::new(self)) as isize
     }
 
+    fn scalable(&self) -> Option<ScalableFields> {
+        match *self.sub.borrow() {
+            Sub::Scalable(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    /// `UIScalableButton::CopyData`: the state's source rectangle copied, then `UIButton::CopyData`.
+    fn scalable_copy_data(&self) -> isize {
+        if let Some(mut x) = self.scalable() {
+            let f = self.fields();
+            let [normal, focused, pressed] = x.rects;
+            let has_focused = !f.focused_bitmap.is_null();
+            x.copied =
+                button_variants::scalable_copied_rect(f.state, has_focused, &normal, &focused, &pressed, &x.copied);
+            *self.sub.borrow_mut() = Sub::Scalable(x);
+        }
+        button::copy_data(&mut Btn::new(self)) as isize
+    }
+
+    /// `UIScalableButton::DrawPolygons`: the copied bitmap drawn as a left cap, a right cap and a stretched middle;
+    /// the last draw's result.
+    fn scalable_draw_polygons(&self) -> isize {
+        let bitmap = self.fields().copied_bitmap;
+        let Some(x) = self.scalable() else { return 0 };
+        if bitmap.is_null() {
+            return 0;
+        }
+        let draw = self.host.get_rect(Op::CopiedDrawRect, 0);
+        let width = self.op(Op::BitmapTextureWidth, bitmap as isize, 0) as c_ulong;
+        let mut r = 0;
+        for s in button_variants::scalable_slices(&x.copied, &draw, width) {
+            let src = s.source;
+            let mut f = crate::obj::rect_buf(s.destination);
+            let (c, d) = (pack(src.bottom, src.left), pack(src.right, src.top));
+            self.host.op_f(Op::BitmapStretch, bitmap as isize, 0, c, d, &mut f);
+            self.host.op_point(Op::BitmapSetLocation, bitmap as isize, s.location);
+            r = self.op(Op::BitmapDraw, bitmap as isize, 0);
+        }
+        r
+    }
+
     fn scroll(&self) -> ScrollFields {
         match *self.sub.borrow() {
             Sub::Scroll(s) => s,
@@ -134,7 +192,7 @@ impl EeUiButton {
     }
 
     /// The variants' inward calls ([`EeUiButtonCall`] from 95 on).
-    pub(crate) fn call_variant(&self, call: EeUiButtonCall, a: isize, b: isize, _f: [f32; 4]) -> isize {
+    pub(crate) fn call_variant(&self, call: EeUiButtonCall, a: isize, b: isize, f: [f32; 4]) -> isize {
         type C = EeUiButtonCall;
         let mut h = Btn::new(self);
         match call {
@@ -165,6 +223,17 @@ impl EeUiButton {
             C::BlinkSetIsBlinking => self.set_is_blinking(a != 0),
             C::BlinkIsBlinking => return self.blink().is_some_and(|b| b.f.is_blinking) as isize,
             C::BlinkCopyData => return self.blink_copy_data(),
+            C::ScalableInit => {
+                let rect = UiRect { bottom: f[0], left: f[1], right: f[2], top: f[3] };
+                let empty = ScalableFields { rects: [UiRect::default(); 3], copied: UiRect::default() };
+                let mut x = self.scalable().unwrap_or(empty);
+                if let Some(slot) = x.rects.get_mut(a as usize) {
+                    *slot = rect;
+                }
+                *self.sub.borrow_mut() = Sub::Scalable(x);
+            }
+            C::ScalableCopyData => return self.scalable_copy_data(),
+            C::ScalableDrawPolygons => return self.scalable_draw_polygons(),
             _ => {}
         }
         0

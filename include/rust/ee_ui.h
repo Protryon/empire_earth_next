@@ -317,6 +317,11 @@ enum class EeUiOp : uint32_t {
   SetBorderOpacity = 146,
   /// Bitmap `a`'s `SetOpacity(f[0])`.
   BitmapSetOpacity = 147,
+  /// *Pure*: bitmap `a`'s `GetTexture(GetScreenIndex())->GetWidth()`.
+  BitmapTextureWidth = 148,
+  /// Bitmap `a`'s `ComputeStretchedCoordsAndScale(f, f, source, GetScreenIndex())`: `f` the destination, the source
+  /// rectangle's bottom and left float bits in `c` (high, low), its right and top in `d`.
+  BitmapStretch = 149,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -503,6 +508,12 @@ enum class EeUiButtonCall : uint32_t {
   BlinkIsBlinking = 102,
   /// `CopyData()` -> its result: the fade, then `UIButton::CopyData()`.
   BlinkCopyData = 103,
+  /// The constructor's source rectangle `a` (0 normal, 1 focused, 2 pressed) = `f`.
+  ScalableInit = 110,
+  /// `CopyData()` -> its result.
+  ScalableCopyData = 111,
+  /// `DrawPolygons()` -> its result.
+  ScalableDrawPolygons = 112,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -781,13 +792,6 @@ struct EeUiBackgroundTableRefs {
   EeUiLayout *layout;
   EeUiRect *texture_rect;
   EeUiColor *color;
-};
-
-/// One of the three draws: the bitmap's source and destination rectangles, and where it is drawn.
-struct EeUiSlice {
-  EeUiRect source;
-  EeUiRect destination;
-  EeUiPoint location;
 };
 
 /// `UIComboBox`'s members in their C++ order (from `mTextBox` on). The pointer is C++'s.
@@ -1432,20 +1436,6 @@ long ee_ui_event_initialize(unsigned long *count, void *event);
 
 /// `UIEvent::Uninitialize`.
 long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// `UIScalableButton::CopyData`'s source rectangle for the state.
-EeUiRect ee_ui_scalable_copied_rect(unsigned long state,
-                                    bool has_focused_bitmap,
-                                    const EeUiRect *normal,
-                                    const EeUiRect *focused,
-                                    const EeUiRect *pressed,
-                                    const EeUiRect *current);
-
-/// `UIScalableButton::DrawPolygons`' three slices, written to `out[0..3]`.
-void ee_ui_scalable_slices(const EeUiRect *copied,
-                           const EeUiRect *draw,
-                           unsigned long texture_width,
-                           EeUiSlice *out);
 
 /// The constructor's drop button ([`combo::drop_rect`]).
 EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);

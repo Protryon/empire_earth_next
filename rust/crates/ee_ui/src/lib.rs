@@ -52,9 +52,6 @@ mod background_ffi;
 // absent from a test binary
 #[cfg(not(test))]
 mod background_table_ffi;
-// the blinking and scalable buttons' pure exports (UIBlinkingButton.cpp, UIScalableButton.cpp)
-#[cfg(not(test))]
-mod button_variants_ffi;
 // imports the C++ combo box's host calls (UIComboBox.cpp), absent from a test binary
 #[cfg(not(test))]
 mod combo_ffi;

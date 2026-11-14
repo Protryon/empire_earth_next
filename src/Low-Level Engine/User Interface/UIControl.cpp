@@ -534,6 +534,7 @@ bool UIObjHost::Media(UIControl* c, EeUiOp inOp, intptr_t a, intptr_t b, float* 
         break;
     case EeUiOp::BitmapSetScale: theBitmap->SetXYScale(f[0], f[1]); break;
     case EeUiOp::BitmapSetOpacity: theBitmap->SetOpacity(f[0]); break;
+    case EeUiOp::BitmapTextureWidth: r = theBitmap->GetTexture(c->GetScreenIndex())->GetWidth(); break;
     case EeUiOp::StringLength: r = reinterpret_cast<const UWideString*>(a)->GetLength(); break;
     case EeUiOp::TextCreate: r = (intptr_t) new GEText(reinterpret_cast<GEFont*>(a)); break;
     case EeUiOp::TextDelete: delete theText; break;

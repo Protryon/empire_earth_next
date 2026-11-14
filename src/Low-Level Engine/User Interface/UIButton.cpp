@@ -42,7 +42,7 @@
 #include "UIObjHost.h"
 
 struct UIButtonHost {
-    static intptr_t Op(void* inButton, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
+    static intptr_t Op(void* inButton, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
     {
         UIButton* s = static_cast<UIButton*>(inButton);
         intptr_t r = 0;
@@ -76,6 +76,16 @@ struct UIButtonHost {
         case EeUiOp::PollSetDelay: reinterpret_cast<TMPoll*>(a)->SetTimeDelay((unsigned long)b); break;
         case EeUiOp::SliderValue: return reinterpret_cast<UISlider*>(a)->GetCurrentRangeValue();
         case EeUiOp::SliderSetValue: reinterpret_cast<UISlider*>(a)->SetCurrentRangeValue((long)b); break;
+        case EeUiOp::BitmapStretch: {
+            // the source rectangle's floats, two per integer (variantobj.rs)
+            uint32_t theBits[4] = {(uint32_t)((uint64_t)c >> 32), (uint32_t)c, (uint32_t)((uint64_t)d >> 32), (uint32_t)d};
+            float theSource[4];
+            memcpy(theSource, theBits, sizeof(theSource));
+            GERectangle theDestination = UIObjHost::Rect(f);
+            reinterpret_cast<GEBitmap*>(a)->ComputeStretchedCoordsAndScale(theDestination, theDestination,
+                                                                           UIObjHost::Rect(theSource), s->GetScreenIndex());
+            break;
+        }
         case EeUiOp::LabelSetText:
             reinterpret_cast<UITextLabel*>(a)->SetText(*reinterpret_cast<const UWideString*>(b));   // SetText(text, true)
             break;

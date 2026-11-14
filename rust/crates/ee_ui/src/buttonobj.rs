@@ -219,6 +219,14 @@ pub enum EeUiButtonCall {
     BlinkIsBlinking = 102,
     /// `CopyData()` -> its result: the fade, then `UIButton::CopyData()`.
     BlinkCopyData = 103,
+
+    // ---- UIScalableButton (variantobj.rs)
+    /// The constructor's source rectangle `a` (0 normal, 1 focused, 2 pressed) = `f`.
+    ScalableInit = 110,
+    /// `CopyData()` -> its result.
+    ScalableCopyData = 111,
+    /// `DrawPolygons()` -> its result.
+    ScalableDrawPolygons = 112,
 }
 
 /// A subclass's own record (its constructor's init call sets it): what were the C++ subclass's members.
@@ -236,6 +244,8 @@ pub(crate) enum Sub {
     Scroll(crate::variantobj::ScrollFields),
     /// `UIBlinkingButton` (`variantobj.rs`).
     Blink(crate::variantobj::BlinkObj),
+    /// `UIScalableButton` (`variantobj.rs`).
+    Scalable(crate::variantobj::ScalableFields),
 }
 
 /// The Rust UIButton.
