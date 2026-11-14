@@ -18127,3 +18127,151 @@ op cases); the final tree's LAN run covers it.
   room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic, RoutingLogic last) and the
   resource tables and factories.
 - The list rows kept in C++ (BadUserItem, NetworkAdapterListItem) go with the WON GUI lane's list widgets.
+
+## R4.3, twelfth part: GERasterizer's base state whole in Rust; GETransformation's copies and the value types' codecs in Rust (ee_ge rastobj.rs, values.rs; branch rust-ge12, 2026-11-14)
+
+The sixth whole-class round of the Graphics Engine, in parts seven to eleven's pattern (a census commit, then the
+move, a golden over the unmodified unit with traced fakes, mutations, a cargo replay through a port of the driver).
+By `tools/ge_census.py`: 2,388 logic lines at the start, 1,832 after (GERasterizer.cpp 260 -> 12, GETransformation.cpp
+137 -> 0, GEViewport.cpp 39 -> 4, GE3DPoint/GEVector/GEOrientation/GERectangle/GEColor/GETextureCoordinate's codecs
+gone).
+
+| Commit | What | C++ (`git diff --numstat` over src, include without include/rust) |
+|---|---|---|
+| b09d31ca | GERasterizer's census: the DX7 plug-in and GEInitialize reach the base's state through accessors | +70 -65, net +5 (census) |
+| f4c96d28 | GERasterizer's base state whole in Rust (`rastobj.rs`) | +240 -497, net -257 |
+| f5e82d6d | GETransformation's copies, comparisons, setters and codec in Rust (`values.rs`) | +18 -148, net -130 |
+| bfa7c543 | the value types' float codecs and `GEViewport::operator=` in Rust (`values.rs`) | +41 -170, net -129 |
+| 4f93c725 | the UI fixture asks for the screen count before the window (test-only) | +4 -1, net +3 |
+
+- **The census was the DX7 plug-in.** Its files read the base's protected members directly (`mScreenStates[i]->...`
+  in DX7Rasterizer.cpp's setters, ShowScene, SetTexture and the activation trampolines; `mDrawingAccess`,
+  `mComputedAmbientColor`, `mWaterRipple0..2` through `DX7DrawSeam.h`'s `using`s; `mCulling = -16`;
+  `sActiveRasterizer = this`), and GEInitialize/GEShutdown wrote `sRasterizers`. The census commit gave the base
+  `GetScreenState(i)`, `GetDrawingAccess()`, `GetWaterRippleEffect(...)`, `GetProjectionMode(i)`,
+  `SetActiveRasterizer(r)` and the friends' `ClearRasterizers`/`AddRasterizer`, and routed every reader through them;
+  DX7Rasterizer's own SetAmbientColor/SetAmbientIntensity, which repeated the base's three products, call the base's
+  (the same stores). Oracle identical (seeds 2-3), store gate PASS.
+- **The move** (`EeGeRasterizer`): the colours, the screen records, the debug font and text, the drawing lock, the
+  intensity, the ripple, the culling, the flags, the name (a C++ `UString` the host makes and deletes) and the screen
+  id; the statics `sRasterizers` (a `Mutex<Vec>`) and `sActiveRasterizer` (an atomic); every method of
+  GERasterizer.cpp: the constructor's debug text, the destructor, `Activate` (the plug-in's `ActivateRasterizer`
+  through the host; it re-enters `AddValidScreen`, so no Rust reference is held across it), `AddValidScreen`,
+  `CreateFontBitmap`, `Deactivate` (each record's surfaces and texture released), the two `GetPixelSize`s, the
+  orthographic and perspective visibility tests (the model's centre, radii, box and clip planes through the host; the
+  viewport and transformation read through their mirrors) and the base's setters. Every call on another object is one
+  host operation (`EeGeRastOp`, 29 operations, `GERasterizerHost`, a friend struct so it can call the protected pure
+  `ActivateRasterizer`). The class keeps its vtable (DX7Rasterizer's base: every virtual the plug-in overrides is still
+  a virtual; the base's bodies forward) and one member, `mRust`; the unused `sTransformStack`/`TransformStack`,
+  `m34` and the protected `AddToDrawnPoly*` are gone.
+- **The screen record is a view.** `GERScreenState` lost its constructor and destructor and is now the C++ view of
+  the Rust record `EeGeRastScreen` (same fields, GERasterizer.cpp `static_assert`s the size and seven offsets): the
+  plug-in still writes its device-side fields (the `-16` "force" sentinels, ShowScene's statistics, SetTexture's
+  texture and counters, the activation's surfaces) through `GetScreenState(i)`, a pointer into the record, as
+  GETexture's `GetStage` returns a pointer into its Rust object. The viewport inside is `GeViewport`, so
+  `GetViewport(i)` still returns a `GEViewport&`. The header's per-screen inline accessors read through
+  `GetScreenState`; the rasterizer-wide ones are out of line (GERasterizer.h does not include `rust/ee_ge.h`).
+- **The golden** (scratch, `build/ge12/golden`: `build.py orig-wt | cur`, `driver_grast.cpp`, `fake_grast.h`,
+  `mutate.py`): GERasterizer.cpp and its header of the census commit (unmodified) or the worktree's, through a
+  minimal plug-in subclass, over traced fakes (the scheduler's lock, failing one time in eight so the `ESVERIFY`
+  fires; fonts and texts with reference counts; font bitmaps; surfaces and textures; screens with and without a
+  texture manager; models with centres, four frame radii and transforms, a box; placed models) and the real math
+  headers (their inline code is the original's; the out-of-line members forward to the ee_ge staticlib as the real
+  units do). Random sequences of rasterizers made and deleted, activations that add 0-2 screens and may make
+  themselves active and may fail, screens added, deactivations, every base setter with special floats, viewports, the
+  plug-in's writes through the records, font bitmaps, both pixel sizes, both visibility tests, the ambient colour and
+  intensity, the ripple, culling, id and profiling, the list's appends and clears and the active rasterizer; each step
+  followed by every live rasterizer's state through the accessors (each viewport hashed). 20,000 sequences, every
+  digest identical over the shell at the first build. The first 60 digests are `golden_grast.txt`, which cargo
+  replays (`rastobj_tests.rs`): the driver ported onto the Rust object's C ABI with a mock host that is the fakes,
+  drawing the same random stream and writing the same lines.
+
+  | Mutation of the Rust | Sequences of 2,000 that change | cargo |
+  |---|---|---|
+  | the debug text is transparent | 2,000 | replay |
+  | culling starts clockwise | 2,000 | replay, unit test |
+  | a failed activation keeps the active rasterizer | 884 | replay, unit test |
+  | deactivate keeps the render target | 129 | replay |
+  | deactivate keeps the active rasterizer | 511 | replay, unit test |
+  | a new screen does not wait for the vsync | 1,858 | replay, unit test |
+  | the fog scale is end minus start | 78 | replay, unit test |
+  | the computed ambient ignores blue | 1,813 | replay, unit test |
+  | the orthographic pixel width ignores the scale | 1,595 | replay, unit test |
+  | a negative width is the half width | 649 | replay, unit test |
+  | the placed size scales about the origin | 660 | replay |
+  | the placed size takes frame 0's radius | 1,254 | replay |
+  | the perspective test ignores the rear distance | 1,385 | replay |
+  | the perspective clip tests "not above" for "on or below" | 0 | passes |
+  | the orthographic test swaps top and bottom | 317 | replay |
+  | the orthographic y clip is not negated | 648 | replay |
+  | the viewport is not stored | 1,025 | replay |
+  | the list's index is off by one | 1,713 | replay, unit test |
+
+  The restored source: 0. The one survivor differs from the original only for a point exactly on a side plane or a
+  NaN distance, which no sequence produced.
+- **Driver lessons.** The cargo replay passed alone and failed beside the unit tests: the statics (the active
+  rasterizer, the list) are process-wide and a unit test's `Deactivate` cleared the active rasterizer under the
+  replay. Every test of the module takes one lock. A private `const CLIP_LEFT` in ee_ge was exported by cbindgen into
+  `ee_rust_common.h` because ee_dx7 has a constant of the same name and a different type (the header generator moves
+  shared names there): prefix even private constants (`RAST_CLIP_*`). Adding a module above `pub mod vector;` moved
+  `vector`'s `/// cbindgen:ignore` onto the new module (its functions vanished from the header, vector's constants
+  appeared): insert modules after an attribute's target, never between. The driver's printf output is CRLF on
+  Windows: convert a golden file before committing it. Random draws inside one call's arguments were sequenced first
+  (part eleven's lesson), including `m32C[R() % 4] += R() % 100`.
+- **GETransformation** (`values.rs`): the default constructor and `MakeIdentity` (`ee_ge_t_identity`), the copy
+  constructor, `operator=` and the matrix constructor (`ee_ge_t_copy`, the sixteen floats bit for bit, a self-copy
+  included), the two `operator==` (IEEE: a NaN never equals, -0 equals 0), `SetScale`, both `ZeroOrientation`s and
+  Load/Save over the field stream (`ee_ge_t_io`: row by row, stopping at the first error with the elements read so
+  far). GETransformation.cpp has no logic left. The simulation copies transformations everywhere: the oracle on seeds
+  2-7 stayed identical after this commit alone, and the saveload matrix reads and writes them.
+- **The value types' codecs**: GEVector, GE3DPoint, GEOrientation, GERectangle (left, top, right, bottom: not its
+  member order), GEColor (no open check) and GETextureCoordinate (the position read first and set back after a failed
+  field) Load/Save are one Rust codec (`ee_ge_fields_io`) over the file's own float reads and writes, called through
+  `GERustFields` (GERustIO.h) with the fields in the original's order and `GetIsOpen()`'s answer (closed:
+  `kErrorNotOpen`, no access). `GEViewport::operator=` is `ee_ge_viewport_copy`.
+- **The first tour crashed** (`0xc0000005` in the UI fixture's poll thread, after the settings form's apply): the
+  fixture asks `GetWindow(screen)` from its own thread every poll, and a settings change re-activates the rasterizer
+  (`Deactivate`, then `Activate` re-adds the screens). In that gap the original's `mScreenStates[i]` read a stale
+  pointer to a deleted record (undefined, and it happened to work); `GetScreenState` past the records is NULL now. The
+  game's own path never reads in the gap (it re-adds the screens inside `Activate` before reading); the fixture now
+  asks `GetScreenCount()` first (EETestFixture.cpp, test-only). Another thread reading a rasterizer's screens during a
+  re-activation is a race the original had too.
+- **Behaviour changes** (undefined paths only): the rasterizer's ambient intensity and a screen's alpha reference
+  start at 0 (the original left them unset; a `SetAmbientColor` before `SetAmbientIntensity`, as the game's start-up
+  does, read garbage for one call); a screen index past the records gives a NULL record (the original indexed past the
+  vector); the destructor frees the screen records without releasing their surfaces (the original's vector freed only
+  its array: the same calls); copying a rasterizer is deleted.
+- **What runs it: the tour, the random game and the store gate.** EE-SIM makes no rasterizer: the GERasterizer move
+  is exercised by the store gate (its `StoreRasterizer` derives from the base and activates it; 7,104 cases and the
+  store digests equal) and, for the plug-in's draw paths, the setters and the records, only by the tour and the random
+  game below. The transformation and codec commits run in EE-SIM (the oracle, the captures, the saveload matrix).
+- **Gates.** Each code commit: build `--sim` 0/0, the Rust gate PASS, the oracle identical on seeds 2-3 (2-7 for the
+  transformation commit), the store gate PASS after the census and the move. The merge of `rust` (95 commits since
+  part 11: WON 35, WONLobby 2-3, the progress files) merged without a conflict; `rust_build.py header` current,
+  `rust_includes.py` changed nothing, no conflict marker. On the merged tree: build `--sim` 0/0 (EE-AOC 1,088
+  inputs), the oracle identical on seeds 2-7, the Rust gate PASS (3,185 tests), the captures at seeds 2-3 PASS (oracle
+  169, late 170, calamity 183, space 171 digests), `--profile effects` at seeds 2-7 PASS (18 digests), the saveload
+  matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) expect PASS with part
+  eleven's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space
+  1/4, calamity 4/4, next 0/4), the test profile 0/0, the store gate PASS (7,104/7,104), and under the harness lock
+  the tour (`fixture_game.py --exercise tour --play-seconds 60`) `RESULT PASS tour` (render checks ok: view
+  83.3% lit) and the random game (`--exercise random-game --play-seconds 30 --scroll-check --zoom-captures 50 100
+  200`) `SCROLL CHECK PASS` and `RESULT PASS random-game`, both after the fixture fix below. Not run: the LAN game,
+  the menu pixel comparison, macOS or Linux builds.
+- **Left** (by the census, 1,832 logic lines), and what blocks each piece:
+  - GESurface.cpp (512): the renderers' abstract base (DX7Surface, the GX surface implement its 30 virtuals); its own
+    code is libjpeg's plumbing (C decoder/encoder state, stdio streams), which stays C; the pixel loops are Rust.
+  - The host switches of the moved classes (GETextureManager 182, GEFontBitmap 157, GEModel 151, GETexture 113,
+    GEBitmap 89, GEModelManager 66, GETerrainMesh 58): tables of C++ calls the census counts as logic; they shrink
+    only as the objects they call (UString, the screens, surfaces, vertex arrays, materials) move.
+  - GEOpenFormatsFile.cpp (83): the model and texture file search over FSFileSpec and the directory plumbing; a move
+    needs the FS classes' host (the LLE lane's).
+  - GE2DPoint.cpp (80, 22 bodies of 2-8 lines): the value types' small arithmetic (`operator+=`, `Add`, `SetXYZ`,
+    GE2DPoint's codec); an FFI call per `+=` would cost more than the line; GE2DPoint's Load/Save can take
+    `GERustFields` next.
+  - GELine (52), GEPoint (34), GERhombus (31): copyable wrappers over a vertex array and per-screen textures (GELine's
+    implicit `operator=` copies its three members); whole Rust objects would need a deep copy and a host of vertex
+    array calls about as long as the bodies.
+  - Graphics Engine.cpp (32): the plug-in loader (PIMModule, RasterizerWrapper).
+  - Smaller: GEMaterial 21, GEPhysicalModel 20, GETextureSet 17, GEFont 16, GEBoundingBox 14, GE3DPlane 13,
+    GEWindow 12, GERasterizer.cpp's 12 (the census reads `GERasterizerHost` as a function, its switch is uncounted).
