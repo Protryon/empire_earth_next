@@ -14373,3 +14373,93 @@ Interface Thread without the unit utilities, UI Events, `include/ee/EEUI*.h`): 2
 - **Left**: `EEUIFMGStatusButton::GetHelpString` (103: string building; the ops would be text slots), the main game
   form's `RefreshStatus` (109), `CopyData` (120), `DisplayChatLine`, `ShowInformation`, its constructor;
   `EEUserInterface`'s `SaveAndTestScenario`, `Run`, `TestScenario`, `LoadSavedGame`.
+
+## R6: the game screens, twenty-fourth round: the main game form's per-frame work and the command buttons' tooltip in Rust (ee_screens main_form.rs, status_button.rs; branch rust-screens24, 2026-11-13)
+
+Round 23's leftovers, biggest first. Count (round 22's `count.sh`, copied to `build/sc24`: User Interface Thread
+without the unit utilities, UI Events, `include/ee/EEUI*.h`): 20,627 at the branch's start (3fcc1992) -> 20,573 at deef8154 (-54; git over `src` and `include/ee`: +357 -411).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| e94fb473 | harness: a frame capture after `--box-select` (`box-selected`, evidence only) | tools only |
+| 9ddfd220 | `EEUIFMainGame::CopyData`, `RefreshStatus`, `DisplayChatLine`, `ShowInformation` in Rust (`main_form.rs`) | +290 -304, net -14 |
+| deef8154 | `EEUIFMGStatusButton::GetHelpString` in Rust (`status_button.rs` `help_string`) | +67 -107, net -40 |
+
+- **The main game form's per-frame work (commit 2)**: `CopyData` (the selection flag, the error log's 36 lines, the
+  dirty view, the poll and `RefreshStatus`, the panel group's reset and refresh, edge scrolling, the gate, wall and
+  placement previews), `RefreshStatus` (five resources, population, the wonder countdowns sorted, the clock or frame
+  rate, pause and result texts, minimap dirty, the eight lag icons, the briefing and previous-messages buttons, the
+  cursor), `DisplayChatLine` (seven chat lines scrolled up when full; the original's recursion over the rest of a
+  long text is a loop) and `ShowInformation` (the dialog message's text, portrait, sound and scroll) are
+  `main_form.rs` over one host, `EEUIFMainGame::HostOp` (`ee_screenscpp_main_form`, 76 ops, `EE_SCREENS_MF_OP_*`;
+  a static member: `UIForm::GetMouseCaptured` and `UIForm::CopyData` are protected). The host's record of one call
+  (`EEUIFMGFormCall`) holds the form, the picked unit (between `PICK` and `RELEASE`), one held text (a `UWideString`),
+  the chat line's colour, name, text and flags, and the dialog message. Texts cross as UTF-8 bytes: Rust builds the
+  population's "%ld/%ld" and the frame rate's "%s: %ld" (the string read back from the held text), the host prints
+  the wonder countdown's resource format (`%s ... %d`, a format Rust cannot restate). The in/out values of an op go
+  through `EeScreensMainFormIo` (four floats, two longs; in cbindgen's `[export] include`, since only the
+  ignored host declaration names it). `UMCeil` is `lrintf` then up (`ee_ge::um::lrintf`), `UMFloatToLong` is
+  `lrintf`; the wall drag's tiles come from `ee_ge`'s `interpolate_to` (what `GE2DPoint::InterpolateTo` forwards
+  to). The wonder rows sort with Rust's stable sort: MSVC's `std::sort` is an insertion sort below 32 elements (at
+  most eight teams), so equal countdowns keep their team order as before. The empty `FnE123D` call went;
+  `EEUIFMGVictoryStatus` went.
+- **Its golden** (`build/sc24/mf`: `fake.h`, `driver.cpp`, `cut.py`, `drv.py`, `mutate.py`, `rmutate.py`): the four
+  functions cut verbatim from 3fcc1992 (as `OrigForm`) and the call record, host and forwarders cut from the work
+  tree, over one fake world (256 controls that trace every effect: display modes, texts, the error log's lines, chat
+  displays and copies, colours, bitmaps, scrolls; the players, teams and their countdowns with ties, the picker, the
+  mouse's tile, the gate finder that turns the direction, the ghost lock, the wall preview's tiles, the sound's
+  sample or none, the resource strings with multi-byte text). Per case one of C `CopyData`, S `RefreshStatus`, D
+  `DisplayChatLine` (texts with line feeds and multi-byte characters, lines that show 1-1000 characters), I
+  `ShowInformation` (no text control, no portrait, a class past the table); both sides' traces plus the final
+  state (form fields, `gUnitSelected`, every control's mode and text, mute). Seeds 2-4: 43,000 calls, 0
+  differences. Host mutations caught (5,000 calls): 15 of 15 (the wall pick's answers swapped 249 differing, the
+  picked tile's y 128, the gate finder's direction not written back 218, the preview's turned direction dropped 69,
+  the wall tile's y 322, the resource index 1,897, the label test 763, the countdown's value 726, the teams test
+  56, the lag colour's player 937, the chat's line feed 123, the rest's name kept 370, the text's top 631, the
+  portrait's button test 60, the elapsed field 1,580). `golden_main_form.txt` (seed 1, 2,400 calls, 1.5 MB; texts and
+  wall tiles as hex payloads, the io before and after) is replayed by `main_form::tests::golden_main_form`; 16 of 16
+  Rust mutations fail it (the dirty rectangle, the poll's `> 0`, the group's refresh on elapsed, the release, the
+  tile's y, the sort order, the five labels, `UMCeil`, the minimap's `> 2`, the lag's player, the previous
+  messages' `> 0` (caught once the world had one entry: the first world had 0 or 3), the free line's `+ 1`, the
+  full lines' scroll, the length test, the sound's none, `lrintf` for the chat top). The countdown's winner crosses
+  as a pointer: the golden's numbers for it differ per run (the replay only echoes them).
+- **GetHelpString (commit 3)**: `help_string` in `status_button.rs` over the press host (11 new ops, 65-75, and
+  five text kinds, `EE_SCREENS_SB_TEXT_*`: a resource string, the button object's or the node's hot key name, an
+  upgrade's name, the node's cost string). Rust assembles the tooltip's bytes (the market's "%s %d %s" and " %ld %s",
+  the priest's conversion cost, the population cost's " %s: %ld", the calamity's power, " (" hot key ")") and hands
+  them to the host once (`HELP_OUT`). `command_panel.rs`' `tech_help`, `command_help_string` and
+  `command_help_priest` are called in Rust; their three C++ exports went. The trade decode op takes b 1 for the
+  tooltip: the original ignored `EEDecodeTradeButton`'s result and used its outputs; the presses still get -1.
+- **Its golden** (`build/sc24/sb`: round 23's driver with H cases): `GetHelpString`'s original is the one before
+  `command_panel.rs` (a137f1a9^, all C++). The fake's `UWideString` now holds bytes (concatenation, `%s` and `%ld`
+  through `vsnprintf`); resource strings, hot key names, upgrade names (multi-byte) and cost strings are made from
+  their arguments. The driver found one difference on its first run: a failed trade decode (the -1 above). Seeds 2-4
+  x 20,000: 0 differences. Host mutations caught: 12 of 12. `golden_status_button.txt` regenerated (seed 1: 1,582
+  left, 1,154 right presses, 1,170 `CopyData`, 1,094 `GetHelpString`; the help text's reads and the result as hex
+  payloads); 11 of 11 (the " 100 ", the sell bit, the group count, the class index, the calamity kind, the population, the unit name's space, the hot key's " (", the node's hot key, the power's ": ", the upgrade name) Rust mutations fail it.
+- **Harness (commit 1)**: `fixture_game.py --box-select` now captures `box-selected` right after its four steps
+  (the selection is the last step's group): round 23 noted nobody had seen the status box with a selection.
+  `selftest.py` ALL PASS.
+- **Lessons**: (1) a fake whose answers changed for a new case kind can crash the old kinds: the tooltip's "no node"
+  (10%) made the presses' and `CopyData`'s unchecked node reads crash; the driver now gives no-node worlds only to
+  the tooltip. (2) Strings with backslash escapes written through a shell here-document lost a backslash in this
+  environment (`"\\n"` became a line feed, `'\\0'` a NUL byte in a C++ source); write such scripts with the file
+  tool, or build the backslash with `chr(92)`. (3) The first editor gate of commit 2's chain failed (five extra
+  dead walls) with `Data/ai is not this checkout's ai/` in its log; rerun alone it passed (1820 lines): a stage
+  race with another run, not this change (EE-SIM builds no main game form's preview).
+- **Behaviour**: none intended. `RefreshStatus` no longer calls the empty `FnE123D`; the gate preview's mouse tile
+  starts at 0 where the original's locals were uninitialised (`EEPointUnitOrTileXY` always writes them); the
+  tooltip's calamity cost is 0 for a missing calamity class (the round 22 host op; the original crashed), the
+  tooltip's priest test reads no unit of a missing group (the original crashed), and the tooltip is assigned whole
+  instead of `vsprintf` into a fixed buffer (no overflow for a long name).
+- **What runs it**: every frame of a game runs `CopyData` and, each poll, `RefreshStatus` (the tour and the orders
+  game); every chat line (`DisplayChat`), every tooltip of a command button under the mouse. EE-SIM builds no main
+  game form: the oracle and the editor gate are unchanged by construction. **Only a person reaches**: the gate and
+  wall previews (the fixture builds none), the wonder countdowns (a wonder victory), the frame rate clock (a
+  setting), pause and result texts in a person's game, the lag icons (LAN), the dialog message (`ShowInformation`:
+  scenarios), long chat lines wrapped, and the tooltips (the fixture hovers no command button).
+- **Gates**: per commit (on that commit's tree) the build `--sim` 0/0 (EE-AOC and EE-SIM), `tools/sim_editor.py` PASS (1820 lines; the main form's first run failed on a stage race, above, and passed rerun), the oracle identical on seeds 2-3, the Rust gate PASS (the main form's first run: clippy's `needless_late_init`, fixed before the commit; two `ee_plat_core` timer tests failed under load and passed alone). On deef8154: the test profile 0/0; tours (`fixture_game.py`, the harness lock held): `--exercise tour --play-seconds 60` `RESULT PASS tour`, `gx_errors` {}; `--exercise random-game --play-seconds 60 --orders --box-select` `RESULT PASS random-game`, `BOX SELECT PASS` (4 steps), `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped: no button, no unit), `gx_errors` {}. The new `box-selected` frame shows the status box with the selection (a female citizen: portrait, 65/65, attack 5+0, 2+0, speed 10+0), its command buttons, the resources and the population "4/250" (`RefreshStatus`). MERGEGATES
+- **Left**: the main game form's constructor (it runs before its controls exist: round 21's start-up hang), the
+  start modes (gate, wall, calamity, flare, patrol, build); `EEUserInterface`'s `SaveAndTestScenario`, `Run`,
+  `TestScenario`, `LoadSavedGame` (call sequences over the world lock: one host op per call, the restart of the
+  world shared by the two scenario tests).
