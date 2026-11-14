@@ -178,6 +178,8 @@ struct Options {
     long mPortOffset = -1;                              // -1: a free pair found at start
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     bool mQuiet = false;
+    long mFlareMs = -1;                                  // --flare SECONDS:PLAYER (TEST ONLY): -1 none
+    unsigned long mFlarePlayer = 0;
 };
 
 Options sOptions;
@@ -432,6 +434,28 @@ void AfterTick()
             }
             Note("game s %ld PT %lu:%s", theTime / 1000, s.mPT, theLine.c_str());
         }
+    }
+    // --flare (TEST ONLY): once, the idle human's flare at the player's first building, told to the human's allies as
+    // EEMSendFlare::Execute tells them (EEPlayer::FlareReceived): the AIs' answer to an ally's flare, which no
+    // computer sends
+    if (sOptions.mFlareMs >= 0 && theTime >= sOptions.mFlareMs) {
+        sOptions.mFlareMs = -1;
+        EEPlayer* theHuman = gWorld.GetCurrentPlayer();
+        EEPlayer* theTarget = sOptions.mFlarePlayer < theCount ? gWorld.GetPlayer(sOptions.mFlarePlayer) : NULL;
+        EEUnit* theSpot = NULL;
+        for (EEUnit* u = theTarget != NULL ? theTarget->mFirstUnit : NULL; u != NULL && theSpot == NULL;
+             u = static_cast<EEUnit*>(u->mNext))
+            if (u->mComplexUnit != NULL && u->mHitPoints > 0 && u->mUnitClass->IsBuilding())
+                theSpot = u;
+        if (theHuman != NULL && theSpot != NULL) {
+            U2DPoint<long> theTile(theSpot->GetTileX(), theSpot->GetTileY());
+            std::vector<EEPlayer*> theAllies = theHuman->mAllies;
+            for (EEPlayer* a : theAllies)
+                a->FlareReceived(theHuman, theTile);
+            Note("FLARE at %ld,%ld (player %lu) to %lu allies at game ms %ld", theTile.mX, theTile.mY,
+                 sOptions.mFlarePlayer, (unsigned long)theAllies.size(), theTime);
+        } else
+            Note("FLARE: no building of player %lu", sOptions.mFlarePlayer);
     }
     // the end of the run (tools/harness/ai_game.py's rules)
     if (gPhysics->mGameOver) {
@@ -956,6 +980,8 @@ const char* kUsage =
     "  --wall-timeout S       give up after this wall time (default 3600)\n"
     "  --pt-rate N            Min = Max PTs per Second (default 40, the harness's pin)\n"
     "  --human-defeat         let the idle human be defeated (default: kept in, the harness's --no-human-defeat)\n"
+    "  --flare SECONDS:PLAYER the idle human flares at the player's first building at that game time (TEST ONLY:\n"
+    "                         its allies, the computers, answer it as an ally's flare)\n"
     "  --keep-human           keep the idle human at war (default: allied with every computer from the start, so no\n"
     "                         computer attacks it)\n"
     "  --cheats SETS          EE_AI_CHEATS (e.g. none, all, none/all)\n"
@@ -1167,6 +1193,16 @@ int EESimMain(int argc, char** argv)
             sOptions.mNoHumanDefeat = true;
         else if (a == "--keep-human")
             sOptions.mHumanOut = false;
+        else if (a == "--flare") {
+            std::string v = value();
+            size_t c = v.find(':');
+            if (c == std::string::npos) {
+                fprintf(stderr, "EE-SIM: --flare SECONDS:PLAYER\n");
+                return 64;
+            }
+            sOptions.mFlareMs = (long)(atof(v.substr(0, c).c_str()) * 1000);
+            sOptions.mFlarePlayer = (unsigned long)atol(v.substr(c + 1).c_str());
+        }
         else if (a == "--cheats")
             sOptions.mCheats = value();
         else if (a == "--personality")
