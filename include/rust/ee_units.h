@@ -659,6 +659,50 @@ constexpr static const int64_t TRIGGER_COMPLETED_UNIT_FACING = 9015;
 /// `kUnitCategoryAirplane`, `kUnitCategoryPlanetSpaceship`: the start's aircraft
 constexpr static const int64_t CATEGORY_AIRPLANE = 3;
 
+/// `Create(mL195614, mL195610, mU19561C, false)`
+constexpr static const int32_t EE_UNITS_MAP_SAVE_CREATE = 111;
+
+/// the tile pointer at (x, y): `LoadTile(x, y)` when `io.b`, else NULL
+constexpr static const int32_t EE_UNITS_MAP_SAVE_LOAD_TILE = 112;
+
+/// `mTerrainMesh.Load` / `Save`
+constexpr static const int32_t EE_UNITS_MAP_SAVE_MESH_LOAD = 113;
+
+constexpr static const int32_t EE_UNITS_MAP_SAVE_MESH_SAVE = 114;
+
+/// the tile at (x, y) saved when there is one (its result; 0 for none)
+constexpr static const int32_t EE_UNITS_MAP_SAVE_TILE_SAVE = 115;
+
+/// the default terrain table, chosen once: `io.b` the base terrain was read (then an unknown one becomes
+/// `gDefaultTerrain` and the table is its), else `gDefaultTerrain`'s table (none for -1)
+constexpr static const int32_t EE_UNITS_MAP_SAVE_PICK_DEFAULT = 116;
+
+/// queries of the tile at (x, y) into `io.i`: the mesh's valid flag; the terrain table's type of its texture set
+/// (`io.b`: there is a table); the mesh's space flag
+constexpr static const int32_t EE_UNITS_MAP_SAVE_VALID = 117;
+
+constexpr static const int32_t EE_UNITS_MAP_SAVE_TERRAIN_TYPE = 118;
+
+constexpr static const int32_t EE_UNITS_MAP_SAVE_SPACE = 119;
+
+/// the tile's `SetTerrainType` (the type in the upper 32 bits of `io.i`)
+constexpr static const int32_t EE_UNITS_MAP_SAVE_SET_TYPE = 120;
+
+/// the tile's terrain table's `Load(mTerrainMesh)`
+constexpr static const int32_t EE_UNITS_MAP_SAVE_TERRAIN_LOAD = 121;
+
+/// the default terrain on the tile: `SetTileTerrain(default's texture set)`, then its type
+constexpr static const int32_t EE_UNITS_MAP_SAVE_SET_DEFAULT = 122;
+
+/// `io.i` a usable cliff terrain id (below the count, in the table): `io.b` out
+constexpr static const int32_t EE_UNITS_MAP_SAVE_CLIFF_VALID = 123;
+
+/// `gFirstCliffTerrain` into `io.i`
+constexpr static const int32_t EE_UNITS_MAP_SAVE_FIRST_CLIFF = 124;
+
+/// the region tables made again for `mSize`, then `UpdateCliffs` over the map
+constexpr static const int32_t EE_UNITS_MAP_SAVE_FINISH = 125;
+
 /// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
 constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
 
@@ -2899,6 +2943,53 @@ struct EeUnitsLocationGoal {
   uint8_t group_path_state;
 };
 
+/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
+struct EeUnitsPlayerSaveIo {
+  int64_t i;
+  float f;
+  uint8_t b;
+};
+
+/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
+using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
+/// `RTSMap`'s plain members (ee/EEMap.h), in the class's order.
+struct EeUnitsRtsMapFields {
+  /// the constructor's tile size (copied to `gMapTileSize`)
+  float mF1955F4;
+  float mF1955F8;
+  float mF1955FC;
+  long mL195600;
+  long mL195604;
+  long mL195608;
+  long mL19560C;
+  /// saved: `Create`'s height
+  long mL195610;
+  /// saved: `Create`'s width
+  long mL195614;
+  /// tiles per side
+  long mSize;
+  /// saved: the player count
+  unsigned long mU19561C;
+  /// the tiles exist
+  bool mB195620;
+};
+
+/// `EEMap`'s plain members (ee/EEMap.h), in the class's order.
+struct EeUnitsMapFields {
+  /// saved
+  unsigned long mMapCharacteristics;
+  /// saved: the base terrain
+  unsigned long mU195650;
+  /// the next free entry of the tile array
+  unsigned long mNextTile;
+  unsigned long mTileArrayCount;
+  /// saved: the cliff terrain
+  unsigned long mU19565C;
+  /// `ComputeChecksum` checks 64 x 64 tiles from here
+  unsigned long mChecksumCursor;
+};
+
 /// What `Move`'s arithmetic gives: whether the unit moves (the push is past the stop distance), whether the move is
 /// past the move distance (the shuffle animation's test), the push's size per axis after the clamp, the new point.
 struct EeUnitsPush {
@@ -2986,16 +3077,6 @@ struct EeUnitsPitchIn {
   /// 1: `EEPMNaval`'s (and `EEPMSpaceship`'s) mode, 0: the base model's
   uint8_t naval;
 };
-
-/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
-struct EeUnitsPlayerSaveIo {
-  int64_t i;
-  float f;
-  uint8_t b;
-};
-
-/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
-using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
 
 /// `EEPhysics`' plain members (ee/EEPhysics.h), in the class's order.
 struct EeUnitsPhysicsSaved {
@@ -4040,6 +4121,40 @@ void ee_units_location_goal_get(uint64_t goal, EeUnitsLocationGoal *out);
 /// `record` must point to a valid record.
 void ee_units_location_goal_set(uint64_t goal,
                                 const EeUnitsLocationGoal *record);
+
+/// `EEMap::Load` over the map's records; the file's primitives and the map's parts through `f`.
+///
+/// # Safety
+/// The records are the live map's; `f` is valid with `ctx` for the call.
+int32_t ee_units_map_load(void *ctx,
+                          EeUnitsPlayerSaveFn f,
+                          EeUnitsRtsMapFields *rts,
+                          EeUnitsMapFields *map,
+                          uint32_t major,
+                          uint32_t minor);
+
+/// `EEMap::Save`: as [`ee_units_map_load`].
+///
+/// # Safety
+/// As [`ee_units_map_load`].
+int32_t ee_units_map_save(void *ctx,
+                          EeUnitsPlayerSaveFn f,
+                          EeUnitsRtsMapFields *rts,
+                          EeUnitsMapFields *map);
+
+/// `RTSMap::Load` over its record (the virtual slot; `EEMap::Load` runs it inside [`ee_units_map_load`]).
+///
+/// # Safety
+/// As [`ee_units_map_load`] (`map` is not read).
+int32_t ee_units_rts_map_load(void *ctx,
+                              EeUnitsPlayerSaveFn f,
+                              EeUnitsRtsMapFields *rts);
+
+/// `RTSMap::Save` over its record.
+///
+/// # Safety
+/// As [`ee_units_rts_map_load`].
+int32_t ee_units_rts_map_save(void *ctx, EeUnitsPlayerSaveFn f, EeUnitsRtsMapFields *rts);
 
 /// `AfterStep`'s roll decay over the store: the new roll.
 float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_seconds);
