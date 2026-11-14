@@ -83,6 +83,8 @@ M.opts = {
     camp_ms = 40000,      -- ... unless the raid has camped this long within camp_r of one spot: 1-3 rock throwers
     camp_r = 10,          -- by a food patch for 15 minutes starved two towns that fled them and never fought
                           -- (seeds 18 and 25 against the improved classic, AI_RESEARCH §8.41)
+    handle_max = 4,       -- raids handled a micro step, the rest in turn (the Lua classic's 40-70-soldier attacks split
+                          -- into many raids and overran the step's instruction budget at defence.lua:415/1073)
     tower_share = 100,    -- percent of a tower's attack per 2 s of its reload counted in the odds
     clear_r = 10,         -- a spot is clear with no raider this near ...
     clear_ms = 8000,      -- ... and no citizen hit near it for this long
@@ -460,10 +462,11 @@ local function handle(mem, cl, now)
         local a = mem.away[u.id]
         if a ~= nil and a.why == "militia" then
             -- (a militia citizen belongs to the raid nearest it: another raid near does not call it off)
+            -- (the other raids by their centres: every raider of every raid per militia citizen was the budget's cost)
             local mine = true
-            local du = raider_d2(cl, u.x, u.y)
+            local du = d2(u.x, u.y, cl.x, cl.y)
             for _, q in ipairs(CLUSTERS) do
-                if q ~= cl and raider_d2(q, u.x, u.y) < du then
+                if q ~= cl and d2(u.x, u.y, q.x, q.y) < du then
                     mine = false
                 end
             end
@@ -1069,9 +1072,13 @@ function M.micro(mem, events, now, tx, ty, epoch)
         mem.st.raids = mem.st.raids + #CLUSTERS - (mem.raids_now or 0)
     end
     mem.raids_now = #CLUSTERS
-    for _, cl in ipairs(CLUSTERS) do
-        handle(mem, cl, now)
+    -- (at most handle_max raids a step, in turn from where the last step stopped)
+    local n = #CLUSTERS
+    local first = (mem.handle_next or 0) % math.max(n, 1)
+    for k = 0, math.min(n, M.opts.handle_max) - 1 do
+        handle(mem, CLUSTERS[(first + k) % n + 1], now)
     end
+    mem.handle_next = first + math.min(n, M.opts.handle_max)
     returns(mem, now)
 end
 
