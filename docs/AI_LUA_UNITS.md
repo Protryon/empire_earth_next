@@ -1025,6 +1025,12 @@ from data, so that a script can make its decisions with the same numbers:
   otherwise: `ai.seen` is the fog-honest count). `ai.player_file(player)` -> `{gatherers, types = {[class] = n},
   military = {land, sea, air, space}, strength = {...}}`: the classic's intelligence file of a player
   (EECPIntelligencePlayerFile: every unit, seen or not); only with `sees_all`. No other query reads through the fog.
+- **The lobby's Classic, `classic`.** A manifest entry may declare `"classic": true` (classic_lua does, the first so
+  marked counts). The lobby's Classic (choice 0, every new seat's default, saves and network fallbacks included) then
+  plays that AI, and the C++ classic becomes the choice "Classic (C++)" after the manifest's AIs. In EE-SIM and
+  sim_bench `--engine classic` is the marked AI and `--engine classic_cpp` the C++ classic; a C++ seat's trace and game
+  log say `engine=classic_cpp` (`classic` while no AI is marked). Random keeps its pool: Classic (now the marked AI)
+  and the AIs marked `random`. The C++ choice goes with the C++ decision code at stage 5.
 - **The classic's garrison cheat, `fills_garrison`.** The C++ classic's FillGarrison sends the idle citizens into a
   settlement (or a town centre) it upgrades and tops the rest of the garrison up with no citizens
   (EEComplexUnit::AddGarrison): a settlement becomes a town centre for a few citizens, and the classic trains its

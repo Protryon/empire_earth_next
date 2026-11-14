@@ -158,8 +158,8 @@ python -I tools/sim.py -- --seed 3 --difficulty Hard --game-seconds 2700 --cheat
 python -I tools/sim.py -- --seed 3 --set aipersonalities.balanced.military.army_floor=0.2 --report r.json
 python -I tools/sim_bench.py --name base --seeds 2-7 --repeat 2 --jobs 2      # build/sim/bench/base/results.csv
 python -I tools/sim_bench.py --name floor --seeds 2-7 --vary aipersonalities.balanced.military.army_floor=0.1,0.2,0.3
-python -I tools/sim.py -- --seed 3 --engine next,classic --report r.json     # p2 the next engine, p3 classic
-python -I tools/sim_bench.py --name eng --seeds 2-7 --engine "classic;next,classic"   # ';' between variants
+python -I tools/sim.py -- --seed 3 --engine boom,classic --report r.json     # p2 boom, p3 classic (classic_lua)
+python -I tools/sim_bench.py --name eng --seeds 2-7 --engine "classic;classic,classic_cpp"   # ';' between variants
 python -I tools/sim_bench.py --name base --seeds 2-33 --engine boom,classic --cache    # a rerun reuses the games
 python -I tools/sim_bench.py --name v1 --seeds 2-33 --engine boom,classic --ai-scripts X --screen 2-17 --screen-baseline build/sim/bench/base
 ```
@@ -175,9 +175,12 @@ from chance alone). The games run below normal priority (`--normal-priority` tur
 gates can run beside a bench.
 
 `tools/sim.py` stages the data tree per slot (`build/sim/stage/<slot>`: hard links, the tree is only read) and passes
-EE-SIM.exe its options (`EE-SIM.exe --help`). `--engine` picks each computer seat's engine (classic, next, random;
-docs/AI_LUA_PLAN.md) through the lobby's engine boxes, as the lobby's host does: one value for every seat, or a comma
-list by seat. The report (JSON) holds the outcome, the game time and per player the
+EE-SIM.exe its options (`EE-SIM.exe --help`). `--engine` picks each computer seat's engine (classic, classic_cpp,
+random, an AI's id such as boom, or next for the manifest's first AI; docs/AI_LUA_PLAN.md) through the lobby's engine
+boxes, as the lobby's host does: one value for every seat, or a comma list by seat. `classic` is the lobby's Classic:
+the AI the manifest marks `"classic": true` (classic_lua, the classic computer player's port to Lua);
+`classic_cpp` is the C++ classic, the lobby's Classic (C++), kept for comparison until stage 5 deletes it
+(docs/AI_LUA_UNITS.md §11). The report (JSON) holds the outcome, the game time and per player the
 epoch, citizens, army, buildings, population and resources every `--sample-seconds`. See PORT_LEARNINGS.md "The
 headless simulation" for what it shares with the game and where it differs.
 
