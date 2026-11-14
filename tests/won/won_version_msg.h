@@ -6,7 +6,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "ee/wonapi/WONPatchMsg.h"
+#include "won_patch_msg.h"
 #include "rust/ee_won.h"
 
 namespace WONAPI {

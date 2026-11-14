@@ -73,6 +73,7 @@ pub mod hostauth;
 pub mod hostnative;
 pub mod hostop;
 pub mod http;
+pub mod httpcache;
 pub mod httpdoc;
 pub mod httpengine;
 pub mod httpget;
@@ -152,6 +153,7 @@ pub mod verop;
 pub mod winobj;
 pub mod wire;
 pub mod wmcache;
+pub mod wmloop;
 pub mod wmobj;
 
 #[cfg(test)]

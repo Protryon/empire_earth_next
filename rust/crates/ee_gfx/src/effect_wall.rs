@@ -1,14 +1,21 @@
-//! The energy walls on the effects' records (`EEE3DEnergyWall`, `src/Empire Earth/Graphics Thread/EEE3DEnergyWall.cpp`):
-//! the posts' segment ends, the segments found around the posts every 500 ms, Load (and the files before 0.250) and
-//! Save. The C++ keeps the posts' places on the unit (a gate's two end parts), the units on the tiles, the draw's
-//! alpha, colour and texture frame, and the draw.
+//! The energy wall (kind 0x34) whole in Rust (`EEE3DEnergyWall`, deleted; `wall` below): the posts' segment ends,
+//! the segments found around the posts every 500 ms, the queue's alpha, colour and texture frame, the ground strips
+//! of pass 6, Load (and the files before 0.250) and Save. The C++ host answers the posts' places on the unit (a
+//! gate's two end parts), the friendly wall pieces on the tiles, the gate's opening and the owner's colour;
+//! `EEE3DRust::IsTileVisible` marks the wall seen through a doppelganger.
 //!
 //! Simulation state (RUST_PLAN 2.1): the C++'s f32 operations in order.
 
 use ee_ge::types::Ge3DPoint;
 use ee_ge::um;
 
-use crate::effect_state::{load_point, save_point, EeGfxEffectRecord, EffectFile};
+use crate::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
+use crate::effect_state::{load_point, random_long, save_point, EeGfxEffectRecord, EffectFile};
+use crate::effects::EeGfxColor;
+use crate::raster::Raster;
+
+/// `kEffect3DEnergyWall`
+pub const EE_GFX_EFFECT_KIND_ENERGY_WALL: i32 = 0x34;
 
 /// `kErrorOK`.
 const OK: i32 = 0;
@@ -22,7 +29,7 @@ const SEGMENT_TIME: i32 = 500;
 
 /// `EEE3DEnergyWall`'s state.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeGfxEffectWall {
     /// `mPoints`: [0] and [9] the posts, [1..4] and [5..8] the segment ends (saved)
     pub points: [Ge3DPoint; 10],
@@ -34,6 +41,34 @@ pub struct EeGfxEffectWall {
     pub placed: bool,
     /// `mGate`: two posts (saved)
     pub gate: bool,
+    /// `mSeen`: seen only through a doppelganger since the last queue (the texture frame restarts)
+    pub seen: bool,
+    /// `mAlpha`, `mGateAlpha`: the strips' and the gate's (the queue's)
+    pub alpha: f32,
+    pub gate_alpha: f32,
+    /// `mTextureOffset`: the animation frame's (the queue's)
+    pub offset_u: f32,
+    pub offset_v: f32,
+    /// `mColor`: the owner's (the queue's; `GEColor()`'s white before)
+    pub color: EeGfxColor,
+}
+
+impl Default for EeGfxEffectWall {
+    fn default() -> EeGfxEffectWall {
+        EeGfxEffectWall {
+            points: [Ge3DPoint::default(); 10],
+            segments: 0,
+            timer: 0,
+            placed: false,
+            gate: false,
+            seen: false,
+            alpha: 0.0,
+            gate_alpha: 0.0,
+            offset_u: 0.0,
+            offset_v: 0.0,
+            color: EeGfxColor { red: 1.0, green: 1.0, blue: 1.0 },
+        }
+    }
 }
 
 /// The friendly wall pieces a segment reaches.
@@ -184,6 +219,195 @@ pub fn save_wall<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
     }
     f.write_bool(w.placed)
 }
+
+/// The segment search over the effect host's wall pieces.
+struct Pieces<'a, H: Effect3DHost>(&'a mut H);
+
+impl<H: Effect3DHost> WallHost for Pieces<'_, H> {
+    fn wall_piece(&mut self, x: i32, y: i32) -> Option<f32> {
+        self.0.wall_piece(x, y)
+    }
+}
+
+/// `Place`: the posts (a gate's two end parts, else the unit) raised by param 6, the segment ends, the effect at the
+/// unit's place with its location's orientation, its bounding radius.
+fn place<H: Effect3DHost>(r: *mut EeGfxEffectRecord, g: &EeGfxGraphicFacts, h: &mut H) {
+    let position = h.complex_position();
+    let posts = h.wall_gate_posts();
+    // SAFETY (every access below): the virtuals' contract; no reference to the record lives across a host call
+    unsafe {
+        let w = &mut (*r).wall;
+        w.gate = false;
+        if let Some((first, second)) = posts {
+            w.points[0] = first;
+            w.points[9] = second;
+            w.points[0].z = g.param6 + first.z;
+            w.points[9].z = g.param6 + second.z;
+            w.gate = true;
+        } else {
+            w.points[0].x = position.x;
+            w.points[0].y = position.y;
+            w.points[0].z = g.param6 + position.z;
+        }
+        wall_place(&mut *r);
+    }
+    let mut t = h.unit_location();
+    let at = h.complex_position();
+    t.m[0][3] = at.x;
+    t.m[1][3] = at.y;
+    t.m[2][3] = at.z;
+    unsafe { (*r).transformation = t };
+    h.move_to();
+    unsafe { (*r).bounding_radius = 2.828 };
+}
+
+/// `FindSegments` (the posts' friendly wall pieces through the host).
+fn find_segments<H: Effect3DHost>(r: *mut EeGfxEffectRecord, g: &EeGfxGraphicFacts, h: &mut H) {
+    // SAFETY: the virtuals' contract; the host's wall pieces do not read the record
+    unsafe { wall_find_segments(&mut *r, g.param6, &mut Pieces(h)) }
+}
+
+/// The energy wall's virtuals (kind 0x34, `EEE3DEnergyWall`, deleted):
+/// - made on a unit, it is placed and finds its segments; a load-time wall unplaced by an old file is placed again
+///   at its next step, and the segments are found again every 500 ms;
+/// - queued (4) once placed: its segments again under a free camera, a gate's alpha by how open it is, the alpha
+///   (0 for a cloaked enemy), the owner's colour and the texture frame (a random one under a free camera, 0 once
+///   after the wall was seen only through a doppelganger, else the game time);
+/// - pass 6: a ground strip from each post to each segment end found, and across a gate.
+///
+/// # Safety
+/// As `effect_rising::effect3d`.
+pub unsafe fn wall<H: Effect3DHost, R: Raster>(
+    op: EeGfxEffect3DOp,
+    r: *mut EeGfxEffectRecord,
+    g: &EeGfxGraphicFacts,
+    h: &mut H,
+    x: &mut R,
+) -> i32 {
+    match op {
+        EeGfxEffect3DOp::Create => {
+            place(r, g, h);
+            find_segments(r, g, h);
+            0
+        }
+        EeGfxEffect3DOp::SetUp => h.load_media(),
+        EeGfxEffect3DOp::Queue => {
+            // SAFETY (every access below): the function's contract; no reference lives across a host call
+            if !unsafe { (*r).wall.placed } {
+                return 0;
+            }
+            let res = h.base_queue();
+            if res != 0 {
+                return res;
+            }
+            if g.free_camera {
+                find_segments(r, g, h);
+            }
+            if let Some(open) = h.gate_open() {
+                unsafe { (*r).wall.gate_alpha = (1.0 - open) * (g.param3 - g.param2) + g.param2 };
+            }
+            unsafe { (*r).wall.alpha = g.param3 };
+            if h.unit_hidden() {
+                unsafe {
+                    (*r).wall.alpha = 0.0;
+                    (*r).wall.gate_alpha = 0.0;
+                }
+            }
+            let color = h.player_color();
+            let w = unsafe { &mut (*r).wall };
+            w.color = color;
+            let frame = if g.free_camera {
+                random_long(0, 0x20)
+            } else if w.seen {
+                w.seen = false;
+                0
+            } else {
+                g.game_time_bits as i32
+            };
+            w.offset_u = (frame & 7) as f32 * 0.14;
+            w.offset_v = (frame >> 2 & 7) as f32 * 0.14;
+            h.queue(4);
+            0
+        }
+        EeGfxEffect3DOp::DrawPass6 => {
+            let w = unsafe { (*r).wall };
+            let size = (g.param4, g.param5);
+            let offset = (w.offset_u, w.offset_v);
+            for i in 1..5 {
+                if w.segments & (1 << i) != 0 {
+                    x.ground_strip(
+                        &w.points[0],
+                        &w.points[i],
+                        g.param1,
+                        w.color,
+                        offset,
+                        size,
+                        w.alpha,
+                        1.0,
+                        g.alpha_ref,
+                    );
+                }
+            }
+            if !w.gate {
+                return 0;
+            }
+            x.ground_strip(&w.points[0], &w.points[9], g.param1, w.color, offset, size, w.gate_alpha, 1.0, g.alpha_ref);
+            for i in 5..9 {
+                if w.segments & (1 << i) != 0 {
+                    x.ground_strip(
+                        &w.points[9],
+                        &w.points[i],
+                        g.param1,
+                        w.color,
+                        offset,
+                        size,
+                        w.alpha,
+                        1.0,
+                        g.alpha_ref,
+                    );
+                }
+            }
+            0
+        }
+        EeGfxEffect3DOp::Step => {
+            if !unsafe { (*r).wall.placed } {
+                place(r, g, h);
+            }
+            if wall_step(unsafe { &mut *r }, g.tick_time) {
+                find_segments(r, g, h);
+            }
+            0
+        }
+        _ => 0,
+    }
+}
+
+/// The energy wall's `Load` (after the base's, whose result is ignored: the media's result, then the wall's reads,
+/// the files before 0.250 through `load_wall_old`) and `Save` (the base's error stops it).
+#[allow(clippy::too_many_arguments)]
+pub fn wall_file<H: Effect3DHost, F: EffectFile>(
+    load: bool,
+    base: i32,
+    r: &mut EeGfxEffectRecord,
+    f: &mut F,
+    major: u32,
+    minor: u32,
+    h: &mut H,
+) -> i32 {
+    if !load {
+        return if base != OK { base } else { save_wall(r, f) };
+    }
+    let media = h.load_media();
+    if major == 0 && minor < 0xfa {
+        load_wall_old(r, f, media)
+    } else {
+        load_wall(r, f, media)
+    }
+}
+
+#[cfg(test)]
+#[path = "effect_wall_tests.rs"]
+mod effect_tests;
 
 #[cfg(test)]
 mod tests {

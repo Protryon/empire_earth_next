@@ -7,6 +7,7 @@
 #define EE_RTSUNIT_H
 
 #include "ee/EEUnitStore.h"   // the members the unit store mirrors (EEUnitStoreField)
+#include "rust/ee_units.h"    // EeUnitsRtsUnitFields (RTSUnit's plain members)
 
 class EEPlayer;
 class EEMap;
@@ -35,7 +36,11 @@ private:
     RTSUnitObjectKind& operator=(const RTSUnitObjectKind&);
 };
 
-class RTSUnit : public UReferenceCounter {
+// New (R5b.4, round 26): the plain members (mTileX, mTileY, mUnitID, mIsQueuedForDelete, mIsEditorSelected,
+// mIsNodeFreed, mIsValid: their names, types and order) are the Rust record EeUnitsRtsUnitFields (ee_units
+// unit_fields.rs), the second base; UReferenceCounter stays the first, so RTSUnit is at offset 0 of every unit. The
+// unit store reads the record directly.
+class RTSUnit : public UReferenceCounter, public EeUnitsRtsUnitFields {
 public:
     // inline (COMDAT 0x1db4 in EEACalamity.cpp's range, after its first user: count above 1 ->
     // UReferenceCounter::Dereference, else the virtual at +0x34); every caller still calls it out of line
@@ -84,16 +89,24 @@ public:
     RTSUnit* mPrevious;                     // +0x10 the previous unit of that list (0x23dabb)
     RTSTile* mTile;                         // +0x14 its tile (0x23dcf3; 0: not selectable by the hot keys; provisional name)
     EEPlayer* mPlayer;                      // +0x18 (its owner)
-    EEUnitStoreField<long, kUnitFieldTileX> mTileX;   // +0x1c provisional name (the cast-calamity goal's x; = -10000) (the unit store's)
-    EEUnitStoreField<long, kUnitFieldTileY> mTileY;   // +0x20 provisional name (= -10000) (the unit store's)
-    unsigned long mUnitID;                  // +0x24 (EECalamity keeps its target's and caster's; -1 for none)
-    bool mIsQueuedForDelete;                // +0x28 (saved)
-    bool mIsEditorSelected;                 // +0x29 (saved as false; Load clears it)
-    bool mIsNodeFreed;                      // +0x2a (= true after the ctor)
+    // +0x1c mTileX, +0x20 mTileY (= -10000), +0x24 mUnitID (-1 for none), +0x28 mIsQueuedForDelete (saved), +0x29
+    // mIsEditorSelected (saved as false), +0x2a mIsNodeFreed, +0x2b mIsValid: EeUnitsRtsUnitFields
     bool GetIsValid() const { return this->mIsValid; }
-    EEUnitStoreField<bool, kUnitFieldValid> mIsValid;   // +0x2b (named by the asserts "this->mIsValid == true") (the unit store's)
     RTSUnitObjectKind mObjectKind;          // New (port): RTSUnit 0, EEUnit 1, EEComplexUnit 2 (EEUnitCast<T>)
     bool mInUnitStore = false;              // New (port): its record is in the unit store (ee/EEUnitStore.h)
 };
+
+// New (R5b.4, round 26): the units' Save and Load are Rust (ee_units unit_save.rs, unit_load.rs) over the records and
+// this host (EEComplexDoppelganger.cpp): the file's primitives with the overload the original called and the unit's C++
+// parts by operation. mGoals: EEComplexUnit::Load's stand-in goal queue (the queues past the unit's own)
+class EEUnitVectorItem;
+struct EEUnitSaveContext {
+    RTSUnit* mUnit;
+    FSFile* mFile;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+    EEUnitVectorItem* mGoals;
+};
+int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsUnitSaveIo* io);
 
 #endif

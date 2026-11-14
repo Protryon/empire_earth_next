@@ -777,7 +777,7 @@ pub enum EeWonGuiOp {
     WmSelfHold,
     /// `Release()` on the manager.
     WmSelfRelease,
-    /// the window set's `a`-th window (0 past the end; a pure read).
+    /// not made since round 34 (the window set is the Rust manager's, `wmloop`); the number stays taken
     WmWindowAt,
     /// a cache's reference: `b` (an `EeWonWmRefKind` `a`) held (`c != 0`) or given back.
     WmRef,
@@ -790,6 +790,14 @@ pub enum EeWonGuiOp {
     WmDelayImage,
     /// `mDefaultWindow->GetFont(FontDescriptor("Tahoma", 0, 8))` (a `Font*` with one reference).
     WmDefaultWindowFont,
+    /// a window event's field or method (`a` an `EeWonWmEvent`, `b` the `WindowEventBase*`; `c`, `d` its
+    /// arguments; R6 WON round 34, `wmloop`).
+    WmEvent = 604,
+    /// the screen resolution hooks (virtual): `a` 0 `GetScreenResolutionHook(*(int*)b, *(int*)c)`, 1
+    /// `SetScreenResolutionHook(b, c)`.
+    WmResolution,
+    /// `Signal()` (virtual; any thread: PostEvent's wake-up).
+    WmSignal,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

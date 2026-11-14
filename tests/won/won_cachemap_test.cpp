@@ -1,6 +1,6 @@
 // HTTPCache's index file (ReadCacheMap, WriteCacheMap and the entries' ReadFromFile / WriteToFile): the original's
 // statements (copied from HTTPCache.cpp before the port, over stand-in caches, with the real FileReader and
-// FileWriter) against include/ee/wonapi/WONHttpCacheMsg.h over ee_won's cachemap module. Generated caches are
+// FileWriter) against tests/won/won_cachemap_glue.h over ee_won's cachemap module. Generated caches are
 // written by both into two files (the bytes and the deletions compared), then generated files (written ones, cut at
 // random lengths, mutated, another version, missing) are read by both (the maps compared). The exit code is the
 // number of failed checks.
@@ -17,7 +17,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-#include "ee/wonapi/WONHttpCacheMsg.h"
+#include "won_cachemap_glue.h"
 #include "rust/ee_won.h"
 
 using namespace WONAPI;

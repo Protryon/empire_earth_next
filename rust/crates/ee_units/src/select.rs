@@ -19,7 +19,7 @@ use crate::store::{UnitView, EE_UNIT_COMPLEX_SELF};
 pub const EE_UNIT_TYPE_PATH_POINT: i64 = 0xdf;
 
 /// The picked ids of `ids` for the player object `player` (the store records' `player`), in order.
-pub fn select_pick(view: &impl UnitView, player: u64, ids: &[u32], out: &mut Vec<u32>) {
+pub fn select_pick(view: &mut impl UnitView, player: u64, ids: &[u32], out: &mut Vec<u32>) {
     // the group's units after the clear: the valid ones added so far (EEGroup::Contains is a linear search)
     let mut added: Vec<u32> = Vec::new();
     for &id in ids {
@@ -67,9 +67,9 @@ mod tests {
     }
 
     fn pick(units: &[EeUnitRecord], ids: &[u32]) -> Vec<u32> {
-        let view: BTreeMap<u32, EeUnitRecord> = units.iter().map(|u| (u.id, *u)).collect();
+        let mut view: BTreeMap<u32, EeUnitRecord> = units.iter().map(|u| (u.id, *u)).collect();
         let mut out = Vec::new();
-        select_pick(&view, P, ids, &mut out);
+        select_pick(&mut view, P, ids, &mut out);
         out
     }
 
