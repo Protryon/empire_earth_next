@@ -19499,6 +19499,11 @@ velocity particle, kind 0xc), `EEE2DSmokeMuzzleBlast`, `EEE2DWinterBreath`, `EEE
   move given; patrol and attack-ground skipped: no button, no unit). Per commit: the build 0/0, the oracle at seeds
   2-3 identical, the effects capture at seeds 2-7 PASS against the C++ golden, the Rust gate's tests PASS (3,192,
   3,196, 3,199) with clippy; the first batch's rustfmt failure fixed before its commit.
+- **The merge of `rust` 024b9ef2** (at dfea66b6; conflicts only in RUST_PLAN's Progress table, rust's kept, and the
+  appended PORT_LEARNINGS sections, both kept): `build.py --sim` and the test profile link 0/0, the Rust gate PASS
+  (3,266 tests), the sim oracle identical on seeds 2-7, the effects capture at seeds 2-7 PASS (18), the tour `RESULT
+  PASS tour`; the orders game failed once under the Rust gate's load (`repair` refused `home-no-pick`: the camera
+  centred on the town, the 1.5 s wait for the picker's frames was not enough) and passed on the rerun (`homed`).
 - **Only a tour or a person reaches:** every draw of the seventeen kinds through the raster table (the driver compares
   them against the original over a logging rasterizer; no gate game draws): the impacts' and plasma pulse's additive
   sprites and the impact's random spin, the blood impact's red tint and its reset to white (a missing reset would tint
