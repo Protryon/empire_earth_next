@@ -329,3 +329,20 @@ tab 5                              # Enter
 blank 40 40 3                      # a new map on the player tab: its Load
 form 0 99999 4
 players
+# editor screens round 2: the player combo's display mode after each player page (SelectPage shows it only on the
+# tech tree page)
+tab 5
+radio 0x12d                        # tech tree
+controls 0x149
+radio 0x15d                        # page 2
+controls 0x149
+radio 0x12d
+controls 0x149
+radio 0x170                        # AI settings
+controls 0x149
+radio 0x12d
+radio 0x12c                        # page 1
+controls 0x149
+radio 0x12d
+radio 0x15a                        # options
+controls 0x149

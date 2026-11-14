@@ -5558,3 +5558,24 @@ step 331 players
   player 15 'Computer' colour=0.501961,0.501961,1 civ='' epochs=0,0,14 caps=15000,15000,5000,10000,10000 los=1 upgrades=0 points=0 enemies=11111111111111101 options=14,1 ai=10111101 citizens=0.45
   player 16 'Computer' colour=1,0.568627,0.784314 civ='' epochs=0,0,14 caps=15000,15000,5000,10000,10000 los=1 upgrades=0 points=0 enemies=11111111111111110 options=15,1 ai=10111101 citizens=0.45
   world max=5 population=1000 wonders=5 victory=0 teams=1 cheats=1 improvements=1 carbon=0 options=1000,5,0,1,1
+step 334 tab 5
+step 335 radio 0x12d                        # tech tree
+step 336 controls 0x149
+  0x149 mode=1
+step 337 radio 0x15d                        # page 2
+step 338 controls 0x149
+  0x149 mode=0
+step 339 radio 0x12d
+step 340 controls 0x149
+  0x149 mode=1
+step 341 radio 0x170                        # AI settings
+step 342 controls 0x149
+  0x149 mode=0
+step 343 radio 0x12d
+step 344 radio 0x12c                        # page 1
+step 345 controls 0x149
+  0x149 mode=0
+step 346 radio 0x12d
+step 347 radio 0x15a                        # options
+step 348 controls 0x149
+  0x149 mode=0
