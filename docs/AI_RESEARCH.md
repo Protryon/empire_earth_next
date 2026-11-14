@@ -4129,6 +4129,30 @@ Next: claim and settle them from the advance, near home only, then the pool and 
 (every option off), so `boom` plays exactly what `boom_order` played: identical game samples on 3 seeds (2-4, 40
 minutes against the improved classic, the same exe). Benches name the engine `boom` from here on.
 
+**The idle human, and boom's answer to the classic's real raids (2026-11-13).** EE-SIM kept an idle human seat in the
+game (never defeated, --no-human-defeat), and the computers' attack choice prefers a human: the classic's early
+raids hit that seat in 60 of 64 boom games from minute 4 (Age of AI's in 41 of 64 from minute 13), so every bench
+against the classic was kind to boom. EE-SIM now allies the idle human with every computer at the start
+(`--keep-human`: the old seat; the computers stay at war with each other; an observer seat, or its units removed,
+ends the single-player game at once); `--repeat 2` identical. The new baseline (32 seeds) against the improved
+classic: won-lost-close 6-16-10 against 17-6-9, 5 defeats against 1, 10 games under 30 citizens against 1, Bronze in
+13 games against 23; against Age of AI unchanged (17-1-14, Bronze 65.2 in 30). The classic pays as boom does
+(`cheats=none cheating=0 cost100=100`, balanced). In the bad games the first raid (3-5 clubmen) lands at minute 4-8
+with no barracks (barracks_at 24: it stood at 11-14.5 minutes) and 0-2 towers.
+
+- **Garrisons are no shelter.** A drop site holds citizens as a count (EEComplexUnit::GarrisonUnit adds their weight
+  and population and kills the unit; nothing turns the count back into citizens): sheltered citizens are spent, the
+  unload does nothing (21 -> 9 citizens in a minute). Settlements spend theirs in the upgrade. The owner's garrisoned
+  town centres are the deposit bonus, spent on purpose.
+- **The levers within the owner's spec** (32 seeds, new EE-SIM): `owner_barracks` (the Prehistoric barracks at 6
+  citizens, his at 2.4 minutes) against the classic 14-12-6, 3 defeats; `early_towers` (the Prehistoric towers from 6
+  citizens, stone only, his at 1.1 minutes) 13-14-5, citizens lost 78 against 94; both (DTB) 16-10-6, 3 defeats,
+  under 30 citizens in 4, Bronze in 22 games. Against Age of AI all equal the base on the epochs. The Prehistoric line
+  re-ranks too: R2c against the classic 11-12-9 (against 6-16-10), against Age of AI Bronze 69.2 against 65.2.
+- **DTB on 64 seeds** (2-65) against the base: against the improved classic won-lost-close 27-25-12 against 18-28-18,
+  5 defeats against 6, Bronze in 40 games against 33, citizens lost 77 against 86; against Age of AI 33-3-28 against
+  39-5-20, Bronze 65.4 in 60 against 65.0 in 57, no defeats. On in boom_order.
+
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
 **Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the
