@@ -4291,6 +4291,191 @@ constexpr static const int64_t EE_SCREENS_SB_IDS_IMPROVEMENT_POWER = 30024;
 
 constexpr static const int64_t EE_SCREENS_SB_IDS_POP_COST = 30469;
 
+/// `PauseGraphics()` (a 1) or `ResumeGraphics()` (a 0).
+constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS = 1;
+
+/// The world's `mLock->WriteLock()` (a 1) or `WriteUnlock()` (a 0).
+constexpr static const uint32_t EE_SCREENS_UG_OP_WORLD_LOCK = 2;
+
+/// `gGameScreenActive = true`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SCREEN_ACTIVE = 3;
+
+/// `gContinentManager.Clear(map)`, `BuildRegions(map)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_CONTINENTS = 4;
+
+/// `gWorld.mNumPlayers`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_NUM_PLAYERS = 5;
+
+/// Player a's call b (`EE_SCREENS_UG_PLAYER_*`).
+constexpr static const uint32_t EE_SCREENS_UG_OP_PLAYER = 6;
+
+/// `gPathManager.Reset()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_PATH_RESET = 7;
+
+/// `gSightUpdatesEnabled = true`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SIGHT_ON = 8;
+
+/// `gWorld.RestartUnits()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_RESTART_UNITS = 9;
+
+/// `EEUpdateLandContinents()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_LAND_CONTINENTS = 10;
+
+/// `ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, a != 0, b != 0)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_RESIZE_GAME = 11;
+
+/// `gUIManager->SwapForm(gUIManager->mMainGameForm)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SWAP_MAIN = 12;
+
+/// `gMiniMap->Redraw()`, `Refresh()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_MINI_MAP = 13;
+
+/// `EESetGameViewRectangle` of the game view (`kGameViewLeft`, `kGameViewTop`, `kGameViewRight`, `kGameViewBottom`).
+constexpr static const uint32_t EE_SCREENS_UG_OP_GAME_VIEW = 14;
+
+/// `gAmbientSoundManager.SetEnabled(the ambient sounds setting)`, `Restart()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_AMBIENT = 15;
+
+/// `gPhysics->mThread->Post(a, NULL, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_PHYSICS_POST = 16;
+
+/// `gMusicManager->Start()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_MUSIC = 17;
+
+/// `gWorld.mMap->PrepareSave()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_PREPARE_SAVE = 18;
+
+/// `SaveGame("ScenDefault" + gScenarioExtension, TMGetTime(), true, "data\\Scenarios\\")`: its result.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SAVE_SCENARIO = 19;
+
+/// `gUIManager->DisplayMessage(gLoadSaveErrorMessage, true, NULL, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SAVE_ERROR = 20;
+
+/// The world's game options: load type 1, map type "ScenDefault" + `gScenarioExtension`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SCENARIO_OPTIONS = 21;
+
+/// `gWorld.SetNumPlayers(gWorld.mMaxPlayers)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_MAX_PLAYERS = 22;
+
+/// `gArtificialIntelligence->CollectComputerPlayers()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_COLLECT_COMPUTERS = 23;
+
+/// The saved game header's `LoadFromFile(*file a)` (the save version's) == `kErrorOK`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_LOAD_HEADER = 24;
+
+/// `gPhysics->mTimerRunning`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_TIMER_RUNNING = 25;
+
+/// `PlatSleep(a)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SLEEP = 26;
+
+/// The old communications deleted, a local `EEServer` made and its threads started.
+constexpr static const uint32_t EE_SCREENS_UG_OP_NEW_SERVER = 27;
+
+/// `gUIManager->mB13D = false`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_B13D_OFF = 28;
+
+/// `gGameState.Clear()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_STATE_CLEAR = 29;
+
+/// `EEStopAllSounds()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_STOP_SOUNDS = 30;
+
+/// `gUIManager->SwapForm(gUIManager->GetFormByID(kFormSplash))`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SWAP_SPLASH = 31;
+
+/// The server's load setup: no new players, no load responses, load state 1, game state 2, one human, not
+/// multiplayer.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SERVER_LOAD = 32;
+
+/// `gGameOptions.mLock->WriteLock()` (a 1) or `WriteUnlock()` (a 0).
+constexpr static const uint32_t EE_SCREENS_UG_OP_OPTIONS_LOCK = 33;
+
+/// `gGameOptions.SetDefaults()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_OPTIONS_DEFAULTS = 34;
+
+/// File a's name has `gScenarioExtension` (`Find(extension, 0) < GetLength()`).
+constexpr static const uint32_t EE_SCREENS_UG_OP_FILE_IS_SCENARIO = 35;
+
+/// `gGameOptions`' load type b and map type file a's name.
+constexpr static const uint32_t EE_SCREENS_UG_OP_LOAD_OPTIONS = 36;
+
+/// `gDataPreLoading->PostLoadGame(a != 0, b != 0)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_POST_LOAD = 37;
+
+/// `IDS_SAVE_GAME_ISNT_VALID` shown by `gUIManager->DisplayMessage(text, true, NULL, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_INVALID_SAVE = 38;
+
+/// `delete` file a (an `FSFile*`; none for 0).
+constexpr static const uint32_t EE_SCREENS_UG_OP_DELETE_FILE = 39;
+
+/// `gISMouse->Resume()`, `gISKeyboard->Resume()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_INPUT_RESUME = 40;
+
+/// `TSThread::SetThreadName(PlatCurrentThreadId(), gUserInterfaceThreadName)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_THREAD_NAME = 41;
+
+/// The locales: `IDS_ENGLISH` for all, "English" numbers, the "C" character classes (decision D6).
+constexpr static const uint32_t EE_SCREENS_UG_OP_LOCALE = 42;
+
+/// `CreateRenderObject()`: its result.
+constexpr static const uint32_t EE_SCREENS_UG_OP_CREATE_RENDER_OBJECT = 43;
+
+/// `gMousePointer->mThread->Post(a, the primary surface (0x405) or NULL, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_POINTER_POST = 44;
+
+/// `gGraphics->PostSetFlag54(false)`, `PostResume()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_GRAPHICS_START = 45;
+
+/// The FPU: a 0 `UMSetFloatingPointPrecision(kFPPrecision53)`; a 1 the precision and rounding put back when they
+/// changed.
+constexpr static const uint32_t EE_SCREENS_UG_OP_FPU = 46;
+
+/// `mIsQuitting`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_QUITTING = 47;
+
+/// `mThread->LockMessageQueue()` (a 1) or `UnlockMessageQueue()` (a 0).
+constexpr static const uint32_t EE_SCREENS_UG_OP_QUEUE_LOCK = 48;
+
+/// `mThread->Receive(message, parameter 1, parameter 2)`: its result; the three into `c` (an `[i64; 3]`).
+constexpr static const uint32_t EE_SCREENS_UG_OP_RECEIVE = 49;
+
+/// `HandleMessage(a, b, c)`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_HANDLE = 50;
+
+/// `mIsUpdating != 0`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_UPDATING = 51;
+
+/// `UpdateInterface()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_UPDATE_INTERFACE = 52;
+
+/// `gFreeCamera`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_FREE_CAMERA = 53;
+
+/// `TMGetTime()`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_TIME = 54;
+
+/// `gWorld.mCameraControl.Update(f)`, f the float of a's bits.
+constexpr static const uint32_t EE_SCREENS_UG_OP_CAMERA = 55;
+
+/// `gPlatSimRun`.
+constexpr static const uint32_t EE_SCREENS_UG_OP_SIM_RUN = 56;
+
+/// Player calls (EE_SCREENS_UG_OP_PLAYER's b): there is player a; its `RegisterHerds()`, `AssignHerds()`; its
+/// `RegisterTowns()`, `AssignTowns()`; it has a computer player; that one's `RefreshResourceCenters()`; its
+/// `RefreshTownGroups()`.
+constexpr static const int64_t EE_SCREENS_UG_PLAYER_EXISTS = 0;
+
+constexpr static const int64_t EE_SCREENS_UG_PLAYER_HERDS = 1;
+
+constexpr static const int64_t EE_SCREENS_UG_PLAYER_TOWNS = 2;
+
+constexpr static const int64_t EE_SCREENS_UG_PLAYER_COMPUTER = 3;
+
+constexpr static const int64_t EE_SCREENS_UG_PLAYER_CENTRES = 4;
+
+constexpr static const int64_t EE_SCREENS_UG_PLAYER_TOWN_GROUPS = 5;
+
 /// `this->PauseGraphics()`.
 constexpr static const uint32_t EE_SCREENS_UI_OP_PAUSE = 1;
 
@@ -5510,6 +5695,18 @@ int64_t ee_screens_status_button_copy_data(void *press);
 
 /// `EEUIFMGStatusButton::GetHelpString` over the host's press record (its result string): always true.
 bool ee_screens_status_button_help(void *press);
+
+/// `EEUserInterface::TestScenario` on the UI object `ui`.
+void ee_screens_ui_test_scenario(void *ui);
+
+/// `EEUserInterface::SaveAndTestScenario` on the UI object `ui`.
+void ee_screens_ui_save_and_test_scenario(void *ui);
+
+/// `EEUserInterface::LoadSavedGame(file)` on the UI object `ui` (`file` an `FSFile*`, deleted).
+void ee_screens_ui_load_saved_game(void *ui, void *file);
+
+/// `EEUserInterface::Run` on the UI object `ui`: the UI thread's loop until it quits.
+int64_t ee_screens_ui_run(void *ui);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,
