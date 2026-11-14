@@ -246,12 +246,6 @@ impl ClientHost for Replay {
     fn thread_priority(&self, t: Thr) {
         self.num(format!("c1 t{t}"));
     }
-    fn base_get(&self, f: BaseField) -> u32 {
-        self.num(format!("c2 {}", f as u32)) as u32
-    }
-    fn base_set(&self, f: BaseField, value: u32) {
-        self.num(format!("c3 {} {value}", f as u32));
-    }
     fn protocol_count(&self) -> u32 {
         self.num("c4".into()) as u32
     }
@@ -452,6 +446,8 @@ fn replay(lines: Vec<String>) {
     }));
     ME.with(|m| m.set(0));
     let mut client: Option<Box<Client<Replay>>> = None;
+    // the C++ base class's fields (the driver's "base" steps set them)
+    let comms = Arc::new(Comms::new(0));
     loop {
         let Some(line) = host.0.lines.lock().unwrap().pop_front() else { break };
         if let Some(k) = line.strip_prefix("sw ") {
@@ -481,7 +477,7 @@ fn replay(lines: Vec<String>) {
         let w: Vec<&str> = call.split(' ').collect();
         match w[0] {
             "new" => {
-                let c = Client::new(host.clone());
+                let c = Client::new(host.clone(), comms.clone());
                 *host.0.client.lock().unwrap() = &*c as *const Client<Replay> as usize;
                 client = Some(c);
                 expect_ret(&host, 0);
@@ -501,7 +497,18 @@ fn replay(lines: Vec<String>) {
                 drop(c);
                 expect_ret(&host, 0);
             }
-            "run" | "pass" | "packets" | "xfer" | "base" => {}
+            "run" | "pass" | "packets" | "xfer" => {}
+            "base" => {
+                // the driver's fields: the last tick received, paused, multiplayer, the average, the CTs processed
+                let f = [
+                    BaseField::LastTickReceived,
+                    BaseField::IsGamePaused,
+                    BaseField::IsMultiplayerSession,
+                    BaseField::AveragePhysicsUpdateTime,
+                    BaseField::CtsProcessed,
+                ][w[1].parse::<usize>().unwrap()];
+                comms.set(f, w[2].parse::<i64>().unwrap() as u32);
+            }
             "input" => {
                 let c = client.as_ref().unwrap();
                 let r = c.process_user_input(id(w[1]), w[3].parse().unwrap(), w[2] == "1");

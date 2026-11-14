@@ -132,12 +132,9 @@ public:
 
 // ---- the Rust side's hosts (each op the statement NESynchronousClient.cpp's hosts make, on the world)
 
-struct RBase {   // the Rust client's base class fields
-    long mLastTickReceived = -2;
-    unsigned long mCTs = 0, mAverage = 0;
-    bool mPaused = false, mMultiplayer = false;
-};
-static RBase sBase;
+static EeNetComms* sComms;   // the Rust client's base class fields (ee_net comms.rs), as NESynchronousCommunications holds them
+static uint32_t BGet(EeNetCommsField f) { return ee_net_comms_get(sComms, f); }
+static void BSet(EeNetCommsField f, unsigned long v) { ee_net_comms_set(sComms, f, (uint32_t)v); }
 static EeNetClient* sRust;
 
 static std::string Tok(char inKind, int inID) { return std::string(1, inKind) + std::to_string(inID); }
@@ -257,25 +254,6 @@ static ptrdiff_t RustClHost(void*, EeNetClOp inOp, size_t a, size_t b, size_t c,
     case EeNetClOp::ThreadPriority:
         OpLine(theArgs + " " + ThTok(a));
         ((TSThread*)a)->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
-        return Answer(0);
-    case EeNetClOp::BaseGet: {
-        OpLine(theArgs + " " + std::to_string(a));
-        ptrdiff_t r = 0;
-        switch ((EeNetClBase)a) {
-        case EeNetClBase::LastTickReceived: r = (ptrdiff_t)(uint32_t)sBase.mLastTickReceived; break;
-        case EeNetClBase::CtsProcessed: r = (ptrdiff_t)(uint32_t)sBase.mCTs; break;
-        case EeNetClBase::AveragePhysicsUpdateTime: r = (ptrdiff_t)(uint32_t)sBase.mAverage; break;
-        case EeNetClBase::IsGamePaused: r = sBase.mPaused; break;
-        case EeNetClBase::IsMultiplayerSession: r = sBase.mMultiplayer; break;
-        }
-        return Answer(r);
-    }
-    case EeNetClOp::BaseSet:
-        OpLine(theArgs + " " + std::to_string(a) + " " + std::to_string((uint32_t)b));
-        if ((EeNetClBase)a == EeNetClBase::LastTickReceived)
-            sBase.mLastTickReceived = (long)(int32_t)(uint32_t)b;
-        else if ((EeNetClBase)a == EeNetClBase::IsGamePaused)
-            sBase.mPaused = b != 0;
         return Answer(0);
     case EeNetClOp::ProtocolCount:
         OpLine(theArgs);
@@ -553,8 +531,8 @@ struct Sequence {
             NEConnection* c = (NEConnection*)ee_net_cl_connection(sRust);
             conn = c != NULL ? c->mID : 0;
             mode = ee_net_cl_record_playback_mode(sRust);
-            last = sBase.mLastTickReceived;
-            paused = sBase.mPaused;
+            last = (long)(int32_t)BGet(EeNetCommsField::LastTickReceived);
+            paused = BGet(EeNetCommsField::IsGamePaused) != 0;
         } else {
             ct = this->mOrig->GetCurrentCommunicationsTick();
             pt = this->mOrig->GetCurrentPhysicsTick();
@@ -767,13 +745,11 @@ struct Sequence {
                 theValue = this->mRandom.Below(500);
             snprintf(theCall, sizeof(theCall), "base %u %ld", theField, theValue);
             this->Call(theCall);
-            RBase& b = sBase;
             if (this->mRust) {
-                if (theField == 0) b.mLastTickReceived = theValue;
-                else if (theField == 1) b.mPaused = theValue != 0;
-                else if (theField == 2) b.mMultiplayer = theValue != 0;
-                else if (theField == 3) b.mAverage = theValue;
-                else b.mCTs = theValue;
+                static const EeNetCommsField kFields[] = {EeNetCommsField::LastTickReceived, EeNetCommsField::IsGamePaused,
+                                                          EeNetCommsField::IsMultiplayerSession,
+                                                          EeNetCommsField::AveragePhysicsUpdateTime, EeNetCommsField::CtsProcessed};
+                BSet(kFields[theField], (unsigned long)theValue);
             } else {
                 if (theField == 0) o->mLastTickReceived = theValue;
                 else if (theField == 1) o->mIsGamePaused = theValue != 0;
@@ -820,10 +796,11 @@ struct Sequence {
         this->mRandom.mState = inSeed;
         this->mServerTick = 0;
         this->mUniqueID = 0;
-        sBase = RBase();
+        ee_net_comms_free(sComms);
+        sComms = ee_net_comms_new(0);
         this->Call("new");
         if (this->mRust) {
-            sRust = ee_net_cl_new(NULL, RustClHost, RustQHost);
+            sRust = ee_net_cl_new(NULL, RustClHost, RustQHost, sComms);
             sDisconnect = [] { return (long)ee_net_cl_disconnect(sRust); };
         } else {
             this->mOrig = new OrigClient;

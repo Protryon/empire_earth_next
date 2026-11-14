@@ -11,6 +11,7 @@
 #include "lle/U2DRectangle.h"           // RTSColoredRectangle holds one by value
 #include "lle/GEColor.h"               // RTSColoredRectangle holds one by value
 #include "ee/EERandomMapIDs.h"
+#include "rust/ee_units.h"             // EeUnitsRtsMapFields, EeUnitsMapFields (the maps' plain members)
 
 // One map tile (provisional name and layout)
 class EEDoppelganger;
@@ -190,7 +191,10 @@ struct RTSMapTileRun {
     U2DPoint<long> mEnd;                    // +0x08
 };
 
-class RTSMap : public FSRestorable {
+// New (R5b.4, round 28): RTSMap's plain block (+0x1955f4 .. +0x195620) and EEMap's (+0x19564c .. +0x195660) are the Rust
+// records EeUnitsRtsMapFields and EeUnitsMapFields (ee_units map_save.rs; names, types and order kept), the classes'
+// second and third bases; RTSMap's and EEMap's Load and Save are Rust over them.
+class RTSMap : public FSRestorable, public EeUnitsRtsMapFields {
 public:
     RTSMap(float inF1955F4);                // 0x121d41 (EEMap's ctors push a float constant; the vectors' allocator
                                             // byte is read from the parameter's high byte)
@@ -264,22 +268,11 @@ public:
     std::vector<RTSMapTileRun> mU1955DC;
     long mL1955EC;                          // +0x1955ec
     EEMapTile** mTiles;                     // +0x1955f0 row-major, mSize x mSize
-    float mF1955F4;                         // +0x1955f4 (the ctor's argument; copied to gMapTileSize)
-    float mF1955F8;                         // +0x1955f8 (84 after Create)
-    float mF1955FC;                         // +0x1955fc (42 after Create)
-    long mL195600;                          // +0x195600
-    long mL195604;                          // +0x195604
+    // +0x1955f4 mF1955F4 .. +0x195620 mB195620: the record EeUnitsRtsMapFields (the base above)
     long GetL195608() const { return this->mL195608; }
-    long mL195608;                          // +0x195608
     long GetL19560C() const { return this->mL19560C; }
-    long mL19560C;                          // +0x19560c
     long GetL195610() const { return this->mL195610; }
-    long mL195610;                          // +0x195610 (saved: Create's height)
-    long mL195614;                          // +0x195614 (saved: Create's width)
     long GetSize() const { return this->mSize; }
-    long mSize;                             // +0x195618 tiles per side (signed: the loops compare it with jl)
-    unsigned long mU19561C;                 // +0x19561c (saved: the player count)
-    bool mB195620;                          // +0x195620 (true once the tiles exist)
 };
 
 // 0x52988c: set from RTSMap::mF1955F4 by RTSMap's ctor, read by EETile::Virtual14 0x1214bf (in RTSTile.cpp's .bss
@@ -293,7 +286,7 @@ template <class T> class RTSRegionTable;   // ee/RTSRegionTable.h
 struct EeCombatUnitRegions;               // rust/ee_combat.h (ee/EEUnitRegions.h)
 class EEComplexUnit;
 class EEEffect;
-class EEMap : public RTSMap, public FSPersistent {
+class EEMap : public RTSMap, public FSPersistent, public EeUnitsMapFields {
 public:
     EEMap();                                // 0x11b844 (EEPTPRestorable<EEMap>::CreateDefault)
     // 0x11b8d9: a new map of inWidth x inHeight for inPlayerCount players in inTerrain (provisional name)
@@ -393,13 +386,21 @@ public:
     EETile* mTileArray;                     // +0x195644 (new EETile[n]: Virtual1C; Virtual18/24 hand them out) (provisional name)
     uint32_t* mVisibilityWords;             // +0x195648 (the tiles' visibility words, (players + 1) / 2 per tile) (provisional name)
     unsigned long GetMapCharacteristics() const { return this->mMapCharacteristics; }
-    unsigned long mMapCharacteristics;      // +0x19564c (saved)
-    unsigned long mU195650;                 // +0x195650 (saved; a ctor result)
-    unsigned long mNextTile;                // +0x195654 (the next free entry of mTileArray) (provisional name)
-    unsigned long mTileArrayCount;          // +0x195658 (provisional name)
-    unsigned long mU19565C;                 // +0x19565c (saved; the second ctor stores 0x11bf4a's result)
-    unsigned long mChecksumCursor;          // +0x195660 (ComputeChecksum checks 64 x 64 tiles from here) (provisional name)
+    // +0x19564c mMapCharacteristics .. +0x195660 mChecksumCursor: the record EeUnitsMapFields (the base above)
 };
+
+// New (R5b.4, round 28): the C++ parts of RTSMap's and EEMap's Load and Save (ee_units map_save.rs; EEMap.cpp): the
+// file's primitives, the tiles, the mesh and the terrain tables by operation
+class EETerrainTable;
+struct EEMapSaveContext {
+    RTSMap* mMap;
+    FSFile* mFile;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+    EETerrainTable* mDefault;               // the load's default terrain (PICK_DEFAULT)
+    EETerrainTable* mTerrain;               // the last TERRAIN_TYPE's table
+};
+int32_t EEMapSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io);
 
 // RTSTile::SetVisibility: inline (the out-of-line COMDAT 0x124072 follows its first user in RTSMap.cpp, PrepareSave
 // 0x122517). Its body needs the player's id, so it is defined only where ee/EEPlayer.h came first (RTSMap.cpp,

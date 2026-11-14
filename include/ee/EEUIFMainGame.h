@@ -60,36 +60,33 @@ public:
     // the rest in address order (provisional names)
     void DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inFlags);    // 0x2649a2 (controls 0x65..0x6b: EEUICChatLine)
-    void UpdateBackgroundMedia(bool inOnlyIfVisible);   // 0x264b4b
     void SetStatusText(const UWideString& inText);  // 0x264cd5 (control 0x19)
     void CreateGroup(unsigned long inIndex);    // 0x26522b
     void DisplayChat(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                      unsigned long inFlags, unsigned long inArg5);   // 0x265317
     void SetEntityGroup(long inGroup);      // 0x2655da
-    void ShowAllBackgrounds();              // 0x26568e
-    void SetPauseText(bool inPaused);       // 0x26572f
     bool IsInGameView(const GE2DPoint& inLocation);     // 0x265a06 (in the view, outside background 0x64)
     void SetErrorString(const UWideString& inText, unsigned long inIndex);   // 0x265ff6 (mStrings, mStringsChanged)
     void ShowInformation(EEUIFMGInformation* inInformation);   // 0x26533e (the scrolling text 0xd3, portrait 0xdf)
-    void PauseInformation();                // 0x2662d7
-    void ResumeInformation();               // 0x266367
     void BuildUnit(unsigned long inUnitID, long inTechnology);  // 0x266384 (the build mode for a unit's technology)
     void StartGate(long inTechnology);      // 0x2664b4 (state 0xb)
     void StartWall(long inTechnology);      // 0x266594 (state 6)
     void StartCalamity(long inTechnology);  // 0x26662d (state 5)
-    void SetChatTop(long inTop);            // 0x26676e (the chat lines' +0xc8)
     void StartFlare();                      // 0x26679a (state 0x15)
     void StartPatrol();                     // 0x26681d (state 0x10)
     void SetHotKeyMode(long inMode);        // 0x2668a0 (hot-key groups 0..2)
-    void HideAllBackgrounds();              // 0x266960
-    void HideMessages();                    // 0x2669e8 (stops the information text)
     void RefreshStatus();                   // 0x266a3b (the status update, each mPoll tick)
     void UpdateCursorKind();                // 0x266f8b (the cursor: ee_screens cursor.rs, with 0x265791 GetAttackStance,
                                             // 0x26588c GetCommandOnUnit, 0x265a4f EEGetAttackRangeKind, 0x265d7a,
                                             // 0x265e35 GetRepairCommand, 0x265e89 GetTransportCommand)
-    void RefreshSavedGroups();              // 0x26716e (refreshes the saved-group buttons 0xd4..0xdd)
-    void UpdateIconBar();                   // 0x2671b0 (control 0xde)
     void FnE123D();                         // (ICF-folded into 0xe123d: an empty body; provisional name)
+    // the members that are Rust's whole (EE_SCREENS_MF_DO_*, with their argument: the original's
+    // UpdateBackgroundMedia 0x264b4b, SetPauseText 0x26572f, PauseInformation 0x2662d7,
+    // ResumeInformation 0x266367, SetChatTop 0x26676e, HideMessages 0x2669e8,
+    // RefreshSavedGroups 0x26716e, UpdateIconBar 0x2671b0, and the overrides above)
+    int64_t Rust(uint32_t inWhich, int64_t inA = 0);
+    void ShowAllBackgrounds();              // 0x26568e (EERenderObject's; Rust's whole)
+    void HideAllBackgrounds();              // 0x266960
     // the host of the per-frame work in Rust (ee_screens main_form.rs: CopyData, RefreshStatus, DisplayChatLine,
     // ShowInformation); a member for UIForm's protected GetMouseCaptured and CopyData
     static int64_t HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, EeScreensMainFormIo* ioIo);

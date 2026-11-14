@@ -1135,5 +1135,380 @@ pub fn start_targeting(h: &mut impl FormHost, state: i64) {
     show_cancel(h);
 }
 
+// ---- the form's members (round 28): Activate, Deactivate, Open, Close, DrawPolygons, UpdateBackgroundMedia,
+// ShowAllBackgrounds, HideAllBackgrounds, HideMessages, SetPauseText, Pause/ResumeInformation, SetChatTop,
+// RefreshSavedGroups, UpdateIconBar (`EEUIFMainGame::Rust(which, a)`, `ee_screens_main_form_member`)
+
+/// `gMouse->mIsFrozen = a != 0`.
+pub const EE_SCREENS_MF_OP_MOUSE_FREEZE: u32 = 111;
+/// `gMouse`'s `mShiftMode = false`, `mPointer = 0`, `SetBounds(io.f)`.
+pub const EE_SCREENS_MF_OP_MOUSE_RESET: u32 = 112;
+/// `mScroll->mEdges = io.f`.
+pub const EE_SCREENS_MF_OP_SCROLL_EDGES: u32 = 113;
+/// `UIForm`'s member a (`EE_SCREENS_MF_BASE_*`): `DrawPolygons`' answer.
+pub const EE_SCREENS_MF_OP_BASE: u32 = 114;
+/// `gWorld.mUserPaused`.
+pub const EE_SCREENS_MF_OP_USER_PAUSED: u32 = 115;
+/// `gCommunications->IsServer() == true`.
+pub const EE_SCREENS_MF_OP_IS_SERVER: u32 = 116;
+/// The server's `UnpauseGame()`, then `gUserInterface->PostPauseInformation(false)`.
+pub const EE_SCREENS_MF_OP_UNPAUSE: u32 = 117;
+/// With a `gGraphics`: `PostClearRenderObjects()`, `PostPushRenderObject(gU56534C)` (the UI's render object).
+pub const EE_SCREENS_MF_OP_GRAPHICS_UI: u32 = 118;
+/// `gSoundManager->SetLatency(a)`.
+pub const EE_SCREENS_MF_OP_LATENCY: u32 = 119;
+/// `gSoundManager->SetMasterVolume(gMasterVolume)`.
+pub const EE_SCREENS_MF_OP_MASTER_VOLUME: u32 = 120;
+/// `gMouse->SetPosition(io.f[0], io.f[1])`.
+pub const EE_SCREENS_MF_OP_MOUSE_POSITION: u32 = 121;
+/// The error log's (control 0x1b) `AppendLine("")`.
+pub const EE_SCREENS_MF_OP_LOG_APPEND: u32 = 122;
+/// One `EECreateScreenEvent(EE_SCREENS_MG_CANCEL_UI_MODE)` on the cancel button's button up and right button up.
+pub const EE_SCREENS_MF_OP_CANCEL_EVENT: u32 = 123;
+/// a 0: `EESetCivBuilderButtonBlinking(b != 0)`; a 1: `EEUISCIFormManager::Get()->SetBlinking(b != 0)`.
+pub const EE_SCREENS_MF_OP_BLINKING: u32 = 124;
+/// `mUnitHack->FillComboBox()`.
+pub const EE_SCREENS_MF_OP_FILL_HACK: u32 = 125;
+/// The main panel group's (`mGroups[0]`) a 0: `Open(this)`; a 1: `mL20 = 0`.
+pub const EE_SCREENS_MF_OP_MAIN_GROUP: u32 = 126;
+/// The current player's `mTechnologies != NULL`.
+pub const EE_SCREENS_MF_OP_HAS_TECHS: u32 = 127;
+/// The held text = the string `EEEpochTitleID(the current player's mTechnologies->mCurrentEpoch)`.
+pub const EE_SCREENS_MF_OP_TEXT_EPOCH_TITLE: u32 = 128;
+/// `SetStatusText(held text)`.
+pub const EE_SCREENS_MF_OP_STATUS_TEXT: u32 = 129;
+/// `mUnitInfoBackground = GetBackgroundByID(0x64)`.
+pub const EE_SCREENS_MF_OP_UNIT_INFO_BACKGROUND: u32 = 130;
+/// `EEPostGraphicsAll()`, `gGraphics->PostFadeIn(0)`.
+pub const EE_SCREENS_MF_OP_POST_GRAPHICS: u32 = 131;
+/// `gUIManager->GetMainGameForm()->GetEntityGroup(a)->Enable()` (b 1) or `Disable()` (b 0).
+pub const EE_SCREENS_MF_OP_MAIN_ENTITY_GROUP: u32 = 132;
+/// `gUIManager->GetMainGameForm()->GetBackgroundByID(a)->SetVisibility(b != 0)`.
+pub const EE_SCREENS_MF_OP_MAIN_BACKGROUND: u32 = 133;
+/// `GetBackgroundByID(a)->SetVisibility(b != 0)`.
+pub const EE_SCREENS_MF_OP_BACKGROUND: u32 = 134;
+/// The old media = `EEMedia::Get(mMediaID)`, held: != NULL.
+pub const EE_SCREENS_MF_OP_MEDIA_OLD: u32 = 135;
+/// `GetManager()->IsFormVisible(this)`.
+pub const EE_SCREENS_MF_OP_FORM_VISIBLE: u32 = 136;
+/// The current player's `mTechnologies->mMediaID`.
+pub const EE_SCREENS_MF_OP_PLAYER_MEDIA_ID: u32 = 137;
+/// `gWorld.mUsingCarbon`.
+pub const EE_SCREENS_MF_OP_USING_CARBON: u32 = 138;
+/// The media = `EEMedia::Get(a)`, held: != NULL.
+pub const EE_SCREENS_MF_OP_MEDIA: u32 = 139;
+/// a 1: the media's `LoadMedia()`; a 0: the old media's `UnloadMedia()`.
+pub const EE_SCREENS_MF_OP_MEDIA_LOAD: u32 = 140;
+/// The bitmap background a's `SetBitmapTexture(the media's mTextures[b])`.
+pub const EE_SCREENS_MF_OP_BG_TEXTURE: u32 = 141;
+/// `GetManager()->RedrawAll()`.
+pub const EE_SCREENS_MF_OP_REDRAW_ALL: u32 = 142;
+/// The scrolling text's (0xd3) `StopScrolling()`.
+pub const EE_SCREENS_MF_OP_INFO_STOP: u32 = 143;
+/// `gPhysics->PostShowDialogMessage()`.
+pub const EE_SCREENS_MF_OP_POST_SHOW_DIALOG: u32 = 144;
+/// The scrolling text's `PauseScrolling()` (a 1) or `ResumeScrolling()` (a 0).
+pub const EE_SCREENS_MF_OP_INFO_PAUSE: u32 = 145;
+/// The chat line a's `SetShadowOffset(b)` when it exists: it exists.
+pub const EE_SCREENS_MF_OP_CHAT_SHADOW: u32 = 146;
+/// The saved-group button a's `Refresh()` when the control exists: it exists.
+pub const EE_SCREENS_MF_OP_SAVED_GROUP_REFRESH: u32 = 147;
+/// The icon bar's (0xde) `Update()` when it exists.
+pub const EE_SCREENS_MF_OP_ICON_BAR_UPDATE: u32 = 148;
+/// The background a's `DrawBackground(its rectangle)`.
+pub const EE_SCREENS_MF_OP_DRAW_BACKGROUND: u32 = 149;
+/// `gUIManager->mMainGameForm->mUIState`.
+pub const EE_SCREENS_MF_OP_MAIN_UI_STATE: u32 = 150;
+/// `gUnitSelected`.
+pub const EE_SCREENS_MF_OP_UNIT_SELECTED: u32 = 151;
+
+/// `UIForm::Activate`, `Deactivate`, `Open`, `Close`, `DrawPolygons` (EE_SCREENS_MF_OP_BASE).
+pub const EE_SCREENS_MF_BASE_ACTIVATE: i64 = 0;
+pub const EE_SCREENS_MF_BASE_DEACTIVATE: i64 = 1;
+pub const EE_SCREENS_MF_BASE_OPEN: i64 = 2;
+pub const EE_SCREENS_MF_BASE_CLOSE: i64 = 3;
+pub const EE_SCREENS_MF_BASE_DRAW: i64 = 4;
+
+/// The members `ee_screens_main_form_member` runs (its `which`).
+pub const EE_SCREENS_MF_DO_ACTIVATE: u32 = 1;
+pub const EE_SCREENS_MF_DO_DEACTIVATE: u32 = 2;
+pub const EE_SCREENS_MF_DO_OPEN: u32 = 3;
+pub const EE_SCREENS_MF_DO_CLOSE: u32 = 4;
+pub const EE_SCREENS_MF_DO_DRAW: u32 = 5;
+/// `UpdateBackgroundMedia(a != 0)`.
+pub const EE_SCREENS_MF_DO_UPDATE_MEDIA: u32 = 6;
+pub const EE_SCREENS_MF_DO_SHOW_BACKGROUNDS: u32 = 7;
+pub const EE_SCREENS_MF_DO_HIDE_BACKGROUNDS: u32 = 8;
+pub const EE_SCREENS_MF_DO_HIDE_MESSAGES: u32 = 9;
+/// `SetPauseText(a != 0)`.
+pub const EE_SCREENS_MF_DO_PAUSE_TEXT: u32 = 10;
+/// `PauseInformation()` (a 1) or `ResumeInformation()` (a 0).
+pub const EE_SCREENS_MF_DO_INFO_PAUSE: u32 = 11;
+/// `SetChatTop(a)`.
+pub const EE_SCREENS_MF_DO_CHAT_TOP: u32 = 12;
+pub const EE_SCREENS_MF_DO_SAVED_GROUPS: u32 = 13;
+pub const EE_SCREENS_MF_DO_ICON_BAR: u32 = 14;
+
+/// The title label (`kMainGameTitle`), the error log, the information's scrolling text, the icon bar.
+pub const EE_SCREENS_MF_CTL_TITLE: i64 = 25;
+pub const EE_SCREENS_MF_CTL_ERROR_LOG: i64 = 27;
+pub const EE_SCREENS_MF_CTL_DIALOG_MESSAGE: i64 = 211;
+/// The saved-group buttons (0xd4..=0xdd).
+pub const EE_SCREENS_MF_CTL_SAVED_GROUP1: i64 = 0xd4;
+/// `IDS_YOU_ARE_VICTORIOUS`, `IDS_YOU_HAVE_BEEN_DEFEATED`.
+pub const EE_SCREENS_MF_IDS_VICTORIOUS: i64 = 30401;
+pub const EE_SCREENS_MF_IDS_DEFEATED: i64 = 30402;
+/// The form's default background media (`mMediaID` when none), the carbon one.
+pub const EE_SCREENS_MF_MEDIA_CARBON: i64 = 0x377;
+
+/// Runs the member `which` with its argument `a` (`EE_SCREENS_MF_DO_*`): `DrawPolygons`' answer, else 0.
+pub fn member(h: &mut impl FormHost, which: u32, a: i64) -> i64 {
+    match which {
+        EE_SCREENS_MF_DO_ACTIVATE => activate(h),
+        EE_SCREENS_MF_DO_DEACTIVATE => deactivate(h),
+        EE_SCREENS_MF_DO_OPEN => open(h),
+        EE_SCREENS_MF_DO_CLOSE => close(h),
+        EE_SCREENS_MF_DO_DRAW => return draw_polygons(h),
+        EE_SCREENS_MF_DO_UPDATE_MEDIA => update_background_media(h, a != 0),
+        EE_SCREENS_MF_DO_SHOW_BACKGROUNDS => show_all_backgrounds(h),
+        EE_SCREENS_MF_DO_HIDE_BACKGROUNDS => hide_all_backgrounds(h),
+        EE_SCREENS_MF_DO_HIDE_MESSAGES => hide_messages(h),
+        EE_SCREENS_MF_DO_PAUSE_TEXT => set_pause_text(h, a != 0),
+        EE_SCREENS_MF_DO_INFO_PAUSE => pause_information(h, a != 0),
+        EE_SCREENS_MF_DO_CHAT_TOP => set_chat_top(h, a),
+        EE_SCREENS_MF_DO_SAVED_GROUPS => refresh_saved_groups(h),
+        EE_SCREENS_MF_DO_ICON_BAR => {
+            h.a(EE_SCREENS_MF_OP_ICON_BAR_UPDATE, 0);
+        }
+        _ => {}
+    }
+    0
+}
+
+/// The game window's size (`gGameWindow`'s `GetWidth()`, `GetHeight()`) as the original's floats.
+fn window_size(h: &mut impl FormHost) -> (f32, f32) {
+    let n = h.io(EE_SCREENS_MF_OP_WINDOW_SIZE, 1, 0, EeScreensMainFormIo::default()).n;
+    (n[0] as u32 as f32, n[1] as u32 as f32)
+}
+
+/// `EEUIFMainGame::Activate` (0x2648d4): the mouse freed, the scroll edges the window less a pixel, the base's
+/// activation, a game paused only by leaving the form resumed (by its server), the cursor unlocked, the saved
+/// groups refreshed.
+pub fn activate(h: &mut impl FormHost) {
+    h.a(EE_SCREENS_MF_OP_MOUSE_FREEZE, 0);
+    let (w, hh) = window_size(h);
+    h.io(EE_SCREENS_MF_OP_SCROLL_EDGES, 0, 0, EeScreensMainFormIo { f: [0.0, 0.0, w - 1.0, hh - 1.0], n: [0; 2] });
+    h.a(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_ACTIVATE);
+    if !h.t(EE_SCREENS_MF_OP_USER_PAUSED)
+        && h.a(EE_SCREENS_MF_OP_COMMS_PAUSED, 0) as u8 == 1
+        && h.t(EE_SCREENS_MF_OP_IS_SERVER)
+    {
+        h.a(EE_SCREENS_MF_OP_UNPAUSE, 0);
+    }
+    h.set_field(EE_SCREENS_MF_FIELD_CURSOR_LOCKED, 0);
+    refresh_saved_groups(h);
+}
+
+/// `EEUIFMainGame::Deactivate` (0x264d40): the mouse freed and reset (no shift mode, the first pointer, the
+/// window's bounds), the cursor locked, mode 0, the base's deactivation.
+pub fn deactivate(h: &mut impl FormHost) {
+    h.a(EE_SCREENS_MF_OP_MOUSE_FREEZE, 0);
+    let (w, hh) = window_size(h);
+    h.io(EE_SCREENS_MF_OP_MOUSE_RESET, 0, 0, EeScreensMainFormIo { f: [0.0, 0.0, w, hh], n: [0; 2] });
+    h.set_field(EE_SCREENS_MF_FIELD_CURSOR_LOCKED, 1);
+    set_ui_state(h, 0);
+    h.a(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_DEACTIVATE);
+}
+
+/// `EEUIFMainGame::Open` (0x266038): the sound's latency and volume, the mouse centred, the base's opening, an empty
+/// error log, the cancel button's event, the two blinkings, the unit hack's list, the main panel, the backgrounds'
+/// media, the mini map, entity groups 1 and 3, the epoch's title, the unit panel's background, the graphics posted
+/// and faded in, the main form's unit panels off.
+pub fn open(h: &mut impl FormHost) {
+    h.a(EE_SCREENS_MF_OP_LATENCY, 100);
+    h.a(EE_SCREENS_MF_OP_MASTER_VOLUME, 0);
+    let n = h.io(EE_SCREENS_MF_OP_WINDOW_SIZE, 1, 0, EeScreensMainFormIo::default()).n;
+    let centre = [(n[0] as u32 / 2) as f32, (n[1] as u32 / 2) as f32];
+    h.io(EE_SCREENS_MF_OP_MOUSE_POSITION, 0, 0, EeScreensMainFormIo { f: [centre[0], centre[1], 0.0, 0.0], n: [0; 2] });
+    h.a(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_OPEN);
+    for _ in 0..EE_SCREENS_MF_ERROR_LINES {
+        h.a(EE_SCREENS_MF_OP_LOG_APPEND, 0);
+    }
+    h.a(EE_SCREENS_MF_OP_CANCEL_EVENT, 0);
+    let button = h.field(EE_SCREENS_MF_FIELD_BUTTON_BLINKING);
+    h.ab(EE_SCREENS_MF_OP_BLINKING, 0, button);
+    let info = h.field(EE_SCREENS_MF_FIELD_INFO_BLINKING);
+    h.ab(EE_SCREENS_MF_OP_BLINKING, 1, info);
+    h.a(EE_SCREENS_MF_OP_FILL_HACK, 0);
+    h.a(EE_SCREENS_MF_OP_MAIN_GROUP, 0);
+    update_background_media(h, false);
+    h.ab(EE_SCREENS_MF_OP_SET_MODE, EE_SCREENS_MF_CTL_MINI_MAP, EE_SCREENS_MF_SHOWN);
+    h.set_field(EE_SCREENS_MF_FIELD_CURRENT_GROUP, 0);
+    set_entity_group(h, 1);
+    h.ab(EE_SCREENS_MF_OP_ENTITY_GROUP, 3, 1);
+    if h.t(EE_SCREENS_MF_OP_HAS_PLAYER) && h.t(EE_SCREENS_MF_OP_HAS_TECHS) {
+        h.a(EE_SCREENS_MF_OP_TEXT_EPOCH_TITLE, 0);
+    } else {
+        h.set_text(b"");
+    }
+    h.a(EE_SCREENS_MF_OP_STATUS_TEXT, 0);
+    h.a(EE_SCREENS_MF_OP_MAIN_GROUP, 1);
+    h.a(EE_SCREENS_MF_OP_UNIT_INFO_BACKGROUND, 0);
+    h.a(EE_SCREENS_MF_OP_POST_GRAPHICS, 0);
+    unit_panels_off(h);
+}
+
+/// The main game form's two unit panels off: entity group 9 and background 0x97, entity group 8 and background
+/// 0x98 (`gUIManager->GetMainGameForm()`'s).
+pub fn unit_panels_off(h: &mut impl FormHost) {
+    h.ab(EE_SCREENS_MF_OP_MAIN_ENTITY_GROUP, 9, 0);
+    h.ab(EE_SCREENS_MF_OP_MAIN_BACKGROUND, 0x97, 0);
+    h.ab(EE_SCREENS_MF_OP_MAIN_ENTITY_GROUP, 8, 0);
+    h.ab(EE_SCREENS_MF_OP_MAIN_BACKGROUND, 0x98, 0);
+}
+
+/// `EEUIFMainGame::Close` (0x264cf1): the messages hidden, the UI's render object back to the graphics thread, the
+/// backgrounds' media unloaded, the sound's latency 200, the base's closing.
+pub fn close(h: &mut impl FormHost) {
+    hide_messages(h);
+    h.a(EE_SCREENS_MF_OP_GRAPHICS_UI, 0);
+    update_background_media(h, false);
+    h.a(EE_SCREENS_MF_OP_LATENCY, 200);
+    h.a(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_CLOSE);
+}
+
+/// `EEUIFMainGame::DrawPolygons` (0x26550c): the bottom panels (and with a selected unit the unit panels) unless the
+/// main game form is in the no-scroll mode, then the base's drawing.
+pub fn draw_polygons(h: &mut impl FormHost) -> i64 {
+    if h.a(EE_SCREENS_MF_OP_MAIN_UI_STATE, 0) as i32 != EE_SCREENS_MF_STATE_NO_SCROLL as i32 {
+        for id in [0x74, 0x73, 0x72] {
+            h.a(EE_SCREENS_MF_OP_DRAW_BACKGROUND, id);
+        }
+        if h.t(EE_SCREENS_MF_OP_UNIT_SELECTED) {
+            for id in [0x6f, 0x70, 0x71] {
+                h.a(EE_SCREENS_MF_OP_DRAW_BACKGROUND, id);
+            }
+        }
+    }
+    h.a(EE_SCREENS_MF_OP_BASE, EE_SCREENS_MF_BASE_DRAW)
+}
+
+/// `EEUIFMainGame::UpdateBackgroundMedia` (0x264b4b): with a player whose tech tree exists (and the form visible
+/// when asked), the backgrounds take the epoch's media (the carbon one when carbon is used): textures 8 on 0x67..0x6a
+/// and 0x64, 4 on 0x6b..0x7c, the old media unloaded once the new one loaded, the whole window redrawn when the form
+/// is current; otherwise the old media unloaded and none kept.
+pub fn update_background_media(h: &mut impl FormHost, only_if_visible: bool) {
+    let old = h.t(EE_SCREENS_MF_OP_MEDIA_OLD);
+    if h.t(EE_SCREENS_MF_OP_HAS_PLAYER)
+        && h.t(EE_SCREENS_MF_OP_HAS_TECHS)
+        && (!only_if_visible || h.t(EE_SCREENS_MF_OP_FORM_VISIBLE))
+    {
+        let mut media = h.a(EE_SCREENS_MF_OP_PLAYER_MEDIA_ID, 0);
+        h.set_field(EE_SCREENS_MF_FIELD_MEDIA_ID, media);
+        if h.t(EE_SCREENS_MF_OP_USING_CARBON) {
+            media = EE_SCREENS_MF_MEDIA_CARBON;
+            h.set_field(EE_SCREENS_MF_FIELD_MEDIA_ID, media);
+        }
+        if h.a(EE_SCREENS_MF_OP_MEDIA, media) != 0 {
+            h.a(EE_SCREENS_MF_OP_MEDIA_LOAD, 1);
+            if old {
+                h.a(EE_SCREENS_MF_OP_MEDIA_LOAD, 0);
+            }
+            for id in 0x67..0x6b {
+                h.ab(EE_SCREENS_MF_OP_BG_TEXTURE, id, 8);
+            }
+            h.ab(EE_SCREENS_MF_OP_BG_TEXTURE, 0x64, 8);
+            for id in 0x6b..0x7d {
+                h.ab(EE_SCREENS_MF_OP_BG_TEXTURE, id, 4);
+            }
+        }
+        if h.t(EE_SCREENS_MF_OP_IS_CURRENT) {
+            h.a(EE_SCREENS_MF_OP_ALL_DIRTY, 0);
+            let (w, hh) = window_size(h);
+            h.io(EE_SCREENS_MF_OP_ADD_DIRTY, 0, 0, EeScreensMainFormIo { f: [0.0, 0.0, w, hh], n: [0; 2] });
+        }
+    } else {
+        if old {
+            h.a(EE_SCREENS_MF_OP_MEDIA_LOAD, 0);
+        }
+        h.set_field(EE_SCREENS_MF_FIELD_MEDIA_ID, -1);
+    }
+}
+
+/// `EEUIFMainGame::ShowAllBackgrounds` (0x26568e): the backgrounds 0x67..0x7c but 0x6b and the unit panels'
+/// (0x6f..0x71), then 0x65, 0x90, 0x8f, 0x91 shown, entity groups 0 and 1 on, everything redrawn.
+pub fn show_all_backgrounds(h: &mut impl FormHost) {
+    for id in 0x67..0x7d {
+        if id != 0x6b && !(0x6f..=0x71).contains(&id) {
+            h.ab(EE_SCREENS_MF_OP_BACKGROUND, id, 1);
+        }
+    }
+    for id in [0x65, 0x90, 0x8f, 0x91] {
+        h.ab(EE_SCREENS_MF_OP_BACKGROUND, id, 1);
+    }
+    for group in 0..2 {
+        h.ab(EE_SCREENS_MF_OP_ENTITY_GROUP, group, 1);
+    }
+    h.a(EE_SCREENS_MF_OP_REDRAW_ALL, 0);
+}
+
+/// `EEUIFMainGame::HideAllBackgrounds` (0x266960): the backgrounds 0x67..0x7c, then 0x64, 0x65, 0x90, 0x8f, 0x91
+/// hidden, entity groups 0 to 2 off.
+pub fn hide_all_backgrounds(h: &mut impl FormHost) {
+    for id in (0x67..0x7d).chain([0x64, 0x65, 0x90, 0x8f, 0x91]) {
+        h.ab(EE_SCREENS_MF_OP_BACKGROUND, id, 0);
+    }
+    for group in 0..3 {
+        h.ab(EE_SCREENS_MF_OP_ENTITY_GROUP, group, 0);
+    }
+}
+
+/// `EEUIFMainGame::HideMessages` (0x2669e8): the information's scrolling text stopped and hidden (without one, the
+/// physics told to show the dialog message), its portrait hidden, the chat lines back up.
+pub fn hide_messages(h: &mut impl FormHost) {
+    if h.t(EE_SCREENS_MF_OP_INFO_HAS_TEXT) {
+        h.a(EE_SCREENS_MF_OP_INFO_STOP, 0);
+        h.ab(EE_SCREENS_MF_OP_SET_MODE, EE_SCREENS_MF_CTL_DIALOG_MESSAGE, EE_SCREENS_MF_HIDDEN);
+    } else {
+        h.a(EE_SCREENS_MF_OP_POST_SHOW_DIALOG, 0);
+    }
+    if h.t(EE_SCREENS_MF_OP_INFO_HAS_PORTRAIT) {
+        h.ab(EE_SCREENS_MF_OP_SET_MODE, EE_SCREENS_MF_CTL_DIALOG_PORTRAIT, EE_SCREENS_MF_HIDDEN);
+    }
+    set_chat_top(h, 0);
+}
+
+/// `EEUIFMainGame::SetPauseText` (0x26572f): the win/lose label shows the victory (true) or defeat text.
+pub fn set_pause_text(h: &mut impl FormHost, victory: bool) {
+    let id = if victory { EE_SCREENS_MF_IDS_VICTORIOUS } else { EE_SCREENS_MF_IDS_DEFEATED };
+    h.a(EE_SCREENS_MF_OP_TEXT_STRING, id);
+    h.a(EE_SCREENS_MF_OP_LABEL_SET_TEXT, EE_SCREENS_MF_CTL_WIN_LOSE);
+    h.ab(EE_SCREENS_MF_OP_SET_MODE, EE_SCREENS_MF_CTL_WIN_LOSE, EE_SCREENS_MF_SHOWN);
+}
+
+/// `EEUIFMainGame::PauseInformation` (0x2662d7, `pause`) and `ResumeInformation` (0x266367): the information's
+/// scrolling text, when shown.
+pub fn pause_information(h: &mut impl FormHost, pause: bool) {
+    if h.t(EE_SCREENS_MF_OP_INFO_HAS_TEXT)
+        && h.a(EE_SCREENS_MF_OP_MODE, EE_SCREENS_MF_CTL_DIALOG_MESSAGE) as u32 == EE_SCREENS_MF_SHOWN as u32
+    {
+        h.a(EE_SCREENS_MF_OP_INFO_PAUSE, pause as i64);
+    }
+}
+
+/// `EEUIFMainGame::SetChatTop` (0x26676e): each chat line's (0x65..0x6b) shadow offset.
+pub fn set_chat_top(h: &mut impl FormHost, top: i64) {
+    for line in EE_SCREENS_MF_CTL_CHAT_LINE1..=EE_SCREENS_MF_CTL_CHAT_LINE7 {
+        h.ab(EE_SCREENS_MF_OP_CHAT_SHADOW, line, top);
+    }
+}
+
+/// `EEUIFMainGame::RefreshSavedGroups` (0x26716e): the ten saved-group buttons.
+pub fn refresh_saved_groups(h: &mut impl FormHost) {
+    for id in EE_SCREENS_MF_CTL_SAVED_GROUP1..EE_SCREENS_MF_CTL_SAVED_GROUP1 + 10 {
+        h.a(EE_SCREENS_MF_OP_SAVED_GROUP_REFRESH, id);
+    }
+}
+
 #[cfg(test)]
 mod tests;

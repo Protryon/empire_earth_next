@@ -1,13 +1,24 @@
-//! The tracer beams on the effects' records (`EEE3DTracerBeam`, `src/Empire Earth/Graphics Thread/EEE3DTracerBeam.cpp`):
-//! the texture's scroll, the width's pulse, the timed beam's age, its impact and hit moments and its end, Load and
-//! Save. The aim and the stretch are `beam.rs`'s; the C++ keeps the shooter and target units, the impact effect, the
-//! hit report and the draw.
+//! The tracer beam (kind 0x40) whole in Rust on `EEE3DRust` (`EEE3DTracerBeam`, 0xfc382..0xfd330, deleted): a beam
+//! from a unit's weapon tag point to a point on its target unit (or to a fixed point), re-aimed every step (`beam.rs`'s
+//! length and transformation), its texture scrolled and its width pulsed; a timed beam ages over the effect's
+//! duration, places its impact effect, reports the hit to its target and ends. Queued in render queue 4 and drawn in
+//! pass 6: the beam model stretched to its length and width (the raster table's `model_stretch` and its restore),
+//! additive under flag 2. The C++ keeps the target unit (`EEE3DRust::mTarget`: referenced, replaced by `ReplaceUnit`,
+//! its load-time id and `RepairPointers`), the tag points behind the beam's two ends, the impact and the hit
+//! (`EeGfxEffect3DHost`'s `tracer_*`).
 //!
 //! Simulation state (RUST_PLAN 2.1): the C++'s f32 operations in order.
 
-use ee_ge::types::Ge3DPoint;
+use ee_ge::types::{Ge3DPoint, GeTransformation};
 
+use crate::beam;
+use crate::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
 use crate::effect_state::{load_point, save_point, EeGfxEffectRecord, EffectFile};
+use crate::lighting::EeGfxLighting;
+use crate::raster::{Raster, BLEND_INV_SRC_ALPHA, BLEND_ONE, BLEND_SRC_ALPHA, ZBUFFER_TEST_ONLY};
+
+/// `kEffect3DTracerBeam`
+pub const EE_GFX_EFFECT_KIND_TRACER_BEAM: i32 = 0x40;
 
 /// `kErrorOK`.
 const OK: i32 = 0;
@@ -39,6 +50,181 @@ pub struct EeGfxEffectTracer {
     pub impact_created: bool,
     /// `mWeaponTagPoint`: the shooter's (saved from 0.250)
     pub weapon_tag_point: i32,
+    /// the draw copies `Queue` takes (`mDrawScroll`, `mDrawAge`, `mDrawLength`, `mDrawWidth`)
+    pub draw_scroll: f32,
+    pub draw_age: f32,
+    pub draw_length: f32,
+    pub draw_width: f32,
+}
+
+/// The beam's two ends as the C++ finds them on the units (`Aim` before `beam::aim`), and whether it has a target unit.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxTracerEnds {
+    pub start: Ge3DPoint,
+    pub end: Ge3DPoint,
+    pub has_target: bool,
+}
+
+/// `Aim`: the ends from the host, the beam between them at the record's age (grown by param 5, shrunk after param
+/// 6), its length and transformation (`SetTransformation`: the record's, then the host's `move_to`); whether the beam
+/// has a target unit.
+///
+/// # Safety
+/// As `effect_rising::effect3d`.
+unsafe fn aim<H: Effect3DHost>(r: *mut EeGfxEffectRecord, g: &EeGfxGraphicFacts, h: &mut H) -> bool {
+    let ends = h.tracer_ends();
+    // SAFETY (every access below): the function's contract; no reference to the record is kept across a host call
+    let a = beam::aim(ends.start, ends.end, unsafe { (*r).tracer.age }, g.param5, g.param6);
+    unsafe {
+        (*r).tracer.length = a.length;
+        (*r).transformation = a.transform;
+    }
+    h.move_to();
+    ends.has_target
+}
+
+/// The tracer beam's virtuals (`RepairPointers` is the C++'s: the target's saved id).
+///
+/// # Safety
+/// As `effect_rising::effect3d`.
+pub unsafe fn tracer<H: Effect3DHost, R: Raster>(
+    op: EeGfxEffect3DOp,
+    r: *mut EeGfxEffectRecord,
+    g: &EeGfxGraphicFacts,
+    h: &mut H,
+    x: &mut R,
+) -> i32 {
+    // SAFETY (every access below): the function's contract; no reference to the record is kept across a host call
+    match op {
+        // both constructors (0xfc3c5 on a unit, 0xfc49d at a point): the C++ set the target point and the weapon tag
+        // point
+        EeGfxEffect3DOp::Create => {
+            unsafe {
+                let b = &mut (*r).tracer;
+                b.age = 0.0;
+                b.timed = false;
+                b.impact_created = false;
+                b.draw_age = 0.0;
+                b.scroll = 0.0;
+            }
+            unsafe { aim(r, g, h) };
+            0
+        }
+        // 0xfca62: the media, timed unless flag 1, the width from param 4, the radius from the size
+        EeGfxEffect3DOp::SetUp => {
+            let result = h.load_media();
+            unsafe {
+                (*r).tracer.timed = !g.flag1;
+                (*r).tracer.width = g.param4;
+                (*r).bounding_radius = g.size;
+            }
+            result
+        }
+        // 0xfc9d7: the draw copies, render queue 4
+        EeGfxEffect3DOp::Queue => {
+            let result = h.base_queue();
+            if result == 0 {
+                unsafe {
+                    let b = &mut (*r).tracer;
+                    b.draw_age = b.age;
+                    b.draw_length = b.length;
+                    b.draw_scroll = b.scroll;
+                    b.draw_width = b.width;
+                }
+                h.queue(4);
+            }
+            result
+        }
+        // 0xfca9b: the beam model stretched, its fog and its vertices restored after
+        EeGfxEffect3DOp::DrawPass6 => {
+            let model = h.model();
+            x.set_alpha_ref(if g.has_object { g.alpha_ref } else { 0.0 });
+            let fog = x.get_fog();
+            x.set_zbuffer(ZBUFFER_TEST_ONLY);
+            x.set_shading_source(0);
+            if g.flag2 {
+                x.set_blending(BLEND_ONE, BLEND_ONE);
+            } else {
+                x.set_blending(BLEND_SRC_ALPHA, BLEND_INV_SRC_ALPHA);
+            }
+            x.lighting(EeGfxLighting::White);
+            let texture = h.texture();
+            x.model_own_texture(model, texture);
+            let (t, b) = unsafe { ((*r).transformation, (*r).tracer) };
+            if g.flag2 {
+                x.fog_factor(&Ge3DPoint { x: t.m[0][3], y: t.m[1][3], z: t.m[2][3] }, fog);
+            }
+            let mut scale = GeTransformation::default();
+            scale.set_scale(g.size, g.size, g.size);
+            x.model_transform(model, &t.compose(&scale));
+            x.model_stretch(model, b.draw_length, b.draw_width, b.draw_scroll);
+            x.model_prepare(model);
+            let result = x.model_draw(model, 1.0);
+            x.set_fog(fog);
+            x.model_unstretch(model);
+            result
+        }
+        // 0xfd140: aimed again, then `tracer_step`'s events
+        EeGfxEffect3DOp::Step => {
+            let has_target = unsafe { aim(r, g, h) };
+            let tick = EeGfxTracerTick {
+                tick_time: g.tick_time,
+                param1: g.param1,
+                param2: g.param2,
+                param3: g.param3,
+                param4: g.param4,
+                param5: g.param5,
+                param7: g.param7,
+                duration: g.duration,
+                has_linked1: g.has_linked1,
+                has_target,
+            };
+            let mut local = unsafe { r.read() };
+            let events = tracer_step(&mut local, &tick);
+            unsafe { r.write(local) };
+            let mut result = 0;
+            if events & EE_GFX_TRACER_IMPACT != 0 {
+                result = h.tracer_impact();
+            }
+            if events & EE_GFX_TRACER_HIT != 0 {
+                h.tracer_hit();
+            }
+            if events & EE_GFX_TRACER_OVER != 0 {
+                result = 7;
+            }
+            result
+        }
+        _ => 0,
+    }
+}
+
+/// `Load` (0xfcf21) and `Save` (0xfd04e) after `EEEffect3D`'s (`base`): the load ignores the base's result and stops at
+/// the media's error (the weapon tag point then 0); the read target id goes to the host. The save stops at the base's
+/// error.
+pub fn tracer_file<H: Effect3DHost, F: EffectFile>(
+    load: bool,
+    base: i32,
+    r: &mut EeGfxEffectRecord,
+    f: &mut F,
+    major: u32,
+    minor: u32,
+    h: &mut H,
+) -> i32 {
+    if !load {
+        return if base != OK { base } else { save_tracer(r, f, h.tracer_target_id()) };
+    }
+    let media = h.load_media();
+    if media != OK {
+        r.tracer.weapon_tag_point = 0;
+        return media;
+    }
+    let (mut id, mut read) = (0, false);
+    let result = load_tracer(r, f, major, minor, &mut id, &mut read);
+    if read {
+        h.tracer_saved_target(id);
+    }
+    result
 }
 
 /// What the beam's tick reads: the tick, the graphic effect's params 1-5 and 7 (the scroll's rate, the width's rate,
@@ -163,6 +349,10 @@ pub fn save_tracer<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F, id: u32) -> 
     }
     res
 }
+
+#[cfg(test)]
+#[path = "effect_tracer_tests.rs"]
+mod virtual_tests;
 
 #[cfg(test)]
 mod tests {
@@ -302,6 +492,7 @@ mod tests {
             timed: true,
             impact_created: true,
             weapon_tag_point: 3,
+            ..Default::default()
         };
         let mut m = Mem::default();
         assert_eq!(save_tracer(&r, &mut m, 0xffff_ffff), 0);

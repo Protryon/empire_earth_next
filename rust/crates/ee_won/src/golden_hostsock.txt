@@ -1,0 +1,103 @@
+new socket 0 o0
+listener connected 0 status 100004 port 0
+bind 0
+bound port nonzero 1
+listen 0
+lfs 4
+lfs after 2 2
+lfs after 1 1
+lfs after 4 4
+listener connected 0 status 100004
+new socket 0 o1
+client connected 0
+accept op o2
+connect 0
+accept status 0 killed 0 socket o0 is recv msg 0 bytes none
+server accepted o3
+client connected 1 status 100004 server connected 1
+send msg 0
+recv msg 0 5:68656c6c6f
+send msg 0
+recv msg 0 300:797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979797979
+send bytes 0
+recv bytes 4 0 4:61626364
+recv bytes 6 0 6:65666768696a
+send bytes 0
+recv line 0 16:485454502f312e3020323030204f4b00
+recv rest 0 4:6e657874
+recv msg none 100001 none
+recv bytes none 100001 none
+recv line none 100001 none
+new op 5 o4
+recv msg op socket o3 is recv msg 1 status 100004 killed 0 bytes none
+run block 1 status 0 bytes 5:6279206f70
+new op 4 o5
+recv bytes op is recv msg 0 bytes none
+run 2 0 status 0 bytes 5:3132333435
+new op 5 o6
+run async status 100000
+run async done 0 bytes 5:6173796e63
+new op 5 o7
+queued status 100000
+queued done 0 bytes 6:717565756564
+new op 5 o8
+killed no finish 1 status 100000
+killed finish 1 status 100002
+new op 6 o9
+line op 1 is recv msg 0 bytes 7:61206c696e6500
+new op 1 o10
+send op 1 bytes none addr zero port
+sent by op 0 3:78797a
+new op 3 o11
+send msg op 1 status 0
+sent msg by op 0 6:6f70206d7367
+new op 0 o12
+connect op socket null bytes none addr zero no port is recv msg 0 status 100004
+connect op run without socket 0 status 100022
+timer o13
+timer status 100004 killed 0 socket null bytes none addr zero port is recv msg 0
+timer killed 1 status 100004
+new op 4 o14
+file op 1 bytes none
+file 6:62696e0d0a00 modify time 1000000000
+new op 4 o15
+text file op 1
+appended file 12:62696e0d0a00740d0a780d0a
+new op 4 o16
+skip op 1 bytes 0:
+after skip 100001 none
+new op 4 o17
+progress op 1 bytes 10:30313233343536373839
+progress called 1 last 10
+new socket 1 o18
+new socket 1 o19
+udp bind 0
+udp bind reuse 0
+udp ports nonzero 1 1 connected 0
+send to 0
+recv from 0 8:646174616772616d loopback port
+recv from none 100001 none zero no port
+new op 7 o20
+recv from op 1 bytes 9:746f20746865206f70 addr loopback port socket o19
+new op 2 o21
+send to op 1 addr zero no port
+sent to by op 0 11:6f7020646174616772616d
+udp closed connected 0 status 100004
+send to reopened 0
+recv after reopen 0 8:72656f70656e6564
+recv from killed 100016 none
+killed status 100004
+closed connected 0 status 100004 lfs 4
+recv to close 0 4:6c617374
+recv msg after close 100020 none
+send closed 100016
+server killed connected 0 status 100004
+new socket 0 o22
+listener closed port 0
+connect refused 10061
+refused connected 1 status 100004
+self killed 0 status 100004
+self killed 1 status 100004
+self killed 1 status 100004
+op as obj killed 0 status 100004
+done

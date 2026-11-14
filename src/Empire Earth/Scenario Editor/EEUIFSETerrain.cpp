@@ -225,7 +225,7 @@ long EESEUITerrainTypeLB::DrawTextA()
     unsigned long theHeight = this->GetLineHeight();
     unsigned long i = 0;
     this->DrawScrollBarText();
-    this->mDrawCount--;
+    this->UIControl::DrawTextA();   // the base's draw count
     theRectangle = this->GetCopyTextRectangle();
     theRectangle.SetRight(theRectangle.GetRight() + 1.0f);
     theRectangle.SetLeft(theRectangle.GetLeft() + 16.0f);
@@ -235,7 +235,7 @@ long EESEUITerrainTypeLB::DrawTextA()
         theRectangle.SetBottom(theRectangle.GetTop() + (float)theHeight);
         this->mCopyText->SetLocation(GE2DPoint(theRectangle.GetLeft(), theRectangle.GetTop()));
         this->mCopyText->SetText(this->mCopyLineArray[i].mName);
-        theResult = this->mForm->DrawClippedText(theRectangle, this->mCopyText, this);
+        theResult = this->GetForm()->DrawClippedText(theRectangle, this->mCopyText, this);
         theYOffset += theHeight;
     }
     return theResult;
@@ -248,18 +248,18 @@ void EEUIFSETRBPaintType::Check()
     UIRadioButton::Check();
     switch (this->GetId()) {
     case kSETerrainTerrainButton:
-        this->mForm->GetControlById(kSETerrainTerrainTypeLabel)->SetDisplayMode(kDisplayModeShown);
-        this->mForm->GetControlById(kSETerrainTerrainType)->SetDisplayMode(kDisplayModeShown);
-        this->mForm->GetControlById(kSETerrainTerrainColorTypeLabel)->SetDisplayMode(kDisplayModeShown);
-        this->mForm->GetControlById(kSETerrainTerrainColorType)->SetDisplayMode(kDisplayModeShown);
-        this->mForm->GetControlById(kSETerrainBitmap)->SetDisplayMode(kDisplayModeShown);
+        this->GetForm()->GetControlById(kSETerrainTerrainTypeLabel)->SetDisplayMode(kDisplayModeShown);
+        this->GetForm()->GetControlById(kSETerrainTerrainType)->SetDisplayMode(kDisplayModeShown);
+        this->GetForm()->GetControlById(kSETerrainTerrainColorTypeLabel)->SetDisplayMode(kDisplayModeShown);
+        this->GetForm()->GetControlById(kSETerrainTerrainColorType)->SetDisplayMode(kDisplayModeShown);
+        this->GetForm()->GetControlById(kSETerrainBitmap)->SetDisplayMode(kDisplayModeShown);
         break;
     case kSETerrainMountainsButton:
-        this->mForm->GetControlById(kSETerrainTerrainTypeLabel)->SetDisplayMode(kDisplayModeHidden);
-        this->mForm->GetControlById(kSETerrainTerrainType)->SetDisplayMode(kDisplayModeHidden);
-        this->mForm->GetControlById(kSETerrainTerrainColorTypeLabel)->SetDisplayMode(kDisplayModeHidden);
-        this->mForm->GetControlById(kSETerrainTerrainColorType)->SetDisplayMode(kDisplayModeHidden);
-        this->mForm->GetControlById(kSETerrainBitmap)->SetDisplayMode(kDisplayModeHidden);
+        this->GetForm()->GetControlById(kSETerrainTerrainTypeLabel)->SetDisplayMode(kDisplayModeHidden);
+        this->GetForm()->GetControlById(kSETerrainTerrainType)->SetDisplayMode(kDisplayModeHidden);
+        this->GetForm()->GetControlById(kSETerrainTerrainColorTypeLabel)->SetDisplayMode(kDisplayModeHidden);
+        this->GetForm()->GetControlById(kSETerrainTerrainColorType)->SetDisplayMode(kDisplayModeHidden);
+        this->GetForm()->GetControlById(kSETerrainBitmap)->SetDisplayMode(kDisplayModeHidden);
         break;
     }
 }
