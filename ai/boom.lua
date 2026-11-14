@@ -777,7 +777,19 @@ function M.step(view, memory)
     -- to gather it (a playtest: a raid's scramble spent the Copper Age's iron, 433 to 22, and the last safe iron mine ran
     -- out: the Stone Age for the rest of the game)
     local no_site = memory.no_site or {}
+    -- (BO.OPT.overrun_spend, the owner: respond to raids; against the Lua classic a 40-soldier attack met boom saving
+    -- for Copper with food 1600 and gold 730 kept as nearly paid, 9 soldiers wanted 50 and none trained while the
+    -- citizens fell 74 -> 45) a threat OVERRUN_X times the army and towers spends the save too
+    local overrun = ECON.order and BO.OPT.overrun_spend and threatened and short_strength > 0
+        and (memory.threat or 0) * 100 >= BO.OVERRUN_PCT * (view.army_strength + towers_built * TOWER_STRENGTH)
+    if overrun and not memory.overrun_said then
+        print(string.format("overrun threat=%d army=%d towers=%d", memory.threat or 0, view.army_count, towers_built))
+    end
+    memory.overrun_said = overrun or nil
     local function guarded(r)
+        if overrun then
+            return false
+        end
         -- (ECON.iron_guard, boom-defence's late-game finding: the Bronze save unpaid 44 minutes on iron alone, stock 3-27,
         -- the reserve 0 iron while the light army, always short in Copper, retrained spearmen and macemen from it) from
         -- the Copper Age, while saving, the epoch's iron is kept from the army too

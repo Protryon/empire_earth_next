@@ -66,6 +66,7 @@ M.OPT = {
     cit_parity = false,     -- (off until benched) from stone_grow the citizen target follows the biggest enemy town seen
     army_parity = false,    -- (off until benched) from Stone the army follows the largest enemy army seen
     cit_grow = false,       -- (off until benched) the developed Stone and the Copper town grow on to CIT_GROW
+    overrun_spend = false,  -- (off until benched) a threat OVERRUN_PCT of the army and towers spends the save too
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -142,6 +143,7 @@ M.ARMY_PARITY_PCT = 80     -- (OPT.army_parity) percent of the largest enemy arm
 M.ARMY_PARITY_MOST = 80    -- (OPT.army_parity) soldiers at most
 M.ARMY_PARITY_MS = 600000  -- (OPT.army_parity) a sighting counts this long
 M.CIT_GROW = {stone_developed = 110, copper = 180}   -- (OPT.cit_grow) citizens_max
+M.OVERRUN_PCT = 200        -- (OPT.overrun_spend) percent of the army's and towers' strength
 M.SAVE_BANK = 300          -- (OPT.save_retarget) a resource is banked past its cost by this much
 M.SAVE_FLOOR = {food = 18, wood = 10, gold = 12, stone = 6}   -- (OPT.save_retarget) the gatherers a donor keeps
 M.PRE_HUNT_MIN = 3         -- (OPT.pre_hunt_patch) the owner's 3-6 hunting
