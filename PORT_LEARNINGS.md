@@ -14499,3 +14499,90 @@ statement, no algorithm moved.
   `RepairPointers`, `UpdatePlayer`) can now work on `EeUnitsPlayerSaved` from Rust. `Animate`'s remaining C++ is
   the sound's play (sound manager glue). Still open from round 23's list: `EEUnitClass`'s constructor, `FindPath`/
   `AdjustPath`, `EEComplexUnit`'s copy, reset and `UpdateHidden` (tile walks over the unit lists).
+
+## R5b.5, third round: the manager's numbers, saves and timed effects, Update's trigger round, Set Player Attribute and the objects' Evaluate in Rust (ee_scenario manager.rs, round.rs, player.rs, objeval.rs; branch rust-triggers3, 2026-11-13)
+
+| Function | Was (C++) | Now (Rust) |
+|---|---|---|
+| `EEScenarioManager`'s numbers (+0x200..+0x238) | members | `EeScenarioManagerFields` (manager.rs), the class's second base: same names and C++ types |
+| `std::vector<EESMTimedEffect> mTimedEffects` and its upkeep | the vector, `AddTimedEffect`'s stable sort, `RemoveTimedEffects`, `EraseTimedEffect`, `SetTimedEffectHasRun`, the `Renumber`/`RemapEffects` and `EndCinematic` parts | `EeScenarioTimedQueue` (Rust-owned; the C++ holds the pointer from the ctor to the dtor) |
+| `Reset`'s numbers, `Load`, `Save` | 13 assignments, 150 + 104 lines | `manager::reset`, `manager::load`, `manager::save` over the element stream |
+| `Update` | 50 lines | round.rs over one operation callback (`EE_SCENARIO_ROUND_*`) |
+| `EESMEffect::SetPlayerAttribute` | a 128-line switch | player.rs: a plan of writes (`EE_SCENARIO_WRITE_*`) |
+| `EESMObject::Evaluate`'s body | 122 lines | objeval.rs over the C++ object's own list and the world's units (`EE_SCENARIO_READ_OBJ_*`, `EE_SCENARIO_WRITE_OBJ_*`) |
+
+- **Goldens first, from the unmodified C++.** Three new capture records (ee/EEScenarioCapture.h): SMPA (every Set
+  Player Attribute call, the any/all recursions too: the inputs, the seeds, the player's numbers after, the
+  statistics' saved bytes' FNV and the pending effects after), SMTK (every `ExpandTokens`: the text's and the
+  result's FNV) and SMFP (every `FindPlacement`, the retry too). Recorded on the six scenarios before any move
+  (commit ab9f4ec8) together with a check that every earlier SM digest still matched. The moves of this round are
+  checked by SMSV (the manager's saved bytes after `Load` and every 120th round), SMUP and SMTE/SMEX (each carries
+  the timed effects' list), SMOB (every object evaluation, units before and after) and SMPA.
+- **The game barely reaches Set Player Attribute and never a token.** SMPA: 7 calls in six scenarios (variables
+  set exactly, the population cap set exactly); SMTK: 60 calls, the text never changed. Set Player Attribute has
+  its own golden driver: `build/trig3_draft/gen_pa_driver.py` (TEST ONLY scratch, not committed) takes the original
+  body from git, puts it over stand-in players, world, physics and manager, and prints for 3 player kinds (none, a
+  human, a computer) x 73 attributes (0..70, 100, 0xffffffff) x 4 modes x 9 amounts (the 32-bit limits included)
+  the calls in order (recursions, random draws, statistics, tributes, the pending effect) and the player's numbers
+  after: `golden_player_attribute.txt` (7,884 lines), replayed by `player::tests::golden_matches_the_original_body`
+  through a mock host that keeps the same numbers. Where `long` is 64 bits the amounts at the 32-bit limits wrap
+  otherwise (the C++ there does too): those lines are compared on Windows only.
+- **A queue the C++ holds by pointer.** The manager's timed effects are read by the capture and `GetTimedEffect`
+  and changed by the editor's sort and renumbering, an effect's End Cinematic (re-arming itself through
+  `SetTimedEffectHasRun`), `EndCinematic` and the trigger round; every one of them is now a call on the Rust queue
+  (`ee_scenario_timed_*`). The queue is created in the ctor (before `Reset`) and freed in the dtor. The stable sort
+  is `sort_by_key` (stable; a strict weak order on the time gives the one result `std::stable_sort` gives).
+  `SetTimedEffectHasRun(effect)` compared each entry's `GetEffect(index)` with the effect: it is the effect's place
+  in `mEffects` (the pointers are distinct), `None` when it is not there.
+- **The manager's save over the element stream.** Five more stream operations (stream.rs): an element of list
+  `slot` loaded (the C++ creates it, runs its `Load`, keeps or frees it as the original: an "object 0" condition
+  freed, a pending effect kept only while a saved game, not a scenario, loads; freed on an error), saved, counted;
+  the media strings; the dialog messages (`EESMLoadVector`/`EESMSaveVector`). The Rust keeps the original's error
+  shape: every load error stops the rest (the `goto theEnd`, the timed effects' early `return` and the pending
+  effects' `break` all end with nothing more read); the save writes each of the first five sections' counts
+  whatever came before and returns the first of their errors, the timed effects only after a good areas section,
+  then the rest's error; the last chat text's result is now returned (the port had already taken it).
+- **Update through one operation callback, the numbers read again after each.** An effect run inside the round can
+  start or end a cinematic (`mCinematicStartTime`, `mIsEndingCinematic`), show a dialog (`mIsShowingDialog`),
+  schedule a timed effect or re-arm one (the queue): `Round::fields` and `Round::queue` hand a borrow that ends
+  before the next callback, and the loop reads the queue's size again at each step (as `(int)mTimedEffects.size()`
+  did). A due time is the entry's `unsigned long` converted to `f32` and compared with the clock, as the C++ did. A
+  new entry sorted before the current one shifts the list, so the entry at the same index can run twice in a round
+  when an effect re-arms itself: kept (a unit test shows it).
+- **Set Player Attribute's recursion goes back through the C++ entry.** Any Resource draws a resource and All
+  Resources loops: both call the member again, which made a capture record per call. The Rust plan asks the host
+  (`EE_SCENARIO_WRITE_SET_ATTRIBUTE`) instead of recursing itself, so SMPA keeps one record per call (the lesson of
+  round 1's SMCP). The write host is a third callback of `EeScenarioHost` (`write(op, player, b, c, d)`).
+- **Evaluate over the C++ list.** A filter can evaluate another object (the parent, the nearness target) or this one
+  again (a target that is the object itself), which changes `mUnits` and `mIsSelectOnMap` in the middle of the loop;
+  the Rust therefore reads and changes the C++ list by operation (count, element, erase, push, clear, the parent's
+  copy, the shuffle with its physics draws, the truncation) and reads the object's numbers afresh at each use; the
+  parent, the target and the area are the ones resolved on entry, as the original's pointers were. A player's unit
+  chain is walked with a cursor in the host context (`EE_SCENARIO_READ_PLAYER_UNIT`: the id and the class type in one
+  read). The class filter is the Rust `accepts_class` (round 1) and the player choices the Rust `choose_player` (SMCP
+  is not written inside an object's evaluation, as before).
+- **Coverage (the six scenarios' SMOB records):** 641,360 evaluations of dynamic objects over the owners' units,
+  16,505 of static objects over a parent's units; area check 1 (286,822), attribute check 1 (50,005), nearness
+  check 1 (20,768), state check 1 (61,501), selected-by check 1 (6,280). Not reached by a game: area, attribute,
+  nearness, state and selected-by checks 2, visible-by checks, the dead included: the unit tests only. SMPA: Set
+  Player Attribute's variable and population cap cases (the rest: the golden driver). The manager's `Load` runs on
+  every scenario load (SMSV kind 0) and its `Save` every 120th round (kind 1) and in the saveload matrix (random
+  maps: the built-ins and the pending effects); `Update` every physics tick of every game (the oracle), its round in
+  the scenarios only.
+- **C++ lines** (src and include, include/rust aside): the capture records +109; the manager -221, Update +1 (the
+  operation callback is as long as the body it replaced), Set Player Attribute -84, Evaluate -7: net -202 (-311
+  without the TEST ONLY records). EEScenarioManager.cpp 2,565 -> 2,351, EESMEffect.cpp 2,680 -> 2,585,
+  EESMObject.cpp 1,805 -> 1,781. The operation hosts restate the original's statements one per line: what moved is
+  the logic (the order, the counts and wraps, the error shapes); the C++ deletion grows when the hosts' callers move
+  too.
+- **Two shell gotchas.** A bash heredoc holding Rust test code twice failed to parse ("unexpected EOF while looking
+  for matching `''") although its delimiter was quoted: Rust code went into files through the editor instead. And
+  Python's text-mode `open(..., 'w')` on Windows wrote a new Rust file with CRLF (rustfmt accepts it; the repository
+  wants LF): write Rust with `newline='\n'`.
+- **Not moved, and why.** `ExpandTokens`: the string scan over `UWideString` (`Find`, `GetIndexedSubstring` over
+  `PlatMbs*`) would need the platform's UTF-8 semantics in this crate, and no game reaches a token; note its quirk for
+  the next round: a text shorter than 4 characters makes `Find(...) < GetLength() - 4` true (unsigned wrap) for every
+  marker, and with an empty replacement the loop never ends. `IsNearUnit`/`IsNearTile` (footprint distances,
+  line of sight, reach: host reads, next), `GetTiles` (the area's tile cache), `GetUnitAttribute` (a 474-line switch
+  of unit and class reads: a table of reads by attribute would move it), `FindPlacement` (SMFP is its golden), the
+  world-glue effect bodies.
