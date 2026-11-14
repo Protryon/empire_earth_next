@@ -20533,6 +20533,15 @@ that paragraph. Headers current after it, `rust_includes.py` changed nothing. Th
 final tree (started by round 4, finished during this round) ended `ALL EXIT 0`: all 105 programs exit 0. Simulation
 code did not change, so the sim_capture profiles were not run.
 
+rust advanced while those gates ran, so it was merged twice more. 7347206d conflicted in PORT_LEARNINGS.md only (both
+sides appended a section: resolved as rust's file with this section after it); its tree did not build (lle's
+GETransformation.cpp still defined MakeLookAtTransform and both ZeroOrientation, whose declarations the dead code
+round had removed), which rust fixed in 0853699a; that merge (ceae4354) is the branch's tip. On ceae4354:
+`build.py -j 3 --sim` EE-AOC and EE-SIM 0 unresolved, 0 duplicates; `rust_build.py gate` PASS (3,380 tests);
+oracle seeds 2-7 identical; the twelve lobby `wontest` programs above exit 0; the test profile 0 / 0;
+`lan_game.py` `RESULT PASS lan-game` (PT 2932 / 2932). Headers current and `rust_includes.py` changed nothing after
+each merge.
+
 ### Left for the next rounds
 
 - The EE room's last classes: EELobbyColorButton (the button and its 4 x 4 colour chooser popup: paint, hover,
