@@ -783,8 +783,8 @@ void DumpState(const std::string& inPath)
                 continue;
             fprintf(f, "TOWN %lu %ld units=%ld patrol=%ld hull=", i, (long)theTown->mTownID, (long)theTown->mNumUnits,
                     theTown->mPatrolGroup != NULL ? (long)theTown->mPatrolGroup->mID : -1L);
-            for (unsigned long v = 0; v < theTown->mHull.GetPointCount(); v++)
-                fprintf(f, "%ld,%ld ", (long)theTown->mHull.GetPoint(v)->GetX(), (long)theTown->mHull.GetPoint(v)->GetY());
+            for (unsigned long v = 0; v < theTown->GetHullPointCount(); v++)
+                fprintf(f, "%ld,%ld ", (long)theTown->GetHullPoint(v).GetX(), (long)theTown->GetHullPoint(v).GetY());
             fprintf(f, "\n");
         }
         for (size_t g = 0; g < p->mPatrolGroups.size(); g++) {

@@ -81,11 +81,11 @@ unsigned short EEAIRectangleArea::UpdateContinents()
                 this->mNumWaterTiles++;
             else if (theContinent->GetCategory() == kContinentCategorySpace)
                 this->mNumSpaceTiles++;
-            theCount = theCounts.find((long)theContinent->mID);
+            theCount = theCounts.find((long)theContinent->GetID());
             if (theCount != theCounts.end())
                 theCount->second++;
             else
-                theCounts.insert(std::make_pair(theContinent->mID, 1L));
+                theCounts.insert(std::make_pair(theContinent->GetID(), 1L));
         }
     }
     theResult = 0;
@@ -122,7 +122,7 @@ U2DPoint<long> EEAIRectangleArea::GetRandomPoint()
     EEMap* theMap = gWorld.mMap;
     if (!theMap || theMap->GetTile(theResult.mX, theResult.mY))
         return theResult;
-    this->mTiles.BuildPointList(thePoints, 1);
+    this->GetTileSet().BuildPointList(thePoints, 1);
     theTiles.reserve(thePoints.size());
     for (long i = thePoints.size() - 1; i >= 0; i--) {
         if (theMap->GetTile((*(thePoints.begin() + i)).mX, (*(thePoints.begin() + i)).mY))

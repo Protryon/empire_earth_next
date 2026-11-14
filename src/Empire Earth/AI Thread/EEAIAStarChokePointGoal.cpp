@@ -84,8 +84,8 @@ void EEAIAStarChokePointGoal::CollectTiles()
 void EEAIAStarChokePointGoal::CreateChokePoint()
 {
     EEAIChokePoint* theChokePoint = new EEAIChokePoint;
-    theChokePoint->mIndex = this->mNextIndex;
-    theChokePoint->mAreaType = kAIAreaChokePoint;
+    theChokePoint->SetIndex(this->mNextIndex);
+    theChokePoint->SetAreaType(kAIAreaChokePoint);
     theChokePoint->Create(this->mTiles);
     theChokePoint->UpdateBounds(gWorld.mInfluenceTable);
     std::sort(this->mAreaSerials.begin(), this->mAreaSerials.end());
@@ -94,8 +94,8 @@ void EEAIAStarChokePointGoal::CreateChokePoint()
         this->mAreaSerials.erase(theEnd, this->mAreaSerials.end());
     theChokePoint->AddAreaSerials(this->mAreaSerials);
     if (this->mTiles.size() > 0)
-        theChokePoint->mContinentID = gContinentManager.GetContinentID(this->mTiles.front().GetX(), this->mTiles.front().GetY());
-    this->mStorage->SetDirtyBounds(theChokePoint->mHull.GetBounds());
+        theChokePoint->SetContinentID(gContinentManager.GetContinentID(this->mTiles.front().GetX(), this->mTiles.front().GetY()));
+    this->mStorage->SetDirtyBounds(theChokePoint->GetHullBounds());
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mAreaSerials.clear();

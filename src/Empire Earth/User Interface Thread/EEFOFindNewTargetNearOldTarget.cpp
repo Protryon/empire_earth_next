@@ -247,9 +247,9 @@ bool EEUUPointNearerToUnit::operator()(const GE2DPoint& inFirst,
 bool EEUUTileInPathArea::operator()(const EETileCoordinate& inFirst, const EETileCoordinate& inSecond) const
 {
     EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(inFirst);
-    unsigned short theFirst = theArea != NULL ? theArea->mID : 0;
+    unsigned short theFirst = theArea != NULL ? theArea->GetID() : 0;
     theArea = gContinentManager.GetPathAreaAt(inSecond);
-    unsigned short theSecond = theArea != NULL ? theArea->mID : 0;
+    unsigned short theSecond = theArea != NULL ? theArea->GetID() : 0;
     if (theFirst == this->mID && theSecond != this->mID)
         return true;
     return false;
@@ -1348,8 +1348,8 @@ bool EEPickTileNear(std::vector<EETileCoordinate>& inTiles, EEComplexUnit* inUni
             && (theTileContinent == NULL || theContinent == NULL || theContinent == theTileContinent
                 || gContinentManager.AreConnectedForUnit(inUnit, theTileContinent, theContinent)
                 || ((inUnit->mUnitClass->GetDomains() & kMovementSea)
-                    && gContinentManager.mTileFlags[theTileContinent->mID * gContinentManager.mFlagsWidth
-                                                    + theContinent->mID]))
+                    && gContinentManager.mTileFlags[theTileContinent->GetID() * gContinentManager.mFlagsWidth
+                                                    + theContinent->GetID()]))
             && EEFindPlaceOnTile(inUnit->GetComplexUnit(), NULL, inContainer->GetTileX(), inContainer->GetTileY(),
                           inContainer->GetClass()->GetTileSize(), it->GetX(), it->GetY(), 0, &outLocation)
             && (inIgnoreBlockedLine || !EEIsLineBlocked(it->GetX(), it->GetY(), inContainer->GetTileX(), inContainer->GetTileY(), &theArg5, &theX, &theY)))
@@ -1970,8 +1970,8 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEComplexUnit* inUnit, EEUnitClass* inC
                 || theContinent == NULL || theOther == NULL
                 || (theContinent != theOther && !gContinentManager.AreConnected(theContinent, theOther, theKind)
                     && (((inClass->mDomains & kMovementSea) == 0 && !inArg11)
-                        || !gContinentManager.mTileFlags[theOther->mID
-                                                        + theContinent->mID * gContinentManager.mFlagsWidth])))
+                        || !gContinentManager.mTileFlags[theOther->GetID()
+                                                        + theContinent->GetID() * gContinentManager.mFlagsWidth])))
                 continue;
             if (!inCorners && inRings > 1) {
                 if (inTarget != NULL) {
@@ -3916,7 +3916,7 @@ bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoin
     } else {
         EEGetTilesAroundUnit(inUnit, inTarget, 1, 0, 1, theTiles);
         EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(U2DPoint<long>(inUnit->mTileX, inUnit->mTileY));
-        std::stable_sort(theTiles.begin(), theTiles.end(), EEUUTileInPathArea(theArea ? theArea->mID : 0));
+        std::stable_sort(theTiles.begin(), theTiles.end(), EEUUTileInPathArea(theArea ? theArea->GetID() : 0));
         if (inUnit != NULL && inUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen) {
             EETileCoordinate theTile;
             theTile.mX = inUnit->mTileX;
@@ -6075,8 +6075,8 @@ bool EECanPlaceUnitOnTile(EEPlayer* inPlayer, EEComplexUnit* inUnit, long inUnit
         } else if (!inSkipPlayerChecks && inPlayer != NULL && inPlayer->mActiveGroup->GetNumUnits() != 0) {
             unsigned short theID = inPlayer->mActiveGroup->GetContinent();
             EEAIContinent* theOther = gContinentManager.GetContinentByID(theID);
-            if (theOther != NULL && ((theOther->mCategory != kContinentCategoryWater && !theClass->mTerrainTypes[kTerrainDeepWater])
-                                     || (theOther->mCategory != kContinentCategorySpace && !theClass->mTerrainTypes[kTerrainSpace])))
+            if (theOther != NULL && ((theOther->GetCategory() != kContinentCategoryWater && !theClass->mTerrainTypes[kTerrainDeepWater])
+                                     || (theOther->GetCategory() != kContinentCategorySpace && !theClass->mTerrainTypes[kTerrainSpace])))
                 theResult = gContinentManager.AreConnectedByID(theID, theContinent, inPlayer->GetCitizenPassability());
         }
     }

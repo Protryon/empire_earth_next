@@ -21315,3 +21315,64 @@ completions could go.
 The merge of rust (at 84001ecf) needed nothing: no conflict, `rust_build.py header` current, `rust_includes.py`
 changed nothing. The second commit's gates were run once, on the merged result (a deletion of methods with no
 caller; the build would have failed on any).
+
+## R5b.1, the areas: the AI areas behind accessors, EEAIArea's and EEAIContinent's records in Rust (ee_astar area.rs, continent.rs; branch rust-astar-areas1, 2026-11-14)
+
+The lane restarted on its blocker (b): the AI and the units read the areas' members directly, so no area data
+could leave C++. This round put every member of `EEAIArea` and its six analysis kinds behind accessors, then moved
+the base's and the continent's data into Rust records.
+
+- **The accessors (C++ only, no behaviour change).** `EEAIArea`'s tile set, hull, region bounds, serial and type
+  and the members of `EEAIContinent`, `EEAIPathArea`, `EEAIHill`, `EEAIForest`, `EEAIChokePoint` and
+  `EEAIRectangleArea` are private; 64 files changed (the AI, the units, the scenario effects, the ambient sound, the
+  persistent world helper, the save, the captures). The hull is read through area-level methods (`GetHullCenter`,
+  `GetHullBounds`, `HullContains`, `GetHullPoint`, `GetHullClosestOutlinePoint`, ...), not as an object, so it could
+  move. Each kind writes and reads its own saved members (`WriteFields`/`ReadFields`, the continent's lists
+  `WriteLists`/`ReadLists`, the hull `WriteHull`/`ReadHull`): the same bytes in the same order.
+  - **How:** the members were made private and renamed nowhere; the compiler's "is a private member" errors drove
+    a line rewriter (getter, or setter for an assignment). Its one trap: a rewritten line may hold another class's
+    member of the same name (`theLocation.mSerial = theContinent->mSerial` rewrote both sides; EECPILocation has
+    its own public `mSerial`; the hill and path area goals' own `mContinentID`/`mKind`). The second compile names
+    every such line ("no member named SetSerial in EECPILocation"); review the diff for the rest.
+  - clang stops listing a unit's errors at its limit: a unit with many sites needs several rounds.
+- **`EEAIArea`'s record (`area.rs`).** `EeAStarAreaRecord` is the class's private first base: the hull's points
+  (a Rust-owned vector), its bounds (`U2DRectangle<long>`'s layout, handed out as one), center and area, the region
+  bounds, the serial and the type. The hull's rebuild (`Create`, `AddTiles`, `UpdateHull`, `RemoveTile`: the tile
+  set's extreme edge points, then `SetPoints(points, false)`) and `UpdateBounds` are Rust; the tile set stays the
+  C++ wrapper over its Rust handle (`sparse.rs`), which the record's calls take (`GetHandle`). The class has no copy
+  constructor any more (the record owns its hull; nothing copied an area).
+  - **`U2DPolygon<long>`/`U2DConvexHull<long>` are gone:** the area was their only user. `lle/U2DPolygon.h`
+    keeps the seam's point helpers and the geometry capture records; the eight hull exports nothing calls any more
+    (`set_points`, `sort`, `center`, `area`, `project_point`, `closest_points`, `closest_point_index`,
+    `scan_lines`) and `hull::sort` were deleted.
+  - **The HULL capture records are written by the area now**, at the calls the class made them (`SetPoints` kind
+    1 in the rebuilds, 6 `Contains` inside the bounds, 4 and 2 the closest point and outline point), each from an
+    outer `EEGeomCaptureScope` around the Rust call; kind 1 rebuilds its input (the extreme edge points) only when
+    the record is written. The HULL, AREA, CNTB and CNTR digests stayed equal to the C++ goldens in the four
+    profiles: the records are the same calls in the same order.
+- **`EEAIContinent`'s record (`continent.rs`).** `EeAStarContinentRecord` is the continent's third base: the
+  shore tiles, the choke point indices, the seven id lists (forests, path areas, hills, the four region lists), the
+  seven chain counts, the category and the id. The lists' upkeep is Rust (`AddPathAreaID` unless present,
+  `RemovePathAreaID`/`RemoveForestID` the first of equals, `AddChokePoint`/`AddForestID`/`AddHillID` push and sort
+  with duplicates kept, `AddIDBC`..`AddIDEC` unless present in the order added). The C++ reads the lists through
+  `EEAIListView<T>` (pointer and size over the Rust vector, valid until that list changes; it converts to a
+  `std::vector` copy, so the sites that copied or bound a `const std::vector&` compile unchanged). No site holds a
+  view across a change of the same list. The neighbours stay a C++ vector (pointers to C++ objects).
+- **`MergeWaypoints` is not dead:** the progress file said it had no caller; `EEUnitClass`'s collision detour calls
+  it twice. Its search moved instead (`path_splice::merge_waypoints`, the waypoint found; the C++ appends the ones
+  after it).
+- **Left of blocker (b):** the object bookkeeping of `Rebuild` and `RepairPathArea` and the manager's object queries
+  walk the C++ area objects (the manager's tables of pointers, the virtual slots, `EETown`/`EEHerd`/`EECPIArmy` as
+  areas); the other kinds' scalar members and the path area's sector ids, the choke point's area serials are
+  still C++ members (behind accessors now). Blocker (c) (`CanGetTo`, the path manager's request handling) was not
+  started this round.
+- **Gates** (on the merge of `rust` 0853699a: no conflict, the headers current): `build.py -j 3 --sim` 0/0 for EE-AOC and EE-SIM; the sim oracle identical on seeds 2-7; `sim_capture.py
+  check` PASS at seeds 2-3 in the four profiles (171, 172, 173 and 189 digests; the 3-5 without a golden are other
+  lanes' SMSV/TNMT tags); the save/load matrix (`saveload --settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) PASS against the expectations (4, 2, 3, 4, 2, 1, 0, 1, 4 and 0 of 4 saves
+  continuing identically); `rust_build.py gate` PASS (3,373 tests; ee_astar 140: 10 new, the hull sort's deleted); the
+  windowed-software test profile 0/0; one `sim_bench` game (seed 2, Small, Hard, 2 AIs, 2,700 s): time cap,
+  both AIs alive (population 21 and 59, 18 and 20 buildings). Before the merge each code commit was built (0/0) and oracle-checked on seeds
+  2-3, and the four capture profiles passed at seeds 2-3 on the area record. Not run: `gates.sh` or any harness
+  session (the tour is the only thing that draws: nothing here is drawn, the hulls are read by the AI only),
+  `eedata check`/`cppgate` (no data change), macOS or Linux builds.

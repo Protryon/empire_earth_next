@@ -366,7 +366,7 @@ float EECPASGLand::GetDangerRatio(long inArg1)
 EEAIContinent* EECPASGLand::GetTargetContinent(unsigned short inID, unsigned short inOtherID, long inArg3)
 {
     EEAIContinent* theContinent = gContinentManager.GetContinentByID(inID);
-    if (inID == inOtherID && (theContinent == NULL || theContinent->mCategory == kContinentCategoryLand))
+    if (inID == inOtherID && (theContinent == NULL || theContinent->GetCategory() == kContinentCategoryLand))
     {
         const std::vector<EEAIContinent*>& theContinents = gContinentManager.mContinents;
         return theContinents[inOtherID];
@@ -817,10 +817,10 @@ bool EECPASGLand::CanReach(const EECPILocation* inLocation)
         // Keep that distinction in case IsValid repairs the copy.
         EEAIContinent* theContinent = gContinentManager.GetContinentAt(inLocation->mTile.GetX(), inLocation->mTile.GetY());
         if (theContinent != NULL) {
-            if (theCurrentID == theContinent->mID) {
+            if (theCurrentID == theContinent->GetID()) {
                 theResult = true;
-            } else if (theContinent->mCategory != kContinentCategoryCliff) {
-                bool theAllWater = gContinentManager.AllNeighborsOfKind(theContinent->mID, kContinentCategoryCliff);
+            } else if (theContinent->GetCategory() != kContinentCategoryCliff) {
+                bool theAllWater = gContinentManager.AllNeighborsOfKind(theContinent->GetID(), kContinentCategoryCliff);
                 for (long i = this->mUnits.size() - 1; i >= 0 && !theResult; --i) {
                     EEUnitClass* theClass = this->mUnits[i]->GetUnit()->GetUnitClass();
                     if (!theAllWater) {
@@ -830,10 +830,10 @@ bool EECPASGLand::CanReach(const EECPILocation* inLocation)
                         theNeedBuildable = true;
                     }
                 }
-                if (theResult == true && (theContinent->mCategory == kContinentCategoryWater || theContinent->mCategory == kContinentCategorySpace)) {
+                if (theResult == true && (theContinent->GetCategory() == kContinentCategoryWater || theContinent->GetCategory() == kContinentCategorySpace)) {
                     theResult = false;
                     for (long i = this->mUnits.size() - 1; i >= 0 && !theResult; --i) {
-                        theResult = (*(this->mUnits.begin() + i))->GetUnit()->GetUnitClass()->CanMoveOnTerrain(this->mUnits[i]->GetUnit(), theContinent->mCategory == kContinentCategoryWater ? 1 : 12);
+                        theResult = (*(this->mUnits.begin() + i))->GetUnit()->GetUnitClass()->CanMoveOnTerrain(this->mUnits[i]->GetUnit(), theContinent->GetCategory() == kContinentCategoryWater ? 1 : 12);
                     }
                 }
             }
@@ -985,20 +985,20 @@ bool EECPASGLand::FindCrossingTile(EEAIContinent* inFirst, EEAIContinent* inSeco
         } else {
             // the original uses BC's count even when indexing the separate DC vector; an index past DC's end
             // reads as id 0 instead of reading past the vector
-            for (long i = inFirst->mIDsBC.size() - 1; i >= 0; i--) {
+            for (long i = inFirst->GetIDsBC().size() - 1; i >= 0; i--) {
                 if (!(inWater)) {
-                    if (std::find(inSecond->mIDsBC.begin(), inSecond->mIDsBC.end(), inFirst->mIDsBC[i]) != inSecond->mIDsBC.end())
-                        theIDs.push_back(inFirst->mIDsBC[i]);
+                    if (std::find(inSecond->GetIDsBC().begin(), inSecond->GetIDsBC().end(), inFirst->GetIDsBC()[i]) != inSecond->GetIDsBC().end())
+                        theIDs.push_back(inFirst->GetIDsBC()[i]);
                 } else {
-                    unsigned short theDCID = (unsigned long)i < inFirst->mIDsDC.size() ? inFirst->mIDsDC[i] : 0;
-                    if (std::find(inSecond->mIDsDC.begin(), inSecond->mIDsDC.end(), theDCID) != inSecond->mIDsDC.end())
+                    unsigned short theDCID = (unsigned long)i < inFirst->GetIDsDC().size() ? inFirst->GetIDsDC()[i] : 0;
+                    if (std::find(inSecond->GetIDsDC().begin(), inSecond->GetIDsDC().end(), theDCID) != inSecond->GetIDsDC().end())
                         theIDs.push_back(theDCID);
                 }
             }
             if (theIDs.size() > 0)
                 inFirst->GetShoreInRegions(theIDs, theTiles, theKind);
             else
-                inFirst->GetShoreNextTo(inSecond->mID, theTiles);
+                inFirst->GetShoreNextTo(inSecond->GetID(), theTiles);
         }
         if (inFirst != inSecond)
             std::sort(theTiles.begin(), theTiles.end(), EECPASGLandTileFarther(inTile));
@@ -1963,8 +1963,8 @@ bool EECPASGLand::ChooseNearestUnloadPoint(bool inWater)
             theContinent = NULL;
         theBest.second = 0;
         if (theContinent != NULL) {
-            if (theContinent->mCategory != kContinentCategoryLand) {
-                gContinentManager.GetAdjacentIDs(theIDs, theContinent->mID);
+            if (theContinent->GetCategory() != kContinentCategoryLand) {
+                gContinentManager.GetAdjacentIDs(theIDs, theContinent->GetID());
                 for (long i = theIDs.size() - 1; i >= 0; i--) {
                     EEAIContinent* theNeighbor = gContinentManager.GetContinentByID(theIDs[i]);
                     if (theNeighbor != NULL && theNeighbor->GetCategory() == kContinentCategoryLand &&
@@ -2029,7 +2029,7 @@ bool EECPASGLand::ChooseAirUnloadPoint()
                                 if (gWorld.GetMap()->GetTile(thePoint.GetX(), thePoint.GetY()) == NULL || !this->CanTransportLandAt(thePoint))
                                     continue;
                                 thePending = false;
-                                this->mUnloadLocation.mSerial = theContinent->mSerial;
+                                this->mUnloadLocation.mSerial = theContinent->GetSerial();
                                 this->mUnloadLocation.mType = kAIAreaContinent;
                                 theTile = thePoint;
                                 break;
@@ -2038,11 +2038,11 @@ bool EECPASGLand::ChooseAirUnloadPoint()
                         break;
                     case 0:
                         if (theRandom <= theChoices.back().second) {
-                            theFile->GetAllUnits(theContinent->mID, theUnits);
+                            theFile->GetAllUnits(theContinent->GetID(), theUnits);
                             for (long i = theUnits.size() - 1; i >= 0; i--) {
                                 if (theUnits[i]->GetClass()->GetUnitType() != kUnitTypeFarm && theUnits[i]->GetClass()->GetUnitType() != kUnitTypeRoboticFarm)
                                     continue;
-                                this->mUnloadLocation.mSerial = theContinent->mSerial;
+                                this->mUnloadLocation.mSerial = theContinent->GetSerial();
                                 this->mUnloadLocation.mType = kAIAreaContinent;
                                 theTile.SetXY(theUnits[i]->GetTileX(), theUnits[i]->GetTileY());
                                 thePending = false;
@@ -2055,12 +2055,12 @@ bool EECPASGLand::ChooseAirUnloadPoint()
                 } while (theChoices.size() != 0);
             }
             if (thePending) {
-                theTiles = theContinent->mShoreTiles;
+                theTiles = theContinent->GetShoreTiles();
                 std::sort(theTiles.begin(), theTiles.end(), EECPASGLandTileFarther(theCenter));
                 while (!theTiles.empty() && !this->CanTransportLandAt(theTiles.back()))
                     theTiles.pop_back();
                 EECPILocation& theLocation = this->mUnloadLocation;
-                theLocation.mSerial = theContinent->mSerial;
+                theLocation.mSerial = theContinent->GetSerial();
                 theLocation.mType = kAIAreaContinent;
                 if (!theTiles.empty()) {
                     theTile = theTiles.back();
@@ -2117,9 +2117,8 @@ bool EECPASGLand::ChooseShoreUnloadPoint(bool inWater)
                 } else {
                     EEAIContinent* theTask = gContinentManager.mContinents[theTaskID];
                     if (theTask != NULL) {
-                        U2DConvexHull<long>* theHull = &theTask->mHull;
-                        if (!theHull->BoundedContains(theCenter)) {
-                            theClosest = theHull->GetClosestOutlinePoint(theCenter);
+                        if (!theTask->HullContains(theCenter)) {
+                            theClosest = theTask->GetHullClosestOutlinePoint(theCenter);
                             if (theClosest.DistanceToSquared(theCenter) > 36)
                                 theExamine = true;
                         }
@@ -2147,7 +2146,7 @@ bool EECPASGLand::ChooseShoreUnloadPoint(bool inWater)
                     if (theDestination != NULL) {
                         thePoint = this->mLandingTile;
                         if (this->FindCrossingTile(theDestination, gContinentManager.GetContinentByID(theOwnID), thePoint, thePoint, inWater)) {
-                            this->mUnloadLocation.mSerial = theDestination->mSerial;
+                            this->mUnloadLocation.mSerial = theDestination->GetSerial();
                             this->mUnloadLocation.mType = kAIAreaContinent;
                             theTile = thePoint;
                         } else {
@@ -2250,7 +2249,7 @@ void EECPASGLand::PrunePath()
             continue;
         EEAIContinent* theContinent = gContinentManager.GetContinentAt(this->mPath[i].mTile.GetX(), this->mPath[i].mTile.GetY());
         long theType = theContinent->GetCategory();
-        if (theContinentID == theContinent->mID || theType == kContinentCategoryLand || theType == kContinentCategoryMapEdge) {
+        if (theContinentID == theContinent->GetID() || theType == kContinentCategoryLand || theType == kContinentCategoryMapEdge) {
             long theKind = theSector->mKind;
             if ((theKind == kAITileLand || (theKind > kAITileMapEdge && theKind <= kAITileShore) || theKind == kAITileGate) &&
                 i != 0 && i < this->mPath.size() - 2) {
@@ -2308,7 +2307,7 @@ void EECPASGLand::PrunePath()
                         EEAIContinent* theNext = gContinentManager.GetContinentAt(this->mPath[j].mTile.GetX(),
                                                                                this->mPath[j].mTile.GetY());
                         if (theNext != theContinent && theNext->GetCategory() == kContinentCategoryLand &&
-                            theNext->mID == theLastContinent->mID) {
+                            theNext->GetID() == theLastContinent->GetID()) {
                             this->mLandingTile = this->mPath[j].mTile;
                             break;
                         }

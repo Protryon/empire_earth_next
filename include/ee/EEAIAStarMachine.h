@@ -310,7 +310,7 @@ struct EEAIAStarGraphHooks {
     {
         Machine* theMachine = (Machine*)inMachine;
         M* theStart = theMachine->mGoal.GetStartObject();
-        EEAIAStarNote(kAStarEventGraphStart, 0, 0, 0, 0, 0, theStart ? theStart->mID : -1);
+        EEAIAStarNote(kAStarEventGraphStart, 0, 0, 0, 0, 0, theStart ? theStart->GetID() : -1);
         return Handle(theStart);
     }
     static int32_t GoalID(void* inMachine) { return ((Machine*)inMachine)->mGoal.GetGoalID(); }
@@ -327,11 +327,11 @@ struct EEAIAStarGraphHooks {
         return EEAIAStarNote(kAStarEventGraphGoalNode, inHasNode ? inNode->index : -1, 0, 0, 0, 0,
                              theMachine->mGoal.IsGoalNode(inHasNode ? &theNode : NULL)) != 0;
     }
-    static int32_t ObjectID(void* inMachine, void* inObject) { return Object(inObject)->mID; }
+    static int32_t ObjectID(void* inMachine, void* inObject) { return Object(inObject)->GetID(); }
     static uint32_t NumNeighbors(void* inMachine, void* inObject) { return Object(inObject)->GetNumNeighbors(); }
     static void* Neighbor(void* inMachine, void* inObject, uint32_t inIndex)
     {
-        return Handle(Object(inObject)->mNeighbors[inIndex]);
+        return Handle(Object(inObject)->GetNeighbors()[inIndex]);
     }
     static void GraphLocation(void* inMachine, void* inObject, int32_t* outX, int32_t* outY)
     {
@@ -344,7 +344,7 @@ struct EEAIAStarGraphHooks {
         Machine* theMachine = (Machine*)inMachine;
         M* theNeighbor = Object(inNeighbor);
         M* theFrom = Object(inFrom);
-        return EEAIAStarNote(kAStarEventGraphEnter, theNeighbor->mID, theFrom->mID, 0, 0, 0,
+        return EEAIAStarNote(kAStarEventGraphEnter, theNeighbor->GetID(), theFrom->GetID(), 0, 0, 0,
                              theMachine->mGoal.CanEnter(theNeighbor, theFrom)) != 0;
     }
     static int32_t StepCost(void* inMachine, const EeAStarGraphNodeView* inParent, void* inObject)
@@ -352,7 +352,7 @@ struct EEAIAStarGraphHooks {
         Machine* theMachine = (Machine*)inMachine;
         EEAIAStarGraphNode theParent(*inParent);
         M* theObject = Object(inObject);
-        return EEAIAStarNote(kAStarEventGraphCost, inParent->index, theObject->mID, 0, 0, 0,
+        return EEAIAStarNote(kAStarEventGraphCost, inParent->index, theObject->GetID(), 0, 0, 0,
                              (long)theMachine->mGoal.GetStepCost(&theParent, theObject));
     }
     static void SearchDone(void* inMachine, bool inHasCurrent, const EeAStarGraphNodeView* inCurrent, bool inHasOpen)
