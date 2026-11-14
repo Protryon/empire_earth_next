@@ -619,7 +619,7 @@ void RoutingLogic::GroupJoinAttempt(RoutingOp* inBaseOp, LobbyServer* inServer)
 void RoutingLogic::Reset()
 {
     if (this->mSuppressIdle || !this->IsConnected()) return;
-    DWORD aLastInputTick = GetLobbyWindow()->mLastInputTick;
+    DWORD aLastInputTick = GetLobbyWindow()->GetLastInputTick();
     if (WONTickCount() - aLastInputTick > 300000) {
         if (this->mIdle) return;
         RoutingConnection* aConnection = this->GetConnection();

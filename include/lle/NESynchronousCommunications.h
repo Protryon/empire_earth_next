@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "lle/TSCriticalSection.h"
+#include "rust/ee_net.h"
 
 class NEMessage;
 enum class EeNetQOp : uint32_t;             // the queues' calls out (rust/ee_net.h)

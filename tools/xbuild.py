@@ -485,6 +485,10 @@ WON_TESTS = {
     # Window as a whole Rust object (winobj.rs) over a world that models the platform window, the root and the
     # manager as logged host ops (golden: rust/crates/ee_won/src/golden_winobj.txt)
     "won_winobj_test": [],
+    # WindowManager's popup stack, modal dialog, message loop and focus as a Rust object (wmobj.rs) over a world
+    # that models the platform, the windows and the components as logged host ops (golden:
+    # rust/crates/ee_won/src/golden_wmobj.txt)
+    "won_wmobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -703,6 +707,10 @@ WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                                                      "HTTPCacheDefaults.cpp")],
                                   *[WON_SRC / "WONAuth" / f for f in ("AuthSession.cpp", "AuthContext.cpp")],
                                   *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]]
+# RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
+# real certificates (golden: rust/crates/ee_won/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
+# AuthContext.cpp); the same units as won_serverop_test
+WON_TESTS["won_authhost_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

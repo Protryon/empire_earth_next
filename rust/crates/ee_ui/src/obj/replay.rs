@@ -34,7 +34,13 @@ pub struct Replay<'a> {
     pub checked: Cell<usize>,
     /// The first failure inside a call out.
     failed: RefCell<Option<String>>,
+    /// Rewrites a pure op's answer (`(replay, op, a, the world's answer)`): a test's own objects for an answer that
+    /// names one (the radio button's `RadioOf`).
+    pure_hook: Option<PureHook>,
 }
+
+/// A replay's rewrite of a pure op's answer.
+pub type PureHook = fn(&Replay, EeUiOp, isize, isize) -> isize;
 
 pub fn hex4(f: &[f32; 4]) -> String {
     format!("{:08x} {:08x} {:08x} {:08x}", f[0].to_bits(), f[1].to_bits(), f[2].to_bits(), f[3].to_bits())
@@ -82,7 +88,19 @@ impl<'a> Replay<'a> {
             dispatch,
             checked: Cell::new(0),
             failed: RefCell::new(None),
+            pure_hook: None,
         }
+    }
+
+    /// The replay with a rewrite of the pure ops' answers.
+    pub fn with_pure_hook(mut self, hook: PureHook) -> Self {
+        self.pure_hook = Some(hook);
+        self
+    }
+
+    /// The world's current answer to the pure op `op` on `a` (a `set` line's), if it gave one.
+    pub fn model_value(&self, op: u32, a: isize) -> Option<isize> {
+        self.model.borrow().get(&(op, a)).map(|v| v.0)
     }
 
     /// The host function and object to give a Rust object made in this replay.
@@ -120,7 +138,10 @@ impl<'a> Replay<'a> {
                 got.unwrap_or_else(|| panic!("golden line {}: no world value for op {op:?} {a}", self.pos.get()));
             // SAFETY: the contract
             unsafe { write_buf(f, out) };
-            return r;
+            return match self.pure_hook {
+                Some(h) => h(self, op, a, r),
+                None => r,
+            };
         }
         // SAFETY: the contract
         let inb = unsafe { read_buf(f) };

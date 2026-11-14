@@ -2,6 +2,9 @@
 // background, border and bitmap opacities while blinking. UIBlinkingButton.cpp (0x1005db0f..0x1005e47c) emits
 // UIButton's and its own inline members first. Vtable 0x10098d44. sizeof 0x148 (??_E stride, 0x1005e061; the TMPoll
 // member is 8-aligned at +0x108). Requires lle/UIButton.h, lle/TMPoll.h.
+//
+// The class is whole in Rust (rust/crates/ee_ui/src/variantobj.rs, R6 ui round 12): its record is the Rust button's
+// and its methods forward to it.
 #ifndef LLE_UIBLINKINGBUTTON_H
 #define LLE_UIBLINKINGBUTTON_H
 
@@ -16,19 +19,11 @@ public:
     virtual long CopyData();
     virtual long DrawPolygons();            // ICF-folded with UIButton::DrawPolygons (0x1005eb30)
     virtual long DrawTextA();
-    bool GetIsBlinking() { return this->mIsBlinking; }
+    bool GetIsBlinking();
     void SetIsBlinking(bool inBlinking);
-protected:
-    TMPoll mPoll;                           // +0x108 one blink phase
-    unsigned long mBlinkPhase;              // +0x128 1: fading out, 0: fading in (provisional name)
-    unsigned long mBlinkRate;               // +0x12c milliseconds per phase, 50..5000 (0: 250)
-    float mPressedOpacity;                  // +0x130 mPressedBitmap's full opacity
-    float mNormalOpacity;                   // +0x134 mNormalBitmap's full opacity
-    float mBgOpacity;                       // +0x138 the background's full opacity
-    float mFullBorderOpacity;               // +0x13c
-    bool mSavedAlwaysDirty;                 // +0x140 mAlwaysDirty before blinking
-    bool mNeedsOpacities;                   // +0x141 sample the full opacities at the next CopyData
-    bool mIsBlinking;                       // +0x142
+    // the original's members (+0x108 TMPoll mPoll: one blink phase, +0x128 mBlinkPhase, +0x12c mBlinkRate, the full
+    // opacities +0x130..+0x13c, +0x140 mSavedAlwaysDirty, +0x141 mNeedsOpacities, +0x142 mIsBlinking; sizeof 0x148)
+    // are the Rust button's (variantobj.rs; the poll is now a heap object it makes and deletes)
 };
 
 #endif

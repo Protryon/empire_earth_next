@@ -44,18 +44,10 @@ struct UIScrollBarRust {
     {
         UIScrollBar* s = static_cast<UIScrollBar*>(inBar);
         UISlider* theSlider = reinterpret_cast<UISlider*>(a);
-        UIManager* m = s->mForm->GetManager();
         intptr_t r = 0;
         if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
             return r;
         switch (inOp) {
-        case EeUiOp::ManagerBitmap: {
-            GEBitmap* theBitmaps[8] = {m->GetSBBitmapDownNormal(),  m->GetSBBitmapUpNormal(),
-                                       m->GetSBBitmapDownPressed(), m->GetSBBitmapUpPressed(),
-                                       m->GetSBBitmapRightNormal(), m->GetSBBitmapLeftNormal(),
-                                       m->GetSBBitmapRightPressed(), m->GetSBBitmapLeftPressed()};
-            return (intptr_t)theBitmaps[a];
-        }
         case EeUiOp::CreateSlider:
             return (intptr_t) new UISlider(s->GetId(), UIObjHost::Rect(f), (unsigned long)a, s->mForm, s->GetIndex(),
                                            (unsigned long)b);
