@@ -894,7 +894,7 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
         return theUnit->mUnitClass->mCommands[inA];
     }
     case EE_SCREENS_GAME_MG_BEHAVIOR:
-        gCommunications->ProcessLocalUserInput(new EEMSetUnitBehavior((long)inA), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSetUnitBehavior, {(long)inA}), kSlotNone);
         break;
     case EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS:
         gUIManager->mMainGameForm->GetEntityGroup(9)->Disable();
@@ -1010,7 +1010,7 @@ static uint32_t EEScreensCameraCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
     case EE_SCREENS_GAME_MG_SET_FORMATION: {
         // the selected group's formation, posted; the formation menu closed
         EEFormation* theFormation = EEFormation::Create((long)inA);
-        gCommunications->ProcessLocalUserInput(new EEMChangeFormation((long)inA), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageChangeFormation, {(long)inA, true}), kSlotNone);
         gUIManager->mMainGameForm->GetEntityGroup(8)->Disable();
         gUIManager->mMainGameForm->GetBackgroundByID(0x98)->SetVisibility(false);
         theFormation->mB5C = true;

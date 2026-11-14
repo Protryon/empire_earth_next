@@ -19,19 +19,21 @@ pub const EE_NETMSG_RECORD_BYTES: usize = 32;
 const PAUSED: u8 = EE_NETMSG_RECORD_PAUSED;
 const WHEN_OUT: u8 = EE_NETMSG_RECORD_WHEN_OUT;
 
-/// One record type: its codec class, its flags, its label (NUL-terminated: `GetMessageLabel` hands it to C++).
+/// One record type: its codec class, its message type when the class has several (0: the class's one type in
+/// `TYPES`), its flags, its label (NUL-terminated: `GetMessageLabel` hands it to C++).
 pub struct RecordType {
     pub class: u32,
+    pub message_type: u8,
     pub flags: u8,
     pub label: &'static str,
 }
 
 const fn rec(class: u32, flags: u8, label: &'static str) -> RecordType {
-    RecordType { class, flags, label }
+    RecordType { class, message_type: 0, flags, label }
 }
 
 /// The record types, by codec class (each of these classes is one message type's: `TYPES`).
-pub static RECORD_TYPES: [RecordType; 53] = [
+pub static RECORD_TYPES: [RecordType; 74] = [
     rec(EE_NETMSG_ADD_REMOVE_RESOURCES, PAUSED, "Add Remove Resources\0"),
     rec(EE_NETMSG_ATTACK_PLAYERS, 0, "Attack Players\0"),
     rec(EE_NETMSG_CAMERA_LOCATION_INFO, 0, "Camera Location\0"),
@@ -86,12 +88,37 @@ pub static RECORD_TYPES: [RecordType; 53] = [
     rec(EE_NETMSG_EXPLORE, 0, "Explore\0"),
     rec(EE_NETMSG_STOP_ACTIVE_GROUP, 0, "Stop Active Group\0"),
     rec(EE_NETMSG_MAKE_WORLD_VISIBLE, 0, "Make World Visible\0"),
+    // round 4: the unit orders (the physics' order log reads them through the record)
+    rec(EE_NETMSG_ADD_PATROL_POINT, 0, "Add Patrol Point\0"),
+    rec(EE_NETMSG_ATTACK_GROUND, 0, "Attack Ground\0"),
+    rec(EE_NETMSG_ATTACK_UNIT, 0, "Attack Unit\0"),
+    rec(EE_NETMSG_BUILD_GATE, 0, "Build Gate\0"),
+    rec(EE_NETMSG_BUILD_UNIT, 0, "Build Unit\0"),
+    rec(EE_NETMSG_BUILD_WALL, 0, "Build Wall\0"),
+    rec(EE_NETMSG_CHANGE_FORMATION, 0, "ChangeFormation\0"),
+    rec(EE_NETMSG_DROPOFF_RESOURCE, 0, "Dropoff Resource\0"),
+    rec(EE_NETMSG_GATHER_RESOURCE, 0, "Gather Resource\0"),
+    rec(EE_NETMSG_HEAL_UNIT, 0, "Heal Unit\0"),
+    rec(EE_NETMSG_IMMEDIATE_CARGO_UNLOAD, 0, "Immediate Cargo Unload\0"),
+    rec(EE_NETMSG_IMPROVE_UNIT, 0, "Upgrade Unit\0"),
+    rec(EE_NETMSG_LOAD_GARRISON, 0, "Load Unit(s) Into Garrison\0"),
+    rec(EE_NETMSG_LOAD_TRANSPORT, 0, "Load Unit(s) Into Transport\0"),
+    rec(EE_NETMSG_PACK_UNPACK, 0, "Pack Unpack\0"),
+    rec(EE_NETMSG_PATH_TO, 0, "Path To\0"),
+    rec(EE_NETMSG_REPAIR_UNIT, 0, "Repair Unit\0"),
+    rec(EE_NETMSG_RESEARCH_TECHNOLOGY, 0, "Research Technology\0"),
+    rec(EE_NETMSG_SET_RALLY_GOAL, 0, "Set Rally Goal\0"),
+    rec(EE_NETMSG_SET_UNIT_BEHAVIOR, 0, "Set Unit Behavior\0"),
+    rec(EE_NETMSG_UNLOAD_TRANSPORT, 0, "Unload Unit(s) From Transport\0"),
 ];
 
-/// The record type of a message type, if it is one.
+/// The record type of a message type, if it is one: a row naming the type, else the row of the type's class.
 pub fn record_type(message_type: u8) -> Option<&'static RecordType> {
+    if let Some(r) = RECORD_TYPES.iter().find(|r| r.message_type != 0 && r.message_type == message_type) {
+        return Some(r);
+    }
     let class = TYPES.iter().find(|t| t.0 == message_type)?.1;
-    RECORD_TYPES.iter().find(|r| r.class == class)
+    RECORD_TYPES.iter().find(|r| r.class == class && r.message_type == 0)
 }
 
 /// A record member: its kind (`EE_NETMSG_RECORD_FIELD_*`, NONE past the last member), its offset in the record and
@@ -169,8 +196,13 @@ mod tests {
     fn every_record_type_is_one_message_type_of_fixed_members_that_fit() {
         for r in &RECORD_TYPES {
             let c = &CLASSES[r.class as usize];
-            assert_eq!(TYPES.iter().filter(|t| t.1 == r.class).count(), 1, "{}", c.name);
-            assert_eq!(c.import_fields, c.fields.len(), "{}", c.name);
+            if r.message_type == 0 {
+                assert_eq!(TYPES.iter().filter(|t| t.1 == r.class).count(), 1, "{}", c.name);
+            }
+            // EEMChangeFormation's import stops before its flag (the record keeps it 0)
+            if r.class != EE_NETMSG_CHANGE_FORMATION {
+                assert_eq!(c.import_fields, c.fields.len(), "{}", c.name);
+            }
             let size: usize = c.fields[1..].iter().map(|f| f.kind.fixed_size().expect(c.name)).sum();
             assert!(size <= EE_NETMSG_RECORD_BYTES, "{}", c.name);
             assert!(r.label.ends_with('\0') && !r.label[..r.label.len() - 1].contains('\0'));
@@ -179,10 +211,10 @@ mod tests {
             }
             assert_eq!(record_field(r.class, c.fields.len() as u32).kind, EE_NETMSG_RECORD_FIELD_NONE);
         }
-        let mut classes: Vec<u32> = RECORD_TYPES.iter().map(|r| r.class).collect();
-        classes.sort_unstable();
-        classes.dedup();
-        assert_eq!(classes.len(), RECORD_TYPES.len());
+        let mut types: Vec<(u32, u8)> = RECORD_TYPES.iter().map(|r| (r.class, r.message_type)).collect();
+        types.sort_unstable();
+        types.dedup();
+        assert_eq!(types.len(), RECORD_TYPES.len());
     }
 
     #[test]
@@ -202,13 +234,26 @@ mod tests {
         assert_eq!(record_field(EE_NETMSG_CAMERA_LOCATION_INFO, 1).kind, EE_NETMSG_RECORD_FIELD_VECTOR);
         assert_eq!(record_field(EE_NETMSG_RETURN_TO_BASE, 2).kind, EE_NETMSG_RECORD_FIELD_BOOL);
         assert_eq!(record_field(EE_NETMSG_GAME_SPEED, 1).kind, EE_NETMSG_RECORD_FIELD_FLOAT);
+        // EEMPathTo (0x4d, round 4): facing, x, y, then four flags
+        assert_eq!(ee_netmsg_record_class(0x4d), EE_NETMSG_PATH_TO);
+        let p = |i| record_field(EE_NETMSG_PATH_TO, i);
+        assert_eq!(p(1), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_FLOAT, offset: 0, size: 4 });
+        assert_eq!(p(3), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_FLOAT, offset: 8, size: 4 });
+        assert_eq!(p(7), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_BOOL, offset: 15, size: 1 });
+        assert_eq!(p(8).kind, EE_NETMSG_RECORD_FIELD_NONE);
+        // EEMBuildWall: two points, the technology, the player (the largest order: 24 bytes)
+        assert_eq!(record_field(EE_NETMSG_BUILD_WALL, 4), EeNetMsgRecordField { kind: EE_NETMSG_RECORD_FIELD_INTEGER, offset: 20, size: 4 });
+        // EEMChangeFormation: the flag is a member the import leaves 0
+        assert_eq!(record_field(EE_NETMSG_CHANGE_FORMATION, 2).kind, EE_NETMSG_RECORD_FIELD_BOOL);
+        assert_eq!(CLASSES[EE_NETMSG_CHANGE_FORMATION as usize].import_fields, 2);
         // a type with a class of its own, and no type
-        assert_eq!(ee_netmsg_record_class(0x4c), u32::MAX); // EEMAttackUnit
+        assert_eq!(ee_netmsg_record_class(0x4e), u32::MAX); // EEMSelectUnits
         assert_eq!(ee_netmsg_record_class(0x9d), u32::MAX); // EEMEndCinematic: the factory builds none
-        assert_eq!(ee_netmsg_record_flags(0x4c), 0);
+        assert_eq!(ee_netmsg_record_flags(0x4e), 0);
         let label = |t| unsafe { std::ffi::CStr::from_ptr(ee_netmsg_record_label(t)) }.to_str().unwrap().to_string();
         assert_eq!(label(0x44), "Pay Tribute");
-        assert_eq!(label(0x4c), "");
+        assert_eq!(label(0x4d), "Path To");
+        assert_eq!(label(0x4e), "");
         let select = TYPES.iter().find(|t| t.1 == EE_NETMSG_SELECT_UNIT).unwrap().0;
         assert_eq!(ee_netmsg_record_flags(select), PAUSED | WHEN_OUT);
     }

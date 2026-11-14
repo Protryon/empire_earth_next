@@ -109,24 +109,6 @@ public:
     unsigned char mRecord[32];   // EE_NETMSG_RECORD_BYTES
 };
 
-// The local player changes the formation of the selected group (vtable 0x43de14). sizeof 0x18.
-class EEMChangeFormation : public EEMessage {
-public:
-    // the received message does not carry the formation flag (ImportMessage reads only the selection and type):
-    // start it cleared instead of leaving it uninitialised
-    EEMChangeFormation(unsigned char* inData) : mB14(false) { this->ImportMessage(inData); }
-    EEMChangeFormation(long inFormationType) : EEMessage(kMessageChangeFormation, false), mFormationType(inFormationType)
-    {
-        this->mB14 = true;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mFormationType;                 // +0x10
-    bool mB14;                              // +0x14
-};
-
 // A chat line (type 0x7d, vtable 0x43e0bc). sizeof 0x24.
 class EEMInGameChat : public EEMessage {
 public:
@@ -200,18 +182,6 @@ public:
     virtual char* GetMessageLabel() const;
 };
 
-// vtable 0x43df18; sizeof 0x18
-class EEMAddPatrolPoint : public EEMessage {
-public:
-    EEMAddPatrolPoint(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMAddPatrolPoint(const GE2DPoint& inPoint) : EEMessage(kMessageAddPatrolPoint, false) { this->mPoint = inPoint; }   // the next AI's ai.patrol
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    GE2DPoint mPoint;                       // +0x10
-};
-
 // vtable 0x438c88; sizeof 0x138
 class EEMAddUnitsToSelectedGroup : public EEMSelectUnits {
 public:
@@ -221,107 +191,6 @@ public:
         : EEMSelectUnits(inRectangle, inUnitType, inType) {}
     virtual void Execute();
     virtual char* GetMessageLabel() const;
-};
-
-// vtable 0x43deb0; sizeof 0x18
-class EEMAttackGround : public EEMessage {
-public:
-    EEMAttackGround(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: EEModeAttackGround expands it (type 0x9f)
-    EEMAttackGround(float inX, float inY) : EEMessage(kMessageAttackGround, false)
-    {
-        this->mX = inX;
-        this->mY = inY;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Attack Ground"; }
-
-    float mX;                               // +0x10 (the target's x)
-    float mY;                               // +0x14 (the target's y)
-};
-
-// vtable 0x438f18; sizeof 0x18
-class EEMAttackUnit : public EEMessage {
-public:
-    EEMAttackUnit(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: EEModeConvert expands it (type 0x4c; mB14 follows the vptr store)
-    EEMAttackUnit(long inTarget, bool inIsQueued, bool inIsConvert) : EEMessage(kMessageAttackUnit, false), mTargetID(inTarget), mIsConvert(inIsConvert)
-    {
-        this->mIsQueued = inIsQueued;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mTargetID;                      // +0x10
-    bool mIsQueued;                         // +0x14 (EEActiveGroup::SetGoal's flag)
-    bool mIsConvert;                        // +0x15 (EEUGAttackUnit's last argument)
-};
-
-// vtable 0x438b1c; sizeof 0x24
-class EEMBuildGate : public EEMessage {
-public:
-    EEMBuildGate(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT 0x194a after its first user EEABuild::BuildGate 0x18dd (type 0x86; the members after the vptr)
-    EEMBuildGate(const GE2DPoint& inLocation, long inTechnology, long inSide, long inPlayerID) : EEMessage(kMessageBuildGate, false)
-    {
-        this->mPoint = inLocation;
-        this->mTechnology = inTechnology;
-        this->mSide = inSide;
-        this->mPlayerID = inPlayerID;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    GE2DPoint mPoint;                       // +0x10
-    int32_t mTechnology;                    // +0x18
-    int32_t mSide;                          // +0x1c
-    int32_t mPlayerID;                      // +0x20
-};
-
-// vtable 0x438ab4; sizeof 0x20
-class EEMBuildUnit : public EEMessage {
-public:
-    EEMBuildUnit(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT 0x1844 after its first user EEABuild::Build 0x1760 (type 0x56; the members after the vptr)
-    EEMBuildUnit(const GE2DPoint& inLocation, long inTechnology, unsigned char inIsQueued) : EEMessage(kMessageBuildUnit, false)
-    {
-        this->mPoint = inLocation;
-        this->mTechnology = inTechnology;
-        this->mIsQueued = inIsQueued;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    GE2DPoint mPoint;                       // +0x10
-    int32_t mTechnology;                    // +0x18
-    unsigned char mIsQueued;                // +0x1c
-};
-
-// vtable 0x438b50; sizeof 0x28
-class EEMBuildWall : public EEMessage {
-public:
-    EEMBuildWall(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT 0x1a0b after its first user EEABuild::BuildWall 0x199e (type 0x59; the members after the vptr)
-    EEMBuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd, long inTechnology, long inPlayerID)
-        : EEMessage(kMessageBuildWall, false)
-    {
-        this->mStart = inStart;
-        this->mEnd = inEnd;
-        this->mTechnology = inTechnology;
-        this->mPlayerID = inPlayerID;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    GE2DPoint mStart;                       // +0x10
-    GE2DPoint mEnd;                         // +0x18
-    int32_t mTechnology;                    // +0x20
-    int32_t mPlayerID;                      // +0x24
 };
 
 // vtable 0x438b98; sizeof 0x24
@@ -422,18 +291,6 @@ public:
     virtual ~EEMCivUpgradesRequested() {}
     virtual void Execute();
     virtual char* GetMessageLabel() const;
-};
-
-// vtable 0x438fe8; sizeof 0x14
-class EEMDropoffResource : public EEMessage {
-public:
-    EEMDropoffResource(long inDropoffID) : EEMessage(kMessageDropoffResource, false) { this->mDropoffID = inDropoffID; }  // 0x4041cf (inline, first user EEAMouseClick::Execute)
-    EEMDropoffResource(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mDropoffID;                     // +0x10
 };
 
 // vtable 0x43dca0; sizeof 0x14
@@ -575,19 +432,6 @@ public:
     uint32_t mValue;                        // +0x28 the value (unsigned: the flags are mL28 > 0 with seta)
 };
 
-// vtable 0x438fb4; sizeof 0x18
-class EEMGatherResource : public EEMessage {
-public:
-    EEMGatherResource(long inTargetID, bool inIsQueued) : EEMessage(kMessageGatherResource, false), mTargetID(inTargetID), mIsQueued(inIsQueued) {}  // inline (EEAMouseClick::Execute 0x403907)
-    EEMGatherResource(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mTargetID;                      // +0x10
-    bool mIsQueued;                         // +0x14 (EEActiveGroup::SetGoal's flag)
-};
-
 // vtable 0x43e088; sizeof 0x20
 class EEMHackANewUnit : public EEMessage {
 public:
@@ -604,54 +448,6 @@ public:
     unsigned char mPlayerID;                // +0x1c
 };
 
-// vtable 0x43901c; sizeof 0x14
-class EEMHealUnit : public EEMessage {
-public:
-    EEMHealUnit(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: out-of-line COMDAT 0x41fc after its first user (type 0x92; the store follows the vptr)
-    EEMHealUnit(long inTarget) : EEMessage(kMessageHealUnit, false) { this->mTargetID = inTarget; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mTargetID;                      // +0x10
-};
-
-// vtable 0x43da64; sizeof 0x1c
-class EEMImmediateCargoUnload : public EEMessage {
-public:
-    EEMImmediateCargoUnload(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline (out-of-line COMDAT 0x25af3d after its first user EEUICUnitIconBar::MouseRButtonUp; type 0x95)
-    EEMImmediateCargoUnload(long inTransportID, long inCargoID, bool inFlag)
-        : EEMessage(kMessageImmediateCargoUnload, false), mTransportID(inTransportID), mCargoID(inCargoID), mB18(inFlag) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Immediate Cargo Unload"; }
-
-    int32_t mTransportID;                   // +0x10
-    int32_t mCargoID;                       // +0x14
-    bool mB18;                              // +0x18
-};
-
-// vtable 0x439118; sizeof 0x18
-class EEMImproveUnit : public EEMessage {
-public:
-    EEMImproveUnit(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT-free (EEAUpgradeImprovement::Virtual4 0x50dc expands it, calling EEMessage's out-of-line copy
-    // 0x32a6; type 0x77; the members after the vptr)
-    EEMImproveUnit(long inUnitID, long inImprovement) : EEMessage(kMessageImproveUnit, false)
-    {
-        this->mUnitID = inUnitID;
-        this->mImprovement = inImprovement;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Upgrade Unit"; }
-
-    int32_t mUnitID;                        // +0x10
-    int32_t mImprovement;                   // +0x14
-};
-
 // vtable 0x43d994; sizeof 0x14
 class EEMKillUnit : public EEMessage {
 public:
@@ -663,26 +459,6 @@ public:
     virtual char* GetMessageLabel() const { return "Delete Unit"; }
 
     unsigned char mAllUnits;                // +0x10
-};
-
-// vtable 0x43d828; sizeof 0x1c
-class EEMLoadGarrison : public EEMessage {
-public:
-    EEMLoadGarrison(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: EEModeGarrison expands it (type 0x7b)
-    EEMLoadGarrison(long inTarget, long inUnitID, unsigned char inB18) : EEMessage(kMessageLoadGarrison, false)
-    {
-        this->mB18 = inB18;
-        this->mUnitID = inUnitID;
-        this->mGarrisonID = inTarget;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Load Unit(s) Into Garrison"; }
-
-    int32_t mGarrisonID;                    // +0x10
-    int32_t mUnitID;                        // +0x14
-    unsigned char mB18;                     // +0x18
 };
 
 // vtable 0x43e0f0; sizeof 0x34; import ctor 0xba957, ??_G 0xba9b9; Get/SetSendToAllAndWaitMessageID inline (0xba9a1/0xba9af)
@@ -708,23 +484,6 @@ public:
     bool mIsQuiet;                          // +0x1d
     unsigned char mIsAutoSave;              // +0x1e
     UWideString mFileName;                  // +0x20
-};
-
-// vtable 0x438ddc; sizeof 0x1c
-class EEMLoadTransport : public EEMessage {
-public:
-    // inline (out-of-line COMDAT 0x3192 after its first user EEAMouseClick::CreateLoadTransportMessage, which also
-    // expands it once)
-    EEMLoadTransport(long inTransportID, long inPassengerID, unsigned char inB18)
-        : EEMessage(kMessageLoadTransport), mTransportID(inTransportID), mPassengerID(inPassengerID), mB18(inB18) {}
-    EEMLoadTransport(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Load Unit(s) Into Transport"; }
-
-    int32_t mTransportID;                   // +0x10
-    int32_t mPassengerID;                   // +0x14
-    unsigned char mB18;                     // +0x18
 };
 
 // vtable 0x43d7f4; sizeof 0x14
@@ -756,54 +515,6 @@ public:
     unsigned short mYesVotes;               // +0x12
     unsigned short mNoVotes;                // +0x14
     unsigned char mIsEnacted;               // +0x16
-};
-
-// vtable 0x43d7c0; sizeof 0x14
-class EEMPackUnpack : public EEMessage {
-public:
-    EEMPackUnpack(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT 0x26f9fb after its first user EEUIFMGStatusButton::Command (type 0xab)
-    EEMPackUnpack(bool inPack) : EEMessage(kMessagePackUnpack, false), mPack(inPack) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    bool mPack;                             // +0x10 (pack)
-};
-
-// vtable 0x438d5c; sizeof 0x20
-class EEMPathTo : public EEMessage {
-public:
-    EEMPathTo(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: EEAMiniMap::SendGroup 0x2aaa expands it (type 0x4d; NEMessage's own ctor refused there: the exported
-    // copy is called; +0x14/+0x18/+0x1c/+0x1f before the vptr, +0x1d/+0x10/+0x1e after it)
-    EEMPathTo(float inX, float inY, float inAngle, bool inIsForcedMove, bool inIsQueued)
-        : EEMessage(kMessagePathTo, false), mX(inX), mY(inY), mIsForcedMove(inIsForcedMove), mUseGroupMovement(false)
-    {
-        this->mIsRotating = true;
-        this->mFacing = inAngle;
-        this->mIsQueued = inIsQueued;
-    }
-    // EEAMouseClick::Execute 0x403350 builds its paths with mB1D/mUseGroupMovement from arguments (stores
-    // +0x14/+0x18/+0x1c/+0x1d/+0x10/+0x1e, vptr, +0x1f; no separate null test before the stores)
-    EEMPathTo(float inX, float inY, float inAngle, bool inIsForcedMove, bool inIsRotating, bool inIsQueued, bool inUseGroupMovement)
-        : EEMessage(kMessagePathTo, false), mX(inX), mY(inY), mIsForcedMove(inIsForcedMove), mIsRotating(inIsRotating)
-    {
-        this->mFacing = inAngle;
-        this->mIsQueued = inIsQueued;
-        this->mUseGroupMovement = inUseGroupMovement;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    float mFacing;                          // +0x10
-    float mX;                               // +0x14
-    float mY;                               // +0x18
-    bool mIsForcedMove;                     // +0x1c
-    bool mIsRotating;                       // +0x1d
-    bool mIsQueued;                         // +0x1e
-    bool mUseGroupMovement;                 // +0x1f
 };
 
 // vtable 0x43d6bc; sizeof 0x14
@@ -872,19 +583,6 @@ public:
     bool mFiveTimes;                        // +0x19 (five times)
 };
 
-// vtable 0x438f80; sizeof 0x18
-class EEMRepairUnit : public EEMessage {
-public:
-    EEMRepairUnit(long inTargetID, bool inIsQueued) : EEMessage(kMessageRepairUnit, false), mTargetID(inTargetID), mIsQueued(inIsQueued) {}  // inline (EEAMouseClick::Execute 0x40395c)
-    EEMRepairUnit(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mTargetID;                      // +0x10
-    bool mIsQueued;                         // +0x14
-};
-
 // vtable 0x43d5b8; sizeof 0x14
 class EEMReplantFarms : public EEMessage {
 public:
@@ -908,25 +606,6 @@ public:
 
     int32_t mL10;                           // +0x10
     int32_t mL14;                           // +0x14
-};
-
-// vtable 0x43d550; sizeof 0x1c
-class EEMResearchTechnology : public EEMessage {
-public:
-    EEMResearchTechnology(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: EEUIFMGStatusButton::ButtonUp 0x26e274 expands it (type 0x52)
-    EEMResearchTechnology(long inUnitID, long inTechnology, bool inFiveTimes) : EEMessage(kMessageResearchTechnology, false), mBuildingID(inUnitID)
-    {
-        this->mTechnology = inTechnology;
-        this->mFiveTimes = inFiveTimes;
-    }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-
-    int32_t mBuildingID;                    // +0x10
-    int32_t mTechnology;                    // +0x14
-    bool mFiveTimes;                        // +0x18 (five times)
 };
 
 // vtable 0x438d24; sizeof 0x14
@@ -961,37 +640,6 @@ public:
     virtual char* GetMessageLabel() const;
 
     std::vector<long> mUnitIDs;             // +0x10
-};
-
-// vtable 0x438d90; sizeof 0x24
-class EEMSetRallyGoal : public EEMessage {
-public:
-    EEMSetRallyGoal(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT 0x2ca6 after its first user EEAMiniMap::SendGroup (type 0x66; every member in the init list, so
-    // EEMessage's vptr store stays)
-    EEMSetRallyGoal(long inUnitID, const GE2DPoint& inLocation, long inTargetID, unsigned char inIsQueued)
-        : EEMessage(kMessageSetRallyGoal, false), mPoint(inLocation), mTargetID(inTargetID), mBuildingID(inUnitID), mIsQueued(inIsQueued) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Set Rally Goal"; }
-
-    GE2DPoint mPoint;                       // +0x10
-    int32_t mTargetID;                      // +0x18
-    int32_t mBuildingID;                    // +0x1c
-    unsigned char mIsQueued;                // +0x20
-};
-
-// vtable 0x43e2f8; sizeof 0x14
-class EEMSetUnitBehavior : public EEMessage {
-public:
-    EEMSetUnitBehavior(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline (0x260a12 expands it: the EEMessage ctor 0x32a6 call, the vptr, then +0x10; type 0x9e)
-    EEMSetUnitBehavior(long inBehavior) : EEMessage(kMessageSetUnitBehavior, false) { this->mBehavior = inBehavior; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Set Unit Behavior"; }
-
-    int32_t mBehavior;                      // +0x10
 };
 
 // vtable 0x438f4c; sizeof 0x18
@@ -1035,26 +683,6 @@ public:
     unsigned char mSlot;                    // +0x10
     unsigned char mPlayerID;                // +0x11
     unsigned char mLobbySlot;               // +0x12
-};
-
-// vtable 0x43d78c; sizeof 0x1c
-class EEMUnloadTransport : public EEMessage {
-public:
-    EEMUnloadTransport(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: EEUIFMGStatusButton::Command / EEModeUnload expand it (type 0x68)
-    // members in the initializer list: the inline expansions store +0x10/+0x14/+0x18 before the vptr (0x26f41b..)
-    EEMUnloadTransport(long inUnitID, long inX, long inY)
-        : EEMessage(kMessageUnloadTransport, false), mUnitID(inUnitID), mX(inX), mY(inY) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Unload Unit(s) From Transport"; }
-    // inline (Execute 0x4c8615 loads both into registers before the argument pushes; provisional names)
-    long GetX() const { return this->mX; }
-    long GetY() const { return this->mY; }
-
-    int32_t mUnitID;                        // +0x10
-    int32_t mX;                             // +0x14
-    int32_t mY;                             // +0x18
 };
 
 #endif
