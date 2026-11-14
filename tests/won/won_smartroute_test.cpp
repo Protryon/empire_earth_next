@@ -27,6 +27,7 @@
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
 #include "rust/ee_won.h"
+#include "won_blocking.h"
 
 using namespace WONAPI;
 
@@ -228,7 +229,7 @@ struct Server {
         aMsg[0] = (char)(aLength & 0xff);
         aMsg[1] = (char)((aLength >> 8) & 0xff);
         aMsg += inMsg.b;
-        WONStatus aStatus = this->Peer()->SendMsg(Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000);
+        WONStatus aStatus = WonBlocking::SendMsg(this->Peer(), Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000);
         if (aStatus != WS_Success)
             Log(std::string("server send ") + inName + " " + St(aStatus));
     }

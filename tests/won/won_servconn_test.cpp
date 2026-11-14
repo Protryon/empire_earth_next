@@ -30,6 +30,7 @@
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
+#include "won_blocking.h"
 
 using namespace WONAPI;
 
@@ -267,7 +268,7 @@ struct Server {
             aMsg[i] = (char)((aLength >> (8 * i)) & 0xff);
         aMsg += inText;
         Log(std::string("peer send ") + inText + " "
-            + St(this->Peer()->SendMsg(Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000)));
+            + St(WonBlocking::SendMsg(this->Peer(), Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000)));
     }
 };
 
@@ -477,7 +478,7 @@ static void Push(Server& s, const char* inName, const unsigned char* inBytes, si
     aMsg[1] = (char)((aLength >> 8) & 0xff);
     aMsg.append(reinterpret_cast<const char*>(inBytes), inLength);
     Log(std::string("server ") + inName + " "
-        + St(s.Peer()->SendMsg(Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000)));
+        + St(WonBlocking::SendMsg(s.Peer(), Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000)));
 }
 #define PUSH(s, name, ...) do { static const unsigned char b_[] = {__VA_ARGS__}; Push(s, name, b_, sizeof(b_)); } while (0)
 

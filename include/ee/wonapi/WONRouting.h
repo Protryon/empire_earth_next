@@ -411,16 +411,12 @@ private:
     EeWonQueueSocket* mQueue;
 };
 
+// a queue socket the WON ops make and hold. Its blocking calls (Connect 2b1c10, SendBytes 2b1d00, SendMsg 2b1e30,
+// RecvMsg 2b1f10, RecvCRMsg 2b2040, the SDK's SendBytesTo, RecvBytesFrom, RecvBytes: a socket op run blocking) are
+// the op base's (ee_won hostsock.rs) since net round 23; no caller was left, and they went in round 24 (the test
+// drivers keep the statements: tests/won/won_blocking.h)
 class BlockingSocket : public QueueSocket {
 public:
-    WONStatus Connect(const IPAddr&,unsigned long); //2b1c10
-    WONStatus SendBytes(const ByteBuffer*,unsigned long); //2b1d00
-    WONStatus SendBytesTo(const ByteBuffer*,const IPAddr&,unsigned long);
-    WONStatus RecvBytesFrom(ByteBufferPtr&,unsigned short,IPAddr&,unsigned long);
-    WONStatus RecvMsg(ByteBufferPtr&,unsigned long); //2b1f10
-    WONStatus RecvBytes(ByteBufferPtr&,DWORD,DWORD inTimeout=0xffffffff);
-    WONStatus RecvCRMsg(ByteBufferPtr&,unsigned long); //2b2040
-    WONStatus SendMsg(const ByteBuffer*,unsigned long); //2b1e30 (WON SDK)
     BlockingSocket(int inType); //2b1bd0, just QueueSocket(inType), ownvptr
     // IMPLICIT destructor normal2aad90(375B), no own-vptr; inlines Queue members
     // then calls AsyncSocket::~AsyncSocket 2b04a0. Scalar deleting 2b1bf0.

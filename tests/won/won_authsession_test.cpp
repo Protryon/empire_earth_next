@@ -28,6 +28,7 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatFile.h"
 #include "rust/ee_won.h"
+#include "won_blocking.h"
 
 using namespace WONAPI;
 using std::string;
@@ -207,7 +208,7 @@ static bool Accept(Pair& p, WONAPICore& inCore)
 static bool Connect(Pair& p, WONAPICore& inCore)
 {
     p.mClient = new BlockingSocket(0);
-    if (p.mClient->Connect(sListenAddr, 2000) != WS_Success) return false;
+    if (WonBlocking::Connect(p.mClient, sListenAddr, 2000) != WS_Success) return false;
     return Accept(p, inCore);
 }
 

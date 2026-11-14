@@ -1,4 +1,4 @@
-// WONAPI BlockingSocket: socket calls that run a socket op and wait for it (file grouping inferred)
+// WONAPI BlockingSocket: a queue socket the WON ops make (its blocking calls are the op base's, ee_won hostsock.rs)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -8,55 +8,6 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 namespace WONAPI {
-// FUNCTION: WON 0x006b1c10
-// Connects to an address, waiting up to the timeout; returns the connect status
-WONStatus BlockingSocket::Connect(const IPAddr& inAddress,unsigned long inTimeout)
-{
-    SmartPtr<ConnectOp> op=new ConnectOp(inAddress,this);
-    op->RunBlock(inTimeout);
-    return op->GetStatus();
-}
-
-// FUNCTION: WON 0x006b1f10
-// Waits up to the timeout for one length-prefixed message; returns it and the receive status
-WONStatus BlockingSocket::RecvMsg(ByteBufferPtr& outMessage,unsigned long inTimeout)
-{
-    SmartPtr<RecvMsgOp> op=new RecvMsgOp(this);
-    if (op->RunBlock(inTimeout)) outMessage=op->GetMsg().get();
-    return op->GetStatus();
-}
-
-// FUNCTION: WON 0x006b2040
-// Waits up to the timeout for one CR-LF terminated line; returns it and the receive status
-WONStatus BlockingSocket::RecvCRMsg(ByteBufferPtr& outMessage,unsigned long inTimeout)
-{
-    SmartPtr<RecvCRMsgOp> op=new RecvCRMsgOp(this);
-    if (op->RunBlock(inTimeout)) outMessage=op->GetMsg();
-    return op->GetStatus();
-}
-// 2b1d00, 0x228 bytes in the original
-// FUNCTION: WON 0x006b1d00
-// Sends raw bytes, waiting up to the timeout; returns the send status
-WONStatus BlockingSocket::SendBytes(const ByteBuffer* bytes,unsigned long timeout)
-{
-    SmartPtr<SendBytesOp> op=new SendBytesOp(bytes,this);
-    op->RunBlock(timeout);
-    return op->GetStatus();
-}
-
-// 2b1e30, 0x219 bytes in the original
-// FUNCTION: WON 0x006b1e30
-// Sends one length-prefixed message, waiting up to the timeout; returns the send status
-WONStatus BlockingSocket::SendMsg(const ByteBuffer* message,unsigned long timeout)
-{
-    SmartPtr<SendMsgOp> op=new SendMsgOp(message,this);
-    op->RunBlock(timeout);
-    return op->GetStatus();
-}
-
-} // namespace WONAPI
-
-namespace WONAPI {
 // FUNCTION: WON 0x006b1bd0
 // Creates a blocking socket of the given type (stream or datagram)
 BlockingSocket::BlockingSocket(int type) : QueueSocket(type) {}
@@ -65,40 +16,6 @@ BlockingSocket::BlockingSocket(int type) : QueueSocket(type) {}
 AsyncSocket* BlockingSocket::Duplicate()
 {
     return new BlockingSocket(this->GetType());
-}
-}
-
-// No original address identified: WON SDK datagram send/receive calls
-namespace WONAPI {
-WONStatus BlockingSocket::SendBytesTo(const ByteBuffer *theBytes, const IPAddr &theAddr, unsigned long theTimeout)
-{
-	SmartPtr<SendBytesToOp> anOp = new SendBytesToOp(theBytes,theAddr,this);
-	anOp->RunBlock(theTimeout);
-	return anOp->GetStatus();
-}
-
-WONStatus BlockingSocket::RecvBytesFrom(ByteBufferPtr &theBytes, unsigned short theMaxBytes, IPAddr &theAddr, unsigned long theTimeout)
-{
-	SmartPtr<RecvBytesFromOp> anOp = new RecvBytesFromOp(theMaxBytes,this);
-	if(anOp->RunBlock(theTimeout))
-	{
-		theAddr = anOp->GetAddr();
-		theBytes = anOp->GetBytes();
-	}
-	
-	return anOp->GetStatus();
-}
-}
-
-// No original address identified: WON SDK blocking byte receive
-namespace WONAPI {
-WONStatus BlockingSocket::RecvBytes(ByteBufferPtr &theBytes, DWORD theNumBytes, DWORD theTimeout)
-{
-	SmartPtr<RecvBytesOp> anOp = new RecvBytesOp(theNumBytes,this);
-	if(anOp->RunBlock(theTimeout))
-		theBytes = anOp->GetBytes();
-
-	return anOp->GetStatus();
 }
 }
 

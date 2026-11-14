@@ -19,6 +19,7 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "platform/PlatSocket.h"
 #include "platform/PlatTime.h"
+#include "won_blocking.h"
 
 using namespace WONAPI;
 
@@ -47,7 +48,7 @@ struct Pair {
         if (this->mListener->Bind(IPAddr("127.0.0.1", 0), true) != 0 || this->mListener->Listen(5) != 0)
             return false;
         this->mClient = new BlockingSocket(0);
-        if (this->mClient->Connect(IPAddr("127.0.0.1", this->mListener->GetLocalPort()), 2000) != WS_Success)
+        if (WonBlocking::Connect(this->mClient, IPAddr("127.0.0.1", this->mListener->GetLocalPort()), 2000) != WS_Success)
             return false;
         this->mListener->WaitForAccept(2000);
         return this->mListener->Accept(this->mServer) == 0 && this->mServer.get() != NULL;
@@ -84,53 +85,53 @@ static void BlockingOps()
 
     // a 4-byte length field (the default) counts itself
     const unsigned char aMsg4[] = {9, 0, 0, 0, 'h', 'e', 'l', 'l', 'o'};
-    CHECK_STATUS(aClient->SendMsg(Bytes(aMsg4, sizeof(aMsg4)), 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::SendMsg(aClient, Bytes(aMsg4, sizeof(aMsg4)), 1000), WS_Success);
     ByteBufferPtr aGot;
-    CHECK_STATUS(aServer->RecvMsg(aGot, 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvMsg(aServer, aGot, 1000), WS_Success);
     CHECK(Same(aGot, "hello", 5));
 
     // 2 bytes, and the 2-byte escape 0xffff followed by a 4-byte length
     aServer->SetLengthFieldSize(2);
     const unsigned char aMsg2[] = {5, 0, 'a', 'b', 'c'};
-    CHECK_STATUS(aClient->SendMsg(Bytes(aMsg2, sizeof(aMsg2)), 1000), WS_Success);
-    CHECK_STATUS(aServer->RecvMsg(aGot, 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::SendMsg(aClient, Bytes(aMsg2, sizeof(aMsg2)), 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvMsg(aServer, aGot, 1000), WS_Success);
     CHECK(Same(aGot, "abc", 3));
     const unsigned char aMsgEsc[] = {0xff, 0xff, 7, 0, 0, 0, 'x', 'y', 'z'};
-    CHECK_STATUS(aClient->SendMsg(Bytes(aMsgEsc, sizeof(aMsgEsc)), 1000), WS_Success);
-    CHECK_STATUS(aServer->RecvMsg(aGot, 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::SendMsg(aClient, Bytes(aMsgEsc, sizeof(aMsgEsc)), 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvMsg(aServer, aGot, 1000), WS_Success);
     CHECK(Same(aGot, "xyz", 3));
 
     // 1 byte
     aServer->SetLengthFieldSize(1);
     const unsigned char aMsg1[] = {3, 'q', 'r'};
-    CHECK_STATUS(aClient->SendMsg(Bytes(aMsg1, sizeof(aMsg1)), 1000), WS_Success);
-    CHECK_STATUS(aServer->RecvMsg(aGot, 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::SendMsg(aClient, Bytes(aMsg1, sizeof(aMsg1)), 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvMsg(aServer, aGot, 1000), WS_Success);
     CHECK(Same(aGot, "qr", 2));
 
     // a length not above the field's size, a length of 256000, a field size of 3
     aServer->SetLengthFieldSize(4);
     const unsigned char aBad[] = {4, 0, 0, 0};
-    CHECK_STATUS(aClient->SendBytes(Bytes(aBad, sizeof(aBad)), 1000), WS_Success);
-    CHECK_STATUS(aServer->RecvMsg(aGot, 1000), WS_RecvMsg_InvalidMessageLength);
+    CHECK_STATUS(WonBlocking::SendBytes(aClient, Bytes(aBad, sizeof(aBad)), 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvMsg(aServer, aGot, 1000), WS_RecvMsg_InvalidMessageLength);
     const unsigned char aHuge[] = {0x00, 0xe8, 0x03, 0};   // 256000
-    CHECK_STATUS(aClient->SendBytes(Bytes(aHuge, sizeof(aHuge)), 1000), WS_Success);
-    CHECK_STATUS(aServer->RecvMsg(aGot, 1000), WS_RecvMsg_InvalidMessageLength);
+    CHECK_STATUS(WonBlocking::SendBytes(aClient, Bytes(aHuge, sizeof(aHuge)), 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvMsg(aServer, aGot, 1000), WS_RecvMsg_InvalidMessageLength);
     aServer->SetLengthFieldSize(3);
-    CHECK_STATUS(aServer->RecvMsg(aGot, 1000), WS_RecvMsg_InvalidLengthFieldSize);
+    CHECK_STATUS(WonBlocking::RecvMsg(aServer, aGot, 1000), WS_RecvMsg_InvalidLengthFieldSize);
     aServer->SetLengthFieldSize(4);
 
     // nothing queued: the receive times out
     uint64_t aStart = PlatTimeMilliseconds64();
-    CHECK_STATUS(aServer->RecvMsg(aGot, 150), WS_TimedOut);
+    CHECK_STATUS(WonBlocking::RecvMsg(aServer, aGot, 150), WS_TimedOut);
     uint64_t aWaited = PlatTimeMilliseconds64() - aStart;
     CHECK(aWaited >= 100 && aWaited < 2000);
 
     // a CR-LF line (the CR becomes a NUL, the LF is dropped); a lone LF does not end it
     const char aLines[] = "a\nb\r\nnext";
-    CHECK_STATUS(aClient->SendBytes(Bytes(aLines, sizeof(aLines) - 1), 1000), WS_Success);
-    CHECK_STATUS(aServer->RecvCRMsg(aGot, 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::SendBytes(aClient, Bytes(aLines, sizeof(aLines) - 1), 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvCRMsg(aServer, aGot, 1000), WS_Success);
     CHECK(Same(aGot, "a\nb\0", 4));
-    CHECK_STATUS(aServer->RecvBytes(aGot, 4, 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvBytes(aServer, aGot, 4, 1000), WS_Success);
     CHECK(Same(aGot, "next", 4));
 
     // a large send while another thread reads it
@@ -140,8 +141,8 @@ static void BlockingOps()
         aData[i] = (char)(i * 7 + (i >> 11));
     ByteBufferPtr aReceived;
     WONStatus aRecvStatus = WS_None;
-    std::thread aReader([&] { aRecvStatus = aServer->RecvBytes(aReceived, aBig, 10000); });
-    CHECK_STATUS(aClient->SendBytes(Bytes(aData, aBig), 10000), WS_Success);
+    std::thread aReader([&] { aRecvStatus = WonBlocking::RecvBytes(aServer, aReceived, aBig, 10000); });
+    CHECK_STATUS(WonBlocking::SendBytes(aClient, Bytes(aData, aBig), 10000), WS_Success);
     aReader.join();
     CHECK_STATUS(aRecvStatus, WS_Success);
     CHECK(Same(aReceived, aData, aBig));
@@ -149,24 +150,24 @@ static void BlockingOps()
 
     // the peer closes: a receive reports Shutdown; RecvBytes(0) reads until then
     const char aTail[] = "tail";
-    CHECK_STATUS(aClient->SendBytes(Bytes(aTail, 4), 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::SendBytes(aClient, Bytes(aTail, 4), 1000), WS_Success);
     aClient->Close();
-    CHECK_STATUS(aServer->RecvBytes(aGot, 0, 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvBytes(aServer, aGot, 0, 1000), WS_Success);
     CHECK(Same(aGot, "tail", 4));
-    CHECK_STATUS(aServer->RecvMsg(aGot, 1000), WS_AsyncSocket_Shutdown);
+    CHECK_STATUS(WonBlocking::RecvMsg(aServer, aGot, 1000), WS_AsyncSocket_Shutdown);
 
     // ops on a closed socket
-    CHECK_STATUS(aClient->SendMsg(Bytes(aMsg4, sizeof(aMsg4)), 100), WS_AsyncSocket_InvalidSocket);
+    CHECK_STATUS(WonBlocking::SendMsg(aClient, Bytes(aMsg4, sizeof(aMsg4)), 100), WS_AsyncSocket_InvalidSocket);
 
     // datagrams
     SmartPtr<BlockingSocket> aUdpA = new BlockingSocket(1), aUdpB = new BlockingSocket(1);
     CHECK(aUdpA->Bind(IPAddr("127.0.0.1", 0), false) == 0 && aUdpB->Bind(IPAddr("127.0.0.1", 0), false) == 0);
-    CHECK_STATUS(aUdpA->SendBytesTo(Bytes("ping", 4), IPAddr("127.0.0.1", aUdpB->GetLocalPort()), 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::SendBytesTo(aUdpA, Bytes("ping", 4), IPAddr("127.0.0.1", aUdpB->GetLocalPort()), 1000), WS_Success);
     IPAddr aFrom;
-    CHECK_STATUS(aUdpB->RecvBytesFrom(aGot, 512, aFrom, 1000), WS_Success);
+    CHECK_STATUS(WonBlocking::RecvBytesFrom(aUdpB, aGot, 512, aFrom, 1000), WS_Success);
     CHECK(Same(aGot, "ping", 4));
     CHECK(aFrom.GetPort() == aUdpA->GetLocalPort() && aFrom.GetHost() == 0x7f000001);
-    CHECK_STATUS(aUdpB->RecvBytesFrom(aGot, 512, aFrom, 100), WS_TimedOut);
+    CHECK_STATUS(WonBlocking::RecvBytesFrom(aUdpB, aGot, 512, aFrom, 100), WS_TimedOut);
     // a stream op on a datagram socket and the reverse
     CHECK_STATUS(aUdpA->Listen(1), WS_AsyncSocket_DatagramNotAllowed);
     CHECK_STATUS(aServer->SendTo("x", 1, aFrom), WS_AsyncSocket_StreamNotAllowed);
@@ -178,8 +179,8 @@ static void BlockingOps()
 
     // connecting to a port nobody listens on (the listener's, closed), and to an invalid address
     SmartPtr<BlockingSocket> aRefused = new BlockingSocket(0);
-    CHECK_STATUS(aRefused->Connect(IPAddr("127.0.0.1", aClosedPort), 3000), PLAT_SOCK_ECONNREFUSED);
-    CHECK_STATUS(aRefused->Connect(IPAddr(), 100), WS_InvalidAddress);
+    CHECK_STATUS(WonBlocking::Connect(aRefused, IPAddr("127.0.0.1", aClosedPort), 3000), PLAT_SOCK_ECONNREFUSED);
+    CHECK_STATUS(WonBlocking::Connect(aRefused, IPAddr(), 100), WS_InvalidAddress);
 }
 
 static void AsyncOps(WONAPICore& inCore)
