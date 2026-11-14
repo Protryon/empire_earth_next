@@ -1,4 +1,4 @@
-//! `extern "C"` for the message box (`dialog.rs`): `EEUIFError::Display` and `Open` call these; the host is
+//! `extern "C"` for the message box (`dialog.rs`): `EEUIFError`'s constructor, `Display` and `Open` call these; the host is
 //! `ee_screenscpp_dialog` (`User Interface Thread/EEUIFError.cpp`).
 #![allow(clippy::missing_safety_doc)]
 
@@ -35,4 +35,10 @@ pub unsafe extern "C" fn ee_screens_dialog_show(dialog: *mut c_void, kind: u32, 
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_dialog_open(dialog: *mut c_void, mode: u32) {
     crate::dialog::open(&mut Dialog(dialog), mode);
+}
+
+/// `EEUIFError::EEUIFError`: creates and lays out the box's controls and background.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_dialog_construct(dialog: *mut c_void) {
+    crate::dialog::construct(&mut Dialog(dialog));
 }

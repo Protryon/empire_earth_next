@@ -55,7 +55,12 @@ struct Ask2D {
     EEE2DRust* mEffect;
     EEEffectQueue* mQueues;
     static EEE2DRust* E(void* inAsk) { return static_cast<Ask2D*>(inAsk)->mEffect; }
-    static int32_t BaseQueue(void* inAsk) { return E(inAsk)->EEEffect::Queue(static_cast<Ask2D*>(inAsk)->mQueues); }
+    static int32_t BaseQueue(void* inAsk)
+    {
+        EEE2DRust* theEffect = E(inAsk);
+        EEEffectQueue* theQueues = static_cast<Ask2D*>(inAsk)->mQueues;
+        return theEffect->mKind == 0x41 ? theEffect->EEEffect::Queue(theQueues) : theEffect->EEEffect2D::Queue(theQueues);
+    }
     static void Push(void* inAsk, uint32_t inIndex)
     {
         EEGraphicObject* theObject = E(inAsk)->mGraphicEffect->mGraphicObject;
@@ -144,6 +149,35 @@ struct Ask2D {
     {
         return inIndex == 0 ? sTexture4E0 : inIndex == 1 ? sTexture4E4 : sTexture4E8;
     }
+    // a random one of the unit's tag points of inKind (the unit itself without any) (EEE2DShockwave::SetUp, 0xe6259)
+    static EeGe3DPoint SpawnPoint(void* inAsk, uint32_t inKind)
+    {
+        EEE2DRust* theEffect = E(inAsk);
+        GE3DPoint thePosition;
+        GETransformation theTransformation(false);
+        theTransformation = theEffect->mUnit->mComplexUnit->mPhysicalModel.GetLocation();
+        EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
+        EETagPointList* theList = theUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), (long)inKind);
+        float theScale = theUnit->mPhysicalModel.GetScale();
+        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
+        if (theList && theList->mPoints.size() != 0) {
+            long theIndex = UMFloatToLong(EEEffect::GetRandom() * theList->mPoints.size());
+            if (theIndex == theList->mPoints.size())
+                theIndex = theList->mPoints.size() - 1;
+            EETagPointList::Scale(theTransformation, theScale);
+            theList->mPoints[theIndex]->GetPoint(theFrame, theTransformation, thePosition);
+        } else {
+            // no tag points of the kind: at the unit itself, not at the map origin
+            thePosition = GE3DPoint(theTransformation);
+        }
+        return EeGe3DPoint{thePosition.mX, thePosition.mY, thePosition.mZ};
+    }
+    static int32_t ObjectMedia(void* inAsk)
+    {
+        E(inAsk)->mGraphicObject = E(inAsk)->GetGraphicObject();
+        return E(inAsk)->mGraphicObject->LoadMedia();
+    }
+    static void* ObjectTexture(void* inAsk, uint32_t inIndex) { return E(inAsk)->mGraphicObject->mTextures[inIndex]; }
 };
 }
 
@@ -165,6 +199,27 @@ EEE2DRust::EEE2DRust(EEUnit* inUnit, const GE3DPoint& inLocation, EEGraphicEffec
     this->Call(EeGfxEffect3DOp::CreateAt);
 }
 
+// the shockwave (0x12) on a unit (EEE2DShockwave, 0xe6192)
+EEE2DRust::EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect2D(inUnit, inGraphicEffect, gU4E8DF4, inKind, false)
+{
+    this->Call(EeGfxEffect3DOp::Create);
+}
+
+// at a point (0xe61e2)
+EEE2DRust::EEE2DRust(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect2D(0, inGraphicEffect, gU4E8DF4, inKind, false)
+{
+    this->Call(EeGfxEffect3DOp::CreateAt);
+    this->SetPosition(inPosition);
+}
+
+// for loading (0xe621f)
+EEE2DRust::EEE2DRust(long inKind)
+    : EEEffect2D(gU4E8DF4, inKind, false)
+{
+}
+
 // unloads the kept graphic object's media
 EEE2DRust::~EEE2DRust()
 {
@@ -174,12 +229,43 @@ EEE2DRust::~EEE2DRust()
     }
 }
 
-long EEE2DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues)
+long EEE2DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile)
 {
     Ask2D theAsk = {this, inQueues};
     EeGfxEffect2DHost theHost = {&theAsk, Ask2D::BaseQueue, Ask2D::Push, Ask2D::Media, Ask2D::Frames, Ask2D::MoveToPoint,
                                  Ask2D::Model, Ask2D::SelectionSize, Ask2D::ConfirmEnemy, Ask2D::ConfirmGoal,
-                                 Ask2D::ConfirmUnit, Ask2D::UnitLocation, Ask2D::TerrainZ, Ask2D::CommandTexture};
+                                 Ask2D::ConfirmUnit, Ask2D::UnitLocation, Ask2D::TerrainZ, Ask2D::CommandTexture,
+                                 Ask2D::SpawnPoint, Ask2D::ObjectMedia, Ask2D::ObjectTexture};
+    // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
+    if (inFile != NULL)
+        return ee_gfx_effect2d_file(inOp, this->mRecord, inFile, &theHost);
     EeGfxGraphicFacts theFacts = EEEffectFacts(this->mGraphicEffect, this->mUnit);
     return ee_gfx_effect2d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
+}
+
+// the confirmation (0x41): 0 without the base's (it is never saved); the others: EEEffect2D's, then the kind's (the
+// base's result ignored, as the shockwave's)
+long EEE2DRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
+    if (this->mKind == 0x41)
+        return this->Call(EeGfxEffect3DOp::Load);
+    EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return this->Call(EeGfxEffect3DOp::Load, NULL, &theFile);
+}
+
+long EEE2DRust::RepairPointers()
+{
+    if (this->mKind == 0x41)
+        return this->Call(EeGfxEffect3DOp::Repair);
+    return EEEffect2D::RepairPointers();
+}
+
+long EEE2DRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
+{
+    if (this->mKind == 0x41)
+        return this->Call(EeGfxEffect3DOp::Save);
+    EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return this->Call(EeGfxEffect3DOp::Save, NULL, &theFile);
 }

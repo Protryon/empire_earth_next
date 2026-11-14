@@ -13,6 +13,10 @@
 #include "ee/EECivilization.h"          // held by value (+0x468)
 #include "ee/EEResourceType.h"
 #include "rust/ee_units.h"             // EeUnitsPlayerSaved (EEPlayer's saved numbers)
+class FSFile;
+// New (R5b.4, round 28): the Rust saves' file primitives (ee_units player_save.rs's READ_ULONG .. WRITE_BOOL, shared by
+// the player's and the physics' hosts; EEPlayer.cpp); -1 for another operation
+int32_t EESavePrimitive(FSFile& inFile, int32_t inOp, EeUnitsPlayerSaveIo* io);
 
 class EEPlayer;
 void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount);   // ee/EEGameLog.h

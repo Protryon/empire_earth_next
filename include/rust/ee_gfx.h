@@ -124,6 +124,9 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_RAIN = 42;
 /// The snow (`EEE3DSnow`).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SNOW = 61;
 
+/// `kEffect3DTracerBeam`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_TRACER_BEAM = 64;
+
 /// The tick's events: the impact effect is placed now.
 constexpr static const int32_t EE_GFX_TRACER_IMPACT = 1;
 
@@ -135,6 +138,9 @@ constexpr static const int32_t EE_GFX_TRACER_OVER = 4;
 
 /// `kEffect3DDamageVent`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_DAMAGE_VENT = 53;
+
+/// `kEffect3DVolcano`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_VOLCANO = 32;
 
 /// `kEffect3DEnergyWall`
 constexpr static const int32_t EE_GFX_EFFECT_KIND_ENERGY_WALL = 52;
@@ -332,6 +338,9 @@ struct EeGfxStormLists;
 
 /// The jets (`mParts`).
 struct EeGfxVentParts;
+
+/// The mesh's terrain points (`mPoints`) and cone heights (`mHeights`).
+struct EeGfxVolcanoMesh;
 
 /// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
 /// end (a move shorter than 0.001).
@@ -828,6 +837,11 @@ struct EeGfxEffectTracer {
   bool impact_created;
   /// `mWeaponTagPoint`: the shooter's (saved from 0.250)
   int32_t weapon_tag_point;
+  /// the draw copies `Queue` takes (`mDrawScroll`, `mDrawAge`, `mDrawLength`, `mDrawWidth`)
+  float draw_scroll;
+  float draw_age;
+  float draw_length;
+  float draw_width;
 };
 
 /// The shield's state (`effect_follow.rs`): its texture scroll and direction, its opacity, its unit's hit points at
@@ -953,6 +967,33 @@ struct EeGfxEffectConfirm {
   uint32_t goal_index;
 };
 
+/// A volcano: its area (`mArea`) and centre (`mCenter`).
+struct EeGfxVolcanoArea {
+  float left;
+  float top;
+  float right;
+  float bottom;
+  EeGe3DPoint center;
+};
+
+/// The volcano's state.
+struct EeGfxEffectVolcano {
+  /// `mArea` and `mCenter` (saved)
+  EeGfxVolcanoArea area;
+  /// `mGrowth`: 0 on the terrain .. 1 the cone (saved)
+  float growth;
+  /// `mTimeLeft` (saved)
+  int32_t time_left;
+  /// `mTime`: ms since the last jitter (saved)
+  int32_t time;
+  /// `mGrown` (saved)
+  bool grown;
+  /// `mDone`: the mesh is at its growth
+  bool done;
+  /// the mesh (made on first use; owned by the record)
+  EeGfxVolcanoMesh *mesh;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -1012,6 +1053,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectVent vent;
   /// the command confirmation's (`effect_confirm.rs`)
   EeGfxEffectConfirm confirm;
+  /// the volcano's (`effect_volcano.rs`)
+  EeGfxEffectVolcano volcano;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1253,22 +1296,6 @@ struct EeGfxStormDraw {
   bool water;
 };
 
-/// What the beam's tick reads: the tick, the graphic effect's params 1-5 and 7 (the scroll's rate, the width's rate,
-/// its restart and its top, the hit's age, the impact's age), its duration, whether it has a linked (impact) effect
-/// and whether the beam has a target unit.
-struct EeGfxTracerTick {
-  float tick_time;
-  float param1;
-  float param2;
-  float param3;
-  float param4;
-  float param5;
-  float param7;
-  uint32_t duration;
-  bool has_linked1;
-  bool has_target;
-};
-
 /// What the effects read of their graphic effect and the tick, gathered by the C++ for each call.
 struct EeGfxGraphicFacts {
   /// `mSize`
@@ -1317,6 +1344,9 @@ struct EeGfxGraphicFacts {
   float param11;
   /// the effect has its graphic effect
   bool has_effect;
+  /// `mTime1`, `mTime2` (ms)
+  uint32_t time1;
+  int32_t time2;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1380,6 +1410,13 @@ struct EeGfxFrames {
   uint32_t time;
   uint32_t count;
   uint32_t last;
+};
+
+/// The beam's two ends as the C++ finds them on the units (`Aim` before `beam::aim`), and whether it has a target unit.
+struct EeGfxTracerEnds {
+  EeGe3DPoint start;
+  EeGe3DPoint end;
+  bool has_target;
 };
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -1495,6 +1532,25 @@ struct EeGfxEffect3DHost {
   /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
   /// screen (none without an object)
   void (*queue_screen)(void *context, uint32_t index);
+  /// the tracer beam's ends (`EEE3DTracerBeam::Aim`, 0xfc5a4, before its `beam.rs` part): the shooter's weapon tag
+  /// point (or its tag point of kind 6, or its stats' default point) and the target point (on the target unit's
+  /// location, or the fixed point); whether the beam has a target unit
+  EeGfxTracerEnds (*tracer_ends)(void *context);
+  /// the tracer beam's impact: the linked effect 1 placed at the target point on the target unit (or at the fixed
+  /// point); the placement's result
+  int32_t (*tracer_impact)(void *context);
+  /// the tracer beam's hit: the target unit's class's `UnitDamaged`
+  void (*tracer_hit)(void *context);
+  /// the tracer beam's target as its saved id (`Load`: `RepairPointers` resolves it)
+  void (*tracer_saved_target)(void *context, uint32_t id);
+  /// the tracer beam's target unit's id, 0xffffffff for none (`Save`)
+  uint32_t (*tracer_target_id)(void *context);
+  /// the volcano's `BuildModel` (0xfe79d) over the record's mesh lists (`count` points and heights): the image's
+  /// colours and cone heights and the mesh (`volcano.rs`), the model made and referenced, the centre's height, the
+  /// placement, the radius and the texture; its result
+  int32_t (*volcano_build)(void *context, EeGe3DPoint *points, float *heights, uint32_t count);
+  /// the volcano's model
+  EeGfxModel (*volcano_model)(void *context);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1591,6 +1647,21 @@ struct EeGfxRaster {
   /// `text`, drawn by `DrawClippedText` clipped to the viewport's view rectangle on the main game form (the scenario
   /// editor's under a free camera)
   void (*draw_text)(float x, float y, const uint8_t *text, EeGfxColor color);
+  /// the tracer beam's stretch (`EEE3DTracerBeam::DrawPass6`, 0xfca9b): vertex array 0's points and texture
+  /// coordinates kept, then y stretched to `length` and x to `width`, u scrolled by `scroll` (`beam.rs`); each
+  /// sub-model's internal y kept and stretched; `ComputeBoundingVolumes`
+  void (*model_stretch)(EeGfxModel model, float length, float width, float scroll);
+  /// puts back the vertices and sub-model ys `model_stretch` kept
+  void (*model_unstretch)(EeGfxModel model);
+  /// vertex array 0's size (`GetVertexArray(0)->GetSize()`)
+  uint32_t (*vertex_count)(EeGfxModel model);
+  /// vertex array 0's point `index` (`GetPoint`)
+  EeGe3DPoint (*vertex_point)(EeGfxModel model, uint32_t index);
+  /// vertex array 0's point `index` set (`SetPoint`)
+  void (*set_vertex_point)(EeGfxModel model, uint32_t index, const EeGe3DPoint *point);
+  /// `ComputeBoundingVolumes`, `ComputeModelNormals`
+  void (*model_bounds)(EeGfxModel model);
+  void (*model_normals)(EeGfxModel model);
 };
 
 /// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it
@@ -1610,7 +1681,7 @@ struct EeGfxConfirmUnit {
 /// The C++'s answers for an `EEE2DRust`.
 struct EeGfxEffect2DHost {
   void *context;
-  /// `EEEffect::Queue` (the confirmation's base: not `EEEffect2D`'s projection)
+  /// the base's queue: `EEEffect::Queue` for the confirmation (not `EEEffect2D`'s projection), else `EEEffect2D`'s
   int32_t (*base_queue)(void *context);
   /// pushes the effect on render queue `index` under its graphic's texture for the current screen
   void (*queue)(void *context, uint32_t index);
@@ -1639,6 +1710,13 @@ struct EeGfxEffect2DHost {
   float (*terrain_z)(void *context, float x, float y);
   /// one of the command textures (0 `sTexture4E0`, 1 `sTexture4E4`, 2 `sTexture4E8`)
   EeGfxModel (*command_texture)(void *context, uint32_t index);
+  /// a random one of the unit's tag points of `kind` at its animation and frame (`EEEffect::GetRandom`), the unit's
+  /// position without any (the shockwave's `SetUp`, 0xe6259)
+  EeGe3DPoint (*spawn_point)(void *context, uint32_t kind);
+  /// the graphic object (`GetGraphicObject`, kept as the effect's) loaded; its result
+  int32_t (*object_media)(void *context);
+  /// the kept graphic object's texture `index`
+  EeGfxModel (*object_texture)(void *context, uint32_t index);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
@@ -1723,15 +1801,6 @@ struct EeGfxVolcanoBuilt {
   uint32_t dropped;
 };
 
-/// A volcano: its area (`mArea`) and centre (`mCenter`).
-struct EeGfxVolcanoArea {
-  float left;
-  float top;
-  float right;
-  float bottom;
-  EeGe3DPoint center;
-};
-
 /// The terrain under a volcano, as C++ callbacks over `context` (the `EEMap`).
 struct EeGfxVolcanoTerrain {
   void *context;
@@ -1743,12 +1812,6 @@ struct EeGfxVolcanoTerrain {
   bool (*valid_tile)(void *context, uint32_t x, uint32_t y);
   /// `GetVertexColor(x, y, corner)`
   EeGfxColor (*light)(void *context, int32_t x, int32_t y, int32_t corner);
-};
-
-/// `Aim`'s result: the beam's transformation (`SetTransformation`) and length (`mLength`).
-struct EeGfxBeamAim {
-  EeGeTransformation transform;
-  float length;
 };
 
 /// One vertex of the beam model as `DrawPass6` stretches it: its point and texture coordinate.
@@ -2871,31 +2934,6 @@ int32_t ee_gfx_storm_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_storm_save(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
-/// `EEE3DTracerBeam::Step`'s timing after the C++'s aim: its events (`EE_GFX_TRACER_*`).
-///
-/// # Safety
-/// `r` is a live record; `tick` is valid.
-int32_t ee_gfx_tracer_step(EeGfxEffectRecord *r, const EeGfxTracerTick *tick);
-
-/// `EEE3DTracerBeam::Load`'s own reads after the media load succeeded (`id`, `read`: the target's saved id).
-///
-/// # Safety
-/// `r` is a live record; `file`, `id` and `read` are valid.
-int32_t ee_gfx_tracer_load(EeGfxEffectRecord *r,
-                           const EeGfxEffectFile *file,
-                           uint32_t major,
-                           uint32_t minor,
-                           uint32_t *id,
-                           bool *read);
-
-/// `EEE3DTracerBeam::Save`'s own writes after `EEEffect3D::Save`'s (`id`: the target's, -1 for none).
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_tracer_save(const EeGfxEffectRecord *r,
-                           const EeGfxEffectFile *file,
-                           uint32_t id);
-
 /// One virtual of an `EEE3DRust` (the effects whole in Rust: `effect_rising.rs`), drawing through `raster`.
 ///
 /// # Safety
@@ -2915,6 +2953,15 @@ int32_t ee_gfx_effect2d(EeGfxEffect3DOp op,
                         const EeGfxGraphicFacts *g,
                         const EeGfxEffect2DHost *host,
                         const EeGfxRaster *raster);
+
+/// `Load` (`op` Load) or `Save` of an `EEE2DRust` after `EEEffect2D`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid; `host` is readable and its functions valid.
+int32_t ee_gfx_effect2d_file(EeGfxEffect3DOp op,
+                             EeGfxEffectRecord *r,
+                             const EeGfxEffectFile *file,
+                             const EeGfxEffect2DHost *host);
 
 /// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s (its result `base`).
 ///
@@ -3062,17 +3109,6 @@ EeGfxVolcanoBuilt ee_gfx_volcano_build(const EeGfxVolcanoArea *area,
                                        size_t vertex_count,
                                        EeGfxMeshTriangle *triangles,
                                        size_t triangle_count);
-
-/// `EEE3DTracerBeam::Aim`'s beam between `start` and `end` at `age` (the effect's params 5 and 6 grow and shrink
-/// it).
-///
-/// # Safety
-/// `start` and `end` are valid.
-EeGfxBeamAim ee_gfx_beam_aim(const EeGe3DPoint *start,
-                             const EeGe3DPoint *end,
-                             float age,
-                             float grow,
-                             float shrink);
 
 /// `EEE3DTracerBeam::DrawPass6`'s stretch of `count` vertices in place (length, width, texture scroll).
 ///

@@ -256,6 +256,8 @@ pub struct EeGfxEffectRecord {
     pub vent: crate::effect_vent::EeGfxEffectVent,
     /// the command confirmation's (`effect_confirm.rs`)
     pub confirm: crate::effect_confirm::EeGfxEffectConfirm,
+    /// the volcano's (`effect_volcano.rs`)
+    pub volcano: crate::effect_volcano::EeGfxEffectVolcano,
 }
 
 /// The identity (`GETransformation()`).
@@ -300,6 +302,7 @@ impl EeGfxEffectRecord {
             blast: crate::effect_nuclear::EeGfxEffectBlast::default(),
             vent: crate::effect_vent::EeGfxEffectVent::default(),
             confirm: crate::effect_confirm::EeGfxEffectConfirm::default(),
+            volcano: crate::effect_volcano::EeGfxEffectVolcano::default(),
         }
     }
 
