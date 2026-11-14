@@ -67,6 +67,8 @@
 //!   game options page): the controls it makes as tables, its pages, rows, diplomacy grid, load and store.
 //! - [`editor_trigger`]: the scenario editor's trigger tab trigger screen whole in Rust (`EESETSTrigger`): its
 //!   controls, condition and effect rows, operators, store and load.
+//! - [`editor_unit`]: the scenario editor's unit tab whole in Rust (`EESEUnit`): its controls, palettes, sorts and
+//!   owners and the class list they fill, the cargo, the unit, wall and gate placement state, the mouse and keys.
 //! - [`editor_whole`]: the scenario editor's actions whole in Rust behind one C++ action (`EESEARust`): save, test,
 //!   exit, quick save, the tech lists, the rotation, the trigger area, the blank map (the elevation file's heights)
 //!   and the random map, the wall and gate placements, the unit placement and move ([`editor_place`]).
@@ -145,6 +147,9 @@ mod editor_players_ffi;
 pub mod editor_trigger;
 #[cfg(not(test))]
 mod editor_trigger_ffi;
+pub mod editor_unit;
+#[cfg(not(test))]
+mod editor_unit_ffi;
 pub mod editor_whole;
 #[cfg(not(test))]
 mod editor_whole_ffi;

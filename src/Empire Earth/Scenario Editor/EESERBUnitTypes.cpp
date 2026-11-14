@@ -195,6 +195,9 @@ void EESECBMaxPlayer::ChangeSelection()
 
 // the screen's font while a screen's object makes its controls (the player tab, the trigger screens' objects)
 GEFont* gSeplScreenFont;
+// the unit tab's lists (EESEUnit.cpp; declared in ee/EESEUnit.h)
+UILBString* EESEUnitNewList(long inKind, unsigned long inID, GEFont* inFont, const GE2DPoint& inLocation,
+                            unsigned long inWidth, unsigned long inHeight, UIForm* inForm, unsigned long inIndex);
 
 // FUNCTION: EXE 0x573313
 // Creates the player tab: player page, tech tree page and game options page controls (editor_players.rs)
@@ -655,8 +658,11 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
     }
     case EE_SCREENS_SEPL_UNIT_LIST: {
         std::vector<UWideString> theNone;
-        EESETSOUnitList* t = new EESETSOUnitList(c.id, theNone, theFont, false, theLocation, c.w, (unsigned long)c.h,
-                                                 inForm, c.index, 3);
+        UILBString* t = c.extra[0] == EE_SCREENS_SEPL_LIST_OBJECT
+                            ? new EESETSOUnitList(c.id, theNone, theFont, false, theLocation, c.w, (unsigned long)c.h,
+                                                  inForm, c.index, 3)
+                            : EESEUnitNewList(c.extra[0], c.id, theFont, theLocation, (unsigned long)c.w,
+                                              (unsigned long)c.h, inForm, c.index);
         if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
         if (c.bg2 >= 0.0f) t->SetScrollBarBgOpacity(c.bg2);
         if (theFg) SeplYellow(t->GetGEText());

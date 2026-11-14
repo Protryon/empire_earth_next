@@ -2186,6 +2186,307 @@ constexpr static const uint32_t EE_SCREENS_SETR_REMOVE_ENTRY = 8;
 
 constexpr static const uint32_t EE_SCREENS_SETR_STEP = 9;
 
+/// The sort event (`EESEERust(kSEESortUnitList)`) made -> its handle in p0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_SORT_EVENT = 300;
+
+/// The control p0's trigger i0 set to the event p1 (`SetTriggerEvent`; the event's reference kept by the control).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_SET_EVENT = 301;
+
+/// A unit type button: p0 -> three handles (the button, its normal and its pressed bitmap), made on the form p1 at
+/// the control index i0 for the palette i1 (its cells f0, f1 normal and f2, f3 pressed in the button texture), the
+/// help string i2, at x i3; its button-up event the sort event p2; added to group 6.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_TYPE_BUTTON = 302;
+
+/// The remove cargo button: p0 -> its handle, made on the form p1 at the index i0, at x f0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_REMOVE_CARGO = 303;
+
+/// The rotation button: p0 -> its handle, made on the form p1 at the index i0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_ROTATION = 304;
+
+/// An action made (i0: `EE_SCREENS_SEUN_ACTION_*`) -> its handle in p0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_ACTION = 305;
+
+/// The selection tool: p0 -> its handle (`EEUICSelectUnits` on the form p1 at the index i0, the click and the lasso
+/// in p2: two handles), added to group 0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_SELECT_UNITS = 306;
+
+/// The command tool: p0 -> its handle (`EESEUICCommandUnits` on the form p1 at the index i0, the click p2), added
+/// to group 0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_COMMAND_UNITS = 307;
+
+/// The panel's background (`textures\scenunit`) -> its handle in p0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_BACKGROUND = 308;
+
+/// The upgrade panel: p0 -> its handle, made on the form p1 from the index i0 -> the next index.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_UPGRADE_PANEL = 309;
+
+/// p0 released: i0 0 an action, 1 a bitmap, 2 an event (`Dereference`), 3 the upgrade panel (`delete`).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_RELEASE = 310;
+
+/// The wall (p0 the shell, p1 the place wall action) placed from the build tool's start to its end for the player
+/// i0 / the gate (p1 the place gate action) on its tile and direction.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_PLACE_WALL = 311;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_PLACE_GATE = 312;
+
+/// The ghosts cleared (i0: inside the ghosts' lock).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_CLEAR_GHOSTS = 313;
+
+/// The colour of the gate tool's player's walls restored (p0 the shell; `EEClearGateHighlights`).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_GATE_HIGHLIGHTS = 314;
+
+/// A frame's preview (p0 the shell): i0 0 the unit ghost at the mouse, 1 the wall ghosts, 2 the gate on a wall.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_PREVIEW = 315;
+
+/// The game view (i0: 1 right of the panel, 0 the full view), the camera flags cleared, the mini map's view, the
+/// manager redrawn and the current form's controls dirty.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_GAME_VIEW = 316;
+
+/// The form of the control p0: its manager redrawn / the editor's selection cleared.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_REDRAW = 317;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_CLEAR_SELECTION = 318;
+
+/// The move action p0: -> whether a unit is picked up / cancelled / its unit i0 picked up / put down.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_MOVING = 319;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_CANCEL_MOVE = 320;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_PICK_UP = 321;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_PUT_DOWN = 322;
+
+/// The place unit action p0's unit placed for the player i0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_PLACE_UNIT = 323;
+
+/// The upgrade panel p0 shows the unit p1 (NULL: none).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_SHOW_UNIT = 324;
+
+/// The background p1 drawn on the form where the shell p0's panel rectangle overlaps the rectangle p2.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_DRAW = 325;
+
+/// The rotation button p0's yaw -> f0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_ANGLE = 326;
+
+/// -> the palette the type buttons set (`EEUIFSEBUnitType::Check`).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_TYPE_MODE = 327;
+
+/// The shell p1's panel rectangle set to (0, 0)-(224, 605) and added to the dirty rectangles of the manager of the
+/// control p0's form.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_DIRTY = 328;
+
+/// The list p0's selection -> it, -1 for none / its line count / the line i0 selected / its scroll at 0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_LIST_SELECTION = 329;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_LIST_COUNT = 330;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_LIST_SELECT = 331;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_LIST_TOP = 332;
+
+/// The build tool i0 (0 the wall, 1 the gate) of the shell p0 cancelled (`Cancel`).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_CANCEL_BUILD = 333;
+
+/// The unit list p0's line i1 for the player i0: -> the player's id; i1 whether the player may place the class, i2
+/// what it is (`EE_SCREENS_SEUN_KIND_*`).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_PLACE_INFO = 334;
+
+/// The wall (i2 = 0) or gate (1) tool of the shell p0 set from the unit list p1's line i1 and started for the
+/// player i0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_START_BUILD = 335;
+
+/// The unit list p1's line i0's class and the player id i1 posted to the editor's load thread (form p0; 0x402).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_POST_GHOST = 336;
+
+/// The cargo list p0 emptied / the editor's selected units (form p1) -> their count / the selected unit i0 -> its
+/// cargo count / its cargo i1 added to the list p0.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_CARGO_CLEAR = 337;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_SELECTED_COUNT = 338;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_CARGO_COUNT = 339;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_CARGO_ADD = 340;
+
+/// The unit list p0: its comparator for the sort i0 / emptied / the class i0 inserted at its sorted place.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_LIST_SORT = 341;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_LIST_EMPTY = 342;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_LIST_ADD = 343;
+
+/// -> the unit class count / the class i0's flags (`EE_SCREENS_SEUN_CLASS_*`; 0 for none), its type in i1.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_CLASS_COUNT = 344;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_CLASS = 345;
+
+/// -> whether the game view contains f0, f1 / the mouse buttons (`EE_SCREENS_SEUN_MOUSE_*`).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_IN_VIEW = 346;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_MOUSE = 347;
+
+/// The unit at f0, f1 -> its id (-1: none), i1 whether it is a gate.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_PICK = 348;
+
+/// The gate i0 lifted for re-placing: the shell p0's gate tool set from it, the gate killed, the tool started.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_HOLD_GATE = 349;
+
+/// The build tool i0 (0 wall, 1 gate) of the shell p0 follows the mouse at f0, f1 (`Update`).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_BUILD_UPDATE = 350;
+
+/// The selection tool p0 starts a selection / the command tool a command at f0, f1.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_START_SELECTION = 351;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_START_COMMAND = 352;
+
+/// The ghosts' lock entered (i0 = 1) or left.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_LOCK = 353;
+
+/// -> the keys: bit 0 Delete just pressed, bit 1 Shift down.
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_KEYS = 354;
+
+/// The current player's selection deleted (i0: the group flag, Shift).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_DELETE_SELECTION = 355;
+
+/// The rotation button p0's keys (`UpdateKeyboard`).
+constexpr static const uint32_t EE_SCREENS_SEUN_OP_ROTATION_KEYS = 356;
+
+/// The actions: the click, the lasso, the wall, gate and unit placements, the move.
+constexpr static const int32_t EE_SCREENS_SEUN_ACTION_CLICK = 0;
+
+constexpr static const int32_t EE_SCREENS_SEUN_ACTION_LASSO = 1;
+
+constexpr static const int32_t EE_SCREENS_SEUN_ACTION_PLACE_UNIT = 2;
+
+constexpr static const int32_t EE_SCREENS_SEUN_ACTION_PLACE_GATE = 3;
+
+constexpr static const int32_t EE_SCREENS_SEUN_ACTION_PLACE_WALL = 4;
+
+constexpr static const int32_t EE_SCREENS_SEUN_ACTION_MOVE = 5;
+
+/// What a picked class places: a unit, a wall (its node a wall technology), a gate.
+constexpr static const int32_t EE_SCREENS_SEUN_KIND_UNIT = 0;
+
+constexpr static const int32_t EE_SCREENS_SEUN_KIND_WALL = 1;
+
+constexpr static const int32_t EE_SCREENS_SEUN_KIND_GATE = 2;
+
+/// A unit class's flags for the palettes: it exists and the editor lists it, gaia or players may place it, a hero
+/// (by AI kind or category), its domains, a land building.
+constexpr static const int32_t EE_SCREENS_SEUN_CLASS_SELECTABLE = 1;
+
+constexpr static const int32_t EE_SCREENS_SEUN_CLASS_GAIA = 2;
+
+constexpr static const int32_t EE_SCREENS_SEUN_CLASS_PLAYER = 4;
+
+constexpr static const int32_t EE_SCREENS_SEUN_CLASS_HERO = 8;
+
+constexpr static const int32_t EE_SCREENS_SEUN_CLASS_AIR = 16;
+
+constexpr static const int32_t EE_SCREENS_SEUN_CLASS_BUILDING = 32;
+
+constexpr static const int32_t EE_SCREENS_SEUN_CLASS_LAND = 64;
+
+constexpr static const int32_t EE_SCREENS_SEUN_CLASS_SEA = 128;
+
+constexpr static const int32_t EE_SCREENS_SEUN_CLASS_SPACE = 256;
+
+/// The mouse buttons: left double pressed, just pressed, just released, down; right just pressed, just released.
+constexpr static const int32_t EE_SCREENS_SEUN_MOUSE_L_DOUBLE = 1;
+
+constexpr static const int32_t EE_SCREENS_SEUN_MOUSE_L_PRESSED = 2;
+
+constexpr static const int32_t EE_SCREENS_SEUN_MOUSE_L_RELEASED = 4;
+
+constexpr static const int32_t EE_SCREENS_SEUN_MOUSE_L_DOWN = 8;
+
+constexpr static const int32_t EE_SCREENS_SEUN_MOUSE_R_PRESSED = 16;
+
+constexpr static const int32_t EE_SCREENS_SEUN_MOUSE_R_RELEASED = 32;
+
+/// The unit palettes (`kUnitPalette*`).
+constexpr static const int32_t EE_SCREENS_SEUN_PALETTE_LAND = 0;
+
+constexpr static const int32_t EE_SCREENS_SEUN_PALETTE_AIR = 1;
+
+constexpr static const int32_t EE_SCREENS_SEUN_PALETTE_NAVAL = 2;
+
+constexpr static const int32_t EE_SCREENS_SEUN_PALETTE_STRUCTURES = 3;
+
+constexpr static const int32_t EE_SCREENS_SEUN_PALETTE_HEROES = 4;
+
+constexpr static const int32_t EE_SCREENS_SEUN_PALETTE_RESOURCES = 5;
+
+/// The kinds of the shared maker's unit list (`EE_SCREENS_SEPL_UNIT_LIST`'s extra 0): the object screen's list, the
+/// unit tab's class list (`EEUIFSELBUnitList`), its cargo list (`EEUIFSELBCargoList`).
+constexpr static const int32_t EE_SCREENS_SEPL_LIST_OBJECT = 0;
+
+constexpr static const int32_t EE_SCREENS_SEPL_LIST_UNIT_TYPES = 1;
+
+constexpr static const int32_t EE_SCREENS_SEPL_LIST_CARGO = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_IDS_ALPHA = 20536;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_IDS_CARGO = 20540;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_IDS_SORT = 20541;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_IDS_WORLD_PLAYER = 20553;
+
+/// The tab's members without arguments: `Update`, `Leave`, `Enter`, `UpdateKeys`, `PlaceWall`, `EndWall`,
+/// `PlaceGate`, `EndGate`, `ReselectUnitType`, `SelectUnitType`, `UpdateSelection`, `RefreshUnitList`.
+constexpr static const uint32_t EE_SCREENS_SEUN_UPDATE = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_LEAVE = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_ENTER = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_UPDATE_KEYS = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_PLACE_WALL = 5;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_END_WALL = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_PLACE_GATE = 7;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_END_GATE = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_RESELECT = 9;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_SELECT = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_UPDATE_SELECTION = 11;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_REFRESH = 12;
+
+/// With an argument `a`: `ShowCargo(a != 0)`, `MouseMove(x, y)`; `ShowUnitStatus(p)`, `Draw(p: the rectangle)`.
+constexpr static const uint32_t EE_SCREENS_SEUN_SHOW_CARGO = 13;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_MOUSE_MOVE = 14;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_SHOW_UNIT = 15;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_DRAW = 16;
+
+/// Values: `GetLayer`, `GetSortMode`, the unit under the mouse, the placement flags (1 placing, 2 a wall, 4 a gate,
+/// 8 a held gate), the palette, sort and owner last listed; `GetRotationAngle` through `ee_screens_seun_angle`.
+constexpr static const uint32_t EE_SCREENS_SEUN_GET_LAYER = 20;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_GET_SORT = 21;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_GET_UNDER_MOUSE = 22;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_GET_FLAGS = 23;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_GET_LISTED_MODE = 24;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_GET_LISTED_SORT = 25;
+
+constexpr static const uint32_t EE_SCREENS_SEUN_GET_LISTED_LAYER = 26;
+
+/// Handles: the selection tool.
+constexpr static const uint32_t EE_SCREENS_SEUN_GET_SELECT_UNITS = 27;
+
 /// `EESEASaveScenario`.
 constexpr static const uint32_t EE_SCREENS_SEW_SAVE = 1;
 
@@ -6835,6 +7136,9 @@ struct EeScreensSePlayers;
 /// The trigger screen (opaque to C++).
 struct EeScreensSeTrigger;
 
+/// The unit tab (opaque to C++).
+struct EeScreensSeUnit;
+
 /// A paint action's record (opaque to C++).
 struct EeScreensSeaPaint;
 
@@ -7526,6 +7830,60 @@ void ee_screens_setr_call(const EeScreensSeTrigger *screen,
 /// # Safety
 /// `screen` comes from `ee_screens_setr_new` (or is NULL); `out` is a vector.
 void ee_screens_setr_get_names(const EeScreensSeTrigger *screen, void *out);
+
+/// `EESEUnit`'s constructor: every control made on `form` from the control index `*index` (advanced); `shell` is
+/// the C++ `EESEUnit` (its build tools), `players` the editor's player combo box. Freed by `ee_screens_seun_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSeUnit *ee_screens_seun_new(void *shell,
+                                     void *form,
+                                     void *players,
+                                     uint32_t *index);
+
+/// The destructor: every control deleted, the actions, bitmaps and event released (the original's order), the
+/// object freed.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seun_new` (or is NULL) and is not used again.
+void ee_screens_seun_free(EeScreensSeUnit *tab);
+
+/// One of the tab's members (`EE_SCREENS_SEUN_UPDATE` ...) with its arguments (`a`, `x`, `y`, `p`).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seun_new` (or is NULL); `p` is what the member takes.
+void ee_screens_seun_call(const EeScreensSeUnit *tab,
+                          uint32_t what,
+                          int32_t a,
+                          float x,
+                          float y,
+                          void *p);
+
+/// One of the tab's values (`EE_SCREENS_SEUN_GET_LAYER` ...); `SetUnitUnderMouse` with `EE_SCREENS_SEUN_GET_UNDER_MOUSE`
+/// through `ee_screens_seun_set_under_mouse`.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seun_new` (or is NULL).
+int32_t ee_screens_seun_get(const EeScreensSeUnit *tab,
+                            uint32_t what);
+
+/// A handle of the tab (`EE_SCREENS_SEUN_GET_SELECT_UNITS`).
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seun_new` (or is NULL).
+void *ee_screens_seun_handle(const EeScreensSeUnit *tab, uint32_t what);
+
+/// `SetUnitUnderMouse`.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seun_new` (or is NULL).
+void ee_screens_seun_set_under_mouse(const EeScreensSeUnit *tab, int32_t unit);
+
+/// `GetRotationAngle`: the rotation button's yaw.
+///
+/// # Safety
+/// `tab` comes from `ee_screens_seun_new` (or is NULL).
+float ee_screens_seun_angle(const EeScreensSeUnit *tab);
 
 /// The action of `kind` (`EE_SCREENS_SEW_*`) for the `EESEARust` `owner`, with its object and arguments; NULL for
 /// an unknown kind. Freed by `ee_screens_sew_free`.
