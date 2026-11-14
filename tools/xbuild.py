@@ -311,8 +311,8 @@ def cmd_fonttest(a):
 TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
 # the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
 TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
-    "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp",
-    "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")]
+    "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")]   # (TSEvent and
+# TSCriticalSection are header classes over ee_ts since the Thread System moved to Rust)
 
 
 def cmd_tcptest(a):
@@ -803,13 +803,15 @@ NET_TESTS = {
     # NESynchronousServer's tuning and booting (golden: rust/crates/ee_net/src/golden_tune.txt; the original members are
     # tests/net/orig_s/NESynchronousServerTune.inc)
     "ne_tune_test": [],
+    # NESynchronousServer (golden: rust/crates/ee_net/src/golden_server.txt; the original unit is
+    # tests/net/orig_s/NESynchronousServer.cpp)
+    "ne_server_test": [],
     # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the
     # original units with the TCP shim's entry table)
     # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp instead
     # of NEProtocol.cpp, `--print FILE`)
     "ne_protocol_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
-        "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp",
-        "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")],
+        "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
 }
 
 
