@@ -1640,6 +1640,61 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                     theText += std::string(" '") + (const char*)theList->GetData(k) + "'";
                 theOutput.push_back(theText);
             };
+        else if (c == "unittab")   // the unit tab's placement state, its list state, rotation, cargo and ghosts
+            theCode = [=, &theOutput] {
+                EESEUnit* s = gUIManager->mScenarioEditorForm->GetUnitScreen();
+                long theMode, theSort, theLayer;
+                s->GetListState(theMode, theSort, theLayer);
+                char theText[160];
+                snprintf(theText, sizeof theText, "  unit tab flags=%ld under=%ld list=%ld/%ld/%ld angle=%.4f ghosts=%lu",
+                         s->GetPlacingFlags(), s->GetUnitUnderMouse(), theMode, theSort, theLayer,
+                         (double)s->GetRotationAngle(), (unsigned long)gWorld.GetNumGhostUnits());
+                std::string theLine = theText;
+                UILBString* theCargo = static_cast<UILBString*>(EditorControl("0x3f2"));
+                theLine += " cargo " + std::to_string(theCargo->GetLineCount()) + ":";
+                for (unsigned long k = 0; k < theCargo->GetLineCount(); k++)
+                    theLine += std::string(" '") + (const char*)theCargo->GetData(k) + "'";
+                unsigned long theSelected;
+                if (theCargo->GetLineCount() > 0 && theCargo->GetCurrentSelection(theSelected) == kErrorOK)
+                    theLine += " selected " + std::to_string(theSelected);
+                theOutput.push_back(theLine);
+            };
+        else if (c == "unitpick")   // unitpick NAME: the unit list's first line starting with NAME ('_' a space) picked
+            theCode = [=, &theOutput] {
+                EESEUnit* s = gUIManager->mScenarioEditorForm->GetUnitScreen();
+                UILBString* theList = static_cast<UILBString*>(EditorControl("0x3f1"));
+                std::string theName = w[1];
+                std::replace(theName.begin(), theName.end(), '_', ' ');
+                for (unsigned long k = 0; k < theList->GetLineCount(); k++) {
+                    std::string theLine = (const char*)theList->GetData(k);
+                    if (theLine.compare(0, theName.size(), theName) != 0)
+                        continue;
+                    theList->ChangeSelectionIndex(k, true, false);
+                    s->SelectUnitType(GE2DPoint(0.0f, 0.0f));   // as the list's ButtonUp
+                    theOutput.push_back("  picked " + std::to_string(k) + " '" + theLine + "'");
+                    return;
+                }
+                theOutput.push_back("  no line " + theName);
+            };
+        else if (c == "unitbuild")   // unitbuild wall X0 Y0 X1 Y1 | gate X Y DIRECTION | cancel: the tab's build tools
+            theCode = [=] {
+                EESEUnit* s = gUIManager->mScenarioEditorForm->GetUnitScreen();
+                if (w[1] == "wall") {
+                    s->mBuildWall.mStart.SetXY(F(2), F(3));
+                    s->mBuildWall.mEnd.SetXY(F(4), F(5));
+                    s->mBuildWall.Build();   // PlaceWall
+                } else if (w[1] == "gate") {
+                    s->mBuildGate.mTileX = L(2);
+                    s->mBuildGate.mTileY = L(3);
+                    s->mBuildGate.mDirection = L(4);
+                    s->mBuildGate.Build(GE2DPoint(F(2), F(3)), L(4));   // PlaceGate
+                } else {
+                    if (s->GetPlacingFlags() & 2)
+                        s->mBuildWall.Cancel();   // EndWall
+                    if (s->GetPlacingFlags() & 4)
+                        s->mBuildGate.Cancel();   // EndGate
+                }
+            };
         else if (c == "epoch")   // epoch ROW START END: a player row's end epoch set, then its start epoch picked
             theCode = [=, &theOutput] {
                 EESEPlayerScreen* theScreen = gUIManager->mScenarioEditorForm->GetPlayerScreen();
@@ -1718,7 +1773,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             outError = inScript + ":" + std::to_string(k + 1) + ": unknown command " + c;
             return 2;
         }
-        if (c == "form" || c == "players")
+        if (c == "form" || c == "players" || c == "unittab")
             SyncLoadThread();
         size_t theBefore = theOutput.size();
         if (!RunStep(theCode)) {

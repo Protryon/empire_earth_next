@@ -542,3 +542,48 @@ controls 0x149
 tab 3                              # entered
 controls 0x149
 form 55 73
+# editor screens round 3: the unit tab's placement state (EESEUnit::SelectUnitType's unit, wall and gate tools, the
+# build tools' Build and Cancel calling PlaceWall/EndWall and PlaceGate/EndGate, a palette or owner change cancelling
+# them in RefreshUnitList, Leave ending the placement); the structures palette first
+tab 3
+radio %62
+fire %62
+unittab
+unitpick Airport                   # a plain structure: placing it
+unittab
+unitpick Palisades                 # a wall technology: the wall tool
+unittab
+unitbuild wall 36 44 36 38         # PlaceWall for the combo's player
+units
+unitbuild cancel                   # EndWall
+unittab
+unitpick Gate_-_Bamboo             # a gate: the gate tool
+unittab
+unitbuild gate 36 41 2             # PlaceGate on the wall
+units
+unitbuild cancel                   # EndGate
+unittab
+unitpick Barbed                    # a wall again, then the land palette: the tool cancelled, relisted
+unittab
+radio %59
+fire %59
+unittab
+unitlist
+unitpick 120mm                     # a land unit for the players
+unittab
+radio %56                          # World: relisted for gaia, the combo hidden
+controls 0x149
+unittab
+unitlist
+radio %64                          # resources for gaia
+fire %64
+unitlist
+unitpick B                         # the first resource starting with B
+unittab
+radio %57                          # Players again
+unittab
+tab 0                              # Leave: the placement ended
+unittab
+tab 3
+unittab
+form 55 73
