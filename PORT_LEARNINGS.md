@@ -15307,7 +15307,8 @@ The game messages lane's third round (RUST_PLAN R5b.4 leaf 4 (c)). Its aim was t
   PlayerInformation, RecordFrames, RemoveImprovement, RemoveUnitFromSelectedGroup, ReturnToBase, SavedGroupAddSelection,
   SavedGroupClear, SavedGroupCreate, SavedGroupSelect, ScrambleAircraft, SelectCustomPlayerForChat,
   SelectPlayerChatType, SelectUnit, SendFlare, SetAirportCommand, SetDiplomaticStance, SetWaterLevel, SnapToDaylight,
-  StartLoading, ToggleCollisionDetection, ToggleDayNight, UpdatePingStat, ZoomInfo.
+  StartLoading (restored as a class after the merge: see below), ToggleCollisionDetection, ToggleDayNight,
+  UpdatePingStat, ZoomInfo.
   Kept, and why: a member reader outside the class (EEPhysics.cpp's order log: AddPatrolPoint, AttackGround,
   AttackUnit, BuildGate, BuildUnit, BuildWall, ChangeFormation, DropoffResource, GatherResource, HealUnit,
   ImmediateCargoUnload, ImproveUnit, LoadGarrison, LoadTransport, PackUnpack, PathTo, RepairUnit,
@@ -15321,5 +15322,81 @@ The game messages lane's third round (RUST_PLAN R5b.4 leaf 4 (c)). Its aim was t
   not build), the Lua AI's stack messages and out-of-line constructors elsewhere (Explore, StopActiveGroup, KillUnit,
   LockUnlock, ExchangeResources, RemoveTechnology, SmartFarmers, HackANewUnit, ReplantFarms, ReportStatistics,
   ExitShiftMode, MakeWorldVisible) and the member-less ones the UI builds with `new X` (ClearAirportCommands,
-  Disband, GameRestarting, GoFanatic, JITManufacturing, Resign, SelfDestruct, UnselectAllUnits): candidates for a
-  next round (the second group needs only its senders changed).
+  Disband, GameRestarting, GoFanatic, JITManufacturing, Resign, SelfDestruct, UnselectAllUnits): the second group
+  (and MakeWorldVisible, Explore, StopActiveGroup) became record types too in this round's third commit.
+- **The capture through the slots** (`EEMessageCapture.cpp`'s `Members`): one loop over `GetCodecSlots` replaces the
+  107 cases that read the members by name: a fixed slot writes its bytes (the slot is the member's address and
+  `sizeof`, the size the codec already checks against the layout, so the bytes are the old ones), a string its byte
+  count, bytes and character count (`PlatMbsLen` of the bytes: `UWideString::GetLength` is that count for every
+  string the import or a sender builds; the sweep's strings never hold a NUL), records their count and bytes (an
+  `EECivUpgrade` is a `uint32_t`: the old per-record `U32` wrote the same bytes), a blob its bytes; only the import's
+  members (`ee_netmsg_import_fields`: EEMChangeFormation's import stops before `mB14`, which the capture never
+  wrote). What the slots do not carry stays by name: EEMSelectTheseUnits' id list (its class has no codec slots) and
+  the selections' `mUnitIDs` after the blob. A type the factory does not build still writes 0xffffffff. A script
+  first compared the old cases with the classes' slot lists: 100 of the 107 types equal member for member, the 7
+  others the special cases above. `ee_netmsg_field_kind` says what a slot holds. Gate: the oracle capture's NM*
+  digests (NMIM, NMEX, NMSW, NMDC, NMNE, NMCU) equal to the goldens with no re-recording.
+- **EEMRecord** (ee/EEMessage.h, EEMessage.cpp; `ee_netmsg` records.rs). The 43 census classes (42 after EEMStartLoading went back), then 11 member-less
+  ones whose only outside uses were `new X` or a stack object (ClearAirportCommands, Disband, GameRestarting,
+  GoFanatic, JITManufacturing, Resign, SelfDestruct, UnselectAllUnits, Explore, StopActiveGroup, MakeWorldVisible),
+  are one class: `unsigned char mRecord[32]` holds the codec class's members after the selection id, packed in wire
+  order; `GetCodecSlots` points one slot per member into it (`ee_netmsg_record_field`: kind, offset, size), so the
+  wire bytes, the export size and the capture's records are the old ones. The type's two flags (can send while
+  paused; may be sent while out, which only a sender's constructor set) and its debug label are the Rust table's
+  (`ee_netmsg_record_flags`, `ee_netmsg_record_label`). The factory builds an `EEMRecord` for a record type before
+  its switch; the import constructor keeps EEMessage's defaults as the old ones did. A sender passes the members in
+  wire order (`new EEMRecord(kMessagePayTribute, {food, gold, iron, stone, wood, receiver})`): six constructors took
+  them in another order (MigrationSlotInfo, PayTribute, PlayerInformation, AddRemoveResources, ScrambleAircraft,
+  SetAirportCommand) and their call sites were reordered by a script from the old constructors; an
+  `EEMRecordValue` converts each value as the old constructor's assignment did (an integer to the member's low
+  bytes, a bool member as != 0, a float, a point, a vector). The `Execute` bodies are static functions over the
+  record (`m->Get<T>(i)` with the old member's C++ type, the size verified; `m->Set` for EEMLoadPercent's clamp,
+  which the NMEX record sees) in a table by type; a type whose body was empty has no entry. EEMLoadOrSaveGame's
+  `IsResponse` reads the response's tick as `Get<int32_t>(1)`.
+- **Behaviour changes.** A record sender's members start at 0: EEMLagStatus and the others set every member, but a
+  member a constructor left out (none of the 53 does) would have been stack garbage before. `GetMessageLabel`
+  returns the Rust's static strings (debug only). The vtables of the 53 types are one (`EEMRecord`'s; no caller
+  depends on them). Nothing in a game's simulation changed: the oracle traces and the captures are identical.
+- **What only a played game runs.** Single-player games execute these messages unencoded (the physics takes the
+  objects); the capture's NMEX/NMIM records and the sweep (NMSW: every type exported, sized and imported over edge
+  payloads, through `EEMRecord` for the record types) cover the codec and the record layout. The senders are UI
+  clicks (saved groups, chat type, tribute, diplomacy, flares, airport commands, explore, disband, ...), the lobby
+  (PlayerInformation, LoadMainScreen(Response), MigrationSlotInfo, LagStatus, UpdatePingStat,
+  LoadPercent) and the Lua AI's stop and explore: the LAN game and the orders game exercise a part (see the gates).
+- **EEMStartLoading stays a class.** The test-profile build failed on the merged tree: build.py's HARNESS_HOOKS
+  keep `void EEMStartLoading::Execute()` out of line for the debugger harness (game_session.py, `gates.sh --legacy`),
+  which breaks at `?Execute@EEMStartLoading@@UEAAXXZ` and writes the seed at the class's `mSeed` offset from the
+  PDB layout. The class came back unchanged (its senders too) and records.rs lists 53 types. Lesson: before
+  deleting a class, grep tools/ (build.py's overlays and hooks, the harness's symbols) as well as src.
+- **Net C++** (src + include/ee, without include/rust): the capture through the slots -739 (+34, -773); the 43
+  classes as records -1,181 (+381, -1,562); the 11 member-less ones -295 (+48, -343); EEMStartLoading back +28; the editor's read +3. Round: -2,184 (after the merge of rust: EEMessage.cpp
+  3,854 lines, was 4,653; ee/EEMessage.h 1,062, was 1,702; EEMessageCapture.cpp 1,025, was 1,764).
+- **The scenario editor's message read.** EESEARust's `EE_SCREENS_SEU_MESSAGE_UNIT` read `mUnitID` of the editor's
+  click message through an `EEMAddUnitToSelectedGroup*` whatever its type (Select Unit, the toggle, Always Add:
+  the three classes put the id at +0x10). EEMSelectUnit is a record now (its id in `mRecord`), so a Select Unit reads
+  `Get<uint32_t>(1)`. The census had counted EESEARust's read under EEMAddUnitToSelectedGroup only: a cast to a
+  sibling class is a layout read of every type it can see. Only the scenario editor's clicks run it (no gate).
+- **Gates.** Each code commit: build `--sim` 0/0, the oracle identical on seeds 2-3, the oracle capture at seeds 2-3
+  PASS (no re-recording), the Rust gate PASS (once `ee_plat_core` failed two timing tests under load and passed
+  alone). On the result merged with rust d8551990 (WON round 33, WON Internet 20, screens: the command buttons in
+  Rust): build `--sim` 0/0; the oracle identical on seeds 2-7; the captures at seeds 2-7 equal to the goldens with no
+  re-recording: oracle 500 digests, late 513, space 511, calamity 540, scenario 65 (NMIM, NMEX, NMSW, NMDC, NMNE,
+  NMCU among them); `saveload --settings all --seeds 2-3 --at 1000,1900` expect PASS (oracle 4/4, plains 2/4,
+  islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust
+  gate PASS; the test-profile build 0/0 (after EEMStartLoading came back). Under the harness lock, on the final
+  test exe: `lan_game.py` RESULT PASS lan-game (host PT 2887, joiner 2882; no crash at Join Game);
+  `fixture_game.py --exercise random-game --orders` ORDERS PASS (gather, repair, repair queued, move; patrol and
+  attack ground skipped as before). With `--box-select` the run failed three times at the Shift box ("add-right": the
+  selection became the box's one unit, or no box message was built) where the main checkout's test exe of 20:47
+  passed that step once (and failed the next, "dead", step): see "Open" below. A debug print showed every record
+  type executing and no command message dropped by its selection id during the failing drag. Not run: a tour, a
+  played game sending the record types, macOS or Linux builds.
+- **Open: the Shift box selection.** Not resolved this round. Shift sends EEMEnterShiftMode, now a record; it
+  executes (the debug print) and sets the player's and the mouse's shift mode as before. The lasso picks its message
+  from the keyboard modifiers (EEALasso::SelectUnits), none of which is a record type. The lead should run the box
+  selection on rust's head and on this branch side by side to tell a regression from the known flakiness.
+- **Left:** the classes with outside member readers (EEPhysics.cpp's order log reads 21 unit orders by name: it
+  could read them through the slots as the capture now does, which would make most of them records too), the
+  Lua AI's stack messages with members (KillUnit, LockUnlock, ExchangeResources, RemoveTechnology, SmartFarmers,
+  HackANewUnit), the out-of-line constructors elsewhere (ReplantFarms, ReportStatistics, ExitShiftMode,
+  CivTimerExpired), then the record bodies themselves in Rust.
