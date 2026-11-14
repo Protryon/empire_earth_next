@@ -20,9 +20,27 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
+#include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/ee_won.h"
 
 using namespace WONAPI;
+
+extern GUIString gEELobbyConnectDialog_AbortLaunch;    // 0x96598c (EELobbyResource.cpp)
+extern GUIString gEELobbyConnectDialog_LeaveGame;      // 0x965948 (EELobbyResource.cpp)
+
+namespace {
+// One player's line of the EE connect dialog (EELobbyConnectDialog.cpp's anonymous namespace; 0x2c bytes; vtable
+// 0x84c2c0: TextListItem's slots)
+class ConnectListItem : public TextListItem {
+public:
+    ConnectListItem(const GUIString& inName, Image* inImage, unsigned char inSlot) : TextListItem(inName, inImage)
+    {
+        this->mSlot = inSlot;
+    }
+
+    unsigned char mSlot;                    // +0x28
+};
+}
 
 // ---- the list rows (R6 WONLobby round 3: moved here from BadUserDialog.cpp and ChooseNetworkAdapterDialog.cpp, whose
 // dialogs are lobby dialog kinds now; the rows stay C++ widgets)
@@ -217,6 +235,8 @@ static const GUIString& AdminString(intptr_t inString)
     case EeWonLobbyDlgString::ExplanationReq: return ::AdminActionDialog_ExplanationReq_String;
     case EeWonLobbyDlgString::Ok: return ::LobbyGlobal_OK_String;
     case EeWonLobbyDlgString::Cancel: return ::LobbyGlobal_Cancel_String;
+    case EeWonLobbyDlgString::AbortLaunch: return gEELobbyConnectDialog_AbortLaunch;
+    case EeWonLobbyDlgString::LeaveGame: return gEELobbyConnectDialog_LeaveGame;
     default: return sEmpty;
     }
 }
@@ -410,6 +430,28 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         const GUIString& aText = *reinterpret_cast<const GUIString*>(a);
         return aDialog->GetDefaultFont()->GetStringWidth(aText, 0, aText.length());
     }
+    // EELobbyConnectDialog
+    case Op::GameIsHost: return reinterpret_cast<EELobbyGame*>(a)->GetIsHost() ? 1 : 0;
+    case Op::GameSlot: return (intptr_t) reinterpret_cast<EELobbyGame*>(a)->GetPlayerSlot((int)b);
+    case Op::SlotState: return reinterpret_cast<EELobbyPlayerSlot*>(a)->Option(0);
+    case Op::ConnectInsert: {
+        Image* theImage = ((c >> 8) == 0 ? ::GameUserListCtrl_Ready_Image : ::LobbyGlobal_Searching_Image).mPtr;
+        reinterpret_cast<ListArea*>(a)->InsertItem(
+            new ConnectListItem(reinterpret_cast<EELobbyPlayerSlot*>(b)->GetName(), theImage, (unsigned char)c), -1);
+        return theImage != ::GameUserListCtrl_Ready_Image.mPtr ? 1 : 0;
+    }
+    case Op::DoDialog: return LobbyDoDialog(aDialog);
+    case Op::RootWindow: return (intptr_t)aDialog->GetRootWindow();
+    case Op::EndDialog: reinterpret_cast<Window*>(a)->EndDialog((int)b, aDialog); return 0;
+    case Op::ListGetItem: return (intptr_t) reinterpret_cast<ListArea*>(a)->GetItem((int)b);
+    case Op::ConnectItemSlot: return reinterpret_cast<ConnectListItem*>(a)->mSlot;
+    case Op::ConnectItemSetImage:
+        reinterpret_cast<ConnectListItem*>(a)->mImage =
+            (b == 0 ? ::GameUserListCtrl_Ready_Image : ::ServerListCtrl_PingFailed_Image).mPtr;
+        return 0;
+    case Op::ConnectItemNotReady:
+        return reinterpret_cast<ConnectListItem*>(a)->mImage.mPtr != ::GameUserListCtrl_Ready_Image.mPtr ? 1 : 0;
+    case Op::ListRefresh: reinterpret_cast<ListArea*>(a)->RefreshItem(reinterpret_cast<ListItem*>(b)); return 0;
     }
     return 0;
 }

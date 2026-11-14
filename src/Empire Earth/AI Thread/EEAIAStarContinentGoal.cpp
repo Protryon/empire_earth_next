@@ -77,12 +77,12 @@ void EEAIAStarContinentGoal::CollectTiles()
 void EEAIAStarContinentGoal::CreateContinent()
 {
     EEAIContinent* theContinent = new EEAIContinent;
-    theContinent->mID = this->mNextID;
-    theContinent->mCategory = this->mKind;
-    theContinent->mAreaType = kAIAreaContinent;
+    theContinent->SetID(this->mNextID);
+    theContinent->SetCategory(this->mKind);
+    theContinent->SetAreaType(kAIAreaContinent);
     theContinent->Create(this->mTiles);
     theContinent->UpdateBounds(gWorld.mInfluenceTable);
-    this->mStorage->SetDirtyBounds(theContinent->mHull.GetBounds());
+    this->mStorage->SetDirtyBounds(theContinent->GetHullBounds());
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mContinents.insert(std::make_pair(this->mNextID, theContinent));

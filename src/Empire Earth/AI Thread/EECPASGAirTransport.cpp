@@ -637,8 +637,8 @@ bool EECPASeaTargetFilter::Accept(EEComplexUnit* inUnit)
                                 const EEAIContinent* theContinent = gContinentManager.GetContinentAt(inUnit);
                                 if (theContinent != NULL) {
                                     U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
-                                    theResult = std::binary_search(theContinent->mShoreTiles.begin(),
-                                        theContinent->mShoreTiles.end(), theTile);
+                                    theResult = std::binary_search(theContinent->GetShoreTiles().begin(),
+                                        theContinent->GetShoreTiles().end(), theTile);
                                 }
                             }
                         }
@@ -775,8 +775,8 @@ bool EECPASpaceshipTargetFilter::Accept(EEComplexUnit* inUnit)
                             const EEAIContinent* theContinent = gContinentManager.GetContinentAt(inUnit);
                             if (theContinent != NULL) {
                                 U2DPoint<long> theTile(inUnit->mTileX, inUnit->mTileY);
-                                theResult = std::binary_search(theContinent->mShoreTiles.begin(),
-                                    theContinent->mShoreTiles.end(), theTile);
+                                theResult = std::binary_search(theContinent->GetShoreTiles().begin(),
+                                    theContinent->GetShoreTiles().end(), theTile);
                             }
                         }
                     }

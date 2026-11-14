@@ -411,16 +411,12 @@ private:
     EeWonQueueSocket* mQueue;
 };
 
+// a queue socket the WON ops make and hold. Its blocking calls (Connect 2b1c10, SendBytes 2b1d00, SendMsg 2b1e30,
+// RecvMsg 2b1f10, RecvCRMsg 2b2040, the SDK's SendBytesTo, RecvBytesFrom, RecvBytes: a socket op run blocking) are
+// the op base's (ee_won hostsock.rs) since net round 23; no caller was left, and they went in round 24 (the test
+// drivers keep the statements: tests/won/won_blocking.h)
 class BlockingSocket : public QueueSocket {
 public:
-    WONStatus Connect(const IPAddr&,unsigned long); //2b1c10
-    WONStatus SendBytes(const ByteBuffer*,unsigned long); //2b1d00
-    WONStatus SendBytesTo(const ByteBuffer*,const IPAddr&,unsigned long);
-    WONStatus RecvBytesFrom(ByteBufferPtr&,unsigned short,IPAddr&,unsigned long);
-    WONStatus RecvMsg(ByteBufferPtr&,unsigned long); //2b1f10
-    WONStatus RecvBytes(ByteBufferPtr&,DWORD,DWORD inTimeout=0xffffffff);
-    WONStatus RecvCRMsg(ByteBufferPtr&,unsigned long); //2b2040
-    WONStatus SendMsg(const ByteBuffer*,unsigned long); //2b1e30 (WON SDK)
     BlockingSocket(int inType); //2b1bd0, just QueueSocket(inType), ownvptr
     // IMPLICIT destructor normal2aad90(375B), no own-vptr; inlines Queue members
     // then calls AsyncSocket::~AsyncSocket 2b04a0. Scalar deleting 2b1bf0.
@@ -797,6 +793,7 @@ typedef std::set<IPAddr> AddrSet;
 // shuffle and the lock); the original's 0x3c-byte layout is gone
 class ServerContext : public RefCount {
 public:
+    EeWonServerList* GetListObject() const { return this->mList; }
     ServerContext();
     virtual ~ServerContext();
     bool AddAddress(const IPAddr& inAddress); //2ac4b0, AL = success
@@ -838,18 +835,16 @@ public:
     AsyncOp* AddOp(AsyncOp* inOp, unsigned long inId); // original29fc80
     bool RemoveOp(AsyncOp* inOp);             // original29fe50
     void KillAll();                          // original29ffa0
+    EeWonOpTracker* GetTrackerObject() const { return this->mTracker; }
 private:
     AsyncOpTracker(const AsyncOpTracker&);
     AsyncOpTracker& operator=(const AsyncOpTracker&);
     EeWonOpTracker* mTracker;               // owned
 };
 
-// an op that tracks sub-ops
+// an op that tracks sub-ops (the tracked sub-ops' completion is Rust's: ee_won opobj.rs EeWonAsyncOp::track; the
+// original's TrackerCompletion, 16 bytes, and its Callback, 0x2a00d0, are gone)
 class AsyncOpWithTracker : public AsyncOp {
-private:
-    class TrackerCompletion; //nested16 owner, RTTI44c854 / 2a0100
-    friend class TrackerCompletion;
-    void Callback(AsyncOp*,int); //2a00d0 pending/remove/virtualcallback dispatcher
 public:
     AsyncOp* Track(AsyncOp*,int); //2a0100, protected in the SDK; returns the tracker's AddOp result
     virtual void CleanupHook();             //slot08 CleanupHook2a0290
@@ -858,38 +853,15 @@ public:
 };
 
 class BlockingSocket;
-// PeerAuthOp (0x2244 bytes) below: constructors, destructors and protocol are out of line.
-// RTTI: PeerAuthOp > ServerOp > AsyncOpWithTracker > AsyncOp > RefCount.
-// vtables: PeerAuthOp 44d4b0 (four slots), ServerOp 44c9e8 (four slots).
-// AsyncOpWithTracker (0x78) must be complete before this point.
-// ServerOp, 0x94 bytes: ctor 2acc10, implicit dtor 2accf0 (no own-vptr store).
+// ServerOp (0x94 bytes, ctor 2acc10): the base of the server ops. RTTI: PeerAuthOp > ServerOp > AsyncOpWithTracker >
+// AsyncOp > RefCount. Its members (mSocket +0x78, mAuthContext +0x7c, mAuthType +0x80, mLengthFieldSize +0x84,
+// mClientKeySize +0x85, mUseClientKey +0x86, mMaxConnectTime, mMaxSendTime, mMaxRecvTime +0x88..+0x90) and its
+// ConnectTime 2ace50, SendTime 2ace80 and RecvTime 2aceb0 are the Rust op's since net round 24 (ee_won hostbase.rs):
+// RustServerOp's accessors. The SDK's SendMsgAsync / RecvMsgAsync (no caller) went with them: the Rust ops send and
+// receive through their own calls.
 class ServerOp : public AsyncOpWithTracker {
-public:
-    void SetMaxTimes(int,int,int); //2ace20
-    BlockingSocket* GetSocket() { return this->mSocket.get(); } //WON SDK accessor, borrowed (no refcount change)
-    void SetAuthType(AuthType theType,AuthContext* theContext=NULL) { this->mAuthType=theType; this->mAuthContext=theContext; }
-    void SetLengthFieldSize(unsigned char theLengthFieldSize) { this->mLengthFieldSize=theLengthFieldSize; }
-    unsigned char GetLengthFieldSize() { return this->mLengthFieldSize; }
 protected:
-    void SendMsgAsync(ByteBufferPtr,int inTrackId=0);
-    void RecvMsgAsync(int inTrackId=0);
-public:
-    DWORD ConnectTime(); //2ace50
-    DWORD SendTime(); //2ace80
-    DWORD RecvTime(); //2aceb0
-    void CopyMaxTimes(ServerOp*); //2acee0
-    ServerOp(); //2acc10, constructor leaves mAuthType/mLengthFieldSize untouched
-    // CallbackHook slot0c inherited from AsyncOpWithTracker; ServerOp has no override.
-    SmartPtr<BlockingSocket> mSocket; //78
-    SmartPtr<AuthContext> mAuthContext; //7c
-    AuthType mAuthType; //80
-    unsigned char mLengthFieldSize; //84
-    unsigned char mClientKeySize; //85=8
-    bool mUseClientKey; //86=false, natural alignment87
-    void SetClientKeySize(unsigned char size,bool useClientKey) { this->mClientKeySize=size;this->mUseClientKey=useClientKey; }
-    DWORD mMaxConnectTime; //88=60000
-    DWORD mMaxSendTime; //8c=60000
-    DWORD mMaxRecvTime; //90=60000
+    ServerOp() {}
 };
 
 // An op of the Rust op base (rust/crates/ee_won/src/hostop.rs): its members and steps are the Rust op's
@@ -944,12 +916,22 @@ public:
         std::string aBytes = this->GetBytes(EE_WON_HTTPDOC_DOCUMENT, inOwner);
         return new ByteBuffer(aBytes.data(), (unsigned long)aBytes.size(), false);
     }
+    // ServerOp's members (ee_won hostbase.rs): the time limits (2ace20, 2acee0), the socket and auth context
+    // (borrowed; the op holds a reference), the auth type, the length field, the client key
+    void SetMaxTimes(int inConnect, int inSend, int inRecv);
+    void CopyMaxTimes(const RustServerOp* inSource);
+    BlockingSocket* GetSocket() const;
+    void SetSocket(BlockingSocket* inSocket);
+    AuthContext* GetAuthContext() const;
+    AuthType GetAuthType() const { return (AuthType)ee_won_hostop_base_get(this->mRustOp, EE_WON_HOSTBASE_AUTH_TYPE); }
+    void SetAuthType(AuthType inType, AuthContext* inContext = NULL);
+    void SetLengthFieldSize(unsigned char inSize) { ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_LFS, inSize, NULL); }
+    void SetClientKeySize(unsigned char inSize, bool inUseClientKey);
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
-    // the Rust op's calls (EeWonHostCall), and a completion this op made, with its id
+    // the Rust op's calls (EeWonHostCall) that stay the C++ side's
     static void HostCall(void* inOp, EeWonHostCall* inCall);
-    void Completed(AsyncOp* inOp, int inId) { ee_won_hostop_callback(this->mRustOp, inId, inOp); }
 protected:
     virtual ~RustServerOp();
 private:

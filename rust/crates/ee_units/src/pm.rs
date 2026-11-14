@@ -312,10 +312,14 @@ pub trait PmHost {
     fn death_effect(&mut self, obj: u64);
     fn impact_decal(&mut self, obj: u64, p: Ge3DPoint);
     fn land_ripple(&mut self, p: Ge3DPoint);
-    /// the carrier plane's deck walk (`EEPMAirplane::IsDocked`, `FollowCarrier`), `mHomeBase`
-    fn docked(&mut self, obj: u64) -> bool;
-    fn follow_carrier(&mut self, obj: u64);
+    /// the carrier plane's deck walk (pm_air.rs `docked`, `follow_carrier`): `mHomeBase`; the carrier model's tag
+    /// points of its animation (`GetModel()->mTagPoints[mAnimation]`): their count (-1: no list) and point `index` at
+    /// the carrier's frame in its location scaled by its stats (`EETagPointList::Scale`, `GetPoint`); the class's
+    /// `RouteDockWaypoint(unit)`
     fn home_base(&mut self, obj: u64) -> u64;
+    fn carrier_tag_count(&mut self, carrier: u64) -> i32;
+    fn carrier_tag(&mut self, carrier: u64, index: i32) -> Ge3DPoint;
+    fn route_dock_waypoint(&mut self, obj: u64);
     /// a gate's first part (no previous part, a next one): its last linked carrier and last linked part
     fn gate_links(&mut self, obj: u64, carrier: &mut u64, last: &mut u64) -> bool;
     /// `EEPMProjectile::Step0`, `Step2`, `EEPMMissile::Step0` (C++: ee_combat's flight arithmetic and captures)

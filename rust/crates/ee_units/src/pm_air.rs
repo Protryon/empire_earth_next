@@ -12,7 +12,7 @@
     clippy::unnecessary_cast
 )]
 
-use ee_ge::types::{Ge3DPoint, GeOrientation, GeVector};
+use ee_ge::types::{Ge3DPoint, GeOrientation, GeTransformation, GeVector};
 use ee_ge::um::{floor, um_arccos, um_arctan2, um_sin};
 
 use crate::pm::*;
@@ -469,14 +469,79 @@ fn carrier_scale(c: &mut Ctx, u: EeUnitsPmUnit, z: f32, animal: bool) {
     }
 }
 
+// ---- the carrier planes' deck walk (EEPMAirplane's; the carrier model's tag points through the host)
+
+/// `EEPMAirplane::IsDocked` (0x5581a0): a carrier plane (air traffic 2 or 4) with a carrier, taxiing or braking with
+/// clearance, whose path does not start at the deck tag point (2) yet; without a tag list the deck point is the
+/// carrier's position at height 1.
+pub(crate) fn docked(c: &mut Ctx, u: EeUnitsPmUnit) -> bool {
+    let class = c.h.class(u.obj);
+    if class.air_traffic_type != 2 && class.air_traffic_type != 4 {
+        return false;
+    }
+    let carrier = c.h.home_base(u.obj);
+    if carrier == 0 {
+        return false;
+    }
+    let command = c.h.command_type(u.obj);
+    if (command != ACTION_TAXI && command != ACTION_BRAKE) || !rb!(u, mIsClearanceGranted) {
+        return false;
+    }
+    let t = c.h.location(carrier);
+    let next = c.h.path_start(u.obj);
+    // the original reads point 2 of any list it has (an empty one is not met: every carrier model has its points)
+    let deck = if c.h.carrier_tag_count(carrier) >= 0 {
+        c.h.carrier_tag(carrier, 2)
+    } else {
+        Ge3DPoint { x: t.x(), y: t.y(), z: 1.0 }
+    };
+    // GE3DPoint's operator!=
+    next.x != deck.x || next.y != deck.y || next.z != deck.z
+}
+
+/// `EEPMAirplane::FollowCarrier` (0x557999): a docked plane kept on its carrier's deck between the tag points 0 and
+/// 2, at its path's distance from the deck point.
+pub(crate) fn follow_carrier(c: &mut Ctx, u: EeUnitsPmUnit) {
+    let carrier = c.h.home_base(u.obj);
+    let carrier_t = c.h.location(carrier);
+    if c.h.carrier_tag_count(carrier) <= 0 {
+        return;
+    }
+    let next = c.h.path_start(u.obj);
+    let here = position(&c.h.location(u.obj));
+    let walked = here.distance_to(next);
+    let deck = c.h.carrier_tag(carrier, 2);
+    let start = c.h.carrier_tag(carrier, 0);
+    let distance = start.distance_to(deck) - walked;
+    orient_on_carrier(c, u, &carrier_t, start, distance);
+}
+
+/// `EEPMAirplane::OrientOnCarrier` (0x5582d6): the plane at an offset along the carrier from a deck point (the
+/// carrier's axes there), with its home base's orientation, onto its tile, facing so, routed on.
+fn orient_on_carrier(c: &mut Ctx, u: EeUnitsPmUnit, carrier: &GeTransformation, p: Ge3DPoint, offset: f32) {
+    let mut t = *carrier;
+    t.m[0][3] = p.x;
+    t.m[1][3] = p.y;
+    t.m[2][3] = p.z;
+    let at = t.apply_point(Ge3DPoint { x: 0.0, y: offset, z: 0.0 });
+    let home = c.h.home_base(u.obj);
+    let mut t = c.h.location(home);
+    t.m[0][3] = at.x;
+    t.m[1][3] = at.y;
+    t.m[2][3] = at.z;
+    c.h.update_tile(u.obj, &t);
+    c.h.set_orientation(u.obj, t.orientation());
+    c.h.route_dock_waypoint(u.obj);
+}
+
 /// `EEPMAirplane::Step0` (`EEPMAirAnimal::Step0` with `animal`: no descent floor, no roll kept): toward its next
 /// waypoint at its height (straight on without one), following its carrier while docked; arrived when close.
 fn fly_step0(c: &mut Ctx, k: Kind, u: EeUnitsPmUnit, animal: bool) {
     let mut t = c.h.location(u.obj);
     let command = c.h.command_type(u.obj);
     let step = c.t.tick_seconds;
-    if c.h.docked(u.obj) {
-        c.h.follow_carrier(u.obj);
+    if docked(c, u) {
+        follow_carrier(c, u);
         t = c.h.location(u.obj);
     }
     let mut l = position(&t);
@@ -719,8 +784,8 @@ pub(crate) fn airplane_step4(c: &mut Ctx, k: Kind, u: EeUnitsPmUnit) {
     let mut t = c.h.location(u.obj);
     let step = c.t.tick_seconds;
     let mut yaw_rate = c.h.angular_velocity(u.obj).yaw;
-    if c.h.docked(u.obj) {
-        c.h.follow_carrier(u.obj);
+    if docked(c, u) {
+        follow_carrier(c, u);
         t = c.h.location(u.obj);
     }
     let mut l = position(&t);

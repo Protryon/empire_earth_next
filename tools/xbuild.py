@@ -577,6 +577,10 @@ WON_TESTS = {
     # GameBrowserCtrl, GameStagingCtrl, LobbyOptionsCtrl and GameUserListCtrl as one Rust object (golden:
     # rust/crates/ee_won/src/golden_lobbyctl.txt)
     "won_lobbyctl_test": [],
+    # EELobbyGame and its player slots as one Rust object (golden: rust/crates/ee_won/src/golden_eegame.txt)
+    "won_eegame_test": [],
+    # EELobbyConnectDialog as a lobby dialog kind (golden: rust/crates/ee_won/src/golden_eedlg.txt)
+    "won_eedlg_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
@@ -751,6 +755,13 @@ WON_TESTS["won_authsession_test"] = WON_TESTS["won_serverop_test"]
 # HostCall before these calls were answered in Rust in net round 23: hostsock.rs); the same units as
 # won_serverop_test
 WON_TESTS["won_hostsock_test"] = WON_TESTS["won_serverop_test"]
+# the op base's own calls and the AsyncOp machinery behind them over real sockets on 127.0.0.1: the op's status, mode,
+# time left, timeout and Finish, ServerOp's members, the tracker, the timers' and repeating receives' completions, a
+# completion called, references, another Rust op's numbers and bytes, a server context's addresses, an HTTP session's
+# AddOp, a new peer authentication op (golden: rust/crates/ee_won/src/golden_opcore.txt, recorded over ServerOp.cpp's
+# HostCall, AsyncOp.cpp and AsyncOpWithTracker.cpp before they moved into Rust in net round 24); the same units as
+# won_serverop_test
+WON_TESTS["won_opcore_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

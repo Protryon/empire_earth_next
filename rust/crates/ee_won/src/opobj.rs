@@ -52,6 +52,64 @@ pub struct EeWonAsyncOpHooks {
     pub op_add_ref: EeWonAsyncOpFn,
     pub op_release: EeWonAsyncOpFn,
     pub op_kill: EeWonAsyncOpFn,
+    /// `object->AddRef()`, `object->Release()` on any `RefCount*` (the op base's objects: sockets, contexts)
+    pub ref_add: EeWonAsyncOpFn,
+    pub ref_release: EeWonAsyncOpFn,
+    /// `new RustCompletion(body)`: a C++ completion (no reference taken yet, as a `new` one) whose `Complete` runs
+    /// [`ee_won_completion_run`] and whose deletion frees the body ([`ee_won_completion_free`])
+    pub new_completion: Option<unsafe extern "C" fn(body: *mut EeWonCompletion) -> *mut c_void>,
+    /// the virtual `AsyncOpWithTracker::CallbackHook(child, param)` of `op`
+    pub callback_hook: Option<unsafe extern "C" fn(op: *mut c_void, child: *mut c_void, param: i32) -> bool>,
+}
+
+/// A completion's call in Rust (round 24): what the C++ `RustCompletion` runs when completed (with the op, an
+/// `AsyncOp*`, the caller holding a reference for the call), and what it frees when deleted. The tracker's
+/// completion (`TrackerCompletion`, deleted) and the op base's timer and repeat completions (`HostCompletion`,
+/// deleted) are these.
+pub struct EeWonCompletion {
+    call: Box<dyn Fn(*mut c_void) + Send + Sync>,
+}
+
+impl EeWonCompletion {
+    /// A C++ completion running `call`, made through `hooks` (null when the table has no maker); like a `new`
+    /// object it holds no reference: its first holder takes one.
+    pub fn make(hooks: &EeWonAsyncOpHooks, call: impl Fn(*mut c_void) + Send + Sync + 'static) -> *mut c_void {
+        let Some(h) = hooks.new_completion else {
+            return null_mut();
+        };
+        let body = Box::into_raw(Box::new(EeWonCompletion { call: Box::new(call) }));
+        // SAFETY: the hooks' contract: the C++ completion owns `body` from here
+        unsafe { h(body) }
+    }
+}
+
+/// A reference held on a C++ object for as long as a completion's body lives (`SmartPtr` members of the deleted
+/// completion classes): taken when made, given back when dropped.
+pub(crate) struct HeldRef {
+    object: usize,
+    release: EeWonAsyncOpFn,
+}
+
+impl HeldRef {
+    pub(crate) fn new(object: *mut c_void, add: EeWonAsyncOpFn, release: EeWonAsyncOpFn) -> HeldRef {
+        if let Some(h) = add {
+            // SAFETY: the caller's live object
+            unsafe { h(object) };
+        }
+        HeldRef { object: object as usize, release }
+    }
+    pub(crate) fn get(&self) -> *mut c_void {
+        self.object as *mut c_void
+    }
+}
+
+impl Drop for HeldRef {
+    fn drop(&mut self) {
+        if let Some(h) = self.release {
+            // SAFETY: the reference taken in `new`
+            unsafe { h(self.object as *mut c_void) };
+        }
+    }
 }
 
 /// A recursive platform lock held for a scope; `leave` ends it early (`AutoCrit::Leave`).
@@ -193,6 +251,45 @@ impl EeWonAsyncOp {
     }
     pub fn container(&self) -> *mut c_void {
         self.container.load(Relaxed)
+    }
+    /// The C++ `AsyncOp*` the hooks get.
+    pub fn cpp(&self) -> *mut c_void {
+        self.op
+    }
+    pub fn hooks(&self) -> &'static EeWonAsyncOpHooks {
+        self.hooks
+    }
+
+    /// `AsyncOpWithTracker::Track(child, param)`: the child's completion becomes the tracker's (holding a reference
+    /// to this op; when the child completes while this op is pending and the tracker still has it, the child leaves
+    /// the tracker and this op's `CallbackHook(child, param)` runs), then the tracker takes the child; returns it.
+    ///
+    /// # Safety
+    /// `tracker` is this op's tracker; `child` is a live op whose object is `child_obj`.
+    pub unsafe fn track(
+        &self,
+        tracker: *const EeWonOpTracker,
+        child: *mut c_void,
+        child_obj: &EeWonAsyncOp,
+        param: i32,
+    ) -> *mut c_void {
+        let hooks = self.hooks;
+        let parent = HeldRef::new(self.op, hooks.op_add_ref, hooks.op_release);
+        let (me, tracker_at) = (self as *const EeWonAsyncOp as usize, tracker as usize);
+        let c = EeWonCompletion::make(hooks, move |op| {
+            // SAFETY: `parent` holds this op (and so its object and tracker) alive while the completion lives
+            let (p, t) = unsafe { (&*(me as *const EeWonAsyncOp), &*(tracker_at as *const EeWonOpTracker)) };
+            if p.status() == WS_PENDING && t.remove(op) {
+                if let Some(h) = hooks.callback_hook {
+                    // SAFETY: the hooks' contract: the live op and its child
+                    unsafe { h(parent.get(), op, param) };
+                }
+            }
+        });
+        // SAFETY: a new completion (or null), the caller's live child
+        unsafe { child_obj.set_completion(c) };
+        // SAFETY: the caller's contract
+        unsafe { (*tracker).add(child, param as u32) }
     }
 
     /// `mCompletion = completion`: the new one's reference first, then the old one's goes (a `SmartPtr`
@@ -813,6 +910,44 @@ pub unsafe extern "C" fn ee_won_op_tracker_len(t: *const EeWonOpTracker) -> usiz
 pub unsafe extern "C" fn ee_won_op_tracker_at(t: *const EeWonOpTracker, index: usize) -> *mut c_void {
     // SAFETY: the caller's contract
     unsafe { (*t).at(index).0 }
+}
+
+/// `AsyncOpWithTracker::Track(child, param)` (see [`EeWonAsyncOp::track`]); returns the child.
+///
+/// # Safety
+/// `o` is the op's object, `tracker` its tracker; `child` is a live op whose object is `child_obj`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_asyncop_track(
+    o: *const EeWonAsyncOp,
+    tracker: *const EeWonOpTracker,
+    child: *mut c_void,
+    child_obj: *const EeWonAsyncOp,
+    param: i32,
+) -> *mut c_void {
+    // SAFETY: the caller's contract
+    unsafe { (*o).track(tracker, child, &*child_obj, param) }
+}
+
+/// A `RustCompletion`'s `Complete(op)`: its Rust call.
+///
+/// # Safety
+/// `c` is a live body (a `RustCompletion`'s); `op` the op it completes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_completion_run(c: *const EeWonCompletion, op: *mut c_void) {
+    // SAFETY: the caller's contract
+    unsafe { ((*c).call)(op) }
+}
+
+/// A `RustCompletion`'s deletion: its body (and the references the body holds) freed.
+///
+/// # Safety
+/// `c` came from [`EeWonCompletion::make`] (or is null), not used after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_completion_free(c: *mut EeWonCompletion) {
+    if !c.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(c) });
+    }
 }
 
 #[cfg(test)]

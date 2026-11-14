@@ -27,6 +27,7 @@
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
 #include "rust/ee_won.h"
+#include "won_blocking.h"
 
 using namespace WONAPI;
 
@@ -85,28 +86,39 @@ static std::string Esc(const std::wstring& inText)
 static std::map<const void*, IPAddr> sPeerAddr;
 static int sListenPort;
 
-namespace WONAPI {
-ServerOp::ServerOp()
+// the stand-in's ServerOp members (the real ones are the Rust op's since net round 24): the socket and the auth
+// context with a reference each, released as the original's members were (the context, then the socket)
+struct StandinMembers {
+    SmartPtr<BlockingSocket> mSocket;
+    SmartPtr<AuthContext> mAuthContext;
+    AuthType mAuthType = AUTH_TYPE_NONE;
+};
+static std::map<const void*, StandinMembers> sPeerMembers;
+// the original BlockingSocket::Connect's statements (a connect op run blocking)
+static WONStatus StandinConnect(BlockingSocket* inSocket, const IPAddr& inAddr, unsigned long inTimeout)
 {
-    this->mAuthType = AUTH_TYPE_NONE;
-    this->mLengthFieldSize = 4;
-    this->mClientKeySize = 8;
-    this->mUseClientKey = false;
-    this->mMaxConnectTime = 60000;
-    this->mMaxSendTime = 60000;
-    this->mMaxRecvTime = 60000;
+    SmartPtr<ConnectOp> anOp = new ConnectOp(inAddr, inSocket);
+    anOp->RunBlock(inTimeout);
+    return anOp->GetStatus();
 }
+namespace WONAPI {
 RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp) {}
 RustServerOp::~RustServerOp()
 {
+    StandinMembers aMembers;
     PlatMutexLock(sLinesLock);
+    std::map<const void*, StandinMembers>::iterator aMember = sPeerMembers.find(this);
+    if (aMember != sPeerMembers.end()) {
+        aMembers = aMember->second;
+        sPeerMembers.erase(aMember);
+    }
     sPeerAddr.erase(this);
     PlatMutexUnlock(sLinesLock);
 }
 void RustServerOp::RunHook()
 {
     IPAddr anAddr = sPeerAddr[this];
-    this->Finish(this->mSocket->Connect(anAddr, 5000));
+    this->Finish(StandinConnect(sPeerMembers[this].mSocket.get(), anAddr, 5000));
 }
 void RustServerOp::CleanupHook() { AsyncOpWithTracker::CleanupHook(); }
 bool RustServerOp::CallbackHook(AsyncOp* inOp, int inParam) { return AsyncOpWithTracker::CallbackHook(inOp, inParam); }
@@ -114,10 +126,10 @@ PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType in
                        bool)
     : RustServerOp(NULL)
 {
-    this->mSocket = inSocket;
-    this->mAuthContext = inContext;
-    this->mAuthType = inType;
     PlatMutexLock(sLinesLock);
+    sPeerMembers[this].mSocket = inSocket;
+    sPeerMembers[this].mAuthContext = inContext;
+    sPeerMembers[this].mAuthType = inType;
     sPeerAddr[this] = inAddr;
     PlatMutexUnlock(sLinesLock);
 }
@@ -217,7 +229,7 @@ struct Server {
         aMsg[0] = (char)(aLength & 0xff);
         aMsg[1] = (char)((aLength >> 8) & 0xff);
         aMsg += inMsg.b;
-        WONStatus aStatus = this->Peer()->SendMsg(Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000);
+        WONStatus aStatus = WonBlocking::SendMsg(this->Peer(), Bytes(aMsg.data(), (unsigned long)aMsg.size()), 5000);
         if (aStatus != WS_Success)
             Log(std::string("server send ") + inName + " " + St(aStatus));
     }

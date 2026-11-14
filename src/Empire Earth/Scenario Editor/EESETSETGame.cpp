@@ -204,7 +204,7 @@ void EESETSETGame::UpdateName(EESMEffect* inEffect, EESETSEffectControls* inCont
             theName = theText;
         theText = "<" + theName + ">";
         inEffect->mName = theText;
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mNameEditBox->SetText(theText);
+        gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetNameEditBox()->SetText(theText);
     }
 }
 

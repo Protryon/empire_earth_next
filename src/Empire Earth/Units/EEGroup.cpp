@@ -358,7 +358,7 @@ void EEGroup::RequestPath(const EETileCoordinate& inFrom, const EETileCoordinate
 unsigned short EEAIContinentManager::GetPathAreaIDAt(const EETileLocation& inTile)
 {
     EEAIPathArea* theArea = this->GetPathAreaAt(inTile);
-    return theArea != NULL ? theArea->mID : (unsigned short)0;
+    return theArea != NULL ? theArea->GetID() : (unsigned short)0;
 }
 
 // The (x, y) overload: MoveAlong's first site passes UMFloor values (copied into the parameter slots

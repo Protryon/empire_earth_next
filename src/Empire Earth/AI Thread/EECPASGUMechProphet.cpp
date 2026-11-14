@@ -32,7 +32,6 @@
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
-#include "ee/EECCTeleport.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EECPILocation.h"
@@ -243,7 +242,7 @@ bool EECPASGUProphetCalamityAnalyzerTeleport::CanPlace(EEComplexUnit* inUnit)
     GETransformation theTransformation;
     bool theResult = true;
     if (!EECanStandOn(this->mTile, inUnit)) {
-        long theRange = static_cast<EECCTeleport*>(this->mCalamityClass)->mPlacementRange;
+        long theRange = this->mCalamityClass->mPlacementRange;
         long theSize = this->mUnit->mUnitClass->GetTileSize();
         long theY = this->mTile.mY;
         long theX = this->mTile.GetX();
