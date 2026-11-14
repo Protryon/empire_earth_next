@@ -14289,3 +14289,37 @@ that moves it.
   rerun: BOX SELECT PASS, ORDERS PASS (gather, repair, repair queued, move; patrol and attack ground skipped). Not run: a tour or a played game sending these four messages, macOS or Linux builds.
 - **Left:** EEMPayTribute's chat line (its decisions are ee_netmsg's already), EEMChangeSelectedUnitCollisionSphere
   (debug), the smaller bodies, the UI ones (EEMGameOptions, EEMInGameChat), and the members as records (above).
+
+## R5b.4 game messages, round 3: the capture through the codec slots, 43 message classes as one record class (ee_netmsg records.rs; EEMRecord; branch rust-msg3, 2026-11-13)
+
+The game messages lane's third round (RUST_PLAN R5b.4 leaf 4 (c)). Its aim was to delete C++: rounds 1-2 moved
+`Execute` bodies but grew the test-only sweep more than the game shrank.
+
+- **The census** (`build/msg3/census.py`: every name `EEM*` in src, include and tests outside EEMessage.cpp/.h and
+  EEMessageCapture.cpp, comments and strings stripped; a use is a constructor (`new EEMx(...)`, a stack object) or a
+  reader (a cast, a member, a pointer variable)). Of the 110 classes, 43 are touched only by their senders'
+  constructors, their own `Execute` and the capture, have no import of their own, no base or subclass beyond
+  EEMessage and only fixed members (no string, list or blob):
+  AddRemoveResources, AttackPlayers, CameraLocationInfo, ChangeSelectedUnitCollisionSphere, CheatCode,
+  EdictPreProposal, EdictPreProposalResponse, EnterShiftMode, GameSpeed, HaltSelectedGroup, IncrementEpic,
+  IncrementRallyTimer, LagStatus, LoadMainScreen, LoadMainScreenResponse, LoadOrSaveGameResponse (its one reader,
+  EEMLoadOrSaveGame::IsResponse, is in EEMessage.cpp), LoadPercent, LoadUnitData, MigrationSlotInfo, PayTribute,
+  PlayerInformation, RecordFrames, RemoveImprovement, RemoveUnitFromSelectedGroup, ReturnToBase, SavedGroupAddSelection,
+  SavedGroupClear, SavedGroupCreate, SavedGroupSelect, ScrambleAircraft, SelectCustomPlayerForChat,
+  SelectPlayerChatType, SelectUnit, SendFlare, SetAirportCommand, SetDiplomaticStance, SetWaterLevel, SnapToDaylight,
+  StartLoading, ToggleCollisionDetection, ToggleDayNight, UpdatePingStat, ZoomInfo.
+  Kept, and why: a member reader outside the class (EEPhysics.cpp's order log: AddPatrolPoint, AttackGround,
+  AttackUnit, BuildGate, BuildUnit, BuildWall, ChangeFormation, DropoffResource, GatherResource, HealUnit,
+  ImmediateCargoUnload, ImproveUnit, LoadGarrison, LoadTransport, PackUnpack, PathTo, RepairUnit,
+  ResearchTechnology, SetRallyGoal, SetUnitBehavior, UnloadTransport; EEServer/EEClient: EdictProposal, EdictVote,
+  FullPlayerInformation, PlayerSlotInfo, NewEdictEnacted; EESEARust: AddUnitToSelectedGroup; the test fixture:
+  Patrol; EEACalamity's pointer: CastCalamity; EEDataPreLoading's: StartLoadingResponse; EEPhysics's pointer:
+  CivTimerExpired), an import of their own (Chat, InGameChat, GameOptions, FullGameOptions, FullPlayerInformation,
+  PlayerSlotInfo, CivUpgrades and its two subclasses, LoadOrSaveGame, SelectUnits and its two subclasses,
+  SelectTheseUnits), a subclass (AddUnitToSelectedGroup / AlwaysAddUnitToSelectedGroup), EEMSelectPatrolGroup (the
+  lasso holds it as an `EEMSelectUnits*`, the original's cast), EEMEndCinematic (type 0x9d, which the factory does
+  not build), the Lua AI's stack messages and out-of-line constructors elsewhere (Explore, StopActiveGroup, KillUnit,
+  LockUnlock, ExchangeResources, RemoveTechnology, SmartFarmers, HackANewUnit, ReplantFarms, ReportStatistics,
+  ExitShiftMode, MakeWorldVisible) and the member-less ones the UI builds with `new X` (ClearAirportCommands,
+  Disband, GameRestarting, GoFanatic, JITManufacturing, Resign, SelfDestruct, UnselectAllUnits): candidates for a
+  next round (the second group needs only its senders changed).
