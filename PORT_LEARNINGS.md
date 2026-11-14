@@ -15290,3 +15290,101 @@ stack, -350) -> 75,576 (the caches, -28). This round's own net: -370. WindowMana
   set, ProcessEvents, DeliverEvent, CloseAllWindows, Add/RemoveWindow, the screen resolution). PostEvent locks
   `mDataCrit` because events may come from other threads: the event list needs a lock in Rust (a `Mutex`, never held
   across a call out), not the `RefCell` the other state uses. Then the skins' Button subclasses (draw ops).
+
+## R4.4, seventeenth round: the multi-effect, energy wall and damage vent whole in Rust on EEE3DRust; EEE2DRust, the 2D twin, with the command confirmation (ee_gfx effect_multi.rs, effect_wall.rs, effect_vent.rs, effect_2d.rs, effect_confirm.rs; branch rust-gfx23, 2026-11-13)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 19,868 lines before the round; 19,784 after the
+multi-effect (-84); 19,551 after the energy wall (-233); 19,250 after the damage vent (-301); 19,063 after the
+command confirmation (-187, with the new `EEE2DRust.cpp`). `EEE3DMultiEffect`, `EEE3DEnergyWall`,
+`EEE3DDamageVent` and `EEE3DCommandConfirmation` (`.cpp` and `.h`) deleted. All four kinds were already in round
+16's effects sweep (0x3b on a unit and at a point, 0x34 and 0x35 on a unit, 0x41 on a unit and unit to point), so
+each move is checked against the sweep's golden recorded from the original C++.
+
+| Commit | What | Graphics Thread C++ |
+|---|---|---|
+| c7720eec | the orbit tests' two racy "drew no random" asserts dropped (as round 16 did for the hurricane) | |
+| cae9ee9a | the multi-effect whole in Rust | -84 |
+| c9a1eb47 | the energy wall whole in Rust | -233 |
+| c608658f | the damage vent whole in Rust | -301 |
+| 441fb91e | `EEE2DRust` and the command confirmation whole in Rust | -187 |
+| 64f0339f | merge of `rust` d8551990 (84 commits; no conflict, `rust_includes.py` changed nothing) | |
+| ca0496a4 | effects sweep: the farm's placeholder triangles in bounds (the lead's seeds 5-7 panic) | +7 |
+| 0c62959b | effects sweep: the moved damage vent without vent tag lists makes no jet (seed 4's fault) | +8 |
+| 6dacb144 | the effects golden recorded from the C++ for seeds 2-7 (was 2-3) | |
+
+- **The effects sweep on seeds 4-7 (the lead's report, fixed during this round).** The capture had only been run and
+  recorded at seeds 2-3. On seeds 5-7 it panicked in ee_dx7's `set_point` (index 4, length 4): the sweep's farm on
+  a 1-tile unit, whose `BuildGroundModels` fills its draw copies with placeholder triangles three vertices at a
+  time, past the end of a vertex array whose count is not a multiple of 3 ((1 + 1)^2 = 4). The retail C++ wrote past
+  its heap array; the DX7 vertex arrays have been Rust (bounds-checked) since before f839d277, so every port tree
+  panics. Now only the vertices inside the array are written, each with the original's value (`EEFarmPlaceholder`).
+  Seed 4 then faulted in the moved damage vent: the sweep's vent stood on a unit without vent tag points and read
+  the vent count through the null list, exactly as the original `EEE3DDamageVent::Step` did (f839d277 faults
+  there too, checked). No lists now means no vents, so no jet. The golden was then recorded again from f839d277 with
+  round 16's sweep and both fixes applied (a temporary worktree with its own staging root, removed after): seeds
+  2-3 unchanged, seeds 4-7 new, the C++ and this tree giving the same 18 digests. `golden_cpp_effects.txt` now
+  covers seeds 2-7.
+  - **Lesson:** a capture profile recorded on two seeds is gated on two seeds; run a new sweep on all six before
+    recording its golden. Its sweep unit (the newest unit on the map) varies widely by seed.
+  - **Trap (tooling):** stopping a background chain with the task tool did not stop the bash children it had
+    started: the final chain went on running (EE-SIM held the exe and a later build failed with "Access is denied").
+    Check for live `EE-SIM.exe` processes under the worktree before rebuilding.
+
+- **The multi-effect (0x3b, `effect_multi.rs`).** It only starts its graphic effect's linked effects 1, 2 (and 3 when
+  there is one) through the entry point that made it, is never queued (10) and ends at its first step (7). The
+  entry point is the constructor's: `EEE3DRust::Call` takes the constructor's argument (`inArg`: the unit, point or
+  line) and the host's `create_linked` makes the linked effect through it; a new line constructor and op
+  `CreateLine`. Its own unit stays none (the original's unit constructor gave `EEEffect3D` no unit).
+- **The energy wall (0x34, `effect_wall.rs`, whose record part already held the segments, timer, Load and Save).**
+  Place (the posts: a gate's two end parts through `wall_gate_posts`, else the unit, raised by param 6), the
+  segment search (`wall_piece`: the host keeps the original's tile query), the 500 ms timer, the queue (a gate's
+  alpha by its opening, the cloak test, the owner's colour, the texture frame: random under a free camera, 0 once
+  after a doppelganger sighting, else the game time) and pass 6's ground strips (new table entry `ground_strip`)
+  in Rust. The draw state the class held (seen, alphas, offset, colour) is the record's; the colour starts as
+  `GEColor()`'s white (the driver's draw before any queue showed it). `EEE3DRust::IsTileVisible` keeps the
+  doppelganger test for kind 0x34 (world queries only).
+- **The damage vent (0x35, `effect_vent.rs`).** The jets are a Rust list the record owns (`vent.parts`, freed with
+  the record, like the orbitals); the host answers the tag lists (kept for the call, as the hurricane's spawn list),
+  the vent count, a vent's offsets (the aim, through ee_ge's `make_look_at` and the jet rotation in Rust) and its
+  places around the unit (`vent_points`), the unit's command and maximum hit points, the graphic's animation 0 and
+  the class scale; the table gains `texture_frame`. The sub-effects' spread draws three randoms for z, y, x: the
+  original's `GE3DPoint(x, y, z)` argument expressions are evaluated right to left (clang-cl, the MS ABI), which the
+  driver (compiled the same way as the game) confirmed on its first run.
+- **EEE2DRust, the 2D twin (`effect_2d.rs`, `EEE2DRust.h/.cpp`).** The command confirmation is an `EEEffect2D`
+  despite its name, so it moved on a new class over `EEEffect2D` (`EEEffect2D`'s model, position, parts and
+  ReleaseResources stay the base's), each virtual a Rust call by kind with its own host (`EeGfxEffect2DHost`) and
+  the same ops, facts and rasterizer table as `EEE3DRust`. The facts are one C++ function now (`EEEffectFacts`,
+  shared by both classes) and gain the game speed. Load, Save and RepairPointers go to Rust too (the confirmation
+  returns 0 without the base's, as its original); a sprite kind that needs `EEEffect2D`'s Load will add a host op.
+  `EEE2DRust.cpp` is a new unit (`tools/units.py` EXTRA_UNITS).
+- **The command confirmation (0x41, `effect_confirm.rs`).** Set-up's colour by state and the unit's selection
+  circle sizes, the goal a state-0 ring shows (the host answers it as one value: no unit, blocked, forced, move,
+  unloading, other, with the tile computed by Rust's `floor`), the step's age, follow (a tree's id-based spot, a
+  dead unit's top point) and animation, queue 2 after `EEEffect::Queue` and pass 4's camera-facing ring (new table
+  entries `camera_yaw`, `get_zbuffer`, `get_zcompare`; the three command textures through the host).
+- **Golden drivers** (`build/gx23/drv/make.py COMMIT|WORKTREE OUT KINDS`: round 16's generator patched by
+  `patch_multi.py`, `patch_wall.py`, `patch_vent.py`, `patch_confirm.py`; `run.sh NAME COMMIT KINDS SNAP` builds the
+  original's side over a snapshot of the Rust library and header from before the move, `ee_rust_SNAP.lib` and
+  `inc_SNAP`, since the original classes call exports a move may change). Each 300 effects on seed 1 and 3,000 on
+  seed 2, identical bytes: multi 6,605 and 67,828 lines (2,399 unit, 2,509 placed and 2,649 line creations); wall
+  7,410 and 66,437 (8,181 strips, 8,303 visibility tests, 4,133 doppelganger asks); vent 7,022 and 67,129 (1,698
+  placements); confirmation 6,659 and 67,496 (9,671 draws, 8,521 moves, 1,003 animated texture frames). The world
+  gained gates and their parts, wall pieces on tiles, two tag lists with offsets, the engine's look-at, Translate,
+  SetScale and vector Apply, goal queues and location goals, standing and visibility, trees and top points, and a 2D
+  base over the driver's interface.
+- **Traps (tooling):** the generator cut the namespace of `EEE3DRust.cpp` up to the first constructor's text, which a
+  new comment line moved: it now cuts to the namespace's end. A placeholder named like a `#define` (`CONFIRM`) was
+  replaced inside `#ifdef CONFIRM` too. Appending to the C++ rasterizer table after its last entry needs the
+  trailing comma accounted for (one build failed on `},,`).
+- **Behaviour:** none intended (each commit's effects capture equals the golden of f839d277). The energy wall's colour
+  before its first queue is white as the original's (`GEColor()`), not zero.
+- **Gates.** On the result merged with rust (64f0339f, with the sweep fixes at 6dacb144): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,920 tests; clippy, rustfmt, header), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169 digests, late 170, calamity 183), the effects capture at seeds 2-7 PASS (18 digests, the extended C++ golden), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected), the four drivers rerun on the final tree identical, and the tour (`fixture_game.py --exercise tour --play-seconds 60` on the open tree, under the harness lock) `RESULT PASS tour`. Per commit: the build 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-3 PASS against the C++ golden, the Rust gate PASS (2,784, 2,790, 2,795 tests; the multi-effect's and the confirmation's runs lost ee_plat_core's timer test under load, which passes alone; the multi-effect's `--no-fail-fast` rerun passed every step). Graphics Thread C++ at the end: 19,078 lines (+15 the two sweep fixes). The tour's 60 s random map gives no command and is not known to make any of the moved kinds: it checks that the table, `EEE3DRust` and `EEE2DRust` changes leave the game drawing, not their draws.
+- **Only a tour or a person reaches:** every draw of the four kinds through the table (the wall's ground strips, the
+  vent's jets with their texture frames, the confirmation's ring with its fog, z buffer and z compare restored: a
+  wrong restore would show the scene drawn over the rings or z fighting after a command; the command textures), the
+  doppelganger sighting of a wall, and loading a saved game holding a wall or vent (the sweep loads copies; the
+  confirmation is never saved). Where they appear: the confirmation at every command a person gives, the energy wall
+  on space walls and gates, the damage vent on damaged units with vent tag points.
+- **Next:** the tracer beam (its target unit as an `EEE3DRust` member with `ReplaceUnit`, the vertex stretch as a
+  table entry), the farm and volcano (their meshes are Rust already), the text draw in the table for the icon and
+  goal (0x3c derives from the icon: they move together), then the 2D sprites on `EEE2DRust` with a 2D sweep.
