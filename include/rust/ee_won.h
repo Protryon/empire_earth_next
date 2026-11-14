@@ -1008,7 +1008,7 @@ constexpr static const int32_t EE_WON_HOST_GET_SESSION = 87;
 /// `mAuthContext->PutSession(addr, obj0)`
 constexpr static const int32_t EE_WON_HOST_PUT_SESSION = 88;
 
-/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session)
+/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session handle the transform holds)
 constexpr static const int32_t EE_WON_HOST_ADD_CRYPT = 89;
 
 /// `mTracker.KillAll()` (may call back)
@@ -1212,7 +1212,8 @@ constexpr static const int32_t EE_WON_HOST_PEER_NEW_LIGHT = 157;
 /// may call back
 constexpr static const int32_t EE_WON_HOST_PEER_REFRESH_ASYNC = 158;
 
-/// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
+/// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj: answered in Rust for a bound op,
+/// a session handle (hostauth.rs, round 22)
 constexpr static const int32_t EE_WON_HOST_PEER_NEW_SESSION = 160;
 
 /// a C++ `AuthContext*` obj0 (NULL: the op's `mAuthContext`) -> out_obj: its Rust object (`AuthContext::Core()`,
@@ -2927,6 +2928,19 @@ enum class EeWonGuiOp : uint32_t {
   WmResolution,
   /// `Signal()` (virtual; any thread: PostEvent's wake-up).
   WmSignal,
+  /// a button's or component's method (`a` an `EeWonSkinBtn`; `b`, `c` its arguments).
+  SkinBtn = 607,
+  /// the check box's or radio button's painter function on the Graphics `a` (`b` an `EeWonMsBox`):
+  /// `MSCheckbox::CheckboxPainter(*(Graphics*)a, this)` / `MSRadioButton::RadioPainter`.
+  SkinBoxPainter,
+  /// a wrapped text's method (`a` an `EeWonWbText`, `b` the `WrappedText*`, `c` its argument).
+  WbText,
+  /// an image's method (`a` an `EeWonWbImage`, `b` the `Image*`).
+  WbImage,
+  /// a font's (`a` an `EeWonWbFont`, `b` the `Font*`).
+  WbFont,
+  /// `Button::CopyAttributes((Button*)a)`.
+  WbBaseCopy,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3271,6 +3285,125 @@ enum class EeWonDlgCall : uint32_t {
   GetField,
   /// the field `a` = `b`.
   SetField,
+};
+
+/// The ops (`a`..`d` as documented).
+enum class EeWonDlgLogicOp : uint32_t {
+  /// `SafeGetComponent(a, aPtr, "OkCancelDialog", "DialogLogic.cpp", 48)` into a `SmartPtr<OkCancelDialog>`: the
+  /// dialog with a reference added, or NULL.
+  FindOkCancel = 1,
+  /// `SafeGetComponent(a, aPtr, "StatusDialog", "DialogLogic.cpp", 49)`: the dialog with a reference, or NULL.
+  FindStatus,
+  /// `WindowManager::GetDefaultWindowManager()`: -1 when NULL, else its `GetPopupsInOwnWindow()` (0 or 1).
+  WmPopups,
+  /// `a->Release()` of a component (a dialog, a container).
+  ReleaseComponent,
+  /// `a->AddRef()` of a component.
+  AddRefComponent,
+  /// `a->Release()` of a window.
+  ReleaseWindow,
+  /// `a->AddRef()` of a window.
+  AddRefWindow,
+  /// `a->Release()` of an async operation.
+  ReleaseOp,
+  /// `a->AddRef()` of an async operation.
+  AddRefOp,
+  /// `((AsyncOp*)a)->Kill(true)`.
+  OpKill,
+  /// `((AsyncOp*)a)->ForceFinish(WS_Killed)`.
+  OpForceFinishKilled,
+  /// `((AsyncOp*)a)->GetStatus()`.
+  OpGetStatus,
+  /// `this->RunOp(a, new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, this), b)`.
+  RunOp,
+  /// `GetLobbyWindow()->EndDialog(-1, NULL, a)` (the status dialog).
+  EndDialog,
+  /// `GetLobbyRoot()` (not held).
+  LobbyRoot,
+  /// `LobbyGetRootWindow()` (not held).
+  RootWindow,
+  /// `a->mParent` (a component).
+  Parent,
+  /// `((Container*)a)->RemoveChild(b)`.
+  RemoveChild,
+  /// `((Window*)a)->Close()`.
+  WindowClose,
+  /// `a->Width()` (a component).
+  Width,
+  /// `a->Height()`.
+  Height,
+  /// `a->GetBounds()` into `*(int(*)[4])b`: x, y, width, height.
+  Bounds,
+  /// `CreateNativeWindow()` into a `SmartPtr<Window>`, then its `SetOneComponentWindow(true)`: the window with a
+  /// reference added.
+  NewWindow,
+  /// `a->SetParent(b); a->SetStyle(0x22); a->Create(WONRectangle(0, 0, 100, 100));
+  /// LobbyAddLogicListener(a->mRoot); a->mRoot->SetColorScheme(LobbyGetColorScheme())`.
+  SetUpPopup,
+  /// `((Window*)a)->SetClientSize(b, c)`.
+  SetClientSize,
+  /// `((Window*)a)->mRoot.get()` (not held).
+  WindowRoot,
+  /// `((Window*)a)->Center(true)`.
+  WindowCenter,
+  /// `CenterLayout::Center((Container*)a, b, true, true)`.
+  CenterLayout,
+  /// `((Container*)a)->AddChild(b)`.
+  AddChild,
+  /// `((Window*)a)->Show(true)`.
+  WindowShow,
+  /// `((Window*)a)->RunDialog(b)`: the dialog's result.
+  RunDialog,
+  /// `LobbyIsSuspended()` (0 or 1).
+  LobbySuspended,
+  /// `((StatusDialog*)a)->SetText(*(GUIString*)b, *(GUIString*)c, d != 0)`.
+  StatusSetText,
+  /// `((StatusDialog*)a)->mStartTick = WONTickCount()`.
+  StatusSetStartTick,
+  /// `((StatusDialog*)a)->SetStatus(GetWONStatusString(b), false)`.
+  StatusSetStatus,
+  /// `LobbyGetLobbySoundEffects()` (0 or 1).
+  SoundEffects,
+  /// `LobbyPlaySound(LobbyGlobal_Error_Sound.get())`.
+  PlayErrorSound,
+  /// `((OkCancelDialog*)a)->SetText(*(GUIString*)b, *(GUIString*)c, OK or Yes, Cancel or No)`: Yes/No when
+  /// `d != 0`.
+  OkCancelSetText,
+  /// `a->GetRootWindow()` (a component; not held).
+  RootWindowOf,
+  /// `((Container*)a)->InvalidateRect(WONRectangle(*(int(*)[4])b))`.
+  InvalidateRect,
+};
+
+/// The inward calls (the C++ class's methods).
+enum class EeWonDlgLogicCall : uint32_t {
+  /// `InitComponent(a)`.
+  Init = 1,
+  /// `KillHook()`.
+  KillHook,
+  /// `Reset()` (= ClearDialogs).
+  Reset,
+  /// `StatusOpComplete(a)`.
+  StatusOpComplete,
+  /// `ClearDialogs()`.
+  ClearDialogs,
+  /// `DoDialog(a)`: the dialog's result.
+  DoDialog,
+  /// `RunOpWithStatus(a, title b, status c, mode d, timeout e)`.
+  RunOpWithStatus,
+  /// `ShowStatus(title a, status b, cancel c != 0)`.
+  ShowStatus,
+  /// `ShowError(title a, text b)`.
+  ShowError,
+  /// `UpdateStatus(a)`.
+  UpdateStatus,
+  /// `ShowOkCancel(title a, text b, sound c != 0)`.
+  ShowOkCancel,
+  /// `ShowYesNo(title a, text b, sound c != 0)`.
+  ShowYesNo,
+  /// a field: 0 `mStatusCancelled`, 1 `mPopupWindows`, 2 `mStatusVisible`, 3 `mStatusMode`, 4 `mStatusOp`,
+  /// 5 the OK/Cancel dialog, 6 the status dialog, 7 the stack's depth.
+  Field,
 };
 
 /// What an ElGamal call computes into a sink.
@@ -3974,6 +4107,20 @@ enum class EeWonLobbyDlgKind : uint32_t {
   CreateRoom = 5,
   CreateGame = 6,
   AdminAction = 7,
+  /// StatusDialog (round 2): DialogLogic's status box.
+  Status = 8,
+  /// OkCancelDialog (round 2): DialogLogic's OK/Cancel and Yes/No box.
+  OkCancel = 9,
+  /// RoomDialog (round 3): no control (its RoomCtrl member was never set).
+  Room = 10,
+  /// TOUDialog (round 3): the terms of use.
+  Tou = 11,
+  /// BadUserDialog (round 3): the moderators' banned and muted users.
+  BadUser = 12,
+  /// ChooseNetworkAdapterDialog (round 3): InitLogic's adapter choice.
+  ChooseAdapter = 13,
+  /// CreditsDialog (round 3): AccountLogic's credits, with the scrolling text it holds.
+  Credits = 14,
 };
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -4042,6 +4189,135 @@ enum class EeWonLobbyDlgOp : uint32_t {
   GameSetInviteOnly,
   /// `((LobbyGame*)a)->SetSkill(b)`.
   GameSetSkill,
+  /// `a->Width()`.
+  Width,
+  /// `a->Height()`.
+  Height,
+  /// `a->Left()`.
+  Left,
+  /// `a->Top()`.
+  Top,
+  /// `a->SetSize(b, c)`.
+  SetSize,
+  /// `a->SetSizeAtLeast(b, c)`.
+  SetSizeAtLeast,
+  /// `a->SetDesiredSize(b, c)`.
+  SetDesiredSize,
+  /// `a->SetDesiredWidth(b)`.
+  SetDesiredWidth,
+  /// `a->SetPos(b, c)`.
+  SetPos,
+  /// `((Label*)a)->SetVertPad(b, c)`.
+  SetVertPad,
+  /// `((Label*)a)->SetText(*(const GUIString*)b, true)`, `gEmptyGUIString` for a NULL `b`.
+  LabelSetText,
+  /// `((Button*)a)->SetText(*(const GUIString*)b, true)`.
+  ButtonSetText,
+  /// `((WONFrameComponent*)a)->GetFrameLeft()`.
+  FrameLeft,
+  /// `((WONFrameComponent*)a)->GetFrameRight()`.
+  FrameRight,
+  /// `GetLobbyRoot()->Width()`.
+  RootWidth,
+  /// `GetLobbyRoot()->Height()`.
+  RootHeight,
+  /// `((Label*)a)->mWrappedText->mFont->GetStringWidth(*(const GUIString*)b)`.
+  FontStringWidth,
+  /// `aFont->GetStringWidth(s, 0, s.length())` of the label `a`'s font and the string `b`.
+  FontStringWidthRange,
+  /// `((Label*)a)->mWrappedText->mFont->GetCharacterWidth(b)`.
+  FontCharWidth,
+  /// `((Label*)a)->mWrappedText->mFont->GetHeight()`.
+  FontHeight,
+  /// `WONTickCount()`.
+  TickCount,
+  /// `a->Invalidate()` (the dialog).
+  Invalidate,
+  /// `((Dialog*)a)->IsDragging()` (0 or 1).
+  IsDragging,
+  /// `((Dialog*)a)->SetDragging(b != 0)`.
+  SetDragging,
+  /// `&((Label*)a)->mWrappedText->mText` (the title's own text, as SetStatus passed it on).
+  TitleText,
+  /// `((Button*)a)->mControlId = b`.
+  ButtonSetControlId,
+  /// `((Component*)a)->SubscribeToBroadcast(b != 0)` (the dialog).
+  SubscribeBroadcast,
+  /// `((BrowserComponent*)a)->ShowFiles(LobbyGetSysTOUPath(), LobbyGetGameTOUPath(), false)`.
+  BrowserShowTou,
+  /// `((BrowserComponent*)a)->GetHTMLView()->SetOffsets(0, 0)`.
+  BrowserTop,
+  /// `((GotHTTPDocumentEvent*)a)->mOp->GetNum(EE_WON_HTTPDOC_TYPE)`.
+  HttpDocType,
+  /// `((ListArea*)a)->BeginUpdate()`.
+  ListBeginUpdate,
+  /// `((ListArea*)a)->EndUpdate()`.
+  ListEndUpdate,
+  /// `((ListArea*)a)->Clear(b != 0)`.
+  ListClear,
+  /// `for (each user of *(const RoutingBadUserList*)b) ((ListArea*)a)->InsertItem(new BadUserItem(user, c != 0),
+  /// -1)`.
+  BadUsersInsert,
+  /// `((BadUserDialog::IdList*)a)->clear()`.
+  IdsClear,
+  /// `((ListArea*)a)->RewindSelections()`.
+  ListRewind,
+  /// `((ListArea*)a)->HasMoreSelections()` (0 or 1).
+  ListHasMore,
+  /// `((ListArea*)a)->GetNextSelection()`.
+  ListNextSel,
+  /// `((BadUserItem*)a)->mValues[1]` (the user's WON id).
+  BadUserId,
+  /// `((BadUserDialog::IdList*)a)->push_back((unsigned long)b)`.
+  IdsPush,
+  /// `InsertItem(new NetworkAdapterListItem(0), -1); SetString(0, 0, ChooseNetworkAdapterDialog_Default_String,
+  /// NULL)` on the list `a`.
+  AdapterAddDefault,
+  /// `IPAddr::GetLocalHost()`.
+  LocalHost,
+  /// `((ListArea*)a)->SetSelItem(b, c != 0)`.
+  ListSetSel,
+  /// `((ListArea*)a)->GetNumItems()`.
+  ListNumItems,
+  /// `LobbyGetNetAddresses(aList, true)` into a new list; the list (freed by `AdaptersFree`).
+  AdaptersGet,
+  /// the number of addresses in the list `a`.
+  AdaptersCount,
+  /// the `b`-th address's `mHandle` of the list `a`.
+  AdapterHandle,
+  /// the `b`-th address's `GUIString(mName).length()` of the list `a`.
+  AdapterNameLength,
+  /// `((MultiListArea*)a)->InsertItem(new NetworkAdapterListItem(b), -1)`.
+  AdapterInsertRow,
+  /// `SetString(GetNumItems() - 1, 0, GUIString(the c-th address of the list b's mName), NULL)` on the list `a`.
+  AdapterSetName,
+  /// `SetString(GetNumItems() - 1, 0, ChooseNetworkAdapterDialog_Unknown_String, NULL)` on the list `a`.
+  AdapterSetUnknownName,
+  /// `SetString(GetNumItems() - 1, 1, IPAddr(b, 0).GetHostString(true), NULL)` on the list `a`.
+  AdapterSetAddress,
+  /// frees the list `a` (the original's local list).
+  AdaptersFree,
+  /// `((ListArea*)a)->GetSelItem()`.
+  ListGetSel,
+  /// `((NetworkAdapterListItem*)a)->mHost`.
+  AdapterHost,
+  /// `a->AddRef()` (a `SmartPtr` assignment's).
+  AddRef,
+  /// `Component* aParent = ((Component*)b)->mParent; this->Fn2F6140((Component*)a, 0x5003, (Component*)b,
+  /// aParent->Left(), aParent->Top(), 0, 0, 0)` (the scrolling text `a` in place of the credits button `b`).
+  CreditsPlace,
+  /// `this->AddChild((Component*)a)`.
+  AddChild,
+  /// `((ScrollingTextComponent*)a)->Start()`.
+  ScrollStart,
+  /// `((ScrollingTextComponent*)a)->Stop()`.
+  ScrollStop,
+  /// `((ScrollingTextComponent*)a)->Reset()`.
+  ScrollReset,
+  /// `((ScrollingTextComponent*)a)->AddLine(*(const GUIString*)b, (unsigned long)c)`.
+  ScrollAddLine,
+  /// `this->GetDefaultFont()->GetStringWidth(t, 0, t.length())` of the string `a`.
+  DefaultFontStringWidth,
 };
 
 /// The inward calls (the shells' methods).
@@ -4074,8 +4350,32 @@ enum class EeWonLobbyDlgCall : uint32_t {
   ApplyToServer,
   /// AdminAction: `GetNumSeconds()`.
   NumSeconds,
-  /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional.
+  /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional,
+  /// 4 StatusDialog's start tick, 5 TOUDialog's need-to-rebuild flag, 6 BadUserDialog's simple flag.
   Field,
+  /// StatusDialog: `SetText(*(GUIString*)a, *(GUIString*)b, c != 0)`; OkCancelDialog: `SetText(title a, body b,
+  /// ((GUIString**)c)[0], ((GUIString**)c)[1])`.
+  SetText,
+  /// StatusDialog: `SetStatus(*(GUIString*)a, b != 0)`.
+  SetStatus,
+  /// StatusDialog: `mStartTick = a`.
+  SetStartTick,
+  /// BadUserDialog: `SetUserList(*(const RoutingBadUserList*)a, b != 0)`.
+  SetUserList,
+  /// BadUserDialog: `GetIds(*(IdList*)a)`.
+  GetIds,
+  /// ChooseNetworkAdapterDialog: `GetSelectedAddress()`.
+  SelectedAddress,
+  /// CreditsDialog's constructor: `mScrollingText = (ScrollingTextComponent*)a` (held).
+  HoldScrollText,
+  /// CreditsDialog: `StartScrolling()`.
+  StartScrolling,
+  /// CreditsDialog: `StopScrolling()`.
+  StopScrolling,
+  /// CreditsDialog: `ResetScrolling()`.
+  ResetScrolling,
+  /// CreditsDialog: `AddLine(*(const GUIString*)a, (Component*)b, (unsigned long)c)`.
+  AddLine,
 };
 
 /// A container's key kind (its comparator).
@@ -4094,6 +4394,118 @@ enum class EeWonLobbyKeyKind {
   NarrowNoCase = 5,
   /// LobbyOptionSet: `GUIString` values unique by `Compare`, in insertion order
   InOrder = 6,
+};
+
+/// The popup kinds.
+enum class EeWonLobbyPopupKind : uint32_t {
+  Client = 0,
+  Game = 1,
+  Friend = 2,
+};
+
+/// The ops (`a`, `b`, `c` as documented; "the popup" is the C++ popup this object belongs to).
+enum class EeWonLobbyPopupOp : uint32_t {
+  /// `new PopupMenu` (no reference added).
+  MenuNew = 1,
+  /// `a->AddRef()` (a `SmartPtr`'s reference: the menu, the subject, a font).
+  AddRef,
+  /// `a->Release()`.
+  Release,
+  /// `this->AddChild((Component*)a)`.
+  AddChild,
+  /// `((PopupMenu*)a)->Clear(false)`.
+  MenuClear,
+  /// `((PopupMenu*)a)->mFont.get()` with a reference added (the original's local `SmartPtr`), or NULL.
+  MenuFont,
+  /// `this->GetFontMod((Font*)a, 1, 0)` with a reference added.
+  PopupFontMod,
+  /// `((PopupMenu*)a)->GetFontMod((Font*)b, 1, 0)` with a reference added.
+  MenuFontMod,
+  /// `((PopupMenu*)a)->SetFont((Font*)b)`.
+  MenuSetFont,
+  /// `((PopupMenu*)a)->mFont = (Font*)b`.
+  MenuAssignFont,
+  /// `((PopupMenu*)a)->AddItem(((LobbyClient*)b)->GetName(), 0)->mSelectable = false`.
+  MenuTitleClient,
+  /// `((PopupMenu*)a)->AddItem(((LobbyGame*)b)->GetName(), 0)->mSelectable = false`.
+  MenuTitleGame,
+  /// `((PopupMenu*)a)->AddItem(((LobbyFriend*)b)->GetName(), 0)->mSelectable = false`.
+  MenuTitleFriend,
+  /// `sprintf(aBuffer, "%d", b); ((PopupMenu*)a)->AddItem(GUIString(aBuffer), 0)->mSelectable = false`.
+  MenuTitleNumber,
+  /// `((PopupMenu*)a)->AddItem(the string b, NULL, NULL, c)`.
+  MenuAddItem,
+  /// `((PopupMenu*)a)->AddSeperator()`.
+  MenuAddSeparator,
+  /// `((Component*)a)->Width()`.
+  Width,
+  /// `((Component*)a)->Height()`.
+  Height,
+  /// `this->SetSize(a, b)`.
+  SetSize,
+  /// `((LobbyClient*)a)->IsModerator()` (0 or 1).
+  ClientIsModerator,
+  /// `((LobbyClient*)a)->IsCaptain(b != 0)` (0 or 1).
+  ClientIsCaptain,
+  /// `((LobbyClient*)a)->GetClientId()`.
+  ClientId,
+  /// `((LobbyClient*)a)->GetWONUserId()`.
+  ClientWonUserId,
+  /// `((LobbyClient*)a)->GetGameGroupId()`.
+  ClientGameGroupId,
+  /// `((LobbyClient*)a)->IsInvited()` (0 or 1).
+  ClientIsInvited,
+  /// `((LobbyClient*)a)->IsFriend()` (0 or 1).
+  ClientIsFriend,
+  /// `((LobbyClient*)a)->IsAway()` (0 or 1).
+  ClientIsAway,
+  /// `((LobbyClient*)a)->IsIgnored()` (0 or 1).
+  ClientIsIgnored,
+  /// `((LobbyClient*)a)->IsBlocked()` (0 or 1).
+  ClientIsBlocked,
+  /// `((LobbyClient*)a)->IsMuted(b != 0)` (0 or 1).
+  ClientIsMuted,
+  /// `((LobbyGame*)a)->CanJoin()` (0 or 1).
+  GameCanJoin,
+  /// `((LobbyGame*)a)->IsInProgress()` (0 or 1).
+  GameInProgress,
+  /// `((LobbyGame*)a)->GetGameType()`.
+  GameType,
+  /// `((LobbyGame*)a)->GetShowDetails()` (0 or 1).
+  GameShowDetails,
+  /// `GetLobbyConfig()`.
+  Config,
+  /// `((LobbyConfig*)a)->GetNoPingInProgress()` (0 or 1).
+  ConfigNoPingInProgress,
+  /// `Container::HandleComponentEvent(a)` on the popup.
+  BaseEvent,
+  /// `((ListItemClickedEvent*)a)->mItem.get()`.
+  EventItem,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  EventButton,
+  /// `((MenuItem*)a)->mMenuId`.
+  ItemMenuId,
+  /// `this->DeliverEvent(new ClientActionEvent(a, c, (LobbyClient*)b), false)`.
+  DeliverClient,
+  /// `this->DeliverEvent(new GameActionEvent(a, (LobbyGame*)b), false)`.
+  DeliverGame,
+  /// `this->DeliverEvent(new FriendActionEvent(a, (LobbyFriend*)b, c), false)`.
+  DeliverFriend,
+  /// `this->GetRoot()->ClosePopup(this)`.
+  ClosePopup,
+};
+
+/// The inward calls.
+enum class EeWonLobbyPopupCall : uint32_t {
+  /// The constructor's body: the menu made, held and added.
+  Construct = 1,
+  /// ClientOptionsPopup: `Init((LobbyClient*)a, (LobbyClient*)b, c)`; GameOptionsPopup: `Init((LobbyGame*)a)`;
+  /// FriendOptionsPopup: `Init((LobbyFriend*)a, b)`.
+  Init,
+  /// `HandleComponentEvent(a)`: `b` the `EeWonLobbyPopupEvent`.
+  Event,
+  /// a member: 0 the menu, 1 the subject, 2 the room flags.
+  Field,
 };
 
 /// The inward calls (`PopupMenu`'s virtuals and methods).
@@ -4122,6 +4534,40 @@ enum class EeWonMenuCall : uint32_t {
   TimerAcc,
   /// `mMouseUpCount`.
   MouseUpCount,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonMsBtnCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `SetTextHook`'s step after the C++ set the text: `AdjustHeightToFitText`.
+  TextSet,
+  /// `SetTransparent(a != 0)`.
+  SetTransparent,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `AdjustHeightToFitText()`.
+  AdjustHeightToFitText,
+  /// `DrawButtonText(*a, b, c)` (`a` the Graphics).
+  DrawButtonText,
+  /// the field `a` (`EeWonMsBtnField`).
+  Get,
+  /// the field `a` = `b`.
+  Set,
+  /// `SetHorzAlign(a)`: the field, then the text centred when it is `HorzAlign_Center`.
+  SetHorzAlign,
+  /// `SetStandardTextColor(a)`: the standard colour, the own colour -1.
+  SetStandardTextColor,
+  /// `IncrementHorzTextPad(a, b)` (each pad plus the low byte, as `unsigned char`).
+  IncrementHorzTextPad,
+  /// `IncrementVertTextPad(a, b)`.
+  IncrementVertTextPad,
+  /// the subclass `a`'s (`EeWonMsBox`) `Init()`, its box `b` pixels wide.
+  BoxInit,
+  /// the subclass `a`'s `Paint(*b)`, its box `c` pixels high.
+  BoxPaint,
 };
 
 /// The inward calls of the list (`MultiListArea`'s virtuals and methods).
@@ -4428,6 +4874,63 @@ enum class EeWonScrollerCall : uint32_t {
   EnableScrollbar,
   /// `SetScrollbarConditions(a, b)` (horizontal, vertical).
   SetScrollbarConditions,
+};
+
+/// The ops (`a` the `Graphics*` of a paint or a `GUIString*`; `b` a `GUIString*`; `x`, `y`, `w`, `h` as named).
+enum class EeWonScrollTextOp : uint32_t {
+  /// `Width()` of the component.
+  Width = 1,
+  /// `Height()` of the component.
+  Height,
+  /// `Invalidate()`.
+  Invalidate,
+  /// `RequestTimer(x != 0)`.
+  RequestTimer,
+  /// `new GUIString(*(const GUIString*)a)`: a line's copy (freed by `LineFree`).
+  LineNew,
+  /// `delete (GUIString*)a`.
+  LineFree,
+  /// `Component::Paint(*(Graphics*)a)`.
+  BasePaint,
+  /// `g.SetFont(GetDefaultFont())`.
+  SetDefaultFont,
+  /// `g.SetColor((DWORD)x)`.
+  SetColor,
+  /// `g.SetSysColor(StandardColor_3DHilight)`.
+  SysHilight,
+  /// `g.SetSysColor(StandardColor_3DShadow)`.
+  SysShadow,
+  /// `g.FillRect(x, y, w, h)`.
+  FillRect,
+  /// `g.DrawRect(x, y, w, h)`.
+  DrawRect,
+  /// `g.mFont->GetHeight()`.
+  FontHeight,
+  /// `g.mColor`.
+  Color,
+  /// `g.mFont->GetStringWidth(*(const GUIString*)b)`.
+  StringWidth,
+  /// `g.DrawString(*(const GUIString*)b, x, y)`.
+  DrawString,
+};
+
+/// The inward calls.
+enum class EeWonScrollTextCall : uint32_t {
+  /// `AddLine(*(const GUIString*)a, (unsigned long)b)`.
+  AddLine = 1,
+  /// `TimerEvent(a)`: 1 (the original always answered true).
+  Timer,
+  /// `Paint(*(Graphics*)a)`.
+  Paint,
+  /// `Start()`.
+  Start,
+  /// `Stop()`.
+  Stop,
+  /// `Reset()`.
+  Reset,
+  /// a member: 0 the scroll top, 1 the text's height, 2 the time since the last scroll, 3 the last colour, 4 the
+  /// number of lines, 5 the scroll period.
+  Field,
 };
 
 /// Which copy `ee_won_smart_get` makes.
@@ -4872,6 +5375,50 @@ enum class EeWonWmCall : uint32_t {
   ProcessEvents,
   /// `DeliverEvent((WindowEventBase*)a)`.
   DeliverEvent,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonWbCall : uint32_t {
+  /// `SetTextHook(*(const GUIString*)a)`.
+  SetTextHook = 1,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `AdjustHeightToFitText()`.
+  AdjustHeightToFitText,
+  /// `SetAdjustHeightToFitText(a != 0)`.
+  SetAdjustHeightToFitText,
+  /// `SetWrapText(a != 0)`.
+  SetWrapText,
+  /// `SetTransparent(a != 0)`.
+  SetTransparent,
+  /// `SetButtonState(a, (Image*)b, c, (Font*)d, checked)` with the checked flag as `e`: see
+  /// `ee_won_wonbtn_set_state`.
+  SetButtonState,
+  /// `GetTextSize(*a, *b)` (`a`, `b` point at i32s).
+  GetTextSize,
+  /// `GetDesiredSize(*a, *b)`.
+  DesiredSize,
+  /// `SetHorzAlign(a)`.
+  SetHorzAlign,
+  /// `SetTextColor(a)`.
+  SetTextColor,
+  /// `SetFont((Font*)a)`.
+  SetFont,
+  /// `CopyAttributes(from)`, `a` the source's Rust button (`ee_won_wonbtn_of`) and `b` its C++ `WONButton*`.
+  CopyAttributes,
+  /// `DrawButtonText(*a, (WrappedText*)b, c)`.
+  DrawButtonText,
+  /// `GetButtonState`: the colour into `*(int*)b`, the text into `*(WrappedText**)c` and the image into
+  /// `*(Image**)d` (each skipped when NULL); `a` the Graphics (unused, as in the original).
+  GetButtonState,
+  /// `Paint(*a)`.
+  Paint,
+  /// `GetText()`: the first font's text's `GUIString*`, 0 when there is no font.
+  GetText,
+  /// the field `a` (`EeWonWbField`).
+  Get,
+  /// the field `a` = `b`.
+  Set,
 };
 
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
@@ -5415,6 +5962,16 @@ enum class EeWonLobbyDlgType : uint32_t {
   Button = 1,
   Label = 2,
   Combo = 3,
+  /// a plain `Component` (round 2)
+  Component = 4,
+  /// a `WONFrameComponent` (round 2)
+  Frame = 5,
+  /// a `BrowserComponent` (round 3)
+  Browser = 6,
+  /// a `MultiListArea` (round 3)
+  MultiList = 7,
+  /// a `ListArea` (round 3)
+  List = 8,
 };
 
 /// The texts AdminActionDialog sets (the lobby's resource strings).
@@ -5428,6 +5985,10 @@ enum class EeWonLobbyDlgString : uint32_t {
   Ban = 5,
   ExplanationOpt = 6,
   ExplanationReq = 7,
+  /// `LobbyGlobal_OK_String` (round 2)
+  Ok = 8,
+  /// `LobbyGlobal_Cancel_String` (round 2)
+  Cancel = 9,
 };
 
 /// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
@@ -5436,6 +5997,192 @@ enum class EeWonLobbyDlgEvent : uint32_t {
   InputTextChanged = 1,
   ButtonPressed = 2,
   ComboSelChanged = 3,
+  /// `LobbyEvent_GotHTTPDocument` (round 3: a `GotHTTPDocumentEvent`, broadcast when a download finished)
+  GotHttpDocument = 4,
+};
+
+/// The button's and component's methods a skin button calls (`SkinBtn`).
+enum class EeWonSkinBtn : uint32_t {
+  /// `IsDisabled()` (0 or 1).
+  IsDisabled = 1,
+  /// `HasFocus()` (0 or 1).
+  HasFocus,
+  /// `mParent` (a `Container*`; a pure read).
+  Parent,
+  /// `((Container*)b)->HasUsedDialogKeys()` (0 or 1).
+  UsedDialogKeys,
+  /// `IsPressed()` (0 or 1).
+  IsPressed,
+  /// `IsChecked()` (0 or 1).
+  IsChecked,
+  /// `SetComponentFlags(ComponentFlag_GrabBG, true)`.
+  SetGrabBG,
+  /// `SetComponentFlags(ComponentFlag_WantFocus, b != 0)`.
+  SetWantFocus,
+  /// `SetButtonFlags(b, c != 0)`.
+  SetButtonFlags,
+  /// `GetButtonFlags()`.
+  ButtonFlags,
+  /// `IsDefaultButton()` (0 or 1).
+  IsDefaultButton,
+  /// `((Component*)b)->ComponentFlagSet(c)` (0 or 1).
+  FlagSet,
+  /// `SetComponentFlags(b, true)`.
+  SetFlag,
+};
+
+/// A field of the button base (`Get` / `Set` calls). A set stores what the original's member held: the
+/// alignments, focus style and pads as `unsigned char`.
+enum class EeWonMsBtnField : uint32_t {
+  /// `mStandardTextColor`.
+  StandardTextColor = 1,
+  /// `mTextColor` (-1: the standard colour).
+  TextColor,
+  /// `mHAlign` (the field alone; `SetHorzAlign` also centres the text).
+  HAlign,
+  /// `mVAlign`.
+  VAlign,
+  /// `mFocusStyle`.
+  FocusStyle,
+  /// `mTopTextPad`.
+  TopTextPad,
+  /// `mBottomTextPad`.
+  BottomTextPad,
+  /// `mLeftTextPad`.
+  LeftTextPad,
+  /// `mRightTextPad`.
+  RightTextPad,
+  /// `mIsTransparent` (the flag alone; `SetTransparent` also grabs the background).
+  Transparent,
+  /// `mAdjustHeightToFitText` (the flag alone).
+  AdjustHeight,
+};
+
+/// The subclass whose box a `BoxInit` / `BoxPaint` call makes (`MSCheckbox`, `MSRadioButton`); the painter op's
+/// `b`.
+enum class EeWonMsBox : uint32_t {
+  /// `MSCheckbox`: its `CheckboxPainter`.
+  Checkbox = 0,
+  /// `MSRadioButton`: its `RadioPainter`.
+  Radio = 1,
+};
+
+/// A wrapped text's method (`WbText`; `b` the text).
+enum class EeWonWbText : uint32_t {
+  /// `new WrappedText`, answered with one reference (the Rust's).
+  New = 1,
+  /// `AddRef()` (a `SmartPtr` the Rust holds).
+  Hold,
+  /// `Release()`.
+  Release,
+  /// `SetText(*(const GUIString*)c)`.
+  SetText,
+  /// `SetMaxWidth(c)`.
+  SetMaxWidth,
+  /// `SetWrap(c != 0)`.
+  SetWrap,
+  /// `SetCentered(c != 0)`.
+  SetCentered,
+  /// `SetFont((Font*)c)`.
+  SetFont,
+  /// `GetWidth()`.
+  Width,
+  /// `GetHeight()`.
+  Height,
+  /// `mFont.get()` (a pure read).
+  Font,
+  /// `&GetText()` (a `const GUIString*`).
+  Text,
+};
+
+/// An image's method (`WbImage`; `b` the image).
+enum class EeWonWbImage : uint32_t {
+  /// `AddRef()`.
+  Hold = 1,
+  /// `Release()`.
+  Release,
+  /// `mWidth`.
+  Width,
+  /// `mHeight`.
+  Height,
+  /// `Duplicate()`, answered with the returned `SmartPtr`'s reference.
+  Duplicate,
+};
+
+/// A font's (`WbFont`; `b` the font).
+enum class EeWonWbFont : uint32_t {
+  /// `WindowManager::GetDefaultWindowManager()->GetDefaultFont()` (raw).
+  Default = 1,
+  /// `AddRef()`.
+  Hold,
+  /// `Release()`.
+  Release,
+};
+
+/// A field of the button (`Get` / `Set` calls).
+enum class EeWonWbField : uint32_t {
+  /// `mAdjustHeightToFitText` (the flag alone).
+  AdjustHeight = 1,
+  LeftTextPad,
+  TopTextPad,
+  RightTextPad,
+  BottomTextPad,
+  LeftFocusPad,
+  TopFocusPad,
+  RightFocusPad,
+  BottomFocusPad,
+  PushDX,
+  PushDY,
+  DefaultTextColor,
+  HasCheck,
+  ScaleImage,
+  /// `mWrapText` (the flag alone; `SetWrapText` also sets the texts').
+  WrapText,
+  DrawGrayText,
+  /// `mIsTransparent` (the flag alone; `SetTransparent` also grabs the background).
+  Transparent,
+  /// `mHAlign` (the field alone; `SetHorzAlign` also centres the texts).
+  HAlign,
+  VAlign,
+  FocusStyle,
+};
+
+/// The menu entries' texts (the lobby's resource strings).
+enum class EeWonLobbyPopupString : uint32_t {
+  Whisper = 0,
+  Invite,
+  Uninvite,
+  /// `FriendOptionsCtrl_Locate_String` (the client menu's and the friend menu's)
+  Locate,
+  AddToFriends,
+  RemoveFromFriends,
+  ClearAfk,
+  SetAfk,
+  Ignore,
+  Unignore,
+  Block,
+  Unblock,
+  Warn,
+  UnMute,
+  Mute,
+  Kick,
+  Ban,
+  GameJoin,
+  GamePing,
+  GameQueryDetails,
+  GameHideDetails,
+  GameShowDetails,
+  GameRemove,
+  FriendRefreshList,
+  /// `FriendOptionsCtrl_RemoveFromFriends_String`
+  FriendRemove,
+};
+
+/// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
+enum class EeWonLobbyPopupEvent : uint32_t {
+  Other = 0,
+  /// `ComponentEvent_ListItemUpClicked` (a `ListItemClickedEvent`)
+  ItemUpClicked = 1,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -5485,6 +6232,9 @@ struct EeWonContainer;
 
 /// The Rust Dialog.
 struct EeWonDialog;
+
+/// DialogLogic's Rust half.
+struct EeWonDlgLogic;
 
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
@@ -5539,6 +6289,9 @@ struct EeWonLobbyDlg;
 /// An ordered container of the lobby (see the module).
 struct EeWonLobbyMap;
 
+/// One options popup's Rust half.
+struct EeWonLobbyPopup;
+
 /// `LobbyPersistentData`'s scalar state and its setters' rules.
 struct EeWonLobbyPrefs;
 
@@ -5550,6 +6303,9 @@ struct EeWonMRow;
 
 /// The Rust PopupMenu.
 struct EeWonMenu;
+
+/// The Rust MSButtonBase.
+struct EeWonMsButton;
 
 /// The Rust MultiListArea.
 struct EeWonMulti;
@@ -5585,6 +6341,9 @@ struct EeWonRouteOp;
 
 /// The Rust ScrollArea.
 struct EeWonScrollPane;
+
+/// One scrolling text's Rust half.
+struct EeWonScrollText;
 
 /// The Rust Scrollbar.
 struct EeWonScrollbar;
@@ -5655,6 +6414,9 @@ struct EeWonWindow;
 /// `Signal` ops, which the C++ answers on any thread.
 struct EeWonWm;
 
+/// The Rust WONButton.
+struct EeWonWonButton;
+
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
 
@@ -5710,8 +6472,6 @@ struct EeWonAuthFlowHooks {
   void (*add_ref)(void*);
   /// `RefCount::Release`
   void (*release)(void*);
-  /// `AuthSession::GetLastUseTime`
-  int64_t (*session_last_use)(void*);
   /// `AsyncOp::Kill(true)`
   void (*op_kill)(void*);
   /// `AsyncOp::IsKilled`
@@ -6025,6 +6785,14 @@ struct EeWonDirListed {
   EeWonDirBytes path;
   EeWonDirBytes name;
 };
+
+/// The host: `(logic, op, a, b, c, d) -> result`; `logic` is the C++ DialogLogic.
+using EeWonDlgLogicHostFn = ptrdiff_t(*)(void *logic,
+                                         EeWonDlgLogicOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c,
+                                         ptrdiff_t d);
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
@@ -6883,6 +7651,13 @@ struct EeWonLobbyKey {
   uint32_t unit_size;
 };
 
+/// The host: `(popup, op, a, b, c) -> result`.
+using EeWonLobbyPopupHostFn = ptrdiff_t(*)(void *popup,
+                                           EeWonLobbyPopupOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           ptrdiff_t c);
+
 /// One patch as the C++ hands it over.
 struct EeWonPatchRef {
   const uint8_t *from;
@@ -7321,6 +8096,16 @@ struct EeWonServerPick {
   /// It lists the lobby's language.
   bool language;
 };
+
+/// The host: `(component, op, a, b, x, y, w, h) -> result`.
+using EeWonScrollTextHostFn = ptrdiff_t(*)(void *comp,
+                                           EeWonScrollTextOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           int32_t x,
+                                           int32_t y,
+                                           int32_t w,
+                                           int32_t h);
 
 /// What the connection object calls back in the C++. One static table serves every connection. Every object is
 /// passed as its `RefCount*`.
@@ -7929,9 +8714,13 @@ int64_t ee_won_auth_auto_refresh_wait(bool enabled,
                                       bool peer_valid,
                                       int64_t expire_delta);
 
+/// A flow alone (the drivers'; the game's is the auth context's): its sessions are stand-ins held through the hooks
+/// with `session_last_use` as their `GetLastUseTime`, or session handles when it is NULL.
+///
 /// # Safety
 /// `hooks` points to a hook table; its context outlives the flow.
-EeWonAuthFlow *ee_won_auth_flow_new(const EeWonAuthFlowHooks *hooks);
+EeWonAuthFlow *ee_won_auth_flow_new(const EeWonAuthFlowHooks *hooks,
+                                    int64_t (*session_last_use)(void*));
 
 /// The members' references dropped.
 ///
@@ -7940,7 +8729,7 @@ EeWonAuthFlow *ee_won_auth_flow_new(const EeWonAuthFlowHooks *hooks);
 void ee_won_auth_flow_free(EeWonAuthFlow *f);
 
 /// # Safety
-/// `f` a flow, `a` a live IPAddr value, `session` an `AuthSession`'s `RefCount*` or NULL.
+/// `f` a flow, `a` a live IPAddr value, `session` a session (as the flow was made) or NULL.
 void ee_won_auth_flow_put_session(const EeWonAuthFlow *f,
                                   const EeWonIpAddr *a,
                                   void *session,
@@ -8119,18 +8908,6 @@ void ee_won_authctx_free(const EeWonAuthCtx *c);
 /// # Safety
 /// `c` is a live context.
 const EeWonAuthLogin *ee_won_authctx_login(const EeWonAuthCtx *c);
-
-/// `PutSession(address, session)` (a session's `RefCount*`; NULL: nothing).
-///
-/// # Safety
-/// `c` a live context, `a` a live IPAddr value, `session` NULL or a live session.
-void ee_won_authctx_put_session(const EeWonAuthCtx *c, const EeWonIpAddr *a, void *session);
-
-/// `GetSession(address)`: a reference the caller adopts, or NULL.
-///
-/// # Safety
-/// `c` a live context, `a` a live IPAddr value.
-void *ee_won_authctx_get_session(const EeWonAuthCtx *c, const EeWonIpAddr *a);
 
 /// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
 ///
@@ -9041,6 +9818,27 @@ void ee_won_dir_group_keys(EeWonDirBytes query_path,
                            size_t count,
                            EeWonByteSink sink,
                            void *context);
+
+/// A new DialogLogic object for the C++ `logic`.
+EeWonDlgLogic *ee_won_dlglogic_new(void *logic, EeWonDlgLogicHostFn host);
+
+/// Releases what the object holds and frees it.
+///
+/// # Safety
+/// `obj` came from `ee_won_dlglogic_new` (or is NULL) and is not used again.
+void ee_won_dlglogic_free(EeWonDlgLogic *obj);
+
+/// One inward call (`EeWonDlgLogicCall`).
+///
+/// # Safety
+/// `obj` is live; the arguments as documented.
+ptrdiff_t ee_won_dlglogic_call(const EeWonDlgLogic *obj,
+                               EeWonDlgLogicCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c,
+                               ptrdiff_t d,
+                               ptrdiff_t e);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.
@@ -11961,6 +12759,33 @@ bool ee_won_gui_max_width(int32_t new_width,
                           int32_t *out_width,
                           bool *out_rewrap);
 
+/// `CryptTransform`'s constructor: one more reference to the session handle.
+///
+/// # Safety
+/// `session` is a live session handle (or NULL).
+void ee_won_session_hold(void *session);
+
+/// `CryptTransform`'s destructor: its reference given back.
+///
+/// # Safety
+/// `session` is a reference the caller held (or NULL).
+void ee_won_session_release(void *session);
+
+/// `CryptTransform::Send` (`decrypt` false: `AuthSession::Encrypt`) or `Recv` (`Decrypt`) at the current time: the
+/// status; the replacing message handed to `sink` when there is one (`*replaced`). Anything but a session handle
+/// leaves the message as it is (the original dereferenced it).
+///
+/// # Safety
+/// `session` is a live handle or NULL; `data` holds `len` bytes; `sink` is valid with `context`; `replaced` is
+/// writable.
+int32_t ee_won_session_crypt(void *session,
+                             bool decrypt,
+                             const uint8_t *data,
+                             size_t len,
+                             EeWonByteSink sink,
+                             void *context,
+                             bool *replaced);
+
 /// `HTTPGetOp`'s constructors' proxy file read (`dir`: `WONAPICore::GetDefaultFileDirectory()`, `len` bytes).
 ///
 /// # Safety
@@ -12803,6 +13628,27 @@ const void *ee_won_lobbymap_key_text(const EeWonLobbyMap *m,
                                      size_t i,
                                      size_t *count);
 
+/// A new popup object for the C++ `popup` of `kind`.
+EeWonLobbyPopup *ee_won_lobbypopup_new(void *popup,
+                                       EeWonLobbyPopupKind kind,
+                                       EeWonLobbyPopupHostFn host);
+
+/// Releases the members (reverse member order) and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_lobbypopup_new` (or is NULL) and is not used again.
+void ee_won_lobbypopup_free(EeWonLobbyPopup *p);
+
+/// One inward call (`EeWonLobbyPopupCall`).
+///
+/// # Safety
+/// `p` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lobbypopup_call(const EeWonLobbyPopup *p,
+                                 EeWonLobbyPopupCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b,
+                                 ptrdiff_t c);
+
 /// A new Rust PopupMenu for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
 EeWonMenu *ee_won_menu_new(void *component,
                            EeWonGuiHostFn host,
@@ -12925,6 +13771,23 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 const uint8_t *data,
                                 size_t data_length,
                                 uint16_t *out_count);
+
+/// A new Rust MSButtonBase for the C++ `component`, its calls out through `host`.
+EeWonMsButton *ee_won_msbtn_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `btn` came from `ee_won_msbtn_new` (or is NULL) and is not used again.
+void ee_won_msbtn_free(EeWonMsButton *btn);
+
+/// One of MSButtonBase's methods (`EeWonMsBtnCall`).
+///
+/// # Safety
+/// `btn` is live; the call's arguments as documented.
+ptrdiff_t ee_won_msbtn_call(const EeWonMsButton *btn,
+                            EeWonMsBtnCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// A new Rust MultiListArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
 EeWonMulti *ee_won_multi_new(void *component,
@@ -14382,6 +15245,24 @@ ptrdiff_t ee_won_scroller_call(const EeWonScroller *scroller,
                                ptrdiff_t a,
                                ptrdiff_t b,
                                ptrdiff_t c);
+
+/// A new scrolling text for the C++ component `comp`.
+EeWonScrollText *ee_won_scrolltext_new(void *comp, EeWonScrollTextHostFn host);
+
+/// Frees the lines (front to back) and the object.
+///
+/// # Safety
+/// `st` came from `ee_won_scrolltext_new` (or is NULL) and is not used again.
+void ee_won_scrolltext_free(EeWonScrollText *st);
+
+/// One inward call (`EeWonScrollTextCall`).
+///
+/// # Safety
+/// `st` is live; the call's arguments as documented.
+ptrdiff_t ee_won_scrolltext_call(const EeWonScrollText *st,
+                                 EeWonScrollTextCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b);
 
 /// A new connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
 ///
@@ -16115,6 +16996,41 @@ ptrdiff_t ee_won_wm_popup_at(const EeWonWm *wm, size_t i);
 size_t ee_won_wm_cache_line(const EeWonWm *wm,
                             uint8_t *buf,
                             size_t cap);
+
+/// A new Rust WONButton for the C++ `component`, its calls out through `host`.
+EeWonWonButton *ee_won_wonbtn_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `btn` came from `ee_won_wonbtn_new` (or is NULL) and is not used again.
+void ee_won_wonbtn_free(EeWonWonButton *btn);
+
+/// One of WONButton's methods (`EeWonWbCall`).
+///
+/// # Safety
+/// `btn` is live; the call's arguments as documented.
+ptrdiff_t ee_won_wonbtn_call(const EeWonWonButton *btn,
+                             EeWonWbCall call,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             ptrdiff_t c,
+                             ptrdiff_t d);
+
+/// `SetButtonState(state, image, color, font, checked)`.
+///
+/// # Safety
+/// `btn` is live.
+void ee_won_wonbtn_set_state(const EeWonWonButton *btn,
+                             int32_t state,
+                             void *image,
+                             int32_t color,
+                             void *font,
+                             bool checked);
+
+/// `CopyAttributes(from)`: `from` the source's Rust button, `from_comp` its C++ `WONButton*`.
+///
+/// # Safety
+/// Both buttons are live and distinct (`Duplicate` copies onto a new button).
+void ee_won_wonbtn_copy(const EeWonWonButton *btn, const EeWonWonButton *from, void *from_comp);
 
 }  // extern "C"
 

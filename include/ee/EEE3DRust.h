@@ -10,7 +10,8 @@
 // 0x42 the virus (EEE3DVirus, 0xfdbab..0xfe553), 0x24 the hurricane (EEE3DHurricane, 0xf1600..0xf2046), 0x28 the
 // nuclear explosion (EEE3DNuclearExplosion, 0xf43c7..0xf4bf3) and 0x47 the energy wave (EEE3DEnergyWave,
 // 0xee1b4..0xee5c0), 0x3b the multi-effect (EEE3DMultiEffect, 0xf4247..0xf43c7), 0x34 the energy wall
-// (EEE3DEnergyWall, 0xed606..0xee1b4), 0x35 the damage vent (EEE3DDamageVent, 0xea9e2..0xebbba), all deleted.
+// (EEE3DEnergyWall, 0xed606..0xee1b4), 0x35 the damage vent (EEE3DDamageVent, 0xea9e2..0xebbba), 2 the icon
+// (EEE3DIcon, 0xf2046..0xf2d93) and 0x3c the goal (EEE3DGoal, 0xf1327..0xf1600), all deleted.
 // Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
@@ -45,6 +46,8 @@ public:
     virtual long RepairPointers();
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     virtual long Step() { return this->Call(EeGfxEffect3DOp::Step); }
+    // the icon's and goal's (EEE3DIcon::SetLocation, 0xf2637): a fixed one moves to inLocation; others ignore it
+    void SetLocation(const GE3DPoint& inLocation);
     // the energy wall's: also true where the current player holds a doppelganger of its unit (then marked seen)
     virtual bool IsTileVisible(EEMapTile* inTile);
 

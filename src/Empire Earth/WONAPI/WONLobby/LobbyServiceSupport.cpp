@@ -153,7 +153,7 @@ int LobbyGetNumPingsToDo() { return gLobbyData.get()!=NULL?gLobbyData->mPingLogi
 // (SDK LobbyDialog::UserCanceledLastStatusOp)
 // FUNCTION: WON 0x00758f50
 // Returns whether the player cancelled the last operation run behind a status dialog
-bool LobbyUserCanceledLastStatusOp() { return gLobbyData.get()!=NULL?gLobbyData->mDialogLogic->mStatusCancelled:false; }
+bool LobbyUserCanceledLastStatusOp() { return gLobbyData.get()!=NULL?gLobbyData->mDialogLogic->GetStatusCancelled():false; }
 }
 
 namespace WONAPI {

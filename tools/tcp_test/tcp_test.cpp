@@ -31,6 +31,7 @@
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
 #include "platform/PlatSim.h"
+#include "rust/ee_ts.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/NEProtocol.h"
 #include "lle/NEConnection.h"
@@ -96,26 +97,22 @@ unsigned long URandom::NextInSeries()
     this->mSeed = (this->mMultiplier * this->mSeed + this->mIncrement) % this->mModulus;
     return this->mSeed;
 }
-long TSScheduler::CreateCriticalSection(TSCriticalSection*& outSection)   // as TSScheduler.cpp
+long TSScheduler::CreateCriticalSection(TSCriticalSection*& outSection)   // as TSScheduler.cpp (ee_ts)
 {
-    outSection = new TSCriticalSection;
-    return outSection ? kErrorOK : kErrorOutOfMemory;
+    outSection = reinterpret_cast<TSCriticalSection*>(ee_ts_section_new());
+    return kErrorOK;
 }
 void TSScheduler::DestroyCriticalSection(TSCriticalSection* inSection)
 {
-    delete inSection;
+    ee_ts_section_free(reinterpret_cast<EeTsSection*>(inSection));
 }
 long TSScheduler::CreateEvent(TSEvent*& outEvent, bool inManualReset)
 {
-    PlatEvent* theHandle = PlatEventCreate(inManualReset, 0);
-    if (theHandle == NULL)
-        return kErrorNativeError;
-    outEvent = new TSEvent(theHandle, inManualReset);
-    return kErrorOK;
+    return ee_ts_event_new(reinterpret_cast<EeTsEvent**>(&outEvent), inManualReset);
 }
 void TSScheduler::DestroyEvent(TSEvent* inEvent)
 {
-    delete inEvent;
+    ee_ts_event_free(reinterpret_cast<EeTsEvent*>(inEvent));
 }
 // the search thread (NPIMSearchForGame) is not tested: no threads
 long TSScheduler::CreateThread(TSThread*& outThread, unsigned long (*)(void*), void*, unsigned long, bool)

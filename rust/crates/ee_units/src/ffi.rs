@@ -55,7 +55,22 @@ pub unsafe extern "C" fn ee_units_store_set_fields(
     record.rts_fields = rts as usize as u64;
     record.unit_fields = unit as usize as u64;
     record.complex_fields = complex as usize as u64;
+    // what an object of a lesser class has of the pointer members' values (the refresh sets the others)
+    record.category = -1;
+    record.unit_type = -1;
+    record.goal_kind = -1;
     crate::store::refresh(record);
+}
+
+/// The twenty-seventh round's: where the store reads the units' pointer members (`store::EeUnitsStoreSlots`; once,
+/// before the first record).
+///
+/// # Safety
+/// `slots` is readable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_store_set_slots(slots: *const crate::store::EeUnitsStoreSlots) {
+    // SAFETY: the caller's contract
+    crate::store::set_slots(unsafe { *slots });
 }
 
 /// A unit leaves its player's list (or is freed): the record of that object, if it is the one under the id.

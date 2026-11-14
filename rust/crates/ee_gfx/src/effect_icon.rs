@@ -1,21 +1,36 @@
-//! The animated 3D icons on the effects' records (`EEE3DIcon`, also the base of `EEE3DGoal`,
-//! `src/Empire Earth/Graphics Thread/EEE3DIcon.cpp`): the age and its end, the scale pulsing between the graphic
-//! effect's start size and size, the texture's scroll, the animation frame, the draw's opacity, Load and Save. The C++
-//! keeps the graphic object, the orbitals (copies of the graphic's), the position at the unit and the draw.
+//! The animated 3D icon (kind 2) and the goal (kind 0x3c, an icon with a countdown label) whole in Rust on
+//! `EEE3DRust` (`EEE3DIcon` and `EEE3DGoal`, deleted): the age and its end, the scale pulsing between the graphic
+//! effect's start size and size, the texture's scroll, the animation frame, the orbitals (`effect_orbit.rs`'s list),
+//! the place at the unit or the point, the queue, pass 6's tweened model, the goal's pass 3 label, Load and Save. The
+//! C++ keeps the graphic object (`EEE3DRust::mGraphicObject`) and answers the world.
 //!
 //! Simulation state (RUST_PLAN 2.1): the C++'s f32 operations in order, `lrintf` for `UMFloatToLong`.
 
-use ee_ge::types::Ge3DPoint;
+use ee_ge::transform::RotationOrder;
+use ee_ge::types::{Ge3DPoint, GeTransformation};
 use ee_ge::um;
 
-use crate::effect_state::{load_point, save_point, EeGfxEffectRecord, EffectFile};
+use crate::effect_orbit::{copy_orbitals, keep_angles, update_orbitals};
+use crate::effect_rising::{EeGfxEffect3DOp, EeGfxGraphicFacts, Effect3DHost};
+use crate::effect_state::{identity, load_point, save_point, EeGfxEffectRecord, EffectFile};
+use crate::effects::EeGfxColor;
+use crate::lighting::EeGfxLighting;
+use crate::raster::{
+    Raster, BLEND_INV_SRC_ALPHA, BLEND_ONE, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE, ZBUFFER_TEST_ONLY,
+};
+
+/// `kEffect3DIcon`, `kEffect3DGoal`.
+pub const EE_GFX_EFFECT_KIND_ICON: i32 = 2;
+pub const EE_GFX_EFFECT_KIND_GOAL: i32 = 0x3c;
+/// The goal's label stands this high over its location.
+const GOAL_LABEL_HEIGHT: f32 = 1.2;
 
 /// `kErrorOK`.
 const OK: i32 = 0;
 
-/// `EEE3DIcon`'s state.
+/// `EEE3DIcon`'s state (and `EEE3DGoal`'s time left).
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeGfxEffectIcon {
     /// `mLocation`: where a fixed icon stands (saved when it does not follow its unit)
     pub location: Ge3DPoint,
@@ -39,6 +54,35 @@ pub struct EeGfxEffectIcon {
     pub follow_unit: bool,
     /// `mGrowing`: the scale grows towards the size
     pub growing: bool,
+    /// the draw's copies (`Queue`): `mDrawTransformation`, `mDrawFrame`, `mDrawScroll`
+    pub draw_transformation: GeTransformation,
+    pub draw_frame: u32,
+    pub draw_scroll: f32,
+    /// the goal's `mTimeLeft` in ms (saved; its label shows it as m:ss while positive)
+    pub time_left: u32,
+}
+
+impl Default for EeGfxEffectIcon {
+    fn default() -> EeGfxEffectIcon {
+        EeGfxEffectIcon {
+            location: Ge3DPoint::default(),
+            opacity: 0.0,
+            time: 0.0,
+            scale: 0.0,
+            age: 0.0,
+            fraction: 0.0,
+            frame: 0,
+            frame_count: 0,
+            frame_time: 0,
+            scroll: 0.0,
+            follow_unit: false,
+            growing: false,
+            draw_transformation: identity(),
+            draw_frame: 0,
+            draw_scroll: 0.0,
+            time_left: 0,
+        }
+    }
 }
 
 /// What the icon's tick reads: the tick, the physics' speed and the graphic effect's duration, size, start size,
@@ -130,9 +174,10 @@ pub fn icon_queue(r: &mut EeGfxEffectRecord, param8: f32, param9: f32, param10: 
     i.fraction = if i.frame_count > 0 && i.frame_time != 0 { i.time / i.frame_time as f32 } else { 0.0 };
 }
 
-/// `EEE3DIcon::Load`'s own reads after `EEEffect3D::Load`'s: the age, the follow flag, a fixed icon's location; the
-/// first error.
+/// `EEE3DIcon::Load`'s own reads after `EEEffect3D::Load`'s: the age, the follow flag, a fixed icon's location (and
+/// `EEE3DGoal::Load`'s time left); the first error.
 pub fn load_icon<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
+    let goal = r.kind == EE_GFX_EFFECT_KIND_GOAL;
     let i = &mut r.icon;
     let mut res = f.read_f32(&mut i.age);
     if res == OK {
@@ -140,6 +185,9 @@ pub fn load_icon<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
         if res == OK && !i.follow_unit {
             res = load_point(f, &mut i.location);
         }
+    }
+    if res == OK && goal {
+        res = f.read_u32(&mut i.time_left);
     }
     res
 }
@@ -154,8 +202,252 @@ pub fn save_icon<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
             res = save_point(f, &i.location);
         }
     }
+    if res == OK && r.kind == EE_GFX_EFFECT_KIND_GOAL {
+        res = f.write_u32(i.time_left);
+    }
     res
 }
+
+/// `EEE3DIcon::Clear`: `icon_clear` and the orbitals dropped (their angles kept, as the original's `mAngles`).
+///
+/// # Safety
+/// `r` is a live record.
+unsafe fn clear(r: *mut EeGfxEffectRecord) {
+    // SAFETY: the function's contract
+    unsafe {
+        icon_clear(&mut *r);
+        if !(*r).orbit.orbitals.is_null() {
+            (*(*r).orbit.orbitals).list.clear();
+        }
+        (*r).orbit.count = 0;
+    }
+}
+
+/// `UpdatePosition`: at the unit (raised by its effect height while on the map and alive; the origin without one)
+/// or the fixed location, plus the graphic effect's offset (params 1..3).
+///
+/// # Safety
+/// `r` is a live record, not referenced across the host's calls.
+unsafe fn place<H: Effect3DHost>(r: *mut EeGfxEffectRecord, g: &EeGfxGraphicFacts, h: &mut H) {
+    // SAFETY (every access below): the function's contract
+    let mut at =
+        if unsafe { (*r).icon.follow_unit } { h.unit_raised_position() } else { unsafe { (*r).icon.location } };
+    at.x += g.param1;
+    at.y += g.param2;
+    at.z += g.param3;
+    let mut t = identity();
+    t.m[0][3] = at.x;
+    t.m[1][3] = at.y;
+    t.m[2][3] = at.z;
+    unsafe { (*r).transformation = t };
+    h.move_to();
+}
+
+/// Animation 13 of the kept graphic object restarted (`mFrame`, `mFrameCount`, `mFrameTime`, `mTime`).
+///
+/// # Safety
+/// As `place`.
+unsafe fn restart<H: Effect3DHost>(r: *mut EeGfxEffectRecord, h: &mut H) {
+    let a = h.animation();
+    // SAFETY: the function's contract
+    unsafe {
+        let i = &mut (*r).icon;
+        i.frame = a.start;
+        i.frame_count = a.frame_count;
+        i.frame_time = a.frame_time;
+        i.time = 0.0;
+    }
+}
+
+/// The icon's and goal's virtuals.
+///
+/// # Safety
+/// As `effect_rising::effect3d`.
+pub(crate) unsafe fn icon<H: Effect3DHost, R: Raster>(
+    op: EeGfxEffect3DOp,
+    r: *mut EeGfxEffectRecord,
+    g: &EeGfxGraphicFacts,
+    h: &mut H,
+    x: &mut R,
+) -> i32 {
+    // SAFETY (every access below): the function's contract; no reference to the record is kept across a host call
+    match op {
+        // on a unit: it follows the unit
+        EeGfxEffect3DOp::Create => {
+            unsafe {
+                (*r).icon.follow_unit = true;
+                (*r).icon.growing = false;
+                (*r).icon.scroll = 0.0;
+            }
+            0
+        }
+        // at the point the constructor left in `aged.location`
+        EeGfxEffect3DOp::CreateAt => {
+            unsafe {
+                (*r).icon.follow_unit = false;
+                (*r).icon.location = (*r).aged.location;
+                (*r).aged.location = Ge3DPoint::default();
+                (*r).icon.growing = false;
+                (*r).icon.scroll = 0.0;
+            }
+            0
+        }
+        EeGfxEffect3DOp::SetUp => {
+            unsafe { clear(r) };
+            h.reload_media();
+            unsafe {
+                restart(r, h);
+                copy_orbitals(r, h, false);
+                (*r).bounding_radius = g.size;
+                place(r, g, h);
+                (*r).icon.scale = g.size;
+            }
+            0
+        }
+        EeGfxEffect3DOp::Repair => {
+            let result = h.load_media();
+            unsafe {
+                if g.has_effect {
+                    (*r).icon.scale = g.size;
+                }
+                copy_orbitals(r, h, false);
+                restart(r, h);
+            }
+            result
+        }
+        EeGfxEffect3DOp::Step => {
+            let t = EeGfxIconTick {
+                tick_time: g.tick_time,
+                speed: g.speed,
+                duration: g.duration,
+                size: g.size,
+                start_size: g.start_size,
+                rate: g.param7,
+                int_param2: g.int_param2,
+                param11: g.param11,
+            };
+            unsafe {
+                let result = icon_step(&mut *r, &t);
+                update_orbitals(r, g.tick_seconds);
+                (*r).bounding_radius = (*r).icon.scale;
+                place(r, g, h);
+                result
+            }
+        }
+        EeGfxEffect3DOp::Queue => {
+            let result = if g.flag2 { 0 } else { h.base_queue() };
+            if result != 0 {
+                return result;
+            }
+            if h.market_unbuilt() {
+                return 10;
+            }
+            unsafe {
+                let i = &mut (*r).icon;
+                i.draw_transformation = (*r).transformation;
+                keep_angles(r);
+                let i = &mut (*r).icon;
+                i.draw_frame = i.frame;
+                i.draw_scroll = i.scroll;
+                icon_queue(&mut *r, g.param8, g.param9, g.param10);
+            }
+            h.queue_screen(4);
+            0
+        }
+        EeGfxEffect3DOp::DrawPass3 if unsafe { (*r).kind } == EE_GFX_EFFECT_KIND_GOAL => {
+            let (left, location) = unsafe { ((*r).icon.time_left, (*r).icon.location) };
+            if left > 0 {
+                draw_label(x, left, &location);
+            }
+            0
+        }
+        EeGfxEffect3DOp::DrawPass6 => unsafe { draw(r, g, h, x) },
+        _ => 0,
+    }
+}
+
+/// The goal's countdown: `left` ms as m:ss over `location`, black, then white one pixel up and left
+/// (`GetMinutesAndSeconds`, `"%ld:%.2ld"`).
+fn draw_label<R: Raster>(x: &mut R, left: u32, location: &Ge3DPoint) {
+    let minutes = left / 1000 / 60;
+    let seconds = (left - minutes.wrapping_mul(60000)) / 1000;
+    let text = format!("{minutes}:{seconds:02}");
+    let at = Ge3DPoint { x: location.x, y: location.y, z: location.z + GOAL_LABEL_HEIGHT };
+    let (sx, sy) = x.screen_point(&at);
+    x.draw_text(sx, sy, &text, EeGfxColor { red: 0.0, green: 0.0, blue: 0.0 });
+    x.draw_text(sx - 1.0, sy - 1.0, &text, EeGfxColor { red: 1.0, green: 1.0, blue: 1.0 });
+}
+
+/// Pass 6: the graphic's model `mIntParam1` tweened between the kept frame and the next, alpha blended with z
+/// writes and prelit (flag 1), else one-one blended over the z buffer, white lit and dimmed by the fog at its place,
+/// facing the camera; its orbitals turned and textured, the texture's u scrolled for the draw when `mIntParam2` is
+/// positive; the fog restored.
+///
+/// # Safety
+/// As `icon`.
+unsafe fn draw<H: Effect3DHost, R: Raster>(
+    r: *mut EeGfxEffectRecord,
+    g: &EeGfxGraphicFacts,
+    h: &mut H,
+    x: &mut R,
+) -> i32 {
+    // SAFETY (every access below): the function's contract
+    let i = unsafe { (*r).icon };
+    let mut t = i.draw_transformation;
+    let model = h.model_at(g.int_param1 as u32);
+    let fog = x.get_fog();
+    x.set_alpha_ref(if g.has_object { g.alpha_ref } else { 0.0 });
+    x.set_shading_source(0);
+    if g.flag1 {
+        x.set_blending(BLEND_SRC_ALPHA, BLEND_INV_SRC_ALPHA);
+        x.lighting(EeGfxLighting::Prelit);
+        x.set_zbuffer(ZBUFFER_TEST_AND_WRITE);
+    } else {
+        x.set_blending(BLEND_ONE, BLEND_ONE);
+        x.lighting(EeGfxLighting::White);
+        let at = Ge3DPoint { x: t.m[0][3], y: t.m[1][3], z: t.m[2][3] };
+        let value = x.fog_factor(&at, fog);
+        x.set_ambient(EeGfxColor { red: value, green: value, blue: value });
+        let yaw = x.camera_yaw();
+        t.set_orientation(RotationOrder::Ypr, yaw, 0.0, 0.0);
+        x.set_zbuffer(ZBUFFER_TEST_ONLY);
+    }
+    let texture = h.texture_at(0);
+    x.model_texture(model, texture);
+    x.model_frame(model, i.draw_frame);
+    // the original divides by the frame count (no animation: it would fault; frame 0)
+    x.model_tween(model, i.draw_frame.wrapping_add(1).checked_rem(i.frame_count).unwrap_or(0), i.fraction);
+    x.model_transform(model, &t);
+    x.model_scale(model, i.scale);
+    x.model_opacity(model, i.opacity);
+    x.model_prepare(model);
+    unsafe {
+        let count = (*r).orbit.count;
+        if count > 0 {
+            let o = &*(*r).orbit.orbitals;
+            let mut turn = identity();
+            for k in 0..count as usize {
+                turn.set_orientation(RotationOrder::Ypr, o.angles[k], 0.0, 0.0);
+                x.model_texture(o.list[k].model, texture);
+                x.model_pre_transform(o.list[k].model, &turn);
+            }
+        }
+    }
+    let scroll = g.int_param2 > 0;
+    if scroll {
+        x.model_scroll_u(model, i.draw_scroll);
+    }
+    let result = x.model_draw(model, 1.0);
+    x.set_fog(fog);
+    if scroll {
+        x.model_restore_u(model);
+    }
+    result
+}
+
+#[cfg(test)]
+#[path = "effect_icon_tests.rs"]
+mod virtual_tests;
 
 #[cfg(test)]
 mod tests {

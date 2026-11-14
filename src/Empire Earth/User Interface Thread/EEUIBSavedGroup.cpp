@@ -137,7 +137,7 @@ long EEUIBSavedGroup::MouseLButtonDoublePressed()
     unsigned long theIndex = this->GetIndex();
     if (gWorld.GetCurrentPlayer()) {
         if (this->mHasUnit == true)
-            gCommunications->ProcessLocalUserInput(new EEMSavedGroupSelect(theIndex - 0xd4, true), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSavedGroupSelect, {theIndex - 0xd4, true}), kSlotNone);
         gSoundManager->Play(sSavedGroupDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
     }
     this->ReleaseCapturedMouse();
@@ -155,14 +155,14 @@ long EEUIBSavedGroup::MouseLButtonUp()
     EEMessage* theMessage = NULL;
     if (thePlayer) {
         if (UIControl::ShiftKeyPressed()) {
-            theMessage = new EEMSavedGroupAddSelection(theGroup);
+            theMessage = new EEMRecord(kMessageSavedGroupAddSelection, {theGroup});
             if (!this->mHasUnit)
                 this->SetUnit(thePlayer->mSelectedGroup->GetFirstUnit());
         } else if (!this->mHasUnit) {
-            theMessage = new EEMSavedGroupCreate(theGroup);
+            theMessage = new EEMRecord(kMessageSavedGroupCreate, {theGroup});
             this->SetUnit(thePlayer->mSelectedGroup->GetFirstUnit());
         } else
-            theMessage = new EEMSavedGroupSelect(theGroup, false);
+            theMessage = new EEMRecord(kMessageSavedGroupSelect, {theGroup, false});
         gSoundManager->Play(sSavedGroupDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
         gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
     }
@@ -176,7 +176,7 @@ long EEUIBSavedGroup::MouseRButtonUp()
     unsigned long theIndex = this->GetIndex();
     if (this->mHasUnit == true) {
         this->mHasUnit = false;
-        gCommunications->ProcessLocalUserInput(new EEMSavedGroupClear(theIndex - 0xd4), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSavedGroupClear, {theIndex - 0xd4}), kSlotNone);
     } else
         this->mHasUnit = false;
     UIButton::MouseLButtonUp();

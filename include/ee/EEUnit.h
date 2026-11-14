@@ -297,10 +297,10 @@ public:
     // (provisional name)
     static bool IsCarbonRock(unsigned long inUnitType);
 
-    EEUnitStoreField<EEUnitClass*, kUnitFieldUnitClass> mUnitClass;   // +0x2c (the unit store's)
+    EEUnitClass* mUnitClass;                // +0x2c (the unit store reads it: EEUnitStore.h)
     // +0x30: the complex unit this unit belongs to (the calamities read its hit points, transformation +0x130 and
     // goals through it: 0xafe2c, 0xb1a5d) (provisional name)
-    EEUnitStoreField<EEComplexUnit*, kUnitFieldComplex> mComplexUnit;   // (the unit store's)
+    EEComplexUnit* mComplexUnit;            // (the unit store reads it)
     EEUnitClassUpgrade* mStats;             // +0x34 (provisional name)
     // +0x38 mResourceType (saved), +0x3c mHitPoints (> 0: alive), +0x40 mResourceAmount (saved), +0x44 mHiddenFlags
     // (0x10: MoveTo moved it; 0x20 and the low 2 bits: Virtual40 0x228f90): EeUnitsUnitFields
@@ -830,7 +830,7 @@ public:
     EEPPatrolGroup* GetPatrolGroup() const { return this->mPatrolGroup; }
     EEPPatrolGroup* mPatrolGroup;           // +0x1c4 (RTTI EEPPatrolGroup, ee/EEPPatrolGroup.h)
     EEActiveGroup* GetActiveGroup() const { return this->mActiveGroup; }
-    EEUnitStoreField<EEActiveGroup*, kUnitFieldActiveGroup> mActiveGroup;   // +0x1c8 provisional name (0x5e407 and the teleport calamity call into it; the unit store's)
+    EEActiveGroup* mActiveGroup;            // +0x1c8 provisional name (0x5e407 and the teleport calamity call into it; the unit store reads it)
     // +0x1cc (non-zero: not selectable by the aircraft hot key; the unit carrying this one: the fire/plague functors
     // walk the chain to the outermost carrier; provisional name)
     EEComplexUnit* GetPreviousPart() const { return this->mPreviousPart; }
@@ -839,25 +839,25 @@ public:
     EEComplexUnit* mNextPart;               // +0x1d0 the next unit of a linked group (EEDoppelgangerManager 0x20278c walks it)
     EEComplexUnit* mHomeBase;               // +0x1d4
     EEComplexUnit* GetContainer() const { return this->mContainer; }  // inline (0x61c806 budget) r37_big B2
-    EEUnitStoreField<EEComplexUnit*, kUnitFieldContainer> mContainer;   // +0x1d8 provisional name (aircraft in an airport: its position is the holder's; the unit store's)
+    EEComplexUnit* mContainer;              // +0x1d8 provisional name (aircraft in an airport: its position is the holder's; the unit store reads it)
     EEComplexUnit* mLastAttacker;                 // +0x1dc (released by Virtual04)
     void SetLastAttacker(EEComplexUnit* inUnit);  // 0x22a3d8 (EnabledChanged 0x229de2; set-if-different with Reference) (provisional name)
     EEComplexUnit* mOwner;                        // +0x1e0 provisional name (SetOwner; referenced)
     EEComplexUnit* GetHolder() const { return this->mHolder; }
     EEComplexUnit* mHolder;                 // +0x1e4 (Virtual04: mRegeneration->ReleaseHeld(this))
     EEUnitAction* GetCommand() const { return this->mCommand; }
-    EEUnitStoreField<EEUnitAction*, kUnitFieldCommand> mCommand;   // +0x1e8 the unit's current script action (ee/EEUnitAction.h; the unit store's)
+    EEUnitAction* mCommand;                 // +0x1e8 the unit's current script action (ee/EEUnitAction.h; the unit store reads it)
     // +0x1ec a goal (EECPASGUHero::CheckCondition 0x64fd tests its mKind == 0xb; EECPASGUProphet::CanStillCast
     // dynamic_casts it to EEUnitGoal) (provisional name)
     EEUnitGoal* mActiveGoal;
     // +0x1f0 the unit's goal (EEMAddPatrolPoint dynamic_casts it to EEUGPatrol, src TD EEUnitGoal). Its
     // mKind 0xb = not to be cloaked (EECCCloaking). Name is provisional
     EEUnitGoal* GetGoalState() const { return this->mGoalState; }
-    EEUnitStoreField<EEUnitGoal*, kUnitFieldGoal> mGoalState;   // (the unit store's)
+    EEUnitGoal* mGoalState;                 // (the unit store reads it)
     RTSUnit* mLastResource;                 // +0x1f4
     EEUnit* mGatheredResource;              // +0x1f8 (SetGatheredResource: referenced, its +0x2b tested)
     EEUnit* mMine;                          // +0x1fc (a unit: the mining building tests its +0x2b/+0x40; provisional name)
-    EEUnitStoreField<EEHerd*, kUnitFieldHerd> mHerd;   // +0x200 the unit's herd (EEHerd AddUnit 0xa1b45 sets it, RemoveUnit 0xa3749 clears it; the unit store's)
+    EEHerd* mHerd;                          // +0x200 the unit's herd (EEHerd AddUnit 0xa1b45 sets it, RemoveUnit 0xa3749 clears it; the unit store reads it)
     float* mTurretAngles;                   // +0x204 (ResizeTurretAngles: delete[], new float[n] zeroed)
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     EEUnitBehavior* mBehavior;              // +0x208 the unit's behaviour (EEUnitAI 0x22d9b5 reads its mB09; EEUIFMGMainGroup compares it with EEUnitBehavior::sTable[i])
@@ -1010,7 +1010,10 @@ struct EEUnitClassImprovementTable {
 };
 
 
-class EEUnitClass : public UReferenceCounter {
+// The plain members (mAirTrafficType, mCommands and the block mCruiseAltitude +0x11c .. mIsParatrooperBomber +0x326:
+// numbers, flags and their arrays, names and types kept) are the Rust record EeUnitsUnitClassFields (ee_units
+// unit_class_fields.rs), the second base after UReferenceCounter; the ctor's copies from the db row are its fill.
+class EEUnitClass : public UReferenceCounter, public EeUnitsUnitClassFields {
 public:
     // 0x22f317 (out of line; every EEUC* ctor calls it with 1, its record and its class's global) (provisional names)
     EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysicsModel* inPhysicsModel);
@@ -1208,9 +1211,7 @@ public:
     // the stores' width (float: fld/fstp); member names are provisional.
     UString mAIScriptName;                  // +0x008 the ctor's member ctor, then UString::Copy
     UString mName;                          // +0x018 the ctor's member ctor, then UString::Copy
-    long mAirTrafficType;                   // +0x028 the ctor stores it
     std::vector<long> mResearchTechnologies;  // +0x02c 4-byte elements: the ctor's `_Buy(0)`
-    unsigned long mCommands[9];             // +0x03c the command buttons (30: formation); 9 separate ctor stores
     void* mAIScript;                        // +0x060 the class's AI script (EEUnitAction::GetScript of its name: a Rust script's handle; FindAction finds an action in it)
     EEGraphicEffect* mAttachedEffect;   // +0x064 (dereferenced by the dtor 0x2305ee: an effect)
     EEGraphicEffect* mDeathEffect;          // +0x068 provisional name (VirtualC4: played on the dying unit)
@@ -1259,15 +1260,9 @@ public:
     EEUnitClassImprovementTable* mImprovements;   // +0x114 the ctor stores it
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     EEUnitBehavior* mBehavior;              // +0x118 the ctor stores it (EEUnitBehavior::sTable[record +0x390]; the units' default behaviour)
-    float mCruiseAltitude;                  // +0x11c the ctor stores it (a float: the space building's z, EEUCSpaceBuilding 0x219fe3)
-    float mMinRange;                        // +0x120 the ctor stores it (a float: 0x243e0a fld/fmul; the record's +0x80 copied with mov)
-    float mRange;                           // +0x124 the ctor stores it (a float: the ctor compares it with mLineOfSight)
-    float mAreaEffect;                       // +0x128 the ctor stores it
-    float mAreaEffectScale;                 // +0x12c the ctor stores it
     // inline (EEE3DDamageVent::SetUp 0xeabb5 loads it as a value before the effect's height)
     // (provisional name)
     float GetScale() const { return this->mScale; }
-    float mScale;                           // +0x130 the ctor stores it
     float GetMaxVelocity() const { return this->mMaxVelocity; }  // inline (read as a value)
     float GetRange() const { return this->mRange; }  // inline (EESMObject 0x5c8871)
     float GetAreaEffect() const { return this->mAreaEffect; }  // inline (0x66cbe1)
@@ -1285,196 +1280,30 @@ public:
     float GetAcceleration() const { return this->mAcceleration; }  // inline (read as a value)
     float GetMaxAngularVelocity() const { return this->mMaxAngularVelocity; }  // inline (read as a value)
     float GetTurretMaxAngularVelocity() const { return this->mTurretMaxAngularVelocity; }  // inline (read as a value)
-    float mMaxVelocity;                     // +0x134 the ctor stores it (a float: EETown 0xac2b6 compares it with 0.0f)
-    float mF138;                            // +0x138 the ctor stores it
-    float mAcceleration;                    // +0x13c the ctor stores it (the projectile models' gravity factor: EEPMProjectile 0x15d259)
-    float mAngularAcceleration;             // +0x140 (> 0: the editor may rotate the unit; EESEARotateUnits 0x1aa794)
     float GetAngularAcceleration() const { return this->mAngularAcceleration; }  // inline (EEPMNaval::PitchMode 0x55c146 loads it as a value: fld; fdivp) (provisional name)
-    float mMaxAngularVelocity;              // +0x144 the ctor stores it (a float: EEGhostUnit::Create applies the rotation only when non-zero)
-    float mCostScale;                       // +0x148 the ctor stores it
-    float mTurretMaxAngularVelocity;        // +0x14c actual turret angular velocity, original FLD/FMUL
-    float mBuildTimeScale;                  // +0x150 the ctor stores it
-    float mGarrisonBonus;                   // +0x154 the ctor stores it (fld: EEAEEconomyFromUnits::GetRate 0x27ac9e)
     float GetMaxRoll() const { return this->mMaxRoll; }  // inline value getter (0x55da2c / 0x55937a)
-    float mMaxRoll;                         // +0x158 the ctor stores it (a float: EEPMAirplane::ComputeRoll 0x55da2c)
     float GetFacingOffset() const { return this->mFacingOffset; }
-    float mFacingOffset;                    // +0x15c the ctor stores it (a float: EEPhysicsModel::TurnTowardAngle 0x554738 reads it)
-    float mFiringArc;                       // +0x160 the ctor stores 0x3eb2b8c3; 0x148291 is called on it
-    float mLineOfSight;                     // +0x164 the ctor stores it
-    float mSelectionSize;                   // +0x168 the ctor stores it (a float: EEE3DCommandConfirmation::SetUp fld/fmul)
-    float mShadowScale;                     // +0x16c the ctor stores it (a float: EERenderObject fld's it)
-    float mL170;                            // +0x170 the ctor stores it (a float, as mL16C)
-    float mOuterCollisionSphere;            // +0x174 the ctor stores it (a float: EEMChangeSelectedUnitCollisionSphere fadds it)
-    float mInnerCollisionSphere;            // +0x178 the ctor stores it (a float: the hurricane fld's it)
-    float mLaunchPitch;                     // +0x17c the ctor stores it
-    long mL180;                             // +0x180 the ctor stores it
     float GetConversionResistance() const { return this->mConversionResistance; }  // inline (EEUnitClassUpgrade::Init 0x63b891 copies with fld/fstp)
     float GetConversionRate() const { return this->mConversionRate; }
-    float mConversionResistance;            // +0x184 the ctor stores it (a float: EEUnitClassUpgrade::Init 0x63ba8f fld's it)
-    float mConversionRate;                  // +0x188 the ctor stores it
-    float mSlopeSpeedPenalty;                            // +0x18c the ctor stores it (a float: EEPhysicsModel::SpeedMode 0x554cb2 reads it)
-    float mBobHeight;                       // +0x190 the ctor stores it (the helicopter's bob height: EEPMHelicopter 0x158ce3)
     float GetBobHeight() const { return this->mBobHeight; }  // inline (EEPMHelicopter::ApplyBob 0x558ce3 loads it as a value: fld; fmul st(2)) (provisional name)
-    float mBobPitch;                        // +0x194 the ctor stores it
     float GetBobPitch() const { return this->mBobPitch; }  // inline (EEPMNaval::ApplyBob 0x55b668 loads it as a value before the bob: fld [eax+0x194]) (provisional name)
-    float mFriendlyDamageFactor;            // +0x198 the ctor stores it (a float: EEUnitClass 0x630db1/0x630ef9 fld it)
-    float mF19C;                            // +0x19c the ctor stores it
     // inline (the heal goal's Virtual64 0x22569f loads it as an FP value after the ratio; provisional name)
     float GetHealThreshold() const { return this->mHealThreshold; }
-    float mHealThreshold;                   // +0x1a0 the ctor stores it (a float: the heal goal fld's it as the health fraction to heal below)
-    float mHealRange;                       // +0x1a4 the ctor stores it (the heal range: squared against a distance)
-    float mHealDelay;                       // +0x1a8 the ctor stores it (a float: SetCursor compares it with the unit's +0x22c)
-    float mLoadRange;                       // +0x1ac the ctor stores it (a float: the load goals add it to their distance)
-    float mUnloadRange;                     // +0x1b0 the ctor stores it (a float: the unload goal squares it as its range)
-    long mIsComplex;                        // +0x1b4 the ctor stores it
-    unsigned long mCategory;                       // +0x1b8 provisional name (3, 0x22: aircraft; 6, 0x16: the hot keys' idle workers)
-    unsigned long mUnitType;                // +0x1bc (unsigned: EESGUnitSorter::Compare 0x209018 ends in setb) EEUnitSetManager::Contains; cloaking checks 0x29
-    long mCombatReaction;                   // +0x1c0 the ctor stores it
-    long mWeapon;                           // +0x1c4 the ctor stores it
-    unsigned long mFamily;                  // +0x1c8 (provisional name; aircraft hot keys: with +0x1cc the aircraft kind; unsigned: EESEUnitLayerLess 0x199e45 jbe/jae)
-    long mAmmoType;                         // +0x1cc (provisional name)
     unsigned long GetAIKind() const { return this->mAIKind; }
-    unsigned long mAIKind;                         // +0x1d0 the ctor stores it
-    unsigned long mCounterKind1;            // +0x1d4 the ctor stores it (unsigned: 0x49b34e's map<long>::find takes a converted temp)
-    unsigned long mCounterKind2;            // +0x1d8 the ctor stores it
-    unsigned long mCounterKind3;            // +0x1dc the ctor stores it
-    long mKindFlags;                        // +0x1e0 the ctor stores it
-    long mTechnology;                       // +0x1e4 the ctor stores it
-    long mGarrisonTechnology;               // +0x1e8 the ctor stores it
-    long mWaterKind;                        // +0x1ec the ctor stores it
-    long mArmor[6];                         // +0x1f0 the base armor per weapon kind (EECBUpgradeArmor 0x28239e indexes it)
-    long mL208;                             // +0x208 the ctor stores it
     long GetEpoch() const { return this->mEpoch; }
-    long mEpoch;                            // +0x20c the ctor stores it
-    long mReloadTime;                       // +0x210 the ctor stores it
-    long mAttack;                           // +0x214 the ctor stores it
-    long mWorkRate;                         // +0x218 the ctor stores it
-    long mGatherTimes[7];                   // +0x21c..+0x234 (the ctor zeroes it in a loop, rep stosd; EEUnitClassUpgrade::Init copies it)
-    long mFlightTime;                       // +0x238 the ctor stores it
-    long mLeadership;                       // +0x23c the ctor stores it
-    long mMaxObjectCarry;                   // +0x240 the ctor stores it
     long GetInfluence() const { return this->mInfluence; }
-    long mInfluence;                        // +0x244 the ctor stores it
-    long mRottingTime;                      // +0x248 the ctor stores it
     long GetTransportCapacity() const { return this->mTransportCapacity; }
-    long mTransportCapacity;                // +0x24c the ctor stores it
-    long mGarrisonCapacity;                 // +0x250 the ctor stores it
-    long mRepairRate;                       // +0x254 the ctor stores it
-    long mWeight;                           // +0x258 the ctor stores it
-    long mHitPoints;                        // +0x25c the ctor stores it
-    long mNameStringID;                     // +0x260 the ctor stores it
-    long mTargetSearchInterval;             // +0x264 the ctor stores it
-    long mResourceType;                     // +0x268 the ctor stores it
-    long mResourceAmount;                   // +0x26c the ctor stores it
-    long mCarryAmount;                      // +0x270 the ctor stores it
-    long mHealingPoints;                    // +0x274 the ctor stores it
-    long mRegeneration;                     // +0x278 the ctor stores it
-    long mPowerRegeneration;                // +0x27c the ctor stores it
-    long mPower;                            // +0x280 the ctor stores it
-    long mL284;                             // +0x284 the ctor stores it
-    long mMissileDelayTime;                 // +0x288 the ctor stores it
-    long mTileSize;                         // +0x28c the ctor stores it (EEFindPlacement's 6th argument; read through GetTileSize)
-    long mCloakRadius;                      // +0x290 the ctor stores it
-    long mL294;                             // +0x294 the ctor stores it
-    long mOverlapUnitSet;                   // +0x298 the ctor stores it
-    long mAmmunition;                       // +0x29c the ctor stores it
-    long mNumUnits;                         // +0x2a0 the ctor stores it
-    long mLastUnitGoneTime;                 // +0x2a4 the ctor stores it
-    long mMiniMapColor;                     // +0x2a8 the ctor stores it
     long GetMiniMapColor() const { return this->mMiniMapColor; }  // inline (EEMiniMap 0x51e53b loads it before the colour pushes) (provisional name)
-    long mInitialGarrisonCount;             // +0x2ac the ctor stores it
-    long mWonderBonus;                      // +0x2b0 the ctor stores it
-    long mWonderUnitSet;                    // +0x2b4 the ctor stores it
-    long mMinConversionTime;                // +0x2b8 the ctor stores it
-    // +0x2bc..+0x2c8 the area-effect template ids: one array (EEUnitClassUpgrade::Init 0x63b891 copies them in a loop;
-    // the ctor stores the four one by one) (provisional name)
-    long mAreaEffectTemplates[4];
-    //
-    long mAnimalID;                         // +0x2cc the ctor stores it
-    unsigned char mDomains;                 // +0x2d0 the ctor stores it (the time warp tests bits 1 and 4)
-    bool mB2D1;                             // +0x2d1 the ctor stores it
-    bool mTerrainTypes[17];                 // +0x2d2..+0x2e2 (the ctor memsets 0x11 bytes) the ctor stores each; per terrain type, whether the class may stand on it (CanMoveOnTerrain, EERandomMap 0x2849f2) (provisional name)
-    bool mIsAffectedByGravity;              // +0x2e3 the ctor stores it
-    bool mUsesAmmunition;                   // +0x2e4 the ctor stores it
-    bool mShootsHigh;                       // +0x2e5 the ctor stores it
-    bool mUpgradesAreaEffect;               // +0x2e6 the ctor stores it
-    bool mUpgradesRepair;                   // +0x2e7 the ctor stores it
-    bool mUpgradesShockArmor;               // +0x2e8 the ctor stores it
-    bool mUpgradesPierceArmor;              // +0x2e9 the ctor stores it
-    bool mUpgradesArrowArmor;               // +0x2ea the ctor stores it
-    bool mUpgradesLaserArmor;               // +0x2eb the ctor stores it
-    bool mUpgradesGunArmor;                 // +0x2ec the ctor stores it
-    bool mUpgradesMissileArmor;             // +0x2ed the ctor stores it
-    bool mUpgradesRange;                    // +0x2ee the ctor stores it
-    bool mPitchesWithTerrain;               // +0x2ef the ctor stores it
-    bool mRollsWithTerrain;                 // +0x2f0 the ctor stores it
-    bool mFiresBroadside;                   // +0x2f1 the ctor stores it
-    bool mCanAttackGround;                  // +0x2f2 the ctor stores it
-    bool mCanFireOverWalls;                 // +0x2f3 the ctor stores it
-    bool mIsScenarioSelectable;             // +0x2f4 the ctor stores it
-    bool mIsEnabled;                        // +0x2f5 the ctor stores it
-    bool mFacesCamera;                             // +0x2f6 the ctor stores it
-    bool mIsDecoration;                     // +0x2f7 the ctor stores it
-    bool mFiresWhileMoving;                 // +0x2f8 the ctor stores it
-    bool mCanFly;                           // +0x2f9 the ctor stores it
-    bool mB2FA;                             // +0x2fa the ctor stores it
-    bool mBuildsOnElevation;                // +0x2fb the ctor stores it
     bool GetBlocksTile() const { return this->mBlocksTile; }
-    bool mBlocksTile;                       // +0x2fc the ctor stores it
     bool GetCanEnterAirTransports() const { return this->mCanEnterAirTransports; }
-    bool mCanEnterAirTransports;            // +0x2fd the ctor stores it
-    bool mCanEnterLandTransports;           // +0x2fe the ctor stores it
     bool GetCanEnterSeaTransports() const { return this->mCanEnterSeaTransports; }
-    bool mCanEnterSeaTransports;            // +0x2ff the ctor stores it
     bool GetCanEnterSpaceTransports() const { return this->mCanEnterSpaceTransports; }
-    bool mCanEnterSpaceTransports;          // +0x300 the ctor stores it
-    bool mCanEnterFortresses;               // +0x301 the ctor stores it
-    bool mCanGarrison;                      // +0x302 the ctor stores it
     bool GetIsCollidable() const { return this->mIsCollidable; }
-    bool mIsCollidable;                     // +0x303 the ctor stores it
-    bool mCanSetRallyPoint;                 // +0x304 the ctor stores it
-    bool mB305;                             // +0x305 the ctor stores it
-    bool mIsGaiaPlaceable;                  // +0x306 the ctor stores it
-    bool mConvertsBuildings;                // +0x307 the ctor stores it
-    bool mConvertsPriests;                  // +0x308 the ctor stores it
-    bool mIsPlayerPlaceable;                // +0x309 the ctor stores it
-    bool mIsVital;                          // +0x30a the ctor stores it
-    bool mIsCloakable;                      // +0x30b the ctor stores it
-    bool mIsExpansionUnit;                             // +0x30c the ctor stores it
-    bool mCanEnterAirports;                 // +0x30d the ctor stores it
-    bool mCanEnterCarriers;                 // +0x30e the ctor stores it
-    bool mCanEnterNavyYards;                // +0x30f the ctor stores it
     bool GetIsWall() const { return this->mIsWall; }
-    bool mIsWall;                           // +0x310 the ctor stores it
-    bool mIsDeletable;                      // +0x311 the contagion functors copy it to EEComplexUnit::mIsDeletable; (provisional name)
-    bool mIsInactive;                       // +0x312 the ctor stores it
     bool GetIsAttackUnit() const { return this->mIsAttackUnit; }
-    bool mIsAttackUnit;                     // +0x313 the ctor stores it
     bool GetIsDefenseUnit() const { return this->mIsDefenseUnit; }
-    bool mIsDefenseUnit;                    // +0x314 the ctor stores it
-    bool mCanCrossForest;                             // +0x315 the ctor stores it
-    bool mIsObstacle;                       // +0x316 the ctor stores it
-    bool mIsTree;                           // +0x317 the ctor stores it
-    bool mIsMelee;                          // +0x318 the ctor stores it
-    bool mCanDisband;                       // +0x319 the ctor stores it
-    bool mIsHuman;                          // +0x31a the ctor stores it
-    bool mIsHorse;                          // +0x31b the ctor stores it
-    bool mIsTower;                          // +0x31c the ctor stores it
     bool GetHasCalamityPowers() const { return this->mHasCalamityPowers; }
-    bool mHasCalamityPowers;                // +0x31d the ctor stores it
-    bool mIsProjectile;                     // +0x31e the ctor stores it
-    bool mCanChangeBehavior;                // +0x31f the ctor stores it
-    bool mIsCyber;                          // +0x320 the ctor stores it
-    bool mCanPatrol;                        // +0x321 the ctor stores it
-    bool mIsMedic;                          // +0x322 (untouched by the ctor)
-    bool mSkipsLineOfFireCheck;             // +0x323 the ctor stores it
-    bool mIsFlare;                          // +0x324 (untouched by the ctor; MarkInvalid; the doppelganger manager)
-    bool mIsBoobyTrap;                      // +0x325 (untouched by the ctor; the doppelganger manager)
-    bool mIsParatrooperBomber;              // +0x326 (untouched by the ctor)
-    bool mHasSpecialAttack;                 // +0x327 the ctor stores it
     volatile bool mIsMediaLoaded;           // +0x328 the ctor stores it (volatile: VirtualB4 0x638432 clears it with `mov byte`, not `and`)
-    bool mB329;                             // +0x329 (untouched by the ctor)
-    short mS32A;                            // +0x32a (untouched by the ctor)
 };
 
 // EEComplexUnit::Step (inline; needs EEUnitClass): EEPhysics::UpdateUnits calls it for each unit of gWorld's +0xadc

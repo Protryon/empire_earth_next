@@ -24,6 +24,11 @@
 
 using namespace WONAPI;
 
+// the longest a wait for another thread's step may take: each wait ends as soon as its condition holds, so this only
+// stops a hang. A starved thread (THREAD_PRIORITY_LOWEST on a saturated machine runs only through Windows'
+// starvation boost, every few seconds) can take longer than the 5 s the waits allowed before.
+static const uint64_t kPatienceMs = 120000;
+
 static std::vector<std::string> sLines;
 static PlatMutex* sLinesLock = PlatMutexCreate();   // the auto-deleting thread logs its destruction from itself
 static void Log(const std::string& inLine)
@@ -215,6 +220,7 @@ static void Timers()
         t->AddTimerOp(b, 3600000);
         Show("b added again", b);
         PlatSleep(5);
+        uint64_t aPumped = PlatTimeMilliseconds64(); // the pump's tick is this or later
         t->Pump();
         Show("pumped", a, b);
         c->Pump(0);
@@ -225,7 +231,13 @@ static void Timers()
         Show("b removed again", b);
         t->AddTimerOp(b, 3600000);
         t->AddTimerOp(d, 3600000);
-        Log("wait time below an hour+1 -> " + std::to_string(t->GetWaitTime() <= 3600000 ? 1 : 0));
+        // GetWaitTime counts from the last pump's tick, not from now: b's deadline (the earliest) is the add's tick
+        // plus an hour, so the wait is an hour plus the ticks between the pump and the add (none on an idle machine;
+        // a loaded one can take milliseconds over the calls between)
+        unsigned long aWait = t->GetWaitTime();
+        uint64_t aSincePump = PlatTimeMilliseconds64() - aPumped;
+        Log("wait time below an hour+1 -> "
+            + std::to_string(aWait >= 3600000 && aWait <= 3600000 + aSincePump ? 1 : 0));
         t->PurgeOps();
         Show("purged", b, d);
         c->Pump(0);
@@ -239,7 +251,7 @@ static void Timers()
         c->Pump(0);
         t->Start();
         t->AddTimerOp(f, 1);
-        uint64_t anEnd = PlatTimeMilliseconds64() + 5000;
+        uint64_t anEnd = PlatTimeMilliseconds64() + kPatienceMs;
         while (f->GetStatus() == WS_Pending && PlatTimeMilliseconds64() < anEnd)
             PlatSleep(1);
         Show("tf timed out on the thread", f);
@@ -256,10 +268,15 @@ static void Timers()
     Log("timers done");
 }
 
+static PlatEvent* sThreadDestroyed = PlatEventCreate(1, 0); // set by a TestThread's destructor, after its line
 class TestThread : public Thread {
 public:
     TestThread(const char* inName) : mName(inName), mInThis(false) {}
-    virtual ~TestThread() { Log(this->mName + " thread destroyed"); }
+    virtual ~TestThread()
+    {
+        Log(this->mName + " thread destroyed");
+        PlatEventSet(sThreadDestroyed);
+    }
     virtual void ThreadFunc()
     {
         this->mInThis = this->InThisThread();
@@ -278,7 +295,7 @@ static void Threads()
     Log("before start in this thread -> " + std::to_string(t->InThisThread() ? 1 : 0));
     t->Start();
     t->Start();
-    uint64_t anEnd = PlatTimeMilliseconds64() + 5000;
+    uint64_t anEnd = PlatTimeMilliseconds64() + kPatienceMs;
     while (!t->mInThis && PlatTimeMilliseconds64() < anEnd)
         PlatSleep(1);
     Log("ThreadFunc saw InThisThread -> " + std::to_string(t->mInThis ? 1 : 0));
@@ -288,16 +305,19 @@ static void Threads()
     t->Stop(true);
     t->WaitForStop();
     delete t;
+    PlatEventReset(sThreadDestroyed);
     TestThread* u = new TestThread("t2");
     u->SetPriority(ThreadPriority_Low);
     u->SetAutoDelete(true);
     u->Start();
     PlatSleep(20);
     u->Stop(false);
-    anEnd = PlatTimeMilliseconds64() + 5000;
-    while (!Logged("t2 thread destroyed") && PlatTimeMilliseconds64() < anEnd)
-        PlatSleep(1);
-    Log("threads done");
+    // the auto-deleting thread deletes itself once it sees the stop (a low-priority thread: whenever it is scheduled)
+    uint64_t aStopped = PlatTimeMilliseconds64();
+    PlatEventWait(sThreadDestroyed, (uint32_t)kPatienceMs);
+    fprintf(stderr, "won_asyncop_test: t2 destroyed %llu ms after its stop\n",
+            (unsigned long long)(PlatTimeMilliseconds64() - aStopped));
+    Log(Logged("t2 thread destroyed") ? "threads done" : "threads done (t2 not destroyed)");
 }
 
 // ---- round 13: the op's remaining transitions and timings, and AsyncOpTracker / AsyncOpWithTracker (recorded over
@@ -675,7 +695,7 @@ static void SocketThreads()
         h->mScript.push_back(WS_Success);
         t->Start();
         t->AddSocketOp(h);
-        uint64_t anEnd = PlatTimeMilliseconds64() + 5000;
+        uint64_t anEnd = PlatTimeMilliseconds64() + kPatienceMs;
         while (h->GetStatus() == WS_Pending && PlatTimeMilliseconds64() < anEnd)
             PlatSleep(1);
         t->Stop(true);

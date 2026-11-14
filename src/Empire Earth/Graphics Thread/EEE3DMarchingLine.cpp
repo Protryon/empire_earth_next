@@ -45,10 +45,11 @@
 #include <algorithm>
 #include "lle/GELine.h"
 #include "ee/RTSRegionTable.h"
-#include "ee/EEE3DIcon.h"
-#include "ee/EEE3DGoal.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEE3DMarchingLine.h"
+
+// EEROUnits.cpp's screen point (0x118676)
+void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint);
 #include "ee/EEEffectKindIDs.h"
 
 // the step along the line in tiles (.rdata 0x440994, loaded from memory: a named constant)

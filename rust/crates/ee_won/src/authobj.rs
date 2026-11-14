@@ -19,7 +19,6 @@ use std::thread::ThreadId;
 use crate::authflow::{self, EeWonAuthFlow, EeWonAuthFlowHooks, EeWonLightCert};
 use crate::authlogin::{self, EeWonAuthLogin};
 use crate::elgamal::ElGamal;
-use crate::ipobj::EeWonIpAddr;
 use crate::peerobj::{self, unix_now, EeWonAuthObj, PeerData};
 use crate::random::Random;
 
@@ -93,7 +92,7 @@ pub struct EeWonAuthCtx {
     servers: Servers,
 }
 
-// SAFETY: the C++ objects it holds (sessions, ops, the server list) are reached only through their hooks, from
+// SAFETY: the C++ objects it holds (ops, the server list) are reached only through their hooks, from
 // whichever thread calls, under this object's lock where the original took its own, as the original's were
 unsafe impl Send for EeWonAuthCtx {}
 // SAFETY: as above
@@ -138,7 +137,7 @@ impl EeWonAuthCtx {
         self.flow.is_expired(extra, unix_now())
     }
 
-    /// `PutSession(address, session)`.
+    /// `PutSession(address, session)` (a session handle, hostauth.rs; the request ops' `EE_WON_HOST_PUT_SESSION`).
     pub(crate) fn put_session(&self, key: [u8; 6], session: *mut c_void) {
         let _l = self.lock.lock();
         if !session.is_null() {
@@ -146,7 +145,7 @@ impl EeWonAuthCtx {
         }
     }
 
-    /// `GetSession(address)`: a reference the caller adopts, or NULL.
+    /// `GetSession(address)`: a session handle reference the caller adopts, or NULL.
     pub(crate) fn get_session(&self, key: [u8; 6]) -> *mut c_void {
         let _l = self.lock.lock();
         self.flow.get_session(key, unix_now())
@@ -363,28 +362,6 @@ pub unsafe extern "C" fn ee_won_authctx_free(c: *const EeWonAuthCtx) {
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_authctx_login(c: *const EeWonAuthCtx) -> *const EeWonAuthLogin {
     unsafe { ctx(c) }.login()
-}
-
-/// `PutSession(address, session)` (a session's `RefCount*`; NULL: nothing).
-///
-/// # Safety
-/// `c` a live context, `a` a live IPAddr value, `session` NULL or a live session.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_authctx_put_session(
-    c: *const EeWonAuthCtx,
-    a: *const EeWonIpAddr,
-    session: *mut c_void,
-) {
-    unsafe { ctx(c) }.put_session(authflow::addr_key(a), session)
-}
-
-/// `GetSession(address)`: a reference the caller adopts, or NULL.
-///
-/// # Safety
-/// `c` a live context, `a` a live IPAddr value.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_authctx_get_session(c: *const EeWonAuthCtx, a: *const EeWonIpAddr) -> *mut c_void {
-    unsafe { ctx(c) }.get_session(authflow::addr_key(a))
 }
 
 /// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.

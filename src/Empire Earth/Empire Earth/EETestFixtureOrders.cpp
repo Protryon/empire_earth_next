@@ -205,7 +205,7 @@ EEComplexUnit* OwnComplex(long inID)
     if (theUnit == NULL)
         return NULL;
     EEUnit* theEEUnit = static_cast<EEUnit*>(theUnit);
-    EEComplexUnit* theComplex = theEEUnit->mComplexUnit.Get();
+    EEComplexUnit* theComplex = theEEUnit->mComplexUnit;
     return static_cast<EEUnit*>(theComplex) == theEEUnit ? theComplex : NULL;
 }
 
@@ -313,8 +313,8 @@ void Skip(OrderUnit& ioUnit, const char* inWhy, const std::string& inFound)
 
 void JudgeUnchanged(OrderUnit& ioUnit, EEComplexUnit* inUnit)
 {
-    Judge(ioUnit, inUnit->mGoalState.Get() == ioUnit.mGoal, "unchanged:" + GoalText(ioUnit.mGoal),
-          GoalText(inUnit->mGoalState.Get()));
+    Judge(ioUnit, inUnit->mGoalState == ioUnit.mGoal, "unchanged:" + GoalText(ioUnit.mGoal),
+          GoalText(inUnit->mGoalState));
 }
 
 void JudgeGather(OrderState& ioState)
@@ -327,7 +327,7 @@ void JudgeGather(OrderState& ioState)
             Skip(theRow, "gone", "-");
             continue;
         }
-        std::string theFound = GoalText(theUnit->mGoalState.Get());
+        std::string theFound = GoalText(theUnit->mGoalState);
         if (theTarget == NULL || ioState.mNote == "no-resource") {
             JudgeUnchanged(theRow, theUnit);
             continue;
@@ -338,7 +338,7 @@ void JudgeGather(OrderState& ioState)
         }
         long theX = theTarget->GetTileX(), theY = theTarget->GetTileY();
         bool theQueued = ioState.mQueued && theRow.mHadGoal && !theRow.mGatheringTarget;
-        EEUnitGoal* theGoal = theQueued ? LastQueued(theUnit) : theUnit->mGoalState.Get();
+        EEUnitGoal* theGoal = theQueued ? LastQueued(theUnit) : theUnit->mGoalState;
         std::string theGot = GoalText(theGoal);
         if (gContinentManager.CanGetTo(theUnit, theX, theY)) {
             bool theOK = theGoal != NULL && theGoal->mKind == kGoalGather
@@ -399,7 +399,7 @@ void JudgePatrol(OrderState& ioState)
             Skip(theRow, "gone", "-");
             continue;
         }
-        std::string theFound = GoalText(theUnit->mGoalState.Get());
+        std::string theFound = GoalText(theUnit->mGoalState);
         if (thePoint == NULL || theUnit->mUnitClass->mUnitType == kUnitTypePathPoint) {
             JudgeUnchanged(theRow, theUnit);
             continue;
@@ -416,7 +416,7 @@ void JudgePatrol(OrderState& ioState)
             Skip(theRow, "transport-in-container", theFound);
             continue;
         }
-        EEUnitGoal* theGoal = theUnit->mGoalState.Get();
+        EEUnitGoal* theGoal = theUnit->mGoalState;
         if (!theUnit->mUnitClass->mCanPatrol
             && (!theUnit->mIsDetachedFromAI || theUnit->mUnitClass->FindAction(kActionGetNextPatrolPoint) == NULL)) {
             float theX = thePoint->mPhysicalModel.GetLocation().GetX();
@@ -442,7 +442,7 @@ void JudgeAttackGround(OrderState& ioState)
             Skip(theRow, "gone", "-");
             continue;
         }
-        std::string theFound = GoalText(theUnit->mGoalState.Get());
+        std::string theFound = GoalText(theUnit->mGoalState);
         if (!IsLiving(theUnit) || !InSomeSlot(theUnit)) {
             Skip(theRow, "not-taken", theFound);
             continue;
@@ -455,7 +455,7 @@ void JudgeAttackGround(OrderState& ioState)
             Skip(theRow, "transport-in-container", theFound);
             continue;
         }
-        EEUnitGoal* theGoal = theUnit->mGoalState.Get();
+        EEUnitGoal* theGoal = theUnit->mGoalState;
         bool theOK = theGoal != NULL && theGoal->mKind == kGoalAttackGround
             && static_cast<EEUGRust*>(theGoal)->GetGroundTarget().GetX() == ioState.mX
             && static_cast<EEUGRust*>(theGoal)->GetGroundTarget().GetY() == ioState.mY;
@@ -472,7 +472,7 @@ void JudgeMove(OrderState& ioState)
             Skip(theRow, "gone", "-");
             continue;
         }
-        EEUnitGoal* theGoal = theUnit->mGoalState.Get();
+        EEUnitGoal* theGoal = theUnit->mGoalState;
         std::string theFound = GoalText(theGoal);
         if (!IsLiving(theUnit) || !theUnit->mIsCommandable || !IsMobile(theUnit) || IsTransportInContainer(theUnit)) {
             Skip(theRow, "not-a-commandable-living-mobile-unit", theFound);
@@ -528,7 +528,7 @@ void MessageHook(NEMessage* inMessage, int inPhase)
                 continue;
             OrderUnit theRow;
             theRow.mID = (long)theUnit->mUnitID;
-            theRow.mGoal = theUnit->mGoalState.Get();
+            theRow.mGoal = theUnit->mGoalState;
             theRow.mHadGoal = theRow.mGoal != NULL;
             theRow.mGatheringTarget = theRow.mGoal != NULL && theRow.mGoal->mKind == kGoalGather && theTarget != NULL
                 && static_cast<EEUGRust*>(theRow.mGoal)->GetGatherResource() == theTarget;

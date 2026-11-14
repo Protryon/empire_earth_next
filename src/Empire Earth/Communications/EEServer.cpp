@@ -403,7 +403,7 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
                 EEMessage* theMessage;
                 switch (this->mLoadState) {
                 case 2:
-                    theMessage = new EEMLoadMainScreenResponse(inSlot, 0xff);
+                    theMessage = new EEMRecord(kMessageLoadMainScreenResponse, {inSlot, 0xff});
                     this->ProcessLocalUserInput(theMessage, kSlotServer);
                     this->mNumDroppedLoaders++;
                     break;
@@ -1056,14 +1056,14 @@ void EEServer::HandleReconnectWaitTimedOut()
     for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
         EEPlayer* theOther = gWorld.mPlayers[i];
         if (theOther->mHumanPlayer != NULL)
-            gCommunications->ProcessLocalUserInput(new EEMMigrationSlotInfo(theOther->mSlot, theOther->mPlayerID),
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageMigrationSlotInfo, {theOther->mPlayerID, theOther->mSlot}),
                                                    kSlotNone);
     }
     gCommunications->SetIsMultiplayerSession(gCommunications->GetNumHumanPlayers() != 1);
     gResource->GetString(IDS_NEW_HOST_ESTABLISHED, theText);
     gUserInterface->AddChatLogEntry(theText, 0);
     gUserInterface->PostHostMigrated();
-    gCommunications->ProcessLocalUserInput(new EEMGameRestarting, kSlotNone);
+    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageGameRestarting), kSlotNone);
     this->StartGame();
 }
 
@@ -1085,14 +1085,14 @@ void EEServer::ReportLaggers(std::vector<unsigned char>& inSlots, bool inFlag)
             }
             if (theMask != this->mLagMask || inFlag) {
                 this->mLagMask = theMask;
-                EEMLagStatus* theMessage = new EEMLagStatus(theMask, inFlag);
+                EEMRecord* theMessage = new EEMRecord(kMessageLagStatus, {theMask, inFlag});
                 theMessage->SetOriginatingSlot(kSlotServer);
                 this->SendMessageToAll(theMessage, false);
                 theMessage->Dereference();
             }
         }
     } else if (this->GetGameState() == kServerStateOpen || this->GetGameState() == kServerStateClosed) {
-        EEMLagStatus* theMessage = new EEMLagStatus(inSlots.size(), inFlag);
+        EEMRecord* theMessage = new EEMRecord(kMessageLagStatus, {inSlots.size(), inFlag});
         theMessage->SetOriginatingSlot(kSlotServer);
         this->SendMessageToAll(theMessage, false);
         theMessage->Dereference();
@@ -1221,7 +1221,7 @@ void EEServer::SendPingStat(unsigned char inPlayer, float inPing)
     gGameOptions.mLock->ReadLock();
     thePlayer = gGameOptions.mPlayers[inPlayer];
     if (thePlayer.mType == 1 || thePlayer.mType == 2)
-        this->ProcessLocalUserInput(new EEMUpdatePingStat(inPlayer, inPing), kSlotNone);
+        this->ProcessLocalUserInput(new EEMRecord(kMessageUpdatePingStat, {inPlayer, inPing}), kSlotNone);
     gGameOptions.mLock->ReadUnlock();
 }
 

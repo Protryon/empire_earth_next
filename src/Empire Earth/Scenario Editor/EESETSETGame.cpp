@@ -262,10 +262,10 @@ void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBo
     UWideString theTitle;
     if (inAreas) {
         gResource->GetString(IDS_AREA, theTitle);
-        gWorld.mScenarioManager->GetAreaNames(theNames);
+        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_AREAS, theNames);
     } else {
         gResource->GetString(IDS_TRIGGER_SCREEN_TAB_OBJECT, theTitle);
-        gWorld.mScenarioManager->GetObjectNames(theNames);
+        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
     }
     inLabel->SetText(theTitle);
     inComboBox->DeleteAllEntries();
