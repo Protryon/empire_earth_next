@@ -14,6 +14,8 @@
 //! - [`calamity_update`]: every calamity class's own update over a host of world calls.
 //! - [`calamity_start`]: every calamity class's `Start` and `Stop` over the same host.
 //! - [`contagion`]: the contagion helpers' update and spread over a host, the functors' damage arithmetic.
+//! - [`nodes`]: the tree's, the epochs' and the nodes' members as records and the tree's walks over them (research,
+//!   availability, obsolescence, the epochs, the saved game, the checksum, the media table).
 //! - [`capture`]: the simulation capture's records (`ee/EETechCapture.h`) and their replay.
 
 pub mod calamity;
@@ -24,6 +26,7 @@ pub mod capture;
 pub mod contagion;
 pub mod effects;
 pub mod ffi;
+pub mod nodes;
 pub mod tree;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the
