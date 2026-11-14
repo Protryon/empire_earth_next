@@ -1253,13 +1253,6 @@ struct EeGfxStormDraw {
   bool water;
 };
 
-/// The friendly wall pieces a segment reaches (`context`: the effect).
-struct EeGfxWallHost {
-  void *context;
-  /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
-  bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
-};
-
 /// What the beam's tick reads: the tick, the graphic effect's params 1-5 and 7 (the scroll's rate, the width's rate,
 /// its restart and its top, the hit's age, the impact's age), its duration, whether it has a linked (impact) effect
 /// and whether the beam has a target unit.
@@ -2877,39 +2870,6 @@ int32_t ee_gfx_storm_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_storm_save(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
-
-/// `EEE3DEnergyWall::Place`'s segment ends after the C++ set the posts.
-///
-/// # Safety
-/// `r` is a live record.
-void ee_gfx_wall_place(EeGfxEffectRecord *r);
-
-/// `EEE3DEnergyWall::FindSegments` (`height`: the graphic effect's `GetParam6()`).
-///
-/// # Safety
-/// `r` is a live record; `host` is valid.
-void ee_gfx_wall_find_segments(EeGfxEffectRecord *r, float height, const EeGfxWallHost *host);
-
-/// `EEE3DEnergyWall::Step`'s timer: whether the segments are due.
-///
-/// # Safety
-/// `r` is a live record.
-bool ee_gfx_wall_step(EeGfxEffectRecord *r, float tick_time);
-
-/// `EEE3DEnergyWall::Load`'s (or, `old`, `LoadOldVersion`'s) own reads after the media load (`media`: its result).
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_wall_load(EeGfxEffectRecord *r,
-                         const EeGfxEffectFile *file,
-                         int32_t media,
-                         bool old);
-
-/// `EEE3DEnergyWall::Save`'s own writes after `EEEffect3D::Save`'s.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-int32_t ee_gfx_wall_save(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEE3DTracerBeam::Step`'s timing after the C++'s aim: its events (`EE_GFX_TRACER_*`).
 ///
