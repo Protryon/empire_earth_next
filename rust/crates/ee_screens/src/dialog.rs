@@ -2,8 +2,9 @@
 //! password prompt): what each kind shows (its buttons' strings and callbacks, the hidden controls, the message, the
 //! edit box) and, when it opens, where its controls go for that kind, scaled from a 1024x768 design. Over a host
 //! ([`DialogHost`]) whose calls are each one toolkit call on the box's controls (`ee_screenscpp_dialog`,
-//! `User Interface Thread/EEUIFError.cpp`); the C++ keeps the form, its controls and their construction, the
-//! buttons' drawing and the posted callback on close.
+//! `User Interface Thread/EEUIFError.cpp`), and the box's construction ([`construct`]: its controls' order, sizes,
+//! colours and layout); the C++ keeps the form, the `new` of each control, the buttons' drawing and the posted
+//! callback on close.
 
 /// The kinds (and the modes `Open` lays out): OK (shown or not), Yes/No, Yes/No/Cancel, a text or password with
 /// OK, Cancel only.
@@ -50,6 +51,29 @@ pub const EE_SCREENS_DLG_SET_RECT: u32 = 12;
 pub const EE_SCREENS_DLG_LINE_HEIGHT: u32 = 13;
 /// -> the message label's line count.
 pub const EE_SCREENS_DLG_LINES: u32 = 14;
+
+// The constructor's ops (`EEUIFError::EEUIFError`). Their sizes, colours and layout go first into the host's float
+// register (f0..f8).
+/// (index, f32 bits) the float register's entry.
+pub const EE_SCREENS_DLG_FLOAT: u32 = 15;
+/// (control) creates it: the message label (f0 x f1, the font register, index 1), OK (id 1), No (2), Cancel (3), the
+/// edit box (f0 x f1, the font register, 0x32 characters, id 4); each 50x20 button in its own class.
+pub const EE_SCREENS_DLG_NEW: u32 = 16;
+/// The message label's scroll bar: background colour f0..f2, opacity f3.
+pub const EE_SCREENS_DLG_SCROLL_BAR: u32 = 17;
+/// (alignment) the message label's alignment.
+pub const EE_SCREENS_DLG_ALIGN: u32 = 18;
+/// (control: the label or the edit box) its text transparent, coloured f0..f2.
+pub const EE_SCREENS_DLG_TEXT_COLOR: u32 = 19;
+/// (control) `AddControl(control, 0)`.
+pub const EE_SCREENS_DLG_ADD: u32 = 20;
+/// The edit box's selection background f0..f2, background f3..f5, cursor f6..f8.
+pub const EE_SCREENS_DLG_EDIT_COLORS: u32 = 21;
+/// The form's entity group 0 enabled.
+pub const EE_SCREENS_DLG_ENABLE: u32 = 22;
+/// The form's layout (relative sides f0 left, f1 right, f2 top, f3 bottom) and its gold framed background (colour
+/// f4..f6) in the manager's UI texture depth.
+pub const EE_SCREENS_DLG_BACKGROUND: u32 = 23;
 
 const DLG_LABEL: u32 = 0;
 const DLG_OK: u32 = 1;
@@ -202,6 +226,69 @@ pub fn open<H: DialogHost + ?Sized>(h: &mut H, mode: u32) {
         }
         _ => {}
     }
+}
+
+/// The text's colour (black), the scroll bar's (white, 0.3 opaque), the edit box's (white) and its selection's
+/// (gold), the background's (parchment).
+const DLG_BLACK: [f32; 3] = [0.0, 0.0, 0.0];
+const DLG_WHITE: [f32; 3] = [1.0, 1.0, 1.0];
+const DLG_SCROLL_BAR_OPACITY: f32 = 0.3;
+const DLG_GOLD: [f32; 3] = [0.61, 0.46, 0.0];
+const DLG_PARCHMENT: [f32; 3] = [0.91, 0.85, 0.73];
+const DLG_ALIGN_CENTER: u32 = 1;
+
+/// Loads the float register from f0.
+fn floats<H: DialogHost + ?Sized>(h: &mut H, values: &[f32]) {
+    for (i, v) in values.iter().enumerate() {
+        h.call(EE_SCREENS_DLG_FLOAT, i as u32, v.to_bits());
+    }
+}
+
+/// `EEUIFError::EEUIFError`: the scaled Tahoma 16, the message label (280x135, white scroll bar, centred black
+/// text), OK, No and Cancel, the edit box (220x24, black text on white, a gold selection), each added to the form in
+/// that order; the entity group on, mode 0, then the form's layout (295..730 of 1024, 262..506 of 768) and its gold
+/// framed parchment background; the font released.
+pub fn construct<H: DialogHost + ?Sized>(h: &mut H) {
+    h.call(EE_SCREENS_DLG_FONT, DLG_FONT_NEW, 0);
+    floats(h, &[280.0, 135.0]);
+    h.call(EE_SCREENS_DLG_NEW, DLG_LABEL, 0);
+    floats(h, &[DLG_WHITE[0], DLG_WHITE[1], DLG_WHITE[2], DLG_SCROLL_BAR_OPACITY]);
+    h.call(EE_SCREENS_DLG_SCROLL_BAR, 0, 0);
+    h.call(EE_SCREENS_DLG_ALIGN, DLG_ALIGN_CENTER, 0);
+    floats(h, &DLG_BLACK);
+    h.call(EE_SCREENS_DLG_TEXT_COLOR, DLG_LABEL, 0);
+    h.call(EE_SCREENS_DLG_ADD, DLG_LABEL, 0);
+    for button in [DLG_OK, DLG_NO, DLG_CANCEL] {
+        h.call(EE_SCREENS_DLG_NEW, button, 0);
+        h.call(EE_SCREENS_DLG_ADD, button, 0);
+    }
+    floats(h, &[220.0, 24.0]);
+    h.call(EE_SCREENS_DLG_NEW, DLG_EDIT, 0);
+    floats(h, &DLG_BLACK);
+    h.call(EE_SCREENS_DLG_TEXT_COLOR, DLG_EDIT, 0);
+    let mut colors = [0.0f32; 9];
+    colors[..3].copy_from_slice(&DLG_GOLD);
+    colors[3..6].copy_from_slice(&DLG_WHITE);
+    colors[6..].copy_from_slice(&DLG_BLACK);
+    floats(h, &colors);
+    h.call(EE_SCREENS_DLG_EDIT_COLORS, 0, 0);
+    h.call(EE_SCREENS_DLG_ADD, DLG_EDIT, 0);
+    h.call(EE_SCREENS_DLG_ENABLE, 0, 0);
+    h.call(EE_SCREENS_DLG_MODE, 0, 0);
+    floats(
+        h,
+        &[
+            295.0 / 1024.0,
+            730.0 / 1024.0,
+            262.0 / 768.0,
+            506.0 / 768.0,
+            DLG_PARCHMENT[0],
+            DLG_PARCHMENT[1],
+            DLG_PARCHMENT[2],
+        ],
+    );
+    h.call(EE_SCREENS_DLG_BACKGROUND, 0, 0);
+    h.call(EE_SCREENS_DLG_FONT, DLG_FONT_DROP, 0);
 }
 
 #[cfg(test)]

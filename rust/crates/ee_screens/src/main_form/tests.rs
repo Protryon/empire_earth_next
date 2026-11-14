@@ -236,3 +236,63 @@ fn hot_key_table() {
     assert!(keys.iter().all(|k| k.modifiers[2] == 0x7fff));
     assert_eq!(keys.iter().filter(|k| k.always).count(), 9);
 }
+
+const GOLDEN_MEMBERS: &str = include_str!("../golden_main_form_members.txt");
+
+/// `build/sc28/mf/driver.cpp 1 N golden`: per call (a `Activate`, d `Deactivate`, o `Open`, c `Close`, p
+/// `DrawPolygons`, m `UpdateBackgroundMedia`, s `ShowAllBackgrounds`, h `HideAllBackgrounds`, x `HideMessages`, t
+/// `SetPauseText`, i `Pause`/`ResumeInformation`, q `SetChatTop`, r `RefreshSavedGroups`, u `UpdateIconBar`) with
+/// its argument, the new host's ops and answers; the driver checked them against the original's calls (cut from
+/// 2cac466f).
+#[test]
+fn golden_main_form_members() {
+    let mut kinds = std::collections::BTreeMap::new();
+    for (k, line) in GOLDEN_MEMBERS.lines().enumerate() {
+        let mut fields = line.split('|');
+        let head: Vec<&str> = fields.next().unwrap().split(' ').collect();
+        let (kind, a) = (head[0], head[1].parse::<i64>().unwrap());
+        let ops = fields.map(parse).collect();
+        let mut h = Replay { ops, at: 0, line: k + 1 };
+        let which = match kind {
+            "a" => EE_SCREENS_MF_DO_ACTIVATE,
+            "d" => EE_SCREENS_MF_DO_DEACTIVATE,
+            "o" => EE_SCREENS_MF_DO_OPEN,
+            "c" => EE_SCREENS_MF_DO_CLOSE,
+            "p" => EE_SCREENS_MF_DO_DRAW,
+            "m" => EE_SCREENS_MF_DO_UPDATE_MEDIA,
+            "s" => EE_SCREENS_MF_DO_SHOW_BACKGROUNDS,
+            "h" => EE_SCREENS_MF_DO_HIDE_BACKGROUNDS,
+            "x" => EE_SCREENS_MF_DO_HIDE_MESSAGES,
+            "t" => EE_SCREENS_MF_DO_PAUSE_TEXT,
+            "i" => EE_SCREENS_MF_DO_INFO_PAUSE,
+            "q" => EE_SCREENS_MF_DO_CHAT_TOP,
+            "r" => EE_SCREENS_MF_DO_SAVED_GROUPS,
+            _ => EE_SCREENS_MF_DO_ICON_BAR,
+        };
+        let result = member(&mut h, which, a);
+        if kind == "p" {
+            assert_eq!(result, h.ops[h.at - 1].head[3], "line {}: DrawPolygons' result", k + 1);
+        }
+        assert_eq!(h.at, h.ops.len(), "line {}: ops missing", k + 1);
+        *kinds.entry(kind.to_string()).or_insert(0) += 1;
+    }
+    for kind in ["a", "d", "o", "c", "p", "m", "s", "h", "x", "t", "i", "q", "r", "u"] {
+        assert!(kinds.get(kind).copied().unwrap_or(0) >= 20, "{kinds:?}");
+    }
+}
+
+/// `HideAllBackgrounds` hides 0x67..=0x7c, then 0x64, 0x65, 0x90, 0x8f, 0x91; `ShowAllBackgrounds` skips 0x6b and
+/// the unit panels.
+#[test]
+fn backgrounds_shown_and_hidden() {
+    let mut log = Log::default();
+    hide_all_backgrounds(&mut log);
+    let hidden: Vec<i64> = log.ops.iter().filter(|o| o.0 == EE_SCREENS_MF_OP_BACKGROUND).map(|o| o.1).collect();
+    assert_eq!(hidden.len(), 27);
+    assert_eq!(&hidden[22..], &[0x64, 0x65, 0x90, 0x8f, 0x91]);
+    let mut log = Log::default();
+    show_all_backgrounds(&mut log);
+    let shown: Vec<i64> = log.ops.iter().filter(|o| o.0 == EE_SCREENS_MF_OP_BACKGROUND).map(|o| o.1).collect();
+    assert!(!shown.contains(&0x6b) && !shown.contains(&0x70) && shown.contains(&0x72));
+    assert_eq!(shown.len(), 22 - 4 + 4);
+}

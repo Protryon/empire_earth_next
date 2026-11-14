@@ -125,6 +125,13 @@ SocketOp::~SocketOp() { ee_won_socketop_free(this->mSockOp); }
 // Starts the op, first finishing it with InvalidSocket when it has no socket (and starting anyway); a pending
 // start is queued on the socket thread (async) or continued and finished (blocking), any other result finishes it
 void SocketOp::RunHook() { ee_won_socketop_run_hook(this->mSockOp); }
+// FUNCTION: WON 0x006b60c0
+// Removes the op from the socket thread if it was handed there
+void SocketOp::CleanupHook()
+{
+    if(this->IsInSocketThread())
+        WONAPICore::RemoveFromSocketThread(this);
+}
 }
 
 // SDK SocketOp static definition; in the original a zero byte at 565f08

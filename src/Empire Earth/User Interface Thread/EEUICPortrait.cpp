@@ -5,6 +5,7 @@
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
+#include <string>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -61,6 +62,7 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEUICPortrait.h"
 #include "ee/EEStringIDs.h"
+#include "rust/ee_screens.h"   // ee_screens_portrait_* (ee_screens portrait.rs)
 // FUNCTION: EXE 0x65861c
 // Creates the selected-unit portrait with its research (green) and improvement (yellow) progress bars over a
 // red background, and a level text
@@ -112,43 +114,27 @@ EEUICPortrait::~EEUICPortrait()
 }
 
 // FUNCTION: EXE 0x65891c
-// Returns the bar rectangles; with both bars the research bar is the top half
-void EEUICPortrait::GetBarRectangles(GERectangle& outFirst, GERectangle& outSecond) const
-{
-    outFirst = this->GetRectangle();
-    outSecond = this->GetRectangle();
-    if (this->mShowSecondBar == true && this->mShowFirstBar == true) {
-        outSecond.SetBottom(outSecond.GetHeight() * 0.5f + outSecond.GetTop());
-        outFirst.SetTop(outSecond.GetTop() + 1.0f);
-    }
-}
-
 // FUNCTION: EXE 0x658987
-// Draws the portrait and each shown progress bar with the red remainder after it
-long EEUICPortrait::DrawPolygons()
+// FUNCTION: EXE 0x658af7
+// FUNCTION: EXE 0x658d02
+// FUNCTION: EXE 0x659028
+// The bars' rectangles, the drawing, the tooltip, the click and the update from the unit (the original's
+// GetBarRectangles, DrawPolygons, GetHelpString, MouseLButtonDown and Update): ee_screens portrait.rs over the host
+// below
+long EEUICPortrait::DrawPolygons() { return ee_screens_portrait_draw(this); }
+long EEUICPortrait::MouseLButtonDown() { return ee_screens_portrait_mouse_down(this); }
+void EEUICPortrait::Update() { ee_screens_portrait_update(this); }
+
+// the tooltip being built (the UI thread's)
+static UWideString* sPortraitHelp;
+
+bool EEUICPortrait::GetHelpString(UWideString& outString) const
 {
-    GERectangle theRectangle;
-    long theResult = UIControl::DrawPolygons();
-    theResult = this->GetRasterizer()->Draw(this->mPortrait, this->GetScreenIndex());
-    if (this->mShowFirstBar) {
-        theResult = this->GetRasterizer()->Draw(this->mFirstBar, this->GetScreenIndex());
-        theRectangle.SetLeft(this->mFirstBar->GetRectangle().GetRight());
-        theRectangle.SetRight(this->GetCopiedDrawRectangle().GetRight() + 1.0f);
-        theRectangle.SetTop(this->mFirstBar->GetRectangle().GetTop());
-        theRectangle.SetBottom(this->mFirstBar->GetRectangle().GetBottom());
-        this->mBackground->SetRectangle(theRectangle);
-        theResult = this->GetRasterizer()->Draw(this->mBackground, this->GetScreenIndex());
-    }
-    if (!this->mShowSecondBar)
-        return theResult;
-    theResult = this->GetRasterizer()->Draw(this->mSecondBar, this->GetScreenIndex());
-    theRectangle.SetLeft(this->mSecondBar->GetRectangle().GetRight());
-    theRectangle.SetRight(this->GetCopiedDrawRectangle().GetRight() + 1.0f);
-    theRectangle.SetTop(this->mSecondBar->GetRectangle().GetTop());
-    theRectangle.SetBottom(this->mSecondBar->GetRectangle().GetBottom());
-    this->mBackground->SetRectangle(theRectangle);
-    theResult = this->GetRasterizer()->Draw(this->mBackground, this->GetScreenIndex());
-    return theResult;
+    UWideString theResult;
+    sPortraitHelp = &theResult;
+    bool theFound = ee_screens_portrait_help(const_cast<EEUICPortrait*>(this));
+    outString = theResult;
+    return theFound;
 }
 
 // FUNCTION: EXE 0x658ad0
@@ -162,99 +148,9 @@ long EEUICPortrait::DrawTextA()
     return theResult;
 }
 
-// FUNCTION: EXE 0x658af7
-// Builds the help text for the bar under the mouse: cancel the research (buildings) or the improvement
-bool EEUICPortrait::GetHelpString(UWideString& outString) const
-{
-    GERectangle theFirst;
-    GERectangle theSecond;
-    UWideString theName;
-    UWideString theFormat;
-    UWideString theResult;
-    bool theFound = true;
-    if (this->mShowSecondBar == true && this->mShowFirstBar == true) {
-        this->GetBarRectangles(theFirst, theSecond);
-        if (theSecond.Contains(this->GetMouseLocation()) && this->mUnit->GetUnitClass()->IsBuilding() == true) {
-            gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_RESEARCH, theFormat);
-            long theID = this->mUnit->GetComplexUnit()->mCurrentResearch;
-            EETechTreeNode* theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(theID);
-            if (theNode) {
-                if (theNode->mData->mMakesUnit == true)
-                    gResource->GetString(gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID, theName);
-                else
-                    gResource->GetString(theNode->mData->mNameID, theName);
-                sprintf(theResult, theFormat, (const char*)theName);
-            } else
-                theFound = false;
-        } else {
-            gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_IMPROVEMENT, theFormat);
-            this->mUnit->mStats->GetImprovementName(theName,
-                                    this->mUnit->GetPlayer()->GetResearchedImprovement(this->mUnit->GetUnitClass()->GetUnitType()));
-            sprintf(theResult, theFormat, (const char*)theName);
-        }
-    } else if (this->mShowSecondBar == true) {
-        gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_IMPROVEMENT, theFormat);
-        this->mUnit->mStats->GetImprovementName(theName, this->mUnit->GetPlayer()->GetResearchedImprovement(this->mUnit->GetUnitClass()->GetUnitType()));
-        sprintf(theResult, theFormat, (const char*)theName);
-    } else if (this->mShowFirstBar == true && this->mUnit->GetUnitClass()->IsBuilding() == true) {
-        gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_RESEARCH, theFormat);
-        long theID = this->mUnit->GetComplexUnit()->mCurrentResearch;
-        EETechTreeNode* theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(theID);
-        if (theNode) {
-            if (theNode->mData->mMakesUnit == true)
-                gResource->GetString(gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID, theName);
-            else
-                gResource->GetString(theNode->mData->mNameID, theName);
-            sprintf(theResult, theFormat, (const char*)theName);
-        } else
-            theFound = false;
-    } else
-        theFound = false;
-    outString = theResult;
-    return theFound;
-}
-
 // FUNCTION: EXE 0x658cb8
 // Returns the improvement the player is researching for a unit type
 // (EEPlayer::GetResearchedImprovement, inline in EEPlayer.h; emitted after its first user)
-
-// FUNCTION: EXE 0x658d02
-// On a click on the portrait, cancels the research (top bar of a building) or the improvement in progress
-// NEAR: register assignment (orig: this esi, the complex unit ebx, the technology edi and in memory)
-long EEUICPortrait::MouseLButtonDown()
-{
-    GERectangle theFirst;
-    GERectangle theSecond;
-    if (this->mUnit && this->mUnit->mHitPoints > 0 && this->mUnit->mTileNode) {
-        EEComplexUnit* theUnit = this->mUnit->mComplexUnit;
-        long theTechnology = theUnit->mCurrentResearch;
-        long theImprovement = theUnit->GetPlayer()->GetResearchedImprovement(theUnit->GetUnitClass()->GetUnitType());
-        if (theTechnology != kTechNone) {
-            if (theImprovement != 0x10) {
-                this->GetBarRectangles(theFirst, theSecond);
-                if (this->mShowFirstBar && theSecond.Contains(this->GetMouseLocation())) {
-                    if (this->mUnit->GetUnitClass()->IsBuilding()) {
-                        gCommunications->ProcessLocalUserInput(
-                            new EEMRemoveTechnology(theUnit->GetUnitID(), theTechnology, true), kSlotNone);
-                        gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-                    }
-                } else if (this->mShowSecondBar) {
-                    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageRemoveImprovement, {theUnit->GetUnitID(), theImprovement}),
-                                                           kSlotNone);
-                    gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-                }
-            } else if (this->mUnit->GetUnitClass()->IsBuilding()) {
-                gCommunications->ProcessLocalUserInput(new EEMRemoveTechnology(theUnit->GetUnitID(), theTechnology, true),
-                                                       kSlotNone);
-                gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-            }
-        } else if (theImprovement != 0x10) {
-            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageRemoveImprovement, {theUnit->GetUnitID(), theImprovement}), kSlotNone);
-            gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-        }
-    }
-    return 0;
-}
 
 // FUNCTION: EXE 0x658f5d
 // Updates the help text while the mouse moves over a portrait showing both bars
@@ -270,135 +166,149 @@ long EEUICPortrait::MouseMove(const GE2DPoint& inLocation)
 // (inline in the class)
 
 // FUNCTION: EXE 0x658f82
-// Shows a unit's portrait (button face), taking references, and updates the bars
+// Shows a unit's portrait (button face), taking references, and updates the bars (ee_screens portrait.rs)
 void EEUICPortrait::SetUnit(EEUnit* inUnit)
 {
-    if (this->mUnit) {
-        this->mButton->Release();
-        this->mUnit->Dereference();
-    }
-    this->mUnit = inUnit;
-    if (!this->mUnit)
-        return;
-    this->mUnit->Reference();
-    this->mButton = this->mUnit->mStats->mButton;
-    this->mButton->Acquire();
-    this->mPortrait->SetTexture(this->mButton->GetTexture(), gScreenIndex);
-    this->mButton->SetFaceBitmap(this->mPortrait, this->GetRectangle(), gScreenIndex);
-    this->mShowFirstBar = false;
-    this->mShowSecondBar = false;
-    this->SetDirty(true);
-    this->Update();
-}
-
-// FUNCTION: EXE 0x659028
-// Updates the portrait for the local player's unit: research and improvement progress bars and the
-// improvement level (capped by world table entry 47)
-// NEAR: register and slot choice; the both-bars branch expands GERhombus::SetRectangle and
-// GetTopLeft calls the imported GE2DPoint ctors in the original)
-void EEUICPortrait::Update()
-{
-    GERectangle theRectangle;
-    unsigned long theOldLevel = this->mLevel;
-    bool theOldSecond = this->mShowSecondBar;
-    EEComplexUnit* theUnit = this->mUnit->GetComplexUnit();
-    bool theOldFirst = this->mShowFirstBar;
-    long theImprovement;
-    EETechTreeNode* theNode;
-    float theScale;
-    long theTotal;
-    long theMaximum;
-    float theMaximumF;
-    UWideString* theText;
-    if (theUnit != NULL) {
-        if (theUnit->GetPlayer() == gWorld.GetCurrentPlayer()) {
-            if (theUnit->mProductionTime > 0) {
-                this->mShowFirstBar = true;
-                this->SetDirty(true);
-            } else if (this->mShowFirstBar) {
-                this->mShowFirstBar = false;
-                this->SetDirty(true);
-            }
-            theImprovement = theUnit->GetPlayer()->GetResearchedImprovement(theUnit->GetUnitClass()->GetUnitType());
-            if (theImprovement != 0x10) {
-                this->mShowSecondBar = true;
-                this->SetDirty(true);
-            } else if (this->mShowSecondBar) {
-                this->mShowSecondBar = false;
-                this->SetDirty(true);
-            }
-            if (this->mShowSecondBar == true && this->mShowFirstBar == true) {
-                theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch);
-                if (theNode->mData->mMakesUnit && this->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass])
-                    theScale = this->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass]->mBuildTimeScale;
-                else
-                    theScale = 1.0f;
-                theTotal = (long)(theNode->GetBuildTime() * theScale + 0.5f);
-                GE2DPoint theTopLeft = this->GetRectangle().GetTopLeft();
-                theRectangle.SetTop(theTopLeft.GetY());
-                theRectangle.SetLeft(theTopLeft.GetX());
-                theRectangle.SetBottom(this->GetRectangle().GetHeight() * 0.5f + theRectangle.GetTop() + 1.0f);
-                theRectangle.SetRight(this->GetRectangle().GetWidth() * ((float)(theTotal - theUnit->mProductionTime) / theTotal) +
-                                      theTopLeft.GetX());
-                this->mFirstBar->SetRectangle(theRectangle);
-                if (theUnit->GetStats()->mImprovement.GetLevel(theImprovement) == 1)
-                    theMaximum = gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
-                else
-                    theMaximum = gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
-                theRectangle.SetLeft(this->GetRectangle().GetLeft());
-                theMaximumF = theMaximum;
-                theRectangle.SetRight((theMaximumF - theUnit->GetPlayer()->GetImprovementProgress(
-                                                         theUnit->GetUnitClass()->GetUnitType())) / theMaximumF *
-                                      this->GetRectangle().GetWidth() + this->GetRectangle().GetLeft() + 1.0f);
-                theRectangle.SetTop(this->GetRectangle().GetHeight() * 0.5f + this->GetRectangle().GetTop());
-                theRectangle.SetBottom(this->GetRectangle().GetBottom() + 1.0f);
-                this->mSecondBar->SetRectangle(theRectangle);
-            } else if (this->mShowSecondBar == true) {
-                if (theUnit->GetStats()->mImprovement.GetLevel(theImprovement) == 1)
-                    theMaximum = gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
-                else
-                    theMaximum = gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
-                theRectangle.SetLeft(this->GetRectangle().GetLeft());
-                theMaximumF = theMaximum;
-                theRectangle.SetRight((theMaximumF - theUnit->GetPlayer()->GetImprovementProgress(
-                                                         theUnit->GetUnitClass()->GetUnitType())) / theMaximumF *
-                                      this->GetRectangle().GetWidth() + this->GetRectangle().GetLeft() + 1.0f);
-                theRectangle.SetTop(this->GetRectangle().GetTop());
-                theRectangle.SetBottom(this->GetRectangle().GetBottom() + 1.0f);
-                this->mSecondBar->SetRectangle(theRectangle);
-            } else if (this->mShowFirstBar == true) {
-                theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch);
-                if (theNode) {
-                    if (theNode->mData->mMakesUnit && this->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass])
-                        theScale = this->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass]->mBuildTimeScale;
-                    else
-                        theScale = 1.0f;
-                    theTotal = (long)(theNode->GetBuildTime() * theScale + 0.5f);
-                    theRectangle.SetTop(this->GetRectangle().GetTop());
-                    theRectangle.SetLeft(this->GetRectangle().GetLeft());
-                    theRectangle.SetBottom(this->GetRectangle().GetHeight() + theRectangle.GetTop());
-                    theRectangle.SetRight(this->GetRectangle().GetWidth() * ((float)(theTotal - theUnit->mProductionTime) / theTotal) +
-                                          this->GetRectangle().GetLeft());
-                    this->mFirstBar->SetRectangle(theRectangle);
-                }
-            }
-        }
-        this->mLevel = theUnit->GetStats()->mImprovement.mTotalCost;
-    } else
-        this->mLevel = 0;
-    if (this->mLevel > gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax))
-        this->mLevel = gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax);
-    if (this->mLevel != theOldLevel) {
-        theText = new UWideString;
-        if (this->mLevel > 0)
-            sprintf(*theText, "%ld", this->mLevel);
-        this->mText->SetText(*theText);
-        delete theText;
-    }
-    if (theOldSecond != this->mShowSecondBar || theOldFirst != this->mShowFirstBar)
-        this->GetForm()->UpdateHelpString();
+    ee_screens_portrait_set_unit(this, inUnit);
 }
 
 // FUNCTION: EXE 0x6594e8
 // Returns the player's improvement progress for a unit type
 // (EEPlayer::GetImprovementProgress, inline in EEPlayer.h; emitted after its first user)
+
+// The portrait's host (portrait.rs EE_SCREENS_PT_OP_*): units and nodes as handles, ioF the op's floats
+extern "C" int64_t ee_screenscpp_portrait(void* inPortrait, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
+{
+    return EEUICPortrait::HostOp(static_cast<EEUICPortrait*>(inPortrait), inOp, inA, inB, ioF);
+}
+
+int64_t EEUICPortrait::HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t inA, int64_t inB, float* ioF)
+{
+    EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(inA);
+    EETechTreeNode* theNode = reinterpret_cast<EETechTreeNode*>(inA);
+    GERhombus* theBars[3] = {inPortrait->mFirstBar, inPortrait->mSecondBar, inPortrait->mBackground};
+    GERectangle theRect;
+    UWideString theFormat;
+    UWideString theName;
+    float theFloat;
+    uint32_t theBits;
+    NEMessage* theMessage = NULL;
+    switch (inOp) {
+    case EE_SCREENS_PT_OP_HAS_UNIT: return inPortrait->mUnit != NULL;
+    case EE_SCREENS_PT_OP_RELEASE:
+        inPortrait->mButton->Release();
+        inPortrait->mUnit->Dereference();
+        return 0;
+    case EE_SCREENS_PT_OP_SET_UNIT: inPortrait->mUnit = reinterpret_cast<EEUnit*>(inA); return 0;
+    case EE_SCREENS_PT_OP_ACQUIRE:
+        inPortrait->mUnit->Reference();
+        inPortrait->mButton = inPortrait->mUnit->mStats->mButton;
+        inPortrait->mButton->Acquire();
+        return 0;
+    case EE_SCREENS_PT_OP_FACE:
+        inPortrait->mPortrait->SetTexture(inPortrait->mButton->GetTexture(), gScreenIndex);
+        inPortrait->mButton->SetFaceBitmap(inPortrait->mPortrait, inPortrait->GetRectangle(), gScreenIndex);
+        return 0;
+    case EE_SCREENS_PT_OP_STATE:
+        return (int64_t)inPortrait->mLevel | (int64_t)inPortrait->mShowFirstBar << 32 | (int64_t)inPortrait->mShowSecondBar << 33;
+    case EE_SCREENS_PT_OP_SET_STATE:
+        inPortrait->mLevel = (unsigned long)(inA & 0xffffffff);
+        inPortrait->mShowFirstBar = (inA >> 32 & 1) != 0;
+        inPortrait->mShowSecondBar = (inA >> 33 & 1) != 0;
+        return 0;
+    case EE_SCREENS_PT_OP_COMPLEX:
+        return (int64_t)inPortrait->mUnit->GetComplexUnit();
+    case EE_SCREENS_PT_OP_LOCAL:
+        return theUnit->GetPlayer() == gWorld.GetCurrentPlayer();
+    case EE_SCREENS_PT_OP_PRODUCTION:
+        return theUnit->mProductionTime;
+    case EE_SCREENS_PT_OP_DIRTY:
+        inPortrait->SetDirty(true);
+        return 0;
+    case EE_SCREENS_PT_OP_RESEARCHED:
+        return theUnit->GetPlayer()->GetResearchedImprovement(theUnit->GetUnitClass()->GetUnitType());
+    case EE_SCREENS_PT_OP_RESEARCH:
+        return theUnit->mCurrentResearch;
+    case EE_SCREENS_PT_OP_NODE:
+        return (int64_t)gWorld.GetCurrentPlayer()->GetTechTree()->Get((long)inA);
+    case EE_SCREENS_PT_OP_SCALE:
+        if (!theNode->mData->mMakesUnit || !inPortrait->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass])
+            return -1;
+        memcpy(&theBits, &inPortrait->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass]->mBuildTimeScale, 4);
+        return theBits;
+    case EE_SCREENS_PT_OP_BUILD_TIME:
+        return theNode->GetBuildTime();
+    case EE_SCREENS_PT_OP_RECT:
+    case EE_SCREENS_PT_OP_BAR:
+    case EE_SCREENS_PT_OP_DRAW_RECT:
+        theRect = inOp == EE_SCREENS_PT_OP_RECT ? inPortrait->GetRectangle()
+                : inOp == EE_SCREENS_PT_OP_BAR  ? theBars[inA]->GetRectangle() : inPortrait->GetCopiedDrawRectangle();
+        ioF[0] = theRect.GetLeft();
+        ioF[1] = theRect.GetTop();
+        ioF[2] = theRect.GetRight();
+        ioF[3] = theRect.GetBottom();
+        return 0;
+    case EE_SCREENS_PT_OP_SET_BAR:
+        theBars[inA]->SetRectangle(GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]));
+        return 0;
+    case EE_SCREENS_PT_OP_IMPROVEMENT_LEVEL:
+        return theUnit->GetStats()->mImprovement.GetLevel((long)inB);
+    case EE_SCREENS_PT_OP_IMPROVEMENT_TIME:
+        return inA == 1 ? gWorldTable.GetLongValue(EEWorldImprovementTime((long)inB))
+                        : gWorldTable.GetLongValue2(EEWorldImprovementTime((long)inB));
+    case EE_SCREENS_PT_OP_PROGRESS:
+        theFloat = theUnit->GetPlayer()->GetImprovementProgress(theUnit->GetUnitClass()->GetUnitType());
+        memcpy(&theBits, &theFloat, 4);
+        return theBits;
+    case EE_SCREENS_PT_OP_TOTAL_COST:
+        return theUnit->GetStats()->mImprovement.mTotalCost;
+    case EE_SCREENS_PT_OP_POINTS_MAX:
+        return gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax);
+    case EE_SCREENS_PT_OP_TEXT:
+        inPortrait->mText->SetText(UWideString(std::string(reinterpret_cast<const char*>(inA), (size_t)inB).c_str()));
+        return 0;
+    case EE_SCREENS_PT_OP_UPDATE_HELP:
+        inPortrait->GetForm()->UpdateHelpString();
+        return 0;
+    case EE_SCREENS_PT_OP_DRAW_BASE:
+        return inPortrait->UIControl::DrawPolygons();
+    case EE_SCREENS_PT_OP_DRAW:
+        if (inA == 0)
+            return inPortrait->GetRasterizer()->Draw(inPortrait->mPortrait, inPortrait->GetScreenIndex());
+        return inPortrait->GetRasterizer()->Draw(inA == 3 ? theBars[2] : theBars[inA - 1], inPortrait->GetScreenIndex());
+    case EE_SCREENS_PT_OP_CONTAINS:
+        return GERectangle(ioF[0], ioF[1], ioF[2], ioF[3]).Contains(inPortrait->GetMouseLocation());
+    case EE_SCREENS_PT_OP_BUILDING:
+        return inPortrait->mUnit->GetUnitClass()->IsBuilding();
+    case EE_SCREENS_PT_OP_HELP_RESEARCH:
+        gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_RESEARCH, theFormat);
+        if (theNode->mData->mMakesUnit == true)
+            gResource->GetString(gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID, theName);
+        else
+            gResource->GetString(theNode->mData->mNameID, theName);
+        sprintf(*sPortraitHelp, theFormat, (const char*)theName);
+        return 0;
+    case EE_SCREENS_PT_OP_HELP_IMPROVEMENT:
+        gResource->GetString(IDS_LEFT_RIGHT_CLICK_TO_CANCEL_IMPROVEMENT, theFormat);
+        inPortrait->mUnit->mStats->GetImprovementName(
+            theName, inPortrait->mUnit->GetPlayer()->GetResearchedImprovement(inPortrait->mUnit->GetUnitClass()->GetUnitType()));
+        sprintf(*sPortraitHelp, theFormat, (const char*)theName);
+        return 0;
+    case EE_SCREENS_PT_OP_ALIVE:
+        return inPortrait->mUnit && inPortrait->mUnit->mHitPoints > 0 && inPortrait->mUnit->mTileNode;
+    case EE_SCREENS_PT_OP_COMPLEX_FIELD:
+        return (int64_t)(EEComplexUnit*)inPortrait->mUnit->mComplexUnit;
+    case EE_SCREENS_PT_OP_REMOVE_TECHNOLOGY:
+        theMessage = new EEMRemoveTechnology(theUnit->GetUnitID(), (long)inB, true);
+        break;
+    case EE_SCREENS_PT_OP_REMOVE_IMPROVEMENT:
+        theMessage = new EEMRecord(kMessageRemoveImprovement, {theUnit->GetUnitID(), (long)inB});
+        break;
+    case EE_SCREENS_PT_OP_SOUND:
+        gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+        return 0;
+    }
+    if (theMessage != NULL)
+        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
+    return 0;
+}

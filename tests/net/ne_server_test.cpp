@@ -159,13 +159,9 @@ public:
 
 // ---- the Rust side's hosts (each op the statement NESynchronousServer.cpp's hosts make, on the world)
 
-struct RBase {   // the Rust server's base class fields
-    long mLastTickReceived = -2;
-    unsigned long mCTs = 0, mAverage = 0;
-    unsigned char mHumans = 1;
-    bool mPaused = false, mMultiplayer = false;
-};
-static RBase sBase;
+static EeNetComms* sComms;   // the Rust server's base class fields (ee_net comms.rs), as NESynchronousCommunications holds them
+static uint32_t BGet(EeNetCommsField f) { return ee_net_comms_get(sComms, f); }
+static void BSet(EeNetCommsField f, unsigned long v) { ee_net_comms_set(sComms, f, (uint32_t)v); }
 static EeNetServer* sRust;
 static UWideString sName("host");
 static bool sAnnounce;
@@ -302,23 +298,6 @@ static ptrdiff_t RustSvHost(void*, EeNetSvOp inOp, size_t a, size_t b, size_t c,
     case EeNetSvOp::SimMode:
         OpLine(theArgs);
         return Answer(gPlatSimMode);
-    case EeNetSvOp::BaseGet: {
-        OpLine(theArgs + " " + std::to_string(a));
-        ptrdiff_t r = 0;
-        switch ((EeNetSvBase)a) {
-        case EeNetSvBase::NumHumanPlayers: r = sBase.mHumans; break;
-        case EeNetSvBase::IsMultiplayerSession: r = sBase.mMultiplayer; break;
-        case EeNetSvBase::IsGamePaused: r = sBase.mPaused; break;
-        }
-        return Answer(r);
-    }
-    case EeNetSvOp::BaseSet:
-        OpLine(theArgs + " " + std::to_string(a) + " " + std::to_string(b));
-        if ((EeNetSvBase)a == EeNetSvBase::NumHumanPlayers)
-            sBase.mHumans = (unsigned char)b;
-        else if ((EeNetSvBase)a == EeNetSvBase::IsGamePaused)
-            sBase.mPaused = b != 0;
-        return Answer(0);
     case EeNetSvOp::ProtocolCount:
         OpLine(theArgs);
         return Answer((ptrdiff_t)NEProtocol::GetCount());
@@ -534,8 +513,9 @@ static ptrdiff_t RustMmHost(void*, EeNetMmOp inOp, size_t a, size_t b, size_t c,
         NEMessage* theSent = (NEMessage*)b;
         NEMessage* theResponse;
         if (a == kNetMessageCommunicationsTick)
-            theResponse = new NEMCommunicationsTickResponse(sBase.mCTs, ((NEMCommunicationsTick*)theSent)->GetCurrentCommunicationsTick(),
-                                                            sBase.mAverage);
+            theResponse = new NEMCommunicationsTickResponse(BGet(EeNetCommsField::CtsProcessed),
+                                                            ((NEMCommunicationsTick*)theSent)->GetCurrentCommunicationsTick(),
+                                                            BGet(EeNetCommsField::AveragePhysicsUpdateTime));
         else if (a == kNetMessageUnPauseGame)
             theResponse = new NEMUnPauseGameResponse(((NEMUnPauseGame*)theSent)->GetUniqueID());
         else
@@ -543,19 +523,6 @@ static ptrdiff_t RustMmHost(void*, EeNetMmOp inOp, size_t a, size_t b, size_t c,
         theResponse->SetOriginatingSlot(kSlotServer);
         return Answer((ptrdiff_t)theResponse, MsgTok((size_t)theResponse));
     }
-    case EeNetMmOp::LastTick:
-        OpLine(theArgs);
-        return Answer(sBase.mLastTickReceived);
-    case EeNetMmOp::SetLastTick:
-        OpLine(theArgs + " " + std::to_string(a));
-        sBase.mLastTickReceived = (long)a;
-        return Answer(0);
-    case EeNetMmOp::CtsProcessed:
-        OpLine(theArgs);
-        return Answer((uint32_t)sBase.mCTs);
-    case EeNetMmOp::AvgPhysics:
-        OpLine(theArgs);
-        return Answer((uint32_t)sBase.mAverage);
     case EeNetMmOp::ProcessSystemMessage:
         OpLine(theArgs + " " + MsgTok(a));
         VProcessSystemMessage(theMessage);
@@ -680,9 +647,9 @@ struct Sequence {
             ee_net_sv_queue_lengths(sRust, &a, &b);
             inputs = a;
             s2aw = b;
-            humans = sBase.mHumans;
-            last = (unsigned long)sBase.mLastTickReceived;
-            paused = sBase.mPaused;
+            humans = (unsigned char)BGet(EeNetCommsField::NumHumanPlayers);
+            last = (unsigned long)(long)(int32_t)BGet(EeNetCommsField::LastTickReceived);
+            paused = BGet(EeNetCommsField::IsGamePaused) != 0;
         } else {
             OrigServer* o = this->mOrig;
             v[0] = o->mCurrentCommunicationsTick;
@@ -849,11 +816,10 @@ struct Sequence {
             snprintf(theCall, sizeof(theCall), "base %u %lu", theField, theValue);
             this->Call(theCall);
             if (R) {
-                if (theField == 0) sBase.mHumans = (unsigned char)theValue;
-                else if (theField == 1) sBase.mMultiplayer = theValue != 0;
-                else if (theField == 2) sBase.mPaused = theValue != 0;
-                else if (theField == 3) sBase.mAverage = theValue;
-                else sBase.mCTs = theValue;
+                static const EeNetCommsField kFields[] = {EeNetCommsField::NumHumanPlayers,
+                                                          EeNetCommsField::IsMultiplayerSession, EeNetCommsField::IsGamePaused,
+                                                          EeNetCommsField::AveragePhysicsUpdateTime, EeNetCommsField::CtsProcessed};
+                BSet(kFields[theField], theValue);
             } else {
                 if (theField == 0) o->mNumHumanPlayers = (unsigned char)theValue;
                 else if (theField == 1) o->mIsMultiplayerSession = theValue != 0;
@@ -1048,7 +1014,8 @@ struct Sequence {
     void Run(uint32_t inSeed, int inSteps)
     {
         this->mRandom.mState = inSeed;
-        sBase = RBase();
+        ee_net_comms_free(sComms);
+        sComms = NULL;
         gS->mPublishFails = this->mRandom.Below(12) == 0;
         gPlatSimMode = this->mRandom.Below(10) == 0;
         static const unsigned long kIntervals[] = {200, 350, 350, 350, 700};
@@ -1071,8 +1038,9 @@ struct Sequence {
             EeNetSvArgs a = {theMax, (uint32_t)theInterval, thePTs, (uint32_t)theMaxRate, (uint32_t)theMinRate,
                              theFactor, (uint32_t)theMaxInterval, (uint32_t)theIncrement, (uint32_t)theDecrement,
                              (uint32_t)theCT, 0, theAllow};
-            sBase.mCTs = theCT;   // (the base class's constructor takes the tick)
-            sRust = ee_net_sv_new(NULL, RustSvHost, RustMmHost, RustQHost, &a);
+            sComms = ee_net_comms_new((uint32_t)theCT);   // (the base class's constructor takes the tick)
+            BSet(EeNetCommsField::NumHumanPlayers, 1);
+            sRust = ee_net_sv_new(NULL, RustSvHost, RustMmHost, RustQHost, &a, sComms);
             this->mPublished = ee_net_sv_get(sRust, EeNetSvGet::GameWasPublished) != 0;
         } else {
             this->mOrig = new OrigServer(theMax, theInterval, thePTs, theMaxRate, theMinRate, theFactor, theMaxInterval,

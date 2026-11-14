@@ -348,10 +348,41 @@ struct EEUIFMGFormCall {
     EEUnit* mUnit;
     EEUnit* mCaster;
     EECalamityClass* mCalamity;
+    EEMedia* mOldMedia;                     // UpdateBackgroundMedia's old and new media
+    EEMedia* mMedia;
     explicit EEUIFMGFormCall(EEUIFMainGame* inForm)
         : mForm(inForm), mPicked(NULL), mColor(NULL), mFlags(0), mMessage(NULL), mNode(NULL), mUnit(NULL),
-          mCaster(NULL), mCalamity(NULL) {}
+          mCaster(NULL), mCalamity(NULL), mOldMedia(NULL), mMedia(NULL) {}
 };
+
+// FUNCTION: EXE 0x664b4b
+// FUNCTION: EXE 0x66568e
+// FUNCTION: EXE 0x66572f
+// FUNCTION: EXE 0x6662d7
+// FUNCTION: EXE 0x666367
+// FUNCTION: EXE 0x66676e
+// FUNCTION: EXE 0x666960
+// FUNCTION: EXE 0x6669e8
+// FUNCTION: EXE 0x66716e
+// FUNCTION: EXE 0x6671b0
+// Runs a member that is Rust's (EE_SCREENS_MF_DO_*: Activate, Deactivate, Open, Close, DrawPolygons and the
+// original's UpdateBackgroundMedia, ShowAllBackgrounds, SetPauseText, PauseInformation, ResumeInformation,
+// SetChatTop, HideAllBackgrounds, HideMessages, RefreshSavedGroups, UpdateIconBar: ee_screens main_form.rs)
+int64_t EEUIFMainGame::Rust(uint32_t inWhich, int64_t inA)
+{
+    EEUIFMGFormCall theCall(this);
+    return ee_screens_main_form_member(&theCall, inWhich, inA);
+}
+
+void EEUIFMainGame::ShowAllBackgrounds()
+{
+    this->Rust(EE_SCREENS_MF_DO_SHOW_BACKGROUNDS);
+}
+
+void EEUIFMainGame::HideAllBackgrounds()
+{
+    this->Rust(EE_SCREENS_MF_DO_HIDE_BACKGROUNDS);
+}
 
 // FUNCTION: EXE 0x662e73
 // Creates the main game form: its panel groups, mouse actions (scroll, zoom, click, lasso, build, calamity),
@@ -454,18 +485,7 @@ EEUIFMainGame::~EEUIFMainGame()
 // Activates the form: frees the mouse, resumes a game paused only by leaving it, refreshes the saved groups
 void EEUIFMainGame::Activate()
 {
-    UWideString theString;
-
-    gMouse->mIsFrozen = false;
-    this->mScroll->mEdges = GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth() - 1.0f,
-                                  (float)gGameWindow->GetHeight() - 1.0f);
-    UIForm::Activate();
-    if (!gWorld.mUserPaused && gCommunications->GetIsGamePaused() == true && gCommunications->IsServer() == true) {
-        dynamic_cast<EEServer*>(gCommunications)->UnpauseGame();
-        gUserInterface->PostPauseInformation(false);
-    }
-    this->mIsCursorLocked = false;
-    this->RefreshSavedGroups();
+    this->Rust(EE_SCREENS_MF_DO_ACTIVATE);
 }
 
 
@@ -497,47 +517,6 @@ void EEUIFMainGame::BuildWall(const GE2DPoint& inStart, const GE2DPoint& inEnd)
     this->mBuild->BuildWall(inStart, inEnd);
 }
 
-// FUNCTION: EXE 0x664b4b
-// Loads the interface background media of the local player's epoch (the carbon one when carbon is used),
-// unloading the previous one, and redraws the form
-void EEUIFMainGame::UpdateBackgroundMedia(bool inOnlyIfVisible)
-{
-    EEMedia* theOld = EEMedia::Get(this->mMediaID);
-    unsigned long theID = 0x67;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-
-    if (thePlayer != NULL && thePlayer->mTechnologies != NULL &&
-        (!inOnlyIfVisible || this->GetManager()->IsFormVisible(this))) {
-        this->mMediaID = gWorld.GetCurrentPlayer()->mTechnologies->mMediaID;
-        if (gWorld.mUsingCarbon)
-            this->mMediaID = 0x377;
-        EEMedia* theMedia = EEMedia::Get(this->mMediaID);
-        if (theMedia != NULL) {
-            unsigned long i;
-            theMedia->LoadMedia();
-            if (theOld != NULL)
-                theOld->UnloadMedia();
-            for (i = 4; i != 0; i--) {
-                static_cast<UIBitmapBackground*>(this->GetBackgroundByID(theID))->SetBitmapTexture(static_cast<EEGraphicObject*>(theMedia)->mTextures[8]);
-                theID++;
-            }
-            static_cast<UIBitmapBackground*>(this->GetBackgroundByID(0x64))->SetBitmapTexture(static_cast<EEGraphicObject*>(theMedia)->mTextures[8]);
-            for (i = 0x12; i != 0; i--) {
-                static_cast<UIBitmapBackground*>(this->GetBackgroundByID(theID))->SetBitmapTexture(static_cast<EEGraphicObject*>(theMedia)->mTextures[4]);
-                theID++;
-            }
-        }
-        if (this->GetManager()->GetCurrentForm() == this) {
-            this->SetAllControlsDirty();
-            this->GetManager()->AddDirtyRectangle(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(),
-                                                    (float)gGameWindow->GetHeight()), this);
-        }
-    } else {
-        if (theOld != NULL)
-            theOld->UnloadMedia();
-        this->mMediaID = -1;
-    }
-}
 
 // FUNCTION: EXE 0x664cd5
 // Shows a text in the main game form's title label
@@ -554,27 +533,14 @@ void EEUIFMainGame::SetStatusText(const UWideString& inText)
 // background media
 void EEUIFMainGame::Close()
 {
-    this->HideMessages();
-    if (gGraphics != NULL) {
-        gGraphics->PostClearRenderObjects();
-        gGraphics->PostPushRenderObject(gU56534C);
-    }
-    this->UpdateBackgroundMedia(false);
-    gSoundManager->SetLatency(200);
-    UIForm::Close();
+    this->Rust(EE_SCREENS_MF_DO_CLOSE);
 }
 
 // FUNCTION: EXE 0x664d40
 // Deactivates the form: frees and resets the mouse and leaves any interface mode
 void EEUIFMainGame::Deactivate()
 {
-    gMouse->mIsFrozen = false;
-    gMouse->mShiftMode = false;
-    gMouse->mPointer = 0;
-    gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
-    this->mIsCursorLocked = true;
-    this->SetUIState(0);
-    UIForm::Deactivate();
+    this->Rust(EE_SCREENS_MF_DO_DEACTIVATE);
 }
 
 // FUNCTION: EXE 0x664dc4
@@ -627,17 +593,7 @@ void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
 // Draws the form's fixed background panels (the unit panels only with a selection)
 long EEUIFMainGame::DrawPolygons()
 {
-    if (gUIManager->mMainGameForm->mUIState != 0x11) {
-        this->GetBackgroundByID(0x74)->DrawBackground(this->GetBackgroundByID(0x74)->GetRectangle());
-        this->GetBackgroundByID(0x73)->DrawBackground(this->GetBackgroundByID(0x73)->GetRectangle());
-        this->GetBackgroundByID(0x72)->DrawBackground(this->GetBackgroundByID(0x72)->GetRectangle());
-        if (gUnitSelected) {
-            this->GetBackgroundByID(0x6f)->DrawBackground(this->GetBackgroundByID(0x6f)->GetRectangle());
-            this->GetBackgroundByID(0x70)->DrawBackground(this->GetBackgroundByID(0x70)->GetRectangle());
-            this->GetBackgroundByID(0x71)->DrawBackground(this->GetBackgroundByID(0x71)->GetRectangle());
-        }
-    }
-    return UIForm::DrawPolygons();
+    return (long)this->Rust(EE_SCREENS_MF_DO_DRAW);
 }
 
 // FUNCTION: EXE 0x6655da
@@ -648,39 +604,7 @@ void EEUIFMainGame::SetEntityGroup(long inGroup)
     ee_screens_main_form_entity_group(&theCall, inGroup);
 }
 
-// FUNCTION: EXE 0x66568e
-// Shows every background panel except the unit panels and enables the first two entity groups
-void EEUIFMainGame::ShowAllBackgrounds()
-{
-    unsigned long i;
 
-    for (i = 0x67; i < 0x7d; i++) {
-        if (i != 0x64 && i != 0x6b && i != 0x6f && i != 0x70 && i != 0x71)
-            this->GetBackgroundByID(i)->SetVisibility(true);
-    }
-    this->GetBackgroundByID(0x65)->SetVisibility(true);
-    this->GetBackgroundByID(0x90)->SetVisibility(true);
-    this->GetBackgroundByID(0x8f)->SetVisibility(true);
-    this->GetBackgroundByID(0x91)->SetVisibility(true);
-    for (i = 0; i < 2; i++)
-        this->GetEntityGroup(i)->Enable();
-    this->GetManager()->RedrawAll();
-}
-
-// FUNCTION: EXE 0x66572f
-// Shows the victory or defeat text
-void EEUIFMainGame::SetPauseText(bool inPaused)
-{
-    UWideString theText;
-    UITextLabel* theLabel = static_cast<UITextLabel*>(this->GetControl(kMainGameWinLose));
-
-    if (inPaused)
-        gResource->GetString(IDS_YOU_ARE_VICTORIOUS, theText);
-    else
-        gResource->GetString(IDS_YOU_HAVE_BEEN_DEFEATED, theText);
-    theLabel->SetText(theText);
-    theLabel->SetDisplayMode(kDisplayModeShown);
-}
 
 // FUNCTION: EXE 0x665a06
 // Tells whether a screen point is in the game view and not under the unit information panel
@@ -710,60 +634,13 @@ void EEUIFMainGame::SetErrorString(const UWideString& inText, unsigned long inIn
 // backgrounds and the civilization builder button's blinking
 void EEUIFMainGame::Open()
 {
-    UWideString theText;
-    unsigned long i;
-    UIEvent* theEvent;
-
-    gSoundManager->SetLatency(100);
-    gSoundManager->SetMasterVolume(gMasterVolume);
-    gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() / 2), (float)(gGameWindow->GetHeight() / 2)));
-    UIForm::Open();
-    theText = "";
-    for (i = 0; i < 0x24; i++)
-        (static_cast<UILBString*>(this->GetControl(kMainGameErrorLog)))->AppendLine(theText);
-    theEvent = EECreateScreenEvent(EE_SCREENS_MG_CANCEL_UI_MODE);
-    this->GetControl(kMainGameCancelUIMode)->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
-    this->GetControl(kMainGameCancelUIMode)->SetTriggerEvent(kControlTriggerRightButtonUp, theEvent);
-    theEvent->Dereference();
-    EESetCivBuilderButtonBlinking(this->mIsButtonBlinking);
-    EEUISCIFormManager::Get()->SetBlinking(this->mInfoBlinking);
-    this->mUnitHack->FillComboBox();
-    static_cast<EEUIFMGMainGroup*>(this->mGroups[0])->Open(this);
-    this->UpdateBackgroundMedia(false);
-    this->FnE123D();
-    this->GetControl(kMainGameMiniMap)->SetDisplayMode(kDisplayModeShown);
-    this->mCurrentGroup = 0;
-    this->SetEntityGroup(1);
-    this->GetEntityGroup(3)->Enable();
-    this->FnE123D();
-    if (gWorld.GetCurrentPlayer() != NULL && gWorld.GetCurrentPlayer()->mTechnologies != NULL)
-        gResource->GetString(EEEpochTitleID(gWorld.GetCurrentPlayer()->mTechnologies->mCurrentEpoch), theText);
-    else
-        theText = "";
-    this->SetStatusText(theText);
-    static_cast<EEUIFMGMainGroup*>(this->mGroups[0])->mL20 = 0;
-    this->mUnitInfoBackground = this->GetBackgroundByID(0x64);
-    EEPostGraphicsAll();
-    gGraphics->PostFadeIn(0);
-    gUIManager->GetMainGameForm()->GetEntityGroup(9)->Disable();
-    gUIManager->GetMainGameForm()->GetBackgroundByID(0x97)->SetVisibility(false);
-    gUIManager->GetMainGameForm()->GetEntityGroup(8)->Disable();
-    gUIManager->GetMainGameForm()->GetBackgroundByID(0x98)->SetVisibility(false);
+    this->Rust(EE_SCREENS_MF_DO_OPEN);
 }
 
 // FUNCTION: EXE 0x6662ac
 // Destroys a cancel-mode event (scalar deleting destructor)
 // (an inline COMDAT after its first user, Open)
 
-// FUNCTION: EXE 0x6662d7
-// Pauses the scrolling information message
-void EEUIFMainGame::PauseInformation()
-{
-    UITLScrolling* theText = static_cast<UITLScrolling*>(this->GetControl(kMainGameDialogMessage));
-
-    if (theText != NULL && theText->GetDisplayMode() == kDisplayModeShown)
-        theText->PauseScrolling();
-}
 
 // FUNCTION: EXE 0x6662f4
 // Reads the information and civilization builder blinking flags from a saved game (version 0.0xd2 on)
@@ -790,15 +667,6 @@ long EEUIFMainGame::Save(unsigned long inMajorVersion, unsigned long inMinorVers
     return theResult;
 }
 
-// FUNCTION: EXE 0x666367
-// Resumes the scrolling information message
-void EEUIFMainGame::ResumeInformation()
-{
-    UITLScrolling* theText = static_cast<UITLScrolling*>(this->GetControl(kMainGameDialogMessage));
-
-    if (theText != NULL && theText->GetDisplayMode() == kDisplayModeShown)
-        theText->ResumeScrolling();
-}
 
 // FUNCTION: EXE 0x666384
 // Starts placing a building from a unit's tech when it can be produced; otherwise beeps and explains in
@@ -843,18 +711,6 @@ void EEUIFMainGame::StartCalamity(long inTechnology)
     ee_screens_main_form_start(&theCall, 2, inTechnology);
 }
 
-// FUNCTION: EXE 0x66676e
-// Moves the chat lines down by an offset (below the information message)
-void EEUIFMainGame::SetChatTop(long inTop)
-{
-    unsigned long i;
-
-    for (i = 0x65; i < 0x6c; i++) {
-        EEUICChatLine* theLine = static_cast<EEUICChatLine*>(this->GetControl(i));
-        if (theLine != NULL)
-            theLine->SetShadowOffset(inTop);
-    }
-}
 
 // FUNCTION: EXE 0x66679a
 // Enters flare mode when units are selected
@@ -888,40 +744,7 @@ void EEUIFMainGame::SetUIState(long inUIState)
     ee_screens_main_form_ui_state(&theCall, inUIState);
 }
 
-// FUNCTION: EXE 0x666960
-// Hides every background panel and disables the first three entity groups
-void EEUIFMainGame::HideAllBackgrounds()
-{
-    unsigned long i;
 
-    for (i = 0; i < 0x16; i++)
-        this->GetBackgroundByID(i + 0x67)->SetVisibility(false);
-    this->GetBackgroundByID(0x64)->SetVisibility(false);
-    this->GetBackgroundByID(0x65)->SetVisibility(false);
-    this->GetBackgroundByID(0x90)->SetVisibility(false);
-    this->GetBackgroundByID(0x8f)->SetVisibility(false);
-    this->GetBackgroundByID(0x91)->SetVisibility(false);
-    for (i = 0; i < 3; i++)
-        this->GetEntityGroup(i)->Disable();
-}
-
-// FUNCTION: EXE 0x6669e8
-// Hides the information message and its portrait and moves the chat lines back up
-void EEUIFMainGame::HideMessages()
-{
-    UITLScrolling* theText = static_cast<UITLScrolling*>(this->GetControl(kMainGameDialogMessage));
-    UIControl* thePortrait = this->GetControl(kMainGameDialogPortrait);
-
-    if (theText != NULL) {
-        theText->StopScrolling();
-        theText->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        gPhysics->PostShowDialogMessage();
-    }
-    if (thePortrait != NULL)
-        thePortrait->SetDisplayMode(kDisplayModeHidden);
-    this->SetChatTop(0);
-}
 
 #include "ee/EEVictoryCondition.h"
 #include "ee/EEVCWonder.h"
@@ -1129,7 +952,7 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_SET_MUTED: gSoundManager->SetIsMuted(inA != 0); return 0;
     case EE_SCREENS_MF_OP_MUTED: return gSoundManager->GetIsMuted();
     case EE_SCREENS_MF_OP_GAME_RESULT: return gWorld.GetCurrentPlayer()->mGameResult;
-    case EE_SCREENS_MF_OP_PAUSE_TEXT: theForm->SetPauseText(inA != 0); return 0;
+    case EE_SCREENS_MF_OP_PAUSE_TEXT: theForm->Rust(EE_SCREENS_MF_DO_PAUSE_TEXT, inA); return 0;
     case EE_SCREENS_MF_OP_SET_DIRTY: theForm->GetControl((unsigned long)inA)->SetDirty(true); return 0;
     case EE_SCREENS_MF_OP_LAG_STATUS: return gWorld.mLagStatus;
     case EE_SCREENS_MF_OP_LAG_COLOR:
@@ -1198,8 +1021,8 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         ioIo->f[0] = theText->GetRectangle().GetBottom(), ioIo->f[1] = theText->GetRectangle().mTop;
         return 0;
     }
-    case EE_SCREENS_MF_OP_CHAT_TOP: theForm->SetChatTop((long)inA); return 0;
-    case EE_SCREENS_MF_OP_HIDE_MESSAGES: theForm->HideMessages(); return 0;
+    case EE_SCREENS_MF_OP_CHAT_TOP: theForm->Rust(EE_SCREENS_MF_DO_CHAT_TOP, inA); return 0;
+    case EE_SCREENS_MF_OP_HIDE_MESSAGES: theForm->Rust(EE_SCREENS_MF_DO_HIDE_MESSAGES); return 0;
     case EE_SCREENS_MF_OP_CREATE_ERROR_LOCK:
         ESVERIFY_AT(TSScheduler::CreateCriticalSection(theForm->mErrorCriticalSection) == keseOK, 633);
         return 0;
@@ -1326,6 +1149,116 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
         if (gUIManager->mMainGameForm != NULL)
             gUIManager->mMainGameForm->mRefreshGroup = true;
         return 0;
+    case EE_SCREENS_MF_OP_MOUSE_FREEZE: gMouse->mIsFrozen = inA != 0; return 0;
+    case EE_SCREENS_MF_OP_MOUSE_RESET:
+        gMouse->mShiftMode = false;
+        gMouse->mPointer = 0;
+        gMouse->SetBounds(GERectangle(ioIo->f[0], ioIo->f[1], ioIo->f[2], ioIo->f[3]));
+        return 0;
+    case EE_SCREENS_MF_OP_SCROLL_EDGES:
+        theForm->mScroll->mEdges = GERectangle(ioIo->f[0], ioIo->f[1], ioIo->f[2], ioIo->f[3]);
+        return 0;
+    case EE_SCREENS_MF_OP_BASE:
+        switch (inA) {
+        case EE_SCREENS_MF_BASE_ACTIVATE: theForm->UIForm::Activate(); break;
+        case EE_SCREENS_MF_BASE_DEACTIVATE: theForm->UIForm::Deactivate(); break;
+        case EE_SCREENS_MF_BASE_OPEN: theForm->UIForm::Open(); break;
+        case EE_SCREENS_MF_BASE_CLOSE: theForm->UIForm::Close(); break;
+        default: return theForm->UIForm::DrawPolygons();
+        }
+        return 0;
+    case EE_SCREENS_MF_OP_USER_PAUSED: return gWorld.mUserPaused;
+    case EE_SCREENS_MF_OP_IS_SERVER: return gCommunications->IsServer() == true;
+    case EE_SCREENS_MF_OP_UNPAUSE:
+        dynamic_cast<EEServer*>(gCommunications)->UnpauseGame();
+        gUserInterface->PostPauseInformation(false);
+        return 0;
+    case EE_SCREENS_MF_OP_GRAPHICS_UI:
+        if (gGraphics != NULL) {
+            gGraphics->PostClearRenderObjects();
+            gGraphics->PostPushRenderObject(gU56534C);
+        }
+        return 0;
+    case EE_SCREENS_MF_OP_LATENCY: gSoundManager->SetLatency((unsigned long)inA); return 0;
+    case EE_SCREENS_MF_OP_MASTER_VOLUME: gSoundManager->SetMasterVolume(gMasterVolume); return 0;
+    case EE_SCREENS_MF_OP_MOUSE_POSITION: gMouse->SetPosition(GE2DPoint(ioIo->f[0], ioIo->f[1])); return 0;
+    case EE_SCREENS_MF_OP_LOG_APPEND:
+        static_cast<UILBString*>(theForm->GetControl(kMainGameErrorLog))->AppendLine(UWideString(""));
+        return 0;
+    case EE_SCREENS_MF_OP_CANCEL_EVENT: {
+        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MG_CANCEL_UI_MODE);
+        theForm->GetControl(kMainGameCancelUIMode)->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
+        theForm->GetControl(kMainGameCancelUIMode)->SetTriggerEvent(kControlTriggerRightButtonUp, theEvent);
+        theEvent->Dereference();
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_BLINKING:
+        if (inA == 0)
+            EESetCivBuilderButtonBlinking(inB != 0);
+        else
+            EEUISCIFormManager::Get()->SetBlinking(inB != 0);
+        return 0;
+    case EE_SCREENS_MF_OP_FILL_HACK: theForm->mUnitHack->FillComboBox(); return 0;
+    case EE_SCREENS_MF_OP_MAIN_GROUP:
+        if (inA == 0)
+            static_cast<EEUIFMGMainGroup*>(theForm->mGroups[0])->Open(theForm);
+        else
+            static_cast<EEUIFMGMainGroup*>(theForm->mGroups[0])->mL20 = 0;
+        return 0;
+    case EE_SCREENS_MF_OP_HAS_TECHS: return gWorld.GetCurrentPlayer()->mTechnologies != NULL;
+    case EE_SCREENS_MF_OP_TEXT_EPOCH_TITLE:
+        gResource->GetString(EEEpochTitleID(gWorld.GetCurrentPlayer()->mTechnologies->mCurrentEpoch), theCall.mText);
+        return 0;
+    case EE_SCREENS_MF_OP_STATUS_TEXT: theForm->SetStatusText(theCall.mText); return 0;
+    case EE_SCREENS_MF_OP_UNIT_INFO_BACKGROUND: theForm->mUnitInfoBackground = theForm->GetBackgroundByID(0x64); return 0;
+    case EE_SCREENS_MF_OP_POST_GRAPHICS: EEPostGraphicsAll(); gGraphics->PostFadeIn(0); return 0;
+    case EE_SCREENS_MF_OP_MAIN_ENTITY_GROUP:
+        inB != 0 ? gUIManager->GetMainGameForm()->GetEntityGroup(inA)->Enable()
+                 : gUIManager->GetMainGameForm()->GetEntityGroup(inA)->Disable();
+        return 0;
+    case EE_SCREENS_MF_OP_MAIN_BACKGROUND:
+        gUIManager->GetMainGameForm()->GetBackgroundByID((unsigned long)inA)->SetVisibility(inB != 0);
+        return 0;
+    case EE_SCREENS_MF_OP_BACKGROUND: theForm->GetBackgroundByID((unsigned long)inA)->SetVisibility(inB != 0); return 0;
+    case EE_SCREENS_MF_OP_MEDIA_OLD: return (theCall.mOldMedia = EEMedia::Get(theForm->mMediaID)) != NULL;
+    case EE_SCREENS_MF_OP_FORM_VISIBLE: return theForm->GetManager()->IsFormVisible(theForm);
+    case EE_SCREENS_MF_OP_PLAYER_MEDIA_ID: return gWorld.GetCurrentPlayer()->mTechnologies->mMediaID;
+    case EE_SCREENS_MF_OP_USING_CARBON: return gWorld.mUsingCarbon;
+    case EE_SCREENS_MF_OP_MEDIA: return (theCall.mMedia = EEMedia::Get((long)inA)) != NULL;
+    case EE_SCREENS_MF_OP_MEDIA_LOAD: inA != 0 ? theCall.mMedia->LoadMedia() : theCall.mOldMedia->UnloadMedia(); return 0;
+    case EE_SCREENS_MF_OP_BG_TEXTURE:
+        static_cast<UIBitmapBackground*>(theForm->GetBackgroundByID((unsigned long)inA))
+            ->SetBitmapTexture(static_cast<EEGraphicObject*>(theCall.mMedia)->mTextures[inB]);
+        return 0;
+    case EE_SCREENS_MF_OP_REDRAW_ALL: theForm->GetManager()->RedrawAll(); return 0;
+    case EE_SCREENS_MF_OP_INFO_STOP: static_cast<UITLScrolling*>(theForm->GetControl(kMainGameDialogMessage))->StopScrolling(); return 0;
+    case EE_SCREENS_MF_OP_POST_SHOW_DIALOG: gPhysics->PostShowDialogMessage(); return 0;
+    case EE_SCREENS_MF_OP_INFO_PAUSE: {
+        UITLScrolling* theText = static_cast<UITLScrolling*>(theForm->GetControl(kMainGameDialogMessage));
+        inA != 0 ? theText->PauseScrolling() : theText->ResumeScrolling();
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_CHAT_SHADOW:
+    case EE_SCREENS_MF_OP_SAVED_GROUP_REFRESH:
+    case EE_SCREENS_MF_OP_ICON_BAR_UPDATE: {
+        UIControl* theControl = theForm->GetControl(inOp == EE_SCREENS_MF_OP_ICON_BAR_UPDATE ? kMainGameUnitIconBar : (unsigned long)inA);
+        if (theControl == NULL)
+            return 0;
+        if (inOp == EE_SCREENS_MF_OP_CHAT_SHADOW)
+            static_cast<EEUICChatLine*>(theControl)->SetShadowOffset((long)inB);
+        else if (inOp == EE_SCREENS_MF_OP_SAVED_GROUP_REFRESH)
+            dynamic_cast<EEUIBSavedGroup*>(theControl)->Refresh();
+        else
+            dynamic_cast<EEUICUnitIconBar*>(theControl)->Update();
+        return 1;
+    }
+    case EE_SCREENS_MF_OP_DRAW_BACKGROUND: {
+        UIBackground* theBackground = theForm->GetBackgroundByID((unsigned long)inA);
+        theBackground->DrawBackground(theBackground->GetRectangle());
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_MAIN_UI_STATE: return gUIManager->mMainGameForm->mUIState;
+    case EE_SCREENS_MF_OP_UNIT_SELECTED: return gUnitSelected;
     }
     return 0;
 }
@@ -1501,25 +1434,7 @@ void EEUIFMainGame::UpdateCursorKind()
     gMouse->mPointer = ee_screens_cursor_kind(&theRead);
 }
 
-// FUNCTION: EXE 0x66716e
-// Refreshes the ten saved-group buttons
-void EEUIFMainGame::RefreshSavedGroups()
-{
-    unsigned long i;
 
-    for (i = 0xd4; i <= 0xdd; i++) {
-        if (this->GetControl(i) != NULL)
-            dynamic_cast<EEUIBSavedGroup*>(this->GetControl(i))->Refresh();
-    }
-}
-
-// FUNCTION: EXE 0x6671b0
-// Refreshes the selected-units icon bar
-void EEUIFMainGame::UpdateIconBar()
-{
-    if (this->GetControl(kMainGameUnitIconBar) != NULL)
-        dynamic_cast<EEUICUnitIconBar*>(this->GetControl(kMainGameUnitIconBar))->Update();
-}
 
 // FUNCTION: EXE 0x6671df
 // Creates the calamity casting action
