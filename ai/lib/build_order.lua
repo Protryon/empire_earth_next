@@ -53,6 +53,9 @@ M.OPT = {
                             -- PRE_HUNT_MIN hunters
     pre_wood_cap = false,   -- (off until benched) the Prehistoric wood at most PRE_WOOD_MOST, its leftover idle (exact = 2)
     early_towers = false,   -- (on in boom_order) the Prehistoric towers from EARLY_TOWERS_AT citizens (his: 1.1 min)
+    iron_recover = false,   -- (off until benched) lost gold and iron sites retaken (all-in under 2 working), or replaced
+    metal_parity = false,   -- (off until benched) with iron_recover: behind the enemy's known metal sites, a loss takes
+                            -- the whole army, and without one the army takes an enemy or contested site
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
