@@ -59,6 +59,17 @@ pub fn append_waypoints(path: &mut Vec<EePathPoint>, waypoints: &[EePathPoint]) 
     !path.is_empty()
 }
 
+/// `MergeWaypoints` (`EEUnitClass`'s collision detour): the unit's waypoints are walked from the last; the first
+/// one on a tile of the path (the path's points tested from its end) is found, and the C++ appends the waypoints
+/// after it, in their order, to the path. Returns that waypoint's index (`None`: none lies on the path, nothing is
+/// appended).
+pub fn merge_waypoints(path: &[EePathPoint], waypoints: &[EePathPoint]) -> Option<usize> {
+    (0..waypoints.len()).rev().find(|&i| {
+        let waypoint = tile(&waypoints[i]);
+        path.iter().rev().any(|p| tile(p) == waypoint)
+    })
+}
+
 /// `JoinPaths`: when the detour starts on the tile of the point `count` from the path's end, the path up to that
 /// point and then the detour; `None` otherwise (and for an empty detour). `count` is at least 1 and at most the
 /// path's length at every call.
@@ -235,4 +246,18 @@ mod tests {
         // exactly reaching an edge takes the edge
         assert_eq!(bounds_around((26, 37), 26, 64), EePathBounds { top: 11, left: 0, bottom: 63, right: 52 });
     }
+    #[test]
+    fn merge_waypoints_finds_the_last_waypoint_on_the_path() {
+        let pt = |x: f32, y: f32| EePathPoint { x, y, z: 0.0 };
+        let path = [pt(0.5, 0.5), pt(1.5, 0.5), pt(2.5, 0.5)];
+        // the last waypoint on a path tile wins, the walk from the last waypoint
+        let waypoints = [pt(1.2, 0.9), pt(5.0, 5.0), pt(2.9, 0.1), pt(7.5, 7.5), pt(8.5, 8.5)];
+        assert_eq!(merge_waypoints(&path, &waypoints), Some(2));
+        // tiles by UMFloor: (-0.5, 0.5) is tile (-1, 0), not (0, 0)
+        assert_eq!(merge_waypoints(&path, &[pt(-0.5, 0.5)]), None);
+        assert_eq!(merge_waypoints(&path, &[pt(0.0, 0.99), pt(9.0, 9.0)]), Some(0));
+        assert_eq!(merge_waypoints(&[], &waypoints), None);
+        assert_eq!(merge_waypoints(&path, &[]), None);
+    }
+
 }

@@ -1526,6 +1526,16 @@ size_t ee_path_append_waypoints(const EePathPoint *path,
                                 size_t waypoint_count,
                                 EePathPoint *out);
 
+/// `MergeWaypoints`: the index of the last waypoint (walked from the end) that lies on a tile of the path, or -1;
+/// the C++ appends the waypoints after it to the path.
+///
+/// # Safety
+/// `path` valid for `count`, `waypoints` for `waypoint_count` points.
+ptrdiff_t ee_path_merge_waypoints(const EePathPoint *path,
+                                  size_t count,
+                                  const EePathPoint *waypoints,
+                                  size_t waypoint_count);
+
 /// `JoinPaths`' test: whether the detour starts on the tile of the point `join` from the path's end (the C++ then
 /// takes the path up to that point and the detour).
 ///

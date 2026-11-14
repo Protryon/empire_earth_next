@@ -2083,6 +2083,23 @@ pub unsafe extern "C" fn ee_path_append_waypoints(
     added.len()
 }
 
+/// `MergeWaypoints`: the index of the last waypoint (walked from the end) that lies on a tile of the path, or -1;
+/// the C++ appends the waypoints after it to the path.
+///
+/// # Safety
+/// `path` valid for `count`, `waypoints` for `waypoint_count` points.
+#[no_mangle]
+pub unsafe extern "C" fn ee_path_merge_waypoints(
+    path: *const EePathPoint,
+    count: usize,
+    waypoints: *const EePathPoint,
+    waypoint_count: usize,
+) -> isize {
+    // SAFETY: the caller's contract
+    let (path, waypoints) = unsafe { (path_points(path, count), path_points(waypoints, waypoint_count)) };
+    path_splice::merge_waypoints(path, waypoints).map_or(-1, |i| i as isize)
+}
+
 /// `JoinPaths`' test: whether the detour starts on the tile of the point `join` from the path's end (the C++ then
 /// takes the path up to that point and the detour).
 ///
