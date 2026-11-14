@@ -1226,77 +1226,16 @@ void EESMEffect::MaintainObject()
 // a player condition's current value or an object's unit count
 void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
 {
-    if (!EESimCaptureRecord::Active()) {
-        this->ExpandTokensUncaptured(inText, outText);
-        return;
-    }
-    unsigned int theSeed = EESMCaptureSeed();
+    bool theCapture = EESimCaptureRecord::Active();
+    unsigned int theSeed = theCapture ? EESMCaptureSeed() : 0;
     UWideString theText(inText);
-    this->ExpandTokensUncaptured(inText, outText);
-    EESMCaptureTokens(theText, outText, theSeed);
-}
-
-// ExpandTokens' body (ExpandTokens adds the simulation capture's SMTK record: ee/EEScenarioCapture.h)
-void EESMEffect::ExpandTokensUncaptured(const UWideString& inText, UWideString& outText)
-{
-    std::vector<UWideString> theMarkers;
-    std::vector<long> thePlayers;
-    UWideString theNumber;
-    UWideString theReplacement;
-    EEScenarioManager* theManager = gWorld.mScenarioManager;
-    theMarkers.push_back("/#OA");
-    theMarkers.push_back("/#PA");
-    theMarkers.push_back("/#OC");
-    outText = inText;
-    unsigned long theMarker = 0;
-    while (theMarker < 5) {
-        if (theMarkers.size() > theMarker && (theMarkers[theMarker]).GetLength() > 0) {
-            if (outText.Find(theMarkers[theMarker], 0) < outText.GetLength() - 4) {
-                unsigned long thePosition = outText.Find(theMarkers[theMarker], 0) +
-                    (theMarkers[theMarker]).GetLength();
-                theNumber = outText.GetIndexedSubstring(thePosition, thePosition + 4);
-                long theIndex = atoi(theNumber);
-                theReplacement.Clear();
-                switch (theMarker) {
-                case 0: {
-                    EESMObject* theObject = theManager->FindObjectByID(theIndex);
-                    if (theObject != NULL && theObject->mHasAttributeCheck != 0) {
-                        theObject->Evaluate(0);
-                        if (theObject->mUnits.size() > 0) {
-                            long theValue = theObject->GetUnitAttribute(theObject->GetAttribute(), theObject->GetIsAttributePercent(),
-                                gWorld.GetUnit(theObject->GetUnitAt(0)), 0, 0);
-                            sprintf(theReplacement, "%ld", theValue);
-                        }
-                    }
-                    break;
-                }
-                case 1: {
-                    EESMCondition* theCondition = theManager->FindConditionByID(theIndex);
-                    if (theCondition != NULL && theCondition->mType == kSMConditionPlayerAttribute) {
-                        theManager->ChoosePlayer(theCondition->mPlayer, &thePlayers, true);
-                        if (thePlayers.size() > 0) {
-                            long theValue = theCondition->GetPlayerValue(thePlayers.front(), theCondition->mAttribute);
-                            sprintf(theReplacement, "%ld", theValue);
-                        }
-                    }
-                    break;
-                }
-                case 2: {
-                    EESMObject* theObject = theManager->FindObjectByID(theIndex);
-                    if (theObject != NULL) {
-                        theObject->Evaluate(0);
-                        sprintf(theReplacement, "%zu", theObject->mUnits.size());
-                    }
-                    break;
-                }
-                }
-                outText = outText.GetIndexedSubstring(0, thePosition - theMarkers[theMarker].GetLength() - 1) +
-                    theReplacement + outText.GetIndexedSubstring(thePosition + 4, outText.GetLength());
-                continue;
-            }
-        }
-        ++theMarker;
-    }
+    EESMHostContext theContext = {NULL, NULL, this, NULL, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);   // ee_scenario tokens.rs expand_tokens
+    char* theResult = ee_scenario_expand_tokens(&theHost, (const char*)inText);
+    outText = theResult;
+    ee_scenario_text_free(theResult);
+    if (theCapture)
+        EESMCaptureTokens(theText, outText, theSeed);   // TEST ONLY: SMTK
 }
 
 

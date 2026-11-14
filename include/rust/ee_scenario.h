@@ -492,6 +492,18 @@ constexpr static const uint32_t EE_SCENARIO_ENTRIES_CONDITIONS = 0;
 
 constexpr static const uint32_t EE_SCENARIO_ENTRIES_EFFECTS = 1;
 
+/// `FindObjectByID(a)`: -1 without the object or (when `b` is 1) when its `mHasAttributeCheck` is 0, else its
+/// `Evaluate(0)` and then `mUnits.size()`.
+constexpr static const uint32_t EE_SCENARIO_READ_TOKEN_OBJECT = 66;
+
+/// `FindObjectByID(a)->GetUnitAttribute(GetAttribute(), GetIsAttributePercent(), gWorld.GetUnit(GetUnitAt(0)), 0,
+/// 0)`.
+constexpr static const uint32_t EE_SCENARIO_READ_TOKEN_VALUE = 67;
+
+/// `FindConditionByID(a)`: -1 without the condition or when its `mType` is not Player Attribute, else its `mPlayer`
+/// (`b` 0) or `mAttribute` (`b` 1).
+constexpr static const uint32_t EE_SCENARIO_READ_TOKEN_CONDITION = 68;
+
 /// `kSMTriggerOperator*`.
 constexpr static const int32_t EE_SCENARIO_OPERATOR_END = 0;
 
@@ -1118,6 +1130,20 @@ void ee_scenario_set_player_attribute(const EeScenarioHost *host,
 bool ee_scenario_object_evaluate(const EeScenarioHost *host,
                                  EeScenarioObjectFields *fields,
                                  bool include_dead);
+
+/// `EESMEffect::ExpandTokens` (tokens.rs): `text` (a C string) with its tags expanded, a new C string the caller frees
+/// with [`ee_scenario_text_free`].
+///
+/// # Safety
+/// `host` must be valid for the call, `text` a C string.
+char *ee_scenario_expand_tokens(const EeScenarioHost *host,
+                                const char *text);
+
+/// Frees a text [`ee_scenario_expand_tokens`] returned (NULL is ignored).
+///
+/// # Safety
+/// `text` must come from `ee_scenario_expand_tokens` and not be freed before.
+void ee_scenario_text_free(char *text);
 
 }  // extern "C"
 

@@ -21,6 +21,7 @@
 //! - [`round`]: `EEScenarioManager::Update`, the clocks and the trigger round with the timed effects.
 //! - [`player`]: the Set Player Attribute effect as a plan of writes (`EESMEffect::SetPlayerAttribute`).
 //! - [`aivar`]: the Set AI Variable effect's table as data (`EESMEffect::SetAIVariable`).
+//! - [`tokens`]: a message's tags expanded (`EESMEffect::ExpandTokens`).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
 pub mod aivar;
@@ -36,6 +37,7 @@ pub mod player;
 pub mod round;
 pub mod save;
 pub mod stream;
+pub mod tokens;
 pub mod trigger;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the

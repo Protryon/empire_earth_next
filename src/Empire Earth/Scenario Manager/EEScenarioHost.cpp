@@ -171,6 +171,24 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
     case EE_SCENARIO_READ_OBJ_NEAR_UNIT:
     case EE_SCENARIO_READ_PLAYER_UNIT:
         return EESMObjectRead(theContext, inOp, inA, inB, inC);
+    case EE_SCENARIO_READ_TOKEN_OBJECT: {
+        EESMObject* theObject = theManager->FindObjectByID(inA);
+        if (theObject == NULL || (inB != 0 && theObject->mHasAttributeCheck == 0))
+            return -1;
+        theObject->Evaluate(0);
+        return (int64_t)theObject->mUnits.size();
+    }
+    case EE_SCENARIO_READ_TOKEN_VALUE: {
+        EESMObject* theObject = theManager->FindObjectByID(inA);
+        return theObject->GetUnitAttribute(theObject->GetAttribute(), theObject->GetIsAttributePercent(),
+                                           gWorld.GetUnit(theObject->GetUnitAt(0)), 0, 0);
+    }
+    case EE_SCENARIO_READ_TOKEN_CONDITION: {
+        EESMCondition* theToken = theManager->FindConditionByID(inA);
+        if (theToken == NULL || theToken->mType != kSMConditionPlayerAttribute)
+            return -1;
+        return inB == 0 ? (int64_t)theToken->mPlayer : (int64_t)theToken->mAttribute;
+    }
     case EE_SCENARIO_READ_CONDITION: {
         EESMCondition* theOther = theManager->GetCondition((unsigned long)inA);
         return theOther == NULL ? -1 : theOther->Evaluate();

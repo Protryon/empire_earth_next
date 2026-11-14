@@ -19,6 +19,7 @@ use crate::player;
 use crate::round::{self, EeScenarioRoundHost};
 use crate::save;
 use crate::stream::EeScenarioStream;
+use crate::tokens;
 use crate::trigger::{
     self, EeScenarioConditionEntry, EeScenarioEffectEntry, EeScenarioTimedEffect, EeScenarioTriggerState,
 };
@@ -742,4 +743,32 @@ pub unsafe extern "C" fn ee_scenario_object_evaluate(
     // SAFETY: the caller's contract
     let mut t = ObjectTable { host: unsafe { host_of(host) }, fields };
     objeval::evaluate(&mut t, include_dead)
+}
+
+/// `EESMEffect::ExpandTokens` (tokens.rs): `text` (a C string) with its tags expanded, a new C string the caller frees
+/// with [`ee_scenario_text_free`].
+///
+/// # Safety
+/// `host` must be valid for the call, `text` a C string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_expand_tokens(
+    host: *const EeScenarioHost,
+    text: *const std::os::raw::c_char,
+) -> *mut std::os::raw::c_char {
+    // SAFETY: the caller's contract
+    let (mut h, bytes) = unsafe { (host_of(host), std::ffi::CStr::from_ptr(text).to_bytes()) };
+    let out = tokens::expand_tokens(&mut h, bytes);
+    std::ffi::CString::new(out).unwrap_or_default().into_raw()
+}
+
+/// Frees a text [`ee_scenario_expand_tokens`] returned (NULL is ignored).
+///
+/// # Safety
+/// `text` must come from `ee_scenario_expand_tokens` and not be freed before.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_text_free(text: *mut std::os::raw::c_char) {
+    if !text.is_null() {
+        // SAFETY: the caller's contract: a CString's raw pointer
+        drop(unsafe { std::ffi::CString::from_raw(text) });
+    }
 }
