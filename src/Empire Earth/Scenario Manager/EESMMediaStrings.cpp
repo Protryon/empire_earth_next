@@ -1,5 +1,6 @@
 // C:\EEX\Empire Earth\Scenario Manager\EESMMediaStrings.cpp (__FILE__ 0x4c5944, used by 0x1c5828's ESVERIFYs).
-// 0x1c5783..0x1c5f73: the seven media/briefing strings of a scenario. Unit flags: the exe
+// 0x1c5783..0x1c5f73: the seven media/briefing strings of a scenario (the trigger text file's sections, Export
+// 0x1c5d2e, Import 0x1c5dfe and Validate 0x1c5f20, are ee_scenario text.rs). Unit flags: the exe
 // module set. EESMEffect's COMDAT tail (the EESMUnitPriorityLess sort family) ends at 0x1c5783.
 #include <windows.h>
 #include <stdio.h>
@@ -119,57 +120,6 @@ bool EESMMediaStrings::GetMediaFile(const UWideString& inScenarioName, unsigned 
     return theResult;
 }
 
-// FUNCTION: EXE 0x5c5d2e
-// Writes the aftermath, hints, instructions and history texts as {tag} sections; returns 0, or 9 on a write error
-long EESMMediaStrings::Export(FSFileSpec& inFile)
-{
-    int theResult = fprintf(inFile, "{%s}\n", "1_After Math");
-    if (theResult >= 0) {
-        theResult = fprintf(inFile, "%s\n\n", (const char*)this->mAftermath);
-        if (theResult >= 0) {
-            theResult = fprintf(inFile, "{%s}\n", "0_Hints");
-            if (theResult >= 0) {
-                theResult = fprintf(inFile, "%s\n\n", (const char*)this->mHints);
-                if (theResult >= 0) {
-                    theResult = fprintf(inFile, "{%s}\n", "3_Instructions");
-                    if (theResult >= 0) {
-                        theResult = fprintf(inFile, "%s\n\n", (const char*)this->mInstructions);
-                        if (theResult >= 0) {
-                            theResult = fprintf(inFile, "{%s}\n", "2_History");
-                            if (theResult >= 0) {
-                                theResult = fprintf(inFile, "%s\n\n", (const char*)this->mHistory);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return theResult >= 0 ? 0 : 9;
-}
-
-// FUNCTION: EXE 0x5c5dfe
-// Stores an imported text section by its tag (history, instructions, hints, aftermath); returns 3 for an unknown tag
-long EESMMediaStrings::Import(const UString& inLine, unsigned long inKind, const UWideString& inText)
-{
-    long theResult;
-    if (inLine == "2_History") {
-        this->mHistory = inText;
-        theResult = 0;
-    } else if (inLine == "3_Instructions") {
-        this->mInstructions = inText;
-        theResult = 0;
-    } else if (inLine == "0_Hints") {
-        this->mHints = inText;
-        theResult = 0;
-    } else if (inLine == "1_After Math") {
-        this->mAftermath = inText;
-        theResult = 0;
-    } else
-        theResult = 3;
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5c5e78
 // Reads the seven media strings from the saved file; returns the first error (ee_scenario save.rs strings)
 long EESMMediaStrings::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
@@ -192,12 +142,3 @@ long EESMMediaStrings::Save(unsigned long inMajorVersion, unsigned long inMinorV
     return ee_scenario_strings_io(&theTable, 7, true);
 }
 
-// FUNCTION: EXE 0x5c5f20
-// Returns 0 when the line is one of the four text section tags, else 3
-long EESMMediaStrings::Validate(const UString& inLine, unsigned long inKind)
-{
-    bool theKnown = inLine == "2_History" || inLine == "3_Instructions" || inLine == "0_Hints";
-    if (theKnown)
-        return 0;
-    return inLine == "1_After Math" ? 0 : 3;
-}

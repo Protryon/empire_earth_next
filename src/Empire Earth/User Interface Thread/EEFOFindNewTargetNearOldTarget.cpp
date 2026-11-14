@@ -1528,7 +1528,7 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
             theLink = theLink->mNextPart;
         }
         if (inTarget->mUnitClass->GetCategory() == kUnitCategoryGate) {
-            EEComplexUnit* theFirst = dynamic_cast<EEUCGate*>(inTarget->mUnitClass.Get())->GetLastLinkedCarrier(
+            EEComplexUnit* theFirst = dynamic_cast<EEUCGate*>(inTarget->mUnitClass)->GetLastLinkedCarrier(
                 theLink->GetOutermostCarrier());
             EEComplexUnit* theSecond = dynamic_cast<EEUCGate*>(inTarget->GetUnitClass())->GetLastLinked(
                 theFirst->GetOutermostCarrier());
@@ -3402,7 +3402,7 @@ EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit)
             theCommand = theUnit->mCommand != NULL ? theUnit->mCommand->mType : 0;
             if (theCommand != kActionWaitForOpenPosition || theUnit->mGoalState == NULL || theUnit->mGoalState->mKind != kGoalGather)
                 continue;
-            EEUGRust* theGoal = EEGatherGoalCast(theUnit->mGoalState.Get());
+            EEUGRust* theGoal = EEGatherGoalCast(theUnit->mGoalState);
             if (theGoal != NULL && theGoal->GetGatherResource() == inUnit)
                 theResult = theUnit;
         }

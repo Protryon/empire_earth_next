@@ -280,7 +280,7 @@ long EEUICUnitIconBar::MouseLButtonUp()
                     gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
                     gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
                 } else if (!this->mSelecting && !UIControl::ShiftKeyPressed()) {
-                    theMessage = new EEMSelectUnit(theUnit->GetUnitID());
+                    theMessage = new EEMRecord(kMessageSelectUnit, {theUnit->GetUnitID()});
                     gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
                     gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
                 } else {
@@ -306,8 +306,7 @@ long EEUICUnitIconBar::MouseLButtonUp()
                     theGoal = theFirst->GetQueuedGoal(3);
                 if (theGoal == NULL &&
                     (theUnit->GetQueueGoals(1).size() == 0 || theUnit->mGoalQueues[1].GetFront() == NULL)) {
-                    theMessage = new EEMScrambleAircraft(theUnit->GetUnitID(), theFirst->GetTileX(),
-                                                         theFirst->GetTileY());
+                    theMessage = new EEMRecord(kMessageScrambleAircraft, {theFirst->GetTileX(), theFirst->GetTileY(), theUnit->GetUnitID()});
                     gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
                     gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
                 }
@@ -347,7 +346,7 @@ long EEUICUnitIconBar::MouseRButtonUp()
     if (this->GetRectangle().Contains(this->GetMouseLocation())) {
         EEComplexUnit* theUnit = this->GetUnit(this->GetIconIndex());
         if (theUnit && !this->mShowCargo) {
-            gCommunications->ProcessLocalUserInput(new EEMRemoveUnitFromSelectedGroup(theUnit->GetUnitID()), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageRemoveUnitFromSelectedGroup, {theUnit->GetUnitID()}), kSlotNone);
             gSoundManager->Play(sIconBarDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
         } else if (this->mShowCargo && theUnit) {
             EEComplexUnit* theTransport = gWorld.GetCurrentPlayer()->mSelectedGroup->GetUnit(0);

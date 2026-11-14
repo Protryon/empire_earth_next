@@ -352,7 +352,6 @@ fn hooks() -> EeWonAuthFlowHooks {
         context: std::ptr::null_mut(),
         add_ref: h_add_ref,
         release: h_release,
-        session_last_use: h_last_use,
         op_kill: h_kill,
         op_killed: h_killed,
         op_status: h_status,
@@ -504,7 +503,7 @@ fn take_trace() -> String {
 /// One script; the normalized trace of each step and of the end.
 fn run_script(steps: &[(char, [i64; 4])]) -> Vec<String> {
     with(|w| *w = World::default());
-    let fl = Box::into_raw(Box::new(EeWonAuthFlow::new(hooks())));
+    let fl = Box::into_raw(Box::new(EeWonAuthFlow::with_sessions(hooks(), Some(h_last_use))));
     with(|w| w.flow = fl as usize);
     let p = new_peer(false, 0);
     set_ctx_peer(p);
@@ -588,7 +587,7 @@ fn refresh_runs_one_request_for_every_waiting_op() {
 
 fn flow_status_after(steps: &[(char, [i64; 4])]) -> c_long {
     with(|w| *w = World::default());
-    let fl = Box::into_raw(Box::new(EeWonAuthFlow::new(hooks())));
+    let fl = Box::into_raw(Box::new(EeWonAuthFlow::with_sessions(hooks(), Some(h_last_use))));
     with(|w| w.flow = fl as usize);
     let p = new_peer(false, 0);
     set_ctx_peer(p);
@@ -608,7 +607,7 @@ fn flow_status_after(steps: &[(char, [i64; 4])]) -> c_long {
 #[test]
 fn the_peer_data_is_the_flows_own() {
     with(|w| *w = World::default());
-    let f = EeWonAuthFlow::new(hooks());
+    let f = EeWonAuthFlow::with_sessions(hooks(), Some(h_last_use));
     // the original's NULL before Init: none, expired
     assert!(f.peer_data().is_none());
     assert!(f.is_expired(0, CERT_NOW));

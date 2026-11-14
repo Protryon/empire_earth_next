@@ -1,9 +1,8 @@
 //! `GETerrainMesh::UpdateVisibleTerrain` (`GETerrainMesh.cpp`) as a plan: which tile rows the camera sees, the
 //! terrain and water polygons with their vertices, alphas, texture coordinates and material, the materials as texture
-//! handles in the order the C++ built its lists, the map-edge skirts and the space-map cliffs. The C++ keeps the
-//! mesh, its render-vertex arrays, the material lists keyed by `GETexture*`, the reference counts and the polygon
-//! arrays: it maps the plan's material indices to its lists and its vertex references to pointers (`GETerrainMesh.cpp`,
-//! the fill after `ee_ge_terrain_visible_plan`).
+//! handles in the order the C++ built its lists, the map-edge skirts and the space-map cliffs. The terrain mesh object
+//! (`tmobj.rs`) keeps the render-vertex arrays, the material lists, the textures' references and the polygon arrays:
+//! it maps the plan's material indices to its lists and its vertex references to pointers.
 //!
 //! The graphics thread calls this once a frame; it is not simulation code, but the C++'s `f32` order, its `long` and
 //! `unsigned long` arithmetic (`c_long`, `c_ulong`) and its quirks are kept: a tile layer's texture is chosen by the

@@ -1,13 +1,9 @@
 //! The C ABI of `GEViewport`'s math (`viewport.rs`), `GEPhysicalModel::Intersects(viewport)` (`physical.rs`) and
-//! `UpdateVisibleTerrain`'s plan (`terrain_visible.rs`). The viewport pointer is the C++ object itself
-//! (`GERustViewport.h` pins the layout); the plan is a Rust-owned handle the C++ reads through `GeVisibleOut` and
-//! frees with `ee_ge_terrain_visible_free`.
-
-use std::ffi::c_ulong;
+//! the rhombus corners. The viewport pointer is the C++ object itself (`GERustViewport.h` pins the layout).
+//! (`UpdateVisibleTerrain`'s plan is the terrain mesh's own, `tmobj.rs`.)
 
 use crate::bitmap;
 use crate::physical;
-use crate::terrain_visible::{self, GeVisibleInput, GeVisiblePolygon, VisiblePlan};
 use crate::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation};
 use crate::viewport::GeViewport;
 
@@ -169,93 +165,6 @@ pub unsafe extern "C" fn ee_ge_physical_visible(
 ) -> bool {
     // SAFETY: the function's contract
     unsafe { physical::model_visible(&*location, scale, &*internal, *center, radius, &*bbox, &*viewport, orthographic) }
-}
-
-// ---- UpdateVisibleTerrain ----
-
-/// The plan's arrays, borrowed from the handle until `ee_ge_terrain_visible_free`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct GeVisibleOut {
-    /// The visible tile rows, three values each (y, first x, last x).
-    pub row_count: usize,
-    pub rows: *const std::ffi::c_long,
-    pub bottom_left_x: c_ulong,
-    pub bottom_left_y: c_ulong,
-    pub tile_width: c_ulong,
-    pub tile_height: c_ulong,
-    pub num_visible_tiles: c_ulong,
-    pub visible_poly_count: c_ulong,
-    /// `side * side` flags each, `[a][b]` at `a * side + b`.
-    pub terrain_visible: *const u8,
-    pub water_visible: *const u8,
-    /// The terrain materials' textures (0 for none), in list order.
-    pub material_count: usize,
-    pub materials: *const usize,
-    pub terrain_polygon_count: usize,
-    pub terrain_polygons: *const GeVisiblePolygon,
-    pub water_polygon_count: usize,
-    pub water_polygons: *const GeVisiblePolygon,
-    pub edge_count: usize,
-    pub edge_points: *const Ge3DPoint,
-    pub cliff_count: usize,
-    pub cliff_points: *const Ge3DPoint,
-    /// Per cliff vertex, the terrain render vertex (`a`, `b`) it follows.
-    pub cliff_links: *const u32,
-}
-
-/// `UpdateVisibleTerrain`'s plan for a viewport: returns the handle and fills `out` with its arrays.
-///
-/// # Safety
-/// `input` describes a live mesh; `viewport` and `out` are valid. The handle must be freed with
-/// `ee_ge_terrain_visible_free`, after which `out`'s pointers are dead.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_terrain_visible_plan(
-    input: *const GeVisibleInput,
-    viewport: *const GeViewport,
-    orthographic: bool,
-    out: *mut GeVisibleOut,
-) -> *mut VisiblePlan {
-    // SAFETY: the function's contract
-    let plan = Box::new(unsafe { terrain_visible::update_visible_terrain(&*input, &*viewport, orthographic) });
-    let view = GeVisibleOut {
-        row_count: plan.rows.len() / 3,
-        rows: plan.rows.as_ptr(),
-        bottom_left_x: plan.bottom_left_x,
-        bottom_left_y: plan.bottom_left_y,
-        tile_width: plan.tile_width,
-        tile_height: plan.tile_height,
-        num_visible_tiles: plan.num_visible_tiles,
-        visible_poly_count: plan.visible_poly_count,
-        terrain_visible: plan.terrain_visible.as_ptr(),
-        water_visible: plan.water_visible.as_ptr(),
-        material_count: plan.materials.len(),
-        materials: plan.materials.as_ptr(),
-        terrain_polygon_count: plan.terrain_polygons.len(),
-        terrain_polygons: plan.terrain_polygons.as_ptr(),
-        water_polygon_count: plan.water_polygons.len(),
-        water_polygons: plan.water_polygons.as_ptr(),
-        edge_count: plan.edge_points.len(),
-        edge_points: plan.edge_points.as_ptr(),
-        cliff_count: plan.cliff_points.len(),
-        cliff_points: plan.cliff_points.as_ptr(),
-        cliff_links: plan.cliff_links.as_ptr(),
-    };
-    // SAFETY: the function's contract
-    unsafe { *out = view };
-    Box::into_raw(plan)
-}
-
-/// Frees a plan.
-///
-/// # Safety
-/// `plan` came from `ee_ge_terrain_visible_plan` and is freed once.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_terrain_visible_free(plan: *mut VisiblePlan) {
-    if !plan.is_null() {
-        // SAFETY: the function's contract
-        drop(unsafe { Box::from_raw(plan) });
-    }
 }
 
 // ---- GERhombus (GEBitmap's corners and stretch are its Rust object's: bmpobj.rs) ----

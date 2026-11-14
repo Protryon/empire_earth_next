@@ -311,8 +311,8 @@ def cmd_fonttest(a):
 TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
 # the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
 TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
-    "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp",
-    "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")]
+    "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")]   # (TSEvent and
+# TSCriticalSection are header classes over ee_ts since the Thread System moved to Rust)
 
 
 def cmd_tcptest(a):
@@ -489,6 +489,12 @@ WON_TESTS = {
     # that models the platform, the windows and the components as logged host ops (golden:
     # rust/crates/ee_won/src/golden_wmobj.txt)
     "won_wmobj_test": [],
+    # MSButtonBase and the check box and radio button over it as whole Rust objects (msbtnobj.rs) over a logged draw
+    # world (golden: rust/crates/ee_won/src/golden_msbtnobj.txt)
+    "won_msbtnobj_test": [],
+    # WONButton as a whole Rust object (wonbtnobj.rs) over a logged world of texts, images and fonts with reference
+    # counts (golden: rust/crates/ee_won/src/golden_wonbtnobj.txt)
+    "won_wonbtnobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -552,6 +558,17 @@ WON_TESTS = {
     "won_dialogs_test": [],
     # the lobby's eight small dialogs as one Rust object (golden: rust/crates/ee_won/src/golden_lobbydlg.txt)
     "won_lobbydlg_test": [],
+    # DialogLogic and its status and OK/Cancel boxes in Rust (golden: rust/crates/ee_won/src/golden_dlglogic.txt)
+    "won_dlglogic_test": [],
+    # RoomDialog, TOUDialog, BadUserDialog and ChooseNetworkAdapterDialog as lobby dialog kinds (golden:
+    # rust/crates/ee_won/src/golden_lobbyscr.txt)
+    "won_lobbyscr_test": [],
+    # the credits: ScrollingTextComponent (golden: rust/crates/ee_won/src/golden_scrolltext.txt) and CreditsDialog as
+    # a lobby dialog kind (golden_credits.txt)
+    "won_credits_test": [],
+    # ClientOptionsPopup, GameOptionsPopup and FriendOptionsPopup as one Rust object (golden:
+    # rust/crates/ee_won/src/golden_lobbypopup.txt)
+    "won_lobbypopup_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
@@ -647,8 +664,7 @@ WON_TESTS = {
     # the certificate classes, the peer data and PeerAuthClient / PeerAuthServer: the original's statements
     # (tests/won/won_auth_orig.h) against the game's classes over ee_won's peerobj module (golden:
     # rust/crates/ee_won/src/golden_peerobj.txt)
-    "won_peerobj_test": [WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]
-                        + [WON_SRC / "WONAuth" / "AuthSession.cpp"],
+    "won_peerobj_test": [WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")],
     # PeerAuthOp and PeerAuthServerOp: the original's statements against the Rust ops on the op base (golden:
     # rust/crates/ee_won/src/golden_peerop.txt)
     "won_peerop_test": "won_peerobj_test",
@@ -706,7 +722,7 @@ WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   *[WON_SRC / "WONCommon" / f for f in ("WONFile.cpp", "StringUtil.cpp")],
                                   *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
                                   WON_SRC / "WONMisc" / "HTTPEngine.cpp",
-                                  *[WON_SRC / "WONAuth" / f for f in ("AuthSession.cpp", "AuthContext.cpp")],
+                                  WON_SRC / "WONAuth" / "AuthContext.cpp",
                                   *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
 # real certificates (golden: rust/crates/ee_won/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
@@ -716,6 +732,11 @@ WON_TESTS["won_authhost_test"] = WON_TESTS["won_serverop_test"]
 # rust/crates/ee_won/src/golden_httpcache.txt, recorded over HTTPCache.cpp and ServerOp.cpp's HostCall, before the
 # classes moved into ee_won httpcache.rs); the same units as won_serverop_test
 WON_TESTS["won_httpcache_test"] = WON_TESTS["won_serverop_test"]
+# the peer sessions over real sockets on 127.0.0.1: a real peer authentication's sessions and keys, the transforms
+# (ADD_CRYPT) and messages through them, the auth context's session cache, sessions made with a known key (golden:
+# rust/crates/ee_won/src/golden_authsession.txt, recorded over AuthSession.cpp and ServerOp.cpp's HostCall before
+# the session became an ee_won handle in round 22: hostauth.rs); the same units as won_serverop_test
+WON_TESTS["won_authsession_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]
@@ -803,13 +824,15 @@ NET_TESTS = {
     # NESynchronousServer's tuning and booting (golden: rust/crates/ee_net/src/golden_tune.txt; the original members are
     # tests/net/orig_s/NESynchronousServerTune.inc)
     "ne_tune_test": [],
+    # NESynchronousServer (golden: rust/crates/ee_net/src/golden_server.txt; the original unit is
+    # tests/net/orig_s/NESynchronousServer.cpp)
+    "ne_server_test": [],
     # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the
     # original units with the TCP shim's entry table)
     # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp instead
     # of NEProtocol.cpp, `--print FILE`)
     "ne_protocol_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
-        "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp",
-        "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")],
+        "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
 }
 
 

@@ -237,7 +237,7 @@ void EESETSETObject::Show(EESETSEffectControls* inControls)
     inControls->mScenarioComboBoxes[1]->ChangeWidth(200);
     inControls->mScenarioComboBoxes[1]->DeleteAllEntries();
     inControls->mScenarioComboBoxes[1]->mMode = kSETriggerScreenObject;
-    gWorld.mScenarioManager->GetObjectNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
     for (unsigned long i = 0; i < theNames.size(); i++)
         inControls->mScenarioComboBoxes[1]->AppendLine(theNames[i]);
     inControls->mScenarioComboBoxes[1]->SetDisplayMode(kDisplayModeShown);
@@ -379,7 +379,7 @@ void EESETSETObjectToArea::Show(EESETSEffectControls* inControls)
     inControls->mScenarioComboBoxes[3]->ChangeWidth(200);
     inControls->mScenarioComboBoxes[3]->DeleteAllEntries();
     inControls->mScenarioComboBoxes[3]->mMode = kSETriggerScreenArea;
-    gWorld.mScenarioManager->GetAreaNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_AREAS, theNames);
     for (unsigned long i = 0; i < theNames.size(); i++)
         inControls->mScenarioComboBoxes[3]->AppendLine(theNames[i]);
     inControls->mScenarioComboBoxes[3]->SetDisplayMode(kDisplayModeShown);
@@ -475,7 +475,7 @@ void EESETSETObjectToObject::Show(EESETSEffectControls* inControls)
     inControls->mScenarioComboBoxes[2]->ChangeWidth(200);
     inControls->mScenarioComboBoxes[2]->DeleteAllEntries();
     inControls->mScenarioComboBoxes[2]->mMode = kSETriggerScreenObject;
-    gWorld.mScenarioManager->GetObjectNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
     for (unsigned long i = 0; i < theNames.size(); i++)
         inControls->mScenarioComboBoxes[2]->AppendLine(theNames[i]);
     inControls->mScenarioComboBoxes[2]->SetDisplayMode(kDisplayModeShown);

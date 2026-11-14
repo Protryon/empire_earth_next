@@ -532,7 +532,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
     UIEvent* theEvent;
     switch (this->mKind) {
     case kSETriggerScreenTrigger:
-        theSelection = this->mCurrentSelection;
+        theSelection = this->GetSelectionIndex();
         if (!UIsNone32(theSelection)) {
             theEvent = theScreen->mTabs[kSETriggerScreenTrigger]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
@@ -545,7 +545,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
         }
         break;
     case kSETriggerScreenCondition:
-        theSelection = this->mCurrentSelection;
+        theSelection = this->GetSelectionIndex();
         if (!UIsNone32(theSelection)) {
             unsigned long theCount = gWorld.mScenarioManager->mConditions.size();
             for (theIndex = 0; theIndex < theCount; theIndex++) {
@@ -577,7 +577,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
         }
         break;
     case kSETriggerScreenEffect:
-        theSelection = this->mCurrentSelection;
+        theSelection = this->GetSelectionIndex();
         if (!UIsNone32(theSelection) && theSelection > 0) {
             theEvent = theScreen->mTabs[kSETriggerScreenEffect]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
@@ -590,7 +590,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
         }
         break;
     case kSETriggerScreenObject:
-        theSelection = this->mCurrentSelection;
+        theSelection = this->GetSelectionIndex();
         if (!UIsNone32(theSelection) && theSelection > 0) {
             theEvent = theScreen->mTabs[kSETriggerScreenObject]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
@@ -603,7 +603,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
         }
         break;
     case kSETriggerScreenArea:
-        theSelection = this->mCurrentSelection;
+        theSelection = this->GetSelectionIndex();
         if (!UIsNone32(theSelection) && theSelection > 1) {
             theEvent = theScreen->mTabs[kSETriggerScreenArea]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
@@ -673,21 +673,21 @@ EESETSTrigger::~EESETSTrigger()
 // Sorts the scenario's triggers by name
 void EESETSTrigger::Sort()
 {
-    gWorld.mScenarioManager->SortTriggers();
+    gWorld.mScenarioManager->SortList(EE_SCENARIO_LIST_TRIGGERS);
 }
 
 // FUNCTION: EXE 0x5961df
 // Moves the selected trigger one place down
 void EESETSTrigger::MoveDown()
 {
-    gWorld.mScenarioManager->MoveTriggerDown(this->mSelection);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_TRIGGERS, this->mSelection, false);
 }
 
 // FUNCTION: EXE 0x5961ee
 // Moves the selected trigger one place up
 void EESETSTrigger::MoveUp()
 {
-    gWorld.mScenarioManager->MoveTriggerUp(this->mSelection);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_TRIGGERS, this->mSelection, true);
 }
 
 // FUNCTION: EXE 0x5961fd
@@ -696,7 +696,7 @@ void EESETSTrigger::Delete()
 {
     this->mFirstCondition = 0;
     this->mFirstEffect = 0;
-    gWorld.mScenarioManager->DeleteTrigger(this->mSelection);
+    gWorld.mScenarioManager->DeleteEntry(EE_SCENARIO_LIST_TRIGGERS, this->mSelection);
 }
 
 // FUNCTION: EXE 0x59621a
@@ -731,7 +731,7 @@ void EESETSTrigger::Duplicate()
 {
     this->mFirstCondition = 0;
     this->mFirstEffect = 0;
-    gWorld.mScenarioManager->DuplicateTrigger(this->mSelection);
+    gWorld.mScenarioManager->DuplicateEntry(EE_SCENARIO_LIST_TRIGGERS, this->mSelection);
 }
 
 // FUNCTION: EXE 0x5962cd
@@ -745,13 +745,13 @@ void EESETSTrigger::Activate()
     this->mSecondConditionComboBox->DeleteAllEntries();
     this->mFirstEffectComboBox->DeleteAllEntries();
     this->mSecondEffectComboBox->DeleteAllEntries();
-    gWorld.mScenarioManager->GetAllConditionNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_CONDITIONS, theNames);
     for (i = 0; i < theNames.size(); i++) {
         this->mFirstConditionComboBox->AppendLine(theNames[i]);
         this->mSecondConditionComboBox->AppendLine(theNames[i]);
     }
     theNames.clear();
-    gWorld.mScenarioManager->GetAllEffectNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_EFFECTS, theNames);
     for (i = 0; i < theNames.size(); i++) {
         this->mFirstEffectComboBox->AppendLine(theNames[i]);
         this->mSecondEffectComboBox->AppendLine(theNames[i]);
@@ -839,7 +839,7 @@ void EESETSTrigger::ChangeOperator(unsigned long inControlID)
 // Returns the scenario's trigger names
 void EESETSTrigger::GetNames(std::vector<UWideString>& outNames)
 {
-    gWorld.mScenarioManager->GetTriggerNames(outNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, outNames);
 }
 
 // FUNCTION: EXE 0x596737
@@ -952,7 +952,7 @@ void EESETSTrigger::New()
 {
     this->mFirstCondition = 0;
     this->mFirstEffect = 0;
-    gWorld.mScenarioManager->NewTrigger();
+    gWorld.mScenarioManager->NewEntry(EE_SCENARIO_LIST_TRIGGERS);
 }
 
 // FUNCTION: EXE 0x596c69

@@ -19,17 +19,8 @@ void MSCheckbox::DefaultCheckboxPainterFunc(Graphics& g,MSCheckbox* button) {
     MSGraphicsUtil::DrawCheck(g,0,0,MSCheckbox::mCheckboxWidth,MSCheckbox::mCheckboxHeight,button->IsPressed(),button->IsChecked());
 }
 // FUNCTION: WON 0x6ff470
-// Paints the check box: face, the box aligned vertically by the painter function, then the text
+// Paints the check box: face, the box aligned vertically and drawn by the painter function, then the text (the Rust
+// button's box paint, msbtnobj.rs)
 void MSCheckbox::Paint(Graphics& g) {
-    Component::Paint(g);
-    g.SetSysColor(StandardColor_3DFace);
-    if(!this->mIsTransparent) g.FillRect(0,0,this->Width(),this->Height());
-    int height=MSCheckbox::mCheckboxHeight;
-    int y=0;
-    if(this->mVAlign==VertAlign_Center) y=(this->Height()-height-this->mTopTextPad-this->mBottomTextPad)/2;
-    else if(this->mVAlign==VertAlign_Bottom) y=this->Height()-height-this->mTopTextPad-this->mBottomTextPad;
-    g.Translate(0,this->mTopTextPad+y);
-    MSCheckbox::CheckboxPainter(g,this);
-    g.Translate(0,-y-this->mTopTextPad);
-    this->DrawButtonText(g,0,0);
+    this->MCall(EeWonMsBtnCall::BoxPaint,(intptr_t)EeWonMsBox::Checkbox,(intptr_t)&g,MSCheckbox::mCheckboxHeight);
 }

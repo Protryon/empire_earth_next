@@ -52,6 +52,7 @@ def main():
     if got == want:
         print(f"sim_editor: PASS ({len(got)} lines)")
         return
+    sys.stdout.reconfigure(errors="replace")   # the texts are UTF-8; a console may not take them
     for line in list(difflib.unified_diff(want, got, "expected", "got", lineterm="", n=1))[:60]:
         print(line)
     sys.exit("sim_editor: FAIL")

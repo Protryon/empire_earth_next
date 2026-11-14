@@ -95,7 +95,7 @@ static void AIMembers(void* inContext, EeUnitsAIState* outState)
 
 static uint64_t AICommand(void* inContext)
 {
-    return reinterpret_cast<uintptr_t>(AIUnit(inContext)->mCommand.Get());
+    return reinterpret_cast<uintptr_t>(AIUnit(inContext)->mCommand);
 }
 
 static bool AIGatherInactive(void* inContext, uint32_t* outAction)

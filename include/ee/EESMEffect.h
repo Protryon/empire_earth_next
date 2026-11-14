@@ -10,7 +10,6 @@
 
 #include <vector>
 #include "lle/UWideString.h"
-#include "ee/EESMIDMap.h"
 #include "rust/ee_scenario.h"
 
 // the numbers (mPlayerAttribute .. mB193, their order and types) are EeScenarioEffectFields (ee_scenario fields.rs):
@@ -45,12 +44,6 @@ public:
     void Reset();                           // 0x1bb65a (the ctor's tail; assigns "" to the strings, the numbers below)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1bfa67
     virtual void ExpandTokens(const UWideString& inText, UWideString& outText);            // +0x04 0x1bef17
-    virtual void RemapAreas(EESMIDMap& inMap);  // +0x08 0x1bf508 (remaps +0x164/+0x120/+0x12c/+0x178)
-    virtual void RenumberAreas(unsigned long inOldIndex, unsigned long inNewIndex);  // +0x0c 0x1bf2b3 (renumbers Virtual08's)
-    virtual void RemapObjects(EESMIDMap& inMap);  // +0x10 0x1bf54c (remaps +0x158/+0x17c/+0x168/+0x130/+0x124, mV04)
-    virtual void RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex);  // +0x14 0x1bf384 (renumbers Virtual10's)
-    virtual void RemapTriggers(EESMIDMap& inMap);  // +0x18 0x1bf5c3 (remaps +0x180)
-    virtual void RenumberTriggers(unsigned long inOldIndex, unsigned long inNewIndex);  // +0x1c 0x1bf4c9 (renumbers +0x180)
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x20 0x1c0134
     // inline accessor (the effect editors' std::find takes its value as a temporary: 0x184bd6 exact; provisional name)
     long GetPlacedEffect() const { return this->mPlacedEffect; }

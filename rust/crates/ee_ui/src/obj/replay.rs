@@ -171,6 +171,8 @@ impl<'a> Replay<'a> {
             match op {
                 EeUiOp::StringNew => (fnv(a), b),
                 EeUiOp::TextSetBytes => (a, fnv(b)),
+                // a combo box's inserted line (R6 ui round 15)
+                EeUiOp::ComboAct if a == 1 => (a, fnv(b)),
                 EeUiOp::ClipboardSet | EeUiOp::TranslatedKey => {
                     let bytes = core::ffi::CStr::from_ptr(a as *const core::ffi::c_char).to_bytes_with_nul();
                     *self.last_bytes.borrow_mut() = bytes.to_vec();
@@ -179,7 +181,10 @@ impl<'a> Replay<'a> {
                 _ => (a, b),
             }
         };
-        self.expect(&format!("op {} {ta} {tb} {c} {d} {}", op as u32, hex4(&inb)));
+        // a combo box's typed key (R6 ui round 15)
+        // SAFETY: that action passes NUL-terminated bytes
+        let tc = if op == EeUiOp::ComboAct && a == 13 { unsafe { fnv(c) } } else { c };
+        self.expect(&format!("op {} {ta} {tb} {tc} {d} {}", op as u32, hex4(&inb)));
         loop {
             let l = self.next();
             let w: Vec<&str> = l.split(' ').collect();

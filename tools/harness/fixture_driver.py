@@ -550,28 +550,42 @@ def box_state(text):
 BOX_MODES = {'select': 0, 'add': 1, 'dead': 2}
 
 
-def box_step(g, form, name, mode, box, timeout=30):
+def box_step(g, form, name, mode, box, timeout=None):
     """One box selection through the fixture's boxselect command (the real press, drag and release) -> the step's
     evidence; raises when the fixture refuses it, no box selection message is built, or the selected group does not
-    settle on the expected units (the original's rule over the box's ids) within timeout s."""
+    settle on the expected units (the original's rule over the box's ids) within timeout s (30; the dead step 120:
+    its unit must be gone first, about 30 s of a Very Fast game)."""
+    if timeout is None:
+        timeout = 120 if mode == 'dead' else 30
     x0, y0, x1, y1 = (int(v) for v in box)
     seq = g.command(f'boxselect {form} {BOX_MODES[mode]} {x0} {y0} {x1} {y1}')
-    end = time.monotonic() + 20
-    while g.verdict(seq) not in ('box-released', 'box-busy', 'box-no-candidate', 'rejected') and time.monotonic() < end:
+    # the fixture waits for each stage the UI thread must reach (up to 20 s each), never for a time
+    end = time.monotonic() + 150
+    done = ('box-released', 'box-stalled', 'box-busy', 'box-no-candidate', 'rejected')
+    while g.verdict(seq) not in done and time.monotonic() < end:
         g.check_alive()
         time.sleep(0.2)
     verdict = g.verdict(seq)
-    if verdict != 'box-released':
+    if verdict != 'box-released':   # box-stalled: a stage the UI never reached (game.log "BOXSELECT seq N stalled at")
         raise RuntimeError(f'box {name}: the fixture says {verdict!r} for boxselect mode {mode} {box}')
     end = time.monotonic() + timeout
-    matched, last = 0, None
+    matched, last, seen = 0, None, []
     while time.monotonic() < end:
         g.check_alive()
         dismiss(g, g.state())
         last = box_state(g.raw())
         b = last['box']
+        if b:   # the distinct states the wait went through (the evidence of a step that does not settle)
+            state = dict(selection=last['selection'], expected=b['expected'], match=b['match'],
+                         dead_state=b['dead_state'])
+            if not seen or seen[-1][1] != state:
+                seen.append((round(time.monotonic() - end + timeout, 1), state))
+        # the dead step settles once the unit is gone: while it dies the game may drop it from the group (a dying
+        # unit is deselected unless it is the viewed one) before or after the box's message put it there, and the
+        # original's rule still counts it (valid) until it leaves the player's list
         if b and b['seq'] == seq and b['phase'] == 3 and b['match'] and \
-                sorted(last['selection'] or []) == sorted(b['expected']):
+                sorted(last['selection'] or []) == sorted(b['expected']) and \
+                (mode != 'dead' or b['dead_state'] in ('gone', 'invalid')):
             matched += 1
             if matched >= 2:   # two polls in a row: the group settled
                 break
@@ -582,7 +596,7 @@ def box_step(g, form, name, mode, box, timeout=30):
     row = dict(step=name, mode=mode, box=[x0, y0, x1, y1], seq=seq, phase=b.get('phase'), lasso=b.get('lasso'),
                before=b.get('before'), expected=b.get('expected'), selection=(last or {}).get('selection'),
                match=matched >= 2, dead=b.get('dead'), dead_in_lasso=b.get('dead_in_lasso'),
-               dead_state=b.get('dead_state'))
+               dead_state=b.get('dead_state'), seen=seen[-8:])
     g.note(f'BOX {name}: mode {mode} box {row["box"]} lasso {len(row["lasso"] or [])} selection '
            f'{len(row["selection"] or [])} expected {len(row["expected"] or [])} match {row["match"]}'
            + (f' dead {row["dead"]} in lasso {row["dead_in_lasso"]} state {row["dead_state"]}' if mode == 'dead' else ''))
@@ -597,8 +611,8 @@ def box_select(g, form):
     """The box selection exercise on the game form (EETestFixture.cpp "the box selection"): a box over the middle of
     the game view (it must catch some of the local player's units), its left half, the right half added with Shift
     (the group must keep the left half's units), and the whole box again with one unit of the selection disbanded
-    just before the release (the message must carry the dead unit's id, dead_in_lasso, and the unit must be dead by
-    the check, dead_state not alive). Each step must settle on the expected group -> evidence; raises on a failure."""
+    just before the box's message is sent (the message must carry the dead unit's id, dead_in_lasso, and the unit
+    must be gone by the check). Each step must settle on the expected group -> evidence; raises on a failure."""
     st = box_state(g.raw())
     if not st['view']:
         raise RuntimeError('box selection: the fixture reports no game view')
