@@ -4,14 +4,6 @@
 
 #include "lle/U2DPoint.h"
 
-#ifndef LLE_EXE_HEADERS   // the exe has one U2DRectangle key chain (its first unit), not one per includer
-                          // (EEContagionHelper.cpp, EECPAttackSubGroup.cpp: none)
-const UString kU2DRectangleLeftKey("U2DRectangle-Left");
-const UString kU2DRectangleTopKey("U2DRectangle-Top");
-const UString kU2DRectangleRightKey("U2DRectangle-Right");
-const UString kU2DRectangleBottomKey("U2DRectangle-Bottom");
-#endif
-
 // Engine template (U2DPolygon<float>'s bounds, GETerrainMesh.cpp). Members alphabetical like GERectangle (+0 bottom,
 // +4 left, +8 right, +0xc top: U2DConvexHull<float>::SetPoints 0x1002f795, Load 0x1003057d). (provisional names)
 template <class T> class U2DRectangle {

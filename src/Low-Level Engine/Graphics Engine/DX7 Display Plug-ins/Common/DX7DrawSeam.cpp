@@ -7,8 +7,8 @@
 #include "dx7/DX7DrawSeam.h"
 
 extern "C" {
-void ee_dx7cpp_enter(void* inRasterizer) { DX7Access(inRasterizer)->mDrawingAccess->Enter(); }
-void ee_dx7cpp_leave(void* inRasterizer) { DX7Access(inRasterizer)->mDrawingAccess->Leave(); }
+void ee_dx7cpp_enter(void* inRasterizer) { DX7Access(inRasterizer)->GetDrawingAccess()->Enter(); }
+void ee_dx7cpp_leave(void* inRasterizer) { DX7Access(inRasterizer)->GetDrawingAccess()->Leave(); }
 void ee_dx7cpp_set_2d_mode(void* inRasterizer, unsigned long inScreen) { DX7Access(inRasterizer)->Set2DMode(inScreen); }
 void ee_dx7cpp_set_3d_mode(void* inRasterizer, unsigned long inScreen) { DX7Access(inRasterizer)->Set3DMode(inScreen); }
 void ee_dx7cpp_set_texture(void* inRasterizer, void* inTexture, unsigned long inScreen)
@@ -28,6 +28,6 @@ Dx7StdColorVertex* ee_dx7cpp_lock_vb(void* inRasterizer, unsigned long inCount, 
 long ee_dx7cpp_unlock_vb(void* inRasterizer, unsigned long inScreen) { return DX7Access(inRasterizer)->UnlockVB(inScreen); }
 void ee_dx7cpp_add_triangles(void* inRasterizer, unsigned long inScreen, unsigned long inCount)
 {
-    DX7Access(inRasterizer)->mScreenStates[inScreen]->m32C[1] += inCount;
+    DX7Access(inRasterizer)->GetScreenState(inScreen)->m32C[1] += inCount;
 }
 }

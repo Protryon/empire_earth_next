@@ -26,7 +26,6 @@ public:
     ~UList() { this->Clear(); }
 
     void InsertAfter(UListNode<T>* inPrevious, const T& inData);   // LLE 0x10055aa3 (provisional names)
-    void InsertBefore(UListNode<T>* inNext, const T& inData);      // LLE 0x10055afd
     void Remove(UListNode<T>* inNode);
     void Clear();
     void AddHead(const T& inData);              // LLE 0x1001e135 (GELOD lists; provisional name, gemodel)
@@ -64,36 +63,6 @@ template <class T> void UList<T>::InsertAfter(UListNode<T>* inPrevious, const T&
         }
         theNode->mPrev = inPrevious;
         inPrevious->mNext = theNode;
-    } else {
-        theNode->mNext = this->mHead;
-        if (this->mHead)
-            this->mHead->mPrev = theNode;
-        this->mHead = theNode;
-    }
-    this->mCount++;
-}
-
-// inNext == 0: insert at the head
-template <class T> void UList<T>::InsertBefore(UListNode<T>* inNext, const T& inData)
-{
-    UListNode<T>* theNode = UList::sNodePool.New();
-    theNode->mData = inData;
-    theNode->mPrev = NULL;
-    theNode->mNext = NULL;
-    theNode->mData = inData;
-    theNode->mPrev = NULL;
-    theNode->mNext = NULL;
-    if (inNext) {
-        if (inNext->mPrev) {
-            theNode->mPrev = inNext->mPrev;
-            theNode->mNext = inNext;
-            inNext->mPrev = theNode;
-            theNode->mPrev->mNext = theNode;
-        } else {
-            theNode->mNext = this->mHead;
-            inNext->mPrev = theNode;
-            this->mHead = theNode;
-        }
     } else {
         theNode->mNext = this->mHead;
         if (this->mHead)

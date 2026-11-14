@@ -39,23 +39,3 @@ void UILayoutUtility::CalculateRectangle(const GERectangle& inParent, GERectangl
 {
     ee_ui_layout_calculate(reinterpret_cast<const EeUiLayout*>(this), UIRect(inParent), UIRect(outRectangle), inExclusive);
 }
-
-void UILayoutUtility::OffsetBottom(long inOffset, unsigned long inSize)
-{
-    ee_ui_layout_offset(reinterpret_cast<EeUiLayout*>(this), EeUiEdge::Bottom, inOffset, inSize);
-}
-
-void UILayoutUtility::OffsetLeft(long inOffset, unsigned long inSize)
-{
-    ee_ui_layout_offset(reinterpret_cast<EeUiLayout*>(this), EeUiEdge::Left, inOffset, inSize);
-}
-
-void UILayoutUtility::OffsetTop(long inOffset, unsigned long inSize)
-{
-    ee_ui_layout_offset(reinterpret_cast<EeUiLayout*>(this), EeUiEdge::Top, inOffset, inSize);
-}
-
-void UILayoutUtility::OffsetRight(long inOffset, unsigned long inSize)
-{
-    ee_ui_layout_offset(reinterpret_cast<EeUiLayout*>(this), EeUiEdge::Right, inOffset, inSize);
-}

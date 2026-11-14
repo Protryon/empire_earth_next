@@ -89,12 +89,6 @@ bool U2DSparseArrayPointContainer::Contains(const U2DPoint<long>& inPoint) const
     return ee_sparse_contains(this->mPoints, (int32_t)inPoint.mX, (int32_t)inPoint.mY);
 }
 
-// Returns the number of runs over all columns
-long U2DSparseArrayPointContainer::CountContainerNodes()
-{
-    return ee_sparse_run_count(this->mPoints);
-}
-
 // Rebuilds the set from a point list, sizing the column array from the list's x range
 void U2DSparseArrayPointContainer::Create(const std::vector<U2DPoint<long> >& inPoints)
 {

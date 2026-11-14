@@ -338,11 +338,6 @@ void EEUGRust::RetargetGatePart(EEComplexUnit*)
     Combat(EE_COMBAT_GOAL_RETARGET_GATE, this);
 }
 
-void EEUGRust::UpdateTargetTile()
-{
-    Combat(EE_COMBAT_GOAL_UPDATE_TILE, this);
-}
-
 long EEUGRust::GetAttackTileX() const
 {
     return AttackOf(this).tile[0];
@@ -356,21 +351,6 @@ long EEUGRust::GetAttackTileY() const
 bool EEUGRust::IsConvertAttack() const
 {
     return AttackOf(this).convert != 0;
-}
-
-GE3DPoint EEUGRust::GetAttackLocation() const
-{
-    EeCombatAttackGoal theRecord = AttackOf(this);
-    return GE3DPoint(Float(theRecord.location[0]), Float(theRecord.location[1]), Float(theRecord.location[2]));
-}
-
-void EEUGRust::SetAttackLocation(const GE3DPoint& inLocation)
-{
-    EeCombatAttackGoal theRecord = AttackOf(this);
-    theRecord.location[0] = Bits(inLocation.GetX());
-    theRecord.location[1] = Bits(inLocation.GetY());
-    theRecord.location[2] = Bits(inLocation.GetZ());
-    AttackSet(this, theRecord);
 }
 
 unsigned long EEUGRust::GetSidestepCount() const

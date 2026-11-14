@@ -243,13 +243,6 @@ GESurface* UIControl::GetDrawingSurface() const
     return this->mForm->GetManager()->GetDrawingSurface();
 }
 
-// FUNCTION: LLE 0x100658b3
-// Returns whether the control at this control's form slot holds the keyboard capture
-bool UIControl::GetHasKeyboardCapture() const
-{
-    return this->mForm->GetControl(this->mIndex) == this->mForm->GetKeyboardCaptured();
-}
-
 // FUNCTION: LLE 0x100658ce
 // Returns whether the control at this control's form slot holds the mouse capture
 bool UIControl::GetHasMouseCapture() const

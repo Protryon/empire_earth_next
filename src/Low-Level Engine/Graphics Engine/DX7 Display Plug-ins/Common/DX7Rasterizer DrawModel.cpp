@@ -75,7 +75,7 @@ void ee_dx7cpp_model_visible(void* inRasterizer, unsigned long inScreen, void* i
                              bool* outVisible, bool* outClipped)
 {
     DX7DrawAccess* theRasterizer = DX7Access(inRasterizer);
-    GEViewport* theViewport = &theRasterizer->mScreenStates[inScreen]->mViewport;
+    GEViewport* theViewport = &theRasterizer->GetViewport(inScreen);
     GETransformation theTransformation(inTransform);
     bool theVisible;
     bool theClipped;
@@ -90,14 +90,14 @@ void ee_dx7cpp_model_visible(void* inRasterizer, unsigned long inScreen, void* i
 float ee_dx7cpp_pixel_size(void* inRasterizer, unsigned long inScreen, void* inModel, const float inTransform[4][4], float inScale, bool inOrthographic)
 {
     DX7DrawAccess* theRasterizer = DX7Access(inRasterizer);
-    GEViewport* theViewport = &theRasterizer->mScreenStates[inScreen]->mViewport;
+    GEViewport* theViewport = &theRasterizer->GetViewport(inScreen);
     GETransformation theTransformation(inTransform);
     return theRasterizer->GetPixelSize(static_cast<GEModel*>(inModel), theViewport, theTransformation, inScale, inOrthographic);
 }
 
 float ee_dx7cpp_view_width(void* inRasterizer, unsigned long inScreen)
 {
-    return DX7Access(inRasterizer)->mScreenStates[inScreen]->mViewport.GetViewRectangle().GetWidth();
+    return DX7Access(inRasterizer)->GetViewport(inScreen).GetViewRectangle().GetWidth();
 }
 
 void ee_dx7cpp_material_info(void* inModel, unsigned long inScreen, unsigned long inIndex, unsigned long inLOD, EeDx7MaterialInfo* outInfo)
@@ -156,7 +156,7 @@ long DX7Rasterizer::Draw3DLine(std::vector<std::pair<GE3DPoint, float> >& inPoin
                                float inV, unsigned long inScreen, bool inOrthographic)
 {
     static_assert(sizeof(std::pair<GE3DPoint, float>) == 16, "ee_dx7/src/draw_model.rs draw_3d_line: (x, y, z, advance)");
-    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->mScreenStates[inScreen]->mViewport);
+    EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->GetViewport(inScreen));
     return ee_dx7r_draw_3d_line(this, inScreen, DX7DrawState(this, inScreen), reinterpret_cast<const float(*)[4]>(inPoints.data()),
                                 inPoints.size(), inTexture, inV, inOrthographic, &theViewport);
 }

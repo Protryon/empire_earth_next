@@ -4,6 +4,10 @@
 // 0x1006ff58..0x1007042f: the U2D key init chains, the sFontTable/sFont init chains (guarded atexit dtors), the ctor,
 // the static members, vector<GEFont*>::push_back last. The dtor and the implicit copy members are emitted by
 // UIControlsTable.cpp. UIForm.cpp's key chains start at 0x1007042f.
+//
+// UIFontTable is whole in Rust (rust/crates/ee_ui/src/fonttableobj.rs, R6 ui round 18): the records, the shared
+// font list, Create, CreateClosestFont, GetFont, FindOrCreateFont and DeleteAll; this unit keeps the forwarders and
+// the host of their calls out (UIFontTableHost: the file, the string table's face names, the GEFonts).
 #include <windows.h>
 #include <string.h>
 
@@ -29,53 +33,45 @@
 #include "lle/UIManager.h"
 #include "lle/UIFontTable.h"
 
-// One font record of the UI database (0x80 bytes) (provisional names).
-struct UIDbDataFonts {
-    char mFontName[0x6c];                   // +0x00 empty: no font
-    uint32_t mStringID;                     // +0x6c face name in the string table
-    uint32_t mSize;                         // +0x70
-    uint32_t mQuality;                      // +0x74
-    bool mBold;                             // +0x78 style bit 0x01
-    bool mItalic;                           // +0x79 style bit 0x02
-    bool mUnderline;                        // +0x7a style bit 0x04
-    bool mStyle10;                          // +0x7b style bit 0x10
-    bool mStyle08;                          // +0x7c style bit 0x08
-    char mPad[3];
-};
-static_assert(sizeof(UIDbDataFonts) == 128, "on-disk record: 128 bytes on every target");
-static_assert(sizeof(UIDbDataFonts) == sizeof(EeUiDbFont) && offsetof(UIDbDataFonts, mStringID) == offsetof(EeUiDbFont, string_id) &&
-                  offsetof(UIDbDataFonts, mBold) == offsetof(EeUiDbFont, bold) &&
-                  offsetof(UIDbDataFonts, mStyle08) == offsetof(EeUiDbFont, style08),
-              "the record ee_ui font.rs reads");
-
-std::vector<UIFontTable*> UIFontTable::sFontTable;
-std::vector<GEFont*> UIFontTable::sFont;
-
-// The Rust search's view of the shared fonts (ee_ui font.rs, docs/RUST_PLAN.md R6): the query, the list, a font's
-// CompareFont, Reference and construction
-struct UIFontQuery {
-    const UString* mName;
-    unsigned long mStyle;
-    unsigned long mQuality;
-    unsigned long mSize;
-};
-struct UIFontTableRust {
-    static std::vector<GEFont*>& Fonts() { return UIFontTable::sFont; }
-};
-extern "C" size_t ee_uicpp_font_count() { return UIFontTableRust::Fonts().size(); }
-extern "C" bool ee_uicpp_font_matches(const void* inQuery, size_t inIndex)
+// The Rust font table's calls out (EeUiOp, obj.rs; ee_ui fonttableobj.rs): a the file, manager, name or font
+static intptr_t UIFontTableHost(void* inObject, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
 {
-    const UIFontQuery* q = static_cast<const UIFontQuery*>(inQuery);
-    return UIFontTableRust::Fonts()[inIndex]->CompareFont(*q->mName, q->mStyle, q->mQuality, q->mSize);
-}
-extern "C" void ee_uicpp_font_take(size_t inIndex) { UIFontTableRust::Fonts()[inIndex]->Reference(); }
-extern "C" size_t ee_uicpp_font_create(const void* inQuery)
-{
-    const UIFontQuery* q = static_cast<const UIFontQuery*>(inQuery);
-    GEFont* theFont = new GEFont(*q->mName, q->mSize, q->mStyle, q->mQuality);
-    theFont->Reference();
-    UIFontTableRust::Fonts().push_back(theFont);
-    return UIFontTableRust::Fonts().size() - 1;
+    static UWideString sFace;   // Create's face name (kept between records, as the original's local was)
+    FSFileSpec* theFile = reinterpret_cast<FSFileSpec*>(a);
+    GEFont* theFont = reinterpret_cast<GEFont*>(a);
+    const UString& theName = *reinterpret_cast<const UString*>(b);
+    (void)inObject;
+    (void)f;
+    switch (inOp) {
+    case EeUiOp::TblFileOpen: theFile->Open(kFileAccessRead); return 0;
+    case EeUiOp::TblFileReadCount: {
+        unsigned long theCount = 0;
+        long theResult = theFile->Read(theCount);
+        return (intptr_t)((uint64_t)theCount << 32 | (uint32_t)theResult);
+    }
+    case EeUiOp::TblFileRead: {
+        unsigned long theRead = 0;
+        return theFile->Read(reinterpret_cast<unsigned char*>(b), (unsigned long)c, theRead);
+    }
+    case EeUiOp::TblFileClose: theFile->Close(); return 0;
+    case EeUiOp::FontName: {
+        reinterpret_cast<UIManager*>(a)->GetStringTable()->GetString((unsigned long)b, sFace);
+        UString* theCopy = new UString;
+        theCopy->Copy(sFace, 0, sFace.GetLength(), 0, true);
+        return (intptr_t)theCopy;
+    }
+    case EeUiOp::FontNameDelete: delete reinterpret_cast<UString*>(a); return 0;
+    case EeUiOp::FontCompare:
+        return theFont->CompareFont(theName, (unsigned long)c, (unsigned long)(uint32_t)d, (unsigned long)((uint64_t)d >> 32));
+    case EeUiOp::FontReference: theFont->Reference(); return 0;
+    case EeUiOp::FontNew: {
+        GEFont* theNew = new GEFont(*reinterpret_cast<const UString*>(a), (unsigned long)d, (unsigned long)b, (unsigned long)c);
+        theNew->Reference();
+        return (intptr_t)theNew;
+    }
+    case EeUiOp::FontRelease: theFont->Dereference(); return 0;
+    default: return 0;
+    }
 }
 
 // FUNCTION: LLE 0x1007010a
@@ -88,72 +84,26 @@ UIFontTable::UIFontTable()
 // Loads the UI font table from the database file: face name, size, quality and style per entry; returns the read result
 long UIFontTable::Create(FSFileSpec& inFile, UIManager* inManager)
 {
-    UWideString theString;
-    UString theUnused;
-    unsigned long theCount = 0;
-    unsigned long theRead = 0;
-    long theResult;
-    inFile.Open(kFileAccessRead);
-    theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        UIFontTable::sFontTable.resize(theCount, NULL);
-        for (unsigned long i = 0; i < theCount; i++) {
-            UIDbDataFonts theData;
-            UIFontTable* theTable;
-            theResult = inFile.Read(reinterpret_cast<unsigned char*>(&theData), sizeof(theData), theRead);
-            EeUiFontEntry theEntry = ee_ui_font_entry(reinterpret_cast<const EeUiDbFont*>(&theData));
-            if (theEntry.present) {
-                theTable = new UIFontTable;
-                inManager->GetStringTable()->GetString(theEntry.string_id, theString);
-                theTable->mName.Copy(theString, 0, theString.GetLength(), 0, true);
-                theTable->mStyle = theEntry.style;
-                theTable->mQuality = theEntry.quality;
-                theTable->mSize = theEntry.size;
-            } else
-                theTable = NULL;
-            UIFontTable::sFontTable[i] = theTable;
-        }
-    }
-    inFile.Close();
-    return theResult;
+    return (long)ee_ui_font_tables(EeUiFontsCall::Create, (intptr_t)&inFile, (intptr_t)inManager, 0, 0, UIFontTableHost);
 }
 
 // FUNCTION: LLE 0x1007025f
 // Returns a shared font for a table entry scaled to a pixel height on the screen (NULL for an empty entry)
 GEFont* UIFontTable::CreateClosestFont(unsigned long inIndex, unsigned long inPixelHeight)
 {
-    GEFont* theFont = NULL;
-    UIFontTable* theTable = UIFontTable::sFontTable[inIndex];
-    if (theTable) {
-        // the screen's LOGPIXELSY was 96 for the game (a DPI-unaware process): fonts are sized in game pixels
-        long theSize = ee_ui_font_closest_size(inPixelHeight);
-        theFont = UIFontTable::FindOrCreateFont(theTable->mName, theTable->mStyle, theTable->mQuality, theSize);
-    }
-    return theFont;
+    return reinterpret_cast<GEFont*>(
+        ee_ui_font_tables(EeUiFontsCall::CreateClosestFont, inIndex, inPixelHeight, 0, 0, UIFontTableHost));
 }
 
 // FUNCTION: LLE 0x100702d2
 // Deletes every font table entry, drops one reference to each shared font and empties both lists
-void UIFontTable::DeleteAll()
-{
-    unsigned long i;
-    for (i = 0; i < UIFontTable::sFontTable.size(); i++) {
-        if (UIFontTable::sFontTable[i])
-            delete UIFontTable::sFontTable[i];
-    }
-    for (i = 0; i < UIFontTable::sFont.size(); i++)
-        UIFontTable::sFont[i]->Dereference();
-    UIFontTable::sFontTable.resize(0, NULL);
-    // Fixed: the shared font list used to be kept, so a later lookup or DeleteAll used released fonts
-    UIFontTable::sFont.clear();
-}
+void UIFontTable::DeleteAll() { ee_ui_font_tables(EeUiFontsCall::DeleteAll, 0, 0, 0, 0, UIFontTableHost); }
 
 // FUNCTION: LLE 0x10070337
-// Returns the shared font for a table entry (no check for an empty entry)
+// Returns the shared font for a table entry (NULL for an empty entry: the original read through it)
 GEFont* UIFontTable::GetFont(unsigned long inIndex)
 {
-    UIFontTable* theTable = UIFontTable::sFontTable[inIndex];
-    return UIFontTable::FindOrCreateFont(theTable->mName, theTable->mStyle, theTable->mQuality, theTable->mSize);
+    return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::GetFont, inIndex, 0, 0, 0, UIFontTableHost));
 }
 
 // FUNCTION: LLE 0x1007035a
@@ -161,10 +111,9 @@ GEFont* UIFontTable::GetFont(unsigned long inIndex)
 GEFont* UIFontTable::FindOrCreateFont(const UString& inName, unsigned long inStyle, unsigned long inQuality,
                                       unsigned long inSize)
 {
-    UIFontQuery theQuery = {&inName, inStyle, inQuality, inSize};
-    return UIFontTableRust::Fonts()[ee_ui_font_find_or_create(&theQuery)];
+    return reinterpret_cast<GEFont*>(ee_ui_font_tables(EeUiFontsCall::FindOrCreateFont, (intptr_t)&inName, inStyle,
+                                                       inQuality, inSize, UIFontTableHost));
 }
-
 // vector<GEFont*>::push_back
 // SYNTHETIC: LLE 0x10070403
 // Compiler-generated: the U2D key and static vector init chains (names in analysis/lle/names.txt)

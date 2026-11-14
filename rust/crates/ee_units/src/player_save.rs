@@ -85,6 +85,21 @@ pub const EE_UNITS_PLAYER_SAVE_WRITE_ULONG: i32 = 5;
 pub const EE_UNITS_PLAYER_SAVE_WRITE_LONG: i32 = 6;
 pub const EE_UNITS_PLAYER_SAVE_WRITE_FLOAT: i32 = 7;
 pub const EE_UNITS_PLAYER_SAVE_WRITE_BOOL: i32 = 8;
+/// the units' `unsigned short` (unit_save.rs, unit_load.rs)
+pub const EE_UNITS_PLAYER_SAVE_READ_USHORT: i32 = 98;
+pub const EE_UNITS_PLAYER_SAVE_WRITE_USHORT: i32 = 99;
+
+/// Whether `op` is one of `EESavePrimitive`'s reads.
+pub fn is_save_read(op: i32) -> bool {
+    (EE_UNITS_PLAYER_SAVE_READ_ULONG..=EE_UNITS_PLAYER_SAVE_READ_BOOL).contains(&op)
+        || op == EE_UNITS_PLAYER_SAVE_READ_USHORT
+}
+
+/// Whether `op` is one of `EESavePrimitive`'s writes.
+pub fn is_save_write(op: i32) -> bool {
+    (EE_UNITS_PLAYER_SAVE_WRITE_ULONG..=EE_UNITS_PLAYER_SAVE_WRITE_BOOL).contains(&op)
+        || op == EE_UNITS_PLAYER_SAVE_WRITE_USHORT
+}
 // the load's parts
 /// a stand-in upgrade of the first unit class (index: the era's assertion line)
 pub const EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_NEW: i32 = 10;

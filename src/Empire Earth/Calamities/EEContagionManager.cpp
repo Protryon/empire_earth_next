@@ -25,9 +25,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
 
-const UString EEContagionManager::mNumHelpersStringID("NumHelpers-StringID");
-const UString EEContagionManager::mCalamityHelperOffsetStringID("CalamityHelperOffset-StringID");
-const UString EEContagionManager::mHelperFunctorIDStringID("HelperFunctorID-StringID");
 
 // FUNCTION: EXE 0x4b66f8
 // Tells whether the functor can infect the unit's category and type
@@ -142,31 +139,15 @@ EEContagionHelper* EEContagionManager::GetContagionHelper(long inHelperID)
 
 // FUNCTION: EXE 0x4b6940
 // Deletes the helpers and reads them from a saved game with their calamity indexes; returns the first read error
-// (a helper's own load result is ignored)
+// (a helper's own load result is ignored). Port (0.273, ee/EESaveGameFiles.h EESaveHasContagionCounter): the running
+// game's last helper id, which RestorePointers goes on from; an older save goes on from its highest helper's id as
+// the original did (ee_tech contagion_save.rs manager_load)
 long EEContagionManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theNumHelpers = 0;
-    EEContagionHelper* theHelper = NULL;
-    DeleteVectorContents(this->mHelpers);
-    this->mCalamityIndexes.clear();
-    long theResult = inFile.Read(theNumHelpers);
-    if (theResult == kErrorOK)
-        for (unsigned long i = 0; i < theNumHelpers && theResult == kErrorOK; i++) {
-            unsigned long theCalamityIndex;
-            theResult = inFile.Read(theCalamityIndex);
-            if (theResult != kErrorOK)
-                continue;
-            theHelper = new EEContagionHelper;
-            theHelper->Load(inMajorVersion, inMinorVersion, inFile);
-            this->mHelpers.push_back(theHelper);
-            this->mCalamityIndexes.push_back(theCalamityIndex);
-        }
-    // port (0.273, ee/EESaveGameFiles.h EESaveHasContagionCounter): the running game's last helper id, which
-    // RestorePointers goes on from; an older save goes on from its highest helper's id as the original did
-    this->mNextHelperID = 0;
-    if (theResult == kErrorOK && EESaveHasContagionCounter(inMajorVersion, inMinorVersion))
-        theResult = inFile.Read(this->mNextHelperID);
-    return theResult;
+    EEContagionIo theIo = {&inFile, NULL, this, inMajorVersion, inMinorVersion};
+    EeContagionIoFfi theFfi = {&theIo, &EEContagionIoCall};
+    return ee_contagion_manager_load(&this->mNextHelperID, EESaveHasContagionCounter(inMajorVersion, inMinorVersion),
+                                     theFfi);
 }
 
 // FUNCTION: EXE 0x4b69ef
@@ -199,25 +180,13 @@ long EEContagionManager::RestorePointers(std::vector<EECalamity*>& inCalamities)
 
 // FUNCTION: EXE 0x4b6abe
 // Writes each helper with its calamity's index to the saved game; returns 9 if a calamity is not active, else the
-// first write error
+// first write error; the last helper id from 0.273 on (ee_tech contagion_save.rs manager_save)
 long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theNumHelpers = this->mHelpers.size();
-    unsigned long theCalamityIndex = 0;
-    long theResult = outFile.Write(theNumHelpers);
-    if (theResult == kErrorOK)
-        for (std::vector<EEContagionHelper*>::iterator theIterator = this->mHelpers.begin();
-             theIterator != this->mHelpers.end() && theResult == kErrorOK; ++theIterator)
-            if (EECalamityManager::GetInstance()->GetCalamityIndex((*theIterator)->GetCalamity(),
-                                                                    (long&)theCalamityIndex)) {
-                theResult = outFile.Write(theCalamityIndex);
-                if (theResult == kErrorOK)
-                    theResult = (*theIterator)->Save(inMajorVersion, inMinorVersion, outFile);
-            } else
-                theResult = 9;
-    if (theResult == kErrorOK && EESaveHasContagionCounter(inMajorVersion, inMinorVersion))   // port (0.273)
-        theResult = outFile.Write(this->mNextHelperID);
-    return theResult;
+    EEContagionIo theIo = {&outFile, NULL, this, inMajorVersion, inMinorVersion};
+    EeContagionIoFfi theFfi = {&theIo, &EEContagionIoCall};
+    return ee_contagion_manager_save(this->mNextHelperID, EESaveHasContagionCounter(inMajorVersion, inMinorVersion),
+                                     theFfi);
 }
 
 // FUNCTION: EXE 0x4b6b4f
@@ -233,15 +202,3 @@ void EEContagionManager::SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 // TEMPLATE: EXE 0x4b6b74
 // TEMPLATE: EXE 0x4b6ba0
 
-// SYNTHETIC: EXE 0x4b662f
-// SYNTHETIC: EXE 0x4b6639
-// SYNTHETIC: EXE 0x4b664a
-// SYNTHETIC: EXE 0x4b6656
-// SYNTHETIC: EXE 0x4b6672
-// SYNTHETIC: EXE 0x4b667c
-// SYNTHETIC: EXE 0x4b668d
-// SYNTHETIC: EXE 0x4b6699
-// SYNTHETIC: EXE 0x4b66b5
-// SYNTHETIC: EXE 0x4b66bf
-// SYNTHETIC: EXE 0x4b66d0
-// SYNTHETIC: EXE 0x4b66dc

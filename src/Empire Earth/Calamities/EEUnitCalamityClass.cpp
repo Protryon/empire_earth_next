@@ -19,6 +19,7 @@
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
+#include "ee/EEContagionFunctor.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEMouse.h"
 #include "ee/EEUnit.h"
@@ -67,4 +68,13 @@ long EEUnitCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation
 long EEUnitCalamityClass::GetTargetKind()
 {
     return 3;
+}
+
+// The class's IsValidTarget: the fire's and the plague's functor decides (CanInfect), the other classes' the shared
+// rule (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+bool EEUnitCalamityClass::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
+{
+    if (ee_calamity_class_targets_by_functor((int32_t)this->mClassEnum))
+        return this->mFunctor->CanInfect(inTargetUnit);
+    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }
