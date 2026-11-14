@@ -13,6 +13,7 @@
 
 #include "lle/UILayoutUtility.h"
 #include "platform/PlatWindow.h"   // PlatKeyIsToggled
+#include "rust/ee_ui.h"
 
 class FSFileSpec;
 class GEBitmap;
