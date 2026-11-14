@@ -160,55 +160,43 @@ local function set_next_attack(view, memory)
 end
 M.set_next_attack = set_next_attack
 
--- ChooseFavoriteLandType and ChooseFavoriteSeaType (EnterEpoch): a random buildable soldier class of the epoch. DEVIATION: the classic's
--- favourite screener and AI lines are not exposed; the port draws among the soldier classes the player can train now
-local function choose_favorite_land(view, memory)
-    local list = {}
-    local land = {b_barracks = true, b_archery_range = true, b_stable = true, b_siege_factory = true,
-                  b_tank_factory = true, b_cyber_factory = true}
+-- ChooseFavoriteLandType, ChooseFavoriteSeaType and ChooseFavoriteSpaceType (EnterEpoch): EEAIFOFavoriteUnitScreener
+-- with an epoch span of 0 (only the classes of the current epoch, moving, attacking, not citizens, their node not
+-- obsolete) and the domain's IsFavorite screen, grouped by AI line (GetScreenedTypesByLine: a class with no line is
+-- left out); a random line, then a random class of it. Left as it was when none passes. The port had drawn among every
+-- soldier class it could train now: in the Stone Age half its favourites were Prehistoric clubmen and rock throwers,
+-- which its standing army then kept training (AI_RESEARCH 8.83)
+local function choose_favorite(view, domain, ok)
+    local lines = {}
     for _, c in ipairs(view.costs or {}) do
         if c.military and not c.building then
-            local cls = R.class_of(c.type)
+            local k = R.class_of(c.type)
             local t = U.class_tech(view, c.type)
-            local trained = false
-            for _, p in ipairs(t ~= nil and t.producers or {}) do
-                if land[p] then
-                    trained = true
-                end
+            local ak = k.ai_kind or 0
+            if (k.epoch or -1) == view.epoch and k.domain == domain and ak ~= 0 and (k.speed or 0) > 0
+                    and (k.attack or 0) > 0 and k.category ~= "citizen" and k.category ~= "boat"
+                    and t ~= nil and not t.obsolete and ok(c.type) then
+                lines[ak] = lines[ak] or {}
+                local l = lines[ak]
+                l[#l + 1] = c.type
             end
-            if cls.category == "soldier" and trained then
-                list[#list + 1] = c.type
-            end
         end
     end
-    table.sort(list)
-    if #list > 0 then
-        memory.cp.favorite_land = list[ai.random(1, #list)]
+    local keys = ai.keys(lines)
+    if #keys == 0 then
+        return nil
     end
-    -- ChooseFavoriteSeaType: a random warship class the player can train now that passes IsFavoriteSea (DEVIATION as
-    -- the land's: the screener's AI lines are not exposed)
-    local sea = {}
-    for _, c in ipairs(view.costs or {}) do
-        if c.military and not c.building and R.class_of(c.type).domain == "sea" and ARMY.favorite_sea_ok(c.type) then
-            sea[#sea + 1] = c.type
-        end
-    end
-    table.sort(sea)
-    if #sea > 0 then
-        memory.cp.favorite_sea = sea[ai.random(1, #sea)]
-    end
-    -- ChooseFavoriteSpaceType: a random space class the player can train now that passes IsFavoriteSpace (the same
-    -- DEVIATION); none before the space units, so no random draw then
-    local space = {}
-    for _, c in ipairs(view.costs or {}) do
-        if c.military and not c.building and R.class_of(c.type).domain == "space" and ARMY.favorite_space_ok(c.type) then
-            space[#space + 1] = c.type
-        end
-    end
-    table.sort(space)
-    if #space > 0 then
-        memory.cp.favorite_space = space[ai.random(1, #space)]
-    end
+    table.sort(keys)
+    local l = lines[keys[ai.random(1, #keys)]]
+    table.sort(l)
+    return l[ai.random(1, #l)]
+end
+
+local function choose_favorite_land(view, memory)
+    local cp = memory.cp
+    cp.favorite_land = choose_favorite(view, "land", ARMY.favorite_land_ok) or cp.favorite_land
+    cp.favorite_sea = choose_favorite(view, "sea", ARMY.favorite_sea_ok) or cp.favorite_sea
+    cp.favorite_space = choose_favorite(view, "space", ARMY.favorite_space_ok) or cp.favorite_space
 end
 
 -- KeepStandingArmy: the personality's standing_army per worker, up to the military room, 5 at a time, of the favourite
