@@ -67,9 +67,10 @@ game; when it ends, every swept 3D effect kind (EEEffectManager.cpp's EEEffectCa
 splash, tracers, disease, 3D projectile, shells, additive pass, citizen beam, teleport, virus, pulse cannon ball,
 time warp, shield, screen flash; since the sixteenth round also the hurricane, nuclear explosion, energy wave, goal,
 icon, tracer beam, command confirmation, energy wall, damage vent, farm, the smoke generators, particle emitter,
-multi-effect and volcano) is made in its world through each entry point that makes it, stepped, saved and
-loaded: EFSW one record per case (the creation, the save, the load and repair, the second save), EFST and EFMU after
-every update of the sweep. Its golden came from the C++ effects of f839d277 (R4.4, fourteenth and sixteenth rounds).
+multi-effect and volcano; since the nineteenth round the 2D kinds but the three that start at a weapon tag point,
+with a transformation and a line entry) is made in its world through each entry point that makes it, stepped, saved
+and loaded: EFSW one record per case (the creation, the save, the load and repair, the second save), EFST and EFMU after
+every update of the sweep. Its golden came from the C++ effects of f839d277 (R4.4, fourteenth, sixteenth and nineteenth rounds).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from

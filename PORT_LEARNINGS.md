@@ -18741,3 +18741,117 @@ the op switch take back half of what went. `UIControl`'s move, the bigger half, 
   through accessors); then the record inside each Rust object and `UIObjHost::Base` shrinking op by op, as planned in
   round 16. `UIForm::Create` and the manager's `LoadDatabase`/`CreateBackgrounds` read the database and make C++
   objects by type: they move with the controls table's factories.
+
+## R4.4, nineteenth round: the tracer beam and the volcano whole in Rust on EEE3DRust; the 2D sweep and the shockwave on EEE2DRust; the Graphics Thread re-measured (ee_gfx effect_tracer.rs, effect_volcano.rs, effect_shockwave.rs; branch rust-gfx25, 2026-11-14)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 18,672 lines before the round; 18,452 after the
+tracer beam (-220); 18,093 after the volcano (-359); 18,115 with the 2D sweep (+22, TEST ONLY); 17,977 after the
+shockwave (-138). `EEE3DTracerBeam`, `EEE3DVolcano` and `EEE2DShockwave` (`.cpp` and `.h`) deleted.
+
+| Commit | What | Graphics Thread C++ |
+|---|---|---|
+| 98e39572 | the tracer beam whole in Rust on `EEE3DRust` | -220 |
+| b81de992 | the volcano whole in Rust on `EEE3DRust` | -359 |
+| 07a17ce9 | the effects sweep gains the 2D kinds; its golden from f839d277 for seeds 2-7 | +22 (TEST ONLY) |
+| 8ce23c7c | the 2D shockwave whole in Rust on `EEE2DRust` | -138 |
+| 66166cf9 | merge of `rust` 354fde6a (clean; no conflict marker) | |
+
+- **The tracer beam (0x40, `effect_tracer.rs`), round 18's design.** The target is an `EEE3DRust` member
+  (`mTarget`): referenced by the unit constructor (the base effect's unit is the shooter: the shared two-unit
+  constructor passes `inFrom` for 0x40, `inTo` for the tracers and shells), replaced by `EEE3DRust::ReplaceUnit`
+  (kind 0x40 only, unless the effect keeps its unit), dereferenced by the destructor; Load's -1 sentinel and
+  RepairPointers' id resolution (7 when the unit is gone) stay in C++, the id itself read by Rust and handed over by
+  the host's `tracer_saved_target`. Aim's two ends are one host call (`tracer_ends`: the weapon tag point on the
+  turret part, the kind 6 tag point under int param 1, the stats' default point; the target point on the target's
+  location, scaled when the weapon tag point was used) and `beam.rs`'s aim the rest; the impact and the hit are host
+  calls after `tracer_step`'s events. Pass 6 composes the transformation with the size's scale through
+  `GeTransformation::compose` (`Apply(scale, combined)`) and stretches through two new table entries
+  (`model_stretch`: vertex array 0 and the sub-models' internal ys kept and stretched through `beam.rs`, then
+  `ComputeBoundingVolumes`; `model_unstretch`). The draw copies are record fields now. The `ee_gfx_tracer_*` and
+  `ee_gfx_beam_aim` exports are gone (`ee_gfx_beam_stretch`/`_y` stay: the table's entry calls them).
+- **The volcano (0x20, `effect_volcano.rs`).** Everything but `BuildModel`, which moved unchanged into the host
+  (`volcano_build`: the image's surface, the model's creation and material, `volcano.rs`'s mesh stored, the
+  placement, radius and texture) over the record's mesh lists: the terrain points and cone heights are a Rust list the
+  record owns (`volcano.mesh`, freed with the record), sized as the original's `resize` (kept contents). The queue's
+  morph reads and writes vertex array 0 through new table entries (`vertex_count`, `vertex_point`,
+  `set_vertex_point`, `model_bounds`, `model_normals`); its jitter draws from one `URandom` all volcanoes share (the
+  original's function-static generator, seed 1, now a Rust static: the same count and order of draws). The centre's
+  z stays the last vertex's height after a jitter, as the original's (saved). Facts gain `time1`/`time2`. The model is
+  `EEE3DRust::mVolcanoModel`; the destructor dereferences it when there is one (the original did it without a test).
+- **Golden drivers** (`build/gx25/drv/make.py` = round 18's generator, kept as `make_r18.py`, patched in order by
+  `patch_tracer.py`, `patch_volcano.py`, `patch_shock.py`; `run.sh NAME COMMIT KINDS SNAP` over
+  `build/gx25/ee_rust_P.lib`, the library from before the round). The world gained a target unit with references,
+  ids and the world's `GetUnit`, weapon tag points, turret parts and angles, the stats' default point, vertex points,
+  sub-models with internal transforms, model references and normals, a `URandom`, terrain lighting, `EEEffect2D`'s
+  queue, and a destruction at each case's end (so destructors are compared too). 300 effects on seed 1 and 3,000 on
+  seed 2, identical: tracer 6,992 and 71,123 lines (428 impacts, 323 hits, 8,600 stretched draws, 8,545 unit
+  replacements); volcano 7,074 and 70,654 (10,302 builds, 6,100 morphs, 528 ends); shockwave 7,206 and 70,778 (9,635
+  draws, 398 tag-point placements).
+  - The volcano's `BuildModel` is the same stub on both sides of its driver (it moved unchanged: the surface, the
+    model manager and the mesh are not the driver's world); the morph, step and draw are compared on its output.
+  - **Trap (driver):** a stub filling points with `GE3DPoint(Unit(), Unit(), Unit())` on one side and
+    `EeGe3DPoint{Unit(), Unit(), Unit()}` on the other differs: the constructor call's arguments are evaluated right
+    to left (clang-cl, the MS ABI), the braced list left to right. Draw into named temporaries first.
+  - **Trap (driver):** a generator line that contains `\n` inside a patch's non-raw triple-quoted string becomes a
+    real newline in the generated `make.py` (twice this round): double the backslash, or keep such code on one line.
+- **The 2D sweep.** `EEEffectCaptureSweep` makes, after its 65 3D cases (unchanged), the 2D kinds through each entry
+  point that makes them, with two new entries (at the unit's location, along the line between the two units): 114
+  records a seed. The muzzle flash, smoke muzzle blast and 2D projectile are left out: their start faults in
+  `EECombatEffectWeaponPoint` on a unit without weapon tag points at its animation (the sweep's unit); f839d277 faults
+  identically (the muzzle flash: the same frames, the same capture length up to the fault). The golden is the
+  original C++'s, f839d277 in a temporary worktree under `build/old25` (round 16's `sweep_old.patch`, this sweep
+  function, round 17's farm and vent fixes; its own staging root; removed after): its 18 digests equal this tree's.
+  - **Lesson:** a symbolizer for an `EE-SIM FAULT` line (`build/gx25/sym.py MAP LOG`: the `.map`'s `0001:` rows by
+    address) found both faults in a minute; run a new sweep on one seed (`probe.sh`) before the six-seed run.
+  - **Trap (cbindgen):** the header generator reads every `.rs` file in the crate's folder, not only the modules
+    `lib.rs` declares: a private `const NOT_OPEN: i32 = 4` in a file not yet in the module tree moved `NOT_OPEN` from
+    `ee_fs.h` into `ee_rust_common.h`. Keep drafts outside the crate, and constants inline or prefixed.
+- **The shockwave (0x12, `effect_shockwave.rs`), the first 2D sprite on `EEE2DRust`.** `EEE2DRust` gains the
+  sprite constructors (on a unit, at a point, for loading), Load/Save/RepairPointers out of line (the confirmation
+  keeps its 0 without the base's; the sprites go through `EEEffect2D`'s, whose results the original ignored, then
+  `ee_gfx_effect2d_file`), the base queue by kind (`EEEffect::Queue` for the confirmation, `EEEffect2D::Queue`
+  else) and three host calls (`spawn_point`: a random tag point of a kind through `EEEffect::GetRandom`, the unit
+  without any; `object_media` through `GetGraphicObject`; `object_texture`).
+- **Not moved: the farm (0x29).** Its meshes are Rust (`farm.rs`) but `EEE3DFarm` (693 lines) builds three models
+  through `gModelManager->CreateModel` and the materials' polygon and vertex ranges, copies the swaying vertices into
+  draw copies every queue (points and opacities, per vertex), sets placeholder triangles, and tests every farm tile and
+  doppelganger for visibility: it wants bulk vertex-array entries (points with opacities and colours in one call) and
+  model creation in the table, the same blockers as the render objects below.
+- **The re-measure (17,977 lines at 8ce23c7c, by unit).** Render objects and capture: `EERenderObject.cpp` 1,974,
+  `EEROUnits.cpp` 1,070, `EEROTerrain.cpp` 604, `EEROGroundShadows.cpp` 251, `EEROUserInterface.cpp` 136,
+  `EEROEffects.cpp` 66, `EERenderSnapshot.cpp` 92 (4.2k). Effects frame: `EEE3DRust.cpp` 927 and `EEE2DRust.cpp`
+  ~240 (hosts and the C++ kept for moved kinds), `EEEffectManager.cpp` 823 (constructor tables, the sweep),
+  `EEEffect.cpp` 762, `EEEffect2D.cpp` 317, `EEEffect3D.cpp` 125, `EEOrbital.cpp` 95 (3.3k). Effect leaves still C++:
+  the 2D sprites (light glow 444, marching icons 435, battlefield decal 387, impact 374, 2D particle 357, winter
+  breath 317, 2D projectile 307, fire 297, lightning 287, explosion 273, plasma pulse 264, muzzle blast 259, exhaust
+  trail 251, pulse wave 235, vortex 224, smoke plume 201, fire trail 186, water ripple 184, muzzle flash 122, blood
+  impact 90: 5.5k) and the 3D ones (farm 693, marching line 393, particle emitter 342, earthquake 325, rain 321, 3D
+  particle 319, storm 279, smoke generator 238, damaged effect 187, snow 173: 3.3k). The rest: `EEGraphics.cpp` 565,
+  `EEUnitPicker.cpp` 558, `EEGraphicalGoalManager.cpp` 504, `EEMouse.cpp` 74.
+  - **What blocks the render objects' draw passes** (counted call sites): per-vertex writes into vertex arrays
+    (`SetPoint`/`SetColor`/`SetOpacity`/`SetTextureCoordinate`: units 13, terrain 21, shadows 11, the capture 10, the
+    farm 15) want a bulk entry (one call writes a range of vertices from a Rust slice of point, colour, opacity and
+    uv), not one FFI call a vertex; polygon arrays and the materials' ranges (`GetPolygonArray`,
+    `SetPolygonStartingIndex`/`RangeLength`, `SetVertexStartingIndex`/`RangeLength`: terrain 26, units 8, shadows 8)
+    and model creation (`CreateModel`: terrain 4, shadows 1, farm 3) want table entries over a model handle;
+    special rasterizer draws with no table entry yet (`DrawSky`, `DrawTerrainHighlight`, `DrawPolygons`,
+    `DrawUnitModel`/`DrawShadows`/`DrawUnitShadows`, `ClearZBuffer`, `GetFogAttributes`, `SetFogRange`/`Color`/`Type`,
+    `SetAmbientIntensity`, `GetCanModulateTextureAlpha`, the viewports' `SetViewport` with their own viewports); and
+    the labels (`GEText` and `DrawClippedText` per unit: the table's `draw_text` covers one font and form). The state
+    calls (blending, z, culling, alpha) are already table entries. The next useful step is the bulk vertex write and
+    the polygon-range entries, then `EEROGroundShadows` (the smallest pass) as their first user.
+- **Behaviour:** none intended (each commit's effects capture equals the C++ golden of f839d277 on seeds 2-7). Two
+  hardenings: the tracer beam's destructor does not dereference the load-time -1 sentinel (the original would have
+  faulted on an effect destroyed between Load and RepairPointers); the volcano's destructor tests its model.
+- **Gates.** On the result merged with rust (354fde6a, at 66166cf9): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (3,182 tests; clippy, rustfmt, header), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169 digests, late 170, calamity 183; 4, 4 and 3 records without a golden come from the merged branches), the effects capture at seeds 2-7 PASS (18 digests, the C++ golden with the 2D sweep), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected), the tour (`fixture_game.py --exercise tour --play-seconds 60` on the open tree, under the harness lock) `RESULT PASS tour`, and the orders game without `--box-select` `RESULT PASS random-game` (gather, repair, queued repair and move given: command confirmations drawn; patrol and attack-ground skipped, no button and no unit). Per commit: the build 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-7 PASS against the C++ golden, the Rust gate's tests PASS (3,063, 3,068, 3,072) with clippy and rustfmt fixed before committing where they failed (the tracer's format; the volcano's manual clamp kept as the original's form); the drivers rerun on each later tree identical.
+- **Only a tour or a person reaches:** the tracer beam's stretched draw and its restore through the new table
+  entries (a missing restore would leave every later beam longer each frame; the sub-models' ys), its additive
+  variant; the volcano's morph through the vertex entries, its normals and bounds, and its pass-4 depth range; the
+  shockwave's camera-facing draw; loading saved games holding a beam (the target's id through the host), a volcano
+  (the rebuild over the record's lists) or a shockwave (the sweep loads copies of all three). Where they appear: tracer
+  beams on beam weapons' shots (laser, the cybers' beams), volcanoes from the volcano calamity, shockwaves on unit
+  hits and explosions.
+- **Next:** the bulk vertex write and polygon ranges in the table (with `EEROGroundShadows`, then the farm); the
+  other 2D sprites on `EEE2DRust` one at a time (each now checked by the 2D sweep against the original: the aged and
+  simple ones first, the vortex, pulse wave, fire trail, water ripple); a sweep unit with weapon tag points for the
+  three weapon-point sprites.
