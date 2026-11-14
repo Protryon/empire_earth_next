@@ -1,19 +1,29 @@
-//! The scroll arrow (`UIScrollButton`) whole in the Rust button (R6 ui round 12): its record ([`ScrollFields`]) is
-//! the button object's [`Sub`] and every method is here.
+//! The scroll arrow (`UIScrollButton`) and the blinking button (`UIBlinkingButton`) whole in the Rust button (R6 ui
+//! round 12): their records ([`ScrollFields`], [`BlinkObj`]) are the button object's [`Sub`] and every method is
+//! here.
 //!
 //! The arrow's two polls (`TMPoll`s, the 500 ms delay and the 100 ms repeat) are C++ objects the Rust button holds
 //! by address, made and deleted by [`Op::PollCreate`]/[`Op::PollDelete`] and driven by the poll ops; its slider is
 //! the scroll bar's (by address, round 10's slider ops). Its stepping is round 3's ([`button::scroll_button_down`]).
+//!
+//! The blinking button's poll was an embedded `TMPoll` member; it is now made by [`Op::PollCreate`] at construction
+//! and deleted with the button. Its fade is round 6's ([`button_variants::blink_copy_data`]); the opacities it reads
+//! and sets are the control's (`UIControl` ops) and the bitmaps' ([`Op::BitmapSetOpacity`]).
 
 use core::ffi::{c_long, c_ulong, c_void};
 
 use crate::button::{self, ScrollButtonHost};
+use crate::button_variants::{self, BlinkFields};
 use crate::buttonobj::{Btn, EeUiButton, EeUiButtonCall, Sub};
 use crate::obj::EeUiOp as Op;
 
 /// The scroll arrow's delay before repeating and its repeat period (milliseconds).
 const SCROLL_DELAY_MS: isize = 500;
 const SCROLL_REPEAT_MS: isize = 100;
+/// The blinking button's poll before `SetTimeDelay(rate)`.
+const BLINK_POLL_MS: isize = 250;
+/// `kDisplayModeShown`.
+const DISPLAY_MODE_SHOWN: isize = 1;
 
 /// `UIScrollButton`'s members: `mDecrement`, `mSlider`, `mRepeatPoll`, `mDelayPoll`.
 #[derive(Clone, Copy, Debug)]
@@ -24,7 +34,75 @@ pub(crate) struct ScrollFields {
     pub delay_poll: *mut c_void,
 }
 
+/// `UIBlinkingButton`'s members: its poll and round 6's record.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct BlinkObj {
+    pub poll: *mut c_void,
+    pub f: BlinkFields,
+}
+
 impl EeUiButton {
+    fn blink(&self) -> Option<BlinkObj> {
+        match *self.sub.borrow() {
+            Sub::Blink(b) => Some(b),
+            _ => None,
+        }
+    }
+
+    fn store_blink(&self, b: &BlinkObj) {
+        if let Sub::Blink(x) = &mut *self.sub.borrow_mut() {
+            *x = *b;
+        }
+    }
+
+    /// `UIBlinkingButton::SetIsBlinking`: blinking keeps the button redrawn every frame (and shown).
+    fn set_is_blinking(&self, blinking: bool) {
+        let Some(mut b) = self.blink() else { return };
+        if b.f.is_blinking == blinking {
+            return;
+        }
+        b.f.is_blinking = blinking;
+        self.store_blink(&b);
+        self.poll_op(Op::PollStop, b.poll);
+        if blinking {
+            self.poll_op(Op::PollStart, b.poll);
+            self.op(Op::SetAlwaysDirty, 1, 0);
+            self.op(Op::SetDirty, 1, 0);
+            self.op(Op::SetDisplayMode, DISPLAY_MODE_SHOWN, 0);
+        } else {
+            self.op(Op::SetAlwaysDirty, b.f.saved_always_dirty as isize, 0);
+            self.op(Op::SetDirty, 1, 0);
+        }
+    }
+
+    /// One float into an op (an opacity).
+    fn op_float(&self, op: Op, a: isize, x: f32) {
+        self.host.op_f(op, a, 0, 0, 0, &mut [x, 0.0, 0.0, 0.0]);
+    }
+
+    /// `UIBlinkingButton::CopyData`: the fade's opacities set, then `UIButton::CopyData`.
+    fn blink_copy_data(&self) -> isize {
+        let Some(mut b) = self.blink() else { return 0 };
+        let polled = self.poll_op(Op::PollPoll, b.poll) != 0;
+        let time_left = self.poll_op(Op::PollTimeLeft, b.poll) as c_ulong;
+        let state = self.fields().state;
+        let bg = self.host.get_point(Op::BgOpacity, 0).x;
+        let border = self.host.get_point(Op::BorderOpacity, 0).x;
+        let show = button_variants::blink_copy_data(&mut b.f, polled, time_left, state, bg, border);
+        self.store_blink(&b);
+        self.op_float(Op::SetBgOpacity, 0, show.background);
+        self.op_float(Op::SetBorderOpacity, 0, show.border);
+        let pressed = self.fields().pressed_bitmap;
+        if !pressed.is_null() {
+            self.op_float(Op::BitmapSetOpacity, pressed as isize, show.pressed);
+        }
+        let normal = self.fields().normal_bitmap;
+        if !normal.is_null() {
+            self.op_float(Op::BitmapSetOpacity, normal as isize, show.normal);
+        }
+        button::copy_data(&mut Btn::new(self)) as isize
+    }
+
     fn scroll(&self) -> ScrollFields {
         match *self.sub.borrow() {
             Sub::Scroll(s) => s,
@@ -41,11 +119,17 @@ impl EeUiButton {
         self.op(op, poll as isize, 0)
     }
 
-    /// The variants' destructor part: the arrow's polls deleted, the repeat poll first.
+    /// The variants' destructor part: the arrow's polls deleted (the repeat poll first), the blinking button's poll.
     pub(crate) fn release_variant(&self) {
-        if let Sub::Scroll(s) = *self.sub.borrow() {
-            self.poll_op(Op::PollDelete, s.repeat_poll);
-            self.poll_op(Op::PollDelete, s.delay_poll);
+        match *self.sub.borrow() {
+            Sub::Scroll(s) => {
+                self.poll_op(Op::PollDelete, s.repeat_poll);
+                self.poll_op(Op::PollDelete, s.delay_poll);
+            }
+            Sub::Blink(b) => {
+                self.poll_op(Op::PollDelete, b.poll);
+            }
+            _ => {}
         }
     }
 
@@ -71,6 +155,16 @@ impl EeUiButton {
                 self.poll_op(Op::PollStop, s.delay_poll);
                 button::button_up(&mut h);
             }
+            C::BlinkInit => {
+                let poll = self.op(Op::PollCreate, BLINK_POLL_MS, 0) as *mut c_void;
+                let always_dirty = self.op(Op::AlwaysDirty, 0, 0) != 0;
+                let f = button_variants::blink_init(a as c_ulong, always_dirty);
+                *self.sub.borrow_mut() = Sub::Blink(BlinkObj { poll, f });
+                self.op(Op::PollSetDelay, poll as isize, f.blink_rate as isize);
+            }
+            C::BlinkSetIsBlinking => self.set_is_blinking(a != 0),
+            C::BlinkIsBlinking => return self.blink().is_some_and(|b| b.f.is_blinking) as isize,
+            C::BlinkCopyData => return self.blink_copy_data(),
             _ => {}
         }
         0

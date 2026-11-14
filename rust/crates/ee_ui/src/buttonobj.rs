@@ -209,6 +209,16 @@ pub enum EeUiButtonCall {
     ScrollButtonDown = 96,
     /// `ButtonUp()`: the polls stopped, then `UIButton::ButtonUp()`.
     ScrollButtonUp = 97,
+
+    // ---- UIBlinkingButton (variantobj.rs)
+    /// The constructor's part after `UIButton`'s: the poll, the record for the blink rate `a`.
+    BlinkInit = 100,
+    /// `SetIsBlinking(a != 0)`.
+    BlinkSetIsBlinking = 101,
+    /// `GetIsBlinking()`.
+    BlinkIsBlinking = 102,
+    /// `CopyData()` -> its result: the fade, then `UIButton::CopyData()`.
+    BlinkCopyData = 103,
 }
 
 /// A subclass's own record (its constructor's init call sets it): what were the C++ subclass's members.
@@ -224,6 +234,8 @@ pub(crate) enum Sub {
     TriState(crate::button_variants::TriStateFields),
     /// `UIScrollButton` (`variantobj.rs`).
     Scroll(crate::variantobj::ScrollFields),
+    /// `UIBlinkingButton` (`variantobj.rs`).
+    Blink(crate::variantobj::BlinkObj),
 }
 
 /// The Rust UIButton.

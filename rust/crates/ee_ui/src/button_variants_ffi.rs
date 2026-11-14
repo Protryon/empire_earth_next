@@ -1,34 +1,11 @@
-//! `extern "C"` for the blinking button and the scalable button (`UIBlinkingButton.cpp`, `UIScalableButton.cpp`):
-//! pure, the C++ applies what they return. (The tri-state box is whole in the Rust button since R6 ui round 12,
-//! `checkobj.rs`.)
+//! `extern "C"` for the scalable button (`UIScalableButton.cpp`): pure, the C++ applies what they return. (The
+//! tri-state box and the blinking button are whole in the Rust button since R6 ui round 12.)
 #![allow(clippy::missing_safety_doc)]
 
 use core::ffi::c_ulong;
 
-use crate::button_variants::{self, BlinkFields, BlinkShow, Slice};
+use crate::button_variants::{self, Slice};
 use crate::rect::UiRect;
-
-/// `UIBlinkingButton`'s constructor: the record after `UIButton`'s (written whole).
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_blink_init(fields: *mut BlinkFields, rate: c_ulong, always_dirty: bool) {
-    fields.write(button_variants::blink_init(rate, always_dirty));
-}
-
-/// `UIBlinkingButton::CopyData`'s fade: the opacities to set (the record updated).
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_blink_copy_data(
-    fields: *mut BlinkFields,
-    polled: bool,
-    time_left: c_ulong,
-    state: c_ulong,
-    bg: f32,
-    border: f32,
-) -> BlinkShow {
-    let mut f = fields.read();
-    let show = button_variants::blink_copy_data(&mut f, polled, time_left, state, bg, border);
-    fields.write(f);
-    show
-}
 
 /// `UIScalableButton::CopyData`'s source rectangle for the state.
 #[no_mangle]

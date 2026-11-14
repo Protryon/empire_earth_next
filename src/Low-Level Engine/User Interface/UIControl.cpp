@@ -504,6 +504,13 @@ bool UIObjHost::Base(UIControl* c, EeUiOp inOp, intptr_t a, float* f, intptr_t* 
     case EeUiOp::CopiedDrawRect: UIObjHost::PutRect(f, c->mCopiedDrawRectangle); break;
     case EeUiOp::BaseSetRectangle: c->UIControl::SetRectangle(UIObjHost::Rect(f)); break;
     case EeUiOp::ControlCount: r = c->GetForm()->GetControlCount(); break;
+    case EeUiOp::AlwaysDirty: r = c->GetAlwaysDirty(); break;
+    case EeUiOp::SetAlwaysDirty: c->SetAlwaysDirty(a != 0); break;
+    case EeUiOp::SetDisplayMode: c->SetDisplayMode((unsigned long)a); break;
+    case EeUiOp::BgOpacity: f[0] = c->GetBgOpacity(); break;
+    case EeUiOp::BorderOpacity: f[0] = c->GetBorderOpacity(); break;
+    case EeUiOp::SetBgOpacity: c->SetBgOpacity(f[0]); break;
+    case EeUiOp::SetBorderOpacity: c->SetBorderOpacity(f[0]); break;
     default: return false;
     }
     *outResult = r;
@@ -526,6 +533,7 @@ bool UIObjHost::Media(UIControl* c, EeUiOp inOp, intptr_t a, intptr_t b, float* 
         f[1] = theBitmap->GetYScale();
         break;
     case EeUiOp::BitmapSetScale: theBitmap->SetXYScale(f[0], f[1]); break;
+    case EeUiOp::BitmapSetOpacity: theBitmap->SetOpacity(f[0]); break;
     case EeUiOp::StringLength: r = reinterpret_cast<const UWideString*>(a)->GetLength(); break;
     case EeUiOp::TextCreate: r = (intptr_t) new GEText(reinterpret_cast<GEFont*>(a)); break;
     case EeUiOp::TextDelete: delete theText; break;

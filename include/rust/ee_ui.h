@@ -301,6 +301,22 @@ enum class EeUiOp : uint32_t {
   PollTimeLeft = 136,
   /// Poll `a`'s `SetTimeDelay(b)`.
   PollSetDelay = 137,
+  /// *Pure*: `GetAlwaysDirty()`.
+  AlwaysDirty = 140,
+  /// `SetAlwaysDirty(a != 0)`.
+  SetAlwaysDirty = 141,
+  /// The virtual `SetDisplayMode(a)`.
+  SetDisplayMode = 142,
+  /// *Pure*: `GetBgOpacity()` -> `f[0]`.
+  BgOpacity = 143,
+  /// *Pure*: `GetBorderOpacity()` -> `f[0]`.
+  BorderOpacity = 144,
+  /// The virtual `SetBgOpacity(f[0])`.
+  SetBgOpacity = 145,
+  /// `SetBorderOpacity(f[0])`.
+  SetBorderOpacity = 146,
+  /// Bitmap `a`'s `SetOpacity(f[0])`.
+  BitmapSetOpacity = 147,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -479,6 +495,14 @@ enum class EeUiButtonCall : uint32_t {
   ScrollButtonDown = 96,
   /// `ButtonUp()`: the polls stopped, then `UIButton::ButtonUp()`.
   ScrollButtonUp = 97,
+  /// The constructor's part after `UIButton`'s: the poll, the record for the blink rate `a`.
+  BlinkInit = 100,
+  /// `SetIsBlinking(a != 0)`.
+  BlinkSetIsBlinking = 101,
+  /// `GetIsBlinking()`.
+  BlinkIsBlinking = 102,
+  /// `CopyData()` -> its result: the fade, then `UIButton::CopyData()`.
+  BlinkCopyData = 103,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -757,29 +781,6 @@ struct EeUiBackgroundTableRefs {
   EeUiLayout *layout;
   EeUiRect *texture_rect;
   EeUiColor *color;
-};
-
-/// `UIBlinkingButton`'s members in their C++ order (from `mBlinkPhase` on).
-struct EeUiBlinkFields {
-  /// 1 fading out, 0 fading in.
-  unsigned long blink_phase;
-  /// Milliseconds per phase, 50..5000.
-  unsigned long blink_rate;
-  float pressed_opacity;
-  float normal_opacity;
-  float bg_opacity;
-  float full_border_opacity;
-  bool saved_always_dirty;
-  bool needs_opacities;
-  bool is_blinking;
-};
-
-/// What `CopyData` shows: the background's, the border's and the two bitmaps' opacities.
-struct EeUiBlinkShow {
-  float background;
-  float border;
-  float pressed;
-  float normal;
 };
 
 /// One of the three draws: the bitmap's source and destination rectangles, and where it is drawn.
@@ -1431,17 +1432,6 @@ long ee_ui_event_initialize(unsigned long *count, void *event);
 
 /// `UIEvent::Uninitialize`.
 long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// `UIBlinkingButton`'s constructor: the record after `UIButton`'s (written whole).
-void ee_ui_blink_init(EeUiBlinkFields *fields, unsigned long rate, bool always_dirty);
-
-/// `UIBlinkingButton::CopyData`'s fade: the opacities to set (the record updated).
-EeUiBlinkShow ee_ui_blink_copy_data(EeUiBlinkFields *fields,
-                                    bool polled,
-                                    unsigned long time_left,
-                                    unsigned long state,
-                                    float bg,
-                                    float border);
 
 /// `UIScalableButton::CopyData`'s source rectangle for the state.
 EeUiRect ee_ui_scalable_copied_rect(unsigned long state,

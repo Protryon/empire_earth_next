@@ -229,6 +229,24 @@ pub enum EeUiOp {
     PollTimeLeft = 136,
     /// Poll `a`'s `SetTimeDelay(b)`.
     PollSetDelay = 137,
+
+    // ---- the blinking button's fade (UIControl's members, the bitmaps')
+    /// *Pure*: `GetAlwaysDirty()`.
+    AlwaysDirty = 140,
+    /// `SetAlwaysDirty(a != 0)`.
+    SetAlwaysDirty = 141,
+    /// The virtual `SetDisplayMode(a)`.
+    SetDisplayMode = 142,
+    /// *Pure*: `GetBgOpacity()` -> `f[0]`.
+    BgOpacity = 143,
+    /// *Pure*: `GetBorderOpacity()` -> `f[0]`.
+    BorderOpacity = 144,
+    /// The virtual `SetBgOpacity(f[0])`.
+    SetBgOpacity = 145,
+    /// `SetBorderOpacity(f[0])`.
+    SetBorderOpacity = 146,
+    /// Bitmap `a`'s `SetOpacity(f[0])`.
+    BitmapSetOpacity = 147,
 }
 
 impl EeUiOp {
@@ -256,6 +274,9 @@ impl EeUiOp {
                 | RadioOf
                 | ControlCount
                 | PollRunning
+                | AlwaysDirty
+                | BgOpacity
+                | BorderOpacity
                 | PartRect
                 | SliderStyle
                 | SliderValue

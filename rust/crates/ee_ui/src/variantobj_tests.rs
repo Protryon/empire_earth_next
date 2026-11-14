@@ -1,4 +1,5 @@
-//! The scroll arrow's goldens (`golden_scrollobj.txt`): the first sequences the round-12 driver (`build/ui12`)
+//! The scroll arrow's and blinking button's goldens (`golden_scrollobj.txt`, `golden_blinkobj.txt`): the first
+//! sequences the round-12 driver (`build/ui12`)
 //! printed over round 11's UIScrollButton.cpp statements and record FFI (the polls and the slider by handle, the
 //! virtual ButtonDown and ButtonUp dispatched by the world), replayed op for op against the Rust button.
 
@@ -53,4 +54,13 @@ fn a_repeat_poll_that_ran_out_fails() {
     let new = if old == "0" { "1" } else { "0" };
     let g = format!("{}= {}{}", &GOLDEN_SCROLL[..eq], new, &GOLDEN_SCROLL[eq + 3..]);
     replay(&g);
+}
+
+// ---- the blinking button (`golden_blinkobj.txt`)
+
+const GOLDEN_BLINK: &str = include_str!("golden_blinkobj.txt");
+
+#[test]
+fn blink_golden_replays() {
+    assert!(replay(GOLDEN_BLINK) > 1_000);
 }
