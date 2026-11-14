@@ -61,16 +61,11 @@
 #include "ee/EEUIFError.h"
 #include "ee/EEStringIDs.h"
 #include "lle/UILayoutUtility.h"
-#include "rust/ee_screens.h"   // ee_screens_dialog_show, _open (ee_screens dialog.rs)
-static const float kMessageScrollBarOpacity = 0.3f;             // 0x44a634
+#include "rust/ee_screens.h"   // ee_screens_dialog_show, _open, _construct (ee_screens dialog.rs)
 static const float kMessageButtonOpacity = 0.4f;                // 0x44a638
-static const GEColor kMessageScrollBarColor(1.0f, 1.0f, 1.0f);  // 0x5645f8
 static const GEColor kMessageButtonColor(1.0f, 1.0f, 1.0f);     // 0x5645e8
 static const GEColor kMessageTextColor(0.0f, 0.0f, 0.0f);       // 0x5645d8
 static const GEColor kMessageFocusedColor(0.61f, 0.46f, 0.0f);  // 0x5645c8
-static const GEColor kMessageEditBoxColor(1.0f, 1.0f, 1.0f);    // 0x5645b8
-static const GEColor kMessageSelectedColor(0.61f, 0.46f, 0.0f); // 0x5645a8
-static const GEColor kMessageBackgroundColor(0.91f, 0.85f, 0.73f); // 0x564598
 
 // The OK button (RTTI EEUIFEBOK > UIButton; vtable 0x44a640; sizeof 0x110). The in-class virtuals follow the ctor
 // with the ??_G in declaration order.
@@ -82,7 +77,7 @@ public:
     {
         GERhombus theRhombus;
         theRhombus.SetColor(kMessageButtonColor);
-        theRhombus.SetRectangle(this->mCopiedDrawRectangle);
+        theRhombus.SetRectangle(this->GetCopiedDrawRectangle());
         theRhombus.SetOpacity(kMessageButtonOpacity);
         this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
         return UIButton::DrawPolygons();
@@ -111,7 +106,7 @@ public:
     {
         GERhombus theRhombus;
         theRhombus.SetColor(kMessageButtonColor);
-        theRhombus.SetRectangle(this->mCopiedDrawRectangle);
+        theRhombus.SetRectangle(this->GetCopiedDrawRectangle());
         theRhombus.SetOpacity(kMessageButtonOpacity);
         this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
         return UIButton::DrawPolygons();
@@ -185,67 +180,12 @@ void EEUIFEBCancel::ButtonUp()
 
 // FUNCTION: EXE 0x660ffb
 // Creates the game's message box form: message label, OK, No and Cancel buttons, an edit box and the gold
-// framed background, laid out for a 1024x768 design
+// framed background, laid out for a 1024x768 design (ee_screens dialog.rs construct: the order, sizes, colours and
+// layout; each step one op of the host below)
 EEUIFError::EEUIFError(UIManager* inManager)
-    : UIForm(7, 1, inManager, -1, true)
+    : UIForm(7, 1, inManager, -1, true), mOk(NULL), mNo(NULL), mCancel(NULL), mError(NULL), mEditBox(NULL)
 {
-    GERectangle theScreen(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight());
-    UILayoutUtility theLayout;
-    GETextureDescription theDescription;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mPixelDepth = 16;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mFrameFormat = 0;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    GEFont* theFont = UIFontTable::CreateClosestFont(0x1c, UMFloatToLong((gFontTahoma16->GetHeight() * (1.0f / 768.0f)) *
-                                                                         theScreen.GetHeight()));
-    this->mError = new UITextLabel(UWideString(""), theFont, 0, GERectangle(GE2DPoint(0.0f, 0.0f), 280.0f, 135.0f), this, 1,
-                             0, 0);
-    ESVERIFY_AT(this->mError, 220);
-    this->mError->SetScrollBarBgColor(kMessageScrollBarColor);
-    this->mError->SetScrollBarBgOpacity(kMessageScrollBarOpacity);
-    this->mError->SetAlignment(kTextAlignCenter);
-    GEText* theGEText = this->mError->GetGEText();
-    theGEText->SetIsTransparent(true);
-    theGEText->SetFgColor(kMessageTextColor);
-    this->AddControl(this->mError, 0);
-
-    this->mOk = new EEUIFEBOK(this, 1);
-    ESVERIFY_AT(this->mOk, 236);
-    this->AddControl(this->mOk, 0);
-
-    this->mNo = new EEUIFEBCancel(this, 2);
-    ESVERIFY_AT(this->mNo, 244);
-    this->AddControl(this->mNo, 0);
-
-    this->mCancel = new EEUIFEBCancel(this, 3);
-    ESVERIFY_AT(this->mCancel, 252);
-    this->AddControl(this->mCancel, 0);
-
-    this->mEditBox = new UIEditBox(4, theFont, 0x32, false, GERectangle(GE2DPoint(0.0f, 0.0f), 220.0f, 24.0f), this, 4, 2,
-                             false, false);
-    ESVERIFY_AT(this->mEditBox, 260);
-    this->mEditBox->GetGEText()->SetIsTransparent(true);
-    this->mEditBox->GetGEText()->SetFgColor(kMessageTextColor);
-    this->mEditBox->SetSelectedBgColor(kMessageSelectedColor);
-    this->mEditBox->SetBgColor(kMessageEditBoxColor);
-    this->mEditBox->SetCursorColor(kMessageTextColor);
-    this->AddControl(this->mEditBox, 0);
-    this->GetEntityGroup(0)->Enable();
-    this->mMode = 0;
-    theLayout.SetLeft(4, 295.0f / 1024.0f);
-    theLayout.SetRight(4, 730.0f / 1024.0f);
-    theLayout.SetTop(4, 262.0f / 768.0f);
-    theLayout.SetBottom(4, 506.0f / 768.0f);
-    this->SetLayout(theLayout);
-    theDescription.mPixelDepth = this->GetManager()->GetUITextureBitDepth();
-    theDescription.mHasAlpha = true;
-    this->mBackground = new EEUIBGenericBackground(0, "textures\\EEGenericBack_Gold", theDescription, theLayout, this, 0,
-                                             kMessageBackgroundColor, true, 1.0f, 1.0f, 1.0f, 3);
-    theFont->Dereference();
+    ee_screens_dialog_construct(this);
 }
 
 // SYNTHETIC: EXE 0x66149b
@@ -269,6 +209,7 @@ static EEUIFErrorCallback sDialogCallbacks[2];
 static UIForm* sDialogCloseForm;
 static GERectangle sDialogRectangle;
 static GEFont* sDialogFont;
+static float sDialogFloats[9];   // the constructor's sizes, colours and layout (EE_SCREENS_DLG_FLOAT)
 
 // FUNCTION: EXE 0x66151a
 // FUNCTION: EXE 0x66167f
@@ -297,6 +238,7 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
     UIButton* theButton = inA >= 1 && inA <= 3 ? static_cast<UIButton*>(theControls[inA]) : NULL;
     float* theSides[4] = {&sDialogRectangle.mLeft, &sDialogRectangle.mTop, &sDialogRectangle.mRight,
                           &sDialogRectangle.mBottom};
+    const float* f = sDialogFloats;
     switch (inOp) {
     case EE_SCREENS_DLG_BUTTON: {
         UWideString theText;
@@ -376,6 +318,65 @@ extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t
         return (uint32_t)gFontTahoma12->GetHeight();
     case EE_SCREENS_DLG_LINES:
         return (uint32_t)theBox->mError->GetLineCount();
+    case EE_SCREENS_DLG_FLOAT:
+        memcpy(&sDialogFloats[inA], &inB, 4);
+        break;
+    case EE_SCREENS_DLG_NEW: {
+        GERectangle theRectangle(GE2DPoint(0.0f, 0.0f), f[0], f[1]);
+        if (inA == 0)   // (the original's ESVERIFYs after each new: new never returns NULL)
+            theBox->mError = new UITextLabel(UWideString(""), sDialogFont, 0, theRectangle, theBox, 1, 0, 0);
+        else if (inA == 1)
+            theBox->mOk = new EEUIFEBOK(theBox, 1);
+        else if (inA == 4)
+            theBox->mEditBox = new UIEditBox(4, sDialogFont, 0x32, false, theRectangle, theBox, 4, 2, false, false);
+        else
+            (inA == 2 ? theBox->mNo : theBox->mCancel) = new EEUIFEBCancel(theBox, inA);
+        break;
+    }
+    case EE_SCREENS_DLG_SCROLL_BAR:
+        theBox->mError->SetScrollBarBgColor(GEColor(f[0], f[1], f[2]));
+        theBox->mError->SetScrollBarBgOpacity(f[3]);
+        break;
+    case EE_SCREENS_DLG_ALIGN:
+        theBox->mError->SetAlignment(inA);
+        break;
+    case EE_SCREENS_DLG_TEXT_COLOR: {
+        GEText* theText = inA == 0 ? theBox->mError->GetGEText() : theBox->mEditBox->GetGEText();
+        theText->SetIsTransparent(true);
+        theText->SetFgColor(GEColor(f[0], f[1], f[2]));
+        break;
+    }
+    case EE_SCREENS_DLG_ADD:
+        theBox->AddControl(theControls[inA], 0);
+        break;
+    case EE_SCREENS_DLG_EDIT_COLORS:
+        theBox->mEditBox->SetSelectedBgColor(GEColor(f[0], f[1], f[2]));
+        theBox->mEditBox->SetBgColor(GEColor(f[3], f[4], f[5]));
+        theBox->mEditBox->SetCursorColor(GEColor(f[6], f[7], f[8]));
+        break;
+    case EE_SCREENS_DLG_ENABLE:
+        theBox->GetEntityGroup(0)->Enable();
+        break;
+    case EE_SCREENS_DLG_BACKGROUND: {
+        UILayoutUtility theLayout;
+        theLayout.SetLeft(4, f[0]);
+        theLayout.SetRight(4, f[1]);
+        theLayout.SetTop(4, f[2]);
+        theLayout.SetBottom(4, f[3]);
+        theBox->SetLayout(theLayout);
+        GETextureDescription theDescription;
+        theDescription.mIs3DRenderable = false;
+        theDescription.mIsTransparencyEnabled = false;
+        theDescription.mPixelDepth = theBox->GetManager()->GetUITextureBitDepth();
+        theDescription.mNumMipLevelsToDrop = 0;
+        theDescription.mSurfaceVolatility = 1;
+        theDescription.mFrameFormat = 0;
+        theDescription.mHasAlpha = true;
+        theDescription.mCreateMIPMaps = true;
+        theBox->mBackground = new EEUIBGenericBackground(0, "textures\\EEGenericBack_Gold", theDescription, theLayout, theBox,
+                                                         0, GEColor(f[4], f[5], f[6]), true, 1.0f, 1.0f, 1.0f, 3);
+        break;
+    }
     }
     return 0;
 }

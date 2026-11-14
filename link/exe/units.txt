@@ -185,7 +185,6 @@ e4529 e4729 Empire Earth/Graphics Thread/EEE2DMuzzleFlash.cpp
 e4729 e56d0 Empire Earth/Graphics Thread/EEE2DParticle.cpp
 e56d0 e5c63 Empire Earth/Graphics Thread/EEE2DPlasmaPulse.cpp
 e5c63 e614f Empire Earth/Graphics Thread/EEE2DPulseWave.cpp
-e614f e6621 Empire Earth/Graphics Thread/EEE2DShockwave.cpp
 e6621 e6ef2 Empire Earth/Graphics Thread/EEE2DSmokeMuzzleBlast.cpp
 e6ef2 e72fa Empire Earth/Graphics Thread/EEE2DSmokePlume.cpp
 e773c e7d67 Empire Earth/Graphics Thread/EEE2DVortex.cpp
@@ -199,8 +198,6 @@ f7394 f8ceb Empire Earth/Graphics Thread/EEE3DRain.cpp
 f9871 f9b6d Empire Earth/Graphics Thread/EEE3DSmokeGenerator.cpp
 f9b6d fb088 Empire Earth/Graphics Thread/EEE3DSnow.cpp
 fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
-fc382 fd330 Empire Earth/Graphics Thread/EEE3DTracerBeam.cpp
-fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 101fce 10251d Empire Earth/Graphics Thread/EEEDamagedEffect.cpp
 10251d 10428c Empire Earth/Graphics Thread/EEEffect.cpp
 10428c 1050fb Empire Earth/Graphics Thread/EEEffect2D.cpp
@@ -454,7 +451,6 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 290e89 291463 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileDialog.cpp
 291463 29222b Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileTransfer.cpp
 29222b 2942c8 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyGame.cpp
-2942c8 294d62 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyGameOptionsCtrl.cpp
 294d62 296aaa Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInit.cpp
 296aaa 297ee7 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInterface.cpp
 297ee7 299838 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyMisc.cpp
