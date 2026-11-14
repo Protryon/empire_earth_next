@@ -17,7 +17,7 @@
 //! over the stepped units' list `tick`; the classes' `Update`s as sequences of those leaves and host calls `update`,
 //! their `ActionChanged`s as decisions over the store and host operations `actions`.
 //! The players' diplomacy tables (by player object) are `players`, the player's saved state and its Load/Save
-//! `player_save`; the turrets' turn `turret`. The goal classes moved whole (one C++ class,
+//! `player_save`, its tick and reset over that record `player_tick`; the turrets' turn `turret`. The goal classes moved whole (one C++ class,
 //! `EEUGRust`, every virtual one call) are `rust_goal` (the dispatch and the host) with `patrol`, `calamity`,
 //! `explore` and `unload`.
 
@@ -43,6 +43,7 @@ pub mod order;
 pub mod patrol;
 pub mod physics;
 pub mod player_save;
+pub mod player_tick;
 pub mod players;
 pub mod rally;
 pub mod registry;

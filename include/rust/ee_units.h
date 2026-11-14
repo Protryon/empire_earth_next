@@ -792,6 +792,79 @@ constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_COUNT = 66;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_ID = 67;
 
+/// the viewed units released when only the player holds them, the active, selected, saved and running groups
+/// validated
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_VALIDATE = 1;
+
+/// `mHerds.size()` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_COUNT = 2;
+
+/// `gPhysics->mGameTime` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_GAME_TIME = 3;
+
+/// herd `index`: its `mNextUpdateTime` into `io.i`, `mIsActive` into `io.b`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_DUE = 4;
+
+/// herd `index`'s `Update(io.i)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_UPDATE = 5;
+
+/// herd `index`'s `mState` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_STATE = 6;
+
+/// `KillHerdUnits(mHerds[index], 0)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_KILL = 7;
+
+/// `UpdateAirTraffic()`, then `mEvents.TickEvents(this, gPhysics->mTickTime)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_AIR_AND_EVENTS = 8;
+
+/// the walk of `mQueuedImprovements`: to its first entry; the result 1 with the key in `io.i` and the float in
+/// `io.f`, 0 at the end
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_FIRST = 9;
+
+/// to the next entry (as FIRST)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_NEXT = 10;
+
+/// the current entry erased, to the one after it (as FIRST)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_ERASE = 11;
+
+/// the current entry's float `= io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_SET = 12;
+
+/// `gPhysics->GetTickTime()` into `io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_TICK_TIME = 13;
+
+/// `mInstantBuild` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_INSTANT_BUILD = 14;
+
+/// `ApplyImprovement(key, the list's front, false)`, the front erased, the float 0
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_APPLY = 15;
+
+/// `AdvanceImprovement(io.i)` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE = 16;
+
+/// `mHealsUnits` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HEALS_UNITS = 17;
+
+/// `gPhysics->mTickTimeMs` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_TICK_MS = 18;
+
+/// the heal's numbers by `index`: 0 `kWorldWonderHealAmount`, 1 the tech tree's `mCurrentEpoch`, 2
+/// `kWorldWonderHealEpochStep` into `io.i`; 3 `kWorldWonderHealEpochFactor` into `io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HEAL_VALUE = 19;
+
+/// the player's unit list: from `io.i` 0 its first unit, else the unit after unit `io.i`; that unit into `io.i` (0
+/// at the end), the result 1 when the healed unit set holds its class's type
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_UNIT_NEXT = 20;
+
+/// unit `io.i`'s `mHitPoints` (`index` 0) or its stats' `mMaxHitPoints` (1) (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_UNIT_HIT_POINTS = 21;
+
+/// unit `io.i`'s `SetHitPoints(index as long)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_UNIT_SET_HIT_POINTS = 22;
+
+/// `kPlayerHealInterval` (ms)
+constexpr static const float EE_UNITS_PLAYER_HEAL_INTERVAL = 10000.0;
+
 /// The player ids (`gWorld.mPlayers`, `mEnemies`: 17 entries).
 constexpr static const size_t EE_UNITS_PLAYER_COUNT = 17;
 
@@ -2284,6 +2357,9 @@ struct EeUnitsPlayerSaved {
   bool mCivUpgradesPurchased;
 };
 
+/// The host: `(ctx, op, index, io) -> the operation's result`.
+using EeUnitsPlayerTickFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
 /// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
 struct EeUnitsGoalIo {
   int64_t i[8];
@@ -3218,6 +3294,18 @@ int32_t ee_units_player_save(void *ctx,
                              EeUnitsPlayerSaved *rec,
                              uint32_t major,
                              uint32_t minor);
+
+/// `EEPlayer::UpdatePlayer` (see [`update_player`]).
+///
+/// # Safety
+/// `rec` is the player's record (as [`update_player`]); `f` handles every operation with `ctx`.
+void ee_units_player_update(void *ctx, EeUnitsPlayerTickFn f, EeUnitsPlayerSaved *rec);
+
+/// `EEPlayer::Reset`'s fields of the record (see [`reset`]).
+///
+/// # Safety
+/// `rec` points to the record.
+void ee_units_player_reset(EeUnitsPlayerSaved *rec, uint32_t player_id, uint32_t part);
 
 /// A player's table: its id and its 17 stances (`enemies` has 17 words).
 ///
