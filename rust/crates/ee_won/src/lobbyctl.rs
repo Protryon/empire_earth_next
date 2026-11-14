@@ -605,12 +605,12 @@ pub static SLOTS: [EeWonLobbyCtlSlot; 103] = [
     slot!(c"VictoryCheck", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 15),
     // EELobbyPlayerOptionsCtrl::InitComponent (55..=102): each slot's name, team, colour, citizen, observe and
     // transfer controls, ids slot * 6 + column + 1
-    slot!(c"UserNameCombo1", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 1, (P_NAME + 0) as i32),
-    slot!(c"TeamCombo1", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 2, (P_TEAM + 0) as i32),
-    slot!(c"ColorButton1", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 3, (P_COLOR + 0) as i32),
-    slot!(c"CitizenCombo1", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 4, (P_CITIZEN + 0) as i32),
-    slot!(c"ObserveCheck1", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 5, (P_OBSERVE + 0) as i32),
-    slot!(c"FileTransferLabel1", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 6, (P_TRANSFER + 0) as i32),
+    slot!(c"UserNameCombo1", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 1, P_NAME as i32),
+    slot!(c"TeamCombo1", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 2, P_TEAM as i32),
+    slot!(c"ColorButton1", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 3, P_COLOR as i32),
+    slot!(c"CitizenCombo1", c"EELobbyPlayerOptionsCtrl.cpp", 62, Combo, 4, P_CITIZEN as i32),
+    slot!(c"ObserveCheck1", c"EELobbyPlayerOptionsCtrl.cpp", 66, Button, 5, P_OBSERVE as i32),
+    slot!(c"FileTransferLabel1", c"EELobbyPlayerOptionsCtrl.cpp", 70, Label, 6, P_TRANSFER as i32),
     slot!(c"UserNameCombo2", c"EELobbyPlayerOptionsCtrl.cpp", 50, Combo, 7, (P_NAME + 1) as i32),
     slot!(c"TeamCombo2", c"EELobbyPlayerOptionsCtrl.cpp", 54, Combo, 8, (P_TEAM + 1) as i32),
     slot!(c"ColorButton2", c"EELobbyPlayerOptionsCtrl.cpp", 58, ColorButton, 9, (P_COLOR + 1) as i32),
