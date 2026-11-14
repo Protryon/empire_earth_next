@@ -28,7 +28,8 @@ use crate::reqhost::{set_last_server_error, Calls, HostRequest, ReqPlan};
 use crate::reqop::Checked;
 use crate::server::st;
 
-/// `GetPeerData()` (a borrowed `RefCount*`, NULL before a login): `ee_won_hostop_num`
+/// the op's peer data object as the op holds it (a hostauth.rs handle in the game, a stand-in's number in the drivers;
+/// 0 before a login): `ee_won_hostop_num`
 pub const EE_WON_GETCERT_PEER: i32 = 1;
 /// `GetSessionKey()` (the `Blowfish`, as round 6's `ee_won_getcert_session_key`): `ee_won_hostop_num`
 pub const EE_WON_GETCERT_SESSION_KEY: i32 = 2;
@@ -46,6 +47,9 @@ pub const EE_WON_GETCERT_CREATE_ACCOUNT: i32 = 7;
 pub const EE_WON_GETCERT_NEW_PASSWORD: i32 = 8;
 /// `SetAuthContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
 pub const EE_WON_GETCERT_AUTH_CONTEXT: i32 = 9;
+/// `GetPeerData()`: a new `EeWonAuthObj*` reference (`ee_won_authobj_free`), 0 before a login or for a driver's
+/// stand-in: `ee_won_hostop_num`
+pub const EE_WON_GETCERT_PEER_DATA: i32 = 10;
 
 fn o(p: CObj) -> Obj {
     Obj::of(p)
@@ -310,6 +314,7 @@ impl HostRequest for CertReq {
         let c = usize::try_from(index).ok().and_then(|i| self.g.communities.get(i));
         match which {
             EE_WON_GETCERT_PEER => self.g.peer as usize as i64,
+            EE_WON_GETCERT_PEER_DATA => crate::hostauth::peer_obj(o(self.g.peer)) as usize as i64,
             EE_WON_GETCERT_SESSION_KEY => &self.key as *const Blowfish as usize as i64,
             EE_WON_GETCERT_ERRORS => self.g.errors.len() as i64,
             EE_WON_GETCERT_COMMUNITIES => self.g.communities.len() as i64,
