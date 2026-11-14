@@ -157,7 +157,7 @@ long EEUICChatLine::CopyData()
         this->mTimer->Stop();
     }
     long theResult = UIControl::CopyData();
-    this->mTextRectangle = this->mCopiedDrawRectangle;
+    this->mTextRectangle = this->GetCopiedDrawRectangle();
     this->mTextRectangle.SetTop(this->mTextRectangle.GetTop() + this->mShadowOffset);
     float theOffset = (float)this->mShadowOffset;
     this->mTextRectangle.SetBottom(theOffset + this->mTextRectangle.GetBottom());

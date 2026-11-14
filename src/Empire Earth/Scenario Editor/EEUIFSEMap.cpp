@@ -143,7 +143,7 @@ void UIRBMap::Check()
 {
     UIRadioButton::Check();
     this->HideControls();
-    switch (this->mId) {
+    switch (this->GetId()) {
     case 0x6f:
         this->GetForm()->GetControlById(kSEMapMapStyleLabel)->SetDisplayMode(kDisplayModeShown);
         this->GetForm()->GetControlById(kSEMapMapStyle)->SetDisplayMode(kDisplayModeShown);
@@ -179,28 +179,28 @@ void UIRBMap::Check()
 // Hides every mode-specific control of the map tab
 void UIRBMap::HideControls()
 {
-    this->mForm->GetControlById(kSEMapDefaultTerrainLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapDefaultTerrain)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapMapStyleLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapMapStyle)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapSeedLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapSeedEditBox)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapWidth)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapHeight)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapWidthLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapHeightLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapRandomMapSize)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapRandomMapSizeLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapElevationFile)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapElevationFileLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapWaterCutoffLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapWaterDepthLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapLandCutoffLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapLandHeightLabel)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapLandCutoff)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapLandHeight)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapWaterDepth)->SetDisplayMode(kDisplayModeHidden);
-    this->mForm->GetControlById(kSEMapWaterCutoff)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapDefaultTerrainLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapDefaultTerrain)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapMapStyleLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapMapStyle)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapSeedLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapSeedEditBox)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapWidth)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapHeight)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapWidthLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapHeightLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapRandomMapSize)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapRandomMapSizeLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapElevationFile)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapElevationFileLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapWaterCutoffLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapWaterDepthLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapLandCutoffLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapLandHeightLabel)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapLandCutoff)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapLandHeight)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapWaterDepth)->SetDisplayMode(kDisplayModeHidden);
+    this->GetForm()->GetControlById(kSEMapWaterCutoff)->SetDisplayMode(kDisplayModeHidden);
 }
 
 // FUNCTION: EXE 0x5a1bc6

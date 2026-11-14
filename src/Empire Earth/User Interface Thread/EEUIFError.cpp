@@ -82,7 +82,7 @@ public:
     {
         GERhombus theRhombus;
         theRhombus.SetColor(kMessageButtonColor);
-        theRhombus.SetRectangle(this->mCopiedDrawRectangle);
+        theRhombus.SetRectangle(this->GetCopiedDrawRectangle());
         theRhombus.SetOpacity(kMessageButtonOpacity);
         this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
         return UIButton::DrawPolygons();
@@ -111,7 +111,7 @@ public:
     {
         GERhombus theRhombus;
         theRhombus.SetColor(kMessageButtonColor);
-        theRhombus.SetRectangle(this->mCopiedDrawRectangle);
+        theRhombus.SetRectangle(this->GetCopiedDrawRectangle());
         theRhombus.SetOpacity(kMessageButtonOpacity);
         this->GetRasterizer()->Draw(&theRhombus, this->GetScreenIndex());
         return UIButton::DrawPolygons();

@@ -155,7 +155,7 @@ long EEUICPortrait::DrawPolygons()
 // Draws the improvement level when it is above 0
 long EEUICPortrait::DrawTextA()
 {
-    this->mDrawCount--;
+    this->UIControl::DrawTextA();   // the base's draw count
     long theResult = 0;
     if (this->mLevel > 0)
         theResult = this->GetForm()->DrawClippedText(this->GetCopiedDrawRectangle(), this->mText, this);
