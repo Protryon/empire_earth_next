@@ -457,6 +457,7 @@ local function fight(g, recs, cands)
         end
     end
     local taken = {}
+    local hurts = {}
     for _, u in ipairs(recs) do
       if M.committed[u.id] then
         fighting = fighting + 1
@@ -497,6 +498,16 @@ local function fight(g, recs, cands)
                             break
                         end
                     end
+                end
+                -- g.can_hurt (opt-in): only a target the unit's weapon hurts (ai.can_hurt; the classic's submarines)
+                if not skip and g.can_hurt and ai.can_hurt ~= nil then
+                    local key = u.type .. ">" .. c.u.type
+                    local h = hurts[key]
+                    if h == nil then
+                        h = ai.can_hurt(u.type, c.u.type)
+                        hurts[key] = h
+                    end
+                    skip = not h
                 end
                 if not skip and (ranged or (c.kind ~= "ship" and c.kind ~= "boat")) then
                     local s = c.p * 10000 + isqrt(d2(u.x, u.y, c.u.x, c.u.y)) * 10 + (taken[c.u.id] or 0)

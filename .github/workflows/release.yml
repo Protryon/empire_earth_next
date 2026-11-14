@@ -1,0 +1,191 @@
+name: release
+
+# The game's binaries for the three platforms, attached to a GitHub release, whenever a version tag is pushed
+# (git tag v0.1.0 && git push origin v0.1.0) or by hand (Actions -> release -> Run workflow, with an existing tag).
+# Only v* tags: the data parts' releases (open-db-*, open-media-*, open-textures-4x-*) never start it.
+#   Windows x86_64: EE-AOC.exe (build.py, as ci.yml), its .pdb as a separate asset
+#   Linux x86_64:   ee-aoc (tools/xbuild.py game, as posix.yml)
+#   macOS arm64:    Empire Earth AoC.app (tools/xbuild.py game), unsigned
+# No game data goes into these packages: the player adds the data parts (README "Building the data").
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "an existing tag (or a branch, to build only) to build, e.g. v0.1.0"
+        required: true
+      publish:
+        description: "publish a release for the tag (off: build the packages only, as workflow artifacts)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: LLVM
+        run: choco upgrade llvm -y --no-progress
+
+      - name: Cache wgpu-native
+        uses: actions/cache@v4
+        with:
+          path: toolchain
+          key: wgpu-${{ hashFiles('tools/fetch_wgpu.py') }}
+
+      - name: Fetch wgpu-native
+        run: python -I tools/fetch_wgpu.py
+
+      - name: Fetch SDL3 and the fonts
+        run: python -I tools/fetch_posix.py sdl3 fonts
+
+      - name: Build the x86_64 exe
+        run: python -I build.py -j 4
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist/pkg
+          cp build/clang/exe/EE-AOC.exe dist/pkg/
+          cp .github/release/README.txt dist/pkg/
+          (cd dist/pkg && 7z a -tzip "../EE-AOC-$TAG-windows-x86_64.zip" .)
+          (cd build/clang/exe && 7z a -tzip "../../../dist/EE-AOC-$TAG-windows-x86_64-pdb.zip" EE-AOC.pdb)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld cmake ninja-build pkg-config \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxfixes-dev libxtst-dev \
+            libxkbcommon-dev libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libdbus-1-dev \
+            libibus-1.0-dev libdecor-0-dev
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: toolchain/dl
+          key: posix-dl-${{ hashFiles('tools/fetch_posix.py') }}
+
+      - name: Fetch wgpu-native, SDL3, fonts
+        run: python -I tools/fetch_posix.py wgpu sdl3 fonts
+
+      - name: SDL3 (static)
+        run: python -I tools/xbuild.py sdl3 -j 4
+
+      - name: Game (linux-x86_64)
+        run: python -I tools/xbuild.py game -j 4
+
+      - name: Package
+        run: |
+          mkdir -p dist/ee-aoc
+          cp build/xbuild/linux-x86_64/game/ee-aoc dist/ee-aoc/
+          cp .github/release/README.txt dist/ee-aoc/
+          # the symbols as a separate asset (as Windows' .pdb), the shipped program stripped
+          objcopy --only-keep-debug dist/ee-aoc/ee-aoc dist/ee-aoc.debug
+          strip --strip-debug dist/ee-aoc/ee-aoc
+          objcopy --add-gnu-debuglink=dist/ee-aoc.debug dist/ee-aoc/ee-aoc
+          tar -C dist -czf "dist/EE-AOC-$TAG-linux-x86_64.tar.gz" ee-aoc
+          tar -C dist -czf "dist/EE-AOC-$TAG-linux-x86_64-debug.tar.gz" ee-aoc.debug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*.tar.gz
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Tools
+        run: brew install ninja || true
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: toolchain/dl
+          key: posix-dl-${{ hashFiles('tools/fetch_posix.py') }}
+
+      - name: Fetch wgpu-native, SDL3, fonts
+        run: python -I tools/fetch_posix.py wgpu sdl3 fonts
+
+      - name: SDL3 (static)
+        run: python -I tools/xbuild.py sdl3 -j 4
+
+      - name: Game (macos-arm64)
+        run: python -I tools/xbuild.py game --target macos-arm64 -j 4
+
+      - name: Package
+        run: |
+          mkdir -p dist/pkg
+          cp -R "build/xbuild/macos-arm64/game/Empire Earth AoC.app" dist/pkg/
+          cp .github/release/README.txt dist/pkg/
+          (cd dist/pkg && ditto -c -k --sequesterRsrc . "../EE-AOC-$TAG-macos-arm64.zip")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*.zip
+
+  release:
+    needs: [windows, linux, macos]
+    if: github.event_name == 'push' || inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      # a release made by hand for the tag keeps its notes; the binaries are added (or replaced)
+      - name: Publish
+        run: |
+          ls -l dist
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            pre=""; case "$TAG" in *-*) pre="--prerelease";; esac   # v0.1.0-rc1: a pre-release
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --verify-tag $pre --title "$TAG" --notes \
+              "Empire Earth: The Art of Conquest, built from source: Windows x86_64, Linux x86_64 and macOS arm64 (Apple Silicon). The game data is not included: see README.txt in each package."
+          fi
+          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber dist/*

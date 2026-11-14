@@ -330,13 +330,122 @@ local function centre_tower_site(view, memory, c, class)
     return nil
 end
 
--- FindTowerSite: the centres with a drop site, the active ones nearest the town first (island coasts and the gates'
--- and choke points' towers: not ported)
+-- FindTowerSite's other sites. The tower's reach: 1.5 x its range. DEVIATIONS: a town is a drop site (town centre,
+-- capitol, settlement); a coast is the largest water's shore by it (ai.water_sites; the classic walks the town's
+-- continent's shore tiles); the gate's and choke point's site is the first placeable tile (ai.find_site), not a
+-- random one
+local function tower_reach2(class)
+    local cls = ai.class(class)
+    local range = cls ~= nil and (cls.range or 0) // 100 or 0
+    if range < 3 then
+        range = 3
+    end
+    return (range * 3 // 2) * (range * 3 // 2), range
+end
+
+local function towns_nearest_first(view)
+    local tx, ty = R.town(view)
+    local list = {}
+    for _, d in ipairs(R.drops(false)) do
+        if d.built then
+            list[#list + 1] = d
+        end
+    end
+    table.sort(list, function(a, b)
+        local da, db = d2(a.x, a.y, tx, ty), d2(b.x, b.y, tx, ty)
+        if da ~= db then
+            return da < db
+        end
+        return a.id < b.id
+    end)
+    return list
+end
+
+-- the island map's coasts: the shore by each town, nearest the town first, a site in the rings 1-2 round a shore tile
+-- with no tower within reach
+local function coast_tower_site(view, memory, class)
+    if not memory.t.island then
+        return nil
+    end
+    local reach2 = tower_reach2(class)
+    local asked = 0
+    for _, d in ipairs(towns_nearest_first(view)) do
+        for _, st in ipairs(ai.water_sites(d.x, d.y, {max = 24})) do
+            if not M.tower_near(view, st[1], st[2], reach2) then
+                local x, y = ai.find_site(class, st[1], st[2], {min = 1, max = 2})
+                if x ~= nil then
+                    return x, y
+                end
+                asked = asked + 1
+                if asked >= 12 then
+                    return nil
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- the gates nearest the town first: a site within 5 tiles of a gate with no tower within reach, off the gate (2) and
+-- the wall (4)
+local function gate_tower_site(view, memory, class)
+    local reach2 = tower_reach2(class)
+    local tx, ty = R.town(view)
+    local gates = {}
+    for _, id in ipairs(ai.units{category = "building", built = true}) do
+        local u = R.unit(id)
+        if u ~= nil and u.type:find("gate") ~= nil then
+            gates[#gates + 1] = u
+        end
+    end
+    table.sort(gates, function(a, b)
+        local da, db = d2(a.x, a.y, tx, ty), d2(b.x, b.y, tx, ty)
+        if da ~= db then
+            return da < db
+        end
+        return a.id < b.id
+    end)
+    for _, g in ipairs(gates) do
+        if not M.tower_near(view, g.x, g.y, reach2) then
+            local x, y = ai.find_site(class, g.x, g.y, {min = 3, max = 5})
+            if x ~= nil then
+                return x, y
+            end
+        end
+    end
+    return nil
+end
+
+-- the choke points of the town's land within 7 tiles of a town, none of the class within twice its range: the
+-- choke point's tiles nearest the town first
+local function choke_tower_site(view, memory, class)
+    if ai.choke_point == nil then
+        return nil
+    end
+    local _, range = tower_reach2(class)
+    for _, d in ipairs(towns_nearest_first(view)) do
+        local cx, cy = ai.choke_point(d.x, d.y, 1, 0, 1)
+        if cx ~= nil and d2(cx, cy, d.x, d.y) < 50 and not M.tower_near(view, cx, cy, 4 * range * range) then
+            local x, y = ai.find_site(class, cx, cy, {min = 0, max = 3})
+            if x ~= nil then
+                return x, y
+            end
+        end
+    end
+    return nil
+end
+
+-- FindTowerSite: an island map's coasts first; then the centres with a drop site, the active ones nearest the town
+-- first; then the gates; then the choke points by the towns
 local function find_tower_site(view, memory, class)
     local rm = R.state(memory)
     local tx, ty = R.town(view)
     if tx == nil then
         return nil
+    end
+    local cx, cy = coast_tower_site(view, memory, class)
+    if cx ~= nil then
+        return cx, cy
     end
     local order = {}
     for _, c in ipairs(rm.centres) do
@@ -357,7 +466,11 @@ local function find_tower_site(view, memory, class)
             return x, y
         end
     end
-    return nil
+    local gx, gy = gate_tower_site(view, memory, class)
+    if gx ~= nil then
+        return gx, gy
+    end
+    return choke_tower_site(view, memory, class)
 end
 
 -- FindGranarySite: just beyond a centre's drop-off distance (within the claim range with the personality's claim
@@ -540,6 +653,21 @@ end
 -- StartBuilding: a site and a builder; -> whether the request is done
 
 local DROP_WITHOUT_BUILDER = {}
+local STALL_MEMORY_MS = 600000
+
+-- a site within 2 tiles of one that stalled twice for the class in the last ten minutes (cancel_stalled; the
+-- foundation's place and the site's tile may differ by its footprint)
+local function stalled_site(view, memory, class, x, y)
+    local stalls = M.state(memory).stalls or {}
+    for _, key in ipairs(ai.keys(stalls)) do
+        local st = stalls[key]
+        if st.class == class and st.n >= 2 and view.time - st.t <= STALL_MEMORY_MS
+                and math.abs(st.x - x) <= 2 and math.abs(st.y - y) <= 2 then
+            return true
+        end
+    end
+    return false
+end
 
 local function start_building(view, memory, req)
     local class = req.class
@@ -559,6 +687,9 @@ local function start_building(view, memory, req)
         if memory.t.personality.claim_range and (class == C.farm or class == C.granary or class == C.settlement) then
             R.claim_expand(view, memory)
         end
+        return false
+    end
+    if fid == nil and stalled_site(view, memory, class, x, y) then
         return false
     end
     local w = M.find_builder(memory, x, y, class)
@@ -611,6 +742,11 @@ end
 -- C++'s: FindSite picks another), the builder sent to the town centre; one builder at a time until none
 local function cancel_stalled(view, memory)
     local bm = M.state(memory)
+    for _, key in ipairs(ai.keys(bm.stalls or {})) do
+        if view.time - bm.stalls[key].t > STALL_MEMORY_MS then
+            bm.stalls[key] = nil
+        end
+    end
     local ids = ai.units{category = "citizen"}
     if #ids == 0 then
         return
@@ -632,6 +768,17 @@ local function cancel_stalled(view, memory)
                 if tx ~= nil then
                     ai.move({ids[k]}, tx, ty)
                 end
+                -- New (not the C++'s): the stalled site remembered; one that stalled twice in ten minutes is not
+                -- used again for that class until then (a ship parked on a navy yard's shore site stalled it 33
+                -- times in one game, AI_RESEARCH 8.73)
+                bm.stalls = bm.stalls or {}
+                local key = string.format("%s@%d,%d", b.type, b.x, b.y)
+                local st = bm.stalls[key]
+                if st == nil or view.time - st.t > STALL_MEMORY_MS then
+                    st = {n = 0, t = view.time, class = b.type, x = b.x, y = b.y}
+                    bm.stalls[key] = st
+                end
+                st.n = st.n + 1
                 print(string.format("classic_lua build.stalled %s at=%d,%d", b.type, b.x, b.y))
             end
         end

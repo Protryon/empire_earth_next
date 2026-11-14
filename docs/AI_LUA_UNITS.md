@@ -535,6 +535,10 @@ open question: is rebuilding enough?
 - `swapped` `{old, new}` (UnitsSwapped :5016);
 - `converted` `{unit, to}` (a unit lost to a priest; a unit gained is `trained` with `at = 0`);
 - `enemy_seen` `{player, x, y, count}` (the first sight of a player's units in a 20 s window);
+- `flare` `{player, x, y}` (an ally's flare, EEComputerPlayer::FlareReceived; the classic's CombatManager::Attack at the
+  tile);
+- `attack_player` / `defend_player` `{player}` (the attack-players order, EEAttackPlayers: a player's call that the
+  computers at war with it attack it, its allies defend it; the classic's AttackPlayer / DefendPlayer);
 - `research_done` `{tech}`;
 - `epoch` `{epoch}`;
 - today's `unit_lost`, `production_lost`, `advance_lost`, `no_site`, `group_wants`, until their verbs go.
@@ -925,7 +929,7 @@ from data, so that a script can make its decisions with the same numbers:
   popband, catchup, retire: whether each is on for the seat); `personality` (aipersonalities.yaml as EECPPersonality
   picks it, with EE_AI_PERSONALITY and the TEST ONLY EE_AI_EXP switches folded in); `behavior` (every dbcpbehavior
   value EEComputerPlayer::Init copies, by a snake_case name, plus the population cap weights, the epoch advance scale
-  and the mining limit). Floats are thousandths, under keys ending in `_k`.
+  the mining limit and the carrier fighters to keep, `carrier_fighters_easy`..`_hard` and `carrier_fighters_dm_*`). Floats are thousandths, under keys ending in `_k`.
 - `ai.techs{epoch = n, id = tech}` -> the tech tree's nodes of epochs n..0 (the current epoch by default), latest
   epoch first as GetEpochNodeIDs collects them: `id`, `name`, `epoch`, `kind`, `makes` (the class), `counts_toward_epoch`,
   `researched`, `available`, `obsolete`, `obsolete_epoch`, `producers` (class names), `plain_producer` (a producer that
@@ -951,6 +955,41 @@ from data, so that a script can make its decisions with the same numbers:
   builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
   `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
   sub-group's common move flags).
+- `ai.can_hurt(attacker_type, target_type)` -> whether the attacker's weapon hurts the target's family (the damage
+  table, combat.yaml, which a human reads too; EECPAttackSubGroupUnit::CanAttack without the ignored targets): the
+  classic air sub-group's targets and prejudices.
+- The class record has `flight_time` (an aircraft's fuel in ms; 0: no limit) and an own unit's record `base` (the
+  airport or carrier an aircraft returns to): the classic air sub-group's reach (EECPASGAir::CanReach, flight seconds
+  x speed x 0.9 from the base).
+- The `attack_player` / `defend_player` events (§ events above) reach a script seat in place of the C++ combat
+  manager's AttackPlayer / DefendPlayer, and another player's wonder no longer runs the C++ RespondToUnit for a script
+  seat (its C++ combat manager is not run; classic_lua answers from `ai.wonders`).
+- `ai.wonders()` -> `{victory, to_win, players = {{player, team, count}}, list = {{id, player, team, type, built, x,
+  y}}}`: the wonders as the game announces them and the wonder countdown shows them; a wonder's tile only where the
+  player has explored it (or with `sees_all`). The classic's wonder race (EECPCombatManager::RespondToUnit,
+  UpdateWonderRace).
+- The class record has `planet_spaceship` (category 0x22: the classic's space fighter sub-group; the other space
+  units take its spaceship sub-group). `ai.attack` takes a missile base holding its ICBM (the ICBM's family): the
+  base launches it, as a human's attack order does (the classic's ICBM).
+- `lib.groups`: a group with `can_hurt = true` gives its units only targets their weapons hurt (the classic's
+  submarines).
+- `ai.wall_path(unit, x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tile path an own unit would take from (x1, y1) to
+  (x2, y2) inside the box of the two tiles, as the classic wall planner refines each step of its way
+  (EEPathManager::FindPath with EEAIGPGModifierComputerPlayerWallPather); empty when there is none.
+- `ai.wall_route(enemy, x1, y1, x2, y2)` -> handle, and `ai.wall_route_result(handle)` -> nil while it runs, the
+  tiles `{{x, y}, ...}` when done (empty: no way), false for a handle not held: the classic wall planner's way from
+  the enemy's centre to the own town, the path manager's request on its coarse graph with the wall planner modifier
+  (the enemy's influence costs) and a citizen's terrain (EECPWallManager::StartNextWall). Asynchronous: the request
+  runs over the next game ticks. One at a time per player; not saved (a loaded game forgets it).
+- `ai.wall_line(x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tiles a wall from (x1, y1) to (x2, y2) lays, in order
+  (EEGetWallLine).
+- `ai.wall_stretches(x1, y1, x2, y2)` -> blocked, `{{ax, ay, bx, by, len, level}, ...}`: the classic wall planner's
+  look at one wall line (EECPWallManager::PlanWall, IsPathBlocked). `blocked`: a land building on the line or within 2
+  tiles of it (the player's own wall pieces on the line excepted). The stretches: the runs of open tiles after a
+  blocked one (off the map, a forest, a cliff, water, space), with their ends, length and whether five level tiles in
+  a row lie on them (EEAreTilesLevel). classic_lua's wall planner (walls.lua) uses both.
+- Own and allied building records have `queued`: the techs queued behind the one being made (`producing`), in order
+  (EEComplexUnit::IsResearchQueued, the classic's IsInProduction).
 - Resource records have `untapped`: the resource's hit points still stand at 1, i.e. nobody has gathered from it yet
   (the classic's GetGatherCapacity and its sites trace count a centre's units with mHitPoints > 0, so a tapped mine
   no longer adds room).

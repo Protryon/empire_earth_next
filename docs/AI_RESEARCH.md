@@ -4557,7 +4557,11 @@ The owner's direction: port all of the C++ classic into Lua, so that its decisio
 1. the inventory (below);
 2. the missing parts by value: transports and island play (2a), walls (2b), air, space and submarines (2c), the
    wonder race and the ICBM (2d), allies (2e), the rest (2f);
-3. benches beyond Small land maps;
+3. benches beyond Small land maps. First on the list (coordinator, 2026-11-13): the late-start economy. At the WW2
+   start the port has 22 citizens at 10 minutes against the C++'s 33 (§8.74). An economy that trails the C++'s
+   blocks the deletion, so this cannot stay a known deviation. After it: the ICBM, never yet seen fired (§8.75; a late
+   start at the Nano or Digital Age with cheats, with a scratch script, would show it); the wall count (§8.70); and the
+   rest;
 4. classic_lua as the lobby's classic for a soak;
 5. then the deletion, keeping the helpers the Lua calls (EEComputerPlayer's engine glue split out).
 
@@ -4653,6 +4657,536 @@ Small Islands, balanced, 90 minutes, 8 seeds:
 Determinism on islands (seeds 3 and 5, 90 minutes, --repeat 2, a landing in one of them) is identical. On land maps
 nothing changes (no crossing is needed).
 
+### 8.66 Porting everything, 2a: the island growth gap, the queues, the island garrisons (2026-11-13, EE-SIM)
+
+**Where the gap starts.** On Small Islands (8 seeds) the two sides train their citizens in the same batches of 5
+(at 30, 172, 314 and 456 s) for the first 8 minutes. They part from minute 6 (15.4 against 12.6 citizens), and by
+20 minutes stand at 32.2 against 25.9. The epoch reserve and the epoch pressure are the same on both sides (a
+traced game: 0.333 at 10 minutes on both, the Stone Age's 1,122 food reserved).
+
+**Two differences, both ported:**
+- **The queues (IsInProduction).** The C++ counts a class as in production while any producer is making it or has
+  it queued (EEComplexUnit::IsResearchQueued). The port saw only the item being made, a documented deviation, now
+  gone: own building records have `queued` (the techs behind the one being made; AI_LUA_UNITS §11), and the port's
+  IsInProduction reads it.
+- **The island garrisons (FillGarrison).** On island and planets maps the C++ fills a garrison with any available
+  citizen, a gatherer too, not only the idle ones. A town centre hires its garrison: the citizens for the free room
+  are trained at once when affordable, else requested. The upgrade then uses them up. In the C++, 73 citizens a
+  bench die inside a garrison in the first 20 minutes (4.6 a game, at tile -10000, no killer); the port lost 0.4.
+  The port now does both (civ.lua `fill_garrison`; the deviation in ORIGIN is gone).
+
+| Small Islands, 16 seeds, 60 min | before | queues | queues + garrisons |
+|---|---|---|---|
+| Lua won-lost | 10-3, 3 close (§8.64) | 10-2, 4 close | 8-2, 6 close |
+| citizens at 20 / 40 min, Lua | 31.1 / 63.8 | 31.1 / 63.2 | 27.9 / 58.9 |
+| citizens at 20 / 40 min, the C++ | 24.2 / 34.2 | 24.2 / 34.9 | 24.1 / 34.4 |
+| citizens lost by 20 min, Lua / C++ | 0.4 / 4.6 | 0.4 / 4.6 | 1.9 / 4.7 |
+
+On land (balanced, 32 seeds) the queues give 11-17, 4 close (12-16, 4 close before), within noise. The garrisons
+change only island and planets maps.
+
+**Open in 2a.** The gap has narrowed but is not closed: 27.9 against 24.1 citizens at 20 minutes, and Copper 12 of
+16 against 3. The C++ still loses more citizens in its first 20 minutes (4.7 against 1.9). The coast towers
+(FindTowerSite's island coasts) go with the gates' and choke points' towers in 2b.
+
+Determinism: islands (seeds 3 and 5) and land (seed 2), 60 minutes, --repeat 2, identical. 0 script errors.
+### 8.67 Porting everything, 2a closed (2026-11-13, EE-SIM)
+
+The close-out bench was Small Islands, balanced, 90 minutes, 32 seeds:
+- **The result:** Lua 19-3, 10 close. Copper 29 of 32 against the C++'s 15; Bronze 17 against 0.
+- **Citizens:** 54.1 against 36.4 at 40 minutes. Citizens lost: 14.7 against 14.4 in all, 1.8 against 3.6 by 20
+  minutes.
+- **The ferries:** 274 started, 214 landed, 43 aborted (3 found no plan).
+- **The attack crossings:** 3 started, 2 landed. Few groups attacked across water in these games.
+- 0 script errors.
+
+The port plays islands better than the C++. That is accepted, and recorded in ORIGIN as a known deviation: the aim
+is to replace the C++, not to copy its weaknesses. 2a is done: the ferries, the attack crossings, the queues, the
+island garrisons. The coast towers move to 2b with the walls and the other tower sites.
+### 8.68 Porting everything, 2b: the tower sites and the walls (2026-11-13, EE-SIM)
+
+**The tower sites** (EECPBuildManager::FindTowerSite). Before, the port placed its towers only at the resource
+centres. It now follows the C++'s order:
+1. an island map's coasts: the largest water's shore by each town (ai.water_sites), a site in the rings 1-2 round a
+   shore tile with no tower within 1.5 x the tower's range;
+2. the worked resource centres, as before;
+3. the gates: within 5 tiles of a gate, off the gate and the wall;
+4. the choke points within 7 tiles of a town, none of the class within twice its range.
+
+DEVIATION: the gate's and the choke point's site is the first placeable tile (ai.find_site), not a random one.
+Towers built: on Small Islands (16 seeds, 90 minutes) 168 for the port against the C++'s 158. On land the port
+builds more of them, as before this change (364 against 193 in 32 games). Balanced 32 seeds: 12-15, 5 close.
+
+**The walls** (EECPWallManager): `ai/classic_lua/walls.lua`, on two new generic helpers:
+- `ai.wall_line`: a wall line's tiles;
+- `ai.wall_stretches`: the planner's look at one line, whether a building blocks it and its open stretches between
+  forests, cliffs and water, with their levelness. Both are in AI_LUA_UNITS §11.
+
+How the port plans a wall:
+- **When.** From the Copper Age, a wall across the way from each enemy's known town to each own town centre and
+  capitol, the nearest enemy first. One wall every 30 s, once the last one's gate stands.
+- **The way.** It is cut at the size table's fraction of its length. Each step is looked at across, and the
+  shortest open level stretch clear of the resource centres and the gates is taken. With none, the next size is
+  tried; the 9th size takes the stretch nearest a gate.
+- **Building.** A builder for every 10 tiles; ai.wall lays the wall, and ai.gate puts the gate at its middle.
+- **DEVIATIONS** (ORIGIN): the way is ai.route's, straight between its 8-tile cells; the enemy's centre is its known
+  town; IsPathUsable is not tested; a lost wall piece is not queued again.
+
+In 40 bench games (32 Small Islands, 8 land) the C++ built no wall; why is not traced yet. The port builds about
+one a game on land: 30 walls and 15 gates in 31 balanced games. Balanced 32 seeds (1 lobby fault): 12-14, 5 close
+(12-15 before), within noise.
+
+Determinism: seeds 2 and 5, and seed 12 (4 walls), 90 minutes, --repeat 2: identical. 0 script errors.
+Both builds 0/0, eedata check PASS. Next: the late-epoch start benches (sim_bench `--start-epoch`), where walls and
+towers come up sooner and can be compared with the C++'s.
+### 8.69 Porting everything, 2b: the late-start benches, and the C++'s walls after all (2026-11-13, EE-SIM)
+
+**`sim_bench.py --start-epoch`.** It sets the lobby's starting epoch (control 183) by its line, for example
+`--start-epoch "Copper Age"`, so that late-epoch play comes up in short games. A Copper start (8 seeds, 45 minutes)
+runs cleanly: both sides start in Copper, and the port won 4-0 with 4 close.
+
+**The C++'s walls: a correction.** §8.68 said that the C++ built no wall in 40 bench games. That was wrong: the count
+looked for wall pieces among the build manager's `build.start` lines. The wall manager orders its walls with
+EEMBuildWall, which lays the pieces without that line. A temporary trace (reverted) counted the pieces each wall
+order laid (EEPlanWall) in 8 balanced 90-minute games:
+
+| | wall orders | pieces laid | games with walls |
+|---|---|---|---|
+| the C++ | 62 | 142 | 5 of 8 |
+| the port | 8 | 68 | 2 of 8 |
+
+The C++'s planner is not broken. Its walls are short (2.3 pieces an order), and it orders them every 30 s.
+
+**Why the port orders fewer.** The enemy's centre was the first suspect: the port knew only the enemy towns its view
+carried. It now also takes a remembered unit of the player (ai.memory), and queues its plans again whenever the
+queue is empty (the C++ queues them at the start, every enemy known). The count stayed at 7 orders in 8 games. A
+count of the planner's own steps (4 games, temporary) shows the real cause:
+- of 450 steps across the way, 404 were blocked: a land building within 2 tiles of the line;
+- only 5 open stretches were found, and 1 was long and level; none of them crossed the way clear of the resource
+  centres.
+
+The port's way is ai.route's: straight lines between 8-tile cells, through towns and by buildings. The C++'s is the
+path manager's tile path, refined with the wall pather, which keeps clear of buildings, so its lines across the way
+are seldom blocked. Next in 2b: a generic helper for that tile path (the path manager's FindPath with the wall
+pather, between two tiles), so that the port's planner looks across the same way as the C++'s.
+### 8.70 Porting everything, 2b: the wall planner's path (2026-11-13, EE-SIM)
+
+**`ai.wall_path(unit, x1, y1, x2, y2)`**, a new generic helper (AI_LUA_UNITS §11), returns the tile path an own unit
+would take between two tiles inside their box. It is the path manager's FindPath with the wall pather, the C++
+wall planner's own refinement of each step of its way. walls.lua now refines each step between ai.route's waypoints
+with it, as the C++ does. The enemy's centre is the known town, else a building of that player the seat
+remembers (its capitol, then a town centre, then any). A unit seen on the way no longer counts: a scout by the own
+town had given a way of 37 tiles.
+
+**The result:** no better. Over 4 balanced games the planner still finds about 9 in 10 of its lines across the way
+blocked (a land building within 2 tiles of the line), and seldom an open, level stretch clear of the resource
+centres.
+
+| | the port | the C++ (§8.69's temporary trace) |
+|---|---|---|
+| land, 8 games, 90 min: wall orders (games) | 3 (2) | 62 (5) |
+| Copper start, 8 games, 45 min: wall orders (games) | 9 (4) | 21 in 4 games |
+
+**Open.** The port plans far fewer walls than the C++. Two differences are left between their lines across the way.
+- **The coarse way.** The C++'s comes from the path manager's own request with the wall planner modifier, which
+  favours open ground; the port's from ai.route.
+- **What blocks a line.** Not traced yet: which building blocks it.
+
+The next step is a trace of the blocker in a debug build, then the request path itself as a helper if it is the way.
+Results stay within noise (8 balanced seeds: 2-5, 1 close). Determinism (seeds 3 and 12, 90 minutes, --repeat 2,
+4 walls in seed 12) identical. 0 script errors. Both builds 0/0, eedata check PASS.
+### 8.71 Porting everything, 2b closed: what blocks the port's walls (2026-11-13, EE-SIM)
+
+The walls got one more round, time-boxed. A debug build (reverted) named the building that blocks each of the
+port's lines across the way. In 4 balanced games:
+- **The port's own buildings:** settlements 73, Copper guard towers 57, stables 22, temples 13, barracks 12, then
+  Bronze guard towers, archery ranges and houses.
+- **The enemy's:** settlements 46, Prehistoric guard towers 8, temples 5.
+
+So the port's way runs past its own outposts. A whole tile path between the two towns (ai.wall_path over the box of
+the two) instead of the refined route changed nothing: 73 whole paths, 407 blocked lines, 3 wall orders in 8 games.
+The C++'s coarse way comes from the path manager's own request with the wall planner modifier (influence costs). That
+is the one difference left. Porting it needs an asynchronous path request held across steps and saves, more than
+the time box allowed.
+
+The gap is recorded as open in ORIGIN: the port orders 3-9 walls where the C++ orders 21-62. The walls come back in
+stage 3. 2b is closed (the tower sites, the walls, the late-start benches), and 2c (air, space, submarines) is next.
+### 8.72 Porting everything, 2c: the air share (2026-11-13, EE-SIM)
+
+The benches start in the Atomic Age - WW2 (`--start-epoch`; 8 seeds, 45 minutes). Before this change the C++ asked
+for aircraft and the port never did:
+- the C++: 70 requests (37 carrier fighters, 33 Typhoon fighter-bombers), 8 airports and 13-22 anti-air guns;
+- the port: none, and so no airport, since CheckBuildingCounts counts an airport for the air units asked for.
+
+The port now has ComputeDomainShares' air share from WW1:
+- **The weight.** 0.1-0.3 when the target's known town lies across water; 0.05-0.2 more when the target has more
+  anti-air units than the player; 0.2-0.35 when neither holds (planets 0-0.1).
+- **The share.** A random 0.9-1.35 of the weight, pulled toward the target's air share of its strength by the
+  naval unit weight, as the original does.
+- **The count.** The air count is filled by the counters (3-5 classes), then by a favourite air type; with no air
+  class it goes to land.
+- **DEVIATIONS** (ORIGIN): the town values' rule (a target town worth 1.5 x the player's) is not ported; the
+  favourite air type is a random trainable air class (the original's screen is not readable).
+
+The attack line now prints `air=` (the share) and `airslots=`.
+
+At the WW2 start: 27 air slots in 128 groups (a mean air share of 0.18) against the C++'s 33 fighter-bomber
+requests; airports 7 against 8; anti-air guns 8 against 22. Results 1-2, 5 close (2-1 before), within noise.
+Determinism at the WW2 start (seeds 2 and 5, --repeat 2, air slots in both) is identical. 0 script errors. No C++
+changed.
+
+Next in 2c: the carriers and their fighters (CheckNaval's carrier, the 37 Corsairs), the anti-air count (the C++ asks
+for nearly three times as many guns), the air and space explorers, the favourite space type and CheckSpace, then the
+air sub-groups' own behaviour (bombers, fighters, helicopters) beyond lib.groups.
+### 8.73 Porting everything, 2c: carriers, anti-air, explorers, space (2026-11-13, EE-SIM)
+
+The benches start in the Atomic Age - WW2 (`--start-epoch`; 8 seeds, 45 and 90 minutes) and, for space, in the Space
+Age on Planets Earth (4 seeds, 45 minutes).
+
+- **The aircraft carriers.** AllocateSpecialUnits' carriers are ported:
+  - the carrier chance;
+  - at most the per-group number, less one sea unit;
+  - the carriers' share of the unit limit.
+
+  As in the C++, they never come up with this data. The carrier is neither an attack nor a defence unit, so it is
+  never a candidate. A carrier comes only as the carrier fighters' producer. The army line now prints `carriers=`.
+- **The carrier fighters.** From WW2, CheckNaval keeps the difficulty's carrier fighters (new tuning fields
+  `carrier_fighters_*` in `ai.tuning().behavior`, AI_LUA_UNITS §11), counting own units and those asked for. The
+  fighter is the epoch's: Corsair, then F-14, then Avenger. The request queues the carrier as its producer at the
+  start, as the C++'s does: 8 carriers queued plus 1 later in 8 games for both.
+- **The anti-air count.** It was already the C++'s; the 22 in §8.72 was a 90-minute count. At 45 minutes it is 8
+  against 7; at 90 minutes 12 against 12.
+- **A stall loop (new, not the C++'s).** In one game a navy yard's shore site stalled 33 times: the foundation was
+  deleted and placed again on the same tile. Now a site that stalled twice for its class in ten minutes is skipped
+  until then. That game had 4 stalls afterwards.
+- **The explorers.** The air explorers are ported: num_air_explorers, once the first attack has started and the
+  airport is researched; an aircraft inside its airport also goes out. The space explorers are ported too: as many as
+  the sea explorers (the C++ reads that number), once the space dock is researched on a space map.
+
+  DEVIATION: the port picks the fastest class trainable now. The C++ asked for a Corsair 52 times in 8 WW2 games,
+  with no carrier to build it, and got none. The port asked for 15 aircraft it could train (A-10, B-17, B-2).
+- **CheckSpace.** On a space map, every ship_maintenance_timer minutes, a space-only group of kind 5 tops the space
+  units (own and asked for) up to ships_to_maintain. A space carrier is added while there are fewer than the space
+  docks and 4. ChooseFavoriteSpaceType and IsFavoriteSpace are ported. On Planets Earth the port made 13 space
+  groups in 4 games. The space units join the land sub-groups until the air and space sub-groups are ported.
+
+0 script errors. Determinism (seeds 2 and 5, --repeat 2) is identical at the WW2 start and on Planets Earth. Only a
+Lua tuning export changed in the C++; the classic's decisions did not change.
+
+On land (balanced, 32 seeds, 90 minutes) the C++ won 16, the port 10, with 6 close (12-15 and 11-17 before), within noise. Only the stall rule acts on land: these games never reach the epochs of the other changes.
+
+Next in 2c: the air sub-groups (EECPASGAir and its bomber, fighter and helicopter units), and the space fighters'
+sub-group.
+### 8.74 Porting everything, 2c: the air and space sub-groups (2026-11-13, EE-SIM)
+
+- **A gap first.** The port had asked for aircraft since §8.72, but its free pool held only soldiers and ships. The
+  aircraft it trained were never taken into a group: the slots waited until their deadline and the planes stood in
+  their airports. The free pool now holds the own aircraft too, parked ones included, and so does the own file's
+  air strength.
+- **The air sub-group.** EECPASGAir with EECPASGUAirBomber and EECPASGUAirFighter is ported (army.lua
+  `air_update`):
+  - a manual group of the planes with no rally point: they take off from their bases once the slots are filled;
+  - the task as AssignLandTask's, but only places within the fuel reach (CanReach: flight seconds x speed x 0.9 from
+    the plane's base);
+  - the planes' own defence ladder: guard_chokepoint_air_percentage, the threatened town, the land;
+  - IsLocationTaskValid every 15-180 s: an attack holds while the target is known within 2 regions; a defence lapses
+    35% of the time;
+  - AssignPrejudices: bombers prefer citizens (10%) or anti-air (15-40%), fighters prefer bombers (35-70%), each
+    only where the weapon hurts that kind;
+  - targets round the task's place (no walls, runways or animals). A bomber keeps a live target within 10 tiles.
+    Fighters fly to the target's tile and the engine dogfights; the others attack it;
+  - an idle or parked plane is sent to the task's place again, at most every 10 s; the engine brings it home when
+    its fuel runs out.
+- **Helpers (AI_LUA_UNITS §11).** `ai.can_hurt(attacker, target)` (the damage table: CanAttack without the ignored
+  targets), the class field `flight_time` and the own unit field `base` (the airport or carrier).
+- **Helicopters** fly over and stay with the land sub-group, as EECPASGHelicopter is a kind of land sub-group.
+- **Space.** The space units get the same life (EECPASGSpaceFighter), every unit flying to its target. DEVIATION:
+  the planet spaceships go with them.
+- **DEVIATIONS.**
+  - The target score is the port's (prejudice, armed, distance), not ScoreTarget's.
+  - The route is the engine's.
+  - The town defence is no aid package, and the air sub-groups stay out of the aid packages and SendBestSubGroup.
+
+**Results.** WW2 start, 8 seeds, 90 minutes:
+- No cheats: 22 air groups, 15 air tasks (choke, town, return). The economy at the late start fills few slots.
+- With the cheats on: 172 air and space group lines, 112 air tasks (5 territory attacks), with this change and
+  before it:
+  - wins: C++ 3, port 0, 5 close (C++ 5, 3 close before);
+  - the port's army at 30 minutes: 20.5 (13.8 before).
+
+  The port starts these late games with fewer citizens than the C++ (22 against 33 at 10 minutes), an economy gap for
+  stage 3.
+
+**An engine crash on the way.** EEE3DDamageVent::Step faulted in 2 of 4 Space Age games on Planets Earth: a model
+without the vent's tag points (PORT_LEARNINGS). It did so with the old scripts too. Fixed: such a model gets no vents.
+
+0 script errors. Determinism (WW2 start with cheats, seeds 2 and 5, --repeat 2, air groups in both) is identical.
+
+2c is complete apart from the submarines' kind (EECPASGSubmarine) and the planet spaceships' own sub-group.
+### 8.75 Porting everything, 2d: the wonders, the ICBM, the submarines and spaceships (2026-11-13, EE-SIM)
+
+- **The wonders** (army.lua `update_wonders`; new helper `ai.wonders`, AI_LUA_UNITS §11).
+  - RespondToUnit fires when another player completes a wonder with the victory conditions on.
+    - An ally's wonder: DefendUnit. Difficulty sets the share of groups sent to defend it (Easy 30-40%, Medium
+      20-30%, Hard 10-15%, with more than 3 groups), and a defence group is made.
+    - An enemy's wonder: AttackUnit. A share of groups attacks it (Easy 5-10%, Medium 10-25%, Hard 25-40%) and an
+      attack group is made. If that team has enough wonders to win, every group goes, five new groups are made, and
+      the wonder race starts.
+  - UpdateWonderRace: one of the racing team's wonders is attacked every 150 s.
+  - The next Update after a response goes for the leading wonder racer's nearest wonder.
+  - A wonder task attacks or defends round the wonder while it stands.
+  - **DEVIATION:** a wonder's tile is known only where explored. Otherwise the port uses its owner's known town;
+    with `sees_all` it reads them all.
+- **The ICBM.**
+  - With a new attack, at the difficulty's chance (20/40/60%), the ICBM fires at the target's seen unit with the
+    most hit points of 1500 or more. `ai.attack` now takes a missile base holding its ICBM, as a human's order does.
+  - CheckSpecials is ported: anti-missile batteries (one, then one more per town centre up to 10) and one ICBM kept
+    with the missile base. **NOT STARTED:** the capitols' cloaking, and culling batteries past 10.
+- **The sub-groups.**
+  - Submarines (EECPASGSubmarine, AI kind 0x15) form a sea sub-group whose units take only targets their weapons
+    hurt (the opt-in `can_hurt` in lib.groups).
+  - The space units now split as the C++'s GetSubGroupKind does. Planet spaceships (category 0x22, the new class
+    field `planet_spaceship`) take the space fighter sub-group (§8.74). The other space units take EECPASGSpaceship:
+    a sea sub-group of the space region (AssignSpaceTask as AssignSeaTask over the space area). This corrects §8.74,
+    which had the two the other way round.
+
+**The skirmish AIs build no wonders.** Neither the C++ nor any Lua AI orders one, so a test copy of the scripts had
+seat 3 build a Colosseum (scratch only, not committed). At the WW2 start with cheats, the wonders became available
+after about 41 minutes. In the game where one was completed (seed 3, at 63 minutes), the port answered:
+- an attack share (3 groups sent) and a new attack group;
+- then an attack on the racer's nearest wonder;
+- the groups took wonder tasks at it.
+
+**Results.** WW2 start, cheats, 8 seeds, 90 minutes:
+- 139 air, 333 navy and 49 submarine group lines;
+- wins: C++ 2, port 0, 6 close (3-0 with 5 close in §8.74).
+
+Space Age on Planets Earth, cheats, 4 seeds: 11 spaceship, 6 space-fighter and 22 air groups; the spaceship groups
+took space tasks. The C++ won 3, 1 close (4-0 before).
+
+0 script errors. Determinism is identical at the WW2 start and on Planets Earth (seeds 2 and 5, --repeat 2).
+
+2d is done. Next is 2e: the allies (AttackPlayer / DefendPlayer, AidAllies).
+### 8.76 Porting everything, 2e: the allies (2026-11-13, EE-SIM)
+
+The C++ classic's ally code is small:
+- AidAllies;
+- AttackPlayer / DefendPlayer, which answer the attack-players order (EEAttackPlayers, a player's hot-key call);
+- the allies' towns in two sub-group checks (MoveToNearestTown, IsAwayFromTowns). These stand on lib.groups'
+  movement and are not ported.
+
+EECPDiplomacyManager is empty in the original, and the interaction manager is chat only.
+
+- **AidAllies** (army.lua `aid_allies`, every defence update):
+  - The allies are taken in a shuffled order.
+  - The first one with a threatened town, or else with a town of more than 2 buildings and no package, gets an aid
+    package, while the unit allowance holds. One package per update.
+  - The C++'s threat test passes for every ally, since an ally is no enemy. A human ally's package is sent at once.
+  - The allies' towns are their buildings (allied units are always seen), clustered as the own. The packages run on
+    the own towns' machinery: `town_by_id` finds allied towns too.
+- **AttackPlayer / DefendPlayer.** For a script seat, the order is now an event (`attack_player` / `defend_player`,
+  AI_LUA_UNITS) instead of a call into the seat's C++ combat manager, which is not run for it. classic_lua answers:
+  - the caller's most valuable building, seen or remembered, is attacked or defended by every group, plus a new
+    group;
+  - the aid timers are halved.
+
+  This is untested: EE-SIM has no human to give the order.
+- **A fix on the way.** WonderStarted ran the C++ RespondToUnit for script seats too. It made C++ groups that were
+  never updated. A script seat now answers only from `ai.wonders` (§8.75).
+
+**Bench:** 4 players in two teams, each a port and a C++ (seats 1+2 against 3+4), Small, balanced, 8 seeds, 90
+minutes, against the same scripts before 2e:
+
+| | aid packages for allies | the port's C++ ally alive | the other team's C++ alive | the ports alive |
+|---|---|---|---|---|
+| before | 0 | 7/8 | 8/8 | 7/8, 8/8 |
+| after | 50 | 6/8 | 8/8 | 7/8, 8/8 |
+
+End citizens and armies are within a few units of each other: the port's ally has 60.6 citizens against 58.1, and
+an army of 0.6 against 1.2. Within noise.
+
+0 script errors. Determinism in the team game (seeds 2 and 5, --repeat 2, aid packages in both) is identical.
+
+2e is done. 2f (the rest) is next:
+- CheckRaids / Retaliate;
+- BuildUp (deathmatch);
+- EpochReached's WW1 groups;
+- Attack's flares and covered landings;
+- the capitols' cloaking;
+- the ChooseUnitsToKill rooms;
+- GiveImprovements;
+- the scenario tasks.
+### 8.77 Porting everything, 2f: the rest (2026-11-13, EE-SIM)
+
+The last of the C++ classic's decision code, in the order of §8.76:
+
+- **CheckRaids / Retaliate** (`check_raids`).
+  - Every 80 s once the first attack has started, the port counts its land buildings (no walls or farms; the queued
+    ones count).
+  - With fewer than bonzai_attack_level, it attacks a random enemy's most valuable building with every group and a
+    new one, sends every citizen there, then waits 300 s.
+  - The Bundeswehr power's citizen research is not started.
+- **BuildUp** (a deathmatch's start). Three defence groups, each of one random land defence class (the C++'s
+  screen), up to the unit allowance and 20 each.
+- **EpochReached.** On reaching the WW1 epoch in a game started before it: a defence group, and 1-4 cruisers on a
+  map of 250 water tiles or more.
+- **CombatManager::Attack** (`attack_at`). The attack groups' units are measured against the difficulty's share of
+  the unit limit (Easy all, Medium 75%, Hard 50%):
+  - under it, the nearest groups of the wanted kinds are sent, up to the first that is not already attacking;
+  - over it, the nearest attacking group that is free or within ~17 tiles is sent;
+  - when none is sent and new groups are allowed, a new group is made.
+
+  It serves two callers:
+  - **An ally's flare:** FlareReceived becomes a `flare` event for a script seat, as in §8.76. It sends every kind
+    of group and allows a new one. It is untested, since EE-SIM has no human to flare.
+  - **CoverLanding:** a crossing's beach is covered by the air, sea and space groups.
+- **CheckSpecials' cloaking.** A capitol whose nearest town's threat passes 0.5 casts the cloak (calamity tech
+  0x43d). DEVIATION: the capitol's power is not read; the engine refuses the cast without it. Batteries past 10
+  are now deleted, those with the most other batteries and fewest town centres within 4 tiles first.
+- **ChooseUnitsToKill for CheckNaval and CheckSpace.** Land citizens are deleted for the room the maintenance group
+  needs beyond the units available, the idle first.
+- **The wonder race's 95% military share** (kCMFactor) is now in the unit limit and the units available.
+- **GiveImprovements** (create_group, with the improvements enabled, not on Easy): num_improved_unit_types classes
+  of the selection, num_improved_attributes improvements each. DEVIATION: the port orders them through an own unit
+  of the class, so a class with none yet is skipped.
+- **NOT PORTED:** the scenario's attack and defend tasks (AddAttackTask / AddDefendTask, from scenario triggers). A
+  script seat ignores them.
+
+**Results** (balanced):
+- Land, 32 seeds, 90 minutes: C++ 17, port 10, 5 close (16-10 with 6 close in §8.73, 12-15 and 11-17 before).
+  Within noise. The port bought improvements in 55 groups.
+- Deathmatch, 8 seeds, 45 minutes: the port won 4, the C++ 2, 2 close. 24 build-up groups were made, three a game.
+- Small Islands, 8 seeds, 90 minutes: the port won 2, 6 close. Landings were covered twice.
+- WW2 start with cheats, 8 seeds: C++ 2, 6 close.
+
+No Retaliate fired: no game fell below the bonzai level. No cloak or WW1 group appeared either: the land games stop
+before WW1, and the late starts begin after it.
+
+0 script errors. Determinism (seeds 2 and 5, --repeat 2) is identical on land and in deathmatch.
+
+**Stage 2 is complete.** Everything of the C++ classic's decision code is ported or recorded in ORIGIN as a deviation
+or not ported. Stage 3 is next: the benches beyond Small land, with the late-start economy first (§8.63).
+### 8.78 Stage 3: script errors on large maps, the late-start economy, the ICBM (2026-11-13, EE-SIM)
+
+**The old "budget exceeded" errors.** They came from older benches. Six Large games with 4 players (2 ports, 2 C++)
+and 120 minutes were run on current code: 2 without cheats and 4 with them. They gave no script errors.
+
+**The late-start economy** (WW2 start with the cheats; at 10 minutes the port had 22 citizens against 33). The gap
+has three parts:
+- **The second town centre came late.** Only the capitol and town centres train citizens; settlements do not. At 5
+  minutes both players turn a settlement into a town centre with the garrison cheat (ChooseGarrison).
+  - The C++'s idle citizens are at hand, so its centre stands before the next batch of 10 citizens is queued, and
+    the batch is shared (a batch every ~142 s).
+  - The port seldom has idle citizens. Its garrison waited, and its next batch went to the capitol alone, so it got a
+    batch only every ~283 s until minute 10.
+  - Two new rules:
+    - with the garrison cheat and no idle citizen, the nearest gatherer goes in, so the rest is topped up and the
+      settlement turns at once;
+    - a citizen batch waits up to 30 s while a settlement is being filled, so both centres share it.
+  - The port's batches now come at the C++'s times: 30, 313, 455, 597 s.
+- **Carrier fighters without a carrier.** The port filled CheckNaval's carrier fighters (15 Corsairs) at its
+  airports. The C++'s request waits for a carrier that seldom comes. Those fighters cannot hit the ground, yet they
+  counted as army, so KeepStandingArmy raised no soldiers. DEVIATION: the carrier fighters are kept only with an own
+  carrier.
+- **Not closed: the losses and the army.** The C++ raids from minute 3. The port loses 6 citizens by 10 minutes
+  against the C++'s 1, its army is 7 against 21, and later its citizens stay at 33-37 against the C++'s ~50. That is
+  the next item: the military side of late starts (KeepStandingArmy's count, the defence of the gatherers).
+
+| WW2 + cheats, 32 seeds, 45 min | citizens/army 5 / 10 / 20 / 30 min | won-lost |
+|---|---|---|
+| C++ (before) | 15.2/4.7 / 34.9/21.4 / 51.1/24.8 / 47.4/27.4 | 13-1, 18 close |
+| port before | 14.0/6.0 / 21.8/8.8 / 26.6/10.9 / 31.0/11.3 | |
+| C++ (after) | 15.1/4.7 / 34.5/20.9 / 49.2/22.7 / 46.5/27.2 | 11-0, 21 close |
+| port after | 14.2/6.1 / 25.1/7.2 / 32.5/10.2 / 33.3/11.3 | |
+
+**The ICBM** had never fired, for two reasons:
+- **It is a missile.** No script list holds it, so the port never saw it and asked for a new one every two minutes
+  (21 in one game). The port now reads its missile bases' cargo and gives the loaded base the attack.
+- **The attacks went for the sims' idle human.** In EE-SIM the attack choice prefers humans, and the sims keep an
+  idle human (player 1) with nothing to hit. This holds for the C++ too, and every bench has it. It is noted here
+  for the bench design.
+
+A Digital Age start with cheats and a scratch copy that left the human out of the choice (not committed) confirmed
+the fire. Seed 3 queued a missile base at once, fired at minute 22 at the C++'s largest building, and killed 10
+citizens. The target list now takes remembered buildings too, which ai.attack accepts. DEVIATION: the C++ needs the
+tile seen now.
+
+On land (balanced, 32 seeds, 90 minutes) the C++ won 15, the port 11, with 6 close (17-10 with 5 close in §8.77). Determinism (seeds 2 and 5, --repeat 2) is identical on land and at the WW2 start.
+
+0 script errors. Next: the late-start army, then the wall count (§8.70).
+### 8.79 Stage 3: the late-start army (tried, not kept), and the wall planner's way (2026-11-13, EE-SIM)
+
+**The late-start army.** At the WW2 start with cheats the port's army trails the C++'s (12 against 21 at 10
+minutes, §8.78). The cause is in the C++'s KeepStandingArmy (a port addition, §8.13). It counts its army with
+CountMilitaryUnits(false, true): with inByClass false, GatherUnits skips the unit lists and counts only the military
+asked for and being made. So the C++ never sees its standing army and keeps a steady trickle of its favourite land
+unit up to the military room. The port counts its units, as the rule meant.
+
+Two versions were benched against the same scripts, 32 seeds each (balanced; the C++ unchanged):
+
+| | WW2 + cheats, 45 min: won-lost (close) | port's citizens/army at 20 min | land, 90 min: won-lost (close) |
+|---|---|---|---|
+| the port as it is (§8.78) | 0-11 (21) | 32.5/10.2 | 11-15 (6) |
+| as the C++: requests and production only | 3-8 (21) | 37.4/20.3 | 7-18 (7) |
+| requests, production and the free soldiers | 1-9 (22) | 35.7/15.6 | 8-20 (4) |
+
+Counting as the C++ does closes the late-start army (20.3 against the C++'s 22.8) and wins 3 games. On land, though,
+its bigger army (7.6 against 4.2 at 30 minutes) costs citizens: 42 against 49 at 40 minutes, and 7-18. **Not kept.**
+The choice between them is a design one, for the owner:
+- copy the C++'s trickle everywhere;
+- copy it only at late starts;
+- or leave the late-start army behind the C++'s.
+
+**The wall planner's way.** New generic helper `ai.wall_route(enemy, x1, y1, x2, y2)` with
+`ai.wall_route_result(handle)` (AI_LUA_UNITS §11). It is the C++ wall planner's own path request: the path manager's
+coarse graph with the planner modifier (the enemy's influence costs), asynchronous across ticks, not saved.
+walls.lua now takes its way from it:
+- the path reversed, its ends the unit and the enemy's centre;
+- each step refined with ai.wall_path, as PlanWall does;
+- the way kept for the next sizes;
+- ai.route's cells only when the request fails.
+
+| | the port before (§8.70) | the port now | the C++ |
+|---|---|---|---|
+| land, 8 games, 90 min: wall orders (games) | 3 (2) | 8 (4) | 62 (5) |
+| Copper start, 8 games, 45 min: wall orders | 9 (4) | 10 (4) | 21 in 4 games |
+
+Better on land, still far from the C++. The walls stay OPEN.
+
+The trace prints `wall.way route|cells tiles=`. 0 script errors. Determinism with the asynchronous route (land, seeds
+2 and 6, 90 minutes, --repeat 2, walls in both) is identical.
+### 8.80 Stage 3: the baselines without the idle human, and the standing army counted as the C++ counts it (2026-11-13, EE-SIM)
+
+EE-SIM now allies the idle human seat with every computer at the start, so no AI attacks it (main d9a854ff). Every
+earlier port-against-C++ number had that seat soaking up attacks. The three KeepStandingArmy counts of §8.79 were
+benched again:
+- the port's (the units standing);
+- the C++'s (CountMilitaryUnits(false, true): only the military asked for and being made);
+- the C++'s plus the free soldiers.
+
+The C++ was unchanged, the setup balanced, with 32 seeds, and 64 for the land deciding pair.
+
+| | land, 90 min: port won-lost (close) | port's citizens/army at 40 min | WW2 + cheats, 45 min: won-lost (close) | port's citizens/army at 20 min |
+|---|---|---|---|---|
+| the port's count, seeds 2-33 | 13-12 (7) | 46.9/7.9 | 0-6 (26) | 47.3/23.6 |
+| the port's count, seeds 34-65 | 7-21 (4) | 40.8/8.2 | | |
+| **the port's count, 64 seeds** | **20-33 (11)** | | | |
+| the C++'s count, seeds 2-33 | 12-14 (6) | 43.3/9.2 | 0-3 (29) | 44.7/28.7 |
+| the C++'s count, seeds 34-65 | 10-18 (4) | 39.8/8.0 | | |
+| **the C++'s count, 64 seeds** | **22-32 (10)** | | | |
+| the C++'s plus the free soldiers, seeds 2-33 | 12-14 (6) | 43.1/8.1 | 0-1 (31) | 45.6/25.1 |
+
+Readings:
+- **The idle human was most of the late-start gap.** With the seat out of reach, the port at the WW2 start has
+  47.3 citizens at 20 minutes against the C++'s 52.3, where §8.78 had 32.5 against 49.2. Most games end close.
+- **Counting as the C++ does is no worse on land** (64 seeds: 22-32 against 20-33). At the late start it takes the
+  port's army past the C++'s (28.7 against 24.8 at 20 minutes) and loses fewer games (0-3 against 0-6).
+- **Kept, by the rule** (parity with the C++ we are replacing): the port's KeepStandingArmy counts the military asked
+  for and being made, as the C++'s does.
+- **On land the C++ still leads the port over 64 seeds**, about 22-32. The port's citizens fall behind after 30
+  minutes (40 against 56 at 40 minutes in seeds 34-65). That is the next stage-3 item, now on a true 1v1 bench.
+
+0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

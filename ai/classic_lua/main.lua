@@ -197,6 +197,18 @@ local function choose_favorite_land(view, memory)
     if #sea > 0 then
         memory.cp.favorite_sea = sea[ai.random(1, #sea)]
     end
+    -- ChooseFavoriteSpaceType: a random space class the player can train now that passes IsFavoriteSpace (the same
+    -- DEVIATION); none before the space units, so no random draw then
+    local space = {}
+    for _, c in ipairs(view.costs or {}) do
+        if c.military and not c.building and R.class_of(c.type).domain == "space" and ARMY.favorite_space_ok(c.type) then
+            space[#space + 1] = c.type
+        end
+    end
+    table.sort(space)
+    if #space > 0 then
+        memory.cp.favorite_space = space[ai.random(1, #space)]
+    end
 end
 
 -- KeepStandingArmy: the personality's standing_army per worker, up to the military room, 5 at a time, of the favourite
@@ -208,7 +220,10 @@ local function keep_standing_army(view, memory)
         return
     end
     local target = k * U.workers(view, memory) // 1000
-    local army = U.military(view, memory, true)
+    -- (CountMilitaryUnits(false, true): the C++ counts the military asked for and being made, not the units standing
+    -- - inByClass false skips the unit lists - so it keeps a steady trickle of the favourite up to the military room.
+    -- The port counts the same, for parity: AI_RESEARCH 8.80, 64 land seeds no worse, the late-start army closer)
+    local army = U.military(view, memory, true) - U.military(view, memory, false) + U.military_in_production(view)
     -- GetUnitsAvailable: (1 - citizen share - military / cap) x cap
     local cap = view.population_cap
     local room = (cap * (1000 - memory.t.behavior.citizen_percentage_k) + 999) // 1000 - army
@@ -332,6 +347,7 @@ function M.step(view, memory)
     if cp.epoch ~= view.epoch then
         cp.epoch = view.epoch
         CIV.epoch_reached(view, memory)
+        ARMY.epoch_reached(view, memory)   -- (EECPCombatManager::EpochReached: the WW1 groups)
         choose_favorite_land(view, memory)
     end
     CIV.update(view, memory)

@@ -373,7 +373,8 @@ end
 -- the garrison and the fortress (ChooseGarrison / ChooseFortress / FillGarrison): a random settlement connected to the
 -- town (economy.early_town_centers: none before the Bronze Age while that many centres stand) filled with idle
 -- citizens, its upgrade to a town centre; a random town centre into a capitol (not before the Bronze Age with
--- early_town_centers). DEVIATION: the island map's hired citizens are not ported (idle citizens fill it)
+-- early_town_centers). On island and planets maps a town centre hires its garrison (citizens trained for the room)
+-- and any available citizen fills it, a gatherer too
 
 local function fill_garrison(view, memory, id)
     local u = R.unit(id)
@@ -385,16 +386,39 @@ local function fill_garrison(view, memory, id)
     if room <= 0 then
         return
     end
+    local island = memory.t.island or memory.t.planets
+    if island and u.type == C.town_center then
+        -- (island and planets maps: a town centre hires its garrison - the citizens trained for the free room,
+        -- at once when affordable, else requested; they fill it as they come out)
+        if U.can_afford(view, memory, U.cost(C.citizen), room, C.citizen) then
+            ai.train(id, C.citizen, math.min(room, 5))
+        elseif not U.is_requested(memory, C.citizen) then
+            U.request(view, memory, C.citizen, room)
+        end
+    end
     local ids = {}
     for _, cid in ipairs(ai.units{category = "citizen", near = {u.x, u.y, 60}}) do
         if #ids >= room then
             break
         end
         local c = R.unit(cid)
-        -- (idle, or a gatherer waiting for room at its resource: kActionWaitForOpenPosition)
-        if c ~= nil and (c.action == "idle" or (c.action == "gather" and c.waiting)) and c.inside == nil
+        -- (idle, or a gatherer waiting for room at its resource: kActionWaitForOpenPosition; on island and planets
+        -- maps any available citizen, a gatherer too: IsCitizenAvailable)
+        if c ~= nil and (c.action == "idle" or (c.action == "gather" and (c.waiting or island))) and c.inside == nil
                 and ai.reach(c.x, c.y, u.x, u.y) then
             ids[#ids + 1] = cid
+        end
+    end
+    -- New (AI_RESEARCH 8.78): with the garrison cheat and no idle citizen, the nearest gatherer goes in, so the rest is
+    -- topped up and the settlement becomes a town centre now. The C++'s gatherers often stand idle (its resource
+    -- manager's free citizens), the port's seldom: it waited 5 more minutes for its second centre at late starts
+    if #ids == 0 and memory.t.fills_garrison and ai.garrison_fill ~= nil then
+        for _, cid in ipairs(ai.units{category = "citizen", near = {u.x, u.y, 60}, limit = 8}) do
+            local c = R.unit(cid)
+            if c ~= nil and c.action == "gather" and c.inside == nil and ai.reach(c.x, c.y, u.x, u.y) then
+                ids[1] = cid
+                break
+            end
         end
     end
     if #ids > 0 then
@@ -455,6 +479,7 @@ local function choose_garrison(view, memory)
         return
     end
     civ.garrison = id
+    civ.garrison_t = view.time
     fill_garrison(view, memory, id)
 end
 
@@ -561,6 +586,7 @@ function M.update(view, memory)
     U.update(view, memory)
     require("classic_lua.econ").update(view, memory)
     B.update(view, memory)
+    require("classic_lua.walls").update(view, memory)   -- (EECPWallManager::Update)
     RS.update(view, memory)
     if not civ.advancing and (B.has_later_requests(view, memory) or RS.has_later_ids(view, memory)
             or U.has_later_requests(view, memory) or view.epoch < max_human_epoch(view)) then

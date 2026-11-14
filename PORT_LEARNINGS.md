@@ -2100,3 +2100,14 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - The harness cannot see this class of bug: the test profile is windowed and the gates check milestones. A
   full-screen check needs a display. A disconnected session (this machine's RDP) still renders (WARP), but a BitBlt
   of the screen captures white.
+
+## A damage vent without tag points (Space Age on Planets Earth, 2026-11-13)
+
+- **Symptom**: EE-SIM faulted (c0000005) in EEE3DDamageVent::Step in 2 of 4 Space Age games on Planets Earth, about
+  13 game minutes in, with the old and the new classic_lua scripts alike: a graphics effect, not the computer player.
+- **Cause**: Step read the model's vent tag points (kinds 5 and 0x38) without checking them. A damaged unit whose
+  model has no such points (a NULL list), or fewer target points than source points, was read through the missing
+  list. The 32-bit original either never met such a model or survived the read.
+- **Fix**: a model without both lists, with no source points, or with fewer target points than source points, gets no
+  vents (Step returns early). The vents are cosmetic and draw from the effects' own random generator, so the
+  simulation does not change.

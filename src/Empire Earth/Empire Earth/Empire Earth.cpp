@@ -80,6 +80,8 @@ void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidt
 #include "ee/EEGraphics.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPCombatManager.h"
+#include "ee/EECPEngine.h"
+#include "ee/EECPNextUnits.h"
 
 // chain at 0x53e967 (wrapper)
 UString gU530BE0("B7B226DDB7B226DDBCD9344624C93DE6C4A90DD4B7B20375");
@@ -659,11 +661,20 @@ void EEAttackPlayers(long inPlayer, unsigned char inFlag)
             }
         }
         long j;
-        for (j = theEnemies.size() - 1; j >= 0; j--)
-            theEnemies[j]->mCombatManager->AttackPlayer(thePlayer);
+        // port: a script seat (the next engine) gets the order as an event; its C++ combat manager is not run
+        for (j = theEnemies.size() - 1; j >= 0; j--) {
+            if (EECPEngine(theEnemies[j]) == kEECPEngineNext)
+                EECPUnitsOnAttackPlayer(theEnemies[j], (long)thePlayer->mPlayerID, false);
+            else
+                theEnemies[j]->mCombatManager->AttackPlayer(thePlayer);
+        }
         if (inFlag)
-            for (j = theAllies.size() - 1; j >= 0; j--)
-                theAllies[j]->mCombatManager->DefendPlayer(thePlayer);
+            for (j = theAllies.size() - 1; j >= 0; j--) {
+                if (EECPEngine(theAllies[j]) == kEECPEngineNext)
+                    EECPUnitsOnAttackPlayer(theAllies[j], (long)thePlayer->mPlayerID, true);
+                else
+                    theAllies[j]->mCombatManager->DefendPlayer(thePlayer);
+            }
     }
 }
 

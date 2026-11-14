@@ -237,6 +237,8 @@ def run_one(run, args, slots, out):
                 "--report", str(report), "--trace", str(trace), "--ai-trace", "--wall-timeout", str(args.wall_timeout)]
         if run["map"] != "-":
             opts += ["--map-type", run["map"]]
+        if args.start_epoch:
+            opts += ["--lobby", "183=" + args.start_epoch]   # the lobby's starting epoch (late-start benches)
         if run["cheats"] != "-":
             opts += ["--cheats", run["cheats"]]
         if run["personality"] != "-":
@@ -367,6 +369,8 @@ def main():
                                                   "such as boom, or next: its first AI; ',' by seat), "
                                                   "';' between variants (- the lobby's classic)")
     ap.add_argument("--set", action="append", default=[], help="DOC.KEY=VALUE for every run")
+    ap.add_argument("--start-epoch", default="", help="the lobby's starting epoch line (e.g. 'Copper Age'); "
+                    "late-start benches (AI_RESEARCH 8.69)")
     ap.add_argument("--vary", action="append", default=[], help="DOC.KEY=V1,V2,...: one dimension")
     ap.add_argument("--env", action="append", default=[], help="NAME=VALUE for every run")
     ap.add_argument("--env-vary", action="append", default=[], help="NAME=V1,V2,...: one dimension")
