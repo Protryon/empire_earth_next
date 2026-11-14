@@ -14208,3 +14208,110 @@ over the unmodified unit with traced fakes, mutations, a cargo replay).
   renderer, the effects and the graphic objects: a census commit first; 'GEModel Load.cpp'), GETerrainMesh,
   GERasterizer, GEBitmap, GEFontBitmap, GETransformation's member copies. GETexture.cpp keeps 113 logic lines, the
   host's switch.
+
+## R6: the button subclasses whole in Rust: check box, radio button, tri-state box, scroll arrow, blinking and scalable buttons (ee_ui checkobj.rs, variantobj.rs; branch rust-r6-ui12, 2026-11-13)
+
+Round 11 made `UIButton` a Rust object; its subclasses still kept their own records in C++ members (reached by
+pointer from the round-3 and round-6 logic). This round moves those records into the Rust button: `Sub`, an enum
+in `buttonobj.rs` (`Plain`, `Check`, `Radio`, `TriState`, `Scroll`, `Blink`, `Scalable`), set by the subclass
+constructor's one init call. Every method of the six subclasses, the header's inline ones included, is a one-line
+forwarder (`UIButtonRust::Call`); each C++ constructor keeps only its `UIButton` part (the box rectangle and the
+manager's bitmaps it passes up); the destructors are gone (the Rust button's release does their part first, in the
+original's order).
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 17,154 at the branch's start ->
+16,541 (net -613 over the six commits).
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 7746656f | UICheckBox whole (`checkobj.rs`); the label a part; the shared ops | -100 |
+| e4d806f6 | UIRadioButton whole; the radio walk over the siblings' Rust buttons | -251 |
+| 1a5ca745 | UITriStateCheckBox whole | -150 |
+| 66b69409 | UIScrollButton whole (`variantobj.rs`); its polls by address; `button_ffi.rs` deleted | -49 |
+| 180bc004 | UIBlinkingButton whole; its embedded poll a heap object | -33 |
+| 7b3c93c3 | UIScalableButton whole; `button_variants_ffi.rs` deleted | -30 |
+
+- **The census.** Round 11's covered `UIButton`'s members; this round grepped the six subclasses' own members across
+  `src`, `include` and `tests`: no reader outside the toolkit's own units (`EESERBUnitTypes`' `mControl->mTextLabel`
+  is a combo box's). The game's nine subclasses (the editor's eight radio buttons and `EESETSShowIDsCheckBox`) use
+  the public methods and override only `Check`/`UnCheck`. No census commit, nothing changed under
+  `src/Empire Earth`.
+- **The label is a part.** The check box, radio button and tri-state box each own a `UITextLabel` beside the box,
+  now held by the Rust button by address as the scroll bar holds its slider: `LabelCreate` (110) and `LabelSetText`
+  (111) are new ops; moving, measuring, resizing, copying, drawing and deleting it are round 10's part ops, which the
+  button host now answers through `UIObjHost::Part`.
+- **The radio walk** (`RemoveOtherChecks`) reads each sibling's Rust button through `RadioOf` (118, pure: the form's
+  control `i`, its `GetType()` test, its `mRust`: WON round 30's `BtnOf`) and its checked flag directly, as the
+  original read `mIsChecked`. The sibling's `UnCheck` and the button's own `Check` are virtual (the editor's tabs,
+  unit-type, brush, map and main buttons override them): `RadioUnCheckAt` (117) and `RadioCheck` (116) call them on
+  the C++ objects.
+- **The polls.** The scroll arrow's delay and repeat polls were `TMPoll*` members; the blinking button's was an
+  embedded `TMPoll`. All three are now made, driven and deleted through ops (`PollCreate`..`PollSetDelay`, 130-137);
+  the blinking button's is a heap object (its constructor's `PollCreate`, its release's `PollDelete`, which the
+  original's member did not have: the only structural difference, invisible to callers).
+- **Other ops.** `StringLength` (112, pure; the round-3 logic tests a text's emptiness), `BitmapScale` (113) with
+  `BitmapSetScale` (28, round 10's `ThumbSetScale` renamed, now in `UIObjHost::Media`), `CopiedDrawRect` (114),
+  `BaseSetRectangle` (115), `ControlCount` (119), the blinking button's control ops (140-146: always-dirty, display
+  mode, the background and border opacities) and `BitmapSetOpacity` (147), the scalable button's
+  `BitmapTextureWidth` (148) and `BitmapStretch` (149: the destination in `f`, the source rectangle's four floats
+  packed two per integer in `c`, `d`); `ManagerBitmap` (40) grew the check and radio bitmaps (8..17) and moved into
+  `UIObjHost::Base`.
+- **What went.** `button_ffi.rs` and `button_variants_ffi.rs` (every record FFI of the button subclasses:
+  `ee_ui_check_*`, `ee_ui_radio_*`, `ee_ui_tristate_*`, `ee_ui_scroll_button_button_down`, `ee_ui_blink_*`,
+  `ee_ui_scalable_*`, `ButtonRefs`, `EeUiTriStateRefs`), their 30 `ee_uicpp_*` host calls, `UIButtonRust`'s `Refs`,
+  `Label`, `BitmapOffset` and record accessors, the `UITriStateCheckBoxRust` view. The round-3 and round-6 logic
+  (`button.rs`, `button_variants.rs`) stays with its goldens; `checkobj.rs` and `variantobj.rs` are its hosts.
+  `ee_ui_button_box_rect` is the subclass constructors' one remaining export.
+- **Behaviour.** No change. The emptiness test of a label text reads `GetLength()` (an op) instead of its bytes.
+- **The goldens** (`build/ui12`: one generic driver `sub_driver.inc`, `KIND` 1..6, over round 11's world plus the
+  label, the strings, the manager's bitmaps and scales, the polls, the slider, the opacities, and for the radio button
+  the form's siblings). `orig` is the subclass's statements at round 11's head (7b436ee0) over that commit's record FFI
+  and its whole Rust `UIButton` (`lib_orig.lib`, `orig_include`); `cur` is the Rust button. The radio button's siblings
+  are real Rust radio buttons on a silent host in `cur`, flags in `orig`; `RadioOf` prints as a flag, and a world-only
+  `set 120 i c` line gives each sibling's check state to the cargo replay (which makes its own sibling buttons through
+  a new `Replay::with_pure_hook`). 20,000 sequences of 40 calls each, orig = cur byte for byte:
+
+  | Golden | Trace lines | Mutations (sequences failing of 20,000) |
+  |---|---|---|
+  | check box | 8,500,913 | label copied without text 19,992; box scale restored before the draw 4,928; scale without the border 3,661; on/off bitmaps swapped 18,781; width less 0 not 1 18,865; label not deleted 15,658; ButtonUp before the toggle 14,857 |
+  | radio button | 10,183,166 | swap without SetDirty 18,969; a setter replacing the other state's 19,960; ButtonUp before the virtual Check 19,707; a sibling's check never read 9,370; other-state bitmaps kept 19,692; a checked construction swapping one bitmap 8,051; the check box's float border 0 (equivalent: the two doublings agree below 2^24) |
+  | tri-state box | 9,709,240 | not-state bitmaps those of on 19,717; label drawn without the box 19,998; ButtonUp before the cycle 18,512; label copied as the box 13,502; text set without dirtying 18,357 |
+  | scroll arrow | 10,514,214 | polls made in the other order 20,000; ButtonUp stopping only the repeat 20,000; delay poll deleted first 20,000; direction inverted 19,998; the delay's running read from the repeat poll 20,000 |
+  | blinking button | 10,146,051 | the poll's delay left at 250 20,000; blinking without SetDisplayMode 16,174; the time left read before the poll 19,963; stopping restoring always-dirty true 6,809; the two bitmaps' opacities swapped 0 (equivalent: both full opacities are 1) |
+  | scalable button | 9,423,601 | the source's packed halves swapped 17,751; the focused source without a focus bitmap 3,723; the normal and pressed rectangles swapped 17,411; the slices drawn at their destinations' top-left 0 (equivalent: each slice's location is its destination's top-left) |
+
+  The first 25 sequences of each are `golden_{checkobj,radioobj,tristateobj,scrollobj,blinkobj,scalableobj}.txt`,
+  replayed by cargo (`checkobj_tests.rs`, `variantobj_tests.rs`), each with a changed-answer test.
+- **NULL-receiver audit** (WON rounds 30-31). Every original method of the six classes, the inline ones included
+  (`GetIsChecked`, `GetTextLabel`, `GetCheckState`, `GetTabable`, `GetIsBlinking`, the destructors), read a member of
+  `this` first or called through the vtable, so a NULL receiver crashed the original as it crashes the forwarder's
+  `mRust` read: no early return needed keeping. The scroll arrow's `GetTabable`/`UpdateKeyboard` stay inline
+  constants. `RadioOf` tests the form's control for NULL as the original's walk did.
+- **Lessons.**
+  - A mutation written against unformatted code missed after `rustfmt` re-indented the site: `mutate.sh` said
+    `MUTATION NOT APPLIED` and the mutation was rerun with the formatted text.
+  - Each subclass got its own commit although they share the label and host plumbing: the first commit built the
+    shared ops, later commits' C++ sat in scratch (`build/ui12/*_files`) until the earlier commit's gates passed.
+  - The scratch world's sibling objects need stable addresses (`Vec<Box<_>>`, clippy's `vec_box` allowed with the
+    reason).
+- **What runs it.** EE-SIM never builds a button: the oracle is unchanged by construction (seeds 2-3 identical after
+  every commit). The scenario editor gate (`sim_editor.py`, 1,820 lines unchanged after every commit) builds the
+  editor's tab radio buttons (`EESETab`, the main and tool buttons, the unit-type and brush buttons, each a radio
+  button with a `Check` override), its check boxes (`check ID 0|1` sets them through `SetChecked`, their trigger events
+  run), the editor's list boxes and scroll bars (so scroll arrows are made and deleted with their polls).
+  **Only the tour shows:** every draw (the box bitmaps scaled to the box, the labels beside them, the scalable
+  buttons' three slices in every menu, the blinking button's fade in game), mouse clicks on a check box, radio button
+  or tri-state box (the toggle, the radio walk unchecking a sibling, the trigger events the settings screens listen
+  for), the scroll arrows held down (the delay, then the repeat stepping the slider), the in-game blinking buttons.
+- **Gates.** Per commit: `build.py -j 3 --sim` 0/0, the Rust gate (once a known timing test, `ee_plat_core`'s
+  one-shot callback, failed under load and passed alone; once clippy's `vec_box` and once rustfmt were fixed before
+  the commit), the oracle seeds 2-3 identical, `sim_editor.py` PASS (1,820 lines). After each group (the check, radio
+  and tri-state boxes; the scroll, blinking and scalable buttons) the test-profile build (0/0) and the tour
+  (`fixture_game.py --exercise tour --play-seconds 60 --data <main tree>` under the harness lock): `RESULT PASS tour`
+  both times. On the result merged with `rust` (94898cb2, a clean merge; `rust_includes.py`'s re-added
+  `rust/ee_screens.h` in `EESEUICCommandUnits.cpp`/`EESEUnit.cpp` reverted): build 0/0, the Rust gate PASS, the
+  oracle seeds 2-7 identical, the editor gate PASS (1,820 lines), the test-profile build 0/0, the tour `RESULT PASS tour`.
+  The harness lock sat ownerless (an empty directory) for about half an hour at 15:11; it cleared without this lane
+  touching it.
+- **Left:** `UITextLabel` with `UITLScrolling` (census first: many outside `SetText` callers), `UIEditBox`, the list
+  boxes, the combo box, the form and the manager; then `UIControl` itself.
