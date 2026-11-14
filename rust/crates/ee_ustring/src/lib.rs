@@ -29,8 +29,8 @@ mod record;
 mod wide;
 
 pub use record::*;
-pub use wide::*;
 use std::ffi::{c_char, c_ulong};
+pub use wide::*;
 
 /// `strncmp(a, b, n) == 0` over strings whose bytes past their slices read as the terminator.
 fn strneq(a: &[u8], b: &[u8], n: u32) -> bool {
