@@ -19,8 +19,14 @@ unsafe extern "C" fn h_release(p: *mut c_void) {
     COUNTS.with(|c| *c.borrow_mut().entry(p as usize).or_default() -= 1);
     LOG.with(|l| l.borrow_mut().push(format!("release {}", p as usize)));
 }
-unsafe extern "C" fn h_last_use(_: *mut c_void) -> i64 {
-    unix_now()
+// a session handle (hostauth.rs) last used at `at`, and its handle count
+fn session(at: i64) -> *mut c_void {
+    let key = crate::blowfish::Blowfish::default();
+    crate::hostauth::session_handle(crate::peerauth::EeWonAuthSession::new(1, 7, key, 4, at)).ptr()
+}
+fn handles(p: *mut c_void) -> usize {
+    let a = crate::hostauth::item(crate::hostop::Obj(p as usize)).expect("a handle");
+    std::sync::Arc::strong_count(&a) - 1
 }
 unsafe extern "C" fn h_kill(_: *mut c_void) {}
 unsafe extern "C" fn h_killed(_: *mut c_void) -> bool {
@@ -50,7 +56,6 @@ pub(crate) fn hooks() -> EeWonAuthFlowHooks {
         context: 77 as *mut c_void,
         add_ref: h_add_ref,
         release: h_release,
-        session_last_use: h_last_use,
         op_kill: h_kill,
         op_killed: h_killed,
         op_status: h_status,
@@ -120,12 +125,15 @@ fn the_server_list_is_held_and_released_last() {
     unsafe { h_release(got) };
     c.set_server_context(600 as *mut c_void);
     assert_eq!((count(500), count(600)), (0, 1));
-    c.put_session([1, 2, 3, 4, 5, 6], 700 as *mut c_void);
-    assert_eq!(count(700), 1);
+    let s = session(unix_now());
+    c.put_session([1, 2, 3, 4, 5, 6], s);
+    assert_eq!(handles(s), 2, "the cache's reference to the session handle");
     LOG.with(|l| l.borrow_mut().clear());
     drop(c);
     let log = LOG.with(|l| l.borrow().clone());
-    assert_eq!(log, vec!["release 700".to_string(), "release 600".to_string()], "the sessions, then the servers");
+    assert_eq!(log, vec!["release 600".to_string()], "the servers (the session is a handle)");
+    assert_eq!(handles(s), 1, "the cache's reference given back");
+    crate::hostauth::release(crate::hostop::Obj(s as usize));
 }
 
 #[test]
@@ -134,9 +142,19 @@ fn sessions_go_through_the_flow_under_the_lock() {
     let a = [9, 9, 1, 2, 3, 4];
     c.put_session(a, std::ptr::null_mut());
     assert!(c.get_session(a).is_null());
-    c.put_session(a, 800 as *mut c_void);
-    assert_eq!(c.get_session(a) as usize, 800);
+    let s = session(unix_now());
+    c.put_session(a, s);
+    assert_eq!(c.get_session(a), s);
     assert!(c.get_session(a).is_null());
+    assert_eq!(handles(s), 2, "the caller's reference from get_session");
+    crate::hostauth::release(crate::hostop::Obj(s as usize));
+    // a session last used over 300 seconds ago is dropped, not answered
+    let old = session(unix_now() - 301);
+    c.put_session(a, old);
+    assert!(c.get_session(a).is_null());
+    assert_eq!(handles(old), 1, "the cache's reference given back");
+    crate::hostauth::release(crate::hostop::Obj(old as usize));
+    crate::hostauth::release(crate::hostop::Obj(s as usize));
     assert_eq!(c.refresh_block(10), 100055);
 }
 

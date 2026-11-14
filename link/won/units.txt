@@ -36,7 +36,6 @@
 2d7a20 2d8391 WONMisc/URL.cpp
 2d95a0 2d995e WONCommon/DNSTestOp.cpp
 2ddb70 2e1b5f WONAuth/AuthContext.cpp
-2e27b0 2e305f WONAuth/AuthSession.cpp
 2e3090 2e3c2d WONAuth/CDKey.cpp
 2f0190 2f04ec WONDir/DirEntity.cpp
 2f04f0 2f0d9a WONDir/DirEntityReplyParser.cpp

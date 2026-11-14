@@ -23,7 +23,9 @@ use crate::authflow::{self, EeWonLightCert};
 use crate::authlogin::{self, EE_WON_AUTH_LOGIN_CLEAR_ONE_TIME, EE_WON_AUTH_LOGIN_NAME, EE_WON_AUTH_LOGIN_PASSWORD};
 use crate::authobj::{self, EeWonAuthCtx};
 use crate::elgamal::ElGamal;
+use crate::ffi::EeWonByteSink;
 use crate::hostop::{self, Obj, Reply};
+use crate::peerauth::EeWonAuthSession;
 use crate::peerobj::{self, unix_now, Cert, PeerData, EE_WON_AUTHOBJ_AUTH_DELTA};
 use crate::peerobj::{
     EE_WON_AUTHOBJ_BLOCK_ID, EE_WON_AUTHOBJ_EXPIRE, EE_WON_AUTHOBJ_ISSUE, EE_WON_AUTHOBJ_PEER_DELTA,
@@ -43,6 +45,9 @@ pub(crate) enum Item {
     HttpCache(crate::httpcache::HttpCache),
     /// an HTTP cache's entry (its maps hold the same `Arc`, so a handle to it is the same number every time)
     CacheEntry(Mutex<crate::httpcache::CacheEntry>),
+    /// a peer session (`AuthSession`; round 22): the peer auth op that made it, the auth context's cache and the
+    /// sockets' `CryptTransform`s hold it
+    Session(Box<Mutex<EeWonAuthSession>>),
 }
 
 impl Drop for Item {
@@ -191,6 +196,35 @@ fn secrets(c: &EeWonAuthCtx, which: i32, key: &[u8], t0: i64, t1: i64) {
     unsafe { authlogin::ee_won_auth_login_secrets(c.login(), which, k.as_ptr(), t0, t1) };
 }
 
+/// A session handle's `GetLastUseTime()` (anything else: 0).
+pub(crate) fn session_last_use(o: Obj) -> i64 {
+    match item(o).as_deref() {
+        Some(Item::Session(s)) => s.lock().unwrap_or_else(|e| e.into_inner()).last_use,
+        _ => 0,
+    }
+}
+
+/// A new session handle (one reference).
+pub(crate) fn session_handle(s: EeWonAuthSession) -> Obj {
+    handle(Item::Session(Box::new(Mutex::new(s))))
+}
+
+/// A peer auth op's session calls, given the op's session (`EE_WON_PEEROP_SESSION`, borrowed; none for none):
+/// `GetSession()` (a new reference) and `GetSession()->GetKey()`'s bytes.
+pub(crate) fn op_session(code: i32, session: Obj) -> Reply {
+    match item(session).as_deref() {
+        Some(Item::Session(s)) if code == hostop::EE_WON_HOST_PEER_AUTH_KEY => {
+            let key = s.lock().unwrap_or_else(|e| e.into_inner()).key.key().to_vec();
+            Reply { obj: Obj::none(), num: 0, addr: [0; 6], bytes: Some(key) }
+        }
+        Some(Item::Session(_)) => {
+            add_ref(session);
+            Reply { obj: session, num: 0, addr: [0; 6], bytes: None }
+        }
+        _ => Reply { obj: Obj::none(), num: 0, addr: [0; 6], bytes: None },
+    }
+}
+
 /// The call answered here, or None for the C++ side. `core(o)` is the Rust object of a C++ `AuthContext*` `o` (none:
 /// the op's `mAuthContext`), through the one call left (`EE_WON_HOST_AUTH_CORE`).
 pub(crate) fn answer(
@@ -333,6 +367,13 @@ pub(crate) fn answer(
             }
             num(0)
         }
+        // `new AuthSession(session)`: the handle owns the op's new session (an `ee_won_auth_session_new` box)
+        EE_WON_HOST_PEER_NEW_SESSION => obj(if n[0] == 0 {
+            Obj::none()
+        } else {
+            // SAFETY: the op's new session, handed over (peerop.rs)
+            session_handle(*unsafe { Box::from_raw(n[0] as usize as *mut EeWonAuthSession) })
+        }),
         // a new `EeWonAuthObj*` the op takes
         EE_WON_HOST_PEER_CTX_DATA => {
             num(core(Obj::none()).and_then(|c| c.peer_data()).map_or(0, |p| peerobj::peer_ref(p) as usize as i64))
@@ -349,6 +390,71 @@ pub(crate) fn answer(
         }
         _ => None,
     }
+}
+
+// ---- `CryptTransform` (WONRouting.h): a socket's encryption by a session handle it holds a reference to
+
+/// `CryptTransform`'s constructor: one more reference to the session handle.
+///
+/// # Safety
+/// `session` is a live session handle (or NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_session_hold(session: *mut c_void) {
+    add_ref(Obj(session as usize))
+}
+
+/// `CryptTransform`'s destructor: its reference given back.
+///
+/// # Safety
+/// `session` is a reference the caller held (or NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_session_release(session: *mut c_void) {
+    release(Obj(session as usize))
+}
+
+/// `CryptTransform::Send` (`decrypt` false: `AuthSession::Encrypt`) or `Recv` (`Decrypt`) at the current time: the
+/// status; the replacing message handed to `sink` when there is one (`*replaced`). Anything but a session handle
+/// leaves the message as it is (the original dereferenced it).
+///
+/// # Safety
+/// `session` is a live handle or NULL; `data` holds `len` bytes; `sink` is valid with `context`; `replaced` is
+/// writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_session_crypt(
+    session: *mut c_void,
+    decrypt: bool,
+    data: *const u8,
+    len: usize,
+    sink: EeWonByteSink,
+    context: *mut c_void,
+    replaced: *mut bool,
+) -> i32 {
+    // SAFETY: the caller's flag
+    unsafe { *replaced = false };
+    let Some(it) = item(Obj(session as usize)) else {
+        return 0;
+    };
+    let Item::Session(s) = &*it else {
+        return 0;
+    };
+    // SAFETY: the caller's bytes
+    let msg = unsafe { crate::ffi::bytes(data, len) };
+    let (st, out) = {
+        let mut s = s.lock().unwrap_or_else(|e| e.into_inner());
+        if decrypt {
+            s.decrypt(msg, unix_now())
+        } else {
+            s.encrypt(msg, unix_now())
+        }
+    };
+    if let Some(m) = out {
+        // SAFETY: the caller's sink and flag
+        unsafe {
+            crate::ffi::give(sink, context, &m);
+            *replaced = true;
+        }
+    }
+    st
 }
 
 #[cfg(test)]

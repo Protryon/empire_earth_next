@@ -647,8 +647,7 @@ WON_TESTS = {
     # the certificate classes, the peer data and PeerAuthClient / PeerAuthServer: the original's statements
     # (tests/won/won_auth_orig.h) against the game's classes over ee_won's peerobj module (golden:
     # rust/crates/ee_won/src/golden_peerobj.txt)
-    "won_peerobj_test": [WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]
-                        + [WON_SRC / "WONAuth" / "AuthSession.cpp"],
+    "won_peerobj_test": [WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")],
     # PeerAuthOp and PeerAuthServerOp: the original's statements against the Rust ops on the op base (golden:
     # rust/crates/ee_won/src/golden_peerop.txt)
     "won_peerop_test": "won_peerobj_test",
@@ -706,7 +705,7 @@ WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                   *[WON_SRC / "WONCommon" / f for f in ("WONFile.cpp", "StringUtil.cpp")],
                                   *[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
                                   WON_SRC / "WONMisc" / "HTTPEngine.cpp",
-                                  *[WON_SRC / "WONAuth" / f for f in ("AuthSession.cpp", "AuthContext.cpp")],
+                                  WON_SRC / "WONAuth" / "AuthContext.cpp",
                                   *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]]
 # RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
 # real certificates (golden: rust/crates/ee_won/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
@@ -716,6 +715,11 @@ WON_TESTS["won_authhost_test"] = WON_TESTS["won_serverop_test"]
 # rust/crates/ee_won/src/golden_httpcache.txt, recorded over HTTPCache.cpp and ServerOp.cpp's HostCall, before the
 # classes moved into ee_won httpcache.rs); the same units as won_serverop_test
 WON_TESTS["won_httpcache_test"] = WON_TESTS["won_serverop_test"]
+# the peer sessions over real sockets on 127.0.0.1: a real peer authentication's sessions and keys, the transforms
+# (ADD_CRYPT) and messages through them, the auth context's session cache, sessions made with a known key (golden:
+# rust/crates/ee_won/src/golden_authsession.txt, recorded over AuthSession.cpp and ServerOp.cpp's HostCall before
+# the session became an ee_won handle in round 22: hostauth.rs); the same units as won_serverop_test
+WON_TESTS["won_authsession_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]

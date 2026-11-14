@@ -972,33 +972,19 @@ private:
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
 
 // AuthSession (0x10cc bytes in the original: type, length field size, id, sequence numbers, the by-value Blowfish
-// and the last use, constructor 2e27b0, dtor 2e2a80): a RefCount shim over ee_won's EeWonAuthSession
-// (rust/crates/ee_won/src/peerauth.rs), which owns all of it.
-class AuthSession : public RefCount {
-protected:
-    EeWonAuthSession* mImpl;
-    virtual ~AuthSession(); //2e2a80
-public:
-    AuthSession(AuthType, unsigned short, Blowfish, unsigned char); //2e27b0/RET10c0
-    explicit AuthSession(EeWonAuthSession* inImpl) : mImpl(inImpl) {} // adopts a session ee_won made
-    WONStatus Encrypt(ByteBufferPtr&); //2e2b40
-    WONStatus Decrypt(ByteBufferPtr&); //2e2d60
-    time_t GetLastUseTime() const { return static_cast<time_t>(ee_won_auth_session_get(this->mImpl, 2)); }
-    // the Rust session's key, laid out as Blowfish's one member
-    const Blowfish& GetKey() const { return *reinterpret_cast<const Blowfish*>(ee_won_auth_session_key(this->mImpl)); }
-    AuthType GetAuthType() const { return static_cast<AuthType>(ee_won_auth_session_get(this->mImpl, 0)); }
-    unsigned short GetSessionId() const { return static_cast<unsigned short>(ee_won_auth_session_get(this->mImpl, 1)); }
-    void SetLengthFieldSize(unsigned char size) { ee_won_auth_session_set_lfs(this->mImpl, size); }
-    bool IsEncrypted() { AuthType t = this->GetAuthType(); return (t==AUTH_TYPE_SESSION || t==AUTH_TYPE_PERSISTENT); } //inline (WON SDK); same AuthSession+08 test as PeerAuthServerOp::Success
-};
-// CryptTransform: 8 bytes; new 8 at 2ad6d7, VT44ca1c, SDK CryptTransform.h.
-// Holds a reference to the AuthSession only.
+// and the last use) is an ee_won handle (rust/crates/ee_won/src/hostauth.rs over peerauth.rs's session, round 22):
+// the peer auth op that makes it, the auth context's session cache and the sockets' transforms hold it.
+// CryptTransform: 8 bytes; new 8 at 2ad6d7, VT44ca1c, SDK CryptTransform.h. Holds a reference to the session handle
+// only; its Encrypt / Decrypt are Rust's.
 class CryptTransform : public MsgTransform {
-    SmartPtr<AuthSession> mSession; //04, size08; implicit dtor2ad8e0 releases then MsgTransform dtor
+    void* mSession; //04, size08; an ee_won session handle (one reference)
 public:
-    CryptTransform(AuthSession* inSession) : mSession(inSession) {} //inline
-    virtual WONStatus Send(ByteBufferPtr& inMessage) { return this->mSession->Encrypt(inMessage); } //2ad8b0
-    virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->mSession->Decrypt(inMessage); } //2ad8a0
+    explicit CryptTransform(void* inSession) : mSession(inSession) { ee_won_session_hold(inSession); } //inline
+    virtual ~CryptTransform() { ee_won_session_release(this->mSession); } //2ad8e0
+    virtual WONStatus Send(ByteBufferPtr& inMessage) { return this->Crypt(false, inMessage); } //2ad8b0
+    virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->Crypt(true, inMessage); } //2ad8a0
+private:
+    WONStatus Crypt(bool inDecrypt, ByteBufferPtr& ioMessage); // ServerOp.cpp
 };
 
 
@@ -1023,10 +1009,6 @@ public:
 class PeerAuthOp : public RustServerOp {
 public:
     PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket, bool inUseAuth2 = true);
-    AuthSession* GetSession() const
-    {
-        return static_cast<AuthSession*>(reinterpret_cast<RefCount*>((intptr_t)this->GetNum(EE_WON_PEEROP_SESSION)));
-    }
     WONStatus GetGetCertStatus() const { return (WONStatus)this->GetNum(EE_WON_PEEROP_GET_CERT_STATUS); }
 };
 
