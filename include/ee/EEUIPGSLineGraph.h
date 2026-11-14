@@ -27,7 +27,6 @@ public:
     virtual void FormatYValues(float inValue, UWideString& outString);   // +0x9c "%d", rounded
     virtual void FormatXValues(float inValue, UWideString& outString);   // +0xa0 "%d:%.2d" game time
     const UGraph& GetShownGraph() const { return this->mGraph; }
-    void SetShownGraph(const UGraph& inGraph) { this->mGraph = inGraph; }
 
     UGraph mGraphs[31];                     // +0x230
 };

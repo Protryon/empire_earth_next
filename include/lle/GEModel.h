@@ -39,8 +39,6 @@ public:
     const GEBoundingBox& GetGraphicsBoundingBox() const { return *this->GetGraphicsBoundingBoxPointer(); }
     float GetGraphicsBoundingRadius() const { return this->GetBoundingRadius(this->GetGraphicsCurrentFrame()); }
     unsigned long GetGraphicsCurrentFrame() const { return this->Val(EeGeModVal::CurrentFrame); }
-    const GETransformation& GetGraphicsInternalTransform() const
-        { return this->GetInternalTransform(this->GetGraphicsCurrentFrame()); }
     unsigned long GetGraphicsNextFrame() const { return this->Val(EeGeModVal::NextFrame); }
     const GETransformation& GetGraphicsPostModelTransform() const
         { return *(const GETransformation*)this->Ptr(EeGeModPtr::PostTransform); }
@@ -60,7 +58,6 @@ public:
     GEPolygonArray* GetPolygonArray(unsigned long inLOD) { return this->GetPolygonArrays()[inLOD]; }
     unsigned long GetPolygonCount() const { return this->Val(EeGeModVal::PolygonCount); }
     unsigned long GetPolygonCount(unsigned long inLOD) const;   // 0x1001fab0
-    unsigned long GetPolygonCountOfHierarchy(unsigned long inLOD) const;   // 0x1001fade
     GEVertexArray* GetVertexArray(unsigned long inFrame) { return this->GetVertexArrays()[inFrame]; }
     GEModel* GetSubModel(unsigned long inIndex) const { return this->GetSubModels()[inIndex]; }
     unsigned long GetSubModelCount() const { return this->Val(EeGeModVal::SubModelCount); }
@@ -98,9 +95,7 @@ public:
     // Hides UReferenceCounter::Dereference: GEPhysicalModel calls this one, GEModelManager calls the base explicitly
     // (0x10004370) when it drops its own reference.
     void Dereference();                     // 0x1001fa84
-    long LoadTexturesForScreen(const GETextureDescription& inDescription, unsigned long inFlags);   // 0x1001cad5
     void PrepareTransforms();               // 0x1001fb1d
-    void RemoveScale();                     // 0x1002004b
     // (Save 0x1001e4e8 and SaveData 0x1001eb5a wrote .cem files: retired under D9)
     void SetFractionalFramePosition(float inPosition);   // 0x1002009b
     void SetGraphicsCurrentFrame(unsigned long inFrame);   // 0x100200d7

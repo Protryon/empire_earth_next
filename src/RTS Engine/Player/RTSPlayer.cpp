@@ -203,49 +203,45 @@ void RTSPlayer::InsertUnit(RTSUnit* inUnit)
 
 // FUNCTION: EXE 0x56f539
 // Reads the player's vision flags, ids, color (deriving the shade color), name, units and observer mode;
-// returns the first read error
+// returns the first read error.
+// port (R5b.4, round 29): the body is Rust (ee_units rts_player_save.rs `load`) over the record this class derives
+// from (EeUnitsRtsPlayerFields) and RTSPlayerSaveOperation's parts
+struct RTSPlayerSaveContext {
+    RTSPlayer* mPlayer;
+    FSFile* mFile;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+};
+
+static int32_t RTSPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t, EeUnitsPlayerSaveIo* io)
+{
+    RTSPlayerSaveContext& theContext = *static_cast<RTSPlayerSaveContext*>(inContext);
+    RTSPlayer* thePlayer = theContext.mPlayer;
+    FSFile& theFile = *theContext.mFile;
+    switch (inOp) {
+    case EE_UNITS_RTS_PLAYER_SAVE_COLOR_LOAD: return thePlayer->mColor.Load(theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_SHADE:
+        thePlayer->mShadeColor.SetRed(thePlayer->mColor.GetRed() * 0.6f);
+        thePlayer->mShadeColor.SetGreen(thePlayer->mColor.GetGreen() * 0.6f);
+        thePlayer->mShadeColor.SetBlue(thePlayer->mColor.GetBlue() * 0.6f);
+        return 0;
+    case EE_UNITS_RTS_PLAYER_SAVE_NAME_LOAD: return thePlayer->mName.Load(theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_LOAD_UNIT:
+        return thePlayer->LoadUnit(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_ADD_PENDING: thePlayer->AddPendingUnits(true, false); return 0;
+    case EE_UNITS_RTS_PLAYER_SAVE_COLOR_SAVE: return thePlayer->mColor.Save(theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_NAME_SAVE: return thePlayer->mName.Save(theFile);
+    case EE_UNITS_RTS_PLAYER_SAVE_SAVE_UNITS:
+        return thePlayer->SaveUnits(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+    }
+    return EESavePrimitive(theFile, inOp, io);
+}
+
 long RTSPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
-    unsigned long theHashBucketLength = 0;
-    unsigned long theLoaded = 0;
-    unsigned long theUnitCount = 0;
-    theResult = inFile.Read(this->mSaveVisMap);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mSeesAll);
-    if (theResult == 0) {
-        if (inMajorVersion == 0 && inMinorVersion <= 0xcf)
-            this->mSeesAll = false;
-        theResult = inFile.Read(this->mNextUniqueID);
-    }
-    if (theResult == 0)
-        theResult = inFile.Read(this->mPlayerID);
-    if (theResult == 0)
-        theResult = this->mColor.Load(inFile);
-    if (theResult == 0) {
-        this->mShadeColor.SetRed(this->mColor.GetRed() * 0.6f);
-        this->mShadeColor.SetGreen(this->mColor.GetGreen() * 0.6f);
-        this->mShadeColor.SetBlue(this->mColor.GetBlue() * 0.6f);
-        theResult = this->mName.Load(inFile);
-    }
-    if (theResult == 0)
-        theResult = inFile.Read(theHashBucketLength);
-    if (theResult != 0)
-        return theResult;
-    for (unsigned long i = 0; i < 0x80 && theResult == 0; i++) {
-        theResult = inFile.Read(theUnitCount);
-        if (theResult != 0)
-            continue;
-        for (unsigned long j = 0; j < theUnitCount && theResult == 0; j++) {
-            theResult = this->LoadUnit(inMajorVersion, inMinorVersion, inFile);
-            if (theResult == 0)
-                theLoaded++;
-        }
-    }
-    this->AddPendingUnits(true, false);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mObserverMode);
-    return theResult;
+    RTSPlayerSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion};
+    return ee_units_rts_player_load(&theContext, &RTSPlayerSaveOperation, this, (uint32_t)inMajorVersion,
+                                    (uint32_t)inMinorVersion);
 }
 
 // FUNCTION: EXE 0x56f6ae
@@ -269,35 +265,11 @@ long RTSPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 
 // FUNCTION: EXE 0x56f6f8
 // Writes the player's vision flags, ids, color, name, unit count, units and observer mode; returns the first
-// write error
+// write error (the body: ee_units rts_player_save.rs `save`)
 long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = outFile.Write(this->mSaveVisMap);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mSeesAll);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mNextUniqueID);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mPlayerID);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mColor.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->mName.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mUnitCount);
-    if (theResult != 0)
-        return theResult;
-    theResult = this->SaveUnits(inMajorVersion, inMinorVersion, outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mObserverMode);
-    return theResult;
+    RTSPlayerSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion};
+    return ee_units_rts_player_save(&theContext, &RTSPlayerSaveOperation, this);
 }
 
 // FUNCTION: EXE 0x56f7b1

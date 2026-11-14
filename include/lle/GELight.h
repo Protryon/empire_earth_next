@@ -43,16 +43,8 @@ public:
     const GEColor& GetColor() const { return this->mColor; }
     const GEColor& GetComputedColor() const { return this->mComputedColor; }
     const GEVector& GetDirection() const { return this->mDirection; }
-    float GetIntensity() const { return this->mIntensity; }
     const GE3DPoint& GetLocation() const { return this->mLocation; }
-    GEVector& GetModelSpaceDirection() { return this->mModelSpaceDirection; }
-    GE3DPoint& GetModelSpaceLocation() { return this->mModelSpaceLocation; }
-    float GetModelSpaceRange() const { return this->mModelSpaceRange; }
-    float GetModelSpaceRangeInverse() const { return this->mModelSpaceRangeInverse; }
-    float GetModelSpaceRangeSquared() const { return this->mModelSpaceRangeSquared; }
     float GetRange() const { return this->mRange; }
-    float GetRangeInverse() const { return this->mRangeInverse; }
-    float GetRangeSquared() const { return this->mRangeSquared; }
     unsigned long GetStyle() const { return this->mStyle; }
 #ifdef LLE_EXE_HEADERS
     // inline in the exe's view: the exe never imports it and stores +0x48 directly (EERenderObject 0x10ae74)
@@ -85,12 +77,6 @@ public:
         this->mComputedColor.SetBlue(this->mColor.GetBlue() * inIntensity);
     }
     void SetLocation(const GE3DPoint& inLocation) { this->mLocation = inLocation; }
-    void SetModelSpaceRange(float inRange)
-    {
-        this->mModelSpaceRange = inRange;
-        this->mModelSpaceRangeInverse = inRange == 0.0f ? 0.0f : 1.0f / inRange;
-        this->mModelSpaceRangeSquared = inRange * inRange;
-    }
     void SetRange(float inRange)
     {
         this->mRange = inRange;

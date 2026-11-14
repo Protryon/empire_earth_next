@@ -180,8 +180,6 @@ void UIControl::CaptureMouse() { this->Call(C::CaptureMouse); }
 long UIControl::CopyData() { return (long)this->Call(C::CopyData); }
 // FUNCTION: LLE 0x1006586a
 void UIControl::FireTriggerEvent(unsigned long inEvent) { this->Call(C::FireTrigger, inEvent); }
-// FUNCTION: LLE 0x100658b3
-bool UIControl::GetHasKeyboardCapture() const { return this->Call(C::HasKeyboardCapture) != 0; }
 // FUNCTION: LLE 0x100658ce
 bool UIControl::GetHasMouseCapture() const { return this->Call(C::HasMouseCapture) != 0; }
 // FUNCTION: LLE 0x100658e9

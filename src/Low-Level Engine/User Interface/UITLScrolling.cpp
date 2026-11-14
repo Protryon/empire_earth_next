@@ -41,11 +41,6 @@ UITLScrolling::UITLScrolling(const UWideString& inText, GEFont* inFont, unsigned
     UITLScrollingRust::Call(this, EeUiLabelCall::ScrollInit, (intptr_t)inFont);
 }
 
-unsigned long UITLScrolling::GetPixelStartingOffset() const
-{
-    return (unsigned long)UITLScrollingRust::Call(this, EeUiLabelCall::PixelStartingOffset);
-}
-unsigned long UITLScrolling::GetStartingLine() const { return (unsigned long)UITLScrollingRust::Call(this, EeUiLabelCall::StartingLine); }
 void UITLScrolling::PauseScrolling() { UITLScrollingRust::Call(this, EeUiLabelCall::PauseScrolling); }
 void UITLScrolling::ResumeScrolling() { UITLScrollingRust::Call(this, EeUiLabelCall::ResumeScrolling); }
 // the offsets travel as their 32 bits in the floats

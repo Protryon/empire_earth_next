@@ -927,27 +927,9 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
     EEUnit* theUnit = static_cast<EEUnit*>(theContext.mUnit);   // (the unit operations only)
     EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);   // (the complex operations only)
     long theResult = 0;
+    if (EESaveIsPrimitive(inOp))
+        return EESavePrimitive(outFile, inOp, io);
     switch (inOp) {
-    case EE_UNITS_UNIT_SAVE_WRITE_LONG: {
-        long theValue = (long)io->i;
-        return outFile.Write(theValue);
-    }
-    case EE_UNITS_UNIT_SAVE_WRITE_ULONG: {
-        unsigned long theValue = (unsigned long)io->i;
-        return outFile.Write(theValue);
-    }
-    case EE_UNITS_UNIT_SAVE_WRITE_FLOAT: {
-        float theValue = io->f;
-        return outFile.Write(theValue);
-    }
-    case EE_UNITS_UNIT_SAVE_WRITE_BOOL: {
-        bool theValue = io->b != 0;
-        return outFile.Write(theValue);
-    }
-    case EE_UNITS_UNIT_SAVE_WRITE_USHORT: {
-        unsigned short theValue = (unsigned short)io->i;
-        return outFile.Write(theValue);
-    }
     case EE_UNITS_UNIT_SAVE_MAX:
         io->i = inIndex == EE_UNITS_UNIT_SAVE_MAX_HIT_POINTS ? (int64_t)theUnit->mStats->mMaxHitPoints
               : inIndex == EE_UNITS_UNIT_SAVE_MAX_FLIGHT_TIME ? (int64_t)theUnit->mStats->mFlightTime
@@ -1152,36 +1134,6 @@ int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeU
         default: return 0;
         }
     // ---- the loads (ee_units unit_load.rs)
-    case EE_UNITS_UNIT_LOAD_READ_LONG: {
-        long theValue = (long)io->i;
-        theResult = inFile.Read(theValue);
-        io->i = (int64_t)theValue;
-        return theResult;
-    }
-    case EE_UNITS_UNIT_LOAD_READ_ULONG: {
-        unsigned long theValue = (unsigned long)io->i;
-        theResult = inFile.Read(theValue);
-        io->i = (int64_t)theValue;
-        return theResult;
-    }
-    case EE_UNITS_UNIT_LOAD_READ_FLOAT: {
-        float theValue = io->f;
-        theResult = inFile.Read(theValue);
-        io->f = theValue;
-        return theResult;
-    }
-    case EE_UNITS_UNIT_LOAD_READ_BOOL: {
-        bool theValue = io->b != 0;
-        theResult = inFile.Read(theValue);
-        io->b = theValue ? 1 : 0;
-        return theResult;
-    }
-    case EE_UNITS_UNIT_LOAD_READ_USHORT: {
-        unsigned short theValue = (unsigned short)io->i;
-        theResult = inFile.Read(theValue);
-        io->i = (int64_t)theValue;
-        return theResult;
-    }
     case EE_UNITS_UNIT_LOAD_TURRET_ANGLE:
         return inFile.Read(theComplex->mTurretAngles[inIndex]);
     case EE_UNITS_UNIT_LOAD_PART:

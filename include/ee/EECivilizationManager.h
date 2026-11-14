@@ -75,7 +75,6 @@ public:
     unsigned long MakePowerUpgrade(unsigned long inIndex);   // 0x281db1 (the powers' category Load appends; ecx unused)
     // a category's levels (1 .. this; the record's 60, or as many as dbcivilization.yaml gives)
     unsigned long GetLevelCount(unsigned long inCategory) const;
-    unsigned long GetCategoryCount() const { return this->mCategoryCount; }
     // the legacy (category << 6) | level form (.civ files, premade checksums): false when it does not fit
     // an attribute level's name (civbuilder.yaml name) and whether it applies a civ power; the level of the
     // attribute that applies a power (by power id; the original: the id itself)

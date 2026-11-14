@@ -29,7 +29,6 @@ public:
     void SetText(const UWideString& inText, GEFont* inFont);
 protected:
     virtual void ButtonUp();                // 0x100805ea: the cycle, then UIButton's
-    void CycleCheck();
     virtual void TabbedTo() { UIButton::TabbedTo(); }     // ICF-folded (0x1005fcac)
     virtual void TabbedFrom() { UIButton::TabbedFrom(); } // ICF-folded (0x1005fcb1)
     // the original's members (+0x104 mTextLabel, +0x108 mCheckState 0 off, 1 on, 2 "not", +0x10c mHasText; sizeof

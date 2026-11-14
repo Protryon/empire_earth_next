@@ -76,4 +76,14 @@ inline EeGeFieldIo GERustFieldIO(FSFileSpec& inFile)
 }
 #endif
 
+// The value types' codecs (GEVector, GE3DPoint, GEOrientation, GERectangle, GEColor, GETextureCoordinate; ee_ge
+// values.rs): the fields in order through the file's float reads or writes. inOpen is GetIsOpen() (-1: not asked).
+template <class F>
+inline long GERustFields(F& inFile, const float* const* inFields, uint32_t inCount, int inOpen, bool inWrite,
+                         bool inRestore)
+{
+    EeGeFieldIo theIO = GERustFieldIO(inFile);
+    return ee_ge_fields_io(const_cast<float* const*>(inFields), inCount, &theIO, inOpen, inWrite, inRestore);
+}
+
 #endif

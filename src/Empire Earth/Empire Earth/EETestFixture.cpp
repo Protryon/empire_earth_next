@@ -1023,7 +1023,10 @@ void Poll(const std::string& inDirectory)
         fprintf(theState, "\n");
         UIControl* theOver = theForm ? theForm->GetMouseOverControl() : NULL;
         fprintf(theState, "mouseover %ld\n", theOver ? (long)theOver->GetIndex() : -1L);
-        GEWindow* theWindow = theManager->GetRasterizer()->GetWindow(theManager->GetScreen());
+        // no screen while the rasterizer is re-activated (a settings change): no window then
+        GERasterizer* theRasterizer = theManager->GetRasterizer();
+        GEWindow* theWindow = theManager->GetScreen() < theRasterizer->GetScreenCount()
+            ? theRasterizer->GetWindow(theManager->GetScreen()) : NULL;
         if (theWindow)   // the window's size in the game's (logical) pixels: the pointer's coordinates
             fprintf(theState, "window %lu %lu\n", (unsigned long)theWindow->GetWidth(), (unsigned long)theWindow->GetHeight());
         for (unsigned long i = 0; i < theCount && i < 2000; i++) {

@@ -137,7 +137,6 @@ public:
     long DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GERectangle& inDrawRectangle,
                         const GERectangle& inTileRectangle);
     long DrawClippedText(const GERectangle& inRectangle, GEText* inText, UIControl* inControl);
-    bool GetAvailableIndex(unsigned long& outIndex) const;
     UIBackground* GetBackgroundByID(unsigned long inID) const;
     UIControl* GetControl(unsigned long inIndex) const;
     UIControl* GetControlById(unsigned long inId);
@@ -148,30 +147,17 @@ public:
     UIEntityGroup* GetEntityGroup(unsigned long inIndex) const;
     UIEntityGroup* GetEntityGroupById(unsigned long inId) const;
     float GetFadeOpacity();
-    UIEvent* GetFormActivateEvent() const;
-    UIEvent* GetFormDeactivateEvent() const;
     unsigned long GetFormID() const;
     UIFormManager* GetFormManager() const;
     UIEvent* GetFormUpdateEvent() const;
     UITextLabel* GetHelpTextLabel() const;
-    unsigned long GetHowLongHasFormBeenOpen();
     bool GetIsKeyboardCaptured() const { return this->GetKeyboardCaptured() != NULL; }
     bool GetIsMouseCaptured() const { return this->GetMouseCaptured() != NULL; }
     bool GetUseExclusiveCoords() const;
     UIManager* GetManager() const;
-    UIEvent* GetMouseLeftButtonPressedEvent() const;
-    UIEvent* GetMouseLeftButtonUnpressedEvent() const;
-    UIEvent* GetMouseLeftButtonDoublePressedEvent() const;
     const GE2DPoint& GetMouseLocation() const;
-    UIEvent* GetMouseMiddleButtonPressedEvent() const;
-    UIEvent* GetMouseMiddleButtonUnpressedEvent() const;
-    UIEvent* GetMouseMiddleButtonDoublePressedEvent() const;
     UIEvent* GetMouseMoveEvent() const;
     UIControl* GetMouseOverControl() const;
-    UIEvent* GetMouseRightButtonPressedEvent() const;
-    UIEvent* GetMouseRightButtonUnpressedEvent() const;
-    UIEvent* GetMouseRightButtonDoublePressedEvent() const;
-    UIEvent* GetMouseWheelMoveEvent() const;
     UWideString GetMusicFileName() const;
     // Num Lock is off (GetKeyState(VK_NUMLOCK) & 1 was the original's test; 0x100596a2)
     static bool GetNumLockOff() { return PlatKeyIsToggled(VK_NUMLOCK) ? false : true; }
@@ -179,7 +165,6 @@ public:
     bool GetShouldFadeIn();
     bool GetTabbingOn() const;
     unsigned long GetTabStop() const;
-    void GetToolTipShadowRectangle(const GERectangle& inRectangle, GERectangle& outRectangle);
     bool GetUseGDIForText() const;
     void LoadBackgrounds();
     void LockDrawBackground();
@@ -203,16 +188,9 @@ public:
     void SetHelpTextTimeDelay(unsigned long inTimeDelay);
     void SetHotKeyGroupEnabled(unsigned long inGroup, bool inEnabled);
     void SetLayout(UILayoutUtility& inLayout);
-    void SetMouseLeftButtonPressedEvent(UIEvent* inEvent);
-    void SetMouseLeftButtonUnpressedEvent(UIEvent* inEvent);
-    void SetMouseLeftButtonDoublePressedEvent(UIEvent* inEvent);
     void SetMouseMiddleButtonPressedEvent(UIEvent* inEvent);
     void SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent);
-    void SetMouseMiddleButtonDoublePressedEvent(UIEvent* inEvent);
     void SetMouseMoveEvent(UIEvent* inEvent);
-    void SetMouseRightButtonPressedEvent(UIEvent* inEvent);
-    void SetMouseRightButtonUnpressedEvent(UIEvent* inEvent);
-    void SetMouseRightButtonDoublePressedEvent(UIEvent* inEvent);
     void SetMouseWheelMoveEvent(UIEvent* inEvent);
     void SetMusicFileName(const UWideString& inName);
     void SetPopup(UIControl* inControl);

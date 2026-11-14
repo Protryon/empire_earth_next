@@ -38,9 +38,6 @@ public:
     virtual long MouseLButtonDown(const GE2DPoint& inLocation) { return kErrorOK; }
     virtual long MouseLButtonUp(const GE2DPoint& inLocation) { return kErrorOK; }
     void CloseCandidateWindow();
-    const GERectangle& GetIMECandidateRectangle() const { return this->mCandidateRectangle; }
-    const std::vector<UWideString>& GetIMECandidateStrings() const { return this->mCandidateStrings; }
-    GEText* GetIMECandidateTextObject() const { return this->mText; }
     const GERectangle& GetIMECopyCandidateRectangle() const { return this->mCopyCandidateRectangle; }
     void OpenCandidateWindow(const GERectangle& inScreenRectangle, const GERectangle& inControlRectangle);
     void SetCandidateList(const UIIMECandidateList& inList, float inLeft);

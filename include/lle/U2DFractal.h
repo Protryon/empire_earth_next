@@ -12,7 +12,6 @@ public:
 
     virtual void ComputeFractal(float inCornerValue, float inRange, unsigned long inSeed);   // slot 1 (0x546d2)
     float GetValue(unsigned long inX, unsigned long inY) { return this->mValues[inX][inY]; }
-    unsigned long GetSquareDimension() { return this->mSquareDimension; }
 
 protected:
     virtual float GenerateFractalValue(URandom& inRandom, float inRange, float inScale, float inAverage,
