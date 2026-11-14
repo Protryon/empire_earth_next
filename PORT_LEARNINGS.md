@@ -14208,3 +14208,123 @@ over the unmodified unit with traced fakes, mutations, a cargo replay).
   renderer, the effects and the graphic objects: a census commit first; 'GEModel Load.cpp'), GETerrainMesh,
   GERasterizer, GEBitmap, GEFontBitmap, GETransformation's member copies. GETexture.cpp keeps 113 logic lines, the
   host's switch.
+
+## LLE Network Engine, round 2: NELagLossSimulator, NERecordPlayback and NETimestampedMessage whole in Rust (ee_net lagloss.rs, recplay.rs; branch rust-ne2, 2026-11-13)
+
+Round 1's order, next step: the client's two message queues and the record they share. Before it the client held
+an `NELagLossSimulator*` (simulated packet loss on sends and receipts, simulated lag on receipts with a lag thread,
+"CommLagLoss") and both the client and the server an `NERecordPlayback*` (the message stream passed on, recorded to
+a file with timestamps, or played back from one by a playback thread, "CommRecPlay", 45 times slower in slow mode);
+`NETimestampedMessage` was the `[time][size][message]` record both used.
+
+**The move** (`rust/crates/ee_net`: `lagloss.rs`, `recplay.rs`, `qhost.rs`, and `ffi.rs`'s new half): each class's
+state and every method, the thread bodies included. The C++ keeps `EeNetLagLoss*` / `EeNetRecPlay*` members and calls
+`ee_net_ll_*` / `ee_net_rp_*`; the calls out (one op table, `EeNetQOp`: the clock, ESVerify, the floating-point
+checks of the thread loops, events, threads, the messages' Reference/Dereference/ExportSize/ExportMessage and
+ConvertMemoryToMessage, the owner's callbacks, the record file's Create/Delete/Open/Close/Write/Read) are answered by
+`NESynchronousCommunications::QueueHostCommon`, the client's and the server's `QueueHost` adding their callbacks
+(`Deliver`). A thread is a `TSThread` made by the host whose body calls `ee_net_ll_thread` / `ee_net_rp_thread`.
+The three units and their headers are deleted; `GetLagLossSimulator` (no caller) went, `GetRecordPlayback()->...`
+became `GetRecordPlaybackMode()`, `SetSlowPlayback()`, `SetNormalPlayback()` on the client and the server (the two
+EEMessage callers, record frames and zoom, use them); `NERecordPlaybackMode` moved to NESynchronousCommunications.h.
+
+- **Locks and sharing.** The lag list's critical section is a re-entrant `RLock`, held where the original held it
+  (around the insertion; in the lag thread across each delivery, so the callback runs under it, and around the
+  release-time read). The fields the original shared between threads without a lock are atomics; the random series
+  (seeded with the clock as stored: a 0 stays 0; drawn by Process and Send, which run on different threads) is behind
+  a mutex never held across a call out. The loss roll is the original's f32 expression (`Generate() * 99 + 1 < pct`,
+  ee_random's URandom), the lag `Generate(min, max)` truncated as the C cast did, added with 32-bit wrapping.
+- **Kept as the original did:** messages still lagged when lag is turned off without a flush, or when the simulator
+  is freed, are never released; a live message passed to the recorder while it plays back is dropped without being
+  released; a message the playback thread read when it is told to quit is never released; the network record and
+  playback targets ("not implemented yet") fail ESVerify and only switch the mode.
+- **Behaviour changes, on crashing paths only:** `PlaybackComplete`, `SetSlowPlayback`, `SetNormalPlayback` without
+  the playback thread's events (no playback, or the network one) answer false / do nothing (the original read NULL
+  events); a NULL recorder (a server whose Publish failed: EESim.cpp's port note) passes nothing on and reports
+  "passing" (the original crashed in `Process`); `ExportMessage` of a message whose export is longer than its
+  `ExportSize` copies only the size (the original overran its buffer before its verification).
+- **What runs it.** Every game runs the server's recorder in pass mode: each local input of the single-player game
+  goes through `ee_net_rp_process` to `ProcessLocalUserInput2`, so the oracle covers that path (seeds identical). The
+  client's lag simulator and recorder run only in a LAN game (pass-through: no caller enables lag or loss, nobody
+  records or plays back); recording, playback, lag and loss run only in the golden.
+- **The golden** (`tests/net/ne_queues_test.cpp`, in `python -I tools/xbuild.py nettest`): the three original units,
+  unmodified (`tests/net/orig_q/`, with their headers), over stand-in headers in `tests/net/orig_q/lle/` sharing one
+  world (`q_world.h`): a clock, events, messages (their exported bytes; a 0xff count converts to none), record files
+  and threads. **The threads are real threads that run one at a time**: the running one keeps a baton until it
+  waits on an event that is not set (or its body ends), and the world hands it on by a fixed rule (the
+  lowest-numbered thread that can run; else the main thread when it only yields between the driver's steps; else the
+  clock moves to the earliest finite deadline and that waiter times out; else the highest waiter's wait fails), so
+  both sides interleave the same way and the clock only moves when every thread waits. Each of 1,500 sequences of 80
+  random steps (receipts lost, lagged or passed; sends lost or sent; lag on and off with and without a flush; loss
+  on and off at percentages around the roll's edges; messages passed, recorded to a file and played back from it or
+  from a world-made file with records naming no message and files cut short; slow and normal playback; the clock
+  moving on, the world's FPU state changed) ends with both objects freed, every thread ended and the messages left
+  listed: all traces equal (300 sequences: 179,227 lines). The files are never cut inside a record's size field:
+  the original then reads the first record's message from a 0-byte buffer (undefined).
+- **Mutations** (300 sequences each, and the cargo replay):
+
+  | Mutation | Sequences differing | Replay |
+  |---|---|---|
+  | equal release times queued before the earlier ones | 75 | fails |
+  | the loss roll without its + 1 | 18 | fails |
+  | lag delivered on exit without a flush | 163 | fails |
+  | the lag thread's timeout one later | 267 | fails |
+
+  Four more (slow playback 44 times, back to normal without the + 1, the recorded message delivered before its
+  reference, the delay loop's first step 10) were not run: on this loaded machine each took ~12 minutes and the run
+  was stopped to free the build.
+- **Cargo:** the Rust side's host also records each op, the API calls and the baton's hand-overs (`sw N`); the first
+  60 sequences are `golden_queues.txt` (0.4 MB). `tests_queues.rs` replays them against the Rust alone with real
+  threads handed the baton where the record says, every op the next recorded one; a thread that finds the Rust off
+  the record fails every waiter (the first version deadlocked on a mutation and hung cargo for 15 minutes). Unit
+  tests: equal release times keep their order, the loss roll's edge from seed 1, the record's byte layout, a recorder
+  without events.
+
+**NEProtocol calls the Rust plug-in directly** (its own commit). The protocol was a table of 30 function pointers
+(`GetEntry("NPIM...")` on a plug-in module of type 'ntwk') into the TCP shim's `NPIM*` functions, which converted
+UStrings to bytes, events to their platform handles and called `ee_tcp_*`. Now each NEProtocol member calls
+`ee_tcp_*` itself with those conversions (NEConnection and NEServer, all inline forwarders over it, are unchanged);
+the table, the protocol's module, the shim's 30 entry points and its `PIMPlugin` registration are gone (the shim
+keeps the four engine calls the Rust makes); `NEInitialize` makes the one protocol and keeps it while
+`ee_tcp_is_valid()`, as the module walk did. Kept exactly: the timeout handed to the plug-in's adapter argument by
+Connect, Publish's port as the plug-in's flags, SearchForGame passing only the name, a receive's in-value passed in,
+the counters after each call, the wrappers deleted on a failed open or a successful close.
+- **Behaviour change (undefined in the original):** SendSingle's port was an `unsigned short` passed through a
+  function pointer whose target took an `unsigned long`: the upper bits were whatever the register held (the
+  plug-in truncates to 16 bits, so the port was right). It is passed as a value now.
+- **The golden** (`tests/net/ne_protocol_test.cpp`, in `nettest`): 40 sequences of 150 random calls through
+  NEProtocol, NEServer and NEConnection over a stand-in plug-in (each `ee_tcp_*` a trace line with its arguments,
+  answers from the trace's stream, handles numbered by appearance and renumbered per open: the allocator reuses a
+  freed wrapper's address) against `tests/net/golden_protocol.txt`, which the original units made (kept in
+  `tests/net/orig_p/`: NEProtocol.cpp, its header, the TCP shim; built with `NE_PROTOCOL_ORIG` and `--print`):
+  15,879 lines equal. Mutations caught (5 of 5): Receive's bytes not counted, allow and announce swapped in Publish,
+  the adapter list not cleared, Receive's in-value not passed, a failed accept keeping its connection. No cargo part:
+  no Rust changed.
+- **tcp_test** goes through the protocol now (NEProtocol, NEServer, NEConnection) instead of looking the entry points
+  up, and checks the protocol's byte counters; it links NEProtocol.cpp. `build_won_test` (wontest, nettest) compiles
+  engine units with LOWLEVELENGINE_EXPORTS and `/Zc:dllexportInlines-`, as tcptest did.
+- **Lesson:** `#define private public` around an engine header changes the MSVC mangling of every private member
+  (access is part of the name), so a driver that does it no longer links against the units; befriend instead (here
+  the driver defines the friend class `NESynchronousServer`, which the test does not link).
+
+- **Gates.** After each commit: build --sim 0/0 (EE-AOC, EE-SIM); oracle seeds 2-3 identical to `ref`; the Rust gate
+  PASS (three ee_plat_core timer tests failed once under load and passed alone); nettest (ne_msgmgr_test 20,000
+  sequences, ne_queues_test 1,500, ne_protocol_test equal to its golden); tcptest passes (through NEProtocol, the
+  byte counters exact: 69,636 sent and received). On the round merged with `rust` (68c6875a): the same, oracle seeds
+  2-7 identical apart from line 0 (the data tree's AI list: the main checkout's `ref` was re-recorded with a
+  refreshed Data/ai while this ran), the test-profile build 0/0. LAN games (`lan_game.py`, under the harness lock):
+  both commits before the merge `RESULT PASS lan-game PT host=2837 joiner=2841`; merged with rust 57ae2ad1
+  `PT host=3017 joiner=3019`; merged again with rust 94898cb2 (57e479d7: build --sim 0/0, oracle seeds 2-7 identical
+  to the re-recorded `ref`, nettest, tcptest, test-profile 0/0) `PT host=2911 joiner=2914`. No sim_capture: nothing in the tick path moved (the recorder's pass mode
+  hands the same message to the same callback).
+- **Commits, net C++ over src + include (without include/rust):** the queues -772 (+210, -982); NEProtocol's table
+  -191 (+205, -396). Round: -963.
+- **Left:** NESynchronousClient and NESynchronousServer (threads, connect, lockstep tuning, RUST_PLAN 2.1), then
+  NEMessage. NEProtocol is a thin C++ class over ee_net_tcp; its byte counters and registry could move with the
+  client and server. `rust_includes.py` proposes `rust/ee_net.h` in NESynchronousClient.h, NESynchronousCommunications.h
+  and NESynchronousServer.h: they forward-declare the Rust types and the op enum on purpose (138 units include them).
+- **Lessons:** a test driver of thread code can stay deterministic with real threads that run one at a time under a
+  baton and a clock that moves only when every thread waits; its cargo replay must fail every waiting thread when
+  one finds the Rust off the record, or a mutation hangs cargo. An empty harness.lock directory (no owner file) sat
+  for 40 minutes after this lane's first LAN game, blocking the next: release the lock with `rm owner; rmdir` and
+  check that it went.
