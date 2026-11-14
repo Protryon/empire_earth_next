@@ -173,6 +173,8 @@ protected:
     virtual long DrawBorder(const GERectangle& inRectangle, unsigned long inThickness);   // slot 0x84
     const GE2DPoint& GetMouseLocation() const;
     void SetBgRectangle(const GERectangle& inRectangle);
+    // port: the display mode stored without SetDisplayMode's dirtying (two game controls' hides)
+    void StoreDisplayMode(unsigned long inMode) { this->mDisplayMode = inMode; }
 
     unsigned long mDisplayMode;             // +0x08 (1 at construction)
     std::map<unsigned long, UIEvent*> mTriggerEvents;   // +0x0c event id -> event (referenced)

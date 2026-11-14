@@ -53,7 +53,6 @@
 #include "ee/EEE2DMuzzleFlash.h"
 #include "ee/EEE2DImpact.h"
 #include "ee/EEE2DImpactBlood.h"
-#include "ee/EEE2DShockwave.h"
 #include "ee/EEE2DExhaustTrail.h"
 #include "ee/EEE2DFireTrail.h"
 #include "ee/EEE2DPlasmaPulse.h"
@@ -74,11 +73,10 @@
 #include "ee/EEE3DParticleEmitter.h"
 #include "ee/EEEDamagedEffect.h"
 #include "ee/EEE3DRust.h"
+#include "ee/EEEffectKindIDs.h"
 #include "ee/EEE2DRust.h"
-#include "ee/EEE3DTracerBeam.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
-#include "ee/EEE3DVolcano.h"
 #include "ee/EEE3DStorm.h"
 #include "ee/EEE3DSnow.h"
 #include "ee/EEE3DRain.h"
@@ -169,7 +167,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DSmokeGenerator: theEffect = new EEE3DSmokeGenerator(0x2b); break;
     case kEffect2DExplosion: theEffect = new EEE2DExplosion(); break;
     case kEffect2DSmokePlume: theEffect = new EEE2DSmokePlume(0xb); break;
-    case kEffect2DShockwave: theEffect = new EEE2DShockwave(); break;
+    case kEffect2DShockwave: theEffect = new EEE2DRust(0x12); break;
     case kEffect2DFire: theEffect = new EEE2DFire(); break;
     case kEffect2DMuzzleFlash: theEffect = new EEE2DMuzzleFlash(); break;
     case kEffect2DImpact: theEffect = new EEE2DImpact(6); break;
@@ -188,7 +186,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect2DWaterRipple: theEffect = new EEE2DWaterRipple(); break;
     case kEffect3DEarthquake: theEffect = new EEE3DEarthquake(); break;
     case kEffect3DTracers: theEffect = new EEE3DRust(0x21); break;
-    case kEffect3DVolcano: theEffect = new EEE3DVolcano(); break;
+    case kEffect3DVolcano: theEffect = new EEE3DRust(0x20); break;
     case kEffect3DDisease: theEffect = new EEE3DRust(0x23); break;
     case kEffect3DFarm: theEffect = new EEE3DFarm(); break;
     case kEffect3DHurricane: theEffect = new EEE3DRust(0x24); break;
@@ -203,7 +201,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DGoal: theEffect = new EEE3DRust(0x3c); break;
     case kEffect3DTeleport: theEffect = new EEE3DRust(0x3f); break;
     case kEffect3DTimeWarp: theEffect = new EEE3DRust(0x44); break;
-    case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(0x40); break;
+    case kEffect3DTracerBeam: theEffect = new EEE3DRust(0x40); break;
     case kEffect3DPulseCannonBall: theEffect = new EEE3DRust(0x43); break;
     case kEffect3DShield: theEffect = new EEE3DRust(kEffect3DShield); break;
     case kEffect2DVortex: theEffect = new EEE2DVortex(); break;
@@ -274,7 +272,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 9: theEffect = new EEE2DMuzzleFlash(inUnit, inEffect); break;
     case 6: theEffect = new EEE2DImpact(inUnit, inEffect, 6); break;
     case 7: theEffect = new EEE2DImpactBlood(inUnit, inEffect); break;
-    case 18: theEffect = new EEE2DShockwave(inUnit, inEffect); break;
+    case 18: theEffect = new EEE2DRust(inUnit, inEffect, 0x12); break;
     case 3: theEffect = new EEE2DExhaustTrail(inUnit, inEffect); break;
     case 14: theEffect = new EEE2DFireTrail(inUnit, inEffect); break;
     case 10: theEffect = new EEE2DPlasmaPulse(inUnit, inEffect); break;
@@ -329,7 +327,7 @@ long EEEffectManager::CreateEffectBetweenUnits(EEUnit* inFrom, EEUnit* inTo, EEG
     case kEffect3DTracers: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x21); break;
     case kEffect3DShells: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x26); break;
     case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inFrom, inTo, inEffect); break;
-    case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(inFrom, inTo, inEffect, 0x40); break;
+    case kEffect3DTracerBeam: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x40); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
@@ -351,7 +349,7 @@ long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGrap
     case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DSmokeMuzzleBlast(inUnit, inLocation, inEffect); break;
     case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inUnit, inLocation, inEffect); break;
     case kEffect3DCitizenBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x33); break;
-    case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(inUnit, inLocation, inEffect, 0x40); break;
+    case kEffect3DTracerBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x40); break;
     case kEffect3DCommandConfirmation:
         theEffect = new EEE2DRust(inUnit, inLocation, inEffect, inUnknown, 0x41);
         break;
@@ -374,10 +372,10 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 6: theEffect = new EEE2DImpact(inLocation, inEffect, 6); break;
     case 8: theEffect = new EEE2DLightning(inLocation, inEffect); break;
     case 0xb: theEffect = new EEE2DSmokePlume(inLocation, inEffect, 0xb); break;
-    case 0x12: theEffect = new EEE2DShockwave(inLocation, inEffect); break;
+    case 0x12: theEffect = new EEE2DRust(inLocation, inEffect, 0x12); break;
     case 0x18: theEffect = new EEE3DRust(inLocation, inEffect, 0x18); break;
     case 0x1b: theEffect = new EEE3DRust(inLocation, inEffect, 0x1b); break;
-    case 0x20: theEffect = new EEE3DVolcano(inLocation, inEffect); break;
+    case 0x20: theEffect = new EEE3DRust(inLocation, inEffect, 0x20); break;
     case 0x22: theEffect = new EEE2DWaterRipple(inLocation, inEffect); break;
     case 0x2b: theEffect = new EEE3DSmokeGenerator(inLocation, inEffect, 0x2b); break;
     case 0x2e: theEffect = EEE2DParticle::Create(inLocation, inEffect); break;
@@ -621,7 +619,8 @@ static void EECaptureEffectStates(EEEffectManager* inManager)
 // position, from A to B, from A to B's position, or between the two positions. Then three manager updates, the
 // effect saved, a load-time effect of its kind loaded from those bytes, its pointers repaired and saved again (the
 // copy is left out of the manager: its resources released, the object kept), forty updates more and the effect
-// destroyed. EFSW holds one record per case: the kind, the graphic effect's row, the entry, the creation's result,
+// destroyed. Since the nineteenth round the 2D kinds follow the 3D ones, with two entry points more: at A's location
+// (a transformation) and along the line from A's position to B's. EFSW holds one record per case: the kind, the graphic effect's row, the entry, the creation's result,
 // whether it made an effect, whether the effect lived to its save, the load's and repair's results and the length and
 // FNV-1a 64 of both saves, then the first save's bytes. Only EFSW, EFST and EFMU are written, and no other
 // thread's records while it runs (the updates' EFST and EFMU cover every step); the game is over and nothing
@@ -632,7 +631,7 @@ void EEEffectCaptureSweep()
         (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'S' << 16) | ((unsigned int)'W' << 24),
         (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'S' << 16) | ((unsigned int)'T' << 24),
         (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'M' << 16) | ((unsigned int)'U' << 24)};
-    enum { kOnUnit, kAtPoint, kBetweenUnits, kUnitToPoint, kBetweenPoints };
+    enum { kOnUnit, kAtPoint, kBetweenUnits, kUnitToPoint, kBetweenPoints, kTransformation, kLine };
     struct Case {
         long mKind;
         int mEntry;
@@ -652,6 +651,16 @@ void EEEffectCaptureSweep()
         {0x29, kOnUnit, 0},        {0x2b, kOnUnit, 0},        {0x2b, kAtPoint, 0},       {0x2c, kOnUnit, 0},
         {0x1e, kOnUnit, 0},        {0x3a, kOnUnit, 0},        {0x3a, kAtPoint, 0},       {0x3b, kOnUnit, 0},
         {0x3b, kAtPoint, 0},       {0x20, kAtPoint, 0},
+        // R4.4, nineteenth round: the 2D kinds through each entry point that makes them. Not the muzzle flash (0x09), the
+        // smoke muzzle blast (0x14) or the 2D projectile (0x30): their start faults in EECombatEffectWeaponPoint on a unit
+        // without weapon tag points at its animation (the sweep's unit; f839d277 faults there too, checked for 0x09)
+        {0x03, kOnUnit, 0},        {0x04, kOnUnit, 0},        {0x05, kOnUnit, 0},        {0x06, kOnUnit, 0},
+        {0x07, kOnUnit, 0},        {0x08, kOnUnit, 0},        {0x0a, kOnUnit, 0},
+        {0x0d, kOnUnit, 0},        {0x0e, kOnUnit, 0},        {0x0f, kOnUnit, 0},        {0x10, kOnUnit, 0},
+        {0x12, kOnUnit, 0},        {0x2e, kOnUnit, 0},        {0x2f, kOnUnit, 0},        {0x06, kAtPoint, 0},
+        {0x08, kAtPoint, 0},       {0x0b, kAtPoint, 0},       {0x12, kAtPoint, 0},       {0x22, kAtPoint, 0},
+        {0x2e, kAtPoint, 0},       {0x31, kAtPoint, 0},       {0x32, kAtPoint, 0},       {0x16, kBetweenUnits, 0},
+        {0x22, kTransformation, 0}, {0x32, kTransformation, 0}, {0x0c, kLine, 0},       {0x2e, kLine, 0},
     };
     EEEffectManager* theManager = gEffectManager;
     if (theManager == NULL)
@@ -697,6 +706,17 @@ void EEEffectCaptureSweep()
                 case kAtPoint: theResult = theManager->CreatePlacedEffect(theAt, theEffect, &theHandle); break;
                 case kBetweenUnits: theResult = theManager->CreateEffectBetweenUnits(a, b, theEffect, &theHandle); break;
                 case kUnitToPoint: theResult = theManager->CreateEffect(a, theTo, theEffect, &theHandle, 0); break;
+                case kTransformation:
+                    theResult = theManager->CreateTransformationEffect(a->mComplexUnit->mPhysicalModel.GetLocation(), theEffect,
+                                                                       &theHandle);
+                    break;
+                case kLine: {
+                    GE3DLine theLine;
+                    theLine.SetStart(theAt);
+                    theLine.SetDirection(GEVector(theTo.mX - theAt.mX, theTo.mY - theAt.mY, theTo.mZ - theAt.mZ));
+                    theResult = theManager->CreateLineEffect(theLine, theEffect, &theHandle);
+                    break;
+                }
                 default: theResult = theManager->CreateEffectBetween(theAt, theTo, theEffect, &theHandle); break;
                 }
                 theEffect->mKind = theOwnKind;

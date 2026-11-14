@@ -7,7 +7,7 @@
 #define LLE_UIMANAGER_CPP   // UIManager::sMouseWheel/sMouseLeftHanded are visible here (see UIManager.h)
 #include <windows.h>
 #include <mbstring.h>
-#include <algorithm>
+#include <string.h>
 
 #include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
@@ -61,525 +61,298 @@ ISEntity* UIManager::sRMouseButton;
 ISEntity* UIManager::sMouseWheel;
 bool UIManager::sMouseLeftHanded;
 
-// The Rust form stack's view of the manager (rust/crates/ee_ui/src/manager.rs, docs/RUST_PLAN.md R6): its lists a
-// slot at a time, the forms as opaque handles, the calls on a form. A friend of UIManager and UIForm.
-struct UIManagerRust {
-    // 0 the stack, 1 the visible forms, 2 every form
-    static std::vector<UIForm*>& List(void* inManager, int inList)
-    {
-        UIManager* theManager = static_cast<UIManager*>(inManager);
-        switch (inList) {
-        case 0:
-            return theManager->mFormStack;
-        case 1:
-            return theManager->mVisibleForms;
-        default:
-            return theManager->mForms;
-        }
-    }
-    static UIManager* Manager(void* inManager) { return static_cast<UIManager*>(inManager); }
-    static std::vector<UIForm*>& Copied(void* inManager) { return Manager(inManager)->mCopiedForms; }
-    static std::deque<UIEventTrigger>& Events(void* inManager) { return Manager(inManager)->mEventsToTrigger; }
-    static UIForm* Form(void* inForm) { return static_cast<UIForm*>(inForm); }
-    static EeUiRect Rect(const GERectangle& inRectangle)
-    {
-        return EeUiRect{inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
-    }
-    static GERectangle Rect(const EeUiRect& inRectangle)
-    {
-        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
-    }
-    static void FormCall(UIForm* inForm, int inCall)
-    {
-        switch (inCall) {
-        case 0:
-            inForm->Open();
-            break;
-        case 1:
-            inForm->Close();
-            break;
-        case 2:
-            inForm->Activate();
-            break;
-        case 3:
-            inForm->Deactivate();
-            break;
-        case 4:
-            inForm->ClearAllClipRectangles();
-            break;
-        default:
-            inForm->SetAllControlsDirty();
-            break;
-        }
-    }
-    // ChangeIMECompositionString's arguments, through the Rust IME call
-    struct Composition {
-        const UWideString* mString;
-        const UString* mAttributes;
-        unsigned long mCursor;
-    };
-    static long Value(void* inManager, int inWhich)
-    {
-        UIManager* theManager = Manager(inManager);
-        switch (inWhich) {
-        case 0:
-            return theManager->mSoundManager != NULL;
-        case 1:
-            return theManager->mMusicID;
-        case 2:
-            return theManager->mStartMusic;
-        default:
-            return theManager->mStopMusic;
-        }
-    }
-    static void SetValue(void* inManager, int inWhich, long inValue)
-    {
-        UIManager* theManager = Manager(inManager);
-        switch (inWhich) {
-        case 1:
-            theManager->mMusicID = inValue;
-            break;
-        case 2:
-            theManager->mStartMusic = inValue != 0;
-            break;
-        default:
-            theManager->mStopMusic = inValue != 0;
-            break;
-        }
-    }
-    static float& Volume(void* inManager) { return Manager(inManager)->mMusicVolume; }
-    static UWideString& MusicFileName(void* inManager) { return Manager(inManager)->mMusicFileName; }
-    static SESMInstanceNode*& Instance(void* inManager) { return Manager(inManager)->mMusicInstance; }
-    static SESoundManager* Sound(void* inManager) { return Manager(inManager)->mSoundManager; }
-    static TSCriticalSection* Lock(void* inManager) { return Manager(inManager)->mCriticalSection; }
-    static long ImeFormCall(void* inManager, int inCall, const void* inArguments)
-    {
-        UIForm* theForm = Manager(inManager)->mFormStack.back();
-        switch (inCall) {
-        case 0:
-            theForm->AddIMEResultString(*static_cast<const UWideString*>(inArguments));
-            return kErrorOK;
-        case 1: {
-            const Composition* theArguments = static_cast<const Composition*>(inArguments);
-            return theForm->ChangeIMECompositionString(*theArguments->mString, *theArguments->mAttributes, theArguments->mCursor);
-        }
-        case 2:
-            return theForm->CloseIMECompositionString();
-        default:
-            return theForm->OpenIMECompositionString();
-        }
-    }
-    static UIControl* Captured(void* inManager, bool inCurrent)
-    {
-        UIManager* theManager = Manager(inManager);
-        UIForm* theForm = inCurrent ? theManager->GetCurrentForm() : theManager->mFormStack.back();
-        return theForm ? theForm->GetKeyboardCaptured() : NULL;
-    }
-    static bool& Flag(void* inManager, int inFlag)
-    {
-        return inFlag == 0 ? Manager(inManager)->mCandidateWindowOpen : Manager(inManager)->mDrawCandidateWindow;
-    }
-    static UIIMECandidate* Candidate(void* inManager) { return Manager(inManager)->mCandidateWindow; }
-    static void FormRectCall(UIForm* inForm, int inCall, const GERectangle& inRectangle)
-    {
-        switch (inCall) {
-        case 0:
-            inForm->AddDirtyRectangle(inRectangle);
-            break;
-        case 1:
-            inForm->RedrawIntersectControls(inRectangle);
-            break;
-        case 2:
-            inForm->AddClipRectangle(inRectangle);
-            break;
-        default:
-            inForm->RelayoutForm(inRectangle);
-            break;
-        }
-    }
+// The Rust manager's calls out (EeUiOp, obj.rs): a is the form, event, bitmap, texture, lock, sound instance or
+// other object the op names; rectangles and points travel in f
+static GERectangle UIManagerRect(const float* inF) { return GERectangle(inF[1], inF[3], inF[2], inF[0]); }
+static void UIManagerPutRect(float* outF, const GERectangle& inRectangle)
+{
+    outF[0] = inRectangle.mBottom;
+    outF[1] = inRectangle.mLeft;
+    outF[2] = inRectangle.mRight;
+    outF[3] = inRectangle.mTop;
+}
+static float UIManagerBits(intptr_t inBits, int inHalf)
+{
+    uint32_t theBits = (uint32_t)((uint64_t)inBits >> (32 * inHalf));
+    float theValue;
+    memcpy(&theValue, &theBits, 4);
+    return theValue;
+}
+
+// Loads a UI texture with the UI bit depth, alpha, mipmaps and clamped, modulated stages; keeps a reference
+// (FUNCTION: LLE 0x1007ab03, UIManager::LoadTexture)
+static GETexture* UIManagerLoadTexture(UIManager* inManager, const UString& inName)
+{
+    GETextureManager* theManager = inManager->GetRasterizer()->GetScreen(inManager->GetScreen())->GetTextureManager();
+    GETextureDescription theDescription;
+    theDescription.mNumMipLevelsToDrop = 0;
+    theDescription.mFrameFormat = 0;
+    theDescription.mIs3DRenderable = false;
+    theDescription.mIsTransparencyEnabled = false;
+    theDescription.mSurfaceVolatility = 1;
+    theDescription.mPixelDepth = inManager->GetUITextureBitDepth();
+    theDescription.mHasAlpha = true;
+    theDescription.mCreateMIPMaps = true;
+    GETexture* theTexture = theManager->LoadTexture(inName, theDescription);
+    theTexture->Reference();
+    theTexture->SetStageAlphaMode(kStageOpModulate, -1);
+    theTexture->SetStageColorMode(kStageOpModulate, -1);
+    theTexture->SetStageMinFilterMode(1, -1);
+    theTexture->SetStageMagFilterMode(1, -1);
+    theTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
+    theTexture->SetStageMipMapBias(-0.75f, -1);
+    theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
+    return theTexture;
+}
+
+// ChangeIMECompositionString's arguments, through the Rust IME call
+struct UIManagerComposition {
+    const UWideString* mString;
+    const UString* mAttributes;
+    unsigned long mCursor;
 };
 
-extern "C" unsigned long ee_uicpp_manager_len(void* inManager, int inList)
+intptr_t UIManager::Call(EeUiManagerCall inCall, intptr_t inA, intptr_t inB, intptr_t inC, float* ioF) const
 {
-    return (unsigned long)UIManagerRust::List(inManager, inList).size();
-}
-extern "C" void* ee_uicpp_manager_at(void* inManager, int inList, unsigned long inIndex)
-{
-    return UIManagerRust::List(inManager, inList)[inIndex];
-}
-extern "C" void ee_uicpp_manager_push(void* inManager, int inList, void* inForm)
-{
-    UIManagerRust::List(inManager, inList).push_back(UIManagerRust::Form(inForm));
-}
-extern "C" void ee_uicpp_manager_pop(void* inManager, int inList)
-{
-    UIManagerRust::List(inManager, inList).pop_back();
-}
-extern "C" void ee_uicpp_manager_insert(void* inManager, int inList, unsigned long inIndex, void* inForm)
-{
-    std::vector<UIForm*>& theList = UIManagerRust::List(inManager, inList);
-    theList.insert(theList.begin() + inIndex, UIManagerRust::Form(inForm));
-}
-extern "C" void ee_uicpp_manager_erase(void* inManager, int inList, unsigned long inIndex)
-{
-    std::vector<UIForm*>& theList = UIManagerRust::List(inManager, inList);
-    theList.erase(theList.begin() + inIndex);
-}
-extern "C" void ee_uicpp_manager_copied_clear(void* inManager)
-{
-    UIManagerRust::Copied(inManager).clear();
-}
-extern "C" EeUiRect ee_uicpp_manager_form_rect(void* inForm)
-{
-    return UIManagerRust::Rect(UIManagerRust::Form(inForm)->GetRectangle());
-}
-extern "C" unsigned long ee_uicpp_manager_form_id(void* inForm)
-{
-    return UIManagerRust::Form(inForm)->GetFormID();
-}
-extern "C" void ee_uicpp_manager_form_call(void* inForm, int inCall)
-{
-    UIManagerRust::FormCall(UIManagerRust::Form(inForm), inCall);
-}
-extern "C" void ee_uicpp_manager_form_rect_call(void* inForm, int inCall, const EeUiRect* inRectangle)
-{
-    UIManagerRust::FormRectCall(UIManagerRust::Form(inForm), inCall, UIManagerRust::Rect(*inRectangle));
-}
-extern "C" bool ee_uicpp_manager_event_take(void* inManager, EeUiTrigger* outTrigger)
-{
-    std::deque<UIEventTrigger>& theQueue = UIManagerRust::Events(inManager);
-    if (theQueue.empty())
-        return false;
-    UIEventTrigger theTrigger = theQueue.front();
-    theQueue.pop_front();
-    outTrigger->event = theTrigger.mEvent;
-    outTrigger->form = theTrigger.mForm;
-    outTrigger->entity = theTrigger.mEntity;
-    return true;
-}
-extern "C" void ee_uicpp_manager_event_process(const EeUiTrigger* inTrigger)
-{
-    UIEvent* theEvent = static_cast<UIEvent*>(inTrigger->event);
-    theEvent->ProcessEvent(static_cast<UIForm*>(inTrigger->form), static_cast<UIEntity*>(inTrigger->entity));
-    theEvent->Dereference();
-}
-extern "C" void ee_uicpp_manager_event_push(void* inManager, const EeUiTrigger* inTrigger)
-{
-    UIEventTrigger theTrigger;
-    theTrigger.mEvent = static_cast<UIEvent*>(inTrigger->event);
-    theTrigger.mForm = static_cast<UIForm*>(inTrigger->form);
-    theTrigger.mEntity = static_cast<UIEntity*>(inTrigger->entity);
-    UIManagerRust::Events(inManager).push_back(theTrigger);
+    return ee_ui_manager_call(this->mRust, inCall, inA, inB, inC, ioF);
 }
 
-// UIManager's music bookkeeping and IME members (ee_ui manager_media.rs)
-extern "C" long ee_uicpp_manager_music_value(void* inManager, int inWhich) { return UIManagerRust::Value(inManager, inWhich); }
-extern "C" void ee_uicpp_manager_music_set_value(void* inManager, int inWhich, long inValue)
+intptr_t UIManager::HostOp(void* inManager, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d, float* f)
 {
-    UIManagerRust::SetValue(inManager, inWhich, inValue);
+    static UWideString sKey;   // UpdateTranslatedKey's character (the UI thread's)
+    UIManager* theManager = static_cast<UIManager*>(inManager);
+    UIForm* theForm = reinterpret_cast<UIForm*>(a);
+    GEBitmap* theBitmap = reinterpret_cast<GEBitmap*>(a);
+    UIIMECandidate* theCandidate = reinterpret_cast<UIIMECandidate*>(a);
+    SESMInstanceNode* theInstance = reinterpret_cast<SESMInstanceNode*>(a);
+    UIEvent* theEvent = reinterpret_cast<UIEvent*>(a);
+    switch (inOp) {
+    // the forms
+    case EeUiOp::MgrFormRect: UIManagerPutRect(f, theForm->GetRectangle()); return 0;
+    case EeUiOp::MgrFormId: return theForm->GetFormID();
+    case EeUiOp::MgrFormUseGdi: return theForm->GetUseGDIForText();
+    case EeUiOp::MgrFormKeyboard: return (intptr_t)theForm->GetKeyboardCaptured();
+    case EeUiOp::MgrFormMouse: return (intptr_t)theForm->GetMouseCaptured();
+    case EeUiOp::MgrFormCall:
+        switch (b) {
+        case 0: theForm->Open(); return 0;
+        case 1: theForm->Close(); return 0;
+        case 2: theForm->Activate(); return 0;
+        case 3: theForm->Deactivate(); return 0;
+        case 4: theForm->ClearAllClipRectangles(); return 0;
+        case 5: theForm->SetAllControlsDirty(); return 0;
+        case 6: return theForm->CopyData();
+        case 7: return theForm->DrawPolygons();
+        case 8: return theForm->DrawTextA();
+        case 9: return theForm->UpdateKeyboard();
+        case 10: return theForm->UpdateMouse();
+        default: delete theForm; return 0;
+        }
+    case EeUiOp::MgrFormRectCall:
+        switch (b) {
+        case 0: theForm->AddDirtyRectangle(UIManagerRect(f)); return 0;
+        case 1: theForm->RedrawIntersectControls(UIManagerRect(f)); return 0;
+        case 2: theForm->AddClipRectangle(UIManagerRect(f)); return 0;
+        case 3: theForm->RelayoutForm(UIManagerRect(f)); return 0;
+        default: theForm->UpdateMouseLocation(GE2DPoint(f[0], f[1])); return 0;
+        }
+    case EeUiOp::MgrFormIme:
+        switch (b) {
+        case 0: theForm->AddIMEResultString(*reinterpret_cast<const UWideString*>(c)); return kErrorOK;
+        case 1: {
+            const UIManagerComposition* theArguments = reinterpret_cast<const UIManagerComposition*>(c);
+            return theForm->ChangeIMECompositionString(*theArguments->mString, *theArguments->mAttributes,
+                                                       theArguments->mCursor);
+        }
+        case 2: return theForm->CloseIMECompositionString();
+        default: return theForm->OpenIMECompositionString();
+        }
+    case EeUiOp::MgrTranslatedKey:
+        sKey.CopyString(reinterpret_cast<const char*>(b), 1);
+        return theForm->UpdateTranslatedKey(sKey, (short)c);
+    case EeUiOp::MgrCtlIme: return reinterpret_cast<UIControl*>(a)->GetIMEEnabled();
+    case EeUiOp::PartRect: UIManagerPutRect(f, reinterpret_cast<UIControl*>(a)->GetRectangle()); return 0;
+    // the events and their factories
+    case EeUiOp::FormEventCall:
+        if (b == 1)
+            theEvent->Dereference();
+        else
+            theEvent->Reference();
+        return 0;
+    case EeUiOp::MgrEventProcess:
+        theEvent->ProcessEvent(reinterpret_cast<UIForm*>(b), reinterpret_cast<UIEntity*>(c));
+        return 0;
+    case EeUiOp::MgrCallback:
+        if (b == 0)
+            return (intptr_t) reinterpret_cast<UIEvent* (*)(UIManager*, unsigned long)>(a)(theManager, (unsigned long)c);
+        return (intptr_t) reinterpret_cast<UIEvent* (*)(UIForm*, unsigned long)>(a)(reinterpret_cast<UIForm*>(d),
+                                                                                    (unsigned long)c);
+    // the input
+    case EeUiOp::MgrKeyboardShouldUpdate: return gISKeyboard->GetShouldUpdate();
+    case EeUiOp::MgrMouseShouldUpdate: return gISMouse->GetShouldUpdate();
+    case EeUiOp::MgrHotKeyPoll: UIHotKey::UpdatePressedPollAmount(); return 0;
+    case EeUiOp::MgrHotKeysDelete: UIHotKey::DeleteHotKeys(); return 0;
+    case EeUiOp::MgrVirtUpdateKeyboard: return theManager->UpdateKeyboard();
+    case EeUiOp::MgrVirtUpdateMouse: return theManager->UpdateMouse(GE2DPoint(f[0], f[1]));
+    // the window, the rasterizer, the texture and the bitmaps
+    case EeUiOp::MgrWindow: {
+        GEWindow* theWindow = theManager->GetRasterizer()->GetWindow(theManager->GetScreen());
+        if (!theWindow)
+            return 0;
+        f[0] = theWindow->GetClientOrigin().GetX();
+        f[1] = theWindow->GetClientOrigin().GetY();
+        return 1;
+    }
+    case EeUiOp::MgrWindowSize: {
+        GEWindow* theWindow = theManager->GetRasterizer()->GetWindow(theManager->GetScreen());
+        return (intptr_t)((uint64_t)(uint32_t)theWindow->GetWidth() | (uint64_t)(uint32_t)theWindow->GetHeight() << 32);
+    }
+    case EeUiOp::MgrBlending: {
+        unsigned long theSource;
+        unsigned long theDestination;
+        theManager->GetRasterizer()->GetBlending(theSource, theDestination, theManager->GetScreen());
+        return (intptr_t)((uint64_t)(uint32_t)theSource | (uint64_t)(uint32_t)theDestination << 32);
+    }
+    case EeUiOp::MgrSetBlending:
+        theManager->GetRasterizer()->SetBlending((unsigned long)a, (unsigned long)b, theManager->GetScreen());
+        return 0;
+    case EeUiOp::MgrTextureLoad:
+        theManager->GetRasterizer()->GetScreen(theManager->GetScreen());
+        return (intptr_t)UIManagerLoadTexture(theManager, UString("textures\\UIControls"));
+    case EeUiOp::MgrTextureSize:
+        f[0] = (float)reinterpret_cast<GETexture*>(a)->GetWidth();
+        f[1] = (float)reinterpret_cast<GETexture*>(a)->GetHeight();
+        return 0;
+    case EeUiOp::MgrTextureRelease: reinterpret_cast<GETexture*>(a)->Dereference(); return 0;
+    case EeUiOp::MgrBitmapNew: {
+        GEBitmap* theNew = new GEBitmap;
+        theNew->SetTexture(reinterpret_cast<GETexture*>(a), theManager->GetScreen());
+        return (intptr_t)theNew;
+    }
+    case EeUiOp::MgrBitmapCoords:
+        // CreateBitmap (0x1007a438): top-left, top-right, bottom-left, bottom-right
+        theBitmap->SetOpacity(1.0f);
+        theBitmap->SetTextureCoordinates(GETextureCoordinate(f[0], f[1]), GETextureCoordinate(f[2], f[1]),
+                                         GETextureCoordinate(f[0], f[3]), GETextureCoordinate(f[2], f[3]));
+        return 0;
+    case EeUiOp::MgrScaledBitmapNew: {
+        GETextureCoordinate theTopLeft;
+        GETextureCoordinate theTopRight;
+        GETextureCoordinate theBottomLeft;
+        GETextureCoordinate theBottomRight;
+        theBitmap->GetTextureCoordinatesPerVertex(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
+        GEBitmap* theNew = new GEBitmap;
+        theNew->SetTexture(theBitmap->GetTexture(theManager->GetScreen()), theManager->GetScreen());
+        theNew->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
+        return (intptr_t)theNew;
+    }
+    case EeUiOp::BitmapScale:
+        f[0] = theBitmap->GetXScale();
+        f[1] = theBitmap->GetYScale();
+        return 0;
+    case EeUiOp::BitmapSetScale: theBitmap->SetXYScale(f[0], f[1]); return 0;
+    case EeUiOp::BitmapRelease: theBitmap->Dereference(); return 0;
+    // the locks
+    case EeUiOp::MgrLockNew: {
+        TSCriticalSection* theLock = NULL;
+        ESVERIFY_AT(TSScheduler::CreateCriticalSection(theLock) == keseOK, (int)a);
+        return (intptr_t)theLock;
+    }
+    case EeUiOp::MgrLockDelete: TSScheduler::DestroyCriticalSection(reinterpret_cast<TSCriticalSection*>(a)); return 0;
+    case EeUiOp::FormLockEnter: reinterpret_cast<TSCriticalSection*>(a)->Enter(); return 0;
+    case EeUiOp::FormLockLeave: reinterpret_cast<TSCriticalSection*>(a)->Leave(); return 0;
+    // the IME candidate window
+    case EeUiOp::MgrCandidateNew:
+        return (intptr_t) new UIIMECandidate(theManager, 0.2f, 0.35f, reinterpret_cast<GEFont*>(a));
+    case EeUiOp::MgrCandidateCall:
+        switch (b) {
+        case 0: return theCandidate->DrawPolygons();
+        case 1: return theCandidate->DrawTextA();
+        case 2: theCandidate->CloseCandidateWindow(); return 0;
+        case 3: return theCandidate->CopyData();
+        default: delete theCandidate; return 0;
+        }
+    case EeUiOp::MgrCandidateSetList:
+        theCandidate->SetCandidateList(*reinterpret_cast<const UIIMECandidateList*>(b), f[0]);
+        return 0;
+    case EeUiOp::MgrCandidateOpen:
+        theCandidate->OpenCandidateWindow(UIManagerRect(f), GERectangle(UIManagerBits(b, 1), UIManagerBits(c, 1),
+                                                                        UIManagerBits(c, 0), UIManagerBits(b, 0)));
+        return 0;
+    // the music
+    case EeUiOp::MgrSoundStop: theManager->GetSoundManager()->Stop(theInstance, false); return 0;
+    case EeUiOp::MgrSoundUnload: theManager->GetSoundManager()->Unload((long)a); return 0;
+    case EeUiOp::MgrSoundLoad: return theManager->GetSoundManager()->Load(reinterpret_cast<const char*>(a), 0, 1);
+    case EeUiOp::MgrSoundPlay:
+        return (intptr_t)theManager->GetSoundManager()->PlayAndReturnReferencedNode((long)a, f[0], 0.0f, 1.0f, true, NULL);
+    case EeUiOp::MgrSoundParameters:
+        theManager->GetSoundManager()->SetSoundParameters(theInstance, f[0], 0.0f, 1.0f);
+        return 0;
+    case EeUiOp::MgrInstanceRef:
+        if (b == 0)
+            theInstance->Reference();
+        else
+            theInstance->Dereference();
+        return 0;
+    default:
+        break;
+    }
+    return 0;
 }
-extern "C" float ee_uicpp_manager_music_volume(void* inManager) { return UIManagerRust::Volume(inManager); }
-extern "C" void ee_uicpp_manager_music_set_volume(void* inManager, float inVolume) { UIManagerRust::Volume(inManager) = inVolume; }
-extern "C" const char* ee_uicpp_manager_music_name(void* inManager) { return UIManagerRust::MusicFileName(inManager); }
-extern "C" void ee_uicpp_manager_music_set_name(void* inManager, const char* inName) { UIManagerRust::MusicFileName(inManager) = inName; }
-extern "C" void ee_uicpp_manager_music_lower(const char* inName, unsigned char* outName, size_t inCapacity)
-{
-    UWideString theName(inName);
-    PlatMbsLwr((unsigned char*)(const char*)theName);
-    strncpy((char*)outName, theName, inCapacity);
-    outName[inCapacity - 1] = 0;
-}
-extern "C" void* ee_uicpp_manager_music_instance(void* inManager) { return UIManagerRust::Instance(inManager); }
-extern "C" void ee_uicpp_manager_music_set_instance(void* inManager, void* inInstance)
-{
-    UIManagerRust::Instance(inManager) = static_cast<SESMInstanceNode*>(inInstance);
-}
-extern "C" void ee_uicpp_manager_music_instance_call(void* inManager, int inCall, void* inInstance)
-{
-    SESMInstanceNode* theInstance = static_cast<SESMInstanceNode*>(inInstance);
-    if (inCall == 0)
-        theInstance->Reference();
-    else if (inCall == 1)
-        theInstance->Dereference();
-    else
-        UIManagerRust::Sound(inManager)->Stop(theInstance, false);
-}
-extern "C" void ee_uicpp_manager_music_unload(void* inManager, long inID) { UIManagerRust::Sound(inManager)->Unload(inID); }
-extern "C" long ee_uicpp_manager_music_load(void* inManager, const char* inName)
-{
-    return UIManagerRust::Sound(inManager)->Load(inName, 0, 1);
-}
-extern "C" void* ee_uicpp_manager_music_play(void* inManager, long inID, float inVolume)
-{
-    return UIManagerRust::Sound(inManager)->PlayAndReturnReferencedNode(inID, inVolume, 0.0f, 1.0f, true, NULL);
-}
-extern "C" void ee_uicpp_manager_music_set_parameters(void* inManager, void* inInstance, float inVolume)
-{
-    UIManagerRust::Sound(inManager)->SetSoundParameters(static_cast<SESMInstanceNode*>(inInstance), inVolume, 0.0f, 1.0f);
-}
-extern "C" void ee_uicpp_manager_lock(void* inManager, int inLeave)
-{
-    if (inLeave)
-        UIManagerRust::Lock(inManager)->Leave();
-    else
-        UIManagerRust::Lock(inManager)->Enter();
-}
-extern "C" bool ee_uicpp_manager_ime_has_form(void* inManager) { return UIManagerRust::List(inManager, 0).size() > 0; }
-extern "C" long ee_uicpp_manager_ime_form_call(void* inManager, int inCall, const void* inArguments)
-{
-    return UIManagerRust::ImeFormCall(inManager, inCall, inArguments);
-}
-extern "C" bool ee_uicpp_manager_ime_captured(void* inManager, bool inCurrent)
-{
-    UIControl* theControl = UIManagerRust::Captured(inManager, inCurrent);
-    return theControl && theControl->GetIMEEnabled() == true;
-}
-extern "C" EeUiRect ee_uicpp_manager_ime_captured_rect(void* inManager, bool inCurrent)
-{
-    return UIManagerRust::Rect(UIManagerRust::Captured(inManager, inCurrent)->GetRectangle());
-}
-extern "C" bool ee_uicpp_manager_ime_window(void* inManager, float* outOrigin, unsigned long* outSize)
-{
-    UIManager* theManager = UIManagerRust::Manager(inManager);
-    GEWindow* theWindow = theManager->GetRasterizer()->GetWindow(theManager->GetScreen());
-    if (!theWindow)
-        return false;
-    outOrigin[0] = theWindow->GetClientOrigin().GetX();
-    outOrigin[1] = theWindow->GetClientOrigin().GetY();
-    outSize[0] = theWindow->GetWidth();
-    outSize[1] = theWindow->GetHeight();
-    return true;
-}
-extern "C" bool ee_uicpp_manager_ime_flag(void* inManager, int inFlag) { return UIManagerRust::Flag(inManager, inFlag); }
-extern "C" void ee_uicpp_manager_ime_set_flag(void* inManager, int inFlag, bool inValue) { UIManagerRust::Flag(inManager, inFlag) = inValue; }
-extern "C" void ee_uicpp_manager_ime_set_list(void* inManager, const void* inList, float inLeft)
-{
-    UIManagerRust::Candidate(inManager)->SetCandidateList(*static_cast<const UIIMECandidateList*>(inList), inLeft);
-}
-extern "C" void ee_uicpp_manager_ime_open_window(void* inManager, const EeUiRect* inScreen, const EeUiRect* inControl)
-{
-    UIManagerRust::Candidate(inManager)->OpenCandidateWindow(UIManagerRust::Rect(*inScreen), UIManagerRust::Rect(*inControl));
-}
-extern "C" void ee_uicpp_manager_ime_close_window(void* inManager) { UIManagerRust::Candidate(inManager)->CloseCandidateWindow(); }
-extern "C" long ee_uicpp_manager_ime_copy(void* inManager) { return UIManagerRust::Candidate(inManager)->CopyData(); }
 
 // FUNCTION: LLE 0x10078ee4
 // Creates the UI manager: its locks, the UIControls texture and the check box, radio, sort and scroll-bar
 // bitmaps cut from it; looks up the shared mouse buttons and wheel on first use; no music playing
 UIManager::UIManager(GERasterizer* inRasterizer, SESoundManager* inSoundManager, unsigned long inNumberOfSurfaces,
                      unsigned long inUITextureBitDepth, UResourceFile* inStringTable, unsigned long inScreen)
+    : mRust(NULL)
 {
     FSFileSpec theDirectory(gStartupVolume + gStartupDirectory);
-    this->mRasterizer = inRasterizer;
-    this->mScreen = inScreen;
-    this->mNumberOfSurfaces = inNumberOfSurfaces;
-    this->mUITextureBitDepth = inUITextureBitDepth;
-    this->mStringTable = inStringTable;
-    this->mSoundManager = inSoundManager;
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mCriticalSection) == keseOK, 81);
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mDrawCriticalSection) == keseOK, 82);
-    this->mRasterizer->GetScreen(inScreen);
-    this->LoadTexture(UString("textures\\UIControls"), this->mUITexture);
-    float theWidth = (float)this->mUITexture->GetWidth();
-    float theHeight = (float)this->mUITexture->GetHeight();
-    this->mDragBarBitmap = new GEBitmap;
-    this->mDragBarBitmap->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mDragBarBitmap, GETextureCoordinate(80.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(100.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(100.0f / theWidth, 60.0f / theHeight));
-    this->mCheckOn = new GEBitmap;
-    this->mCheckOn->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mCheckOn, GETextureCoordinate(0.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(0.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 20.0f / theHeight));
-    this->mCheckDownOn = new GEBitmap;
-    this->mCheckDownOn->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mCheckDownOn, GETextureCoordinate(20.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 20.0f / theHeight));
-    this->mCheckNot = new GEBitmap;
-    this->mCheckNot->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mCheckNot, GETextureCoordinate(0.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(0.0f / theWidth, 80.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 80.0f / theHeight));
-    this->mCheckDownNot = new GEBitmap;
-    this->mCheckDownNot->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mCheckDownNot, GETextureCoordinate(20.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 80.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 80.0f / theHeight));
-    this->mAlphaSortUpBitmap = new GEBitmap;
-    this->mAlphaSortUpBitmap->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mAlphaSortUpBitmap, GETextureCoordinate(40.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 80.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 80.0f / theHeight));
-    this->mAlphaSortDownBitmap = new GEBitmap;
-    this->mAlphaSortDownBitmap->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mAlphaSortDownBitmap, GETextureCoordinate(60.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 80.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 80.0f / theHeight));
-    this->mCheckOff = new GEBitmap;
-    this->mCheckOff->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mCheckOff, GETextureCoordinate(40.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 20.0f / theHeight));
-    this->mCheckDownOff = new GEBitmap;
-    this->mCheckDownOff->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mCheckDownOff, GETextureCoordinate(60.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 20.0f / theHeight));
-    this->mRadioOn = new GEBitmap;
-    this->mRadioOn->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mRadioOn, GETextureCoordinate(80.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(100.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(100.0f / theWidth, 20.0f / theHeight));
-    this->mRadioDownOn = new GEBitmap;
-    this->mRadioDownOn->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mRadioDownOn, GETextureCoordinate(100.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(120.0f / theWidth, 0.0f / theHeight),
-                 GETextureCoordinate(100.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(120.0f / theWidth, 20.0f / theHeight));
-    this->mRadioOff = new GEBitmap;
-    this->mRadioOff->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mRadioOff, GETextureCoordinate(0.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(0.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 40.0f / theHeight));
-    this->mRadioDownOff = new GEBitmap;
-    this->mRadioDownOff->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mRadioDownOff, GETextureCoordinate(20.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 40.0f / theHeight));
-    this->mSBBitmapUpNormal = new GEBitmap;
-    this->mSBBitmapUpNormal->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mSBBitmapUpNormal, GETextureCoordinate(40.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 40.0f / theHeight));
-    this->mSBBitmapUpPressed = new GEBitmap;
-    this->mSBBitmapUpPressed->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mSBBitmapUpPressed, GETextureCoordinate(60.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 40.0f / theHeight));
-    this->mSBBitmapDownPressed = new GEBitmap;
-    this->mSBBitmapDownPressed->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mSBBitmapDownPressed, GETextureCoordinate(80.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(100.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(100.0f / theWidth, 40.0f / theHeight));
-    this->mSBBitmapDownNormal = new GEBitmap;
-    this->mSBBitmapDownNormal->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mSBBitmapDownNormal, GETextureCoordinate(100.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(120.0f / theWidth, 20.0f / theHeight),
-                 GETextureCoordinate(100.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(120.0f / theWidth, 40.0f / theHeight));
-    this->mSBBitmapRightNormal = new GEBitmap;
-    this->mSBBitmapRightNormal->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mSBBitmapRightNormal, GETextureCoordinate(0.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(0.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 60.0f / theHeight));
-    this->mSBBitmapRightPressed = new GEBitmap;
-    this->mSBBitmapRightPressed->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mSBBitmapRightPressed, GETextureCoordinate(20.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(20.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 60.0f / theHeight));
-    this->mSBBitmapLeftPressed = new GEBitmap;
-    this->mSBBitmapLeftPressed->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mSBBitmapLeftPressed, GETextureCoordinate(40.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(40.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 60.0f / theHeight));
-    this->mSBBitmapLeftNormal = new GEBitmap;
-    this->mSBBitmapLeftNormal->SetTexture(this->mUITexture, inScreen);
-    this->CreateBitmap(this->mSBBitmapLeftNormal, GETextureCoordinate(60.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 40.0f / theHeight),
-                 GETextureCoordinate(60.0f / theWidth, 60.0f / theHeight),
-                 GETextureCoordinate(80.0f / theWidth, 60.0f / theHeight));
+    this->mRust = ee_ui_manager_new(this, UIManager::HostOp, inRasterizer, inSoundManager, inNumberOfSurfaces,
+                                    inUITextureBitDepth, inStringTable, inScreen);
+    this->Call(EeUiManagerCall::Init);   // its ops read the manager through the forwarders: after mRust is set
     if (UIManager::sLMouseButton == NULL) {
         gISMouse->GetEntity(kMouseLeftButton, UIManager::sLMouseButton);
         gISMouse->GetEntity(kMouseRightButton, UIManager::sRMouseButton);
         gISMouse->GetEntity(kMouseZAxis, UIManager::sMouseWheel);
     }
-    this->mCandidateWindowOpen = false;
-    this->mMusicVolume = 1.0f;
-    this->mDrawCandidateWindow = false;
-    this->mMusicID = -1;
-    this->mStartMusic = false;
-    this->mStopMusic = false;
-    this->mForceUIUpdate = false;
-    this->mCandidateWindow = NULL;
-    this->mMusicInstance = NULL;
 }
 
 // FUNCTION: LLE 0x10079a18
 // Destroys the UI manager: stops the music, frees the locks, texture, bitmaps, forms, hot keys, IME window and database
 UIManager::~UIManager()
 {
-    this->RemoveAndStopSoundInstance();
-    TSScheduler::DestroyCriticalSection(this->mCriticalSection);
-    TSScheduler::DestroyCriticalSection(this->mDrawCriticalSection);
-    this->mUITexture->Dereference();
-    this->mSBBitmapDownNormal->Dereference();
-    this->mSBBitmapDownPressed->Dereference();
-    this->mSBBitmapLeftNormal->Dereference();
-    this->mSBBitmapLeftPressed->Dereference();
-    this->mSBBitmapRightNormal->Dereference();
-    this->mSBBitmapRightPressed->Dereference();
-    this->mSBBitmapUpNormal->Dereference();
-    this->mSBBitmapUpPressed->Dereference();
-    this->mDragBarBitmap->Dereference();
-    this->mCheckOff->Dereference();
-    this->mCheckDownOff->Dereference();
-    this->mCheckNot->Dereference();
-    this->mCheckDownNot->Dereference();
-    this->mCheckOn->Dereference();
-    this->mCheckDownOn->Dereference();
-    this->mRadioOff->Dereference();
-    this->mRadioDownOff->Dereference();
-    this->mRadioOn->Dereference();
-    this->mRadioDownOn->Dereference();
-    this->mAlphaSortUpBitmap->Dereference();
-    this->mAlphaSortDownBitmap->Dereference();
-    for (unsigned long i = 0; i < this->mForms.size(); i++) {
-        delete this->mForms[i];
-        this->mForms[i] = NULL;
-    }
-    UIHotKey::DeleteHotKeys();
-    this->mForms.clear();
-    this->mVisibleForms.clear();
-    delete this->mCandidateWindow;
+    ee_ui_manager_free(this->mRust);
+    this->mRust = NULL;
     this->RemoveDatabase();
 }
 
-// FUNCTION: LLE 0x10079be5 (AddClippedForms) and 0x10079e1f (AddToVisibleForms): the bodies are Rust (ee_ui
-// manager.rs, inside Pop, SwapForm and Push); the members stay declared, with no C++ definition.
+// FUNCTION: LLE 0x10079be5 (AddClippedForms), 0x10079e1f (AddToVisibleForms), 0x1007af90 (RemoveClippedForms): Rust
+// (ee_ui manager.rs, inside Pop, SwapForm and Push).
 
 // FUNCTION: LLE 0x10079f7f
 // Marks a rectangle dirty: on the top form directly, else on that form and every visible form above that overlaps it
 void UIManager::AddDirtyRectangle(const GERectangle& inRectangle, UIForm* inForm)
 {
-    EeUiRect theRectangle = UIManagerRust::Rect(inRectangle);
-    ee_ui_manager_add_dirty_rectangle(this, &theRectangle, inForm);
+    float f[4];
+    UIManagerPutRect(f, inRectangle);
+    this->Call(EeUiManagerCall::AddDirtyRectangle, (intptr_t)inForm, 0, 0, f);
 }
+
+// FUNCTION: LLE 0x10059fdb
+// Queues an event (referenced) to run on the next update for a form and entity
+void UIManager::AddEventToTrigger(UIEvent* inEvent, UIForm* inForm, UIEntity* inEntity)
+{
+    this->Call(EeUiManagerCall::AddEventToTrigger, (intptr_t)inEvent, (intptr_t)inForm, (intptr_t)inEntity);
+}
+
+void UIManager::AddForm(UIForm* inForm) { this->Call(EeUiManagerCall::AppendForm, (intptr_t)inForm); }
 
 // FUNCTION: LLE 0x1007a03d
 // Passes an IME result string to the top form, under the UI lock
 void UIManager::AddIMEResultString(const UWideString& inString)
 {
-    ee_ui_manager_ime_form_call(this, 0, &inString);
+    this->Call(EeUiManagerCall::AddImeResult, (intptr_t)&inString);
 }
 
 // FUNCTION: LLE 0x1007a074
@@ -587,7 +360,8 @@ void UIManager::AddIMEResultString(const UWideString& inString)
 // most one candidate, else shows it at the control; returns OK
 long UIManager::ChangeIMECandidateWindow(const UIIMECandidateList& inList)
 {
-    return ee_ui_manager_change_candidate_window(this, &inList, inList.mStyle, inList.mCount);
+    return (long)this->Call(EeUiManagerCall::ChangeCandidateWindow, (intptr_t)&inList, (intptr_t)inList.mStyle,
+                            (intptr_t)inList.mCount);
 }
 
 // FUNCTION: LLE 0x1007a102
@@ -595,36 +369,26 @@ long UIManager::ChangeIMECandidateWindow(const UIIMECandidateList& inList)
 long UIManager::ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                            unsigned long inCursor)
 {
-    UIManagerRust::Composition theArguments = {&inString, &inAttributes, inCursor};
-    return ee_ui_manager_ime_form_call(this, 1, &theArguments);
+    UIManagerComposition theArguments = {&inString, &inAttributes, inCursor};
+    return (long)this->Call(EeUiManagerCall::ChangeComposition, (intptr_t)&theArguments);
+}
+
+void UIManager::ChangeRasterizer(GERasterizer* inRasterizer)
+{
+    this->Call(EeUiManagerCall::ChangeRasterizer, (intptr_t)inRasterizer);
 }
 
 // FUNCTION: LLE 0x1007a149
 // Closes the IME candidate window; returns OK
-long UIManager::CloseIMECandidateWindow()
-{
-    return ee_ui_manager_close_candidate_window(this);
-}
+long UIManager::CloseIMECandidateWindow() { return (long)this->Call(EeUiManagerCall::CloseCandidateWindow); }
 
 // FUNCTION: LLE 0x1007a162
 // Tells the top form the IME composition string closed, under the UI lock; returns its result
-long UIManager::CloseIMECompositionString()
-{
-    return ee_ui_manager_ime_form_call(this, 2, NULL);
-}
+long UIManager::CloseIMECompositionString() { return (long)this->Call(EeUiManagerCall::CloseComposition); }
 
 // FUNCTION: LLE 0x1007a19b
 // Snapshots every visible form (and the candidate window when open) for drawing; returns the last copy result
-long UIManager::CopyData()
-{
-    long theResult = kErrorOK;
-    this->mCopiedForms.clear();
-    for (long i = 0; i < (long)this->mVisibleForms.size(); i++) {
-        theResult = this->mVisibleForms[i]->CopyData();
-        this->mCopiedForms.push_back(this->mVisibleForms[i]);
-    }
-    return ee_ui_manager_copy_candidate_window(this, theResult);
-}
+long UIManager::CopyData() { return (long)this->Call(EeUiManagerCall::CopyData); }
 
 // FUNCTION: LLE 0x1007a216
 // Creates every background in the UI background database on its form, by type (others via CreateUserDefinedBackground)
@@ -641,7 +405,7 @@ void UIManager::CreateBackgrounds()
     theDescription.mHasAlpha = true;
     theDescription.mCreateMIPMaps = true;
     unsigned long theCount = UIBackgroundTable::GetArraySize();
-    theDescription.mPixelDepth = this->mUITextureBitDepth;
+    theDescription.mPixelDepth = this->GetUITextureBitDepth();
     for (unsigned long i = 0; i < theCount; i++) {
         UIBackgroundTable* theTable = UIBackgroundTable::GetUIBackgroundTable(i);
         if (!theTable)
@@ -690,104 +454,138 @@ void UIManager::CreateBackgrounds()
     }
 }
 
-// FUNCTION: LLE 0x1007a438
-// Points a bitmap at a texture region given by its four corner coordinates, opaque, scaled to the region
-void UIManager::CreateBitmap(GEBitmap* inBitmap, GETextureCoordinate& inTopLeft, GETextureCoordinate& inTopRight,
-                             GETextureCoordinate& inBottomLeft, GETextureCoordinate& inBottomRight)
-{
-    inBitmap->SetOpacity(1.0f);
-    inBitmap->SetTextureCoordinates(inTopLeft, inTopRight, inBottomLeft, inBottomRight);
-    inBitmap->SetXYScale(inTopRight.GetU() - inTopLeft.GetU(), inBottomLeft.GetV() - inTopLeft.GetV());
-}
+// FUNCTION: LLE 0x1007a438 (CreateBitmap): the Rust constructor's MgrBitmapCoords and BitmapSetScale.
 
 // FUNCTION: LLE 0x1007a48e
 // Creates a copy of a bitmap's texture region scaled to fill a control rectangle (20-pixel source)
 GEBitmap* UIManager::CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle)
 {
-    GETextureCoordinate theTopLeft;
-    GETextureCoordinate theTopRight;
-    GETextureCoordinate theBottomLeft;
-    GETextureCoordinate theBottomRight;
-    inBitmap->GetTextureCoordinatesPerVertex(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-    GEBitmap* theBitmap = new GEBitmap;
-    theBitmap->SetTexture(inBitmap->GetTexture(this->mScreen), this->mScreen);
-    theBitmap->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-    theBitmap->SetXYScale(inRectangle.GetWidth() * inBitmap->GetXScale() * 0.05f,
-                          inRectangle.GetHeight() * inBitmap->GetYScale() * 0.05f);
-    return theBitmap;
+    float f[4];
+    UIManagerPutRect(f, inRectangle);
+    return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::ScaledBitmap, (intptr_t)inBitmap, 0, 0, f));
 }
 
 // FUNCTION: LLE 0x1007a559
 // Asks each registered control-event factory in turn for a form's event; returns the first one made, or NULL
 UIEvent* UIManager::CreateControlEvent(UIForm* inForm, unsigned long inEventID)
 {
-    UIEvent* theEvent = NULL;
-    for (unsigned long i = 0; i < mControlEventCallbacks.size() && theEvent == NULL; i++)
-        theEvent = mControlEventCallbacks[i](inForm, inEventID);
-    return theEvent;
+    return reinterpret_cast<UIEvent*>(
+        this->Call(EeUiManagerCall::CreateControlEvent, (intptr_t)inForm, (intptr_t)inEventID));
 }
 
 // FUNCTION: LLE 0x1007a58f
 // Asks each registered form-event factory in turn for an event; returns the first one made, or NULL
 UIEvent* UIManager::CreateFormEvent(unsigned long inEventID)
 {
-    UIEvent* theEvent = NULL;
-    for (unsigned long i = 0; i < mFormEventCallbacks.size() && theEvent == NULL; i++)
-        theEvent = mFormEventCallbacks[i](this, inEventID);
-    return theEvent;
+    return reinterpret_cast<UIEvent*>(this->Call(EeUiManagerCall::CreateFormEvent, (intptr_t)inEventID));
 }
 
 // FUNCTION: LLE 0x1007a5c2
 // Creates the IME candidate window with the given font
 void UIManager::CreateIMECandidateWindow(GEFont* inFont)
 {
-    this->mCandidateWindow = new UIIMECandidate(this, 0.2f, 0.35f, inFont);
+    this->Call(EeUiManagerCall::CreateCandidateWindow, (intptr_t)inFont);
 }
 
 // FUNCTION: LLE 0x1007a602
 // Draws the snapshotted forms with alpha blending (their text too, unless drawn by GDI) and the candidate window
-long UIManager::DrawPolygons()
-{
-    unsigned long theSource;
-    unsigned long theDestination;
-    long theResult = kErrorOK;
-    this->mRasterizer->GetBlending(theSource, theDestination, this->mScreen);
-    this->mRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, this->mScreen);
-    this->mDrawCriticalSection->Enter();
-    for (unsigned long i = 0; i < this->mCopiedForms.size(); i++) {
-        theResult = this->mCopiedForms[i]->DrawPolygons();
-        if (!this->mCopiedForms[i]->GetUseGDIForText())
-            theResult = this->mCopiedForms[i]->DrawTextA();
-    }
-    if (this->mDrawCandidateWindow == true)
-        theResult = this->mCandidateWindow->DrawPolygons();
-    this->mDrawCriticalSection->Leave();
-    this->mRasterizer->SetBlending(theSource, theDestination, this->mScreen);
-    return theResult;
-}
+long UIManager::DrawPolygons() { return (long)this->Call(EeUiManagerCall::DrawPolygons); }
 
 // FUNCTION: LLE 0x1007a6be
 // Draws the GDI text of the snapshotted forms and the candidate window, under the draw lock
-long UIManager::DrawTextA()
+long UIManager::DrawTextA() { return (long)this->Call(EeUiManagerCall::DrawText); }
+
+// The header's getters and setters (the original's inline members, 0x10059fdb..0x1005a269)
+void UIManager::ForceUIUpdate() { this->Call(EeUiManagerCall::ForceUiUpdate); }
+#define UI_MANAGER_BITMAP(Name, Index) \
+    GEBitmap* UIManager::Name() const { return reinterpret_cast<GEBitmap*>(this->Call(EeUiManagerCall::Bitmap, Index)); }
+UI_MANAGER_BITMAP(GetAlphaSortUpBitmap, 0)
+UI_MANAGER_BITMAP(GetAlphaSortDownBitmap, 1)
+UI_MANAGER_BITMAP(GetSBBitmapDownNormal, 2)
+UI_MANAGER_BITMAP(GetSBBitmapDownPressed, 3)
+UI_MANAGER_BITMAP(GetSBBitmapLeftNormal, 4)
+UI_MANAGER_BITMAP(GetSBBitmapLeftPressed, 5)
+UI_MANAGER_BITMAP(GetSBBitmapRightNormal, 6)
+UI_MANAGER_BITMAP(GetSBBitmapRightPressed, 7)
+UI_MANAGER_BITMAP(GetSBBitmapUpNormal, 8)
+UI_MANAGER_BITMAP(GetSBBitmapUpPressed, 9)
+UI_MANAGER_BITMAP(GetDragBarBitmap, 10)
+UI_MANAGER_BITMAP(GetCheckOff, 11)
+UI_MANAGER_BITMAP(GetCheckDownOff, 12)
+UI_MANAGER_BITMAP(GetCheckOn, 13)
+UI_MANAGER_BITMAP(GetCheckDownOn, 14)
+UI_MANAGER_BITMAP(GetCheckNot, 15)
+UI_MANAGER_BITMAP(GetCheckDownNot, 16)
+UI_MANAGER_BITMAP(GetRadioOff, 17)
+UI_MANAGER_BITMAP(GetRadioDownOff, 18)
+UI_MANAGER_BITMAP(GetRadioOn, 19)
+UI_MANAGER_BITMAP(GetRadioDownOn, 20)
+#undef UI_MANAGER_BITMAP
+UIIMECandidate* UIManager::GetCandidateWindow() const
 {
-    long theResult = kErrorOK;
-    this->mDrawCriticalSection->Enter();
-    if (this->mCopiedForms.size() > 0)
-        for (unsigned long i = 0; i < this->mCopiedForms.size(); i++)
-            if (this->mCopiedForms[i]->GetUseGDIForText() == true)
-                theResult = this->mCopiedForms[i]->DrawTextA();
-    if (this->mDrawCandidateWindow == true)
-        theResult = this->mCandidateWindow->DrawTextA();
-    this->mDrawCriticalSection->Leave();
-    return theResult;
+    return reinterpret_cast<UIIMECandidate*>(this->Call(EeUiManagerCall::CandidateWindow));
 }
+UIForm* UIManager::GetCurrentForm() const { return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::CurrentForm)); }
+bool UIManager::GetDrawCandidateWindow() const { return this->Call(EeUiManagerCall::DrawCandidateWindow) != 0; }
+GEFont* UIManager::GetFont(unsigned long inIndex) const
+{
+    return reinterpret_cast<GEFont*>(this->Call(EeUiManagerCall::Font, (intptr_t)inIndex));
+}
+unsigned long UIManager::GetFormCount() const { return (unsigned long)this->Call(EeUiManagerCall::FormCount); }
+UIForm* UIManager::GetStackedForm(unsigned long inIndex) const
+{
+    return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::StackedForm, (intptr_t)inIndex));
+}
+GESurface* UIManager::GetDrawingSurface() const { return this->GetRasterizer()->GetSecondarySurface(this->GetScreen()); }
+unsigned long UIManager::GetNumberOfSurfaces() const
+{
+    return (unsigned long)this->Call(EeUiManagerCall::NumberOfSurfaces);
+}
+GERasterizer* UIManager::GetRasterizer() const
+{
+    return reinterpret_cast<GERasterizer*>(this->Call(EeUiManagerCall::Rasterizer));
+}
+unsigned long UIManager::GetScreen() const { return (unsigned long)this->Call(EeUiManagerCall::Screen); }
+SESoundManager* UIManager::GetSoundManager() const
+{
+    return reinterpret_cast<SESoundManager*>(this->Call(EeUiManagerCall::SoundManager));
+}
+UResourceFile* UIManager::GetStringTable() const
+{
+    return reinterpret_cast<UResourceFile*>(this->Call(EeUiManagerCall::StringTable));
+}
+unsigned long UIManager::GetUITextureBitDepth() const
+{
+    return (unsigned long)this->Call(EeUiManagerCall::TextureBitDepth);
+}
+unsigned long UIManager::GetVisibleFormCount() const
+{
+    return (unsigned long)this->Call(EeUiManagerCall::VisibleFormCount);
+}
+bool UIManager::IsFormOnStack(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormOnStack, (intptr_t)inForm) != 0; }
+bool UIManager::IsFormVisible(UIForm* inForm) { return this->Call(EeUiManagerCall::IsFormVisible, (intptr_t)inForm) != 0; }
+void UIManager::LockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 0); }
+void UIManager::UnlockUIForCopyData() { this->Call(EeUiManagerCall::LockForCopy, 1); }
+void UIManager::RegisterControlEventCallback(UIEvent* (*inCallback)(UIForm*, unsigned long))
+{
+    this->Call(EeUiManagerCall::RegisterControlCallback, (intptr_t)inCallback);
+}
+void UIManager::RegisterFormEventCallback(UIEvent* (*inCallback)(UIManager*, unsigned long))
+{
+    this->Call(EeUiManagerCall::RegisterFormCallback, (intptr_t)inCallback);
+}
+void UIManager::SetFont(unsigned long inIndex, GEFont* inFont)
+{
+    this->Call(EeUiManagerCall::SetFont, (intptr_t)inIndex, (intptr_t)inFont);
+}
+void UIManager::SetNumberOfFonts(unsigned long inCount) { this->Call(EeUiManagerCall::SetNumberOfFonts, (intptr_t)inCount); }
 
 // FUNCTION: LLE 0x1007a72d
 // Returns the form with the given ID (NULL: none)
 UIForm* UIManager::GetFormByID(unsigned long inID) const
 {
     // an unknown ID gives NULL (the original returned the word one past the end of the form list)
-    return static_cast<UIForm*>(ee_ui_manager_form_by_id(const_cast<UIManager*>(this), inID));
+    return reinterpret_cast<UIForm*>(this->Call(EeUiManagerCall::FormById, (intptr_t)inID));
 }
 
 // FUNCTION: LLE 0x1007a766
@@ -851,128 +649,54 @@ void UIManager::LoadDatabase(FSPath* inPath, const UString& inDirectory)
     delete theDbFile;
 }
 
-// FUNCTION: LLE 0x1007ab03
-// Loads a UI texture with the UI bit depth, alpha, mipmaps and clamped, modulated stages; keeps a reference
-void UIManager::LoadTexture(const UString& inName, GETexture*& outTexture)
-{
-    GETextureManager* theManager = this->mRasterizer->GetScreen(this->mScreen)->GetTextureManager();
-    GETextureDescription theDescription;
-    theDescription.mNumMipLevelsToDrop = 0;
-    theDescription.mFrameFormat = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mPixelDepth = this->mUITextureBitDepth;
-    theDescription.mHasAlpha = true;
-    theDescription.mCreateMIPMaps = true;
-    outTexture = theManager->LoadTexture(inName, theDescription);
-    outTexture->Reference();
-    outTexture->SetStageAlphaMode(kStageOpModulate, -1);
-    outTexture->SetStageColorMode(kStageOpModulate, -1);
-    outTexture->SetStageMinFilterMode(1, -1);
-    outTexture->SetStageMagFilterMode(1, -1);
-    outTexture->SetStageMipFilterMode(kMipFilterPoint, -1);
-    outTexture->SetStageMipMapBias(-0.75f, -1);
-    outTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
-}
+// FUNCTION: LLE 0x1007ab03 (LoadTexture): UIManagerLoadTexture above (the Rust constructor's MgrTextureLoad).
 
 // FUNCTION: LLE 0x1007abb9
 // Opens the IME candidate window over the client area for the focused IME-enabled control; returns OK
-long UIManager::OpenIMECandidateWindow()
-{
-    return ee_ui_manager_open_candidate_window(this);
-}
+long UIManager::OpenIMECandidateWindow() { return (long)this->Call(EeUiManagerCall::OpenCandidateWindow); }
 
 // FUNCTION: LLE 0x1007ac9b
 // Tells the top form an IME composition string opened, under the UI lock; returns its result
-long UIManager::OpenIMECompositionString()
-{
-    return ee_ui_manager_ime_form_call(this, 3, NULL);
-}
+long UIManager::OpenIMECompositionString() { return (long)this->Call(EeUiManagerCall::OpenComposition); }
 
 // FUNCTION: LLE 0x1007acd4
 // Closes the top form, re-shows the forms it covered, redraws its area and activates the form below; returns OK
-long UIManager::Pop()
-{
-    this->mCriticalSection->Enter();
-    this->mDrawCriticalSection->Enter();
-    ee_ui_manager_pop(this);
-    this->mDrawCriticalSection->Leave();
-    this->mCriticalSection->Leave();
-    return kErrorOK;
-}
+long UIManager::Pop() { return (long)this->Call(EeUiManagerCall::Pop); }
 
 // FUNCTION: LLE 0x1007adbe
 // Pops forms until the given one is on top, when it is on the stack; returns OK (each Pop does)
-long UIManager::PopTo(UIForm* inForm)
-{
-    this->mCriticalSection->Enter();
-    this->mDrawCriticalSection->Enter();
-    ee_ui_manager_pop_to(this, inForm);
-    this->mDrawCriticalSection->Leave();
-    this->mCriticalSection->Leave();
-    return kErrorOK;
-}
+long UIManager::PopTo(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::PopTo, (intptr_t)inForm); }
 
 // FUNCTION: LLE 0x1007ae53
 // Opens a form on top of the stack (unless already stacked), deactivating the old top; returns OK
-long UIManager::Push(UIForm* inForm)
-{
-    this->mCriticalSection->Enter();
-    this->mDrawCriticalSection->Enter();
-    ee_ui_manager_push(this, inForm);
-    this->mDrawCriticalSection->Leave();
-    this->mCriticalSection->Leave();
-    return kErrorOK;
-}
+long UIManager::Push(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::Push, (intptr_t)inForm); }
 
 // FUNCTION: LLE 0x1007af47
 // Marks every visible form and all its controls dirty
-void UIManager::RedrawAll()
-{
-    this->mCriticalSection->Enter();
-    ee_ui_manager_redraw_all(this);
-    this->mCriticalSection->Leave();
-}
-
-// FUNCTION: LLE 0x1007af90 (RemoveClippedForms): the body is Rust (ee_ui manager.rs, inside Push and SwapForm); the
-// member stays declared, with no C++ definition.
+void UIManager::RedrawAll() { this->Call(EeUiManagerCall::RedrawAll); }
 
 // FUNCTION: LLE 0x1007b147
 // Rebuilds each visible form's clip rectangles from the visible forms above it
-void UIManager::ResetClippedForms()
-{
-    ee_ui_manager_reset_clipped_forms(this);
-}
+void UIManager::ResetClippedForms() { this->Call(EeUiManagerCall::ResetClippedForms); }
 
 // FUNCTION: LLE 0x1007b1a2
 // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
-void UIManager::RelayoutAllForms()
-{
-    GEWindow* theWindow = this->mRasterizer->GetWindow(this->mScreen);
-    ee_ui_manager_relayout_all_forms(this, theWindow->GetWidth(), theWindow->GetHeight());
-}
+void UIManager::RelayoutAllForms() { this->Call(EeUiManagerCall::RelayoutAllForms); }
 
 // FUNCTION: LLE 0x1007b254
 // Runs and releases the queued events of one form; the other forms' events stay queued in order
 void UIManager::ProcessAllEventsForForm(UIForm* inForm)
 {
-    ee_ui_manager_process_all_events_for_form(this, inForm);
+    this->Call(EeUiManagerCall::ProcessAllEventsForForm, (intptr_t)inForm);
 }
 
 // FUNCTION: LLE 0x1007b2ec
 // Stops the playing music and releases its instance
-void UIManager::RemoveAndStopSoundInstance()
-{
-    ee_ui_manager_remove_and_stop_sound_instance(this);
-}
+void UIManager::RemoveAndStopSoundInstance() { this->Call(EeUiManagerCall::RemoveAndStopSoundInstance); }
 
 // FUNCTION: LLE 0x1007b310
 // Releases the music instance
-void UIManager::RemoveSoundInstance()
-{
-    ee_ui_manager_remove_sound_instance(this);
-}
+void UIManager::RemoveSoundInstance() { this->Call(EeUiManagerCall::RemoveSoundInstance); }
 
 // FUNCTION: LLE 0x1007b338
 // Deletes the UI database tables (controls, backgrounds, fonts)
@@ -987,20 +711,12 @@ void UIManager::RemoveDatabase()
 // Replaces the music instance, moving the reference to the new one
 void UIManager::SetSoundInstance(SESMInstanceNode* inInstance)
 {
-    ee_ui_manager_set_sound_instance(this, inInstance);
+    this->Call(EeUiManagerCall::SetSoundInstance, (intptr_t)inInstance);
 }
 
 // FUNCTION: LLE 0x1007b36e
 // Replaces the top form with another (unless already stacked), re-showing what the old one covered; returns OK
-long UIManager::SwapForm(UIForm* inForm)
-{
-    this->mCriticalSection->Enter();
-    this->mDrawCriticalSection->Enter();
-    ee_ui_manager_swap_form(this, inForm);
-    this->mDrawCriticalSection->Leave();
-    this->mCriticalSection->Leave();
-    return kErrorOK;
-}
+long UIManager::SwapForm(UIForm* inForm) { return (long)this->Call(EeUiManagerCall::SwapForm, (intptr_t)inForm); }
 
 // FUNCTION: LLE 0x1007b511
 // Swaps the left and right mouse buttons when the left-handed setting changes
@@ -1018,80 +734,46 @@ void UIManager::SetMouseLeftHanded(bool inLeftHanded)
 // Sets the music volume; stops the music at 0 and restarts the last track (or the intro) when raised from 0
 void UIManager::SetMusicVolume(float inVolume)
 {
-    ee_ui_manager_set_music_volume(this, inVolume);
+    float f[4] = {inVolume, 0.0f, 0.0f, 0.0f};
+    this->Call(EeUiManagerCall::SetMusicVolume, 0, 0, 0, f);
 }
 
 // FUNCTION: LLE 0x1007b616
 // Loads and starts a music track unless it is the current one (names compared lower-cased)
 void UIManager::StartMusic(const UWideString& inFileName)
 {
-    ee_ui_manager_start_music(this, inFileName);
+    this->Call(EeUiManagerCall::StartMusic, (intptr_t)(const char*)inFileName);
 }
 
 // FUNCTION: LLE 0x1007b743
 // Stops the music and unloads the track
-void UIManager::StopMusic()
-{
-    ee_ui_manager_stop_music(this);
-}
+void UIManager::StopMusic() { this->Call(EeUiManagerCall::StopMusic); }
 
 // FUNCTION: LLE 0x1007b786
 // Passes keyboard input to the top form when the keyboard changed, a control holds it, or an update is forced
-long UIManager::UpdateKeyboard()
-{
-    long theResult = kErrorOK;
-    this->mCriticalSection->Enter();
-    if (this->mFormStack.size() > 0 && (gISKeyboard->GetShouldUpdate() || this->mFormStack.back()->GetKeyboardCaptured() ||
-                                   this->mForceUIUpdate == true)) {
-        UIHotKey::UpdatePressedPollAmount();
-        theResult = this->mFormStack.back()->UpdateKeyboard();
-    }
-    this->mCriticalSection->Leave();
-    return theResult;
-}
+long UIManager::UpdateKeyboard() { return (long)this->Call(EeUiManagerCall::UpdateKeyboard); }
 
 // FUNCTION: LLE 0x1007b7f4
 // Passes the mouse location and buttons to the top form when the mouse changed, it is captured, or an update is forced
 long UIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 {
-    long theResult = kErrorOK;
-    this->mCriticalSection->Enter();
-    if (this->mFormStack.size() > 0 && (gISMouse->GetShouldUpdate() || this->mFormStack.back()->GetMouseCaptured() ||
-                                   this->mForceUIUpdate == true)) {
-        this->mFormStack.back()->UpdateMouseLocation(inMouseLocation);
-        theResult = this->mFormStack.back()->UpdateMouse();
-    }
-    this->mCriticalSection->Leave();
-    return theResult;
+    float f[4] = {inMouseLocation.GetX(), inMouseLocation.GetY(), 0.0f, 0.0f};
+    return (long)this->Call(EeUiManagerCall::UpdateMouse, 0, 0, 0, f);
 }
 
 // FUNCTION: LLE 0x1007b864
 // Passes a translated character to the top form unless its repeat count is 16 or more; returns its result
 long UIManager::UpdateTranslatedKey(const char* inKey, short inRepeat)
 {
-    static UWideString sKey;
-    long theResult = kErrorOK;
-    this->mCriticalSection->Enter();
-    if (this->mFormStack.size() > 0 && inRepeat < 0x10) {
-        sKey.CopyString(inKey, 1);
-        theResult = this->mFormStack.back()->UpdateTranslatedKey(sKey, inRepeat);
-    }
-    this->mCriticalSection->Leave();
-    return theResult;
+    return (long)this->Call(EeUiManagerCall::UpdateTranslatedKey, (intptr_t)inKey, (intptr_t)inRepeat);
 }
 
 // FUNCTION: LLE 0x1007b8f1
 // Runs one UI update: keyboard, mouse, queued events, then any pending music stop or start; returns the mouse result
 long UIManager::UpdateUI(const GE2DPoint& inMouseLocation)
 {
-    this->UpdateKeyboard();
-    long theResult = this->UpdateMouse(inMouseLocation);
-    this->mForceUIUpdate = false;
-    this->mCriticalSection->Enter();
-    ee_ui_manager_process_all_events(this);
-    ee_ui_manager_update_music(this);
-    this->mCriticalSection->Leave();
-    return theResult;
+    float f[4] = {inMouseLocation.GetX(), inMouseLocation.GetY(), 0.0f, 0.0f};
+    return (long)this->Call(EeUiManagerCall::UpdateUi, 0, 0, 0, f);
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):

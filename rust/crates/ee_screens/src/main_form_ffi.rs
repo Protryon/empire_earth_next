@@ -111,3 +111,10 @@ pub extern "C" fn ee_screens_main_form_start(call: *mut c_void, kind: u32, tech:
         _ => main_form::start_targeting(h, main_form::EE_SCREENS_MF_STATE_PATROL),
     }
 }
+
+/// `EEUIFMainGame::Rust(which, a)`: the member `which` (`EE_SCREENS_MF_DO_*`) with its argument; `DrawPolygons`'
+/// answer, else 0.
+#[no_mangle]
+pub extern "C" fn ee_screens_main_form_member(call: *mut c_void, which: u32, a: i64) -> i64 {
+    main_form::member(&mut Host(call), which, a)
+}

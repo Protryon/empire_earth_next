@@ -25,6 +25,7 @@ pub mod find_key;
 pub mod font;
 pub mod form;
 pub mod form_state;
+pub mod formobj;
 pub mod graph;
 pub mod hotkey;
 pub mod ime;
@@ -35,6 +36,7 @@ pub mod list;
 pub mod listobj;
 pub mod manager;
 pub mod manager_media;
+pub mod managerobj;
 pub mod mouse;
 pub mod obj;
 pub mod rect;
@@ -59,12 +61,6 @@ mod background_table_ffi;
 // imports the C++ controls table's static array (UIControlsTable.cpp), absent from a test binary
 #[cfg(not(test))]
 mod controls_table_ffi;
-// imports the C++ form questions (UIForm.cpp), absent from a test binary
-#[cfg(not(test))]
-mod form_ffi;
-// imports the C++ form's lists, members and calls (UIForm.cpp), absent from a test binary
-#[cfg(not(test))]
-mod form_state_ffi;
 // imports the C++ shared font list (UIFontTable.cpp), absent from a test binary
 #[cfg(not(test))]
 mod font_ffi;
@@ -88,12 +84,6 @@ mod layout_ffi;
 #[cfg(not(test))]
 mod mouse_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
-// imports the C++ manager's lists and the forms' members (UIManager.cpp), absent from a test binary
-#[cfg(not(test))]
-mod manager_ffi;
-// imports the C++ manager's music and IME members, the sound manager's calls (UIManager.cpp), absent from a test binary
-#[cfg(not(test))]
-mod manager_media_ffi;
 // imports the C++ text measuring (UITextLabel.cpp)
 
 pub use layout::{Edge, Layout};

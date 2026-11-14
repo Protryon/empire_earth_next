@@ -23,13 +23,13 @@ public:
     virtual ~EEUICPortrait();
     virtual long DrawPolygons();            // +0x18 0x258987
     virtual long DrawTextA();               // +0x1c 0x258ad0
-    // 0x25891c: the two bar rectangles (the second shortened when both bars show)
-    void GetBarRectangles(GERectangle& outFirst, GERectangle& outSecond) const;
     virtual bool GetHelpString(UWideString& outString) const;   // +0x20 0x258af7
     // 0x258f82: shows inUnit (EEUIFMainGame 0x26bfe2, 0x26c38b)
     void SetUnit(EEUnit* inUnit);
     // 0x259028: updates the bars and the level text from the unit (EEUIFMainGame 0x26d0a0)
     void Update();
+    // the portrait's host (ee_screenscpp_portrait, EEUICPortrait.cpp; the bar rectangles of 0x25891c are portrait.rs')
+    static int64_t HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t inA, int64_t inB, float* ioF);
 protected:
     virtual long MouseLButtonDown();        // +0x34 0x258d02
     virtual long MouseLButtonUp() { return 0; }

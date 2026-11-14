@@ -14,6 +14,7 @@
 use std::cell::UnsafeCell;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU32, AtomicU8, AtomicUsize, Ordering::SeqCst};
+use std::sync::Arc;
 
 use crate::lagloss::LagLoss;
 use crate::qhost::*;
@@ -53,19 +54,17 @@ pub const MSG_CLIENT_RECONNECTION_REQUEST_RESPONSE: u8 = 0x38;
 pub const MSG_CLIENT_REQUEST_PAUSE: u8 = 0x39;
 pub const MSG_SERVER_IS_ALIVE: u8 = 0x3a;
 
-pub use crate::ffi_client::{
-    EeNetClBase as BaseField, EeNetClMsgField as MsgField, EeNetClMsgFlag as MsgFlag, EeNetClNewMsg as NewMsg,
-};
+pub use crate::comms::Comms;
+pub use crate::ffi_client::{EeNetClMsgField as MsgField, EeNetClMsgFlag as MsgFlag, EeNetClNewMsg as NewMsg};
+pub use crate::ffi_comms::EeNetCommsField as BaseField;
 
 /// The client's calls out besides the queues' (`QHost`): the engine, the protocol and its connections, the messages,
-/// the received file, the base class's fields and the C++ class's virtual members.
+/// the received file and the C++ class's virtual members.
 pub trait ClientHost: QHost {
     /// `TSEvent::WaitAny`: the index of the set event (the lowest), WAIT_ANY_TIMEOUT or WAIT_ANY_FAILED
     fn wait_any(&self, events: &[Ev], timeout: u32) -> i32;
     /// `SetPriority(PLAT_PRIORITY_TIME_CRITICAL)`
     fn thread_priority(&self, t: Thr);
-    fn base_get(&self, f: BaseField) -> u32;
-    fn base_set(&self, f: BaseField, value: u32);
 
     /// `NEProtocol::GetCount()`
     fn protocol_count(&self) -> u32;
@@ -267,6 +266,8 @@ const SILENCE_LOST: u32 = 75000;
 
 pub struct Client<H: ClientHost + 'static> {
     pub host: H,
+    /// the base class's fields (NESynchronousCommunications, shared with the C++ base)
+    pub comms: Arc<Comms>,
     lag: UnsafeCell<Option<LagLoss<ClientQ<H>>>>,
     rec: UnsafeCell<Option<RecPlay<ClientQ<H>>>>,
     incoming_lock: RLock,
@@ -298,7 +299,7 @@ unsafe impl<H: ClientHost + Sync> Sync for Client<H> {}
 impl<H: ClientHost> Client<H> {
     /// The constructor: protocol 0, the threads' events, the lag simulator with lag and loss off, the recorder
     /// passing, the receive thread allowed to go.
-    pub fn new(host: H) -> Box<Self> {
+    pub fn new(host: H, comms: Arc<Comms>) -> Box<Self> {
         if host.protocol_count() == 0 {
             host.verify(UNIT, 38);
         }
@@ -316,6 +317,7 @@ impl<H: ClientHost> Client<H> {
         }
         let c = Box::new(Client {
             host,
+            comms,
             lag: UnsafeCell::new(None),
             rec: UnsafeCell::new(None),
             incoming_lock: RLock::new(),
@@ -842,8 +844,8 @@ impl<H: ClientHost> Client<H> {
             self.host.msg_set_slot(m, false, player);
             let send = (!self.host.is_playback_recording_session()
                 || self.host.msg_type(m) == MSG_CLIENT_RECONNECTION_REQUEST)
-                && (self.host.base_get(BaseField::IsGamePaused) == 0
-                    || self.host.base_get(BaseField::IsMultiplayerSession) == 0
+                && (self.comms.get(BaseField::IsGamePaused) == 0
+                    || self.comms.get(BaseField::IsMultiplayerSession) == 0
                     || self.host.msg_flag(m, MsgFlag::CanSendWhilePaused)
                     || self.host.msg_type(m) == MSG_CLIENT_REQUEST_PAUSE
                     || self.host.msg_type(m) == MSG_CLIENT_RECONNECTION_REQUEST
@@ -874,8 +876,8 @@ impl<H: ClientHost> Client<H> {
     }
 
     fn new_tick_response(&self, tick: u32) -> Msg {
-        let average = self.host.base_get(BaseField::AveragePhysicsUpdateTime);
-        let processed = self.host.base_get(BaseField::CtsProcessed);
+        let average = self.comms.get(BaseField::AveragePhysicsUpdateTime);
+        let processed = self.comms.get(BaseField::CtsProcessed);
         self.host.msg_new(NewMsg::TickResponse, processed as usize, tick as usize, average as usize, 0)
     }
 
@@ -883,7 +885,7 @@ impl<H: ClientHost> Client<H> {
     /// an old tick answered again (the kept answer when it was that tick's); nothing before the connection's reply.
     fn process_communications_tick_message(&self, m: Msg) {
         let tick = self.host.msg_get(m, MsgField::TickCt) as u32;
-        let last = self.host.base_get(BaseField::LastTickReceived);
+        let last = self.comms.get(BaseField::LastTickReceived);
         if last as i32 != -2 {
             let response;
             if tick <= last && last as i32 != -1 {
@@ -896,7 +898,7 @@ impl<H: ClientHost> Client<H> {
                 }
             } else {
                 self.current_communications_tick.fetch_add(1, SeqCst);
-                self.host.base_set(BaseField::LastTickReceived, tick);
+                self.comms.set(BaseField::LastTickReceived, tick);
                 self.host.handle_message(m);
                 response = self.new_tick_response(tick);
                 {
@@ -945,12 +947,12 @@ impl<H: ClientHost> Client<H> {
                     self.my_send_to_slot.store(self.host.msg_get(m, MsgField::SendToSlot) as u8, SeqCst);
                     self.connect_for_xfer();
                 }
-                self.host.base_set(BaseField::LastTickReceived, -2i32 as u32);
+                self.comms.set(BaseField::LastTickReceived, -2i32 as u32);
                 self.host.event_set(self.ev(EV_MAIN_END_CONNECT));
                 self.host.handle_message(m);
                 if self.host.msg_get(m, MsgField::ConnectionError) as i32 == CONNECTION_ACCEPTED {
                     let ct = self.host.msg_get(m, MsgField::ConnectionCt) as u32;
-                    self.host.base_set(BaseField::LastTickReceived, ct.wrapping_sub(1));
+                    self.comms.set(BaseField::LastTickReceived, ct.wrapping_sub(1));
                 }
             }
             MSG_WORLD_DATABASE_CHECKSUM => self.host.handle_message(m),
@@ -962,21 +964,21 @@ impl<H: ClientHost> Client<H> {
                 }
                 self.host.handle_message(m);
                 let ct = self.host.msg_get(m, MsgField::ReconnectionCt) as u32;
-                self.host.base_set(BaseField::LastTickReceived, ct.wrapping_sub(1));
+                self.comms.set(BaseField::LastTickReceived, ct.wrapping_sub(1));
             }
             MSG_UNPAUSE_GAME => {
                 let id = self.host.msg_get(m, MsgField::UniqueId) as u32;
                 let r = self.host.msg_new(NewMsg::UnPauseGameResponse, id as usize, 0, 0, 0);
                 self.host.msg_set_slot(r, true, self.my_send_to_slot.load(SeqCst));
                 self.send_a_message(r);
-                self.host.base_set(BaseField::IsGamePaused, 0);
+                self.comms.set(BaseField::IsGamePaused, 0);
             }
             MSG_PAUSE_GAME => {
                 let id = self.host.msg_get(m, MsgField::UniqueId) as u32;
                 let r = self.host.msg_new(NewMsg::PauseGameResponse, id as usize, 0, 0, 0);
                 self.host.msg_set_slot(r, true, self.my_send_to_slot.load(SeqCst));
                 self.send_a_message(r);
-                self.host.base_set(BaseField::IsGamePaused, 1);
+                self.comms.set(BaseField::IsGamePaused, 1);
             }
             _ => self.host.handle_message(m),
         }

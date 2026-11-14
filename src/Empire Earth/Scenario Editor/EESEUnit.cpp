@@ -282,8 +282,8 @@ EEUIFSELBUnitList::EEUIFSELBUnitList(unsigned long inID, std::vector<UWideString
 // Picks the clicked unit class for placement on the map, then fires the list's button-up event
 void EEUIFSELBUnitList::ButtonUp()
 {
-    EESEUnit* theScreen = (static_cast<EEUIFScenarioEditor*>(this->mForm))->GetUnitScreen();
-    theScreen->SelectUnitType(this->mForm->GetMouseLocation());
+    EESEUnit* theScreen = (static_cast<EEUIFScenarioEditor*>(this->GetForm()))->GetUnitScreen();
+    theScreen->SelectUnitType(this->GetForm()->GetMouseLocation());
     this->FireTriggerEvent(kControlTriggerButtonUp);
 }
 
@@ -375,8 +375,8 @@ long EEUIFSELBUnitList::UpdateKeyboard()
 {
     long theResult = UILBString::UpdateKeyboard();
     if (UIControl::sEnterKey->GetValue()) {
-        EESEUnit* theScreen = (static_cast<EEUIFScenarioEditor*>(this->mForm))->GetUnitScreen();
-        theScreen->SelectUnitType(this->mForm->GetMouseLocation());
+        EESEUnit* theScreen = (static_cast<EEUIFScenarioEditor*>(this->GetForm()))->GetUnitScreen();
+        theScreen->SelectUnitType(this->GetForm()->GetMouseLocation());
     }
     return theResult;
 }
@@ -452,7 +452,7 @@ EEUIFSEBUnitType::EEUIFSEBUnitType(unsigned long inID, GEBitmap* inUp, GEBitmap*
 // Sets the unit palette (land, air, naval, structures, heroes or resources) from the button's id, then checks it
 void EEUIFSEBUnitType::Check()
 {
-    switch (this->mId) {
+    switch (this->GetId()) {
     case 0x406:
         sUnitTypeMode = kUnitPaletteLandUnits;
         break;
@@ -515,7 +515,7 @@ EEUIFSEBRotation::EEUIFSEBRotation(unsigned long inID, GEBitmap* inNormal, GEBit
         this->mBitmaps[i * 2 + 1]->SetXYScale(50.0f / theSize, 50.0f / theSize);
     }
     this->UpdateBitmaps();
-    this->mAlwaysDirty = true;
+    this->SetAlwaysDirty(true);
 }
 
 // SYNTHETIC: EXE 0x59a4b6
@@ -661,7 +661,7 @@ void EEUIFSEBRotation::RotateSelection()
 {
     GETransformation theTransformation;
     float theAngle = this->GetAngle();
-    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->mForm);
+    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->GetForm());
     unsigned long theCount = theEditor->GetSelectedUnitCount();
     for (unsigned long i = 0; i < theCount; i++) {
         EEUnit* theUnit = theEditor->GetSelectedUnit(i);
@@ -678,7 +678,7 @@ void EEUIFSEBRotation::RotateSelection()
 // Deletes the unit on the cargo list's selected line, then releases the button
 void EEUIFSEBRemoveCargo::ButtonUp()
 {
-    static_cast<EEUIFSELBCargoList*>(this->mForm->GetControlById(0x3f2))->RemoveSelected();
+    static_cast<EEUIFSELBCargoList*>(this->GetForm()->GetControlById(0x3f2))->RemoveSelected();
     UIButton::ButtonUp();
 }
 

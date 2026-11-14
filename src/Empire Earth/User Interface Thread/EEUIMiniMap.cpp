@@ -246,7 +246,7 @@ long EEUIMiniMap::DrawPolygons()
 {
     uint32_t theLines = (this->mDrawLine0 ? 1 : 0) | (this->mDrawLine1 ? 2 : 0) | (this->mDrawLine2 ? 4 : 0) |
                         (this->mDrawLine3 ? 8 : 0);
-    const GERectangle& theCopied = this->mCopiedDrawRectangle;
+    const GERectangle& theCopied = this->GetCopiedDrawRectangle();
     EeScreensMiniMapDraw thePlan = ee_screens_mini_map_draw_plan(this->mShowFlare, theLines, theCopied.GetLeft(),
                                                                  theCopied.GetTop(), theCopied.GetRight(),
                                                                  theCopied.GetBottom());
