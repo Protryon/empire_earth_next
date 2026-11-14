@@ -198,7 +198,7 @@ static void PMStepCommit()
     sPMStepCalls = 0;
 }
 
-// TEST ONLY: the steps per model so far (the lane's coverage of the capture's games), printed to stderr every 20000
+// TEST ONLY: the steps per model so far (the lane's coverage of the capture's games), printed to stderr every 4000
 // ticks while the capture runs: "EE-PM-COUNT <tick> <land> <airplane> .. <spaceship>"
 static uint32_t sPMStepKinds[12];
 
@@ -207,7 +207,7 @@ static void PMStepNote(EEPhysicsModel* inModel, EEComplexUnit* inUnit, unsigned 
     if (gPhysics->mNumTicksDone != sPMStepTick) {
         PMStepCommit();
         sPMStepTick = gPhysics->mNumTicksDone;
-        if (sPMStepTick % 20000 == 0) {
+        if (sPMStepTick % 4000 == 0) {
             fprintf(stderr, "EE-PM-COUNT %lu", sPMStepTick);
             for (int i = 0; i < 12; i++)
                 fprintf(stderr, " %u", sPMStepKinds[i]);
