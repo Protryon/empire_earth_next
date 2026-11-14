@@ -1,32 +1,36 @@
 # R5b calamities (src/Empire Earth/Calamities)
 
 The lane's state. Each round rewrites this file to the current state; the round's story goes in PORT_LEARNINGS.md
-("Calamities lane, round 1").
+("Calamities lane, round 1", "Calamities lane, round 2").
 
-**Round 1** (branch `rust-calamities1`, `ee_tech`): before it, R5b.2 had moved every class's `Update`, `Start`,
-`Stop`, the cast tests and the contagion update into Rust over host calls; the classes' data, `Initialize`, media,
-`Reset`, the per-class run wrappers and the saves were C++ (7,969 lines in the directory).
+**Rust** (`ee_tech`): every class's `Start`, `Stop` and `Update` decisions, the cast tests and the contagion update
+(R5b.2); the classes' data as one record with every per-class virtual as a table by `mClassEnum`, the base each
+kind is made as (`calamity_class.rs`); an active calamity's record, `Reset`, checksum, `Load` and `Save`
+(`calamity_record.rs`); the contagion helpers' record and saves (`contagion_save.rs`); the contagion functors as one
+record, their getters, `Update`'s discrete time and `Apply`'s hit (`contagion_functor.rs`).
 
-- **The classes' data as one Rust record, every per-class virtual in the base** (`calamity_class.rs`):
-  `EECalamityClass` derives from `EeCalamityClassFields` (the base members, then the twenty subclasses' numbers by
-  their C++ names; the area effects' and the leprosy's radius in tiles is `mRadiusTiles`, the teleport's float share
-  `mDamageShare`) and holds the effects, sounds and functor (`mGraphicEffect1..4`, `mSound`, `mSecondarySound`,
-  `mFunctor`). `Initialize` (each slot's fetch mode, the numbers, the functor), the destructor, `LoadMedia`,
-  `UnloadMedia`, `PlaySound`, `Reset`, `Start`, `Stop`, `Update`, `GetContagionFunctor`, `IsValidTarget` and
-  `IsValidLocation` are the base's (or the unit/location base's), run by Rust tables keyed by `mClassEnum`. The
-  `EECC*` classes keep only their world steps (`StartStep`, `UpdateStep`, their helpers) and the special virtuals
-  (`CanCastAt` of the line of sight and special attack, `AffectsOwnUnits`, `Virtual4C`, the volcano's `Place`).
-- **An active calamity's record** (`calamity_record.rs`): `EECalamity` derives from `EeCalamityFields` (its 17 plain
-  members); `Reset`'s numbers, the out-of-sync checksum, `Load` and `Save` are Rust over one I/O callback.
-- **The contagion saves** (`contagion_save.rs`): `EEContagionHelper` derives from `EeContagionHelperFields`; the
-  helper's and the manager's `Load`/`Save` and the helper's checksum are Rust over one I/O callback.
-- **C++**: net -2,546 this round (the directory 7,969 -> 6,293 lines with the 514-line test capture).
-- **Gate**: CALI (every class as `Initialize` left it) and CALK (each active calamity's checksum, save bytes and
-  reload, the contagion manager's), recorded from the unmodified C++ (calamity profile, seeds 2-3), with CALT/CALW/
-  CONT/CCAS; every class is cast, started, updated and stopped in the calamity profile's game.
+**C++ left** (5,000 lines in the directory with the 439-line test capture; 7,969 before round 1):
+- `EECalamityUpdate.cpp` (1,350): the host every Rust run asks, one switch over `EeCalamityOp`: the shared calls and
+  every class's own world steps (the effects, sounds, units, orders, the camera shake), keyed by the class enum for
+  the start steps (`ClassStep`). This is where the twenty `EECC*` classes' bodies live now; they move further only as
+  the world calls they make (effect manager, units, goals, map) become Rust.
+- The three bases (`EEGlobalCalamityClass`, `EELocationCalamityClass`, `EEUnitCalamityClass`) and `EECalamityClass`
+  (379): the C++ object glue around the Rust tables (effects, sounds and functor pointers, media load/unload,
+  `PlaySound`, `UpdateSound`, the volcano's `Place`).
+- `EECalamityManager` (410): the active list and the class list (`std::vector`s of C++ objects), `Update`'s loop,
+  the creates, `Restore`, the capture hooks.
+- `EECalamity` (365): the constructor/destructor (references, media), the sound setters, the out-of-sync dump, the
+  `Load`/`Save` I/O callback.
+- `EEContagionHelper` (402) and `EEContagionManager` (412): the helper's unit list (`std::vector<EEUnit*>`,
+  referenced), the manager's helper list, the helper's update host, the functor's world steps (`Infect`, `Cure`,
+  `Apply` by kind).
+- `EECalamityCast.cpp` (216): the cast tests' host.
 
-**Left** (C++): the world steps of each class (`StartStep`/`UpdateStep` and their helpers: the effects, sounds,
-units and orders; by design until the world calls are Rust), `EECalamityManager` (the active list, `Update`, the
-creates, the class factory), `EECalamity`'s ctor/dtor/sound setters and out-of-sync dump, the contagion helper's
-unit list (`AddUnit`, `RemoveUnit`, `SwapUnit`, `RestorePointers`) and the manager's helper list, the functors
-(`EE*Functor.cpp`), `EECalamityUpdate.cpp`/`EECalamityCast.cpp` (the shared hosts).
+**Next**: the unit lists as ids (the helper's units, the calamity's target and caster) once a pending unit (no id
+yet: a conversion's new unit in `SwapUnit`) can be held by id; the manager's lists in a Rust store once the
+calamities are Rust objects; the world steps as the effect manager's and the units' calls become Rust.
+
+**Gates**: the calamity profile's CALI, CALK (each calamity at its start, every five seconds of its life and every
+five game minutes), CALT, CALW, CONT, CCAS, CALS, CALU records at seeds 2-3, recorded from the unmodified C++; the
+oracle; the saveload matrix (`oracle,calamity`). EE-SIM draws and plays nothing: the effects, sounds, camera shake and
+media loads are tour-only paths (no fixture command casts a calamity yet).
