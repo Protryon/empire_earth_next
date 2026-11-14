@@ -5066,6 +5066,127 @@ before WW1, and the late starts begin after it.
 
 **Stage 2 is complete.** Everything of the C++ classic's decision code is ported or recorded in ORIGIN as a deviation
 or not ported. Stage 3 is next: the benches beyond Small land, with the late-start economy first (§8.63).
+### 8.78 Stage 3: script errors on large maps, the late-start economy, the ICBM (2026-11-13, EE-SIM)
+
+**The old "budget exceeded" errors.** They came from older benches. Six Large games with 4 players (2 ports, 2 C++)
+and 120 minutes were run on current code: 2 without cheats and 4 with them. They gave no script errors.
+
+**The late-start economy** (WW2 start with the cheats; at 10 minutes the port had 22 citizens against 33). The gap
+has three parts:
+- **The second town centre came late.** Only the capitol and town centres train citizens; settlements do not. At 5
+  minutes both players turn a settlement into a town centre with the garrison cheat (ChooseGarrison).
+  - The C++'s idle citizens are at hand, so its centre stands before the next batch of 10 citizens is queued, and
+    the batch is shared (a batch every ~142 s).
+  - The port seldom has idle citizens. Its garrison waited, and its next batch went to the capitol alone, so it got a
+    batch only every ~283 s until minute 10.
+  - Two new rules:
+    - with the garrison cheat and no idle citizen, the nearest gatherer goes in, so the rest is topped up and the
+      settlement turns at once;
+    - a citizen batch waits up to 30 s while a settlement is being filled, so both centres share it.
+  - The port's batches now come at the C++'s times: 30, 313, 455, 597 s.
+- **Carrier fighters without a carrier.** The port filled CheckNaval's carrier fighters (15 Corsairs) at its
+  airports. The C++'s request waits for a carrier that seldom comes. Those fighters cannot hit the ground, yet they
+  counted as army, so KeepStandingArmy raised no soldiers. DEVIATION: the carrier fighters are kept only with an own
+  carrier.
+- **Not closed: the losses and the army.** The C++ raids from minute 3. The port loses 6 citizens by 10 minutes
+  against the C++'s 1, its army is 7 against 21, and later its citizens stay at 33-37 against the C++'s ~50. That is
+  the next item: the military side of late starts (KeepStandingArmy's count, the defence of the gatherers).
+
+| WW2 + cheats, 32 seeds, 45 min | citizens/army 5 / 10 / 20 / 30 min | won-lost |
+|---|---|---|
+| C++ (before) | 15.2/4.7 / 34.9/21.4 / 51.1/24.8 / 47.4/27.4 | 13-1, 18 close |
+| port before | 14.0/6.0 / 21.8/8.8 / 26.6/10.9 / 31.0/11.3 | |
+| C++ (after) | 15.1/4.7 / 34.5/20.9 / 49.2/22.7 / 46.5/27.2 | 11-0, 21 close |
+| port after | 14.2/6.1 / 25.1/7.2 / 32.5/10.2 / 33.3/11.3 | |
+
+**The ICBM** had never fired, for two reasons:
+- **It is a missile.** No script list holds it, so the port never saw it and asked for a new one every two minutes
+  (21 in one game). The port now reads its missile bases' cargo and gives the loaded base the attack.
+- **The attacks went for the sims' idle human.** In EE-SIM the attack choice prefers humans, and the sims keep an
+  idle human (player 1) with nothing to hit. This holds for the C++ too, and every bench has it. It is noted here
+  for the bench design.
+
+A Digital Age start with cheats and a scratch copy that left the human out of the choice (not committed) confirmed
+the fire. Seed 3 queued a missile base at once, fired at minute 22 at the C++'s largest building, and killed 10
+citizens. The target list now takes remembered buildings too, which ai.attack accepts. DEVIATION: the C++ needs the
+tile seen now.
+
+On land (balanced, 32 seeds, 90 minutes) the C++ won 15, the port 11, with 6 close (17-10 with 5 close in §8.77). Determinism (seeds 2 and 5, --repeat 2) is identical on land and at the WW2 start.
+
+0 script errors. Next: the late-start army, then the wall count (§8.70).
+### 8.79 Stage 3: the late-start army (tried, not kept), and the wall planner's way (2026-11-13, EE-SIM)
+
+**The late-start army.** At the WW2 start with cheats the port's army trails the C++'s (12 against 21 at 10
+minutes, §8.78). The cause is in the C++'s KeepStandingArmy (a port addition, §8.13). It counts its army with
+CountMilitaryUnits(false, true): with inByClass false, GatherUnits skips the unit lists and counts only the military
+asked for and being made. So the C++ never sees its standing army and keeps a steady trickle of its favourite land
+unit up to the military room. The port counts its units, as the rule meant.
+
+Two versions were benched against the same scripts, 32 seeds each (balanced; the C++ unchanged):
+
+| | WW2 + cheats, 45 min: won-lost (close) | port's citizens/army at 20 min | land, 90 min: won-lost (close) |
+|---|---|---|---|
+| the port as it is (§8.78) | 0-11 (21) | 32.5/10.2 | 11-15 (6) |
+| as the C++: requests and production only | 3-8 (21) | 37.4/20.3 | 7-18 (7) |
+| requests, production and the free soldiers | 1-9 (22) | 35.7/15.6 | 8-20 (4) |
+
+Counting as the C++ does closes the late-start army (20.3 against the C++'s 22.8) and wins 3 games. On land, though,
+its bigger army (7.6 against 4.2 at 30 minutes) costs citizens: 42 against 49 at 40 minutes, and 7-18. **Not kept.**
+The choice between them is a design one, for the owner:
+- copy the C++'s trickle everywhere;
+- copy it only at late starts;
+- or leave the late-start army behind the C++'s.
+
+**The wall planner's way.** New generic helper `ai.wall_route(enemy, x1, y1, x2, y2)` with
+`ai.wall_route_result(handle)` (AI_LUA_UNITS §11). It is the C++ wall planner's own path request: the path manager's
+coarse graph with the planner modifier (the enemy's influence costs), asynchronous across ticks, not saved.
+walls.lua now takes its way from it:
+- the path reversed, its ends the unit and the enemy's centre;
+- each step refined with ai.wall_path, as PlanWall does;
+- the way kept for the next sizes;
+- ai.route's cells only when the request fails.
+
+| | the port before (§8.70) | the port now | the C++ |
+|---|---|---|---|
+| land, 8 games, 90 min: wall orders (games) | 3 (2) | 8 (4) | 62 (5) |
+| Copper start, 8 games, 45 min: wall orders | 9 (4) | 10 (4) | 21 in 4 games |
+
+Better on land, still far from the C++. The walls stay OPEN.
+
+The trace prints `wall.way route|cells tiles=`. 0 script errors. Determinism with the asynchronous route (land, seeds
+2 and 6, 90 minutes, --repeat 2, walls in both) is identical.
+### 8.80 Stage 3: the baselines without the idle human, and the standing army counted as the C++ counts it (2026-11-13, EE-SIM)
+
+EE-SIM now allies the idle human seat with every computer at the start, so no AI attacks it (main d9a854ff). Every
+earlier port-against-C++ number had that seat soaking up attacks. The three KeepStandingArmy counts of §8.79 were
+benched again:
+- the port's (the units standing);
+- the C++'s (CountMilitaryUnits(false, true): only the military asked for and being made);
+- the C++'s plus the free soldiers.
+
+The C++ was unchanged, the setup balanced, with 32 seeds, and 64 for the land deciding pair.
+
+| | land, 90 min: port won-lost (close) | port's citizens/army at 40 min | WW2 + cheats, 45 min: won-lost (close) | port's citizens/army at 20 min |
+|---|---|---|---|---|
+| the port's count, seeds 2-33 | 13-12 (7) | 46.9/7.9 | 0-6 (26) | 47.3/23.6 |
+| the port's count, seeds 34-65 | 7-21 (4) | 40.8/8.2 | | |
+| **the port's count, 64 seeds** | **20-33 (11)** | | | |
+| the C++'s count, seeds 2-33 | 12-14 (6) | 43.3/9.2 | 0-3 (29) | 44.7/28.7 |
+| the C++'s count, seeds 34-65 | 10-18 (4) | 39.8/8.0 | | |
+| **the C++'s count, 64 seeds** | **22-32 (10)** | | | |
+| the C++'s plus the free soldiers, seeds 2-33 | 12-14 (6) | 43.1/8.1 | 0-1 (31) | 45.6/25.1 |
+
+Readings:
+- **The idle human was most of the late-start gap.** With the seat out of reach, the port at the WW2 start has
+  47.3 citizens at 20 minutes against the C++'s 52.3, where §8.78 had 32.5 against 49.2. Most games end close.
+- **Counting as the C++ does is no worse on land** (64 seeds: 22-32 against 20-33). At the late start it takes the
+  port's army past the C++'s (28.7 against 24.8 at 20 minutes) and loses fewer games (0-3 against 0-6).
+- **Kept, by the rule** (parity with the C++ we are replacing): the port's KeepStandingArmy counts the military asked
+  for and being made, as the C++'s does.
+- **On land the C++ still leads the port over 64 seeds**, about 22-32. The port's citizens fall behind after 30
+  minutes (40 against 56 at 40 minutes in seeds 34-65). That is the next stage-3 item, now on a true 1v1 bench.
+
+0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

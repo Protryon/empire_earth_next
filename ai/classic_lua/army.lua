@@ -2484,7 +2484,16 @@ local function check_naval(view, memory)
         end
         -- the carrier fighters (from the Atomic Age - WW2): the difficulty's number kept, own and asked for, of the
         -- epoch's carrier fighter (WW2 the Corsair, Modern the F-14, later the Avenger)
-        if view.epoch >= 10 then
+        -- DEVIATION (AI_RESEARCH 8.78): only with an own carrier. The C++'s request waits for a carrier that seldom
+        -- comes, while it counts as army; the port's was filled at the airports, and fighters that cannot hit the
+        -- ground took the standing army's room at late starts
+        local carriers = 0
+        for _, u in ipairs(own_ships()) do
+            if (cls(u.type).ai_kind or 0) == KIND_CARRIER then
+                carriers = carriers + 1
+            end
+        end
+        if view.epoch >= 10 and carriers > 0 then
             local wanted
             if t.deathmatch then
                 wanted = T.by_difficulty(memory, b.carrier_fighters_dm_easy, b.carrier_fighters_dm_medium,
@@ -2563,6 +2572,19 @@ end
 -- The wonders (EECPCombatManager::RespondToUnit, AttackUnit, DefendUnit, UpdateWonderRace) and the ICBM
 
 local ICBM = "cp_icbm"                      -- kUnitTypeCpICBM: it sits in its missile base
+local MISSILE_BASE = "cp_missile_base"      -- the ICBM's container (the missile base power)
+
+-- the missile bases holding their ICBM (the ICBM is a missile: no unit of the script's lists; its base's cargo)
+local function loaded_bases()
+    local out = {}
+    for _, id in ipairs(ai.units{type = MISSILE_BASE, built = true}) do
+        local u = R.unit(id)
+        if u ~= nil and (u.cargo or 0) > 0 then
+            out[#out + 1] = id
+        end
+    end
+    return out
+end
 local AMB = "n14_anti_missile_battery"      -- kUnitType14AntiMissileBattery
 local WONDER_ATTACK_MS = 150000             -- UpdateWonderRace: a wonder of the racing team attacked every 150 s
 local CLOAK_TECH = 0x43d                     -- the cloaking calamity's tech (CheckSpecials)
@@ -2804,15 +2826,13 @@ end
 
 -- the ICBM fired at a unit: its missile base (the ICBM's container) given the attack
 local function fire_icbm(target_id)
-    for _, id in ipairs(ai.units{type = ICBM}) do
-        local u = ai.unit(id)
-        if u ~= nil and u.inside ~= nil then
-            local code = ai.attack({u.inside}, target_id)
-            print(string.format("classic_lua army.icbm target=%d %s", target_id, tostring(code)))
-            return code == "ok"
-        end
+    local bases = loaded_bases()
+    if #bases == 0 then
+        return false
     end
-    return false
+    local code = ai.attack({bases[1]}, target_id)
+    print(string.format("classic_lua army.icbm target=%d %s", target_id, tostring(code)))
+    return code == "ok"
 end
 
 -- Update's ICBM with a new attack (kCMCannonChance by difficulty): the target player's seen unit with the most hit
@@ -2821,17 +2841,27 @@ local function icbm_at_player(memory, player)
     if T.random_k() > CANNON_CHANCE_K[(memory.t.difficulty or 2) + 1] then
         return
     end
-    if #ai.units{type = ICBM} == 0 then
+    if #loaded_bases() == 0 then
         return
     end
     local best, bh = nil, nil
+    local recs = {}
     for _, id in ipairs(ai.seen{enemy = true, player = player}) do
         local u = ai.unit(id)
         if u ~= nil then
-            local hp = cls(u.type).hp or 0
-            if hp >= 1500 and (bh == nil or hp > bh or (hp == bh and u.id < best)) then
-                best, bh = u.id, hp
-            end
+            recs[#recs + 1] = u
+        end
+    end
+    -- (and its remembered buildings, which ai.attack takes: DEVIATION, the C++ needs the tile seen now)
+    for _, m in ipairs(ai.memory{player = player}) do
+        if m.building then
+            recs[#recs + 1] = m
+        end
+    end
+    for _, u in ipairs(recs) do
+        local hp = cls(u.type).hp or 0
+        if hp >= 1500 and (bh == nil or hp > bh or (hp == bh and u.id < best)) then
+            best, bh = u.id, hp
         end
     end
     if best ~= nil then
@@ -2944,7 +2974,7 @@ local function check_specials(view, memory)
     end
     local it = U.class_tech(view, ICBM)
     if it ~= nil and it.available and not it.obsolete and view.epoch >= (it.epoch or 0) then
-        if #ai.units{type = ICBM} + (waiting[ICBM] or 0) < 1 then
+        if #loaded_bases() + (waiting[ICBM] or 0) < 1 and not U.in_production(view, ICBM) then
             U.request(view, memory, ICBM, 1)
         end
     end

@@ -220,7 +220,10 @@ local function keep_standing_army(view, memory)
         return
     end
     local target = k * U.workers(view, memory) // 1000
-    local army = U.military(view, memory, true)
+    -- (CountMilitaryUnits(false, true): the C++ counts the military asked for and being made, not the units standing
+    -- - inByClass false skips the unit lists - so it keeps a steady trickle of the favourite up to the military room.
+    -- The port counts the same, for parity: AI_RESEARCH 8.80, 64 land seeds no worse, the late-start army closer)
+    local army = U.military(view, memory, true) - U.military(view, memory, false) + U.military_in_production(view)
     -- GetUnitsAvailable: (1 - citizen share - military / cap) x cap
     local cap = view.population_cap
     local room = (cap * (1000 - memory.t.behavior.citizen_percentage_k) + 999) // 1000 - army

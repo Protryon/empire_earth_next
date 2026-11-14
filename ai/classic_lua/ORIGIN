@@ -38,7 +38,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 PARTLY -> main.lua: the start (EnableManagers, SetNextAttackTime, SetNextExpansionTime, the resource
                 centres grouped), Update's order, EnableManagers (the combat state's priority lists, the stock
                 thresholds, the shuffled "other" managers, max_enabled_managers + 1), FlagGroup on the expansion
-                timer, KeepStandingArmy every 30 s, ChooseFavoriteLandType at each epoch, CanAfford (units.lua: the
+                timer, KeepStandingArmy every 30 s (its count as the C++'s CountMilitaryUnits(false, true): the military asked for and being made, AI_RESEARCH 8.80), ChooseFavoriteLandType at each epoch, CanAfford (units.lua: the
                 epoch reserve by the pressure, the recovery citizens, the Prehistoric army cap with EECPArmyThreat,
                 claim_needed), EECPEpochPressure / EECPEpochTimerSpan (civ.lua). The combat state is the script's (1 once
                 another player's unit is seen, 2 under attack, back to 1 a minute after the last hit): the engine's
@@ -58,14 +58,17 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 military count, coast_fishing's two docks, no airport before the attacks, the granary for the farms),
                 RepairBuildings (idle citizens to buildings under 80%), ChooseGarrison / ChooseFortress /
                 FillGarrison (on island and planets maps a town centre hires its garrison and any available citizen fills it; early_town_centers; the idle and waiting citizens sent, the rest of the garrison filled with
-                none through the manifest's "fills_garrison" - the classic's garrison cheat; new citizens routed there
+                none through the manifest's "fills_garrison" - the classic's garrison cheat; with no idle citizen the
+                nearest gatherer goes in so the rest is topped up at once - New, AI_RESEARCH 8.78; new citizens routed there
                 every 2 s, DEVIATION from UnitAdded's at once), QueueMoraleBuilding. DEVIATIONS: the morale effect's fill is not
                 readable (the town centre wants 2 houses in its 10-tile square, the capitol 4: the data's morale effects; a settlement none); GetFarmType's robotic farm (Nano) is not ported; the gate
                 chains' repair end is not ported.
   EECPUnitManager.cpp
                 PORTED -> units.lua: the per-epoch request FIFOs, RequestUnits (a producer first: the cheapest
                 available producer class ordered), Update (the citizens up to GetWantedCitizens, 10 at a time, 5 on an
-                island map; the requests started while the population has room, all at once when affordable, else one),
+                island map; the requests started while the population has room, all at once when affordable, else one;
+                New, AI_RESEARCH 8.78: a citizen batch waits up to 30 s while a settlement is filled to become a town
+                centre, so both centres share it),
                 StartProduction (round robin at the least busy producers: ai.train), DropObsoleteRequests,
                 GetWantedCitizens (with max_citizen_share). DEVIATIONS: the units in production are the producers'
                 queue lengths; the transports'
@@ -128,14 +131,18 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 PlanWall over the size table (ai.wall_stretches across each step; the shortest open level stretch clear
                 of the centres and gates), the next size on failure, the 9th the stretch nearest a gate
                 (ChooseRunNearGates); BuildWall (a builder every 10 tiles, ai.wall); the gate at the wall's middle
-                (AddGates, FindGate: ai.gate). DEVIATIONS: the way is ai.route's, straight between its cells (the
-                wall planner path); the enemy's centre is the town the view knows (its capitol); IsPathUsable is not
+                (AddGates, FindGate: ai.gate). The way: the wall planner's own path request (ai.wall_route: the path
+                manager's coarse graph with the planner's influence costs, from the enemy's centre to the town,
+                answered over the next ticks), each step refined with ai.wall_path; ai.route's cells only when the
+                request fails or a loaded game forgot it. DEVIATIONS: the enemy's centre is the town the view knows (its capitol); IsPathUsable is not
                 tested; a stretch with units on it is not left out; a wall piece lost is not queued again (UnitLost).
                 In 8 balanced 90-minute games the C++ ordered 62 walls (142 pieces, in 5 games), the port 8 (68 pieces,
                 in 2). OPEN (AI_RESEARCH 8.71): the port's lines across its way are blocked 9 times in 10, mostly by its own
                 settlements and towers (then the enemy's settlements) within 2 tiles; neither the refined steps
                 (ai.wall_path) nor a whole tile path changed that; the C++'s coarse way (the path manager's request
-                with the wall planner's influence costs) is the difference left untried. Back in stage 3.
+                with the wall planner's influence costs) is the difference left untried. Stage 3 (AI_RESEARCH 8.79):
+                with that way the port orders 8 walls in 8 land games (3 before) and 10 in 8 Copper starts; the C++
+                62 and 21 in 4. Still OPEN.
   EECPCombatManager.cpp         PARTLY -> army.lua: Update on the attack timer (IsAttackDue; SetNextAttackTime in
                 main.lua: the initial delay per epoch span and the frequency, the difficulty's modifiers, the bounds),
                 the target player (computers by the aggression's chance when humans are there too; theLargest, else
@@ -261,7 +268,8 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 the unit allowance and 20, one defence group each). AidAllies: PORTED (army.lua aid_allies, every defence update: the allies shuffled,
                 the first with a threatened town - else a town of more than 2 buildings without a package - gets an
                 aid package while the unit allowance holds; a human ally's is sent at once; the allies' towns are
-                their buildings clustered as the own). CheckSpecials: PORTED (army.lua check_specials, every ship_maintenance_timer / 2
+                their buildings clustered as the own). CheckSpecials: PORTED (the ICBM found through its loaded missile base - a missile is in no script list; the
+                targets with the remembered buildings too, DEVIATION; army.lua check_specials, every ship_maintenance_timer / 2
                 minutes: the anti-missile batteries, one and one more per town centre, settlement or capitol up to
                 10, those past 10 deleted - the most batteries and fewest town centres within 4 tiles first; one
                 ICBM kept once the missile base can make it; the capitols' cloak cast where the nearest town's threat
@@ -271,7 +279,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 ChooseUnitsToKill: land citizens deleted for the room past the units available; the space units join the land sub-groups until the air and space
                 sub-groups are ported). CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
                 50 water tiles: the warships own and asked for topped up to ships_to_maintain by a sea-only group of
-                kind 5; the carrier fighters from WW2, the difficulty's carrier_fighters_* kept, own and asked for, of the epoch's fighter; its ChooseUnitsToKill: land citizens deleted for the room past the units available).
+                kind 5; the carrier fighters from WW2, the difficulty's carrier_fighters_* kept, own and asked for, of the epoch's fighter - DEVIATION: only with an own carrier, AI_RESEARCH 8.78; its ChooseUnitsToKill: land citizens deleted for the room past the units available).
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
                 class drafted or requested, explore with the difficulty's stance, every 30 s), the sea explorers
                 (num_sea_explorers of the fastest warship class, once the dock is researched, with water on the map).

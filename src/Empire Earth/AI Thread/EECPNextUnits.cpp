@@ -90,6 +90,8 @@
 #include "ee/EELuaApi.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
+#include "ee/EEAutoPathRequest.h"
+#include "ee/EEAIPathGoalModifiers.h"
 #include "platform/PlatSim.h"
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -166,6 +168,15 @@ struct EECPUnitsState {
     std::vector<long> mIds, mIds2;
     std::vector<std::pair<long long, long> > mSorted;
     std::map<long, std::string> mNames;
+    // ai.wall_route's path requests (the path manager's, held until read; not saved: a loaded game forgets them)
+    std::map<long, EEAutoPathRequest*> mRoutes;
+    long mNextRoute = 1;
+    ~EECPUnitsState()
+    {
+        for (std::map<long, EEAutoPathRequest*>::iterator it = mRoutes.begin(); it != mRoutes.end(); ++it)
+            if (it->second != NULL)
+                it->second->Dereference();
+    }
 };
 
 static EECPUnitsState* EECPUnitsGet(EEComputerPlayer* inPlayer)
@@ -3176,6 +3187,84 @@ static int LuaWallPath(lua_State* L)
     return 1;
 }
 
+// ai.wall_route(enemy, x1, y1, x2, y2) -> handle: the classic wall planner's way from the enemy's centre (x1, y1) to
+// the own town (x2, y2): the path manager's request on its coarse graph with the wall planner modifier (the enemy's
+// influence costs) and a citizen's terrain (EECPWallManager::StartNextWall). The request runs over the next game
+// ticks; ai.wall_route_result(handle) -> nil while it runs, the tiles {{x, y}, ...} when done (empty: no way), false
+// for a handle it does not hold (read already, or a loaded game). One request a player at a time: a new one drops
+// the old.
+static int LuaWallRoute(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    EECPUnitsCharge(L, kCostCommand);
+    for (int i = 1; i <= 5; i++)
+        if (!lua_isinteger(L, i) || gWorld.mMap == NULL) {
+            lua_pushnil(L);
+            return 1;
+        }
+    long theEnemy = (long)lua_tointeger(L, 1);
+    if (theEnemy <= 0 || (unsigned long)theEnemy >= gWorld.mNumPlayers || gWorld.mPlayers[theEnemy] == NULL
+        || gUnitClassTable[kUnitTypeCitizen] == NULL) {
+        lua_pushnil(L);
+        return 1;
+    }
+    for (std::map<long, EEAutoPathRequest*>::iterator it = s->mRoutes.begin(); it != s->mRoutes.end(); ++it)
+        if (it->second != NULL)
+            it->second->Dereference();
+    s->mRoutes.clear();
+    EECPASGFlags theFlags;
+    gUnitClassTable[kUnitTypeCitizen]->GetTerrainFlags(NULL, theFlags);
+    EEAIGPGModifierComputerPlayerWallPlanner* theModifier = new EEAIGPGModifierComputerPlayerWallPlanner(theEnemy, 0);
+    EETileCoordinate theFrom;
+    theFrom.mX = (long)lua_tointeger(L, 2);
+    theFrom.mY = (long)lua_tointeger(L, 3);
+    EETileCoordinate theTo;
+    theTo.mX = (long)lua_tointeger(L, 4);
+    theTo.mY = (long)lua_tointeger(L, 5);
+    EEAutoPathRequest* theRequest = gPathManager.RequestPath(theEnemy, theFrom, theTo, &theFlags, 2, -1, theModifier, 1);
+    theModifier->Dereference();
+    if (theRequest == NULL) {
+        lua_pushnil(L);
+        return 1;
+    }
+    long theHandle = s->mNextRoute++;
+    s->mRoutes[theHandle] = theRequest;
+    lua_pushinteger(L, (lua_Integer)theHandle);
+    return 1;
+}
+
+static int LuaWallRouteResult(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    EECPUnitsState* s = EECPUnitsGet(me);
+    EECPUnitsCharge(L, kCostCall);
+    std::map<long, EEAutoPathRequest*>::iterator it =
+        lua_isinteger(L, 1) ? s->mRoutes.find((long)lua_tointeger(L, 1)) : s->mRoutes.end();
+    if (it == s->mRoutes.end() || it->second == NULL) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+    EEAutoPathRequest* theRequest = it->second;
+    if (!theRequest->mIsDone) {
+        lua_pushnil(L);
+        return 1;
+    }
+    EECPUnitsCharge(L, (int64_t)theRequest->mPath.size() * kCostField * 2);
+    lua_createtable(L, (int)theRequest->mPath.size(), 0);
+    for (size_t k = 0; k < theRequest->mPath.size(); k++) {
+        lua_createtable(L, 2, 0);
+        lua_pushinteger(L, (lua_Integer)theRequest->mPath[k].mX);
+        lua_rawseti(L, -2, 1);
+        lua_pushinteger(L, (lua_Integer)theRequest->mPath[k].mY);
+        lua_rawseti(L, -2, 2);
+        lua_rawseti(L, -2, (lua_Integer)k + 1);
+    }
+    theRequest->Dereference();
+    s->mRoutes.erase(it);
+    return 1;
+}
+
 // ai.wall_line(x1, y1, x2, y2) -> {{x, y}, ...}: the tiles a wall from (x1, y1) to (x2, y2) lays (EEGetWallLine), in order
 static int LuaWallLine(lua_State* L)
 {
@@ -4441,7 +4530,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_route", LuaWallRoute}, {"wall_route_result", LuaWallRouteResult}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig}, {"used", LuaUsed},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},

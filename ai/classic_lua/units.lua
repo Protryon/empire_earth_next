@@ -108,6 +108,31 @@ function M.military(view, memory, requests)
     return n
 end
 
+-- the military being made at the own buildings: the item in production and the queue behind it (GatherUnits' last
+-- loop, CountRequest per queued military class)
+function M.military_in_production(view)
+    local n = 0
+    local ids = ai.units{category = "building", built = true}
+    if #ids == 0 then
+        return 0
+    end
+    local cols = ai.get(ids, {"producing", "queued"})
+    local tree = M.tree(view)
+    local function count(tid)
+        local t = tid ~= nil and tree.byId ~= nil and tree.byId[tid] or nil
+        if t ~= nil and t.makes ~= nil and M.is_military_class(t.makes) then
+            n = n + 1
+        end
+    end
+    for k = 1, #ids do
+        count(cols.producing[k])
+        for _, q in ipairs(cols.queued[k] or {}) do
+            count(q)
+        end
+    end
+    return n
+end
+
 -- IsRequested: any epoch's list holds the class
 function M.is_requested(memory, class)
     local um = M.state(memory)
@@ -522,8 +547,15 @@ function M.update(view, memory)
             local q = list[k]
             local t = M.class_tech(view, q.class)
             local size = 1   -- (GetPopulationCost: one for every unit the classic requests)
+            -- New (AI_RESEARCH 8.78): citizens wait up to 30 s while a settlement is being filled to become a town
+            -- centre, so the batch is shared by both centres (queued a moment earlier, all ten waited at one)
+            local civ = memory.civ
+            local hold = (q.class == C.citizen or q.class == C.female_citizen) and civ ~= nil and civ.garrison ~= nil
+                and view.time < (civ.garrison_t or 0) + 30000
             if t == nil or t.obsolete or q.n == 0 then
                 table.remove(list, k)
+            elseif hold then
+                k = k + 1
             else
                 local cost = M.cost(q.class)
                 local all = room >= q.n * size
