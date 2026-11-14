@@ -311,8 +311,8 @@ def cmd_fonttest(a):
 TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
 # the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
 TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
-    "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp",
-    "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")]
+    "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")]   # (TSEvent and
+# TSCriticalSection are header classes over ee_ts since the Thread System moved to Rust)
 
 
 def cmd_tcptest(a):
@@ -488,6 +488,12 @@ WON_TESTS = {
     # that models the platform, the windows and the components as logged host ops (golden:
     # rust/crates/ee_won/src/golden_wmobj.txt)
     "won_wmobj_test": [],
+    # MSButtonBase and the check box and radio button over it as whole Rust objects (msbtnobj.rs) over a logged draw
+    # world (golden: rust/crates/ee_won/src/golden_msbtnobj.txt)
+    "won_msbtnobj_test": [],
+    # WONButton as a whole Rust object (wonbtnobj.rs) over a logged world of texts, images and fonts with reference
+    # counts (golden: rust/crates/ee_won/src/golden_wonbtnobj.txt)
+    "won_wonbtnobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -551,6 +557,17 @@ WON_TESTS = {
     "won_dialogs_test": [],
     # the lobby's eight small dialogs as one Rust object (golden: rust/crates/ee_won/src/golden_lobbydlg.txt)
     "won_lobbydlg_test": [],
+    # DialogLogic and its status and OK/Cancel boxes in Rust (golden: rust/crates/ee_won/src/golden_dlglogic.txt)
+    "won_dlglogic_test": [],
+    # RoomDialog, TOUDialog, BadUserDialog and ChooseNetworkAdapterDialog as lobby dialog kinds (golden:
+    # rust/crates/ee_won/src/golden_lobbyscr.txt)
+    "won_lobbyscr_test": [],
+    # the credits: ScrollingTextComponent (golden: rust/crates/ee_won/src/golden_scrolltext.txt) and CreditsDialog as
+    # a lobby dialog kind (golden_credits.txt)
+    "won_credits_test": [],
+    # ClientOptionsPopup, GameOptionsPopup and FriendOptionsPopup as one Rust object (golden:
+    # rust/crates/ee_won/src/golden_lobbypopup.txt)
+    "won_lobbypopup_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",
@@ -812,13 +829,15 @@ NET_TESTS = {
     # NESynchronousServer's tuning and booting (golden: rust/crates/ee_net/src/golden_tune.txt; the original members are
     # tests/net/orig_s/NESynchronousServerTune.inc)
     "ne_tune_test": [],
+    # NESynchronousServer (golden: rust/crates/ee_net/src/golden_server.txt; the original unit is
+    # tests/net/orig_s/NESynchronousServer.cpp)
+    "ne_server_test": [],
     # NEProtocol, NEConnection, NEServer over a stand-in plug-in (golden: tests/net/golden_protocol.txt, made by the
     # original units with the TCP shim's entry table)
     # (the golden: built with NE_PROTOCOL_ORIG over tests/net/orig_p's NEProtocol.cpp and TCP Protocol.cpp instead
     # of NEProtocol.cpp, `--print FILE`)
     "ne_protocol_test": [ROOT / "src" / "Low-Level Engine" / p for p in (
-        "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp",
-        "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")],
+        "Network Engine/NEProtocol.cpp", "Utilities/UString.cpp", "Utilities/UWideString.cpp")],
 }
 
 

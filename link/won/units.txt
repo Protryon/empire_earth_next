@@ -281,14 +281,5 @@
 3e5c10 3e5ec9 WONLobby/LobbyLogicMgr.cpp
 3e5ed0 3e6e75 WONLobby/PingLogic.cpp
 3e6e80 3ef15e WONLobby/RoutingLogic.cpp
-3f5290 3f5d01 WONLobby/BadUserDialog.cpp
-3f5d10 3f63d3 WONLobby/ClientOptionsPopup.cpp
 3f6de0 3fa1fd WONLobby/CreditsDialog.cpp
-3f7b60 3f7f5d WONLobby/FriendOptionsPopup.cpp
-3f7f60 3f83a4 WONLobby/GameOptionsPopup.cpp
-3f8bc0 3f8f17 WONLobby/OkCancelDialog.cpp
-3f9110 3f91ac WONLobby/RoomDialog.cpp
-3f91b0 3f979e WONLobby/StatusDialog.cpp
-3f9910 3f9c00 WONLobby/TOUDialog.cpp
-3f9c00 3fa1ea WONLobby/ChooseNetworkAdapterDialog.cpp
 3fad10 3fd5f3 WONGUI/BrowserComponent.cpp

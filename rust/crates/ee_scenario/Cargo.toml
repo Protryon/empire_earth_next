@@ -12,3 +12,4 @@ crate-type = ["rlib"]
 
 [dependencies]
 ee_plat_core = { path = "../ee_plat_core" }
+ee_ustring = { path = "../ee_ustring" }

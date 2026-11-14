@@ -29,7 +29,10 @@ public:
     // 0x276236 (5 callers: EEMiniMap 0x11f0a1, EEWorld 0x13a308, the scenario editor): the bitmaps' textures, texture
     // coordinates and sBounds from inMiniMap's transformations, gMiniMapTransformation = its +0x64 (provisional name)
     static void Update(EEMiniMap* inMiniMap);
-    static GERectangle sBounds;             // 0x565318 the map's corners in mini-map units (Update; one guard bit)
+    static GERectangle sBounds;
+    // the ee_screens mini_map.rs host of the left release and drag (EE_SCREENS_MM_OP_*; a member: the mouse state
+    // and CenterCamera are protected)
+    static int64_t HostOp(EEUIMiniMap* inMap, uint32_t inOp, int64_t inA, int64_t inB, int64_t inC);             // 0x565318 the map's corners in mini-map units (Update; one guard bit)
 protected:
     virtual long MouseLButtonDown();        // +0x34 (ICF-folded 0x25ae3b: CaptureMouse, 0)
     virtual long MouseLButtonUp();          // +0x38 0x275f72

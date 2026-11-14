@@ -1,4 +1,7 @@
-// Skinned button: per-state images, colours and fonts, text layout and painting
+// Skinned button (R6 WON round 35): the Rust WONButton (rust/crates/ee_won/src/wonbtnobj.rs) holds the states, the
+// wrapped text per font, the pads, colours, flags and alignments and runs every method; this is its host (its calls
+// out: the base Button, the wrapped texts, the images, the fonts, the button's state, the Graphics), the text getter
+// and the destructor.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -13,392 +16,96 @@
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
-// GetButtonState's state and fallback order are ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs).
-namespace WONAPI {
+using namespace WONAPI;
 
-// FUNCTION: WON 0x00718060
-// Sets the button text in every font's wrapped text and refits the height
-void WONButton::SetTextHook(const GUIString &theText)
+typedef EeWonGuiOp Op;
+
+static WrappedText* Txt(intptr_t a) { return (WrappedText*)a; }
+static Image* Img(intptr_t a) { return (Image*)a; }
+
+// a wrapped text's method (EeWonWbText; `b` the text)
+static intptr_t TextOp(intptr_t which, intptr_t b, intptr_t c)
 {
-	FontTextMap::iterator anItr = this->mFontTextMap.begin();
-	while(anItr!=this->mFontTextMap.end())
-	{
-		WrappedText *aText = anItr->second.get();
-		aText->SetText(theText);
-		++anItr;
-	}
-
-	this->AdjustHeightToFitText(); 
+    switch ((EeWonWbText)which) {
+    case EeWonWbText::New: { WrappedText* t = new WrappedText; t->AddRef(); return (intptr_t)t; }
+    case EeWonWbText::Hold: Txt(b)->AddRef(); return 0;
+    case EeWonWbText::Release: Txt(b)->Release(); return 0;
+    case EeWonWbText::SetText: Txt(b)->SetText(*(const GUIString*)c); return 0;
+    case EeWonWbText::SetMaxWidth: Txt(b)->SetMaxWidth((int)c); return 0;
+    case EeWonWbText::SetWrap: Txt(b)->SetWrap(c != 0); return 0;
+    case EeWonWbText::SetCentered: Txt(b)->SetCentered(c != 0); return 0;
+    case EeWonWbText::SetFont: Txt(b)->SetFont((Font*)c); return 0;
+    case EeWonWbText::Width: return Txt(b)->GetWidth();
+    case EeWonWbText::Height: return Txt(b)->GetHeight();
+    case EeWonWbText::Font: return (intptr_t)Txt(b)->mFont.get();
+    case EeWonWbText::Text: return (intptr_t)&Txt(b)->GetText();
+    default: return 0;
+    }
 }
 
-// FUNCTION: WON 0x00718100
-// After the base handling, re-wraps every font's text to the inner width (when wrapping) and refits the height
-void WONButton::Virtual08()
+// an image's method (EeWonWbImage; `b` the image)
+static intptr_t ImageOp(intptr_t which, intptr_t b)
 {
-	Button::Virtual08();
-	if(!this->mWrapText)
-		return;
-
-	FontTextMap::iterator anItr = this->mFontTextMap.begin();
-	while(anItr!=this->mFontTextMap.end())
-	{
-		WrappedText *aText = anItr->second.get();
-		aText->SetMaxWidth(this->Width()-this->mLeftTextPad-this->mRightTextPad);
-		++anItr;
-	}
-
-	this->AdjustHeightToFitText();
+    switch ((EeWonWbImage)which) {
+    case EeWonWbImage::Hold: Img(b)->AddRef(); return 0;
+    case EeWonWbImage::Release: Img(b)->Release(); return 0;
+    case EeWonWbImage::Width: return Img(b)->mWidth;
+    case EeWonWbImage::Height: return Img(b)->mHeight;
+    case EeWonWbImage::Duplicate: { // the SmartPtr temporary's reference goes to the Rust
+        SmartPtr<Image> aCopy = Img(b)->Duplicate();
+        Image* p = aCopy.get();
+        if (p) p->AddRef();
+        return (intptr_t)p;
+    }
+    default: return 0;
+    }
 }
 
-// FUNCTION: WON 0x007181A0
-// Resizes the button to the text height plus padding, when height fitting is on
-void WONButton::AdjustHeightToFitText()
+extern "C" intptr_t ee_won_guicpp_wonbtn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
 {
-	if(!this->mAdjustHeightToFitText)
-		return;
-
-	int width,height;
-	this->GetTextSize(width,height);
-
-	if(this->Height()-this->mTopTextPad-this->mBottomTextPad!=height)
-		this->SetSize(this->Width(),height+this->mTopTextPad+this->mBottomTextPad);
-}
-
-// FUNCTION: WON 0x00718220
-// Turns text wrapping on or off for every font's wrapped text
-void WONButton::SetWrapText(bool wrap)
-{
-	if(this->mWrapText==wrap)
-		return;
-
-	this->mWrapText = wrap;
-	FontTextMap::iterator anItr = this->mFontTextMap.begin();
-	while(anItr!=this->mFontTextMap.end())
-	{
-		WrappedText *aText = anItr->second.get();
-		aText->SetWrap(wrap);
-
-		++anItr;
-	}
-}
-
-// FUNCTION: WON 0x007182C0
-// Sets the image, text colour and font of one button state (normal or checked); the first state without
-// a font gets the default font; one wrapped text is shared per font
-void WONButton::SetButtonState(int theState, Image *theImage, int theColor, Font *theFont, bool checked)
-{
-	int checkedIndex = checked?1:0;
-	ButtonState &aState = this->mStates[theState][checkedIndex];
-	if(checkedIndex)
-		this->mHasCheck = true;
-
-	SmartPtr<Font> aFont;
-	if(this->mFontTextMap.empty() && theFont==NULL)
-		theFont = aFont = WONAPI::WindowManager::GetDefaultWindowManager()->GetDefaultFont();
-
-	if(theFont!=NULL)
-	{
-		FontTextMap::iterator anItr = this->mFontTextMap.insert(FontTextMap::value_type(theFont,NULL)).first;
-		if(anItr->second.get()==NULL)
-		{
-			SmartPtr<WrappedText> aText = new WrappedText;
-			aText->SetCentered(this->mHAlign==HorzAlign_Center);
-			aText->SetWrap(false);
-			aText->SetFont(theFont);
-			anItr->second = aText;
-		}
-
-		aState.mText = anItr->second;
-	}
-
-	aState.mImage = theImage;
-	aState.mColor = theColor;
-
-}
-
-// FUNCTION: WON 0x00718580
-// Returns the largest width and height of the button text over all fonts
-void WONButton::GetTextSize(int &width, int &height)
-{
-	width = 0; height = 0;
-	FontTextMap::iterator anItr = this->mFontTextMap.begin();
-	while(anItr!=this->mFontTextMap.end())
-	{
-		WrappedText *aText = anItr->second.get();
-		if(aText->GetWidth() > width)
-			width = aText->GetWidth();
-
-		if(aText->GetHeight() > height)
-			height = aText->GetHeight();
-
-		++anItr;
-	}
-}
-
-// FUNCTION: WON 0x00718640
-// Returns the text size, grown to the largest state image unless images are scaled, plus the text padding
-void WONButton::GetDesiredSize(int &width, int &height)
-{
-	this->GetTextSize(width,height);
-	for(int i=0; i<5; i++)
-	{
-		for(int j=0; j<2; j++)
-		{
-			Image *anImage = this->mStates[i][j].mImage.get();
-			if(anImage==NULL)
-				continue;
-			if(!this->mScaleImage && anImage->mWidth>width)
-				width = anImage->mWidth;
-
-			if(!this->mScaleImage && anImage->mHeight > height)
-				height = anImage->mHeight;
-		}
-	}
-
-
-	width += this->mLeftTextPad + this->mRightTextPad;
-	height += this->mTopTextPad + this->mBottomTextPad;
-}
-
-// FUNCTION: WON 0x007186E0
-// Sets the horizontal text alignment; only switches to or from centred (left <-> right is ignored)
-void WONButton::SetHorzAlign(HorzAlign theHorzAlign)
-{
-	if(theHorzAlign==this->mHAlign)
-		return;
-
-	if(this->mHAlign!=HorzAlign_Center && theHorzAlign!=HorzAlign_Center)
-		return;
-
-	this->mHAlign = theHorzAlign;
-
-	FontTextMap::iterator anItr = this->mFontTextMap.begin();
-	while(anItr!=this->mFontTextMap.end())
-	{
-		WrappedText *aText = anItr->second.get();
-		aText->SetCentered(this->mHAlign==HorzAlign_Center); 
-		++anItr;
-	}
-}
-
-// FUNCTION: WON 0x00718790
-// Sets the text colour of every state; with scaled images only of the normal and default states
-void WONButton::SetTextColor(int theColor)
-{
-	if(!this->mScaleImage)
-	{
-		for(int i=0; i<5; i++)
-			for(int j=0; j<2; j++)
-				this->mStates[i][j].mColor = theColor;
-	}
-	else
-	{
-		this->mStates[0][0].mColor = theColor;
-		this->mStates[0][1].mColor = theColor;
-		this->mStates[4][0].mColor = theColor;
-		this->mStates[4][1].mColor = theColor;
-	}
-}
-
-// FUNCTION: WON 0x007187E0
-// Makes every state use the normal state's wrapped text, set to the given font
-void WONButton::SetFont(Font *theFont)
-{
-	this->mFontTextMap.clear();
-	SmartPtr<WrappedText> aText = this->mStates[0][0].mText.get();
-	aText->SetFont(theFont);
-	this->mFontTextMap[theFont] = aText;
-	
-	for(int i=0; i<5; i++)
-		for(int j=0; j<2; j++)
-			this->mStates[i][j].mText = aText;
-}
-
-// FUNCTION: WON 0x00718970
-// Copies another button's padding, alignment, flags, colours and state images (duplicated when scaled),
-// with fresh wrapped texts per font
-void WONButton::CopyAttributes(WONButton *from)
-{
-	Button::CopyAttributes(from);
-	this->mLeftTextPad		= from->mLeftTextPad;
-	this->mTopTextPad			= from->mTopTextPad;
-	this->mRightTextPad		= from->mRightTextPad;
-	this->mBottomTextPad		= from->mBottomTextPad;
-	this->mLeftFocusPad		= from->mLeftFocusPad;
-	this->mTopFocusPad		= from->mTopFocusPad;
-	this->mRightFocusPad		= from->mRightFocusPad;
-	this->mBottomFocusPad		= from->mBottomFocusPad;
-	this->mPushDX				= from->mPushDX;
-	this->mPushDY				= from->mPushDY;
-	this->mHasCheck			= from->mHasCheck;
-	this->mScaleImage			= from->mScaleImage;
-	this->mHAlign				= from->mHAlign;
-	this->mVAlign				= from->mVAlign;
-	this->mDrawGrayText		= from->mDrawGrayText;
-	this->mIsTransparent		= from->mIsTransparent;
-	this->mFocusStyle			= from->mFocusStyle;
-	this->mDefaultTextColor	= from->mDefaultTextColor;
-	if(from->ComponentFlagSet(ComponentFlag_GrabBG))
-		this->SetComponentFlags(ComponentFlag_GrabBG,true);
-	if(from->ComponentFlagSet(ComponentFlag_Translucent))
-		this->SetComponentFlags(ComponentFlag_Translucent,true);
-
-	this->mFontTextMap = from->mFontTextMap;
-	FontTextMap::iterator anItr = this->mFontTextMap.begin();
-	while(anItr!=this->mFontTextMap.end())
-	{
-		anItr->second = new WrappedText;
-		anItr->second->SetCentered(this->mHAlign==HorzAlign_Center);
-		anItr->second->SetWrap(this->mWrapText);
-		anItr->second->SetFont(anItr->first);
-		++anItr;
-	}
-
-
-	for(int i=0; i<5; i++)
-	{
-		for(int j=0; j<2; j++)
-		{
-			ButtonState &src = from->mStates[i][j];
-			ButtonState &dst = this->mStates[i][j];
-
-			dst.mColor = src.mColor;
-
-			if(src.mImage.get()!=NULL)
-			{
-				if(this->mScaleImage)
-					dst.mImage = src.mImage->Duplicate();
-				else
-					dst.mImage = src.mImage;
-			}
-
-			if(src.mText.get()!=NULL)
-				dst.mText = this->mFontTextMap[src.mText->mFont.get()];
-		}
-	}
-}
-
-// FUNCTION: WON 0x00718DB0
-// Draws the button text aligned and pushed when pressed, embossed grey when disabled, with a dotted focus
-// rectangle after dialog-key use
-// The paint's inputs: the button's size, flags and pads, its state image and text (guidraw.rs EeWonButtonPaint)
-static EeWonButtonPaint WONButtonPaintOf(WONButton* b, Image* theImage, WrappedText* theText, int theColor)
-{
-	EeWonButtonPaint p;
-	p.width = b->Width();
-	p.height = b->Height();
-	p.transparent = b->mIsTransparent;
-	p.scale_image = b->mScaleImage;
-	p.has_image = theImage!=NULL;
-	p.has_text = theText!=NULL;
-	p.pressed = b->IsPressed();
-	p.disabled = b->IsDisabled();
-	p.draw_gray_text = b->mDrawGrayText;
-	p.focus_shown = b->mFocusStyle && b->HasFocus() && b->mParent->HasUsedDialogKeys();
-	p.h_align = b->mHAlign;
-	p.v_align = b->mVAlign;
-	p.image_width = theImage ? theImage->mWidth : 0;
-	p.image_height = theImage ? theImage->mHeight : 0;
-	p.text_width = theText ? theText->GetWidth() : 0;
-	p.text_height = theText ? theText->GetHeight() : 0;
-	p.color = theColor;
-	p.left_text_pad = b->mLeftTextPad;
-	p.top_text_pad = b->mTopTextPad;
-	p.right_text_pad = b->mRightTextPad;
-	p.bottom_text_pad = b->mBottomTextPad;
-	p.left_focus_pad = b->mLeftFocusPad;
-	p.top_focus_pad = b->mTopFocusPad;
-	p.right_focus_pad = b->mRightFocusPad;
-	p.bottom_focus_pad = b->mBottomFocusPad;
-	p.push_dx = b->mPushDX;
-	p.push_dy = b->mPushDY;
-	return p;
-}
-
-void WONButton::DrawButtonText(Graphics &g, WrappedText *theText, int theColor)
-{
-	if(theText==NULL)
-		return;
-
-	// guidraw.rs button_text: the place by the alignment and push, the grey emboss, the focus rectangle
-	EeWonButtonPaint p = WONButtonPaintOf(this,NULL,theText,theColor);
-	WONDrawSlots aSlots;
-	aSlots.mText = theText;
-	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_button_text(&p,o,n); });
-	WONDrawRun(g,anOps,aSlots);
-}
-
-// FUNCTION: WON 0x00718F90
-// Picks the current state (disabled, pressed, mouse-over, default, normal; checked or not) and returns its
-// colour, text and image, falling back to the normal state and the default text colour
-void WONButton::GetButtonState(Graphics &g, int *theColor, WrappedText **theText, Image **theImage)
-{
-	int aState = 0;
-	int aCheckedIndex = ee_won_gui_button_state(this->IsDisabled(),(uint32_t)this->GetButtonFlags(),this->IsDefaultButton(),
-		this->mHasCheck,&aState);
-
-	// the state's own cell, then the normal state's in the same column, then (checked) the normal unchecked one
-	Image *anImage = NULL;
-	int aColor = -1;
-	WrappedText *aText = NULL;
-	int s = 0, c = 0;
-	for(int k = 0; ee_won_gui_button_state_cell(aState,aCheckedIndex,k,&s,&c); k++)
-	{
-		ButtonState &aCell = this->mStates[s][c];
-		if(anImage==NULL) anImage = aCell.mImage.get();
-		if(aColor==-1) aColor = aCell.mColor;
-		if(aText==NULL) aText = aCell.mText.get();
-	}
-
-	if(aColor==-1)
-		aColor = this->mDefaultTextColor;
-
-	if(theText) *theText = aText;
-	if(theColor) *theColor = aColor;
-	if(theImage) *theImage = anImage;
-}
-
-// FUNCTION: WON 0x00719080
-// Paints the button: face colour unless transparent, the state image (scaled or vertically aligned), then the text
-void WONButton::Paint(Graphics &g)
-{
-	Button::Paint(g);
-
-	Image *anImage;
-	int aColor;
-	WrappedText *aText;
-	this->GetButtonState(g,&aColor,&aText,&anImage);
-
-	// guidraw.rs button: the face, the state image scaled or aligned, then the text
-	EeWonButtonPaint p = WONButtonPaintOf(this,anImage,aText,aColor);
-	WONDrawSlots aSlots;
-	aSlots.mImages[0] = anImage;
-	aSlots.mText = aText;
-	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) { return ee_won_gui_draw_button(&p,o,n); });
-	WONDrawRun(g,anOps,aSlots);
-}
-
-
-// FUNCTION: WON 0x00718200
-// Turns height fitting on or off and refits the height when it changed
-void WONButton::SetAdjustHeightToFitText(bool adjust)
-{
-	if(adjust==this->mAdjustHeightToFitText)
-		return;
-
-	this->mAdjustHeightToFitText = adjust;
-	this->AdjustHeightToFitText();
-}
-
-
-// FUNCTION: WON 0x007182a0
-// Sets whether the face is left unpainted; transparent buttons grab the background
-void WONButton::SetTransparent(bool isTransparent)
-{
-	this->mIsTransparent = isTransparent;
-	if(isTransparent)
-		this->SetComponentFlags(ComponentFlag_GrabBG,true);
-}
+    WONButton* t = (WONButton*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((EeWonGuiField)a == EeWonGuiField::Width) return t->Width();
+        if ((EeWonGuiField)a == EeWonGuiField::Height) return t->Height();
+        return 0;
+    case Op::SetSize: t->SetSize((int)a,(int)b); return 0;
+    case Op::BaseSizeChanged: t->Button::Virtual08(); return 0;
+    case Op::BasePaint: t->Button::Paint(*(Graphics*)a); return 0;
+    case Op::WbBaseCopy: t->Button::CopyAttributes((Button*)a); return 0;
+    case Op::SkinBtn:
+        switch ((EeWonSkinBtn)a) {
+        case EeWonSkinBtn::IsDisabled: return t->IsDisabled() ? 1 : 0;
+        case EeWonSkinBtn::HasFocus: return t->HasFocus() ? 1 : 0;
+        case EeWonSkinBtn::Parent: return (intptr_t)t->mParent;
+        case EeWonSkinBtn::UsedDialogKeys: return ((Container*)b)->HasUsedDialogKeys() ? 1 : 0;
+        case EeWonSkinBtn::IsPressed: return t->IsPressed() ? 1 : 0;
+        case EeWonSkinBtn::ButtonFlags: return (intptr_t)(uint32_t)t->GetButtonFlags();
+        case EeWonSkinBtn::IsDefaultButton: return t->IsDefaultButton() ? 1 : 0;
+        case EeWonSkinBtn::FlagSet: return ((Component*)b)->ComponentFlagSet((int)c) ? 1 : 0;
+        case EeWonSkinBtn::SetFlag: t->SetComponentFlags((int)b,true); return 0;
+        case EeWonSkinBtn::SetGrabBG: t->SetComponentFlags(ComponentFlag_GrabBG,true); return 0;
+        default: return 0;
+        }
+    case Op::WbText: return TextOp(a,b,c);
+    case Op::WbImage: return ImageOp(a,b);
+    case Op::WbFont:
+        switch ((EeWonWbFont)a) {
+        case EeWonWbFont::Default: return (intptr_t)WONAPI::WindowManager::GetDefaultWindowManager()->GetDefaultFont();
+        case EeWonWbFont::Hold: ((Font*)b)->AddRef(); return 0;
+        case EeWonWbFont::Release: ((Font*)b)->Release(); return 0;
+        default: return 0;
+        }
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        aSlots.mImages[0] = Img(c);
+        aSlots.mText = Txt(d);
+        WONDrawNoCall aNoCall;
+        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
+        return 0;
+    }
+    default: return 0;
+    }
 }
 
 namespace WONAPI {
@@ -406,32 +113,13 @@ namespace WONAPI {
 // Returns the button text, or an empty string when the button has no font yet
 const GUIString& WONButton::GetText()
 {
-    if(this->mFontTextMap.empty()) return gEmptyGUIString;
-    return this->mFontTextMap.begin()->second->GetText();
+    const GUIString* aText = (const GUIString*)this->WCall(EeWonWbCall::GetText);
+    return aText ? *aText : gEmptyGUIString;
 }
-}
-
-namespace WONAPI {
-// FUNCTION: WON 0x00718780
-// Sets the vertical alignment of the button image
-void WONButton::SetVertAlign(VertAlign align)
-{
-    this->mVAlign=align;
-}
+// Destroys the button: the Rust button gives its texts and images back
+WONButton::~WONButton() { ee_won_wonbtn_free(this->mWb); }
 }
 
 // Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x00722490
 // (public: class std::_Tree<class WONAPI::Font *,struct std::pair<class WONAPI::Font * const,class WONAPI::SmartPtr<class WONAPI::WrappedText> >,struct s)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0071ba60
-// (public: struct std::pair<class std::_Tree<class WONAPI::Font *,struct std::pair<class WONAPI::Font * const,class WONAPI::SmartPtr<class WONAPI::Wrappe)
-// TEMPLATE: WON 0x0071b8e0
-// (public: class std::_Tree<class WONAPI::Font *,struct std::pair<class WONAPI::Font * const,class WONAPI::SmartPtr<class WONAPI::WrappedText> >,struct s)
-// TEMPLATE: WON 0x0071d8f0
-// (public: class std::_Tree<class WONAPI::Font *,struct std::pair<class WONAPI::Font * const,class WONAPI::SmartPtr<class WONAPI::WrappedText> >,struct s)
-// TEMPLATE: WON 0x0071d9a0
-// (protected: class std::_Tree<class WONAPI::Font *,struct std::pair<class WONAPI::Font * const,class WONAPI::SmartPtr<class WONAPI::WrappedText> >,struc)
-// TEMPLATE: WON 0x00722980
-// (protected: struct std::_Tree<class WONAPI::Font *,struct std::pair<class WONAPI::Font * const,class WONAPI::SmartPtr<class WONAPI::WrappedText> >,stru)

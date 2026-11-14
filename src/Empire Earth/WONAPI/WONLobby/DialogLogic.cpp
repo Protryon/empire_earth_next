@@ -1,5 +1,8 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-// DialogLogic: the lobby's modal dialogs (OK/Cancel, Yes/No, status and error boxes), inline or in popup windows
+// DialogLogic: the lobby's modal dialogs (OK/Cancel, Yes/No, status and error boxes), inline or in popup windows.
+// The class is one Rust object (R6 WONLobby round 2: rust/crates/ee_won/src/dlglogic.rs: the dialog stack, the
+// status operation, every method); this unit is its C++ shell and host: each op is the original's statements on a
+// window, a component, an operation or a lobby global, with no decision.
 #include <windows.h>
 #include <string>
 #include <list>
@@ -16,287 +19,184 @@
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyDialogLogic.h"
 #include "ee/wonapi/WONStatus.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
+
+static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
+
 // FUNCTION: WON 0x7dc3f0
-// Creates the dialog logic, showing dialogs inside the lobby window (no popups)
-DialogLogic::DialogLogic() { this->mPopupWindows = false; this->mStatusCancelled = false; }
+DialogLogic::DialogLogic() : mRust(ee_won_dlglogic_new(this, DialogLogicHost)) {}
 // FUNCTION: WON 0x7dc480
-// Destroys the dialog logic (members only)
-DialogLogic::~DialogLogic() {}
+DialogLogic::~DialogLogic() { ee_won_dlglogic_free(this->mRust); }
 // FUNCTION: WON 0x7dc5a0
-// Looks up the OK/Cancel and status dialogs and takes the popup-window setting from the window manager
-void DialogLogic::InitComponent(ComponentConfig* inConfig)
-{
-    this->mStatusVisible = false;
-    this->mStatusMode = 0;
-    this->mStatusOp = NULL;
-    SafeGetComponent(inConfig, this->mOkCancelDialog, "OkCancelDialog", __FILE__, 48);
-    SafeGetComponent(inConfig, this->mStatusDialog, "StatusDialog", __FILE__, 49);
-    if (WONAPI::WindowManager::GetDefaultWindowManager() != NULL)
-        this->mPopupWindows = WONAPI::WindowManager::GetDefaultWindowManager()->GetPopupsInOwnWindow();
-}
+void DialogLogic::InitComponent(ComponentConfig* inConfig) { this->Call(EeWonDlgLogicCall::Init, (intptr_t)inConfig); }
 // FUNCTION: WON 0x7dc630
-// Cancels the operation behind the status box and removes every dialog that is not running
-void DialogLogic::KillHook()
-{
-    if (this->mStatusOp.get() != NULL) {
-        this->mStatusOp->Kill(true);
-        this->mStatusOp = NULL;
-    }
-    this->ClearDialogs();
-}
+void DialogLogic::KillHook() { this->Call(EeWonDlgLogicCall::KillHook); }
 // FUNCTION: WON 0x7dc680
-// Closes the status box when its operation finishes (or succeeds, by mode), else shows the result in it
-void DialogLogic::StatusOpComplete(AsyncOp* inOp)
-{
-    if (inOp != this->mStatusOp.get())
-        return;
-    bool aDone = this->mStatusMode == 2 || (this->mStatusMode == 1 && inOp->GetStatus() == WS_Success);
-    if (aDone)
-        GetLobbyWindow()->EndDialog(-1, NULL, this->mStatusDialog.get());
-    else
-        this->UpdateStatus(inOp->GetStatus());
-}
+void DialogLogic::StatusOpComplete(AsyncOp* inOp) { this->Call(EeWonDlgLogicCall::StatusOpComplete, (intptr_t)inOp); }
 // FUNCTION: WON 0x7dc6d0
-// Removes the dialogs above the newest running one, closing their popup windows, and forgets them
-void DialogLogic::ClearDialogs()
-{
-    if (this->mDialogStack.empty() || GetLobbyRoot() == NULL)
-        return;
-    bool aChanged = false;
-    DialogStack::iterator aBackItr = this->mDialogStack.end();
-    while (aBackItr != this->mDialogStack.begin()) {
-        --aBackItr;
-        if (aBackItr->mInModal)
-            break;
-        Component* aComponent = aBackItr->mComponent.get();
-        if (aComponent->mParent != NULL)
-            aComponent->mParent->RemoveChild(aComponent);
-        if (this->mPopupWindows)
-            aBackItr->mWindow->Close();
-        aChanged = true;
-    }
-    if (!aChanged)
-        return;
-    DialogStack::iterator anItr = this->mDialogStack.begin();
-    while (anItr != this->mDialogStack.end()) {
-        if (!anItr->mInModal)
-            this->mDialogStack.erase(anItr++);
-        else
-            ++anItr;
-    }
-}
-// FUNCTION: WON 0x7dc790
-// Returns whether a dialog is the top one; reports whether its size changed since it was shown
-bool DialogLogic::CheckDialog(Component* inDialog, bool& outSizeChanged)
-{
-    outSizeChanged = true;
-    if (this->mDialogStack.empty())
-        return false;
-    DialogInfo& anInfo = this->mDialogStack.back();
-    if (anInfo.mComponent.get() != inDialog)
-        return false;
-    if (inDialog->Width() == anInfo.mOldRect.width && inDialog->Height() == anInfo.mOldRect.height)
-        outSizeChanged = false;
-    return true;
-}
+void DialogLogic::ClearDialogs() { this->Call(EeWonDlgLogicCall::ClearDialogs); }
 // FUNCTION: WON 0x7dc9a0
-// Runs a dialog modally, centered in the lobby or in a popup window (reused if on top); returns its result
-int DialogLogic::DoDialog(Component* inDialog)
-{
-    bool aSizeChanged = true;
-    bool aReuse = this->CheckDialog(inDialog, aSizeChanged);
-    if (!aReuse)
-        this->ClearDialogs();
-    SmartPtr<Window> aWindow = this->GetDialogWindow(aReuse);
-    if (aWindow.get() == NULL)
-        return -1;
-    SmartPtr<Container> aRoot;
-    if (this->mPopupWindows) {
-        aWindow->SetClientSize(inDialog->Width(), inDialog->Height());
-        aRoot = aWindow->mRoot.get();
-    }
-    else
-        aRoot = GetLobbyRoot();
-    if (aRoot.get() == NULL)
-        return -1;
-    if (aSizeChanged) {
-        if (this->mPopupWindows)
-            aWindow->Center(true);
-        else
-            CenterLayout::Center(aRoot.get(), inDialog, true, true);
-    }
-    if (!aReuse) {
-        aRoot->AddChild(inDialog);
-        this->mDialogStack.push_back(DialogInfo());
-    }
-    DialogInfo& anInfo = this->mDialogStack.back();
-    anInfo.mWindow = aWindow.get();
-    anInfo.mComponent = inDialog;
-    anInfo.mInModal = true;
-    anInfo.mOldRect = inDialog->GetBounds();
-    if (this->mPopupWindows)
-        aWindow->Show(true);
-    int aResult = aWindow->RunDialog(inDialog);
-    anInfo.mInModal = false;
-    return aResult;
-}
+int DialogLogic::DoDialog(Component* inDialog) { return (int)this->Call(EeWonDlgLogicCall::DoDialog, (intptr_t)inDialog); }
 // FUNCTION: WON 0x7dcc70
-// Runs an operation behind a status box and cancels it if the box closes first; killed if a box is already up
-void DialogLogic::RunOpWithStatus(AsyncOp* inOp, unsigned long inUnusedTimeout,
-                                const GUIString& inTitle, const GUIString& inStatus,
-                                int inStatusMode, unsigned long inTimeout)
+void DialogLogic::RunOpWithStatus(AsyncOp* inOp, unsigned long, const GUIString& inTitle, const GUIString& inStatus,
+                                  int inStatusMode, unsigned long inTimeout)
 {
-    if (this->mStatusVisible) {
-        inOp->ForceFinish(WS_Killed);
-        return;
-    }
-    this->mStatusOp = inOp;
-    this->mStatusCancelled = false;
-    this->RunOp(this->mStatusOp.get(), new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, this), inTimeout);
-    this->mStatusMode = inStatusMode;
-    this->ShowStatus(inTitle, inStatus, true);
-    if (this->mStatusOp->GetStatus() == WS_Pending) {
-        this->mStatusCancelled = true;
-        this->mStatusOp->Kill(true);
-    }
-    this->mStatusOp = NULL;
+    this->Call(EeWonDlgLogicCall::RunOpWithStatus, (intptr_t)inOp, (intptr_t)&inTitle, (intptr_t)&inStatus,
+               inStatusMode, (intptr_t)inTimeout);
 }
 // FUNCTION: WON 0x7dcdb0
-// Shows the status box with a title and text (optionally with Cancel), unless one is up or the lobby is suspended
 void DialogLogic::ShowStatus(const GUIString& inTitle, const GUIString& inStatus, bool inCancel)
 {
-    if (this->mStatusVisible || LobbyIsSuspended())
-        return;
-    this->mStatusVisible = true;
-    this->mStatusDialog->SetText(inTitle, inStatus, inCancel);
-    this->DoDialog(this->mStatusDialog.get());
-    this->mStatusDialog->mStartTick = WONTickCount();
-    this->mStatusVisible = false;
+    this->Call(EeWonDlgLogicCall::ShowStatus, (intptr_t)&inTitle, (intptr_t)&inStatus, inCancel);
 }
 // FUNCTION: WON 0x7dce10
-// Plays the error sound and shows an error box, unless a status box is already up
 void DialogLogic::ShowError(const GUIString& inTitle, const GUIString& inStatus)
 {
-    if (this->mStatusVisible)
-        return;
-    if (LobbyGetLobbySoundEffects())
-        LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
-    this->ShowStatus(inTitle, inStatus, false);
+    this->Call(EeWonDlgLogicCall::ShowError, (intptr_t)&inTitle, (intptr_t)&inStatus);
 }
 // FUNCTION: WON 0x7dce50
-// Shows an error box with a WON status's text (no sound)
+// An error box with a WON status's text (no sound)
 void DialogLogic::ShowError(const GUIString& inTitle, WONStatus inStatus)
 {
     this->ShowStatus(inTitle, GetWONStatusString(inStatus), false);
 }
 // FUNCTION: WON 0x7dd050
-// Asks an OK/Cancel question, optionally with the error sound; returns the button pressed
 int DialogLogic::ShowOkCancel(const GUIString& inTitle, const GUIString& inText, bool inPlaySound)
 {
-    this->mOkCancelDialog->SetText(inTitle, inText, ::LobbyGlobal_OK_String, ::LobbyGlobal_Cancel_String);
-    if (inPlaySound && LobbyGetLobbySoundEffects())
-        LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
-    return this->DoDialog(this->mOkCancelDialog.get());
+    return (int)this->Call(EeWonDlgLogicCall::ShowOkCancel, (intptr_t)&inTitle, (intptr_t)&inText, inPlaySound);
 }
 // FUNCTION: WON 0x7dd0a0
-// Asks a Yes/No question, optionally with the error sound; returns the button pressed
 int DialogLogic::ShowYesNo(const GUIString& inTitle, const GUIString& inText, bool inPlaySound)
 {
-    this->mOkCancelDialog->SetText(inTitle, inText, ::LobbyGlobal_Yes_String, ::LobbyGlobal_No_String);
-    if (inPlaySound && LobbyGetLobbySoundEffects())
-        LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
-    return this->DoDialog(this->mOkCancelDialog.get());
-}
-// FUNCTION: WON 0x7dc7e0
-// Returns a dialog's window: the lobby window, the top popup when reused, or a new popup owned by the top one
-SmartPtr<Window> DialogLogic::GetDialogWindow(bool inReuse)
-{
-    if (!this->mPopupWindows)
-        return LobbyGetRootWindow();
-    if (inReuse && !this->mDialogStack.empty())
-        return this->mDialogStack.back().mWindow;
-    SmartPtr<Window> aWindow(CreateNativeWindow());
-    aWindow->SetOneComponentWindow(true);
-    if (!this->mDialogStack.empty())
-        aWindow->SetParent(this->mDialogStack.back().mWindow.get());
-    else
-        aWindow->SetParent(LobbyGetRootWindow());
-    aWindow->SetStyle(0x22);
-    aWindow->Create(WONRectangle(0, 0, 100, 100));
-    LobbyAddLogicListener(aWindow->mRoot.get());
-    aWindow->mRoot->SetColorScheme(LobbyGetColorScheme());
-    return aWindow;
+    return (int)this->Call(EeWonDlgLogicCall::ShowYesNo, (intptr_t)&inTitle, (intptr_t)&inText, inPlaySound);
 }
 // FUNCTION: WON 0x7dd0f0
-// Removes every dialog that is not running
-void DialogLogic::Reset() { this->ClearDialogs(); }
-}
-
-// UpdateStatus: the original also constructs and destroys an empty std::wstring that nothing uses
-namespace WONAPI {
+void DialogLogic::Reset() { this->Call(EeWonDlgLogicCall::Reset); }
 // FUNCTION: WON 0x007dced0
-// Shows an operation's result in the status box (error sound on failure) and re-centers the box if it resized
-void DialogLogic::UpdateStatus(WONStatus inStatus)
+void DialogLogic::UpdateStatus(WONStatus inStatus) { this->Call(EeWonDlgLogicCall::UpdateStatus, (intptr_t)inStatus); }
+bool DialogLogic::GetStatusCancelled() { return this->Call(EeWonDlgLogicCall::Field, 0) != 0; }
+
+// ---- the host
+
+static Component* FindDialog(ComponentConfig* inConfig, bool inStatus)
 {
-    WONRectangle anOldBounds = this->mStatusDialog->GetBounds();
-    int anOldWidth = anOldBounds.Width();
-    int anOldHeight = anOldBounds.Height();
-    std::wstring aText; // constructed and destroyed; no statement reads it
-    this->mStatusDialog->SetStatus(GetWONStatusString(inStatus), false);
-    if (inStatus != 0 && LobbyGetLobbySoundEffects())
-        LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
-    if (anOldWidth == this->mStatusDialog->Width() && anOldHeight == this->mStatusDialog->Height())
-        return;
-    if (this->mPopupWindows) {
-        Window* aWindow = this->mStatusDialog->GetRootWindow();
-        if (aWindow == NULL)
-            return;
-        aWindow->SetClientSize(this->mStatusDialog->Width(), this->mStatusDialog->Height());
-        aWindow->Center(true);
+    Component* aFound;
+    if (inStatus) {
+        SmartPtr<StatusDialog> aPtr;
+        SafeGetComponent(inConfig, aPtr, "StatusDialog", "DialogLogic.cpp", 49);
+        aFound = aPtr.get();
     }
     else {
-        Container* aRoot = GetLobbyRoot();
-        if (aRoot != NULL) {
-            CenterLayout::Center(aRoot, this->mStatusDialog.get(), true, true);
-            WONRectangle aBounds(this->mStatusDialog->GetBounds());
-            aRoot->InvalidateRect(aBounds);
-        }
+        SmartPtr<OkCancelDialog> aPtr;
+        SafeGetComponent(inConfig, aPtr, "OkCancelDialog", "DialogLogic.cpp", 48);
+        aFound = aPtr.get();
     }
+    if (aFound != NULL)
+        aFound->AddRef();
+    return aFound;
+}
+
+static intptr_t DialogLogicHost(void* inLogic, EeWonDlgLogicOp inOp, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    typedef EeWonDlgLogicOp Op;
+    DialogLogic* aLogic = static_cast<DialogLogic*>(inLogic);
+    Component* aComp = reinterpret_cast<Component*>(a);
+    Window* aWindow = reinterpret_cast<Window*>(a);
+    AsyncOp* anOp = reinterpret_cast<AsyncOp*>(a);
+    switch (inOp) {
+    case Op::FindOkCancel: return (intptr_t)FindDialog(reinterpret_cast<ComponentConfig*>(a), false);
+    case Op::FindStatus: return (intptr_t)FindDialog(reinterpret_cast<ComponentConfig*>(a), true);
+    case Op::WmPopups: {
+        if (WONAPI::WindowManager::GetDefaultWindowManager() == NULL)
+            return -1;
+        return WONAPI::WindowManager::GetDefaultWindowManager()->GetPopupsInOwnWindow() ? 1 : 0;
+    }
+    case Op::ReleaseComponent: aComp->Release(); return 0;
+    case Op::AddRefComponent: aComp->AddRef(); return 0;
+    case Op::ReleaseWindow: aWindow->Release(); return 0;
+    case Op::AddRefWindow: aWindow->AddRef(); return 0;
+    case Op::ReleaseOp: anOp->Release(); return 0;
+    case Op::AddRefOp: anOp->AddRef(); return 0;
+    case Op::OpKill: anOp->Kill(true); return 0;
+    case Op::OpForceFinishKilled: anOp->ForceFinish(WS_Killed); return 0;
+    case Op::OpGetStatus: return (intptr_t)anOp->GetStatus();
+    case Op::RunOp:
+        aLogic->RunOp(anOp, new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, aLogic),
+                      (unsigned long)b);
+        return 0;
+    case Op::EndDialog: GetLobbyWindow()->EndDialog(-1, NULL, aComp); return 0;
+    case Op::LobbyRoot: return (intptr_t)static_cast<Component*>(GetLobbyRoot());
+    case Op::RootWindow: return (intptr_t)LobbyGetRootWindow();
+    case Op::Parent: return (intptr_t)static_cast<Component*>(aComp->mParent);
+    case Op::RemoveChild:
+        static_cast<Container*>(aComp)->RemoveChild(reinterpret_cast<Component*>(b));
+        return 0;
+    case Op::WindowClose: aWindow->Close(); return 0;
+    case Op::Width: return aComp->Width();
+    case Op::Height: return aComp->Height();
+    case Op::Bounds: {
+        const WONRectangle& aBounds = aComp->GetBounds();
+        int* anOut = reinterpret_cast<int*>(b);
+        anOut[0] = aBounds.x;
+        anOut[1] = aBounds.y;
+        anOut[2] = aBounds.width;
+        anOut[3] = aBounds.height;
+        return 0;
+    }
+    case Op::NewWindow: {
+        SmartPtr<Window> aNew(CreateNativeWindow());
+        aNew->SetOneComponentWindow(true);
+        aNew->AddRef(); // the Rust's reference
+        return (intptr_t)aNew.get();
+    }
+    case Op::SetUpPopup:
+        aWindow->SetParent(reinterpret_cast<Window*>(b));
+        aWindow->SetStyle(0x22);
+        aWindow->Create(WONRectangle(0, 0, 100, 100));
+        LobbyAddLogicListener(aWindow->mRoot.get());
+        aWindow->mRoot->SetColorScheme(LobbyGetColorScheme());
+        return 0;
+    case Op::SetClientSize: aWindow->SetClientSize((int)b, (int)c); return 0;
+    case Op::WindowRoot: return (intptr_t)static_cast<Component*>(aWindow->mRoot.get());
+    case Op::WindowCenter: aWindow->Center(true); return 0;
+    case Op::CenterLayout:
+        CenterLayout::Center(static_cast<Container*>(aComp), reinterpret_cast<Component*>(b), true, true);
+        return 0;
+    case Op::AddChild: static_cast<Container*>(aComp)->AddChild(reinterpret_cast<Component*>(b)); return 0;
+    case Op::WindowShow: aWindow->Show(true); return 0;
+    case Op::RunDialog: return aWindow->RunDialog(reinterpret_cast<Component*>(b));
+    case Op::LobbySuspended: return LobbyIsSuspended() ? 1 : 0;
+    case Op::StatusSetText:
+        static_cast<StatusDialog*>(aComp)->SetText(*reinterpret_cast<const GUIString*>(b),
+                                                   *reinterpret_cast<const GUIString*>(c), d != 0);
+        return 0;
+    case Op::StatusSetStartTick: static_cast<StatusDialog*>(aComp)->SetStartTick(WONTickCount()); return 0;
+    case Op::StatusSetStatus:
+        static_cast<StatusDialog*>(aComp)->SetStatus(GetWONStatusString((WONStatus)b), false);
+        return 0;
+    case Op::SoundEffects: return LobbyGetLobbySoundEffects() ? 1 : 0;
+    case Op::PlayErrorSound: LobbyPlaySound(::LobbyGlobal_Error_Sound.get()); return 0;
+    case Op::OkCancelSetText:
+        static_cast<OkCancelDialog*>(aComp)->SetText(*reinterpret_cast<const GUIString*>(b),
+                                                     *reinterpret_cast<const GUIString*>(c),
+                                                     d != 0 ? ::LobbyGlobal_Yes_String : ::LobbyGlobal_OK_String,
+                                                     d != 0 ? ::LobbyGlobal_No_String : ::LobbyGlobal_Cancel_String);
+        return 0;
+    case Op::RootWindowOf: return (intptr_t)aComp->GetRootWindow();
+    case Op::InvalidateRect: {
+        const int* aRect = reinterpret_cast<const int*>(b);
+        WONRectangle aBounds(aRect[0], aRect[1], aRect[2], aRect[3]);
+        static_cast<Container*>(aComp)->InvalidateRect(aBounds);
+        return 0;
+    }
+    }
+    return 0;
 }
 }
-// TEMPLATE: WON 0x007f47c0
 
 // Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x007dc460
 // (public: virtual void * __thiscall WONAPI::DialogLogic::`scalar deleting destructor'(unsigned int)    [??_GDialogLogic@WONAPI@@UAEPAXI@Z])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f4750
-// (void __cdecl std::_Construct(struct WONAPI::DialogLogic::DialogInfo *,struct WONAPI::DialogLogic::DialogInfo const &)    [?_Construct@std@@YAXPAUDialo)
-// TEMPLATE: WON 0x007f33d0
-// TEMPLATE: WON 0x007f3550
-
-// Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x007f1300
 // (public: virtual void __thiscall WONAPI::LogicCompletion<class WONAPI::DialogLogic>::Run(class WONAPI::AsyncOp *)    [?Run@?$LogicCompletion@VDialogLog)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007dcbf0
-// (public: __thiscall WONAPI::DialogLogic::DialogInfo::~DialogInfo(void)    [??1DialogInfo@DialogLogic@WONAPI@@QAE@XZ])
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f12a0
-// (public: __thiscall std::list<struct WONAPI::DialogLogic::DialogInfo,class std::allocator<struct WONAPI::DialogLogic::DialogInfo> >::~list<struct WONAP)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f1410
-// (public: virtual void * __thiscall WONAPI::LogicCompletion<class WONAPI::DialogLogic>::`scalar deleting destructor'(unsigned int)    [??_G?$LogicComple)
-// TEMPLATE: WON 0x007f14b0
-// (public: virtual __thiscall WONAPI::LogicCompletion<class WONAPI::DialogLogic>::~LogicCompletion<class WONAPI::DialogLogic>(void)    [??1?$LogicComplet)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x007f1690
-// (public: void __thiscall std::list<struct WONAPI::DialogLogic::DialogInfo,class std::allocator<struct WONAPI::DialogLogic::DialogInfo> >::_Insert(class)
-// TEMPLATE: WON 0x007f1f50
-// (protected: void __thiscall std::list<struct WONAPI::DialogLogic::DialogInfo,class std::allocator<struct WONAPI::DialogLogic::DialogInfo> >::_Incsize(u)

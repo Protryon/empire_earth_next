@@ -10,7 +10,6 @@
 
 #include <vector>
 #include "lle/UWideString.h"
-#include "ee/EESMIDMap.h"
 #include "rust/ee_scenario.h"
 class EEComplexUnit;
 class EEUnit;
@@ -24,10 +23,6 @@ public:
     virtual ~EESMObject();                  // +0x00 (??_G 0x1c6019; the body 0x1c6035)
     // slot signatures from `ret N` and EEScenarioManager's broadcast hooks
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x1c8284
-    virtual void RemapAreas(EESMIDMap& inMap);  // +0x08 0x1c856e
-    virtual void RenumberAreas(unsigned long inOldIndex, unsigned long inNewIndex);  // +0x0c 0x1c84db
-    virtual void RemapObjects(EESMIDMap& inMap);  // +0x10 0x1c8580
-    virtual void RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex);  // +0x14 0x1c8511
     virtual void ReplaceUnit(long inOldUnit, long inNewUnit);  // +0x18 0x1c85a4 (replaces a unit id in mUnits)
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x1c 0x1c85de
     void Copy(const EESMObject& inObject);  // 0x1c6386 (provisional name)

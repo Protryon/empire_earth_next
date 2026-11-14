@@ -249,17 +249,17 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
             theMessage = new EEMUnloadTransport(thePress.mTransport->mUnitID, thePress.mTransport->GetTileX(),
                                                 thePress.mTransport->GetTileY());
             break;
-        case EE_SCREENS_SB_SEND_STOP: theMessage = new EEMStopActiveGroup; break;
-        case EE_SCREENS_SB_SEND_DISBAND: theMessage = new EEMDisband; break;
-        case EE_SCREENS_SB_SEND_SELF_DESTRUCT: theMessage = new EEMSelfDestruct; break;
+        case EE_SCREENS_SB_SEND_STOP: theMessage = new EEMRecord(kMessageStopActiveGroup); break;
+        case EE_SCREENS_SB_SEND_DISBAND: theMessage = new EEMRecord(kMessageDisband); break;
+        case EE_SCREENS_SB_SEND_SELF_DESTRUCT: theMessage = new EEMRecord(kMessageSelfDestruct); break;
         case EE_SCREENS_SB_SEND_PATROL: theMessage = new EEMPatrol(-1); break;
         case EE_SCREENS_SB_SEND_REPLANT: theMessage = new EEMReplantFarms(-1); break;
-        case EE_SCREENS_SB_SEND_CLEAR_AIRPORT: theMessage = new EEMClearAirportCommands; break;
-        case EE_SCREENS_SB_SEND_EXPLORE: theMessage = new EEMExplore; break;
+        case EE_SCREENS_SB_SEND_CLEAR_AIRPORT: theMessage = new EEMRecord(kMessageClearAirportCommands); break;
+        case EE_SCREENS_SB_SEND_EXPLORE: theMessage = new EEMRecord(kMessageExplore); break;
         case EE_SCREENS_SB_SEND_LOCK: theMessage = new EEMLockUnlock(inB != 0); break;
         case EE_SCREENS_SB_SEND_PACK: theMessage = new EEMPackUnpack(inB != 0); break;
-        case EE_SCREENS_SB_SEND_FANATIC: theMessage = new EEMGoFanatic; break;
-        case EE_SCREENS_SB_SEND_JIT: theMessage = new EEMJITManufacturing; break;
+        case EE_SCREENS_SB_SEND_FANATIC: theMessage = new EEMRecord(kMessageGoFanatic); break;
+        case EE_SCREENS_SB_SEND_JIT: theMessage = new EEMRecord(kMessageJITManufacturing); break;
         case EE_SCREENS_SB_SEND_EXCHANGE: theMessage = new EEMExchangeResources((inB & 1) != 0, (long)(inB >> 1), inC != 0); break;
         case EE_SCREENS_SB_SEND_RESEARCH:
             theMessage = new EEMResearchTechnology(theButton->mUnitID, theButton->mTechnology, inB != 0);
@@ -689,7 +689,7 @@ long EEModeAirport(void* inLocation, void* inForm, long inCommand, long inKind)
         } else {
             sB5652F0 = theShift;
             gCommunications->ProcessLocalUserInput(
-                new EEMSetAirportCommand(inCommand, GE2DPoint(thePoint.GetX(), thePoint.GetY()), theTarget, theShift),
+                new EEMRecord(kMessageSetAirportCommand, {GE2DPoint(thePoint.GetX(), thePoint.GetY()), inCommand, theTarget, theShift}),
                 kSlotNone);
             if (theShift)
                 return false;
@@ -894,7 +894,7 @@ long EEModeFlare(void* inLocation, void* inForm)
         return false;
     if (EEPointUnitOrTileXY(theLocation, theTile, theX, theY, true)) {
         EEOrderAtCursor(theLocation, NULL);
-        gCommunications->ProcessLocalUserInput(new EEMSendFlare(U2DPoint<long>(theX, theY)), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSendFlare, {theX, theY}), kSlotNone);
     }
     theForm->SetUIState(0);
     gMouse->mPointer = 0;

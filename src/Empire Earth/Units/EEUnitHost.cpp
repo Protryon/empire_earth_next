@@ -736,7 +736,7 @@ extern "C" void* ee_units_host_unit_patrol_group(uint32_t inUnit)
 extern "C" int64_t ee_units_host_object_unit_type(uint32_t inUnit)
 {
     EEUnit* theUnit = UnitOf(inUnit);
-    EEUnitClass* theClass = theUnit != NULL ? theUnit->mUnitClass.Get() : NULL;
+    EEUnitClass* theClass = theUnit != NULL ? theUnit->mUnitClass : NULL;
     return theClass != NULL ? (int64_t)theClass->mUnitType : -1;
 }
 
@@ -1532,7 +1532,7 @@ extern "C" uint8_t ee_units_host_object_record(uint32_t inUnit, EeUnitRecord* ou
     memset(outRecord, 0, sizeof(*outRecord));
     outRecord->id = inUnit;
     outRecord->hit_points = (int64_t)theUnit->mHitPoints;
-    EEUnitClass* theClass = theUnit->mUnitClass.Get();
+    EEUnitClass* theClass = theUnit->mUnitClass;
     outRecord->category = theClass != NULL ? (int64_t)theClass->mCategory : -1;
     outRecord->unit_type = theClass != NULL ? (int64_t)theClass->mUnitType : -1;
     EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
@@ -1651,7 +1651,7 @@ extern "C" uint8_t ee_units_host_unit_load_traits(uint32_t inUnit)
 extern "C" void* ee_units_host_unit_load_goal(uint32_t inUnit, uint8_t inKind)
 {
     EEComplexUnit* theUnit = ComplexOf(inUnit);
-    EEUnitGoal* theGoal = inKind == kGoalLoadGarrison ? theUnit->mGoalState.Get() : theUnit->GetLoadGoal();
+    EEUnitGoal* theGoal = inKind == kGoalLoadGarrison ? theUnit->mGoalState : theUnit->GetLoadGoal();
     if (theGoal != NULL && theGoal->mKind != inKind)
         theGoal = NULL;
     if (sDry == NULL)

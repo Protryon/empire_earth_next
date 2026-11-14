@@ -69,7 +69,6 @@
 #include "ee/EEE2DWaterRipple.h"
 #include "ee/EEE2DVortex.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
-#include "ee/EEE3DIcon.h"
 #include "ee/EEE3DSmokeGenerator.h"
 #include "ee/EEE3DFarm.h"
 #include "ee/EEE3DParticleEmitter.h"
@@ -80,7 +79,6 @@
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
 #include "ee/EEE3DVolcano.h"
-#include "ee/EEE3DGoal.h"
 #include "ee/EEE3DStorm.h"
 #include "ee/EEE3DSnow.h"
 #include "ee/EEE3DRain.h"
@@ -200,9 +198,9 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DShells: theEffect = new EEE3DRust(0x26); break;
     case kEffect3DAdditivePass: theEffect = new EEE3DRust(0x27); break;
     case kEffect3DNuclearExplosion: theEffect = new EEE3DRust(0x28); break;
-    case kEffect3DIcon: theEffect = new EEE3DIcon(2); break;
+    case kEffect3DIcon: theEffect = new EEE3DRust(2); break;
     case kEffect3DMarchingLine: theEffect = new EEE3DMarchingLine(); break;
-    case kEffect3DGoal: theEffect = new EEE3DGoal(); break;
+    case kEffect3DGoal: theEffect = new EEE3DRust(0x3c); break;
     case kEffect3DTeleport: theEffect = new EEE3DRust(0x3f); break;
     case kEffect3DTimeWarp: theEffect = new EEE3DRust(0x44); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(0x40); break;
@@ -284,7 +282,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 8: theEffect = new EEE2DLightning(inUnit, inEffect); break;
     case 16: theEffect = new EEE2DMarchingIcons(inUnit, inEffect, EE_GFX_EFFECT_KIND_CIRCULAR_ICONS); break;
     case 15: theEffect = new EEE2DMarchingIcons(inUnit, inEffect, EE_GFX_EFFECT_KIND_SQUARE_ICONS); break;
-    case 2: theEffect = new EEE3DIcon(inUnit, inEffect, 0, 2); break;
+    case 2: theEffect = new EEE3DRust(inUnit, inEffect, 2); break;
     case 0x18: theEffect = new EEE3DRust(inUnit, inEffect, 0x18); break;
     case 0x28: theEffect = new EEE3DRust(inUnit, inEffect, 0x28); break;
     case 0x27: theEffect = new EEE3DRust(inUnit, inEffect, 0x27); break;
@@ -372,7 +370,7 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
         return thePlan.result;
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
-    case 2: theEffect = new EEE3DIcon(0, inEffect, &inLocation, 2); break;
+    case 2: theEffect = new EEE3DRust(inLocation, inEffect, 2); break;
     case 6: theEffect = new EEE2DImpact(inLocation, inEffect, 6); break;
     case 8: theEffect = new EEE2DLightning(inLocation, inEffect); break;
     case 0xb: theEffect = new EEE2DSmokePlume(inLocation, inEffect, 0xb); break;
@@ -388,7 +386,7 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 0x39: theEffect = EEE3DParticle::Create(inLocation, inEffect); break;
     case 0x3a: theEffect = new EEE3DParticleEmitter(inLocation, inEffect, 0x3a); break;
     case 0x3b: theEffect = new EEE3DRust(inLocation, inEffect, 0x3b); break;
-    case 0x3c: theEffect = new EEE3DGoal(0, inEffect, &inLocation); break;
+    case 0x3c: theEffect = new EEE3DRust(inLocation, inEffect, 0x3c); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }

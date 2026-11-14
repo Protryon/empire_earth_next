@@ -7,7 +7,6 @@ use std::ffi::c_void;
 
 use ee_ge::types::Ge3DPoint;
 
-use crate::effect_icon::{self, EeGfxIconTick};
 use crate::effect_state::{
     self, DamagedHost, EeGfxAmbientNew, EeGfxDamagedTick, EeGfxEffectLists, EeGfxEffectLoaded, EeGfxEffectPart,
     EeGfxEffectRecord, EeGfxEmitterBurst, EeGfxEmitterMove, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxPlumeTick,
@@ -15,7 +14,6 @@ use crate::effect_state::{
 };
 use crate::effect_storm::{self, EeGfxStormDraw, EeGfxStormLists, StormHost};
 use crate::effect_tracer::{self, EeGfxTracerTick};
-use crate::effect_wall::{self, WallHost};
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
 /// type; `context` is the file).
@@ -1221,143 +1219,6 @@ pub unsafe extern "C" fn ee_gfx_storm_load(r: *mut EeGfxEffectRecord, file: *con
 pub unsafe extern "C" fn ee_gfx_storm_save(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
     // SAFETY: the function's contract
     unsafe { on_storm(r, |r, l| effect_storm::save_storm(r, l, &mut File(&*file))) }
-}
-
-// ---- the 3D icons (effect_icon.rs)
-
-/// `EEE3DIcon::Clear`'s part of the record.
-///
-/// # Safety
-/// `r` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_icon_clear(r: *mut EeGfxEffectRecord) {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, effect_icon::icon_clear) }
-}
-
-/// `EEE3DIcon::Step`'s part: 7 once a set duration is up.
-///
-/// # Safety
-/// `r` is a live record; `tick` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_icon_step(r: *mut EeGfxEffectRecord, tick: *const EeGfxIconTick) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        let t = *tick;
-        on_copy(r, |r| effect_icon::icon_step(r, &t))
-    }
-}
-
-/// `EEE3DIcon::Queue`'s opacity and fractional frame.
-///
-/// # Safety
-/// `r` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_icon_queue(r: *mut EeGfxEffectRecord, param8: f32, param9: f32, param10: f32) {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_icon::icon_queue(r, param8, param9, param10)) }
-}
-
-/// `EEE3DIcon::Load`'s own reads after `EEEffect3D::Load`'s.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_icon_load(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_icon::load_icon(r, &mut File(&*file))) }
-}
-
-/// `EEE3DIcon::Save`'s own writes after `EEEffect3D::Save`'s.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_icon_save(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { effect_icon::save_icon(&*r, &mut File(&*file)) }
-}
-
-// ---- the energy walls (effect_wall.rs)
-
-/// The friendly wall pieces a segment reaches (`context`: the effect).
-#[repr(C)]
-pub struct EeGfxWallHost {
-    pub context: *mut c_void,
-    /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
-    pub wall_piece: extern "C" fn(context: *mut c_void, x: i32, y: i32, z: *mut f32) -> bool,
-}
-
-struct Wall<'a>(&'a EeGfxWallHost);
-
-impl WallHost for Wall<'_> {
-    fn wall_piece(&mut self, x: i32, y: i32) -> Option<f32> {
-        let mut z = 0.0f32;
-        (self.0.wall_piece)(self.0.context, x, y, &mut z).then_some(z)
-    }
-}
-
-/// `EEE3DEnergyWall::Place`'s segment ends after the C++ set the posts.
-///
-/// # Safety
-/// `r` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_wall_place(r: *mut EeGfxEffectRecord) {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, effect_wall::wall_place) }
-}
-
-/// `EEE3DEnergyWall::FindSegments` (`height`: the graphic effect's `GetParam6()`).
-///
-/// # Safety
-/// `r` is a live record; `host` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_wall_find_segments(r: *mut EeGfxEffectRecord, height: f32, host: *const EeGfxWallHost) {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_wall::wall_find_segments(r, height, &mut Wall(&*host))) }
-}
-
-/// `EEE3DEnergyWall::Step`'s timer: whether the segments are due.
-///
-/// # Safety
-/// `r` is a live record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_wall_step(r: *mut EeGfxEffectRecord, tick_time: f32) -> bool {
-    // SAFETY: the function's contract
-    unsafe { on_copy(r, |r| effect_wall::wall_step(r, tick_time)) }
-}
-
-/// `EEE3DEnergyWall::Load`'s (or, `old`, `LoadOldVersion`'s) own reads after the media load (`media`: its result).
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_wall_load(
-    r: *mut EeGfxEffectRecord,
-    file: *const EeGfxEffectFile,
-    media: i32,
-    old: bool,
-) -> i32 {
-    // SAFETY: the function's contract
-    unsafe {
-        on_copy(r, |r| {
-            if old {
-                effect_wall::load_wall_old(r, &mut File(&*file), media)
-            } else {
-                effect_wall::load_wall(r, &mut File(&*file), media)
-            }
-        })
-    }
-}
-
-/// `EEE3DEnergyWall::Save`'s own writes after `EEEffect3D::Save`'s.
-///
-/// # Safety
-/// `r` is a live record; `file` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_wall_save(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
-    // SAFETY: the function's contract
-    unsafe { effect_wall::save_wall(&*r, &mut File(&*file)) }
 }
 
 // ---- the tracer beams (effect_tracer.rs)

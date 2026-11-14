@@ -12,7 +12,6 @@
 #include "ee/EESMMediaStrings.h"
 
 #include "ee/EESMDialogMessage.h"
-#include "ee/EESMIDMap.h"               // (the remap slots +0x20..+0x40)
 #include "rust/ee_scenario.h"           // EeScenarioManagerFields, the timed effects' queue
 
 class EESMArea;
@@ -46,20 +45,9 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x1b4d1a
     virtual ~EEScenarioManager();           // +0x10 (??_G 0x1afb95)
     virtual FSPersistent* CreateDefault() const;   // +0x14 0x1b0982
-    // own slots +0x1c..+0x48 (after FSPersistent::GetTagID +0x18): broadcast hooks that
-    // forward to the element classes' remap (EESMIDMap&) / renumber (old, new) slots. Names by offset (provisional
-    // name).
+    // own slots +0x1c..+0x48 (after FSPersistent::GetTagID +0x18); the remap and renumber slots +0x20..+0x44 are
+    // ee_scenario lists.rs
     virtual void Prepare();                 // +0x1c 0x1b28c0 (unloads mUnitClassMedia's media, reloads the effects' media)
-    virtual void RemapAreas(EESMIDMap& inMap);  // +0x20 0x1b313b (mEffects/mObjects/mPendingEffects +0x08)
-    virtual void RenumberAreas(unsigned long inOld, unsigned long inNew);  // +0x24 0x1b3084 (mEffects/mObjects/mPendingEffects +0x0c)
-    virtual void RemapConditions(EESMIDMap& inMap);  // +0x28 0x1b2d21 (mTriggers +0x04)
-    virtual void RenumberConditions(unsigned long inOld, unsigned long inNew);  // +0x2c 0x1b2cdc (mTriggers +0x08)
-    virtual void RemapEffects(EESMIDMap& inMap);  // +0x30 0x1b2e33 (mTriggers +0x0c, mTimedEffects ids)
-    virtual void RenumberEffects(unsigned long inOld, unsigned long inNew);  // +0x34 0x1b2d62 (mTriggers +0x10, mTimedEffects)
-    virtual void RemapObjects(EESMIDMap& inMap);  // +0x38 0x1b2fa1 (conditions +0x04, effects/objects/mPendingEffects +0x10)
-    virtual void RenumberObjects(unsigned long inOld, unsigned long inNew);  // +0x3c 0x1b2eb2
-    virtual void RemapTriggers(EESMIDMap& inMap);  // +0x40 0x1b2c2f (conditions +0x0c, effects/mPendingEffects +0x18)
-    virtual void RenumberTriggers(unsigned long inOld, unsigned long inNew);  // +0x44 0x1b2b78
     virtual void ReplaceUnit(long inOldUnit, long inNewUnit);  // +0x48 0x1b31e8 (mObjects +0x18; EEPhysics 0x153430)
     void EndCinematic();                    // 0x1b1ae4 (no arguments; EEMEndCinematic::Execute 0xbdf7d)
     void ShowDialogMessage();               // 0x1b481a (no arguments, `ret`; EEPhysics::HandleMessage's message 0x508; provisional name)
@@ -69,15 +57,11 @@ public:
     void Update();                          // 0x1b20e6 (EEPhysics 0x153265: the per-tick clock and trigger update)
     long ExportText(FSFileSpec& inFile);    // 0x1b23dc (EESEIAExport 0x16ffd0; `ret 4`)
     void MoveCameraToStart();               // 0x1b5173 (Update, while mIsMovingCamera; `ret`)
-    // the trigger text import (EESEIAImport 0x170439; provisional names; `ret 0xc` each)
+    // the trigger text import (EESEIAImport 0x170439; provisional name; `ret 0xc`; ee_scenario text.rs with
+    // ValidateText 0x1b52bb, ImportText 0x1b4a95 and the line parsers 0x1b463b, 0x1b46bf, 0x1b4796)
     long ImportTriggerText(FSFileSpec& inFile, unsigned long inKind, bool inValidate);   // 0x1b3ae9
-    long ImportText(const std::vector<UString>& inLines, unsigned long inKind, const std::vector<UWideString>& inTexts);  // 0x1b4a95
-    long ValidateText(std::vector<UString>& inLines, unsigned long inKind, const std::vector<UWideString>& inTexts);    // 0x1b52bb (errors into mImportErrors)
     // 0x1b33d7 / 0x1b396b: fill outNames with the scenario's area / object names (EESEEvents' combo helper;
     // provisional names)
-    void GetAreaNames(std::vector<UWideString>& outNames);
-    void GetObjectNames(std::vector<UWideString>& outNames);
-    void GetTriggerNames(std::vector<UWideString>& outNames);   // 0x1b3a2a (the +0xe8 entries' names; EESETSCTTriggerAttribute; provisional name)
     // inline (COMDAT 0x17cadf, emitted by EESETriggerScreen.cpp): condition inIndex, 0 past the end
     EESMCondition* GetCondition(unsigned long inIndex)
     {
@@ -95,44 +79,21 @@ public:
         return theEffect;
     }
     // the condition screen's slots call these with its +0x04 + 1 (provisional names by address)
-    void SortConditions();                  // 0x1b01a6 (EESETSCondition::Sort)
-    EESMCondition* NewCondition();          // 0x1b07d2 (EESETSCondition::New; returns the new condition)
-    void MoveConditionDown(unsigned long inIndex);  // 0x1b0c45 (Virtual0C)
-    bool DeleteCondition(unsigned long inIndex);  // 0x1b0f3f (Virtual10)
-    EESMCondition* DuplicateCondition(unsigned long inIndex);  // 0x1b1358 (Virtual18; duplicates condition inIndex)
-    void GetUserConditionNames(std::vector<UWideString>& outNames);  // 0x1b3656 (Virtual1C)
-    void MoveConditionUp(unsigned long inIndex);  // 0x1b3ea9 (Virtual30)
     // the effect screen's slots (provisional names by address)
-    void SortEffects();                     // 0x1b02f6 (EESETSEffect::Sort)
-    EESMEffect* NewEffect();                // 0x1b099c (EESETSEffect::New; returns the new effect)
-    void MoveEffectDown(unsigned long inIndex);  // 0x1b0cde (EESETSEffect::MoveDown)
-    bool DeleteEffect(unsigned long inIndex);   // 0x1b0fb5 (EESETSEffect::Delete; deletes effect inIndex)
-    EESMEffect* DuplicateEffect(unsigned long inIndex);  // 0x1b15a7 (EESETSEffect::Duplicate; duplicates effect inIndex)
-    void GetUserEffectNames(std::vector<UWideString>& outNames);    // 0x1b3726 (EESETSEffect::GetNames)
-    void MoveEffectUp(unsigned long inIndex);   // 0x1b3edd (EESETSEffect::MoveUp)
 
     // EEScenarioManager.cpp's own members (provisional names unless stated)
     void Reset();                           // 0x1afbb1 (the ctor and Load 0x1b4081)
+    // the editor's list operations and name lists (EE_SCENARIO_LIST_*, EE_SCENARIO_NAMES_*; ee_scenario lists.rs)
+    void SortList(unsigned long inList);
+    void* NewEntry(unsigned long inList);
+    void MoveEntry(unsigned long inList, unsigned long inIndex, bool inUp);
+    bool DeleteEntry(unsigned long inList, unsigned long inIndex);
+    void* DuplicateEntry(unsigned long inList, unsigned long inIndex);
+    void GetNames(unsigned long inWhich, std::vector<UWideString>& outNames);
+    void ObjectChanged(EESMObject* inObject, bool inParent, long inValue);   // EESMObject::SetName, SetParent
     void AddMessage(const EESMDialogMessage& inMessage);    // 0x1afffb
     void AddV134Effect(const EESMEffect& inEffect);   // 0x1b000d (not while mB234)
     void AddTimedEffect(long inEffect, unsigned long inTime, bool inIsInCinematic);  // 0x1b005b (EESMTrigger 0x1c9c84)
-    void SortAreas();                       // 0x1b00c1 (by name, after the two default areas)
-    void SortObjects();                     // 0x1b041c (and the object conditions)
-    void SortTriggers();                    // 0x1b0674
-    EESMArea* NewArea();                    // 0x1b074c ("<Area %d>")
-    EESMObject* NewObject();                // 0x1b0a28 (and its object condition)
-    EESMTrigger* NewTrigger();              // 0x1b0b65 ("<Trigger %d>")
-    void MoveAreaDown(unsigned long inIndex);   // 0x1b0beb
-    void MoveObjectDown(unsigned long inIndex); // 0x1b0d37
-    void MoveTriggerDown(unsigned long inIndex);    // 0x1b0e71
-    bool DeleteArea(unsigned long inIndex);     // 0x1b0ec6
-    bool DeleteObject(unsigned long inIndex);   // 0x1b1033
-    bool DeleteTrigger(unsigned long inIndex);  // 0x1b10ed
-    void RemoveTimedEffects(long inEffect);  // 0x1b115a
-    void EraseTimedEffect(unsigned long inIndex);  // 0x1b11d1
-    EESMArea* DuplicateArea(unsigned long inIndex);     // 0x1b120d
-    EESMObject* DuplicateObject(unsigned long inIndex); // 0x1b1719
-    EESMTrigger* DuplicateTrigger(unsigned long inIndex);   // 0x1b1978
     // 0x1b260a: a scenario player choice (0 nature, 1/3 humans, 2/4 computers, 5/6 random, 7.. player n - 6) as one
     // player (the result, -1 if none) and the candidate list (provisional name)
     long ChoosePlayer(long inType, std::vector<long>* outPlayers, bool inSingle);
@@ -141,18 +102,7 @@ public:
     EESMObject* FindObjectByID(long inID);  // 0x1b32a8 (mL64)
     long GetObjectIndex(EESMObject* inObject);  // 0x1b32e4 (-1 if none; EESMObject::SetName)
     // the editor's name lists ("[id]" prefixes while mShowDebugIDs; provisional names)
-    void GetUserAreaNames(std::vector<UWideString>& outNames);  // 0x1b3317 (from area 2)
-    void GetAllConditionNames(std::vector<UWideString>& outNames);  // 0x1b3496 (renames the object conditions)
-    void GetAllEffectNames(std::vector<UWideString>& outNames); // 0x1b37e9
-    void GetUserObjectNames(std::vector<UWideString>& outNames);    // 0x1b38ab (from object 1)
-    void MoveAreaUp(unsigned long inIndex);     // 0x1b3e75 (EESETSArea 0x17d1f3)
-    void MoveObjectUp(unsigned long inIndex);   // 0x1b3f11
-    void MoveTriggerUp(unsigned long inIndex);  // 0x1b4017
     void SetTimedEffectHasRun(EESMEffect* inEffect, bool inFlag);  // 0x1b45cb (EESMEffect 0x1bd860)
-    // the trigger import's line parsers (0x1b4a95 / 0x1b52bb call them; 9 when the key is missing; provisional names)
-    long ParseConditionID(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest);   // 0x1b463b
-    long ParseEffectID(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest);  // 0x1b46bf
-    long ParsePlayerName(const UString& inLine, unsigned long inKind, long* outID, UWideString& outRest);    // 0x1b4796
     EESMEffect* GetTimedEffect(unsigned long inIndex);     // 0x1b9f8f (mEffects[mTimedEffects[i].mEffectIndex], 0 past the end)
     unsigned long GetNumTimedEffects() { return (unsigned long)ee_scenario_timed_count(this->mTimedEffects); }
     EeScenarioTimedEntry GetTimedEntry(unsigned long inIndex) { return ee_scenario_timed_at(this->mTimedEffects, inIndex); }
