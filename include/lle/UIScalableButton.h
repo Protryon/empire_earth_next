@@ -3,6 +3,9 @@
 // exported (RTTI .?AVUIScalableButton@@ only); UIControlsTable::CreateButton creates it. UIScalableButton.cpp
 // (0x1007c38e..0x1007c901). Vtable 0x10099ac0 (??_G in slot 0; CopyData, DrawPolygons, SetLocation overridden).
 // sizeof 0x144. Requires lle/UIButton.h.
+//
+// The class is whole in Rust (rust/crates/ee_ui/src/variantobj.rs, R6 ui round 12): its methods forward to the
+// Rust button.
 #ifndef LLE_UISCALABLEBUTTON_H
 #define LLE_UISCALABLEBUTTON_H
 
@@ -19,11 +22,9 @@ public:
     virtual long CopyData();
     virtual long DrawPolygons();
     virtual void SetLocation(const GE2DPoint& inLocation);
-private:
-    GERectangle mNormalRectangle;           // +0x104 slice rectangles of each bitmap (left cap .. right cap)
-    GERectangle mFocusedRectangle;          // +0x114
-    GERectangle mPressedRectangle;          // +0x124
-    GERectangle mCopiedRectangle;           // +0x134 the current state's, as of the last CopyData
+    // the original's members (+0x104 mNormalRectangle, +0x114 mFocusedRectangle, +0x124 mPressedRectangle: each
+    // bitmap's slice rectangle; +0x134 mCopiedRectangle, the current state's as of the last CopyData; sizeof 0x144)
+    // are the Rust button's (variantobj.rs)
 };
 
 #endif

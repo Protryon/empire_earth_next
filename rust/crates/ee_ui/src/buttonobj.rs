@@ -10,9 +10,9 @@
 //! calls) go through the C++ object, so the state is never borrowed across an op: a check box's `ButtonUp` toggles
 //! and calls back in, a trigger event may read the button.
 //!
-//! The state machine is round 3's (`button.rs`, pinned by its goldens); this object is its [`ButtonHost`]. The
-//! subclasses' records (the check box's, the radio button's, the scroll arrow's) are still C++ members: their
-//! algorithms reach this object for `UIButton`'s part through [`Btn`] (`button_ffi.rs`).
+//! The state machine is round 3's (`button.rs`, pinned by its goldens); this object is its [`ButtonHost`]. A
+//! subclass's record is the object's [`Sub`] (R6 ui round 12: the check box, radio button and tri-state box in
+//! `checkobj.rs`, the scroll arrow, blinking and scalable buttons in `variantobj.rs`).
 
 use core::cell::RefCell;
 use core::ffi::{c_long, c_ulong, c_void};
@@ -103,28 +103,170 @@ pub enum EeUiButtonCall {
     DualMouseRButtonDown = 37,
     /// `UIDualButton::MouseRButtonUp()` -> OK.
     DualMouseRButtonUp = 38,
+
+    // ---- UICheckBox (checkobj.rs)
+    /// The constructor's part after `UIButton`'s: `SetText(*(const UWideString*)a, font b)` beside a box of height
+    /// `f[0]` (the constructor's rectangle's), the bitmap scaled when `f[1]` is nonzero.
+    CheckInit = 40,
+    /// `ChangeWidth(a)`.
+    CheckChangeWidth = 41,
+    /// `CopyData()` -> its result.
+    CheckCopyData = 42,
+    /// `DrawPolygons()` -> its result.
+    CheckDrawPolygons = 43,
+    /// `DrawTextA()` -> its result.
+    CheckDrawText = 44,
+    /// `SetChecked(a != 0)`.
+    CheckSetChecked = 45,
+    /// `SetDisabled(a != 0)`.
+    CheckSetDisabled = 46,
+    /// `SetLocation(f[0], f[1])`.
+    CheckSetLocation = 47,
+    /// `SetText(*(const UWideString*)a, font b)`.
+    CheckSetText = 48,
+    /// `ToggleCheck()`.
+    CheckToggle = 49,
+    /// `ButtonUp()`: the toggle, then `UIButton::ButtonUp()`.
+    CheckButtonUp = 50,
+    /// `ButtonDown()`.
+    CheckButtonDown = 51,
+    /// `MouseLButtonDown()` -> OK.
+    CheckMouseLButtonDown = 52,
+    /// `MouseLButtonUp()` -> OK.
+    CheckMouseLButtonUp = 53,
+    /// `MouseMove(f[0], f[1])` -> OK.
+    CheckMouseMove = 54,
+    /// `GetIsChecked()`.
+    CheckIsChecked = 55,
+    /// `GetTextLabel()` (the check box's, radio button's or tri-state box's).
+    TextLabel = 56,
+
+    // ---- UIRadioButton (checkobj.rs)
+    /// The constructor's part after `UIButton`'s: the other state's bitmaps, a checked button's swap, the bitmap
+    /// offset in a box of height `f[0]`, then `SetText(*(const UWideString*)a, font b)`; `f[1]` the push button,
+    /// `f[2]` checked, `f[3]` the scaled bitmap (nonzero: true).
+    RadioInit = 60,
+    /// `UIRadioButton::Check()`.
+    RadioCheck = 61,
+    /// `UIRadioButton::UnCheck()`.
+    RadioUnCheck = 62,
+    /// `CopyData()` -> its result.
+    RadioCopyData = 63,
+    /// `DrawPolygons()` -> its result.
+    RadioDrawPolygons = 64,
+    /// `DrawTextA()` -> its result.
+    RadioDrawText = 65,
+    /// `GetIsChecked()`.
+    RadioIsChecked = 66,
+    /// `GetTabable()`: not a push button.
+    RadioTabable = 67,
+    /// `SetDownCheckedBitmap(a)`.
+    RadioSetDownChecked = 68,
+    /// `SetDownUncheckedBitmap(a)`.
+    RadioSetDownUnchecked = 69,
+    /// `SetUpCheckedBitmap(a)`.
+    RadioSetUpChecked = 70,
+    /// `SetUpUncheckedBitmap(a)`.
+    RadioSetUpUnchecked = 71,
+    /// `SetLocation(f[0], f[1])`.
+    RadioSetLocation = 72,
+    /// `SetText(*(const UWideString*)a, font b)`.
+    RadioSetText = 73,
+    /// `ButtonUp()`: the virtual `Check()`, then `UIButton::ButtonUp()`.
+    RadioButtonUp = 74,
+    /// `MouseLButtonDown()` -> OK.
+    RadioMouseLButtonDown = 75,
+
+    // ---- UITriStateCheckBox (checkobj.rs)
+    /// The constructor's part after `UIButton`'s: the bitmap offset in a box of height `f[0]`, then
+    /// `SetText(*(const UWideString*)a, font b)`.
+    TriInit = 80,
+    /// `ChangeWidth(a)`.
+    TriChangeWidth = 81,
+    /// `CopyData()` -> its result.
+    TriCopyData = 82,
+    /// `DrawPolygons()` -> its result.
+    TriDrawPolygons = 83,
+    /// `DrawTextA()` -> its result.
+    TriDrawText = 84,
+    /// `GetCheckState()`.
+    TriCheckState = 85,
+    /// `SetCheckState(a)`.
+    TriSetCheckState = 86,
+    /// `SetLocation(f[0], f[1])`.
+    TriSetLocation = 87,
+    /// `SetText(*(const UWideString*)a, font b)`.
+    TriSetText = 88,
+    /// `CycleCheck()`.
+    TriCycle = 89,
+    /// `ButtonUp()`: the cycle, then `UIButton::ButtonUp()`.
+    TriButtonUp = 90,
+
+    // ---- UIScrollButton (variantobj.rs)
+    /// The constructor's part after `UIButton`'s: the slider `a`, the direction `b` (nonzero: down), the polls made.
+    ScrollInit = 95,
+    /// `ButtonDown()`: the slider stepped on the press, after the delay and at every repeat, then `UIButton`'s.
+    ScrollButtonDown = 96,
+    /// `ButtonUp()`: the polls stopped, then `UIButton::ButtonUp()`.
+    ScrollButtonUp = 97,
+
+    // ---- UIBlinkingButton (variantobj.rs)
+    /// The constructor's part after `UIButton`'s: the poll, the record for the blink rate `a`.
+    BlinkInit = 100,
+    /// `SetIsBlinking(a != 0)`.
+    BlinkSetIsBlinking = 101,
+    /// `GetIsBlinking()`.
+    BlinkIsBlinking = 102,
+    /// `CopyData()` -> its result: the fade, then `UIButton::CopyData()`.
+    BlinkCopyData = 103,
+
+    // ---- UIScalableButton (variantobj.rs)
+    /// The constructor's source rectangle `a` (0 normal, 1 focused, 2 pressed) = `f`.
+    ScalableInit = 110,
+    /// `CopyData()` -> its result.
+    ScalableCopyData = 111,
+    /// `DrawPolygons()` -> its result.
+    ScalableDrawPolygons = 112,
+}
+
+/// A subclass's own record (its constructor's init call sets it): what were the C++ subclass's members.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Sub {
+    /// `UIButton` itself, or a subclass without a Rust record.
+    Plain,
+    /// `UICheckBox` (`checkobj.rs`).
+    Check(button::CheckFields),
+    /// `UIRadioButton` (`checkobj.rs`).
+    Radio(button::RadioFields),
+    /// `UITriStateCheckBox` (`checkobj.rs`).
+    TriState(crate::button_variants::TriStateFields),
+    /// `UIScrollButton` (`variantobj.rs`).
+    Scroll(crate::variantobj::ScrollFields),
+    /// `UIBlinkingButton` (`variantobj.rs`).
+    Blink(crate::variantobj::BlinkObj),
+    /// `UIScalableButton` (`variantobj.rs`).
+    Scalable(crate::variantobj::ScalableFields),
 }
 
 /// The Rust UIButton.
 pub struct EeUiButton {
     pub(crate) host: Host,
-    f: RefCell<ButtonFields>,
+    pub(crate) f: RefCell<ButtonFields>,
+    pub(crate) sub: RefCell<Sub>,
 }
 
-/// The button as round 3's state machine sees it: the record copied in and out around every op, and (for a
-/// subclass's algorithm, `button_ffi.rs`) the subclass's record and the forwarder's context.
+/// The button as round 3's state machine sees it: the record copied in and out around every op, and a `SetText`'s
+/// text and font (the label's, `checkobj.rs`).
 pub(crate) struct Btn<'a> {
     pub(crate) o: &'a EeUiButton,
-    // read by the subclasses' host calls (button_ffi.rs), absent from a test binary
-    #[cfg_attr(test, allow(dead_code))]
-    pub(crate) sub: *mut c_void,
-    #[cfg_attr(test, allow(dead_code))]
-    pub(crate) ctx: *mut c_void,
+    /// A `SetText`'s `const UWideString*` and font (the label's create and text ops).
+    pub(crate) text: isize,
+    pub(crate) font: isize,
 }
 
 impl<'a> Btn<'a> {
     pub(crate) fn new(o: &'a EeUiButton) -> Self {
-        Btn { o, sub: core::ptr::null_mut(), ctx: core::ptr::null_mut() }
+        Btn { o, text: 0, font: 0 }
     }
     fn op(&self, op: Op, a: isize) -> isize {
         self.o.host.op(op, a, 0, 0, 0)
@@ -255,7 +397,7 @@ impl ButtonHost for Btn<'_> {
 
 /// Which of the three bitmaps a setter replaces.
 #[derive(Clone, Copy)]
-enum Which {
+pub(crate) enum Which {
     Normal,
     Focused,
     Pressed,
@@ -279,19 +421,22 @@ impl EeUiButton {
         reference(f.pressed_bitmap);
         f.focused_bitmap = focused;
         reference(focused);
-        EeUiButton { host, f: RefCell::new(f) }
+        EeUiButton { host, f: RefCell::new(f), sub: RefCell::new(Sub::Plain) }
     }
 
-    fn fields(&self) -> ButtonFields {
+    pub(crate) fn fields(&self) -> ButtonFields {
         *self.f.borrow()
     }
 
-    fn op(&self, op: Op, a: isize, b: isize) -> isize {
+    pub(crate) fn op(&self, op: Op, a: isize, b: isize) -> isize {
         self.host.op(op, a, b, 0, 0)
     }
 
-    /// The destructor: the texts deleted, the four bitmaps' references and the two sounds released.
+    /// The destructor: the subclass's part first (its destructor ran before `UIButton`'s), then the texts deleted,
+    /// the four bitmaps' references and the two sounds released.
     pub fn release(&self) {
+        self.release_sub();
+        self.release_variant();
         let f = self.fields();
         if !f.text.is_null() {
             self.op(Op::TextDelete, f.text as isize, 0);
@@ -371,7 +516,7 @@ impl EeUiButton {
     }
 
     /// The bitmap setters: the old reference released, the new one taken, then (`Set*Bitmap`) the button dirtied.
-    fn set_bitmap(&self, which: Which, bitmap: *mut c_void, dirty: bool) {
+    pub(crate) fn set_bitmap(&self, which: Which, bitmap: *mut c_void, dirty: bool) {
         let get = |f: &ButtonFields| match which {
             Which::Normal => f.normal_bitmap,
             Which::Focused => f.focused_bitmap,
@@ -466,6 +611,7 @@ impl EeUiButton {
             C::ReplacePressedBitmap => self.set_bitmap(Which::Pressed, a as *mut c_void, false),
             C::DualMouseRButtonDown => return button::dual_mouse_r_button_down(&mut h) as isize,
             C::DualMouseRButtonUp => return button::dual_mouse_r_button_up(&mut h) as isize,
+            _ => return self.call_sub(call, a, b, buf),
         }
         0
     }
