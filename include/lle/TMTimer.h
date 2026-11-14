@@ -19,7 +19,7 @@ public:
     // the event's handle is read here (the original read it at Start; a NULL event crashed there)
     long SetEvent(TSEvent* inEvent)
     {
-        return ee_time_timer_set_event(this->mTimer, inEvent != NULL ? inEvent->mHandle : NULL);
+        return ee_time_timer_set_event(this->mTimer, inEvent != NULL ? inEvent->GetHandle() : NULL);
     }
     long SetInterval(unsigned long inInterval, unsigned long inTimeUnit)
     {

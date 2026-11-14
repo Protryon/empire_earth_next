@@ -62,11 +62,7 @@
 532d9 53675 Sound Engine/Sound Engine.cpp
 53675 53701 Thread System/Thread System.cpp
 53701 53819 Time Manager/Time Manager.cpp
-53ca1 53cee Thread System/TSCriticalSection.cpp
-53cee 53d8b Thread System/TSEvent.cpp
-53d8b 53e55 Thread System/TSReadWriteLock.cpp
 53e55 54203 Thread System/TSScheduler.cpp
-54203 545ff Thread System/TSThread.cpp
 545ff 549b6 Utilities/U2DFractal.cpp
 549b6 56369 Utilities/U2DSparseArray.cpp
 56369 5662f Utilities/UDataCompression.cpp

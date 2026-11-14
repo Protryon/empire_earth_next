@@ -11,6 +11,8 @@ use ee_input as _;
 use ee_error as _;
 // the Time Manager (ee_time): TMPoll, TMTimer, the clocks
 use ee_time as _;
+// the Thread System (ee_ts): the locks, the events, the threads and their registry
+use ee_ts as _;
 // the Graphics Engine's math and the table trigonometry (ee_ge/src/ffi.rs), called by the C++ GE classes and UMath.cpp
 use ee_ge as _;
 // the Graphics Thread's and the camera's math (ee_gfx/src/ffi.rs), called by EECameraControl.cpp

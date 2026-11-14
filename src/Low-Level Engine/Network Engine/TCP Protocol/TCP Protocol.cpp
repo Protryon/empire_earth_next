@@ -65,7 +65,7 @@ static void ToUWide(void* inContext, const uint8_t* inBytes, size_t inLength)
 }
 static PlatEvent* Handle(TSEvent* inEvent)
 {
-    return inEvent->mHandle;
+    return inEvent->GetHandle();
 }
 
 extern "C" void NPIMAllowNewConnections(void** inHandle, bool inAllow)
