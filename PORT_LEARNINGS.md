@@ -19415,3 +19415,105 @@ conflict. This lane's state is now `docs/progress/r6-won-the-lobby-screens.md`.
 ### The full `wontest` set on the final tree
 
 Started on the final tree (61a9d843) with a 3-hour limit, in the background; when this section was written 13 of the 106 programs had run and all 13 exited 0 (0 failures). The loaded machine runs one program every 2-10 minutes, so the set may hit the limit before its end: its log is `build/wl4/wontest_all.log` in the worktree (`ALL EXIT` ends it; 124 means the limit).
+
+## R6: WON's Internet code, round 24 (the AsyncOp machinery's completions and the op base's own calls in Rust; BlockingSocket's blocking calls)
+
+Branch `rust-won-net24`. Measured by net C++ deletion over src + include (without include/rust), as rounds 7 to 23.
+Round 23 named the next step: AsyncOp as a Rust-owned object, so that the hook tables back into AsyncOp's virtuals and
+completions could go.
+
+- **What "AsyncOp as a Rust object" could mean here.** AsyncOp's state, lock, run, finish, kill and completion steps
+  were Rust's since round 13 (`opobj.rs` `EeWonAsyncOp`). What kept C++ was (a) the references (every op is a
+  `RefCount` with a non-virtual count: an op's lifetime is the C++ object's), (b) the virtual `RunHook` /
+  `CleanupHook` / `CallbackHook` of the ~20 C++ op classes, and (c) the completions: every completion is a C++
+  `CompletionBase` object, and the C++ classes made for the machinery itself (`TrackerCompletion`, the op base's
+  `HostCompletion` + `HostParam`) were C++ only because a completion had to be one. (a) and (b) are the callers'
+  classes; (c) is not, so this round made a completion's call Rust's: `EeWonCompletion` (a boxed Rust call) behind one
+  C++ class, `RustCompletion` (its `Complete` runs the body, its destructor frees it), made through the AsyncOp hook
+  table (`new_completion`). Any C++ holder (a queue socket, an op, the HTTP engine) still sees a real
+  `CompletionBase*`, so nothing that holds or reads completions changed; tagging Rust completions in the pointer (as
+  the auth handles are) was rejected because C++ code still dereferences an op's completion (HTTPEngine.cpp, the
+  queue socket's fast completion).
+- **The golden first** (`won_opcore_test`, its own commit over the unmodified ServerOp.cpp, AsyncOp.cpp and
+  AsyncOpWithTracker.cpp): every op kind the game makes (an HTTP get, a directory and an account request, a peer
+  authentication client and server, a certificate op, a firewall detection) and its own values; the setters; a new
+  peer authentication op's members taken from its maker; references and a completion called; another Rust op's
+  numbers, bytes and setters, the HTTP modify time from a local file (its time set with utime); a server context's
+  addresses and failed server (shuffle off: the one-time shuffle draws from `rand`); then running ops (HTTP gets
+  connected to a listener that never answers, waiting for the status line): a tracked timer timing out, a timer's
+  own completion, a killed timer, KillAll (the tracked ops leave the tracker first, so they do not call back), Track
+  again and twice, the base cleanup, Finish with a completion; a repeating receive's completion; an HTTP session's
+  AddOp. Every line carries the objects' reference counts, which is what tells a replaced completion from a leaked
+  one (`tracked refs 2 op refs 4`: the tracker's completion took a reference to the op, the timer's own completion
+  gave its one back). 110 lines, six runs the same.
+  - **Event waits met again.** "Running" first meant "connected with an op tracked", which caught the HTTP get while
+    its send was still tracked (2 vs 3 tracked ops between runs); it now waits until the one tracked op is the status
+    line's `RecvCRMsgOp`. A finished op's completion is delivered later by the pump, so "done" waits for the
+    completion too (`IsCompletionPending`). And the timer thread releases its entry's reference after it finishes the
+    timer, on its own thread: a reference count read right after the timer finished was 1 or 2 (seen once in eight
+    runs, after the move, and the race is the original's too); the driver waits for the timer thread's reference
+    before reading counts.
+- **What moved.**
+  - `opobj.rs`: `EeWonCompletion`, `HeldRef` (a reference a body holds, the deleted classes' `SmartPtr` members),
+    `EeWonAsyncOp::track` (`AsyncOpWithTracker::Track`: the child's completion becomes one holding this op; when it
+    runs while this op is pending and the tracker still has the child, the child leaves the tracker and the virtual
+    `CallbackHook` runs, the original's `Callback`, then the tracker takes the child). The hook table gained
+    `ref_add` / `ref_release` (any `RefCount*`), `new_completion` and `callback_hook`. AsyncOpWithTracker.cpp's
+    `TrackerCompletion` and `Callback` are deleted; `Track` is one forwarder.
+  - `hostbase.rs`: `ServerOp`'s members (`ServerBase`: socket and auth context with a reference each, auth type,
+    length field, client key size and use, the three limits; `ConnectTime` / `SendTime` / `RecvTime` from them)
+    moved into the Rust op; the C++ `ServerOp` is an empty base and `RustServerOp` has the accessors
+    (`ee_won_hostop_base`, `ee_won_hostop_base_get`). The op's own calls are answered on its own objects, which
+    `ee_won_hostop_bind_native` now receives (the `AsyncOp*`, its `EeWonAsyncOp`, its tracker): status, mode, time
+    left, timeout, Finish, the members, Track / KillAll / the base cleanup / the tracker's emptiness, the new timer
+    (a plain `new AsyncOp` from the C++ side, its completion Rust's), the repeating receive (the queue socket's
+    repeat completion Rust's), a completion called, AddRef / Release of C++ objects, and through two more
+    `SOCK_CORE` kinds (`EE_WON_HOST_CORE_HOSTOP`, `_CONTEXT`) another Rust op's numbers, bytes and setters, a peer op's
+    certificate status, the HTTP get's modify time (`WONFile`'s, hostnative.rs) and a server context's addresses and
+    failed server. `HostCall` went from 37 cases to 9: the objects only C++ can make (a socket, a socket op, a plain
+    op, a peer authentication op, an HTTP get), the crypt transform, the HTTP session's `AddOp`, and the objects'
+    Rust objects (`AUTH_CORE`, `SOCK_CORE`). The dead SDK `SendMsgAsync` / `RecvMsgAsync` went with ServerOp's unit
+    code (no caller; the Rust ops send and receive through their own calls). EEWonNet reads the peer op's socket
+    through `GetSocket()` (one accessor-level edit there).
+  - **Order of answers matters**: `ADD_REF` / `RELEASE` of a Rust handle (certificates, sessions, HTTP cache
+    entries: odd addresses, round 20) must reach hostauth.rs / httpcache.rs first; answered before them, a handle went
+    to the C++ `Release` and three drivers crashed (won_authhost_test, won_httpcache_test, won_authsession_test,
+    access violation). The C++ objects' references are now answered after the handles' (`answer_refs`). The Rust
+    unit tests' stand-in objects must be even numbers for the same reason.
+  - **BlockingSocket's seven blocking calls** (Connect, SendBytes, SendMsg, RecvMsg, RecvCRMsg, SendBytesTo,
+    RecvBytesFrom, RecvBytes) are deleted: round 23 left them no game caller. Seven test drivers called them; they
+    keep the original's statements as their own helpers (`tests/won/won_blocking.h`, `WonBlocking::RecvMsg(socket,
+    ...)`), so their goldens, recorded through these calls, still check the socket classes; the op base's blocking
+    calls (hostsock.rs) are compared with the same statements by won_hostsock_test. The three routing and connection
+    drivers that define a stand-in `RustServerOp` keep its members in a map (they were the C++ members).
+- **Behaviour.** None on defined paths. A Track of an op without an object, a repeat on a socket that is not a queue
+  socket and a completion on a NULL do nothing where the C++ dereferenced NULL. The op base's own calls make one call
+  fewer each (no C++ round trip); a child's Track makes one `SOCK_CORE` call (its object).
+- **Reach.** Every `RustServerOp` (the Internet path; the LAN direct connect's peer authentication with the CD key
+  check) and every `AsyncOpWithTracker::Track` (the same ops). EE-SIM makes no op. Gates: the LAN game after the op
+  commit.
+- **Unit tests**: opobj_tests.rs (+3: a tracked completion's call, a replaced one, no maker), hostbase_tests.rs (7: the
+  own values and members, the object members' references and release order, the tracker and its completion, the
+  timers and completions, objects without their Rust objects, another op's members and a server list, an op not
+  bound natively).
+- **What is left in the AsyncOp / WONSocket hook tables.** QueueSocket.cpp's 25 hooks: nine are op calls an
+  `EeWonAsyncOp` answers (one op-object hook would do), four make completions or a timer that can now be
+  `EeWonCompletion`s (the fast completion's original is found by `dynamic_cast` today: a Rust registry would replace
+  it); UDPManager.cpp's the same; the timer thread's and op containers' hook tables (their ops' steps are
+  `EeWonAsyncOp`'s); the crypt transform (a C++ `MsgTransform` over a Rust session: the socket's transform chain
+  would need a Rust variant).
+
+### Gates
+
+| Gate | 5be30f8c (completions, own calls) | db1db659 (blocking calls) | Merged with rust |
+|---|---|---|---|
+| `build.py -j 3 --sim` | 0 / 0 | (with the merge) | 0 / 0 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | (with the merge) | seeds 2-7 identical |
+| `rust_build.py gate` | clippy (`useless_conversion`, a test-only method) and rustfmt failed, fixed before the commit; PASS | PASS (no Rust change) | PASS |
+| `build.py --test-profile windowed-software` | 0 / 0 | (with the merge) | 0 / 0 |
+| `xbuild.py wontest` | 65 programs exit 0 before the full run hit its 50-minute limit; then the 25 that link the op base, the sockets or the drivers changed, exit 0 (the 16 wire-format and crypto programs left for the merged run) | the seven changed drivers and won_hostsock_test, won_asyncop_test, won_socket_test exit 0 | see the final report |
+| `lan_game.py` (harness lock) | `RESULT PASS lan-game PT host=2869 joiner=2873` | (with the merge) | `RESULT PASS lan-game PT host=2862 joiner=2862` |
+
+The merge of rust (at 84001ecf) needed nothing: no conflict, `rust_build.py header` current, `rust_includes.py`
+changed nothing. The second commit's gates were run once, on the merged result (a deletion of methods with no
+caller; the build would have failed on any).
