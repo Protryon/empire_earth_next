@@ -15404,3 +15404,130 @@ The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l
   and keyboard handlers, the polls, the cursor line, the selection rhombus; about 700 lines of C++) and its golden
   did not fit this round; the list boxes did not start either.
 - **Left:** `UIEditBox`, the list boxes, the combo box, the form and the manager; then `UIControl`.
+
+## R6: UIEditBox whole in Rust (ee_ui editobj.rs; branch rust-r6-ui14, 2026-11-13)
+
+Round 13 decided that the edit box's lines could become Rust storage once the class moved whole (its `GetText(i)`
+answers a `const char*`, not a `UWideString&`). This round moves it: one Rust object, `EeUiEdit` (`editobj.rs`), holds
+the box's state (the lines and the display copies as NUL-terminated bytes, the record the text model already used,
+the text and copied rectangles, the four colours, the IME attributes and their copy) and every method of
+`UIEditBox.cpp` and the header's; the C++ class is a shim of one-line forwarders, its constructor (which makes the
+object) and destructor (which frees it), and one host function (`UIEditBoxRust::Op`, the op switch).
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 8b92641e | UIEditBox whole (`editobj.rs`); `edit_ffi.rs` and `edit_draw_ffi.rs` deleted | -864 |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 15,974 at the branch's start
+-> 15,110 (-864).
+
+- **The census.** No census commit: the box's members were private; its friends are `UIComboBox` (the protected
+  mouse and tab handlers, through the virtual forwarders) and the host struct. One game class derives from it
+  (`EESETSAEditBox`, the scenario editor's trigger screen: overrides `ProcessEnterKey` and calls the base one first);
+  its virtual is reached through the new op `VirtProcessEnterKey`. The original's `sizeof` (0x1e0) appears only in
+  comments. Nothing under `src/Empire Earth` changed.
+- **The lines.** Rust bytes, each with its terminator. `GetText(i)` answers the address of line `i`'s bytes (valid
+  until the text changes, as the `UWideString` buffer was; NULL past the lines, where the original read garbage, so
+  `GetTextAsInt` past the lines crashes in `atoi` as the garbage read could have). `GetAllText` and `GetSelectedText`
+  answer the address of a Rust buffer kept until the next answer, which the C++ forwarder assigns to the caller's
+  `UWideString` (`GetSelectedText` leaves it alone without a selection, as before). `UWideString` is left only at
+  that boundary: `SetText`, `AddIMEResultString`, `ChangeIMECompositionString` (its attributes as the `UString`'s
+  NUL-terminated bytes) and `UpdateTranslatedKey` pass bytes in; the clipboard passes bytes both ways.
+- **The text model is unchanged.** `edit.rs`, `edit_keys.rs` and `edit_draw.rs` (rounds 2, 6-8, with their goldens)
+  run over a new host, `Bridge` (`EditHost` + `EditKeysHost`): the record and the text rectangle live in a `Cell`,
+  `mRectangle` and `mBorderThickness` are read through pure ops at each load, the lines are the object's own; the
+  model's store-before/load-after around a re-entering host call is as before. `CopyData`, `DrawPolygons`,
+  `DrawTextA`, `GetSelectedTextRectangle`, the mouse, focus, keyboard-release and `UpdateTranslatedKey` code that
+  stayed C++ until now is Rust (the IME underlines' `ImeHost` is the object).
+- **The ops.** 171-190: `EditKey` (pure: the 19 key questions), `BarMax` (pure), `VirtProcessEnterKey`,
+  `ClipboardSet` / `ClipboardGet` (pure; the host keeps the last `PlatClipboardGetText` buffer and frees it at the
+  next), `TranslatedKey` (the manager's `UpdateTranslatedKey`), `TextInputCancel`, `BaseReleaseKeyboard`,
+  `BaseMouseDoublePressed`, `FormMouseLocation` (pure), the `GELine` ops (create with the caret's or the default
+  constructor, delete, points, colour, draw), `RhombusCreate`/`RhombusDelete` (the edit host's `RhombusSetRect`,
+  `RhombusSetColor`, `RhombusDraw` take the rhombus's address, the status bar's an index), `TextFgColor` (pure),
+  `TextSetBgColor`, `TextSetTransparent`. The rest are the shared ones (`UIObjHost::Base`, `Media`, `Part`; the
+  scroll bar a part held by address) and round 13's (`TextSetBytes`, `TextFontHeight`, `DrawCountDecrement`,
+  `CreateScrollBar`, `BarSetRange`, `BarSetPageSize`, `BarValue`, `BarSetValue`, the polls, `VirtSetRectangle`). The
+  inward calls carry four integers (`ee_ui_edit_call(obj, call, a, b, c, d, f)`): `DeleteText` and `SelectText`
+  take four, `ChangeIMECompositionString` three.
+- **What went.** `edit_ffi.rs` (the `EditRefs` record view and its 40 `ee_ui_edit_*` exports, the 27
+  `ee_uicpp_edit_*` host calls and `ee_uicpp_wide_assign`), `edit_draw_ffi.rs` (the five drawing exports and
+  `EeUiEditSpan`), the C++ `UIEditBoxRust::Refs` and its `static_assert`ed layout, the cbindgen renames of
+  `EditFields`, `EditRefs`, `EditSelection`, `EditIme`; the C++ members (the box is a `UIControl` and one pointer).
+- **Behaviour.** No change on any path the original defined. Two structural differences, invisible to callers: the
+  selection rhombus (a `GERhombus` member) and the IME underlines' line (a `GELine` local of each `DrawPolygons`)
+  are heap objects the Rust object makes in its constructor and deletes last; the underline line keeps its points
+  and colour between draws, and each draw sets both first. `mWorkString` (set once, never read) is gone. Where the
+  original read past a vector (a line or display copy past its end, an IME start line past the lines) the Rust object
+  reads the empty text and a write past the end is skipped; the reference driver counted such reads (1,798 in 20,000
+  sequences, see below) and both sides agreed every time.
+- **The golden** (`build/ui14`: `edit_driver.cpp`, `world.h`). The world: the control's rectangle, border, mouse and
+  the form's mouse, the tab stop and index, the always-dirty flag and background opacity, the 19 key answers, the
+  clipboard (none or one of 16 texts: ASCII, UTF-8 accents and CJK, line breaks, digits, a 34-letter word), texts
+  (font, content, foreground colour; the extent from a fake per-byte width), the scroll bar (value clamped to its
+  range, rectangle, mouse moves changing the value), polls, lines, rhombi. Virtuals call the object back (`do`
+  lines): `SetRectangle` as `UIControl`'s (the rectangle, then the box's `SetLocation`), `ProcessEnterKey` (variant 1:
+  the editor's override reading the line count after), `ReleaseCapturedKeyboard`, the manager's
+  `UpdateTranslatedKey` (the first character typed back into the box, 70%). `orig` is UIEditBox.cpp at the branch's
+  start (04a4f4da) transcribed over the world's ops, calling that commit's record FFI (`edit`, `edit_keys`,
+  `edit_draw`) in its library (`lib_orig.lib`, `orig_include`); `cur` is the Rust object. The driver's pointer
+  answers (`GetText`, `GetAllText`, `GetSelectedText`) and the bytes passed by address (`ClipboardSet`,
+  `TranslatedKey`) are traced as FNV-1a hashes, `ClipboardGet`'s pointer as its text's handle;
+  `CalculateCaretFromMouseLocation`'s index travels in `f[2]`'s bits. 20,000 sequences of 40 calls:
+
+  | Golden | Trace lines | orig = cur | Mutations (sequences failing of 20,000) |
+  |---|---|---|---|
+  | edit box | 20,596,425 | yes (sha256 c77f14c1...) | the caret line drawn without the font height 14,695; the IME colour not restored after its row 1,102; the IME attributes kept without a composition 19,633 (that run stopped at sequence 1,877 on the runaway guard, the rest counted as differing); the display copy keeping the line end 1,385; the selection row placed in the copied rectangle 101; the scroll bar's polygons not drawn 19,990; `ButtonDown` skipped 14,936; the focus opacity never saved 3,250 |
+
+  The world's random generator runs on across sequences, so a mutation that drops or adds an op with a random
+  answer (a draw's result) desynchronises every later sequence: such counts are near 20,000 whatever the mutation's
+  reach. A ninth mutation (the two texts deleted in the other order) was not applied: its two-line site did not
+  survive the shell's quoting.
+  The first 25 sequences are `golden_editobj.txt` (25,464 lines), replayed by cargo (`editobj_tests.rs`, with the
+  replay's new `last_bytes` for the typed key and a pure hook for the clipboard), with a changed-font-height and a
+  changed-text test.
+- **What the driver avoids** (each hung the original, so neither side can be traced through it): a box narrower than
+  a character (60 px minimum: a multi-line box's word wrap then never fits a character and loops); a multi-line box
+  without a visible row (24 px minimum: `CopyData`'s copied selection ends at `last - first - 1` = 2^32 - 1 and
+  `DrawPolygons` draws that many rhombi); and an IME composition in a multi-line box (a composition scrolled above the
+  copied window, or one whose text was replaced under it, makes `CopyData`'s end walk or `DrawPolygons`' underline
+  walk run past the lines for 2^32 steps). The multi-line IME ranges keep round 8's golden of `edit_draw.rs`; the
+  object's multi-line IME branch of `CopyData` (the line lengths it hands over) has no golden and runs only when a
+  player composes in a multi-line box. These are the original's own hangs and were not fixed. Even so, a mutated
+  run's diverging world found another hang (above): the driver's avoidance is not complete.
+- **NULL-receiver audit** (WON rounds 30-31). Every original method read a member of `this` first, took a member's
+  address for the record FFI (the Rust model then read through it), or called through the vtable, so a NULL receiver
+  crashed the original as it crashes the forwarder's `mRust` read: no early return needed keeping. `ButtonDown`,
+  `MouseRButtonDown`/`Up`, `GetTextAsInt` and `SetText(unsigned long)` stay inline.
+- **Lessons.**
+  - The driver's runaway guard counts every host call, pure ones included: the first hang called only pure ops (an
+    unbounded walk measuring nothing) and so never reached a guard on traced ops, and the first runaway wrote 1.9 GB
+    in three minutes before it was killed. The guard exits with a `RUNAWAY` line naming the op.
+  - A `\n` inside a Python heredoc run through this machine's bash tool reached the file as a real newline (twice);
+    C string literals edited that way were fixed with the Edit tool.
+  - A changed-world test must change an answer the object reads before the world changes it again: the first
+    clipboard, key and measure perturbations were all overwritten or not compared; a changed inward call (another
+    text for `SetText`) and a changed font height fail as they should.
+- **What runs it.** EE-SIM never builds an edit box: the oracle is unchanged by construction (seeds 2-3 identical).
+  The scenario editor gate (`sim_editor.py`, 1,820 lines unchanged) builds the editor's edit boxes (the unit-type and
+  player tabs' number boxes, the trigger screen's `EESETSAEditBox`es through the controls table and directly), sets
+  their texts (`SetText`, `SetText(unsigned long)`) and reads them back (`GetText`, `GetTextAsInt`), so the
+  constructor, the text model's `SetText` path, the line answers and the destructor run there through the shim
+  (which of the editor's boxes it builds was not checked one by one).
+  **Only the tour shows:** every edit box draw (the text rows, the caret, the selection rhombi, the IME underlines,
+  the scroll bar of a multi-line box), typing (`UpdateTranslatedKey` through the manager), the key dispatch with its
+  repeat polls, the clipboard, mouse selection and drag scrolling, focus (`TabbedTo`/`TabbedFrom`, the background
+  opacity), the IME. The tour reaches the main menu, the settings tabs, single player, the random map setup and 60 s
+  of play; it types into no edit box, so the typing paths stay with the golden; the settings and save screens and
+  the LAN lobby (whose name box is WON's own, not this class) are where a person types into one.
+- **Gates.** After the commit: `build.py -j 3 --sim` 0/0, the Rust gate (all tests and clippy passed, rustfmt
+  failed on one line of `editobj.rs`; fixed by amending, with the line endings of the files written on this machine
+  put back to LF: the Write tool and Python's text mode had made `editobj.rs`, `editobj_tests.rs`, `obj.rs`,
+  `lib.rs`, `replay.rs` and `cbindgen.toml` CRLF), the oracle seeds 2-3 identical, `sim_editor.py` PASS (1,820
+  lines), the test-profile build 0/0 and the tour (`fixture_game.py --exercise tour --play-seconds 60 --data <main
+  tree>` under the harness lock): `RESULT PASS tour`, `gx_errors` {}. On the result merged with `rust` (3337f3eb, a
+  clean merge; `rust_build.py header` and `rust_includes.py` changed nothing): build 0/0 (EE-AOC and EE-SIM), the
+  Rust gate PASS, the oracle seeds 2-7 identical, the editor gate PASS (1,820 lines), the test-profile build 0/0,
+  the tour `RESULT PASS tour` (`gx_errors` {}).
+- **Left:** the list boxes (`UIListBox<T>`: the non-template state into one Rust object, per-T host calls), the
+  combo box, the form and the manager; then `UIControl`.
