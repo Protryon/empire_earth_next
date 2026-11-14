@@ -311,3 +311,20 @@ fn the_cast_questions() {
     cast_fields(&f, &mut cast, 9);
     assert_eq!(cast.space_terrain, 9);
 }
+
+#[test]
+fn every_kind_has_its_subclass_base() {
+    // the twenty EECC* classes' bases (ee/EECC*.h as they were): global, location, unit
+    for k in [23, 25] {
+        assert_eq!(target_kind(k), EE_CALAMITY_TARGET_GLOBAL, "kind {k}");
+    }
+    for k in [3, 4, 8, 9, 15, 16, 17, 19, 24, 26] {
+        assert_eq!(target_kind(k), EE_CALAMITY_TARGET_LOCATION, "kind {k}");
+    }
+    for k in [7, 10, 13, 14, 18, 20, 21, 22] {
+        assert_eq!(target_kind(k), EE_CALAMITY_TARGET_UNIT, "kind {k}");
+    }
+    for k in [-1, 0, 1, 2, 5, 6, 11, 12, 27, 30] {
+        assert_eq!(target_kind(k), EE_CALAMITY_TARGET_NONE, "kind {k}");
+    }
+}

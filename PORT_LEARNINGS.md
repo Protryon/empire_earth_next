@@ -21376,3 +21376,82 @@ the base's and the continent's data into Rust records.
   2-3, and the four capture profiles passed at seeds 2-3 on the area record. Not run: `gates.sh` or any harness
   session (the tour is the only thing that draws: nothing here is drawn, the hulls are read by the AI only),
   `eedata check`/`cppgate` (no data change), macOS or Linux builds.
+
+## Calamities lane, round 2: the twenty EECC* subclasses gone into the host's switch; the six contagion functors as one Rust record (ee_tech calamity_class.rs target_kind, contagion_functor.rs; branch rust-calamities2, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| b74c9107 | CALK at each calamity's start (TEST ONLY), golden from the unmodified C++ | +3 -1 (test hook) |
+| a8e8d6d5 | the twenty `EECC*` classes deleted: the manager makes one of the three bases by the kind's target, every class's world steps are `EECalamityUpdate.cpp`'s switch by enum | +1224 -3261, net -2037 |
+| 63b4adfe | the six functor classes as one `EEContagionFunctor` over `EeContagionFunctorFields` | +270 -910, net -640 |
+| b30baf18 | `EECalamity::Save` through the Rust save (round 1 had left the C++ chain) | +4 -78, net -74 |
+
+The round's C++: net -2,751 for the moves. The directory's units went from 6,293 to 4,172 lines (with the 439-line
+test capture), 40 headers and 26 units fewer (`include/ee/EECC*.h`, `EECC*.cpp`, `EE*Functor.cpp`).
+
+**The measure.** After round 1 every `EECC*` class held only its world steps: a static `StartStep` (the
+`EeCalamityOp::ClassStep` calls of the Rust `Start`/`Stop`, by index) and `UpdateStep` (the class's own update ops),
+their helpers (`CreateCracks`, `CreateStorm`, `ClearArea`, `Teleport`, `CloakGroup`, ...) and a few special
+virtuals. The world calls in them (the effect manager, units' orders and flags, the map, goals, sounds, the
+camera) are not Rust yet, so they cannot move into Rust as such; but the classes as C++ types had no reason left
+to exist. Each class unit carried 30-40 lines of includes and comments and a 20-line header around its bodies.
+
+- **The bases by the kind's target.** `ee_calamity_class_target_kind` gives the base each kind's subclass derived
+  from (global: the cloaking, the line of sight; location: ten kinds; unit: eight); `LoadCalamityClasses` makes
+  `EEGlobalCalamityClass`, `EELocationCalamityClass` or `EEUnitCalamityClass`. `GetCalamityClass<T>`'s dynamic_cast
+  still answers by the base (the callers pass the kind's enum, so the answer is the same).
+- **One host switch.** `EECalamityUpdate.cpp`'s `Call` answers every op of every run: the shared ones as before,
+  each class's update op (they never overlapped between classes, except `ApplyEffect`, `PlacedEffect` and
+  `CreateHelper`, whose bodies were the same or now branch on the enum), and `ClassStep` by `enum * 8 + index`. The
+  step pointers (`EECalamityStepFn`, `mStep`) are gone; the three run functions share one RAII run object. Calls,
+  their order and the CALT/CALW records are unchanged: the calamity capture's 187 digests stayed equal, down to the
+  capture files' sizes.
+- **The special virtuals.** The special attack's `CanCastAt` (the base with 2 allowed) is `EEUnitCalamityClass`'s
+  with the `SpecialAttack` mode by enum; the line of sight's was already the global base's body (ICF); the mind
+  control's `AffectsOwnUnits` is a test of the enum in `ApplyEffect`; the volcano's `Place` is `EECalamityClass::Place`
+  by enum and its `GetRandomLocation` (the volcano building's eruptions) `EELocationCalamityClass`'s. The cloaking's
+  `Virtual4C` and the special location's `+0x50` had no caller.
+- **Hooks in other lanes' files** (one line each): `EEUIFMainGame.cpp` reads the class's `mUnitClassIndex` (the
+  `dynamic_cast<EECCVolcano*>` before it); `EEUCBuilding.cpp`, `EECPAttackSubGroup.cpp` and `EECPASGUMechProphet.cpp`
+  use the base types.
+- **Exactness checks while merging bodies.** Places where a merged body could differ from the original and were
+  kept as they were: the hurricane's first effect is created without a handle pointer (the others with one, and
+  only the area effects return it); the time warp's departure plays the main sound (the secondary without one) and
+  its arrival the secondary; `EEFindPlacement` leaves its transformation untouched when it fails, so the teleport's
+  two tries can each start from a fresh one. Pure lookups the originals made and dropped (`GetContagionHelper` with
+  an unused result) are not repeated.
+- **The functors.** Each kind's constructor arguments (what `Initialize` passed), the getters the helper's update
+  reads, `Update`'s discrete time and `Apply`'s hit are `contagion_functor.rs`; `Infect`, `Cure` and `Apply`'s world
+  steps are one C++ switch by kind. Two details mattered: the fire and the plague hit whenever there was a discrete
+  update, even for 0 damage (`TakeHit(0)` has side effects), the leprosy and the area effect only above 1; and the
+  discrete time converts as each class's member type (the area effects' `long mUpdateTime`, the others' `unsigned
+  long`). The leprosy's and the area effect's `Cure` were the base's empty one: no CONT record for them. The CALI
+  functor record is written field by field as the six classes wrote it (equal digests).
+- **Save.** Round 1 had moved `EECalamity::Load` onto the Rust record but left `Save`'s 70-line write chain; it now
+  calls `ee_calamity_record_save` over the same I/O callback (CALK compares every calamity's save bytes, now also at
+  each start).
+- **The captures first.** CALK now also records each calamity at its start (`AddCalamity`, after it is kept), so the
+  five calamities that live under five seconds (the area effect, special attack, conscription, drop object, special
+  location) have their save and reload compared too: 1,583 -> 1,649 records per game, recorded from the unmodified
+  C++ before the moves.
+- **Tests.** calamity_class_tests.rs 14 (+1: every kind's base), contagion_functor_tests.rs 4 (ee_tech 87).
+- **Not moved** (see docs/progress/r5b-calamities.md): the helper's unit list and the calamity's target and caster
+  as ids (a conversion's new unit, swapped in by `SwapUnit`, can be pending: no id yet), the manager's lists (C++
+  objects), the world steps themselves.
+- **Tour only.** Everything in the host switch that draws, plays or moves the camera (the effects, the sounds, the
+  earthquake's shake and camera distance, the media loads) runs in EE-SIM without output. No fixture command casts
+  a calamity (`EETestFixture.cpp` has clicks, keys, orders and box selections, no cast), so the tour could not
+  cast the earthquake, hurricane, volcano and meteor storm; the lead should cast them by hand (a Prophet's powers)
+  and look at the cracks, the storm, the volcano and the meteors.
+- **Gates.** Commit 1 (on the unmodified code): build `--sim` 0/0, calamity capture seeds 2-3: every tag equal but
+  CALK (1,583 -> 1,649 records, recorded as the new golden). Commit 2: build `--sim` 0/0, calamity capture 2-3 PASS
+  (187 digests, the capture files byte for byte the same size), oracle 2-3 identical. Commit 3: the same (calamity
+  187 PASS, oracle 2-3 identical); ee_tech tests 87, clippy and rustfmt clean. Commit 4: oracle 2-3 identical, the
+  saveload `oracle,calamity` 4/4 each with `--expect` PASS (its calamity capture ran against the golden file the
+  merge of `rust` had just extended with PMST, so it was rerun on the merged tree). Merged with `rust` 0853699a (one
+  conflict, ee_tech's lib.rs module list; headers current, no include to narrow): build `--sim` 0/0; oracle seeds
+  2-7 identical to `ref`; captures at seeds 2-3: oracle (171 digests), late (172), space (173), calamity (189),
+  scenario (22) PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4,
+  mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS; the test profile
+  0/0.

@@ -273,13 +273,8 @@ void EEContagionHelper::SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 // (Spread, 0x4b62dd, is that Rust update's spread)
 void EEContagionHelper::Update(float inElapsedTime)
 {
-    EeContagionParams theParams = EeContagionParams();
-    theParams.spread_time = (uint32_t)this->mFunctor->GetSpreadTime();
-    theParams.chance = this->mFunctor->GetChance();
-    theParams.radius = this->mFunctor->GetRadius();
-    theParams.flags = (this->mFunctor->SkipsSpread() ? EE_CONTAGION_SKIPS_SPREAD : 0) |
-                      (this->mFunctor->InfectsAlliesOnly() ? EE_CONTAGION_ALLIES_ONLY : 0) |
-                      (this->mCalamity->mClass->mIsBlockedByImmunity ? EE_CONTAGION_BLOCKED_BY_IMMUNITY : 0);
+    // the functor's getters (ee_tech contagion_functor.rs params)
+    EeContagionParams theParams = ee_contagion_functor_params(this->mFunctor, this->mCalamity->mClass->mIsBlockedByImmunity);
     EEContagionHelperHost theHost;
     theHost.mHelper = this;
     EeContagionHostFfi theFfi;
@@ -303,8 +298,8 @@ void EEContagionHelperHost::Call(void* inContext, const EeContagionCall* inCall,
     theReply = EeContagionReply();
     switch (theCall.op) {
     case EeContagionOp::UpdateUnits:
+        // (every functor's UpdateUnits was empty)
         EECalamityCaptureContagionEvent(kContagionUpdateUnits);   // CONT (TEST ONLY)
-        theHelper->mFunctor->UpdateUnits(&theHelper->mUnits);
         break;
     case EeContagionOp::FunctorUpdate:
         EECalamityCaptureContagionEvent(kContagionFunctorUpdate);   // CONT (TEST ONLY)

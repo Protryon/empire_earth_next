@@ -19,6 +19,8 @@
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
+#include "lle/USingleton.h"
+#include "ee/EECalamityManager.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEMouse.h"
@@ -52,15 +54,18 @@ long EEUnitCalamityClass::GetDefaultTarget(GE3DPoint&, unsigned long, unsigned l
     return theUnitID;
 }
 
-// FUNCTION: EXE 0x4b7157
-// Checks the base cast rules, then refuses (1) unless the target unit exists and is a valid target
+// FUNCTION: EXE 0x4b7157 (and EECCSpecialAttack's override 0xb32da)
+// Checks the base cast rules (the special attack counting status 2 as allowed), then refuses (1) unless the target
+// unit exists and is a valid target
 long EEUnitCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX,
                                     unsigned long inY, bool inCheck, EEUnit* inTargetUnit)
 {
     // the rules are Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
+    EeCalamityCastMode theMode = this->mClassEnum == kCalamitySpecialAttack ? EeCalamityCastMode::SpecialAttack
+                                                                             : EeCalamityCastMode::Unit;
     EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
     return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
-                             EECalamityCanCastAt(this, EeCalamityCastMode::Unit, inUnit, inX, inY, inCheck, inTargetUnit));
+                             EECalamityCanCastAt(this, theMode, inUnit, inX, inY, inCheck, inTargetUnit));
 }
 
 // ICF-FOLDED: EXE 0x63c6cd

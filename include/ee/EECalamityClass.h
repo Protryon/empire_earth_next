@@ -79,8 +79,9 @@ static_assert(sizeof(EECalamityData) == 236, "on-disk record: 236 bytes on every
 
 // New (port): the class's effects, sounds and numbers in one place for every class (ee_tech calamity_class.rs). The
 // numbers are the Rust record EeCalamityClassFields the class derives from (the base members, then the union of the
-// twenty subclasses' own); the subclasses kept only their world steps, and each per-class virtual below is the base's,
-// run by tables keyed by mClassEnum.
+// twenty subclasses' own). The subclasses are gone (calamities lane, round 2): the manager makes one of the three
+// bases by the kind's target (ee_tech calamity_class.rs target_kind), each per-class virtual below is the base's, run
+// by tables keyed by mClassEnum, and the classes' world steps are the host's (EECalamityUpdate.cpp).
 class EECalamityClass : public EeCalamityClassFields {
 public:
     EECalamityClass();                      // 0xadcd9 (every number 0, no effect, sound or functor)
@@ -98,7 +99,8 @@ public:
     // sounds and unit class media (the bool goes to EEGraphicEffect::Load)
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);
     virtual void PlaySound(EECalamity* inCalamity);   // +0x2c (EECalamity::PlaySound calls it)
-    virtual void Place(EEUnit* inUnit, unsigned long inX, unsigned long inY);       // (the volcano reads inUnit->mPlayer) +0x30 (0x2907a3: empty)
+    // +0x30 (0x2907a3: empty): the volcano's (0xb5137) makes units step aside from its site
+    virtual void Place(EEUnit* inUnit, unsigned long inX, unsigned long inY);
     virtual void UnloadMedia(EEPlayer* inPlayer);  // +0x34 (~EECalamity calls it)
     virtual long Update(EECalamity* inCalamity, float inElapsedTime);  // +0x38 (Rust: ee/EECalamityUpdate.h)
     // +0x3c (0xadec7): 1 = refused, 2 = protected by an area effect, 0 = fine (tile (inX, inY), when inCheck)
