@@ -215,6 +215,78 @@ enum class EeNetClOp : uint32_t {
   ProcessLocalUserInput = 41,
 };
 
+/// The tuning's calls out; a, b, c as each op says, the answer as isize.
+enum class EeNetTuOp : uint32_t {
+  /// a field (EeNetTuField) -> its value
+  Get = 0,
+  /// a field, a value
+  Set = 1,
+  /// 0 mChangeSendIntervalEvent, 1 mPauseGameEvent, 2 mUnpauseGameEvent: Set()
+  EventSet = 2,
+  /// a message number -> ee_net_mm_outstanding
+  MmOutstanding = 3,
+  /// -> ee_net_mm_highest_response_time
+  MmHighestResponseTime = 4,
+  /// -> ee_net_mm_highest_cpu
+  MmHighestCpu = 5,
+  /// -> ee_net_mm_lowest_ct
+  MmLowestCt = 6,
+  /// a message number: ee_net_mm_resend
+  MmResend = 7,
+  /// a message number -> ee_net_mm_who_has_not_responded
+  MmWho = 8,
+  /// a slot, a message number -> ee_net_mm_who_has_not_responded_next
+  MmWhoNext = 9,
+  /// -> ee_net_mm_num_clients
+  MmNumClients = 10,
+  /// -> ee_net_mm_slowest_responder
+  MmSlowestResponder = 11,
+  /// -> ee_net_mm_slowest_client_cpu
+  MmSlowestClientCpu = 12,
+  /// on: ee_net_mm_set_force_ct
+  MmSetForceCt = 13,
+  /// a slot: UnregisterSlot
+  UnregisterSlot = 14,
+  /// BeforeRemovingPlayers()
+  BeforeRemovingPlayers = 15,
+  /// slot, was booted, game is exiting: BootPlayer
+  BootPlayer = 16,
+  /// slots, their count, the warning: ReportLaggers(std::vector of the slots, warning)
+  ReportLaggers = 17,
+  /// a slot: ProcessLocalUserInput(new NEMRemovePlayer(slot, true, false, false), kSlotNone)
+  RemovePlayerInput = 18,
+};
+
+/// The server's fields the tuning reads and writes
+enum class EeNetTuField : uint32_t {
+  /// mSendInterval (read, written)
+  SendInterval = 0,
+  /// mSendIntervalIncrement
+  SendIntervalIncrement = 1,
+  /// mMaxSendInterval
+  MaxSendInterval = 2,
+  /// mPTsPerSecond (read, written)
+  PTsPerSecond = 3,
+  /// mMaxPhysicsTicksPerSecond
+  MaxPTsPerSecond = 4,
+  /// mMinPhysicsTicksPerSecond
+  MinPTsPerSecond = 5,
+  /// mPhysicsTickCostFactor (the f32's bits)
+  CostFactor = 6,
+  /// mDefaultSendInterval
+  DefaultSendInterval = 7,
+  /// mLastCTMessageID
+  LastCtMessageId = 8,
+  /// mGameState
+  GameState = 9,
+  /// mIsMultiplayerSession
+  IsMultiplayerSession = 10,
+  /// the virtual GetCurrentCommunicationsTick()
+  CurrentCommunicationsTick = 11,
+  /// mPTsPerCT (written)
+  PTsPerCt = 12,
+};
+
 /// The base class's (`NESynchronousCommunications`) fields this class read and wrote
 enum class EeNetClBase : uint32_t {
   /// `mLastTickReceived` (a `long`: -2 before the connection, -1 "none")
@@ -293,11 +365,16 @@ struct EeNetMsgMgr;
 /// The client's and the server's message recorder (`NERecordPlayback`).
 struct EeNetRecPlay;
 
+/// The server's tuning and booting state (NESynchronousServer's network and CPU tuning).
+struct EeNetTune;
+
 using EeNetMmHostFn = ptrdiff_t(*)(void *ctx, EeNetMmOp op, size_t a, size_t b, size_t c, size_t d);
 
 using EeNetQHostFn = ptrdiff_t(*)(void *ctx, EeNetQOp op, size_t a, size_t b, size_t c, size_t d);
 
 using EeNetClHostFn = ptrdiff_t(*)(void *ctx, EeNetClOp op, size_t a, size_t b, size_t c, size_t d);
+
+using EeNetTuHostFn = ptrdiff_t(*)(void *ctx, EeNetTuOp op, size_t a, size_t b, size_t c, size_t d);
 
 extern "C" {
 
@@ -517,6 +594,34 @@ uint8_t ee_net_cl_record_playback_mode(const EeNetClient *c);
 void ee_net_cl_set_slow_playback(const EeNetClient *c);
 
 void ee_net_cl_set_normal_playback(const EeNetClient *c);
+
+/// # Safety
+/// `host` answers every op for `ctx` until `ee_net_tu_free`.
+EeNetTune *ee_net_tu_new(void *ctx, EeNetTuHostFn host, uint32_t send_interval_decrement);
+
+/// # Safety
+/// `t` from `ee_net_tu_new` (or NULL), used by nothing after.
+void ee_net_tu_free(EeNetTune *t);
+
+bool ee_net_tu_tune_server(const EeNetTune *t);
+
+bool ee_net_tu_tune_for_slow_network(const EeNetTune *t);
+
+bool ee_net_tu_tune_for_slow_cpu(const EeNetTune *t);
+
+void ee_net_tu_boot_all_laggers(const EeNetTune *t, uint32_t number);
+
+void ee_net_tu_boot_the_slowest_responder(const EeNetTune *t);
+
+void ee_net_tu_boot_the_slowest_client_cpu(const EeNetTune *t);
+
+uint8_t ee_net_tu_slowest_client_cpu(const EeNetTune *t);
+
+/// The tuning's own state (the tests): 12 values, `tune.rs` Tune::state's order.
+///
+/// # Safety
+/// `out` holds 12 values.
+void ee_net_tu_state(const EeNetTune *t, uint32_t *out);
 
 }  // extern "C"
 
