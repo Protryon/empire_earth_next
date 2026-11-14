@@ -302,7 +302,7 @@ void EESETSETObject::UpdateName(EESMEffect* inEffect, EESETSEffectControls* inCo
             break;
         }
         inEffect->mName = theName;
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mNameEditBox->SetText(theName);
+        gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetNameEditBox()->SetText(theName);
     }
 }
 

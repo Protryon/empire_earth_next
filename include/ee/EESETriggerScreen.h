@@ -31,6 +31,10 @@ public:
 
 extern bool gB4C3220;                       // 0x4c3220 (= true; set while an entry is written back; provisional name)
 
+// Whole in Rust (ee_screens editor_tscreen.rs: its controls, the entry list and its buttons, the sub-tabs, the
+// store and load of the open entry, entering and leaving); the class keeps the five sub-screens and forwards.
+struct EeScreensSeTriggerTab;
+
 class EESETriggerScreen : public EEUIFSEMainGroup {
 public:
     EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont);  // 0x17b0b7
@@ -71,35 +75,19 @@ public:
     void FillList();                        // 0x17c99f: refills the list from the current screen's names
 
     // inline (COMDAT 0x17eaab, called out of line by EESETSCondition::Store): the name edit box's first line
-    const char* GetName() const { return this->mNameEditBox->GetText(0); }
-    // inline accessors (EESETSCondition::Store/Virtual2C)
-    UIEditBox* GetNameEditBox() const { return this->mNameEditBox; }
-    UIEditBox* GetTextEditBox() const { return this->mTextEditBox; }
-    // read from outside (the scenario combo boxes' jump to an entry, the editor gate): the entry list, a sub-tab,
-    // the open sub-screen
-    UILBString* GetList() const { return this->mList; }
-    UIRadioButton* GetTab(long inScreen) const { return this->mTabs[inScreen]; }
-    long GetCurrentScreen() const { return this->mCurrentScreen; }
+    const char* GetName() const { return this->GetNameEditBox()->GetText(0); }
+    // the name and description boxes (EESETSCondition::Store/Virtual2C); read from outside (the scenario combo
+    // boxes' jump to an entry, the editor gate): the entry list, a sub-tab, the open sub-screen
+    UIEditBox* GetNameEditBox() const;
+    UIEditBox* GetTextEditBox() const;
+    UILBString* GetList() const;
+    UIRadioButton* GetTab(long inScreen) const;
+    long GetCurrentScreen() const;
 
     EESETSBaseObject* mScreens[5];          // +0x04 (0 trigger, 1 condition, 2 effect, 3 object, 4 area)
-    GERectangle mR18;                       // +0x18
-    UIEditBox* mNameEditBox;                // +0x28 (the entry's name; EESETSCondition::Load SetText)
-    UITextLabel* mNameLabel;                // +0x2c (ctor: UITextLabel id 0x7dc)
-    UITextLabel* mTextLabel;                // +0x30 (ctor: UITextLabel id 0x962)
-    UIEditBox* mTextEditBox;                // +0x34 (the entry's text; GetAllText / SetText; id 0x963)
-    // members below from the ctor 0x17b0b7 (control ids) and the dtor 0x17bf97 (deletes through slot 0); names
-    // are provisional.
-    UIRadioButton* mTabs[5];                // +0x38 (ids 0x7d0..0x7d4: one per mScreens entry)
-    EESETSShowIDsCheckBox* mShowIDsCheckBox;  // +0x4c (id 0x7de)
-    UILBString* mList;                      // +0x50 (id 0x7da: the entries)
-    UIButton* mNewButton;                   // +0x54 (id 0x7d5)
-    UIButton* mDuplicateButton;             // +0x58 (id 0x7d6)
-    UIButton* mDeleteButton;                // +0x5c (id 0x7d7)
-    UIButton* mAlphaSortButton;             // +0x60 (id 0x7dd)
-    UIButton* mIncPriorityButton;           // +0x64 (id 0x7d8)
-    UIButton* mDecPriorityButton;           // +0x68 (id 0x7d9)
-    long mCurrentEntityGroup;               // +0x6c (ctor 9)
-    long mCurrentScreen;                    // +0x70 (ctor 0)
+    GERectangle mR18;                       // +0x18 (the panel's rectangle)
+    // the tab (ee_screens editor_tscreen.rs: its controls, the open sub-screen and its control group)
+    EeScreensSeTriggerTab* mRust;
     // sizeof 0x74 (its `new`)
 };
 

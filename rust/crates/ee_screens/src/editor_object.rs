@@ -195,11 +195,12 @@ pub const EE_SCREENS_SEPL_COMBO_LINES_FAMILIES: i32 = 1;
 pub const EE_SCREENS_SEPL_COMBO_LINES_STRINGS: i32 = 2;
 
 /// The trigger screens' screen event triggers (`EE_SCREENS_SEPL_OP_SCREEN_EVENT`'s i1 bits): checked, unchecked,
-/// selection changed, button up.
+/// selection changed, button up, Enter (an edit box).
 pub const EE_SCREENS_SEPL_ON_CHECKED: i32 = 1;
 pub const EE_SCREENS_SEPL_ON_UNCHECKED: i32 = 2;
 pub const EE_SCREENS_SEPL_ON_SELECTION: i32 = 4;
 pub const EE_SCREENS_SEPL_ON_BUTTON_UP: i32 = 8;
+pub const EE_SCREENS_SEPL_ON_ENTER: i32 = 16;
 
 /// The object screen (`EESETSObject`).
 #[derive(Debug, Default)]

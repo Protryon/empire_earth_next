@@ -111,12 +111,12 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
     case kSETriggerScreenTrigger:
         theSelection = this->GetSelectionIndex();
         if (!UIsNone32(theSelection)) {
-            theEvent = theScreen->mTabs[kSETriggerScreenTrigger]->GetTriggerEvent(kControlTriggerChecked);
+            theEvent = theScreen->GetTab(kSETriggerScreenTrigger)->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
                 theEvent->Reference();
-            theScreen->mTabs[kSETriggerScreenTrigger]->SetTriggerEvent(kControlTriggerChecked, NULL);
-            theScreen->mTabs[kSETriggerScreenTrigger]->Check();
-            theScreen->mTabs[kSETriggerScreenTrigger]->SetTriggerEvent(kControlTriggerChecked, theEvent);
+            theScreen->GetTab(kSETriggerScreenTrigger)->SetTriggerEvent(kControlTriggerChecked, NULL);
+            theScreen->GetTab(kSETriggerScreenTrigger)->Check();
+            theScreen->GetTab(kSETriggerScreenTrigger)->SetTriggerEvent(kControlTriggerChecked, theEvent);
             theScreen->mScreens[kSETriggerScreenTrigger]->mSelection = theSelection;
             theScreen->ShowTab(kSETriggerTabTrigger);
         }
@@ -129,12 +129,12 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
                 if (gWorld.mScenarioManager->GetCondition(theIndex)->GetType() != kSMConditionObject)
                     continue;
                 if (theIndex != 0 && theSelection >= theIndex) {
-                    theEvent = theScreen->mTabs[kSETriggerScreenObject]->GetTriggerEvent(kControlTriggerChecked);
+                    theEvent = theScreen->GetTab(kSETriggerScreenObject)->GetTriggerEvent(kControlTriggerChecked);
                     if (theEvent != NULL)
                         theEvent->Reference();
-                    theScreen->mTabs[kSETriggerScreenObject]->SetTriggerEvent(kControlTriggerChecked, NULL);
-                    theScreen->mTabs[kSETriggerScreenObject]->Check();
-                    theScreen->mTabs[kSETriggerScreenObject]->SetTriggerEvent(kControlTriggerChecked, theEvent);
+                    theScreen->GetTab(kSETriggerScreenObject)->SetTriggerEvent(kControlTriggerChecked, NULL);
+                    theScreen->GetTab(kSETriggerScreenObject)->Check();
+                    theScreen->GetTab(kSETriggerScreenObject)->SetTriggerEvent(kControlTriggerChecked, theEvent);
                     theScreen->mScreens[kSETriggerScreenObject]->mSelection = theSelection - theIndex;
                     theScreen->ShowTab(kSETriggerTabObject);
                     return 0;
@@ -142,12 +142,12 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
                 break;
             }
             if (theSelection > 0) {
-                theEvent = theScreen->mTabs[kSETriggerScreenCondition]->GetTriggerEvent(kControlTriggerChecked);
+                theEvent = theScreen->GetTab(kSETriggerScreenCondition)->GetTriggerEvent(kControlTriggerChecked);
                 if (theEvent != NULL)
                     theEvent->Reference();
-                theScreen->mTabs[kSETriggerScreenCondition]->SetTriggerEvent(kControlTriggerChecked, NULL);
-                theScreen->mTabs[kSETriggerScreenCondition]->Check();
-                theScreen->mTabs[kSETriggerScreenCondition]->SetTriggerEvent(kControlTriggerChecked, theEvent);
+                theScreen->GetTab(kSETriggerScreenCondition)->SetTriggerEvent(kControlTriggerChecked, NULL);
+                theScreen->GetTab(kSETriggerScreenCondition)->Check();
+                theScreen->GetTab(kSETriggerScreenCondition)->SetTriggerEvent(kControlTriggerChecked, theEvent);
                 theScreen->mScreens[kSETriggerScreenCondition]->mSelection = theSelection - 1;
                 theScreen->ShowTab(kSETriggerTabCondition);
             }
@@ -156,12 +156,12 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
     case kSETriggerScreenEffect:
         theSelection = this->GetSelectionIndex();
         if (!UIsNone32(theSelection) && theSelection > 0) {
-            theEvent = theScreen->mTabs[kSETriggerScreenEffect]->GetTriggerEvent(kControlTriggerChecked);
+            theEvent = theScreen->GetTab(kSETriggerScreenEffect)->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
                 theEvent->Reference();
-            theScreen->mTabs[kSETriggerScreenEffect]->SetTriggerEvent(kControlTriggerChecked, NULL);
-            theScreen->mTabs[kSETriggerScreenEffect]->Check();
-            theScreen->mTabs[kSETriggerScreenEffect]->SetTriggerEvent(kControlTriggerChecked, theEvent);
+            theScreen->GetTab(kSETriggerScreenEffect)->SetTriggerEvent(kControlTriggerChecked, NULL);
+            theScreen->GetTab(kSETriggerScreenEffect)->Check();
+            theScreen->GetTab(kSETriggerScreenEffect)->SetTriggerEvent(kControlTriggerChecked, theEvent);
             theScreen->mScreens[kSETriggerScreenEffect]->mSelection = theSelection - 1;
             theScreen->ShowTab(kSETriggerTabEffect);
         }
@@ -169,12 +169,12 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
     case kSETriggerScreenObject:
         theSelection = this->GetSelectionIndex();
         if (!UIsNone32(theSelection) && theSelection > 0) {
-            theEvent = theScreen->mTabs[kSETriggerScreenObject]->GetTriggerEvent(kControlTriggerChecked);
+            theEvent = theScreen->GetTab(kSETriggerScreenObject)->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
                 theEvent->Reference();
-            theScreen->mTabs[kSETriggerScreenObject]->SetTriggerEvent(kControlTriggerChecked, NULL);
-            theScreen->mTabs[kSETriggerScreenObject]->Check();
-            theScreen->mTabs[kSETriggerScreenObject]->SetTriggerEvent(kControlTriggerChecked, theEvent);
+            theScreen->GetTab(kSETriggerScreenObject)->SetTriggerEvent(kControlTriggerChecked, NULL);
+            theScreen->GetTab(kSETriggerScreenObject)->Check();
+            theScreen->GetTab(kSETriggerScreenObject)->SetTriggerEvent(kControlTriggerChecked, theEvent);
             theScreen->mScreens[kSETriggerScreenObject]->mSelection = theSelection - 1;
             theScreen->ShowTab(kSETriggerTabObject);
         }
@@ -182,12 +182,12 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
     case kSETriggerScreenArea:
         theSelection = this->GetSelectionIndex();
         if (!UIsNone32(theSelection) && theSelection > 1) {
-            theEvent = theScreen->mTabs[kSETriggerScreenArea]->GetTriggerEvent(kControlTriggerChecked);
+            theEvent = theScreen->GetTab(kSETriggerScreenArea)->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
                 theEvent->Reference();
-            theScreen->mTabs[kSETriggerScreenArea]->SetTriggerEvent(kControlTriggerChecked, NULL);
-            theScreen->mTabs[kSETriggerScreenArea]->Check();
-            theScreen->mTabs[kSETriggerScreenArea]->SetTriggerEvent(kControlTriggerChecked, theEvent);
+            theScreen->GetTab(kSETriggerScreenArea)->SetTriggerEvent(kControlTriggerChecked, NULL);
+            theScreen->GetTab(kSETriggerScreenArea)->Check();
+            theScreen->GetTab(kSETriggerScreenArea)->SetTriggerEvent(kControlTriggerChecked, theEvent);
             theScreen->mScreens[kSETriggerScreenArea]->mSelection = theSelection - 2;
             theScreen->ShowTab(kSETriggerTabArea);
         }

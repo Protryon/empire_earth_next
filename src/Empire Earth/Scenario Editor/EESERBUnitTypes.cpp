@@ -474,7 +474,8 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         break;
     }
     case EE_SCREENS_SEPL_EDIT: {
-        UIEditBox* t = new UIEditBox(c.id, theFont, c.extra[0], c.extra[1] != 0, theRect, inForm, c.index, 2, false, false);
+        UIEditBox* t = new UIEditBox(c.id, theFont, c.extra[0], c.extra[1] != 0, theRect, inForm, c.index, 2,
+                                     c.extra[2] != 0, false);
         if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
         if (c.text != EE_SCREENS_SEPL_TEXT_NONE) t->SetText(theText);
         if (theFg) SeplYellow(t->GetGEText());
@@ -658,7 +659,9 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
     }
     case EE_SCREENS_SEPL_UNIT_LIST: {
         std::vector<UWideString> theNone;
-        UILBString* t = c.extra[0] == EE_SCREENS_SEPL_LIST_OBJECT
+        UILBString* t = c.extra[0] == EE_SCREENS_SEPL_LIST_PLAIN
+                            ? new UILBString(c.id, theNone, theFont, false, theRect, inForm, c.index, 3)
+                            : c.extra[0] == EE_SCREENS_SEPL_LIST_OBJECT
                             ? new EESETSOUnitList(c.id, theNone, theFont, false, theLocation, c.w, (unsigned long)c.h,
                                                   inForm, c.index, 3)
                             : EESEUnitNewList(c.extra[0], c.id, theFont, theLocation, (unsigned long)c.w,
@@ -671,6 +674,8 @@ UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
         break;
     }
     }
+    if (theControl != NULL && (c.flags & EE_SCREENS_SEPL_HIDE))   // hidden before it joins its groups
+        theControl->SetDisplayMode(kDisplayModeHidden);
     for (unsigned long g = 0; g < 32; g++)
         if (theControl != NULL && (c.groups >> g) & 1)
             inForm->AddControl(theControl, g);
@@ -1062,6 +1067,7 @@ extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i,
         if (i[1] & EE_SCREENS_SEPL_ON_UNCHECKED) c->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
         if (i[1] & EE_SCREENS_SEPL_ON_SELECTION) c->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
         if (i[1] & EE_SCREENS_SEPL_ON_BUTTON_UP) c->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
+        if (i[1] & EE_SCREENS_SEPL_ON_ENTER) c->SetTriggerEvent(kControlTriggerEnterPressed, theEvent);
         theEvent->Dereference();
         return 0;
     }
