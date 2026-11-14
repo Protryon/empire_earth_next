@@ -1,8 +1,9 @@
 // Low-Level Engine\Sound Engine\Mixer\Mixer.cpp
-// The sound mixer plug-in's shim (' snd'). The mixing and the sample/channel logic are Rust
-// (rust/crates/ee_mixer); this file keeps the miniaudio device and decoder and the SPIM entry points the engine
-// looks up by name. The samples are Rust's (rust/crates/ee_sound objects.rs, which also serves ee_mixer's
-// ee_mixer_host_* sample access).
+// The sound mixer plug-in's shim (' snd'). The mixing, the sample/channel logic and the SPIM entry points that only
+// reach them are Rust (rust/crates/ee_mixer ffi.rs, which defines them under their SPIM names); this file keeps the
+// miniaudio device and decoder, the entry points over C++ objects (samples' files, the name) and the plug-in's entry
+// table the engine looks names up in. The samples are Rust's (rust/crates/ee_sound objects.rs, which also serves
+// ee_mixer's ee_mixer_host_* sample access).
 #include <windows.h>
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
@@ -29,7 +30,6 @@ struct SPIMChannelInfo {                         // the engine passes one; never
 };
 
 static UString gMixerName("Mixer");
-static unsigned long gMixerType = ' snd';
 static HWND gWindowHandle;
 static ma_context gContext;
 static ma_device gDevice;
@@ -37,21 +37,10 @@ static std::string gOutputDevice;
 
 // ---- the device and the decoder (miniaudio)
 
-extern "C" void SPIMSetMasterVolume(float inVolume)
-{
-    ee_mixer_set_master_volume(inVolume);
-}
-
-extern "C" void SPIMSetMuted(bool inMuted)
-{
-    ee_mixer_set_muted(inMuted);
-}
-
 extern "C" void SPIMSetOutputDevice(const char* inName)
 {
     gOutputDevice = inName ? inName : "";
 }
-
 extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity)
 {
     ma_context theContext;
@@ -68,25 +57,16 @@ extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned lo
     ma_context_uninit(&theContext);
     return theResult;
 }
-
 static void MixerCallback(ma_device* inDevice, void* outFrames, const void* inInput, ma_uint32 inCount)
 {
     ee_mixer_mix(static_cast<float*>(outFrames), inCount);
 }
-
-extern "C" long SPIMCreateChannels(unsigned long inCount, SPIMChannelInfo* outInfo);
 extern "C" long SPIMDeactivateMixer();
 
 static const UString* PIMGetName()
 {
     return &gMixerName;
 }
-
-static unsigned long PIMGetType()
-{
-    return gMixerType;
-}
-
 // Opens the playback device (stereo float at the device's own rate) and creates the channels
 extern "C" long SPIMActivateMixer()
 {
@@ -143,7 +123,6 @@ extern "C" long SPIMActivateMixer()
     ee_mixer_activated(gDevice.sampleRate);
     return kSPIMOK;
 }
-
 // Returns whether the mixer works: activates and deactivates it once
 static bool PIMIsValid()
 {
@@ -152,17 +131,6 @@ static bool PIMIsValid()
     SPIMDeactivateMixer();
     return true;
 }
-
-extern "C" long SPIMCreateChannels(unsigned long inCount, SPIMChannelInfo* outInfo)
-{
-    return ee_mixer_create_channels((uint32_t)inCount);
-}
-
-extern "C" long SPIMDestroyChannels()
-{
-    return ee_mixer_destroy_channels();
-}
-
 // Destroys the channels and closes the device
 extern "C" long SPIMDeactivateMixer()
 {
@@ -174,12 +142,6 @@ extern "C" long SPIMDeactivateMixer()
     ee_mixer_deactivated();
     return kSPIMOK;
 }
-
-extern "C" void SPIMDeleteWaveData(SESample* inSample)
-{
-    ee_mixer_delete_wave_data(inSample);
-}
-
 // Creates a copy of the sample that shares (references) the same wave data
 extern "C" long SPIMDuplicateSample(SESample* inSample, SESample** outSample)
 {
@@ -191,76 +153,10 @@ extern "C" long SPIMDuplicateSample(SESample* inSample, SESample** outSample)
     *outSample = theSample;
     return kSPIMOK;
 }
-
-extern "C" unsigned long SPIMGetChannelCount()
-{
-    return ee_mixer_channel_count();
-}
-
-extern "C" float SPIMGetCPUUsage()
-{
-    return 0.0f;
-}
-
-extern "C" void* SPIMGetDirectSoundInterface()
-{
-    return NULL;
-}
-
-extern "C" unsigned long SPIMGetOutputRate()
-{
-    return ee_mixer_output_rate();
-}
-
-extern "C" void SPIMSetMusicSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
-{
-    ee_mixer_set_music_source(inSource, inContext);
-}
-
-extern "C" void SPIMSetMovieSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
-{
-    ee_mixer_set_movie_source(inSource, inContext);
-}
-
-extern "C" long SPIMGetHighestTimerDelay()
-{
-    return 0;
-}
-
-extern "C" unsigned long SPIMGetMaximumChannelCount()
-{
-    return ee_mixer_maximum_channel_count();
-}
-
-extern "C" unsigned long SPIMGetSampleOffset(SESample* inSample)
-{
-    return ee_mixer_sample_offset(inSample);
-}
-
-extern "C" long SPIMGetSamplePlayBackTime(SESample* inSample, long* outTotal, long* outRemaining)
-{
-    int32_t theTotal = 0, theRemaining = 0;
-    long theResult = ee_mixer_sample_play_back_time(inSample, &theTotal, &theRemaining);
-    *outTotal = theTotal;
-    *outRemaining = theRemaining;
-    return theResult;
-}
-
-extern "C" float SPIMGetVolume()
-{
-    return ee_mixer_volume();
-}
-
 extern "C" void SPIMInitializeMixer(HWND* inWindow)
 {
     gWindowHandle = *inWindow;
 }
-
-extern "C" long SPIMIsChannelBusyPlaying(unsigned long inChannel)
-{
-    return ee_mixer_is_channel_busy_playing((uint32_t)inChannel);
-}
-
 // Decodes a whole file image through miniaudio; a NULL sample when it cannot be decoded
 static const void* Decode(const void* inData, unsigned long inSize)
 {
@@ -284,7 +180,6 @@ static const void* Decode(const void* inData, unsigned long inSize)
     return ee_mixer_sample_create(static_cast<const uint8_t*>(inData), (uint32_t)inSize, thePCM.empty() ? NULL : &thePCM[0],
                                   thePCM.size(), (uint32_t)theChannels, (uint32_t)theRate);
 }
-
 // Loads a sound file (from disk or a memory file), decodes it and fills in the sample's format and length;
 // kSPIMFailed when it cannot be decoded
 extern "C" long SPIMLoadWaveData(FSFileSpec* inSpec, SESample* ioSample)
@@ -329,77 +224,12 @@ extern "C" long SPIMLoadWaveData(FSFileSpec* inSpec, SESample* ioSample)
     return kSPIMOK;
 }
 
-extern "C" long SPIMMixAhead()
-{
-    return kSPIMOK;
-}
-
-extern "C" long SPIMPlayChannel(unsigned long inChannel)
-{
-    return ee_mixer_play_channel((uint32_t)inChannel);
-}
-
-extern "C" bool SPIMProcessMessage()
-{
-    return true;
-}
-
-extern "C" long SPIMSetChannelSample(unsigned long inChannel, SESample* inSample)
-{
-    return ee_mixer_set_channel_sample((uint32_t)inChannel, inSample);
-}
-
-extern "C" long SPIMSetLatency(unsigned long inMilliseconds)
-{
-    return kSPIMOK;
-}
-
-extern "C" void SPIMSetSampleLooping(SESample* inSample, bool inLooping)
-{
-    ee_mixer_set_sample_looping(inSample, inLooping);
-}
-
-extern "C" long SPIMSetSampleOffset(SESample* inSample, unsigned long inOffset)
-{
-    return ee_mixer_set_sample_offset(inSample, (uint32_t)inOffset);
-}
-
-extern "C" long SPIMSetSamplePan(SESample* inSample, float inPan)
-{
-    return ee_mixer_set_sample_pan(inSample, inPan);
-}
-
-extern "C" long SPIMSetSamplePitch(SESample* inSample, float inPitch)
-{
-    return ee_mixer_set_sample_pitch(inSample, inPitch);
-}
-
-extern "C" long SPIMSetSampleVolume(SESample* inSample, float inVolume)
-{
-    return ee_mixer_set_sample_volume(inSample, inVolume);
-}
-
-extern "C" long SPIMSetVolume(float inVolume)
-{
-    return ee_mixer_set_volume(inVolume);
-}
-
-extern "C" long SPIMStopAllChannels()
-{
-    return ee_mixer_stop_all_channels();
-}
-
-extern "C" long SPIMStopChannel(unsigned long inChannel)
-{
-    return ee_mixer_stop_channel((uint32_t)inChannel);
-}
-
 #include "lle/PIMModule.h"
 
 // The plug-in's entry points (registered in PIMModule.cpp)
 static const PIMEntry sEntries[] = {
     PIM_ENTRY(PIMGetName),
-    PIM_ENTRY(PIMGetType),
+    {"PIMGetType", reinterpret_cast<void*>(&ee_mixer_pim_type)},
     PIM_ENTRY(PIMIsValid),
     PIM_ENTRY(SPIMActivateMixer),
     PIM_ENTRY(SPIMCreateChannels),
