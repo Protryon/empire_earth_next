@@ -506,32 +506,7 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         Give(c, aLine.get());
         break;
     }
-    case EE_WON_HOST_CACHE_ENTRY: {
-        HTTPCacheEntry* anEntry = static_cast<HTTPCache*>(Obj(o0))->GetEntry(
-            std::string(reinterpret_cast<const char*>(c->data), c->len));
-        c->out_obj = anEntry != NULL ? Out(anEntry) : NULL;
-        break;
-    }
-    case EE_WON_HOST_ENTRY_GET: {
-        HTTPCacheEntry* e = static_cast<HTTPCacheEntry*>(Obj(o0));
-        if (n0 == 0) c->out_num = e->IsValid() ? 1 : 0;
-        else if (n0 == 1) c->out_num = (long long)e->GetExpirationTime();
-        else {
-            const std::string& s = n0 == 2 ? e->GetLocalPath() : e->GetEntityTag();
-            Give(c, s.data(), s.size());
-        }
-        break;
-    }
-    case EE_WON_HOST_ENTRY_SET: {
-        HTTPCacheEntry* e = static_cast<HTTPCacheEntry*>(Obj(o0));
-        if (n0 == 0) e->SetValid(n1 != 0);
-        else if (n0 == 1) e->SetExpirationTime((time_t)n1);
-        else e->SetEntityTag(std::string(reinterpret_cast<const char*>(c->data), c->len));
-        break;
-    }
-    case EE_WON_HOST_CACHE_UPDATE:
-        static_cast<HTTPCache*>(Obj(o0))->UpdateEntry(static_cast<HTTPCacheEntry*>(Obj(c->obj[1])));
-        break;
+    // the HTTP cache's calls are the Rust op's (ee_won httpcache.rs) on the Rust cache
     case EE_WON_HOST_RECV_SKIP: static_cast<RecvBytesOp*>(Op(o0))->SetSkipBytes(true); break;
     case EE_WON_HOST_RECV_BINARY: static_cast<RecvBytesOp*>(Op(o0))->SetBinaryFile(n0 != 0); break;
     case EE_WON_HOST_RECV_MODIFY_TIME: static_cast<RecvBytesOp*>(Op(o0))->SetFileModifyTime((time_t)n0); break;

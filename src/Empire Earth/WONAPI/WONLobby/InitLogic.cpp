@@ -226,7 +226,10 @@ void InitLogic::ParseCrossPromotion(const ByteBuffer* inDocument)
     this->mCrossPromotion = aLines.mLink;
     if (!imageURL.empty()) {
         SmartPtr<RustServerOp> op = RustServerOp::NewHttpGet(imageURL);
-        op->Set(EE_WON_HTTPGET_CACHE, HTTPCache::GetGlobalCache());
+        // HTTPCache::GetGlobalCache(): the Rust cache in the WON directory (ee_won httpcache.rs), the op's reference
+        const std::string& aDir = WONAPICore::GetDefaultFileDirectory();
+        ee_won_hostop_set(op->GetRustOp(), EE_WON_HTTPGET_CACHE, 0, NULL, 0, NULL,
+                          ee_won_http_cache_global(reinterpret_cast<const uint8_t*>(aDir.data()), aDir.size()));
         op->SetCompletion(new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion,this));
         this->mHTTPSession->AddOp(op.get());
     }

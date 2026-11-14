@@ -89,7 +89,7 @@ static void AIMembers(void* inContext, EeUnitsAIState* outState)
 {
     EEComplexUnit* theUnit = AIUnit(inContext);
     outState->command = theUnit->mCommand != NULL ? (int64_t)theUnit->mCommand->mType : 0;
-    outState->next_trigger_time = (int64_t)theUnit->mNextTriggerTime.Get();
+    outState->next_trigger_time = (int64_t)theUnit->mNextTriggerTime;
     outState->goal_kind = theUnit->mGoalState != NULL ? (int32_t)theUnit->mGoalState->mKind : -1;
 }
 

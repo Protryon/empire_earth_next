@@ -389,8 +389,25 @@ long EEE3DFarm::Queue(EEEffectQueue* inQueues)
     return theResult;
 }
 
+// A placeholder triangle's points and opacities at vertices inFirst .. inFirst + 2 of a draw copy of inCount
+// vertices. The original wrote all three, past the array's end when inCount is not a multiple of 3 (a 1-tile farm's
+// ground copy has 4 vertices: it wrote 4 and 5; undefined behaviour the retail heap survived, an index panic in the
+// Rust vertex arrays); the vertices past the end are skipped, the ones in the array get the original's values.
+static void EEFarmPlaceholder(GEVertexArray* inArray, long inFirst, long inCount)
+{
+    if (inFirst < inCount)
+        inArray->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), inFirst);
+    if (inFirst + 1 < inCount)
+        inArray->SetPoint(GE3DPoint(0.0001f, 0.0f, 0.0f), inFirst + 1);
+    if (inFirst + 2 < inCount)
+        inArray->SetPoint(GE3DPoint(0.0f, 0.0001f, 0.0f), inFirst + 2);
+    for (long k = 0; k < 3 && inFirst + k < inCount; k++)
+        inArray->SetOpacity(0.0f, inFirst + k);
+}
+
 // FUNCTION: EXE 0x4f04ee
-// Creates the ground and crop draw copies, sized for the field, filled with invisible placeholder triangles
+// Creates the ground and crop draw copies, sized for the field, filled with invisible placeholder triangles (in
+// bounds: EEFarmPlaceholder)
 void EEE3DFarm::BuildGroundModels()
 {
     long i;
@@ -402,12 +419,7 @@ void EEE3DFarm::BuildGroundModels()
         this->mGroundCopy->GetPolygonArray(0)->SetVertexIndex1(0, i);
         this->mGroundCopy->GetPolygonArray(0)->SetVertexIndex2(0, i + 1);
         this->mGroundCopy->GetPolygonArray(0)->SetVertexIndex3(0, i + 2);
-        this->mGroundCopy->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), i);
-        this->mGroundCopy->GetVertexArray(0)->SetPoint(GE3DPoint(0.0001f, 0.0f, 0.0f), i + 1);
-        this->mGroundCopy->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0001f, 0.0f), i + 2);
-        this->mGroundCopy->GetVertexArray(0)->SetOpacity(0.0f, i);
-        this->mGroundCopy->GetVertexArray(0)->SetOpacity(0.0f, i + 1);
-        this->mGroundCopy->GetVertexArray(0)->SetOpacity(0.0f, i + 2);
+        EEFarmPlaceholder(this->mGroundCopy->GetVertexArray(0), i, this->mRowLength * this->mRowLength);
     }
     this->mGroundCopy->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
     this->mGroundCopy->GetMaterial(0)->SetPolygonRangeLength(
@@ -424,12 +436,7 @@ void EEE3DFarm::BuildGroundModels()
         this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex1(0, j);
         this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex2(0, j + 1);
         this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex3(0, j + 2);
-        this->mCropsCopy->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), j);
-        this->mCropsCopy->GetVertexArray(0)->SetPoint(GE3DPoint(0.0001f, 0.0f, 0.0f), j + 1);
-        this->mCropsCopy->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0001f, 0.0f), j + 2);
-        this->mCropsCopy->GetVertexArray(0)->SetOpacity(0.0f, j);
-        this->mCropsCopy->GetVertexArray(0)->SetOpacity(0.0f, j + 1);
-        this->mCropsCopy->GetVertexArray(0)->SetOpacity(0.0f, j + 2);
+        EEFarmPlaceholder(this->mCropsCopy->GetVertexArray(0), j, this->mGraphicEffect->GetIntParam1() * this->mRowLength * UMFloor(this->mArea.GetWidth() + 1.0f) * 2);
     }
     this->mCropsCopy->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
     this->mCropsCopy->GetMaterial(0)->SetPolygonRangeLength(

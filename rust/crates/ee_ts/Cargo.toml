@@ -1,0 +1,15 @@
+[package]
+name = "ee_ts"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The Low-Level Engine's Thread System whole in Rust (TSCriticalSection, TSEvent, TSReadWriteLock, TSThread,
+# TSScheduler; LLE lane round 3).
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ee_plat_core = { path = "../ee_plat_core" }
+ee_plat_sys = { path = "../ee_plat_sys" }
+ee_error = { path = "../ee_error" }

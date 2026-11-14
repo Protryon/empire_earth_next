@@ -46,7 +46,7 @@ pub fn in_formation_slot(unit: &EeUnitRecord, slot: i64) -> bool {
 
 /// `EEActiveGroup::Fill`'s test: the indices into `ids` (a selection's units in its order) of the units the group
 /// takes for `slot`, in order (a unit listed twice is taken twice, as the original's loop did).
-pub fn fill_members(view: &impl UnitView, ids: &[u32], slot: i64, out: &mut Vec<u32>) {
+pub fn fill_members(view: &mut impl UnitView, ids: &[u32], slot: i64, out: &mut Vec<u32>) {
     for (index, &id) in ids.iter().enumerate() {
         let Some(unit) = view.unit(id) else { continue };
         if unit.valid != 0 && unit.hit_points > 0 && in_formation_slot(unit, slot) {
@@ -753,13 +753,13 @@ mod tests {
         }
         let mut out = Vec::new();
         // 99 is in no list: not taken; 10 twice: taken twice
-        fill_members(&view, &[15, 99, 10, 11, 12, 13, 14, 10], 2, &mut out);
+        fill_members(&mut view, &[15, 99, 10, 11, 12, 13, 14, 10], 2, &mut out);
         assert_eq!(out, vec![0, 2, 7]);
         out.clear();
-        fill_members(&view, &[15, 14, 10], 1, &mut out);
+        fill_members(&mut view, &[15, 14, 10], 1, &mut out);
         assert_eq!(out, vec![1]);
         out.clear();
-        fill_members(&view, &[], 0, &mut out);
+        fill_members(&mut view, &[], 0, &mut out);
         assert!(out.is_empty());
     }
 

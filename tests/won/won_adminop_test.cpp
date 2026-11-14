@@ -23,7 +23,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "won_profiledata.h"
 #include "won_db_msg.h"
-#include "ee/wonapi/WONPatchMsg.h"
+#include "won_patch_msg.h"
 #include "won_admin_msg.h"
 #include "rust/ee_won.h"
 
