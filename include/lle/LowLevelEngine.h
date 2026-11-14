@@ -43,9 +43,6 @@
 #include "lle/TSThread.h"
 #include "lle/TSScheduler.h"
 
-LLE_API UString operator+(const UString& inLeft, const UString& inRight);
-LLE_API UString operator+(const UString& inLeft, const char* inRight);
-
 // ---- Reference counting
 #include "lle/UReferenceCounter.h"
 

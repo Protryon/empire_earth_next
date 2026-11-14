@@ -26,7 +26,6 @@ struct AuthContextFlow {
     static AsyncOp* Op(void* p) { return static_cast<AsyncOp*>(Obj(p)); }
     static void AddRef(void* p) { Obj(p)->AddRef(); }
     static void Release(void* p) { Obj(p)->Release(); }
-    static int64_t LastUse(void* p) { return (int64_t)static_cast<AuthSession*>(Obj(p))->GetLastUseTime(); }
     static void Kill(void* p) { Op(p)->Kill(true); }
     static bool Killed(void* p) { return Op(p)->IsKilled(); }
     static long Status(void* p) { return Op(p)->GetStatus(); }
@@ -60,7 +59,6 @@ struct AuthContextFlow {
         h.context = c;
         h.add_ref = AddRef;
         h.release = Release;
-        h.session_last_use = LastUse;
         h.op_kill = Kill;
         h.op_killed = Killed;
         h.op_status = Status;
@@ -97,22 +95,6 @@ AuthContext::~AuthContext()
     ee_won_authctx_free(this->mCore);
 }
 
-// FUNCTION: WON 0x006deeb0
-// Caches a peer session for an address and drops up to five map entries unused for over 300 seconds
-void AuthContext::PutSession(const IPAddr& address,AuthSession* session)
-{
-    ee_won_authctx_put_session(this->mCore,address.GetValue(),session!=NULL?static_cast<RefCount*>(session):NULL);
-}
-// FUNCTION: WON 0x006df080
-// Takes a session used within 300 seconds for the address out of the cache; NULL when none
-SmartPtr<AuthSession> AuthContext::GetSession(const IPAddr& address)
-{
-    void* aSession=ee_won_authctx_get_session(this->mCore,address.GetValue());
-    if(aSession==NULL) return NULL;
-    SmartPtr<AuthSession> session(static_cast<AuthSession*>(static_cast<RefCount*>(aSession)));
-    static_cast<RefCount*>(aSession)->Release();
-    return session;
-}
 // FUNCTION: WON 0x006de7f0
 // Starts a certificate refresh when the current auto-refresh timer fires (not when killed)
 void AuthContext::AutoRefreshCallback(AsyncOp* op)

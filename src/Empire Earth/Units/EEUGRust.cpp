@@ -978,7 +978,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             EEUnitClass* theClass = theUnit->mUnitClass;
             EEPlayer* thePlayer = theUnit->mPlayer;
             EEComplexUnit* theOwn = EEUnitCast<EEComplexUnit>(theUnit);
-            theFields->complex = Handle(theUnit->mComplexUnit.Get());
+            theFields->complex = Handle(theUnit->mComplexUnit);
             theFields->unit_class = Handle(theClass);
             theFields->player = Handle(thePlayer);
             theFields->unit_type = theClass->mUnitType;

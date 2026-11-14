@@ -302,7 +302,7 @@ int64_t EEUICPortrait::HostOp(EEUICPortrait* inPortrait, uint32_t inOp, int64_t 
         theMessage = new EEMRemoveTechnology(theUnit->GetUnitID(), (long)inB, true);
         break;
     case EE_SCREENS_PT_OP_REMOVE_IMPROVEMENT:
-        theMessage = new EEMRemoveImprovement(theUnit->GetUnitID(), (long)inB);
+        theMessage = new EEMRecord(kMessageRemoveImprovement, {theUnit->GetUnitID(), (long)inB});
         break;
     case EE_SCREENS_PT_OP_SOUND:
         gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);

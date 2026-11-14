@@ -39,6 +39,26 @@ impl RLock {
         }
         RGuard { lock: self }
     }
+
+    /// Takes the lock without a guard (a C++ caller's Enter, given back by `leave`: the server's
+    /// LockSendCommunicationsTick and UnlockSendCommunicationsTick)
+    pub fn enter(&self) {
+        std::mem::forget(self.lock());
+    }
+
+    /// Gives back a lock `enter` took on this thread (a lock not held: nothing)
+    pub fn leave(&self) {
+        let me = thread::current().id();
+        let mut s = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        if s.0 != Some(me) || s.1 == 0 {
+            return;
+        }
+        s.1 -= 1;
+        if s.1 == 0 {
+            s.0 = None;
+            self.free.notify_one();
+        }
+    }
 }
 
 impl Drop for RGuard<'_> {

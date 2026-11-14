@@ -871,7 +871,9 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
     }
     case EE_SCREENS_SEU_MESSAGE_TYPE:
         return static_cast<EEMessage*>(inUnit)->GetType();
-    case EE_SCREENS_SEU_MESSAGE_UNIT:
+    case EE_SCREENS_SEU_MESSAGE_UNIT:   // a Select Unit is a record (EEMRecord, round 3), the toggles a class
+        if (static_cast<EEMessage*>(inUnit)->GetType() == kMessageSelectUnit)
+            return static_cast<EEMRecord*>(inUnit)->Get<uint32_t>(1);
         return static_cast<EEMAddUnitToSelectedGroup*>(inUnit)->mUnitID;
     case EE_SCREENS_SEU_MESSAGE_RELEASE:
         static_cast<EEMessage*>(inUnit)->Dereference();
@@ -886,7 +888,7 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
     case EE_SCREENS_SEU_NEW_TOGGLE:
         return (uintptr_t)static_cast<EEMessage*>(new EEMAddUnitToSelectedGroup(theUnit->mUnitID));
     case EE_SCREENS_SEU_NEW_UNSELECT_ALL:
-        return (uintptr_t)static_cast<EEMessage*>(new EEMUnselectAllUnits);
+        return (uintptr_t)static_cast<EEMessage*>(new EEMRecord(kMessageUnselectAllUnits));
     case EE_SCREENS_SEU_SET_MESSAGE:
         static_cast<EEAMouseClick*>(static_cast<EEAction*>(inUnit))->SetMessage(reinterpret_cast<EEMessage*>(inA));
         return 0;

@@ -18,7 +18,7 @@ void MSButton::Paint(Graphics& g) {
     bool down=this->IsPressed();
     int offset=down?1:0;
     g.SetSysColor(StandardColor_3DFace);
-    if(!this->mIsTransparent) g.FillRect(0,0,this->Width(),this->Height());
+    if(!this->IsTransparent()) g.FillRect(0,0,this->Width(),this->Height());
     int x=0,y=0,width=this->Width(),height=this->Height();
     bool frame2=this->mUseFrame2;
     if(this->IsDefaultButton()) {

@@ -152,7 +152,7 @@ pub const EE_WON_HOST_CTX_FAILED: i32 = 86;
 pub const EE_WON_HOST_GET_SESSION: i32 = 87;
 /// `mAuthContext->PutSession(addr, obj0)`
 pub const EE_WON_HOST_PUT_SESSION: i32 = 88;
-/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session)
+/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session handle the transform holds)
 pub const EE_WON_HOST_ADD_CRYPT: i32 = 89;
 /// `mTracker.KillAll()` (may call back)
 pub const EE_WON_HOST_KILL_ALL: i32 = 90;
@@ -294,7 +294,8 @@ pub const EE_WON_HOST_PEER_NEW_LIGHT: i32 = 157;
 /// `mAuthContext->RefreshAsync(obj0, num0)`: the light op's run and its member (an `EeWonLightCert*`, borrowed);
 /// may call back
 pub const EE_WON_HOST_PEER_REFRESH_ASYNC: i32 = 158;
-/// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
+/// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj: answered in Rust for a bound op,
+/// a session handle (hostauth.rs, round 22)
 pub const EE_WON_HOST_PEER_NEW_SESSION: i32 = 160;
 /// a C++ `AuthContext*` obj0 (NULL: the op's `mAuthContext`) -> out_obj: its Rust object (`AuthContext::Core()`,
 /// borrowed; NULL for none). The certificate and auth context calls are answered in Rust over it (hostauth.rs).
@@ -465,6 +466,17 @@ impl<P: Plan> Host<P> {
                 // SAFETY: the C++ side's borrowed object (its AuthContext alive: the op or the caller holds it)
                 unsafe { crate::authobj::ctx_ref(r.obj.ptr() as *const crate::authobj::EeWonAuthCtx) }
             };
+            // a peer auth op's session (a handle the op holds) read through the op's number
+            if code == EE_WON_HOST_PEER_AUTH_SESSION || code == EE_WON_HOST_PEER_AUTH_KEY {
+                let session = if obj[0].is_none() {
+                    Obj::none()
+                } else {
+                    let n = i64::from(crate::peerop::EE_WON_PEEROP_SESSION);
+                    Obj(self.send(EE_WON_HOST_HOSTOP_NUM, [obj[0], Obj::none(), Obj::none()], [n, 0], &[], [0; 6]).num
+                        as usize)
+                };
+                return crate::hostauth::op_session(code, session);
+            }
             if let Some(r) = crate::hostauth::answer(code, obj, num, data, addr, &core) {
                 return r;
             }

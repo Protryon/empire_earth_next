@@ -211,16 +211,16 @@ int64_t EEUICUnitIconBar::HostOp(EEUICUnitIconBar* inBar, uint32_t inOp, int64_t
         break;
     }
     case EE_SCREENS_IB_OP_SELECT:
-        theMessage = new EEMSelectUnit((unsigned long)inA);
+        theMessage = new EEMRecord(kMessageSelectUnit, {(long)inA});
         break;
     case EE_SCREENS_IB_OP_UNLOAD:
         theMessage = new EEMImmediateCargoUnload((long)inA, (long)inB, false);
         break;
     case EE_SCREENS_IB_OP_SCRAMBLE:
-        theMessage = new EEMScrambleAircraft((long)inA, (long)(int32_t)inB, (long)(inB >> 32));
+        theMessage = new EEMRecord(kMessageScrambleAircraft, {(long)(int32_t)inB, (long)(inB >> 32), (long)inA});
         break;
     case EE_SCREENS_IB_OP_REMOVE:
-        theMessage = new EEMRemoveUnitFromSelectedGroup((long)inA);
+        theMessage = new EEMRecord(kMessageRemoveUnitFromSelectedGroup, {(long)inA});
         break;
     case EE_SCREENS_IB_OP_SOUND:
         gSoundManager->Play(inA == 0 ? sIconBarDownSound : sIconBarUpSound, 1.0f, 0.0f, 1.0f, false, NULL);

@@ -185,6 +185,89 @@ void EEMessage::ImportMessage(unsigned char* inPayloadPointer)
     ee_netmsg_import(theClass, inPayloadPointer, theSlots, theCount);
 }
 
+// ---- EEMRecord (game messages lane, round 3): the record types' messages (ee/EEMessage.h; ee_netmsg records.rs) ----
+EEMRecordValue::EEMRecordValue(const GE2DPoint& inPoint) : mInteger(0), mIsFloat(true)
+{
+    this->mFloats[0] = inPoint.GetX();
+    this->mFloats[1] = inPoint.GetY();
+}
+
+EEMRecordValue::EEMRecordValue(const GEVector& inVector) : mInteger(0), mIsFloat(true)
+{
+    this->mFloats[0] = inVector.GetX();
+    this->mFloats[1] = inVector.GetY();
+    this->mFloats[2] = inVector.GetZ();
+}
+
+// the import constructor: EEMessage's defaults (no send flag), as the old classes' import constructors
+EEMRecord::EEMRecord(unsigned char* inData)
+{
+    memset(this->mRecord, 0, sizeof(this->mRecord));
+    this->mType = inData[1];
+    this->ImportMessage(inData);
+}
+
+// a sender's: the members in wire order (fewer leave the rest 0)
+EEMRecord::EEMRecord(unsigned char inType, std::initializer_list<EEMRecordValue> inValues)
+    : EEMessage(inType, (ee_netmsg_record_flags(inType) & EE_NETMSG_RECORD_WHEN_OUT) != 0)
+{
+    memset(this->mRecord, 0, sizeof(this->mRecord));
+    uint32_t theClass = ee_netmsg_record_class(inType);
+    ESVERIFY_AT(theClass != 0xffffffffu, __LINE__);
+    uint32_t theIndex = 1;
+    for (const EEMRecordValue& theValue : inValues) {
+        EeNetMsgRecordField theField = ee_netmsg_record_field(theClass, theIndex);
+        unsigned char* theTo = this->Field(theIndex++, theField.size);
+        float theFloat = theValue.mIsFloat ? theValue.mFloats[0] : (float)theValue.mInteger;
+        long long theInteger = theValue.mIsFloat ? (long long)theValue.mFloats[0] : theValue.mInteger;
+        bool theBool = theInteger != 0 || (theValue.mIsFloat && theValue.mFloats[0] != 0.0f);
+        switch (theField.kind) {
+        case EE_NETMSG_RECORD_FIELD_INTEGER:
+            memcpy(theTo, &theInteger, theField.size);   // little-endian: the low bytes
+            break;
+        case EE_NETMSG_RECORD_FIELD_BOOL:
+            *theTo = theBool ? 1 : 0;
+            break;
+        case EE_NETMSG_RECORD_FIELD_FLOAT:
+            memcpy(theTo, &theFloat, 4);
+            break;
+        default:   // a point or a vector
+            memcpy(theTo, theValue.mFloats, theField.size);
+            break;
+        }
+    }
+}
+
+unsigned char* EEMRecord::Field(uint32_t inIndex, size_t inSize) const
+{
+    EeNetMsgRecordField theField = ee_netmsg_record_field(ee_netmsg_record_class(this->mType), inIndex);
+    ESVERIFY_AT(theField.kind != EE_NETMSG_RECORD_FIELD_NONE && theField.size == inSize, __LINE__);
+    return const_cast<unsigned char*>(this->mRecord) + theField.offset;
+}
+
+bool EEMRecord::GetCanSendWhilePaused() const
+{
+    return (ee_netmsg_record_flags(this->mType) & EE_NETMSG_RECORD_PAUSED) != 0;
+}
+
+char* EEMRecord::GetMessageLabel() const
+{
+    return const_cast<char*>(ee_netmsg_record_label(this->mType));
+}
+
+size_t EEMRecord::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
+{
+    outClass = ee_netmsg_record_class(this->mType);
+    this->GetHeaderSlots(outSlots);
+    outSlots[4] = EENetMsgField(this->mFastSelectionID);
+    size_t theCount = 5;
+    for (EeNetMsgRecordField theField; (theField = ee_netmsg_record_field(outClass, (uint32_t)theCount - 4)).kind != 0; theCount++) {
+        EeNetMsgSlot theSlot = {this->mRecord + theField.offset, theField.size, 0, 0};
+        outSlots[theCount] = theSlot;
+    }
+    return theCount;
+}
+
 // EEMSelectTheseUnits' slot list (its id list is read and written around the codec)
 static size_t Slots(EEMSelectTheseUnits* inMessage, EeNetMsgSlot* outSlots, std::vector<int32_t>& ioIDs);
 
@@ -358,15 +441,14 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     unsigned char theType = inMemory[1];
     NEMessage* theMessage = NULL;
     ESVERIFY_AT(inMemory != NULL, 841);
-    switch (theType) {
+    if (ee_netmsg_record_class(theType) != 0xffffffffu)   // a record type (EEMRecord, ee_netmsg records.rs)
+        theMessage = new EEMRecord(inMemory);
+    else switch (theType) {
     case kMessageAddAndRemoveUnitsFromSelectedGroup:
         theMessage = new EEMAddAndRemoveUnitsFromSelectedGroup(inMemory);
         break;
     case kMessageAddPatrolPoint:
         theMessage = new EEMAddPatrolPoint(inMemory);
-        break;
-    case kMessageAddRemoveResources:
-        theMessage = new EEMAddRemoveResources(inMemory);
         break;
     case kMessageAddUnitsToSelectedGroup:
         theMessage = new EEMAddUnitsToSelectedGroup(inMemory);
@@ -380,9 +462,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageAttackGround:
         theMessage = new EEMAttackGround(inMemory);
         break;
-    case kMessageAttackPlayers:
-        theMessage = new EEMAttackPlayers(inMemory);
-        break;
     case kMessageAttackUnit:
         theMessage = new EEMAttackUnit(inMemory);
         break;
@@ -395,23 +474,14 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageBuildWall:
         theMessage = new EEMBuildWall(inMemory);
         break;
-    case kMessageCameraLocationInfo:
-        theMessage = new EEMCameraLocationInfo(inMemory);
-        break;
     case kMessageCastCalamity:
         theMessage = new EEMCastCalamity(inMemory);
-        break;
-    case kMessageChangeSelectedUnitCollisionSphere:
-        theMessage = new EEMChangeSelectedUnitCollisionSphere(inMemory);
         break;
     case kMessageChangeFormation:
         theMessage = new EEMChangeFormation(inMemory);
         break;
     case kMessageChat:
         theMessage = new EEMChat(inMemory);
-        break;
-    case kMessageCheatCode:
-        theMessage = new EEMCheatCode(inMemory);
         break;
     case kMessageCivTimerExpired:
         theMessage = new EEMCivTimerExpired(inMemory);
@@ -422,12 +492,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageCivUpgradesRequested:
         theMessage = new EEMCivUpgradesRequested(inMemory);
         break;
-    case kMessageClearAirportCommands:
-        theMessage = new EEMClearAirportCommands(inMemory);
-        break;
-    case kMessageDisband:
-        theMessage = new EEMDisband(inMemory);
-        break;
     case kMessageDropoffResource:
         theMessage = new EEMDropoffResource(inMemory);
         break;
@@ -437,20 +501,8 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageEdictVote:
         theMessage = new EEMEdictVote(inMemory);
         break;
-    case kMessageEdictPreProposal:
-        theMessage = new EEMEdictPreProposal(inMemory);
-        break;
-    case kMessageEdictPreProposalResponse:
-        theMessage = new EEMEdictPreProposalResponse(inMemory);
-        break;
-    case kMessageEnterShiftMode:
-        theMessage = new EEMEnterShiftMode(inMemory);
-        break;
     case kMessageExitShiftMode:
         theMessage = new EEMExitShiftMode(inMemory);
-        break;
-    case kMessageExplore:
-        theMessage = new EEMExplore(inMemory);
         break;
     case kMessageFullGameOptions:
         theMessage = new EEMFullGameOptions(inMemory);
@@ -458,23 +510,11 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageGameOptions:
         theMessage = new EEMGameOptions(inMemory);
         break;
-    case kMessageGameRestarting:
-        theMessage = new EEMGameRestarting(inMemory);
-        break;
-    case kMessageGameSpeed:
-        theMessage = new EEMGameSpeed(inMemory);
-        break;
     case kMessageGatherResource:
         theMessage = new EEMGatherResource(inMemory);
         break;
-    case kMessageGoFanatic:
-        theMessage = new EEMGoFanatic(inMemory);
-        break;
     case kMessageHackANewUnit:
         theMessage = new EEMHackANewUnit(inMemory);
-        break;
-    case kMessageHaltSelectedGroup:
-        theMessage = new EEMHaltSelectedGroup(inMemory);
         break;
     case kMessageHealUnit:
         theMessage = new EEMHealUnit(inMemory);
@@ -482,41 +522,14 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageImmediateCargoUnload:
         theMessage = new EEMImmediateCargoUnload(inMemory);
         break;
-    case kMessageIncrementEpic:
-        theMessage = new EEMIncrementEpic(inMemory);
-        break;
-    case kMessageIncrementRallyTimer:
-        theMessage = new EEMIncrementRallyTimer(inMemory);
-        break;
     case kMessageInGameChat:
         theMessage = new EEMInGameChat(inMemory);
-        break;
-    case kMessageJITManufacturing:
-        theMessage = new EEMJITManufacturing(inMemory);
         break;
     case kMessageKillUnit:
         theMessage = new EEMKillUnit(inMemory);
         break;
-    case kMessageLagStatus:
-        theMessage = new EEMLagStatus(inMemory);
-        break;
-    case kMessageLoadMainScreen:
-        theMessage = new EEMLoadMainScreen(inMemory);
-        break;
-    case kMessageLoadMainScreenResponse:
-        theMessage = new EEMLoadMainScreenResponse(inMemory);
-        break;
     case kMessageLoadOrSaveGame:
         theMessage = new EEMLoadOrSaveGame(inMemory);
-        break;
-    case kMessageLoadOrSaveGameResponse:
-        theMessage = new EEMLoadOrSaveGameResponse(inMemory);
-        break;
-    case kMessageLoadPercent:
-        theMessage = new EEMLoadPercent(inMemory);
-        break;
-    case kMessageLoadUnitData:
-        theMessage = new EEMLoadUnitData(inMemory);
         break;
     case kMessageLoadGarrison:
         theMessage = new EEMLoadGarrison(inMemory);
@@ -533,12 +546,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageUnloadTransport:
         theMessage = new EEMUnloadTransport(inMemory);
         break;
-    case kMessageMakeWorldVisible:
-        theMessage = new EEMMakeWorldVisible(inMemory);
-        break;
-    case kMessageMigrationSlotInfo:
-        theMessage = new EEMMigrationSlotInfo(inMemory);
-        break;
     case kMessageNewEdictEnacted:
         theMessage = new EEMNewEdictEnacted(inMemory);
         break;
@@ -548,23 +555,11 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessagePatrol:
         theMessage = new EEMPatrol(inMemory);
         break;
-    case kMessagePayTribute:
-        theMessage = new EEMPayTribute(inMemory);
-        break;
     case kMessageFullPlayerInformation:
         theMessage = new EEMFullPlayerInformation(inMemory);
         break;
-    case kMessagePlayerInformation:
-        theMessage = new EEMPlayerInformation(inMemory);
-        break;
     case kMessagePlayerSlotInfo:
         theMessage = new EEMPlayerSlotInfo(inMemory);
-        break;
-    case kMessageRecordFrames:
-        theMessage = new EEMRecordFrames(inMemory);
-        break;
-    case kMessageRemoveUnitFromSelectedGroup:
-        theMessage = new EEMRemoveUnitFromSelectedGroup(inMemory);
         break;
     case kMessageRepairUnit:
         theMessage = new EEMRepairUnit(inMemory);
@@ -575,71 +570,23 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageRemoveTechnology:
         theMessage = new EEMRemoveTechnology(inMemory);
         break;
-    case kMessageRemoveImprovement:
-        theMessage = new EEMRemoveImprovement(inMemory);
-        break;
     case kMessageResearchTechnology:
         theMessage = new EEMResearchTechnology(inMemory);
         break;
     case kMessageReportStatistics:
         theMessage = new EEMReportStatistics(inMemory);
         break;
-    case kMessageResign:
-        theMessage = new EEMResign(inMemory);
-        break;
-    case kMessageReturnToBase:
-        theMessage = new EEMReturnToBase(inMemory);
-        break;
-    case kMessageSavedGroupAddSelection:
-        theMessage = new EEMSavedGroupAddSelection(inMemory);
-        break;
-    case kMessageSavedGroupClear:
-        theMessage = new EEMSavedGroupClear(inMemory);
-        break;
-    case kMessageSavedGroupCreate:
-        theMessage = new EEMSavedGroupCreate(inMemory);
-        break;
-    case kMessageSavedGroupSelect:
-        theMessage = new EEMSavedGroupSelect(inMemory);
-        break;
-    case kMessageScrambleAircraft:
-        theMessage = new EEMScrambleAircraft(inMemory);
-        break;
-    case kMessageSelectCustomPlayerForChat:
-        theMessage = new EEMSelectCustomPlayerForChat(inMemory);
-        break;
     case kMessageSelectPatrolGroup:
         theMessage = new EEMSelectPatrolGroup(inMemory);
-        break;
-    case kMessageSelectPlayerChatType:
-        theMessage = new EEMSelectPlayerChatType(inMemory);
         break;
     case kMessageSelectTheseUnits:
         theMessage = new EEMSelectTheseUnits(inMemory);
         break;
-    case kMessageSelectUnit:
-        theMessage = new EEMSelectUnit(inMemory);
-        break;
     case kMessageSelectUnits:
         theMessage = new EEMSelectUnits(inMemory);
         break;
-    case kMessageSelfDestruct:
-        theMessage = new EEMSelfDestruct(inMemory);
-        break;
-    case kMessageSendFlare:
-        theMessage = new EEMSendFlare(inMemory);
-        break;
-    case kMessageSetAirportCommand:
-        theMessage = new EEMSetAirportCommand(inMemory);
-        break;
-    case kMessageSetDiplomaticStance:
-        theMessage = new EEMSetDiplomaticStance(inMemory);
-        break;
     case kMessageSetRallyGoal:
         theMessage = new EEMSetRallyGoal(inMemory);
-        break;
-    case kMessageSetWaterLevel:
-        theMessage = new EEMSetWaterLevel(inMemory);
         break;
     case kMessageSmartFarmers:
         theMessage = new EEMSmartFarmers(inMemory);
@@ -650,29 +597,8 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageStartLoadingResponse:
         theMessage = new EEMStartLoadingResponse(inMemory);
         break;
-    case kMessageStopActiveGroup:
-        theMessage = new EEMStopActiveGroup(inMemory);
-        break;
-    case kMessageSnapToDaylight:
-        theMessage = new EEMSnapToDaylight(inMemory);
-        break;
-    case kMessageToggleCollisionDetection:
-        theMessage = new EEMToggleCollisionDetection(inMemory);
-        break;
-    case kMessageToggleDayNight:
-        theMessage = new EEMToggleDayNight(inMemory);
-        break;
-    case kMessageUnselectAllUnits:
-        theMessage = new EEMUnselectAllUnits(inMemory);
-        break;
-    case kMessageUpdatePingStat:
-        theMessage = new EEMUpdatePingStat(inMemory);
-        break;
     case kMessageImproveUnit:
         theMessage = new EEMImproveUnit(inMemory);
-        break;
-    case kMessageZoomInfo:
-        theMessage = new EEMZoomInfo(inMemory);
         break;
     case kMessageSetUnitBehavior:
         theMessage = new EEMSetUnitBehavior(inMemory);
@@ -736,30 +662,17 @@ char* EEMAddPatrolPoint::GetMessageLabel() const
     return "Add Patrol Point";
 }
 
-// EEMAddRemoveResources's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMAddRemoveResources::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_ADD_REMOVE_RESOURCES;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mAmount);
-    outSlots[6] = EENetMsgField(this->mPlayerID);
-    outSlots[7] = EENetMsgField(this->mResourceType);
-    outSlots[8] = EENetMsgField(this->mAdd);
-    return 9;
-}
-
 // FUNCTION: EXE 0x4bb264
 // Gives a player an amount of one resource, or takes it if the amount is positive and no more than the stock
-void EEMAddRemoveResources::Execute()
+static void ExecuteAddRemoveResources(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayerID];
+    EEPlayer* thePlayer = gWorld.mPlayers[m->Get<int32_t>(2)];
     // the take's test compares unsigned, as on Windows (the decision); an add reads nothing
-    uint8_t theDecision = DecideAddRemove(this->mAdd, this->mAmount, this->mAdd ? 0 : thePlayer->mResourceCaps[this->mResourceType]);
+    uint8_t theDecision = DecideAddRemove(m->Get<unsigned char>(4), m->Get<uint32_t>(1), m->Get<unsigned char>(4) ? 0 : thePlayer->mResourceCaps[m->Get<int32_t>(3)]);
     if (theDecision == 1)
-        thePlayer->AddResource(this->mResourceType, this->mAmount);
+        thePlayer->AddResource(m->Get<int32_t>(3), m->Get<uint32_t>(1));
     else if (theDecision == 2)
-        thePlayer->TakeResource(this->mResourceType, this->mAmount);
+        thePlayer->TakeResource(m->Get<int32_t>(3), m->Get<uint32_t>(1));
 }
 
 // FUNCTION: EXE 0x4bb2a2
@@ -852,20 +765,9 @@ size_t EEMAttackGround::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass
 
 // FUNCTION: EXE 0x4bb75e
 // Runs the attack-players order (EEAttackPlayers) for the message's player and allies flag
-void EEMAttackPlayers::Execute()
+static void ExecuteAttackPlayers(EEMRecord* m)
 {
-    EEAttackPlayers(this->mPlayerID, this->mAllies);
-}
-
-// EEMAttackPlayers's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMAttackPlayers::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_ATTACK_PLAYERS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mPlayerID);
-    outSlots[6] = EENetMsgField(this->mAllies);
-    return 7;
+    EEAttackPlayers(m->Get<int32_t>(1), m->Get<unsigned char>(2));
 }
 
 // FUNCTION: EXE 0x4bb869
@@ -1017,20 +919,6 @@ char* EEMBuildWall::GetMessageLabel() const
     return "Build Wall";
 }
 
-void EEMCameraLocationInfo::Execute()
-{
-}
-
-// EEMCameraLocationInfo's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMCameraLocationInfo::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_CAMERA_LOCATION_INFO;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mLocation);
-    return 6;
-}
-
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
@@ -1097,10 +985,10 @@ char* EEMChangeFormation::GetMessageLabel() const
 // FUNCTION: EXE 0x4bcb62
 // Debug: grows or shrinks the inner or outer collision sphere (by collision sphere mode 9/10) of the first
 // selected unit's class by 0.05 and refreshes that unit's radius; the sea units it collects are never used
-void EEMChangeSelectedUnitCollisionSphere::Execute()
+static void ExecuteChangeSelectedUnitCollisionSphere(EEMRecord* m)
 {
     std::vector<RTSUnit*> theUnits;
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
+    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
     if (theGroup) {
         EEComplexUnit* theUnit = theGroup->GetFirstUnit();
         if (theUnit) {
@@ -1115,7 +1003,7 @@ void EEMChangeSelectedUnitCollisionSphere::Execute()
                     }
                 }
             }
-            if (this->mGrow) {
+            if (m->Get<bool>(1)) {
                 switch (gCollisionSphereMode) {
                 case 9:
                     theUnit->mUnitClass->mInnerCollisionSphere += 0.05f;
@@ -1144,23 +1032,6 @@ void EEMChangeSelectedUnitCollisionSphere::Execute()
                 static_cast<EEComplexUnit*>(theUnits[j])->mCollisionRadius = (float)theUnit->mUnitClass->mInnerCollisionSphere;
         }
     }
-}
-
-// EEMChangeSelectedUnitCollisionSphere's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMChangeSelectedUnitCollisionSphere::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_CHANGE_SELECTED_UNIT_COLLISION_SPHERE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mGrow);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4bcd0d
-// Returns the Change Selected Unit Collision Sphere message's debug label
-char* EEMChangeSelectedUnitCollisionSphere::GetMessageLabel() const
-{
-    return "ChangeSelectedUnitCollisionSphere";
 }
 
 // FUNCTION: EXE 0x4bcd63
@@ -1209,28 +1080,10 @@ void EEMChat::ImportMessage(unsigned char* inPayloadPointer)
 
 // FUNCTION: EXE 0x4bced6
 // Applies a cheat code with its parameter for the sending player
-void EEMCheatCode::Execute()
+static void ExecuteCheatCode(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    gCheatCodes->ApplyCheatCode(this->mCode, thePlayer->mPlayerID, this->mParameter);
-}
-
-// EEMCheatCode's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMCheatCode::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_CHEAT_CODE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mCode);
-    outSlots[6] = EENetMsgField(this->mParameter);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4bcf9b
-// Returns the Cheat Code message's debug label
-char* EEMCheatCode::GetMessageLabel() const
-{
-    return "Cheat Code";
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    gCheatCodes->ApplyCheatCode(m->Get<int32_t>(1), thePlayer->mPlayerID, m->Get<int32_t>(2));
 }
 
 // FUNCTION: EXE 0x4bd008
@@ -1350,48 +1203,23 @@ char* EEMCivUpgradesRequested::GetMessageLabel() const
     return "Civilization Builder requesting upgrades from server";
 }
 
-// EEMClearAirportCommands's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMClearAirportCommands::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_CLEAR_AIRPORT_COMMANDS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4bd53f
-// Returns the Clear Airport Commands message's debug label
-char* EEMClearAirportCommands::GetMessageLabel() const
-{
-    return "Clear Airport Commands";
-}
-
 // FUNCTION: EXE 0x4bd588
 // Clears the queued orders of the sender's selected airports, carriers/space docks and navy yards (reopening
 // them and emptying their air traffic queue) and the orders of selected aircraft
-void EEMClearAirportCommands::Execute()
+static void ExecuteClearAirportCommands(EEMRecord* m)
 {
     // New (game messages lane, round 1): the body is Rust (ee_units rally.rs clear_airport_commands: each selected
     // airport's, air base's and navy yard's queues cleared and opened, an aircraft's queue 1, the goals refreshed)
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     ee_units_clear_airport_commands(static_cast<EEGroup*>(thePlayer->mActiveGroup));
-}
-
-// EEMDisband's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMDisband::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_DISBAND;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
 }
 
 // FUNCTION: EXE 0x4bd82a
 // Disbands the sender's living, disbandable selected units, refunding 75% of their cost scaled by health;
 // plays the cash register sound for the local player
-void EEMDisband::Execute()
+static void ExecuteDisband(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EESelectedGroup* theGroup = thePlayer->mActiveGroup;
     if (theGroup->GetFirstUnit()) {
         EESoundObject* theSound = EESoundObject::Get(kSoundCashRegister);
@@ -1438,35 +1266,6 @@ size_t EEMDropoffResource::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outCl
 char* EEMDropoffResource::GetMessageLabel() const
 {
     return "Dropoff Resource";
-}
-
-void EEMEdictPreProposal::Execute()
-{
-}
-
-// EEMEdictPreProposal's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMEdictPreProposal::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_EDICT_PRE_PROPOSAL;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mEdict);
-    return 6;
-}
-
-void EEMEdictPreProposalResponse::Execute()
-{
-}
-
-// EEMEdictPreProposalResponse's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMEdictPreProposalResponse::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_EDICT_PRE_PROPOSAL_RESPONSE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mEdict);
-    outSlots[6] = EENetMsgField(this->mW12);
-    return 7;
 }
 
 // EEMEdictProposal's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -1530,29 +1329,12 @@ char* EEMEndCinematic::GetMessageLabel() const
 
 // FUNCTION: EXE 0x4be076
 // Puts the sender into shift (queue-orders) mode, and the mouse too for the local player
-void EEMEnterShiftMode::Execute()
+static void ExecuteEnterShiftMode(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     thePlayer->mShiftMode = true;
     if (thePlayer == gWorld.GetCurrentPlayer())
         gMouse->mShiftMode = true;
-}
-
-// EEMEnterShiftMode's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMEnterShiftMode::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_ENTER_SHIFT_MODE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mGameTime);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4be12f
-// Returns the Enter Shift Mode message's debug label
-char* EEMEnterShiftMode::GetMessageLabel() const
-{
-    return "Enter Shift Mode";
 }
 
 // FUNCTION: EXE 0x4be185
@@ -1634,20 +1416,11 @@ void EEMExchangeResources::Execute()
         gUIManager->mMainGameForm->UpdateHelpString();
 }
 
-// EEMExplore's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMExplore::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_EXPLORE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
 // FUNCTION: EXE 0x4be5b6
 // Sends the sender's mobile selected units, split by unit category, to explore unexplored areas
-void EEMExplore::Execute()
+static void ExecuteExplore(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     // New (R5b.4): the body is Rust (ee_units group.rs explore: per formation slot 1..5 an active group filled from
     // the selection, given an Explore goal and planned, one unit drawn to acknowledge) over the world calls of
     // EEUnitHost.cpp
@@ -1858,7 +1631,7 @@ void EEMGameOptions::ImportMessage(unsigned char* inPayloadPointer)
 
 // FUNCTION: EXE 0x4beedd
 // Ends host migration on this machine (client or server) as the game restarts
-void EEMGameRestarting::Execute()
+static void ExecuteGameRestarting(EEMRecord* m)
 {
     if (gCommunications) {
         if (gCommunications->IsClient())
@@ -1868,44 +1641,11 @@ void EEMGameRestarting::Execute()
     }
 }
 
-// EEMGameRestarting's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMGameRestarting::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_GAME_RESTARTING;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4bef70
-// Returns the Game Restarting message's debug label
-char* EEMGameRestarting::GetMessageLabel() const
-{
-    return "Game Restarting";
-}
-
 // FUNCTION: EXE 0x4befb9
 // Sets the world's game speed to the requested speed
-void EEMGameSpeed::Execute()
+static void ExecuteGameSpeed(EEMRecord* m)
 {
-    gWorld.SetGameSpeed(this->mSpeed);
-}
-
-// EEMGameSpeed's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMGameSpeed::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_GAME_SPEED;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mSpeed);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4bf04d
-// Returns the message's debug label "Game Speed"
-char* EEMGameSpeed::GetMessageLabel() const
-{
-    return "Game Speed";
+    gWorld.SetGameSpeed(m->Get<float>(1));
 }
 
 // FUNCTION: EXE 0x4bf0a3
@@ -1938,27 +1678,11 @@ char* EEMGatherResource::GetMessageLabel() const
     return "Gather Resource";
 }
 
-// EEMGoFanatic's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMGoFanatic::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_GO_FANATIC;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4bf371
-// Returns the message's debug label "Go Fanatic"
-char* EEMGoFanatic::GetMessageLabel() const
-{
-    return "Go Fanatic";
-}
-
 // FUNCTION: EXE 0x4bf3ba
 // Makes every living unit of the sender's selection that is in unit set 0x2f go fanatic
-void EEMGoFanatic::Execute()
+static void ExecuteGoFanatic(EEMRecord* m)
 {
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
+    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
     EEUnitSet* theSet = gUnitSetManager.GetSet(0x2f);
     for (long i = theGroup->GetNumUnits() - 1; i >= 0; i--) {
         EEComplexUnit* theUnit = theGroup->GetUnit(i);
@@ -1992,9 +1716,9 @@ void EEMHackANewUnit::Execute()
 
 // FUNCTION: EXE 0x4bf8c8
 // Stops the sender's selected units: clears their goals and sets them idle
-void EEMHaltSelectedGroup::Execute()
+static void ExecuteHaltSelectedGroup(EEMRecord* m)
 {
-    EEGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
+    EEGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
     unsigned long theCount = theGroup->GetNumUnits();
     for (unsigned long i = 0; i < theCount; i++) {
         EEComplexUnit* theUnit = theGroup->GetUnit(i);
@@ -2002,22 +1726,6 @@ void EEMHaltSelectedGroup::Execute()
         theUnit->StartAction(kActionIdle);
         theUnit->mUnitClass->ActionChanged(theUnit);
     }
-}
-
-// EEMHaltSelectedGroup's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMHaltSelectedGroup::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_HALT_SELECTED_GROUP;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4bf996
-// Returns the message's debug label "Halt Selected Group"
-char* EEMHaltSelectedGroup::GetMessageLabel() const
-{
-    return "Halt Selected Group";
 }
 
 // FUNCTION: EXE 0x4bf9df
@@ -2158,76 +1866,34 @@ void EEMInGameChat::ImportMessage(unsigned char* inPayloadPointer)
     this->mText.Import(inPayloadPointer + theSlots[5].offset);
 }
 
-// EEMIncrementEpic's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMIncrementEpic::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_INCREMENT_EPIC;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
 // FUNCTION: EXE 0x4c0150
 // Advances the sending player to the next epoch
-void EEMIncrementEpic::Execute()
+static void ExecuteIncrementEpic(EEMRecord* m)
 {
-    gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->IncrementEpic();
+    gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->IncrementEpic();
 }
 
 // FUNCTION: EXE 0x4c0170
 // Adds 60 seconds to the given goal queue's timer of every selected airport whose queue holds goals
-void EEMIncrementRallyTimer::Execute()
+static void ExecuteIncrementRallyTimer(EEMRecord* m)
 {
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
+    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
     for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
         EEComplexUnit* theUnit = theGroup->GetUnit(i);
         if (theUnit && theUnit->mUnitClass->mUnitType == kUnitTypeAirport) {
-            EEUnitVectorItem& theItem = theUnit->mGoalQueues[this->mGoalQueue];
+            EEUnitVectorItem& theItem = theUnit->mGoalQueues[m->Get<unsigned char>(1)];
             if (theItem.mGoals.size() > 0)
                 theItem.AddTime(60000);
         }
     }
 }
 
-// EEMIncrementRallyTimer's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMIncrementRallyTimer::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_INCREMENT_RALLY_TIMER;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mGoalQueue);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c0265
-// Returns the message's debug label "Increment Rally Timer"
-char* EEMIncrementRallyTimer::GetMessageLabel() const
-{
-    return "Increment Rally Timer";
-}
-
-// EEMJITManufacturing's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMJITManufacturing::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_J_I_T_MANUFACTURING;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4c0326
-// Returns the message's debug label "JIT Manufacturing"
-char* EEMJITManufacturing::GetMessageLabel() const
-{
-    return "JIT Manufacturing";
-}
-
 // FUNCTION: EXE 0x4c036f
 // Toggles just-in-time manufacturing on the sender's living selected units and on the player; refreshes the
 // local interface
-void EEMJITManufacturing::Execute()
+static void ExecuteJITManufacturing(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EEGroup* theGroup = thePlayer->mActiveGroup;
     unsigned long theCount = theGroup->GetNumUnits();
     for (unsigned long i = 0; i < theCount; i++) {
@@ -2302,38 +1968,10 @@ void EEMKillUnit::Execute()
 
 // FUNCTION: EXE 0x4c06aa
 // Stores the network lag status and shows it (with the lag warning) in the interface
-void EEMLagStatus::Execute()
+static void ExecuteLagStatus(EEMRecord* m)
 {
-    gWorld.mLagStatus = this->mStatus;
-    gUserInterface->SetLagStatus(this->mStatus, this->mLagWarning);
-}
-
-// EEMLagStatus's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMLagStatus::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_LAG_STATUS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mStatus);
-    outSlots[6] = EENetMsgField(this->mLagWarning);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c075b
-// Returns the message's debug label "Lag Status"
-char* EEMLagStatus::GetMessageLabel() const
-{
-    return "Lag Status";
-}
-
-// EEMLoadMainScreen's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMLoadMainScreen::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_LOAD_MAIN_SCREEN;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mB10);
-    return 6;
+    gWorld.mLagStatus = m->Get<unsigned short>(1);
+    gUserInterface->SetLagStatus(m->Get<unsigned short>(1), m->Get<unsigned char>(2));
 }
 
 // inline (header-declared; the COMDAT 0x4c0894 sits here): inPoint on the terrain, its own z off
@@ -2354,9 +1992,9 @@ void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
 // FUNCTION: EXE 0x4c0936
 // With the flag set, stops the graphics thread and waits for it; otherwise restarts it, switches to the game (or
 // scenario editor) screen and answers the server with a load-main-screen response
-void EEMLoadMainScreen::Execute()
+static void ExecuteLoadMainScreen(EEMRecord* m)
 {
-    if (this->mB10) {
+    if (m->Get<unsigned char>(1)) {
         gGraphics->PostResume();
         while (true) {
             if (!gGraphics->mIsPaused)
@@ -2376,32 +2014,14 @@ void EEMLoadMainScreen::Execute()
             gUIManager->SwapForm(gUIManager->mScenarioEditorForm);
         gWorld.mCameraControl.Update(1.0f);
         gCommunications->ProcessLocalUserInput(
-            new EEMLoadMainScreenResponse(gWorld.GetCurrentPlayer()->GetSlot(), gWorld.mCurrentPlayer), kSlotServer);
+            new EEMRecord(kMessageLoadMainScreenResponse, {gWorld.GetCurrentPlayer()->GetSlot(), gWorld.mCurrentPlayer}), kSlotServer);
     }
-}
-
-// FUNCTION: EXE 0x4c0a3a
-// Creates the response telling the server that this slot and player have reached the main screen
-EEMLoadMainScreenResponse::EEMLoadMainScreenResponse(unsigned char inSlot, unsigned char inPlayerID)
-    : EEMessage(kMessageLoadMainScreenResponse, true), mSlot(inSlot), mPlayerID(inPlayerID)
-{
-}
-
-// EEMLoadMainScreenResponse's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMLoadMainScreenResponse::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_LOAD_MAIN_SCREEN_RESPONSE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mSlot);
-    outSlots[6] = EENetMsgField(this->mPlayerID);
-    return 7;
 }
 
 bool gLocalPlayerOut;                      // 0x4e6099 (.bss between this unit's Execute statics 0x4e6098/0x4e609a; ee/EEMessage.h)
 // FUNCTION: EXE 0x4c0b60
 // Server: counts each slot's first response; once every human (minus dropped loaders) has answered, starts the game
-void EEMLoadMainScreenResponse::Execute()
+static void ExecuteLoadMainScreenResponse(EEMRecord* m)
 {
     static std::vector<unsigned char> sResponses;
     static unsigned char sNumResponses;
@@ -2409,9 +2029,9 @@ void EEMLoadMainScreenResponse::Execute()
     if (gCommunications->IsServer()) {
         if (sNumResponses == 0)
             sResponses.clear();
-        if (std::find(sResponses.begin(), sResponses.end(), this->mSlot) == sResponses.end()) {
-            sResponses.push_back(this->mSlot);
-            if (this->mPlayerID != 0xff)
+        if (std::find(sResponses.begin(), sResponses.end(), m->Get<unsigned char>(1)) == sResponses.end()) {
+            sResponses.push_back(m->Get<unsigned char>(1));
+            if (m->Get<unsigned char>(2) != 0xff)
                 sNumResponses++;
             if (sNumResponses == static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers() - static_cast<EEServer*>(gCommunications)->mNumDroppedLoaders) {
                 theTime = TMGetTime();
@@ -2458,7 +2078,7 @@ void EEMLoadOrSaveGame::ImportMessage(unsigned char* inPayloadPointer)
 bool EEMLoadOrSaveGame::IsResponse(NEMessage* inMessage)
 {
     bool theResult = false;
-    if (inMessage->GetType() == kMessageLoadOrSaveGameResponse && this->mTick == static_cast<EEMLoadOrSaveGameResponse*>(inMessage)->mTick)
+    if (inMessage->GetType() == kMessageLoadOrSaveGameResponse && this->mTick == static_cast<EEMRecord*>(inMessage)->Get<int32_t>(1))
         theResult = true;
     return theResult;
 }
@@ -2482,7 +2102,7 @@ void EEMLoadOrSaveGame::Execute()
         theDirectory = "data\\";
         theDirectory += "Saved Games\\";
         theResult = EELoadSavedGameFile(UString(this->mFileName), true, this->mIsQuiet, theDirectory, 1);
-        EEMLoadOrSaveGameResponse* theResponse = new EEMLoadOrSaveGameResponse(this->mTick);
+        EEMRecord* theResponse = new EEMRecord(kMessageLoadOrSaveGameResponse, {this->mTick});
         theResponse->SetOriginatingSlot(gWorld.GetCurrentPlayer()->mSlot);
         static_cast<NESynchronousServer*>(gCommunications)->LogResponse(theResponse);
     } else {
@@ -2494,17 +2114,6 @@ void EEMLoadOrSaveGame::Execute()
     }
     if (theResult != 0)
         gUIManager->DisplayMessage(gLoadSaveErrorMessage, 1, NULL, NULL, true);
-}
-
-// FUNCTION: EXE 0x4c1025
-// Creates the response acknowledging the load/save request of the given tick
-EEMLoadOrSaveGameResponse::EEMLoadOrSaveGameResponse(long inTick)
-    : EEMessage(kMessageLoadOrSaveGameResponse, true), mTick(inTick)
-{
-}
-
-void EEMLoadOrSaveGameResponse::Execute()
-{
 }
 
 extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
@@ -2544,58 +2153,26 @@ long EEMLoadOrSaveGame::LoadOrSave()
 // FUNCTION: EXE 0x4c1264
 // Packs the load/save response (header, selection id, tick) into a new send buffer
 
-// EEMLoadOrSaveGameResponse's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMLoadOrSaveGameResponse::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_LOAD_OR_SAVE_GAME_RESPONSE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mTick);
-    return 6;
-}
-
-// EEMLoadPercent's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMLoadPercent::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_LOAD_PERCENT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mSlot);
-    outSlots[6] = EENetMsgField(this->mPercent);
-    return 7;
-}
-
 // FUNCTION: EXE 0x4c142a
 // Shows a slot's loading progress in the interface, capped at 100 percent
-void EEMLoadPercent::Execute()
+static void ExecuteLoadPercent(EEMRecord* m)
 {
-    if (this->mPercent > 100)
-        this->mPercent = 100;
-    gUserInterface->SetLoadPercent(this->mSlot, this->mPercent);
-}
-
-// EEMLoadUnitData's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMLoadUnitData::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_LOAD_UNIT_DATA;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mUnitType);
-    outSlots[6] = EENetMsgField(this->mB14);
-    return 7;
+    if (m->Get<uint32_t>(2) > 100)
+        m->Set<uint32_t>(2, 100);
+    gUserInterface->SetLoadPercent(m->Get<int32_t>(1), m->Get<uint32_t>(2));
 }
 
 // FUNCTION: EXE 0x4c153d
 // Changes the sender's cheat unit class: unloads the old class's data for every player and preloads the new one
-void EEMLoadUnitData::Execute()
+static void ExecuteLoadUnitData(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    if (thePlayer->mHackUnitClass != this->mUnitType) {
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    if (thePlayer->mHackUnitClass != m->Get<int32_t>(1)) {
         unsigned long i;
         for (i = 1; i < gWorld.mNumPlayers; i++)
             if (thePlayer->mHackUnitClass < EEUnitClassCount() && gUnitClassTable[thePlayer->mHackUnitClass])
                 gDataPreLoading->PostUnloadUnitClass(gWorld.mPlayers[i]->mPlayerID, thePlayer->mHackUnitClass);
-        thePlayer->SetHackUnitClass(this->mUnitType);
+        thePlayer->SetHackUnitClass(m->Get<int32_t>(1));
         for (i = 1; i < gWorld.mNumPlayers; i++)
             if (thePlayer->mHackUnitClass < EEUnitClassCount() && gUnitClassTable[thePlayer->mHackUnitClass])
                 gDataPreLoading->PostLoadUnitClass(gWorld.mPlayers[i]->mPlayerID, thePlayer->mHackUnitClass);
@@ -2688,20 +2265,11 @@ void EEMLockUnlock::Execute()
     }
 }
 
-// EEMMakeWorldVisible's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMMakeWorldVisible::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_MAKE_WORLD_VISIBLE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
 // FUNCTION: EXE 0x4c212b
 // Toggles whether the sending player sees the whole map; redraws the mini-map for the local player
-void EEMMakeWorldVisible::Execute()
+static void ExecuteMakeWorldVisible(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     thePlayer->mSeesAll = !thePlayer->mSeesAll;
     if (thePlayer == gWorld.GetCurrentPlayer())
         gMiniMap->Redraw();
@@ -2710,38 +2278,27 @@ void EEMMakeWorldVisible::Execute()
 // FUNCTION: EXE 0x4c2170
 // After a host migration, moves a player to the new slot; a player left without a slot is announced as dropped and
 // (unless observing) removed from the game as defeated; tells the local client a new host is set
-void EEMMigrationSlotInfo::Execute()
+static void ExecuteMigrationSlotInfo(EEMRecord* m)
 {
     UWideString theText;
     UWideString theFormat;
-    if (this->mSlot == kSlotNone) {
-        unsigned char theSlot = gWorld.mPlayers[this->mPlayerID]->mSlot;
+    if (m->Get<unsigned char>(2) == kSlotNone) {
+        unsigned char theSlot = gWorld.mPlayers[m->Get<unsigned char>(1)]->mSlot;
         if (theSlot != kSlotNone && theSlot != kSlotServer) {
             gResource->GetString(IDS_PLAYER_HAS_DROPPED_OUT_OF_GAME, theFormat);
-            sprintf(theText, theFormat, (const char*)gWorld.mPlayers[this->mPlayerID]->mName);
+            sprintf(theText, theFormat, (const char*)gWorld.mPlayers[m->Get<unsigned char>(1)]->mName);
             gUserInterface->AddChatLogEntry(theText, 1);
         }
-        if (!gWorld.mPlayers[this->mPlayerID]->mObserverMode) {
-            gWorld.RemovePlayerFromGame(0, this->mPlayerID);
-            gWorld.mPlayers[this->mPlayerID]->SetGameResult(2);
+        if (!gWorld.mPlayers[m->Get<unsigned char>(1)]->mObserverMode) {
+            gWorld.RemovePlayerFromGame(0, m->Get<unsigned char>(1));
+            gWorld.mPlayers[m->Get<unsigned char>(1)]->SetGameResult(2);
         }
     }
-    gWorld.mPlayers[this->mPlayerID]->mSlot = this->mSlot;
-    if (this->mPlayerID == gWorld.GetCurrentPlayer()->mPlayerID && gCommunications->IsClient()) {
+    gWorld.mPlayers[m->Get<unsigned char>(1)]->mSlot = m->Get<unsigned char>(2);
+    if (m->Get<unsigned char>(1) == gWorld.GetCurrentPlayer()->mPlayerID && gCommunications->IsClient()) {
         gResource->GetString(IDS_NEW_HOST_ESTABLISHED, theText);
         gUserInterface->AddChatLogEntry(theText, 0);
     }
-}
-
-// EEMMigrationSlotInfo's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMMigrationSlotInfo::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_MIGRATION_SLOT_INFO;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mPlayerID);
-    outSlots[6] = EENetMsgField(this->mSlot);
-    return 7;
 }
 
 void EEMNewEdictEnacted::Execute()
@@ -2919,25 +2476,10 @@ char* EEMPatrol::GetMessageLabel() const
     return "Patrol";
 }
 
-// EEMPayTribute's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMPayTribute::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_PAY_TRIBUTE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mFood);
-    outSlots[6] = EENetMsgField(this->mGold);
-    outSlots[7] = EENetMsgField(this->mIron);
-    outSlots[8] = EENetMsgField(this->mStone);
-    outSlots[9] = EENetMsgField(this->mWood);
-    outSlots[10] = EENetMsgField(this->mReceiver);
-    return 11;
-}
-
 // FUNCTION: EXE 0x4c315b
 // Gives the tributed resources to the receiver and records them for both players; the giver and receiver get a
 // chat line listing the amounts
-void EEMPayTribute::Execute()
+static void ExecutePayTribute(EEMRecord* m)
 {
     UWideString theYouGave;
     UWideString theFood;
@@ -2947,11 +2489,11 @@ void EEMPayTribute::Execute()
     UWideString theIron;
     UWideString theText(0x400);
     UWideString theSpace(" ");
-    EEPlayer* theFrom = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EEPlayer* theTo = gWorld.mPlayers[this->mReceiver];
+    EEPlayer* theFrom = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    EEPlayer* theTo = gWorld.mPlayers[m->Get<unsigned char>(6)];
     unsigned long theAmount;
     char theNumber[8];
-    uint32_t theAmounts[7] = {0, 0, this->mFood, this->mWood, this->mStone, this->mGold, this->mIron};
+    uint32_t theAmounts[7] = {0, 0, m->Get<uint32_t>(1), m->Get<uint32_t>(5), m->Get<uint32_t>(4), m->Get<uint32_t>(2), m->Get<uint32_t>(3)};
     uint8_t theOrder[5];
     uint32_t theCount = DecideTributeOrder(theAmounts, 0, theOrder);
     for (uint32_t i = 0; i < theCount; i++) {
@@ -2991,70 +2533,39 @@ void EEMPayTribute::Execute()
     gUserInterface->AddChatLogEntry(theFrom->mColor, theFrom->mName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
 }
 
-// FUNCTION: EXE 0x4c3547
-// Creates a lobby update of one field (type, ping, color, team, citizens or ready) for a slot
-EEMPlayerInformation::EEMPlayerInformation(long inField, long inSlot, long inValue, float inPing)
-    : EEMessage(kMessagePlayerInformation, false)
-{
-    this->mPing = inPing;
-    this->mValue = inValue;
-    this->mField = inField;
-    this->mSlot = inSlot;
-}
-
 // FUNCTION: EXE 0x4c3589
 // Applies the lobby field update to the slot's game options under the write lock and refreshes the lobby row
-void EEMPlayerInformation::Execute()
+static void ExecutePlayerInformation(EEMRecord* m)
 {
     EEGameOptionsPlayer thePlayer;
     gGameOptions.mLock->WriteLock();
-    thePlayer = gGameOptions.mPlayers[this->mSlot];
-    switch (this->mField) {
+    thePlayer = gGameOptions.mPlayers[m->Get<int32_t>(4)];
+    switch (m->Get<int32_t>(2)) {
     case kPlayerInfoEngine:   // port: a computer slot's engine (ee/EECPEngine.h)
-        thePlayer.mEngine = this->mValue < EECPEngineChoiceCount() ? this->mValue : (unsigned long)kEECPChoiceClassic;
+        thePlayer.mEngine = m->Get<uint32_t>(1) < EECPEngineChoiceCount() ? m->Get<uint32_t>(1) : (unsigned long)kEECPChoiceClassic;
         break;
     case 5:
-        thePlayer.mIsReady = this->mValue > 0;
+        thePlayer.mIsReady = m->Get<uint32_t>(1) > 0;
         break;
     case 4:
-        thePlayer.mStartingCitizens = this->mValue;
+        thePlayer.mStartingCitizens = m->Get<uint32_t>(1);
         break;
     case 3:
-        thePlayer.mTeam = this->mValue;
+        thePlayer.mTeam = m->Get<uint32_t>(1);
         break;
     case 2:
-        thePlayer.mColor = this->mValue;
+        thePlayer.mColor = m->Get<uint32_t>(1);
         break;
     case 1:
-        thePlayer.mPing = this->mPing;
+        thePlayer.mPing = m->Get<float>(3);
         break;
     case 0:
-        thePlayer.mType = this->mValue;
+        thePlayer.mType = m->Get<uint32_t>(1);
         break;
     }
-    gGameOptions.mPlayers[this->mSlot] = thePlayer;
+    gGameOptions.mPlayers[m->Get<int32_t>(4)] = thePlayer;
     gGameOptions.mLock->WriteUnlock();
-    gUserInterface->PostLobbyUpdatePlayer(this->mSlot, this->mField);
-}
-
-// EEMPlayerInformation's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMPlayerInformation::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_PLAYER_INFORMATION;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mValue);
-    outSlots[6] = EENetMsgField(this->mField);
-    outSlots[7] = EENetMsgField(this->mPing);
-    outSlots[8] = EENetMsgField(this->mSlot);
-    return 9;
-}
-
-// FUNCTION: EXE 0x4c3700
-// Returns the message's debug label "Player Information"
-char* EEMPlayerInformation::GetMessageLabel() const
-{
-    return "Player Information";
+    gUserInterface->PostLobbyUpdatePlayer(m->Get<int32_t>(4), m->Get<int32_t>(2));
 }
 
 // FUNCTION: EXE 0x4c378e
@@ -3148,17 +2659,17 @@ void EEMPlayerSlotInfo::ImportMessage(unsigned char* inPayloadPointer)
 // FUNCTION: EXE 0x4c3bbc
 // During recorded-game playback, switches graphics, physics and the player between slow and normal speed when the
 // local player sent it
-void EEMRecordFrames::Execute()
+static void ExecuteRecordFrames(EEMRecord* m)
 {
     if ((gCommunications->IsClient() == true
          && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
         || (gCommunications->IsServer() == true
             && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)) {
-        if (this->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot) {
-            gGraphics->PostSetFlag5B(this->mSlowPlayback);
-            gPhysics->SetSlowPlayback(this->mSlowPlayback);
+        if (m->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot) {
+            gGraphics->PostSetFlag5B(m->Get<bool>(1));
+            gPhysics->SetSlowPlayback(m->Get<bool>(1));
             if (gCommunications->IsClient()) {
-                if (this->mSlowPlayback)
+                if (m->Get<bool>(1))
                     (static_cast<NESynchronousClient*>(gCommunications))->SetSlowPlayback();
                 else
                     (static_cast<NESynchronousClient*>(gCommunications))->SetNormalPlayback();
@@ -3167,39 +2678,12 @@ void EEMRecordFrames::Execute()
     }
 }
 
-// EEMRecordFrames's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMRecordFrames::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_RECORD_FRAMES;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mSlowPlayback);
-    return 6;
-}
-
 // FUNCTION: EXE 0x4c3d36
 // Removes the unit from the sending player's selection
-void EEMRemoveUnitFromSelectedGroup::Execute()
+static void ExecuteRemoveUnitFromSelectedGroup(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    thePlayer->RemoveUnitFromSelectedGroup(this->mUnitID);
-}
-
-// EEMRemoveUnitFromSelectedGroup's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMRemoveUnitFromSelectedGroup::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_REMOVE_UNIT_FROM_SELECTED_GROUP;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mUnitID);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c3ddb
-// Returns the message's debug label "Remove Unit From Selected Group"
-char* EEMRemoveUnitFromSelectedGroup::GetMessageLabel() const
-{
-    return "Remove Unit From Selected Group";
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    thePlayer->RemoveUnitFromSelectedGroup(m->Get<int32_t>(1));
 }
 
 // FUNCTION: EXE 0x4c3e31
@@ -3311,33 +2795,17 @@ char* EEMReportStatistics::GetMessageLabel() const
     return "Report Statistics";
 }
 
-// EEMResign's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMResign::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_RESIGN;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4c44b5
-// Returns the message's debug label "Resign"
-char* EEMResign::GetMessageLabel() const
-{
-    return "Resign";
-}
-
 // FUNCTION: EXE 0x4c44bb
 // Removes the sending player from the game as resigned (observers excepted); the other machines post a
 // "has resigned" chat line
-void EEMResign::Execute()
+static void ExecuteResign(EEMRecord* m)
 {
     GEColor theColor(1.0f, 1.0f, 1.0f);
     UWideString theUnused;
     UWideString theText;
     UWideString theFormat;
     UWideString theName;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     if (!thePlayer->mObserverMode) {
         gWorld.RemovePlayerFromGame(0, thePlayer->mPlayerID);
         thePlayer->SetGameResult(2);
@@ -3352,11 +2820,11 @@ void EEMResign::Execute()
 
 // FUNCTION: EXE 0x4c45b8
 // Removes the improvement from the queue of every living selected building of the clicked unit's type
-void EEMRemoveImprovement::Execute()
+static void ExecuteRemoveImprovement(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEUnit* theUnit = gWorld.GetUnit(this->mUnitID);
+    EEUnit* theUnit = gWorld.GetUnit(m->Get<int32_t>(1));
     if (theUnit && theUnit->mHitPoints > 0) {
         long theType = theUnit->mUnitClass->mUnitType;
         unsigned long theNumUnits = theGroup->GetNumUnits();
@@ -3364,31 +2832,13 @@ void EEMRemoveImprovement::Execute()
             EEComplexUnit* theOther = theGroup->GetUnit(i);
             long theOtherType = theOther->mUnitClass->mUnitType;
             if (theOther->mHitPoints > 0 && theOtherType == theType && theOther->mComplexUnit) {
-                if (thePlayer->CountQueuedImprovements(theOtherType, this->mImprovement) == 0)
-                    thePlayer->RemoveQueuedImprovement(theOtherType, this->mImprovement, false);
+                if (thePlayer->CountQueuedImprovements(theOtherType, m->Get<int32_t>(2)) == 0)
+                    thePlayer->RemoveQueuedImprovement(theOtherType, m->Get<int32_t>(2), false);
                 else
-                    thePlayer->RemoveQueuedImprovement(theOtherType, this->mImprovement, true);
+                    thePlayer->RemoveQueuedImprovement(theOtherType, m->Get<int32_t>(2), true);
             }
         }
     }
-}
-
-// EEMRemoveImprovement's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMRemoveImprovement::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_REMOVE_IMPROVEMENT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mUnitID);
-    outSlots[6] = EENetMsgField(this->mImprovement);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c46f9
-// Returns the message's debug label "Remove Improvement"
-char* EEMRemoveImprovement::GetMessageLabel() const
-{
-    return "Remove Improvement";
 }
 
 // FUNCTION: EXE 0x4c4766
@@ -3475,12 +2925,12 @@ char* EEMResearchTechnology::GetMessageLabel() const
 // FUNCTION: EXE 0x4c4e02
 // Makes the target the home base of the selected aircraft in flight (resetting their flight time unless kept);
 // acknowledges by voice
-void EEMReturnToBase::Execute()
+static void ExecuteReturnToBase(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EESelectedGroup* theGroup = thePlayer->mActiveGroup;
     EEComplexUnit* theLastUnit = NULL;
-    EEUnit* theBase = gWorld.GetUnit(this->mBaseID);
+    EEUnit* theBase = gWorld.GetUnit(m->Get<int32_t>(1));
     if (theBase) {
         EEComplexUnit* theBaseUnit = theBase->GetComplexUnit();
         if (theBaseUnit) {
@@ -3490,7 +2940,7 @@ void EEMReturnToBase::Execute()
                     long theCategory = theUnit->GetUnitClass()->mCategory;
                     if ((theCategory == kUnitCategoryAirplane || theCategory == kUnitCategoryPlanetSpaceship) && theUnit->mFlightTime > 0) {
                         theUnit->SetHomeBase(theBaseUnit);
-                        if (!this->mKeepFlightTime)
+                        if (!m->Get<bool>(2))
                             theUnit->SetFlightTime(0);
                         theLastUnit = theUnit;
                     }
@@ -3502,30 +2952,12 @@ void EEMReturnToBase::Execute()
     }
 }
 
-// EEMReturnToBase's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMReturnToBase::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_RETURN_TO_BASE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mBaseID);
-    outSlots[6] = EENetMsgField(this->mKeepFlightTime);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c4f64
-// Returns the message's debug label "Return To Base"
-char* EEMReturnToBase::GetMessageLabel() const
-{
-    return "Return To Base";
-}
-
 // FUNCTION: EXE 0x4c4fd1
 // Adds the units of a saved group to the sender's selection, skipping ones already selected
-void EEMSavedGroupAddSelection::Execute()
+static void ExecuteSavedGroupAddSelection(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EEGroup* theSavedGroup = thePlayer->mGroups[this->mGroup];
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    EEGroup* theSavedGroup = thePlayer->mGroups[m->Get<unsigned char>(1)];
     EEGroup* theActiveGroup = thePlayer->mActiveGroup;
     for (unsigned long i = 0; i < theSavedGroup->GetNumUnits(); i++) {
         EEComplexUnit* theUnit = theSavedGroup->GetUnit(i);
@@ -3534,87 +2966,36 @@ void EEMSavedGroupAddSelection::Execute()
     }
 }
 
-// EEMSavedGroupAddSelection's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSavedGroupAddSelection::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SAVED_GROUP_ADD_SELECTION;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mGroup);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c50c1
-// Returns the message's debug label "Add Selection To Saved Group"
-char* EEMSavedGroupAddSelection::GetMessageLabel() const
-{
-    return "Add Selection To Saved Group";
-}
-
 // FUNCTION: EXE 0x4c5117
 // Clears the sender's saved group if it holds any units
-void EEMSavedGroupClear::Execute()
+static void ExecuteSavedGroupClear(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EEGroup* theGroup = thePlayer->mGroups[this->mGroup];
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    EEGroup* theGroup = thePlayer->mGroups[m->Get<unsigned char>(1)];
     if (theGroup && theGroup->GetNumUnits() > 0)
-        thePlayer->ClearSavedGroup(this->mGroup);
-}
-
-// EEMSavedGroupClear's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSavedGroupClear::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SAVED_GROUP_CLEAR;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mGroup);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c51d8
-// Returns the message's debug label "Clear Saved Group"
-char* EEMSavedGroupClear::GetMessageLabel() const
-{
-    return "Clear Saved Group";
+        thePlayer->ClearSavedGroup(m->Get<unsigned char>(1));
 }
 
 // FUNCTION: EXE 0x4c522e
 // Stores the sender's current selection as a saved group (when anything is selected)
-void EEMSavedGroupCreate::Execute()
+static void ExecuteSavedGroupCreate(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     if (thePlayer->mActiveGroup->GetNumUnits() > 0)
-        thePlayer->mGroups[this->mGroup]->Assign(thePlayer->mActiveGroup);
-}
-
-// EEMSavedGroupCreate's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSavedGroupCreate::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SAVED_GROUP_CREATE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mGroup);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c52f4
-// Returns the message's debug label "Create Saved Group"
-char* EEMSavedGroupCreate::GetMessageLabel() const
-{
-    return "Create Saved Group";
+        thePlayer->mGroups[m->Get<unsigned char>(1)]->Assign(thePlayer->mActiveGroup);
 }
 
 // FUNCTION: EXE 0x4c534a
 // Selects the sender's saved group; for the local player resets the command panel, centres the camera on it
 // when asked and plays its selection sound
-void EEMSavedGroupSelect::Execute()
+static void ExecuteSavedGroupSelect(EEMRecord* m)
 {
     GE3DPoint theLocation;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EEUIFMGMainGroup* theMainGroup = static_cast<EEUIFMGMainGroup*>(gUIManager->mMainGameForm->mGroups[0]);
-    unsigned char theSlot = this->GetOriginatingSlot();
+    unsigned char theSlot = m->GetOriginatingSlot();
     unsigned char theLocalSlot = gWorld.GetCurrentPlayer()->GetSlot();
-    thePlayer->mActiveGroup->SelectSavedGroup(thePlayer->mGroups[this->mGroup], true);
+    thePlayer->mActiveGroup->SelectSavedGroup(thePlayer->mGroups[m->Get<unsigned char>(1)], true);
     if (theSlot == theLocalSlot && gWorld.mExecutingLocalSelection == true) {
         gMouse->mPointer = 0;
         theMainGroup->ShowCommands(theMainGroup->GetSelectedUnit());
@@ -3623,7 +3004,7 @@ void EEMSavedGroupSelect::Execute()
         gUIManager->mMainGameForm->mIsCursorLocked = false;
         EEComplexUnit* theUnit = thePlayer->mSelectedGroup->GetFirstUnit();
         if (theUnit) {
-            if (this->mFlag) {
+            if (m->Get<bool>(2)) {
                 theUnit->GetPosition(theLocation);
                 gWorld.mCameraControl.SetChanged();
                 gWorld.mCameraControl.SetLocation(theLocation, false, true);
@@ -3636,33 +3017,15 @@ void EEMSavedGroupSelect::Execute()
     }
 }
 
-// EEMSavedGroupSelect's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSavedGroupSelect::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SAVED_GROUP_SELECT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mGroup);
-    outSlots[6] = EENetMsgField(this->mFlag);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c551c
-// Returns the message's debug label "Select Saved Group"
-char* EEMSavedGroupSelect::GetMessageLabel() const
-{
-    return "Select Saved Group";
-}
-
 // FUNCTION: EXE 0x4c5587
 // Sends an airplane to the point: clears its goal queues and queues the move in queues 0 and 1 (1 s timer)
-void EEMScrambleAircraft::Execute()
+static void ExecuteScrambleAircraft(EEMRecord* m)
 {
-    EEUnit* theUnit = gWorld.GetUnit(this->mUnitID);
+    EEUnit* theUnit = gWorld.GetUnit(m->Get<int32_t>(3));
     if (theUnit) {
         EEComplexUnit* theAircraft = theUnit->GetComplexUnit();
         if (theAircraft && (theAircraft->mUnitClass->mCategory == kUnitCategoryAirplane || theAircraft->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship)) {
-            EEUGRust* theGoal = EEUGRust::NewLocation(GE2DPoint(long(this->mX), long(this->mY)), false, false, false, 0.0f, false, false);
+            EEUGRust* theGoal = EEUGRust::NewLocation(GE2DPoint(long(m->Get<int32_t>(1)), long(m->Get<int32_t>(2))), false, false, false, 0.0f, false, false);
             theAircraft->ClearAllGoalQueues();
             theAircraft->QueueGoal(theGoal, 0);
             theAircraft->QueueGoal(theGoal->Clone(), 1);
@@ -3671,50 +3034,13 @@ void EEMScrambleAircraft::Execute()
     }
 }
 
-// EEMScrambleAircraft's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMScrambleAircraft::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SCRAMBLE_AIRCRAFT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mX);
-    outSlots[6] = EENetMsgField(this->mY);
-    outSlots[7] = EENetMsgField(this->mUnitID);
-    return 8;
-}
-
-// FUNCTION: EXE 0x4c56d7
-// Returns the message's debug label "Scramble Aircraft"
-char* EEMScrambleAircraft::GetMessageLabel() const
-{
-    return "Scramble Aircraft";
-}
-
 // FUNCTION: EXE 0x4c5755
 // Sets whether the sender's chat goes to the given player
-void EEMSelectCustomPlayerForChat::Execute()
+static void ExecuteSelectCustomPlayerForChat(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     if (thePlayer)
-        thePlayer->mSendChatMessage[this->mPlayerID] = this->mIsSelected;
-}
-
-// EEMSelectCustomPlayerForChat's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSelectCustomPlayerForChat::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SELECT_CUSTOM_PLAYER_FOR_CHAT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mPlayerID);
-    outSlots[6] = EENetMsgField(this->mIsSelected);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c5812
-// Returns the message's debug label "Select Custom Player For Chat"
-char* EEMSelectCustomPlayerForChat::GetMessageLabel() const
-{
-    return "Select Custom Player For Chat";
+        thePlayer->mSendChatMessage[m->Get<int32_t>(1)] = m->Get<bool>(2);
 }
 
 // FUNCTION: EXE 0x4c587f
@@ -3747,28 +3073,11 @@ char* EEMSelectPatrolGroup::GetMessageLabel() const
 
 // FUNCTION: EXE 0x4c59ac
 // Sets the sender's chat recipient type
-void EEMSelectPlayerChatType::Execute()
+static void ExecuteSelectPlayerChatType(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     if (thePlayer)
-        thePlayer->mChatType = this->mChatType;
-}
-
-// EEMSelectPlayerChatType's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSelectPlayerChatType::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SELECT_PLAYER_CHAT_TYPE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mChatType);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c5a54
-// Returns the message's debug label "Select Player Chat Type"
-char* EEMSelectPlayerChatType::GetMessageLabel() const
-{
-    return "Select Player Chat Type";
+        thePlayer->mChatType = m->Get<int32_t>(1);
 }
 
 // FUNCTION: EXE 0x4c5aaa
@@ -3836,27 +3145,10 @@ void EEMSelectTheseUnits::ImportMessage(unsigned char* inPayloadPointer)
 
 // FUNCTION: EXE 0x4c5c80
 // Selects one unit for the sender
-void EEMSelectUnit::Execute()
+static void ExecuteSelectUnit(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    thePlayer->SelectUnit(this->mUnitID, true, true);
-}
-
-// EEMSelectUnit's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSelectUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SELECT_UNIT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mUnitID);
-    return 6;
-}
-
-// FUNCTION: EXE 0x4c5d29
-// Returns the message's debug label "Select Unit"
-char* EEMSelectUnit::GetMessageLabel() const
-{
-    return "Select Unit";
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    thePlayer->SelectUnit(m->Get<uint32_t>(1), true, true);
 }
 
 // New (port), TEST ONLY: set by the UI fixture (EETestFixture.cpp, only with EE_TEST_UI) to see each box selection's
@@ -3949,20 +3241,11 @@ void EEMSelectUnits::ImportMessage(unsigned char* inPayloadPointer)
     DecompressUnits(this->mBuffer, this->mBufferSize, this->mUnitIDs);
 }
 
-// EEMSelfDestruct's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSelfDestruct::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SELF_DESTRUCT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
 // FUNCTION: EXE 0x4c626c
 // Kills every living selected unit whose class has a death-spawn class; acknowledges by voice
-void EEMSelfDestruct::Execute()
+static void ExecuteSelfDestruct(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EEGroup* theGroup = thePlayer->mActiveGroup;
     if (theGroup->GetFirstUnit()) {
         unsigned long theNumUnits = theGroup->GetNumUnits();
@@ -3975,27 +3258,16 @@ void EEMSelfDestruct::Execute()
     }
 }
 
-// EEMSendFlare's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSendFlare::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SEND_FLARE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mX);
-    outSlots[6] = EENetMsgField(this->mY);
-    return 7;
-}
-
 // FUNCTION: EXE 0x4c63e8
 // Shows a flare at the tile to the sender and each ally, and tells each ally it received one
-void EEMSendFlare::Execute()
+static void ExecuteSendFlare(EEMRecord* m)
 {
     std::vector<EEPlayer*> theAllies;
     U2DPoint<long> theTile;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     theAllies = thePlayer->mAllies;
-    theTile.mX = this->mX;
-    theTile.mY = this->mY;
+    theTile.mX = m->Get<int32_t>(1);
+    theTile.mY = m->Get<int32_t>(2);
     thePlayer->mEvents.AddEvent(theTile, 3, thePlayer, -1, true);
     for (std::vector<EEPlayer*>::iterator it = theAllies.begin(); it != theAllies.end(); ++it) {
         (*it)->mEvents.AddEvent(theTile, 3, *it, -1, true);
@@ -4003,58 +3275,34 @@ void EEMSendFlare::Execute()
     }
 }
 
-// EEMSetAirportCommand's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSetAirportCommand::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SET_AIRPORT_COMMAND;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mPoint);
-    outSlots[6] = EENetMsgField(this->mCommand);
-    outSlots[7] = EENetMsgField(this->mTargetID);
-    outSlots[8] = EENetMsgField(this->mIsQueued);
-    return 9;
-}
-
 // FUNCTION: EXE 0x4c65d2
 // Gives the sender's selected airports an order for their aircraft: attack the target (a seen enemy) or go to
 // the point, in the queue(s) the command picks (12-15 add a 60 s timer; 15 shares one attack goal)
-void EEMSetAirportCommand::Execute()
+static void ExecuteSetAirportCommand(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     // New (game messages lane, round 1): the body is Rust (ee_units rally.rs set_airport_command: the attack or move
     // goal, each selected airport's queues and timers by the command) over the store and EEUnitHost.cpp's calls
-    ee_units_set_airport_command(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mPoint.GetX(),
-                                 this->mPoint.GetY(), this->mCommand, this->mTargetID, this->mIsQueued);
-}
-
-// EEMSetDiplomaticStance's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSetDiplomaticStance::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SET_DIPLOMATIC_STANCE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mPlayerID);
-    outSlots[6] = EENetMsgField(this->mStance);
-    return 7;
+    ee_units_set_airport_command(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), m->Get<GE2DPoint>(1).GetX(),
+                                 m->Get<GE2DPoint>(1).GetY(), m->Get<int32_t>(2), m->Get<int32_t>(3), m->Get<unsigned char>(4));
 }
 
 // FUNCTION: EXE 0x4c6b85
 // Sets the sender's stance toward a player and posts "<name> changes diplomatic stance to" friendly
 // (stance 0) or hostile to the chat log
-void EEMSetDiplomaticStance::Execute()
+static void ExecuteSetDiplomaticStance(EEMRecord* m)
 {
     UWideString theAlly;
     UWideString theEnemy;
     UWideString theIsNow;
     UWideString theText(0x400);
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    gWorld.SetDiplomaticStance(thePlayer->mPlayerID, this->mPlayerID, this->mStance);
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
+    gWorld.SetDiplomaticStance(thePlayer->mPlayerID, m->Get<int32_t>(1), m->Get<int32_t>(2));
     gResource->GetString(IDS_HOSTILE, theAlly);
     gResource->GetString(IDS_FRIENDLY, theEnemy);
     gResource->GetString(IDS_CHANGES_DIPLOMATIC_STANCE_TO, theIsNow);
     sprintf(theText, "%s %s %s", (const char*)thePlayer->mName, (const char*)theIsNow,
-            (const char*)(this->mStance == 0 ? theEnemy : theAlly));
+            (const char*)(m->Get<int32_t>(2) == 0 ? theEnemy : theAlly));
     gUserInterface->AddChatLogEntry(thePlayer->mColor, thePlayer->mName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
 }
 
@@ -4071,10 +3319,6 @@ size_t EEMSetRallyGoal::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass
     return 9;
 }
 
-void EEMSetWaterLevel::Execute()
-{
-}
-
 // inline (header-declared; its COMDAT 0x4c7486 follows its first user EEMSetRallyGoal::Execute): the unit can
 // attack inClass: its stats' +0xd8 is positive, and the damage table entry of inClass against this class
 // not inline: other units call it (VC6 left an out-of-line copy of the inline for them; clang does not)
@@ -4085,7 +3329,6 @@ bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
     return this->mStats->mAttack > 0.0f && (theTarget = this->mUnitClass->mAmmoType, theAttacker = inClass->mFamily, inClass->CanBeAttacked())
            && EEDamageFactor(theAttacker, theTarget) > 0.0f;
 }
-
 
 // FUNCTION: EXE 0x4c6dca
 // Sets the rally goal of the sender's selected buildings of this type: gather, attack, repair, patrol, garrison,
@@ -4101,16 +3344,6 @@ void EEMSetRallyGoal::Execute()
 
 // FUNCTION: EXE 0x4c74da
 // Packs the water-level message (header, selection id, level byte) into a new send buffer
-
-// EEMSetWaterLevel's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSetWaterLevel::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SET_WATER_LEVEL;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mB10);
-    return 6;
-}
 
 // EEMSmartFarmers' sort predicate (provisional name): the farther farm first, with +0x34c, then +0x344 ordering
 // the units; `this` is the EETileDistanceLess the distances are taken from.
@@ -4251,97 +3484,45 @@ void EEMStartLoadingResponse::Execute()
             if (theNumResponses + 1 == theServer->GetNumHumanPlayers()) {
                 theServer->SendPlayerSlotInfo();
                 theServer->mLoadState = 2;
-                gCommunications->ProcessLocalUserInput(new EEMLoadMainScreen((unsigned char)0), kSlotNone);
+                gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageLoadMainScreen, {0}), kSlotNone);
             }
         }
     }
 }
 
-// FUNCTION: EXE 0x4c7fda
-// Creates a load-main-screen message with the given flag byte
-EEMLoadMainScreen::EEMLoadMainScreen(unsigned char inB10)
-    : EEMessage(kMessageLoadMainScreen, true), mB10(inB10)
-{
-}
-
-// EEMSnapToDaylight's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSnapToDaylight::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SNAP_TO_DAYLIGHT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
 // FUNCTION: EXE 0x4c80bf
 // Asks the physics thread to snap the day/night cycle to daylight
-void EEMSnapToDaylight::Execute()
+static void ExecuteSnapToDaylight(EEMRecord* m)
 {
     gPhysics->mThread->Post(0x503, NULL, NULL, true);
-}
-
-// EEMStopActiveGroup's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMStopActiveGroup::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_STOP_ACTIVE_GROUP;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4c8144
-// Returns the message's debug label "Stop Active Group"
-char* EEMStopActiveGroup::GetMessageLabel() const
-{
-    return "Stop Active Group";
 }
 
 // FUNCTION: EXE 0x4c818d
 // Stops the sender's living selected units: aircraft drop their orders and, unless taking off, flying a
 // pattern or landing, hold at their tile; other units halt
-void EEMStopActiveGroup::Execute()
+static void ExecuteStopActiveGroup(EEMRecord* m)
 {
     // New (game messages lane, round 1): the body is Rust (ee_units rally.rs stop_active_group: aircraft drop their
     // orders and, unless airborne, move to their tile; the other living units halt)
-    ee_units_stop_active_group(static_cast<EEGroup*>(gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup));
-}
-
-// EEMToggleCollisionDetection's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMToggleCollisionDetection::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_TOGGLE_COLLISION_DETECTION;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mDivisor);
-    outSlots[6] = EENetMsgField(this->mL14);
-    return 7;
+    ee_units_stop_active_group(static_cast<EEGroup*>(gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup));
 }
 
 // FUNCTION: EXE 0x4c840a
 // Debug: when the mode value is negative, sets the collision cell size (if positive) or cycles the
 // collision flags 0..15
-void EEMToggleCollisionDetection::Execute()
+static void ExecuteToggleCollisionDetection(EEMRecord* m)
 {
-    if (this->mL14 < 0) {
-        if (this->mDivisor > 0)
-            gCollisionDetectionUnit = this->mDivisor;
+    if (m->Get<int32_t>(2) < 0) {
+        if (m->Get<int32_t>(1) > 0)
+            gCollisionDetectionUnit = m->Get<int32_t>(1);
         else
             gWorld.mCollisionDetectionFlags = (gWorld.mCollisionDetectionFlags + 1) % 16;
     }
 }
 
-// EEMToggleDayNight's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMToggleDayNight::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_TOGGLE_DAY_NIGHT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
 // FUNCTION: EXE 0x4c84df
 // Asks the physics thread to toggle the day/night cycle
-void EEMToggleDayNight::Execute()
+static void ExecuteToggleDayNight(EEMRecord* m)
 {
     gPhysics->mThread->Post(0x502, NULL, NULL, true);
 }
@@ -4358,7 +3539,6 @@ size_t EEMUnloadTransport::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outCl
     return 8;
 }
 
-
 // FUNCTION: EXE 0x4c8615
 // Splits the sender's selection by kind; parts with a loaded transport unload at the point, the rest move
 // there (a loaded transport that cannot unload there raises a warning event)
@@ -4374,56 +3554,22 @@ void EEMUnloadTransport::Execute()
 
 // FUNCTION: EXE 0x4c889e
 // Clears the sender's selection
-void EEMUnselectAllUnits::Execute()
+static void ExecuteUnselectAllUnits(EEMRecord* m)
 {
-    gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->UnselectAllUnits();
-}
-
-// EEMUnselectAllUnits's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMUnselectAllUnits::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_UNSELECT_ALL_UNITS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4c8929
-// Returns the message's debug label "Unselect All Units"
-char* EEMUnselectAllUnits::GetMessageLabel() const
-{
-    return "Unselect All Units";
+    gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->UnselectAllUnits();
 }
 
 // FUNCTION: EXE 0x4c8972
 // Stores a slot's ping in the game options under the write lock and refreshes that lobby row
-void EEMUpdatePingStat::Execute()
+static void ExecuteUpdatePingStat(EEMRecord* m)
 {
     EEGameOptionsPlayer thePlayer;
     gGameOptions.mLock->WriteLock();
-    thePlayer = gGameOptions.mPlayers[this->mSlot];
-    thePlayer.mPing = this->mPing;
-    gGameOptions.mPlayers[this->mSlot] = thePlayer;
+    thePlayer = gGameOptions.mPlayers[m->Get<unsigned char>(1)];
+    thePlayer.mPing = m->Get<float>(2);
+    gGameOptions.mPlayers[m->Get<unsigned char>(1)] = thePlayer;
     gGameOptions.mLock->WriteUnlock();
-    gUserInterface->PostLobbyUpdatePlayer(this->mSlot, 1);
-}
-
-// EEMUpdatePingStat's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMUpdatePingStat::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_UPDATE_PING_STAT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mSlot);
-    outSlots[6] = EENetMsgField(this->mPing);
-    return 7;
-}
-
-// FUNCTION: EXE 0x4c8a79
-// Returns the message's debug label "Update Ping Stat"
-char* EEMUpdatePingStat::GetMessageLabel() const
-{
-    return "Update Ping Stat";
+    gUserInterface->PostLobbyUpdatePlayer(m->Get<unsigned char>(1), 1);
 }
 
 // FUNCTION: EXE 0x4c8ae4
@@ -4459,25 +3605,15 @@ size_t EEMImproveUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 
 // FUNCTION: EXE 0x4c8cbb
 // During recorded-game playback, applies the sender's camera zoom when the sender is the local player
-void EEMZoomInfo::Execute()
+static void ExecuteZoomInfo(EEMRecord* m)
 {
     if ((gCommunications->IsClient() == true
          && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
         || (gCommunications->IsServer() == true
             && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)) {
-        if (this->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot)
-            gWorld.mCameraControl.SetZoom(this->mZoom);
+        if (m->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot)
+            gWorld.mCameraControl.SetZoom(m->Get<float>(1));
     }
-}
-
-// EEMZoomInfo's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMZoomInfo::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_ZOOM_INFO;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    outSlots[5] = EENetMsgField(this->mZoom);
-    return 6;
 }
 
 // FUNCTION: EXE 0x4c8df1
@@ -4651,3 +3787,68 @@ size_t EEMSetUnitBehavior::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outCl
 // TEMPLATE: EXE 0x4ca13d
 // TEMPLATE: EXE 0x4ca240
 // TEMPLATE: EXE 0x4ca290
+
+// the record types' Execute bodies (a type with none does nothing)
+static const struct {
+    unsigned char mType;
+    void (*mExecute)(EEMRecord* m);
+} kRecordExecutes[] = {
+    {kMessageAddRemoveResources, ExecuteAddRemoveResources},
+    {kMessageAttackPlayers, ExecuteAttackPlayers},
+    {kMessageChangeSelectedUnitCollisionSphere, ExecuteChangeSelectedUnitCollisionSphere},
+    {kMessageCheatCode, ExecuteCheatCode},
+    {kMessageClearAirportCommands, ExecuteClearAirportCommands},
+    {kMessageDisband, ExecuteDisband},
+    {kMessageEnterShiftMode, ExecuteEnterShiftMode},
+    {kMessageExplore, ExecuteExplore},
+    {kMessageGameRestarting, ExecuteGameRestarting},
+    {kMessageGameSpeed, ExecuteGameSpeed},
+    {kMessageGoFanatic, ExecuteGoFanatic},
+    {kMessageHaltSelectedGroup, ExecuteHaltSelectedGroup},
+    {kMessageIncrementEpic, ExecuteIncrementEpic},
+    {kMessageIncrementRallyTimer, ExecuteIncrementRallyTimer},
+    {kMessageJITManufacturing, ExecuteJITManufacturing},
+    {kMessageLagStatus, ExecuteLagStatus},
+    {kMessageLoadMainScreen, ExecuteLoadMainScreen},
+    {kMessageLoadMainScreenResponse, ExecuteLoadMainScreenResponse},
+    {kMessageLoadPercent, ExecuteLoadPercent},
+    {kMessageLoadUnitData, ExecuteLoadUnitData},
+    {kMessageMakeWorldVisible, ExecuteMakeWorldVisible},
+    {kMessageMigrationSlotInfo, ExecuteMigrationSlotInfo},
+    {kMessagePayTribute, ExecutePayTribute},
+    {kMessagePlayerInformation, ExecutePlayerInformation},
+    {kMessageRecordFrames, ExecuteRecordFrames},
+    {kMessageRemoveImprovement, ExecuteRemoveImprovement},
+    {kMessageRemoveUnitFromSelectedGroup, ExecuteRemoveUnitFromSelectedGroup},
+    {kMessageResign, ExecuteResign},
+    {kMessageReturnToBase, ExecuteReturnToBase},
+    {kMessageSavedGroupAddSelection, ExecuteSavedGroupAddSelection},
+    {kMessageSavedGroupClear, ExecuteSavedGroupClear},
+    {kMessageSavedGroupCreate, ExecuteSavedGroupCreate},
+    {kMessageSavedGroupSelect, ExecuteSavedGroupSelect},
+    {kMessageScrambleAircraft, ExecuteScrambleAircraft},
+    {kMessageSelectCustomPlayerForChat, ExecuteSelectCustomPlayerForChat},
+    {kMessageSelectPlayerChatType, ExecuteSelectPlayerChatType},
+    {kMessageSelectUnit, ExecuteSelectUnit},
+    {kMessageSelfDestruct, ExecuteSelfDestruct},
+    {kMessageSendFlare, ExecuteSendFlare},
+    {kMessageSetAirportCommand, ExecuteSetAirportCommand},
+    {kMessageSetDiplomaticStance, ExecuteSetDiplomaticStance},
+    {kMessageSnapToDaylight, ExecuteSnapToDaylight},
+    {kMessageStopActiveGroup, ExecuteStopActiveGroup},
+    {kMessageToggleCollisionDetection, ExecuteToggleCollisionDetection},
+    {kMessageToggleDayNight, ExecuteToggleDayNight},
+    {kMessageUnselectAllUnits, ExecuteUnselectAllUnits},
+    {kMessageUpdatePingStat, ExecuteUpdatePingStat},
+    {kMessageZoomInfo, ExecuteZoomInfo},
+};
+
+void EEMRecord::Execute()
+{
+    for (size_t i = 0; i < sizeof(kRecordExecutes) / sizeof(kRecordExecutes[0]); i++) {
+        if (kRecordExecutes[i].mType == this->mType) {
+            kRecordExecutes[i].mExecute(this);
+            return;
+        }
+    }
+}

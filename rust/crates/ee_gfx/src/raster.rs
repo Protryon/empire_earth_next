@@ -116,6 +116,14 @@ pub struct EeGfxRaster {
         brightness: f32,
         alpha_ref: f32,
     ),
+    /// `SetGraphicsNextFrame(next)` then `SetFractionalFramePosition(fraction)` (the tween between two frames)
+    pub model_tween: extern "C" fn(model: EeGfxModel, next: u32, fraction: f32),
+    /// `GetScreenPoint`: the world point's place on the screen (the camera, then the main viewport)
+    pub screen_point: extern "C" fn(point: *const Ge3DPoint, x: *mut f32, y: *mut f32),
+    /// a `GEText` in Tahoma 10, transparent and centred at (`x`, `y`) in `color`, its text the NUL-terminated UTF-8
+    /// `text`, drawn by `DrawClippedText` clipped to the viewport's view rectangle on the main game form (the scenario
+    /// editor's under a free camera)
+    pub draw_text: extern "C" fn(x: f32, y: f32, text: *const u8, color: EeGfxColor),
 }
 
 /// The rasterizer as the draws call it.
@@ -182,6 +190,10 @@ pub trait Raster {
     fn camera_yaw(&mut self) -> f32;
     fn get_zbuffer(&mut self) -> u32;
     fn get_zcompare(&mut self) -> u32;
+    fn model_tween(&mut self, model: EeGfxModel, next: u32, fraction: f32);
+    fn screen_point(&mut self, point: &Ge3DPoint) -> (f32, f32);
+    /// `text` without a NUL
+    fn draw_text(&mut self, x: f32, y: f32, text: &str, color: EeGfxColor);
 }
 
 impl Raster for &EeGfxRaster {
@@ -324,6 +336,20 @@ impl Raster for &EeGfxRaster {
     }
     fn get_zcompare(&mut self) -> u32 {
         (self.get_zcompare)()
+    }
+    fn model_tween(&mut self, model: EeGfxModel, next: u32, fraction: f32) {
+        (self.model_tween)(model, next, fraction)
+    }
+    fn screen_point(&mut self, point: &Ge3DPoint) -> (f32, f32) {
+        let (mut x, mut y) = (0.0, 0.0);
+        (self.screen_point)(point, &mut x, &mut y);
+        (x, y)
+    }
+    fn draw_text(&mut self, x: f32, y: f32, text: &str, color: EeGfxColor) {
+        let mut bytes = Vec::with_capacity(text.len() + 1);
+        bytes.extend_from_slice(text.as_bytes());
+        bytes.push(0);
+        (self.draw_text)(x, y, bytes.as_ptr(), color)
     }
 }
 
@@ -488,5 +514,15 @@ impl Raster for LogRaster {
     }
     fn get_zcompare(&mut self) -> u32 {
         0
+    }
+    fn model_tween(&mut self, _model: EeGfxModel, next: u32, fraction: f32) {
+        self.calls.push(format!("tween {next} {fraction}"));
+    }
+    fn screen_point(&mut self, p: &Ge3DPoint) -> (f32, f32) {
+        self.calls.push(format!("screen {} {} {}", p.x, p.y, p.z));
+        (p.x * 10.0, p.y * 10.0)
+    }
+    fn draw_text(&mut self, x: f32, y: f32, text: &str, k: EeGfxColor) {
+        self.calls.push(format!("text {x} {y} {text} color {} {} {}", k.red, k.green, k.blue));
     }
 }

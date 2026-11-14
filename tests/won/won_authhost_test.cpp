@@ -427,25 +427,36 @@ int main(int argc, char** argv)
         IPAddr anAddr, anOther;
         anAddr.SetWithDefaultPortNoDNS("10.0.0.5:15101", 1);
         anOther.SetWithDefaultPortNoDNS("10.0.0.6:15101", 1);
-        SmartPtr<AuthSession> aSession = new AuthSession(AUTH_TYPE_SESSION, 7, Blowfish(), 4);
-        SmartPtr<AuthSession> aSession2 = new AuthSession(AUTH_TYPE_PERSISTENT, 8, Blowfish(), 2);
+        // sessions are ee_won handles (round 22): made through the op's own path, as a peer auth op makes them
+        Blowfish aNoKey;
+        void* aSession = Call(EE_WON_HOST_PEER_NEW_SESSION, NULL, NULL, NULL, (long long)(intptr_t)ee_won_auth_session_new(
+            AUTH_TYPE_SESSION, 7, reinterpret_cast<const EeWonBlowfish*>(&aNoKey), 4, (int64_t)time(NULL))).mCall.out_obj;
+        void* aSession2 = Call(EE_WON_HOST_PEER_NEW_SESSION, NULL, NULL, NULL, (long long)(intptr_t)ee_won_auth_session_new(
+            AUTH_TYPE_PERSISTENT, 8, reinterpret_cast<const EeWonBlowfish*>(&aNoKey), 2, (int64_t)time(NULL))).mCall.out_obj;
         Num("get none", Call(EE_WON_HOST_GET_SESSION, NULL, NULL, NULL, 0, 0, string(), &anAddr));
-        Call(EE_WON_HOST_PUT_SESSION, static_cast<RefCount*>(aSession.get()), NULL, NULL, 0, 0, string(), &anAddr);
-        Call(EE_WON_HOST_PUT_SESSION, static_cast<RefCount*>(aSession2.get()), NULL, NULL, 0, 0, string(), &anAddr);
+        Call(EE_WON_HOST_PUT_SESSION, aSession, NULL, NULL, 0, 0, string(), &anAddr);
+        Call(EE_WON_HOST_PUT_SESSION, aSession2, NULL, NULL, 0, 0, string(), &anAddr);
         Call(EE_WON_HOST_PUT_SESSION, NULL, NULL, NULL, 0, 0, string(), &anOther);
         for (int i = 0; i < 3; i++) {
             Answer g = Call(EE_WON_HOST_GET_SESSION, NULL, NULL, NULL, 0, 0, string(), &anAddr);
             void* s = g.mCall.out_obj;
-            Log("get " + N(i) + " " + (s == NULL ? "null" : s == static_cast<RefCount*>(aSession.get()) ? "first" : s == static_cast<RefCount*>(aSession2.get()) ? "second" : "other"));
+            Log("get " + N(i) + " " + (s == NULL ? "null" : s == aSession ? "first" : s == aSession2 ? "second" : "other"));
             if (s != NULL) Call(EE_WON_HOST_RELEASE, s);
         }
         Num("get other", Call(EE_WON_HOST_GET_SESSION, NULL, NULL, NULL, 0, 0, string(), &anOther));
-        // sessions through the class, and SetPeerData's clear
-        ctx->PutSession(anAddr, aSession.get());
-        Log(string("class get ") + (ctx->GetSession(anAddr).get() == aSession.get() ? "first" : "?"));
-        ctx->PutSession(anAddr, aSession2.get());
+        // sessions again (through the class until round 22, whose GetSession / PutSession had no other caller), and
+        // SetPeerData's clear
+        Call(EE_WON_HOST_PUT_SESSION, aSession, NULL, NULL, 0, 0, string(), &anAddr);
+        void* aGot = Call(EE_WON_HOST_GET_SESSION, NULL, NULL, NULL, 0, 0, string(), &anAddr).mCall.out_obj;
+        Log(string("class get ") + (aGot == aSession ? "first" : "?"));
+        if (aGot != NULL) Call(EE_WON_HOST_RELEASE, aGot);
+        Call(EE_WON_HOST_PUT_SESSION, aSession2, NULL, NULL, 0, 0, string(), &anAddr);
         ctx->SetPeerData(ctx->GetPeerData().get());
-        Log(string("after set peer ") + (ctx->GetSession(anAddr).get() == NULL ? "null" : "kept"));
+        aGot = Call(EE_WON_HOST_GET_SESSION, NULL, NULL, NULL, 0, 0, string(), &anAddr).mCall.out_obj;
+        Log(string("after set peer ") + (aGot == NULL ? "null" : "kept"));
+        if (aGot != NULL) Call(EE_WON_HOST_RELEASE, aGot);
+        Call(EE_WON_HOST_RELEASE, aSession);
+        Call(EE_WON_HOST_RELEASE, aSession2);
         // a blocking refresh with no auth servers, then an asynchronous one with a waiting op
         Num("refresh block", Call(EE_WON_HOST_PEER_REFRESH_BLOCK, NULL, NULL, NULL, 2000));
         Log("after refresh " + Peer(ctx));

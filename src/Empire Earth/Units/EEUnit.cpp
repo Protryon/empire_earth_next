@@ -544,16 +544,12 @@ long EEUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
 }
 
 // FUNCTION: EXE 0x629973
-// Turns the loaded health fraction into hit points (at least 1 if the fraction was not 0); returns 0
+// Turns the loaded health fraction into hit points (at least 1 if the fraction was not 0; port, R5b.4 round 27:
+// ee_units unit_load.rs finish_hit_points over the record); returns 0
 long EEUnit::FinishLoad(long, long)
 {
-    if (this->mUnitClass != NULL) {
-        float theFraction;
-        memcpy(&theFraction, &this->mHitPoints, 4);
-        this->mHitPoints = UMFloatToLong(this->mStats->mMaxHitPoints * theFraction + 0.00001f);
-        if (theFraction != 0.0f && this->mHitPoints == 0)
-            this->mHitPoints = 1;
-    }
+    if (this->mUnitClass != NULL)
+        ee_units_unit_finish_hit_points(this, this->mStats->mMaxHitPoints);
     return 0;
 }
 

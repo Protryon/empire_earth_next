@@ -236,3 +236,40 @@ fn old_saves_take_their_eras_reads() {
     assert_eq!(unsafe { rts_load(&mut f, &mut r) }, 0);
     assert_eq!((r.mTileX, r.mTileY, r.mUnitID), (40, 41, 0x0300_0102));
 }
+
+/// a fraction's bits as a load leaves them in a `long` (its first four bytes)
+fn held(fraction: f32) -> std::os::raw::c_long {
+    let mut v: std::os::raw::c_long = 0;
+    // SAFETY: a long has at least four bytes (little-endian)
+    unsafe { std::ptr::write_unaligned(std::ptr::addr_of_mut!(v).cast::<u32>(), fraction.to_bits()) };
+    v
+}
+
+#[test]
+fn finish_load_turns_the_fractions_into_amounts() {
+    let mut cx = crate::unit_fields::EeUnitsComplexUnitFields {
+        mLastHitPoints: held(0.5),
+        mFlightTime: held(0.0001),
+        mGarrisonCount: held(0.0),
+        mPower: held(0.333_333_34),
+        ..Default::default()
+    };
+    let input = EeUnitsFinishLoadIn { max_hit_points: 125, flight_time: 1000, garrison_capacity: 10, power: 300 };
+    // SAFETY: a live record and input
+    unsafe { ee_units_unit_finish_fractions(&mut cx, &input) };
+    // 62.5 truncated; 0.1 truncated to 0, then 1 (not a zero fraction); 0 stays 0; 100.000_01 truncated
+    assert_eq!((cx.mLastHitPoints, cx.mFlightTime, cx.mGarrisonCount, cx.mPower), (62, 1, 0, 100));
+}
+
+#[test]
+fn finish_load_rounds_the_units_hit_points() {
+    let mut u = crate::unit_fields::EeUnitsUnitFields { mHitPoints: held(0.5), ..Default::default() };
+    // SAFETY: a live record
+    unsafe { ee_units_unit_finish_hit_points(&mut u, 125) };
+    // 62.500_01 rounds to 63 (the truncating four give 62)
+    assert_eq!(u.mHitPoints, 63);
+    let mut u = crate::unit_fields::EeUnitsUnitFields { mHitPoints: held(0.001), ..Default::default() };
+    // SAFETY: a live record
+    unsafe { ee_units_unit_finish_hit_points(&mut u, 100) };
+    assert_eq!(u.mHitPoints, 1);
+}

@@ -1209,59 +1209,6 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
 }
 
 
-// FUNCTION: EXE 0x5bf2b3
-// Follows an area move in the effect's area references (old and new index swap); on a delete (new index -1) references
-// to it become 0 and later ones shift down (ee_scenario fields.rs)
-void EESMEffect::RenumberAreas(unsigned long inOldIndex, unsigned long inNewIndex)
-{
-    ee_scenario_effect_renumber(this, EE_SCENARIO_RENUMBER_AREAS, inOldIndex, inNewIndex);
-}
-
-// FUNCTION: EXE 0x5bf384
-// Follows an object move or delete in the effect's object references and object list, like RenumberAreas
-void EESMEffect::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex)
-{
-    ee_scenario_effect_renumber(this, EE_SCENARIO_RENUMBER_OBJECTS, inOldIndex, inNewIndex);
-    ee_scenario_renumber_ids(this->mObjects.data(), this->mObjects.size(), inOldIndex, inNewIndex);
-}
-
-// FUNCTION: EXE 0x5bf4c9
-// Follows a trigger move or delete in the effect's trigger reference, like RenumberAreas
-void EESMEffect::RenumberTriggers(unsigned long inOldIndex, unsigned long inNewIndex)
-{
-    ee_scenario_effect_renumber(this, EE_SCENARIO_RENUMBER_TRIGGERS, inOldIndex, inNewIndex);
-}
-
-// FUNCTION: EXE 0x5bf508
-// Maps the effect's area references through an old-to-new id map
-void EESMEffect::RemapAreas(EESMIDMap& inMap)
-{
-    EERemapID(this->mTaskArea, inMap);
-    EERemapID(this->mTargetArea, inMap);
-    EERemapID(this->mPlaceArea, inMap);
-    EERemapID(this->mLocationArea, inMap);
-}
-
-// FUNCTION: EXE 0x5bf54c
-// Maps the effect's object references and object list through an old-to-new id map
-void EESMEffect::RemapObjects(EESMIDMap& inMap)
-{
-    EERemapID(this->mObject, inMap);
-    EERemapID(this->mLocationObject, inMap);
-    EERemapID(this->mTaskObject, inMap);
-    EERemapID(this->mPlaceObject, inMap);
-    EERemapID(this->mTargetObject, inMap);
-    for (unsigned long i = 0; i < this->mObjects.size(); i++)
-        EERemapID(this->mObjects[i], inMap);
-}
-
-// FUNCTION: EXE 0x5bf5c3
-// Maps the effect's trigger reference through an old-to-new id map
-void EESMEffect::RemapTriggers(EESMIDMap& inMap)
-{
-    EERemapID(this->mTrigger, inMap);
-}
-
 // FUNCTION: EXE 0x5bf5d8
 // Turns the scenario object's idle living units to face mAttributeAmount degrees, at once (mUsesPercent) or with a turn
 // goal; units already within one degree are left alone

@@ -360,7 +360,7 @@ int64_t EEUIMiniMap::HostOp(EEUIMiniMap* inMap, uint32_t inOp, int64_t inA, int6
     }
     case EE_SCREENS_MM_OP_TILE_EXISTS: return ::gWorld.mMap->GetTileAtLocation(U2DPoint<long>((long)inA, (long)inB)) != NULL;
     case EE_SCREENS_MM_OP_SEND_FLARE:
-        gCommunications->ProcessLocalUserInput(new EEMSendFlare(U2DPoint<long>((long)inA, (long)inB)), kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSendFlare, {(long)inA, (long)inB}), kSlotNone);
         break;
     case EE_SCREENS_MM_OP_FLARE_DONE:
         gMouse->mPointer = 0;
