@@ -32,6 +32,9 @@ constexpr static const uint32_t EE_SCENARIO_AI_CALL_DM_ATTACK_FREQUENCY_MODIFIER
 
 constexpr static const uint32_t EE_SCENARIO_AI_CALL_DM_INITIAL_ATTACK_MODIFIER = 3;
 
+/// The host's `mTiles->push_back(U2DPoint<long>(b, c))`: an area's rebuilt tiles (`EESMArea::GetTiles`).
+constexpr static const uint32_t EE_SCENARIO_WRITE_TILE = 17;
+
 /// The context unit's member `b` (`EE_SCENARIO_UNIT_*`): an integer, or a `float`'s bits for the float fields.
 constexpr static const uint32_t EE_SCENARIO_READ_UNIT_FIELD = 69;
 
@@ -416,9 +419,6 @@ constexpr static const uint32_t EE_SCENARIO_READ_UNIT_SEEN_BY = 62;
 /// `GetArea(a)`: -1 without the area, else its `ContainsUnit(unit b)` (1/0).
 constexpr static const uint32_t EE_SCENARIO_READ_AREA_CONTAINS_UNIT = 63;
 
-/// `GetScenarioObject(a)`: -1 without the object, else its `IsNearUnit(unit b, c, false)` (1/0).
-constexpr static const uint32_t EE_SCENARIO_READ_OBJ_NEAR_UNIT = 64;
-
 /// Player `a`'s first unit (`mFirstUnit`, the context's cursor set to it), the next (`mNext`) when `b` is 1: its id
 /// in the low 32 bits and its `mUnitClass->mUnitType` in the high, -1 at the end.
 constexpr static const uint32_t EE_SCENARIO_READ_PLAYER_UNIT = 65;
@@ -440,6 +440,83 @@ constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_SHUFFLE = 15;
 
 /// `mUnits.erase(begin() + b, end())`.
 constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_TRUNCATE = 16;
+
+/// `gWorld.mMap`'s `mL195610` (the height, low 32 bits) and `mL195614` (the width, high), as `unsigned long`s.
+constexpr static const uint32_t EE_SCENARIO_READ_MAP_SIZE = 70;
+
+/// `GetArea(a)->ContainsTile(U2DPoint<long>(b, c))` (1/0; the area's own capture record).
+constexpr static const uint32_t EE_SCENARIO_READ_AREA_CONTAINS_TILE = 71;
+
+/// `GetScenarioObject(a)->mUnits.size()`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_UNIT_COUNT = 72;
+
+/// `GetScenarioObject(a)->mUnits[b]`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_UNIT_AT = 73;
+
+/// `GetScenarioObject(a)->mSelectedByCheck`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_SELECTED_BY_CHECK = 74;
+
+/// Unit `a`'s `mTileX`, `mTileY`, packed.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_TILE_OF = 75;
+
+/// Unit `a`'s `mComplexUnit->GetLineOfSight()`'s bits.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_LINE_OF_SIGHT = 76;
+
+/// Unit `a`'s `mStats->mRange`'s bits.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_RANGE = 77;
+
+/// Unit `a`'s `mUnitClass->mTileSize`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_TILE_SIZE = 78;
+
+/// `gUnitClassTable[a]->mTileSize`.
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_TILE_SIZE = 79;
+
+/// `EEPlayerBlockTakes(NULL, a, b, c, d, d, 0)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_BLOCK_TAKES = 80;
+
+/// `gWorld.mMap->GetTile(a, b)`: 1 for a tile that is neither deep nor shallow water, else 0 (no tile too).
+constexpr static const uint32_t EE_SCENARIO_READ_MAP_TILE_DRY = 81;
+
+/// `EEGetFootprintDistance(unit a, b, c, ...)`'s bits (the squared distance to the unit's nearest tile).
+constexpr static const uint32_t EE_SCENARIO_READ_FOOTPRINT_DISTANCE = 82;
+
+/// Unit `a`'s complex unit's `CanReachTile(b, c)`, 0 without one.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_CAN_REACH_TILE = 83;
+
+/// Unit `a`'s `GetNearestFootprintTile(unit b, &x, &y)`: (x, y) packed.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_NEAREST_TILE = 84;
+
+/// Unit `a`'s complex unit's `IsInReach(unit b)`, 0 without one.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_IN_REACH = 85;
+
+/// `gWorld.mMap->GetTile(a, b) != NULL` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_MAP_TILE_EXISTS = 86;
+
+/// `EEGetTilesNearPoint(GE3DPoint((float)a, (float)b, 0), radius c's bits, list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_NEAR_POINT = 0;
+
+/// `EEGetSideTiles(a, b, size c, list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_SIDE = 1;
+
+/// `EEGetCornerTiles(0, a, b, size c, list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_CORNER = 2;
+
+/// `GetArea(a)->GetTiles(list)` (the area's cache and capture record).
+constexpr static const uint32_t EE_SCENARIO_TILES_AREA = 3;
+
+/// `gContinentManager.GetContinentTiles(a, list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_CONTINENT = 4;
+
+/// `gWorld.GetPlayer(a)->mTowns[b]->GetTiles(list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_TOWN = 5;
+
+/// What [`find_placement`] answers: not found, found (the location written), or not found and to be tried again
+/// through the C++ entry without the random tries (`FindPlacement(type, location, false)`, its own record).
+constexpr static const uint32_t EE_SCENARIO_PLACEMENT_NONE = 0;
+
+constexpr static const uint32_t EE_SCENARIO_PLACEMENT_FOUND = 1;
+
+constexpr static const uint32_t EE_SCENARIO_PLACEMENT_RETRY = 2;
 
 /// `SetPlayerAttribute(player, b, c, d)` again, through the C++ entry (the any/all resources' recursion).
 constexpr static const uint32_t EE_SCENARIO_WRITE_SET_ATTRIBUTE = 0;
@@ -657,6 +734,9 @@ constexpr static const int32_t EE_SCENARIO_OPERATOR_AND = 1;
 
 constexpr static const int32_t EE_SCENARIO_OPERATOR_OR = 2;
 
+/// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
+struct EeScenarioTiles;
+
 /// The manager's timed effects, kept sorted by time (stably: equal times in the order they came).
 struct EeScenarioTimedQueue;
 
@@ -675,6 +755,8 @@ struct EeScenarioHost {
                   uint32_t seed);
   /// [`Host::write`].
   void (*write)(void *ctx, uint32_t op, long player, int64_t b, int64_t c, int64_t d);
+  /// [`Host::tiles`]: the C++ fills `list` with [`ee_scenario_tiles_push`].
+  void (*tiles)(void *ctx, uint32_t op, int32_t a, int32_t b, int32_t c, EeScenarioTiles *list);
 };
 
 /// `EESMCondition`'s numbers, in the class's order.
@@ -1297,6 +1379,31 @@ void ee_scenario_text_free(char *text);
 /// # Safety
 /// `host` must be valid for the call.
 long ee_scenario_unit_attribute(const EeScenarioHost *host, uint32_t attribute, bool percent);
+
+/// `EESMObject::FindPlacement`'s body (placement.rs) for the object's numbers `fields` and its area's record (`area`:
+/// NULL for no area): `EE_SCENARIO_PLACEMENT_*`; `location` (x, y) written as the original wrote it.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` (and `area` unless NULL) for a read, `location` for a read and a write.
+uint32_t ee_scenario_find_placement(const EeScenarioHost *host,
+                                    const EeScenarioObjectFields *fields,
+                                    const EeScenarioAreaRecord *area,
+                                    uint32_t unit_type,
+                                    bool try_random,
+                                    float (*location)[2]);
+
+/// `EESMArea::GetTiles`' rebuild of the area's cache (area.rs tiles): each tile through `EE_SCENARIO_WRITE_TILE`.
+///
+/// # Safety
+/// `host` and `area` must be valid for the call.
+void ee_scenario_area_tiles(const EeScenarioHost *host,
+                            const EeScenarioAreaRecord *area);
+
+/// Appends tile (x, y) to a list the host is filling.
+///
+/// # Safety
+/// `list` must be the list a [`EeScenarioHost::tiles`] call handed over, during that call.
+void ee_scenario_tiles_push(EeScenarioTiles *list, int32_t x, int32_t y);
 
 }  // extern "C"
 

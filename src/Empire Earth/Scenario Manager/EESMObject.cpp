@@ -19,11 +19,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 
-// 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
-// (inX, inY), the unit's nearest tile out (provisional name)
-float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
-#include "ee/EEUnit.h"
-#include "ee/EEUnitSetManager.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EEPlayer.h"
@@ -31,7 +26,17 @@ float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* ou
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
-// 0x246ea2 again, as IsNearTile uses it (provisional name)
+#include "lle/GE3DPoint.h"
+#include "lle/GEVector.h"
+#include "lle/GEColor.h"
+#include "lle/GETextureCoordinate.h"
+#include "lle/GE3DPlane.h"
+#include "lle/GETerrainMesh.h"
+#include "ee/EEUUUnitFunctor.h"
+#include "ee/EEMap.h"
+#include "ee/EEUnitUtilities.h"
+// 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
+// (inX, inY), the unit's nearest tile out (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 
 // FUNCTION: EXE 0x5c5f73
@@ -65,82 +70,10 @@ bool EESMObject::AcceptsClass(unsigned long inClass)
 }
 
 // FUNCTION: EXE 0x5c6148
-// Returns whether one of the object's units is near the unit (mode 0: within the sight range of either side's unit,
-// 1: within reach, 2: adjacent); refreshes the object's units first
-// (provisional name)
-bool EESMObject::IsNearUnit(EEUnit* inUnit, long inMode, bool inFromUnit)
-{
-    bool theResult = false;
-    long theX = inUnit->mTileX;
-    long theY = inUnit->mTileY;
-    if (theX != -10000) {
-        this->Evaluate(0);
-        long theCount = this->mUnits.size();
-        for (long i = 0; i < theCount && !theResult; i++) {
-            EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(gWorld.GetUnit(this->mUnits[i]));
-            if (theUnit != NULL && theUnit != inUnit && theUnit->mTileX != -10000) {
-                long theUnitX;
-                long theUnitY;
-                inUnit->GetNearestFootprintTile(theUnit, &theUnitX, &theUnitY);
-                theUnit->GetNearestFootprintTile(inUnit, &theX, &theY);
-                long theDY = theUnitY - theY;
-                long theDX = theUnitX - theX;
-                float theDistance = (float)(theDX * theDX + theDY * theDY);
-                switch (inMode) {
-                case 0: {
-                    float theRange = (inFromUnit ? inUnit->mComplexUnit : theUnit->mComplexUnit)->GetLineOfSight();
-                    theResult = theDistance <= theRange * theRange;
-                    break;
-                }
-                case 1:
-                    if (inFromUnit)
-                        theResult = inUnit->mComplexUnit != NULL ? inUnit->mComplexUnit->IsInReach(theUnit) : false;
-                    else
-                        theResult = theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->IsInReach(inUnit) : false;
-                    break;
-                case 2:
-                    theResult = theDistance <= 2.0f;
-                    break;
-                }
-            }
-        }
-    }
-    return theResult;
-}
+// IsNearUnit: ee_scenario placement.rs near_unit (objeval.rs asks it)
 
 // FUNCTION: EXE 0x5c629f
-// Returns whether one of the object's units is near a tile (mode 0: within its sight range, 1: can reach it,
-// 2: adjacent); optionally refreshes the units first, after reading their count
-// (provisional name)
-bool EESMObject::IsNearTile(long inX, long inY, long inMode, bool inEvaluate)
-{
-    long theTileX = 0;
-    long theTileY = 0;
-    long theCount = this->mUnits.size();
-    if (inEvaluate)
-        this->Evaluate(0);
-    bool theResult = false;
-    for (long i = 0; i < theCount && !theResult; i++) {
-        EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(gWorld.GetUnit(this->mUnits[i]));
-        if (theUnit == NULL)
-            continue;
-        float theDistance = EEGetFootprintDistance(theUnit, inX, inY, &theTileX, &theTileY);
-        switch (inMode) {
-        case 0: {
-            float theRange = theUnit->mComplexUnit->GetLineOfSight();
-            theResult = theDistance <= theRange * theRange;
-            break;
-        }
-        case 1:
-            theResult = theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->CanReachTile(inX, inY) : false;
-            break;
-        case 2:
-            theResult = theDistance <= 2.0f;
-            break;
-        }
-    }
-    return theResult;
-}
+// IsNearTile: ee_scenario placement.rs near_tile (find_placement asks it)
 
 // FUNCTION: EXE 0x5c6386
 // Copies another object's name and filter settings, and its unit list when it picks units on the map
@@ -188,10 +121,24 @@ int64_t SMChainUnit(EEUnit* inUnit)
     return inUnit == NULL ? -1 : (int64_t)(uint32_t)inUnit->GetUnitID() | ((int64_t)(uint32_t)inUnit->mUnitClass->mUnitType << 32);
 }
 
+// two longs as one read: x in the low 32 bits, y in the high (ee_scenario area.rs unpack)
+int64_t SMPack(long inX, long inY)
+{
+    return (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32);
+}
+
+int64_t SMFloat(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
 }   // namespace
 
-// Evaluate's reads, each the original's expression (objeval.rs EE_SCENARIO_READ_OBJ_* and the unit reads)
-int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC)
+// Evaluate's and FindPlacement's reads, each the original's expression (objeval.rs EE_SCENARIO_READ_OBJ_* and the unit
+// reads, placement.rs)
+int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, int32_t inD)
 {
     EESMObject* theObject = inContext->mObject;
     EEScenarioManager* theManager = gWorld.mScenarioManager;
@@ -222,10 +169,6 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
         EESMArea* theArea = theManager->GetArea((unsigned long)inA);
         return theArea == NULL ? -1 : theArea->ContainsUnit(SMUnit(inB));
     }
-    case EE_SCENARIO_READ_OBJ_NEAR_UNIT: {
-        EESMObject* theTarget = theManager->GetScenarioObject((unsigned long)inA);
-        return theTarget == NULL ? -1 : theTarget->IsNearUnit(SMUnit(inB), (long)inC, false);
-    }
     case EE_SCENARIO_READ_PLAYER_UNIT:
         if (inB == 0) {
             EEPlayer* thePlayer = gWorld.mPlayers[inA];
@@ -233,6 +176,39 @@ int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, i
         } else
             inContext->mCursor = static_cast<EEUnit*>(inContext->mCursor->mNext);
         return SMChainUnit(inContext->mCursor);
+    case EE_SCENARIO_READ_MAP_SIZE: return SMPack((long)gWorld.mMap->mL195610, (long)gWorld.mMap->mL195614);
+    case EE_SCENARIO_READ_AREA_CONTAINS_TILE:
+        return theManager->GetArea((unsigned long)inA)->ContainsTile(U2DPoint<long>(inB, inC));
+    case EE_SCENARIO_READ_OBJECT_UNIT_COUNT: return (int64_t)theManager->GetScenarioObject((unsigned long)inA)->mUnits.size();
+    case EE_SCENARIO_READ_OBJECT_UNIT_AT:
+        return (int64_t)(uint32_t)theManager->GetScenarioObject((unsigned long)inA)->mUnits[(size_t)inB];
+    case EE_SCENARIO_READ_OBJECT_SELECTED_BY_CHECK: return theManager->GetScenarioObject((unsigned long)inA)->mSelectedByCheck;
+    case EE_SCENARIO_READ_UNIT_TILE_OF: return SMPack(SMUnit(inA)->mTileX, SMUnit(inA)->mTileY);
+    case EE_SCENARIO_READ_UNIT_LINE_OF_SIGHT: return SMFloat(SMUnit(inA)->mComplexUnit->GetLineOfSight());
+    case EE_SCENARIO_READ_UNIT_RANGE: return SMFloat(SMUnit(inA)->mStats->mRange);
+    case EE_SCENARIO_READ_UNIT_TILE_SIZE: return SMUnit(inA)->mUnitClass->mTileSize;
+    case EE_SCENARIO_READ_CLASS_TILE_SIZE: return gUnitClassTable[inA]->mTileSize;
+    case EE_SCENARIO_READ_BLOCK_TAKES: return EEPlayerBlockTakes(NULL, inA, inB, inC, inD, inD, 0);
+    case EE_SCENARIO_READ_MAP_TILE_DRY: {
+        EEMapTile* theTile = gWorld.mMap->GetTile(inA, inB);
+        return theTile != NULL && theTile->mTerrainType != kTerrainDeepWater && theTile->mTerrainType != kTerrainShallowWater;
+    }
+    case EE_SCENARIO_READ_MAP_TILE_EXISTS: return gWorld.mMap->GetTile(inA, inB) != NULL;
+    case EE_SCENARIO_READ_FOOTPRINT_DISTANCE: {
+        long theX = 0;
+        long theY = 0;
+        return SMFloat(EEGetFootprintDistance(static_cast<EEComplexUnit*>(SMUnit(inA)), inB, inC, &theX, &theY));
+    }
+    case EE_SCENARIO_READ_UNIT_CAN_REACH_TILE:
+        return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->CanReachTile(inB, inC);
+    case EE_SCENARIO_READ_UNIT_NEAREST_TILE: {
+        long theX;
+        long theY;
+        SMUnit(inA)->GetNearestFootprintTile(SMUnit(inB), &theX, &theY);
+        return SMPack(theX, theY);
+    }
+    case EE_SCENARIO_READ_UNIT_IN_REACH:
+        return SMUnit(inA)->mComplexUnit != NULL && SMUnit(inA)->mComplexUnit->IsInReach(SMUnit(inB));
     }
     return 0;
 }
@@ -253,6 +229,17 @@ void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB)
     }
 }
 
+// FindPlacement's tile lists (placement.rs EE_SCENARIO_TILES_NEAR_POINT, _SIDE, _CORNER)
+void EESMObjectTiles(uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, std::vector<U2DPoint<long> >& outTiles)
+{
+    float theRadius;
+    memcpy(&theRadius, &inC, 4);
+    switch (inOp) {
+    case EE_SCENARIO_TILES_NEAR_POINT: EEGetTilesNearPoint(GE3DPoint((float)inA, (float)inB, 0.0f), theRadius, outTiles); break;
+    case EE_SCENARIO_TILES_SIDE: EEGetSideTiles(inA, inB, inC, outTiles); break;
+    case EE_SCENARIO_TILES_CORNER: EEGetCornerTiles(0, inA, inB, inC, outTiles); break;
+    }
+}
 
 // FUNCTION: EXE 0x5c6b14
 // Picks the unit type to create for the object: the parent's first unit's type, the object's class, or a random
@@ -263,16 +250,6 @@ long EESMObject::PickUnitType()
     EeScenarioHost theHost = EESMHost(&theContext);
     return ee_scenario_object_pick_unit_type(&theHost, this);
 }
-
-#include "lle/GE3DPoint.h"
-#include "lle/GEVector.h"
-#include "lle/GEColor.h"
-#include "lle/GETextureCoordinate.h"
-#include "lle/GE3DPlane.h"
-#include "lle/GETerrainMesh.h"
-#include "ee/EEUUUnitFunctor.h"
-#include "ee/EEMap.h"
-#include "ee/EEUnitUtilities.h"
 
 // FUNCTION: EXE 0x5c6d4f
 // Finds a free spot for a new unit of the type that meets the object's area and nearness filters (random tries for
@@ -288,176 +265,22 @@ bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation,
     return theResult;
 }
 
-// FindPlacement's body (FindPlacement adds the simulation capture's SMFP record: ee/EEScenarioCapture.h)
+// FindPlacement's body (FindPlacement adds the simulation capture's SMFP record: ee/EEScenarioCapture.h): ee_scenario
+// placement.rs find_placement over the area's record; the retry without random tries goes through FindPlacement
 bool EESMObject::FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom)
 {
-    std::vector<U2DPoint<long> > theCandidates;
-    std::vector<U2DPoint<long> > theAreaTiles;
-    std::vector<U2DPoint<long> > theObjectTiles;
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<U2DPoint<long> > theOtherTiles;
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mNearObject);
     EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mArea);
-    unsigned long theHeight = gWorld.mMap->mL195610;
-    unsigned long theWidth = gWorld.mMap->mL195614;
-    bool theFound = false;
-    bool theNoArea = false;
-    bool theTriedRandom = false;
-    if ((inTryRandom && this->mInAreaCheck == 2 && theArea != NULL) || (this->mNearCheck == 2 && theObject != NULL)) {
-        theTriedRandom = true;
-        if (this->mNearCheck == 2 && theObject != NULL)
-            theObject->Evaluate(false);
-        for (long i = 0; i < 25; ++i) {
-            long theA = gPhysics->GetRandom(0L,theWidth - 1);
-            long theB = gPhysics->GetRandom(0L,theHeight - 1);
-            long theX = theB + theA;
-            long theY = theHeight + theB - theA;
-            bool theAllowed = true;
-            if (this->mInAreaCheck == 2 && theArea != NULL) {
-                U2DPoint<long> theTile((long)(float)theX,(long)(float)theY);
-                if (theArea->ContainsTile(theTile))
-                    theAllowed = false;
-            }
-            if (this->mNearCheck == 2 && theObject != NULL && theObject->IsNearTile(theX,theY,this->mNearMode,false))
-                theAllowed = false;
-            if (theAllowed) {
-                U2DPoint<long> theTile(theX,theY);
-                theCandidates.push_back(theTile);
-            }
-        }
-    } else {
-        if (this->mInAreaCheck == 1 && theArea != NULL) {
-            if (theArea->IsUnset()) {
-                theNoArea = true;
-                outLocation.mX = -10000.0f;
-                theFound = true;
-                outLocation.mY = -10000.0f;
-            } else {
-                if (!theArea->IsOffMap())
-                    theArea->GetTiles(theAreaTiles);
-            }
-        } else if (this->mInAreaCheck == 2 && theArea != NULL) {
-            // the area's own tiles, to leave out below
-            if (!theArea->IsUnset() && theArea->mSelectMode != 0)
-                theArea->GetTiles(theTiles);
-            for (long row = 0; row < theWidth; ++row) {
-                long x = row;
-                long y = row + theHeight;
-                for (long count = theHeight; count != 0; --count, ++x, --y) {
-                    U2DPoint<long> theTile(x,y);
-                    if (theArea->IsUnset())
-                        theAreaTiles.push_back(theTile);
-                    else if (theArea->mSelectMode == 0) {
-                        if (!theArea->ContainsTile(theTile))
-                            theAreaTiles.push_back(theTile);
-                    } else if (std::find(theTiles.begin(),theTiles.end(),theTile) == theTiles.end())
-                        theAreaTiles.push_back(theTile);
-                    U2DPoint<long> theNextTile(x + 1,y);
-                    if (theArea->IsUnset())
-                        theAreaTiles.push_back(theNextTile);
-                    else if (theArea->mSelectMode == 0) {
-                        if (!theArea->ContainsTile(theNextTile))
-                            theAreaTiles.push_back(theNextTile);
-                    } else if (std::find(theTiles.begin(),theTiles.end(),theNextTile) == theTiles.end())
-                        theAreaTiles.push_back(theNextTile);
-                }
-            }
-        }
-        if (this->mNearCheck != 0 && theObject != NULL
-            && ((theObject->mSelectedByCheck != 0 && theObject->mUnits.size() > 0) || theObject->Evaluate(false))) {
-            for (unsigned long i = 0; i < theObject->mUnits.size(); ++i) {
-                EEUnit* theUnit = gWorld.GetUnit(theObject->mUnits[i]);
-                if (theUnit != NULL && theUnit->mHitPoints > 0) {
-                    theTiles.clear();
-                    theOtherTiles.clear();
-                    switch (this->mNearMode) {
-                    case 0:
-                        if (theUnit->mComplexUnit->GetLineOfSight() > 0.0f) {
-                            GE3DPoint thePoint((float)theUnit->GetTileX(),(float)theUnit->GetTileY(),0.0f);
-                            EEGetTilesNearPoint(thePoint,theUnit->mComplexUnit->GetLineOfSight(),theTiles);
-                        }
-                        break;
-                    case 1:
-                        if (theUnit->mStats->mRange > 0.0f) {
-                            GE3DPoint thePoint((float)theUnit->GetTileX(),(float)theUnit->GetTileY(),0.0f);
-                            EEGetTilesNearPoint(thePoint,theUnit->mStats->mRange,theTiles);
-                        }
-                        break;
-                    case 2:
-                        EEGetSideTiles(theUnit->GetTileX(),theUnit->GetTileY(),theUnit->mUnitClass->mTileSize,theTiles);
-                        EEGetCornerTiles(0,theUnit->GetTileX(),theUnit->GetTileY(),theUnit->mUnitClass->mTileSize,theOtherTiles);
-                        break;
-                    }
-                }
-                for (unsigned long j = 0; j < theTiles.size(); ++j)
-                    theObjectTiles.push_back(theTiles[j]);
-                for (unsigned long k = 0; k < theOtherTiles.size(); ++k)
-                    theObjectTiles.push_back(theOtherTiles[k]);
-            }
-            if (this->mNearCheck == 2) {
-                theTiles = theObjectTiles;
-                theObjectTiles.clear();
-                for (long row = 0; row < theWidth; ++row) {
-                    long x = row;
-                    long y = row + theHeight;
-                    for (long count = theHeight; count != 0; --count, ++x, --y) {
-                        U2DPoint<long> theTile(x,y);
-                        if (std::find(theTiles.begin(),theTiles.end(),theTile) == theTiles.end())
-                            theObjectTiles.push_back(theTile);
-                    }
-                }
-            }
-        }
-        if (this->mInAreaCheck == 0) {
-            if (this->mNearCheck != 0)
-                theCandidates = theObjectTiles;
-        } else if (this->mNearCheck == 0)
-            theCandidates = theAreaTiles;
-        else {
-            for (unsigned long i = 0; i < theAreaTiles.size(); ++i) {
-                if (std::find(theObjectTiles.begin(),theObjectTiles.end(),theAreaTiles[i]) != theObjectTiles.end())
-                    theCandidates.push_back(theAreaTiles[i]);
-            }
-        }
-        if (theNoArea)
-            return theFound;
-    }
-    long theSize = gUnitClassTable[inUnitType]->mTileSize;
-    EEAIRandomShuffle(theCandidates.begin(),theCandidates.end());
-    for (std::vector<U2DPoint<long> >::iterator i = theCandidates.begin(); !theFound && i != theCandidates.end(); ++i) {
-        long theX = i->mX;
-        long theY = i->mY;
-        if (EEPlayerBlockTakes(NULL,inUnitType,theX,theY,theSize,theSize,0)) {
-            if (theSize == 1) {
-                theFound = true;
-                outLocation.mX = (float)theX;
-                outLocation.mY = (float)theY;
-            } else {
-                for (unsigned long j = 0; j < theCandidates.size(); ++j) {
-                    if (theCandidates[j].mX == theSize - 1 + theX && theCandidates[j].mY == theSize - 1 + theY) {
-                        theFound = true;
-                        outLocation.mX = (float)theX;
-                        outLocation.mY = (float)theY;
-                        break;
-                    }
-                }
-                // The original type 0x41 test is independent of whether the far footprint corner was found.
-                if ((theFound && inUnitType == 0x24) || inUnitType == 0x41) {
-                    theFound = false;
-                    for (long x = theX - 1; !theFound && x <= theX + theSize; ++x) {
-                        for (long y = theY - 1; !theFound && y <= theY + theSize; ++y) {
-                            EEMapTile* theMapTile = gWorld.mMap->GetTile(x,y);
-                            if (theMapTile != NULL && theMapTile->mTerrainType != kTerrainDeepWater && theMapTile->mTerrainType != kTerrainShallowWater)
-                                theFound = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    if (!theFound && inTryRandom && theTriedRandom)
-        theFound = this->FindPlacement(inUnitType,outLocation,false);
-    return theFound;
+    EeScenarioAreaRecord theRecord = theArea != NULL ? EESMAreaRecord(*theArea) : EeScenarioAreaRecord();
+    EESMHostContext theContext = {};
+    EeScenarioHost theHost = EESMHost(&theContext);
+    float theLocation[2] = {outLocation.mX, outLocation.mY};
+    uint32_t theResult = ee_scenario_find_placement(&theHost, this, theArea != NULL ? &theRecord : NULL,
+                                                    (uint32_t)inUnitType, inTryRandom, &theLocation);
+    outLocation.mX = theLocation[0];
+    outLocation.mY = theLocation[1];
+    if (theResult == EE_SCENARIO_PLACEMENT_RETRY)
+        return this->FindPlacement(inUnitType, outLocation, false);
+    return theResult == EE_SCENARIO_PLACEMENT_FOUND;
 }
 
 // FUNCTION: EXE 0x5c7749

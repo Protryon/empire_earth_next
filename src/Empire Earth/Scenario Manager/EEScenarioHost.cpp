@@ -157,20 +157,6 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
     case EE_SCENARIO_READ_SHARE_BONUS: return thePlayer->mShareBonus;
     case EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: return gWorld.mPlayerPopulationLimit;
     case EE_SCENARIO_READ_PLAYER_ID: return thePlayer->mPlayerID;
-    case EE_SCENARIO_READ_OBJ_UNIT_COUNT:
-    case EE_SCENARIO_READ_OBJ_UNIT_AT:
-    case EE_SCENARIO_READ_OBJ_EVALUATE:
-    case EE_SCENARIO_READ_UNIT_FLAGS:
-    case EE_SCENARIO_READ_UNIT_CLASS_TYPE:
-    case EE_SCENARIO_READ_UNIT_PLAYER:
-    case EE_SCENARIO_READ_UNIT_COMMAND:
-    case EE_SCENARIO_READ_UNIT_ATTRIBUTE:
-    case EE_SCENARIO_READ_UNIT_SELECTED_BY:
-    case EE_SCENARIO_READ_UNIT_SEEN_BY:
-    case EE_SCENARIO_READ_AREA_CONTAINS_UNIT:
-    case EE_SCENARIO_READ_OBJ_NEAR_UNIT:
-    case EE_SCENARIO_READ_PLAYER_UNIT:
-        return EESMObjectRead(theContext, inOp, inA, inB, inC);
     case EE_SCENARIO_READ_UNIT_FIELD: return EESMUnitField(theContext->mUnit, inA);
     case EE_SCENARIO_READ_TOKEN_OBJECT: {
         EESMObject* theObject = theManager->FindObjectByID(inA);
@@ -195,7 +181,7 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
         return theOther == NULL ? -1 : theOther->Evaluate();
     }
     }
-    return 0;
+    return EESMObjectRead(theContext, inOp, inA, inB, inC, inD);   // the objects' and units' reads
 }
 
 // a plan's write (ee_scenario player.rs): each the original's statement on player inPlayer
@@ -225,15 +211,23 @@ void Write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t i
     case EE_SCENARIO_WRITE_STATISTIC_ADD: thePlayer->mSavedGroups.Reset((long)inB, (long)inC); break;
     case EE_SCENARIO_WRITE_STATISTIC_SET: thePlayer->mSavedGroups.Set((long)inB, (long)inC); break;
     case EE_SCENARIO_WRITE_MINING_LIMIT: thePlayer->mMiningLimit = (long)inB; break;
-    case EE_SCENARIO_WRITE_OBJ_CLEAR:
-    case EE_SCENARIO_WRITE_OBJ_COPY_PARENT:
-    case EE_SCENARIO_WRITE_OBJ_ERASE:
-    case EE_SCENARIO_WRITE_OBJ_PUSH:
-    case EE_SCENARIO_WRITE_OBJ_SHUFFLE:
-    case EE_SCENARIO_WRITE_OBJ_TRUNCATE:
-        EESMObjectWrite(theContext, inOp, inB);
-        break;
+    case EE_SCENARIO_WRITE_TILE: theContext->mTiles->push_back(U2DPoint<long>((long)inB, (long)inC)); break;
+    default: EESMObjectWrite(theContext, inOp, inB); break;   // the object's list
     }
+}
+
+// a tile list (ee_scenario placement.rs EE_SCENARIO_TILES_*), handed over tile by tile
+void Tiles(void*, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, EeScenarioTiles* outList)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    switch (inOp) {
+    case EE_SCENARIO_TILES_AREA: gWorld.mScenarioManager->GetArea((unsigned long)inA)->GetTiles(theTiles); break;
+    case EE_SCENARIO_TILES_CONTINENT: gContinentManager.GetContinentTiles((unsigned short)inA, theTiles); break;
+    case EE_SCENARIO_TILES_TOWN: gWorld.GetPlayer(inA)->mTowns[inB]->GetTiles(theTiles); break;
+    default: EESMObjectTiles(inOp, inA, inB, inC, theTiles); break;
+    }
+    for (const U2DPoint<long>& theTile : theTiles)
+        ee_scenario_tiles_push(outList, (int32_t)theTile.mX, (int32_t)theTile.mY);
 }
 
 // TEST ONLY: a player choice's SMCP record (ee/EEScenarioCapture.h)
@@ -318,7 +312,7 @@ EeScenarioStream EESMStreamTable(EESMStream* inStream)
 
 EeScenarioHost EESMHost(EESMHostContext* inContext)
 {
-    EeScenarioHost theHost = {inContext, Read, Players, Write};
+    EeScenarioHost theHost = {inContext, Read, Players, Write, Tiles};
     return theHost;
 }
 

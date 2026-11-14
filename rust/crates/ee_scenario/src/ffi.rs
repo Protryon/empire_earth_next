@@ -12,10 +12,11 @@ use crate::fields::{
     self, EeScenarioAreaSave, EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields,
     EeScenarioTriggerFields,
 };
-use crate::host::EeScenarioHost;
+use crate::host::{EeScenarioHost, Host};
 use crate::manager::{self, EeScenarioManagerFields, EeScenarioTimedEntry, EeScenarioTimedQueue};
 use crate::object::{self, EeScenarioObjectFilter};
 use crate::objeval::{self, ObjectTable};
+use crate::placement;
 use crate::player;
 use crate::round::{self, EeScenarioRoundHost};
 use crate::save;
@@ -34,7 +35,10 @@ pub const EE_SCENARIO_MAX_PLAYERS: usize = 64;
 /// `host` must be valid for a read.
 unsafe fn host_of(host: *const EeScenarioHost) -> EeScenarioHost {
     // SAFETY: the caller's contract
-    unsafe { EeScenarioHost { ctx: (*host).ctx, read: (*host).read, players: (*host).players, write: (*host).write } }
+    unsafe {
+        let h = &*host;
+        EeScenarioHost { ctx: h.ctx, read: h.read, players: h.players, write: h.write, tiles: h.tiles }
+    }
 }
 
 // SAFETY (every function taking pointers below): the caller passes valid, aligned pointers for the documented reads
@@ -788,4 +792,39 @@ pub unsafe extern "C" fn ee_scenario_unit_attribute(
     // SAFETY: the caller's contract
     let mut h = unsafe { host_of(host) };
     attribute::unit_attribute(&mut h, attribute, percent) as c_long
+}
+
+/// `EESMObject::FindPlacement`'s body (placement.rs) for the object's numbers `fields` and its area's record (`area`:
+/// NULL for no area): `EE_SCENARIO_PLACEMENT_*`; `location` (x, y) written as the original wrote it.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` (and `area` unless NULL) for a read, `location` for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_find_placement(
+    host: *const EeScenarioHost,
+    fields: *const EeScenarioObjectFields,
+    area: *const EeScenarioAreaRecord,
+    unit_type: u32,
+    try_random: bool,
+    location: *mut [f32; 2],
+) -> u32 {
+    // SAFETY: the caller's contract; the records and the location are copied before the first read
+    let (mut h, f, a, mut at) = unsafe { (host_of(host), *fields, area.as_ref().copied(), *location) };
+    let result = placement::find_placement(&mut h, &f, a.as_ref(), unit_type, try_random, &mut at);
+    // SAFETY: the caller's contract
+    unsafe { *location = at };
+    result
+}
+
+/// `EESMArea::GetTiles`' rebuild of the area's cache (area.rs tiles): each tile through `EE_SCENARIO_WRITE_TILE`.
+///
+/// # Safety
+/// `host` and `area` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_area_tiles(host: *const EeScenarioHost, area: *const EeScenarioAreaRecord) {
+    // SAFETY: the caller's contract; the record is copied before the first read
+    let (mut h, a) = unsafe { (host_of(host), *area) };
+    for (x, y) in area::tiles(&mut h, &a) {
+        h.write(area::EE_SCENARIO_WRITE_TILE, 0, x as i64, y as i64, 0);
+    }
 }
