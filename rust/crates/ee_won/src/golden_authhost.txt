@@ -1,0 +1,174 @@
+start peer valid 0 user 0 delta 0 community 0 expire 0 expired 1/1 block 0 ctx expired 1/1
+verifier public num 1 obj null bytes none
+load missing 0
+verifier public num 1 obj null bytes none
+load bad 0
+verifier public num 0 obj null bytes none
+block num 0 obj set bytes none
+verified (bad verifier) num 0 obj null bytes none
+load good 1
+verifier public num 1 obj null bytes none
+verified num 1 obj null bytes none
+ctx peer num 0 obj set bytes none
+peer delta num 0 obj null bytes none
+peer block num 0 obj set bytes none
+peer block again same 1
+block valid num 0 obj null bytes none
+block id num 0 obj null bytes none
+block encrypt num 0 obj null bytes none
+block verified num 0 obj null bytes none
+peer as cert valid num 0 obj null bytes none
+peer as block valid num 0 obj null bytes none
+peer times num 0 obj null bytes 16:00000000000000000000000000000000
+peer delta as cert num 0 obj null bytes none
+peer encrypt num 0 obj null bytes none
+block times num 0 obj null bytes 16:00000000000000000000000000000000
+new block num 0 obj set bytes none
+valid num 1 obj null bytes none
+id num 17 obj null bytes none
+verified num 1 obj null bytes none
+times num 0 obj null bytes 16:e8030000000000000000007f00000000
+delta issue-now ok
+encrypt num 0 obj null bytes 52:0100000019478ad92d8d9bbc70073644ba7eabbe7cf4fd0f0cd70742286a80b1c4d5dd7996f8a5e2f91383bce1615dd1
+encrypt again num 0 obj null bytes 52:01000000141c5bfffc33f5c6c0623968316de704898888ea28908216590886d79cf73dcb5531c25d9957d890e4899f1c
+encrypt empty num 0 obj null bytes 4:00000000
+block by key 1 num 0 obj set bytes none
+valid num 1 obj null bytes none
+verified num 0 obj null bytes none
+junk block num 0 obj set bytes none
+valid num 0 obj null bytes none
+id num 0 obj null bytes none
+verified num 0 obj null bytes none
+encrypt num 0 obj null bytes none
+empty block num 0 obj set bytes none
+valid num 0 obj null bytes none
+from block peer valid 0 user 0 delta 0 community 0 expire 0 expired 1/1 block 17 ctx expired 1/1
+ctx peer num 0 obj set bytes none
+peer block num 0 obj set bytes none
+peer block is the block 0
+its id num 17 obj null bytes none
+its verified num 1 obj null bytes none
+peer valid num 0 obj null bytes none
+from peer peer valid 0 user 0 delta 0 community 0 expire 0 expired 1/1 block 0 ctx expired 1/1
+ctx peer num 0 obj set bytes none
+its block id num 0 obj null bytes none
+cert1 num 0 obj set bytes none
+cert2 num 0 obj set bytes none
+cert1 by key 1 num 0 obj set bytes none
+cert1 expired num 0 obj set bytes none
+cert2 junk num 0 obj set bytes none
+cert kind 0 num 0 obj set bytes none
+cert1 valid num 1 obj null bytes none
+cert1 verify num 1 obj null bytes none
+cert1 verify by empty num 0 obj null bytes none
+cert1 verify by peer num 1 obj null bytes none
+cert1 times num 0 obj null bytes 16:e8030000000000000000007f00000000
+cert1 delta issue-now ok
+cert1 encrypt num 0 obj null bytes 52:01000000d40954f5935d1411eee9e8ac19597f6b574dfb872619b2dc41ae0394c3d8f1912acbf3a4fb344162fcd37c06
+cert2 valid num 1 obj null bytes none
+cert2 verify num 1 obj null bytes none
+cert2 verify by empty num 0 obj null bytes none
+cert2 verify by peer num 1 obj null bytes none
+cert2 times num 0 obj null bytes 16:e8030000000000000000007f00000000
+cert2 delta issue-now ok
+cert2 encrypt num 0 obj null bytes 52:010000007f68a691417f7915d06a2ce837fc908d7ba7ef2f15a8a7a617674cc02b26484fdf1b3eb3ef575ebcede90eb0
+cert1 by key 1 valid num 1 obj null bytes none
+cert1 by key 1 verify num 0 obj null bytes none
+cert1 by key 1 verify by empty num 0 obj null bytes none
+cert1 by key 1 verify by peer num 0 obj null bytes none
+cert1 by key 1 times num 0 obj null bytes 16:e8030000000000000000007f00000000
+cert1 by key 1 delta issue-now ok
+cert1 by key 1 encrypt num 0 obj null bytes 52:0100000036eabd28bd8f81d4757b220d48dd013950b0b85c3c8af3e1c91573c57e848ad159f01fff929debf65f5decc8
+cert1 expired valid num 1 obj null bytes none
+cert1 expired verify num 1 obj null bytes none
+cert1 expired verify by empty num 0 obj null bytes none
+cert1 expired verify by peer num 1 obj null bytes none
+cert1 expired times num 0 obj null bytes 16:e803000000000000e803000000000000
+cert1 expired delta issue-now ok
+cert1 expired encrypt num 0 obj null bytes 52:01000000d9d496f1fd29cf2e04bf851eae6cbf16dcb01be9da396dafaed66f61f95c67eb0bdb661858072fd40cae25a4
+cert2 junk valid num 0 obj null bytes none
+cert2 junk verify num 0 obj null bytes none
+cert2 junk verify by empty num 0 obj null bytes none
+cert2 junk verify by peer num 0 obj null bytes none
+cert2 junk times num 0 obj null bytes 16:6e6b6a75000000006e6b6a7500000000
+cert2 junk delta issue-now ok
+cert2 junk encrypt num 0 obj null bytes none
+cert kind 0 valid num 1 obj null bytes none
+cert kind 0 verify num 1 obj null bytes none
+cert kind 0 verify by empty num 0 obj null bytes none
+cert kind 0 verify by peer num 1 obj null bytes none
+cert kind 0 times num 0 obj null bytes 16:e8030000000000000000007f00000000
+cert kind 0 delta issue-now ok
+cert kind 0 encrypt num 0 obj null bytes 52:010000009baac43d021abc61f5ae21176247593becd58a50b261902dbbfe603b009f47644b279d87ca6d4fb13978008e
+verify none num 0 obj null bytes none
+verify a block num 1 obj null bytes none
+priv num 0 obj set bytes none
+priv set junk num 0 obj null bytes none
+priv set num 1 obj null bytes none
+new peer num 0 obj set bytes none
+priv 2 num 0 obj set bytes none
+new peer no cert2 num 0 obj set bytes none
+new peer no key num 0 obj set bytes none
+peer 0 valid num 1 obj null bytes none
+peer 0 delta num 5 obj null bytes none
+peer 0 block the block
+peer 0 block id num 17 obj null bytes none
+peer 0 verify num 1 obj null bytes none
+peer 1 valid num 0 obj null bytes none
+peer 1 delta num -7 obj null bytes none
+peer 1 block the block
+peer 1 block id num 17 obj null bytes none
+peer 1 verify num 1 obj null bytes none
+peer 2 valid num 0 obj null bytes none
+peer 2 delta num 0 obj null bytes none
+peer 2 block null
+peer 2 verify num 0 obj null bytes none
+set peer valid 1 user 1000 delta 5 community 42 expire future expired 0/0 block 17 ctx expired 0/1
+ctx peer num 0 obj set bytes none
+its delta num 5 obj null bytes none
+its valid num 1 obj null bytes none
+set no cert2 peer valid 0 user 1000 delta -7 community 0 expire 0 expired 1/1 block 17 ctx expired 1/1
+set a cert peer null
+ctx peer num 0 obj null bytes none
+set none peer null
+set again peer valid 1 user 1000 delta 5 community 42 expire future expired 0/0 block 17 ctx expired 0/1
+user num 0 obj null bytes 12:540065007300740065007200
+password num 0 obj null bytes 12:730065006300720065007400
+community num 0 obj null bytes 41:00010b0045006d007000690072006500450061007200740068000100040a0004006e00690063006b00
+hashes num 0 obj null bytes 1:00
+hash file 1
+hashes num 0 obj null bytes 58:01010b0045006d00700069007200650045006100720074006800bbe1d76330eb43269a43c8e280ea2df9581269add217
+hashes no seed num 0 obj null bytes 58:01010b0045006d00700069007200650045006100720074006800bbe1d76330eb43269a43c8e280ea2df987adce06c827
+password now 'newpass'
+password num 0 obj null bytes 14:6e00650077007000610073007300
+password empty ''
+community with data num 0 obj null bytes 77:00010b0045006d0070006900720065004500610072007400680002000821000b0045006d007000690072006500450061
+community cleared num 0 obj null bytes 41:00010b0045006d007000690072006500450061007200740068000100040a0004006e00690063006b00
+community data 41:00010b0045006d007000690072006500450061007200740068000100040a0004006e00690063006b00
+secrets 1:00 file (none)
+added 25:03434343434343434342424242424242424141414141414141 file 37:03000000004343434343434343000000004242424242424242000000004141414141414141
+removed 17:0242424242424242424141414141414141 file 25:02000000004242424242424242000000004141414141414141
+committed 17:0242424242424242424141414141414141 file 25:024600007f42424242424242424600007f4141414141414141
+committed past 25:03444444444444444442424242424242424141414141414141 file 37:030e01000044444444444444444600007f42424242424242424600007f4141414141414141
+loaded 25:03444444444444444442424242424242424141414141414141
+plain has auth num 0 obj null bytes none
+has auth num 1 obj null bytes none
+user id num 1000 obj null bytes none
+ctx data set valid 1 user 1000 delta 5
+get none num 0 obj null bytes none
+get 0 first
+get 1 second
+get 2 null
+get other num 0 obj null bytes none
+class get first
+after set peer null
+refresh block num 100055 obj null bytes none
+after refresh peer valid 1 user 1000 delta 5 community 42 expire future expired 0/0 block 17 ctx expired 0/1
+light status 100055 pending 0 peer null
+after async peer valid 1 user 1000 delta 5 community 42 expire future expired 0/0 block 17 ctx expired 0/1
+servers 0 add 1 again 0 other 1 now 2
+remove 1 again 0 now 1
+remove all 0 from dir 0
+set servers same 1
+end peer valid 1 user 1000 delta 5 community 42 expire future expired 0/0 block 17 ctx expired 0/1
+done

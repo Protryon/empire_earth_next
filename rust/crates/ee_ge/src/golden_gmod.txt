@@ -1,0 +1,4220 @@
+0| do Begin 1
+0| step
+0| step
+0| step
+0| step
+0| step
+0| step
+0| step
+0| do NewCounts 1 4 2 1 3 2 't2' f1 G1
+0| V2 new f1 n4
+0| V3 new f1 n4
+0| V4 new f1 n4
+0| P5 new n1
+0| R6 material s2 l1
+0| R7 material s2 l1
+0| = R1
+0| do NewCounts 1 1 1 2 2 0 't2' f0 G1
+0| V9 new f0 n1
+0| V10 new f0 n1
+0| P11 new n1
+0| R12 material s2 l1
+0| = R8
+0| do SetSub R1 0 R8
+0| ref R8 2
+0| do Deref R8
+0| deref R8 1
+0| do NewCounts 3 2 1 0 3 0 't2' f0 G2
+0| V14 new f0 n2
+0| V15 new f0 n2
+0| V16 new f0 n2
+0| P17 new n3
+0| R18 material s2 l1
+0| = R13
+0| do SetSub R1 1 R13
+0| ref R13 2
+0| do Deref R13
+0| deref R13 1
+0| step
+0| M R1 dbd91959b9d8eab5
+0| M R8 d579d867dff4c719
+0| M R13 c1347cbcb3458edb
+0| step
+0| M R1 dbd91959b9d8eab5
+0| M R8 d579d867dff4c719
+0| M R13 c1347cbcb3458edb
+0| do NewCounts 4 2 0 0 3 0 'x9' f0 G2
+0| V20 new f0 n2
+0| V21 new f0 n2
+0| V22 new f0 n2
+0| P23 new n4
+0| = R19
+0| do SetSub R1 1 R19
+0| deref R13 0
+0| del V14
+0| del V15
+0| del V16
+0| del P17
+0| deref R18 0
+0| del R18
+0| del R13
+0| ref R19 2
+0| do Deref R19
+0| deref R19 1
+0| step
+0| M R1 66a89f1f07326129
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| do NewCounts 3 2 0 0 3 1 'x9' f3 G2
+0| V25 new f3 n2
+0| V26 new f3 n2
+0| V27 new f3 n2
+0| P28 new n3
+0| = R24
+0| do NewCounts 1 5 0 2 2 0 'x9' f1 G2
+0| V30 new f1 n5
+0| V31 new f1 n5
+0| P32 new n1
+0| = R29
+0| do SetSub R24 0 R29
+0| ref R29 2
+0| do Deref R29
+0| deref R29 1
+0| step
+0| M R1 66a89f1f07326129
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| M R24 c7262a15af1460ab
+0| M R29 fab3d7ea3338f648
+0| do Reference R1
+0| ref R1 2
+0| step
+0| M R1 ed04b918750e99de
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| M R24 c7262a15af1460ab
+0| M R29 fab3d7ea3338f648
+0| do NewCounts 3 5 2 2 1 1 '' f0 G2
+0| V34 new f0 n5
+0| P35 new n3
+0| R36 material s2 l1
+0| R37 material s2 l1
+0| = R33
+0| do NewCounts 3 0 0 0 1 0 '' f1 G1
+0| V39 new f1 n0
+0| P40 new n3
+0| = R38
+0| do SetSub R33 0 R38
+0| ref R38 2
+0| do Deref R38
+0| deref R38 1
+0| step
+0| M R1 ed04b918750e99de
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| M R24 c7262a15af1460ab
+0| M R29 fab3d7ea3338f648
+0| M R33 ce98ec713b0bb38c
+0| M R38 57283e8c6b26f4e0
+0| do Dereference R33
+0| G2 remove R33
+0| deref R33 0
+0| del V34
+0| del P35
+0| deref R36 0
+0| del R36
+0| deref R37 0
+0| del R37
+0| deref R38 0
+0| del V39
+0| del P40
+0| del R38
+0| del R33
+0| step
+0| M R1 ed04b918750e99de
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| M R24 c7262a15af1460ab
+0| M R29 fab3d7ea3338f648
+0| do SizeOf R29
+0| = 1121
+0| step
+0| M R1 ed04b918750e99de
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| M R24 c7262a15af1460ab
+0| M R29 fab3d7ea3338f648
+0| do Reference R29
+0| ref R29 2
+0| step
+0| M R1 ed04b918750e99de
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do Verify R29
+0| = 1
+0| step
+0| M R1 ed04b918750e99de
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetCurrentFrame R29 0
+0| step
+0| M R1 ed04b918750e99de
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetCurrentFrame R19 0
+0| step
+0| M R1 ed04b918750e99de
+0| M R8 d579d867dff4c719
+0| M R19 f7593c7025a652b2
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetOpacity R1 c1070000
+0| step
+0| M R1 f3f250330e4b8573
+0| M R8 93f4c8cd07b2d458
+0| M R19 3b75f11f0cb5e327
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do ComputeModelNormals R29
+0| V30 nm 0 00000000 00000000 00000000
+0| V30 nm 1 00000000 00000000 00000000
+0| V30 nm 2 00000000 00000000 00000000
+0| V30 nm 3 00000000 00000000 00000000
+0| V30 nm 4 00000000 00000000 00000000
+0| V31 nm 0 00000000 00000000 00000000
+0| V31 nm 1 00000000 00000000 00000000
+0| V31 nm 2 00000000 00000000 00000000
+0| V31 nm 3 00000000 00000000 00000000
+0| V31 nm 4 00000000 00000000 00000000
+0| step
+0| M R1 f3f250330e4b8573
+0| M R8 93f4c8cd07b2d458
+0| M R19 3b75f11f0cb5e327
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SortTagPoints R29
+0| step
+0| M R1 f3f250330e4b8573
+0| M R8 93f4c8cd07b2d458
+0| M R19 3b75f11f0cb5e327
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetTexture R1 0 1
+0| R6 settex 0 1
+0| R7 settex 0 1
+0| R12 settex 0 1
+0| step
+0| M R1 f3f250330e4b8573
+0| M R8 93f4c8cd07b2d458
+0| M R19 3b75f11f0cb5e327
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetFractional R19 c0260000
+0| step
+0| M R1 f3f250330e4b8573
+0| M R8 93f4c8cd07b2d458
+0| M R19 8f89e34c416c6af5
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetFractional R8 4164c000
+0| step
+0| M R1 f3f250330e4b8573
+0| M R8 0d0e2831b1807033
+0| M R19 8f89e34c416c6af5
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do Verify R19
+0| = 1
+0| step
+0| M R1 f3f250330e4b8573
+0| M R8 0d0e2831b1807033
+0| M R19 8f89e34c416c6af5
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetTransform R8 1 0 41200000 40838000 c16e4000 c11d0000 c0b48000 3f040000 c1438000 00000000 00000000 c0940000 413d4000 c09d8000 410b4000 00000000 00000000 bf000000
+0| step
+0| M R1 f3f250330e4b8573
+0| M R8 cba63c0ea46d8c87
+0| M R19 8f89e34c416c6af5
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetNextFrame R1 1
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do Verify R24
+0| = 1
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SortTagPoints R8
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do ComputeModelNormals R24
+0| V25 nm 0 00000000 00000000 00000000
+0| V25 nm 1 00000000 00000000 00000000
+0| V26 nm 0 00000000 00000000 00000000
+0| V26 nm 1 00000000 00000000 00000000
+0| V27 nm 0 00000000 00000000 00000000
+0| V27 nm 1 00000000 00000000 00000000
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do LoadTextures R24 d3 1
+0| = 0
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do ComputeModelNormals R24
+0| V25 nm 0 00000000 00000000 00000000
+0| V25 nm 1 00000000 00000000 00000000
+0| V26 nm 0 00000000 00000000 00000000
+0| V26 nm 1 00000000 00000000 00000000
+0| V27 nm 0 00000000 00000000 00000000
+0| V27 nm 1 00000000 00000000 00000000
+0| step
+0| M R1 b9ed5aacefabe51a
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetTagPoint R1 -1 0 3f5c0000 41448000 40c08000
+0| step
+0| M R1 dbc148e2747f052c
+0| M R8 c0d7ac25abc10a16
+0| M R19 3edd85d9a457ae30
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do SetOpacity R19 408e8000
+0| step
+0| M R1 dbc148e2747f052c
+0| M R8 c0d7ac25abc10a16
+0| M R19 8b5dd217234fbd5e
+0| M R24 c7262a15af1460ab
+0| M R29 0bfe4ed460475d2b
+0| do Reference R24
+0| ref R24 2
+0| step
+0| M R1 dbc148e2747f052c
+0| M R8 c0d7ac25abc10a16
+0| M R19 8b5dd217234fbd5e
+0| M R24 b8243ca1b24c47d4
+0| M R29 0bfe4ed460475d2b
+0| end
+0| do Deref R1
+0| deref R1 1
+0| do Deref R1
+0| deref R1 0
+0| del V2
+0| del V3
+0| del V4
+0| del P5
+0| deref R6 0
+0| del R6
+0| deref R7 0
+0| del R7
+0| deref R8 0
+0| del V9
+0| del V10
+0| del P11
+0| deref R12 0
+0| del R12
+0| del R8
+0| deref R19 0
+0| del V20
+0| del V21
+0| del V22
+0| del P23
+0| del R19
+0| del R1
+0| do Deref R24
+0| deref R24 1
+0| do Deref R24
+0| deref R24 0
+0| del V25
+0| del V26
+0| del V27
+0| del P28
+0| deref R29 1
+0| del R24
+0| do Deref R29
+0| deref R29 0
+0| del V30
+0| del V31
+0| del P32
+0| del R29
+0| step
+0| left 0
+1| do Begin 1
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| do NewCounts 3 4 2 2 2 0 '' f1 G2
+1| V2 new f1 n4
+1| V3 new f1 n4
+1| P4 new n3
+1| R5 material s2 l1
+1| R6 material s2 l1
+1| = R1
+1| step
+1| M R1 ee97c9d32dae0948
+1| do SetScale R1 3f800000
+1| step
+1| M R1 ee97c9d32dae0948
+1| do SetFractional R1 41498000
+1| step
+1| M R1 86f8a944a7ab9022
+1| do Deref R1
+1| deref R1 0
+1| del V2
+1| del V3
+1| del P4
+1| deref R5 0
+1| del R5
+1| deref R6 0
+1| del R6
+1| del R1
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| step
+1| do Load G2 220465948 1:-1
+1| V8 new f0 n1
+1| P9 new n4
+1| R10 material s2 l1
+1| R11 material s2 l1
+1| P9 i1 0 0
+1| P9 i2 0 0
+1| P9 i3 0 0
+1| P9 i1 1 0
+1| P9 i2 1 0
+1| P9 i3 1 0
+1| P9 i1 2 0
+1| P9 i2 2 0
+1| P9 i3 2 0
+1| P9 i1 3 0
+1| P9 i2 3 0
+1| P9 i3 3 0
+1| R10 name 't2'
+1| R10 ti 4
+1| R10 ps 1 l0
+1| R10 pl 0 l0
+1| R10 vs 0
+1| R10 vl 1
+1| R11 name 'tag'
+1| R11 ti 3
+1| R11 ps 2 l0
+1| R11 pl 2 l0
+1| R11 vs 0
+1| R11 vl 1
+1| V8 pt 0 c09e8000 bfac0000 c1544000
+1| V8 nm 0 c0fb0000 40df8000 c1644000
+1| V8 uv 0 bf700000 c09b0000
+1| V8 pt 0 c0e38000 c0640000 c135c000
+1| V8 nm 0 c0f90000 3f240000 c1628000
+1| = R7 0
+1| step
+1| M R7 40688a9b62d6c44c
+1| do PrepareTransforms R7
+1| step
+1| M R7 ebe441777586d11e
+1| do ComputeModelNormals R7
+1| V8 nm 0 00000000 00000000 00000000
+1| V8 nm 0 00000000 00000000 00000000
+1| step
+1| M R7 ebe441777586d11e
+1| do SetOpacity R7 410b0000
+1| step
+1| M R7 f5f653cf9cc9e633
+1| do SortTagPoints R7
+1| step
+1| M R7 f5f653cf9cc9e633
+1| do SetOpacity R7 c12a0000
+1| step
+1| M R7 ca9c4b18d1e2b6b6
+1| step
+1| M R7 ca9c4b18d1e2b6b6
+1| do PrepareTransforms R7
+1| step
+1| M R7 ca9c4b18d1e2b6b6
+1| do SetFractional R7 40a20000
+1| step
+1| M R7 128ada057a5ad734
+1| end
+1| do Deref R7
+1| deref R7 0
+1| del V8
+1| del P9
+1| deref R10 0
+1| del R10
+1| deref R11 0
+1| del R11
+1| del R7
+1| step
+1| left 0
+2| do Begin 1
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| step
+2| do Load G2 655999813
+2| V2 new f0 n1
+2| V3 new f0 n1
+2| V4 new f0 n1
+2| P5 new n3
+2| R6 material s2 l2
+2| P7 new n3
+2| P7 i1 0 0
+2| P7 i2 0 0
+2| P7 i3 0 0
+2| P7 i1 1 0
+2| P7 i2 1 0
+2| P7 i3 1 0
+2| P7 i1 2 0
+2| P7 i2 2 0
+2| P7 i3 2 0
+2| P8 new n2
+2| P8 i1 0 0
+2| P8 i2 0 0
+2| P8 i3 0 0
+2| P8 i1 1 0
+2| P8 i2 1 0
+2| R6 ti 3
+2| R6 ps 0 l0
+2| R6 pl 0 l0
+2| R6 ps 0 l1
+2| R6 pl 1 l1
+2| R6 vs 1
+2| R6 vl 1
+2| V2 pt 0 c1524000 41094000 41238000
+2| V2 nm 0 3ee80000 c143c000 bef00000
+2| V2 uv 0 c0380000 41644000
+2| V3 pt 0 3fd80000 c09b8000 41384000
+2| V3 nm 0 c163c000 41580000 4154c000
+2| V4 pt 0 c11a4000 40100000 c1594000
+2| V4 nm 0 c1330000 be000000 c0c28000
+2| = R1 5
+2| step
+2| M R1 f5f0d618cac11b0c
+2| do ComputeModelNormals R1
+2| V2 nm 0 00000000 00000000 00000000
+2| V3 nm 0 00000000 00000000 00000000
+2| V4 nm 0 00000000 00000000 00000000
+2| step
+2| M R1 f5f0d618cac11b0c
+2| do SetCurrentFrame R1 2
+2| step
+2| M R1 540fa9b166524fba
+2| do SetCurrentFrame R1 0
+2| step
+2| M R1 f5f0d618cac11b0c
+2| do SetTagPoint R1 1 0 40810000 c10f0000 405b0000
+2| step
+2| M R1 3a56f57b5c8c17ee
+2| do Load G1 110049417
+2| = R9 9
+2| step
+2| M R1 3a56f57b5c8c17ee
+2| M R9 82dbec90ed4acfe6
+2| do Deref R9
+2| deref R9 0
+2| del R9
+2| step
+2| M R1 3a56f57b5c8c17ee
+2| do Verify R1
+2| = 1
+2| step
+2| M R1 3a56f57b5c8c17ee
+2| do PolygonCount R1 1
+2| = 1 1
+2| step
+2| M R1 3a56f57b5c8c17ee
+2| do SetScale R1 3f800000
+2| step
+2| M R1 3a56f57b5c8c17ee
+2| do SetFractional R1 c12d4000
+2| step
+2| M R1 30982ee4bef414ac
+2| step
+2| M R1 30982ee4bef414ac
+2| do SetOpacity R1 c13fc000
+2| step
+2| M R1 0ff34f38b6d457f5
+2| do SetTagPointName R1 0 'Zed'
+2| step
+2| M R1 3c69be46db3370a3
+2| do SetScale R1 3ef00000
+2| step
+2| M R1 e8e2ab73a3b152fa
+2| do SetTransform R1 3 1 40948000 c0f80000 c0d60000 00000000 bffc0000 41358000 c1030000 41250000 00000000 00000000 bfc20000 40840000 c0b90000 c1324000 c1418000 c15a8000
+2| step
+2| M R1 ef7326d2ca2bba5e
+2| do SetOpacity R1 408a0000
+2| step
+2| M R1 7663254bae723278
+2| do SetNextFrame R1 0
+2| step
+2| M R1 7663254bae723278
+2| end
+2| do Deref R1
+2| deref R1 0
+2| del V2
+2| del V3
+2| del V4
+2| del P7
+2| del P8
+2| deref R6 0
+2| del R6
+2| del R1
+2| step
+2| left 0
+3| do Begin 0
+3| step
+3| step
+3| do NewCounts 4 0 2 2 1 1 'tag' f3 G2
+3| V2 new f3 n0
+3| P3 new n4
+3| R4 material s1 l1
+3| R5 material s1 l1
+3| = R1
+3| do NewCounts 2 0 0 1 3 0 'tag' f2 G2
+3| V7 new f2 n0
+3| V8 new f2 n0
+3| V9 new f2 n0
+3| P10 new n2
+3| = R6
+3| do SetSub R1 0 R6
+3| ref R6 2
+3| do Deref R6
+3| deref R6 1
+3| step
+3| M R1 87c9dc2ebc066440
+3| M R6 89fb5ca112f4d8e2
+3| do SetTextureFilename R1 1 't1'
+3| step
+3| M R1 991ef87983d693fb
+3| M R6 89fb5ca112f4d8e2
+3| do Deref R1
+3| deref R1 0
+3| del V2
+3| del P3
+3| deref R4 0
+3| del R4
+3| deref R5 0
+3| del R5
+3| deref R6 0
+3| del V7
+3| del V8
+3| del V9
+3| del P10
+3| del R6
+3| del R1
+3| step
+3| step
+3| step
+3| step
+3| step
+3| step
+3| step
+3| step
+3| end
+3| step
+3| left 0
+4| do Begin 1
+4| step
+4| step
+4| step
+4| step
+4| step
+4| step
+4| step
+4| step
+4| step
+4| step
+4| do Load G2 124986881
+4| V2 new f0 n3
+4| V3 new f0 n3
+4| V4 new f0 n3
+4| P5 new n2
+4| P5 i1 0 2
+4| P5 i2 0 2
+4| P5 i3 0 0
+4| P5 i1 1 2
+4| P5 i2 1 1
+4| P5 i3 1 0
+4| V2 pt 0 404b0000 41080000 41770000
+4| V2 pt 1 411ac000 4123c000 c126c000
+4| V2 pt 2 c1600000 c1410000 c11b8000
+4| V2 nm 0 c0510000 c0b20000 c10d4000
+4| V2 nm 1 c1698000 c0af0000 c16dc000
+4| V2 nm 2 40a40000 c12a0000 414b0000
+4| V2 uv 0 414b0000 40f40000
+4| V2 uv 1 c133c000 bfcc0000
+4| V2 uv 2 c16c8000 40fc0000
+4| V3 pt 0 c0710000 c0f60000 c1508000
+4| V3 pt 1 c1750000 412b0000 c156c000
+4| V3 pt 2 40df0000 4161c000 40b80000
+4| V3 nm 0 c0928000 3fd00000 c163c000
+4| V3 nm 1 c0828000 c13f4000 c0bf0000
+4| V3 nm 2 c13e4000 c10e4000 c16e4000
+4| V4 pt 0 c04f0000 4179c000 c0450000
+4| V4 pt 1 401d0000 41300000 414a8000
+4| V4 pt 2 405f0000 407a0000 40110000
+4| V4 nm 0 c13bc000 c03a0000 c0b70000
+4| V4 nm 1 40e18000 40760000 c1368000
+4| V4 nm 2 3fda0000 41530000 41418000
+4| V4 uv 0 4113c000 c1564000
+4| V4 uv 1 c0978000 c09c0000
+4| V4 uv 2 410f8000 c12b0000
+4| V7 new f0 n2
+4| V8 new f0 n2
+4| P9 new n1
+4| R10 material s2 l1
+4| R11 material s2 l1
+4| P9 i1 0 1
+4| P9 i2 0 0
+4| P9 i3 0 1
+4| R10 name '3d'
+4| R10 ti 2
+4| R10 ps 0 l0
+4| R10 pl 0 l0
+4| R10 vs 1
+4| R10 vl 2
+4| R11 name 'Zed'
+4| R11 ti 1
+4| R11 ps 0 l0
+4| R11 pl 0 l0
+4| R11 vs 1
+4| R11 vl 2
+4| V7 pt 0 40d78000 41340000 c11fc000
+4| V7 pt 1 403a0000 c0070000 c0f30000
+4| V7 nm 0 bfb80000 3f780000 4166c000
+4| V7 nm 1 c10a4000 c1280000 414f0000
+4| V7 uv 0 c0ba8000 c0f20000
+4| V7 uv 1 40410000 410b0000
+4| V8 pt 0 c0af8000 c0eb8000 411d4000
+4| V8 pt 1 bf960000 c0cb8000 41010000
+4| V8 nm 0 3f940000 41020000 416e4000
+4| V8 nm 1 c13d0000 3f9a0000 c03a0000
+4| V8 uv 0 40630000 c0dc8000
+4| V8 uv 1 c1304000 c1534000
+4| V13 new f0 n3
+4| V14 new f0 n3
+4| V15 new f0 n3
+4| P16 new n2
+4| R17 material s2 l2
+4| P16 i1 0 2
+4| P16 i2 0 1
+4| P16 i3 0 2
+4| P16 i1 1 2
+4| P16 i2 1 0
+4| P16 i3 1 0
+4| P18 new n3
+4| P18 i1 0 2
+4| P18 i2 0 2
+4| P18 i3 0 2
+4| P18 i1 1 2
+4| P18 i2 1 2
+4| P18 i3 1 1
+4| P18 i1 2 1
+4| P18 i2 2 1
+4| R17 name 'mud'
+4| R17 ti 4
+4| R17 ps 1 l0
+4| R17 pl 1 l0
+4| R17 ps 0 l1
+4| R17 pl 1 l1
+4| R17 vs 0
+4| R17 vl 2
+4| V14 pt 0 00000000 4161c000 415e8000
+4| V14 pt 1 405f0000 40420000 c1624000
+4| V14 pt 2 41348000 c03d0000 bf2c0000
+4| V14 nm 0 c10b0000 c0780000 3e000000
+4| V14 nm 1 c156c000 3f0c0000 41490000
+4| V14 nm 2 40560000 c1674000 416bc000
+4| V14 uv 0 41228000 c0a10000
+4| V14 uv 1 405e0000 40838000
+4| V14 uv 2 40880000 40d90000
+4| V14 pt 0 c0470000 40010000 41298000
+4| V14 pt 1 414e4000 41730000 41248000
+4| V14 pt 2 c0c20000 c14d8000 412b8000
+4| V14 uv 0 410c8000 40e58000
+4| V14 uv 1 40fe0000 c158c000
+4| V14 uv 2 c1750000 408a0000
+4| V15 pt 0 c0938000 3fe00000 40ee8000
+4| V15 pt 1 412e0000 c0500000 412bc000
+4| V15 nm 0 40ae8000 c107c000 40530000
+4| V15 nm 1 c0110000 c11e8000 c0d58000
+4| V15 nm 2 410d8000 c157c000 c0f90000
+4| V15 uv 0 c103c000 41300000
+4| V15 uv 1 41558000 c0da0000
+4| V15 uv 2 416dc000 c0c78000
+4| V20 new f0 n3
+4| P21 new n2
+4| R22 material s2 l1
+4| P21 i1 0 0
+4| P21 i2 0 0
+4| P21 i3 0 0
+4| P21 i1 1 0
+4| R22 name 't1'
+4| R22 ti 2
+4| R22 ps 1 l0
+4| R22 pl 0 l0
+4| R22 vs 1
+4| R22 vl 0
+4| V20 pt 0 bec00000 c1540000 407b0000
+4| V20 pt 1 41060000 c135c000 3f500000
+4| V20 pt 2 416fc000 412c4000 c1020000
+4| V20 nm 0 c0620000 416e8000 c0020000
+4| V20 nm 1 c1154000 41750000 c07c0000
+4| V20 nm 2 c16e8000 40d38000 c0ba0000
+4| V20 uv 0 c1668000 c1348000
+4| V20 uv 1 4164c000 408e8000
+4| V20 uv 2 408e0000 41010000
+4| = R1 0
+4| step
+4| M R1 113cf57726a2758f
+4| M R6 2126f2b076c8457a
+4| M R12 364dc3e7abb02810
+4| M R19 2cf5fe5f86483255
+4| do ComputeBoundingVolumes R6
+4| step
+4| M R1 113cf57726a2758f
+4| M R6 08a07f8b043868eb
+4| M R12 fbc69e9b27c64b28
+4| M R19 3c44805095a226c2
+4| do SetTexture R6 0 2
+4| R10 settex 0 2
+4| R11 settex 0 2
+4| R17 settex 0 2
+4| R22 settex 0 2
+4| step
+4| M R1 113cf57726a2758f
+4| M R6 08a07f8b043868eb
+4| M R12 fbc69e9b27c64b28
+4| M R19 3c44805095a226c2
+4| do SetTagPoint R1 1 0 c0960000 c0c40000 40ad0000
+4| step
+4| M R1 f26338fdf3ae537c
+4| M R6 08a07f8b043868eb
+4| M R12 fbc69e9b27c64b28
+4| M R19 3c44805095a226c2
+4| end
+4| do Deref R1
+4| deref R1 0
+4| del V2
+4| del V3
+4| del V4
+4| del P5
+4| deref R6 0
+4| del V7
+4| del V8
+4| del P9
+4| deref R10 0
+4| del R10
+4| deref R11 0
+4| del R11
+4| deref R12 0
+4| del V13
+4| del V14
+4| del V15
+4| del P16
+4| del P18
+4| deref R17 0
+4| del R17
+4| del R12
+4| deref R19 0
+4| del V20
+4| del P21
+4| deref R22 0
+4| del R22
+4| del R19
+4| del R6
+4| del R1
+4| step
+4| left 0
+5| do Begin 0
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| step
+5| end
+5| step
+5| left 0
+6| do Begin 0
+6| step
+6| step
+6| step
+6| step
+6| step
+6| step
+6| step
+6| step
+6| step
+6| step
+6| step
+6| step
+6| end
+6| step
+6| left 0
+7| do Begin 1
+7| step
+7| step
+7| step
+7| step
+7| step
+7| step
+7| step
+7| end
+7| step
+7| left 0
+8| do Begin 0
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| do Load G1 220129336
+8| = R1 9
+8| step
+8| M R1 82dbec90ed4acfe6
+8| step
+8| M R1 82dbec90ed4acfe6
+8| step
+8| M R1 82dbec90ed4acfe6
+8| step
+8| M R1 82dbec90ed4acfe6
+8| step
+8| M R1 82dbec90ed4acfe6
+8| step
+8| M R1 82dbec90ed4acfe6
+8| step
+8| M R1 82dbec90ed4acfe6
+8| step
+8| M R1 82dbec90ed4acfe6
+8| do Dereference R1
+8| G1 remove R1
+8| deref R1 0
+8| del R1
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| step
+8| end
+8| step
+8| left 0
+9| do Begin 1
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| step
+9| end
+9| step
+9| left 0
+10| do Begin 0
+10| step
+10| step
+10| step
+10| do Load G1 147447136
+10| V2 new f0 n2
+10| P3 new n4
+10| R4 material s1 l1
+10| R5 material s1 l1
+10| P3 i1 0 1
+10| P3 i2 0 1
+10| P3 i3 0 1
+10| P3 i1 1 1
+10| P3 i2 1 1
+10| P3 i3 1 1
+10| P3 i1 2 1
+10| P3 i2 2 1
+10| P3 i3 2 1
+10| P3 i1 3 0
+10| P3 i2 3 1
+10| P3 i3 3 0
+10| R4 name 'x9'
+10| R4 ti 2
+10| R4 ps 3 l0
+10| R4 pl 0 l0
+10| R4 vs 1
+10| R4 vl 1
+10| R5 name 'abc'
+10| R5 ti 1
+10| R5 ps 1 l0
+10| R5 pl 3 l0
+10| R5 vs 1
+10| R5 vl 2
+10| V2 pt 0 40e40000 41450000 c05a0000
+10| V2 pt 1 c0f70000 bf8a0000 414c8000
+10| V2 nm 0 c1364000 40860000 40ba0000
+10| V2 nm 1 3fae0000 41658000 410b0000
+10| V2 uv 0 c1788000 3f040000
+10| V2 uv 1 41720000 c14ec000
+10| V7 new f0 n6
+10| V8 new f0 n6
+10| V9 new f0 n6
+10| P10 new n3
+10| R11 material s1 l1
+10| P12 new n3
+10| P12 i1 0 5
+10| P12 i2 0 4
+10| P12 i3 0 2
+10| P12 i1 1 0
+10| P12 i2 1 0
+10| P12 i3 1 5
+10| P12 i1 2 4
+10| P12 i2 2 1
+10| P12 i3 2 4
+10| R11 name 'tag'
+10| R11 ti 1
+10| R11 ps 1 l0
+10| R11 pl 1 l0
+10| R11 vs 1
+10| R11 vl 4
+10| V7 nm 0 4123c000 c1450000 40df8000
+10| V7 nm 1 c0e90000 c0bd0000 c0900000
+10| V7 nm 2 c11b8000 c08e0000 c02b0000
+10| V7 nm 3 412fc000 40888000 4109c000
+10| V7 nm 4 c16c4000 c0630000 414a8000
+10| V7 nm 5 407b0000 c16f4000 c1288000
+10| V7 uv 0 41718000 c06d0000
+10| V7 uv 1 c1190000 c13c8000
+10| V7 uv 2 c14e8000 40290000
+10| V7 uv 3 40c68000 416a8000
+10| V7 uv 4 be100000 c0d00000
+10| V7 uv 5 41428000 c1504000
+10| V9 pt 0 40a48000 c0aa8000 c1784000
+10| V9 pt 1 41338000 412a0000 40e38000
+10| V9 pt 2 41260000 bf400000 414a4000
+10| V9 pt 3 416e0000 c177c000 c12c8000
+10| V9 pt 4 c0630000 40230000 41760000
+10| V9 pt 5 c13b4000 415f4000 c1604000
+10| V9 nm 0 40c98000 415bc000 40be0000
+10| V9 nm 1 41194000 c0ec0000 c174c000
+10| V9 nm 2 40a50000 c11b0000 bfe40000
+10| V9 nm 3 c160c000 00000000 406f0000
+10| V9 nm 4 c1678000 c1628000 c0e68000
+10| V9 nm 5 4170c000 c16b8000 40be8000
+10| V9 uv 0 c1730000 40f48000
+10| V9 uv 1 c0ed0000 41200000
+10| V9 uv 2 40c78000 3f980000
+10| V9 uv 3 bf9e0000 403f0000
+10| V9 uv 4 410e8000 416f4000
+10| V9 uv 5 40f20000 41328000
+10| V9 pt 0 bf380000 40210000 c1424000
+10| V9 pt 1 41114000 c1458000 c0030000
+10| V9 pt 2 c0df8000 c0250000 c08f0000
+10| V9 pt 3 41530000 c1454000 41694000
+10| V9 pt 4 40ab8000 40bc0000 c12ac000
+10| V9 pt 5 41328000 40440000 c0810000
+10| V9 nm 0 c12f8000 40dc0000 407e0000
+10| V9 nm 1 414a4000 416f0000 c1088000
+10| V9 nm 2 c1264000 c14b0000 41570000
+10| V9 nm 3 40d58000 414b4000 c11e8000
+10| V9 nm 4 c13c4000 411cc000 be700000
+10| V9 nm 5 c1314000 415c4000 41798000
+10| V9 uv 0 c05d0000 41358000
+10| V9 uv 1 414c0000 c1484000
+10| V9 uv 2 c1528000 c0ab0000
+10| V9 uv 3 41500000 414f8000
+10| V9 uv 4 c11cc000 c0e78000
+10| V9 uv 5 c0f38000 c0ea0000
+10| V14 new f0 n6
+10| V15 new f0 n6
+10| V16 new f0 n6
+10| P17 new n4
+10| P18 new n4
+10| P18 i1 0 0
+10| P18 i2 0 2
+10| P18 i3 0 1
+10| P18 i1 1 5
+10| P18 i2 1 0
+10| P18 i3 1 2
+10| P18 i1 2 1
+10| P18 i2 2 1
+10| P18 i3 2 2
+10| P18 i1 3 5
+10| P18 i2 3 0
+10| P18 i3 3 2
+10| P19 new n3
+10| P19 i1 0 2
+10| P19 i2 0 5
+10| P19 i3 0 4
+10| P19 i1 1 4
+10| P19 i2 1 4
+10| P19 i3 1 2
+10| P19 i1 2 0
+10| P19 i2 2 3
+10| P19 i3 2 0
+10| V14 pt 0 412f4000 3f940000 40060000
+10| V14 pt 1 40e00000 c1650000 3f640000
+10| V14 pt 2 c10f8000 41144000 3f880000
+10| V14 pt 3 413c8000 c0b58000 c0110000
+10| V14 pt 4 40490000 bee80000 c13ec000
+10| V14 pt 5 3ff80000 4159c000 41560000
+10| V14 nm 0 413b4000 414e0000 c10d4000
+10| V14 nm 1 41150000 c16d8000 c0760000
+10| V14 nm 2 c0280000 c1028000 413bc000
+10| V14 nm 3 40bc8000 40f80000 c13b4000
+10| V14 nm 4 410d8000 414a0000 41084000
+10| V14 nm 5 40a08000 c0710000 c1758000
+10| V14 uv 0 c148c000 c08f8000
+10| V14 uv 1 3fbe0000 bef80000
+10| V14 uv 2 409b0000 3ec80000
+10| V14 uv 3 c01c0000 c0ad0000
+10| V14 uv 4 40df0000 41688000
+10| V14 uv 5 c1060000 c154c000
+10| V15 pt 0 c16cc000 c1088000 40a18000
+10| V15 pt 1 415b0000 41164000 40290000
+10| V15 pt 2 41370000 c16b4000 412ec000
+10| V15 pt 3 c1018000 c0800000 4137c000
+10| V15 pt 4 4177c000 4128c000 c0d80000
+10| V15 pt 5 c1648000 40c60000 40e48000
+10| V15 nm 0 41424000 c1734000 c10a0000
+10| V15 nm 1 c140c000 40c00000 c02b0000
+10| V15 nm 2 3f700000 40a50000 41060000
+10| V15 nm 3 c1058000 40c50000 c0850000
+10| V15 nm 4 c0980000 c0bd8000 41614000
+10| V15 nm 5 3f5c0000 c0d18000 c0140000
+10| V15 uv 0 41508000 40da8000
+10| V15 uv 1 c1514000 40520000
+10| V15 uv 2 41350000 c1018000
+10| V15 uv 3 40ff0000 c1160000
+10| V15 uv 4 41134000 c02e0000
+10| V15 uv 5 415cc000 40e68000
+10| V16 pt 0 bfec0000 403d0000 c0380000
+10| V16 pt 1 bfea0000 40fb0000 c10c4000
+10| V16 pt 2 c1334000 c106c000 40c68000
+10| V16 pt 3 409b8000 c14b0000 407d0000
+10| V16 pt 4 41578000 413b0000 414e8000
+10| V16 pt 5 c11cc000 40240000 41250000
+10| V16 nm 0 41100000 416a0000 c13d0000
+10| V16 nm 1 c0c20000 c168c000 c0e40000
+10| V16 nm 2 c0200000 41428000 bfb00000
+10| V16 nm 3 40e10000 c1210000 c11b4000
+10| V16 nm 4 c0af0000 40858000 40160000
+10| V16 nm 5 c119c000 402f0000 3f960000
+10| V16 uv 0 41058000 c15fc000
+10| V16 uv 1 3e200000 c0d20000
+10| V16 uv 2 c1084000 c0a80000
+10| V16 uv 3 c0270000 c04f0000
+10| V16 uv 4 c10a4000 40f00000
+10| V16 uv 5 c1068000 c120c000
+10| = R1 0
+10| step
+10| M R1 86cafe253283e473
+10| M R6 a1e77e479e258b13
+10| M R13 d946c1ff897675c2
+10| do SetTextureFilename R6 0 'mud'
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 431e356ec55909fb
+10| M R13 d946c1ff897675c2
+10| do Load G2 957580468
+10| V21 new f0 n4
+10| V22 new f0 n4
+10| V23 new f0 n4
+10| P24 new n3
+10| P24 i1 0 3
+10| P24 i2 0 3
+10| P24 i3 0 2
+10| P24 i1 1 0
+10| P24 i2 1 1
+10| P24 i3 1 3
+10| P24 i1 2 1
+10| P24 i2 2 1
+10| P24 i3 2 0
+10| V21 pt 0 40c40000 41434000 c160c000
+10| V21 pt 1 c1600000 401a0000 412d8000
+10| V21 pt 2 c1220000 c12b4000 c0868000
+10| V21 pt 3 414ac000 4115c000 40e60000
+10| V22 pt 0 c08c8000 c0c10000 4169c000
+10| V22 pt 1 4156c000 c1058000 400a0000
+10| V22 pt 2 4122c000 40380000 41638000
+10| V22 pt 3 41778000 413f0000 bf200000
+10| V22 uv 0 c0c68000 c116c000
+10| V22 uv 1 41380000 c0480000
+10| V22 uv 2 409b8000 bfe80000
+10| V22 uv 3 c176c000 c0c50000
+10| V23 pt 0 c1288000 c1324000 bfc60000
+10| V23 nm 0 c0400000 40de8000 40cb8000
+10| V23 nm 1 41500000 410d4000 c1624000
+10| V23 nm 2 c137c000 41284000 410d0000
+10| V23 nm 3 3f2c0000 c0938000 c0000000
+10| V23 uv 0 c161c000 413e8000
+10| V23 uv 1 c0fd8000 c0af8000
+10| V23 uv 2 40848000 c02e0000
+10| V23 uv 3 40850000 bf580000
+10| = R20 0
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 431e356ec55909fb
+10| M R13 d946c1ff897675c2
+10| M R20 5eb162ba4e30f6a3
+10| do SetScale R6 bf200000
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 d946c1ff897675c2
+10| M R20 5eb162ba4e30f6a3
+10| do ComputeModelNormals R13
+10| V14 nm 0 bec173c2 bf6cf7ac 3ca4ad06
+10| V14 nm 1 3d9a0dce 3d6e651b bf7ed6ea
+10| V14 nm 2 bec173c2 bf6cf7ac 3ca4ad06
+10| V14 nm 3 00000000 00000000 00000000
+10| V14 nm 4 00000000 00000000 00000000
+10| V14 nm 5 beac25f8 bf41185f 3f105da3
+10| V15 nm 0 3e4af884 bdb1ca64 bf79ef3f
+10| V15 nm 1 3e05deda beaa92fa bf6f0b43
+10| V15 nm 2 3e4af884 bdb1ca64 bf79ef3f
+10| V15 nm 3 00000000 00000000 00000000
+10| V15 nm 4 00000000 00000000 00000000
+10| V15 nm 5 3e7b3847 3e032c8a bf760011
+10| V16 nm 0 3f4502b1 be0a5ebb 3f1fc4ef
+10| V16 nm 1 be9a7d1e 3f3be274 3f1bc8bf
+10| V16 nm 2 3f4502b1 be0a5ebb 3f1fc4ef
+10| V16 nm 3 00000000 00000000 00000000
+10| V16 nm 4 00000000 00000000 00000000
+10| V16 nm 5 3f52e222 be938504 3ef9fd58
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 d946c1ff897675c2
+10| M R20 5eb162ba4e30f6a3
+10| do NewCounts 4 5 1 2 2 2 'x9' f3 G2
+10| V26 new f3 n5
+10| V27 new f3 n5
+10| P28 new n4
+10| R29 material s1 l1
+10| = R25
+10| do NewCounts 4 2 2 1 3 0 'x9' f3 G2
+10| V31 new f3 n2
+10| V32 new f3 n2
+10| V33 new f3 n2
+10| P34 new n4
+10| R35 material s1 l1
+10| R36 material s1 l1
+10| = R30
+10| do SetSub R25 0 R30
+10| ref R30 2
+10| do Deref R30
+10| deref R30 1
+10| do NewCounts 4 5 2 2 1 0 'x9' f1 G2
+10| V38 new f1 n5
+10| P39 new n4
+10| R40 material s1 l1
+10| R41 material s1 l1
+10| = R37
+10| do SetSub R25 1 R37
+10| ref R37 2
+10| do Deref R37
+10| deref R37 1
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 d946c1ff897675c2
+10| M R20 5eb162ba4e30f6a3
+10| M R25 e107918b492d9b84
+10| M R30 d4c85adcc5ef3610
+10| M R37 086d26813ba52f8a
+10| do SetFractional R20 c1360000
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 d946c1ff897675c2
+10| M R20 fb2553dbe073fc5c
+10| M R25 e107918b492d9b84
+10| M R30 d4c85adcc5ef3610
+10| M R37 086d26813ba52f8a
+10| do PrepareTransforms R25
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 d946c1ff897675c2
+10| M R20 fb2553dbe073fc5c
+10| M R25 e107918b492d9b84
+10| M R30 d4c85adcc5ef3610
+10| M R37 086d26813ba52f8a
+10| do ComputeModelNormals R6
+10| V7 nm 0 00000000 00000000 00000000
+10| V7 nm 1 00000000 00000000 00000000
+10| V7 nm 2 00000000 00000000 00000000
+10| V7 nm 3 00000000 00000000 00000000
+10| V7 nm 4 00000000 00000000 00000000
+10| V7 nm 5 00000000 00000000 00000000
+10| V8 nm 0 00000000 00000000 00000000
+10| V8 nm 1 00000000 00000000 00000000
+10| V8 nm 2 00000000 00000000 00000000
+10| V8 nm 3 00000000 00000000 00000000
+10| V8 nm 4 00000000 00000000 00000000
+10| V8 nm 5 00000000 00000000 00000000
+10| V9 nm 0 00000000 00000000 00000000
+10| V9 nm 1 00000000 00000000 00000000
+10| V9 nm 2 3e844f98 bf49a81f bf0f2849
+10| V9 nm 3 00000000 00000000 00000000
+10| V9 nm 4 3e844f98 bf49a81f bf0f2849
+10| V9 nm 5 3e844f98 bf49a81f bf0f2849
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 d946c1ff897675c2
+10| M R20 fb2553dbe073fc5c
+10| M R25 e107918b492d9b84
+10| M R30 d4c85adcc5ef3610
+10| M R37 086d26813ba52f8a
+10| do SetTextureFilename R30 0 't2'
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 d946c1ff897675c2
+10| M R20 fb2553dbe073fc5c
+10| M R25 8221511489d09d02
+10| M R30 b0f3c87abfc32e86
+10| M R37 086d26813ba52f8a
+10| do SetTransform R13 1 0 c03c0000 40d08000 c0c80000 c1370000 40838000 c10e8000 41628000 c1458000 3f920000 00000000 4109c000 c05a0000 c0c88000 bf240000 c1688000 bf040000
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 67e55ebc2517953d
+10| M R20 fb2553dbe073fc5c
+10| M R25 8221511489d09d02
+10| M R30 b0f3c87abfc32e86
+10| M R37 086d26813ba52f8a
+10| do SetTagPoint R20 -1 0 c147c000 c146c000 bfd40000
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 67e55ebc2517953d
+10| M R20 8fb3fda7a86e6636
+10| M R25 8221511489d09d02
+10| M R30 b0f3c87abfc32e86
+10| M R37 086d26813ba52f8a
+10| do SetTextureFilename R30 0 't2'
+10| step
+10| M R1 f5598cd5c2d5ffb5
+10| M R6 b6155a96fdec75db
+10| M R13 67e55ebc2517953d
+10| M R20 8fb3fda7a86e6636
+10| M R25 8221511489d09d02
+10| M R30 b0f3c87abfc32e86
+10| M R37 086d26813ba52f8a
+10| end
+10| do Deref R1
+10| deref R1 0
+10| del V2
+10| del P3
+10| deref R4 0
+10| del R4
+10| deref R5 0
+10| del R5
+10| deref R6 0
+10| del V7
+10| del V8
+10| del V9
+10| del P12
+10| deref R11 0
+10| del R11
+10| del R6
+10| deref R13 0
+10| del V14
+10| del V15
+10| del V16
+10| del P18
+10| del P19
+10| del R13
+10| del R1
+10| do Deref R20
+10| deref R20 0
+10| del V21
+10| del V22
+10| del V23
+10| del P24
+10| del R20
+10| do Deref R25
+10| deref R25 0
+10| del V26
+10| del V27
+10| del P28
+10| deref R29 0
+10| del R29
+10| deref R30 0
+10| del V31
+10| del V32
+10| del V33
+10| del P34
+10| deref R35 0
+10| del R35
+10| deref R36 0
+10| del R36
+10| del R30
+10| deref R37 0
+10| del V38
+10| del P39
+10| deref R40 0
+10| del R40
+10| deref R41 0
+10| del R41
+10| del R37
+10| del R25
+10| step
+10| left 0
+11| do Begin 1
+11| step
+11| do NewCounts 2 3 2 0 3 2 'b' f2 G1
+11| V2 new f2 n3
+11| V3 new f2 n3
+11| V4 new f2 n3
+11| P5 new n2
+11| R6 material s2 l1
+11| R7 material s2 l1
+11| = R1
+11| do NewCounts 4 3 2 2 2 0 'b' f2 G2
+11| V9 new f2 n3
+11| V10 new f2 n3
+11| P11 new n4
+11| R12 material s2 l1
+11| R13 material s2 l1
+11| = R8
+11| do SetSub R1 0 R8
+11| ref R8 2
+11| do Deref R8
+11| deref R8 1
+11| do NewCounts 3 5 2 1 2 0 'b' f0 G1
+11| V15 new f0 n5
+11| V16 new f0 n5
+11| P17 new n3
+11| R18 material s2 l1
+11| R19 material s2 l1
+11| = R14
+11| do SetSub R1 1 R14
+11| ref R14 2
+11| do Deref R14
+11| deref R14 1
+11| step
+11| M R1 ee825bc8641edaba
+11| M R8 93454a15a05d70dd
+11| M R14 33e2696809426d7d
+11| step
+11| M R1 ee825bc8641edaba
+11| M R8 93454a15a05d70dd
+11| M R14 33e2696809426d7d
+11| step
+11| M R1 ee825bc8641edaba
+11| M R8 93454a15a05d70dd
+11| M R14 33e2696809426d7d
+11| do Dereference R1
+11| G1 remove R1
+11| deref R1 0
+11| del V2
+11| del V3
+11| del V4
+11| del P5
+11| deref R6 0
+11| del R6
+11| deref R7 0
+11| del R7
+11| deref R8 0
+11| del V9
+11| del V10
+11| del P11
+11| deref R12 0
+11| del R12
+11| deref R13 0
+11| del R13
+11| del R8
+11| deref R14 0
+11| del V15
+11| del V16
+11| del P17
+11| deref R18 0
+11| del R18
+11| deref R19 0
+11| del R19
+11| del R14
+11| del R1
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| step
+11| end
+11| step
+11| left 0
+12| do Begin 0
+12| step
+12| step
+12| step
+12| step
+12| step
+12| step
+12| step
+12| step
+12| step
+12| step
+12| end
+12| step
+12| left 0
+13| do Begin 1
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| step
+13| end
+13| step
+13| left 0
+14| do Begin 0
+14| do Load G1 976048750
+14| V2 new f0 n5
+14| P3 new n4
+14| P4 new n4
+14| P4 i1 0 3
+14| P4 i2 0 3
+14| P4 i3 0 2
+14| P4 i1 1 0
+14| P4 i2 1 1
+14| P4 i3 1 4
+14| P4 i1 2 3
+14| P4 i2 2 4
+14| P4 i3 2 2
+14| P4 i1 3 0
+14| P4 i2 3 1
+14| P4 i3 3 0
+14| P5 new n3
+14| P5 i1 0 0
+14| P5 i2 0 4
+14| P5 i3 0 2
+14| P5 i1 1 4
+14| P5 i2 1 2
+14| P5 i3 1 0
+14| P5 i1 2 1
+14| P5 i2 2 4
+14| P5 i3 2 3
+14| V2 pt 0 40010000 3f480000 c1028000
+14| V2 pt 1 3ff20000 40e98000 414c8000
+14| V2 pt 2 c0ca0000 c0b98000 c12dc000
+14| V2 pt 3 c10c4000 c102c000 c0640000
+14| V2 pt 4 40e80000 c1288000 c08e8000
+14| V2 nm 0 40988000 41728000 c150c000
+14| V2 nm 1 c142c000 c13c4000 3f700000
+14| V2 nm 2 bf880000 c0f68000 4130c000
+14| V2 nm 3 413c0000 3fc20000 40fc8000
+14| V2 nm 4 408a0000 c13bc000 c11d4000
+14| = R1 0
+14| step
+14| M R1 05433eb46180f6e2
+14| step
+14| M R1 05433eb46180f6e2
+14| step
+14| M R1 05433eb46180f6e2
+14| do SetTransform R1 1 0 c12ec000 c150c000 c0b78000 c0bf0000 00000000 3f800000 c0d20000 00000000 00000000 00000000 bff00000 00000000 c1660000 00000000 00000000 3f800000
+14| step
+14| M R1 7fce8575cc210bda
+14| do Dereference R1
+14| G1 remove R1
+14| deref R1 0
+14| del V2
+14| del P4
+14| del P5
+14| del R1
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| do Load G2 17425432 1:-1
+14| V7 new f0 n1
+14| V8 new f0 n1
+14| P9 new n1
+14| R10 material s1 l1
+14| P9 i1 0 0
+14| P9 i2 0 0
+14| P9 i3 0 0
+14| R10 ti 0
+14| R10 ps 0 l0
+14| R10 pl 0 l0
+14| R10 vs 1
+14| R10 vl 0
+14| V7 pt 0 c1414000 c1684000 bd400000
+14| V7 nm 0 404e0000 c14cc000 c0ea0000
+14| V7 uv 0 40140000 c01c0000
+14| V7 pt 0 4102c000 c0bb0000 4147c000
+14| V7 nm 0 c145c000 41480000 c1658000
+14| V7 uv 0 c1650000 410bc000
+14| V8 pt 0 c1780000 c13e8000 41294000
+14| V8 uv 0 3f500000 c04f0000
+14| V12 new f0 n3
+14| P13 new n3
+14| R14 material s1 l1
+14| R15 material s1 l1
+14| P13 i1 0 1
+14| P13 i2 0 2
+14| P13 i3 0 2
+14| P13 i1 1 1
+14| P13 i2 1 0
+14| P13 i3 1 0
+14| P13 i1 2 1
+14| P13 i2 2 2
+14| P13 i3 2 0
+14| R14 name 'b'
+14| R14 ti 3
+14| R14 ps 0 l0
+14| R14 pl 0 l0
+14| R14 vs 1
+14| R14 vl 3
+14| R15 name '3d'
+14| R15 ti 1
+14| R15 ps 1 l0
+14| R15 pl 0 l0
+14| R15 vs 1
+14| R15 vl 2
+14| V12 pt 0 41088000 41500000 c0f50000
+14| V12 pt 1 c1250000 41538000 c106c000
+14| V12 pt 2 bf860000 412d4000 40340000
+14| V12 nm 0 c0fc8000 40c80000 40670000
+14| V12 nm 1 c0c78000 414fc000 410d0000
+14| V12 nm 2 41208000 c1734000 415c4000
+14| V12 uv 0 c15ac000 412dc000
+14| V12 uv 1 bf700000 c1258000
+14| V12 uv 2 40590000 c172c000
+14| V12 pt 0 bf100000 3ef80000 bfc80000
+14| V12 pt 1 412b4000 41118000 3fce0000
+14| V12 pt 2 40cf8000 c0430000 412e0000
+14| V12 nm 0 c1018000 41724000 c1380000
+14| V12 nm 1 c1268000 40900000 40a38000
+14| V12 nm 2 bf7c0000 41724000 400f0000
+14| V17 new f0 n6
+14| P18 new n3
+14| R19 material s1 l2
+14| P18 i1 0 4
+14| P18 i2 0 0
+14| P18 i3 0 0
+14| P18 i1 1 2
+14| P18 i2 1 0
+14| P18 i3 1 2
+14| P18 i1 2 4
+14| P18 i2 2 5
+14| P18 i3 2 4
+14| P20 new n4
+14| P20 i1 0 0
+14| P20 i2 0 5
+14| P20 i3 0 4
+14| P20 i1 1 4
+14| P20 i2 1 3
+14| P20 i3 1 5
+14| P20 i1 2 5
+14| P20 i2 2 3
+14| P20 i3 2 2
+14| P20 i1 3 4
+14| P20 i2 3 0
+14| P20 i3 3 4
+14| R19 name 't2'
+14| R19 ti 3
+14| R19 ps 2 l0
+14| R19 pl 0 l0
+14| R19 ps 2 l1
+14| R19 pl 1 l1
+14| R19 vs 0
+14| R19 vl 3
+14| V17 pt 0 c1388000 3f7c0000 c1278000
+14| V17 pt 1 c15bc000 c1650000 412f0000
+14| V17 pt 2 41760000 41768000 c120c000
+14| V17 pt 3 412ec000 40ec0000 40e20000
+14| V17 pt 4 c1418000 412e4000 c137c000
+14| V17 pt 5 40b68000 c1328000 40c60000
+14| V17 nm 0 40db8000 c0270000 c1294000
+14| V17 nm 1 c16b8000 c15b0000 41500000
+14| V17 nm 2 c0a40000 414b4000 bfc00000
+14| V17 nm 3 416ac000 c133c000 c05c0000
+14| V17 nm 4 bf400000 408c0000 c05e0000
+14| V17 nm 5 41574000 bfcc0000 40510000
+14| V17 uv 0 3f1c0000 40b50000
+14| V17 uv 1 bd800000 41088000
+14| V17 uv 2 bf780000 c1344000
+14| V17 uv 3 c0a20000 c11c0000
+14| V17 uv 4 3f9c0000 410f4000
+14| V17 uv 5 c13a8000 c1094000
+14| V17 pt 0 3fe00000 40a78000 bee00000
+14| V17 pt 1 40ed8000 41060000 bf980000
+14| V17 pt 2 bfba0000 c0908000 c1364000
+14| V17 pt 3 c1130000 c0280000 c1398000
+14| V17 pt 4 41454000 41488000 40ef0000
+14| V17 pt 5 c0988000 c11b8000 3ef00000
+14| V17 nm 0 c1028000 40720000 c1770000
+14| V17 nm 1 416f0000 40b28000 4125c000
+14| V17 nm 2 41420000 40af8000 c0220000
+14| V17 nm 3 408f8000 416e8000 41604000
+14| V17 nm 4 c0910000 3f2c0000 41008000
+14| V17 nm 5 c0c10000 c1294000 41490000
+14| V17 uv 0 c122c000 c08b0000
+14| V17 uv 1 409a8000 c1728000
+14| V17 uv 2 4129c000 c12b0000
+14| V17 uv 3 4170c000 40ca0000
+14| V17 uv 4 c1470000 c127c000
+14| V17 uv 5 c0aa8000 c05b0000
+14| V22 new f0 n4
+14| P23 new n1
+14| R24 material s1 l1
+14| R25 material s1 l1
+14| P23 i1 0 2
+14| P23 i2 0 0
+14| P23 i3 0 1
+14| R24 name 'b'
+14| R24 ti 3
+14| R24 ps 0 l0
+14| R24 pl 0 l0
+14| R24 vs 0
+14| R24 vl 1
+14| R25 name 'tag'
+14| R25 ti 4
+14| R25 ps 0 l0
+14| R25 pl 0 l0
+14| R25 vs 1
+14| R25 vl 3
+14| V22 pt 0 c14a8000 c16e4000 bf440000
+14| V22 pt 1 c1570000 40ee8000 c14dc000
+14| V22 pt 2 c0898000 c0590000 40a90000
+14| V22 pt 3 c1724000 40130000 41784000
+14| V22 nm 0 40f48000 bf640000 40960000
+14| V22 nm 1 c0d90000 c0760000 c15b4000
+14| V22 nm 2 c0a00000 4161c000 3e100000
+14| V22 nm 3 41468000 c06f0000 3ff60000
+14| V22 pt 0 c173c000 bff00000 3fda0000
+14| V22 pt 1 40d08000 416a0000 c0c20000
+14| V22 pt 2 c105c000 c0918000 c1554000
+14| V22 nm 0 c1364000 414b0000 c0990000
+14| V22 nm 1 c0090000 40200000 41394000
+14| V22 nm 2 40050000 c0500000 c0700000
+14| V22 nm 3 4146c000 c0b40000 c0b68000
+14| V27 new f0 n5
+14| V28 new f0 n5
+14| P29 new n4
+14| P29 i1 0 0
+14| P29 i2 0 2
+14| P29 i3 0 0
+14| P29 i1 1 1
+14| P29 i2 1 4
+14| P29 i3 1 1
+14| P29 i1 2 2
+14| P29 i2 2 0
+14| P29 i3 2 0
+14| P29 i1 3 4
+14| P29 i2 3 4
+14| V27 pt 0 c0300000 c10d0000 bf780000
+14| V27 pt 1 414dc000 c16e4000 c1104000
+14| V27 pt 2 41030000 c0b40000 c11f4000
+14| V27 pt 3 413bc000 c1578000 c1428000
+14| V27 pt 4 416ec000 c14bc000 40740000
+14| V27 nm 0 c15dc000 412ec000 c12dc000
+14| V27 nm 1 40d20000 41720000 c0830000
+14| V27 nm 2 c14cc000 bfcc0000 40e18000
+14| V27 nm 3 c1454000 bea80000 bfca0000
+14| V27 nm 4 c0bf8000 c1608000 c0e00000
+14| V27 uv 0 c1208000 409e0000
+14| V27 uv 1 c0e90000 414ec000
+14| V27 uv 2 41538000 c0fb8000
+14| V27 uv 3 40930000 411bc000
+14| V27 uv 4 408c8000 c01f0000
+14| V27 pt 0 40c78000 c0ae8000 c1478000
+14| V27 pt 1 40240000 41478000 c0858000
+14| V27 pt 2 c1114000 40ca0000 c120c000
+14| V27 pt 3 409d0000 3f740000 c0050000
+14| V27 pt 4 c116c000 41338000 41598000
+14| V27 nm 0 c0d90000 c0b68000 bee00000
+14| V27 nm 1 c0f90000 40500000 4176c000
+14| V27 nm 2 c11b0000 40a10000 bf740000
+14| V27 nm 3 c14f0000 407e0000 c0f18000
+14| V27 nm 4 412d0000 c08e0000 405d0000
+14| V28 pt 0 402d0000 41060000 412a8000
+14| V28 pt 1 4166c000 c1758000 3f6c0000
+14| V28 pt 2 4102c000 41120000 41518000
+14| V28 pt 3 402a0000 41398000 40a98000
+14| V28 pt 4 c14f4000 c143c000 c0170000
+14| V28 uv 0 414b8000 41084000
+14| V28 uv 1 3fea0000 c0170000
+14| V28 uv 2 412e4000 41684000
+14| V28 uv 3 bfe60000 c0b28000
+14| V28 uv 4 41028000 c0fa0000
+14| V31 new f0 n6
+14| V32 new f0 n6
+14| P33 new n2
+14| P33 i1 0 4
+14| P33 i2 0 5
+14| P33 i3 0 1
+14| P33 i1 1 2
+14| P33 i2 1 4
+14| P33 i3 1 5
+14| P34 new n1
+14| P34 i1 0 4
+14| P34 i2 0 4
+14| P34 i3 0 5
+14| V31 pt 0 415d4000 41594000 bf200000
+14| V31 pt 1 c00f0000 c0f08000 c06e0000
+14| V31 pt 2 41518000 c174c000 c0b00000
+14| V31 pt 3 c1790000 3fe40000 41310000
+14| V31 pt 4 c1430000 41088000 41774000
+14| V31 pt 5 c0bc0000 41384000 40858000
+14| V31 uv 0 406a0000 41718000
+14| V31 uv 1 4145c000 c10c8000
+14| V31 uv 2 40950000 414c4000
+14| V31 uv 3 4118c000 40e88000
+14| V31 uv 4 4107c000 3e600000
+14| V31 uv 5 c11bc000 40a68000
+14| V31 pt 0 3f280000 c10c4000 410e8000
+14| V31 pt 1 c0700000 410a0000 c118c000
+14| V31 pt 2 bf440000 401d0000 c1784000
+14| V31 pt 3 41714000 c0ad0000 c1080000
+14| V31 pt 4 c0c10000 c1700000 c15c8000
+14| V31 pt 5 4155c000 c0c80000 c130c000
+14| V32 pt 0 c1228000 c0fb8000 c0a38000
+14| V32 pt 1 41600000 c14d4000 c11f0000
+14| V32 pt 2 c1740000 bfec0000 415d4000
+14| V32 pt 3 40958000 c1584000 bf580000
+14| V32 pt 4 40ac0000 40940000 bfd60000
+14| V32 pt 5 bf8a0000 3fca0000 41428000
+14| V32 nm 0 c1158000 c15c0000 41438000
+14| V32 nm 1 c0a98000 c14d8000 40f70000
+14| V32 nm 2 bf9a0000 41068000 c0b10000
+14| V32 nm 3 bf9a0000 c1228000 c1090000
+14| V32 nm 4 40700000 c1168000 41384000
+14| V32 nm 5 c0650000 bfa80000 408b8000
+14| V32 uv 0 c07f0000 c0ec0000
+14| V32 uv 1 401b0000 c0b20000
+14| V32 uv 2 c178c000 c0b90000
+14| V32 uv 3 413f8000 41790000
+14| V32 uv 4 c15c0000 40b90000
+14| V32 uv 5 c1554000 c16a0000
+14| = R6 0
+14| step
+14| M R6 a80813d54810b7d5
+14| M R11 f4ddfd2f62a83452
+14| M R16 65240632ed3a3113
+14| M R21 bdf49f46f5790845
+14| M R26 05cb4232862d3b07
+14| M R30 5e0900afe0574f22
+14| do PolygonCount R30 0
+14| = 0 0
+14| step
+14| M R6 a80813d54810b7d5
+14| M R11 f4ddfd2f62a83452
+14| M R16 65240632ed3a3113
+14| M R21 bdf49f46f5790845
+14| M R26 05cb4232862d3b07
+14| M R30 5e0900afe0574f22
+14| do SortTagPoints R6
+14| step
+14| M R6 a80813d54810b7d5
+14| M R11 33f083fd1f026f9a
+14| M R16 65240632ed3a3113
+14| M R21 bdf49f46f5790845
+14| M R26 05cb4232862d3b07
+14| M R30 5e0900afe0574f22
+14| do LoadTextures R11 d3 0
+14| R14 settex 0 0
+14| TM1 load 'tag' d3 = R35
+14| R14 settex R35 0
+14| R35 min 1 ffffffff
+14| R35 mag 1 ffffffff
+14| R35 mip 1 ffffffff
+14| R15 settex 0 0
+14| TM1 load 'b' d3 = R36
+14| R15 settex R36 0
+14| R36 min 1 ffffffff
+14| R36 mag 1 ffffffff
+14| R36 mip 1 ffffffff
+14| R19 settex 0 0
+14| R24 settex 0 0
+14| TM1 load 'b' d3 = R36
+14| R24 settex R36 0
+14| R36 min 1 ffffffff
+14| R36 mag 1 ffffffff
+14| R36 mip 1 ffffffff
+14| R25 settex 0 0
+14| TM1 load 'Zed' d3 = R37
+14| R25 settex R37 0
+14| R37 min 1 ffffffff
+14| R37 mag 1 ffffffff
+14| R37 mip 1 ffffffff
+14| = 0
+14| step
+14| M R6 a80813d54810b7d5
+14| M R11 2593919c647a8a61
+14| M R16 65240632ed3a3113
+14| M R21 a3cf7e659d9b2d82
+14| M R26 05cb4232862d3b07
+14| M R30 5e0900afe0574f22
+14| do Deref R6
+14| deref R6 0
+14| del V7
+14| del V8
+14| del P9
+14| deref R10 0
+14| del R10
+14| deref R11 0
+14| del V12
+14| del P13
+14| deref R14 0
+14| del R14
+14| deref R15 0
+14| del R15
+14| deref R16 0
+14| del V17
+14| del P18
+14| del P20
+14| deref R19 0
+14| del R19
+14| del R16
+14| deref R21 0
+14| del V22
+14| del P23
+14| deref R24 0
+14| del R24
+14| deref R25 0
+14| del R25
+14| del R21
+14| del R11
+14| deref R26 0
+14| del V27
+14| del V28
+14| del P29
+14| deref R30 0
+14| del V31
+14| del V32
+14| del P33
+14| del P34
+14| del R30
+14| del R26
+14| del R6
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| step
+14| end
+14| step
+14| left 0
+15| do Begin 1
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| step
+15| end
+15| step
+15| left 0
+16| do Begin 0
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| step
+16| do NewCounts 1 1 0 2 2 2 'tag' f1 G1
+16| V2 new f1 n1
+16| V3 new f1 n1
+16| P4 new n1
+16| = R1
+16| do NewCounts 1 2 1 1 1 0 'tag' f3 G1
+16| V6 new f3 n2
+16| P7 new n1
+16| R8 material s1 l1
+16| = R5
+16| do SetSub R1 0 R5
+16| ref R5 2
+16| do Deref R5
+16| deref R5 1
+16| do NewCounts 4 1 0 1 3 0 'tag' f0 G1
+16| V10 new f0 n1
+16| V11 new f0 n1
+16| V12 new f0 n1
+16| P13 new n4
+16| = R9
+16| do SetSub R1 1 R9
+16| ref R9 2
+16| do Deref R9
+16| deref R9 1
+16| step
+16| M R1 bf36cf1d02376c4c
+16| M R5 9f51e88eff138ced
+16| M R9 8ae1d9342efde1fc
+16| do SetOpacity R5 c1190000
+16| step
+16| M R1 bf36cf1d02376c4c
+16| M R5 1a3893e8d847263a
+16| M R9 8ae1d9342efde1fc
+16| do SetOpacity R5 40f60000
+16| step
+16| M R1 bf36cf1d02376c4c
+16| M R5 2a7754a3e3d3b922
+16| M R9 8ae1d9342efde1fc
+16| do SetCurrentFrame R5 0
+16| step
+16| M R1 bf36cf1d02376c4c
+16| M R5 2a7754a3e3d3b922
+16| M R9 8ae1d9342efde1fc
+16| step
+16| M R1 bf36cf1d02376c4c
+16| M R5 2a7754a3e3d3b922
+16| M R9 8ae1d9342efde1fc
+16| do Load G2 11004120 2:-1
+16| V15 new f0 n5
+16| V16 new f0 n5
+16| P17 new n3
+16| R18 material s1 l2
+16| P19 new n3
+16| P19 i1 0 1
+16| P19 i2 0 1
+16| P19 i3 0 3
+16| P19 i1 1 0
+16| P19 i2 1 4
+16| P19 i3 1 4
+16| P19 i1 2 3
+16| P19 i2 2 4
+16| P19 i3 2 2
+16| P20 new n3
+16| P20 i1 0 4
+16| P20 i2 0 2
+16| P20 i3 0 4
+16| P20 i1 1 2
+16| P20 i2 1 4
+16| P20 i3 1 4
+16| P20 i1 2 1
+16| P20 i2 2 2
+16| P20 i3 2 4
+16| R18 name '3d'
+16| R18 ti 2
+16| R18 ps 1 l0
+16| R18 pl 1 l0
+16| R18 ps 1 l1
+16| R18 pl 0 l1
+16| R18 vs 0
+16| R18 vl 4
+16| V15 pt 0 40c40000 416b4000 c16f8000
+16| V15 pt 1 c1750000 415c4000 c0b38000
+16| V15 pt 2 41098000 40fd8000 40aa0000
+16| V15 pt 3 40c58000 406f0000 bfca0000
+16| V15 nm 0 40f60000 40180000 41218000
+16| V15 nm 1 3f740000 3fbe0000 40870000
+16| V15 nm 2 40890000 c13ac000 4167c000
+16| V15 nm 3 41690000 c0a30000 40ab0000
+16| V15 nm 4 3fb60000 40c50000 c0e78000
+16| V15 uv 0 4143c000 41148000
+16| V15 uv 1 c1034000 41088000
+16| V15 uv 2 c1260000 bff40000
+16| V15 uv 3 40bf8000 c168c000
+16| V15 uv 4 4116c000 c0600000
+16| V15 pt 0 c11f8000 40390000 c1594000
+16| V15 pt 1 c1644000 40820000 c0b10000
+16| V15 pt 2 3fe40000 c0bb0000 4135c000
+16| V15 pt 3 40380000 40be8000 41240000
+16| V15 pt 4 3eb00000 bf980000 412a4000
+16| V15 nm 0 c08f0000 c0d70000 c0a68000
+16| V15 nm 1 41384000 c0ca8000 41118000
+16| V15 nm 2 40350000 c1778000 41704000
+16| V15 nm 3 c1664000 41658000 41184000
+16| V15 nm 4 40590000 c173c000 40510000
+16| V15 uv 0 c1140000 3f700000
+16| V15 uv 1 c1124000 41760000
+16| V15 uv 2 c1718000 410e4000
+16| V15 uv 3 40e80000 414f4000
+16| V15 uv 4 412c4000 3fee0000
+16| V22 new f0 n3
+16| V23 new f0 n3
+16| P24 new n3
+16| R25 material s1 l2
+16| R26 material s1 l2
+16| P24 i1 0 2
+16| P24 i2 0 0
+16| P24 i3 0 0
+16| P24 i1 1 0
+16| P24 i2 1 1
+16| P24 i3 1 1
+16| P24 i1 2 0
+16| P24 i2 2 0
+16| P24 i3 2 0
+16| P27 new n1
+16| P27 i1 0 0
+16| P27 i2 0 2
+16| P27 i3 0 1
+16| R25 name 'x9'
+16| R25 ti 3
+16| R25 ps 2 l0
+16| R25 pl 0 l0
+16| R25 ps 0 l1
+16| R25 pl 0 l1
+16| R25 vs 1
+16| R25 vl 1
+16| R26 name 'b'
+16| R26 ti 3
+16| R26 ps 2 l0
+16| R26 pl 1 l0
+16| R26 ps 1 l1
+16| R26 pl 2 l1
+16| R26 vs 0
+16| R26 vl 2
+16| V22 pt 0 403d0000 c13dc000 c0b48000
+16| V22 pt 1 c1258000 40700000 4145c000
+16| V22 pt 2 c1160000 bf0c0000 c1138000
+16| V22 uv 0 414f8000 40900000
+16| V22 uv 1 415a8000 40bb8000
+16| V22 uv 2 41690000 40f20000
+16| V23 pt 0 41368000 be000000 c12d0000
+16| V23 pt 1 3e400000 c131c000 c0680000
+16| V23 pt 2 c1734000 416b4000 c1120000
+16| V23 nm 0 c1424000 c0bd0000 c130c000
+16| V23 nm 1 416bc000 c11b8000 4147c000
+16| V23 nm 2 c1674000 c16d4000 c0560000
+16| V23 uv 0 c0818000 c1238000
+16| V23 uv 1 40210000 4123c000
+16| V23 uv 2 bf300000 c0d38000
+16| V29 new f0 n5
+16| V30 new f0 n5
+16| P31 new n2
+16| R32 material s1 l2
+16| R33 material s1 l2
+16| P34 new n2
+16| P34 i1 0 0
+16| P34 i2 0 2
+16| P34 i3 0 2
+16| P34 i1 1 4
+16| P34 i2 1 2
+16| P34 i3 1 0
+16| P35 new n1
+16| P35 i1 0 0
+16| P35 i2 0 3
+16| P35 i3 0 3
+16| R32 name 't1'
+16| R32 ti 3
+16| R32 ps 1 l0
+16| R32 pl 1 l0
+16| R32 ps 1 l1
+16| R32 pl 0 l1
+16| R32 vs 1
+16| R32 vl 5
+16| R33 name 'b'
+16| R33 ti 4
+16| R33 ps 1 l0
+16| R33 pl 0 l0
+16| R33 ps 1 l1
+16| R33 pl 1 l1
+16| R33 vs 1
+16| R33 vl 5
+16| V29 pt 0 40d90000 c1008000 3ffa0000
+16| V29 pt 1 bf940000 c0bc8000 bfd80000
+16| V29 pt 2 40c40000 40650000 41468000
+16| V29 pt 3 414e0000 407a0000 c16e0000
+16| V29 pt 4 40a58000 4169c000 408d8000
+16| V29 nm 0 c1708000 414ac000 40c50000
+16| V29 nm 1 c0200000 40020000 40820000
+16| V29 nm 2 41374000 c1668000 c1758000
+16| V29 nm 3 c1410000 41330000 404d0000
+16| V29 nm 4 40760000 40b58000 c0ce8000
+16| V29 uv 0 c0aa8000 c01a0000
+16| V29 uv 1 40c88000 c1798000
+16| V29 uv 2 40d88000 bf500000
+16| V29 uv 3 41480000 c10e8000
+16| V29 uv 4 407e0000 c1294000
+16| V30 pt 0 3f920000 415b4000 c1030000
+16| V30 pt 1 c0fb0000 c1628000 c0480000
+16| V30 pt 2 c09f0000 411b8000 412d4000
+16| V30 pt 3 c1604000 c0de8000 c1300000
+16| V30 pt 4 c0210000 c1628000 c1544000
+16| V30 nm 0 c158c000 4179c000 c0c18000
+16| V30 nm 1 c120c000 40b60000 c14bc000
+16| V30 nm 2 c16ac000 41580000 c15cc000
+16| V30 nm 3 c14bc000 41110000 bf140000
+16| V30 nm 4 41614000 c106c000 4175c000
+16| V30 uv 0 c0a08000 4121c000
+16| V30 uv 1 411e4000 bf8c0000
+16| V30 uv 2 00000000 41028000
+16| V30 uv 3 c12a0000 c109c000
+16| V30 uv 4 c16ac000 41410000
+16| V30 pt 0 c0880000 be900000 c0410000
+16| V30 pt 1 c150c000 4110c000 40920000
+16| V30 pt 2 40210000 4108c000 c1278000
+16| V30 pt 3 40b18000 410e8000 40c68000
+16| V30 pt 4 c0e60000 416c4000 c1094000
+16| V30 nm 0 c1644000 409a8000 41230000
+16| V30 nm 1 416a0000 3ffa0000 3fe00000
+16| V30 nm 2 3e400000 c0f30000 c1618000
+16| V30 nm 3 c1420000 3e300000 c139c000
+16| V30 nm 4 c1644000 3fe00000 bfba0000
+16| V30 uv 0 c0ed0000 3fb40000
+16| V30 uv 1 c0e68000 bf080000
+16| V30 uv 2 bf600000 3de00000
+16| V30 uv 3 408e8000 c0e00000
+16| V30 uv 4 c127c000 4129c000
+16| V37 new f0 n3
+16| V38 new f0 n3
+16| P39 new n3
+16| R40 material s1 l1
+16| R41 material s1 l1
+16| P39 i1 0 1
+16| P39 i2 0 0
+16| P39 i3 0 1
+16| P39 i1 1 1
+16| P39 i2 1 2
+16| P39 i3 1 1
+16| P39 i1 2 1
+16| R40 ti 3
+16| R40 ps 1 l0
+16| R40 pl 0 l0
+16| R40 vs 1
+16| R41 ti 0
+16| R41 ps 0 l0
+16| R41 pl 2 l0
+16| R41 vs 1
+16| R41 vl 0
+16| V37 pt 0 41508000 40270000 40290000
+16| V37 pt 1 c0ce8000 41620000 40a10000
+16| V37 pt 2 409b0000 c1068000 41140000
+16| V37 nm 0 41008000 bfd80000 c1344000
+16| V37 nm 1 406f0000 c0d00000 c1130000
+16| V37 nm 2 41084000 413c4000 c1554000
+16| V38 pt 0 c0c90000 c0e30000 c135c000
+16| V38 nm 0 40710000 c0490000 3ed80000
+16| V38 nm 1 3f340000 3ffa0000 c0b68000
+16| V38 nm 2 be880000 c0d10000 4100c000
+16| V38 uv 0 c1638000 c0ce0000
+16| V38 uv 1 bf440000 bfb40000
+16| V38 uv 2 41428000 c0120000
+16| V43 new f0 n5
+16| V44 new f0 n5
+16| P45 new n4
+16| P45 i1 0 1
+16| P45 i2 0 0
+16| P45 i3 0 3
+16| P45 i1 1 1
+16| P45 i2 1 1
+16| P45 i3 1 2
+16| P45 i1 2 0
+16| P45 i2 2 0
+16| P45 i3 2 1
+16| P45 i1 3 1
+16| P45 i2 3 1
+16| P45 i3 3 1
+16| P46 new n4
+16| P46 i1 0 1
+16| P46 i2 0 0
+16| P46 i3 0 2
+16| P46 i1 1 4
+16| P46 i2 1 3
+16| P46 i3 1 4
+16| P46 i1 2 4
+16| P46 i2 2 0
+16| P46 i3 2 4
+16| P46 i1 3 3
+16| P46 i2 3 0
+16| P46 i3 3 1
+16| V43 pt 0 c163c000 c0b50000 40160000
+16| V43 pt 1 c08a0000 c140c000 be800000
+16| V43 pt 2 c174c000 40868000 4142c000
+16| V43 pt 3 c15bc000 c10fc000 41344000
+16| V43 pt 4 412a4000 c0b20000 41238000
+16| V43 nm 0 41120000 410e4000 c15fc000
+16| V43 nm 1 c12f4000 c11d0000 3ffa0000
+16| V43 nm 2 3f0c0000 c1714000 407d0000
+16| V43 nm 3 c14e0000 410ac000 412c0000
+16| V43 nm 4 3fb80000 c0950000 c1684000
+16| V44 pt 0 c1508000 403b0000 414e4000
+16| V44 pt 1 c1440000 41650000 c0e28000
+16| V44 pt 2 41304000 c1000000 41644000
+16| V44 pt 3 c16bc000 c116c000 415bc000
+16| V44 pt 4 c0af8000 c1120000 41380000
+16| V44 uv 0 c03a0000 3f200000
+16| V44 uv 1 c1630000 40260000
+16| V44 uv 2 41728000 bf140000
+16| V44 uv 3 c174c000 c0500000
+16| V44 uv 4 41778000 bf480000
+16| V44 pt 0 3f100000 3f980000 c0fd8000
+16| V44 pt 1 c14dc000 c0868000 c1118000
+16| V44 pt 2 c1254000 c175c000 41700000
+16| V44 pt 3 bfde0000 bf540000 c10fc000
+16| V44 pt 4 c09d8000 c1780000 40b48000
+16| V44 uv 0 406f0000 41530000
+16| V44 uv 1 3f680000 c0bf0000
+16| V44 uv 2 40af8000 41698000
+16| V44 uv 3 c0b00000 c05a0000
+16| V44 uv 4 c1504000 416d8000
+16| = R14 0
+16| step
+16| M R1 bf36cf1d02376c4c
+16| M R5 2a7754a3e3d3b922
+16| M R9 8ae1d9342efde1fc
+16| M R14 0f45e72ba89aa244
+16| M R21 a6dd451513f23103
+16| M R28 b5bdcf648a1aa296
+16| M R36 142f9dc8196ca97f
+16| M R42 79c3bb74322765ea
+16| end
+16| do Deref R1
+16| deref R1 0
+16| del V2
+16| del V3
+16| del P4
+16| deref R5 0
+16| del V6
+16| del P7
+16| deref R8 0
+16| del R8
+16| del R5
+16| deref R9 0
+16| del V10
+16| del V11
+16| del V12
+16| del P13
+16| del R9
+16| del R1
+16| do Deref R14
+16| deref R14 0
+16| del V15
+16| del V16
+16| del P19
+16| del P20
+16| deref R18 0
+16| del R18
+16| deref R21 0
+16| del V22
+16| del V23
+16| del P24
+16| del P27
+16| deref R25 0
+16| del R25
+16| deref R26 0
+16| del R26
+16| deref R28 0
+16| del V29
+16| del V30
+16| del P34
+16| del P35
+16| deref R32 0
+16| del R32
+16| deref R33 0
+16| del R33
+16| del R28
+16| deref R36 0
+16| del V37
+16| del V38
+16| del P39
+16| deref R40 0
+16| del R40
+16| deref R41 0
+16| del R41
+16| del R36
+16| del R21
+16| deref R42 0
+16| del V43
+16| del V44
+16| del P45
+16| del P46
+16| del R42
+16| del R14
+16| step
+16| left 0
+17| do Begin 0
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| step
+17| end
+17| step
+17| left 0
+18| do Begin 1
+18| step
+18| step
+18| step
+18| step
+18| do NewCounts 4 4 2 0 1 1 'b' f2 G1
+18| V2 new f2 n4
+18| P3 new n4
+18| R4 material s2 l1
+18| R5 material s2 l1
+18| = R1
+18| do NewCounts 3 4 1 2 3 0 'b' f2 G1
+18| V7 new f2 n4
+18| V8 new f2 n4
+18| V9 new f2 n4
+18| P10 new n3
+18| R11 material s2 l1
+18| = R6
+18| do SetSub R1 0 R6
+18| ref R6 2
+18| do Deref R6
+18| deref R6 1
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 1872013b8d725173
+18| do Verify R1
+18| = 1
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 1872013b8d725173
+18| do SetScale R1 3f800000
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 1872013b8d725173
+18| do Load G2 679053417 1:-1
+18| V13 new f0 n4
+18| V14 new f0 n4
+18| P15 new n4
+18| R16 material s2 l1
+18| P15 i1 0 0
+18| P15 i2 0 3
+18| P15 i3 0 3
+18| P15 i1 1 3
+18| P15 i2 1 3
+18| P15 i3 1 3
+18| P15 i1 2 0
+18| P15 i2 2 1
+18| P15 i3 2 0
+18| P15 i1 3 2
+18| P15 i2 3 0
+18| P15 i3 3 2
+18| R16 name 't2'
+18| R16 ti 3
+18| R16 ps 1 l0
+18| R16 pl 3 l0
+18| R16 vs 1
+18| R16 vl 4
+18| V13 pt 0 c1444000 c0750000 3f900000
+18| V13 pt 1 c14b4000 40a00000 c16e8000
+18| V13 pt 2 c0870000 41534000 41640000
+18| V13 pt 3 3f4c0000 40100000 40958000
+18| V13 nm 0 41450000 c0a90000 c0060000
+18| V13 nm 1 3f920000 3f440000 c1794000
+18| V13 nm 2 4118c000 41194000 40170000
+18| V13 nm 3 c1228000 c0a30000 bf140000
+18| V13 uv 0 41708000 c13e0000
+18| V13 uv 1 bfa80000 3fbe0000
+18| V13 uv 2 3f860000 bf820000
+18| V13 uv 3 41034000 c10ac000
+18| V13 pt 0 41680000 4151c000 40120000
+18| V13 pt 1 bed00000 3fbe0000 40890000
+18| V13 pt 2 41444000 40e98000 c10c8000
+18| V13 pt 3 c10a8000 41614000 40640000
+18| V13 nm 0 c1508000 c0ee0000 c10e0000
+18| V13 nm 1 c148c000 c15c0000 c1184000
+18| V13 nm 2 41168000 3ea00000 41750000
+18| V13 nm 3 40888000 c12a8000 c0f28000
+18| V13 uv 0 40e08000 3f140000
+18| V13 uv 1 c1258000 40b50000
+18| V13 uv 2 c12a0000 c1338000
+18| V13 uv 3 c118c000 c0f60000
+18| V14 pt 0 41214000 414b8000 414cc000
+18| V14 pt 1 c0210000 c13bc000 40590000
+18| V14 pt 2 bf8c0000 c0838000 410dc000
+18| V14 pt 3 c1494000 c166c000 c1278000
+18| V14 uv 0 40dd8000 40390000
+18| V14 uv 1 40780000 c0eb8000
+18| V14 uv 2 c16b4000 40690000
+18| V14 uv 3 c1230000 00000000
+18| = R12 0
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 1872013b8d725173
+18| M R12 c4a7772b13af3fa7
+18| do PolygonCount R12 0
+18| = 3 3
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 1872013b8d725173
+18| M R12 c4a7772b13af3fa7
+18| do PolygonCount R6 0
+18| = 0 0
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 1872013b8d725173
+18| M R12 c4a7772b13af3fa7
+18| do SetFractional R12 40f30000
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 1872013b8d725173
+18| M R12 b6782bd51343c3a6
+18| do SetTagPoint R6 -1 0 40560000 40a48000 41418000
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 4f7d6ecbd4d2ca57
+18| M R12 b6782bd51343c3a6
+18| do PolygonCount R12 0
+18| = 3 3
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 4f7d6ecbd4d2ca57
+18| M R12 b6782bd51343c3a6
+18| do SetNextFrame R12 0
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 4f7d6ecbd4d2ca57
+18| M R12 b6782bd51343c3a6
+18| do SetTexture R1 0 0
+18| R4 settex 0 0
+18| R5 settex 0 0
+18| R11 settex 0 0
+18| step
+18| M R1 8110ebda906d8cd0
+18| M R6 4f7d6ecbd4d2ca57
+18| M R12 b6782bd51343c3a6
+18| do NewCounts 4 1 0 1 1 0 'b' f2 G1
+18| V18 new f2 n1
+18| P19 new n4
+18| = R17
+18| do SetSub R1 0 R17
+18| deref R6 0
+18| del V7
+18| del V8
+18| del V9
+18| del P10
+18| deref R11 0
+18| del R11
+18| del R6
+18| ref R17 2
+18| do Deref R17
+18| deref R17 1
+18| step
+18| M R1 0d63ca762a4441a4
+18| M R12 b6782bd51343c3a6
+18| M R17 def7342df6acfe73
+18| do SetClip R17 0 0
+18| step
+18| M R1 0d63ca762a4441a4
+18| M R12 b6782bd51343c3a6
+18| M R17 def7342df6acfe73
+18| step
+18| M R1 0d63ca762a4441a4
+18| M R12 b6782bd51343c3a6
+18| M R17 def7342df6acfe73
+18| do SizeOf R1
+18| = 1587
+18| step
+18| M R1 0d63ca762a4441a4
+18| M R12 b6782bd51343c3a6
+18| M R17 def7342df6acfe73
+18| do SizeOf R12
+18| = 1241
+18| step
+18| M R1 0d63ca762a4441a4
+18| M R12 b6782bd51343c3a6
+18| M R17 def7342df6acfe73
+18| step
+18| M R1 0d63ca762a4441a4
+18| M R12 b6782bd51343c3a6
+18| M R17 def7342df6acfe73
+18| do PrepareTransforms R17
+18| step
+18| M R1 0d63ca762a4441a4
+18| M R12 b6782bd51343c3a6
+18| M R17 def7342df6acfe73
+18| do NewCounts 2 0 2 2 1 0 'mud' f2 G2
+18| V21 new f2 n0
+18| P22 new n2
+18| R23 material s2 l1
+18| R24 material s2 l1
+18| = R20
+18| do SetSub R1 0 R20
+18| deref R17 0
+18| del V18
+18| del P19
+18| del R17
+18| ref R20 2
+18| do Deref R20
+18| deref R20 1
+18| step
+18| M R1 b7cab5e160f1cade
+18| M R12 b6782bd51343c3a6
+18| M R20 d7ee98a08865812a
+18| do SetCurrentFrame R20 0
+18| step
+18| M R1 b7cab5e160f1cade
+18| M R12 b6782bd51343c3a6
+18| M R20 d7ee98a08865812a
+18| do SetCurrentFrame R20 0
+18| step
+18| M R1 b7cab5e160f1cade
+18| M R12 b6782bd51343c3a6
+18| M R20 d7ee98a08865812a
+18| do SetScale R1 c14c8000
+18| step
+18| M R1 139ba8a02d4d9a44
+18| M R12 b6782bd51343c3a6
+18| M R20 d7ee98a08865812a
+18| end
+18| do Deref R1
+18| deref R1 0
+18| del V2
+18| del P3
+18| deref R4 0
+18| del R4
+18| deref R5 0
+18| del R5
+18| deref R20 0
+18| del V21
+18| del P22
+18| deref R23 0
+18| del R23
+18| deref R24 0
+18| del R24
+18| del R20
+18| del R1
+18| do Deref R12
+18| deref R12 0
+18| del V13
+18| del V14
+18| del P15
+18| deref R16 0
+18| del R16
+18| del R12
+18| step
+18| left 0
+19| do Begin 0
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| step
+19| do NewCounts 1 1 0 1 3 2 '3d' f0 G1
+19| V2 new f0 n1
+19| V3 new f0 n1
+19| V4 new f0 n1
+19| P5 new n1
+19| = R1
+19| do NewCounts 3 5 1 0 3 0 '3d' f1 G2
+19| V7 new f1 n5
+19| V8 new f1 n5
+19| V9 new f1 n5
+19| P10 new n3
+19| R11 material s1 l1
+19| = R6
+19| do SetSub R1 0 R6
+19| ref R6 2
+19| do Deref R6
+19| deref R6 1
+19| do NewCounts 3 2 1 0 3 0 '3d' f3 G2
+19| V13 new f3 n2
+19| V14 new f3 n2
+19| V15 new f3 n2
+19| P16 new n3
+19| R17 material s1 l1
+19| = R12
+19| do SetSub R1 1 R12
+19| ref R12 2
+19| do Deref R12
+19| deref R12 1
+19| step
+19| M R1 ce1c238358efb7b5
+19| M R6 7cd14a5321422e7c
+19| M R12 3ad0f2d010a21ef2
+19| do ComputeBoundingVolumes R6
+19| step
+19| M R1 ce1c238358efb7b5
+19| M R6 fb60fca286d17a1c
+19| M R12 3ad0f2d010a21ef2
+19| do SortTagPoints R12
+19| step
+19| M R1 ce1c238358efb7b5
+19| M R6 fb60fca286d17a1c
+19| M R12 3ad0f2d010a21ef2
+19| do SortTagPoints R6
+19| step
+19| M R1 ce1c238358efb7b5
+19| M R6 fb60fca286d17a1c
+19| M R12 3ad0f2d010a21ef2
+19| do Load G2 941196874
+19| V19 new f0 n6
+19| V20 new f0 n6
+19| P21 new n3
+19| P22 new n3
+19| P22 i1 0 3
+19| P22 i2 0 4
+19| P22 i3 0 2
+19| P22 i1 1 3
+19| P22 i2 1 4
+19| P22 i3 1 0
+19| P22 i1 2 3
+19| P22 i2 2 5
+19| P22 i3 2 4
+19| V19 pt 0 4113c000 3f040000 c122c000
+19| V19 pt 1 40200000 4173c000 bfda0000
+19| V19 pt 2 c1204000 c13e0000 c05e0000
+19| V19 pt 3 bfcc0000 c16e8000 40750000
+19| V19 pt 4 c10e4000 c0b08000 bf180000
+19| V19 pt 5 41074000 3fa20000 be400000
+19| V19 nm 0 410e4000 41470000 c06f0000
+19| V19 nm 1 c0240000 4121c000 414b0000
+19| V19 nm 2 41350000 40a68000 c0830000
+19| V19 nm 3 41584000 40f28000 c06c0000
+19| V19 nm 4 416a4000 414ec000 41018000
+19| V19 nm 5 41188000 bf9e0000 412a4000
+19| V20 pt 0 411d0000 c04d0000 412e4000
+19| V20 pt 1 c0c20000 40a08000 3ed00000
+19| V20 pt 2 c1720000 c0e68000 c0908000
+19| V20 pt 3 407c0000 c1504000 40cb0000
+19| V20 pt 4 40a10000 4145c000 c05e0000
+19| V20 pt 5 c1310000 3f920000 40ce8000
+19| = R18 0
+19| step
+19| M R1 ce1c238358efb7b5
+19| M R6 fb60fca286d17a1c
+19| M R12 3ad0f2d010a21ef2
+19| M R18 b8d472e52c852206
+19| do Load G2 761616316
+19| V24 new f0 n4
+19| P25 new n1
+19| R26 material s1 l2
+19| P25 i1 0 1
+19| P25 i2 0 1
+19| P25 i3 0 3
+19| P27 new n3
+19| P27 i1 0 3
+19| P27 i2 0 3
+19| P27 i3 0 0
+19| P27 i1 1 0
+19| P27 i2 1 1
+19| P27 i3 1 1
+19| P27 i1 2 1
+19| P27 i2 2 2
+19| P27 i3 2 0
+19| R26 name 'b'
+19| R26 ti 1
+19| R26 ps 0 l0
+19| R26 pl 1 l0
+19| R26 ps 0 l1
+19| R26 pl 0 l1
+19| R26 vs 1
+19| R26 vl 2
+19| V24 pt 0 c1438000 40a08000 c117c000
+19| V24 pt 1 4141c000 4158c000 40ee0000
+19| V24 pt 2 413f8000 c0f48000 c0f88000
+19| V24 pt 3 c1270000 40450000 41490000
+19| V24 nm 0 40b50000 bf9e0000 40ac8000
+19| V24 nm 1 c1300000 c0b08000 c03e0000
+19| V24 nm 2 4159c000 40320000 41488000
+19| V24 nm 3 c179c000 c1634000 410f0000
+19| V24 uv 0 bf440000 41000000
+19| V24 uv 1 c173c000 c148c000
+19| V24 uv 2 c04f0000 c0c90000
+19| V24 uv 3 c1428000 c1048000
+19| = R23 0
+19| step
+19| M R1 ce1c238358efb7b5
+19| M R6 fb60fca286d17a1c
+19| M R12 3ad0f2d010a21ef2
+19| M R18 b8d472e52c852206
+19| M R23 a1360b2b72248924
+19| do RemoveScale R18
+19| V19 pt 0 42f3df53 41062cc4 c2cd89ab
+19| V19 nm 0 42eacb51 434a475e c216eac9
+19| V19 pt 1 42040bc3 4377c41f c189a819
+19| V19 nm 1 c20758db 43246a40 43002f52
+19| V19 pt 2 c3044095 c3412168 c20c2eb5
+19| V19 nm 2 43156082 42a93e49 c22570c7
+19| V19 pt 3 c1a85bcc c3726dfa 421ab4b2
+19| V19 nm 3 433277e6 42f67ed9 c21505d5
+19| V19 pt 4 c2eacb51 c2b36877 c0bff628
+19| V19 nm 4 434152d2 4352280e 42a38bd3
+19| V19 pt 5 42df3d7c 41a4ab4e bff27a4d
+19| V19 nm 5 42fbb66c c1a09a6f 42d70272
+19| V20 pt 0 411d0000 c12e9200 430b7398
+19| V20 nm 0 00000000 00000000 00000000
+19| V20 pt 1 c0c20000 4188ad00 40a67626
+19| V20 nm 1 00000000 00000000 00000000
+19| V20 pt 2 c1720000 c1c44900 c2674915
+19| V20 nm 2 00000000 00000000 00000000
+19| V20 pt 3 407c0000 c2315680 42a275c5
+19| V20 nm 3 00000000 00000000 00000000
+19| V20 pt 4 40a10000 42286580 c231aa69
+19| V20 nm 4 00000000 00000000 00000000
+19| V20 pt 5 c1310000 4078a800 42a542d6
+19| V20 nm 5 00000000 00000000 00000000
+19| step
+19| M R1 ce1c238358efb7b5
+19| M R6 fb60fca286d17a1c
+19| M R12 3ad0f2d010a21ef2
+19| M R18 fd815dc614486777
+19| M R23 a1360b2b72248924
+19| do Load G1 517139148
+19| V29 new f0 n1
+19| P30 new n4
+19| R31 material s1 l1
+19| R32 material s1 l1
+19| P30 i1 0 0
+19| P30 i2 0 0
+19| P30 i3 0 0
+19| P30 i1 1 0
+19| P30 i2 1 0
+19| P30 i3 1 0
+19| P30 i1 2 0
+19| P30 i2 2 0
+19| P30 i3 2 0
+19| P30 i1 3 0
+19| P30 i2 3 0
+19| P30 i3 3 0
+19| R31 name 't2'
+19| R31 ti 0
+19| R31 ps 3 l0
+19| R31 pl 0 l0
+19| R31 vs 0
+19| R31 vl 1
+19| R32 name 'abc'
+19| R32 ti 1
+19| R32 ps 2 l0
+19| R32 pl 1 l0
+19| R32 vs 0
+19| R32 vl 0
+19| V29 pt 0 40060000 c1174000 41144000
+19| V29 nm 0 c15d8000 3f840000 40808000
+19| V29 uv 0 bc800000 c0260000
+19| = R28 0
+19| step
+19| M R1 ce1c238358efb7b5
+19| M R6 fb60fca286d17a1c
+19| M R12 3ad0f2d010a21ef2
+19| M R18 fd815dc614486777
+19| M R23 a1360b2b72248924
+19| M R28 8ba503402446bd71
+19| do PrepareTransforms R12
+19| step
+19| M R1 ce1c238358efb7b5
+19| M R6 fb60fca286d17a1c
+19| M R12 3ad0f2d010a21ef2
+19| M R18 fd815dc614486777
+19| M R23 a1360b2b72248924
+19| M R28 8ba503402446bd71
+19| end
+19| do Deref R1
+19| deref R1 0
+19| del V2
+19| del V3
+19| del V4
+19| del P5
+19| deref R6 0
+19| del V7
+19| del V8
+19| del V9
+19| del P10
+19| deref R11 0
+19| del R11
+19| del R6
+19| deref R12 0
+19| del V13
+19| del V14
+19| del V15
+19| del P16
+19| deref R17 0
+19| del R17
+19| del R12
+19| del R1
+19| do Deref R18
+19| deref R18 0
+19| del V19
+19| del V20
+19| del P22
+19| del R18
+19| do Deref R23
+19| deref R23 0
+19| del V24
+19| del P25
+19| del P27
+19| deref R26 0
+19| del R26
+19| del R23
+19| do Deref R28
+19| deref R28 0
+19| del V29
+19| del P30
+19| deref R31 0
+19| del R31
+19| deref R32 0
+19| del R32
+19| del R28
+19| step
+19| left 0
+20| do Begin 0
+20| step
+20| step
+20| do Load G1 662034999
+20| V2 new f0 n3
+20| P3 new n3
+20| R4 material s1 l1
+20| R5 material s1 l1
+20| P3 i1 0 0
+20| P3 i2 0 0
+20| P3 i3 0 2
+20| P3 i1 1 1
+20| P3 i2 1 0
+20| P3 i3 1 2
+20| P3 i1 2 1
+20| P3 i2 2 0
+20| P3 i3 2 1
+20| R4 name 'tag'
+20| R4 ti 3
+20| R4 ps 1 l0
+20| R4 pl 1 l0
+20| R4 vs 1
+20| R4 vl 2
+20| R5 name 'mud'
+20| R5 ti 3
+20| R5 ps 0 l0
+20| R5 pl 1 l0
+20| R5 vs 0
+20| R5 vl 2
+20| V2 pt 0 40f20000 c1508000 c0c78000
+20| V2 nm 0 c0d30000 c0f50000 40440000
+20| V2 nm 1 c0320000 40a30000 3fea0000
+20| V2 nm 2 3f780000 c0500000 c10ec000
+20| = R1 0
+20| step
+20| M R1 e98b578812eeb72d
+20| do SetTransform R1 2 0 40c80000 c175c000 00000000 c0f28000 c1404000 c14e8000 3fe60000 00000000 00000000 c16fc000 c10d0000 4163c000 00000000 4128c000 41350000 c1370000
+20| step
+20| M R1 3ddf97c36bdebb7f
+20| do NewCounts 1 0 0 1 2 0 'abc' f1 G1
+20| V7 new f1 n0
+20| V8 new f1 n0
+20| P9 new n1
+20| = R6
+20| step
+20| M R1 3ddf97c36bdebb7f
+20| M R6 3d32fd2e9713ff63
+20| do Reference R6
+20| ref R6 2
+20| step
+20| M R1 3ddf97c36bdebb7f
+20| M R6 2aa1b7056a72c5b2
+20| do PolygonCount R6 0
+20| = 0 0
+20| step
+20| M R1 3ddf97c36bdebb7f
+20| M R6 2aa1b7056a72c5b2
+20| do Dereference R6
+20| deref R6 1
+20| G1 remove R6
+20| deref R6 0
+20| del V7
+20| del V8
+20| del P9
+20| del R6
+20| step
+20| M R1 3ddf97c36bdebb7f
+20| do SetOpacity R1 bf0c0000
+20| step
+20| M R1 76dd505cd7a38a5b
+20| do Dereference R1
+20| G1 remove R1
+20| deref R1 0
+20| del V2
+20| del P3
+20| deref R4 0
+20| del R4
+20| deref R5 0
+20| del R5
+20| del R1
+20| step
+20| do NewCounts 1 1 0 0 2 0 '3d' f0 G2
+20| V11 new f0 n1
+20| V12 new f0 n1
+20| P13 new n1
+20| = R10
+20| step
+20| M R10 370489b8b84066fa
+20| do SetCurrentFrame R10 0
+20| step
+20| M R10 370489b8b84066fa
+20| do PolygonCount R10 0
+20| = 0 0
+20| step
+20| M R10 370489b8b84066fa
+20| do SortTagPoints R10
+20| step
+20| M R10 370489b8b84066fa
+20| do Load G1 534200268
+20| V15 new f0 n5
+20| V16 new f0 n5
+20| P17 new n2
+20| R18 material s1 l2
+20| R19 material s1 l2
+20| P17 i1 0 2
+20| P17 i2 0 3
+20| P17 i3 0 4
+20| P17 i1 1 2
+20| P20 new n1
+20| P20 i1 0 2
+20| P20 i2 0 4
+20| P20 i3 0 0
+20| R18 name 't2'
+20| R18 ti 3
+20| R18 ps 1 l0
+20| R18 pl 0 l0
+20| R18 ps 1 l1
+20| R18 pl 0 l1
+20| R19 name '3d'
+20| R19 ti 0
+20| R19 ps 0 l0
+20| R19 pl 1 l0
+20| R19 ps 0 l1
+20| R19 pl 0 l1
+20| V15 pt 0 411a4000 c1358000 3f900000
+20| V15 pt 1 c1260000 4160c000 41684000
+20| V15 nm 0 c159c000 c03e0000 4164c000
+20| V15 nm 1 3fc00000 c0fe8000 c00e0000
+20| V15 nm 2 c1534000 c16fc000 40290000
+20| V15 nm 3 40c20000 c0df8000 40c10000
+20| V15 nm 4 41350000 3fb40000 40910000
+20| V15 uv 0 c14d8000 414b4000
+20| V15 uv 1 c1288000 40ae0000
+20| V15 uv 2 411a8000 41244000
+20| V15 uv 3 413fc000 41744000
+20| V15 uv 4 c1714000 c09a0000
+20| V16 pt 0 c0830000 410dc000 c117c000
+20| V16 pt 1 bfb60000 bf880000 c0c40000
+20| V16 pt 2 c04b0000 c0470000 bd800000
+20| V16 pt 3 c1740000 41220000 40780000
+20| V16 pt 4 40740000 c1654000 c1414000
+20| V16 nm 0 3fca0000 40d28000 3fbe0000
+20| V16 nm 1 41334000 40b08000 40c10000
+20| V16 nm 2 c125c000 40fc0000 3fd20000
+20| V16 nm 3 4176c000 c169c000 c1608000
+20| V16 nm 4 41308000 40b50000 c1394000
+20| V16 uv 0 416d4000 41318000
+20| V16 uv 1 40ad0000 413ec000
+20| V16 uv 2 41550000 4130c000
+20| V16 uv 3 41624000 c0f88000
+20| V16 uv 4 416a8000 41424000
+20| V22 new f0 n4
+20| P23 new n4
+20| P24 new n4
+20| P24 i1 0 2
+20| P24 i2 0 0
+20| P24 i3 0 1
+20| P24 i1 1 3
+20| P24 i2 1 3
+20| P24 i3 1 0
+20| P24 i1 2 3
+20| P24 i2 2 2
+20| P24 i3 2 1
+20| P24 i1 3 1
+20| P24 i2 3 1
+20| P24 i3 3 3
+20| V22 pt 0 415c4000 c0ea8000 409c0000
+20| V22 pt 1 3f440000 c0e78000 41210000
+20| V22 pt 2 4176c000 c0fa8000 c14d0000
+20| V22 pt 3 c1164000 41340000 40260000
+20| V22 nm 0 c1058000 c16a4000 c13d0000
+20| V22 nm 1 c1404000 40a70000 40c08000
+20| V22 nm 2 c1118000 c11e8000 bfe80000
+20| V22 nm 3 c0d40000 c166c000 c0580000
+20| V26 new f0 n6
+20| V27 new f0 n6
+20| V28 new f0 n6
+20| P29 new n1
+20| R30 material s1 l2
+20| R31 material s1 l2
+20| P29 i1 0 0
+20| P29 i2 0 2
+20| P29 i3 0 1
+20| P32 new n4
+20| P32 i1 0 3
+20| P32 i2 0 2
+20| P32 i3 0 0
+20| P32 i1 1 5
+20| P32 i2 1 1
+20| P32 i3 1 4
+20| P32 i1 2 0
+20| P32 i2 2 2
+20| P32 i3 2 5
+20| P32 i1 3 4
+20| P32 i2 3 0
+20| P32 i3 3 0
+20| R30 name '3d'
+20| R30 ti 3
+20| R30 ps 0 l0
+20| R30 pl 1 l0
+20| R30 ps 0 l1
+20| R30 pl 1 l1
+20| R30 vs 1
+20| R30 vl 2
+20| R31 name 'abc'
+20| R31 ti 4
+20| R31 ps 0 l0
+20| R31 pl 0 l0
+20| R31 ps 0 l1
+20| R31 pl 0 l1
+20| R31 vs 1
+20| R31 vl 5
+20| V26 pt 0 41698000 c1268000 416d4000
+20| V26 pt 1 c08c8000 c1708000 40a10000
+20| V26 pt 2 41024000 c16ec000 c0120000
+20| V26 pt 3 c0878000 c1154000 c0db0000
+20| V26 pt 4 40b68000 c0e48000 c157c000
+20| V26 pt 5 407f0000 c1308000 c13e0000
+20| V26 nm 0 c1084000 c0ed0000 c09e8000
+20| V26 nm 1 4132c000 c0938000 c1528000
+20| V26 nm 2 c0960000 4178c000 40d68000
+20| V26 nm 3 c13f0000 c0c28000 41418000
+20| V26 nm 4 41528000 c02a0000 c173c000
+20| V26 nm 5 411fc000 40bb0000 40968000
+20| V26 uv 0 c0a30000 c1294000
+20| V26 uv 1 415c0000 40d18000
+20| V26 uv 2 40570000 c15f8000
+20| V26 uv 3 40f90000 413ac000
+20| V26 uv 4 c1384000 c1724000
+20| V26 uv 5 412fc000 c1324000
+20| V27 pt 0 c0fa8000 40dc8000 c06f0000
+20| V27 pt 1 c1328000 c1520000 412c4000
+20| V27 pt 2 41258000 403c0000 410d8000
+20| V27 pt 3 c0c58000 c06f0000 40380000
+20| V27 pt 4 c0d18000 40858000 c09f8000
+20| V27 pt 5 c10e8000 c0090000 c0e90000
+20| V28 pt 0 c130c000 c16dc000 4158c000
+20| V28 pt 1 3e700000 413b4000 c0d88000
+20| V28 pt 2 bfc80000 c1530000 c0620000
+20| V28 pt 3 c09a0000 c1628000 40c58000
+20| V28 pt 4 c11ec000 bed00000 c04d0000
+20| V28 pt 5 411cc000 416bc000 c148c000
+20| V28 nm 0 41624000 c0c58000 409d8000
+20| V28 nm 1 41018000 be400000 40bc0000
+20| V28 nm 2 bf900000 c0250000 c0ec0000
+20| V28 nm 3 c1478000 41564000 410ac000
+20| V28 nm 4 40e30000 4137c000 c12c0000
+20| V28 nm 5 40c88000 415cc000 c11e0000
+20| V28 uv 0 40b88000 41780000
+20| V28 uv 1 c111c000 c1068000
+20| V28 uv 2 c171c000 41340000
+20| V28 uv 3 c131c000 bc800000
+20| V28 uv 4 c0f10000 40c58000
+20| V28 uv 5 c0980000 3e500000
+20| V34 new f0 n4
+20| V35 new f0 n4
+20| P36 new n1
+20| R37 material s1 l1
+20| P38 new n1
+20| P38 i1 0 1
+20| P38 i2 0 3
+20| R37 ti 4
+20| R37 ps 0 l0
+20| R37 pl 0 l0
+20| R37 vs 1
+20| R37 vl 0
+20| V34 pt 0 c177c000 41550000 41234000
+20| V34 pt 1 40888000 40580000 be980000
+20| V34 pt 2 c0270000 c13f8000 c1144000
+20| V34 pt 3 c1020000 40850000 40b08000
+20| V34 nm 0 c1304000 40a08000 c13d4000
+20| V34 nm 1 bf800000 40d10000 c0f00000
+20| V34 nm 2 c0c18000 41598000 40cd0000
+20| V34 nm 3 c1768000 c1264000 c15e4000
+20| V34 uv 0 40b58000 4169c000
+20| V34 uv 1 c08e8000 412b8000
+20| V34 uv 2 c12d0000 413cc000
+20| V34 uv 3 40630000 413c0000
+20| V35 pt 0 4150c000 c1018000 c15d0000
+20| V35 pt 1 c14a4000 3e100000 41424000
+20| V35 pt 2 3da00000 40cc8000 c1664000
+20| V35 pt 3 412c4000 411c8000 c0a30000
+20| V35 nm 0 405b0000 c0250000 3fd80000
+20| V35 nm 1 c15a0000 c1054000 c0350000
+20| V35 nm 2 c10b0000 405c0000 c13c0000
+20| V35 nm 3 4114c000 c1000000 c1280000
+20| V35 uv 0 c0e50000 403e0000
+20| V35 uv 1 41374000 403e0000
+20| V35 uv 2 4104c000 c1660000
+20| V35 uv 3 40a60000 c0740000
+20| = R14 0
+20| step
+20| M R10 370489b8b84066fa
+20| M R14 ad06a0f48c3462d4
+20| M R21 e20051f4e2198f92
+20| M R25 378e11398b8c7cd0
+20| M R33 d87ba8d05f4b6bd6
+20| do SortTagPoints R10
+20| step
+20| M R10 370489b8b84066fa
+20| M R14 ad06a0f48c3462d4
+20| M R21 e20051f4e2198f92
+20| M R25 378e11398b8c7cd0
+20| M R33 d87ba8d05f4b6bd6
+20| do SetTexture R14 0 2
+20| R18 settex 0 2
+20| R19 settex 0 2
+20| R30 settex 0 2
+20| R31 settex 0 2
+20| R37 settex 0 2
+20| step
+20| M R10 370489b8b84066fa
+20| M R14 ad06a0f48c3462d4
+20| M R21 e20051f4e2198f92
+20| M R25 378e11398b8c7cd0
+20| M R33 d87ba8d05f4b6bd6
+20| do SetTagPoint R25 -1 0 3fbc0000 40670000 c0b00000
+20| step
+20| M R10 370489b8b84066fa
+20| M R14 ad06a0f48c3462d4
+20| M R21 e20051f4e2198f92
+20| M R25 df1c0405535cc724
+20| M R33 d87ba8d05f4b6bd6
+20| do SetTexture R10 0 1
+20| step
+20| M R10 370489b8b84066fa
+20| M R14 ad06a0f48c3462d4
+20| M R21 e20051f4e2198f92
+20| M R25 df1c0405535cc724
+20| M R33 d87ba8d05f4b6bd6
+20| do Reference R25
+20| ref R25 2
+20| step
+20| M R10 370489b8b84066fa
+20| M R14 ad06a0f48c3462d4
+20| M R21 e20051f4e2198f92
+20| M R25 9474edb95d4af14b
+20| M R33 d87ba8d05f4b6bd6
+20| do SetClip R33 1 0
+20| step
+20| M R10 370489b8b84066fa
+20| M R14 ad06a0f48c3462d4
+20| M R21 e20051f4e2198f92
+20| M R25 9474edb95d4af14b
+20| M R33 d87ba8d05f4b6bd6
+20| end
+20| do Deref R10
+20| deref R10 0
+20| del V11
+20| del V12
+20| del P13
+20| del R10
+20| do Deref R14
+20| deref R14 0
+20| del V15
+20| del V16
+20| del P17
+20| del P20
+20| deref R18 0
+20| del R18
+20| deref R19 0
+20| del R19
+20| deref R21 0
+20| del V22
+20| del P24
+20| deref R25 1
+20| del R21
+20| deref R33 0
+20| del V34
+20| del V35
+20| del P38
+20| deref R37 0
+20| del R37
+20| del R33
+20| del R14
+20| do Deref R25
+20| deref R25 0
+20| del V26
+20| del V27
+20| del V28
+20| del P29
+20| del P32
+20| deref R30 0
+20| del R30
+20| deref R31 0
+20| del R31
+20| del R25
+20| step
+20| left 0
+21| do Begin 0
+21| step
+21| step
+21| step
+21| step
+21| step
+21| step
+21| step
+21| step
+21| step
+21| step
+21| end
+21| step
+21| left 0
+22| do Begin 0
+22| step
+22| step
+22| step
+22| do NewCounts 2 2 1 1 1 2 'tag' f2 G2
+22| V2 new f2 n2
+22| P3 new n2
+22| R4 material s1 l1
+22| = R1
+22| do NewCounts 2 4 1 2 3 0 'tag' f2 G1
+22| V6 new f2 n4
+22| V7 new f2 n4
+22| V8 new f2 n4
+22| P9 new n2
+22| R10 material s1 l1
+22| = R5
+22| do SetSub R1 0 R5
+22| ref R5 2
+22| do Deref R5
+22| deref R5 1
+22| do NewCounts 4 2 1 2 3 0 'tag' f2 G2
+22| V12 new f2 n2
+22| V13 new f2 n2
+22| V14 new f2 n2
+22| P15 new n4
+22| R16 material s1 l1
+22| = R11
+22| do SetSub R1 1 R11
+22| ref R11 2
+22| do Deref R11
+22| deref R11 1
+22| step
+22| M R1 ff0d499b5fb09dda
+22| M R5 5b749e58a9507bd6
+22| M R11 d8536eca05387b80
+22| do SetCurrentFrame R11 2
+22| step
+22| M R1 ff0d499b5fb09dda
+22| M R5 5b749e58a9507bd6
+22| M R11 49d2da7a19e076be
+22| do Load G2 440609779
+22| V18 new f0 n6
+22| V19 new f0 n6
+22| P20 new n2
+22| R21 material s1 l2
+22| R22 material s1 l2
+22| P20 i1 0 1
+22| P20 i2 0 0
+22| P20 i3 0 2
+22| P20 i1 1 1
+22| P20 i2 1 2
+22| P20 i3 1 5
+22| P23 new n3
+22| P23 i1 0 2
+22| P23 i2 0 0
+22| P23 i3 0 4
+22| P23 i1 1 1
+22| P23 i2 1 4
+22| P23 i3 1 0
+22| P23 i1 2 4
+22| P23 i2 2 1
+22| P23 i3 2 1
+22| R21 name 't2'
+22| R21 ti 2
+22| R21 ps 1 l0
+22| R21 pl 1 l0
+22| R21 ps 0 l1
+22| R21 pl 1 l1
+22| R21 vs 1
+22| R21 vl 1
+22| R22 name 'tag'
+22| R22 ti 0
+22| R22 ps 1 l0
+22| R22 pl 1 l0
+22| R22 ps 1 l1
+22| R22 pl 1 l1
+22| R22 vs 0
+22| R22 vl 0
+22| V18 pt 0 c0890000 bfc20000 3fc00000
+22| V18 pt 1 c0ec8000 c13f4000 40ab8000
+22| V18 pt 2 40b30000 c0b10000 4149c000
+22| V18 pt 3 40d18000 40e18000 41488000
+22| V18 pt 4 c177c000 c1660000 bea80000
+22| V18 pt 5 41258000 3fe00000 3f860000
+22| V18 uv 0 412e0000 3e800000
+22| V18 uv 1 40650000 c1500000
+22| V18 uv 2 bfba0000 c1264000
+22| V18 uv 3 411cc000 40550000
+22| V18 uv 4 c11a8000 c0ef8000
+22| V18 uv 5 c0f78000 41350000
+22| V19 pt 0 41350000 c0ff8000 c03c0000
+22| V19 pt 1 41520000 3ee00000 c04f0000
+22| V19 pt 2 40910000 3f180000 c1598000
+22| V19 pt 3 4137c000 3ed80000 415a0000
+22| V19 pt 4 c0c28000 c1460000 3da00000
+22| V19 uv 0 41144000 415f0000
+22| V19 uv 1 bf740000 c11d4000
+22| V19 uv 2 4136c000 c1214000
+22| V19 uv 3 414cc000 c0b48000
+22| V19 uv 4 414a0000 416a4000
+22| V19 uv 5 41318000 41670000
+22| = R17 5
+22| step
+22| M R1 ff0d499b5fb09dda
+22| M R5 5b749e58a9507bd6
+22| M R11 49d2da7a19e076be
+22| M R17 9cb213914f84a7e2
+22| do RemoveScale R5
+22| V6 pt 0 00000000 00000000 00000000
+22| V6 nm 0 00000000 00000000 00000000
+22| V6 pt 1 00000000 00000000 00000000
+22| V6 nm 1 00000000 00000000 00000000
+22| V6 pt 2 00000000 00000000 00000000
+22| V6 nm 2 00000000 00000000 00000000
+22| V6 pt 3 00000000 00000000 00000000
+22| V6 nm 3 00000000 00000000 00000000
+22| V7 pt 0 00000000 00000000 00000000
+22| V7 nm 0 00000000 00000000 00000000
+22| V7 pt 1 00000000 00000000 00000000
+22| V7 nm 1 00000000 00000000 00000000
+22| V7 pt 2 00000000 00000000 00000000
+22| V7 nm 2 00000000 00000000 00000000
+22| V7 pt 3 00000000 00000000 00000000
+22| V7 nm 3 00000000 00000000 00000000
+22| V8 pt 0 00000000 00000000 00000000
+22| V8 nm 0 00000000 00000000 00000000
+22| V8 pt 1 00000000 00000000 00000000
+22| V8 nm 1 00000000 00000000 00000000
+22| V8 pt 2 00000000 00000000 00000000
+22| V8 nm 2 00000000 00000000 00000000
+22| V8 pt 3 00000000 00000000 00000000
+22| V8 nm 3 00000000 00000000 00000000
+22| step
+22| M R1 ff0d499b5fb09dda
+22| M R5 5b749e58a9507bd6
+22| M R11 49d2da7a19e076be
+22| M R17 9cb213914f84a7e2
+22| do SetFractional R1 40aa8000
+22| step
+22| M R1 690bf351af45d6a4
+22| M R5 a2947f9d3dfb48d0
+22| M R11 50da0190b65e6a28
+22| M R17 9cb213914f84a7e2
+22| do LoadTextures R5 d3 1
+22| R10 settex 0 1
+22| = 0
+22| step
+22| M R1 690bf351af45d6a4
+22| M R5 a2947f9d3dfb48d0
+22| M R11 50da0190b65e6a28
+22| M R17 9cb213914f84a7e2
+22| step
+22| M R1 690bf351af45d6a4
+22| M R5 a2947f9d3dfb48d0
+22| M R11 50da0190b65e6a28
+22| M R17 9cb213914f84a7e2
+22| step
+22| M R1 690bf351af45d6a4
+22| M R5 a2947f9d3dfb48d0
+22| M R11 50da0190b65e6a28
+22| M R17 9cb213914f84a7e2
+22| do SetFractional R17 c0300000
+22| step
+22| M R1 690bf351af45d6a4
+22| M R5 a2947f9d3dfb48d0
+22| M R11 50da0190b65e6a28
+22| M R17 16d3f0aba90f1cf2
+22| do NewCounts 3 4 2 1 2 1 'abc' f1 G1
+22| V25 new f1 n4
+22| V26 new f1 n4
+22| P27 new n3
+22| R28 material s1 l1
+22| R29 material s1 l1
+22| = R24
+22| do NewCounts 1 0 0 1 1 0 'abc' f0 G1
+22| V31 new f0 n0
+22| P32 new n1
+22| = R30
+22| do SetSub R24 0 R30
+22| ref R30 2
+22| do Deref R30
+22| deref R30 1
+22| step
+22| M R1 690bf351af45d6a4
+22| M R5 a2947f9d3dfb48d0
+22| M R11 50da0190b65e6a28
+22| M R17 16d3f0aba90f1cf2
+22| M R24 ffc714a637456e65
+22| M R30 96d51939279886c0
+22| end
+22| do Deref R1
+22| deref R1 0
+22| del V2
+22| del P3
+22| deref R4 0
+22| del R4
+22| deref R5 0
+22| del V6
+22| del V7
+22| del V8
+22| del P9
+22| deref R10 0
+22| del R10
+22| del R5
+22| deref R11 0
+22| del V12
+22| del V13
+22| del V14
+22| del P15
+22| deref R16 0
+22| del R16
+22| del R11
+22| del R1
+22| do Deref R17
+22| deref R17 0
+22| del V18
+22| del V19
+22| del P20
+22| del P23
+22| deref R21 0
+22| del R21
+22| deref R22 0
+22| del R22
+22| del R17
+22| do Deref R24
+22| deref R24 0
+22| del V25
+22| del V26
+22| del P27
+22| deref R28 0
+22| del R28
+22| deref R29 0
+22| del R29
+22| deref R30 0
+22| del V31
+22| del P32
+22| del R30
+22| del R24
+22| step
+22| left 0
+23| do Begin 1
+23| step
+23| step
+23| step
+23| step
+23| step
+23| step
+23| step
+23| step
+23| step
+23| do NewCounts 1 1 2 1 2 2 't1' f0 G2
+23| V2 new f0 n1
+23| V3 new f0 n1
+23| P4 new n1
+23| R5 material s2 l1
+23| R6 material s2 l1
+23| = R1
+23| do NewCounts 2 0 1 0 3 0 't1' f2 G1
+23| V8 new f2 n0
+23| V9 new f2 n0
+23| V10 new f2 n0
+23| P11 new n2
+23| R12 material s2 l1
+23| = R7
+23| do SetSub R1 0 R7
+23| ref R7 2
+23| do Deref R7
+23| deref R7 1
+23| do NewCounts 4 3 0 1 1 0 't1' f2 G1
+23| V14 new f2 n3
+23| P15 new n4
+23| = R13
+23| do SetSub R1 1 R13
+23| ref R13 2
+23| do Deref R13
+23| deref R13 1
+23| step
+23| M R1 893d3a748d1f2a4f
+23| M R7 638b3f8209e69716
+23| M R13 40926910cb777610
+23| do Deref R1
+23| deref R1 0
+23| del V2
+23| del V3
+23| del P4
+23| deref R5 0
+23| del R5
+23| deref R6 0
+23| del R6
+23| deref R7 0
+23| del V8
+23| del V9
+23| del V10
+23| del P11
+23| deref R12 0
+23| del R12
+23| del R7
+23| deref R13 0
+23| del V14
+23| del P15
+23| del R13
+23| del R1
+23| step
+23| step
+23| step
+23| step
+23| step
+23| step
+23| step
+23| step
+23| step
+23| end
+23| step
+23| left 0
+24| do Begin 1
+24| step
+24| step
+24| step
+24| step
+24| step
+24| step
+24| step
+24| step
+24| step
+24| step
+24| step
+24| step
+24| do Load G2 755403261
+24| V2 new f0 n4
+24| P3 new n1
+24| P4 new n1
+24| P4 i1 0 0
+24| P4 i2 0 0
+24| P4 i3 0 3
+24| P5 new n3
+24| P5 i1 0 2
+24| P5 i2 0 2
+24| P5 i3 0 0
+24| P5 i1 1 3
+24| P5 i2 1 1
+24| P5 i3 1 3
+24| P5 i1 2 1
+24| P5 i2 2 2
+24| V2 pt 0 402a0000 40c38000 40080000
+24| V2 pt 1 c1470000 40a98000 c104c000
+24| V2 pt 2 c0958000 c1240000 c101c000
+24| V2 pt 3 415c4000 c1254000 408f0000
+24| V2 nm 0 3d800000 c10cc000 41530000
+24| V2 nm 1 bf040000 4144c000 c14d0000
+24| V2 nm 2 41584000 416dc000 c0e58000
+24| V2 nm 3 c0240000 4164c000 c0710000
+24| V2 uv 0 c1720000 413b0000
+24| V2 uv 1 c1160000 412d8000
+24| V2 uv 2 c0c78000 40938000
+24| V2 uv 3 40770000 41760000
+24| = R1 0
+24| step
+24| M R1 eba8c52f48091791
+24| do ComputeModelNormals R1
+24| V2 nm 0 00000000 00000000 00000000
+24| V2 nm 1 00000000 00000000 00000000
+24| V2 nm 2 00000000 00000000 00000000
+24| V2 nm 3 00000000 00000000 00000000
+24| step
+24| M R1 eba8c52f48091791
+24| do SetOpacity R1 c0f30000
+24| step
+24| M R1 f3a371b58ad72a1f
+24| do LoadTextures R1 d2 1
+24| = 0
+24| step
+24| M R1 f3a371b58ad72a1f
+24| do SetNextFrame R1 2
+24| step
+24| M R1 c056d04329dfa4d1
+24| do Reference R1
+24| ref R1 2
+24| step
+24| M R1 004ac7f5b96bd698
+24| step
+24| M R1 004ac7f5b96bd698
+24| do SetClip R1 2 1
+24| step
+24| M R1 e0910483a38ca4dd
+24| do Load G1 834515637 1:-1 2:-2
+24| V7 new f0 n5
+24| P8 new n3
+24| R9 material s2 l1
+24| R10 material s2 l1
+24| P11 new n3
+24| P11 i1 0 1
+24| P11 i2 0 0
+24| P11 i3 0 1
+24| P11 i1 1 2
+24| P11 i2 1 1
+24| P11 i3 1 0
+24| P11 i1 2 1
+24| P11 i2 2 4
+24| P11 i3 2 3
+24| R9 name '3d'
+24| R9 ti 2
+24| R9 ps 2 l0
+24| R9 pl 1 l0
+24| R9 vs 0
+24| R9 vl 4
+24| R10 name 'abc'
+24| R10 ti 1
+24| R10 ps 0 l0
+24| R10 pl 1 l0
+24| R10 vs 0
+24| R10 vl 1
+24| V7 pt 0 40b78000 410e8000 413b4000
+24| V7 pt 1 c165c000 40ff8000 c16d8000
+24| V7 pt 2 40ed0000 c1468000 c0de8000
+24| V7 pt 3 40e90000 c1384000 40e10000
+24| V7 pt 4 41784000 c1174000 c133c000
+24| V7 pt 0 c107c000 bfc60000 bf700000
+24| V7 pt 1 c1350000 c06e0000 41110000
+24| V7 pt 2 4141c000 c0db8000 411ac000
+24| V7 pt 3 c16dc000 c17a0000 c0ed0000
+24| V7 pt 4 41208000 c02f0000 40d58000
+24| V7 nm 0 40300000 c1324000 c15cc000
+24| V7 nm 1 c1500000 41178000 41684000
+24| V7 nm 2 bf440000 c0f38000 c1528000
+24| V7 nm 3 c1108000 3fb20000 41714000
+24| V7 nm 4 41084000 41384000 41480000
+24| V13 new f0 n4
+24| P14 new n4
+24| R15 material s2 l1
+24| P14 i1 0 0
+24| P14 i2 0 3
+24| P14 i3 0 3
+24| P14 i1 1 1
+24| P14 i2 1 1
+24| P14 i3 1 1
+24| P14 i1 2 1
+24| P14 i2 2 1
+24| P14 i3 2 3
+24| P14 i1 3 1
+24| P14 i2 3 1
+24| R15 name 'mud'
+24| R15 ti 1
+24| R15 ps 0 l0
+24| R15 pl 3 l0
+24| R15 vs 1
+24| R15 vl 3
+24| V13 pt 0 bf6c0000 413bc000 c0630000
+24| V13 pt 1 3fae0000 41170000 c0060000
+24| V13 pt 2 c172c000 c1200000 c1634000
+24| V13 pt 3 40b80000 c16a4000 c0790000
+24| V13 pt 0 be200000 40bf8000 4135c000
+24| V13 pt 1 c0f18000 3f140000 41568000
+24| V13 pt 2 403f0000 407e0000 41044000
+24| V13 pt 3 41440000 c1148000 3f100000
+24| V13 nm 0 41378000 41548000 40f40000
+24| V13 nm 1 3f700000 c11f4000 40838000
+24| V13 nm 2 c0d90000 c0eb0000 c0e90000
+24| V13 nm 3 41644000 410ac000 c0f50000
+24| V13 uv 0 bfa00000 4128c000
+24| V13 uv 1 c01b0000 41588000
+24| V13 uv 2 41300000 c0bb8000
+24| V13 uv 3 c114c000 41008000
+24| = R6 0
+24| step
+24| M R1 e0910483a38ca4dd
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| do SetCurrentFrame R6 0
+24| step
+24| M R1 e0910483a38ca4dd
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| do Load G1 1000856889
+24| V17 new f0 n2
+24| V18 new f0 n2
+24| V19 new f0 n2
+24| P20 new n1
+24| R21 material s2 l1
+24| R22 material s2 l1
+24| P20 i1 0 1
+24| P20 i2 0 1
+24| P20 i3 0 1
+24| R21 name 'tag'
+24| R21 ti 2
+24| R21 ps 0 l0
+24| R21 pl 0 l0
+24| R22 name 't2'
+24| R22 ti 4
+24| R22 ps 0 l0
+24| R22 pl 1 l0
+24| R22 vs 0
+24| R22 vl 2
+24| V17 pt 0 4144c000 c0d10000 c0e00000
+24| V17 nm 0 40260000 402c0000 408a0000
+24| V17 nm 1 40620000 c0480000 c1190000
+24| V18 pt 0 c100c000 412d4000 41090000
+24| V18 pt 1 c09c0000 c120c000 404b0000
+24| V18 nm 0 412f4000 405d0000 40a48000
+24| V18 nm 1 3fc60000 4170c000 c0c18000
+24| V19 nm 0 414a0000 c1430000 c13c8000
+24| V19 nm 1 c14c8000 bf240000 41098000
+24| V19 uv 0 c11b4000 410c4000
+24| V19 uv 1 c0740000 40680000
+24| V24 new f0 n6
+24| V25 new f0 n6
+24| P26 new n2
+24| P27 new n2
+24| P27 i1 0 4
+24| P27 i2 0 1
+24| P27 i3 0 0
+24| P27 i1 1 2
+24| P27 i2 1 4
+24| P27 i3 1 4
+24| V24 pt 0 40f70000 c15a8000 41520000
+24| V24 pt 1 40750000 41094000 4121c000
+24| V24 pt 2 40630000 c0e68000 c1288000
+24| V24 pt 3 c14b0000 402e0000 406c0000
+24| V24 pt 4 c0a50000 40a08000 c0d18000
+24| V24 pt 5 415e8000 40470000 c0cf0000
+24| V24 uv 0 40c80000 bf1c0000
+24| V24 uv 1 40090000 c15ac000
+24| V24 uv 2 416f8000 41474000
+24| V24 uv 3 c0440000 40420000
+24| V24 uv 4 40fe0000 c0a70000
+24| V24 uv 5 c131c000 4159c000
+24| V25 pt 0 4125c000 c124c000 c0ea0000
+24| V25 pt 1 c04e0000 c12b8000 41214000
+24| V25 pt 2 415e8000 40a28000 409d8000
+24| V25 pt 3 c11f4000 bfd20000 415a0000
+24| V25 nm 0 c0cc8000 40570000 c1134000
+24| V25 nm 1 c1658000 400a0000 c0988000
+24| V25 nm 2 40cf8000 406a0000 41130000
+24| V25 nm 3 c11fc000 407f0000 40978000
+24| V25 nm 4 c0ca8000 c1020000 408b8000
+24| V25 nm 5 4158c000 c09a0000 c13f8000
+24| V25 uv 0 40878000 3ff20000
+24| V25 uv 1 416f0000 407f0000
+24| V25 uv 2 c0e80000 c14b8000
+24| V25 uv 3 41370000 40a50000
+24| V25 uv 4 40b28000 400e0000
+24| V25 uv 5 c0fe8000 40a68000
+24| V29 new f0 n5
+24| V30 new f0 n5
+24| P31 new n1
+24| R32 material s2 l1
+24| P31 i1 0 4
+24| P31 i2 0 3
+24| P31 i3 0 2
+24| R32 name 'mud'
+24| R32 ti 3
+24| R32 ps 0 l0
+24| R32 pl 1 l0
+24| R32 vs 1
+24| R32 vl 4
+24| V30 pt 0 40010000 40f58000 c0958000
+24| V30 pt 1 c106c000 41108000 c0a78000
+24| V30 pt 2 c16fc000 3fe80000 c1588000
+24| V30 pt 3 bf380000 3f380000 c0d90000
+24| V30 pt 4 3f820000 40370000 c10dc000
+24| V30 pt 0 40df0000 c1524000 c0670000
+24| V30 nm 0 41218000 c08c8000 41748000
+24| V30 nm 1 c142c000 4162c000 c0d40000
+24| V30 nm 2 412ec000 40908000 bfaa0000
+24| V30 nm 3 40520000 40e78000 40c50000
+24| V30 nm 4 c0eb8000 41740000 c00b0000
+24| V30 uv 0 c0f68000 416c0000
+24| V30 uv 1 c06f0000 401d0000
+24| V30 uv 2 41500000 c0ae8000
+24| V30 uv 3 c0e60000 401c0000
+24| V30 uv 4 c0ea8000 41770000
+24| = R16 0
+24| step
+24| M R1 e0910483a38ca4dd
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| M R16 84f633bf37e84fab
+24| M R23 e86f86318b6de62b
+24| M R28 e52ecd8585c9b4eb
+24| do ComputeModelNormals R28
+24| V29 nm 0 00000000 00000000 00000000
+24| V29 nm 1 00000000 00000000 00000000
+24| V29 nm 2 00000000 00000000 00000000
+24| V29 nm 3 00000000 00000000 00000000
+24| V29 nm 4 00000000 00000000 00000000
+24| V30 nm 0 00000000 00000000 00000000
+24| V30 nm 1 00000000 00000000 00000000
+24| V30 nm 2 be671fca 3f443c17 3f19e9cb
+24| V30 nm 3 be671fca 3f443c17 3f19e9cb
+24| V30 nm 4 be671fca 3f443c17 3f19e9cb
+24| step
+24| M R1 e0910483a38ca4dd
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| M R16 84f633bf37e84fab
+24| M R23 e86f86318b6de62b
+24| M R28 e52ecd8585c9b4eb
+24| do ComputeModelNormals R12
+24| V13 nm 0 00000000 00000000 00000000
+24| V13 nm 1 00000000 00000000 00000000
+24| V13 nm 2 00000000 00000000 00000000
+24| V13 nm 3 00000000 00000000 00000000
+24| V13 nm 0 00000000 00000000 00000000
+24| V13 nm 1 00000000 00000000 00000000
+24| V13 nm 2 00000000 00000000 00000000
+24| V13 nm 3 00000000 00000000 00000000
+24| step
+24| M R1 e0910483a38ca4dd
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| M R16 84f633bf37e84fab
+24| M R23 e86f86318b6de62b
+24| M R28 e52ecd8585c9b4eb
+24| do SetScale R16 3f800000
+24| step
+24| M R1 e0910483a38ca4dd
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| M R16 84f633bf37e84fab
+24| M R23 e86f86318b6de62b
+24| M R28 e52ecd8585c9b4eb
+24| do SetScale R23 41600000
+24| step
+24| M R1 e0910483a38ca4dd
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| M R16 84f633bf37e84fab
+24| M R23 fb215515dda81195
+24| M R28 e52ecd8585c9b4eb
+24| do SetScale R6 3f800000
+24| step
+24| M R1 e0910483a38ca4dd
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| M R16 84f633bf37e84fab
+24| M R23 fb215515dda81195
+24| M R28 e52ecd8585c9b4eb
+24| do SetCurrentFrame R23 1
+24| step
+24| M R1 e0910483a38ca4dd
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| M R16 84f633bf37e84fab
+24| M R23 0278ec0e94d5df45
+24| M R28 e52ecd8585c9b4eb
+24| do Dereference R1
+24| deref R1 1
+24| G2 remove R1
+24| deref R1 0
+24| del V2
+24| del P4
+24| del P5
+24| del R1
+24| step
+24| M R6 b145ef0b4cd4f1fa
+24| M R12 0d0e0139046e2fc3
+24| M R16 84f633bf37e84fab
+24| M R23 0278ec0e94d5df45
+24| M R28 e52ecd8585c9b4eb
+24| do Deref R6
+24| deref R6 0
+24| del V7
+24| del P11
+24| deref R9 0
+24| del R9
+24| deref R10 0
+24| del R10
+24| deref R12 0
+24| del V13
+24| del P14
+24| deref R15 0
+24| del R15
+24| del R12
+24| del R6
+24| step
+24| M R16 84f633bf37e84fab
+24| M R23 0278ec0e94d5df45
+24| M R28 e52ecd8585c9b4eb
+24| do Reference R28
+24| ref R28 2
+24| step
+24| M R16 84f633bf37e84fab
+24| M R23 0278ec0e94d5df45
+24| M R28 77a7c11c424a1e60
+24| end
+24| do Deref R16
+24| deref R16 0
+24| del V17
+24| del V18
+24| del V19
+24| del P20
+24| deref R21 0
+24| del R21
+24| deref R22 0
+24| del R22
+24| deref R23 0
+24| del V24
+24| del V25
+24| del P27
+24| del R23
+24| deref R28 1
+24| del R16
+24| do Deref R28
+24| deref R28 0
+24| del V29
+24| del V30
+24| del P31
+24| deref R32 0
+24| del R32
+24| del R28
+24| step
+24| left 0

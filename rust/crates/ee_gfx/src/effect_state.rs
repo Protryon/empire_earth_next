@@ -250,6 +250,8 @@ pub struct EeGfxEffectRecord {
     pub pass: crate::effect_additive::EeGfxEffectPass,
     /// the orbiting effects' (`effect_orbit.rs`)
     pub orbit: crate::effect_orbit::EeGfxEffectOrbit,
+    /// the nuclear explosion's and energy wave's (`effect_nuclear.rs`)
+    pub blast: crate::effect_nuclear::EeGfxEffectBlast,
 }
 
 /// The identity (`GETransformation()`).
@@ -291,6 +293,7 @@ impl EeGfxEffectRecord {
             shot: EeGfxEffectShot::default(),
             pass: crate::effect_additive::EeGfxEffectPass::default(),
             orbit: crate::effect_orbit::EeGfxEffectOrbit::default(),
+            blast: crate::effect_nuclear::EeGfxEffectBlast::default(),
         }
     }
 

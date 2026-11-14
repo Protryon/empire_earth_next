@@ -161,10 +161,11 @@ enum class EeUiOp : uint32_t {
   BitmapDraw = 26,
   /// *Pure*: the manager's drag bar bitmap's `GetXScale()`, `GetYScale()` -> `f[0]`, `f[1]`.
   DragBarScale = 27,
-  /// The thumb bitmap `a`'s `SetXYScale(f[0], f[1])`.
-  ThumbSetScale = 28,
-  /// *Pure*: the manager's scroll bar bitmap `a` (0 down normal, 1 up normal, 2 down pressed, 3 up pressed,
-  /// 4 right normal, 5 left normal, 6 right pressed, 7 left pressed).
+  /// Bitmap `a`'s `SetXYScale(f[0], f[1])` (the slider's thumb, the check box's and radio button's box).
+  BitmapSetScale = 28,
+  /// *Pure*: the manager's bitmap `a`: the scroll bar's (0 down normal, 1 up normal, 2 down pressed, 3 up pressed,
+  /// 4 right normal, 5 left normal, 6 right pressed, 7 left pressed), the check box's (8 off, 9 on, 10 down off,
+  /// 11 down on, 12 not, 13 down not) and the radio button's (14 off, 15 on, 16 down off, 17 down on).
   ManagerBitmap = 40,
   /// `new UISlider(GetId(), f, style a, form, GetIndex(), border b)` -> the slider.
   CreateSlider = 41,
@@ -264,6 +265,63 @@ enum class EeUiOp : uint32_t {
   SoundPlay = 100,
   /// Text `a`'s `SetFgColor(f[0..3])`.
   TextSetFgColor = 101,
+  /// `new UITextLabel(*(const UWideString*)a, font b, GetId(), f, GetForm(), 0, GetIndex(), 0)` -> the label.
+  LabelCreate = 110,
+  /// The label `a`'s `SetText(*(const UWideString*)b)` (the public one: it dirties the label).
+  LabelSetText = 111,
+  /// *Pure*: `((const UWideString*)a)->GetLength()`.
+  StringLength = 112,
+  /// *Pure*: bitmap `a`'s `GetXScale()`, `GetYScale()` -> `f[0]`, `f[1]`.
+  BitmapScale = 113,
+  /// *Pure*: `GetCopiedDrawRectangle()` -> `f`.
+  CopiedDrawRect = 114,
+  /// `UIControl::SetRectangle(f)` (non-virtual).
+  BaseSetRectangle = 115,
+  /// The virtual `Check()` (the radio button's; the editor's tabs and tool buttons override it).
+  RadioCheck = 116,
+  /// The form's control `a`'s virtual `UnCheck()` (a radio button: `RadioOf(a)` answered it).
+  RadioUnCheckAt = 117,
+  /// *Pure*: the Rust button of the form's control `a`, if it exists and is a radio button (`GetType()`), else 0.
+  RadioOf = 118,
+  /// *Pure*: the form's `GetControlCount()`.
+  ControlCount = 119,
+  /// `new TMPoll(a, 0, false)` -> the poll.
+  PollCreate = 130,
+  /// `delete` poll `a`.
+  PollDelete = 131,
+  /// *Pure*: poll `a`'s `GetIsRunning()`.
+  PollRunning = 132,
+  /// Poll `a`'s `Poll()` -> its result (nonzero: the time ran out).
+  PollPoll = 133,
+  /// Poll `a`'s `Start()`.
+  PollStart = 134,
+  /// Poll `a`'s `Stop()`.
+  PollStop = 135,
+  /// Poll `a`'s `GetTimeLeft()` (the clock's: traced, not pure).
+  PollTimeLeft = 136,
+  /// Poll `a`'s `SetTimeDelay(b)`.
+  PollSetDelay = 137,
+  /// *Pure*: `GetAlwaysDirty()`.
+  AlwaysDirty = 140,
+  /// `SetAlwaysDirty(a != 0)`.
+  SetAlwaysDirty = 141,
+  /// The virtual `SetDisplayMode(a)`.
+  SetDisplayMode = 142,
+  /// *Pure*: `GetBgOpacity()` -> `f[0]`.
+  BgOpacity = 143,
+  /// *Pure*: `GetBorderOpacity()` -> `f[0]`.
+  BorderOpacity = 144,
+  /// The virtual `SetBgOpacity(f[0])`.
+  SetBgOpacity = 145,
+  /// `SetBorderOpacity(f[0])`.
+  SetBorderOpacity = 146,
+  /// Bitmap `a`'s `SetOpacity(f[0])`.
+  BitmapSetOpacity = 147,
+  /// *Pure*: bitmap `a`'s `GetTexture(GetScreenIndex())->GetWidth()`.
+  BitmapTextureWidth = 148,
+  /// Bitmap `a`'s `ComputeStretchedCoordsAndScale(f, f, source, GetScreenIndex())`: `f` the destination, the source
+  /// rectangle's bottom and left float bits in `c` (high, low), its right and top in `d`.
+  BitmapStretch = 149,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -344,6 +402,118 @@ enum class EeUiButtonCall : uint32_t {
   DualMouseRButtonDown = 37,
   /// `UIDualButton::MouseRButtonUp()` -> OK.
   DualMouseRButtonUp = 38,
+  /// The constructor's part after `UIButton`'s: `SetText(*(const UWideString*)a, font b)` beside a box of height
+  /// `f[0]` (the constructor's rectangle's), the bitmap scaled when `f[1]` is nonzero.
+  CheckInit = 40,
+  /// `ChangeWidth(a)`.
+  CheckChangeWidth = 41,
+  /// `CopyData()` -> its result.
+  CheckCopyData = 42,
+  /// `DrawPolygons()` -> its result.
+  CheckDrawPolygons = 43,
+  /// `DrawTextA()` -> its result.
+  CheckDrawText = 44,
+  /// `SetChecked(a != 0)`.
+  CheckSetChecked = 45,
+  /// `SetDisabled(a != 0)`.
+  CheckSetDisabled = 46,
+  /// `SetLocation(f[0], f[1])`.
+  CheckSetLocation = 47,
+  /// `SetText(*(const UWideString*)a, font b)`.
+  CheckSetText = 48,
+  /// `ToggleCheck()`.
+  CheckToggle = 49,
+  /// `ButtonUp()`: the toggle, then `UIButton::ButtonUp()`.
+  CheckButtonUp = 50,
+  /// `ButtonDown()`.
+  CheckButtonDown = 51,
+  /// `MouseLButtonDown()` -> OK.
+  CheckMouseLButtonDown = 52,
+  /// `MouseLButtonUp()` -> OK.
+  CheckMouseLButtonUp = 53,
+  /// `MouseMove(f[0], f[1])` -> OK.
+  CheckMouseMove = 54,
+  /// `GetIsChecked()`.
+  CheckIsChecked = 55,
+  /// `GetTextLabel()` (the check box's, radio button's or tri-state box's).
+  TextLabel = 56,
+  /// The constructor's part after `UIButton`'s: the other state's bitmaps, a checked button's swap, the bitmap
+  /// offset in a box of height `f[0]`, then `SetText(*(const UWideString*)a, font b)`; `f[1]` the push button,
+  /// `f[2]` checked, `f[3]` the scaled bitmap (nonzero: true).
+  RadioInit = 60,
+  /// `UIRadioButton::Check()`.
+  RadioCheck = 61,
+  /// `UIRadioButton::UnCheck()`.
+  RadioUnCheck = 62,
+  /// `CopyData()` -> its result.
+  RadioCopyData = 63,
+  /// `DrawPolygons()` -> its result.
+  RadioDrawPolygons = 64,
+  /// `DrawTextA()` -> its result.
+  RadioDrawText = 65,
+  /// `GetIsChecked()`.
+  RadioIsChecked = 66,
+  /// `GetTabable()`: not a push button.
+  RadioTabable = 67,
+  /// `SetDownCheckedBitmap(a)`.
+  RadioSetDownChecked = 68,
+  /// `SetDownUncheckedBitmap(a)`.
+  RadioSetDownUnchecked = 69,
+  /// `SetUpCheckedBitmap(a)`.
+  RadioSetUpChecked = 70,
+  /// `SetUpUncheckedBitmap(a)`.
+  RadioSetUpUnchecked = 71,
+  /// `SetLocation(f[0], f[1])`.
+  RadioSetLocation = 72,
+  /// `SetText(*(const UWideString*)a, font b)`.
+  RadioSetText = 73,
+  /// `ButtonUp()`: the virtual `Check()`, then `UIButton::ButtonUp()`.
+  RadioButtonUp = 74,
+  /// `MouseLButtonDown()` -> OK.
+  RadioMouseLButtonDown = 75,
+  /// The constructor's part after `UIButton`'s: the bitmap offset in a box of height `f[0]`, then
+  /// `SetText(*(const UWideString*)a, font b)`.
+  TriInit = 80,
+  /// `ChangeWidth(a)`.
+  TriChangeWidth = 81,
+  /// `CopyData()` -> its result.
+  TriCopyData = 82,
+  /// `DrawPolygons()` -> its result.
+  TriDrawPolygons = 83,
+  /// `DrawTextA()` -> its result.
+  TriDrawText = 84,
+  /// `GetCheckState()`.
+  TriCheckState = 85,
+  /// `SetCheckState(a)`.
+  TriSetCheckState = 86,
+  /// `SetLocation(f[0], f[1])`.
+  TriSetLocation = 87,
+  /// `SetText(*(const UWideString*)a, font b)`.
+  TriSetText = 88,
+  /// `CycleCheck()`.
+  TriCycle = 89,
+  /// `ButtonUp()`: the cycle, then `UIButton::ButtonUp()`.
+  TriButtonUp = 90,
+  /// The constructor's part after `UIButton`'s: the slider `a`, the direction `b` (nonzero: down), the polls made.
+  ScrollInit = 95,
+  /// `ButtonDown()`: the slider stepped on the press, after the delay and at every repeat, then `UIButton`'s.
+  ScrollButtonDown = 96,
+  /// `ButtonUp()`: the polls stopped, then `UIButton::ButtonUp()`.
+  ScrollButtonUp = 97,
+  /// The constructor's part after `UIButton`'s: the poll, the record for the blink rate `a`.
+  BlinkInit = 100,
+  /// `SetIsBlinking(a != 0)`.
+  BlinkSetIsBlinking = 101,
+  /// `GetIsBlinking()`.
+  BlinkIsBlinking = 102,
+  /// `CopyData()` -> its result: the fade, then `UIButton::CopyData()`.
+  BlinkCopyData = 103,
+  /// The constructor's source rectangle `a` (0 normal, 1 focused, 2 pressed) = `f`.
+  ScalableInit = 110,
+  /// `CopyData()` -> its result.
+  ScalableCopyData = 111,
+  /// `DrawPolygons()` -> its result.
+  ScalableDrawPolygons = 112,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -622,69 +792,6 @@ struct EeUiBackgroundTableRefs {
   EeUiLayout *layout;
   EeUiRect *texture_rect;
   EeUiColor *color;
-};
-
-/// One button subclass as Rust sees it: the C++ object (as a `UIButton*`), its Rust button, the subclass's record
-/// (`CheckFields`, `RadioFields`, the scroll button's `mDecrement`) and `ctx`, the C++ forwarder's own context for a
-/// host call (a `SetText`'s text and font; NULL otherwise).
-struct EeUiButtonRefs {
-  void *button;
-  const EeUiButton *obj;
-  void *sub;
-  void *ctx;
-};
-
-/// `UITriStateCheckBox`'s members in their C++ order (from `mTextLabel` on).
-struct EeUiTriStateFields {
-  /// `UITextLabel*`, C++'s.
-  void *text_label;
-  /// 0 off, 1 on, 2 "not".
-  unsigned long check_state;
-  bool has_text;
-};
-
-/// Where a `UITriStateCheckBox` keeps what the Rust side reads and writes.
-struct EeUiTriStateRefs {
-  /// The `UITriStateCheckBox*`.
-  void *button;
-  /// Its record from `mTextLabel` on.
-  EeUiTriStateFields *fields;
-  /// `mRectangle`.
-  const EeUiRect *rect;
-  /// `mBorderThickness`.
-  const unsigned long *border;
-  /// A `SetText`'s text and font for the label host calls (`UIButtonRust::Label`), else NULL.
-  void *ctx;
-};
-
-/// `UIBlinkingButton`'s members in their C++ order (from `mBlinkPhase` on).
-struct EeUiBlinkFields {
-  /// 1 fading out, 0 fading in.
-  unsigned long blink_phase;
-  /// Milliseconds per phase, 50..5000.
-  unsigned long blink_rate;
-  float pressed_opacity;
-  float normal_opacity;
-  float bg_opacity;
-  float full_border_opacity;
-  bool saved_always_dirty;
-  bool needs_opacities;
-  bool is_blinking;
-};
-
-/// What `CopyData` shows: the background's, the border's and the two bitmaps' opacities.
-struct EeUiBlinkShow {
-  float background;
-  float border;
-  float pressed;
-  float normal;
-};
-
-/// One of the three draws: the bitmap's source and destination rectangles, and where it is drawn.
-struct EeUiSlice {
-  EeUiRect source;
-  EeUiRect destination;
-  EeUiPoint location;
 };
 
 /// `UIComboBox`'s members in their C++ order (from `mTextBox` on). The pointer is C++'s.
@@ -1179,6 +1286,11 @@ ptrdiff_t ee_ui_button_call(const EeUiButton *button,
                             ptrdiff_t b,
                             float *f);
 
+/// The check box's and radio button's bitmap rectangle (their constructors' `UIButton` argument; the tri-state box's
+/// without scaling: [`button::box_rect`]).
+EeUiRect ee_ui_button_box_rect(EeUiRect rect,
+                               bool scale_bitmap);
+
 /// The constructor's geometry ([`scrollbar::layout`]): the C++ needs the rectangle for `UIControl`'s constructor,
 /// before this object is made.
 EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at,
@@ -1334,108 +1446,6 @@ long ee_ui_event_initialize(unsigned long *count, void *event);
 
 /// `UIEvent::Uninitialize`.
 long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// `UIScrollButton::ButtonDown` (`sub`: `mDecrement`).
-void ee_ui_scroll_button_button_down(const EeUiButtonRefs *refs);
-
-/// The check box's and radio button's bitmap rectangle ([`button::box_rect`]).
-EeUiRect ee_ui_button_box_rect(EeUiRect rect, bool scale_bitmap);
-
-/// The check box's (`float_border`) and radio button's bitmap offset: true and `out` written, or false to keep it
-/// ([`button::label_bitmap_offset`]).
-bool ee_ui_button_label_bitmap_offset(float height,
-                                      unsigned long border,
-                                      bool scale_bitmap,
-                                      bool float_border,
-                                      EeUiPoint *out);
-
-/// `UICheckBox::SetChecked` (`sub`: the check box's record).
-void ee_ui_check_set_checked(const EeUiButtonRefs *refs, bool checked);
-
-/// `UICheckBox::ToggleCheck`.
-void ee_ui_check_toggle(const EeUiButtonRefs *refs);
-
-/// `UICheckBox::SetDisabled`.
-void ee_ui_check_set_disabled(const EeUiButtonRefs *refs, bool disabled);
-
-/// `UICheckBox::SetLocation` (`ctx`: the label, as for `SetText`).
-void ee_ui_check_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
-
-/// `UICheckBox::SetText` (`ctx`: the C++ text and font for the label host calls).
-void ee_ui_check_set_text(const EeUiButtonRefs *refs, const char *s);
-
-/// `UICheckBox::ButtonDown` and the mouse handlers: whether the enabled box goes on to `UIButton`'s.
-bool ee_ui_check_enabled(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::Check`.
-void ee_ui_radio_check(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::UnCheck`.
-void ee_ui_radio_uncheck(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::RemoveOtherChecks`.
-void ee_ui_radio_remove_other_checks(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::CopyData`'s button part (the label's stays C++).
-long ee_ui_radio_copy_data(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::MouseLButtonDown`.
-long ee_ui_radio_mouse_l_button_down(const EeUiButtonRefs *refs);
-
-/// `UIRadioButton::SetLocation` (`ctx`: the label, as for `SetText`).
-void ee_ui_radio_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
-
-/// `UIRadioButton::SetText` (`ctx` as for the check box).
-void ee_ui_radio_set_text(const EeUiButtonRefs *refs, const char *s);
-
-/// The constructor's `UIButton` rectangle.
-EeUiRect ee_ui_tristate_rect(const EeUiRect *rect);
-
-/// The constructor's bitmap offset: true and `out` written, or false to keep it.
-bool ee_ui_tristate_bitmap_offset(float height, unsigned long border, EeUiPoint *out);
-
-/// `UITriStateCheckBox::ChangeWidth`.
-void ee_ui_tristate_change_width(const EeUiTriStateRefs *refs, unsigned long width);
-
-/// `UITriStateCheckBox::CopyData`.
-long ee_ui_tristate_copy_data(const EeUiTriStateRefs *refs);
-
-/// `UITriStateCheckBox::SetCheckState`.
-void ee_ui_tristate_set_check_state(const EeUiTriStateRefs *refs, unsigned long state);
-
-/// `UITriStateCheckBox::SetLocation`.
-void ee_ui_tristate_set_location(const EeUiTriStateRefs *refs, EeUiPoint at);
-
-/// `UITriStateCheckBox::SetText` (`ctx` in `refs`: the C++ text and font for the label host calls).
-void ee_ui_tristate_set_text(const EeUiTriStateRefs *refs, const char *s);
-
-/// `UITriStateCheckBox::CycleCheck`.
-void ee_ui_tristate_cycle(const EeUiTriStateRefs *refs);
-
-/// `UIBlinkingButton`'s constructor: the record after `UIButton`'s (written whole).
-void ee_ui_blink_init(EeUiBlinkFields *fields, unsigned long rate, bool always_dirty);
-
-/// `UIBlinkingButton::CopyData`'s fade: the opacities to set (the record updated).
-EeUiBlinkShow ee_ui_blink_copy_data(EeUiBlinkFields *fields,
-                                    bool polled,
-                                    unsigned long time_left,
-                                    unsigned long state,
-                                    float bg,
-                                    float border);
-
-/// `UIScalableButton::CopyData`'s source rectangle for the state.
-EeUiRect ee_ui_scalable_copied_rect(unsigned long state,
-                                    bool has_focused_bitmap,
-                                    const EeUiRect *normal,
-                                    const EeUiRect *focused,
-                                    const EeUiRect *pressed,
-                                    const EeUiRect *current);
-
-/// `UIScalableButton::DrawPolygons`' three slices, written to `out[0..3]`.
-void ee_ui_scalable_slices(const EeUiRect *copied,
-                           const EeUiRect *draw,
-                           unsigned long texture_width,
-                           EeUiSlice *out);
 
 /// The constructor's drop button ([`combo::drop_rect`]).
 EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);
