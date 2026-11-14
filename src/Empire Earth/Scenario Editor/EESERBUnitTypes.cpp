@@ -1159,10 +1159,10 @@ void EESEUIBDiplomacy::UpdateBitmaps()
     this->SetNormalBitmap(EESEUIBDiplomacy::sNormalBitmaps[this->mState]);
     switch (this->mState) {
     case kButtonStateNormal:
-        this->mStringTableID = IDS_PLAYERS_CURRENTLY_ALLIES;
+        this->SetStringTableID(IDS_PLAYERS_CURRENTLY_ALLIES);
         break;
     case kButtonStateFocused:
-        this->mStringTableID = IDS_PLAYERS_CURRENTLY_ENEMIES;
+        this->SetStringTableID(IDS_PLAYERS_CURRENTLY_ENEMIES);
         break;
     }
 }

@@ -814,7 +814,10 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_CURSOR_LOCKED, theForm->mIsCursorLocked)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_INFO_BLINKING, theForm->mInfoBlinking)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_BUTTON_BLINKING, theForm->mIsButtonBlinking)
-            EE_MF_FIELD(EE_SCREENS_MF_FIELD_TOOLTIP_SHADOW, theForm->mDrawToolTipShadow)
+            case EE_SCREENS_MF_FIELD_TOOLTIP_SHADOW:
+                if (theSet)
+                    theForm->SetDrawToolTipShadow(inB != 0);
+                return (int64_t)theForm->GetDrawToolTipShadow();
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_ENTITY_GROUP, theForm->mEntityGroup)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_CURRENT_GROUP, theForm->mCurrentGroup)
             EE_MF_FIELD(EE_SCREENS_MF_FIELD_MEDIA_ID, theForm->mMediaID)

@@ -18422,3 +18422,322 @@ at the branch's start (2cac466f, rust merged) -> 19,834 (-304; git over `src` an
   `EEUIBSavedGroup` 238, `EEUICSelectUnits` 233, `EEUICChatLine` 213, the wall and gate builders 342,
   `EEUIFMGAttribute` 136, `EEUIFileComboBox` 128, `EEUICPing` 105, `EEUIBColor` 104, `EEUIFMGErrorLog` 80): mostly
   toolkit and renderer calls, so a move nets little until the toolkit's controls are Rust objects.
+
+## R6: UIForm whole in Rust; the manager's census and the plans for UIManager and UIControl (ee_ui formobj.rs; branch rust-r6-ui16, 2026-11-14)
+
+Rounds 1-9 had put the form's algorithms in Rust (the focus walk and hit test, the dirty rectangles, the open, close,
+copy and popup sequences, the mouse and keyboard passes) behind record FFIs over the C++ members; rounds 10-15 moved
+the controls whole. This round moves the form itself: one Rust object, `EeUiForm` (`formobj.rs`), holds every member
+of `UIForm` (the control and draw slots, the groups, backgrounds, hot keys by group and the hot key list, the database
+controls and events, the dirty, copy and clip rectangles, the layout, the rectangle, the mouse location, the music file
+name, the captures, the popup and its copy, the help label and poll, the seventeen events, the wheel event, the
+draw-background lock, the counts and flags) and every method of `UIForm.cpp` and the header's. The C++ class is the
+forwarders, the two constructors (which make the object), the destructor (which frees it), the database's static
+`Create` and one host function, `UIForm::HostOp`.
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| d564e18a | Census: `mDrawToolTipShadow` behind protected accessors (`EEUIFMainGame.cpp`'s field op, `User Interface Thread`) | +5 |
+| f4407ca3 | `UIForm` whole (`formobj.rs`); `form_ffi.rs`, `form_state_ffi.rs` and the form parts of `hotkey_ffi.rs`, `mouse_ffi.rs`, `background_ffi.rs` and `draw_ffi.rs` deleted | -997 |
+| b185ec83 | Census: `EEUIManager.cpp`'s one read of `mRasterizer`/`mScreen` behind `GetRasterizer()`/`GetScreen()` (`User Interface Thread`) | 0 |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 14,535 at the branch's start ->
+13,540.
+
+- **The census.** `UIForm`'s members were private but for `mDrawToolTipShadow` (protected); the friends (`UIControl`,
+  `UIManager`, `UIManagerRust`) call only methods (`SetMouseCaptured`, `SetKeyboardCaptured`, `AddDirtyRectangle`,
+  the protected virtuals). The one outside reader was the main game form's field op (`EEUIFMainGame.cpp`, the screens
+  lane's directory), now `Get`/`SetDrawToolTipShadow()`: one commit, one `case`. The header's unused members went:
+  `GetClipRectangles` (nothing called it), `GetHotKey(i, group)`/`GetHotKeyCount(group)` (nothing outside the unit),
+  the inline `RemoveControl`'s include guards (it is a forwarder), `UIDirtyRectangle` (the deque is Rust's), `mText`
+  (never set: always NULL), `mUnknown0EC`/`mUnknown19A` (never read). `GetMusicFileName` answers a `UWideString` by
+  value (its one caller copies it); `GetRectangle` and `GetMouseLocation` answer the address of the Rust object's
+  members (`UiRect` is `GERectangle`'s layout, `UiPoint` `GE2DPoint`'s; the object is boxed and never moves).
+- **The game's forms.** Twenty-odd game forms derive from `UIForm` and override `Activate`, `Deactivate`, `Open`,
+  `Close`, `CopyData`, `DrawPolygons`, `DrawTextA`, `UpdateKeyboard`, `UpdateMouse`, `RelayoutForm`,
+  `SetHelpTextPopupLocation`, `DrawBackground(rect)`; the vtable is unchanged and each base body is a forwarder. The
+  two virtuals the form calls on itself go back through the C++ object (`FormVirtHelpLocation` from `UpdateHelpText`,
+  `FormVirtDrawBackground` from `DrawPolygons`), so an override runs. The IME pass-throughs (`AddIMEResultString`,
+  `Change`/`Open`/`CloseIMECompositionString`, `UpdateTranslatedKey`) stay two-line C++ over
+  `GetKeyboardCaptured()`: their `UWideString`/`UString` arguments go straight to the control.
+- **The host.** One switch, `UIForm::HostOp`, a private static member so that it has the friendship `UIControl`,
+  `UIHotKey`, `UIEntityGroup` and `UITextLabel` give `UIForm` (the protected `TabbedTo`/`TabbedFrom`, the hot key's
+  fields, the group's `AddEntity`/`RemoveEntity`, the label's private `SetText(text, bool)`). Ops 200-237 are pure
+  (a control's type, entity type, display mode, dirtiness, draw count, index, id, tabability, check, IME; a group's
+  enabled flag and size; a background's priority, id, visibility, rectangle; a hot key's always-fire flag, key count,
+  key and modifier entities; the manager's surfaces, window and candidate window; the controls table; a label's fit; a
+  bitmap's texture size; the input keys), 240-303 act (a group's entity, the groups made and deleted, the controls'
+  setters and virtuals, the help string, the backgrounds' virtuals, the hot keys made, copied, deleted and fired, the
+  events' reference counting and `ProcessEvent`, the manager's calls, the controls table's, the lock, the input keys,
+  the form's own two virtuals, the bitmap, text and shadow draws, the clock). Round 10-15's shared ops serve the
+  controls by address (`PartRect`, `PartCopiedDrawRect`, `PartCopyData`, `PartDrawPolygons`, `PartDrawText`,
+  `PartSetLocation`, `DeletePart`), the polls and the rhombus. During the constructors the object is made before
+  `mRust` is set: `Init`'s ops need no manager and no forwarder.
+- **The inward calls.** `ee_ui_form_call(form, call, a, b, f)`, 94 calls. Calls with more arguments than `a`, `b` and
+  four floats are split or packed: the ten-argument `AddHotKey` is two staging calls for its four events and one with
+  the key and three modifiers 16 bits each (codes at or past 0xffff pack as 0xffff, "no key" as `kKeyNone` 0x7fff
+  already was) and the group and always-fire flag; the tiled `DrawBackground` stages its three rectangles;
+  `DrawBackground(bitmap, rect, location)` passes the location's float bits in `b`; `SetLayout` the four types packed
+  in `a`.
+- **Threads.** The form is reached from the UI thread (the mouse and keyboard passes, every setter) and the graphics
+  thread (`CopyData`, `DrawPolygons`, `DrawTextA`), unguarded but for the draw-background lock, as the C++ members
+  were. The state is one `UnsafeCell` reached only inside closures that make no call out (`EeUiForm::with`), not a
+  `RefCell`: a `RefCell`'s borrow flag raced from two threads can be left counted and panic a later borrow, which the
+  earlier controls risk only on rare cross-thread meetings and the form would meet every frame.
+- **What went.** `form_ffi.rs` (`ee_ui_form_checked_radio_button`, `_tab`, `_shift_tab`, `_hit` and their 12
+  `ee_uicpp_form_*` questions), `form_state_ffi.rs` (the 40 `ee_uicpp_form_life_*` host calls and the 11 exports of
+  the open, close, copy, popup and dirty-rectangle sequences), the form parts of `hotkey_ffi.rs` (the keyboard pass's
+  host and export), `mouse_ffi.rs` (the mouse pass's), `background_ffi.rs` (`ee_ui_form_draw_tiles`,
+  `ee_uicpp_form_tile_draw`) and `draw_ffi.rs` (`ee_ui_form_draw_clipped_text`, `EeUiClipInfo`); in C++ the
+  `UIFormRust` view, `UIHotKeySorter`, `Init`, the constants. The algorithms (`form.rs`, `form_state.rs`, `mouse.rs`,
+  `hotkey.rs`, `draw.rs`, `background.rs`, `layout.rs`) keep their goldens; the object is their host.
+- **Behaviour.** No change on any path the original defined. Differences, none visible to callers:
+  - the hot keys are ordered by a stable sort over `UIHotKeySorter`'s order (their ranks read first); the C++ called
+    `std::sort`, whose order among equal hot keys is the library's (the MSVC STL's insertion sort for 32 or fewer,
+    which is stable; libc++ differs; the original's VC6 differed again). Only a group of more than 32 hot keys with
+    equal rank can order differently, and only if two of them fire on the same keys;
+  - the tool-tip shadow's `GERhombus` (a local of the original `DrawPolygons`) is made and deleted around its draw;
+    the temporary hot key of the ten-argument `AddHotKey` (a stack object) is a heap object deleted at the end;
+  - reads past the arrays (`mControls[mTabStop]` of a form with no controls, a control index past the slots, a group
+    index past the groups) read NULL; the original read past the allocation.
+- **The golden** (`build/ui16`: `form_driver.cpp` with `form_driver_tail.inc` over `world_form.h`). The world: the
+  controls (type, entity type, display mode, dirtiness, draw count, index, id, tabability, check, IME, rectangles; new
+  ones from the controls table), groups (enabled, entity lists that `AddEntity`/`RemoveEntity` change), backgrounds,
+  hot keys (copies keep the source's rank and entities; the temporary one's modifiers raise its key count), events,
+  eight controls-table rows, polls, the lock, bitmaps, rhombi, the mouse and key entities, texts, the manager (surfaces,
+  window, candidate window, wheel, clock). The world calls the form back (`do` lines): an event's `ProcessEvent` adds a
+  dirty rectangle (12%) or clears the popup (5%); a control's `ReleaseCapturedMouse`/`Keyboard` clears the capture as
+  `UIControl`'s do; `TabbedTo` reads the tab stop; a trigger reads the mouse-over control; `UpdateMouse` moves the
+  mouse (3%); the form's own two virtuals run the base bodies. The forms are made both ways (the counts, or a random
+  database record with its music name, layout, help delay, tool tips, tabbing), filled with controls, a help label,
+  backgrounds, database rows, events and hot keys, then 40 random calls over all 94. `orig` is UIForm.cpp/UIForm.h at
+  the census commit (d564e18a) transcribed over the world's ops (its members as the original's containers), calling
+  that commit's record FFI (`form_ffi`, `form_state_ffi`, `hotkey_ffi`, `mouse_ffi`, `background_ffi`, `draw_ffi`)
+  in its library (`lib_orig.lib`, `orig_include`); `cur` is the Rust object. 20,000 sequences: 9,331,573 trace lines,
+  orig = cur byte for byte (sha256 0ebda00f...).
+
+  | Mutation | Sequences failing of 20,000 |
+  |---|---|
+  | an event setter storing the new event before releasing the old | 0 (equivalent: nothing reads the slot while the old event is uninitialized and released) |
+  | a background inserted after those of its draw priority | 10,505 |
+  | the popup's draw count not decremented by `DrawTextA` | 17,350 |
+  | the captured control not kept under the mouse | 18,929 |
+  | mouse-over fired before mouse-out | 7,672 |
+  | the bitmap's rectangle not widened by a pixel | 7,075 |
+  | the hot keys sorted the other way | 19,951 |
+  | `RemoveHotKey` matching the key alone | 19,688 |
+  | the groups deleted first to last | 13,018 |
+  | the help text label shown without the poll stopped | 19,653 |
+  | the tool-tip shadow drawn for any popup | 19,738 |
+  | `AddControl` overwriting a filled slot | 19,957 |
+
+  As in round 14, the world's generator runs on across sequences, so a mutation that adds or drops a call out with a
+  random answer desynchronises later sequences: counts near 20,000 say only that the mutation is caught.
+
+  The first 25 sequences are `golden_formobj.txt` (11,656 lines, 3,761 of them checked), replayed by cargo
+  (`formobj_tests.rs`), with a changed group handle and a changed control index that must fail.
+- **What the driver avoids** (each hangs the original, so neither side can be traced through it): a form with no
+  controls (`Tab`/`ShiftTab` start at `mControls[0]`, past the array, and walk for ever) and two radio buttons side by
+  side (a tab stop inside a radio run that no tabbable control ends: the walk skips the run, never meets the stop again
+  and loops; the driver's world makes radio buttons only at even slots). These are the original's hangs and were not
+  fixed; no game form is known to reach them (the editor's radio runs end with tabbable controls or have tabbing off).
+- **NULL-receiver audit** (WON rounds 30-31). Every original method of the form, the header's inline getters included,
+  read a member of `this` first (`mControls`, `mHotKeys`, `mManager`, the event members, `mKeyboardCaptured`) or
+  called through the vtable, so a NULL receiver crashed the original as it crashes the forwarder's `mRust` read: no
+  early return needed keeping. `GetNumLockOff` (static), `UpdateInformation` (empty) and `GetIsKeyboardCaptured`/
+  `GetIsMouseCaptured` (over the getters) stay inline. The static `Create` is unchanged but for
+  `GetEntityGroup(0)->Enable()`.
+- **Lessons.**
+  - A `pub const` in an `ee_ui` module is exported by cbindgen (`EV_OPEN` and its kin reached `rust/ee_ui.h` and
+    failed the header check); the form's event indices are `pub(crate)`.
+  - The setters' index order matters where it meets a C++ numbering: the event indices first followed the setters'
+    order (close, open), the database's form-event types are open 0, close 1; the golden's first comparison caught it
+    (an open event processed where the original had none).
+  - `python -c` with `open().read()` on this machine decodes as Windows-1252: a driver string with an accent came back
+    double-encoded. Harmless in a driver (both sides read the same bytes) but the cargo replay must use the same bytes.
+  - A world whose answers lead the original into one of its own loops is a driver bug: cap every loop (the runaway
+    guard counts pure ops too) and, when both sides loop at the same call, change the world rather than the object.
+- **What runs it.** Every screen: EE-SIM's games make no form (the oracle, seeds 2-3, identical), the scenario editor
+  gate (`sim_editor.py`, 1,820 lines unchanged) makes the editor's forms and fills, tabs and reads them through the
+  shim. **Only the tour shows:** every menu form's open, close, copy and draw (the dirty rectangles, the backgrounds,
+  the popup and the tool tip with its shadow), the mouse over controls (the help text's delay and placement), the
+  hot keys, Tab, the music change on activation; the orders game shows the main game form (its hot keys, the mouse
+  pass every frame on two threads).
+- **Gates.** After the form commit: `build.py -j 3 --sim` 0/0 (EE-AOC and EE-SIM), the oracle seeds 2-3 identical, `sim_editor.py` PASS (1,820 lines), the Rust gate (its first run failed only the header check: the form's `pub const` event indices had reached `rust/ee_ui.h`; made `pub(crate)`, the header regenerated, the gate rerun: PASS, in the commit), the test-profile build 0/0, the tour (`fixture_game.py --exercise tour --play-seconds 60 --data <main tree>` under the harness lock): `RESULT PASS tour`. The manager's census commit (one line) was built with the merge. On the result merged with `rust` (4242a90a, a clean merge; `rust_build.py header` current; `rust_includes.py` added `rust/ee_ui.h` to `UIForm.h`, committed as ddc64589): build `--sim` 0/0, the Rust gate PASS, the oracle seeds 2-7 identical, the editor gate PASS (2,686 lines: the merge brought the triggers lane's new editor steps, b68b6df5; unchanged by this lane), the test-profile build 0/0, the tour `RESULT PASS tour`, the orders game (`--exercise random-game --play-seconds 60 --orders`) `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped by the driver: no button, no unit) and `RESULT PASS random-game`. EE-SIM makes no form, so the sim_capture profiles were not run.
+- **UIManager: measured, not moved.** `UIManager.cpp` is 1,129 lines (85 members and host functions), `UIManager.h`
+  284; its form stack, dirty and clip rectangles, event queue dispatch and music are Rust plans already (`manager.rs`,
+  `manager_media.rs`, round 4 and 9) behind `UIManagerRust`. Outside readers of its protected members: only
+  `EEUIManager.cpp`'s `mRasterizer`/`mScreen` (one line, the census commit above); the game's `gUIManager->m*` reads
+  are all `EEUIManager`'s own members (`mMainGameForm`, `mScenarioEditorForm`, ...). The whole move needs: the five
+  form vectors and the event deque as Rust `Vec`s of handles (the record FFI's `ee_uicpp_manager_*` calls become the
+  object's own), the 20 bitmaps and the UI texture by address (the constructor's 150 lines: the texture load and the
+  bitmaps' texture coordinates, a pure table), the two critical sections, the music fields over the sound manager
+  ops, the IME candidate window as a part, the font list, the event callback vectors (function pointers: kept as
+  `usize`s the host calls), and `EEUIManager`'s virtual overrides (`CreateUserDefinedControl`, `UpdateUI`, ...)
+  reached through the C++ object as the form's are. Its golden needs a world of forms (handles answering
+  `Open`/`Close`/`CopyData`/...): the form golden's world is most of it.
+- **UIControl: the plan.** `UIControl.cpp` 686 lines, `UIControl.h` 279; 19 classes derive from it directly (11 in the
+  toolkit, 8 in the game: `EEUICChatLine`, `EEUICCommandUnits`, `EEUICPing`, `EEUICPortrait`, `EEUICSelectUnits`,
+  `EEUICUnitIconBar`, `EEUIFSEPaint`, `EEUIMiniMap`) plus `UIListBox<T>`, and every whole object of rounds 10-15
+  reaches the base through `UIObjHost::Base` (66 op cases). What blocks it: (1) the members are protected and read
+  directly by the game's direct subclasses (by `this->`: `mRectangle` in 5 files, `mForm` 8, `mIndex` 5, `mId` 5,
+  `mCopiedDrawRectangle` 3, `mDisplayMode` 2, `mDrawCount` 2, `mStringTableID` 1, `mAlwaysDirty` 1; some of these
+  hits are the classes' own members of the same names: a census first, per file, in the screens lane's directory as
+  small mechanical commits); (2) `mBgRhombus`/`mCopiedBgRhombus` are `GERhombus` members the subclasses' draws use
+  (they become parts by address, as the status bar's); (3) `GetRectangle()`/`GetCopiedDrawRectangle()` answer
+  references, used everywhere (they answer the Rust object's member's address, as the form's do); (4) the base ops
+  of every whole object (`BaseCopyData`, `BaseDrawPolygons`, `Rect`, `SetDirty`, ...) become calls between Rust
+  objects: the plan is one `EeUiControl` record inside each Rust object (the base's state) with the base's methods as
+  Rust functions over it, the C++ `UIControl` holding only `mRust` for the classes that are not whole objects yet (the
+  game's direct subclasses and `UIBitmap`, `UIGraph`, `UIMovie`), so `UIObjHost::Base` shrinks op by op; (5) the 24
+  static key entities and the two border colours stay C++ statics (the input lane's).
+
+## R6: UIManager whole in Rust; UIControl's census (ee_ui managerobj.rs; branch rust-r6-ui17, 2026-11-14)
+
+Rounds 4 and 9 had put the manager's algorithms in Rust (the form stack, the dirty and clip rectangles, the event
+queue's dispatch, the music bookkeeping, the IME calls) behind record FFIs over its C++ members (`UIManagerRust`, 37
+`ee_uicpp_manager_*` host calls). This round moves the manager itself: one Rust object, `EeUiManager`
+(`managerobj.rs`), holds every member of `UIManager` (the form and control event factories, the stack, the forms, the
+visible and copied forms, the queued events, the fonts, the music's name, id, instance, volume and flags, the
+rasterizer, sound manager and string table, the UI texture and the 21 control bitmaps cut from it, the IME candidate
+window and its two flags, the two locks, the surface count, screen and bit depth, the forced update) and every method
+of `UIManager.cpp` and the header's but three: the database's `LoadDatabase`, `CreateBackgrounds` (it makes the C++
+backgrounds by type, `CreateUserDefinedBackground` included) and `RemoveDatabase` (the tables' statics), which stay
+C++ over the forwarders. The C++ class is the forwarders, the constructor (which makes the object and fetches the
+mouse buttons' statics), the destructor (which frees it, then deletes the database), those three and one host
+function, `UIManager::HostOp`.
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| dcace41f | `UIManager` whole (`managerobj.rs`); `manager_ffi.rs`, `manager_media_ffi.rs`, `UIManagerRust` and its 37 host calls deleted | -412 |
+| b33f99a6 | Census: UIControl's members read by 13 game files through the accessors (`User Interface Thread`, `Scenario Editor`) | +2 |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 13,483 at the branch's start ->
+13,074. The round's net C++ is -409, short of the 1,500 the rules ask for: the manager's algorithms were Rust
+already (rounds 4 and 9), so its move deleted the record FFI's host more than it moved code, and the forwarders and
+the op switch take back half of what went. `UIControl`'s move, the bigger half, could only be prepared (the census).
+
+- **The header.** `UIManager.h` keeps every exported method and the vtable (13 slots; `EEUIManager` overrides
+  `CreateUserDefinedBackground`, `CreateUserDefinedControl`, `CreateForm`, `UpdateKeyboard`, `UpdateMouse`). The
+  former inline getters (`GetCurrentForm`, `GetCheckOn`, ..., `GetFont`, `IsFormOnStack`, `LockUIForCopyData`,
+  `AddEventToTrigger`, `AddForm`, `RegisterFormEventCallback`, ...) are out-of-line forwarders; the 21 bitmap getters
+  are one macro over `EeUiManagerCall::Bitmap` with the header's member order as the index. Gone: the members,
+  `UIEventTrigger` (the queue is a `VecDeque<Trigger>`), the declared-but-Rust `AddClippedForms`,
+  `AddToVisibleForms`, `RemoveClippedForms`, `CreateBitmap`, `LoadTexture` (a static helper of the host now), the
+  `<vector>`/`<deque>`/`<algorithm>` includes, `UIForm`'s friendship of `UIManagerRust`. The mouse buttons' statics
+  (`sLMouseButton`, ... `sMouseLeftHanded`) stay C++: the input lane's, read inline by the game.
+- **The virtuals the manager calls on itself.** `UpdateUI` calls the virtual `UpdateKeyboard` and `UpdateMouse`
+  (`EEUIManager` overrides both: the movie skip, F9) through the C++ object (`MgrVirtUpdateKeyboard`,
+  `MgrVirtUpdateMouse`); the base bodies are `EeUiManagerCall::UpdateKeyboard`/`UpdateMouse`, which `EEUIManager`'s
+  overrides reach through `UIManager::UpdateKeyboard()` as before.
+- **The host.** `UIManager::HostOp`, a private static member so that it has the friendship `UIForm` gives `UIManager`
+  (the protected `Open`, `Close`, `CopyData`, `DrawPolygons`, `DrawTextA`, `AddDirtyRectangle`). Ops 400-411 are pure
+  (a form's rectangle, id, GDI text, keyboard and mouse captures; a control's IME; the input's update flags; the
+  window's origin and size; the texture's size; the blending); 420-447 act (the locks, the texture and the bitmaps, a
+  form's twelve calls and five rectangle calls, its IME calls and translated key, an event's `ProcessEvent`, the
+  factories, the candidate window, the blending, the hot keys' poll and deletion, the two virtuals, the sound
+  manager and the music instance). The shared ops `PartRect`, `BitmapScale`, `BitmapSetScale`, `BitmapRelease`,
+  `FormEventCall`, `FormLockEnter`/`Leave` serve the manager too. `ChangeIMECompositionString`'s three arguments
+  and `ChangeIMECandidateWindow`'s list travel by address and come back to the host untouched.
+- **Inward calls.** `ee_ui_manager_call(manager, call, a, b, c, f)`, 60 calls (`Init` the constructor's work) (`EeUiManagerCall`; `c` for
+  `AddEventToTrigger`'s entity and the candidate list's count). `AddForm` is `AppendForm`: winspool.h maps the name
+  `AddForm` to `AddFormA`, and rust/ee_ui.h is included before UIManager.h's `#undef`, so the enum's member and the
+  forwarder's use were renamed differently.
+- **Threads.** The UI thread (the updates, the stack, the music, the events) and the graphics thread (`CopyData`
+  under `LockUIForCopyData`, `DrawPolygons`/`DrawTextA` under the draw lock) reach the manager as they reached the
+  C++ members, under the original's two locks (C++ critical sections held by address). The state is one
+  `UnsafeCell` reached only inside closures that make no call out (`formobj.rs`' rule); `GetCurrentForm`, read
+  unlocked from several threads, reads the stack's last slot as the inline getter read `mFormStack.back()`.
+- **Behaviour.** No change on any path the original defined. Differences, none visible to callers:
+  - the constructor's `CreateBitmap` calls are one table (`CUTS`: the pixel square of each of the 21 bitmaps, in
+    the constructor's order; the golden's reference transcribes the 84 coordinates from the source and checks that
+    each bitmap's four corners are its square's);
+  - reads past the vectors (`GetFont` past the fonts, `GetStackedForm` past the stack, the back of an empty stack)
+    answer NULL; the original read past the allocation;
+  - `Pop` of a stack whose visible list is empty (a form left on the stack after its cover moved off it: see the
+    golden's notes) pops nothing from the visible list; the original's `pop_back` on an empty vector was undefined
+    (it read stale slots afterwards);
+  - the music's lower-cased name is `ee_plat_core::utf8::fold` over the bytes, `PlatMbsLwr`'s own mapping (it was
+    a C++ host call to `PlatMbsLwr`).
+- **The golden** (`build/ui17`: `mgr_driver.cpp` over `world.h`, round 16's world with the manager's pure ops). The
+  world: forms (rectangle, a quarter full screen; id; GDI text; keyboard and mouse captures), controls (IME,
+  rectangle), events, entities, event factories (40% make an event), the texture (64-512 pixels a side) and bitmaps
+  (scales), locks, candidate windows, sound ids (10% fail to load) and instances (5% none), the window (10% none),
+  the input flags and the blending, changed at random between calls. The world calls the manager back (`do`
+  lines): an event's `ProcessEvent` pushes (15%), pops (8%), queues another event (10%), swaps (5%) or runs a form's
+  events (3%), three deep at most; a form's `Open` adds a dirty rectangle (5%); the two virtuals run the base
+  bodies. Each sequence makes the manager (10% without a sound manager), adds 2-8 forms, factories, fonts and
+  (80%) the candidate window, then 40 random calls over all 59, then deletes it. `orig` is UIManager.cpp/.h at the
+  round's base (41b42a5e) transcribed over the world's ops (its members as the original's containers), calling that
+  commit's record FFI (`manager_ffi`, `manager_media_ffi`) in its library (`lib_orig.lib`); `cur` is the Rust
+  object. 20,000 sequences (seed 7): 10,191,277 trace lines, orig = cur byte for byte (sha256 3c004ec4...); seed 1,
+  2,000 sequences, equal too.
+
+  | Mutation | Sequences failing of 2,000 |
+  |---|---|
+  | `DrawPolygons` draws the text of the GDI forms | 1,291 |
+  | `UpdateKeyboard` ignores the forced update | 1,301 |
+  | `UpdateUI` keeps the forced update | 1,910 |
+  | two bitmaps' cuts swapped (`CheckOn`, `CheckDownOn`) | 2,000 |
+  | the bitmaps released in cut order | 2,000 |
+  | the factories asked past the first event | 1,998 |
+  | `DrawTextA` draws the candidate window's polygons | 2 |
+  | the scaled bitmap's scale without the 0.05 | 979 |
+  | `AddEventToTrigger` without the reference | 966 |
+  | `UpdateTranslatedKey` takes a repeat of 16 | 126 |
+  | the locks taken draw lock first | 1,929 |
+  | `CopyData` lists the form before its copy | 1,325 |
+  | the music's lower-casing dropped | 434 |
+  | the destructor deletes the candidate window before the hot keys | 2,000 |
+
+  The first 25 sequences are `golden_managerobj.txt` (12,521 lines), replayed by cargo (`managerobj_tests.rs`), with
+  a changed texture size and a changed lock handle that must fail.
+- **What the driver avoids.** `RelayoutForm` keeps the form's rectangle in the world: a moved rectangle can uncover
+  a form its cover had closed (`RemoveClippedForms` takes covered forms off the visible list; `AddClippedForms`
+  brings back only forms the popped one still covers), and a later `Pop` then pops an empty visible list, undefined in
+  the original (its first run here diverged that way: the reference read stale slots, the Rust object did nothing).
+  No game form is known to reach it: `RelayoutAllForms` runs on a window resize, and the game's covering forms are
+  full screen.
+- **NULL-receiver audit** (WON rounds 30-31). Every original method, the header's inline getters included, read a
+  member of `this` first (`mFormStack`, `mCriticalSection`, `mRasterizer`, the bitmaps) or called through the vtable,
+  so a NULL receiver crashed the original as it crashes the forwarder's `mRust` read: no early return needed keeping.
+  The statics (`GetMouseWheelScrollAmount`, `SetMouseLeftHanded`, the mouse buttons' getters) take no receiver and
+  are unchanged.
+- **Lessons.**
+  - The constructor's work cannot run inside `ee_ui_manager_new`: its host ops (the texture's load, a bitmap's
+    texture) ask the manager for its rasterizer and screen through the forwarders, and `mRust` is not set until the
+    function returns. The first build crashed EE-SIM at start-up (`EEUIManager`'s constructor, a NULL `mRust` read in
+    `EeUiManager::call`); the golden could not see it (its host answers from the world, never through the C++
+    object). `ee_ui_manager_new` makes the members and the C++ constructor then calls `EeUiManagerCall::Init`. The
+    form (round 16) avoided this by needing no manager in `Init`; a whole object whose constructor calls out through
+    its own forwarders needs the split.
+  - A Windows macro can rename one side of a cbindgen enum: rust/ee_ui.h is included after windows.h and before
+    UIManager.h's `#undef AddForm`, so the generated `EeUiManagerCall::AddForm` became `AddFormA` while the
+    forwarder's use (after the undef) stayed `AddForm`. Names that winuser.h/winspool.h map (`AddForm`, `GetForm`,
+    `DrawText`, ...) are avoided in exported enums (`DrawText` works only because both sides see the macro).
+  - Constants the host side owns come from the C++ in the golden's reference: the first `managerobj.rs` had
+    `kBlendSrcAlpha`/`kBlendInvSrcAlpha` as 5/6 (they are 4/5, GERenderState.h); the reference's use of the C++
+    enum would have caught it, the compile of the host found it first.
+  - A world that changes a collaborator's geometry under the class can lead the original into undefined behaviour
+    that the trace shows only much later; when orig and cur diverge after a long equal stretch, look for a container
+    edge (an empty `pop_back`, an index past the end) before suspecting the move.
+- **UIControl's census** (the plan of round 16, step 2). With `UIControl`'s members made private in a scratch
+  compile (`clang_build.py --only "Empire Earth"`), 13 game files failed, 71 lines: `mForm` 51, `mId` 9,
+  `mCopiedDrawRectangle` 4, `mStringTableID` 2, `mDisplayMode` 2, `mDrawCount` 2, `mAlwaysDirty` 1 (EEUIFSEMap 23,
+  EEUIFSETerrain 12, EESEBSelect 9, EESEUnit 8, EESEUITechListBox 5, EEUIFMGStatusBar 5, EESERBUnitTypes 2,
+  EEUIFError 2, EEUICChatLine, EEUICCommandUnits, EEUICPortrait, EEUICSelectUnits, EEUIMiniMap 1 each). The census
+  commit switches each to the public accessor (`GetForm()`, `GetId()`, `GetCopiedDrawRectangle()`,
+  `SetStringTableID`, `SetAlwaysDirty`), a new protected `StoreDisplayMode` for the two raw hides (they skip
+  `SetDisplayMode`'s dirtying on purpose), and `UIControl::DrawTextA()` for the two `mDrawCount--` (the base body
+  is exactly that). After it the scratch compile with the members private is clean for the game; the toolkit's own
+  subclasses (`UIBitmap`, `UIGraph`, `UIMovie`, the whole objects' C++ shims) still read them and are this lane's.
+- **What runs it.** Every screen: EE-SIM's games make no manager (the oracle, seeds 2-3, identical; the editor gate
+  makes one: `sim_editor.py`). **Only the tour shows:** the constructor's texture and bitmaps (check boxes, radio
+  buttons, scroll arrows, the slider's drag bar, the sort arrows), the stack (every menu's push and pop, covered
+  forms closed and shown again), the dirty and clip rectangles, the copy and draws on the graphics thread, the music
+  on each screen, the event queue (every button's event); the orders game shows the main game form's updates.
+- **Gates.** After the manager commit (with the `Init` fix): `build.py -j 3 --sim` 0/0 (EE-AOC and EE-SIM), the driver over the new FFI equal to the reference (seed 1, 2,000 sequences), the oracle seeds 2-3 identical, `sim_editor.py` PASS (2,686 lines), the Rust gate PASS (its first run failed rustfmt only; the first oracle run found EE-SIM's start-up crash, above). After the census commit: build `--sim` 0/0, the oracle seeds 2-3 identical, the editor gate PASS (2,686 lines), the Rust gate PASS, and the scratch compile with `UIControl`'s members private clean for the game (only `EESEUnit.cpp`'s read of the static `sEnterKey`, which stays). `rust` had not moved since the round's start merge (f2813578): `rust_build.py header` current, `rust_includes.py` nothing to narrow. At the end: the oracle seeds 2-7 identical, the test-profile build 0/0, the tour (`fixture_game.py --exercise tour --play-seconds 60 --data <main tree>` under the harness lock) `RESULT PASS tour` (no GX errors), the orders game (`--exercise random-game --play-seconds 60 --orders`) `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped by the driver: no button, no unit) and `RESULT PASS random-game`. EE-SIM makes no form, so the sim_capture profiles were not run.
+- **What is left.** `UIControl` toward a base record: its members can be made private now (the game's reads go
+  through accessors); then the record inside each Rust object and `UIObjHost::Base` shrinking op by op, as planned in
+  round 16. `UIForm::Create` and the manager's `LoadDatabase`/`CreateBackgrounds` read the database and make C++
+  objects by type: they move with the controls table's factories.
