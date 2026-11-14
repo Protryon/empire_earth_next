@@ -382,6 +382,18 @@ int32_t ee_fs_archive_read_member(const uint8_t *view,
                                   int32_t length,
                                   EeFsMemFile **out_file);
 
+/// Registers a prototype under its tag -> whether it was taken (false: the tag was already registered, the caller
+/// deletes the prototype).
+bool ee_fs_persistent_register(int32_t tag,
+                               void *prototype);
+
+/// The prototype registered under a tag, or NULL.
+void *ee_fs_persistent_find(int32_t tag);
+
+/// Takes one prototype out of the registry for the caller to delete (the lowest tag first), NULL when empty: the
+/// shutdown loops until NULL.
+void *ee_fs_persistent_take();
+
 }  // extern "C"
 
 #endif  // EE_RUST_EE_FS_H

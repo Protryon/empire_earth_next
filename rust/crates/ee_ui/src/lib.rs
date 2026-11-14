@@ -10,6 +10,7 @@ pub mod background_table;
 pub mod button;
 pub mod button_variants;
 pub mod buttonobj;
+pub mod checkobj;
 pub mod combo;
 pub mod controls_table;
 pub mod draw;
@@ -41,6 +42,7 @@ pub mod sliderobj;
 pub mod status;
 pub mod statusobj;
 pub mod text;
+pub mod variantobj;
 pub mod wrap;
 
 // imports the C++ backgrounds' draws and moves (UI*Background.cpp, UIForm.cpp), absent from a test binary
@@ -50,13 +52,6 @@ mod background_ffi;
 // absent from a test binary
 #[cfg(not(test))]
 mod background_table_ffi;
-// imports the C++ button subclasses' host calls (UICheckBox.cpp, UIRadioButton.cpp, UIScrollButton.cpp), absent from a
-// test binary
-#[cfg(not(test))]
-mod button_ffi;
-// imports the C++ tri-state check box's host calls (UITriStateCheckBox.cpp), absent from a test binary
-#[cfg(not(test))]
-mod button_variants_ffi;
 // imports the C++ combo box's host calls (UIComboBox.cpp), absent from a test binary
 #[cfg(not(test))]
 mod combo_ffi;

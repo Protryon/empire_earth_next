@@ -7,7 +7,6 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
-#include "lle/NERecordPlayback.h"
 #include "lle/NESynchronousServer.h"
 #include "lle/NEServer.h"
 #include "rust/ee_net.h"
@@ -119,10 +118,8 @@ NESynchronousServer::NESynchronousServer(unsigned char inMaxPlayers, unsigned lo
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mXferThreadStartedEvent) == keseOK, 272);
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mXferThreadExitEvent) == keseOK, 273);
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mXferThreadFinishedEvent) == keseOK, 274);
-    this->mRecordPlayback = new NERecordPlayback(NESynchronousServer::RecordPlaybackCallback, this);
-
-    ESVERIFY_AT(this->mRecordPlayback != NULL, 278);
-    this->mRecordPlayback->PassMode();
+    this->mRecordPlayback = ee_net_rp_new(this, NESynchronousServer::QueueHost);
+    ee_net_rp_pass_mode(this->mRecordPlayback);
 
     theResult = TSScheduler::CreateCriticalSection(this->mChecksumResponsesLock);
     ESVERIFY_AT(theResult == keseOK, 283);
@@ -149,7 +146,7 @@ NECDIServer::NECDIServer()
 NESynchronousServer::~NESynchronousServer()
 {
     if (this->mGameWasPublished == true) {
-        delete this->mRecordPlayback;
+        ee_net_rp_free(this->mRecordPlayback);
         TSScheduler::DestroyEvent(this->mChangeSendIntervalEvent);
         TSScheduler::DestroyEvent(this->mMainThreadStartedEvent);
         TSScheduler::DestroyEvent(this->mMainThreadExitEvent);
@@ -515,7 +512,7 @@ void NESynchronousServer::ProcessCommunicationsTickResponse(NEMCommunicationsTic
     for (unsigned long i = 0; i < inMessage->GetNumberOfPlayerInputs(); i++)
         if (inMessage->GetPlayerInput(i, theInput) == kErrorOK) {
             theInput->Reference();
-            this->mRecordPlayback->Process(theInput);
+            ee_net_rp_process(this->mRecordPlayback, theInput);
         }
     ee_net_mm_log_response_time(this->mMessageManager, inMessage->GetOriginatingSlot(), inMessage->GetLastCommunicationsTickProcessed(),
                                      inMessage->GetAveragePhysicsTickTime());
@@ -532,7 +529,7 @@ long NESynchronousServer::ProcessLocalUserInput(NEMessage* inMessage, unsigned c
         inMessage->SetOriginatingSlot(kSlotServer);
         inMessage->SetForSpecificSlot(inPlayer);
         this->PrepareLocalInput(inMessage);
-        this->mRecordPlayback->Process(inMessage);
+        ee_net_rp_process(this->mRecordPlayback, inMessage);
     } else
         inMessage->Dereference();
     return kErrorOK;
@@ -569,7 +566,7 @@ void NESynchronousServer::ProcessPendingPlayerInputs()
     NEMessage* theMessage = NEMessage::ConvertMemoryToMessage(theBuffer);
     if (theMessage != NULL) {
         theMessage->SetOriginatingSlot((unsigned char)theIndex);
-        this->mRecordPlayback->Process(theMessage);
+        ee_net_rp_process(this->mRecordPlayback, theMessage);
     }
 }
 
@@ -653,6 +650,21 @@ void NESynchronousServer::RecordPlaybackCallback(NEMessage* inMessage, void* inT
         theServer->ProcessLocalUserInput2(inMessage);
     else
         theServer->ProcessPendingPlayerInputs2(inMessage);
+}
+
+// The recorder's mode (ee_net recplay.rs; a server that was not published has none: passing)
+unsigned char NESynchronousServer::GetRecordPlaybackMode() const
+{
+    return ee_net_rp_mode(this->mRecordPlayback);
+}
+
+// The recorder's calls out: its callback is this server's, the rest common
+ptrdiff_t NESynchronousServer::QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d)
+{
+    if (inOp != EeNetQOp::Deliver)
+        return NESynchronousCommunications::QueueHostCommon(inOp, a, b, c, d);
+    NESynchronousServer::RecordPlaybackCallback(reinterpret_cast<NEMessage*>(b), inServer);
+    return 0;
 }
 
 // FUNCTION: LLE 0x100488df

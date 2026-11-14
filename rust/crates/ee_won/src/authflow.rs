@@ -414,7 +414,7 @@ impl Drop for EeWonAuthFlow {
 
 // ---- the C ABI (AuthContext.cpp; `f` is from `ee_won_auth_flow_new`)
 
-fn addr_key(a: *const EeWonIpAddr) -> [u8; 6] {
+pub(crate) fn addr_key(a: *const EeWonIpAddr) -> [u8; 6] {
     // SAFETY: a live IPAddr value (contract)
     unsafe { &*a }.addr().six_bytes()
 }

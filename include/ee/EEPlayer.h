@@ -12,6 +12,7 @@
 #include "lle/GEColor.h"
 #include "ee/EECivilization.h"          // held by value (+0x468)
 #include "ee/EEResourceType.h"
+#include "rust/ee_units.h"             // EeUnitsPlayerSaved (EEPlayer's saved numbers)
 
 class EEPlayer;
 void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount);   // ee/EEGameLog.h
@@ -745,7 +746,10 @@ public:
     bool mObserverMode;                     // +0x467 (chat: everybody / observer; provisional name)
 };
 
-class EEPlayer : public RTSPlayer {
+// port (R5b.4): the saved numbers (mScenarioVariables, mEnemies, mTributes, mResourceCaps, mPopLimit, ... the 24
+// fields EEPlayer::Load and Save read and write as plain values) are the Rust record EeUnitsPlayerSaved
+// (ee_units player_save.rs) this class derives from, with their C++ names and types; the offsets below omit them
+class EEPlayer : public RTSPlayer, public EeUnitsPlayerSaved {
 public:
     // out of line in EEPlayer.cpp (EEHumanPlayer's ctors call them; its ??_G calls the dtor)
     EEPlayer();                             // 0x162048
@@ -1104,61 +1108,32 @@ public:
     EETechnologyTable* mTechnologies;       // +0x9cc (provisional name; conscription 0xafe3b; Reset: new 0x554 bytes)
     RTSUnit* mViewedUnit;                   // +0x9d0 (Reset dereferences it)
     RTSUnit* mSelectedViewedUnit;           // +0x9d4 (a referenced unit: SetSelectedViewedUnit swaps it)
-    unsigned long mChatType;                // +0x9d8 0..3 (the chat form's radio buttons 3, 2, 4, 5; saved)
-    unsigned long mEnemies[17];             // +0x9dc non-zero: at war with that player (calamity targets; unsigned: Save writes it with Write(const unsigned long&))
-    unsigned long mCombatState;             // +0xa20 (saved)
     unsigned long mHackUnitClass;           // +0xa24 (kNoUnitClass: none (the original: 0x367); a gUnitClassTable index, compared unsigned: EEMLoadUnitData)
-    unsigned long mGameResult;              // +0xa28 (saved)
     float mConversionFactor;                // +0xa2c (= 1)
     float mTributeFee;                      // +0xa30 (the tribute fee: the diplomacy form loads it with fld)
-    float mHighGroundBonus;                 // +0xa34 (saved)
-    float mHealTimer;                       // +0xa38 (saved)
-    unsigned long mScenarioVariables[10];   // +0xa3c (zeroed together; saved)
     long mMaxStartingCitizens;              // +0xa64
     long mDamageFrom[17];                   // +0xa68 (a loop of 17 with the bytes at +0xb30)
     long mNumAttacks;                       // +0xaac
-    unsigned long mTributes[10];            // +0xab0 (zeroed together; unsigned: Save)
     long mLastAcknowledgementTime;          // +0xad8
     long mLastAcknowledgedGroup;            // +0xadc
     long GetHeroLimit() const { return this->mHeroLimit; }
     long mHeroLimit;                        // +0xae0
     long GetMiningLimit() const { return this->mMiningLimit; }  // inline (EEUGBuildRepair::GatherNearBuilding 0x61ed5e: loaded into a temp before the GetResourceUsers call)
     long mMiningLimit;                      // +0xae4
-    unsigned long mFreeUnitCounter;         // +0xae8 (saved)
-    unsigned long mFreeUnitInterval;        // +0xaec (saved)
     long mLAF0;                             // +0xaf0
-    // +0xaf4: indexed by a resource (EEMAddRemoveResources 0xbb28c, 0x12bbf6, 0x702c4); Reset zeroes
-    // [2..6] with five stosd. Provisional name and count
-    long mResourceCaps[7];
-    long mPopLimit;                         // +0xb10 (saved)
-    long mPopulationCount;                  // +0xb14 (saved)
-    long mEndOfGameCount;                   // +0xb18 (saved)
-    long mNumCapitols;                      // +0xb1c (saved)
     long mShareBonus;                       // +0xb20
     long mPopulationLimitBonus;             // +0xb24
     long mNumHeroes;                        // +0xb28
     long mNumHeroesInProduction;            // +0xb2c
-    bool mSendChatMessage[17];              // +0xb30 (the loop of 17)
     bool mAreaConversion;                   // +0xb41
     bool mBB42;                             // +0xb42
-    bool mSharedLOS;                        // +0xb43 (saved)
     bool mBB44;                             // +0xb44
     bool mInstantBuild;                     // +0xb45
     bool mHealsUnits;                       // +0xb46
     bool mBehindFirewall;                   // +0xb47
-    bool mDisconnected;                     // +0xb48 (saved)
-    bool mCivilizationLocked;               // +0xb49 (saved)
-    bool mCivilizationChosen;               // +0xb4a (saved)
-    bool mCivUpgradesPurchased;             // +0xb4b (saved)
     bool mEarthquakeShaken;                 // +0xb4c (EECalamityManager::Update clears it for players 1..)
     bool mShiftMode;                        // +0xb4d EEMEnterShiftMode/EEMExitShiftMode (provisional name)
     bool mJITManufacturing;                 // +0xb4e
-    // +0xb50..+0xb74 untouched by the ctor, Reset and Load/Save. +0xb50: indexed by a resource 2..6 as
-    // mResourceTrade[resource - 2] (EEMExchangeResources::Execute 0xbe3b1: `[player + resource*4 + 0xb48]`;
-    // name and count inferred: resources 2..6 as mResourceCaps' Reset)
-    long mResourceTrade[5];
-    long mInsuranceRefunds[5];              // +0xb64..+0xb74 (Reset zeroes them, Save writes them in one loop)
-    long mNumVitalBuildings;                // +0xb78 (saved)
     long mNumTeleporters;                   // +0xb7c
 };
 

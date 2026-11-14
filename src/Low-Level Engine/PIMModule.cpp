@@ -10,12 +10,11 @@
 #include "lle/PIMModule.h"
 
 // The plug-ins linked into the game (each defined next to its entry points)
-extern const PIMPlugin gPIMPluginTCPProtocol;          // 'ntwk' TCP Protocol
 extern const PIMPlugin gPIMPluginMixer;                // ' snd' the sound mixer (miniaudio)
 extern const PIMPlugin gPIMPluginDefaultRandomMap;     // 'rmap' Default random map generator
 extern const PIMPlugin gPIMPluginDX7HRTnLDisplay;      // 'rast' DX7 hardware T&L renderer
 static const PIMPlugin* const sPlugins[] = {
-    &gPIMPluginTCPProtocol, &gPIMPluginMixer, &gPIMPluginDefaultRandomMap, &gPIMPluginDX7HRTnLDisplay,
+    &gPIMPluginMixer, &gPIMPluginDefaultRandomMap, &gPIMPluginDX7HRTnLDisplay,
 };
 
 FSFileSpec PIMModule::sDirectory;

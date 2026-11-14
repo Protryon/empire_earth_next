@@ -18,6 +18,12 @@
 //         trigger round): each list's count, the first error and the FNV-1a of its elements' Saves into a memory
 //         file (triggers, conditions, effects, objects, areas, pending effects, the built-ins included), then the
 //         whole manager's Save
+//   SMPA  every EESMEffect::SetPlayerAttribute (the any/all resources' recursions too): the player, attribute, mode
+//         and amount, the seeds, the player's numbers after (resources, share bonus, AI difficulty, scenario
+//         variables, tributes, mining limit, the statistics' saved bytes' FNV-1a) and the pending effects after
+//   SMTK  every EESMEffect::ExpandTokens: the text's and the result's FNV-1a, the seeds
+//   SMFP  every EESMObject::FindPlacement (the retry too): the object's index, the unit type, the random flag, the
+//         result and location, the seeds
 // Off (EE_SIM_CAPTURE unset) each hook is one cached test.
 #ifndef EE_EESCENARIOCAPTURE_H
 #define EE_EESCENARIOCAPTURE_H
@@ -31,6 +37,7 @@ class EESMArea;
 class EESMEffect;
 class EEScenarioManager;
 class EEUnit;
+class UWideString;
 
 // the physics random stream's seed (0 without physics)
 unsigned int EESMCaptureSeed();
@@ -57,6 +64,10 @@ void EESMCapturePlayers(long inType, bool inSingle, long inResult, const void* i
 // GetTiles: count and hash)
 void EESMCaptureArea(EESMArea* inArea, long inKind, long inA, long inB, long inX, long inY, unsigned long long inHash);
 void EESMCaptureEffect(EESMEffect* inEffect, bool inIsCinematic, unsigned int inSeed);
+void EESMCapturePlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount, unsigned int inSeed);
+void EESMCaptureTokens(const UWideString& inText, const UWideString& outText, unsigned int inSeed);
+void EESMCapturePlacement(EESMObject* inObject, unsigned long inUnitType, bool inTryRandom, bool inResult, float inX,
+                          float inY, unsigned int inSeed);
 void EESMCaptureUpdate(EEScenarioManager* inManager, bool inHumanPlaying);
 void EESMCaptureSaved(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
                       unsigned long inMinorVersion);
