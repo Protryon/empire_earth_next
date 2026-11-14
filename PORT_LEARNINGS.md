@@ -17670,3 +17670,65 @@ logic).
   the terrain, the fog of war's unexplored black past the start area and the map edge). Not run: the LAN game, the menu pixel comparison, macOS or Linux builds.
 - **Left** (by the census, 2,388 logic lines): GERasterizer (DX7Rasterizer's base: its members are read by
   the plug-in), GETransformation's member copies, GESurface's libjpeg plumbing (stays: C), the moved classes' hosts.
+
+## R4.4, eighteenth round: the icon and the goal whole in Rust on EEE3DRust; the text draw in the raster table (ee_gfx effect_icon.rs; branch rust-gfx24, 2026-11-14)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 19,078 lines before the round; 18,672 after the icon
+and goal (-406). `EEE3DIcon` and `EEE3DGoal` (`.cpp` and `.h`) deleted. Both kinds were already in round 16's effects
+sweep (the icon on a unit and at a point, the goal at a point), so the move is checked against the original C++'s
+golden in a game world on seeds 2-7.
+
+| Commit | What | Graphics Thread C++ |
+|---|---|---|
+| 6147a5d9 | the icon and the goal whole in Rust; the text draw, tween and screen point in the table | -406 |
+| 38e059a0 | the energy wall's old `ee_gfx_wall_*` exports removed (Rust only) | |
+| 200dc845 | merge of `rust` (clean; no conflict marker) | |
+
+- **The table's text draw.** Three entries: `model_tween` (`SetGraphicsNextFrame`, then
+  `SetFractionalFramePosition`), `screen_point` (`GetScreenPoint`, EEROUnits.cpp's world-to-screen) and `draw_text`
+  (a `GEText` in Tahoma 10, transparent, centred, its text NUL-terminated UTF-8, drawn by `DrawClippedText` clipped to
+  the viewport's view rectangle on the main game form, or the scenario editor's under a free camera). The entry makes
+  its `GEText` per call; the original made one and drew it twice with a new place and colour: the same draws.
+- **The icon (2) and the goal (0x3c), `effect_icon.rs`.** Round 9 had the tick, opacity, Load and Save on the
+  record; now everything else: set-up (the graphic reloaded with the replaced one's media unloaded after the new
+  load, through the host's `reload_media`; animation 13; the orbitals copied into `effect_orbit.rs`'s list, which
+  `Clear` empties keeping the angles as the original's `mAngles`; the radius; the place), the step (the tick, the
+  orbitals turned, the radius from the scale, the place), the place (`UpdatePosition`: the host's
+  `unit_raised_position` for a following icon, the location for a fixed one, plus params 1..3, then `MoveTo`), the
+  queue (no base queue under flag 2; 10 over an unbuilt market, host `market_unbuilt`; the draw copies, now record
+  fields; queue 4 by the preferences' screen's texture, host `queue_screen`, not `gScreenIndex` as the others'),
+  pass 6 (model `mIntParam1` tweened, flag 1 prelit and alpha blended with z writes, else one-one, white lit, dimmed
+  by the fog factor and facing the camera's yaw; the orbitals textured and turned; the u scroll and its restore
+  under int param 2; the fog restored) and the goal's pass 3 (the time left as `m:ss`, `GetMinutesAndSeconds` and
+  `"%ld:%.2ld"` in Rust; black at the screen point of the location 1.2 up, white one pixel up and left). Load and Save:
+  the base's error stops both; the goal's time left follows the icon's fields (format unchanged). Repair: the media's
+  result; the scale only with a graphic effect; the orbitals appended again (as the original: `mOrbitalCount` is the
+  graphic's count, the list grows); animation 13 restarted. `EEE3DRust::SetLocation` (not virtual) is the icon's
+  `SetLocation` for kinds 2 and 0x3c; `EEGraphicalGoalManager` reaches it by `dynamic_cast` (the original
+  `static_cast` to `EEE3DIcon`). Facts gain params 9..11 and `has_effect`. The `ee_gfx_icon_*` exports are gone.
+- **Golden driver** (`build/gx24/drv/make.py`: round 17's generator, kept as `make_r17.py`, patched by
+  `patch_icon.py`; `run.sh NAME COMMIT KINDS SNAP` as round 17's, the original over `build/gx24/ee_rust_P.lib` and
+  `inc_P`, the library and headers from before the move). The world gains the unit's effect height and
+  `GetComplexUnit`, markets (built, foundation), the tween, `GE3DPoint +=`, `GEText`, the forms' `DrawClippedText`,
+  `gUIManager`, `GetScreenPoint`, the viewport rectangle, the physics' minutes and seconds, a `SetLocation` step and
+  a pass 3 in every draw step; orbital models got materials (the icon textures them). 300 effects on seed 1 (6,621
+  lines) and 3,000 on seed 2 (67,723 lines: 2,970 labels, 8,467 moves of a fixed icon, 8,349 tweens), identical.
+  - **Trap (driver):** a pure read the original makes once a call and the table once a draw (the viewport and its
+    view rectangle) splits the logs without any behaviour change: those stubs print nothing; the rectangle's identity
+    is printed with each text.
+  - **Trap (driver):** the sweep's "no graphic object" step would make the original icon fault in pass 6
+    (`GetGraphicObject()->mModels`), so the icon kinds skip it.
+- **Lesson (build):** `EEE3DRust` already declared `DrawPass3` (calling Rust): adding it again fails only in the full
+  build; and `EEE3DMarchingLine.cpp` had `GetScreenPoint` only through the deleted `EEE3DGoal.h` (now declared
+  locally, as `EERenderObject.cpp` does).
+- **Behaviour:** none intended (the effects capture equals the C++ golden on seeds 2-7). One hardening: an icon whose
+  animation 13 has no frames tweens to frame 0 instead of the original's divide by zero.
+- **Gates.** On the result merged with rust (200dc845): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (3,058 tests; clippy, rustfmt, header), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169 digests, late 170, calamity 183; 4, 4 and 3 records without a golden come from the merged branches), the effects capture at seeds 2-7 PASS (18 digests, the C++ golden), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected), the icon driver rerun on the merged tree identical, the tour (`fixture_game.py --exercise tour --play-seconds 60` on the open tree, under the harness lock) `RESULT PASS tour`, the orders game with `--box-select` `RESULT FAIL` at its box-selection step ("no box selection message was built", the known flake; before any order) and without it `RESULT PASS random-game` (gather, repair, queued repair and move given: command confirmations drawn). Per commit: the build 0/0, the oracle at seeds 2-3 identical, the effects capture at seeds 2-7 PASS, the Rust gate's tests and clippy PASS (2,928 tests; the icon commit's rustfmt step failed, the format applied before committing; the wall commit's gate PASS whole).
+- **Only a tour or a person reaches:** the icon's and goal's draws through the table (the tweened model, the
+  camera-facing one-one draw and its fog-dimmed ambient, the u scroll and its restore: a missing restore would leave
+  the icon's texture shifted), the orbitals' textures, and the goal's countdown text (no game sets a goal's time left
+  but a load: `mTimeLeft` is only read from saves, so the label is practically never drawn). The icons appear over
+  units (the scenario's graphical goals, the market's icon) and at goal points.
+- **Not done this round** (the plan's items 2 and 3): the tracer beam (its target as an `EEE3DRust` member with
+  `ReplaceUnit`, the stretch and its restore as table entries; designed, not started), the farm and volcano, and the
+  2D sprites on `EEE2DRust` with a 2D sweep.
