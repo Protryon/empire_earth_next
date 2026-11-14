@@ -14,6 +14,8 @@
 -- - [owner] under 2 working sites of a resource: everything goes, the standing army included, with the stockpile
 --   spent on soldiers at once (M.urgent); above that, a proportionate force: the free soldiers, when they are at
 --   least NEED_BASE + NEED_UNIT a enemy soldier + NEED_TOWER an enemy tower;
+-- - [owner] (M.parity) behind the enemy's known metal sites: the weakest site the enemy holds or contests is taken
+--   by the free soldiers, only when they are at least TAKE_BASE + TAKE_X x its defence;
 -- - a site that cannot be retaken (no force, or the operation failed) gets a replacement claimed at once;
 -- - every trigger, operation and outcome is printed ("recover ...") for the benches.
 local G = require("lib.groups")
@@ -28,9 +30,13 @@ M.OP_MIN = 3           -- ... or with fewer soldiers than this left
 M.ORDER_MS = 5000      -- the attack is given again this often
 M.URGENT_MIN = 2       -- working sites of a resource under this: existential
 M.parity = false       -- (BO.OPT.metal_parity, the owner: match or exceed the enemy's gathering) behind the enemy's known
-                       -- metal sites, a loss is existential, and without one the army takes an enemy or contested site
+                       -- metal sites (and no lost site to retake), the free soldiers take the weakest enemy-held or
+                       -- contested site, when they clearly outnumber its defence (TAKE_BASE, TAKE_X)
 M.PARITY_MS = 10000    -- the enemy's metal sites are counted this often
 M.PARITY_REACH = 45    -- tiles from home a site to take may lie
+M.TAKE_BASE = 8        -- (M.parity) a site is taken only by free soldiers clearly outnumbering its defence: TAKE_BASE +
+M.TAKE_X = 2           -- TAKE_X x (NEED_UNIT a soldier seen + NEED_TOWER a tower remembered); never the whole army
+M.TAKE_RETRY_MS = 180000   -- a target without that force is looked at again after this long
 local DROPS = {b_settlement = true, b_town_center = true, b_capitol = true}
 
 local MINES = {"gold", "iron"}
@@ -90,6 +96,14 @@ function M.urgent(mem)
     return state(mem).urgent == true
 end
 
+-- (M.cap_need) the soldiers the urgent operation needs: the army is trained up to this, not to the plan's most
+function M.need(mem)
+    return state(mem).need
+end
+
+M.cap_need = false     -- (BO.OPT.recover_cap) urgent: train to the force check's need only, and release the urgency
+                       -- once the force goes (the citizens are trained again at once)
+
 function M.replace(mem, r)
     return state(mem).replace[r] == true
 end
@@ -135,7 +149,9 @@ function M.step(view, mem, sites)
                         theirs[r] = theirs[r] + 1
                     end
                     if held or s.blocked == "enemy_near" or s.blocked == "tower" then
-                        targets[#targets + 1] = {idx = s.index, r = r, x = s.x, y = s.y, d = s.distance}
+                        local units, towers = enemy_at(s.x, s.y)
+                        targets[#targets + 1] = {idx = s.index, r = r, x = s.x, y = s.y, d = s.distance,
+                            def = M.NEED_UNIT * #units + M.NEED_TOWER * #towers}
                     end
                 end
             end
@@ -227,37 +243,56 @@ function M.step(view, mem, sites)
             best = {idx = idx, r = l.r, x = l.x, y = l.y}
         end
     end
-    S.urgent = nil
+    S.urgent, S.need = nil, nil
     if best == nil and M.parity and S.behind ~= nil and S.targets ~= nil then
-        -- (M.parity, the owner: behind on metal sites, the army takes one: an enemy-held or contested site, the
-        -- resource the town is behind on, the nearest home first)
+        -- (M.parity, the owner: behind on metal sites, take one: the weakest enemy-held or contested site of a
+        -- resource the town is behind on, the nearest of equal defence first; only the free soldiers go, and only when
+        -- they clearly outnumber its defence; the 64-seed bench of the whole-army version: defeats 9 against 5)
+        S.skip = S.skip or {}
+        local t_best = nil
         for _, t in ipairs(S.targets) do
-            if S.behind[t.r] and (best == nil or (t.r == "iron" and best.r ~= "iron") or (t.r == best.r and t.d < best.d))
-                    and not (S.tried or {})[t.idx] then
-                best = {idx = t.idx, r = t.r, x = t.x, y = t.y, d = t.d, take = true}
+            if S.behind[t.r] and not (S.tried or {})[t.idx] and now - (S.skip[t.idx] or -M.TAKE_RETRY_MS) >= M.TAKE_RETRY_MS
+                    and (t_best == nil or t.def < t_best.def or (t.def == t_best.def and t.d < t_best.d)) then
+                t_best = t
             end
         end
-        if best ~= nil and S.lost[best.idx] == nil then
-            S.lost[best.idx] = {r = best.r, x = best.x, y = best.y, t = now, take = true}
-            print(string.format("recover behind r=%s ours=%d theirs=%d target=%d at=%d,%d", best.r, working[best.r],
-                S.theirs[best.r], best.idx, best.x, best.y))
+        if t_best ~= nil then
+            local units, towers = enemy_at(t_best.x, t_best.y)
+            local need = M.TAKE_BASE + M.TAKE_X * (M.NEED_UNIT * #units + M.NEED_TOWER * #towers)
+            local ids = G.free_soldiers(t_best.x, t_best.y)
+            if #ids >= need then
+                S.lost[t_best.idx] = {r = t_best.r, x = t_best.x, y = t_best.y, t = now, take = true}
+                local g = G.create(mem, {task = "recover", manual = true, units = ids, x = t_best.x, y = t_best.y})
+                S.op = {group = g.id, site = t_best.idx, r = t_best.r, x = t_best.x, y = t_best.y, t = now, n = #ids,
+                        last_enemy = now}
+                print(string.format("recover behind go r=%s ours=%d theirs=%d target=%d at=%d,%d n=%d need=%d enemy=%d towers=%d",
+                    t_best.r, working[t_best.r], S.theirs[t_best.r], t_best.idx, t_best.x, t_best.y, #ids, need, #units,
+                    #towers))
+            else
+                S.skip[t_best.idx] = now
+                print(string.format("recover behind wait r=%s target=%d n=%d need=%d", t_best.r, t_best.idx, #ids, need))
+            end
         end
+        return
     end
     if best == nil then
         return
     end
     local units, towers = enemy_at(best.x, best.y)
     local need = M.NEED_BASE + M.NEED_UNIT * #units + M.NEED_TOWER * #towers
-    local existential = (working[best.r] < M.URGENT_MIN and S.peak[best.r] >= M.URGENT_MIN)
-        or (M.parity and S.theirs ~= nil and working[best.r] <= S.theirs[best.r])
+    local existential = working[best.r] < M.URGENT_MIN and S.peak[best.r] >= M.URGENT_MIN
     local ids = existential and all_soldiers(mem) or G.free_soldiers(best.x, best.y)
     if existential then
         S.urgent = true   -- (the army spends the stockpile while it gathers its force)
+        S.need = need
     end
     if #ids >= need then
         local g = G.create(mem, {task = "recover", manual = true, units = ids, x = best.x, y = best.y})
         S.op = {group = g.id, site = best.idx, r = best.r, x = best.x, y = best.y, t = now, n = #ids,
                 last_enemy = now}
+        if M.cap_need then
+            S.urgent, S.need = nil, nil   -- (the force is out: the stockpile goes back to the citizens)
+        end
         print(string.format("recover go r=%s site=%d n=%d need=%d enemy=%d towers=%d existential=%s working=%d",
             best.r, best.idx, #ids, need, #units, #towers, tostring(existential), working[best.r]))
     elseif not S.lost[best.idx].no_force and now - S.lost[best.idx].t >= (existential and 180000 or 60000) then

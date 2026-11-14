@@ -4193,6 +4193,45 @@ Results:
 `iron_guard`, `iron_recover`, `metal_parity` and `copper_mines` are on in boom_order (decided on 32 seeds, not yet
 confirmed on 64).
 
+**The 64-seed check, and the Copper save's metal (2026-11-14/15).** On 64 normal starts against the C++ improved classic,
+K5 had 9 defeats against K0's 5. The cause was metal_parity: every "behind" sent the whole army. It went off on main
+(4a20ad99), but without it the defeats only fell to 7, and citizens at 60 minutes stayed at 92.2 against 98.0.
+
+Two causes and the fixes:
+- **recover's citizen cost.** Every operation was existential (under 2 working sites is common in Stone), and each one
+  trained to plan.soldiers_max from the stockpile. `recover_cap` trains only to the force check's need and releases
+  the urgency once the force goes out.
+- **The empty Copper save.** stone_developed came with 10-190 gold and iron in stock: under ECON.order the metal is kept
+  only while saving, so the growth's army spent it. The save took 14.6 minutes against the owner's 7.5 and paid iron
+  last in 20 of 25 games. `iron_guard_stone` extends iron_guard to the Stone save, and `stone_metal_keep` keeps the
+  advance's gold and iron from stone_grow on.
+
+`save_developed` and `stone_mines` are no-ops: the save never waited for the raid, and the claims already wanted 3
+sites.
+
+The reworked `metal_parity`: being behind no longer counts as existential. The target is the weakest enemy-held or
+contested metal site. Only free soldiers go, and only at TAKE_BASE 8 + 2 x its defence.
+
+64 seeds against the C++ classic:
+
+| Variant | W-L-C | Defeats | Citizens at 60 min (mean) | Bronze in |
+|---|---|---|---|---|
+| K0 | 27-25-12 | 5 | 98.0 | 40 |
+| K3f, main | 25-24-15 | 7 | 92.2 | 41 |
+| K9, recover_cap | 27-20-17 | 8 | | |
+| K8b, the metal pair | 32-18-14 | 8 | | |
+| K10, all three | 26-25-13 | 10 | 99.0 | 41 |
+| K10p, + parity | 24-22-18 | 8 | 99.1 | 42 |
+
+On seeds 34-65 the Bronze median fell from 80.5 to 75. Against Age of AI, K10p went 18-0-14, Bronze in 31 at 63.0.
+K10p is on in boom_order.
+
+**Against the Lua classic** (classic_lua, main 2701e6b6, 32 seeds), boom loses nearly every game:
+- main's config went 0-28-4, with 7 defeats and Bronze in 12;
+- K10 went 2-26-4, with 6 defeats and Bronze in 14 at 75.5.
+
+The Lua port is now the opponent to beat. One run also hit lib/defence's micro instruction budget at 108 minutes,
+under a large attack.
 
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 

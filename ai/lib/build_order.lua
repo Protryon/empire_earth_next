@@ -59,6 +59,10 @@ M.OPT = {
                             -- the whole army, and without one the army takes an enemy or contested site
     copper_mines = false,   -- (off until benched) from Copper a third gold and iron site claimed at once, further out if
                             -- the claim range holds none
+    stone_mines = false,    -- (off until benched) copper_mines from the Stone Age's growth (stone_grow on)
+    save_developed = false, -- (off until benched) the Copper Age saved for once developed, the raid not waited for
+    stone_metal_keep = false,   -- (off until benched) the Copper Age's gold and iron kept from stone_grow, before the save
+    recover_cap = false,    -- (off until benched) lib.recover's urgent army only to its need, released once it goes
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -266,6 +270,9 @@ function M.saving(view, memory, phase, default)
     end
     if phase ~= "stone_developed" then
         return false
+    end
+    if M.OPT.save_developed then
+        return true
     end
     local raid = memory.raid ~= nil and memory.raid.state or nil
     if raid == nil or raid == "sent" or raid == "done" then
