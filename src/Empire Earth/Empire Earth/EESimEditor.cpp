@@ -764,7 +764,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 EEMessage* m = c == "select" ? static_cast<EEMessage*>(new EEMRecord(kMessageSelectUnit, {theID}))
                                : c == "toggle" ? static_cast<EEMessage*>(new EEMAddUnitToSelectedGroup(theID))
                                : c == "add" ? static_cast<EEMessage*>(new EEMAlwaysAddUnitToSelectedGroup(theID))
-                               : static_cast<EEMessage*>(new EEMUnselectAllUnits);
+                               : static_cast<EEMessage*>(new EEMRecord(kMessageUnselectAllUnits));
                 a->SetMessage(m);
                 gUserInterface->PostAction(a);
                 a->Dereference();

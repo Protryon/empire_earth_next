@@ -83,7 +83,7 @@ struct EEMRecordValue {
 };
 
 // New (game messages lane, round 3): the game messages whose members only their senders' constructors, their own
-// Execute and the capture touched (43 types: the census in PORT_LEARNINGS "R5b.4 game messages, round 3"). One class
+// Execute and the capture touched (54 types: the census in PORT_LEARNINGS "R5b.4 game messages, round 3"). One class
 // carries any of them: its codec class's members after the selection id, packed in wire order in mRecord, the layout,
 // flags and label the Rust's (ee_netmsg records.rs). A sender passes the members in wire order:
 // new EEMRecord(kMessageCheatCode, {theCode, theParameter}); Execute runs the type's body (EEMessage.cpp).
@@ -425,27 +425,6 @@ public:
     virtual char* GetMessageLabel() const;
 };
 
-// vtable 0x43dd08; sizeof 0x10
-class EEMClearAirportCommands : public EEMessage {
-public:
-    EEMClearAirportCommands(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: out-of-line COMDAT 0x26f927 after its first user EEUIFMGStatusButton::Command (type 0x87)
-    EEMClearAirportCommands() : EEMessage(kMessageClearAirportCommands, false) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-};
-
-// vtable 0x43dcd4; sizeof 0x10
-class EEMDisband : public EEMessage {
-public:
-    EEMDisband(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMDisband() : EEMessage(kMessageDisband, false) {}  // inline (EEUIFMGStatusButton::Command)
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Disband"; }
-};
-
 // vtable 0x438fe8; sizeof 0x14
 class EEMDropoffResource : public EEMessage {
 public:
@@ -526,17 +505,6 @@ public:
     int32_t mGameTime;                      // +0x10
 };
 
-// vtable 0x43db68; sizeof 0x10
-class EEMExplore : public EEMessage {
-public:
-    EEMExplore(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: out-of-line COMDAT 0x26083a after its first user (type 0x79)
-    EEMExplore() : EEMessage(kMessageExplore, false) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Explore"; }
-};
-
 // vtable 0x43e054; sizeof 0x54
 class EEMFullGameOptions : public EEMessage {
 public:
@@ -608,17 +576,6 @@ public:
     uint32_t mValue;                        // +0x28 the value (unsigned: the flags are mL28 > 0 with seta)
 };
 
-// vtable 0x43db34; sizeof 0x10
-class EEMGameRestarting : public EEMessage {
-public:
-    EEMGameRestarting(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMGameRestarting() : EEMessage(kMessageGameRestarting, true) {}  // 0xccb42 (EEServer.cpp)
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-};
-
 // vtable 0x438fb4; sizeof 0x18
 class EEMGatherResource : public EEMessage {
 public:
@@ -630,17 +587,6 @@ public:
 
     int32_t mTargetID;                      // +0x10
     bool mIsQueued;                         // +0x14 (EEActiveGroup::SetGoal's flag)
-};
-
-// vtable 0x43dacc; sizeof 0x10
-class EEMGoFanatic : public EEMessage {
-public:
-    EEMGoFanatic(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT 0x26f986 after its first user EEUIFMGStatusButton::Command (type 0xac)
-    EEMGoFanatic() : EEMessage(kMessageGoFanatic, false) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
 };
 
 // vtable 0x43e088; sizeof 0x20
@@ -705,17 +651,6 @@ public:
 
     int32_t mUnitID;                        // +0x10
     int32_t mImprovement;                   // +0x14
-};
-
-// vtable 0x43d9c8; sizeof 0x10
-class EEMJITManufacturing : public EEMessage {
-public:
-    EEMJITManufacturing(unsigned char* inData) { this->ImportMessage(inData); }
-    // inline: COMDAT 0x26f9aa after its first user EEUIFMGStatusButton::Command (type 0xad)
-    EEMJITManufacturing() : EEMessage(kMessageJITManufacturing, false) {}
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
 };
 
 // vtable 0x43d994; sizeof 0x14
@@ -804,17 +739,6 @@ public:
     virtual char* GetMessageLabel() const;
 
     bool mIsLocked;                         // +0x10 (locked)
-};
-
-// vtable 0x43d758; sizeof 0x10
-class EEMMakeWorldVisible : public EEMessage {
-public:
-    EEMMakeWorldVisible(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMMakeWorldVisible();                  // 0x12ba49 (EECheatCodes.cpp)
-    void SetOriginatingSlot(unsigned char inSlot) { this->mOriginatingSlot = inSlot; }  // (the cheat's sender; provisional name)
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Make World Visible"; }
 };
 
 // vtable 0x43d6f0; sizeof 0x18
@@ -1006,17 +930,6 @@ public:
     bool mFiveTimes;                        // +0x18 (five times)
 };
 
-// vtable 0x43d4e8; sizeof 0x10
-class EEMResign : public EEMessage {
-public:
-    EEMResign(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMResign() : EEMessage(kMessageResign, true) {}  // out-of-line COMDAT 0x1e0eb5 after its first user
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-};
-
 // vtable 0x438d24; sizeof 0x14
 class EEMSelectPatrolGroup : public EEMessage {
 public:
@@ -1050,16 +963,6 @@ public:
 
     long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<long> mUnitIDs;             // +0x10
-};
-
-// vtable 0x43d348; sizeof 0x10
-class EEMSelfDestruct : public EEMessage {
-public:
-    EEMSelfDestruct(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMSelfDestruct() : EEMessage(kMessageSelfDestruct, false) {}  // inline (EEUIFMGStatusButton::Command)
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const { return "Self Destruct"; }
 };
 
 // vtable 0x438d90; sizeof 0x24
@@ -1121,16 +1024,6 @@ public:
     unsigned char mLobbySlot;               // +0x12
 };
 
-// vtable 0x43d210; sizeof 0x10
-class EEMStopActiveGroup : public EEMessage {
-public:
-    EEMStopActiveGroup(unsigned char* inData) { this->ImportMessage(inData); }
-    EEMStopActiveGroup() : EEMessage(kMessageStopActiveGroup, false) {}  // inline (EEUIFMGStatusButton::Command)
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
-};
-
 // vtable 0x43d78c; sizeof 0x1c
 class EEMUnloadTransport : public EEMessage {
 public:
@@ -1149,17 +1042,6 @@ public:
     int32_t mUnitID;                        // +0x10
     int32_t mX;                             // +0x14
     int32_t mY;                             // +0x18
-};
-
-// vtable 0x438eac; sizeof 0x10
-class EEMUnselectAllUnits : public EEMessage {
-public:
-    EEMUnselectAllUnits() : EEMessage(kMessageUnselectAllUnits, true) {}  // 0x332c (the editor's mouse click)
-    EEMUnselectAllUnits(unsigned char* inData) { this->ImportMessage(inData); }
-    virtual bool GetCanSendWhilePaused() const { return true; }
-    virtual size_t GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass);
-    virtual void Execute();
-    virtual char* GetMessageLabel() const;
 };
 
 #endif

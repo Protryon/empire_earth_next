@@ -492,12 +492,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageCivUpgradesRequested:
         theMessage = new EEMCivUpgradesRequested(inMemory);
         break;
-    case kMessageClearAirportCommands:
-        theMessage = new EEMClearAirportCommands(inMemory);
-        break;
-    case kMessageDisband:
-        theMessage = new EEMDisband(inMemory);
-        break;
     case kMessageDropoffResource:
         theMessage = new EEMDropoffResource(inMemory);
         break;
@@ -510,23 +504,14 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageExitShiftMode:
         theMessage = new EEMExitShiftMode(inMemory);
         break;
-    case kMessageExplore:
-        theMessage = new EEMExplore(inMemory);
-        break;
     case kMessageFullGameOptions:
         theMessage = new EEMFullGameOptions(inMemory);
         break;
     case kMessageGameOptions:
         theMessage = new EEMGameOptions(inMemory);
         break;
-    case kMessageGameRestarting:
-        theMessage = new EEMGameRestarting(inMemory);
-        break;
     case kMessageGatherResource:
         theMessage = new EEMGatherResource(inMemory);
-        break;
-    case kMessageGoFanatic:
-        theMessage = new EEMGoFanatic(inMemory);
         break;
     case kMessageHackANewUnit:
         theMessage = new EEMHackANewUnit(inMemory);
@@ -539,9 +524,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
         break;
     case kMessageInGameChat:
         theMessage = new EEMInGameChat(inMemory);
-        break;
-    case kMessageJITManufacturing:
-        theMessage = new EEMJITManufacturing(inMemory);
         break;
     case kMessageKillUnit:
         theMessage = new EEMKillUnit(inMemory);
@@ -563,9 +545,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
         break;
     case kMessageUnloadTransport:
         theMessage = new EEMUnloadTransport(inMemory);
-        break;
-    case kMessageMakeWorldVisible:
-        theMessage = new EEMMakeWorldVisible(inMemory);
         break;
     case kMessageNewEdictEnacted:
         theMessage = new EEMNewEdictEnacted(inMemory);
@@ -597,9 +576,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageReportStatistics:
         theMessage = new EEMReportStatistics(inMemory);
         break;
-    case kMessageResign:
-        theMessage = new EEMResign(inMemory);
-        break;
     case kMessageSelectPatrolGroup:
         theMessage = new EEMSelectPatrolGroup(inMemory);
         break;
@@ -609,9 +585,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
     case kMessageSelectUnits:
         theMessage = new EEMSelectUnits(inMemory);
         break;
-    case kMessageSelfDestruct:
-        theMessage = new EEMSelfDestruct(inMemory);
-        break;
     case kMessageSetRallyGoal:
         theMessage = new EEMSetRallyGoal(inMemory);
         break;
@@ -620,12 +593,6 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
         break;
     case kMessageStartLoadingResponse:
         theMessage = new EEMStartLoadingResponse(inMemory);
-        break;
-    case kMessageStopActiveGroup:
-        theMessage = new EEMStopActiveGroup(inMemory);
-        break;
-    case kMessageUnselectAllUnits:
-        theMessage = new EEMUnselectAllUnits(inMemory);
         break;
     case kMessageImproveUnit:
         theMessage = new EEMImproveUnit(inMemory);
@@ -1233,48 +1200,23 @@ char* EEMCivUpgradesRequested::GetMessageLabel() const
     return "Civilization Builder requesting upgrades from server";
 }
 
-// EEMClearAirportCommands's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMClearAirportCommands::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_CLEAR_AIRPORT_COMMANDS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4bd53f
-// Returns the Clear Airport Commands message's debug label
-char* EEMClearAirportCommands::GetMessageLabel() const
-{
-    return "Clear Airport Commands";
-}
-
 // FUNCTION: EXE 0x4bd588
 // Clears the queued orders of the sender's selected airports, carriers/space docks and navy yards (reopening
 // them and emptying their air traffic queue) and the orders of selected aircraft
-void EEMClearAirportCommands::Execute()
+static void ExecuteClearAirportCommands(EEMRecord* m)
 {
     // New (game messages lane, round 1): the body is Rust (ee_units rally.rs clear_airport_commands: each selected
     // airport's, air base's and navy yard's queues cleared and opened, an aircraft's queue 1, the goals refreshed)
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     ee_units_clear_airport_commands(static_cast<EEGroup*>(thePlayer->mActiveGroup));
-}
-
-// EEMDisband's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMDisband::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_DISBAND;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
 }
 
 // FUNCTION: EXE 0x4bd82a
 // Disbands the sender's living, disbandable selected units, refunding 75% of their cost scaled by health;
 // plays the cash register sound for the local player
-void EEMDisband::Execute()
+static void ExecuteDisband(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EESelectedGroup* theGroup = thePlayer->mActiveGroup;
     if (theGroup->GetFirstUnit()) {
         EESoundObject* theSound = EESoundObject::Get(kSoundCashRegister);
@@ -1471,20 +1413,11 @@ void EEMExchangeResources::Execute()
         gUIManager->mMainGameForm->UpdateHelpString();
 }
 
-// EEMExplore's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMExplore::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_EXPLORE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
 // FUNCTION: EXE 0x4be5b6
 // Sends the sender's mobile selected units, split by unit category, to explore unexplored areas
-void EEMExplore::Execute()
+static void ExecuteExplore(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     // New (R5b.4): the body is Rust (ee_units group.rs explore: per formation slot 1..5 an active group filled from
     // the selection, given an Explore goal and planned, one unit drawn to acknowledge) over the world calls of
     // EEUnitHost.cpp
@@ -1695,7 +1628,7 @@ void EEMGameOptions::ImportMessage(unsigned char* inPayloadPointer)
 
 // FUNCTION: EXE 0x4beedd
 // Ends host migration on this machine (client or server) as the game restarts
-void EEMGameRestarting::Execute()
+static void ExecuteGameRestarting(EEMRecord* m)
 {
     if (gCommunications) {
         if (gCommunications->IsClient())
@@ -1703,22 +1636,6 @@ void EEMGameRestarting::Execute()
         else
             (static_cast<EEServer*>(gCommunications))->mIsMigrating = false;
     }
-}
-
-// EEMGameRestarting's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMGameRestarting::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_GAME_RESTARTING;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4bef70
-// Returns the Game Restarting message's debug label
-char* EEMGameRestarting::GetMessageLabel() const
-{
-    return "Game Restarting";
 }
 
 // FUNCTION: EXE 0x4befb9
@@ -1758,27 +1675,11 @@ char* EEMGatherResource::GetMessageLabel() const
     return "Gather Resource";
 }
 
-// EEMGoFanatic's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMGoFanatic::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_GO_FANATIC;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4bf371
-// Returns the message's debug label "Go Fanatic"
-char* EEMGoFanatic::GetMessageLabel() const
-{
-    return "Go Fanatic";
-}
-
 // FUNCTION: EXE 0x4bf3ba
 // Makes every living unit of the sender's selection that is in unit set 0x2f go fanatic
-void EEMGoFanatic::Execute()
+static void ExecuteGoFanatic(EEMRecord* m)
 {
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
+    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup;
     EEUnitSet* theSet = gUnitSetManager.GetSet(0x2f);
     for (long i = theGroup->GetNumUnits() - 1; i >= 0; i--) {
         EEComplexUnit* theUnit = theGroup->GetUnit(i);
@@ -1984,28 +1885,12 @@ static void ExecuteIncrementRallyTimer(EEMRecord* m)
     }
 }
 
-// EEMJITManufacturing's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMJITManufacturing::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_J_I_T_MANUFACTURING;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4c0326
-// Returns the message's debug label "JIT Manufacturing"
-char* EEMJITManufacturing::GetMessageLabel() const
-{
-    return "JIT Manufacturing";
-}
-
 // FUNCTION: EXE 0x4c036f
 // Toggles just-in-time manufacturing on the sender's living selected units and on the player; refreshes the
 // local interface
-void EEMJITManufacturing::Execute()
+static void ExecuteJITManufacturing(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EEGroup* theGroup = thePlayer->mActiveGroup;
     unsigned long theCount = theGroup->GetNumUnits();
     for (unsigned long i = 0; i < theCount; i++) {
@@ -2377,20 +2262,11 @@ void EEMLockUnlock::Execute()
     }
 }
 
-// EEMMakeWorldVisible's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMMakeWorldVisible::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_MAKE_WORLD_VISIBLE;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
 // FUNCTION: EXE 0x4c212b
 // Toggles whether the sending player sees the whole map; redraws the mini-map for the local player
-void EEMMakeWorldVisible::Execute()
+static void ExecuteMakeWorldVisible(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     thePlayer->mSeesAll = !thePlayer->mSeesAll;
     if (thePlayer == gWorld.GetCurrentPlayer())
         gMiniMap->Redraw();
@@ -2916,33 +2792,17 @@ char* EEMReportStatistics::GetMessageLabel() const
     return "Report Statistics";
 }
 
-// EEMResign's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMResign::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_RESIGN;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4c44b5
-// Returns the message's debug label "Resign"
-char* EEMResign::GetMessageLabel() const
-{
-    return "Resign";
-}
-
 // FUNCTION: EXE 0x4c44bb
 // Removes the sending player from the game as resigned (observers excepted); the other machines post a
 // "has resigned" chat line
-void EEMResign::Execute()
+static void ExecuteResign(EEMRecord* m)
 {
     GEColor theColor(1.0f, 1.0f, 1.0f);
     UWideString theUnused;
     UWideString theText;
     UWideString theFormat;
     UWideString theName;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     if (!thePlayer->mObserverMode) {
         gWorld.RemovePlayerFromGame(0, thePlayer->mPlayerID);
         thePlayer->SetGameResult(2);
@@ -3378,20 +3238,11 @@ void EEMSelectUnits::ImportMessage(unsigned char* inPayloadPointer)
     DecompressUnits(this->mBuffer, this->mBufferSize, this->mUnitIDs);
 }
 
-// EEMSelfDestruct's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMSelfDestruct::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_SELF_DESTRUCT;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
 // FUNCTION: EXE 0x4c626c
 // Kills every living selected unit whose class has a death-spawn class; acknowledges by voice
-void EEMSelfDestruct::Execute()
+static void ExecuteSelfDestruct(EEMRecord* m)
 {
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
+    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(m->GetOriginatingSlot());
     EEGroup* theGroup = thePlayer->mActiveGroup;
     if (theGroup->GetFirstUnit()) {
         unsigned long theNumUnits = theGroup->GetNumUnits();
@@ -3632,30 +3483,14 @@ static void ExecuteSnapToDaylight(EEMRecord* m)
     gPhysics->mThread->Post(0x503, NULL, NULL, true);
 }
 
-// EEMStopActiveGroup's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMStopActiveGroup::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_STOP_ACTIVE_GROUP;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4c8144
-// Returns the message's debug label "Stop Active Group"
-char* EEMStopActiveGroup::GetMessageLabel() const
-{
-    return "Stop Active Group";
-}
-
 // FUNCTION: EXE 0x4c818d
 // Stops the sender's living selected units: aircraft drop their orders and, unless taking off, flying a
 // pattern or landing, hold at their tile; other units halt
-void EEMStopActiveGroup::Execute()
+static void ExecuteStopActiveGroup(EEMRecord* m)
 {
     // New (game messages lane, round 1): the body is Rust (ee_units rally.rs stop_active_group: aircraft drop their
     // orders and, unless airborne, move to their tile; the other living units halt)
-    ee_units_stop_active_group(static_cast<EEGroup*>(gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup));
+    ee_units_stop_active_group(static_cast<EEGroup*>(gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->mActiveGroup));
 }
 
 // FUNCTION: EXE 0x4c840a
@@ -3705,25 +3540,9 @@ void EEMUnloadTransport::Execute()
 
 // FUNCTION: EXE 0x4c889e
 // Clears the sender's selection
-void EEMUnselectAllUnits::Execute()
+static void ExecuteUnselectAllUnits(EEMRecord* m)
 {
-    gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->UnselectAllUnits();
-}
-
-// EEMUnselectAllUnits's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
-size_t EEMUnselectAllUnits::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
-{
-    outClass = EE_NETMSG_UNSELECT_ALL_UNITS;
-    this->GetHeaderSlots(outSlots);
-    outSlots[4] = EENetMsgField(this->mFastSelectionID);
-    return 5;
-}
-
-// FUNCTION: EXE 0x4c8929
-// Returns the message's debug label "Unselect All Units"
-char* EEMUnselectAllUnits::GetMessageLabel() const
-{
-    return "Unselect All Units";
+    gWorld.GetPlayerBySlot(m->GetOriginatingSlot())->UnselectAllUnits();
 }
 
 // FUNCTION: EXE 0x4c8972
@@ -3964,22 +3783,30 @@ static const struct {
     {kMessageAttackPlayers, ExecuteAttackPlayers},
     {kMessageChangeSelectedUnitCollisionSphere, ExecuteChangeSelectedUnitCollisionSphere},
     {kMessageCheatCode, ExecuteCheatCode},
+    {kMessageClearAirportCommands, ExecuteClearAirportCommands},
+    {kMessageDisband, ExecuteDisband},
     {kMessageEnterShiftMode, ExecuteEnterShiftMode},
+    {kMessageExplore, ExecuteExplore},
+    {kMessageGameRestarting, ExecuteGameRestarting},
     {kMessageGameSpeed, ExecuteGameSpeed},
+    {kMessageGoFanatic, ExecuteGoFanatic},
     {kMessageHaltSelectedGroup, ExecuteHaltSelectedGroup},
     {kMessageIncrementEpic, ExecuteIncrementEpic},
     {kMessageIncrementRallyTimer, ExecuteIncrementRallyTimer},
+    {kMessageJITManufacturing, ExecuteJITManufacturing},
     {kMessageLagStatus, ExecuteLagStatus},
     {kMessageLoadMainScreen, ExecuteLoadMainScreen},
     {kMessageLoadMainScreenResponse, ExecuteLoadMainScreenResponse},
     {kMessageLoadPercent, ExecuteLoadPercent},
     {kMessageLoadUnitData, ExecuteLoadUnitData},
+    {kMessageMakeWorldVisible, ExecuteMakeWorldVisible},
     {kMessageMigrationSlotInfo, ExecuteMigrationSlotInfo},
     {kMessagePayTribute, ExecutePayTribute},
     {kMessagePlayerInformation, ExecutePlayerInformation},
     {kMessageRecordFrames, ExecuteRecordFrames},
     {kMessageRemoveImprovement, ExecuteRemoveImprovement},
     {kMessageRemoveUnitFromSelectedGroup, ExecuteRemoveUnitFromSelectedGroup},
+    {kMessageResign, ExecuteResign},
     {kMessageReturnToBase, ExecuteReturnToBase},
     {kMessageSavedGroupAddSelection, ExecuteSavedGroupAddSelection},
     {kMessageSavedGroupClear, ExecuteSavedGroupClear},
@@ -3989,13 +3816,16 @@ static const struct {
     {kMessageSelectCustomPlayerForChat, ExecuteSelectCustomPlayerForChat},
     {kMessageSelectPlayerChatType, ExecuteSelectPlayerChatType},
     {kMessageSelectUnit, ExecuteSelectUnit},
+    {kMessageSelfDestruct, ExecuteSelfDestruct},
     {kMessageSendFlare, ExecuteSendFlare},
     {kMessageSetAirportCommand, ExecuteSetAirportCommand},
     {kMessageSetDiplomaticStance, ExecuteSetDiplomaticStance},
     {kMessageSnapToDaylight, ExecuteSnapToDaylight},
     {kMessageStartLoading, ExecuteStartLoading},
+    {kMessageStopActiveGroup, ExecuteStopActiveGroup},
     {kMessageToggleCollisionDetection, ExecuteToggleCollisionDetection},
     {kMessageToggleDayNight, ExecuteToggleDayNight},
+    {kMessageUnselectAllUnits, ExecuteUnselectAllUnits},
     {kMessageUpdatePingStat, ExecuteUpdatePingStat},
     {kMessageZoomInfo, ExecuteZoomInfo},
 };

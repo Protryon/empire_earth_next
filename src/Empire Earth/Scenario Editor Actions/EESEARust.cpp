@@ -886,7 +886,7 @@ extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA
     case EE_SCREENS_SEU_NEW_TOGGLE:
         return (uintptr_t)static_cast<EEMessage*>(new EEMAddUnitToSelectedGroup(theUnit->mUnitID));
     case EE_SCREENS_SEU_NEW_UNSELECT_ALL:
-        return (uintptr_t)static_cast<EEMessage*>(new EEMUnselectAllUnits);
+        return (uintptr_t)static_cast<EEMessage*>(new EEMRecord(kMessageUnselectAllUnits));
     case EE_SCREENS_SEU_SET_MESSAGE:
         static_cast<EEAMouseClick*>(static_cast<EEAction*>(inUnit))->SetMessage(reinterpret_cast<EEMessage*>(inA));
         return 0;

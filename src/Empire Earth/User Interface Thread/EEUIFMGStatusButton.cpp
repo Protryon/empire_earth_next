@@ -614,15 +614,15 @@ void EEUIFMGStatusButton::Command()
             break;
         }
         case 3:
-            gCommunications->ProcessLocalUserInput(new EEMStopActiveGroup, kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageStopActiveGroup), kSlotNone);
             static_cast<EEUIFMainGame*>(this->GetForm())->SetUIState(0);
             break;
         case 0x1f:
-            gCommunications->ProcessLocalUserInput(new EEMDisband, kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageDisband), kSlotNone);
             static_cast<EEUIFMainGame*>(this->GetForm())->SetUIState(0);
             break;
         case 0x1c:
-            gCommunications->ProcessLocalUserInput(new EEMSelfDestruct, kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageSelfDestruct), kSlotNone);
             static_cast<EEUIFMainGame*>(this->GetForm())->SetUIState(0);
             break;
         case 0x1b:
@@ -642,10 +642,10 @@ void EEUIFMGStatusButton::Command()
             static_cast<EEUIFMainGame*>(this->GetForm())->StartFlare();
             break;
         case 0x16:
-            gCommunications->ProcessLocalUserInput(new EEMClearAirportCommands, kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageClearAirportCommands), kSlotNone);
             break;
         case 0x17:
-            gCommunications->ProcessLocalUserInput(new EEMExplore, kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageExplore), kSlotNone);
             break;
         case 0x19:
             gCommunications->ProcessLocalUserInput(new EEMLockUnlock(true), kSlotNone);
@@ -668,7 +668,7 @@ void EEUIFMGStatusButton::Command()
             gCommunications->ProcessLocalUserInput(new EEMPackUnpack(false), kSlotNone);
             break;
         case 0x28:
-            gCommunications->ProcessLocalUserInput(new EEMGoFanatic, kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageGoFanatic), kSlotNone);
             break;
         case 0x29:
         case 0x2a:
@@ -678,7 +678,7 @@ void EEUIFMGStatusButton::Command()
                 gUserInterface->AddChatLogEntry(theString, 0);
                 break;
             }
-            gCommunications->ProcessLocalUserInput(new EEMJITManufacturing, kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageJITManufacturing), kSlotNone);
             if (gUIManager->GetMainGameForm())
                 gUIManager->GetMainGameForm()->mRefreshGroup = true;
             break;

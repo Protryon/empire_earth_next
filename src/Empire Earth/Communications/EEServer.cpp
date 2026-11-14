@@ -1063,7 +1063,7 @@ void EEServer::HandleReconnectWaitTimedOut()
     gResource->GetString(IDS_NEW_HOST_ESTABLISHED, theText);
     gUserInterface->AddChatLogEntry(theText, 0);
     gUserInterface->PostHostMigrated();
-    gCommunications->ProcessLocalUserInput(new EEMGameRestarting, kSlotNone);
+    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageGameRestarting), kSlotNone);
     this->StartGame();
 }
 

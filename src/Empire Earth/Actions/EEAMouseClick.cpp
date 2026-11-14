@@ -183,7 +183,7 @@ void EEAMouseClick::SelectAtMouse(unsigned long inModifiers)
     } else {
         if (inModifiers != 0)
             return;
-        theMessage = new EEMUnselectAllUnits;
+        theMessage = new EEMRecord(kMessageUnselectAllUnits);
     }
     if (theMessage) {
         this->mMessage = theMessage;

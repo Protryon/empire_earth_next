@@ -2555,7 +2555,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     // the in-game options menu's (main_game_options.rs)
     case EE_SCREENS_GAME_GO_RESIGN:
-        gCommunications->ProcessLocalUserInput(new EEMResign, kSlotNone);
+        gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageResign), kSlotNone);
         break;
     case EE_SCREENS_GAME_GO_RESTART:
         gUserInterface->PostRestartGame();
