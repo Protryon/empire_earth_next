@@ -1,10 +1,10 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
 // effect_beam.rs, effect_aged.rs, effect_additive.rs,
-// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
 // EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
-// EEE3DNuclearExplosion.cpp and EEE3DEnergyWave.cpp.
+// EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp and EEE3DMultiEffect.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -56,6 +56,8 @@ struct Ask {
     EEE3DRust* mEffect;
     EEEffectQueue* mQueues;
     EETagPointList* mSpawn;   // the hurricane's spawn list, read once by SpawnCount for SpawnAt
+    EeGfxEffect3DOp mOp;
+    void* mArg;               // a constructor's unit (Create), point (CreateAt) or line (CreateLine)
     static EEE3DRust* E(void* inAsk) { return static_cast<Ask*>(inAsk)->mEffect; }
     static EeGe3DPoint UnitPosition(void* inAsk)
     {
@@ -280,6 +282,20 @@ struct Ask {
     {
         return gWorld.mMap->mTerrainMesh.GetIsSpaceTile((unsigned long)inX, (unsigned long)inY);
     }
+    // the multi-effect's linked effect inIndex through its constructor's entry point (EEE3DMultiEffect's three
+    // constructors, 0xf4247, 0xf42c3, 0xf4339)
+    static int32_t CreateLinked(void* inAsk, uint32_t inIndex)
+    {
+        Ask* theAsk = static_cast<Ask*>(inAsk);
+        EEGraphicEffect* theEffect = theAsk->mEffect->mGraphicEffect;
+        EEGraphicEffect* theLinked = inIndex == 1 ? theEffect->mLinkedEffect1
+                                     : inIndex == 2 ? theEffect->mLinkedEffect2 : theEffect->mLinkedEffect3;
+        if (theAsk->mOp == EeGfxEffect3DOp::CreateLine)
+            return gEffectManager->CreateLineEffect(*static_cast<GE3DLine*>(theAsk->mArg), theLinked, NULL);
+        if (theAsk->mOp == EeGfxEffect3DOp::CreateAt)
+            return gEffectManager->CreatePlacedEffect(*static_cast<GE3DPoint*>(theAsk->mArg), theLinked, NULL);
+        return gEffectManager->CreateUnitEffect(static_cast<EEUnit*>(theAsk->mArg), theLinked, NULL, 0, 0, 0);
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -297,17 +313,25 @@ bool ShotStart(long inMode, EEUnit* inUnit, EeGe3DPoint& outStart)
 }
 }
 
+// on a unit (the multi-effect's own unit is none: its linked effects are made on inUnit)
 EEE3DRust::EEE3DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind)
-    : EEEffect3D(inUnit, inGraphicEffect, inKind)
+    : EEEffect3D(inKind == 0x3b ? NULL : inUnit, inGraphicEffect, inKind)
 {
-    this->Call(EeGfxEffect3DOp::Create);
+    this->Call(EeGfxEffect3DOp::Create, NULL, NULL, 0, 0, 0, inUnit);
 }
 
 EEE3DRust::EEE3DRust(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect3D(0, inGraphicEffect, inKind)
 {
     this->mRecord->aged.location = EeGe3DPoint{inLocation.mX, inLocation.mY, inLocation.mZ};
-    this->Call(EeGfxEffect3DOp::CreateAt);
+    this->Call(EeGfxEffect3DOp::CreateAt, NULL, NULL, 0, 0, 0, const_cast<GE3DPoint*>(&inLocation));
+}
+
+// the multi-effect (0x3b) along a line (EEE3DMultiEffect, 0xf42c3)
+EEE3DRust::EEE3DRust(GE3DLine& inLine, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect3D(0, inGraphicEffect, inKind)
+{
+    this->Call(EeGfxEffect3DOp::CreateLine, NULL, NULL, 0, 0, 0, &inLine);
 }
 
 // the pulse cannon ball (0x43): from the unit's weapon point to the target (EEE3DPulseCannonBall, 0xf6a26); the
@@ -377,9 +401,9 @@ EEE3DRust::~EEE3DRust()
 }
 
 long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
-                     unsigned long inMajorVersion, unsigned long inMinorVersion)
+                     unsigned long inMajorVersion, unsigned long inMinorVersion, void* inArg)
 {
-    Ask theAsk = {this, inQueues, NULL};
+    Ask theAsk = {this, inQueues, NULL, inOp, inArg};
     EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
                                  Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
                                  Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
@@ -387,7 +411,7 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
                                  Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
                                  Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
-                                 Ask::SpaceTile};
+                                 Ask::SpaceTile, Ask::CreateLinked};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
@@ -417,6 +441,7 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
         theFacts.int_param2 = (int32_t)theEffect->mIntParam2;
         theFacts.int_param3 = (int32_t)theEffect->mIntParam3;
         theFacts.has_linked1 = theEffect->mLinkedEffect1 != NULL;
+        theFacts.has_linked3 = theEffect->mLinkedEffect3 != NULL;
     }
     theFacts.game_time_bits = (uint32_t)(unsigned long)gPhysics->mGameTime;
     return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);

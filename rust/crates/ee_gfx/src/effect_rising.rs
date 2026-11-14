@@ -17,6 +17,7 @@ use crate::effect_aged::aged;
 use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
 use crate::effect_hurricane::{hurricane, load_hurricane, save_hurricane, EE_GFX_EFFECT_KIND_HURRICANE};
+use crate::effect_multi::{multi, EE_GFX_EFFECT_KIND_MULTI_EFFECT};
 use crate::effect_nuclear::{
     blast, load_blast, save_blast, EeGfxUnitTile, EE_GFX_EFFECT_KIND_ENERGY_WAVE, EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION,
 };
@@ -57,6 +58,8 @@ pub enum EeGfxEffect3DOp {
     /// `Load` and `Save` after `EEEffect3D`'s (`ee_gfx_effect3d_file`)
     Load = 11,
     Save = 12,
+    /// the constructor along a line (the multi-effect's)
+    CreateLine = 13,
 }
 
 /// What the effects read of their graphic effect and the tick, gathered by the C++ for each call.
@@ -93,6 +96,8 @@ pub struct EeGfxGraphicFacts {
     pub start_size: f32,
     /// the graphic effect has its linked effect 1
     pub has_linked1: bool,
+    /// the graphic effect has its linked effect 3
+    pub has_linked3: bool,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -172,6 +177,9 @@ pub struct EeGfxEffect3DHost {
     pub unit_hidden: extern "C" fn(context: *mut c_void) -> bool,
     /// the terrain mesh's tile is a space tile (`GetIsSpaceTile`)
     pub space_tile: extern "C" fn(context: *mut c_void, x: u32, y: u32) -> bool,
+    /// the graphic effect's linked effect `index` (1..3) made through the entry point that made the effect (on its
+    /// unit, at its point, along its line); the creation's result
+    pub create_linked: extern "C" fn(context: *mut c_void, index: u32) -> i32,
 }
 
 /// The world as the effects ask it.
@@ -251,6 +259,10 @@ pub trait Effect3DHost {
     }
     fn space_tile(&mut self, _x: u32, _y: u32) -> bool {
         false
+    }
+    /// the tests' hosts that make no multi-effect make nothing
+    fn create_linked(&mut self, _index: u32) -> i32 {
+        0
     }
 }
 
@@ -360,6 +372,9 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn space_tile(&mut self, x: u32, y: u32) -> bool {
         (self.space_tile)(self.context, x, y)
     }
+    fn create_linked(&mut self, index: u32) -> i32 {
+        (self.create_linked)(self.context, index)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -388,6 +403,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         },
         EE_GFX_EFFECT_KIND_HURRICANE => unsafe { hurricane(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION | EE_GFX_EFFECT_KIND_ENERGY_WAVE => unsafe { blast(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_MULTI_EFFECT => unsafe { multi(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -475,6 +491,8 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 save_blast(r, f)
             }
         }
+        // the base's alone
+        EE_GFX_EFFECT_KIND_MULTI_EFFECT => base,
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
             // the base's result is ignored; the media's stops the load
             let res = h.load_media();

@@ -199,7 +199,6 @@ ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
 f1327 f1600 Empire Earth/Graphics Thread/EEE3DGoal.cpp
 f2046 f2d93 Empire Earth/Graphics Thread/EEE3DIcon.cpp
 f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
-f4247 f43c7 Empire Earth/Graphics Thread/EEE3DMultiEffect.cpp
 f5d94 f69e3 Empire Earth/Graphics Thread/EEE3DParticleEmitter.cpp
 f7394 f8ceb Empire Earth/Graphics Thread/EEE3DRain.cpp
 f9871 f9b6d Empire Earth/Graphics Thread/EEE3DSmokeGenerator.cpp

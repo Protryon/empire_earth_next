@@ -30,6 +30,9 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
 /// `kEffect3DHurricane`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_HURRICANE = 36;
 
+/// `kEffect3DMultiEffect`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_MULTI_EFFECT = 59;
+
 /// `kEffect3DNuclearExplosion`, `kEffect3DEnergyWave`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION = 40;
 
@@ -204,6 +207,8 @@ enum class EeGfxEffect3DOp : uint32_t {
   /// `Load` and `Save` after `EEEffect3D`'s (`ee_gfx_effect3d_file`)
   Load = 11,
   Save = 12,
+  /// the constructor along a line (the multi-effect's)
+  CreateLine = 13,
 };
 
 /// The set-ups, one per C++ function.
@@ -1233,6 +1238,8 @@ struct EeGfxGraphicFacts {
   float start_size;
   /// the graphic effect has its linked effect 1
   bool has_linked1;
+  /// the graphic effect has its linked effect 3
+  bool has_linked3;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1354,6 +1361,9 @@ struct EeGfxEffect3DHost {
   bool (*unit_hidden)(void *context);
   /// the terrain mesh's tile is a space tile (`GetIsSpaceTile`)
   bool (*space_tile)(void *context, uint32_t x, uint32_t y);
+  /// the graphic effect's linked effect `index` (1..3) made through the entry point that made the effect (on its
+  /// unit, at its point, along its line); the creation's result
+  int32_t (*create_linked)(void *context, uint32_t index);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.

@@ -33,6 +33,7 @@ pub mod effect_follow;
 pub mod effect_hurricane;
 pub mod effect_icon;
 pub mod effect_manager;
+pub mod effect_multi;
 pub mod effect_nuclear;
 pub mod effect_orbit;
 pub mod effect_rising;

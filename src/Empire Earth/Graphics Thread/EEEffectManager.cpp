@@ -75,7 +75,6 @@
 #include "ee/EEE3DEnergyWall.h"
 #include "ee/EEE3DDamageVent.h"
 #include "ee/EEE3DParticleEmitter.h"
-#include "ee/EEE3DMultiEffect.h"
 #include "ee/EEEDamagedEffect.h"
 #include "ee/EEE3DRust.h"
 #include "ee/EEE3DCommandConfirmation.h"
@@ -304,7 +303,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x41: theEffect = new EEE3DCommandConfirmation(inUnit, inEffect, inGoalIndex, 0x41); break;
     case 0x3f: theEffect = new EEE3DRust(inUnit, inEffect, 0x3f); break;
     case 0x3e: theEffect = new EEEDamagedEffect(inUnit, inEffect); break;
-    case 0x3b: theEffect = new EEE3DMultiEffect(inUnit, inEffect, 0x3b); break;
+    case 0x3b: theEffect = new EEE3DRust(inUnit, inEffect, 0x3b); break;
     case 0x3a: theEffect = new EEE3DParticleEmitter(inUnit, inEffect, 0x3a, inTagPoint); break;
     case 0x42: theEffect = new EEE3DRust(inUnit, inEffect, 0x42); break;
     case 0x47: theEffect = new EEE3DRust(inUnit, inEffect, 0x47); break;
@@ -390,7 +389,7 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 0x32: theEffect = new EEE2DBattlefieldAmbient(inLocation, inEffect); break;
     case 0x39: theEffect = EEE3DParticle::Create(inLocation, inEffect); break;
     case 0x3a: theEffect = new EEE3DParticleEmitter(inLocation, inEffect, 0x3a); break;
-    case 0x3b: theEffect = new EEE3DMultiEffect(inLocation, inEffect, 0x3b); break;
+    case 0x3b: theEffect = new EEE3DRust(inLocation, inEffect, 0x3b); break;
     case 0x3c: theEffect = new EEE3DGoal(0, inEffect, &inLocation); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
@@ -427,7 +426,7 @@ long EEEffectManager::CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffe
     case kEffect2DParticle: theEffect = EEE2DParticle::Create(inLine, inEffect); break;
     case kEffect3DParticle: theEffect = EEE3DParticle::Create(inLine, inEffect); break;
     case kEffect3DParticleEmitter: theEffect = new EEE3DParticleEmitter(inLine, inEffect, 0x3a); break;
-    case kEffect3DMultiEffect: theEffect = new EEE3DMultiEffect(inLine, inEffect, 0x3b); break;
+    case kEffect3DMultiEffect: theEffect = new EEE3DRust(inLine, inEffect, 0x3b); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);
 }
