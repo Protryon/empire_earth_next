@@ -19415,3 +19415,70 @@ conflict. This lane's state is now `docs/progress/r6-won-the-lobby-screens.md`.
 ### The full `wontest` set on the final tree
 
 Started on the final tree (61a9d843) with a 3-hour limit, in the background; when this section was written 13 of the 106 programs had run and all 13 exited 0 (0 failures). The loaded machine runs one program every 2-10 minutes, so the set may hit the limit before its end: its log is `build/wl4/wontest_all.log` in the worktree (`ALL EXIT` ends it; 124 means the limit).
+
+## Calamities lane, round 1: the classes' data as one Rust record with every per-class virtual in the base; the active calamity's and the contagion helpers' records and saves in Rust (ee_tech calamity_class.rs, calamity_record.rs, contagion_save.rs; branch rust-calamities1, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 66fed8db | CALI/CALK capture records (TEST ONLY), golden from the unmodified C++ | +553 -2 (test code) |
+| 9a37ad68 | `EECalamityClass` derives from `EeCalamityClassFields`; `Initialize`, the destructor, media, `PlaySound`, `Reset`, `Start`/`Stop`/`Update`, `IsValidTarget`/`IsValidLocation` are the base's over Rust tables by `mClassEnum` | +371 -2591, net -2220 |
+| 0e727d00 | `EECalamity` derives from `EeCalamityFields`; `Reset`'s numbers, the checksum, `Load`/`Save` in Rust; 20 unused save keys gone | +87 -274, net -187 |
+| 88defabf | `EEContagionHelper` derives from `EeContagionHelperFields`; the helper's and manager's `Load`/`Save` and the helper's checksum in Rust; 7 unused save keys gone | +89 -141, net -52 |
+| 790e7a5e | `EECalamityManager::LoadCalamityClasses`' switch as a one-line-per-kind factory | +37 -124, net -87 |
+
+The round's C++: net -2,546 for the moves (-2,220, -187, -52, -87); the test-only capture adds +553. The directory went from 7,969 to 6,293 lines (with the new capture unit's 514).
+
+**The measure.** R5b.2 had already moved every class's `Update`, `Start` and `Stop` decisions, the cast tests and the
+contagion update into Rust over host calls (`EECalamityUpdate.cpp`, each class's `StartStep`/`UpdateStep`). What
+was left per class was boilerplate around those: a constructor zeroing its members, a destructor dereferencing its
+effects, `Initialize` reading the db row, `LoadMedia`/`UnloadMedia`, `PlaySound`, `Reset`, and three wrappers
+filling `EeCalamityParams` for `Start`, `Stop` and `Update` (about 1,100 lines over 20 classes, 56 per class), plus
+the members in each header. Every class is reached in the calamity profile's game (EE-SIM `--calamities`): all 20
+kinds start, update and stop at seeds 2 and 3 (CALT/CALW counts per kind); the area effect, special attack,
+conscription, drop object and special location live under five seconds, so CALK records no mid-life save of them.
+
+- **One record for twenty classes.** The subclasses' members did not overlap in meaning except by name (`mDamage`
+  in five classes, `mRadius` float in four, `mPlacementRange` in two), so `EeCalamityClassFields` is the base
+  members followed by the union of the subclasses' numbers, each under its C++ name. Two clashes were renamed: the
+  area effects' and the leprosy's `unsigned long mRadius` (tiles) is `mRadiusTiles`, the teleport's `float
+  mDamageFactor` is `mDamageShare` (the area effect's `long mDamageFactor` kept its name). The effects, sounds and
+  functor are C++ pointer members of the base under one set of names (`mGraphicEffect1..4`: the cloaking's, morale's
+  and plague's `mGraphicEffect` became `mGraphicEffect1`; `mFunctor` is `EEContagionFunctor*`). The functors'
+  constructor arguments that the classes kept in locals are record fields (`mSpreadTime`, `mFunctorFlag`; the
+  plague's radius and chance go into `mRadius`/`mChance`). Outside readers (the prophet's teleport range, the
+  volcano's unit class) read the same names.
+- **Tables, not overrides.** `get_mode` says how each class fetched each of its six slots (unconditionally,
+  `!= 0`, `> 0`: `Get(0)` is the table's first entry, so the difference matters), `fill` the numbers its
+  `Initialize` computed (the `unsigned long` sums wrap, `UMFloatToLong` is `lrintf`), `media_step` its
+  `LoadMedia`/`UnloadMedia`/destructor steps in its own order (the earthquake and teleport load effect 2 before 1,
+  the hurricane never loads effect 1, the meteor storm loads no buttons), `sound_mode` its `PlaySound`, `run` the
+  parameters and the sounds each wrapper passed (the plague, meteor storm and four others passed none even with a
+  sound), `reset` its `Reset`, `cast_fields` its `IsValidLocation` fields. The step functions are a C++ switch
+  (`ClassSteps`): they are C++ functions of the subclasses.
+- **Differences** (crash paths only): the originals that dereferenced, loaded or referenced an effect or sound
+  without a NULL test (the time warp's, teleport's, volcano's, leprosy's loads; the earthquake's sizes) now skip a
+  missing one; the time warp's `mDepartTime` without a first effect was uninitialised and is 0.
+- **The active calamity** (`calamity_record.rs`): its 17 plain members are `EeCalamityFields`; the rectangle,
+  locations, effect generations' vector, remembered tile, effect handle, units, class and sound nodes stay C++.
+  `Load`/`Save` keep the original's order and stop rule (each read only while the ones before succeeded), the class
+  read through `GetCalamityClass(long)` even after a failed read (as the original, with 0 for its uninitialised
+  local), the `FSLoadVector` that appends to the six-zero vector (a loaded calamity's vector has 12 entries: kept).
+  The checksum sums as `long` on every data model (the bits sign-extended, the tile's `unsigned long`s converted).
+- **The contagion saves** (`contagion_save.rs`): the helper's id and timers are `EeContagionHelperFields`; a failed
+  unit-id read still pushes the id last read (the original's one local), the 0.231 era has no update timer, the
+  manager's 9 for a helper without an active calamity and its 0.273 counter are kept.
+- **Golden first.** CALI (each class as `Initialize` left it: the base fields, effects and sounds by table index
+  with their durations, sizes and delays, the functor's fields, the class's numbers) and CALK (each active
+  calamity's checksum, `Save` bytes through an `FSMemoryFile` and the state a fresh calamity `Load`s from them; the
+  contagion manager's the same, with an old-era helper load) were recorded from the unmodified C++ and added to
+  `golden_cpp_calamity.txt` for seeds 2-3. The functors' `mUpdates` (uninitialised in the plague's, a running count
+  in the others) differed between seeds and is left out. CALK runs every five game minutes and whenever a
+  calamity's age crosses a multiple of five seconds (1,583 records per game).
+- **Tests.** calamity_class_tests.rs 13, calamity_record_tests.rs 5, contagion_save_tests.rs 6 (ee_tech 82 in all).
+- **Coverage.** In game: every class's `Initialize` (CALI), every kind's `Reset`/`Start`/`Update`/`Stop` (CALT,
+  CALW, CONT), the saves and reloads of 15 kinds and of the contagion manager (CALK), the saveload matrix. Unit tests
+  only: the failure paths of the loads and saves, the old helper era beyond CALK's one sample.
+- **Tour only.** `LoadMedia`/`UnloadMedia` (effects, sounds, the hurricane's, meteor's and volcano's unit class media
+  and buttons) and `PlaySound` run in EE-SIM but draw and sound nothing there: the lead should cast an earthquake,
+  hurricane, volcano and meteor storm in a tour and see and hear them.
+- **Gates.** Commit 1 (on the unmodified code): build `--sim` 0/0, calamity capture seeds 2-3 PASS (183 digests; CALI/CALK recorded), oracle seeds 2-3 identical. Commit 2: build `--sim` 0/0, calamity capture seeds 2-3 PASS (187 digests, CALI/CALK included), oracle 2-3 identical; the Rust gate's one failure was ee_gx's timing test `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags` under load (passes alone), ee_tech clippy and rustfmt clean. Commits 3-4 (built together): calamity capture 2-3 PASS (CALK: every save byte and reload equal), oracle 2-3 identical, saveload `oracle,calamity` 4/4 each with `--expect` PASS. Commit 5: calamity capture 2-3 PASS, oracle 2-3 identical. Merged with `rust` 024b9ef2 (no conflict; headers current, no include to narrow): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle (169 digests), late (170), space (171), calamity (187), scenario (22) PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS (tests, clippy, rustfmt, headers); the test profile 0/0.
