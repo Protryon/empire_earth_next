@@ -418,7 +418,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 28d82d 28f0cb Empire Earth/Campaign/EECampaignEditorBehavior.cpp
 28f0cb 28f39a Empire Earth/Campaign/EECampaignFormManager.cpp
 28f39a 290578 Empire Earth/Campaign/EECampaignProgress.cpp
-290578 2909a1 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyColorButton.cpp
 291463 29222b Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileTransfer.cpp
 294d62 296aaa Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInit.cpp
 296aaa 297ee7 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInterface.cpp

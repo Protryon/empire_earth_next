@@ -424,7 +424,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::PlayerSlot: return reinterpret_cast<EELobbyPlayer*>(a)->GetSlot();
     case Op::ClientPlayer: return (intptr_t)(EELobbyPlayer*)aClient->GetPlayer().mPtr;
     case Op::ColorSetColor: reinterpret_cast<EELobbyColorButton*>(a)->SetColor((int)b); return 0;
-    case Op::ColorGetColor: return reinterpret_cast<EELobbyColorButton*>(a)->mColor;
+    case Op::ColorGetColor: return reinterpret_cast<EELobbyColorButton*>(a)->GetColor();
     case Op::LabelSetPercent: {
         char theBuffer[50];
         sprintf(theBuffer, "%d", (int)b);

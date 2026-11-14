@@ -327,6 +327,8 @@ constexpr static const uint32_t EE_WON_DIR_UF_UNIQUE_DISPLAY_NAME = 1;
 /// `DIR_UF_SERVRETURNADDR`
 constexpr static const uint32_t EE_WON_DIR_UF_SERV_RETURN_ADDR = 16;
 
+constexpr static const int32_t CHOOSER_SIZE = 120;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
@@ -3456,6 +3458,97 @@ enum class EeWonDlgLogicCall : uint32_t {
   /// a field: 0 `mStatusCancelled`, 1 `mPopupWindows`, 2 `mStatusVisible`, 3 `mStatusMode`, 4 `mStatusOp`,
   /// 5 the OK/Cancel dialog, 6 the status dialog, 7 the stack's depth.
   Field,
+};
+
+/// The two objects.
+enum class EeWonEeColorKind : uint32_t {
+  Button = 0,
+  Chooser = 1,
+};
+
+/// The host's ops (`a`..`f` as documented; `self` the C++ object the Rust object belongs to).
+enum class EeWonEeColorOp : uint32_t {
+  /// `((Component*)a)->Invalidate()`.
+  Invalidate = 1,
+  /// `((Component*)a)->Width()`.
+  Width,
+  /// `((Component*)a)->Height()`.
+  Height,
+  /// `((Button*)a)->IsDisabled()` (0 or 1).
+  IsDisabled,
+  /// `((Button*)a)->IsPressed()` (0 or 1).
+  IsPressed,
+  /// `((Component*)a)->Component::Paint(*(Graphics*)b)`.
+  BasePaint,
+  /// `((Graphics*)a)->SetColor(b)` (0x00rrggbb).
+  SetColor,
+  /// `((Graphics*)a)->SetSysColor(StandardColor_MenuBack)`.
+  SetMenuBackColor,
+  /// `((Graphics*)a)->FillRect(b, c, d, e)`.
+  FillRect,
+  /// `((Graphics*)a)->DrawRect(b, c, d, e)`.
+  DrawRect,
+  /// `LobbyDraw3DFrame(*(Graphics*)a, b, c, d, e, f != 0)`.
+  Draw3DFrame,
+  /// `LobbyDrawFrame(*(Graphics*)a, b, c, d, e, f != 0)`.
+  DrawFrame,
+  /// `new EELobbyColorChooser` with a reference added (the button's `SmartPtr`).
+  ChooserNew,
+  /// `((EELobbyColorChooser*)a)->mRust`: the chooser's Rust object.
+  ChooserRust,
+  /// `((Component*)a)->SetDesiredSize(b, c)`.
+  SetDesiredSize,
+  /// `((Component*)a)->AddListener(new ComponentListenerComp((Component*)b))`.
+  AddListener,
+  /// `((Component*)a)->mParent`.
+  Parent,
+  /// `((Component*)a)->GetRoot()->ClosePopup((Component*)b)`.
+  ClosePopup,
+  /// `((Component*)a)->LocalToRoot(*(int*)b, *(int*)c)`.
+  LocalToRoot,
+  /// `PopupParams p((Component*)b, 0x23e7, (Component*)a, c, d); p.mAvoidRect.height = a->Height();
+  /// p.mAvoidRect.y = d - a->Height(); p.mInputComponent = a; a->GetRoot()->OpenPopup(p)`.
+  OpenPopup,
+  /// `((Component*)a)->FireEvent(100064, false)` (the player rows' colour change).
+  FireColorChanged,
+  /// `((Button*)a)->Button::HandleComponentEvent((ComponentEvent*)b)`.
+  BaseEvent,
+  /// `((Component*)a)->Component::AddedToParent()`.
+  BaseAddedToParent,
+  /// `((Component*)a)->Component::MouseExit()`.
+  BaseMouseExit,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((EELobbyGame*)a)->mRust`: the game's Rust object.
+  GameRust,
+  /// `((RefCount*)a)->Release()`.
+  Release,
+};
+
+/// The inward calls (the classes' methods and virtuals).
+enum class EeWonEeColorCall : uint32_t {
+  /// Button: `SetColor(a)` (0 or 1: whether it changed).
+  SetColor = 1,
+  /// Button: `mColor`.
+  GetColor,
+  /// Both: `Paint(*(Graphics*)a)`.
+  Paint,
+  /// Button: `HandleActivate()` (0).
+  Activate,
+  /// Button: `HandleComponentEvent(a)`, `b` 1 for an end of popup.
+  Event,
+  /// Chooser: `AddedToParent()`.
+  AddedToParent,
+  /// Chooser: `MouseMove(a, b)`.
+  MouseMove,
+  /// Chooser: `MouseDown(a, b, c)`.
+  MouseDown,
+  /// Chooser: `MouseExit()`.
+  MouseExit,
+  /// Chooser: a member: 0 `mHover`, 1 `mSelected`, 2..17 `mTaken[a - 2]`; Button: 0 `mChooser`.
+  Field,
+  /// Chooser: `mSelected = a`.
+  SetSelected,
 };
 
 /// The host's ops. `a`..`d` as documented; a read answers `isize::MIN` when it threw.
@@ -7051,6 +7144,9 @@ struct EeWonDialog;
 /// DialogLogic's Rust half.
 struct EeWonDlgLogic;
 
+/// A colour button or a colour chooser.
+struct EeWonEeColor;
+
 /// The lobby game's Rust half.
 struct EeWonEeGame;
 
@@ -7614,6 +7710,16 @@ using EeWonDlgLogicHostFn = ptrdiff_t(*)(void *logic,
                                          ptrdiff_t b,
                                          ptrdiff_t c,
                                          ptrdiff_t d);
+
+/// The host: `(object, op, a, b, c, d, e, f) -> result`.
+using EeWonEeColorHostFn = ptrdiff_t(*)(void *obj,
+                                        EeWonEeColorOp op,
+                                        ptrdiff_t a,
+                                        ptrdiff_t b,
+                                        ptrdiff_t c,
+                                        ptrdiff_t d,
+                                        ptrdiff_t e,
+                                        ptrdiff_t f);
 
 /// The host: `(game, op, a, b, c, d) -> result`.
 using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
@@ -10716,6 +10822,34 @@ ptrdiff_t ee_won_dlglogic_call(const EeWonDlgLogic *obj,
                                ptrdiff_t c,
                                ptrdiff_t d,
                                ptrdiff_t e);
+
+/// A new colour button or chooser for the C++ object `obj`.
+EeWonEeColor *ee_won_eecolor_new(void *obj, EeWonEeColorKind kind, EeWonEeColorHostFn host);
+
+/// Releases the button's chooser and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_eecolor_new` (or is NULL) and is not used again.
+void ee_won_eecolor_free(EeWonEeColor *p);
+
+/// One inward call (`EeWonEeColorCall`).
+///
+/// # Safety
+/// `p` is live; a paint's `a` is a `Graphics*`.
+ptrdiff_t ee_won_eecolor_call(const EeWonEeColor *p,
+                              EeWonEeColorCall call,
+                              ptrdiff_t a,
+                              ptrdiff_t b,
+                              ptrdiff_t c);
+
+/// The palette's colour `i` (0..15).
+uint32_t ee_won_eecolor_palette(uint32_t i);
+
+/// Sets the palette from `n` colours (0x00rrggbb; at most 16 are read).
+///
+/// # Safety
+/// `colors` holds `n` values.
+void ee_won_eecolor_set_palette(const uint32_t *colors, uint32_t n);
 
 /// A new lobby game for the C++ `game` (EELobbyGame's constructor).
 EeWonEeGame *ee_won_eegame_new(void *game, EeWonEeGameHostFn host);

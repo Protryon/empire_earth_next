@@ -177,20 +177,34 @@ public:
 };
 
 // a player's colour button (EELobbyColorButton.cpp; 0x4c bytes; vtable 0x84c074): a click opens the colour
-// chooser popup (provisional name)
-class EELobbyColorChooser;
-
+// chooser popup, 4 x 4 swatches of the colours no other player uses (0x48 bytes; vtable 0x84c140) (provisional names).
+// R6 WONLobby round 6: Rust objects (ee_won eecolor.rs: the colour, the held chooser, the hover, the choice, the taken
+// colours, the sixteen player colours, every method); the virtuals forward (WONLobby/EELobbyGlueHost.cpp)
 class EELobbyColorButton : public Button {
 public:
     EELobbyColorButton();                   // 0x290578 (0x4c bytes)
     virtual ~EELobbyColorButton();          // 0x2905ca
     bool SetColor(int inColor);             // 0x2905e8 (0..15)
+    int GetColor();                         // mColor (+0x44)
     virtual void Paint(Graphics& inGraphics);                  // +0x18 0x29060b
     virtual bool HandleActivate();          // +0xac 0x290669 (opens or closes the chooser)
     virtual void HandleComponentEvent(ComponentEvent* inEvent);    // +0x7c 0x290751
 
-    int mColor;                             // +0x44
-    SmartPtr<EELobbyColorChooser> mChooser; // +0x48
+    EeWonEeColor* mRust;
+};
+
+class EELobbyColorChooser : public Component {
+public:
+    EELobbyColorChooser();                  // 0x290789
+    virtual ~EELobbyColorChooser();         // 0x2907c2
+    virtual void GetDesiredSize(int& outWidth, int& outHeight);   // 0x2908af (120 x 120)
+    virtual void Paint(Graphics& inGraphics);   // 0x2908c1
+    virtual void MouseExit();               // 0x290894
+    virtual void MouseDown(int inA, int inB, int inC);   // 0x29086e
+    virtual void MouseMove(int inX, int inY);   // 0x290801
+    virtual void AddedToParent();           // 0x2907cd
+
+    EeWonEeColor* mRust;
 };
 
 // the players' connection state before a game starts (EELobbyConnectDialog.cpp; 0xa4 bytes; vtable 0x84c1f0).
@@ -323,9 +337,6 @@ void EELobbyAddResources(WONAPI::ResourceConfigTable* inCollection);  // 0x2989e
 void EELobbyClose();                                        // 0x297e51
 bool EELobbyHostGame();                                     // 0x296d1e
 unsigned short EELobbyGetFileTransferPort();                // 0x295bf5 (EELobbyInit.cpp)
-// 0x8d01f4: the lobby's sixteen player colours (.data; filled by EELobbyInit through 0x298829; the colour button
-// and the connect dialog read it; defined in the 0x290514 range) (provisional name)
-extern unsigned long gEELobbyColors[16];
 
 // WONAPI lobby functions the init calls (provisional names)
 namespace WONAPI {

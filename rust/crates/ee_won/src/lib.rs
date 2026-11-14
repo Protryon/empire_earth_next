@@ -37,6 +37,7 @@ pub mod dir;
 pub mod dirchange;
 pub mod dirops;
 pub mod dlglogic;
+pub mod eecolor;
 pub mod eegame;
 pub mod eeresource;
 pub mod elgamal;

@@ -177,7 +177,11 @@ void EELobbyInit()
     for (int i = 0; i < 16; i++)
         LobbyAddGameOption("Epoch", EELobbyResource_GetString(i), true);
     EELobbyAddMapTypeOptions();
-    EELobbyGetPlayerColors(gEELobbyColors, 16);
+    unsigned long theColors[16];   // gEELobbyColors: ee_won eecolor.rs's palette
+    EELobbyGetPlayerColors(theColors, 16);
+    uint32_t theColors32[16];
+    for (int i = 0; i < 16; i++) theColors32[i] = (uint32_t)theColors[i];
+    ee_won_eecolor_set_palette(theColors32, 16);
     LobbyAddGameOption("MapType", gEELobbyGameOptionsCtrl_GameType2, true);
     LobbySetProductName(L"EEAOC", NULL);
 }
