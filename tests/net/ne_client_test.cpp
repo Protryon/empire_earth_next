@@ -878,7 +878,7 @@ static std::string RunSide(bool inRust, uint32_t inSeed, int inSteps, bool inRec
 
 int main(int argc, char** argv)
 {
-    int theCount = 1500, theSteps = 80, theRecorded = 40, theShow = 0;
+    int theCount = 1500, theSteps = 80, theRecorded = 40, theShow = 0, theFirst = 1;
     const char* thePrint = NULL;
     std::map<std::string, int> theKinds;
     for (int i = 1; i < argc; i++) {
@@ -890,13 +890,15 @@ int main(int argc, char** argv)
             thePrint = argv[++i];
         else if (strcmp(argv[i], "--show") == 0 && i + 1 < argc)
             theShow = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--first") == 0 && i + 1 < argc)
+            theFirst = atoi(argv[++i]);
         else if (strcmp(argv[i], "--verbose") == 0)
             sVerbose = true;
     }
     int theDiffering = 0;
     size_t theLines = 0;
     std::string theGolden;
-    for (int s = 0; s < theCount; s++) {
+    for (int s = theFirst - 1; s < theFirst - 1 + theCount; s++) {
         if (sVerbose) {
             fprintf(stderr, "sequence %d\n", s + 1);
             fflush(stderr);
