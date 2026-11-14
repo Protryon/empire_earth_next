@@ -18237,3 +18237,91 @@ without the unit utilities, UI Events, `include/ee/EEUI*.h`): 20,374 at the bran
   `ShowAllBackgrounds`, `HideAllBackgrounds`, `HideMessages`; `EEUserInterface`'s `EnterScenarioEditor`,
   `ShowCivilizationBuilder`, `LeaveMap`, `StartLoadingFromEditor`; the portrait's `SetUnit`; the UI manager's
   factories (C++ objects).
+
+## R6: the game screens, twenty-eighth round: the main game form's members, the UI thread's map and editor transitions, the portrait's SetUnit and the main panel group in Rust (ee_screens main_form.rs, ui_game.rs, portrait.rs, main_group.rs; branch rust-screens28, 2026-11-14)
+
+Round 27's leftovers, then the largest untouched logic of the panel (`EEUIFMGMainGroup`). Count (round 22's
+`count.sh`, `build/sc28`: User Interface Thread without the unit utilities, UI Events, `include/ee/EEUI*.h`): 20,138
+at the branch's start (2cac466f, rust merged) -> 19,834 (-304; git over `src` and `include/ee`: +484 -795, net -311).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| e02abe6f | `EEUIFMainGame`'s `Activate`, `Deactivate`, `Open`, `Close`, `DrawPolygons` and the original's `UpdateBackgroundMedia`, `ShowAllBackgrounds`, `HideAllBackgrounds`, `HideMessages`, `SetPauseText`, `Pause`/`ResumeInformation`, `SetChatTop`, `RefreshSavedGroups`, `UpdateIconBar` in Rust (`main_form.rs`) | +161 -250, net -89 |
+| f9731801 | `EEUserInterface`'s `LeaveMap`, `CancelGame`, `CloseScenarioEditor`, `EnterScenarioEditor`, `StartLoadingFromEditor`, `ShowCivilizationBuilder`, `RestartGame` in Rust (`ui_game.rs`) | +104 -214, net -110 |
+| b92e3fca | `EEUICPortrait::SetUnit` in Rust (`portrait.rs`) | +17 -17, net 0 |
+| 37c7b3d7 | `EEUIFMGMainGroup`'s `Refresh`, `SetUnit`, `GetSelectedUnit`, `Open`, `ShowCommandButton`, `ShowSpecialButtons`, `Update`, `WantsRefresh` in Rust (`main_group.rs`) | +202 -314, net -112 |
+
+- **The main game form (commit 1)**: one entry, `EEUIFMainGame::Rust(which, a)` (`ee_screens_main_form_member`,
+  `EE_SCREENS_MF_DO_*`), runs every member that is Rust's whole; the five overrides are one-line calls of it and the
+  ten other members left the class (their callers, the UI thread's message host and the main form's own host, call
+  `Rust`; `Show`/`HideAllBackgrounds` stay as one-line members for `EERenderObject.cpp`, which should not include the
+  screens' header). 41 more host ops (111..151): the mouse, the scroll edges, `UIForm`'s base members, the pause test,
+  the UI render object, the sound, the cancel button's one event on both triggers, the two blinkings, the unit hack's
+  list, the main group's `Open` and `mL20`, the epoch's title, the backgrounds and their media (the old and new
+  `EEMedia` held in the call record), the information text's stop and pause, the chat lines' shadow, the saved-group
+  buttons, the icon bar, the panel draws.
+- **Its golden** (`build/sc28/mf`, round 25's driver extended): the 15 originals cut from 2cac466f against `Rust`
+  and the overrides over random worlds (no player or tech tree, the media missing, carbon, the form visible or
+  current or not, the main game form this one or another, controls missing, a paused game by a server or not).
+  Seeds 2-4 x 2,000: 0 differences. Host mutations: 25 of 26 (the backgrounds' and entity groups' owner form needed
+  a tag in the fake's trace to be seen; the 26th, `HIDE_MESSAGES` as an op, belongs to round 24's golden).
+  `golden_main_form_members.txt` (700 calls) is replayed by `main_form::tests::golden_main_form_members`; 21 of 21
+  Rust mutations fail it.
+- **The UI thread (commit 2)**: `ee_screens_ui_member(ui, which, a, b, c)` (`EE_SCREENS_UG_DO_*`) runs the seven from the
+  thread's messages; the members left `EEUserInterface` (`LeaveMap` had only these callers). 34 more ops of
+  `ee_screenscpp_ui_game` (57..90); the existing ones (graphics, world lock, timer, server, load) are reused, so
+  `RestartGame` needed none of its own. The civilization builder's music is kept in a static of the host between
+  ops 0 and 2 (the UI thread's). The civilization message's flag is still the low byte of the raw dword (the owner's
+  STAND-IN), now `(uint8_t)` at the call.
+- **Its golden** (`build/sc28/ui`, round 25's driver extended): forms on a stack (the current form `mDepth` pops
+  above the main one), statistics of 0-2 records, clients that lost their server or not, servers, a lobby open or
+  not, ScenDefault loads failing, the graphics paused or not, civilizations buyable, custom or chosen. Seeds 2-4 x
+  2,000: 0 differences. Host mutations: 19 of 19. `golden_ui_members.txt` (700 calls) is replayed by
+  `ui_game::tests::golden_ui_members`.
+- **The portrait's SetUnit (commit 3)**: 5 ops (has a unit, release, store, acquire, face); the bars off through the
+  state word, then `update`. Round 27's driver gained an `S` call (its unit a stable handle in the golden); 7 of 7
+  host mutations; `golden_portrait.txt` regenerated (1,200 cases, now with 852 `SetUnit`s). Net 0: the original's 17
+  lines became the ops.
+- **The main panel group (commit 4)**: `ee_screens_main_group_member(group, which, unit, b)` (`EE_SCREENS_MGR_DO_*`;
+  `ShowCommandButton`'s button and control packed in b) over `ee_screenscpp_main_group` (43 ops: the group's eight
+  fields, the selection, the units, the cloak, the status box's calls and its eight control slots through a table of
+  member pointers, the status buttons' counts, faces and commands, the hot keys, the airport's timers, the build
+  queues). `ShowCommands` stays C++ (its reads feed `command_panel.rs`); its command buttons and the airport's
+  buttons are Rust's now, and its research hot keys and the command buttons' go through one helper
+  (`EEMainGroupHotKey`: the events, the add, the Shift copy). `SetUnit`, `ShowCommandButton`, `ShowSpecialButtons`
+  and `Update` left the class; `Refresh`, `WantsRefresh`, `GetSelectedUnit` and `Open` are one-line members (the
+  vtable, `EEMessage.cpp`, `EEScreens.cpp`, the main form).
+- **Its golden** (`build/sc28/mg`, new): the eight originals and `ShowCommands`' research hot key block (cut from
+  2cac466f) against the new side, 1-4 calls per case over worlds of 0-4 selected units or a viewed unit, dead
+  units, units without a complex unit or off the map, other players', citizens, markets (cloaked) and airports,
+  behaviours and formations past the faces, missing button objects and hot keys, running goal queues, epochs around
+  WW2, build queues with runs of one technology. The world keeps out of the original's crashes (a unit or complex
+  unit read without a test: `Update`, `ShowSpecialButtons`, the behaviour button, `Refresh`'s update). Seeds 2-4 x
+  5,000 (1 x 3,000): 0 differences. Host mutations: 20 of 21 (the 21st, the behaviours asked in another order, is
+  equivalent: one matches). `golden_main_group.txt` (1,200 cases) is replayed by `main_group::golden`; 16 of 17 Rust
+  mutations fail it (the 17th, `GetSelectedUnit`'s fallback to the first unit, is reached only with a NULL unit in
+  a selection, which no world has).
+- **Lessons**: (1) the first helper made its Shift copy of a hot key for every call (an extra `UIHotKey` copy per
+  event set); the golden's trace of the copy constructor caught it: build the copy only where the original did. (2)
+  A fake's trace that names only the object's id cannot tell two forms apart: give every fake object its owner in
+  the trace when the host chooses between `this` and a global (`gUIManager->mMainGameForm`). (3) The here-document
+  backslash again (rounds 24, 25, 27): `\n` in a Python string inside a Bash here-document became a newline; the
+  mutation lists went through the file tools.
+- **Behaviour**: none intended. The helper builds the research hot keys' Shift copy as the original did; the cancel
+  button's single event is still one object on both triggers.
+- **What runs it**: the main form's `Open`, `Activate`, `Close`, `Deactivate`, `UpdateBackgroundMedia` and the panel
+  draws run in every game (the tour's random map, the orders game); the main group's `Refresh`, `SetUnit`, `Update`
+  and the command buttons on every selection (the box selection); `LeaveMap` and `CancelGame` when a game ends or is
+  left (the tour's quit to the menu). EE-SIM builds no form: the oracle and the editor gate are unchanged by
+  construction. **Only a person reaches**: `EnterScenarioEditor`, `CloseScenarioEditor`, `StartLoadingFromEditor`
+  (the editor), `RestartGame` (the in-game restart), `ShowCivilizationBuilder` (the in-game civilization builder and
+  the predefined civilization choice), `CancelGame`'s lost-server path (multiplayer), the airport's timers and the
+  market's cloak, `Pause`/`ResumeInformation` and `HideMessages` (scenario dialogs), the behaviour and formation
+  buttons' faces, the hot keys of the command and research buttons.
+- **Left**: `ShowCommands` (its reads), the main form's small members (`SetStatusText`, `DisplayChat`,
+  `IsInGameView`, `SetErrorString`, `Load`/`Save`, `CreateGroup`) and its two hosts (`HostOp` 560 lines, the
+  cursor's 140); the UI manager's factories (C++ `new`s of C++ classes: moving their switch to Rust adds lines until
+  the controls are Rust's); the untouched controls (`EEUIFMGStatusBar` 331, `EEUICCommandUnits` 328,
+  `EEUIBSavedGroup` 238, `EEUICSelectUnits` 233, `EEUICChatLine` 213, the wall and gate builders 342,
+  `EEUIFMGAttribute` 136, `EEUIFileComboBox` 128, `EEUICPing` 105, `EEUIBColor` 104, `EEUIFMGErrorLog` 80): mostly
+  toolkit and renderer calls, so a move nets little until the toolkit's controls are Rust objects.
