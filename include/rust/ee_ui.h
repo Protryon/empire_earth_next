@@ -364,6 +364,46 @@ enum class EeUiOp : uint32_t {
   VirtSetLocation = 169,
   /// The virtual `SetRectangle(f)`.
   VirtSetRectangle = 170,
+  /// *Pure*: the edit box's key question `a` (`edit_keys::EditKey`).
+  EditKey = 171,
+  /// *Pure*: the scroll bar `a`'s `GetSlider()->GetMaxRange()`.
+  BarMax = 172,
+  /// The virtual `ProcessEnterKey()` (the scenario editor's `EESETSAEditBox` overrides it).
+  VirtProcessEnterKey = 173,
+  /// `PlatClipboardSetText((const char*)a)` (the goldens trace the bytes' hash).
+  ClipboardSet = 174,
+  /// *Pure*: `PlatClipboardGetText()`: NUL-terminated bytes the host keeps until the next, or 0.
+  ClipboardGet = 175,
+  /// The form's manager's `UpdateTranslatedKey((const char*)a, 1)` (the goldens trace the bytes' hash).
+  TranslatedKey = 176,
+  /// `PlatTextInputCancel` on the control's window (the original's `ImmNotifyIME` cancel).
+  TextInputCancel = 177,
+  /// `UIControl::ReleaseCapturedKeyboard()` (non-virtual).
+  BaseReleaseKeyboard = 178,
+  /// `UIControl::MouseLButtonDoublePressed()` -> its result.
+  BaseMouseDoublePressed = 179,
+  /// *Pure*: the form's `GetMouseLocation()` -> `f[0]`, `f[1]`.
+  FormMouseLocation = 180,
+  /// `new GELine` -> the line: `a` 0 the default one, 1 the edit box's caret (zero points, black, width 1).
+  LineCreate = 181,
+  /// `delete` line `a`.
+  LineDelete = 182,
+  /// Line `a`'s `SetStartPoint(f[0], f[1])`, `SetEndPoint(f[2], f[3])`.
+  LineSetPoints = 183,
+  /// Line `a`'s `SetColor(f[0..3])`.
+  LineSetColor = 184,
+  /// The rasterizer's `Draw(line a, GetScreenIndex())` -> its result.
+  LineDraw = 185,
+  /// `new GERhombus` -> the rhombus (the edit box's `RhombusSetRect`, `RhombusSetColor`, `RhombusDraw` take it).
+  RhombusCreate = 186,
+  /// `delete` rhombus `a`.
+  RhombusDelete = 187,
+  /// *Pure*: text `a`'s `GetFgColor()` -> `f[0..3]`.
+  TextFgColor = 188,
+  /// Text `a`'s `SetBgColor(f[0..3])`.
+  TextSetBgColor = 189,
+  /// Text `a`'s `SetIsTransparent(b != 0)`.
+  TextSetTransparent = 190,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -556,6 +596,109 @@ enum class EeUiButtonCall : uint32_t {
   ScalableCopyData = 111,
   /// `DrawPolygons()` -> its result.
   ScalableDrawPolygons = 112,
+};
+
+/// The inward calls (the C++ shim's methods).
+enum class EeUiEditCall : uint32_t {
+  /// `AddIMEResultString(a)` (a NUL-terminated bytes).
+  AddImeResult = 1,
+  /// `CalculateCaretFromMouseLocation(.., (f[0], f[1]))` -> the line; the index written to `*(long*)a`.
+  CaretFromMouse = 2,
+  /// `ChangeIMECompositionString(a text, c attributes, b cursor)` (NUL-terminated bytes) -> its result.
+  ImeChange = 3,
+  /// `ChangeFont(a)`.
+  ChangeFont = 4,
+  /// `ChangeWidth(a)`.
+  ChangeWidth = 5,
+  /// `CloseIMECompositionString()`.
+  ImeClose = 6,
+  /// `Copy()`.
+  Copy = 7,
+  /// `CopyData()`.
+  CopyData = 8,
+  /// `Cut()`.
+  Cut = 9,
+  /// `DeleteSelectedText()`.
+  DeleteSelectedText = 10,
+  /// `DeleteText(a start index, b start line, c end index, d end line)`.
+  DeleteRange = 11,
+  /// `DeleteText()`.
+  Clear = 12,
+  /// `DrawPolygons()`.
+  DrawPolygons = 13,
+  /// `DrawTextA()`.
+  DrawText = 14,
+  /// `GetAllText` -> the address of its NUL-terminated bytes (valid until the next call).
+  AllText = 15,
+  /// `GetCaretLocation` -> `f[0]`, `f[1]`.
+  CaretLocation = 16,
+  /// `GetCursorOn()`.
+  CursorOn = 17,
+  /// `GetGEText()`.
+  Text = 18,
+  /// `GetIMEEnabled()`.
+  ImeEnabled = 19,
+  /// `GetIsPasswordBox()`.
+  IsPasswordBox = 20,
+  /// `GetIsTextSelected()`.
+  IsTextSelected = 21,
+  /// `GetLineCount()`.
+  LineCount = 22,
+  /// `GetSelectedText` -> the address of its NUL-terminated bytes, or 0 without a selection (the out string left
+  /// alone).
+  SelectedText = 23,
+  /// `GetSelectedTextIndices`' start (`mSelectionStartIndex`).
+  SelectionStartIndex = 24,
+  /// `GetSelectedTextIndices`' end (`mCaretIndex`).
+  CaretIndex = 25,
+  /// `GetStartingDisplayIndex()`.
+  StartingDisplayIndex = 26,
+  /// `GetText(a)` -> the address of line `a`'s NUL-terminated bytes (0 past the lines).
+  Line = 27,
+  /// `Paste()`.
+  Paste = 28,
+  /// `OpenIMECompositionString()`.
+  ImeOpen = 29,
+  /// `ReleaseCapturedKeyboard()` (the box's own).
+  ReleaseKeyboard = 30,
+  /// `SelectText()`.
+  SelectAll = 31,
+  /// `SelectText(a caret index, b anchor index, c caret line, d anchor line)`.
+  Select = 32,
+  /// `SetCaretLocation(a index, b line)`.
+  SetCaretLocation = 33,
+  /// `SetCharScroll(a)`.
+  SetCharScroll = 34,
+  /// `SetCursorColor(f[0..3])`.
+  SetCursorColor = 35,
+  /// `SetIMETextColor(f[0..3])`.
+  SetImeTextColor = 36,
+  /// `SetIsPasswordBox(a != 0)`.
+  SetIsPasswordBox = 37,
+  /// `SetLocation(f[0], f[1])` (the box's own).
+  SetLocation = 38,
+  /// `SetSelectedBgColor(f[0..3])`.
+  SetSelectedBgColor = 39,
+  /// `SetText(a)` (NUL-terminated bytes).
+  SetText = 40,
+  /// `UpdateKeyboard()`.
+  UpdateKeyboard = 41,
+  /// `UpdateTranslatedKey(a, b)` (NUL-terminated bytes, the repeat).
+  UpdateTranslatedKey = 42,
+  /// `MouseLButtonDoublePressed()`.
+  MouseDoublePressed = 43,
+  /// `MouseLButtonDown()`.
+  MouseLButtonDown = 44,
+  /// `MouseLButtonUp()`.
+  MouseLButtonUp = 45,
+  /// `MouseMove(f[0], f[1])`.
+  MouseMove = 46,
+  /// `ProcessEnterKey()` (the box's own).
+  ProcessEnterKey = 47,
+  /// `TabbedFrom()`.
+  TabbedFrom = 48,
+  /// `TabbedTo()`.
+  TabbedTo = 49,
 };
 
 /// The inward calls (the C++ shims' methods).
@@ -787,6 +930,9 @@ enum class EeUiEdge {
 
 /// The Rust UIButton.
 struct EeUiButton;
+
+/// The Rust UIEditBox.
+struct EeUiEdit;
 
 /// The Rust UITextLabel (and UITLScrolling).
 struct EeUiLabel;
@@ -1079,56 +1225,6 @@ struct EeUiDbControl {
   uint8_t loop_movie;
 };
 
-/// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
-/// `static_assert`ed in `UIEditBox.cpp`).
-struct EeUiEditFields {
-  float caret_x;
-  float saved_bg_opacity;
-  unsigned long selection_start_line;
-  unsigned long copied_selection_start_line;
-  unsigned long copied_selection_end_line;
-  unsigned long max_chars;
-  unsigned long char_scroll;
-  unsigned long caret_line;
-  unsigned long visible_line_count;
-  unsigned long ime_composition_length;
-  unsigned long ime_start_index;
-  unsigned long ime_start_line;
-  unsigned long copied_ime_start_index;
-  unsigned long copied_ime_start_line;
-  unsigned long copied_ime_end_index;
-  unsigned long copied_ime_end_line;
-  long copied_selection_end_index;
-  long copied_selection_start_index;
-  long selection_start_index;
-  long caret_index;
-  long drawing_index;
-  bool is_text_selected;
-  bool key_repeating;
-  bool cursor_on;
-  bool selecting;
-  bool copied_cursor_on;
-  bool copied_is_text_selected;
-  bool numbers_only;
-  bool is_single_line;
-  bool scroll_bar_captured;
-  bool scroll_bar_visible;
-  bool is_password_box;
-  bool ime_active;
-  bool copied_ime_active;
-  bool saved_always_dirty;
-};
-
-/// One edit box as Rust sees it: the C++ object, its record from `mCaretX` on, `mTextRectangle`, `mRectangle` and
-/// `mBorderThickness`.
-struct EeUiEditRefs {
-  void *edit;
-  EeUiEditFields *fields;
-  EeUiRect *text;
-  const EeUiRect *rect;
-  const unsigned long *border;
-};
-
 /// What `Create` makes of a record: no entry for an empty font name, else its face (by string ID), style, quality
 /// and size.
 struct EeUiFontEntry {
@@ -1239,41 +1335,6 @@ struct EeUiListRange {
   unsigned long first;
   unsigned long end;
   unsigned long count;
-};
-
-/// The copied selection (`mCopiedSelection*`, `mCopiedIsTextSelected`): lines relative to the first copied line.
-struct EeUiEditSelection {
-  unsigned long start_line;
-  unsigned long end_line;
-  long start_index;
-  long end_index;
-  bool selected;
-};
-
-/// The copied IME composition (`mCopiedIME*`): lines relative to the first copied line.
-struct EeUiEditIme {
-  unsigned long start_line;
-  unsigned long start_index;
-  unsigned long end_line;
-  unsigned long end_index;
-  bool active;
-};
-
-/// A highlighted span of a line: characters `from .. to`.
-struct EeUiEditSpan {
-  unsigned long from;
-  unsigned long to;
-};
-
-/// The C++'s measures and draw for the IME underlines (`ImeHost`), each given `ctx`.
-struct EeUiImeHost {
-  void *ctx;
-  unsigned long (*display_len)(void *ctx, unsigned long i);
-  float (*prefix_width)(void *ctx, unsigned long i, unsigned long j);
-  size_t (*char_bytes)(void *ctx, unsigned long i, unsigned long j);
-  float (*char_width)(void *ctx, unsigned long i, unsigned long j);
-  uint8_t (*attribute)(void *ctx, int32_t offset);
-  long (*draw_line)(void *ctx, EeUiPoint start, EeUiPoint end);
 };
 
 /// The host functions of one `UIListBox<T>` instantiation.
@@ -1410,6 +1471,36 @@ ptrdiff_t ee_ui_button_call(const EeUiButton *button,
 /// without scaling: [`button::box_rect`]).
 EeUiRect ee_ui_button_box_rect(EeUiRect rect,
                                bool scale_bitmap);
+
+/// A new Rust edit box for the C++ `edit` (its `UIControl` part constructed): `flags` bit 0 numbers only, bit 1
+/// multi-line, bit 2 a password box.
+///
+/// # Safety
+/// `host` answers the ops for `edit`.
+EeUiEdit *ee_ui_edit_new(void *edit,
+                         EeUiHostFn host,
+                         void *font,
+                         unsigned long max_chars,
+                         uint32_t flags,
+                         unsigned long border);
+
+/// The destructor: deletes the polls, lines, texts and scroll bar and frees the object.
+///
+/// # Safety
+/// `edit` came from `ee_ui_edit_new` (or is NULL) and is not used again.
+void ee_ui_edit_free(EeUiEdit *edit);
+
+/// One of UIEditBox's methods ([`EeUiEditCall`]).
+///
+/// # Safety
+/// `edit` is live; see [`EeUiEdit::call`].
+ptrdiff_t ee_ui_edit_call(const EeUiEdit *edit,
+                          EeUiEditCall call,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t c,
+                          ptrdiff_t d,
+                          float *f);
 
 /// A new Rust label for the C++ `label` (its `UIControl` part constructed): `f` the rectangle given (a
 /// `GERectangle`), `font` the text font. Its text is set by the first [`ee_ui_label_call`] (`Init`).
@@ -1742,151 +1833,6 @@ float ee_ui_controls_table_scroll_bar_length(const EeUiRect *rect, bool vertical
 /// `CreateSlider`: the page size, capped below the range.
 long ee_ui_controls_table_slider_page_size(long start_range, long end_range, long page_size);
 
-/// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
-size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);
-
-/// `UIEditBox::BackSpaceChar`.
-void ee_ui_edit_back_space_char(const EeUiEditRefs *refs);
-
-/// `UIEditBox::CalculateCaretFromMouseLocation` (the outputs are written after the model ran: a caller may pass the
-/// box's own caret members).
-void ee_ui_edit_caret_from_mouse(const EeUiEditRefs *refs,
-                                 EeUiPoint at,
-                                 unsigned long *out_line,
-                                 long *out_index);
-
-/// `UIEditBox::ChangeWidth`.
-void ee_ui_edit_change_width(const EeUiEditRefs *refs, unsigned long width);
-
-/// `UIEditBox::CheckScrollBar`.
-void ee_ui_edit_check_scroll_bar(const EeUiEditRefs *refs);
-
-/// `UIEditBox::ComputeCaretLocation`.
-void ee_ui_edit_compute_caret_location(const EeUiEditRefs *refs, bool update_x);
-
-/// `UIEditBox::ComputeDrawingIndex`.
-void ee_ui_edit_compute_drawing_index(const EeUiEditRefs *refs);
-
-/// `UIEditBox::DecrementCaretPos`.
-void ee_ui_edit_decrement_caret_pos(const EeUiEditRefs *refs);
-
-/// `UIEditBox::DeleteChar`.
-void ee_ui_edit_delete_char(const EeUiEditRefs *refs);
-
-/// `UIEditBox::DeleteLine`.
-void ee_ui_edit_delete_line(const EeUiEditRefs *refs, unsigned long line);
-
-/// `UIEditBox::DeleteSelectedText`.
-void ee_ui_edit_delete_selected_text(const EeUiEditRefs *refs);
-
-/// `UIEditBox::DeleteText(start index, start line, end index, end line)`.
-void ee_ui_edit_delete_range(const EeUiEditRefs *refs,
-                             unsigned long start_index,
-                             unsigned long start_line,
-                             unsigned long end_index,
-                             unsigned long end_line);
-
-/// `UIEditBox::DeleteText()`.
-void ee_ui_edit_clear(const EeUiEditRefs *refs);
-
-/// `UIEditBox::GetLocationFromIndex`.
-void ee_ui_edit_location_from_index(const EeUiEditRefs *refs,
-                                    unsigned long index,
-                                    unsigned long line,
-                                    EeUiPoint *out);
-
-/// `UIEditBox::GetSelectedText` into the `UWideString` `out` (left alone without a selection).
-void ee_ui_edit_selected_text(const EeUiEditRefs *refs, void *out);
-
-/// `UIEditBox::GetText(start line, end line, start index, end index)` into the `UWideString` `out`.
-void ee_ui_edit_text(const EeUiEditRefs *refs,
-                     unsigned long start_line,
-                     unsigned long end_line,
-                     unsigned long start_index,
-                     unsigned long end_index,
-                     void *out);
-
-/// `UIEditBox::IncrementCaretPos`.
-void ee_ui_edit_increment_caret_pos(const EeUiEditRefs *refs, long count);
-
-/// `UIEditBox::ProcessDownKey`.
-void ee_ui_edit_down_key(const EeUiEditRefs *refs);
-
-/// `UIEditBox::ProcessEndKey`.
-void ee_ui_edit_end_key(const EeUiEditRefs *refs);
-
-/// `UIEditBox::ProcessEnterKey`.
-void ee_ui_edit_enter_key(const EeUiEditRefs *refs);
-
-/// `UIEditBox::ProcessHomeKey`.
-void ee_ui_edit_home_key(const EeUiEditRefs *refs);
-
-/// `UIEditBox::ProcessUpKey`.
-void ee_ui_edit_up_key(const EeUiEditRefs *refs);
-
-/// `UIEditBox::ScrollLeft`.
-void ee_ui_edit_scroll_left(const EeUiEditRefs *refs);
-
-/// `UIEditBox::ScrollRight`.
-void ee_ui_edit_scroll_right(const EeUiEditRefs *refs, long count);
-
-/// `UIEditBox::SelectText()`.
-void ee_ui_edit_select_all(const EeUiEditRefs *refs);
-
-/// `UIEditBox::SelectText(caret index, anchor index, caret line, anchor line)`.
-void ee_ui_edit_select(const EeUiEditRefs *refs,
-                       unsigned long caret_index,
-                       unsigned long start_index,
-                       unsigned long caret_line,
-                       unsigned long start_line);
-
-/// `UIEditBox::SetCaretLocation`.
-void ee_ui_edit_set_caret_location(const EeUiEditRefs *refs,
-                                   unsigned long index,
-                                   unsigned long line);
-
-/// `UIEditBox::SetIndexFromUpDownOffset`.
-void ee_ui_edit_index_from_up_down_offset(const EeUiEditRefs *refs);
-
-/// `UIEditBox::SetLocation`.
-void ee_ui_edit_set_location(const EeUiEditRefs *refs, EeUiPoint at);
-
-/// `UIEditBox::SetText`.
-void ee_ui_edit_set_text(const EeUiEditRefs *refs, const char *text);
-
-/// `UIEditBox::OpenIMECompositionString`.
-long ee_ui_edit_ime_open(const EeUiEditRefs *refs);
-
-/// `UIEditBox::CloseIMECompositionString`.
-long ee_ui_edit_ime_close(const EeUiEditRefs *refs);
-
-/// `UIEditBox::ChangeIMECompositionString` (the C++ sets `mIMEAttributes`).
-long ee_ui_edit_ime_change(const EeUiEditRefs *refs, const char *text, unsigned long cursor);
-
-/// `UIEditBox::RemoveIMECompositionString`.
-void ee_ui_edit_ime_remove(const EeUiEditRefs *refs);
-
-/// `UIEditBox::UpdateTranslatedKey`'s typing (the C++ restarts the caret blink).
-void ee_ui_edit_type_key(const EeUiEditRefs *refs, const char *key, short repeat);
-
-/// `UIEditBox::UpdateKeyboard`.
-long ee_ui_edit_update_keyboard(const EeUiEditRefs *refs);
-
-/// `UIEditBox::Copy`.
-void ee_ui_edit_copy(const EeUiEditRefs *refs);
-
-/// `UIEditBox::Cut`.
-void ee_ui_edit_cut(const EeUiEditRefs *refs);
-
-/// `UIEditBox::Paste`.
-void ee_ui_edit_paste(const EeUiEditRefs *refs);
-
-/// `UIEditBox::AddIMEResultString` (the text copied first: typing it comes back into the box).
-void ee_ui_edit_add_ime_result(const EeUiEditRefs *refs, const char *text);
-
-/// `UIEditBox::MouseMove` while selecting (the C++ forwards a drag of its scroll bar).
-void ee_ui_edit_drag(const EeUiEditRefs *refs, EeUiPoint at);
-
 /// `UIForm::CheckedRadioButton`.
 void ee_ui_form_checked_radio_button(void *form, long *index);
 
@@ -2103,54 +2049,6 @@ void ee_ui_box_bitmap_scale(float x_scale,
                             bool has_border,
                             unsigned long border,
                             float *out);
-
-/// `UIEditBox::CopyData`'s copied selection (`display_lens`: the copied lines' characters, `count` of them).
-EeUiEditSelection ee_ui_edit_copied_selection(unsigned long caret_line,
-                                              long caret_index,
-                                              unsigned long anchor_line,
-                                              long anchor_index,
-                                              long drawing_index,
-                                              unsigned long first,
-                                              unsigned long last,
-                                              const unsigned long *display_lens,
-                                              size_t count);
-
-/// `UIEditBox::CopyData`'s copied composition of a single-line box.
-EeUiEditIme ee_ui_edit_copied_ime_single(unsigned long start_index,
-                                         unsigned long length,
-                                         long drawing_index);
-
-/// `UIEditBox::CopyData`'s copied composition of a multi-line box (`line_lens`: every line's characters).
-EeUiEditIme ee_ui_edit_copied_ime_lines(unsigned long start_line,
-                                        unsigned long start_index,
-                                        unsigned long length,
-                                        unsigned long first,
-                                        unsigned long last,
-                                        long after_start,
-                                        const unsigned long *line_lens,
-                                        size_t count);
-
-/// `UIEditBox::DrawPolygons`' selection on copied line `i` (`line_len` its characters).
-EeUiEditSpan ee_ui_edit_selection_span(const EeUiEditSelection *s,
-                                       unsigned long i,
-                                       unsigned long line_len);
-
-/// `UIEditBox::GetSelectedTextRectangle` from the two widths the C++ measured.
-EeUiRect ee_ui_edit_selection_rect(unsigned long line,
-                                   long height,
-                                   EeUiRect tr,
-                                   float before,
-                                   float span);
-
-/// `UIEditBox::DrawTextA`'s row y of copied line `i`.
-float ee_ui_edit_text_row_y(unsigned long i, long height, float top);
-
-/// `UIEditBox::DrawPolygons`' IME underlines -> the last draw's result (`result` when none is drawn).
-long ee_ui_edit_ime_underlines(const EeUiEditIme *m,
-                               EeUiRect tr,
-                               unsigned long font_height,
-                               long result,
-                               const EeUiImeHost *host);
 
 /// `UILayoutUtility::UILayoutUtility`.
 void ee_ui_layout_init(EeUiLayout *layout);

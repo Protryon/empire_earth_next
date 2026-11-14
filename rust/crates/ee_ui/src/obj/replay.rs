@@ -6,7 +6,8 @@
 //! - `new ...` / `free`: the object made or freed (the class's test reads them);
 //! - `call C a b f0 f1 f2 f3`: an inward call by the driver (`C` the class's call number, floats as hex bits),
 //!   answered by `ret r f0 f1 f2 f3` after the calls out it made;
-//! - `op O a b c d f0 f1 f2 f3`: a call out that is not pure (a string op's bytes as their FNV-1a hash), which the
+//! - `op O a b c d f0 f1 f2 f3`: a call out that is not pure (a string op's bytes as their FNV-1a hash: `StringNew`,
+//!   `TextSetBytes`, `ClipboardSet`, `TranslatedKey`), which the
 //!   next lines answer: `set` lines, `do` lines
 //!   (an inward call the world made meanwhile, like `call`, answered by `ret`), then `= r f0 f1 f2 f3`;
 //! - `set O a r f0 f1 f2 f3`: the world's answer to the pure op `O` on `a` from now on (`EeUiOp::is_pure`); a pure op
@@ -38,6 +39,9 @@ pub struct Replay<'a> {
     /// Rewrites a pure op's answer (`(replay, op, a, the world's answer)`): a test's own objects for an answer that
     /// names one (the radio button's `RadioOf`).
     pure_hook: Option<PureHook>,
+    /// The bytes of the last op that passed bytes by address (an edit box's `TranslatedKey`, `ClipboardSet`), for a
+    /// class's dispatch to hand back in a `do` line.
+    pub last_bytes: RefCell<Vec<u8>>,
 }
 
 /// A replay's rewrite of a pure op's answer.
@@ -104,6 +108,7 @@ impl<'a> Replay<'a> {
             checked: Cell::new(0),
             failed: RefCell::new(None),
             pure_hook: None,
+            last_bytes: RefCell::new(Vec::new()),
         }
     }
 
@@ -166,6 +171,11 @@ impl<'a> Replay<'a> {
             match op {
                 EeUiOp::StringNew => (fnv(a), b),
                 EeUiOp::TextSetBytes => (a, fnv(b)),
+                EeUiOp::ClipboardSet | EeUiOp::TranslatedKey => {
+                    let bytes = core::ffi::CStr::from_ptr(a as *const core::ffi::c_char).to_bytes_with_nul();
+                    *self.last_bytes.borrow_mut() = bytes.to_vec();
+                    (fnv(a), b)
+                }
                 _ => (a, b),
             }
         };
