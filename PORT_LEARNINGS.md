@@ -16586,3 +16586,172 @@ after (GEFontBitmap.cpp 129 -> 157, the host's switch counted as logic; GESurfac
 - **Left** (by the census, 2,724 logic lines): GETerrainMesh (a census of its outside readers first), GERasterizer
   (DX7Rasterizer's base), GESurface's libjpeg plumbing (stays: C), GETransformation's member copies, the managers'
   and the moved classes' hosts.
+
+## R6 WONLobby, round 1: the lobby measured; eight dialogs as one Rust dialog object (ee_won lobbydlg.rs; branch rust-wonlobby1, 2026-11-13)
+
+A new lane, top-down on `src/Empire Earth/WONAPI/WONLobby` (88 units with `GameCode/EmpireEarth`, 27,045 lines at the
+branch's start; their headers in `include/ee/wonapi`). The WON GUI lane moves the widgets bottom-up, the Internet lane
+the routing and authentication; this lane stays out of both and uses the widgets only through their public methods.
+
+### The measure (at 94898cb2)
+
+"Code" is a unit's lines that are not comments, blank lines or includes; "Rust" is how many lines already call
+`ee_won_*` (a unit whose decisions moved earlier). "LAN" says what the real LAN game (`lan_game.py`: the LAN name
+through the Options tab's name dialog, Host Game through the create-game dialog, discovery, join, the room's
+staging, ready and start) reaches: **yes** (every LAN game), **person** (only a person on the LAN path: a menu, a
+button the harness does not press), **net** (only the Internet path: routing servers, accounts, rooms, friends,
+moderation), **start** (the lobby's start-up and shut-down, on every path).
+
+| Unit(s) | Code | Rust | Class (base) | Callers | LAN |
+|---|---|---|---|---|---|
+| WONLobbyResource | 1,499 | 4 | (the resource tables, globals, strings) | everything | start |
+| RoutingLogic | 1,699 | 12 | RoutingLogic (LobbyLogic) | LobbyLogicMgr, the screens' events | net |
+| LobbyModel | 987 | 45 | LobbyClient/Game/Group/Server/Friend/Player and lists (RefCount) | every logic and control | yes |
+| EELobbyGame | 807 | 0 | EELobbyGame (Container): the EE game room screen | the room's controls, StagingLogic | yes |
+| ServerListCtrl | 799 | 4 | ServerListCtrl (Container), ServerDetailsItem, its config | RoutingLogic | net |
+| LobbyPersistentData + 5 split units | 1,041 | 34 | LobbyPersistentData (the saved settings) | everything (Get/Set) | yes |
+| EELobbyInterface | 591 | 0 | (the game's entry points into the lobby) | the game's menus | yes |
+| ChatCtrl | 585 | 2 | ChatCtrl (Container) | RoutingLogic, LanLogic, the room | yes (the room's chat box; typing only by a person) |
+| LanLogicHost | 570 | 16 | LanLogic's C++ shell and host (LobbyLogic), LobbyLanSocket | LobbyLogicMgr | yes |
+| InitLogic | 499 | 16 | InitLogic (LobbyLogic) | WONLobbyPrv | start (the adapter dialog: person) |
+| WONStatusString | 386 | 0 | (the status texts) | DialogLogic, the logics | yes (error texts only on failures) |
+| EELobbyResource / EELobbyInit / EELobbyMisc | 896 | 0 | the EE configs and factories, EELobbyConfig | WONLobbyPrv | start |
+| RoomCtrl, RoomLabelCtrl, RoomDialog | 425 | 1 | RoomCtrl (Container), RoomListItem, RoomDialog (Dialog) | RoutingLogic | net |
+| LobbyLogicHost | 301 | 8 | StagingLogic's shell and host (LobbyLogic) | LanLogic, RoutingLogic | yes |
+| EELobbyGameOptionsCtrl | 269 | 0 | EELobbyGameOptionsCtrl (Container) | EELobbyGame | yes |
+| UserListCtrl, GameUserListCtrl | 427 | 2 | UserListCtrl, GameUserListCtrl (Container), their ListItems | the logics | yes (the room's players); the room list: net |
+| PingLogic | 218 | 0 | PingLogic (LobbyLogic), PingGameOp | StagingLogic, GameBrowserCtrl | net (a LAN join never pings) |
+| WONLobbyPrv + Lifetime | 219 | 0 | WONLobbyPrv (the lobby object, its factories) | EELobbyInterface | start |
+| ChatCommandParser | 215 | 18 | ChatCommandParser | ChatCtrl | person (a typed `/` command) |
+| DialogLogic | 213 | 0 | DialogLogic (LobbyLogic): message boxes, yes/no, status waits | every logic | yes (the join's status wait) |
+| EELobbyPlayerOptionsCtrl, EELobbyPlayer | 327 | 0 | the room's player rows (Container) | EELobbyGame | yes |
+| FriendsListCtrl, FriendOptionsPopup | 220 | 0 | FriendsListCtrl (Container), FriendOptionsPopup (Container) | RoutingLogic | net |
+| AccountLogic | 178 | 2 | AccountLogic (LobbyLogic): login, credits, terms of use | the login screens | net (credits: person) |
+| RootScreen | 172 | 0 | RootScreen (Container) | WONLobbyPrv | yes |
+| EELobbyFileTransfer | 171 | 0 | EELobbyFileTransfer, SendFileOp | EELobbyGame | person (a scenario sent to the room) |
+| LobbyStagingSupport | 164 | 0 | (Lobby* helpers of the room) | StagingLogic | yes |
+| EELobbyColorButton | 158 | 0 | EELobbyColorButton (Button), its chooser | the player rows | yes (drawn; chosen by a person) |
+| CreditsDialog | 153 | 1 | CreditsDialog (Dialog), ScrollingTextComponent (Component) | AccountLogic | person |
+| CrossPromotionButton | 127 | 2 | CrossPromotionButton, ImageTextButton (Button) | the screens | net |
+| LoginCtrl, LoginScreen, LoginHelp/Status, LostPassword/UserName, CreateAccount, UpdateAccount, InitFailed, QuickPlay, MOTD | 579 | 0 | Containers of the login screens | AccountLogic, RoutingLogic | net |
+| BadUserDialog | 122 | 0 | BadUserDialog (Dialog), BadUserItem | RoutingLogic | net |
+| GameBrowserCtrl | 112 | 1 | GameBrowserCtrl (Container) | the LAN and Internet screens | yes (the LAN list) |
+| LobbyEvents | 107 | 0 | 25 ComponentEvent subclasses | every logic | yes |
+| LobbyServiceSupport | 100 | 0 | (Lobby* helpers) | the logics | yes |
+| AdminActionDialog | 93 | 0 | AdminActionDialog (Dialog) | RoutingLogic | net (moderators) |
+| LobbyConfig, LobbyContainer, LobbyLogic, LobbyLogicMgr | 227 | 0 | the lobby's config, container, logic base and manager | WONLobbyPrv | start |
+| ClientOptionsPopup, GameOptionsPopup | 141 | 0 | Container + PopupMenu | LanLogic, RoutingLogic, StagingLogic | person |
+| EELobbyConnectDialog, EELobbyFileDialog | 161 | 0 | Dialogs | the room's start, the file transfer | yes (the connect dialog at the start); the file dialog: person |
+| StatusDialog, OkCancelDialog | 152 | 6 | Dialog | DialogLogic | yes (status); yes/no: person |
+| CreateGameDialog | 77 | 3 | CreateGameDialog (Dialog) | StagingLogic's host | yes |
+| CreateRoomDialog | 57 | 1 | CreateRoomDialog (Dialog) | RoutingLogic | net |
+| ChooseNetworkAdapterDialog | 56 | 2 | Dialog | InitLogic | person (more than one adapter) |
+| LanPortDialog | 54 | 1 | LanPortDialog (Dialog) | LanLogic's host | person |
+| LobbyOptionsCtrl, GameStagingCtrl, DirectConnectCtrl | 276 | 0 | Containers | the LAN and Internet screens | yes (the Options tab, the room); direct connect: person |
+| TOUDialog | 43 | 0 | TOUDialog (Dialog) | AccountLogic | net |
+| AddFriendDialog | 32 | 1 | AddFriendDialog (Dialog) | RoutingLogic | net |
+| DirectConnectDialog | 27 | 0 | DirectConnectDialog (Dialog) | LanLogic's host | person |
+| LanNameDialog | 24 | 0 | LanNameDialog (Dialog) | LanLogic's host | yes (lan_game.py sets both names through it) |
+| PasswordDialog | 23 | 0 | PasswordDialog (Dialog) | LanLogic's host, RoutingLogic | person (a LAN game with a password) |
+| EELobbySound, EELobbyTimeouts | 67 | 0 | the lobby's sounds and music, the timeouts | the logics | yes |
+| the 18 small Lobby* units (Dispatch, EventHooks, RunState, Lifecycle, Shutdown, ScreenAccess, ScreenQueries, SingletonAccess, NetworkState, NetworkAdapter, UDPManager, Completion, ClientFlags, PopupSupport, ErrorScreen, AuthContextAccess, RestoreDefaults, SyncGameEvent; DrawLobbyPing is empty) | 475 | 0 | free functions (`Lobby*`, `GetLobby*`): mostly one-line forwarders to WONLobbyPrv | everything | yes |
+
+What this says: the lobby's C++ is mostly (a) the Internet path (RoutingLogic, the server list, rooms, friends,
+accounts: ~4,500 code lines that only a routing server reaches), (b) the resource tables and factories
+(~2,600, every path), (c) the model and settings (~2,060, Rust-backed already), (d) the EE room screen and its
+controls (~1,560), and (e) about twenty small dialogs and popups. (e) has the best deletion-to-risk: each dialog
+is created only by the lobby's resource factory (`WONLobbyPrv.cpp`'s allocator table), held by one logic, and
+its code is widget look-ups, a Reset, an input check and getters.
+
+### The move: eight dialogs as one Rust object over a table of their controls
+
+Measured as the WON rounds (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 75,946 at
+the branch's start -> 75,387 (the eight dialogs, -559). The eight units (796 lines with their headers' declarations)
+became one host unit (`LobbyDialogHost.cpp`, 168) and the shells (69).
+
+- **A data-driven builder, chosen over eight ports.** The eight dialogs (LanNameDialog, PasswordDialog,
+  AddFriendDialog, DirectConnectDialog, LanPortDialog, CreateRoomDialog, CreateGameDialog, AdminActionDialog) were
+  `Dialog` subclasses whose code was the same four things: their controls looked up by name in the resource config
+  (`SafeGetComponent`), a Reset, an input check, getters. `lobbydlg.rs` holds one table per kind (each control's
+  resource name, the original's file and line for the missing-control report, its type for the `dynamic_cast`), in
+  the original's member order; AdminActionDialog looked its title up last, which is the one look-up order that is
+  not the member order. One object per dialog holds the controls (by reference: the `SmartPtr` members), the
+  scalars (LanPortDialog's game port, CreateGameDialog's game type, AdminActionDialog's action and reason flag) and
+  every method of the eight units, keyed on the kind.
+- **What stays C++.** One shell, `LobbyRustDialog : Dialog` (InitComponent and HandleComponentEvent forward to the
+  object; the event's type is mapped to a four-value enum in C++, so the Rust needs no `ComponentEvent` constant),
+  and the eight class names as subclasses with one-line forwarders (`Reset`, `GetName`, `SetPort`, ...), so their
+  holders (LanLogic's and StagingLogic's hosts, RoutingLogic, AccountLogic's factories in WONLobbyPrv.cpp) did not
+  change. The getters returning `const GUIString&` read the held input box's `GetText()` in C++ (the object answers
+  the control's address); CreateRoomDialog's GetPassword answers NULL for `gEmptyGUIString`. CreateGameDialog's
+  GetGame returns the game with a reference added, which the shell hands to a `SmartPtr` and releases.
+- **The host** (`LobbyDialogHost`, given to `ee_won_lobbydlg_new` so the tests pass a scripted one; 31 ops, `EeWonLobbyDlgOp`): Find (the typed `SafeGetComponent` into a local
+  `SmartPtr`, then a reference for the Rust), Release, the dialog's base handler and Relayout, the control calls
+  (RequestFocus, SetEnabled, SetVisible, IsVisible, the input box's Clear, text lengths (shown and real), ToInt, the
+  numeric filter, SetText of a number or of "", SelectRange; the label's and the button's texts; IsDisabled,
+  IsChecked, SetCheck; the combo's selection), AdminActionDialog's title and resource strings, and the five
+  LobbyGame setters with `CreateGame`. Separate ops where the original read `mText` (the shown text, a password
+  box's stars) and where it read `GetText()`.
+- **Re-entry.** A text set with its event (AddFriendDialog's `Clear(true)`, LanPortDialog's `SetPort`) fires the
+  input box's event into the dialog's HandleComponentEvent, which is this object again: the state is in `Cell`s
+  behind a shared reference and nothing is borrowed across an op.
+- **The golden** (`tests/won/won_lobbydlg_test.cpp`, `xbuild.py wontest won_lobbydlg_test`): the eight units'
+  statements copied before the deletion, each call on another object replaced by its op, against the Rust object
+  over one scripted host (each op's answer from a seeded stream; an input's evented text set re-enters the dialog
+  half of the time). The Rust's control table is checked name by name, line by line and type by type against the
+  original `SafeGetComponent` arguments. 20,000 sequences of a random kind's InitComponent and 12 random calls
+  (every Reset argument, AdminActionDialog's five actions and an unknown one, events of every type on members and
+  on other components, the ports, game types and games, a second InitComponent now and then), then the free:
+  1,346,007 trace lines, 105 distinct ops and calls, identical on the first run. `golden_lobbydlg.txt` (80
+  sequences, 6,037 lines) is replayed by cargo (`lobbydlg_tests.rs`): every op the Rust makes must be the next
+  line, a `reenter` line re-enters the object, every call's return is compared; it fails on one changed op.
+
+  | Mutation of the Rust | Sequences of 20,000 that change |
+  |---|---|
+  | CreateGameDialog's button press not passed on to the dialog | 1,259 |
+  | LanPortDialog rechecks on any input's text change | 969 |
+  | AdminActionDialog looks its title up first | 2,517 |
+  | Kick's reason required | 752 |
+  | AddFriendDialog's Reset clears without its event | 2,245 |
+  | the controls released in member order | 20,000 |
+
+  Unit tests (6): the tables' names distinct, AdminActionDialog's look-up and release orders, LanPortDialog's filter
+  and range and its unsigned short, CreateGameDialog's button press reaching the dialog after the update and a text
+  change not, the ban seconds' fall-through, the reason flag per action.
+- **Behaviour changes, on undefined paths only:** AdminActionDialog's action type and reason flag start 0 / false
+  (the constructor left them unset); an action outside the five (the original's switch left its three locals unset
+  and its text empty) hides the duration and scope, disables the reason and keeps the reason flag. No caller passes
+  one.
+- **What runs it.** EE-SIM never builds the lobby (the oracle is unchanged by construction; seeds 2-3 identical).
+  The real LAN game (`lan_game.py`) reaches LanNameDialog (both instances set their name through it: Add, type, OK:
+  InitComponent, Reset, the input's events, GetName) and CreateGameDialog (the host: SetGameType, Reset, the name's
+  text events and the create button's check, GetGame with the name, password radio, access radios and skill).
+  Only a person reaches LanPortDialog (the Options tab's port), DirectConnectDialog, PasswordDialog (joining a LAN
+  game with a password; RoutingLogic's rooms); only the Internet path reaches AddFriendDialog, CreateRoomDialog and
+  AdminActionDialog (a routing server's moderator). Those run only in the golden.
+
+### Gates
+
+| Gate | Commit 93e2c368 (the dialogs) | Merged with rust (59f87447) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | tests and clippy pass; rustfmt failed on one line of lobbydlg.rs (fixed before the commit, `cargo fmt --check` clean) | PASS |
+| `build.py --test-profile windowed-software` | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | all 92 programs exit 0 | won_lobbydlg_test, won_dialogs_test, won_lanobj_test, won_stagingobj_test, won_dialogobj_test exit 0 (the full set takes two hours on the loaded machine) |
+| `lan_game.py` (harness lock) | `RESULT PASS lan-game` (both LAN names through LanNameDialog, the host's game through CreateGameDialog) | `RESULT PASS lan-game` |
+
+The merge of rust met `rust/cbindgen.toml`'s export list (both sides added names: kept both), the generated
+`ee_won.h` (regenerated) and the docs' ends (both sections and rows kept).
+
+### Left for the next rounds
+
+- DialogLogic with StatusDialog and OkCancelDialog (LAN reaches the status wait; OkCancelDialog's SetText is a sizing
+  routine over the label's font: ~25 ops), then BadUserDialog (a list), ChooseNetworkAdapterDialog, CreditsDialog with
+  its ScrollingTextComponent (a Component: paint and timer), TOUDialog, RoomDialog: most fit the same table, with a
+  few ops more.
+- The popups (ClientOptionsPopup, GameOptionsPopup, FriendOptionsPopup: a PopupMenu filled by rules).
+- ChatCommandParser (its decisions are Rust since round 5; the class is the command table and the dispatch).
+- Then top-down: the controls of the LAN screens (GameBrowserCtrl, GameUserListCtrl, LobbyOptionsCtrl,
+  GameStagingCtrl), the EE room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic,
+  RoutingLogic last, Internet only), and the resource tables and factories.
