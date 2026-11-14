@@ -38,6 +38,7 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitBehavior.h"
 #include "rust/ee_units.h"
+#include "ee/EESimCapture.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
@@ -940,32 +941,112 @@ void EEPhysicsModel::AfterStep(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x556897
 // Runs the step for the unit's physics action (0..5), then the after-step work (not after action 2, nor for
 // a dead unit in another action)
-void EEPhysicsModel::Step(EEComplexUnit* inUnit)
+static void PMStepBody(EEPhysicsModel* inModel, EEComplexUnit* inUnit)
 {
     switch (inUnit->mCurrentPhysicsAction) {
     case 0:
-        this->Step0(inUnit);
+        inModel->Step0(inUnit);
         break;
     case 1:
-        this->Step1(inUnit);
+        inModel->Step1(inUnit);
         break;
     case 2:
-        this->Step2(inUnit);
+        inModel->Step2(inUnit);
         return;
     case 3:
-        this->Step3(inUnit);
+        inModel->Step3(inUnit);
         break;
     case 4:
-        this->Step4(inUnit);
+        inModel->Step4(inUnit);
         break;
     case 5:
-        this->Step5(inUnit);
+        inModel->Step5(inUnit);
         break;
     default:
         if (inUnit->mHitPoints <= 0)
             return;
     }
-    this->AfterStep(inUnit);
+    inModel->AfterStep(inUnit);
+}
+
+// TEST ONLY: the physics models' step record (PMST, the physics models' lane, round 1). Every Step call folds the
+// unit's id, its model's index, its physics action before the step and the state the models write after it (the
+// location's matrix, the velocity, the angular velocity, the push, the roll, the bob phase, the collision time, state
+// and blocking unit, the physics action, the tile, the arrival flag, the animation, its pause and time, the hit
+// points, the contact location, the push immunity, the orientation, the height; floats as bits) into the tick's
+// FNV-1a 64; the record (the tick, the calls, the digest) is written when the next tick's first step comes. Nothing
+// is noted unless the capture runs.
+static uint64_t sPMStepDigest = 0xcbf29ce484222325ull;
+static uint32_t sPMStepCalls = 0;
+static unsigned long sPMStepTick = 0;
+
+static void PMStepFNV(uint32_t inWord)
+{
+    for (int i = 0; i < 4; i++) {
+        sPMStepDigest ^= (inWord >> (8 * i)) & 0xff;
+        sPMStepDigest *= 0x100000001b3ull;
+    }
+}
+
+static void PMStepCommit()
+{
+    if (sPMStepCalls != 0) {
+        EESimCaptureRecord theRecord(0x54534d50u);   // "PMST"
+        theRecord.U32((unsigned int)sPMStepTick);
+        theRecord.U32(sPMStepCalls);
+        theRecord.U32((unsigned int)(sPMStepDigest & 0xffffffffu));
+        theRecord.U32((unsigned int)(sPMStepDigest >> 32));
+        theRecord.Commit();
+    }
+    sPMStepDigest = 0xcbf29ce484222325ull;
+    sPMStepCalls = 0;
+}
+
+static void PMStepNote(EEPhysicsModel* inModel, EEComplexUnit* inUnit, unsigned long inAction)
+{
+    if (gPhysics->mNumTicksDone != sPMStepTick) {
+        PMStepCommit();
+        sPMStepTick = gPhysics->mNumTicksDone;
+    }
+    uint32_t theModel = 0xff;
+    for (uint32_t i = 0; i < 12; i++)
+        if (gPhysicsModels[i] == inModel)
+            theModel = i;
+    PMStepFNV((uint32_t)inUnit->mUnitID);
+    PMStepFNV(theModel);
+    PMStepFNV((uint32_t)inAction);
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
+    for (int r = 0; r < 4; r++)
+        for (int c = 0; c < 4; c++)
+            PMStepFNV(PMBits(theLocation.mMatrix[r][c]));
+    const float theFloats[] = {inUnit->mVelocity, inUnit->mAngularVelocity.mYaw, inUnit->mAngularVelocity.mPitch,
+                               inUnit->mAngularVelocity.mRoll, inUnit->mPushVelocityX, inUnit->mPushVelocityY,
+                               inUnit->mRoll, inUnit->mF220, inUnit->mCollisionResolutionCount,
+                               inUnit->mInitialContactLocation.mX, inUnit->mInitialContactLocation.mY,
+                               inUnit->mInitialContactLocation.mZ, inUnit->mOrientation.mYaw,
+                               inUnit->mOrientation.mPitch, inUnit->mOrientation.mRoll, inUnit->mHeight};
+    for (size_t i = 0; i < sizeof(theFloats) / sizeof(theFloats[0]); i++)
+        PMStepFNV(PMBits(theFloats[i]));
+    PMStepFNV((uint32_t)inUnit->mCollisionState);
+    PMStepFNV(inUnit->mBlockingUnit ? (uint32_t)inUnit->mBlockingUnit->mUnitID : 0xfffffffeu);
+    PMStepFNV((uint32_t)inUnit->mCurrentPhysicsAction);
+    PMStepFNV((uint32_t)inUnit->mTileX);
+    PMStepFNV((uint32_t)inUnit->mTileY);
+    PMStepFNV(inUnit->mHasArrived ? 1u : 0u);
+    PMStepFNV((uint32_t)inUnit->mAnimation);
+    PMStepFNV(inUnit->mIsAnimationPaused ? 1u : 0u);
+    PMStepFNV((uint32_t)inUnit->mAnimationTime);
+    PMStepFNV((uint32_t)inUnit->mHitPoints);
+    PMStepFNV((uint32_t)inUnit->mPushImmuneUntil);
+    sPMStepCalls++;
+}
+
+void EEPhysicsModel::Step(EEComplexUnit* inUnit)
+{
+    unsigned long theAction = inUnit->mCurrentPhysicsAction;   // TEST ONLY (PMST)
+    PMStepBody(this, inUnit);
+    if (EESimCaptureRecord::Active())   // TEST ONLY (PMST)
+        PMStepNote(this, inUnit, theAction);
 }
 
 // NEAR: the original refuses some GE3DPoint assignment inlines in a different order
