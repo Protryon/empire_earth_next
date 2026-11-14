@@ -13798,6 +13798,37 @@ void ee_won_imgf_crop(const EeWonRawPixels *src,
                       int32_t row_bytes,
                       int32_t height);
 
+/// `StretchImageFilter`'s pixel work over the plan's `n` operations at `ops` (`stretch_run`).
+///
+/// # Safety
+/// As `stretch_run`; `ops` points at `n` operations (or `n` is 0).
+void ee_won_imgf_stretch_run(const EeWonRawPixels *src,
+                             const EeWonRawPixels *dst,
+                             const EeWonDrawOp *ops,
+                             size_t n);
+
+/// RawImage32::GetNative's transparency pass (`mask32`).
+///
+/// # Safety
+/// As `mask32`.
+void ee_won_imgf_mask32(uint32_t *pixels,
+                        int32_t width,
+                        int32_t height,
+                        uint8_t *mask,
+                        int32_t pitch);
+
+/// RawImage8::GetNative's mask (`mask8`).
+///
+/// # Safety
+/// As `mask8`.
+void ee_won_imgf_mask8(const uint8_t *pixels,
+                       int32_t width,
+                       int32_t height,
+                       int32_t pixel_pitch,
+                       int32_t transparent,
+                       uint8_t *mask,
+                       int32_t pitch);
+
 /// A new Rust InputBox for the C++ `component`, its calls out through `host`.
 EeWonInput *ee_won_input_new(void *component, EeWonGuiHostFn host);
 

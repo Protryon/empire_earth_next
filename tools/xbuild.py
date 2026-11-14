@@ -503,6 +503,12 @@ WON_TESTS = {
     # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
     # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
     "won_compaint_test": [],
+    # StretchImageFilter's pixel work (imgfilter.rs stretch_run) against the original CopyRawImage and RawStretch over
+    # guidraw's plan (golden: rust/crates/ee_won/src/golden_stretchpx.txt)
+    "won_stretchpx_test": [],
+    # the raw images' transparency masks (imgfilter.rs mask32, mask8) against Image.cpp's GetNative loops
+    # (golden: rust/crates/ee_won/src/golden_imgmask.txt)
+    "won_imgmask_test": [],
     # the image filters' pixel loops (imgfilter.rs) against the original statements over stand-in raw images
     # (golden: rust/crates/ee_won/src/golden_imgfilter.txt)
     "won_imgfilter_test": [],
