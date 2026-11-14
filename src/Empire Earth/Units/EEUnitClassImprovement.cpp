@@ -20,7 +20,6 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/UResourceFile.h"
 
-#include "ee/EEUnitStore.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -170,7 +169,6 @@ long EEUnitClassImprovement::GetCost(long inImprovement)
 void EEUnitClassImprovement::ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, long inImprovement,
                                       long inDelta)
 {
-    EEUnitStatsScope theStatsScope(inUpgrade);   // New (R5b.4, the fourteenth round): the stats table (ee/EEUnitStore.h)
     EeUnitsImproveClass theClass = ClassRecord(inUnitClass);
     EeUnitsImproveStats theStats = StatsRecord(inUpgrade);
     int32_t theTotal = (int32_t)this->mTotalCost;

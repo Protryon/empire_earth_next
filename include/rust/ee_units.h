@@ -1640,7 +1640,7 @@ constexpr static const uint32_t EE_UNIT_FIELD_HEAL_THRESHOLD = 46;
 /// `EE_COMBAT_CLASS_*` bits), fixed once the db's classes are made
 constexpr static const uint32_t EE_UNIT_FIELD_CLASS_FLAGS = 47;
 
-/// the fourteenth round's: `mStats` (the `EEUnitClassUpgrade*`'s address; the stats table's key: stats.rs)
+/// the fourteenth round's: `mStats` (the `EEUnitClassUpgrade*`'s address: stats.rs; read in place from round 28)
 constexpr static const uint32_t EE_UNIT_FIELD_STATS = 48;
 
 /// the fifteenth round's: the active goal's id (`mGoalState->mID`; 0: no goal), beside its kind
@@ -2547,6 +2547,10 @@ struct EeUnitsStoreSlots {
   uint64_t goal_kind;
   uint64_t goal_id;
   uint64_t action_type;
+  /// the twenty-eighth round's: `EEUnit::mStats` (the record's `stats`) and the record base's offset in
+  /// `EEUnitClassUpgrade` (stats.rs)
+  uint64_t stats;
+  uint64_t stats_fields;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -2830,112 +2834,60 @@ struct EeUnitsScriptReader {
   bool (*read)(void*, const uint8_t*, size_t, void*);
 };
 
-/// One stats object's fields (floats as their bits), as the C++ fills them (`EEUnitStatsFill`).
-struct EeUnitStatsRecord {
-  /// the `EEUnitClassUpgrade*`'s address (the key)
-  uint64_t object;
-  /// the reports that changed this record (1: the first); set by the table, not compared
-  uint32_t version;
-  /// `mUnitClass->mUnitType` (-1: no class)
-  int64_t unit_type;
-  /// `mScale`, `mRange`, `mAreaEffect`, `mLineOfSight`, `mAcceleration`, `mMaxVelocity`, `mMaxAngularVelocity`,
-  /// `mAttack`, `mLeadership` (float bits)
-  uint32_t scale;
-  uint32_t range;
-  uint32_t area_effect;
-  uint32_t line_of_sight;
-  uint32_t acceleration;
-  uint32_t max_velocity;
-  uint32_t max_angular_velocity;
-  uint32_t attack;
-  uint32_t leadership;
-  /// `mArmor[6]` (float bits)
-  uint32_t armor[6];
-  /// `mGatherTimes[7]`
-  int64_t gather_times[7];
-  /// `mPowerRegeneration`, `mFlightTime`, `mWorkRate`, `mReloadTime`, `mMaxHitPoints`, `mPower`, `mHealingPoints`,
-  /// `mRegeneration` (`long`s)
-  int64_t power_regeneration;
-  int64_t flight_time;
-  int64_t work_rate;
-  int64_t reload_time;
-  int64_t max_hit_points;
-  int64_t power;
-  int64_t healing_points;
-  int64_t regeneration;
-  /// `mCanFireOverWalls`, `mConvertsBuildings`, `mConvertsPriests`, `mDeathSound != NULL`
-  uint8_t can_fire_over_walls;
-  uint8_t converts_buildings;
-  uint8_t converts_priests;
-  uint8_t death_sound;
-};
-
-/// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
-/// `->mPower`), the world's cinematic flag, the rules' interval and the tick.
-struct EeUnitsPowerIn {
-  int64_t regeneration;
-  int64_t max_power;
-  uint8_t in_cinematic;
-  int64_t interval;
-  int64_t tick_ms;
-};
-
-/// What `RegeneratePower` writes: `write` 0 when it returns early (nothing written); else the power regeneration
-/// timer, and the power when `set_power` is 1 (the timer ran out).
-struct EeUnitsPowerOut {
-  uint8_t write;
-  uint8_t set_power;
-  int64_t power;
-  int64_t regen_timer;
-};
-
-/// One event of the camouflage decision.
-struct EeUnitsCamoEvent {
-  uint32_t code;
-  uint32_t value;
-};
-
-/// The C++ calls of the unit loop (EEPhysics.cpp). `ctx` is the host's.
-struct EeUnitsTickHost {
-  void *ctx;
-  /// `gWorld.mNumPlayers`
-  uint32_t num_players;
-  /// `gCollisionDetectionUnit`
-  uint32_t detection_unit;
-  /// `gCollisionPeriod = value`
-  void (*set_collision_period)(void *ctx, uint32_t value);
-  /// `gWorld.mPlayers[index]->UpdatePlayer()` when the slot has a player
-  void (*update_player)(void *ctx, uint32_t index);
-  /// `gWorld.mUpdateUnits[index]->Step()` (the list's id at the index handed in: the host checks it)
-  void (*step)(void *ctx, uint32_t index, uint32_t id);
-};
-
-/// The unit's numbers for the tick.
-struct EeUnitsTurretsIn {
-  /// true: the goal is an attack, heal or calamity goal and `target_x`, `target_y` its point; false: turn back
-  bool aim;
-  /// `mHitPoints > 0` (turning back only)
-  bool alive;
-  /// `mStats->mTurretMaxAngularVelocity`
-  float turn_rate;
-  /// `gPhysics->mTickSeconds`
-  float tick_seconds;
-  /// `mStats->GetScale()`
-  float scale;
-  /// `mPhysicalModel.GetLocation()`
-  float location[4][4];
-  float target_x;
-  float target_y;
-};
-
-/// One turret part.
-struct EeUnitsTurretPart {
-  /// the part's `mPosition` (model space, before the stats' scale)
-  float position[3];
-  /// the part's `mTransformation`
-  float transform[4][4];
-  /// the unit's `mTurretAngles[i]`: the angle before the tick in, after it out
-  float angle;
+/// `EEUnitClassUpgrade`'s plain members (ee/EEUnit.h), in the class's order.
+struct EeUnitsUnitClassUpgradeFields {
+  float mAreaEffectScale;
+  float mConversionResistance;
+  float mConversionRate;
+  float mCostScale;
+  float mBuildTimeScale;
+  float mScale;
+  float mRange;
+  float mAreaEffect;
+  float mLineOfSight;
+  float mAcceleration;
+  float mMaxVelocity;
+  float mAngularAcceleration;
+  float mMaxAngularVelocity;
+  float mTurretMaxAngularVelocity;
+  /// `EEComplexUnit::SetVelocity` keeps `mF21C` at least this (`Init`: the smaller of acceleration and top speed)
+  float mBC;
+  /// the projectile's launch speed (`SetRange`)
+  float mLaunchSpeed;
+  float mInverseAcceleration;
+  float mInverseAngularAcceleration;
+  float mInverseMaxAngularVelocity;
+  float mInverseMaxVelocity;
+  float mInverseTurretMaxAngularVelocity;
+  float mAttack;
+  float mLeadership;
+  /// per weapon kind
+  float mArmor[6];
+  float mCameraFocus;
+  long mAreaEffectTemplates[4];
+  long mWonderUnitSet;
+  long mGatherTimes[7];
+  long mPowerRegeneration;
+  long mFlightTime;
+  long mWorkRate;
+  long mReloadTime;
+  long mMaxObjectCarry;
+  long mRepairRate;
+  long mMaxHitPoints;
+  long mPower;
+  long mCarryAmount;
+  long mHealingPoints;
+  /// the media loads (`EEPlayer::LoadUnitClassMedia`; signed: the `> 0` tests)
+  long mMediaCount;
+  long mButtonLoadCount;
+  long mRegeneration;
+  /// the terrains the unit crosses, a bit per terrain type (0x4000: forest)
+  unsigned long mTerrainMask;
+  bool mCanFireOverWalls;
+  bool mBuildsOnElevation;
+  bool mConvertsBuildings;
+  bool mConvertsPriests;
+  bool mIsInitialized;
 };
 
 /// `EEUnitClass`'s plain members (ee/EEUnit.h), in the class's order.
@@ -3120,6 +3072,74 @@ struct EeUnitsUnitClassFields {
   /// port (not in the original): the class's `IsLandBuilding()`, set by `CreateUnitClasses` once the class's
   /// vtable is final; the unit store reads it (store.rs)
   bool mIsLandBuildingClass;
+};
+
+/// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
+/// `->mPower`), the world's cinematic flag, the rules' interval and the tick.
+struct EeUnitsPowerIn {
+  int64_t regeneration;
+  int64_t max_power;
+  uint8_t in_cinematic;
+  int64_t interval;
+  int64_t tick_ms;
+};
+
+/// What `RegeneratePower` writes: `write` 0 when it returns early (nothing written); else the power regeneration
+/// timer, and the power when `set_power` is 1 (the timer ran out).
+struct EeUnitsPowerOut {
+  uint8_t write;
+  uint8_t set_power;
+  int64_t power;
+  int64_t regen_timer;
+};
+
+/// One event of the camouflage decision.
+struct EeUnitsCamoEvent {
+  uint32_t code;
+  uint32_t value;
+};
+
+/// The C++ calls of the unit loop (EEPhysics.cpp). `ctx` is the host's.
+struct EeUnitsTickHost {
+  void *ctx;
+  /// `gWorld.mNumPlayers`
+  uint32_t num_players;
+  /// `gCollisionDetectionUnit`
+  uint32_t detection_unit;
+  /// `gCollisionPeriod = value`
+  void (*set_collision_period)(void *ctx, uint32_t value);
+  /// `gWorld.mPlayers[index]->UpdatePlayer()` when the slot has a player
+  void (*update_player)(void *ctx, uint32_t index);
+  /// `gWorld.mUpdateUnits[index]->Step()` (the list's id at the index handed in: the host checks it)
+  void (*step)(void *ctx, uint32_t index, uint32_t id);
+};
+
+/// The unit's numbers for the tick.
+struct EeUnitsTurretsIn {
+  /// true: the goal is an attack, heal or calamity goal and `target_x`, `target_y` its point; false: turn back
+  bool aim;
+  /// `mHitPoints > 0` (turning back only)
+  bool alive;
+  /// `mStats->mTurretMaxAngularVelocity`
+  float turn_rate;
+  /// `gPhysics->mTickSeconds`
+  float tick_seconds;
+  /// `mStats->GetScale()`
+  float scale;
+  /// `mPhysicalModel.GetLocation()`
+  float location[4][4];
+  float target_x;
+  float target_y;
+};
+
+/// One turret part.
+struct EeUnitsTurretPart {
+  /// the part's `mPosition` (model space, before the stats' scale)
+  float position[3];
+  /// the part's `mTransformation`
+  float transform[4][4];
+  /// the unit's `mTurretAngles[i]`: the angle before the tick in, after it out
+  float angle;
 };
 
 /// What the constructor looks up outside the row: the C++ fills it before [`fill`].
@@ -4161,31 +4181,27 @@ int32_t ee_units_script_action_id(const char *name);
 /// The NUL-terminated name of an action id ("" unknown), static.
 const char *ee_units_script_action_name(uint32_t id);
 
-/// A stats object's report (its fields may have changed). Returns its version.
+/// `Init`'s copies before `Reapply` ([`init`]).
 ///
 /// # Safety
-/// `record` points to a valid record.
-uint32_t ee_units_stats_report(const EeUnitStatsRecord *record);
+/// `upgrade` and `class` point to live records; no other reference to them is held during the call.
+void ee_units_upgrade_init(EeUnitsUnitClassUpgradeFields *upgrade,
+                           const EeUnitsUnitClassFields *class_);
 
-/// A stats object's destructor.
-void ee_units_stats_remove(uint64_t object);
-
-/// Copies a stats object's record into `out`; false (and `out` untouched) when the table has none.
+/// `Init`'s copies after `Reapply` ([`init_finish`]).
 ///
 /// # Safety
-/// `out` points to a writable record.
-bool ee_units_stats_get(uint64_t object, EeUnitStatsRecord *out);
+/// As [`ee_units_upgrade_init`].
+void ee_units_upgrade_init_finish(EeUnitsUnitClassUpgradeFields *upgrade,
+                                  const EeUnitsUnitClassFields *class_);
 
-/// TEST ONLY: the objects of `objects` (`count` records filled from the units' stats) whose record is missing or
-/// differs.
+/// `SetMaxVelocity` ([`set_max_velocity`]).
 ///
 /// # Safety
-/// `objects` points to `count` records (or is null with `count` 0).
-uint32_t ee_units_stats_check(const EeUnitStatsRecord *objects,
-                              size_t count);
-
-/// The table's records (TEST ONLY: the teardown's leak check).
-uint32_t ee_units_stats_count();
+/// As [`ee_units_upgrade_init`].
+void ee_units_upgrade_set_max_velocity(EeUnitsUnitClassUpgradeFields *upgrade,
+                                       const EeUnitsUnitClassFields *class_,
+                                       float value);
 
 /// `UpdateReloadTimer` / `UpdateTargetSearchTimer` (`which`: `EE_UNITS_STEP_*`) over the store: true and the new
 /// timer in `out` when the C++ writes it.

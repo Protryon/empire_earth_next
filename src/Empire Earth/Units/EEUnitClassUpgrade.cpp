@@ -21,7 +21,6 @@
 #include "lle/TSCriticalSection.h"
 #include "lle/TSScheduler.h"
 
-#include "ee/EEUnitStore.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -74,7 +73,6 @@ EEUnitClassUpgrade::EEUnitClassUpgrade(EEUnitClass* inUnitClass)
 // Destroys the copy, unloading its sounds and model while its media is loaded
 EEUnitClassUpgrade::~EEUnitClassUpgrade()
 {
-    EEUnitStatsRemove(this);   // New (R5b.4, the fourteenth round): out of the stats table (ee/EEUnitStore.h)
     if (this->mMediaCount > 0) {
         long i;
         for (i = 0; i < 2; i++) {
@@ -173,7 +171,6 @@ EEUnitClass* EEUnitClassUpgrade::GetUnitClass()
 // (flag 0x4000 added when the class's +0x315 is set), then reapplies the improvement levels
 void EEUnitClassUpgrade::Init()
 {
-    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the stats table's record, on return
     long i;
     this->mButton = this->mUnitClass->mButton;
     this->SetModel(this->mUnitClass->mModel);
@@ -183,68 +180,12 @@ void EEUnitClassUpgrade::Init()
     this->SetDeathSound(this->mUnitClass->mDeathSound);
     for (i = 0; i < 2; i++)
         this->SetSelectionSound(this->mUnitClass->mSelectionSounds[i], i);
-    for (i = 0; i < 7; i++)
-        this->mGatherTimes[i] = this->mUnitClass->mGatherTimes[i];
-    this->mScale = this->mUnitClass->GetScale();
+    // New (R5b.4, round 28): the copies from the class's record are Rust (ee_units stats.rs init, init_finish), the
+    // original's statements in order around SetRange (which writes none of them) and Reapply
     this->SetRange(this->mUnitClass->mRange);
-    this->mAreaEffect = this->mUnitClass->GetAreaEffect();
-    this->mLineOfSight = this->mUnitClass->GetLineOfSight();
-    this->mAcceleration = this->mUnitClass->GetAcceleration();
-    this->mMaxVelocity = this->mUnitClass->GetMaxVelocity();
-    this->mAngularAcceleration = this->mUnitClass->GetAngularAcceleration();
-    this->mMaxAngularVelocity = this->mUnitClass->GetMaxAngularVelocity();
-    this->mTurretMaxAngularVelocity = this->mUnitClass->GetTurretMaxAngularVelocity();
-    // the class's armour array (+0x1f0..+0x204) copied in a loop, as the original
-    for (i = 0; i < 6; i++)
-        this->mArmor[i] = (float)this->mUnitClass->mArmor[i];
-    this->mReloadTime = this->mUnitClass->mReloadTime;
-    this->mAttack = (float)this->mUnitClass->mAttack;
-    this->mWorkRate = this->mUnitClass->mWorkRate;
-    this->mFlightTime = this->mUnitClass->mFlightTime;
-    this->mPowerRegeneration = this->mUnitClass->mPowerRegeneration;
-    this->mLeadership = (float)this->mUnitClass->mLeadership;
-    this->mMaxObjectCarry = this->mUnitClass->mMaxObjectCarry;
-    this->mRepairRate = this->mUnitClass->mRepairRate;
-    this->mMaxHitPoints = this->mUnitClass->mHitPoints;
-    this->mCarryAmount = this->mUnitClass->mCarryAmount;
-    this->mHealingPoints = this->mUnitClass->mHealingPoints;
-    this->mCanFireOverWalls = this->mUnitClass->mCanFireOverWalls;
-    this->mBuildsOnElevation = this->mUnitClass->mBuildsOnElevation;
-    this->mConvertsBuildings = this->mUnitClass->mConvertsBuildings;
-    this->mConvertsPriests = this->mUnitClass->mConvertsPriests;
-    this->mConversionResistance = this->mUnitClass->GetConversionResistance();
-    this->mConversionRate = this->mUnitClass->GetConversionRate();
-    this->mCostScale = this->mUnitClass->mCostScale;
-    this->mBuildTimeScale = this->mUnitClass->mBuildTimeScale;
-    this->mAreaEffectScale = this->mUnitClass->mAreaEffectScale;
-    this->mPower = this->mUnitClass->mPower;
-    this->mRegeneration = this->mUnitClass->mRegeneration;
-    if (this->mAcceleration < this->mMaxVelocity)
-        this->mBC = this->mAcceleration;
-    else
-        this->mBC = this->mMaxVelocity;
-    this->mInverseAcceleration = 1.0f / this->mAcceleration;
-    this->mInverseAngularAcceleration = 1.0f / this->mAngularAcceleration;
-    this->mInverseMaxAngularVelocity = 1.0f / this->mMaxAngularVelocity;
-    this->mInverseMaxVelocity = 1.0f / this->mMaxVelocity;
-    this->mInverseTurretMaxAngularVelocity = 1.0f / this->mTurretMaxAngularVelocity;
+    ee_units_upgrade_init(this, this->mUnitClass);
     this->mImprovement.Reapply(this->mUnitClass, this);
-    // the four area-effect templates (+0xfc / the class's +0x2bc) copied in a loop, as the original
-    for (i = 0; i < 4; i++)
-        this->mAreaEffectTemplates[i] = this->mUnitClass->mAreaEffectTemplates[i];
-    this->mWonderUnitSet = this->mUnitClass->mWonderUnitSet;
-    this->mIsInitialized = true;
-    this->mCameraFocus = 0.5f;              // original +0xf8 IEEE float 0x3f000000
-    this->mTerrainMask = 0;
-    for (unsigned long j = 0; j < 0x11; j++) {
-        if (!this->mUnitClass->mTerrainTypes[j])
-            continue;
-        unsigned long theBit = 1 << j;
-        if ((theBit & this->mTerrainMask) == 0)
-            this->mTerrainMask |= theBit;
-    }
-    if (this->mUnitClass->mCanCrossForest && ((this->mTerrainMask >> 0xe) & 1) == 0)
-        this->mTerrainMask |= 0x4000;
+    ee_units_upgrade_init_finish(this, this->mUnitClass);
 }
 
 // FUNCTION: EXE 0x63bbf9
@@ -284,7 +225,6 @@ void EEUnitClassUpgrade::LoadButtons(EEPlayer* inPlayer)
 // the area-effect templates and the class's media; later requests are counted and wait while the first one loads
 void EEUnitClassUpgrade::LoadMedia(EEPlayer* inPlayer, long inMediaFlags)
 {
-    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the death sound's (ee/EEUnitStore.h)
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount == 0) {
         this->mMediaCount = 1;
@@ -364,7 +304,6 @@ void EEUnitClassUpgrade::SetCreationSound(EESoundObject* inSound)
 // Replaces the death sound; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetDeathSound(EESoundObject* inSound)
 {
-    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the stats table's record, on return
     while (this->mIsLoadingMedia == true)
         PlatSleep(1);
     sDatabaseLock.mLock->Enter();
@@ -396,18 +335,7 @@ void EEUnitClassUpgrade::SetModel(EEModel* inModel)
 // inverses
 void EEUnitClassUpgrade::SetMaxVelocity(float inValue)
 {
-    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the stats table's record, on return
-    float theRatio = inValue / this->mUnitClass->GetMaxVelocity();
-    this->mMaxVelocity = inValue;
-    this->mAcceleration = this->mUnitClass->GetAcceleration() * theRatio;
-    this->mAngularAcceleration = this->mUnitClass->GetAngularAcceleration() * theRatio;
-    this->mMaxAngularVelocity = this->mUnitClass->GetMaxAngularVelocity() * theRatio;
-    this->mTurretMaxAngularVelocity = this->mUnitClass->GetTurretMaxAngularVelocity() * theRatio;
-    this->mInverseAcceleration = 1.0f / this->mAcceleration;
-    this->mInverseAngularAcceleration = 1.0f / this->mAngularAcceleration;
-    this->mInverseMaxAngularVelocity = 1.0f / this->mMaxAngularVelocity;
-    this->mInverseMaxVelocity = 1.0f / inValue;
-    this->mInverseTurretMaxAngularVelocity = 1.0f / this->mTurretMaxAngularVelocity;
+    ee_units_upgrade_set_max_velocity(this, this->mUnitClass, inValue);   // New (R5b.4, round 28): ee_units stats.rs
 }
 
 // FUNCTION: EXE 0x63c09d
@@ -430,7 +358,6 @@ void EEUnitClassUpgrade::SetButton(EEButtonObject* inButton)
 // Legionnaire aims for its heal range; no projectile: 0)
 void EEUnitClassUpgrade::SetRange(float inValue)
 {
-    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the stats table's record, on return
     float theCosine = UMCos(0.78539819f);
     this->mRange = inValue;
     EEUnitClass* theProjectile = this->mUnitClass->mProjectileClass;
