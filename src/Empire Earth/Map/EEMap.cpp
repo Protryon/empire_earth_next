@@ -447,84 +447,89 @@ void EEMap::Initialize()
 // tile (cliffs and unknown terrain become the base terrain; saves up to 0.203 have no space tiles)
 long EEMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
-    EETerrainTable* theDefault;
-    if (inMajorVersion == 0 && inMinorVersion <= 0xcb) {
-        if (RTSMap::Load(inMajorVersion, inMinorVersion, inFile) == kErrorOK && inFile.Read(this->mU195650) == kErrorOK) {
-            if (EETerrainTable::Get(this->mU195650) == NULL)
-                this->mU195650 = gDefaultTerrain;
-            theDefault = EETerrainTable::Get(this->mU195650);
-        } else theDefault = gDefaultTerrain != -1 ? EETerrainTable::Get(gDefaultTerrain) : NULL;
-        for (long x = 0; x < this->mSize; x++) {
-            for (long y = 0; y < this->mSize; y++) {
-                if (!this->mTerrainMesh.GetIsValidTile(x, y))
-                    continue;
-                EETerrainTable* theTerrain = EETerrainTable::Get(this->mTerrainMesh.GetTextureSetID(x, y));
-                if (theTerrain) {
-                    long theType = theTerrain->mTerrainType;
-                    if (theType != kTerrainCliff) {
-                        EETileLocation theLocation(x, y);
-                        this->GetTile(x, y)->SetTerrainType(theType, theLocation, this);
-                        theTerrain->Load(this->mTerrainMesh);
-                    } else {
-                        this->SetTileTerrain(x, y, theDefault->mTextureSetID, false);
-                        EETileLocation theLocation(x, y);
-                        this->GetTile(x, y)->SetTerrainType(theDefault->mTerrainType, theLocation, this);
-                    }
-                } else {
-                    this->SetTileTerrain(x, y, theDefault->mTextureSetID, false);
-                    EETileLocation theLocation(x, y);
-                    this->GetTile(x, y)->SetTerrainType(theDefault->mTerrainType, theLocation, this);
-                }
-            }
-        }
-        theResult = inFile.Read(this->mMapCharacteristics);
-        this->mU19565C = gFirstCliffTerrain;
-    } else {
-        if (RTSMap::Load(inMajorVersion, inMinorVersion, inFile) == kErrorOK && inFile.Read(this->mU195650) == kErrorOK) {
-            if (EETerrainTable::Get(this->mU195650) == NULL)
-                this->mU195650 = gDefaultTerrain;
-            theDefault = EETerrainTable::Get(this->mU195650);
-        } else theDefault = gDefaultTerrain != -1 ? EETerrainTable::Get(gDefaultTerrain) : NULL;
-        for (long x = 0; x < this->mSize; x++) {
-            for (long y = 0; y < this->mSize; y++) {
-                if (!this->mTerrainMesh.GetIsValidTile(x, y))
-                    continue;
-                EETerrainTable* theTerrain = EETerrainTable::Get(this->mTerrainMesh.GetTextureSetID(x, y));
-                if (theTerrain) {
-                    if (theTerrain->mTerrainType != kTerrainCliff) {
-                        if (this->mTerrainMesh.GetIsSpaceTile(x, y)) {
-                            EETileLocation theLocation(x, y);
-                            this->GetTile(x, y)->SetTerrainType(kTerrainSpace, theLocation, this);
-                        } else {
-                            long theType = theTerrain->mTerrainType;
-                            EETileLocation theLocation(x, y);
-                            this->GetTile(x, y)->SetTerrainType(theType, theLocation, this);
-                        }
-                        theTerrain->Load(this->mTerrainMesh);
-                    } else {
-                        this->SetTileTerrain(x, y, theDefault->mTextureSetID, false);
-                        EETileLocation theLocation(x, y);
-                        this->GetTile(x, y)->SetTerrainType(theDefault->mTerrainType, theLocation, this);
-                    }
-                } else {
-                    this->SetTileTerrain(x, y, theDefault->mTextureSetID, false);
-                    EETileLocation theLocation(x, y);
-                    this->GetTile(x, y)->SetTerrainType(theDefault->mTerrainType, theLocation, this);
-                }
-            }
-        }
-        inFile.Read(this->mMapCharacteristics);
-        theResult = inFile.Read(this->mU19565C);
-        if (this->mU19565C >= EETerrainTable::GetNumCliffTerrains() || EETerrainTable::sCliffTable[this->mU19565C] == NULL)
-            this->mU19565C = gFirstCliffTerrain;
+    // port (R5b.4, round 28): the original's two era bodies are one Rust sequence (ee_units map_save.rs) over the records
+    // the classes derive from and EEMapSaveOperation's parts
+    EEMapSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL, NULL};
+    return ee_units_map_load(&theContext, &EEMapSaveOperation, static_cast<EeUnitsRtsMapFields*>(this),
+                             static_cast<EeUnitsMapFields*>(this), (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
+}
+
+// New (R5b.4, round 28): the C++ parts of the maps' Load and Save (ee/EEMap.h): the file's primitives (EESavePrimitive),
+// the tiles, the mesh and the terrain tables; a tile's y in inIndex, its x in io->i's low 32 bits
+int32_t EEMapSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EEMapSaveContext& theContext = *static_cast<EEMapSaveContext*>(inContext);
+    RTSMap* theMap = theContext.mMap;
+    EEMap* theEEMap = static_cast<EEMap*>(theMap);   // (EEMap's operations only)
+    FSFile& theFile = *theContext.mFile;
+    long theX = (long)(uint32_t)io->i;
+    long theY = (long)inIndex;
+    switch (inOp) {
+    case EE_UNITS_MAP_SAVE_CREATE:
+        theMap->Create(theMap->mL195614, theMap->mL195610, theMap->mU19561C, false);
+        return kErrorOK;
+    case EE_UNITS_MAP_SAVE_LOAD_TILE:
+        theMap->mTiles[theMap->mSize * theY + theX] =
+            io->b != 0 ? theMap->LoadTile(theContext.mMajorVersion, theContext.mMinorVersion, theFile, theX, theY) : NULL;
+        return kErrorOK;
+    case EE_UNITS_MAP_SAVE_MESH_LOAD:
+        return theMap->mTerrainMesh.Load(theContext.mMajorVersion, theContext.mMinorVersion, theFile);
+    case EE_UNITS_MAP_SAVE_MESH_SAVE:
+        return theMap->mTerrainMesh.Save(theFile);
+    case EE_UNITS_MAP_SAVE_TILE_SAVE: {
+        EEMapTile* theTile = theMap->mTiles[theMap->mSize * theY + theX];
+        return theTile != NULL ? theTile->Save(theFile, theMap->mU19561C) : kErrorOK;
     }
-    ee_combat_regions_free(this->mUnitRegions);
-    delete this->mEffectRegions;
-    this->mUnitRegions = ee_combat_regions_new((uint32_t)UMCeilUnsigned((float)this->mSize / 3L), 3);
-    this->mEffectRegions = new EEEffectsTable(this, 10);
-    this->UpdateCliffs(0, this->mSize, 0, this->mSize);
-    return theResult;
+    case EE_UNITS_MAP_SAVE_PICK_DEFAULT:
+        if (io->b != 0) {
+            if (EETerrainTable::Get(theEEMap->mU195650) == NULL)
+                theEEMap->mU195650 = gDefaultTerrain;
+            theContext.mDefault = EETerrainTable::Get(theEEMap->mU195650);
+        } else
+            theContext.mDefault = gDefaultTerrain != -1 ? EETerrainTable::Get(gDefaultTerrain) : NULL;
+        return kErrorOK;
+    case EE_UNITS_MAP_SAVE_VALID:
+        io->i = theEEMap->mTerrainMesh.GetIsValidTile(theX, theY) ? 1 : 0;
+        return kErrorOK;
+    case EE_UNITS_MAP_SAVE_TERRAIN_TYPE:
+        theContext.mTerrain = EETerrainTable::Get(theEEMap->mTerrainMesh.GetTextureSetID(theX, theY));
+        io->b = theContext.mTerrain != NULL ? 1 : 0;
+        io->i = theContext.mTerrain != NULL ? theContext.mTerrain->mTerrainType : 0;
+        return kErrorOK;
+    case EE_UNITS_MAP_SAVE_SPACE:
+        io->i = theEEMap->mTerrainMesh.GetIsSpaceTile(theX, theY) ? 1 : 0;
+        return kErrorOK;
+    case EE_UNITS_MAP_SAVE_SET_TYPE: {
+        EETileLocation theLocation(theX, theY);
+        theEEMap->GetTile(theX, theY)->SetTerrainType((long)(io->i >> 32), theLocation, theEEMap);
+        return kErrorOK;
+    }
+    case EE_UNITS_MAP_SAVE_TERRAIN_LOAD:
+        theContext.mTerrain->Load(theEEMap->mTerrainMesh);
+        return kErrorOK;
+    case EE_UNITS_MAP_SAVE_SET_DEFAULT: {
+        theEEMap->SetTileTerrain(theX, theY, theContext.mDefault->mTextureSetID, false);
+        EETileLocation theLocation(theX, theY);
+        theEEMap->GetTile(theX, theY)->SetTerrainType(theContext.mDefault->mTerrainType, theLocation, theEEMap);
+        return kErrorOK;
+    }
+    case EE_UNITS_MAP_SAVE_CLIFF_VALID: {
+        unsigned long theID = (unsigned long)io->i;
+        io->b = theID >= EETerrainTable::GetNumCliffTerrains() || EETerrainTable::sCliffTable[theID] == NULL ? 0 : 1;
+        return kErrorOK;
+    }
+    case EE_UNITS_MAP_SAVE_FIRST_CLIFF:
+        io->i = gFirstCliffTerrain;
+        return kErrorOK;
+    case EE_UNITS_MAP_SAVE_FINISH:
+        ee_combat_regions_free(theEEMap->mUnitRegions);
+        delete theEEMap->mEffectRegions;
+        theEEMap->mUnitRegions = ee_combat_regions_new((uint32_t)UMCeilUnsigned((float)theEEMap->mSize / 3L), 3);
+        theEEMap->mEffectRegions = new EEEffectsTable(theEEMap, 10);
+        theEEMap->UpdateCliffs(0, theEEMap->mSize, 0, theEEMap->mSize);
+        return kErrorOK;
+    }
+    return EESavePrimitive(theFile, inOp, io);
 }
 
 // FUNCTION: EXE 0x51ceb0
@@ -869,16 +874,9 @@ void EEMap::RegisterTerrainSets()
 // Writes the map, its base terrain, characteristics and cliff terrain to the saved game; returns the first error
 long EEMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = RTSMap::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mU195650);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mMapCharacteristics);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mU19565C);
-    return theResult;
+    EEMapSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL, NULL};   // port: ee_units map_save.rs
+    return ee_units_map_save(&theContext, &EEMapSaveOperation, static_cast<EeUnitsRtsMapFields*>(this),
+                             static_cast<EeUnitsMapFields*>(this));
 }
 
 // FUNCTION: EXE 0x51df99
