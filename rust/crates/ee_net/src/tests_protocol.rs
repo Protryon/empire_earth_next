@@ -216,7 +216,13 @@ pub mod stub {
         log(format!("send {:x} {:?}", slot(connection), std::slice::from_raw_parts(data, length as usize)));
         answer()
     }
-    pub unsafe fn ee_tcp_send_single(host: *const u8, host_length: usize, port: u32, data: *const u8, length: u32) -> i32 {
+    pub unsafe fn ee_tcp_send_single(
+        host: *const u8,
+        host_length: usize,
+        port: u32,
+        data: *const u8,
+        length: u32,
+    ) -> i32 {
         let _ = data;
         log(format!("send_single {} {port} {length}", text(host, host_length)));
         answer()
@@ -294,7 +300,7 @@ fn opens_hand_on_the_handle_only_on_success() {
     log();
     unsafe {
         let ev = 0x40 as *const c_void;
-        let mut out = 1usize as *mut c_void;
+        let mut out = 7usize as *mut c_void;
         assert_eq!(ee_net_pr_connect(p, b"n".as_ptr(), 1, b"h".as_ptr(), 1, b"a".as_ptr(), 1, 2, ev, &mut out, 900), 0);
         assert_eq!(out as usize, stub::NEW);
         *stub::ANSWERS.lock().unwrap() = vec![6, 0, 7, 9];
@@ -309,7 +315,19 @@ fn opens_hand_on_the_handle_only_on_success() {
         assert!(c.is_null());
         let events = [0x10 as *const c_void, 0x20 as *const c_void, 0x30 as *const c_void];
         assert_eq!(
-            ee_net_pr_publish(p, b"EEService".as_ptr(), 9, b"me".as_ptr(), 2, 2, events.as_ptr(), &mut c, true, false, 3),
+            ee_net_pr_publish(
+                p,
+                b"EEService".as_ptr(),
+                9,
+                b"me".as_ptr(),
+                2,
+                2,
+                events.as_ptr(),
+                &mut c,
+                true,
+                false,
+                3
+            ),
             0
         );
         assert_eq!(c as usize, stub::NEW);
@@ -336,7 +354,7 @@ fn the_counters_add_what_moved() {
     unsafe {
         let mut data = [1u8, 2, 3];
         *stub::ANSWERS.lock().unwrap() = vec![4, 0, 0, 5, 3, 0, 9, 2];
-        assert_eq!(ee_net_pr_send(p, 0x1 as *mut c_void, data.as_mut_ptr(), 3), 4, "counted even when it failed");
+        assert_eq!(ee_net_pr_send(p, 0x11 as *mut c_void, data.as_mut_ptr(), 3), 4, "counted even when it failed");
         assert_eq!(ee_net_pr_send_to(p, 0x2 as *mut c_void, false, 3, data.as_mut_ptr(), 2), 0);
         assert_eq!(ee_net_pr_send_to(p, 0x2 as *mut c_void, true, 3, data.as_mut_ptr(), 1), 0);
         assert_eq!(ee_net_pr_send_single(p, b"host".as_ptr(), 4, 0x1234, data.as_ptr(), 3), 5);
@@ -355,7 +373,7 @@ fn the_counters_add_what_moved() {
         assert_eq!(
             log(),
             [
-                "send 1 [1, 2, 3]",
+                "send 11 [1, 2, 3]",
                 "send_to 2 3 [1, 2]",
                 "xfer_send_to 2 3 1",
                 "send_single host 4660 3",

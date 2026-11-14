@@ -29,6 +29,7 @@ use ee_mixer as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
 use ee_net_tcp as _;
 // the Network Engine's whole classes (ee_net/src/ffi.rs), called by NESynchronousServer.cpp
+#[cfg(not(test))] // its protocol imports the TCP plug-in's C ABI (ee_net_tcp, absent from a test binary)
 use ee_net as _;
 use ee_random as _;
 #[cfg(not(test))]

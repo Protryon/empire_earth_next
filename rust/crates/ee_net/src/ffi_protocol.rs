@@ -105,10 +105,10 @@ mod sys {
         pub fn ee_ts_event_handle(event: *const c_void) -> *mut c_void;
     }
 }
-#[cfg(not(test))]
-use sys::*;
 #[cfg(test)]
 use crate::tests_protocol::stub::*;
+#[cfg(not(test))]
+use sys::*;
 
 /// `kErrorOK`, `kErrorNotFound`, `kErrorBeyondEnd`
 const ERROR_OK: i32 = 0;

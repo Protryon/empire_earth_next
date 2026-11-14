@@ -772,7 +772,7 @@ impl<H: ClientHost> Client<H> {
                                 file = self.host.create_xfer_file(data + 8, file_size);
                                 if file == 0 {
                                     let slot = self.host.client_slot();
-                                    let values = [slot as u32, percent_done as u32, xfer_id, status_id as u32];
+                                    let values = [slot as u32, percent_done, xfer_id, status_id];
                                     let s = self.host.msg_new(MSG_XFER_STATUS, &values);
                                     self.host.process_local_user_input(s, SLOT_SERVER);
                                 }
@@ -785,7 +785,7 @@ impl<H: ClientHost> Client<H> {
                                 } else {
                                     xfer_id = 0xffff;
                                     let slot = self.host.client_slot();
-                                    let values = [slot as u32, percent_done as u32, xfer_id, status_id as u32];
+                                    let values = [slot as u32, percent_done, xfer_id, status_id];
                                     let s = self.host.msg_new(MSG_XFER_STATUS, &values);
                                     self.host.process_local_user_input(s, SLOT_SERVER);
                                 }

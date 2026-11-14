@@ -29,7 +29,9 @@ use crate::tune::{f32_to_u32, Field as TuField, Tune, TuneHost};
 pub use crate::comms::Comms;
 pub use crate::ffi::{MmCall, MmVia};
 pub use crate::ffi_comms::EeNetCommsField as BaseField;
-pub use crate::ffi_server::{EeNetSvEvent as SvEvent, EeNetSvGet as SvGet, EeNetSvMsgFlag as MsgFlag, EeNetSvSet as SvSet};
+pub use crate::ffi_server::{
+    EeNetSvEvent as SvEvent, EeNetSvGet as SvGet, EeNetSvMsgFlag as MsgFlag, EeNetSvSet as SvSet,
+};
 
 /// `ESVERIFY_AT`'s unit for this file (QHost::verify)
 pub const UNIT: u32 = 4;
