@@ -96,4 +96,17 @@ public:
     bool mInUnitStore = false;              // New (port): its record is in the unit store (ee/EEUnitStore.h)
 };
 
+// New (R5b.4, round 26): the units' Save and Load are Rust (ee_units unit_save.rs, unit_load.rs) over the records and
+// this host (EEComplexDoppelganger.cpp): the file's primitives with the overload the original called and the unit's C++
+// parts by operation. mGoals: EEComplexUnit::Load's stand-in goal queue (the queues past the unit's own)
+class EEUnitVectorItem;
+struct EEUnitSaveContext {
+    RTSUnit* mUnit;
+    FSFile* mFile;
+    unsigned long mMajorVersion;
+    unsigned long mMinorVersion;
+    EEUnitVectorItem* mGoals;
+};
+int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsUnitSaveIo* io);
+
 #endif

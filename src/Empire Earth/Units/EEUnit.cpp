@@ -535,25 +535,12 @@ void EEUnit::LastDereference()
 
 // FUNCTION: EXE 0x6298fb
 // Reads the unit from a saved game (resource type, health fraction held in mHitPoints until FinishLoad, amount);
-// returns the first read error
+// returns the first read error. port (R5b.4, round 26): the body is Rust (ee_units unit_load.rs unit_load)
 long EEUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = RTSUnit::Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult == 0) {
-        theResult = inFile.Read(this->mResourceType);
-        if (theResult == 0) {
-            float theFraction;
-            long theUnused;
-            theResult = inFile.Read(theFraction);
-            memcpy(&this->mHitPoints, &theFraction, 4);
-            if (theResult == 0) {
-                theResult = inFile.Read(this->mResourceAmount);
-                if (theResult == 0)
-                    theResult = inFile.Read(theUnused);
-            }
-        }
-    }
-    return theResult;
+    EEUnitSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL};
+    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion, 0, 0};
+    return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, this, NULL, &theIn);
 }
 
 // FUNCTION: EXE 0x629973
@@ -579,25 +566,12 @@ long EEUnit::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorV
 
 // FUNCTION: EXE 0x6299e5
 // Writes the unit to the saved game (base unit part, resource type, health fraction, amount, a zero); returns the
-// first write error
+// first write error. port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs unit_save)
 long EEUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theZero = 0;
-    // the base unit part's result counts too (it used to be ignored)
-    long theResult = RTSUnit::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mResourceType);
-    if (theResult != 0)
-        return theResult;
-    float theFraction = (float)this->mHitPoints / this->mStats->mMaxHitPoints;
-    theResult = outFile.Write(theFraction);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mResourceAmount);
-    if (theResult == 0)
-        theResult = outFile.Write(theZero);
-    return theResult;
+    EEUnitSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
+    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion, 0, 0};
+    return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, this, NULL, &theIn);
 }
 
 // FUNCTION: EXE 0x629a56

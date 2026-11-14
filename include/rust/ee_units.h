@@ -1674,6 +1674,259 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 /// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
 constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
 
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_LONG = 101;
+
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_ULONG = 102;
+
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_FLOAT = 103;
+
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_BOOL = 104;
+
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_USHORT = 105;
+
+/// a section (`index`: `EE_UNITS_UNIT_LOAD_SECTION_*`), the result; io.b = 1 when the held units' loop left for
+/// `LoadLateVersions`; io.i carries the original's `theValue` (the citizen queue, the cargo, the held units) or
+/// `theState` (the unit variables) in and out
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_SECTION = 110;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_BUILD_QUEUE = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_CITIZEN_QUEUE = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_CARGO = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_WAYPOINTS = 3;
+
+/// the goal queues, then the conversion and heal effects' handles (the original's chain)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_GOAL_QUEUES = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_HELD_UNITS = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_UNIT_VARIABLES = 6;
+
+/// the port's live state (0.254) and running state (0.256), put back at the first tick
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_LIVE_STATE = 7;
+
+/// a composite member's read (`index`: `EE_UNITS_UNIT_LOAD_PART_*`), the result
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_PART = 111;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_PROJECTILE_START = 0;
+
+/// the location's `Load`, then (read) `mPhysicalModel.SetLocation`
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_LOCATION = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_ANGULAR_VELOCITY = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_ORIENTATION = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_U0DC = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_COLOR = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_FIRE_EFFECT = 6;
+
+/// the path's flag and goal tile; a unit with no path queues a pending path request
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_PATH = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_LAST_MAP_POSITION = 8;
+
+/// `mInitialContactLocation`'s x, y, z (read as floats into the C++ point)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_CONTACT_X = 9;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_CONTACT_Y = 10;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_CONTACT_Z = 11;
+
+/// `mTurretAngles[index]`'s read (`EE_UNITS_UNIT_LOAD_TURRET_ANGLE`)
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_TURRET_ANGLE = 112;
+
+/// a C++ member set from a value read (`index`: `EE_UNITS_UNIT_LOAD_SET_*`; io.i or io.f the value)
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_SET = 113;
+
+/// `mBehavior = EEUnitBehavior::sTable[5]`
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_DEFAULT_BEHAVIOR = 0;
+
+/// the scale (io.f) for a scenario or a zero scale from the class, then `SetScale`
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_SCALE = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_FRAME = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_X = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_Y = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_LAUNCHER_CLASS = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_PATROL_GROUP = 6;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_PREVIOUS_PART = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_NEXT_PART = 8;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_HOME_BASE = 9;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_CONTAINER = 10;
+
+/// the action read (io.i): started when the class has it (0 as 5000)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_ACTION = 11;
+
+/// `ResizeTurretAngles(io.i)`
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_TURRETS = 12;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_GATHERED_RESOURCE = 13;
+
+/// the last attacker's and the owner's references dropped (`index` 14, 16), then set from an id (15, 17)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_LAST_ATTACKER_CLEAR = 14;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_LAST_ATTACKER = 15;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_OWNER_CLEAR = 16;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_OWNER = 17;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_MINE = 18;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_HERD = 19;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_HOLDER = 20;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_BEHAVIOR = 21;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_LAST_RESOURCE = 22;
+
+/// `mMine = (EEUnit*)-1` (before its id's read)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_MINE_UNSET = 23;
+
+/// `kUnsetHeading` (0x446db0): `mInitialContactHeading` before its read.
+constexpr static const float EE_UNITS_UNSET_HEADING = -10000.0;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_LONG = 1;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_ULONG = 2;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_FLOAT = 3;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_BOOL = 4;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_USHORT = 5;
+
+/// `mStats->mMaxHitPoints`, `mStats->mFlightTime`, `mStats->mPower`, `GetUnitClass()->mGarrisonCapacity`
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_MAX = 20;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_MAX_HIT_POINTS = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_MAX_FLIGHT_TIME = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_MAX_POWER = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_MAX_GARRISON = 3;
+
+/// the value the original wrote for a pointer member or a part of one (`index`: `EE_UNITS_UNIT_SAVE_ID_*`), as an
+/// `unsigned long` (io.i)
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_ID = 21;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_FRAME = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_LAUNCHER_CLASS = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_PATROL_GROUP = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_PREVIOUS_PART = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_NEXT_PART = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_HOME_BASE = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_CONTAINER = 6;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_COMMAND = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_GATHERED_RESOURCE = 8;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_LAST_ATTACKER = 9;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_OWNER = 10;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_MINE = 11;
+
+/// (the herd's id, 0 for none)
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_HERD = 12;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_HOLDER = 13;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_BEHAVIOR = 14;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_LAST_RESOURCE = 15;
+
+/// the effect handles' values (`mConversionEffect`, `mHealEffect` as the original's `long`)
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_CONVERSION_EFFECT = 16;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_HEAL_EFFECT = 17;
+
+/// `mPhysicalModel.GetScale()` and `mInitialContactLocation`'s x, y, z (io.f; `index` 0..3)
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_FLOAT = 22;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_FLOAT_SCALE = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_X = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_Y = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_Z = 3;
+
+/// the collision tile's x and y (`index` 0, 1; io.i, written as `long`)
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_COLLISION_TILE = 23;
+
+/// a section (`index`: `EE_UNITS_UNIT_SAVE_SECTION_*`): its count and elements with the original's loop
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_SECTION = 30;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_BUILD_QUEUE = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_CITIZEN_QUEUE = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_CARGO = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_WAYPOINTS = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_TURRET_ANGLES = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_GOAL_QUEUES = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_HELD_UNITS = 6;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_UNIT_VARIABLES = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_IGNORED_TARGETS = 8;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_BOUNDED_PATH_TILES = 9;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_CONTACTS = 10;
+
+/// a composite member's `Save` (`index`: `EE_UNITS_UNIT_SAVE_PART_*`)
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_PART = 31;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_PROJECTILE_START = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_LOCATION = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_ANGULAR_VELOCITY = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_ORIENTATION = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_U0DC = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_COLOR = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_FIRE_EFFECT = 6;
+
+/// `gPathManager.GetPathGoal`: the bool written, then the goal tile's `Save`
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_PATH = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_LAST_MAP_POSITION = 8;
+
+/// `if (mHerd != NULL) mHerd->HasUnit(this)` after the herd's id (no write; 0)
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_HERD_HAS_UNIT = 9;
+
 /// the transport's classes (`EEUnitClassCast<EEUCTransport>`, `<EEUCAirplane>`)
 constexpr static const int64_t TRANSPORT_CLASS = 1;
 
@@ -2665,6 +2918,24 @@ struct EeUnitsTurretPart {
   float transform[4][4];
   /// the unit's `mTurretAngles[i]`: the angle before the tick in, after it out
   float angle;
+};
+
+/// One operation's values: a number (`long`/`unsigned long`/`unsigned short`/an id/a count), a float, a bool (0 or 1).
+struct EeUnitsUnitSaveIo {
+  int64_t i;
+  float f;
+  uint8_t b;
+};
+
+/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer in `io`).
+using EeUnitsUnitSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsUnitSaveIo*);
+
+/// The save's inputs: the version, whether it carries the port's live state (0.254) and running state (0.256).
+struct EeUnitsUnitSaveIn {
+  uint32_t major;
+  uint32_t minor;
+  uint8_t live_state;
+  uint8_t running_state;
 };
 
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
@@ -3762,6 +4033,30 @@ uint32_t ee_units_update_units(const EeUnitsTickHost *host);
 /// # Safety
 /// `input` is valid; `parts` holds `count` parts (NULL when `count` is 0).
 void ee_units_turn_turrets(const EeUnitsTurretsIn *input, EeUnitsTurretPart *parts, uint32_t count);
+
+/// The C ABI: `RTSUnit::Load` (`unit`, `complex` null), `EEUnit::Load` (`complex` null) or `EEComplexUnit::Load` (all
+/// three) of one unit over the host callback.
+///
+/// # Safety
+/// The record pointers name the live records of the unit the callback loads (null where noted); `inp` is valid.
+int32_t ee_units_unit_load(void *ctx,
+                           EeUnitsUnitSaveFn f,
+                           EeUnitsRtsUnitFields *rts,
+                           EeUnitsUnitFields *unit,
+                           EeUnitsComplexUnitFields *complex,
+                           const EeUnitsUnitSaveIn *inp);
+
+/// The C ABI: `RTSUnit::Save` (`unit`, `complex` null), `EEUnit::Save` (`complex` null) or `EEComplexUnit::Save`
+/// (all three) of one unit over the host callback.
+///
+/// # Safety
+/// The record pointers name the live records of the unit the callback saves (null where noted); `inp` is valid.
+int32_t ee_units_unit_save(void *ctx,
+                           EeUnitsUnitSaveFn f,
+                           const EeUnitsRtsUnitFields *rts,
+                           const EeUnitsUnitFields *unit,
+                           const EeUnitsComplexUnitFields *complex,
+                           const EeUnitsUnitSaveIn *inp);
 
 /// A class's `Update` of the unit `id` (`object`: its address, the record's check) over the store and `host`.
 ///

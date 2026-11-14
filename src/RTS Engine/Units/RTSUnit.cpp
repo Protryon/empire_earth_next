@@ -298,27 +298,13 @@ void RTSUnit::LastDereference()
 }
 
 // FUNCTION: EXE 0x63db4f
-// Reads the unit's tile, id and flags (the editor selection is cleared); returns the first read error
+// Reads the unit's tile, id and flags (the editor selection is cleared); returns the first read error. port (R5b.4,
+// round 26): the body is Rust (ee_units unit_load.rs rts_load)
 long RTSUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = inFile.Read(this->mTileX);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mTileY);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mUnitID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mIsQueuedForDelete);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mIsEditorSelected);
-    this->mIsEditorSelected = false;
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(this->mIsValid);
-    }
-    return theResult;
+    EEUnitSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL};
+    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion, 0, 0};
+    return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, NULL, NULL, &theIn);
 }
 
 // FUNCTION: EXE 0x63dbb7
@@ -359,39 +345,12 @@ void RTSUnit::Unlink()
 
 // FUNCTION: EXE 0x63dc3a
 // Writes the unit's tile, id and flags (editor selection as false; versions up to 0.6 write id and tile
-// only); returns the first write error
+// only); returns the first write error. port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs rts_save)
 long RTSUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult;
-    bool theIsEditorSelected;
-    if (inMajorVersion == 0 && inMinorVersion <= 6) {
-        theResult = outFile.Write(this->mUnitID);
-        if (theResult == kErrorOK) {
-            theResult = outFile.Write(this->mTileX);
-            if (theResult == kErrorOK) {
-                theResult = outFile.Write(this->mTileY);
-            }
-        }
-    } else {
-        theResult = outFile.Write(this->mTileX);
-        if (theResult == kErrorOK) {
-            theResult = outFile.Write(this->mTileY);
-            if (theResult == kErrorOK) {
-                theResult = outFile.Write(this->mUnitID);
-                if (theResult == kErrorOK) {
-                    theResult = outFile.Write(this->mIsQueuedForDelete);
-                    if (theResult == kErrorOK) {
-                        theIsEditorSelected = false;
-                        theResult = outFile.Write(theIsEditorSelected);
-                        if (theResult == kErrorOK) {
-                            theResult = outFile.Write(this->mIsValid);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return theResult;
+    EEUnitSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
+    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion, 0, 0};
+    return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, NULL, NULL, &theIn);
 }
 
 // FUNCTION: EXE 0x63dcf3

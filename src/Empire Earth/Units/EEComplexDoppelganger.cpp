@@ -381,435 +381,216 @@ long EEComplexDoppelganger::Save(unsigned long inMajorVersion, unsigned long inM
     return outFile.Write(this->mIsFoundation);
 }
 
-static const float kUnsetHeading = -10000.0f;   // 0x446db0 (Load's mInitialContactHeading; provisional name)
-// FUNCTION: EXE 0x5f2452
-// Reads the complex unit's state from the saved game, keeping units and groups as ids for RepairPointers and queueing
-// its pending path; fields newer than the file get defaults; returns the read status
-long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+// The sections of EEComplexUnit::Load (ee_units unit_load.rs EE_UNITS_UNIT_LOAD_SECTION_*): the containers with the
+// original's loops (io.i carries the original's theValue, or theState, in and out; io.b = 1 when the held units' loop
+// left for LoadLateVersions) and the port's live state; the result
+static int32_t EEComplexUnitLoadSection(EEUnitSaveContext& inContext, uint32_t inIndex, EeUnitsUnitSaveIo* io)
 {
-    long i, j, k, p, q, n, r;
-    EEUnitVectorItem theGoals(this);
-    EEComplexUnitWaypoint theWaypoint;
-    GETransformation theLocation(false);
-    U2DPoint<long> theGoalTile;
-    unsigned long theValue;
-    unsigned long theSecond;
-    unsigned long theGoalCount;
-    long theCount;
-    long theFirst;
-    long theState;
-    unsigned long theAction;
-    long thePartsResult;
-    float theFraction;
-    float theScale;
-    bool theFlag;
-    bool theHasPath = false;
-    long theResult = EEUnit::Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult != 0)
-        goto LoadFinalVersions;
-    this->mInitialContactHeading = kUnsetHeading;
-    this->mBehavior = EEUnitBehavior::sTable[5];
-    this->mBuildQueue.clear();
-    theResult = inFile.Read(theCount);
-    for (i = 0; i < theCount && theResult == 0; i++) {
-        theResult = inFile.Read(theFirst);
-        if (theResult == 0) {
-            if (inMinorVersion < 0xf8)
-                theSecond = 0;
-            else
-                theResult = inFile.Read(theSecond);
+    FSFile& inFile = *inContext.mFile;
+    EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inContext.mUnit);
+    unsigned long inMajorVersion = inContext.mMajorVersion;
+    unsigned long inMinorVersion = inContext.mMinorVersion;
+    unsigned long theValue = (unsigned long)io->i;
+    long theCount = 0;
+    long theResult = 0;
+    switch (inIndex) {
+    case EE_UNITS_UNIT_LOAD_SECTION_BUILD_QUEUE: {
+        long theFirst;
+        unsigned long theSecond;
+        theUnit->mBuildQueue.clear();
+        theResult = inFile.Read(theCount);
+        for (long i = 0; i < theCount && theResult == 0; i++) {
+            theResult = inFile.Read(theFirst);
             if (theResult == 0) {
-                EEProductionEntry thePair = {theFirst, theSecond};
-                this->mBuildQueue.push_back(thePair);
+                if (inMinorVersion < 0xf8)
+                    theSecond = 0;
+                else
+                    theResult = inFile.Read(theSecond);
+                if (theResult == 0) {
+                    EEProductionEntry thePair = {theFirst, theSecond};
+                    theUnit->mBuildQueue.push_back(thePair);
+                }
             }
         }
+        return theResult;
     }
-    this->mCitizenBuildQueue.clear();
-    theResult = inFile.Read(theCount);
-    for (j = 0; j < theCount && theResult == 0; j++) {
-        theResult = inFile.Read(theValue);
-        if (theResult == 0) {
-            EEUnit* theUnit = reinterpret_cast<EEUnit*>(theValue);
-            this->mCitizenBuildQueue.push_back(theUnit);
-        }
-    }
-    this->mCargo.clear();
-    theResult = inFile.Read(theCount);
-    for (k = 0; k < theCount && theResult == 0; k++) {
-        theResult = inFile.Read(theValue);
-        if (theResult == 0) {
-            EEComplexUnit* theUnit = reinterpret_cast<EEComplexUnit*>(theValue);
-            this->mCargo.push_back(theUnit);
-        }
-    }
-    this->mWaypoints.clear();
-    theResult = inFile.Read(theCount);
-    for (p = 0; p < theCount; p++) {
-        if (theResult != 0)
-            goto LoadFlags;
-        theResult = theWaypoint.mLocation.Load(inFile);
-        if (theResult == 0 && (theResult = inFile.Read(theWaypoint.mDistance)) == 0
-            && (theResult = inFile.Read(theWaypoint.mStartDistance)) == 0)
-            this->mWaypoints.push_back(theWaypoint);
-    }
-    if (theResult != 0 || (theResult = this->mProjectileStart.Load(inFile)) != 0)
-        goto LoadFlags;
-    theResult = theLocation.Load(inFile);
-    if (theResult != 0)
-        goto LoadFlags;
-    this->mPhysicalModel.SetLocation(theLocation);
-    theResult = inFile.Read(theFlag);
-    this->mIsFiringHigh = theFlag;
-    if (theResult != 0 || (theResult = inFile.Read(theScale)) != 0)
-        goto LoadFlags;
-    if (GetIsLoadingScenario() || theScale == 0.0f) {
-        if (this->GetUnitClass() == NULL) {
-            if (theScale == 0.0f)
-                theScale = 1.0f;
-        } else
-            theScale = this->GetUnitClass()->GetScale();
-    }
-    this->mPhysicalModel.SetScale(theScale);
-    theResult = inFile.Read(theValue);
-    this->mPhysicalModel.SetFrame(theValue);
-    if (theResult != 0 || (theResult = this->mAngularVelocity.Load(inFile)) != 0 || (theResult = this->mOrientation.Load(inFile)) != 0)
-        goto LoadFlags;
-    inFile.Read(theState);
-    this->mCollisionTile.mX = theState;
-    theResult = inFile.Read(theState);
-    this->mCollisionTile.mY = theState;
-    if (theResult != 0 || (theResult = inFile.Read(theValue)) != 0)
-        goto LoadFlags;
-    this->mLauncherClass = theValue == 0 || UIsNone32(theValue) ? NULL : gUnitClassTable[theValue];
-    theResult = inFile.Read(theValue);
-    this->mPatrolGroup = USavedPointer<EEPPatrolGroup>(theValue);
-    if (theResult != 0)
-        goto LoadFlags;
-    theResult = inFile.Read(theValue);
-    this->mPreviousPart = reinterpret_cast<EEComplexUnit*>(theValue);
-    if (theResult != 0)
-        goto LoadFlags;
-    theResult = inFile.Read(theValue);
-    this->mNextPart = reinterpret_cast<EEComplexUnit*>(theValue);
-    if (theResult != 0)
-        goto LoadFlags;
-    theResult = inFile.Read(theValue);
-    this->mHomeBase = reinterpret_cast<EEComplexUnit*>(theValue);
-    if (theResult != 0)
-        goto LoadFlags;
-    theResult = inFile.Read(theValue);
-    this->mContainer = reinterpret_cast<EEComplexUnit*>(theValue);
-    if (theResult != 0)
-        goto LoadFlags;
-    theResult = inFile.Read(theAction);
-    if (this->GetUnitClass() != NULL && this->GetUnitClass()->FindAction(theAction) != NULL) {
-        if (theAction == 0)
-            theAction = 5000;
-        this->StartAction(theAction);
-    }
-    if (theResult != 0 || (thePartsResult = inFile.Read(theCount)) != 0)
-        goto LoadFlags;
-    this->ResizeTurretAngles(theCount);
-    this->mNumTurretAngles = theCount;
-    for (q = 0; q < theCount; q++) {
-        if (thePartsResult != 0)
-            goto LoadFlags;
-        thePartsResult = inFile.Read(this->mTurretAngles[q]);
-    }
-    if (thePartsResult != 0)
-        goto LoadFlags;
-    if ((theResult = inFile.Read(this->mHeight)) != 0
-        || (theResult = inFile.Read(this->mVelocity)) != 0
-        || (theResult = inFile.Read(this->mF220)) != 0
-        || (theResult = inFile.Read(this->mF21C)) != 0
-        || (theResult = inFile.Read(this->mCurrentResearch)) != 0
-        || (theResult = inFile.Read(this->mAnimation)) != 0
-        || (theResult = inFile.Read(this->mCurrentPhysicsAction)) != 0
-        || (theResult = inFile.Read(this->mCurrentPhysicsOrder)) != 0
-        || (theResult = inFile.Read(this->mFacing)) != 0
-        || (theResult = inFile.Read(this->mLaunchYaw)) != 0)
-        goto LoadFlags;
-    theResult = inFile.Read(theFraction);
-    memcpy(&this->mLastHitPoints, &theFraction, sizeof(theFraction));
-    if (theResult != 0)
-        goto LoadFlags;
-    if ((theResult = inFile.Read(this->mExitingUnitID)) != 0
-        || (theResult = inFile.Read(this->mCrewHitPoints)) != 0
-        || (theResult = inFile.Read(this->mProductionTime)) != 0)
-        goto LoadFlags;
-    theResult = inFile.Read(theFraction);
-    memcpy(&this->mFlightTime, &theFraction, sizeof(theFraction));
-    if (theResult != 0)
-        goto LoadFlags;
-    if ((theResult = inFile.Read(this->mReloadTimer)) != 0
-        || (theResult = inFile.Read(this->mCargoRoom)) != 0
-        || (theResult = inFile.Read(this->mRottingAwayTime)) != 0
-        || (theResult = inFile.Read(this->mTargetSearchTimer)) != 0
-        || (theResult = inFile.Read(this->mWorkTimer)) != 0
-        || (theResult = inFile.Read(this->mRegenerationTimer)) != 0
-        || (theResult = inFile.Read(this->mHealSearchTimer)) != 0
-        || (theResult = inFile.Read(this->mCollisionResolutionCount)) != 0
-        || (theResult = inFile.Read(this->mWakeTimer)) != 0
-        || (theResult = inFile.Read(this->mTrailEffectTimer)) != 0
-        || (theResult = inFile.Read(this->mAmmunition)) != 0
-        || (theResult = inFile.Read(this->mAnimationTime)) != 0
-        || (theResult = inFile.Read(theValue)) != 0
-        || (theResult = inFile.Read(this->mWeaponTagPoint)) != 0)
-        goto LoadFlags;
-    inFile.Read(this->mTimesUpdated);
-
-LoadFlags:
-    if ((theResult = inFile.Read(this->mConversionStartTime)) != 0
-        || (theResult = inFile.Read(this->mCollisionState)) != 0
-        || (theResult = inFile.Read(this->mIsDisabled)) != 0
-        || (theResult = inFile.Read(this->mIsDeletable)) != 0
-        || (theResult = inFile.Read(this->mIsCommandable)) != 0
-        || (theResult = inFile.Read(this->mIsAnimationPaused)) != 0
-        || (theResult = inFile.Read(this->mHasArrived)) != 0
-        || (theResult = inFile.Read(this->mIsPathDone)) != 0
-        || (theResult = inFile.Read(this->mIsClearanceGranted)) != 0)
-        goto LoadLegacy;
-    theResult = inFile.Read(this->mIsBuilt);   // a unit store holder (ee/EEUnitStore.h)
-LoadLegacy:
-    if (inMinorVersion <= 0x1b) {
-        if (theResult == 0)
-            theResult = inFile.Read(theFlag);
-        if (theResult == 0)
-            theResult = inFile.Read(theFlag);
-    } else {
-        if (theResult == 0)
-            theResult = inFile.Read(this->mOpacity);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mIsCloaked);
-    }
-    if (theResult == 0) {
-        theResult = inFile.Read(theValue);
-        this->mGatheredResource = reinterpret_cast<EEUnit*>(theValue);
-        if (theResult == 0 && (theResult = inFile.Read(this->mNumAreaEffects)) == 0)
-            theResult = inFile.Read(this->mU2FC);
-    }
-    if (this->mLastAttacker != NULL)
-        this->mLastAttacker->Dereference();
-    this->mLastAttacker = NULL;
-    if (theResult == 0) {
-        theResult = inFile.Read(theValue);
-        this->mLastAttacker = reinterpret_cast<EEComplexUnit*>(theValue);
-    }
-    if (this->mOwner != NULL)
-        this->mOwner->Dereference();
-    this->mOwner = NULL;
-    if (theResult == 0) {
-        theResult = inFile.Read(theValue);
-        this->mOwner = USavedPointer<EEComplexUnit>(theValue);
-        if (theResult == 0) {
-            theResult = inFile.Read(theFraction);
-            memcpy(&this->mGarrisonCount, &theFraction, sizeof(theFraction));
-            if (theResult == 0 && (theResult = inFile.Read(this->mGarrisonPopulation)) == 0
-                && (theResult = inFile.Read(this->mIsPaidFor)) == 0)
-                theResult = inFile.Read(this->mNumBuilders);
-        }
-    }
-    theValue = (unsigned long)-1;
-    this->mMine = (EEUnit*)-1;
-    if (theResult == 0) {
-        theResult = inFile.Read(theValue);
-        this->mMine = USavedPointer<EEUnit>(theValue);
-        if (theResult == 0 && (theResult = this->mU0DC.Load(inFile)) == 0
-            && (theResult = inFile.Read(this->mIsDetachedFromAI)) == 0 && (theResult = this->mColor.Load(inFile)) == 0
-            && (theResult = inFile.Read(this->mIsTinted)) == 0 && (theResult = inFile.Read(this->mIsLocked)) == 0
-            && (theResult = inFile.Read(this->mGateDirection)) == 0 && (theResult = inFile.Read(this->mOpenFraction)) == 0) {
-            theResult = inFile.Read(theGoalCount);
-            for (unsigned long goal = 0; goal < theGoalCount; goal++)
-                if (theResult == 0)
-                    theResult = (goal < this->mGoalQueues.size() ? this->mGoalQueues[goal] : theGoals).Load(inMajorVersion, inMinorVersion, inFile);
-            if (theResult == 0 && (theResult = inFile.Read(this->mConversionEffect.mValue)) == 0)
-                theResult = inFile.Read(this->mHealEffect.mValue);
-        }
-    }
-    theValue = 0;
-    if (theResult == 0) {
-        theResult = inFile.Read(theValue);
-        this->mHerd = reinterpret_cast<EEHerd*>(theValue);
-    }
-    theValue = (unsigned long)-1;
-    if (theResult == 0) {
-        inFile.Read(theValue);
-        this->mHolder = USavedPointer<EEComplexUnit>(theValue);
-    }
-    theCount = 0;
-    theResult = inFile.Read(theCount);
-    this->mHeldUnits.resize(theCount, NULL);
-    for (n = 0; n < theCount; n++) {
-        if (theResult != 0)
-            goto LoadLateVersions;
-        theResult = inFile.Read(theValue);
-        this->mHeldUnits[n] = reinterpret_cast<EEComplexUnit*>(theValue);
-    }
-    if ((theResult = inFile.Read(this->mGrowth)) != 0
-        || (theResult = inFile.Read(this->mB34F)) != 0
-        || (theResult = inFile.Read(this->mIsRegrowing)) != 0
-        || (theResult = inFile.Read(this->mNumAttackers)) != 0
-        || (theResult = inFile.Read(this->mGrowTime)) != 0
-        || (theResult = inFile.Read(this->mGrazeTime)) != 0
-        || (theResult = inFile.Read(this->mFireEffect.mValue)) != 0)
-        goto LoadLateVersions;
-    theResult = inFile.Read(theHasPath);
-    if (theResult == 0)
-        theResult = theGoalTile.Load(inFile);
-    if (!theHasPath) {
-        EEPathManagerPending thePending;
-        thePending.mUnitID = this->mUnitID;
-        thePending.mTile.mX = theGoalTile.mX;
-        thePending.mTile.mY = theGoalTile.mY;
-        gPathManager.mPending.push_back(thePending);
-    }
-    if ((theResult = inFile.Read(this->mPositiveMorale)) != 0
-        || (theResult = inFile.Read(this->mNegativeMorale)) != 0)
-        goto LoadLateVersions;
-    theResult = inFile.Read(theFraction);
-    memcpy(&this->mPower, &theFraction, sizeof(theFraction));
-    if (theResult != 0)
-        goto LoadLateVersions;
-    if ((theResult = inFile.Read(this->mPowerRegenTimer)) != 0
-        || (theResult = inFile.Read(this->mIsCloakable)) != 0
-        || (theResult = inFile.Read(this->mInitialContactLocation.mX)) != 0
-        || (theResult = inFile.Read(this->mInitialContactLocation.mY)) != 0
-        || (theResult = inFile.Read(this->mInitialContactLocation.mZ)) != 0
-        || (theResult = inFile.Read(this->mInitialContactHeading)) != 0)
-        goto LoadLateVersions;
-    theResult = inFile.Read(theValue);
-    this->mBehavior = reinterpret_cast<EEUnitBehavior*>(theValue);
-    if (theResult == 0 && (theResult = inFile.Read(this->mExperience)) == 0) {
-        theResult = inFile.Read(theValue);
-        this->mLastResource = reinterpret_cast<EEUnit*>(theValue);
-    }
-LoadLateVersions:
-    if (inMinorVersion >= 0xc9 && theResult == 0 && (theResult = inFile.Read(this->mIsFoundation)) == 0
-        && (inMajorVersion != 0 || inMinorVersion >= 0xcd)) {
+    case EE_UNITS_UNIT_LOAD_SECTION_CITIZEN_QUEUE:
+        theUnit->mCitizenBuildQueue.clear();
         theResult = inFile.Read(theCount);
-        for (r = 0; r < theCount && theResult == 0; r++) {
+        for (long j = 0; j < theCount && theResult == 0; j++) {
+            theResult = inFile.Read(theValue);
+            if (theResult == 0)
+                theUnit->mCitizenBuildQueue.push_back(reinterpret_cast<EEUnit*>(theValue));
+        }
+        io->i = (int64_t)theValue;
+        return theResult;
+    case EE_UNITS_UNIT_LOAD_SECTION_CARGO:
+        theUnit->mCargo.clear();
+        theResult = inFile.Read(theCount);
+        for (long k = 0; k < theCount && theResult == 0; k++) {
+            theResult = inFile.Read(theValue);
+            if (theResult == 0)
+                theUnit->mCargo.push_back(reinterpret_cast<EEComplexUnit*>(theValue));
+        }
+        io->i = (int64_t)theValue;
+        return theResult;
+    case EE_UNITS_UNIT_LOAD_SECTION_WAYPOINTS: {
+        EEComplexUnitWaypoint theWaypoint;
+        theUnit->mWaypoints.clear();
+        theResult = inFile.Read(theCount);
+        for (long p = 0; p < theCount && theResult == 0; p++) {
+            theResult = theWaypoint.mLocation.Load(inFile);
+            if (theResult == 0 && (theResult = inFile.Read(theWaypoint.mDistance)) == 0
+                && (theResult = inFile.Read(theWaypoint.mStartDistance)) == 0)
+                theUnit->mWaypoints.push_back(theWaypoint);
+        }
+        return theResult;
+    }
+    case EE_UNITS_UNIT_LOAD_SECTION_GOAL_QUEUES: {
+        unsigned long theGoalCount;
+        theResult = inFile.Read(theGoalCount);
+        for (unsigned long goal = 0; goal < theGoalCount; goal++)
+            if (theResult == 0)
+                theResult = (goal < theUnit->mGoalQueues.size() ? theUnit->mGoalQueues[goal] : *inContext.mGoals)
+                                .Load(inMajorVersion, inMinorVersion, inFile);
+        if (theResult == 0 && (theResult = inFile.Read(theUnit->mConversionEffect.mValue)) == 0)
+            theResult = inFile.Read(theUnit->mHealEffect.mValue);
+        return theResult;
+    }
+    case EE_UNITS_UNIT_LOAD_SECTION_HELD_UNITS:
+        io->b = 0;
+        theResult = inFile.Read(theCount);
+        theUnit->mHeldUnits.resize(theCount, NULL);
+        for (long n = 0; n < theCount; n++) {
+            if (theResult != 0) {
+                io->b = 1;   // goto LoadLateVersions
+                break;
+            }
+            theResult = inFile.Read(theValue);
+            theUnit->mHeldUnits[n] = reinterpret_cast<EEComplexUnit*>(theValue);
+        }
+        io->i = (int64_t)theValue;
+        return theResult;
+    case EE_UNITS_UNIT_LOAD_SECTION_UNIT_VARIABLES: {
+        long theState = (long)io->i;
+        theResult = inFile.Read(theCount);
+        for (long r = 0; r < theCount && theResult == 0; r++) {
             theResult = inFile.Read(theState);
             if (theResult == 0)
-                this->mUnitVariables[r] = theState;
+                theUnit->mUnitVariables[r] = theState;
+        }
+        io->i = (int64_t)theState;
+        return theResult;
+    }
+    case EE_UNITS_UNIT_LOAD_SECTION_LIVE_STATE:
+        break;
+    default:
+        return 0;
+    }
+    struct LiveState {
+        float mAnimationFraction, mCollisionRadius, mPushVelocityX, mPushVelocityY, mF24C;
+        long mNextFrame, mAIState;
+        unsigned long mNextTriggerTime;
+        std::deque<EEComplexUnitAttacker> mIgnoredTargets;
+        std::vector<U2DPoint<long> > mBoundedPathTiles;
+        // port (0.256): the model's frame (RepairPointers restarts an animation at its last frame), the counters
+        // the original saved as fractions (FinishLoad) or set at load (the rotting time, a builder's research)
+        bool mRunning = false;
+        unsigned long mFrame = 0;
+        long mFlightTime = 0, mRottingAwayTime = 0, mCurrentResearch = 0, mLastHitPoints = 0, mGarrisonCount = 0, mPower = 0;
+        // the turret angles as read above: the load's LoadMedia makes the array again, all zero, after Load (a
+        // frigate's turrets then had to turn to their target again: space game, seed 2's 1900 s save, where the
+        // continued frigate fired at its first tick)
+        std::vector<float> mTurretAngles;
+    } theLive;
+    for (long q = 0; q < theUnit->mNumTurretAngles && theUnit->mTurretAngles != NULL; q++)
+        theLive.mTurretAngles.push_back(theUnit->mTurretAngles[q]);
+    unsigned long theLiveCount = 0;
+    if ((theResult = inFile.Read(theLive.mAnimationFraction)) == 0 && (theResult = inFile.Read(theLive.mNextFrame)) == 0
+        && (theResult = inFile.Read(theLive.mCollisionRadius)) == 0 && (theResult = inFile.Read(theLive.mPushVelocityX)) == 0
+        && (theResult = inFile.Read(theLive.mPushVelocityY)) == 0 && (theResult = inFile.Read(theLive.mF24C)) == 0
+        && (theResult = inFile.Read(theLive.mAIState)) == 0 && (theResult = inFile.Read(theLive.mNextTriggerTime)) == 0)
+        theResult = inFile.Read(theLiveCount);
+    for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
+        EEComplexUnitAttacker theAttacker;
+        if ((theResult = inFile.Read(theAttacker.mTileX)) == 0 && (theResult = inFile.Read(theAttacker.mTileY)) == 0
+            && (theResult = inFile.Read(theAttacker.mFromX)) == 0 && (theResult = inFile.Read(theAttacker.mFromY)) == 0
+            && (theResult = inFile.Read(theAttacker.mUnitID)) == 0 && (theResult = inFile.Read(theAttacker.mTime)) == 0)
+            theLive.mIgnoredTargets.push_back(theAttacker);
+    }
+    theLiveCount = 0;
+    if (theResult == 0)
+        theResult = inFile.Read(theLiveCount);
+    for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
+        U2DPoint<long> theTile;
+        if ((theResult = inFile.Read(theTile.mX)) == 0 && (theResult = inFile.Read(theTile.mY)) == 0)
+            theLive.mBoundedPathTiles.push_back(theTile);
+    }
+    unsigned long theUnitID = theUnit->mUnitID;
+    EEComplexUnit* theSelf = theUnit;   // only while it is the world's unit of that id (not a doppelganger, not freed)
+    if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.256), see LiveState
+        theLive.mRunning = true;
+        if ((theResult = inFile.Read(theLive.mFrame)) == 0 && (theResult = inFile.Read(theLive.mFlightTime)) == 0
+            && (theResult = inFile.Read(theLive.mRottingAwayTime)) == 0 && (theResult = inFile.Read(theLive.mCurrentResearch)) == 0
+            && (theResult = inFile.Read(theLive.mLastHitPoints)) == 0 && (theResult = inFile.Read(theLive.mGarrisonCount)) == 0
+            && (theResult = inFile.Read(theLive.mPower)) == 0)
+            theResult = inFile.Read(theLiveCount);
+        std::vector<unsigned long> theContacts;
+        for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
+            unsigned long theID = 0;
+            if ((theResult = inFile.Read(theID)) == 0)
+                theContacts.push_back(theID);
+        }
+        if (theResult == 0) {
+            if (sLoadedContacts.empty())
+                EEAfterLoad(RestoreLoadedContacts);   // once per load (the first unit read registers it; it runs at the first tick, every unit read)
+            sLoadedContacts.push_back(std::make_pair(std::make_pair(theSelf, theUnitID), theContacts));
         }
     }
-    if (inMinorVersion >= 0xd3 && theResult == 0 && (theResult = inFile.Read(this->mFormationRank)) == 0)
-        theResult = inFile.Read(this->mWaterState);
-    if (inMinorVersion >= 0xd5 && theResult == 0)
-        theResult = this->mLastMapPosition.Load(inFile);
-    if (inMinorVersion >= 0xe2 && theResult == 0)
-        theResult = inFile.Read(this->mCloaked);
-    if (inMinorVersion >= 0xe8 && theResult == 0)
-        theResult = inFile.Read(this->mCamouflageTimer);
-LoadFinalVersions:
-    if (inMajorVersion == 0 && inMinorVersion <= 0xea) {
-        this->mIsSpecialAttack = false;
-        this->mDisabledReason = 0;
-    } else if (theResult == 0 && (theResult = inFile.Read(this->mIsSpecialAttack)) == 0)
-        theResult = inFile.Read(this->mDisabledReason);
-    if (inMinorVersion < 0xf3)
-        this->mPlanetID = 0;
-    else if (theResult == 0)
-        theResult = inFile.Read(this->mPlanetID);
-    if (inMajorVersion == 0 && inMinorVersion < 0xf4)
-        this->mSight = 0.0f;
-    else if (theResult == 0)
-        theResult = inFile.Read(this->mSight);
-    if ((inMajorVersion != 0 || inMinorVersion >= 0xf5) && theResult == 0)
-        theResult = inFile.Read(this->mU32C);
-    // port (0.254): the running state the original did not save (Save); put back at the first tick, after the load's
-    // own rebuilding has set some of it again (EEAfterLoad)
-    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
-        struct LiveState {
-            float mAnimationFraction, mCollisionRadius, mPushVelocityX, mPushVelocityY, mF24C;
-            long mNextFrame, mAIState;
-            unsigned long mNextTriggerTime;
-            std::deque<EEComplexUnitAttacker> mIgnoredTargets;
-            std::vector<U2DPoint<long> > mBoundedPathTiles;
-            // port (0.256): the model's frame (RepairPointers restarts an animation at its last frame), the counters
-            // the original saved as fractions (FinishLoad) or set at load (the rotting time, a builder's research)
-            bool mRunning = false;
-            unsigned long mFrame = 0;
-            long mFlightTime = 0, mRottingAwayTime = 0, mCurrentResearch = 0, mLastHitPoints = 0, mGarrisonCount = 0, mPower = 0;
-            // the turret angles as read above: the load's LoadMedia makes the array again, all zero, after Load (a
-            // frigate's turrets then had to turn to their target again: space game, seed 2's 1900 s save, where the
-            // continued frigate fired at its first tick)
-            std::vector<float> mTurretAngles;
-        } theLive;
-        for (long q = 0; q < this->mNumTurretAngles && this->mTurretAngles != NULL; q++)
-            theLive.mTurretAngles.push_back(this->mTurretAngles[q]);
-        unsigned long theLiveCount = 0;
-        if ((theResult = inFile.Read(theLive.mAnimationFraction)) == 0 && (theResult = inFile.Read(theLive.mNextFrame)) == 0
-            && (theResult = inFile.Read(theLive.mCollisionRadius)) == 0 && (theResult = inFile.Read(theLive.mPushVelocityX)) == 0
-            && (theResult = inFile.Read(theLive.mPushVelocityY)) == 0 && (theResult = inFile.Read(theLive.mF24C)) == 0
-            && (theResult = inFile.Read(theLive.mAIState)) == 0 && (theResult = inFile.Read(theLive.mNextTriggerTime)) == 0)
-            theResult = inFile.Read(theLiveCount);
-        for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
-            EEComplexUnitAttacker theAttacker;
-            if ((theResult = inFile.Read(theAttacker.mTileX)) == 0 && (theResult = inFile.Read(theAttacker.mTileY)) == 0
-                && (theResult = inFile.Read(theAttacker.mFromX)) == 0 && (theResult = inFile.Read(theAttacker.mFromY)) == 0
-                && (theResult = inFile.Read(theAttacker.mUnitID)) == 0 && (theResult = inFile.Read(theAttacker.mTime)) == 0)
-                theLive.mIgnoredTargets.push_back(theAttacker);
-        }
-        theLiveCount = 0;
-        if (theResult == 0)
-            theResult = inFile.Read(theLiveCount);
-        for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
-            U2DPoint<long> theTile;
-            if ((theResult = inFile.Read(theTile.mX)) == 0 && (theResult = inFile.Read(theTile.mY)) == 0)
-                theLive.mBoundedPathTiles.push_back(theTile);
-        }
-        unsigned long theUnitID = this->mUnitID;
-        EEComplexUnit* theSelf = this;   // only while it is the world's unit of that id (not a doppelganger, not freed)
-        if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {   // port (0.256), see LiveState
-            theLive.mRunning = true;
-            if ((theResult = inFile.Read(theLive.mFrame)) == 0 && (theResult = inFile.Read(theLive.mFlightTime)) == 0
-                && (theResult = inFile.Read(theLive.mRottingAwayTime)) == 0 && (theResult = inFile.Read(theLive.mCurrentResearch)) == 0
-                && (theResult = inFile.Read(theLive.mLastHitPoints)) == 0 && (theResult = inFile.Read(theLive.mGarrisonCount)) == 0
-                && (theResult = inFile.Read(theLive.mPower)) == 0)
-                theResult = inFile.Read(theLiveCount);
-            std::vector<unsigned long> theContacts;
-            for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
-                unsigned long theID = 0;
-                if ((theResult = inFile.Read(theID)) == 0)
-                    theContacts.push_back(theID);
+    if (theResult == 0)
+        EEAfterLoad([theUnitID, theSelf, theLive]() {
+            EEComplexUnit* theUnit = theSelf;
+            if (static_cast<RTSUnit*>(theUnit) != gWorld.GetUnit(theUnitID))
+                return;
+            theUnit->mAnimationFraction = theLive.mAnimationFraction;
+            theUnit->mNextFrame = theLive.mNextFrame;
+            theUnit->mCollisionRadius = theLive.mCollisionRadius;
+            theUnit->mPushVelocityX = theLive.mPushVelocityX;
+            theUnit->mPushVelocityY = theLive.mPushVelocityY;
+            theUnit->mF24C = theLive.mF24C;
+            theUnit->mAIState = theLive.mAIState;
+            theUnit->mNextTriggerTime = theLive.mNextTriggerTime;
+            theUnit->mIgnoredTargets = theLive.mIgnoredTargets;
+            theUnit->mBoundedPathTiles = theLive.mBoundedPathTiles;
+            if (theLive.mRunning) {
+                theUnit->mPhysicalModel.SetFrame(theLive.mFrame);
+                theUnit->mFlightTime = theLive.mFlightTime;
+                theUnit->mRottingAwayTime = theLive.mRottingAwayTime;
+                theUnit->mCurrentResearch = theLive.mCurrentResearch;
+                theUnit->mLastHitPoints = theLive.mLastHitPoints;
+                theUnit->mGarrisonCount = theLive.mGarrisonCount;
+                theUnit->mPower = theLive.mPower;
             }
-            if (theResult == 0) {
-                if (sLoadedContacts.empty())
-                    EEAfterLoad(RestoreLoadedContacts);   // once per load (the first unit read registers it; it runs at the first tick, every unit read)
-                sLoadedContacts.push_back(std::make_pair(std::make_pair(theSelf, theUnitID), theContacts));
-            }
-        }
-        if (theResult == 0)
-            EEAfterLoad([theUnitID, theSelf, theLive]() {
-                EEComplexUnit* theUnit = theSelf;
-                if (static_cast<RTSUnit*>(theUnit) != gWorld.GetUnit(theUnitID))
-                    return;
-                theUnit->mAnimationFraction = theLive.mAnimationFraction;
-                theUnit->mNextFrame = theLive.mNextFrame;
-                theUnit->mCollisionRadius = theLive.mCollisionRadius;
-                theUnit->mPushVelocityX = theLive.mPushVelocityX;
-                theUnit->mPushVelocityY = theLive.mPushVelocityY;
-                theUnit->mF24C = theLive.mF24C;
-                theUnit->mAIState = theLive.mAIState;
-                theUnit->mNextTriggerTime = theLive.mNextTriggerTime;
-                theUnit->mIgnoredTargets = theLive.mIgnoredTargets;
-                theUnit->mBoundedPathTiles = theLive.mBoundedPathTiles;
-                if (theLive.mRunning) {
-                    theUnit->mPhysicalModel.SetFrame(theLive.mFrame);
-                    theUnit->mFlightTime = theLive.mFlightTime;
-                    theUnit->mRottingAwayTime = theLive.mRottingAwayTime;
-                    theUnit->mCurrentResearch = theLive.mCurrentResearch;
-                    theUnit->mLastHitPoints = theLive.mLastHitPoints;
-                    theUnit->mGarrisonCount = theLive.mGarrisonCount;
-                    theUnit->mPower = theLive.mPower;
-                }
-                unsigned long theParts = theUnit->GetModel() != NULL ? theUnit->GetModel()->GetNumParts() : 0;
-                for (unsigned long q = 0; q < theLive.mTurretAngles.size() && q < theParts && theUnit->mTurretAngles != NULL; q++)
-                    theUnit->mTurretAngles[q] = theLive.mTurretAngles[q];
-            });
-    }
+            unsigned long theParts = theUnit->GetModel() != NULL ? theUnit->GetModel()->GetNumParts() : 0;
+            for (unsigned long q = 0; q < theLive.mTurretAngles.size() && q < theParts && theUnit->mTurretAngles != NULL; q++)
+                theUnit->mTurretAngles[q] = theLive.mTurretAngles[q];
+        });
     return theResult;
+}
+
+// FUNCTION: EXE 0x5f2452
+// Reads the complex unit's state from the saved game, keeping units and groups as ids for RepairPointers and queueing
+// its pending path; fields newer than the file get defaults; returns the read status. port (R5b.4, round 26): the
+// body is Rust (ee_units unit_load.rs, with RTSUnit's and EEUnit's parts) over the records this class derives from,
+// EEUnitSaveOperation's parts and EEComplexUnitLoadSection's sections
+long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
+    EEUnitVectorItem theGoals(this);
+    EEUnitSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, &theGoals};
+    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
+                               (uint8_t)(EESaveHasLiveState(inMajorVersion, inMinorVersion) ? 1 : 0),
+                               (uint8_t)(EESaveHasRunningState(inMajorVersion, inMinorVersion) ? 1 : 0)};
+    return ee_units_unit_load(&theContext, &EEUnitSaveOperation, this, this, this, &theIn);
 }
 
 // Load stores the saved fractions as floats in the longs.
@@ -1136,273 +917,385 @@ void EEComplexUnit::SetAnimationFrame(unsigned long inFrame)
 
 // FUNCTION: EXE 0x5f417e
 // Writes the complex unit's state to the saved game, units and groups as ids and hit points, flight time, garrison
-// and power as fractions of their maximum; returns the write status
+// and power as fractions of their maximum; returns the write status.
+// port (R5b.4, round 26): the body is Rust (ee_units unit_save.rs, with RTSUnit's and EEUnit's parts) over the records
+// this class derives from and EEUnitSaveOperation's parts
 long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    std::vector<long> theUnused;
-    EEComplexUnitWaypoint theWaypoint;
-    U2DPoint<long> theGoalTile;
-    unsigned long theID;
-    unsigned long theCount;
-    unsigned long theBehavior;
-    unsigned long theZero = 0;
-    long q;
-    long theLength;
-    long theState;
-    float theFraction;
-    float theScale;
-    bool theHasPath;
-    long theResult = EEUnit::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult != 0)
-        return theResult;
+    EEUnitSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL};
+    EeUnitsUnitSaveIn theIn = {(uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
+                               (uint8_t)(EESaveHasLiveState(inMajorVersion, inMinorVersion) ? 1 : 0),
+                               (uint8_t)(EESaveHasRunningState(inMajorVersion, inMinorVersion) ? 1 : 0)};
+    return ee_units_unit_save(&theContext, &EEUnitSaveOperation, this, this, this, &theIn);
+}
 
-    theLength = this->mBuildQueue.size();
-    theResult = outFile.Write(theLength);
-    for (long i = 0; i < theLength && theResult == 0; i++) {
-        long theFirst = this->mBuildQueue[i].mTechnology;
-        theResult = outFile.Write(theFirst);
-        if (theResult == 0) {
-            unsigned long theSecond = this->mBuildQueue[i].mFlag;
-            theResult = outFile.Write(theSecond);
-        }
+// The C++ parts of the units' saves (ee_units unit_save.rs): the file's primitives with the overload the original
+// called, the containers' sections with the original's loops, the composite members' Save, the ids it wrote for
+// pointers and the maxima of the fractions
+int32_t EEUnitSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsUnitSaveIo* io)
+{
+    EEUnitSaveContext& theContext = *static_cast<EEUnitSaveContext*>(inContext);
+    FSFile& outFile = *theContext.mFile;
+    FSFile& inFile = outFile;
+    EEUnit* theUnit = static_cast<EEUnit*>(theContext.mUnit);   // (the unit operations only)
+    EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);   // (the complex operations only)
+    long theResult = 0;
+    switch (inOp) {
+    case EE_UNITS_UNIT_SAVE_WRITE_LONG: {
+        long theValue = (long)io->i;
+        return outFile.Write(theValue);
     }
-    theLength = 0;
-    long theQueued = this->mCitizenBuildQueue.size();
-    long j; for (j = 0; j < theQueued; j++)
-        if (this->mCitizenBuildQueue[j]->mIsValid)
-            theLength++;
-    theResult = outFile.Write(theLength);
-    for (j = 0; j < theQueued && theResult == 0; j++) {
-        if (this->mCitizenBuildQueue[j]->mIsValid) {
-            theID = this->mCitizenBuildQueue[j]->mUnitID;
-            theResult = outFile.Write(theID);
-        }
+    case EE_UNITS_UNIT_SAVE_WRITE_ULONG: {
+        unsigned long theValue = (unsigned long)io->i;
+        return outFile.Write(theValue);
     }
-    theLength = this->mCargo.size();
-    theResult = outFile.Write(theLength);
-    for (long k = 0; k < theLength && theResult == 0; k++) {
-        theID = this->mCargo[k]->mUnitID;
-        theResult = outFile.Write(theID);
+    case EE_UNITS_UNIT_SAVE_WRITE_FLOAT: {
+        float theValue = io->f;
+        return outFile.Write(theValue);
     }
-    theLength = this->mWaypoints.size();
-    theResult = outFile.Write(theLength);
-    for (long p = 0; p < theLength; p++) {
-        if (theResult != 0)
-            goto SaveGoals;
-        theWaypoint = this->mWaypoints[p];
-        theResult = theWaypoint.mLocation.Save(outFile);
-        if (theResult == 0) {
-            theResult = outFile.Write(theWaypoint.mDistance);
-            if (theResult == 0)
-                theResult = outFile.Write(theWaypoint.mStartDistance);
-        }
+    case EE_UNITS_UNIT_SAVE_WRITE_BOOL: {
+        bool theValue = io->b != 0;
+        return outFile.Write(theValue);
     }
-    if (theResult != 0 || (theResult = this->mProjectileStart.Save(outFile)) != 0
-        || (theResult = this->mPhysicalModel.GetLocation().Save(outFile)) != 0
-        || (theResult = outFile.Write(this->mIsFiringHigh)) != 0)
-        goto SaveGoals;
-    theScale = this->mPhysicalModel.GetScale();
-    if ((theResult = outFile.Write(theScale)) != 0)
-        goto SaveGoals;
-    theID = this->mPhysicalModel.GetFrame();
-    if ((theResult = outFile.Write(theID)) != 0 || (theResult = this->mAngularVelocity.Save(outFile)) != 0
-        || (theResult = this->mOrientation.Save(outFile)) != 0)
-        goto SaveGoals;
-    theState = this->mCollisionTile.mX;
-    outFile.Write(theState);
-    theState = this->mCollisionTile.mY;
-    if ((theResult = outFile.Write(theState)) != 0)
-        goto SaveGoals;
-    theID = this->mLauncherClass == NULL ? 0 : this->mLauncherClass->GetUnitType();
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theID = this->mPatrolGroup == NULL ? (unsigned long)-1 : this->mPatrolGroup->mID;
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theID = this->mPreviousPart == NULL ? (unsigned long)-1 : this->mPreviousPart->GetUnitID();
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theID = this->mNextPart == NULL ? (unsigned long)-1 : this->mNextPart->GetUnitID();
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theID = this->mHomeBase == NULL ? (unsigned long)-1 : this->mHomeBase->GetUnitID();
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theID = this->mContainer == NULL || this->mContainer->mUnitClass->mTransportCapacity == 0
-        ? (unsigned long)-1 : this->mContainer->GetUnitID();
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theID = this->mCommand == NULL ? 0 : this->mCommand->mType;
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theLength = this->GetModel()->GetNumParts();
-    theResult = outFile.Write(theLength);
-    for (q = 0; q < theLength; q++) {
-        if (theResult != 0)
-            goto SaveGoals;
-        theResult = outFile.Write(this->mTurretAngles[q]);
+    case EE_UNITS_UNIT_SAVE_WRITE_USHORT: {
+        unsigned short theValue = (unsigned short)io->i;
+        return outFile.Write(theValue);
     }
-    if (theResult != 0 || (theResult = outFile.Write(this->mHeight)) != 0
-        || (theResult = outFile.Write(this->mVelocity)) != 0 || (theResult = outFile.Write(this->mF220)) != 0
-        || (theResult = outFile.Write(this->mF21C)) != 0 || (theResult = outFile.Write(this->mCurrentResearch)) != 0
-        || (theResult = outFile.Write(this->mAnimation)) != 0 || (theResult = outFile.Write(this->mCurrentPhysicsAction)) != 0
-        || (theResult = outFile.Write(this->mCurrentPhysicsOrder)) != 0 || (theResult = outFile.Write(this->mFacing)) != 0
-        || (theResult = outFile.Write(this->mLaunchYaw)) != 0)
-        goto SaveGoals;
-    theFraction = this->mLastHitPoints < 1 || this->mStats->mMaxHitPoints < 1 ? 0.0f : (float)this->mLastHitPoints / this->mStats->mMaxHitPoints;
-    if ((theResult = outFile.Write(theFraction)) != 0 || (theResult = outFile.Write(this->mExitingUnitID)) != 0
-        || (theResult = outFile.Write(this->mCrewHitPoints)) != 0 || (theResult = outFile.Write(this->mProductionTime)) != 0)
-        goto SaveGoals;
-    theFraction = this->mFlightTime < 1 || this->mStats->mFlightTime < 1 ? 0.0f : (float)this->mFlightTime / this->mStats->mFlightTime;
-    if ((theResult = outFile.Write(theFraction)) != 0 || (theResult = outFile.Write(this->mReloadTimer)) != 0
-        || (theResult = outFile.Write(this->mCargoRoom)) != 0 || (theResult = outFile.Write(this->mRottingAwayTime)) != 0
-        || (theResult = outFile.Write(this->mTargetSearchTimer)) != 0 || (theResult = outFile.Write(this->mWorkTimer)) != 0
-        || (theResult = outFile.Write(this->mRegenerationTimer)) != 0 || (theResult = outFile.Write(this->mHealSearchTimer)) != 0
-        || (theResult = outFile.Write(this->mCollisionResolutionCount)) != 0 || (theResult = outFile.Write(this->mWakeTimer)) != 0
-        || (theResult = outFile.Write(this->mTrailEffectTimer)) != 0 || (theResult = outFile.Write(this->mAmmunition)) != 0
-        || (theResult = outFile.Write(this->mAnimationTime)) != 0 || (theResult = outFile.Write(theZero)) != 0
-        || (theResult = outFile.Write(this->mWeaponTagPoint)) != 0 || (theResult = outFile.Write(this->mTimesUpdated)) != 0
-        || (theResult = outFile.Write(this->mConversionStartTime)) != 0 || (theResult = outFile.Write(this->mCollisionState)) != 0
-        || (theResult = outFile.Write(this->mIsDisabled)) != 0 || (theResult = outFile.Write(this->mIsDeletable)) != 0
-        || (theResult = outFile.Write(this->mIsCommandable)) != 0 || (theResult = outFile.Write(this->mIsAnimationPaused)) != 0
-        || (theResult = outFile.Write(this->mHasArrived)) != 0 || (theResult = outFile.Write(this->mIsPathDone)) != 0
-        || (theResult = outFile.Write(this->mIsClearanceGranted)) != 0 || (theResult = outFile.Write(this->mIsBuilt)) != 0
-        || (theResult = outFile.Write(this->mOpacity)) != 0 || (theResult = outFile.Write(this->mIsCloaked)) != 0)
-        goto SaveGoals;
-    theID = this->mGatheredResource == NULL ? (unsigned long)-1 : this->mGatheredResource->GetUnitID();
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theState = this->mNumAreaEffects;
-    if ((theResult = outFile.Write(theState)) != 0 || (theResult = outFile.Write(this->mU2FC)) != 0)
-        goto SaveGoals;
-    theID = this->mLastAttacker == NULL ? (unsigned long)-1 : this->mLastAttacker->GetUnitID();
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theID = this->mOwner == NULL ? (unsigned long)-1 : this->mOwner->GetUnitID();
-    if ((theResult = outFile.Write(theID)) != 0)
-        goto SaveGoals;
-    theFraction = this->mGarrisonCount < 1 || this->GetUnitClass()->mGarrisonCapacity < 1 ? 0.0f : (float)this->mGarrisonCount / this->GetUnitClass()->mGarrisonCapacity;
-    if ((theResult = outFile.Write(theFraction)) != 0 || (theResult = outFile.Write(this->mGarrisonPopulation)) != 0
-        || (theResult = outFile.Write(this->mIsPaidFor)) != 0 || (theResult = outFile.Write(this->mNumBuilders)) != 0)
-        goto SaveGoals;
-    theID = this->mMine == NULL ? (unsigned long)-1 : this->mMine->GetUnitID();
-    if ((theResult = outFile.Write(theID)) != 0 || (theResult = this->mU0DC.Save(outFile)) != 0
-        || (theResult = outFile.Write(this->mIsDetachedFromAI)) != 0 || (theResult = this->mColor.Save(outFile)) != 0
-        || (theResult = outFile.Write(this->mIsTinted)) != 0 || (theResult = outFile.Write(this->mIsLocked)) != 0
-        || (theResult = outFile.Write(this->mGateDirection)) != 0)
-        goto SaveGoals;
-    outFile.Write(this->mOpenFraction);
-
-SaveGoals:
-    theCount = this->mGoalQueues.size();
-    theResult = outFile.Write(theCount);
-    for (unsigned long item = 0; item < theCount; item++)
-        if (theResult == 0)
-            theResult = this->mGoalQueues[item].Save(inMajorVersion, inMinorVersion, outFile);
-    theState = this->mConversionEffect.mValue;
-    if (theResult == 0) {
-        theResult = outFile.Write(theState);
-        if (theResult == 0) {
-            theState = this->mHealEffect.mValue;
-            theResult = outFile.Write(theState);
-        }
-    }
-    theID = this->mHerd == NULL ? 0 : this->mHerd->mID;
-    if (theResult == 0)
-        theResult = outFile.Write(theID);
-    if (this->mHerd != NULL)
-        this->mHerd->HasUnit(this);
-    theID = this->mHolder == NULL ? (unsigned long)-1 : this->mHolder->GetUnitID();
-    if (theResult == 0)
-        outFile.Write(theID);
-    theLength = this->mHeldUnits.size();
-    theResult = outFile.Write(theLength);
-    for (long n = 0; n < theLength; n++) {
-        if (theResult != 0)
-            goto SaveFinalFields;
-        theID = this->mHeldUnits[n]->mUnitID;
-        theResult = outFile.Write(theID);
-    }
-    if (theResult != 0 || (theResult = outFile.Write(this->mGrowth)) != 0
-        || (theResult = outFile.Write(this->mB34F)) != 0 || (theResult = outFile.Write(this->mIsRegrowing)) != 0
-        || (theResult = outFile.Write(this->mNumAttackers)) != 0 || (theResult = outFile.Write(this->mGrowTime)) != 0
-        || (theResult = outFile.Write(this->mGrazeTime)) != 0 || (theResult = outFile.Write(this->mFireEffect.mValue)) != 0)
-        goto SaveFinalFields;
-    theHasPath = gPathManager.GetPathGoal(this, theGoalTile);
-    if ((theResult = outFile.Write(theHasPath)) != 0 || (theResult = theGoalTile.Save(outFile)) != 0
-        || (theResult = outFile.Write(this->mPositiveMorale)) != 0 || (theResult = outFile.Write(this->mNegativeMorale)) != 0)
-        goto SaveFinalFields;
-    theFraction = this->mStats->mPower < 1 ? 0.0f : (float)this->mPower / this->mStats->mPower;
-    if ((theResult = outFile.Write(theFraction)) != 0 || (theResult = outFile.Write(this->mPowerRegenTimer)) != 0
-        || (theResult = outFile.Write(this->mIsCloakable)) != 0)
-        goto SaveFinalFields;
-    theScale = this->mInitialContactLocation.GetX();
-    if ((theResult = outFile.Write(theScale)) != 0)
-        goto SaveFinalFields;
-    theScale = this->mInitialContactLocation.GetY();
-    if ((theResult = outFile.Write(theScale)) != 0)
-        goto SaveFinalFields;
-    theScale = this->mInitialContactLocation.GetZ();
-    if ((theResult = outFile.Write(theScale)) != 0 || (theResult = outFile.Write(this->mInitialContactHeading)) != 0)
-        goto SaveFinalFields;
-    for (theBehavior = 0; theBehavior < 8; theBehavior++)
-        if (EEUnitBehavior::sTable[theBehavior] == this->mBehavior)
+    case EE_UNITS_UNIT_SAVE_MAX:
+        io->i = inIndex == EE_UNITS_UNIT_SAVE_MAX_HIT_POINTS ? (int64_t)theUnit->mStats->mMaxHitPoints
+              : inIndex == EE_UNITS_UNIT_SAVE_MAX_FLIGHT_TIME ? (int64_t)theUnit->mStats->mFlightTime
+              : inIndex == EE_UNITS_UNIT_SAVE_MAX_POWER ? (int64_t)theUnit->mStats->mPower
+              : (int64_t)theUnit->GetUnitClass()->mGarrisonCapacity;
+        return 0;
+    case EE_UNITS_UNIT_SAVE_FLOAT:
+        io->f = inIndex == EE_UNITS_UNIT_SAVE_FLOAT_SCALE ? theComplex->mPhysicalModel.GetScale()
+              : inIndex == EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_X ? theComplex->mInitialContactLocation.GetX()
+              : inIndex == EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_Y ? theComplex->mInitialContactLocation.GetY()
+              : theComplex->mInitialContactLocation.GetZ();
+        return 0;
+    case EE_UNITS_UNIT_SAVE_COLLISION_TILE:
+        io->i = (int64_t)(inIndex == 0 ? theComplex->mCollisionTile.mX : theComplex->mCollisionTile.mY);
+        return 0;
+    case EE_UNITS_UNIT_SAVE_ID: {
+        unsigned long theID = (unsigned long)-1;
+        switch (inIndex) {
+        case EE_UNITS_UNIT_SAVE_ID_FRAME: theID = theComplex->mPhysicalModel.GetFrame(); break;
+        case EE_UNITS_UNIT_SAVE_ID_LAUNCHER_CLASS:
+            theID = theComplex->mLauncherClass == NULL ? 0 : theComplex->mLauncherClass->GetUnitType();
             break;
-    if ((theResult = outFile.Write(theBehavior)) != 0 || (theResult = outFile.Write(this->mExperience)) != 0)
-        goto SaveFinalFields;
-    theID = this->mLastResource == NULL ? (unsigned long)-1 : this->mLastResource->GetUnitID();
-    if ((theResult = outFile.Write(theID)) == 0)
-        outFile.Write(this->mIsFoundation);
-
-SaveFinalFields:
-    theLength = this->mUnitVariables.size();
-    theResult = outFile.Write(theLength);
-    for (long r = 0; r < theLength; r++) {
-        if (theResult != 0)
+        case EE_UNITS_UNIT_SAVE_ID_PATROL_GROUP:
+            if (theComplex->mPatrolGroup != NULL) theID = theComplex->mPatrolGroup->mID;
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_PREVIOUS_PART:
+            if (theComplex->mPreviousPart != NULL) theID = theComplex->mPreviousPart->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_NEXT_PART:
+            if (theComplex->mNextPart != NULL) theID = theComplex->mNextPart->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_HOME_BASE:
+            if (theComplex->mHomeBase != NULL) theID = theComplex->mHomeBase->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_CONTAINER:
+            if (theComplex->mContainer != NULL && theComplex->mContainer->mUnitClass->mTransportCapacity != 0)
+                theID = theComplex->mContainer->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_COMMAND: theID = theComplex->mCommand == NULL ? 0 : theComplex->mCommand->mType; break;
+        case EE_UNITS_UNIT_SAVE_ID_GATHERED_RESOURCE:
+            if (theComplex->mGatheredResource != NULL) theID = theComplex->mGatheredResource->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_LAST_ATTACKER:
+            if (theComplex->mLastAttacker != NULL) theID = theComplex->mLastAttacker->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_OWNER:
+            if (theComplex->mOwner != NULL) theID = theComplex->mOwner->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_MINE:
+            if (theComplex->mMine != NULL) theID = theComplex->mMine->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_HERD: theID = theComplex->mHerd == NULL ? 0 : theComplex->mHerd->mID; break;
+        case EE_UNITS_UNIT_SAVE_ID_HOLDER:
+            if (theComplex->mHolder != NULL) theID = theComplex->mHolder->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_BEHAVIOR:
+            for (theID = 0; theID < 8; theID++)
+                if (EEUnitBehavior::sTable[theID] == theComplex->mBehavior)
+                    break;
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_LAST_RESOURCE:
+            if (theComplex->mLastResource != NULL) theID = theComplex->mLastResource->GetUnitID();
+            break;
+        case EE_UNITS_UNIT_SAVE_ID_CONVERSION_EFFECT: io->i = (int64_t)(long)theComplex->mConversionEffect.mValue; return 0;
+        case EE_UNITS_UNIT_SAVE_ID_HEAL_EFFECT: io->i = (int64_t)(long)theComplex->mHealEffect.mValue; return 0;
+        default: break;
+        }
+        io->i = (int64_t)theID;
+        return 0;
+    }
+    case EE_UNITS_UNIT_SAVE_PART:
+        switch (inIndex) {
+        case EE_UNITS_UNIT_SAVE_PART_PROJECTILE_START: return theComplex->mProjectileStart.Save(outFile);
+        case EE_UNITS_UNIT_SAVE_PART_LOCATION: return theComplex->mPhysicalModel.GetLocation().Save(outFile);
+        case EE_UNITS_UNIT_SAVE_PART_ANGULAR_VELOCITY: return theComplex->mAngularVelocity.Save(outFile);
+        case EE_UNITS_UNIT_SAVE_PART_ORIENTATION: return theComplex->mOrientation.Save(outFile);
+        case EE_UNITS_UNIT_SAVE_PART_U0DC: return theComplex->mU0DC.Save(outFile);
+        case EE_UNITS_UNIT_SAVE_PART_COLOR: return theComplex->mColor.Save(outFile);
+        case EE_UNITS_UNIT_SAVE_PART_FIRE_EFFECT: return outFile.Write(theComplex->mFireEffect.mValue);
+        case EE_UNITS_UNIT_SAVE_PART_PATH: {
+            U2DPoint<long> theGoalTile;
+            bool theHasPath = gPathManager.GetPathGoal(theComplex, theGoalTile);
+            if ((theResult = outFile.Write(theHasPath)) == 0)
+                theResult = theGoalTile.Save(outFile);
             return theResult;
-        long theValue = this->mUnitVariables[r];
-        theResult = outFile.Write(theValue);
-    }
-    if (theResult == 0 && (theResult = outFile.Write(this->mFormationRank)) == 0
-        && (theResult = outFile.Write(this->mWaterState)) == 0 && (theResult = this->mLastMapPosition.Save(outFile)) == 0
-        && (theResult = outFile.Write(this->mCloaked)) == 0 && (theResult = outFile.Write(this->mCamouflageTimer)) == 0
-        && (theResult = outFile.Write(this->mIsSpecialAttack)) == 0 && (theResult = outFile.Write(this->mDisabledReason)) == 0
-        && (theResult = outFile.Write(this->mPlanetID)) == 0 && (theResult = outFile.Write(this->mSight)) == 0)
-        theResult = outFile.Write(this->mU32C);
-    // port (0.254): the running state the original did not save: the animation, collision and push, the AI state and
-    // trigger time, the targets ignored for now and the tiles a bounded path avoids (Load)
-    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
-        if ((theResult = outFile.Write(this->mAnimationFraction)) == 0 && (theResult = outFile.Write(this->mNextFrame)) == 0
-            && (theResult = outFile.Write(this->mCollisionRadius)) == 0 && (theResult = outFile.Write(this->mPushVelocityX)) == 0
-            && (theResult = outFile.Write(this->mPushVelocityY)) == 0 && (theResult = outFile.Write(this->mF24C)) == 0
-            && (theResult = outFile.Write(this->mAIState)) == 0 && (theResult = outFile.Write(this->mNextTriggerTime)) == 0)
-            theResult = outFile.Write((unsigned long)this->mIgnoredTargets.size());
-        for (size_t k = 0; k < this->mIgnoredTargets.size() && theResult == 0; k++) {
-            const EEComplexUnitAttacker& theAttacker = this->mIgnoredTargets[k];
-            if ((theResult = outFile.Write(theAttacker.mTileX)) == 0 && (theResult = outFile.Write(theAttacker.mTileY)) == 0
-                && (theResult = outFile.Write(theAttacker.mFromX)) == 0 && (theResult = outFile.Write(theAttacker.mFromY)) == 0
-                && (theResult = outFile.Write(theAttacker.mUnitID)) == 0)
-                theResult = outFile.Write(theAttacker.mTime);
         }
-        if (theResult == 0)
-            theResult = outFile.Write((unsigned long)this->mBoundedPathTiles.size());
-        for (size_t k = 0; k < this->mBoundedPathTiles.size() && theResult == 0; k++) {
-            if ((theResult = outFile.Write(this->mBoundedPathTiles[k].mX)) == 0)
-                theResult = outFile.Write(this->mBoundedPathTiles[k].mY);
+        case EE_UNITS_UNIT_SAVE_PART_LAST_MAP_POSITION: return theComplex->mLastMapPosition.Save(outFile);
+        case EE_UNITS_UNIT_SAVE_PART_HERD_HAS_UNIT:
+            if (theComplex->mHerd != NULL)
+                theComplex->mHerd->HasUnit(theComplex);
+            return 0;
+        default: return 0;
         }
-        // port (0.256): the model's frame, the exact counters the original saved as fractions or set at load, and the
-        // contact list's unit ids, head first (Load; sLoadedContacts)
-        if (theResult == 0 && EESaveHasRunningState(inMajorVersion, inMinorVersion)) {
-            if ((theResult = outFile.Write(this->mPhysicalModel.GetFrame())) == 0 && (theResult = outFile.Write(this->mFlightTime)) == 0
-                && (theResult = outFile.Write(this->mRottingAwayTime)) == 0 && (theResult = outFile.Write(this->mCurrentResearch)) == 0
-                && (theResult = outFile.Write(this->mLastHitPoints)) == 0 && (theResult = outFile.Write(this->mGarrisonCount)) == 0
-                && (theResult = outFile.Write(this->mPower)) == 0)
-                theResult = outFile.Write((unsigned long)this->mContacts.mCount);
-            for (UListNode<EEComplexUnit*>* theNode = this->mContacts.mHead; theNode != NULL && theResult == 0; theNode = theNode->mNext)
+    case EE_UNITS_UNIT_SAVE_SECTION:
+        switch (inIndex) {
+        case EE_UNITS_UNIT_SAVE_SECTION_BUILD_QUEUE: {
+            long theLength = theComplex->mBuildQueue.size();
+            theResult = outFile.Write(theLength);
+            for (long i = 0; i < theLength && theResult == 0; i++) {
+                long theFirst = theComplex->mBuildQueue[i].mTechnology;
+                theResult = outFile.Write(theFirst);
+                if (theResult == 0) {
+                    unsigned long theSecond = theComplex->mBuildQueue[i].mFlag;
+                    theResult = outFile.Write(theSecond);
+                }
+            }
+            return theResult;
+        }
+        case EE_UNITS_UNIT_SAVE_SECTION_CITIZEN_QUEUE: {
+            long theLength = 0;
+            long theQueued = theComplex->mCitizenBuildQueue.size();
+            for (long j = 0; j < theQueued; j++)
+                if (theComplex->mCitizenBuildQueue[j]->mIsValid)
+                    theLength++;
+            theResult = outFile.Write(theLength);
+            for (long j = 0; j < theQueued && theResult == 0; j++) {
+                if (theComplex->mCitizenBuildQueue[j]->mIsValid) {
+                    unsigned long theID = theComplex->mCitizenBuildQueue[j]->mUnitID;
+                    theResult = outFile.Write(theID);
+                }
+            }
+            return theResult;
+        }
+        case EE_UNITS_UNIT_SAVE_SECTION_CARGO: {
+            long theLength = theComplex->mCargo.size();
+            theResult = outFile.Write(theLength);
+            for (long k = 0; k < theLength && theResult == 0; k++) {
+                unsigned long theID = theComplex->mCargo[k]->mUnitID;
+                theResult = outFile.Write(theID);
+            }
+            return theResult;
+        }
+        case EE_UNITS_UNIT_SAVE_SECTION_WAYPOINTS: {
+            long theLength = theComplex->mWaypoints.size();
+            theResult = outFile.Write(theLength);
+            for (long p = 0; p < theLength && theResult == 0; p++) {
+                EEComplexUnitWaypoint theWaypoint = theComplex->mWaypoints[p];
+                theResult = theWaypoint.mLocation.Save(outFile);
+                if (theResult == 0) {
+                    theResult = outFile.Write(theWaypoint.mDistance);
+                    if (theResult == 0)
+                        theResult = outFile.Write(theWaypoint.mStartDistance);
+                }
+            }
+            return theResult;
+        }
+        case EE_UNITS_UNIT_SAVE_SECTION_TURRET_ANGLES: {
+            long theLength = theComplex->GetModel()->GetNumParts();
+            theResult = outFile.Write(theLength);
+            for (long q = 0; q < theLength && theResult == 0; q++)
+                theResult = outFile.Write(theComplex->mTurretAngles[q]);
+            return theResult;
+        }
+        case EE_UNITS_UNIT_SAVE_SECTION_GOAL_QUEUES: {
+            unsigned long theCount = theComplex->mGoalQueues.size();
+            theResult = outFile.Write(theCount);
+            for (unsigned long item = 0; item < theCount; item++)
+                if (theResult == 0)
+                    theResult = theComplex->mGoalQueues[item].Save(theContext.mMajorVersion, theContext.mMinorVersion, outFile);
+            return theResult;
+        }
+        case EE_UNITS_UNIT_SAVE_SECTION_HELD_UNITS: {
+            long theLength = theComplex->mHeldUnits.size();
+            theResult = outFile.Write(theLength);
+            for (long n = 0; n < theLength && theResult == 0; n++) {
+                unsigned long theID = theComplex->mHeldUnits[n]->mUnitID;
+                theResult = outFile.Write(theID);
+            }
+            return theResult;
+        }
+        case EE_UNITS_UNIT_SAVE_SECTION_UNIT_VARIABLES: {
+            long theLength = theComplex->mUnitVariables.size();
+            theResult = outFile.Write(theLength);
+            for (long r = 0; r < theLength && theResult == 0; r++) {
+                long theValue = theComplex->mUnitVariables[r];
+                theResult = outFile.Write(theValue);
+            }
+            return theResult;
+        }
+        case EE_UNITS_UNIT_SAVE_SECTION_IGNORED_TARGETS:
+            theResult = outFile.Write((unsigned long)theComplex->mIgnoredTargets.size());
+            for (size_t k = 0; k < theComplex->mIgnoredTargets.size() && theResult == 0; k++) {
+                const EEComplexUnitAttacker& theAttacker = theComplex->mIgnoredTargets[k];
+                if ((theResult = outFile.Write(theAttacker.mTileX)) == 0 && (theResult = outFile.Write(theAttacker.mTileY)) == 0
+                    && (theResult = outFile.Write(theAttacker.mFromX)) == 0 && (theResult = outFile.Write(theAttacker.mFromY)) == 0
+                    && (theResult = outFile.Write(theAttacker.mUnitID)) == 0)
+                    theResult = outFile.Write(theAttacker.mTime);
+            }
+            return theResult;
+        case EE_UNITS_UNIT_SAVE_SECTION_BOUNDED_PATH_TILES:
+            theResult = outFile.Write((unsigned long)theComplex->mBoundedPathTiles.size());
+            for (size_t k = 0; k < theComplex->mBoundedPathTiles.size() && theResult == 0; k++) {
+                if ((theResult = outFile.Write(theComplex->mBoundedPathTiles[k].mX)) == 0)
+                    theResult = outFile.Write(theComplex->mBoundedPathTiles[k].mY);
+            }
+            return theResult;
+        case EE_UNITS_UNIT_SAVE_SECTION_CONTACTS:
+            theResult = outFile.Write((unsigned long)theComplex->mContacts.mCount);
+            for (UListNode<EEComplexUnit*>* theNode = theComplex->mContacts.mHead; theNode != NULL && theResult == 0; theNode = theNode->mNext)
                 theResult = outFile.Write(theNode->mData->mUnitID);
+            return theResult;
+        default: return 0;
         }
+    // ---- the loads (ee_units unit_load.rs)
+    case EE_UNITS_UNIT_LOAD_READ_LONG: {
+        long theValue = (long)io->i;
+        theResult = inFile.Read(theValue);
+        io->i = (int64_t)theValue;
+        return theResult;
     }
-    return theResult;
+    case EE_UNITS_UNIT_LOAD_READ_ULONG: {
+        unsigned long theValue = (unsigned long)io->i;
+        theResult = inFile.Read(theValue);
+        io->i = (int64_t)theValue;
+        return theResult;
+    }
+    case EE_UNITS_UNIT_LOAD_READ_FLOAT: {
+        float theValue = io->f;
+        theResult = inFile.Read(theValue);
+        io->f = theValue;
+        return theResult;
+    }
+    case EE_UNITS_UNIT_LOAD_READ_BOOL: {
+        bool theValue = io->b != 0;
+        theResult = inFile.Read(theValue);
+        io->b = theValue ? 1 : 0;
+        return theResult;
+    }
+    case EE_UNITS_UNIT_LOAD_READ_USHORT: {
+        unsigned short theValue = (unsigned short)io->i;
+        theResult = inFile.Read(theValue);
+        io->i = (int64_t)theValue;
+        return theResult;
+    }
+    case EE_UNITS_UNIT_LOAD_TURRET_ANGLE:
+        return inFile.Read(theComplex->mTurretAngles[inIndex]);
+    case EE_UNITS_UNIT_LOAD_PART:
+        switch (inIndex) {
+        case EE_UNITS_UNIT_LOAD_PART_PROJECTILE_START: return theComplex->mProjectileStart.Load(inFile);
+        case EE_UNITS_UNIT_LOAD_PART_LOCATION: {
+            GETransformation theLocation(false);
+            theResult = theLocation.Load(inFile);
+            if (theResult == 0)
+                theComplex->mPhysicalModel.SetLocation(theLocation);
+            return theResult;
+        }
+        case EE_UNITS_UNIT_LOAD_PART_ANGULAR_VELOCITY: return theComplex->mAngularVelocity.Load(inFile);
+        case EE_UNITS_UNIT_LOAD_PART_ORIENTATION: return theComplex->mOrientation.Load(inFile);
+        case EE_UNITS_UNIT_LOAD_PART_U0DC: return theComplex->mU0DC.Load(inFile);
+        case EE_UNITS_UNIT_LOAD_PART_COLOR: return theComplex->mColor.Load(inFile);
+        case EE_UNITS_UNIT_LOAD_PART_FIRE_EFFECT: return inFile.Read(theComplex->mFireEffect.mValue);
+        case EE_UNITS_UNIT_LOAD_PART_PATH: {
+            bool theHasPath = false;
+            U2DPoint<long> theGoalTile;
+            theResult = inFile.Read(theHasPath);
+            if (theResult == 0)
+                theResult = theGoalTile.Load(inFile);
+            if (!theHasPath) {
+                EEPathManagerPending thePending;
+                thePending.mUnitID = theComplex->mUnitID;
+                thePending.mTile.mX = theGoalTile.mX;
+                thePending.mTile.mY = theGoalTile.mY;
+                gPathManager.mPending.push_back(thePending);
+            }
+            return theResult;
+        }
+        case EE_UNITS_UNIT_LOAD_PART_LAST_MAP_POSITION: return theComplex->mLastMapPosition.Load(inFile);
+        case EE_UNITS_UNIT_LOAD_PART_CONTACT_X: return inFile.Read(theComplex->mInitialContactLocation.mX);
+        case EE_UNITS_UNIT_LOAD_PART_CONTACT_Y: return inFile.Read(theComplex->mInitialContactLocation.mY);
+        case EE_UNITS_UNIT_LOAD_PART_CONTACT_Z: return inFile.Read(theComplex->mInitialContactLocation.mZ);
+        default: return 0;
+        }
+    case EE_UNITS_UNIT_LOAD_SET: {
+        unsigned long theValue = (unsigned long)io->i;
+        switch (inIndex) {
+        case EE_UNITS_UNIT_LOAD_SET_DEFAULT_BEHAVIOR: theComplex->mBehavior = EEUnitBehavior::sTable[5]; break;
+        case EE_UNITS_UNIT_LOAD_SET_SCALE: {
+            float theScale = io->f;
+            if (GetIsLoadingScenario() || theScale == 0.0f) {
+                if (theComplex->GetUnitClass() == NULL) {
+                    if (theScale == 0.0f)
+                        theScale = 1.0f;
+                } else
+                    theScale = theComplex->GetUnitClass()->GetScale();
+            }
+            theComplex->mPhysicalModel.SetScale(theScale);
+            break;
+        }
+        case EE_UNITS_UNIT_LOAD_SET_FRAME: theComplex->mPhysicalModel.SetFrame(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_X: theComplex->mCollisionTile.mX = (long)io->i; break;
+        case EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_Y: theComplex->mCollisionTile.mY = (long)io->i; break;
+        case EE_UNITS_UNIT_LOAD_SET_LAUNCHER_CLASS:
+            theComplex->mLauncherClass = theValue == 0 || UIsNone32(theValue) ? NULL : gUnitClassTable[theValue];
+            break;
+        case EE_UNITS_UNIT_LOAD_SET_PATROL_GROUP: theComplex->mPatrolGroup = USavedPointer<EEPPatrolGroup>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_PREVIOUS_PART: theComplex->mPreviousPart = reinterpret_cast<EEComplexUnit*>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_NEXT_PART: theComplex->mNextPart = reinterpret_cast<EEComplexUnit*>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_HOME_BASE: theComplex->mHomeBase = reinterpret_cast<EEComplexUnit*>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_CONTAINER: theComplex->mContainer = reinterpret_cast<EEComplexUnit*>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_ACTION:
+            if (theComplex->GetUnitClass() != NULL && theComplex->GetUnitClass()->FindAction(theValue) != NULL) {
+                if (theValue == 0)
+                    theValue = 5000;
+                theComplex->StartAction(theValue);
+            }
+            break;
+        case EE_UNITS_UNIT_LOAD_SET_TURRETS: theComplex->ResizeTurretAngles((long)io->i); break;
+        case EE_UNITS_UNIT_LOAD_SET_GATHERED_RESOURCE: theComplex->mGatheredResource = reinterpret_cast<EEUnit*>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_LAST_ATTACKER_CLEAR:
+            if (theComplex->mLastAttacker != NULL)
+                theComplex->mLastAttacker->Dereference();
+            theComplex->mLastAttacker = NULL;
+            break;
+        case EE_UNITS_UNIT_LOAD_SET_LAST_ATTACKER: theComplex->mLastAttacker = reinterpret_cast<EEComplexUnit*>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_OWNER_CLEAR:
+            if (theComplex->mOwner != NULL)
+                theComplex->mOwner->Dereference();
+            theComplex->mOwner = NULL;
+            break;
+        case EE_UNITS_UNIT_LOAD_SET_OWNER: theComplex->mOwner = USavedPointer<EEComplexUnit>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_MINE: theComplex->mMine = USavedPointer<EEUnit>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_MINE_UNSET: theComplex->mMine = (EEUnit*)-1; break;
+        case EE_UNITS_UNIT_LOAD_SET_HERD: theComplex->mHerd = reinterpret_cast<EEHerd*>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_HOLDER: theComplex->mHolder = USavedPointer<EEComplexUnit>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_BEHAVIOR: theComplex->mBehavior = reinterpret_cast<EEUnitBehavior*>(theValue); break;
+        case EE_UNITS_UNIT_LOAD_SET_LAST_RESOURCE: theComplex->mLastResource = reinterpret_cast<EEUnit*>(theValue); break;
+        default: break;
+        }
+        return 0;
+    }
+    case EE_UNITS_UNIT_LOAD_SECTION:
+        return EEComplexUnitLoadSection(theContext, inIndex, io);
+    default:
+        return 0;
+    }
 }
 
 // TEMPLATE: EXE 0x5f5180
