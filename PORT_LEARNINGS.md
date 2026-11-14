@@ -14586,3 +14586,89 @@ statement, no algorithm moved.
   line of sight, reach: host reads, next), `GetTiles` (the area's tile cache), `GetUnitAttribute` (a 474-line switch
   of unit and class reads: a table of reads by attribute would move it), `FindPlacement` (SMFP is its golden), the
   world-glue effect bodies.
+
+## R5b.4, twenty-fifth round: the turrets' turn, the player's tick and its reset over the saved record in Rust (ee_units turret.rs, player_tick.rs; branch rust-r5b4-core25, 2026-11-13)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 202efad8 | `EEUnitClass::TurnTurrets` and `TurnTurretsBack` in Rust (turret.rs) | +45 -69, net -24 |
+| f05f0e5b | `EEPlayer::UpdatePlayer` in Rust over a host callback; `Reset`'s fields of `EeUnitsPlayerSaved` set by Rust (player_tick.rs) | +122 -101, net +21 |
+| 5b876c23 | merge of `rust` (triggers 3, core 24's merge, LLE 2, NE 2, the messages lane's rally ghost fix): no conflict | |
+
+The round's C++: net -3. Order and reasons:
+
+- **The turrets first**: the brief's third item asked for per-tick simulation C++ with real decisions, measured first.
+  Of `EEUnitClass`'s remaining per-tick bodies, `TurnTurrets` (71 lines) is the one whole algorithm (a float
+  geometry: the part's world position, the heading to the target, the part's facing through three
+  transformations, the clamped turn and two wraps); the angle it writes is read by combat (the weapon point of a
+  turret's shot, `EECombatFormulas.h`, `EECombatGoals.cpp`), so it is simulation. `Heal`, `UpdateAnimal`,
+  `FleeAttacker` are effect and sound glue or sequences of calls already Rust.
+- **The player's tick and reset second**: round 24's list. `UpdatePlayer` moved as one Rust sequence with its
+  decisions (the herds' due test and end, the queued improvements' timers, the wonders' heal) but its leaves stay
+  C++ calls through 22 host operations, so its C++ grew (+50 for the body's -70): the C++ owns the groups, herds,
+  map and units. `Reset`'s record part is the fields the record holds (-31 C++).
+- **Left, with reasons:** `RepairPointers` is a list of C++ calls (civilization, groups, towns, herds, events,
+  queued improvements' re-queue, tech-tree allows, off-map units) with no decision of its own over the record: as
+  Rust it would be one host operation per statement. `Animate`'s remaining sound play is sound manager glue
+  (instance compare, stop, parameters, play, reference): the same, and EE-SIM has no sound to gate it.
+
+- **The turrets** (`turret.rs`, `ee_units_turn_turrets` over `EeUnitsTurretsIn` and one `EeUnitsTurretPart` per
+  part): the C++ (`EETurnTurretsRust`) copies the unit's location matrix, its stats' scale and turret turn rate,
+  `gPhysics->mTickSeconds`, the target point, and each part's `mPosition`, `mTransformation` and current angle (on
+  the stack for up to 8 parts), then stores each angle back where it differs (the original's
+  `if (theAngle != old) set`: a -0.0 result over a +0.0 angle is not written). `TurnTurrets` keeps the goal's
+  kind test and the target point (the attack target's location, or its tile for a unit without a complex unit;
+  else `GetGoalLocation`), `TurnTurretsBack` is one call. The Rust uses ee_ge's `apply_point`/`apply_vector`
+  (the header inlines' summation order), `set_orientation(Ypr)` and `um_arctan2` (the C++'s own
+  `SetOrientationYPR` and `UMArcTan2` forward to these), `GeVector::normalize` (the 0.0001 cut), and the
+  original's `3.1415927f`/`6.2831855f` (`f32::consts::PI`, `TAU`: the same floats). The original reused one
+  rotation matrix over the parts; `SetOrientationYPR` rewrites its 3x3 and keeps its zero position, so a fresh
+  identity per part is the same.
+- **Golden in game (temporary, removed):** the original bodies over a copy of the angles, compared bit for bit with
+  the Rust's stored angles after every call. Oracle seeds 2-7 and the late captures (seeds 2-3) never call
+  `TurnTurrets`: no unit with a `turret_` part (41 models have one: pillboxes, AA guns, tanks, ships) is built or
+  fights in them. The space captures (seeds 2-3) do: at least 150,548 turn-back and 46,060 aim calls (the log
+  printed at each power of two), 46,630 with a turned turret, 0 differences.
+- **The player's tick** (`player_tick.rs` `update_player`, `ee_units_player_update`, the host
+  `EEPlayerTickOperation` with operation numbers 1-22 of its own, the record by raw pointer for `mHealTimer` only):
+  the selections' validation is one operation (no decision in it); the herds from the last (the game time read
+  per herd, `mNextUpdateTime <= time && mIsActive` updates, state 0xb kills); the air traffic and events one
+  operation; the queued improvements walked in key order by a C++ iterator the host keeps (first, next, erase:
+  each returns the entry's key and float), the timer less `GetTickTime()` and the instant build's cap of 1
+  decided in Rust, the apply (front applied and erased, float 0) and `AdvanceImprovement` C++; the heal (the tick
+  ms floored at 0, the timer less it as `float`, at 0 or under: the amount `amount + (long)((epoch / step) *
+  factor * amount)` with x86's truncation, each unit of a healed type gaining it up to its maximum when alive,
+  the timer reset to `kPlayerHealInterval`, now `EE_UNITS_PLAYER_HEAL_INTERVAL`). Each unit's healed-set test is
+  made for every unit, as the original's.
+- **`Reset`** calls `ee_units_player_reset` twice: part 0 where the original set `mEnemies` (before
+  `EEUnitStorePlayerTable`, which reads them), with every record field the original set before the events'
+  clear (the calls between, the upgrade, tech-tree and air-traffic constructors and the saved groups' clear,
+  read none of them), part 1 after `mEvents.Clear` for the trade, refunds and vital buildings it zeroed there (an
+  event's removal may change them).
+- **Coverage by temporary prints (removed): the first sight of each host operation.** Oracle seeds 2-7 and the
+  late, space and calamity captures (seeds 2-3): every game runs the validation, the herds (count, time, due,
+  update, state, the 0xb kill), the air traffic and events, and the queued walk's first step, and reads the tick
+  ms and the heal flag. No game queues an improvement (the map is always empty: next, erase, set, apply, advance
+  never run) and no player heals units (no healing wonder): those are unit tests only (player_tick_tests.rs, 8
+  tests, with turret_tests.rs 8). Every reset of every game runs `reset`; the saveload matrix loads run it too.
+- **Behaviour:** none. Tour only: nothing drawn changed by itself, but the turret angles feed the renderer
+  (`EERenderObject` copies them); the space captures' golden covers their values.
+- **Gates.** Commit 1 and 2 (one coverage and golden build, then the final build): build `--sim` 0/0; on the golden
+  build oracle seeds 2-7 identical to `ref`, late and space captures (seeds 2-3) PASS (170, 171 digests); on the
+  coverage build oracle seeds 2-7 identical, late (170), space (171), calamity (183) PASS; on the final build
+  oracle seeds 2-3 identical and the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4,
+  mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4), every run exit 0. The first commit
+  was not built alone (its tree differs from the built one by player_tick.rs, its header lines and EEPlayer.cpp;
+  its header was generated without them). The Rust gate failed once on rustfmt of the new files (fixed before the
+  commits). On the result merged with rust (5b876c23): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`;
+  the Rust gate PASS (ee_units 237 tests, 16 new); captures at seeds 2-3 oracle (169 digests), late (170), space
+  (171), calamity (183) PASS; scenario seeds 2-7 PASS (65 digests), every seed exit 0 including seed 4 (Carrier
+  Strike) with the messages lane's rally ghost fix merged; the test profile 0/0. `rust_includes.py`
+  re-added `rust/ee_screens.h` to `EESEUICCommandUnits.cpp` and `EESEUnit.cpp` after the merge: reverted, not
+  committed.
+- **For the next round:** `RepairPointers` and the sound play stay C++ (above). Still open from round 23's list:
+  `EEUnitClass`'s constructor, `FindPath`/`AdjustPath`, `EEComplexUnit`'s copy, reset and `UpdateHidden` (the
+  hide flags: it reads the local player, so it is display state, not simulation). The queued improvements'
+  map could become a Rust record (key order, float, id list) with `QueueImprovement`/`AdvanceImprovement`,
+  which would turn UpdatePlayer's walk into Rust over its own data.
