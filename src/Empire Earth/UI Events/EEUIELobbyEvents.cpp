@@ -1306,11 +1306,14 @@ long LobbyApplySavedGameOptions(EEPSaveGameHeader& inHeader)
     return 0;
 }
 
-// port: an engine choice's text (ee/EECPEngine.h): the strings Classic and Random, an AI's manifest name
+// port: an engine choice's text (ee/EECPEngine.h): the strings Classic and Random, an AI's manifest name; with a
+// manifest "classic" AI the C++ classic's choice after the AIs is "Classic (C++)"
 static void LobbyEngineText(unsigned long inChoice, UWideString& outText)
 {
-    const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
-    if (theAI != NULL)
+    const EECPAIEntry* theAI = inChoice == kEECPChoiceClassic ? NULL : EECPAIByChoice(inChoice);
+    if (EECPClassicAI() != NULL && inChoice == EECPChoiceClassicCpp())
+        outText = UWideString("Classic (C++)");
+    else if (theAI != NULL)
         outText = UWideString(theAI->mName.c_str());
     else
         gResource->GetString(kLobbyEngineClassicString + (inChoice == kEECPChoiceRandom ? 1 : 0), outText);
