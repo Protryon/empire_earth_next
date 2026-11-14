@@ -976,6 +976,11 @@ from data, so that a script can make its decisions with the same numbers:
 - `ai.wall_path(unit, x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tile path an own unit would take from (x1, y1) to
   (x2, y2) inside the box of the two tiles, as the classic wall planner refines each step of its way
   (EEPathManager::FindPath with EEAIGPGModifierComputerPlayerWallPather); empty when there is none.
+- `ai.wall_route(enemy, x1, y1, x2, y2)` -> handle, and `ai.wall_route_result(handle)` -> nil while it runs, the
+  tiles `{{x, y}, ...}` when done (empty: no way), false for a handle not held: the classic wall planner's way from
+  the enemy's centre to the own town, the path manager's request on its coarse graph with the wall planner modifier
+  (the enemy's influence costs) and a citizen's terrain (EECPWallManager::StartNextWall). Asynchronous: the request
+  runs over the next game ticks. One at a time per player; not saved (a loaded game forgets it).
 - `ai.wall_line(x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tiles a wall from (x1, y1) to (x2, y2) lays, in order
   (EEGetWallLine).
 - `ai.wall_stretches(x1, y1, x2, y2)` -> blocked, `{{ax, ay, bx, by, len, level}, ...}`: the classic wall planner's
