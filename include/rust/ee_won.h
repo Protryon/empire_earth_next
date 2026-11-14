@@ -3406,6 +3406,246 @@ enum class EeWonDlgLogicCall : uint32_t {
   Field,
 };
 
+/// The host's ops. `a`..`d` as documented; a read answers `isize::MIN` when it threw.
+enum class EeWonEeGameOp : uint32_t {
+  /// `a->AddRef()` (a `SmartPtr`'s reference: a client, a player, the file transfer, a `GUIStringData`).
+  AddRef = 1,
+  /// `a->Release()`.
+  Release,
+  /// `((ReadBuffer*)a)->ReadByte()` (0..255).
+  ReadByte,
+  /// `ReadShort()`, sign-extended.
+  ReadShort,
+  /// `ReadBool()` (0 or 1).
+  ReadBool,
+  /// `ReadLong()`, sign-extended.
+  ReadLong,
+  /// `ReadWString(text, 2)` as a new `GUIStringData` with one reference (the caller's).
+  ReadWString,
+  /// `Available()`.
+  Available,
+  /// `((WriteBuffer*)a)->AppendByte(b)`.
+  AppendByte,
+  /// `AppendShort(b)`.
+  AppendShort,
+  /// `AppendBool(b != 0)`.
+  AppendBool,
+  /// `AppendLong(b)`.
+  AppendLong,
+  /// `AppendWString(GUIString(b), 2)` (`b` a `GUIStringData`, 0 the empty string).
+  AppendWString,
+  /// `length()`.
+  Length,
+  /// `SetByte(b, c)`.
+  SetByte,
+  /// `new WriteBuffer(0, true)` (a game room message).
+  NewBuffer,
+  /// `LobbyBroadcastToGame(a->ToByteBuffer(true).get())`.
+  BroadcastToGame,
+  /// `LobbySendToCaptain(a->ToByteBuffer(true).get())`.
+  SendToCaptain,
+  /// `LobbySendToClient(b, a->ToByteBuffer(true).get())`.
+  SendToClient,
+  /// `delete a` (the message buffer's end of scope).
+  FreeBuffer,
+  /// `this->GetIsHost()`.
+  IsHost,
+  /// `this->GetMaxPlayers()`.
+  MaxPlayers,
+  /// `this->SetMaxPlayers(a)`.
+  SetMaxPlayers,
+  /// `this->GetGameType()`.
+  GameType,
+  /// `this->GetClients().mPtr` (a `LobbyClientList`).
+  Clients,
+  /// `((LobbyClientList*)a)->FindClient(b)`.
+  FindClient,
+  /// `LobbyGetCurrentServer()`.
+  CurrentServer,
+  /// `((LobbyServer*)a)->GetClient(b)`.
+  ServerClient,
+  /// `new LobbyClientSetIterator(a)`.
+  IterNew,
+  /// `a->HasMore()`.
+  IterHasMore,
+  /// `a->Next(&client)`: the client.
+  IterNext,
+  /// `delete a` (the iterator's end of scope).
+  IterFree,
+  /// `((LobbyClient*)a)->GetName()`'s `GUIStringData` (no reference added).
+  ClientName,
+  /// `GetClientId()`.
+  ClientId,
+  /// `GetPlayer().mPtr` (an `EELobbyPlayer`).
+  ClientPlayer,
+  /// `IsCaptain(1)`.
+  ClientIsCaptain,
+  /// `((EELobbyPlayer*)a)->GetSlot()`.
+  PlayerSlot,
+  /// `GetTeam()` (its slot's team, through that slot's game).
+  PlayerTeam,
+  /// `a->mPlayerSlot = &this->mSlots[b]; a->mSlot = b` (EELobbyPlayerSlot::SetPlayer's two stores).
+  PlayerAttach,
+  /// `a->mPlayerSlot = NULL` (ClearPlayer's store).
+  PlayerDetach,
+  /// `GetMyLobbyPlayer()`.
+  MyPlayer,
+  /// `LobbyIAmCaptain()`.
+  IAmCaptain,
+  /// `LobbyNotifyStagingChange()`.
+  NotifyStagingChange,
+  /// `LobbyNetAdvertiseGame()`.
+  AdvertiseGame,
+  /// `LobbyResetReadyFlags()`.
+  ResetReadyFlags,
+  /// `LobbyBroadcastEvent(new EELobbySyncPlayerEvent(a), true)`.
+  SyncPlayer,
+  /// `LobbyBroadcastEvent(new EELobbySyncOptionEvent(a), true)`.
+  SyncOption,
+  /// `LobbyBroadcastEvent(new PlayerTeamChangedEvent(a, b != 0), true)`.
+  TeamChanged,
+  /// `LobbyBroadcastLobbyEvent(a, true)`.
+  LobbyEvent,
+  /// `LobbyKickClient(a, false)`.
+  KickClient,
+  /// `LobbyMessageBox(StartGameError, EveryoneOnSameTeam)`.
+  SameTeamBox,
+  /// `EELobbyHostGame()`.
+  HostGame,
+  /// `EELobbyCancelConnectDialog()`.
+  CancelConnectDialog,
+  /// `EELobbySetSlotConnected(a, b != 0)`.
+  SetSlotConnected,
+  /// `EELobbyIsConnectDialogRunning()`.
+  ConnectDialogRunning,
+  /// `EELobbyGetFileTransferPort()`.
+  FileTransferPort,
+  /// `EELobbyGetNumMapTypes()`.
+  NumMapTypes,
+  /// `EELobbySetDefaultGameOptions(this)`.
+  SetDefaultOptions,
+  /// `EELobbyGetVersion(version, *(uint32_t*)a)`: the version as a new `GUIStringData` with one reference.
+  Version,
+  /// `GUIString(a) == GUIString(b)` (0: the empty string).
+  StringsEqual,
+  /// `new EELobbyFileTransfer` (no reference: the `SmartPtr` assignment follows).
+  TransferNew,
+  /// `a->SetFileInfo(GUIString(b), c, d)`.
+  TransferSetFileInfo,
+  /// `a->SetPath(EELobbyFn2988E9() + a->mName)` (the saved games' directory and the file's name).
+  TransferSetSavesPath,
+  /// `a->Serve(b)`.
+  TransferServe,
+  /// `a->mName`'s `GUIStringData` (no reference).
+  TransferName,
+  /// `a->mSize`.
+  TransferSize,
+  /// `a->mChecksum`.
+  TransferChecksum,
+  /// `a->SetHost(this->GetAddress() with port b)`.
+  TransferSetHost,
+  /// `a->Stop()`.
+  TransferStop,
+  /// `a->CloseClients()`.
+  TransferCloseClients,
+  /// `a->IsFileHere()`.
+  TransferIsFileHere,
+  /// `a->Download()`.
+  TransferDownload,
+};
+
+/// The inward calls: EELobbyGame's methods and virtual hooks, then EELobbyPlayerSlot's (`a` the slot's number).
+/// `a`..`d` are the method's arguments in order (pointers, numbers); a hook whose read threw answers `isize::MIN`.
+enum class EeWonEeGameCall : uint32_t {
+  GetNumFiles = 1,
+  /// `GetFile(a)`: its `GUIStringData`, 0 the empty string.
+  GetFile,
+  /// `SetGameFile(GUIString(a), b, c, d != 0)`.
+  SetGameFile,
+  /// `GetGameFileName()`'s `GUIStringData` (0 without a file transfer).
+  GetGameFileName,
+  StopTransfer,
+  /// `UpdateTransferProgress(a, b)`.
+  UpdateTransferProgress,
+  SetTransferPercent,
+  StartTransfer,
+  CanReadyHook,
+  CanStartGameHook,
+  TryStartGameHook,
+  PostNetLeaveGameHook,
+  NotifyStartGameHook,
+  /// `HandleHostGameHook(a)`.
+  HandleHostGameHook,
+  /// `GetJoinGameRequestHook(*a)`.
+  GetJoinGameRequestHook,
+  /// `HandleJoinGameRequestHook(*a, b)`.
+  HandleJoinGameRequestHook,
+  /// `GetJoinGameReplyHook(a, *b)`.
+  GetJoinGameReplyHook,
+  HandleJoinGameReplyHook,
+  /// `HandlePlayerLeftHook(a, b)`.
+  HandlePlayerLeftHook,
+  HandlePlayerJoinedHook,
+  WriteSummaryHook,
+  WriteDetailsHook,
+  ReadSummaryHook,
+  ReadDetailsHook,
+  /// `HandleGameMessageHook(a, *b, c)`.
+  HandleGameMessageHook,
+  /// `GetStatusStringHook(a)`: 0 the empty string, 1 not in the saved game, 2 invalid version, 3 corrupt binaries.
+  GetStatusStringHook,
+  ResetSlots,
+  CountPlayers,
+  HasGameFile,
+  GetOption,
+  /// `SetOption(a, b)`.
+  SetOption,
+  /// `ChangeOption(a, b, c != 0)`.
+  ChangeOption,
+  SendGameState,
+  /// `ChangePlayerOption(a, b, c)`.
+  ChangePlayerOption,
+  SendConnectStatus,
+  SendCancelConnect,
+  SendOption,
+  /// `GetFreeColor(a, b)`.
+  GetFreeColor,
+  MakeColorsDistinct,
+  GetMySlot,
+  GetMyTeam,
+  /// `GetTakenColors((bool*)a, b)` (16 entries).
+  GetTakenColors,
+  IsColorFree,
+  /// a member: `a` 0 the file transfer, 1 the file is here, 2 human players, 3 computer players, 4 reserved slots.
+  Field,
+  /// EELobbyPlayerSlot::Reset (`a` the slot).
+  SlotReset,
+  /// `GetName()`'s `GUIStringData` (0 the empty string).
+  SlotGetName,
+  /// `SetState(b)`.
+  SlotSetState,
+  /// `GetOption(b)`.
+  SlotGetOption,
+  /// `SetOption(b, c)`.
+  SlotSetOption,
+  SlotClearPlayer,
+  SlotSetOpen,
+  SlotSetClosed,
+  SlotSetComputer,
+  /// `SetName(GUIString(b))`.
+  SlotSetName,
+  /// `SetPlayer(b, c)`.
+  SlotSetPlayer,
+  /// `mOptions[b]` (0 past the six).
+  SlotRawOption,
+  /// `mOptions[b] = c` (nothing past the six).
+  SlotSetRawOption,
+  /// `mClient.mPtr`.
+  SlotClient,
+  /// `mPlayer.mPtr`.
+  SlotPlayer,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -6613,6 +6853,9 @@ struct EeWonDialog;
 /// DialogLogic's Rust half.
 struct EeWonDlgLogic;
 
+/// The lobby game's Rust half.
+struct EeWonEeGame;
+
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
 
@@ -7173,6 +7416,14 @@ using EeWonDlgLogicHostFn = ptrdiff_t(*)(void *logic,
                                          ptrdiff_t b,
                                          ptrdiff_t c,
                                          ptrdiff_t d);
+
+/// The host: `(game, op, a, b, c, d) -> result`.
+using EeWonEeGameHostFn = ptrdiff_t(*)(void *game,
+                                       EeWonEeGameOp op,
+                                       ptrdiff_t a,
+                                       ptrdiff_t b,
+                                       ptrdiff_t c,
+                                       ptrdiff_t d);
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
@@ -10237,6 +10488,29 @@ ptrdiff_t ee_won_dlglogic_call(const EeWonDlgLogic *obj,
                                ptrdiff_t c,
                                ptrdiff_t d,
                                ptrdiff_t e);
+
+/// A new lobby game for the C++ `game` (EELobbyGame's constructor).
+EeWonEeGame *ee_won_eegame_new(void *game, EeWonEeGameHostFn host);
+
+/// Releases the slots' members, the transfer and the names (the destructor's order) and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_eegame_new` (or is NULL) and is not used again.
+void ee_won_eegame_free(EeWonEeGame *p);
+
+/// One inward call (`EeWonEeGameCall`); `isize::MIN` when a hook's read threw.
+///
+/// # Safety
+/// `p` is live; the call's arguments as documented.
+ptrdiff_t ee_won_eegame_call(const EeWonEeGame *p,
+                             EeWonEeGameCall call,
+                             ptrdiff_t a,
+                             ptrdiff_t b,
+                             ptrdiff_t c,
+                             ptrdiff_t d);
+
+/// EELobbyPlayer::IsTeammate's rule: team 0 (no team) has no teammates.
+bool ee_won_eegame_is_teammate(uint8_t mine, uint8_t theirs);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.

@@ -37,6 +37,7 @@ pub mod dir;
 pub mod dirchange;
 pub mod dirops;
 pub mod dlglogic;
+pub mod eegame;
 pub mod elgamal;
 pub mod ffi;
 pub mod ffi_lan;

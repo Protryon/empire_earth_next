@@ -84,46 +84,46 @@ void EELobbyPlayerOptionsCtrl::UpdatePlayer(int inSlot, EELobbyGame* inGame)
     if (theSlot == NULL)
         return;
     SmartPtr<ComboBox>& theTeam = this->mTeamCombo[inSlot];
-    theTeam->SetSelItem(theSlot->mOptions[1]);
+    theTeam->SetSelItem(theSlot->Option(1));
     SmartPtr<ComboBox>& theCitizen = this->mCitizenCombo[inSlot];
-    theCitizen->SetSelItem(theSlot->mOptions[3] - 1);
+    theCitizen->SetSelItem(theSlot->Option(3) - 1);
     bool theTaken = false;
     bool theShowTeam = false;
     bool theNotRandomMap = inGame->GetOption(0) != 0;
     bool theIsMe = false;
     if (inSlot == this->mMySlot && !GetMyLobbyPlayer()->GetReady())
         theIsMe = true;
-    if (theSlot->mOptions[0] == 1)
+    if (theSlot->Option(0) == 1)
         theShowTeam = true;
     SmartPtr<ComboBox>* theName;
-    if (theSlot->mOptions[0] != 3 && theSlot->mOptions[0] != 4) {
+    if (theSlot->Option(0) != 3 && theSlot->Option(0) != 4) {
         theName = &this->mUserNameCombo[inSlot];
-        (*theName)->SetSelItem(theSlot->mOptions[0]);
+        (*theName)->SetSelItem(theSlot->Option(0));
         (*theName)->mEdit->mTextColor = 0x8000000e;
         this->mObserveCheck[inSlot]->SetVisible(false);
         this->mColorButton[inSlot]->SetVisible(false);
         this->mFileTransferLabel[inSlot]->SetVisible(false);
     } else {
-        theShowTeam = theSlot->mOptions[4] == 0;
+        theShowTeam = theSlot->Option(4) == 0;
         theName = &this->mUserNameCombo[inSlot];
         theTaken = true;
         (*theName)->SetText(theSlot->GetName());
-        if (theSlot->mOptions[0] == 4)
+        if (theSlot->Option(0) == 4)
             (*theName)->mEdit->mTextColor = 0xff0000;
         else
             (*theName)->mEdit->mTextColor = 0x8000000e;
         this->mObserveCheck[inSlot]->SetVisible(true);
         this->mObserveCheck[inSlot]->SetEnabled(theIsMe && !theNotRandomMap);
-        this->mObserveCheck[inSlot]->SetCheck(theSlot->mOptions[4] != 0);
-        this->mColorButton[inSlot]->SetVisible(theSlot->mOptions[4] == 0);
+        this->mObserveCheck[inSlot]->SetCheck(theSlot->Option(4) != 0);
+        this->mColorButton[inSlot]->SetVisible(theSlot->Option(4) == 0);
         this->mColorButton[inSlot]->SetEnabled(theIsMe && !theNotRandomMap);
-        this->mColorButton[inSlot]->SetColor(theSlot->mOptions[2]);
-        if (theSlot->mOptions[5] >= 100)
+        this->mColorButton[inSlot]->SetColor(theSlot->Option(2));
+        if (theSlot->Option(5) >= 100)
             this->mFileTransferLabel[inSlot]->SetVisible(false);
         else {
             this->mFileTransferLabel[inSlot]->SetVisible(true);
             char theBuffer[50];
-            sprintf(theBuffer, "%d", theSlot->mOptions[5]);
+            sprintf(theBuffer, "%d", theSlot->Option(5));
             this->mFileTransferLabel[inSlot]->SetText(
                 LobbyFormatString(gEELobbyPlayerOptionsCtrl_TransferPercent, theBuffer));
         }

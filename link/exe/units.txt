@@ -453,11 +453,9 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 2909a1 290e89 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyConnectDialog.cpp
 290e89 291463 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileDialog.cpp
 291463 29222b Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyFileTransfer.cpp
-29222b 2942c8 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyGame.cpp
 294d62 296aaa Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInit.cpp
 296aaa 297ee7 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyInterface.cpp
 297ee7 299838 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyMisc.cpp
-299838 299b17 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyPlayer.cpp
 299b17 29a43d Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyPlayerOptionsCtrl.cpp
 29a43d 29ce06 Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbyResource.cpp
 29ce06 29cfda Empire Earth/WONAPI/WONLobby/GameCode/EmpireEarth/EELobbySound.cpp

@@ -409,7 +409,7 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
         aLabel->SetText(static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(b))->GetGameFileName());
         return 0;
     case Op::GameSlot: return (intptr_t)static_cast<EELobbyGame*>(aGame)->GetPlayerSlot((int)b);
-    case Op::SlotState: return reinterpret_cast<EELobbyPlayerSlot*>(a)->mOptions[0];
+    case Op::SlotState: return reinterpret_cast<EELobbyPlayerSlot*>(a)->Option(0);
     case Op::SlotSetOpen: reinterpret_cast<EELobbyPlayerSlot*>(a)->SetOpen(); return 0;
     case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
     case Op::EventParam: return static_cast<EELobbySyncOptionEvent*>(anEvent)->mParam;

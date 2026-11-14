@@ -70,7 +70,7 @@ bool EELobbyConnectDialog::Run(EELobbyGame* inGame)
     this->mConnectList->Clear(true);
     for (int i = 0; i < 8; i++) {
         EELobbyPlayerSlot* theSlot = inGame->GetPlayerSlot(i);
-        if (theSlot != NULL && theSlot->mOptions[0] == 3) {
+        if (theSlot != NULL && theSlot->Option(0) == 3) {
             Image* theImage = (i == 0 ? ::GameUserListCtrl_Ready_Image : ::LobbyGlobal_Searching_Image).mPtr;
             this->mConnectList->InsertItem(new ConnectListItem(theSlot->GetName(), theImage, i), -1);
             if (theImage != ::GameUserListCtrl_Ready_Image.mPtr)
