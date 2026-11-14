@@ -122,7 +122,7 @@ bool EEAIContinent::GetClosestPoints(EEAIArea* inOther, U2DPoint<long>& outThis,
     if (theOther) {
         if (theResult) {
             ee_area_closest_points_to_hull(U2DHullPoints(this->mShoreTiles), this->mShoreTiles.size(),
-                                           U2DHullPoints(theOther->GetHullPoints()), theOther->GetHullPointCount(),
+                                           reinterpret_cast<const EeHullPoint*>(theOther->GetHullPointData()), theOther->GetHullPointCount(),
                                            &theThis, &theOtherPoint);
             outThis = U2DHullPoint(theThis);
             outOther = U2DHullPoint(theOtherPoint);

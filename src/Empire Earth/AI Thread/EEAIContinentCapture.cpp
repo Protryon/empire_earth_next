@@ -366,32 +366,22 @@ void EEGeomCapturePoint(const U2DPoint<long>& inPoint)
     sGeomCaptureRecord->I32((int)inPoint.mY);
 }
 
-void EEGeomCapturePoints(const std::vector<U2DPoint<long> >& inPoints, bool inWhole)
+void EEGeomCapturePoints(const U2DPoint<long>* inPoints, size_t inCount, bool inWhole)
 {
-    sGeomCaptureRecord->I32((int)inPoints.size());
+    sGeomCaptureRecord->I32((int)inCount);
     if (inWhole) {
-        for (size_t i = 0; i < inPoints.size(); i++)
+        for (size_t i = 0; i < inCount; i++)
             EEGeomCapturePoint(inPoints[i]);
         return;
     }
     unsigned int theHash = 0x811c9dc5u;
-    for (size_t i = 0; i < inPoints.size(); i++) {
+    for (size_t i = 0; i < inCount; i++) {
         int theValues[2] = {(int)inPoints[i].mX, (int)inPoints[i].mY};
         const unsigned char* theBytes = (const unsigned char*)theValues;
         for (size_t j = 0; j < sizeof(theValues); j++)
             theHash = (theHash ^ theBytes[j]) * 0x01000193u;
     }
     sGeomCaptureRecord->U32(theHash);
-}
-
-void EEGeomCaptureRows(const std::map<long, std::pair<long, long> >& inRows)
-{
-    sGeomCaptureRecord->I32((int)inRows.size());
-    for (std::map<long, std::pair<long, long> >::const_iterator theIt = inRows.begin(); theIt != inRows.end(); ++theIt) {
-        sGeomCaptureRecord->I32((int)theIt->first);
-        sGeomCaptureRecord->I32((int)theIt->second.first);
-        sGeomCaptureRecord->I32((int)theIt->second.second);
-    }
 }
 
 void EEGeomCaptureCommit()

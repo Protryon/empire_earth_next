@@ -42,6 +42,7 @@ public:
     // cleared, when they are not such a list)
     void GetRaw(std::vector<long>& outRaw) const;
     bool SetRaw(const std::vector<long>& inRaw);
+    EeSparseArray* GetHandle() const { return this->mPoints; }   // New (port): for the AI area's record (ee_astar area.rs)
 
 private:
     EeSparseArray* mPoints;                 // the points (ee_sparse_new)

@@ -107,6 +107,9 @@ enum class EeAStarGraphList {
   FastOpen = 4,
 };
 
+/// The hull's points (opaque to C++).
+struct EeAStarAreaHull;
+
 /// One graph storage (opaque to C++): `EEAIAStarGraphStorage` owns one.
 struct EeAStarGraphStorage;
 
@@ -121,6 +124,39 @@ struct EeSparseArray;
 
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
+
+/// A hull's bounds (`U2DRectangle<long>`, its members in their order).
+struct EeHullRect {
+  long bottom;
+  long left;
+  long right;
+  long top;
+};
+
+/// `U2DPoint<long>` (the C++ class's layout: two `long`s).
+struct EeHullPoint {
+  long x;
+  long y;
+};
+
+/// `EEAIArea`'s members but the tile set (the C++ class's first base; `ee_astar_area_init` / `ee_astar_area_free`
+/// in its ctor and dtor).
+struct EeAStarAreaRecord {
+  /// the hull's points (`ee_astar_area_hull_points`); NULL until a hull is set
+  EeAStarAreaHull *hull;
+  /// the hull's input's bounds (`U2DRectangle<long>`'s layout: the C++ hands it out as one)
+  EeHullRect hull_bounds;
+  /// the hull's center (`U2DPoint<long>`'s layout)
+  EeHullPoint hull_center;
+  /// the hull's area (`float`)
+  float hull_area;
+  /// `mBounds`: the hull's bounds in influence-table regions
+  EeHullRect bounds;
+  /// `mSerial`: `EEAIContinentManager::mLastSerial` when made, the key of its `mAreas`
+  unsigned long serial;
+  /// `mAreaType`: the area kind (`kAIArea*`)
+  long area_type;
+};
 
 /// A node as the goals and the capture see it.
 struct EeAStarNodeView {
@@ -656,31 +692,6 @@ struct EePathBounds {
   int32_t right;
 };
 
-/// `U2DPoint<long>` (the C++ class's layout: two `long`s).
-struct EeHullPoint {
-  long x;
-  long y;
-};
-
-/// What `SetPoints` leaves besides the points: the input's bounds (`U2DRectangle<long>`'s members in their order),
-/// the center and the area.
-struct EeHullShape {
-  long bottom;
-  long left;
-  long right;
-  long top;
-  EeHullPoint center;
-  float area;
-};
-
-/// A hull's bounds (`U2DRectangle<long>`, its members in their order).
-struct EeHullRect {
-  long bottom;
-  long left;
-  long right;
-  long top;
-};
-
 /// What `EEAIContinent::GetShoreInRegions` asks the continent manager (`area_geom::ShoreHost`), over `ctx`.
 struct EeShoreCallbacks {
   void *ctx;
@@ -695,6 +706,66 @@ struct EeShoreCallbacks {
 };
 
 extern "C" {
+
+/// The record of a new area: everything zero, no hull.
+///
+/// # Safety
+/// `r` points to writable memory for a record (its old contents are not read).
+void ee_astar_area_init(EeAStarAreaRecord *r);
+
+/// The record's hull freed (the area's dtor).
+///
+/// # Safety
+/// `r` a record from `ee_astar_area_init`.
+void ee_astar_area_free(EeAStarAreaRecord *r);
+
+/// The hull's points and their count (NULL and 0 without points); valid until the hull next changes.
+///
+/// # Safety
+/// `r` a live record, `count` valid.
+const EeHullPoint *ee_astar_area_hull_points(const EeAStarAreaRecord *r,
+                                             size_t *count);
+
+/// `SetPoints(points, false)` on the hull.
+///
+/// # Safety
+/// `r` a live record, `points` holds `count` points (NULL when 0).
+void ee_astar_area_set_hull(EeAStarAreaRecord *r, const EeHullPoint *points, size_t count);
+
+/// The hull as a saved game has it (points, bounds, center, area).
+///
+/// # Safety
+/// `r` a live record, `points` holds `count` points (NULL when 0).
+void ee_astar_area_set_hull_raw(EeAStarAreaRecord *r,
+                                const EeHullPoint *points,
+                                size_t count,
+                                EeHullRect bounds,
+                                EeHullPoint center,
+                                float area);
+
+/// `U2DConvexHull<long>::Clear` on the hull.
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_area_clear_hull(EeAStarAreaRecord *r);
+
+/// `UpdateBounds(table)` (`region_size` 0: no table).
+///
+/// # Safety
+/// `r` a live record.
+void ee_astar_area_update_bounds(EeAStarAreaRecord *r, long region_size);
+
+/// `UpdateHull`: the hull of `tiles`' extreme edge points, then the region bounds.
+///
+/// # Safety
+/// `r` a live record, `tiles` a live set.
+void ee_astar_area_update_hull(EeAStarAreaRecord *r, const EeSparseArray *tiles, long region_size);
+
+/// `RemoveTile(tile)`: whether the tile was there (then the hull is rebuilt).
+///
+/// # Safety
+/// `r` a live record, `tiles` a live set.
+bool ee_astar_area_remove_tile(EeAStarAreaRecord *r, EeSparseArray *tiles, int32_t x, int32_t y);
 
 /// The storage as bytes (`storage_save`): writes them to `out` when `capacity` holds them; returns their length.
 ///
@@ -1491,41 +1562,6 @@ int32_t ee_path_graph_revs(int32_t distance, bool kind_allowed, bool repeated);
 /// `SetPathRevs`' step budget.
 int32_t ee_path_path_revs(int32_t distance, bool amphibious, bool same_continent);
 
-/// `U2DConvexHull<long>::SetPoints`: the hull of `count` points written to `out` (room for `count`), its length
-/// returned; the input's bounds, the hull's center and area in `shape`.
-///
-/// # Safety
-/// `points` holds `count` points, `out` room for `count` (it may not overlap `points`), `shape` valid.
-size_t ee_hull_set_points(const EeHullPoint *points,
-                          size_t count,
-                          bool is_sorted,
-                          EeHullPoint *out,
-                          EeHullShape *shape);
-
-/// `U2DPolygon<long>::Sort`: the points sorted and scanned in place, the new length returned.
-///
-/// # Safety
-/// `points` holds `count` points.
-size_t ee_hull_sort(EeHullPoint *points, size_t count);
-
-/// `ComputeCenter`.
-///
-/// # Safety
-/// `points` holds `count` points.
-EeHullPoint ee_hull_center(const EeHullPoint *points, size_t count);
-
-/// `ComputeArea`.
-///
-/// # Safety
-/// `points` holds `count` points.
-float ee_hull_area(const EeHullPoint *points, size_t count);
-
-/// `ProjectPoint`.
-EeHullPoint ee_hull_project_point(EeHullPoint point,
-                                  float scale,
-                                  EeHullPoint start,
-                                  EeHullPoint end);
-
 /// `GetClosestOutlinePoint`.
 ///
 /// # Safety
@@ -1534,43 +1570,17 @@ EeHullPoint ee_hull_closest_outline_point(const EeHullPoint *points,
                                           size_t count,
                                           EeHullPoint point);
 
-/// `GetClosestPoints`: this outline's and the other's points of the closest pair.
-///
-/// # Safety
-/// `points` holds `count` points, `other` `other_count`; the outputs valid.
-void ee_hull_closest_points(const EeHullPoint *points,
-                            size_t count,
-                            const EeHullPoint *other,
-                            size_t other_count,
-                            EeHullPoint *out_point,
-                            EeHullPoint *out_other);
-
 /// `GetClosestPoint`.
 ///
 /// # Safety
 /// `points` holds `count` points.
 EeHullPoint ee_hull_closest_point(const EeHullPoint *points, size_t count, EeHullPoint point);
 
-/// `GetClosestPointIndex`.
-///
-/// # Safety
-/// `points` holds `count` points.
-long ee_hull_closest_point_index(const EeHullPoint *points, size_t count, EeHullPoint point);
-
 /// `U2DConvexHull<long>::Contains`.
 ///
 /// # Safety
 /// `points` holds `count` points.
 bool ee_hull_contains(const EeHullPoint *points, size_t count, EeHullPoint point);
-
-/// `GetScanLines`: `row(ctx, y, first x, last x)` for each row under the outline, by y.
-///
-/// # Safety
-/// `points` holds `count` points; `row` may not call back into the hull functions with these points mutated.
-void ee_hull_scan_lines(const EeHullPoint *points,
-                        size_t count,
-                        void *ctx,
-                        void (*row)(void*, long, long, long));
 
 /// `EEAIArea::GetClosestHullPoint`.
 ///
