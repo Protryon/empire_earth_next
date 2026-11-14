@@ -15866,3 +15866,215 @@ Round 24's leftovers. Count (round 22's `count.sh`: User Interface Thread withou
   (365), `EEUIFError`'s constructor (454); the main game form's `Open`, `Close`, `Activate`, `Deactivate`,
   `UpdateBackgroundMedia`, `ShowAllBackgrounds`, `HideAllBackgrounds`, `HideMessages` (call sequences over the same
   host); `EEUserInterface`'s `EnterScenarioEditor`, `ShowCivilizationBuilder`, `LeaveMap`, `StartLoadingFromEditor`.
+
+## R5b.4, twenty-fifth round: the turrets' turn, the player's tick and its reset over the saved record in Rust (ee_units turret.rs, player_tick.rs; branch rust-r5b4-core25, 2026-11-13)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 202efad8 | `EEUnitClass::TurnTurrets` and `TurnTurretsBack` in Rust (turret.rs) | +45 -69, net -24 |
+| f05f0e5b | `EEPlayer::UpdatePlayer` in Rust over a host callback; `Reset`'s fields of `EeUnitsPlayerSaved` set by Rust (player_tick.rs) | +122 -101, net +21 |
+| 5b876c23 | merge of `rust` (triggers 3, core 24's merge, LLE 2, NE 2, the messages lane's rally ghost fix): no conflict | |
+
+The round's C++: net -3. Order and reasons:
+
+- **The turrets first**: the brief's third item asked for per-tick simulation C++ with real decisions, measured first.
+  Of `EEUnitClass`'s remaining per-tick bodies, `TurnTurrets` (71 lines) is the one whole algorithm (a float
+  geometry: the part's world position, the heading to the target, the part's facing through three
+  transformations, the clamped turn and two wraps); the angle it writes is read by combat (the weapon point of a
+  turret's shot, `EECombatFormulas.h`, `EECombatGoals.cpp`), so it is simulation. `Heal`, `UpdateAnimal`,
+  `FleeAttacker` are effect and sound glue or sequences of calls already Rust.
+- **The player's tick and reset second**: round 24's list. `UpdatePlayer` moved as one Rust sequence with its
+  decisions (the herds' due test and end, the queued improvements' timers, the wonders' heal) but its leaves stay
+  C++ calls through 22 host operations, so its C++ grew (+50 for the body's -70): the C++ owns the groups, herds,
+  map and units. `Reset`'s record part is the fields the record holds (-31 C++).
+- **Left, with reasons:** `RepairPointers` is a list of C++ calls (civilization, groups, towns, herds, events,
+  queued improvements' re-queue, tech-tree allows, off-map units) with no decision of its own over the record: as
+  Rust it would be one host operation per statement. `Animate`'s remaining sound play is sound manager glue
+  (instance compare, stop, parameters, play, reference): the same, and EE-SIM has no sound to gate it.
+
+- **The turrets** (`turret.rs`, `ee_units_turn_turrets` over `EeUnitsTurretsIn` and one `EeUnitsTurretPart` per
+  part): the C++ (`EETurnTurretsRust`) copies the unit's location matrix, its stats' scale and turret turn rate,
+  `gPhysics->mTickSeconds`, the target point, and each part's `mPosition`, `mTransformation` and current angle (on
+  the stack for up to 8 parts), then stores each angle back where it differs (the original's
+  `if (theAngle != old) set`: a -0.0 result over a +0.0 angle is not written). `TurnTurrets` keeps the goal's
+  kind test and the target point (the attack target's location, or its tile for a unit without a complex unit;
+  else `GetGoalLocation`), `TurnTurretsBack` is one call. The Rust uses ee_ge's `apply_point`/`apply_vector`
+  (the header inlines' summation order), `set_orientation(Ypr)` and `um_arctan2` (the C++'s own
+  `SetOrientationYPR` and `UMArcTan2` forward to these), `GeVector::normalize` (the 0.0001 cut), and the
+  original's `3.1415927f`/`6.2831855f` (`f32::consts::PI`, `TAU`: the same floats). The original reused one
+  rotation matrix over the parts; `SetOrientationYPR` rewrites its 3x3 and keeps its zero position, so a fresh
+  identity per part is the same.
+- **Golden in game (temporary, removed):** the original bodies over a copy of the angles, compared bit for bit with
+  the Rust's stored angles after every call. Oracle seeds 2-7 and the late captures (seeds 2-3) never call
+  `TurnTurrets`: no unit with a `turret_` part (41 models have one: pillboxes, AA guns, tanks, ships) is built or
+  fights in them. The space captures (seeds 2-3) do: at least 150,548 turn-back and 46,060 aim calls (the log
+  printed at each power of two), 46,630 with a turned turret, 0 differences.
+- **The player's tick** (`player_tick.rs` `update_player`, `ee_units_player_update`, the host
+  `EEPlayerTickOperation` with operation numbers 1-22 of its own, the record by raw pointer for `mHealTimer` only):
+  the selections' validation is one operation (no decision in it); the herds from the last (the game time read
+  per herd, `mNextUpdateTime <= time && mIsActive` updates, state 0xb kills); the air traffic and events one
+  operation; the queued improvements walked in key order by a C++ iterator the host keeps (first, next, erase:
+  each returns the entry's key and float), the timer less `GetTickTime()` and the instant build's cap of 1
+  decided in Rust, the apply (front applied and erased, float 0) and `AdvanceImprovement` C++; the heal (the tick
+  ms floored at 0, the timer less it as `float`, at 0 or under: the amount `amount + (long)((epoch / step) *
+  factor * amount)` with x86's truncation, each unit of a healed type gaining it up to its maximum when alive,
+  the timer reset to `kPlayerHealInterval`, now `EE_UNITS_PLAYER_HEAL_INTERVAL`). Each unit's healed-set test is
+  made for every unit, as the original's.
+- **`Reset`** calls `ee_units_player_reset` twice: part 0 where the original set `mEnemies` (before
+  `EEUnitStorePlayerTable`, which reads them), with every record field the original set before the events'
+  clear (the calls between, the upgrade, tech-tree and air-traffic constructors and the saved groups' clear,
+  read none of them), part 1 after `mEvents.Clear` for the trade, refunds and vital buildings it zeroed there (an
+  event's removal may change them).
+- **Coverage by temporary prints (removed): the first sight of each host operation.** Oracle seeds 2-7 and the
+  late, space and calamity captures (seeds 2-3): every game runs the validation, the herds (count, time, due,
+  update, state, the 0xb kill), the air traffic and events, and the queued walk's first step, and reads the tick
+  ms and the heal flag. No game queues an improvement (the map is always empty: next, erase, set, apply, advance
+  never run) and no player heals units (no healing wonder): those are unit tests only (player_tick_tests.rs, 8
+  tests, with turret_tests.rs 8). Every reset of every game runs `reset`; the saveload matrix loads run it too.
+- **Behaviour:** none. Tour only: nothing drawn changed by itself, but the turret angles feed the renderer
+  (`EERenderObject` copies them); the space captures' golden covers their values.
+- **Gates.** Commit 1 and 2 (one coverage and golden build, then the final build): build `--sim` 0/0; on the golden
+  build oracle seeds 2-7 identical to `ref`, late and space captures (seeds 2-3) PASS (170, 171 digests); on the
+  coverage build oracle seeds 2-7 identical, late (170), space (171), calamity (183) PASS; on the final build
+  oracle seeds 2-3 identical and the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4,
+  mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4), every run exit 0. The first commit
+  was not built alone (its tree differs from the built one by player_tick.rs, its header lines and EEPlayer.cpp;
+  its header was generated without them). The Rust gate failed once on rustfmt of the new files (fixed before the
+  commits). On the result merged with rust (5b876c23): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`;
+  the Rust gate PASS (ee_units 237 tests, 16 new); captures at seeds 2-3 oracle (169 digests), late (170), space
+  (171), calamity (183) PASS; scenario seeds 2-7 PASS (65 digests), every seed exit 0 including seed 4 (Carrier
+  Strike) with the messages lane's rally ghost fix merged; the test profile 0/0. `rust_includes.py`
+  re-added `rust/ee_screens.h` to `EESEUICCommandUnits.cpp` and `EESEUnit.cpp` after the merge: reverted, not
+  committed.
+- **For the next round:** `RepairPointers` and the sound play stay C++ (above). Still open from round 23's list:
+  `EEUnitClass`'s constructor, `FindPath`/`AdjustPath`, `EEComplexUnit`'s copy, reset and `UpdateHidden` (the
+  hide flags: it reads the local player, so it is display state, not simulation). The queued improvements'
+  map could become a Rust record (key order, float, id list) with `QueueImprovement`/`AdvanceImprovement`,
+  which would turn UpdatePlayer's walk into Rust over its own data.
+
+## R5b.4, twenty-sixth round: the units' plain members as Rust records, the store reading them; the units' Save and Load in Rust (ee_units unit_fields.rs, unit_save.rs, unit_load.rs; branch rust-r5b4-core26, 2026-11-13)
+
+The lead's direction: rounds 22-25 moved leaves around C++ calls for small returns; do for the units what round 24 did
+for the player (a Rust record the class derives from, then its Load/Save over the record).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| ecfc0d6e | `RTSUnit` derives from `EeUnitsRtsUnitFields`; the store's records keep their objects' record addresses and read them (`refresh`); 3 holders gone | +33 -54, net -21 |
+| cd168c20 | `EEUnit` derives from `EeUnitsUnitFields`; 2 holders gone | +21 -36, net -15 |
+| eef829dc | `EEComplexUnit` derives from `EeUnitsComplexUnitFields` (101 members); 21 holders, `EEUnitStoreRead` and the holder's arithmetic gone | +65 -349, net -284 |
+| c313e8a2 | `RTSUnit`/`EEUnit`/`EEComplexUnit` `Save` and `Load` in Rust (unit_save.rs, unit_load.rs) over `EEUnitSaveOperation` | +581 -742, net -161 |
+| (merge) | `rust` 88f9be65 (the farm's placeholder triangles): no conflict | |
+
+The round's C++: net -481 (EEComplexDoppelganger.cpp 1,453 -> 1,346 lines with the host and the load's sections;
+EEUnitStore.cpp 1,044 -> 865 lines). The merge of `rust` at the start needed RUST_PLAN's row and
+PORT_LEARNINGS' end merged by hand (both sides appended).
+
+**The measure** (before the round; uses over src and include/ee, by name, so a name another class shares counts too):
+
+| Class | Plain members (non-pointer, non-container) | Uses | Store holders |
+|---|---|---|---|
+| `RTSUnit` | 7: `mTileX`, `mTileY`, `mUnitID`, `mIsQueuedForDelete`, `mIsEditorSelected`, `mIsNodeFreed`, `mIsValid` | 1,623 in 191 files (`mUnitID` 587, `mTileX` 489, `mTileY` 439, `mIsValid` 74) | 3 (`mTileX`, `mTileY`, `mIsValid`) |
+| `EEUnit` | 4: `mResourceType`, `mHitPoints`, `mResourceAmount`, `mHiddenFlags` | 829 in 146 files (`mHitPoints` 507) | 2 (`mHitPoints`, `mResourceAmount`) |
+| `EEComplexUnit` | 101: the block `mHeight` (+0x210) .. `mRoll` (+0x360) less `mSound` and the three effect handles, and the port's `mHasShiftQueuedBuild` | 3,076 in 303 files (`mHeight` 457, `mIsBuilt` 150, `mFlightTime` 132, `mPower` 111, `mVelocity` 99; 2 names used once) | 21 |
+| (pointer holders, kept) | `mUnitClass`, `mComplexUnit`, `mActiveGroup`, `mContainer`, `mCommand`, `mGoalState`, `mHerd` | | 7 |
+
+The store had grown from round 4's eight holders to 33 (26 plain, 7 pointers) plus the location (`EEUnitStoreModel`),
+each write a mutex and a `BTreeMap` lookup. `EEUnitClass` was not made a record: its plain members are the db record's
+copies the constructor makes (round 24's list), the store reads none of them by holder (the class-derived fields are
+reported once at `mUnitClass`), and its readers are spread over every class file; it is the next candidate.
+
+- **The records** (`unit_fields.rs`): `EeUnitsRtsUnitFields`, `EeUnitsUnitFields`, `EeUnitsComplexUnitFields`, the
+  members' C++ names, types (`c_long`/`c_ulong` are the C++ `long`/`unsigned long` on every data model, `bool`,
+  `u16`, `u8`, `f32`) and order. `class RTSUnit : public UReferenceCounter, public EeUnitsRtsUnitFields`,
+  `class EEUnit : public RTSUnit, public EeUnitsUnitFields`, `class EEComplexUnit : public EEUnit, public
+  EeUnitsComplexUnitFields`: `RTSUnit` stays at offset 0 of every unit (every `RTSUnit*` <-> `EEUnit*` cast and the
+  ids-as-pointers of the loads are unchanged), the members' readers did not change except the `.Get()` of the 26
+  holders (95 sites) and the 17 `EEUnitStoreRead` of the loads. Nothing in the tree takes `offsetof`/`sizeof` of a
+  unit class but EEUnitStore.cpp's holder owners (pointer holders only now, unchanged offsets of their own) and the
+  out-of-sync dump's raw bytes (`EESim.cpp`, named by `layout.json`).
+- **The store reads the records.** An `EeUnitRecord` keeps its object's record addresses (`rts_fields`,
+  `unit_fields`, `complex_fields`; set by `Fill` through `ee_units_store_set_fields`, which also reads the values),
+  and `Store::get`/`by_object` refresh the 26 mirrored values from them before they return (`store::refresh`:
+  the conversions the holders made, an `unsigned long` zero-extended, floats as bits, a bool as its byte so a
+  non-0/1 byte is never a Rust `bool`); the checksum flags and the USCK comparisons use fresh copies. `get` and
+  `by_object` take `&mut self` now (`UnitView::unit` too); the step and motion leaves take `&mut Store`. Deleted:
+  the 26 holders, their 26 `EEUnitStoreWrote` cases, their `Fill` lines and enum values, `EEUnitStoreRead`, the
+  holder's arithmetic operators. Kept: the 7 pointer holders and the location's reports (what the store keeps of
+  them is derived: the class's category and flags, the goal's kind and id, set or not).
+- **No record outlives its object.** A record now holds addresses, so a stale one would be a read of freed memory:
+  `~RTSUnit` removes its record too (`EEUnitStoreRemove`, a no-op unless `mInUnitStore`), after `RemoveKilledUnits`,
+  `FreeNode` and `~RTSPlayer`'s by the player. USCK still compares every listed and unlisted unit with its record
+  at every tick of a capture game: its plain fields now compare equal by construction; the derived fields, the
+  object index and the domains still compare as before.
+- **Threads.** The refresh is a volatile read of the C++ members, made only on the simulation thread's store calls
+  (the combat reads' bridge, the step leaves, the selection pick): the same reads the C++ makes of its own members.
+
+**The units' Save and Load in Rust** (`unit_save.rs`, `unit_load.rs`): `RTSUnit::Save`/`Load`, `EEUnit::Save`/`Load`
+and `EEComplexUnit::Save`/`Load` are one call each to `ee_units_unit_save`/`ee_units_unit_load` with the records the
+object has (null past its class) over one host, `EEUnitSaveOperation` (EEComplexDoppelganger.cpp; its context in
+ee/RTSUnit.h), as player_save.rs does for the player:
+
+- **The primitives** with the overload the original called (`long`, `unsigned long`, `float`, `bool`, `unsigned
+  short`); a load's io holds the old value in and the read value out, so a failed read leaves what the original's
+  variable held. The original's locals carried across reads (`theValue`, `theFraction`, `theFlag`, `theState`) are
+  carried by the Rust reader, through the C++ sections that read into them (the citizen queue, the cargo and the held
+  units' `theValue`, the unit variables' `theState`: io.i in and out).
+- **The C++ parts by operation**: the sections (build queue, citizen queue, cargo, waypoints, turret angles, goal
+  queues, held units, unit variables, and the port's ignored targets, bounded path tiles and contacts), each with the
+  original's loop and returning its last result (the held units' load reports when its loop left for
+  `LoadLateVersions`); the composite members' `Save`/`Load` (projectile start, location with its `SetLocation`,
+  angular velocity, orientation, `mU0DC`, colour, last map position, the fire effect's handle, the path's flag and
+  goal tile with the pending request); the ids written for pointers and the pointers set from ids read (kept as ids
+  for `RepairPointers`; `mMine`'s `(EEUnit*)-1` is its own operation, not `USavedPointer(-1)`); the scale's scenario
+  rule, the frame, the action's start, the turret array's resize; the maxima of the fractions. The port's live-state
+  block of the load (0.254/0.256: the values put back at the first tick by `EEAfterLoad`) stays C++ as one section.
+- **Kept quirks**: the results the original ignored (the collision tile's first word, the open fraction, the holder's
+  id, the foundation flag, the times updated) or overwrote (each container's count read or write starts a new result:
+  the build queue's, citizen queue's and cargo's errors are not tested; a path's result is overwritten by the morale);
+  the error labels (save: `SaveGoals`, `SaveFinalFields`; load: `LoadFlags`, `LoadLegacy`, `LoadLateVersions`,
+  `LoadFinalVersions`) and every version test; the fractions' float bits copied into the four `long`s whatever the
+  read returned, written to the first four bytes (`FinishLoad` reads those back; where `long` has 64 bits the upper
+  half keeps its old bytes, as the original's 4-byte `memcpy`). The fractions divide as the original: `(float)value /
+  max` with the `long` converted to `float`, the unit's hit points with no guard.
+- **Differences** (failure paths only): an uninitialised local of the original read by a failed read starts at 0
+  (`theFraction`, `theState`, `theValue` before their first read; `theScale` and `theAction` are their own); a bool
+  read crosses as 0 or 1 (a hand-edited byte other than 0/1 becomes true, as in player_save.rs).
+- **Tests** (`unit_save_tests.rs` 5, `unit_load_tests.rs` 3, `unit_fields.rs` 2, `store.rs` 1 new): the writes in
+  the original's order (116 primitive writes with the live and running state, counted by hand from the original's
+  statements and equal to the Rust's), every section, part and id in order, the labels on a failed write and read, the
+  ignored results, the eras' reads (0x1b's legacy flags, the late versions, a failed `EEUnit::Load` going straight to
+  `LoadFinalVersions`), and a save read back by the load into empty records equal to the saved ones (the fractions as
+  their bits).
+
+**For the legacy harness and the renderer.** `layout_gen.py` flattens base subobjects into the derived class's
+member names, so `layout.json` names every moved member under `RTSUnit`/`EEUnit`/`EEComplexUnit` as before (at new
+offsets: the records sit after the first base, e.g. `RTSUnit`'s pointers now follow its record); `layout.translate`
+maps a VC6 offset by name and finds them. `vc6_layout.json.gz` is frozen and unchanged. The differential sampler
+(`tools/harness/differential/layout.py`, round 39, TEST ONLY) parses the member lines of `include/ee/EEUnit.h` and
+`RTSUnit.h` by their `// +0xOFF` comments: the moved members are no longer member lines there (their offsets are
+in comments listing them), so its unit field tables lose them; it is not part of the gates. The renderer reads
+moved members (`mHeight`, `mOpacity`, `mIsCloaked`, `mIsBuilt`, `mHitPoints`, `mTileX`/`mTileY`, `mAnimationFraction`,
+`mNextFrame`, `mRoll`, `mIsFoundation`, `mIsTinted`, `mColor`'s neighbours) by the same names; only a tour shows them
+drawn.
+
+- **Coverage.** The store's refresh runs on every store read of every game (oracle, captures): USCK compared every
+  listed and unlisted unit at every tick of the five capture profiles and found no difference. The saves and loads
+  run in every save and continued game of the saveload matrix (0.280, every unit kind, `RTSUnit` alone in none:
+  its `Save`/`Load` run as the first part of the others'); the eras before 0.280, the failure paths and 0.6's base
+  save are unit tests only.
+- **Behaviour:** none (the matrix rows equal the expect file; the oracle is identical). Tour only: nothing drawn
+  changed, the renderer reads the moved members by the same names at their new offsets.
+- **Gates.** Commit 1: build `--sim` 0/0, oracle seeds 2-3 identical to `ref`. Commits 2 and 3 were built together
+  (commit 2's tree alone was not built: it differs from the built tree by EEComplexUnit's member block and its
+  `.Get()`/store lines), build `--sim` 0/0, oracle seeds 2-3 identical. Commit 4: build `--sim` 0/0, oracle seeds 2-3
+  identical, the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`)
+  PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4,
+  late 0/4, space 1/4, calamity 4/4, next 0/4), no load fault; the Rust gate PASS (ee_units 259 tests). On the result
+  merged with rust (88f9be65): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle
+  (169 digests), late (170), space (171), calamity (183), scenario (22) PASS, USCK included; the Rust gate PASS; the
+  test profile 0/0.
+- **For the next round.** `EEUnitClass` as a record (its constructor's field copies from the db record would become
+  one Rust fill); `EEComplexUnit::RepairPointers` (the ids the load left, now set by named operations) and
+  `FinishLoad` (the four fractions over the records: plain arithmetic, a small Rust function); the load's live-state
+  block; the store's remaining holders are pointers, whose derived values could become reads of a Rust handle table.

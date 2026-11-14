@@ -205,7 +205,7 @@ void OriginalRepair(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID, boo
         void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
         ee_units_host_group_fill(theActiveGroup, theGroup, 0, 0);
         ee_units_host_pending_push(thePlayer, theActiveGroup);
-        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theTarget->mTileX.Get(), (int64_t)theTarget->mTileY.Get());
+        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theTarget->mTileX, (int64_t)theTarget->mTileY);
         if (Count(theActiveGroup) > 0) {
             unsigned long i;
             for (i = 0; i < Count(theActiveGroup); i++)
@@ -285,8 +285,8 @@ void OriginalAttackUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID,
             ee_units_host_group_set_queued(theActiveGroup, inQueued);
             if (Count(theActiveGroup) > 0) {
                 ee_units_host_pending_push(thePlayer, theActiveGroup);
-                ee_units_host_group_spread_around_unit(theActiveGroup, IDOf(theTarget), (int64_t)theTarget->mTileX.Get(),
-                                                       (int64_t)theTarget->mTileY.Get());
+                ee_units_host_group_spread_around_unit(theActiveGroup, IDOf(theTarget), (int64_t)theTarget->mTileX,
+                                                       (int64_t)theTarget->mTileY);
                 if (Count(theActiveGroup) > 0)
                     theUnit = UnitAt(theActiveGroup, ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
                 else
@@ -402,7 +402,7 @@ void OriginalDropoffResource(EEPlayer* thePlayer, void* theGroup, int32_t inDrop
         void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
         ee_units_host_group_fill(theActiveGroup, theGroup, 0, 0);
         ee_units_host_pending_push(thePlayer, theActiveGroup);
-        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theDropoff->mTileX.Get(), (int64_t)theDropoff->mTileY.Get());
+        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theDropoff->mTileX, (int64_t)theDropoff->mTileY);
         if (Count(theActiveGroup) > 0) {
             ee_units_host_group_clear_goal(theActiveGroup);
             EeGoalSpec theSpec;   // EEUGRust::NewGather(NULL, theDropoff, true)
@@ -550,8 +550,8 @@ void OriginalBuildUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTechnology
                             ReadFarms(ee_units_host_unit_complex_id(theBuilding), theNearUnits);
                             if (theNearUnits.size() > 0) {
                                 EEUnit* theFirst = ObjectOf(UnitAt(theActiveGroup, 0));
-                                ee_units_host_sort_farms(&theNearUnits[0], theNearUnits.size(), theFirst->mTileX.Get(),
-                                                         theFirst->mTileY.Get(), 0);
+                                ee_units_host_sort_farms(&theNearUnits[0], theNearUnits.size(), theFirst->mTileX,
+                                                         theFirst->mTileY, 0);
                             }
                         }
                         unsigned long i = 0;
@@ -625,7 +625,7 @@ void OriginalSmartFarmers(EEPlayer* thePlayer, void* theSelection, int32_t inTar
             }
             if (theFarm == kNone && theFarms.size() > 0) {
                 EEUnit* theObject = ObjectOf(theUnit);
-                ee_units_host_sort_farms(&theFarms[0], theFarms.size(), theObject->mTileX.Get(), theObject->mTileY.Get(), 1);
+                ee_units_host_sort_farms(&theFarms[0], theFarms.size(), theObject->mTileX, theObject->mTileY, 1);
                 theFarm = theFarms.back();
                 theFarms.pop_back();
             }
@@ -1825,11 +1825,11 @@ void EEGroupCommandSweep()
             // Attack Ground at the first unit's tile (else, or off the map: a unit inside another, the map's centre)
             // and at the map's centre (a point off the map's diamond has no terrain row: the UI never sends one)
             theCase.mBody = kSweepAttackGround;
-            bool theOnMap = !theUnits.empty() && theUnits[0]->mTileX.Get() >= 0 && theUnits[0]->mTileY.Get() >= 0
-                && gWorld.GetMap()->GetTile((unsigned long)theUnits[0]->mTileX.Get(), (unsigned long)theUnits[0]->mTileY.Get()) != NULL;
+            bool theOnMap = !theUnits.empty() && theUnits[0]->mTileX >= 0 && theUnits[0]->mTileY >= 0
+                && gWorld.GetMap()->GetTile((unsigned long)theUnits[0]->mTileX, (unsigned long)theUnits[0]->mTileY) != NULL;
             float theCenter = (float)(gWorld.GetMap()->GetSize() / 2) + 0.5f;
-            theCase.mX = theOnMap ? (float)theUnits[0]->mTileX.Get() + 0.5f : theCenter;
-            theCase.mY = theOnMap ? (float)theUnits[0]->mTileY.Get() + 0.5f : theCenter;
+            theCase.mX = theOnMap ? (float)theUnits[0]->mTileX + 0.5f : theCenter;
+            theCase.mY = theOnMap ? (float)theUnits[0]->mTileY + 0.5f : theCenter;
             RunCase(theCase, p, thePlayer, theUnits);
             float theFirstX = theCase.mX, theFirstY = theCase.mY;
             theCase.mX = theCenter;

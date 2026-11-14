@@ -96,7 +96,7 @@ pub struct Reads {
 }
 
 /// The record of `object` under `id`, if any.
-pub(crate) fn record_of(store: &crate::store::Store, id: u32, object: u64) -> Option<&EeUnitRecord> {
+pub(crate) fn record_of(store: &mut crate::store::Store, id: u32, object: u64) -> Option<&EeUnitRecord> {
     store.get(id).filter(|r| r.object == object)
 }
 
@@ -107,7 +107,7 @@ pub const EE_UNITS_STEP_TARGET_SEARCH: u32 = 2;
 /// `UpdateReloadTimer` (`which` 1) / `UpdateTargetSearchTimer` (2) over the store: the new timer, `None` for no
 /// write. `member` is the C++ member's value.
 pub fn step_countdown(
-    store: &crate::store::Store,
+    store: &mut crate::store::Store,
     reads: &mut Reads,
     id: u32,
     object: u64,
@@ -131,7 +131,7 @@ pub fn step_countdown(
 
 /// `UpdateHealSearchTimer` over the store (`member` the C++ member's value).
 pub fn step_heal(
-    store: &crate::store::Store,
+    store: &mut crate::store::Store,
     reads: &mut Reads,
     id: u32,
     object: u64,
@@ -154,7 +154,7 @@ pub fn step_heal(
 /// `RegeneratePower` over the store: `member` holds the C++ members' power, timer, built and land-building flags
 /// (the record used instead when there is one).
 pub fn step_power(
-    store: &crate::store::Store,
+    store: &mut crate::store::Store,
     reads: &mut Reads,
     id: u32,
     object: u64,
@@ -301,7 +301,7 @@ pub fn resources_rot(time: i64, amount: i64, tick_ms: i64) -> (i64, Option<i64>)
 
 /// `UpdateRottingAwayTime` over the store (`member`: the C++ member's time): the new time.
 pub fn step_rotting(
-    store: &crate::store::Store,
+    store: &mut crate::store::Store,
     reads: &mut Reads,
     id: u32,
     object: u64,
@@ -323,7 +323,7 @@ pub fn step_rotting(
 
 /// `UpdateResourcesRotting` over the store (`member_*`: the C++ members' time and resource amount).
 pub fn step_resources_rotting(
-    store: &crate::store::Store,
+    store: &mut crate::store::Store,
     reads: &mut Reads,
     id: u32,
     object: u64,
@@ -477,7 +477,7 @@ pub fn cloak_fade(opacity: f32, cloaked: bool, tick_time: f32, pulse: bool, game
 /// timer is not in the store).
 #[allow(clippy::too_many_arguments)]
 pub fn step_camouflage(
-    store: &crate::store::Store,
+    store: &mut crate::store::Store,
     reads: &mut Reads,
     id: u32,
     object: u64,
@@ -596,12 +596,12 @@ mod round11_tests {
             ..Default::default()
         });
         let mut reads = Reads::default();
-        assert_eq!(step_rotting(&s, &mut reads, 3, 0x30, 1000, 125), 875);
-        assert_eq!(step_rotting(&s, &mut reads, 3, 0x30, 50, 125), 875);
+        assert_eq!(step_rotting(&mut s, &mut reads, 3, 0x30, 1000, 125), 875);
+        assert_eq!(step_rotting(&mut s, &mut reads, 3, 0x30, 50, 125), 875);
         assert_eq!(reads.mismatches, 1);
-        assert_eq!(step_rotting(&s, &mut reads, 4, 0x40, 50, 125), 0);
+        assert_eq!(step_rotting(&mut s, &mut reads, 4, 0x40, 50, 125), 0);
         assert_eq!(reads.unrecorded, 1);
-        assert_eq!(step_resources_rotting(&s, &mut reads, 3, 0x30, 1000, 7, 3125), (125, Some(6)));
+        assert_eq!(step_resources_rotting(&mut s, &mut reads, 3, 0x30, 1000, 7, 3125), (125, Some(6)));
     }
 
     fn codes(v: &[EeUnitsCamoEvent]) -> Vec<(u32, u32)> {
@@ -661,7 +661,7 @@ mod round11_tests {
         let mut s = Store::new();
         s.insert(EeUnitRecord { id: 5, object: 0x50, camouflage_timer: 1000, ..Default::default() });
         let mut reads = Reads::default();
-        assert_eq!(codes(&step_camouflage(&s, &mut reads, 5, 0x50, 1000, 0, false, 125)), vec![(9, 875), (7, 0)]);
+        assert_eq!(codes(&step_camouflage(&mut s, &mut reads, 5, 0x50, 1000, 0, false, 125)), vec![(9, 875), (7, 0)]);
         assert_eq!((reads.mismatches, reads.unrecorded), (0, 0));
         let mut out = [EeUnitsCamoEvent::default(); EE_UNITS_CAMO_MAX_EVENTS];
         // SAFETY: room for the most events
@@ -690,20 +690,20 @@ mod tests {
             ..Default::default()
         });
         let mut reads = Reads::default();
-        assert_eq!(step_countdown(&s, &mut reads, 7, 0x70, EE_UNITS_STEP_RELOAD, 500, 125), Some(375));
-        assert_eq!(step_countdown(&s, &mut reads, 7, 0x70, EE_UNITS_STEP_TARGET_SEARCH, 0, 125), None);
+        assert_eq!(step_countdown(&mut s, &mut reads, 7, 0x70, EE_UNITS_STEP_RELOAD, 500, 125), Some(375));
+        assert_eq!(step_countdown(&mut s, &mut reads, 7, 0x70, EE_UNITS_STEP_TARGET_SEARCH, 0, 125), None);
         assert_eq!((reads.mismatches, reads.unrecorded), (0, 0));
         // the record's value wins over a member that differs, and the difference is counted
-        assert_eq!(step_countdown(&s, &mut reads, 7, 0x70, EE_UNITS_STEP_RELOAD, 900, 125), Some(375));
+        assert_eq!(step_countdown(&mut s, &mut reads, 7, 0x70, EE_UNITS_STEP_RELOAD, 900, 125), Some(375));
         assert_eq!(reads.mismatches, 1);
         // another object under the id, or no record: the member's value
-        assert_eq!(step_countdown(&s, &mut reads, 7, 0x99, EE_UNITS_STEP_RELOAD, 900, 125), Some(775));
-        assert_eq!(step_countdown(&s, &mut reads, 8, 0x80, EE_UNITS_STEP_RELOAD, 50, 125), Some(0));
+        assert_eq!(step_countdown(&mut s, &mut reads, 7, 0x99, EE_UNITS_STEP_RELOAD, 900, 125), Some(775));
+        assert_eq!(step_countdown(&mut s, &mut reads, 8, 0x80, EE_UNITS_STEP_RELOAD, 50, 125), Some(0));
         assert_eq!(reads.unrecorded, 2);
-        assert_eq!(step_heal(&s, &mut reads, 7, 0x70, 1.0, 125.0), Some(1.0 - 125.0 / 1000.0));
+        assert_eq!(step_heal(&mut s, &mut reads, 7, 0x70, 1.0, 125.0), Some(1.0 - 125.0 / 1000.0));
         let inp = EeUnitsPowerIn { regeneration: 5, max_power: 100, in_cinematic: 0, interval: 5000, tick_ms: 125 };
         let member = EeUnitRecord { power: 10, power_regen_timer: 100, built: 1, ..Default::default() };
-        let o = step_power(&s, &mut reads, 7, 0x70, &member, &inp);
+        let o = step_power(&mut s, &mut reads, 7, 0x70, &member, &inp);
         assert_eq!((o.write, o.set_power, o.power, o.regen_timer), (1, 1, 15, 5000));
         assert_eq!(reads.mismatches, 1);
     }
