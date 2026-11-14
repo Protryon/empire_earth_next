@@ -30,6 +30,8 @@ pub enum EeWonLobbyCtlKind {
     /// `LobbyOptionsCtrl(false)`
     NetOptions = 3,
     UserList = 4,
+    /// EELobbyGameOptionsCtrl (the EE game room's options panel)
+    GameOptions = 5,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -44,6 +46,10 @@ pub enum EeWonLobbyCtlType {
     MultiList = 5,
     /// `ImageComponent`
     Image = 6,
+    /// `Container`
+    Container = 7,
+    /// `Component`
+    Component = 8,
 }
 
 /// One control look-up: the resource name, the original's file and line (for the missing-control report), the type,
@@ -91,6 +97,10 @@ pub enum EeWonLobbyCtlEvent {
     LanOptions,
     /// 100055: the public address changed
     PublicAddress,
+    /// 100065: every game option to show again (EELobbyGameOptionsCtrl)
+    AllOptions,
+    /// `LobbyEvent_EELobbySyncOption` (an `EELobbySyncOptionEvent`)
+    SyncOption,
 }
 
 /// The texts the controls set (the lobby's resource strings).
@@ -363,6 +373,43 @@ pub enum EeWonLobbyCtlOp {
     PublicAddressValid,
     /// `((Label*)a)->SetText(LobbyGetPublicAddress().GetHostString(true), true)`.
     LabelSetPublicAddress,
+    /// `ComponentConfigMissing(std::string("Invalid type for ") + slot a's name, its file, 89)`.
+    ReportInvalidType,
+    /// `dynamic_cast<Button*>((Component*)a) != NULL`.
+    IsButton,
+    /// `dynamic_cast<ComboBox*>((Component*)a) != NULL`.
+    IsCombo,
+    /// `sprintf(buffer, "%d", b); ((ComboBox*)a)->AddString(buffer)` (a 50-byte buffer).
+    ComboAddNumber,
+    /// `EELobbyFillMapTypeCombo((ComboBox*)a)`.
+    FillMapTypes,
+    /// `((ComboBox*)a)->mListArea->GetSelItem() != NULL`.
+    ComboHasSel,
+    /// `((EELobbyGame*)a)->GetOption(b)`.
+    GameOption,
+    /// `((EELobbyGame*)a)->SetOption(b, c)`.
+    GameSetOption,
+    /// `((EELobbyGame*)a)->ChangeOption(b, c, true)`.
+    GameChangeOption,
+    /// `((EELobbyGame*)a)->SendGameState()`.
+    GameSendState,
+    /// `((EELobbyGame*)a)->HasGameFile()` (0 or 1).
+    GameHasFile,
+    /// `((Label*)a)->SetText(((EELobbyGame*)b)->GetGameFileName())`.
+    LabelSetGameFile,
+    /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
+    GameSlot,
+    /// `((EELobbyPlayerSlot*)a)->mOptions[0]` (the slot's state).
+    SlotState,
+    /// `((EELobbyPlayerSlot*)a)->SetOpen()`.
+    SlotSetOpen,
+    /// `LobbyIAmCaptain()` (0 or 1).
+    IAmCaptain,
+    /// `((EELobbySyncOptionEvent*)a)->mParam`.
+    EventParam,
+    /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
+    /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
+    ChooseSavedGame,
 }
 
 /// The inward calls.
@@ -377,8 +424,8 @@ pub enum EeWonLobbyCtlCall {
     Paint,
     /// GameBrowserCtrl::ResetBrowser.
     ResetBrowser,
-    /// a member: `a` < 18 a control member, 100 the room flags, 101 in game, 102 the last ready state, 103 the
-    /// browser's reset flag.
+    /// a member: `a` < 19 a control member, 100 the room flags, 101 in game (EELobbyGameOptionsCtrl: active), 102
+    /// the last ready state, 103 the browser's reset flag.
     Field,
 }
 
@@ -391,7 +438,7 @@ use EeWonLobbyCtlKind as Kind;
 use EeWonLobbyCtlOp as Op;
 use EeWonLobbyCtlString as S;
 
-const MEMBERS: usize = 18;
+const MEMBERS: usize = 19;
 
 macro_rules! slot {
     ($name:literal, $file:literal, $line:expr, $ty:ident, $id:expr, $member:expr) => {
@@ -444,9 +491,17 @@ const O_AUTO_AFK: usize = 17;
 // the player list
 const U_LIST: usize = 0;
 const U_KICK: usize = 1;
+// the game options: the campaign label and boxes, then `mOptions[16]`
+const G_LABEL: usize = 0;
+const G_BOX1: usize = 1;
+const G_BOX2: usize = 2;
+const G_OPTION: usize = 3;
+/// The game options' table (`sOptionTable`): the eleven combo boxes, then the five check boxes.
+const OPTION_IS_CHECK: [bool; 16] =
+    [false, false, false, false, false, false, false, false, false, false, false, true, true, true, true, true];
 
 /// Every look-up, kind by kind in the originals' order (the slot index is what `Find` passes).
-pub static SLOTS: [EeWonLobbyCtlSlot; 36] = [
+pub static SLOTS: [EeWonLobbyCtlSlot; 55] = [
     // GameBrowserCtrl::InitComponent (0..=10)
     slot!(c"Browser", c"GameBrowserCtrl.cpp", 27, Browser, -1, B_BROWSER as i32),
     slot!(c"BackButton", c"GameBrowserCtrl.cpp", 28, Button, -1, B_BACK as i32),
@@ -489,6 +544,26 @@ pub static SLOTS: [EeWonLobbyCtlSlot; 36] = [
     // GameUserListCtrl::InitComponent (34..=35; the Kick button is optional: no report)
     slot!(c"UserList", c"GameUserListCtrl.cpp", 159, MultiList, -1, U_LIST as i32),
     slot!(c"KickButton", c"GameUserListCtrl.cpp", 182, Button, -1, U_KICK as i32),
+    // EELobbyGameOptionsCtrl::InitComponent (36..=54; each option's type checked and its id set after its look-up)
+    slot!(c"CampaignInfoLabel", c"EELobbyGameOptionsCtrl.cpp", 74, Label, -1, G_LABEL as i32),
+    slot!(c"CampaignInfoBox1", c"EELobbyGameOptionsCtrl.cpp", 75, Container, -1, G_BOX1 as i32),
+    slot!(c"CampaignInfoBox2", c"EELobbyGameOptionsCtrl.cpp", 76, Container, -1, G_BOX2 as i32),
+    slot!(c"GameTypeCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32),
+    slot!(c"MapSizeCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 1),
+    slot!(c"MapTypeCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 2),
+    slot!(c"ResourcesCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 3),
+    slot!(c"StartingEpochCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 4),
+    slot!(c"EndingEpochCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 5),
+    slot!(c"GameVariantCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 6),
+    slot!(c"DifficultyLevelCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 7),
+    slot!(c"GameSpeedCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 8),
+    slot!(c"GameUnitLimitCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 9),
+    slot!(c"WondersCombo", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 10),
+    slot!(c"RevealMapCheck", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 11),
+    slot!(c"UseCustomCivsCheck", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 12),
+    slot!(c"LockTeamsCheck", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 13),
+    slot!(c"LockSpeedCheck", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 14),
+    slot!(c"VictoryCheck", c"EELobbyGameOptionsCtrl.cpp", 80, Component, -1, G_OPTION as i32 + 15),
 ];
 
 /// The number of members each kind holds (released in reverse by the destructor).
@@ -496,7 +571,8 @@ fn member_count(kind: Kind) -> usize {
     match kind {
         Kind::Browser => 11,
         Kind::Staging | Kind::UserList => 2,
-        Kind::LanOptions | Kind::NetOptions => MEMBERS,
+        Kind::LanOptions | Kind::NetOptions => 18,
+        Kind::GameOptions => MEMBERS,
     }
 }
 
@@ -548,7 +624,11 @@ impl EeWonLobbyCtl {
             host,
             kind,
             members: Default::default(),
-            room_flags: Cell::new(if matches!(kind, Kind::Staging | Kind::UserList) { 2 } else { 0 }),
+            room_flags: Cell::new(if matches!(kind, Kind::Staging | Kind::UserList | Kind::GameOptions) {
+                2
+            } else {
+                0
+            }),
             in_game: Cell::new(false),
             last_ready: Cell::new(false),
             is_reset: Cell::new(kind == Kind::Browser),
@@ -652,6 +732,7 @@ impl EeWonLobbyCtl {
                 }
                 self.op(Op::SubscribeBroadcast, 1, 0, 0);
             }
+            Kind::GameOptions => self.game_options_init(config, &local),
         }
         // the local SmartPtr<Button> (LobbyOptionsCtrl's reset, restore and remove buttons in turn)
         let l = local.replace(0);
@@ -1182,6 +1263,226 @@ impl EeWonLobbyCtl {
         self.op(Op::BaseEvent, event, 0, 0);
     }
 
+    // ---- EELobbyGameOptionsCtrl (`in_game` is its `mIsActive`)
+
+    fn option_control(&self, option: i32) -> isize {
+        if (0..16).contains(&option) {
+            self.m(G_OPTION + option as usize)
+        } else {
+            0
+        }
+    }
+
+    fn option_combo(&self, option: i32) -> isize {
+        if (0..16).contains(&option) && !OPTION_IS_CHECK[option as usize] {
+            self.m(G_OPTION + option as usize)
+        } else {
+            0
+        }
+    }
+
+    fn option_check(&self, option: i32) -> isize {
+        if (0..16).contains(&option) && OPTION_IS_CHECK[option as usize] {
+            self.m(G_OPTION + option as usize)
+        } else {
+            0
+        }
+    }
+
+    fn game_options_init(&self, config: isize, local: &Cell<isize>) {
+        for slot in 36..=38 {
+            self.find(config, slot, local);
+        }
+        for (i, &is_check) in OPTION_IS_CHECK.iter().enumerate() {
+            let slot = 39 + i;
+            self.find(config, slot, local);
+            let control = self.m(G_OPTION + i);
+            let ok = if is_check { self.ask(Op::IsButton, control) } else { self.ask(Op::IsCombo, control) };
+            if !ok {
+                self.op(Op::ReportInvalidType, slot as isize, 0, 0);
+            }
+            self.op(Op::SetControlId, self.m(G_OPTION + i), i as isize + 1, 0);
+        }
+        let limits = self.option_combo(9);
+        if limits != 0 {
+            for limit in (50..=1200).step_by(50) {
+                self.op(Op::ComboAddNumber, limits, limit, 0);
+            }
+        }
+        self.op(Op::FillMapTypes, self.option_combo(2), 0, 0);
+        self.op(Op::SubscribeBroadcast, 1, 0, 0);
+        self.op(Op::SetVisible, self.option_check(15), 0, 0);
+    }
+
+    /// UpdateOption(option, game): the game's option shown in its control; the unit limit in steps of 50.
+    fn update_option(&self, option: i32, game: isize) {
+        // the original's range test let 16 through and then read past its table (undefined): nothing here
+        if game == 0 || !(0..16).contains(&option) {
+            return;
+        }
+        if option != 9 {
+            if OPTION_IS_CHECK[option as usize] {
+                let check = self.option_check(option);
+                if check != 0 {
+                    let v = self.op(Op::GameOption, game, option as isize, 0);
+                    self.op(Op::ButtonSetCheck, check, (v != 0) as isize, 0);
+                }
+            } else {
+                let combo = self.option_combo(option);
+                if combo != 0 {
+                    let v = self.op(Op::GameOption, game, option as isize, 0) as i32;
+                    self.op(Op::ComboSetSel, combo, v as isize, 0);
+                }
+            }
+        } else {
+            let combo = self.option_combo(9);
+            if combo != 0 {
+                let v = self.op(Op::GameOption, game, 9, 0) as u32;
+                self.op(Op::ComboSetSel, combo, (v / 50).wrapping_sub(1) as i32 as isize, 0);
+            }
+        }
+    }
+
+    fn update_all(&self) {
+        let game = self.op(Op::MyGame, 0, 0, 0);
+        if game == 0 {
+            return;
+        }
+        for i in 0..16 {
+            self.update_option(i, game);
+        }
+        let not_random_map = self.op(Op::GameOption, game, 0, 0) != 0;
+        let host = self.ask(Op::GameIsHost, game);
+        for j in 0..16 {
+            let control = self.option_control(j);
+            let enabled = if j == 0 { host } else { host && !not_random_map };
+            if control != 0 {
+                self.set_enabled(control, enabled);
+            }
+        }
+        if self.ask(Op::GameHasFile, game) {
+            self.op(Op::SetVisible, self.m(G_BOX1), 0, 0);
+            self.op(Op::SetVisible, self.m(G_BOX2), 1, 0);
+            self.op(Op::LabelSetGameFile, self.m(G_LABEL), game, 0);
+        } else {
+            self.op(Op::SetVisible, self.m(G_BOX1), 1, 0);
+            self.op(Op::SetVisible, self.m(G_BOX2), 0, 0);
+        }
+    }
+
+    fn activate(&self) {
+        let game = self.op(Op::MyGame, 0, 0, 0);
+        if game == 0 || self.op(Op::GameMatchesSpec, game, self.room_flags.get() as isize, 0) == 0 {
+            return;
+        }
+        self.in_game.set(true);
+        self.update_all();
+        let host = self.ask(Op::GameIsHost, game);
+        for i in 0..16 {
+            self.set_enabled(self.m(G_OPTION + i), host);
+        }
+    }
+
+    /// ChangeGameType: random map or a saved game (the file dialog; the named slots opened for a random map).
+    fn change_game_type(&self) {
+        let combo = self.option_combo(0);
+        if combo == 0 || !self.ask(Op::ComboHasSel, combo) {
+            return;
+        }
+        let game = self.op(Op::MyGame, 0, 0, 0);
+        if game == 0 {
+            return;
+        }
+        let old = self.op(Op::GameOption, game, 0, 0) as i32;
+        if self.op(Op::ComboGetSel, combo, 0, 0) == 1 {
+            let result = self.op(Op::ChooseSavedGame, 0, 0, 0);
+            let game = self.op(Op::MyGame, 0, 0, 0);
+            if game != 0 {
+                if result == 100001 {
+                    self.op(Op::GameSetOption, game, 0, 1);
+                    self.op(Op::GameSendState, game, 0, 0);
+                } else {
+                    self.op(Op::ComboSetSel, combo, old as isize, 0);
+                }
+            }
+        } else {
+            self.op(Op::ComboSetSel, combo, 0, 0);
+            self.op(Op::GameSetOption, game, 0, 0);
+            for i in 0..8 {
+                let slot = self.op(Op::GameSlot, game, i, 0);
+                if slot != 0 && self.op(Op::SlotState, slot, 0, 0) == 4 {
+                    self.op(Op::SlotSetOpen, slot, 0, 0);
+                }
+            }
+            self.op(Op::GameSendState, game, 0, 0);
+        }
+    }
+
+    /// OptionChanged: the captain's change sent to the game; anyone else's control restored from the game.
+    fn option_changed(&self, option: i32) {
+        if !(0..16).contains(&option) {
+            return;
+        }
+        if !self.ask(Op::IAmCaptain, 0) {
+            let game = self.op(Op::MyGame, 0, 0, 0);
+            self.update_option(option, game);
+            return;
+        }
+        let game = self.op(Op::MyGame, 0, 0, 0);
+        if game == 0 {
+            return;
+        }
+        if option == 0 {
+            self.change_game_type();
+        } else if option != 9 {
+            if OPTION_IS_CHECK[option as usize] {
+                let check = self.option_check(option);
+                if check != 0 {
+                    let v = self.op(Op::ButtonIsChecked, check, 0, 0);
+                    self.op(Op::GameChangeOption, game, option as isize, v);
+                }
+            } else {
+                let combo = self.option_combo(option);
+                if combo != 0 && self.ask(Op::ComboHasSel, combo) {
+                    let v = self.op(Op::ComboGetSel, combo, 0, 0) as i32;
+                    self.op(Op::GameChangeOption, game, option as isize, v as isize);
+                }
+            }
+        } else {
+            let combo = self.option_combo(9);
+            if combo != 0 && self.ask(Op::ComboHasSel, combo) {
+                let sel = self.op(Op::ComboGetSel, combo, 0, 0) as i32;
+                self.op(Op::GameChangeOption, game, 9, sel.wrapping_add(1).wrapping_mul(50) as isize);
+            }
+        }
+    }
+
+    fn game_options_event(&self, event: isize, kind: Ev) {
+        match kind {
+            Ev::AllOptions => {
+                if self.in_game.get() {
+                    self.update_all();
+                }
+            }
+            Ev::SyncOption => {
+                if self.in_game.get() {
+                    let option = self.op(Op::EventParam, event, 0, 0) as i32;
+                    let game = self.op(Op::MyGame, 0, 0, 0);
+                    self.update_option(option, game);
+                }
+            }
+            Ev::SetRoomSpecFlags => self.add_room_flags(event),
+            Ev::LeftGame => self.in_game.set(false),
+            Ev::JoinedGame => self.activate(),
+            Ev::ComboSelChanged | Ev::ButtonPressed if self.in_game.get() => {
+                let id = self.op(Op::EventControlId, event, 0, 0) as i32;
+                self.option_changed(id.wrapping_sub(1));
+            }
+            // no base call
+            _ => {}
+        }
+    }
+
     // ---- the calls
 
     fn event(&self, event: isize, kind: u32, component: isize) {
@@ -1191,6 +1492,7 @@ impl EeWonLobbyCtl {
             Kind::Staging => self.staging_event(event, kind),
             Kind::LanOptions | Kind::NetOptions => self.options_event(event, kind, component),
             Kind::UserList => self.user_list_event(event, kind, component),
+            Kind::GameOptions => self.game_options_event(event, kind),
         }
     }
 
@@ -1204,7 +1506,7 @@ impl EeWonLobbyCtl {
             C::ResetBrowser => self.reset_browser(),
             C::Field => {
                 return match a {
-                    0..=17 => self.members[a as usize].get(),
+                    0..=18 => self.members[a as usize].get(),
                     100 => self.room_flags.get() as isize,
                     101 => self.in_game.get() as isize,
                     102 => self.last_ready.get() as isize,
@@ -1227,7 +1529,7 @@ impl EeWonLobbyCtl {
     }
 }
 
-const EVENTS: [Ev; 16] = [
+const EVENTS: [Ev; 18] = [
     Ev::Other,
     Ev::ButtonPressed,
     Ev::ComboSelChanged,
@@ -1244,6 +1546,8 @@ const EVENTS: [Ev; 16] = [
     Ev::SyncOptions,
     Ev::LanOptions,
     Ev::PublicAddress,
+    Ev::AllOptions,
+    Ev::SyncOption,
 ];
 
 /// The look-up `index` of `SLOTS` (NULL past the end).

@@ -4107,6 +4107,10 @@ enum class EeWonLobbyCtlType : uint32_t {
   MultiList = 5,
   /// `ImageComponent`
   Image = 6,
+  /// `Container`
+  Container = 7,
+  /// `Component`
+  Component = 8,
 };
 
 /// The control kinds (the original classes; LobbyOptionsCtrl's LAN and Internet tabs are two kinds).
@@ -4118,6 +4122,8 @@ enum class EeWonLobbyCtlKind : uint32_t {
   /// `LobbyOptionsCtrl(false)`
   NetOptions = 3,
   UserList = 4,
+  /// EELobbyGameOptionsCtrl (the EE game room's options panel)
+  GameOptions = 5,
 };
 
 /// The ops (`a`, `b`, `c` as documented; "the control" is the C++ control this object belongs to).
@@ -4321,6 +4327,43 @@ enum class EeWonLobbyCtlOp : uint32_t {
   PublicAddressValid,
   /// `((Label*)a)->SetText(LobbyGetPublicAddress().GetHostString(true), true)`.
   LabelSetPublicAddress,
+  /// `ComponentConfigMissing(std::string("Invalid type for ") + slot a's name, its file, 89)`.
+  ReportInvalidType,
+  /// `dynamic_cast<Button*>((Component*)a) != NULL`.
+  IsButton,
+  /// `dynamic_cast<ComboBox*>((Component*)a) != NULL`.
+  IsCombo,
+  /// `sprintf(buffer, "%d", b); ((ComboBox*)a)->AddString(buffer)` (a 50-byte buffer).
+  ComboAddNumber,
+  /// `EELobbyFillMapTypeCombo((ComboBox*)a)`.
+  FillMapTypes,
+  /// `((ComboBox*)a)->mListArea->GetSelItem() != NULL`.
+  ComboHasSel,
+  /// `((EELobbyGame*)a)->GetOption(b)`.
+  GameOption,
+  /// `((EELobbyGame*)a)->SetOption(b, c)`.
+  GameSetOption,
+  /// `((EELobbyGame*)a)->ChangeOption(b, c, true)`.
+  GameChangeOption,
+  /// `((EELobbyGame*)a)->SendGameState()`.
+  GameSendState,
+  /// `((EELobbyGame*)a)->HasGameFile()` (0 or 1).
+  GameHasFile,
+  /// `((Label*)a)->SetText(((EELobbyGame*)b)->GetGameFileName())`.
+  LabelSetGameFile,
+  /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
+  GameSlot,
+  /// `((EELobbyPlayerSlot*)a)->mOptions[0]` (the slot's state).
+  SlotState,
+  /// `((EELobbyPlayerSlot*)a)->SetOpen()`.
+  SlotSetOpen,
+  /// `LobbyIAmCaptain()` (0 or 1).
+  IAmCaptain,
+  /// `((EELobbySyncOptionEvent*)a)->mParam`.
+  EventParam,
+  /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
+  /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
+  ChooseSavedGame,
 };
 
 /// The inward calls.
@@ -4333,8 +4376,8 @@ enum class EeWonLobbyCtlCall : uint32_t {
   Paint,
   /// GameBrowserCtrl::ResetBrowser.
   ResetBrowser,
-  /// a member: `a` < 18 a control member, 100 the room flags, 101 in game, 102 the last ready state, 103 the
-  /// browser's reset flag.
+  /// a member: `a` < 19 a control member, 100 the room flags, 101 in game (EELobbyGameOptionsCtrl: active), 102
+  /// the last ready state, 103 the browser's reset flag.
   Field,
 };
 
@@ -6454,6 +6497,10 @@ enum class EeWonLobbyCtlEvent : uint32_t {
   LanOptions,
   /// 100055: the public address changed
   PublicAddress,
+  /// 100065: every game option to show again (EELobbyGameOptionsCtrl)
+  AllOptions,
+  /// `LobbyEvent_EELobbySyncOption` (an `EELobbySyncOptionEvent`)
+  SyncOption,
 };
 
 /// The texts the controls set (the lobby's resource strings).

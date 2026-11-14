@@ -81,7 +81,7 @@ fn call_of(n: u32) -> EeWonLobbyCtlCall {
 
 fn kind_of(n: u32) -> EeWonLobbyCtlKind {
     use EeWonLobbyCtlKind as K;
-    [K::Browser, K::Staging, K::LanOptions, K::NetOptions, K::UserList][n as usize]
+    [K::Browser, K::Staging, K::LanOptions, K::NetOptions, K::UserList, K::GameOptions][n as usize]
 }
 
 fn replay(golden: &'static str) -> Result<usize, String> {
@@ -184,7 +184,7 @@ fn the_connection_speeds_and_their_entries() {
 #[test]
 fn the_slots_hold_each_kinds_lookups_in_order() {
     // every name distinct within its kind and every member filled once
-    let kinds = [0..=10, 11..=12, 13..=29, 30..=33, 34..=35];
+    let kinds = [0..=10, 11..=12, 13..=29, 30..=33, 34..=35, 36..=54];
     for k in kinds {
         let mut members = std::collections::BTreeSet::new();
         for i in k {
@@ -283,4 +283,46 @@ fn the_browser_goes_home_on_its_first_paint_only() {
     p.release_all();
     let released: Vec<isize> = log().iter().map(|x| x.1).collect();
     assert_eq!(released, (0..=10).rev().map(|i| 0x100 + i * 0x10).collect::<Vec<_>>());
+}
+
+#[test]
+fn the_unit_limit_is_shown_and_sent_in_steps_of_fifty() {
+    use EeWonLobbyCtlOp as O;
+    let limits = 0x100 + (39 + 9) * 0x10;
+    let p = made(EeWonLobbyCtlKind::GameOptions, move |op, a, _| match op {
+        O::MyGame => 0x30,
+        O::GameMatchesSpec | O::GameIsHost | O::IAmCaptain | O::ComboHasSel | O::IsCombo | O::IsButton => 1,
+        O::GameOption => 300,
+        O::ComboGetSel if a == limits => 7,
+        O::EventControlId => 10,
+        _ => 0,
+    });
+    event(&p, EeWonLobbyCtlEvent::JoinedGame, 0);
+    assert!(log().contains(&(O::ComboSetSel, limits, 5, 0)));
+    LOG.with(|l| l.borrow_mut().clear());
+    event(&p, EeWonLobbyCtlEvent::ComboSelChanged, 0);
+    assert_eq!(log().last().unwrap(), &(O::GameChangeOption, 0x30, 9, 400));
+    p.release_all();
+}
+
+#[test]
+fn a_saved_game_needs_the_file_dialogs_load() {
+    use EeWonLobbyCtlOp as O;
+    let types = 0x100 + 39 * 0x10;
+    let p = made(EeWonLobbyCtlKind::GameOptions, move |op, a, _| match op {
+        O::MyGame => 0x30,
+        O::GameMatchesSpec | O::IAmCaptain | O::ComboHasSel => 1,
+        O::ComboGetSel if a == types => 1,
+        O::EventControlId => 1,
+        O::ChooseSavedGame => 100002,
+        _ => 0,
+    });
+    event(&p, EeWonLobbyCtlEvent::JoinedGame, 0);
+    LOG.with(|l| l.borrow_mut().clear());
+    event(&p, EeWonLobbyCtlEvent::ComboSelChanged, 0);
+    // cancelled: the combo box back to the game's type, nothing sent
+    let l = log();
+    assert_eq!(l.last().unwrap(), &(O::ComboSetSel, types, 0, 0));
+    assert!(!l.iter().any(|x| x.0 == O::GameSendState));
+    p.release_all();
 }

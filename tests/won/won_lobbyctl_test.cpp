@@ -1,5 +1,5 @@
 // The lobby screens' controls as one Rust object (R6 WONLobby round 4): the original GameBrowserCtrl.cpp,
-// GameStagingCtrl.cpp, LobbyOptionsCtrl.cpp and GameUserListCtrl.cpp (the statements copied from the C++ before the
+// GameStagingCtrl.cpp, LobbyOptionsCtrl.cpp, GameUserListCtrl.cpp and EELobbyGameOptionsCtrl.cpp (the statements copied from the C++ before the
 // port, every call on a control, an event, the lobby's model, its settings or a global replaced by the host op that
 // makes it: LobbyCtrlHost.cpp runs the same calls) against ee_won's lobbyctl.rs over one scripted host.
 //
@@ -7,7 +7,8 @@
 // now and then; every event type on the control's own members, on no component and on another one; the browser's
 // paint and reset; the members read back), and frees it. The host answers each op from a seeded generator (the same
 // stream for both sides); a check box set with its event, a combo box or a list cleared with its event re-enters
-// the control with the matching event a third of the time (two deep at most). The traces must be the same.
+// the control with the matching event a third of the time (two deep at most), as does the saved game's file
+// dialog with a random event. The traces must be the same.
 //
 // The control tables are checked name by name, line by line and type by type against the original
 // SafeGetComponent arguments.
@@ -49,7 +50,8 @@ static void Line(const char* inFormat, long long a = 0, long long b = 0, long lo
 }
 
 static const intptr_t kCtl = 0x1000, kKick = 0x2000, kGame = 0x3000, kClients = 0x3100, kClient = 0x3200,
-                      kItem = 0x3300, kNewItem = 0x3400, kScreen = 0x3500, kEvent = 0xE1, kOther = 0x77;
+                      kItem = 0x3300, kNewItem = 0x3400, kScreen = 0x3500, kSlot = 0x3600, kEvent = 0xE1,
+                      kOther = 0x77;
 static const int kControlIds[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0x30d55, 0x30d56, 99};
 
 static bool sRust;
@@ -74,7 +76,7 @@ static intptr_t Host(Op inOp, intptr_t a, intptr_t b, intptr_t c)
     switch (inOp) {
     case Op::Find: r = R(12) ? kCtl + b * 0x10 : 0; break;
     case Op::FindOptional: r = R(3) ? kKick : 0; break;
-    case Op::EventControlId: r = R(10); break;
+    case Op::EventControlId: r = R(18); break;
     case Op::EventFlags: case Op::EventRoomSpec: r = R(8); break;
     case Op::EventButton: r = R(3); break;
     case Op::MyGame: r = R(5) ? kGame : 0; break;
@@ -100,7 +102,13 @@ static intptr_t Host(Op inOp, intptr_t a, intptr_t b, intptr_t c)
     case Op::GameCanReady: case Op::GameMatchesSpec: case Op::IAmReady: case Op::ClientHasPlayer:
     case Op::ItemClientIs: case Op::OnLoginScreen: case Op::OnLanScreen: case Op::FirewallTestDone:
     case Op::BehindFirewall: case Op::PublicAddressValid:
-        r = R(2); break;
+    case Op::IsButton: case Op::IsCombo: case Op::ComboHasSel: case Op::GameHasFile: case Op::IAmCaptain:
+        r = R(5) != 0; break;
+    case Op::GameOption: r = R(4) == 0 ? (intptr_t)R(1300) : (intptr_t)R(3); break;
+    case Op::GameSlot: r = R(3) ? kSlot + b : 0; break;
+    case Op::SlotState: r = R(6); break;
+    case Op::EventParam: r = (intptr_t)R(19) - 1; break;
+    case Op::ChooseSavedGame: r = R(3) == 0 ? -1 : R(2) ? 100001 : 100002; break;
     default: break;
     }
     Line("op %lld %lld %lld %lld = %lld", (long long)inOp, a, b, c, r);
@@ -108,6 +116,7 @@ static intptr_t Host(Op inOp, intptr_t a, intptr_t b, intptr_t c)
     if (inOp == Op::ButtonSetCheck && c != 0) Reenter(Ev::ButtonPressed, a);
     if (inOp == Op::ComboClear && b != 0) Reenter(Ev::ComboSelChanged, a);
     if (inOp == Op::ListClear && b != 0) Reenter(Ev::ListSelChanged, kOther);
+    if (inOp == Op::ChooseSavedGame) Reenter((Ev)R(18), kOther);
     return r;
 }
 
@@ -132,6 +141,8 @@ struct Orig {
         mDoAutoAFKCheck;
     // GameUserListCtrl
     intptr_t mUserList, mKickButton;
+    // EELobbyGameOptionsCtrl (its mIsActive is mInGame)
+    intptr_t mCampaignInfoLabel, mCampaignInfoBox1, mCampaignInfoBox2, mOptions[16];
 };
 static Orig sO;
 
@@ -172,10 +183,22 @@ static const Orig_Slot kOrigSlots[] = {
     {"AutoPingGamesCheck", 119, EeWonLobbyCtlType::Button, 1}, {"DoAutoAFKCheck", 120, EeWonLobbyCtlType::Button, 4},
     {"FilterDirtyWordsCheck", 121, EeWonLobbyCtlType::Button, 0x30d55},
     {"UserList", 159, EeWonLobbyCtlType::MultiList, -1}, {"KickButton", 182, EeWonLobbyCtlType::Button, -1},
+    {"CampaignInfoLabel", 74, EeWonLobbyCtlType::Label, -1}, {"CampaignInfoBox1", 75, EeWonLobbyCtlType::Container, -1},
+    {"CampaignInfoBox2", 76, EeWonLobbyCtlType::Container, -1},
+    // sOptionTable's names, each SafeGetComponent<Component> at line 80
+    {"GameTypeCombo", 80, EeWonLobbyCtlType::Component, -1}, {"MapSizeCombo", 80, EeWonLobbyCtlType::Component, -1},
+    {"MapTypeCombo", 80, EeWonLobbyCtlType::Component, -1}, {"ResourcesCombo", 80, EeWonLobbyCtlType::Component, -1},
+    {"StartingEpochCombo", 80, EeWonLobbyCtlType::Component, -1}, {"EndingEpochCombo", 80, EeWonLobbyCtlType::Component, -1},
+    {"GameVariantCombo", 80, EeWonLobbyCtlType::Component, -1},
+    {"DifficultyLevelCombo", 80, EeWonLobbyCtlType::Component, -1}, {"GameSpeedCombo", 80, EeWonLobbyCtlType::Component, -1},
+    {"GameUnitLimitCombo", 80, EeWonLobbyCtlType::Component, -1}, {"WondersCombo", 80, EeWonLobbyCtlType::Component, -1},
+    {"RevealMapCheck", 80, EeWonLobbyCtlType::Component, -1}, {"UseCustomCivsCheck", 80, EeWonLobbyCtlType::Component, -1},
+    {"LockTeamsCheck", 80, EeWonLobbyCtlType::Component, -1}, {"LockSpeedCheck", 80, EeWonLobbyCtlType::Component, -1},
+    {"VictoryCheck", 80, EeWonLobbyCtlType::Component, -1},
 };
 static const char* const kOrigFiles[] = {"GameBrowserCtrl.cpp", "GameStagingCtrl.cpp", "LobbyOptionsCtrl.cpp",
-                                         "GameUserListCtrl.cpp"};
-static int OrigFileOf(int inSlot) { return inSlot <= 10 ? 0 : inSlot <= 12 ? 1 : inSlot <= 33 ? 2 : 3; }
+                                         "GameUserListCtrl.cpp", "EELobbyGameOptionsCtrl.cpp"};
+static int OrigFileOf(int inSlot) { return inSlot <= 10 ? 0 : inSlot <= 12 ? 1 : inSlot <= 33 ? 2 : inSlot <= 35 ? 3 : 4; }
 
 // SafeGetComponent(config, outPtr, name, [id,] file, line), the name given by its slot
 static void SafeGetComponent(intptr_t inConfig, intptr_t& outPtr, int inSlot)
@@ -628,6 +651,202 @@ static void ListEvent(intptr_t inEvent, Ev inType, intptr_t inComponent)
     O(Op::BaseEvent, inEvent);
 }
 
+// EELobbyGameOptionsCtrl (sOptionTable's types: 0 combo box, 1 check box)
+static const int kOptionType[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
+static intptr_t GoGetControl(int inOption) { return inOption >= 0 && inOption < 16 ? sO.mOptions[inOption] : 0; }
+static intptr_t GoGetComboBox(int inOption)
+{
+    if (inOption >= 0 && inOption < 16 && kOptionType[inOption] == 0) return sO.mOptions[inOption];
+    return 0;
+}
+static intptr_t GoGetCheckBox(int inOption)
+{
+    if (inOption >= 0 && inOption < 16 && kOptionType[inOption] == 1) return sO.mOptions[inOption];
+    return 0;
+}
+static intptr_t GoGetGame() { return O(Op::MyGame); }
+static void GoInit(intptr_t theConfig)
+{
+    SafeGetComponent(theConfig, sO.mCampaignInfoLabel, 36);
+    SafeGetComponent(theConfig, sO.mCampaignInfoBox1, 37);
+    SafeGetComponent(theConfig, sO.mCampaignInfoBox2, 38);
+    int i;
+    for (i = 0; i < 16; i++) {
+        SafeGetComponent(theConfig, sO.mOptions[i], 39 + i);
+        bool theTypeOK = true;
+        switch (kOptionType[i]) {
+        case 1: theTypeOK = O(Op::IsButton, sO.mOptions[i]) != 0; break;
+        case 0: theTypeOK = O(Op::IsCombo, sO.mOptions[i]) != 0; break;
+        }
+        if (!theTypeOK)
+            O(Op::ReportInvalidType, 39 + i); // ComponentConfigMissing("Invalid type for "+name, __FILE__, 89)
+        O(Op::SetControlId, sO.mOptions[i], i + 1);
+    }
+    intptr_t theCombo = GoGetComboBox(9);
+    if (theCombo != 0) {
+        for (int theLimit = 50; theLimit <= 1200; theLimit += 50)
+            O(Op::ComboAddNumber, theCombo, theLimit);
+    }
+    O(Op::FillMapTypes, GoGetComboBox(2));
+    O(Op::SubscribeBroadcast, 1);
+    O(Op::SetVisible, GoGetCheckBox(15), 0);
+}
+static void GoUpdateOption(int inOption, intptr_t inGame)
+{
+    if (inGame == 0 || inOption < 0 || inOption > 16)
+        return;
+    if (inOption != 9) {
+        // sOptionTable[16] was past the table; its getters answer NULL for 16 whatever it held
+        switch (inOption < 16 ? kOptionType[inOption] : -1) {
+        case 1: {
+            intptr_t theCheck = GoGetCheckBox(inOption);
+            if (theCheck != 0)
+                O(Op::ButtonSetCheck, theCheck, O(Op::GameOption, inGame, inOption) != 0, 0);
+            break;
+        }
+        case 0: {
+            intptr_t theCombo = GoGetComboBox(inOption);
+            if (theCombo != 0)
+                O(Op::ComboSetSel, theCombo, (int)(long)O(Op::GameOption, inGame, inOption), 0);
+            break;
+        }
+        }
+    } else {
+        intptr_t theCombo = GoGetComboBox(9);
+        if (theCombo != 0)
+            O(Op::ComboSetSel, theCombo, (int)((uint32_t)(long)O(Op::GameOption, inGame, 9) / 50 - 1), 0);
+    }
+}
+static void GoUpdateAll()
+{
+    intptr_t theGame = GoGetGame();
+    if (theGame == 0)
+        return;
+    int i;
+    for (i = 0; i < 16; i++)
+        GoUpdateOption(i, theGame);
+    bool theNotRandomMap = O(Op::GameOption, theGame, 0) != 0;
+    bool theFlag = O(Op::GameIsHost, theGame) != 0;
+    for (int j = 0; j < 16; j++) {
+        intptr_t theControl = GoGetControl(j);
+        bool theEnabled;
+        if (j == 0)
+            theEnabled = theFlag;
+        else if (theFlag && !theNotRandomMap)
+            theEnabled = true;
+        else
+            theEnabled = false;
+        if (theControl != 0)
+            O(Op::SetEnabled, theControl, theEnabled);
+    }
+    if (O(Op::GameHasFile, theGame)) {
+        O(Op::SetVisible, sO.mCampaignInfoBox1, 0);
+        O(Op::SetVisible, sO.mCampaignInfoBox2, 1);
+        O(Op::LabelSetGameFile, sO.mCampaignInfoLabel, theGame);
+    } else {
+        O(Op::SetVisible, sO.mCampaignInfoBox1, 1);
+        O(Op::SetVisible, sO.mCampaignInfoBox2, 0);
+    }
+}
+static void GoActivate()
+{
+    intptr_t theGame = GoGetGame();
+    if (theGame == 0 || !O(Op::GameMatchesSpec, theGame, sO.mRoomSpecFlags))
+        return;
+    sO.mInGame = true;
+    GoUpdateAll();
+    bool theFlag = O(Op::GameIsHost, theGame) != 0;
+    for (int i = 0; i < 16; i++)
+        O(Op::SetEnabled, sO.mOptions[i], theFlag);
+}
+static void GoChangeGameType()
+{
+    intptr_t theCombo = GoGetComboBox(0);
+    if (theCombo == 0 || !O(Op::ComboHasSel, theCombo))
+        return;
+    intptr_t theGame = GoGetGame();
+    if (theGame == 0)
+        return;
+    long theOldType = (long)O(Op::GameOption, theGame, 0);
+    if (O(Op::ComboGetSel, theCombo) == 1) {
+        int theResult = (int)O(Op::ChooseSavedGame);
+        theGame = GoGetGame();
+        if (theGame != 0) {
+            if (theResult == 100001) {
+                O(Op::GameSetOption, theGame, 0, 1);
+                O(Op::GameSendState, theGame);
+            } else
+                O(Op::ComboSetSel, theCombo, (int)theOldType, 0);
+        }
+    } else {
+        O(Op::ComboSetSel, theCombo, 0, 0);
+        O(Op::GameSetOption, theGame, 0, 0);
+        for (int i = 0; i < 8; i++) {
+            intptr_t theSlot = O(Op::GameSlot, theGame, i);
+            if (theSlot != 0 && O(Op::SlotState, theSlot) == 4)
+                O(Op::SlotSetOpen, theSlot);
+        }
+        O(Op::GameSendState, theGame);
+    }
+}
+static void GoOptionChanged(int inOption)
+{
+    if (inOption < 0 || inOption >= 16)
+        return;
+    if (!O(Op::IAmCaptain)) {
+        GoUpdateOption(inOption, GoGetGame()); // UpdateOption(int)
+    } else {
+        intptr_t theGame = GoGetGame();
+        if (theGame == 0)
+            return;
+        if (inOption != 0) {
+            if (inOption != 9) {
+                switch (kOptionType[inOption]) {
+                case 1: {
+                    intptr_t theCheck = GoGetCheckBox(inOption);
+                    if (theCheck != 0)
+                        O(Op::GameChangeOption, theGame, inOption, O(Op::ButtonIsChecked, theCheck));
+                    break;
+                }
+                case 0: {
+                    intptr_t theCombo = GoGetComboBox(inOption);
+                    if (theCombo != 0 && O(Op::ComboHasSel, theCombo))
+                        O(Op::GameChangeOption, theGame, inOption, (int)O(Op::ComboGetSel, theCombo));
+                    break;
+                }
+                }
+            } else {
+                intptr_t theCombo = GoGetComboBox(9);
+                if (theCombo != 0 && O(Op::ComboHasSel, theCombo))
+                    O(Op::GameChangeOption, theGame, 9, ((int)O(Op::ComboGetSel, theCombo) + 1) * 50);
+            }
+        } else
+            GoChangeGameType();
+    }
+}
+static void GoEvent(intptr_t inEvent, Ev inType)
+{
+    switch (inType) {
+    case Ev::AllOptions:
+        if (sO.mInGame) GoUpdateAll();
+        break;
+    case Ev::SyncOption:
+        if (sO.mInGame) {
+            int theOption = (int)O(Op::EventParam, inEvent);
+            GoUpdateOption(theOption, GoGetGame());
+        }
+        break;
+    case Ev::SetRoomSpecFlags: sO.mRoomSpecFlags |= (int)O(Op::EventFlags, inEvent); break;
+    case Ev::LeftGame: if (sO.mInGame) sO.mInGame = false; break;
+    case Ev::JoinedGame: GoActivate(); break;
+    case Ev::ComboSelChanged:
+    case Ev::ButtonPressed:
+        if (sO.mInGame) GoOptionChanged((int)O(Op::EventControlId, inEvent) - 1);
+        break;
+    default: break;
+    }
+}
+
 static intptr_t OrigMember(int inIndex)
 {
     switch (sO.mKind) {
@@ -639,6 +858,11 @@ static intptr_t OrigMember(int inIndex)
     }
     case Kind::Staging: return inIndex == 0 ? sO.mLeaveGameButton : inIndex == 1 ? sO.mStartGameButton : 0;
     case Kind::UserList: return inIndex == 0 ? sO.mUserList : inIndex == 1 ? sO.mKickButton : 0;
+    case Kind::GameOptions:
+        if (inIndex == 0) return sO.mCampaignInfoLabel;
+        if (inIndex == 1) return sO.mCampaignInfoBox1;
+        if (inIndex == 2) return sO.mCampaignInfoBox2;
+        return sO.mOptions[inIndex - 3];
     default: {
         const intptr_t m[] = {sO.mTabSelectCombo, sO.mConnectionSpeedCombo, sO.mCrossPromotionCheck,
                               sO.mLobbySoundEffectsCheck, sO.mChatSoundEffectsCheck, sO.mStagingSoundEffectsCheck,
@@ -646,7 +870,7 @@ static intptr_t OrigMember(int inIndex)
                               sO.mAnonymousToFriendsCheck, sO.mAutoPingGamesCheck, sO.mLocalAddressDetailLabel,
                               sO.mPublicAddressDetailLabel, sO.mFirewalledIcon, sO.mUserNameCombo,
                               sO.mLANBroadcastDetailLabel, sO.mFilterDirtyWordsCheck, sO.mDoAutoAFKCheck};
-        return m[inIndex];
+        return inIndex < 18 ? m[inIndex] : 0;
     }
     }
 }
@@ -659,6 +883,7 @@ static intptr_t OrigCall(Call inCall, intptr_t a, intptr_t b, intptr_t c)
         case Kind::Browser: BrowserInit(a); break;
         case Kind::Staging: StagingInit(a); break;
         case Kind::UserList: ListInit(a); break;
+        case Kind::GameOptions: GoInit(a); break;
         default: OptionsInit(a); break;
         }
         return 0;
@@ -667,13 +892,14 @@ static intptr_t OrigCall(Call inCall, intptr_t a, intptr_t b, intptr_t c)
         case Kind::Browser: BrowserEvent(a, (Ev)b); break;
         case Kind::Staging: StagingEvent(a, (Ev)b); break;
         case Kind::UserList: ListEvent(a, (Ev)b, c); break;
+        case Kind::GameOptions: GoEvent(a, (Ev)b); break;
         default: OptionsEvent(a, (Ev)b, c); break;
         }
         return 0;
     case Call::Paint: BrowserPaint(a); return 0;
     case Call::ResetBrowser: O(Op::BrowserReset, sO.mBrowser); sO.mIsReset = true; return 0;
     case Call::Field:
-        if (a >= 0 && a < 18) return OrigMember((int)a);
+        if (a >= 0 && a < 19) return OrigMember((int)a);
         switch (a) {
         case 100: return sO.mRoomSpecFlags;
         case 101: return sO.mInGame;
@@ -697,6 +923,10 @@ static void OrigFree()
         break;
     case Kind::Staging: ReleasePtr(sO.mStartGameButton); ReleasePtr(sO.mLeaveGameButton); break;
     case Kind::UserList: ReleasePtr(sO.mKickButton); ReleasePtr(sO.mUserList); break;
+    case Kind::GameOptions:
+        for (int i = 15; i >= 0; i--) ReleasePtr(sO.mOptions[i]);
+        ReleasePtr(sO.mCampaignInfoBox2); ReleasePtr(sO.mCampaignInfoBox1); ReleasePtr(sO.mCampaignInfoLabel);
+        break;
     default:
         ReleasePtr(sO.mDoAutoAFKCheck); ReleasePtr(sO.mFilterDirtyWordsCheck); ReleasePtr(sO.mLANBroadcastDetailLabel);
         ReleasePtr(sO.mUserNameCombo); ReleasePtr(sO.mFirewalledIcon); ReleasePtr(sO.mPublicAddressDetailLabel);
@@ -727,7 +957,7 @@ static std::vector<std::string> RunSide(bool inRust, Kind inKind, unsigned inSee
         sO.mKind = inKind;
         // the constructors
         sO.mIsReset = inKind == Kind::Browser;
-        sO.mRoomSpecFlags = (inKind == Kind::Staging || inKind == Kind::UserList) ? 2 : 0;
+        sO.mRoomSpecFlags = (inKind == Kind::Staging || inKind == Kind::UserList || inKind == Kind::GameOptions) ? 2 : 0;
         sO.mIsLan = inKind == Kind::LanOptions;
     }
     for (size_t i = 0; i < inSteps.size(); i++) {
@@ -751,6 +981,7 @@ static int SlotsOf(Kind inKind, int* outSlots)
     case Kind::LanOptions: for (int i = 13; i <= 29; i++) outSlots[n++] = i; break;
     case Kind::NetOptions: for (int i = 13; i <= 26; i++) outSlots[n++] = i; for (int i = 30; i <= 33; i++) outSlots[n++] = i; break;
     case Kind::UserList: outSlots[n++] = 34; break;
+    case Kind::GameOptions: for (int i = 36; i <= 54; i++) outSlots[n++] = i; break;
     }
     return n;
 }
@@ -772,24 +1003,26 @@ int main(int argc, char** argv)
     unsigned long long aLines = 0;
     int aDiffer = 0;
     unsigned aStepSeed = 4711;
-    const int kSequences = 40000;
+    const int kSequences = 50000;
     for (int n = 0; n < kSequences; n++) {
         unsigned aSave = sSeed;
         sSeed = aStepSeed;
-        Kind aKind = (Kind)R(5);
+        Kind aKind = (Kind)R(6);
         int aSlots[24];
         int aSlotCount = SlotsOf(aKind, aSlots);
         std::vector<Step> aSteps;
         if (R(6)) aSteps.push_back(Step{Call::Init, 0xC0, 0, 0});
+        // the options panel acts only once a game room is joined: half of its sequences join first
+        if (aKind == Kind::GameOptions && R(2)) aSteps.push_back(Step{Call::Event, kEvent, (intptr_t)Ev::JoinedGame, 0});
         int aCount = 1 + (int)R(10);
         for (int i = 0; i < aCount; i++) {
-            Step s = {Call::Event, kEvent, (intptr_t)R(16), 0};
+            Step s = {Call::Event, kEvent, (intptr_t)R(18), 0};
             switch (R(10)) {
             case 0: s.mCall = Call::Init; s.a = 0xC0; s.b = 0; break;
             case 1:
                 if (aKind == Kind::Browser) { s.mCall = R(2) ? Call::Paint : Call::ResetBrowser; s.a = 0x6600; s.b = 0; }
                 break;
-            case 2: s.mCall = Call::Field; s.a = R(3) ? (intptr_t)R(18) : 100 + (intptr_t)R(4); s.b = 0; break;
+            case 2: s.mCall = Call::Field; s.a = R(3) ? (intptr_t)R(19) : 100 + (intptr_t)R(4); s.b = 0; break;
             default: break;
             }
             if (s.mCall == Call::Event) {

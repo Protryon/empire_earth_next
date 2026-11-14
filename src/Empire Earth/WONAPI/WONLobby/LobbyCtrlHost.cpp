@@ -1,6 +1,6 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 // The lobby screens' controls' shell and host (R6 WONLobby round 4): GameBrowserCtrl, GameStagingCtrl,
-// LobbyOptionsCtrl and GameUserListCtrl are one Rust object each (rust/crates/ee_won/src/lobbyctl.rs). This unit is
+// LobbyOptionsCtrl, GameUserListCtrl and the EE room's EELobbyGameOptionsCtrl are one Rust object each (rust/crates/ee_won/src/lobbyctl.rs). This unit is
 // the shell's two virtuals, the host (each op the original's statements on a control, an event, the lobby's model,
 // its settings or a global, with no decision), the player row GameUserListItem (a list row: paint, size, order; its
 // icon rule is Rust) and the two config readers that were in GameBrowserCtrl.cpp and GameUserListCtrl.cpp.
@@ -23,6 +23,7 @@
 #include "ee/wonapi/WONLobbyControls.h"
 #include "ee/wonapi/WONLobbyScreens.h"
 #include "ee/wonapi/WONURL.h"
+#include "ee/wonapi/EELobbyGameCode.h"
 #include "rust/ee_won.h"
 
 namespace WONAPI {
@@ -122,6 +123,8 @@ void LobbyRustCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     case 100014: aType = E::SyncOptions; break;
     case 100050: aType = E::LanOptions; break;
     case 100055: aType = E::PublicAddress; break;
+    case 100065: aType = E::AllOptions; break;
+    case LobbyEvent_EELobbySyncOption: aType = E::SyncOption; break;
     default: break;
     }
     this->CCall(EeWonLobbyCtlCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
@@ -148,6 +151,8 @@ static Component* FindSlot(ComponentConfig* inConfig, const EeWonLobbyCtlSlot* i
     case T::Browser: return FindAs<BrowserComponent>(inConfig, inSlot);
     case T::MultiList: return FindAs<MultiListArea>(inConfig, inSlot);
     case T::Image: return FindAs<ImageComponent>(inConfig, inSlot);
+    case T::Container: return FindAs<Container>(inConfig, inSlot);
+    case T::Component: return FindAs<Component>(inConfig, inSlot);
     }
     return NULL;
 }
@@ -377,6 +382,48 @@ static intptr_t LobbyCtrlHost(void* inCtl, EeWonLobbyCtlOp inOp, intptr_t a, int
     case Op::IconSetImage: reinterpret_cast<ImageComponent*>(a)->SetImage(CtlImage(b).get()); return 0;
     case Op::PublicAddressValid: return LobbyGetPublicAddress().IsValid() ? 1 : 0;
     case Op::LabelSetPublicAddress: aLabel->SetText(LobbyGetPublicAddress().GetHostString(true), true); return 0;
+    // EELobbyGameOptionsCtrl
+    case Op::ReportInvalidType: {
+        const EeWonLobbyCtlSlot* aSlot = ee_won_lobbyctl_slot((uint32_t)a);
+        ComponentConfigMissing(std::string("Invalid type for ") + aSlot->name, aSlot->file, 89);
+        return 0;
+    }
+    case Op::IsButton: return dynamic_cast<Button*>(aComp) != NULL ? 1 : 0;
+    case Op::IsCombo: return dynamic_cast<ComboBox*>(aComp) != NULL ? 1 : 0;
+    case Op::ComboAddNumber: {
+        char aBuffer[50];
+        sprintf(aBuffer, "%d", (int)b);
+        aCombo->AddString(aBuffer);
+        return 0;
+    }
+    case Op::FillMapTypes: EELobbyFillMapTypeCombo(aCombo); return 0;
+    case Op::ComboHasSel: return aCombo->mListArea->GetSelItem() != NULL ? 1 : 0;
+    case Op::GameOption: return (intptr_t)static_cast<EELobbyGame*>(aGame)->GetOption((int)b);
+    case Op::GameSetOption: static_cast<EELobbyGame*>(aGame)->SetOption((int)b, (unsigned long)c); return 0;
+    case Op::GameChangeOption:
+        static_cast<EELobbyGame*>(aGame)->ChangeOption((int)b, (unsigned long)(long)c, true);
+        return 0;
+    case Op::GameSendState: static_cast<EELobbyGame*>(aGame)->SendGameState(); return 0;
+    case Op::GameHasFile: return static_cast<EELobbyGame*>(aGame)->HasGameFile() ? 1 : 0;
+    case Op::LabelSetGameFile:
+        aLabel->SetText(static_cast<EELobbyGame*>(reinterpret_cast<LobbyGame*>(b))->GetGameFileName());
+        return 0;
+    case Op::GameSlot: return (intptr_t)static_cast<EELobbyGame*>(aGame)->GetPlayerSlot((int)b);
+    case Op::SlotState: return reinterpret_cast<EELobbyPlayerSlot*>(a)->mOptions[0];
+    case Op::SlotSetOpen: reinterpret_cast<EELobbyPlayerSlot*>(a)->SetOpen(); return 0;
+    case Op::IAmCaptain: return LobbyIAmCaptain() ? 1 : 0;
+    case Op::EventParam: return static_cast<EELobbySyncOptionEvent*>(anEvent)->mParam;
+    case Op::ChooseSavedGame: {
+        // the saved games' directory, the file dialog over its .ees files (no dialog: -1)
+        GUIString theDirectory = EELobbyFn2988E9();
+        SmartPtr<EELobbyFileDialog> theDialog = EELobbyGetFileDialog();
+        int theResult = -1;
+        if (theDialog.mPtr != NULL) {
+            theDialog->ListFiles(theDirectory, ".ees");
+            theResult = LobbyDoDialog(theDialog.mPtr);
+        }
+        return theResult;
+    }
     }
     return 0;
 }
