@@ -18127,3 +18127,140 @@ op cases); the final tree's LAN run covers it.
   room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic, RoutingLogic last) and the
   resource tables and factories.
 - The list rows kept in C++ (BadUserItem, NetworkAdapterListItem) go with the WON GUI lane's list widgets.
+
+## R6 WONLobby, round 4: the LAN screen's controls and the EE room's options panel as one Rust control object (ee_won lobbyctl.rs; branch rust-wonlobby4, 2026-11-14)
+
+Round 3's list, top-down, biggest deletion first: the controls every LAN game builds (the LAN screen's tabs and the
+game room's buttons and player list), then the EE room's options panel. Each commit has its golden over the original
+statements (copied from the units before their deletion), mutations of the Rust that the golden catches, and a cargo
+replay of a recorded subset.
+
+### What moved (net WON C++ = every tracked file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`)
+
+| Commit | What | WON C++ |
+|---|---|---|
+| 8e426691 | GameBrowserCtrl, GameStagingCtrl, LobbyOptionsCtrl (both tabs), GameUserListCtrl as `lobbyctl.rs` kinds; four units deleted | +473 -870 = -397 (72,410 -> 72,013) |
+| 62aafdda | EELobbyGameOptionsCtrl (the EE game room's options panel) as kind `GameOptions`; its unit deleted | +53 -379 = -326 (72,013 -> 71,687) |
+
+- **One control object over a table of look-ups.** The five classes were `Container`s whose members were their
+  controls (`SmartPtr`s filled by `SafeGetComponent`) and a few flags. `lobbyctl.rs` holds one table (`SLOTS`, 55
+  entries) of every look-up in the originals' order: the resource name, the original's file and line for the
+  missing-control report, the `dynamic_cast` type, the control id `SafeGetComponent` set and the member it fills.
+  The `Find` op is the original template's statements (the cast and the report) and returns the control without a
+  reference; the Rust then does `ConstSmartPtr::operator=` (nothing for the same pointer, else release the old one,
+  reference the new one) and sets the id, so a second InitComponent and LobbyOptionsCtrl's one local `SmartPtr<Button>`
+  (the reset, restore and remove buttons in turn, released at the end) make the original's reference traffic.
+  GameUserListCtrl's Kick button is the optional `Fn386860` look-up (no report).
+- **What stays C++.** One shell, `LobbyRustCtrl : Container` (WONLobbyRustCtrl.h; InitComponent and
+  HandleComponentEvent forward, the event's type mapped to `EeWonLobbyCtlEvent`), and the class names as one-line
+  subclasses, so the resource factories (WONLobbyPrv.cpp, EELobbyInit.cpp), RootScreen's `ResetBrowser` and the
+  browser config's `SetHomeLocation` did not change. GameBrowserCtrl keeps its home location (a `GUIString` member)
+  and its `Paint` override (one forward; the Rust goes home once after a reset, then calls `Container::Paint`).
+  GameUserListItem (the player row: paint, size, order) stays a C++ list row in LobbyCtrlHost.cpp; its icon rule
+  (`UpdateIcon`: the first of ignored, blocked, muted, away, admin, moderator, captain) is Rust over one op per test.
+  The two config readers (GameBrowserCtrlConfig, GameUserListCtrlConfig) moved into LobbyCtrlHost.cpp unchanged.
+- **The host** (`LobbyCtrlHost`, `EeWonLobbyCtlOp`, 117 ops, 99 of them in the first commit; its own enums for the strings, pictures, client tests
+  and settings, `EeWonLobbyCtlPref` naming the twelve `LobbyGet*`/`LobbySet*` pairs): each op is the original's
+  statements on a control, an event, the lobby's model, its settings, a sound or a resource with no decision between
+  them. Two reads became two calls where the original made one: RefreshPublicAddress's `LobbyGetPublicAddress()`
+  (asked for `IsValid`, then again for the label's text; it returns a copy of a stored address) and nothing else.
+- **Re-entry.** A check box set with its event (`SetCheck(x, true)`: RefreshOptions sets nine), a combo box or list
+  cleared with its event, and the saved game's file dialog (`LobbyDoDialog`, a modal loop) deliver events back into
+  the same control: the state is in `Cell`s behind a shared reference and nothing is borrowed across an op.
+- **EELobbyGameOptionsCtrl** is the sixth kind: the campaign label and boxes, the 16 options (`sOptionTable`'s
+  eleven combo boxes and five check boxes, a `Component` look-up each, then the type check with its "Invalid type for"
+  report, then the id), the unit limit list (50..1200), the map types, Activate/Deactivate, UpdateOption/UpdateAll
+  (the unit limit shown in steps of 50, the options enabled for the host of a random map), OptionChanged (a
+  captain's change sent with `ChangeOption`, anyone else's control restored) and ChangeGameType (the saved game's
+  file dialog; a random map reopens the slots reserved by name). Its `mIsActive` is the object's in-game flag.
+
+### Goldens, mutations, replays
+
+`tests/won/won_lobbyctl_test.cpp` (`xbuild.py wontest won_lobbyctl_test`): the units' statements before the
+deletion, every call on another object replaced by its op, against the Rust over one scripted host whose answers come
+from a seeded stream; a notifying set or clear, and the file dialog, re-enter the control with a matching (or random)
+event a third of the time, two deep at most. The table is checked name, file, line, type and id against the original
+`SafeGetComponent` arguments.
+
+| Commit | Sequences | Trace lines | Replayed by cargo |
+|---|---|---|---|
+| 8e426691 | 40,000 (five kinds) | 2,595,339 | `golden_lobbyctl.txt` (123 sequences) |
+| 62aafdda | 50,000 (six kinds) | 4,230,291 | `golden_lobbyctl.txt` (137 sequences) |
+
+All identical on the first run. Each replay test also fails on one changed op.
+
+| Mutation of the Rust | Sequences that change |
+|---|---|
+| UpdateStartButton asks `LobbyIAmReady` once (the original asks twice) | 185 of 40,000 |
+| the dirty-word check set with its event | 615 |
+| Ban for a LAN room (flag 2, not 4) | 383 |
+| the refresh and home buttons' ids swapped | 7,255 |
+| a saved speed's entry one higher at the boundary (`>=`) | 98 |
+| away tested before muted | 136 |
+| the options' local button never released | 13,600 |
+| the unit limit shown without the -1 | 794 of 50,000 |
+| a guest's options enabled on a random map | 55 |
+| only slots of state 3 reopened | 13 |
+| the type check skipped for the check boxes | 7,496 |
+| a cancelled saved game still sent (generator below) | 2 of 50,000 |
+| a non-captain's change sent | 146 |
+
+The cancelled saved game was not caught at first (0 of 50,000): the generator rarely activated the options panel and
+the control ids reached only options 0-8. It now joins a game room first in half of the panel's sequences and draws
+the ids over all 17 options; the recorded golden is that generator's. The second commit's first five rows ran while the generator
+changed (the first rows with the first generator, the type-check row with the new one).
+
+Unit tests (11, the two replays among them): the connection speeds and their entries; each kind's look-ups fill each
+member once; a host may start only a startable game and a guest relabels on ready; the Kick button is never for the
+captain; the icon is the first match; the dirty-word and AFK checks are set without their event; the browser goes home
+on its first paint only and releases its members in reverse; the unit limit shown and sent in steps of 50; a
+cancelled saved game restores the combo box and sends nothing.
+
+### Behaviour changes
+
+None on a defined path. The missing-control reports name the unit's file without the original's staged path (as in
+rounds 1-3). EELobbyGameOptionsCtrl's UpdateOption let option 16 through and read `sOptionTable[16]` (past the table);
+its getters answered NULL for 16 whatever that held, so it did nothing, as the Rust does.
+
+### What runs it
+
+EE-SIM never builds the lobby (the oracle is unchanged by construction). Every LAN game builds the LAN screen's
+options tab (`LobbyOptionsCtrl(true)`: its look-ups, the local address, the 100014/100050/100055 refreshes),
+the help browser tab (GameBrowserCtrl: look-ups, EnableButtons, RootScreen's ResetBrowser on entering the
+screen; its paint, and so GoHome, only when the help tab is shown, which the harness does not do), the game room's
+GameStagingCtrl (JoinedGame, the host's Start Game and the joiner's Ready/Not Ready, UpdateStartButton on 100061),
+GameUserListCtrl (HandleJoinedGame's rows and icons, PlayerChanged adds, ClientChanged refreshes, LeftGame) and
+EELobbyGameOptionsCtrl (Activate, UpdateAll, the 100065 and SyncOption updates). Only a person reaches the options
+tab's buttons and combo boxes, the browser's navigation and find, the Kick button, a right click or double click on a
+player, and the options panel's changes (a captain's ChangeOption, the saved game's file dialog). Only the Internet
+path reaches the Internet options tab (`LobbyOptionsCtrl(false)`), the news tab and the Ban label (room flag 4).
+
+### Gates
+
+| Gate | 8e426691 (the four controls) | 62aafdda (the options panel) | final tree 61a9d843 (merged with rust f2813578) |
+|---|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | tests passed; clippy (one cast) and rustfmt failed on the first runs, fixed and re-run in the commit; after the commit one run crashed in `ee_gx`'s tests (0xC0000409, not this lane's crate), which then passed alone (175 tests) | tests passed, clippy failed on two lints (a range loop, a collapsible `if`); fixed before the commit (`cargo clippy -p ee_won -D warnings` clean, the golden and cargo replay re-run) | PASS |
+| `build.py --test-profile windowed-software` | 0 / 0 | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | `won_lobbyctl_test` exits 0 | `won_lobbyctl_test` exits 0 | the lobby set exits 0: won_lobbyctl_test, won_lobbydlg_test, won_dlglogic_test, won_lobbyscr_test, won_credits_test, won_lobbypopup_test, won_lanobj_test, won_stagingobj_test, won_dialogobj_test, won_dialogs_test. The full set (about 100 programs) was started on this tree with a 3-hour limit: see the end of this section |
+| `lan_game.py` (harness lock, the test exe of that tree) | `RESULT PASS lan-game` (PT 2980 / 2954) | `RESULT PASS lan-game` (PT 3006 / 3010; the exe built before the two clippy refactors) | `RESULT PASS lan-game` (PT 3006 / 3006) |
+
+The merge of rust (f2813578) brought documentation only (RUST_PLAN's Progress rows moved to `docs/progress/`); no
+conflict. This lane's state is now `docs/progress/r6-won-the-lobby-screens.md`.
+
+### Left for the next rounds
+
+- ChatCommandParser: not moved. Its parsing and state are Rust already (`chat.rs`, `chatobj.rs`); what is left is
+  `InitCommands`' 24 resource strings, `AddCommands`' StringParser list read (WONCommon's `StringParser::ReadValue`,
+  another lane's), the help strings' table and the client-list glue. Moving them would trade the resource string
+  switches for the same switches in a host: little C++ deleted for a new op set.
+- The EE room: EELobbyGame (1,086 lines), EELobbyPlayerOptionsCtrl and EELobbyPlayer, EELobbyColorButton, the
+  connect and file dialogs; then the logics (LanLogic's and StagingLogic's hosts, AccountLogic, InitLogic, PingLogic),
+  RoutingLogic (Internet) last, and the resource tables and factories.
+- The list rows kept in C++ (BadUserItem, NetworkAdapterListItem, GameUserListItem) go with the WON GUI lane's list
+  widgets.
+
+### The full `wontest` set on the final tree
+
+Started on the final tree (61a9d843) with a 3-hour limit, in the background; when this section was written 13 of the 106 programs had run and all 13 exited 0 (0 failures). The loaded machine runs one program every 2-10 minutes, so the set may hit the limit before its end: its log is `build/wl4/wontest_all.log` in the worktree (`ALL EXIT` ends it; 124 means the limit).
