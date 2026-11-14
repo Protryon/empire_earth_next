@@ -57,6 +57,9 @@
 //   sm OP LIST [INDEX] | sm fill | sm state  the scenario manager's lists: an editor list operation (new, sort, up,
 //                                         down, delete, dup), index references set on every element, every element's
 //                                         references and the name lists (ScenarioListStep)
+//   sm text | sm export | sm import FILE KIND VALIDATE   the trigger text file (EESEIAExport, EESEIAImport): the
+//                                         effects' and conditions' texts set, ExportText's file, ImportTriggerText
+//                                         over a fixed file (ScenarioTextStep)
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -561,6 +564,140 @@ void ScenarioListState(std::vector<std::string>& outLines)
     outLines.push_back(f);
 }
 
+// TEST ONLY: the trigger text file of the instructions tab (EESEIAExport, EESEIAImport): the manager's ExportText
+// and ImportTriggerText over files in data\Scenarios (written and read as the editor's actions do, the version line
+// aside: EESEIAImport reads it before the manager)
+
+// the import files (each ends with a new line: a last line without one leaves the original's text list a line short
+// and ImportText reads past it)
+const char* const sTextFiles[] = {
+    // 0: valid (version 1): the four media strings, the texts of three effects and a condition, two player names
+    "{1_After Math}\nAftermath text\nline two\n\n{0_Hints}\nHints \xc3\xbc\n\n{3_Instructions}\nDo this.\n\n\n\n"
+    "{2_History}\nLong ago\n\n{5_Effect:<Effect0_Copy>}\nNew briefing\n{2_Effect:<Effect1>}\nNew dialogue\n\n"
+    "{9_Condition:<Condition3_Copy>}\nnew chat\n\n{1_Player Name:Alice}\n{2_Player Name:Bob \xc3\xbc}\n",
+    // 1: errors of every kind (validated: listed; not validated: applied up to the first)
+    "preamble before any entry\n{3_Effect:Renamed}\nRenamed class\n\n{0_Hints}\nHints two\n{3_Player Name:Carol}\n"
+    "{0_Player Name:Zero}\n{99_Player Name:Nobody}\n{6_Condition:<Condition5>}\nchat 6\n{4_Effect:<Effect3>}\nchat 4\n"
+    "{7_Bogus}\nbogus\n{99_Effect:x}\ny\n{0_Effect:Do Nothing}\nz\n{99_Condition:x}\ny\n{5_Condition:<Condition4>}\n"
+    "t\n{6_Condition:Wrong}\nt\n{\xc3\xbc" "3_Effect:x}\nt\nx{y\na{b}c\n{a}{b}\n{}\n{2_History}\nhistory two\n",
+    // 2: version 0 entries ("<id>_<name>"; a condition entry reads as an effect's)
+    "{5_<Effect0_Copy>}\nkind zero\n\n{2_Effect:<Effect1>}\nkind zero two\n{9_Condition:<Condition3_Copy>}\nxx\n",
+    // 3: empty
+    "",
+    // 4: long lines (TextFileContent: fgets reads 511 bytes at a time, so an entry can start inside a line)
+    NULL,
+};
+
+std::string TextFileContent(unsigned long inIndex)
+{
+    if (inIndex != 4)
+        return sTextFiles[inIndex];
+    std::string a(600, 'a'), b(511, 'b'), c(509, 'c');
+    return "{2_History}\n" + a + "\n" + b + "{3_Effect:<Effect2>}\nafter\n" + c + "\xc3\xbc\xc3\xbc\n{0_Hints}\n" + b +
+           "\n\n";
+}
+
+FSFileSpec TextFile(unsigned long inIndex)
+{
+    FSFileSpec theFile;
+    theFile.SetVolume(gStartupVolume);
+    theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
+    theFile.SetFile(UString(("smtext" + std::to_string(inIndex) + ".lcl").c_str()));
+    return theFile;
+}
+
+// every effect's and condition's name and texts, every player's name
+void TextElements(std::vector<std::string>& outLines)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    for (EESMEffect* e : m->mEffects)
+        outLines.push_back("  effect " + Num(e->mID) + " " + (const char*)e->mName + " |" + (const char*)e->mDescription +
+                           "|" + (const char*)e->mMessage + "|" + (const char*)e->mNewName + "|");
+    for (EESMCondition* c : m->mConditions)
+        outLines.push_back("  condition " + Num(c->mID) + " " + (const char*)c->mName + " |" + (const char*)c->mChatText +
+                           "|");
+    std::string s = "  players";
+    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++)
+        s += std::string(" |") + (gWorld.GetPlayer(p) != NULL ? (const char*)gWorld.GetPlayer(p)->mName : "-");
+    outLines.push_back(s);
+}
+
+// sm text | sm export | sm import FILE KIND VALIDATE
+void ScenarioTextStep(const std::vector<std::string>& w, std::vector<std::string>& outLines)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    const std::string& theOp = w[1];
+    if (theOp == "text") {   // sm text: types and texts on the effects and conditions the script left
+        struct {
+            unsigned long mType, mAction;
+            const char* mText;
+        } theEffects[] = {{kSMEffectMedia, kSMMediaActionChangeText, "Briefing \xc3\xbc\nsecond line"},
+                          {kSMEffectMedia, kSMMediaActionSendDialogue, "Hello \xe6\x97\xa5\xe6\x9c\xac"},
+                          {kSMEffectObject, kSMObjectActionClassName, "Class X"},
+                          {kSMEffectMedia, kSMMediaActionSendChatMessage, "chat msg"}};
+        for (unsigned long i = 1; i < m->mEffects.size() && i <= 4; i++) {
+            EESMEffect* e = m->mEffects[i];
+            e->mType = theEffects[i - 1].mType;
+            if (e->mType == kSMEffectMedia)
+                e->mMediaAction = theEffects[i - 1].mAction;
+            else
+                e->mObjectAction = theEffects[i - 1].mAction;
+            e->mDescription = "desc only";
+            e->mMessage = "message only";
+            e->mNewName = "new name only";
+            if (e->mType == kSMEffectObject)
+                e->mNewName = theEffects[i - 1].mText;
+            else if (theEffects[i - 1].mAction == kSMMediaActionChangeText)
+                e->mDescription = theEffects[i - 1].mText;
+            else
+                e->mMessage = theEffects[i - 1].mText;
+        }
+        const char* theChats[] = {"gg", "multi\nline", "not exported", ""};
+        for (unsigned long i = 1; i < m->mConditions.size() && i <= 4; i++) {
+            EESMCondition* c = m->mConditions[i];
+            c->mType = i == 3 ? 2 : kSMConditionChatMessageContains;
+            c->mChatText = theChats[i - 1];
+        }
+        TextElements(outLines);
+        return;
+    }
+    char theWrite[] = "w";
+    char theRead[] = "r";
+    if (theOp == "export") {   // sm export: ExportText's result and the file's lines
+        FSFileSpec theFile = TextFile(9);
+        long theResult = theFile.FOpen(theWrite) == 0 ? m->ExportText(theFile) : -1;
+        theFile.Close();
+        outLines.push_back("  export " + std::to_string(theResult));
+        char theBuffer[0x400];
+        if (theFile.FOpen(theRead) == 0) {
+            while (fgets(theBuffer, sizeof(theBuffer), (FILE*)theFile) != NULL) {
+                std::string theLine(theBuffer);
+                while (!theLine.empty() && (theLine.back() == '\n' || theLine.back() == '\r'))
+                    theLine.pop_back();
+                outLines.push_back("  | " + theLine);
+            }
+            theFile.Close();
+        }
+        return;
+    }
+    // sm import FILE KIND VALIDATE: ImportTriggerText over file FILE (sTextFiles); its result, the errors, the texts
+    unsigned long theIndex = (unsigned long)atol(w[2].c_str());
+    FSFileSpec theFile = TextFile(theIndex);
+    if (theFile.FOpen(theWrite) == 0) {
+        fputs(TextFileContent(theIndex).c_str(), (FILE*)theFile);
+        theFile.Close();
+    }
+    m->mImportErrors.clear();
+    long theResult = -1;
+    if (theFile.FOpen(theRead) == 0)
+        theResult = m->ImportTriggerText(theFile, (unsigned long)atol(w[3].c_str()), atol(w[4].c_str()) != 0);
+    theFile.Close();
+    outLines.push_back("  import " + w[2] + " " + w[3] + " " + w[4] + " result " + std::to_string(theResult));
+    for (const UWideString& e : m->mImportErrors)
+        outLines.push_back(std::string("  error ") + (const char*)e);
+    TextElements(outLines);
+}
+
 // sm OP LIST [INDEX]: LIST 0 triggers, 1 conditions, 2 effects, 3 objects, 4 areas; OP new, sort, up, down, delete,
 // dup; "sm fill": every element's index references set from its place (each list's size modulo), two trigger entries
 // of each kind, a timed entry per effect and a pending copy of effect 1; "sm state": the state above
@@ -572,6 +709,10 @@ void ScenarioListStep(const std::vector<std::string>& w, std::vector<std::string
     unsigned long i = w.size() > 3 ? (unsigned long)atol(w[3].c_str()) : 0;
     if (theOp == "state") {
         ScenarioListState(outLines);
+        return;
+    }
+    if (theOp == "text" || theOp == "export" || theOp == "import") {
+        ScenarioTextStep(w, outLines);
         return;
     }
     if (theOp == "fill") {

@@ -2340,3 +2340,347 @@ step 282 sm state
   areas |[0]Off Map |[0]Previous Location |[4]<Area0_Copy> |[1]<Area0> |[3]<Area2>
   user areas |[4]<Area0_Copy> |[1]<Area0> |[3]<Area2>
   find 0:Always True/Do Nothing/<NONE>/0 1:<<NONE> Exists>/-/<NONE>/2 2:<<NONE> Exists>/<Effect1>/<NONE>/1 3:-/<Effect2>/-/-2 4:-/<Effect3>/<NONE_Copy>/4 5:<Condition4>/<Effect0_Copy>/<NONE_Copy>/5 6:<Condition5>/-/<NONE>/3 7:<<NONE_Copy> Exists>/-/<NONE_Copy>/6
+step 283 sm text
+  effect 0 Do Nothing ||||
+  effect 5 <Effect0_Copy> |Briefing ü
+second line|message only|new name only|
+  effect 2 <Effect1> |desc only|Hello 日本|new name only|
+  effect 3 <Effect2> |desc only|message only|Class X|
+  effect 4 <Effect3> |desc only|chat msg|new name only|
+  condition 0 Always True ||
+  condition 9 <Condition3_Copy> |gg|
+  condition 6 <Condition5> |multi
+line|
+  condition 5 <Condition4> |not exported|
+  condition 10 <Condition9> ||
+  condition 11 <<NONE> Exists> ||
+  condition 2 <<NONE> Exists> ||
+  condition 1 <<NONE> Exists> ||
+  condition 7 <<NONE_Copy> Exists> ||
+  condition 8 <<NONE_Copy> Exists> ||
+  condition 12 <<NONE_Copy> Exists> ||
+  players |World |Human |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer
+step 284 sm export
+  export 0
+  | {1_After Math}
+  | 
+  | 
+  | {0_Hints}
+  | 
+  | 
+  | {3_Instructions}
+  | 
+  | 
+  | {2_History}
+  | 
+  | 
+  | {5_Effect:<Effect0_Copy>}
+  | Briefing ü
+  | second line
+  | 
+  | {2_Effect:<Effect1>}
+  | Hello 日本
+  | 
+  | {3_Effect:<Effect2>}
+  | Class X
+  | 
+  | {4_Effect:<Effect3>}
+  | chat msg
+  | 
+  | {9_Condition:<Condition3_Copy>}
+  | gg
+  | 
+  | {6_Condition:<Condition5>}
+  | multi
+  | line
+  | 
+  | {1_Player Name:Human}
+  | {2_Player Name:Computer}
+  | {3_Player Name:Computer}
+  | {4_Player Name:Computer}
+  | {5_Player Name:Computer}
+  | {6_Player Name:Computer}
+  | {7_Player Name:Computer}
+  | {8_Player Name:Computer}
+  | {9_Player Name:Computer}
+  | {10_Player Name:Computer}
+  | {11_Player Name:Computer}
+  | {12_Player Name:Computer}
+  | {13_Player Name:Computer}
+  | {14_Player Name:Computer}
+  | {15_Player Name:Computer}
+  | {16_Player Name:Computer}
+step 285 sm import 0 1 1
+  import 0 1 1 result 0
+  effect 0 Do Nothing ||||
+  effect 5 <Effect0_Copy> |New briefing|message only|new name only|
+  effect 2 <Effect1> |desc only|New dialogue|new name only|
+  effect 3 <Effect2> |desc only|message only|Class X|
+  effect 4 <Effect3> |desc only|chat msg|new name only|
+  condition 0 Always True ||
+  condition 9 <Condition3_Copy> |new chat|
+  condition 6 <Condition5> |multi
+line|
+  condition 5 <Condition4> |not exported|
+  condition 10 <Condition9> ||
+  condition 11 <<NONE> Exists> ||
+  condition 2 <<NONE> Exists> ||
+  condition 1 <<NONE> Exists> ||
+  condition 7 <<NONE_Copy> Exists> ||
+  condition 8 <<NONE_Copy> Exists> ||
+  condition 12 <<NONE_Copy> Exists> ||
+  players |World |Alice |Bob ü |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer
+step 286 sm export
+  export 0
+  | {1_After Math}
+  | Aftermath text
+  | line two
+  | 
+  | {0_Hints}
+  | Hints ü
+  | 
+  | {3_Instructions}
+  | Do this.
+  | 
+  | 
+  | 
+  | {2_History}
+  | Long ago
+  | 
+  | {5_Effect:<Effect0_Copy>}
+  | New briefing
+  | 
+  | {2_Effect:<Effect1>}
+  | New dialogue
+  | 
+  | {3_Effect:<Effect2>}
+  | Class X
+  | 
+  | {4_Effect:<Effect3>}
+  | chat msg
+  | 
+  | {9_Condition:<Condition3_Copy>}
+  | new chat
+  | 
+  | {6_Condition:<Condition5>}
+  | multi
+  | line
+  | 
+  | {1_Player Name:Alice}
+  | {2_Player Name:Bob ü}
+  | {3_Player Name:Computer}
+  | {4_Player Name:Computer}
+  | {5_Player Name:Computer}
+  | {6_Player Name:Computer}
+  | {7_Player Name:Computer}
+  | {8_Player Name:Computer}
+  | {9_Player Name:Computer}
+  | {10_Player Name:Computer}
+  | {11_Player Name:Computer}
+  | {12_Player Name:Computer}
+  | {13_Player Name:Computer}
+  | {14_Player Name:Computer}
+  | {15_Player Name:Computer}
+  | {16_Player Name:Computer}
+step 287 sm import 1 1 1
+  import 1 1 1 result 9
+  error The text file effect name (3_Effect:Renamed) does not match the scenario's effect name of (<Effect2>).
+  error Invalid Player Number(0) for this Scenario.
+  error Invalid Player Number(99) for this Scenario.
+  error {7_Bogus} is an invalid token
+  error (99) is an invalid effect id for token {99_Effect:x}
+  error {0_Effect:Do Nothing} is an invalid effect type to be a token.
+  error (99) is an invalid condition ID for token {99_Condition:x}
+  error {5_Condition:<Condition4>} is an invalid condition type to be a token.
+  error The text file effect name (6_Condition:Wrong) does not match the scenario's condition name of (<Condition5>).
+  error {ü3_Effect:x} is an invalid effect type to be a token.
+  error {x} is an invalid token
+  effect 0 Do Nothing ||||
+  effect 5 <Effect0_Copy> |New briefing|message only|new name only|
+  effect 2 <Effect1> |desc only|New dialogue|new name only|
+  effect 3 <Effect2> |desc only|message only|Class X|
+  effect 4 <Effect3> |desc only|chat msg|new name only|
+  condition 0 Always True ||
+  condition 9 <Condition3_Copy> |new chat|
+  condition 6 <Condition5> |multi
+line|
+  condition 5 <Condition4> |not exported|
+  condition 10 <Condition9> ||
+  condition 11 <<NONE> Exists> ||
+  condition 2 <<NONE> Exists> ||
+  condition 1 <<NONE> Exists> ||
+  condition 7 <<NONE_Copy> Exists> ||
+  condition 8 <<NONE_Copy> Exists> ||
+  condition 12 <<NONE_Copy> Exists> ||
+  players |World |Alice |Bob ü |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer
+step 288 sm import 1 1 0
+  import 1 1 0 result 9
+  effect 0 Do Nothing ||||
+  effect 5 <Effect0_Copy> |New briefing|message only|new name only|
+  effect 2 <Effect1> |desc only|New dialogue|new name only|
+  effect 3 Renamed |desc only|message only|Renamed class|
+  effect 4 <Effect3> |desc only|chat 4|new name only|
+  condition 0 Always True ||
+  condition 9 <Condition3_Copy> |new chat|
+  condition 6 <Condition5> |chat 6|
+  condition 5 <Condition4> |not exported|
+  condition 10 <Condition9> ||
+  condition 11 <<NONE> Exists> ||
+  condition 2 <<NONE> Exists> ||
+  condition 1 <<NONE> Exists> ||
+  condition 7 <<NONE_Copy> Exists> ||
+  condition 8 <<NONE_Copy> Exists> ||
+  condition 12 <<NONE_Copy> Exists> ||
+  players |World |Alice |Bob ü |Carol |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer
+step 289 sm import 2 0 1
+  import 2 0 1 result 9
+  error The text file effect name (2_Effect:<Effect1>) does not match the scenario's effect name of (<Effect1>).
+  error (9) is an invalid effect id for token {9_Condition:<Condition3_Copy>}
+  effect 0 Do Nothing ||||
+  effect 5 <Effect0_Copy> |New briefing|message only|new name only|
+  effect 2 <Effect1> |desc only|New dialogue|new name only|
+  effect 3 Renamed |desc only|message only|Renamed class|
+  effect 4 <Effect3> |desc only|chat 4|new name only|
+  condition 0 Always True ||
+  condition 9 <Condition3_Copy> |new chat|
+  condition 6 <Condition5> |chat 6|
+  condition 5 <Condition4> |not exported|
+  condition 10 <Condition9> ||
+  condition 11 <<NONE> Exists> ||
+  condition 2 <<NONE> Exists> ||
+  condition 1 <<NONE> Exists> ||
+  condition 7 <<NONE_Copy> Exists> ||
+  condition 8 <<NONE_Copy> Exists> ||
+  condition 12 <<NONE_Copy> Exists> ||
+  players |World |Alice |Bob ü |Carol |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer
+step 290 sm import 2 0 0
+  import 2 0 0 result 9
+  effect 0 Do Nothing ||||
+  effect 5 <Effect0_Copy> |kind zero|message only|new name only|
+  effect 2 Effect:<Effect1> |desc only|kind zero two|new name only|
+  effect 3 Renamed |desc only|message only|Renamed class|
+  effect 4 <Effect3> |desc only|chat 4|new name only|
+  condition 0 Always True ||
+  condition 9 <Condition3_Copy> |new chat|
+  condition 6 <Condition5> |chat 6|
+  condition 5 <Condition4> |not exported|
+  condition 10 <Condition9> ||
+  condition 11 <<NONE> Exists> ||
+  condition 2 <<NONE> Exists> ||
+  condition 1 <<NONE> Exists> ||
+  condition 7 <<NONE_Copy> Exists> ||
+  condition 8 <<NONE_Copy> Exists> ||
+  condition 12 <<NONE_Copy> Exists> ||
+  players |World |Alice |Bob ü |Carol |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer
+step 291 sm import 3 1 1
+  import 3 1 1 result 0
+  effect 0 Do Nothing ||||
+  effect 5 <Effect0_Copy> |kind zero|message only|new name only|
+  effect 2 Effect:<Effect1> |desc only|kind zero two|new name only|
+  effect 3 Renamed |desc only|message only|Renamed class|
+  effect 4 <Effect3> |desc only|chat 4|new name only|
+  condition 0 Always True ||
+  condition 9 <Condition3_Copy> |new chat|
+  condition 6 <Condition5> |chat 6|
+  condition 5 <Condition4> |not exported|
+  condition 10 <Condition9> ||
+  condition 11 <<NONE> Exists> ||
+  condition 2 <<NONE> Exists> ||
+  condition 1 <<NONE> Exists> ||
+  condition 7 <<NONE_Copy> Exists> ||
+  condition 8 <<NONE_Copy> Exists> ||
+  condition 12 <<NONE_Copy> Exists> ||
+  players |World |Alice |Bob ü |Carol |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer
+step 292 sm import 4 1 1
+  import 4 1 1 result 9
+  error The text file effect name (3_Effect:<Effect2>) does not match the scenario's effect name of (Renamed).
+  effect 0 Do Nothing ||||
+  effect 5 <Effect0_Copy> |kind zero|message only|new name only|
+  effect 2 Effect:<Effect1> |desc only|kind zero two|new name only|
+  effect 3 Renamed |desc only|message only|Renamed class|
+  effect 4 <Effect3> |desc only|chat 4|new name only|
+  condition 0 Always True ||
+  condition 9 <Condition3_Copy> |new chat|
+  condition 6 <Condition5> |chat 6|
+  condition 5 <Condition4> |not exported|
+  condition 10 <Condition9> ||
+  condition 11 <<NONE> Exists> ||
+  condition 2 <<NONE> Exists> ||
+  condition 1 <<NONE> Exists> ||
+  condition 7 <<NONE_Copy> Exists> ||
+  condition 8 <<NONE_Copy> Exists> ||
+  condition 12 <<NONE_Copy> Exists> ||
+  players |World |Alice |Bob ü |Carol |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer
+step 293 sm import 4 1 0
+  import 4 1 0 result 0
+  effect 0 Do Nothing ||||
+  effect 5 <Effect0_Copy> |kind zero|message only|new name only|
+  effect 2 Effect:<Effect1> |desc only|kind zero two|new name only|
+  effect 3 <Effect2> |desc only|message only|after
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccüü|
+  effect 4 <Effect3> |desc only|chat 4|new name only|
+  condition 0 Always True ||
+  condition 9 <Condition3_Copy> |new chat|
+  condition 6 <Condition5> |chat 6|
+  condition 5 <Condition4> |not exported|
+  condition 10 <Condition9> ||
+  condition 11 <<NONE> Exists> ||
+  condition 2 <<NONE> Exists> ||
+  condition 1 <<NONE> Exists> ||
+  condition 7 <<NONE_Copy> Exists> ||
+  condition 8 <<NONE_Copy> Exists> ||
+  condition 12 <<NONE_Copy> Exists> ||
+  players |World |Alice |Bob ü |Carol |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer |Computer
+step 294 sm export
+  export 0
+  | {1_After Math}
+  | Aftermath text
+  | line two
+  | 
+  | {0_Hints}
+  | bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  | 
+  | {3_Instructions}
+  | Do this.
+  | 
+  | 
+  | 
+  | {2_History}
+  | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  | bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  | 
+  | {5_Effect:<Effect0_Copy>}
+  | kind zero
+  | 
+  | {2_Effect:Effect:<Effect1>}
+  | kind zero two
+  | 
+  | {3_Effect:<Effect2>}
+  | after
+  | cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccüü
+  | 
+  | {4_Effect:<Effect3>}
+  | chat 4
+  | 
+  | {9_Condition:<Condition3_Copy>}
+  | new chat
+  | 
+  | {6_Condition:<Condition5>}
+  | chat 6
+  | 
+  | {1_Player Name:Alice}
+  | {2_Player Name:Bob ü}
+  | {3_Player Name:Carol}
+  | {4_Player Name:Computer}
+  | {5_Player Name:Computer}
+  | {6_Player Name:Computer}
+  | {7_Player Name:Computer}
+  | {8_Player Name:Computer}
+  | {9_Player Name:Computer}
+  | {10_Player Name:Computer}
+  | {11_Player Name:Computer}
+  | {12_Player Name:Computer}
+  | {13_Player Name:Computer}
+  | {14_Player Name:Computer}
+  | {15_Player Name:Computer}
+  | {16_Player Name:Computer}

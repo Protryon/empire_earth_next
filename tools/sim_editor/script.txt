@@ -280,3 +280,15 @@ sm new 3
 sm dup 3 1
 sm sort 3
 sm state
+sm text
+sm export
+sm import 0 1 1
+sm export
+sm import 1 1 1
+sm import 1 1 0
+sm import 2 0 1
+sm import 2 0 0
+sm import 3 1 1
+sm import 4 1 1
+sm import 4 1 0
+sm export
