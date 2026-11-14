@@ -1949,6 +1949,315 @@ constexpr static const uint32_t EE_SCREENS_GAME_TYPE_SCENARIO = 2;
 /// [`game_type_action`]: back to a random map: the loaded game's options cleared, sent and shown again.
 constexpr static const uint32_t EE_SCREENS_GAME_TYPE_RANDOM_MAP = 3;
 
+/// `mErrorCriticalSection->Enter()` (a 1) or `Leave()` (a 0).
+constexpr static const uint32_t EE_SCREENS_MF_OP_ERROR_LOCK = 1;
+
+/// `gWorld.GetCurrentPlayer() != NULL`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_HAS_PLAYER = 2;
+
+/// The current player's selected group exists and has a first unit.
+constexpr static const uint32_t EE_SCREENS_MF_OP_GROUP_HAS_FIRST = 3;
+
+/// The current player's `mSelectedViewedUnit != NULL`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_HAS_VIEWED = 4;
+
+/// `gUnitSelected = a != 0`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_SET_UNIT_SELECTED = 5;
+
+/// The form's field a (`EE_SCREENS_MF_FIELD_*`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_FIELD = 6;
+
+/// The form's field a = b.
+constexpr static const uint32_t EE_SCREENS_MF_OP_SET_FIELD = 7;
+
+/// The error log's (control 0x1b) `SetLine(a, mStrings[a])`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_LOG_LINE = 8;
+
+/// `gViewport.GetViewRectangle()` into io.f (left, top, right, bottom).
+constexpr static const uint32_t EE_SCREENS_MF_OP_VIEW_RECT = 9;
+
+/// `GetManager()->GetCurrentForm() == this`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_IS_CURRENT = 10;
+
+/// `GetManager()->AddDirtyRectangle(io.f, this)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_ADD_DIRTY = 11;
+
+/// `mPoll->Poll()`: the elapsed ticks.
+constexpr static const uint32_t EE_SCREENS_MF_OP_POLL = 12;
+
+/// The current panel group's (`mGroups[mCurrentGroup]`) call a (`EE_SCREENS_MF_GROUP_*`); `WantsRefresh`'s answer.
+constexpr static const uint32_t EE_SCREENS_MF_OP_GROUP = 13;
+
+/// `GetMouseCaptured() != NULL`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MOUSE_CAPTURED = 14;
+
+/// `mScroll->Update(gMouse->mPosition)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_SCROLL = 15;
+
+/// `gUnitPicker.PickUnit(gMouse->mPosition, 0)`, held by the host: 0 none, 1 a unit, 2 a wall.
+constexpr static const uint32_t EE_SCREENS_MF_OP_PICK = 16;
+
+/// The picked unit's tile into io.n.
+constexpr static const uint32_t EE_SCREENS_MF_OP_PICKED_TILE = 17;
+
+/// `EEPointUnitOrTileXY(gMouse->mPosition, ..., true)`'s tile into io.n.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MOUSE_TILE = 18;
+
+/// The picked unit's `Dereference()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_RELEASE = 19;
+
+/// `EEFindGateWall((a, b), io.n[0])`: found; the direction back in io.n[0].
+constexpr static const uint32_t EE_SCREENS_MF_OP_FIND_GATE_WALL = 20;
+
+/// `EEGhostUnit::CreateGate` of the gate mode's class and player, then `PreviewGate(mouse, io.n[0])`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_PREVIEW_GATE = 21;
+
+/// `gWorld.mGhostUnitsLock->Enter()` (a 1) or `Leave()` (a 0).
+constexpr static const uint32_t EE_SCREENS_MF_OP_GHOST_LOCK = 22;
+
+/// `gWorld.ClearGhostUnits()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CLEAR_GHOSTS = 23;
+
+/// The wall mode's `mStart` into io.f[0..2].
+constexpr static const uint32_t EE_SCREENS_MF_OP_WALL_START = 24;
+
+/// `EEPreviewWall` of the a tiles at b (x, y pairs of i32) for the wall mode's technology and player.
+constexpr static const uint32_t EE_SCREENS_MF_OP_PREVIEW_WALL = 25;
+
+/// `EEPreviewPlacement(gMouse->mPosition)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_PREVIEW_PLACEMENT = 26;
+
+/// `UIForm::CopyData()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_BASE_COPY_DATA = 27;
+
+/// The current player's `mResourceCaps[a + 2]`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_RESOURCE = 28;
+
+/// `atoi` of the label a's text.
+constexpr static const uint32_t EE_SCREENS_MF_OP_LABEL_INT = 29;
+
+/// The label a's `SetText((long)b)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_LABEL_SET_LONG = 30;
+
+/// The current player's `GetTotalPopulation(false, false)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_POPULATION = 31;
+
+/// The current player's `GetPopulationLimit(false)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_POPULATION_LIMIT = 32;
+
+/// The held text = the a bytes at b (UTF-8).
+constexpr static const uint32_t EE_SCREENS_MF_OP_TEXT_SET = 33;
+
+/// The held text's length in bytes; with b not 0, its bytes copied to b (a bytes at most).
+constexpr static const uint32_t EE_SCREENS_MF_OP_TEXT_GET = 34;
+
+/// The label a's text differs from the held text.
+constexpr static const uint32_t EE_SCREENS_MF_OP_LABEL_DIFFERS = 35;
+
+/// The label a's `SetText(held text)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_LABEL_SET_TEXT = 36;
+
+/// `gWorld.mVictoryEnabled`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_VICTORY_ENABLED = 37;
+
+/// `gWorld.GetNumTeams()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_NUM_TEAMS = 38;
+
+/// The team a's `mVictoryCondition->GetWonderCountdown(io.n[0])`: the winner (a pointer, 0 for none).
+constexpr static const uint32_t EE_SCREENS_MF_OP_COUNTDOWN = 39;
+
+/// The control a's `SetDisplayMode(b)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_SET_MODE = 40;
+
+/// The control a's `GetDisplayMode()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MODE = 41;
+
+/// The label a's text colour = the player b's (a pointer) `mColor`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_LABEL_PLAYER_COLOR = 42;
+
+/// The held text = `IDS_TIME_LEFT_UNTIL_WINS_WONDER_VICTORY` printed with the player a's (a pointer) name and b.
+constexpr static const uint32_t EE_SCREENS_MF_OP_TEXT_WONDER = 43;
+
+/// `gWorld.mInCinematic`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_IN_CINEMATIC = 44;
+
+/// The held text = `gPhysics->GetTimeString()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_TEXT_TIME = 45;
+
+/// The held text = the string a (`gResource->GetString`).
+constexpr static const uint32_t EE_SCREENS_MF_OP_TEXT_STRING = 46;
+
+/// `gRasterizer->GetFramesPerSecond(GetManager()->GetScreen())` into io.f[0].
+constexpr static const uint32_t EE_SCREENS_MF_OP_FPS = 47;
+
+/// `gCommunications != NULL`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_HAS_COMMS = 48;
+
+/// `gCommunications->GetIsGamePaused()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_COMMS_PAUSED = 49;
+
+/// `gWorld.mTeams.size() > 0`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_HAS_TEAMS = 50;
+
+/// `gSoundManager->SetIsMuted(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_SET_MUTED = 51;
+
+/// `gSoundManager->GetIsMuted()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_MUTED = 52;
+
+/// The current player's `mGameResult`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_GAME_RESULT = 53;
+
+/// `SetPauseText(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_PAUSE_TEXT = 54;
+
+/// The control a's `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_SET_DIRTY = 55;
+
+/// `gWorld.mLagStatus`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_LAG_STATUS = 56;
+
+/// The bitmap control a's bitmap colour = `gWorld.mPlayers[b]->mColor`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_LAG_COLOR = 57;
+
+/// The scenario's instructions are not empty.
+constexpr static const uint32_t EE_SCREENS_MF_OP_HAS_INSTRUCTIONS = 58;
+
+/// `EEUIECLEFormManager::GetEntryCount()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_LOG_ENTRIES = 59;
+
+/// `UpdateCursorKind()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_UPDATE_CURSOR = 60;
+
+/// The chat line a's `Display` of the call's colour, name, text and flags: the characters shown.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CHAT_DISPLAY = 61;
+
+/// The chat line a's `Copy` of the line a + 1.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CHAT_COPY = 62;
+
+/// The call's text's `GetLength()` (characters).
+constexpr static const uint32_t EE_SCREENS_MF_OP_CHAT_LENGTH = 63;
+
+/// The call's text = its rest after a characters (and the line feed after them); its name = "".
+constexpr static const uint32_t EE_SCREENS_MF_OP_CHAT_REST = 64;
+
+/// The information's scrolling text control (0xd3) exists.
+constexpr static const uint32_t EE_SCREENS_MF_OP_INFO_HAS_TEXT = 65;
+
+/// The scrolling text's `SetText` of the message's text, then shown.
+constexpr static const uint32_t EE_SCREENS_MF_OP_INFO_SET_TEXT = 66;
+
+/// The information's portrait control (0xdf) exists.
+constexpr static const uint32_t EE_SCREENS_MF_OP_INFO_HAS_PORTRAIT = 67;
+
+/// The message's unit type has a class and the current player's upgrade of it a button object.
+constexpr static const uint32_t EE_SCREENS_MF_OP_INFO_HAS_BUTTON = 68;
+
+/// The portrait = the button object's face (a new bitmap), shown, its opacity set again.
+constexpr static const uint32_t EE_SCREENS_MF_OP_INFO_PORTRAIT = 69;
+
+/// `EELoadSound("Sounds\\" + the message's sound, 0x31, io.n[0], io.n[1], 1)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_INFO_SOUND = 70;
+
+/// `gSoundManager->GetTotalPlayTimeInMilli(a)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_PLAY_TIME = 71;
+
+/// The message's `mDuration`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_INFO_DURATION = 72;
+
+/// The scrolling text's `ScrollText((unsigned long)a, (unsigned long)b)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_INFO_SCROLL = 73;
+
+/// The scrolling text's rectangle's bottom and top into io.f[0..2].
+constexpr static const uint32_t EE_SCREENS_MF_OP_INFO_RECT = 74;
+
+/// `SetChatTop(a)`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_CHAT_TOP = 75;
+
+/// `HideMessages()`.
+constexpr static const uint32_t EE_SCREENS_MF_OP_HIDE_MESSAGES = 76;
+
+/// `mStringsChanged`.
+constexpr static const int64_t EE_SCREENS_MF_FIELD_STRINGS_CHANGED = 1;
+
+/// `mElapsed`.
+constexpr static const int64_t EE_SCREENS_MF_FIELD_ELAPSED = 2;
+
+/// `mRefreshGroup`.
+constexpr static const int64_t EE_SCREENS_MF_FIELD_REFRESH_GROUP = 3;
+
+/// `mUIState`.
+constexpr static const int64_t EE_SCREENS_MF_FIELD_UI_STATE = 4;
+
+/// `mBuildGate.mDirection`.
+constexpr static const int64_t EE_SCREENS_MF_FIELD_GATE_DIRECTION = 5;
+
+/// `mBuildWall.mState`.
+constexpr static const int64_t EE_SCREENS_MF_FIELD_WALL_STATE = 6;
+
+/// `mClockMode`.
+constexpr static const int64_t EE_SCREENS_MF_FIELD_CLOCK_MODE = 7;
+
+/// `mIsCursorLocked`.
+constexpr static const int64_t EE_SCREENS_MF_FIELD_CURSOR_LOCKED = 8;
+
+/// `Reset()`.
+constexpr static const int64_t EE_SCREENS_MF_GROUP_RESET = 0;
+
+/// `Refresh()`.
+constexpr static const int64_t EE_SCREENS_MF_GROUP_REFRESH = 1;
+
+/// `WantsRefresh() == true`.
+constexpr static const int64_t EE_SCREENS_MF_GROUP_WANTS_REFRESH = 2;
+
+/// The first resource label (`GetControl(i + 6)`).
+constexpr static const int64_t EE_SCREENS_MF_CTL_RESOURCE = 6;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_WIN_LOSE = 13;
+
+/// The first wonder countdown label (to 0x12).
+constexpr static const int64_t EE_SCREENS_MF_CTL_WONDER = 14;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_POPULATION = 24;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_MINI_MAP = 26;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_CHAT_LINE1 = 101;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_CHAT_LINE7 = 107;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_GAME_CLOCK = 108;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_BRIEFING = 109;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_DIALOG_PORTRAIT = 223;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_BRIEFING_ALERT = 235;
+
+/// The last lag icon (player 8); player 1's is 0xfc.
+constexpr static const int64_t EE_SCREENS_MF_CTL_LAG_LAST = 245;
+
+constexpr static const int64_t EE_SCREENS_MF_CTL_PREVIOUS_MESSAGES = 253;
+
+/// The error log's lines (`mStrings`).
+constexpr static const int64_t EE_SCREENS_MF_ERROR_LINES = 36;
+
+/// `mUIState`: the wall mode, the gate mode, no scrolling.
+constexpr static const int64_t EE_SCREENS_MF_STATE_WALL = 6;
+
+constexpr static const int64_t EE_SCREENS_MF_STATE_GATE = 11;
+
+constexpr static const int64_t EE_SCREENS_MF_STATE_NO_SCROLL = 17;
+
+constexpr static const int64_t EE_SCREENS_MF_IDS_FPS = 30324;
+
+constexpr static const int64_t EE_SCREENS_MF_IDS_GAME_PAUSED = 30614;
+
+/// `kDisplayModeHidden` / `kDisplayModeShown`.
+constexpr static const int64_t EE_SCREENS_MF_HIDDEN = 0;
+
+constexpr static const int64_t EE_SCREENS_MF_SHOWN = 1;
+
 constexpr static const uint32_t EE_SCREENS_MG_CANCEL_UI_MODE = 2817;
 
 /// The media dump (`EEUIEMGDumpLoadedMedia(replace, leaks)`): the main screen's two hot keys, the scenario editor's.
@@ -4506,6 +4815,12 @@ struct EeScreensHudUnit {
   bool using_carbon;
 };
 
+/// The host's in/out values of one op.
+struct EeScreensMainFormIo {
+  float f[4];
+  int64_t n[2];
+};
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
@@ -4895,6 +5210,18 @@ void ee_screens_lobby_update_form();
 
 /// `LobbyShowTransferProgress`: a client's file transfer on its row.
 void ee_screens_lobby_show_transfer_progress(uint8_t slot, uint8_t progress);
+
+/// `EEUIFMainGame::CopyData` over the host's call record: `UIForm::CopyData`'s result.
+int64_t ee_screens_main_form_copy_data(void *call);
+
+/// `EEUIFMainGame::RefreshStatus` over the host's call record.
+void ee_screens_main_form_refresh_status(void *call);
+
+/// `EEUIFMainGame::DisplayChatLine` of the host's call record's colour, name, text and flags.
+void ee_screens_main_form_chat_line(void *call);
+
+/// `EEUIFMainGame::ShowInformation` of the host's call record's dialog message.
+void ee_screens_main_form_show_information(void *call);
 
 /// `EEScreenEvent::ProcessEvent`: the screen event `event` on `form` (`UIForm*`) from `entity`; `kErrorOK` (0).
 long ee_screens_event(uint32_t event,

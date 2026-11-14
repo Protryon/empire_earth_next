@@ -134,6 +134,9 @@ pub mod lobby_form;
 #[cfg(not(test))]
 mod lobby_form_ffi;
 pub mod lobby_options;
+pub mod main_form;
+#[cfg(not(test))]
+mod main_form_ffi;
 pub mod main_game;
 #[cfg(not(test))]
 mod main_game_ffi;

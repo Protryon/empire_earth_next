@@ -608,54 +608,33 @@ void EEUIFMainGame::Activate()
     this->RefreshSavedGroups();
 }
 
+// One call of the form's per-frame work in Rust (ee_screens main_form.rs, host EEUIFMainGame::HostOp): the form,
+// the picked unit, the held text, the chat line's colour, name, text and flags, the dialog message
+struct EEUIFMGFormCall {
+    EEUIFMainGame* mForm;
+    EEUnit* mPicked;
+    UWideString mText;
+    const GEColor* mColor;
+    UWideString mName;
+    UWideString mChat;
+    unsigned long mFlags;
+    const EESMDialogMessage* mMessage;
+    explicit EEUIFMGFormCall(EEUIFMainGame* inForm)
+        : mForm(inForm), mPicked(NULL), mColor(NULL), mFlags(0), mMessage(NULL) {}
+};
+
 // FUNCTION: EXE 0x6649a2
 // Shows a chat message in the next free chat line (scrolling the lines up when full), wrapping the rest of a
-// long message onto further lines
+// long message onto further lines (ee_screens main_form.rs)
 void EEUIFMainGame::DisplayChatLine(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                                     unsigned long inFlags)
 {
-    UWideString theRest;
-    UWideString theName(inName);
-    unsigned long theShown;
-    long i = 0x6a;
-    bool theFree;
-
-    if (this->GetControl(kMainGameChatLine7)->GetDisplayMode() == kDisplayModeHidden) {
-        for (; i >= 0x65; i--) {
-            theFree = this->GetControl(i)->GetDisplayMode() == kDisplayModeHidden;
-            if (!theFree) {
-                theShown = static_cast<EEUICChatLine*>(this->GetControl(i + 1))->Display(inColor, inName, inText, inFlags);
-                break;
-            }
-        }
-        if (theFree != true)
-            goto theCheck;
-        theShown = static_cast<EEUICChatLine*>(this->GetControl(kMainGameChatLine1))->Display(inColor, inName, inText, inFlags);
-    } else {
-        for (; i >= 0x65; i--) {
-            theFree = this->GetControl(i)->GetDisplayMode() == kDisplayModeHidden;
-            if (theFree == true)
-                break;
-        }
-        if (theFree == true) {
-            for (; i < 0x6b; i++)
-                (static_cast<EEUICChatLine*>(this->GetControl(i)))->Copy(*static_cast<EEUICChatLine*>(this->GetControl(i + 1)));
-        }
-        if (!theFree) {
-            for (i = 0x65; i < 0x6b; i++)
-                (static_cast<EEUICChatLine*>(this->GetControl(i)))->Copy(*static_cast<EEUICChatLine*>(this->GetControl(i + 1)));
-        }
-        theShown = static_cast<EEUICChatLine*>(this->GetControl(i))->Display(inColor, inName, inText, inFlags);
-    }
-theCheck:
-    if (theShown < inText.GetLength()) {
-        const unsigned char* theNext = PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), theShown);
-        if (PlatMbsNBCmp(theNext, (const unsigned char*)"\n", 1) == 0)
-            theNext = PlatMbsInc(theNext);
-        theRest = reinterpret_cast<const char*>(theNext);
-        theName = "";
-        this->DisplayChatLine(inColor, theName, theRest, inFlags);
-    }
+    EEUIFMGFormCall theCall(this);
+    theCall.mColor = &inColor;
+    theCall.mName = inName;
+    theCall.mChat = inText;
+    theCall.mFlags = inFlags;
+    ee_screens_main_form_chat_line(&theCall);
 }
 
 // FUNCTION: EXE 0x664b1f
@@ -754,126 +733,11 @@ void EEUIFMainGame::Deactivate()
 
 // FUNCTION: EXE 0x664dc4
 // Snapshots the form for drawing: selection state, error log, status refresh each poll, the panel group, edge
-// scrolling and the gate or wall preview of the current mode
+// scrolling and the gate or wall preview of the current mode (ee_screens main_form.rs)
 long EEUIFMainGame::CopyData()
 {
-    GERectangle theView = gViewport.GetViewRectangle();
-    unsigned long theElapsed;
-    long theDirection;
-    EETile* theOther;
-
-    this->mErrorCriticalSection->Enter();
-    if (gWorld.GetCurrentPlayer() != NULL &&
-        ((gWorld.GetCurrentPlayer()->mSelectedGroup != NULL &&
-          gWorld.GetCurrentPlayer()->mSelectedGroup->GetFirstUnit() != NULL) ||
-         gWorld.GetCurrentPlayer()->mSelectedViewedUnit != NULL))
-        gUnitSelected = true;
-    else
-        gUnitSelected = false;
-    if (this->mStringsChanged) {
-        unsigned long i;
-        for (i = 0; i < 0x24; i++) {
-            EEUIFMGErrorLog* theLog = static_cast<EEUIFMGErrorLog*>(this->GetControl(kMainGameErrorLog));
-            theLog->SetLine(i, this->mStrings[i]);
-        }
-        this->mStringsChanged = false;
-    }
-    this->mErrorCriticalSection->Leave();
-    if (this->GetManager()->GetCurrentForm() != this) {
-        theView.SetRight(theView.GetRight() - 1.0f);
-        theView.SetBottom(theView.GetBottom() - 1.0f);
-        this->GetManager()->AddDirtyRectangle(theView, this);
-    }
-    theElapsed = this->mPoll->Poll();
-    if (theElapsed > 0) {
-        this->mElapsed += theElapsed;
-        this->RefreshStatus();
-    }
-    if (this->mRefreshGroup) {
-        this->mGroups[this->mCurrentGroup]->Reset();
-        this->mGroups[this->mCurrentGroup]->Refresh();
-        this->mRefreshGroup = false;
-    } else if (this->mGroups[this->mCurrentGroup]->WantsRefresh() == true || theElapsed > 0) {
-        this->mGroups[this->mCurrentGroup]->Refresh();
-    }
-    if (this->GetMouseCaptured() == NULL && this->mUIState != 0x11)
-        this->mScroll->Update(gMouse->mPosition);
-    switch (this->mUIState) {
-    case 0xb: {
-        EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, 0);
-        long theX;
-        long theY;
-        if (theUnit != NULL && theUnit->mUnitClass->mIsWall) {
-            theX = theUnit->mTileX;
-            theY = theUnit->mTileY;
-        } else {
-            EEPointUnitOrTileXY(gMouse->mPosition, theOther, theX, theY, true);
-        }
-        if (theUnit != NULL)
-            theUnit->Dereference();
-        theDirection = this->mBuildGate.mDirection;
-        EETileCoordinate theTile;
-        theTile.mX = theX;
-        theTile.mY = theY;
-        if (EEFindGateWall(theTile, theDirection)) {
-            EEGhostUnit::CreateGate(0.0f, this->mBuildGate.mUnitClass, gWorld.mPlayers[this->mBuildGate.mPlayer]);
-            EEGhostUnit::PreviewGate(gMouse->mPosition, theDirection);
-            this->mBuildGate.mDirection = theDirection;
-        } else {
-            gWorld.mGhostUnitsLock->Enter();
-            gWorld.ClearGhostUnits();
-            gWorld.mGhostUnitsLock->Leave();
-        }
-        break;
-    }
-    case 6: {
-        std::vector<EETileCoordinate> theTiles;
-        std::vector<GE2DPoint> thePoints;
-        GE2DPoint theEnd;
-        EETile* theUnit;
-        long theX;
-        long theY;
-        unsigned long i;
-        EEPointUnitOrTileXY(gMouse->mPosition, theUnit, theX, theY, true);
-        theEnd.SetX((float)theX);
-        theEnd.SetY((float)theY);
-        if (this->mBuildWall.mState == 0) {
-            EETileCoordinate theTile;
-            theEnd.SetX(theEnd.GetX() + 0.5f);
-            theEnd.SetY(theEnd.GetY() + 0.5f);
-            theTiles.clear();
-            theTile.mX = (long)theEnd.GetX();
-            theTile.mY = (long)theEnd.GetY();
-            theTiles.push_back(theTile);
-            gWorld.mGhostUnitsLock->Enter();
-            EEPreviewWall(theTiles, this->mBuildWall.mTechnology, this->mBuildWall.mPlayer);
-            gWorld.mGhostUnitsLock->Leave();
-        }
-        if (this->mBuildWall.mState == 1) {
-            theEnd.SetX(theEnd.GetX() + 0.5f);
-            theEnd.SetY(theEnd.GetY() + 0.5f);
-            theTiles.clear();
-            this->mBuildWall.mStart.InterpolateTo(theEnd, 1.0f, thePoints);
-            for (i = 0; i < thePoints.size(); i++) {
-                EETileCoordinate theTile;
-                theTile.mX = (long)thePoints[i].GetX();
-                theTile.mY = (long)thePoints[i].GetY();
-                theTiles.push_back(theTile);
-            }
-            gWorld.mGhostUnitsLock->Enter();
-            EEPreviewWall(theTiles, this->mBuildWall.mTechnology, this->mBuildWall.mPlayer);
-            gWorld.mGhostUnitsLock->Leave();
-        }
-        break;
-    }
-    case 5:
-        EEPreviewPlacement(gMouse->mPosition);
-        break;
-    default:   // every state but 6 and 0xb (orig 264f61..264f74: sub 5 je / jne -> 0x26520f)
-        EEPreviewPlacement(gMouse->mPosition);
-        break;
-    }
-    return UIForm::CopyData();
+    EEUIFMGFormCall theCall(this);
+    return (long)ee_screens_main_form_copy_data(&theCall);
 }
 
 // FUNCTION: EXE 0x66522b
@@ -905,41 +769,12 @@ void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inNam
 
 // FUNCTION: EXE 0x66533e
 // Shows an information message: scrolling text, the speaker's portrait and its sound; hides the messages
-// without a text control
+// without a text control (ee_screens main_form.rs)
 void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
 {
-    const EESMDialogMessage* theMessage = reinterpret_cast<const EESMDialogMessage*>(inInformation);
-    UITLScrolling* theText = static_cast<UITLScrolling*>(this->GetControl(kMainGameDialogMessage));
-    UIBitmap* thePortrait = static_cast<UIBitmap*>(this->GetControl(kMainGameDialogPortrait));
-    unsigned long theSampleID;
-    unsigned long theLength;
-
-    if (theText != NULL) {
-        theText->SetText(theMessage->mText);
-        theText->SetDisplayMode(kDisplayModeShown);
-        if (thePortrait != NULL) {
-            EEButtonObject* theButton;
-            // (a class past the table is no portrait)
-            if (theMessage->mUnitType < (unsigned long)EEUnitClassCount() && gUnitClassTable[theMessage->mUnitType] != NULL &&
-                (theButton = gWorld.GetCurrentPlayer()->mUnitClassUpgrades[theMessage->mUnitType]->mButton) != NULL) {
-                GEBitmap* theBitmap = new GEBitmap;
-                theButton->SetFaceBitmap(theBitmap, thePortrait->GetRectangle(), thePortrait->GetScreenIndex());
-                thePortrait->SetBitmap(theBitmap);
-                thePortrait->SetDisplayMode(kDisplayModeShown);
-                thePortrait->SetBgOpacity(thePortrait->GetBgOpacity());
-                theBitmap->Dereference();
-            } else {
-                thePortrait->SetDisplayMode(kDisplayModeHidden);
-            }
-        }
-        EELoadSound("Sounds\\" + UString((const char*)theMessage->mSound), 0x31, theSampleID, theLength, 1);
-        if (!UIsNone32(theLength))
-            theText->ScrollText(gSoundManager->GetTotalPlayTimeInMilli(theSampleID) + 300, theMessage->mDuration);
-        else
-            theText->ScrollText(theMessage->mDuration, 0);
-        this->SetChatTop(UMFloatToLong(theText->GetRectangle().GetBottom() - theText->GetRectangle().mTop + 5.0f));
-    } else
-        this->HideMessages();
+    EEUIFMGFormCall theCall(this);
+    theCall.mMessage = reinterpret_cast<const EESMDialogMessage*>(inInformation);
+    ee_screens_main_form_show_information(&theCall);
 }
 
 // FUNCTION: EXE 0x66550c
@@ -1351,126 +1186,273 @@ void EEUIFMainGame::HideMessages()
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUIEChatLogEvents.h"
 
-// Original status row: player pointer, victory condition pointer, unsigned remaining seconds.
-// The original sort compares only +8 as unsigned (267521).
-struct EEUIFMGVictoryStatus {
-    EEPlayer* mPlayer;
-    EEVictoryCondition* mCondition;
-    unsigned long mValue;
-    bool operator<(const EEUIFMGVictoryStatus& inOther) const { return mValue < inOther.mValue; }
-};
+static_assert(EE_SCREENS_MF_CTL_WIN_LOSE == kMainGameWinLose && EE_SCREENS_MF_CTL_POPULATION == kMainGamePopulation &&
+                  EE_SCREENS_MF_CTL_MINI_MAP == kMainGameMiniMap && EE_SCREENS_MF_CTL_CHAT_LINE1 == kMainGameChatLine1 &&
+                  EE_SCREENS_MF_CTL_CHAT_LINE7 == kMainGameChatLine7 && EE_SCREENS_MF_CTL_GAME_CLOCK == kMainGameGameClock &&
+                  EE_SCREENS_MF_CTL_BRIEFING == kMainGameGameInfoBriefing &&
+                  EE_SCREENS_MF_CTL_DIALOG_PORTRAIT == kMainGameDialogPortrait &&
+                  EE_SCREENS_MF_CTL_BRIEFING_ALERT == kMainGameLargeScenBriefingAlert &&
+                  EE_SCREENS_MF_CTL_PREVIOUS_MESSAGES == kMainGamePreviousMessages &&
+                  EE_SCREENS_MF_IDS_FPS == IDS_FPS && EE_SCREENS_MF_IDS_GAME_PAUSED == IDS_GAME_PAUSED,
+              "main_form.rs' controls and strings");
+
+// The Rust's calls on the form, its controls and the world (EE_SCREENS_MF_OP_*), each the original's call
+extern "C" int64_t ee_screenscpp_main_form(void* inCall, uint32_t inOp, int64_t inA, int64_t inB,
+                                           EeScreensMainFormIo* ioIo)
+{
+    return EEUIFMainGame::HostOp(inCall, inOp, inA, inB, ioIo);
+}
+
+// (a member: UIForm's GetMouseCaptured and CopyData are protected)
+int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t inB, EeScreensMainFormIo* ioIo)
+{
+    EEUIFMGFormCall& theCall = *static_cast<EEUIFMGFormCall*>(inCall);
+    EEUIFMainGame* theForm = theCall.mForm;
+    UITextLabel* theLabel = NULL;
+    switch (inOp) {
+    case EE_SCREENS_MF_OP_LABEL_INT:
+    case EE_SCREENS_MF_OP_LABEL_SET_LONG:
+    case EE_SCREENS_MF_OP_LABEL_DIFFERS:
+    case EE_SCREENS_MF_OP_LABEL_SET_TEXT:
+    case EE_SCREENS_MF_OP_LABEL_PLAYER_COLOR:
+        theLabel = static_cast<UITextLabel*>(theForm->GetControl((unsigned long)inA));
+        break;
+    }
+    switch (inOp) {
+    case EE_SCREENS_MF_OP_ERROR_LOCK:
+        inA != 0 ? theForm->mErrorCriticalSection->Enter() : theForm->mErrorCriticalSection->Leave();
+        return 0;
+    case EE_SCREENS_MF_OP_HAS_PLAYER: return gWorld.GetCurrentPlayer() != NULL;
+    case EE_SCREENS_MF_OP_GROUP_HAS_FIRST:
+        return gWorld.GetCurrentPlayer()->mSelectedGroup != NULL &&
+               gWorld.GetCurrentPlayer()->mSelectedGroup->GetFirstUnit() != NULL;
+    case EE_SCREENS_MF_OP_HAS_VIEWED: return gWorld.GetCurrentPlayer()->mSelectedViewedUnit != NULL;
+    case EE_SCREENS_MF_OP_SET_UNIT_SELECTED: gUnitSelected = inA != 0; return 0;
+    case EE_SCREENS_MF_OP_FIELD:
+    case EE_SCREENS_MF_OP_SET_FIELD: {
+        bool theSet = inOp == EE_SCREENS_MF_OP_SET_FIELD;
+#define EE_MF_FIELD(id, member) \
+    case id: \
+        if (theSet) \
+            member = (decltype(member))inB; \
+        return (int64_t)member;
+        switch (inA) {
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_STRINGS_CHANGED, theForm->mStringsChanged)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_ELAPSED, theForm->mElapsed)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_REFRESH_GROUP, theForm->mRefreshGroup)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_UI_STATE, theForm->mUIState)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_GATE_DIRECTION, theForm->mBuildGate.mDirection)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_WALL_STATE, theForm->mBuildWall.mState)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_CLOCK_MODE, theForm->mClockMode)
+            EE_MF_FIELD(EE_SCREENS_MF_FIELD_CURSOR_LOCKED, theForm->mIsCursorLocked)
+        }
+#undef EE_MF_FIELD
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_LOG_LINE:
+        static_cast<EEUIFMGErrorLog*>(theForm->GetControl(kMainGameErrorLog))->SetLine((unsigned long)inA,
+                                                                                    theForm->mStrings[inA]);
+        return 0;
+    case EE_SCREENS_MF_OP_VIEW_RECT: {
+        GERectangle theView = gViewport.GetViewRectangle();
+        ioIo->f[0] = theView.GetLeft(), ioIo->f[1] = theView.GetTop();
+        ioIo->f[2] = theView.GetRight(), ioIo->f[3] = theView.GetBottom();
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_IS_CURRENT: return theForm->GetManager()->GetCurrentForm() == theForm;
+    case EE_SCREENS_MF_OP_ADD_DIRTY:
+        theForm->GetManager()->AddDirtyRectangle(GERectangle(ioIo->f[0], ioIo->f[1], ioIo->f[2], ioIo->f[3]), theForm);
+        return 0;
+    case EE_SCREENS_MF_OP_POLL: return theForm->mPoll->Poll();
+    case EE_SCREENS_MF_OP_GROUP: {
+        EEUIFMGGroup* theGroup = theForm->mGroups[theForm->mCurrentGroup];
+        if (inA == EE_SCREENS_MF_GROUP_RESET)
+            theGroup->Reset();
+        else if (inA == EE_SCREENS_MF_GROUP_REFRESH)
+            theGroup->Refresh();
+        else
+            return theGroup->WantsRefresh() == true;
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_MOUSE_CAPTURED: return theForm->GetMouseCaptured() != NULL;
+    case EE_SCREENS_MF_OP_SCROLL: theForm->mScroll->Update(gMouse->mPosition); return 0;
+    case EE_SCREENS_MF_OP_PICK:
+        theCall.mPicked = gUnitPicker.PickUnit(gMouse->mPosition, 0);
+        return theCall.mPicked == NULL ? 0 : theCall.mPicked->mUnitClass->mIsWall ? 2 : 1;
+    case EE_SCREENS_MF_OP_PICKED_TILE: ioIo->n[0] = theCall.mPicked->mTileX; ioIo->n[1] = theCall.mPicked->mTileY; return 0;
+    case EE_SCREENS_MF_OP_MOUSE_TILE: {
+        EETile* theOther;
+        long theX = 0, theY = 0;
+        EEPointUnitOrTileXY(gMouse->mPosition, theOther, theX, theY, true);
+        ioIo->n[0] = theX, ioIo->n[1] = theY;
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_RELEASE: theCall.mPicked->Dereference(); theCall.mPicked = NULL; return 0;
+    case EE_SCREENS_MF_OP_FIND_GATE_WALL: {
+        EETileCoordinate theTile;
+        theTile.mX = (long)inA, theTile.mY = (long)inB;
+        long theDirection = (long)ioIo->n[0];
+        bool theFound = EEFindGateWall(theTile, theDirection);
+        ioIo->n[0] = theDirection;
+        return theFound;
+    }
+    case EE_SCREENS_MF_OP_PREVIEW_GATE: {
+        long theDirection = (long)ioIo->n[0];
+        EEGhostUnit::CreateGate(0.0f, theForm->mBuildGate.mUnitClass, gWorld.mPlayers[theForm->mBuildGate.mPlayer]);
+        EEGhostUnit::PreviewGate(gMouse->mPosition, theDirection);
+        ioIo->n[0] = theDirection;
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_GHOST_LOCK: inA != 0 ? gWorld.mGhostUnitsLock->Enter() : gWorld.mGhostUnitsLock->Leave(); return 0;
+    case EE_SCREENS_MF_OP_CLEAR_GHOSTS: gWorld.ClearGhostUnits(); return 0;
+    case EE_SCREENS_MF_OP_WALL_START:
+        ioIo->f[0] = theForm->mBuildWall.mStart.GetX(), ioIo->f[1] = theForm->mBuildWall.mStart.GetY();
+        return 0;
+    case EE_SCREENS_MF_OP_PREVIEW_WALL: {
+        const int32_t* theXY = reinterpret_cast<const int32_t*>(inB);
+        std::vector<EETileCoordinate> theTiles;
+        for (int64_t i = 0; i < inA; i++) {
+            EETileCoordinate theTile;
+            theTile.mX = theXY[2 * i], theTile.mY = theXY[2 * i + 1];
+            theTiles.push_back(theTile);
+        }
+        EEPreviewWall(theTiles, theForm->mBuildWall.mTechnology, theForm->mBuildWall.mPlayer);
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_PREVIEW_PLACEMENT: EEPreviewPlacement(gMouse->mPosition); return 0;
+    case EE_SCREENS_MF_OP_BASE_COPY_DATA: return theForm->UIForm::CopyData();
+    case EE_SCREENS_MF_OP_RESOURCE: return gWorld.GetCurrentPlayer()->mResourceCaps[inA + 2];
+    case EE_SCREENS_MF_OP_LABEL_INT: return atoi(theLabel->GetText(0));
+    case EE_SCREENS_MF_OP_LABEL_SET_LONG: theLabel->SetText((long)inB); return 0;
+    case EE_SCREENS_MF_OP_POPULATION: return gWorld.GetCurrentPlayer()->GetTotalPopulation(false, false);
+    case EE_SCREENS_MF_OP_POPULATION_LIMIT: return gWorld.GetCurrentPlayer()->GetPopulationLimit(false);
+    case EE_SCREENS_MF_OP_TEXT_SET: {
+        std::vector<char> theBytes(reinterpret_cast<const char*>(inB), reinterpret_cast<const char*>(inB) + inA);
+        theBytes.push_back(0);
+        theCall.mText = &theBytes[0];
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_TEXT_GET: {
+        const char* theBytes = theCall.mText;
+        size_t theLength = strlen(theBytes);
+        if (inB != 0)
+            memcpy(reinterpret_cast<char*>(inB), theBytes, theLength < (size_t)inA ? theLength : (size_t)inA);
+        return (int64_t)theLength;
+    }
+    case EE_SCREENS_MF_OP_LABEL_DIFFERS: return theLabel->GetText(0) != theCall.mText;
+    case EE_SCREENS_MF_OP_LABEL_SET_TEXT: theLabel->SetText(theCall.mText); return 0;
+    case EE_SCREENS_MF_OP_VICTORY_ENABLED: return gWorld.mVictoryEnabled == true;
+    case EE_SCREENS_MF_OP_NUM_TEAMS: return gWorld.GetNumTeams();
+    case EE_SCREENS_MF_OP_COUNTDOWN: {
+        unsigned long theValue = 0;
+        EEPlayer* theWinner = gWorld.mTeams[inA].mVictoryCondition->GetWonderCountdown(theValue);
+        ioIo->n[0] = theValue;
+        return (int64_t)(intptr_t)theWinner;
+    }
+    case EE_SCREENS_MF_OP_SET_MODE: theForm->GetControl((unsigned long)inA)->SetDisplayMode((unsigned long)inB); return 0;
+    case EE_SCREENS_MF_OP_MODE: return theForm->GetControl((unsigned long)inA)->GetDisplayMode();
+    case EE_SCREENS_MF_OP_LABEL_PLAYER_COLOR:
+        theLabel->GetGEText()->SetFgColor(reinterpret_cast<EEPlayer*>(inB)->mColor);
+        return 0;
+    case EE_SCREENS_MF_OP_TEXT_WONDER: {
+        UWideString theFormat;
+        gResource->GetString(IDS_TIME_LEFT_UNTIL_WINS_WONDER_VICTORY, theFormat);
+        sprintf(theCall.mText, theFormat, (const char*)reinterpret_cast<EEPlayer*>(inA)->mName, (unsigned long)inB);
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_IN_CINEMATIC: return gWorld.mInCinematic;
+    case EE_SCREENS_MF_OP_TEXT_TIME: theCall.mText = gPhysics->GetTimeString(); return 0;
+    case EE_SCREENS_MF_OP_TEXT_STRING: gResource->GetString((unsigned long)inA, theCall.mText); return 0;
+    case EE_SCREENS_MF_OP_FPS: ioIo->f[0] = gRasterizer->GetFramesPerSecond(theForm->GetManager()->GetScreen()); return 0;
+    case EE_SCREENS_MF_OP_HAS_COMMS: return gCommunications != NULL;
+    case EE_SCREENS_MF_OP_COMMS_PAUSED: return gCommunications->GetIsGamePaused();
+    case EE_SCREENS_MF_OP_HAS_TEAMS: return gWorld.mTeams.size() > 0;
+    case EE_SCREENS_MF_OP_SET_MUTED: gSoundManager->SetIsMuted(inA != 0); return 0;
+    case EE_SCREENS_MF_OP_MUTED: return gSoundManager->GetIsMuted();
+    case EE_SCREENS_MF_OP_GAME_RESULT: return gWorld.GetCurrentPlayer()->mGameResult;
+    case EE_SCREENS_MF_OP_PAUSE_TEXT: theForm->SetPauseText(inA != 0); return 0;
+    case EE_SCREENS_MF_OP_SET_DIRTY: theForm->GetControl((unsigned long)inA)->SetDirty(true); return 0;
+    case EE_SCREENS_MF_OP_LAG_STATUS: return gWorld.mLagStatus;
+    case EE_SCREENS_MF_OP_LAG_COLOR:
+        static_cast<UIBitmap*>(theForm->GetControl((unsigned long)inA))->GetBitmap()->SetColor(gWorld.mPlayers[inB]->mColor);
+        return 0;
+    case EE_SCREENS_MF_OP_HAS_INSTRUCTIONS: return gWorld.mScenarioManager->mMediaStrings.mInstructions.GetLength() > 0;
+    case EE_SCREENS_MF_OP_LOG_ENTRIES: return EEUIECLEFormManager::GetEntryCount();
+    case EE_SCREENS_MF_OP_UPDATE_CURSOR: theForm->UpdateCursorKind(); return 0;
+    case EE_SCREENS_MF_OP_CHAT_DISPLAY:
+        return static_cast<EEUICChatLine*>(theForm->GetControl((unsigned long)inA))
+            ->Display(*theCall.mColor, theCall.mName, theCall.mChat, theCall.mFlags);
+    case EE_SCREENS_MF_OP_CHAT_COPY:
+        static_cast<EEUICChatLine*>(theForm->GetControl((unsigned long)inA))
+            ->Copy(*static_cast<EEUICChatLine*>(theForm->GetControl((unsigned long)inA + 1)));
+        return 0;
+    case EE_SCREENS_MF_OP_CHAT_LENGTH: return theCall.mChat.GetLength();
+    case EE_SCREENS_MF_OP_CHAT_REST: {
+        const unsigned char* theNext = PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theCall.mChat),
+                                                   (size_t)inA);
+        if (PlatMbsNBCmp(theNext, (const unsigned char*)"\n", 1) == 0)
+            theNext = PlatMbsInc(theNext);
+        UWideString theRest(reinterpret_cast<const char*>(theNext));   // (theNext points into mChat)
+        theCall.mChat = theRest;
+        theCall.mName = "";
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_INFO_HAS_TEXT: return theForm->GetControl(kMainGameDialogMessage) != NULL;
+    case EE_SCREENS_MF_OP_INFO_SET_TEXT: {
+        UITLScrolling* theText = static_cast<UITLScrolling*>(theForm->GetControl(kMainGameDialogMessage));
+        theText->SetText(theCall.mMessage->mText);
+        theText->SetDisplayMode(kDisplayModeShown);
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_INFO_HAS_PORTRAIT: return theForm->GetControl(kMainGameDialogPortrait) != NULL;
+    case EE_SCREENS_MF_OP_INFO_HAS_BUTTON: {
+        // (a class past the table is no portrait)
+        unsigned long theType = theCall.mMessage->mUnitType;
+        return theType < (unsigned long)EEUnitClassCount() && gUnitClassTable[theType] != NULL &&
+               gWorld.GetCurrentPlayer()->mUnitClassUpgrades[theType]->mButton != NULL;
+    }
+    case EE_SCREENS_MF_OP_INFO_PORTRAIT: {
+        UIBitmap* thePortrait = static_cast<UIBitmap*>(theForm->GetControl(kMainGameDialogPortrait));
+        EEButtonObject* theButton = gWorld.GetCurrentPlayer()->mUnitClassUpgrades[theCall.mMessage->mUnitType]->mButton;
+        GEBitmap* theBitmap = new GEBitmap;
+        theButton->SetFaceBitmap(theBitmap, thePortrait->GetRectangle(), thePortrait->GetScreenIndex());
+        thePortrait->SetBitmap(theBitmap);
+        thePortrait->SetDisplayMode(kDisplayModeShown);
+        thePortrait->SetBgOpacity(thePortrait->GetBgOpacity());
+        theBitmap->Dereference();
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_INFO_SOUND: {
+        unsigned long theSampleID, theLength;
+        EELoadSound("Sounds\\" + UString((const char*)theCall.mMessage->mSound), 0x31, theSampleID, theLength, 1);
+        ioIo->n[0] = theSampleID, ioIo->n[1] = theLength;
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_PLAY_TIME: return gSoundManager->GetTotalPlayTimeInMilli((unsigned long)inA);
+    case EE_SCREENS_MF_OP_INFO_DURATION: return theCall.mMessage->mDuration;
+    case EE_SCREENS_MF_OP_INFO_SCROLL:
+        static_cast<UITLScrolling*>(theForm->GetControl(kMainGameDialogMessage))
+            ->ScrollText((unsigned long)inA, (unsigned long)inB);
+        return 0;
+    case EE_SCREENS_MF_OP_INFO_RECT: {
+        UIControl* theText = theForm->GetControl(kMainGameDialogMessage);
+        ioIo->f[0] = theText->GetRectangle().GetBottom(), ioIo->f[1] = theText->GetRectangle().mTop;
+        return 0;
+    }
+    case EE_SCREENS_MF_OP_CHAT_TOP: theForm->SetChatTop((long)inA); return 0;
+    case EE_SCREENS_MF_OP_HIDE_MESSAGES: theForm->HideMessages(); return 0;
+    }
+    return 0;
+}
 
 // FUNCTION: EXE 0x666a3b
 // Refreshes the status bar: resources, population, wonder countdowns, clock or frame rate, pause and
-// victory texts, the lag icons, the briefing and previous-messages buttons, then the cursor
+// victory texts, the lag icons, the briefing and previous-messages buttons, then the cursor (ee_screens
+// main_form.rs)
 void EEUIFMainGame::RefreshStatus()
 {
-    std::vector<EEUIFMGVictoryStatus> theRows;
-    UWideString thePopulation, theText, theFormat;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    this->FnE123D();
-    for (long i = 0; i < 5; i++) {
-        long theValue = thePlayer->mResourceCaps[i + 2];
-        UITextLabel* theLabel = static_cast<UITextLabel*>(this->GetControl(i + 6));
-        if (theValue != atoi(theLabel->GetText(0)))
-            theLabel->SetText(theValue);
-    }
-    UITextLabel* thePopulationLabel = static_cast<UITextLabel*>(this->GetControl(kMainGamePopulation));
-    sprintf(thePopulation, "%ld/%ld", thePlayer->GetTotalPopulation(false, false), thePlayer->GetPopulationLimit(false));
-    if (thePopulationLabel->GetText(0) != thePopulation)
-        thePopulationLabel->SetText(thePopulation);
-    if (gWorld.mVictoryEnabled == true) {
-        for (unsigned long t = 0; t < gWorld.GetNumTeams(); t++) {
-            EEVictoryCondition* theCondition = gWorld.mTeams[t].mVictoryCondition;
-            unsigned long theValue;
-            EEPlayer* theWinner = theCondition->GetWonderCountdown(theValue);
-            if (theWinner == NULL)
-                continue;
-            EEUIFMGVictoryStatus theRow;
-            theRow.mPlayer = theWinner;
-            theRow.mCondition = theCondition;
-            theRow.mValue = theValue;
-            theRows.push_back(theRow);
-        }
-        std::sort(theRows.begin(), theRows.end());
-        unsigned long theRow;
-        long theControl = 0x0e;
-        for (theRow = 0; theRow < theRows.size(); theRow++) {
-            if (theControl >= 0x13)
-                break;
-            UITextLabel* theLabel = static_cast<UITextLabel*>(this->GetControl(theControl));
-            theLabel->SetDisplayMode(kDisplayModeShown);
-            theLabel->GetGEText()->SetFgColor(theRows[theRow].mPlayer->mColor);
-            gResource->GetString(IDS_TIME_LEFT_UNTIL_WINS_WONDER_VICTORY, theFormat);
-            sprintf(theText, theFormat, (const char*)(theRows[theRow]).mPlayer->mName,
-                    theRows[theRow].mValue);
-            theLabel->SetText(theText);
-            theControl++;
-        }
-        if (theRow < 5)
-            for (long theUnused = theRow + 0xe; theUnused < 0x13; theUnused++)
-                this->GetControl(theUnused)->SetDisplayMode(kDisplayModeHidden);
-    }
-    UITextLabel* theTimeLabel = static_cast<UITextLabel*>(this->GetControl(kMainGameGameClock));
-    if (!gWorld.mInCinematic) {
-        switch (this->mClockMode) {
-        case 1:
-            theTimeLabel->SetDisplayMode(kDisplayModeShown);
-            theTimeLabel->SetText(gPhysics->GetTimeString());
-            break;
-        case 2: {
-            theTimeLabel->SetDisplayMode(kDisplayModeShown);
-            gResource->GetString(IDS_FPS, theFormat);
-            float theFPS = gRasterizer->GetFramesPerSecond(this->GetManager()->GetScreen());
-            unsigned long theRounded = (unsigned long)UMCeil(theFPS);
-            sprintf(theText, "%s: %ld", (const char*)theFormat, theRounded);
-            theTimeLabel->SetText(theText);
-            break;
-        }
-        default:
-            theTimeLabel->SetDisplayMode(kDisplayModeHidden);
-            break;
-        }
-    } else
-        theTimeLabel->SetDisplayMode(kDisplayModeHidden);
-    if (gCommunications != NULL && gCommunications->GetIsGamePaused() && gWorld.mTeams.size() > 0) {
-        UITextLabel* thePauseLabel = static_cast<UITextLabel*>(this->GetControl(kMainGameWinLose));
-        gResource->GetString(IDS_GAME_PAUSED, theText);
-        thePauseLabel->SetText(theText);
-        thePauseLabel->SetDisplayMode(kDisplayModeShown);
-        gSoundManager->SetIsMuted(true);
-    } else if (thePlayer->mGameResult != 0) {
-        gSoundManager->SetIsMuted(true);
-        this->SetPauseText(thePlayer->mGameResult == 1);
-    } else {
-        this->GetControl(kMainGameWinLose)->SetDisplayMode(kDisplayModeHidden);
-        if (gSoundManager->GetIsMuted())
-            gSoundManager->SetIsMuted(false);
-    }
-    if (this->mElapsed > 2) {
-        this->GetControl(kMainGameMiniMap)->SetDirty(true);
-        this->mElapsed = 0;
-    }
-    unsigned short theMask = gWorld.mLagStatus;
-    unsigned long theBit = 1;
-    for (long thePlayerIndex = 1, theIcon = 0xfc; theIcon >= 0xf5; thePlayerIndex++, theIcon--) {
-        UIControl* theControl = this->GetControl(theIcon);
-        if ((theMask & theBit) != 0) {
-            static_cast<UIBitmap*>(theControl)->GetBitmap()->SetColor(gWorld.mPlayers[thePlayerIndex]->mColor);
-            theControl->SetDisplayMode(kDisplayModeShown);
-        } else
-            theControl->SetDisplayMode(kDisplayModeHidden);
-        theBit <<= 1;
-    }
-    if (gWorld.mScenarioManager->mMediaStrings.mInstructions.GetLength() > 0)
-        this->GetControl(kMainGameGameInfoBriefing)->SetDisplayMode(kDisplayModeShown);
-    else {
-        this->GetControl(kMainGameGameInfoBriefing)->SetDisplayMode(kDisplayModeHidden);
-        this->GetControl(kMainGameLargeScenBriefingAlert)->SetDisplayMode(kDisplayModeHidden);
-    }
-    this->GetControl(kMainGamePreviousMessages)->SetDisplayMode(EEUIECLEFormManager::GetEntryCount() > 0);
-    if (!this->mIsCursorLocked)
-        this->UpdateCursorKind();
+    EEUIFMGFormCall theCall(this);
+    ee_screens_main_form_refresh_status(&theCall);
 }
 
 // The cursor's reads for one UpdateCursorKind (ee_screens cursor.rs asks them through ee_screenscpp_cursor)
