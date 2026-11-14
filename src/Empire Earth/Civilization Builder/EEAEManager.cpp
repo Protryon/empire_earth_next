@@ -49,6 +49,7 @@
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffectKindIDs.h"
 #include "ee/EESaveGameFiles.h"
+#include "ee/EEAECapture.h"
 #include <memory>
 
 // The unit functors of the manager's passes (RTTI names; each > EEUUUnitFunctor, slot +0x04 only; their ??_G is
@@ -423,6 +424,7 @@ void EEAEManager::Tick(float inElapsed)
     this->UpdateGeneratedAreaEffects(inElapsed);
     this->RebuildAreaEffectRegionList();
     this->UpdateAffectedByAreaEffects(inElapsed);
+    EEAECaptureTick(inElapsed);   // TEST ONLY: AEFX (ee/EEAECapture.h)
 }
 
 // FUNCTION: EXE 0x67b673
