@@ -95,34 +95,6 @@ long EESMCondition::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     return ee_scenario_condition_load(&theTable, this);
 }
 
-// FUNCTION: EXE 0x5bb326
-// Updates the condition's object index after objects inOld/inNew swap, or after inOld is deleted (inNew -1)
-void EESMCondition::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex)
-{
-    ee_scenario_condition_renumber(this, EE_SCENARIO_RENUMBER_OBJECTS, inOldIndex, inNewIndex);
-}
-
-// FUNCTION: EXE 0x5bb35c
-// Updates the condition's trigger index after triggers inOld/inNew swap, or after inOld is deleted (inNew -1)
-void EESMCondition::RenumberTriggers(unsigned long inOldIndex, unsigned long inNewIndex)
-{
-    ee_scenario_condition_renumber(this, EE_SCENARIO_RENUMBER_TRIGGERS, inOldIndex, inNewIndex);
-}
-
-// FUNCTION: EXE 0x5bb392
-// Maps the condition's object index through the ID map
-void EESMCondition::RemapObjects(EESMIDMap& inMap)
-{
-    EERemapID(this->mObjectIndex, inMap);
-}
-
-// FUNCTION: EXE 0x5bb3a4
-// Maps the condition's trigger index through the ID map
-void EESMCondition::RemapTriggers(EESMIDMap& inMap)
-{
-    EERemapID(this->mTrigger, inMap);
-}
-
 // FUNCTION: EXE 0x5bb3b6
 // Writes the condition; returns the first error (ee_scenario save.rs condition_save)
 long EESMCondition::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)

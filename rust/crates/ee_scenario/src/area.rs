@@ -3,6 +3,7 @@
 
 use crate::ftol;
 use crate::host::*;
+use crate::placement::{EE_SCENARIO_READ_MAP_TILE_EXISTS, EE_SCENARIO_TILES_CONTINENT, EE_SCENARIO_TILES_TOWN};
 
 /// The anchor's "no area" coordinate.
 const EE_SCENARIO_K_NO_AREA: i32 = -10000;
@@ -137,6 +138,44 @@ pub fn center_tile<H: Host>(host: &mut H, a: &mut EeScenarioAreaRecord) -> (i32,
     (a.center_x, a.center_y)
 }
 
+/// The host's `mTiles->push_back(U2DPoint<long>(b, c))`: an area's rebuilt tiles (`EESMArea::GetTiles`).
+pub const EE_SCENARIO_WRITE_TILE: u32 = 17;
+
+/// `EESMArea::GetTiles`' rebuild of the area's tile cache: the rectangle's map tiles (column by column), the anchor's
+/// continent, or the tiles of the towns holding the anchor (the first found last), else the anchor alone.
+pub fn tiles<H: Host>(host: &mut H, a: &EeScenarioAreaRecord) -> Vec<(i32, i32)> {
+    let mut tiles = Vec::new();
+    match a.select_mode {
+        0 => {
+            let mut x = ftol(a.left);
+            while (x as f32) <= a.right {
+                let mut y = ftol(a.top);
+                while (y as f32) <= a.bottom {
+                    if host.read(EE_SCENARIO_READ_MAP_TILE_EXISTS, x, y) != 0 {
+                        tiles.push((x, y));
+                    }
+                    y = y.wrapping_add(1);
+                }
+                x = x.wrapping_add(1);
+            }
+        }
+        1 => {
+            let continent = host.read(EE_SCENARIO_READ_CONTINENT, a.anchor_x, a.anchor_y) as i32;
+            tiles = host.tiles(EE_SCENARIO_TILES_CONTINENT, continent, 0, 0);
+        }
+        2 => {
+            for &(p, t) in anchor_towns(host, a).iter().rev() {
+                tiles.extend(host.tiles(EE_SCENARIO_TILES_TOWN, p, t, 0));
+            }
+            if tiles.is_empty() {
+                tiles.push((a.anchor_x, a.anchor_y));
+            }
+        }
+        _ => {}
+    }
+    tiles
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,9 +214,34 @@ mod tests {
                 EE_SCENARIO_READ_UNIT_TILE => self.unit.map(|(x, y)| pack(x, y)).unwrap(),
                 EE_SCENARIO_READ_UNIT_HAS_COMPLEX => self.previous.is_some() as i64,
                 EE_SCENARIO_READ_UNIT_PREVIOUS_TILE => self.previous.map(|(x, y)| pack(x, y)).unwrap(),
+                EE_SCENARIO_READ_MAP_TILE_EXISTS => (a >= 0 && b >= 0) as i64,
                 _ => panic!("unexpected read {op}"),
             }
         }
+        fn tiles(&mut self, op: u32, a: i32, b: i32, _c: i32) -> Vec<(i32, i32)> {
+            match op {
+                EE_SCENARIO_TILES_CONTINENT => vec![(a, 0), (a, 1)],
+                EE_SCENARIO_TILES_TOWN => vec![(a, b)],
+                _ => panic!("unexpected tiles {op}"),
+            }
+        }
+    }
+
+    #[test]
+    fn the_tiles_of_a_rectangle_a_continent_and_the_towns() {
+        let mut w = World { players: 4, ..World::default() };
+        // columns from the cut left edge while x <= right as a float; tiles off the map left out
+        assert_eq!(tiles(&mut w, &rect(-1.0, 1.0, 1.5, 2.0)), [(0, 1), (0, 2), (1, 1), (1, 2)]);
+        let a = EeScenarioAreaRecord { select_mode: 1, anchor_x: 23, anchor_y: 4, ..Default::default() };
+        assert_eq!(tiles(&mut w, &a), [(2, 0), (2, 1)]);
+        // the towns holding the anchor, player 3's found first and appended last
+        w.towns.insert(1, vec![(0, 0, 10, 10), (50, 50, 60, 60)]);
+        w.towns.insert(3, vec![(5, 5, 20, 20)]);
+        let b = EeScenarioAreaRecord { select_mode: 2, anchor_x: 6, anchor_y: 6, ..Default::default() };
+        assert_eq!(tiles(&mut w, &b), [(1, 0), (3, 0)]);
+        let c = EeScenarioAreaRecord { anchor_x: 99, anchor_y: 99, ..b };
+        assert_eq!(tiles(&mut w, &c), [(99, 99)]);
+        assert!(tiles(&mut w, &EeScenarioAreaRecord { select_mode: 3, ..b }).is_empty());
     }
 
     fn rect(l: f32, t: f32, r: f32, b: f32) -> EeScenarioAreaRecord {

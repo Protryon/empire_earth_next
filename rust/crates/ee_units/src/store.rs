@@ -3,9 +3,10 @@
 //!
 //! A record lives while its unit is in a player's list: inserted by `RTSPlayer::InsertUnit` (seeded whole from the
 //! object), removed by `RTSPlayer::RemoveKilledUnits`, a player's records dropped by `RTSPlayer::Reset`. That is
-//! the domain of `RTSPlayer::GetUnit` / `gWorld.GetUnit`. Between, the C++ members it mirrors are write-through
-//! holders (`EEUnitStoreField<T, F>`): every write of one reports the new value here (`set`), so the record is
-//! current at every point of the tick.
+//! the domain of `RTSPlayer::GetUnit` / `gWorld.GetUnit`. Between, every read refreshes the record from its object
+//! ([`refresh`]): the plain members from the Rust records the unit classes derive from (round 26), the pointer
+//! members' derived values from the members at their places in the object ([`EeUnitsStoreSlots`], round 27); only
+//! the location, the on-map flag and the stats object are still reported (`set`).
 //!
 //! Determinism: the game only looks records up by id. The map is a `BTreeMap` (no hash order); the walks
 //! (`clear_player`, `check`) are in id order and observe nothing the game reads. A write is a plain store of the
@@ -213,6 +214,214 @@ pub struct EeUnitRecord {
     pub stats: u64,
     /// the active goal's id (`mGoalState->mID`, the saves' goal id; 0: no goal): the goal queues' ids are goals.rs
     pub goal_id: u32,
+    /// the twenty-sixth round's: the addresses of the object's Rust records (unit_fields.rs: its
+    /// `EeUnitsRtsUnitFields`, `EeUnitsUnitFields`, `EeUnitsComplexUnitFields` base subobjects; 0 for a record its
+    /// class does not have). Every read of the store refreshes the mirrored plain values from them ([`refresh`]).
+    pub rts_fields: u64,
+    pub unit_fields: u64,
+    pub complex_fields: u64,
+}
+
+/// Reads one plain member of a record at `$p` (a raw pointer to the record).
+macro_rules! member {
+    ($p:expr, $f:ident) => {
+        // SAFETY: the caller's pointer names a live record
+        unsafe { std::ptr::read_volatile(std::ptr::addr_of!((*$p).$f)) }
+    };
+}
+
+/// A `bool` member's byte (0 or 1) of a record at `$p`.
+macro_rules! flag {
+    ($p:expr, $f:ident) => {
+        // SAFETY: the caller's pointer names a live record
+        unsafe { crate::unit_fields::bool_byte(std::ptr::addr_of!((*$p).$f)) }
+    };
+}
+
+/// The mirrored plain values of `r` read again from its object's records (`rts_fields`, `unit_fields`,
+/// `complex_fields`; a zero address leaves those values as they are). The conversions are the ones the holders'
+/// reports made: `long`s and `unsigned long`s widened to 64 bits (an `unsigned long` zero-extended), floats as
+/// their bits, bools as 0 or 1.
+///
+/// The addresses are live while the record is in the store: a record leaves the store before its object goes
+/// (`RTSPlayer::RemoveKilledUnits`, `RTSUnit::FreeNode` and `~RTSUnit`, `~RTSPlayer`'s by the player).
+pub fn refresh(r: &mut EeUnitRecord) {
+    use crate::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
+    if r.rts_fields != 0 {
+        let p = r.rts_fields as usize as *const EeUnitsRtsUnitFields;
+        r.tile_x = member!(p, mTileX) as i64;
+        r.tile_y = member!(p, mTileY) as i64;
+        r.valid = flag!(p, mIsValid);
+    }
+    if r.unit_fields != 0 {
+        let p = r.unit_fields as usize as *const EeUnitsUnitFields;
+        r.hit_points = member!(p, mHitPoints) as i64;
+        r.resource_amount = member!(p, mResourceAmount) as i64;
+    }
+    if r.complex_fields != 0 {
+        let p = r.complex_fields as usize as *const EeUnitsComplexUnitFields;
+        r.built = flag!(p, mIsBuilt);
+        r.commandable = flag!(p, mIsCommandable);
+        r.formation_slot = member!(p, mFormationSlot) as i64;
+        r.height = member!(p, mHeight).to_bits();
+        r.times_updated = member!(p, mTimesUpdated) as i64;
+        r.reload_timer = member!(p, mReloadTimer) as i64;
+        r.target_search_timer = member!(p, mTargetSearchTimer) as i64;
+        r.heal_search_timer = member!(p, mHealSearchTimer).to_bits();
+        r.next_trigger_time = member!(p, mNextTriggerTime) as i64;
+        r.rotting_away_time = member!(p, mRottingAwayTime) as i64;
+        r.power = member!(p, mPower) as i64;
+        r.power_regen_timer = member!(p, mPowerRegenTimer) as i64;
+        r.camouflage_timer = member!(p, mCamouflageTimer) as i64;
+        r.velocity = member!(p, mVelocity).to_bits();
+        r.push_velocity_x = member!(p, mPushVelocityX).to_bits();
+        r.push_velocity_y = member!(p, mPushVelocityY).to_bits();
+        r.roll = member!(p, mRoll).to_bits();
+        r.flight_time = member!(p, mFlightTime) as i64;
+        r.cloak_timer = member!(p, mCloaked) as i64;
+        r.cloakable = flag!(p, mIsCloakable);
+        r.cloaked = flag!(p, mIsCloaked);
+    }
+    if let Some(slots) = SLOTS.get() {
+        refresh_pointers(r, slots);
+    }
+}
+
+/// The twenty-seventh round's: where the store finds a unit's pointer members (byte offsets from the unit object:
+/// `EEUnit::mUnitClass`, `mComplexUnit`; `EEComplexUnit::mActiveGroup`, `mContainer`, `mCommand`, `mGoalState`,
+/// `mHerd`) and what it reads behind them (the class's record base in `EEUnitClass`, the goal's `mKind` and `mID`,
+/// the action's `mType`). The C++ sets it once, before the first record (`EEUnitStore.cpp`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeUnitsStoreSlots {
+    pub unit_class: u64,
+    pub complex_unit: u64,
+    pub active_group: u64,
+    pub container: u64,
+    pub command: u64,
+    pub goal_state: u64,
+    pub herd: u64,
+    pub class_fields: u64,
+    pub goal_kind: u64,
+    pub goal_id: u64,
+    pub action_type: u64,
+}
+
+static SLOTS: std::sync::OnceLock<EeUnitsStoreSlots> = std::sync::OnceLock::new();
+
+/// Sets the slots (the first call wins: the layout is the build's).
+pub fn set_slots(slots: EeUnitsStoreSlots) {
+    let _ = SLOTS.set(slots);
+}
+
+/// A pointer member's value at `base + offset`.
+///
+/// # Safety
+/// `base + offset` is a live pointer member.
+unsafe fn pointer_at(base: usize, offset: u64) -> usize {
+    // SAFETY: the caller's contract
+    unsafe { std::ptr::read_volatile((base + offset as usize) as *const usize) }
+}
+
+/// The class-derived values of a unit whose class is `class` (0: none), as the holders reported them.
+fn refresh_class(r: &mut EeUnitRecord, class: usize, slots: &EeUnitsStoreSlots) {
+    use crate::unit_class_fields::EeUnitsUnitClassFields;
+    if class == 0 {
+        r.category = -1;
+        r.unit_type = -1;
+        r.domains = 0;
+        r.land_building = 0;
+        r.can_attack_ground = 0;
+        r.family = 0;
+        r.cloak_radius = 0;
+        r.crusader = 0;
+        r.paratrooper_bomber = 0;
+        r.heal_threshold = 0;
+        r.class_flags = 0;
+        return;
+    }
+    let p = (class + slots.class_fields as usize) as *const EeUnitsUnitClassFields;
+    r.category = member!(p, mCategory) as i64;
+    let unit_type = member!(p, mUnitType);
+    r.unit_type = unit_type as i64;
+    r.domains = member!(p, mDomains);
+    r.land_building = flag!(p, mIsLandBuildingClass);
+    r.can_attack_ground = flag!(p, mCanAttackGround);
+    r.family = member!(p, mFamily) as i64;
+    r.cloak_radius = member!(p, mCloakRadius) as i64;
+    r.crusader = u8::from((CRUSADER_FIRST..=CRUSADER_LAST).contains(&(unit_type as u64)));
+    r.paratrooper_bomber = flag!(p, mIsParatrooperBomber);
+    r.heal_threshold = member!(p, mHealThreshold).to_bits();
+    let mut flags = 0;
+    if flag!(p, mIsWall) != 0 {
+        flags |= EE_UNIT_CLASS_WALL;
+    }
+    if flag!(p, mIsProjectile) != 0 {
+        flags |= EE_UNIT_CLASS_PROJECTILE;
+    }
+    if r.paratrooper_bomber != 0 {
+        flags |= EE_UNIT_CLASS_PARATROOPER_BOMBER;
+    }
+    if flag!(p, mIsMelee) != 0 {
+        flags |= EE_UNIT_CLASS_MELEE;
+    }
+    r.class_flags = flags;
+}
+
+/// `EEUnitClass::IsCrusader()`'s unit types (`kUnitTypeInf04ShortSwordCrusader` .. `kUnitTypeCav06KnightCrusader`)
+const CRUSADER_FIRST: u64 = 0x2e6;
+const CRUSADER_LAST: u64 = 0x2e9;
+
+/// The values derived from the unit's pointer members (the class's, the complex unit, the goal, the command, the
+/// group, the container, the herd), read at their places in the object. Nothing until the C++ has set the slots
+/// (the unit tests never do: their objects are not units).
+fn refresh_pointers(r: &mut EeUnitRecord, slots: &EeUnitsStoreSlots) {
+    let object = r.object as usize;
+    if r.unit_fields != 0 {
+        // SAFETY: the object is a live EEUnit (its record is in the store): its pointer members are readable
+        let class = unsafe { pointer_at(object, slots.unit_class) };
+        refresh_class(r, class, slots);
+        // SAFETY: as above
+        let complex = unsafe { pointer_at(object, slots.complex_unit) };
+        r.complex = if complex == 0 {
+            EE_UNIT_COMPLEX_NONE
+        } else if complex == object {
+            EE_UNIT_COMPLEX_SELF
+        } else {
+            EE_UNIT_COMPLEX_OTHER
+        };
+    }
+    if r.complex_fields != 0 {
+        // SAFETY: the object is a live EEComplexUnit: its pointer members are readable, and a goal or an action it
+        // points to is live while it does
+        unsafe {
+            let goal = pointer_at(object, slots.goal_state);
+            if goal == 0 {
+                r.goal_kind = -1;
+                r.goal_id = 0;
+            } else {
+                r.goal_kind = i32::from(std::ptr::read_volatile((goal + slots.goal_kind as usize) as *const u8));
+                r.goal_id =
+                    std::ptr::read_volatile((goal + slots.goal_id as usize) as *const std::os::raw::c_ulong) as u32;
+            }
+            let command = pointer_at(object, slots.command);
+            r.command = if command == 0 {
+                0
+            } else {
+                i64::from(std::ptr::read_volatile((command + slots.action_type as usize) as *const u32))
+            };
+            r.active_group = u8::from(pointer_at(object, slots.active_group) != 0);
+            r.herd = u8::from(pointer_at(object, slots.herd) != 0);
+            r.container = u8::from(pointer_at(object, slots.container) != 0);
+        }
+    }
+}
+
+/// `r` with its mirrored values read again ([`refresh`]).
+pub fn fresh(r: &EeUnitRecord) -> EeUnitRecord {
+    let mut copy = *r;
+    refresh(&mut copy);
+    copy
 }
 
 impl EeUnitRecord {
@@ -289,6 +498,9 @@ impl EeUnitRecord {
     pub fn first_difference(&self, other: &EeUnitRecord) -> Option<u32> {
         if self.id != other.id
             || self.owner != other.owner
+            || self.rts_fields != other.rts_fields
+            || self.unit_fields != other.unit_fields
+            || self.complex_fields != other.complex_fields
             || self.object != other.object
             || self.player != other.player
             || self.object_kind != other.object_kind
@@ -352,11 +564,11 @@ impl EeUnitRecord {
 
 /// What a decision reads: a unit's record by id. The store implements it; tests use plain maps.
 pub trait UnitView {
-    fn unit(&self, id: u32) -> Option<&EeUnitRecord>;
+    fn unit(&mut self, id: u32) -> Option<&EeUnitRecord>;
 }
 
 impl UnitView for BTreeMap<u32, EeUnitRecord> {
-    fn unit(&self, id: u32) -> Option<&EeUnitRecord> {
+    fn unit(&mut self, id: u32) -> Option<&EeUnitRecord> {
         self.get(&id)
     }
 }
@@ -396,8 +608,8 @@ pub struct Store {
 }
 
 impl UnitView for Store {
-    fn unit(&self, id: u32) -> Option<&EeUnitRecord> {
-        self.records.get(&id)
+    fn unit(&mut self, id: u32) -> Option<&EeUnitRecord> {
+        self.get(id)
     }
 }
 
@@ -478,11 +690,14 @@ impl Store {
     }
 
     /// The record of an object (its `RTSUnit*`'s address), when the store has one of that object.
-    pub fn by_object(&self, object: u64) -> Option<&EeUnitRecord> {
-        match self.by_object.get(&object) {
-            Some(id) => self.records.get(id).filter(|r| r.object == object),
-            None => self.unlisted.get(&object),
-        }
+    /// (Its mirrored values read again from the object: [`refresh`].)
+    pub fn by_object(&mut self, object: u64) -> Option<&EeUnitRecord> {
+        let r = match self.by_object.get(&object) {
+            Some(id) => self.records.get_mut(id).filter(|r| r.object == object),
+            None => self.unlisted.get_mut(&object),
+        }?;
+        refresh(r);
+        Some(r)
     }
 
     /// TEST ONLY: the object index against the records: the records it does not name, plus its entries that name
@@ -502,8 +717,16 @@ impl Store {
         }
     }
 
-    pub fn get(&self, id: u32) -> Option<&EeUnitRecord> {
-        self.records.get(&id)
+    /// The record under `id`, its mirrored values read again from the object ([`refresh`]).
+    pub fn get(&mut self, id: u32) -> Option<&EeUnitRecord> {
+        let r = self.records.get_mut(&id)?;
+        refresh(r);
+        Some(r)
+    }
+
+    /// Whether a record is under `id` (no read of the object).
+    pub fn contains(&self, id: u32) -> bool {
+        self.records.contains_key(&id)
     }
 
     pub fn len(&self) -> usize {
@@ -523,6 +746,7 @@ impl Store {
             .values()
             .chain(self.unlisted.values())
             .filter(|r| r.on_map != 0 && r.object_kind == crate::kinds::EE_OBJECT_COMPLEX_UNIT)
+            .map(fresh)
             .fold(0u64, |sum, r| sum.wrapping_add(r.hit_points.wrapping_add(r.tile_y).wrapping_add(r.tile_x) as u64))
     }
 
@@ -535,6 +759,7 @@ impl Store {
             .values()
             .chain(self.unlisted.values())
             .filter(|r| r.on_map != 0 && r.object_kind == crate::kinds::EE_OBJECT_COMPLEX_UNIT)
+            .map(fresh)
             .fold(0u64, |sum, r| sum.wrapping_add(r.flag2() as u64))
     }
 
@@ -570,7 +795,7 @@ impl Store {
         let mut bad = 0u32;
         for o in unlisted {
             let differs = match self.unlisted.get(&o.object) {
-                Some(r) => r.first_difference(o),
+                Some(r) => fresh(r).first_difference(&fresh(o)),
                 None => Some(0xfd),
             };
             if let Some(f) = differs {
@@ -600,14 +825,14 @@ impl Store {
             let field = if o.id == EE_UNIT_ID_UNLISTED {
                 // (by object, in the unlisted table: not one of `records`)
                 match self.unlisted.get(&o.object) {
-                    Some(r) => r.first_difference(o),
+                    Some(r) => fresh(r).first_difference(&fresh(o)),
                     None => Some(0xff),
                 }
             } else {
                 match self.records.get(&o.id) {
                     Some(r) => {
                         named += 1;
-                        r.first_difference(o)
+                        fresh(r).first_difference(&fresh(o))
                     }
                     None => Some(0xff),
                 }
@@ -1010,5 +1235,122 @@ mod tests {
         with_store(|s| s.insert(rec(id, 0xfd)));
         assert_eq!(with_store(|s| s.get(id).copied()).unwrap().unit_type, 42);
         assert_eq!(with_store(|s| s.clear_player(0x5000 + 0xfd)), 1);
+    }
+
+    #[test]
+    fn reads_take_the_plain_values_from_the_object_records() {
+        use crate::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnitsUnitFields};
+        let mut rts = Box::new(EeUnitsRtsUnitFields { mTileX: 3, mTileY: -4, mIsValid: true, ..Default::default() });
+        let mut unit = Box::new(EeUnitsUnitFields { mHitPoints: 7, mResourceAmount: 9, ..Default::default() });
+        let mut cx = Box::new(EeUnitsComplexUnitFields {
+            mIsBuilt: true,
+            mFormationSlot: 0xffff_fff0,
+            mHeight: 1.5,
+            mCloaked: 12,
+            mReloadTimer: -3,
+            ..Default::default()
+        });
+        let mut s = Store::new();
+        let mut r = EeUnitRecord { on_map: 1, ..rec(0x0300_0001, 3) };
+        r.rts_fields = std::ptr::addr_of!(*rts) as usize as u64;
+        r.unit_fields = std::ptr::addr_of!(*unit) as usize as u64;
+        r.complex_fields = std::ptr::addr_of!(*cx) as usize as u64;
+        s.insert(r);
+        let g = *s.get(0x0300_0001).unwrap();
+        assert_eq!((g.tile_x, g.tile_y, g.valid), (3, -4, 1));
+        assert_eq!((g.hit_points, g.resource_amount), (7, 9));
+        assert_eq!(
+            (g.built, g.formation_slot, g.height, g.cloak_timer, g.reload_timer),
+            (1, 0xffff_fff0, 1.5f32.to_bits(), 12, -3)
+        );
+        assert_eq!(s.checksum_flag1(), (7i64 - 4 + 3) as u64);
+        // the objects change: the next read has the new values, with no report
+        rts.mTileX = 10;
+        rts.mIsValid = false;
+        unit.mHitPoints = 0;
+        cx.mIsCloaked = true;
+        cx.mRoll = -0.0;
+        cx.mIsBuilt = false;
+        let g = *s.by_object(r.object).unwrap();
+        assert_eq!(
+            (g.tile_x, g.valid, g.hit_points, g.cloaked, g.roll, g.built),
+            (10, 0, 0, 1, (-0.0f32).to_bits(), 0)
+        );
+        assert_eq!(s.checksum_flag1(), (10i64 - 4) as u64);
+        // a fill of the same object compares equal (USCK)
+        assert_eq!(s.check(&[fresh(&r)]).mismatches, 0);
+        // a record with no object records keeps its values
+        s.insert(rec(0x0300_0002, 3));
+        assert_eq!(s.get(0x0300_0002).unwrap().hit_points, 100);
+    }
+
+    /// a fake unit object: pointer members at known offsets, a class record, a goal and an action behind them
+    #[test]
+    fn the_pointer_members_are_read_where_the_slots_say() {
+        use crate::unit_class_fields::EeUnitsUnitClassFields;
+        let mut class = EeUnitsUnitClassFields {
+            mCategory: 6,
+            mUnitType: 0x2e7,
+            mDomains: 2,
+            mIsLandBuildingClass: true,
+            mCanAttackGround: true,
+            mFamily: 9,
+            mCloakRadius: -3,
+            mIsParatrooperBomber: true,
+            mHealThreshold: 0.5,
+            mIsWall: true,
+            mIsMelee: true,
+            ..Default::default()
+        };
+        let mut goal = [0u64; 4];
+        // the goal's kind byte at 5, its id at 16
+        let goal_bytes = goal.as_mut_ptr().cast::<u8>();
+        // SAFETY: inside the 32 bytes
+        unsafe {
+            goal_bytes.add(5).write(11);
+            goal_bytes.add(16).cast::<std::os::raw::c_ulong>().write_unaligned(0x1234);
+        }
+        let action: u32 = 5000;
+        let mut object = [0usize; 8];
+        let base = object.as_ptr() as usize;
+        object[0] = std::ptr::addr_of_mut!(class) as usize;
+        object[1] = base; // the complex unit is the unit itself
+        object[2] = 0x40; // a group
+        object[3] = 0; // no container
+        object[4] = std::ptr::addr_of!(action) as usize;
+        object[5] = goal.as_ptr() as usize;
+        object[6] = 0x80; // a herd
+        let w = std::mem::size_of::<usize>() as u64;
+        let slots = EeUnitsStoreSlots {
+            unit_class: 0,
+            complex_unit: w,
+            active_group: 2 * w,
+            container: 3 * w,
+            command: 4 * w,
+            goal_state: 5 * w,
+            herd: 6 * w,
+            class_fields: 0,
+            goal_kind: 5,
+            goal_id: 16,
+            action_type: 0,
+        };
+        let mut r = EeUnitRecord { object: base as u64, unit_fields: 1, complex_fields: 1, ..Default::default() };
+        refresh_pointers(&mut r, &slots);
+        assert_eq!((r.category, r.unit_type, r.domains, r.land_building, r.can_attack_ground), (6, 0x2e7, 2, 1, 1));
+        assert_eq!((r.family, r.cloak_radius, r.crusader, r.paratrooper_bomber), (9, -3, 1, 1));
+        assert_eq!(r.heal_threshold, 0.5f32.to_bits());
+        assert_eq!(r.class_flags, EE_UNIT_CLASS_WALL | EE_UNIT_CLASS_PARATROOPER_BOMBER | EE_UNIT_CLASS_MELEE);
+        assert_eq!(r.complex, EE_UNIT_COMPLEX_SELF);
+        assert_eq!((r.goal_kind, r.goal_id, r.command), (11, 0x1234, 5000));
+        assert_eq!((r.active_group, r.container, r.herd), (1, 0, 1));
+        // no class, no goal, no command, another complex unit
+        object[0] = 0;
+        object[1] = 0x99;
+        object[4] = 0;
+        object[5] = 0;
+        std::hint::black_box(&mut object);
+        refresh_pointers(&mut r, &slots);
+        assert_eq!((r.category, r.unit_type, r.domains, r.class_flags, r.heal_threshold), (-1, -1, 0, 0, 0));
+        assert_eq!((r.complex, r.goal_kind, r.goal_id, r.command), (EE_UNIT_COMPLEX_OTHER, -1, 0, 0));
     }
 }

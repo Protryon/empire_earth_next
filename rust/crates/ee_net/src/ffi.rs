@@ -73,22 +73,40 @@ pub enum EeNetMmOp {
 pub type EeNetMmHostFn =
     unsafe extern "C" fn(ctx: *mut c_void, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> isize;
 
-pub struct FfiHost {
+/// The message manager's calls out as one function: the C++ host's (`RawMm`), or the Rust server's, which answers
+/// a few itself (server.rs)
+pub trait MmCall {
+    fn mm_call(&self, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> isize;
+}
+
+pub struct RawMm {
     ctx: *mut c_void,
     f: EeNetMmHostFn,
 }
 
 // The context is the C++ server, used from its threads as the original's manager was.
-unsafe impl Send for FfiHost {}
-unsafe impl Sync for FfiHost {}
+unsafe impl Send for RawMm {}
+unsafe impl Sync for RawMm {}
 
-impl FfiHost {
-    fn call(&self, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> isize {
+impl MmCall for RawMm {
+    fn mm_call(&self, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> isize {
         unsafe { (self.f)(self.ctx, op, a, b, c, d) }
     }
 }
 
-impl Host for FfiHost {
+/// The manager's host (`msgmgr::Host`) over a call
+pub struct MmVia<C: MmCall>(pub C);
+
+/// The manager's host over the C++ function
+pub type FfiHost = MmVia<RawMm>;
+
+impl<C: MmCall> MmVia<C> {
+    fn call(&self, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> isize {
+        self.0.mm_call(op, a, b, c, d)
+    }
+}
+
+impl<C: MmCall> Host for MmVia<C> {
     fn msg_reference(&self, m: Msg) {
         self.call(EeNetMmOp::MsgReference, m, 0, 0, 0);
     }
@@ -191,7 +209,7 @@ fn mm<'a>(m: *const EeNetMsgMgr) -> &'a MsgMgr<FfiHost> {
 /// `host` answers every op for `ctx` until `ee_net_mm_free`.
 #[no_mangle]
 pub unsafe extern "C" fn ee_net_mm_new(ctx: *mut c_void, host: EeNetMmHostFn) -> *mut EeNetMsgMgr {
-    Box::into_raw(Box::new(EeNetMsgMgr(MsgMgr::new(FfiHost { ctx, f: host }))))
+    Box::into_raw(Box::new(EeNetMsgMgr(MsgMgr::new(MmVia(RawMm { ctx, f: host })))))
 }
 
 /// # Safety
@@ -410,8 +428,8 @@ pub type EeNetQHostFn =
     unsafe extern "C" fn(ctx: *mut c_void, op: EeNetQOp, a: usize, b: usize, c: usize, d: usize) -> isize;
 
 pub struct QFfiHost {
-    ctx: *mut c_void,
-    f: EeNetQHostFn,
+    pub(crate) ctx: *mut c_void,
+    pub(crate) f: EeNetQHostFn,
 }
 
 // The context is the C++ client or server, used from its threads as the original's objects were.

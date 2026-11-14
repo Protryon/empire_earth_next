@@ -777,7 +777,7 @@ pub enum EeWonGuiOp {
     WmSelfHold,
     /// `Release()` on the manager.
     WmSelfRelease,
-    /// the window set's `a`-th window (0 past the end; a pure read).
+    /// not made since round 34 (the window set is the Rust manager's, `wmloop`); the number stays taken
     WmWindowAt,
     /// a cache's reference: `b` (an `EeWonWmRefKind` `a`) held (`c != 0`) or given back.
     WmRef,
@@ -790,6 +790,120 @@ pub enum EeWonGuiOp {
     WmDelayImage,
     /// `mDefaultWindow->GetFont(FontDescriptor("Tahoma", 0, 8))` (a `Font*` with one reference).
     WmDefaultWindowFont,
+    /// a window event's field or method (`a` an `EeWonWmEvent`, `b` the `WindowEventBase*`; `c`, `d` its
+    /// arguments; R6 WON round 34, `wmloop`).
+    WmEvent = 604,
+    /// the screen resolution hooks (virtual): `a` 0 `GetScreenResolutionHook(*(int*)b, *(int*)c)`, 1
+    /// `SetScreenResolutionHook(b, c)`.
+    WmResolution,
+    /// `Signal()` (virtual; any thread: PostEvent's wake-up).
+    WmSignal,
+    // ---- the skins' button subclasses (R6 WON round 35: `msbtnobj`, the receiver the `MSButtonBase*`; the wrapped
+    // text's calls are the label's `Wrap*` ops on `mText`, its paint the `Draw` op's text slot)
+    /// a button's or component's method (`a` an `EeWonSkinBtn`; `b`, `c` its arguments).
+    SkinBtn = 607,
+    /// the check box's or radio button's painter function on the Graphics `a` (`b` an `EeWonMsBox`):
+    /// `MSCheckbox::CheckboxPainter(*(Graphics*)a, this)` / `MSRadioButton::RadioPainter`.
+    SkinBoxPainter,
+    // ---- the WON skin's button (`wonbtnobj`; the receiver the `WONButton*`)
+    /// a wrapped text's method (`a` an `EeWonWbText`, `b` the `WrappedText*`, `c` its argument).
+    WbText,
+    /// an image's method (`a` an `EeWonWbImage`, `b` the `Image*`).
+    WbImage,
+    /// a font's (`a` an `EeWonWbFont`, `b` the `Font*`).
+    WbFont,
+    /// `Button::CopyAttributes((Button*)a)`.
+    WbBaseCopy,
+}
+
+/// A wrapped text's method (`WbText`; `b` the text).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonWbText {
+    /// `new WrappedText`, answered with one reference (the Rust's).
+    New = 1,
+    /// `AddRef()` (a `SmartPtr` the Rust holds).
+    Hold,
+    /// `Release()`.
+    Release,
+    /// `SetText(*(const GUIString*)c)`.
+    SetText,
+    /// `SetMaxWidth(c)`.
+    SetMaxWidth,
+    /// `SetWrap(c != 0)`.
+    SetWrap,
+    /// `SetCentered(c != 0)`.
+    SetCentered,
+    /// `SetFont((Font*)c)`.
+    SetFont,
+    /// `GetWidth()`.
+    Width,
+    /// `GetHeight()`.
+    Height,
+    /// `mFont.get()` (a pure read).
+    Font,
+    /// `&GetText()` (a `const GUIString*`).
+    Text,
+}
+
+/// An image's method (`WbImage`; `b` the image).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonWbImage {
+    /// `AddRef()`.
+    Hold = 1,
+    /// `Release()`.
+    Release,
+    /// `mWidth`.
+    Width,
+    /// `mHeight`.
+    Height,
+    /// `Duplicate()`, answered with the returned `SmartPtr`'s reference.
+    Duplicate,
+}
+
+/// A font's (`WbFont`; `b` the font).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonWbFont {
+    /// `WindowManager::GetDefaultWindowManager()->GetDefaultFont()` (raw).
+    Default = 1,
+    /// `AddRef()`.
+    Hold,
+    /// `Release()`.
+    Release,
+}
+
+/// The button's and component's methods a skin button calls (`SkinBtn`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonSkinBtn {
+    /// `IsDisabled()` (0 or 1).
+    IsDisabled = 1,
+    /// `HasFocus()` (0 or 1).
+    HasFocus,
+    /// `mParent` (a `Container*`; a pure read).
+    Parent,
+    /// `((Container*)b)->HasUsedDialogKeys()` (0 or 1).
+    UsedDialogKeys,
+    /// `IsPressed()` (0 or 1).
+    IsPressed,
+    /// `IsChecked()` (0 or 1).
+    IsChecked,
+    /// `SetComponentFlags(ComponentFlag_GrabBG, true)`.
+    SetGrabBG,
+    /// `SetComponentFlags(ComponentFlag_WantFocus, b != 0)`.
+    SetWantFocus,
+    /// `SetButtonFlags(b, c != 0)`.
+    SetButtonFlags,
+    /// `GetButtonFlags()`.
+    ButtonFlags,
+    /// `IsDefaultButton()` (0 or 1).
+    IsDefaultButton,
+    /// `((Component*)b)->ComponentFlagSet(c)` (0 or 1).
+    FlagSet,
+    /// `SetComponentFlags(b, true)`.
+    SetFlag,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

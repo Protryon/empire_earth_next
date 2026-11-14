@@ -17,6 +17,8 @@ use crate::effect_aged::aged;
 use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
 use crate::effect_hurricane::{hurricane, load_hurricane, save_hurricane, EE_GFX_EFFECT_KIND_HURRICANE};
+use crate::effect_icon::{icon, load_icon, save_icon, EE_GFX_EFFECT_KIND_GOAL, EE_GFX_EFFECT_KIND_ICON};
+use crate::effect_multi::{multi, EE_GFX_EFFECT_KIND_MULTI_EFFECT};
 use crate::effect_nuclear::{
     blast, load_blast, save_blast, EeGfxUnitTile, EE_GFX_EFFECT_KIND_ENERGY_WAVE, EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION,
 };
@@ -30,6 +32,9 @@ use crate::effect_state::{
     EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_SCREEN_FLASH, EE_GFX_EFFECT_KIND_TELEPORT,
     EE_GFX_EFFECT_KIND_TIME_WARP, EE_GFX_EFFECT_KIND_WATER_SPLASH, EE_GFX_EFFECT_MOVED,
 };
+use crate::effect_vent::{damage_vent, EeGfxFrames, EeGfxVentPoints, EeGfxVentUnit, EE_GFX_EFFECT_KIND_DAMAGE_VENT};
+use crate::effect_wall::{wall, wall_file, EE_GFX_EFFECT_KIND_ENERGY_WALL};
+use crate::effects::EeGfxColor;
 use crate::lighting::EeGfxLighting;
 use crate::raster::{EeGfxModel, Raster, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE};
 
@@ -57,6 +62,8 @@ pub enum EeGfxEffect3DOp {
     /// `Load` and `Save` after `EEEffect3D`'s (`ee_gfx_effect3d_file`)
     Load = 11,
     Save = 12,
+    /// the constructor along a line (the multi-effect's)
+    CreateLine = 13,
 }
 
 /// What the effects read of their graphic effect and the tick, gathered by the C++ for each call.
@@ -93,6 +100,22 @@ pub struct EeGfxGraphicFacts {
     pub start_size: f32,
     /// the graphic effect has its linked effect 1
     pub has_linked1: bool,
+    /// the graphic effect has its linked effect 3
+    pub has_linked3: bool,
+    /// `gFreeCamera`
+    pub free_camera: bool,
+    /// `mFlag2`, `mParam7`, `mParam8`
+    pub flag2: bool,
+    pub param7: f32,
+    pub param8: f32,
+    /// `gPhysics->mSpeed` (the game speed)
+    pub speed: f32,
+    /// `mParam9` .. `mParam11`
+    pub param9: f32,
+    pub param10: f32,
+    pub param11: f32,
+    /// the effect has its graphic effect
+    pub has_effect: bool,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -172,6 +195,41 @@ pub struct EeGfxEffect3DHost {
     pub unit_hidden: extern "C" fn(context: *mut c_void) -> bool,
     /// the terrain mesh's tile is a space tile (`GetIsSpaceTile`)
     pub space_tile: extern "C" fn(context: *mut c_void, x: u32, y: u32) -> bool,
+    /// the graphic effect's linked effect `index` (1..3) made through the entry point that made the effect (on its
+    /// unit, at its point, along its line); the creation's result
+    pub create_linked: extern "C" fn(context: *mut c_void, index: u32) -> i32,
+    /// the unit's complex unit is a gate: its two end parts' positions
+    pub wall_gate_posts: extern "C" fn(context: *mut c_void, first: *mut Ge3DPoint, second: *mut Ge3DPoint) -> bool,
+    /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
+    pub wall_piece: extern "C" fn(context: *mut c_void, x: i32, y: i32, z: *mut f32) -> bool,
+    /// the unit's complex unit is a gate: how open it is into `open`
+    pub gate_open: extern "C" fn(context: *mut c_void, open: *mut f32) -> bool,
+    /// the unit's complex unit's player's colour
+    pub player_color: extern "C" fn(context: *mut c_void) -> EeGfxColor,
+    /// the damage vent's tag point lists (kinds 5 and 0x38 of the unit's model at its animation), kept for the call
+    pub vent_lists: extern "C" fn(context: *mut c_void),
+    /// the damage vent's unit: its command is to die, its maximum hit points
+    pub vent_unit: extern "C" fn(context: *mut c_void) -> EeGfxVentUnit,
+    /// the number of vents (kind 5 tag points; after `vent_lists`)
+    pub vent_count: extern "C" fn(context: *mut c_void) -> u32,
+    /// vent `tag`'s and its aim's offsets at frame 0 into `points[0]` and `points[1]` (after `vent_lists`)
+    pub vent_offsets: extern "C" fn(context: *mut c_void, tag: i32, points: *mut Ge3DPoint),
+    /// vent `tag`'s places on the unit (after `vent_lists`)
+    pub vent_points: extern "C" fn(context: *mut c_void, tag: i32) -> EeGfxVentPoints,
+    /// the kept graphic object's animation `index`
+    pub frames: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxFrames,
+    /// the unit's class's scale (`GetClass()->GetScale()`)
+    pub unit_class_scale: extern "C" fn(context: *mut c_void) -> f32,
+    /// the graphic object is the graphic effect's; its `LoadMedia`, then the media of the one it replaces unloaded
+    pub reload_media: extern "C" fn(context: *mut c_void) -> i32,
+    /// the unit's position, raised by its complex unit's effect height while on the map and alive (the origin
+    /// without a unit)
+    pub unit_raised_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
+    /// the unit is an unbuilt market (a complex unit of type market, not built, not a foundation)
+    pub market_unbuilt: extern "C" fn(context: *mut c_void) -> bool,
+    /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
+    /// screen (none without an object)
+    pub queue_screen: extern "C" fn(context: *mut c_void, index: u32),
 }
 
 /// The world as the effects ask it.
@@ -252,6 +310,54 @@ pub trait Effect3DHost {
     fn space_tile(&mut self, _x: u32, _y: u32) -> bool {
         false
     }
+    /// the tests' hosts that make no multi-effect make nothing
+    fn create_linked(&mut self, _index: u32) -> i32 {
+        0
+    }
+    /// the tests' hosts that make no energy wall stand on no gate and find no wall
+    fn wall_gate_posts(&mut self) -> Option<(Ge3DPoint, Ge3DPoint)> {
+        None
+    }
+    fn wall_piece(&mut self, _x: i32, _y: i32) -> Option<f32> {
+        None
+    }
+    fn gate_open(&mut self) -> Option<f32> {
+        None
+    }
+    fn player_color(&mut self) -> EeGfxColor {
+        EeGfxColor::default()
+    }
+    /// the tests' hosts that make no damage vent have no vents
+    fn vent_lists(&mut self) {}
+    fn vent_unit(&mut self) -> EeGfxVentUnit {
+        EeGfxVentUnit::default()
+    }
+    fn vent_count(&mut self) -> u32 {
+        0
+    }
+    fn vent_offsets(&mut self, _tag: i32) -> (Ge3DPoint, Ge3DPoint) {
+        (Ge3DPoint::default(), Ge3DPoint::default())
+    }
+    fn vent_points(&mut self, _tag: i32) -> EeGfxVentPoints {
+        EeGfxVentPoints::default()
+    }
+    fn frames(&mut self, _index: u32) -> EeGfxFrames {
+        EeGfxFrames::default()
+    }
+    fn unit_class_scale(&mut self) -> f32 {
+        0.0
+    }
+    /// the tests' hosts that make no icon load nothing more and stand at the origin
+    fn reload_media(&mut self) -> i32 {
+        0
+    }
+    fn unit_raised_position(&mut self) -> Ge3DPoint {
+        Ge3DPoint::default()
+    }
+    fn market_unbuilt(&mut self) -> bool {
+        false
+    }
+    fn queue_screen(&mut self, _index: u32) {}
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -360,6 +466,59 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn space_tile(&mut self, x: u32, y: u32) -> bool {
         (self.space_tile)(self.context, x, y)
     }
+    fn create_linked(&mut self, index: u32) -> i32 {
+        (self.create_linked)(self.context, index)
+    }
+    fn wall_gate_posts(&mut self) -> Option<(Ge3DPoint, Ge3DPoint)> {
+        let (mut first, mut second) = (Ge3DPoint::default(), Ge3DPoint::default());
+        (self.wall_gate_posts)(self.context, &mut first, &mut second).then_some((first, second))
+    }
+    fn wall_piece(&mut self, x: i32, y: i32) -> Option<f32> {
+        let mut z = 0.0;
+        (self.wall_piece)(self.context, x, y, &mut z).then_some(z)
+    }
+    fn gate_open(&mut self) -> Option<f32> {
+        let mut open = 0.0;
+        (self.gate_open)(self.context, &mut open).then_some(open)
+    }
+    fn player_color(&mut self) -> EeGfxColor {
+        (self.player_color)(self.context)
+    }
+    fn vent_lists(&mut self) {
+        (self.vent_lists)(self.context)
+    }
+    fn vent_unit(&mut self) -> EeGfxVentUnit {
+        (self.vent_unit)(self.context)
+    }
+    fn vent_count(&mut self) -> u32 {
+        (self.vent_count)(self.context)
+    }
+    fn vent_offsets(&mut self, tag: i32) -> (Ge3DPoint, Ge3DPoint) {
+        let mut points = [Ge3DPoint::default(); 2];
+        (self.vent_offsets)(self.context, tag, points.as_mut_ptr());
+        (points[0], points[1])
+    }
+    fn vent_points(&mut self, tag: i32) -> EeGfxVentPoints {
+        (self.vent_points)(self.context, tag)
+    }
+    fn frames(&mut self, index: u32) -> EeGfxFrames {
+        (self.frames)(self.context, index)
+    }
+    fn unit_class_scale(&mut self) -> f32 {
+        (self.unit_class_scale)(self.context)
+    }
+    fn reload_media(&mut self) -> i32 {
+        (self.reload_media)(self.context)
+    }
+    fn unit_raised_position(&mut self) -> Ge3DPoint {
+        (self.unit_raised_position)(self.context)
+    }
+    fn market_unbuilt(&mut self) -> bool {
+        (self.market_unbuilt)(self.context)
+    }
+    fn queue_screen(&mut self, index: u32) {
+        (self.queue_screen)(self.context, index)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -388,6 +547,10 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         },
         EE_GFX_EFFECT_KIND_HURRICANE => unsafe { hurricane(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION | EE_GFX_EFFECT_KIND_ENERGY_WAVE => unsafe { blast(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_MULTI_EFFECT => unsafe { multi(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_ENERGY_WALL => unsafe { wall(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_DAMAGE_VENT => unsafe { damage_vent(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_ICON | EE_GFX_EFFECT_KIND_GOAL => unsafe { icon(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -473,6 +636,27 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 unsafe { load_blast(r, f, h) }
             } else {
                 save_blast(r, f)
+            }
+        }
+        // the base's alone
+        EE_GFX_EFFECT_KIND_MULTI_EFFECT => base,
+        EE_GFX_EFFECT_KIND_ENERGY_WALL => wall_file(load, base, r, f, major, minor, h),
+        // the base's result ignored on loading: the media's
+        EE_GFX_EFFECT_KIND_DAMAGE_VENT => {
+            if load {
+                h.load_media()
+            } else {
+                base
+            }
+        }
+        // the base's error stops it
+        EE_GFX_EFFECT_KIND_ICON | EE_GFX_EFFECT_KIND_GOAL => {
+            if base != 0 {
+                base
+            } else if load {
+                load_icon(r, f)
+            } else {
+                save_icon(r, f)
             }
         }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {

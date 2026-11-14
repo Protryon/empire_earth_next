@@ -252,6 +252,114 @@ pub enum EeUiOp {
     /// Bitmap `a`'s `ComputeStretchedCoordsAndScale(f, f, source, GetScreenIndex())`: `f` the destination, the source
     /// rectangle's bottom and left float bits in `c` (high, low), its right and top in `d`.
     BitmapStretch = 149,
+
+    // ---- UITextLabel and UITLScrolling (R6 ui round 13): their strings, texts and scroll bar by address
+    /// `new UWideString((const char*)a)` -> the string (the goldens trace the bytes' hash, not the address).
+    StringNew = 150,
+    /// `delete` string `a`.
+    StringDelete = 151,
+    /// `*string a = *string b`.
+    StringAssign = 152,
+    /// Text `a`'s `SetText(UWideString((const char*)b))` (the goldens trace the bytes' hash).
+    TextSetBytes = 153,
+    /// *Pure*: text `a`'s `GetFont()->GetHeight()`.
+    TextFontHeight = 154,
+    /// `mDrawCount--`.
+    DrawCountDecrement = 155,
+    /// `SetBgRectangle(f)`.
+    SetBgRectangle = 156,
+    /// The form's `RedrawIntersectControls(f)`.
+    RedrawIntersect = 157,
+    /// `new UIScrollBar(GetId(), (f[0], f[1]), f[2], 1, GetForm(), GetIndex(), GetBorderThickness())` -> the bar.
+    CreateScrollBar = 158,
+    /// The scroll bar `a`'s `SetRange(0, b)`.
+    BarSetRange = 159,
+    /// The scroll bar `a`'s `SetPageSize(b)`.
+    BarSetPageSize = 160,
+    /// *Pure*: the scroll bar `a`'s `GetSlider()->GetCurrentRangeValue()`.
+    BarValue = 161,
+    /// The scroll bar `a`'s `IncrementBy(b)`.
+    BarIncrementBy = 162,
+    /// The scroll bar `a`'s `SetCurrentRangeValue(b)`.
+    BarSetValue = 163,
+    /// *Pure*: part `a`'s `GetCopiedDrawRectangle()` -> `f`.
+    PartCopiedDrawRect = 164,
+    /// Poll `a`'s `Pause()`.
+    PollPause = 165,
+    /// Poll `a`'s `Resume()`.
+    PollResume = 166,
+    /// The virtual `CheckScrollBar()`.
+    VirtCheckScrollBar = 167,
+    /// The virtual `RecomputeDisplayRange()`.
+    VirtRecompute = 168,
+    /// The virtual `SetLocation(f[0], f[1])`.
+    VirtSetLocation = 169,
+    /// The virtual `SetRectangle(f)`.
+    VirtSetRectangle = 170,
+
+    // ---- UIEditBox (R6 ui round 14): its lines, rhombus, texts, scroll bar and polls by address
+    /// *Pure*: the edit box's key question `a` (`edit_keys::EditKey`).
+    EditKey = 171,
+    /// *Pure*: the scroll bar `a`'s `GetSlider()->GetMaxRange()`.
+    BarMax = 172,
+    /// The virtual `ProcessEnterKey()` (the scenario editor's `EESETSAEditBox` overrides it).
+    VirtProcessEnterKey = 173,
+    /// `PlatClipboardSetText((const char*)a)` (the goldens trace the bytes' hash).
+    ClipboardSet = 174,
+    /// *Pure*: `PlatClipboardGetText()`: NUL-terminated bytes the host keeps until the next, or 0.
+    ClipboardGet = 175,
+    /// The form's manager's `UpdateTranslatedKey((const char*)a, 1)` (the goldens trace the bytes' hash).
+    TranslatedKey = 176,
+    /// `PlatTextInputCancel` on the control's window (the original's `ImmNotifyIME` cancel).
+    TextInputCancel = 177,
+    /// `UIControl::ReleaseCapturedKeyboard()` (non-virtual).
+    BaseReleaseKeyboard = 178,
+    /// `UIControl::MouseLButtonDoublePressed()` -> its result.
+    BaseMouseDoublePressed = 179,
+    /// *Pure*: the form's `GetMouseLocation()` -> `f[0]`, `f[1]`.
+    FormMouseLocation = 180,
+    /// `new GELine` -> the line: `a` 0 the default one, 1 the edit box's caret (zero points, black, width 1).
+    LineCreate = 181,
+    /// `delete` line `a`.
+    LineDelete = 182,
+    /// Line `a`'s `SetStartPoint(f[0], f[1])`, `SetEndPoint(f[2], f[3])`.
+    LineSetPoints = 183,
+    /// Line `a`'s `SetColor(f[0..3])`.
+    LineSetColor = 184,
+    /// The rasterizer's `Draw(line a, GetScreenIndex())` -> its result.
+    LineDraw = 185,
+    /// `new GERhombus` -> the rhombus (the edit box's `RhombusSetRect`, `RhombusSetColor`, `RhombusDraw` take it).
+    RhombusCreate = 186,
+    /// `delete` rhombus `a`.
+    RhombusDelete = 187,
+    /// *Pure*: text `a`'s `GetFgColor()` -> `f[0..3]`.
+    TextFgColor = 188,
+    /// Text `a`'s `SetBgColor(f[0..3])`.
+    TextSetBgColor = 189,
+    /// Text `a`'s `SetIsTransparent(b != 0)`.
+    TextSetTransparent = 190,
+
+    // ---- UIListBox<T> (R6 ui round 15): the per-`T` host's ops (`UIListBoxRust<T>::Op`, lle/UIListBox.h); the list
+    // box's rhombi take their address (`RhombusRect`, `RhombusSetRect`, `RhombusDraw` too)
+    /// *Pure*: the virtual `GetNumLines()`.
+    ListNumLines = 191,
+    /// The virtual `ChangeSelectionIndex(a, b != 0, c != 0)`.
+    ListChangeSelection = 192,
+    /// The virtual `ClearSelection()`.
+    ListClearSelection = 193,
+    /// The visible lines copied: `mCopyLineArray` grown to `a` lines if shorter, then lines `b .. c` of `mData` copied
+    /// to its start.
+    ListCopyLines = 194,
+    /// The virtual `ProcessDown()` (`a` 0), `ProcessUp()` (1), `ProcessHome()` (2), `ProcessEnd()` (3).
+    ListProcess = 195,
+    /// `*rhombus a = *rhombus b`.
+    RhombusAssign = 196,
+
+    // ---- UIComboBox (R6 ui round 15): its questions and actions, numbered as the record FFI's host calls were
+    /// *Pure*: the combo box's question `a >> 24` (`comboobj::EeUiComboQuery`) with its argument `a & 0xffffff`.
+    ComboQuery = 197,
+    /// The combo box's action `a` (`comboobj::EeUiComboAct`) with `b`, `c`, `d`.
+    ComboAct = 198,
 }
 
 impl EeUiOp {
@@ -289,6 +397,16 @@ impl EeUiOp {
                 | RhombusRect
                 | TextLength
                 | TextExtent
+                | TextFontHeight
+                | BarValue
+                | PartCopiedDrawRect
+                | EditKey
+                | BarMax
+                | ClipboardGet
+                | FormMouseLocation
+                | TextFgColor
+                | ListNumLines
+                | ComboQuery
         )
     }
 }

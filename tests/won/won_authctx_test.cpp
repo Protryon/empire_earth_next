@@ -456,7 +456,6 @@ struct RustCtx {
         h.context = this;
         h.add_ref = HAddRef;
         h.release = HRelease;
-        h.session_last_use = HLastUse;
         h.op_kill = HKill;
         h.op_killed = HKilled;
         h.op_status = HStatus;
@@ -466,7 +465,7 @@ struct RustCtx {
         h.new_timer = HNewTimer;
         h.new_cert_op = HNewCert;
         h.cert_peer_data = HCertPeer;
-        mFlow = ee_won_auth_flow_new(&h);
+        mFlow = ee_won_auth_flow_new(&h, HLastUse);
     }
     ~RustCtx() { ee_won_auth_flow_free(mFlow); }
     void PutSession(const IPAddr& a, FSession* s, time_t now)

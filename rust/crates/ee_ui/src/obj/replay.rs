@@ -6,7 +6,9 @@
 //! - `new ...` / `free`: the object made or freed (the class's test reads them);
 //! - `call C a b f0 f1 f2 f3`: an inward call by the driver (`C` the class's call number, floats as hex bits),
 //!   answered by `ret r f0 f1 f2 f3` after the calls out it made;
-//! - `op O a b c d f0 f1 f2 f3`: a call out that is not pure, which the next lines answer: `set` lines, `do` lines
+//! - `op O a b c d f0 f1 f2 f3`: a call out that is not pure (a string op's bytes as their FNV-1a hash: `StringNew`,
+//!   `TextSetBytes`, `ClipboardSet`, `TranslatedKey`), which the
+//!   next lines answer: `set` lines, `do` lines
 //!   (an inward call the world made meanwhile, like `call`, answered by `ret`), then `= r f0 f1 f2 f3`;
 //! - `set O a r f0 f1 f2 f3`: the world's answer to the pure op `O` on `a` from now on (`EeUiOp::is_pure`); a pure op
 //!   is answered from these and is not traced.
@@ -37,6 +39,9 @@ pub struct Replay<'a> {
     /// Rewrites a pure op's answer (`(replay, op, a, the world's answer)`): a test's own objects for an answer that
     /// names one (the radio button's `RadioOf`).
     pure_hook: Option<PureHook>,
+    /// The bytes of the last op that passed bytes by address (an edit box's `TranslatedKey`, `ClipboardSet`), for a
+    /// class's dispatch to hand back in a `do` line.
+    pub last_bytes: RefCell<Vec<u8>>,
 }
 
 /// A replay's rewrite of a pure op's answer.
@@ -52,6 +57,20 @@ fn floats(w: &[&str]) -> [f32; 4] {
         f[i] = f32::from_bits(u32::from_str_radix(x, 16).expect("hex float"));
     }
     f
+}
+
+/// FNV-1a over NUL-terminated bytes at `p` (the drivers' trace of a string op's bytes).
+///
+/// # Safety
+/// `p` points at NUL-terminated bytes.
+pub unsafe fn fnv(p: isize) -> isize {
+    // SAFETY: the contract
+    let bytes = unsafe { core::ffi::CStr::from_ptr(p as *const core::ffi::c_char) }.to_bytes();
+    let mut h: u32 = 2166136261;
+    for &b in bytes {
+        h = (h ^ b as u32).wrapping_mul(16777619);
+    }
+    h as isize
 }
 
 fn int(w: &str) -> isize {
@@ -89,6 +108,7 @@ impl<'a> Replay<'a> {
             checked: Cell::new(0),
             failed: RefCell::new(None),
             pure_hook: None,
+            last_bytes: RefCell::new(Vec::new()),
         }
     }
 
@@ -145,7 +165,26 @@ impl<'a> Replay<'a> {
         }
         // SAFETY: the contract
         let inb = unsafe { read_buf(f) };
-        self.expect(&format!("op {} {a} {b} {c} {d} {}", op as u32, hex4(&inb)));
+        // the string ops' bytes are traced as their hash (the driver's world did the same)
+        // SAFETY: those ops pass NUL-terminated bytes
+        let (ta, tb) = unsafe {
+            match op {
+                EeUiOp::StringNew => (fnv(a), b),
+                EeUiOp::TextSetBytes => (a, fnv(b)),
+                // a combo box's inserted line (R6 ui round 15)
+                EeUiOp::ComboAct if a == 1 => (a, fnv(b)),
+                EeUiOp::ClipboardSet | EeUiOp::TranslatedKey => {
+                    let bytes = core::ffi::CStr::from_ptr(a as *const core::ffi::c_char).to_bytes_with_nul();
+                    *self.last_bytes.borrow_mut() = bytes.to_vec();
+                    (fnv(a), b)
+                }
+                _ => (a, b),
+            }
+        };
+        // a combo box's typed key (R6 ui round 15)
+        // SAFETY: that action passes NUL-terminated bytes
+        let tc = if op == EeUiOp::ComboAct && a == 13 { unsafe { fnv(c) } } else { c };
+        self.expect(&format!("op {} {ta} {tb} {tc} {d} {}", op as u32, hex4(&inb)));
         loop {
             let l = self.next();
             let w: Vec<&str> = l.split(' ').collect();

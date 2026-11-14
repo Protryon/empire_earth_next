@@ -108,9 +108,12 @@ fn the_context_calls_reach_the_rust_context() {
     assert_eq!(call(EE_WON_HOST_HAS_AUTH, [N; 3], [0, 0], &[], c).num, 1);
     // sessions by the call's address
     assert!(call(EE_WON_HOST_GET_SESSION, [N; 3], [0, 0], &[], c).obj.is_none());
-    call(EE_WON_HOST_PUT_SESSION, [Obj(900), N, N], [0, 0], &[], c);
-    assert_eq!(call(EE_WON_HOST_GET_SESSION, [N; 3], [0, 0], &[], c).obj, Obj(900));
-    for h in [p0, p, cert, k] {
+    let s = new_session(1, 5, unix_now());
+    call(EE_WON_HOST_PUT_SESSION, [s, N, N], [0, 0], &[], c);
+    assert_eq!(count(s), 2, "the cache's reference");
+    assert_eq!(call(EE_WON_HOST_GET_SESSION, [N; 3], [0, 0], &[], c).obj, s);
+    assert_eq!(count(s), 2, "the cache's reference is the caller's");
+    for h in [p0, p, cert, k, s, s] {
         release(h);
     }
 }
@@ -125,4 +128,81 @@ fn without_a_context_the_calls_answer_nothing() {
     assert!(call(EE_WON_HOST_CERT_CTX_PEER, [N; 3], [0, 0], &[], None).obj.is_none());
     assert!(call(EE_WON_HOST_CERT_USER, [N; 3], [0, 0], &[], None).bytes.is_none());
     assert!(call(EE_WON_HOST_GET_SESSION, [N; 3], [0, 0], &[], None).obj.is_none());
+}
+
+fn new_session(auth_type: i32, id: u16, at: i64) -> Obj {
+    let mut key = crate::blowfish::Blowfish::default();
+    assert!(key.set_key(b"0123456789abcdef"));
+    let s = Box::into_raw(Box::new(EeWonAuthSession::new(auth_type, id, key, 4, at)));
+    call(hostop::EE_WON_HOST_PEER_NEW_SESSION, [N; 3], [s as usize as i64, 0], &[], None).obj
+}
+
+unsafe extern "C" fn keep(context: *mut c_void, data: *const u8, length: usize) {
+    // SAFETY: the Vec the test passed; the callee's bytes
+    let v = unsafe { &mut *(context as *mut Vec<u8>) };
+    *v = unsafe { crate::ffi::bytes(data, length) }.to_vec();
+}
+
+fn crypt(session: Obj, decrypt: bool, msg: &[u8]) -> (i32, Option<Vec<u8>>) {
+    let mut out = Vec::new();
+    let mut replaced = false;
+    // SAFETY: a handle (or none), the bytes, a Vec sink, a flag
+    let st = unsafe {
+        ee_won_session_crypt(
+            session.ptr(),
+            decrypt,
+            msg.as_ptr(),
+            msg.len(),
+            keep,
+            &mut out as *mut Vec<u8> as *mut c_void,
+            &mut replaced,
+        )
+    };
+    (st, replaced.then_some(out))
+}
+
+#[test]
+fn a_new_session_is_a_handle_owning_the_ops_session() {
+    assert!(call(hostop::EE_WON_HOST_PEER_NEW_SESSION, [N; 3], [0, 0], &[], None).obj.is_none());
+    let s = new_session(1, 0x1234, 77);
+    assert!(is_handle(s) && count(s) == 1);
+    assert_eq!(session_last_use(s), 77);
+    assert_eq!(session_last_use(N), 0, "not a session");
+    // the op's GetSession(): a new reference; its key's bytes
+    let r = op_session(hostop::EE_WON_HOST_PEER_AUTH_SESSION, s);
+    assert_eq!((r.obj, count(s)), (s, 2));
+    release(r.obj);
+    let k = op_session(hostop::EE_WON_HOST_PEER_AUTH_KEY, s);
+    assert_eq!(k.bytes.as_deref(), Some(&b"0123456789abcdef"[..]));
+    // no session: nothing
+    let none = op_session(hostop::EE_WON_HOST_PEER_AUTH_SESSION, N);
+    assert!(none.obj.is_none() && none.bytes.is_none());
+    assert!(op_session(hostop::EE_WON_HOST_PEER_AUTH_KEY, N).bytes.is_none());
+    release(s);
+}
+
+#[test]
+fn the_transform_encrypts_and_decrypts_through_the_handle() {
+    let (a, b) = (new_session(1, 0x1234, 0), new_session(1, 0x1234, 0));
+    // CryptTransform's reference
+    // SAFETY: live handles
+    unsafe { ee_won_session_hold(a.ptr()) };
+    assert_eq!(count(a), 2);
+    let plain = [9u8, 0, 0, 0, b'h', b'e', b'l', b'l', b'o'];
+    let (st, enc) = crypt(a, false, &plain);
+    let enc = enc.expect("encrypted");
+    assert_eq!((st, enc[4], enc[5], enc[6]), (0, 12, 0x34, 0x12), "the session's header and id");
+    assert!(session_last_use(a) > 0, "the use time is now");
+    // a received message comes without its length field
+    let (st, dec) = crypt(b, true, &enc[4..]);
+    assert_eq!((st, dec.as_deref()), (0, Some(&b"hello"[..])));
+    // the same message again: the sequence number is behind
+    assert_eq!(crypt(b, true, &enc[4..]).0, 100086);
+    // anything but a session leaves the message
+    assert_eq!(crypt(N, false, &plain), (0, None));
+    // SAFETY: the transform's reference
+    unsafe { ee_won_session_release(a.ptr()) };
+    assert_eq!(count(a), 1);
+    release(a);
+    release(b);
 }

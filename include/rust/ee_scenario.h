@@ -32,6 +32,155 @@ constexpr static const uint32_t EE_SCENARIO_AI_CALL_DM_ATTACK_FREQUENCY_MODIFIER
 
 constexpr static const uint32_t EE_SCENARIO_AI_CALL_DM_INITIAL_ATTACK_MODIFIER = 3;
 
+/// The host's `mTiles->push_back(U2DPoint<long>(b, c))`: an area's rebuilt tiles (`EESMArea::GetTiles`).
+constexpr static const uint32_t EE_SCENARIO_WRITE_TILE = 17;
+
+/// The context unit's member `b` (`EE_SCENARIO_UNIT_*`): an integer, or a `float`'s bits for the float fields.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_FIELD = 69;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_HAS_COMPLEX = 0;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_HAS_STATS = 1;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_HAS_CLASS = 2;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_HIT_POINTS = 3;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_RESOURCE_TYPE = 4;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_RESOURCE_AMOUNT = 5;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_FLIGHT_TIME = 6;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_CARGO = 7;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_GARRISON = 8;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_AMMUNITION = 9;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_PAUSED = 10;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_RELOAD_TIMER = 11;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_UNIT_SCALE = 12;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_POWER = 13;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_ROTTING = 14;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_BUILT = 15;
+
+/// `mUnitVariables[b - this]`, 3 of them.
+constexpr static const int32_t EE_SCENARIO_UNIT_VARIABLE = 16;
+
+constexpr static const int32_t EE_SCENARIO_STATS_MAX_HIT_POINTS = 20;
+
+constexpr static const int32_t EE_SCENARIO_STATS_CARRY = 21;
+
+constexpr static const int32_t EE_SCENARIO_STATS_FLIGHT_TIME = 22;
+
+constexpr static const int32_t EE_SCENARIO_STATS_MAX_CARRY = 23;
+
+constexpr static const int32_t EE_SCENARIO_STATS_RELOAD = 24;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_SCALE = 25;
+
+constexpr static const int32_t EE_SCENARIO_STATS_POWER = 26;
+
+/// float `mArmor[b - this]`, 6 of them.
+constexpr static const int32_t EE_SCENARIO_STATS_ARMOR = 27;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_ATTACK = 33;
+
+constexpr static const int32_t EE_SCENARIO_STATS_WORK_RATE = 34;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_LEADERSHIP = 35;
+
+constexpr static const int32_t EE_SCENARIO_STATS_REPAIR = 36;
+
+constexpr static const int32_t EE_SCENARIO_STATS_HEALING = 37;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_RANGE = 38;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_LINE_OF_SIGHT = 39;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_VELOCITY = 40;
+
+constexpr static const int32_t EE_SCENARIO_STATS_INITIALIZED = 41;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_CAMERA_FOCUS = 42;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_GARRISON = 50;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_AMMUNITION = 51;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_ROTTING = 52;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_POWER = 53;
+
+/// `mArmor[b - this]` (`long`), 6 of them.
+constexpr static const int32_t EE_SCENARIO_CLASS_ARMOR = 54;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_RELOAD = 60;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_ATTACK = 61;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_WORK_RATE = 62;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_FLIGHT_TIME = 63;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_LEADERSHIP = 64;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_MAX_CARRY = 65;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_REPAIR = 66;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_HIT_POINTS = 67;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_CARRY = 68;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_HEALING = 69;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_CLASS_RANGE = 70;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_CLASS_LINE_OF_SIGHT = 71;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_CLASS_VELOCITY = 72;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_TRANSPORT = 73;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_WEIGHT = 74;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_TILE_SIZE = 75;
+
+/// float (`GetCruiseAltitude()`)
+constexpr static const int32_t EE_SCENARIO_CLASS_CRUISE = 76;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_CLASS_MIN_RANGE = 77;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_AIR = 78;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_LAND = 79;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_SEA = 80;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_FORTRESS = 81;
+
+/// Added to a class field: the upgrade's class (`GetStats()->mUnitClass`) instead of the unit's.
+constexpr static const int32_t EE_SCENARIO_OF_STATS = 100;
+
 /// `kSMCondition*` (ee/EEScenarioIDs.h).
 constexpr static const uint32_t EE_SCENARIO_CONDITION_ALWAYS_TRUE = 0;
 
@@ -48,6 +197,10 @@ constexpr static const uint32_t EE_SCENARIO_CONDITION_PLAYER_DIPLOMACY = 5;
 constexpr static const uint32_t EE_SCENARIO_CONDITION_GAME_ATTRIBUTE = 6;
 
 constexpr static const uint32_t EE_SCENARIO_CONDITION_CHAT_CONTAINS = 7;
+
+/// One unit made for player `player` (the C++ `CreateUnits`' loop body): type `b`; `c` 1 for a created unit (the
+/// class `gUnitClassTable[b]`, the id kept for the object), 0 for a copy of the object's unit `d` (its class).
+constexpr static const uint32_t EE_SCENARIO_WRITE_CREATE_UNIT = 18;
 
 /// The most players a choice can list (`EEScenarioManager::ChoosePlayer`'s out buffer; the world has at most 17).
 constexpr static const size_t EE_SCENARIO_MAX_PLAYERS = 64;
@@ -231,6 +384,103 @@ constexpr static const uint32_t EE_SCENARIO_READ_WORLD_POPULATION_LIMIT = 51;
 /// `gWorld.mPlayers[a]->mPlayerID`.
 constexpr static const uint32_t EE_SCENARIO_READ_PLAYER_ID = 52;
 
+/// The lists, by the manager's member: `mTriggers`, `mConditions`, `mEffects`, `mObjects`, `mAreas`,
+/// `mPendingEffects` (the last only for the index upkeep).
+constexpr static const uint32_t EE_SCENARIO_LIST_TRIGGERS = 0;
+
+constexpr static const uint32_t EE_SCENARIO_LIST_CONDITIONS = 1;
+
+constexpr static const uint32_t EE_SCENARIO_LIST_EFFECTS = 2;
+
+constexpr static const uint32_t EE_SCENARIO_LIST_OBJECTS = 3;
+
+constexpr static const uint32_t EE_SCENARIO_LIST_AREAS = 4;
+
+constexpr static const uint32_t EE_SCENARIO_LIST_PENDING = 5;
+
+/// The name lists (`GetTriggerNames`, `GetAllConditionNames`, `GetUserConditionNames`, `GetAllEffectNames`,
+/// `GetUserEffectNames`, `GetObjectNames`, `GetUserObjectNames`, `GetAreaNames`, `GetUserAreaNames`).
+constexpr static const uint32_t EE_SCENARIO_NAMES_TRIGGERS = 0;
+
+constexpr static const uint32_t EE_SCENARIO_NAMES_CONDITIONS = 1;
+
+constexpr static const uint32_t EE_SCENARIO_NAMES_USER_CONDITIONS = 2;
+
+constexpr static const uint32_t EE_SCENARIO_NAMES_EFFECTS = 3;
+
+constexpr static const uint32_t EE_SCENARIO_NAMES_USER_EFFECTS = 4;
+
+constexpr static const uint32_t EE_SCENARIO_NAMES_OBJECTS = 5;
+
+constexpr static const uint32_t EE_SCENARIO_NAMES_USER_OBJECTS = 6;
+
+constexpr static const uint32_t EE_SCENARIO_NAMES_AREAS = 7;
+
+constexpr static const uint32_t EE_SCENARIO_NAMES_USER_AREAS = 8;
+
+/// The C++ host's operations on the lists (`EESMListOp`, EEScenarioManager.cpp): `index` and `element` as each
+/// names them, the answer an element or an integer in the pointer.
+/// The list's size.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_COUNT = 0;
+
+/// Element `index` (NULL past the end).
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_AT = 1;
+
+/// `list[index] = element`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_SET = 2;
+
+/// `list.insert(begin + index, element)`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_INSERT = 3;
+
+/// `list.erase(begin + index)`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_ERASE = 4;
+
+/// `list.push_back(element)`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_PUSH = 5;
+
+/// `new` element of the list's class (its constructor's defaults).
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_CREATE = 6;
+
+/// `element->Copy(*list[index])`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_COPY = 7;
+
+/// `delete element`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_DESTROY = 8;
+
+/// The element's `mName` as a C string (valid until the next operation).
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_NAME = 9;
+
+/// The element's name set to `text` (an object's through `EESMObject::SetName`, which renames its conditions).
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_SET_NAME = 10;
+
+/// The element's id (`mID`, an object's `mL64`).
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_ID = 11;
+
+/// The element's id set to `index`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_SET_ID = 12;
+
+/// The element's numbers (the condition's, effect's, object's or trigger's fields record; NULL for an area).
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_FIELDS = 13;
+
+/// An effect's `mObjects.size()`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_OBJECT_COUNT = 14;
+
+/// An effect's `mObjects.data()`.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_OBJECTS = 15;
+
+/// A trigger's entry count: `list` 0 its condition entries, 1 its effect entries.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_ENTRY_COUNT = 16;
+
+/// The index in a trigger's entry: `index` the entry, `list` 0 a condition entry's `mValue`, 1 an effect entry's
+/// `mEffectIndex` (a pointer to the `unsigned long`).
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_ENTRY = 17;
+
+/// `gResource->GetString(index ? IDS_EXISTS : IDS_COPY)` as a C string.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_RESOURCE = 18;
+
+/// `text` appended to the caller's name list.
+constexpr static const uint32_t EE_SCENARIO_LIST_OP_OUT_NAME = 19;
+
 /// The manager's string slots in its stream: `mExportFileName`, `mLastChatText`.
 constexpr static const uint32_t EE_SCENARIO_MANAGER_EXPORT_NAME = 0;
 
@@ -270,9 +520,6 @@ constexpr static const uint32_t EE_SCENARIO_READ_UNIT_SEEN_BY = 62;
 /// `GetArea(a)`: -1 without the area, else its `ContainsUnit(unit b)` (1/0).
 constexpr static const uint32_t EE_SCENARIO_READ_AREA_CONTAINS_UNIT = 63;
 
-/// `GetScenarioObject(a)`: -1 without the object, else its `IsNearUnit(unit b, c, false)` (1/0).
-constexpr static const uint32_t EE_SCENARIO_READ_OBJ_NEAR_UNIT = 64;
-
 /// Player `a`'s first unit (`mFirstUnit`, the context's cursor set to it), the next (`mNext`) when `b` is 1: its id
 /// in the low 32 bits and its `mUnitClass->mUnitType` in the high, -1 at the end.
 constexpr static const uint32_t EE_SCENARIO_READ_PLAYER_UNIT = 65;
@@ -294,6 +541,83 @@ constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_SHUFFLE = 15;
 
 /// `mUnits.erase(begin() + b, end())`.
 constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_TRUNCATE = 16;
+
+/// `gWorld.mMap`'s `mL195610` (the height, low 32 bits) and `mL195614` (the width, high), as `unsigned long`s.
+constexpr static const uint32_t EE_SCENARIO_READ_MAP_SIZE = 70;
+
+/// `GetArea(a)->ContainsTile(U2DPoint<long>(b, c))` (1/0; the area's own capture record).
+constexpr static const uint32_t EE_SCENARIO_READ_AREA_CONTAINS_TILE = 71;
+
+/// `GetScenarioObject(a)->mUnits.size()`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_UNIT_COUNT = 72;
+
+/// `GetScenarioObject(a)->mUnits[b]`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_UNIT_AT = 73;
+
+/// `GetScenarioObject(a)->mSelectedByCheck`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_SELECTED_BY_CHECK = 74;
+
+/// Unit `a`'s `mTileX`, `mTileY`, packed.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_TILE_OF = 75;
+
+/// Unit `a`'s `mComplexUnit->GetLineOfSight()`'s bits.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_LINE_OF_SIGHT = 76;
+
+/// Unit `a`'s `mStats->mRange`'s bits.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_RANGE = 77;
+
+/// Unit `a`'s `mUnitClass->mTileSize`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_TILE_SIZE = 78;
+
+/// `gUnitClassTable[a]->mTileSize`.
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_TILE_SIZE = 79;
+
+/// `EEPlayerBlockTakes(NULL, a, b, c, d, d, 0)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_BLOCK_TAKES = 80;
+
+/// `gWorld.mMap->GetTile(a, b)`: 1 for a tile that is neither deep nor shallow water, else 0 (no tile too).
+constexpr static const uint32_t EE_SCENARIO_READ_MAP_TILE_DRY = 81;
+
+/// `EEGetFootprintDistance(unit a, b, c, ...)`'s bits (the squared distance to the unit's nearest tile).
+constexpr static const uint32_t EE_SCENARIO_READ_FOOTPRINT_DISTANCE = 82;
+
+/// Unit `a`'s complex unit's `CanReachTile(b, c)`, 0 without one.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_CAN_REACH_TILE = 83;
+
+/// Unit `a`'s `GetNearestFootprintTile(unit b, &x, &y)`: (x, y) packed.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_NEAREST_TILE = 84;
+
+/// Unit `a`'s complex unit's `IsInReach(unit b)`, 0 without one.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_IN_REACH = 85;
+
+/// `gWorld.mMap->GetTile(a, b) != NULL` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_MAP_TILE_EXISTS = 86;
+
+/// `EEGetTilesNearPoint(GE3DPoint((float)a, (float)b, 0), radius c's bits, list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_NEAR_POINT = 0;
+
+/// `EEGetSideTiles(a, b, size c, list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_SIDE = 1;
+
+/// `EEGetCornerTiles(0, a, b, size c, list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_CORNER = 2;
+
+/// `GetArea(a)->GetTiles(list)` (the area's cache and capture record).
+constexpr static const uint32_t EE_SCENARIO_TILES_AREA = 3;
+
+/// `gContinentManager.GetContinentTiles(a, list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_CONTINENT = 4;
+
+/// `gWorld.GetPlayer(a)->mTowns[b]->GetTiles(list)`.
+constexpr static const uint32_t EE_SCENARIO_TILES_TOWN = 5;
+
+/// What [`find_placement`] answers: not found, found (the location written), or not found and to be tried again
+/// through the C++ entry without the random tries (`FindPlacement(type, location, false)`, its own record).
+constexpr static const uint32_t EE_SCENARIO_PLACEMENT_NONE = 0;
+
+constexpr static const uint32_t EE_SCENARIO_PLACEMENT_FOUND = 1;
+
+constexpr static const uint32_t EE_SCENARIO_PLACEMENT_RETRY = 2;
 
 /// `SetPlayerAttribute(player, b, c, d)` again, through the C++ entry (the any/all resources' recursion).
 constexpr static const uint32_t EE_SCENARIO_WRITE_SET_ATTRIBUTE = 0;
@@ -492,12 +816,93 @@ constexpr static const uint32_t EE_SCENARIO_ENTRIES_CONDITIONS = 0;
 
 constexpr static const uint32_t EE_SCENARIO_ENTRIES_EFFECTS = 1;
 
+/// An element's text by slot: an effect's `mDescription`, `mMessage`, `mNewName`; a condition's `mChatText`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_DESCRIPTION = 0;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_MESSAGE = 1;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_NEW_NAME = 2;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_CHAT = 3;
+
+/// The import's error messages (`mImportErrors`), each the language's format (`IDS_IS_INVALID_TOKEN`,
+/// `IDS_IS_INVALID_EFFECT_ID_FOR_TOKEN`, `IDS_IS_INVALID_EFFECT_TYPE_TO_BE_TOKEN`,
+/// `IDS_TEXT_FILE_EFFECT_NAME_DOES_NOT_MATCH_SCENARIOS`, the condition's three, `IDS_INVALID_PLAYER_NUMBER_FOR_THIS_
+/// SCENARIO`). The id kinds format (id, line), the others (line, the scenario's name).
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_TOKEN = 0;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_EFFECT_ID = 1;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_EFFECT_TYPE = 2;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_EFFECT_NAME = 3;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_CONDITION_ID = 4;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_CONDITION_TYPE = 5;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_CONDITION_NAME = 6;
+
+constexpr static const uint32_t EE_SCENARIO_TEXT_ERROR_PLAYER = 7;
+
+/// The host's operations (`EESMTextOp`, EEScenarioManager.cpp).
+/// An element's text `slot` as a C string.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_GET = 0;
+
+/// An element's text `slot` set to `text`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_SET = 1;
+
+/// `gWorld.mNumPlayers` (in the answer).
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_PLAYERS = 2;
+
+/// Player `value`'s name, NULL when there is no such player.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_PLAYER_NAME = 3;
+
+/// Player `value`'s name set to `text`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_SET_PLAYER_NAME = 4;
+
+/// `text` written to the file (`fprintf("%s")`): NULL on a write error.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_WRITE = 5;
+
+/// The file's end flag (`feof`): not NULL when set.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_EOF = 6;
+
+/// The next line, 511 bytes at most (`fgets` into 0x200 bytes): NULL at the end.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_READ = 7;
+
+/// `mImportErrors.clear()`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_CLEAR_ERRORS = 8;
+
+/// Error `slot` (`EE_SCENARIO_TEXT_ERROR_*`) formatted with `value` (an id) or `text2`, and `text` (the line).
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_ERROR = 9;
+
+/// The media strings' section `slot` ([`MEDIA_TAGS`]) as a C string.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_MEDIA = 10;
+
+/// The media strings' section `slot` set to `text`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_SET_MEDIA = 11;
+
+/// `FindObjectByID(a)`: -1 without the object or (when `b` is 1) when its `mHasAttributeCheck` is 0, else its
+/// `Evaluate(0)` and then `mUnits.size()`.
+constexpr static const uint32_t EE_SCENARIO_READ_TOKEN_OBJECT = 66;
+
+/// `FindObjectByID(a)->GetUnitAttribute(GetAttribute(), GetIsAttributePercent(), gWorld.GetUnit(GetUnitAt(0)), 0,
+/// 0)`.
+constexpr static const uint32_t EE_SCENARIO_READ_TOKEN_VALUE = 67;
+
+/// `FindConditionByID(a)`: -1 without the condition or when its `mType` is not Player Attribute, else its `mPlayer`
+/// (`b` 0) or `mAttribute` (`b` 1).
+constexpr static const uint32_t EE_SCENARIO_READ_TOKEN_CONDITION = 68;
+
 /// `kSMTriggerOperator*`.
 constexpr static const int32_t EE_SCENARIO_OPERATOR_END = 0;
 
 constexpr static const int32_t EE_SCENARIO_OPERATOR_AND = 1;
 
 constexpr static const int32_t EE_SCENARIO_OPERATOR_OR = 2;
+
+/// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
+struct EeScenarioTiles;
 
 /// The manager's timed effects, kept sorted by time (stably: equal times in the order they came).
 struct EeScenarioTimedQueue;
@@ -517,6 +922,8 @@ struct EeScenarioHost {
                   uint32_t seed);
   /// [`Host::write`].
   void (*write)(void *ctx, uint32_t op, long player, int64_t b, int64_t c, int64_t d);
+  /// [`Host::tiles`]: the C++ fills `list` with [`ee_scenario_tiles_push`].
+  void (*tiles)(void *ctx, uint32_t op, int32_t a, int32_t b, int32_t c, EeScenarioTiles *list);
 };
 
 /// `EESMCondition`'s numbers, in the class's order.
@@ -767,6 +1174,30 @@ struct EeScenarioRoundHost {
   int64_t (*op)(void *ctx, uint32_t op, int64_t a, int64_t b, float time);
 };
 
+/// The C++ host of the lists (`EESMListOp` in EEScenarioManager.cpp): the manager's numbers and timed effects, and
+/// one operation callback (`EE_SCENARIO_LIST_OP_*`; `text` a NUL-terminated name for `SET_NAME` and `OUT_NAME`).
+struct EeScenarioListHost {
+  void *ctx;
+  EeScenarioManagerFields *manager;
+  EeScenarioTimedQueue *timed;
+  void *(*op)(void *ctx, uint32_t op, uint32_t list, size_t index, void *element, const char *text);
+};
+
+/// The C++ host of the text file (`EESMTextOp` in EEScenarioManager.cpp): the lists' host and one operation
+/// callback (`EE_SCENARIO_TEXT_OP_*`: `slot` a text slot or an error kind, `value` a player, an id or the file's
+/// version, `text` and `text2` NUL-terminated strings).
+struct EeScenarioTextHost {
+  const EeScenarioListHost *lists;
+  void *ctx;
+  void *(*op)(void *ctx,
+              uint32_t op,
+              uint32_t slot,
+              long value,
+              void *element,
+              const char *text,
+              const char *text2);
+};
+
 /// One trigger entry: the NOT flag (0/1) or the delay, the operator, the condition or effect index.
 struct EeScenarioEntry {
   unsigned long first;
@@ -918,43 +1349,6 @@ int32_t ee_scenario_object_save(const EeScenarioStream *stream,
                                 const EeScenarioObjectFields *fields,
                                 unsigned long minor);
 
-/// The effect's `Renumber*` of a kind (`EE_SCENARIO_RENUMBER_*`; its object list's entries:
-/// [`ee_scenario_renumber_ids`]).
-///
-/// # Safety
-/// `fields` must be valid for a read and a write.
-void ee_scenario_effect_renumber(EeScenarioEffectFields *fields,
-                                 uint32_t kind,
-                                 unsigned long old,
-                                 unsigned long new_);
-
-/// The condition's `Renumber*` of a kind.
-///
-/// # Safety
-/// `fields` must be valid for a read and a write.
-void ee_scenario_condition_renumber(EeScenarioConditionFields *fields,
-                                    uint32_t kind,
-                                    unsigned long old,
-                                    unsigned long new_);
-
-/// The object's `Renumber*` of a kind.
-///
-/// # Safety
-/// `fields` must be valid for a read and a write.
-void ee_scenario_object_renumber(EeScenarioObjectFields *fields,
-                                 uint32_t kind,
-                                 unsigned long old,
-                                 unsigned long new_);
-
-/// The same upkeep of each of `count` indices (an effect's object list).
-///
-/// # Safety
-/// `ids` must be valid for `count` reads and writes (any pointer when `count` is 0).
-void ee_scenario_renumber_ids(unsigned long *ids,
-                              size_t count,
-                              unsigned long old,
-                              unsigned long new_);
-
 /// `EESMEffect::SetAIVariable`'s stores for the effect's behaviour, in order, into `out` (room for
 /// [`EE_SCENARIO_AI_MAX_WRITES`]), their number into `out_count`; whether the applied effect is kept for a saved game.
 ///
@@ -1021,39 +1415,6 @@ void ee_scenario_timed_add(EeScenarioTimedQueue *queue,
                            unsigned long time,
                            bool cinematic);
 
-/// `EEScenarioManager::RemoveTimedEffects`.
-///
-/// # Safety
-/// `queue` must be a live queue.
-void ee_scenario_timed_remove_effect(EeScenarioTimedQueue *queue, long effect);
-
-/// `EEScenarioManager::EraseTimedEffect` (`index` below the count).
-///
-/// # Safety
-/// `queue` must be a live queue.
-void ee_scenario_timed_erase(EeScenarioTimedQueue *queue, size_t index);
-
-/// Empties the queue (`SortEffects`).
-///
-/// # Safety
-/// `queue` must be a live queue.
-void ee_scenario_timed_clear(EeScenarioTimedQueue *queue);
-
-/// `RenumberEffects`' timed part.
-///
-/// # Safety
-/// `queue` must be a live queue.
-void ee_scenario_timed_renumber(EeScenarioTimedQueue *queue, unsigned long old, unsigned long new_);
-
-/// `RemapEffects`' timed part: the map as `count` pairs `olds[i]` -> `news[i]`.
-///
-/// # Safety
-/// `queue` must be a live queue; `olds` and `news` valid for `count` reads (either may be null when it is 0).
-void ee_scenario_timed_remap(EeScenarioTimedQueue *queue,
-                             const unsigned long *olds,
-                             const unsigned long *news,
-                             size_t count);
-
 /// `SetTimedEffectHasRun`: the effect's `mEffects` index (`found` false: not in the list).
 ///
 /// # Safety
@@ -1118,6 +1479,138 @@ void ee_scenario_set_player_attribute(const EeScenarioHost *host,
 bool ee_scenario_object_evaluate(const EeScenarioHost *host,
                                  EeScenarioObjectFields *fields,
                                  bool include_dead);
+
+/// `EESMEffect::ExpandTokens` (tokens.rs): `text` (a C string) with its tags expanded, a new C string the caller frees
+/// with [`ee_scenario_text_free`].
+///
+/// # Safety
+/// `host` must be valid for the call, `text` a C string.
+char *ee_scenario_expand_tokens(const EeScenarioHost *host,
+                                const char *text);
+
+/// Frees a text [`ee_scenario_expand_tokens`] returned (NULL is ignored).
+///
+/// # Safety
+/// `text` must come from `ee_scenario_expand_tokens` and not be freed before.
+void ee_scenario_text_free(char *text);
+
+/// `EESMObject::GetUnitAttribute` for the host's unit (not NULL; attribute.rs): its members through
+/// `EE_SCENARIO_READ_UNIT_FIELD`.
+///
+/// # Safety
+/// `host` must be valid for the call.
+long ee_scenario_unit_attribute(const EeScenarioHost *host, uint32_t attribute, bool percent);
+
+/// `EESMObject::FindPlacement`'s body (placement.rs) for the object's numbers `fields` and its area's record (`area`:
+/// NULL for no area): `EE_SCENARIO_PLACEMENT_*`; `location` (x, y) written as the original wrote it.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` (and `area` unless NULL) for a read, `location` for a read and a write.
+uint32_t ee_scenario_find_placement(const EeScenarioHost *host,
+                                    const EeScenarioObjectFields *fields,
+                                    const EeScenarioAreaRecord *area,
+                                    uint32_t unit_type,
+                                    bool try_random,
+                                    float (*location)[2]);
+
+/// `EESMArea::GetTiles`' rebuild of the area's cache (area.rs tiles): each tile through `EE_SCENARIO_WRITE_TILE`.
+///
+/// # Safety
+/// `host` and `area` must be valid for the call.
+void ee_scenario_area_tiles(const EeScenarioHost *host,
+                            const EeScenarioAreaRecord *area);
+
+/// `EESMEffect::CreateUnits` over object `object` with its numbers `fields` (create.rs): whether it created units;
+/// each unit through `EE_SCENARIO_WRITE_CREATE_UNIT`.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` for a read.
+bool ee_scenario_create_units(const EeScenarioHost *host,
+                              int32_t object,
+                              const EeScenarioObjectFields *fields);
+
+/// Appends tile (x, y) to a list the host is filling.
+///
+/// # Safety
+/// `list` must be the list a [`EeScenarioHost::tiles`] call handed over, during that call.
+void ee_scenario_tiles_push(EeScenarioTiles *list, int32_t x, int32_t y);
+
+/// `Sort*` of `list` ([`sort`]).
+///
+/// # Safety
+/// `host` must be a valid host table over the live manager.
+void ee_scenario_list_sort(const EeScenarioListHost *host, uint32_t list);
+
+/// `New*` of `list` ([`new`]): the new element.
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`].
+void *ee_scenario_list_new(const EeScenarioListHost *host, uint32_t list);
+
+/// `Move*Up` (`up`) or `Move*Down` ([`move_entry`]).
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`].
+void ee_scenario_list_move(const EeScenarioListHost *host,
+                           uint32_t list,
+                           unsigned long index,
+                           bool up);
+
+/// `Delete*` ([`delete`]): whether it deleted.
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`].
+bool ee_scenario_list_delete(const EeScenarioListHost *host, uint32_t list, unsigned long index);
+
+/// `Duplicate*` ([`duplicate`]): the copy.
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`].
+void *ee_scenario_list_duplicate(const EeScenarioListHost *host,
+                                 uint32_t list,
+                                 unsigned long index);
+
+/// `Find*ByID` ([`find`]).
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`].
+void *ee_scenario_list_find(const EeScenarioListHost *host, uint32_t list, long id);
+
+/// `GetObjectIndex` ([`index_of`]).
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`].
+long ee_scenario_list_index_of(const EeScenarioListHost *host, uint32_t list, void *element);
+
+/// The `Get*Names` list `which` ([`names`]), each name through `EE_SCENARIO_LIST_OP_OUT_NAME`.
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`].
+void ee_scenario_list_names(const EeScenarioListHost *host, uint32_t which);
+
+/// `EESMObject::SetName`'s conditions ([`rename_object_conditions`]).
+///
+/// # Safety
+/// As [`ee_scenario_list_sort`]; `object` a live scenario object.
+void ee_scenario_list_rename_object_conditions(const EeScenarioListHost *host, void *object);
+
+/// `EESMObject::SetParent` ([`set_parent`]).
+///
+/// # Safety
+/// As [`ee_scenario_list_rename_object_conditions`].
+void ee_scenario_list_set_parent(const EeScenarioListHost *host, void *object, long parent);
+
+/// `ExportText` ([`export`]).
+///
+/// # Safety
+/// `host` must be a valid host table over the live manager and an open file.
+long ee_scenario_text_export(const EeScenarioTextHost *host);
+
+/// `ImportTriggerText` ([`import`]): `kind` the file's version, `validate` the editor's first pass.
+///
+/// # Safety
+/// As [`ee_scenario_text_export`].
+long ee_scenario_text_import(const EeScenarioTextHost *host, unsigned long kind, bool validate);
 
 }  // extern "C"
 

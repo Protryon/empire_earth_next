@@ -1,0 +1,143 @@
+cache A dir made
+dir httpcache_files/cacheA:
+entry 'http://host.example/news/motd.txt' -> #1 num 0 bytes none
+new #1 valid 0 expires 0 path 'httpcache_files/cacheA/000001.txt' tag 0:
+entry 'http://host.example/news/motd.txt' -> #2 num 0 bytes none
+same entry 1
+entry 'http://host.example/img/logo.png' -> #3 num 0 bytes none
+entry 'noslash' -> #4 num 0 bytes none
+entry 'http://host.example/dir\back.bmp' -> #5 num 0 bytes none
+entry 'http://host.example/a.b/c' -> #6 num 0 bytes none
+entry '' -> #7 num 0 bytes none
+entry 'HTTP://HOST.EXAMPLE/news/motd.txt' -> #8 num 0 bytes none
+new #3 valid 0 expires 0 path 'httpcache_files/cacheA/000002.png' tag 0:
+new #4 valid 0 expires 0 path 'httpcache_files/cacheA/000003.dat' tag 0:
+new #5 valid 0 expires 0 path 'httpcache_files/cacheA/000004.bmp' tag 0:
+new #6 valid 0 expires 0 path 'httpcache_files/cacheA/000005.dat' tag 0:
+new #7 valid 0 expires 0 path 'httpcache_files/cacheA/000006.dat' tag 0:
+new #8 valid 0 expires 0 path 'httpcache_files/cacheA/000007.txt' tag 0:
+set #2 0 1 0: -> num 0
+set #2 1 2130706432 0: -> num 0
+set #2 2 0 6:657461672d31 -> num 0
+set #2 valid 1 expires 2130706432 path 'httpcache_files/cacheA/000001.txt' tag 6:657461672d31
+set #3 0 1 0: -> num 0
+set #3 1 5 0: -> num 0
+set #3 2 0 5:00ff227122 -> num 0
+set #4 0 7 0: -> num 0
+set #4 0 0 0: -> num 0
+set #5 0 1 0: -> num 0
+set #5 1 -1 0: -> num 0
+set #6 0 1 0: -> num 0
+set #6 2 0 0: -> num 0
+set #8 0 1 0: -> num 0
+set #8 1 4294967299 0: -> num 0
+set #3 valid 1 expires 5 path 'httpcache_files/cacheA/000002.png' tag 5:00ff227122
+set #4 valid 0 expires 0 path 'httpcache_files/cacheA/000003.dat' tag 0:
+set #5 valid 1 expires -1 path 'httpcache_files/cacheA/000004.bmp' tag 0:
+set #6 valid 1 expires 0 path 'httpcache_files/cacheA/000005.dat' tag 0:
+set #8 valid 1 expires 4294967299 path 'httpcache_files/cacheA/000007.txt' tag 0:
+entry 'http://host.example/img/logo.png' -> #9 num 0 bytes none
+same entry 1
+again #9 valid 1 expires 5 path 'httpcache_files/cacheA/000002.png' tag 5:00ff227122
+dir httpcache_files/cacheA: 000001.txt 000002.png 000003.dat 000004.bmp 000005.dat 000006.dat 000007.txt other.txt
+update num 0 bytes none
+map httpcache_files/cacheA/ none
+dir httpcache_files/cacheA: 000001.txt 000002.png 000004.bmp 000005.dat 000007.txt cachemap.dat other.txt
+map httpcache_files/cacheA/ 329 bytes version 1 count 5
+  id 1 valid 1 expires 2130706432 used now 'http://host.example/news/motd.txt' '000001.txt' '' 6:657461672d31
+  id 2 valid 1 expires 5 used now 'http://host.example/img/logo.png' '000002.png' '' 5:00ff227122
+  id 4 valid 1 expires -1 used now 'http://host.example/dir\back.bmp' '000004.bmp' '' 0:
+  id 5 valid 1 expires 0 used now 'http://host.example/a.b/c' '000005.dat' '' 0:
+  id 7 valid 1 expires 3 used now 'HTTP://HOST.EXAMPLE/news/motd.txt' '000007.txt' '' 0:
+  end 329
+after #9 valid 1 expires 5 path 'httpcache_files/cacheA/000002.png' tag 5:00ff227122
+after #5 valid 1 expires -1 path 'httpcache_files/cacheA/000004.bmp' tag 0:
+set #9 2 0 4:6c617465 -> num 0
+after #9 valid 1 expires 5 path 'httpcache_files/cacheA/000002.png' tag 4:6c617465
+entry 'http://host.example/news/motd.txt' -> #10 num 0 bytes none
+read #10 valid 1 expires 2130706432 path 'httpcache_files/cacheA/000001.txt' tag 6:657461672d31
+entry 'http://host.example/img/logo.png' -> #11 num 0 bytes none
+read #11 valid 1 expires 5 path 'httpcache_files/cacheA/000002.png' tag 5:00ff227122
+entry 'http://host.example/dir\back.bmp' -> #12 num 0 bytes none
+read #12 valid 1 expires -1 path 'httpcache_files/cacheA/000004.bmp' tag 0:
+dir httpcache_files/cacheA: 000001.txt 000002.png 000003.dat 000004.bmp 000005.dat 000006.dat 000007.txt cachemap.dat other.txt
+entry 'noslash' -> #13 num 0 bytes none
+fresh #13 valid 0 expires 0 path 'httpcache_files/cacheA/000003.dat' tag 0:
+entry 'http://other.example/x.jpeg' -> #14 num 0 bytes none
+fresh #14 valid 0 expires 0 path 'httpcache_files/cacheA/000006.jpeg' tag 0:
+dir httpcache_files/cacheA: 000001.txt 000002.png 000004.bmp 000005.dat 000006.dat 000007.txt cachemap.dat other.txt
+map httpcache_files/cacheA/ 329 bytes version 1 count 5
+  id 1 valid 1 expires 2130706432 used now 'http://host.example/news/motd.txt' '000001.txt' '' 6:657461672d31
+  id 2 valid 1 expires 5 used now 'http://host.example/img/logo.png' '000002.png' '' 5:00ff227122
+  id 4 valid 1 expires -1 used now 'http://host.example/dir\back.bmp' '000004.bmp' '' 0:
+  id 5 valid 1 expires 0 used now 'http://host.example/a.b/c' '000005.dat' '' 0:
+  id 7 valid 1 expires 3 used now 'HTTP://HOST.EXAMPLE/news/motd.txt' '000007.txt' '' 0:
+  end 329
+dir httpcache_files/cacheC: 2.dat 5a.dat 6b.dat 9.txt cachemap.dat invalid.txt old.txt
+entry 'http://c/dup' -> #15 num 0 bytes none
+read #15 valid 1 expires 0 path 'httpcache_files/cacheC/6b.dat' tag 6:7365636f6e64
+entry 'http://c/one' -> #16 num 0 bytes none
+read #16 valid 1 expires 7 path 'httpcache_files/cacheC/../escape.dat' tag 0:
+entry 'http://c/new.txt' -> #17 num 0 bytes none
+fresh #17 valid 0 expires 0 path 'httpcache_files/cacheC/000002.txt' tag 0:
+entry 'http://c/new2.txt' -> #18 num 0 bytes none
+fresh #18 valid 0 expires 0 path 'httpcache_files/cacheC/000007.txt' tag 0:
+set #17 0 1 0: -> num 0
+set #18 0 1 0: -> num 0
+dir httpcache_files/cacheC: 2.dat 5a.dat 6b.dat 9.txt cachemap.dat
+dir httpcache_files/: cacheA cacheC escape.dat
+map httpcache_files/cacheC/ 288 bytes version 1 count 6
+  id 1 valid 1 expires 7 used now 'http://c/one' '../escape.dat' 'x' 0:
+  id 2 valid 1 expires 0 used now 'http://c/new.txt' '000002.txt' '' 0:
+  id 5 valid 1 expires 0 used now-~1209540 'http://c/dup' '5a.dat' '' 5:6669727374
+  id 6 valid 1 expires 0 used now 'http://c/dup' '6b.dat' '' 6:7365636f6e64
+  id 7 valid 1 expires 0 used now 'http://c/new2.txt' '000007.txt' '' 0:
+  id 9 valid 1 expires 2130706432 used now-~20 'http://c/nine.txt' '9.txt' 'text' 2:7439
+  end 288
+entry 'http://c/nine.txt' -> #19 num 0 bytes none
+read #19 valid 1 expires 2130706432 path 'httpcache_files/cacheC/9.txt' tag 2:7439
+entry 'http://c/later.txt' -> #20 num 0 bytes none
+fresh #20 valid 0 expires 0 path 'httpcache_files/cacheC/000003.txt' tag 0:
+map httpcache_files/cacheC/ 288 bytes version 1 count 6
+  id 1 valid 1 expires 7 used now 'http://c/one' '../escape.dat' 'x' 0:
+  id 2 valid 1 expires 0 used now 'http://c/new.txt' '000002.txt' '' 0:
+  id 5 valid 1 expires 0 used now-~1209540 'http://c/dup' '5a.dat' '' 5:6669727374
+  id 6 valid 1 expires 0 used now 'http://c/dup' '6b.dat' '' 6:7365636f6e64
+  id 7 valid 1 expires 0 used now 'http://c/new2.txt' '000007.txt' '' 0:
+  id 9 valid 1 expires 2130706432 used now 'http://c/nine.txt' '9.txt' 'text' 2:7439
+  end 288
+entry 'http://v/a' -> #21 num 0 bytes none
+other version #21 valid 0 expires 0 path 'httpcache_files/cacheV/000001.dat' tag 0:
+map httpcache_files/cacheV/ 8 bytes version 1 count 0
+  end 8
+entry 'http://t/a' -> #22 num 0 bytes none
+cut #22 valid 1 expires 2130706432 path 'httpcache_files/cacheT/a.dat' tag 0:
+entry 'http://t/b' -> #23 num 0 bytes none
+cut #23 valid 0 expires 0 path 'httpcache_files/cacheT/000001.dat' tag 0:
+entry 'http://t/c' -> #24 num 0 bytes none
+cut #24 valid 0 expires 0 path 'httpcache_files/cacheT/000003.dat' tag 0:
+map httpcache_files/cacheT/ 44 bytes version 1 count 1
+  id 2 valid 1 expires 2130706432 used now 'http://t/a' 'a.dat' '' 0:
+  end 44
+entry 'http://b/x.txt' -> #25 num 0 bytes none
+full #25 valid 0 expires 0 path <cwd>/httpcache_files/cacheB/000001.txt (sep \) tag 0:
+dir httpcache_files/cacheB: cachemap.dat
+cache B2 no dir
+entry 'http://b/y.txt' -> #26 num 0 bytes none
+no dir #26 valid 0 expires 0 path <cwd>/httpcache_files/nothere/cacheB2/000001.txt (sep \) tag 0:
+dir httpcache_files/nothere missing
+global set again same 1
+dir httpcache_files/: _wonHTTPCache cacheA cacheB cacheC cacheT cacheV escape.dat
+entry 'http://host.example/promo/image.bmp' -> #27 num 0 bytes none
+set #27 0 1 0: -> num 0
+global #27 valid 1 expires 0 path 'httpcache_files/_wonHTTPCache/000001.bmp' tag 0:
+map httpcache_files/_wonHTTPCache/ none
+map httpcache_files/_wonHTTPCache/ 74 bytes version 1 count 1
+  id 1 valid 1 expires 0 used now 'http://host.example/promo/image.bmp' '000001.bmp' '' 0:
+  end 74
+entry 'http://host.example/promo/image.bmp' -> #28 num 0 bytes none
+global again #28 valid 1 expires 0 path 'httpcache_files/_wonHTTPCache/000001.bmp' tag 0:
+map httpcache_files/_wonHTTPCache/ 74 bytes version 1 count 1
+  id 1 valid 1 expires 0 used now 'http://host.example/promo/image.bmp' '000001.bmp' '' 0:
+  end 74
+done

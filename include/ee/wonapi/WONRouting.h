@@ -972,33 +972,19 @@ private:
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
 
 // AuthSession (0x10cc bytes in the original: type, length field size, id, sequence numbers, the by-value Blowfish
-// and the last use, constructor 2e27b0, dtor 2e2a80): a RefCount shim over ee_won's EeWonAuthSession
-// (rust/crates/ee_won/src/peerauth.rs), which owns all of it.
-class AuthSession : public RefCount {
-protected:
-    EeWonAuthSession* mImpl;
-    virtual ~AuthSession(); //2e2a80
-public:
-    AuthSession(AuthType, unsigned short, Blowfish, unsigned char); //2e27b0/RET10c0
-    explicit AuthSession(EeWonAuthSession* inImpl) : mImpl(inImpl) {} // adopts a session ee_won made
-    WONStatus Encrypt(ByteBufferPtr&); //2e2b40
-    WONStatus Decrypt(ByteBufferPtr&); //2e2d60
-    time_t GetLastUseTime() const { return static_cast<time_t>(ee_won_auth_session_get(this->mImpl, 2)); }
-    // the Rust session's key, laid out as Blowfish's one member
-    const Blowfish& GetKey() const { return *reinterpret_cast<const Blowfish*>(ee_won_auth_session_key(this->mImpl)); }
-    AuthType GetAuthType() const { return static_cast<AuthType>(ee_won_auth_session_get(this->mImpl, 0)); }
-    unsigned short GetSessionId() const { return static_cast<unsigned short>(ee_won_auth_session_get(this->mImpl, 1)); }
-    void SetLengthFieldSize(unsigned char size) { ee_won_auth_session_set_lfs(this->mImpl, size); }
-    bool IsEncrypted() { AuthType t = this->GetAuthType(); return (t==AUTH_TYPE_SESSION || t==AUTH_TYPE_PERSISTENT); } //inline (WON SDK); same AuthSession+08 test as PeerAuthServerOp::Success
-};
-// CryptTransform: 8 bytes; new 8 at 2ad6d7, VT44ca1c, SDK CryptTransform.h.
-// Holds a reference to the AuthSession only.
+// and the last use) is an ee_won handle (rust/crates/ee_won/src/hostauth.rs over peerauth.rs's session, round 22):
+// the peer auth op that makes it, the auth context's session cache and the sockets' transforms hold it.
+// CryptTransform: 8 bytes; new 8 at 2ad6d7, VT44ca1c, SDK CryptTransform.h. Holds a reference to the session handle
+// only; its Encrypt / Decrypt are Rust's.
 class CryptTransform : public MsgTransform {
-    SmartPtr<AuthSession> mSession; //04, size08; implicit dtor2ad8e0 releases then MsgTransform dtor
+    void* mSession; //04, size08; an ee_won session handle (one reference)
 public:
-    CryptTransform(AuthSession* inSession) : mSession(inSession) {} //inline
-    virtual WONStatus Send(ByteBufferPtr& inMessage) { return this->mSession->Encrypt(inMessage); } //2ad8b0
-    virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->mSession->Decrypt(inMessage); } //2ad8a0
+    explicit CryptTransform(void* inSession) : mSession(inSession) { ee_won_session_hold(inSession); } //inline
+    virtual ~CryptTransform() { ee_won_session_release(this->mSession); } //2ad8e0
+    virtual WONStatus Send(ByteBufferPtr& inMessage) { return this->Crypt(false, inMessage); } //2ad8b0
+    virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->Crypt(true, inMessage); } //2ad8a0
+private:
+    WONStatus Crypt(bool inDecrypt, ByteBufferPtr& ioMessage); // ServerOp.cpp
 };
 
 
@@ -1023,65 +1009,14 @@ public:
 class PeerAuthOp : public RustServerOp {
 public:
     PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket, bool inUseAuth2 = true);
-    AuthSession* GetSession() const
-    {
-        return static_cast<AuthSession*>(reinterpret_cast<RefCount*>((intptr_t)this->GetNum(EE_WON_PEEROP_SESSION)));
-    }
     WONStatus GetGetCertStatus() const { return (WONStatus)this->GetNum(EE_WON_PEEROP_GET_CERT_STATUS); }
 };
 
 // HTTP operation, 0x15c bytes.
 class FileReader;
 class FileWriter;
-// Cache entry, 0x68 bytes; ctor 2d1260; implicit dtor 2d1330 (no own-vtable store).
-template <class Cache, class Entry> struct HttpCacheMsg;
-class HTTPCacheEntry : public RefCount {
-    friend class HTTPCache;
-    template <class Cache, class Entry> friend struct HttpCacheMsg;
-    int mId; //08
-    bool mIsValid; //0c,naturalpadding0d..0f
-    std::string mRemoteLocation; //10
-    std::string mLocalPath; //20
-    std::string mFileName; //30
-    std::string mFileType; //40
-    std::string mEntityTag; //50
-    time_t mExpirationTime; //60
-    time_t mLastAccessTime; //64
-public:
-    HTTPCacheEntry(); //2d1260
-    // ReadFromFile 2d1450 and WriteToFile 2d14c0 are ee_won's (cachemap.rs, through WONHttpCacheMsg.h)
-    bool IsValid(); //2d1540, small getter, out of line
-    void SetValid(bool inValid) {this->mIsValid=inValid;}
-    void SetExpirationTime(time_t inTime) {this->mExpirationTime=inTime;}
-    void SetEntityTag(const std::string& inTag) {this->mEntityTag=inTag;}
-    const std::string& GetLocalPath() {return this->mLocalPath;}
-    const std::string& GetEntityTag() {return this->mEntityTag;}
-    time_t GetExpirationTime() {return this->mExpirationTime;}
-};
-// Cache, 0x34 bytes. No mCreatedDirectory boolean (added in a later SDK).
-// Constructor 2d1670 and the singleton allocation at 2d192d give sizeof 0x34.
-class HTTPCache : public RefCount {
-protected:
-    std::string mCachePath; //08
-    typedef std::map<std::string,SmartPtr<HTTPCacheEntry> > CacheLocationMap;
-    typedef std::map<int,SmartPtr<HTTPCacheEntry> > CacheIdMap;
-    CacheLocationMap mCacheLocationMap; //18
-    CacheIdMap mCacheIdMap; //24
-    int mNextFreeId; //30
-    void ReadCacheMap(); //2d1a10
-    void WriteCacheMap(); //2d1ca0
-    void DeleteCachedFile(HTTPCacheEntry*); // WriteCacheMap's deletion of a dropped entry's file
-    template <class Cache, class Entry> friend struct HttpCacheMsg;
-    int GetFreeId(); //2d2170
-    virtual ~HTTPCache(); //2d1820 explicitownVT then WriteCacheMap
-public:
-    HTTPCache(const std::string&,bool inFullPath=false); //2d1670
-    void SetCachePath(const std::string&,bool); //2d1ef0 always creates dir; empty path returns before read
-    HTTPCacheEntry* GetEntry(const std::string&); //2d2210 rawborrowed ret4, mapsretain
-    static HTTPCache* GetGlobalCache(); //2d1900, no-argument getter
-    static void SetGlobalCache(HTTPCache*);
-    void UpdateEntry(HTTPCacheEntry*); //2fa500, called with an empty version
-};
+// HTTPCache and HTTPCacheEntry (cache 0x34 bytes, entry 0x68) are Rust's whole (rust/crates/ee_won/src/httpcache.rs):
+// the HTTP get op's cache and entry are Rust handles; the global cache is ee_won_http_cache_global
 // HTTPGetOp is a Rust op on the base (rust/crates/ee_won/src/httpget.rs): RustServerOp::NewHttpGet, its members by
 // EE_WON_HTTPGET_* number
 
@@ -1196,88 +1131,9 @@ public:
 
 
 // DBProxyOp is a Rust op base (rust/crates/ee_won/src/reqop.rs DbProxy)
-// Patch-server records: VersionData 0x48 / PatchData 0xa4,
-// constructors 2d83a0/2d86f0, allocations 2d93a7/2d9079.
-enum VersionState { VersionState_Invalid=0, VersionState_Inactive=1, VersionState_Active=2, VersionState_BadState=3 };
-typedef std::list<std::string> VersionTypeList;
-class VersionData : public RefCount {
-protected:
-    virtual ~VersionData(); //2d8510, explicit ownVT; clears list then owns members
-private:
-    std::string mConfigName; //08
-    std::string mVersion; //18
-    std::string mDescriptionURL; //28
-    VersionState mState; //38
-    VersionTypeList mVersionTypeList; //3c..48
-public:
-    VersionData(); //2d83a0
-    void WriteToBuffer(WriteBuffer&,DWORD inFlags=0); //2d8660
-    enum { WriteFlag_AppendState=1, WriteFlag_AppendDescripURL=2 };
-    void AddVersionType(const std::string&);
-    void ReadFromBuffer(ReadBuffer&);
-    bool operator==(const VersionData&) const;
-    bool operator!=(const VersionData&) const;
-    void SetDescriptionURL	(const std::string& theDescriptionURL)	{ this->mDescriptionURL	= theDescriptionURL;}
-    const std::string& GetDescriptionURL()		const { return this->mDescriptionURL;	 }
-    const VersionState GetState()				const { return this->mState;			 }
-    const VersionTypeList& GetVersionTypeList() const { return this->mVersionTypeList; }
-    void SetConfigName(const std::string& inName) { this->mConfigName=inName; }
-    void SetVersion(const std::string& inVersion) { this->mVersion=inVersion; }
-    void SetState(VersionState inState) { this->mState=inState; }
-    const std::string& GetConfigName() const { return this->mConfigName; }
-    const std::string& GetVersion() const { return this->mVersion; }
-};
-class PatchData : public RefCount {
-protected:
-    virtual ~PatchData(); //2d8a50, explicit own vtable store, then 9 string members
-private:
-    std::string mConfigName; //08
-    std::string mFromVersion; //18
-    std::string mToVersion; //28
-    std::string mDisplayName; //38
-    std::string mNetAddress; //48
-    unsigned long mCheckSum; //58
-    unsigned long mPatchSize; //5c
-    std::string mHostName; //60
-    std::string mHostURL; //70
-    std::string mHostText; //80
-    std::string mHostImageURL; //90
-    bool mMustVisitHost; //a0
-    bool mIsActive; //a1, naturalpaddinga2..a3
-public:
-    PatchData(); //2d86f0
-    void ReadFromBuffer(ReadBuffer&,bool inGetPatchList=false); //2d8bc0
-    void WriteToBuffer(WriteBuffer&,bool inUpdateOnly=false);
-    bool operator==(const PatchData&) const;
-    bool operator!=(const PatchData&) const;
-    void SetDisplayName	(const std::string& theDisplayName)	{ this->mDisplayName = theDisplayName;	}
-    void SetNetAddress	(const std::string& theNetAddress)	{ this->mNetAddress = theNetAddress;		}
-    void SetCheckSum	(unsigned long theCheckSum)			{ this->mCheckSum = theCheckSum;			}
-    void SetPatchSize	(unsigned long thePatchSize)		{ this->mPatchSize = thePatchSize;		}
-    void SetHostName	(const std::string& theHostName)	{ this->mHostName = theHostName;			}
-    void SetHostURL		(const std::string& theHostURL)		{ this->mHostURL = theHostURL;			}
-    void SetHostText	(const std::string& theHostText)	{ this->mHostText = theHostText;			}
-    void SetHostImageURL(const std::string& theHostImageURL){ this->mHostImageURL = theHostImageURL;	}
-    void SetMustVisitHost(bool theMustVisitHost)			{ this->mMustVisitHost = theMustVisitHost;}
-    const std::string&  GetConfigName()		const	{ return this->mConfigName;	}
-    const std::string&  GetFromVersion()	const	{ return this->mFromVersion;	}
-    const std::string&  GetToVersion()		const	{ return this->mToVersion;	}
-    const std::string&  GetDisplayName()	const	{ return this->mDisplayName;	}
-    const std::string&  GetNetAddress()		const	{ return this->mNetAddress;	}
-    const unsigned long GetCheckSum()		const	{ return this->mCheckSum;		}
-    const unsigned long GetPatchSize()		const	{ return this->mPatchSize;	}
-    const std::string&  GetHostName()		const	{ return this->mHostName;		}
-    const std::string&  GetHostURL()		const	{ return this->mHostURL;		}
-    const std::string&  GetHostText()		const	{ return this->mHostText;		}
-    const std::string&  GetHostImageURL()	const	{ return this->mHostImageURL; }
-    bool  GetMustVisitHost()				const	{ return this->mMustVisitHost;}
-    bool  GetIsActive()						const	{ return this->mIsActive;		}
-    void SetConfigName(const std::string& inName) { this->mConfigName=inName; }
-    void SetFromVersion(const std::string& inVersion) { this->mFromVersion=inVersion; }
-    void SetToVersion(const std::string& inVersion) { this->mToVersion=inVersion; }
-    void SetIsActive(bool inActive) { this->mIsActive=inActive; }
-};
-typedef std::list<SmartPtr<PatchData> > PatchDataList;
+// The patch server's records (VersionData 0x48, PatchData 0xa4; constructors 2d83a0/2d86f0) are Rust's: their wire
+// forms are ee_won patch.rs, the ops that read them verop.rs; no game code made the C++ classes, deleted in WON
+// Internet round 21 (their statements are tests/won/won_patch_msg.h, over the drivers' stand-ins)
 // CheckValidVersionOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
 // DetectFirewallOp (2cf600): a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step);
 // the class is its constructor (ServerOp.cpp) and the setters and the public address the lobby uses.

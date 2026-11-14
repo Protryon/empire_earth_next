@@ -188,7 +188,7 @@ void EECBUIListBox::ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent
 {
     if (this->mSelectUpgradesOnly) {
         if (!this->IsUpgradeAt(inIndex, NULL)) {
-            if (this->mAutoSelect)
+            if (this->GetAutoSelect())
                 return;
             unsigned long theCurrent;
             if (this->GetCurrentSelection(theCurrent) != kErrorOK)
@@ -260,8 +260,8 @@ void EECBUIListBox::SetUpgrades(std::vector<EECivUpgrade>& inUpgrades, bool inFl
 long EECBUIListBox::CopyData()
 {
     long theResult = UILBString::CopyData();
-    if (this->mCurrentSelection == 0)
-        this->mCopiedHasSelection = false;
+    if (this->GetSelectionIndex() == 0)
+        this->SetCopiedHasSelection(false);
     this->mC148 = this->mC13C;
     this->mCopiedShowPoints = this->mShowPoints;
     return theResult;
@@ -362,15 +362,15 @@ long EECBUIListBox::DrawTextA()
     UWideString theLine;
     UIControl::DrawTextA();
     GERectangle theRectangle;
-    theRectangle = this->mCopyTextRectangle;
+    theRectangle = this->GetCopyTextRectangle();
     theRectangle.SetLeft(theRectangle.GetLeft() + 2.0f);
     theRectangle.SetRight(theRectangle.GetRight() + 1.0f);
     GEText* theText = this->GetGEText();
-    unsigned long theLineHeight = this->mLineHeight;
+    unsigned long theLineHeight = this->GetLineHeight();
     long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mDrawLineCount && theResult == kErrorOK; i++) {
+    for (unsigned long i = 0; i < this->GetDrawCount() && theResult == kErrorOK; i++) {
         theLine = this->mCopyLineArray[i];
-        float theTop = this->mCopyTextRectangle.GetTop() + i * theLineHeight;
+        float theTop = this->GetCopyTextRectangle().GetTop() + i * theLineHeight;
         theRectangle.SetTop(theTop);
         theRectangle.SetBottom(theTop + theLineHeight);
         if (EECBUIListBox::IsUpgradeLine(theLine))
@@ -721,7 +721,7 @@ void EECBUIListBox::SortLines()
 // On tabbing in, moves a selection off a header line in upgrade-only mode and redraws
 void EECBUIListBox::TabbedTo()
 {
-    if (!this->mAutoSelect && this->mSelectUpgradesOnly && !this->mHasSelection && !this->IsUpgradeAt(this->mCurrentSelection, NULL))
+    if (!this->GetAutoSelect() && this->mSelectUpgradesOnly && !this->GetHasSelection() && !this->IsUpgradeAt(this->GetSelectionIndex(), NULL))
         this->ChangeSelectionIndex(0, false, true);
     this->SetDirty(true);
 }

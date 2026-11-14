@@ -190,28 +190,28 @@ void EESETSEffect::ChangeEffectType()
 // Sorts the scenario's effects
 void EESETSEffect::Sort()
 {
-    gWorld.mScenarioManager->SortEffects();
+    gWorld.mScenarioManager->SortList(EE_SCENARIO_LIST_EFFECTS);
 }
 
 // FUNCTION: EXE 0x582acb
 // Moves the selected effect one place down the list
 void EESETSEffect::MoveDown()
 {
-    gWorld.mScenarioManager->MoveEffectDown(this->mSelection + 1);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_EFFECTS, this->mSelection + 1, false);
 }
 
 // FUNCTION: EXE 0x582adc
 // Moves the selected effect one place up the list
 void EESETSEffect::MoveUp()
 {
-    gWorld.mScenarioManager->MoveEffectUp(this->mSelection + 1);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_EFFECTS, this->mSelection + 1, true);
 }
 
 // FUNCTION: EXE 0x582aed
 // Deletes the selected effect and hides the current effect type's controls
 void EESETSEffect::Delete()
 {
-    gWorld.mScenarioManager->DeleteEffect(this->mSelection + 1);
+    gWorld.mScenarioManager->DeleteEntry(EE_SCENARIO_LIST_EFFECTS, this->mSelection + 1);
     this->mTypes[this->mType]->VirtualC(this->mControls);
 }
 
@@ -219,7 +219,7 @@ void EESETSEffect::Delete()
 // Duplicates the selected effect
 void EESETSEffect::Duplicate()
 {
-    gWorld.mScenarioManager->DuplicateEffect(this->mSelection + 1);
+    gWorld.mScenarioManager->DuplicateEntry(EE_SCENARIO_LIST_EFFECTS, this->mSelection + 1);
 }
 
 // FUNCTION: EXE 0x582b22
@@ -252,7 +252,7 @@ void EESETSEffect::Store()
 // Lists the names of the scenario's user effects
 void EESETSEffect::GetNames(std::vector<UWideString>& outNames)
 {
-    gWorld.mScenarioManager->GetUserEffectNames(outNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_EFFECTS, outNames);
 }
 
 // FUNCTION: EXE 0x582c55
@@ -285,7 +285,7 @@ void EESETSEffect::Load()
 // Adds a new effect to the scenario
 void EESETSEffect::New()
 {
-    gWorld.mScenarioManager->NewEffect();
+    gWorld.mScenarioManager->NewEntry(EE_SCENARIO_LIST_EFFECTS);
 }
 
 // FUNCTION: EXE 0x582d40

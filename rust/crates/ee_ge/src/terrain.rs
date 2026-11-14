@@ -1,8 +1,8 @@
 //! `GETerrainMesh`'s queries the simulation makes (`GETerrainMesh.cpp`): the height and normal under a map position,
 //! the four map-edge planes, the tile closest to a point or a line, and a line's first hit on the terrain.
 //!
-//! The mesh stays C++ (its rows, the render arrays, the materials); these functions read its point and tile rows in
-//! place through a `TerrainView` the C++ builds per call (`#[repr(C)]` row mirrors, offsets pinned in GERustMath.h).
+//! These functions read the mesh's point and tile rows (`tmobj.rs`) in place through a `TerrainView` built per
+//! call.
 //! `unsigned long` is `c_ulong` and `long` is `c_long`, so index arithmetic wraps as the C++'s does on each data model.
 
 use std::ffi::{c_long, c_ulong};

@@ -124,6 +124,413 @@ enum class EeNetQOp : uint32_t {
   FileRead = 25,
 };
 
+/// The client's calls out besides the queues' (`client::ClientHost`); a, b, c, d as each op says, the answer as
+/// isize.
+enum class EeNetClOp : uint32_t {
+  /// events (TSEvent* const*), their count, a timeout -> TSEvent::WaitAny (an index, kTSWaitTimeout, kTSWaitFailed)
+  WaitAny = 0,
+  /// a thread: SetPriority(PLAT_PRIORITY_TIME_CRITICAL)
+  ThreadPriority = 1,
+  /// a field (EeNetClBase) -> the base class's field
+  BaseGet = 2,
+  /// a field, a value: the base class's field set
+  BaseSet = 3,
+  /// -> NEProtocol::GetCount()
+  ProtocolCount = 4,
+  /// an NEProtocol** -> NEProtocol::GetProtocol(0, *out)
+  ProtocolGet = 5,
+  /// const void* strings[3] (name, host, address), an event, an NEConnection**, a timeout -> the client's protocol's
+  /// Connect(name, host, address, 2, event, *out, timeout)
+  Connect = 6,
+  /// a connection, an event, an NEConnection** -> ConnectForXfer(connection, 1, event, *out)
+  ConnectForXfer = 7,
+  /// a connection -> Close()
+  ConnClose = 8,
+  /// a connection, a buffer, its size, an uint32_t* length (in and out) -> Receive(size, buffer, length)
+  ConnReceive = 9,
+  /// a connection, data, its size -> Send(data, size)
+  ConnSend = 10,
+  /// -> the client's protocol's GetDetectedGameCount()
+  DetectedGameCount = 11,
+  /// an index, void* strings[3] (UString name, UString host, UWideString address) -> GetDetectedGame
+  DetectedGame = 12,
+  /// start -> the client's protocol's SearchForGame(UString("Anything"), UString("EEService"), start)
+  SearchForGame = 13,
+  /// a buffer, its size, an uint32_t* received (in and out) -> the client's protocol's XferReceive
+  XferReceive = 14,
+  /// -> NEMXferMessage::StaticExportSize()
+  XferExportSize = 15,
+  /// a message -> GetType()
+  MsgType = 16,
+  /// a message, a flag (EeNetClMsgFlag) -> the virtual flag
+  MsgFlag = 17,
+  /// a message, 0 SetForSpecificSlot / 1 SetOriginatingSlot, a slot
+  MsgSetSlot = 18,
+  /// a message, an uint32_t* -> GetSendToAllAndWaitMessageID(*out)
+  MsgS2awId = 19,
+  /// a message, a field (EeNetClMsgField) -> the typed message's field
+  MsgGet = 20,
+  /// a kind (EeNetClNewMsg), then its arguments (the transfer status: slot | percent << 8 | status << 16, the id)
+  /// -> the new message
+  MsgNew = 21,
+  /// a tick response, an input -> AddPlayerInput(input)
+  MsgAddInput = 22,
+  /// a message, an uint32_t* size -> ExportMessage's data (C++ new[]), its size in *size
+  MsgExportNew = 23,
+  /// an export: deleted
+  BytesFree = 24,
+  /// an FSFile*, data, its size, an uint32_t* written -> Write(data, size, written)
+  FsWrite = 25,
+  /// an FSFile*: Close()
+  FsClose = 26,
+  /// an FSFile*: Delete()
+  FsDelete = 27,
+  /// an FSFile*: deleted
+  FsFree = 28,
+  /// a zero-terminated name, a size -> CreateXferFile(UWideString(name), size)
+  CreateXferFile = 29,
+  /// -> IsPlaybackRecordingSession()
+  IsPlaybackRecordingSession = 30,
+  /// -> GetConnectTimeout()
+  ConnectTimeout = 31,
+  /// -> GetClientSlot()
+  ClientSlot = 32,
+  /// -> IgnoreConnectionTimeout()
+  IgnoreConnectionTimeout = 33,
+  /// a state: SetConnectionState(state)
+  SetConnectionState = 34,
+  /// a message: HandleMessage
+  HandleMessage = 35,
+  /// a message: HandleUserInput
+  HandleUserInput = 36,
+  /// HandleConnectionLost()
+  HandleConnectionLost = 37,
+  /// an offset -> HandleStartGame(offset)
+  HandleStartGame = 38,
+  /// HandleStopGame()
+  HandleStopGame = 39,
+  /// the time left: HandleConnectionTimeoutWarning
+  HandleConnectionTimeoutWarning = 40,
+  /// a message, a player -> the virtual ProcessLocalUserInput
+  ProcessLocalUserInput = 41,
+};
+
+/// The server's calls out; a, b, c, d as each op says, the answer as isize.
+enum class EeNetSvOp : uint32_t {
+  /// events, their count, a timeout -> TSEvent::WaitAny (the index, kTSWaitTimeout, kTSWaitFailed)
+  WaitAny = 0,
+  /// a thread: SetPriority(PLAT_PRIORITY_TIME_CRITICAL)
+  ThreadPriority = 1,
+  /// ms: PlatSleep
+  Sleep = 2,
+  /// -> gPlatSimMode
+  SimMode = 3,
+  /// a field (EeNetSvBase) -> its value
+  BaseGet = 4,
+  /// a field, a value
+  BaseSet = 5,
+  /// -> NEProtocol::GetCount()
+  ProtocolCount = 6,
+  /// an NEProtocol** -> NEProtocol::GetProtocol(0, out)
+  ProtocolGet = 7,
+  /// protocol, the three events (input, xfer input, xfer accept), an NEServer**, allow -> Publish's result
+  Publish = 8,
+  /// protocol, server, allow: AllowNewConnections
+  AllowNewConnections = 9,
+  /// protocol, server: AcceptForXfer
+  AcceptForXfer = 10,
+  /// protocol, start -> SearchForGame
+  SearchForGame = 11,
+  /// server, slot, data, size -> SendTo
+  ServerSendTo = 12,
+  /// server, a 0x200-byte buffer, a uint32_t* size, a uint32_t* index -> ReceiveFrom
+  ServerReceiveFrom = 13,
+  /// server: Close()
+  ServerClose = 14,
+  /// a message -> GetType()
+  MsgType = 15,
+  /// a message, originating (else for a specific slot), a slot
+  MsgSetSlot = 16,
+  /// a message, a flag (EeNetSvMsgFlag)
+  MsgFlag = 17,
+  /// a message, a field (EeNetSvMsgField)
+  MsgGet = 18,
+  /// kind (EeNetSvNewMsg), a, b, c -> the new message
+  MsgNew = 19,
+  /// a tick response, an index, an NEMessage** -> GetPlayerInput(i, out)
+  MsgTickResponseInput = 20,
+  /// a tick, an input -> AddPlayerInput
+  MsgAddInput = 21,
+  /// a message, an id: SetSendToAllAndWaitMessageID
+  MsgSetS2awId = 22,
+  /// a message, a uint32_t* size -> ExportMessage's buffer (new[])
+  MsgExportNew = 23,
+  /// a buffer: delete[]
+  BytesFree = 24,
+  /// slot, booted, exiting: BootPlayer
+  BootPlayer = 25,
+  /// -> ServerSlot28()
+  ServerSlot28 = 26,
+  /// -> IsMigrating()
+  IsMigrating = 27,
+  /// BeforeRemovingPlayers()
+  BeforeRemovingPlayers = 28,
+  /// HandleReconnectWaitTimedOut()
+  HandleReconnectWaitTimedOut = 29,
+  /// a player -> GetPlayerSendToSlot
+  PlayerSendToSlot = 30,
+  /// a message -> FilterPlayerInput
+  FilterPlayerInput = 31,
+  /// a message: PrepareLocalInput
+  PrepareLocalInput = 32,
+  /// a player -> IsPlayerPresent
+  IsPlayerPresent = 33,
+  /// slots, their count, the warning: ReportLaggers(std::vector of the slots, warning)
+  ReportLaggers = 34,
+  /// a message: ProcessSystemMessage
+  ProcessSystemMessage = 35,
+  /// a message, a player -> the virtual ProcessLocalUserInput
+  ProcessLocalUserInput = 36,
+};
+
+/// The fields the accessors read (`ee_net_sv_get`)
+enum class EeNetSvGet : uint32_t {
+  CurrentCommunicationsTick = 0,
+  CurrentPhysicsTick = 1,
+  GameState = 2,
+  GameWasPublished = 3,
+  LastCtMessageId = 4,
+  MaxPlayers = 5,
+  NumberOfPlayers = 6,
+  ProcessingSendToAllAndWait = 7,
+  PTsPerCt = 8,
+  RestartCt = 9,
+  SendInterval = 10,
+  IsOos = 11,
+  PTsPerSecond = 12,
+  NextChecksumCt = 13,
+  ReconnectCount = 14,
+  LowestReconnectCt = 15,
+  WaitForReconnectsTime = 16,
+  Ping = 17,
+  Protocol = 18,
+  TempOutOfSynchPTs = 19,
+};
+
+/// The fields the accessors write (`ee_net_sv_set`)
+enum class EeNetSvSet : uint32_t {
+  CurrentCommunicationsTick = 0,
+  CurrentPhysicsTick = 1,
+  GameState = 2,
+  LastCtMessageId = 3,
+  RestartCt = 4,
+  TempOutOfSynchPTs = 5,
+  Ping = 6,
+};
+
+/// The events the inline members set (`ee_net_sv_set_event`)
+enum class EeNetSvEvent : uint32_t {
+  StartGame = 0,
+  StopGame = 1,
+  ResumeMigratedGame = 2,
+  ForceNextCt = 3,
+};
+
+/// The tuning's calls out; a, b, c as each op says, the answer as isize.
+enum class EeNetTuOp : uint32_t {
+  /// a field (EeNetTuField) -> its value
+  Get = 0,
+  /// a field, a value
+  Set = 1,
+  /// 0 mChangeSendIntervalEvent, 1 mPauseGameEvent, 2 mUnpauseGameEvent: Set()
+  EventSet = 2,
+  /// a message number -> ee_net_mm_outstanding
+  MmOutstanding = 3,
+  /// -> ee_net_mm_highest_response_time
+  MmHighestResponseTime = 4,
+  /// -> ee_net_mm_highest_cpu
+  MmHighestCpu = 5,
+  /// -> ee_net_mm_lowest_ct
+  MmLowestCt = 6,
+  /// a message number: ee_net_mm_resend
+  MmResend = 7,
+  /// a message number -> ee_net_mm_who_has_not_responded
+  MmWho = 8,
+  /// a slot, a message number -> ee_net_mm_who_has_not_responded_next
+  MmWhoNext = 9,
+  /// -> ee_net_mm_num_clients
+  MmNumClients = 10,
+  /// -> ee_net_mm_slowest_responder
+  MmSlowestResponder = 11,
+  /// -> ee_net_mm_slowest_client_cpu
+  MmSlowestClientCpu = 12,
+  /// on: ee_net_mm_set_force_ct
+  MmSetForceCt = 13,
+  /// a slot: UnregisterSlot
+  UnregisterSlot = 14,
+  /// BeforeRemovingPlayers()
+  BeforeRemovingPlayers = 15,
+  /// slot, was booted, game is exiting: BootPlayer
+  BootPlayer = 16,
+  /// slots, their count, the warning: ReportLaggers(std::vector of the slots, warning)
+  ReportLaggers = 17,
+  /// a slot: ProcessLocalUserInput(new NEMRemovePlayer(slot, true, false, false), kSlotNone)
+  RemovePlayerInput = 18,
+};
+
+/// The server's fields the tuning reads and writes
+enum class EeNetTuField : uint32_t {
+  /// mSendInterval (read, written)
+  SendInterval = 0,
+  /// mSendIntervalIncrement
+  SendIntervalIncrement = 1,
+  /// mMaxSendInterval
+  MaxSendInterval = 2,
+  /// mPTsPerSecond (read, written)
+  PTsPerSecond = 3,
+  /// mMaxPhysicsTicksPerSecond
+  MaxPTsPerSecond = 4,
+  /// mMinPhysicsTicksPerSecond
+  MinPTsPerSecond = 5,
+  /// mPhysicsTickCostFactor (the f32's bits)
+  CostFactor = 6,
+  /// mDefaultSendInterval
+  DefaultSendInterval = 7,
+  /// mLastCTMessageID
+  LastCtMessageId = 8,
+  /// mGameState
+  GameState = 9,
+  /// mIsMultiplayerSession
+  IsMultiplayerSession = 10,
+  /// the virtual GetCurrentCommunicationsTick()
+  CurrentCommunicationsTick = 11,
+  /// mPTsPerCT (written)
+  PTsPerCt = 12,
+};
+
+/// The base class's fields the server reads and writes (NESynchronousCommunications)
+enum class EeNetSvBase : uint32_t {
+  /// mNumHumanPlayers (read, written)
+  NumHumanPlayers = 0,
+  /// mIsMultiplayerSession
+  IsMultiplayerSession = 1,
+  /// mIsGamePaused (written through SetIsGamePaused)
+  IsGamePaused = 2,
+};
+
+/// The typed messages' fields the server reads
+enum class EeNetSvMsgField : uint32_t {
+  /// any message: GetOriginatingSlot()
+  OriginatingSlot = 0,
+  /// NEMCommunicationsTickResponse: GetNumberOfPlayerInputs()
+  NumberOfPlayerInputs = 1,
+  /// NEMCommunicationsTickResponse: GetLastCommunicationsTickProcessed()
+  LastCtProcessed = 2,
+  /// NEMCommunicationsTickResponse: GetAveragePhysicsTickTime()
+  AveragePhysicsTickTime = 3,
+  /// NEMClientReconnectionRequest: GetCurrentCT()
+  ReconnectionCt = 4,
+  /// NEMWorldDatabaseChecksumResponse: GetCommunicationsTick()
+  ChecksumTick = 5,
+  /// NEMWorldDatabaseChecksumResponse: GetWorldDatabaseChecksum()
+  Checksum = 6,
+};
+
+/// The messages' flags the server reads
+enum class EeNetSvMsgFlag : uint32_t {
+  CanSendWhilePaused = 0,
+  IsAvailableToSend = 1,
+};
+
+/// The messages the server makes (`EeNetSvOp::MsgNew`)
+enum class EeNetSvNewMsg : uint32_t {
+  /// NEMRemovePlayer(a, b & 1, b & 2, b & 4)
+  RemovePlayer = 0,
+  /// NEMPauseGame(a)
+  PauseGame = 1,
+  /// NEMUnPauseGame(a)
+  UnPauseGame = 2,
+  /// NEMServerIsAlive()
+  ServerIsAlive = 3,
+  /// NEMStopGame()
+  StopGame = 4,
+  /// NEMPlayerConnectionCheck(a)
+  PlayerConnectionCheck = 5,
+  /// NEMCommunicationsTick(a, b & 0xff, (b >> 8) & 0xff, b >> 16 & 1, c)
+  CommunicationsTick = 6,
+  /// NEMClientReconnectionRequestResponse(a, b, c)
+  ReconnectionRequestResponse = 7,
+};
+
+/// The base class's (`NESynchronousCommunications`) fields this class read and wrote
+enum class EeNetClBase : uint32_t {
+  /// `mLastTickReceived` (a `long`: -2 before the connection, -1 "none")
+  LastTickReceived = 0,
+  /// `mNumberOfCTsProcessedInPhysics`
+  CtsProcessed = 1,
+  /// `GetAveragePhysicsUpdateTime()`
+  AveragePhysicsUpdateTime = 2,
+  /// `mIsGamePaused` (set through `SetIsGamePaused`)
+  IsGamePaused = 3,
+  /// `mIsMultiplayerSession`
+  IsMultiplayerSession = 4,
+};
+
+/// A message's virtual flags
+enum class EeNetClMsgFlag : uint32_t {
+  CountsTowardsPlayerInputThrottle = 0,
+  CanSendWhilePaused = 1,
+  IsAvailableToSend = 2,
+};
+
+/// The fields of the typed messages this class read (each a `static_cast` and a getter)
+enum class EeNetClMsgField : uint32_t {
+  /// NEMCommunicationsTick::GetCurrentCommunicationsTick
+  TickCt = 0,
+  /// NEMCommunicationsTickResponse::GetServersCommunicationTick
+  ServersTick = 1,
+  /// NEMStartGame::GetOffsetStartTime
+  OffsetStartTime = 2,
+  /// NEMClientConnectionRequestResponse::GetSendToSlot
+  SendToSlot = 3,
+  /// NEMClientConnectionRequestResponse::GetError
+  ConnectionError = 4,
+  /// NEMClientConnectionRequestResponse::GetCurrentCT
+  ConnectionCt = 5,
+  /// NEMClientReconnectionRequestResponse::GetNewSendToSlot
+  NewSendToSlot = 6,
+  /// NEMClientReconnectionRequestResponse::GetCurrentCT
+  ReconnectionCt = 7,
+  /// NEMPauseGame / NEMUnPauseGame::GetUniqueID
+  UniqueId = 8,
+  /// NEMXferMessage::GetID
+  XferId = 9,
+  /// NEMXferMessage::GetData (a pointer)
+  XferData = 10,
+  /// NEMXferMessage::GetDataSize
+  XferDataSize = 11,
+};
+
+/// The messages this class made (`new`, one reference)
+enum class EeNetClNewMsg : uint32_t {
+  /// NEMCommunicationsTickResponse(CTs processed, the tick, the average physics update time)
+  TickResponse = 0,
+  StopGameResponse = 1,
+  /// NEMStartGameResponse(time)
+  StartGameResponse = 2,
+  /// NEMUnPauseGameResponse(id)
+  UnPauseGameResponse = 3,
+  /// NEMPauseGameResponse(id)
+  PauseGameResponse = 4,
+  /// NEMXferMessage(the received bytes)
+  XferMessage = 5,
+  /// NEMXferStatus(slot, percent done, transfer id, status)
+  XferStatus = 6,
+};
+
+/// The lock-step client (`NESynchronousClient`).
+struct EeNetClient;
+
 /// The client's lag and loss simulator (`NELagLossSimulator`).
 struct EeNetLagLoss;
 
@@ -133,9 +540,38 @@ struct EeNetMsgMgr;
 /// The client's and the server's message recorder (`NERecordPlayback`).
 struct EeNetRecPlay;
 
+/// NESynchronousServer whole in Rust.
+struct EeNetServer;
+
+/// The server's tuning and booting state (NESynchronousServer's network and CPU tuning).
+struct EeNetTune;
+
 using EeNetMmHostFn = ptrdiff_t(*)(void *ctx, EeNetMmOp op, size_t a, size_t b, size_t c, size_t d);
 
 using EeNetQHostFn = ptrdiff_t(*)(void *ctx, EeNetQOp op, size_t a, size_t b, size_t c, size_t d);
+
+using EeNetClHostFn = ptrdiff_t(*)(void *ctx, EeNetClOp op, size_t a, size_t b, size_t c, size_t d);
+
+using EeNetSvHostFn = ptrdiff_t(*)(void *ctx, EeNetSvOp op, size_t a, size_t b, size_t c, size_t d);
+
+/// The constructor's arguments (NESynchronousServer's; the name, the announcement and the network adapter stay the
+/// C++ constructor's, for Publish)
+struct EeNetSvArgs {
+  uint8_t max_players;
+  uint32_t default_send_interval;
+  uint8_t pts_per_ct;
+  uint32_t max_pts_per_second;
+  uint32_t min_pts_per_second;
+  float cost_factor;
+  uint32_t max_send_interval;
+  uint32_t send_interval_increment;
+  uint32_t send_interval_decrement;
+  uint32_t current_communications_tick;
+  uint32_t current_physics_tick;
+  bool allow_new_connections;
+};
+
+using EeNetTuHostFn = ptrdiff_t(*)(void *ctx, EeNetTuOp op, size_t a, size_t b, size_t c, size_t d);
 
 extern "C" {
 
@@ -267,6 +703,273 @@ bool ee_net_rp_playback_complete(const EeNetRecPlay *r);
 void ee_net_rp_set_slow_playback(const EeNetRecPlay *r);
 
 void ee_net_rp_set_normal_playback(const EeNetRecPlay *r);
+
+/// The constructor (protocol 0, the events, the lag simulator, the recorder).
+///
+/// # Safety
+/// `host` and `qhost` answer every op for `ctx` until `ee_net_cl_free`.
+EeNetClient *ee_net_cl_new(void *ctx, EeNetClHostFn host, EeNetQHostFn qhost);
+
+/// The destructor's work, then the object freed.
+///
+/// # Safety
+/// `c` from `ee_net_cl_new` (or NULL), its threads ended, used by nothing after.
+void ee_net_cl_free(EeNetClient *c);
+
+/// The main thread's body (the host's `ThreadNew` of kind 4 runs it with the client).
+uint32_t ee_net_cl_main_thread(const EeNetClient *c);
+
+/// The receive thread's body (kind 5).
+uint32_t ee_net_cl_receive_thread(const EeNetClient *c);
+
+/// The client's lag thread's body (kind 2, with the object the lag simulator handed over).
+uint32_t ee_net_cl_lag_thread(const void *obj);
+
+/// The client's playback thread's body (kind 3, with the object the recorder handed over).
+uint32_t ee_net_cl_playback_thread(const void *obj);
+
+void ee_net_cl_start_threads(const EeNetClient *c);
+
+/// `StopThreads` and `SendExitMessage`
+void ee_net_cl_stop_threads(const EeNetClient *c);
+
+void ee_net_cl_clear_incoming_messages(const EeNetClient *c);
+
+void ee_net_cl_send_start_connect_message(const EeNetClient *c, void *msg);
+
+void ee_net_cl_send_end_connect_message(const EeNetClient *c);
+
+/// `Connect(name, host, address)`: `strings` points at the three, handed to the host's Connect.
+int32_t ee_net_cl_connect(const EeNetClient *c, const void *strings);
+
+int32_t ee_net_cl_connect_for_xfer(const EeNetClient *c);
+
+int32_t ee_net_cl_disconnect(const EeNetClient *c);
+
+int32_t ee_net_cl_disconnect_from_xfer(const EeNetClient *c);
+
+/// `GetDetectedGame(index, name, host, address)`: `strings` points at the three, handed to the host.
+int32_t ee_net_cl_detected_game(const EeNetClient *c,
+                                uint32_t index,
+                                const void *strings);
+
+uint32_t ee_net_cl_detected_game_count(const EeNetClient *c);
+
+int32_t ee_net_cl_search_for_game(const EeNetClient *c, bool start);
+
+/// `ProcessLocalUserInput` (`guaranteed` false) and `ProcessGuaranteedLocalUserInput`
+int32_t ee_net_cl_process_user_input(const EeNetClient *c,
+                                     void *msg,
+                                     uint8_t player,
+                                     bool guaranteed);
+
+/// The protocol the client uses (protocol 0, `NEProtocol*`)
+void *ee_net_cl_protocol(const EeNetClient *c);
+
+/// The game connection (`NEConnection*`, NULL when not connected)
+void *ee_net_cl_connection(const EeNetClient *c);
+
+uint32_t ee_net_cl_current_communications_tick(const EeNetClient *c);
+
+void ee_net_cl_set_current_communications_tick(const EeNetClient *c, uint32_t tick);
+
+uint32_t ee_net_cl_current_physics_tick(const EeNetClient *c);
+
+void ee_net_cl_set_current_physics_tick(const EeNetClient *c, uint32_t tick);
+
+uint8_t ee_net_cl_my_send_to_slot(const EeNetClient *c);
+
+void ee_net_cl_set_my_send_to_slot(const EeNetClient *c, uint8_t slot);
+
+uint32_t ee_net_cl_num_connection_trys(const EeNetClient *c);
+
+void ee_net_cl_set_max_num_connection_trys(const EeNetClient *c, uint32_t max);
+
+/// The recorder's mode (1 passing, 2 recording, 3 playing back)
+uint8_t ee_net_cl_record_playback_mode(const EeNetClient *c);
+
+void ee_net_cl_set_slow_playback(const EeNetClient *c);
+
+void ee_net_cl_set_normal_playback(const EeNetClient *c);
+
+/// The constructor (published or not: `ee_net_sv_get(s, GameWasPublished)`).
+///
+/// # Safety
+/// `host`, `mmhost` and `qhost` answer every op for `ctx` until `ee_net_sv_free`; `args` points at the arguments.
+EeNetServer *ee_net_sv_new(void *ctx,
+                           EeNetSvHostFn host,
+                           EeNetMmHostFn mmhost,
+                           EeNetQHostFn qhost,
+                           const EeNetSvArgs *args);
+
+/// The destructor's work, then the object freed.
+///
+/// # Safety
+/// `s` from `ee_net_sv_new` (or NULL), its threads ended, used by nothing after.
+void ee_net_sv_free(EeNetServer *s);
+
+/// The main thread's body (the host's `ThreadNew` of kind 7 runs it with the server).
+uint32_t ee_net_sv_main_thread(const EeNetServer *s);
+
+/// The send thread's body (kind 8).
+uint32_t ee_net_sv_send_thread(const EeNetServer *s);
+
+/// The transfer thread's body (kind 9).
+uint32_t ee_net_sv_xfer_thread(const EeNetServer *s);
+
+/// The server's playback thread's body (kind 6, with the object the recorder handed over).
+uint32_t ee_net_sv_playback_thread(const void *obj);
+
+void ee_net_sv_start_threads(const EeNetServer *s);
+
+void ee_net_sv_stop_threads(const EeNetServer *s);
+
+void ee_net_sv_send_exit_message(const EeNetServer *s);
+
+/// A field (`SvGet`) for the accessors
+uint32_t ee_net_sv_get(const EeNetServer *s, EeNetSvGet field);
+
+/// A field (`SvSet`) for the setters
+void ee_net_sv_set(const EeNetServer *s, EeNetSvSet field, uint32_t value);
+
+/// The protocol (`NEProtocol*`)
+void *ee_net_sv_protocol(const EeNetServer *s);
+
+/// The published server (`NEServer*`)
+void *ee_net_sv_server(const EeNetServer *s);
+
+void ee_net_sv_set_event(const EeNetServer *s, EeNetSvEvent which);
+
+void ee_net_sv_allow_new_players(const EeNetServer *s, bool allow);
+
+void ee_net_sv_clear_send_to_slot_array(const EeNetServer *s);
+
+void ee_net_sv_set_send_to_slot_for_player(const EeNetServer *s, uint8_t player, uint8_t slot);
+
+uint8_t ee_net_sv_send_to_slot_for_player(const EeNetServer *s, uint8_t player);
+
+void ee_net_sv_set_send_interval(const EeNetServer *s, uint32_t interval);
+
+void ee_net_sv_start_waiting_for_reconnects(const EeNetServer *s, uint32_t time);
+
+void ee_net_sv_lock_send_communications_tick(const EeNetServer *s);
+
+void ee_net_sv_unlock_send_communications_tick(const EeNetServer *s);
+
+/// SimGameRunning (TEST ONLY)
+bool ee_net_sv_sim_game_running(const EeNetServer *s);
+
+/// SimCommunicationsTick (TEST ONLY)
+void ee_net_sv_sim_communications_tick(const EeNetServer *s);
+
+/// The recorder's mode (1 passing, 2 recording, 3 playing back; a server that was not published: passing)
+uint8_t ee_net_sv_record_playback_mode(const EeNetServer *s);
+
+void ee_net_sv_set_slow_playback(const EeNetServer *s);
+
+void ee_net_sv_set_normal_playback(const EeNetServer *s);
+
+void ee_net_sv_abort_xfer(const EeNetServer *s, uint32_t id);
+
+void ee_net_sv_boot_all_laggers(const EeNetServer *s, uint32_t number);
+
+int32_t ee_net_sv_broadcast_message(const EeNetServer *s, void *msg);
+
+uint32_t ee_net_sv_message_manager_current_number(const EeNetServer *s);
+
+void ee_net_sv_set_message_manager_current_number(const EeNetServer *s, uint32_t number);
+
+void ee_net_sv_set_message_manager_lowest_cts(const EeNetServer *s, uint32_t ct);
+
+bool ee_net_sv_is_oos(const EeNetServer *s);
+
+void ee_net_sv_log_checksum_response(const EeNetServer *s,
+                                     uint32_t tick,
+                                     uint32_t checksum,
+                                     uint8_t slot);
+
+void ee_net_sv_log_response(const EeNetServer *s, void *msg);
+
+/// PauseGame (`pause`) and UnpauseGame
+void ee_net_sv_pause_game(const EeNetServer *s, bool pause);
+
+int32_t ee_net_sv_process_local_user_input(const EeNetServer *s, void *msg, uint8_t player);
+
+void ee_net_sv_register_slot(const EeNetServer *s, uint8_t slot);
+
+void ee_net_sv_unregister_slot(const EeNetServer *s, uint8_t slot);
+
+void ee_net_sv_remove_player_from_game_in_progress(const EeNetServer *s,
+                                                   uint8_t slot,
+                                                   bool was_booted,
+                                                   bool is_oos,
+                                                   bool game_is_exiting);
+
+int32_t ee_net_sv_search_for_game(const EeNetServer *s, bool start);
+
+uint32_t ee_net_sv_send_message_to(const EeNetServer *s, uint8_t slot, void *msg, bool guaranteed);
+
+uint32_t ee_net_sv_send_message_to_all(const EeNetServer *s, void *msg, bool guaranteed);
+
+int32_t ee_net_sv_send_to_all_and_wait(const EeNetServer *s,
+                                       void *msg,
+                                       uint32_t timeout,
+                                       uint32_t retries);
+
+bool ee_net_sv_tune_server(const EeNetServer *s);
+
+/// XferFileToClient: `spec` an FSFileSpec*, copied by the message manager
+///
+/// # Safety
+/// `id` points at a uint32_t.
+bool ee_net_sv_xfer_file_to_client(const EeNetServer *s,
+                                   void *spec,
+                                   uint32_t user_data,
+                                   uint8_t slot,
+                                   uint32_t *id);
+
+/// The checksums' state (the tests): writes at most `size` bytes of `Server::checks_state` (NUL-terminated) and
+/// answers its length.
+///
+/// # Safety
+/// `out` holds `size` bytes.
+size_t ee_net_sv_checks_state(const EeNetServer *s,
+                              uint8_t *out,
+                              size_t size);
+
+/// The queues' lengths (the tests): the incoming inputs, the queued send-to-all-and-waits
+///
+/// # Safety
+/// `inputs` and `s2aw` point at uint32_t's.
+void ee_net_sv_queue_lengths(const EeNetServer *s, uint32_t *inputs, uint32_t *s2aw);
+
+/// # Safety
+/// `host` answers every op for `ctx` until `ee_net_tu_free`.
+EeNetTune *ee_net_tu_new(void *ctx, EeNetTuHostFn host, uint32_t send_interval_decrement);
+
+/// # Safety
+/// `t` from `ee_net_tu_new` (or NULL), used by nothing after.
+void ee_net_tu_free(EeNetTune *t);
+
+bool ee_net_tu_tune_server(const EeNetTune *t);
+
+bool ee_net_tu_tune_for_slow_network(const EeNetTune *t);
+
+bool ee_net_tu_tune_for_slow_cpu(const EeNetTune *t);
+
+void ee_net_tu_boot_all_laggers(const EeNetTune *t, uint32_t number);
+
+void ee_net_tu_boot_the_slowest_responder(const EeNetTune *t);
+
+void ee_net_tu_boot_the_slowest_client_cpu(const EeNetTune *t);
+
+uint8_t ee_net_tu_slowest_client_cpu(const EeNetTune *t);
+
+/// The tuning's own state (the tests): 12 values, `tune.rs` Tune::state's order.
+///
+/// # Safety
+/// `out` holds 12 values.
+void ee_net_tu_state(const EeNetTune *t, uint32_t *out);
 
 }  // extern "C"
 

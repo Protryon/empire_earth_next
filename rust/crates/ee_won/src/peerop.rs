@@ -6,10 +6,10 @@
 //! the certificate refresh's), `AsyncRetry`, `AsyncSend`, `AsyncConnect`, `AsyncRefreshCert`, `Success` and
 //! `CheckStatus`. The C++ classes are `RustServerOp`s with their constructors and accessors.
 //!
-//! The socket, the socket ops, the auth context's refresh and the session the socket encrypts with stay C++
-//! objects, reached by host calls; the members `ServerOp` keeps (the socket, the auth type, the client key size,
-//! the time limits) are read through the host. A handshake step that makes a session hands it to a new C++
-//! `AuthSession` at once (`EE_WON_HOST_PEER_NEW_SESSION`), which the op keeps for `GetSession()`.
+//! The socket, the socket ops and the auth context's refresh stay C++ objects, reached by host calls; the members
+//! `ServerOp` keeps (the socket, the auth type, the client key size, the time limits) are read through the host. A
+//! handshake step that makes a session hands it over at once (`EE_WON_HOST_PEER_NEW_SESSION`: a session handle,
+//! hostauth.rs, since round 22), which the op keeps for `GetSession()` and the socket's `CryptTransform` holds.
 //!
 //! Behaviour: `golden_peerop.txt`, recorded by tests/won/won_peerop_test.cpp from the original's statements
 //! before the classes moved. Reached by the Internet login's connections (ServerConnection, a request's peer

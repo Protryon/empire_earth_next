@@ -1,4 +1,7 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
+// MSButtonBase (R6 WON round 35): the Rust MSButtonBase (rust/crates/ee_won/src/msbtnobj.rs) holds the colours,
+// alignments, focus style, pads and flags and runs every method; this is its host (its calls out: the base
+// Component, the wrapped text, the button's state, the Graphics) and the constructor and destructor.
 #include <windows.h>
 #include <string>
 #include <vector>
@@ -9,118 +12,76 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "rust/ee_won.h"
+#include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
 
-// FUNCTION: WON 0x006fe850
-// Returns the button's text
-const GUIString& MSButtonBase::GetText() { return this->mText->mText; }
+typedef EeWonGuiOp Op;
 
-// FUNCTION: WON 0x006fe880
-// Sets the button's text and refits the height to it if asked to
-void MSButtonBase::SetTextHook(const GUIString& text) {
-    this->mText->SetText(text);
-    this->AdjustHeightToFitText();
-}
-
-// FUNCTION: WON 0x006fe8a0
-// Sets whether the face is left unpainted; a transparent button grabs the background behind it
-void MSButtonBase::SetTransparent(bool transparent) {
-    this->mIsTransparent=transparent;
-    if(transparent) this->SetComponentFlags(ComponentFlag_GrabBG,true);
-}
-
-// FUNCTION: WON 0x006fe8c0
-// Returns the text size plus the text padding on each side
-void MSButtonBase::GetDesiredSize(int& width,int& height) {
-    width=this->mText->GetWidth()+this->mLeftTextPad+this->mRightTextPad;
-    height=this->mText->GetHeight()+this->mTopTextPad+this->mBottomTextPad;
-}
-
-// FUNCTION: WON 0x006fe980
-// Resizes the button's height to the text plus padding, when height fitting is on
-void MSButtonBase::AdjustHeightToFitText() {
-    if(!this->mAdjustHeightToFitText) return;
-    if(this->Height()-this->mTopTextPad-this->mBottomTextPad!=this->mText->GetHeight())
-        this->SetSize(this->Width(),this->mText->GetHeight()+this->mTopTextPad+this->mBottomTextPad);
-}
-
-// FUNCTION: WON 0x006fe9f0
-// Turns height fitting on or off, refitting at once when it changes
-void MSButtonBase::SetAdjustHeightToFitText(bool adjust) {
-    if(adjust==this->mAdjustHeightToFitText) return;
-    this->mAdjustHeightToFitText=adjust;
-    this->AdjustHeightToFitText();
-}
-
-// FUNCTION: WON 0x006fea10
-// Relays out the button: wraps the text to the width inside the padding and refits the height
-void MSButtonBase::Virtual08() {
-    Component::Virtual08();
-    this->mText->SetMaxWidth(this->Width()-this->mLeftTextPad-this->mRightTextPad);
-    this->AdjustHeightToFitText();
-}
-
-// FUNCTION: WON 0x006fea40
-// Draws the aligned text (embossed gray when disabled) and, once dialog keys were used, the focus
-// rectangle around the window or the text
-void MSButtonBase::DrawButtonText(Graphics& g,int xoff,int yoff) {
-    int textWidth=this->mText->GetWidth();
-    int textHeight=this->mText->GetHeight();
-    int width=this->Width()-this->mLeftTextPad-this->mRightTextPad;
-    int height=this->Height()-this->mTopTextPad-this->mBottomTextPad;
-    int x,y;
-    switch(this->mHAlign) {
-    case HorzAlign_Left: x=0;break;
-    case HorzAlign_Center: x=(width-textWidth)/2;break;
-    case HorzAlign_Right: x=width-textWidth;break;
-    default:x=0;break;
+// the button's and component's methods (EeWonSkinBtn)
+static intptr_t SkinBtnOp(MSButtonBase* t, intptr_t which, intptr_t b, intptr_t c)
+{
+    switch ((EeWonSkinBtn)which) {
+    case EeWonSkinBtn::IsDisabled: return t->IsDisabled() ? 1 : 0;
+    case EeWonSkinBtn::HasFocus: return t->HasFocus() ? 1 : 0;
+    case EeWonSkinBtn::Parent: return (intptr_t)t->mParent;
+    case EeWonSkinBtn::UsedDialogKeys: return ((Container*)b)->HasUsedDialogKeys() ? 1 : 0;
+    case EeWonSkinBtn::IsPressed: return t->IsPressed() ? 1 : 0;
+    case EeWonSkinBtn::IsChecked: return t->IsChecked() ? 1 : 0;
+    case EeWonSkinBtn::SetGrabBG: t->SetComponentFlags(ComponentFlag_GrabBG,true); return 0;
+    case EeWonSkinBtn::SetWantFocus: t->SetComponentFlags(ComponentFlag_WantFocus,b!=0); return 0;
+    case EeWonSkinBtn::SetButtonFlags: t->SetButtonFlags((unsigned long)b,c!=0); return 0;
+    default: return 0;
     }
-    switch(this->mVAlign) {
-    case VertAlign_Top:y=0;break;
-    case VertAlign_Center:y=(height-textHeight)/2;break;
-    case VertAlign_Bottom:y=height-textHeight;break;
-    default:y=0;break;
+}
+
+// the Rust's check box colour is StandardColor_Text (msbtnobj.rs SYS_TEXT)
+static_assert(StandardColor_Text==14,"msbtnobj.rs SYS_TEXT");
+
+extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    MSButtonBase* t = (MSButtonBase*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((EeWonGuiField)a == EeWonGuiField::Width) return t->Width();
+        if ((EeWonGuiField)a == EeWonGuiField::Height) return t->Height();
+        return 0;
+    case Op::SetSize: t->SetSize((int)a,(int)b); return 0;
+    case Op::BaseSizeChanged: t->Component::Virtual08(); return 0;
+    case Op::BasePaint: t->Component::Paint(*(Graphics*)a); return 0;
+    case Op::WrapSetMaxWidth: t->mText->SetMaxWidth((int)a); return 0;
+    case Op::WrapSetCentered: t->mText->SetCentered(a != 0); return 0;
+    case Op::WrapWidth: return t->mText->GetWidth();
+    case Op::WrapHeight: return t->mText->GetHeight();
+    case Op::SkinBtn: return SkinBtnOp(t,a,b,c);
+    case Op::SkinBoxPainter: // the subclass's replaceable painter function
+        if ((EeWonMsBox)b == EeWonMsBox::Checkbox) MSCheckbox::CheckboxPainter(*(Graphics*)a,(MSCheckbox*)t);
+        else if ((EeWonMsBox)b == EeWonMsBox::Radio) MSRadioButton::RadioPainter(*(Graphics*)a,(MSRadioButton*)t);
+        return 0;
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        aSlots.mText = t->mText.get();
+        WONDrawNoCall aNoCall;
+        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
+        return 0;
     }
-    x+=xoff+this->mLeftTextPad;
-    y+=yoff+this->mTopTextPad;
-    if(this->IsDisabled()) {
-        g.SetSysColor(StandardColor_3DHilight);
-        this->mText->Paint(g,x+1,y+1);
-        g.SetSysColor(StandardColor_GrayText);
-    } else if(this->mTextColor<0) g.SetSysColor(this->mStandardTextColor);
-    else g.SetColor(this->mTextColor);
-    this->mText->Paint(g,x,y);
-    if(!this->HasFocus())
-        return;
-    Container* parent=this->mParent;
-    if(parent==NULL || !parent->HasUsedDialogKeys())
-        return;
-    if(this->mTextColor<0) g.SetSysColor(this->mStandardTextColor);
-    else g.SetColor(this->mTextColor);
-    switch(this->mFocusStyle) {
-    case FocusStyle_AroundWindow:g.DrawDottedRect(4,3,this->Width()-8,this->Height()-7);break;
-    case FocusStyle_AroundText:g.DrawDottedRect(x-1,y-1,textWidth+2,textHeight+2);break;
+    default: return 0;
     }
 }
 
 // FUNCTION: WON 0x006fe6e0
-// Creates a button base with unwrapped centred text in the MSButton font and 2-pixel padding
+// Creates a button base with unwrapped centred text in the MSButton font and 2-pixel padding (the Rust button holds
+// the colours, alignments, focus style and pads)
 MSButtonBase::MSButtonBase() {
+    this->mMsb=ee_won_msbtn_new(this,ee_won_guicpp_msbtn_call);
     this->mText=new WrappedText;
     this->mText->SetWrap(false);
     this->mText->SetFont(this->GetNamedFont("MSButton"));
-    this->mStandardTextColor=StandardColor_ButtonText;
-    this->mTextColor=-1;
-    this->mHAlign=HorzAlign_Center;
-    this->mVAlign=VertAlign_Center;
-    this->mFocusStyle=FocusStyle_AroundWindow;
-    this->mTopTextPad=this->mBottomTextPad=this->mLeftTextPad=this->mRightTextPad=2;
-    this->mIsTransparent=false;
-    this->mAdjustHeightToFitText=false;
 }
 // FUNCTION: WON 0x006fe910
-// Destroys the button base (members only)
-MSButtonBase::~MSButtonBase() {}
+// Destroys the button base: the Rust button goes
+MSButtonBase::~MSButtonBase() { ee_won_msbtn_free(this->mMsb); }
 
 // Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x006fe860

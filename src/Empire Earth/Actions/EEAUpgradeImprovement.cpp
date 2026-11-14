@@ -94,7 +94,7 @@ void EEAUpgradeImprovement::Virtual4()
         if (this->mRaise == true)
             gCommunications->ProcessLocalUserInput(new EEMImproveUnit(this->mUnit->GetUnitID(), this->mImprovement), kSlotNone);
         else
-            gCommunications->ProcessLocalUserInput(new EEMRemoveImprovement(this->mUnit->GetUnitID(), this->mImprovement), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageRemoveImprovement, {this->mUnit->GetUnitID(), this->mImprovement}), kSlotNone);
     } else if (this->mRaise == true) {
         this->mUnit->GetPlayer()->ApplyImprovement(this->mUnit->GetUnitClass()->GetUnitType(), this->mImprovement, false);
         gUIManager->mScenarioEditorForm->GetUnitScreen()->ShowUnitStatus(this->mUnit);

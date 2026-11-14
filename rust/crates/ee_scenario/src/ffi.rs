@@ -6,19 +6,23 @@ use std::os::raw::{c_long, c_ulong};
 
 use crate::aivar::{self, EeScenarioAiWrite, EE_SCENARIO_AI_MAX_WRITES};
 use crate::area::{self, EeScenarioAreaRecord};
+use crate::attribute;
 use crate::condition::{self, EeScenarioCondition};
+use crate::create;
 use crate::fields::{
     self, EeScenarioAreaSave, EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields,
     EeScenarioTriggerFields,
 };
-use crate::host::EeScenarioHost;
+use crate::host::{EeScenarioHost, Host};
 use crate::manager::{self, EeScenarioManagerFields, EeScenarioTimedEntry, EeScenarioTimedQueue};
 use crate::object::{self, EeScenarioObjectFilter};
 use crate::objeval::{self, ObjectTable};
+use crate::placement;
 use crate::player;
 use crate::round::{self, EeScenarioRoundHost};
 use crate::save;
 use crate::stream::EeScenarioStream;
+use crate::tokens;
 use crate::trigger::{
     self, EeScenarioConditionEntry, EeScenarioEffectEntry, EeScenarioTimedEffect, EeScenarioTriggerState,
 };
@@ -32,7 +36,10 @@ pub const EE_SCENARIO_MAX_PLAYERS: usize = 64;
 /// `host` must be valid for a read.
 unsafe fn host_of(host: *const EeScenarioHost) -> EeScenarioHost {
     // SAFETY: the caller's contract
-    unsafe { EeScenarioHost { ctx: (*host).ctx, read: (*host).read, players: (*host).players, write: (*host).write } }
+    unsafe {
+        let h = &*host;
+        EeScenarioHost { ctx: h.ctx, read: h.read, players: h.players, write: h.write, tiles: h.tiles }
+    }
 }
 
 // SAFETY (every function taking pointers below): the caller passes valid, aligned pointers for the documented reads
@@ -348,67 +355,6 @@ pub unsafe extern "C" fn ee_scenario_object_save(
     save::object_save(&mut s, &f, minor)
 }
 
-/// The effect's `Renumber*` of a kind (`EE_SCENARIO_RENUMBER_*`; its object list's entries:
-/// [`ee_scenario_renumber_ids`]).
-///
-/// # Safety
-/// `fields` must be valid for a read and a write.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_effect_renumber(
-    fields: *mut EeScenarioEffectFields,
-    kind: u32,
-    old: c_ulong,
-    new: c_ulong,
-) {
-    // SAFETY: the caller's contract
-    unsafe { fields::effect_renumber(&mut *fields, kind, old, new) }
-}
-
-/// The condition's `Renumber*` of a kind.
-///
-/// # Safety
-/// `fields` must be valid for a read and a write.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_condition_renumber(
-    fields: *mut EeScenarioConditionFields,
-    kind: u32,
-    old: c_ulong,
-    new: c_ulong,
-) {
-    // SAFETY: the caller's contract
-    unsafe { fields::condition_renumber(&mut *fields, kind, old, new) }
-}
-
-/// The object's `Renumber*` of a kind.
-///
-/// # Safety
-/// `fields` must be valid for a read and a write.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_object_renumber(
-    fields: *mut EeScenarioObjectFields,
-    kind: u32,
-    old: c_ulong,
-    new: c_ulong,
-) {
-    // SAFETY: the caller's contract
-    unsafe { fields::object_renumber(&mut *fields, kind, old, new) }
-}
-
-/// The same upkeep of each of `count` indices (an effect's object list).
-///
-/// # Safety
-/// `ids` must be valid for `count` reads and writes (any pointer when `count` is 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_renumber_ids(ids: *mut c_ulong, count: usize, old: c_ulong, new: c_ulong) {
-    if count == 0 {
-        return;
-    }
-    // SAFETY: the caller's contract
-    for id in unsafe { std::slice::from_raw_parts_mut(ids, count) } {
-        fields::renumber(id, old, new);
-    }
-}
-
 /// `EESMEffect::SetAIVariable`'s stores for the effect's behaviour, in order, into `out` (room for
 /// [`EE_SCENARIO_AI_MAX_WRITES`]), their number into `out_count`; whether the applied effect is kept for a saved game.
 ///
@@ -558,69 +504,6 @@ pub unsafe extern "C" fn ee_scenario_timed_add(
     unsafe { queue_of(queue) }.add(effect, time, cinematic);
 }
 
-/// `EEScenarioManager::RemoveTimedEffects`.
-///
-/// # Safety
-/// `queue` must be a live queue.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_remove_effect(queue: *mut EeScenarioTimedQueue, effect: c_long) {
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.remove_effect(effect);
-}
-
-/// `EEScenarioManager::EraseTimedEffect` (`index` below the count).
-///
-/// # Safety
-/// `queue` must be a live queue.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_erase(queue: *mut EeScenarioTimedQueue, index: usize) {
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.entries.remove(index);
-}
-
-/// Empties the queue (`SortEffects`).
-///
-/// # Safety
-/// `queue` must be a live queue.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_clear(queue: *mut EeScenarioTimedQueue) {
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.entries.clear();
-}
-
-/// `RenumberEffects`' timed part.
-///
-/// # Safety
-/// `queue` must be a live queue.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_renumber(queue: *mut EeScenarioTimedQueue, old: c_ulong, new: c_ulong) {
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.renumber(old, new);
-}
-
-/// `RemapEffects`' timed part: the map as `count` pairs `olds[i]` -> `news[i]`.
-///
-/// # Safety
-/// `queue` must be a live queue; `olds` and `news` valid for `count` reads (either may be null when it is 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_remap(
-    queue: *mut EeScenarioTimedQueue,
-    olds: *const c_ulong,
-    news: *const c_ulong,
-    count: usize,
-) {
-    // SAFETY: the caller's contract
-    let (olds, news) = unsafe {
-        if count == 0 {
-            (&[][..], &[][..])
-        } else {
-            (std::slice::from_raw_parts(olds, count), std::slice::from_raw_parts(news, count))
-        }
-    };
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.remap(olds, news);
-}
-
 /// `SetTimedEffectHasRun`: the effect's `mEffects` index (`found` false: not in the list).
 ///
 /// # Safety
@@ -742,4 +625,99 @@ pub unsafe extern "C" fn ee_scenario_object_evaluate(
     // SAFETY: the caller's contract
     let mut t = ObjectTable { host: unsafe { host_of(host) }, fields };
     objeval::evaluate(&mut t, include_dead)
+}
+
+/// `EESMEffect::ExpandTokens` (tokens.rs): `text` (a C string) with its tags expanded, a new C string the caller frees
+/// with [`ee_scenario_text_free`].
+///
+/// # Safety
+/// `host` must be valid for the call, `text` a C string.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_expand_tokens(
+    host: *const EeScenarioHost,
+    text: *const std::os::raw::c_char,
+) -> *mut std::os::raw::c_char {
+    // SAFETY: the caller's contract
+    let (mut h, bytes) = unsafe { (host_of(host), std::ffi::CStr::from_ptr(text).to_bytes()) };
+    let out = tokens::expand_tokens(&mut h, bytes);
+    std::ffi::CString::new(out).unwrap_or_default().into_raw()
+}
+
+/// Frees a text [`ee_scenario_expand_tokens`] returned (NULL is ignored).
+///
+/// # Safety
+/// `text` must come from `ee_scenario_expand_tokens` and not be freed before.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_text_free(text: *mut std::os::raw::c_char) {
+    if !text.is_null() {
+        // SAFETY: the caller's contract: a CString's raw pointer
+        drop(unsafe { std::ffi::CString::from_raw(text) });
+    }
+}
+
+/// `EESMObject::GetUnitAttribute` for the host's unit (not NULL; attribute.rs): its members through
+/// `EE_SCENARIO_READ_UNIT_FIELD`.
+///
+/// # Safety
+/// `host` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_unit_attribute(
+    host: *const EeScenarioHost,
+    attribute: u32,
+    percent: bool,
+) -> c_long {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { host_of(host) };
+    attribute::unit_attribute(&mut h, attribute, percent) as c_long
+}
+
+/// `EESMObject::FindPlacement`'s body (placement.rs) for the object's numbers `fields` and its area's record (`area`:
+/// NULL for no area): `EE_SCENARIO_PLACEMENT_*`; `location` (x, y) written as the original wrote it.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` (and `area` unless NULL) for a read, `location` for a read and a write.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_find_placement(
+    host: *const EeScenarioHost,
+    fields: *const EeScenarioObjectFields,
+    area: *const EeScenarioAreaRecord,
+    unit_type: u32,
+    try_random: bool,
+    location: *mut [f32; 2],
+) -> u32 {
+    // SAFETY: the caller's contract; the records and the location are copied before the first read
+    let (mut h, f, a, mut at) = unsafe { (host_of(host), *fields, area.as_ref().copied(), *location) };
+    let result = placement::find_placement(&mut h, &f, a.as_ref(), unit_type, try_random, &mut at);
+    // SAFETY: the caller's contract
+    unsafe { *location = at };
+    result
+}
+
+/// `EESMArea::GetTiles`' rebuild of the area's cache (area.rs tiles): each tile through `EE_SCENARIO_WRITE_TILE`.
+///
+/// # Safety
+/// `host` and `area` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_area_tiles(host: *const EeScenarioHost, area: *const EeScenarioAreaRecord) {
+    // SAFETY: the caller's contract; the record is copied before the first read
+    let (mut h, a) = unsafe { (host_of(host), *area) };
+    for (x, y) in area::tiles(&mut h, &a) {
+        h.write(area::EE_SCENARIO_WRITE_TILE, 0, x as i64, y as i64, 0);
+    }
+}
+
+/// `EESMEffect::CreateUnits` over object `object` with its numbers `fields` (create.rs): whether it created units;
+/// each unit through `EE_SCENARIO_WRITE_CREATE_UNIT`.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` for a read.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_create_units(
+    host: *const EeScenarioHost,
+    object: i32,
+    fields: *const EeScenarioObjectFields,
+) -> bool {
+    // SAFETY: the caller's contract; the numbers are copied before the first read
+    let (mut h, f) = unsafe { (host_of(host), *fields) };
+    create::create_units(&mut h, object, &f)
 }

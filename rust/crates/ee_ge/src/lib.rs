@@ -6,8 +6,8 @@
 //! stores (`model_store.rs`, decoded from a glTF by `ee_openformats`; the `.cem` reader and writer were retired under
 //! D9), the pixel formats and a frame's store into a surface (`pixel.rs`), `GETexture`'s surface planning and
 //! `GETextureSet`'s grid (`texture.rs`), and the texture and model managers' decisions, names and texture pack
-//! (`managers.rs`) and the two managers, `GETexture`, `GEModel` and `GEBitmap` whole (`manobj.rs`, `texobj.rs`,
-//! `texobj_tex.rs`, `modobj.rs`, `bmpobj.rs`), `GEViewport`'s matrices, planes and
+//! (`managers.rs`) and the two managers, `GETexture`, `GEModel`, `GEBitmap` and `GEFontBitmap` whole (`manobj.rs`,
+//! `texobj.rs`, `texobj_tex.rs`, `modobj.rs`, `bmpobj.rs`, `fbobj.rs`) and `GETerrainMesh` whole (`tmobj.rs`), `GEViewport`'s matrices, planes and
 //! frustum (`viewport.rs`), `UpdateVisibleTerrain` as a plan the
 //! C++ fills its lists from (`terrain_visible.rs`), `GEPhysicalModel`'s viewport test and its walks over the C++ models
 //! (`physical_walk.rs`), `GEBitmap`'s and
@@ -32,6 +32,7 @@
 pub mod bbox;
 pub mod bitmap;
 pub mod bmpobj;
+pub mod fbobj;
 pub mod ffi;
 pub mod font;
 pub mod font_ffi;
@@ -71,6 +72,7 @@ pub mod physical_walk;
 pub mod pixel;
 /// cbindgen:ignore
 pub mod point;
+pub mod surface_px;
 pub mod terrain;
 pub mod terrain_mesh;
 pub mod terrain_visible;
@@ -81,6 +83,7 @@ pub mod texobj_tex;
 /// cbindgen:ignore
 pub mod texture;
 pub mod texture_ffi;
+pub mod tmobj;
 /// cbindgen:ignore
 pub mod transform;
 pub mod types;

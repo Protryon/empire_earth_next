@@ -19,18 +19,8 @@ void MSRadioButton::DefaultRadioPainterFunc(Graphics& g,MSRadioButton* button) {
     MSGraphicsUtil::DrawRadio(g,0,0,MSRadioButton::mRadioWidth,MSRadioButton::mRadioHeight,button->IsPressed(),button->IsChecked());
 }
 // FUNCTION: WON 0x6ff600
-// Paints the radio button: face background unless transparent, the radio circle aligned vertically
-// between the text pads, then the button text
+// Paints the radio button: face background unless transparent, the radio circle aligned vertically between the
+// text pads and drawn by the painter function, then the button text (the Rust button's box paint, msbtnobj.rs)
 void MSRadioButton::Paint(Graphics& g) {
-    Component::Paint(g);
-    g.SetSysColor(StandardColor_3DFace);
-    if(!this->mIsTransparent) g.FillRect(0,0,this->Width(),this->Height());
-    int height=MSRadioButton::mRadioHeight;
-    int y=0;
-    if(this->mVAlign==VertAlign_Center) y=(this->Height()-height-this->mTopTextPad-this->mBottomTextPad)/2;
-    else if(this->mVAlign==VertAlign_Bottom) y=this->Height()-height-this->mTopTextPad-this->mBottomTextPad;
-    g.Translate(0,this->mTopTextPad+y);
-    MSRadioButton::RadioPainter(g,this);
-    g.Translate(0,-y-this->mTopTextPad);
-    this->DrawButtonText(g,0,0);
+    this->MCall(EeWonMsBtnCall::BoxPaint,(intptr_t)EeWonMsBox::Radio,(intptr_t)&g,MSRadioButton::mRadioHeight);
 }

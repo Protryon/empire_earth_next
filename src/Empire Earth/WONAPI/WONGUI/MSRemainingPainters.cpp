@@ -25,7 +25,7 @@ void MSHeaderButton::Paint(Graphics& g)
     if(this->mText->GetWidth()==0)
         x=(this->Width()-4)/2;
     else
-        x=this->mText->GetWidth()+10+this->mLeftTextPad;
+        x=this->mText->GetWidth()+10+this->GetLeftTextPad();
     int y=this->Height()/2-2;
     int offset=this->IsPressed()?1:0;
     x+=offset;
@@ -71,7 +71,7 @@ void MSLabel::Paint(Graphics& g)
 {
     MSButtonBase::Paint(g);
     g.SetSysColor(StandardColor_3DFace);
-    if(!this->mIsTransparent)
+    if(!this->IsTransparent())
         g.FillRect(0,0,this->Width(),this->Height());
     this->DrawButtonText(g,0,0);
 }

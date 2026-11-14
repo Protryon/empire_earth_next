@@ -130,6 +130,23 @@ pub trait Host {
     }
     /// One write of a plan (`EE_SCENARIO_WRITE_*`) on player `player`.
     fn write(&mut self, _op: u32, _player: c_long, _b: i64, _c: i64, _d: i64) {}
+    /// A tile list the world makes (`EE_SCENARIO_TILES_*`), in its order.
+    fn tiles(&mut self, _op: u32, _a: i32, _b: i32, _c: i32) -> Vec<(i32, i32)> {
+        Vec::new()
+    }
+}
+
+/// A tile list handed over by the host ([`Host::tiles`]): the C++ appends with [`ee_scenario_tiles_push`].
+pub struct EeScenarioTiles(pub Vec<(i32, i32)>);
+
+/// Appends tile (x, y) to a list the host is filling.
+///
+/// # Safety
+/// `list` must be the list a [`EeScenarioHost::tiles`] call handed over, during that call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_tiles_push(list: *mut EeScenarioTiles, x: i32, y: i32) {
+    // SAFETY: the caller's contract
+    unsafe { (*list).0.push((x, y)) }
 }
 
 /// The C ABI's host: a context and the read callback.
@@ -150,6 +167,8 @@ pub struct EeScenarioHost {
     ),
     /// [`Host::write`].
     pub write: unsafe extern "C" fn(ctx: *mut c_void, op: u32, player: c_long, b: i64, c: i64, d: i64),
+    /// [`Host::tiles`]: the C++ fills `list` with [`ee_scenario_tiles_push`].
+    pub tiles: unsafe extern "C" fn(ctx: *mut c_void, op: u32, a: i32, b: i32, c: i32, list: *mut EeScenarioTiles),
 }
 
 impl Host for EeScenarioHost {
@@ -169,5 +188,11 @@ impl Host for EeScenarioHost {
     fn write(&mut self, op: u32, player: c_long, b: i64, c: i64, d: i64) {
         // SAFETY: as `read`
         unsafe { (self.write)(self.ctx, op, player, b, c, d) }
+    }
+    fn tiles(&mut self, op: u32, a: i32, b: i32, c: i32) -> Vec<(i32, i32)> {
+        let mut list = EeScenarioTiles(Vec::new());
+        // SAFETY: as `read`; `list` lives through the call
+        unsafe { (self.tiles)(self.ctx, op, a, b, c, &mut list) };
+        list.0
     }
 }

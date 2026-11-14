@@ -36,7 +36,7 @@ MSTabButton::MSTabButton(const GUIString& text,bool fillWhole,int lower)
         this->mText->SetText(text);
         this->SetDesiredSize(0,0);
     }
-    this->mIsTransparent=!fillWhole;
+    this->SetTransparentField(!fillWhole);
     this->SetButtonFlags(0x48,true);
     this->SetVertAlign(VertAlign_Center);
 }
@@ -75,8 +75,8 @@ namespace WONAPI {
 // Sets a push button's padding (8 across, 4 down), makes it take focus and become the default button while focused
 void MSButton::Init()
 {
-    this->mLeftTextPad=this->mRightTextPad=8;
-    this->mTopTextPad=this->mBottomTextPad=4;
+    this->SetHorzTextPad(8,8);
+    this->SetVertTextPad(4,4);
     this->SetComponentFlags(ComponentFlag_WantFocus,true);
     this->SetButtonFlags(0x400,true);
     this->mUseFrame2=false;
@@ -140,22 +140,14 @@ namespace WONAPI {
 // Sets a check box's left-aligned text after the box, its focus rectangle around the text, and focus
 void MSCheckbox::Init()
 {
-    this->mStandardTextColor=StandardColor_Text;
-    this->mTextColor=-1;
-    this->mHAlign=HorzAlign_Left;
-    this->mFocusStyle=FocusStyle_AroundText;
-    this->mLeftTextPad=MSCheckbox::mCheckboxWidth+4;
-    this->SetComponentFlags(ComponentFlag_WantFocus,true);
+    this->MCall(EeWonMsBtnCall::BoxInit,(intptr_t)EeWonMsBox::Checkbox,MSCheckbox::mCheckboxWidth);
 }
 // FUNCTION: WON 0x006ff3e0
 // Creates a check box
 MSCheckbox::MSCheckbox() { this->Init(); }
 inline void MSRadioButton::Init()
 {
-    this->SetButtonFlags(8,true);
-    this->mHAlign=HorzAlign_Left;
-    this->mFocusStyle=FocusStyle_AroundText;
-    this->mLeftTextPad=MSRadioButton::mRadioWidth+4;
+    this->MCall(EeWonMsBtnCall::BoxInit,(intptr_t)EeWonMsBox::Radio,MSRadioButton::mRadioWidth);
 }
 // FUNCTION: WON 0x006ff530
 // Creates a radio button with left-aligned text after the circle
@@ -163,19 +155,19 @@ MSRadioButton::MSRadioButton() { this->Init(); }
 // Creates an unpadded left-aligned label that never activates (emitted at 0x006ff6c0)
 MSLabel::MSLabel()
 {
-    this->mStandardTextColor=StandardColor_Text;
-    this->mTextColor=-1;
-    this->mTopTextPad=this->mRightTextPad=this->mLeftTextPad=this->mBottomTextPad=0;
-    this->mHAlign=HorzAlign_Left;
+    this->SetStandardTextColor(StandardColor_Text);
+    this->SetHorzTextPad(0,0);
+    this->SetVertTextPad(0,0);
+    this->SetHorzAlignField(HorzAlign_Left);
     this->SetButtonFlags(0x200,true);
 }
 // Creates an unpadded, never-activating label sized to the given text; unlike the default constructor it keeps the
 // centred alignment (emitted at 0x006ff740)
 MSLabel::MSLabel(const GUIString& text)
 {
-    this->mStandardTextColor=StandardColor_Text;
-    this->mTextColor=-1;
-    this->mTopTextPad=this->mRightTextPad=this->mLeftTextPad=this->mBottomTextPad=0;
+    this->SetStandardTextColor(StandardColor_Text);
+    this->SetHorzTextPad(0,0);
+    this->SetVertTextPad(0,0);
     this->SetButtonFlags(0x200,true);
     this->SetText(text,true);
     this->SetDesiredSize(0,0);

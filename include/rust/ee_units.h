@@ -815,6 +815,79 @@ constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_COUNT = 66;
 
 constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_ID = 67;
 
+/// the viewed units released when only the player holds them, the active, selected, saved and running groups
+/// validated
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_VALIDATE = 1;
+
+/// `mHerds.size()` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_COUNT = 2;
+
+/// `gPhysics->mGameTime` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_GAME_TIME = 3;
+
+/// herd `index`: its `mNextUpdateTime` into `io.i`, `mIsActive` into `io.b`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_DUE = 4;
+
+/// herd `index`'s `Update(io.i)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_UPDATE = 5;
+
+/// herd `index`'s `mState` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_STATE = 6;
+
+/// `KillHerdUnits(mHerds[index], 0)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HERD_KILL = 7;
+
+/// `UpdateAirTraffic()`, then `mEvents.TickEvents(this, gPhysics->mTickTime)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_AIR_AND_EVENTS = 8;
+
+/// the walk of `mQueuedImprovements`: to its first entry; the result 1 with the key in `io.i` and the float in
+/// `io.f`, 0 at the end
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_FIRST = 9;
+
+/// to the next entry (as FIRST)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_NEXT = 10;
+
+/// the current entry erased, to the one after it (as FIRST)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_ERASE = 11;
+
+/// the current entry's float `= io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_SET = 12;
+
+/// `gPhysics->GetTickTime()` into `io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_TICK_TIME = 13;
+
+/// `mInstantBuild` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_INSTANT_BUILD = 14;
+
+/// `ApplyImprovement(key, the list's front, false)`, the front erased, the float 0
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_APPLY = 15;
+
+/// `AdvanceImprovement(io.i)` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_QUEUED_ADVANCE = 16;
+
+/// `mHealsUnits` (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HEALS_UNITS = 17;
+
+/// `gPhysics->mTickTimeMs` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_TICK_MS = 18;
+
+/// the heal's numbers by `index`: 0 `kWorldWonderHealAmount`, 1 the tech tree's `mCurrentEpoch`, 2
+/// `kWorldWonderHealEpochStep` into `io.i`; 3 `kWorldWonderHealEpochFactor` into `io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_HEAL_VALUE = 19;
+
+/// the player's unit list: from `io.i` 0 its first unit, else the unit after unit `io.i`; that unit into `io.i` (0
+/// at the end), the result 1 when the healed unit set holds its class's type
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_UNIT_NEXT = 20;
+
+/// unit `io.i`'s `mHitPoints` (`index` 0) or its stats' `mMaxHitPoints` (1) (the result)
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_UNIT_HIT_POINTS = 21;
+
+/// unit `io.i`'s `SetHitPoints(index as long)`
+constexpr static const int32_t EE_UNITS_PLAYER_TICK_UNIT_SET_HIT_POINTS = 22;
+
+/// `kPlayerHealInterval` (ms)
+constexpr static const float EE_UNITS_PLAYER_HEAL_INTERVAL = 10000.0;
+
 /// The player ids (`gWorld.mPlayers`, `mEnemies`: 17 entries).
 constexpr static const size_t EE_UNITS_PLAYER_COUNT = 17;
 
@@ -1601,6 +1674,259 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 /// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
 constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
 
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_LONG = 101;
+
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_ULONG = 102;
+
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_FLOAT = 103;
+
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_BOOL = 104;
+
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_READ_USHORT = 105;
+
+/// a section (`index`: `EE_UNITS_UNIT_LOAD_SECTION_*`), the result; io.b = 1 when the held units' loop left for
+/// `LoadLateVersions`; io.i carries the original's `theValue` (the citizen queue, the cargo, the held units) or
+/// `theState` (the unit variables) in and out
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_SECTION = 110;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_BUILD_QUEUE = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_CITIZEN_QUEUE = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_CARGO = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_WAYPOINTS = 3;
+
+/// the goal queues, then the conversion and heal effects' handles (the original's chain)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_GOAL_QUEUES = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_HELD_UNITS = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_UNIT_VARIABLES = 6;
+
+/// the port's live state (0.254) and running state (0.256), put back at the first tick
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SECTION_LIVE_STATE = 7;
+
+/// a composite member's read (`index`: `EE_UNITS_UNIT_LOAD_PART_*`), the result
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_PART = 111;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_PROJECTILE_START = 0;
+
+/// the location's `Load`, then (read) `mPhysicalModel.SetLocation`
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_LOCATION = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_ANGULAR_VELOCITY = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_ORIENTATION = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_U0DC = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_COLOR = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_FIRE_EFFECT = 6;
+
+/// the path's flag and goal tile; a unit with no path queues a pending path request
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_PATH = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_LAST_MAP_POSITION = 8;
+
+/// `mInitialContactLocation`'s x, y, z (read as floats into the C++ point)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_CONTACT_X = 9;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_CONTACT_Y = 10;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_PART_CONTACT_Z = 11;
+
+/// `mTurretAngles[index]`'s read (`EE_UNITS_UNIT_LOAD_TURRET_ANGLE`)
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_TURRET_ANGLE = 112;
+
+/// a C++ member set from a value read (`index`: `EE_UNITS_UNIT_LOAD_SET_*`; io.i or io.f the value)
+constexpr static const int32_t EE_UNITS_UNIT_LOAD_SET = 113;
+
+/// `mBehavior = EEUnitBehavior::sTable[5]`
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_DEFAULT_BEHAVIOR = 0;
+
+/// the scale (io.f) for a scenario or a zero scale from the class, then `SetScale`
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_SCALE = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_FRAME = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_X = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_COLLISION_TILE_Y = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_LAUNCHER_CLASS = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_PATROL_GROUP = 6;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_PREVIOUS_PART = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_NEXT_PART = 8;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_HOME_BASE = 9;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_CONTAINER = 10;
+
+/// the action read (io.i): started when the class has it (0 as 5000)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_ACTION = 11;
+
+/// `ResizeTurretAngles(io.i)`
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_TURRETS = 12;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_GATHERED_RESOURCE = 13;
+
+/// the last attacker's and the owner's references dropped (`index` 14, 16), then set from an id (15, 17)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_LAST_ATTACKER_CLEAR = 14;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_LAST_ATTACKER = 15;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_OWNER_CLEAR = 16;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_OWNER = 17;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_MINE = 18;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_HERD = 19;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_HOLDER = 20;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_BEHAVIOR = 21;
+
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_LAST_RESOURCE = 22;
+
+/// `mMine = (EEUnit*)-1` (before its id's read)
+constexpr static const uint32_t EE_UNITS_UNIT_LOAD_SET_MINE_UNSET = 23;
+
+/// `kUnsetHeading` (0x446db0): `mInitialContactHeading` before its read.
+constexpr static const float EE_UNITS_UNSET_HEADING = -10000.0;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_LONG = 1;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_ULONG = 2;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_FLOAT = 3;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_BOOL = 4;
+
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_WRITE_USHORT = 5;
+
+/// `mStats->mMaxHitPoints`, `mStats->mFlightTime`, `mStats->mPower`, `GetUnitClass()->mGarrisonCapacity`
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_MAX = 20;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_MAX_HIT_POINTS = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_MAX_FLIGHT_TIME = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_MAX_POWER = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_MAX_GARRISON = 3;
+
+/// the value the original wrote for a pointer member or a part of one (`index`: `EE_UNITS_UNIT_SAVE_ID_*`), as an
+/// `unsigned long` (io.i)
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_ID = 21;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_FRAME = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_LAUNCHER_CLASS = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_PATROL_GROUP = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_PREVIOUS_PART = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_NEXT_PART = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_HOME_BASE = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_CONTAINER = 6;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_COMMAND = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_GATHERED_RESOURCE = 8;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_LAST_ATTACKER = 9;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_OWNER = 10;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_MINE = 11;
+
+/// (the herd's id, 0 for none)
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_HERD = 12;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_HOLDER = 13;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_BEHAVIOR = 14;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_LAST_RESOURCE = 15;
+
+/// the effect handles' values (`mConversionEffect`, `mHealEffect` as the original's `long`)
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_CONVERSION_EFFECT = 16;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_ID_HEAL_EFFECT = 17;
+
+/// `mPhysicalModel.GetScale()` and `mInitialContactLocation`'s x, y, z (io.f; `index` 0..3)
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_FLOAT = 22;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_FLOAT_SCALE = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_X = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_Y = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_FLOAT_CONTACT_Z = 3;
+
+/// the collision tile's x and y (`index` 0, 1; io.i, written as `long`)
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_COLLISION_TILE = 23;
+
+/// a section (`index`: `EE_UNITS_UNIT_SAVE_SECTION_*`): its count and elements with the original's loop
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_SECTION = 30;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_BUILD_QUEUE = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_CITIZEN_QUEUE = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_CARGO = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_WAYPOINTS = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_TURRET_ANGLES = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_GOAL_QUEUES = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_HELD_UNITS = 6;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_UNIT_VARIABLES = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_IGNORED_TARGETS = 8;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_BOUNDED_PATH_TILES = 9;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_SECTION_CONTACTS = 10;
+
+/// a composite member's `Save` (`index`: `EE_UNITS_UNIT_SAVE_PART_*`)
+constexpr static const int32_t EE_UNITS_UNIT_SAVE_PART = 31;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_PROJECTILE_START = 0;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_LOCATION = 1;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_ANGULAR_VELOCITY = 2;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_ORIENTATION = 3;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_U0DC = 4;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_COLOR = 5;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_FIRE_EFFECT = 6;
+
+/// `gPathManager.GetPathGoal`: the bool written, then the goal tile's `Save`
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_PATH = 7;
+
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_LAST_MAP_POSITION = 8;
+
+/// `if (mHerd != NULL) mHerd->HasUnit(this)` after the herd's id (no write; 0)
+constexpr static const uint32_t EE_UNITS_UNIT_SAVE_PART_HERD_HAS_UNIT = 9;
+
 /// the transport's classes (`EEUnitClassCast<EEUCTransport>`, `<EEUCAirplane>`)
 constexpr static const int64_t TRANSPORT_CLASS = 1;
 
@@ -2053,6 +2379,174 @@ struct EeUnitRecord {
   uint64_t stats;
   /// the active goal's id (`mGoalState->mID`, the saves' goal id; 0: no goal): the goal queues' ids are goals.rs
   uint32_t goal_id;
+  /// the twenty-sixth round's: the addresses of the object's Rust records (unit_fields.rs: its
+  /// `EeUnitsRtsUnitFields`, `EeUnitsUnitFields`, `EeUnitsComplexUnitFields` base subobjects; 0 for a record its
+  /// class does not have). Every read of the store refreshes the mirrored plain values from them ([`refresh`]).
+  uint64_t rts_fields;
+  uint64_t unit_fields;
+  uint64_t complex_fields;
+};
+
+/// `RTSUnit`'s plain members (ee/RTSUnit.h; RTSUnit.cpp's `Reset` sets them).
+struct EeUnitsRtsUnitFields {
+  /// the unit's tile (-10000: off the map)
+  long mTileX;
+  long mTileY;
+  /// the unit's id (0xffffffff: none; the owner in its top byte)
+  unsigned long mUnitID;
+  /// saved
+  bool mIsQueuedForDelete;
+  /// saved as false; Load clears it
+  bool mIsEditorSelected;
+  /// true after the constructor
+  bool mIsNodeFreed;
+  /// named by the asserts "this->mIsValid == true"
+  bool mIsValid;
+};
+
+/// `EEUnit`'s plain members (ee/EEUnit.h).
+struct EeUnitsUnitFields {
+  /// saved
+  unsigned long mResourceType;
+  /// > 0: alive (a load holds the saved fraction's float bits here until `FinishLoad`)
+  long mHitPoints;
+  /// what a resource has left (saved)
+  long mResourceAmount;
+  /// 0x10: `MoveTo` moved it; 0x20 and the low 2 bits: `UpdateHidden`
+  uint8_t mHiddenFlags;
+};
+
+/// `EEComplexUnit`'s plain members (ee/EEUnit.h), in the class's order; its pointers (`mSound`), effect handles
+/// (`mConversionEffect`, `mHealEffect`, `mFireEffect`), points, containers and parts stay C++ members.
+struct EeUnitsComplexUnitFields {
+  float mHeight;
+  float mInitialContactHeading;
+  float mOpacity;
+  float mF21C;
+  float mF220;
+  float mLaunchYaw;
+  float mOpenFraction;
+  float mHealSearchTimer;
+  float mPushVelocityX;
+  float mPushVelocityY;
+  float mVelocity;
+  float mAnimationFraction;
+  float mGrowth;
+  float mCollisionRadius;
+  float mCollisionResolutionCount;
+  float mF24C;
+  float mSight;
+  unsigned long mCalamityFlags;
+  /// unsigned: AIStep compares it with the game time unsigned
+  unsigned long mNextTriggerTime;
+  long mCurrentResearch;
+  unsigned long mAnimation;
+  unsigned long mCurrentPhysicsAction;
+  unsigned long mCurrentPhysicsOrder;
+  unsigned long mFacing;
+  unsigned long mGateDirection;
+  long mNumBuilders;
+  long mCrewHitPoints;
+  long mProductionTime;
+  long mTrailEffectTimer;
+  /// a load holds the saved fraction's float bits here until `FinishLoad`
+  long mGarrisonCount;
+  long mGarrisonPopulation;
+  /// a load holds the saved fraction's float bits here until `FinishLoad`
+  long mFlightTime;
+  long mRegenerationTimer;
+  long mExitingUnitID;
+  unsigned long mFormationSlot;
+  /// a load holds the saved fraction's float bits here until `FinishLoad`
+  long mLastHitPoints;
+  long mReloadTimer;
+  long mCargoRoom;
+  long mRottingAwayTime;
+  long mTargetSearchTimer;
+  unsigned long mNumAreaEffects;
+  long mWakeTimer;
+  long mWorkTimer;
+  long mPositiveMorale;
+  long mNegativeMorale;
+  long mPowerRegenTimer;
+  /// a load holds the saved fraction's float bits here until `FinishLoad`
+  long mPower;
+  long mNumPathRequests;
+  long mIsCollidable;
+  long mFormationRank;
+  long mWaterState;
+  unsigned long mAmmunition;
+  unsigned long mWeaponTagPoint;
+  unsigned long mNumOrbitals;
+  unsigned long mNumWheels;
+  long mNumTurretAngles;
+  unsigned long mU2FC;
+  unsigned long mAnimationTime;
+  unsigned long mConversionStartTime;
+  unsigned long mTimesUpdated;
+  long mNextFrame;
+  unsigned long mGrazeTime;
+  unsigned long mGrowTime;
+  unsigned long mNumAttackers;
+  /// the cloak's timer (the cloaking calamity sets it)
+  unsigned long mCloaked;
+  /// a game time (compared unsigned)
+  unsigned long mPushImmuneUntil;
+  unsigned long mCamouflageTimer;
+  unsigned long mU32C;
+  long mAIState;
+  long mL334;
+  long mL338;
+  uint16_t mCollisionState;
+  uint16_t mExperience;
+  bool mIsDeletable;
+  bool mIsCommandable;
+  bool mIsClearanceGranted;
+  bool mIsAnimationPaused;
+  bool mIsPaidFor;
+  bool mIsCloakable;
+  bool mIsCloaked;
+  bool mIsDisabled;
+  bool mIsLocked;
+  bool mIsTinted;
+  bool mIsPathDone;
+  bool mHasArrived;
+  bool mIsBuilt;
+  bool mIsDetachedFromAI;
+  bool mIsFiringHigh;
+  bool mB34F;
+  bool mIsRegrowing;
+  bool mIsFoundation;
+  bool mCanBeHidden;
+  bool mIsCitizen;
+  bool mIsPacked;
+  bool mIsSpecialAttack;
+  /// untouched by the constructor and Load/Save
+  uint16_t mU356;
+  unsigned long mDisabledReason;
+  uint16_t mPlanetID;
+  uint16_t mU35E;
+  float mRoll;
+  /// port: a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit)
+  bool mHasShiftQueuedBuild;
+};
+
+/// The twenty-seventh round's: where the store finds a unit's pointer members (byte offsets from the unit object:
+/// `EEUnit::mUnitClass`, `mComplexUnit`; `EEComplexUnit::mActiveGroup`, `mContainer`, `mCommand`, `mGoalState`,
+/// `mHerd`) and what it reads behind them (the class's record base in `EEUnitClass`, the goal's `mKind` and `mID`,
+/// the action's `mType`). The C++ sets it once, before the first record (`EEUnitStore.cpp`).
+struct EeUnitsStoreSlots {
+  uint64_t unit_class;
+  uint64_t complex_unit;
+  uint64_t active_group;
+  uint64_t container;
+  uint64_t command;
+  uint64_t goal_state;
+  uint64_t herd;
+  uint64_t class_fields;
+  uint64_t goal_kind;
+  uint64_t goal_id;
+  uint64_t action_type;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -2307,6 +2801,9 @@ struct EeUnitsPlayerSaved {
   bool mCivUpgradesPurchased;
 };
 
+/// The host: `(ctx, op, index, io) -> the operation's result`.
+using EeUnitsPlayerTickFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
 /// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
 struct EeUnitsGoalIo {
   int64_t i[8];
@@ -2413,6 +2910,265 @@ struct EeUnitsTickHost {
   void (*step)(void *ctx, uint32_t index, uint32_t id);
 };
 
+/// The unit's numbers for the tick.
+struct EeUnitsTurretsIn {
+  /// true: the goal is an attack, heal or calamity goal and `target_x`, `target_y` its point; false: turn back
+  bool aim;
+  /// `mHitPoints > 0` (turning back only)
+  bool alive;
+  /// `mStats->mTurretMaxAngularVelocity`
+  float turn_rate;
+  /// `gPhysics->mTickSeconds`
+  float tick_seconds;
+  /// `mStats->GetScale()`
+  float scale;
+  /// `mPhysicalModel.GetLocation()`
+  float location[4][4];
+  float target_x;
+  float target_y;
+};
+
+/// One turret part.
+struct EeUnitsTurretPart {
+  /// the part's `mPosition` (model space, before the stats' scale)
+  float position[3];
+  /// the part's `mTransformation`
+  float transform[4][4];
+  /// the unit's `mTurretAngles[i]`: the angle before the tick in, after it out
+  float angle;
+};
+
+/// `EEUnitClass`'s plain members (ee/EEUnit.h), in the class's order.
+struct EeUnitsUnitClassFields {
+  long mAirTrafficType;
+  /// the command buttons (30: formation)
+  unsigned long mCommands[9];
+  float mCruiseAltitude;
+  float mMinRange;
+  float mRange;
+  float mAreaEffect;
+  float mAreaEffectScale;
+  float mScale;
+  float mMaxVelocity;
+  float mF138;
+  float mAcceleration;
+  float mAngularAcceleration;
+  float mMaxAngularVelocity;
+  float mCostScale;
+  float mTurretMaxAngularVelocity;
+  float mBuildTimeScale;
+  float mGarrisonBonus;
+  float mMaxRoll;
+  float mFacingOffset;
+  float mFiringArc;
+  float mLineOfSight;
+  float mSelectionSize;
+  float mShadowScale;
+  float mL170;
+  float mOuterCollisionSphere;
+  float mInnerCollisionSphere;
+  float mLaunchPitch;
+  long mL180;
+  float mConversionResistance;
+  float mConversionRate;
+  float mSlopeSpeedPenalty;
+  float mBobHeight;
+  float mBobPitch;
+  float mFriendlyDamageFactor;
+  float mF19C;
+  float mHealThreshold;
+  float mHealRange;
+  float mHealDelay;
+  float mLoadRange;
+  float mUnloadRange;
+  long mIsComplex;
+  unsigned long mCategory;
+  unsigned long mUnitType;
+  long mCombatReaction;
+  long mWeapon;
+  unsigned long mFamily;
+  long mAmmoType;
+  unsigned long mAIKind;
+  unsigned long mCounterKind1;
+  unsigned long mCounterKind2;
+  unsigned long mCounterKind3;
+  long mKindFlags;
+  long mTechnology;
+  long mGarrisonTechnology;
+  long mWaterKind;
+  /// the base armour per weapon kind
+  long mArmor[6];
+  long mL208;
+  long mEpoch;
+  long mReloadTime;
+  long mAttack;
+  long mWorkRate;
+  long mGatherTimes[7];
+  long mFlightTime;
+  long mLeadership;
+  long mMaxObjectCarry;
+  long mInfluence;
+  long mRottingTime;
+  long mTransportCapacity;
+  long mGarrisonCapacity;
+  long mRepairRate;
+  long mWeight;
+  long mHitPoints;
+  long mNameStringID;
+  long mTargetSearchInterval;
+  long mResourceType;
+  long mResourceAmount;
+  long mCarryAmount;
+  long mHealingPoints;
+  long mRegeneration;
+  long mPowerRegeneration;
+  long mPower;
+  long mL284;
+  long mMissileDelayTime;
+  long mTileSize;
+  long mCloakRadius;
+  long mL294;
+  long mOverlapUnitSet;
+  long mAmmunition;
+  long mNumUnits;
+  long mLastUnitGoneTime;
+  long mMiniMapColor;
+  long mInitialGarrisonCount;
+  long mWonderBonus;
+  long mWonderUnitSet;
+  long mMinConversionTime;
+  /// the area-effect template ids
+  long mAreaEffectTemplates[4];
+  long mAnimalID;
+  /// the movement domains (land 2, air 1, sea 4, space 8)
+  uint8_t mDomains;
+  bool mB2D1;
+  /// per terrain type, whether the class may stand on it
+  bool mTerrainTypes[17];
+  bool mIsAffectedByGravity;
+  bool mUsesAmmunition;
+  bool mShootsHigh;
+  bool mUpgradesAreaEffect;
+  bool mUpgradesRepair;
+  bool mUpgradesShockArmor;
+  bool mUpgradesPierceArmor;
+  bool mUpgradesArrowArmor;
+  bool mUpgradesLaserArmor;
+  bool mUpgradesGunArmor;
+  bool mUpgradesMissileArmor;
+  bool mUpgradesRange;
+  bool mPitchesWithTerrain;
+  bool mRollsWithTerrain;
+  bool mFiresBroadside;
+  bool mCanAttackGround;
+  bool mCanFireOverWalls;
+  bool mIsScenarioSelectable;
+  bool mIsEnabled;
+  bool mFacesCamera;
+  bool mIsDecoration;
+  bool mFiresWhileMoving;
+  bool mCanFly;
+  bool mB2FA;
+  bool mBuildsOnElevation;
+  bool mBlocksTile;
+  bool mCanEnterAirTransports;
+  bool mCanEnterLandTransports;
+  bool mCanEnterSeaTransports;
+  bool mCanEnterSpaceTransports;
+  bool mCanEnterFortresses;
+  bool mCanGarrison;
+  bool mIsCollidable;
+  bool mCanSetRallyPoint;
+  bool mB305;
+  bool mIsGaiaPlaceable;
+  bool mConvertsBuildings;
+  bool mConvertsPriests;
+  bool mIsPlayerPlaceable;
+  bool mIsVital;
+  bool mIsCloakable;
+  bool mIsExpansionUnit;
+  bool mCanEnterAirports;
+  bool mCanEnterCarriers;
+  bool mCanEnterNavyYards;
+  bool mIsWall;
+  /// the contagion functors copy it to the unit's
+  bool mIsDeletable;
+  bool mIsInactive;
+  bool mIsAttackUnit;
+  bool mIsDefenseUnit;
+  bool mCanCrossForest;
+  bool mIsObstacle;
+  bool mIsTree;
+  bool mIsMelee;
+  bool mCanDisband;
+  bool mIsHuman;
+  bool mIsHorse;
+  bool mIsTower;
+  bool mHasCalamityPowers;
+  bool mIsProjectile;
+  bool mCanChangeBehavior;
+  bool mIsCyber;
+  bool mCanPatrol;
+  /// set by `CreateUnitClasses` (unit set 0x81)
+  bool mIsMedic;
+  bool mSkipsLineOfFireCheck;
+  /// set by `CreateUnitClasses` (unit sets 0x8a, 0x97, 0x96)
+  bool mIsFlare;
+  bool mIsBoobyTrap;
+  bool mIsParatrooperBomber;
+  bool mHasSpecialAttack;
+  /// port (not in the original): the class's `IsLandBuilding()`, set by `CreateUnitClasses` once the class's
+  /// vtable is final; the unit store reads it (store.rs)
+  bool mIsLandBuildingClass;
+};
+
+/// What the constructor looks up outside the row: the C++ fills it before [`fill`].
+struct EeUnitsUnitClassFillIn {
+  /// the constructor's first argument
+  long is_complex;
+  /// the row's technology is in the tech tree: its node's epoch wins over the row's
+  bool has_tech_node;
+  long tech_epoch;
+  /// one of the research technologies is a kind-5 (calamity) technology
+  bool has_calamity_powers;
+  /// `EEAnimal::Find(unit type)` found a record: its animal id (else 1000)
+  bool has_animal;
+  long animal_id;
+  /// the class's AI script (a script.rs handle; 0: none)
+  uint64_t ai_script;
+};
+
+/// One operation's values: a number (`long`/`unsigned long`/`unsigned short`/an id/a count), a float, a bool (0 or 1).
+struct EeUnitsUnitSaveIo {
+  int64_t i;
+  float f;
+  uint8_t b;
+};
+
+/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer in `io`).
+using EeUnitsUnitSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsUnitSaveIo*);
+
+/// The save's inputs: the version, whether it carries the port's live state (0.254) and running state (0.256).
+struct EeUnitsUnitSaveIn {
+  uint32_t major;
+  uint32_t minor;
+  uint8_t live_state;
+  uint8_t running_state;
+};
+
+/// The maxima `EEComplexUnit::FinishLoad` turns the saved fractions back into amounts with (the unit's stats' and
+/// class's).
+struct EeUnitsFinishLoadIn {
+  /// `mStats->mMaxHitPoints` (the last hit points' fraction)
+  long max_hit_points;
+  /// `mStats->mFlightTime`
+  long flight_time;
+  /// `GetUnitClass()->mGarrisonCapacity`
+  long garrison_capacity;
+  /// `mStats->mPower`
+  long power;
+};
+
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
 /// a complex unit).
 struct EeUnitsBuildUnit {
@@ -2514,6 +3270,23 @@ void *ee_units_resolve(uint32_t id);
 /// # Safety
 /// `record` points to a valid record.
 void ee_units_store_insert(const EeUnitRecord *record);
+
+/// The twenty-sixth round's: a record's object records (the C++ `Fill` passes its unit's base subobjects, null for
+/// a record its class does not have) and its mirrored values read from them (`store::refresh`).
+///
+/// # Safety
+/// `record` points to a writable record; each other pointer is null or a live object's record.
+void ee_units_store_set_fields(EeUnitRecord *record,
+                               const EeUnitsRtsUnitFields *rts,
+                               const EeUnitsUnitFields *unit,
+                               const EeUnitsComplexUnitFields *complex);
+
+/// The twenty-seventh round's: where the store reads the units' pointer members (`store::EeUnitsStoreSlots`; once,
+/// before the first record).
+///
+/// # Safety
+/// `slots` is readable.
+void ee_units_store_set_slots(const EeUnitsStoreSlots *slots);
 
 /// A unit leaves its player's list (or is freed): the record of that object, if it is the one under the id.
 bool ee_units_store_remove(uint32_t id,
@@ -3297,6 +4070,18 @@ int32_t ee_units_player_save(void *ctx,
                              uint32_t major,
                              uint32_t minor);
 
+/// `EEPlayer::UpdatePlayer` (see [`update_player`]).
+///
+/// # Safety
+/// `rec` is the player's record (as [`update_player`]); `f` handles every operation with `ctx`.
+void ee_units_player_update(void *ctx, EeUnitsPlayerTickFn f, EeUnitsPlayerSaved *rec);
+
+/// `EEPlayer::Reset`'s fields of the record (see [`reset`]).
+///
+/// # Safety
+/// `rec` points to the record.
+void ee_units_player_reset(EeUnitsPlayerSaved *rec, uint32_t player_id, uint32_t part);
+
 /// A player's table: its id and its 17 stances (`enemies` has 17 words).
 ///
 /// # Safety
@@ -3480,6 +4265,57 @@ float ee_units_step_cloak_fade(float opacity,
 /// # Safety
 /// `host` points to a valid table whose calls are valid for its `ctx`.
 uint32_t ee_units_update_units(const EeUnitsTickHost *host);
+
+/// `TurnTurrets` / `TurnTurretsBack` for one unit (see [`turn_turrets`]).
+///
+/// # Safety
+/// `input` is valid; `parts` holds `count` parts (NULL when `count` is 0).
+void ee_units_turn_turrets(const EeUnitsTurretsIn *input, EeUnitsTurretPart *parts, uint32_t count);
+
+/// `EEUnitClass::EEUnitClass`'s plain stores: `out` (the class's record base) set from the db row `row`
+/// (an `EEUnitClassRecord`, ee/EEUnitClassRecord.h, the layout ee_data's generated record asserts).
+///
+/// # Safety
+/// `out` is a writable `EeUnitsUnitClassFields`; `row` a readable `EEUnitClassRecord`; `input` readable.
+void ee_units_unit_class_fill(EeUnitsUnitClassFields *out,
+                              const void *row,
+                              const EeUnitsUnitClassFillIn *input);
+
+/// The C ABI: `RTSUnit::Load` (`unit`, `complex` null), `EEUnit::Load` (`complex` null) or `EEComplexUnit::Load` (all
+/// three) of one unit over the host callback.
+///
+/// # Safety
+/// The record pointers name the live records of the unit the callback loads (null where noted); `inp` is valid.
+int32_t ee_units_unit_load(void *ctx,
+                           EeUnitsUnitSaveFn f,
+                           EeUnitsRtsUnitFields *rts,
+                           EeUnitsUnitFields *unit,
+                           EeUnitsComplexUnitFields *complex,
+                           const EeUnitsUnitSaveIn *inp);
+
+/// `EEComplexUnit::FinishLoad`'s four fractions over the unit's record.
+///
+/// # Safety
+/// `cx` is the unit's live record; `input` readable.
+void ee_units_unit_finish_fractions(EeUnitsComplexUnitFields *cx, const EeUnitsFinishLoadIn *input);
+
+/// `EEUnit::FinishLoad`'s hit points over the unit's record.
+///
+/// # Safety
+/// `unit` is the unit's live record.
+void ee_units_unit_finish_hit_points(EeUnitsUnitFields *unit, long max_hit_points);
+
+/// The C ABI: `RTSUnit::Save` (`unit`, `complex` null), `EEUnit::Save` (`complex` null) or `EEComplexUnit::Save`
+/// (all three) of one unit over the host callback.
+///
+/// # Safety
+/// The record pointers name the live records of the unit the callback saves (null where noted); `inp` is valid.
+int32_t ee_units_unit_save(void *ctx,
+                           EeUnitsUnitSaveFn f,
+                           const EeUnitsRtsUnitFields *rts,
+                           const EeUnitsUnitFields *unit,
+                           const EeUnitsComplexUnitFields *complex,
+                           const EeUnitsUnitSaveIn *inp);
 
 /// A class's `Update` of the unit `id` (`object`: its address, the record's check) over the store and `host`.
 ///

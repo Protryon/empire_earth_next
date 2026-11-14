@@ -2,14 +2,12 @@
 // One scenario trigger (RTTI EESMTrigger, a root class; vtable 0x4460e4, six slots). Layout from the ctor 0x1c97b7
 // (two UWideStrings, two vectors of wrapper pointers, then the scalars) and the dtor 0x1c98dd (not virtual; stores
 // the vptr: user-declared; deletes every wrapper, non-virtually). EEScenarioManager keeps them in mTriggers.
-// Slots: +0x00 Load 0x1c9d56, +0x04/+0x0c remap (EESMIDMap&) through the condition/effect wrappers' +0x00,
-// +0x08/+0x10 renumber them (wrappers' +0x04), +0x14 Save 0x1ca0b3. Member and slot names by offset (provisional name).
+// Slots: +0x00 Load 0x1c9d56, +0x04..+0x10 the entries' remap and renumber (ee_scenario lists.rs), +0x14 Save 0x1ca0b3. Member and slot names by offset (provisional name).
 // Requires lle/UWideString.h, lle/FSFile.h, <vector>.
 #ifndef EE_EESMTRIGGER_H
 #define EE_EESMTRIGGER_H
 
 #include <vector>
-#include "ee/EESMIDMap.h"
 #include "ee/EESMTConditionWrapper.h"
 #include "ee/EESMTEffectWrapper.h"
 #include "rust/ee_scenario.h"
@@ -20,10 +18,6 @@ public:
     EESMTrigger();                          // 0x1c97b7
     ~EESMTrigger();                         // 0x1c98dd
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1c9d56
-    virtual void RemapConditions(EESMIDMap& inMap);  // +0x04 0x1ca045 (condition wrappers' +0x00)
-    virtual void RenumberConditions(unsigned long inOld, unsigned long inNew);  // +0x08 0x1c9fcd (condition wrappers' +0x04)
-    virtual void RemapEffects(EESMIDMap& inMap);  // +0x0c 0x1ca07c (effect wrappers' +0x00)
-    virtual void RenumberEffects(unsigned long inOld, unsigned long inNew);  // +0x10 0x1ca009 (effect wrappers' +0x04)
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x14 0x1ca0b3
     void Copy(const EESMTrigger& inTrigger);    // 0x1c9966 (provisional name)
     void DeleteCondition(unsigned long inIndex);    // 0x1c99c7 (provisional name)

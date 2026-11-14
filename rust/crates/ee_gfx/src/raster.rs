@@ -95,6 +95,35 @@ pub struct EeGfxRaster {
         brightness: f32,
         alpha_ref: f32,
     ),
+    /// `SetFrame(frame)` of a texture (`GETexture*`)
+    pub texture_frame: extern "C" fn(texture: EeGfxModel, frame: u32),
+    /// the camera's yaw (`gRenderSnapshot.mCameraYaw`)
+    pub camera_yaw: extern "C" fn() -> f32,
+    /// `GetZBuffer`, `GetZCompare`
+    pub get_zbuffer: extern "C" fn() -> u32,
+    pub get_zcompare: extern "C" fn() -> u32,
+    /// `AddGroundStrip(from, to, width, color, offset, size, alpha, brightness, alpha reference)`
+    pub ground_strip: extern "C" fn(
+        from: *const Ge3DPoint,
+        to: *const Ge3DPoint,
+        width: f32,
+        color: EeGfxColor,
+        offset_u: f32,
+        offset_v: f32,
+        size_u: f32,
+        size_v: f32,
+        alpha: f32,
+        brightness: f32,
+        alpha_ref: f32,
+    ),
+    /// `SetGraphicsNextFrame(next)` then `SetFractionalFramePosition(fraction)` (the tween between two frames)
+    pub model_tween: extern "C" fn(model: EeGfxModel, next: u32, fraction: f32),
+    /// `GetScreenPoint`: the world point's place on the screen (the camera, then the main viewport)
+    pub screen_point: extern "C" fn(point: *const Ge3DPoint, x: *mut f32, y: *mut f32),
+    /// a `GEText` in Tahoma 10, transparent and centred at (`x`, `y`) in `color`, its text the NUL-terminated UTF-8
+    /// `text`, drawn by `DrawClippedText` clipped to the viewport's view rectangle on the main game form (the scenario
+    /// editor's under a free camera)
+    pub draw_text: extern "C" fn(x: f32, y: f32, text: *const u8, color: EeGfxColor),
 }
 
 /// The rasterizer as the draws call it.
@@ -144,6 +173,27 @@ pub trait Raster {
         brightness: f32,
         alpha_ref: f32,
     );
+    #[allow(clippy::too_many_arguments)]
+    fn ground_strip(
+        &mut self,
+        from: &Ge3DPoint,
+        to: &Ge3DPoint,
+        width: f32,
+        color: EeGfxColor,
+        offset: (f32, f32),
+        size: (f32, f32),
+        alpha: f32,
+        brightness: f32,
+        alpha_ref: f32,
+    );
+    fn texture_frame(&mut self, texture: EeGfxModel, frame: u32);
+    fn camera_yaw(&mut self) -> f32;
+    fn get_zbuffer(&mut self) -> u32;
+    fn get_zcompare(&mut self) -> u32;
+    fn model_tween(&mut self, model: EeGfxModel, next: u32, fraction: f32);
+    fn screen_point(&mut self, point: &Ge3DPoint) -> (f32, f32);
+    /// `text` without a NUL
+    fn draw_text(&mut self, x: f32, y: f32, text: &str, color: EeGfxColor);
 }
 
 impl Raster for &EeGfxRaster {
@@ -260,6 +310,46 @@ impl Raster for &EeGfxRaster {
         alpha_ref: f32,
     ) {
         (self.ground_quad)(center, color, yaw, size, heights.as_ptr(), brightness, alpha_ref)
+    }
+    fn ground_strip(
+        &mut self,
+        from: &Ge3DPoint,
+        to: &Ge3DPoint,
+        width: f32,
+        color: EeGfxColor,
+        offset: (f32, f32),
+        size: (f32, f32),
+        alpha: f32,
+        brightness: f32,
+        alpha_ref: f32,
+    ) {
+        (self.ground_strip)(from, to, width, color, offset.0, offset.1, size.0, size.1, alpha, brightness, alpha_ref)
+    }
+    fn texture_frame(&mut self, texture: EeGfxModel, frame: u32) {
+        (self.texture_frame)(texture, frame)
+    }
+    fn camera_yaw(&mut self) -> f32 {
+        (self.camera_yaw)()
+    }
+    fn get_zbuffer(&mut self) -> u32 {
+        (self.get_zbuffer)()
+    }
+    fn get_zcompare(&mut self) -> u32 {
+        (self.get_zcompare)()
+    }
+    fn model_tween(&mut self, model: EeGfxModel, next: u32, fraction: f32) {
+        (self.model_tween)(model, next, fraction)
+    }
+    fn screen_point(&mut self, point: &Ge3DPoint) -> (f32, f32) {
+        let (mut x, mut y) = (0.0, 0.0);
+        (self.screen_point)(point, &mut x, &mut y);
+        (x, y)
+    }
+    fn draw_text(&mut self, x: f32, y: f32, text: &str, color: EeGfxColor) {
+        let mut bytes = Vec::with_capacity(text.len() + 1);
+        bytes.extend_from_slice(text.as_bytes());
+        bytes.push(0);
+        (self.draw_text)(x, y, bytes.as_ptr(), color)
     }
 }
 
@@ -395,5 +485,44 @@ impl Raster for LogRaster {
             "quad {} {} {} color {} {} {} yaw {yaw} size {size} heights {heights:?} {brightness} {alpha_ref}",
             c.x, c.y, c.z, k.red, k.green, k.blue
         ));
+    }
+    fn ground_strip(
+        &mut self,
+        a: &Ge3DPoint,
+        b: &Ge3DPoint,
+        width: f32,
+        k: EeGfxColor,
+        offset: (f32, f32),
+        size: (f32, f32),
+        alpha: f32,
+        brightness: f32,
+        alpha_ref: f32,
+    ) {
+        self.calls.push(format!(
+            "strip {} {} {} to {} {} {} width {width} color {} {} {} offset {offset:?} size {size:?} {alpha} {brightness} {alpha_ref}",
+            a.x, a.y, a.z, b.x, b.y, b.z, k.red, k.green, k.blue
+        ));
+    }
+    fn texture_frame(&mut self, _texture: EeGfxModel, frame: u32) {
+        self.calls.push(format!("frame {frame}"));
+    }
+    fn camera_yaw(&mut self) -> f32 {
+        0.25
+    }
+    fn get_zbuffer(&mut self) -> u32 {
+        0
+    }
+    fn get_zcompare(&mut self) -> u32 {
+        0
+    }
+    fn model_tween(&mut self, _model: EeGfxModel, next: u32, fraction: f32) {
+        self.calls.push(format!("tween {next} {fraction}"));
+    }
+    fn screen_point(&mut self, p: &Ge3DPoint) -> (f32, f32) {
+        self.calls.push(format!("screen {} {} {}", p.x, p.y, p.z));
+        (p.x * 10.0, p.y * 10.0)
+    }
+    fn draw_text(&mut self, x: f32, y: f32, text: &str, k: EeGfxColor) {
+        self.calls.push(format!("text {x} {y} {text} color {} {} {}", k.red, k.green, k.blue));
     }
 }

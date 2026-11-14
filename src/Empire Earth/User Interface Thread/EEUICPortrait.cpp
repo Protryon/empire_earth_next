@@ -239,7 +239,7 @@ long EEUICPortrait::MouseLButtonDown()
                         gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
                     }
                 } else if (this->mShowSecondBar) {
-                    gCommunications->ProcessLocalUserInput(new EEMRemoveImprovement(theUnit->GetUnitID(), theImprovement),
+                    gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageRemoveImprovement, {theUnit->GetUnitID(), theImprovement}),
                                                            kSlotNone);
                     gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
                 }
@@ -249,7 +249,7 @@ long EEUICPortrait::MouseLButtonDown()
                 gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
             }
         } else if (theImprovement != 0x10) {
-            gCommunications->ProcessLocalUserInput(new EEMRemoveImprovement(theUnit->GetUnitID(), theImprovement), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRecord(kMessageRemoveImprovement, {theUnit->GetUnitID(), theImprovement}), kSlotNone);
             gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
         }
     }

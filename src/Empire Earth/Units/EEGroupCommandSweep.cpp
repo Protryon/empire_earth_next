@@ -205,7 +205,7 @@ void OriginalRepair(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID, boo
         void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
         ee_units_host_group_fill(theActiveGroup, theGroup, 0, 0);
         ee_units_host_pending_push(thePlayer, theActiveGroup);
-        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theTarget->mTileX.Get(), (int64_t)theTarget->mTileY.Get());
+        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theTarget->mTileX, (int64_t)theTarget->mTileY);
         if (Count(theActiveGroup) > 0) {
             unsigned long i;
             for (i = 0; i < Count(theActiveGroup); i++)
@@ -285,8 +285,8 @@ void OriginalAttackUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID,
             ee_units_host_group_set_queued(theActiveGroup, inQueued);
             if (Count(theActiveGroup) > 0) {
                 ee_units_host_pending_push(thePlayer, theActiveGroup);
-                ee_units_host_group_spread_around_unit(theActiveGroup, IDOf(theTarget), (int64_t)theTarget->mTileX.Get(),
-                                                       (int64_t)theTarget->mTileY.Get());
+                ee_units_host_group_spread_around_unit(theActiveGroup, IDOf(theTarget), (int64_t)theTarget->mTileX,
+                                                       (int64_t)theTarget->mTileY);
                 if (Count(theActiveGroup) > 0)
                     theUnit = UnitAt(theActiveGroup, ee_units_host_random(0, (int32_t)Count(theActiveGroup) - 1));
                 else
@@ -402,7 +402,7 @@ void OriginalDropoffResource(EEPlayer* thePlayer, void* theGroup, int32_t inDrop
         void* theActiveGroup = ee_units_host_active_group_new(thePlayer);
         ee_units_host_group_fill(theActiveGroup, theGroup, 0, 0);
         ee_units_host_pending_push(thePlayer, theActiveGroup);
-        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theDropoff->mTileX.Get(), (int64_t)theDropoff->mTileY.Get());
+        ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theDropoff->mTileX, (int64_t)theDropoff->mTileY);
         if (Count(theActiveGroup) > 0) {
             ee_units_host_group_clear_goal(theActiveGroup);
             EeGoalSpec theSpec;   // EEUGRust::NewGather(NULL, theDropoff, true)
@@ -550,8 +550,8 @@ void OriginalBuildUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTechnology
                             ReadFarms(ee_units_host_unit_complex_id(theBuilding), theNearUnits);
                             if (theNearUnits.size() > 0) {
                                 EEUnit* theFirst = ObjectOf(UnitAt(theActiveGroup, 0));
-                                ee_units_host_sort_farms(&theNearUnits[0], theNearUnits.size(), theFirst->mTileX.Get(),
-                                                         theFirst->mTileY.Get(), 0);
+                                ee_units_host_sort_farms(&theNearUnits[0], theNearUnits.size(), theFirst->mTileX,
+                                                         theFirst->mTileY, 0);
                             }
                         }
                         unsigned long i = 0;
@@ -562,7 +562,7 @@ void OriginalBuildUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTechnology
                             if (inQueued) {
                                 ee_units_host_unit_add_build_target(theWorker, theBuilding);
                                 EEComplexUnit* theObject = static_cast<EEComplexUnit*>(ObjectOf(theWorker));
-                                if (theObject->mGoalState.Get() && theObject->mGoalState->mKind != kGoalBuildRepair)
+                                if (theObject->mGoalState && theObject->mGoalState->mKind != kGoalBuildRepair)
                                     ee_units_host_unit_start_action(theWorker, kActionIdle);
                             } else
                                 ee_units_host_unit_order_build(theWorker, theBuilding);
@@ -625,7 +625,7 @@ void OriginalSmartFarmers(EEPlayer* thePlayer, void* theSelection, int32_t inTar
             }
             if (theFarm == kNone && theFarms.size() > 0) {
                 EEUnit* theObject = ObjectOf(theUnit);
-                ee_units_host_sort_farms(&theFarms[0], theFarms.size(), theObject->mTileX.Get(), theObject->mTileY.Get(), 1);
+                ee_units_host_sort_farms(&theFarms[0], theFarms.size(), theObject->mTileX, theObject->mTileY, 1);
                 theFarm = theFarms.back();
                 theFarms.pop_back();
             }
@@ -1773,7 +1773,7 @@ void EEGroupCommandSweep()
                 continue;
             EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
             theOwn.push_back(theComplex);
-            if (thePathPoint == NULL && theComplex->mUnitClass.Get() != NULL && theComplex->mUnitClass->mUnitType == kUnitTypePathPoint)
+            if (thePathPoint == NULL && theComplex->mUnitClass != NULL && theComplex->mUnitClass->mUnitType == kUnitTypePathPoint)
                 thePathPoint = theComplex;
         }
         std::vector<EEComplexUnit*> theReversed(theOwn.rbegin(), theOwn.rend());
@@ -1825,11 +1825,11 @@ void EEGroupCommandSweep()
             // Attack Ground at the first unit's tile (else, or off the map: a unit inside another, the map's centre)
             // and at the map's centre (a point off the map's diamond has no terrain row: the UI never sends one)
             theCase.mBody = kSweepAttackGround;
-            bool theOnMap = !theUnits.empty() && theUnits[0]->mTileX.Get() >= 0 && theUnits[0]->mTileY.Get() >= 0
-                && gWorld.GetMap()->GetTile((unsigned long)theUnits[0]->mTileX.Get(), (unsigned long)theUnits[0]->mTileY.Get()) != NULL;
+            bool theOnMap = !theUnits.empty() && theUnits[0]->mTileX >= 0 && theUnits[0]->mTileY >= 0
+                && gWorld.GetMap()->GetTile((unsigned long)theUnits[0]->mTileX, (unsigned long)theUnits[0]->mTileY) != NULL;
             float theCenter = (float)(gWorld.GetMap()->GetSize() / 2) + 0.5f;
-            theCase.mX = theOnMap ? (float)theUnits[0]->mTileX.Get() + 0.5f : theCenter;
-            theCase.mY = theOnMap ? (float)theUnits[0]->mTileY.Get() + 0.5f : theCenter;
+            theCase.mX = theOnMap ? (float)theUnits[0]->mTileX + 0.5f : theCenter;
+            theCase.mY = theOnMap ? (float)theUnits[0]->mTileY + 0.5f : theCenter;
             RunCase(theCase, p, thePlayer, theUnits);
             float theFirstX = theCase.mX, theFirstY = theCase.mY;
             theCase.mX = theCenter;
@@ -1967,7 +1967,7 @@ void EEGroupCommandSweep()
             for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext) {
                 if (theUnit->mObjectKind.mValue != EE_OBJECT_COMPLEX_UNIT)
                     continue;
-                EEUnitClass* theClass = static_cast<EEComplexUnit*>(theUnit)->mUnitClass.Get();
+                EEUnitClass* theClass = static_cast<EEComplexUnit*>(theUnit)->mUnitClass;
                 if (theClass != NULL && (theClass->mUnitType == kUnitTypeGranary || theClass->mUnitType == kUnitTypeGranaryImproved)) {
                     theFarmTargets.push_back((int32_t)IDOf(theUnit));
                     break;
@@ -2038,7 +2038,7 @@ void EEGroupCommandSweep()
             int32_t theFound[6] = {-1, -1, -1, -1, -1, -1};   // airport, navy yard, building, garrison, farm, damaged
             for (size_t k = 0; k < theOwn.size(); k++) {
                 EEComplexUnit* theUnit = theOwn[k];
-                EEUnitClass* theClass = theUnit->mUnitClass.Get();
+                EEUnitClass* theClass = theUnit->mUnitClass;
                 if (theClass == NULL)
                     continue;
                 int32_t theID = (int32_t)IDOf(theUnit);
@@ -2109,7 +2109,7 @@ void EEGroupCommandSweep()
             // the passenger and a passenger id no unit has
             int32_t theTransport = -1;
             for (size_t k = 0; k < theOwn.size() && theTransport == -1; k++)
-                if (theOwn[k]->mUnitClass.Get() != NULL && theOwn[k]->mUnitClass->IsTransport())
+                if (theOwn[k]->mUnitClass != NULL && theOwn[k]->mUnitClass->IsTransport())
                     theTransport = (int32_t)IDOf(theOwn[k]);
             if (theTransport != -1)
                 theCarriers.insert(theCarriers.begin(), theTransport);
@@ -2175,11 +2175,11 @@ void EEGroupCommandSweep()
             // tile, the map's centre, its corner and its far edge
             std::vector<int32_t> theHackClasses;
             theHackClasses.push_back(-1);
-            if (!theOwn.empty() && theOwn[0]->mUnitClass.Get() != NULL)
+            if (!theOwn.empty() && theOwn[0]->mUnitClass != NULL)
                 theHackClasses.push_back((int32_t)theOwn[0]->mUnitClass->mUnitType);
             if (theFound[2] != -1)
                 theHackClasses.push_back((int32_t)ObjectOf((uint32_t)theFound[2])->mUnitClass->mUnitType);
-            if (theResource != NULL && static_cast<EEUnit*>(theResource)->mUnitClass.Get() != NULL)
+            if (theResource != NULL && static_cast<EEUnit*>(theResource)->mUnitClass != NULL)
                 theHackClasses.push_back((int32_t)static_cast<EEUnit*>(theResource)->mUnitClass->mUnitType);
             theHackClasses.push_back(0x7fff);
             float theEdge = (float)gWorld.GetMap()->GetSize() - 0.5f;
