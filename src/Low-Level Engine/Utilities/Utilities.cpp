@@ -27,31 +27,6 @@ unsigned short UGetOSLanguage()
     return PlatSystemLanguageId();
 }
 
-// FUNCTION: LLE 0x100837eb
-// Returns the Windows family: 1 = 95, 2 = 98/ME, 3 = NT 5 or later, 4 = NT 4 or older (or a 9x major below 4)
-// Written with a result variable (the 4 shares the compare in eax); the major version declared first, both as
-// MSDN's (DWORD)(LOBYTE(LOWORD(v))) casts (the up-front movzx of the minor)
-unsigned long UGetOSType()
-{
-    unsigned long theVersion = PlatSystemVersion();
-    unsigned long theMajor = (unsigned long)(LOBYTE(LOWORD(theVersion)));
-    unsigned long theMinor = (unsigned long)(HIBYTE(LOWORD(theVersion)));
-    unsigned long theResult;
-    if (theVersion < 0x80000000) {
-        if (theMajor < 5)
-            theResult = 4;
-        else
-            theResult = 3;
-    } else if (theMajor < 4) {
-        theResult = 4;
-    } else if (theMajor > 4 || (theMajor == 4 && theMinor >= 10)) {
-        theResult = 2;
-    } else {
-        theResult = 1;
-    }
-    return theResult;
-}
-
 // FUNCTION: LLE 0x10083826
 // Registers a function to call at engine shutdown; always returns kErrorOK
 long URegisterShutdown(void (*inFunction)(bool))

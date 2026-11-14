@@ -31,26 +31,6 @@ public:
         this->mVertices->GetColor(outBottomRight, 2);
         this->mVertices->GetColor(outBottomLeft, 3);
     }
-    void GetLocationPerVertex(GE2DPoint& outTopLeft, GE2DPoint& outTopRight, GE2DPoint& outBottomRight,
-                              GE2DPoint& outBottomLeft) const
-    {
-        GE3DPoint theTopLeft;
-        GE3DPoint theTopRight;
-        GE3DPoint theBottomRight;
-        GE3DPoint theBottomLeft;
-        this->mVertices->GetPoint(theTopLeft, 0);
-        this->mVertices->GetPoint(theTopRight, 1);
-        this->mVertices->GetPoint(theBottomRight, 2);
-        this->mVertices->GetPoint(theBottomLeft, 3);
-        outTopLeft.SetX(theTopLeft.GetX());
-        outTopLeft.SetY(theTopLeft.GetY());
-        outTopRight.SetX(theTopRight.GetX());
-        outTopRight.SetY(theTopRight.GetY());
-        outBottomRight.SetX(theBottomRight.GetX());
-        outBottomRight.SetY(theBottomRight.GetY());
-        outBottomLeft.SetX(theBottomLeft.GetX());
-        outBottomLeft.SetY(theBottomLeft.GetY());
-    }
     void GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
                              float& outBottomLeft) const
     {
@@ -58,22 +38,6 @@ public:
         outTopRight = this->mVertices->GetOpacity(1);
         outBottomRight = this->mVertices->GetOpacity(2);
         outBottomLeft = this->mVertices->GetOpacity(3);
-    }
-    float GetRotation() const { return this->mRotation; }
-    void GetZPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight, float& outBottomLeft) const
-    {
-        GE3DPoint theTopLeft;
-        GE3DPoint theTopRight;
-        GE3DPoint theBottomRight;
-        GE3DPoint theBottomLeft;
-        this->mVertices->GetPoint(theTopLeft, 0);
-        this->mVertices->GetPoint(theTopRight, 1);
-        this->mVertices->GetPoint(theBottomRight, 2);
-        this->mVertices->GetPoint(theBottomLeft, 3);
-        outTopLeft = theTopLeft.GetZ();
-        outTopRight = theTopRight.GetZ();
-        outBottomRight = theBottomRight.GetZ();
-        outBottomLeft = theBottomLeft.GetZ();
     }
     void SetColor(const GEColor& inColor)
     {

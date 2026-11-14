@@ -777,17 +777,6 @@ bool EEHasPathToTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<
     return theResult;
 }
 
-// FUNCTION: EXE 0x63f5a3
-// Tells whether units with these kind flags can enter a transport, fortress or other container of those flags
-bool EECanEnterUnit(unsigned long inFlags, unsigned long inOtherFlags)
-{
-    return (inOtherFlags & kUnitKindHelicopterTransport) == kUnitKindHelicopterTransport && (inFlags & kUnitKindCanEnterAirTransports) == kUnitKindCanEnterAirTransports
-        || (inOtherFlags & kUnitKindLandTransport) == kUnitKindLandTransport && (inFlags & kUnitKindCanEnterLandTransports) == kUnitKindCanEnterLandTransports
-        || (inOtherFlags & kUnitKindNavalTransport) == kUnitKindNavalTransport && (inFlags & kUnitKindCanEnterSeaTransports) == kUnitKindCanEnterSeaTransports
-        || (inOtherFlags & kUnitKindSpaceTransport) == kUnitKindSpaceTransport && (inFlags & kUnitKindCanEnterSpaceTransports) == kUnitKindCanEnterSpaceTransports
-        || (inOtherFlags & kUnitKindFortress) == kUnitKindFortress && (inFlags & kUnitKindCanEnterFortresses) == kUnitKindCanEnterFortresses;
-}
-
 // FUNCTION: EXE 0x63f630
 // Tells whether a unit can be pushed aside: alive and not a building, aircraft, projectile or fixed object
 bool EEIsUnitMovable(EEComplexUnit* inPlayer, EEComplexUnit* inUnit)
@@ -6124,7 +6113,7 @@ bool EEEditorCanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, lo
     bool theResult = inType == 0x167;
     EETile* theTile = theMap->GetTile(inX, inY);
     if (theTile != NULL && !theResult) {
-        long theID = gUIManager->mScenarioEditorForm->GetUnitScreen()->mUnitUnderMouse;
+        long theID = gUIManager->mScenarioEditorForm->GetUnitScreen()->GetUnitUnderMouse();
         if (theID != -1) {
             EEUnit* theUnit = static_cast<EEUnit*>(::gWorld.GetUnit(theID));
             if (theUnit != NULL) {

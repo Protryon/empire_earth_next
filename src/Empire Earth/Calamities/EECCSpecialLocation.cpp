@@ -20,58 +20,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 
-// FUNCTION: EXE 0x4b338d
-// Creates the special-location calamity class
-EECCSpecialLocation::EECCSpecialLocation()
-{
-}
-
-// SYNTHETIC: EXE 0x4b339f
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b33bb
-// Destroys the calamity class
-EECCSpecialLocation::~EECCSpecialLocation()
-{
-}
-
-// ICF-FOLDED: EXE 0x4b3257
-// (`return true`: identical to EECCSpecialAttack::Start)
-bool EECCSpecialLocation::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, NULL);
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCSpecialLocation::Stop(EECalamity* inCalamity)
-{
-}
-
-// ICF-FOLDED: EXE 0x4afea3
-// (identical to EECCConscription::Initialize)
-void EECCSpecialLocation::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCSpecialLocation::Reset(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4b33c6
-// Orders the caster to the target location for its special-location action; always returns 7 (done)
-long EECCSpecialLocation::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, &EECCSpecialLocation::UpdateStep);
-}
-
 // New (port): EECCSpecialLocation's world steps for its Rust update (ee/EECalamityUpdate.h)
 bool EECCSpecialLocation::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
 {
@@ -103,13 +51,4 @@ long EECCSpecialLocation::CanCastIgnoringAreaEffects(EEComplexUnit* inUnit, GE3D
     if (theResult == 2)
         theResult = 0;
     return theResult;
-}
-
-// FUNCTION: EXE 0x4b3468
-// Accepts any tile, except that a radio man needs a free tile
-bool EECCSpecialLocation::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
-    return EECalamityValidLocation(this, theCast, inUnit, 0);
 }

@@ -37,93 +37,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
-// FUNCTION: EXE 0x4af8c0
-// Creates the cloaking calamity class with no effect or sound
-EECCCloaking::EECCCloaking()
-{
-    this->mGraphicEffect = NULL;
-    this->mSound = NULL;
-}
-
-// SYNTHETIC: EXE 0x4af8da
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4af8f6
-// Destroys the calamity class, releasing its effect
-EECCCloaking::~EECCCloaking()
-{
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Dereference();
-}
-
-// FUNCTION: EXE 0x4af915
-// Cloaks the caster: gives it the cloak area effect, plays the sound and the effect on it; a capitol
-// also makes the capitols grouped around it cast cloaking. Returns true
-bool EECCCloaking::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCCloaking::StartStep);
-}
-
-// FUNCTION: EXE 0x4afa26
-// Uncloaks the caster: removes its area effect of kind 8 and stops the sound
-void EECCCloaking::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCCloaking::StartStep);
-}
-
-// FUNCTION: EXE 0x4afa68
-// Reads the calamity data: sound and effect; the effect's duration becomes the cloak's lifetime
-void EECCCloaking::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    if (inData->mSoundID != 0)
-        this->mSound = EESoundObject::Get(inData->mSoundID);
-    if (inData->mGraphicEffectID1 == 0)
-        return;
-    this->mGraphicEffect = EEGraphicEffect::Get(inData->mGraphicEffectID1);
-    this->mGraphicEffect->Reference();
-    this->mLifeTime = this->mGraphicEffect->mDuration;
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCCloaking::Reset(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4afabe
-// Loads the cloak's effect and sound
-void EECCCloaking::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Load(inIsOnDemand);
-    if (this->mSound != NULL)
-        this->mSound->LoadMedia();
-}
-
-// ICF-FOLDED: EXE 0x4b1c2f
-// (folded into a later unit's identical copy)
-void EECCCloaking::UnloadMedia(EEPlayer* inPlayer)
-{
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Unload();
-    if (this->mSound != NULL)
-        this->mSound->UnloadMedia();
-}
-
-// FUNCTION: EXE 0x4afae1
-// Ages the cloak and updates its sound; returns 7 at the end of its lifetime (Rust)
-long EECCCloaking::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, NULL);
-}
-
 // ICF-FOLDED: EXE 0x6135bc
 // (`return true`: folded into a later unit's identical function)
 bool EECCCloaking::Virtual4C(unsigned long, unsigned long)
@@ -226,7 +139,7 @@ bool EECCCloaking::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall&
                              static_cast<EEAreaEffect*>(ioHost.mPending));
         return true;
     case 3:
-        gEffectManager->CreateUnitEffect(theCalamity->mCasterUnit, theClass->mGraphicEffect, NULL, 0, 0, 0);
+        gEffectManager->CreateUnitEffect(theCalamity->mCasterUnit, theClass->mGraphicEffect1, NULL, 0, 0, 0);
         return true;
     case 4:
         EEUnitCast<EEComplexUnit>(theCalamity->GetCasterUnit())->mAreaEffects.Remove(8);

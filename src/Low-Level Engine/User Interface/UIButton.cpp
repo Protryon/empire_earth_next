@@ -113,7 +113,7 @@ UIButton::UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFoc
                    unsigned long inBorderThickness)
     : UIControl(kControlTypeButton, inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
-    this->mBorderType = 1;
+    this->SetBorderType(1);
     this->mRust = ee_ui_button_new(this, UIButtonHost::Op, inNormalBitmap, inFocusedBitmap, inPressedBitmap);
 }
 
@@ -164,10 +164,6 @@ void UIButton::TabbedFrom() { EE_UI_BUTTON(TabbedFrom); }
 long UIButton::UpdateKeyboard() { return (long)EE_UI_BUTTON(UpdateKeyboard); }   // Fixed (kept): a key press on it
 
 // The header's members (the original's inline ones, emitted by UIBlinkingButton.cpp)
-unsigned long UIButton::GetButtonDownSound() const { return (unsigned long)EE_UI_BUTTON(ButtonDownSound); }
-unsigned long UIButton::GetButtonUpSound() const { return (unsigned long)EE_UI_BUTTON(ButtonUpSound); }
-GEBitmap* UIButton::GetCurrentBitmap() const { return (GEBitmap*)EE_UI_BUTTON(CurrentBitmap); }
-GEBitmap* UIButton::GetCopiedBitmap() const { return (GEBitmap*)EE_UI_BUTTON(CopiedBitmap); }
 GE2DPoint UIButton::GetBitmapLocation() const
 {
     float f[4] = {0.0f, 0.0f, 0.0f, 0.0f};

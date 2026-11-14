@@ -81,13 +81,6 @@ long GEModel::StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, l
     return ee_ge_mod_store_loaded(this->mRust, inModel, theShared.empty() ? NULL : &theShared[0], theShared.size());
 }
 
-// FUNCTION: LLE 0x1001cad5
-// Loads every material's texture for one screen (point mip filter), then does the same for the sub-models
-long GEModel::LoadTexturesForScreen(const GETextureDescription& inDescription, unsigned long inScreen)
-{
-    return ee_ge_mod_load_textures(this->mRust, &inDescription, inScreen);
-}
-
 // UList<GELODVertex*>/<GELODPolygon*>/<GELODMetaVertex*>::sNodePool init wrapper and atexit registrars (GELOD.h via
 // GEModel.h; the $D ctors are GEBoundingBox.cpp's COMDATs 0x10014ed4/0x10014efb/0x10014f22)
 // SYNTHETIC: LLE 0x1001ccf9

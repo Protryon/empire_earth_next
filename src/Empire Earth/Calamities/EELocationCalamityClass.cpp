@@ -6,6 +6,10 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
+#include "lle/GEColor.h"
+#include "lle/GETextureCoordinate.h"
+#include "lle/GE3DPlane.h"
+#include "lle/GETerrainMesh.h"
 #include "lle/FSRestorable.h"
 
 #include "ee/EEEffectManager.h"
@@ -14,6 +18,7 @@
 #include "ee/EECalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
+#include "ee/EEMap.h"
 
 // FUNCTION: EXE 0x4b6f21
 // Creates a calamity of the class at the location for the caster and resets it for its start
@@ -41,4 +46,13 @@ long EELocationCalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLoca
     EECalamityCanCastScope theCapture;   // CCAS (TEST ONLY)
     return theCapture.Record(this, inUnit, inLocation, inX, inY, inCheck, inTargetUnit,
                              EECalamityCanCastAt(this, EeCalamityCastMode::Location, inUnit, inX, inY, inCheck, inTargetUnit));
+}
+
+// The class's IsValidLocation: the shared rule over the class's radius, water flag, map area, space terrain and placed
+// unit class (ee_tech calamity_cast.rs, calamity_class.rs cast_fields)
+bool EELocationCalamityClass::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
+{
+    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
+    long theUnitClass = ee_calamity_class_cast_fields(this, &theCast, kTerrainSpace);
+    return EECalamityValidLocation(this, theCast, inUnit, theUnitClass);
 }

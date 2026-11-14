@@ -2,8 +2,11 @@
 // it sorts after EELobbyPlayerOptionsCtrl.cpp and before the sound classes). The game lobby's text resources, in the
 // shape of WONAPI's generated resource units: 73 GUIString globals (init chains 0x69a43d..0x69b1ed, definition order
 // = table order), the loader registration, the section loader and the reset: 0x69a43d..0x69ce06 (the
-// GUIString::operator= COMDAT closes it). Every name here is a provisional name.
+// GUIString::operator= COMDAT closes it). Every name here is a provisional name. R6 WONLobby round 5: each string's
+// section and key are ee_won's eeresource.rs rows (in this table's order); the loader and the reset run over them.
 #include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string>
 #include <list>
 
@@ -11,6 +14,7 @@
 
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
+#include "rust/ee_won.h"
 
 using namespace WONAPI;
 
@@ -188,178 +192,42 @@ GUIString& EELobbyResource_GetString(int inID)
     return *sEELobbyStrings[inID];
 }
 
+// the global of row `inIndex` of ee_won's table (the same order); the program stops when the two lists disagree
+static GUIString* EELobbyResourceSlotFor(size_t inIndex)
+{
+    if (ee_won_eeresource_count() != sizeof(sEELobbyStrings) / sizeof(sEELobbyStrings[0])) {
+        fprintf(stderr, "EELobbyResource: %u rows for %u globals\n", (unsigned)ee_won_eeresource_count(),
+                (unsigned)(sizeof(sEELobbyStrings) / sizeof(sEELobbyStrings[0])));
+        abort();
+    }
+    return sEELobbyStrings[inIndex];
+}
+
 // FUNCTION: EXE 0x69b278
-// Loads the game options, player options, connect, file dialog, game status and lobby texts from resources
-// GUIString::operator='s inner SmartPtr::operator=(const SmartPtr&) (ee/EEWonNet.h) is called out of line
-// (0x69cdf2) at the first 48 assignments and expanded inline from the 49th on
+// Loads the game options, player options, connect, file dialog, game status and lobby texts from resources (ee_won's
+// rows in order: a section is looked up where it changes, as the original's statements did)
 static void EELobbyResource_Load(ResourceConfigTable* inTable)
 {
-    ResourceConfig* aTable;
-    aTable = inTable->SafeGetConfig("GameOptionsCtrl");
-    gEELobbyGameOptionsCtrl_Epoch1 = aTable->SafeGetString("Epoch1");
-    gEELobbyGameOptionsCtrl_Epoch2 = aTable->SafeGetString("Epoch2");
-    gEELobbyGameOptionsCtrl_Epoch3 = aTable->SafeGetString("Epoch3");
-    gEELobbyGameOptionsCtrl_Epoch4 = aTable->SafeGetString("Epoch4");
-    gEELobbyGameOptionsCtrl_Epoch5 = aTable->SafeGetString("Epoch5");
-    gEELobbyGameOptionsCtrl_Epoch6 = aTable->SafeGetString("Epoch6");
-    gEELobbyGameOptionsCtrl_Epoch7 = aTable->SafeGetString("Epoch7");
-    gEELobbyGameOptionsCtrl_Epoch8 = aTable->SafeGetString("Epoch8");
-    gEELobbyGameOptionsCtrl_Epoch9 = aTable->SafeGetString("Epoch9");
-    gEELobbyGameOptionsCtrl_Epoch10 = aTable->SafeGetString("Epoch10");
-    gEELobbyGameOptionsCtrl_Epoch11 = aTable->SafeGetString("Epoch11");
-    gEELobbyGameOptionsCtrl_Epoch12 = aTable->SafeGetString("Epoch12");
-    gEELobbyGameOptionsCtrl_Epoch13 = aTable->SafeGetString("Epoch13");
-    gEELobbyGameOptionsCtrl_Epoch14 = aTable->SafeGetString("Epoch14");
-    gEELobbyGameOptionsCtrl_Epoch15 = aTable->SafeGetString("Epoch15");
-    gEELobbyGameOptionsCtrl_Epoch16 = aTable->SafeGetString("Epoch16");
-    gEELobbyGameOptionsCtrl_GameType1 = aTable->SafeGetString("GameType1");
-    gEELobbyGameOptionsCtrl_GameType2 = aTable->SafeGetString("GameType2");
-    gEELobbyGameOptionsCtrl_GameType3 = aTable->SafeGetString("GameType3");
-    gEELobbyGameOptionsCtrl_MapSize1 = aTable->SafeGetString("MapSize1");
-    gEELobbyGameOptionsCtrl_MapSize2 = aTable->SafeGetString("MapSize2");
-    gEELobbyGameOptionsCtrl_MapSize3 = aTable->SafeGetString("MapSize3");
-    gEELobbyGameOptionsCtrl_MapSize4 = aTable->SafeGetString("MapSize4");
-    gEELobbyGameOptionsCtrl_MapSize5 = aTable->SafeGetString("MapSize5");
-    gEELobbyGameOptionsCtrl_MapSize6 = aTable->SafeGetString("MapSize6");
-    gEELobbyGameOptionsCtrl_Resources1 = aTable->SafeGetString("Resources1");
-    gEELobbyGameOptionsCtrl_Resources2 = aTable->SafeGetString("Resources2");
-    gEELobbyGameOptionsCtrl_Resources3 = aTable->SafeGetString("Resources3");
-    gEELobbyGameOptionsCtrl_Resources4 = aTable->SafeGetString("Resources4");
-    gEELobbyGameOptionsCtrl_Resources5 = aTable->SafeGetString("Resources5");
-    gEELobbyGameOptionsCtrl_GameVariant1 = aTable->SafeGetString("GameVariant1");
-    gEELobbyGameOptionsCtrl_GameVariant2 = aTable->SafeGetString("GameVariant2");
-    gEELobbyGameOptionsCtrl_Difficulty1 = aTable->SafeGetString("Difficulty1");
-    gEELobbyGameOptionsCtrl_Difficulty2 = aTable->SafeGetString("Difficulty2");
-    gEELobbyGameOptionsCtrl_Difficulty3 = aTable->SafeGetString("Difficulty3");
-    gEELobbyGameOptionsCtrl_GameSpeed1 = aTable->SafeGetString("GameSpeed1");
-    gEELobbyGameOptionsCtrl_GameSpeed2 = aTable->SafeGetString("GameSpeed2");
-    gEELobbyGameOptionsCtrl_GameSpeed3 = aTable->SafeGetString("GameSpeed3");
-    gEELobbyGameOptionsCtrl_GameSpeed4 = aTable->SafeGetString("GameSpeed4");
-    gEELobbyGameOptionsCtrl_OptionOn = aTable->SafeGetString("OptionOn");
-    gEELobbyGameOptionsCtrl_OptionOff = aTable->SafeGetString("OptionOff");
-    gEELobbyGameOptionsCtrl_WondersOff = aTable->SafeGetString("WondersOff");
-    gEELobbyGameOptionsCtrl_GameType = aTable->SafeGetString("GameType");
-    gEELobbyGameOptionsCtrl_MapSize = aTable->SafeGetString("MapSize");
-    gEELobbyGameOptionsCtrl_MapType = aTable->SafeGetString("MapType");
-    gEELobbyGameOptionsCtrl_Resources = aTable->SafeGetString("Resources");
-    gEELobbyGameOptionsCtrl_StartingEpoch = aTable->SafeGetString("StartingEpoch");
-    gEELobbyGameOptionsCtrl_EndingEpoch = aTable->SafeGetString("EndingEpoch");
-    gEELobbyGameOptionsCtrl_GameUnitLimit = aTable->SafeGetString("GameUnitLimit");
-    gEELobbyGameOptionsCtrl_GameVariant = aTable->SafeGetString("GameVariant");
-    gEELobbyGameOptionsCtrl_DifficultyLevel = aTable->SafeGetString("DifficultyLevel");
-    gEELobbyGameOptionsCtrl_GameSpeed = aTable->SafeGetString("GameSpeed");
-    gEELobbyGameOptionsCtrl_RevealMap = aTable->SafeGetString("RevealMap");
-    gEELobbyGameOptionsCtrl_UseCustomCivs = aTable->SafeGetString("UseCustomCivs");
-    gEELobbyGameOptionsCtrl_LockTeams = aTable->SafeGetString("LockTeams");
-    gEELobbyGameOptionsCtrl_LockSpeed = aTable->SafeGetString("LockSpeed");
-    gEELobbyGameOptionsCtrl_VictoryAllowed = aTable->SafeGetString("VictoryAllowed");
-    gEELobbyGameOptionsCtrl_CampaignInformation = aTable->SafeGetString("CampaignInformation");
-    gEELobbyGameOptionsCtrl_NumberOfWonders = aTable->SafeGetString("NumberOfWonders");
-
-    aTable = inTable->SafeGetConfig("PlayerOptionsCtrl");
-    gEELobbyPlayerOptionsCtrl_TransferPercent = aTable->SafeGetString("TransferPercent");
-
-    aTable = inTable->SafeGetConfig("EELobbyConnectDialog");
-    gEELobbyConnectDialog_LeaveGame = aTable->SafeGetString("LeaveGame");
-    gEELobbyConnectDialog_AbortLaunch = aTable->SafeGetString("AbortLaunch");
-
-    aTable = inTable->SafeGetConfig("EELobbyFileDialog");
-    gEELobbyFileDialog_DeleteTitle = aTable->SafeGetString("DeleteTitle");
-    gEELobbyFileDialog_DeleteDetails = aTable->SafeGetString("DeleteDetails");
-
-    aTable = inTable->SafeGetConfig("EELobbyGameStatus");
-    gEELobbyGameStatus_NotInSavedGame = aTable->SafeGetString("NotInSavedGame");
-    gEELobbyGameStatus_InvalidVersion = aTable->SafeGetString("InvalidVersion");
-    gEELobbyGameStatus_CorruptBinaries = aTable->SafeGetString("CorruptBinaries");
-
-    aTable = inTable->SafeGetConfig("EELobbyInterface");
-    gEELobbyInterface_LoadGameError = aTable->SafeGetString("LoadGameError");
-    gEELobbyInterface_ErrorReadingFile = aTable->SafeGetString("ErrorReadingFile");
-    gEELobbyInterface_PlayerNotInGame = aTable->SafeGetString("PlayerNotInGame");
-    gEELobbyInterface_Players = aTable->SafeGetString("Players");
-
-    aTable = inTable->SafeGetConfig("EELobbyGame");
-    gEELobbyGame_StartGameError = aTable->SafeGetString("StartGameError");
-    gEELobbyGame_EveryoneOnSameTeam = aTable->SafeGetString("EveryoneOnSameTeam");
+    ResourceConfig* aTable = NULL;
+    size_t aCount = ee_won_eeresource_count();
+    for (size_t i = 0; i < aCount; i++) {
+        EeWonEeResource aRow;
+        if (!ee_won_eeresource_row(i, &aRow))
+            break;
+        GUIString* aGlobal = EELobbyResourceSlotFor(i);
+        if (aRow.new_section)
+            aTable = inTable->SafeGetConfig(aRow.section);
+        *aGlobal = aTable->SafeGetString(aRow.key);
+    }
 }
 
 // FUNCTION: EXE 0x69c961
-// Resets every game lobby string to the empty string
+// Resets every game lobby string to the empty string (ee_won's rows in order)
 void EELobbyResource_Destroy()
 {
-    gEELobbyGameOptionsCtrl_Epoch1 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch2 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch3 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch4 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch5 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch6 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch7 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch8 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch9 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch10 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch11 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch12 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch13 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch14 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch15 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Epoch16 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameType1 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameType2 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameType3 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_MapSize1 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_MapSize2 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_MapSize3 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_MapSize4 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_MapSize5 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_MapSize6 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Resources1 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Resources2 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Resources3 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Resources4 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Resources5 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameVariant1 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameVariant2 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Difficulty1 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Difficulty2 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Difficulty3 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameSpeed1 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameSpeed2 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameSpeed3 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameSpeed4 = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_OptionOn = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_OptionOff = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_WondersOff = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameType = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_MapSize = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_MapType = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_Resources = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_StartingEpoch = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_EndingEpoch = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameUnitLimit = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameVariant = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_DifficultyLevel = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_GameSpeed = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_RevealMap = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_UseCustomCivs = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_LockTeams = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_LockSpeed = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_VictoryAllowed = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_CampaignInformation = GetEmptyGUIStringData();
-    gEELobbyGameOptionsCtrl_NumberOfWonders = GetEmptyGUIStringData();
-    gEELobbyPlayerOptionsCtrl_TransferPercent = GetEmptyGUIStringData();
-    gEELobbyConnectDialog_LeaveGame = GetEmptyGUIStringData();
-    gEELobbyConnectDialog_AbortLaunch = GetEmptyGUIStringData();
-    gEELobbyFileDialog_DeleteTitle = GetEmptyGUIStringData();
-    gEELobbyFileDialog_DeleteDetails = GetEmptyGUIStringData();
-    gEELobbyGameStatus_NotInSavedGame = GetEmptyGUIStringData();
-    gEELobbyGameStatus_InvalidVersion = GetEmptyGUIStringData();
-    gEELobbyGameStatus_CorruptBinaries = GetEmptyGUIStringData();
-    gEELobbyInterface_LoadGameError = GetEmptyGUIStringData();
-    gEELobbyInterface_ErrorReadingFile = GetEmptyGUIStringData();
-    gEELobbyInterface_PlayerNotInGame = GetEmptyGUIStringData();
-    gEELobbyInterface_Players = GetEmptyGUIStringData();
-    gEELobbyGame_StartGameError = GetEmptyGUIStringData();
-    gEELobbyGame_EveryoneOnSameTeam = GetEmptyGUIStringData();
+    size_t aCount = ee_won_eeresource_count();
+    for (size_t i = 0; i < aCount; i++)
+        *EELobbyResourceSlotFor(i) = GetEmptyGUIStringData();
 }
 
 // TEMPLATE: EXE 0x69cdf2

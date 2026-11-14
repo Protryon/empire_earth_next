@@ -485,9 +485,8 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
         theClass->PathToward(inUnit, thePosition, theTarget, true);
         break;
     case EE_UNITS_ACT_DEATH_ROLL: {
-        EEPMAirplane* theModel = dynamic_cast<EEPMAirplane*>(theClass->mPhysicsModel);
-        if (theModel != NULL)
-            inUnit->SetF220(theModel->ComputeRoll(inUnit, inUnit->mAngularVelocity.GetYaw()));
+        if (theClass->mPhysicsModel != NULL && theClass->mPhysicsModel->IsAirplane())
+            inUnit->SetF220(theClass->mPhysicsModel->ComputeRoll(inUnit, inUnit->mAngularVelocity.GetYaw()));
         GEOrientation theOrientation = inUnit->mAngularVelocity;
         theOrientation.SetRoll(theOrientation.GetYaw());
         inUnit->mAngularVelocity = theOrientation;

@@ -327,17 +327,18 @@ void EEClient::HandleMessage(NEMessage* inMessage)
 
     switch (inMessage->GetType()) {
     case kNetMessageClientReconnectionRequestResponse: {
-        NEMClientReconnectionRequestResponse* theResponse = static_cast<NEMClientReconnectionRequestResponse*>(inMessage);
-        gCommunications->SetNumberOfCTsProcessedInPhysics(theResponse->GetCurrentCT());
-        gCommunications->SetCurrentCommunicationsTick(theResponse->GetCurrentCT());
+        unsigned long theTick = static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(2);   // error, new slot, tick
+        gCommunications->SetNumberOfCTsProcessedInPhysics(theTick);
+        gCommunications->SetCurrentCommunicationsTick(theTick);
         unsigned long theCT = gCommunications->GetNumberOfCTsProcessedInPhysics();   // the original reads it (0xb7a2a) and drops it
         gCommunications->GetCurrentCommunicationsTick();
         break;
     }
     case kNetMessageCommunicationsTick: {
-        NEMCommunicationsTick* theTickMessage = static_cast<NEMCommunicationsTick*>(inMessage);
+        // the tick, its PTs to perform, PTs per second, checksum and dump flags, the players' inputs
+        NEMRecord* theTickMessage = static_cast<NEMRecord*>(inMessage);
         NEMessage* theInput;
-        unsigned char theTicksToPerform = theTickMessage->GetPhysicsTicksToPerform();
+        unsigned char theTicksToPerform = theTickMessage->Get<unsigned char>(1);
         unsigned long theNumberOfInputs = theTickMessage->GetNumberOfPlayerInputs();
         for (unsigned long i = 0; i < theNumberOfInputs; i++) {
             theTickMessage->GetPlayerInput(i, theInput);
@@ -347,9 +348,9 @@ void EEClient::HandleMessage(NEMessage* inMessage)
         if (theTicksToPerform != 0xff) {
             unsigned long thePhysicsTick = this->GetCurrentPhysicsTick() + theTicksToPerform;
             this->SetCurrentPhysicsTick(thePhysicsTick);
-            unsigned char thePhysicsTicksPerSecond = theTickMessage->GetPhysicsTicksPerSecond();
-            NEMPhysicsTick* thePhysicsTickMessage = new NEMPhysicsTick(theTicksToPerform, theCount,
-                thePhysicsTicksPerSecond, theTickMessage->GetGenerateChecksum(), theTickMessage->GetDumpTheWorld());
+            NEMessage* thePhysicsTickMessage = new NEMRecord(kNetMessagePhysicsTick,
+                {theCount, theTicksToPerform, theTickMessage->Get<bool>(3), theTickMessage->Get<bool>(4),
+                 theTickMessage->Get<unsigned char>(2)});
             gPhysics->mServerMessageQueueLock->Enter();
             gPhysics->QueueServerMessage(thePhysicsTickMessage);
             for (unsigned long j = 0; j < theNumberOfInputs; j++) {
@@ -374,106 +375,64 @@ void EEClient::HandleMessage(NEMessage* inMessage)
         break;
     }
     case kNetMessageClientConnectionRequestResponse: {
-        NEMClientConnectionRequestResponse* theResponse = static_cast<NEMClientConnectionRequestResponse*>(inMessage);
-        if (theResponse->GetError() == kConnectionAccepted) {
-            this->mUISlotNumber = theResponse->GetUISlotNumber();
+        // the error, the lobby slot, the send-to slot, the tick, the version
+        NEMRecord* theResponse = static_cast<NEMRecord*>(inMessage);
+        long theError = theResponse->Get<int32_t>(0);
+        // leaving the game: back to the game list, then the form closed and the reason shown (formatted with the
+        // host's version and ours), or the boot action posted with it, or nothing; then disconnected
+        enum { kLeaveShow, kLeaveShowVersions, kLeaveBoot, kLeaveQuiet };
+        auto theLeave = [&](long inText, int inHow) {
+            if (gWonNet != NULL) {
+                gWonNet->ClearGameList();
+                gWonNet->RejoinRoom(false);
+            }
+            if (inHow == kLeaveBoot) {
+                EEAction* theAction = new EEABootClientFromCanceledGame(inText);
+                gUserInterface->PostAction(theAction);
+                theAction->Dereference();
+            } else if (inHow != kLeaveQuiet) {
+                gUserInterface->CloseForm(NULL);
+                gResource->GetString(inText, theFormat);
+                if (inHow == kLeaveShowVersions)
+                    sprintf(theText, theFormat, (const char*)theResponse->GetString(4), (const char*)gGameVersion);
+                gUIManager->DisplayMessage(inHow == kLeaveShowVersions ? theText : theFormat, true, NULL, NULL, true);
+            }
+            this->Disconnect();
+        };
+        if (theError == kConnectionAccepted) {
+            this->mUISlotNumber = theResponse->Get<unsigned char>(1);
             gLocalPlayerOut = false;
             if (EEIsMultiplayerGame(true))
                 EELobbyPostConnectStatus(true);
             else
                 gUserInterface->OpenForm(gUIManager->GetFormByID(kFormLobby));
-            gCommunications->SetNumberOfCTsProcessedInPhysics(theResponse->GetCurrentCT());
-            gCommunications->SetCurrentCommunicationsTick(theResponse->GetCurrentCT());
+            gCommunications->SetNumberOfCTsProcessedInPhysics(theResponse->Get<uint32_t>(3));
+            gCommunications->SetCurrentCommunicationsTick(theResponse->Get<uint32_t>(3));
             unsigned long theCT = gCommunications->GetNumberOfCTsProcessedInPhysics();
         } else if (this->mUISlotNumber == 0xff) {
+            // refused while joining: the lobby is told, or the reason shown (a version mismatch with the host's
+            // version and ours; the game in progress also under the code the host sends, a fix: the original had no
+            // case for either while joining and left the player waiting)
             if (EEIsMultiplayerGame(true))
                 EELobbyPostConnectStatus(false);
-            else if (theResponse->GetError() == kConnectionNameInUse) {
-                if (gWonNet != NULL) {
-                    gWonNet->ClearGameList();
-                    gWonNet->RejoinRoom(false);
-                }
-                gUserInterface->CloseForm(NULL);
-                gResource->GetString(IDS_PLAYER_NAME_ALREADY_EXIST_IN_GAME, theFormat);
-                gUIManager->DisplayMessage(theFormat, true, NULL, NULL, true);
-                this->Disconnect();
-            } else if (theResponse->GetError() == kConnectionBadChecksum) {
-                if (gWonNet != NULL) {
-                    gWonNet->ClearGameList();
-                    gWonNet->RejoinRoom(false);
-                }
-                gUserInterface->CloseForm(NULL);
-                gResource->GetString(IDS_ONE_OR_MORE_OF_YOUR_FILES, theFormat);
-                gUIManager->DisplayMessage(theFormat, true, NULL, NULL, true);
-                this->Disconnect();
-            } else if (theResponse->GetError() == kConnectionGameFull) {
-                if (gWonNet != NULL) {
-                    gWonNet->ClearGameList();
-                    gWonNet->RejoinRoom(false);
-                }
-                gUserInterface->CloseForm(NULL);
-                gResource->GetString(IDS_NO_OPEN_SLOTS_LEFT_IN_GAME, theFormat);
-                gUIManager->DisplayMessage(theFormat, true, NULL, NULL, true);
-                this->Disconnect();
-            } else if (theResponse->GetError() == kConnectionVersionMismatch) {
-                if (gWonNet != NULL) {
-                    gWonNet->ClearGameList();
-                    gWonNet->RejoinRoom(false);
-                }
-                gUserInterface->CloseForm(NULL);
-                gResource->GetString(IDS_TO_JOIN_THIS_GAME_YOU, theFormat);
-                sprintf(theText, theFormat, (const char*)theResponse->GetVersion(), (const char*)gGameVersion);
-                gUIManager->DisplayMessage(theText, true, NULL, NULL, true);
-                this->Disconnect();
-            } else if (theResponse->GetError() == kConnectionGameInProgress
-                       || theResponse->GetError() == kConnectionGameInProgressAsSent) {
-                // Fix: a host refuses a join into a running game with the code kConnectionGameInProgressAsSent (the
-                // message's string id) instead of kConnectionGameInProgress, and this joining branch had no case
-                // for either, so the joining player was never told and kept waiting. The host is left unchanged
-                // (it must stay compatible with other hosts); the joining player now gets the message.
-                if (gWonNet != NULL) {
-                    gWonNet->ClearGameList();
-                    gWonNet->RejoinRoom(false);
-                }
-                gUserInterface->CloseForm(NULL);
-                gResource->GetString(IDS_GAME_IS_IN_PROGRESS, theFormat);
-                gUIManager->DisplayMessage(theFormat, true, NULL, NULL, true);
-                this->Disconnect();
-            }
-        } else if (theResponse->GetError() == kConnectionRemovedByHost) {
-            if (gWonNet != NULL) {
-                gWonNet->ClearGameList();
-                gWonNet->RejoinRoom(false);
-            }
-            EEAction* theAction = new EEABootClientFromCanceledGame(IDS_SERVER_HAS_REMOVED_YOU_FROM_GAME);
-            gUserInterface->PostAction(theAction);
-            theAction->Dereference();
-            this->Disconnect();
-        } else if (theResponse->GetError() == kConnectionHostGone) {
-            if (gWonNet != NULL) {
-                gWonNet->ClearGameList();
-                gWonNet->RejoinRoom(false);
-            }
-            EEAction* theAction = new EEABootClientFromCanceledGame(IDS_HOST_OF_THIS_GAME_HAS_GONE);
-            gUserInterface->PostAction(theAction);
-            theAction->Dereference();
-            this->Disconnect();
-        } else if (theResponse->GetError() == kConnectionGameInProgress) {
-            if (gWonNet != NULL) {
-                gWonNet->ClearGameList();
-                gWonNet->RejoinRoom(false);
-            }
-            gUserInterface->CloseForm(NULL);
-            gResource->GetString(IDS_GAME_IS_IN_PROGRESS, theFormat);
-            sprintf(theText, theFormat, (const char*)theResponse->GetVersion(), (const char*)gGameVersion);
-            gUIManager->DisplayMessage(theText, true, NULL, NULL, true);
-            this->Disconnect();
-        } else if (theResponse->GetError() == 6) {
-            if (gWonNet != NULL) {
-                gWonNet->ClearGameList();
-                gWonNet->RejoinRoom(false);
-            }
-            this->Disconnect();
+            else if (theError == kConnectionNameInUse)
+                theLeave(IDS_PLAYER_NAME_ALREADY_EXIST_IN_GAME, kLeaveShow);
+            else if (theError == kConnectionBadChecksum)
+                theLeave(IDS_ONE_OR_MORE_OF_YOUR_FILES, kLeaveShow);
+            else if (theError == kConnectionGameFull)
+                theLeave(IDS_NO_OPEN_SLOTS_LEFT_IN_GAME, kLeaveShow);
+            else if (theError == kConnectionVersionMismatch)
+                theLeave(IDS_TO_JOIN_THIS_GAME_YOU, kLeaveShowVersions);
+            else if (theError == kConnectionGameInProgress || theError == kConnectionGameInProgressAsSent)
+                theLeave(IDS_GAME_IS_IN_PROGRESS, kLeaveShow);
+        } else if (theError == kConnectionRemovedByHost) {
+            theLeave(IDS_SERVER_HAS_REMOVED_YOU_FROM_GAME, kLeaveBoot);
+        } else if (theError == kConnectionHostGone) {
+            theLeave(IDS_HOST_OF_THIS_GAME_HAS_GONE, kLeaveBoot);
+        } else if (theError == kConnectionGameInProgress) {
+            theLeave(IDS_GAME_IS_IN_PROGRESS, kLeaveShowVersions);
+        } else if (theError == 6) {
+            theLeave(0, kLeaveQuiet);
         }
         break;
     }
@@ -598,16 +557,17 @@ void EEClient::HandleLobbyInput(NEMessage* inMessage)
         }
         break;
     case kNetMessageXferStatus: {
-        NEMXferStatus* theStatus = static_cast<NEMXferStatus*>(inMessage);
-        gUserInterface->PostLobbyShowTransferProgress(theStatus->GetClientSlot(), theStatus->GetPercentDone());
-        if (theStatus->GetStatusID() == 4) {
+        // the client's slot, the percent done, the transfer's id, the status
+        NEMRecord* theStatus = static_cast<NEMRecord*>(inMessage);
+        gUserInterface->PostLobbyShowTransferProgress(theStatus->Get<unsigned char>(0), theStatus->Get<unsigned char>(1));
+        if (theStatus->Get<unsigned char>(3) == 4) {
             gResource->GetString(IDS_FILE_TRANSFER_FAILED, theText);
             gUIManager->DisplayMessage(theText, true, NULL, NULL, true);
         }
         break;
     }
     case kNetMessageStartGame: {
-        gStartTime = static_cast<NEMStartGame*>(inMessage)->GetOffsetStartTime();
+        gStartTime = static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(0);   // the offset start time
         long theSeed = gPhysics->GetRandom(0L, 0x7fffffffL);
         theSeed += gWorld.mNumPlayers;
         for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
@@ -624,13 +584,13 @@ void EEClient::HandleLobbyInput(NEMessage* inMessage)
         break;
     }
     case kNetMessagePlayerConnectionCheck: {
-        NEMessage* theResponse = new NEMPlayerConnectionCheckResponse(
-            static_cast<NEMPlayerConnectionCheck*>(inMessage)->GetPingTimeStart());
+        NEMessage* theResponse = new NEMRecord(kNetMessagePlayerConnectionCheckResponse,
+                                               {static_cast<NEMRecord*>(inMessage)->Get<uint32_t>(0)});   // the ping's start
         this->ProcessLocalUserInput(theResponse, kSlotNone);
         break;
     }
     case kNetMessageClientConnectionRequestResponse:
-        if (static_cast<NEMClientConnectionRequestResponse*>(inMessage)->GetError() == kConnectionPlayerJoined) {
+        if (static_cast<NEMRecord*>(inMessage)->Get<int32_t>(0) == kConnectionPlayerJoined) {   // the error
             gUserInterface->PostLobbyUpdateForm();
             if (gWonNet != NULL)
                 gWonNet->PlayerJoined();

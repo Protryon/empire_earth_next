@@ -36,10 +36,6 @@ public:
     long mNextHelperID;                     // +0x14 (the last id handed out)
     std::vector<unsigned long> mCalamityIndexes;   // +0x18 (Load: each helper's calamity index, for RestorePointers)
 
-    // the save keys (init chains 0xb662f..0xb66f8; guard 0x4e6040; not used by Load/Save)
-    static const UString mNumHelpersStringID;
-    static const UString mCalamityHelperOffsetStringID;
-    static const UString mHelperFunctorIDStringID;
 };
 
 #endif

@@ -1,4 +1,5 @@
-// ServerOp: base of the server operations (per-step connect/send/receive time limits)
+// RustServerOp: an op of the Rust op base (ee_won hostop.rs) with ServerOp's members (hostbase.rs), the calls that
+// stay C++ (new objects, an object's Rust object) answered on the C++ objects
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -12,106 +13,17 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONElGamal.h"
-namespace WONAPI {
-// FUNCTION: WON 0x006acc10
-// Creates a server op with 60-second connect, send and receive limits and an 8-byte key size
-ServerOp::ServerOp()
-{
-    this->mMaxConnectTime=60000;
-    this->mMaxSendTime=60000;
-    this->mMaxRecvTime=60000;
-    this->mClientKeySize=8;
-    this->mUseClientKey=false;
-}
-// FUNCTION: WON 0x006ace20
-// Sets the connect, send and receive time limits
-void ServerOp::SetMaxTimes(int inConnect,int inSend,int inRecv)
-{
-    this->mMaxConnectTime=inConnect;
-    this->mMaxSendTime=inSend;
-    this->mMaxRecvTime=inRecv;
-}
-// FUNCTION: WON 0x006ace50
-// Returns the connect time limit, capped by the time left when blocking
-DWORD ServerOp::ConnectTime()
-{
-    // Rust's (ee_won server.rs); the time left is read only when blocking, as before
-    if(this->GetMode()==OP_MODE_ASYNC) return this->mMaxConnectTime;
-    return ee_won_server_step_time(this->mMaxConnectTime,false,this->TimeLeft());
-}
-// FUNCTION: WON 0x006ace80
-// Returns the send time limit, capped by the time left when blocking
-DWORD ServerOp::SendTime()
-{
-    // Rust's (ee_won server.rs); the time left is read only when blocking, as before
-    if(this->GetMode()==OP_MODE_ASYNC) return this->mMaxSendTime;
-    return ee_won_server_step_time(this->mMaxSendTime,false,this->TimeLeft());
-}
-// FUNCTION: WON 0x006aceb0
-// Returns the receive time limit, capped by the time left when blocking
-DWORD ServerOp::RecvTime()
-{
-    // Rust's (ee_won server.rs); the time left is read only when blocking, as before
-    if(this->GetMode()==OP_MODE_ASYNC) return this->mMaxRecvTime;
-    return ee_won_server_step_time(this->mMaxRecvTime,false,this->TimeLeft());
-}
-// FUNCTION: WON 0x006acee0
-// Copies the time limits of another server op
-void ServerOp::CopyMaxTimes(ServerOp* inSource)
-{
-    this->SetMaxTimes(inSource->mMaxConnectTime,inSource->mMaxSendTime,inSource->mMaxRecvTime);
-}
-}
-
-// No original address identified: WON SDK methods
-namespace WONAPI {
-void ServerOp::SendMsgAsync(ByteBufferPtr theMsg, int theTrackId)
-{
-	SmartPtr<SendMsgOp> anOp = new SendMsgOp(theMsg, this->mSocket);
-	this->Track(anOp,theTrackId);
-	this->mSocket->QueueOp(anOp,-1);
-}
-
-void ServerOp::RecvMsgAsync(int theTrackId)
-{
-	SmartPtr<RecvMsgOp> anOp = new RecvMsgOp(this->mSocket);
-	this->Track(anOp,theTrackId);
-	this->mSocket->QueueOp(anOp,-1);
-}
-}
-
-// ---- RustServerOp: an op of the Rust op base (ee_won hostop.rs), the Rust op's calls answered on the C++ objects
-
 #include <vector>
 #include "ee/wonapi/WONLobbyResource.h" // WONFile
 #include "ee/wonapi/WONLobbyGUI.h" // WONAPICore::GetDefaultFileDirectory
 namespace WONAPI {
 namespace {
-// the param of a completion this op made: the op (a reference, as the original's completions held theirs) and the id
-struct HostParam : public RefCount {
-    SmartPtr<RustServerOp> mOp;
-    int mId;
-    HostParam(RustServerOp* inOp, int inId) : mOp(inOp), mId(inId) {}
-};
-void HostCompletion(AsyncOpPtr inOp, SmartPtr<RefCount> inParam)
-{
-    HostParam* aParam = static_cast<HostParam*>(inParam.get());
-    aParam->mOp->Completed(inOp.get(), aParam->mId);
-}
-CompletionBase<AsyncOpPtr>* NewHostCompletion(RustServerOp* inOp, int inId)
-{
-    return new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(HostCompletion, new HostParam(inOp, inId));
-}
 RefCount* Obj(void* inObj) { return static_cast<RefCount*>(inObj); }
 BlockingSocket* Sock(void* inObj) { return inObj ? static_cast<BlockingSocket*>(Obj(inObj)) : NULL; }
 AsyncOp* Op(void* inObj) { return static_cast<AsyncOp*>(Obj(inObj)); }
 void* Out(RefCount* inObj) { inObj->AddRef(); return inObj; } // a new object: the Rust op's reference
 IPAddr Addr(const EeWonHostCall* c) { IPAddr a; a.SetSixByte(c->addr); return a; }
 ByteBufferPtr Buf(const EeWonHostCall* c) { return new ByteBuffer(c->data, (unsigned long)c->len, false); }
-void Give(EeWonHostCall* c, const void* inData, size_t inLength)
-{
-    c->out_sink(c->out_context, static_cast<const uint8_t*>(inData), inLength);
-}
 SocketOp* NewSocketOp(const EeWonHostCall* c)
 {
     AsyncSocket* s = Sock(c->obj[0]);
@@ -130,13 +42,51 @@ SocketOp* NewSocketOp(const EeWonHostCall* c)
 
 RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp)
 {
-    uint32_t aTimes[3];
-    ee_won_hostop_setup(inRustOp, &this->mLengthFieldSize, aTimes);
-    this->SetMaxTimes(aTimes[0], aTimes[1], aTimes[2]);
-    this->mAuthType = AUTH_TYPE_NONE;
     // the calls that need no C++ object (the clock, rand, an address, the op's file, the files it measures, the web
-    // proxy host) are the Rust op's own (ee_won hostnative.rs)
-    ee_won_hostop_bind_native(inRustOp, RustServerOp::HostCall, this);
+    // proxy host: ee_won hostnative.rs) and the op's own (its status and the like, ServerOp's members, the tracker,
+    // its completions, references: hostbase.rs) are the Rust op's
+    ee_won_hostop_bind_native(inRustOp, RustServerOp::HostCall, this, static_cast<AsyncOp*>(this), this->GetOpObject(),
+                              this->mTracker.GetTrackerObject());
+}
+// FUNCTION: WON 0x006ace20
+// Sets the connect, send and receive time limits
+void RustServerOp::SetMaxTimes(int inConnect, int inSend, int inRecv)
+{
+    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_CONNECT, (DWORD)inConnect, NULL);
+    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_SEND, (DWORD)inSend, NULL);
+    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_MAX_RECV, (DWORD)inRecv, NULL);
+}
+// FUNCTION: WON 0x006acee0
+// Copies the time limits of another server op
+void RustServerOp::CopyMaxTimes(const RustServerOp* inSource)
+{
+    this->SetMaxTimes((int)ee_won_hostop_base_get(inSource->mRustOp, EE_WON_HOSTBASE_MAX_CONNECT),
+                      (int)ee_won_hostop_base_get(inSource->mRustOp, EE_WON_HOSTBASE_MAX_SEND),
+                      (int)ee_won_hostop_base_get(inSource->mRustOp, EE_WON_HOSTBASE_MAX_RECV));
+}
+BlockingSocket* RustServerOp::GetSocket() const
+{
+    return static_cast<BlockingSocket*>(
+        reinterpret_cast<RefCount*>((intptr_t)ee_won_hostop_base_get(this->mRustOp, EE_WON_HOSTBASE_SOCKET)));
+}
+void RustServerOp::SetSocket(BlockingSocket* inSocket)
+{
+    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_SOCKET, 0, static_cast<RefCount*>(inSocket));
+}
+AuthContext* RustServerOp::GetAuthContext() const
+{
+    return static_cast<AuthContext*>(
+        reinterpret_cast<RefCount*>((intptr_t)ee_won_hostop_base_get(this->mRustOp, EE_WON_HOSTBASE_AUTH_CONTEXT)));
+}
+void RustServerOp::SetAuthType(AuthType inType, AuthContext* inContext)
+{
+    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_AUTH_TYPE, inType, NULL);
+    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_AUTH_CONTEXT, 0, static_cast<RefCount*>(inContext));
+}
+void RustServerOp::SetClientKeySize(unsigned char inSize, bool inUseClientKey)
+{
+    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_CLIENT_KEY_SIZE, inSize, NULL);
+    ee_won_hostop_base(this->mRustOp, EE_WON_HOSTBASE_USE_CLIENT_KEY, inUseClientKey, NULL);
 }
 RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, ServerContext* inContext)
 {
@@ -166,9 +116,8 @@ PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType in
                        bool inUseAuth2)
     : RustServerOp(ee_won_hostop_peerauth(reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), inUseAuth2))
 {
-    this->mAuthContext = inContext;
-    this->mAuthType = inType;
-    this->mSocket = inSocket;
+    this->SetAuthType(inType, inContext);
+    this->SetSocket(inSocket);
 }
 // The session's Encrypt (send) or Decrypt (receive): the message replaced when the Rust side made a new one
 WONStatus CryptTransform::Crypt(bool inDecrypt, ByteBufferPtr& ioMessage)
@@ -187,8 +136,8 @@ WONStatus CryptTransform::Crypt(bool inDecrypt, ByteBufferPtr& ioMessage)
 PeerAuthServerOp::PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket)
     : RustServerOp(ee_won_hostop_peerauth_server())
 {
-    this->mAuthContext = inContext;
-    this->mSocket = inSocket;
+    this->SetAuthType(AUTH_TYPE_NONE, inContext);
+    this->SetSocket(inSocket);
 }
 DetectFirewallOp::DetectFirewallOp(ServerContext* inContext) : RustServerOp(ee_won_hostop_firewall())
 {
@@ -383,99 +332,48 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
 {
     RustServerOp* o = static_cast<RustServerOp*>(inOp);
     void* o0 = c->obj[0];
-    long long n0 = c->num[0], n1 = c->num[1];
+    long long n0 = c->num[0];
     switch (c->code) {
-    case EE_WON_HOST_STATUS: c->out_num = o->GetStatus(); break;
-    case EE_WON_HOST_MODE: c->out_num = o->GetMode(); break;
-    case EE_WON_HOST_TIME_LEFT: c->out_num = (DWORD)o->TimeLeft(); break;
-    case EE_WON_HOST_LFS: c->out_num = o->mLengthFieldSize; break;
-    case EE_WON_HOST_SEND_TIME: c->out_num = o->SendTime(); break;
-    case EE_WON_HOST_RECV_TIME: c->out_num = o->RecvTime(); break;
+    // new objects (one reference the Rust op owns)
     case EE_WON_HOST_NEW_SOCKET: c->out_obj = Out(new BlockingSocket(n0 ? AsyncSocket::UDP : AsyncSocket::TCP)); break;
     case EE_WON_HOST_NEW_OP: c->out_obj = Out(NewSocketOp(c)); break;
-    case EE_WON_HOST_NEW_TIMER: {
-        AsyncOp* aTimer = new AsyncOp;
-        aTimer->SetCompletion(NewHostCompletion(o, (int)n0));
-        c->out_obj = Out(aTimer);
-        break;
-    }
+    case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = Out(new AsyncOp); break; // a plain op (a timer: its completion Rust's)
     case EE_WON_HOST_NEW_PEER_AUTH: {
-        PeerAuthOp* anOp = new PeerAuthOp(Addr(c), o->mAuthContext, o->mAuthType, Sock(o0), n0 != 0);
+        PeerAuthOp* anOp = new PeerAuthOp(Addr(c), o->GetAuthContext(), o->GetAuthType(), Sock(o0), n0 != 0);
         anOp->CopyMaxTimes(o);
         c->out_obj = Out(anOp);
         break;
     }
-    case EE_WON_HOST_FINISH: o->Finish((WONStatus)n0); break;
-    case EE_WON_HOST_TRACK: o->Track(Op(o0), (int)n0); break;
-    case EE_WON_HOST_SET_REPEAT:
-        Sock(o0)->SetRepeatCompletion(NewHostCompletion(o, (int)n0));
-        Sock(o0)->SetRepeatOp(static_cast<SocketOp*>(Op(c->obj[1])));
-        break;
-    case EE_WON_HOST_COMPLETE: static_cast<CompletionBase<AsyncOpPtr>*>(Obj(o0))->Complete(o); break;
-    case EE_WON_HOST_BASE_CLEANUP: o->AsyncOpWithTracker::CleanupHook(); break;
-    case EE_WON_HOST_RELEASE: Obj(o0)->Release(); break;
-    case EE_WON_HOST_ADD_REF: Obj(o0)->AddRef(); break;
-    // the request exchange (ee_won reqhost.rs: ServerRequestOp's statements)
-    case EE_WON_HOST_AUTH_TYPE: c->out_num = o->mAuthType; break;
-    case EE_WON_HOST_CONNECT_TIME: c->out_num = o->ConnectTime(); break;
-    case EE_WON_HOST_TIMEOUT: c->out_num = (DWORD)o->GetTimeout(); break;
-    case EE_WON_HOST_CTX_ADDRS: {
-        ServerContext::AddrList aList;
-        static_cast<ServerContext*>(Obj(o0))->CopyAddresses(aList);
-        std::string aBytes;
-        for (ServerContext::AddrList::const_iterator i = aList.begin(); i != aList.end(); ++i)
-            aBytes.append(reinterpret_cast<const char*>(i->GetSixByte()), 6);
-        Give(c, aBytes.data(), aBytes.size());
-        break;
-    }
-    case EE_WON_HOST_CTX_FAILED: static_cast<ServerContext*>(Obj(o0))->NotifyFailed(Addr(c)); break;
-    case EE_WON_HOST_ADD_CRYPT:
-        Sock(o0)->AddMsgTransform(new CryptTransform(c->obj[1]));
-        break;
-    case EE_WON_HOST_KILL_ALL: o->mTracker.KillAll(); break;
-    case EE_WON_HOST_PEER_AUTH_CERT: c->out_num = static_cast<PeerAuthOp*>(Op(o0))->GetGetCertStatus(); break;
-    // DetectFirewallOp's (ee_won fwhost.rs)
-    // HTTPGetOp's (ee_won httpget.rs)
-    // the HTTP cache's calls are the Rust op's (ee_won httpcache.rs) on the Rust cache
     case EE_WON_HOST_NEW_HTTP_GET: {
         std::string aTarget(reinterpret_cast<const char*>(c->data), c->len);
         c->out_obj = Out(NewHttpGet(aTarget.substr(0, (size_t)n0), aTarget.substr((size_t)n0)));
         break;
     }
-    case EE_WON_HOST_HOSTOP_NUM: c->out_num = static_cast<RustServerOp*>(Op(o0))->GetNum((int)n0, n1); break;
-    case EE_WON_HOST_HOSTOP_BYTES:
-        ee_won_hostop_bytes(static_cast<RustServerOp*>(Op(o0))->GetRustOp(), (int)n0, n1, c->out_sink, c->out_context);
+    // C++ objects the Rust op drives: a session's transform, an HTTP session's queue
+    case EE_WON_HOST_ADD_CRYPT:
+        Sock(o0)->AddMsgTransform(new CryptTransform(c->obj[1]));
         break;
-    case EE_WON_HOST_HOSTOP_SET:
-        ee_won_hostop_set(static_cast<RustServerOp*>(Op(o0))->GetRustOp(), (int)n0, n1, c->data, c->len, NULL,
-                          c->obj[1]);
-        break;
-    // GetHTTPDocumentOp's (ee_won httpdoc.rs)
-    case EE_WON_HOST_HTTP_MODIFIED: c->out_num = (long long)static_cast<RustServerOp*>(Op(o0))->GetHttpLastModifiedTime(); break;
     case EE_WON_HOST_SESSION_ADD:
         static_cast<HTTPSession*>(Obj(o0))->AddOp(static_cast<RustServerOp*>(Op(c->obj[1])));
         break;
-    case EE_WON_HOST_TRACKER_EMPTY: c->out_num = o->mTracker.IsEmpty() ? 1 : 0; break;
-    // the certificate and auth context calls are the Rust op's (ee_won hostauth.rs) over the Rust auth context
-    case EE_WON_HOST_AUTH_CORE: {
-        AuthContext* aContext = o0 != NULL ? static_cast<AuthContext*>(Obj(o0)) : o->mAuthContext.get();
-        c->out_obj = aContext != NULL ? const_cast<EeWonAuthCtx*>(aContext->Core()) : NULL;
+    // an object's Rust object: an auth context's (ee_won hostauth.rs), and by kind a socket's, a queue socket's, an
+    // op's, a socket op's, a Rust op's, a server context's list (hostsock.rs, hostbase.rs), or NULL
+    case EE_WON_HOST_AUTH_CORE:
+        c->out_obj = o0 != NULL ? const_cast<EeWonAuthCtx*>(static_cast<AuthContext*>(Obj(o0))->Core()) : NULL;
         break;
-    }
-    // PeerAuthOp's and PeerAuthServerOp's (ee_won peerop.rs)
-    case EE_WON_HOST_OWN_SOCKET: c->out_obj = static_cast<RefCount*>(o->mSocket.get()); break;
-    case EE_WON_HOST_CLIENT_KEY: c->out_num = o->mClientKeySize | (o->mUseClientKey ? 0x100 : 0); break;
-    case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = Out(new AsyncOp); break;
-    // the socket and op calls are the Rust op's (ee_won hostsock.rs) over the objects' Rust objects
     case EE_WON_HOST_SOCK_CORE: {
         RefCount* r = o0 != NULL ? Obj(o0) : o;
         AsyncSocket* s = dynamic_cast<AsyncSocket*>(r);
         QueueSocket* q = dynamic_cast<QueueSocket*>(r);
         SocketOp* so = dynamic_cast<SocketOp*>(r);
         AsyncOp* op = dynamic_cast<AsyncOp*>(r);
+        RustServerOp* h = dynamic_cast<RustServerOp*>(r);
+        ServerContext* x = dynamic_cast<ServerContext*>(r);
         c->out_obj = n0 == EE_WON_HOST_CORE_SOCKET ? (s != NULL ? (void*)s->GetSocketObject() : NULL)
                      : n0 == EE_WON_HOST_CORE_QUEUE ? (q != NULL ? (void*)q->GetQueueObject() : NULL)
                      : n0 == EE_WON_HOST_CORE_OP ? (op != NULL ? (void*)op->GetOpObject() : NULL)
+                     : n0 == EE_WON_HOST_CORE_HOSTOP ? (h != NULL ? (void*)h->GetRustOp() : NULL)
+                     : n0 == EE_WON_HOST_CORE_CONTEXT ? (x != NULL ? (void*)x->GetListObject() : NULL)
                      : (so != NULL ? (void*)so->GetSocketOpObject() : NULL);
         break;
     }

@@ -7,30 +7,11 @@ class GEMaterial;
 
 class LLE_API GEPolygon {                   // sizeof 0x6c: a triangle
 public:
-    const GEColor& GetBaseColor(unsigned long inVertex) const { return this->mBaseColors[inVertex]; }
-    float GetFogIntensity(unsigned long inVertex) const { return this->mFogIntensities[inVertex]; }
     unsigned long GetIndex() const { return this->mIndex; }
-    bool GetIsUsed() const { return this->mIsUsed; }
     GEMaterial* GetMaterial() const { return this->mMaterial; }
     float GetOpacity(unsigned long inVertex) const { return this->mOpacities[inVertex]; }
     void GetTextureCoordinate(GETextureCoordinate& outCoordinate, unsigned long inVertex)
         { outCoordinate = this->mTextureCoordinates[inVertex]; }
-    unsigned long GetVertex(unsigned long inVertex) const { return this->mVertices[inVertex]; }
-    void SetBaseColor(const GEColor& inColor)
-    {
-        this->mBaseColors[0] = inColor;
-        this->mBaseColors[1] = inColor;
-        this->mBaseColors[2] = inColor;
-    }
-    void SetBaseColor(const GEColor& inColor, unsigned long inVertex) { this->mBaseColors[inVertex] = inColor; }
-    void SetIsUsed(bool inIsUsed) { this->mIsUsed = inIsUsed; }
-    void SetFogIntensity(float inIntensity)
-    {
-        this->mFogIntensities[0] = inIntensity;
-        this->mFogIntensities[1] = inIntensity;
-        this->mFogIntensities[2] = inIntensity;
-    }
-    void SetFogIntensity(float inIntensity, unsigned long inVertex) { this->mFogIntensities[inVertex] = inIntensity; }
     void SetOpacity(float inOpacity)
     {
         this->mOpacities[0] = inOpacity;

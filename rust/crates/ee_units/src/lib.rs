@@ -24,6 +24,7 @@
 pub mod actions;
 pub mod ai;
 pub mod animate;
+pub mod atc_save;
 pub mod boarding;
 pub mod build;
 pub mod calamity;
@@ -49,9 +50,16 @@ pub mod physics_save;
 pub mod player_save;
 pub mod player_tick;
 pub mod players;
+pub mod pm;
+pub mod pm_air;
+pub mod pm_ground;
+pub mod pm_host;
+#[cfg(test)]
+mod pm_tests;
 pub mod rally;
 pub mod registry;
 pub mod research;
+pub mod rts_player_save;
 pub mod rust_goal;
 pub mod script;
 pub mod select;

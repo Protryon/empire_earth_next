@@ -26,7 +26,6 @@ public:
     virtual void ReplaceUnit(long inOldUnit, long inNewUnit);  // +0x18 0x1c85a4 (replaces a unit id in mUnits)
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x1c 0x1c85de
     void Copy(const EESMObject& inObject);  // 0x1c6386 (provisional name)
-    bool AcceptsClass(unsigned long inClass);   // 0x1c6051 (provisional name)
     long GetUnitAttribute(unsigned long inMetric, bool inFlag, EEUnit* inUnit, long inArg4, long inArg5);  // 0x1c7749; last two slots unused/provisional
     long PickUnitType();                   // 0x1c6b14: chooses a matching unit class (provisional name)
     bool Evaluate(bool inIncludeDead);      // 0x1c6458 (the object condition: its units exist/are in the area; provisional name)

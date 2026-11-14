@@ -20,17 +20,7 @@ public:
         this->mPointIndex = inVertex.mPointIndex;
     }
     ~GEVertex() {}
-    const GEColor& GetDiffuseColor() const { return this->mDiffuseColor; }
-    unsigned long GetPointIndex() const { return this->mPointIndex; }
-    const GEColor& GetPrelitDiffuseColor() const { return this->mPrelitDiffuseColor; }
-    const GEColor& GetSpecularColor() const { return this->mSpecularColor; }
-    float GetSpecularShininess() const { return this->mSpecularShininess; }
-    void SetPointIndex(unsigned long inIndex) { this->mPointIndex = inIndex; }
-    void SetSpecularShininess(float inShininess) { this->mSpecularShininess = inShininess; }
-private:   // exported private (?SetDiffuseColor@GEVertex@@AAE.., ?SetSpecularColor@GEVertex@@AAE..)
-    void SetDiffuseColor(const GEColor& inColor) { this->mDiffuseColor = inColor; }
-    void SetSpecularColor(const GEColor& inColor) { this->mSpecularColor = inColor; }
-    void SetPrelitDiffuseColor(const GEColor& inColor) { this->mPrelitDiffuseColor = inColor; }
+private:
 
     GEColor mDiffuseColor;                  // +0x00
     GEColor mSpecularColor;                 // +0x0c

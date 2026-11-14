@@ -20,6 +20,7 @@ def sample(pid,addresses=None,players=False):
     mBB49/mBB4A civ flags; gPhysics mLD0 +0xd0 game ms, mBE6 +0xe6 game over)."""
     comm_va=(addresses or {}).get('communications',0x9319c8);world_va=(addresses or {}).get('world',0x930d40)
     physics_va=(addresses or {}).get('physics',0x9318f0)
+    mirror_va=(addresses or {}).get('comms_mirror')   # EETestFixture.cpp's gEETestComms (the bridge refreshes it)
     kernel=ctypes.WinDLL('kernel32',use_last_error=True)
     kernel.OpenProcess.argtypes=[wintypes.DWORD,wintypes.BOOL,wintypes.DWORD]
     kernel.OpenProcess.restype=wintypes.HANDLE
@@ -49,9 +50,20 @@ def sample(pid,addresses=None,players=False):
         if addresses and addresses.get('image_base') is not None:   # move the map's VAs to the running image
             delta=exe_base(kernel,handle)-addresses['image_base']
             comm_va+=delta;world_va+=delta;physics_va+=delta
-        comm=ptr(comm_va)
-        if not comm:raise ValueError('No game communications object')
-        state=read(comm,max(off('NESynchronousCommunications',0x2e)+1,0x30))
+            if mirror_va:mirror_va+=delta
+        if mirror_va:
+            # the communications' state is Rust's (ee_net): the game's TEST ONLY mirror, refreshed before each present
+            last_tick,cts,paused,multiplayer,valid=struct.unpack('<iIBBB',read(mirror_va,11))
+            if not valid:raise ValueError('No game communications object')
+            comms=dict(last_tick_received=last_tick,physics_ticks_processed=cts,paused=bool(paused),multiplayer=bool(multiplayer))
+        else:
+            comm=ptr(comm_va)
+            if not comm:raise ValueError('No game communications object')
+            state=read(comm,max(off('NESynchronousCommunications',0x2e)+1,0x30))
+            comms=dict(last_tick_received=struct.unpack_from('<i',state,off('NESynchronousCommunications',4))[0],
+                       physics_ticks_processed=struct.unpack_from('<I',state,off('NESynchronousCommunications',0x10))[0],
+                       paused=bool(state[off('NESynchronousCommunications',0x2d)]),
+                       multiplayer=bool(state[off('NESynchronousCommunications',0x2e)]))
         extra={}
         if addresses and addresses.get('victory_detail') and P==4:   # opt-in (full-link triage): EEWorld/EEPlayer victory fields (VC6 vector reads: 32-bit only)
             extra['victory_enabled']=read(world_va+off('EEWorld',0xb96),1)[0]
@@ -92,9 +104,7 @@ def sample(pid,addresses=None,players=False):
                                  lb14=struct.unpack_from('<i',body,off('EEPlayer',0xb14))[0],victory_units_lb18=struct.unpack_from('<i',body,off('EEPlayer',0xb18))[0],
                                  civ_wait_bb49=body[off('EEPlayer',0xb49)],civ_chosen_bb4a=body[off('EEPlayer',0xb4a)]))
             extra['player_rows']=rows
-        return dict(extra,pid=pid,time=time.time(),last_tick_received=struct.unpack_from('<i',state,off('NESynchronousCommunications',4))[0],
-                    physics_ticks_processed=struct.unpack_from('<I',state,off('NESynchronousCommunications',0x10))[0],paused=bool(state[off('NESynchronousCommunications',0x2d)]),
-                    multiplayer=bool(state[off('NESynchronousCommunications',0x2e)]),world_players=struct.unpack('<I',read(world_va+off('EEWorld',0xcc),4))[0],
+        return dict(extra,**comms,pid=pid,time=time.time(),world_players=struct.unpack('<I',read(world_va+off('EEWorld',0xcc),4))[0],
                     world_map=hex(ptr(world_va+off('EEWorld',0xbc))),pointer_size=P)
     finally:kernel.CloseHandle(handle)
 

@@ -168,11 +168,6 @@ public:
     typename std::vector<T>::const_iterator End() const { return this->mData.end(); }
     typename std::vector<T>::iterator End() { return this->mData.end(); }
     virtual long MouseWheelTurned(long inDelta) { return (long)this->Call(UIListBoxCall::MouseWheelTurned, inDelta); }
-    void ReplaceLine(const T& inLine, unsigned long inIndex)
-    {
-        this->mData[inIndex] = inLine;
-        this->SetDirty(true);
-    }
     bool ScrollBarExists() { return this->Call(UIListBoxCall::ScrollBar) != 0; }
     void SetAutoSelect(bool inAutoSelect) { this->Call(UIListBoxCall::SetAutoSelect, inAutoSelect); }
     void SetFocusedRectColor(const GEColor& inColor)
@@ -193,7 +188,6 @@ protected:
     virtual void ButtonDown() { this->Call(UIListBoxCall::ButtonDown); }   // slot 0xa0
     virtual void ButtonUp() { this->FireTriggerEvent(kControlTriggerButtonUp); }
     long DrawScrollBarText() { return (long)this->Call(UIListBoxCall::DrawScrollBarText); }
-    const std::vector<T>& GetCopyLineArray() const { return this->mCopyLineArray; }
     const GERectangle& GetCopyTextRectangle() const
     {
         return *reinterpret_cast<const GERectangle*>(this->Call(UIListBoxCall::CopyTextRectangle));

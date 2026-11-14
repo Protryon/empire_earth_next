@@ -112,19 +112,12 @@ class Build:
 
     def bridge_defines(self):
         """-D values for presentation_bridge.c (its offsets and the renderer's ShowScene entry)."""
+        # the UI manager's and forms' state is Rust's (ee_ui managerobj.rs, formobj.rs): the bridge asks UIManager.cpp's
+        # EETestUI* functions by name instead of reading it at offsets; the renderer's (DX7Rasterizer's screen states,
+        # GERasterizer whole in Rust since R4.3 part 12) the GX bridge never read: no offsets asked
         d = self.layout.constants({
-            "EE_OFF_UIM_CRITICAL": ("field", "UIManager", "mCriticalSection"),
-            "EE_OFF_UIM_FORMS_FIRST": ("first", "UIManager", "mFormStack"),
-            "EE_OFF_UIM_FORMS_LAST": ("last", "UIManager", "mFormStack"),
-            "EE_OFF_FORM_COUNT": ("field", "UIForm", "mControlCount"),
-            "EE_OFF_FORM_ID": ("field", "UIForm", "mFormID"),
-            "EE_OFF_FORM_CONTROLS": ("field", "UIForm", "mControls"),
             "EE_OFF_MOUSE_POS": ("field", "EEMouse", "mPosition"),
             "EE_OFF_MOUSE_BOUNDS": ("field", "EEMouse", "mBounds"),
-            "EE_OFF_RAST_STATES_FIRST": ("first", "DX7Rasterizer", "mScreenStates"),
-            "EE_OFF_STATE_SECONDARY": ("field", "GERScreenState", "mViewport.mSecondarySurface"),
-            "EE_OFF_STATE_WINDOW": ("field", "GERScreenState", "mViewport.mWindow"),
-            "EE_OFF_SURFACE_DD": ("field", "DX7Surface", "mSurface"),
         })
         d["EE_SHOWSCENE_RVA"] = self.rva("exe", SHOWSCENE)
         d["EE_SIZE_UWIDESTRING"] = self.layout.size("UWideString") if "UWideString" in self.layout.records else 0x14

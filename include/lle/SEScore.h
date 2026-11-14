@@ -1,33 +1,21 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEScore.h (RECONSTRUCTION). One music score: a DirectMusic segment (.sgt) as
 // loaded by dmusic (src/ThirdParty/dmusic). The original also made a secondary score for every motif of the
-// segment's style; dmusic has no motifs, and the game never plays them, so a score has no secondary scores.
+// segment's style; dmusic has no motifs, and the game never plays them, so a score has no secondary scores. Whole
+// in Rust (rust/crates/ee_sound objects.rs, LLE lane round 6): an SEScore* is an EeSoundScore*, made and deleted by
+// the conductor; the members are defined in SEScore.cpp.
 #ifndef LLE_SESCORE_H
 #define LLE_SESCORE_H
 
-#include <vector>
-
-struct DmSegment;
-
 class LLE_API SEScore {
-    friend class SEConductor;
 public:
-    bool GetIsSecondaryScore() const { return this->mIsSecondaryScore; }
+    bool GetIsSecondaryScore() const;
     unsigned long GetRepeatCount();
-    SEScore* GetSecondaryScore(unsigned long inIndex) const { return this->mSecondaryScores[inIndex]; }
-    unsigned long GetSecondaryScoreCount() const { return this->mSecondaryScores.size(); }
+    SEScore* GetSecondaryScore(unsigned long inIndex) const { return NULL; }   // there are none
+    unsigned long GetSecondaryScoreCount() const { return 0; }
     void SetRepeatCount(unsigned long inCount);
 private:
-    DmSegment* GetSegment() const { return this->mSegment; }
-    SEScore(DmSegment* inSegment, bool inIsSecondaryScore)
-    {
-        this->mSegment = inSegment;
-        this->mIsSecondaryScore = inIsSecondaryScore;
-    }
-    virtual ~SEScore();
-
-    std::vector<SEScore*> mSecondaryScores; // always empty (see above)
-    DmSegment* mSegment;                    // one reference, released by the destructor
-    bool mIsSecondaryScore;
+    SEScore() = delete;
+    ~SEScore() = delete;
 };
 
 #endif
