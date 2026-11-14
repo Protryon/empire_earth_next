@@ -758,6 +758,38 @@ pub enum EeWonGuiOp {
     WinStdArrow,
     /// `((Cursor*)a)->GetNative()`.
     WinCursorNative,
+    // ---- the window manager (`wmobj`; the receiver is the `WindowManager*`, a component a `Component*`, a window
+    // a `Window*`, a rectangle a `WONRectangle*`)
+    /// `WONTickCount()`.
+    WmTick = 590,
+    /// a component's method (`a` an `EeWonWmComp`, `b` the component; `c`, `d` its arguments).
+    WmComp,
+    /// a window's method (`a` an `EeWonWmWin`, `b` the window; `c`, `d` its arguments).
+    WmWin,
+    /// `GetScreenRect(*(WONRectangle*)a)` (virtual).
+    WmScreenRect,
+    /// DoPopup's new popup window: `CreateNativeWindow()` held once (the Rust's reference), one-component, style
+    /// 0x20, parent `a`, a popup, created at `*(WONRectangle*)b`.
+    WmNewPopupWindow,
+    /// `GetNextEvent()` (virtual).
+    WmNextEvent,
+    /// `AddRef()` on the manager.
+    WmSelfHold,
+    /// `Release()` on the manager.
+    WmSelfRelease,
+    /// the window set's `a`-th window (0 past the end; a pure read).
+    WmWindowAt,
+    /// a cache's reference: `b` (an `EeWonWmRefKind` `a`) held (`c != 0`) or given back.
+    WmRef,
+    /// `mImageDecoder.Decode((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with one reference, or 0).
+    WmDecode,
+    /// `mImageDecoder.DecodeRaw(path a of b bytes)` (a `RawImage*` with one reference, or 0).
+    WmDecodeRaw,
+    /// `new DelayLoadImage(path a of b bytes, its width, its height)` with one reference, or 0 when the file's
+    /// attributes cannot be read.
+    WmDelayImage,
+    /// `mDefaultWindow->GetFont(FontDescriptor("Tahoma", 0, 8))` (a `Font*` with one reference).
+    WmDefaultWindowFont,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

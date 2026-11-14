@@ -148,64 +148,67 @@ static unsigned long long HashManager(GETextureManager* inManager);
 
 static void HashModel(Hash& ioHash, GEModel* m, GEModel* inParent)
 {
-    ioHash.U(m->mParentModel == inParent);
+    ioHash.U(m->GetParentModel() == inParent);
     ioHash.U(m->GetReferenceCount());
-    ioHash.Transform(m->mGraphicsPreModelTransform);
-    ioHash.Transform(m->mGraphicsPostModelTransform);
-    ioHash.Transform(m->mGraphicsTransform);
-    ioHash.Point(m->mCenterPoint);
-    ioHash.S(m->mName);
-    ioHash.U(m->mSharedFrames.size());
-    for (const auto& theEntry : m->mSharedFrames) {
-        ioHash.U(theEntry.first);
-        ioHash.U((unsigned long long)(long long)theEntry.second);
+    ioHash.Transform(m->GetGraphicsPreModelTransform());
+    ioHash.Transform(m->GetGraphicsPostModelTransform());
+    ioHash.Transform(m->GetGraphicsTransform());
+    ioHash.Point(m->GetCenterPoint());
+    ioHash.S(m->GetName());
+    ioHash.U(m->GetSharedFrameCount());
+    for (unsigned long i = 0; i < m->GetSharedFrameCount(); i++) {
+        unsigned long theFrame;
+        long theOffset;
+        m->GetSharedFrame(i, theFrame, theOffset);
+        ioHash.U(theFrame);
+        ioHash.U((unsigned long long)(long long)theOffset);
     }
-    ioHash.F(m->mGraphicsScale);
-    ioHash.F(m->mModelOpacity);
-    ioHash.F(m->mFractionalFramePosition);
-    ioHash.U(m->mGraphicsCurrentFrame);
-    ioHash.U(m->mGraphicsNextFrame);
-    ioHash.U(m->mSubModelCount);
-    ioHash.U(m->mFrameCount);
-    ioHash.U(m->mMaterialCount);
-    ioHash.U(m->mPolygonCount);
-    ioHash.U(m->mVertexCount);
-    ioHash.U(m->mTagPointCount);
-    ioHash.U(m->mLODCount);
+    ioHash.F(m->GetGraphicsScale());
+    ioHash.F(m->GetModelOpacity());
+    ioHash.F(m->GetFractionalFramePosition());
+    ioHash.U(m->GetGraphicsCurrentFrame());
+    ioHash.U(m->GetGraphicsNextFrame());
+    ioHash.U(m->GetSubModelCount());
+    ioHash.U(m->GetFrameCount());
+    ioHash.U(m->GetMaterialCount());
+    ioHash.U(m->GetPolygonCount());
+    ioHash.U(m->GetVertexCount());
+    ioHash.U(m->GetTagPointCount());
+    ioHash.U(m->GetLODCount());
     for (int i = 0; i < 6; i++)
-        ioHash.U(m->mClipToPlane[i]);
+        ioHash.U(m->GetClipToPlane(i));
     ioHash.U(m->SizeOf());
-    for (unsigned long f = 0; f < m->mFrameCount && m->mInternalTransforms; f++)
-        ioHash.Transform(m->mInternalTransforms[f]);
-    for (unsigned long f = 0; f < m->mFrameCount && m->mBoundingBoxes; f++) {
-        const GEBoundingBox& b = m->mBoundingBoxes[f];
+    for (unsigned long f = 0; f < m->GetFrameCount() && m->GetInternalTransforms(); f++)
+        ioHash.Transform(m->GetInternalTransforms()[f]);
+    for (unsigned long f = 0; f < m->GetFrameCount() && m->GetBoundingBoxes(); f++) {
+        const GEBoundingBox& b = m->GetBoundingBoxes()[f];
         ioHash.Point(b.GetBottomLeftFront());
         ioHash.Point(b.GetTopRightBack());
         ioHash.F(b.GetWidth());
         ioHash.F(b.GetHeight());
         ioHash.F(b.GetDepth());
     }
-    if (m->mGraphicsBoundingBox) {
-        ioHash.Point(m->mGraphicsBoundingBox->GetBottomLeftFront());
-        ioHash.Point(m->mGraphicsBoundingBox->GetTopRightBack());
+    if (m->GetGraphicsBoundingBoxPointer()) {
+        ioHash.Point(m->GetGraphicsBoundingBoxPointer()->GetBottomLeftFront());
+        ioHash.Point(m->GetGraphicsBoundingBoxPointer()->GetTopRightBack());
     }
-    for (unsigned long f = 0; f < m->mFrameCount && m->mBoundingRadii; f++)
-        ioHash.F(m->mBoundingRadii[f]);
-    for (unsigned long i = 0; i < m->mTagPointCount; i++) {
-        if (m->mTagPoints)
-            ioHash.Point(m->mTagPoints[i]);
-        if (m->mTagPointNames)
-            ioHash.S(m->mTagPointNames[i]);
+    for (unsigned long f = 0; f < m->GetFrameCount() && m->GetBoundingRadii(); f++)
+        ioHash.F(m->GetBoundingRadii()[f]);
+    for (unsigned long i = 0; i < m->GetTagPointCount(); i++) {
+        if (m->GetTagPointList())
+            ioHash.Point(m->GetTagPointList()[i]);
+        if (m->GetTagPointNames())
+            ioHash.S(m->GetTagPointNames()[i]);
     }
-    for (unsigned long f = 0; f < m->mFrameCount && m->mFrameTagPoints; f++) {
-        size_t theFirst = FirstOf(m->mFrameTagPoints, f);
+    for (unsigned long f = 0; f < m->GetFrameCount() && m->GetFrameTagPoints(); f++) {
+        size_t theFirst = FirstOf(m->GetFrameTagPoints(), f);
         ioHash.U(theFirst);
-        if (theFirst == f && m->mFrameTagPoints[f])
-            for (unsigned long i = 0; i < m->mTagPointCount; i++)
-                ioHash.Point(m->mFrameTagPoints[f][i]);
+        if (theFirst == f && m->GetFrameTagPoints()[f])
+            for (unsigned long i = 0; i < m->GetTagPointCount(); i++)
+                ioHash.Point(m->GetFrameTagPoints()[f][i]);
     }
-    for (unsigned long i = 0; i < m->mMaterialCount && m->mMaterials; i++) {
-        GEMaterial* theMaterial = m->mMaterials[i];
+    for (unsigned long i = 0; i < m->GetMaterialCount() && m->GetMaterials(); i++) {
+        GEMaterial* theMaterial = m->GetMaterials()[i];
         ioHash.S(theMaterial->mName);
         ioHash.F(theMaterial->mColor.GetRed());
         ioHash.F(theMaterial->mColor.GetGreen());
@@ -222,11 +225,11 @@ static void HashModel(Hash& ioHash, GEModel* m, GEModel* inParent)
         ioHash.U(theMaterial->mVertexRangeLength);
         ioHash.U(theMaterial->mTextureIndex);
         ioHash.F(theMaterial->mOpacity);
-        if (m->mTextureFilenames)
-            ioHash.S(m->mTextureFilenames[i]);
+        if (m->GetTextureFilenames())
+            ioHash.S(m->GetTextureFilenames()[i]);
     }
-    for (unsigned long l = 0; l < m->mLODCount && m->mPolygonArrays; l++) {
-        StorePolygonArray* theArray = dynamic_cast<StorePolygonArray*>(m->mPolygonArrays[l]);
+    for (unsigned long l = 0; l < m->GetLODCount() && m->GetPolygonArrays(); l++) {
+        StorePolygonArray* theArray = dynamic_cast<StorePolygonArray*>(m->GetPolygonArrays()[l]);
         ioHash.U(theArray != NULL);
         if (!theArray)
             continue;
@@ -234,10 +237,10 @@ static void HashModel(Hash& ioHash, GEModel* m, GEModel* inParent)
         ioHash.Bytes(theArray->mIndices.data(), theArray->mIndices.size() * sizeof(unsigned long));
         ioHash.U(theArray->mOutOfRange);
     }
-    for (unsigned long f = 0; f < m->mFrameCount && m->mVertexArrays; f++) {
-        size_t theFirst = FirstOf(m->mVertexArrays, f);
+    for (unsigned long f = 0; f < m->GetFrameCount() && m->GetVertexArrays(); f++) {
+        size_t theFirst = FirstOf(m->GetVertexArrays(), f);
         ioHash.U(theFirst);
-        StoreVertexArray* theArray = dynamic_cast<StoreVertexArray*>(m->mVertexArrays[f]);
+        StoreVertexArray* theArray = dynamic_cast<StoreVertexArray*>(m->GetVertexArrays()[f]);
         if (theFirst != f || !theArray)
             continue;
         ioHash.U(theArray->mType);
@@ -248,10 +251,10 @@ static void HashModel(Hash& ioHash, GEModel* m, GEModel* inParent)
         ioHash.Floats(theArray->mOpacities);
         ioHash.U(theArray->mOutOfRange);
     }
-    for (unsigned long i = 0; i < m->mSubModelCount && m->mSubModels; i++) {
-        ioHash.U(m->mSubModels[i] != NULL);
-        if (m->mSubModels[i])
-            HashModel(ioHash, m->mSubModels[i], m);
+    for (unsigned long i = 0; i < m->GetSubModelCount() && m->GetSubModels(); i++) {
+        ioHash.U(m->GetSubModels()[i] != NULL);
+        if (m->GetSubModels()[i])
+            HashModel(ioHash, m->GetSubModels()[i], m);
     }
 }
 

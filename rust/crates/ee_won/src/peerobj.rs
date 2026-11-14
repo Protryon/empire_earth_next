@@ -519,7 +519,7 @@ pub const EE_WON_AUTHOBJ_PEER_CERT2: i32 = 2;
 /// `GetPubKeyBlock()`
 pub const EE_WON_AUTHOBJ_PEER_BLOCK: i32 = 3;
 
-fn cert_num(c: &Cert, which: i32, a: i64, b: i64, d: i64, now: i64) -> i64 {
+pub(crate) fn cert_num(c: &Cert, which: i32, a: i64, b: i64, d: i64, now: i64) -> i64 {
     let c2 = c.cert2();
     match which {
         EE_WON_AUTHOBJ_VALID => i64::from(c.valid()),
@@ -538,7 +538,7 @@ fn cert_num(c: &Cert, which: i32, a: i64, b: i64, d: i64, now: i64) -> i64 {
     }
 }
 
-fn peer_num(p: &PeerData, which: i32, a: i64, now: i64) -> i64 {
+pub(crate) fn peer_num(p: &PeerData, which: i32, a: i64, now: i64) -> i64 {
     match which {
         EE_WON_AUTHOBJ_VALID => i64::from(p.is_valid()),
         EE_WON_AUTHOBJ_USER_ID => p.cert.as_ref().map_or(0, |c| i64::from(c.user_id())),

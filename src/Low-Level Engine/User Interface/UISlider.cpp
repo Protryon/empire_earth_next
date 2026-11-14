@@ -38,7 +38,6 @@ struct UISliderHost {
     static intptr_t Op(void* inSlider, EeUiOp inOp, intptr_t a, intptr_t b, intptr_t, intptr_t, float* f)
     {
         UISlider* s = static_cast<UISlider*>(inSlider);
-        GEBitmap* theThumb = reinterpret_cast<GEBitmap*>(a);
         UIManager* theManager = s->mForm->GetManager();
         intptr_t r = 0;
         if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Media(s, inOp, a, b, f, &r))
@@ -53,7 +52,6 @@ struct UISliderHost {
             f[0] = theManager->GetDragBarBitmap()->GetXScale();
             f[1] = theManager->GetDragBarBitmap()->GetYScale();
             break;
-        case EeUiOp::ThumbSetScale: theThumb->SetXYScale(f[0], f[1]); break;
         default: break;
         }
         return 0;
