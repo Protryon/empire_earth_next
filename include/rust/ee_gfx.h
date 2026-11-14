@@ -24,11 +24,17 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_ADDITIVE_PASS = 39;
 /// The citizen beam.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_CITIZEN_BEAM = 51;
 
+/// `kEffect3DCommandConfirmation`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_COMMAND_CONFIRMATION = 65;
+
 /// The shield.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
 
 /// `kEffect3DHurricane`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_HURRICANE = 36;
+
+/// `kEffect3DMultiEffect`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_MULTI_EFFECT = 59;
 
 /// `kEffect3DNuclearExplosion`, `kEffect3DEnergyWave`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION = 40;
@@ -122,6 +128,12 @@ constexpr static const int32_t EE_GFX_TRACER_HIT = 2;
 /// The beam ends (7).
 constexpr static const int32_t EE_GFX_TRACER_OVER = 4;
 
+/// `kEffect3DDamageVent`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_DAMAGE_VENT = 53;
+
+/// `kEffect3DEnergyWall`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_ENERGY_WALL = 52;
+
 /// The calls of one set-up, in order.
 constexpr static const size_t EE_GFX_RASTER_OPS = 8;
 
@@ -204,6 +216,8 @@ enum class EeGfxEffect3DOp : uint32_t {
   /// `Load` and `Save` after `EEEffect3D`'s (`ee_gfx_effect3d_file`)
   Load = 11,
   Save = 12,
+  /// the constructor along a line (the multi-effect's)
+  CreateLine = 13,
 };
 
 /// The set-ups, one per C++ function.
@@ -230,6 +244,22 @@ enum class EeGfxLighting : uint32_t {
   RestoreUnit = 9,
   /// `DimUnitLighting`
   DimUnit = 10,
+};
+
+/// The goal a state-0 confirmation shows.
+enum class EeGfxConfirmGoal : uint32_t {
+  /// no unit or no complex unit
+  NoUnit = 0,
+  /// a location goal on a tile the unit cannot stand on and its player sees
+  Blocked = 1,
+  /// a forced move
+  Forced = 2,
+  /// another location goal
+  Move = 3,
+  /// no location goal, unloading a transport
+  Unloading = 4,
+  /// no location goal
+  Other = 5,
 };
 
 /// The manager's creation entry points (the effects' constructors differ by entry; the C++ keeps them).
@@ -294,6 +324,9 @@ struct EeGfxOrbitals;
 
 /// A storm's tiles (`mTiles`) and its drops or flakes (`mDrops`, `mFlakes`).
 struct EeGfxStormLists;
+
+/// The jets (`mParts`).
+struct EeGfxVentParts;
 
 /// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
 /// end (a move shorter than 0.001).
@@ -754,6 +787,16 @@ struct EeGfxEffectWall {
   bool placed;
   /// `mGate`: two posts (saved)
   bool gate;
+  /// `mSeen`: seen only through a doppelganger since the last queue (the texture frame restarts)
+  bool seen;
+  /// `mAlpha`, `mGateAlpha`: the strips' and the gate's (the queue's)
+  float alpha;
+  float gate_alpha;
+  /// `mTextureOffset`: the animation frame's (the queue's)
+  float offset_u;
+  float offset_v;
+  /// `mColor`: the owner's (the queue's; `GEColor()`'s white before)
+  EeGfxColor color;
 };
 
 /// `EEE3DTracerBeam`'s state.
@@ -869,6 +912,36 @@ struct EeGfxEffectBlast {
   bool hidden;
 };
 
+/// The damage vent's state.
+struct EeGfxEffectVent {
+  /// `mParts` (made on first use; owned by the record)
+  EeGfxVentParts *parts;
+  /// `mDrawCount`: the queue's jet count
+  uint32_t draw_count;
+  /// `mNextCountCheckTime`: ms to the next match of the jets to the damage
+  float next_count_time;
+};
+
+/// The command confirmation's state.
+struct EeGfxEffectConfirm {
+  /// `mColor`
+  EeGfxColor color;
+  /// `mState`: 0 the unit's goal, 1..4 fixed colours; `mDrawState` the queue's copy
+  int32_t state;
+  int32_t draw_state;
+  /// `mAge` (ms) and the queue's copy
+  float age;
+  float draw_age;
+  float start_size;
+  float end_size;
+  /// `mTime`: ms into the frame
+  float time;
+  uint32_t frame;
+  uint32_t draw_frame;
+  /// `mGoalIndex`: the unit's goal queue
+  uint32_t goal_index;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -924,6 +997,10 @@ struct EeGfxEffectRecord {
   EeGfxEffectOrbit orbit;
   /// the nuclear explosion's and energy wave's (`effect_nuclear.rs`)
   EeGfxEffectBlast blast;
+  /// the damage vent's (`effect_vent.rs`)
+  EeGfxEffectVent vent;
+  /// the command confirmation's (`effect_confirm.rs`)
+  EeGfxEffectConfirm confirm;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1233,6 +1310,16 @@ struct EeGfxGraphicFacts {
   float start_size;
   /// the graphic effect has its linked effect 1
   bool has_linked1;
+  /// the graphic effect has its linked effect 3
+  bool has_linked3;
+  /// `gFreeCamera`
+  bool free_camera;
+  /// `mFlag2`, `mParam7`, `mParam8`
+  bool flag2;
+  float param7;
+  float param8;
+  /// `gPhysics->mSpeed` (the game speed)
+  float speed;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1274,6 +1361,28 @@ struct EeGfxUnitTile {
   float size;
   float x;
   float y;
+};
+
+/// The damage vent's unit: its command is to die; its maximum hit points.
+struct EeGfxVentUnit {
+  bool dead;
+  float max_hit_points;
+};
+
+/// A jet's places on the unit (the C++'s tag points at frame 0 around the unit's location scaled by its stats): its
+/// vent, its aim, and the vent's offset from the model's centre turned by that location.
+struct EeGfxVentPoints {
+  EeGe3DPoint from;
+  EeGe3DPoint to;
+  EeGeVector translation;
+};
+
+/// A graphic object's animation `index`: its start frame, frame time (ms), frame count and last frame.
+struct EeGfxFrames {
+  uint32_t start;
+  uint32_t time;
+  uint32_t count;
+  uint32_t last;
 };
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -1354,6 +1463,31 @@ struct EeGfxEffect3DHost {
   bool (*unit_hidden)(void *context);
   /// the terrain mesh's tile is a space tile (`GetIsSpaceTile`)
   bool (*space_tile)(void *context, uint32_t x, uint32_t y);
+  /// the graphic effect's linked effect `index` (1..3) made through the entry point that made the effect (on its
+  /// unit, at its point, along its line); the creation's result
+  int32_t (*create_linked)(void *context, uint32_t index);
+  /// the unit's complex unit is a gate: its two end parts' positions
+  bool (*wall_gate_posts)(void *context, EeGe3DPoint *first, EeGe3DPoint *second);
+  /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
+  bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
+  /// the unit's complex unit is a gate: how open it is into `open`
+  bool (*gate_open)(void *context, float *open);
+  /// the unit's complex unit's player's colour
+  EeGfxColor (*player_color)(void *context);
+  /// the damage vent's tag point lists (kinds 5 and 0x38 of the unit's model at its animation), kept for the call
+  void (*vent_lists)(void *context);
+  /// the damage vent's unit: its command is to die, its maximum hit points
+  EeGfxVentUnit (*vent_unit)(void *context);
+  /// the number of vents (kind 5 tag points; after `vent_lists`)
+  uint32_t (*vent_count)(void *context);
+  /// vent `tag`'s and its aim's offsets at frame 0 into `points[0]` and `points[1]` (after `vent_lists`)
+  void (*vent_offsets)(void *context, int32_t tag, EeGe3DPoint *points);
+  /// vent `tag`'s places on the unit (after `vent_lists`)
+  EeGfxVentPoints (*vent_points)(void *context, int32_t tag);
+  /// the kept graphic object's animation `index`
+  EeGfxFrames (*frames)(void *context, uint32_t index);
+  /// the unit's class's scale (`GetClass()->GetScale()`)
+  float (*unit_class_scale)(void *context);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1423,6 +1557,73 @@ struct EeGfxRaster {
                       const float *heights,
                       float brightness,
                       float alpha_ref);
+  /// `SetFrame(frame)` of a texture (`GETexture*`)
+  void (*texture_frame)(EeGfxModel texture, uint32_t frame);
+  /// the camera's yaw (`gRenderSnapshot.mCameraYaw`)
+  float (*camera_yaw)();
+  /// `GetZBuffer`, `GetZCompare`
+  uint32_t (*get_zbuffer)();
+  uint32_t (*get_zcompare)();
+  /// `AddGroundStrip(from, to, width, color, offset, size, alpha, brightness, alpha reference)`
+  void (*ground_strip)(const EeGe3DPoint *from,
+                       const EeGe3DPoint *to,
+                       float width,
+                       EeGfxColor color,
+                       float offset_u,
+                       float offset_v,
+                       float size_u,
+                       float size_v,
+                       float alpha,
+                       float brightness,
+                       float alpha_ref);
+};
+
+/// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it
+/// has no hit points, a complex unit and a model (`dead_top`) and then the model's top point and the scale.
+struct EeGfxConfirmUnit {
+  EeGe3DPoint position;
+  bool tree;
+  int32_t id;
+  int32_t tile_size;
+  int32_t tile_x;
+  int32_t tile_y;
+  bool dead_top;
+  EeGe3DPoint top;
+  float scale;
+};
+
+/// The C++'s answers for an `EEE2DRust`.
+struct EeGfxEffect2DHost {
+  void *context;
+  /// `EEEffect::Queue` (the confirmation's base: not `EEEffect2D`'s projection)
+  int32_t (*base_queue)(void *context);
+  /// pushes the effect on render queue `index` under its graphic's texture for the current screen
+  void (*queue)(void *context, uint32_t index);
+  /// the graphic effect's object (kept as the effect's) loaded; its result
+  int32_t (*load_media)(void *context);
+  /// the kept graphic object's animation `index`
+  EeGfxFrames (*frames)(void *context, uint32_t index);
+  /// `MoveToPoint(mPosition)` (the second half of `SetPosition`)
+  void (*move_to_point)(void *context);
+  /// `EEEffect2D::mModel`
+  EeGfxModel (*model)(void *context);
+  /// the unit's class's selection size
+  float (*selection_size)(void *context);
+  /// the unit's player is another, not player 0, and the current player's enemy
+  bool (*confirm_enemy)(void *context);
+  /// the goal the confirmation shows (`EeGfxConfirmGoal`) for the unit's goal queue at the tile
+  EeGfxConfirmGoal (*confirm_goal)(void *context,
+                                   uint32_t goal_index,
+                                   int32_t tile_x,
+                                   int32_t tile_y);
+  /// where the unit stands for the confirmation (its position, a tree's tile, a dead unit's top point)
+  EeGfxConfirmUnit (*confirm_unit)(void *context);
+  /// the unit's complex unit's physical location
+  EeGeTransformation (*unit_location)(void *context);
+  /// the terrain mesh's height at a point (`GetMeshZ`)
+  float (*terrain_z)(void *context, float x, float y);
+  /// one of the command textures (0 `sTexture4E0`, 1 `sTexture4E4`, 2 `sTexture4E8`)
+  EeGfxModel (*command_texture)(void *context, uint32_t index);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
@@ -2751,6 +2952,16 @@ int32_t ee_gfx_effect3d(EeGfxEffect3DOp op,
                         EeGfxEffectRecord *r,
                         const EeGfxGraphicFacts *g,
                         const EeGfxEffect3DHost *host,
+                        const EeGfxRaster *raster);
+
+/// One virtual of an `EEE2DRust` (`effect_2d.rs`).
+///
+/// # Safety
+/// `r` is a live record; `g`, `host` and `raster` are readable and their functions valid.
+int32_t ee_gfx_effect2d(EeGfxEffect3DOp op,
+                        EeGfxEffectRecord *r,
+                        const EeGfxGraphicFacts *g,
+                        const EeGfxEffect2DHost *host,
                         const EeGfxRaster *raster);
 
 /// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s (its result `base`).

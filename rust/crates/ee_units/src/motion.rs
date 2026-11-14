@@ -100,7 +100,7 @@ pub fn push(
 }
 
 /// The roll decay over the store (`member`: the C++ member's roll).
-pub fn step_roll(store: &Store, reads: &mut Reads, id: u32, object: u64, member: f32, tick_seconds: f32) -> f32 {
+pub fn step_roll(store: &mut Store, reads: &mut Reads, id: u32, object: u64, member: f32, tick_seconds: f32) -> f32 {
     let roll = match record_of(store, id, object) {
         Some(r) => {
             reads.mismatches += u32::from(r.roll != member.to_bits());
@@ -130,7 +130,7 @@ pub struct EeUnitsPushIn {
 }
 
 /// `Move`'s arithmetic over the store (`member`: the members, used for a unit with no record).
-pub fn step_push(store: &Store, reads: &mut Reads, id: u32, object: u64, member: &EeUnitsPushIn) -> EeUnitsPush {
+pub fn step_push(store: &mut Store, reads: &mut Reads, id: u32, object: u64, member: &EeUnitsPushIn) -> EeUnitsPush {
     let mut v = *member;
     match record_of(store, id, object) {
         Some(r) => {
@@ -229,7 +229,7 @@ mod tests {
             ..Default::default()
         });
         let mut reads = Reads::default();
-        assert_eq!(step_roll(&s, &mut reads, 2, 0x20, 0.3, 0.125), roll_decay(0.3, 0.125));
+        assert_eq!(step_roll(&mut s, &mut reads, 2, 0x20, 0.3, 0.125), roll_decay(0.3, 0.125));
         let m = EeUnitsPushIn {
             push_x: 0.5,
             push_y: -0.25,
@@ -239,12 +239,12 @@ mod tests {
             max_velocity: 2.0,
             tick_seconds: 0.125,
         };
-        assert_eq!(step_push(&s, &mut reads, 2, 0x20, &m), push(0.5, -0.25, 2, 2.0, 0.125, 10.5, 20.5));
+        assert_eq!(step_push(&mut s, &mut reads, 2, 0x20, &m), push(0.5, -0.25, 2, 2.0, 0.125, 10.5, 20.5));
         assert_eq!((reads.mismatches, reads.unrecorded), (0, 0));
         let other = EeUnitsPushIn { push_x: 0.0, ..m };
-        assert_eq!(step_push(&s, &mut reads, 2, 0x20, &other).moving, 1);
+        assert_eq!(step_push(&mut s, &mut reads, 2, 0x20, &other).moving, 1);
         assert_eq!(reads.mismatches, 1);
-        assert_eq!(step_push(&s, &mut reads, 9, 0x90, &other).moving, 1);
+        assert_eq!(step_push(&mut s, &mut reads, 9, 0x90, &other).moving, 1);
         assert_eq!(reads.unrecorded, 1);
     }
 }

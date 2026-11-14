@@ -2802,29 +2802,50 @@ EEUnitAction* EEUnitClass::FindAction(long inKey)
         ee_units_script_find(reinterpret_cast<uintptr_t>(this->mAIScript), (int32_t)inKey)));
 }
 
+// The unit's turrets for one tick through ee_units turret.rs (TurnTurrets' aim, TurnTurretsBack's turn back): the
+// parts' positions, transformations and angles in, each angle stored back where it differs
+static void EETurnTurretsRust(EEComplexUnit* inUnit, bool inAim, float inX, float inY)
+{
+    EeUnitsTurretsIn theIn;
+    theIn.aim = inAim;
+    theIn.alive = inUnit->mHitPoints > 0;
+    theIn.turn_rate = inUnit->mStats->mTurretMaxAngularVelocity;
+    theIn.tick_seconds = gPhysics->mTickSeconds;
+    theIn.scale = inUnit->mStats->GetScale();
+    memcpy(theIn.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(theIn.location));
+    theIn.target_x = inX;
+    theIn.target_y = inY;
+    EEModel* theModel = inUnit->GetModel();
+    unsigned long theCount = theModel->mTurretParts.size();
+    if (theCount == 0 || (!inAim && !theIn.alive))
+        return;
+    EeUnitsTurretPart theLocal[8];
+    std::vector<EeUnitsTurretPart> theMore;
+    EeUnitsTurretPart* theParts = theLocal;
+    if (theCount > 8) {
+        theMore.resize(theCount);
+        theParts = theMore.data();
+    }
+    for (unsigned long i = 0; i < theCount; ++i) {
+        const EETurretPart* thePart = theModel->mTurretParts[i];
+        theParts[i].position[0] = thePart->mPosition.GetX();
+        theParts[i].position[1] = thePart->mPosition.GetY();
+        theParts[i].position[2] = thePart->mPosition.GetZ();
+        memcpy(theParts[i].transform, thePart->mTransformation.mMatrix, sizeof(theParts[i].transform));
+        theParts[i].angle = inUnit->mTurretAngles[i];
+    }
+    ee_units_turn_turrets(&theIn, theParts, (uint32_t)theCount);
+    for (unsigned long i = 0; i < theCount; ++i)
+        if (inUnit->mTurretAngles[i] != theParts[i].angle)
+            inUnit->mTurretAngles[i] = theParts[i].angle;
+}
+
 // FUNCTION: EXE 0x6364f3
 // Turns each turret of a living unit back toward straight ahead by at most its turn rate for this tick
+// port (R5b.4): the turn is Rust (ee_units turret.rs), as TurnTurrets'
 void EEUnitClass::TurnTurretsBack(EEComplexUnit* inUnit)
 {
-    float theStep = inUnit->mStats->mTurretMaxAngularVelocity;
-    theStep *= gPhysics->GetTickSeconds();
-    unsigned long theCount = inUnit->GetModel()->GetNumParts();
-    if (!(inUnit->mHitPoints > 0))
-        return;
-    for (unsigned long i = 0; i < theCount; i++) {
-        float theValue = inUnit->mTurretAngles[i];
-        if (theValue > 0.0f) {
-            theValue -= theStep;
-            if (theValue < 0.0f)
-                theValue = 0.0f;
-        } else if (theValue < 0.0f) {
-            theValue += theStep;
-            if (theValue > 0.0f)
-                theValue = 0.0f;
-        }
-        if (inUnit->mTurretAngles[i] != theValue)
-            inUnit->mTurretAngles[i] = theValue;
-    }
+    EETurnTurretsRust(inUnit, false, 0.0f, 0.0f);
 }
 
 // FUNCTION: EXE 0x63658b
@@ -3663,28 +3684,15 @@ void EEUnitClass::UpdateCloakDetection(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x638948
 // Turns each turret toward the unit's attack, heal or calamity target by its turn rate; else turns them back
+// port (R5b.4): the turn is Rust (ee_units turret.rs) over the parts' numbers; the C++ finds the goal's point
 void EEUnitClass::TurnTurrets(EEComplexUnit* inUnit)
 {
-    GE3DPoint theOffset;
-    GE3DPoint theWorldPosition;
-    GE2DPoint theTarget;
-    GE3DPoint theGoalPosition;
-    GETransformation theTransform(inUnit->mPhysicalModel.GetLocation());
-    GETransformation theRotation;
-    GEVector theDirection;
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theRotated;
-    GEVector thePartFacing;
-    GEVector theWorldFacing;
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    EEModel* theModel = inUnit->GetModel();
-    float theStep = theStats->mTurretMaxAngularVelocity * gPhysics->mTickSeconds;
-    unsigned long theCount = theModel->mTurretParts.size();
     EEUnitGoal* theGoal = inUnit->mGoalState;
     if (theGoal == NULL || (theGoal->mKind != kGoalAttackUnit && theGoal->mKind != kGoalAttackGround && theGoal->mKind != kGoalCastCalamity && theGoal->mKind != kGoalHealUnit)) {
         this->TurnTurretsBack(inUnit);
         return;
     }
+    GE2DPoint theTarget;
     if (theGoal->mKind == kGoalAttackUnit) {
         EEUnit* theUnit = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
         if (theUnit->GetComplexUnit() != NULL) {
@@ -3694,45 +3702,13 @@ void EEUnitClass::TurnTurrets(EEComplexUnit* inUnit)
             theTarget.SetX((float)theUnit->GetTileX());
             theTarget.SetY((float)theUnit->GetTileY());
         }
-    } else if (theGoal->mKind == kGoalHealUnit || theGoal->mKind == kGoalAttackGround || theGoal->mKind == kGoalCastCalamity) {
+    } else {
+        GE3DPoint theGoalPosition;
         theGoal->GetGoalLocation(theGoalPosition);
         theTarget.SetX(theGoalPosition.GetX());
         theTarget.SetY(theGoalPosition.GetY());
     }
-    for (unsigned long i = 0; i < theCount; ++i) {
-        EETurretPart* thePart = theModel->mTurretParts[i];
-        theOffset = thePart->mPosition;
-        theOffset.SetX(theStats->GetScale() * theOffset.GetX());
-        theOffset.SetY(theStats->GetScale() * theOffset.GetY());
-        theOffset.SetZ(theStats->GetScale() * theOffset.GetZ());
-        theTransform.Apply(theOffset, theWorldPosition);
-        theDirection.SetX(theTarget.GetX() - theWorldPosition.GetX());
-        theDirection.SetY(theTarget.GetY() - theWorldPosition.GetY());
-        theDirection.SetZ(0.0f);
-        theDirection.Normalize();
-        float theHeading = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-        float theOld = inUnit->mTurretAngles[i];
-        theRotation.SetOrientationYPR(theOld, 0.0f, 0.0f);
-        theRotation.Apply(theForward, theRotated);
-        (theModel->mTurretParts[i])->mTransformation.Apply(theRotated, thePartFacing);
-        theTransform.Apply(thePartFacing, theWorldFacing);
-        theWorldFacing.SetZ(0.0f);
-        theWorldFacing.Normalize();
-        float theAngle = theHeading - UMArcTan2(-theWorldFacing.GetX(), theWorldFacing.GetY());
-        if (theAngle < -3.1415927f) theAngle += 6.2831855f;
-        else if (theAngle > 3.1415927f) theAngle -= 6.2831855f;
-        if (theAngle > 0.0f) {
-            if (theAngle > theStep) theAngle = theOld + theStep;
-            else theAngle += theOld;
-        } else if (theAngle < 0.0f) {
-            theAngle = -theAngle;
-            if (theAngle > theStep) theAngle = theOld - theStep;
-            else theAngle = theOld - theAngle;
-        } else theAngle = theOld;
-        if (theAngle < -3.1415927f) theAngle += 6.2831855f;
-        else if (theAngle > 3.1415927f) theAngle -= 6.2831855f;
-        if (theAngle != inUnit->mTurretAngles[i]) inUnit->mTurretAngles[i] = theAngle;
-    }
+    EETurnTurretsRust(inUnit, true, theTarget.GetX(), theTarget.GetY());
 }
 
 // FUNCTION: EXE 0x638ce7
@@ -4056,7 +4032,7 @@ void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
     theNote.mCount = 0;
     bool theNoting = EESimCaptureRecord::Active()
                      && ((inUnit->mCamouflageTimer & 0x7fffffff) > 0 || inUnit->mU32C > 0);
-    theNote.Add((uint32_t)inUnit->mCamouflageTimer.Get());
+    theNote.Add((uint32_t)inUnit->mCamouflageTimer);
     theNote.Add((uint32_t)inUnit->mU32C);
     theNote.Add(inUnit->mPlayer->mNumVitalBuildings < 1 ? 1u : 0u);
     theNote.Add((uint32_t)gPhysics->mTickTimeMs);
@@ -4124,7 +4100,7 @@ void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
                               (long)theOriginal.mCount);
     }
     if (theNoting) {   // TEST ONLY (USTM)
-        theNote.Add((uint32_t)inUnit->mCamouflageTimer.Get());
+        theNote.Add((uint32_t)inUnit->mCamouflageTimer);
         theNote.Add((uint32_t)inUnit->mU32C);
         EEUnitStepNote(kUnitStepCamouflage, inUnit->mUnitID, theNote.mWords, theNote.mCount);
     }
@@ -4184,7 +4160,7 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
 {
     uint32_t theWords[13] = {(uint32_t)inUnit->mStats->mPowerRegeneration, (uint32_t)inUnit->mStats->mPower,
                              ::gWorld.mInCinematic ? 1u : 0u, this->IsLandBuilding() ? 1u : 0u, inUnit->mIsBuilt ? 1u : 0u,
-                             (uint32_t)inUnit->mPower.Get(), (uint32_t)inUnit->mPowerRegenTimer.Get(),
+                             (uint32_t)inUnit->mPower, (uint32_t)inUnit->mPowerRegenTimer,
                              (uint32_t)gPhysics->mTickTimeMs, (uint32_t)EEGetRules().mCombat.mPowerRegenerationInterval,
                              0, 0, 0, 0};
     // New (R5b.4 leaf 6): the regeneration is Rust over the unit store (ee_units step.rs regenerate_power); the
@@ -4196,8 +4172,8 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
     theIn.interval = EEGetRules().mCombat.mPowerRegenerationInterval;
     theIn.tick_ms = gPhysics->mTickTimeMs;
     EeUnitsPowerOut theOut;
-    ee_units_step_power(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), inUnit->mPower.Get(),
-                        inUnit->mPowerRegenTimer.Get(), inUnit->mIsBuilt ? 1 : 0, this->IsLandBuilding() ? 1 : 0, &theIn,
+    ee_units_step_power(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), inUnit->mPower,
+                        inUnit->mPowerRegenTimer, inUnit->mIsBuilt ? 1 : 0, this->IsLandBuilding() ? 1 : 0, &theIn,
                         &theOut);
     if (theOut.write) {
         if (theOut.set_power)
@@ -4226,8 +4202,8 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
                               theWrite ? theRemaining : -1);
         theWords[9] = theOut.write;
         theWords[10] = theOut.set_power;
-        theWords[11] = theWords[10] ? (uint32_t)inUnit->mPower.Get() : 0u;
-        theWords[12] = theWords[9] ? (uint32_t)inUnit->mPowerRegenTimer.Get() : 0u;
+        theWords[11] = theWords[10] ? (uint32_t)inUnit->mPower : 0u;
+        theWords[12] = theWords[9] ? (uint32_t)inUnit->mPowerRegenTimer : 0u;
         EEUnitStepNote(kUnitStepPower, inUnit->mUnitID, theWords, 13);
     }
 }

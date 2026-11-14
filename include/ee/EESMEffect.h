@@ -24,7 +24,6 @@ public:
     void SetUnitsOwner();                  // 0x1bcf61 (transfer selected units; void)
     void SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount);  // 0x1bcb1f
     void SetPlayerAttributeUncaptured(long inPlayer, unsigned long inAttribute, long inMode, long inAmount);  // (+ SMPA)
-    void ExpandTokensUncaptured(const UWideString& inText, UWideString& outText);  // ExpandTokens' body (+ SMTK)
     void FaceObject(); // original rotation effect, void ret0
     void SetClassName();                   // 0x1bc942: renames selected unit/class upgrades (provisional name)
     void KillUnits(bool inFlag);            // 0x1bf9b7: applies Virtual60 to the scenario object units (provisional name)

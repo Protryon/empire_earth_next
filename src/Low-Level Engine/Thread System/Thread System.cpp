@@ -4,37 +4,14 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-
-static void TSShutdown(bool inForced);
-
-bool gThreadSystemInitialized;              // 0x12ded0 (provisional name)
+#include "rust/ee_ts.h"
 
 // FUNCTION: LLE 0x10053675
-// Starts the thread system: registers its shutdown and registers the calling (main) thread as a thread object
+// Starts the thread system: registers its shutdown (ee_ts_shutdown: destroys the calling thread's object), then the
+// calling (main) thread as a thread object (rust/crates/ee_ts)
 long TSInitialize()
 {
-    long theResult;
-    PlatThread* theThread;
-    gThreadSystemInitialized = true;
-    if (URegisterShutdown(TSShutdown) == kErrorOK) {
-        theThread = PlatThreadOpenCurrent();
-        if (theThread != NULL)
-            theResult = TSScheduler::CreateThread(theThread, PlatCurrentThreadId(), false);
-        else {
-            theResult = kErrorNativeError;
-            ESRecordNativeError(PlatGetLastError());
-            ESGetNativeError();
-        }
-    } else
-        theResult = kErrorFailed;
-    return theResult;
-}
-
-// FUNCTION: LLE 0x100536f0
-// Shuts the thread system down by destroying the calling thread's object
-static void TSShutdown(bool inForced)
-{
-    TSThread* theThread = TSScheduler::GetCurrentThread();
-    if (theThread)
-        TSScheduler::DestroyThread(theThread);
+    if (URegisterShutdown(ee_ts_shutdown) != kErrorOK)
+        return kErrorFailed;
+    return ee_ts_initialize();
 }

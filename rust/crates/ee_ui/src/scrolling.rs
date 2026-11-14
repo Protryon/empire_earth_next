@@ -2,8 +2,8 @@
 //! ticks and its snapshot of the visible lines, the start, scroll and end timers, `ScrollText`'s speeds and delays,
 //! `Pause`/`Resume`/`StopScrolling`, and `DrawTextA`'s line places.
 //!
-//! The label, its lines, its three `TMPoll`s and the trigger event stay C++: each read, write and call is a host
-//! call, in the C++'s order. The arithmetic is the C++'s types: the pixel offset is a `long` compared as a float,
+//! The state is the Rust label's scrolling part (`labelobj.rs`, R6 ui round 13), this module's host: the three
+//! `TMPoll`s, the strings and the trigger event are C++ objects reached by ops, in the C++'s order. The arithmetic is the C++'s types: the pixel offset is a `long` compared as a float,
 //! the line loop's `y` an `unsigned long` compared with a `long` bottom (converted to unsigned), the delays
 //! `unsigned long`s.
 

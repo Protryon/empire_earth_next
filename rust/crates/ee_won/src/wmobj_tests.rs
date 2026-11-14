@@ -1,5 +1,6 @@
 use super::*;
 use crate::wmcache::EeWonWmRefKind;
+use crate::wmloop::ee_won_wm_set_at;
 use std::cell::RefCell as Cell;
 use std::collections::HashMap;
 
@@ -14,7 +15,7 @@ thread_local! {
 
 unsafe extern "C" fn rec_host(_wm: *mut c_void, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
     LOG.with(|l| l.borrow_mut().push((op, a, b, c, d)));
-    let key = (op as u32, if op == Op::WmComp || op == Op::WmWin || op == Op::WmWindowAt { a } else { 0 });
+    let key = (op as u32, if op == Op::WmComp || op == Op::WmWin { a } else { 0 });
     ANSWERS.with(|m| m.borrow().get(&key).copied().unwrap_or(0))
 }
 
@@ -34,7 +35,8 @@ fn new_wm() -> EeWonWm {
 
 #[test]
 fn the_field_count_is_the_last_field() {
-    assert_eq!(EE_WON_WM_FIELD_COUNT, EeWonWmField::PopupFront as i32);
+    assert_eq!(EE_WON_WM_FIELD_POPUP_LAST, EeWonWmField::PopupFront as i32);
+    assert_eq!(EE_WON_WM_FIELD_COUNT, EeWonWmField::BroadcastCount as i32);
 }
 
 #[test]
@@ -80,9 +82,8 @@ fn end_dialog_ends_only_the_named_dialog() {
 fn message_loop_without_windows_answers_minus_one() {
     let w = new_wm();
     assert_eq!(w.message_loop(), -1);
-    let log = take();
-    assert_eq!(log.len(), 1);
-    assert_eq!(log[0].0, Op::WmWindowAt);
+    // the window set is the manager's own (round 34): no op
+    assert!(take().is_empty());
 }
 
 #[test]
@@ -146,10 +147,14 @@ fn nums(l: &str, skip: usize) -> Vec<i64> {
 }
 
 unsafe extern "C" fn replay_host(_wm: *mut c_void, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+    type E = EeWonWmEvent;
     let rect_a = op == Op::WmScreenRect;
     let set_pos = op == Op::WmWin && a == EeWonWmWin::SetPosSize as isize;
-    let rect_c = op == Op::WmWin && (a == EeWonWmWin::GetRect as isize || set_pos);
-    let rect_b = op == Op::WmNewPopupWindow;
+    let get_rect = op == Op::WmWin && a == EeWonWmWin::GetRect as isize;
+    let ev = |x: E| op == Op::WmEvent && a == x as isize;
+    let res_get = op == Op::WmResolution && a == 0;
+    let rect_c = get_rect || set_pos || ev(E::Mouse) || ev(E::SetMouse) || ev(E::Size) || ev(E::SetSize) || res_get;
+    let rect_b = op == Op::WmNewPopupWindow || res_get;
     let str_b = op == Op::WmDecode;
     let str_a = op == Op::WmDecodeRaw || op == Op::WmDelayImage;
     let extra = if str_a || str_b {
@@ -157,10 +162,14 @@ unsafe extern "C" fn replay_host(_wm: *mut c_void, op: Op, a: isize, b: isize, c
         // SAFETY: the Rust passed a path's bytes
         let s = unsafe { std::slice::from_raw_parts(p as *const u8, n as usize) };
         format!(" s {}", String::from_utf8_lossy(s))
-    } else if set_pos || rect_b {
+    } else if set_pos || ev(E::SetSize) || op == Op::WmNewPopupWindow {
         // SAFETY: the Rust passed a rectangle
-        let r = unsafe { *((if set_pos { c } else { b }) as *const EeWonRect4) };
+        let r = unsafe { *((if op == Op::WmNewPopupWindow { b } else { c }) as *const EeWonRect4) };
         format!(" r {} {} {} {}", r.x, r.y, r.w, r.h)
+    } else if ev(E::SetMouse) {
+        // SAFETY: the Rust passed a mouse event's fields
+        let m = unsafe { *(c as *const EeWonWmMouse) };
+        format!(" m {} {} {}", m.window, m.x, m.y)
     } else {
         String::new()
     };
@@ -182,11 +191,21 @@ unsafe extern "C" fn replay_host(_wm: *mut c_void, op: Op, a: isize, b: isize, c
     let ans = next_line();
     assert!(ans.starts_with("= "), "an answer: {ans}");
     let v = nums(&ans, 1);
-    if v.len() == 5 {
+    if rect_a || get_rect || ev(E::Size) {
         let r = EeWonRect4 { x: v[1] as i32, y: v[2] as i32, w: v[3] as i32, h: v[4] as i32 };
         let p = if rect_a { a } else { c } as *mut EeWonRect4;
         // SAFETY: the Rust passed a writable rectangle
         unsafe { *p = r };
+    } else if ev(E::Mouse) {
+        let m = EeWonWmMouse { window: v[1] as isize, x: v[2] as i32, y: v[3] as i32, button: v[4] as i32 };
+        // SAFETY: the Rust passed a writable mouse event
+        unsafe { *(c as *mut EeWonWmMouse) = m };
+    } else if res_get {
+        // SAFETY: the Rust passed two writable ints
+        unsafe {
+            *(b as *mut i32) = v[1] as i32;
+            *(c as *mut i32) = v[2] as i32;
+        }
     }
     v[0] as isize
 }
@@ -194,7 +213,7 @@ unsafe extern "C" fn replay_host(_wm: *mut c_void, op: Op, a: isize, b: isize, c
 fn state_lines() -> (String, String) {
     let w = wm_ptr();
     let mut s = "state".to_string();
-    for f in 1..=EE_WON_WM_FIELD_COUNT {
+    for f in 1..=EE_WON_WM_FIELD_POPUP_LAST {
         // SAFETY: live
         let v = unsafe { (*w).field(f) };
         match f {
@@ -211,7 +230,33 @@ fn state_lines() -> (String, String) {
         l += &format!(" {}", unsafe { ee_won_wm_popup_at(w, i) });
     }
     // SAFETY: live
-    (s, l + "\n" + &unsafe { (*w).cache_line() })
+    let wm = unsafe { &*w };
+    let g = |f: EeWonWmField| wm.field(f as i32);
+    type F = EeWonWmField;
+    let lp = format!(
+        "loop {} {} {} {} {} {} {} {} {} {}",
+        g(F::DefaultWindow),
+        g(F::WindowCount) as u32,
+        g(F::FullScreen) as i32,
+        g(F::FullScreenWidth) as i32,
+        g(F::FullScreenHeight) as i32,
+        g(F::OriginalWidth) as i32,
+        g(F::OriginalHeight) as i32,
+        g(F::LastTimerTick) as u32,
+        g(F::LastInputTick) as u32,
+        g(F::CallingTimers) as i32
+    );
+    let mut sets = "sets".to_string();
+    for k in 0..5u32 {
+        sets += " |";
+        let n =
+            g([F::WindowSetCount, F::EventCount, F::TimerCount, F::RemoveTimerCount, F::BroadcastCount][k as usize]);
+        for i in 0..n as usize {
+            // SAFETY: live
+            sets += &format!(" {}", unsafe { ee_won_wm_set_at(w, k, i) });
+        }
+    }
+    (s, l + "\n" + &wm.cache_line() + "\n" + &lp + "\n" + &sets)
 }
 
 fn run_call(call: i64, v: &[i64]) -> (isize, Option<EeWonWmMouse>) {
@@ -295,6 +340,27 @@ fn run_call(call: i64, v: &[i64]) -> (isize, Option<EeWonWmMouse>) {
             }
             r
         }
+        31 => wm.call(K::SetScreenResolution, a(0), a(1), 0, 0),
+        32 => wm.call(K::RestoreScreenResolution, 0, 0, 0, 0),
+        33 => wm.call(K::CloseAllWindows, 0, 0, 0, 0),
+        34 => wm.call(K::AddWindow, a(0), 0, 0, 0),
+        35 => wm.call(K::RemoveWindow, a(0), 0, 0, 0),
+        36 => wm.call(K::PostEvent, a(0), a(1), 0, 0),
+        37 => wm.call(K::AddTimerEvent, a(0), 0, 0, 0),
+        38 => wm.call(K::RemoveTimerEvent, a(0), 0, 0, 0),
+        39 => wm.call(K::RemoveAllTimerEvents, 0, 0, 0, 0),
+        40 => wm.call(K::SubscribeToBroadcast, a(0), a(1), 0, 0),
+        41 => wm.call(K::ClearSubscriptions, 0, 0, 0, 0),
+        42 => wm.call(K::BroadcastEvent, a(0), 0, 0, 0),
+        43 => wm.call(K::PeekNextEvent, 0, 0, 0, 0),
+        44 => wm.call(K::ProcessEvents, 0, 0, 0, 0),
+        45 => wm.call(K::DeliverEvent, a(0), 0, 0, 0),
+        46 => {
+            field(F::FullScreen, a(0));
+            field(F::FullScreenWidth, a(1));
+            field(F::FullScreenHeight, a(2))
+        }
+        47 => field(F::LastTimerTick, a(0)),
         _ => panic!("call {call}"),
     };
     (r, None)
@@ -310,11 +376,11 @@ fn run_call_line(top: bool) {
     }
     assert_eq!(next_line(), format!("ret {r}"), "after {l}");
     if top {
-        let (s, li) = state_lines();
+        let (s, rest) = state_lines();
         assert_eq!(next_line(), s, "after {l}");
-        let (li, cache) = li.split_once('\n').unwrap();
-        assert_eq!(next_line(), li, "after {l}");
-        assert_eq!(next_line(), cache, "after {l}");
+        for want in rest.split('\n') {
+            assert_eq!(next_line(), want, "after {l}");
+        }
     }
 }
 
@@ -364,6 +430,24 @@ fn golden_replay_fails_on_a_changed_answer() {
     let i = text.find("\nlist ").expect("a popup list");
     let mut changed = text.to_string();
     changed.replace_range(i + 1..i + 6, "list 99");
+    let r = std::panic::catch_unwind(|| replay(&changed));
+    REPLAY.with(|r| *r.borrow_mut() = None);
+    assert!(r.is_err());
+}
+
+#[test]
+fn golden_replay_fails_on_a_changed_window_set() {
+    let text = include_str!("golden_wmobj.txt");
+    // the first trace of the loop's sets (round 34): its window set's first entry changed (a mismatch inside the
+    // host would abort: the host is an extern "C" function)
+    let i = text
+        .find(
+            "
+sets | ",
+        )
+        .expect("a sets line");
+    let mut changed = text.to_string();
+    changed.replace_range(i + 1..i + 8, "sets | 99 ");
     let r = std::panic::catch_unwind(|| replay(&changed));
     REPLAY.with(|r| *r.borrow_mut() = None);
     assert!(r.is_err());
