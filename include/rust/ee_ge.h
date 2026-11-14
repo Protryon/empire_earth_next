@@ -437,6 +437,16 @@ enum class EeGeModXf : uint32_t {
   Internal,
 };
 
+/// The 3-byte order of `ee_ge_surf_row_out`.
+enum class EeGeSurfRow : uint32_t {
+  /// A BMP's: blue, green, red.
+  Bgr = 0,
+  /// A JPEG's: red, green, blue.
+  Rgb,
+  /// A JPG2's alpha image: the alpha three times.
+  Alpha,
+};
+
 /// The calls a texture makes on other objects. `obj` is the object called; `a`..`c` as each says.
 enum class EeGeTexOp : uint32_t {
   /// `obj->Reference()` (a surface).
@@ -2182,6 +2192,46 @@ bool ee_ge_physical_model_walk(const EeGePhysicalModels *table,
                                const void *other,
                                unsigned long other_frame,
                                unsigned long lod);
+
+/// `SaveAsBMP`'s, `SaveAsJPG`'s and `SaveAsJPG2`'s row: `width` pixels of `row` (`depth` 32, else 16 bits) as 3
+/// bytes each into `out`.
+///
+/// # Safety
+/// `row` holds `width` pixels; `out` has room for `width * 3` bytes.
+void ee_ge_surf_row_out(unsigned long format,
+                        unsigned long depth,
+                        const uint8_t *row,
+                        unsigned long width,
+                        EeGeSurfRow order,
+                        uint8_t *out);
+
+/// `LoadJPG`'s and `LoadJPG2`'s scanline: `stride` bytes of `src`, 3 a pixel, into the surface from `dst` (`depth`
+/// 32, else 16 bits): opaque colour, or (`alpha`) the first byte of each as the alpha of the pixel already there.
+/// Returns the next row's start: `skip` pixels after the row's last.
+///
+/// # Safety
+/// `src` holds `stride` bytes; the surface holds the row's pixels and the skip from `dst`.
+uint8_t *ee_ge_surf_row_in(unsigned long format,
+                           unsigned long depth,
+                           const uint8_t *src,
+                           unsigned long stride,
+                           bool alpha,
+                           uint8_t *dst,
+                           unsigned long skip);
+
+/// `LoadPNG`'s store: the decoded picture (`width` x `height`, blue, green, red, alpha a pixel, top row first) into
+/// the locked surface's top left (`depth` 32, else 16 bits; `no_alpha`: opaque).
+///
+/// # Safety
+/// `src` holds the picture; the surface (`bytes_per_row` a row) holds its rows.
+void ee_ge_surf_png_store(unsigned long format,
+                          unsigned long depth,
+                          bool no_alpha,
+                          const uint8_t *src,
+                          unsigned long width,
+                          unsigned long height,
+                          uint8_t *memory,
+                          unsigned long bytes_per_row);
 
 /// `GETextureManager::GETextureManager(path)`: the object of the C++ manager `owner`.
 ///
