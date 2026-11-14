@@ -5388,6 +5388,8 @@ enum class EeWonMsBtnField : uint32_t {
 enum class EeWonMsBox : uint32_t {
   /// `MSCheckbox`: its `CheckboxPainter`.
   Checkbox = 0,
+  /// `MSRadioButton`: its `RadioPainter`.
+  Radio = 1,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.

@@ -39,6 +39,8 @@ const SYS_TEXT: i32 = 14;
 pub enum EeWonMsBox {
     /// `MSCheckbox`: its `CheckboxPainter`.
     Checkbox = 0,
+    /// `MSRadioButton`: its `RadioPainter`.
+    Radio = 1,
 }
 
 /// A field of the button base (`Get` / `Set` calls). A set stores what the original's member held: the
@@ -359,6 +361,13 @@ impl EeWonMsButton {
                 }
                 self.sb(Sb::SetWantFocus, 1, 0);
             }
+            EeWonMsBox::Radio => {
+                self.sb(Sb::SetButtonFlags, 8, 1);
+                let mut s = self.st.borrow_mut();
+                s.h_align = 0;
+                s.focus_style = FOCUS_AROUND_TEXT;
+                s.left_pad = box_width.wrapping_add(4) as u8;
+            }
         }
     }
 
@@ -447,6 +456,7 @@ impl EeWonMsButton {
 fn box_of(v: i32) -> Option<EeWonMsBox> {
     match v {
         0 => Some(EeWonMsBox::Checkbox),
+        1 => Some(EeWonMsBox::Radio),
         _ => None,
     }
 }

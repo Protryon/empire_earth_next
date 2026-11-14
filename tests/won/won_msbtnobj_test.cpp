@@ -279,6 +279,28 @@ struct MSButtonBase {
         g.Translate(0, -y - this->mTopTextPad);
         this->DrawButtonText(g, 0, 0);
     }
+    // MSControlConstructors.cpp's MSRadioButton::Init and MSRadioButton.cpp's Paint
+    void RadioInit(int radioWidth)
+    {
+        S(Sb::SetButtonFlags, 8, 1);
+        this->mHAlign = HorzAlign_Left;
+        this->mFocusStyle = FocusStyle_AroundText;
+        this->mLeftTextPad = radioWidth + 4;
+    }
+    void RadioPaint(Graphics& g, int radioHeight)
+    {
+        H(Op::BasePaint, kG);
+        g.SetSysColor(StandardColor_3DFace);
+        if (!this->mIsTransparent) g.FillRect(0, 0, this->Width(), this->Height());
+        int height = radioHeight;
+        int y = 0;
+        if (this->mVAlign == VertAlign_Center) y = (this->Height() - height - this->mTopTextPad - this->mBottomTextPad) / 2;
+        else if (this->mVAlign == VertAlign_Bottom) y = this->Height() - height - this->mTopTextPad - this->mBottomTextPad;
+        g.Translate(0, this->mTopTextPad + y);
+        H(Op::SkinBoxPainter, kG, 1);
+        g.Translate(0, -y - this->mTopTextPad);
+        this->DrawButtonText(g, 0, 0);
+    }
     int GetField(int f)
     {
         switch ((Bf)f) {
@@ -332,8 +354,8 @@ static void Run(bool inRust)
     case kDrawText: a = (int)DR(2); b = (int)DR(2); break;
     case kGet: a = 1 + (int)DR(11); break;
     case kWorld: a = (int)DR(64); break;
-    case kBoxInit: a = 0; b = DR(4) == 0 ? (int)DR(300) : 13; break; // the subclass, its box width
-    case kBoxPaint: a = 0; b = DR(4) == 0 ? (int)DR(40) : 13; break; // the subclass, its box height
+    case kBoxInit: a = (int)DR(2); b = DR(4) == 0 ? (int)DR(300) : 13; break; // the subclass, its box width
+    case kBoxPaint: a = (int)DR(2); b = DR(4) == 0 ? (int)DR(40) : 13; break; // the subclass, its box height
     default: break;
     }
     char aLine[100];
@@ -393,8 +415,8 @@ static void Run(bool inRust)
         case kDesired: { int w = 0, h = 0; t->GetDesiredSize(w, h); r = w * 1000 + h; break; }
         case kDrawText: t->DrawButtonText(g, a, b); break;
         case kGet: r = t->GetField(a); break;
-        case kBoxInit: t->CheckboxInit(b); break;
-        case kBoxPaint: t->CheckboxPaint(g, b); break;
+        case kBoxInit: if (a) t->RadioInit(b); else t->CheckboxInit(b); break;
+        case kBoxPaint: if (a) t->RadioPaint(g, b); else t->CheckboxPaint(g, b); break;
         default: break;
         }
     }

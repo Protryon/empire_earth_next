@@ -147,10 +147,7 @@ void MSCheckbox::Init()
 MSCheckbox::MSCheckbox() { this->Init(); }
 inline void MSRadioButton::Init()
 {
-    this->SetButtonFlags(8,true);
-    this->SetHorzAlignField(HorzAlign_Left);
-    this->SetFocusStyle(FocusStyle_AroundText);
-    this->SetLeftTextPad(MSRadioButton::mRadioWidth+4);
+    this->MCall(EeWonMsBtnCall::BoxInit,(intptr_t)EeWonMsBox::Radio,MSRadioButton::mRadioWidth);
 }
 // FUNCTION: WON 0x006ff530
 // Creates a radio button with left-aligned text after the circle

@@ -649,7 +649,6 @@ public:
     int GetLeftTextPad() { return (int)this->MCall(EeWonMsBtnCall::Get,(intptr_t)EeWonMsBtnField::LeftTextPad); }
     void SetLeftTextPad(int l) { this->MSet(EeWonMsBtnField::LeftTextPad,l); }
     void SetHorzAlignField(HorzAlign h) { this->MSet(EeWonMsBtnField::HAlign,h); } // the field alone (the text's centring kept)
-    int MsField(EeWonMsBtnField f) { return (int)this->MCall(EeWonMsBtnCall::Get,(intptr_t)f); }
     SmartPtr<WrappedText> mText;
     EeWonMsButton* mMsb;
 protected:

@@ -57,6 +57,7 @@ extern "C" intptr_t ee_won_guicpp_msbtn_call(void* inComp, EeWonGuiOp op, intptr
     case Op::SkinBtn: return SkinBtnOp(t,a,b,c);
     case Op::SkinBoxPainter: // the subclass's replaceable painter function
         if ((EeWonMsBox)b == EeWonMsBox::Checkbox) MSCheckbox::CheckboxPainter(*(Graphics*)a,(MSCheckbox*)t);
+        else if ((EeWonMsBox)b == EeWonMsBox::Radio) MSRadioButton::RadioPainter(*(Graphics*)a,(MSRadioButton*)t);
         return 0;
     case Op::Draw: {
         WONDrawSlots aSlots;
