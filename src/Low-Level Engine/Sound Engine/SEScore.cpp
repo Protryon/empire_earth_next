@@ -14,12 +14,6 @@ SEScore::~SEScore()
     DmSegment_release(this->mSegment);
 }
 
-// Returns how many times the score repeats
-unsigned long SEScore::GetRepeatCount()
-{
-    return DmSegment_getRepeats(this->mSegment);
-}
-
 // Sets how many times the score repeats (the game loops a score with a large count)
 void SEScore::SetRepeatCount(unsigned long inCount)
 {

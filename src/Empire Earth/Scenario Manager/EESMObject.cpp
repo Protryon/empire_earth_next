@@ -57,17 +57,6 @@ EESMObject::~EESMObject()
 {
 }
 
-// FUNCTION: EXE 0x5c6051
-// Returns whether a unit class passes the object's filter: its class (or any scenario-selectable one), no projectiles
-// or set 0x79 members, narrowed by mFamily (epoch 1..0xf, family 0x10..0x4b, AI kind 0x4c..0x74, then a unit set)
-// (provisional name)
-bool EESMObject::AcceptsClass(unsigned long inClass)
-{
-    EESMHostContext theContext = {NULL, NULL};   // ee_scenario object.rs accepts_class
-    EeScenarioHost theHost = EESMHost(&theContext);
-    return ee_scenario_object_accepts_class(&theHost, this, (uint32_t)inClass);
-}
-
 // FUNCTION: EXE 0x5c6148
 // IsNearUnit: ee_scenario placement.rs near_unit (objeval.rs asks it)
 

@@ -94,10 +94,5 @@ inline EEUGRust* EELoadGarrisonGoalCast(EEUnitGoal* inGoal)
 {
     return EERustGoalCast(inGoal, kGoalLoadGarrison);
 }
-inline EEUGRust* EELoadGoalCast(EEUnitGoal* inGoal)
-{
-    EEUGRust* theGoal = EELoadTransportGoalCast(inGoal);
-    return theGoal != NULL ? theGoal : EELoadGarrisonGoalCast(inGoal);
-}
 
 #endif

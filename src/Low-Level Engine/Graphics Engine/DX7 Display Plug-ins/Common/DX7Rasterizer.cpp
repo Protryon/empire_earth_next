@@ -58,10 +58,10 @@ unsigned long gLightsInUse[8];
 struct DX7RasterAccess : DX7Rasterizer {
     using DX7Rasterizer::SetRenderTarget;
     using DX7Rasterizer::Set3DMode;
-    void MakeActive() { GERasterizer::sActiveRasterizer = this; }
-    GERScreenState* State(unsigned long inScreen) { return this->mScreenStates[inScreen]; }
+    void MakeActive() { GERasterizer::SetActiveRasterizer(this); }
+    GERScreenState* State(unsigned long inScreen) { return this->GetScreenState(inScreen); }
     DX7RScreenState* DX7State(unsigned long inScreen) { return this->mDX7ScreenStates[inScreen]; }
-    void SetCullingUnknown() { this->mCulling = -16; }
+    void SetCullingUnknown() { this->GERasterizer::SetCulling(-16); }
     long CallActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary, GETextureManager* inManager, GEWindow* inWindow)
         { return this->ActivateTheScreen(inScreen, inPrimary, inSecondary, inManager, inWindow); }
 };
@@ -205,35 +205,6 @@ long DX7Rasterizer::ClearZBuffer(float inZ, const GERectangle& inRectangle, unsi
 {
     const float theRect[4] = { inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom() };
     return ee_dx7r_clear_z(this->mDX7ScreenStates[inScreen]->GetDevice(), theRect, inZ);
-}
-
-// FUNCTION: DX7HR 0x1000a973
-// Returns 0: this rasterizer does not measure the polygon area of the vertex buffer
-float DX7Rasterizer::ComputePolyAreaOfCurrentVB(unsigned long inScreen)
-{
-    return 0.0f;
-}
-
-// FUNCTION: DX7HR 0x1000a97c
-// Converts an engine transformation to a Direct3D matrix (transposed)
-void DX7Rasterizer::ConvertToD3DMatrix(const GETransformation& inTransformation, GXMATRIX& outMatrix)
-{
-    outMatrix._11 = inTransformation.GetElement(0, 0);
-    outMatrix._12 = inTransformation.GetElement(1, 0);
-    outMatrix._13 = inTransformation.GetElement(2, 0);
-    outMatrix._14 = inTransformation.GetElement(3, 0);
-    outMatrix._21 = inTransformation.GetElement(0, 1);
-    outMatrix._22 = inTransformation.GetElement(1, 1);
-    outMatrix._23 = inTransformation.GetElement(2, 1);
-    outMatrix._24 = inTransformation.GetElement(3, 1);
-    outMatrix._31 = inTransformation.GetElement(0, 2);
-    outMatrix._32 = inTransformation.GetElement(1, 2);
-    outMatrix._33 = inTransformation.GetElement(2, 2);
-    outMatrix._34 = inTransformation.GetElement(3, 2);
-    outMatrix._41 = inTransformation.GetElement(0, 3);
-    outMatrix._42 = inTransformation.GetElement(1, 3);
-    outMatrix._43 = inTransformation.GetElement(2, 3);
-    outMatrix._44 = inTransformation.GetElement(3, 3);
 }
 
 // FUNCTION: DX7HR 0x1000a9e5
@@ -447,7 +418,7 @@ long DX7Rasterizer::Set3DMode(unsigned long inScreen)
     theSwap.SetElement(2, 1, 1.0f);
     theSwap.SetElement(2, 2, 0.0f);
     theSwap.Apply(this->GetViewport(inScreen).GetCameraInverse(), theView);
-    const GETransformation& theProjection = this->mScreenStates[inScreen]->mProjectionMode == 1
+    const GETransformation& theProjection = this->GetProjectionMode(inScreen) == 1
         ? this->GetViewport(inScreen).GetPerspectiveProjection() : this->GetViewport(inScreen).GetOrthographicProjection();
     float theViewElements[16];
     float theProjectionElements[16];
@@ -463,7 +434,7 @@ long DX7Rasterizer::Set3DMode(unsigned long inScreen)
 // Turns alpha testing on or off when it changes
 void DX7Rasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_alpha_testing(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mAlphaTesting))
+    if (ee_dx7r_set_alpha_testing(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mAlphaTesting))
         GERasterizer::SetAlphaTesting(inState, inScreen);
 }
 
@@ -471,7 +442,7 @@ void DX7Rasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScree
 // Sets the alpha test compare function (skipped when unchanged)
 void DX7Rasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_alpha_testing_compare_state(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mAlphaTestingCompareState))
+    if (ee_dx7r_set_alpha_testing_compare_state(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mAlphaTestingCompareState))
         GERasterizer::SetAlphaTestingCompareState(inState, inScreen);
 }
 
@@ -479,7 +450,7 @@ void DX7Rasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned 
 // Sets the alpha test reference value (0..1 scaled to 0..255) when it changes
 void DX7Rasterizer::SetAlphaTestingRefValue(float inValue, unsigned long inScreen)
 {
-    if (ee_dx7r_set_alpha_testing_ref_value(this->mDX7ScreenStates[inScreen]->mDevice, inValue, this->mScreenStates[inScreen]->mAlphaTestingRefValue))
+    if (ee_dx7r_set_alpha_testing_ref_value(this->mDX7ScreenStates[inScreen]->mDevice, inValue, this->GetScreenState(inScreen)->mAlphaTestingRefValue))
         GERasterizer::SetAlphaTestingRefValue(inValue, inScreen);
 }
 
@@ -487,12 +458,9 @@ void DX7Rasterizer::SetAlphaTestingRefValue(float inValue, unsigned long inScree
 // Sets the ambient light colour and sends it scaled by the ambient intensity
 void DX7Rasterizer::SetAmbientColor(const GEColor& inColor, unsigned long inScreen)
 {
-    this->mAmbientColor = inColor;
-    this->mComputedAmbientColor.SetRed(inColor.GetRed() * this->mAmbientIntensity);
-    this->mComputedAmbientColor.SetGreen(inColor.GetGreen() * this->mAmbientIntensity);
-    this->mComputedAmbientColor.SetBlue(inColor.GetBlue() * this->mAmbientIntensity);
-    const float theRGB[3] = { this->mComputedAmbientColor.GetRed(), this->mComputedAmbientColor.GetGreen(),
-                              this->mComputedAmbientColor.GetBlue() };
+    GERasterizer::SetAmbientColor(inColor, inScreen);
+    const float theRGB[3] = { this->GetComputedAmbientColor().GetRed(), this->GetComputedAmbientColor().GetGreen(),
+                              this->GetComputedAmbientColor().GetBlue() };
     ee_dx7r_set_ambient(this->mDX7ScreenStates[inScreen]->mDevice, theRGB);
 }
 
@@ -500,12 +468,9 @@ void DX7Rasterizer::SetAmbientColor(const GEColor& inColor, unsigned long inScre
 // Sets the ambient light intensity and sends the ambient colour scaled by it
 void DX7Rasterizer::SetAmbientIntensity(float inIntensity, unsigned long inScreen)
 {
-    this->mAmbientIntensity = inIntensity;
-    this->mComputedAmbientColor.SetRed(this->mAmbientColor.GetRed() * inIntensity);
-    this->mComputedAmbientColor.SetGreen(this->mAmbientColor.GetGreen() * inIntensity);
-    this->mComputedAmbientColor.SetBlue(this->mAmbientColor.GetBlue() * inIntensity);
-    const float theRGB[3] = { this->mComputedAmbientColor.GetRed(), this->mComputedAmbientColor.GetGreen(),
-                              this->mComputedAmbientColor.GetBlue() };
+    GERasterizer::SetAmbientIntensity(inIntensity, inScreen);
+    const float theRGB[3] = { this->GetComputedAmbientColor().GetRed(), this->GetComputedAmbientColor().GetGreen(),
+                              this->GetComputedAmbientColor().GetBlue() };
     ee_dx7r_set_ambient(this->mDX7ScreenStates[inScreen]->mDevice, theRGB);
 }
 
@@ -513,7 +478,7 @@ void DX7Rasterizer::SetAmbientIntensity(float inIntensity, unsigned long inScree
 // Turns sort-independent antialiasing on or off when it changes
 void DX7Rasterizer::SetAntiAliasing(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_anti_aliasing(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mAntiAliasing))
+    if (ee_dx7r_set_anti_aliasing(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mAntiAliasing))
         GERasterizer::SetAntiAliasing(inState, inScreen);
 }
 
@@ -521,8 +486,8 @@ void DX7Rasterizer::SetAntiAliasing(unsigned long inState, unsigned long inScree
 // Sets the source and destination blend factors, turning alpha blending off for one/zero and sending only what changed
 void DX7Rasterizer::SetBlending(unsigned long inSource, unsigned long inDestination, unsigned long inScreen)
 {
-    if (ee_dx7r_set_blending(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inSource, inDestination, this->mScreenStates[inScreen]->mBlendSource,
-                             this->mScreenStates[inScreen]->mBlendDestination))
+    if (ee_dx7r_set_blending(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inSource, inDestination, this->GetScreenState(inScreen)->mBlendSource,
+                             this->GetScreenState(inScreen)->mBlendDestination))
         GERasterizer::SetBlending(inSource, inDestination, inScreen);
 }
 
@@ -530,7 +495,7 @@ void DX7Rasterizer::SetBlending(unsigned long inSource, unsigned long inDestinat
 // Turns colour keying on or off when it changes
 void DX7Rasterizer::SetColorKeying(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_color_keying(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mColorKeying))
+    if (ee_dx7r_set_color_keying(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mColorKeying))
         GERasterizer::SetColorKeying(inState, inScreen);
 }
 
@@ -574,7 +539,7 @@ void DX7Rasterizer::SetDisplayOverdrawMode(bool inState, unsigned long inScreen)
 // Turns dithering on or off when it changes
 void DX7Rasterizer::SetDithering(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_dithering(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mDithering))
+    if (ee_dx7r_set_dithering(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mDithering))
         GERasterizer::SetDithering(inState, inScreen);
 }
 
@@ -582,7 +547,7 @@ void DX7Rasterizer::SetDithering(unsigned long inState, unsigned long inScreen)
 // Sets solid, wireframe or point drawing when it changes
 void DX7Rasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen)
 {
-    if (ee_dx7r_set_draw_style(this->mDX7ScreenStates[inScreen]->mDevice, inStyle, this->mScreenStates[inScreen]->mDrawStyle))
+    if (ee_dx7r_set_draw_style(this->mDX7ScreenStates[inScreen]->mDevice, inStyle, this->GetScreenState(inScreen)->mDrawStyle))
         GERasterizer::SetDrawStyle(inStyle, inScreen);
 }
 
@@ -590,7 +555,7 @@ void DX7Rasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen)
 // Turns fog on or off when it changes
 void DX7Rasterizer::SetFog(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_fog(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mFogState))
+    if (ee_dx7r_set_fog(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mFogState))
         GERasterizer::SetFog(inState, inScreen);
 }
 
@@ -599,7 +564,7 @@ void DX7Rasterizer::SetFog(unsigned long inState, unsigned long inScreen)
 void DX7Rasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 {
     const float theRGB[3] = { inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue() };
-    if (ee_dx7r_set_fog_color(this->mDX7ScreenStates[inScreen]->mDevice, theRGB, this->mScreenStates[inScreen]->mFog.mColor == inColor))
+    if (ee_dx7r_set_fog_color(this->mDX7ScreenStates[inScreen]->mDevice, theRGB, this->GetScreenState(inScreen)->mFog.mColor == inColor))
         GERasterizer::SetFogColor(inColor, inScreen);
 }
 
@@ -607,7 +572,7 @@ void DX7Rasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 // Sets the fog start and end distances, sending only the ones that changed
 void DX7Rasterizer::SetFogRange(float inStart, float inEnd, unsigned long inScreen)
 {
-    ee_dx7r_set_fog_range(this->mDX7ScreenStates[inScreen]->mDevice, inStart, inEnd, this->mScreenStates[inScreen]->mFog.mStart, this->mScreenStates[inScreen]->mFog.mEnd);
+    ee_dx7r_set_fog_range(this->mDX7ScreenStates[inScreen]->mDevice, inStart, inEnd, this->GetScreenState(inScreen)->mFog.mStart, this->GetScreenState(inScreen)->mFog.mEnd);
     GERasterizer::SetFogRange(inStart, inEnd, inScreen);
 }
 
@@ -629,7 +594,7 @@ void DX7Rasterizer::SetFogValue(float inValue, unsigned long inScreen)
 // Turns lighting on or off when it changes
 void DX7Rasterizer::SetLighting(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_lighting(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mLighting))
+    if (ee_dx7r_set_lighting(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mLighting))
         GERasterizer::SetLighting(inState, inScreen);
 }
 
@@ -637,11 +602,11 @@ void DX7Rasterizer::SetLighting(unsigned long inState, unsigned long inScreen)
 // Makes a surface the render target (swapping the references) and fits the viewport to its size
 void DX7Rasterizer::SetRenderTarget(GESurface* inTarget, unsigned long inScreen)
 {
-    if (inTarget == this->mScreenStates[inScreen]->mRenderTarget)
+    if (inTarget == this->GetScreenState(inScreen)->mRenderTarget)
         return;
-    if (this->mScreenStates[inScreen]->mRenderTarget != NULL)
-        this->mScreenStates[inScreen]->mRenderTarget->Dereference();
-    this->mScreenStates[inScreen]->mRenderTarget = inTarget;
+    if (this->GetScreenState(inScreen)->mRenderTarget != NULL)
+        this->GetScreenState(inScreen)->mRenderTarget->Dereference();
+    this->GetScreenState(inScreen)->mRenderTarget = inTarget;
     inTarget->Reference();
     ee_dx7r_set_render_target(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), (GXSurface*)*static_cast<DX7Surface*>(inTarget),
                               inTarget->GetWidth(), inTarget->GetHeight());
@@ -651,7 +616,7 @@ void DX7Rasterizer::SetRenderTarget(GESurface* inTarget, unsigned long inScreen)
 // Sets Gouraud or flat shading when it changes
 void DX7Rasterizer::SetShading(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_shading(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mShading))
+    if (ee_dx7r_set_shading(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mShading))
         GERasterizer::SetShading(inState, inScreen);
 }
 
@@ -659,7 +624,7 @@ void DX7Rasterizer::SetShading(unsigned long inState, unsigned long inScreen)
 // Takes lighting colours from the material (source 0) or from the vertex colours (white material) when it changes
 void DX7Rasterizer::SetShadingColorSource(unsigned long inSource, unsigned long inScreen)
 {
-    if (ee_dx7r_set_shading_color_source(this->mDX7ScreenStates[inScreen]->mDevice, inSource, this->mScreenStates[inScreen]->mShadingColorSource))
+    if (ee_dx7r_set_shading_color_source(this->mDX7ScreenStates[inScreen]->mDevice, inSource, this->GetScreenState(inScreen)->mShadingColorSource))
         GERasterizer::SetShadingColorSource(inSource, inScreen);
 }
 
@@ -667,7 +632,7 @@ void DX7Rasterizer::SetShadingColorSource(unsigned long inSource, unsigned long 
 // Turns specular highlights on or off when it changes
 void DX7Rasterizer::SetSpecular(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_specular(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mSpecular))
+    if (ee_dx7r_set_specular(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mSpecular))
         GERasterizer::SetSpecular(inState, inScreen);
 }
 
@@ -676,7 +641,7 @@ void DX7Rasterizer::SetSpecular(unsigned long inState, unsigned long inScreen)
 // only what changed; null disables texturing; stage 1 is always disabled
 void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
-    GERScreenState* theState = this->mScreenStates[inScreen];
+    GERScreenState* theState = this->GetScreenState(inScreen);
     if (inTexture == theState->mTexture && (inTexture == NULL || !inTexture->HasChanged()))
         return;
     if ((inTexture != NULL) != theState->m33C)
@@ -688,7 +653,7 @@ void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
         inTexture->Reference();
         inTexture->Promote();
     }
-    this->mScreenStates[inScreen]->m32C[3]++;
+    this->GetScreenState(inScreen)->m32C[3]++;
     EeDx7ScreenState* theDX7State = reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]);
     if (inTexture == NULL) {
         ee_dx7r_clear_texture(theDX7State);
@@ -732,7 +697,7 @@ void DX7Rasterizer::SetWaitForVSync(bool inState, unsigned long inScreen)
 // Sets Z testing and Z writing from the Z-buffer state when it changes, sending only what changed
 void DX7Rasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_z_buffer(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inState, this->mScreenStates[inScreen]->mZBuffer))
+    if (ee_dx7r_set_z_buffer(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inState, this->GetScreenState(inScreen)->mZBuffer))
         GERasterizer::SetZBuffer(inState, inScreen);
 }
 
@@ -740,7 +705,7 @@ void DX7Rasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen)
 // Sets the Z compare function when it changes
 void DX7Rasterizer::SetZCompare(unsigned long inState, unsigned long inScreen)
 {
-    if (ee_dx7r_set_z_compare(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->mScreenStates[inScreen]->mZCompare))
+    if (ee_dx7r_set_z_compare(this->mDX7ScreenStates[inScreen]->mDevice, inState, this->GetScreenState(inScreen)->mZCompare))
         GERasterizer::SetZCompare(inState, inScreen);
 }
 
@@ -749,7 +714,7 @@ void DX7Rasterizer::SetZCompare(unsigned long inState, unsigned long inScreen)
 // frame, polygon and texture-change statistics
 long DX7Rasterizer::ShowScene(unsigned long inScreen)
 {
-    GERScreenState* theState = this->mScreenStates[inScreen];
+    GERScreenState* theState = this->GetScreenState(inScreen);
     EeDx7FrameStats theStats;
     theStats.frame_counter = theState->m32C[0];
     theStats.scene_polys = theState->m32C[1];

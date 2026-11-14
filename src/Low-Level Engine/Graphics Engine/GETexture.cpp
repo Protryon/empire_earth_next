@@ -230,13 +230,6 @@ GETexture::~GETexture()
     ee_ge_tex_destroy(this->mRust);
 }
 
-// FUNCTION: LLE 0x10032e79
-// Does nothing and returns success (textures are never demoted)
-long GETexture::Demote()
-{
-    return kErrorOK;
-}
-
 // FUNCTION: LLE 0x10032e7c
 // Drops a reference; at the last outside reference a managed texture removes itself from its manager
 void GETexture::Dereference()
@@ -327,12 +320,6 @@ void GETexture::SetStageMipMapBias(float inBias, unsigned long inStage)
 void GETexture::SetStageTextureAddressingMode(unsigned long inMode, unsigned long inStage)
 {
     ee_ge_tex_set_stage(this->mRust, EeGeTexStageField::TextureAddressingMode, inMode);
-}
-
-// FUNCTION: LLE 0x10033a0d
-void GETexture::SetStageTexture(GETexture* inTexture, unsigned long inStage)
-{
-    ee_ge_tex_set_stage_texture(this->mRust, inTexture);
 }
 
 // FUNCTION: LLE 0x10033a52

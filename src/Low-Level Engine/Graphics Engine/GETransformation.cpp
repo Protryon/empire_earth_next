@@ -9,9 +9,9 @@
 // SYNTHETIC: LLE 0x100349ad
 // SYNTHETIC: LLE 0x100349bd
 // SYNTHETIC: LLE 0x100349c9
-// The composition, the inverse, the look-at, Normalize, the rotations and the orientations forward to Rust
-// (rust/crates/ee_ge transform.rs; GERustMath.h); the constructors, the comparisons, the identity/zero setters and
-// the file I/O stay here.
+// Every member forwards to Rust (rust/crates/ee_ge transform.rs, ffi.rs; GERustMath.h): the composition, the inverse,
+// the look-at, Normalize, the rotations and the orientations, and (R4.3 part 12) the constructors' and operator='s
+// element copies, the comparisons, the identity, scale and zero-orientation setters and the file codec.
 #include <windows.h>
 #include <math.h>
 #include <string.h>
@@ -27,6 +27,7 @@
 #include "lle/GETransformation.h"
 #include "lle/FSFile.h"
 #include "GERustMath.h"
+#include "GERustIO.h"
 
 const UString GETransformation::sTransformationStringID("GETransformation-TransformationData");
 
@@ -34,84 +35,24 @@ const UString GETransformation::sTransformationStringID("GETransformation-Transf
 // Creates an identity transformation
 GETransformation::GETransformation()
 {
-    this->mMatrix[0][0] = 1.0f;
-    this->mMatrix[0][1] = 0.0f;
-    this->mMatrix[0][2] = 0.0f;
-    this->mMatrix[0][3] = 0.0f;
-    this->mMatrix[1][0] = 0.0f;
-    this->mMatrix[1][1] = 1.0f;
-    this->mMatrix[1][2] = 0.0f;
-    this->mMatrix[1][3] = 0.0f;
-    this->mMatrix[2][0] = 0.0f;
-    this->mMatrix[2][1] = 0.0f;
-    this->mMatrix[2][2] = 1.0f;
-    this->mMatrix[2][3] = 0.0f;
-    this->mMatrix[3][0] = 0.0f;
-    this->mMatrix[3][1] = 0.0f;
-    this->mMatrix[3][2] = 0.0f;
-    this->mMatrix[3][3] = 1.0f;
+    ee_ge_t_identity(GERust(*this));
 }
 
 GETransformation::GETransformation(const float inMatrix[4][4])
 {
-    this->mMatrix[0][0] = inMatrix[0][0];
-    this->mMatrix[0][1] = inMatrix[0][1];
-    this->mMatrix[0][2] = inMatrix[0][2];
-    this->mMatrix[0][3] = inMatrix[0][3];
-    this->mMatrix[1][0] = inMatrix[1][0];
-    this->mMatrix[1][1] = inMatrix[1][1];
-    this->mMatrix[1][2] = inMatrix[1][2];
-    this->mMatrix[1][3] = inMatrix[1][3];
-    this->mMatrix[2][0] = inMatrix[2][0];
-    this->mMatrix[2][1] = inMatrix[2][1];
-    this->mMatrix[2][2] = inMatrix[2][2];
-    this->mMatrix[2][3] = inMatrix[2][3];
-    this->mMatrix[3][0] = inMatrix[3][0];
-    this->mMatrix[3][1] = inMatrix[3][1];
-    this->mMatrix[3][2] = inMatrix[3][2];
-    this->mMatrix[3][3] = inMatrix[3][3];
+    ee_ge_t_copy(GERust(*this), reinterpret_cast<const float(*)[4][4]>(inMatrix));
 }
 
 // FUNCTION: LLE 0x10034a36
 // Creates a copy of a transformation
 GETransformation::GETransformation(const GETransformation& inTransformation)
 {
-    this->mMatrix[0][0] = inTransformation.mMatrix[0][0];
-    this->mMatrix[0][1] = inTransformation.mMatrix[0][1];
-    this->mMatrix[0][2] = inTransformation.mMatrix[0][2];
-    this->mMatrix[0][3] = inTransformation.mMatrix[0][3];
-    this->mMatrix[1][0] = inTransformation.mMatrix[1][0];
-    this->mMatrix[1][1] = inTransformation.mMatrix[1][1];
-    this->mMatrix[1][2] = inTransformation.mMatrix[1][2];
-    this->mMatrix[1][3] = inTransformation.mMatrix[1][3];
-    this->mMatrix[2][0] = inTransformation.mMatrix[2][0];
-    this->mMatrix[2][1] = inTransformation.mMatrix[2][1];
-    this->mMatrix[2][2] = inTransformation.mMatrix[2][2];
-    this->mMatrix[2][3] = inTransformation.mMatrix[2][3];
-    this->mMatrix[3][0] = inTransformation.mMatrix[3][0];
-    this->mMatrix[3][1] = inTransformation.mMatrix[3][1];
-    this->mMatrix[3][2] = inTransformation.mMatrix[3][2];
-    this->mMatrix[3][3] = inTransformation.mMatrix[3][3];
+    ee_ge_t_copy(GERust(*this), &GERust(inTransformation)->m);
 }
 
 GETransformation& GETransformation::operator=(const GETransformation& inTransformation)
 {
-    this->mMatrix[0][0] = inTransformation.mMatrix[0][0];
-    this->mMatrix[0][1] = inTransformation.mMatrix[0][1];
-    this->mMatrix[0][2] = inTransformation.mMatrix[0][2];
-    this->mMatrix[0][3] = inTransformation.mMatrix[0][3];
-    this->mMatrix[1][0] = inTransformation.mMatrix[1][0];
-    this->mMatrix[1][1] = inTransformation.mMatrix[1][1];
-    this->mMatrix[1][2] = inTransformation.mMatrix[1][2];
-    this->mMatrix[1][3] = inTransformation.mMatrix[1][3];
-    this->mMatrix[2][0] = inTransformation.mMatrix[2][0];
-    this->mMatrix[2][1] = inTransformation.mMatrix[2][1];
-    this->mMatrix[2][2] = inTransformation.mMatrix[2][2];
-    this->mMatrix[2][3] = inTransformation.mMatrix[2][3];
-    this->mMatrix[3][0] = inTransformation.mMatrix[3][0];
-    this->mMatrix[3][1] = inTransformation.mMatrix[3][1];
-    this->mMatrix[3][2] = inTransformation.mMatrix[3][2];
-    this->mMatrix[3][3] = inTransformation.mMatrix[3][3];
+    ee_ge_t_copy(GERust(*this), &GERust(inTransformation)->m);
     return *this;
 }
 
@@ -119,21 +60,14 @@ GETransformation& GETransformation::operator=(const GETransformation& inTransfor
 // Returns whether all sixteen matrix elements equal the other transformation's
 bool GETransformation::operator==(const GETransformation& inTransformation)
 {
-    return this->GetElement(0, 0) == inTransformation.GetElement(0, 0) && this->GetElement(0, 1) == inTransformation.GetElement(0, 1) &&
-           this->GetElement(0, 2) == inTransformation.GetElement(0, 2) && this->GetElement(0, 3) == inTransformation.GetElement(0, 3) &&
-           this->GetElement(1, 0) == inTransformation.GetElement(1, 0) && this->GetElement(1, 1) == inTransformation.GetElement(1, 1) &&
-           this->GetElement(1, 2) == inTransformation.GetElement(1, 2) && this->GetElement(1, 3) == inTransformation.GetElement(1, 3) &&
-           this->GetElement(2, 0) == inTransformation.GetElement(2, 0) && this->GetElement(2, 1) == inTransformation.GetElement(2, 1) &&
-           this->GetElement(2, 2) == inTransformation.GetElement(2, 2) && this->GetElement(2, 3) == inTransformation.GetElement(2, 3) &&
-           this->GetElement(3, 0) == inTransformation.GetElement(3, 0) && this->GetElement(3, 1) == inTransformation.GetElement(3, 1) &&
-           this->GetElement(3, 2) == inTransformation.GetElement(3, 2) && this->GetElement(3, 3) == inTransformation.GetElement(3, 3);
+    return ee_ge_t_equal(GERust(*this), GERust(inTransformation));
 }
 
 // FUNCTION: LLE 0x10034b91
 // Returns whether the transformation's position equals the point
 bool GETransformation::operator==(const GE3DPoint& inPoint) const
 {
-    return this->GetX() == inPoint.GetX() && this->GetY() == inPoint.GetY() && this->GetZ() == inPoint.GetZ();
+    return ee_ge_t_at_point(GERust(*this), GERust(inPoint));
 }
 
 // NEAR: one store of b23 is scheduled one instruction later in the original; tried declaration order, GetElement
@@ -168,35 +102,15 @@ void GETransformation::ConvertToOrientation(GEOrientation& outOrientation) const
 // Reads the sixteen matrix elements from a file, stopping at the first error
 long GETransformation::Load(FSFile& inFile)
 {
-    long theResult = kErrorOK;
-    int i;
-    unsigned long j;
-    for (i = 0; i < 4 && theResult == kErrorOK; i++)
-        for (j = 0; j < 4 && theResult == kErrorOK; j++)
-            theResult = inFile.Read(this->mMatrix[i][j]);
-    return theResult;
+    EeGeFieldIo theIO = GERustFieldIO(inFile);
+    return ee_ge_t_io(GERust(*this), &theIO, false);
 }
 
 // FUNCTION: LLE 0x10034e89
 // Resets the transformation to identity
 void GETransformation::MakeIdentity()
 {
-    this->mMatrix[0][0] = 1.0f;
-    this->mMatrix[0][1] = 0.0f;
-    this->mMatrix[0][2] = 0.0f;
-    this->mMatrix[0][3] = 0.0f;
-    this->mMatrix[1][0] = 0.0f;
-    this->mMatrix[1][1] = 1.0f;
-    this->mMatrix[1][2] = 0.0f;
-    this->mMatrix[1][3] = 0.0f;
-    this->mMatrix[2][0] = 0.0f;
-    this->mMatrix[2][1] = 0.0f;
-    this->mMatrix[2][2] = 1.0f;
-    this->mMatrix[2][3] = 0.0f;
-    this->mMatrix[3][0] = 0.0f;
-    this->mMatrix[3][1] = 0.0f;
-    this->mMatrix[3][2] = 0.0f;
-    this->mMatrix[3][3] = 1.0f;
+    ee_ge_t_identity(GERust(*this));
 }
 
 // FUNCTION: LLE 0x10034ed9
@@ -248,13 +162,8 @@ void GETransformation::Scale(float inX, float inY, float inZ)
 // Writes the sixteen matrix elements to a file, stopping at the first error
 long GETransformation::Save(FSFile& inFile) const
 {
-    long theResult = kErrorOK;
-    int i;
-    unsigned long j;
-    for (i = 0; i < 4 && theResult == kErrorOK; i++)
-        for (j = 0; j < 4 && theResult == kErrorOK; j++)
-            theResult = inFile.Write(this->mMatrix[i][j]);
-    return theResult;
+    EeGeFieldIo theIO = GERustFieldIO(inFile);
+    return ee_ge_t_io(const_cast<EeGeTransformation*>(GERust(*this)), &theIO, true);
 }
 
 // FUNCTION: LLE 0x1003529c
@@ -305,19 +214,7 @@ void GETransformation::SetOrientationYRP(float inYaw, float inPitch, float inRol
 // Makes the transformation a pure scale by x, y and z (position column kept)
 void GETransformation::SetScale(float inX, float inY, float inZ)
 {
-    this->mMatrix[0][0] = inX;
-    this->mMatrix[0][1] = 0.0f;
-    this->mMatrix[0][2] = 0.0f;
-    this->mMatrix[1][0] = 0.0f;
-    this->mMatrix[1][1] = inY;
-    this->mMatrix[1][2] = 0.0f;
-    this->mMatrix[2][0] = 0.0f;
-    this->mMatrix[2][1] = 0.0f;
-    this->mMatrix[2][2] = inZ;
-    this->mMatrix[3][0] = 0.0f;
-    this->mMatrix[3][1] = 0.0f;
-    this->mMatrix[3][2] = 0.0f;
-    this->mMatrix[3][3] = 1.0f;
+    ee_ge_t_set_scale(GERust(*this), inX, inY, inZ);
 }
 
 // FUNCTION: LLE 0x100358a4
@@ -331,41 +228,14 @@ bool GETransformation::Verify() const
 // Resets the rotation to identity, keeping the position
 void GETransformation::ZeroOrientation()
 {
-    this->mMatrix[0][0] = 1.0f;
-    this->mMatrix[0][1] = 0.0f;
-    this->mMatrix[0][2] = 0.0f;
-    this->mMatrix[1][0] = 0.0f;
-    this->mMatrix[1][1] = 1.0f;
-    this->mMatrix[1][2] = 0.0f;
-    this->mMatrix[2][0] = 0.0f;
-    this->mMatrix[2][1] = 0.0f;
-    this->mMatrix[2][2] = 1.0f;
-    this->mMatrix[3][0] = 0.0f;
-    this->mMatrix[3][1] = 0.0f;
-    this->mMatrix[3][2] = 0.0f;
-    this->mMatrix[3][3] = 1.0f;
+    ee_ge_t_zero_orientation(GERust(*this), GERust(*this));
 }
 
 // FUNCTION: LLE 0x100358e8
 // Writes a copy with identity rotation and this transformation's position into outTransformation
 void GETransformation::ZeroOrientation(GETransformation& outTransformation) const
 {
-    outTransformation.mMatrix[0][0] = 1.0f;
-    outTransformation.mMatrix[0][1] = 0.0f;
-    outTransformation.mMatrix[0][2] = 0.0f;
-    outTransformation.mMatrix[0][3] = this->mMatrix[0][3];
-    outTransformation.mMatrix[1][0] = 0.0f;
-    outTransformation.mMatrix[1][1] = 1.0f;
-    outTransformation.mMatrix[1][2] = 0.0f;
-    outTransformation.mMatrix[1][3] = this->mMatrix[1][3];
-    outTransformation.mMatrix[2][0] = 0.0f;
-    outTransformation.mMatrix[2][1] = 0.0f;
-    outTransformation.mMatrix[2][2] = 1.0f;
-    outTransformation.mMatrix[2][3] = this->mMatrix[2][3];
-    outTransformation.mMatrix[3][0] = 0.0f;
-    outTransformation.mMatrix[3][1] = 0.0f;
-    outTransformation.mMatrix[3][2] = 0.0f;
-    outTransformation.mMatrix[3][3] = 1.0f;
+    ee_ge_t_zero_orientation(GERust(*this), GERust(outTransformation));
 }
 
 // ---- Exported members with no address of their own (ICF-folded: GetChecksum's `return 0` 0x32e79, Dump's empty

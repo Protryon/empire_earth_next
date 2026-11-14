@@ -11,6 +11,7 @@
 #include "lle/UWideString.h"
 #include "lle/UString.h"
 #include "lle/FSMemoryFile.h"
+#include "GERustIO.h"
 #include "lle/UMFastMath.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GEVector.h"
@@ -230,17 +231,8 @@ void GE3DPoint::InterpolateTo(const GE3DPoint& inPoint, float inStep, std::vecto
 // Reads x, y and z from an open file; 4 when the file is not open, else the first read error
 long GE3DPoint::Load(FSFile& inFile)
 {
-    long theResult;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.Read(this->mX);
-        if (theResult == 0) {
-            theResult = inFile.Read(this->mY);
-            if (theResult == 0)
-                theResult = inFile.Read(this->mZ);
-        }
-    } else
-        theResult = 4;
-    return theResult;
+    const float* theFields[] = {&this->mX, &this->mY, &this->mZ};
+    return GERustFields(inFile, theFields, 3, inFile.GetIsOpen(), false, false);
 }
 
 // Header-inline/COMDAT members this unit emits (markers at the end)
@@ -264,17 +256,8 @@ long GE3DPoint::Load(FSFile& inFile)
 // empty `ret 4` 0x58f8e
 long GE3DPoint::Save(FSFile& inFile) const
 {
-    long theResult;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.Write(this->mX);
-        if (theResult == 0) {
-            theResult = inFile.Write(this->mY);
-            if (theResult == 0)
-                theResult = inFile.Write(this->mZ);
-        }
-    } else
-        theResult = 4;
-    return theResult;
+    const float* theFields[] = {&this->mX, &this->mY, &this->mZ};
+    return GERustFields(inFile, theFields, 3, inFile.GetIsOpen(), true, false);
 }
 
 void GE3DPoint::GetChecksum(ESChecksum& ioChecksum) const

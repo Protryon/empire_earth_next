@@ -34,33 +34,6 @@ void UReferenceCounter::DumpAllLeakedReferences(FSFileSpec& inFile)
     }
 }
 
-// FUNCTION: LLE 0x10081189
-// Takes one tracked reference of this object off the debug record for the line and file, keeping the real count
-void UReferenceCounter::DereferenceWithoutDecrementingCount(unsigned long inLine, const char* inFile)
-{
-    LineMap::iterator theLine = UReferenceCounter::sReferenceDebugInfo.find(inLine);
-    if (theLine == UReferenceCounter::sReferenceDebugInfo.end())
-        return;
-    CounterMap::iterator theCounter = theLine->second->find(this);
-    if (theCounter == theLine->second->end())
-        return;
-    FileCountMap::iterator theFile = theCounter->second->find(inFile);
-    if (theFile == theCounter->second->end())
-        return;
-    (*theCounter->second)[inFile] = theFile->second - 1;
-    if (theFile->second != 0)
-        return;
-    theCounter->second->erase(theFile);
-    if (theCounter->second->size() != 0)
-        return;
-    delete theCounter->second;
-    theLine->second->erase(theCounter);
-    if (theLine->second->size() == 0) {
-        delete theLine->second;
-        UReferenceCounter::sReferenceDebugInfo.erase(theLine);
-    }
-}
-
 // FUNCTION: LLE 0x1008127f
 // Takes one tracked reference off the debug record for the line and file, then dereferences the object
 void UReferenceCounter::Dereference(unsigned long inLine, const char* inFile)

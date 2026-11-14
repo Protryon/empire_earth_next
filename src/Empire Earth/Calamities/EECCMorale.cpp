@@ -29,99 +29,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 
-// FUNCTION: EXE 0x4b2ba3
-// Creates the morale calamity class with no sounds or effect
-EECCMorale::EECCMorale()
-{
-    this->mSound = NULL;
-    this->mSecondarySound = NULL;
-    this->mGraphicEffect = NULL;
-    this->mEffectDuration = 0;
-}
-
-// SYNTHETIC: EXE 0x4b2bc3
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b2bdf
-// Destroys the calamity class, releasing its effect
-EECCMorale::~EECCMorale()
-{
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Dereference();
-}
-
-// FUNCTION: EXE 0x4b2bfe
-// Starts a morale calamity on the target unit: sends the effect from the caster to it and plays the sound; returns
-// false without a target
-bool EECCMorale::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
-    if (this->mGraphicEffect != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    if (this->mPositive)
-        theParams.flags |= EE_CALAMITY_POSITIVE;
-    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCMorale::StartStep);
-}
-
-// FUNCTION: EXE 0x4b2cad
-// Takes the positive or negative morale count Update gave the target back, removes its effect and stops the sounds
-void EECCMorale::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
-    if (this->mGraphicEffect != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    if (this->mPositive)
-        theParams.flags |= EE_CALAMITY_POSITIVE;
-    EECalamityRunStop(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCMorale::StartStep);
-}
-
-// FUNCTION: EXE 0x4b2d13
-// Reads the calamity data: two sounds, the effect and its duration, and whether the morale is positive
-void EECCMorale::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    this->mSound = EESoundObject::Get(inData->mSoundID);
-    this->mSecondarySound = EESoundObject::Get(inData->mSecondarySoundID);
-    if (inData->mGraphicEffectID1 > 0) {
-        this->mGraphicEffect = EEGraphicEffect::Get(inData->mGraphicEffectID1);
-        this->mGraphicEffect->Reference();
-        this->mEffectDuration = this->mGraphicEffect->mDuration;
-    }
-    this->mPositive = inData->mBoolParam1;
-}
-
-// ICF-FOLDED: EXE 0x4b1c06
-// (folded into a later unit's identical copy)
-void EECCMorale::Reset(EECalamity* inCalamity)
-{
-    inCalamity->mBoolPlaceHolder1 = false;
-}
-
-// FUNCTION: EXE 0x4b2d6d
-// Loads the effect and both sounds
-void EECCMorale::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Load(inIsOnDemand);
-    if (this->mSound != NULL)
-        this->mSound->LoadMedia();
-    if (this->mSecondarySound != NULL)
-        this->mSecondarySound->LoadMedia();
-}
-
-// FUNCTION: EXE 0x4b2d9c
-// Ages the calamity; once the effect has played, gives the target its class's morale effect and one positive or
-// negative morale count (once) and plays the secondary sound
-long EECCMorale::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
-    theParams.morale_delay = (int32_t)this->mEffectDuration;
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, this->mSecondarySound, &EECCMorale::UpdateStep);
-}
-
 // New (port): EECCMorale's world steps for its Rust update (ee/EECalamityUpdate.h)
 bool EECCMorale::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
 {
@@ -157,26 +64,6 @@ bool EECCMorale::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& 
     }
 }
 
-// FUNCTION: EXE 0x4b2ed2
-// Unloads the effect and both sounds
-void EECCMorale::UnloadMedia(EEPlayer* inPlayer)
-{
-    if (this->mGraphicEffect != NULL)
-        this->mGraphicEffect->Unload();
-    if (this->mSound != NULL)
-        this->mSound->UnloadMedia();
-    if (this->mSecondarySound != NULL)
-        this->mSecondarySound->UnloadMedia();
-}
-
-// FUNCTION: EXE 0x4b2efd
-// Accepts a unit on the map that is in the class's unit set
-bool EECCMorale::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    return EECalamityValidTarget(this, inUnit, inTargetUnit);
-}
-
 // New (port): EECCMorale's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
 bool EECCMorale::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
 {
@@ -190,7 +77,7 @@ bool EECCMorale::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& i
         EEUnit* theTargetUnit = NULL;
         theCalamity->GetTargetUnit(theTargetUnit);
         EEEffectHandle theEffectHandle;
-        gEffectManager->CreateEffectBetweenUnits(theCalamity->mCasterUnit, theTargetUnit->mComplexUnit, theClass->mGraphicEffect,
+        gEffectManager->CreateEffectBetweenUnits(theCalamity->mCasterUnit, theTargetUnit->mComplexUnit, theClass->mGraphicEffect1,
                                                  &theEffectHandle);
         outReply.id = theEffectHandle.mValue;
         return true;

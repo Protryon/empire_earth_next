@@ -20,6 +20,9 @@
 #include "ee/EECalamityClass.h"
 #include "ee/EEContagionFunctor.h"
 #include "ee/EEContagionHelper.h"
+#include "lle/USingleton.h"
+#include "ee/EECalamityManager.h"
+#include "ee/EEContagionManager.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
@@ -29,14 +32,10 @@
 #include "ee/EETechCapture.h"
 #include "rust/ee_tech.h"
 
-const UString EEContagionHelper::mNumUnitsStringID("ContagionHelperNumUnits-StringID");
-const UString EEContagionHelper::mUnitIDStringID("ContagionHelperUnitID-StringID");
-const UString EEContagionHelper::mHelperIDStringID("ContagionHelperHelperID-StringID");
-const UString EEContagionHelper::mLastSpreadTimeIDStringID("ContagionHelperLastSpreadTimeID-StringID");
 
 // FUNCTION: EXE 0x4b5c89
 // Creates an empty contagion helper with no calamity or functor (for loading)
-EEContagionHelper::EEContagionHelper()
+EEContagionHelper::EEContagionHelper() : EeContagionHelperFields()
 {
     this->mCalamity = NULL;
     this->mTimeSinceLastUpdate = 0.0f;
@@ -99,15 +98,14 @@ void EEContagionHelper::DumpOutOfSynch(FILE* inFile) const
 }
 
 // FUNCTION: EXE 0x4b5eb0
-// Returns a sync checksum: unit ids, the calamity's checksum, the helper id and the spread timer's bit pattern
+// Returns a sync checksum: unit ids, the calamity's checksum, the helper id and the spread timer's bit pattern (ee_tech
+// contagion_save.rs helper_checksum)
 long EEContagionHelper::GetOutOfSynchChecksum() const
 {
-    long theChecksum = 0;
+    long theUnitIDs = 0;
     for (unsigned long i = 0; i < this->mUnits.size(); i++)
-        theChecksum += this->mUnits[i]->mUnitID;
-    theChecksum += this->mCalamity->GetOutOfSynchChecksum();
-    float theTime = this->mTimeSinceLastSpread;
-    return this->mHelperID + *reinterpret_cast<int32_t*>(&theTime) + theChecksum;
+        theUnitIDs += this->mUnits[i]->mUnitID;
+    return ee_contagion_helper_checksum(this, theUnitIDs, this->mCalamity->GetOutOfSynchChecksum());
 }
 
 // FUNCTION: EXE 0x4b5ef9
@@ -129,45 +127,56 @@ void EEContagionHelper::GetUnitsInArea(float inRadius, EEComplexUnit* inUnit, st
     EEGetUnitsInRectangle(theArea, outUnits, theFilter, true);
 }
 
+// New (port): a helper's or the manager's file and C++ lists for their Rust Load and Save (ee_tech
+// contagion_save.rs EE_CONTAGION_IO_*)
+long EEContagionIoCall(void* inContext, uint32_t inOp, void* ioValue)
+{
+    EEContagionIo& theIo = *static_cast<EEContagionIo*>(inContext);
+    FSFile& theFile = *theIo.mFile;
+    unsigned long* theULong = static_cast<unsigned long*>(ioValue);
+    switch (inOp) {
+    case EE_CONTAGION_IO_READ_ULONG: return theFile.Read(*theULong);
+    case EE_CONTAGION_IO_READ_LONG: return theFile.Read(*static_cast<long*>(ioValue));
+    case EE_CONTAGION_IO_READ_FLOAT: return theFile.Read(*static_cast<float*>(ioValue));
+    case EE_CONTAGION_IO_WRITE_ULONG: return theFile.Write(*static_cast<const unsigned long*>(ioValue));
+    case EE_CONTAGION_IO_WRITE_LONG: return theFile.Write(*static_cast<const long*>(ioValue));
+    case EE_CONTAGION_IO_WRITE_FLOAT: return theFile.Write(*static_cast<const float*>(ioValue));
+    case EE_CONTAGION_IO_PUSH_UNIT_ID: theIo.mHelper->mUnitIDs.push_back(*theULong); return kErrorOK;
+    case EE_CONTAGION_IO_UNIT_COUNT: *theULong = theIo.mHelper->mUnits.size(); return kErrorOK;
+    case EE_CONTAGION_IO_UNIT_ID: *theULong = theIo.mHelper->mUnits[*theULong]->mUnitID; return kErrorOK;
+    case EE_CONTAGION_IO_CLEAR:
+        DeleteVectorContents(theIo.mManager->mHelpers);
+        theIo.mManager->mCalamityIndexes.clear();
+        return kErrorOK;
+    case EE_CONTAGION_IO_LOAD_HELPER: {
+        EEContagionHelper* theHelper = new EEContagionHelper;
+        theHelper->Load(theIo.mMajorVersion, theIo.mMinorVersion, theFile);
+        theIo.mManager->mHelpers.push_back(theHelper);
+        theIo.mManager->mCalamityIndexes.push_back(*theULong);
+        return kErrorOK;
+    }
+    case EE_CONTAGION_IO_HELPER_COUNT: *theULong = theIo.mManager->mHelpers.size(); return kErrorOK;
+    case EE_CONTAGION_IO_HELPER_CALAMITY: {
+        long theIndex = 0;
+        if (!EECalamityManager::GetInstance()->GetCalamityIndex(theIo.mManager->mHelpers[*theULong]->GetCalamity(), theIndex))
+            return kErrorFailed;
+        *theULong = theIndex;
+        return kErrorOK;
+    }
+    case EE_CONTAGION_IO_SAVE_HELPER:
+        return theIo.mManager->mHelpers[*theULong]->Save(theIo.mMajorVersion, theIo.mMinorVersion, theFile);
+    }
+    return kErrorFailed;
+}
+
 // FUNCTION: EXE 0x4b5feb
 // Reads the helper from a saved game (unit ids, id, spread timer; the update timer from 0.231 on); returns the first
-// read error
+// read error (ee_tech contagion_save.rs helper_load)
 long EEContagionHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theNumUnits = 0;
-    unsigned long theUnitID = 0;
-    long theResult;
-    if (inMajorVersion == 0 && inMinorVersion < 0xe7) {
-        theResult = inFile.Read(theNumUnits);
-        if (theResult == kErrorOK) {
-            for (unsigned long i = 0; i < theNumUnits && theResult == kErrorOK; i++) {
-                theResult = inFile.Read(theUnitID);
-                this->mUnitIDs.push_back(theUnitID);
-            }
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(this->mHelperID);
-                if (theResult == kErrorOK)
-                    theResult = inFile.Read(this->mTimeSinceLastSpread);
-            }
-        }
-    } else {
-        theResult = inFile.Read(theNumUnits);
-        if (theResult == kErrorOK) {
-            for (unsigned long i = 0; i < theNumUnits && theResult == kErrorOK; i++) {
-                theResult = inFile.Read(theUnitID);
-                this->mUnitIDs.push_back(theUnitID);
-            }
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(this->mHelperID);
-                if (theResult == kErrorOK) {
-                    theResult = inFile.Read(this->mTimeSinceLastSpread);
-                    if (theResult == kErrorOK)
-                        theResult = inFile.Read(this->mTimeSinceLastUpdate);
-                }
-            }
-        }
-    }
-    return theResult;
+    EEContagionIo theIo = {&inFile, this, NULL, inMajorVersion, inMinorVersion};
+    EeContagionIoFfi theFfi = {&theIo, &EEContagionIoCall};
+    return ee_contagion_helper_load(this, inMajorVersion, inMinorVersion, theFfi);
 }
 
 // FUNCTION: EXE 0x4b60f7
@@ -217,27 +226,13 @@ long EEContagionHelper::RestorePointers()
 }
 
 // FUNCTION: EXE 0x4b6233
-// Writes the helper's unit ids, id and both timers to the saved game; returns the first write error
+// Writes the helper's unit ids, id and both timers to the saved game; returns the first write error (ee_tech
+// contagion_save.rs helper_save)
 long EEContagionHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theNumUnits = this->mUnits.size();
-    long theResult = outFile.Write(theNumUnits);
-    if (theResult != kErrorOK)
-        return theResult;
-    for (std::vector<EEUnit*>::iterator theIterator = this->mUnits.begin();
-         theIterator != this->mUnits.end() && theResult == kErrorOK; ++theIterator) {
-        unsigned long theUnitID = (*theIterator)->mUnitID;
-        theResult = outFile.Write(theUnitID);
-    }
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mHelperID);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = outFile.Write(this->mTimeSinceLastSpread);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTimeSinceLastUpdate);
-    return theResult;
+    EEContagionIo theIo = {&outFile, this, NULL, inMajorVersion, inMinorVersion};
+    EeContagionIoFfi theFfi = {&theIo, &EEContagionIoCall};
+    return ee_contagion_helper_save(this, theFfi);
 }
 
 // FUNCTION: EXE 0x4b62c9
@@ -402,14 +397,6 @@ void EEContagionHelperHost::Call(void* inContext, const EeContagionCall* inCall,
     }
 }
 
-// SYNTHETIC: EXE 0x4b5b7d
-// SYNTHETIC: EXE 0x4b5b87
-// SYNTHETIC: EXE 0x4b5b98
-// SYNTHETIC: EXE 0x4b5ba4
-// SYNTHETIC: EXE 0x4b5bc0
-// SYNTHETIC: EXE 0x4b5bca
-// SYNTHETIC: EXE 0x4b5bdb
-// SYNTHETIC: EXE 0x4b5be7
 // SYNTHETIC: EXE 0x4b5c03
 // SYNTHETIC: EXE 0x4b5c0d
 // SYNTHETIC: EXE 0x4b5c1e

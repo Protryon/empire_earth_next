@@ -9,8 +9,6 @@
 class GEFont;
 
 LLE_API long UIInitialize();
-LLE_API void UICreateMultilineTextFromString(const UWideString& inString, GEFont* inFont, unsigned long inWidth,
-                                             std::vector<UWideString>& outLines);
 LLE_API unsigned long UIGetStringCutOffIndex(const UWideString& inString, GEFont* inFont, unsigned long inWidth,
                                              bool inBreakAtSpace, bool inStopAtNewline);
 

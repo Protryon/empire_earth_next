@@ -35,41 +35,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
-// FUNCTION: EXE 0x4b2034
-// Creates the logic bomb calamity class with no effects, sound or stage times
-EECCLogicBomb::EECCLogicBomb()
-    : mGraphicEffect1(NULL), mGraphicEffect2(NULL), mGraphicEffect3(NULL), mSound(NULL), mEffectTime2(0), mEffectTime3(0)
-{
-}
-
-// SYNTHETIC: EXE 0x4b205a
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b2076
-// Destroys the calamity class, releasing its three effects
-EECCLogicBomb::~EECCLogicBomb()
-{
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Dereference();
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Dereference();
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Dereference();
-}
-
 static void AdjustLocation(EECalamity* inCalamity, GE3DPoint* ioLocation);
-
-// FUNCTION: EXE 0x4b20af
-// Starts a logic bomb unless the target is protected: sends the launch effect from the caster to the target and plays
-// the sound there (at the origin when no launch effect was sent)
-bool EECCLogicBomb::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    if (this->mGraphicEffect1 != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCLogicBomb::StartStep);
-}
 
 // FUNCTION: EXE 0x4b21c2
 // Raises the location by the target model's first-part LOD-0 bounding radius (provisional name)
@@ -86,95 +52,6 @@ static void AdjustLocation(EECalamity* inCalamity, GE3DPoint* ioLocation)
         return;
     // raise the point by the radius (as the disable effect in Step uses it as a height), not shift it sideways
     ioLocation->SetZ(thePart->GetBoundingRadius(0) + ioLocation->GetZ());
-}
-
-// FUNCTION: EXE 0x4b221e
-// Re-enables the target unit (giving a wonder back to its player), removes the disable effect and stops the sounds
-void EECCLogicBomb::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    if (this->mGraphicEffect1 != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCLogicBomb::StartStep);
-}
-
-// FUNCTION: EXE 0x4b22ad
-// Reads the calamity data: sound and three effects; the stage times follow the first two effects' durations
-void EECCLogicBomb::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    if (inData->mSoundID != 0)
-        this->mSound = EESoundObject::Get(inData->mSoundID);
-    if (inData->mGraphicEffectID1 != 0) {
-        this->mGraphicEffect1 = EEGraphicEffect::Get(inData->mGraphicEffectID1);
-        this->mGraphicEffect1->Reference();
-        this->mEffectTime2 = this->mGraphicEffect1->mDuration;
-    } else
-        this->mEffectTime2 = 600;
-    if (inData->mGraphicEffectID2 != 0) {
-        this->mGraphicEffect2 = EEGraphicEffect::Get(inData->mGraphicEffectID2);
-        this->mGraphicEffect2->Reference();
-        this->mEffectTime3 = this->mGraphicEffect2->mDuration + this->mEffectTime2;
-    }
-    if (inData->mGraphicEffectID3 != 0) {
-        this->mGraphicEffect3 = EEGraphicEffect::Get(inData->mGraphicEffectID3);
-        this->mGraphicEffect3->Reference();
-    }
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCLogicBomb::Reset(EECalamity* inCalamity)
-{
-}
-
-// ICF-FOLDED: EXE 0x4af5f2
-// (identical to EECCAreaEffect::LoadMedia)
-void EECCLogicBomb::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Load(inIsOnDemand);
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Load(inIsOnDemand);
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Load(inIsOnDemand);
-    if (this->mSound != NULL)
-        this->mSound->LoadMedia();
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCLogicBomb::PlaySound(EECalamity* inCalamity)
-{
-}
-
-// ICF-FOLDED: EXE 0x4af632
-// (identical to EECCAreaEffect::UnloadMedia)
-void EECCLogicBomb::UnloadMedia(EEPlayer* inPlayer)
-{
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Unload();
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Unload();
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Unload();
-    if (this->mSound != NULL)
-        this->mSound->UnloadMedia();
-}
-
-// FUNCTION: EXE 0x4b2337
-// Ages the calamity: after the launch places the ground effect; after the second stage disables the live target (a
-// wonder stops counting, a gate opens, others halt); returns 7 once the target is dead
-long EECCLogicBomb::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    if (this->mGraphicEffect2 != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT2;
-    theParams.bomb_time2 = (uint32_t)this->mEffectTime2;
-    theParams.bomb_time3 = (uint32_t)this->mEffectTime3;
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCLogicBomb::UpdateStep);
 }
 
 // New (port): EECCLogicBomb's world steps for its Rust update (ee/EECalamityUpdate.h)
@@ -228,14 +105,6 @@ bool EECCLogicBomb::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCal
     default:
         return false;
     }
-}
-
-// FUNCTION: EXE 0x4b25b4
-// Accepts a built, enabled enemy unit on the map that is not a foundation or volcano and is in the class's unit set
-bool EECCLogicBomb::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    return EECalamityValidTarget(this, inUnit, inTargetUnit);
 }
 
 // New (port): EECCLogicBomb's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
