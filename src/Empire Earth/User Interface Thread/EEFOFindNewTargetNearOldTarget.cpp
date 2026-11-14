@@ -18,6 +18,7 @@
 #include <deque>
 #include <algorithm>
 #include <functional>
+#include <mutex>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -188,6 +189,128 @@ float gF56451C = 1.0f / kUUEdgeFalloff;
 // SYNTHETIC: EXE 0x63dd87
 float gF564518 = 1.0f / kUUBehindLimit;
 
+// TEST ONLY: the unit utilities' record (UUTL, the unit utilities lane, round 1). The outermost call of a noted
+// utility on its thread folds its kind, inputs and outputs (units as ids, floats as bits, tile lists whole) into the
+// physics tick's FNV-1a 64; the record (the tick, the calls, the digest) is written when a later tick's first call
+// comes. Nothing is noted unless the capture runs. Its golden came from the C++ utilities (tools/sim_capture.py).
+static thread_local int sUUDepth = 0;
+static std::mutex sUUMutex;
+static uint64_t sUUDigest = 0xcbf29ce484222325ull;
+static uint32_t sUUCalls = 0;
+static unsigned long sUUTick = 0;
+static uint32_t sUUKinds[64];
+class EEUUNote {
+public:
+    explicit EEUUNote(uint32_t inKind) : mOn(++sUUDepth == 1 && EESimCaptureRecord::Active()), mKind(inKind) { this->I(inKind); }
+    ~EEUUNote();
+    EEUUNote& I(long inValue) { if (this->mOn) this->mWords.push_back((uint32_t)inValue); return *this; }
+    EEUUNote& F(float inValue) { uint32_t theBits; memcpy(&theBits, &inValue, 4); return this->I((long)theBits); }
+    EEUUNote& U(const EEUnit* inUnit) { return this->I(inUnit != NULL ? (long)((const RTSUnit*)inUnit)->mUnitID : -2); }
+    EEUUNote& P(const GE3DPoint& inPoint) { return this->F(inPoint.mX).F(inPoint.mY).F(inPoint.mZ); }
+    EEUUNote& T(const std::vector<U2DPoint<long> >& inTiles)
+    {
+        this->I((long)inTiles.size());
+        for (size_t i = 0; this->mOn && i < inTiles.size(); i++)
+            this->I(inTiles[i].mX).I(inTiles[i].mY);
+        return *this;
+    }
+    EEUUNote& Us(const std::vector<EEUnit*>& inUnits)
+    {
+        this->I((long)inUnits.size());
+        for (size_t i = 0; this->mOn && i < inUnits.size(); i++)
+            this->U(inUnits[i]);
+        return *this;
+    }
+    EEUUNote& M(const GETransformation& inTransformation)
+    {
+        for (int r = 0; this->mOn && r < 4; r++)
+            for (int c = 0; c < 4; c++)
+                this->F(inTransformation.mMatrix[r][c]);
+        return *this;
+    }
+    // the outputs, read when the call returns
+    EEUUNote& OutT(std::vector<U2DPoint<long> >* inTiles) { this->mOutTiles = inTiles; return *this; }
+    EEUUNote& OutU(std::vector<EEUnit*>* inUnits) { this->mOutUnits = inUnits; return *this; }
+    EEUUNote& OutL(long* inFirst, long* inSecond = NULL) { this->mOutLongs[0] = inFirst; this->mOutLongs[1] = inSecond; return *this; }
+    EEUUNote& OutP(GE3DPoint* inPoint) { this->mOutPoint = inPoint; return *this; }
+    EEUUNote& OutM(GETransformation* inTransformation) { this->mOutMatrix = inTransformation; return *this; }
+    EEUUNote& Pl(EEPlayer* inPlayer) { return this->I(inPlayer != NULL ? (long)inPlayer->GetPlayerID() : -2); }
+    EEUUNote& C(EEUnitClass* inClass) { return this->I(inClass != NULL ? (long)inClass->mUnitType : -2); }
+    EEUUNote& Ps(const std::vector<GE3DPoint>& inPoints)
+    {
+        this->I((long)inPoints.size());
+        for (size_t i = 0; this->mOn && i < inPoints.size(); i++)
+            this->P(inPoints[i]);
+        return *this;
+    }
+    EEUUNote& OutF(float* inFirst, float* inSecond = NULL) { this->mOutFloats[0] = inFirst; this->mOutFloats[1] = inSecond; return *this; }
+    EEUUNote& OutPs(std::vector<GE3DPoint>* inPoints) { this->mOutPoints = inPoints; return *this; }
+    template <class V> V R(V inValue) { this->I((long)inValue); return inValue; }
+    template <class V> V* RU(V* inUnit) { this->U(inUnit); return inUnit; }
+    float RF(float inValue) { this->F(inValue); return inValue; }
+    bool mOn;
+    uint32_t mKind;
+    std::vector<uint32_t> mWords;
+    std::vector<U2DPoint<long> >* mOutTiles = NULL;
+    std::vector<EEUnit*>* mOutUnits = NULL;
+    long* mOutLongs[2] = {NULL, NULL};
+    GE3DPoint* mOutPoint = NULL;
+    GETransformation* mOutMatrix = NULL;
+    float* mOutFloats[2] = {NULL, NULL};
+    std::vector<GE3DPoint>* mOutPoints = NULL;
+};
+
+EEUUNote::~EEUUNote()
+{
+    sUUDepth--;
+    if (!this->mOn)
+        return;
+    if (this->mOutTiles != NULL)
+        this->T(*this->mOutTiles);
+    if (this->mOutUnits != NULL)
+        this->Us(*this->mOutUnits);
+    for (int i = 0; i < 2; i++)
+        if (this->mOutLongs[i] != NULL)
+            this->I(*this->mOutLongs[i]);
+    if (this->mOutPoint != NULL)
+        this->P(*this->mOutPoint);
+    if (this->mOutMatrix != NULL)
+        this->M(*this->mOutMatrix);
+    for (int i = 0; i < 2; i++)
+        if (this->mOutFloats[i] != NULL)
+            this->F(*this->mOutFloats[i]);
+    if (this->mOutPoints != NULL)
+        this->Ps(*this->mOutPoints);
+    std::lock_guard<std::mutex> theLock(sUUMutex);
+    unsigned long theTick = gPhysics != NULL ? gPhysics->mNumTicksDone : 0;
+    if (theTick != sUUTick) {
+        if (sUUCalls != 0) {
+            EESimCaptureRecord theRecord(0x4c545555u);   // "UUTL"
+            theRecord.U32((unsigned int)sUUTick);
+            theRecord.U32(sUUCalls);
+            theRecord.U32((unsigned int)(sUUDigest & 0xffffffffu));
+            theRecord.U32((unsigned int)(sUUDigest >> 32));
+            theRecord.Commit();
+        }
+        if (theTick / 20000 != sUUTick / 20000) {
+            fprintf(stderr, "EE-UU-COUNT %lu", theTick);
+            for (int i = 1; i < 64; i++)
+                fprintf(stderr, " %u", sUUKinds[i]);
+            fprintf(stderr, "\n");
+        }
+        sUUDigest = 0xcbf29ce484222325ull;
+        sUUCalls = 0;
+        sUUTick = theTick;
+    }
+    sUUKinds[this->mKind & 63]++;
+    for (size_t i = 0; i < this->mWords.size(); i++)
+        for (int b = 0; b < 4; b++) {
+            sUUDigest ^= (this->mWords[i] >> (8 * b)) & 0xff;
+            sUUDigest *= 0x100000001b3ull;
+        }
+    sUUCalls++;
+}
+
 
 // Units by id: EEUUUnitIDLess / EEUUUnitIDEqual are declared in ee/EEUnitCollector.h (its EEGetUnitsInRectangle
 // sorts with them too; EEAIArea.cpp's family 0xe3d7.. calls these bodies)
@@ -308,6 +431,7 @@ bool EEFOLocationScreenEnsureContinentAndPathOverlay::Screen(const U2DPoint<long
 // whose straight line from the last kept point stays on passable tiles away from other units
 void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
 {
+    EEUUNote theNote(1); theNote.U(inUnit).Ps(ioPath).I(inSmooth).OutPs(&ioPath);   // TEST ONLY (UUTL)
     std::vector<GE3DPoint> theNewPath;
     std::vector<U2DPoint<long> > theLine;
     EETileCoordinate theTile;
@@ -414,15 +538,16 @@ void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bo
 bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner,
                std::vector<EEUnit*>& outUnits)
 {
+    EEUUNote theNote(2); theNote.Pl(inPlayer).I(inUnitType).I(inIgnoreOwner).OutU(&outUnits);   // TEST ONLY (UUTL)
     outUnits.clear();
     if (inTile == NULL)
-        return false;   // port: a tile off the map (GetTile's NULL) holds no units; the original read through it
+        return theNote.R(false);   // port: a tile off the map (GetTile's NULL) holds no units; the original read through it
     for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
         EEUnit* theUnit = theNode->mUnit;
         if (theUnit != NULL && EEGetTileUnitStanding(theUnit, inPlayer, inUnitType, inIgnoreOwner) == 2)
             outUnits.push_back(theUnit);
     }
-    return outUnits.size() > 0;
+    return theNote.R(outUnits.size() > 0);
 }
 
 // FUNCTION: EXE 0x63e598
@@ -430,15 +555,16 @@ bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, boo
 bool EEGetMovableTileUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, bool inIgnoreOwner,
                std::vector<EEUnit*>& outUnits)
 {
+    EEUUNote theNote(3); theNote.Pl(inPlayer).I(inUnitType).I(inIgnoreOwner).OutU(&outUnits);   // TEST ONLY (UUTL)
     outUnits.clear();
     if (inTile == NULL)   // port: a tile off the map
-        return false;
+        return theNote.R(false);
     for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
         EEUnit* theUnit = theNode->mUnit;
         if (theUnit != NULL && EEGetTileUnitStanding(theUnit, inPlayer, inUnitType, inIgnoreOwner) == 1)
             outUnits.push_back(theUnit);
     }
-    return outUnits.size() > 0;
+    return theNote.R(outUnits.size() > 0);
 }
 
 // FUNCTION: EXE 0x63e600
@@ -1154,6 +1280,7 @@ void EEGetSubTileSteps(float inSize, long inLength, long inDX, long inDY, bool i
 bool EEFindPlaceOnTile(EEComplexUnit* inUnit, EEUnitClass* inClass, long inX, long inY, long inSize, long inToX, long inToY,
                 long inSquare, GE3DPoint* outLocation)
 {
+    EEUUNote theNote(4); theNote.U(inUnit).C(inClass).I(inX).I(inY).I(inSize).I(inToX).I(inToY).I(inSquare).OutP(outLocation);   // TEST ONLY (UUTL)
     GE3DPoint thePosition;
     std::vector<EEUnit*> theUnits;
     float theStepX = 0.0f;
@@ -1230,7 +1357,7 @@ bool EEFindPlaceOnTile(EEComplexUnit* inUnit, EEUnitClass* inClass, long inX, lo
         while (theY < 0.0f)
             theY += 1.0f;
     }
-    return theFound;
+    return theNote.R(theFound);
 }
 
 // 0x24119a (below): the tiles of the ring inRange around the inSize square at (inX, inY), or inTarget's own
@@ -1243,6 +1370,7 @@ void EEGetTilesAround(EEComplexUnit* inUnit, EEComplexUnit* inTarget, long inX, 
 void EEGetTilesAroundUnit(EEComplexUnit* inUnit, EEComplexUnit* inContainer, long inRange, long inCorners, bool inArg5,
                 std::vector<EETileCoordinate>& outTiles)
 {
+    EEUUNote theNote(5); theNote.U(inUnit).U(inContainer).I(inRange).I(inCorners).I(inArg5).OutT(&outTiles);   // TEST ONLY (UUTL)
     EEGetTilesAround(inUnit, inContainer, inContainer->mTileX, inContainer->mTileY, inContainer->mUnitClass->mTileSize, inRange,
                inCorners, inArg5, outTiles);
 }
@@ -1274,6 +1402,7 @@ void EEGetTilesAround(EEComplexUnit* inUnit, EEComplexUnit* inTarget, long inX, 
 void EEGetSortedRingTiles(const GE3DPoint& inFrom, long inX, long inY, long inSize, long inRange, long inCorners,
                 std::vector<U2DPoint<long> >& outTiles)
 {
+    EEUUNote theNote(6); theNote.P(inFrom).I(inX).I(inY).I(inSize).I(inRange).I(inCorners).OutT(&outTiles);   // TEST ONLY (UUTL)
     std::vector<U2DPoint<long> > theSides;
     std::vector<U2DPoint<long> > theCorners;
     outTiles.clear();
@@ -1334,6 +1463,7 @@ bool EEIsSameResearch(long inFirst, long inSecond)
 bool EEPickTileNear(std::vector<EETileCoordinate>& inTiles, EEComplexUnit* inUnit, EEComplexUnit* inContainer, bool inIgnoreBlockedLine,
                 GE3DPoint& outLocation)
 {
+    EEUUNote theNote(7); theNote.T(inTiles).U(inUnit).U(inContainer).I(inIgnoreBlockedLine).OutP(&outLocation);   // TEST ONLY (UUTL)
     EEAIContinent* theContinent = NULL;
     bool theFound = false;
     EEUnit* theArg5;
@@ -1357,7 +1487,7 @@ bool EEPickTileNear(std::vector<EETileCoordinate>& inTiles, EEComplexUnit* inUni
         else
             theFound = false;
     }
-    return theFound;
+    return theNote.R(theFound);
 }
 
 // FUNCTION: EXE 0x641658
@@ -1366,17 +1496,18 @@ bool EEPickTileNear(std::vector<EETileCoordinate>& inTiles, EEComplexUnit* inUni
 // for an amphibious class, and no unit on it that blocks inUnit (always for a class with flag 1 and no Virtual5C)
 bool EECanStandOn(const EETileCoordinate& inTile, EEComplexUnit* inUnit)
 {
+    EEUUNote theNote(8); theNote.I(inTile.mX).I(inTile.mY).U(inUnit);   // TEST ONLY (UUTL)
     EETile* theTile = ::gWorld.mMap->RTSMap::GetTile(inTile.GetX(), inTile.GetY());
     bool theResult = true;
     if ((inUnit->GetUnitClass()->mDomains & kMovementAir) && !inUnit->GetUnitClass()->FliesOver())
-        return theResult;
+        return theNote.R(theResult);
     if (theTile == NULL || ::gWorld.mMap->IsEdgeTile(inTile.GetX(), inTile.GetY())
         || !inUnit->GetUnitClass()->CanMoveOnTerrain(inUnit, theTile->mTerrainType)) {
         theResult = false;
     } else {
         theResult = true;
         if (inUnit->GetUnitClass()->FliesOver() || (inUnit->GetUnitClass()->mDomains & kMovementSpace))
-            return theResult;
+            return theNote.R(theResult);
         if (inUnit->GetUnitClass()->mDomains & kMovementSea) {
             long theFlag = gContinentManager.GetTileFlag(inTile.GetX(), inTile.GetY());
             if (theFlag != 0) {
@@ -1385,7 +1516,7 @@ bool EECanStandOn(const EETileCoordinate& inTile, EEComplexUnit* inUnit)
                 else
                     theResult = inUnit->mWaterState != 3;
                 if (!theResult)
-                    return theResult;
+                    return theNote.R(theResult);
             }
         }
         for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
@@ -1395,7 +1526,7 @@ bool EECanStandOn(const EETileCoordinate& inTile, EEComplexUnit* inUnit)
             }
         }
     }
-    return theResult;
+    return theNote.R(theResult);
 }
 
 // FUNCTION: EXE 0x641743
@@ -1744,6 +1875,7 @@ struct EEUUTileAmong {
 bool EEGetDockShipPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* inUnit, bool inFacePoint, bool inArg5,
                 GETransformation* outTransformation)
 {
+    EEUUNote theNote(9); theNote.P(*inPoint).C(inClass).U(inUnit).I(inFacePoint).I(inArg5).OutM(outTransformation).OutF(&inUnit->mComplexUnit->mLaunchYaw);   // TEST ONLY (UUTL)
     std::vector<EEUnit*> theUnits;
     std::vector<EEUnit*> theMore;
     std::vector<U2DPoint<long> > theLine;
@@ -1903,7 +2035,7 @@ done:
     }
     if (theNext != theUnit->mLaunchYaw)
         theUnit->mLaunchYaw = theNext;
-    return theFound;
+    return theNote.R(theFound);
 }
 
 // FUNCTION: EXE 0x64352f
@@ -1924,6 +2056,7 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEComplexUnit* inUnit, EEUnitClass* inC
                      unsigned long inY, long inSize, long inRings, bool inCorners, bool inIncludeCenter, bool inFacePoint,
                      bool inArg11, GETransformation* outTransformation, EEComplexUnit* inTarget)
 {
+    EEUUNote theNote(10); theNote.P(*inPoint).U(inUnit).C(inClass).I(inX).I(inY).I(inSize).I(inRings).I(inCorners).I(inIncludeCenter).I(inFacePoint).I(inArg11).U(inTarget).OutM(outTransformation);   // TEST ONLY (UUTL)
     std::vector<U2DPoint<long> > theUnused1;
     std::vector<U2DPoint<long> > theUnused2;
     std::vector<U2DPoint<long> > theTiles;
@@ -2001,7 +2134,7 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEComplexUnit* inUnit, EEUnitClass* inC
             theRoll = theMap->GetTerrainRoll(*outTransformation);
         outTransformation->SetOrientationYPR(theYaw, thePitch, theRoll);
     }
-    return !theSearching;
+    return theNote.R(!theSearching);
 }
 
 // FUNCTION: EXE 0x643978
@@ -2009,6 +2142,7 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEComplexUnit* inUnit, EEUnitClass* inC
 // How inPlayer sees inUnit as a candidate of unit type inUnitType: 0 not at all, 1 a target, 2 otherwise (inferred)
 char EEGetTileUnitStanding(EEUnit* inUnit, EEPlayer* inPlayer, long inUnitType, bool inIgnoreOwner)
 {
+    EEUUNote theNote(11); theNote.U(inUnit).Pl(inPlayer).I(inUnitType).I(inIgnoreOwner);   // TEST ONLY (UUTL)
     EEUnitClass* theClass = gUnitClassTable[inUnitType];
     EEPlayer* theOwner = inUnit->mPlayer;
     EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
@@ -2016,28 +2150,28 @@ char EEGetTileUnitStanding(EEUnit* inUnit, EEPlayer* inPlayer, long inUnitType, 
     unsigned long theType = theUnitClass->mUnitType;
 
     if (theUnitClass->mIsDecoration || theType == kUnitTypeWaypoint || theType == kUnitTypePathPoint)
-        return 0;
+        return theNote.R(0);
     if (inUnit->mHitPoints == 0 && theUnitClass->mCategory != kUnitCategoryResource)
-        return 0;
+        return theNote.R(0);
     if (theUnitClass->mCanFly && theComplexUnit != NULL
         && theComplexUnit->mPhysicalModel.GetLocation().GetZ() > theComplexUnit->mTile->GetHeight())
-        return 0;
+        return theNote.R(0);
     if (theUnitClass->IsLandBuilding() && theComplexUnit != NULL && theComplexUnit->IsFoundation() && inPlayer != NULL
         && inPlayer->IsHuman() && theOwner != inPlayer)
-        return 0;
+        return theNote.R(0);
     if (gUnitSetManager.Contains(theType, theClass->mOverlapUnitSet))
-        return 0;
+        return theNote.R(0);
     if (inPlayer == NULL)
-        return 2;
+        return theNote.R(2);
     if ((inIgnoreOwner || (theOwner != inPlayer && inPlayer->mEnemies[theOwner->GetPlayerID()] != 0)) && theComplexUnit != NULL
         && theComplexUnit->mCurrentPhysicsAction == 0)
-        return 1;
+        return theNote.R(1);
     if ((inIgnoreOwner || theOwner == inPlayer || inPlayer->mEnemies[theOwner->GetPlayerID()] == 0) && theComplexUnit != NULL
         && theComplexUnit->mStats->mMaxVelocity > 0.0f)
-        return 1;
+        return theNote.R(1);
     if (theUnitClass->mFamily == kUnitFamilyAnimal && theComplexUnit != NULL && theComplexUnit->mStats->mAttack == 0.0f)
-        return 1;
-    return 2;
+        return theNote.R(1);
+    return theNote.R(2);
 }
 
 // FUNCTION: EXE 0x643ae1
@@ -2096,12 +2230,13 @@ void EEMakeWallJunctions(std::vector<EEComplexUnit*>& inUnits, std::vector<EETil
 // Tells whether every tile of a rectangle can take a unit type for the unit's player
 bool EEBlockTakes(EEUnit* inUnit, long inUnitType, long inX, long inY, long inWidth, long inHeight, long inIgnoreOwner)
 {
+    EEUUNote theNote(12); theNote.U(inUnit).I(inUnitType).I(inX).I(inY).I(inWidth).I(inHeight).I(inIgnoreOwner);   // TEST ONLY (UUTL)
     bool theResult = true;
     for (long theX = inX; theX < inX + inWidth && theResult; theX++) {
         for (long theY = inY; theY < inY + inHeight && theResult; theY++)
             theResult = EECanPlaceOnTile(inUnit != NULL ? inUnit->mPlayer : NULL, inUnitType, theX, theY, 0, inIgnoreOwner);
     }
-    return theResult;
+    return theNote.R(theResult);
 }
 
 // FUNCTION: EXE 0x643ce6
@@ -2109,12 +2244,13 @@ bool EEBlockTakes(EEUnit* inUnit, long inUnitType, long inX, long inY, long inWi
 // returns the result in al (EECPBuildManager tests it)
 bool EEPlayerBlockTakes(EEPlayer* inPlayer, long inUnitType, long inX, long inY, long inWidth, long inHeight, long inIgnoreOwner)
 {
+    EEUUNote theNote(13); theNote.Pl(inPlayer).I(inUnitType).I(inX).I(inY).I(inWidth).I(inHeight).I(inIgnoreOwner);   // TEST ONLY (UUTL)
     bool theResult = true;
     for (long theX = inX; theX < inX + inWidth && theResult; theX++) {
         for (long theY = inY; theY < inY + inHeight && theResult; theY++)
             theResult = EECanPlaceOnTile(inPlayer, inUnitType, theX, theY, 0, inIgnoreOwner);
     }
-    return theResult;
+    return theNote.R(theResult);
 }
 
 // (The target search of 0x243d43, EEUUTargetSearch with its filter 0x24ffca and scoring 0x25000c, and the tile
@@ -2726,6 +2862,7 @@ bool EEClearUnderBuilding(long inX, long inY, long inSize)
 // Returns the compass sector (0..7) of the direction from one tile to another
 long EEGetTileDirection(long inX1, long inY1, long inX2, long inY2)
 {
+    EEUUNote theNote(14); theNote.I(inX1).I(inY1).I(inX2).I(inY2);   // TEST ONLY (UUTL)
     float theAngle = UMArcTan2((float)(inX1 - inX2), (float)(inY2 - inY1));
     long theSector = 4;
     if (theAngle > kUUSectorHigh) {
@@ -2735,7 +2872,7 @@ long EEGetTileDirection(long inX1, long inY1, long inX2, long inY2)
         if (theSector >= 8)
             theSector = 3;
     }
-    return theSector;
+    return theNote.R(theSector);
 }
 
 // FUNCTION: EXE 0x645261
@@ -2848,6 +2985,7 @@ void EESplitCalamityFlags(unsigned long inFlags, std::vector<unsigned long>& out
 // differ by exactly (+1, +1), cutting diagonal corners
 void EEDropDiagonalCorners(std::vector<EETileCoordinate>& ioTiles)
 {
+    EEUUNote theNote(15); theNote.T(ioTiles).OutT(&ioTiles);   // TEST ONLY (UUTL)
     long thePrevX = 0;
     long thePrevY = 0;
     unsigned long theCount = ioTiles.size();
@@ -2878,6 +3016,7 @@ void EEDropDiagonalCorners(std::vector<EETileCoordinate>& ioTiles)
 // Collects the player's town centers on the corners and sides of a farm's footprint
 bool EEGetFarmDropSites(EEComplexUnit* inUnit, std::vector<EEUnit*>& outUnits)
 {
+    EEUUNote theNote(16); theNote.U(inUnit).Us(outUnits).OutU(&outUnits);   // TEST ONLY (UUTL)
     std::vector<U2DPoint<long> > theTiles;
     std::vector<EEUnit*> theUnits;
     long theSize = inUnit->mUnitClass->mTileSize;
@@ -2897,13 +3036,14 @@ bool EEGetFarmDropSites(EEComplexUnit* inUnit, std::vector<EEUnit*>& outUnits)
         if ((theType == kUnitTypeGranaryImproved || theType == kUnitTypeGranary) && (*it)->mPlayer == inUnit->mPlayer)
             outUnits.push_back(*it);
     }
-    return outUnits.size() > 0;
+    return theNote.R(outUnits.size() > 0);
 }
 
 // FUNCTION: EXE 0x645a19
 // Finds the nearest free farm of the unit's player, ring by ring (the ring reached goes back)
 EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioRing)
 {
+    EEUUNote theNote(17); theNote.U(inUnit).I(inFreeOnly).I(*ioRing).OutL(ioRing);   // TEST ONLY (UUTL)
     std::vector<EETileCoordinate> theTiles;
     std::vector<EEUnit*> theUnits;
     long theRing = *ioRing;
@@ -2939,7 +3079,7 @@ EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioRi
         theRing++;
     } while (!theFound);
     *ioRing = theRing;
-    return theResult;
+    return theNote.RU(theResult);
 }
 
 // FUNCTION: EXE 0x645bc4
@@ -3090,6 +3230,7 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
 // gap between them pushed out to its reach, else a step away from the first attacker (EEUnitClass::FindSafeLocation)
 bool EEGetEscapePoint(EEComplexUnit* inUnit, GE2DPoint& outLocation)
 {
+    EEUUNote theNote(18); theNote.U(inUnit).OutF(&outLocation.mX, &outLocation.mY);   // TEST ONLY (UUTL)
     GE3DPoint theMiddle;
     GE3DPoint thePoint;
     GE3DLine theLine;
@@ -3153,7 +3294,7 @@ bool EEGetEscapePoint(EEComplexUnit* inUnit, GE2DPoint& outLocation)
                 }
                 theResult = ::gWorld.mMap->RTSMap::GetTile(UMFloor(outLocation.GetX()), UMFloor(outLocation.GetY())) != NULL;
                 if (theResult)
-                    return theResult;
+                    return theNote.R(theResult);
             }
         }
     }
@@ -3168,7 +3309,7 @@ bool EEGetEscapePoint(EEComplexUnit* inUnit, GE2DPoint& outLocation)
         EEMoveInDirection(theFrom, outLocation, theDirection, UMFloatToLong(theDistance));
         theResult = ::gWorld.mMap->GetTile(UMFloor(outLocation.GetX()), UMFloor(outLocation.GetY())) != NULL;
     }
-    return theResult;
+    return theNote.R(theResult);
 }
 
 // FUNCTION: EXE 0x6466fe
@@ -3262,6 +3403,7 @@ bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint)
 // Collects the tiles around a rectangle (sides only, no corners)
 void EEGetSquareRing(long inX, long inY, long inWidth, long inHeight, std::vector<U2DPoint<long> >& outTiles)
 {
+    EEUUNote theNote(19); theNote.I(inX).I(inY).I(inWidth).I(inHeight).OutT(&outTiles);   // TEST ONLY (UUTL)
     outTiles.clear();
     outTiles.reserve((inWidth + inHeight) * 2);
     long theBottom = inHeight + inY;
@@ -3306,6 +3448,7 @@ void EEGetSquareRing(long inX, long inY, long inWidth, long inHeight, std::vecto
 // Collects the tiles around a square (sides only)
 void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles)
 {
+    EEUUNote theNote(20); theNote.I(inX).I(inY).I(inSize).OutT(&outTiles);   // TEST ONLY (UUTL)
     EEGetSquareRing(inX, inY, inSize, inSize, outTiles);
 }
 
@@ -3316,6 +3459,7 @@ void EEGetSideTiles(long inX, long inY, long inSize, std::vector<U2DPoint<long> 
 void EEGetBlockRing(long inCorners, long inX, long inY, long inWidth, long inHeight, std::vector<EETileCoordinate>& outTiles,
                 bool inAppend)
 {
+    EEUUNote theNote(21); theNote.I(inCorners).I(inX).I(inY).I(inWidth).I(inHeight).I(inAppend).T(outTiles).OutT(&outTiles);   // TEST ONLY (UUTL)
     if (!inAppend) {
         outTiles.clear();
         outTiles.reserve((inWidth + inHeight) * 2 + 4);
@@ -3344,6 +3488,7 @@ void EEGetBlockRing(long inCorners, long inX, long inY, long inWidth, long inHei
 // Collects the tiles around a square, corners as asked
 void EEGetSquareBlockRing(long inCorners, long inX, long inY, long inSize, std::vector<EETileCoordinate>& outTiles, bool inAppend)
 {
+    EEUUNote theNote(22); theNote.I(inCorners).I(inX).I(inY).I(inSize).I(inAppend).T(outTiles).OutT(&outTiles);   // TEST ONLY (UUTL)
     EEGetBlockRing(inCorners, inX, inY, inSize, inSize, outTiles, inAppend);
 }
 
@@ -3444,20 +3589,21 @@ float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* ou
 // Tells whether both tiles hold a wall piece
 bool EEIsCornerBlocked(unsigned long inX1, unsigned long inY1, unsigned long inX2, unsigned long inY2)
 {
+    EEUUNote theNote(23); theNote.I(inX1).I(inY1).I(inX2).I(inY2);   // TEST ONLY (UUTL)
     EEMap* theMap = ::gWorld.mMap;
     bool theFirst = false;
     bool theSecond = false;
     EETile* theTile = theMap->GetTile(inX1, inY1);
     EETile* theOther = theMap->GetTile(inX2, inY2);
     if (theTile == NULL || theOther == NULL)
-        return false;
+        return theNote.R(false);
     RTSTileUnitNode* theNode;
     for (theNode = theTile->mUnits; theNode != NULL && theNode->mUnit != NULL && !theFirst; theNode = theNode->mNext)
         theFirst = theNode->mUnit->mUnitClass->mIsWall;
     for (theNode = theOther->mUnits; theNode != NULL && theNode->mUnit != NULL && !theSecond; theNode = theNode->mNext)
         theSecond = theNode->mUnit->mUnitClass->mIsWall;
-    return theFirst && theSecond;
-    return false;
+    return theNote.R(theFirst && theSecond);
+    return theNote.R(false);
 }
 
 // FUNCTION: EXE 0x646f93
@@ -3494,6 +3640,7 @@ EEComplexUnit* EEGetAttackPart(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 // by two wall pieces
 void EEGetRingCorners(long inCorners, long inX, long inY, long inWidth, long inHeight, std::vector<U2DPoint<long> >& outTiles)
 {
+    EEUUNote theNote(24); theNote.I(inCorners).I(inX).I(inY).I(inWidth).I(inHeight).OutT(&outTiles);   // TEST ONLY (UUTL)
     outTiles.clear();
     if ((char)inCorners || !EEIsCornerBlocked(inX - 1, inY, inX, inY - 1))
         outTiles.push_back(U2DPoint<long>(inX - 1, inY - 1));
@@ -3533,6 +3680,7 @@ void EEGetEnemiesAround(EEComplexUnit* inUnit, std::vector<EEUnit*>& outAttacker
 // Collects the corner tiles of a square
 void EEGetCornerTiles(long inCorners, long inX, long inY, long inSize, std::vector<U2DPoint<long> >& outTiles)
 {
+    EEUUNote theNote(25); theNote.I(inCorners).I(inX).I(inY).I(inSize).OutT(&outTiles);   // TEST ONLY (UUTL)
     EEGetRingCorners(inCorners, inX, inY, inSize, inSize, outTiles);
 }
 
@@ -3761,6 +3909,7 @@ bool EEIsSeenByOwnerOf(EEComplexUnit* inUnit, EEUnit* inOther)
 long EEExtendWallLine(std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer, EEUnitClass* inClass,
                     std::vector<EETileCoordinate>& outTiles)
 {
+    EEUUNote theNote(26); theNote.T(inTiles).Pl(inPlayer).C(inClass).T(outTiles).OutT(&outTiles);   // TEST ONLY (UUTL)
     std::vector<U2DPoint<long> > theTiles;
     std::vector<U2DPoint<long> > theRing;
     std::vector<EETileCoordinate> theLine;
@@ -3814,7 +3963,7 @@ long EEExtendWallLine(std::vector<EETileCoordinate>& inTiles, EEPlayer* inPlayer
         }
         theResult = 0;
     }
-    return theResult;
+    return theNote.R(theResult);
 }
 
 // TEMPLATE: EXE 0x6481da
@@ -3908,6 +4057,7 @@ bool EEFindOpenSpot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocat
 // A place for inUnit next to inTarget, preferring tiles in inUnit's own path area and continent (inferred)
 bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation)
 {
+    EEUUNote theNote(27); theNote.U(inUnit).U(inTarget).OutP(&outLocation);   // TEST ONLY (UUTL)
     std::vector<EETileCoordinate> theTiles;
     std::vector<EETileCoordinate> theOthers;
     bool theResult = false;
@@ -3940,13 +4090,14 @@ bool EEFindResourceSpot(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoin
         if (theTiles.size() != 0)
             theResult = EEPickTileNear(theTiles, inUnit, inTarget, 0, outLocation);
     }
-    return theResult;
+    return theNote.R(theResult);
 }
 
 // FUNCTION: EXE 0x64899b
 // Finds a free spot next to a target (or the nearest piece of its group) for a unit
 bool EEFindNextFreeTile(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoint& outLocation)
 {
+    EEUUNote theNote(28); theNote.U(inUnit).U(inTarget).OutP(&outLocation);   // TEST ONLY (UUTL)
     std::vector<EETileCoordinate> theTiles;
     EEComplexUnit* theTarget = inTarget;
     bool theOuter = true;
@@ -3955,7 +4106,7 @@ bool EEFindNextFreeTile(EEComplexUnit* inUnit, EEComplexUnit* inTarget, GE3DPoin
         theOuter = theTarget->mPreviousPart == NULL;
     }
     EEGetTilesAroundUnit(inUnit, theTarget, 1, 0, theOuter, theTiles);
-    return EEPickTileNear(theTiles, inUnit, theTarget, 0, outLocation);
+    return theNote.R(EEPickTileNear(theTiles, inUnit, theTarget, 0, outLocation));
 }
 
 // FUNCTION: EXE 0x648a15
@@ -4020,6 +4171,7 @@ void EEGetWallSideTiles(EEComplexUnit* inUnit, EEComplexUnit* inTarget, std::vec
 // Finds a place for a unit to attack a target from (around a wall it stands in, or next to it)
 bool EEGetWallSpot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocation)
 {
+    EEUUNote theNote(29); theNote.U(inUnit).U(inTarget).OutP(&outLocation);   // TEST ONLY (UUTL)
     std::vector<EETileCoordinate> theTiles;
     bool theResult;
     if (inTarget->mStats->mMaxVelocity <= 0.0f) {
@@ -4029,7 +4181,7 @@ bool EEGetWallSpot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& outLocati
     } else {
         theResult = EEFindOpenSpot(inUnit, inTarget, outLocation);
     }
-    return theResult;
+    return theNote.R(theResult);
 }
 
 // FUNCTION: EXE 0x648d05
@@ -4103,6 +4255,7 @@ void EEGetTileInDirection(long inX, long inY, long* outX, long* outY, long inDir
 // Returns the tile a distance away in a compass direction (tile form)
 void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, long inDirection, long inDistance)
 {
+    EEUUNote theNote(30); theNote.I(inTile.mX).I(inTile.mY).I(inDirection).I(inDistance).OutL(&outTile.mX, &outTile.mY);   // TEST ONLY (UUTL)
     long theX;
     long theY;
     EEGetTileInDirection(inTile.mX, inTile.mY, &theX, &theY, inDirection, inDistance);
@@ -4125,6 +4278,7 @@ void EEGetNextTile(const EETileCoordinate& inTile, EETileCoordinate& outTile, lo
 // Moves a point a number of tiles in a compass direction, keeping its offset within the tile
 void EEMoveInDirection(const GE2DPoint& inFrom, GE2DPoint& outTo, long inDirection, long inDistance)
 {
+    EEUUNote theNote(31); theNote.F(inFrom.mX).F(inFrom.mY).I(inDirection).I(inDistance).OutF(&outTo.mX, &outTo.mY);   // TEST ONLY (UUTL)
     long theX = UMFloor(inFrom.GetX());
     long theY = UMFloor(inFrom.GetY());
     float theOffsetX = inFrom.GetX() - theX;
@@ -4138,12 +4292,13 @@ void EEMoveInDirection(const GE2DPoint& inFrom, GE2DPoint& outTo, long inDirecti
 // Turns a compass direction by a random amount within a spread
 long EETurnAway(long inDirection, long inSpread)
 {
+    EEUUNote theNote(32); theNote.I(inDirection).I(inSpread);   // TEST ONLY (UUTL)
     long theTurn = gPhysics->GetRandom(0L, inSpread * 2 + 1) + (4 - inSpread);
     long theResult = inDirection;
     bool theSide = gPhysics->GetRandom(0L, 1L) != 0;
     if (theTurn != 0)
         theResult = EETurnDirection(theResult, theTurn % 8, theSide);
-    return theResult;
+    return theNote.R(theResult);
 }
 
 // FUNCTION: EXE 0x648fe4
@@ -4231,6 +4386,7 @@ unsigned long EEGetLeadUnitID(EEPlayer* inPlayer)
 // Collects the ring of tiles at a distance around a tile
 void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoint<long> >& outTiles)
 {
+    EEUUNote theNote(33); theNote.I(inX).I(inY).I(inRadius).OutT(&outTiles);   // TEST ONLY (UUTL)
     long theSide = inRadius * 2 + 1;
     long theInner = inRadius * 2 - 1;
     long i;
@@ -4351,6 +4507,7 @@ void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPo
 // Collects the tiles whose nearest point lies within a distance of a point
 void EEGetTilesNearPoint(const GE3DPoint& inPoint, float inDistance, std::vector<EETileCoordinate>& outTiles)
 {
+    EEUUNote theNote(34); theNote.P(inPoint).F(inDistance).T(outTiles).OutT(&outTiles);   // TEST ONLY (UUTL)
     float theDistanceSquared = inDistance * inDistance;
     long theLeft = UMFloor(inPoint.GetX() - inDistance);
     long theTop = UMFloor(inPoint.GetY() - inDistance);
@@ -4403,6 +4560,7 @@ void EEGetFanTiles(const GE2DPoint& inCenter, float inRadius, float inFrom, floa
 void EEGetTilesInRadius(long inX, long inY, unsigned long inRadius, bool inInclusive,
                         std::vector<EETileCoordinate>& outTiles)
 {
+    EEUUNote theNote(35); theNote.I(inX).I(inY).I((long)inRadius).I(inInclusive).T(outTiles).OutT(&outTiles);   // TEST ONLY (UUTL)
     long theFar = inInclusive ? inRadius : inRadius - 1;
     if ((long)inRadius < 0)
         return;
@@ -4437,6 +4595,7 @@ void EEGetTilesInRadius(long inX, long inY, unsigned long inRadius, bool inInclu
 // Collects the tiles of a unit's footprint (a gate's pieces; a long wonder's full length)
 void EEGetFootprintTiles(EEUnit* inUnit, std::vector<EETileCoordinate>& outTiles)
 {
+    EEUUNote theNote(36); theNote.U(inUnit).T(outTiles).OutT(&outTiles);   // TEST ONLY (UUTL)
     EEUnitClass* theClass = inUnit->mUnitClass;
     unsigned long theY = inUnit->GetTileY();
     long theSize = theClass->mTileSize;
@@ -4508,6 +4667,7 @@ void EEGetWallLineXY(const GE2DPoint& inFrom, const GE2DPoint& inTo, std::vector
 // Collects the tiles of a wall line between two tiles
 void EEGetWallLine(const EETileCoordinate& inFrom, const EETileCoordinate& inTo, std::vector<EETileCoordinate>& outTiles)
 {
+    EEUUNote theNote(37); theNote.I(inFrom.mX).I(inFrom.mY).I(inTo.mX).I(inTo.mY).OutT(&outTiles);   // TEST ONLY (UUTL)
     outTiles.clear();
     if (inFrom.mX == inTo.mX && inFrom.mY == inTo.mY) {
         outTiles.push_back(inFrom);
@@ -4744,6 +4904,7 @@ long EEGetUnitsInFan(const GE2DPoint& inCenter, float inRadius, float inFrom, fl
 // Collects the units on the tiles of a screen rectangle; their number
 long EEGetUnitsInRectangle(const GERectangle& inRectangle, std::vector<EEUnit*>& outUnits)
 {
+    EEUUNote theNote(38); theNote.F(inRectangle.GetLeft()).F(inRectangle.GetTop()).F(inRectangle.GetRight()).F(inRectangle.GetBottom()).Us(outUnits).OutU(&outUnits);   // TEST ONLY (UUTL)
     std::vector<U2DPoint<long> > theTiles;
     long theRight = UMFloor(inRectangle.GetRight());
     long theBottom = UMFloor(inRectangle.GetBottom());
@@ -4758,7 +4919,7 @@ long EEGetUnitsInRectangle(const GERectangle& inRectangle, std::vector<EEUnit*>&
             theTiles.push_back(U2DPoint<long>(theX, theY));
         theX++;
     }
-    return EEGetUnitsOnTiles(theTiles, outUnits);
+    return theNote.R(EEGetUnitsOnTiles(theTiles, outUnits));
 }
 
 // FUNCTION: EXE 0x64c22a
@@ -4794,6 +4955,7 @@ long EEGetUnitsInRadius(GE2DPoint inCenter, float inRadius, std::vector<EEUnit*>
 // Returns the living unit of a type on a tile, or NULL
 EEUnit* EEGetTileUnitOfType(const EETileCoordinate& inTile, unsigned long inUnitType)
 {
+    EEUUNote theNote(39); theNote.I(inTile.mX).I(inTile.mY).I((long)inUnitType);   // TEST ONLY (UUTL)
     EEMap* theMap = ::gWorld.mMap;
     EEUnit* theUnit = NULL;
     bool theFound = false;
@@ -4810,13 +4972,14 @@ EEUnit* EEGetTileUnitOfType(const EETileCoordinate& inTile, unsigned long inUnit
             }
         }
     }
-    return theFound ? theUnit : NULL;
+    return theNote.RU(theFound ? theUnit : NULL);
 }
 
 // FUNCTION: EXE 0x64c395
 // Collects a player's units of a type; their number
 long EEGetPlayerUnitsOfType(long inUnitType, long inPlayer, std::vector<EEUnit*>& outUnits)
 {
+    EEUUNote theNote(40); theNote.I(inUnitType).I(inPlayer).Us(outUnits).OutU(&outUnits);   // TEST ONLY (UUTL)
     EEUnit* theUnit = NULL;
     long theCount = 0;
     for (theUnit = ::gWorld.mPlayers[inPlayer]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
@@ -4825,23 +4988,25 @@ long EEGetPlayerUnitsOfType(long inUnitType, long inPlayer, std::vector<EEUnit*>
             theCount++;
         }
     }
-    return theCount;
+    return theNote.R(theCount);
 }
 
 // FUNCTION: EXE 0x64c3df
 // Collects the units on a tile; their number
 long EEGetUnitsOnTile(long inX, long inY, std::vector<EEUnit*>& outUnits)
 {
+    EEUUNote theNote(41); theNote.I(inX).I(inY).OutU(&outUnits);   // TEST ONLY (UUTL)
     std::vector<U2DPoint<long> > theTiles;
     outUnits.clear();
     theTiles.push_back(U2DPoint<long>(inX, inY));
-    return EEGetUnitsOn(theTiles, outUnits);
+    return theNote.R(EEGetUnitsOn(theTiles, outUnits));
 }
 
 // FUNCTION: EXE 0x64c433
 // Collects the units on a list of tiles
 long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits)
 {
+    EEUUNote theNote(42); theNote.T(inTiles).Us(outUnits).OutU(&outUnits);   // TEST ONLY (UUTL)
     EEMap* theMap = ::gWorld.mMap;
     long theCount = 0;
     if (theMap != NULL) {
@@ -4858,7 +5023,7 @@ long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& o
             }
         }
     }
-    return theCount;
+    return theNote.R(theCount);
 }
 
 // FUNCTION: EXE 0x64c4be
@@ -4917,6 +5082,7 @@ long EEGetUnitsOfTypeOnTiles(std::vector<EETileCoordinate>& inTiles, EEPlayer* i
 // Collects the units of a type on a list of tiles; their number
 long EEGetWallUnitsOfTypeOnTiles(std::vector<EETileCoordinate>& inTiles, long inUnitType, std::vector<EEUnit*>& outUnits)
 {
+    EEUUNote theNote(43); theNote.T(inTiles).I(inUnitType).Us(outUnits).OutU(&outUnits);   // TEST ONLY (UUTL)
     EEMap* theMap = ::gWorld.mMap;
     long theCount = 0;
     long theX;
@@ -4939,13 +5105,14 @@ long EEGetWallUnitsOfTypeOnTiles(std::vector<EETileCoordinate>& inTiles, long in
             }
         }
     }
-    return theCount;
+    return theNote.R(theCount);
 }
 
 // FUNCTION: EXE 0x64c6fc
 // Collects the free tiles around a unit (its ring, corners included)
 void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles)
 {
+    EEUUNote theNote(44); theNote.U(inUnit).T(outTiles).OutT(&outTiles);   // TEST ONLY (UUTL)
     std::vector<U2DPoint<long> > theTiles;
     std::vector<U2DPoint<long> > theCorners;
     EEMap* theMap = ::gWorld.mMap;
@@ -5027,6 +5194,7 @@ void EEAddToFootprintTiles(EEUnit* inUnit)
 // Returns the tile two tiles away in a direction (1..8)
 void EEGetSlotTile(const EETileCoordinate& inTile, long inDirection, EETileCoordinate& outTile)
 {
+    EEUUNote theNote(45); theNote.I(inTile.mX).I(inTile.mY).I(inDirection).OutL(&outTile.mX, &outTile.mY);   // TEST ONLY (UUTL)
     long theSize = 0;
     long theDY = 0;
     long theDX = 0;
@@ -5299,6 +5467,7 @@ void EERemoveFromFootprintTiles(EEUnit* inUnit)
 // Drops repeated tiles from a list
 void EEDropRepeatedTiles(std::vector<EETileCoordinate>& ioTiles)
 {
+    EEUUNote theNote(46); theNote.T(ioTiles).OutT(&ioTiles);   // TEST ONLY (UUTL)
     long thePrevX = 1000;
     long thePrevY = 1000;
     for (unsigned long i = 0; i < ioTiles.size(); i++) {
@@ -5318,8 +5487,9 @@ void EEDropRepeatedTiles(std::vector<EETileCoordinate>& ioTiles)
 // Turns a compass direction by a number of steps, either way
 long EETurnDirection(long inDirection, long inSteps, bool inClockwise)
 {
+    EEUUNote theNote(47); theNote.I(inDirection).I(inSteps).I(inClockwise);   // TEST ONLY (UUTL)
     if (inDirection < 0 || inDirection > 7)
-        return inDirection;
+        return theNote.R(inDirection);
     for (long i = inSteps - 1; i >= 0; i--) {
         switch (inDirection) {
         case 0:
@@ -5348,13 +5518,14 @@ long EETurnDirection(long inDirection, long inSteps, bool inClockwise)
             break;
         }
     }
-    return inDirection;
+    return theNote.R(inDirection);
 }
 
 // FUNCTION: EXE 0x64db3f
 // Turns an angle by a random share of a full turn, kept in (-pi, pi]
 float EEJitterHeading(float inAngle, float inMin, float inMax)
 {
+    EEUUNote theNote(48); theNote.F(inAngle).F(inMin).F(inMax);   // TEST ONLY (UUTL)
     float theTurn = inMin == inMax ? inMin : gPhysics->GetRandom(inMin, inMax);
     float theAngle = 6.2831855f * (theTurn * 0.01f) + inAngle;
     if (theAngle > 6.2831855f) {
@@ -5365,7 +5536,7 @@ float EEJitterHeading(float inAngle, float inMin, float inMax)
         theAngle -= 6.2831855f;
     else if (theAngle < -3.1415927f)
         theAngle += 6.2831855f;
-    return theAngle;
+    return theNote.RF(theAngle);
 }
 
 
@@ -6057,13 +6228,14 @@ bool EECanPlace(EEPlayer* inPlayer, long inType, GE3DPoint* inLocation, long inX
 bool EECanPlaceUnitOnTile(EEPlayer* inPlayer, EEComplexUnit* inUnit, long inUnitType, long inX, long inY, bool inSkipPlayerChecks,
                 long inIgnoreOwner, bool& outFlag)
 {
+    EEUUNote theNote(49); theNote.Pl(inPlayer).U(inUnit).I(inUnitType).I(inX).I(inY).I(inSkipPlayerChecks).I(inIgnoreOwner);   // TEST ONLY (UUTL)
     std::vector<EEUnit*> theUnits;
     EEMap* theMap = ::gWorld.mMap;
     EETile* theTile = theMap->GetTile(inX, inY);
     EEUnitClass* theClass = gUnitClassTable[inUnitType];
     bool theResult = theTile != NULL;
     if (theTile == NULL)
-        return theResult;
+        return theNote.R(theResult);
     unsigned short theContinent = gContinentManager.GetContinentID(inX, inY);
     if (!theClass->mTerrainTypes[kTerrainDeepWater] && !theClass->mTerrainTypes[kTerrainSpace]) {
         if (inUnit != NULL) {
@@ -6099,7 +6271,7 @@ bool EECanPlaceUnitOnTile(EEPlayer* inPlayer, EEComplexUnit* inUnit, long inUnit
             }
         }
     }
-    return theResult;
+    return theNote.R(theResult);
 }
 
 // FUNCTION: EXE 0x64f4f2
@@ -6185,15 +6357,16 @@ bool EEIsEditorSpacingClear(EEUnitClass* inClass, GE3DPoint* inLocation, long in
 // Tells whether a tile has no unit (trees aside) blocking a class for a player, and is not space
 bool EEIsTileUnblocked(EEPlayer* inPlayer, long inUnitClass, EETile* inTile)
 {
+    EEUUNote theNote(50); theNote.Pl(inPlayer).I(inUnitClass);   // TEST ONLY (UUTL)
     long theCount = 0;
     if (inTile->mTerrainType == kTerrainSpace)
-        return false;
+        return theNote.R(false);
     for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
         EEUnit* theUnit = theNode->mUnit;
         if (theUnit != NULL && !theUnit->mUnitClass->mIsTree && EEGetTileUnitStanding(theUnit, inPlayer, inUnitClass, true) == 2)
             theCount++;
     }
-    return theCount == 0;
+    return theNote.R(theCount == 0);
 }
 
 // FUNCTION: EXE 0x64f8c0
