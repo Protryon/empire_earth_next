@@ -6,10 +6,11 @@
 // The plain members it mirrors are the Rust records the unit classes derive from (R5b.4, round 26: ee_units
 // unit_fields.rs EeUnitsRtsUnitFields, EeUnitsUnitFields, EeUnitsComplexUnitFields): a record keeps its object's record
 // addresses and every read of the store takes the values from them (store.rs refresh). The pointer members it mirrors
-// are write-through holders: EEUnitStoreField<T, F> has T's size and layout, reads as T, and every assignment stores
-// the value and then reports it (EEUnitStoreWrote: the record of a unit in the store, the object checked); what the
-// store keeps of them is derived: the class's category, type, domains and land-building flag at mUnitClass, the goal's
-// kind at mGoalState, the complex flag at mComplexUnit, set or not for the group, container, herd and command.
+// (EEUnit::mUnitClass, mComplexUnit; EEComplexUnit::mActiveGroup, mContainer, mCommand, mGoalState, mHerd) are read the
+// same way since round 27, at their offsets in the object (store.rs EeUnitsStoreSlots, set once by EEUnitStore.cpp):
+// what the store keeps of them is derived: the class's category, type, domains, flags (its record,
+// EeUnitsUnitClassFields), the goal's kind and id, the complex flag, set or not for the group, container, herd, the
+// command's type. Only the location is still reported (EEUnitStoreModel).
 //
 // TEST ONLY: EEUnitStoreCheck compares every unit of every player's list with its record (the simulation capture's
 // USCK record; a mismatch stops EE-SIM, exit code 3).
@@ -22,52 +23,13 @@
 class RTSUnit;
 class RTSPlayer;
 
-// the fields a holder reports (store.rs EE_UNIT_FIELD_*: the same values)
+// the location's report (store.rs EE_UNIT_FIELD_LOCATION_*; EEUnitStoreModel)
 enum EEUnitStoreFieldID {
-    kUnitFieldUnitClass = 5,    // EEUnit::mUnitClass (the record's category and unit type)
-    kUnitFieldComplex = 7,      // EEUnit::mComplexUnit
-    kUnitFieldGoal = 9,         // EEComplexUnit::mGoalState (the record's goal kind)
-    kUnitFieldLocation = 17,    // EEComplexUnit::mPhysicalModel's location (EEUnitStoreModel; the record's x, y, z)
-    kUnitFieldActiveGroup = 22, // EEComplexUnit::mActiveGroup (the record's: set or not)
-    kUnitFieldCommand = 23,     // EEComplexUnit::mCommand (the record's: its mType, 0 for none)
-    kUnitFieldHerd = 40,                // EEComplexUnit::mHerd (the record's: set or not)
-    kUnitFieldContainer = 41            // EEComplexUnit::mContainer (the record's: set or not)
+    kUnitFieldLocation = 17     // EEComplexUnit::mPhysicalModel's location (EEUnitStoreModel; the record's x, y, z)
 };
-// reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING,
-// EE_UNIT_FIELD_CAN_ATTACK_GROUND, and the combat reads' EE_UNIT_FIELD_FAMILY, _CLOAK_RADIUS, _CRUSADER,
-// _PARATROOPER_BOMBER, _HEAL_THRESHOLD): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its
-// constructor, and its mFamily, mCloakRadius, IsCrusader(), mIsParatrooperBomber and GetHealThreshold(), fixed once the
-// db's classes are made (EEUnitClass::InitUnitClasses)
 
-// a holder's member was written (EEUnitStore.cpp: the owner from the member's offset)
+// the location was written (EEUnitStore.cpp: the owner from the member's offset)
 void EEUnitStoreWrote(unsigned int inField, const void* inMember);
-
-// a member the unit store mirrors: T's size and layout, read as T, every write reported
-template <class T, unsigned int F>
-class EEUnitStoreField {
-public:
-    typedef T ValueType;
-    EEUnitStoreField() {}   // as the plain member: the constructors write it
-    // not copied: a holder lives only inside its unit (a copy's write would report from outside one)
-    EEUnitStoreField(const EEUnitStoreField& inOther) = delete;
-
-    operator T() const { return this->mValue; }
-    T Get() const { return this->mValue; }
-    T operator->() const { return this->mValue; }   // a pointer member's
-    // a pointer member's static_cast or C-style cast to a derived class (dynamic_cast takes Get())
-    template <class U> explicit operator U*() const { return static_cast<U*>(this->mValue); }
-
-    EEUnitStoreField& operator=(T inValue)
-    {
-        this->mValue = inValue;
-        EEUnitStoreWrote(F, this);
-        return *this;
-    }
-    EEUnitStoreField& operator=(const EEUnitStoreField& inOther) { return *this = inOther.mValue; }
-
-private:
-    T mValue;
-};
 
 // the unit enters inPlayer's list (its id inOwner; after the unit's mPlayer and id are final) / leaves it (also at
 // RTSUnit::FreeNode, a no-op unless a teardown dropped the list's reference first)

@@ -297,10 +297,10 @@ public:
     // (provisional name)
     static bool IsCarbonRock(unsigned long inUnitType);
 
-    EEUnitStoreField<EEUnitClass*, kUnitFieldUnitClass> mUnitClass;   // +0x2c (the unit store's)
+    EEUnitClass* mUnitClass;                // +0x2c (the unit store reads it: EEUnitStore.h)
     // +0x30: the complex unit this unit belongs to (the calamities read its hit points, transformation +0x130 and
     // goals through it: 0xafe2c, 0xb1a5d) (provisional name)
-    EEUnitStoreField<EEComplexUnit*, kUnitFieldComplex> mComplexUnit;   // (the unit store's)
+    EEComplexUnit* mComplexUnit;            // (the unit store reads it)
     EEUnitClassUpgrade* mStats;             // +0x34 (provisional name)
     // +0x38 mResourceType (saved), +0x3c mHitPoints (> 0: alive), +0x40 mResourceAmount (saved), +0x44 mHiddenFlags
     // (0x10: MoveTo moved it; 0x20 and the low 2 bits: Virtual40 0x228f90): EeUnitsUnitFields
@@ -830,7 +830,7 @@ public:
     EEPPatrolGroup* GetPatrolGroup() const { return this->mPatrolGroup; }
     EEPPatrolGroup* mPatrolGroup;           // +0x1c4 (RTTI EEPPatrolGroup, ee/EEPPatrolGroup.h)
     EEActiveGroup* GetActiveGroup() const { return this->mActiveGroup; }
-    EEUnitStoreField<EEActiveGroup*, kUnitFieldActiveGroup> mActiveGroup;   // +0x1c8 provisional name (0x5e407 and the teleport calamity call into it; the unit store's)
+    EEActiveGroup* mActiveGroup;            // +0x1c8 provisional name (0x5e407 and the teleport calamity call into it; the unit store reads it)
     // +0x1cc (non-zero: not selectable by the aircraft hot key; the unit carrying this one: the fire/plague functors
     // walk the chain to the outermost carrier; provisional name)
     EEComplexUnit* GetPreviousPart() const { return this->mPreviousPart; }
@@ -839,25 +839,25 @@ public:
     EEComplexUnit* mNextPart;               // +0x1d0 the next unit of a linked group (EEDoppelgangerManager 0x20278c walks it)
     EEComplexUnit* mHomeBase;               // +0x1d4
     EEComplexUnit* GetContainer() const { return this->mContainer; }  // inline (0x61c806 budget) r37_big B2
-    EEUnitStoreField<EEComplexUnit*, kUnitFieldContainer> mContainer;   // +0x1d8 provisional name (aircraft in an airport: its position is the holder's; the unit store's)
+    EEComplexUnit* mContainer;              // +0x1d8 provisional name (aircraft in an airport: its position is the holder's; the unit store reads it)
     EEComplexUnit* mLastAttacker;                 // +0x1dc (released by Virtual04)
     void SetLastAttacker(EEComplexUnit* inUnit);  // 0x22a3d8 (EnabledChanged 0x229de2; set-if-different with Reference) (provisional name)
     EEComplexUnit* mOwner;                        // +0x1e0 provisional name (SetOwner; referenced)
     EEComplexUnit* GetHolder() const { return this->mHolder; }
     EEComplexUnit* mHolder;                 // +0x1e4 (Virtual04: mRegeneration->ReleaseHeld(this))
     EEUnitAction* GetCommand() const { return this->mCommand; }
-    EEUnitStoreField<EEUnitAction*, kUnitFieldCommand> mCommand;   // +0x1e8 the unit's current script action (ee/EEUnitAction.h; the unit store's)
+    EEUnitAction* mCommand;                 // +0x1e8 the unit's current script action (ee/EEUnitAction.h; the unit store reads it)
     // +0x1ec a goal (EECPASGUHero::CheckCondition 0x64fd tests its mKind == 0xb; EECPASGUProphet::CanStillCast
     // dynamic_casts it to EEUnitGoal) (provisional name)
     EEUnitGoal* mActiveGoal;
     // +0x1f0 the unit's goal (EEMAddPatrolPoint dynamic_casts it to EEUGPatrol, src TD EEUnitGoal). Its
     // mKind 0xb = not to be cloaked (EECCCloaking). Name is provisional
     EEUnitGoal* GetGoalState() const { return this->mGoalState; }
-    EEUnitStoreField<EEUnitGoal*, kUnitFieldGoal> mGoalState;   // (the unit store's)
+    EEUnitGoal* mGoalState;                 // (the unit store reads it)
     RTSUnit* mLastResource;                 // +0x1f4
     EEUnit* mGatheredResource;              // +0x1f8 (SetGatheredResource: referenced, its +0x2b tested)
     EEUnit* mMine;                          // +0x1fc (a unit: the mining building tests its +0x2b/+0x40; provisional name)
-    EEUnitStoreField<EEHerd*, kUnitFieldHerd> mHerd;   // +0x200 the unit's herd (EEHerd AddUnit 0xa1b45 sets it, RemoveUnit 0xa3749 clears it; the unit store's)
+    EEHerd* mHerd;                          // +0x200 the unit's herd (EEHerd AddUnit 0xa1b45 sets it, RemoveUnit 0xa3749 clears it; the unit store reads it)
     float* mTurretAngles;                   // +0x204 (ResizeTurretAngles: delete[], new float[n] zeroed)
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     EEUnitBehavior* mBehavior;              // +0x208 the unit's behaviour (EEUnitAI 0x22d9b5 reads its mB09; EEUIFMGMainGroup compares it with EEUnitBehavior::sTable[i])

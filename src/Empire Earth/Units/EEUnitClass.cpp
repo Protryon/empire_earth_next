@@ -2287,6 +2287,7 @@ void EEUnitClass::CreateUnitClasses()
         theClass->mIsBoobyTrap = gUnitSetManager.Contains(theClass->mUnitType, 0x97);
         theClass->mIsParatrooperBomber = gUnitSetManager.Contains(theClass->mUnitType, 0x96);
         theClass->mSkipsLineOfFireCheck = gUnitSetManager.Contains(theClass->mUnitType, 0x86);
+        theClass->mIsLandBuildingClass = theClass->IsLandBuilding();   // port: the unit store reads it (EEUnitStore.h)
     }
     unsigned long theTotal = 0;
     for (unsigned long theKind = 0; theKind < 0x23; theKind++)

@@ -2531,6 +2531,24 @@ struct EeUnitsComplexUnitFields {
   bool mHasShiftQueuedBuild;
 };
 
+/// The twenty-seventh round's: where the store finds a unit's pointer members (byte offsets from the unit object:
+/// `EEUnit::mUnitClass`, `mComplexUnit`; `EEComplexUnit::mActiveGroup`, `mContainer`, `mCommand`, `mGoalState`,
+/// `mHerd`) and what it reads behind them (the class's record base in `EEUnitClass`, the goal's `mKind` and `mID`,
+/// the action's `mType`). The C++ sets it once, before the first record (`EEUnitStore.cpp`).
+struct EeUnitsStoreSlots {
+  uint64_t unit_class;
+  uint64_t complex_unit;
+  uint64_t active_group;
+  uint64_t container;
+  uint64_t command;
+  uint64_t goal_state;
+  uint64_t herd;
+  uint64_t class_fields;
+  uint64_t goal_kind;
+  uint64_t goal_id;
+  uint64_t action_type;
+};
+
 /// The result of a consistency check (`Store::check`).
 struct EeUnitStoreCheck {
   /// the objects compared
@@ -3099,6 +3117,9 @@ struct EeUnitsUnitClassFields {
   bool mIsBoobyTrap;
   bool mIsParatrooperBomber;
   bool mHasSpecialAttack;
+  /// port (not in the original): the class's `IsLandBuilding()`, set by `CreateUnitClasses` once the class's
+  /// vtable is final; the unit store reads it (store.rs)
+  bool mIsLandBuildingClass;
 };
 
 /// What the constructor looks up outside the row: the C++ fills it before [`fill`].
@@ -3259,6 +3280,13 @@ void ee_units_store_set_fields(EeUnitRecord *record,
                                const EeUnitsRtsUnitFields *rts,
                                const EeUnitsUnitFields *unit,
                                const EeUnitsComplexUnitFields *complex);
+
+/// The twenty-seventh round's: where the store reads the units' pointer members (`store::EeUnitsStoreSlots`; once,
+/// before the first record).
+///
+/// # Safety
+/// `slots` is readable.
+void ee_units_store_set_slots(const EeUnitsStoreSlots *slots);
 
 /// A unit leaves its player's list (or is freed): the record of that object, if it is the one under the id.
 bool ee_units_store_remove(uint32_t id,

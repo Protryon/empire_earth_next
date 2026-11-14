@@ -732,7 +732,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     this->mHomeBase = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mHomeBase)));
     if (this->mHomeBase != NULL)
         this->mHomeBase->Reference();
-    this->mContainer = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mContainer.Get())));
+    this->mContainer = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(USavedID(this->mContainer)));
     if (this->mContainer != NULL) {
         // A not-yet-repaired cargo vector still holds IDs; a repaired one holds actual unit pointers.
         if (this->mContainer->mUnitClass->mTransportCapacity < 1

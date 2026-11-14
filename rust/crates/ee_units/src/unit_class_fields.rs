@@ -197,6 +197,9 @@ pub struct EeUnitsUnitClassFields {
     pub mIsBoobyTrap: bool,
     pub mIsParatrooperBomber: bool,
     pub mHasSpecialAttack: bool,
+    /// port (not in the original): the class's `IsLandBuilding()`, set by `CreateUnitClasses` once the class's
+    /// vtable is final; the unit store reads it (store.rs)
+    pub mIsLandBuildingClass: bool,
 }
 
 /// What the constructor looks up outside the row: the C++ fills it before [`fill`].
