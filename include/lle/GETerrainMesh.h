@@ -78,6 +78,18 @@ public:
         std::vector<GETMPolygon*> mStripIndices;       // +0x24
     };
 
+    // A material of this frame as the renderer reads it (DX7Rasterizer DrawTerrain.cpp): its texture and its three
+    // polygon lists (the polygons, then the two lists TransformToCamera fills)
+    struct GETMMaterialView {
+        GETexture* mTexture;
+        GETMPolygon** mPolygons;
+        size_t mPolygonCount;
+        GETMPolygon** mIndices;
+        size_t mIndicesLength;
+        GETMPolygon** mStrips;
+        size_t mStripsLength;
+    };
+
     GETerrainMesh();
     virtual ~GETerrainMesh();
 
@@ -90,10 +102,13 @@ public:
     void GetClosestTile(const GE3DPoint& inPoint, long& outX, long& outY) const;
     unsigned char GetColorTableIndex(unsigned long inX, unsigned long inY) const
         { return this->mPointRows[inY].mPoints[inX - this->mPointRows[inY].mStart].mColorTableIndex; }
-    std::vector<GETMRenderVertex*>& GetEdgeRenderVertices() { return this->mEdgeRenderVertices; }
-    std::vector<GE3DPoint>& GetEdgeWorldPoints() { return this->mEdgeWorldPoints; }
-    std::vector<GETMRenderVertex*>& GetCliffRenderVertices() { return this->mCliffRenderVertices; }
-    std::vector<GE3DPoint>& GetCliffWorldPoints() { return this->mCliffWorldPoints; }
+    // the skirt (edge) and cliff vertices of this frame: as many world points as render vertices
+    unsigned long GetEdgeVertexCount() const { return this->mEdgeWorldPoints.size(); }
+    GETMRenderVertex* const* GetEdgeRenderVertices() const { return this->mEdgeRenderVertices.data(); }
+    const GE3DPoint* GetEdgeWorldPoints() const { return this->mEdgeWorldPoints.data(); }
+    unsigned long GetCliffVertexCount() const { return this->mCliffWorldPoints.size(); }
+    GETMRenderVertex* const* GetCliffRenderVertices() const { return this->mCliffRenderVertices.data(); }
+    const GE3DPoint* GetCliffWorldPoints() const { return this->mCliffWorldPoints.data(); }
     const GE3DPlane& GetFrontPlane() const { return this->mFrontPlane; }
     unsigned long GetGlobalWaterSetID() const { return this->mGlobalWaterSetID; }
     bool GetIsValidPoint(unsigned long inX, unsigned long inY) const
@@ -127,8 +142,21 @@ public:
     GETextureSet* GetRegisteredTextureSet(unsigned long inID) const { return this->mRegisteredTextureSets[inID]; }
     const GE3DPlane& GetRightPlane() const { return this->mRightPlane; }
     unsigned long GetTerrainMaterialCount() const { return this->mTerrainMaterialList.size(); }
-    std::vector<GETMMaterial>& GetTerrainMaterialList() { return this->mTerrainMaterialList; }
-    std::map<GETexture*, unsigned long>& GetTerrainMaterialMap() { return this->mTerrainMaterialMap; }
+    // the texture -> terrain material index map, in texture order
+    void GetTerrainMaterialMap(std::vector<std::pair<GETexture*, unsigned long> >& outEntries) const
+        { outEntries.assign(this->mTerrainMaterialMap.begin(), this->mTerrainMaterialMap.end()); }
+    // material inIndex of the terrain (or with inWater, the water) material list
+    void GetMaterialView(bool inWater, unsigned long inIndex, GETMMaterialView& outView)
+    {
+        GETMMaterial& theMaterial = (inWater ? this->mWaterMaterialList : this->mTerrainMaterialList)[inIndex];
+        outView.mTexture = theMaterial.mTexture;
+        outView.mPolygons = theMaterial.mPolygons.data();
+        outView.mPolygonCount = theMaterial.mPolygons.size();
+        outView.mIndices = theMaterial.mIndices.data();
+        outView.mIndicesLength = theMaterial.mIndices.size();
+        outView.mStrips = theMaterial.mStripIndices.data();
+        outView.mStripsLength = theMaterial.mStripIndices.size();
+    }
     bool (&GetTerrainPointVisibilityArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS] { return this->mTerrainPointVisibility; }
     GETMRenderVertex (&GetTerrainRenderVertexArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS] { return this->mTerrainRenderVertices; }
     void GetTerrainVisibleBottomLeftIndices(unsigned long& outX, unsigned long& outY) const
@@ -163,7 +191,6 @@ public:
     unsigned char GetWaterInfo(unsigned long inX, unsigned long inY) const
         { return this->mTileRows[inY].mTiles[inX - this->mTileRows[inY].mStart].mWaterInfo; }
     unsigned long GetWaterMaterialCount() const { return this->mWaterMaterialList.size(); }
-    std::vector<GETMMaterial>& GetWaterMaterialList() { return this->mWaterMaterialList; }
     bool (&GetWaterPointVisibilityArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS] { return this->mWaterPointVisibility; }
     GETMRenderVertex (&GetWaterRenderVertexArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS] { return this->mWaterRenderVertices; }
     // through a row reference: the Generate*EdgePolygons loops (0x10027f81..) add the strength-reduced row offset

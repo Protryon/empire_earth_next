@@ -82,33 +82,30 @@ static EeDx7TerrainMeshView DX7TerrainViewOf(GETerrainMesh& inMesh)
     inMesh.GetTerrainVisibleTileDimensions(theView.width, theView.height);
     theView.water_percentage = inMesh.GetVisibleWaterTilePercentage();
     theView.is_space = inMesh.GetIsSpaceMap();
-    theView.edge_world = reinterpret_cast<const float(*)[3]>(inMesh.GetEdgeWorldPoints().data());
-    theView.edge_vertices = reinterpret_cast<EeDx7RenderVertex* const*>(inMesh.GetEdgeRenderVertices().data());
-    theView.edge_count = inMesh.GetEdgeWorldPoints().size();
-    theView.cliff_world = reinterpret_cast<const float(*)[3]>(inMesh.GetCliffWorldPoints().data());
-    theView.cliff_vertices = reinterpret_cast<EeDx7RenderVertex* const*>(inMesh.GetCliffRenderVertices().data());
-    theView.cliff_count = inMesh.GetCliffWorldPoints().size();
+    theView.edge_world = reinterpret_cast<const float(*)[3]>(inMesh.GetEdgeWorldPoints());
+    theView.edge_vertices = reinterpret_cast<EeDx7RenderVertex* const*>(inMesh.GetEdgeRenderVertices());
+    theView.edge_count = inMesh.GetEdgeVertexCount();
+    theView.cliff_world = reinterpret_cast<const float(*)[3]>(inMesh.GetCliffWorldPoints());
+    theView.cliff_vertices = reinterpret_cast<EeDx7RenderVertex* const*>(inMesh.GetCliffRenderVertices());
+    theView.cliff_count = inMesh.GetCliffVertexCount();
     return theView;
 }
 
-static EeDx7MaterialView DX7MaterialViewOf(GETerrainMesh::GETMMaterial& inMaterial)
+// the terrain (or with inWater, the water) materials
+static std::vector<EeDx7MaterialView> DX7MaterialViewsOf(GETerrainMesh& inMesh, bool inWater)
 {
-    EeDx7MaterialView theView;
-    theView.texture = inMaterial.mTexture;
-    theView.polygons = reinterpret_cast<EeDx7TerrainPolygon* const*>(inMaterial.mPolygons.data());
-    theView.polygon_count = inMaterial.mPolygons.size();
-    theView.indices = reinterpret_cast<EeDx7TerrainPolygon**>(inMaterial.mIndices.data());
-    theView.indices_length = inMaterial.mIndices.size();
-    theView.strips = reinterpret_cast<EeDx7TerrainPolygon**>(inMaterial.mStripIndices.data());
-    theView.strips_length = inMaterial.mStripIndices.size();
-    return theView;
-}
-
-static std::vector<EeDx7MaterialView> DX7MaterialViewsOf(std::vector<GETerrainMesh::GETMMaterial>& inMaterials)
-{
-    std::vector<EeDx7MaterialView> theViews(inMaterials.size());
-    for (size_t i = 0; i < inMaterials.size(); i++)
-        theViews[i] = DX7MaterialViewOf(inMaterials[i]);
+    std::vector<EeDx7MaterialView> theViews(inWater ? inMesh.GetWaterMaterialCount() : inMesh.GetTerrainMaterialCount());
+    for (size_t i = 0; i < theViews.size(); i++) {
+        GETerrainMesh::GETMMaterialView theMaterial;
+        inMesh.GetMaterialView(inWater, i, theMaterial);
+        theViews[i].texture = theMaterial.mTexture;
+        theViews[i].polygons = reinterpret_cast<EeDx7TerrainPolygon* const*>(theMaterial.mPolygons);
+        theViews[i].polygon_count = theMaterial.mPolygonCount;
+        theViews[i].indices = reinterpret_cast<EeDx7TerrainPolygon**>(theMaterial.mIndices);
+        theViews[i].indices_length = theMaterial.mIndicesLength;
+        theViews[i].strips = reinterpret_cast<EeDx7TerrainPolygon**>(theMaterial.mStrips);
+        theViews[i].strips_length = theMaterial.mStripsLength;
+    }
     return theViews;
 }
 
@@ -164,11 +161,12 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
     EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->mScreenStates[inScreen]->mViewport);
-    std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh.GetTerrainMaterialList());
+    std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh, false);
     std::vector<EeDx7MaterialMapEntry> theMap;
-    std::map<GETexture*, unsigned long>& theSource = inMesh.GetTerrainMaterialMap();
-    for (std::map<GETexture*, unsigned long>::iterator i = theSource.begin(); i != theSource.end(); i++) {
-        EeDx7MaterialMapEntry theEntry = {i->first, i->second};
+    std::vector<std::pair<GETexture*, unsigned long> > theSource;
+    inMesh.GetTerrainMaterialMap(theSource);
+    for (size_t i = 0; i < theSource.size(); i++) {
+        EeDx7MaterialMapEntry theEntry = {theSource[i].first, theSource[i].second};
         theMap.push_back(theEntry);
     }
     return ee_dx7r_draw_terrain(this, inScreen, DX7DrawState(this, inScreen), &theMesh, theMap.data(), theMap.size(), theMaterials.data(),
@@ -227,7 +225,7 @@ long DX7Rasterizer::DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, boo
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
     EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(this->mScreenStates[inScreen]->mViewport);
-    std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh.GetWaterMaterialList());
+    std::vector<EeDx7MaterialView> theMaterials = DX7MaterialViewsOf(inMesh, true);
     return ee_dx7r_draw_water(this, inScreen, DX7DrawState(this, inScreen), &theMesh, theMaterials.data(), theMaterials.size(),
                               &theViewport, inOrthographic);
 }
@@ -254,8 +252,8 @@ void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewp
 {
     EeDx7TerrainMeshView theMesh = DX7TerrainViewOf(inMesh);
     EeDx7ViewportInfo theViewport = DX7ViewportInfoOf(inViewport);
-    std::vector<EeDx7MaterialView> theTerrainMaterials = DX7MaterialViewsOf(inMesh.GetTerrainMaterialList());
-    std::vector<EeDx7MaterialView> theWaterMaterials = DX7MaterialViewsOf(inMesh.GetWaterMaterialList());
+    std::vector<EeDx7MaterialView> theTerrainMaterials = DX7MaterialViewsOf(inMesh, false);
+    std::vector<EeDx7MaterialView> theWaterMaterials = DX7MaterialViewsOf(inMesh, true);
     EeDx7WaterRipple theRipple = {this->mWaterRipple0, this->mWaterRipple1, this->mWaterRipple2};
     ee_dx7r_transform_to_camera(&theMesh, theTerrainMaterials.data(), theTerrainMaterials.size(), theWaterMaterials.data(),
                                 theWaterMaterials.size(), &theViewport, inScale, inWaterOnly, inOrthographic, theRipple, &sWaterTime);
