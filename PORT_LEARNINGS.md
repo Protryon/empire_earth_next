@@ -17256,3 +17256,76 @@ game holds across its own calls.
   unit's undefined paths (a failed Publish's uninitialized events and server, a reconnect wait that ignores the exit)
   must be kept out of the driver's steps, not "fixed" in the stand-ins; record only the small sequences for cargo
   (the first full record was 89 MB).
+
+## LLE lane, round 4: UString and UWideString whole in Rust (ee_ustring record.rs, wide.rs; branch rust-lle4, 2026-11-13)
+
+Round 4 of the Low-Level Engine lane (rounds 1-3 above). Net C++ over src + include without the generated
+`include/rust` (`git diff --numstat`), per commit: `UString` -394; `UWideString` -523: -917 in all. Both string
+classes are now Rust records the C++ classes hold by value, round 3's `TMPoll` pattern at the scale of the whole game
+(the classes are named in 374 and 321 files).
+
+- **The pattern: a by-value Rust record behind a C++ class with a vtable.** `UString` keeps its virtual destructor
+  and one member, `EeUString mState` (`string`, `length`, `capacity`: the original's three members in their order,
+  `c_ulong` so the LP64 builds keep their own layout). `sizeof(UString)` is unchanged (0x18 on x64), so the 50
+  classes holding one by value, `GEMaterial`'s `sizeof(UString)` and every saved record keep their layout. Every
+  member is an inline forwarder; `operator const char*` and `GetLength` stay inline reads of the record. The
+  comparison operators became inline functions over `ee_ustring_compare` (they were exported out-of-line
+  functions; no caller took their address). `UWideString` is the same with `EeUWideString` (`string`,
+  `byte_length`, `length`, `capacity`; sizeof 0x20 as before, the record padded to 24 bytes).
+- **The buffer is Rust's**, allocated zero-filled with the capacity as its size (1 byte for a capacity of 0, which
+  the original allocated as `new char[0]` and wrote anyway). The original's bytes past a terminator were the heap's;
+  `UString::Copy` and `operator=` copy them (a whole capacity), so they are visible: now they are always zero or
+  the bytes an earlier operation left, deterministically. The goldens zero-fill the original's heap (a `calloc`
+  `operator new[]` in the driver) to compare them byte for byte.
+- **Raw pointers read in the original's order.** Each Rust function takes `*mut`/`*const` records, never
+  references, and reads a source's fields at the step the original read them: `s.Copy(s, start, count, 0, true)`
+  reads the fresh, empty buffer after the resize, as the original did. A buffer that is replaced while the source
+  may lie in it (`operator=(const char*)` from the string's own text, `Copy(const char*)`, `CopyString` of itself,
+  `InsertString` of itself, `sprintf` with the string as an argument) is freed after the copy instead of before
+  (the original read freed memory there).
+- **What stays C++:** what touches C++ objects or varargs. `Load`/`Save` call the `FSFile` virtuals around
+  `ee_ustring_load_buffer`/`load_end` (the Windows-1252 conversion of decision D6 is Rust now, `convert_loaded`,
+  shared by both classes; `UConvertLoadedText` is deleted, `USetLegacyTextLoad` is an inline forwarder to a Rust
+  flag), `Tokenize`/`NestedTokenize` fill the `std::vector` from Rust's (first, last) pairs, `GetChecksum` names its
+  `ESChecksum` entry with `sprintf` over the Rust checksum, and `sprintf(UString&/UWideString&, ...)` measures with
+  `vsnprintf`, asks Rust for a buffer of that size and `vsprintf`s into it.
+- **Behaviour changes (all where the original wrote outside its buffer):** `sprintf` grows a buffer the text does
+  not fit (the original formatted past it; the old bytes are kept, the arguments still point at the old buffer
+  while it formats); a C string assigned or appended to a `UString` of capacity 0 reallocates or appends nothing;
+  `UWideString::Tokenize` holds a character in 5 bytes (the original's 3-byte buffer overflowed on a 4-byte UTF-8
+  character, e.g. an emoji: such a character now splits or not like any other).
+- **A UB trap found by relinking the driver:** `UString::Load` passed its length on to Rust even when the length's
+  read failed; uninitialised, clang (-O1) folded the failed-read path away and the relinked driver loaded the text
+  anyway. The length starts at 0 now (the original never passed it on, so it never showed).
+- **The goldens** (both drivers include the unmodified classes verbatim: `us_orig.h` from round 3 and
+  `uws_orig.h`; the platform's UTF-8 functions are the real Rust ones, linked from a scratch static library of
+  `ee_ustring` and `ee_plat_core`):
+  - `tests/string/us_store_golden.cpp`: 20,000 random sequences on four strings mixing every member (the four
+    constructors, both assignments and appends, `+`, both `Copy`s with resizes and self-copies, the substrings,
+    `Compact`, `operator[]`, `SizeOf`, the searches, the twelve comparisons and `Equals`, both tokenizers, `Load`
+    with failed and short reads, embedded NULs and Windows-1252 text under both legacy settings, `Save` with failed
+    and short writes, `sprintf` when it fits, the default capacity changing between 1 and 256), printing every
+    string's length, capacity and whole buffer: 741,747 lines. cargo replays them all (`golden_store.rs`, the
+    first 60 sequences checked in), and the driver relinked over the new header and forwarders prints the same
+    741,747 lines. 18 mutations: 13 fail it (3 of them by crashing the replay: a write past the buffer, a
+    deallocation with the wrong size), 5 are equivalent (`operator=(const char*)` reallocating to the same size;
+    `operator[]` reading the terminator, which is 0; the two `Copy` clamps at equality, where both sides give the
+    same count; `GetSubstring` resizing to the size it was made with).
+  - `tests/string/uws_golden.cpp`: 20,000 sequences of every `UWideString` member (constructors, both
+    assignments, both `CopyString`s, appends, both `InsertString`s with and without replace, `+`,
+    `GetIndexedSubstring` with its stale lengths, `operator[]`, both `Find`s, `Tokenize`, `Export`/`Import`,
+    `GetChecksum`, `Clear`, `Reallocate`, `Load`/`Save`, `sprintf`, the block size 4..256) over é, € and stray
+    bytes: 726,957 lines, all replayed by cargo (`golden_wide.rs`) and printed identically by the relinked driver.
+    17 mutations: 14 fail it (2 by crashing), 3 are equivalent (`operator[]` at the terminator; `Find` measuring
+    a `UWideString` needle, whose stored length always equals its measure where `Find` may run; `Load` growing at
+    `size + 2`, which allocates the same `size + 1`). The driver avoids the original's undefined cases: `+=` of a
+    string onto itself (`strcat` overlap), `Find`/`Tokenize` on a `GetIndexedSubstring` result (its stale length
+    walks past the terminator), 4-byte characters (the `Tokenize` overflow; a unit test covers the fix).
+  - The replays hold a lock: the legacy flag and the default capacities are process-wide, and two goldens running
+    on cargo's test threads changed each other's loads.
+- **What runs it.** Everything: EE-SIM's data loading, scripts, saves (the saveload matrix PASS after each
+  commit), the scenario editor's texts (`sim_editor.py` PASS, 1820 lines). `UWideString` is mostly the UI's text
+  (`GEText`, edit boxes, chat, help, the lobby): only a windowed game draws it, so the tour is its check.
+- **Not moved:** `FSPath`, `FSFileSpec`, `FSArchive` (the File System's walk, step 3 of the round): `FSPath` holds
+  `std::vector`s of `FSArchive` and `FSFileSpec` objects, so the walk waits on those two classes (804 + 481 lines
+  of Win32 file calls), which now hold Rust strings and can move next.
