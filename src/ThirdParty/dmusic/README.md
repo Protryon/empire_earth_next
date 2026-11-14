@@ -17,7 +17,7 @@ Changes made here (each marked "(EE patch)" at its place in the source):
   Upstream compared the low part alone, so every instrument of the game's eight songs played as preset 0.
 - General MIDI, GS and XG instruments (`Band.c`): all from `gm.dls`; upstream asked for collections that do not exist
   and the parts stayed silent. The game's conductor finds `gm.dls` in the system's directory on Windows
-  (`SEConductor::Resolve`); elsewhere a song that needs it (Pawns) does not load until one is supplied.
+  (`SEConductor::Resolve`); elsewhere those parts stay silent until one is supplied.
 - Volume curves (`Synth.c`, `_Internal.h`, `tsf.h`): velocity, volume and expression each at 40 * log10, volume and
   expression multiplied, channels reset to volume 100.
 - Master volume on sounding notes (`tsf.h` `tsf_set_volume`): the game fades each song in from 0, and upstream left

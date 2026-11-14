@@ -118,6 +118,10 @@ DmResult DmBand_download(DmBand* slf, DmLoader* loader) {
 
 		rv = DmLoader_getDownloadableSound(loader, &instrument->reference, &instrument->dls);
 		if (rv != DmResult_SUCCESS || instrument->dls == NULL) {
+			// (EE patch) An instrument whose collection is missing stays silent; the band still loads. Upstream
+			// returned the last instrument's result: a song with one such instrument loaded the first time (a
+			// later instrument's success came last) and failed every time after (the others were already there).
+			rv = DmResult_SUCCESS;
 			continue;
 		}
 
