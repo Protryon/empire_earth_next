@@ -44,40 +44,7 @@ GEViewport::GEViewport(const GERectangle& inViewRectangle, const GERectangle& in
 // Copies every field of another viewport (rectangles, planes, camera, matrices, projection factors)
 GEViewport& GEViewport::operator=(const GEViewport& inViewport)
 {
-    this->mOrthographicRectangle = inViewport.mOrthographicRectangle;
-    this->mViewRectangle = inViewport.mViewRectangle;
-    this->mFrontPlane = inViewport.mFrontPlane;
-    this->mRearPlane = inViewport.mRearPlane;
-    this->mBottomPlane = inViewport.mBottomPlane;
-    this->mLeftPlane = inViewport.mLeftPlane;
-    this->mRightPlane = inViewport.mRightPlane;
-    this->mTopPlane = inViewport.mTopPlane;
-    this->mCamera = inViewport.mCamera;
-    this->mCameraInverse = inViewport.mCameraInverse;
-    this->mOrthographicDenormalization = inViewport.mOrthographicDenormalization;
-    this->mPerspectiveDenormalization = inViewport.mPerspectiveDenormalization;
-    this->mOrthographicProjection = inViewport.mOrthographicProjection;
-    this->mPerspectiveProjection = inViewport.mPerspectiveProjection;
-    this->mCameraLookAtVector = inViewport.mCameraLookAtVector;
-    this->mOrthographicScale = inViewport.mOrthographicScale;
-    this->mOrthographicDepthScale = inViewport.mOrthographicDepthScale;
-    this->mOrthographicDepthOffset = inViewport.mOrthographicDepthOffset;
-    this->mPerspectiveScale = inViewport.mPerspectiveScale;
-    this->mPerspectiveDepthScale = inViewport.mPerspectiveDepthScale;
-    this->mPerspectiveDepthOffset = inViewport.mPerspectiveDepthOffset;
-    this->mAspectRatio = inViewport.mAspectRatio;
-    this->mAspectRatioMultiplier = inViewport.mAspectRatioMultiplier;
-    this->mFieldOfView = inViewport.mFieldOfView;
-    this->mFieldOfViewMultiplier = inViewport.mFieldOfViewMultiplier;
-    this->mFrontClippingDistance = inViewport.mFrontClippingDistance;
-    this->mHalfHeight = inViewport.mHalfHeight;
-    this->mHalfWidth = inViewport.mHalfWidth;
-    this->mRearClippingDistance = inViewport.mRearClippingDistance;
-    this->mXCenter = inViewport.mXCenter;
-    this->mYCenter = inViewport.mYCenter;
-    this->mYClippingPlane = inViewport.mYClippingPlane;
-    this->mNearDepth = inViewport.mNearDepth;
-    this->mFarDepth = inViewport.mFarDepth;
+    ee_ge_viewport_copy(GERust(*this), GERust(inViewport));
     return *this;
 }
 

@@ -440,6 +440,119 @@ enum class EeGeModXf : uint32_t {
   Internal,
 };
 
+/// The calls the rasterizer makes on other objects. `obj` is the object called; `a`, `b` as each says.
+enum class EeGeRastOp : uint32_t {
+  /// `new UString(*(const UString*)a)` (the name).
+  NameNew = 1,
+  /// `delete (UString*)obj`.
+  NameDelete,
+  /// `TSScheduler::CreateCriticalSection(*(TSCriticalSection**)a)`.
+  LockCreate,
+  /// `TSScheduler::DestroyCriticalSection((TSCriticalSection*)obj)`.
+  LockDestroy,
+  /// `ESVERIFY_AT(a != 0, b)`.
+  Verify,
+  /// `new GEFont("Arial Bold", 9, 0, kFontQualityAntialiased)`.
+  FontNew,
+  /// `obj->Dereference()` (a font).
+  FontDereference,
+  /// `new GEText((GEFont*)a)`.
+  TextNew,
+  /// `delete (GEText*)obj`.
+  TextDelete,
+  /// `obj->SetAlignment(a)`.
+  TextSetAlignment,
+  /// `obj->SetFgColor(*(const GEColor*)a)`.
+  TextSetFgColor,
+  /// `obj->SetBgColor(*(const GEColor*)a)`.
+  TextSetBgColor,
+  /// `obj->SetFont((GEFont*)a)`.
+  TextSetFont,
+  /// `obj->SetIsTransparent(a != 0)`.
+  TextSetIsTransparent,
+  /// `obj->SetLocation(a's bits, b's bits)`.
+  TextSetLocation,
+  /// The owner's `ActivateRasterizer()`.
+  ActivateRasterizer,
+  /// `new GEFontBitmap(owner, (GEFont*)a, b)`.
+  FontBitmapNew,
+  /// `obj->Dereference()` (a surface).
+  SurfaceDereference,
+  /// `obj->Dereference()` (a texture: GETexture's own).
+  TextureDereference,
+  /// `*(GE3DPoint*)a = obj->GetCenterPoint()` (a model).
+  ModelCenter,
+  /// `obj->GetBoundingRadius(a)`, as its bits.
+  ModelBoundingRadius,
+  /// `obj->GetGraphicsBoundingRadius()`, as its bits.
+  ModelGraphicsRadius,
+  /// `*(GEBoundingBox*)a = obj->GetGraphicsBoundingBox()`.
+  ModelGraphicsBox,
+  /// `obj->SetClipToPlane(a, b != 0)`.
+  ModelSetClip,
+  /// `*(GETransformation*)b = obj->GetInternalTransform(a)`.
+  ModelInternalTransform,
+  /// `obj->GetScale()` (a placed model), as its bits.
+  PlacedScale,
+  /// `obj->GetFrame()`.
+  PlacedFrame,
+  /// `obj->GetModel()`.
+  PlacedModel,
+  /// `*(GETransformation*)a = obj->GetLocation()`.
+  PlacedLocation,
+};
+
+/// A field of the rasterizer (`ee_ge_rast_get`/`ee_ge_rast_set`). Floats cross as their bits.
+enum class EeGeRastVal : uint32_t {
+  /// `mAmbientIntensity` (bits; read only: `SetAmbientIntensity` sets it).
+  AmbientIntensity = 1,
+  /// `mCulling` (read only: `SetCulling` sets it).
+  Culling,
+  /// `mIsPolyAreaProfiling`.
+  IsPolyAreaProfiling,
+  /// `mIsActivated` (read only).
+  IsActivated,
+  /// `mName`: the C++ `UString*` (read only).
+  Name,
+  /// `mScreenStates.size()` (read only).
+  ScreenCount,
+  /// `mScreenID`.
+  ScreenId,
+  /// `mDrawingAccess` (read only).
+  DrawingAccess,
+  /// `mDebugFont` (read only).
+  DebugFont,
+  /// `mDebugText` (read only).
+  DebugText,
+};
+
+/// A render state of one screen (`ee_ge_rast_screen_set`): the base's setters.
+enum class EeGeRastState : uint32_t {
+  AlphaTesting = 1,
+  AlphaTestingCompareState,
+  /// Bits of a float.
+  AlphaTestingRefValue,
+  AntiAliasing,
+  ColorKeying,
+  Dithering,
+  DrawStyle,
+  /// `SetFog`.
+  FogState,
+  /// `SetFogType`.
+  FogType,
+  /// `SetFogValue`: bits of a float.
+  FogDensity,
+  Lighting,
+  ProjectionMode,
+  Shading,
+  ShadingColorSource,
+  Specular,
+  /// A bool.
+  WaitForVSync,
+  ZBuffer,
+  ZCompare,
+};
+
 /// The 3-byte order of `ee_ge_surf_row_out`.
 enum class EeGeSurfRow : uint32_t {
   /// A BMP's: blue, green, red.
@@ -674,6 +787,9 @@ struct EeGeModel;
 /// The model manager.
 struct EeGeModelManager;
 
+/// The rasterizer.
+struct EeGeRasterizer;
+
 /// The terrain mesh.
 struct EeGeTerrainMesh;
 
@@ -857,6 +973,110 @@ struct EeGePhysicalModels {
                      unsigned long lod);
 };
 
+/// The host: `owner` is the C++ rasterizer of the object calling.
+using EeGeRastHostFn = ptrdiff_t(*)(void *owner, EeGeRastOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
+
+/// `GEViewport` (sizeof 0x288), in the C++'s member order.
+struct EeGeViewport {
+  EeGeRectangle orthographic_rectangle;
+  EeGeRectangle view_rectangle;
+  EeGe3DPlane front_plane;
+  EeGe3DPlane rear_plane;
+  EeGe3DPlane left_plane;
+  EeGe3DPlane right_plane;
+  EeGe3DPlane top_plane;
+  EeGe3DPlane bottom_plane;
+  EeGeTransformation camera;
+  EeGeTransformation camera_inverse;
+  EeGeTransformation orthographic_denormalization;
+  EeGeTransformation perspective_denormalization;
+  EeGeTransformation orthographic_projection;
+  EeGeTransformation perspective_projection;
+  EeGeVector camera_look_at_vector;
+  float orthographic_scale;
+  float orthographic_depth_scale;
+  float orthographic_depth_offset;
+  float perspective_scale;
+  float perspective_depth_scale;
+  float perspective_depth_offset;
+  float aspect_ratio;
+  float aspect_ratio_multiplier;
+  float field_of_view;
+  float field_of_view_multiplier;
+  float front_clipping_distance;
+  float half_height;
+  float half_width;
+  float rear_clipping_distance;
+  float x_center;
+  float y_center;
+  float y_clipping_plane;
+  float near_depth;
+  float far_depth;
+};
+
+/// `GEColor`: red, green, blue.
+struct EeGeRastColor {
+  float red;
+  float green;
+  float blue;
+};
+
+/// `GERFogAttributes` (sizeof 0x20 on Windows).
+struct EeGeRastFog {
+  EeGeRastColor color;
+  unsigned long kind;
+  float density;
+  float start;
+  float end;
+  /// `1 / (end - start)`.
+  float scale;
+};
+
+/// `GERScreenState`: one screen's render state, in the C++'s member order.
+struct EeGeRastScreen {
+  EeGeViewport viewport;
+  EeGeRastFog fog;
+  void *screen;
+  void *primary_surface;
+  void *secondary_surface;
+  void *render_target;
+  void *texture;
+  void *window;
+  float alpha_testing_ref_value;
+  float drawn_poly_area;
+  float drawn_poly_area_per_frame;
+  float drawn_poly_area_per_second;
+  float drawn_polys_per_frame;
+  float drawn_polys_per_second;
+  float frames_per_second;
+  float scene_polys_per_frame;
+  float scene_polys_per_second;
+  float total_texture_changes_per_frame;
+  unsigned long alpha_testing;
+  unsigned long alpha_testing_compare_state;
+  unsigned long anti_aliasing;
+  unsigned long blend_source;
+  unsigned long blend_destination;
+  unsigned long color_keying;
+  unsigned long dithering;
+  unsigned long draw_style;
+  unsigned long fog_state;
+  unsigned long lighting;
+  unsigned long projection_mode;
+  unsigned long shading;
+  unsigned long shading_color_source;
+  unsigned long specular;
+  unsigned long z_buffer;
+  unsigned long z_compare;
+  unsigned long drawn_poly_count;
+  /// The plug-in's frame counters (frames, scene polygons, the last time, texture changes).
+  unsigned long counters[4];
+  /// The plug-in's "a texture is set".
+  bool has_texture;
+  bool is_screen_activated;
+  bool wait_for_vsync;
+};
+
 /// `GETextureDescription` (lle/GETextureManager.h), field for field.
 struct EeGeTextureDescription {
   unsigned long surface_volatility;
@@ -939,44 +1159,6 @@ struct EeGeTmTile {
   uint16_t reference_count;
   uint8_t texture_set_id;
   uint8_t water_info;
-};
-
-/// `GEViewport` (sizeof 0x288), in the C++'s member order.
-struct EeGeViewport {
-  EeGeRectangle orthographic_rectangle;
-  EeGeRectangle view_rectangle;
-  EeGe3DPlane front_plane;
-  EeGe3DPlane rear_plane;
-  EeGe3DPlane left_plane;
-  EeGe3DPlane right_plane;
-  EeGe3DPlane top_plane;
-  EeGe3DPlane bottom_plane;
-  EeGeTransformation camera;
-  EeGeTransformation camera_inverse;
-  EeGeTransformation orthographic_denormalization;
-  EeGeTransformation perspective_denormalization;
-  EeGeTransformation orthographic_projection;
-  EeGeTransformation perspective_projection;
-  EeGeVector camera_look_at_vector;
-  float orthographic_scale;
-  float orthographic_depth_scale;
-  float orthographic_depth_offset;
-  float perspective_scale;
-  float perspective_depth_scale;
-  float perspective_depth_offset;
-  float aspect_ratio;
-  float aspect_ratio_multiplier;
-  float field_of_view;
-  float field_of_view_multiplier;
-  float front_clipping_distance;
-  float half_height;
-  float half_width;
-  float rear_clipping_distance;
-  float x_center;
-  float y_center;
-  float y_clipping_plane;
-  float near_depth;
-  float far_depth;
 };
 
 /// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
@@ -2077,6 +2259,169 @@ bool ee_ge_physical_model_walk(const EeGePhysicalModels *table,
                                unsigned long other_frame,
                                unsigned long lod);
 
+/// `GERasterizer(inName)`.
+///
+/// # Safety
+/// `host` answers every operation for `owner`; `name` is a C++ `UString`.
+EeGeRasterizer *ee_ge_rast_new(EeGeRastHostFn host, void *owner, const void *name);
+
+/// `~GERasterizer()`.
+///
+/// # Safety
+/// `p` is live; it is freed.
+void ee_ge_rast_destroy(EeGeRasterizer *p);
+
+/// `Activate()`.
+///
+/// # Safety
+/// `p` is live.
+ptrdiff_t ee_ge_rast_activate(EeGeRasterizer *p);
+
+/// `AddValidScreen(inScreen)` (the base's): a record for another screen.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_rast_add_screen(EeGeRasterizer *p, void *screen);
+
+/// `CreateFontBitmap(inFont, inScreen)`: a font bitmap (it registers itself).
+///
+/// # Safety
+/// `p` is live; `font` is a C++ font.
+void ee_ge_rast_create_font_bitmap(EeGeRasterizer *p, void *font, unsigned long screen);
+
+/// `Deactivate()` (the base's).
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_rast_deactivate(EeGeRasterizer *p);
+
+/// `GetScreenState(inScreen)`: the screen's record (`GERScreenState`'s layout), NULL past the screens.
+///
+/// # Safety
+/// `p` is live.
+EeGeRastScreen *ee_ge_rast_screen(EeGeRasterizer *p,
+                                  unsigned long screen);
+
+/// A field read (the header's accessors).
+///
+/// # Safety
+/// `p` is live.
+ptrdiff_t ee_ge_rast_get(EeGeRasterizer *p, EeGeRastVal field);
+
+/// A field write (`SetPolyAreaProfiling`, `SetScreenID`, the base's `SetCulling`); the read-only fields are ignored.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_rast_set(EeGeRasterizer *p,
+                    EeGeRastVal field,
+                    ptrdiff_t value);
+
+/// `GetAmbientColor()` (`computed` false) or `GetComputedAmbientColor()`: the colour inside the object.
+///
+/// # Safety
+/// `p` is live.
+const EeGeRastColor *ee_ge_rast_color(EeGeRasterizer *p,
+                                      bool computed);
+
+/// `SetAmbientColor(inColor, ...)` (the screen is ignored).
+///
+/// # Safety
+/// `p` is live; `color` is valid.
+void ee_ge_rast_set_ambient_color(EeGeRasterizer *p, const EeGeRastColor *color);
+
+/// `SetAmbientIntensity(inIntensity, ...)` (the screen is ignored).
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_rast_set_ambient_intensity(EeGeRasterizer *p, float intensity);
+
+/// `SetWaterRippleEffect` (`set`) or `GetWaterRippleEffect`: the three ripple values.
+///
+/// # Safety
+/// `p` is live; `ripple` points at three floats.
+void ee_ge_rast_ripple(EeGeRasterizer *p, float (*ripple)[3], bool set);
+
+/// One of the base's render state setters on screen `screen` (floats as their bits).
+///
+/// # Safety
+/// `p` is live; `screen` is one of its screens.
+void ee_ge_rast_screen_set(EeGeRasterizer *p,
+                           unsigned long screen,
+                           EeGeRastState state,
+                           ptrdiff_t value);
+
+/// `SetBlending(inSource, inDestination, inScreen)`.
+///
+/// # Safety
+/// `p` is live; `screen` is one of its screens.
+void ee_ge_rast_set_blending(EeGeRasterizer *p,
+                             unsigned long screen,
+                             unsigned long source,
+                             unsigned long destination);
+
+/// `SetFogColor(inColor, inScreen)`.
+///
+/// # Safety
+/// `p` is live; `screen` is one of its screens; `color` is valid.
+void ee_ge_rast_set_fog_color(EeGeRasterizer *p, unsigned long screen, const EeGeRastColor *color);
+
+/// `SetFogRange(inStart, inEnd, inScreen)`: the range and its scale `1 / (end - start)`.
+///
+/// # Safety
+/// `p` is live; `screen` is one of its screens.
+void ee_ge_rast_set_fog_range(EeGeRasterizer *p, unsigned long screen, float start, float end);
+
+/// `SetViewport(inViewport, inScreen)`: `GEViewport::operator=`, field by field.
+///
+/// # Safety
+/// `p` is live; `screen` is one of its screens; `viewport` is valid.
+void ee_ge_rast_set_viewport(EeGeRasterizer *p, unsigned long screen, const EeGeViewport *viewport);
+
+/// `GetPixelSize(inModel, inViewport, inTransformation, inScale, inOrthographic)`.
+///
+/// # Safety
+/// `p` is live; `model` is a C++ model; the pointers are valid.
+float ee_ge_rast_pixel_size(EeGeRasterizer *p,
+                            void *model,
+                            const EeGeViewport *viewport,
+                            const EeGeTransformation *transformation,
+                            float scale,
+                            bool orthographic);
+
+/// `GetPixelSize(inModel, inViewport, inOrthographic)` of a placed model.
+///
+/// # Safety
+/// `p` is live; `placed` is a C++ `GEPhysicalModel` with a model; `viewport` is valid.
+float ee_ge_rast_placed_pixel_size(EeGeRasterizer *p,
+                                   const void *placed,
+                                   const EeGeViewport *viewport,
+                                   bool orthographic);
+
+/// `IsPerspectiveModelVisible` (`orthographic` false, `scale` used) or `IsOrthographicModelVisible`.
+///
+/// # Safety
+/// `p` is live; `model` is a C++ model; the pointers are valid.
+void ee_ge_rast_model_visible(EeGeRasterizer *p,
+                              void *model,
+                              float scale,
+                              const EeGeViewport *viewport,
+                              const EeGeTransformation *transformation,
+                              bool orthographic,
+                              bool *out_visible,
+                              bool *out_clipped);
+
+/// `GERasterizer::GetActiveRasterizer()`.
+void *ee_ge_rast_active();
+
+/// `GERasterizer::SetActiveRasterizer(inRasterizer)` (the plug-in's activation).
+void ee_ge_rast_set_active(void *rasterizer);
+
+/// The rasterizer list (`sRasterizers`): `op` 0 clears it, 1 appends `rasterizer`, 2 answers its length, 3 its
+/// entry `index` (NULL past the end).
+void *ee_ge_rast_list(uint32_t op,
+                      void *rasterizer,
+                      size_t index);
+
 /// `SaveAsBMP`'s, `SaveAsJPG`'s and `SaveAsJPG2`'s row: `width` pixels of `row` (`depth` 32, else 16 bits) as 3
 /// bytes each into `out`.
 ///
@@ -2734,6 +3079,74 @@ EeGeTmRenderVertex *const *ee_ge_tm_edge_vertices(const EeGeTerrainMesh *p, bool
 /// # Safety
 /// `p` is live.
 const EeGe3DPoint *ee_ge_tm_edge_points(const EeGeTerrainMesh *p, bool cliff);
+
+/// `GETransformation()` and `MakeIdentity()`: the identity.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_identity(EeGeTransformation *t);
+
+/// The copy constructor, `operator=` and `GETransformation(const float[4][4])`: the sixteen elements.
+///
+/// # Safety
+/// `t` and `m` are valid (they may be the same matrix).
+void ee_ge_t_copy(EeGeTransformation *t,
+                  const float (*m)[4][4]);
+
+/// `operator==(GETransformation)`: every element equal (a NaN never is).
+///
+/// # Safety
+/// `a` and `b` are valid.
+bool ee_ge_t_equal(const EeGeTransformation *a, const EeGeTransformation *b);
+
+/// `operator==(GE3DPoint)`: the position equals the point.
+///
+/// # Safety
+/// `t` and `p` are valid.
+bool ee_ge_t_at_point(const EeGeTransformation *t, const EeGe3DPoint *p);
+
+/// `SetScale(x, y, z)`: a pure scale, the position kept.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_set_scale(EeGeTransformation *t, float x, float y, float z);
+
+/// `ZeroOrientation(out)` (and `ZeroOrientation()` with `out` = `t`): the identity rotation at `t`'s position.
+///
+/// # Safety
+/// `t` and `out` are valid (they may be the same matrix).
+void ee_ge_t_zero_orientation(const EeGeTransformation *t,
+                              EeGeTransformation *out);
+
+/// `Load(FSFile&)` (`write` false) or `Save(FSFile&)`: the sixteen elements row by row through the file's own
+/// float reads or writes, stopping at the first error (a load leaves the elements read so far).
+///
+/// # Safety
+/// `t` is valid; `io` is a live field stream.
+long ee_ge_t_io(EeGeTransformation *t,
+                const EeGeFieldIo *io,
+                bool write);
+
+/// The value types' file codecs (`GEVector`, `GE3DPoint`, `GEOrientation`, `GERectangle`, `GEColor`,
+/// `GETextureCoordinate` `Load`/`Save`): the fields in the order given through the file's own float reads or writes,
+/// stopping at the first error. `open` is the file's `GetIsOpen()` (false: `kErrorNotOpen` with no access), or -1 for
+/// the codecs that do not ask (`GEColor`). `restore` (`GETextureCoordinate`): the position is read first (its error
+/// returned as is) and set back after a failed field.
+///
+/// # Safety
+/// `fields` holds `count` valid float pointers; `io` is a live field stream.
+long ee_ge_fields_io(float *const *fields,
+                     uint32_t count,
+                     const EeGeFieldIo *io,
+                     int32_t open,
+                     bool write,
+                     bool restore);
+
+/// `GEViewport::operator=`: every field.
+///
+/// # Safety
+/// `out` and `v` are valid (they may be the same viewport).
+void ee_ge_viewport_copy(EeGeViewport *out, const EeGeViewport *v);
 
 /// `GEViewport()`.
 ///

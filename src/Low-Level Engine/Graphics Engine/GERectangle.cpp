@@ -14,6 +14,7 @@
 #include "lle/FSFile.h"
 #include "lle/GERectangle.h"
 #include "GERustMath.h"
+#include "GERustIO.h"
 
 const UString GERectangle::sLeftID("GERectangle-Left");
 const UString GERectangle::sTopID("GERectangle-Top");
@@ -38,20 +39,8 @@ bool GERectangle::And(const GERectangle& inRectangle, GERectangle& outRectangle)
 // Reads the left, top, right and bottom edges from a file; returns the first read error (or not-open)
 long GERectangle::Load(FSFile& inFile)
 {
-    long theResult;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.Read(this->mLeft);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Read(this->mTop);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Read(this->mRight);
-                if (theResult == kErrorOK)
-                    theResult = inFile.Read(this->mBottom);
-            }
-        }
-    } else
-        theResult = kErrorNotOpen;
-    return theResult;
+    const float* theFields[] = {&this->mLeft, &this->mTop, &this->mRight, &this->mBottom};
+    return GERustFields(inFile, theFields, 4, inFile.GetIsOpen(), false, false);
 }
 
 // FUNCTION: LLE 0x1002490c
@@ -70,20 +59,8 @@ void GERectangle::RemoveIntersectingRectangle(const GERectangle& inRectangle,
 // Writes the left, top, right and bottom edges to a file; returns the first write error (or not-open)
 long GERectangle::Save(FSFile& inFile) const
 {
-    long theResult;
-    if (inFile.GetIsOpen()) {
-        theResult = inFile.Write(this->mLeft);
-        if (theResult == kErrorOK) {
-            theResult = inFile.Write(this->mTop);
-            if (theResult == kErrorOK) {
-                theResult = inFile.Write(this->mRight);
-                if (theResult == kErrorOK)
-                    theResult = inFile.Write(this->mBottom);
-            }
-        }
-    } else
-        theResult = kErrorNotOpen;
-    return theResult;
+    const float* theFields[] = {&this->mLeft, &this->mTop, &this->mRight, &this->mBottom};
+    return GERustFields(inFile, theFields, 4, inFile.GetIsOpen(), true, false);
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
