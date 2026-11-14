@@ -44,6 +44,9 @@ function M.step(view, memory)
     local budget = E.step(view, memory, orders, memory.army_plan)
     T.garrison(view, memory.eco, function(o) orders[#orders + 1] = o end, budget.citizens_wanted)
     -- [priority.c] a building sees the stock the list leaves a building (budget.build); the fortress asks the list
+    -- (the army's memory exists before its first step: a game started in the Copper Age runs the fortress on the
+    -- first step, before ageofai.army made memory.army)
+    memory.army = memory.army or {}
     T.bunkers(view, memory.army, function(o) orders[#orders + 1] = o end, budget.build, memory)
     -- [fronts.c] the territory, the border and the fronts every 10 s; station 1 is the force's home (army.lua)
     FR.step(view, memory)

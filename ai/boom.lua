@@ -20,6 +20,7 @@ local EU = require("lib.econ_units")   -- the economy on the per-unit interface 
 local DM = require("lib.demand")       -- the split's stock correction and the saving ramp (balanced's rules)
 local BO = require("lib.build_order")  -- the owner's build order, phase by phase (ECON.order, AI_RESEARCH §8.51)
 local PL = require("lib.place")        -- (ECON.order) settlements touching their resource, built at that tile
+local RC = require("lib.recover")      -- (BO.OPT.iron_recover) the lost gold and iron sites retaken, or replaced
 
 -- the economy rules (docs/AI_RESEARCH.md §8.43): each one switchable for the bench
 local ECON = {
@@ -647,11 +648,17 @@ function M.step(view, memory)
             and #D.clusters() == 0 then
         soldiers_wanted = math.min(soldiers_wanted, view.army_count)
     end
+    -- (BO.OPT.iron_recover, the owner: under 2 working gold or iron sites the town spends its stockpile on the strongest
+    -- force it can build, to retake the lost site)
+    local recover_urgent = ECON.order and BO.OPT.iron_recover and RC.urgent(memory)
+    if recover_urgent then
+        soldiers_wanted = math.max(soldiers_wanted, plan.soldiers_max)
+    end
     local army_short = view.army_count < soldiers_wanted
     -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
     -- stand in for an empty army: they cover only the land round them)
     local scramble = (threatened and plan.soldiers_max > 0 and (short_strength > 0 or view.army_count < plan.soldiers))
-        or (emergency and army_short)
+        or (emergency and army_short) or (recover_urgent and army_short)
 
     -- saving for the next epoch: once the town has its citizens (or the epoch has run long) the reserve holds the
     -- advance's cost, and the advance is asked for only when it is paid. From the Stone Age the gold and iron are kept
@@ -1104,12 +1111,32 @@ function M.step(view, memory)
             -- out to FAR_REACH (still on the town's side) and up to 5 sites, for the whole 18
             local most = plan.mine_sites or 3
             claim_far[r] = nil
+            -- (BO.OPT.iron_recover: a lost site that cannot be retaken gets a replacement, claimed at once and further)
+            if ECON.order and BO.OPT.iron_recover and (r == "gold" or r == "iron") and RC.replace(memory, r) then
+                claim_far[r] = true
+                most = most + 1
+                claim_want = claim_want + SITE_PLACES
+            end
             if ECON.iron_push and r == "iron" and age >= 3 and saving and view.stock.iron < (view.next_epoch_cost.iron or 0) then
                 claim_far[r] = true
                 most = math.max(most, 5)
                 claim_want = math.max(claim_want, 18)
             end
+            -- (BO.OPT.copper_mines, the owner: "conquer more resource before they pull ahead"; iron stood at 12 places on 2
+            -- sites the whole Copper Age) from the Copper Age a third gold and a third iron site are claimed at once,
+            -- further out on the town's side when the claim range holds none; lib.recover guards and retakes them
+            if ECON.order and BO.OPT.copper_mines and age >= 3 and (r == "gold" or r == "iron") then
+                claim_want = math.max(claim_want, 3 * SITE_PLACES)
+                most = math.max(most, 3)
+                if (memory.copper_places or {})[r] ~= nil and memory.copper_places[r] < 3 * SITE_PLACES then
+                    claim_far[r] = true
+                end
+            end
             local places, c = claim_sites(view, order, keep, r, false, claim_want, most, range, unsettled_r)
+            if ECON.order and BO.OPT.copper_mines then
+                memory.copper_places = memory.copper_places or {}
+                memory.copper_places[r] = places
+            end
             memory.no_site[r] = want[r] > 0 and (places == 0 or c ~= nil)
             mineral_places[r] = places
             if c ~= nil and (contest == nil or c.distance < contest.distance) then
@@ -1211,6 +1238,21 @@ function M.step(view, memory)
                     and view.stock.food >= (cost.food or 0) then
                 local k = math.max(math.min(18 - want.iron, want.food - 12, (room.iron or 0) - want.iron), 0)
                 want.food, want.iron = want.food - k, want.iron + k
+            end
+            -- (BO.OPT.save_retarget, the owner's Copper log: food 6975, wood 9095, gold 4319 banked while iron sat at 6-21
+            -- and the Bronze save never paid) while saving from the Copper Age, the gatherers of a resource banked past its
+            -- cost go to one the advance still lacks, within its places
+            if ECON.order and BO.OPT.save_retarget and age >= 3 and saving then
+                for _, r in ipairs({"iron", "gold", "stone"}) do
+                    if view.stock[r] < (cost[r] or 0) then
+                        for _, d in ipairs({"food", "wood", "gold", "stone"}) do
+                            if d ~= r and view.stock[d] >= (cost[d] or 0) + BO.SAVE_BANK then
+                                local k = math.max(math.min((room[r] or 0) - want[r], want[d] - (BO.SAVE_FLOOR[d] or 0)), 0)
+                                want[d], want[r] = want[d] - k, want[r] + k
+                            end
+                        end
+                    end
+                end
             end
             -- (a mine's settlement waits on wood: up to 4 more on wood until it is paid)
             local settle = V.cost(view, "b_settlement")
@@ -1695,6 +1737,10 @@ function M.step(view, memory)
     end
     memory.town_x, memory.town_y = view.town_x, view.town_y   -- (the micro step's town)
     memory.epoch_now = view.epoch
+    if ECON.order and BO.OPT.iron_recover then
+        RC.parity = BO.OPT.metal_parity == true
+        RC.step(view, memory, view.sites)   -- (before the guard: the operation's soldiers are committed)
+    end
     GD.step(view, memory, {zone = view.claim_range})
     home = GD.group(memory)
     if memory.def ~= nil then   -- (lib.defence's guard_refuge: the guard's post, while it holds 4 or more)

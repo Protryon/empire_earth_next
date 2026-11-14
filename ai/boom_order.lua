@@ -5,9 +5,10 @@
 -- The shore scout walks the shore by home before the Stone advance (the dock's site). (Was "Boom (owner order)",
 -- boom_order; the old default configuration is retired, 2026-11-13.)
 return require("boom").configure{
-    econ = {order = true},
+    econ = {order = true, iron_guard = true},
     order = {shore_scout = true, boat_wood = true, lua_farms = true, soldiers_after_boats = true, blocked_skip = true,
-             early_towers = true, owner_barracks = true},
+             early_towers = true, owner_barracks = true, iron_recover = true,
+             copper_mines = true},
     plan = {tower_up_ships = true, boat_guard = 2, iron_lean = 50},
     defence = {boats = true},
 }
