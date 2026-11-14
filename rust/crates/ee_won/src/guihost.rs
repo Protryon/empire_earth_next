@@ -817,6 +817,9 @@ pub enum EeWonGuiOp {
     // ---- the skins' layouts (R6 WON round 37: `skinlay`; the receiver the composite control as a `Component*`)
     /// a layout's call (`a` an `EeWonSkinLay`; `b`, `c`, `d` its arguments).
     SkinLay = 620,
+    // ---- the background grabber (`grabobj`; the receiver the C++ `BackgroundGrabber*`)
+    /// a grabber's call out (`a` an `EeWonGrab`; `b`, `c`, `d` its arguments).
+    Grab = 621,
 }
 
 /// A wrapped text's method (`WbText`; `b` the text).

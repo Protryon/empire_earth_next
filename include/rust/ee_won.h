@@ -468,6 +468,11 @@ constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
 /// the public address's host, set with port 0 (`ee_won_hostop_num`)
 constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
 
+/// `ComponentFlag_DebugBG` and `ComponentFlag_Translucent` (WONComponentFlags.h; the C++ asserts them).
+constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_DEBUG_BG = 131072;
+
+constexpr static const ptrdiff_t EE_WON_GRAB_FLAG_TRANSLUCENT = 512;
+
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
 
@@ -3002,6 +3007,8 @@ enum class EeWonGuiOp : uint32_t {
   WbBaseCopy,
   /// a layout's call (`a` an `EeWonSkinLay`; `b`, `c`, `d` its arguments).
   SkinLay = 620,
+  /// a grabber's call out (`a` an `EeWonGrab`; `b`, `c`, `d` its arguments).
+  Grab = 621,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3493,6 +3500,24 @@ enum class EeWonStageRoute {
   Net = 2,
   /// Handled locally and handed to the network logic too (the host's broadcast).
   LocalAndNet = 3,
+};
+
+/// The inward calls (the C++ shell's methods; `a` the component, `b` the Graphics where they take them).
+enum class EeWonGrabCall : uint32_t {
+  /// `Clear()`.
+  Clear = 1,
+  /// `PrePaint((Component*)a, *(Graphics*)b)`.
+  PrePaint,
+  /// `Paint((Component*)a, *(Graphics*)b)`.
+  Paint,
+  /// `SetTranslucentColor(a, b)`.
+  SetTranslucentColor,
+  /// `Invalidate((Component*)a)`.
+  Invalidate,
+  /// `SizeChanged((Component*)a)` (nothing).
+  SizeChanged,
+  /// `NeedDrawBG()` (0 or 1).
+  NeedDrawBG,
 };
 
 /// What `ButtonUp` does.
@@ -6830,6 +6855,45 @@ enum class EeWonSkinField : uint32_t {
   FrameBottom,
 };
 
+/// The host's calls (`EeWonGuiOp::Grab`; the receiver the C++ `BackgroundGrabber*`; `b`, `c`, `d` the arguments).
+enum class EeWonGrab : uint32_t {
+  /// `((Component*)b)->LocalToRoot(p[0], p[1])` with `p` the two ints at `c`.
+  LocalToRoot = 1,
+  /// `((Graphics*)b)->DrawImage(mBGImage, c, d)`.
+  DrawImage,
+  /// `((Graphics*)b)->mClipRect` into the `EeWonRect4` at `c`.
+  Clip,
+  /// `((Component*)b)->Width()` and `Height()` into the two ints at `c`.
+  CompSize,
+  /// whether `mBGImage` is set (0 or 1), its `GetWidth()` and `GetHeight()` into the two ints at `c` when it is.
+  ImageSize,
+  /// `mBGImage = ((Component*)b)->GetRoot()->CreateImage(c, d)`.
+  NewImage,
+  /// `((Component*)b)->ComponentFlagSet(c)` (0 or 1).
+  FlagSet,
+  /// `mDebugWindow.get() != NULL` (0 or 1).
+  DebugExists,
+  /// the debug window made (`CreateNativeWindow()`, parent `((Component*)b)->GetRoot()`, style 0x40, created at
+  /// the background image's size).
+  DebugCreate,
+  /// the debug window shows the background image at the component's place on the screen (its root emptied, a new
+  /// ImageComponent of the image added, moved to the component's root point plus its window's screen corner).
+  DebugShow,
+  /// `mDebugWindow->mRoot->Invalidate()`.
+  DebugInvalidate,
+  /// the screen under the component: `x = y = 0`, `((Component*)b)->RootToChild(x, y)`,
+  /// `mBGImage->GetGraphics().DrawImage(b->GetRoot()->GetOffscreenImage(), x, y)`.
+  Capture,
+  /// `((Graphics*)b)->BlendSupported()` (0 or 1).
+  BlendSupported,
+  /// `g.SetColor(c); g.FillRectBlend(0, 0, w, h, alpha)` with `g` the Graphics `b` and `w`, `h`, `alpha` the
+  /// three ints at `d`.
+  Blend,
+  /// the background image's raw pixels tinted (`mBGImage->GetRaw()`, `ee_won_grab_tint(pixels, width * height,
+  /// c, d)`), then drawn: `((Graphics*)b)->DrawImage(raw, 0, 0)`.
+  Tint,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -6886,6 +6950,9 @@ struct EeWonFirewallOp;
 
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
+
+/// The Rust BackgroundGrabber.
+struct EeWonGrabber;
 
 /// An op of the Rust op base, as the C++ `RustServerOp` holds it.
 struct EeWonHostOp;
@@ -7628,6 +7695,25 @@ struct EeWonGetCertHooks {
   void (*clear_one_time)(void*, void*);
 };
 
+/// A rectangle (x, y, width, height).
+struct EeWonRect4 {
+  int32_t x;
+  int32_t y;
+  int32_t w;
+  int32_t h;
+};
+
+/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
+/// map's `int` key), its image's place, its clip rectangle and its image.
+struct EeWonRootGrab {
+  int32_t need;
+  int32_t order;
+  int32_t x;
+  int32_t y;
+  EeWonRect4 clip;
+  ptrdiff_t image;
+};
+
 /// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
 /// the operand threw).
 struct EeWonExprHost {
@@ -7640,14 +7726,6 @@ struct EeWonExprHost {
 
 /// Whether item `i` (below the count) matches, read from the C++ list.
 using EeWonMatchOf = bool(*)(const void *ctx, size_t i);
-
-/// A rectangle (x, y, width, height).
-struct EeWonRect4 {
-  int32_t x;
-  int32_t y;
-  int32_t w;
-  int32_t h;
-};
 
 /// Whether tab `i` (any int) is disabled, as `TabBar::Disabled`.
 using EeWonDisabledOf = bool(*)(const void *ctx, int32_t i);
@@ -9232,17 +9310,6 @@ struct EeWonItemClick {
   bool up;
   int32_t x;
   int32_t y;
-};
-
-/// A grabber's drawing state (`RootGrabberRead`): whether it needs drawing (`NeedDrawBG`), its image order (as the
-/// map's `int` key), its image's place, its clip rectangle and its image.
-struct EeWonRootGrab {
-  int32_t need;
-  int32_t order;
-  int32_t x;
-  int32_t y;
-  EeWonRect4 clip;
-  ptrdiff_t image;
 };
 
 /// An input event's fields, as the C++ forwarder reads them (`KeyEvent`, `MouseEvent`, `SizeEvent`, `InputEvent`).
@@ -11718,6 +11785,31 @@ void ee_won_getcert_setup(EeWonGetCert *op,
                           const uint8_t *seed,
                           size_t length,
                           void *block);
+
+/// A new grabber for the C++ `BackgroundGrabber` `me`.
+EeWonGrabber *ee_won_grab_new(void *me, EeWonGuiHostFn host);
+
+/// # Safety
+/// `g` is null or from `ee_won_grab_new`, not freed before.
+void ee_won_grab_free(EeWonGrabber *g);
+
+/// One of the shell's methods (`EeWonGrabCall`).
+///
+/// # Safety
+/// `g` is a live grabber.
+ptrdiff_t ee_won_grab_call(const EeWonGrabber *g, EeWonGrabCall c, ptrdiff_t a, ptrdiff_t b);
+
+/// The root container's read of the grabber's state into `q` (its `image` left as it was).
+///
+/// # Safety
+/// `g` is a live grabber, `q` points at an `EeWonRootGrab`.
+void ee_won_grab_read(const EeWonGrabber *g, EeWonRootGrab *q);
+
+/// The translucent pass over `n` pixels at `pixels` (`tint`).
+///
+/// # Safety
+/// `pixels` points at `n` pixels (or `n` is 0).
+void ee_won_grab_tint(uint32_t *pixels, size_t n, int32_t level, int32_t color);
 
 /// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
 ///

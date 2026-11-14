@@ -503,6 +503,9 @@ WON_TESTS = {
     # the skins' layouts (skinlay.rs: the combo boxes', scroll containers' and list controls' Virtual08, the column
     # headers, three desired sizes) against the original statements (golden: rust/crates/ee_won/src/golden_skinlay.txt)
     "won_skinlay_test": [],
+    # BackgroundGrabber as a whole Rust object (grabobj.rs) against the original statements over a traced world
+    # (golden: rust/crates/ee_won/src/golden_grabobj.txt)
+    "won_grabobj_test": [],
     # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
     # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
     "won_compaint_test": [],
