@@ -55,6 +55,13 @@
 #include "ee/EEUnitStore.h"
 #include "ee/EEUnitHost.h"
 #include "ee/EEUnitKind.h"
+#include "ee/EEUCTransport.h"
+#include "ee/EECivPowersManager.h"
+#include "ee/EETechTreeTechID.h"
+#include "lle/SESoundManager.h"
+#include "ee/EEMedia.h"
+#include "ee/EESoundObject.h"
+#include "ee/EEGameSound.h"
 #include "rust/ee_units.h"
 
 static EEUnit* UnitOf(uint32_t inID)
@@ -162,12 +169,25 @@ enum DryEvent {
     kDryRefreshGoals,     // unit
     kDryClearBuildTargets,  // unit
     kDryActionChanged,    // unit
-    kDryHalt              // unit
+    kDryHalt,             // unit
+    kDryLoadGoal,         // unit, kind, found
+    kDryAddLoadUnits,     // ctor, the count, the ids
+    kDryNewLoad,          // kind, carrier, flag, the count, the ids
+    kDryLoadFields,       // ctor, valid, the tile x, y
+    kDryEvent,            // player id, x, y, code
+    kDryAddUnit,          // tag, unit
+    kDryFilter,           // transport, the count kept, the ids, the count rejected, the ids
+    kDryQueueResearch,    // unit, technology, front
+    kDryHackUnit,         // unit type, x, y (bits), player id
+    kDryHackBuilding      // unit type, x, y, player id
 };
 
 // the dry goals the host makes without a goal spec: a unit's active goal's clone, the garrison's load goal's clone
 const uint32_t kDryCtorGoalState = 0x101;
 const uint32_t kDryCtorGarrisonLoad = 0x102;
+// a carrier's load goal (the real one, read through) and a load goal the dry host did not make
+const uint32_t kDryCtorOldLoad = 0x103;
+const uint32_t kDryCtorNewLoad = 0x104;
 
 // the dry host's building (EEMakeBuilding makes none) and its two dry farms (ids no unit has)
 const uint32_t kDryBuildingID = 0x7e000002u;
@@ -181,6 +201,8 @@ struct DryGroup {
 struct DryGoal {
     uint32_t mCtor;
     uint8_t mKind;
+    uint32_t mUnit;        // a load goal's carrier
+    EEUnitGoal* mReal;     // a carrier's real load goal (its reads are made on it)
 };
 
 struct DryState {
@@ -1518,6 +1540,8 @@ extern "C" uint8_t ee_units_host_object_record(uint32_t inUnit, EeUnitRecord* ou
     outRecord->tile_x = (int64_t)theUnit->GetTileX();
     outRecord->tile_y = (int64_t)theUnit->GetTileY();
     outRecord->goal_kind = -1;
+    outRecord->domains = theClass != NULL ? (uint8_t)theClass->mDomains : 0;   // (the load orders' formation slots)
+    outRecord->land_building = theClass != NULL && theClass->IsLandBuilding() ? 1 : 0;
     return 1;
 }
 
@@ -1611,4 +1635,272 @@ extern "C" void* ee_units_host_garrison_rally_load(uint32_t inGarrison)
         theGarrison->StartAction(kActionPickedUpLoadableUnits);
     theGarrison->mUnitClass->ActionChanged(theGarrison);
     return static_cast<EEUnitGoal*>(theLoad->Clone());
+}
+
+// ---- EEMLoadGarrison's and EEMLoadTransport's calls (boarding.rs) ----
+
+// a read (the dry host's too)
+extern "C" uint8_t ee_units_host_unit_load_traits(uint32_t inUnit)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    return (theUnit->mUnitClass->mCanGarrison ? EE_UNITS_LOAD_CAN_GARRISON : 0) | (theUnit->mUnitClass->IsTransport() ? EE_UNITS_LOAD_TRANSPORT : 0)
+        | (theUnit->mStats->mMaxVelocity > 0.0f ? EE_UNITS_LOAD_MOVES : 0);
+}
+
+// a garrison's mGoalState, a transport's GetLoadGoal(), when it is of the kind; the dry host wraps the real goal
+extern "C" void* ee_units_host_unit_load_goal(uint32_t inUnit, uint8_t inKind)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    EEUnitGoal* theGoal = inKind == kGoalLoadGarrison ? theUnit->mGoalState.Get() : theUnit->GetLoadGoal();
+    if (theGoal != NULL && theGoal->mKind != inKind)
+        theGoal = NULL;
+    if (sDry == NULL)
+        return theGoal;
+    Log({kDryLoadGoal, inUnit, inKind, theGoal != NULL ? 1u : 0u});
+    if (theGoal == NULL)
+        return NULL;
+    DryGoal* theDry = new DryGoal();
+    theDry->mCtor = kDryCtorOldLoad;
+    theDry->mKind = inKind;
+    theDry->mUnit = inUnit;
+    theDry->mReal = theGoal;
+    sDry->mGoals.push_back(theDry);
+    return theDry;
+}
+
+static std::vector<EEComplexUnit*> ComplexUnits(const uint32_t* inIDs, size_t inCount)
+{
+    std::vector<EEComplexUnit*> theUnits;
+    for (size_t i = 0; i < inCount; i++)
+        theUnits.push_back(ComplexOf(inIDs[i]));
+    return theUnits;
+}
+
+static void LogIDs(const uint32_t* inIDs, size_t inCount)
+{
+    sDry->mLog.push_back((uint32_t)inCount);
+    sDry->mLog.insert(sDry->mLog.end(), inIDs, inIDs + inCount);
+}
+
+extern "C" void ee_units_host_load_goal_add_units(void* inGoal, const uint32_t* inIDs, size_t inCount)
+{
+    if (sDry != NULL) {
+        Log({kDryAddLoadUnits, static_cast<DryGoal*>(inGoal)->mCtor});
+        LogIDs(inIDs, inCount);
+        return;
+    }
+    static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal))->AddLoadUnits(ComplexUnits(inIDs, inCount));
+}
+
+// EEUGRust::NewLoad (the ids come sorted, none twice): the goal is the carrier's once it takes it
+extern "C" void* ee_units_host_load_goal_new(uint8_t inKind, uint32_t inCarrier, const uint32_t* inIDs, size_t inCount, uint8_t inFlag)
+{
+    if (sDry != NULL) {
+        Log({kDryNewLoad, inKind, inCarrier, inFlag});
+        LogIDs(inIDs, inCount);
+        DryGoal* theGoal = new DryGoal();
+        theGoal->mCtor = kDryCtorNewLoad;
+        theGoal->mKind = inKind;
+        theGoal->mUnit = inCarrier;
+        sDry->mGoals.push_back(theGoal);
+        return theGoal;
+    }
+    std::vector<EEComplexUnit*> theUnits = ComplexUnits(inIDs, inCount);
+    return static_cast<EEUnitGoal*>(EEUGRust::NewLoad(inKind, ComplexOf(inCarrier), theUnits, inFlag != 0));
+}
+
+// IsLoadGarrisonValid, GetLoadUnitTile; a load goal the dry host did not make is valid for an even carrier id and
+// its tile is the carrier's
+extern "C" uint8_t ee_units_host_load_goal_fields(void* inGoal, int64_t* outX, int64_t* outY)
+{
+    EEUnitGoal* theReal = sDry != NULL ? static_cast<DryGoal*>(inGoal)->mReal : static_cast<EEUnitGoal*>(inGoal);
+    bool theValid;
+    if (theReal != NULL) {
+        EEUGRust* theGoal = static_cast<EEUGRust*>(theReal);
+        U2DPoint<long> theTile = theGoal->GetLoadUnitTile();
+        theValid = theGoal->IsLoadGarrisonValid();
+        *outX = theTile.GetX();
+        *outY = theTile.GetY();
+    } else {
+        DryGoal* theDry = static_cast<DryGoal*>(inGoal);
+        EEUnit* theCarrier = UnitOf(theDry->mUnit);
+        theValid = (theDry->mUnit & 1) == 0;
+        *outX = theCarrier->GetTileX();
+        *outY = theCarrier->GetTileY();
+    }
+    if (sDry != NULL)
+        Log({kDryLoadFields, static_cast<DryGoal*>(inGoal)->mCtor, theValid ? 1u : 0u, (uint32_t)*outX, (uint32_t)*outY});
+    return theValid ? 1 : 0;
+}
+
+extern "C" void ee_units_host_player_event(void* inPlayer, int64_t inX, int64_t inY, int32_t inCode)
+{
+    if (sDry != NULL) {
+        Log({kDryEvent, PlayerID(inPlayer), (uint32_t)inX, (uint32_t)inY, (uint32_t)inCode});
+        return;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    U2DPoint<long> theTile((long)inX, (long)inY);
+    thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, inCode, false);
+}
+
+extern "C" void ee_units_host_group_add_unit(void* inGroup, uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryAddUnit, Dry(inGroup)->mTag, inUnit});
+        Dry(inGroup)->mUnits.push_back(ComplexOf(inUnit));
+        return;
+    }
+    ActiveOf(inGroup)->AddMember(ComplexOf(inUnit), true);
+}
+
+// EEUCTransport::FilterLoadable (a read: the dry host runs it too)
+extern "C" size_t ee_units_host_transport_filter(uint32_t inTransport, uint32_t* ioIDs, size_t inCount, uint32_t* outRejected)
+{
+    EEComplexUnit* theTransport = ComplexOf(inTransport);
+    std::vector<EEComplexUnit*> theUnits = ComplexUnits(ioIDs, inCount);
+    std::vector<EEComplexUnit*> theRejected;
+    EEUnitClassCast<EEUCTransport>(theTransport->mUnitClass)->FilterLoadable(&theUnits, theTransport, &theRejected);
+    for (size_t i = 0; i < theUnits.size(); i++)
+        ioIDs[i] = static_cast<uint32_t>(theUnits[i]->mUnitID);
+    for (size_t i = 0; i < theRejected.size(); i++)
+        outRejected[i] = static_cast<uint32_t>(theRejected[i]->mUnitID);
+    if (sDry != NULL) {
+        Log({kDryFilter, inTransport});
+        LogIDs(ioIDs, theUnits.size());
+        LogIDs(outRejected, theRejected.size());
+    }
+    return theUnits.size();
+}
+
+// ---- EEMResearchTechnology's calls (research.rs) ----
+
+// the node's reads (the dry host's too): its kind; found, a hero's technology, the Bundeswehr power's, makes a unit,
+// an epoch
+extern "C" uint8_t ee_units_host_research_node(void* inPlayer, int32_t inTechnology, int32_t* outKind)
+{
+    EETechTreeNode* theNode = static_cast<EEPlayer*>(inPlayer)->GetTechTree()->Get(inTechnology);
+    *outKind = 0;
+    if (theNode == NULL)
+        return 0;
+    EECivPower thePower;
+    uint8_t theBits = EE_UNITS_RESEARCH_FOUND;
+    *outKind = theNode->mData->mKind;
+    if (theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass]
+        && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero)
+        theBits |= EE_UNITS_RESEARCH_HERO;
+    if (gCivPowersManager.GetPower(kCivPowerBundeswehr, thePower) && thePower.mTechnology == theNode->mData->mPrerequisite1)
+        theBits |= EE_UNITS_RESEARCH_BUNDESWEHR;
+    if (theNode->mData->mMakesUnit)
+        theBits |= EE_UNITS_RESEARCH_MAKES_UNIT;
+    if (EEIsEpochID(inTechnology))
+        theBits |= EE_UNITS_RESEARCH_EPOCH;
+    return theBits;
+}
+
+extern "C" uint8_t ee_units_host_scenario_game()
+{
+    return gWorld.mGameOptions.mIsScenarioGame ? 1 : 0;
+}
+
+extern "C" uint8_t ee_units_host_unit_shares_research(uint32_t inUnit, int64_t inUnitType)
+{
+    return ComplexOf(inUnit)->mUnitClass->SharesResearch((long)inUnitType) ? 1 : 0;
+}
+
+extern "C" int64_t ee_units_host_unit_research_state(uint32_t inUnit, int64_t* outCurrent, uint8_t* outDisabled)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    *outCurrent = theUnit->mCurrentResearch;
+    *outDisabled = theUnit->mIsDisabled ? 1 : 0;
+    return (int64_t)theUnit->GetBuildQueueSize();
+}
+
+extern "C" void ee_units_host_unit_queue_research(uint32_t inUnit, int32_t inTechnology, uint8_t inFront)
+{
+    if (sDry != NULL) {
+        Log({kDryQueueResearch, inUnit, (uint32_t)inTechnology, inFront});
+        return;
+    }
+    ComplexOf(inUnit)->QueueResearch(inTechnology, inFront != 0);
+}
+
+// ---- EEMHackANewUnit's calls (hack.rs) ----
+
+// the reads below are made on the objects (the dry host does not log them)
+extern "C" int32_t ee_units_host_player_hack_class(void* inPlayer)
+{
+    return (int32_t)static_cast<EEPlayer*>(inPlayer)->mHackUnitClass;
+}
+
+extern "C" int64_t ee_units_host_unit_class_count()
+{
+    return (int64_t)EEUnitClassCount();
+}
+
+// a class of the table: its category and IsLandBuilding (0: none)
+extern "C" uint8_t ee_units_host_unit_class_info(int32_t inUnitType, int64_t* outCategory, uint8_t* outLandBuilding)
+{
+    EEUnitClass* theClass = gUnitClassTable[inUnitType];
+    if (theClass == NULL)
+        return 0;
+    *outCategory = (int64_t)theClass->mCategory;
+    *outLandBuilding = theClass->IsLandBuilding() ? 1 : 0;
+    return 1;
+}
+
+extern "C" float ee_units_host_player_class_scale(int64_t inPlayerID, int32_t inUnitType)
+{
+    return gWorld.mPlayers[inPlayerID]->mUnitClassUpgrades[gUnitClassTable[inUnitType]->mUnitType]->mScale;
+}
+
+extern "C" uint8_t ee_units_host_map_has_tile(int64_t inX, int64_t inY)
+{
+    return gWorld.GetMap()->GetTile((long)inX, (long)inY) != NULL ? 1 : 0;
+}
+
+// the cheat's unit (EEMessage.cpp's statements, unchanged): at the point's ground facing pi, its reload cleared and
+// its power full; the creation sound for the current player
+extern "C" void ee_units_host_hack_create_unit(int32_t inUnitType, float inX, float inY, int64_t inPlayerID)
+{
+    if (sDry != NULL) {
+        Log({kDryHackUnit, (uint32_t)inUnitType, Bits(inX), Bits(inY), (uint32_t)inPlayerID});
+        return;
+    }
+    GETransformation theTransformation;
+    GE3DPoint thePoint;
+    GE3DPoint theGround;
+    EEUnitClass* theClass = gUnitClassTable[inUnitType];
+    EEPlayer* thePlayer = gWorld.mPlayers[inPlayerID];
+    thePoint.SetX(inX);
+    thePoint.SetY(inY);
+    gWorld.GetMap()->GetGroundPoint(thePoint, theGround);
+    theTransformation.SetOrientationYPR(3.1415927f, 0.0f, 0.0f);
+    theTransformation.SetPosition(theGround.GetX(), theGround.GetY(), theGround.GetZ());
+    EEUnit* theUnit = theClass->CreateUnitAt(theTransformation, (long)inPlayerID, false, NULL);
+    if (theUnit->mTileNode != NULL) {
+        theUnit->mComplexUnit->SetReloadTimer(0);
+        theUnit->mComplexUnit->SetPower(theUnit->mComplexUnit->mStats->mPower);
+    }
+    EESoundObject* theSound = thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mCreationSound;
+    if (inPlayerID == gWorld.GetCurrentPlayer()->mPlayerID && theSound != NULL)
+        gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
+}
+
+// the cheat's building (EEMessage.cpp's statements, unchanged): at its lower left corner, built; its creation sound
+// for the current player
+extern "C" void ee_units_host_hack_create_building(int32_t inUnitType, int64_t inX, int64_t inY, int64_t inPlayerID)
+{
+    if (sDry != NULL) {
+        Log({kDryHackBuilding, (uint32_t)inUnitType, (uint32_t)inX, (uint32_t)inY, (uint32_t)inPlayerID});
+        return;
+    }
+    EEUnit* theUnit = gUnitClassTable[inUnitType]->CreateUnit((long)inX, (long)inY, (long)inPlayerID, false, NULL);
+    if (theUnit->mTileNode != NULL)
+        theUnit->mComplexUnit->SetBuilt(1, 0, 1);
+    if (inPlayerID == gWorld.GetCurrentPlayer()->mPlayerID) {
+        EESoundObject* theSound = theUnit->mStats->mCreationSound;
+        if (theSound != NULL)
+            gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
+    }
 }

@@ -14586,3 +14586,84 @@ statement, no algorithm moved.
   line of sight, reach: host reads, next), `GetTiles` (the area's tile cache), `GetUnitAttribute` (a 474-line switch
   of unit and class reads: a table of reads by attribute would move it), `FindPlacement` (SMFP is its golden), the
   world-glue effect bodies.
+
+## R5b.4 game messages, round 2: the load orders, the research order and the cheat's unit over the unit store (ee_units boarding.rs, research.rs, hack.rs; branch rust-msg2, 2026-11-13)
+
+The game messages lane's second round (RUST_PLAN R5b.4 leaf 4 (c)): four more `Execute` bodies of
+`src/Empire Earth/Communications/EEMessage.cpp` in Rust over the store and `EEUnitHost.cpp`'s calls, each in the USGC
+sweep (`EEGroupCommandSweep.cpp`: the original's statements over the dry host against the Rust body) in the commit
+that moves it.
+
+- **The bodies.** `EEMLoadGarrison` and `EEMLoadTransport` (`boarding.rs`): the selection's living units that can
+  garrison (that the transport can carry: `FilterLoadable`, a host call) join the carrier's load goal or start one
+  (the garrison takes a new goal only when it is valid; an invalid one is never deleted, as the original), take its
+  clone and prepare to move; the others go by formation slot (`group::in_formation_slot` over the store) to the
+  carrier's tile or the pickup tile; "cannot garrison there" (0x7c3a) for an invalid garrison goal; the transport's
+  acknowledgement. `EEMResearchTechnology` (`research.rs`): each built selected building of the clicked one's type
+  (or sharing its research) queues the research once or five times; kinds 0/2/7/8 and a hero's technology outside a
+  scenario go to the building with the shortest queue; the Bundeswehr power's interruption. `EEMHackANewUnit`
+  (`hack.rs`): the class (the sender's cheat class for none), the owner (player 0 for ambient and resource classes),
+  a land building's footprint on the map; the creations stay C++ host calls (their statements unchanged). The C++
+  `Execute`s are one call each (`EEMHackANewUnit` stores the class Rust returns: the message kept it before).
+- **`EEUGRust::NewLoad` sorted its caller's vector.** It takes the units by reference and sorts them by id (no id
+  twice), so the original's loop that gives each unit its clone ran in id order after a new goal but in selection
+  order after `AddLoadUnits`. Rust sorts before `load_goal_new` and boards in that order; the sweep's original sorts
+  its vector as `NewLoad` did.
+- **New host calls** (host.rs, EEUnitHost.cpp): the class flags (`unit_load_traits`: can garrison, transport, moves),
+  the carrier's load goal of a kind (a garrison's `mGoalState`, a transport's `GetLoadGoal()`), `AddLoadUnits`,
+  `NewLoad`, the load goal's validity and pickup tile, its clone and the carrier taking it (the existing
+  `goal_clone`/`unit_set_goal` C functions over a borrowed goal), a player event, `AddMember` of a unit
+  (`group_add_unit`: the dry group takes the unit, unlike the old `group_add_member` whose dry host only logs),
+  `FilterLoadable`; the research node's reads (kind, hero, the Bundeswehr power's prerequisite, makes a unit, an
+  epoch), the scenario flag, `SharesResearch`, a building's queue, research and disabled flag, `QueueResearch`; the
+  cheat class, the class table's size and class info, the class scale, a map tile, the two creations.
+  `object_record` also fills the domains and the land building flag (the formation slots of a unit out of the
+  store). The bit constants are `EE_UNITS_LOAD_*` and `EE_UNITS_RESEARCH_*` (crate-prefixed: cbindgen exports them).
+- **The dry host's load goals.** A carrier's real load goal is wrapped (its validity and tile are read on it); a load
+  goal the dry host does not make is valid for an even carrier id (both branches get exercised) and its tile is the
+  carrier's. `FilterLoadable` is a read and runs for real in the dry host.
+- **Sweep cases** (kinds 19-22): Load Garrison into the player's first garrison, its first unit, the next player's
+  first unit and an unknown id; Load Transport onto its first transport and those, with the selection, its last unit
+  as the passenger and an unknown passenger; Research Technology at its first unit, first land building, the next
+  player's unit and an unknown id, for the first technology of each kind 0-9 and the first hero's, once and five
+  times; Hack A New Unit with no class, its first unit's, its first building's, the resource's and a class past the
+  table, at the first unit's tile, the map's centre, its corner and far edge. USGC grew from about 17,950 to about
+  30,850 records a game (oracle profile); its golden lines were recorded again from the merged tree's games.
+- **Census for "members as Rust records".** Of the 110 message classes, every one but six is read outside
+  EEMessage.cpp: `EEMessageCapture.cpp` reads the members of nearly all (the NM* records), `EECPNextUnits.cpp` (the
+  Lua AI) and `EEPhysics.cpp` those of the unit orders, and the UI senders some (EEAMouseClick, EEUIFMGStatusButton,
+  EEScreens, EESEARust). About 45 classes are touched only by their constructors' senders and the capture
+  (e.g. EEMPayTribute, EEMCheatCode, EEMChat, the edict, saved group and lobby info messages): they can become one
+  generic class over a Rust record once the capture reads the members through `GetCodecSlots` (the slots are the
+  members' list already) instead of by name. Not started this round.
+- **Behaviour changes.** A research of a technology the player's tree lacks queues nothing (the original read through
+  NULL); a load order with no selection does nothing (read through NULL before); a load goal's clone the host fails to
+  make is not given (the unit still prepares to move). The cheat's message names its class only after Execute, as
+  before.
+- **What only a played game runs:** the four bodies' world calls (no gate game sends these messages: they come from
+  the UI's right click on a transport or garrison (EEAMouseClick, EEUIFMGStatusButton), the research buttons and the
+  cheat's unit hack screen). The sweep checks their decisions and calls against the originals' over the dry host.
+- **Net C++** (src + include/ee): the load orders +247 (EEMessage.cpp -129, EEUnitHost.cpp +151, the sweep +225), the
+  research order +126 (EEMessage.cpp -56, the sweep +123, the host +59), the cheat's unit +104 (EEMessage.cpp -55,
+  the sweep +68, the host +91): the sweep's originals are test-only C++ that grows with every body it gates.
+- **Round 1's rally point at a unit in a carrier.** The lead's scenario capture of seed 4 (Carrier Strike) faulted
+  in the USGC sweep: `ee_units_host_unit_ghost_seen` read the target's NULL tile (the sweep's target, the next
+  player's first complex unit, was an aircraft inside a carrier; round 1 had run the scenario profile at seeds 2-3
+  only). The original `EEMSetRallyGoal` read `theTarget->mTile`'s doppelgangers the same way, so it would have crashed
+  too; no UI click targets such a unit, but the sweep and the Lua AI's `ai.rally` can. The host now answers "no
+  doppelganger" for a unit off the tiles (commit "rally point ghost test guards a unit off the tiles"); the mock host
+  models it and a unit test covers the case. Lesson: a sweep body's host reads must hold for every unit the sweep
+  can name (contained, dead, ownerless), and the scenario profile must run at all its seeds, not 2-3.
+- **Gates.** Per commit: build `--sim` 0/0 (EE-AOC, EE-SIM), the oracle identical on seeds 2-3, the oracle capture at
+  seeds 2-3 with no sweep difference (only USGC changed), the Rust gate PASS (2,683 -> 2,689 tests). On the result
+  merged with rust 94898cb2 (core rounds 22-23, GE 8) plus the ghost fix: build `--sim` 0/0, the Rust gate PASS
+  (2,782 tests in 71 binaries), the oracle identical on seeds 2-7, the captures oracle, late, space and calamity at
+  seeds 2-7 equal to the goldens but USGC (recorded again from these 24 games; no sweep difference, no fault), the
+  scenario profile at seeds 2-7 PASS (50 digests, Carrier Strike's seed 4 to the cap), the oracle capture at seeds
+  2-7 PASS against the new goldens (500 digests) on the fixed build, `saveload --settings all --seeds 2-3 --at
+  1000,1900` expect PASS, the test-profile build 0/0, `lan_game.py` RESULT PASS lan-game (host PT 2823, joiner
+  2826). The orders game (`fixture_game.py --exercise random-game --orders --box-select`) failed once at the box
+  selection of an empty area ("no box selection message was built", before any order) and passed alone on the
+  rerun: BOX SELECT PASS, ORDERS PASS (gather, repair, repair queued, move; patrol and attack ground skipped). Not run: a tour or a played game sending these four messages, macOS or Linux builds.
+- **Left:** EEMPayTribute's chat line (its decisions are ee_netmsg's already), EEMChangeSelectedUnitCollisionSphere
+  (debug), the smaller bodies, the UI ones (EEMGameOptions, EEMInGameChat), and the members as records (above).
