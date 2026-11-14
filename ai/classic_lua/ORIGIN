@@ -131,14 +131,18 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 PlanWall over the size table (ai.wall_stretches across each step; the shortest open level stretch clear
                 of the centres and gates), the next size on failure, the 9th the stretch nearest a gate
                 (ChooseRunNearGates); BuildWall (a builder every 10 tiles, ai.wall); the gate at the wall's middle
-                (AddGates, FindGate: ai.gate). DEVIATIONS: the way is ai.route's, straight between its cells (the
-                wall planner path); the enemy's centre is the town the view knows (its capitol); IsPathUsable is not
+                (AddGates, FindGate: ai.gate). The way: the wall planner's own path request (ai.wall_route: the path
+                manager's coarse graph with the planner's influence costs, from the enemy's centre to the town,
+                answered over the next ticks), each step refined with ai.wall_path; ai.route's cells only when the
+                request fails or a loaded game forgot it. DEVIATIONS: the enemy's centre is the town the view knows (its capitol); IsPathUsable is not
                 tested; a stretch with units on it is not left out; a wall piece lost is not queued again (UnitLost).
                 In 8 balanced 90-minute games the C++ ordered 62 walls (142 pieces, in 5 games), the port 8 (68 pieces,
                 in 2). OPEN (AI_RESEARCH 8.71): the port's lines across its way are blocked 9 times in 10, mostly by its own
                 settlements and towers (then the enemy's settlements) within 2 tiles; neither the refined steps
                 (ai.wall_path) nor a whole tile path changed that; the C++'s coarse way (the path manager's request
-                with the wall planner's influence costs) is the difference left untried. Back in stage 3.
+                with the wall planner's influence costs) is the difference left untried. Stage 3 (AI_RESEARCH 8.79):
+                with that way the port orders 8 walls in 8 land games (3 before) and 10 in 8 Copper starts; the C++
+                62 and 21 in 4. Still OPEN.
   EECPCombatManager.cpp         PARTLY -> army.lua: Update on the attack timer (IsAttackDue; SetNextAttackTime in
                 main.lua: the initial delay per epoch span and the frequency, the difficulty's modifiers, the bounds),
                 the target player (computers by the aggression's chance when humans are there too; theLargest, else

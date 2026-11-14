@@ -139,6 +139,34 @@ local function the_way(uid, fx, fy, tx, ty)
     return way
 end
 
+-- the way from the wall planner's own path (ai.wall_route: the path manager's coarse request with the planner's
+-- influence costs, from the enemy's centre to the town): reversed, its ends the unit and the centre, each step refined
+-- with ai.wall_path from the later tile back to the earlier one (EECPWallManager::PlanWall)
+local function route_way(uid, path, fx, fy, tx, ty)
+    local pts = {}
+    for k = #path, 1, -1 do
+        pts[#pts + 1] = {path[k][1], path[k][2]}
+    end
+    if #pts < 2 then
+        return nil
+    end
+    pts[1] = {fx, fy}
+    pts[#pts] = {tx, ty}
+    local way = {}
+    for k = 2, #pts do
+        local a, b = pts[k - 1], pts[k]
+        local seg = ai.wall_path(uid, b[1], b[2], a[1], a[2])
+        if #seg < 2 then
+            seg = ai.wall_line(a[1], a[2], b[1], b[2])
+        end
+        for j = 1, #seg - 1 do
+            way[#way + 1] = seg[j]
+        end
+    end
+    way[#way + 1] = {tx, ty}
+    return way
+end
+
 local function line_cost_ok(view, memory, ax, ay, bx, by)
     local class = WALLS[view.epoch]
     if class == nil then
@@ -362,7 +390,11 @@ local function place_gate(view, memory, w)
     w.gate_x, w.gate_y = mid[1], mid[2]
 end
 
--- StartNextWall + the finished request: the last plan's way, its wall, else the next size
+-- StartNextWall + the finished request: the last plan's way, its wall, else the next size. The way is the wall
+-- planner's path request (ai.wall_route, answered over the next ticks: the plan waits for it, up to a minute), else
+-- ai.route's (the old way, also after a loaded game)
+local ROUTE_WAIT_MS = 60000
+
 local function next_wall(view, memory, w)
     local q = table.remove(w.queue)
     if q == nil then
@@ -373,7 +405,38 @@ local function next_wall(view, memory, w)
     if u == nil or ex == nil then
         return
     end
-    local way = the_way(q.unit, u.x, u.y, ex, ey)
+    local way = q.way   -- (the next size tries the same way, as the C++'s PlanWall the same request path)
+    q.way = nil
+    if way == nil and ai.wall_route ~= nil then
+        if q.route == nil then
+            q.route = ai.wall_route(q.enemy, ex, ey, u.x, u.y)
+            q.route_t = view.time
+            if q.route ~= nil then
+                w.queue[#w.queue + 1] = q
+                w.next_time = view.time + 1000
+                return
+            end
+        else
+            local path = ai.wall_route_result(q.route)
+            if path == nil and view.time - (q.route_t or 0) < ROUTE_WAIT_MS then
+                w.queue[#w.queue + 1] = q
+                w.next_time = view.time + 1000
+                return
+            end
+            q.route = nil
+            if type(path) == "table" then
+                way = route_way(q.unit, path, u.x, u.y, ex, ey)
+            end
+        end
+    end
+    local src = "route"
+    if way == nil then
+        way = the_way(q.unit, u.x, u.y, ex, ey)
+        src = "cells"
+    end
+    if w.size == 1 then
+        print(string.format("classic_lua wall.way %s tiles=%d", src, #way))
+    end
     if #way < 10 then
         return
     end
@@ -400,6 +463,7 @@ local function next_wall(view, memory, w)
             add_walls(view, memory, q.unit)
         end
     else
+        q.way = way
         w.queue[#w.queue + 1] = q
     end
 end
