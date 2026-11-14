@@ -1702,6 +1702,21 @@ const EeGfxRaster gEERustRaster = {
     },
     []() -> uint32_t { return (uint32_t)gRasterizer->GetCulling(); },
     [](uint32_t inMode) { gRasterizer->SetCulling(inMode); },
+    [](void* inModel, float inDelta) {
+        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
+        GETextureCoordinate theCoordinate;
+        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
+            theArray->GetTextureCoordinate(theCoordinate, i);
+            theCoordinate.SetV(theCoordinate.GetV() + inDelta);
+            theArray->SetTextureCoordinate(theCoordinate, i);
+        }
+    },
+    [](const EeGe3DPoint* inCenter, EeGfxColor inColor, float inYaw, float inSize, const float* inHeights, float inBrightness,
+       float inAlphaReference) {
+        float theHeights[4] = {inHeights[0], inHeights[1], inHeights[2], inHeights[3]};
+        AddGroundQuad(GE3DPoint(inCenter->x, inCenter->y, inCenter->z), GEColor(inColor.red, inColor.green, inColor.blue),
+                      inYaw, inSize, theHeights, inBrightness, inAlphaReference);
+    },
 };
 
 // FUNCTION: EXE 0x50f60f

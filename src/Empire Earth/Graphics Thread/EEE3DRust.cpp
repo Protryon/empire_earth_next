@@ -1,9 +1,10 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
 // effect_beam.rs, effect_aged.rs, effect_additive.rs,
-// effect_orbit.rs, effect_hurricane.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
-// EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp and EEE3DHurricane.cpp.
+// EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
+// EEE3DNuclearExplosion.cpp and EEE3DEnergyWave.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -255,6 +256,30 @@ struct Ask {
         GE3DPoint thePoint(inPoint->x, inPoint->y, inPoint->z);
         return gEffectManager->CreatePlacedEffect(thePoint, E(inAsk)->mGraphicEffect->mLinkedEffect1, NULL);
     }
+    static void* TextureAt(void* inAsk, uint32_t inIndex) { return E(inAsk)->mGraphicObject->mTextures[inIndex]; }
+    // the nuclear explosion's place off the map: its tile's (EEE3DNuclearExplosion::SetUp, 0xf4524)
+    static EeGfxUnitTile UnitTile(void* inAsk)
+    {
+        EEUnit* theUnit = E(inAsk)->mUnit;
+        return EeGfxUnitTile{theUnit->mTileNode != NULL, (float)theUnit->GetClass()->GetTileSize(),
+                             (float)(long)theUnit->mTileX, (float)(long)theUnit->mTileY};
+    }
+    static float TerrainZ(void* inAsk, float inX, float inY) { return gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY); }
+    // the energy wave's unit is a cloaked enemy's (EEE3DEnergyWave::Queue, 0xee287; the port's R5a.3 test)
+    static bool UnitHidden(void* inAsk)
+    {
+        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
+        bool theCloaked = theUnit->mIsCloakable ? theUnit->mIsCloaked : false;
+        if (!theCloaked)
+            return false;
+        EEPlayer* thePlayer = theUnit->mPlayer;
+        EEPlayer* theCurrent = gWorld.GetCurrentPlayer();
+        return thePlayer != theCurrent && theCurrent->mEnemies[thePlayer->mPlayerID] != 0;
+    }
+    static bool SpaceTile(void*, uint32_t inX, uint32_t inY)
+    {
+        return gWorld.mMap->mTerrainMesh.GetIsSpaceTile((unsigned long)inX, (unsigned long)inY);
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -361,7 +386,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitScale, Ask::UnitLocation,
                                  Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
                                  Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
-                                 Ask::Spawn};
+                                 Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
+                                 Ask::SpaceTile};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);

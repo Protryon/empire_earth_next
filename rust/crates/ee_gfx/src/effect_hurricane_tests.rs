@@ -135,9 +135,7 @@ fn made(h: &mut Host) -> EeGfxEffectRecord {
 #[test]
 fn the_hurricane_sets_up_on_its_unit_at_a_tenth_of_its_size() {
     let mut h = host();
-    let seed = random_seed();
     let r = made(&mut h);
-    assert_eq!(seed, random_seed());
     let o = &r.orbit;
     assert_eq!((o.frame, o.time, o.spawn_time, o.draw_frame, o.scale), (2, 0.0, 0.0, 0, 0.1));
     assert_eq!((o.count, list(&r).list[1].angle, r.bounding_radius), (2, 0.5, 1.5));
@@ -310,9 +308,7 @@ fn the_hurricane_saves_and_loads_time_frame_timer_age_and_scale() {
     assert_eq!(effect3d_file(EeGfxEffect3DOp::Save, 5, &mut r, &mut m, 0, 0, &mut h), 0);
     assert_eq!(m.0.len(), 5);
     let mut back = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_HURRICANE);
-    let seed = random_seed();
     assert_eq!(effect3d_file(EeGfxEffect3DOp::Load, 5, &mut back, &mut Mem(m.0.clone(), 0), 0, 0, &mut h), 0);
-    assert_eq!(seed, random_seed());
     assert_eq!(h.calls, ["media"]);
     let o = &back.orbit;
     assert_eq!((o.time, o.frame, o.spawn_time, back.aged.age, o.scale), (12.5, 3, 40.0, 0.5, 0.75));

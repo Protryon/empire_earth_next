@@ -83,6 +83,18 @@ pub struct EeGfxRaster {
     /// `GetCulling()`, `SetCulling(mode)`
     pub get_culling: extern "C" fn() -> u32,
     pub set_culling: extern "C" fn(mode: u32),
+    /// adds `delta` to the v of every texture coordinate of vertex array 0 for good (nothing kept)
+    pub model_shift_v: extern "C" fn(model: EeGfxModel, delta: f32),
+    /// `AddGroundQuad(center, color, yaw, size, heights, brightness, alpha reference)` (four heights)
+    pub ground_quad: extern "C" fn(
+        center: *const Ge3DPoint,
+        color: EeGfxColor,
+        yaw: f32,
+        size: f32,
+        heights: *const f32,
+        brightness: f32,
+        alpha_ref: f32,
+    ),
 }
 
 /// The rasterizer as the draws call it.
@@ -120,6 +132,18 @@ pub trait Raster {
     fn model_restore_u(&mut self, model: EeGfxModel);
     fn get_culling(&mut self) -> u32;
     fn set_culling(&mut self, mode: u32);
+    fn model_shift_v(&mut self, model: EeGfxModel, delta: f32);
+    #[allow(clippy::too_many_arguments)]
+    fn ground_quad(
+        &mut self,
+        center: &Ge3DPoint,
+        color: EeGfxColor,
+        yaw: f32,
+        size: f32,
+        heights: &[f32; 4],
+        brightness: f32,
+        alpha_ref: f32,
+    );
 }
 
 impl Raster for &EeGfxRaster {
@@ -221,6 +245,21 @@ impl Raster for &EeGfxRaster {
     }
     fn set_culling(&mut self, mode: u32) {
         (self.set_culling)(mode)
+    }
+    fn model_shift_v(&mut self, model: EeGfxModel, delta: f32) {
+        (self.model_shift_v)(model, delta)
+    }
+    fn ground_quad(
+        &mut self,
+        center: &Ge3DPoint,
+        color: EeGfxColor,
+        yaw: f32,
+        size: f32,
+        heights: &[f32; 4],
+        brightness: f32,
+        alpha_ref: f32,
+    ) {
+        (self.ground_quad)(center, color, yaw, size, heights.as_ptr(), brightness, alpha_ref)
     }
 }
 
@@ -338,5 +377,23 @@ impl Raster for LogRaster {
     }
     fn set_culling(&mut self, mode: u32) {
         self.calls.push(format!("culling {mode}"));
+    }
+    fn model_shift_v(&mut self, _model: EeGfxModel, delta: f32) {
+        self.calls.push(format!("shift v {delta}"));
+    }
+    fn ground_quad(
+        &mut self,
+        c: &Ge3DPoint,
+        k: EeGfxColor,
+        yaw: f32,
+        size: f32,
+        heights: &[f32; 4],
+        brightness: f32,
+        alpha_ref: f32,
+    ) {
+        self.calls.push(format!(
+            "quad {} {} {} color {} {} {} yaw {yaw} size {size} heights {heights:?} {brightness} {alpha_ref}",
+            c.x, c.y, c.z, k.red, k.green, k.blue
+        ));
     }
 }

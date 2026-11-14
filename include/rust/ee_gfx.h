@@ -30,6 +30,11 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
 /// `kEffect3DHurricane`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_HURRICANE = 36;
 
+/// `kEffect3DNuclearExplosion`, `kEffect3DEnergyWave`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION = 40;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_ENERGY_WAVE = 71;
+
 /// `kEffect3DLinearProjectile`.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE = 37;
 
@@ -846,6 +851,24 @@ struct EeGfxEffectOrbit {
   float draw_scale;
 };
 
+/// The nuclear explosion's and the energy wave's state beyond the aged record's (the wave's age is `aged.age`).
+struct EeGfxEffectBlast {
+  /// the explosion's `mFlash` (0..1 over the duration) and `mRise` (0..1 over param 1), both saved, and the draw's
+  float flash;
+  float draw_flash;
+  float rise;
+  float draw_rise;
+  /// the explosion's texture scroll of the last step, taken (and cleared) by the queue
+  float scroll;
+  float draw_scroll;
+  /// the wave's `mPhase` (0..1, saved) and the draw's
+  float phase;
+  float draw_phase;
+  /// the wave's corners' heights and whether its unit is hidden (a cloaked enemy's), both taken by the queue
+  float heights[4];
+  bool hidden;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -899,6 +922,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectPass pass;
   /// the orbiting effects' (`effect_orbit.rs`)
   EeGfxEffectOrbit orbit;
+  /// the nuclear explosion's and energy wave's (`effect_nuclear.rs`)
+  EeGfxEffectBlast blast;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1242,6 +1267,15 @@ struct EeGfxAnimation {
   uint32_t frame_count;
 };
 
+/// A unit's tile facts (the nuclear explosion's place off the map): on the map (`mTileNode`), the class's tile size
+/// and the unit's tile, as floats.
+struct EeGfxUnitTile {
+  bool on_map;
+  float size;
+  float x;
+  float y;
+};
+
 /// The C++'s answers for an `EEE3DRust`.
 struct EeGfxEffect3DHost {
   void *context;
@@ -1310,6 +1344,16 @@ struct EeGfxEffect3DHost {
   EeGe3DPoint (*spawn_at)(void *context, uint32_t index, uint32_t frame);
   /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`): its result
   int32_t (*spawn)(void *context, const EeGe3DPoint *point);
+  /// the graphic object's texture `index` (`mTextures[index]`)
+  EeGfxModel (*texture_at)(void *context, uint32_t index);
+  /// the unit's tile facts (on the map, the class's tile size, the tile)
+  EeGfxUnitTile (*unit_tile)(void *context);
+  /// the terrain mesh's height at a point (`GetMeshZ`)
+  float (*terrain_z)(void *context, float x, float y);
+  /// the unit's complex unit is cloaked, another player's and the current player's enemy
+  bool (*unit_hidden)(void *context);
+  /// the terrain mesh's tile is a space tile (`GetIsSpaceTile`)
+  bool (*space_tile)(void *context, uint32_t x, uint32_t y);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1369,6 +1413,16 @@ struct EeGfxRaster {
   /// `GetCulling()`, `SetCulling(mode)`
   uint32_t (*get_culling)();
   void (*set_culling)(uint32_t mode);
+  /// adds `delta` to the v of every texture coordinate of vertex array 0 for good (nothing kept)
+  void (*model_shift_v)(EeGfxModel model, float delta);
+  /// `AddGroundQuad(center, color, yaw, size, heights, brightness, alpha reference)` (four heights)
+  void (*ground_quad)(const EeGe3DPoint *center,
+                      EeGfxColor color,
+                      float yaw,
+                      float size,
+                      const float *heights,
+                      float brightness,
+                      float alpha_ref);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.

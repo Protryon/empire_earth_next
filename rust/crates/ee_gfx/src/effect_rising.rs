@@ -17,6 +17,9 @@ use crate::effect_aged::aged;
 use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
 use crate::effect_hurricane::{hurricane, load_hurricane, save_hurricane, EE_GFX_EFFECT_KIND_HURRICANE};
+use crate::effect_nuclear::{
+    blast, load_blast, save_blast, EeGfxUnitTile, EE_GFX_EFFECT_KIND_ENERGY_WAVE, EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION,
+};
 use crate::effect_orbit::{
     load_orbit, orbit, save_orbit, EeGfxAnimation, EeGfxOrbital, EE_GFX_EFFECT_KIND_DISEASE,
     EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE, EE_GFX_EFFECT_KIND_VIRUS,
@@ -159,6 +162,16 @@ pub struct EeGfxEffect3DHost {
     pub spawn_at: extern "C" fn(context: *mut c_void, index: u32, frame: u32) -> Ge3DPoint,
     /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`): its result
     pub spawn: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint) -> i32,
+    /// the graphic object's texture `index` (`mTextures[index]`)
+    pub texture_at: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxModel,
+    /// the unit's tile facts (on the map, the class's tile size, the tile)
+    pub unit_tile: extern "C" fn(context: *mut c_void) -> EeGfxUnitTile,
+    /// the terrain mesh's height at a point (`GetMeshZ`)
+    pub terrain_z: extern "C" fn(context: *mut c_void, x: f32, y: f32) -> f32,
+    /// the unit's complex unit is cloaked, another player's and the current player's enemy
+    pub unit_hidden: extern "C" fn(context: *mut c_void) -> bool,
+    /// the terrain mesh's tile is a space tile (`GetIsSpaceTile`)
+    pub space_tile: extern "C" fn(context: *mut c_void, x: u32, y: u32) -> bool,
 }
 
 /// The world as the effects ask it.
@@ -222,6 +235,22 @@ pub trait Effect3DHost {
     }
     fn spawn(&mut self, _point: &Ge3DPoint) -> i32 {
         0
+    }
+    /// the tests' hosts that draw no explosion or wave answer nothing
+    fn texture_at(&mut self, _index: u32) -> EeGfxModel {
+        std::ptr::null_mut()
+    }
+    fn unit_tile(&mut self) -> EeGfxUnitTile {
+        EeGfxUnitTile::default()
+    }
+    fn terrain_z(&mut self, _x: f32, _y: f32) -> f32 {
+        0.0
+    }
+    fn unit_hidden(&mut self) -> bool {
+        false
+    }
+    fn space_tile(&mut self, _x: u32, _y: u32) -> bool {
+        false
     }
 }
 
@@ -316,6 +345,21 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn spawn(&mut self, point: &Ge3DPoint) -> i32 {
         (self.spawn)(self.context, point)
     }
+    fn texture_at(&mut self, index: u32) -> EeGfxModel {
+        (self.texture_at)(self.context, index)
+    }
+    fn unit_tile(&mut self) -> EeGfxUnitTile {
+        (self.unit_tile)(self.context)
+    }
+    fn terrain_z(&mut self, x: f32, y: f32) -> f32 {
+        (self.terrain_z)(self.context, x, y)
+    }
+    fn unit_hidden(&mut self) -> bool {
+        (self.unit_hidden)(self.context)
+    }
+    fn space_tile(&mut self, x: u32, y: u32) -> bool {
+        (self.space_tile)(self.context, x, y)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -343,6 +387,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
             orbit(op, r, g, h, x)
         },
         EE_GFX_EFFECT_KIND_HURRICANE => unsafe { hurricane(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION | EE_GFX_EFFECT_KIND_ENERGY_WAVE => unsafe { blast(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -419,6 +464,15 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 unsafe { load_hurricane(r, f, h) }
             } else {
                 save_hurricane(r, f)
+            }
+        }
+        EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION | EE_GFX_EFFECT_KIND_ENERGY_WAVE => {
+            // the base's result is ignored
+            if load {
+                // SAFETY: `r` is the only reference to the record during the call
+                unsafe { load_blast(r, f, h) }
+            } else {
+                save_blast(r, f)
             }
         }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
