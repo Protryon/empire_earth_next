@@ -809,6 +809,35 @@ constexpr static const uint32_t EE_SCREENS_DLG_LINE_HEIGHT = 13;
 /// -> the message label's line count.
 constexpr static const uint32_t EE_SCREENS_DLG_LINES = 14;
 
+/// (index, f32 bits) the float register's entry.
+constexpr static const uint32_t EE_SCREENS_DLG_FLOAT = 15;
+
+/// (control) creates it: the message label (f0 x f1, the font register, index 1), OK (id 1), No (2), Cancel (3), the
+/// edit box (f0 x f1, the font register, 0x32 characters, id 4); each 50x20 button in its own class.
+constexpr static const uint32_t EE_SCREENS_DLG_NEW = 16;
+
+/// The message label's scroll bar: background colour f0..f2, opacity f3.
+constexpr static const uint32_t EE_SCREENS_DLG_SCROLL_BAR = 17;
+
+/// (alignment) the message label's alignment.
+constexpr static const uint32_t EE_SCREENS_DLG_ALIGN = 18;
+
+/// (control: the label or the edit box) its text transparent, coloured f0..f2.
+constexpr static const uint32_t EE_SCREENS_DLG_TEXT_COLOR = 19;
+
+/// (control) `AddControl(control, 0)`.
+constexpr static const uint32_t EE_SCREENS_DLG_ADD = 20;
+
+/// The edit box's selection background f0..f2, background f3..f5, cursor f6..f8.
+constexpr static const uint32_t EE_SCREENS_DLG_EDIT_COLORS = 21;
+
+/// The form's entity group 0 enabled.
+constexpr static const uint32_t EE_SCREENS_DLG_ENABLE = 22;
+
+/// The form's layout (relative sides f0 left, f1 right, f2 top, f3 bottom) and its gold framed background (colour
+/// f4..f6) in the manager's UI texture depth.
+constexpr static const uint32_t EE_SCREENS_DLG_BACKGROUND = 23;
+
 /// The form's open event (`EECreateFormEvent`'s `kFormEventDSOpen`).
 constexpr static const uint32_t EE_SCREENS_DS_OPEN = 6913;
 
@@ -5580,6 +5609,9 @@ void ee_screens_dialog_show(void *dialog,
 
 /// `EEUIFError::Open`: lays the box's controls out for its mode.
 void ee_screens_dialog_open(void *dialog, uint32_t mode);
+
+/// `EEUIFError::EEUIFError`: creates and lays out the box's controls and background.
+void ee_screens_dialog_construct(void *dialog);
 
 /// A paint action's record: the terrain paint (a terrain, b texture), the elevation paint (a the level) or the
 /// bulldozer. Freed by `ee_screens_sea_paint_free` (the action's destructor).
