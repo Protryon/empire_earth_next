@@ -16179,3 +16179,126 @@ drawn.
   drop C++. The calamity effect also passes one shared `GE3DPoint` to every `CanCastAt`, which a host local would not
   reproduce. `ScriptCamera` only draws (a harness tour reaches it, no gate here). Next: the task effects' source
   filter and bucket split (pure lists) with the actions as writes, if the lead wants the bodies smaller still.
+
+## LLE Network Engine, round 3: NESynchronousClient whole in Rust, the server's lock-step tuning and booting in Rust (ee_net client.rs, tune.rs; branch rust-ne3, 2026-11-13)
+
+Round 2's order, next step: the lock-step state machines, determinism first (RUST_PLAN 2.1). The client moved whole;
+the server (1,184 + 292 lines, three threads) moved its tuning and booting, the part RUST_PLAN 2.1 cares most about
+(f32 rates, 32-bit interval arithmetic), as the first of the split the lead named (connect/accept, tick/tuning,
+booting).
+
+**Census.** Neither class's members are read outside it (private, no friends; EEClient and EEServer reach them only
+through accessors, `EEClient.cpp`'s `this->m...` are all its own members): no census commit was needed. Public client
+members with no caller left the header (ClearIncomingMessages, GetDebugInfo with NECDIClient, SendExitMessage,
+SendEndConnectMessage, ConnectForXfer, DisconnectFromXfer, XferReceive); the rest are one-line forwarders.
+
+| Commit | What | C++ (src + include, without include/rust) |
+|---|---|---|
+| 09822b32 | NESynchronousClient whole in Rust (`client.rs`, `ffi_client.rs`) | +333 -680, net -347 |
+| 2970d300 | ne_client_test: input bursts, a game that disconnects inside HandleMessage | tests only |
+| 0f6dcef7 | NESynchronousServer's TuneServer, TuneForSlowNetwork, TuneForSlowCPU, BootAllLaggers, BootTheSlowestResponder, BootTheSlowestClientCPU, GetSlowestClientCPU in Rust (`tune.rs`, `ffi_tune.rs`) | +106 -303, net -197 |
+
+**The client** (`client.rs`): the incoming and outgoing queues (each behind a re-entrant `RLock` held where the
+original held its critical section: the main thread's whole hand-over, a tick reply's draining; the deques themselves
+reached only in closures that make no call out), the last tick reply, the protocol, both connections, the connect
+request, the threads, the twelve events and the counters (atomics), and the lag simulator and recorder, which are now
+the client's own Rust objects: `LagLoss<ClientQ>` / `RecPlay<ClientQ>`, whose host (`ClientQ`, a pointer back to the
+boxed client) answers `deliver` with the client's methods (the three callbacks) and starts their threads as the
+client's kinds. Every member is a method: the constructor, the destructor's work, Connect / Disconnect, the input
+throttle (`process_user_input`), the tick replies, ProcessMessage, the main thread (`Main`) and the receive thread
+(`Receive`: packet batches, the transfer records assembled and written, the 10 s / 75 s silence). The C++ class keeps
+the type callers hold (`EEClient` subclasses it), its virtual members and one host function (`EeNetClOp`, 42 ops: the
+protocol and connections, the typed messages' fields and constructors, the received FSFile, the base class's fields,
+the virtual calls, ProcessLocalUserInput through the vtable); the queues' common ops still go to
+`NESynchronousCommunications::QueueHostCommon` (its thread table now has the client's four bodies, its ESVERIFY table
+the client's unit).
+
+- **The golden** (`tests/net/ne_client_test.cpp`, in `nettest`): the original unit, unmodified (`tests/net/orig_c`,
+  with its header), over stand-in headers in `tests/net/orig_c/lle` (protocol 0 and its connections, messages with
+  the typed fields and flags, received files, the base class) sharing round 2's threaded world (`q_world.h`, now with
+  `WaitAny`: a waiter on several events wakes on any, answering the lowest set index). The client's main and receive
+  threads are real threads under the baton. Each of 1,500 sequences of 80 steps (connects, disconnects, connect
+  requests timed out and retried, searches, detected games, local inputs alone and in bursts of 8-15, the server's
+  packets: ticks new, old, repeated and before the connection's reply, start and stop, connection and reconnection
+  replies, pause and unpause with send-to-all-and-wait ids old and new, packets naming no message; transfer records
+  whole, cut short and misaligned, files made, refused, written, closed and deleted; the base class's fields; the clock
+  moving up to 90 s: retries, silence warnings, lost connections; a game that disconnects from inside HandleMessage)
+  prints the client's state after every step: all equal (1,037,471 trace lines; 425 in-handler disconnects, 200 lost
+  connections, 990 transfer statuses, 60 file writes).
+- **Mutations** (300 sequences each; the cargo replay):
+
+  | Mutation | Sequences differing | Replay |
+  |---|---|---|
+  | the throttle allows 11 a second | 121 | fails |
+  | an old tick is one before the last (`<` for `<=`) | 90 | fails |
+  | the connection is lost after 70 s | 298 | fails |
+  | a connect retry after 4 s | 83 | fails |
+  | a reconnection's CT taken whole (no - 1) | 117 | fails |
+  | received messages handed on when not connected | 30 | fails |
+  | the receive thread lets the next batch go at once | 267 | fails |
+  | a send-to-all-and-wait tick seen again is processed (`>=`) | 88 | fails |
+
+  The first world let two survive (no bursts: the throttle was never reached; nothing disconnected between the receive
+  and the main thread): the bursts and the in-handler disconnect are its own commit. The other six were measured on the
+  first world.
+- **Cargo:** the Rust side's hosts record every op with its arguments and answer (connections, events, threads, files
+  and messages by world id; the bytes the Rust reads through pointers, a transfer record's data or an export, as hex
+  the replay hands back from its own buffers); `golden_client.txt` (40 sequences, 0.5 MB) is replayed by
+  `tests_client.rs` with real threads handed the baton where the record says, the nested ProcessLocalUserInput and
+  in-handler Disconnect made by the replay itself, and the client's state checked after each step.
+- **Behaviour changes, on undefined paths only:** the receive thread's `theLength` and `theReceived` (in-values of the
+  receives, uninitialized in the original) start at 0; threads never started are destroyed as NULL (the original read
+  uninitialized members); a transfer that overruns its record (the original's verification at line 1038, then a write
+  past the buffer) writes nothing past it; an export is freed with `delete[]` (the original's `delete`). Dropped: the
+  discarded `GetMessageLabel()` call of a throttled input and `PlatGetLastError()` after a failed wait (no effect).
+  The client's two critical sections are Rust locks (no TSScheduler critical sections made).
+- **What runs it:** only a LAN game's joiner (the single-player game and EE-SIM have no client): `lan_game.py`.
+
+**The server's tuning and booting** (`tune.rs`): the network tuning's state machine (six states: a late tick waited
+for twice, resent, resent every third time with a warning, then its laggers booted or the slowest responder), the
+counters, the slow-CPU count, the laggers to report (`mSlotsD0`), the lag flags and the send interval's decrement, all
+Rust (12 members left the class); the members read and write the server's other fields (the send interval and its
+limits, the rates, the cost factor, the game state) and call its message manager and the game through one host
+function (`EeNetTuOp`, 19 ops). `TuneServer` and `BootAllLaggers` are forwarders (the send and main threads call them);
+the other five members are gone from the class.
+- **Determinism:** the rate is the original's f32 expression (`1000.0f / (cpu * factor)`, `pts / (1000.0f /
+  interval)`), and the conversions are the code clang emits for x86-64: a float to `unsigned char` truncates through
+  a 32-bit `cvttss2si` (out of range or NaN: 0x80000000, low byte 0), a float to `unsigned long` through a 64-bit one,
+  the low 32 bits kept (`f32_to_u8`, `f32_to_u32`; Rust's saturating `as` differs: a mutation using it changes 349 of
+  2,000 sequences). The interval arithmetic wraps at 32 bits (a server that has not sent has an interval of
+  0xffffffff).
+- **The golden** (`tests/net/ne_tune_test.cpp`, in `nettest`): the original members cut unmodified into
+  `tests/net/orig_s/NESynchronousServerTune.inc` (the unit's lines 15-17, 317-369, 410-415, 887-1115 before the round),
+  compiled into a stand-in server whose message manager answers (`#define`d over the `ee_net_mm_*` names), events,
+  messages and game callbacks are world lines; no threads (the members run under the send thread's locks). 20,000
+  sequences of 120 steps (fields changed to the limits' edges: intervals 340-360, 499/500, 999/1000, 0xffffffff; cost
+  factors 0.1-4; rates 0-255; lagging phases where nine ticks in ten are late) with the tuning's state printed after
+  every call: 11,999,757 lines, all equal. Mutations (2,000 sequences; the replay fails on each):
+
+  | Mutation | Sequences differing |
+  |---|---|
+  | the second late episode does not stop the tick | 115 |
+  | the interval steps down to 350 itself (`>=`) | 244 |
+  | a slow CPU flagged after 16 | 755 |
+  | a late tick resent every second time | 1,777 |
+  | the rate converted with Rust's saturating cast | 349 |
+  | booting the laggers sets the default interval once | 93 |
+
+  `golden_tune.txt` (40 sequences, 0.6 MB) is replayed by `tests_tune.rs`; a unit test pins the conversions' edges.
+- **What runs it:** the send thread's `SendCommunicationsTick(…, true)`: every hosted game outside EE-SIM (EE-SIM's
+  `SimCommunicationsTick` passes false and never tunes), so the oracle does not reach it; a LAN game's host does.
+- **Behaviour change (crashing path only):** BootAllLaggers' laggers are a list (the original wrote them into an
+  array of `ee_net_mm_num_clients()` entries, overrun when more slots owed the message than clients were counted).
+
+- **Gates:** per commit: build --sim 0/0 (EE-AOC, EE-SIM); oracle seeds 2-3 identical to `ref`; the Rust gate PASS; nettest (ne_msgmgr_test 20,000, ne_queues_test 1,500, ne_client_test 1,500, ne_tune_test 20,000 sequences, ne_protocol_test equal to its golden); tcptest passes (one run during another lane's harness session failed at Publish, "publish: 1", the port taken; it passed before and after, and nothing in the round touches the TCP path). The client's commit: the test-profile build 0/0 and `lan_game.py` RESULT PASS lan-game PT host=2847 joiner=2835 (CTs equal or within 1 at every 5 s sample: 213/212 at 61 s). On the round merged with `rust` (ad8e61c3, merge clean, rust_includes' re-added includes reverted): build --sim and the test profile 0/0, oracle seeds 2-7 identical, the Rust gate PASS, nettest and tcptest as above, sim_capture at seeds 2-3: oracle PASS (169 digests equal to golden_cpp.txt, 4 without a golden), late PASS (170, 4 without), and `lan_game.py` on its test exe RESULT PASS lan-game PT host=2919 joiner=2925 (CTs equal at every sample, 220/220 at 60 s). No saveload run: no pause or save path changed (send-to-all-and-wait stays C++).
+- **Left:** the server's other members (the constructor and Publish, the main thread's packets and answer waits, the
+  send thread, the transfer thread, SendCommunicationsTick, the checksums and OOS handling, pause and send-to-all-and-
+  wait), then NEMessage. The server's golden can reuse `orig_c`'s world (protocol, messages, threads) with an
+  NEServer stand-in and the real Rust message manager; the tuning golden shows the cut approach works for members
+  that make no thread calls.
+- **Lessons:** a deterministic thread world needs paths into the states that two threads reach together (input
+  bursts between clock moves, a game callback that disconnects while the main thread holds the queue): mutations that
+  survive the first world name them. A golden over code with float-to-integer casts must emulate the C++ compiler's
+  instruction (`cvttss2si`), not Rust's saturating `as`, wherever the value can leave the target's range. Python edit
+  scripts with `\n` escapes must go through the Write tool (the Bash heredoc turns them into newlines and breaks the
+  string), as round 1 noted.
