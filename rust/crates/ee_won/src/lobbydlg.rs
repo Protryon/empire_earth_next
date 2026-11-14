@@ -34,6 +34,10 @@ pub enum EeWonLobbyDlgKind {
     CreateRoom = 5,
     CreateGame = 6,
     AdminAction = 7,
+    /// StatusDialog (round 2): DialogLogic's status box.
+    Status = 8,
+    /// OkCancelDialog (round 2): DialogLogic's OK/Cancel and Yes/No box.
+    OkCancel = 9,
 }
 
 /// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
@@ -44,6 +48,10 @@ pub enum EeWonLobbyDlgType {
     Button = 1,
     Label = 2,
     Combo = 3,
+    /// a plain `Component` (round 2)
+    Component = 4,
+    /// a `WONFrameComponent` (round 2)
+    Frame = 5,
 }
 
 /// One control of a kind: its resource name, the original's file and line (for the missing-control report) and type.
@@ -71,6 +79,10 @@ pub enum EeWonLobbyDlgString {
     Ban = 5,
     ExplanationOpt = 6,
     ExplanationReq = 7,
+    /// `LobbyGlobal_OK_String` (round 2)
+    Ok = 8,
+    /// `LobbyGlobal_Cancel_String` (round 2)
+    Cancel = 9,
 }
 
 /// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
@@ -151,6 +163,57 @@ pub enum EeWonLobbyDlgOp {
     GameSetInviteOnly,
     /// `((LobbyGame*)a)->SetSkill(b)`.
     GameSetSkill,
+    // ---- round 2: the status and OK/Cancel boxes' sizing (`a` a control or the dialog itself)
+    /// `a->Width()`.
+    Width,
+    /// `a->Height()`.
+    Height,
+    /// `a->Left()`.
+    Left,
+    /// `a->Top()`.
+    Top,
+    /// `a->SetSize(b, c)`.
+    SetSize,
+    /// `a->SetSizeAtLeast(b, c)`.
+    SetSizeAtLeast,
+    /// `a->SetDesiredSize(b, c)`.
+    SetDesiredSize,
+    /// `a->SetDesiredWidth(b)`.
+    SetDesiredWidth,
+    /// `a->SetPos(b, c)`.
+    SetPos,
+    /// `((Label*)a)->SetVertPad(b, c)`.
+    SetVertPad,
+    /// `((Label*)a)->SetText(*(const GUIString*)b, true)`, `gEmptyGUIString` for a NULL `b`.
+    LabelSetText,
+    /// `((Button*)a)->SetText(*(const GUIString*)b, true)`.
+    ButtonSetText,
+    /// `((WONFrameComponent*)a)->GetFrameLeft()`.
+    FrameLeft,
+    /// `((WONFrameComponent*)a)->GetFrameRight()`.
+    FrameRight,
+    /// `GetLobbyRoot()->Width()`.
+    RootWidth,
+    /// `GetLobbyRoot()->Height()`.
+    RootHeight,
+    /// `((Label*)a)->mWrappedText->mFont->GetStringWidth(*(const GUIString*)b)`.
+    FontStringWidth,
+    /// `aFont->GetStringWidth(s, 0, s.length())` of the label `a`'s font and the string `b`.
+    FontStringWidthRange,
+    /// `((Label*)a)->mWrappedText->mFont->GetCharacterWidth(b)`.
+    FontCharWidth,
+    /// `((Label*)a)->mWrappedText->mFont->GetHeight()`.
+    FontHeight,
+    /// `WONTickCount()`.
+    TickCount,
+    /// `a->Invalidate()` (the dialog).
+    Invalidate,
+    /// `((Dialog*)a)->IsDragging()` (0 or 1).
+    IsDragging,
+    /// `((Dialog*)a)->SetDragging(b != 0)`.
+    SetDragging,
+    /// `&((Label*)a)->mWrappedText->mText` (the title's own text, as SetStatus passed it on).
+    TitleText,
 }
 
 /// The inward calls (the shells' methods).
@@ -185,8 +248,16 @@ pub enum EeWonLobbyDlgCall {
     ApplyToServer,
     /// AdminAction: `GetNumSeconds()`.
     NumSeconds,
-    /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional.
+    /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional,
+    /// 4 StatusDialog's start tick.
     Field,
+    /// StatusDialog: `SetText(*(GUIString*)a, *(GUIString*)b, c != 0)`; OkCancelDialog: `SetText(title a, body b,
+    /// ((GUIString**)c)[0], ((GUIString**)c)[1])`.
+    SetText,
+    /// StatusDialog: `SetStatus(*(GUIString*)a, b != 0)`.
+    SetStatus,
+    /// StatusDialog: `mStartTick = a`.
+    SetStartTick,
 }
 
 /// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
@@ -257,6 +328,27 @@ static ADMIN_ACTION: [EeWonLobbyDlgSlot; 10] = [
     slot!(c"ApplyToRoomRadio", c"AdminActionDialog.cpp", 112, Button),
     slot!(c"ApplyToServerRadio", c"AdminActionDialog.cpp", 113, Button),
 ];
+static STATUS: [EeWonLobbyDlgSlot; 6] = [
+    slot!(c"TitleLabel", c"StatusDialog.cpp", 28, Label),
+    slot!(c"CloseButton", c"StatusDialog.cpp", 29, Button),
+    slot!(c"StatusLabel", c"StatusDialog.cpp", 30, Label),
+    slot!(c"CancelButton", c"StatusDialog.cpp", 31, Button),
+    slot!(c"DialogComponent", c"StatusDialog.cpp", 34, Component),
+    slot!(c"Back", c"StatusDialog.cpp", 33, Frame),
+];
+static OK_CANCEL: [EeWonLobbyDlgSlot; 7] = [
+    slot!(c"TitleLabel", c"OkCancelDialog.cpp", 26, Label),
+    slot!(c"BodyLabel", c"OkCancelDialog.cpp", 28, Label),
+    slot!(c"OKButton", c"OkCancelDialog.cpp", 30, Button),
+    slot!(c"CancelButton", c"OkCancelDialog.cpp", 31, Button),
+    slot!(c"CloseButton", c"OkCancelDialog.cpp", 27, Button),
+    slot!(c"DialogComponent", c"OkCancelDialog.cpp", 34, Component),
+    slot!(c"Back", c"OkCancelDialog.cpp", 33, Frame),
+];
+/// StatusDialog looked its frame up before its body.
+const STATUS_INIT_ORDER: [usize; 6] = [0, 1, 2, 3, 5, 4];
+/// OkCancelDialog looked up its title, close button, body, buttons, frame, then its body component.
+const OK_CANCEL_INIT_ORDER: [usize; 7] = [0, 4, 1, 2, 3, 6, 5];
 /// AdminActionDialog looked its title up last.
 const ADMIN_INIT_ORDER: [usize; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
 
@@ -271,6 +363,8 @@ pub fn slots(kind: EeWonLobbyDlgKind) -> &'static [EeWonLobbyDlgSlot] {
         EeWonLobbyDlgKind::CreateRoom => &CREATE_ROOM,
         EeWonLobbyDlgKind::CreateGame => &CREATE_GAME,
         EeWonLobbyDlgKind::AdminAction => &ADMIN_ACTION,
+        EeWonLobbyDlgKind::Status => &STATUS,
+        EeWonLobbyDlgKind::OkCancel => &OK_CANCEL,
     }
 }
 
@@ -309,6 +403,19 @@ const AA_SEGMENT: usize = 5;
 const AA_DO: usize = 6;
 const AA_ROOM: usize = 8;
 const AA_SERVER: usize = 9;
+const ST_TITLE: usize = 0;
+const ST_CLOSE: usize = 1;
+const ST_STATUS: usize = 2;
+const ST_CANCEL: usize = 3;
+const ST_BODY: usize = 4;
+const ST_BACK: usize = 5;
+const OC_TITLE: usize = 0;
+const OC_BODY: usize = 1;
+const OC_OK: usize = 2;
+const OC_CANCEL: usize = 3;
+const OC_CLOSE: usize = 4;
+const OC_COMPONENT: usize = 5;
+const OC_BACK: usize = 6;
 
 /// One lobby dialog's Rust half.
 pub struct EeWonLobbyDlg {
@@ -324,6 +431,8 @@ pub struct EeWonLobbyDlg {
     action_type: Cell<i32>,
     /// AdminActionDialog's `mIsReasonOptional` (unset by the constructor: false here).
     reason_optional: Cell<bool>,
+    /// StatusDialog's `mStartTick` (its constructor's tick, set through `SetStartTick`).
+    start_tick: Cell<u32>,
 }
 
 impl EeWonLobbyDlg {
@@ -337,6 +446,7 @@ impl EeWonLobbyDlg {
             game_type: Cell::new(0),
             action_type: Cell::new(0),
             reason_optional: Cell::new(false),
+            start_tick: Cell::new(0),
         }
     }
 
@@ -365,10 +475,11 @@ impl EeWonLobbyDlg {
     /// assignment: the new one held before the old one is released).
     fn init(&self, config: isize) {
         let table = slots(self.kind);
-        let order: Vec<usize> = if self.kind == EeWonLobbyDlgKind::AdminAction {
-            ADMIN_INIT_ORDER.to_vec()
-        } else {
-            (0..table.len()).collect()
+        let order: Vec<usize> = match self.kind {
+            EeWonLobbyDlgKind::AdminAction => ADMIN_INIT_ORDER.to_vec(),
+            EeWonLobbyDlgKind::Status => STATUS_INIT_ORDER.to_vec(),
+            EeWonLobbyDlgKind::OkCancel => OK_CANCEL_INIT_ORDER.to_vec(),
+            _ => (0..table.len()).collect(),
         };
         for i in order {
             let found = self.op(Op::Find, config, &table[i] as *const EeWonLobbyDlgSlot as isize, 0);
@@ -457,6 +568,7 @@ impl EeWonLobbyDlg {
                 self.check_input();
             }
             EeWonLobbyDlgKind::AdminAction => self.admin_reset(a as i32, b),
+            EeWonLobbyDlgKind::Status | EeWonLobbyDlgKind::OkCancel => {}
         }
     }
 
@@ -629,11 +741,180 @@ impl EeWonLobbyDlg {
                     1 => self.game_type.get() as isize,
                     2 => self.action_type.get() as isize,
                     3 => self.reason_optional.get() as isize,
+                    4 => self.start_tick.get() as isize,
                     _ => 0,
                 }
             }
+            C::SetText => match self.kind {
+                EeWonLobbyDlgKind::Status => self.status_set_text(a, b, c != 0),
+                EeWonLobbyDlgKind::OkCancel => {
+                    let (ok, cancel) = if c != 0 {
+                        let p = c as *const isize;
+                        // SAFETY: the caller's two string pointers (the contract)
+                        unsafe { (*p, *p.add(1)) }
+                    } else {
+                        (0, 0)
+                    };
+                    self.ok_cancel_set_text(a, b, ok, cancel)
+                }
+                _ => {}
+            },
+            C::SetStatus => {
+                if self.kind == EeWonLobbyDlgKind::Status {
+                    let title = self.on(ST_TITLE, Op::TitleText, 0, 0);
+                    self.status_set_text(title, a, b != 0);
+                }
+            }
+            C::SetStartTick => self.start_tick.set(a as u32),
         }
         0
+    }
+
+    /// An op on the dialog itself.
+    fn me(&self, op: Op, b: isize, c: isize) -> isize {
+        self.op(op, self.dialog as isize, b, c)
+    }
+
+    fn int(&self, i: usize, op: Op) -> i32 {
+        self.on(i, op, 0, 0) as i32
+    }
+
+    /// `StatusDialog::SetText`: title, message and Cancel/OK button; the dialog sized to the message (within 50 ms
+    /// of its start tick it never shrinks).
+    fn status_set_text(&self, title: isize, status: isize, cancel: bool) {
+        use EeWonLobbyDlgString as S;
+        let dragging = self.me(Op::IsDragging, 0, 0);
+        let initial_width = self.me(Op::Width, 0, 0) as i32;
+        let initial_height = self.me(Op::Height, 0, 0) as i32;
+        let initial_status_width = self.int(ST_STATUS, Op::Width);
+        let initial_status_height = self.int(ST_STATUS, Op::Height);
+        let initial_body_width = self.int(ST_BODY, Op::Width);
+        let initial_body_height = self.int(ST_BODY, Op::Height);
+        let initial_button_y = self.int(ST_CANCEL, Op::Top);
+        self.on(ST_TITLE, Op::LabelSetText, title, 0);
+        self.on(ST_TITLE, Op::SetDesiredWidth, 0, 0);
+        self.on(ST_CANCEL, Op::ButtonSetString, if cancel { S::Cancel } else { S::Ok } as isize, 0);
+        self.on(ST_CANCEL, Op::SetDesiredSize, 0, 0);
+        self.on(ST_CANCEL, Op::SetSizeAtLeast, 100, 0);
+        self.on(ST_STATUS, Op::SetVertPad, 0, 0);
+        self.on(ST_STATUS, Op::LabelSetText, 0, 0);
+        self.on(ST_STATUS, Op::SetSize, 0, 0);
+        self.me(Op::SetSize, 0, 0);
+        let least = self
+            .int(ST_TITLE, Op::Width)
+            .wrapping_add(self.int(ST_CLOSE, Op::Width))
+            .wrapping_add(self.int(ST_BACK, Op::FrameRight))
+            .wrapping_add(self.int(ST_BACK, Op::FrameLeft))
+            .wrapping_add(5);
+        self.me(Op::SetSizeAtLeast, least as isize, 0);
+        self.on(ST_BODY, Op::SetSize, 0, 0);
+        self.on(ST_BODY, Op::SetDesiredSize, 0, 0);
+        self.me(Op::SetDesiredSize, 20, 20);
+        let old_width = self.me(Op::Width, 0, 0) as i32;
+        let old_height = self.me(Op::Height, 0, 0) as i32;
+        let old_status_height = self.int(ST_STATUS, Op::Height);
+        let root_width = self.op(Op::RootWidth, 0, 0, 0) as i32;
+        let root_height = self.op(Op::RootHeight, 0, 0, 0) as i32;
+        let text_width = self.on(ST_STATUS, Op::FontStringWidth, status, 0) as i32;
+        let m_width = self.on(ST_STATUS, Op::FontCharWidth, b'M' as isize, 0) as i32;
+        let body_width = dialogs::status_body_width(text_width, m_width, root_width);
+        let mut width_change = dialogs::growth(body_width, self.int(ST_STATUS, Op::Width));
+        let h = self.int(ST_STATUS, Op::Height);
+        self.on(ST_STATUS, Op::SetSize, body_width as isize, h as isize);
+        self.on(ST_STATUS, Op::LabelSetText, status, 0);
+        let label_height = self.int(ST_STATUS, Op::Height);
+        let line_height = self.int(ST_STATUS, Op::FontHeight);
+        if let Some(pad) = dialogs::status_pad(label_height, line_height) {
+            self.on(ST_STATUS, Op::SetVertPad, pad as isize, pad as isize);
+            self.on(ST_STATUS, Op::SetDesiredSize, 0, 0);
+        }
+        let mut height_change = dialogs::growth(self.int(ST_STATUS, Op::Height), old_status_height);
+        let new_width = old_width.wrapping_add(width_change);
+        let new_height = height_change.wrapping_add(old_height);
+        if let Some(extra) = dialogs::status_extra_width(new_width, new_height, root_height, width_change, old_width) {
+            width_change = width_change.wrapping_add(extra);
+            let h = self.int(ST_STATUS, Op::Height);
+            self.on(ST_STATUS, Op::SetSize, body_width.wrapping_add(extra) as isize, h as isize);
+            height_change = self.int(ST_STATUS, Op::Height).wrapping_sub(old_status_height);
+        }
+        self.me(
+            Op::SetSize,
+            width_change.wrapping_add(old_width) as isize,
+            height_change.wrapping_add(old_height) as isize,
+        );
+        let now = self.op(Op::TickCount, 0, 0, 0) as u32;
+        if dialogs::status_young(now, self.start_tick.get()) {
+            self.on(ST_STATUS, Op::SetSizeAtLeast, initial_status_width as isize, initial_status_height as isize);
+            self.on(ST_BODY, Op::SetSizeAtLeast, initial_body_width as isize, initial_body_height as isize);
+            self.me(Op::SetSizeAtLeast, initial_width as isize, initial_height as isize);
+            if initial_button_y > self.int(ST_CANCEL, Op::Top) {
+                let left = self.int(ST_CANCEL, Op::Left);
+                self.on(ST_CANCEL, Op::SetPos, left as isize, initial_button_y as isize);
+            }
+        }
+        self.me(Op::Invalidate, 0, 0);
+        self.me(Op::SetDragging, dragging, 0);
+    }
+
+    /// `OkCancelDialog::SetText`: title, message and the two buttons' texts; the dialog sized to the message (up to
+    /// 250 wide, 400 for long ones).
+    fn ok_cancel_set_text(&self, title: isize, body: isize, ok: isize, cancel: isize) {
+        self.on(OC_TITLE, Op::LabelSetText, title, 0);
+        self.on(OC_TITLE, Op::SetDesiredWidth, 0, 0);
+        self.on(OC_OK, Op::ButtonSetText, ok, 0);
+        self.on(OC_OK, Op::SetDesiredSize, 0, 0);
+        self.on(OC_OK, Op::SetSizeAtLeast, 100, 0);
+        self.on(OC_CANCEL, Op::ButtonSetText, cancel, 0);
+        self.on(OC_CANCEL, Op::SetDesiredSize, 0, 0);
+        self.on(OC_CANCEL, Op::SetSizeAtLeast, 100, 0);
+        self.on(OC_BODY, Op::SetVertPad, 0, 0);
+        self.on(OC_BODY, Op::LabelSetText, 0, 0);
+        self.on(OC_BODY, Op::SetSize, 0, 0);
+        self.me(Op::SetSize, 0, 0);
+        let least = self
+            .int(OC_TITLE, Op::Width)
+            .wrapping_add(self.int(OC_CLOSE, Op::Width))
+            .wrapping_add(self.int(OC_BACK, Op::FrameLeft))
+            .wrapping_add(self.int(OC_BACK, Op::FrameRight))
+            .wrapping_add(5);
+        self.me(Op::SetSizeAtLeast, least as isize, 0);
+        self.on(OC_COMPONENT, Op::SetSize, 0, 0);
+        self.on(OC_COMPONENT, Op::SetDesiredSize, 0, 0);
+        self.me(Op::SetDesiredSize, 20, 20);
+        let old_height = self.me(Op::Height, 0, 0) as i32;
+        let old_width = self.me(Op::Width, 0, 0) as i32;
+        let old_body_height = self.int(OC_BODY, Op::Height);
+        let text_width = self.on(OC_BODY, Op::FontStringWidthRange, body, 0) as i32;
+        let body_width = ok_cancel_body_width(text_width);
+        let mut width_change = dialogs::growth(body_width, self.int(OC_BODY, Op::Width));
+        let h = self.int(OC_BODY, Op::Height);
+        self.on(OC_BODY, Op::SetSize, body_width as isize, h as isize);
+        self.on(OC_BODY, Op::LabelSetText, body, 0);
+        let label_height = self.int(OC_BODY, Op::Height);
+        let lines = label_height / self.int(OC_BODY, Op::FontHeight);
+        if lines < 5 {
+            // the original read the font's height a second time here
+            let pad = (5 - lines).wrapping_mul(self.int(OC_BODY, Op::FontHeight)) / 2;
+            self.on(OC_BODY, Op::SetVertPad, pad as isize, pad as isize);
+            self.on(OC_BODY, Op::SetDesiredSize, 0, 0);
+        }
+        let mut height_change = dialogs::growth(self.int(OC_BODY, Op::Height), old_body_height);
+        // the original read the root's width and did not use it
+        self.op(Op::RootWidth, 0, 0, 0);
+        let root_height = self.op(Op::RootHeight, 0, 0, 0) as i32;
+        let new_width = old_width.wrapping_add(width_change);
+        let new_height = old_height.wrapping_add(height_change);
+        if let Some(extra) = dialogs::status_extra_width(new_width, new_height, root_height, width_change, old_width) {
+            width_change = width_change.wrapping_add(extra);
+            let h = self.int(OC_BODY, Op::Height);
+            self.on(OC_BODY, Op::SetSize, body_width.wrapping_add(extra) as isize, h as isize);
+            height_change = self.int(OC_BODY, Op::Height).wrapping_sub(old_body_height);
+        }
+        self.me(
+            Op::SetSize,
+            old_width.wrapping_add(width_change) as isize,
+            old_height.wrapping_add(height_change) as isize,
+        );
     }
 
     /// The destructor: the controls released in reverse member order (the `SmartPtr` members' destruction).
@@ -644,6 +925,17 @@ impl EeWonLobbyDlg {
                 self.op(Op::Release, c, 0, 0);
             }
         }
+    }
+}
+
+/// `OkCancelDialog::SetText`: the message's width: its text's width up to 250, 250 up to 800, else 400.
+pub fn ok_cancel_body_width(text_width: i32) -> i32 {
+    if text_width < 250 {
+        text_width
+    } else if text_width < 800 {
+        250
+    } else {
+        400
     }
 }
 

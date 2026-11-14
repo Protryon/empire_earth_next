@@ -3274,6 +3274,125 @@ enum class EeWonDlgCall : uint32_t {
   SetField,
 };
 
+/// The ops (`a`..`d` as documented).
+enum class EeWonDlgLogicOp : uint32_t {
+  /// `SafeGetComponent(a, aPtr, "OkCancelDialog", "DialogLogic.cpp", 48)` into a `SmartPtr<OkCancelDialog>`: the
+  /// dialog with a reference added, or NULL.
+  FindOkCancel = 1,
+  /// `SafeGetComponent(a, aPtr, "StatusDialog", "DialogLogic.cpp", 49)`: the dialog with a reference, or NULL.
+  FindStatus,
+  /// `WindowManager::GetDefaultWindowManager()`: -1 when NULL, else its `GetPopupsInOwnWindow()` (0 or 1).
+  WmPopups,
+  /// `a->Release()` of a component (a dialog, a container).
+  ReleaseComponent,
+  /// `a->AddRef()` of a component.
+  AddRefComponent,
+  /// `a->Release()` of a window.
+  ReleaseWindow,
+  /// `a->AddRef()` of a window.
+  AddRefWindow,
+  /// `a->Release()` of an async operation.
+  ReleaseOp,
+  /// `a->AddRef()` of an async operation.
+  AddRefOp,
+  /// `((AsyncOp*)a)->Kill(true)`.
+  OpKill,
+  /// `((AsyncOp*)a)->ForceFinish(WS_Killed)`.
+  OpForceFinishKilled,
+  /// `((AsyncOp*)a)->GetStatus()`.
+  OpGetStatus,
+  /// `this->RunOp(a, new LogicCompletion<DialogLogic>(&DialogLogic::StatusOpComplete, this), b)`.
+  RunOp,
+  /// `GetLobbyWindow()->EndDialog(-1, NULL, a)` (the status dialog).
+  EndDialog,
+  /// `GetLobbyRoot()` (not held).
+  LobbyRoot,
+  /// `LobbyGetRootWindow()` (not held).
+  RootWindow,
+  /// `a->mParent` (a component).
+  Parent,
+  /// `((Container*)a)->RemoveChild(b)`.
+  RemoveChild,
+  /// `((Window*)a)->Close()`.
+  WindowClose,
+  /// `a->Width()` (a component).
+  Width,
+  /// `a->Height()`.
+  Height,
+  /// `a->GetBounds()` into `*(int(*)[4])b`: x, y, width, height.
+  Bounds,
+  /// `CreateNativeWindow()` into a `SmartPtr<Window>`, then its `SetOneComponentWindow(true)`: the window with a
+  /// reference added.
+  NewWindow,
+  /// `a->SetParent(b); a->SetStyle(0x22); a->Create(WONRectangle(0, 0, 100, 100));
+  /// LobbyAddLogicListener(a->mRoot); a->mRoot->SetColorScheme(LobbyGetColorScheme())`.
+  SetUpPopup,
+  /// `((Window*)a)->SetClientSize(b, c)`.
+  SetClientSize,
+  /// `((Window*)a)->mRoot.get()` (not held).
+  WindowRoot,
+  /// `((Window*)a)->Center(true)`.
+  WindowCenter,
+  /// `CenterLayout::Center((Container*)a, b, true, true)`.
+  CenterLayout,
+  /// `((Container*)a)->AddChild(b)`.
+  AddChild,
+  /// `((Window*)a)->Show(true)`.
+  WindowShow,
+  /// `((Window*)a)->RunDialog(b)`: the dialog's result.
+  RunDialog,
+  /// `LobbyIsSuspended()` (0 or 1).
+  LobbySuspended,
+  /// `((StatusDialog*)a)->SetText(*(GUIString*)b, *(GUIString*)c, d != 0)`.
+  StatusSetText,
+  /// `((StatusDialog*)a)->mStartTick = WONTickCount()`.
+  StatusSetStartTick,
+  /// `((StatusDialog*)a)->SetStatus(GetWONStatusString(b), false)`.
+  StatusSetStatus,
+  /// `LobbyGetLobbySoundEffects()` (0 or 1).
+  SoundEffects,
+  /// `LobbyPlaySound(LobbyGlobal_Error_Sound.get())`.
+  PlayErrorSound,
+  /// `((OkCancelDialog*)a)->SetText(*(GUIString*)b, *(GUIString*)c, OK or Yes, Cancel or No)`: Yes/No when
+  /// `d != 0`.
+  OkCancelSetText,
+  /// `a->GetRootWindow()` (a component; not held).
+  RootWindowOf,
+  /// `((Container*)a)->InvalidateRect(WONRectangle(*(int(*)[4])b))`.
+  InvalidateRect,
+};
+
+/// The inward calls (the C++ class's methods).
+enum class EeWonDlgLogicCall : uint32_t {
+  /// `InitComponent(a)`.
+  Init = 1,
+  /// `KillHook()`.
+  KillHook,
+  /// `Reset()` (= ClearDialogs).
+  Reset,
+  /// `StatusOpComplete(a)`.
+  StatusOpComplete,
+  /// `ClearDialogs()`.
+  ClearDialogs,
+  /// `DoDialog(a)`: the dialog's result.
+  DoDialog,
+  /// `RunOpWithStatus(a, title b, status c, mode d, timeout e)`.
+  RunOpWithStatus,
+  /// `ShowStatus(title a, status b, cancel c != 0)`.
+  ShowStatus,
+  /// `ShowError(title a, text b)`.
+  ShowError,
+  /// `UpdateStatus(a)`.
+  UpdateStatus,
+  /// `ShowOkCancel(title a, text b, sound c != 0)`.
+  ShowOkCancel,
+  /// `ShowYesNo(title a, text b, sound c != 0)`.
+  ShowYesNo,
+  /// a field: 0 `mStatusCancelled`, 1 `mPopupWindows`, 2 `mStatusVisible`, 3 `mStatusMode`, 4 `mStatusOp`,
+  /// 5 the OK/Cancel dialog, 6 the status dialog, 7 the stack's depth.
+  Field,
+};
+
 /// What an ElGamal call computes into a sink.
 enum class EeWonElGamalOp : uint32_t {
   Encrypt = 0,
@@ -3975,6 +4094,10 @@ enum class EeWonLobbyDlgKind : uint32_t {
   CreateRoom = 5,
   CreateGame = 6,
   AdminAction = 7,
+  /// StatusDialog (round 2): DialogLogic's status box.
+  Status = 8,
+  /// OkCancelDialog (round 2): DialogLogic's OK/Cancel and Yes/No box.
+  OkCancel = 9,
 };
 
 /// The ops (`a`, `b`, `c` as documented; a control is a `Component*` this object holds).
@@ -4043,6 +4166,56 @@ enum class EeWonLobbyDlgOp : uint32_t {
   GameSetInviteOnly,
   /// `((LobbyGame*)a)->SetSkill(b)`.
   GameSetSkill,
+  /// `a->Width()`.
+  Width,
+  /// `a->Height()`.
+  Height,
+  /// `a->Left()`.
+  Left,
+  /// `a->Top()`.
+  Top,
+  /// `a->SetSize(b, c)`.
+  SetSize,
+  /// `a->SetSizeAtLeast(b, c)`.
+  SetSizeAtLeast,
+  /// `a->SetDesiredSize(b, c)`.
+  SetDesiredSize,
+  /// `a->SetDesiredWidth(b)`.
+  SetDesiredWidth,
+  /// `a->SetPos(b, c)`.
+  SetPos,
+  /// `((Label*)a)->SetVertPad(b, c)`.
+  SetVertPad,
+  /// `((Label*)a)->SetText(*(const GUIString*)b, true)`, `gEmptyGUIString` for a NULL `b`.
+  LabelSetText,
+  /// `((Button*)a)->SetText(*(const GUIString*)b, true)`.
+  ButtonSetText,
+  /// `((WONFrameComponent*)a)->GetFrameLeft()`.
+  FrameLeft,
+  /// `((WONFrameComponent*)a)->GetFrameRight()`.
+  FrameRight,
+  /// `GetLobbyRoot()->Width()`.
+  RootWidth,
+  /// `GetLobbyRoot()->Height()`.
+  RootHeight,
+  /// `((Label*)a)->mWrappedText->mFont->GetStringWidth(*(const GUIString*)b)`.
+  FontStringWidth,
+  /// `aFont->GetStringWidth(s, 0, s.length())` of the label `a`'s font and the string `b`.
+  FontStringWidthRange,
+  /// `((Label*)a)->mWrappedText->mFont->GetCharacterWidth(b)`.
+  FontCharWidth,
+  /// `((Label*)a)->mWrappedText->mFont->GetHeight()`.
+  FontHeight,
+  /// `WONTickCount()`.
+  TickCount,
+  /// `a->Invalidate()` (the dialog).
+  Invalidate,
+  /// `((Dialog*)a)->IsDragging()` (0 or 1).
+  IsDragging,
+  /// `((Dialog*)a)->SetDragging(b != 0)`.
+  SetDragging,
+  /// `&((Label*)a)->mWrappedText->mText` (the title's own text, as SetStatus passed it on).
+  TitleText,
 };
 
 /// The inward calls (the shells' methods).
@@ -4075,8 +4248,16 @@ enum class EeWonLobbyDlgCall : uint32_t {
   ApplyToServer,
   /// AdminAction: `GetNumSeconds()`.
   NumSeconds,
-  /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional.
+  /// a scalar member: 0 the game port, 1 the game type, 2 the action type, 3 whether the reason is optional,
+  /// 4 StatusDialog's start tick.
   Field,
+  /// StatusDialog: `SetText(*(GUIString*)a, *(GUIString*)b, c != 0)`; OkCancelDialog: `SetText(title a, body b,
+  /// ((GUIString**)c)[0], ((GUIString**)c)[1])`.
+  SetText,
+  /// StatusDialog: `SetStatus(*(GUIString*)a, b != 0)`.
+  SetStatus,
+  /// StatusDialog: `mStartTick = a`.
+  SetStartTick,
 };
 
 /// A container's key kind (its comparator).
@@ -5416,6 +5597,10 @@ enum class EeWonLobbyDlgType : uint32_t {
   Button = 1,
   Label = 2,
   Combo = 3,
+  /// a plain `Component` (round 2)
+  Component = 4,
+  /// a `WONFrameComponent` (round 2)
+  Frame = 5,
 };
 
 /// The texts AdminActionDialog sets (the lobby's resource strings).
@@ -5429,6 +5614,10 @@ enum class EeWonLobbyDlgString : uint32_t {
   Ban = 5,
   ExplanationOpt = 6,
   ExplanationReq = 7,
+  /// `LobbyGlobal_OK_String` (round 2)
+  Ok = 8,
+  /// `LobbyGlobal_Cancel_String` (round 2)
+  Cancel = 9,
 };
 
 /// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
@@ -5486,6 +5675,9 @@ struct EeWonContainer;
 
 /// The Rust Dialog.
 struct EeWonDialog;
+
+/// DialogLogic's Rust half.
+struct EeWonDlgLogic;
 
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
@@ -6024,6 +6216,14 @@ struct EeWonDirListed {
   EeWonDirBytes path;
   EeWonDirBytes name;
 };
+
+/// The host: `(logic, op, a, b, c, d) -> result`; `logic` is the C++ DialogLogic.
+using EeWonDlgLogicHostFn = ptrdiff_t(*)(void *logic,
+                                         EeWonDlgLogicOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c,
+                                         ptrdiff_t d);
 
 /// Receives UTF-16 units; valid only during the call.
 using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
@@ -9032,6 +9232,27 @@ void ee_won_dir_group_keys(EeWonDirBytes query_path,
                            size_t count,
                            EeWonByteSink sink,
                            void *context);
+
+/// A new DialogLogic object for the C++ `logic`.
+EeWonDlgLogic *ee_won_dlglogic_new(void *logic, EeWonDlgLogicHostFn host);
+
+/// Releases what the object holds and frees it.
+///
+/// # Safety
+/// `obj` came from `ee_won_dlglogic_new` (or is NULL) and is not used again.
+void ee_won_dlglogic_free(EeWonDlgLogic *obj);
+
+/// One inward call (`EeWonDlgLogicCall`).
+///
+/// # Safety
+/// `obj` is live; the arguments as documented.
+ptrdiff_t ee_won_dlglogic_call(const EeWonDlgLogic *obj,
+                               EeWonDlgLogicCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c,
+                               ptrdiff_t d,
+                               ptrdiff_t e);
 
 /// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
 /// bytes); returns the byte count. `out` may be null to measure.

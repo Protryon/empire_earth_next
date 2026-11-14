@@ -185,34 +185,31 @@ public:
 
 
 
-class OkCancelDialog : public Dialog {
+// DialogLogic's two boxes (R6 WONLobby round 2): their controls and SetText (the sizing to the message) are the
+// lobby dialog object's kinds OkCancel and Status.
+class OkCancelDialog : public LobbyRustDialog {
 public:
-    OkCancelDialog();
-    virtual void InitComponent(ComponentInit& inInit);
-    void SetText(const GUIString& inTitle, const GUIString& inBody,
-                 const GUIString& inOkText, const GUIString& inCancelText);
-    SmartPtr<Label> mTitleLabel;
-    SmartPtr<Label> mBodyLabel;
-    SmartPtr<Button> mOkButton;
-    SmartPtr<Button> mCancelButton;
-    SmartPtr<Button> mCloseButton;
-    SmartPtr<Component> mDialogComponent;
-    SmartPtr<WONFrameComponent> mBack;
+    OkCancelDialog() : LobbyRustDialog(EeWonLobbyDlgKind::OkCancel) {}
+    void SetText(const GUIString& inTitle, const GUIString& inBody, const GUIString& inOkText,
+                 const GUIString& inCancelText)
+    {
+        const GUIString* aButtons[2] = {&inOkText, &inCancelText};
+        this->LCall(EeWonLobbyDlgCall::SetText, (intptr_t)&inTitle, (intptr_t)&inBody, (intptr_t)aButtons);
+    }
 };
 
-class StatusDialog : public Dialog {
+class StatusDialog : public LobbyRustDialog {
 public:
-    StatusDialog();
-    virtual void InitComponent(ComponentInit& inInit);
-    void SetStatus(const GUIString& inStatus, bool inCancel);
-    void SetText(const GUIString& inTitle, const GUIString& inStatus, bool inCancel);
-    SmartPtr<Label> mTitleLabel;
-    SmartPtr<Button> mCloseButton;
-    SmartPtr<Label> mStatusLabel;
-    SmartPtr<Button> mCancelButton;
-    SmartPtr<Component> mDialogComponent;
-    SmartPtr<WONFrameComponent> mBack;
-    unsigned long mStartTick;
+    StatusDialog(); // its start tick is the constructor's (LobbyDialogHost.cpp)
+    void SetStatus(const GUIString& inStatus, bool inCancel)
+    {
+        this->LCall(EeWonLobbyDlgCall::SetStatus, (intptr_t)&inStatus, inCancel);
+    }
+    void SetText(const GUIString& inTitle, const GUIString& inStatus, bool inCancel)
+    {
+        this->LCall(EeWonLobbyDlgCall::SetText, (intptr_t)&inTitle, (intptr_t)&inStatus, inCancel);
+    }
+    void SetStartTick(unsigned long inTick) { this->LCall(EeWonLobbyDlgCall::SetStartTick, (intptr_t)inTick); }
 };
 
 

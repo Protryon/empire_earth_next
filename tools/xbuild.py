@@ -552,6 +552,8 @@ WON_TESTS = {
     "won_dialogs_test": [],
     # the lobby's eight small dialogs as one Rust object (golden: rust/crates/ee_won/src/golden_lobbydlg.txt)
     "won_lobbydlg_test": [],
+    # DialogLogic and its status and OK/Cancel boxes in Rust (golden: rust/crates/ee_won/src/golden_dlglogic.txt)
+    "won_dlglogic_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",

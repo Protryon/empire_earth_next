@@ -17789,3 +17789,95 @@ and `CryptTransform` holding a `SmartPtr<AuthSession>`.
   ServerOp.cpp 563 (its `HostCall` shrinks with the sockets); HTTPEngine.cpp 259 (shims with locks over
   httpengine.rs); ServerConnection.cpp 220 (`ServerConnectionConnectOp` about 40 of it: no net deletion alone, as
   round 19 found); WONDir 144 (the entity list the game's readers take); GameSpySupport.cpp 363 is not linked.
+
+## R6 WONLobby, round 2: DialogLogic whole in Rust; the status and OK/Cancel boxes as lobby dialog kinds (ee_won dlglogic.rs, lobbydlg.rs; branch rust-wonlobby2, 2026-11-13)
+
+Round 1's list, top of it: the lobby's dialog runner, which every logic calls (status waits, error boxes, OK/Cancel
+and Yes/No questions) and which the LAN game reaches on every join (the "Joining game" status wait).
+
+### What moved (commit cae2f609, WON C++ -287 lines: 210 added, 497 deleted)
+
+- **DialogLogic** (a `LobbyLogic` the logic manager holds, `gLobbyData->mDialogLogic`) is one Rust object
+  (`dlglogic.rs`): the dialog stack (the original `std::list<DialogInfo>`: window, component, the bounds when shown,
+  the modal flag), the two boxes, the status operation, its mode, the visible and cancelled flags, and every method
+  (InitComponent, KillHook, StatusOpComplete, ClearDialogs, CheckDialog, GetDialogWindow, DoDialog, RunOpWithStatus,
+  ShowStatus, both ShowErrors' decisions, UpdateStatus, ShowOkCancel, ShowYesNo, Reset). The C++ class keeps its
+  vtable and method names as one-line forwarders (ShowError of a `WONStatus` stays the C++ one-liner that makes the
+  status text); its one outside field read (`LobbyUserCanceledLastStatusOp`'s `mStatusCancelled`) is now
+  `GetStatusCancelled()`. The host (`DialogLogicHost` in DialogLogic.cpp, `EeWonDlgLogicOp`, 39 ops) is the
+  original's statements on windows, components, operations and lobby globals; `NewWindow` + `SetUpPopup` split
+  GetDialogWindow's popup creation where the original chose the parent (the top entry's window or the lobby's).
+- **SmartPtrs as references.** What the original held by `SmartPtr` (the boxes, the status op, each entry's window
+  and component, DoDialog's local window and root) the Rust holds by reference through `AddRef*`/`Release*` ops, in
+  the original's order: an assignment releases the old pointer then references the new one and does nothing for the
+  same pointer (`ConstSmartPtr::operator=`); erased entries release their component, then their window; the
+  destructor releases the status op, the status box, the OK/Cancel box, then the entries front to back.
+- **Re-entry.** `RunDialog` is a modal loop that runs any lobby code, this object included (a nested box, the status
+  op's completion, a reset, a KillHook); `RunOp` can complete at once. State is in `Cell`s and one `RefCell` stack
+  never borrowed across an op. DoDialog finds its entry again by an id after the loop: the original kept a reference
+  into its list, valid because a nested ClearDialogs erases only entries that are not modal.
+- **StatusDialog and OkCancelDialog** are round 1's `LobbyRustDialog` kinds `Status` and `OkCancel`: their controls
+  in the control table (two new types, `Component` and `Frame`; StatusDialog looked its frame up before its body,
+  OkCancelDialog its close button second: both look-up orders differ from the member order), their SetText (the
+  sizing of the box to the message: 24 new ops of `EeWonLobbyDlgOp`, appended after round 1's so its golden is
+  unchanged) and StatusDialog's start tick and SetStatus. Their two units are deleted.
+
+### The golden
+
+`tests/won/won_dlglogic_test.cpp` (`xbuild.py wontest won_dlglogic_test`): the three units' statements copied before
+the deletion, every call on another object replaced by its op, against the Rust over one scripted host.
+- 20,000 logic sequences: InitComponent and 10 random calls (every method, the two boxes and two other dialogs, the
+  operations' four completions); the host answers from a seeded stream; a `RunDialog` re-enters the logic with one
+  random call a third of the time (two deep at most) and `RunOp` completes the operation at once a third of the time.
+- 20,000 box sequences: a Status or OkCancel box's InitComponent and 8 calls (SetText with sizes, fonts and ticks
+  chosen to reach every branch: short and long messages, under and over five lines, the 5/4 widening, the young
+  box's floor), with the tables checked name, line and type against the original `SafeGetComponent` arguments.
+- 6,608,186 trace lines identical on the first run. `golden_dlglogic.txt` (80 sequences, 12,900 lines) is replayed
+  by cargo (`dlglogic_tests.rs`, also: the replay fails on one changed op).
+
+| Mutation of the Rust | Sequences of 20,000 that change |
+|---|---|
+| the status box shrinks while young (the 50 ms floor inverted) | 9,854 box |
+| OK/Cancel's padding reads the font height once | 8,888 box |
+| DoDialog clears the top entry's modal flag, not its own | 3,916 logic |
+| ClearDialogs closes popup windows only when not in popups | 18,329 logic |
+| RunOpWithStatus sets the mode before RunOp | 5,823 logic |
+| UpdateStatus plays the error sound on success | 11,781 logic |
+
+Unit tests (5): a status box stays on the stack until the next dialog clears it; no window, no dialog; a pending
+operation is killed and released when its box closes; the OK/Cancel body widths; the golden replay.
+
+### Behaviour changes (undefined paths only)
+
+- RunOpWithStatus no longer reads the status operation after its box when a KillHook in the box's loop cleared it
+  (the original read through NULL). Both sides of the golden make the change.
+- `mStatusVisible` and `mStatusMode` start false / 0 (the original's constructor left them unset until
+  InitComponent).
+- A font height of 0 divides by zero in both (the original faulted; the Rust panics, which aborts).
+
+### What runs it
+
+EE-SIM never builds the lobby. The real LAN game reaches DialogLogic on every path: InitComponent at the lobby's
+start, the join's status wait (RunOpWithStatus, ShowStatus, DoDialog in the lobby window, the StatusDialog's
+SetText), ClearDialogs/Reset at every logic reset, KillHook at shut-down. Only a person or a failure reaches the
+error and Yes/No boxes on the LAN path (a leave or dissolve confirmation, a connect warning); popup windows
+(`GetPopupsInOwnWindow`) are never on in this game. `lan_game.py` passed on this commit.
+
+### Gates
+
+| Gate | cae2f609 | final tree (merged with rust) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | tests and clippy pass; rustfmt (fixed before the commit) and the header check (stale while the header was regenerated; passes alone after) failed on the first runs | PASS |
+| `build.py --test-profile windowed-software` | 0 / 0 | 0 / 0 |
+| `xbuild.py wontest` | won_dlglogic_test, won_lobbydlg_test exit 0 | all 97 programs exit 0 (before the merge of rust) |
+| `lan_game.py` (harness lock) | `RESULT PASS lan-game` | `RESULT PASS lan-game` |
+
+### Left for the next rounds
+
+Round 1's list less DialogLogic and the two boxes: BadUserDialog (its BadUserItem list row stays a widget),
+ChooseNetworkAdapterDialog (its NetworkAdapterListItem likewise; Reset needs the adapters' list as ops),
+CreditsDialog with ScrollingTextComponent (a Component: paint and timer), TOUDialog (a `Paint` override that stays a
+C++ one-liner, the HTTP document event as a new event kind), RoomDialog (an empty table: its RoomCtrl member is never
+set); the three options popups; ChatCommandParser; then the LAN screen's controls top-down.

@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
+#include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "rust/ee_won.h"
 
@@ -45,6 +46,8 @@ void LobbyRustDialog::HandleComponentEvent(ComponentEvent* inEvent)
         aType = EeWonLobbyDlgEvent::ComboSelChanged;
     this->LCall(EeWonLobbyDlgCall::Event, (intptr_t)inEvent, (intptr_t)aType, (intptr_t)inEvent->mComponent);
 }
+
+StatusDialog::StatusDialog() : LobbyRustDialog(EeWonLobbyDlgKind::Status) { this->SetStartTick(WONTickCount()); }
 
 const GUIString& LobbyRustDialog::InputText(int inMember)
 {
@@ -87,6 +90,8 @@ static const GUIString& AdminString(intptr_t inString)
     case EeWonLobbyDlgString::Ban: return ::AdminActionDialog_Ban_String;
     case EeWonLobbyDlgString::ExplanationOpt: return ::AdminActionDialog_ExplanationOpt_String;
     case EeWonLobbyDlgString::ExplanationReq: return ::AdminActionDialog_ExplanationReq_String;
+    case EeWonLobbyDlgString::Ok: return ::LobbyGlobal_OK_String;
+    case EeWonLobbyDlgString::Cancel: return ::LobbyGlobal_Cancel_String;
     default: return sEmpty;
     }
 }
@@ -95,7 +100,8 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
 {
     typedef EeWonLobbyDlgOp Op;
     LobbyRustDialog* aDialog = static_cast<LobbyRustDialog*>(inDialog);
-    Component* aComp = reinterpret_cast<Component*>(a);
+    // the dialog itself (the Rust passes the pointer it was made with) or a held control
+    Component* aComp = a == (intptr_t)inDialog ? static_cast<Component*>(aDialog) : reinterpret_cast<Component*>(a);
     InputBox* anInput = reinterpret_cast<InputBox*>(a);
     Button* aButton = reinterpret_cast<Button*>(a);
     ComboBox* aCombo = reinterpret_cast<ComboBox*>(a);
@@ -111,6 +117,8 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         case EeWonLobbyDlgType::Button: return (intptr_t)FindHeld<Button>(aConfig, aSlot);
         case EeWonLobbyDlgType::Label: return (intptr_t)FindHeld<Label>(aConfig, aSlot);
         case EeWonLobbyDlgType::Combo: return (intptr_t)FindHeld<ComboBox>(aConfig, aSlot);
+        case EeWonLobbyDlgType::Component: return (intptr_t)FindHeld<Component>(aConfig, aSlot);
+        case EeWonLobbyDlgType::Frame: return (intptr_t)FindHeld<WONFrameComponent>(aConfig, aSlot);
         }
         return 0;
     }
@@ -161,6 +169,39 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
     case Op::GameSetAskToJoin: aGame->SetAskToJoin(b != 0); return 0;
     case Op::GameSetInviteOnly: aGame->SetInviteOnly(b != 0); return 0;
     case Op::GameSetSkill: aGame->SetSkill((long)b); return 0;
+    // round 2: the status and OK/Cancel boxes' sizing
+    case Op::Width: return aComp->Width();
+    case Op::Height: return aComp->Height();
+    case Op::Left: return aComp->Left();
+    case Op::Top: return aComp->Top();
+    case Op::SetSize: aComp->SetSize((int)b, (int)c); return 0;
+    case Op::SetSizeAtLeast: aComp->SetSizeAtLeast((int)b, (int)c); return 0;
+    case Op::SetDesiredSize: aComp->SetDesiredSize((int)b, (int)c); return 0;
+    case Op::SetDesiredWidth: aComp->SetDesiredWidth((int)b); return 0;
+    case Op::SetPos: aComp->SetPos((int)b, (int)c); return 0;
+    case Op::SetVertPad: aLabel->SetVertPad((int)b, (int)c); return 0;
+    case Op::LabelSetText:
+        aLabel->SetText(b != 0 ? *reinterpret_cast<const GUIString*>(b) : gEmptyGUIString, true);
+        return 0;
+    case Op::ButtonSetText: aButton->SetText(*reinterpret_cast<const GUIString*>(b), true); return 0;
+    case Op::FrameLeft: return reinterpret_cast<WONFrameComponent*>(a)->GetFrameLeft();
+    case Op::FrameRight: return reinterpret_cast<WONFrameComponent*>(a)->GetFrameRight();
+    case Op::RootWidth: return GetLobbyRoot()->Width();
+    case Op::RootHeight: return GetLobbyRoot()->Height();
+    case Op::FontStringWidth:
+        return aLabel->mWrappedText->mFont->GetStringWidth(*reinterpret_cast<const GUIString*>(b));
+    case Op::FontStringWidthRange: {
+        const GUIString& aText = *reinterpret_cast<const GUIString*>(b);
+        Font* aFont = aLabel->mWrappedText->mFont;
+        return aFont->GetStringWidth(aText, 0, aText.length());
+    }
+    case Op::FontCharWidth: return aLabel->mWrappedText->mFont->GetCharacterWidth((int)b);
+    case Op::FontHeight: return aLabel->mWrappedText->mFont->GetHeight();
+    case Op::TickCount: return (intptr_t)(uint32_t)WONTickCount();
+    case Op::Invalidate: aComp->Invalidate(); return 0;
+    case Op::IsDragging: return aDialog->IsDragging() ? 1 : 0;
+    case Op::SetDragging: aDialog->SetDragging(b != 0); return 0;
+    case Op::TitleText: return (intptr_t)&aLabel->mWrappedText->mText;
     }
     return 0;
 }

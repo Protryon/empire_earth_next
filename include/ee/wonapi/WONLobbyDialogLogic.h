@@ -4,16 +4,9 @@
 #include "ee/wonapi/WONLobbyLogic.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 namespace WONAPI {
+// The class is one Rust object (R6 WONLobby round 2: ee_won dlglogic.rs holds the dialog stack, the two dialogs,
+// the status operation and runs every method); these are its forwarders. The host is in DialogLogic.cpp.
 class DialogLogic : public LobbyLogic {
-protected:
-    struct DialogInfo {
-        DialogInfo() : mInModal(false) {}
-        SmartPtr<Window> mWindow;
-        SmartPtr<Component> mComponent;
-        WONRectangle mOldRect;
-        bool mInModal;
-    };
-    typedef std::list<DialogInfo> DialogStack;
 public:
     DialogLogic();
     virtual ~DialogLogic();
@@ -22,8 +15,6 @@ public:
     virtual void Reset();
     void StatusOpComplete(AsyncOp* inOp);
     void ClearDialogs();
-    bool CheckDialog(Component* inDialog, bool& outSizeChanged);
-    SmartPtr<Window> GetDialogWindow(bool inReuse);
     int DoDialog(Component* inDialog);
     void RunOpWithStatus(AsyncOp* inOp, unsigned long inUnusedTimeout,
                          const GUIString& inTitle, const GUIString& inStatus,
@@ -34,14 +25,11 @@ public:
     void UpdateStatus(WONStatus inStatus);
     int ShowOkCancel(const GUIString& inTitle, const GUIString& inText, bool inPlaySound);
     int ShowYesNo(const GUIString& inTitle, const GUIString& inText, bool inPlaySound);
-    DialogStack mDialogStack;
-    bool mPopupWindows;
-    bool mStatusCancelled;
-    SmartPtr<OkCancelDialog> mOkCancelDialog;
-    SmartPtr<StatusDialog> mStatusDialog;
-    bool mStatusVisible;
-    AsyncOpPtr mStatusOp;
-    int mStatusMode;
+    bool GetStatusCancelled(); // the original's mStatusCancelled
+    EeWonDlgLogic* mRust;
+private:
+    intptr_t Call(EeWonDlgLogicCall inCall, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0, intptr_t d = 0,
+                  intptr_t e = 0) { return ee_won_dlglogic_call(this->mRust, inCall, a, b, c, d, e); }
 };
 }
 #endif
