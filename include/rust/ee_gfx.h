@@ -54,6 +54,21 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_DISEASE = 35;
 
 constexpr static const int32_t EE_GFX_EFFECT_KIND_VIRUS = 66;
 
+/// `kEffect2DImpact` .. the kinds of this file.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_IMPACT = 6;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_IMPACT_BLOOD = 7;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_LIGHTNING = 8;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_MUZZLE_FLASH = 9;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_PLASMA_PULSE = 10;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_FIRE_TRAIL = 14;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_PULSE_WAVE = 47;
+
 /// The tracers, the shells (a tracer with a pass-5 draw) and the pulse cannon ball.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_TRACERS = 33;
 
@@ -202,6 +217,13 @@ constexpr static const uint32_t TYPE_PATH_POINT = 223;
 
 constexpr static const uint32_t TYPE_CP_ICBM = 750;
 
+/// The effect quads of `sprite`: `AddGlowSprite` (the camera batch), `AddGroundSprite`, `AddBlendedSprite`.
+constexpr static const uint32_t EE_GFX_SPRITE_GLOW = 0;
+
+constexpr static const uint32_t EE_GFX_SPRITE_GROUND = 1;
+
+constexpr static const uint32_t EE_GFX_SPRITE_BLENDED = 2;
+
 /// `kBarFraction`: the filled part's share of a bar's own width.
 constexpr static const float BAR_FRACTION = 0.75;
 
@@ -229,6 +251,8 @@ enum class EeGfxEffect3DOp : uint32_t {
   Save = 12,
   /// the constructor along a line (the multi-effect's)
   CreateLine = 13,
+  /// the constructor at a transformation (the 2D water ripple's: the C++ put it in the record's `aged.transformation`)
+  CreateTransformation = 14,
 };
 
 /// The set-ups, one per C++ function.
@@ -994,6 +1018,35 @@ struct EeGfxEffectVolcano {
   EeGfxVolcanoMesh *mesh;
 };
 
+/// The 2D sprites' own state (the members of the deleted classes; which kinds use which field in brackets).
+struct EeGfxEffectSprite {
+  /// `mStart`: the point made at or the tag point (impacts; saved)
+  EeGe3DPoint start;
+  /// `mDrawPosition`: the queue's copy of the start (impacts) or of the position (plasma pulse, fire trail)
+  EeGe3DPoint draw_position;
+  /// `mLifeFraction` (impacts; saved)
+  float life;
+  /// `mTime`: ms into the frame (impacts, lightning, plasma pulse; saved)
+  float time;
+  /// `mAge` 0..1 (pulse wave, fire trail; saved) and the queue's copy
+  float age;
+  float draw_age;
+  /// `mRadius` (pulse wave; saved) and the queue's copy
+  float radius;
+  float draw_radius;
+  /// `mRotation` (fire trail; random; saved)
+  float rotation;
+  /// `mFrame` (saved) and the queue's copy
+  uint32_t frame;
+  uint32_t draw_frame;
+  /// `mTagIndex`: the impact's tag point (saved from 0.245)
+  uint32_t tag_index;
+  /// `mHitPoints`: the pulse wave's unit's hit points at the last tick (saved)
+  int32_t hit_points;
+  /// `mShrinking` (pulse wave; saved)
+  bool shrinking;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -1055,6 +1108,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectConfirm confirm;
   /// the volcano's (`effect_volcano.rs`)
   EeGfxEffectVolcano volcano;
+  /// the 2D sprites' (`effect_sprite.rs`)
+  EeGfxEffectSprite sprite;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1662,6 +1717,16 @@ struct EeGfxRaster {
   /// `ComputeBoundingVolumes`, `ComputeModelNormals`
   void (*model_bounds)(EeGfxModel model);
   void (*model_normals)(EeGfxModel model);
+  /// one effect quad (`EE_GFX_SPRITE_GLOW`, `_GROUND`, `_BLENDED`: `AddGlowSprite`, `AddGroundSprite`,
+  /// `AddBlendedSprite` of `EEEffect.cpp`) at `position` turned by `rotation`
+  void (*sprite)(uint32_t kind,
+                 const EeGe3DPoint *position,
+                 EeGfxColor color,
+                 float rotation,
+                 float size,
+                 float alpha,
+                 float brightness,
+                 float alpha_ref);
 };
 
 /// Where the unit stands for the confirmation: its position; a tree's id, class tile size and tile; else whether it
@@ -1676,6 +1741,12 @@ struct EeGfxConfirmUnit {
   bool dead_top;
   EeGe3DPoint top;
   float scale;
+};
+
+/// A point the host may not have (`has` false: no complex unit).
+struct EeGfx2DPoint {
+  bool has;
+  EeGe3DPoint point;
 };
 
 /// The C++'s answers for an `EEE2DRust`.
@@ -1717,6 +1788,27 @@ struct EeGfxEffect2DHost {
   int32_t (*object_media)(void *context);
   /// the kept graphic object's texture `index`
   EeGfxModel (*object_texture)(void *context, uint32_t index);
+  /// the unit's tag points of `kind` at its animation: -1 without a complex unit, 0 without a list
+  int32_t (*tag_count)(void *context, uint32_t kind);
+  /// the unit's tag point `index` of `kind` at its animation and frame under its scaled location (not without a
+  /// complex unit; the list is not tested, as `EEE2DImpact::UpdatePosition`'s)
+  EeGfx2DPoint (*tag_point)(void *context, uint32_t kind, uint32_t index);
+  /// the unit's weapon tag point (`EECombatEffectWeaponPoint` with its capture `site`)
+  EeGe3DPoint (*weapon_point)(void *context, int32_t site);
+  /// the kept graphic object's animation 0 sound for `frame` at `location` (`PlayAnimationSound`), kept as the
+  /// effect's (`SetSound`) and dereferenced
+  void (*animation_sound)(void *context, EeGe3DPoint location, uint32_t frame, bool changed);
+  /// `gDrawBlood`
+  bool (*draw_blood)(void *context);
+  /// the effect has a unit with a complex unit
+  bool (*has_complex)(void *context);
+  /// the unit's model's default point, the unit's stats' scale
+  EeGe3DPoint (*default_point)(void *context);
+  float (*stats_scale)(void *context);
+  /// `gWorld.IsTileBlocked`
+  bool (*tile_blocked)(void *context, int32_t x, int32_t y);
+  /// `gWorld.mWindDirection`
+  EeGe3DPoint (*wind)(void *context);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
@@ -2961,6 +3053,8 @@ int32_t ee_gfx_effect2d(EeGfxEffect3DOp op,
 int32_t ee_gfx_effect2d_file(EeGfxEffect3DOp op,
                              EeGfxEffectRecord *r,
                              const EeGfxEffectFile *file,
+                             uint32_t major,
+                             uint32_t minor,
                              const EeGfxEffect2DHost *host);
 
 /// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s (its result `base`).

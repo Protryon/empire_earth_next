@@ -1,7 +1,10 @@
 // The 2D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_2d.rs): EEE3DRust's twin over EEEffect2D, one
 // class for every 2D-based kind that moved, each virtual a call into Rust by the record's kind, answered through
 // EeGfxEffect2DHost and drawn through the rasterizer table gEERustRaster. Kinds: 0x41 the command confirmation
-// (EEE3DCommandConfirmation, 0xe9bee..0xea703, deleted; an EEEffect2D despite its name).
+// (EEE3DCommandConfirmation, 0xe9bee..0xea703, deleted; an EEEffect2D despite its name), 0x12 the shockwave, and
+// since the twentieth round the sprites of ee_gfx effect_sprite.rs: 6 the impact, 7 the blood impact, 8 the lightning,
+// 9 the muzzle flash, 0xa the plasma pulse, 0xe the fire trail, 0x22 the water ripple, 0x2f the pulse wave (their
+// classes deleted).
 // Requires ee/EEEffect2D.h and rust/ee_gfx.h.
 #ifndef EE_EEE2DRUST_H
 #define EE_EEE2DRUST_H
@@ -9,6 +12,7 @@
 
 class EEGraphicObject;
 class GETexture;
+class SESMInstanceNode;
 
 // EEROUnits.cpp's three command textures (0x5294e0/0x5294e4/0x5294e8, loaded there; the confirmation draws with them)
 // (provisional names)
@@ -22,9 +26,11 @@ public:
     EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, unsigned long inGoalIndex, long inKind);
     EEE2DRust(EEUnit* inUnit, const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, unsigned long inGoalIndex,
               long inKind);
-    // the shockwave (0x12, EEE2DShockwave 0xe614f..0xe6621, deleted) on a unit, at a point, and for loading
+    // the other kinds on a unit, at a point (kept in the record's sprite.start for Rust), at a transformation (the
+    // water ripple's: the record's aged.transformation) and for loading; each with its kind's shared model
     EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect, long inKind);
+    EEE2DRust(const GETransformation& inTransformation, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE2DRust(long inKind);
     virtual ~EEE2DRust();
     virtual long DrawPass2() { return this->Call(EeGfxEffect3DOp::DrawPass2); }
@@ -42,9 +48,11 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     virtual long Step() { return this->Call(EeGfxEffect3DOp::Step); }
 
-    long Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues = NULL, const EeGfxEffectFile* inFile = NULL);
+    long Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues = NULL, const EeGfxEffectFile* inFile = NULL,
+              unsigned long inMajorVersion = 0, unsigned long inMinorVersion = 0);
 
     EEGraphicObject* mGraphicObject = NULL;
+    SESMInstanceNode* mSound = NULL;        // the animation sound (impacts, lightning, plasma pulse)
 };
 
 // the facts of an effect's graphic effect, unit and tick the Rust effects read (EEE3DRust.cpp)

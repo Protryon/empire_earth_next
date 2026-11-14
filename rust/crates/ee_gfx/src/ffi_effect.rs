@@ -1273,13 +1273,15 @@ pub unsafe extern "C" fn ee_gfx_effect2d_file(
     op: crate::effect_rising::EeGfxEffect3DOp,
     r: *mut EeGfxEffectRecord,
     file: *const EeGfxEffectFile,
+    major: u32,
+    minor: u32,
     host: *const crate::effect_2d::EeGfxEffect2DHost,
 ) -> i32 {
     // SAFETY: the function's contract; the record is a copy while Rust reads or writes it (the host's media load
     // does not read it)
     unsafe {
         let mut h = &*host;
-        on_copy(r, |r| crate::effect_2d::effect2d_file(op, r, &mut File(&*file), &mut h))
+        on_copy(r, |r| crate::effect_2d::effect2d_file(op, r, &mut File(&*file), major, minor, &mut h))
     }
 }
 

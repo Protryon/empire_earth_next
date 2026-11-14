@@ -41,6 +41,7 @@ pub mod effect_orbit;
 pub mod effect_rising;
 pub mod effect_shockwave;
 pub mod effect_shot;
+pub mod effect_sprite;
 pub mod effect_state;
 pub mod effect_store;
 pub mod effect_storm;

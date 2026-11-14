@@ -66,6 +66,8 @@ pub enum EeGfxEffect3DOp {
     Save = 12,
     /// the constructor along a line (the multi-effect's)
     CreateLine = 13,
+    /// the constructor at a transformation (the 2D water ripple's: the C++ put it in the record's `aged.transformation`)
+    CreateTransformation = 14,
 }
 
 /// What the effects read of their graphic effect and the tick, gathered by the C++ for each call.
