@@ -242,7 +242,7 @@ void EEAmbientWorldAnalyzer::CountUnit(EEComplexUnit* inUnit)
     if (!(thePlayer->mTechnologies->mCurrentEpoch >= kTechEpochAtomicWW1))
         return;
     for (long i = thePlayer->mTowns.size() - 1; i >= 0; i--) {
-        if (thePlayer->mTowns[i]->mHull.BoundedContains(theTile)) {
+        if (thePlayer->mTowns[i]->HullContains(theTile)) {
             this->mNumAirRaiders++;
             break;
         }
@@ -266,7 +266,7 @@ void EEAmbientWorldAnalyzer::AddTree(EEUnit* inUnit)
         return;
     EEAIForest* theForest = gContinentManager.GetForestAt(inUnit);
     if (theForest != NULL)
-        this->mForestType = theForest->mResourceKind;
+        this->mForestType = theForest->GetResourceKind();
 }
 
 // FUNCTION: EXE 0x524ec1

@@ -1,21 +1,14 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEScore.cpp
-// A music score on dmusic (see lle/SEScore.h).
+// A music score on dmusic (see lle/SEScore.h): whole in Rust (rust/crates/ee_sound objects.rs).
 #include <windows.h>
-#include <dmusic.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/SEScore.h"
+#include "rust/ee_sound.h"
 
-// Destroys the score, releasing its segment
-SEScore::~SEScore()
-{
-    for (unsigned long i = 0; i < this->mSecondaryScores.size(); i++)
-        delete this->mSecondaryScores[i];
-    DmSegment_release(this->mSegment);
-}
+#define RUST reinterpret_cast<const EeSoundScore*>(this)
 
-// Sets how many times the score repeats (the game loops a score with a large count)
-void SEScore::SetRepeatCount(unsigned long inCount)
-{
-    DmSegment_setRepeats(this->mSegment, inCount);
-}
+bool SEScore::GetIsSecondaryScore() const { return ee_sound_score_is_secondary(RUST); }
+// how many times the score repeats (the game loops a score with a large count)
+unsigned long SEScore::GetRepeatCount() { return ee_sound_score_repeat_count(RUST); }
+void SEScore::SetRepeatCount(unsigned long inCount) { ee_sound_score_set_repeat_count(RUST, (uint32_t)inCount); }

@@ -358,9 +358,7 @@ static inline uint8_t DecideDisbandRefund(long inHitPoints, long inMaxHitPoints,
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
 void EEMessage::RegisterKnownMessages()
 {
-    long i;
-    for (i = 0x41; i < 0xfe; i++)
-        NEMessage::sConstructors[i] = EEMessage::BuildEEMessage;
+    NEMessage::RegisterBuilder(0x41, 0xfd, EEMessage::BuildEEMessage);
 }
 
 // FUNCTION: EXE 0x4b8cf7
@@ -2035,7 +2033,7 @@ static void ExecuteLoadMainScreenResponse(EEMRecord* m)
                 sNumResponses++;
             if (sNumResponses == static_cast<EEServer*>(gCommunications)->GetNumHumanPlayers() - static_cast<EEServer*>(gCommunications)->mNumDroppedLoaders) {
                 theTime = TMGetTime();
-                NEMStartGame* theMessage = new NEMStartGame(theTime);
+                NEMessage* theMessage = new NEMRecord(kNetMessageStartGame, {theTime});   // the offset start time
                 if (theMessage) {
                     static_cast<EEServer*>(gCommunications)->mLoadState = 0;
                     gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);

@@ -881,7 +881,7 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
                 if (theResult) {
                     if (theResource->mResourceType == kResourceWood) {
                         EEAIForest* theForest = gContinentManager.GetForestAt(theResource);
-                        if (theForest == NULL || theForest->mTiles.Size() < 5)
+                        if (theForest == NULL || theForest->GetNumTiles() < 5)
                             theResult = false;
                     }
                     if (theResult) {
@@ -982,7 +982,7 @@ void EECPResourceManager::RefreshResources()
     for (unsigned long i = 0, n = gContinentManager.mForests.size(); i < n; i++) {
         EEAIForest* theForest = gContinentManager.mForests[(unsigned short)i];
         if (theForest != NULL) {
-            unsigned short theID = theForest->mID;
+            unsigned short theID = theForest->GetID();
             this->mForests.push_back(theID);
         }
     }
@@ -1266,12 +1266,12 @@ EEUnit* EECPResourceManager::FindForestTarget(long inCount, EEComplexUnit* inUni
         if (theForest == NULL)
             continue;
         if (inUnit != NULL) {
-            unsigned short theContinent = theForest->mContinentID;
+            unsigned short theContinent = theForest->GetContinentID();
             if (!gContinentManager.AreConnectedByID(gContinentManager.GetContinentID(inUnit), theContinent,
                                            this->mManager->mPlayer->GetCitizenPassability()))
                 continue;
         }
-        if (theForest->mTiles.Size() == 1) {
+        if (theForest->GetNumTiles() == 1) {
             if (inCount < 8) {
                 U2DPoint<long> thePoint = theForest->GetClosestPoint(theCenter);
                 theTile.mX = thePoint.mX;
@@ -1288,7 +1288,7 @@ EEUnit* EECPResourceManager::FindForestTarget(long inCount, EEComplexUnit* inUni
                 }
             }
         }
-        if (!(theForest->mTiles.Size() > 1))
+        if (!(theForest->GetNumTiles() > 1))
             continue;
         U2DPoint<long> thePoint = theForest->GetClosestPoint(theCenter);
         theTile.mX = thePoint.mX;
@@ -1338,7 +1338,7 @@ static EEUnit* EECPRMNextWoodTarget(EECPResourceManager* inManager, long inCount
             if (theForest == NULL)
                 continue;
             if (inUnit != NULL && !gContinentManager.AreConnectedByID(gContinentManager.GetContinentID(inUnit),
-                    theForest->mContinentID, thePlayer->GetCitizenPassability()))
+                    theForest->GetContinentID(), thePlayer->GetCitizenPassability()))
                 continue;
             U2DPoint<long> thePoint = theForest->GetClosestPoint(theDrop);
             long long theDX = thePoint.mX - theDrop.mX, theDY = thePoint.mY - theDrop.mY;
@@ -1837,7 +1837,7 @@ long EECPResourceManager::Save(unsigned long inMajorVersion, unsigned long inMin
             EEAIForest* theForest = theID < gContinentManager.mForests.size() ? gContinentManager.mForests[theID] : NULL;
             if (theForest != NULL) {
                 std::vector<U2DPoint<long> > theTiles;
-                theForest->mTiles.BuildPointList(theTiles, 1);
+                theForest->GetTileSet().BuildPointList(theTiles, 1);
                 if (!theTiles.empty())
                     theTile = theTiles[0];
             }
@@ -3263,7 +3263,7 @@ void EECPResourceManager::Update(unsigned long inTime)
             for (size_t f = 0; f < this->mLoadedForestTiles.size(); f++) {
                 EEAIForest* theForest = this->mLoadedForestTiles[f].mX == -10000 ? NULL : gContinentManager.GetForestAt(this->mLoadedForestTiles[f]);
                 if (theForest != NULL)
-                    this->mForests.push_back(theForest->mID);
+                    this->mForests.push_back(theForest->GetID());
             }
             std::vector<EEUnitHandle<EEComplexUnit> >* theLists[2] = {&this->mMines, &this->mFish};
             std::vector<unsigned long>* theIDs[2] = {&this->mLoadedMines, &this->mLoadedFish};

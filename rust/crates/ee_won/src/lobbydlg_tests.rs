@@ -12,6 +12,8 @@ const GOLDEN: &str = include_str!("golden_lobbydlg.txt");
 const GOLDEN_SCR: &str = include_str!("golden_lobbyscr.txt");
 /// CreditsDialog (kind 14), recorded by tests/won/won_credits_test.cpp (`--print-dialog`)
 const GOLDEN_CREDITS: &str = include_str!("golden_credits.txt");
+// recorded by tests/won/won_eedlg_test.cpp (round 5: EELobbyConnectDialog)
+const GOLDEN_EEDLG: &str = include_str!("golden_eedlg.txt");
 
 struct Replay {
     lines: Vec<&'static str>,
@@ -75,8 +77,19 @@ unsafe extern "C" fn replay_host(_dialog: *mut c_void, op: EeWonLobbyDlgOp, a: i
     if let Some(next) = peek_line() {
         if let Some(rest) = next.strip_prefix("reenter ") {
             next_line();
-            let comp: isize = rest.parse().unwrap();
             let dlg = REPLAY.with(|r| r.borrow().as_ref().unwrap().dlg);
+            let n: Vec<isize> = rest.split(' ').map(|x| x.parse().unwrap()).collect();
+            if n.len() == 3 {
+                // round 5: a call (the connect dialog's modal loop and EndDialog re-enter it)
+                // SAFETY: the replay's live object; the call re-enters through a shared reference, as the C++ does
+                let r = unsafe { ee_won_lobbydlg_call(dlg, call_of(n[0] as u32), n[1], n[2], 0) };
+                let back = next_line().unwrap_or("-");
+                if back != format!("back {r}") {
+                    fail(format!("{next}: expected '{back}', the re-entry returned {r}"));
+                }
+                return answer;
+            }
+            let comp = n[0];
             // SAFETY: the replay's live object; the call re-enters through a shared reference, as the C++ does
             unsafe {
                 ee_won_lobbydlg_call(
@@ -121,6 +134,9 @@ fn call_of(n: u32) -> EeWonLobbyDlgCall {
         C::StopScrolling,
         C::ResetScrolling,
         C::AddLine,
+        C::ConnectRun,
+        C::ConnectEnd,
+        C::ConnectSetConnected,
     ][n as usize - 1]
 }
 
@@ -142,6 +158,7 @@ fn kind_of(n: u32) -> EeWonLobbyDlgKind {
         K::BadUser,
         K::ChooseAdapter,
         K::Credits,
+        K::Connect,
     ][n as usize]
 }
 
@@ -457,4 +474,20 @@ fn admin_action_reset_sets_the_reason_flag_per_action() {
     call(d, EeWonLobbyDlgCall::Reset, 3, 0x5000);
     assert_eq!(call(d, EeWonLobbyDlgCall::Field, 3, 0), 0);
     free(d);
+}
+
+#[test]
+fn golden_replay_connect() {
+    let n = replay(GOLDEN_EEDLG).unwrap();
+    assert!(n >= 60, "{n} sequences");
+}
+
+#[test]
+fn golden_replay_connect_fails_on_a_changed_op() {
+    // the first refresh of a changed line recorded as an insert
+    let refresh = format!("op {} ", EeWonLobbyDlgOp::ListRefresh as u32);
+    let insert = format!("op {} ", EeWonLobbyDlgOp::ConnectInsert as u32);
+    let changed = GOLDEN_EEDLG.replacen(&refresh, &insert, 1);
+    assert_ne!(changed, GOLDEN_EEDLG);
+    assert!(replay(Box::leak(changed.into_boxed_str())).is_err());
 }

@@ -121,6 +121,8 @@ pub enum EeUiManagerCall {
     /// The constructor's work after `ee_ui_manager_new` (the C++ constructor's, once `mRust` is set: the host's ops
     /// read the manager through its forwarders).
     Init = 60,
+    /// The UI lock (`TSCriticalSection*`; the harness's bridge try-enters it).
+    UiLock = 61,
 }
 
 /// The control bitmaps (the header's member order; [`EeUiManagerCall::Bitmap`]'s index).
@@ -620,6 +622,7 @@ impl EeUiManager {
                 return manager::form_by_id(&Stack(self), a as c_ulong).unwrap_or(core::ptr::null_mut()) as isize
             }
             C::FormCount => return self.with(|s| s.stack.len() as isize),
+            C::UiLock => return self.with(|s| s.lock),
             C::StackedForm => return self.with(|s| at(&s.stack, a as usize)),
             C::NumberOfSurfaces => return self.with(|s| s.surfaces as isize),
             C::Rasterizer => return self.with(|s| s.rasterizer),

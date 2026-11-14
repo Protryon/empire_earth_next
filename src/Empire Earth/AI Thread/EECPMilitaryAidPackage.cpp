@@ -185,8 +185,8 @@ U2DPoint<long> EECPMilitaryAidPackage::GetLocation()
     long theX = 0;
     long theY = 0;
     EETown* theTown = this->mTarget->GetTownByID(this->mTownID);
-    if (theTown != NULL && theTown->mTiles.Size() > 0) {
-        theTown->mTiles.BuildPointList(thePoints, 1);
+    if (theTown != NULL && theTown->GetNumTiles() > 0) {
+        theTown->GetTileSet().BuildPointList(thePoints, 1);
         if (thePoints.size() > 0) {
             theX = thePoints[0].mX;
             theY = thePoints[0].mY;
@@ -367,9 +367,9 @@ void EECPMilitaryAidPackage::Deploy(std::vector<EECPDCTownThreat>& inThreats)
         if (theSubGroup == NULL || theSubGroup->mUnits.size() == 0 || theSubGroup->mPath.size() != 0)
             continue;
         theSubGroup->FindPosition(theTile, true, false);
-        theClosest = theTown->mHull.GetClosestPoint(theTile);
+        theClosest = theTown->GetHullClosestPoint(theTile);
         long theDistance = theClosest.DistanceToSquared(theTile);
-        if (theDistance > 0x4b0 && !theTown->mHull.BoundedContains(theTile))
+        if (theDistance > 0x4b0 && !theTown->HullContains(theTile))
             continue;
         if (theDistance <= 0x90) {
             for (it = inThreats.begin(), theEnd = inThreats.end(); it != theEnd; ++it) {
