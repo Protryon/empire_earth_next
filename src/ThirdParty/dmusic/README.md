@@ -26,6 +26,10 @@ Changes made here (each marked "(EE patch)" at its place in the source):
 - Stop (`DmPerformance_stop`): what is due within the given time still sounds, then every note is released.
 - Note order at the same time (`Message.c`): a note's end before a note's start.
 - Silence before the first band (`Synth.c`): with no instruments loaded the output is cleared.
+- A SoundFont in a collection's place (`io/Dls.c`, `Loader.c`, `Band.c`, `Synth.c`, `util/Tsf.c`): a SoundFont 2 file
+  handed over where a DLS collection is asked for (the general MIDI set) is kept whole and given to the synthesizer,
+  which reads that format itself; its presets are found by bank (the variation's MSB) and patch, a missing variation
+  or drum kit falling back to the capital tone or the standard kit.
 - Pattern choice (`Style.c`): of the patterns whose groove range holds the level, the longest that fits the measures
   left before the song ends or starts over (random only among equals), else the longest, cut short; with none in
   range, the nearest range's. Upstream drew any at random, or fell silent.

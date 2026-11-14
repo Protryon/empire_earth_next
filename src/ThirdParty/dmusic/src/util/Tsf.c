@@ -637,6 +637,12 @@ DmResult DmSynth_createTsfForDls(DmDls* dls, tsf** out) {
 		return DmResult_INVALID_ARGUMENT;
 	}
 
+	// (EE patch) A SoundFont standing in for a collection is loaded as it is.
+	if (dls->sound_font_len != 0) {
+		*out = tsf_load_memory(dls->backing_memory, (int) dls->sound_font_len);
+		return *out != NULL ? DmResult_SUCCESS : DmResult_FILE_CORRUPT;
+	}
+
 	// Initialize the hydra by allocation all required memory
 	struct tsf_hydra hydra;
 	float* pcm = NULL;

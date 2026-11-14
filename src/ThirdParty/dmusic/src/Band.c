@@ -125,6 +125,11 @@ DmResult DmBand_download(DmBand* slf, DmLoader* loader) {
 			continue;
 		}
 
+		// (EE patch) A SoundFont lists no instruments here: the synthesizer finds the preset by bank and patch.
+		if (instrument->dls->sound_font_len != 0) {
+			continue;
+		}
+
 		DmDlsInstrument* dls_instrument = DmInstrument_getDlsInstrument(instrument);
 		if (dls_instrument == NULL) {
 			continue;

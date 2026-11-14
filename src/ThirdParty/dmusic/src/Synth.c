@@ -191,9 +191,15 @@ static DmResult DmSynth_assignInstrumentChannels(DmSynth* slf, DmBand* band) {
 		// the channel kept preset 0, so most instruments played as the collection's first one.
 		uint32_t bank = (ins->patch & 0x80000000U) ? 128U : (((ins->patch >> 16) & 0x7FU) << 8) | ((ins->patch >> 8) & 0x7FU);
 		uint32_t patch = ins->patch & 0x7FU;
+		if (fnt->dls->sound_font_len != 0 && bank != 128U) {
+			bank >>= 8;   // (EE patch) a SoundFont numbers its variation banks by the MSB alone
+		}
 
 		tsf_set_volume(fnt->syn, slf->volume);
-		tsf_channel_set_bank_preset(fnt->syn, (int) ins->channel, (int) bank, (int) patch);
+		if (!tsf_channel_set_bank_preset(fnt->syn, (int) ins->channel, (int) bank, (int) patch) && fnt->dls->sound_font_len != 0) {
+			// (EE patch) A SoundFont without that variation or drum kit: the capital tone or the standard kit instead
+			tsf_channel_set_bank_preset(fnt->syn, (int) ins->channel, bank == 128U ? 128 : 0, bank == 128U ? 0 : (int) patch);
+		}
 
 		// Update the instrument's properties
 		if (ins->options & DmInstrument_VALID_PAN) {

@@ -184,6 +184,11 @@ DmResult DmLoader_getDownloadableSound(DmLoader* slf, DmReference const* ref, Dm
 		return rv;
 	}
 
+	// (EE patch) A SoundFont has no id of its own: it takes the one it was asked for by, so the cache finds it again.
+	if ((*snd)->sound_font_len != 0) {
+		(*snd)->guid = ref->guid;
+	}
+
 	// Add the new item to the cache
 	if (mtx_lock(&slf->lock) != thrd_success) {
 		return DmResult_MUTEX_ERROR;

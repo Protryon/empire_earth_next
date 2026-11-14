@@ -433,6 +433,13 @@ DmResult DmDls_parse(DmDls* slf, void* buf, size_t len) {
 
 	slf->backing_memory = buf;
 
+	// (EE patch) A SoundFont 2 file in a collection's place (the general MIDI set, which the game's files do not
+	// include): kept whole for the synthesizer, which reads that format itself.
+	if (rif.typ == DM_FOURCC('s', 'f', 'b', 'k')) {
+		slf->sound_font_len = len;
+		return DmResult_SUCCESS;
+	}
+
 	DmRiff cnk;
 	while (DmRiff_readChunk(&rif, &cnk)) {
 		DmResult rv = DmResult_SUCCESS;
