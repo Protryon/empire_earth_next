@@ -18127,3 +18127,110 @@ op cases); the final tree's LAN run covers it.
   room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic, RoutingLogic last) and the
   resource tables and factories.
 - The list rows kept in C++ (BadUserItem, NetworkAdapterListItem) go with the WON GUI lane's list widgets.
+
+## R6 WON round 36: the Windows skin's painters and drawing helpers in Rust; WONGUI measured (ee_won mspaint.rs; branch rust-r6-won36, 2026-11-14)
+
+### WONGUI measured (at 354fde6a, rust's head with round 35 merged)
+
+`build/r36/measure.py` over the 194 units of `src/Empire Earth/WONAPI/WONGUI` (21,370 lines with comments and
+includes; 13,350 code lines). "Code": lines that are not blank, comments or preprocessor lines. Each function
+definition `Class::Method` is a **forwarder** when its body is at most three lines and calls Rust (`ee_won_`,
+`mRust`), or is one line; its lines and the rest of the functions' are counted apart ("Logic": what is not a
+forwarder). "Classes": the unit's most defined classes; "Subclasses": classes declared over them anywhere in
+`src/Empire Earth` and `include/ee`; "Files naming them": the other files that name one of them (callers,
+holders, configs). Templates are not matched by the parser: Surface.cpp (the software raster surface,
+`Surface<T>`) has 754 code lines of which it counts 78. GuiHost.cpp is the Rust objects' C++ host (its switch,
+not logic to move). Units with 20 logic lines or more, by logic:
+
+| Unit | Code | Forwarders | Logic | Rust lines | Classes | Subclasses | Files naming them |
+|---|---|---|---|---|---|---|---|
+| PlatWindowManager | 603 | 6 | 421 | 0 | PlatWindowManager | - | 5 |
+| ComponentConfigResource | 418 | 4 | 326 | 5 | ComponentConfig | ButtonConfig, ColorSchemeConfig, ContainerConfig, FontConfig, ImageButtonConfig, ImageComponentConfig | 110 |
+| PlatGraphics | 291 | 8 | 212 | 0 | PlatGraphics | - | 3 |
+| PlatGUIWindow | 260 | 8 | 190 | 0 | PlatGUIWindow | - | 3 |
+| PlatNativeImage | 420 | 10 | 183 | 0 | PlatNativeImage, RawImage1, RawImage8, DisplayContext | - | 23 |
+| ImageFilters | 370 | 0 | 169 | 0 | ScaleImageFilter, MultiImageFilter, CropImageFilter, TintImageFilter | TrimImageFilter | 3 |
+| ComponentConfigRead | 218 | 2 | 141 | 8 | ComponentConfig | ButtonConfig, ColorSchemeConfig, ContainerConfig, FontConfig, ImageButtonConfig, ImageComponentConfig | 110 |
+| MSGraphicsUtil | 221 | 0 | 136 | 0 | MSGraphicsUtil | - | 10 |
+| ResourceConfigRead | 178 | 0 | 130 | 0 | ResourceConfig | - | 15 |
+| WONButtonConfig | 156 | 4 | 118 | 4 | WONSimpleButtonConfig, WONButtonConfig | - | 2 |
+| ContainerConfigInstructions | 147 | 0 | 117 | 3 | ContainerConfig | BrowserComponentConfig, ChatCtrlConfig, ComboBoxConfig, DialogConfig, GameBrowserCtrlConfig, GameUserListCtrlConfig | 35 |
+| ComponentConfigValueReaders | 144 | 2 | 111 | 3 | ComponentConfig | ButtonConfig, ColorSchemeConfig, ContainerConfig, FontConfig, ImageButtonConfig, ImageComponentConfig | 110 |
+| Graphics | 189 | 1 | 110 | 0 | Graphics | PlatGraphics | 186 |
+| ComponentTraversal | 198 | 19 | 103 | 1 | Component | Button, Container, EELobbyColorChooser, ImageComponent, InputBox, Label | 152 |
+| SplitterConfig | 129 | 0 | 95 | 3 | SplitterConfig | - | 2 |
+| ImageConfig | 166 | 12 | 95 | 4 | ImageConfig, ImageFilterConfig, StretchImageConfig, StretchCenterImageConfig | ImageFilterConfig, StretchCenterImageConfig, StretchImageConfig | 4 |
+| BackgroundGrabber | 155 | 3 | 95 | 0 | BackgroundGrabber | - | 5 |
+| Image | 192 | 18 | 88 | 0 | Image, RawImage32, RawImage8, ProgramImage | DelayLoadImage, ImagePiece, MSImage, NativeImage, ProgramImage, RawImage | 71 |
+| ContainerConfigLayouts | 110 | 0 | 82 | 1 | ContainerConfig | BrowserComponentConfig, ChatCtrlConfig, ComboBoxConfig, DialogConfig, GameBrowserCtrlConfig, GameUserListCtrlConfig | 35 |
+| WONSkinConfig | 113 | 4 | 79 | 2 | WONSkinConfig | - | 2 |
+| ResourceTableQueries | 138 | 12 | 78 | 4 | ResourceConfigTable, ScrollbarScrollerConfig, ScrollAreaConfig, ScrollerConfig | ListAreaConfig, MSScrollContainerConfig, ScrollbarScrollerConfig, TextAreaConfig, WONScrollContainerConfig | 35 |
+| SkinnedContainers | 95 | 0 | 77 | 2 | WONComboBox, WONScrollContainer | WONListCtrl | 14 |
+| WindowManager | 425 | 66 | 75 | 2 | WindowManager | PlatWindowManager | 24 |
+| Component | 135 | 7 | 72 | 2 | Component | Button, Container, EELobbyColorChooser, ImageComponent, InputBox, Label | 152 |
+| Surface | 754 | 8 | 70 | 0 | SurfaceBase | Surface | 6 |
+| StretchImageConfig | 97 | 0 | 70 | 2 | StretchImageConfig, StretchCenterImageConfig | - | 2 |
+| ImageDecoder | 125 | 0 | 70 | 0 | MultiImageDecoder, ImageDecoder | JPGDecoder, MultiImageDecoder, PNGDecoder | 5 |
+| WrappedText | 106 | 2 | 68 | 4 | WrappedText | - | 7 |
+| MSComponentConfig | 97 | 0 | 68 | 5 | MSButtonConfig, MSArrowButtonConfig, MSTabButtonConfig, MS3DFrameConfig | MSHeaderButtonConfig, MSTabButtonConfig, MaxSplitterButtonConfig | 4 |
+| ComponentLayoutConfigs | 78 | 0 | 65 | 2 | PercentLayoutConfig, ColorSchemeConfig | - | 3 |
+| StretchImage | 195 | 4 | 63 | 3 | StretchImage, StretchCenterImage, StretchImageFilter | - | 9 |
+| ConfigComponentBindings | 111 | 2 | 63 | 0 | ComponentConfig, ButtonConfig, ContainerConfig, DialogConfig | BrowserComponentConfig, ButtonConfig, ChatCtrlConfig, ColorSchemeConfig, ComboBoxConfig, ContainerConfig | 120 |
+| PlatGUIFont | 118 | 8 | 62 | 0 | PlatGUIFont | - | 2 |
+| ImageComponent | 116 | 4 | 59 | 0 | ImageComponent, RectangleComponent, RectangleComponent3D | - | 9 |
+| GuiHost | 801 | 12 | 57 | 45 | TextArea, MultiListHeader, ListItem, InputBox | BadUserItem, ComponentListItem, GameUserListItem, MSHeaderControl, MSInputBox, MultiListItem | 44 |
+| MSControlPainters | 76 | 0 | 56 | 0 | MSComboBox, MSScrollContainer, MSScrollbar | MSListCtrl | 8 |
+| JPGDecoder | 138 | 2 | 56 | 0 | JPGDecoder | - | 2 |
+| Window | 212 | 48 | 52 | 2 | Window | PlatGUIWindow | 38 |
+| ResourceConfigQueries | 84 | 0 | 52 | 0 | ResourceConfig | - | 15 |
+| MSSkinImage | 64 | 0 | 50 | 0 | MSImage | - | 4 |
+| ComponentConfigLoad | 74 | 0 | 50 | 0 | ComponentConfig | ButtonConfig, ColorSchemeConfig, ContainerConfig, FontConfig, ImageButtonConfig, ImageComponentConfig | 110 |
+| BrowserComponent | 99 | 0 | 49 | 1 | BrowserComponent | - | 6 |
+| FontConfig | 81 | 6 | 45 | 3 | FontConfig | - | 3 |
+| MSExtraConfig | 60 | 0 | 44 | 7 | MSComboBoxConfig, MSScrollbarConfig, MSEtchedFrameGroupConfig, MSTabCtrlConfig | - | 5 |
+| MSEtchedFrameGroup | 48 | 2 | 43 | 0 | MSEtchedFrameGroup | - | 4 |
+| TextAreaConfig | 49 | 0 | 42 | 2 | TextAreaConfig | - | 2 |
+| ListAreaConfig | 56 | 0 | 42 | 3 | ListAreaConfig | MultiListAreaConfig, TreeAreaConfig | 7 |
+| ButtonConfig | 54 | 0 | 42 | 2 | ButtonConfig | MSArrowButtonConfig, MSButtonConfig, MSCloseButtonConfig, WONButtonConfig, WONSimpleButtonConfig | 9 |
+| GUIStringDataMutations | 88 | 2 | 41 | 1 | GUIStringData | - | 23 |
+| SimpleComponentConfig | 76 | 8 | 40 | 4 | RectangleComponentConfig, RectangleComponent3DConfig, ImageComponentConfig, ScreenContainerConfig | - | 2 |
+| MSRemainingPainters | 54 | 0 | 40 | 0 | MSHeaderButton, MSCloseButton, MSScrollThumb, MSLabel | - | 7 |
+| WONListConfig | 48 | 0 | 39 | 3 | WONScrollbarConfig, WONHeaderControlConfig, WONListCtrlConfig | - | 5 |
+| SkinListControls | 63 | 0 | 39 | 1 | WONListCtrl, WONHeaderButton, WONHeaderControl | - | 12 |
+| PNGDecoder | 49 | 2 | 37 | 0 | PNGDecoder | - | 2 |
+| MultiListBoxConfig | 43 | 0 | 37 | 3 | MultiListAreaConfig, MultiListHeaderConfig | MSHeaderControlConfig, WONHeaderControlConfig | 9 |
+| ComboBoxConfig | 47 | 0 | 37 | 2 | ComboBoxConfig | MSComboBoxConfig, WONComboBoxConfig | 7 |
+| WONSkinComposition | 46 | 0 | 35 | 0 | WONSkin | WONMSSkin | 12 |
+| ListAreaToolTip | 39 | 0 | 34 | 0 | ListAreaToolTip | - | 2 |
+| ResourceConfigHandlers | 73 | 0 | 33 | 0 | ResourceConfig | - | 15 |
+| WONSimpleButton | 40 | 0 | 30 | 1 | WONSimpleButton | WONScrollThumb | 12 |
+| TabCtrlConfig | 41 | 0 | 30 | 2 | TabCtrlConfig | MSTabCtrlConfig, WONTabCtrlConfig | 9 |
+| Background | 60 | 2 | 30 | 1 | Background | - | 18 |
+| BrowserComponentConfig | 55 | 6 | 29 | 3 | BrowserComponentConfig | - | 2 |
+| ComponentListItemAdapters | 52 | 4 | 28 | 0 | ComponentListItem | - | 3 |
+| TextListItem | 37 | 2 | 27 | 2 | TextListItem | ConnectListItem, FilterListItem, FriendsListItem, MenuItem, UserListItem | 13 |
+| InputBoxConfig | 35 | 0 | 27 | 1 | InputBoxConfig | MSInputBoxConfig | 6 |
+| WONFrameValueConfig | 53 | 0 | 26 | 3 | WONComboBoxConfig, WONTabCtrlConfig, WONScrollContainerConfig | WONListCtrlConfig | 7 |
+| StringLocalize | 36 | 0 | 26 | 0 | StringLocalize | - | 2 |
+| WONControlDuplicates | 34 | 0 | 24 | 0 | WONSimpleButton, WONComboBox, WONScrollContainer, WONTabCtrl | WONListCtrl, WONScrollThumb | 25 |
+| ImageButton | 34 | 0 | 24 | 0 | ImageButton | ImageTextButton | 5 |
+| WONFrameConfig | 32 | 2 | 23 | 2 | WONFrameComponentConfig | - | 2 |
+| ScrollbarConfig | 37 | 0 | 23 | 2 | ScrollbarConfig | MSScrollbarConfig, WONScrollbarConfig | 7 |
+| ChildLayoutsAdvanced | 41 | 0 | 23 | 1 | PercentLayoutParam | - | 4 |
+| MenuBehavior | 31 | 3 | 22 | 2 | MenuItem | - | 6 |
+| SkinTab | 30 | 0 | 20 | 0 | WONTabCtrl | - | 10 |
+| PlatClipboard | 26 | 0 | 20 | 0 | Clipboard | - | 2 |
+| ComponentResourceAdapters | 64 | 16 | 20 | 0 | Component | Button, Container, EELobbyColorChooser, ImageComponent, InputBox, Label | 152 |
+| the other 117 units | 2822 | 454 | 490 | | | | |
+| total | 13350 | 785 | 5995 | 228 | | | |
+
+What it says: WONGUI's remaining logic (about 6,000 lines by the parser, plus Surface's templates) is (a) the
+platform layer (PlatWindowManager, PlatGraphics, PlatGUIWindow, PlatNativeImage, PlatGUIFont, PlatClipboard:
+about 1,100, the SDL/Win32 seam), (b) the resource configs that build the widgets from the skin files
+(ComponentConfig and its 40-odd subclasses, ResourceConfig, the WON/MS configs: about 2,300; every one is made
+by the lobby's config table and read by the screens' configs, 110 files name ComponentConfig), (c) the images
+(ImageFilters, Image, ImageDecoder, JPG/PNG decoders, StretchImage, BackgroundGrabber, MSSkinImage: about 700),
+(d) the Windows skin's painters (MSGraphicsUtil and the MS paint units: about 330, no subclass but MSListCtrl /
+MSHeaderButton; the best deletion for the risk: pure drawing over `Graphics`) and (e) the widgets' own remains
+(Component, ComponentTraversal, WrappedText, ImageComponent, BrowserComponent, ListAreaToolTip: about 450).
+This round takes (d) first.
