@@ -18,6 +18,8 @@
 //! - [`contagion_save`]: the contagion helpers' and their manager's `Load`, `Save` and checksum.
 //! - [`contagion`]: the contagion helpers' update and spread over a host, the functors' damage arithmetic.
 //! - [`contagion_functor`]: the six contagion functors as one record: their numbers, getters and `Apply`'s hit.
+//! - [`nodes`]: the tree's, the epochs' and the nodes' members as records and the tree's walks over them (research,
+//!   availability, obsolescence, the epochs, the saved game, the checksum, the media table).
 //! - [`capture`]: the simulation capture's records (`ee/EETechCapture.h`) and their replay.
 
 pub mod calamity;
@@ -32,6 +34,7 @@ pub mod contagion_functor;
 pub mod contagion_save;
 pub mod effects;
 pub mod ffi;
+pub mod nodes;
 pub mod tree;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the

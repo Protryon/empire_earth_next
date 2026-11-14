@@ -727,14 +727,6 @@ void EEUIFMainGame::StartPatrol()
     ee_screens_main_form_start(&theCall, 4, 0);
 }
 
-// FUNCTION: EXE 0x6668a0
-// Enables the hot key groups of a hot key mode
-void EEUIFMainGame::SetHotKeyMode(long inMode)
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_hot_key_mode(&theCall, inMode);
-}
-
 // FUNCTION: EXE 0x6668ee
 // Switches the interface mode, clearing ghosts and ending a wall or gate placement
 void EEUIFMainGame::SetUIState(long inUIState)
@@ -1260,16 +1252,6 @@ int64_t EEUIFMainGame::HostOp(void* inCall, uint32_t inOp, int64_t inA, int64_t 
     case EE_SCREENS_MF_OP_UNIT_SELECTED: return gUnitSelected;
     }
     return 0;
-}
-
-// FUNCTION: EXE 0x666a3b
-// Refreshes the status bar: resources, population, wonder countdowns, clock or frame rate, pause and
-// victory texts, the lag icons, the briefing and previous-messages buttons, then the cursor (ee_screens
-// main_form.rs)
-void EEUIFMainGame::RefreshStatus()
-{
-    EEUIFMGFormCall theCall(this);
-    ee_screens_main_form_refresh_status(&theCall);
 }
 
 // The cursor's reads for one UpdateCursorKind (ee_screens cursor.rs asks them through ee_screenscpp_cursor)

@@ -67,10 +67,11 @@ game; when it ends, every swept 3D effect kind (EEEffectManager.cpp's EEEffectCa
 splash, tracers, disease, 3D projectile, shells, additive pass, citizen beam, teleport, virus, pulse cannon ball,
 time warp, shield, screen flash; since the sixteenth round also the hurricane, nuclear explosion, energy wave, goal,
 icon, tracer beam, command confirmation, energy wall, damage vent, farm, the smoke generators, particle emitter,
-multi-effect and volcano; since the nineteenth round the 2D kinds but the three that start at a weapon tag point,
-with a transformation and a line entry) is made in its world through each entry point that makes it, stepped, saved
+multi-effect and volcano; since the nineteenth round the 2D kinds, with a transformation and a line entry; since the
+twentieth the three that start at a weapon tag point, on the armed unit) is made in its world through each entry point that makes it, stepped, saved
 and loaded: EFSW one record per case (the creation, the save, the load and repair, the second save), EFST and EFMU after
-every update of the sweep. Its golden came from the C++ effects of f839d277 (R4.4, fourteenth, sixteenth and nineteenth rounds).
+every update of the sweep. Its golden came from the C++ effects of f839d277 (R4.4, fourteenth, sixteenth and nineteenth rounds; the twentieth's
+from the C++ of 2c6cd492, whose 2D kinds but the shockwave and confirmation were the original classes).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
@@ -114,6 +115,11 @@ outputs. Its golden lines come from the C++ bodies (late 3, space 2); late 2, 6,
 games), late 4, 5, the oracle and space 3, 6, 7 (main's AI changes, the merge of a2c4347e), space 4, 5 and calamity
 from the Rust bodies, whose every call the original's statements recheck while the capture runs (EE-SIM exits 3 on a
 difference).
+PMST is the physics models' step (EEPhysicsModel.cpp, the physics models' lane): one record per physics tick, the
+count and FNV-1a of every EEPhysicsModel::Step call's unit, model, physics action before the step and the state the
+models write after it (the location's matrix, velocities, push, roll, bob phase, collision time, state and blocker,
+tile, arrival, animation, hit points, orientation, height). Its golden lines come from the C++ models (seeds 2-3 of
+the oracle, late, space and calamity profiles, before the models moved to Rust).
 SM** are the scenario manager's records (ee/EEScenarioCapture.h, R5b.5): SMCE every trigger condition's test, SMTE
 every trigger's evaluation, SMOB every scenario object's, SMCP the player choices and SMAR the area queries outside an
 object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile

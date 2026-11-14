@@ -773,35 +773,6 @@ void EEActiveGroup::Finish()
     this->mIsFinished = true;
 }
 
-// FUNCTION: EXE 0x5edb21
-// Returns whether a unit belongs to a slot kind: 0 any, 1 air, 2 land or land building, 3 surface naval,
-// 4 submerged naval, 5 movement domain bit 3
-bool EEActiveGroup::IsInFormationSlot(EEComplexUnit* inUnit, long inSlot)
-{
-    bool theResult = false;
-    switch (inSlot) {
-    case 0:
-        theResult = true;
-        break;
-    case 1:
-        theResult = inUnit->mUnitClass->mDomains & kMovementAir;
-        break;
-    case 2:
-        theResult = (inUnit->mUnitClass->mDomains & kMovementLand) || inUnit->mUnitClass->IsLandBuilding();
-        break;
-    case 3:
-        theResult = (inUnit->mUnitClass->mDomains & kMovementSea) && inUnit->mUnitClass->mCategory != kUnitCategorySubmergedNaval;
-        break;
-    case 4:
-        theResult = (inUnit->mUnitClass->mDomains & kMovementSea) && inUnit->mUnitClass->mCategory == kUnitCategorySubmergedNaval;
-        break;
-    case 5:
-        theResult = (inUnit->mUnitClass->mDomains >> 3) & 1;
-        break;
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5edbb2
 // Returns the group's speed when it moves together, else the unit's own maximum velocity
 float EEActiveGroup::GetMaxVelocity(EEComplexUnit* inUnit)

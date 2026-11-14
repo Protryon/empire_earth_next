@@ -210,19 +210,6 @@ void* SEConductor::Resolve(void* inConductor, const char* inFile, size_t* outLen
     return theData;
 }
 
-// Returns the ID of the score playing now (-1: none or not running)
-long SEConductor::GetCurrentlyPlayingScore()
-{
-    this->mLock->Enter();
-    long theID;
-    {
-        Rust::Fields theFields(this);
-        theID = ee_conductor_currently_playing(&theFields.mFields);
-    }
-    this->mLock->Leave();
-    return theID;
-}
-
 // Returns the score with the given ID (NULL: none)
 SEScore* SEConductor::GetScore(long inID) const
 {
@@ -230,29 +217,6 @@ SEScore* SEConductor::GetScore(long inID) const
     SEScore* theScore = static_cast<SEScore*>(ee_conductor_score(this->mRust, (int32_t)inID));
     this->mLock->Leave();
     return theScore;
-}
-
-// Returns the ID of the given score (-1: not found or NULL)
-long SEConductor::GetScoreID(SEScore* inScore) const
-{
-    this->mLock->Enter();
-    long theID = ee_conductor_score_id(this->mRust, inScore);
-    this->mLock->Leave();
-    return theID;
-}
-
-// Starts the performance at the mixer's output rate and the loader (reading from the music folder), reapplies
-// volume and intensity, reloads the remembered scores and connects the performance to the mixer; returns 1 on failure
-long SEConductor::InitializeConductor()
-{
-    this->mLock->Enter();
-    long theResult;
-    {
-        Rust::Fields theFields(this);
-        theResult = ee_conductor_initialize(this->mRust, this, &theFields.mFields);
-    }
-    this->mLock->Leave();
-    return theResult;
 }
 
 // Loads a music score by file name and returns its ID; a name already loaded only bumps its load count; while not

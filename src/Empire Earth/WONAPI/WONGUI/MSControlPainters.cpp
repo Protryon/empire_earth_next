@@ -11,17 +11,16 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
+#include "ee/wonapi/WONGUIDraw.h"
 
 namespace WONAPI {
 // FUNCTION: WON 0x006ffa70
 // Fills the scrollbar track when it needs repainting (unless transparent), then paints the buttons and thumb
 void MSScrollbar::Paint(Graphics& g)
 {
-    if(this->GetScrollRect()->mInvalidState!=0 && !this->mIsTransparent)
-    {
-        g.SetSysColor(StandardColor_Scrollbar);
-        g.FillRect(this->GetScrollRect()->Left(),this->GetScrollRect()->Top(),this->GetScrollRect()->Width(),this->GetScrollRect()->Height());
-    }
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::Scrollbar,0,0,(this->GetScrollRect()->mInvalidState!=0?EE_WON_MSPAINT_INVALID:0)|
+                              (this->mIsTransparent?EE_WON_MSPAINT_TRANSPARENT:0),this->GetScrollRect()->Left(),
+                              this->GetScrollRect()->Top(),this->GetScrollRect()->Width(),this->GetScrollRect()->Height()));
     Container::Paint(g);
 }
 
@@ -30,8 +29,7 @@ void MSScrollbar::Paint(Graphics& g)
 void MSComboBox::Paint(Graphics& g)
 {
     ComboBox::Paint(g);
-    if(this->mDrawFrame)
-        MSGraphicsUtil::DrawFrame3(g,0,0,this->Width(),this->Height(),true);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::ComboBox,this->Width(),this->Height(),this->mDrawFrame?EE_WON_MSPAINT_DRAW_FRAME:0));
 }
 
 // Returns the combo box's preferred size, 100 x 22 (the linker folds this body into the identical one at 0x006ffb00)
@@ -90,20 +88,10 @@ void MSScrollContainer::Virtual08()
 void MSScrollContainer::Paint(Graphics& g)
 {
     Container::Paint(g);
-    if(this->GetScrollbar(true)->IsVisible() && this->GetScrollbar(false)->IsVisible() && !this->mTransparent)
-    {
-        g.SetSysColor(StandardColor_Scrollbar);
-        g.FillRect(this->GetScrollbar(true)->Left(),this->GetScrollbar(true)->Top()+this->GetScrollbar(true)->Height(),
-                   this->GetScrollbar(true)->Width(),this->GetScrollbar(false)->Height());
-    }
-    if(!this->mDrawFrame)
-        return;
-    if(this->mDraw3DFrame)
-        LobbyDraw3DFrame(g,0,0,this->Width(),this->Height(),true);
-    else
-    {
-        g.SetSysColor(StandardColor_3DDarkShadow);
-        g.DrawRect(0,0,this->Width(),this->Height());
-    }
+    Scrollbar* v=this->GetScrollbar(true);
+    Scrollbar* h=this->GetScrollbar(false);
+    uint32_t f=(v->IsVisible()?EE_WON_MSPAINT_VERT:0)|(h->IsVisible()?EE_WON_MSPAINT_HORZ:0)|(this->mTransparent?EE_WON_MSPAINT_TRANSPARENT:0)|
+               (this->mDrawFrame?EE_WON_MSPAINT_DRAW_FRAME:0)|(this->mDraw3DFrame?EE_WON_MSPAINT_DRAW_3D:0);
+    WONMsPaint(g,WONMsPaintOf(EeWonMsPaintKind::ScrollContainer,this->Width(),this->Height(),f,v->Left(),v->Top(),v->Width(),v->Height(),h->Height()));
 }
 }

@@ -91,14 +91,6 @@ void GEVector::Add(const GEVector& inVector, GEVector& outVector) const
     outVector.mZ = inVector.mZ + this->mZ;
 }
 
-// FUNCTION: LLE 0x1000c2ef
-// Writes the cross product of this vector and another to outVector
-void GEVector::CrossProduct(const GEVector& inVector, GEVector& outVector) const
-{
-    // component by component, as the C++ stored them: an output that is an input changes the later components
-    ee_ge_vector_cross(GERust(*this), GERust(inVector), GERust(outVector));
-}
-
 // FUNCTION: LLE 0x1000c328
 
 // FUNCTION: LLE 0x1000c343
@@ -113,15 +105,6 @@ float GEVector::GetMagnitude() const
 float GEVector::GetMagnitudeSquared() const
 {
     return ee_ge_vector_magnitude_squared(GERust(*this));
-}
-
-// FUNCTION: LLE 0x1000c3f7
-// Writes this vector minus another to outVector
-void GEVector::Subtract(const GEVector& inVector, GEVector& outVector) const
-{
-    outVector.mX = this->mX - inVector.mX;
-    outVector.mY = this->mY - inVector.mY;
-    outVector.mZ = this->mZ - inVector.mZ;
 }
 
 // FUNCTION: LLE 0x1000c41a
@@ -163,15 +146,6 @@ void GE3DPoint::Clear()
     this->mZ = 0.0f;
 }
 
-// FUNCTION: LLE 0x1000c4ba
-// Writes the vector from this point to another to outVector
-void GE3DPoint::ComputeVectorTo(const GE3DPoint& inPoint, GEVector& outVector) const
-{
-    outVector.mX = inPoint.mX - this->mX;
-    outVector.mY = inPoint.mY - this->mY;
-    outVector.mZ = inPoint.mZ - this->mZ;
-}
-
 // FUNCTION: LLE 0x1000c4dd
 // Returns the distance to another 3D point (fast square root)
 float GE3DPoint::DistanceTo(const GE3DPoint& inPoint) const
@@ -209,15 +183,6 @@ void GE3DPoint::SetXYZ(float inX, float inY, float inZ)
     this->mX = inX;
     this->mY = inY;
     this->mZ = inZ;
-}
-
-// FUNCTION: LLE 0x1000c597
-// Writes this point moved back by a vector to outPoint
-void GE3DPoint::Subtract(const GEVector& inVector, GE3DPoint& outPoint) const
-{
-    outPoint.mX = this->mX - inVector.GetX();
-    outPoint.mY = this->mY - inVector.GetY();
-    outPoint.mZ = this->mZ - inVector.GetZ();
 }
 
 // FUNCTION: LLE 0x1000c5ba
@@ -307,20 +272,6 @@ long GE2DPoint::Load(FSFile& inFile)
     } else
         theResult = 4;
     return theResult;
-}
-
-// FUNCTION: LLE 0x1000c97a
-// Rotates the point by an angle (radians) around a centre
-void GE2DPoint::RotatePoint(float inAngle, const GE2DPoint& inCenter)
-{
-    ee_ge_2d_rotate(GERust(*this), inAngle, GERust(inCenter), GERust(*this));
-}
-
-// FUNCTION: LLE 0x1000c9fc
-// Writes the point rotated by an angle (radians) around a centre to outPoint
-void GE2DPoint::RotatePoint(float inAngle, const GE2DPoint& inCenter, GE2DPoint& outPoint) const
-{
-    ee_ge_2d_rotate(GERust(*this), inAngle, GERust(inCenter), GERust(outPoint));
 }
 
 // FUNCTION: LLE 0x1000ca7f

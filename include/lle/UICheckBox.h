@@ -33,7 +33,6 @@ public:
     void SetText(const UWideString& inText, GEFont* inFont);
 protected:
     virtual void ButtonUp();                // 0x1005fa07: the toggle, then UIButton's
-    void ToggleCheck();
     virtual void ButtonDown();
     virtual long MouseLButtonDown();
     virtual long MouseLButtonUp();

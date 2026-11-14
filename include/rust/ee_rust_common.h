@@ -20,6 +20,8 @@ constexpr static const int32_t OK = 0;
 
 constexpr static const int32_t NOT_FOUND = 3;
 
+constexpr static const int32_t NOT_OPEN = 4;
+
 constexpr static const int32_t FAILED = 9;
 
 constexpr static const int32_t END_OF_FILE = 18;

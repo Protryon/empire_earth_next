@@ -423,57 +423,61 @@ bool EEAirTrafficControl::IsTakeOffDone(std::vector<EEATCAirport>::iterator& inS
 }
 
 // FUNCTION: EXE 0x54f75c
-// Reads the airports, their queued planes (as unit ids) and the air cargo totals; returns the first read error
+// Reads the airports, their queued planes (as unit ids) and the air cargo totals; returns the first read error.
+// port (R5b.4, round 29): Load's and Save's bodies are Rust (ee_units atc_save.rs) over EEATCSaveOperation's parts
+struct EEATCSaveContext {
+    EEAirTrafficControl* mControl;
+    FSFile* mFile;
+    EEATCAirport mSlot;   // the airport being read (the original's local)
+};
+
+static int32_t EEATCSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EEATCSaveContext& theContext = *static_cast<EEATCSaveContext*>(inContext);
+    EEAirTrafficControl* theControl = theContext.mControl;
+    switch (inOp) {
+    case EE_UNITS_ATC_SAVE_CLEAR: theControl->mSlots.clear(); return 0;
+    case EE_UNITS_ATC_SAVE_SLOT_BEGIN:
+        theContext.mSlot.mAirport = reinterpret_cast<EEComplexUnit*>((unsigned long)io->i);
+        theContext.mSlot.mLanding.clear();
+        theContext.mSlot.mTakeoff.clear();
+        return 0;
+    case EE_UNITS_ATC_SAVE_ITEM_PUSH: {
+        EEATCItem theItem;
+        theItem.mUnit = reinterpret_cast<EEComplexUnit*>((unsigned long)io->i);
+        theItem.mKind = inIndex;
+        if (theItem.mKind == 1)
+            theContext.mSlot.mLanding.push_back(theItem);
+        else
+            theContext.mSlot.mTakeoff.push_back(theItem);
+        return 0;
+    }
+    case EE_UNITS_ATC_SAVE_SLOT_PUSH: theControl->mSlots.push_back(theContext.mSlot); return 0;
+    case EE_UNITS_ATC_SAVE_CARGO: io->i = inIndex == 0 ? theControl->mMaxCargo : theControl->mUsedCargo; return 0;
+    case EE_UNITS_ATC_SAVE_SET_CARGO: (inIndex == 0 ? theControl->mMaxCargo : theControl->mUsedCargo) = (long)io->i; return 0;
+    case EE_UNITS_ATC_SAVE_SLOT_COUNT: io->i = (int64_t)theControl->mSlots.size(); return 0;
+    case EE_UNITS_ATC_SAVE_SLOT_AIRPORT: io->i = (int64_t)theControl->mSlots[inIndex].mAirport->GetUnitID(); return 0;
+    case EE_UNITS_ATC_SAVE_QUEUE_COUNT: {
+        EEATCAirport& theSlot = theControl->mSlots[inIndex];
+        io->i = (int64_t)(io->b == 0 ? theSlot.mLanding.size() : theSlot.mTakeoff.size());
+        return 0;
+    }
+    case EE_UNITS_ATC_SAVE_ITEM: {
+        EEATCAirport& theSlot = theControl->mSlots[inIndex];
+        EEATCItem& theItem = io->b == 0 ? theSlot.mLanding[(size_t)io->i] : theSlot.mTakeoff[(size_t)io->i];
+        io->i = (int64_t)theItem.mUnit->GetUnitID();
+        uint32_t theKind = (uint32_t)theItem.mKind;
+        memcpy(&io->f, &theKind, sizeof(theKind));
+        return 0;
+    }
+    }
+    return EESavePrimitive(*theContext.mFile, inOp, io);
+}
+
 long EEAirTrafficControl::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
 {
-    EEATCAirport theSlot;
-    EEATCItem theItem;
-    unsigned long theNumSlots;
-    unsigned long theNumItems;
-    unsigned long theID;
-    unsigned long i;
-    unsigned long j;
-    theItem.mUnit = NULL;
-    theItem.mKind = 0;
-    this->mSlots.clear();
-    long theResult = inFile->Read(theNumSlots);
-    if (theResult != kErrorOK)
-        return theResult;
-    for (i = 0; i < theNumSlots; i++) {
-        if (theResult != kErrorOK)
-            break;
-        theResult = inFile->Read(theID);
-        theSlot.mAirport = reinterpret_cast<EEComplexUnit*>(theID);
-        theSlot.mLanding.clear();
-        theSlot.mTakeoff.clear();
-        if (theResult == kErrorOK) {
-            theResult = inFile->Read(theNumItems);
-            if (theResult == kErrorOK) {
-                for (j = 0; j < theNumItems; j++) {
-                    if (theResult != kErrorOK)
-                        break;
-                    theResult = inFile->Read(theID);
-                    theItem.mUnit = reinterpret_cast<EEComplexUnit*>(theID);
-                    if (theResult != kErrorOK)
-                        continue;
-                    theResult = inFile->Read(theItem.mKind);
-                    if (theResult != kErrorOK)
-                        continue;
-                    if (theItem.mKind == 1)
-                        theSlot.mLanding.push_back(theItem);
-                    else
-                        theSlot.mTakeoff.push_back(theItem);
-                }
-                this->mSlots.push_back(theSlot);
-            }
-        }
-    }
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile->Read(this->mMaxCargo);
-    if (theResult == kErrorOK)
-        theResult = inFile->Read(this->mUsedCargo);
-    return theResult;
+    EEATCSaveContext theContext = {this, inFile, EEATCAirport()};
+    return ee_units_atc_load(&theContext, &EEATCSaveOperation);
 }
 
 // FUNCTION: EXE 0x54f88d
@@ -631,38 +635,11 @@ long EEAirTrafficControl::RepairPointers(unsigned long inMajorVersion, unsigned 
 
 // FUNCTION: EXE 0x54fead
 // Writes the airports, their queued planes (unit id and request) and the air cargo totals; returns the first error
+// (the body: ee_units atc_save.rs `save`)
 long EEAirTrafficControl::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile* inFile)
 {
-    unsigned long theNumSlots = this->mSlots.size();
-    unsigned long theValue;
-    long theResult = inFile->Write(theNumSlots);
-    for (unsigned long i = 0; i < theNumSlots && theResult == 0; i++) {
-        theValue = this->mSlots[i].mAirport->GetUnitID();
-        theResult = inFile->Write(theValue);
-        if (theResult != 0)
-            break;
-        theValue = this->mSlots[i].mLanding.size() + this->mSlots[i].mTakeoff.size();
-        theResult = inFile->Write(theValue);
-        unsigned long j;
-        for (j = 0; j < this->mSlots[i].mLanding.size() && theResult == 0; j++) {
-            theValue = this->mSlots[i].mLanding[j].mUnit->GetUnitID();
-            theResult = inFile->Write(theValue);
-            if (theResult == 0)
-                theResult = inFile->Write((unsigned long&)this->mSlots[i].mLanding[j].mKind);
-        }
-        for (j = 0; j < this->mSlots[i].mTakeoff.size() && theResult == 0; j++) {
-            theValue = this->mSlots[i].mTakeoff[j].mUnit->GetUnitID();
-            theResult = inFile->Write(theValue);
-            if (theResult == 0)
-                theResult = inFile->Write((unsigned long&)this->mSlots[i].mTakeoff[j].mKind);
-        }
-    }
-    if (theResult == 0) {
-        theResult = inFile->Write(this->mMaxCargo);
-        if (theResult == 0)
-            theResult = inFile->Write(this->mUsedCargo);
-    }
-    return theResult;
+    EEATCSaveContext theContext = {this, inFile, EEATCAirport()};
+    return ee_units_atc_save(&theContext, &EEATCSaveOperation);
 }
 
 // FUNCTION: EXE 0x55014c

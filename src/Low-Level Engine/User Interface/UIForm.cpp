@@ -541,17 +541,6 @@ long UIForm::DrawPolygons() { return (long)this->Call(EeUiFormCall::DrawPolygons
 // Draws the text of every listed control, then the popup's, and empties the draw list
 long UIForm::DrawTextA() { return (long)this->Call(EeUiFormCall::DrawText); }
 
-// FUNCTION: LLE 0x10072452
-// Finds the highest empty control slot and returns the slot after it; false when none is empty or it is the last slot
-bool UIForm::GetAvailableIndex(unsigned long& outIndex) const
-{
-    intptr_t theIndex = this->Call(EeUiFormCall::AvailableIndex);
-    if (theIndex < 0)
-        return false;
-    outIndex = (unsigned long)theIndex;
-    return true;
-}
-
 // FUNCTION: LLE 0x1007248c
 // Returns the background with the given ID, or NULL
 UIBackground* UIForm::GetBackgroundByID(unsigned long inID) const
@@ -576,16 +565,6 @@ UIEntityGroup* UIForm::GetEntityGroupById(unsigned long inId) const
 // FUNCTION: LLE 0x10072571
 // Returns false: forms never fade in
 bool UIForm::GetShouldFadeIn() { return this->Call(EeUiFormCall::ShouldFadeIn) != 0; }
-
-// FUNCTION: LLE 0x10072574
-// Returns the tool-tip shadow rectangle: the given rectangle moved 3 pixels right and down
-void UIForm::GetToolTipShadowRectangle(const GERectangle& inRectangle, GERectangle& outRectangle)
-{
-    float f[4];
-    UIFormPutRect(f, inRectangle);
-    this->Call(EeUiFormCall::ToolTipShadow, 0, 0, f);
-    outRectangle = UIFormRect(f);
-}
 
 // FUNCTION: LLE 0x100725fd
 // Loads every background's texture
@@ -673,15 +652,8 @@ void UIForm::SetAllControlsDirty() { this->Call(EeUiFormCall::SetAllControlsDirt
 // one (the event's index in the Rust form: formobj.rs EV_*)
 void UIForm::SetFormOpenEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 0, (intptr_t)inEvent); }
 void UIForm::SetFormCloseEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 1, (intptr_t)inEvent); }
-void UIForm::SetMouseLeftButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 2, (intptr_t)inEvent); }
-void UIForm::SetMouseLeftButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 3, (intptr_t)inEvent); }
-void UIForm::SetMouseLeftButtonDoublePressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 4, (intptr_t)inEvent); }
 void UIForm::SetMouseMiddleButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 5, (intptr_t)inEvent); }
 void UIForm::SetMouseMiddleButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 6, (intptr_t)inEvent); }
-void UIForm::SetMouseMiddleButtonDoublePressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 7, (intptr_t)inEvent); }
-void UIForm::SetMouseRightButtonPressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 8, (intptr_t)inEvent); }
-void UIForm::SetMouseRightButtonUnpressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 9, (intptr_t)inEvent); }
-void UIForm::SetMouseRightButtonDoublePressedEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 10, (intptr_t)inEvent); }
 void UIForm::SetMouseMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 11, (intptr_t)inEvent); }
 void UIForm::SetMouseWheelMoveEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 12, (intptr_t)inEvent); }
 void UIForm::SetFormUpdateEvent(UIEvent* inEvent) { this->Call(EeUiFormCall::SetEvent, 13, (intptr_t)inEvent); }
@@ -812,27 +784,14 @@ float UIForm::GetFadeOpacity()
     this->Call(EeUiFormCall::FadeOpacity, 0, 0, f);
     return f[0];
 }
-UIEvent* UIForm::GetFormActivateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 14)); }
-UIEvent* UIForm::GetFormDeactivateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 15)); }
 UIEvent* UIForm::GetFormUpdateEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 13)); }
-UIEvent* UIForm::GetMouseLeftButtonPressedEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 2)); }
-UIEvent* UIForm::GetMouseLeftButtonUnpressedEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 3)); }
-UIEvent* UIForm::GetMouseLeftButtonDoublePressedEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 4)); }
-UIEvent* UIForm::GetMouseMiddleButtonPressedEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 5)); }
-UIEvent* UIForm::GetMouseMiddleButtonUnpressedEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 6)); }
-UIEvent* UIForm::GetMouseMiddleButtonDoublePressedEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 7)); }
-UIEvent* UIForm::GetMouseRightButtonPressedEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 8)); }
-UIEvent* UIForm::GetMouseRightButtonUnpressedEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 9)); }
-UIEvent* UIForm::GetMouseRightButtonDoublePressedEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 10)); }
 UIEvent* UIForm::GetMouseMoveEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 11)); }
-UIEvent* UIForm::GetMouseWheelMoveEvent() const { return reinterpret_cast<UIEvent*>(this->Call(EeUiFormCall::Event, 12)); }
 unsigned long UIForm::GetFormID() const { return (unsigned long)this->Call(EeUiFormCall::FormId); }
 UIFormManager* UIForm::GetFormManager() const { return reinterpret_cast<UIFormManager*>(this->Call(EeUiFormCall::FormManager)); }
 UITextLabel* UIForm::GetHelpTextLabel() const
 {
     return static_cast<UITextLabel*>(reinterpret_cast<UIControl*>(this->Call(EeUiFormCall::HelpTextLabel)));
 }
-unsigned long UIForm::GetHowLongHasFormBeenOpen() { return (unsigned long)this->Call(EeUiFormCall::HowLongOpen); }
 bool UIForm::GetUseExclusiveCoords() const { return this->Call(EeUiFormCall::UseExclusiveCoords) != 0; }
 UIManager* UIForm::GetManager() const { return reinterpret_cast<UIManager*>(this->Call(EeUiFormCall::Manager)); }
 const GE2DPoint& UIForm::GetMouseLocation() const

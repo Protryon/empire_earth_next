@@ -145,25 +145,9 @@ dde94 ddee7 Empire Earth/Formations/EEFShortLine.cpp
 ddee7 ddf3a Empire Earth/Formations/EEFStaggeredLine.cpp
 ddf3a de331 Empire Earth/Formations/EEFWedge.cpp
 de331 df57c Empire Earth/Graphics Thread/EEE2DBattlefieldAmbient.cpp
-df68d dfd03 Empire Earth/Graphics Thread/EEE2DExhaustTrail.cpp
-dfd03 e0389 Empire Earth/Graphics Thread/EEE2DExplosion.cpp
-e0389 e0cf5 Empire Earth/Graphics Thread/EEE2DFire.cpp
-e0cf5 e0ffa Empire Earth/Graphics Thread/EEE2DFireTrail.cpp
-e0ffa e1867 Empire Earth/Graphics Thread/EEE2DImpact.cpp
-e1867 e1a37 Empire Earth/Graphics Thread/EEE2DImpactBlood.cpp
 e1a37 e28be Empire Earth/Graphics Thread/EEE2DLightGlow.cpp
-e28be e2edd Empire Earth/Graphics Thread/EEE2DLightning.cpp
-e2edd e3954 Empire Earth/Graphics Thread/EEE2DLinearProjectile.cpp
 e3954 e4529 Empire Earth/Graphics Thread/EEE2DMarchingIcons.cpp
-e4529 e4729 Empire Earth/Graphics Thread/EEE2DMuzzleFlash.cpp
 e4729 e56d0 Empire Earth/Graphics Thread/EEE2DParticle.cpp
-e56d0 e5c63 Empire Earth/Graphics Thread/EEE2DPlasmaPulse.cpp
-e5c63 e614f Empire Earth/Graphics Thread/EEE2DPulseWave.cpp
-e6621 e6ef2 Empire Earth/Graphics Thread/EEE2DSmokeMuzzleBlast.cpp
-e6ef2 e72fa Empire Earth/Graphics Thread/EEE2DSmokePlume.cpp
-e773c e7d67 Empire Earth/Graphics Thread/EEE2DVortex.cpp
-e7d67 e8158 Empire Earth/Graphics Thread/EEE2DWaterRipple.cpp
-e8158 e89c6 Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp
 ec6e4 ed606 Empire Earth/Graphics Thread/EEE3DEarthquake.cpp
 ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
 f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
@@ -230,18 +214,6 @@ fb088 fb9f6 Empire Earth/Graphics Thread/EEE3DStorm.cpp
 14e839 151c28 Empire Earth/Physics Thread/EEAirTrafficControl.cpp
 151c28 15439f Empire Earth/Physics Thread/EEPhysics.cpp
 1543b7 156df8 Empire Earth/Physics Thread/EEPhysicsModel.cpp
-156df8 15726c Empire Earth/Physics Thread/EEPMAirAnimal.cpp
-15726c 1587c7 Empire Earth/Physics Thread/EEPMAirplane.cpp
-1587c7 158a24 Empire Earth/Physics Thread/EEPMBuilding.cpp
-158a24 15a0cf Empire Earth/Physics Thread/EEPMHelicopter.cpp
-15a0cf 15a0db Empire Earth/Physics Thread/EEPMHovercraft.cpp
-15a0db 15aff0 Empire Earth/Physics Thread/EEPMLand.cpp
-15aff0 15b473 Empire Earth/Physics Thread/EEPMMissile.cpp
-15b473 15d015 Empire Earth/Physics Thread/EEPMNaval.cpp
-15d015 15d44f Empire Earth/Physics Thread/EEPMProjectile.cpp
-15d44f 15dd66 Empire Earth/Physics Thread/EEPMSeaAnimal.cpp
-15dd66 15f49d Empire Earth/Physics Thread/EEPMSpaceship.cpp
-15f49d 16066d Empire Earth/Physics Thread/EEPMSubmergedNaval.cpp
 16066d 16100f Empire Earth/Physics Thread/EEPPatrolGroup.cpp
 16100f 161825 RTS Engine/Physics/RTSPhysics.cpp
 161825 16d346 Empire Earth/Player/EEPlayer.cpp

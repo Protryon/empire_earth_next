@@ -7,12 +7,6 @@
 
 class UString;
 
-LLE_API void UEEncryptAuthorizationCode(UString& inCode, UString& outCode);
-LLE_API void UEDecryptAuthorizationCode(UString& inCode, unsigned long& outFirst, unsigned long& outSecond);
-LLE_API void UEEncryptExpiration(unsigned long inFirst, unsigned long inSecond, UString& outString);
-LLE_API bool UEDecryptExpiration(const UString& inString, unsigned long& outFirst, unsigned long& outSecond);
-LLE_API void UEEncryptGUID(unsigned long inValue, UString& inGUID, unsigned long inKey, UString& outString);
-LLE_API bool UEDecryptGUID(const UString& inString, unsigned long inKey, unsigned long& outValue, UString& outGUID);
 LLE_API void UEEncryptUString(const UString& inString, UString& outString);
 LLE_API bool UEDecryptUString(const UString& inString, UString& outString);
 

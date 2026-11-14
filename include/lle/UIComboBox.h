@@ -50,7 +50,6 @@ public:
         outSelection = this->GetSelectionIndex();
         return outSelection != -1 ? kErrorOK : kErrorFailed;
     }
-    const UIEditBox* GetEditBox() const { return reinterpret_cast<const UIEditBox*>(this->PartOf(3)); }
     GEText* GetGEText() const
     {
         if (this->GetTextLabel())
@@ -76,7 +75,6 @@ public:
     virtual void SetBgOpacity(float inOpacity) {}
     void SetCurrentSelection(unsigned long inIndex) { this->Call(EeUiComboCall::SetCurrentSelection, inIndex); }
     void SetListBoxAlwaysDirty(bool inAlwaysDirty) { this->Call(EeUiComboCall::SetListBoxAlwaysDirty, inAlwaysDirty); }
-    void SetListBoxBgColor(const GEColor& inColor) { this->GetList()->SetBgColor(inColor); }
     void SetListBoxFocusedRectColor(const GEColor& inColor) { this->GetList()->SetFocusedRectColor(inColor); }
     void SetListBoxSelectedBgColor(const GEColor& inColor)
     {
