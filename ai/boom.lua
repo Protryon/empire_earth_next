@@ -1125,7 +1125,10 @@ function M.step(view, memory)
             -- (BO.OPT.copper_mines, the owner: "conquer more resource before they pull ahead"; iron stood at 12 places on 2
             -- sites the whole Copper Age) from the Copper Age a third gold and a third iron site are claimed at once,
             -- further out on the town's side when the claim range holds none; lib.recover guards and retakes them
-            if ECON.order and BO.OPT.copper_mines and age >= 3 and (r == "gold" or r == "iron") then
+            -- (BO.OPT.stone_mines: the same from the Stone Age's growth, the owner's 12-18 gold and iron in Stone; 2 sites
+            -- held 12 places and the Copper save waited on iron in 20 of 25 games)
+            if ECON.order and (r == "gold" or r == "iron") and ((BO.OPT.copper_mines and age >= 3)
+                    or (BO.OPT.stone_mines and age == 2 and phase ~= "stone_start")) then
                 claim_want = math.max(claim_want, 3 * SITE_PLACES)
                 most = math.max(most, 3)
                 if (memory.copper_places or {})[r] ~= nil and memory.copper_places[r] < 3 * SITE_PLACES then
@@ -1133,7 +1136,7 @@ function M.step(view, memory)
                 end
             end
             local places, c = claim_sites(view, order, keep, r, false, claim_want, most, range, unsettled_r)
-            if ECON.order and BO.OPT.copper_mines then
+            if ECON.order and (BO.OPT.copper_mines or BO.OPT.stone_mines) then
                 memory.copper_places = memory.copper_places or {}
                 memory.copper_places[r] = places
             end
