@@ -354,6 +354,12 @@ pub enum EeUiOp {
     ListProcess = 195,
     /// `*rhombus a = *rhombus b`.
     RhombusAssign = 196,
+
+    // ---- UIComboBox (R6 ui round 15): its questions and actions, numbered as the record FFI's host calls were
+    /// *Pure*: the combo box's question `a >> 24` (`comboobj::EeUiComboQuery`) with its argument `a & 0xffffff`.
+    ComboQuery = 197,
+    /// The combo box's action `a` (`comboobj::EeUiComboAct`) with `b`, `c`, `d`.
+    ComboAct = 198,
 }
 
 impl EeUiOp {
@@ -400,6 +406,7 @@ impl EeUiOp {
                 | FormMouseLocation
                 | TextFgColor
                 | ListNumLines
+                | ComboQuery
         )
     }
 }

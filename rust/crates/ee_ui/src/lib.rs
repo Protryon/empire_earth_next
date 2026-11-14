@@ -12,6 +12,7 @@ pub mod button_variants;
 pub mod buttonobj;
 pub mod checkobj;
 pub mod combo;
+pub mod comboobj;
 pub mod controls_table;
 pub mod draw;
 pub mod edit;
@@ -55,9 +56,6 @@ mod background_ffi;
 // absent from a test binary
 #[cfg(not(test))]
 mod background_table_ffi;
-// imports the C++ combo box's host calls (UIComboBox.cpp), absent from a test binary
-#[cfg(not(test))]
-mod combo_ffi;
 // imports the C++ controls table's static array (UIControlsTable.cpp), absent from a test binary
 #[cfg(not(test))]
 mod controls_table_ffi;
