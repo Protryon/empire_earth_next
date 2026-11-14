@@ -409,6 +409,18 @@ local function fill_garrison(view, memory, id)
             ids[#ids + 1] = cid
         end
     end
+    -- New (AI_RESEARCH 8.78): with the garrison cheat and no idle citizen, the nearest gatherer goes in, so the rest is
+    -- topped up and the settlement becomes a town centre now. The C++'s gatherers often stand idle (its resource
+    -- manager's free citizens), the port's seldom: it waited 5 more minutes for its second centre at late starts
+    if #ids == 0 and memory.t.fills_garrison and ai.garrison_fill ~= nil then
+        for _, cid in ipairs(ai.units{category = "citizen", near = {u.x, u.y, 60}, limit = 8}) do
+            local c = R.unit(cid)
+            if c ~= nil and c.action == "gather" and c.inside == nil and ai.reach(c.x, c.y, u.x, u.y) then
+                ids[1] = cid
+                break
+            end
+        end
+    end
     if #ids > 0 then
         ai.garrison(ids, id)
         local rm = R.state(memory)
@@ -467,6 +479,7 @@ local function choose_garrison(view, memory)
         return
     end
     civ.garrison = id
+    civ.garrison_t = view.time
     fill_garrison(view, memory, id)
 end
 

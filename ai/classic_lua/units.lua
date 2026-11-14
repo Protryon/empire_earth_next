@@ -522,8 +522,15 @@ function M.update(view, memory)
             local q = list[k]
             local t = M.class_tech(view, q.class)
             local size = 1   -- (GetPopulationCost: one for every unit the classic requests)
+            -- New (AI_RESEARCH 8.78): citizens wait up to 30 s while a settlement is being filled to become a town
+            -- centre, so the batch is shared by both centres (queued a moment earlier, all ten waited at one)
+            local civ = memory.civ
+            local hold = (q.class == C.citizen or q.class == C.female_citizen) and civ ~= nil and civ.garrison ~= nil
+                and view.time < (civ.garrison_t or 0) + 30000
             if t == nil or t.obsolete or q.n == 0 then
                 table.remove(list, k)
+            elseif hold then
+                k = k + 1
             else
                 local cost = M.cost(q.class)
                 local all = room >= q.n * size
