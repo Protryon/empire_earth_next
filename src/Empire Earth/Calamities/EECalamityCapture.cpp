@@ -70,22 +70,19 @@ int EffectIndex(EEGraphicEffect* inEffect)
                  EEGraphicEffect::sEffects.begin());
 }
 
-void Functor(EESimCaptureRecord& ioRecord, EEContagionFunctor* inFunctor)
+void Functor(EESimCaptureRecord& ioRecord, EEContagionFunctor* f)
 {
-    if (inFunctor == NULL) {
+    // the record each of the six classes wrote (its tag: 1 fire, 2 leprosy, 3 plague, 4 area, 5 extra damage, 6 mind)
+    static const unsigned int kTags[7] = {7, 4, 5, 6, 1, 2, 3};   // by EE_CALAMITY_FUNCTOR_*
+    if (f == NULL) {
         ioRecord.U32(0);
         return;
     }
-    if (EEAEExtraDamageFunctor* f = dynamic_cast<EEAEExtraDamageFunctor*>(inFunctor)) {
-        ioRecord.U32(5);
-        ioRecord.U32(f->mFlag ? 1 : 0);
-    } else if (EEAEMindControlFunctor* f = dynamic_cast<EEAEMindControlFunctor*>(inFunctor)) {
-        ioRecord.U32(6);
-        ioRecord.I32(EffectIndex(f->mEffect));
-    } else if (dynamic_cast<EEAreaEffectFunctor*>(inFunctor) != NULL)
-        ioRecord.U32(4);
-    else if (EEFireFunctor* f = dynamic_cast<EEFireFunctor*>(inFunctor)) {
-        ioRecord.U32(1);
+    ioRecord.U32(kTags[f->mKind]);
+    switch (f->mKind) {
+    case EE_CALAMITY_FUNCTOR_EXTRA_DAMAGE: ioRecord.U32(f->mFlag ? 1 : 0); break;
+    case EE_CALAMITY_FUNCTOR_MIND_CONTROL: ioRecord.I32(EffectIndex(f->mEffect)); break;
+    case EE_CALAMITY_FUNCTOR_FIRE:
         ioRecord.I32(EffectIndex(f->mEffect));
         ioRecord.F32(f->mRadius);
         ioRecord.F32(f->mChance);
@@ -94,30 +91,29 @@ void Functor(EESimCaptureRecord& ioRecord, EEContagionFunctor* inFunctor)
         ioRecord.U32(f->mSpreadTime);
         ioRecord.U32(f->mUnitSet);
         ioRecord.I32(f->mMode);
-    } else if (EELeprosyFunctor* f = dynamic_cast<EELeprosyFunctor*>(inFunctor)) {
-        ioRecord.U32(2);
+        return;
+    case EE_CALAMITY_FUNCTOR_LEPROSY:
         ioRecord.I32(f->mDamage);
         ioRecord.U32(f->mSpreadTime);
         ioRecord.U32(f->mUnitSet);
         ioRecord.I32(f->mMode);
-    } else if (EEPlagueFunctor* f = dynamic_cast<EEPlagueFunctor*>(inFunctor)) {
-        ioRecord.U32(3);
+        return;
+    case EE_CALAMITY_FUNCTOR_PLAGUE:
         ioRecord.F32(f->mRadius);
         ioRecord.F32(f->mChance);
         ioRecord.I32(f->mDamage);
-        ioRecord.U32(f->mDamageTime);
+        ioRecord.U32(f->mSpreadTime);
         ioRecord.U32(f->mUnitSet);
         ioRecord.I32(f->mMode);
-    } else
-        ioRecord.U32(7);
-    if (EEAreaEffectFunctor* f = dynamic_cast<EEAreaEffectFunctor*>(inFunctor)) {
-        ioRecord.I32(EffectIndex(f->mEffect2));
-        ioRecord.I32(EffectIndex(f->mEffect3));
-        ioRecord.I32(f->mDamage);
-        ioRecord.I32(f->mUpdateTime);
-        ioRecord.U32(f->mValue);
-        ioRecord.I32(f->mMode);
+        return;
     }
+    // the area effects' base
+    ioRecord.I32(EffectIndex(f->mEffect2));
+    ioRecord.I32(EffectIndex(f->mEffect3));
+    ioRecord.I32(f->mDamage);
+    ioRecord.I32((long)f->mSpreadTime);
+    ioRecord.U32(f->mUnitSet);
+    ioRecord.I32(f->mMode);
 }
 
 // the media slots in one order for every class: effects 1-4, the sound and the secondary sound (a class without a

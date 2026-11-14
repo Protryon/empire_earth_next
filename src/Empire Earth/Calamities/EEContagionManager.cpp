@@ -1,5 +1,6 @@
 // C:\EEX\Empire Earth\Calamities\EEContagionManager.cpp (file name inferred: no __FILE__; the class name). The world's
-// contagion helpers: 0xb662f..0xb6bd1 (the three save keys' init chains first, then EEContagionFunctor::CanInfect).
+// contagion helpers: 0xb662f..0xb6bd1 (the three save keys' init chains first, then EEContagionFunctor::CanInfect);
+// with the six contagion functors as one (ee/EEContagionFunctor.h; their units EE*Functor.cpp are gone).
 // Unit flags: the exe's module set. The unit closes with its template COMDATs: vector<EEContagionHelper*>::push_back
 // (0xb6b74) and DeleteVectorContents<vector<EEContagionHelper*> > (0xb6ba0).
 #include <windows.h>
@@ -23,19 +24,226 @@
 #include "ee/EEContagionHelper.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEUnit.h"
+#include "ee/EEUnitSetManager.h"
+#include "ee/EEEffect2D.h"
+#include "ee/EEEDamagedEffect.h"
+#include "ee/EEEffectKindIDs.h"
+#include "ee/EEMap.h"
+#include "ee/EEMedia.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EEPlayer.h"
+#include "ee/RTSWorld.h"
+#include "ee/EEWorld.h"
+#include "ee/EETechCapture.h"
+#include "rust/ee_tech.h"
 #include "ee/EESaveGameFiles.h"
 
+
+// New (port): the six functor classes' constructors (0xb6bd1, 0xb6e58, 0xb6fb1, 0xac991, 0xac7b9, 0xac891) as one:
+// the numbers from the class's record (ee_tech contagion_functor.rs init), the effects each kind kept
+EEContagionFunctor::EEContagionFunctor(EECalamityClass* inClass, uint32_t inKind)
+{
+    ee_contagion_functor_init(this, inClass, inKind);
+    this->mEffect = NULL;
+    this->mEffect2 = NULL;
+    this->mEffect3 = NULL;
+    if (inKind == EE_CALAMITY_FUNCTOR_FIRE) {
+        this->mEffect = inClass->mGraphicEffect2;
+        this->mEffect->Reference();
+    } else if (inKind == EE_CALAMITY_FUNCTOR_MIND_CONTROL)
+        this->mEffect = inClass->mGraphicEffect3;
+    else if (inKind == EE_CALAMITY_FUNCTOR_AREA) {
+        this->mEffect2 = inClass->mGraphicEffect2;
+        this->mEffect3 = inClass->mGraphicEffect3;
+    }
+}
+
+// FUNCTION: EXE 0x4b6c2f (the fire's; the others' destructors were empty)
+// Destroys the functor, releasing the fire's burning effect
+EEContagionFunctor::~EEContagionFunctor()
+{
+    if (this->mKind == EE_CALAMITY_FUNCTOR_FIRE)
+        this->mEffect->Dereference();
+}
+
+// FUNCTION: EXE 0x4b6c4d
+// Accepts a unit type in the functor's unit set (every functor's CanInfectType, by ICF)
+bool EEContagionFunctor::CanInfectType(long inCategory, long inUnitType)
+{
+    return gUnitSetManager.Contains(inUnitType, this->mUnitSet);
+}
 
 // FUNCTION: EXE 0x4b66f8
 // Tells whether the functor can infect the unit's category and type
 bool EEContagionFunctor::CanInfect(EEUnit* inUnit)
 {
-    bool theResult = false;
-    long theCategory = inUnit->mUnitClass->GetCategory();
-    long theUnitType = inUnit->mUnitClass->GetUnitType();
-    if (this->CanInfectType(theCategory, theUnitType))
-        theResult = true;
-    return theResult;
+    return this->CanInfectType(inUnit->mUnitClass->GetCategory(), inUnit->mUnitClass->GetUnitType());
+}
+
+// FUNCTION: EXE 0x4b6c7c (the fire's; the leprosy's 0xb6eae, the plague's and the area effects' 0xb6ff2)
+// Counts the whole discrete update periods elapsed on the calamity for this update's damage
+void EEContagionFunctor::Update(float inElapsedTime, EECalamity* inCalamity)
+{
+    inCalamity->mDiscreteUpdateTime = ee_contagion_functor_discrete_time(this);
+    inCalamity->mTimeElapsedSinceLastUpdate += inElapsedTime;
+    this->mUpdates = inCalamity->GetDiscreteUpdates();
+}
+
+// FUNCTION: EXE 0x4b6d2c (the fire's), 0xb6e87 (the leprosy's), 0xb706c (the plague's), 0xaca13 (the area effect's),
+// 0xac81c (the extra damage's), 0xac8e1 (the mind control's)
+void EEContagionFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
+{
+    EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
+    EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
+    switch (this->mKind) {
+    case EE_CALAMITY_FUNCTOR_FIRE: {
+        // alight: the burning effect once, then burn percent of its maximum hit points as damage unless carried
+        long theDamage = ee_contagion_fire_burn((int32_t)this->mBurn, (int32_t)inUnit->mStats->mMaxHitPoints);
+        if (theComplexUnit != NULL)
+            theComplexUnit->SetIsDeletable(false);
+        if (theComplexUnit->mFireEffect == kNoEffectHandle) {
+            EEEffectHandle theEffectHandle;
+            gEffectManager->CreateUnitEffect(theComplexUnit, this->mEffect, &theEffectHandle, 0, 0, 0);
+            theComplexUnit->mFireEffect = theEffectHandle;
+        }
+        if (theComplexUnit == NULL || theComplexUnit->GetOutermostCarrier() == theComplexUnit) {
+            EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, theDamage);   // CONT (TEST ONLY)
+            inUnit->TakeHit(inCalamity->mCasterUnit, theDamage, inCalamity->mPlayerNumber, this->mMode);
+        }
+        return;
+    }
+    case EE_CALAMITY_FUNCTOR_LEPROSY:
+    case EE_CALAMITY_FUNCTOR_PLAGUE: {
+        // the unit class's leprosy or plague effect; the plague keeps the unit from being deleted
+        EEGraphicEffect* theEffect = this->mKind == EE_CALAMITY_FUNCTOR_LEPROSY ? inUnit->mUnitClass->mLeprosyEffect
+                                                                                : inUnit->mUnitClass->mPlagueEffect;
+        if (theEffect != NULL)
+            gEffectManager->CreateUnitEffect(inUnit, theEffect, NULL, 0, 0, 0);
+        if (this->mKind == EE_CALAMITY_FUNCTOR_PLAGUE && theComplexUnit != NULL)
+            theComplexUnit->SetIsDeletable(false);
+        return;
+    }
+    case EE_CALAMITY_FUNCTOR_AREA: {
+        // the target effect at the calamity's target on the ground (at height 0 on water terrain types 1 and 10)
+        GE3DPoint theLocation;
+        inCalamity->GetTargetLocation(theLocation);
+        long theTerrainType = ::gWorld.mMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()))->mTerrainType;
+        if (theTerrainType != 1 && theTerrainType != 10)
+            theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()));
+        else
+            theLocation.SetZ(0.0f);
+        if (this->mEffect2 != NULL)
+            gEffectManager->CreateEffect(inUnit, theLocation, this->mEffect2, NULL, 0);
+        return;
+    }
+    case EE_CALAMITY_FUNCTOR_EXTRA_DAMAGE: {
+        // an enemy of the caster (any unit without a caster): its class's pulse cannon or battle cry effect, one
+        // more negative morale
+        EEUnit* theCaster = inCalamity->mCasterUnit;
+        if (theCaster != NULL &&
+            (inUnit->mPlayer == theCaster->mPlayer || theCaster->mPlayer->mEnemies[inUnit->mPlayer->mPlayerID] == 0))
+            return;
+        EEGraphicEffect* theEffect = this->mFlag ? inUnit->mUnitClass->mPulseCannonEffect : inUnit->mUnitClass->mBattleCryEffect;
+        if (theEffect != NULL)
+            gEffectManager->CreateUnitEffect(inUnit, theEffect, NULL, false, 0, 0);
+        theComplexUnit->mNegativeMorale++;
+        return;
+    }
+    case EE_CALAMITY_FUNCTOR_MIND_CONTROL:
+        // the effect on a caught unit, disabled (reason 0x1a) and halted
+        if (this->mEffect != NULL)
+            gEffectManager->CreateUnitEffect(inUnit, this->mEffect, NULL, false, 0, 0);
+        theComplexUnit->SetDisabled(true, 0x1a);
+        theComplexUnit->Halt();
+        return;
+    }
+}
+
+// FUNCTION: EXE 0x4b6dec (the fire's), 0xb70a9 (the plague's), 0xac881 (the extra damage's), 0xac918 (the mind
+// control's); the leprosy's and the area effect's were the base's empty one (no record)
+void EEContagionFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
+{
+    if (this->mKind == EE_CALAMITY_FUNCTOR_LEPROSY || this->mKind == EE_CALAMITY_FUNCTOR_AREA)
+        return;
+    EECalamityCaptureContagionEvent(kContagionCure, inUnit->mUnitID);   // CONT (TEST ONLY)
+    EEComplexUnit* theUnit = inUnit->mComplexUnit;
+    switch (this->mKind) {
+    case EE_CALAMITY_FUNCTOR_FIRE: {
+        // the fire put out: the deletable flag restored, the burning effect finished or removed
+        if (theUnit == NULL)
+            return;
+        theUnit->SetIsDeletable(inUnit->mUnitClass->mIsDeletable);
+        EEEffectHandle theEffectHandle = theUnit->mFireEffect;
+        if (theEffectHandle == kNoEffectHandle)
+            return;
+        EEEffect* theEffect = gEffectManager->GetEffect(theEffectHandle);
+        if (theEffect != NULL) {
+            if (theEffect->mKind == kEffectDamaged)
+                (static_cast<EEEDamagedEffect*>(theEffect))->mIsFinished = true;
+            else
+                gEffectManager->DestroyEffect(theEffectHandle);
+        }
+        theUnit->mFireEffect = kNoEffectHandle;
+        return;
+    }
+    case EE_CALAMITY_FUNCTOR_PLAGUE:
+        if (theUnit != NULL)
+            theUnit->SetIsDeletable(inUnit->mUnitClass->mIsDeletable);
+        return;
+    case EE_CALAMITY_FUNCTOR_EXTRA_DAMAGE:
+        theUnit->mNegativeMorale--;
+        return;
+    case EE_CALAMITY_FUNCTOR_MIND_CONTROL:
+        // re-enabled; a living one first loses its build targets, goals and orders and goes idle (handing the unit
+        // back to its owner is not done here)
+        if (theUnit == NULL)
+            return;
+        if (theUnit->mHitPoints > 0) {
+            theUnit->ClearBuildTargets();
+            for (unsigned long i = 0; i < theUnit->GetNumGoalQueues(); i++)
+                theUnit->ClearGoalQueue(i);
+            theUnit->ClearGoals(0);
+            theUnit->SetDisabled(false, 0);
+            theUnit->StartAction(kActionIdle);
+            inUnit->mUnitClass->ActionChanged(theUnit);
+        } else
+            theUnit->SetDisabled(false, 0);
+        return;
+    }
+}
+
+// FUNCTION: EXE 0x4b6cad (the fire's), 0xb6edf (the leprosy's), 0xb7023 (the plague's), 0xacad4 (the area
+// effect's); the extra damage's and the mind control's were empty (0xac98e)
+// Damages the unit per elapsed period (ee_tech contagion_functor.rs apply_damage): the fire and the plague keep it
+// from being deleted (the fire before, unless it is carried; the plague after), the area effect shows its hit effect
+void EEContagionFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity)
+{
+    EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
+    if (this->mKind == EE_CALAMITY_FUNCTOR_FIRE && theComplexUnit != NULL)
+        theComplexUnit->SetIsDeletable(false);
+    EeContagionFunctorHit theHit = ee_contagion_functor_apply_damage(this, (int32_t)inUnit->mHitPoints,
+                                                                     this->mKind == EE_CALAMITY_FUNCTOR_AREA ? inUnit->mStats->GetAttack() : 0.0f);
+    if (theHit.hits && (this->mKind != EE_CALAMITY_FUNCTOR_FIRE || theComplexUnit == NULL ||
+                        theComplexUnit->GetOutermostCarrier() == theComplexUnit)) {
+        if (this->mKind == EE_CALAMITY_FUNCTOR_AREA && this->mEffect3 != NULL)
+            gEffectManager->CreateUnitEffect(inUnit, this->mEffect3, NULL, false, 0, 0);
+        EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, theHit.damage);   // CONT (TEST ONLY)
+        inUnit->TakeHit(inCalamity->mCasterUnit, theHit.damage, inCalamity->mPlayerNumber, this->mMode);
+    }
+    if (this->mKind == EE_CALAMITY_FUNCTOR_PLAGUE && theComplexUnit != NULL)
+        theComplexUnit->SetIsDeletable(false);
+}
+
+// FUNCTION: EXE 0x4acb52
+// Returns whether a unit type is in the given unit set (false for an unused set)
+// ?Contains@EEUnitSetManager@@QAE_NJK@Z
+// (declared out of line in ee/EEUnitSetManager.h; the original's COMDAT sat in EEAreaEffectFunctor.cpp, after its
+// first user)
+bool EEUnitSetManager::Contains(long inUnitType, unsigned long inSet)
+{
+    if (this->mSets[inSet] != NULL)
+        return this->mSets[inSet]->Contains(inUnitType);
+    return false;
 }
 
 // FUNCTION: EXE 0x4b6723

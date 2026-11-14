@@ -103,18 +103,12 @@ a543d a5589 Empire Earth/AI Thread/EEHumanPlayer.cpp
 a5589 a5c31 Empire Earth/AI Thread/EEInfluenceTable.cpp
 a5c31 abbaf Empire Earth/AI Thread/EEPathManager.cpp
 abbaf ac7b9 Empire Earth/AI Thread/EETown.cpp
-ac7b9 ac891 Empire Earth/Calamities/EEAEExtraDamageFunctor.cpp
-ac891 ac991 Empire Earth/Calamities/EEAEMindControlFunctor.cpp
-ac991 acb75 Empire Earth/Calamities/EEAreaEffectFunctor.cpp
 acb75 adcd9 Empire Earth/Calamities/EECalamity.cpp
 adcd9 adf97 Empire Earth/Calamities/EECalamityClass.cpp
 adf97 aebb7 Empire Earth/Calamities/EECalamityManager.cpp
 b5b7d b662f Empire Earth/Calamities/EEContagionHelper.cpp
 b662f b6bd1 Empire Earth/Calamities/EEContagionManager.cpp
-b6bd1 b6e58 Empire Earth/Calamities/EEFireFunctor.cpp
-b6e58 b6f21 Empire Earth/Calamities/EELeprosyFunctor.cpp
 b6f21 b6fb1 Empire Earth/Calamities/EELocationCalamityClass.cpp
-b6fb1 b70cc Empire Earth/Calamities/EEPlagueFunctor.cpp
 b70cc b71b5 Empire Earth/Calamities/EEUnitCalamityClass.cpp
 0b71b5 0b8cda Empire Earth/Communications/EEClient.cpp
 0b8cda 0ca90f Empire Earth/Communications/EEMessage.cpp

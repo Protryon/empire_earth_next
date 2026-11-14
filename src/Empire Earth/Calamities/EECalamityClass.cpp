@@ -125,30 +125,9 @@ void EECalamityClass::Initialize(EECalamityData* inData)
     EeCalamityClassMedia theMedia;
     this->GetMedia(theMedia);
     ee_calamity_class_fill(this, theData, &theMedia);
-    long theMode = this->mIsBlockedByImmunity ? 2 : 3;
-    switch (ee_calamity_class_functor_kind(inData->mClassEnum)) {
-    case EE_CALAMITY_FUNCTOR_AREA:
-        this->mFunctor = new EEAreaEffectFunctor(this->mGraphicEffect2, this->mGraphicEffect3, this->mDamageFactor,
-                                                 this->mSpreadTime, this->GetUnitSet(), theMode);
-        break;
-    case EE_CALAMITY_FUNCTOR_EXTRA_DAMAGE:
-        this->mFunctor = new EEAEExtraDamageFunctor(this->GetUnitSet(), theMode, this->mFunctorFlag);
-        break;
-    case EE_CALAMITY_FUNCTOR_MIND_CONTROL:
-        this->mFunctor = new EEAEMindControlFunctor(this->mGraphicEffect3, this->GetUnitSet(), theMode);
-        break;
-    case EE_CALAMITY_FUNCTOR_FIRE:
-        this->mFunctor = new EEFireFunctor(this->mGraphicEffect2, this->mBurn, this->mRadius, this->mChance, this->mDamage,
-                                           this->mSpreadTime, this->GetUnitSet(), theMode);
-        break;
-    case EE_CALAMITY_FUNCTOR_LEPROSY:
-        this->mFunctor = new EELeprosyFunctor(this->mDamage, this->mSpreadTime, this->GetUnitSet(), theMode);
-        break;
-    case EE_CALAMITY_FUNCTOR_PLAGUE:
-        this->mFunctor = new EEPlagueFunctor(this->mRadius, this->mChance, this->mDamage, this->mSpreadTime,
-                                             this->GetUnitSet(), theMode);
-        break;
-    }
+    uint32_t theKind = ee_calamity_class_functor_kind(inData->mClassEnum);
+    if (theKind != EE_CALAMITY_FUNCTOR_NONE)
+        this->mFunctor = new EEContagionFunctor(this, theKind);
 }
 
 // New (port): the class's effects (whether set, duration, size, delay) and sounds for the Rust tables
