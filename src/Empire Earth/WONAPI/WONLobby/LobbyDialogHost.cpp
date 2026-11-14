@@ -2,7 +2,8 @@
 // The lobby's small dialogs' shell and host (R6 WONLobby round 1): LanNameDialog, PasswordDialog, AddFriendDialog,
 // DirectConnectDialog, LanPortDialog, CreateRoomDialog, CreateGameDialog and AdminActionDialog are one Rust object
 // each (rust/crates/ee_won/src/lobbydlg.rs), as are StatusDialog and OkCancelDialog (round 2) and RoomDialog,
-// TOUDialog, BadUserDialog and ChooseNetworkAdapterDialog (round 3). This unit is the C++ shell's two virtuals and the host: each op is the
+// TOUDialog, BadUserDialog, ChooseNetworkAdapterDialog and CreditsDialog (round 3); the options popups
+// (ClientOptionsPopup, GameOptionsPopup, FriendOptionsPopup) are lobbypopup.rs objects with their host below. This unit is the C++ shell's two virtuals and the host: each op is the
 // original's statements on a control, the dialog's base, a lobby game or a resource string, with no decision.
 #include <windows.h>
 #include <stdio.h>
@@ -409,6 +410,135 @@ static intptr_t LobbyDialogHost(void* inDialog, EeWonLobbyDlgOp inOp, intptr_t a
         const GUIString& aText = *reinterpret_cast<const GUIString*>(a);
         return aDialog->GetDefaultFont()->GetStringWidth(aText, 0, aText.length());
     }
+    }
+    return 0;
+}
+
+
+// ---- the options popups (R6 WONLobby round 3): the shell and its host (each op the original's statements on the
+// menu, the popup, its subject, a font, the lobby's config or an event)
+
+static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a, intptr_t b, intptr_t c);
+
+LobbyRustPopup::LobbyRustPopup(EeWonLobbyPopupKind inKind)
+    : mLobbyPopup(ee_won_lobbypopup_new(this, inKind, LobbyPopupHost))
+{
+    this->PCall(EeWonLobbyPopupCall::Construct);
+}
+
+// the SmartPtr members are released in reverse member order, before the Container base
+LobbyRustPopup::~LobbyRustPopup() { ee_won_lobbypopup_free(this->mLobbyPopup); }
+
+void LobbyRustPopup::HandleComponentEvent(ComponentEvent* inEvent)
+{
+    EeWonLobbyPopupEvent aType = inEvent->mType == ComponentEvent_ListItemUpClicked
+                                     ? EeWonLobbyPopupEvent::ItemUpClicked
+                                     : EeWonLobbyPopupEvent::Other;
+    this->PCall(EeWonLobbyPopupCall::Event, (intptr_t)inEvent, (intptr_t)aType);
+}
+
+static const GUIString& PopupString(intptr_t inString)
+{
+    typedef EeWonLobbyPopupString S;
+    switch ((S)inString) {
+    case S::Whisper: return ::ClientOptionsCtrl_Whisper_String;
+    case S::Invite: return ::ClientOptionsCtrl_Invite_String;
+    case S::Uninvite: return ::ClientOptionsCtrl_Uninvite_String;
+    case S::Locate: return ::FriendOptionsCtrl_Locate_String;
+    case S::AddToFriends: return ::ClientOptionsCtrl_AddToFriends_String;
+    case S::RemoveFromFriends: return ::ClientOptionsCtrl_RemoveFromFriends_String;
+    case S::ClearAfk: return ::ClientOptionsCtrl_ClearAFK_String;
+    case S::SetAfk: return ::ClientOptionsCtrl_SetAFK_String;
+    case S::Ignore: return ::ClientOptionsCtrl_Ignore_String;
+    case S::Unignore: return ::ClientOptionsCtrl_Unignore_String;
+    case S::Block: return ::ClientOptionsCtrl_Block_String;
+    case S::Unblock: return ::ClientOptionsCtrl_Unblock_String;
+    case S::Warn: return ::ClientOptionsCtrl_Warn_String;
+    case S::UnMute: return ::ClientOptionsCtrl_UnMute_String;
+    case S::Mute: return ::ClientOptionsCtrl_Mute_String;
+    case S::Kick: return ::ClientOptionsCtrl_Kick_String;
+    case S::Ban: return ::ClientOptionsCtrl_Ban_String;
+    case S::GameJoin: return ::GameOptionsPopup_Join_String;
+    case S::GamePing: return ::GameOptionsPopup_Ping_String;
+    case S::GameQueryDetails: return ::GameOptionsPopup_QueryDetails_String;
+    case S::GameHideDetails: return ::GameOptionsPopup_HideDetails_String;
+    case S::GameShowDetails: return ::GameOptionsPopup_ShowDetails_String;
+    case S::GameRemove: return ::GameOptionsPopup_Remove_String;
+    case S::FriendRefreshList: return ::FriendOptionsCtrl_RefreshList_String;
+    case S::FriendRemove: return ::FriendOptionsCtrl_RemoveFromFriends_String;
+    }
+    return gEmptyGUIString;
+}
+
+static intptr_t Held(RefCount* inObject)
+{
+    if (inObject != NULL)
+        inObject->AddRef();
+    return (intptr_t)inObject;
+}
+
+static intptr_t LobbyPopupHost(void* inPopup, EeWonLobbyPopupOp inOp, intptr_t a, intptr_t b, intptr_t c)
+{
+    typedef EeWonLobbyPopupOp Op;
+    LobbyRustPopup* aPopup = static_cast<LobbyRustPopup*>(inPopup);
+    PopupMenu* aMenu = reinterpret_cast<PopupMenu*>(a);
+    LobbyClient* aClient = reinterpret_cast<LobbyClient*>(a);
+    LobbyGame* aGame = reinterpret_cast<LobbyGame*>(a);
+    ListItemClickedEvent* anEvent = reinterpret_cast<ListItemClickedEvent*>(a);
+    switch (inOp) {
+    case Op::MenuNew: return (intptr_t) new PopupMenu;
+    case Op::AddRef: reinterpret_cast<RefCount*>(a)->AddRef(); return 0;
+    case Op::Release: reinterpret_cast<RefCount*>(a)->Release(); return 0;
+    case Op::AddChild: aPopup->AddChild(reinterpret_cast<Component*>(a)); return 0;
+    case Op::MenuClear: aMenu->Clear(false); return 0;
+    case Op::MenuFont: return Held(aMenu->mFont.get());
+    case Op::PopupFontMod: return Held(aPopup->GetFontMod(reinterpret_cast<Font*>(a), 1, 0));
+    case Op::MenuFontMod: return Held(aMenu->GetFontMod(reinterpret_cast<Font*>(b), 1, 0));
+    case Op::MenuSetFont: aMenu->SetFont(reinterpret_cast<Font*>(b)); return 0;
+    case Op::MenuAssignFont: aMenu->mFont = reinterpret_cast<Font*>(b); return 0;
+    case Op::MenuTitleClient: aMenu->AddItem(reinterpret_cast<LobbyClient*>(b)->GetName(), 0)->mSelectable = false; return 0;
+    case Op::MenuTitleGame: aMenu->AddItem(reinterpret_cast<LobbyGame*>(b)->GetName(), 0)->mSelectable = false; return 0;
+    case Op::MenuTitleFriend: aMenu->AddItem(reinterpret_cast<LobbyFriend*>(b)->GetName(), 0)->mSelectable = false; return 0;
+    case Op::MenuTitleNumber: {
+        char aBuffer[256];
+        sprintf(aBuffer, "%d", (int)b);
+        aMenu->AddItem(GUIString(aBuffer), 0)->mSelectable = false;
+        return 0;
+    }
+    case Op::MenuAddItem: aMenu->AddItem(PopupString(b), NULL, NULL, (int)c); return 0;
+    case Op::MenuAddSeparator: aMenu->AddSeperator(); return 0;
+    case Op::Width: return reinterpret_cast<Component*>(a)->Width();
+    case Op::Height: return reinterpret_cast<Component*>(a)->Height();
+    case Op::SetSize: aPopup->SetSize((int)a, (int)b); return 0;
+    case Op::ClientIsModerator: return aClient->IsModerator() ? 1 : 0;
+    case Op::ClientIsCaptain: return aClient->IsCaptain(b != 0) ? 1 : 0;
+    case Op::ClientId: return (intptr_t)aClient->GetClientId();
+    case Op::ClientWonUserId: return (intptr_t)aClient->GetWONUserId();
+    case Op::ClientGameGroupId: return (intptr_t)aClient->GetGameGroupId();
+    case Op::ClientIsInvited: return aClient->IsInvited() ? 1 : 0;
+    case Op::ClientIsFriend: return aClient->IsFriend() ? 1 : 0;
+    case Op::ClientIsAway: return aClient->IsAway() ? 1 : 0;
+    case Op::ClientIsIgnored: return aClient->IsIgnored() ? 1 : 0;
+    case Op::ClientIsBlocked: return aClient->IsBlocked() ? 1 : 0;
+    case Op::ClientIsMuted: return aClient->IsMuted(b != 0) ? 1 : 0;
+    case Op::GameCanJoin: return aGame->CanJoin() ? 1 : 0;
+    case Op::GameInProgress: return aGame->IsInProgress() ? 1 : 0;
+    case Op::GameType: return (intptr_t)aGame->GetGameType();
+    case Op::GameShowDetails: return aGame->GetShowDetails() ? 1 : 0;
+    case Op::Config: return (intptr_t)GetLobbyConfig();
+    case Op::ConfigNoPingInProgress: return reinterpret_cast<LobbyConfig*>(a)->GetNoPingInProgress() ? 1 : 0;
+    case Op::BaseEvent: aPopup->Container::HandleComponentEvent(reinterpret_cast<ComponentEvent*>(a)); return 0;
+    case Op::EventItem: return (intptr_t)anEvent->mItem.get();
+    case Op::EventButton: return anEvent->mButton;
+    case Op::ItemMenuId: return reinterpret_cast<MenuItem*>(a)->mMenuId;
+    case Op::DeliverClient:
+        aPopup->DeliverEvent(new ClientActionEvent((int)a, (int)c, reinterpret_cast<LobbyClient*>(b)), false);
+        return 0;
+    case Op::DeliverGame: aPopup->DeliverEvent(new GameActionEvent((int)a, reinterpret_cast<LobbyGame*>(b)), false); return 0;
+    case Op::DeliverFriend:
+        aPopup->DeliverEvent(new FriendActionEvent((int)a, reinterpret_cast<LobbyFriend*>(b), (int)c), false);
+        return 0;
+    case Op::ClosePopup: aPopup->GetRoot()->ClosePopup(aPopup); return 0;
     }
     return 0;
 }

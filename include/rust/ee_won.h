@@ -4364,63 +4364,6 @@ enum class EeWonLobbyDlgCall : uint32_t {
   AddLine,
 };
 
-/// The ops (`a` the `Graphics*` of a paint or a `GUIString*`; `b` a `GUIString*`; `x`, `y`, `w`, `h` as named).
-enum class EeWonScrollTextOp : uint32_t {
-  /// `Width()` of the component.
-  Width = 1,
-  /// `Height()` of the component.
-  Height,
-  /// `Invalidate()`.
-  Invalidate,
-  /// `RequestTimer(x != 0)`.
-  RequestTimer,
-  /// `new GUIString(*(const GUIString*)a)`: a line's copy (freed by `LineFree`).
-  LineNew,
-  /// `delete (GUIString*)a`.
-  LineFree,
-  /// `Component::Paint(*(Graphics*)a)`.
-  BasePaint,
-  /// `g.SetFont(GetDefaultFont())`.
-  SetDefaultFont,
-  /// `g.SetColor((DWORD)x)`.
-  SetColor,
-  /// `g.SetSysColor(StandardColor_3DHilight)`.
-  SysHilight,
-  /// `g.SetSysColor(StandardColor_3DShadow)`.
-  SysShadow,
-  /// `g.FillRect(x, y, w, h)`.
-  FillRect,
-  /// `g.DrawRect(x, y, w, h)`.
-  DrawRect,
-  /// `g.mFont->GetHeight()`.
-  FontHeight,
-  /// `g.mColor`.
-  Color,
-  /// `g.mFont->GetStringWidth(*(const GUIString*)b)`.
-  StringWidth,
-  /// `g.DrawString(*(const GUIString*)b, x, y)`.
-  DrawString,
-};
-
-/// The inward calls.
-enum class EeWonScrollTextCall : uint32_t {
-  /// `AddLine(*(const GUIString*)a, (unsigned long)b)`.
-  AddLine = 1,
-  /// `TimerEvent(a)`: 1 (the original always answered true).
-  Timer,
-  /// `Paint(*(Graphics*)a)`.
-  Paint,
-  /// `Start()`.
-  Start,
-  /// `Stop()`.
-  Stop,
-  /// `Reset()`.
-  Reset,
-  /// a member: 0 the scroll top, 1 the text's height, 2 the time since the last scroll, 3 the last colour, 4 the
-  /// number of lines, 5 the scroll period.
-  Field,
-};
-
 /// A container's key kind (its comparator).
 enum class EeWonLobbyKeyKind {
   /// `unsigned short` / `unsigned long` ids
@@ -4437,6 +4380,118 @@ enum class EeWonLobbyKeyKind {
   NarrowNoCase = 5,
   /// LobbyOptionSet: `GUIString` values unique by `Compare`, in insertion order
   InOrder = 6,
+};
+
+/// The popup kinds.
+enum class EeWonLobbyPopupKind : uint32_t {
+  Client = 0,
+  Game = 1,
+  Friend = 2,
+};
+
+/// The ops (`a`, `b`, `c` as documented; "the popup" is the C++ popup this object belongs to).
+enum class EeWonLobbyPopupOp : uint32_t {
+  /// `new PopupMenu` (no reference added).
+  MenuNew = 1,
+  /// `a->AddRef()` (a `SmartPtr`'s reference: the menu, the subject, a font).
+  AddRef,
+  /// `a->Release()`.
+  Release,
+  /// `this->AddChild((Component*)a)`.
+  AddChild,
+  /// `((PopupMenu*)a)->Clear(false)`.
+  MenuClear,
+  /// `((PopupMenu*)a)->mFont.get()` with a reference added (the original's local `SmartPtr`), or NULL.
+  MenuFont,
+  /// `this->GetFontMod((Font*)a, 1, 0)` with a reference added.
+  PopupFontMod,
+  /// `((PopupMenu*)a)->GetFontMod((Font*)b, 1, 0)` with a reference added.
+  MenuFontMod,
+  /// `((PopupMenu*)a)->SetFont((Font*)b)`.
+  MenuSetFont,
+  /// `((PopupMenu*)a)->mFont = (Font*)b`.
+  MenuAssignFont,
+  /// `((PopupMenu*)a)->AddItem(((LobbyClient*)b)->GetName(), 0)->mSelectable = false`.
+  MenuTitleClient,
+  /// `((PopupMenu*)a)->AddItem(((LobbyGame*)b)->GetName(), 0)->mSelectable = false`.
+  MenuTitleGame,
+  /// `((PopupMenu*)a)->AddItem(((LobbyFriend*)b)->GetName(), 0)->mSelectable = false`.
+  MenuTitleFriend,
+  /// `sprintf(aBuffer, "%d", b); ((PopupMenu*)a)->AddItem(GUIString(aBuffer), 0)->mSelectable = false`.
+  MenuTitleNumber,
+  /// `((PopupMenu*)a)->AddItem(the string b, NULL, NULL, c)`.
+  MenuAddItem,
+  /// `((PopupMenu*)a)->AddSeperator()`.
+  MenuAddSeparator,
+  /// `((Component*)a)->Width()`.
+  Width,
+  /// `((Component*)a)->Height()`.
+  Height,
+  /// `this->SetSize(a, b)`.
+  SetSize,
+  /// `((LobbyClient*)a)->IsModerator()` (0 or 1).
+  ClientIsModerator,
+  /// `((LobbyClient*)a)->IsCaptain(b != 0)` (0 or 1).
+  ClientIsCaptain,
+  /// `((LobbyClient*)a)->GetClientId()`.
+  ClientId,
+  /// `((LobbyClient*)a)->GetWONUserId()`.
+  ClientWonUserId,
+  /// `((LobbyClient*)a)->GetGameGroupId()`.
+  ClientGameGroupId,
+  /// `((LobbyClient*)a)->IsInvited()` (0 or 1).
+  ClientIsInvited,
+  /// `((LobbyClient*)a)->IsFriend()` (0 or 1).
+  ClientIsFriend,
+  /// `((LobbyClient*)a)->IsAway()` (0 or 1).
+  ClientIsAway,
+  /// `((LobbyClient*)a)->IsIgnored()` (0 or 1).
+  ClientIsIgnored,
+  /// `((LobbyClient*)a)->IsBlocked()` (0 or 1).
+  ClientIsBlocked,
+  /// `((LobbyClient*)a)->IsMuted(b != 0)` (0 or 1).
+  ClientIsMuted,
+  /// `((LobbyGame*)a)->CanJoin()` (0 or 1).
+  GameCanJoin,
+  /// `((LobbyGame*)a)->IsInProgress()` (0 or 1).
+  GameInProgress,
+  /// `((LobbyGame*)a)->GetGameType()`.
+  GameType,
+  /// `((LobbyGame*)a)->GetShowDetails()` (0 or 1).
+  GameShowDetails,
+  /// `GetLobbyConfig()`.
+  Config,
+  /// `((LobbyConfig*)a)->GetNoPingInProgress()` (0 or 1).
+  ConfigNoPingInProgress,
+  /// `Container::HandleComponentEvent(a)` on the popup.
+  BaseEvent,
+  /// `((ListItemClickedEvent*)a)->mItem.get()`.
+  EventItem,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  EventButton,
+  /// `((MenuItem*)a)->mMenuId`.
+  ItemMenuId,
+  /// `this->DeliverEvent(new ClientActionEvent(a, c, (LobbyClient*)b), false)`.
+  DeliverClient,
+  /// `this->DeliverEvent(new GameActionEvent(a, (LobbyGame*)b), false)`.
+  DeliverGame,
+  /// `this->DeliverEvent(new FriendActionEvent(a, (LobbyFriend*)b, c), false)`.
+  DeliverFriend,
+  /// `this->GetRoot()->ClosePopup(this)`.
+  ClosePopup,
+};
+
+/// The inward calls.
+enum class EeWonLobbyPopupCall : uint32_t {
+  /// The constructor's body: the menu made, held and added.
+  Construct = 1,
+  /// ClientOptionsPopup: `Init((LobbyClient*)a, (LobbyClient*)b, c)`; GameOptionsPopup: `Init((LobbyGame*)a)`;
+  /// FriendOptionsPopup: `Init((LobbyFriend*)a, b)`.
+  Init,
+  /// `HandleComponentEvent(a)`: `b` the `EeWonLobbyPopupEvent`.
+  Event,
+  /// a member: 0 the menu, 1 the subject, 2 the room flags.
+  Field,
 };
 
 /// The inward calls (`PopupMenu`'s virtuals and methods).
@@ -4771,6 +4826,63 @@ enum class EeWonScrollerCall : uint32_t {
   EnableScrollbar,
   /// `SetScrollbarConditions(a, b)` (horizontal, vertical).
   SetScrollbarConditions,
+};
+
+/// The ops (`a` the `Graphics*` of a paint or a `GUIString*`; `b` a `GUIString*`; `x`, `y`, `w`, `h` as named).
+enum class EeWonScrollTextOp : uint32_t {
+  /// `Width()` of the component.
+  Width = 1,
+  /// `Height()` of the component.
+  Height,
+  /// `Invalidate()`.
+  Invalidate,
+  /// `RequestTimer(x != 0)`.
+  RequestTimer,
+  /// `new GUIString(*(const GUIString*)a)`: a line's copy (freed by `LineFree`).
+  LineNew,
+  /// `delete (GUIString*)a`.
+  LineFree,
+  /// `Component::Paint(*(Graphics*)a)`.
+  BasePaint,
+  /// `g.SetFont(GetDefaultFont())`.
+  SetDefaultFont,
+  /// `g.SetColor((DWORD)x)`.
+  SetColor,
+  /// `g.SetSysColor(StandardColor_3DHilight)`.
+  SysHilight,
+  /// `g.SetSysColor(StandardColor_3DShadow)`.
+  SysShadow,
+  /// `g.FillRect(x, y, w, h)`.
+  FillRect,
+  /// `g.DrawRect(x, y, w, h)`.
+  DrawRect,
+  /// `g.mFont->GetHeight()`.
+  FontHeight,
+  /// `g.mColor`.
+  Color,
+  /// `g.mFont->GetStringWidth(*(const GUIString*)b)`.
+  StringWidth,
+  /// `g.DrawString(*(const GUIString*)b, x, y)`.
+  DrawString,
+};
+
+/// The inward calls.
+enum class EeWonScrollTextCall : uint32_t {
+  /// `AddLine(*(const GUIString*)a, (unsigned long)b)`.
+  AddLine = 1,
+  /// `TimerEvent(a)`: 1 (the original always answered true).
+  Timer,
+  /// `Paint(*(Graphics*)a)`.
+  Paint,
+  /// `Start()`.
+  Start,
+  /// `Stop()`.
+  Stop,
+  /// `Reset()`.
+  Reset,
+  /// a member: 0 the scroll top, 1 the text's height, 2 the time since the last scroll, 3 the last colour, 4 the
+  /// number of lines, 5 the scroll period.
+  Field,
 };
 
 /// Which copy `ee_won_smart_get` makes.
@@ -5797,6 +5909,44 @@ enum class EeWonLobbyDlgEvent : uint32_t {
   GotHttpDocument = 4,
 };
 
+/// The menu entries' texts (the lobby's resource strings).
+enum class EeWonLobbyPopupString : uint32_t {
+  Whisper = 0,
+  Invite,
+  Uninvite,
+  /// `FriendOptionsCtrl_Locate_String` (the client menu's and the friend menu's)
+  Locate,
+  AddToFriends,
+  RemoveFromFriends,
+  ClearAfk,
+  SetAfk,
+  Ignore,
+  Unignore,
+  Block,
+  Unblock,
+  Warn,
+  UnMute,
+  Mute,
+  Kick,
+  Ban,
+  GameJoin,
+  GamePing,
+  GameQueryDetails,
+  GameHideDetails,
+  GameShowDetails,
+  GameRemove,
+  FriendRefreshList,
+  /// `FriendOptionsCtrl_RemoveFromFriends_String`
+  FriendRemove,
+};
+
+/// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
+enum class EeWonLobbyPopupEvent : uint32_t {
+  Other = 0,
+  /// `ComponentEvent_ListItemUpClicked` (a `ListItemClickedEvent`)
+  ItemUpClicked = 1,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -5900,6 +6050,9 @@ struct EeWonLobbyDlg;
 
 /// An ordered container of the lobby (see the module).
 struct EeWonLobbyMap;
+
+/// One options popup's Rust half.
+struct EeWonLobbyPopup;
 
 /// `LobbyPersistentData`'s scalar state and its setters' rules.
 struct EeWonLobbyPrefs;
@@ -7238,16 +7391,6 @@ using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
                                          ptrdiff_t b,
                                          ptrdiff_t c);
 
-/// The host: `(component, op, a, b, x, y, w, h) -> result`.
-using EeWonScrollTextHostFn = ptrdiff_t(*)(void *comp,
-                                           EeWonScrollTextOp op,
-                                           ptrdiff_t a,
-                                           ptrdiff_t b,
-                                           int32_t x,
-                                           int32_t y,
-                                           int32_t w,
-                                           int32_t h);
-
 /// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
 /// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
 struct EeWonLobbyMapHooks {
@@ -7265,6 +7408,13 @@ struct EeWonLobbyKey {
   size_t count;
   uint32_t unit_size;
 };
+
+/// The host: `(popup, op, a, b, c) -> result`.
+using EeWonLobbyPopupHostFn = ptrdiff_t(*)(void *popup,
+                                           EeWonLobbyPopupOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           ptrdiff_t c);
 
 /// One patch as the C++ hands it over.
 struct EeWonPatchRef {
@@ -7704,6 +7854,16 @@ struct EeWonServerPick {
   /// It lists the lobby's language.
   bool language;
 };
+
+/// The host: `(component, op, a, b, x, y, w, h) -> result`.
+using EeWonScrollTextHostFn = ptrdiff_t(*)(void *comp,
+                                           EeWonScrollTextOp op,
+                                           ptrdiff_t a,
+                                           ptrdiff_t b,
+                                           int32_t x,
+                                           int32_t y,
+                                           int32_t w,
+                                           int32_t h);
 
 /// What the connection object calls back in the C++. One static table serves every connection. Every object is
 /// passed as its `RefCount*`.
@@ -13061,24 +13221,6 @@ ptrdiff_t ee_won_lobbydlg_call(const EeWonLobbyDlg *dlg,
                                ptrdiff_t b,
                                ptrdiff_t c);
 
-/// A new scrolling text for the C++ component `comp`.
-EeWonScrollText *ee_won_scrolltext_new(void *comp, EeWonScrollTextHostFn host);
-
-/// Frees the lines (front to back) and the object.
-///
-/// # Safety
-/// `st` came from `ee_won_scrolltext_new` (or is NULL) and is not used again.
-void ee_won_scrolltext_free(EeWonScrollText *st);
-
-/// One inward call (`EeWonScrollTextCall`).
-///
-/// # Safety
-/// `st` is live; the call's arguments as documented.
-ptrdiff_t ee_won_scrolltext_call(const EeWonScrollText *st,
-                                 EeWonScrollTextCall call,
-                                 ptrdiff_t a,
-                                 ptrdiff_t b);
-
 /// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
 ///
 /// # Safety
@@ -13224,6 +13366,27 @@ const EeWonIpAddr *ee_won_lobbymap_key_addr(const EeWonLobbyMap *m, size_t i);
 const void *ee_won_lobbymap_key_text(const EeWonLobbyMap *m,
                                      size_t i,
                                      size_t *count);
+
+/// A new popup object for the C++ `popup` of `kind`.
+EeWonLobbyPopup *ee_won_lobbypopup_new(void *popup,
+                                       EeWonLobbyPopupKind kind,
+                                       EeWonLobbyPopupHostFn host);
+
+/// Releases the members (reverse member order) and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_lobbypopup_new` (or is NULL) and is not used again.
+void ee_won_lobbypopup_free(EeWonLobbyPopup *p);
+
+/// One inward call (`EeWonLobbyPopupCall`).
+///
+/// # Safety
+/// `p` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lobbypopup_call(const EeWonLobbyPopup *p,
+                                 EeWonLobbyPopupCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b,
+                                 ptrdiff_t c);
 
 /// A new Rust PopupMenu for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
 EeWonMenu *ee_won_menu_new(void *component,
@@ -14804,6 +14967,24 @@ ptrdiff_t ee_won_scroller_call(const EeWonScroller *scroller,
                                ptrdiff_t a,
                                ptrdiff_t b,
                                ptrdiff_t c);
+
+/// A new scrolling text for the C++ component `comp`.
+EeWonScrollText *ee_won_scrolltext_new(void *comp, EeWonScrollTextHostFn host);
+
+/// Frees the lines (front to back) and the object.
+///
+/// # Safety
+/// `st` came from `ee_won_scrolltext_new` (or is NULL) and is not used again.
+void ee_won_scrolltext_free(EeWonScrollText *st);
+
+/// One inward call (`EeWonScrollTextCall`).
+///
+/// # Safety
+/// `st` is live; the call's arguments as documented.
+ptrdiff_t ee_won_scrolltext_call(const EeWonScrollText *st,
+                                 EeWonScrollTextCall call,
+                                 ptrdiff_t a,
+                                 ptrdiff_t b);
 
 /// A new connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
 ///

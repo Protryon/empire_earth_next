@@ -133,32 +133,32 @@ class LobbyGame;
 
 class PopupMenu;
 class LobbyClient;
-class ClientOptionsPopup : public Container {
-protected:
-    SmartPtr<PopupMenu> mPopupMenu; // 0x84
-    SmartPtr<LobbyClient> mClient; // 0x88
-    int mRoomSpecFlags; // 0x8c, not initialized by the constructor
-    int GetRoomSpecFlags() const { return this->mRoomSpecFlags; }
-    void AddItem(const GUIString&,int); // 0x7f5ea0
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); // 0x7f6310, slot 0x7c
-    virtual ~ClientOptionsPopup(); // 0x7f5e00
+class LobbyFriend;
+// The options popups (R6 WONLobby round 3): ClientOptionsPopup, GameOptionsPopup and FriendOptionsPopup are one Rust
+// object each (ee_won lobbypopup.rs: the menu, the subject and the room flags held, Init's rules, the click's action);
+// this shell forwards the event and the classes below are its Init forwarders. The host is in LobbyDialogHost.cpp.
+class LobbyRustPopup : public Container {
 public:
-    ClientOptionsPopup(); // 0x7f5d10; object size 0x90
-    void Init(LobbyClient* inClient, LobbyClient* inMyClient, int inRoomSpecFlags); // 0x7f5ec0
+    explicit LobbyRustPopup(EeWonLobbyPopupKind inKind);
+    virtual ~LobbyRustPopup();
+    virtual void HandleComponentEvent(ComponentEvent* inEvent);
+    EeWonLobbyPopup* mLobbyPopup;
+protected:
+    intptr_t PCall(EeWonLobbyPopupCall c, intptr_t a = 0, intptr_t b = 0, intptr_t cc = 0) {
+        return ee_won_lobbypopup_call(this->mLobbyPopup, c, a, b, cc); }
 };
-
-// GameOptionsPopup: 0x8c bytes.
-class PopupMenu;
-class GameOptionsPopup : public Container {
-protected:
-    SmartPtr<LobbyGame> mGame; // 0x84, owned
-    SmartPtr<PopupMenu> mPopupMenu; // 0x88, owned
-    void AddItem(const GUIString&,int); // 0x7f80f0
-    virtual void HandleComponentEvent(ComponentEvent* inEvent); // 0x7f82f0, slot 0x7c
-    virtual ~GameOptionsPopup(); // 0x7f8050
+class ClientOptionsPopup : public LobbyRustPopup {
 public:
-    GameOptionsPopup(); // 0x7f7f60; object size 0x8c
-    void Init(LobbyGame* inGame); // 0x7f8110
+    ClientOptionsPopup() : LobbyRustPopup(EeWonLobbyPopupKind::Client) {}
+    void Init(LobbyClient* inClient, LobbyClient* inMyClient, int inRoomSpecFlags)
+    {
+        this->PCall(EeWonLobbyPopupCall::Init, (intptr_t)inClient, (intptr_t)inMyClient, inRoomSpecFlags);
+    }
+};
+class GameOptionsPopup : public LobbyRustPopup {
+public:
+    GameOptionsPopup() : LobbyRustPopup(EeWonLobbyPopupKind::Game) {}
+    void Init(LobbyGame* inGame) { this->PCall(EeWonLobbyPopupCall::Init, (intptr_t)inGame); }
 };
 
 
@@ -221,20 +221,13 @@ public:
     CreditsDialog* mCredits; // 0x9c, not owned
 };
 
-class LobbyFriend;
-// FriendOptionsPopup (0x90 bytes): the popup menu on a friend.
-// Vtable 0x856268, 51 slots; it differs from Container's only at 0x00 and 0x7c.
-class FriendOptionsPopup : public Container {
-protected:
-    SmartPtr<PopupMenu> mPopupMenu; // 0x84, owned
-    SmartPtr<LobbyFriend> mFriend; // 0x88, owned
-    int mRoomSpecFlags; // 0x8c, not initialized by the constructor
-    void AddItem(const GUIString&,int); // 0x7f5ea0, shared with ClientOptionsPopup::AddItem
-    virtual void HandleComponentEvent(ComponentEvent*); // 0x7f7ea0
-    virtual ~FriendOptionsPopup(); // 0x7f7c50
+class FriendOptionsPopup : public LobbyRustPopup {
 public:
-    FriendOptionsPopup(); // 0x7f7b60
-    void Init(LobbyFriend*,int); // 0x7f7cf0
+    FriendOptionsPopup() : LobbyRustPopup(EeWonLobbyPopupKind::Friend) {}
+    void Init(LobbyFriend* inFriend, int inRoomSpecFlags)
+    {
+        this->PCall(EeWonLobbyPopupCall::Init, (intptr_t)inFriend, inRoomSpecFlags);
+    }
 };
 
 }

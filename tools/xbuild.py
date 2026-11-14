@@ -560,6 +560,9 @@ WON_TESTS = {
     # the credits: ScrollingTextComponent (golden: rust/crates/ee_won/src/golden_scrolltext.txt) and CreditsDialog as
     # a lobby dialog kind (golden_credits.txt)
     "won_credits_test": [],
+    # ClientOptionsPopup, GameOptionsPopup and FriendOptionsPopup as one Rust object (golden:
+    # rust/crates/ee_won/src/golden_lobbypopup.txt)
+    "won_lobbypopup_test": [],
     # WONGUI's PNG and JPEG decoders over the lobby's pictures and every PNG colour type (golden:
     # tests/won/won_image_golden.txt, recorded over the original libpng 1.0 decoder; PNG is ee_openformats' now)
     "won_image_test": [*[WON_SRC / "WONGUI" / f for f in ("PNGDecoder.cpp", "JPGDecoder.cpp", "Image.cpp",

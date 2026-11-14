@@ -90,6 +90,7 @@ pub mod listobj;
 pub mod lobbydlg;
 pub mod lobbyhost;
 pub mod lobbymap;
+pub mod lobbypopup;
 pub mod md5;
 pub mod menuobj;
 pub mod miscops;
