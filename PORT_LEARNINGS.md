@@ -19474,7 +19474,11 @@ wrote in, member for member).
 - **Gates.** ne_message_test equal; nettest all seven equal (msgmgr 20,000, queues 1,500, client 1,500, tune 20,000,
   server 1,500 sequences, protocol and message equal to their goldens); build `--sim` 0/0; oracle seeds 2-3
   identical; capture oracle seeds 2-3 PASS (169 digests, NMNE 549 equal with no re-recording); the Rust gate PASS
-  (after a rustfmt fix); the test-profile build 0/0; tcptest passes; `lan_game.py`: see below.
+  (after a rustfmt fix); the test-profile build 0/0; tcptest passes; `lan_game.py` (under the harness lock, on the
+  test exe of ab61180c) RESULT PASS lan-game PT host=2900 joiner=2903 (CTs within 1 at every 5 s sample, 227/227 at
+  61 s), no FAULT. After the merge of rust (84001ecf: documents only, no conflict; `rust_build.py header` and
+  `rust_includes.py` changed nothing): build `--sim` 0/0; oracle seeds 2-7 identical; captures at seeds 2-3: oracle
+  PASS (169 digests), late (170), space (171), calamity (183), every run exit 0.
 - **What runs it.** Every game: the communications tick, its response and the physics tick (the local server's
   ticks), the start-game message (EE-SIM and the oracle run them unencoded). Only a LAN game (`lan_game.py`) runs the
   wire: the connection request and response (EEServer's helpers, EEClient's refusal local: a refusal itself needs a
