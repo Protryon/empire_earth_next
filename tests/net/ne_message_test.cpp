@@ -6,9 +6,9 @@
 // through the factory, the inputs released with the message); the factory's unknown types.
 //
 // The API adapter below (Make, the inputs, the local member, the registration) is the only part that names the
-// message classes. The trace is compared with tests/net/golden_message.txt, which the adapter over the original 28
-// classes made (commit "ne_message_test: the engine messages' golden" of branch rust-ne6). `--print FILE` writes it.
-#define LLE_CURRENT_HEADERS   // the game's view (NEMessage::sConstructors)
+// message classes: it is NEMRecord's now. The trace is compared with tests/net/golden_message.txt, which the adapter
+// over the original 28 classes made (commit 31917336 of branch rust-ne6, "ne_message_test: the engine messages'
+// golden"). `--print FILE` writes it.
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,6 +19,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/NEMessage.h"
+#include "rust/ee_netmsg.h"
 
 // ---- the engine functions the units call
 
@@ -106,75 +107,51 @@ static NEMessage* BuildTGame(unsigned char* inData)
 static NEMessage* Make(unsigned char inType, const uint32_t* v, const char* s0, const char* s1,
                        const unsigned char* inBlock)
 {
-    unsigned char b0 = (unsigned char)v[0], b1 = (unsigned char)v[1], b2 = (unsigned char)v[2],
-                  b3 = (unsigned char)v[3];
-    unsigned long l0 = v[0], l1 = v[1];
-    uint32_t u2 = v[2];
-    switch (inType) {
-    case kNetMessageAddPlayer: return new NEMAddPlayer(b0, UWideString(s0));
-    case kNetMessageAddPlayerResponse: return new NEMAddPlayerResponse();
-    case kNetMessageClientConnectionRequest:
-        return new NEMClientConnectionRequest(UWideString(s1), UWideString(s0), v[1], v[0] != 0);
-    case kNetMessageClientConnectionRequestResponse:
-        return new NEMClientConnectionRequestResponse((long)(int32_t)v[0], UWideString(s0), (unsigned char)v[2], v[3],
-                                                      (unsigned char)v[1]);
-    case kNetMessageClientDisconnectionNotification: return new NEMClientDisconnectionNotification(v[0] != 0);
-    case kNetMessageClientDisconnectionNotificationResponse:
-        return new NEMClientDisconnectionNotificationResponse((long)(int32_t)v[0]);
-    case kNetMessageClientReconnectionRequest: return new NEMClientReconnectionRequest(v[0], v[1]);
-    case kNetMessageClientReconnectionRequestResponse:
-        return new NEMClientReconnectionRequestResponse((long)(int32_t)v[0], (unsigned char)v[1], v[2]);
-    case kNetMessageClientRequestPause: return new NEMClientRequestPause();
-    case kNetMessageCommunicationsTick: return new NEMCommunicationsTick(l0, b1, b2, v[3] != 0, v[4] != 0);
-    case kNetMessageCommunicationsTickResponse:
-        return new NEMCommunicationsTickResponse(v[0], v[1], (unsigned short)v[2]);
-    case kNetMessagePauseGame: return new NEMPauseGame(v[0]);
-    case kNetMessagePauseGameResponse: return new NEMPauseGameResponse(v[0]);
-    case kNetMessagePhysicsTick: {
-        unsigned char thePerSecond = (unsigned char)v[4];
-        return new NEMPhysicsTick(b1, l0, thePerSecond, v[2] != 0, v[3] != 0);
+    // the record's fixed members and strings, as many as the type has (a sender names them all)
+    size_t theValues = 0, theStrings = 0;
+    for (uint32_t i = 0; ee_netmsg_ne_field(inType, i).kind != EE_NETMSG_NE_FIELD_NONE; i++) {
+        uint8_t theKind = ee_netmsg_ne_field(inType, i).kind;
+        theValues += theKind == EE_NETMSG_NE_FIELD_INTEGER || theKind == EE_NETMSG_NE_FIELD_BOOL;
+        theStrings += theKind == EE_NETMSG_NE_FIELD_STRING;
     }
-    case kNetMessagePlayerConnectionCheck: return new NEMPlayerConnectionCheck(v[0]);
-    case kNetMessagePlayerConnectionCheckResponse: return new NEMPlayerConnectionCheckResponse(v[0]);
-    case kNetMessageRemovePlayer: return new NEMRemovePlayer(b0, v[3] != 0, v[1] != 0, v[2] != 0);
-    case kNetMessageServerIsAlive: return new NEMServerIsAlive();
-    case kNetMessageStartGame: return new NEMStartGame(l0);
-    case kNetMessageStartGameResponse: return new NEMStartGameResponse(l0);
-    case kNetMessageStopGame: return new NEMStopGame();
-    case kNetMessageStopGameResponse: return new NEMStopGameResponse();
-    case kNetMessageUnPauseGame: return new NEMUnPauseGame(v[0]);
-    case kNetMessageUnPauseGameResponse: return new NEMUnPauseGameResponse(v[0]);
-    case kNetMessageWorldDatabaseChecksum: return new NEMWorldDatabaseChecksum(l0, v[1] != 0);
-    case kNetMessageWorldDatabaseChecksumResponse: return new NEMWorldDatabaseChecksumResponse(l0, l1);
-    case kNetMessageXferMessage: {
-        unsigned long theSize = v[1];
-        return new NEMXferMessage(b0, (unsigned char*)inBlock, theSize);
+    NEMRecord* theMessage = NULL;
+    switch (theValues * 10 + theStrings) {
+    case 0: theMessage = new NEMRecord(inType); break;
+    case 1: theMessage = new NEMRecord(inType, {}, {s0}); break;
+    case 10: theMessage = new NEMRecord(inType, {v[0]}); break;
+    case 11: theMessage = new NEMRecord(inType, {v[0]}, {s0}); break;
+    case 20: theMessage = new NEMRecord(inType, {v[0], v[1]}); break;
+    case 22: theMessage = new NEMRecord(inType, {v[0], v[1]}, {s0, s1}); break;
+    case 30: theMessage = new NEMRecord(inType, {v[0], v[1], v[2]}); break;
+    case 40: theMessage = new NEMRecord(inType, {v[0], v[1], v[2], v[3]}); break;
+    case 41: theMessage = new NEMRecord(inType, {v[0], v[1], v[2], v[3]}, {s0}); break;
+    case 50: theMessage = new NEMRecord(inType, {v[0], v[1], v[2], v[3], v[4]}); break;
     }
-    case kNetMessageXferStatus: return new NEMXferStatus(b0, b1, u2, b3);
-    }
-    return NULL;
+    if (inType == kNetMessageXferMessage)   // the block: the sender's bytes, the rest 0
+        memcpy(theMessage->Field(2, 0x400), inBlock, v[1]);
+    return theMessage;
 }
 
 static long AddInput(NEMessage* inTick, NEMessage* inInput)
 {
-    return static_cast<NEMPlayerInput*>(inTick)->AddPlayerInput(inInput);
+    return static_cast<NEMRecord*>(inTick)->AddPlayerInput(inInput);
 }
 static long GetInput(NEMessage* inTick, unsigned long inIndex, NEMessage*& outInput)
 {
-    return static_cast<NEMPlayerInput*>(inTick)->GetPlayerInput(inIndex, outInput);
+    return static_cast<NEMRecord*>(inTick)->GetPlayerInput(inIndex, outInput);
 }
 static unsigned long InputCount(NEMessage* inTick)
 {
-    return static_cast<NEMPlayerInput*>(inTick)->GetNumberOfPlayerInputs();
+    return static_cast<NEMRecord*>(inTick)->GetNumberOfPlayerInputs();
 }
 static unsigned long LocalPerSecond(NEMessage* inPhysicsTick)
 {
-    return static_cast<NEMPhysicsTick*>(inPhysicsTick)->GetPhysicsTicksPerSecond();
+    return static_cast<NEMRecord*>(inPhysicsTick)->Get<unsigned char>(4);   // mPhysicsTicksPerSecond (not on the wire)
 }
 static void RegisterGame()
 {
     NEMessage::RegisterKnownMessages();
-    NEMessage::sConstructors[0x41] = BuildTGame;
+    NEMessage::RegisterBuilder(0x41, 0x41, BuildTGame);
 }
 static NEMessage* BuildEngine(unsigned char* inData)
 {

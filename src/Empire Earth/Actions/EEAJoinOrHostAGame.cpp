@@ -160,8 +160,8 @@ void EEAJoinOrHostAGame::Virtual4()
                 theAddress = this->mGameName;
                 gCommunications->SearchForGame(false);
                 if (static_cast<NESynchronousClient*>(gCommunications)->Connect(theAddress, theService, theGameName) == 0) {
-                    NEMClientConnectionRequest* theRequest =
-                        new NEMClientConnectionRequest(this->mPlayerName, gGameVersion, gBinaryChecksum, theBehindFirewall);
+                    NEMessage* theRequest = new NEMRecord(kNetMessageClientConnectionRequest,
+                                                          {theBehindFirewall, gBinaryChecksum}, {gGameVersion, this->mPlayerName});
                     static_cast<NESynchronousClient*>(gCommunications)->SendStartConnectMessage(theRequest);
                     gCommunications->ProcessLocalUserInput(theRequest, kSlotNone);
                     UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_LE_ACTIVATE_CLIENT);
@@ -182,8 +182,8 @@ void EEAJoinOrHostAGame::Virtual4()
                         break;
                     if (theService == "EEService" && theGameName == this->mGameName) {
                         if (static_cast<NESynchronousClient*>(gCommunications)->Connect(theAddress, theService, theGameName) == 0) {
-                            NEMClientConnectionRequest* theRequest = new NEMClientConnectionRequest(
-                                this->mPlayerName, gGameVersion, gBinaryChecksum, theBehindFirewall);
+                            NEMessage* theRequest = new NEMRecord(kNetMessageClientConnectionRequest,
+                                {theBehindFirewall, gBinaryChecksum}, {gGameVersion, this->mPlayerName});
                             static_cast<NESynchronousClient*>(gCommunications)->SendStartConnectMessage(theRequest);
                             gCommunications->ProcessLocalUserInput(theRequest, kSlotNone);
                             gPlayerName = this->mPlayerName;
@@ -210,8 +210,8 @@ void EEAJoinOrHostAGame::Virtual4()
                 thePlayer.mPing = 0.0f;
                 thePlayer.mIsLocal = false;
                 thePlayer.mIsReady = false;
-                gCommunications->ProcessLocalUserInput(
-                    new NEMClientConnectionRequest(this->mPlayerName, gGameVersion, gBinaryChecksum, theBehindFirewall), kSlotNone);
+                gCommunications->ProcessLocalUserInput(new NEMRecord(kNetMessageClientConnectionRequest,
+                    {theBehindFirewall, gBinaryChecksum}, {gGameVersion, this->mPlayerName}), kSlotNone);
                 break;
             }
             }

@@ -19,7 +19,7 @@ class NEMessage;
 struct EeNetServer;                         // the server, whole in Rust (rust/ee_net.h)
 enum class EeNetSvOp : uint32_t;
 enum class EeNetMmOp : uint32_t;
-class NEMWorldDatabaseChecksumResponse;
+class NEMRecord;
 class NEServer;
 class FSFileSpec;
 
@@ -82,7 +82,7 @@ public:
     void AbortXfer(unsigned long inXferID);
     unsigned long GetMessageManagerCurrentMessageNumber();
     unsigned char GetSendToSlotForPlayer(unsigned char inPlayer);
-    void LogChecksumResponse(NEMWorldDatabaseChecksumResponse* inMessage);
+    void LogChecksumResponse(NEMRecord* inMessage);   // a world database checksum response
     long LogResponse(NEMessage* inMessage);
     void PauseGame();
     virtual long ProcessLocalUserInput(NEMessage* inMessage, unsigned char inPlayer);
