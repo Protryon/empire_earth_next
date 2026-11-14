@@ -3057,6 +3057,106 @@ constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_EPOCH_TITLE = 4;
 /// Whether the world has a current player.
 constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_HAS_PLAYER = 5;
 
+/// -> the portrait's level | its first bar shown << 32 | its second << 33.
+constexpr static const uint32_t EE_SCREENS_PT_OP_STATE = 0;
+
+/// (state as [`EE_SCREENS_PT_OP_STATE`]) stores the level and the two flags.
+constexpr static const uint32_t EE_SCREENS_PT_OP_SET_STATE = 1;
+
+/// -> the shown unit's complex unit (`GetComplexUnit`).
+constexpr static const uint32_t EE_SCREENS_PT_OP_COMPLEX = 2;
+
+/// (unit) -> whether its player is the local one.
+constexpr static const uint32_t EE_SCREENS_PT_OP_LOCAL = 3;
+
+/// (unit) -> its production time left.
+constexpr static const uint32_t EE_SCREENS_PT_OP_PRODUCTION = 4;
+
+/// `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_PT_OP_DIRTY = 5;
+
+/// (unit) -> the improvement its player researches for its type (0x10: none).
+constexpr static const uint32_t EE_SCREENS_PT_OP_RESEARCHED = 6;
+
+/// (unit) -> its current research.
+constexpr static const uint32_t EE_SCREENS_PT_OP_RESEARCH = 7;
+
+/// (technology) -> the local player's tech tree node.
+constexpr static const uint32_t EE_SCREENS_PT_OP_NODE = 8;
+
+/// (node) -> f32 bits of the shown unit's player's build time scale of the node's unit class when the node makes
+/// a unit and that class has an upgrade; -1 otherwise.
+constexpr static const uint32_t EE_SCREENS_PT_OP_SCALE = 9;
+
+/// (node) -> its build time.
+constexpr static const uint32_t EE_SCREENS_PT_OP_BUILD_TIME = 10;
+
+/// -> f[0..4] the portrait's rectangle.
+constexpr static const uint32_t EE_SCREENS_PT_OP_RECT = 11;
+
+/// (bar: 0 first, 1 second, 2 the background) its rectangle f[0..4].
+constexpr static const uint32_t EE_SCREENS_PT_OP_SET_BAR = 12;
+
+/// (unit, improvement) -> its stats' level of the improvement.
+constexpr static const uint32_t EE_SCREENS_PT_OP_IMPROVEMENT_LEVEL = 13;
+
+/// (1 or 2, improvement) -> the world table's improvement time (its first or second value, unsigned).
+constexpr static const uint32_t EE_SCREENS_PT_OP_IMPROVEMENT_TIME = 14;
+
+/// (unit) -> f32 bits of its player's improvement progress for its type.
+constexpr static const uint32_t EE_SCREENS_PT_OP_PROGRESS = 15;
+
+/// (unit) -> its stats' improvements' total cost.
+constexpr static const uint32_t EE_SCREENS_PT_OP_TOTAL_COST = 16;
+
+/// -> the world table's improvement points maximum (unsigned).
+constexpr static const uint32_t EE_SCREENS_PT_OP_POINTS_MAX = 17;
+
+/// (bytes, length) the level's text.
+constexpr static const uint32_t EE_SCREENS_PT_OP_TEXT = 18;
+
+/// The form's help text updated.
+constexpr static const uint32_t EE_SCREENS_PT_OP_UPDATE_HELP = 19;
+
+/// -> `UIControl::DrawPolygons()`.
+constexpr static const uint32_t EE_SCREENS_PT_OP_DRAW_BASE = 20;
+
+/// (0 the portrait, 1 the first bar, 2 the second, 3 the background) -> drawn: the draw's result.
+constexpr static const uint32_t EE_SCREENS_PT_OP_DRAW = 21;
+
+/// (bar: 0 first, 1 second) -> f[0..4] its rectangle.
+constexpr static const uint32_t EE_SCREENS_PT_OP_BAR = 22;
+
+/// -> f[0..4] the copied draw rectangle.
+constexpr static const uint32_t EE_SCREENS_PT_OP_DRAW_RECT = 23;
+
+/// (f[0..4] a rectangle) -> whether it contains the mouse.
+constexpr static const uint32_t EE_SCREENS_PT_OP_CONTAINS = 24;
+
+/// -> whether the shown unit's class is a building.
+constexpr static const uint32_t EE_SCREENS_PT_OP_BUILDING = 25;
+
+/// (node) the tooltip: "cancel the research" of the node's unit class's or its own name.
+constexpr static const uint32_t EE_SCREENS_PT_OP_HELP_RESEARCH = 26;
+
+/// The tooltip: "cancel the improvement" of the shown unit's researched improvement's name.
+constexpr static const uint32_t EE_SCREENS_PT_OP_HELP_IMPROVEMENT = 27;
+
+/// -> whether the shown unit is set, alive and on the map.
+constexpr static const uint32_t EE_SCREENS_PT_OP_ALIVE = 28;
+
+/// -> the shown unit's complex unit (its field).
+constexpr static const uint32_t EE_SCREENS_PT_OP_COMPLEX_FIELD = 29;
+
+/// (unit, technology) sends "remove the technology".
+constexpr static const uint32_t EE_SCREENS_PT_OP_REMOVE_TECHNOLOGY = 30;
+
+/// (unit, improvement) sends "remove the improvement".
+constexpr static const uint32_t EE_SCREENS_PT_OP_REMOVE_IMPROVEMENT = 31;
+
+/// Plays the button sound.
+constexpr static const uint32_t EE_SCREENS_PT_OP_SOUND = 32;
+
 /// A tab: `EE_SCREENS_PGS_TAB + page - 1`, pages 1..7 (summary, time line, military, economy, epoch, society, misc).
 constexpr static const uint32_t EE_SCREENS_PGS_TAB = 6401;
 
@@ -6106,6 +6206,18 @@ int64_t ee_screens_mini_map_mouse_move(void *map);
 
 /// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
 void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);
+
+/// `EEUICPortrait::Update`.
+void ee_screens_portrait_update(void *portrait);
+
+/// `EEUICPortrait::DrawPolygons`.
+int64_t ee_screens_portrait_draw(void *portrait);
+
+/// `EEUICPortrait::GetHelpString`: whether there is a tooltip (the host builds its text).
+bool ee_screens_portrait_help(void *portrait);
+
+/// `EEUICPortrait::MouseLButtonDown` (and the right press).
+int64_t ee_screens_portrait_mouse_down(void *portrait);
 
 /// The post-game summary's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_post_game_event_for(unsigned long id);

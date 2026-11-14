@@ -84,6 +84,7 @@
 //!   the C++ host.
 //! - [`icon_bar`]: the selected-units icon bar whole (its state, refill, snapshot, drawing and clicks) over the
 //!   C++ host.
+//! - [`portrait`]: the selected unit's portrait's bars, level, drawing, tooltip and click over the C++ host.
 
 pub mod actions;
 #[cfg(not(test))]
@@ -164,6 +165,9 @@ mod mini_map_ffi;
 pub mod panel_groups;
 #[cfg(not(test))]
 mod panel_groups_ffi;
+pub mod portrait;
+#[cfg(not(test))]
+mod portrait_ffi;
 pub mod post_game;
 #[cfg(not(test))]
 mod post_game_ffi;
