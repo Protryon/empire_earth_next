@@ -404,7 +404,7 @@ void LobbyWork(int)
         long a = 0, b = 0;
         sscanf(theCommand.c_str(), "%31s %ld %ld", theOp, &a, &b);
         const char* theVerdict = "lobby-rejected";
-        Component* theScope = (theManager != NULL && theManager->mModalComponent != NULL) ? theManager->mModalComponent : theRoot;
+        Component* theScope = (theManager != NULL && theManager->GetModalComponent() != NULL) ? theManager->GetModalComponent() : theRoot;
         if (!strcmp(theOp, "wonclick") || !strcmp(theOp, "wonactivate")) {
             Component* theTarget = LobbyFindById(theScope, a);
             if (theTarget == NULL)
@@ -457,14 +457,14 @@ void LobbyWork(int)
     char theLine[300];
     snprintf(theLine, sizeof(theLine), "lobby shown %d screen %d lan %d login %d modal %d game %d host %d clients %d ready %d allready %d name %s\n",
              EELobbyIsShown() ? 1 : 0, LobbyGetGameScreenType(), LobbyOnLanScreen() ? 1 : 0, LobbyOnLoginScreen() ? 1 : 0,
-             (theManager != NULL && theManager->mModalComponent != NULL) ? 1 : 0, theGame != NULL ? 1 : 0,
+             (theManager != NULL && theManager->GetModalComponent() != NULL) ? 1 : 0, theGame != NULL ? 1 : 0,
              (theGame != NULL && theGame->GetIsHost()) ? 1 : 0,
              (theGame != NULL && theGame->GetClients().get() != NULL) ? (int)theGame->GetClients()->GetCount() : 0,
              (theClient != NULL && theClient->IsReady()) ? 1 : 0, (theGame != NULL && theGame->AreAllReady()) ? 1 : 0,
              theGame != NULL ? GUIText(theGame->GetName()).c_str() : "-");
     theText += theLine;
     std::vector<ListArea*> theLists;
-    sLobbyModal = theManager != NULL ? theManager->mModalComponent : NULL;
+    sLobbyModal = theManager != NULL ? theManager->GetModalComponent() : NULL;
     sLobbyInModal = false;
     LobbyWalk(theRoot, theText, theLists);
     {
