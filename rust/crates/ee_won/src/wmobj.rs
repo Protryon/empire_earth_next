@@ -915,7 +915,8 @@ impl EeWonWm {
                 let child_container = if child != 0 { self.cm(EeWonWmComp::AsContainer, child, 0, 0) } else { 0 };
                 let bits = if child != 0 { self.cm(EeWonWmComp::Bits, child, 0, 0) as u32 } else { 0 };
                 let input = self.st.borrow().popup_input;
-                let step = guievent::popup_click_step(child != 0, child == input, bits, input != 0, child_container != 0);
+                let step =
+                    guievent::popup_click_step(child != 0, child == input, bits, input != 0, child_container != 0);
                 if step == 1 {
                     end = false;
                     break;

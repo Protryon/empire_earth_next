@@ -222,7 +222,8 @@ impl EeWonWm {
     /// The caches given back as the original's members were destroyed (in reverse order: the delay-load, raw
     /// and native images, the named fonts, then the default font).
     pub fn release_caches(&self) {
-        for kind in [EeWonWmRefKind::Image, EeWonWmRefKind::RawImage, EeWonWmRefKind::NativeImage, EeWonWmRefKind::Font] {
+        for kind in [EeWonWmRefKind::Image, EeWonWmRefKind::RawImage, EeWonWmRefKind::NativeImage, EeWonWmRefKind::Font]
+        {
             let old = std::mem::take(self.caches.borrow_mut().map(kind));
             for (_, v) in old {
                 self.cache_ref(kind, v, false);

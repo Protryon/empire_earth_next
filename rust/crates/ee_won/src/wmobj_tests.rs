@@ -29,7 +29,7 @@ fn take() -> Vec<Entry> {
 fn new_wm() -> EeWonWm {
     ANSWERS.with(|m| m.borrow_mut().clear());
     take();
-    EeWonWm::new(1 as *mut c_void, Some(rec_host))
+    EeWonWm::new(std::ptr::dangling_mut::<c_void>(), Some(rec_host))
 }
 
 #[test]
@@ -268,8 +268,9 @@ fn run_call(call: i64, v: &[i64]) -> (isize, Option<EeWonWmMouse>) {
         20 => field(F::TargetDepth, a(0)),
         21 => field(F::LastLoseFocusTick, a(0)),
         22 => field(F::PopupWindowSave, a(0)),
-        23..=27 | 28..=30 => {
-            const NAMES: [&str; 9] = ["a.png", "A.PNG", "b.png", "Lobby.jpg", "LOBBY.jpg", "c.png", "Title", "title", "Body"];
+        23..=30 => {
+            const NAMES: [&str; 9] =
+                ["a.png", "A.PNG", "b.png", "Lobby.jpg", "LOBBY.jpg", "c.png", "Title", "title", "Body"];
             let idx = match call {
                 28 => v[1],
                 23 | 24 | 29 | 30 => v[0],
@@ -327,7 +328,8 @@ fn replay(text: &str) -> usize {
             next_line();
             seqs += 1;
             REPLAY.with(|r| {
-                r.borrow_mut().as_mut().unwrap().wm = Some(Box::new(EeWonWm::new(1 as *mut c_void, Some(replay_host))))
+                r.borrow_mut().as_mut().unwrap().wm =
+                    Some(Box::new(EeWonWm::new(std::ptr::dangling_mut::<c_void>(), Some(replay_host))))
             });
         } else if l.starts_with("set ") {
             next_line();

@@ -146,9 +146,9 @@ pub mod udpops;
 pub mod userstatus;
 pub mod verop;
 pub mod winobj;
+pub mod wire;
 pub mod wmcache;
 pub mod wmobj;
-pub mod wire;
 
 #[cfg(test)]
 mod buffer_golden;
