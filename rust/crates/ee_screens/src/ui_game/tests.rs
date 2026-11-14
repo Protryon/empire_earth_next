@@ -107,3 +107,54 @@ fn golden_ui_game() {
         assert!(kinds.get(kind).copied().unwrap_or(0) >= 30, "{kinds:?}");
     }
 }
+
+const GOLDEN_MEMBERS: &str = include_str!("../golden_ui_members.txt");
+
+/// `build/sc28/ui/driver.cpp 1 700 golden`: per call (M `LeaveMap`, C `CancelGame`, X `CloseScenarioEditor`, E
+/// `EnterScenarioEditor`, L `StartLoadingFromEditor`, B `ShowCivilizationBuilder`, R `RestartGame`) with its arguments,
+/// the new host's ops and answers; the driver checked them against the original's calls (cut from 2cac466f).
+#[test]
+fn golden_ui_members() {
+    let mut kinds = std::collections::BTreeMap::new();
+    for (k, line) in GOLDEN_MEMBERS.lines().enumerate() {
+        let mut fields = line.split('|');
+        let head: Vec<&str> = fields.next().unwrap().split(' ').collect();
+        let args: Vec<i64> = head[1..4].iter().map(|x| x.parse().unwrap()).collect();
+        let ops = fields.map(|f| f.split(' ').map(|x| x.parse().unwrap()).collect()).collect();
+        let mut h = Replay { ops, at: 0, line: k + 1 };
+        let which = match head[0] {
+            "M" => EE_SCREENS_UG_DO_LEAVE_MAP,
+            "C" => EE_SCREENS_UG_DO_CANCEL_GAME,
+            "X" => EE_SCREENS_UG_DO_CLOSE_EDITOR,
+            "E" => EE_SCREENS_UG_DO_ENTER_EDITOR,
+            "L" => EE_SCREENS_UG_DO_LOAD_FROM_EDITOR,
+            "B" => EE_SCREENS_UG_DO_CIV_BUILDER,
+            _ => EE_SCREENS_UG_DO_RESTART,
+        };
+        member(&mut h, which, args[0], args[1], args[2]);
+        assert_eq!(h.at, h.ops.len(), "line {}: ops missing", k + 1);
+        *kinds.entry(head[0].to_string()).or_insert(0) += 1;
+    }
+    for kind in ["M", "C", "X", "E", "L", "B", "R"] {
+        assert!(kinds.get(kind).copied().unwrap_or(0) >= 50, "{kinds:?}");
+    }
+}
+
+/// A lost server's client is booted with the host's message (none with a lobby open, which is quit).
+#[test]
+fn a_lost_server_boots_the_client() {
+    for lobby in [0, 1] {
+        let mut h = Log {
+            ops: Vec::new(),
+            answer: move |op, _a, _b, _c| match op {
+                EE_SCREENS_UG_OP_SERVER_LOST => 1,
+                EE_SCREENS_UG_OP_LOBBY_OPEN => lobby,
+                _ => 0,
+            },
+        };
+        cancel_game(&mut h);
+        let boot = h.ops.iter().find(|o| o.0 == EE_SCREENS_UG_OP_BOOT_CLIENT).unwrap();
+        assert_eq!(boot.1, if lobby == 1 { 0 } else { EE_SCREENS_UG_IDS_HOST_GONE });
+        assert_eq!(h.ops.iter().any(|o| o.0 == EE_SCREENS_UG_OP_QUIT_FLAG), lobby == 1);
+    }
+}

@@ -22,6 +22,10 @@ public:
     EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, unsigned long inGoalIndex, long inKind);
     EEE2DRust(EEUnit* inUnit, const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, unsigned long inGoalIndex,
               long inKind);
+    // the shockwave (0x12, EEE2DShockwave 0xe614f..0xe6621, deleted) on a unit, at a point, and for loading
+    EEE2DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind);
+    EEE2DRust(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect, long inKind);
+    EEE2DRust(long inKind);
     virtual ~EEE2DRust();
     virtual long DrawPass2() { return this->Call(EeGfxEffect3DOp::DrawPass2); }
     virtual long DrawPass3() { return this->Call(EeGfxEffect3DOp::DrawPass3); }
@@ -31,15 +35,14 @@ public:
     virtual long Queue(EEEffectQueue* inQueues) { return this->Call(EeGfxEffect3DOp::Queue, inQueues); }
     virtual void PrepareQueue() {}
     virtual long SetUp() { return this->Call(EeGfxEffect3DOp::SetUp); }
-    // the confirmation is never saved: Load, Save and RepairPointers return 0 without the base's
-    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-        { return this->Call(EeGfxEffect3DOp::Load); }
-    virtual long RepairPointers() { return this->Call(EeGfxEffect3DOp::Repair); }
-    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-        { return this->Call(EeGfxEffect3DOp::Save); }
+    // the confirmation is never saved: Load, Save and RepairPointers return 0 without the base's; the others after
+    // EEEffect2D's (its results ignored)
+    virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    virtual long RepairPointers();
+    virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     virtual long Step() { return this->Call(EeGfxEffect3DOp::Step); }
 
-    long Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues = NULL);
+    long Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues = NULL, const EeGfxEffectFile* inFile = NULL);
 
     EEGraphicObject* mGraphicObject = NULL;
 };

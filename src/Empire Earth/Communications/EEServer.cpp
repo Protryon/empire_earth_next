@@ -484,7 +484,7 @@ void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
             gWorld.RemoveDisconnectedPlayer(inPlayer);
         }
         if (!inWasBooted)
-            this->mNumHumanPlayers--;
+            this->SetNumHumanPlayers(this->GetNumHumanPlayers() - 1);
         if (!inGameIsExiting) {
             if (inPlayerIsOOS)
                 sSample = gSoundManager->Load(UString("sounds\\OutOfSynch.wav"), 0x31, 1);

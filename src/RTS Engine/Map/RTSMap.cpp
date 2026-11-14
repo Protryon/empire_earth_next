@@ -54,8 +54,11 @@ const UString RTSMap::sVertexColorIndex("RTSMap-VertexColorIndex");
 // FUNCTION: EXE 0x521d41
 // Creates an empty map with the given scale value (also copied to gMapTileSize) and its colored-rectangle lock
 RTSMap::RTSMap(float inF1955F4)
-    : mF1955F4(inF1955F4), mF1955F8(0.0f), mF1955FC(0.0f), mB195620(false)
 {
+    this->mF1955F4 = inF1955F4;   // (the record EeUnitsRtsMapFields' members: no member initializers)
+    this->mF1955F8 = 0.0f;
+    this->mF1955FC = 0.0f;
+    this->mB195620 = false;
     this->mL1955EC = 0;
     this->mTiles = NULL;
     this->mL195600 = 0;
@@ -593,47 +596,8 @@ const GEColor& RTSMap::GetVertexColor(long inX, long inY, long inCorner)
 // first read error (tiles get x = row start + column, which only old saves' terrain lookup uses)
 long RTSMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    bool theLeftShrinking = true;
-    bool theRightGrowing = true;
-    long theResult = inFile.Read(this->mL195614);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mL195610);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mU19561C);
-    if (theResult != kErrorOK)
-        return theResult;
-    this->Create(this->mL195614, this->mL195610, this->mU19561C, false);
-    long theRight = this->mL195610;
-    long theLeft = theRight - 1;
-    for (long theY = 0; theY < this->mSize; theY++) {
-        for (long theX = 0; theX < this->mSize; theX++) {
-            EEMapTile* theTile;
-            if (theX >= theLeft && theX < theRight + 1)
-                theTile = this->LoadTile(inMajorVersion, inMinorVersion, inFile, theX, theY);
-            else
-                theTile = NULL;
-            this->mTiles[this->mSize * theY + theX] = theTile;
-        }
-        if (theLeftShrinking) {
-            if (theLeft != 0)
-                theLeft--;
-            else
-                theLeftShrinking = false;
-        } else
-            theLeft++;
-        if (theRightGrowing) {
-            theRight++;
-            if (theRight == this->mSize) {
-                theRightGrowing = false;
-                theRight = this->mSize - 1;
-            }
-        } else
-            theRight--;
-    }
-    theResult = this->mTerrainMesh.Load(inMajorVersion, inMinorVersion, inFile);
-    return theResult;
+    EEMapSaveContext theContext = {this, &inFile, inMajorVersion, inMinorVersion, NULL, NULL};   // port: ee_units map_save.rs
+    return ee_units_rts_map_load(&theContext, &EEMapSaveOperation, static_cast<EeUnitsRtsMapFields*>(this));
 }
 
 // NEAR: induction variable x - 1 ([ebp-4], with x + 1 as +2) and the dead-parameter slots of the
@@ -733,25 +697,8 @@ void RTSMap::ExploreUnseen(EEPlayer* inPlayer)
 // Writes the map's size, player count, every tile and the terrain mesh; returns the first write error
 long RTSMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = outFile.Write(this->mL195614);
-    if (theResult == kErrorOK) {
-        theResult = outFile.Write(this->mL195610);
-        if (theResult == kErrorOK) {
-            theResult = outFile.Write(this->mU19561C);
-            if (theResult == kErrorOK) {
-                for (long theY = 0; theY < this->mSize && theResult == kErrorOK; theY++) {
-                    for (long theX = 0; theX < this->mSize && theResult == kErrorOK; theX++) {
-                        EEMapTile* theTile = this->mTiles[this->mSize * theY + theX];
-                        if (theTile != NULL)
-                            theResult = theTile->Save(outFile, this->mU19561C);
-                    }
-                }
-                if (theResult == kErrorOK)
-                    theResult = this->mTerrainMesh.Save(outFile);
-            }
-        }
-    }
-    return theResult;
+    EEMapSaveContext theContext = {this, &outFile, inMajorVersion, inMinorVersion, NULL, NULL};   // port: ee_units map_save.rs
+    return ee_units_rts_map_save(&theContext, &EEMapSaveOperation, static_cast<EeUnitsRtsMapFields*>(this));
 }
 
 // NEAR: inline budget (begin() refused in the prologue, Contains/operator+ out of line) and the

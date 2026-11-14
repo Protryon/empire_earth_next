@@ -5,7 +5,6 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
 #include "lle/FSFile.h"
-#include "ee/EEUnitStore.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EESMObject.h"
 #include "ee/EESMTConditionWrapper.h"
@@ -432,7 +431,6 @@ long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
 void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlayer* inPlayer,
                 EEUnitClassUpgrade* inUpgrade, long inAmount, long inMode)
 {
-    EEUnitStatsScope theStatsScope(inUpgrade);   // New (R5b.4, the fourteenth round): the stats table (ee/EEUnitStore.h)
     std::vector<EEUnit*> theUnits;
     std::vector<EEHerd*> theHerds;
     EESMEffect theEffect;

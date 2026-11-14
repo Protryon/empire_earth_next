@@ -3,7 +3,8 @@
 // The TCP/IP protocol over its plug-in, which is Rust (rust/crates/ee_net_tcp): each member calls the plug-in as
 // the original's entry point through its table did, with what the plug-in's C++ shim (TCP Protocol.cpp) did on
 // the way: the strings handed over as bytes, an event as its platform handle, the answers written back into
-// UStrings. The plug-in is given the wrapper's handle slot (NEConnection/NEServer's first member).
+// UStrings. A connection or server is the plug-in's handle (round 5: the NEConnection/NEServer wrappers holding it
+// went); the plug-in's entry points take a slot holding the handle, here a copy the call makes.
 #include <windows.h>
 #include <string.h>
 #include <algorithm>
@@ -14,8 +15,6 @@
 #include "lle/UWideString.h"
 #include "lle/TSEvent.h"
 #include "lle/NEProtocol.h"
-#include "lle/NEConnection.h"
-#include "lle/NEServer.h"
 #include "rust/ee_net_tcp.h"
 
 std::vector<NEProtocol*> NEProtocol::sProtocols;
@@ -46,14 +45,18 @@ static void* NEHandle(TSEvent* inEvent)
 {
     return inEvent->GetHandle();
 }
-// the plug-in's view of a wrapper: its handle slot
-static void** NESlot(const NEConnection* inConnection)
+// a handle's slot for one call (the plug-in reads it; a close clears it, which nothing reads after)
+struct NESlot {
+    void* mHandle;
+    explicit NESlot(const void* inHandle) : mHandle(const_cast<void*>(inHandle)) {}
+    operator void**() { return &this->mHandle; }
+};
+// a new connection or server: the handle the plug-in wrote, or NULL when it failed (called after the plug-in's
+// call, never with it as an argument: the handle argument would be read first)
+template <class T> static long NEOpened(long inResult, void* inHandle, T*& outHandle)
 {
-    return reinterpret_cast<void**>(const_cast<NEConnection*>(inConnection));
-}
-static void** NESlot(const NEServer* inServer)
-{
-    return reinterpret_cast<void**>(const_cast<NEServer*>(inServer));
+    outHandle = inResult == kErrorOK ? static_cast<T*>(inHandle) : NULL;
+    return inResult;
 }
 
 // FUNCTION: LLE 0x100444a6
@@ -62,7 +65,7 @@ NEProtocol::NEProtocol()
     : mBytesSent(0), mBytesReceived(0)
 {
     NEProtocol::sProtocols.push_back(this);
-    this->Activate();
+    ee_tcp_activate();
 }
 
 // FUNCTION: LLE 0x100448ad
@@ -70,20 +73,10 @@ NEProtocol::NEProtocol()
 NEProtocol::~NEProtocol()
 {
     if (ee_tcp_is_valid())
-        this->Deactivate();
+        ee_tcp_deactivate();
     std::vector<NEProtocol*>::iterator theIter = std::find(NEProtocol::sProtocols.begin(), NEProtocol::sProtocols.end(), this);
     if (theIter != NEProtocol::sProtocols.end())
         NEProtocol::sProtocols.erase(theIter);
-}
-
-long NEProtocol::Activate()
-{
-    return ee_tcp_activate();
-}
-
-long NEProtocol::Deactivate()
-{
-    return ee_tcp_deactivate();
 }
 
 const UString& NEProtocol::GetName() const
@@ -97,88 +90,65 @@ unsigned long NEProtocol::GetProtocolType()
 }
 
 // FUNCTION: LLE 0x1004492a
-// Accepts an incoming connection on a server into a new connection; on failure deletes it and returns NULL
-long NEProtocol::Accept(const NEServer* inServer, NEConnection*& outConnection)
+// Accepts an incoming connection on a server: its handle, NULL on failure
+long NEProtocol::Accept(NEServer* inServer, NEConnection*& outConnection)
 {
-    outConnection = new NEConnection(this);
-    long theResult = ee_tcp_accept(NESlot(inServer), NESlot(outConnection));
-    if (theResult != kErrorOK) {
-        delete outConnection;
-        outConnection = NULL;
-    }
-    return theResult;
+    void* theNew = NULL;
+    long theResult = ee_tcp_accept(NESlot(inServer), &theNew);
+    return NEOpened(theResult, theNew, outConnection);
 }
 
 // FUNCTION: LLE 0x10044970
-// Accepts an incoming file-transfer connection on a server; on failure deletes it and returns NULL
-long NEProtocol::AcceptForXfer(const NEServer* inServer, NEConnection*& outConnection)
+// Accepts an incoming file-transfer connection on a server: its handle, NULL on failure
+long NEProtocol::AcceptForXfer(NEServer* inServer, NEConnection*& outConnection)
 {
-    outConnection = new NEConnection(this);
-    long theResult = ee_tcp_accept_for_xfer(NESlot(inServer), NESlot(outConnection));
-    if (theResult != kErrorOK) {
-        delete outConnection;
-        outConnection = NULL;
-    }
-    return theResult;
+    void* theNew = NULL;
+    long theResult = ee_tcp_accept_for_xfer(NESlot(inServer), &theNew);
+    return NEOpened(theResult, theNew, outConnection);
 }
 
 // FUNCTION: LLE 0x100449b7
 // Lets the plug-in allow or refuse new connections to a published server
-void NEProtocol::AllowNewConnections(const NEServer* inServer, bool inAllow)
+void NEProtocol::AllowNewConnections(NEServer* inServer, bool inAllow)
 {
     ee_tcp_allow_new_connections(NESlot(inServer), inAllow);
 }
 
 // FUNCTION: LLE 0x100449c7
-// Closes a connection through the plug-in and deletes it when the close succeeds
+// Closes a connection through the plug-in (which frees it when the close succeeds)
 long NEProtocol::Close(NEConnection* inConnection)
 {
-    long theResult = ee_tcp_close_connection(NESlot(inConnection));
-    if (theResult == kErrorOK)
-        delete inConnection;
-    return theResult;
+    return ee_tcp_close_connection(NESlot(inConnection));
 }
 
 // FUNCTION: LLE 0x100449ea
-// Closes a published server through the plug-in and deletes it when the close succeeds
+// Closes a published server through the plug-in (which frees it when the close succeeds)
 long NEProtocol::Close(NEServer* inServer)
 {
-    long theResult = ee_tcp_close_server(NESlot(inServer));
-    if (theResult == kErrorOK)
-        delete inServer;
-    return theResult;
+    return ee_tcp_close_server(NESlot(inServer));
 }
 
 // FUNCTION: LLE 0x10044a0d
-// Connects to a host into a new connection with an event; on failure deletes it and returns NULL (the plug-in
+// Connects to a host with an event: the connection's handle, NULL on failure (the plug-in
 // takes the timeout in its adapter argument, as the original's entry point did)
 long NEProtocol::Connect(const UString& inName, const UString& inHost, const UWideString& inAddress,
                          unsigned long inPort, TSEvent* inEvent, NEConnection*& outConnection, unsigned long inTimeout)
 {
-    outConnection = new NEConnection(this);
+    void* theNew = NULL;
     long theResult = ee_tcp_connect(NEBytes(inName), inName.GetLength(), NEBytes(inHost), inHost.GetLength(),
-                                    NEBytes(inAddress), NELength(inAddress), (int32_t)inPort, NEHandle(inEvent),
-                                    NESlot(outConnection), (uint32_t)inTimeout);
-    if (theResult != kErrorOK) {
-        delete outConnection;
-        outConnection = NULL;
-    }
-    return theResult;
+                                    NEBytes(inAddress), NELength(inAddress), (int32_t)inPort, NEHandle(inEvent), &theNew,
+                                    (uint32_t)inTimeout);
+    return NEOpened(theResult, theNew, outConnection);
 }
 
 // FUNCTION: LLE 0x10044a66
-// Opens a file-transfer connection alongside an existing one; on failure deletes it and returns NULL
-long NEProtocol::ConnectForXfer(const NEConnection*& inConnection, unsigned long inPort, TSEvent* inEvent,
+// Opens a file-transfer connection alongside an existing one: its handle, NULL on failure
+long NEProtocol::ConnectForXfer(NEConnection* inConnection, unsigned long inPort, TSEvent* inEvent,
                                 NEConnection*& outConnection)
 {
-    outConnection = new NEConnection(this);
-    long theResult = ee_tcp_connect_for_xfer(NESlot(inConnection), (int32_t)inPort, NEHandle(inEvent),
-                                             NESlot(outConnection));
-    if (theResult != kErrorOK) {
-        delete outConnection;
-        outConnection = NULL;
-    }
-    return theResult;
+    void* theNew = NULL;
+    long theResult = ee_tcp_connect_for_xfer(NESlot(inConnection), (int32_t)inPort, NEHandle(inEvent), &theNew);
+    return NEOpened(theResult, theNew, outConnection);
 }
 
 // The network adapters' descriptions (the list cleared first) -> how many
@@ -195,7 +165,7 @@ unsigned long NEProtocol::EnumerateNetworkAdapters(std::vector<UWideString>& out
     return ee_tcp_enumerate_adapters(Lambda::Add, &outAdapters);
 }
 
-long NEProtocol::GetClientAddress(const NEServer* inServer, unsigned long inIndex, UWideString& outAddress)
+long NEProtocol::GetClientAddress(NEServer* inServer, unsigned long inIndex, UWideString& outAddress)
 {
     return ee_tcp_get_client_address(NESlot(inServer), (uint32_t)inIndex, NEToUWide, &outAddress);
 }
@@ -241,21 +211,17 @@ bool NEProtocol::IsAlive(NEConnection* inConnection)
 }
 
 // FUNCTION: LLE 0x10044ae4
-// Publishes a named game server with its accept/receive/transfer events; on failure deletes it and returns NULL
+// Publishes a named game server with its accept/receive/transfer events: its handle, NULL on failure
 long NEProtocol::Publish(const UString& inName, const UWideString& inAddress, unsigned long inPort,
                          TSEvent* inAcceptEvent, TSEvent* inReceiveEvent, TSEvent* inXferEvent, NEServer*& outServer,
                          bool inAllowNewConnections, bool inAnnounce, unsigned long inMaxConnections)
 {
-    outServer = new NEServer(this);
+    void* theNew = NULL;
     long theResult = ee_tcp_publish(NEBytes(inName), inName.GetLength(), NEBytes(inAddress), NELength(inAddress),
                                     (uint32_t)inPort, NEHandle(inAcceptEvent), NEHandle(inReceiveEvent),
-                                    NEHandle(inXferEvent), NESlot(outServer), inAllowNewConnections, inAnnounce,
+                                    NEHandle(inXferEvent), &theNew, inAllowNewConnections, inAnnounce,
                                     (uint32_t)inMaxConnections);
-    if (theResult != kErrorOK) {
-        delete outServer;
-        outServer = NULL;
-    }
-    return theResult;
+    return NEOpened(theResult, theNew, outServer);
 }
 
 // FUNCTION: LLE 0x10044b46
@@ -284,7 +250,7 @@ long NEProtocol::ReceiveFrom(NEServer* inServer, unsigned long inSize, unsigned 
     return theResult;
 }
 
-void NEProtocol::ResetClientConnection(const NEServer* inServer, unsigned long inIndex)
+void NEProtocol::ResetClientConnection(NEServer* inServer, unsigned long inIndex)
 {
     ee_tcp_reset_client_connection(NESlot(inServer), (uint32_t)inIndex);
 }

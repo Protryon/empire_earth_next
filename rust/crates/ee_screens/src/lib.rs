@@ -88,6 +88,12 @@
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 //! - [`status_box`]: the status box's `Fill`, `Refresh`, `UpdateQueuedCounts`, `LoadIcons` (its icon cells) over
 //!   the C++ host.
+//! - [`icon_bar`]: the selected-units icon bar whole (its state, refill, snapshot, drawing and clicks) over the
+//!   C++ host.
+//! - [`portrait`]: the selected unit's portrait's bars, level, drawing, tooltip and click over the C++ host.
+//! - [`main_group`]: the main game form's main panel group (the shown unit, its refresh and update, a command
+//!   button, the airport's buttons) over the C++ host.
+//! - [`upgrade`]: the improvement button's availability, tooltip, presses and cost update over the C++ host.
 
 pub mod actions;
 #[cfg(not(test))]
@@ -150,6 +156,9 @@ pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;
 pub mod hud;
+pub mod icon_bar;
+#[cfg(not(test))]
+mod icon_bar_ffi;
 pub mod lobby;
 pub mod lobby_form;
 #[cfg(not(test))]
@@ -164,6 +173,9 @@ mod main_game_ffi;
 pub mod main_game_options;
 #[cfg(not(test))]
 mod main_game_options_ffi;
+pub mod main_group;
+#[cfg(not(test))]
+mod main_group_ffi;
 pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
@@ -174,6 +186,9 @@ mod mini_map_ffi;
 pub mod panel_groups;
 #[cfg(not(test))]
 mod panel_groups_ffi;
+pub mod portrait;
+#[cfg(not(test))]
+mod portrait_ffi;
 pub mod post_game;
 #[cfg(not(test))]
 mod post_game_ffi;
@@ -213,3 +228,6 @@ mod ui_thread_ffi;
 pub mod unit_hack;
 #[cfg(not(test))]
 mod unit_hack_ffi;
+pub mod upgrade;
+#[cfg(not(test))]
+mod upgrade_ffi;

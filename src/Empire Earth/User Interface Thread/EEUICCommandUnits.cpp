@@ -79,7 +79,7 @@ EEUICCommandUnits::EEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigne
 {
     this->mCanFace = false;
     this->mHasFacing = false;
-    this->mDisplayMode = kDisplayModeHidden;
+    this->StoreDisplayMode(kDisplayModeHidden);
     this->mListener = inListener;
     this->mListener->Reference();
     this->SetAlwaysDirty(true);

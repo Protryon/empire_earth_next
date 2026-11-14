@@ -1894,13 +1894,10 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
 // The C++ parts of the player's Load and Save (ee_units player_save.rs): the file's primitives with the overload the
 // original called (io holds the old value in, the read value out; a bool as 0 or 1) and the player's containers and
 // sub-objects by operation
-static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+// The Rust saves' file primitives (ee/EEPlayer.h): the overload the original called; a read's io holds the old value
+// in and the read value out (a bool as 0 or 1)
+int32_t EESavePrimitive(FSFile& theFile, int32_t inOp, EeUnitsPlayerSaveIo* io)
 {
-    EEPlayerSaveContext& theContext = *static_cast<EEPlayerSaveContext*>(inContext);
-    EEPlayer* thePlayer = theContext.mPlayer;
-    FSFile& theFile = *theContext.mFile;
-    unsigned long theMajor = theContext.mMajorVersion;
-    unsigned long theMinor = theContext.mMinorVersion;
     switch (inOp) {
     case EE_UNITS_PLAYER_SAVE_READ_ULONG: {
         unsigned long theValue = (unsigned long)io->i;
@@ -1942,6 +1939,20 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
         bool theValue = io->b != 0;
         return theFile.Write(theValue);
     }
+    }
+    return -1;
+}
+
+static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inIndex, EeUnitsPlayerSaveIo* io)
+{
+    EEPlayerSaveContext& theContext = *static_cast<EEPlayerSaveContext*>(inContext);
+    EEPlayer* thePlayer = theContext.mPlayer;
+    FSFile& theFile = *theContext.mFile;
+    unsigned long theMajor = theContext.mMajorVersion;
+    unsigned long theMinor = theContext.mMinorVersion;
+    if (inOp >= EE_UNITS_PLAYER_SAVE_READ_ULONG && inOp <= EE_UNITS_PLAYER_SAVE_WRITE_BOOL)
+        return EESavePrimitive(theFile, inOp, io);
+    switch (inOp) {
     // the load
     case EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_NEW: {
         theContext.mDummyUpgrade = NULL;

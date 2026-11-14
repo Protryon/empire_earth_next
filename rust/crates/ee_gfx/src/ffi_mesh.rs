@@ -7,7 +7,7 @@ use std::ffi::c_void;
 
 use ee_ge::types::{Ge3DPoint, GeVector};
 
-use crate::beam::{self, EeGfxBeamAim, EeGfxBeamVertex};
+use crate::beam::{self, EeGfxBeamVertex};
 use crate::effect_store::EffectStore;
 use crate::effects::EeGfxColor;
 use crate::farm::{self, EeGfxFarmField, FarmTerrain};
@@ -201,23 +201,6 @@ pub unsafe extern "C" fn ee_gfx_volcano_build(
             &mut mesh,
         )
     }
-}
-
-/// `EEE3DTracerBeam::Aim`'s beam between `start` and `end` at `age` (the effect's params 5 and 6 grow and shrink
-/// it).
-///
-/// # Safety
-/// `start` and `end` are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_beam_aim(
-    start: *const Ge3DPoint,
-    end: *const Ge3DPoint,
-    age: f32,
-    grow: f32,
-    shrink: f32,
-) -> EeGfxBeamAim {
-    // SAFETY: the function's contract
-    unsafe { beam::aim(*start, *end, age, grow, shrink) }
 }
 
 /// `EEE3DTracerBeam::DrawPass6`'s stretch of `count` vertices in place (length, width, texture scroll).
