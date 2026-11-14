@@ -4,7 +4,7 @@
 
 use core::ffi::c_void;
 
-use crate::status_button::{button_up, copy_data, right_button_up, ButtonHost};
+use crate::status_button::{button_up, copy_data, help_string, right_button_up, ButtonHost};
 
 /// cbindgen:ignore
 mod sys {
@@ -39,4 +39,10 @@ pub extern "C" fn ee_screens_status_button_right_up(press: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_screens_status_button_copy_data(press: *mut c_void) -> i64 {
     copy_data(&mut Host(press))
+}
+
+/// `EEUIFMGStatusButton::GetHelpString` over the host's press record (its result string): always true.
+#[no_mangle]
+pub extern "C" fn ee_screens_status_button_help(press: *mut c_void) -> bool {
+    help_string(&mut Host(press))
 }

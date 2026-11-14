@@ -90,6 +90,87 @@ enum class EeGeBmpFloat : uint32_t {
   Height,
 };
 
+/// The calls a font bitmap makes on other objects. `obj` is the object called; `a`, `b` as each says.
+enum class EeGeFbOp : uint32_t {
+  /// `new GEText(obj)` (the constructor's working text: the font referenced) -> the text.
+  TextNew = 1,
+  /// `delete (GEText*)obj` (the font released).
+  TextDelete,
+  /// `obj->SetFgColor(GEColor())`, then `obj->SetIsTransparent(true)`.
+  TextPrepare,
+  /// The text set to Windows-1252 byte `a` as UTF-8 (`PlatCp1252ToUtf8`, then `obj->SetText`).
+  TextSetByte,
+  /// `obj->GetTextExtent()`'s width and height into `*(float(*)[2])a`.
+  TextExtent,
+  /// `obj->SetLocation(*(const GE2DPoint*)a)`.
+  TextSetLocation,
+  /// `(const char*)obj->GetText()`.
+  TextString,
+  /// `&obj->GetLocation()`.
+  TextLocation,
+  /// `&obj->GetFgColor()`.
+  TextColor,
+  /// The platform's text functions (`GERustTextOps()`).
+  TextOps,
+  /// `PlatFontGetMetrics(obj->GetOSFont())`'s first and last characters into `*(unsigned long(*)[2])a`.
+  FontRange,
+  /// `obj->SetFontBitmap(owner)`.
+  FontSetBitmap,
+  /// `obj->GetScreen(a)` (a rasterizer).
+  RasterScreen,
+  /// `obj->GetBlending((*(unsigned long(*)[2])a)[0], [1], b)`.
+  RasterGetBlending,
+  /// `obj->SetBlending((*(const unsigned long(*)[2])a)[0], [1], b)`.
+  RasterSetBlending,
+  /// `obj->Draw((GEText*)a, (GESurface*)b)`.
+  RasterDrawText,
+  /// `obj->Draw((GEBitmap*)a, b)` -> its result.
+  RasterDrawBitmap,
+  /// `new GEBitmap`.
+  BmpNew,
+  /// `obj->Dereference()` (a bitmap).
+  BmpDereference,
+  /// `obj->SetTexture((GETexture*)a, b)`.
+  BmpSetTexture,
+  /// `obj->ComputeStretchedCoordsAndScale(r[0], r[0], r[1], b)` with `r = *(const GERectangle(*)[2])a`.
+  BmpStretch,
+  /// `obj->GetTextureCoordinatesPerVertex(c[0], t, t, c[1])` with `c = *(GETextureCoordinate(*)[2])a`.
+  BmpUvsPerVertex,
+  /// `obj->GetXScale()`, `obj->GetYScale()` into `*(float(*)[2])a`.
+  BmpScales,
+  /// `obj->SetColor(*(const GEColor*)a)`.
+  BmpSetColor,
+  /// `obj->SetTextureCoordinates(c[0], c[1], c[2], c[3])` with `c = *(const GETextureCoordinate(*)[4])a`.
+  BmpSetUvs,
+  /// `obj->SetXYScale(a's bits, b's bits)`.
+  BmpSetXyScale,
+  /// `obj->SetLocation(*(const GE2DPoint*)a)`.
+  BmpSetLocation,
+  /// `obj->GetSurface()` (a texture).
+  TexSurface,
+  /// `obj->Reference()` (a texture).
+  TexReference,
+  /// The texture's stage setter `a` (`EeGeTexStage`) with `b`, for stage -1.
+  TexStage,
+  /// `obj->TextUnlock()` (a surface).
+  SurfTextUnlock,
+  /// `obj->Lock()`.
+  SurfLock,
+  /// `obj->Unlock()`.
+  SurfUnlock,
+  /// `obj->GetMemoryAddress()`, with `GetWidth()`, `GetHeight()` and `GetBytesPerRow()` into
+  /// `*(unsigned long(*)[3])a`.
+  SurfPixels,
+  /// `obj->Clear(GEColor(0, 0, 0), 1.0f)`.
+  SurfClear,
+  /// `obj->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b)` (a screen) -> its result.
+  ScreenCreateSurface,
+  /// `obj->GetTextureManager()->MakeTexture((GESurface*)a)` (a screen) -> the texture.
+  ScreenMakeTexture,
+  /// `ESVerify` of the constructor's check `a`: 0 the surface's creation (line 228), 1 the texture (235).
+  Verify,
+};
+
 /// A call the managers make on another object (the C++ hosts `GEModelManagerHost` and `GETextureManagerHost`).
 /// `obj`, `a`, `b` and `c` are the operation's arguments as each describes; the result is the call's.
 enum class EeGeManOp : uint32_t {
@@ -356,6 +437,16 @@ enum class EeGeModXf : uint32_t {
   Internal,
 };
 
+/// The 3-byte order of `ee_ge_surf_row_out`.
+enum class EeGeSurfRow : uint32_t {
+  /// A BMP's: blue, green, red.
+  Bgr = 0,
+  /// A JPEG's: red, green, blue.
+  Rgb,
+  /// A JPG2's alpha image: the alpha three times.
+  Alpha,
+};
+
 /// The calls a texture makes on other objects. `obj` is the object called; `a`..`c` as each says.
 enum class EeGeTexOp : uint32_t {
   /// `obj->Reference()` (a surface).
@@ -515,6 +606,9 @@ struct EeGeCemModel;
 /// The bitmap.
 struct EeGeBitmap;
 
+/// The font bitmap.
+struct EeGeFontBitmap;
+
 /// The model.
 struct EeGeModel;
 
@@ -549,6 +643,9 @@ struct EeGe2DPoint {
   float x;
   float y;
 };
+
+/// The host: `owner` is the C++ font bitmap of the object calling.
+using EeGeFbHostFn = ptrdiff_t(*)(void *owner, EeGeFbOp op, void *obj, ptrdiff_t a, ptrdiff_t b);
 
 /// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
 using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
@@ -687,37 +784,6 @@ struct EeGeTextOps {
   uint8_t *(*next_chars)(const uint8_t *text, size_t characters);
   int (*cp1252_byte_of)(uint32_t character);
   int32_t (*measure)(const void *font, const char *text, uint32_t length);
-};
-
-/// The glyph atlas layout of `GEFontBitmap`'s constructor: the pen in the current texture and the row's height so far.
-/// Starts zeroed (no texture yet).
-struct EeGeFontPacker {
-  float x;
-  float y;
-  /// the tallest cell of the row (`unsigned long`: the cell heights are truncated into it)
-  unsigned long row_height;
-  bool has_texture;
-};
-
-/// `GEFBCharacter` (the C++ keeps it; only the rectangle is read here).
-struct EeGeFbCharacter {
-  float top_left[2];
-  float bottom_right[2];
-  EeGeRectangle rect;
-  void *texture;
-  float x_scale;
-  float y_scale;
-};
-
-/// One glyph of `GEFontBitmap::Draw`: the cell (an index into `mCharacters`), where the bitmap goes (`location`, the
-/// destination's top left), and for a clipped glyph the destination and source rectangles of
-/// `ComputeStretchedCoordsAndScale(destination, destination, source)`.
-struct EeGeGlyphDraw {
-  uint32_t kind;
-  uint32_t cell;
-  EeGe2DPoint location;
-  EeGeRectangle destination;
-  EeGeRectangle source;
 };
 
 /// The C++ host: `owner` is the C++ manager the object belongs to.
@@ -1130,6 +1196,32 @@ void *ee_ge_bmp_texture(EeGeBitmap *p, unsigned long screen);
 /// # Safety
 /// `p` is live.
 void *ee_ge_bmp_vertices(EeGeBitmap *p);
+
+/// `new GEFontBitmap(rasterizer, font, screen)`'s object (the glyphs rendered; the font holds `owner`).
+///
+/// # Safety
+/// `host` serves `owner` (a constructed `UReferenceCounter`) from now on; the pointers are live C++ objects.
+EeGeFontBitmap *ee_ge_fb_new(EeGeFbHostFn host,
+                             void *owner,
+                             void *raster,
+                             void *font,
+                             unsigned long screen);
+
+/// `~GEFontBitmap`.
+///
+/// # Safety
+/// `p` is live or NULL; it is freed.
+void ee_ge_fb_destroy(EeGeFontBitmap *p);
+
+/// `GEFontBitmap::Draw` (`clip` NULL: the unclipped draw) -> the last draw's result.
+///
+/// # Safety
+/// `p` is live; `text`, `raster` live C++ objects; `clip` NULL or valid.
+long ee_ge_fb_draw(EeGeFontBitmap *p,
+                   void *text,
+                   const EeGeRectangle *clip,
+                   void *raster,
+                   unsigned long screen);
 
 /// `UMCos`.
 float ee_ge_um_cos(float angle);
@@ -1694,39 +1786,6 @@ void ee_ge_text_extent(const EeGeTextOps *ops,
                        int32_t height,
                        EeGeRectangle *out);
 
-/// `GEFontBitmap`'s next glyph cell of the given extent: writes the cell, returns whether it starts a new texture.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_font_cell_place(EeGeFontPacker *packer,
-                           float width,
-                           float height,
-                           EeGeRectangle *out);
-
-/// `GEFontBitmap::CreateSurfaceAlpha` on a locked surface's memory.
-///
-/// # Safety
-/// `pixels` covers `height` rows of `bytes_per_row` bytes (the last row's padding may be missing).
-void ee_ge_font_surface_alpha(uint16_t *pixels,
-                              unsigned long width,
-                              unsigned long height,
-                              unsigned long bytes_per_row);
-
-/// `GEFontBitmap::Draw`'s glyphs (`clip` NULL: unclipped) into `out` (room for `capacity`; a text has at most one
-/// glyph per byte) -> the count written.
-///
-/// # Safety
-/// The pointers are valid (`cells` for `count`, `out` for `capacity`, `clip` may be NULL); `text` is NUL-terminated.
-size_t ee_ge_font_draw_plan(const EeGeTextOps *ops,
-                            const char *text,
-                            unsigned long first_character,
-                            const EeGeFbCharacter *cells,
-                            size_t count,
-                            const EeGe2DPoint *location,
-                            const EeGeRectangle *clip,
-                            EeGeGlyphDraw *out,
-                            size_t capacity);
-
 /// `GETextureStem`: the length of a texture's cache name within `name`.
 ///
 /// # Safety
@@ -2133,6 +2192,46 @@ bool ee_ge_physical_model_walk(const EeGePhysicalModels *table,
                                const void *other,
                                unsigned long other_frame,
                                unsigned long lod);
+
+/// `SaveAsBMP`'s, `SaveAsJPG`'s and `SaveAsJPG2`'s row: `width` pixels of `row` (`depth` 32, else 16 bits) as 3
+/// bytes each into `out`.
+///
+/// # Safety
+/// `row` holds `width` pixels; `out` has room for `width * 3` bytes.
+void ee_ge_surf_row_out(unsigned long format,
+                        unsigned long depth,
+                        const uint8_t *row,
+                        unsigned long width,
+                        EeGeSurfRow order,
+                        uint8_t *out);
+
+/// `LoadJPG`'s and `LoadJPG2`'s scanline: `stride` bytes of `src`, 3 a pixel, into the surface from `dst` (`depth`
+/// 32, else 16 bits): opaque colour, or (`alpha`) the first byte of each as the alpha of the pixel already there.
+/// Returns the next row's start: `skip` pixels after the row's last.
+///
+/// # Safety
+/// `src` holds `stride` bytes; the surface holds the row's pixels and the skip from `dst`.
+uint8_t *ee_ge_surf_row_in(unsigned long format,
+                           unsigned long depth,
+                           const uint8_t *src,
+                           unsigned long stride,
+                           bool alpha,
+                           uint8_t *dst,
+                           unsigned long skip);
+
+/// `LoadPNG`'s store: the decoded picture (`width` x `height`, blue, green, red, alpha a pixel, top row first) into
+/// the locked surface's top left (`depth` 32, else 16 bits; `no_alpha`: opaque).
+///
+/// # Safety
+/// `src` holds the picture; the surface (`bytes_per_row` a row) holds its rows.
+void ee_ge_surf_png_store(unsigned long format,
+                          unsigned long depth,
+                          bool no_alpha,
+                          const uint8_t *src,
+                          unsigned long width,
+                          unsigned long height,
+                          uint8_t *memory,
+                          unsigned long bytes_per_row);
 
 /// `GETextureManager::GETextureManager(path)`: the object of the C++ manager `owner`.
 ///

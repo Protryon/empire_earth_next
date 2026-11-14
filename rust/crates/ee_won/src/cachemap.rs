@@ -2,10 +2,12 @@
 //! `ReadFromFile` / `WriteToFile`), read and written here on the Rust file layer (`file.rs`'s `FileReader` and
 //! `FileWriter` state over `PlatFOpen`): the version, the count, each entry's id, valid flag, two times and four
 //! strings; which entries are kept (`http::cache_keeps`) and which cached files are deleted, in the original's
-//! order; a read or write that fails stops where the original's exception did. The C++ `HTTPCache` keeps its maps
-//! of entry objects and the file deletions (`WONFile`), handed each entry and each deletion as a callback.
+//! order; a read or write that fails stops where the original's exception did. The cache itself (its maps of entry
+//! objects and the file deletions) is httpcache.rs's since round 21; the C ABI below is the test glue's
+//! (tests/won/won_cachemap_glue.h, won_cachemap_test's stand-ins).
 //!
-//! Reached by nothing in the game (the HTTP cache served the WON patch and news pages; the servers are gone).
+//! Reached only by the lobby's cross-promotion image (the HTTP cache served the WON patch and news pages; the
+//! servers are gone).
 
 use std::ffi::{c_char, c_ulong, c_void};
 

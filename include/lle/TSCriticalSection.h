@@ -1,23 +1,23 @@
-// C:\EEX\Low-Level Engine\Thread System\TSCriticalSection.h (RECONSTRUCTION; layout proven by the engine's own
-// TSCriticalSection.cpp 0x53ca1..0x53cee and TSScheduler::CreateCriticalSection operator new(0x20)).
+// C:\EEX\Low-Level Engine\Thread System\TSCriticalSection.h (RECONSTRUCTION; the engine's own TSCriticalSection.cpp
+// 0x53ca1..0x53cee and TSScheduler::CreateCriticalSection operator new(0x20)). A recursive lock with its owner and
+// count. Whole in Rust (rust/crates/ee_ts, LLE lane round 3): the class has no data; a TSCriticalSection* is the
+// Rust section TSScheduler made, and every member forwards.
 #ifndef LLE_TSCRITICALSECTION_H
 #define LLE_TSCRITICALSECTION_H
 
 #include "platform/PlatThread.h"
+#include "rust/ee_ts.h"
 
 class LLE_API TSCriticalSection {
-    friend class TSScheduler;               // only the scheduler creates/destroys (private ctor/dtor exported)
+    friend class TSScheduler;               // only the scheduler creates/destroys
 public:
-    void Enter();
-    void Leave();
-    bool TryEnter();   // port: Enter without waiting; false when another thread holds it (the test harness)
+    void Enter() { ee_ts_section_enter(this->Rust()); }
+    void Leave() { ee_ts_section_leave(this->Rust()); }
+    bool TryEnter() { return ee_ts_section_try_enter(this->Rust()); }  // port: Enter without waiting (the harness)
 private:
-    TSCriticalSection();
-    ~TSCriticalSection();
-
-    PlatMutex* mSection;                    // +0x00 (the original held a CRITICAL_SECTION here; platform/PlatThread.h)
-    unsigned long mOwnerThread;             // +0x18 thread id while held (set on first Enter)
-    unsigned long mLockCount;               // +0x1c recursion count
+    TSCriticalSection() = delete;
+    ~TSCriticalSection() = delete;
+    const EeTsSection* Rust() const { return reinterpret_cast<const EeTsSection*>(this); }
 };
 
 #endif

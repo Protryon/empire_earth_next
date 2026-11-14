@@ -1,0 +1,311 @@
+use super::*;
+use std::cell::RefCell;
+
+// ---- the golden replay: golden_lobbydlg.txt, recorded by tests/won/won_lobbydlg_test.cpp over the original
+// statements. Every op the Rust makes must be the next "op" line (its arguments, a Find's slot by name, file, line
+// and type), answered by that line's "=" value; a "reenter" line after an op makes the input's event re-enter the
+// object; every call's result must be its "ret" line.
+
+const GOLDEN: &str = include_str!("golden_lobbydlg.txt");
+
+struct Replay {
+    lines: Vec<&'static str>,
+    at: usize,
+    dlg: *const EeWonLobbyDlg,
+    failed: Option<String>,
+}
+
+thread_local! {
+    static REPLAY: RefCell<Option<Replay>> = const { RefCell::new(None) };
+}
+
+fn fail(msg: String) {
+    REPLAY.with(|r| {
+        let mut r = r.borrow_mut();
+        let r = r.as_mut().unwrap();
+        if r.failed.is_none() {
+            r.failed = Some(msg);
+        }
+    });
+}
+
+fn next_line() -> Option<&'static str> {
+    REPLAY.with(|r| {
+        let mut r = r.borrow_mut();
+        let r = r.as_mut().unwrap();
+        let l = r.lines.get(r.at).copied();
+        r.at += 1;
+        l
+    })
+}
+
+fn peek_line() -> Option<&'static str> {
+    REPLAY.with(|r| {
+        let r = r.borrow();
+        let r = r.as_ref().unwrap();
+        r.lines.get(r.at).copied()
+    })
+}
+
+unsafe extern "C" fn replay_host(_dialog: *mut c_void, op: EeWonLobbyDlgOp, a: isize, b: isize, c: isize) -> isize {
+    let made = if op == EeWonLobbyDlgOp::Find {
+        // SAFETY: a Find's b is a slot of the table
+        let slot = unsafe { &*(b as *const EeWonLobbyDlgSlot) };
+        // SAFETY: static C strings
+        let file = unsafe { CStr::from_ptr(slot.file) }.to_str().unwrap();
+        format!("op {} {} {} {} {} {}", op as u32, a, slot_name(slot), file, slot.line, slot.ty as u32)
+    } else {
+        format!("op {} {} {} {}", op as u32, a, b, c)
+    };
+    let Some(line) = next_line() else {
+        fail(format!("op past the end: {made}"));
+        return 0;
+    };
+    let (head, answer) = line.split_once(" = ").unwrap_or((line, "0"));
+    if head != made {
+        fail(format!("expected '{line}', the Rust made '{made}'"));
+        return 0;
+    }
+    let answer: isize = answer.parse().unwrap();
+    if let Some(next) = peek_line() {
+        if let Some(rest) = next.strip_prefix("reenter ") {
+            next_line();
+            let comp: isize = rest.parse().unwrap();
+            let dlg = REPLAY.with(|r| r.borrow().as_ref().unwrap().dlg);
+            // SAFETY: the replay's live object; the call re-enters through a shared reference, as the C++ does
+            unsafe {
+                ee_won_lobbydlg_call(
+                    dlg,
+                    EeWonLobbyDlgCall::Event,
+                    0xE1,
+                    EeWonLobbyDlgEvent::InputTextChanged as isize,
+                    comp,
+                )
+            };
+        }
+    }
+    answer
+}
+
+fn call_of(n: u32) -> EeWonLobbyDlgCall {
+    use EeWonLobbyDlgCall as C;
+    [
+        C::Init,
+        C::Event,
+        C::Reset,
+        C::Slot,
+        C::CheckInput,
+        C::UpdatePasswordVisibility,
+        C::SetPort,
+        C::SetGamePort,
+        C::GetPort,
+        C::SetGameType,
+        C::GetGame,
+        C::GetPassword,
+        C::ApplyToServer,
+        C::NumSeconds,
+        C::Field,
+    ][n as usize - 1]
+}
+
+fn kind_of(n: u32) -> EeWonLobbyDlgKind {
+    use EeWonLobbyDlgKind as K;
+    [K::LanName, K::Password, K::AddFriend, K::DirectConnect, K::LanPort, K::CreateRoom, K::CreateGame, K::AdminAction]
+        [n as usize]
+}
+
+/// Replays every sequence; the number replayed.
+fn replay(golden: &'static str) -> Result<usize, String> {
+    let lines: Vec<&str> = golden.lines().filter(|l| !l.is_empty()).collect();
+    let mut starts: Vec<usize> =
+        lines.iter().enumerate().filter(|(_, l)| l.starts_with("seq ")).map(|(i, _)| i).collect();
+    starts.push(lines.len());
+    for w in starts.windows(2) {
+        let head: Vec<&str> = lines[w[0]].split(' ').collect();
+        let kind = kind_of(head[3].parse().unwrap());
+        let dlg = ee_won_lobbydlg_new(std::ptr::dangling_mut::<c_void>(), kind, Some(replay_host));
+        REPLAY.with(|r| {
+            *r.borrow_mut() = Some(Replay { lines: lines[w[0] + 1..w[1]].to_vec(), at: 0, dlg, failed: None })
+        });
+        while let Some(line) = next_line() {
+            let t: Vec<&str> = line.split(' ').collect();
+            match t[0] {
+                "call" => {
+                    let n: Vec<isize> = t[1..].iter().map(|x| x.parse().unwrap()).collect();
+                    // SAFETY: the live object
+                    let r = unsafe { ee_won_lobbydlg_call(dlg, call_of(n[0] as u32), n[1], n[2], n[3]) };
+                    let ret = next_line().unwrap_or("-");
+                    if ret != format!("ret {r}") {
+                        fail(format!("{line}: expected '{ret}', the Rust returned {r}"));
+                    }
+                }
+                // SAFETY: the live object, freed once
+                "free" => unsafe { ee_won_lobbydlg_free(dlg) },
+                _ => fail(format!("unexpected line '{line}'")),
+            }
+            let failed = REPLAY.with(|r| r.borrow().as_ref().unwrap().failed.clone());
+            if let Some(f) = failed {
+                return Err(format!("{}: {f}", lines[w[0]]));
+            }
+        }
+    }
+    Ok(starts.len() - 1)
+}
+
+#[test]
+fn golden_replay() {
+    let n = replay(GOLDEN).unwrap();
+    assert!(n >= 60, "{n} sequences");
+}
+
+#[test]
+fn golden_replay_fails_on_a_changed_op() {
+    // the first RequestFocus recorded as a SetEnabled
+    let changed = GOLDEN.replacen("op 5 ", "op 6 ", 1);
+    assert_ne!(changed, GOLDEN);
+    assert!(replay(Box::leak(changed.into_boxed_str())).is_err());
+}
+
+// ---- unit tests over a recording host
+
+type Answer = Box<dyn Fn(EeWonLobbyDlgOp, isize) -> isize>;
+
+thread_local! {
+    static LOG: RefCell<Vec<(EeWonLobbyDlgOp, isize, isize, isize)>> = const { RefCell::new(Vec::new()) };
+    static ANSWER: RefCell<Answer> = RefCell::new(Box::new(|_, _| 0));
+}
+
+unsafe extern "C" fn log_host(_d: *mut c_void, op: EeWonLobbyDlgOp, a: isize, b: isize, c: isize) -> isize {
+    LOG.with(|l| l.borrow_mut().push((op, a, b, c)));
+    if op == EeWonLobbyDlgOp::Find {
+        // SAFETY: a slot of the table
+        let slot = unsafe { &*(b as *const EeWonLobbyDlgSlot) };
+        let hash = slot_name(slot).bytes().fold(0usize, |h, b| h.wrapping_mul(31).wrapping_add(b as usize)) % 64;
+        return 0x100 + hash as isize * 16;
+    }
+    ANSWER.with(|f| f.borrow()(op, a))
+}
+
+fn set_answer(f: impl Fn(EeWonLobbyDlgOp, isize) -> isize + 'static) {
+    ANSWER.with(|a| *a.borrow_mut() = Box::new(f));
+}
+
+fn clear_log() {
+    LOG.with(|l| l.borrow_mut().clear());
+}
+
+fn made(kind: EeWonLobbyDlgKind) -> *mut EeWonLobbyDlg {
+    clear_log();
+    set_answer(|_, _| 0);
+    let d = ee_won_lobbydlg_new(std::ptr::null_mut(), kind, Some(log_host));
+    call(d, EeWonLobbyDlgCall::Init, 0x77, 0);
+    d
+}
+
+fn call(d: *mut EeWonLobbyDlg, c: EeWonLobbyDlgCall, a: isize, b: isize) -> isize {
+    // SAFETY: the tests' live objects
+    unsafe { ee_won_lobbydlg_call(d, c, a, b, 0) }
+}
+
+fn event(d: *mut EeWonLobbyDlg, kind: EeWonLobbyDlgEvent, component: isize) {
+    // SAFETY: the tests' live objects
+    unsafe { ee_won_lobbydlg_call(d, EeWonLobbyDlgCall::Event, 0xE1, kind as isize, component) };
+}
+
+fn free(d: *mut EeWonLobbyDlg) {
+    // SAFETY: freed once
+    unsafe { ee_won_lobbydlg_free(d) };
+}
+
+fn ops() -> Vec<EeWonLobbyDlgOp> {
+    LOG.with(|l| l.borrow().iter().map(|x| x.0).collect())
+}
+
+#[test]
+fn every_table_has_distinct_names_within_its_kind() {
+    for k in 0..8 {
+        let t = slots(kind_of(k));
+        assert!(t.len() <= MAX_SLOTS);
+        let mut names: Vec<&str> = t.iter().map(slot_name).collect();
+        names.sort();
+        names.dedup();
+        assert_eq!(names.len(), t.len());
+    }
+}
+
+#[test]
+fn admin_action_looks_its_title_up_last_and_releases_in_reverse_member_order() {
+    let d = made(EeWonLobbyDlgKind::AdminAction);
+    let finds: Vec<isize> =
+        LOG.with(|l| l.borrow().iter().filter(|x| x.0 == EeWonLobbyDlgOp::Find).map(|x| x.2).collect());
+    assert_eq!(finds.len(), 10);
+    assert_eq!(finds[9], &ADMIN_ACTION[0] as *const _ as isize);
+    let controls: Vec<isize> = (0..10).map(|i| call(d, EeWonLobbyDlgCall::Slot, i, 0)).collect();
+    clear_log();
+    free(d);
+    let released: Vec<isize> = LOG.with(|l| l.borrow().iter().map(|x| x.1).collect());
+    assert_eq!(released, controls.iter().rev().copied().collect::<Vec<_>>());
+}
+
+#[test]
+fn lan_port_sets_its_filter_after_the_input_and_checks_the_range() {
+    let d = made(EeWonLobbyDlgKind::LanPort);
+    assert_eq!(ops()[..3], [EeWonLobbyDlgOp::Find, EeWonLobbyDlgOp::InputSetNumeric, EeWonLobbyDlgOp::Find]);
+    // the game port is 6000 and so is the input: OK, enabled (IsDisabled answers 0), is disabled
+    call(d, EeWonLobbyDlgCall::SetGamePort, 6000, 0);
+    set_answer(|op, _| if op == EeWonLobbyDlgOp::InputToInt { 6000 } else { 0 });
+    clear_log();
+    call(d, EeWonLobbyDlgCall::CheckInput, 0, 0);
+    let log = LOG.with(|l| l.borrow().clone());
+    assert_eq!(log.last().map(|x| (x.0, x.2)), Some((EeWonLobbyDlgOp::SetEnabled, 0)));
+    assert_eq!(call(d, EeWonLobbyDlgCall::GetPort, 0, 0), 6000);
+    // a port of 70000 reads back as the original's unsigned short
+    set_answer(|op, _| if op == EeWonLobbyDlgOp::InputToInt { 70000 } else { 0 });
+    assert_eq!(call(d, EeWonLobbyDlgCall::GetPort, 0, 0), 70000 & 0xffff);
+    free(d);
+}
+
+#[test]
+fn create_game_button_press_updates_then_reaches_the_dialog() {
+    let d = made(EeWonLobbyDlgKind::CreateGame);
+    clear_log();
+    event(d, EeWonLobbyDlgEvent::ButtonPressed, 0);
+    let o = ops();
+    assert_eq!(o.first(), Some(&EeWonLobbyDlgOp::ButtonIsChecked));
+    assert_eq!(o.last(), Some(&EeWonLobbyDlgOp::BaseEvent));
+    clear_log();
+    event(d, EeWonLobbyDlgEvent::InputTextChanged, 0);
+    assert!(!ops().contains(&EeWonLobbyDlgOp::BaseEvent));
+    free(d);
+}
+
+#[test]
+fn admin_action_seconds_fall_through_the_segments() {
+    let d = made(EeWonLobbyDlgKind::AdminAction);
+    let duration_combo = call(d, EeWonLobbyDlgCall::Slot, 4, 0);
+    for (duration, segment, want) in
+        [(0, 0, 60), (1, 1, 5 * 3600), (3, 2, 30 * 86400), (4, 2, 0), (9, 0, 3600 * 60), (0, 7, 1)]
+    {
+        set_answer(move |op, a| match op {
+            EeWonLobbyDlgOp::ComboGetSel if a == duration_combo => duration,
+            EeWonLobbyDlgOp::ComboGetSel => segment,
+            _ => 0,
+        });
+        assert_eq!(call(d, EeWonLobbyDlgCall::NumSeconds, 0, 0), want);
+    }
+    free(d);
+}
+
+#[test]
+fn admin_action_reset_sets_the_reason_flag_per_action() {
+    let d = made(EeWonLobbyDlgKind::AdminAction);
+    for (action, optional) in [(15, 0), (8, 1), (14, 1), (7, 1), (2, 0)] {
+        call(d, EeWonLobbyDlgCall::Reset, action, 0x5000);
+        assert_eq!(call(d, EeWonLobbyDlgCall::Field, 3, 0), optional);
+        assert_eq!(call(d, EeWonLobbyDlgCall::Field, 2, 0), action);
+    }
+    // another action keeps the flag (the original left its locals unset)
+    call(d, EeWonLobbyDlgCall::Reset, 3, 0x5000);
+    assert_eq!(call(d, EeWonLobbyDlgCall::Field, 3, 0), 0);
+    free(d);
+}
