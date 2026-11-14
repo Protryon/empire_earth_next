@@ -59,12 +59,14 @@ pub const EE_SCENARIO_TEXT_OP_READ: u32 = 7;
 pub const EE_SCENARIO_TEXT_OP_CLEAR_ERRORS: u32 = 8;
 /// Error `slot` (`EE_SCENARIO_TEXT_ERROR_*`) formatted with `value` (an id) or `text2`, and `text` (the line).
 pub const EE_SCENARIO_TEXT_OP_ERROR: u32 = 9;
-/// The media strings' `Export` (the answer its result).
-pub const EE_SCENARIO_TEXT_OP_MEDIA_EXPORT: u32 = 10;
-/// The media strings' `Import(text, value, text2)` (the answer its result).
-pub const EE_SCENARIO_TEXT_OP_MEDIA_IMPORT: u32 = 11;
-/// The media strings' `Validate(text, value)` (the answer its result).
-pub const EE_SCENARIO_TEXT_OP_MEDIA_VALIDATE: u32 = 12;
+/// The media strings' section `slot` ([`MEDIA_TAGS`]) as a C string.
+pub const EE_SCENARIO_TEXT_OP_MEDIA: u32 = 10;
+/// The media strings' section `slot` set to `text`.
+pub const EE_SCENARIO_TEXT_OP_SET_MEDIA: u32 = 11;
+
+/// The media strings' sections (`EESMMediaStrings`' `mHints`, `mAftermath`, `mHistory`, `mInstructions`) by the
+/// number of their tag.
+pub const MEDIA_TAGS: [&[u8]; 4] = [b"0_Hints", b"1_After Math", b"2_History", b"3_Instructions"];
 
 /// `kSMEffectObject`, `kSMEffectMedia`, `kSMMediaActionChangeText` .. `kSMMediaActionSendChatMessage`,
 /// `kSMObjectActionClassName`, `kSMConditionChatMessageContains` (ee/EEScenarioIDs.h).
@@ -89,9 +91,24 @@ pub trait Text {
     fn read_line(&mut self) -> Option<Vec<u8>>;
     fn clear_errors(&mut self);
     fn error(&mut self, kind: u32, id: c_long, line: &[u8], name: &[u8]);
-    fn media_export(&mut self) -> c_long;
-    fn media_import(&mut self, line: &[u8], kind: c_ulong, text: &[u8]) -> c_long;
-    fn media_validate(&mut self, line: &[u8], kind: c_ulong) -> c_long;
+    fn media(&mut self, slot: u32) -> Vec<u8>;
+    fn set_media(&mut self, slot: u32, text: &[u8]);
+}
+
+/// `EESMMediaStrings::Export`: the aftermath, hints, instructions and history sections; 9 on a write error.
+fn media_export<T: Text + ?Sized>(t: &mut T) -> c_long {
+    for slot in [1, 0, 3, 2] {
+        let text = t.media(slot as u32);
+        if !t.write(&[b"{", MEDIA_TAGS[slot], b"}\n"].concat()) || !t.write(&[&text[..], b"\n\n"].concat()) {
+            return 9;
+        }
+    }
+    0
+}
+
+/// `EESMMediaStrings::Validate` and `Import`'s test: the section a line's tag names (the version aside).
+fn media_slot(line: &[u8]) -> Option<u32> {
+    MEDIA_TAGS.iter().position(|&tag| tag == line).map(|k| k as u32)
 }
 
 /// `sprintf("%ld")` of an `unsigned long` id.
@@ -145,7 +162,7 @@ fn write_entry<T: Text + ?Sized>(t: &mut T, id: c_ulong, kind: &[u8], name: &[u8
 /// `ExportText`: the media strings, the effects' and conditions' texts, the players' names; 9 on a write error
 /// (the players' loop goes on after one).
 pub fn export<L: Lists + ?Sized, T: Text + ?Sized>(l: &mut L, t: &mut T) -> c_long {
-    let mut result = t.media_export();
+    let mut result = media_export(t);
     if result != 0 {
         return result;
     }
@@ -301,7 +318,7 @@ pub fn validate<L: Lists + ?Sized, T: Text + ?Sized>(l: &mut L, t: &mut T, lines
     let mut errors = false;
     t.clear_errors();
     for line in lines {
-        if t.media_validate(line, kind) == 0 {
+        if media_slot(line).is_some() {
             continue;
         }
         let (error, id, scenario_name) = if let Some(p) = parse_effect(line, kind) {
@@ -370,8 +387,8 @@ pub fn apply<L: Lists + ?Sized, T: Text + ?Sized>(
         }
         // a last text the file did not end (no final new line): the original read past its list; empty here
         let text = texts.get(i).unwrap_or(&none);
-        result = t.media_import(line, kind, text);
-        if result == 0 {
+        if let Some(slot) = media_slot(line) {
+            t.set_media(slot, text);
             continue;
         }
         if let Some(p) = parse_effect(line, kind) {
@@ -516,16 +533,11 @@ impl Text for HostText<'_> {
     fn error(&mut self, kind: u32, id: c_long, line: &[u8], name: &[u8]) {
         self.call(EE_SCENARIO_TEXT_OP_ERROR, kind, id, std::ptr::null_mut(), line, name);
     }
-    fn media_export(&mut self) -> c_long {
-        self.call(EE_SCENARIO_TEXT_OP_MEDIA_EXPORT, 0, 0, std::ptr::null_mut(), b"", b"") as isize as c_long
+    fn media(&mut self, slot: u32) -> Vec<u8> {
+        Self::c_text(self.call(EE_SCENARIO_TEXT_OP_MEDIA, slot, 0, std::ptr::null_mut(), b"", b""))
     }
-    fn media_import(&mut self, line: &[u8], kind: c_ulong, text: &[u8]) -> c_long {
-        self.call(EE_SCENARIO_TEXT_OP_MEDIA_IMPORT, 0, kind as c_long, std::ptr::null_mut(), line, text) as isize
-            as c_long
-    }
-    fn media_validate(&mut self, line: &[u8], kind: c_ulong) -> c_long {
-        self.call(EE_SCENARIO_TEXT_OP_MEDIA_VALIDATE, 0, kind as c_long, std::ptr::null_mut(), line, b"") as isize
-            as c_long
+    fn set_media(&mut self, slot: u32, text: &[u8]) {
+        self.call(EE_SCENARIO_TEXT_OP_SET_MEDIA, slot, 0, std::ptr::null_mut(), text, b"");
     }
 }
 
@@ -607,9 +619,6 @@ mod tests {
     fn s(b: &[u8]) -> String {
         String::from_utf8_lossy(b).into_owned()
     }
-
-    /// The media strings' tags by slot.
-    const TAGS: [&[u8]; 4] = [b"0_Hints", b"1_After Math", b"2_History", b"3_Instructions"];
 
     impl Mock {
         fn list(&mut self, list: u32) -> &mut Vec<usize> {
@@ -750,33 +759,23 @@ mod tests {
         fn error(&mut self, kind: u32, id: c_long, line: &[u8], name: &[u8]) {
             self.errors.push((kind, id, s(line), s(name)));
         }
-        // the original's EESMMediaStrings: four "{tag}" sections; the tag's text, 3 for another line
-        fn media_export(&mut self) -> c_long {
-            for k in [1, 0, 3, 2] {
-                let line = [b"{", TAGS[k], b"}\n"].concat();
-                let text = [&self.media[k][..], b"\n\n"].concat();
-                if !self.write(&line) || !self.write(&text) {
-                    return 9;
-                }
-            }
-            0
+        fn media(&mut self, slot: u32) -> Vec<u8> {
+            self.media[slot as usize].clone()
         }
-        fn media_import(&mut self, line: &[u8], _: c_ulong, text: &[u8]) -> c_long {
-            match TAGS.iter().position(|&t| t == line) {
-                Some(k) => {
-                    self.media[k] = text.to_vec();
-                    0
-                }
-                None => 3,
-            }
+        fn set_media(&mut self, slot: u32, text: &[u8]) {
+            self.media[slot as usize] = text.to_vec();
         }
-        fn media_validate(&mut self, line: &[u8], _: c_ulong) -> c_long {
-            if TAGS.contains(&line) {
-                0
-            } else {
-                3
-            }
-        }
+    }
+
+    #[test]
+    fn the_media_tags_name_their_sections() {
+        assert_eq!(media_slot(b"0_Hints"), Some(0));
+        assert_eq!(media_slot(b"1_After Math"), Some(1));
+        assert_eq!(media_slot(b"2_History"), Some(2));
+        assert_eq!(media_slot(b"3_Instructions"), Some(3));
+        assert_eq!(media_slot(b"0_hints"), None);
+        assert_eq!(media_slot(b"0_Hints "), None);
+        assert_eq!(media_slot(b""), None);
     }
 
     #[allow(clippy::too_many_arguments)]

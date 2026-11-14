@@ -7,8 +7,6 @@
 #ifndef EE_EESMMEDIASTRINGS_H
 #define EE_EESMMEDIASTRINGS_H
 
-class FSFileSpec;
-
 class EESMMediaStrings {
 public:
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x1c5e78
@@ -16,9 +14,13 @@ public:
     // 0x1c5783 (`ret 0x10`; EECampaign::ListScenarioMedia 0x28cc2e: the scenario file, the media file list, the
     // error text, a flag; returns bool; provisional name)
     bool ListMediaFiles(const UWideString& inFile, std::vector<UWideString>& ioFiles, UWideString& outError, bool inFlag);
-    long Import(const UString& inLine, unsigned long inKind, const UWideString& inText);  // 0x1c5dfe (`ret 0xc`; 0: the line was a media string; provisional name)
-    long Validate(const UString& inLine, unsigned long inKind);  // 0x1c5f20 (`ret 8`; provisional name)
-    long Export(FSFileSpec& inFile);        // 0x1c5d2e (`ret 4`; EEScenarioManager::ExportText; provisional name)
+    // the trigger text file's sections by their tag's number (ee_scenario text.rs, with Export 0x1c5d2e, Import
+    // 0x1c5dfe and Validate 0x1c5f20): 0 the hints, 1 the aftermath, 2 the history, 3 the instructions
+    UWideString& GetSection(unsigned long inSlot)
+    {
+        UWideString* theSections[] = {&this->mHints, &this->mAftermath, &this->mHistory, &this->mInstructions};
+        return *theSections[inSlot];
+    }
 
 private:
     // 0x1c5828 (`ret 0x14`; ListMediaFiles' per-kind worker: 0 movie, 1 sound, 2 picture; provisional name)

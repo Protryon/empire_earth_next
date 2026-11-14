@@ -1229,7 +1229,8 @@ void EEScenarioManager::ObjectChanged(EESMObject* inObject, bool inParent, long 
 // The trigger text file of the instructions tab (EESEIAExport, EESEIAImport) is ee_scenario text.rs: ExportText
 // 0x1b23dc, ImportTriggerText 0x1b3ae9 with ValidateText 0x1b52bb, ImportText 0x1b4a95 and the line parsers
 // (ParseConditionID 0x1b463b, ParseEffectID 0x1b46bf, ParsePlayerName 0x1b4796). The elements' texts, the players'
-// names, the file and the language's error formats stay here, reached by operation (EESMTextOp)
+// names, the media strings' sections, the file and the language's error formats stay here, reached by operation
+// (EESMTextOp)
 
 namespace {
 struct EESMTextContext {
@@ -1289,10 +1290,8 @@ void* EESMTextOp(void* inContext, uint32_t inOp, uint32_t inSlot, long inValue, 
         m->mImportErrors.push_back(theMessage);
         break;
     }
-    case EE_SCENARIO_TEXT_OP_MEDIA_EXPORT: return (void*)(intptr_t)m->mMediaStrings.Export(*theContext->mFile);
-    case EE_SCENARIO_TEXT_OP_MEDIA_IMPORT:
-        return (void*)(intptr_t)m->mMediaStrings.Import(inText, (unsigned long)inValue, inText2);
-    case EE_SCENARIO_TEXT_OP_MEDIA_VALIDATE: return (void*)(intptr_t)m->mMediaStrings.Validate(inText, (unsigned long)inValue);
+    case EE_SCENARIO_TEXT_OP_MEDIA: return (void*)(const char*)m->mMediaStrings.GetSection(inSlot);
+    case EE_SCENARIO_TEXT_OP_SET_MEDIA: m->mMediaStrings.GetSection(inSlot) = inText; break;
     }
     return NULL;
 }

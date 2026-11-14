@@ -876,14 +876,11 @@ constexpr static const uint32_t EE_SCENARIO_TEXT_OP_CLEAR_ERRORS = 8;
 /// Error `slot` (`EE_SCENARIO_TEXT_ERROR_*`) formatted with `value` (an id) or `text2`, and `text` (the line).
 constexpr static const uint32_t EE_SCENARIO_TEXT_OP_ERROR = 9;
 
-/// The media strings' `Export` (the answer its result).
-constexpr static const uint32_t EE_SCENARIO_TEXT_OP_MEDIA_EXPORT = 10;
+/// The media strings' section `slot` ([`MEDIA_TAGS`]) as a C string.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_MEDIA = 10;
 
-/// The media strings' `Import(text, value, text2)` (the answer its result).
-constexpr static const uint32_t EE_SCENARIO_TEXT_OP_MEDIA_IMPORT = 11;
-
-/// The media strings' `Validate(text, value)` (the answer its result).
-constexpr static const uint32_t EE_SCENARIO_TEXT_OP_MEDIA_VALIDATE = 12;
+/// The media strings' section `slot` set to `text`.
+constexpr static const uint32_t EE_SCENARIO_TEXT_OP_SET_MEDIA = 11;
 
 /// `FindObjectByID(a)`: -1 without the object or (when `b` is 1) when its `mHasAttributeCheck` is 0, else its
 /// `Evaluate(0)` and then `mUnits.size()`.
