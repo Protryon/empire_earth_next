@@ -7,7 +7,7 @@
 //! - `call C a b f0 f1 f2 f3`: an inward call by the driver (`C` the class's call number, floats as hex bits),
 //!   answered by `ret r f0 f1 f2 f3` after the calls out it made;
 //! - `op O a b c d f0 f1 f2 f3`: a call out that is not pure (a string op's bytes as their FNV-1a hash: `StringNew`,
-//!   `TextSetBytes`, `ClipboardSet`, `TranslatedKey`), which the
+//!   `TextSetBytes`, `ClipboardSet`, `TranslatedKey`, `FormMusicStart`), which the
 //!   next lines answer: `set` lines, `do` lines
 //!   (an inward call the world made meanwhile, like `call`, answered by `ret`), then `= r f0 f1 f2 f3`;
 //! - `set O a r f0 f1 f2 f3`: the world's answer to the pure op `O` on `a` from now on (`EeUiOp::is_pure`); a pure op
@@ -169,7 +169,7 @@ impl<'a> Replay<'a> {
         // SAFETY: those ops pass NUL-terminated bytes
         let (ta, tb) = unsafe {
             match op {
-                EeUiOp::StringNew => (fnv(a), b),
+                EeUiOp::StringNew | EeUiOp::FormMusicStart => (fnv(a), b),
                 EeUiOp::TextSetBytes => (a, fnv(b)),
                 // a combo box's inserted line (R6 ui round 15)
                 EeUiOp::ComboAct if a == 1 => (a, fnv(b)),

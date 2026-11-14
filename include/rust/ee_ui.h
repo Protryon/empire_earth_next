@@ -421,6 +421,210 @@ enum class EeUiOp : uint32_t {
   ComboQuery = 197,
   /// The combo box's action `a` (`comboobj::EeUiComboAct`) with `b`, `c`, `d`.
   ComboAct = 198,
+  /// *Pure*: control `a`'s virtual `GetType()`.
+  FormCtlType = 200,
+  /// *Pure*: control `a`'s `UIEntity::GetType()`.
+  FormCtlEntityType = 201,
+  /// *Pure*: control `a`'s `GetDisplayMode()`.
+  FormCtlDisplayMode = 202,
+  /// *Pure*: control `a`'s `GetIsDirty()`.
+  FormCtlDirty = 203,
+  /// *Pure*: control `a`'s `GetDrawCount()`.
+  FormCtlDrawCount = 204,
+  /// *Pure*: control `a`'s `GetIndex()`.
+  FormCtlIndex = 205,
+  /// *Pure*: control `a`'s `GetId()`.
+  FormCtlId = 206,
+  /// *Pure*: control `a`'s virtual `GetTabable()`.
+  FormCtlTabable = 207,
+  /// *Pure*: radio button `a`'s `GetIsChecked()`.
+  FormCtlChecked = 208,
+  /// *Pure*: control `a`'s virtual `GetIMEEnabled()`.
+  FormCtlImeEnabled = 209,
+  /// *Pure*: group `a`'s `GetIsEnabled()`.
+  FormGroupEnabled = 210,
+  /// *Pure*: group `a`'s `GetEntityCount()`.
+  FormGroupCount = 211,
+  /// *Pure*: background `a`'s `GetDrawPriority()`.
+  FormBgPriority = 212,
+  /// *Pure*: background `a`'s `GetBackgroundID()`.
+  FormBgId = 213,
+  /// *Pure*: background `a`'s `GetIsVisible()`.
+  FormBgVisible = 214,
+  /// *Pure*: background `a`'s `GetRectangle()` -> `f`.
+  FormBgRect = 215,
+  /// *Pure*: hot key `a`'s `GetAlwaysFire()`.
+  FormHotKeyAlways = 216,
+  /// *Pure*: hot key `a`'s `GetKeyCount()`.
+  FormHotKeyKeys = 217,
+  /// *Pure*: the manager's `GetNumberOfSurfaces()`.
+  FormSurfaces = 218,
+  /// *Pure*: the manager's screen window's `GetWidth()`.
+  FormWindowWidth = 219,
+  /// *Pure*: the manager's screen window's `GetHeight()`.
+  FormWindowHeight = 220,
+  /// *Pure*: `UIControlsTable::GetUIControlsTable(a)`.
+  FormTable = 221,
+  /// *Pure*: table `a`'s `GetFormIndex()`.
+  FormTableFormIndex = 222,
+  /// *Pure*: table `a`'s `GetGroup()`.
+  FormTableGroup = 223,
+  /// *Pure*: table `a`'s `GetIsVisible() == true`.
+  FormTableVisible = 224,
+  /// *Pure*: table `a`'s `GetControlType()`.
+  FormTableType = 225,
+  /// *Pure*: table `a`'s `GetStringTableID()`.
+  FormTableStringId = 226,
+  /// *Pure*: the manager's `GetDrawCandidateWindow()`.
+  FormCandidateShown = 227,
+  /// *Pure*: the candidate window's `GetIMECopyCandidateRectangle()` -> `f`.
+  FormCandidateRect = 228,
+  /// *Pure*: label `a`'s `GetFitRectToText()`.
+  FormLabelFit = 229,
+  /// *Pure*: `UIManager::GetMouseWheel() != NULL`.
+  FormMouseWheel = 230,
+  /// *Pure*: `UIForm::sTabKey != NULL`.
+  FormKeysReady = 231,
+  /// *Pure*: bitmap `a`'s texture on the manager's screen: `(float)GetWidth()`, `(float)GetHeight()` -> `f[0]`, `f[1]`.
+  FormBitmapTexSize = 232,
+  /// *Pure*: `gISKeyboard->GetEntity(a)`.
+  FormKeyEntity = 233,
+  /// *Pure*: hot key `a`'s `mKey`.
+  FormHotKeyKey = 234,
+  /// *Pure*: hot key `a`'s `mModifiers[0]`.
+  FormHotKeyMod0 = 235,
+  /// *Pure*: hot key `a`'s `mModifiers[1]`.
+  FormHotKeyMod1 = 236,
+  /// *Pure*: hot key `a`'s `mModifiers[2]`.
+  FormHotKeyMod2 = 237,
+  /// Group `a`'s `GetEntity(b)` as a control.
+  FormGroupEntity = 240,
+  /// `new UIEntityGroup` -> the group.
+  FormGroupNew = 241,
+  /// `delete` group `a`.
+  FormGroupDelete = 242,
+  /// Group `a`'s `AddEntity(control b)`.
+  FormGroupAdd = 243,
+  /// Group `a`'s `RemoveEntity(control b)`.
+  FormGroupRemove = 244,
+  /// Control `a`'s virtual `SetDirty(b != 0)`.
+  FormCtlSetDirty = 245,
+  /// Control `a`'s virtual `SetDisplayMode(b)`.
+  FormCtlSetDisplayMode = 246,
+  /// Control `a`'s virtual `HideControl()`.
+  FormCtlHide = 247,
+  /// Control `a`'s `SetStringTableID(b)`.
+  FormCtlSetStringId = 248,
+  /// Control `a`'s virtual `TabbedFrom()`.
+  FormCtlTabbedFrom = 249,
+  /// Control `a`'s virtual `TabbedTo()`.
+  FormCtlTabbedTo = 250,
+  /// Control `a`'s virtual `UpdateKeyboard()` -> its result.
+  FormCtlUpdateKeyboard = 251,
+  /// Control `a`'s `UpdateMouse((f[0], f[1]))` -> its result.
+  FormCtlUpdateMouse = 252,
+  /// Control `a`'s virtual `MouseWheelTurned(b)` -> its result.
+  FormCtlWheelTurned = 253,
+  /// Control `a`'s `FireTriggerEvent(b)`.
+  FormCtlFireTrigger = 254,
+  /// Control `a`'s virtual `ReleaseCapturedMouse()`.
+  FormCtlReleaseMouse = 255,
+  /// Control `a`'s virtual `ReleaseCapturedKeyboard()`.
+  FormCtlReleaseKeyboard = 256,
+  /// Control `a`'s virtual `GetHelpString` into the host's help string (emptied first) -> its result.
+  FormHelpGet = 257,
+  /// Label `a`'s `SetText(the host's help string, true)`.
+  FormHelpSetText = 258,
+  /// Background `a`'s virtual `Open()`.
+  FormBgOpen = 259,
+  /// Background `a`'s virtual `Close()`.
+  FormBgClose = 260,
+  /// `delete` background `a`.
+  FormBgDelete = 261,
+  /// Background `a`'s virtual `DrawBackground(f)` -> its result.
+  FormBgDraw = 262,
+  /// Background `a`'s virtual `LoadBackground()`.
+  FormBgLoad = 263,
+  /// Background `a`'s virtual `UnloadBackground()`.
+  FormBgUnload = 264,
+  /// Background `a`'s virtual `RelayoutBackground()`.
+  FormBgRelayout = 265,
+  /// `new UIHotKey(this, *hot key a)` -> the copy.
+  FormHotKeyCopy = 266,
+  /// `delete` hot key `a`.
+  FormHotKeyDelete = 267,
+  /// Hot key `a`'s `mEnabled = b != 0`.
+  FormHotKeySetEnabled = 268,
+  /// Hot key `a`'s virtual `FireEvents()` -> whether one fired.
+  FormHotKeyFire = 269,
+  /// `new UIHotKey` for `AddHotKey`: `mForm = this`, `GetEntity(a, mKey)`, `CalculateKeyCount()` -> it.
+  FormHotKeyTemp = 270,
+  /// Hot key `a`'s `SetModifier(b, slot c)`.
+  FormHotKeySetModifier = 271,
+  /// Hot key `a`'s event `b` (0 just pressed, 1 pressed, 2 just unpressed, 3 double pressed) set to `c`.
+  FormHotKeySetEvent = 272,
+  /// Hot key `a`'s `mAlwaysFire = b != 0`.
+  FormHotKeySetAlways = 273,
+  /// Event `a`'s `b`: 0 `Uninitialize()`, 1 `Dereference()`, 2 `Reference()`, 3 `Initialize()`.
+  FormEventCall = 274,
+  /// Event `a`'s `ProcessEvent(this, NULL)` -> its result.
+  FormEventProcess = 275,
+  /// `new UIEMouseWheelScroll` -> the event.
+  FormWheelEventNew = 276,
+  /// The manager's `ProcessAllEventsForForm(this)`.
+  FormManagerProcessEvents = 277,
+  /// The manager's `AddDirtyRectangle(f, this)`.
+  FormManagerAddDirty = 278,
+  /// The manager's `StopMusic()`.
+  FormMusicStop = 279,
+  /// The manager's `StartMusic(UWideString((const char*)a))` (the goldens trace the bytes' hash).
+  FormMusicStart = 280,
+  /// The manager's `CreateFormEvent(a)` -> the event.
+  FormCreateFormEvent = 281,
+  /// Table `a`'s `CreateControl(the manager)` -> the control.
+  FormTableCreateControl = 282,
+  /// Table `a`'s `CreateControlEvent(this)`.
+  FormTableCreateEvent = 283,
+  /// Table `a`'s `RelayoutControl(control b, the manager)`.
+  FormTableRelayout = 284,
+  /// `delete` form manager `a`.
+  FormManagerDelete = 285,
+  /// `TSScheduler::CreateCriticalSection` -> the lock.
+  FormLockNew = 286,
+  /// `TSScheduler::DestroyCriticalSection(a)`.
+  FormLockDelete = 287,
+  /// Lock `a`'s `Enter()`.
+  FormLockEnter = 288,
+  /// Lock `a`'s `Leave()`.
+  FormLockLeave = 289,
+  /// `gISKeyboard->GetEntity(kKeyTab, sTabKey)`, then `kKeyShift`'s into `sShiftKey`.
+  FormKeysFetch = 290,
+  /// `sTabKey->JustPressed()`.
+  FormTabJustPressed = 291,
+  /// `sShiftKey->GetValue()`.
+  FormShiftValue = 292,
+  /// `UIManager::GetMouseWheelScrollAmount()`.
+  FormWheelAmount = 293,
+  /// `gISMouse->GetEntity(a)` -> the entity.
+  FormMouseEntity = 294,
+  /// Mouse entity `a`'s query `b` (`mouse::EntityQuery`).
+  FormMouseAsk = 295,
+  /// The virtual `SetHelpTextPopupLocation()`.
+  FormVirtHelpLocation = 296,
+  /// The virtual `DrawBackground(f)` -> its result.
+  FormVirtDrawBackground = 297,
+  /// Bitmap `a`'s `SetTextureCoordinates`: top-left `(f[0], f[1])`, top-right `(f[2], f[1])`, bottom-left `(f[0], f[3])`, bottom-right `(f[2], f[3])`.
+  FormBitmapSetTexCoords = 298,
+  /// The rasterizer's `Draw(bitmap a, the manager's screen)` -> its result.
+  FormBitmapDraw = 299,
+  /// The rasterizer's `Draw(text a, f, the manager's drawing surface)` -> its result.
+  FormTextDraw = 300,
+  /// The rasterizer's `Draw(rhombus a, the manager's screen)` -> its result.
+  FormRhombusDraw = 301,
+  /// Rhombus `a`'s `SetColor(label b's GetGEText()->GetFgColor())`.
+  FormRhombusLabelColor = 302,
+  /// `TMGetTime()`.
+  FormNow = 303,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -778,6 +982,138 @@ enum class EeUiEditCall : uint32_t {
   TabbedFrom = 48,
   /// `TabbedTo()`.
   TabbedTo = 49,
+};
+
+/// The inward calls (the C++ shim's methods). Rectangles and points travel in `f`.
+enum class EeUiFormCall : uint32_t {
+  Activate = 1,
+  Deactivate = 2,
+  Close = 3,
+  Open = 4,
+  /// -> its result.
+  CopyData = 5,
+  DrawPolygons = 6,
+  DrawText = 7,
+  /// The virtual `DrawBackground(f)`'s base body -> its result.
+  DrawBackground = 8,
+  RelayoutForm = 9,
+  /// The virtual `SetHelpTextPopupLocation()`'s base body.
+  SetHelpTextPopupLocation = 10,
+  UpdateKeyboard = 11,
+  UpdateMouse = 12,
+  /// The virtual `SetRectangle(f)`'s base body.
+  SetRectangle = 13,
+  AddBackground = 14,
+  AddClipRectangle = 15,
+  /// `AddControl(a, group b)`.
+  AddControl = 16,
+  /// `AddDatabaseControl({a, b})`.
+  AddDatabaseControl = 17,
+  ReserveControlIndex = 18,
+  AddDrawControl = 19,
+  /// `AddEvent({id a, type b})`.
+  AddEvent = 20,
+  /// `AddHotKey(*(const UIHotKey*)a, group b)`.
+  AddHotKey = 21,
+  /// The built hot key's just-pressed (`a`) and pressed (`b`) events, before `AddHotKeyBuild`.
+  AddHotKeyEvents = 22,
+  /// Its just-unpressed (`a`) and double-pressed (`b`) events.
+  AddHotKeyEvents2 = 23,
+  /// `AddHotKey(key, m1, m2, m3, the four events, group, always)`: the key and modifiers 16 bits each in `a` (low to
+  /// high, each at most 0xffff), the group in `b`'s low 32 bits, always-fire above.
+  AddHotKeyBuild = 24,
+  ClearAllClipRectangles = 25,
+  /// `DrawBackground(bitmap a, f, location)`: the location's x and y float bits in `b` (low, high) -> the draw's.
+  DrawBitmap = 26,
+  /// Stages rectangle `a` (0..2) for `DrawTiles`.
+  StageRect = 27,
+  /// `DrawBackground(bitmap a, staged 0, staged 1, staged 2)` -> OK.
+  DrawTiles = 28,
+  /// `DrawClippedText(f, text a, control b)` -> its result.
+  DrawClippedText = 29,
+  /// `GetAvailableIndex` -> the index, or -1 for false.
+  AvailableIndex = 30,
+  BackgroundById = 31,
+  ControlById = 32,
+  EntityGroupById = 33,
+  ShouldFadeIn = 34,
+  /// `GetToolTipShadowRectangle(f) -> f`.
+  ToolTipShadow = 35,
+  LoadBackgrounds = 36,
+  /// `LockDrawBackground` (`a` 1) / `UnlockDrawBackground` (0).
+  LockDraw = 37,
+  RedrawIntersectControls = 38,
+  RemoveAllHotKeys = 39,
+  RemoveAllHotKeysForAGroup = 40,
+  RemoveBackground = 41,
+  /// `RemoveControl(a, group b)`.
+  RemoveControl = 42,
+  /// `RemoveHotKey(key, m1, m2, m3, group b)`: `a` packed as `AddHotKeyBuild`'s.
+  RemoveHotKeyKeys = 43,
+  /// `RemoveHotKey(index a, group b)`.
+  RemoveHotKeyAt = 44,
+  SetAllControlsDirty = 45,
+  /// One of the seventeen event setters: event index `a` (`EV_*`), the event `b`.
+  SetEvent = 46,
+  /// The private `SetFormEvent(type a, event b)`.
+  SetFormEvent = 47,
+  SetFormManager = 48,
+  SetHelpTextLabel = 49,
+  SetHelpTextTimeDelay = 50,
+  /// `SetHotKeyGroupEnabled(a, b != 0)`.
+  SetHotKeyGroupEnabled = 51,
+  /// `SetLayout`: the four types 16 bits each in `a` (left, right, top, bottom), the offsets in `f` (same order).
+  SetLayout = 52,
+  /// `SetMusicFileName`: `a` the name's NUL-terminated bytes.
+  SetMusicFileName = 53,
+  SetPopup = 54,
+  SetTabbing = 55,
+  /// -> 1 when moved.
+  SetTabStop = 56,
+  SetUseToolTips = 57,
+  ShiftTab = 58,
+  Tab = 59,
+  UnloadBackgrounds = 60,
+  UpdateHelpString = 61,
+  UpdateMouseLocation = 62,
+  SetKeyboardCaptured = 63,
+  SetMouseCaptured = 64,
+  SetMouseOverControl = 65,
+  UpdateHelpText = 66,
+  /// `CheckedRadioButton(a)` -> the index.
+  CheckedRadioButton = 67,
+  AddCopyDirtyRectangle = 68,
+  AddDirtyRectangle = 69,
+  Control = 70,
+  ControlCount = 71,
+  ControlGroupCount = 72,
+  DesignedHeight = 73,
+  DesignedWidth = 74,
+  EntityGroup = 75,
+  /// -> 0, `f[0]` the opacity.
+  FadeOpacity = 76,
+  /// The event of index `a`.
+  Event = 77,
+  FormId = 78,
+  FormManager = 79,
+  HelpTextLabel = 80,
+  HowLongOpen = 81,
+  KeyboardCaptured = 82,
+  MouseCaptured = 83,
+  UseExclusiveCoords = 84,
+  Manager = 85,
+  /// -> the address of the mouse location (`GE2DPoint`'s layout).
+  MouseLocation = 86,
+  MouseOverControl = 87,
+  /// -> the address of the music file name's NUL-terminated bytes.
+  MusicFileName = 88,
+  /// -> the address of the rectangle (`GERectangle`'s layout).
+  Rectangle = 89,
+  TabbingOn = 90,
+  TabStop = 91,
+  UseGdiForText = 92,
+  DrawToolTipShadow = 93,
+  SetDrawToolTipShadow = 94,
 };
 
 /// The inward calls (the C++ shims' methods).
@@ -1227,6 +1563,9 @@ struct EeUiCombo;
 /// The Rust UIEditBox.
 struct EeUiEdit;
 
+/// The Rust UIForm.
+struct EeUiForm;
+
 /// The Rust UITextLabel (and UITLScrolling).
 struct EeUiLabel;
 
@@ -1587,22 +1926,6 @@ struct EeUiBorderLine {
   bool light;
 };
 
-/// What `UIForm::DrawClippedText` clips against (`clips`: the form's `mClipRectangles`, `clip_count` of them, read
-/// before the first draw).
-struct EeUiClipInfo {
-  const EeUiRect *clips;
-  size_t clip_count;
-  bool has_popup;
-  bool popup_is_control;
-  EeUiRect popup_rect;
-  EeUiRect popup_draw_rect;
-  bool has_candidate;
-  EeUiRect candidate_rect;
-};
-
-/// The C++'s text draw: `Draw(text, *r, drawing surface)` -> its result.
-using EeUiTextDrawFn = long(*)(void *ctx, const EeUiRect *r);
-
 /// `UICheckBox`'s members in their C++ order (from `mTextLabel` on).
 struct EeUiCheckFields {
   /// `UITextLabel*`, C++'s.
@@ -1753,6 +2076,43 @@ ptrdiff_t ee_ui_edit_call(const EeUiEdit *edit,
                           ptrdiff_t b,
                           ptrdiff_t c,
                           ptrdiff_t d,
+                          float *f);
+
+/// A new Rust form for the C++ `form`: `UIForm(controls, groups, manager, id, gdi)`.
+EeUiForm *ee_ui_form_new(void *form,
+                         EeUiHostFn host,
+                         unsigned long controls,
+                         unsigned long groups,
+                         void *manager,
+                         unsigned long id,
+                         bool gdi);
+
+/// A new Rust form from the database record `data` (a `UIDbDataForms*`) and its lower-cased music file name.
+///
+/// # Safety
+/// `data` is a live record; `music` NUL-terminated bytes.
+EeUiForm *ee_ui_form_new_db(void *form,
+                            EeUiHostFn host,
+                            void *manager,
+                            const void *data,
+                            const char *music,
+                            bool gdi);
+
+/// The destructor: the events, hot keys, groups, backgrounds, database controls, poll, form manager and lock
+/// released; the object freed.
+///
+/// # Safety
+/// `form` came from `ee_ui_form_new`/`_new_db` (or is NULL) and is not used again.
+void ee_ui_form_free(EeUiForm *form);
+
+/// One of UIForm's methods ([`EeUiFormCall`]).
+///
+/// # Safety
+/// `form` is live; `f` is NULL or four live floats; see [`EeUiForm::call`].
+ptrdiff_t ee_ui_form_call(const EeUiForm *form,
+                          EeUiFormCall call,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
                           float *f);
 
 /// A new Rust label for the C++ `label` (its `UIControl` part constructed): `f` the rectangle given (a
@@ -1948,9 +2308,6 @@ void ee_ui_background_set_rectangle(void *background, EeUiRect rect);
 /// `UIBackground::SetVisibility(visible)`.
 void ee_ui_background_set_visibility(void *background, bool visible);
 
-/// `UIForm::DrawBackground(bitmap, rect, draw, tiles)`.
-void ee_ui_form_draw_tiles(void *form, void *bitmap, EeUiRect rect, EeUiRect draw, EeUiRect tiles);
-
 /// `UIFullBackground::LoadBackground`'s tile file name into the `UString` `out`.
 void ee_ui_background_full_tile_name(const char *name,
                                      unsigned long row,
@@ -2046,52 +2403,6 @@ float ee_ui_controls_table_scroll_bar_length(const EeUiRect *rect, bool vertical
 
 /// `CreateSlider`: the page size, capped below the range.
 long ee_ui_controls_table_slider_page_size(long start_range, long end_range, long page_size);
-
-/// `UIForm::CheckedRadioButton`.
-void ee_ui_form_checked_radio_button(void *form, long *index);
-
-/// `UIForm::Tab`.
-void ee_ui_form_tab(void *form, bool tabbing, unsigned long tab_stop);
-
-/// `UIForm::ShiftTab`.
-void ee_ui_form_shift_tab(void *form, bool tabbing, unsigned long tab_stop);
-
-/// `UIForm::UpdateMouseLocation`'s search -> whether a control was found, at `(*group, *entity)`.
-bool ee_ui_form_hit(void *form, EeUiPoint at, long *group, unsigned long *entity);
-
-/// `UIForm::AddCopyDirtyRectangle(rect)`.
-void ee_ui_form_add_copy_dirty_rectangle(void *form, const EeUiRect *rect);
-
-/// `UIForm::AddDirtyRectangle(rect)` after its popup test (`surfaces`: the manager's surface count).
-void ee_ui_form_add_dirty_rectangle(void *form,
-                                    const EeUiRect *rect,
-                                    unsigned long surfaces);
-
-/// `UIForm::CopyData` -> its result.
-long ee_ui_form_copy_data(void *form);
-
-/// `UIForm::Open`.
-void ee_ui_form_open(void *form);
-
-/// `UIForm::Close`.
-void ee_ui_form_close(void *form);
-
-/// `UIForm::SetPopup(control)`.
-void ee_ui_form_set_popup(void *form, void *control);
-
-/// `UIForm::RedrawIntersectControls(rect)`.
-void ee_ui_form_redraw_intersect_controls(void *form, const EeUiRect *rect);
-
-/// `UIForm::SetAllControlsDirty`.
-void ee_ui_form_set_all_controls_dirty(void *form);
-
-/// `UIForm::GetToolTipShadowRectangle(rect, out)`.
-EeUiRect ee_ui_form_tool_tip_shadow(EeUiRect rect);
-
-/// `UIForm::SetHelpTextPopupLocation`'s point for the mouse, the tool tip label's rectangle and the form's.
-EeUiPoint ee_ui_form_help_location(EeUiPoint mouse,
-                                   EeUiRect label,
-                                   EeUiRect form);
 
 /// `UIFontTable::Create`'s reading of one font record.
 EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
@@ -2210,9 +2521,6 @@ size_t ee_ui_hotkey_name(const char *m0,
 /// `UIHotKey::FireEvents` -> whether an event fired.
 bool ee_ui_hotkey_fire_events(void *key);
 
-/// `UIForm::UpdateKeyboard` -> its result.
-long ee_ui_form_update_keyboard(void *form);
-
 /// `UIHotKey::SetDoublePressedEvent` .. `SetPressedEvent`: `slot` is the member.
 void ee_ui_hotkey_set_event(void **slot, void *event);
 
@@ -2227,12 +2535,6 @@ EeUiBorderLine ee_ui_border_line(EeUiRect r,
                                  uint32_t side,
                                  unsigned long i,
                                  unsigned long border_type);
-
-/// `UIForm::DrawClippedText(r, text, control)` -> the last draw's result.
-long ee_ui_form_draw_clipped_text(const EeUiClipInfo *info,
-                                  EeUiRect r,
-                                  EeUiTextDrawFn draw_text,
-                                  void *ctx);
 
 /// `UILBString::DrawTextA`'s row `i`.
 EeUiRect ee_ui_string_list_row(EeUiRect ctr, unsigned long i, unsigned long line_height);
@@ -2261,9 +2563,6 @@ void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigne
 /// `UIControl::UpdateMouse(*location)` (`location` a `GE2DPoint*`, handed back to `MouseMove`) -> its result.
 long ee_ui_control_update_mouse(void *control,
                                 const void *location);
-
-/// `UIForm::UpdateMouse` -> its result.
-long ee_ui_form_update_mouse(void *form);
 
 /// `UIManager::AddDirtyRectangle(rect, form)`.
 void ee_ui_manager_add_dirty_rectangle(void *manager, const EeUiRect *rect, void *form);

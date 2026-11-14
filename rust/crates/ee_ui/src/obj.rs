@@ -360,6 +360,212 @@ pub enum EeUiOp {
     ComboQuery = 197,
     /// The combo box's action `a` (`comboobj::EeUiComboAct`) with `b`, `c`, `d`.
     ComboAct = 198,
+
+    // ---- UIForm (R6 ui round 16): its controls, groups, backgrounds, hot keys, events and the manager by address
+    /// *Pure*: control `a`'s virtual `GetType()`.
+    FormCtlType = 200,
+    /// *Pure*: control `a`'s `UIEntity::GetType()`.
+    FormCtlEntityType = 201,
+    /// *Pure*: control `a`'s `GetDisplayMode()`.
+    FormCtlDisplayMode = 202,
+    /// *Pure*: control `a`'s `GetIsDirty()`.
+    FormCtlDirty = 203,
+    /// *Pure*: control `a`'s `GetDrawCount()`.
+    FormCtlDrawCount = 204,
+    /// *Pure*: control `a`'s `GetIndex()`.
+    FormCtlIndex = 205,
+    /// *Pure*: control `a`'s `GetId()`.
+    FormCtlId = 206,
+    /// *Pure*: control `a`'s virtual `GetTabable()`.
+    FormCtlTabable = 207,
+    /// *Pure*: radio button `a`'s `GetIsChecked()`.
+    FormCtlChecked = 208,
+    /// *Pure*: control `a`'s virtual `GetIMEEnabled()`.
+    FormCtlImeEnabled = 209,
+    /// *Pure*: group `a`'s `GetIsEnabled()`.
+    FormGroupEnabled = 210,
+    /// *Pure*: group `a`'s `GetEntityCount()`.
+    FormGroupCount = 211,
+    /// *Pure*: background `a`'s `GetDrawPriority()`.
+    FormBgPriority = 212,
+    /// *Pure*: background `a`'s `GetBackgroundID()`.
+    FormBgId = 213,
+    /// *Pure*: background `a`'s `GetIsVisible()`.
+    FormBgVisible = 214,
+    /// *Pure*: background `a`'s `GetRectangle()` -> `f`.
+    FormBgRect = 215,
+    /// *Pure*: hot key `a`'s `GetAlwaysFire()`.
+    FormHotKeyAlways = 216,
+    /// *Pure*: hot key `a`'s `GetKeyCount()`.
+    FormHotKeyKeys = 217,
+    /// *Pure*: the manager's `GetNumberOfSurfaces()`.
+    FormSurfaces = 218,
+    /// *Pure*: the manager's screen window's `GetWidth()`.
+    FormWindowWidth = 219,
+    /// *Pure*: the manager's screen window's `GetHeight()`.
+    FormWindowHeight = 220,
+    /// *Pure*: `UIControlsTable::GetUIControlsTable(a)`.
+    FormTable = 221,
+    /// *Pure*: table `a`'s `GetFormIndex()`.
+    FormTableFormIndex = 222,
+    /// *Pure*: table `a`'s `GetGroup()`.
+    FormTableGroup = 223,
+    /// *Pure*: table `a`'s `GetIsVisible() == true`.
+    FormTableVisible = 224,
+    /// *Pure*: table `a`'s `GetControlType()`.
+    FormTableType = 225,
+    /// *Pure*: table `a`'s `GetStringTableID()`.
+    FormTableStringId = 226,
+    /// *Pure*: the manager's `GetDrawCandidateWindow()`.
+    FormCandidateShown = 227,
+    /// *Pure*: the candidate window's `GetIMECopyCandidateRectangle()` -> `f`.
+    FormCandidateRect = 228,
+    /// *Pure*: label `a`'s `GetFitRectToText()`.
+    FormLabelFit = 229,
+    /// *Pure*: `UIManager::GetMouseWheel() != NULL`.
+    FormMouseWheel = 230,
+    /// *Pure*: `UIForm::sTabKey != NULL`.
+    FormKeysReady = 231,
+    /// *Pure*: bitmap `a`'s texture on the manager's screen: `(float)GetWidth()`, `(float)GetHeight()` -> `f[0]`, `f[1]`.
+    FormBitmapTexSize = 232,
+    /// *Pure*: `gISKeyboard->GetEntity(a)`.
+    FormKeyEntity = 233,
+    /// *Pure*: hot key `a`'s `mKey`.
+    FormHotKeyKey = 234,
+    /// *Pure*: hot key `a`'s `mModifiers[0]`.
+    FormHotKeyMod0 = 235,
+    /// *Pure*: hot key `a`'s `mModifiers[1]`.
+    FormHotKeyMod1 = 236,
+    /// *Pure*: hot key `a`'s `mModifiers[2]`.
+    FormHotKeyMod2 = 237,
+    /// Group `a`'s `GetEntity(b)` as a control.
+    FormGroupEntity = 240,
+    /// `new UIEntityGroup` -> the group.
+    FormGroupNew = 241,
+    /// `delete` group `a`.
+    FormGroupDelete = 242,
+    /// Group `a`'s `AddEntity(control b)`.
+    FormGroupAdd = 243,
+    /// Group `a`'s `RemoveEntity(control b)`.
+    FormGroupRemove = 244,
+    /// Control `a`'s virtual `SetDirty(b != 0)`.
+    FormCtlSetDirty = 245,
+    /// Control `a`'s virtual `SetDisplayMode(b)`.
+    FormCtlSetDisplayMode = 246,
+    /// Control `a`'s virtual `HideControl()`.
+    FormCtlHide = 247,
+    /// Control `a`'s `SetStringTableID(b)`.
+    FormCtlSetStringId = 248,
+    /// Control `a`'s virtual `TabbedFrom()`.
+    FormCtlTabbedFrom = 249,
+    /// Control `a`'s virtual `TabbedTo()`.
+    FormCtlTabbedTo = 250,
+    /// Control `a`'s virtual `UpdateKeyboard()` -> its result.
+    FormCtlUpdateKeyboard = 251,
+    /// Control `a`'s `UpdateMouse((f[0], f[1]))` -> its result.
+    FormCtlUpdateMouse = 252,
+    /// Control `a`'s virtual `MouseWheelTurned(b)` -> its result.
+    FormCtlWheelTurned = 253,
+    /// Control `a`'s `FireTriggerEvent(b)`.
+    FormCtlFireTrigger = 254,
+    /// Control `a`'s virtual `ReleaseCapturedMouse()`.
+    FormCtlReleaseMouse = 255,
+    /// Control `a`'s virtual `ReleaseCapturedKeyboard()`.
+    FormCtlReleaseKeyboard = 256,
+    /// Control `a`'s virtual `GetHelpString` into the host's help string (emptied first) -> its result.
+    FormHelpGet = 257,
+    /// Label `a`'s `SetText(the host's help string, true)`.
+    FormHelpSetText = 258,
+    /// Background `a`'s virtual `Open()`.
+    FormBgOpen = 259,
+    /// Background `a`'s virtual `Close()`.
+    FormBgClose = 260,
+    /// `delete` background `a`.
+    FormBgDelete = 261,
+    /// Background `a`'s virtual `DrawBackground(f)` -> its result.
+    FormBgDraw = 262,
+    /// Background `a`'s virtual `LoadBackground()`.
+    FormBgLoad = 263,
+    /// Background `a`'s virtual `UnloadBackground()`.
+    FormBgUnload = 264,
+    /// Background `a`'s virtual `RelayoutBackground()`.
+    FormBgRelayout = 265,
+    /// `new UIHotKey(this, *hot key a)` -> the copy.
+    FormHotKeyCopy = 266,
+    /// `delete` hot key `a`.
+    FormHotKeyDelete = 267,
+    /// Hot key `a`'s `mEnabled = b != 0`.
+    FormHotKeySetEnabled = 268,
+    /// Hot key `a`'s virtual `FireEvents()` -> whether one fired.
+    FormHotKeyFire = 269,
+    /// `new UIHotKey` for `AddHotKey`: `mForm = this`, `GetEntity(a, mKey)`, `CalculateKeyCount()` -> it.
+    FormHotKeyTemp = 270,
+    /// Hot key `a`'s `SetModifier(b, slot c)`.
+    FormHotKeySetModifier = 271,
+    /// Hot key `a`'s event `b` (0 just pressed, 1 pressed, 2 just unpressed, 3 double pressed) set to `c`.
+    FormHotKeySetEvent = 272,
+    /// Hot key `a`'s `mAlwaysFire = b != 0`.
+    FormHotKeySetAlways = 273,
+    /// Event `a`'s `b`: 0 `Uninitialize()`, 1 `Dereference()`, 2 `Reference()`, 3 `Initialize()`.
+    FormEventCall = 274,
+    /// Event `a`'s `ProcessEvent(this, NULL)` -> its result.
+    FormEventProcess = 275,
+    /// `new UIEMouseWheelScroll` -> the event.
+    FormWheelEventNew = 276,
+    /// The manager's `ProcessAllEventsForForm(this)`.
+    FormManagerProcessEvents = 277,
+    /// The manager's `AddDirtyRectangle(f, this)`.
+    FormManagerAddDirty = 278,
+    /// The manager's `StopMusic()`.
+    FormMusicStop = 279,
+    /// The manager's `StartMusic(UWideString((const char*)a))` (the goldens trace the bytes' hash).
+    FormMusicStart = 280,
+    /// The manager's `CreateFormEvent(a)` -> the event.
+    FormCreateFormEvent = 281,
+    /// Table `a`'s `CreateControl(the manager)` -> the control.
+    FormTableCreateControl = 282,
+    /// Table `a`'s `CreateControlEvent(this)`.
+    FormTableCreateEvent = 283,
+    /// Table `a`'s `RelayoutControl(control b, the manager)`.
+    FormTableRelayout = 284,
+    /// `delete` form manager `a`.
+    FormManagerDelete = 285,
+    /// `TSScheduler::CreateCriticalSection` -> the lock.
+    FormLockNew = 286,
+    /// `TSScheduler::DestroyCriticalSection(a)`.
+    FormLockDelete = 287,
+    /// Lock `a`'s `Enter()`.
+    FormLockEnter = 288,
+    /// Lock `a`'s `Leave()`.
+    FormLockLeave = 289,
+    /// `gISKeyboard->GetEntity(kKeyTab, sTabKey)`, then `kKeyShift`'s into `sShiftKey`.
+    FormKeysFetch = 290,
+    /// `sTabKey->JustPressed()`.
+    FormTabJustPressed = 291,
+    /// `sShiftKey->GetValue()`.
+    FormShiftValue = 292,
+    /// `UIManager::GetMouseWheelScrollAmount()`.
+    FormWheelAmount = 293,
+    /// `gISMouse->GetEntity(a)` -> the entity.
+    FormMouseEntity = 294,
+    /// Mouse entity `a`'s query `b` (`mouse::EntityQuery`).
+    FormMouseAsk = 295,
+    /// The virtual `SetHelpTextPopupLocation()`.
+    FormVirtHelpLocation = 296,
+    /// The virtual `DrawBackground(f)` -> its result.
+    FormVirtDrawBackground = 297,
+    /// Bitmap `a`'s `SetTextureCoordinates`: top-left `(f[0], f[1])`, top-right `(f[2], f[1])`, bottom-left `(f[0], f[3])`, bottom-right `(f[2], f[3])`.
+    FormBitmapSetTexCoords = 298,
+    /// The rasterizer's `Draw(bitmap a, the manager's screen)` -> its result.
+    FormBitmapDraw = 299,
+    /// The rasterizer's `Draw(text a, f, the manager's drawing surface)` -> its result.
+    FormTextDraw = 300,
+    /// The rasterizer's `Draw(rhombus a, the manager's screen)` -> its result.
+    FormRhombusDraw = 301,
+    /// Rhombus `a`'s `SetColor(label b's GetGEText()->GetFgColor())`.
+    FormRhombusLabelColor = 302,
+    /// `TMGetTime()`.
+    FormNow = 303,
 }
 
 impl EeUiOp {
@@ -407,6 +613,44 @@ impl EeUiOp {
                 | TextFgColor
                 | ListNumLines
                 | ComboQuery
+                | FormCtlType
+                | FormCtlEntityType
+                | FormCtlDisplayMode
+                | FormCtlDirty
+                | FormCtlDrawCount
+                | FormCtlIndex
+                | FormCtlId
+                | FormCtlTabable
+                | FormCtlChecked
+                | FormCtlImeEnabled
+                | FormGroupEnabled
+                | FormGroupCount
+                | FormBgPriority
+                | FormBgId
+                | FormBgVisible
+                | FormBgRect
+                | FormHotKeyAlways
+                | FormHotKeyKeys
+                | FormSurfaces
+                | FormWindowWidth
+                | FormWindowHeight
+                | FormTable
+                | FormTableFormIndex
+                | FormTableGroup
+                | FormTableVisible
+                | FormTableType
+                | FormTableStringId
+                | FormCandidateShown
+                | FormCandidateRect
+                | FormLabelFit
+                | FormMouseWheel
+                | FormKeysReady
+                | FormBitmapTexSize
+                | FormKeyEntity
+                | FormHotKeyKey
+                | FormHotKeyMod0
+                | FormHotKeyMod1
+                | FormHotKeyMod2
         )
     }
 }
