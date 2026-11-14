@@ -233,6 +233,50 @@ constexpr static const uint32_t EE_CONTAGION_NEW_COMPLEX = 1;
 /// The helper holds it already.
 constexpr static const uint32_t EE_CONTAGION_NEW_HELD = 2;
 
+/// `FSFile::Read(unsigned long&)` into `*value` (a `c_ulong`; the old value in, the read value out).
+constexpr static const uint32_t EE_CONTAGION_IO_READ_ULONG = 0;
+
+/// `FSFile::Read(long&)` into `*value` (a `c_long`).
+constexpr static const uint32_t EE_CONTAGION_IO_READ_LONG = 1;
+
+/// `FSFile::Read(float&)` into `*value` (an `f32`).
+constexpr static const uint32_t EE_CONTAGION_IO_READ_FLOAT = 2;
+
+/// `FSFile::Write(const unsigned long&)` of `*value`.
+constexpr static const uint32_t EE_CONTAGION_IO_WRITE_ULONG = 3;
+
+/// `FSFile::Write(const long&)` of `*value`.
+constexpr static const uint32_t EE_CONTAGION_IO_WRITE_LONG = 4;
+
+/// `FSFile::Write(const float&)` of `*value`.
+constexpr static const uint32_t EE_CONTAGION_IO_WRITE_FLOAT = 5;
+
+/// The helper: `mUnitIDs.push_back(*value)` (a `c_ulong`).
+constexpr static const uint32_t EE_CONTAGION_IO_PUSH_UNIT_ID = 6;
+
+/// The helper: `mUnits.size()` into `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CONTAGION_IO_UNIT_COUNT = 7;
+
+/// The helper: unit `*value`'s `mUnitID` into `*value` (a `c_ulong`, the index in, the id out).
+constexpr static const uint32_t EE_CONTAGION_IO_UNIT_ID = 8;
+
+/// The manager: delete every helper and clear the calamity indexes.
+constexpr static const uint32_t EE_CONTAGION_IO_CLEAR = 9;
+
+/// The manager: a new helper loaded by its own `Load` (its result ignored) and kept with the calamity index
+/// `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CONTAGION_IO_LOAD_HELPER = 10;
+
+/// The manager: `mHelpers.size()` into `*value` (a `c_ulong`).
+constexpr static const uint32_t EE_CONTAGION_IO_HELPER_COUNT = 11;
+
+/// The manager: helper `*value`'s calamity index among the active calamities into `*value` (a `c_ulong`, the
+/// index in); the result 0 when it has one, else not 0.
+constexpr static const uint32_t EE_CONTAGION_IO_HELPER_CALAMITY = 12;
+
+/// The manager: helper `*value`'s own `Save` (the index in; its result).
+constexpr static const uint32_t EE_CONTAGION_IO_SAVE_HELPER = 13;
+
 /// [`EeTechUnitView::flags`]: the unit has a complex unit.
 constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
 
@@ -869,6 +913,19 @@ struct EeCalamityIoFfi {
   long (*call)(void *ctx, uint32_t op, void *value);
 };
 
+/// A contagion helper's numbers (`EEContagionHelper` derives from it).
+struct EeContagionHelperFields {
+  long mHelperID;
+  float mTimeSinceLastSpread;
+  float mTimeSinceLastUpdate;
+};
+
+/// The C++'s I/O callback: `call(ctx, op, value)`.
+struct EeContagionIoFfi {
+  void *ctx;
+  long (*call)(void *ctx, uint32_t op, void *value);
+};
+
 /// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
 struct EeTechEffectValues {
   float value;
@@ -1261,6 +1318,38 @@ long ee_calamity_record_load(EeCalamityFields *fields, EeCalamityIoFfi io);
 /// # Safety
 /// `fields` valid for reads; `io`'s callback valid.
 long ee_calamity_record_save(const EeCalamityFields *fields, EeCalamityIoFfi io);
+
+/// [`helper_load`] into `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads and writes; `io`'s callback valid, not touching `*fields`.
+long ee_contagion_helper_load(EeContagionHelperFields *fields,
+                              unsigned long major,
+                              unsigned long minor,
+                              EeContagionIoFfi io);
+
+/// [`helper_save`] of `*fields`.
+///
+/// # Safety
+/// `fields` valid for reads; `io`'s callback valid.
+long ee_contagion_helper_save(const EeContagionHelperFields *fields, EeContagionIoFfi io);
+
+/// [`helper_checksum`].
+///
+/// # Safety
+/// `fields` valid for reads.
+long ee_contagion_helper_checksum(const EeContagionHelperFields *fields,
+                                  long unit_ids,
+                                  long calamity);
+
+/// [`manager_load`]; the last helper id into `*next_id`.
+///
+/// # Safety
+/// `next_id` valid for writes; `io`'s callback valid, not touching `*next_id`.
+long ee_contagion_manager_load(long *next_id, bool counter, EeContagionIoFfi io);
+
+/// [`manager_save`].
+long ee_contagion_manager_save(long next_id, bool counter, EeContagionIoFfi io);
 
 /// `EEApplyEventEffect(float, float, EEEventEffect*)`.
 ///
