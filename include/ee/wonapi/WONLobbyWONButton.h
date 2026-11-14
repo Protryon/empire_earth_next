@@ -36,6 +36,7 @@ public:
     void SetTextPadding(int l,int t,int r,int b) { this->mLeftTextPad=l; this->mTopTextPad=t; this->mRightTextPad=r; this->mBottomTextPad=b; }
     void SetFocusPadding(int l,int t,int r,int b) { this->mLeftFocusPad=l; this->mTopFocusPad=t; this->mRightFocusPad=r; this->mBottomFocusPad=b; }
     int GetRightTextPad() { return this->mRightTextPad; }
+    int GetLeftTextPad() { return this->mLeftTextPad; }
     void SetHorzTextPad(int l,int r) { this->mLeftTextPad=l; this->mRightTextPad=r; }
     void SetFont(Font*); //3187e0
     WONButton* Duplicate(); // at 0x00718d40

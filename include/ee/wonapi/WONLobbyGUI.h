@@ -641,6 +641,12 @@ public:
     void SetVertTextPad(int t,int b) { this->mTopTextPad=(unsigned char)t;this->mBottomTextPad=(unsigned char)b; }
     void IncrementHorzTextPad(int l,int r) { this->mLeftTextPad=this->mLeftTextPad+(unsigned char)l;this->mRightTextPad=this->mRightTextPad+(unsigned char)r; }
     void IncrementVertTextPad(int t,int b) { this->mTopTextPad=this->mTopTextPad+(unsigned char)t;this->mBottomTextPad=this->mBottomTextPad+(unsigned char)b; }
+    // the fields the subclasses and the skins read or set alone (R6 WON round 35's census)
+    bool IsTransparent() { return this->mIsTransparent; }
+    void SetTransparentField(bool t) { this->mIsTransparent=t; } // the flag alone (no background grab)
+    int GetLeftTextPad() { return this->mLeftTextPad; }
+    void SetLeftTextPad(int l) { this->mLeftTextPad=(unsigned char)l; }
+    void SetHorzAlignField(HorzAlign h) { this->mHAlign=(unsigned char)h; } // the field alone (the text's centring kept)
     SmartPtr<WrappedText> mText; // at +0x44
     StandardColor mStandardTextColor; //48
     int mTextColor; //4c
