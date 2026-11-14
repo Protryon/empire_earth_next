@@ -35,6 +35,9 @@
 #include <dmusic.h>
 
 long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow);
+#ifdef SE_NEW
+typedef void SEChannelDescription;   // the entry point's argument (no longer declared by the engine)
+#endif
 
 // ---- output
 static std::string gLine;
@@ -560,7 +563,15 @@ DmResult DmPerformance_renderPcm(DmPerformance* inPerformance, void* outBuffer, 
 // ---- the sequences
 static std::string gMusicFolder;                 // ends with a separator
 static SESoundManager* gManager;
-static unsigned long gCats;                      // the manager's category count
+static unsigned long gCats;
+static void DeleteManager()
+{
+#ifdef SE_NEW
+    SESoundManager::Destroy(gManager);
+#else
+    delete gManager;
+#endif
+}                      // the manager's category count
 static SESMInstanceNode* gNodes[8];
 static std::vector<long> gInstanceIDs;           // ids seen
 static std::vector<long> gScoreIDs;
@@ -990,7 +1001,7 @@ static void Sequence(uint64_t inSeed)
             if (gManager) {
                 if (R(12) == 0) {
                     Begin("delmgr");
-                    delete gManager;
+                    DeleteManager();
                     gManager = NULL;
                     End("-");
                 }
@@ -1001,7 +1012,11 @@ static void Sequence(uint64_t inSeed)
                     int k = R(6) == 0 ? 2 : (int)R(2);
                     Begin("newmgr %lu %lu %d", cats, chans, k);
                     gCats = cats;
+#ifdef SE_NEW
+                    gManager = SESoundManager::Create(k == 2 ? NULL : gPaths[k], theMixer, cats, chans);
+#else
                     gManager = new SESoundManager(k == 2 ? NULL : gPaths[k], theMixer, cats, chans);
+#endif
                     End("%lu %lu %lu", gManager->GetAvailableChannels(), gPaths[0]->Count(), gPaths[1]->Count());
                 }
             }
@@ -1016,7 +1031,7 @@ static void Sequence(uint64_t inSeed)
     }
     if (gManager) {
         Begin("delmgr");
-        delete gManager;
+        DeleteManager();
         gManager = NULL;
         End("-");
     }
