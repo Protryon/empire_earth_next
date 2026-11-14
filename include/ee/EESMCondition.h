@@ -9,7 +9,6 @@
 #ifndef EE_EESMCONDITION_H
 #define EE_EESMCONDITION_H
 
-#include "ee/EESMIDMap.h"
 #include "rust/ee_scenario.h"
 
 // the numbers (mType .. mUsesPlayerAttribute) are EeScenarioConditionFields (ee_scenario fields.rs)
@@ -18,10 +17,6 @@ public:
     EESMCondition();                        // 0x1ba89f
     ~EESMCondition();                       // 0x1ba976
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1bb154
-    virtual void RemapObjects(EESMIDMap& inMap);  // +0x04 0x1bb392 (remaps mObjectIndex)
-    virtual void RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex);  // +0x08 0x1bb326
-    virtual void RemapTriggers(EESMIDMap& inMap);  // +0x0c 0x1bb3a4 (remaps mTrigger)
-    virtual void RenumberTriggers(unsigned long inOldIndex, unsigned long inNewIndex);  // +0x10 0x1bb35c
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x14 0x1bb3b6
     // 0x1ba998: inValue against inTarget by the operator index (mOperator: <, <=, ==, >=, >) (provisional name)
     bool Compare(unsigned long inValue, unsigned long inOperator, unsigned long inTarget);

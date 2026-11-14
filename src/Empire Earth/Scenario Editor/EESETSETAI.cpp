@@ -317,7 +317,7 @@ void EESETSETBuildObject::Show(EESETSEffectControls* inControls)
     inControls->mScenarioComboBoxes[1]->ChangeWidth(200);
     inControls->mScenarioComboBoxes[1]->mMode = kSETriggerScreenObject;
     inControls->mScenarioComboBoxes[1]->DeleteAllEntries();
-    gWorld.mScenarioManager->GetObjectNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
     inControls->mScenarioComboBoxes[1]->AppendStringArray(theNames);
     inControls->mScenarioComboBoxes[1]->SetDisplayMode(kDisplayModeShown);
 }
@@ -423,7 +423,7 @@ void EESETSETCreateAIMilitaryGroup::Load(EESMEffect* inEffect, EESETSEffectContr
     inControls->mListBoxes[1]->DeleteAllEntries();
     inControls->mListBoxes[0]->DeleteAllEntries();
     this->mObjectsAdded = inEffect->mObjects;
-    gWorld.mScenarioManager->GetObjectNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
     for (unsigned long i = 1; i < theNames.size(); i++) {
         UILBString* theList;
         if (std::find(this->mObjectsAdded.begin(), this->mObjectsAdded.end(), i) == this->mObjectsAdded.end()) {

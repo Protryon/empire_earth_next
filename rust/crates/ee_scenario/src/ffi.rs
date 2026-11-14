@@ -355,67 +355,6 @@ pub unsafe extern "C" fn ee_scenario_object_save(
     save::object_save(&mut s, &f, minor)
 }
 
-/// The effect's `Renumber*` of a kind (`EE_SCENARIO_RENUMBER_*`; its object list's entries:
-/// [`ee_scenario_renumber_ids`]).
-///
-/// # Safety
-/// `fields` must be valid for a read and a write.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_effect_renumber(
-    fields: *mut EeScenarioEffectFields,
-    kind: u32,
-    old: c_ulong,
-    new: c_ulong,
-) {
-    // SAFETY: the caller's contract
-    unsafe { fields::effect_renumber(&mut *fields, kind, old, new) }
-}
-
-/// The condition's `Renumber*` of a kind.
-///
-/// # Safety
-/// `fields` must be valid for a read and a write.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_condition_renumber(
-    fields: *mut EeScenarioConditionFields,
-    kind: u32,
-    old: c_ulong,
-    new: c_ulong,
-) {
-    // SAFETY: the caller's contract
-    unsafe { fields::condition_renumber(&mut *fields, kind, old, new) }
-}
-
-/// The object's `Renumber*` of a kind.
-///
-/// # Safety
-/// `fields` must be valid for a read and a write.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_object_renumber(
-    fields: *mut EeScenarioObjectFields,
-    kind: u32,
-    old: c_ulong,
-    new: c_ulong,
-) {
-    // SAFETY: the caller's contract
-    unsafe { fields::object_renumber(&mut *fields, kind, old, new) }
-}
-
-/// The same upkeep of each of `count` indices (an effect's object list).
-///
-/// # Safety
-/// `ids` must be valid for `count` reads and writes (any pointer when `count` is 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_renumber_ids(ids: *mut c_ulong, count: usize, old: c_ulong, new: c_ulong) {
-    if count == 0 {
-        return;
-    }
-    // SAFETY: the caller's contract
-    for id in unsafe { std::slice::from_raw_parts_mut(ids, count) } {
-        fields::renumber(id, old, new);
-    }
-}
-
 /// `EESMEffect::SetAIVariable`'s stores for the effect's behaviour, in order, into `out` (room for
 /// [`EE_SCENARIO_AI_MAX_WRITES`]), their number into `out_count`; whether the applied effect is kept for a saved game.
 ///
@@ -563,69 +502,6 @@ pub unsafe extern "C" fn ee_scenario_timed_add(
 ) {
     // SAFETY: the caller's contract
     unsafe { queue_of(queue) }.add(effect, time, cinematic);
-}
-
-/// `EEScenarioManager::RemoveTimedEffects`.
-///
-/// # Safety
-/// `queue` must be a live queue.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_remove_effect(queue: *mut EeScenarioTimedQueue, effect: c_long) {
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.remove_effect(effect);
-}
-
-/// `EEScenarioManager::EraseTimedEffect` (`index` below the count).
-///
-/// # Safety
-/// `queue` must be a live queue.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_erase(queue: *mut EeScenarioTimedQueue, index: usize) {
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.entries.remove(index);
-}
-
-/// Empties the queue (`SortEffects`).
-///
-/// # Safety
-/// `queue` must be a live queue.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_clear(queue: *mut EeScenarioTimedQueue) {
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.entries.clear();
-}
-
-/// `RenumberEffects`' timed part.
-///
-/// # Safety
-/// `queue` must be a live queue.
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_renumber(queue: *mut EeScenarioTimedQueue, old: c_ulong, new: c_ulong) {
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.renumber(old, new);
-}
-
-/// `RemapEffects`' timed part: the map as `count` pairs `olds[i]` -> `news[i]`.
-///
-/// # Safety
-/// `queue` must be a live queue; `olds` and `news` valid for `count` reads (either may be null when it is 0).
-#[no_mangle]
-pub unsafe extern "C" fn ee_scenario_timed_remap(
-    queue: *mut EeScenarioTimedQueue,
-    olds: *const c_ulong,
-    news: *const c_ulong,
-    count: usize,
-) {
-    // SAFETY: the caller's contract
-    let (olds, news) = unsafe {
-        if count == 0 {
-            (&[][..], &[][..])
-        } else {
-            (std::slice::from_raw_parts(olds, count), std::slice::from_raw_parts(news, count))
-        }
-    };
-    // SAFETY: the caller's contract
-    unsafe { queue_of(queue) }.remap(olds, news);
 }
 
 /// `SetTimedEffectHasRun`: the effect's `mEffects` index (`found` false: not in the list).

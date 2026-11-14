@@ -54,6 +54,12 @@
 //   digest LABEL                          the map's tiles and mesh, every unit, the selection, the paint area, and
 //                                         the game's save chunks (the header, which holds the date, left out;
 //                                         four chunks differ by run: ChunkByRun)
+//   sm OP LIST [INDEX] | sm fill | sm state  the scenario manager's lists: an editor list operation (new, sort, up,
+//                                         down, delete, dup), index references set on every element, every element's
+//                                         references and the name lists (ScenarioListStep)
+//   sm text | sm export | sm import FILE KIND VALIDATE   the trigger text file (EESEIAExport, EESEIAImport): the
+//                                         effects' and conditions' texts set, ExportText's file, ImportTriggerText
+//                                         over a fixed file (ScenarioTextStep)
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -123,6 +129,12 @@
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEScenarioManager.h"
+#include "ee/EEScenarioIDs.h"
+#include "ee/EESMArea.h"
+#include "ee/EESMCondition.h"
+#include "ee/EESMEffect.h"
+#include "ee/EESMObject.h"
+#include "ee/EESMTrigger.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEDatabaseTables.h"
@@ -465,6 +477,298 @@ void Digest(const std::string& inLabel, std::vector<std::string>& outLines)
              (double)theArea.GetRight(), (double)theArea.GetBottom());
     outLines.push_back(theText);
     SaveDigest(outLines);
+}
+
+// ------------------------------------------------------------------------------------------------ the scenario lists
+// TEST ONLY: the scenario manager's list operations as the trigger screens call them (EESETSArea's, EESETSCondition's
+// ... Sort, MoveUp, MoveDown, Delete, Duplicate, New), and the lists' state: every element's name, id and index
+// references, the trigger entries, the timed effects and the name lists the screens show
+
+std::string Num(unsigned long inValue)
+{
+    return std::to_string((long)inValue);
+}
+
+void NameList(const char* inLabel, const std::vector<UWideString>& inNames, std::vector<std::string>& outLines)
+{
+    std::string theText = std::string("  ") + inLabel;
+    for (const UWideString& n : inNames)
+        theText += std::string(" |") + (const char*)n;
+    outLines.push_back(theText);
+}
+
+void ScenarioListState(std::vector<std::string>& outLines)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    for (unsigned long i = 0; i < m->mTriggers.size(); i++) {
+        EESMTrigger* t = m->mTriggers[i];
+        std::string s = "  trigger " + Num(i) + " " + (const char*)t->mName + " id " + Num(t->mID) + " c";
+        for (EESMTConditionWrapper* c : t->mConditions)
+            s += " " + Num(c->mValue);
+        s += " e";
+        for (EESMTEffectWrapper* e : t->mEffects)
+            s += " " + Num(e->mEffectIndex);
+        outLines.push_back(s);
+    }
+    for (unsigned long i = 0; i < m->mConditions.size(); i++) {
+        EESMCondition* c = m->mConditions[i];
+        outLines.push_back("  condition " + Num(i) + " " + (const char*)c->mName + " id " + Num(c->mID) + " type " +
+                           Num(c->mType) + " object " + Num(c->mObjectIndex) + " trigger " + Num(c->mTrigger));
+    }
+    std::vector<EESMEffect*> theEffects(m->mEffects);
+    theEffects.insert(theEffects.end(), m->mPendingEffects.begin(), m->mPendingEffects.end());
+    for (unsigned long i = 0; i < theEffects.size(); i++) {
+        EESMEffect* e = theEffects[i];
+        std::string s = std::string(i < m->mEffects.size() ? "  effect " : "  pending ") + Num(i) + " " +
+                        (const char*)e->mName + " id " + Num(e->mID) + " areas " + Num(e->mTaskArea) + " " +
+                        Num(e->mTargetArea) + " " + Num(e->mPlaceArea) + " " + Num(e->mLocationArea) + " objects " +
+                        Num(e->mObject) + " " + Num(e->mLocationObject) + " " + Num(e->mTaskObject) + " " +
+                        Num(e->mPlaceObject) + " " + Num(e->mTargetObject) + " trigger " + Num(e->mTrigger) + " list";
+        for (unsigned long o : e->mObjects)
+            s += " " + Num(o);
+        outLines.push_back(s);
+    }
+    for (unsigned long i = 0; i < m->mObjects.size(); i++) {
+        EESMObject* o = m->mObjects[i];
+        outLines.push_back("  object " + Num(i) + " " + (const char*)o->mName + " id " + Num(o->mL64) + " area " +
+                           Num(o->mArea) + " parent " + Num(o->mParent) + " near " + Num(o->mNearObject));
+    }
+    for (unsigned long i = 0; i < m->mAreas.size(); i++)
+        outLines.push_back("  area " + Num(i) + " " + (const char*)m->mAreas[i]->mName + " id " + Num(m->mAreas[i]->mID));
+    std::string s = "  timed";
+    for (unsigned long i = 0; i < m->GetNumTimedEffects(); i++)
+        s += " " + Num(m->GetTimedEntry(i).mEffectIndex) + "@" + Num(m->GetTimedEntry(i).mTime);
+    outLines.push_back(s);
+    outLines.push_back("  next " + Num(m->mNextTriggerID) + " " + Num(m->mNextConditionID) + " " +
+                       Num(m->mNextEffectID) + " " + Num(m->mNextObjectID) + " " + Num(m->mNextAreaID));
+    for (int theDebug = 0; theDebug < 2; theDebug++) {
+        bool theOld = m->mShowDebugIDs;
+        m->mShowDebugIDs = theDebug != 0;
+        std::vector<UWideString> n[9];
+        for (unsigned long w = 0; w < 9; w++)
+            m->GetNames(w, n[w]);   // EE_SCENARIO_NAMES_TRIGGERS .. EE_SCENARIO_NAMES_USER_AREAS
+        m->mShowDebugIDs = theOld;
+        const char* theLabels[] = {"triggers", "conditions", "user conditions", "effects", "user effects", "objects",
+                                   "user objects", "areas", "user areas"};
+        for (int k = 0; k < 9; k++)
+            NameList(theLabels[k], n[k], outLines);
+    }
+    std::string f = "  find";
+    for (long theID = 0; theID < 8; theID++) {
+        EESMCondition* c = m->FindConditionByID(theID);
+        EESMEffect* e = m->FindEffectByID(theID);
+        EESMObject* o = m->FindObjectByID(theID);
+        f += " " + std::to_string(theID) + ":" + (c ? (const char*)c->mName : "-") + "/" + (e ? (const char*)e->mName : "-") +
+             "/" + (o ? (const char*)o->mName : "-") + "/" + std::to_string(o ? m->GetObjectIndex(o) : -2);
+    }
+    outLines.push_back(f);
+}
+
+// TEST ONLY: the trigger text file of the instructions tab (EESEIAExport, EESEIAImport): the manager's ExportText
+// and ImportTriggerText over files in data\Scenarios (written and read as the editor's actions do, the version line
+// aside: EESEIAImport reads it before the manager)
+
+// the import files (each ends with a new line: a last line without one leaves the original's text list a line short
+// and ImportText reads past it)
+const char* const sTextFiles[] = {
+    // 0: valid (version 1): the four media strings, the texts of three effects and a condition, two player names
+    "{1_After Math}\nAftermath text\nline two\n\n{0_Hints}\nHints \xc3\xbc\n\n{3_Instructions}\nDo this.\n\n\n\n"
+    "{2_History}\nLong ago\n\n{5_Effect:<Effect0_Copy>}\nNew briefing\n{2_Effect:<Effect1>}\nNew dialogue\n\n"
+    "{9_Condition:<Condition3_Copy>}\nnew chat\n\n{1_Player Name:Alice}\n{2_Player Name:Bob \xc3\xbc}\n",
+    // 1: errors of every kind (validated: listed; not validated: applied up to the first)
+    "preamble before any entry\n{3_Effect:Renamed}\nRenamed class\n\n{0_Hints}\nHints two\n{3_Player Name:Carol}\n"
+    "{0_Player Name:Zero}\n{99_Player Name:Nobody}\n{6_Condition:<Condition5>}\nchat 6\n{4_Effect:<Effect3>}\nchat 4\n"
+    "{7_Bogus}\nbogus\n{99_Effect:x}\ny\n{0_Effect:Do Nothing}\nz\n{99_Condition:x}\ny\n{5_Condition:<Condition4>}\n"
+    "t\n{6_Condition:Wrong}\nt\n{\xc3\xbc" "3_Effect:x}\nt\nx{y\na{b}c\n{a}{b}\n{}\n{2_History}\nhistory two\n",
+    // 2: version 0 entries ("<id>_<name>"; a condition entry reads as an effect's)
+    "{5_<Effect0_Copy>}\nkind zero\n\n{2_Effect:<Effect1>}\nkind zero two\n{9_Condition:<Condition3_Copy>}\nxx\n",
+    // 3: empty
+    "",
+    // 4: long lines (TextFileContent: fgets reads 511 bytes at a time, so an entry can start inside a line)
+    NULL,
+};
+
+std::string TextFileContent(unsigned long inIndex)
+{
+    if (inIndex != 4)
+        return sTextFiles[inIndex];
+    std::string a(600, 'a'), b(511, 'b'), c(509, 'c');
+    return "{2_History}\n" + a + "\n" + b + "{3_Effect:<Effect2>}\nafter\n" + c + "\xc3\xbc\xc3\xbc\n{0_Hints}\n" + b +
+           "\n\n";
+}
+
+FSFileSpec TextFile(unsigned long inIndex)
+{
+    FSFileSpec theFile;
+    theFile.SetVolume(gStartupVolume);
+    theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
+    theFile.SetFile(UString(("smtext" + std::to_string(inIndex) + ".lcl").c_str()));
+    return theFile;
+}
+
+// every effect's and condition's name and texts, every player's name
+void TextElements(std::vector<std::string>& outLines)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    for (EESMEffect* e : m->mEffects)
+        outLines.push_back("  effect " + Num(e->mID) + " " + (const char*)e->mName + " |" + (const char*)e->mDescription +
+                           "|" + (const char*)e->mMessage + "|" + (const char*)e->mNewName + "|");
+    for (EESMCondition* c : m->mConditions)
+        outLines.push_back("  condition " + Num(c->mID) + " " + (const char*)c->mName + " |" + (const char*)c->mChatText +
+                           "|");
+    std::string s = "  players";
+    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++)
+        s += std::string(" |") + (gWorld.GetPlayer(p) != NULL ? (const char*)gWorld.GetPlayer(p)->mName : "-");
+    outLines.push_back(s);
+}
+
+// sm text | sm export | sm import FILE KIND VALIDATE
+void ScenarioTextStep(const std::vector<std::string>& w, std::vector<std::string>& outLines)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    const std::string& theOp = w[1];
+    if (theOp == "text") {   // sm text: types and texts on the effects and conditions the script left
+        struct {
+            unsigned long mType, mAction;
+            const char* mText;
+        } theEffects[] = {{kSMEffectMedia, kSMMediaActionChangeText, "Briefing \xc3\xbc\nsecond line"},
+                          {kSMEffectMedia, kSMMediaActionSendDialogue, "Hello \xe6\x97\xa5\xe6\x9c\xac"},
+                          {kSMEffectObject, kSMObjectActionClassName, "Class X"},
+                          {kSMEffectMedia, kSMMediaActionSendChatMessage, "chat msg"}};
+        for (unsigned long i = 1; i < m->mEffects.size() && i <= 4; i++) {
+            EESMEffect* e = m->mEffects[i];
+            e->mType = theEffects[i - 1].mType;
+            if (e->mType == kSMEffectMedia)
+                e->mMediaAction = theEffects[i - 1].mAction;
+            else
+                e->mObjectAction = theEffects[i - 1].mAction;
+            e->mDescription = "desc only";
+            e->mMessage = "message only";
+            e->mNewName = "new name only";
+            if (e->mType == kSMEffectObject)
+                e->mNewName = theEffects[i - 1].mText;
+            else if (theEffects[i - 1].mAction == kSMMediaActionChangeText)
+                e->mDescription = theEffects[i - 1].mText;
+            else
+                e->mMessage = theEffects[i - 1].mText;
+        }
+        const char* theChats[] = {"gg", "multi\nline", "not exported", ""};
+        for (unsigned long i = 1; i < m->mConditions.size() && i <= 4; i++) {
+            EESMCondition* c = m->mConditions[i];
+            c->mType = i == 3 ? 2 : kSMConditionChatMessageContains;
+            c->mChatText = theChats[i - 1];
+        }
+        TextElements(outLines);
+        return;
+    }
+    char theWrite[] = "w";
+    char theRead[] = "r";
+    if (theOp == "export") {   // sm export: ExportText's result and the file's lines
+        FSFileSpec theFile = TextFile(9);
+        long theResult = theFile.FOpen(theWrite) == 0 ? m->ExportText(theFile) : -1;
+        theFile.Close();
+        outLines.push_back("  export " + std::to_string(theResult));
+        char theBuffer[0x400];
+        if (theFile.FOpen(theRead) == 0) {
+            while (fgets(theBuffer, sizeof(theBuffer), (FILE*)theFile) != NULL) {
+                std::string theLine(theBuffer);
+                while (!theLine.empty() && (theLine.back() == '\n' || theLine.back() == '\r'))
+                    theLine.pop_back();
+                outLines.push_back("  | " + theLine);
+            }
+            theFile.Close();
+        }
+        return;
+    }
+    // sm import FILE KIND VALIDATE: ImportTriggerText over file FILE (sTextFiles); its result, the errors, the texts
+    unsigned long theIndex = (unsigned long)atol(w[2].c_str());
+    FSFileSpec theFile = TextFile(theIndex);
+    if (theFile.FOpen(theWrite) == 0) {
+        fputs(TextFileContent(theIndex).c_str(), (FILE*)theFile);
+        theFile.Close();
+    }
+    m->mImportErrors.clear();
+    long theResult = -1;
+    if (theFile.FOpen(theRead) == 0)
+        theResult = m->ImportTriggerText(theFile, (unsigned long)atol(w[3].c_str()), atol(w[4].c_str()) != 0);
+    theFile.Close();
+    outLines.push_back("  import " + w[2] + " " + w[3] + " " + w[4] + " result " + std::to_string(theResult));
+    for (const UWideString& e : m->mImportErrors)
+        outLines.push_back(std::string("  error ") + (const char*)e);
+    TextElements(outLines);
+}
+
+// sm OP LIST [INDEX]: LIST 0 triggers, 1 conditions, 2 effects, 3 objects, 4 areas; OP new, sort, up, down, delete,
+// dup; "sm fill": every element's index references set from its place (each list's size modulo), two trigger entries
+// of each kind, a timed entry per effect and a pending copy of effect 1; "sm state": the state above
+void ScenarioListStep(const std::vector<std::string>& w, std::vector<std::string>& outLines)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    const std::string& theOp = w.size() > 1 ? w[1] : std::string();
+    long k = w.size() > 2 ? atol(w[2].c_str()) : 0;
+    unsigned long i = w.size() > 3 ? (unsigned long)atol(w[3].c_str()) : 0;
+    if (theOp == "state") {
+        ScenarioListState(outLines);
+        return;
+    }
+    if (theOp == "text" || theOp == "export" || theOp == "import") {
+        ScenarioTextStep(w, outLines);
+        return;
+    }
+    if (theOp == "fill") {
+        unsigned long nt = m->mTriggers.size(), nc = m->mConditions.size(), ne = m->mEffects.size();
+        unsigned long no = m->mObjects.size(), na = m->mAreas.size();
+        for (unsigned long j = 0; j < nt; j++) {
+            EESMTrigger* t = m->mTriggers[j];
+            t->SetCondition(0, false, (j + 1) % nc);
+            t->SetConditionOperator(0, 1);
+            t->SetCondition(1, true, (j + 2) % nc);
+            t->SetEffect(0, 0, (j + 1) % ne);
+            t->SetEffectOperator(0, 1);
+            t->SetEffect(1, 5, (j + 2) % ne);
+        }
+        for (unsigned long j = 0; j < nc; j++) {
+            if (m->mConditions[j]->mType != kSMConditionObject)
+                m->mConditions[j]->mObjectIndex = (j + 1) % no;
+            m->mConditions[j]->mTrigger = nt ? (j + 1) % nt : 0;
+        }
+        for (unsigned long j = 0; j < ne; j++) {
+            EESMEffect* e = m->mEffects[j];
+            e->mTaskArea = j % na;
+            e->mTargetArea = (j + 1) % na;
+            e->mPlaceArea = (j + 2) % na;
+            e->mLocationArea = (j + 3) % na;
+            e->mObject = j % no;
+            e->mLocationObject = (j + 1) % no;
+            e->mTaskObject = (j + 2) % no;
+            e->mPlaceObject = (j + 3) % no;
+            e->mTargetObject = (j + 4) % no;
+            e->mTrigger = nt ? (j + 1) % nt : 0;
+            e->mObjects.clear();
+            for (unsigned long o = 0; o < no; o += 2)
+                e->mObjects.push_back((o + j) % no);
+            m->AddTimedEffect((long)j, 1000 * (unsigned long)(ne - j), false);
+        }
+        for (unsigned long j = 0; j < no; j++) {
+            m->mObjects[j]->mArea = (j + 2) % na;
+            m->mObjects[j]->mParent = (j + 1) % no;
+            m->mObjects[j]->mNearObject = (j + 2) % no;
+        }
+        if (ne > 1)
+            m->AddV134Effect(*m->mEffects[1]);
+        return;
+    }
+    outLines.push_back("  " + theOp + " " + std::to_string(k) + " " + std::to_string(i));
+    if (theOp == "new")
+        m->NewEntry(k);
+    else if (theOp == "sort")
+        m->SortList(k);
+    else if (theOp == "up" || theOp == "down")
+        m->MoveEntry(k, i, theOp == "up");
+    else if (theOp == "delete")
+        outLines.push_back(std::string("  deleted ") + (m->DeleteEntry(k, i) ? "1" : "0"));
+    else if (theOp == "dup")
+        m->DuplicateEntry(k, i);
 }
 
 // ------------------------------------------------------------------------------------------------ the script
@@ -1078,6 +1382,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 theOutput.push_back("  end epochs " + std::to_string(theRow->mEndEpoch->GetListBox()->GetLineCount()) +
                                     " selection " + (theSelected ? std::to_string(theEnd) : std::string("none")));
             };
+        else if (c == "sm")   // sm OP LIST [INDEX] | sm fill | sm state: the scenario lists (ScenarioListStep)
+            theCode = [=, &theOutput] { ScenarioListStep(w, theOutput); };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
             theCode = [=, &theOutput] {
                 gPhysics->FlushWorld();
