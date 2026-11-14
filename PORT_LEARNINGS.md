@@ -19474,3 +19474,43 @@ Started on the final tree (61a9d843) with a 3-hour limit, in the background; whe
   identical; captures at seeds 2-3 of oracle (171), late (172), space (173), calamity (185) and missile (22 golden
   digests) all PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`) PASS; the Rust gate
   PASS.
+
+## The physics models, round 2: the units capture profile, EEPPatrolGroup and the deck walk in Rust (ee_units patrol_group.rs, pm_air.rs; branch rust-physics2, 2026-11-14)
+
+- **A sweep that produces, not places, reaches the unreached models.** No gate game stepped an airplane, submarine,
+  sea animal or spaceship. EE-SIM `--unit-sweep` (Physics Thread/EEPhysicsSweep.cpp) every five game minutes gives
+  every player an airport, a dock, a navy yard, an aircraft carrier and a space carrier where `EECanPlaceOnTile`
+  takes them (rings around its first building), then makes one unit of every second class of the swept models
+  through `EEUnitClass::ProduceUnit` at the producer of its kind (aircraft into the producer of their air traffic
+  type, sea units at the dock, space units at the space carrier, helicopters at the town) and gives it one goal at
+  the next player (armed: attack; else move). Producing as the game produces puts carrier planes into carriers, so
+  they take off, attack, come back and walk the deck. The units profile plays it from the Atomic Age on a water map
+  (Continental, even seeds) and a space map (Planets Small, odd seeds; the lobby's name, not the script's
+  "Small Planets") for 1500 s: about 2.5 min a game, 200-410 MB of capture.
+- **The golden comes from the old tree with the new sweep.** A scratch worktree at 9e183199 (the round 1 PMST commit,
+  before the models moved) under the worktree's build/ took the same sweep file, the EESim hooks and units.py line
+  (its own EE_ORIG_SRC_ROOT); its EE-SIM recorded golden_cpp_units.txt (seeds 2-7, 193 digests each). The sweep
+  must compile in both trees: it finds a class's model by its `gPhysicsModels[]` index, not by the Rust-era
+  `mKind`. The Rust models matched every digest at the first run on every seed: no divergence in the five models
+  the gates had never reached (airplane 620k-845k steps a game, helicopter 450k-1.28M, submarine 65k-120k, sea
+  animal 86k-330k, spaceship 210k-230k, missiles 22k-38k through `Step`).
+- **The first produced aircraft crashed the game: a handle taken before the id.** `ProduceUnit` makes an aircraft
+  with `CreateUnitAt` and `LoadCargo`s it into the producer, which puts it off the map and `DeactivateUnit`s it
+  before FlushWorld's `AddPendingUnits` gives it an id. R5a.4 made the deactivation queue hold handles (ids), so the
+  entry resolved to NULL and the next tick's `UpdateActiveUnits` read through it ("EE-HANDLE: a handle to a unit
+  without an id"). Any game where an airport or carrier produces an aircraft would have crashed; no gate game did.
+  The original queue held the pointer: such a unit now waits in a referenced pointer list and joins the queue once it
+  has an id (FlushWorld after `AddPendingUnits`, and at the top of `UpdateActiveUnits`); one still without an id is
+  dropped, as the original's lookup of its id found nothing. The queue's type stayed (EEPWorldHelper saves it).
+- **No class uses the hovercraft model.** No constructor passes `gPhysicsModels[3]`; its body is the land model's.
+- **EEPPatrolGroup's bodies moved, its fields stayed.** The town, the dumps and the fixture read `mPatrolPoints`,
+  `mID`, `mIsLoop`, `mIsTownPatrol`, so the class keeps them and every member forwards to `ee_units_patrol_group(op,
+  group, args)`; the bodies read and replace the point list through the host (a copy per call; `SetPatrolPoints`
+  writes it back after each kill, as the C++ erased in place). The id counter is Rust's. Load keeps the saved ids
+  in the points' places until `RepairPointers`, as the original did. Few lines go: the host is most of what is
+  left.
+- **The deck walk is arithmetic over two host calls.** `IsDocked`, `FollowCarrier` and `OrientOnCarrier` are
+  pm_air.rs functions now; the carrier model's tag points come from one host call (the list's count, -1 for none;
+  point i at the carrier's frame in its location scaled by its stats) and `RouteDockWaypoint` from another. The
+  transformation's `Apply`, `ConvertToOrientation` and the point's `DistanceTo` are ee_ge's (the C++ forwards to
+  them already), so the bits are the same. EE-PM-COUNT ends with "deck N", the placements.
