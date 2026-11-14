@@ -645,6 +645,7 @@ local function favorite_land_ok(name)
         and ak ~= KIND_ANTI_TANK and ak ~= KIND_SPECIAL and ak ~= KIND_SIEGE and ak ~= KIND_ANTI_AIR
         and ak ~= KIND_ARTILLERY and not k.is_transport and not k.mine
 end
+M.favorite_land_ok = favorite_land_ok
 
 -- the military share of the population limit: 1 - the citizen share, 95% in a wonder race (kCMFactor)
 local function military_share_k(memory)
@@ -1457,6 +1458,15 @@ end
 
 local function create_group(view, memory, kind, mission, target, why, naval, domain, preset)
     local mem = army(memory)
+    -- EECPACPrehistoricPeace (CreateGroup / CreateGroupFromStrategy): with the personality's Prehistoric or Stone
+    -- Age peace no group against an enemy is made, a counter-attack's or a naval one's too; only CreateDefendGroup's
+    -- (kAGModeDefense) is. The port had kept the rule to its attacks: its counters raised twice the C++'s land army
+    -- in the first two epochs (AI_RESEARCH 8.82)
+    local p = memory.t.personality
+    if why ~= "defend" and target ~= nil and target ~= 0 and target ~= view.player
+            and ((view.epoch <= 0 and not p.prehistoric_attacks) or (view.epoch == 1 and not p.stone_attacks)) then
+        return nil
+    end
     local sel = preset or select_units(view, memory, kind, target, naval, domain)
     if sel == nil or (#sel.held == 0 and #sel.slots == 0) then
         print(string.format("classic_lua army.%s kind=%d target=%d none", why, kind, target or 0))

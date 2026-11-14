@@ -5211,6 +5211,133 @@ Readings:
   minutes (40 against 56 at 40 minutes in seeds 34-65). That is the next stage-3 item, now on a true 1v1 bench.
 
 0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
+### 8.81 Stage 3: where the port's land citizens part from the C++'s (2026-11-13, EE-SIM)
+
+Land, balanced, 1v1 against the C++ on the new EE-SIM. The curves over 16 seeds (34-49, 50 minutes; the means of the
+seats' `cp stats` lines per 2.5 minutes):
+
+| minute | port citizens / food stock / citizens ordered | the C++'s |
+|---|---|---|
+| 10 | 24.1 / 76 / 0.4 | 25.1 / 81 / 0.6 |
+| 20 | 25.8 / 787 / 1.2 | 28.8 / 828 / 1.9 |
+| 27.5 | 29.4 / 141 / 3.9 | 34.6 / 21 / 5.0 |
+| 30 | 31.3 / 90 / 2.5 | 37.7 / 46 / 3.8 |
+| 35 | 33.6 / 260 / 1.6 | 47.8 / 101 / 4.4 |
+| 40 | 36.7 / 463 / 1.9 | 58.3 / 304 / 6.2 |
+
+**The first point.** The curves run level to 10 minutes and 2-3 apart to 25. They part from 27.5 minutes, just after
+both reach the Stone Age (about 25 minutes). The cap (400) never binds. The losses are small on average, 1-2 citizens
+per 2.5 minutes. Food is not short: the port's stock climbs to 460 by 40 minutes. **It is training.** The port orders
+2 citizens per 2.5 minutes, the C++ 4-6.
+
+**The gap is a few collapses, not a slower average.** At 40 minutes the port has 11, 14, 14 and 18 citizens in four
+of the 16 seeds (36, 39, 42, 43), where the C++ has 63-91. In the rest it is level or ahead (seeds 44-49: 33-71
+against 26-75). Seed 42 traced:
+- From 14 minutes the Stone Age's 1122 food is held by the epoch reserve. Its share grows with the epoch pressure
+  (§8.8), and every citizen ordered waits (8 of them) while the food rises from 375 to 1090.
+- Around 23 minutes a raid takes the citizens from 21 to 13.
+- The Stone Age comes at 25 minutes. Then the Copper Age's reserve (1584 food, 844 gold, 844 iron) starts at once
+  with 13-15 workers and 15-75 food a minute.
+- The port stays at 13-16 citizens to minute 50.
+
+The C++ has the same reserve rule (EEComputerPlayer::CanAfford). It lets a citizen through only below 12 workers
+(kCPRecoveryCitizens), and it seldom falls that far.
+
+**Tried, not kept: a citizen line of 20 workers for the reserve.**
+- Land, 64 seeds: 22-32 with 10 close, the same as §8.80's 22-32.
+- Citizens at 40 minutes 42.4 against the C++'s 52.0 (§8.80: 39.8-43.3).
+- A new failure: in 3 seeds (19, 36, 42) the port never reached the Stone Age. Its citizens spent the food at the
+  line, and it was beaten at 57 and 89 minutes. **Reverted.**
+
+**A second difference on land since §8.80.** With the C++'s standing-army count the port's land army is twice the
+C++'s: 8.4 against 3.4 at 40 minutes, and 21 against 9 at 80 minutes. It also loses more citizens in all (52 against
+34), and its citizens trail more after 40 minutes (86 against 120 at 80 minutes). The army takes population and food
+the C++ puts into citizens.
+
+**Next.** Two leads, neither tried yet:
+- The collapses: the raids at 20-25 minutes, and a reserve that does not starve a town of 13-21 workers. A reserve
+  sized to the income, not a worker line.
+- The land army's size against the citizens.
+### 8.82 Stage 3: the peace rule on every group, and the land army at parity (2026-11-13, EE-SIM)
+
+**The parity bug.** On land the port's army was about twice the C++'s under the same standing-army count (§8.81).
+The count was not the cause. Traced in seed 34:
+- The port's count was dominated by its groups' requests: 30 units at 9 minutes. Its counter-attack groups asked for
+  82 units in 10 groups.
+- The C++'s groups asked for 16 units in the whole game.
+- A debug build (reverted) traced the C++'s CounterAttack: 27 calls, and not one group.
+
+EECPACPrehistoricPeace, the personality's Prehistoric and Stone Age peace (§8.26, §8.29), sits in the C++ attack
+commander's CreateGroup and CreateGroupFromStrategy. So it refuses every group against an enemy in those epochs:
+counter-attacks, aid, naval groups. Only CreateDefendGroup's (kAGModeDefense) and groups for an own or allied target
+pass. The port had kept the rule to its attacks and CheckNaval.
+
+**The fix.** create_group applies the rule as the C++ does. Every group but the defend group is refused against an
+enemy while the peace holds.
+
+| land, balanced, 64 seeds, 90 min | port won-lost (close) | citizens/army at 30 min | at 40 min | at 80 min |
+|---|---|---|---|---|
+| before (§8.81 bench) | 22-32 (10) | port 33.7/8.2, C++ 35.2/4.6 | port 42.4/8.5, C++ 52.0/3.4 | port 86.1/21.4, C++ 120.1/9.1 |
+| **after** | **29-25 (10)** | port 36.0/6.5, C++ 29.8/4.3 | port 46.4/5.8, C++ 46.6/3.5 | port 95.2/22.5, C++ 112.1/7.4 |
+
+The port now leads on land, and its citizens match the C++'s to 40 minutes. The C++ reaches the Stone Age in 59 of
+the 64 games, the port in 64. The port's army is still larger: 5.8 against 3.5 at 40 minutes, 22.5 against 7.4 at 80,
+with its citizens 17 behind at 80 minutes. That is the next look, with the raids at 20-25 minutes.
+
+0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
+### 8.83 Stage 3: the favourite land unit of the current epoch, and where the late gap comes from (2026-11-14, EE-SIM)
+
+**The citizens after 30 minutes.** The port's land citizens stall between 31 and 48 minutes in many seeds, with
+food piling up. The cause is the epoch reserve. The port asks for the Copper Age at 33 minutes on average, the C++
+at 38 (32 seeds). Both use the same rules:
+- the epoch timer draws the same 37.5-52.5 minutes after the Stone Age (Hard), traced in both;
+- epoch_pressure.safe_bonus (0.25) brings the request 11 minutes forward while no stronger enemy army is near.
+
+The C++ is mostly without the bonus: the port's larger army stands near its town, so EECPArmyThreat holds. The port
+then holds its food for the Copper Age, and the C++ keeps training citizens. That is emergent, not a missing rule.
+
+**Mirrors.** Port against port and C++ against C++ (16 seeds each, 80 minutes) separate the engines from their
+opponent:
+
+| mirror | citizens at 40 / 60 / 80 min | army at 60 / 80 min |
+|---|---|---|
+| C++ | 44.4 / 72.0 / 93.1 | 4.3 / 7.6 |
+| port | 42.4 / 70.2 / 99.2 | 8.5 / 22.9 |
+
+The citizens are at parity. The army is not. Ruled out by trace, against the C++:
+- the attack and defence group sizes (count = share x strength x the Hard modifier; the same formula in both);
+- military in production in GetUnitsAvailable: no change in 32 games;
+- the demand's standing-army shortfall: the C++ counts it against nothing (CountMilitaryUnits(false, false) returns
+  0). Copied, it raised the army further.
+
+**The missing rule.** The port's citizens were killed by Stone Age spearmen and slingers, the C++'s by Prehistoric
+clubmen: the port kept training Prehistoric units in the Stone Age. ChooseFavoriteLandType runs
+EEAIFOFavoriteUnitScreener with an epoch span of 0: only the current epoch's classes, grouped by AI line, then a random
+line and a random class of it. The port drew among every soldier class it could train, so in the Stone Age about half
+its favourites were clubmen and rock throwers, which the standing army and the demand's growth tier then asked for.
+
+**The fix.** choose_favorite (main.lua) applies the screener for the land, sea and space favourites:
+- the current epoch's moving, attacking classes, their node not obsolete;
+- IsFavoriteLand / IsFavoriteSea / IsFavoriteSpace;
+- grouped by AI line, a random line and then a random class of it.
+
+The favourite stays as it was when no class passes.
+
+| land, balanced, 64 seeds, 90 min | port won-lost (close) | citizens/army at 40 min | at 60 min | at 80 min | Bronze |
+|---|---|---|---|---|---|
+| before | 29-25 (10) | port 46.4/5.8, C++ 46.7/3.6 | port 69.8/8.8, C++ 85.3/5.3 | port 95.3/22.6, C++ 112.7/7.5 | port 9, C++ 5 |
+| **after** | **32-22 (10)** | port 48.1/5.2, C++ 44.7/3.6 | port 75.3/9.7, C++ 85.9/5.3 | port 102.5/22.8, C++ 115.8/7.6 | port 15, C++ 3 |
+
+The port's citizens lost from 35 to 60 minutes fall from 10.1 to 7.4 a game. The late army is unchanged (22.8
+against 7.6). In the mirrors it is twice the C++'s at the same group sizes, so its cause lies in the fights, not in
+the requests. That is open, with the reserve timing above.
+
+The raids at 20-25 minutes do not show on this bench: from 20 to 25 minutes the port loses 0.7 citizens a game, the
+C++ 0.8.
+
+The `cp unit.death` trace line covers only the C++ seats' citizens. A script's seat has its `next.death` line.
+
+0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
