@@ -148,6 +148,7 @@ pub mod verop;
 pub mod winobj;
 pub mod wire;
 pub mod wmcache;
+pub mod wmloop;
 pub mod wmobj;
 
 #[cfg(test)]
