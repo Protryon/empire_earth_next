@@ -90,10 +90,10 @@ void UIFileComboBox::CreateEntries(unsigned long inSortType)
                     this->AppendLine(theLine);
                     break;
                 case 1:
-                    this->mListBox->InsertLine(theLine, 0, UWSNoCaseAlphaSort());
+                    this->GetList()->InsertLine(theLine, 0, UWSNoCaseAlphaSort());
                     break;
                 default:
-                    this->mListBox->InsertLine(theLine, 0, UWSNoCaseAlphaSort());
+                    this->GetList()->InsertLine(theLine, 0, UWSNoCaseAlphaSort());
                     break;
                 }
                 break;
@@ -113,7 +113,7 @@ long UIFileComboBox::DeleteSelectedFile()
     unsigned long theSelection;
     long theResult = this->GetCurrentSelection(theSelection);
     if (theResult == kErrorOK) {
-        theName = this->mListBox->GetData(theSelection);
+        theName = this->GetList()->GetData(theSelection);
         // Fixed: each valid extension used to be appended (cumulatively) to the listed name, which already has its
         // extension, so the file was never found
         FSFileSpec* theFile = NULL;

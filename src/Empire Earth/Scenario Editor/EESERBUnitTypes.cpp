@@ -171,7 +171,7 @@ void EESECBMaxPlayer::ChangeSelection()
 {
     unsigned long theSelection;
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->GetForm());
-    this->mListBox->GetCurrentSelection(theSelection);
+    this->GetList()->GetCurrentSelection(theSelection);
     theEditor->GetPlayerScreen()->SetPlayerCount(theSelection + 2);
     UIComboBox::ChangeSelection();
 }
@@ -2001,7 +2001,7 @@ void EESEPlayerRow::Load(unsigned long inPlayer)
                     } else {
                         this->mControl->SetCurrentSelection(0);
                         gResource->GetString(IDS_UNKNOWN_CIVILIZATION, theText);
-                        this->mControl->mTextLabel->SetText(theText);
+                        this->mControl->GetTextLabel()->SetText(theText);
                         break;
                     }
                 }
@@ -2057,7 +2057,7 @@ void EESEPlayerRow::ApplySettings(unsigned long inPlayer)
     } else
         theCivilization = UString(this->mControl->GetListBox()->GetData(theSelection));
     if (theSelection == 0) {
-        if (thePlayer->mCivilizationFile.GetLength() > 0 && this->mControl->mTextLabel->GetText(0) != theText) {
+        if (thePlayer->mCivilizationFile.GetLength() > 0 && this->mControl->GetTextLabel()->GetText(0) != theText) {
             thePlayer->mCivilization.mPurchasedUpgrades.clear();
             thePlayer->mCivilization.mAvailablePoints = thePlayer->mCivilization.mMaxPoints;
             theChanged = true;

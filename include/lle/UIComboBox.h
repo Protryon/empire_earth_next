@@ -89,6 +89,9 @@ protected:
     virtual void ProcessUp();
     virtual void TabbedTo();
     virtual void TabbedFrom();
+    // the subclasses' reads of the members (R6 ui round 15's census)
+    UILBString* GetList() const { return this->mListBox; }
+    unsigned long GetSelectionIndex() const { return this->mCurrentSelection; }
 
     UITextLabel* mTextLabel;                // +0x0a0 text box type 1
     UIControl* mDropButton;                 // +0x0a4 a UIButton
