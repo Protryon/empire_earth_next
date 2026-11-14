@@ -15340,3 +15340,60 @@ Round 20 left the HTTP get op's cache calls as the last object calls of group 4 
   C++ caller left, the flow's `session_last_use` hook) can become a handle like the cache's; `CryptTransform` then
   holds the handle. Its golden needs a socket pair on 127.0.0.1 to see the transform (`ADD_CRYPT`) work; that is
   why it was not this round's.
+
+## R6: WON's Internet code, round 22 (AuthSession as an ee_won handle; won_asyncop_test's load-dependent waits)
+
+Branch `rust-won-net22`. Measured by net C++ deletion over src + include (without include/rust), as rounds 7 to 21.
+Round 21 left the peer sessions as the last C++ objects of the auth code: `AuthSession` (a RefCount shim over
+peerauth.rs's session), the context's `GetSession` / `PutSession` (no caller), the flow's `session_last_use` hook,
+and `CryptTransform` holding a `SmartPtr<AuthSession>`.
+
+- **The golden first, over real sockets** (`won_authsession_test`, its own commit, over the unmodified C++): a real
+  `PeerAuthOp` and `PeerAuthServerOp` authenticate over a socket pair on 127.0.0.1 with two real auth contexts and
+  certificates signed by won_peerop_test's keys; every session call goes through an op's own call path
+  (`ee_won_hostop_call`). It sees both ops' sessions and keys, the transforms the ops add (`ADD_CRYPT`) carrying
+  messages both ways (empty, 300 bytes), the auth context's cache and a cached session reused on a new connection,
+  sessions made with a known key (`PEER_NEW_SESSION`) whose transform output is read raw (the session header and
+  id, the sequence number changing the bytes), a skipped sequence number, an id mismatch, persistent and
+  non-encrypting sessions, one session on a socket twice, sessions released while their transforms hold them, and
+  the session mode the peer server refuses. 85 lines, six runs the same; 0 failures after the move.
+  - The peer server only accepts mode 1 (`AUTH_TYPE_PERSISTENT`, the LAN game's direct connect): a `SESSION`
+    authentication fails with `100044` on the server and `100053` on the client.
+  - Driver traps: `Log(N(Bind()) + N(Listen()))` ran Listen first (round 20's lesson again: one effect per
+    statement); `SendMsg` takes the message with its length field filled (the length with the field): a plain
+    message with zeros there broke the stream for every later read. Random keys are logged by length and
+    equality only.
+- **What moved.** `hostauth.rs`: `Item::Session` (boxed: clippy's large_enum_variant, the session carries its
+  Blowfish tables) is the session; `PEER_NEW_SESSION` wraps the op's new session in Rust; `PEER_AUTH_SESSION` and
+  `PEER_AUTH_KEY` read the op's session number (`HOSTOP_NUM`, `EE_WON_PEEROP_SESSION`) and answer in Rust
+  (`op_session`). The auth flow's sessions are handles: their references and last use are Rust's
+  (`session_last_use`); the hook is gone from `EeWonAuthFlowHooks`, and only the drivers' `ee_won_auth_flow_new`
+  takes a stand-in last-use read (won_authctx_test's original-statement comparison, 2,644,851 checks, and
+  `golden_authflow.txt` keep their stand-in sessions). `CryptTransform` holds a handle reference
+  (`ee_won_session_hold` / `_release`) and calls `ee_won_session_crypt`; ADD_CRYPT stays in `HostCall` (the socket
+  is C++).
+- **Deleted:** AuthSession.cpp, the class (kept as test glue, `tests/won/won_auth_session_glue.h`, for the
+  original-statement drivers won_auth_orig.h, won_peerobj_test, won_peerop_test), AuthContext's `GetSession` /
+  `PutSession`, `PeerAuthOp::GetSession`, three `HostCall` cases, `ee_won_authctx_put_session` / `_get_session`.
+  won_authhost_test's two class calls became the same host calls (its 174 lines unchanged). src+include +24 -129;
+  `HostCall` has 76 cases left.
+- **Behaviour.** A transform over anything but a session leaves the message as it is (the original dereferenced
+  it). The flow gives a session back through the handle's count; nothing else changes.
+- **Reach.** The LAN game's direct connect with the CD key check (LanLogic's `PeerAuthServerOp` / `PeerAuthOp`,
+  persistent sessions) and an Internet login's peer authentication make and use sessions; the gate's LAN-listed
+  game does not run a peer authentication. EE-SIM makes none. The driver is the evidence for the sockets' path.
+- **won_asyncop_test** (the lead's report: 2 failures in 5 runs on a loaded machine, "got threads done, want t2
+  thread destroyed"). The test's timing, not a race: thread.rs sets the stop flag before signalling, and the
+  thread ends within one 1 s wait once scheduled; but t2 runs at THREAD_PRIORITY_LOWEST, which on a saturated
+  machine runs only through Windows' starvation boost: one run of 20 under a build destroyed it 15,032 ms after its
+  stop (the test allowed 5 s). Its destructor now sets an event the test waits on (up to 120 s; a missing
+  destruction logs another line); the other polled waits allow 120 s. The same runs showed a second assumption:
+  `GetWaitTime` counts from the last pump's tick, so "below an hour+1" fails when a millisecond passes between the
+  pump and the add; it now checks the wait lies between an hour and an hour plus the measured time since the pump.
+  20 runs during the Rust gate: 0 failures (t2 0 to 3,875 ms).
+- **Measured for the next round** (lines of C++ left): WONSocket 1,996 (13 units: AsyncSocket 405, UDPManager 387,
+  IPAddr 253, QueueSocket 245, SocketOps 213, BlockingSocket 129, the hooks and thread files; shared with the LAN
+  lobby, so the LAN game is its check: the biggest deletion and the next real step for the ops' socket calls);
+  ServerOp.cpp 563 (its `HostCall` shrinks with the sockets); HTTPEngine.cpp 259 (shims with locks over
+  httpengine.rs); ServerConnection.cpp 220 (`ServerConnectionConnectOp` about 40 of it: no net deletion alone, as
+  round 19 found); WONDir 144 (the entity list the game's readers take); GameSpySupport.cpp 363 is not linked.
