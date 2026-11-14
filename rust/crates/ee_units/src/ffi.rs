@@ -523,6 +523,61 @@ pub extern "C" fn ee_units_stop_active_group(selection: *mut c_void) {
     crate::rally::stop_active_group(&mut host, crate::host::HostRef(selection));
 }
 
+/// `EEMLoadGarrison::Execute`'s body (`boarding::load_garrison`) for the sender, its selection (null: none) and the
+/// garrison's id.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_load_garrison(player: *mut c_void, selection: *mut c_void, garrison: u32) {
+    let mut host = crate::host::game::GameHost;
+    crate::boarding::load_garrison(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), garrison);
+}
+
+/// `EEMLoadTransport::Execute`'s body (`boarding::load_transport`) for the sender, its selection (null: none), the
+/// transport's id and the passenger's (-1: the selection).
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_load_transport(player: *mut c_void, selection: *mut c_void, transport: u32, passenger: i32) {
+    let mut host = crate::host::game::GameHost;
+    crate::boarding::load_transport(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        transport,
+        passenger,
+    );
+}
+
+/// `EEMResearchTechnology::Execute`'s body (`research::research_technology`) for the sender, its selection (null:
+/// none), the clicked building's id, the technology and the five-times flag.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_research_technology(
+    player: *mut c_void,
+    selection: *mut c_void,
+    building: u32,
+    technology: i32,
+    five: u8,
+) {
+    let mut host = crate::host::game::GameHost;
+    crate::research::research_technology(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        building,
+        technology,
+        five != 0,
+    );
+}
+
+/// `EEMHackANewUnit::Execute`'s body (`hack::hack_new_unit`) for the sender, the message's class (-1: the sender's
+/// cheat class), point and player id; returns the class the message keeps.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_hack_new_unit(sender: *mut c_void, unit_type: i32, x: f32, y: f32, player_id: i64) -> i32 {
+    let mut host = crate::host::game::GameHost;
+    crate::hack::hack_new_unit(&mut host, crate::host::HostRef(sender), unit_type, x, y, player_id)
+}
+
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
 #[cfg(not(test))]

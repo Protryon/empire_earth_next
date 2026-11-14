@@ -19,6 +19,7 @@ class EEUnit;
 class EESMObject : public EeScenarioObjectFields {
 public:
     bool FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom);  // 0x1c6d4f, actual ret12/AL/float output
+    bool FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom);  // (+ SMFP)
     EESMObject();                           // 0x1c5f73
     virtual ~EESMObject();                  // +0x00 (??_G 0x1c6019; the body 0x1c6035)
     // slot signatures from `ret N` and EEScenarioManager's broadcast hooks

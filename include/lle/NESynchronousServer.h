@@ -22,7 +22,7 @@ struct EeNetMsgMgr;                         // the message manager, a Rust objec
 enum class EeNetMmOp : uint32_t;
 class NEMCommunicationsTickResponse;
 class NEMWorldDatabaseChecksumResponse;
-class NERecordPlayback;
+struct EeNetRecPlay;                        // NERecordPlayback, whole in Rust (rust/ee_net.h)
 class NEServer;
 class FSFileSpec;
 class TSEvent;
@@ -88,7 +88,8 @@ public:
     unsigned char GetGameState() const { return this->mGameState; }
     bool GetGameWasPublished() const { return this->mGameWasPublished; }
     bool GetIsOOS() const { return this->mIsOOS; }
-    NERecordPlayback* GetRecordPlayback() const { return this->mRecordPlayback; }
+    // the recorder's mode (NERecordPlaybackMode; ee_net recplay.rs)
+    unsigned char GetRecordPlaybackMode() const;
     unsigned long GetLastCTMessageID() const { return this->mLastCTMessageID; }
     unsigned long GetMaxPlayers() const { return this->mMaxPlayers; }
     unsigned char GetNumberOfPlayers() const { return this->mNumberOfPlayers; }
@@ -218,6 +219,8 @@ private:
     static unsigned long Xfer(void* inServerObject);
     // the message manager's calls out (ee_net's EeNetMmOp): the messages, this server, its protocol, the files
     static ptrdiff_t MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d);
+    // the recorder's calls out (ee_net's EeNetQOp): its callback, then the common ones
+    static ptrdiff_t QueueHost(void* inServer, EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
 
     NECDIServer mDebugInfo;                 // +0x30
     UWideString mName;                      // +0x70
@@ -262,7 +265,7 @@ private:
     TSCriticalSection* mPauseUnpauseLock;   // +0x160
     TSCriticalSection* mSendToAllLock;      // +0x164
     TSCriticalSection* mSendCommunicationsTickLock; // +0x168
-    NERecordPlayback* mRecordPlayback;      // +0x16c
+    EeNetRecPlay* mRecordPlayback;          // +0x16c NERecordPlayback, whole in Rust (ee_net recplay.rs)
     float mPhysicsTickCostFactor;           // +0x170
     unsigned char mGameState;               // +0x174 (0 open, 1 closed, 3 playing, 4 ...)
     unsigned long mCurrentPhysicsTick;      // +0x178

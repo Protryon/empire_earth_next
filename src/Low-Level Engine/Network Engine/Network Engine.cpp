@@ -4,28 +4,21 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/PIMModule.h"
 #include "lle/NEProtocol.h"
+#include "rust/ee_net_tcp.h"
 
 // FUNCTION: LLE 0x1004b190
-// Loads every network plug-in ('ntwk') in a directory as a protocol; fails if none is usable
+// Registers the network protocol, TCP/IP (the original loaded every 'ntwk' plug-in in the directory; the one there
+// was is linked in, Rust: rust/crates/ee_net_tcp); fails if its plug-in is not usable
 long NEInitialize(FSFileSpec& inDirectory)
 {
-    PIMModule* theModule;
-    NEProtocol* theProtocol;
     long theResult = URegisterShutdown(NEShutdown);
     if (theResult != kErrorOK)
         return theResult;
-    theResult = PIMModule::GetFirstModule(inDirectory, 'ntwk', theModule);
-    while (theResult == kErrorOK) {
-        theProtocol = new NEProtocol(theModule);
-        if (!theModule->IsValid() && theProtocol != NULL)
-            delete theProtocol;
-        theResult = PIMModule::GetNextModule(theModule);
-    }
-    if (theResult == kErrorNoMoreFiles)
-        theResult = NEProtocol::GetCount() > 0 ? kErrorOK : kErrorNotFound;
-    return theResult;
+    NEProtocol* theProtocol = new NEProtocol();
+    if (!ee_tcp_is_valid())
+        delete theProtocol;
+    return NEProtocol::GetCount() > 0 ? kErrorOK : kErrorNotFound;
 }
 
 // FUNCTION: LLE 0x1004b235

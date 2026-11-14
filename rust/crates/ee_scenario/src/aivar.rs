@@ -10,13 +10,14 @@ use crate::fields::EeScenarioEffectFields;
 use crate::ftol;
 
 /// `UMFloatToLong` as the Windows build computes it (`UMRint`: `cvtss2si` inside 2^30, the UCRT's `lrintf` beyond):
-/// round half to even, and 0 for NaN or a value out of the `long` range (the UCRT's answer, pinned by
-/// `golden_aivar.txt`; ee_ge um.rs `lrintf` answers `i32::MIN` there).
+/// round half to even, exactly 2^31 as `i32::MIN`, and 0 for NaN or a value beyond (the UCRT's answers: the golden
+/// `golden_aivar.txt` pins 0 beyond; ee_ge um.rs `lrintf`, measured over the UCRT, the 2^31 case).
 #[inline]
 pub fn lrintf(value: f32) -> i32 {
     let rounded = value.round_ties_even();
-    if (-2_147_483_648.0..2_147_483_648.0).contains(&rounded) {
-        rounded as i32
+    // exactly 2^31 is the conversion's i32::MIN, as the UCRT's lrintf answers (ee_ge um.rs lrintf, measured)
+    if (-2_147_483_648.0..=2_147_483_648.0).contains(&rounded) {
+        rounded as i64 as i32
     } else {
         0
     }
@@ -405,6 +406,7 @@ mod tests {
     fn lrintf_rounds_half_to_even_and_gives_0_out_of_range() {
         assert_eq!((lrintf(2.5), lrintf(3.5), lrintf(-2.5), lrintf(f32::NAN)), (2, 4, -2, 0));
         assert_eq!((lrintf(1.5e9), lrintf(-2.5e9), lrintf(f32::INFINITY)), (1_500_000_000, 0, 0));
+        assert_eq!((lrintf(2_147_483_648.0), lrintf(-2_147_483_648.0), lrintf(4.3e9)), (i32::MIN, i32::MIN, 0));
     }
 
     /// The C++ names of the field numbers (ee/EESMAIFields.h's lists), for the golden's lines.

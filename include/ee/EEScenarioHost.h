@@ -12,27 +12,43 @@ class EESMCondition;
 class EESMTrigger;
 class EESMArea;
 class EESMObject;
+class EESMEffect;
 class EEUnit;
 
 // what a read may ask beyond the world: the condition whose chat text EE_SCENARIO_READ_CHAT_CONTAINS reads, the unit
-// of EE_SCENARIO_READ_UNIT_* (NULL where no read asks)
+// of EE_SCENARIO_READ_UNIT_* (NULL where no read asks); the effect whose plan the writes carry out (NULL for none);
+// the object an evaluation reads and changes (EE_SCENARIO_READ_OBJ_* / EE_SCENARIO_WRITE_OBJ_*) and its cursor in a
+// player's unit chain
 struct EESMHostContext {
     EESMCondition* mCondition;
     EEUnit* mUnit;
+    EESMEffect* mEffect;
+    EESMObject* mObject;
+    EEUnit* mCursor;
 };
+// an object evaluation's reads and writes (objeval.rs; EESMObject.cpp): Read and Write hand them over
+int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC);
+void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB);
 
 // the host table over inContext (it must outlive the Rust call)
 EeScenarioHost EESMHost(EESMHostContext* inContext);
 EeScenarioAreaRecord EESMAreaRecord(const EESMArea& inArea);
 
+class EEScenarioManager;
 // an element's save (ee_scenario save.rs): its file, its strings by slot, its id list (NULL for none), the trigger
-// whose entries it reads or writes (NULL for none)
+// whose entries it reads or writes (NULL for none); the manager's save (manager.rs): the manager whose elements,
+// media strings and messages it reads or writes, and the version they are read or written with
 struct EESMStream {
     FSFile* mFile;
     UWideString* const* mStrings;
     std::vector<unsigned long>* mList;
     EESMTrigger* mTrigger;
+    EEScenarioManager* mManager;
+    unsigned long mMajor;
+    unsigned long mMinor;
 };
+// the manager's operations of a stream (EE_SCENARIO_IO_ELEMENT_*, _MEDIA, _MESSAGES; EEScenarioManager.cpp)
+int32_t EESMManagerIO(EESMStream* inStream, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue);
 // the stream table over inStream (it must outlive the Rust call)
 EeScenarioStream EESMStreamTable(EESMStream* inStream);
 

@@ -58,7 +58,7 @@ long FSChunk::LoadPersistentFromChunk(FSPersistent*& outPersistent)
 {
     if (this->mState.data == NULL)
         return kErrorNotSuspended;
-    outPersistent = FSPersistentList::Instance()->CreateDefaultPersistent(this->mState.tag);
+    outPersistent = FSPersistentList::CreateDefaultPersistent(this->mState.tag);
     if (outPersistent == NULL)
         return kErrorNotFound;
     FSMemoryFile theData(this->mState.data, false);

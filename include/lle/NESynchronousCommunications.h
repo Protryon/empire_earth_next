@@ -5,9 +5,20 @@
 #ifndef LLE_NESYNCHRONOUSCOMMUNICATIONS_H
 #define LLE_NESYNCHRONOUSCOMMUNICATIONS_H
 
+#include <stddef.h>
+#include <stdint.h>
 #include "lle/TSCriticalSection.h"
+#include "rust/ee_net.h"
 
 class NEMessage;
+enum class EeNetQOp : uint32_t;             // the queues' calls out (rust/ee_net.h)
+
+// The recorder's mode (ee_net recplay.rs, NERecordPlayback whole in Rust; the game only ever passes)
+enum NERecordPlaybackMode {
+    kRecordModePassing = 1,                 // messages go straight to the callback
+    kRecordModeRecording = 2,
+    kRecordModePlaying = 3,
+};
 
 class LLE_API NESynchronousCommunications {   // proven sizeof 0x30 (implicit copy ctor 0x40167)
 public:
@@ -59,6 +70,9 @@ public:
     void UnlockDebugInfo() { this->mDebugInfoLock->Leave(); }
 protected:
     void SetIsGamePaused(bool inIsGamePaused) { this->mIsGamePaused = inIsGamePaused; }
+    // the calls out of the lag simulator and the recorder (ee_net's EeNetQOp) that do not reach their owner: the
+    // clock, events, threads, floating-point control, messages and record files (the owner answers Deliver)
+    static ptrdiff_t QueueHostCommon(EeNetQOp inOp, size_t a, size_t b, size_t c, size_t d);
 
     long mLastTickReceived;                 // +0x04 (-2 at construction) the last tick received (accessor names)
     TSCriticalSection* mDebugInfoLock;      // +0x08

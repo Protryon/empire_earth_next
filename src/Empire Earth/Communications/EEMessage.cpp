@@ -1984,65 +1984,10 @@ size_t EEMHackANewUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass
 // (ambient/resource units go to player 0); buildings must fit on the map and start fully built
 void EEMHackANewUnit::Execute()
 {
-    GETransformation theTransformation;
-    GE3DPoint thePoint;
-    GE3DPoint theGround;
-    GE2DPoint theTile = this->mPoint;
-    EEPlayer* theSender = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    long thePlayerID = this->mPlayerID;
-    gWorld.GetMap()->GetTile((long)this->mPoint.GetX(), (long)this->mPoint.GetY());
-    EEPlayer* thePlayer = gWorld.mPlayers[thePlayerID];
-    if ((unsigned long)this->mUnitType == kNoUnitClass)
-        this->mUnitType = (int32_t)theSender->mHackUnitClass;
-    if ((unsigned long)this->mUnitType >= EEUnitClassCount())
-        return;
-    EEUnitClass* theClass = gUnitClassTable[this->mUnitType];
-    // a unit type without a class creates nothing (its category used to be read through NULL first)
-    if (theClass == NULL)
-        return;
-    if (theClass->mCategory == kUnitCategoryAmbient || theClass->mCategory == kUnitCategoryResource) {
-        thePlayer = gWorld.mPlayers[0];
-        thePlayerID = 0;
-    }
-    if (!theClass->IsLandBuilding()) {
-        thePoint.SetX(theTile.GetX());
-        thePoint.SetY(theTile.GetY());
-        gWorld.GetMap()->GetGroundPoint(thePoint, theGround);
-        theTransformation.SetOrientationYPR(3.1415927f, 0.0f, 0.0f);
-        theTransformation.SetPosition(theGround.GetX(), theGround.GetY(), theGround.GetZ());
-        EEUnit* theUnit = theClass->CreateUnitAt(theTransformation, thePlayerID, false, NULL);
-        if (theUnit->mTileNode != NULL) {
-            theUnit->mComplexUnit->SetReloadTimer(0);
-            theUnit->mComplexUnit->SetPower(theUnit->mComplexUnit->mStats->mPower);
-        }
-        if (thePlayerID == gWorld.GetCurrentPlayer()->mPlayerID && thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mCreationSound != NULL) {
-            EESoundObject* theSound = thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mCreationSound;
-            gSoundManager->Play(theSound->mSampleID, thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mCreationSound->mVolume, 0.0f,
-                                1.0f, false, NULL);
-        }
-    } else {
-        float theHalf = (float)((long)thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mScale / 2);
-        float theRight = theTile.GetX() + theHalf;
-        float theTop = theTile.GetY() + theHalf;
-        if (gWorld.GetMap()->GetTile((long)theRight, (long)theTop) == NULL)
-            return;
-        float theLeft = theTile.GetX() - theHalf;
-        if (gWorld.GetMap()->GetTile((long)theLeft, (long)theTop) == NULL)
-            return;
-        float theBottom = theTile.GetY() - theHalf;
-        if (gWorld.GetMap()->GetTile((long)theRight, (long)theBottom) == NULL)
-            return;
-        if (gWorld.GetMap()->GetTile((long)theLeft, (long)theBottom) == NULL)
-            return;
-        EEUnit* theUnit = theClass->CreateUnit((long)theLeft, (long)theBottom, thePlayerID, false, NULL);
-        if (theUnit->mTileNode != NULL)
-            theUnit->mComplexUnit->SetBuilt(1, 0, 1);
-        if (thePlayerID == gWorld.GetCurrentPlayer()->mPlayerID) {
-            EESoundObject* theSound = theUnit->mStats->mCreationSound;
-            if (theSound != NULL)
-                gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
-        }
-    }
+    // New (game messages lane, round 2): the body is Rust (ee_units hack.rs hack_new_unit: the class, the owner, a
+    // building's footprint on the map) over EEUnitHost.cpp's reads and creations; the message keeps the class
+    this->mUnitType = ee_units_hack_new_unit(gWorld.GetPlayerBySlot(this->GetOriginatingSlot()), this->mUnitType,
+                                             this->mPoint.GetX(), this->mPoint.GetY(), (int64_t)this->mPlayerID);
 }
 
 // FUNCTION: EXE 0x4bf8c8
@@ -2669,75 +2614,15 @@ size_t EEMLoadGarrison::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass
     return 8;
 }
 
-#include "ee/EEUGRust.h"
-
 // FUNCTION: EXE 0x4c1722
 // Sends the sender's selected units that can garrison into the target building (joining its load goal or starting
 // one); the others move next to it; posts an event if the goal is invalid
 void EEMLoadGarrison::Execute()
 {
+    // New (game messages lane, round 2): the body is Rust (ee_units boarding.rs load_garrison: the units that can
+    // garrison join or start its load goal, the others move to it) over the store and EEUnitHost.cpp's calls
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theSelection = thePlayer->mActiveGroup;
-    EEUnit* theGarrisonUnit = gWorld.GetUnit(this->mGarrisonID);
-    std::vector<EEComplexUnit*> theUnits;
-    std::vector<EEComplexUnit*> theRejected;
-    if (theGarrisonUnit == NULL || theGarrisonUnit->mTileNode == NULL || theGarrisonUnit->mHitPoints <= 0)
-        return;
-    EEComplexUnit* theGarrison = theGarrisonUnit->mComplexUnit;
-    EEUnitGoal* theOldGoal = theGarrison->mGoalState;
-    if (theSelection->GetFirstUnit() == NULL || theGarrison->mUnitClass->mGarrisonCapacity <= 0)
-        return;
-    unsigned long theCount = theSelection->GetNumUnits();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEComplexUnit* theUnit = theSelection->GetUnit(i);
-        if (theUnit != theGarrison && theUnit->mHitPoints > 0)
-            (theUnit->mUnitClass->mCanGarrison ? theUnits : theRejected).push_back(theUnit);
-    }
-    if (theUnits.size() > 0) {
-        EEUGRust* theGoal;
-        if (theOldGoal != NULL && theOldGoal->mKind == kGoalLoadGarrison) {
-            theGoal = EELoadGarrisonGoalCast(theOldGoal);
-            theGoal->AddLoadUnits(theUnits);
-        } else {
-            theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, theGarrison, theUnits, false);
-            if (theGoal->IsLoadGarrisonValid()) {
-                theGarrison->SetGoal(theGoal, 0, 0);
-                if (theGarrison->mStats->mMaxVelocity > 0.0f) theGarrison->StartAction(kActionPrepareToMove); else theGarrison->StartAction(kActionPickedUpLoadableUnits);
-                theGarrison->mUnitClass->ActionChanged(theGarrison);
-            }
-        }
-        if (theGoal->IsLoadGarrisonValid()) {
-            for (std::vector<EEComplexUnit*>::iterator theIterator = theUnits.begin(); theIterator != theUnits.end();
-                 theIterator++) {
-                EEComplexUnit* theUnit = *theIterator;
-                theUnit->SetGoal(theGoal->Clone(), 0, 0);
-                theUnit->StartAction(kActionPrepareToMove);
-                theUnit->mUnitClass->ActionChanged(theUnit);
-            }
-        } else {
-            U2DPoint<long> theTile(theGarrisonUnit->mTileX, theGarrisonUnit->mTileY);
-            thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, 0x7c3a, false);
-        }
-    }
-    if (theRejected.size() > 0) {
-        for (unsigned long i = 1; i < 6; i++) {
-            EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
-            for (std::vector<EEComplexUnit*>::iterator theIterator = theRejected.begin();
-                 theIterator != theRejected.end(); theIterator++) {
-                if (theGroup->IsInFormationSlot(*theIterator, i))
-                    theGroup->AddMember(*theIterator, true);
-            }
-            theGroup->KeepMobileUnits();
-            if (theGroup->GetNumUnits() > 0) {
-                theGroup->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theGarrison->mTileX, (float)theGarrison->mTileY),
-                                                   true, true, false, 0.0f, false, 0), false);
-                theGroup->mAction = kActionPrepareToMove;
-                thePlayer->mPendingGroups.push_back(theGroup);
-                theGroup->Plan();
-            } else
-                theGroup->Dereference();
-        }
-    }
+    ee_units_load_garrison(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mGarrisonID);
 }
 
 // EEMLoadTransport's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -2752,85 +2637,16 @@ size_t EEMLoadTransport::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClas
     return 8;
 }
 
-#include "ee/EEUGRust.h"
-
 // FUNCTION: EXE 0x4c1b79
 // Boards the selected units (or one passenger) onto the transport via its load goal; units it can't carry move to
 // the pickup tile; acknowledges with the transport's voice
 void EEMLoadTransport::Execute()
 {
+    // New (game messages lane, round 2): the body is Rust (ee_units boarding.rs load_transport: the units it can
+    // carry join or start its load goal, the others move to the pickup tile) over the store and EEUnitHost.cpp's calls
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theSelection = thePlayer->mActiveGroup;
-    EEUnit* theTransportUnit = gWorld.GetUnit(this->mTransportID);
-    std::vector<EEComplexUnit*> theUnits;
-    std::vector<EEComplexUnit*> theRejected;
-    if (theTransportUnit == NULL || theTransportUnit->mTileNode == NULL || theTransportUnit->mHitPoints <= 0)
-        return;
-    EEComplexUnit* theTransport = theTransportUnit->mComplexUnit;
-    EEUnitGoal* theOldGoal = theTransport->GetLoadGoal();
-    if (theSelection->GetFirstUnit() == NULL || !theTransport->mUnitClass->IsTransport())
-        return;
-    if (this->mPassengerID == -1) {
-        unsigned long theCount = theSelection->GetNumUnits();
-        for (unsigned long i = 0; i < theCount; i++) {
-            EEComplexUnit* theUnit = theSelection->GetUnit(i);
-            if (theUnit != theTransport && theUnit->mHitPoints > 0)
-                theUnits.push_back(theUnit);
-        }
-    } else {
-        // the passenger may be gone by the time the order runs (it used to be read through NULL)
-        EEUnit* thePassenger = gWorld.GetUnit(this->mPassengerID);
-        EEComplexUnit* theUnit = thePassenger != NULL ? thePassenger->mComplexUnit : NULL;
-        if (theUnit != NULL && theUnit->mHitPoints > 0)
-            theUnits.push_back(theUnit);
-    }
-    EEUnitClassCast<EEUCTransport>(theTransport->mUnitClass)->FilterLoadable(&theUnits, theTransport, &theRejected);
-    long theTileX;
-    long theTileY;
-    if (theUnits.size() != 0) {
-        EEUGRust* theGoal;
-        if (theOldGoal != NULL && theOldGoal->mKind == kGoalLoadTransport) {
-            theGoal = EELoadTransportGoalCast(theOldGoal);
-            theGoal->AddLoadUnits(theUnits);
-        } else {
-            theGoal = EEUGRust::NewLoad(kGoalLoadTransport, theTransport, theUnits, true);
-            theTransport->SetGoal(theGoal, 0, 0);
-            theTransport->StartAction(theTransport->mStats->mMaxVelocity > 0.0f ? 8000 : 0x2ee3);
-            theTransport->mUnitClass->ActionChanged(theTransport);
-        }
-        theTileX = theGoal->GetLoadUnitTile().GetX();
-        theTileY = theGoal->GetLoadUnitTile().GetY();
-        for (std::vector<EEComplexUnit*>::iterator theIterator = theUnits.begin(); theIterator != theUnits.end();
-             theIterator++) {
-            EEComplexUnit* theUnit = *theIterator;
-            theUnit->SetGoal(theGoal->Clone(), 0, 0);
-            theUnit->StartAction(kActionPrepareToMove);
-            theUnit->mUnitClass->ActionChanged(theUnit);
-        }
-    } else {
-        theTileX = theTransport->mTileX;
-        theTileY = theTransport->mTileY;
-    }
-    if (theRejected.size() != 0) {
-        for (unsigned long i = 1; i < 6; i++) {
-            EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
-            for (std::vector<EEComplexUnit*>::iterator theIterator = theRejected.begin();
-                 theIterator != theRejected.end(); theIterator++) {
-                if (theGroup->IsInFormationSlot(*theIterator, i))
-                    theGroup->AddMember(*theIterator, true);
-            }
-            theGroup->KeepMobileUnits();
-            if (theGroup->GetNumUnits() > 0) {
-                theGroup->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theTileX, (float)theTileY), true, true, false, 0.0f,
-                                                   false, 0), false);
-                theGroup->mAction = kActionPrepareToMove;
-                thePlayer->mPendingGroups.push_back(theGroup);
-                theGroup->Plan();
-            } else
-                theGroup->Dereference();
-        }
-    }
-    thePlayer->PlayAcknowledgement(theTransport);
+    ee_units_load_transport(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTransportID,
+                            this->mPassengerID);
 }
 
 // EEMLockUnlock's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -3335,17 +3151,17 @@ void EEMPlayerSlotInfo::ImportMessage(unsigned char* inPayloadPointer)
 void EEMRecordFrames::Execute()
 {
     if ((gCommunications->IsClient() == true
-         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlayback()->GetMode() == kRecordModePlaying)
+         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
         || (gCommunications->IsServer() == true
-            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlayback()->GetMode() == kRecordModePlaying)) {
+            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)) {
         if (this->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot) {
             gGraphics->PostSetFlag5B(this->mSlowPlayback);
             gPhysics->SetSlowPlayback(this->mSlowPlayback);
             if (gCommunications->IsClient()) {
                 if (this->mSlowPlayback)
-                    (static_cast<NESynchronousClient*>(gCommunications))->GetRecordPlayback()->SetSlowPlayback();
+                    (static_cast<NESynchronousClient*>(gCommunications))->SetSlowPlayback();
                 else
-                    (static_cast<NESynchronousClient*>(gCommunications))->GetRecordPlayback()->SetNormalPlayback();
+                    (static_cast<NESynchronousClient*>(gCommunications))->SetNormalPlayback();
             }
         }
     }
@@ -3630,67 +3446,11 @@ char* EEMRemoveTechnology::GetMessageLabel() const
 // kinds 0/2/7/8 and hero techs go to one building: one with an empty queue and no research, else the first
 void EEMResearchTechnology::Execute()
 {
-    EECivPower thePower;
+    // New (game messages lane, round 2): the body is Rust (ee_units research.rs research_technology: each built
+    // selected building of the type queues it, or the one with the shortest queue) over the store and EEUnitHost.cpp
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    EEUnit* theUnit = gWorld.GetUnit(this->mBuildingID);
-    EEComplexUnit* theBest = NULL;
-    unsigned long theBestQueue = 10000;
-    bool theWonder = false;
-    bool thePower2 = false;
-    unsigned long theCount = this->mFiveTimes ? 5 : 1;
-    if (theUnit && theUnit->mHitPoints > 0) {
-        long theType = theUnit->mUnitClass->mUnitType;
-        EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(this->mTechnology);
-        bool theAll;
-        if (theNode->mData->mKind == 0 || theNode->mData->mKind == 2 || theNode->mData->mKind == 7 || theNode->mData->mKind == 8)
-            theAll = true;
-        else
-            theAll = false;
-        if (theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass] && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero)
-            theWonder = true;
-        else if (theNode->mData->mKind == 3 && gCivPowersManager.GetPower(kCivPowerBundeswehr, thePower)
-                 && thePower.mTechnology == theNode->mData->mPrerequisite1)
-            thePower2 = true;
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theOther = theGroup->GetUnit(i);
-            EEComplexUnit* theComplexUnit = theOther->mComplexUnit;
-            if (theOther->mHitPoints > 0
-                && (theOther->mUnitClass->mUnitType == theType || theOther->mUnitClass->SharesResearch(theType))
-                && theComplexUnit && theComplexUnit->mIsBuilt && theCount > 0) {
-                for (unsigned long j = 0; j < theCount; j++) {
-                    if (theAll || (theWonder && !gWorld.mGameOptions.mIsScenarioGame)) {
-                        unsigned long theQueue = theOther->mComplexUnit->GetBuildQueueSize() + (theOther->mComplexUnit->mCurrentResearch != 100000);   // queue + the one in progress (precedence)
-                        if (theQueue < theBestQueue) {
-                            theBestQueue = theQueue;
-                            theBest = theOther;
-                        }
-                    } else {
-                        if (thePower2 && theOther->mComplexUnit && theOther->mComplexUnit->mCurrentResearch != kTechNone
-                            && theOther->mHitPoints > 0 && !theOther->mComplexUnit->mIsDisabled
-                            && thePlayer->GetTechTree()->Get(theOther->mComplexUnit->mCurrentResearch)
-                            && thePlayer->mTechnologies->Get(theOther->mComplexUnit->mCurrentResearch)->mData->mMakesUnit) {
-                            theOther->mComplexUnit->StartAction(kActionIdle);
-                            theOther->mUnitClass->ActionChanged(theOther->mComplexUnit);
-                        }
-                        theOther->mComplexUnit->QueueResearch(this->mTechnology, (EEIsEpochID(this->mTechnology)) || thePower2);
-                    }
-                }
-            }
-        }
-        if (theAll || (theWonder && !gWorld.mGameOptions.mIsScenarioGame)) {
-            if (theBest) {
-                if (thePower2 && theBest->mComplexUnit && theBest->mComplexUnit->mCurrentResearch != kTechNone && theBest->mHitPoints > 0
-                    && !theBest->mComplexUnit->mIsDisabled && thePlayer->GetTechTree()->Get(theBest->mComplexUnit->mCurrentResearch)
-                    && thePlayer->GetTechTree()->Get(theBest->mComplexUnit->mCurrentResearch)->mData->mMakesUnit) {
-                    theBest->mComplexUnit->StartAction(kActionIdle);
-                    theBest->mUnitClass->ActionChanged(theBest->mComplexUnit);
-                }
-                theBest->mComplexUnit->QueueResearch(this->mTechnology, (EEIsEpochID(this->mTechnology)) || thePower2);
-            }
-        }
-    }
+    ee_units_research_technology(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mBuildingID,
+                                 this->mTechnology, this->mFiveTimes ? 1 : 0);
 }
 
 // EEMResearchTechnology's codec class and members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -4702,9 +4462,9 @@ size_t EEMImproveUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass)
 void EEMZoomInfo::Execute()
 {
     if ((gCommunications->IsClient() == true
-         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlayback()->GetMode() == kRecordModePlaying)
+         && static_cast<NESynchronousClient*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)
         || (gCommunications->IsServer() == true
-            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlayback()->GetMode() == kRecordModePlaying)) {
+            && static_cast<NESynchronousServer*>(gCommunications)->GetRecordPlaybackMode() == kRecordModePlaying)) {
         if (this->GetOriginatingSlot() == gWorld.GetCurrentPlayer()->mSlot)
             gWorld.mCameraControl.SetZoom(this->mZoom);
     }

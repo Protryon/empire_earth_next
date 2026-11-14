@@ -5,7 +5,7 @@
 
 use std::ffi::c_ulong;
 
-use crate::bitmap::{self, Stretch};
+use crate::bitmap;
 use crate::physical;
 use crate::terrain_visible::{self, GeVisibleInput, GeVisiblePolygon, VisiblePlan};
 use crate::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeRectangle, GeTransformation};
@@ -258,28 +258,7 @@ pub unsafe extern "C" fn ee_ge_terrain_visible_free(plan: *mut VisiblePlan) {
     }
 }
 
-// ---- GEBitmap and GERhombus ----
-
-/// `GEBitmap::ComputeRotation`'s corners (top left, top right, bottom left, bottom right) into `out`.
-///
-/// # Safety
-/// `location` is valid; `out` holds four points.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_bitmap_corners(
-    location: *const Ge2DPoint,
-    width: f32,
-    height: f32,
-    x_scale: f32,
-    y_scale: f32,
-    rotation: f32,
-    out: *mut Ge2DPoint,
-) {
-    // SAFETY: the function's contract
-    unsafe {
-        let corners = bitmap::bitmap_corners(*location, width, height, x_scale, y_scale, rotation);
-        std::ptr::copy_nonoverlapping(corners.as_ptr(), out, 4);
-    }
-}
+// ---- GERhombus (GEBitmap's corners and stretch are its Rust object's: bmpobj.rs) ----
 
 /// `GERhombus::ComputeRotation`'s corners into `out`.
 ///
@@ -292,22 +271,4 @@ pub unsafe extern "C" fn ee_ge_rhombus_corners(rectangle: *const GeRectangle, ro
         let corners = bitmap::rhombus_corners(&*rectangle, rotation);
         std::ptr::copy_nonoverlapping(corners.as_ptr(), out, 4);
     }
-}
-
-/// `GEBitmap::ComputeStretchedCoordsAndScale`'s coordinates and scale.
-///
-/// # Safety
-/// The pointers are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ge_bitmap_stretch(
-    texture: *const GeRectangle,
-    source: *const GeRectangle,
-    destination: *const GeRectangle,
-    width: c_ulong,
-    height: c_ulong,
-    drop: c_ulong,
-    out: *mut Stretch,
-) {
-    // SAFETY: the function's contract
-    unsafe { *out = bitmap::stretched_coords(&*texture, &*source, &*destination, width, height, drop) };
 }

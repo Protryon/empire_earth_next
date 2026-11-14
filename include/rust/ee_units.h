@@ -363,6 +363,11 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 /// `kGoalGather` (`EEUnitGoal::mKind` of `EEUGGather`).
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
+/// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
+constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
+
+constexpr static const uint8_t GOAL_LOAD_GARRISON = 12;
+
 /// `kGoalBuildRepair`
 constexpr static const uint8_t GOAL_BUILD_REPAIR = 4;
 
@@ -488,6 +493,24 @@ constexpr static const uint32_t EE_GOAL_CTOR_BUILD_REPAIR = 13;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
+
+/// `Host::unit_load_traits`' bits
+constexpr static const uint8_t EE_UNITS_LOAD_CAN_GARRISON = 1;
+
+constexpr static const uint8_t EE_UNITS_LOAD_TRANSPORT = 2;
+
+constexpr static const uint8_t EE_UNITS_LOAD_MOVES = 4;
+
+/// `Host::research_node`'s bits: the node was found, `ResearchNode`'s flags
+constexpr static const uint8_t EE_UNITS_RESEARCH_FOUND = 1;
+
+constexpr static const uint8_t EE_UNITS_RESEARCH_HERO = 2;
+
+constexpr static const uint8_t EE_UNITS_RESEARCH_BUNDESWEHR = 4;
+
+constexpr static const uint8_t EE_UNITS_RESEARCH_MAKES_UNIT = 8;
+
+constexpr static const uint8_t EE_UNITS_RESEARCH_EPOCH = 16;
 
 /// The improvement kinds (ee/EEImprovementIDs.h): 0 area effect, 1 attack, 2..7 the armours, 8 flight time or power,
 /// 9 hit points, 10 leadership, 11 range, 12 repair, 14 speed, 15 transport; 13 unused.
@@ -642,6 +665,155 @@ constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
 constexpr static const int32_t EE_UNITS_MODE_ACCELERATE = 3;
 
 constexpr static const int32_t EE_UNITS_MODE_BRAKE = 4;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_ULONG = 1;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_LONG = 2;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_FLOAT = 3;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_READ_BOOL = 4;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_ULONG = 5;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_LONG = 6;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_FLOAT = 7;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WRITE_BOOL = 8;
+
+/// a stand-in upgrade of the first unit class (index: the era's assertion line)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_NEW = 10;
+
+/// upgrade `io.i`'s record into the player's upgrade (0) or the stand-in (its result)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UPGRADE_LOAD = 11;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UPGRADE_DUMMY_DELETE = 12;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_RTS_LOAD = 13;
+
+/// `sGoalCounter = io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_SET_GOAL_COUNTER = 14;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_TECH_DELETE = 15;
+
+/// a new tech tree, the game's copied, bound to the player, loaded
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_TECH_LOAD = 16;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_PATROL_CLEAR = 17;
+
+/// a new patrol group loaded, added when it loaded, dereferenced
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_PATROL_LOAD = 18;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_SAVED_GROUPS_LOAD = 19;
+
+/// `EEUnitStorePlayerTable` (the store's diplomacy table)
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_STORE_PLAYER_TABLE = 20;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_AIR_LOAD = 21;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_ACTIVE_LOAD = 22;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_CIV_LOAD = 23;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_GROUP_LOAD = 24;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_CIVFILE_LOAD = 25;
+
+/// `mQueuedImprovements[io.i]` (made if absent): its float into `io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_QUEUED_FLOAT = 26;
+
+/// `mQueuedImprovements[io.i].first = io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_QUEUED_SET_FLOAT = 27;
+
+/// `FSLoadVector` into `mQueuedImprovements[io.i].second`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_LOAD = 28;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_CONSTRUCTION_PUSH = 29;
+
+/// `mHerds.resize(io.i, NULL)`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_HERDS_RESIZE = 30;
+
+/// `mHerds[index] = new EEHerd`, loaded
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_HERD_LOAD = 31;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_EVENTS_LOAD = 32;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_OFFMAP_RESIZE = 33;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_OFFMAP_LOAD = 34;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_PUSH = 35;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDERS_CLEAR = 36;
+
+/// `mUnitClassUpgrades.size()` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UPGRADE_SLOTS = 40;
+
+/// 1: upgrade `index` is not NULL
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UPGRADE_PRESENT = 41;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_UPGRADE_SAVE = 42;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_RTS_SAVE = 43;
+
+/// `sGoalCounter` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_GOAL_COUNTER = 44;
+
+/// 1: the player has a tech tree
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_TECH_PRESENT = 45;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_TECH_SAVE = 46;
+
+/// `mPatrolGroups.size()` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_PATROL_SLOTS = 47;
+
+/// patrol group `index`: 0 NULL, 1 a town's, 2 another
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_PATROL_KIND = 48;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_PATROL_SAVE = 49;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_SAVED_GROUPS_SAVE = 50;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_AIR_SAVE = 51;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_ACTIVE_SAVE = 52;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_CIV_SAVE = 53;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_GROUP_SAVE = 54;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_CIVFILE_SAVE = 55;
+
+/// `mQueuedImprovements.size()` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_QUEUED_COUNT = 56;
+
+/// the `index`th entry (key order): its key into `io.i`, its float into `io.f`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_QUEUED_ENTRY = 57;
+
+/// `FSSaveVector` of the `index`th entry's list
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_QUEUED_VECTOR_SAVE = 58;
+
+/// `mConstructionSites->GetSize()` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_CONSTRUCTION_COUNT = 59;
+
+/// the `index`th construction site's unit id into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_CONSTRUCTION_ID = 60;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_HERD_COUNT = 61;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_HERD_SAVE = 62;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_EVENTS_SAVE = 63;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_OFFMAP_COUNT = 64;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_OFFMAP_SAVE = 65;
+
+/// `mWonders->GetSize()` into `io.i`
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_COUNT = 66;
+
+constexpr static const int32_t EE_UNITS_PLAYER_SAVE_WONDER_ID = 67;
 
 /// The player ids (`gWorld.mPlayers`, `mEnemies`: 17 entries).
 constexpr static const size_t EE_UNITS_PLAYER_COUNT = 17;
@@ -1721,6 +1893,68 @@ struct EeUnitsAIHost {
   void (*set_next_trigger_time)(void *ctx, uint32_t value);
 };
 
+/// The unit's and its model's numbers for its current animation state (`state`).
+struct EeUnitsAnimateIn {
+  /// `mIsAnimationPaused`
+  bool paused;
+  /// the model's `mLoops[state]`
+  bool loops;
+  /// `mIsSpeedScaled[state]`
+  bool speed_scaled;
+  /// `mSharesFrames[state]`
+  bool shares_frames;
+  /// the unit's stats' `mCanFireOverWalls`
+  bool can_fire_over_walls;
+  /// `IsFoundation()`
+  bool foundation;
+  /// `GetAnimation()`
+  uint32_t state;
+  /// `gPhysics->mTickTimeMs`
+  uint32_t tick_ms;
+  /// `mAnimationTime`
+  uint32_t time;
+  /// `mPhysicalModel.GetFrame()`
+  uint32_t frame;
+  uint32_t hold_time;
+  uint32_t start_frame;
+  uint32_t last_frame;
+  uint32_t frame_count;
+  uint32_t frame_time;
+  uint32_t sound1_frame;
+  uint32_t sound2_frame;
+  /// `GetVelocity()`, the class's `GetMaxVelocity()`
+  float velocity;
+  float max_velocity;
+  /// `mAngularVelocity.GetYaw()`, the class's `mMaxAngularVelocity`
+  float yaw_velocity;
+  float max_angular_velocity;
+};
+
+/// What the tick does: each `set_*` flag with its value, applied in this order.
+struct EeUnitsAnimateOut {
+  /// `SetIsAnimationPaused(paused)`
+  bool set_paused;
+  bool paused;
+  /// `SetAnimationFrame(frame)`
+  bool set_frame;
+  uint32_t frame;
+  /// `SetAnimationTime(time)`
+  bool set_time;
+  uint32_t time;
+  /// the unit's sound stopped and released
+  bool stop_sound;
+  /// the paused loop's idle pick: the C++ draws `GetRandom()` and sets animation 7 or 8 (with the horse's breath)
+  bool idle_pick;
+  /// the sound to play: 0 none, 1 the state's first, 2 its second
+  uint32_t sound;
+  /// a running animation only: `mAnimationFraction = fraction` when it differs (the C++ compares, after the
+  /// setters), `SetNextFrame(next_frame)`
+  float fraction;
+  uint32_t next_frame;
+  /// the frames stepped (the return value)
+  uint32_t steps;
+};
+
 /// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
 /// built flag and goal) are 0 / -1.
 struct EeUnitRecord {
@@ -2028,6 +2262,51 @@ struct EeUnitsPitchIn {
   uint8_t naval;
 };
 
+/// One operation's values: a number (`long`/`unsigned long`/an id/a count), a float, a bool (0 or 1).
+struct EeUnitsPlayerSaveIo {
+  int64_t i;
+  float f;
+  uint8_t b;
+};
+
+/// The host: `(ctx, op, index, io) -> the operation's result` (kErrorOK 0; a query's answer for the queries).
+using EeUnitsPlayerSaveFn = int32_t(*)(void*, int32_t, uint32_t, EeUnitsPlayerSaveIo*);
+
+/// `EEPlayer`'s saved numbers (their C++ names and types).
+struct EeUnitsPlayerSaved {
+  /// the scenario's player variables (zeroed together; saved)
+  unsigned long mScenarioVariables[10];
+  /// non-zero: at war with that player (calamity targets; the store's diplomacy table)
+  unsigned long mEnemies[17];
+  /// the tributes given and received by resource (two rows of 5)
+  unsigned long mTributes[10];
+  /// 0..3 (the chat form's radio buttons 3, 2, 4, 5)
+  unsigned long mChatType;
+  unsigned long mCombatState;
+  unsigned long mGameResult;
+  unsigned long mFreeUnitCounter;
+  unsigned long mFreeUnitInterval;
+  /// indexed by a resource (2..6 used)
+  long mResourceCaps[7];
+  long mPopLimit;
+  long mPopulationCount;
+  long mEndOfGameCount;
+  /// written, never read back (a load reads and drops the word)
+  long mNumCapitols;
+  /// indexed by a resource 2..6 as `[resource - 2]`
+  long mResourceTrade[5];
+  long mInsuranceRefunds[5];
+  long mNumVitalBuildings;
+  float mHighGroundBonus;
+  float mHealTimer;
+  bool mSendChatMessage[17];
+  bool mSharedLOS;
+  bool mDisconnected;
+  bool mCivilizationLocked;
+  bool mCivilizationChosen;
+  bool mCivUpgradesPurchased;
+};
+
 /// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
 struct EeUnitsGoalIo {
   int64_t i[8];
@@ -2214,6 +2493,12 @@ EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
                                   uint64_t object,
                                   uint8_t is_citizen,
                                   int64_t game_time);
+
+/// `EEUnitClass::Animate`'s decisions (`out` filled).
+///
+/// # Safety
+/// `input` and `out` are valid.
+void ee_units_animate(const EeUnitsAnimateIn *input, EeUnitsAnimateOut *out);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
@@ -2482,6 +2767,35 @@ void ee_units_clear_airport_commands(void *selection);
 
 /// `EEMStopActiveGroup::Execute`'s body (`rally::stop_active_group`) for the sender's selection (null: none).
 void ee_units_stop_active_group(void *selection);
+
+/// `EEMLoadGarrison::Execute`'s body (`boarding::load_garrison`) for the sender, its selection (null: none) and the
+/// garrison's id.
+void ee_units_load_garrison(void *player,
+                            void *selection,
+                            uint32_t garrison);
+
+/// `EEMLoadTransport::Execute`'s body (`boarding::load_transport`) for the sender, its selection (null: none), the
+/// transport's id and the passenger's (-1: the selection).
+void ee_units_load_transport(void *player,
+                             void *selection,
+                             uint32_t transport,
+                             int32_t passenger);
+
+/// `EEMResearchTechnology::Execute`'s body (`research::research_technology`) for the sender, its selection (null:
+/// none), the clicked building's id, the technology and the five-times flag.
+void ee_units_research_technology(void *player,
+                                  void *selection,
+                                  uint32_t building,
+                                  int32_t technology,
+                                  uint8_t five);
+
+/// `EEMHackANewUnit::Execute`'s body (`hack::hack_new_unit`) for the sender, the message's class (-1: the sender's
+/// cheat class), point and player id; returns the class the message keeps.
+int32_t ee_units_hack_new_unit(void *sender,
+                               int32_t unit_type,
+                               float x,
+                               float y,
+                               int64_t player_id);
 
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
@@ -2792,6 +3106,60 @@ extern void ee_units_host_unit_action_changed(uint32_t unit);
 
 extern void ee_units_host_unit_halt(uint32_t unit);
 
+extern uint8_t ee_units_host_unit_load_traits(uint32_t unit);
+
+extern void *ee_units_host_unit_load_goal(uint32_t unit, uint8_t kind);
+
+extern void ee_units_host_load_goal_add_units(void *goal, const uint32_t *units, size_t count);
+
+extern void *ee_units_host_load_goal_new(uint8_t kind,
+                                         uint32_t carrier,
+                                         const uint32_t *units,
+                                         size_t count,
+                                         uint8_t flag);
+
+extern uint8_t ee_units_host_load_goal_fields(void *goal, int64_t *x, int64_t *y);
+
+extern void ee_units_host_player_event(void *player, int64_t x, int64_t y, int32_t code);
+
+extern void ee_units_host_group_add_unit(void *group, uint32_t unit);
+
+extern uint8_t ee_units_host_research_node(void *player, int32_t technology, int32_t *kind);
+
+extern uint8_t ee_units_host_scenario_game();
+
+extern uint8_t ee_units_host_unit_shares_research(uint32_t unit, int64_t unit_type);
+
+extern int64_t ee_units_host_unit_research_state(uint32_t unit,
+                                                 int64_t *current,
+                                                 uint8_t *disabled);
+
+extern void ee_units_host_unit_queue_research(uint32_t unit, int32_t technology, uint8_t front);
+
+extern int32_t ee_units_host_player_hack_class(void *player);
+
+extern int64_t ee_units_host_unit_class_count();
+
+extern uint8_t ee_units_host_unit_class_info(int32_t unit_type,
+                                             int64_t *category,
+                                             uint8_t *land_building);
+
+extern float ee_units_host_player_class_scale(int64_t player_id, int32_t unit_type);
+
+extern uint8_t ee_units_host_map_has_tile(int64_t x, int64_t y);
+
+extern void ee_units_host_hack_create_unit(int32_t unit_type, float x, float y, int64_t player_id);
+
+extern void ee_units_host_hack_create_building(int32_t unit_type,
+                                               int64_t x,
+                                               int64_t y,
+                                               int64_t player_id);
+
+extern size_t ee_units_host_transport_filter(uint32_t transport,
+                                             uint32_t *units,
+                                             size_t count,
+                                             uint32_t *rejected);
+
 /// `CanUpgrade`
 ///
 /// # Safety
@@ -2908,6 +3276,26 @@ EeUnitsTurn ee_units_pm_approach_pitch(const EeUnitsPitchIn *input,
                                        float current,
                                        float target,
                                        int32_t mode);
+
+/// `EEPlayer::Load`: the record `rec` (the player's `EeUnitsPlayerSaved` base) and its C++ parts through `f`.
+///
+/// # Safety
+/// `rec` points to the player's live record; `f` is valid with `ctx` for the call.
+int32_t ee_units_player_load(void *ctx,
+                             EeUnitsPlayerSaveFn f,
+                             EeUnitsPlayerSaved *rec,
+                             uint32_t major,
+                             uint32_t minor);
+
+/// `EEPlayer::Save`: as [`ee_units_player_load`].
+///
+/// # Safety
+/// As [`ee_units_player_load`].
+int32_t ee_units_player_save(void *ctx,
+                             EeUnitsPlayerSaveFn f,
+                             EeUnitsPlayerSaved *rec,
+                             uint32_t major,
+                             uint32_t minor);
 
 /// A player's table: its id and its 17 stances (`enemies` has 17 words).
 ///

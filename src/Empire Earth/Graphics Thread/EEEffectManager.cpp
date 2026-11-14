@@ -70,8 +70,6 @@
 #include "ee/EEE2DVortex.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
 #include "ee/EEE3DIcon.h"
-#include "ee/EEE3DNuclearExplosion.h"
-#include "ee/EEE3DHurricane.h"
 #include "ee/EEE3DSmokeGenerator.h"
 #include "ee/EEE3DFarm.h"
 #include "ee/EEE3DEnergyWall.h"
@@ -81,7 +79,6 @@
 #include "ee/EEEDamagedEffect.h"
 #include "ee/EEE3DRust.h"
 #include "ee/EEE3DCommandConfirmation.h"
-#include "ee/EEE3DEnergyWave.h"
 #include "ee/EEE3DTracerBeam.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
@@ -199,13 +196,13 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DVolcano: theEffect = new EEE3DVolcano(); break;
     case kEffect3DDisease: theEffect = new EEE3DRust(0x23); break;
     case kEffect3DFarm: theEffect = new EEE3DFarm(); break;
-    case kEffect3DHurricane: theEffect = new EEE3DHurricane(); break;
+    case kEffect3DHurricane: theEffect = new EEE3DRust(0x24); break;
     case kEffect3DLinearProjectile: theEffect = new EEE3DRust(0x25); break;
     case kEffect3DRain: theEffect = new EEE3DRain(); break;
     case kEffect3DSnow: theEffect = new EEE3DSnow(); break;
     case kEffect3DShells: theEffect = new EEE3DRust(0x26); break;
     case kEffect3DAdditivePass: theEffect = new EEE3DRust(0x27); break;
-    case kEffect3DNuclearExplosion: theEffect = new EEE3DNuclearExplosion(); break;
+    case kEffect3DNuclearExplosion: theEffect = new EEE3DRust(0x28); break;
     case kEffect3DIcon: theEffect = new EEE3DIcon(2); break;
     case kEffect3DMarchingLine: theEffect = new EEE3DMarchingLine(); break;
     case kEffect3DGoal: theEffect = new EEE3DGoal(); break;
@@ -222,7 +219,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DEnergyWall: theEffect = new EEE3DEnergyWall(0x34); break;
     case kEffect3DDamageVent: theEffect = new EEE3DDamageVent(); break;
     case kEffect3DScreenFlash: theEffect = new EEE3DRust(0x46); break;
-    case kEffect3DEnergyWave: theEffect = new EEE3DEnergyWave(); break;
+    case kEffect3DEnergyWave: theEffect = new EEE3DRust(0x47); break;
     default: break;
     }
     return theEffect;
@@ -292,9 +289,9 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 15: theEffect = new EEE2DMarchingIcons(inUnit, inEffect, EE_GFX_EFFECT_KIND_SQUARE_ICONS); break;
     case 2: theEffect = new EEE3DIcon(inUnit, inEffect, 0, 2); break;
     case 0x18: theEffect = new EEE3DRust(inUnit, inEffect, 0x18); break;
-    case 0x28: theEffect = new EEE3DNuclearExplosion(inUnit, inEffect); break;
+    case 0x28: theEffect = new EEE3DRust(inUnit, inEffect, 0x28); break;
     case 0x27: theEffect = new EEE3DRust(inUnit, inEffect, 0x27); break;
-    case 0x24: theEffect = new EEE3DHurricane(inUnit, inEffect); break;
+    case 0x24: theEffect = new EEE3DRust(inUnit, inEffect, 0x24); break;
     case 0x23: theEffect = new EEE3DRust(inUnit, inEffect, 0x23); break;
     case 0x1e: theEffect = EEE3DSmokeGenerator::CreateDestructionSmoke(inUnit, inEffect); break;
     case 0x29: theEffect = new EEE3DFarm(inUnit, inEffect); break;
@@ -310,7 +307,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x3b: theEffect = new EEE3DMultiEffect(inUnit, inEffect, 0x3b); break;
     case 0x3a: theEffect = new EEE3DParticleEmitter(inUnit, inEffect, 0x3a, inTagPoint); break;
     case 0x42: theEffect = new EEE3DRust(inUnit, inEffect, 0x42); break;
-    case 0x47: theEffect = new EEE3DEnergyWave(inUnit, inEffect); break;
+    case 0x47: theEffect = new EEE3DRust(inUnit, inEffect, 0x47); break;
     case 0x46: theEffect = new EEE3DRust(inUnit, inEffect, 0x46); break;
     case 0x45: theEffect = new EEE3DRust(inUnit, inEffect, kEffect3DShield); break;
     case 0x44: theEffect = new EEE3DRust(inUnit, inEffect, 0x44); break;
@@ -651,6 +648,15 @@ void EEEffectCaptureSweep()
         {0x23, kOnUnit, 0},        {0x25, kBetweenPoints, 0}, {0x26, kBetweenUnits, 0},  {0x27, kOnUnit, 0},
         {0x33, kUnitToPoint, 0},   {0x3f, kOnUnit, 0},        {0x42, kOnUnit, 0},        {0x43, kUnitToPoint, 0x18},
         {0x44, kOnUnit, 0x3f},     {0x45, kOnUnit, 0},        {0x46, kOnUnit, 0},
+        // R4.4, sixteenth round: the other 3D kinds an entry point makes (after the first fifteen, so their records
+        // are unchanged). Not 0x39 (the 3D particle at a point): its first row (6) faults in EEGraphicEffect::GetMedia
+        // from its SetUp (not tried on the original); the game makes 0x39 through the emitters only
+        {0x24, kOnUnit, 0},        {0x28, kOnUnit, 0},        {0x47, kOnUnit, 0},        {0x3c, kAtPoint, 0},
+        {0x02, kOnUnit, 0},        {0x02, kAtPoint, 0},       {0x40, kBetweenUnits, 0},  {0x40, kUnitToPoint, 0},
+        {0x41, kOnUnit, 0},        {0x41, kUnitToPoint, 0},   {0x34, kOnUnit, 0},        {0x35, kOnUnit, 0},
+        {0x29, kOnUnit, 0},        {0x2b, kOnUnit, 0},        {0x2b, kAtPoint, 0},       {0x2c, kOnUnit, 0},
+        {0x1e, kOnUnit, 0},        {0x3a, kOnUnit, 0},        {0x3a, kAtPoint, 0},       {0x3b, kOnUnit, 0},
+        {0x3b, kAtPoint, 0},       {0x20, kAtPoint, 0},
     };
     EEEffectManager* theManager = gEffectManager;
     if (theManager == NULL)

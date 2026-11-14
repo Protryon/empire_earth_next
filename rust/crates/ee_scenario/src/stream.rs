@@ -45,6 +45,26 @@ pub const EE_SCENARIO_IO_ENTRY_AT: u32 = 15;
 /// value)` then `SetConditionOperator(index, op)`, or `SetEffect(index, first, value)` then `SetEffectOperator`.
 pub const EE_SCENARIO_IO_ENTRY_SET: u32 = 16;
 
+/// The manager's element list `slot` (`EE_SCENARIO_ELEMENT_*`): a new element read by its `Load` and kept as the
+/// original kept it (the result the element's).
+pub const EE_SCENARIO_IO_ELEMENT_LOAD: u32 = 17;
+/// The manager's element `index` of list `slot`: its `Save` (the result).
+pub const EE_SCENARIO_IO_ELEMENT_SAVE: u32 = 18;
+/// The manager's element list `slot`: its `size()` into `*value` (an `unsigned long`).
+pub const EE_SCENARIO_IO_ELEMENT_COUNT: u32 = 19;
+/// The manager's media strings: `Load` (`slot` 0) or `Save` (1).
+pub const EE_SCENARIO_IO_MEDIA: u32 = 20;
+/// The manager's dialog messages (`EESMLoadVector` / `EESMSaveVector`): `slot` 0 load, 1 save.
+pub const EE_SCENARIO_IO_MESSAGES: u32 = 21;
+
+/// The manager's element lists: triggers, conditions, effects, objects, areas, pending effects.
+pub const EE_SCENARIO_ELEMENT_TRIGGERS: u32 = 0;
+pub const EE_SCENARIO_ELEMENT_CONDITIONS: u32 = 1;
+pub const EE_SCENARIO_ELEMENT_EFFECTS: u32 = 2;
+pub const EE_SCENARIO_ELEMENT_OBJECTS: u32 = 3;
+pub const EE_SCENARIO_ELEMENT_AREAS: u32 = 4;
+pub const EE_SCENARIO_ELEMENT_PENDING: u32 = 5;
+
 /// The trigger's condition entries (`EESMTConditionWrapper`) and effect entries (`EESMTEffectWrapper`).
 pub const EE_SCENARIO_ENTRIES_CONDITIONS: u32 = 0;
 pub const EE_SCENARIO_ENTRIES_EFFECTS: u32 = 1;
@@ -81,6 +101,21 @@ pub trait Stream {
         EeScenarioEntry::default()
     }
     fn entry_set(&mut self, _slot: u32, _index: c_ulong, _entry: EeScenarioEntry) {}
+    fn element_load(&mut self, _kind: u32) -> i32 {
+        0
+    }
+    fn element_save(&mut self, _kind: u32, _index: c_ulong) -> i32 {
+        0
+    }
+    fn element_count(&mut self, _kind: u32) -> c_ulong {
+        0
+    }
+    fn media(&mut self, _save: bool) -> i32 {
+        0
+    }
+    fn messages(&mut self, _save: bool) -> i32 {
+        0
+    }
 }
 
 /// The C ABI's stream: a context and the I/O callback (`value` the field or local the operation reads or writes).
@@ -157,6 +192,23 @@ impl Stream for EeScenarioStream {
     }
     fn entry_set(&mut self, slot: u32, index: c_ulong, mut entry: EeScenarioEntry) {
         self.call(EE_SCENARIO_IO_ENTRY_SET, slot, index, (&mut entry as *mut EeScenarioEntry).cast());
+    }
+    fn element_load(&mut self, kind: u32) -> i32 {
+        self.call(EE_SCENARIO_IO_ELEMENT_LOAD, kind, 0, std::ptr::null_mut())
+    }
+    fn element_save(&mut self, kind: u32, index: c_ulong) -> i32 {
+        self.call(EE_SCENARIO_IO_ELEMENT_SAVE, kind, index, std::ptr::null_mut())
+    }
+    fn element_count(&mut self, kind: u32) -> c_ulong {
+        let mut value: c_ulong = 0;
+        self.call(EE_SCENARIO_IO_ELEMENT_COUNT, kind, 0, (&mut value as *mut c_ulong).cast());
+        value
+    }
+    fn media(&mut self, save: bool) -> i32 {
+        self.call(EE_SCENARIO_IO_MEDIA, save as u32, 0, std::ptr::null_mut())
+    }
+    fn messages(&mut self, save: bool) -> i32 {
+        self.call(EE_SCENARIO_IO_MESSAGES, save as u32, 0, std::ptr::null_mut())
     }
 }
 
@@ -280,6 +332,13 @@ pub struct Bytes {
     pub strings: Vec<Vec<u8>>,
     pub lists: Vec<Vec<c_ulong>>,
     pub entries: [Vec<EeScenarioEntry>; 2],
+    /// The manager's element lists: each element is one 4-byte value in the file.
+    pub elements: [Vec<u32>; 6],
+    /// The media strings' and the messages' stand-ins: one 4-byte value each.
+    pub media: u32,
+    pub messages: u32,
+    /// The number of element loads after which an element load fails (9); `None` never.
+    pub fail_element_after: Option<usize>,
 }
 
 #[cfg(test)]
@@ -393,6 +452,53 @@ impl Stream for Bytes {
             list.push(EeScenarioEntry::default());
         }
         list[i].op = entry.op;
+    }
+    fn element_load(&mut self, kind: u32) -> i32 {
+        if let Some(n) = self.fail_element_after.as_mut() {
+            if *n == 0 {
+                return 9;
+            }
+            *n -= 1;
+        }
+        let Some(v) = self.u32() else { return 9 };
+        self.elements[kind as usize].push(v);
+        0
+    }
+    fn element_save(&mut self, kind: u32, index: c_ulong) -> i32 {
+        let v = self.elements[kind as usize][index as usize];
+        self.data.extend_from_slice(&v.to_le_bytes());
+        0
+    }
+    fn element_count(&mut self, kind: u32) -> c_ulong {
+        self.elements[kind as usize].len() as c_ulong
+    }
+    fn media(&mut self, save: bool) -> i32 {
+        if save {
+            self.data.extend_from_slice(&self.media.to_le_bytes());
+            0
+        } else {
+            match self.u32() {
+                Some(v) => {
+                    self.media = v;
+                    0
+                }
+                None => 9,
+            }
+        }
+    }
+    fn messages(&mut self, save: bool) -> i32 {
+        if save {
+            self.data.extend_from_slice(&self.messages.to_le_bytes());
+            0
+        } else {
+            match self.u32() {
+                Some(v) => {
+                    self.messages = v;
+                    0
+                }
+                None => 9,
+            }
+        }
     }
 }
 
