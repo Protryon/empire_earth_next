@@ -272,6 +272,7 @@ fn label20(id: u32, string: u32, x: f32, y: f32, w: f32) -> EeScreensSeplCtl {
 }
 
 /// A combo box of the trigger screens (`kind` its class, `lines` its lines) at (x, y), 20 pixels high.
+#[allow(clippy::too_many_arguments)]
 fn combo(kind: i32, id: u32, x: f32, y: f32, w: f32, lines: i32, border: i32, dirty: bool) -> EeScreensSeplCtl {
     EeScreensSeplCtl::new(EE_SCREENS_SEPL_LIST_COMBO, id, x, y, w, 20.0)
         .font(EE_SCREENS_SEPL_FONT_530)
@@ -1110,12 +1111,12 @@ mod tests {
         // the family combo: the unit sets 1 and 3 listed
         assert_eq!(o.unit_sets, vec![1, 3]);
         // the unit list down to the max count's box (583 + 22 - 1)
-        let list = &h.made[(o.unit_list - 1) as usize];
+        let list = &h.made[o.unit_list - 1];
         assert_eq!(list.kind, EE_SCREENS_SEPL_UNIT_LIST);
         assert_eq!(list.y, 458.0 + 16.0);
         assert_eq!(list.h, 583.0 + 22.0 - 1.0 - 474.0);
         // the percent label: "%"
-        let pc = &h.made[(o.percent_label - 1) as usize];
+        let pc = &h.made[o.percent_label - 1];
         assert_eq!((pc.text, pc.number), (EE_SCREENS_SEPL_TEXT_CHAR, b'%' as i32));
         // the pick-on-map mode shown: the unit list, not the specification
         assert_eq!(h.mode[&o.unit_list], EE_SCREENS_SEPL_SHOWN);
@@ -1220,7 +1221,7 @@ mod tests {
         assert_eq!(h.sel[&o.parent_combo], 2);
         assert_eq!(h.sel.get(&o.near_object), None);
         assert_eq!(h.state[&o.has_state_check], 2);
-        assert_eq!(h.on[&o.type_radio], true);
+        assert!(h.on[&o.type_radio]);
         // an unknown set: any family
         h.fields.insert((2, EE_SCREENS_SEOB_F_FAMILY), 2 + EE_SCREENS_SEOB_FAMILIES as i32);
         o.load(&mut h, 1);

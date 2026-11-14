@@ -473,7 +473,7 @@ impl Trigger {
     pub fn step<H: SeplHost + ?Sized>(&self, h: &mut H, selection: u32, step: u32) {
         self.store(h, selection);
         let first = if step < 2 { &self.first_condition } else { &self.first_effect };
-        first.set(if step % 2 == 0 { first.get() - 1 } else { first.get() + 1 });
+        first.set(if step.is_multiple_of(2) { first.get() - 1 } else { first.get() + 1 });
         self.load(h, selection);
     }
 
