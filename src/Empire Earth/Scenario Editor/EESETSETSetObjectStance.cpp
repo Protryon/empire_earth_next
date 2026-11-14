@@ -337,7 +337,7 @@ void EESETSETTrigger::Show(EESETSEffectControls* inControls)
     inControls->mScenarioComboBoxes[0]->ChangeWidth(200);
     inControls->mScenarioComboBoxes[0]->DeleteAllEntries();
     inControls->mScenarioComboBoxes[0]->mMode = kSETriggerScreenTrigger;
-    gWorld.mScenarioManager->GetTriggerNames(theNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_TRIGGERS, theNames);
     for (unsigned long i = 0; i < theNames.size(); i++)
         inControls->mScenarioComboBoxes[0]->AppendLine(theNames[i]);
     inControls->mScenarioComboBoxes[0]->SetDisplayMode(kDisplayModeShown);

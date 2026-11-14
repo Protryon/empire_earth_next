@@ -173,7 +173,7 @@ EESETSArea::~EESETSArea()
 // Sorts the scenario's areas by name
 void EESETSArea::Sort()
 {
-    gWorld.mScenarioManager->SortAreas();
+    gWorld.mScenarioManager->SortList(EE_SCENARIO_LIST_AREAS);
 }
 
 // FUNCTION: EXE 0x57d0eb
@@ -201,14 +201,14 @@ void EESETSArea::Update()
 // Moves the selected area one place down the list
 void EESETSArea::MoveDown()
 {
-    gWorld.mScenarioManager->MoveAreaDown(this->mSelection + 2);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_AREAS, this->mSelection + 2, false);
 }
 
 // FUNCTION: EXE 0x57d1e7
 // Moves the selected area one place up the list
 void EESETSArea::MoveUp()
 {
-    gWorld.mScenarioManager->MoveAreaUp(this->mSelection + 2);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_AREAS, this->mSelection + 2, true);
 }
 
 // FUNCTION: EXE 0x57d1f9
@@ -216,7 +216,7 @@ void EESETSArea::MoveUp()
 void EESETSArea::Delete()
 {
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->mCenterButton->GetForm());
-    gWorld.mScenarioManager->DeleteArea(this->mSelection + 2);
+    gWorld.mScenarioManager->DeleteEntry(EE_SCENARIO_LIST_AREAS, this->mSelection + 2);
     theEditor->GetBrushGroup()->SetIsHighlightShown(false);
 }
 
@@ -231,7 +231,7 @@ void EESETSArea::Deactivate()
 // Duplicates the selected area
 void EESETSArea::Duplicate()
 {
-    gWorld.mScenarioManager->DuplicateArea(this->mSelection + 2);
+    gWorld.mScenarioManager->DuplicateEntry(EE_SCENARIO_LIST_AREAS, this->mSelection + 2);
 }
 
 // FUNCTION: EXE 0x57d240
@@ -288,7 +288,7 @@ bool EESETSArea::GetCenter(GE2DPoint& outCenter)
 // Returns the names of the scenario's user areas
 void EESETSArea::GetNames(std::vector<UWideString>& outNames)
 {
-    gWorld.mScenarioManager->GetUserAreaNames(outNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_AREAS, outNames);
 }
 
 // FUNCTION: EXE 0x57d3f8
@@ -348,7 +348,7 @@ void EEUIFScenarioEditor::SetPaintArea(const GERectangle& inRectangle)
 // Adds a new area to the scenario
 void EESETSArea::New()
 {
-    gWorld.mScenarioManager->NewArea();
+    gWorld.mScenarioManager->NewEntry(EE_SCENARIO_LIST_AREAS);
 }
 
 // FUNCTION: EXE 0x57d5c5

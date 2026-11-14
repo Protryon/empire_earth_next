@@ -757,11 +757,11 @@ void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inCom
     if (inAreas) {
         inComboBox->mMode = kSETriggerScreenArea;
         gResource->GetString(IDS_AREA, theText);
-        gWorld.mScenarioManager->GetAreaNames(theNames);
+        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_AREAS, theNames);
     } else {
         inComboBox->mMode = kSETriggerScreenObject;
         gResource->GetString(IDS_TRIGGER_SCREEN_TAB_OBJECT, theText);
-        gWorld.mScenarioManager->GetObjectNames(theNames);
+        gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_OBJECTS, theNames);
     }
     inLabel->SetText(theText);
     inComboBox->DeleteAllEntries();

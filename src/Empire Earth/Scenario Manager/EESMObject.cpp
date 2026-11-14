@@ -394,35 +394,6 @@ long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     return ee_scenario_object_load(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
-// FUNCTION: EXE 0x5c84db
-// Updates the object's area index after areas inOld/inNew swap, or after inOld is deleted (inNew -1)
-void EESMObject::RenumberAreas(unsigned long inOldIndex, unsigned long inNewIndex)
-{
-    ee_scenario_object_renumber(this, EE_SCENARIO_RENUMBER_AREAS, inOldIndex, inNewIndex);
-}
-
-// FUNCTION: EXE 0x5c8511
-// Updates the parent and near-object indices after objects inOld/inNew swap, or after inOld is deleted
-void EESMObject::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex)
-{
-    ee_scenario_object_renumber(this, EE_SCENARIO_RENUMBER_OBJECTS, inOldIndex, inNewIndex);
-}
-
-// FUNCTION: EXE 0x5c856e
-// Maps the object's area index through the ID map
-void EESMObject::RemapAreas(EESMIDMap& inMap)
-{
-    EERemapID(this->mArea, inMap);
-}
-
-// FUNCTION: EXE 0x5c8580
-// Maps the object's parent and near-object indices through the ID map
-void EESMObject::RemapObjects(EESMIDMap& inMap)
-{
-    EERemapID(this->mParent, inMap);
-    EERemapID(this->mNearObject, inMap);
-}
-
 // FUNCTION: EXE 0x5c85a4
 // Replaces every occurrence of a unit id in the object's unit list by a new id
 void EESMObject::ReplaceUnit(long inOldUnit, long inNewUnit)
@@ -1074,70 +1045,6 @@ long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
     EESMStream theStream = {&inFile, theStrings, NULL, this};
     EeScenarioStream theTable = EESMStreamTable(&theStream);
     return ee_scenario_trigger_load(&theTable, this);
-}
-
-// FUNCTION: EXE 0x5c9f3d
-// Updates the entry's condition index after conditions inOld/inNew swap, or after inOld is deleted
-void EESMTConditionWrapper::Virtual4(unsigned long inOld, unsigned long inNew)
-{
-    ee_scenario_renumber_ids(&this->mValue, 1, inOld, inNew);   // ee_scenario fields.rs renumber
-}
-
-// FUNCTION: EXE 0x5c9f73
-// Maps the entry's condition index through the ID map
-void EESMTConditionWrapper::Virtual0(EESMIDMap& inMap)
-{
-    EERemapID(this->mValue, inMap);
-}
-
-// FUNCTION: EXE 0x5c9f85
-// Updates the entry's effect index after effects inOld/inNew swap, or after inOld is deleted
-void EESMTEffectWrapper::Virtual4(unsigned long inOld, unsigned long inNew)
-{
-    ee_scenario_renumber_ids(&this->mEffectIndex, 1, inOld, inNew);   // ee_scenario fields.rs renumber
-}
-
-// FUNCTION: EXE 0x5c9fbb
-// Maps the entry's effect index through the ID map
-void EESMTEffectWrapper::Virtual0(EESMIDMap& inMap)
-{
-    EERemapID(this->mEffectIndex, inMap);
-}
-
-// FUNCTION: EXE 0x5c9fcd
-// Updates every condition entry after conditions inOld/inNew swap or inOld is deleted
-void EESMTrigger::RenumberConditions(unsigned long inOld, unsigned long inNew)
-{
-    long theCount = this->mConditions.size();
-    for (long i = 0; i < theCount; i++)
-        this->mConditions[i]->Virtual4(inOld, inNew);
-}
-
-// FUNCTION: EXE 0x5ca009
-// Updates every effect entry after effects inOld/inNew swap or inOld is deleted
-void EESMTrigger::RenumberEffects(unsigned long inOld, unsigned long inNew)
-{
-    long theCount = this->mEffects.size();
-    for (long i = 0; i < theCount; i++)
-        this->mEffects[i]->Virtual4(inOld, inNew);
-}
-
-// FUNCTION: EXE 0x5ca045
-// Maps every condition entry's index through the ID map
-void EESMTrigger::RemapConditions(EESMIDMap& inMap)
-{
-    long theCount = this->mConditions.size();
-    for (long i = 0; i < theCount; i++)
-        this->mConditions[i]->Virtual0(inMap);
-}
-
-// FUNCTION: EXE 0x5ca07c
-// Maps every effect entry's index through the ID map
-void EESMTrigger::RemapEffects(EESMIDMap& inMap)
-{
-    long theCount = this->mEffects.size();
-    for (long i = 0; i < theCount; i++)
-        this->mEffects[i]->Virtual0(inMap);
 }
 
 // FUNCTION: EXE 0x5ca0b3

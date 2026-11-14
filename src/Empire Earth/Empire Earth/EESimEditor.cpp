@@ -541,16 +541,9 @@ void ScenarioListState(std::vector<std::string>& outLines)
     for (int theDebug = 0; theDebug < 2; theDebug++) {
         bool theOld = m->mShowDebugIDs;
         m->mShowDebugIDs = theDebug != 0;
-        std::vector<UWideString> n[10];
-        m->GetTriggerNames(n[0]);
-        m->GetAllConditionNames(n[1]);
-        m->GetUserConditionNames(n[2]);
-        m->GetAllEffectNames(n[3]);
-        m->GetUserEffectNames(n[4]);
-        m->GetObjectNames(n[5]);
-        m->GetUserObjectNames(n[6]);
-        m->GetAreaNames(n[7]);
-        m->GetUserAreaNames(n[8]);
+        std::vector<UWideString> n[9];
+        for (unsigned long w = 0; w < 9; w++)
+            m->GetNames(w, n[w]);   // EE_SCENARIO_NAMES_TRIGGERS .. EE_SCENARIO_NAMES_USER_AREAS
         m->mShowDebugIDs = theOld;
         const char* theLabels[] = {"triggers", "conditions", "user conditions", "effects", "user effects", "objects",
                                    "user objects", "areas", "user areas"};
@@ -625,57 +618,16 @@ void ScenarioListStep(const std::vector<std::string>& w, std::vector<std::string
         return;
     }
     outLines.push_back("  " + theOp + " " + std::to_string(k) + " " + std::to_string(i));
-    if (theOp == "new") {
-        switch (k) {
-        case 0: m->NewTrigger(); break;
-        case 1: m->NewCondition(); break;
-        case 2: m->NewEffect(); break;
-        case 3: m->NewObject(); break;
-        case 4: m->NewArea(); break;
-        }
-    } else if (theOp == "sort") {
-        switch (k) {
-        case 0: m->SortTriggers(); break;
-        case 1: m->SortConditions(); break;
-        case 2: m->SortEffects(); break;
-        case 3: m->SortObjects(); break;
-        case 4: m->SortAreas(); break;
-        }
-    } else if (theOp == "up") {
-        switch (k) {
-        case 0: m->MoveTriggerUp(i); break;
-        case 1: m->MoveConditionUp(i); break;
-        case 2: m->MoveEffectUp(i); break;
-        case 3: m->MoveObjectUp(i); break;
-        case 4: m->MoveAreaUp(i); break;
-        }
-    } else if (theOp == "down") {
-        switch (k) {
-        case 0: m->MoveTriggerDown(i); break;
-        case 1: m->MoveConditionDown(i); break;
-        case 2: m->MoveEffectDown(i); break;
-        case 3: m->MoveObjectDown(i); break;
-        case 4: m->MoveAreaDown(i); break;
-        }
-    } else if (theOp == "delete") {
-        bool r = false;
-        switch (k) {
-        case 0: r = m->DeleteTrigger(i); break;
-        case 1: r = m->DeleteCondition(i); break;
-        case 2: r = m->DeleteEffect(i); break;
-        case 3: r = m->DeleteObject(i); break;
-        case 4: r = m->DeleteArea(i); break;
-        }
-        outLines.push_back(std::string("  deleted ") + (r ? "1" : "0"));
-    } else if (theOp == "dup") {
-        switch (k) {
-        case 0: m->DuplicateTrigger(i); break;
-        case 1: m->DuplicateCondition(i); break;
-        case 2: m->DuplicateEffect(i); break;
-        case 3: m->DuplicateObject(i); break;
-        case 4: m->DuplicateArea(i); break;
-        }
-    }
+    if (theOp == "new")
+        m->NewEntry(k);
+    else if (theOp == "sort")
+        m->SortList(k);
+    else if (theOp == "up" || theOp == "down")
+        m->MoveEntry(k, i, theOp == "up");
+    else if (theOp == "delete")
+        outLines.push_back(std::string("  deleted ") + (m->DeleteEntry(k, i) ? "1" : "0"));
+    else if (theOp == "dup")
+        m->DuplicateEntry(k, i);
 }
 
 // ------------------------------------------------------------------------------------------------ the script

@@ -174,35 +174,35 @@ void EESETSCondition::ChangeConditionType()
 // Sorts the scenario's conditions
 void EESETSCondition::Sort()
 {
-    gWorld.mScenarioManager->SortConditions();
+    gWorld.mScenarioManager->SortList(EE_SCENARIO_LIST_CONDITIONS);
 }
 
 // FUNCTION: EXE 0x57e928
 // Moves the selected condition one place down the list
 void EESETSCondition::MoveDown()
 {
-    gWorld.mScenarioManager->MoveConditionDown(this->mSelection + 1);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_CONDITIONS, this->mSelection + 1, false);
 }
 
 // FUNCTION: EXE 0x57e939
 // Moves the selected condition one place up the list
 void EESETSCondition::MoveUp()
 {
-    gWorld.mScenarioManager->MoveConditionUp(this->mSelection + 1);
+    gWorld.mScenarioManager->MoveEntry(EE_SCENARIO_LIST_CONDITIONS, this->mSelection + 1, true);
 }
 
 // FUNCTION: EXE 0x57e94a
 // Deletes the selected condition
 void EESETSCondition::Delete()
 {
-    gWorld.mScenarioManager->DeleteCondition(this->mSelection + 1);
+    gWorld.mScenarioManager->DeleteEntry(EE_SCENARIO_LIST_CONDITIONS, this->mSelection + 1);
 }
 
 // FUNCTION: EXE 0x57e95b
 // Duplicates the selected condition
 void EESETSCondition::Duplicate()
 {
-    gWorld.mScenarioManager->DuplicateCondition(this->mSelection + 1);
+    gWorld.mScenarioManager->DuplicateEntry(EE_SCENARIO_LIST_CONDITIONS, this->mSelection + 1);
 }
 
 // FUNCTION: EXE 0x57e96c
@@ -245,7 +245,7 @@ void EESETSCondition::Store()
 // Lists the names of the scenario's user conditions
 void EESETSCondition::GetNames(std::vector<UWideString>& outNames)
 {
-    gWorld.mScenarioManager->GetUserConditionNames(outNames);
+    gWorld.mScenarioManager->GetNames(EE_SCENARIO_NAMES_USER_CONDITIONS, outNames);
 }
 
 // FUNCTION: EXE 0x57eaca
@@ -285,7 +285,7 @@ void EESETSCondition::Load()
 // Adds a new condition to the scenario
 void EESETSCondition::New()
 {
-    gWorld.mScenarioManager->NewCondition();
+    gWorld.mScenarioManager->NewEntry(EE_SCENARIO_LIST_CONDITIONS);
 }
 
 // FUNCTION: EXE 0x57ebc2
