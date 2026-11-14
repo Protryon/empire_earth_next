@@ -16755,3 +16755,131 @@ The merge of rust met `rust/cbindgen.toml`'s export list (both sides added names
 - Then top-down: the controls of the LAN screens (GameBrowserCtrl, GameUserListCtrl, LobbyOptionsCtrl,
   GameStagingCtrl), the EE room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic,
   RoutingLogic last, Internet only), and the resource tables and factories.
+
+## R6: UIListBox<T> and UIComboBox whole in Rust (ee_ui listobj.rs, comboobj.rs; branch rust-r6-ui15, 2026-11-14)
+
+Round 14 left the list boxes and the combo box as the toolkit's last controls with record FFIs. This round moves
+both: one Rust object per class holds its state and every method, the C++ class is forwarders, its constructor and
+destructor and a host op switch, each pinned by a golden of 20,000 random call sequences over the census commit's
+class (orig = cur), mutations and a cargo replay.
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 464fcafb | Census: UIListBox's members read by the editor's terrain and tech lists, the civilization builder's list, UILBString and the combo box behind accessors | +10 |
+| 6765951d | Census: the same swaps in the WON games, rooms and stats boxes (`User Interface Thread`, its own small commit) | 0 |
+| 5116d4e8 | `UIListBox<T>` whole but for its lines (`listobj.rs`); `list_ffi.rs` and draw_ffi's list functions deleted | -280 |
+| b475e4d7 | Census: UIComboBox's `mCurrentSelection`, `mListBox` and the player row's `mTextLabel` behind accessors | +3 |
+| e56b0260 | `UIComboBox` whole (`comboobj.rs`); `combo_ffi.rs` and its 50 `ee_uicpp_combo_*` exports deleted | -308 |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 15,110 at the branch's start ->
+14,534 (-575 over the five commits).
+
+- **The census.** `UIListBox`'s members were protected and read by eleven subclasses: the scenario editor's
+  `EESEUITerrainColorLB`/`EESEUITerrainTypeLB` (the copied rectangle, line height, draw count, the copied selection
+  and focus flags and colours, the copied selection rhombus: they draw their own lines and frame), `EESEUITechListBox`
+  (the scroll bar, the rhombus colour), the civilization builder's `EECBUIListBox` (selection, auto-select, the copied
+  selection flag), the WON boxes (`EEUICWonNetGamesBox`, `RoomsBox`, `StatBox`: line height, rhombus, lines shown),
+  `UILBString` and the combo box (`mLineHeight`). They now call protected accessors (`GetLineHeight`,
+  `GetSelectionIndex`, `GetAutoSelect`, `Get`/`SetCopiedHasSelection`, `SetCopiedHasFocus`, `GetFocusedRectColor`,
+  `Get`/`SetCopiedFocusedRectColor`, `GetCopiedSelectedBackground`, the existing `GetCopyTextRectangle`,
+  `GetDrawCount`, `GetSelectedBackground`, `GetNumberLinesDisplayed`, `ScrollBarExists`, `SetScrollBarCurrentRange`).
+  The two vectors (`mData`, `mCopyLineArray`) stay protected C++ members: they are `T`'s. The combo box's census:
+  `EESETSTriggerUIComboBox` and `EESETSUICBPlayer` read `mCurrentSelection` (now `GetSelectionIndex()`),
+  `EESECBMaxPlayer` and `UIFileComboBox` use `mListBox` (now `GetList()`, non-const: the file combo box inserts
+  sorted lines), the player row (a friend) reads its combo box's `mTextLabel` (now `GetTextLabel()`).
+- **The list box: what depends on T.** The template keeps the lines and their copy, the data methods (`AppendLine`,
+  `AppendStringArray`, `InsertLine` and its sort predicate, `DeleteLine`'s and `DeleteAllEntries`' erase, `FindString`,
+  `Sort`, `ReplaceLine`, `GetData`, `GetLineCount`, the iterators) and `GetCurrentSelection`'s emptiness test; each
+  then calls the object (`Inserted`, `DeletedLine`, `Cleared`, `CheckScrollBar`). Everything else (the text and
+  copied rectangles, the three colours, the selection record, the scroll bar, the two key-repeat polls, the two
+  selection rhombi; `CopyData`, the draws, the keys, the mouse, `SetLocation`, `ChangeWidth`, the scroll bar's
+  setters) is `EeUiList`, with round 4's `list.rs` (selection and scrolling, its golden unchanged) as its algorithm.
+  **Per-T host calls:** `UIListBoxRust<T>::Op`, a static member of the template instantiated per `T`, answers the ops
+  that need the instantiation: the virtuals `GetNumLines` (191, pure), `ChangeSelectionIndex` (192), `ClearSelection`
+  (193), `ProcessDown`/`Up`/`Home`/`End` (195), `ButtonDown`/`ButtonUp` (21, 22), and the copy of the visible lines
+  (194: the copy array grown to the lines shown, lines `first .. end` copied); every other op goes to one shared
+  function, `UIListBoxHostOp` (UILBString.cpp, through `UIObjHost::List`, the friend of `UIControl`): `UIControl`'s
+  ops, the scroll bar as a part by address, the polls, the rhombi (`RhombusAssign`, 196, new), the focus line, the
+  keys (`EditKey`'s numbering). A game subclass's override of a virtual runs (the editor's `EESETSOUnitList` and the
+  civilization builder override `ChangeSelectionIndex`).
+- **The combo box: one query op and one action op.** `combo.rs` (round 3, its golden unchanged) already ran over a
+  host trait of ~50 calls; the object implements it with two ops, `ComboQuery` (197, pure: the question in `a`'s top
+  byte, its argument below) and `ComboAct` (198: the action in `a`, its arguments in `b`..`d`), numbered as the
+  record FFI's `ee_uicpp_combo_*` calls were, so `UIComboBox::Rust::Op`'s switch is their bodies moved, and the
+  driver's reference answers its record FFI's host calls with the same two ops. The parts stay C++ controls held by
+  address (`Part(n)` answers them; the label and edit box getters, `GetListBox`, `GetGEText`); the constructor makes
+  them in C++ (bitmaps from the manager, the caller's font and lines) and hands them to `ee_ui_combo_new`, then
+  sets the list up as before. The draws and the destructor are the object's.
+- **Behaviour.** No change on any path the original defined. Structural: the list box's focus-rectangle `GELine` (a
+  local of the original `DrawPolygons`) is made and deleted by each draw through ops, in its colour; the combo
+  box's focus highlight (a `GERhombus` member) is a heap object the Rust object makes in its constructor (its
+  colour, the list's selection colour, set there rather than at the constructor's end: nothing reads it between) and
+  deletes last; the combo box's record is set at once when the object is made (the original wrote the fields
+  through the constructor; nothing reads them in between). The copy constructors are `= delete` (nothing copied
+  either class).
+- **The goldens** (`build/ui15`: `list_driver.cpp` over `world.h`, `combo_driver.cpp` over `world_combo.h`).
+  - The list box's world: the control's rectangle, border, mouse, the form's tab stop, tabbing and index, the keys,
+    the line count (the C++ data, changed by the driver's data steps before the call the template makes after them),
+    the scroll bar, polls, lines and rhombi with their rectangles; the virtuals answered by calling the object back
+    (variant 1: an override of `ChangeSelectionIndex` reading the selection first). `orig` is lle/UIListBox.h at the
+    census commit transcribed over the world's ops and that commit's record FFI (`list_ffi`, draw_ffi's list
+    functions) in its library (`lib_orig.lib`). 6,839,204 trace lines, orig = cur (sha256 f92ec36c...). The first
+    comparison differed only in `GetCopyTextRectangle` before any `CopyData`: the reference left the rectangle
+    uninitialised, the original's `GERectangle()` zeroes it, as the Rust object does; the reference was fixed.
+  - The combo box's world: the control's rectangle, index, mouse and capture, tabbing, keys, window height, the
+    five parts' rectangles, the list's lines (text handles), line height, borders, selection, scroll bar and its
+    capture, the edit box's text; the virtuals (`OpenListBox`, `CloseListBox`, `AddString`, `ChangeSelection` with an
+    `EESECBMaxPlayer`-like override reading the selection, `ProcessDown`/`Up`) call the object back. Line and edit
+    texts answered by pointer are traced as handles, the inserted line's and the typed key's bytes as FNV-1a hashes
+    (`world_combo.h`; the cargo replay hashes `ComboAct` 1 and 13 alike). 10,961,877 trace lines, orig = cur (sha256
+    b1153245...).
+
+  | Golden | Mutation | Sequences failing of 20,000 |
+  |---|---|---|
+  | list box | the copied rhombus assigned before the selected one is placed | 14,859 |
+  | | the focus colour not copied | 1,109 |
+  | | the scroll bar not deleted by `CopyData` | 19,987 |
+  | | the key repeat without the delay poll's stop | 7,826 |
+  | | Up processed as Down | 17,901 |
+  | | a click on the scroll bar not captured | 17,080 |
+  | | the button-up fired off the selection | 15,295 |
+  | | `TabbedFrom` keeping the keyboard | 6,631 |
+  | | a new scroll bar without its colour | 11,915 |
+  | | the polls deleted in the other order | 20,000 |
+  | | the lines shown without the border | 18,928 |
+  | combo box | the parts deleted in another order | 20,000 |
+  | | the focus highlight never drawn | 19,701 |
+  | | the drop button's draw result dropped | 13,673 |
+  | | the selection's fire and scroll flags swapped | 17,696 |
+  | | the list selection's out value ignored | 18,965 |
+  | | the scroll bar rectangle never answered | 19,278 |
+  | | the typed key's repeat dropped | 14,086 |
+  | | the edit box answered as the label | 1,545 |
+  | | the focus highlight placed a pixel left | 5,605 |
+
+  The first 25 sequences of each are `golden_listobj.txt` (8,660 lines) and `golden_comboobj.txt` (12,976), replayed by
+  cargo (`listobj_tests.rs`: a changed line count and a changed border fail; `comboobj_tests.rs`: a changed line
+  height and a changed inserted text fail).
+- **NULL-receiver audit** (WON rounds 30-31). Every original method of both classes read a member first (the list
+  box's inline getters, `mScrollBar`, `mRepeatDelayPoll`, `mData`; the combo box's `mCurrentSelection`, `mTextLabel`,
+  `mListBox`) or called through the vtable, so a NULL receiver crashed the original as it crashes the forwarder's
+  `mRust` read: no early return needed keeping.
+- **Lessons.**
+  - A reference transcribed by hand must construct members as the original's default constructors do: a
+    `GERectangle` member is zeroed by its constructor; a reference struct allocated with `new` is not.
+  - A template's per-instantiation host fits the whole-object pattern as one static template member function passed
+    at construction; the shared ops go to one non-template function in the library, so the game's instantiations
+    need no private header.
+  - Mapping a host trait onto two ops (one pure, one not) keeps a class with fifty host calls to one switch on each
+    side and lets the reference reuse its record FFI unchanged.
+- **What runs it.** EE-SIM never builds a list or combo box: the oracle is unchanged by construction. The scenario
+  editor gate (`sim_editor.py`, 1,820 lines unchanged) builds the editor's list and combo boxes (the subclasses above
+  among them; which ones it builds was not checked one by one), fills and reads them: the constructors, the data methods,
+  `CheckScrollBar`, the selection and the destructors run there through the shims. **Only the tour shows:** every
+  list and combo draw (the copied lines, the selection rhombus and focus rectangle, the scroll bar's parts), the
+  mouse and keys on a list (click, drag on the scroll bar, wheel, arrows with their repeat), opening a combo box's
+  list (the popup, its placement against the window, the commit on release), typing in a combo box's edit box, the
+  settings screen's and single-player screens' list and combo boxes; the WON boxes run only in the lobby.
+- **Gates.** Per commit: `build.py -j 3 --sim` 0/0 (EE-AOC and EE-SIM), the Rust gate PASS (the census commits change no Rust; the list and combo moves ran it), the oracle seeds 2-3 identical, `sim_editor.py` PASS (1,820 lines), the test-profile build 0/0 and the tour (`fixture_game.py --exercise tour --play-seconds 60 --data <main tree>` under the harness lock): `RESULT PASS tour`, `gx_errors` {} after the list box's move and after the combo box's. The combo census commit (b475e4d7) was not built on its own: the combo move's build followed it (its swaps return the same members). On the result merged with `rust` (3d188b75; one conflict, `rust/cbindgen.toml`'s export list, both sides' names kept; `rust_includes.py` added `rust/ee_ui.h` to `UIComboBox.h`, committed): build 0/0, the Rust gate PASS, the oracle seeds 2-7 identical, the editor gate PASS (1,820 lines), the test-profile build 0/0, the tour `RESULT PASS tour` (`gx_errors` {}). EE-SIM never builds these controls, so the sim_capture profiles were not run.
+- **Left:** `UIForm`'s remaining state (not started this round), the manager, then `UIControl`; `UILBString`'s own
+  members (`DrawTextA`, the type-to-find) stay C++ over the list box's accessors.
