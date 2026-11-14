@@ -14748,3 +14748,117 @@ Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 20,627 lines bef
 - **Next:** the icon with the goal (the table needs the text draw), the command confirmation, damage vent, energy
   wall, multi-effect, tracer beam, farm and volcano (all now in the sweep, so each move is checked against the
   original in a game world); the 2D twin (`EEE2DRust` over `EEEffect2D`) with a 2D sweep.
+
+## R4.3, ninth part: GEModel and GEBitmap whole in Rust (ee_ge modobj.rs, bmpobj.rs; branch rust-ge9, 2026-11-13)
+
+The third whole-class round of the Graphics Engine, in parts seven and eight's pattern (a census commit, then each
+move, a golden over the unmodified unit with traced fakes, mutations, a cargo replay).
+
+| Commit | What | C++ (`git diff --numstat` over src, include/lle, include/ee) |
+|---|---|---|
+| e916c85e | GEModel's census: the store gate's digest and the model manager read a model through accessors | +22 -1, net +21 |
+| 953c4252 | GEModel whole in Rust (`modobj.rs`) | +279 -665, net -386 |
+| 24d7d047 | GEBitmap whole in Rust (`bmpobj.rs`) | +138 -249, net -111 |
+
+- **The census** (logic lines by `tools/ge_census.py`): 3,278 at the start; GEModel.cpp 372 -> 151 and
+  'GEModel Load.cpp' 120 -> 9 (the host's switch and two forwarders), GEBitmap.cpp 188 -> 89 (URandom's and
+  GERectangle's members, which the unit also holds, and the bitmap's host); 2,847 after.
+- **GEModel's census was small**, as GETexture's: every member is private, so part seven's 21 outside files read the
+  header's inline accessors, which keep their signatures. The only member readers were the friends: the store gate's
+  digest (every member: private accessors added for the vertex count, the shared frames, the arrays' pointers) and
+  GEModelManager's host (the name, now `GetName()`). GEPhysicalModel, a friend, reads public accessors only. No
+  renderer, effect or graphic-object file changed. GEBitmap needed no census: no friend, no subclass, no outside
+  reader but its inline accessors.
+- **The GEModel move** (`EeGeModel`): the three transforms and the centre are mirrors (`types.rs`) inside the Box;
+  the per-frame arrays (internal transforms, boxes, radii) are vectors allocated once, and the tag points are
+  per-frame boxed slices whose pointers a shared frame copies from its source frame (freed once, by their own frame,
+  as the original's `delete[]`). The accessors index the arrays in C++ through one base pointer
+  (`ee_ge_mod_ptr`), as the inline accessors indexed the members, so `GetBoundingBox`, `GetInternalTransform`,
+  `GetTagPoint`... still return references. The vertex and polygon arrays (the rasterizer's), the materials
+  (`GEMaterial`, private constructor: the host is GEModel's member and keeps the friendship) and the `UString`s (the
+  name, `new UString[n]` for the texture and tag point names) stay C++ objects held by pointer, made, assigned,
+  measured and freed through the host (`EeGeModOp`, 47 operations). Every method of both units is Rust:
+  `AllocateInternalData`, `StoreLoaded` (reading the decoded `CemModel` directly), `LoadTexturesForScreen`, the
+  geometry over `model_geom.rs`, the frame and opacity setters, `SetSubModel`, `SizeOf` (in `unsigned long`,
+  wrapping, the pointer terms at the build's pointer size), `SortTagPoints` (the names swapped through three host
+  assignments, as the original's temporary did), `Verify`. Walks over the sub-models recurse in Rust on each
+  sub-model's object (`ModelObj`), as the original's non-virtual calls did. `model_ffi.rs` lost the cem views and
+  the geometry wrappers only the C++ GEModel called (`ee_ge_cem_free` and `EeGeSharedFrame` stay).
+- **The GEBitmap move** (`EeGeBitmap`): location, vertex array, textures (one per screen), frame size, rotation and
+  scales; every method of the GEBitmap section (the constructor's quad, the corners and stretch over `bitmap.rs`,
+  the flips, the per-vertex readers and writers, `SetTexture`) through a host of 20 operations (floats as their bits).
+  The exe view's inline `GetHeight`/`GetWidth`/`SetRotation` and the engine view's out-of-line ones are one inline
+  forwarder now. `visible_ffi.rs` lost `ee_ge_bitmap_corners` and `ee_ge_bitmap_stretch`.
+- **The goldens** (scratch, `build/ge9/golden`: `build.py gmod|gbmp orig REF|cur`, `mutate.py`, `mutate_bmp.py`):
+  the census commit's units (GEModel) and 953c4252's GEBitmap section, unmodified, over traced fakes (`fake_gmod.h`,
+  `fake_gbmp.h`: the rasterizer, vertex and polygon arrays storing what they are given, materials, textures and
+  texture managers, model managers whose `RemoveModel` drops a reference, a `UString`), linked with a scratch
+  staticlib of `ee_ge` and a decoded-model generator (`modobj_cemgen.rs`: counts, names, LODs with re-created
+  arrays, material values, frames with short lists, sub-models two deep, refused models), with the driver's shared
+  frame maps. Random sequences of every method (and the callers' references, sub-model swaps, the manager's
+  removal), each followed by a digest of every live model or bitmap through its accessors (`GEStoreDigest` is the
+  driver's friend). GEModel: 20,000 sequences, 4.87 M trace lines; GEBitmap: 20,000 sequences, 3.59 M lines; both
+  identical over the shells. The first 25 sequences of each are `golden_gmod.txt` / `golden_gbmp.txt`, which cargo
+  replays through a mock host keeping the world by construction serial (`modobj_tests.rs`, `bmpobj_tests.rs`).
+
+  | Golden | Mutation of the Rust | Sequences of 20,000 that change | cargo |
+  |---|---|---|---|
+  | models | SetSubModel keeps the old sub-model's parent | 660 | unit test (added) |
+  | | Dereference drops one reference at three | 87 | unit test |
+  | | SizeOf counts the shared frames' arrays | 4,836 | replay |
+  | | the scale removal keeps the normals | 1,997 | replay |
+  | | a shared frame has no tag points of its source | 2,906 | replay |
+  | | the materials get the rasterizer's id as their screen count | 15,623 | replay |
+  | | the loaded textures keep their MIP filter | 2,924 | replay |
+  | | SetGraphicsCurrentFrame keeps the box | 4,385 | replay |
+  | | the radius is about the origin | 3,941 | replay |
+  | | a stored box has no dimensions | 13,000 | replay |
+  | | a stored material's vertex start is its length | 12,532 | replay |
+  | | the graphics transform ignores the scale | 441 | unit test (added) |
+  | | the counts constructor drops the flags | 10,069 | replay |
+  | | SetOpacity leaves the sub-models | 1,639 | replay |
+  | | SortTagPoints leaves the names | 854 | replay |
+  | bitmaps | the constructor faces +z | 16,582 | replay |
+  | | the corners keep the old y | 16,582 | replay |
+  | | SetTexture keeps the old texture's reference | 2,803 | replay |
+  | | SetTexture swaps the frame size | 10,063 | replay |
+  | | the same texture again recomputes | 4,080 | replay |
+  | | the stretch ignores the dropped levels | 1,332 | unit test (added) |
+  | | the stretch keeps the scale | 1,934 | replay |
+  | | the depths keep x | 11,016 | replay |
+  | | GetWidth is unscaled | 9,744 | replay |
+  | | the vertical flip is horizontal | 7,842 | replay |
+  | | the destructor keeps the textures | 9,779 | replay |
+  | | SetLocation leaves the corners | 7,758 | replay |
+
+  The restored sources: 0 in both. Three mutations escaped the 25 replayed sequences; a direct test each was added.
+- **Undefined paths the drivers avoid** (the original read or called through them; the Rust reads NULL or skips):
+  a recursive call over a NULL sub-model slot (a counts model's slots are filled at once, as CreateSubModel does);
+  `RemoveScale` or `SetGraphicsCurrentFrame` past a shorter sub-model's frames (read past its arrays; the driver
+  keeps frames within every sub-model's); a refused sub-model (never made by the reader); `SizeOf` on a model with
+  no arrays; a shared frame whose source is out of range or itself shared later; `SetTexture`/`GetTexture` past the
+  screens. Every allocation in the drivers is zeroed (`operator new` is `calloc`), so the original's unset
+  `new float[n]` radii and `mClipToPlane` read 0, as the Rust's.
+- **Driver lessons.** The `do` line must come before the call it names (a created object's serial printed after it),
+  so a replay can run each line in order. A `snprintf` into a 16-byte buffer cut two `%08x` fields short: the trace
+  still compared equal (both sides print the same text) but the replay parsed the wrong numbers. The Bash tool's
+  heredocs turned `\n` inside Python strings into newlines three more times this round (parts seven and eight's
+  lesson): the editor tool, or `chr(10)`, only.
+- **Behaviour changes** (undefined paths of the original only): `mClipToPlane` starts false (the original left it
+  unset); a NULL sub-model, vertex, polygon, material or name array is skipped where the original called through it;
+  an index past an array reads 0 or NULL and a write past one is dropped (tag points, transforms, radii, sub-model
+  slots, a texture's screen); the frame tag pointer of frame 0 of a model without frames is NULL; copying a model
+  or a bitmap is deleted (none was used).
+- **What runs it.** EE-SIM loads, stores, sizes and verifies models (the oracle; the store gate runs every model of
+  the open tree through LoadModel and StoreLoaded, 25,140 lines equal, after each commit). Only the game draws:
+  the renderer's per-draw accessors on models (transforms, frames, boxes, tag points, opacity, clip planes) and the
+  effects' and graphic objects' frame and transform setters, `LoadTexturesForScreen`, and every GEBitmap (the UI's
+  bitmaps, the fonts' glyph quads, the minimap) are tour-only: the tour (below) and the lead's menu pixel comparison.
+- **Gates.** Each commit: build `--sim` 0/0, the store gate PASS (25,140 lines), the oracle identical on seeds 2-3,
+  the Rust gate (PASS for GEBitmap; at the GEModel commit the timing test
+  `ee_plat_core time::tests::timers_under_a_factor_fire_at_the_scaled_rate_until_stopped` failed under load and
+  passed alone, clippy and rustfmt of ee_ge run apart). At the end: the oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169, late 170, calamity 183 digests; TNMT without a golden, as before), `--profile effects` PASS (6 digests), the test profile 0/0, the tour (`fixture_game.py --exercise tour --play-seconds 60`, under the harness lock) `RESULT PASS tour`. `rust` had not moved (94898cb2):
+  nothing to merge.
+- **Left** (by the census, 2,847 logic lines): GESurface (codecs; DX7Surface's base), GETerrainMesh,
+  GERasterizer, GEFontBitmap (its draws are GEBitmap calls now in Rust's object, the cell layout already Rust),
+  GETransformation's member copies, GEModelManager's and GETextureManager's hosts.

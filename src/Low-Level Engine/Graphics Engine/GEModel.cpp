@@ -2,10 +2,17 @@
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
 // 0x1001eb9f..0x100206c7: GEModel's ctors, dtor and core members, then its map COMDAT and the UList<GELOD*> pool init
-// pair (lle/GELOD.h via GEModel.h). AllocateInternalData differs from the original in block layout and register
-// choice. The geometry (boxes, centre and radii, normals, the graphics transform, the scale removal's matrices, the
-// tag point order, Verify's test) is Rust (rust/crates/ee_ge model_geom.rs) over flat copies of the arrays.
+// pair (lle/GELOD.h via GEModel.h).
+//
+// port (R4.3, ninth part): the model is a whole Rust object (ee_ge modobj.rs): the constructors' fields and
+// AllocateInternalData, the destructor's releases, the bounding volumes, normals, transforms and scale removal (over
+// model_geom.rs), the frame setters over the sub-models, SetSubModel, SetTexture, SizeOf, SortTagPoints and Verify.
+// This unit is its shell: the forwarders and the host, which makes each call the original made on another object
+// (the rasterizer, the vertex and polygon arrays, the materials, the texture manager and textures, the manager, the
+// sub-models' reference counts, the UStrings).
 #include <windows.h>
+#include <stdint.h>
+#include <vector>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -29,12 +36,10 @@
 #include "lle/GEVertexArray.h"
 #include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
-#include <math.h>
 #include "lle/GEPolygonArray.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
-#include <vector>
 #include "GERustMath.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
@@ -65,68 +70,172 @@
 // SYNTHETIC: LLE 0x1001eca9
 // SYNTHETIC: LLE 0x1001ecb5
 
-// A frame's points and LOD 0's vertex indices as flat arrays for the geometry in Rust (rust/crates/ee_ge
-// model_geom.rs): the arrays stay behind GEVertexArray's and GEPolygonArray's virtuals.
-static void GEGatherPoints(const GEVertexArray* inArray, unsigned long inCount, std::vector<GE3DPoint>& outPoints)
+// A UString from Rust's bytes (no NUL inside)
+static UString GEModelString(const char* inData, size_t inLength)
 {
-    outPoints.resize(inCount);
-    for (unsigned long i = 0; i < inCount; i++)
-        inArray->GetPoint(outPoints[i], i);
+    std::vector<char> theText(inData, inData + inLength);
+    theText.push_back(0);
+    return UString(&theText[0]);
 }
 
-static void GEGatherIndices(const GEPolygonArray* inArray, unsigned long inCount, std::vector<uint32_t>& outIndices)
+// The calls the model makes on other objects (EeGeModOp), in the original's statements
+intptr_t GEModel::Host(void* inOwner, EeGeModOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c)
 {
-    outIndices.resize(inCount * 3);
-    for (unsigned long i = 0; i < inCount; i++) {
-        outIndices[i * 3] = (uint32_t)inArray->GetVertexIndex1(i);
-        outIndices[i * 3 + 1] = (uint32_t)inArray->GetVertexIndex2(i);
-        outIndices[i * 3 + 2] = (uint32_t)inArray->GetVertexIndex3(i);
+    GEVertexArray* theVertices = (GEVertexArray*)inObj;
+    GEPolygonArray* thePolygons = (GEPolygonArray*)inObj;
+    GEMaterial* theMaterial = (GEMaterial*)inObj;
+    GEModel* theModel = (GEModel*)inObj;
+    UString* theString = (UString*)inObj;
+    GETexture* theTexture = (GETexture*)inObj;
+    switch (inOp) {
+    case EeGeModOp::RasterActive:
+        return (intptr_t)GERasterizer::GetActiveRasterizer();
+    case EeGeModOp::RasterVertexArray:
+        return (intptr_t)((GERasterizer*)inObj)->CreateVertexArray((unsigned long)a, (unsigned long)b);
+    case EeGeModOp::RasterPolygonArray:
+        return (intptr_t)((GERasterizer*)inObj)->CreatePolygonArray((unsigned long)a);
+    case EeGeModOp::RasterScreenId:
+        return (intptr_t)((GERasterizer*)inObj)->GetScreenID();
+    case EeGeModOp::RasterTextureManager:
+        return (intptr_t)((GERasterizer*)inObj)->GetScreen((unsigned long)a)->GetTextureManager();
+    case EeGeModOp::VertexDelete:
+        delete theVertices;
+        return 0;
+    case EeGeModOp::VertexGather:
+        for (unsigned long i = 0; i < (unsigned long)a; i++)
+            theVertices->GetPoint(((GE3DPoint*)b)[i], i);
+        return 0;
+    case EeGeModOp::VertexGetPoint:
+        theVertices->GetPoint(*(GE3DPoint*)b, (unsigned long)a);
+        return 0;
+    case EeGeModOp::VertexSetPoint:
+        theVertices->SetPoint(*(const GE3DPoint*)b, (unsigned long)a);
+        return 0;
+    case EeGeModOp::VertexGetNormal:
+        theVertices->GetNormal(*(GEVector*)b, (unsigned long)a);
+        return 0;
+    case EeGeModOp::VertexSetNormal:
+        theVertices->SetNormal(*(const GEVector*)b, (unsigned long)a);
+        return 0;
+    case EeGeModOp::VertexSetUv:
+        theVertices->SetTextureCoordinate(GETextureCoordinate(((const float*)b)[0], ((const float*)b)[1]),
+                                          (unsigned long)a);
+        return 0;
+    case EeGeModOp::VertexSize:
+        return (intptr_t)theVertices->GetSize();
+    case EeGeModOp::VertexSizeOf:
+        return (intptr_t)theVertices->SizeOf();
+    case EeGeModOp::PolygonDelete:
+        delete thePolygons;
+        return 0;
+    case EeGeModOp::PolygonGather:
+        for (unsigned long i = 0; i < (unsigned long)a; i++) {
+            ((uint32_t*)b)[i * 3] = (uint32_t)thePolygons->GetVertexIndex1(i);
+            ((uint32_t*)b)[i * 3 + 1] = (uint32_t)thePolygons->GetVertexIndex2(i);
+            ((uint32_t*)b)[i * 3 + 2] = (uint32_t)thePolygons->GetVertexIndex3(i);
+        }
+        return 0;
+    case EeGeModOp::PolygonSetIndex:
+        if (c == 1)
+            thePolygons->SetVertexIndex1((unsigned long)a, (unsigned long)b);
+        else if (c == 2)
+            thePolygons->SetVertexIndex2((unsigned long)a, (unsigned long)b);
+        else
+            thePolygons->SetVertexIndex3((unsigned long)a, (unsigned long)b);
+        return 0;
+    case EeGeModOp::PolygonSizeOf:
+        return (intptr_t)thePolygons->SizeOf();
+    case EeGeModOp::MaterialNew:
+        return (intptr_t)new GEMaterial((unsigned long)a, (unsigned long)b);
+    case EeGeModOp::MaterialDereference:
+        theMaterial->UReferenceCounter::Dereference();
+        return 0;
+    case EeGeModOp::MaterialSetTexture:
+        theMaterial->SetTexture((GETexture*)a, (unsigned long)b);
+        return 0;
+    case EeGeModOp::MaterialRangeLength:
+        return (intptr_t)theMaterial->GetPolygonRangeLength((unsigned long)a);
+    case EeGeModOp::MaterialStart:
+        return (intptr_t)theMaterial->GetPolygonStartingIndex((unsigned long)a);
+    case EeGeModOp::MaterialVertexStart:
+        return (intptr_t)theMaterial->GetVertexStartingIndex();
+    case EeGeModOp::MaterialSizeOf:
+        return (intptr_t)theMaterial->SizeOf();
+    case EeGeModOp::MaterialSetName:
+        theMaterial->SetName(GEModelString((const char*)a, (size_t)b));
+        return 0;
+    case EeGeModOp::MaterialSetValue:
+        if (c == 0)
+            theMaterial->SetTextureIndex((unsigned long)a);
+        else if (c == 1)
+            theMaterial->SetPolygonStartingIndex((unsigned long)a, (unsigned long)b);
+        else if (c == 2)
+            theMaterial->SetPolygonRangeLength((unsigned long)a, (unsigned long)b);
+        else if (c == 3)
+            theMaterial->SetVertexStartingIndex((unsigned long)a);
+        else
+            theMaterial->SetVertexRangeLength((unsigned long)a);
+        return 0;
+    case EeGeModOp::ModelNew:
+        return (intptr_t)new GEModel((GEModelManager*)inObj);
+    case EeGeModOp::ModelObj:
+        return (intptr_t)theModel->mRust;
+    case EeGeModOp::ModelReference:
+        theModel->Reference();
+        return 0;
+    case EeGeModOp::ModelBaseDereference:
+        theModel->UReferenceCounter::Dereference();
+        return 0;
+    case EeGeModOp::ModelRefCount:
+        return (intptr_t)theModel->mReferenceCount;
+    case EeGeModOp::ManagerRemove:
+        ((GEModelManager*)inObj)->RemoveModel((GEModel*)a);
+        return 0;
+    case EeGeModOp::StrNew:
+        return (intptr_t)new UString;
+    case EeGeModOp::StrDelete:
+        delete theString;
+        return 0;
+    case EeGeModOp::StrArrayNew:
+        return (intptr_t)new UString[(size_t)a];
+    case EeGeModOp::StrArrayDelete:
+        delete[] theString;
+        return 0;
+    case EeGeModOp::StrAt:
+        return (intptr_t)&theString[a];
+    case EeGeModOp::StrAssign:
+        *theString = *(const UString*)a;
+        return 0;
+    case EeGeModOp::StrSetBytes:
+        *theString = GEModelString((const char*)a, (size_t)b);
+        return 0;
+    case EeGeModOp::StrLength:
+        return (intptr_t)theString->GetLength();
+    case EeGeModOp::StrSizeOf:
+        return (intptr_t)theString->SizeOf();
+    case EeGeModOp::StrFirst:
+        return (intptr_t)((const char*)*theString)[0];
+    case EeGeModOp::TexLoad:
+        return (intptr_t)((GETextureManager*)inObj)->LoadTexture(*(const UString*)a, *(const GETextureDescription*)b);
+    case EeGeModOp::TexMinFilter:
+        theTexture->SetStageMinFilterMode((unsigned long)a, (unsigned long)b);
+        return 0;
+    case EeGeModOp::TexMagFilter:
+        theTexture->SetStageMagFilterMode((unsigned long)a, (unsigned long)b);
+        return 0;
+    case EeGeModOp::TexMipFilter:
+        theTexture->SetStageMipFilterMode((unsigned long)a, (unsigned long)b);
+        return 0;
     }
+    (void)inOwner;
+    return 0;
 }
-
-static const EeGe3DPoint* GERustPoints(const std::vector<GE3DPoint>& inPoints)
-{
-    return inPoints.empty() ? NULL : reinterpret_cast<const EeGe3DPoint*>(&inPoints[0]);
-}
-
-static const uint32_t* GERustIndices(const std::vector<uint32_t>& inIndices)
-{
-    return inIndices.empty() ? NULL : &inIndices[0];
-}
-
 
 // FUNCTION: LLE 0x1001ecbf
 // Creates an empty model owned by a model manager, with one LOD and no data allocated
 GEModel::GEModel(GEModelManager* inManager)
 {
-    this->mGraphicsScale = 1.0f;
-    this->mParentModel = NULL;
-    this->mModelOpacity = 1.0f;
-    this->mSubModels = NULL;
-    this->mBoundingRadii = NULL;
-    this->mFrameTagPoints = NULL;
-    this->mTagPointNames = NULL;
-    this->mFractionalFramePosition = 0.0f;
-    this->mTextureFilenames = NULL;
-    this->mBoundingBoxes = NULL;
-    this->mInternalTransforms = NULL;
-    this->mPolygonArrays = NULL;
-    this->mVertexArrays = NULL;
-    this->mGraphicsCurrentFrame = 0;
-    this->mGraphicsNextFrame = 0;
-    this->mPolygonCount = 0;
-    this->mVertexCount = 0;
-    this->mMaterialCount = 0;
-    this->mTagPointCount = 0;
-    this->mLODCount = 1;
-    this->mManager = inManager;
-    // port: the counts and arrays the destructor reads, for a model whose load stored nothing (the original left
-    // them unset, and destroying such a model read garbage: a refused glTF model or sub-model)
-    this->mFrameCount = 0;
-    this->mSubModelCount = 0;
-    this->mMaterials = NULL;
-    this->mTagPoints = NULL;
-    this->mGraphicsBoundingBox = NULL;
+    this->mRust = ee_ge_mod_new(&GEModel::Host, this, inManager);
 }
 
 // FUNCTION: LLE 0x1001edb9
@@ -135,23 +244,9 @@ GEModel::GEModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsi
                  unsigned long inTagPointCount, unsigned long inFrameCount, unsigned long inSubModelCount,
                  const UString& inName, unsigned long inFlags, GEModelManager* inManager)
 {
-    std::map<unsigned long, long> theTextures;
-    this->mGraphicsScale = 1.0f;
-    this->mModelOpacity = 1.0f;
-    this->mParentModel = NULL;
-    this->mGraphicsCurrentFrame = 0;
-    this->mFractionalFramePosition = 0.0f;
-    this->mGraphicsNextFrame = 0;
-    this->mLODCount = 1;
-    this->mName = inName;
-    this->mPolygonCount = inPolygonCount;
-    this->mVertexCount = inVertexCount;
-    this->mMaterialCount = inMaterialCount;
-    this->mTagPointCount = inTagPointCount;
-    this->mFrameCount = inFrameCount;
-    this->mSubModelCount = inSubModelCount;
-    this->AllocateInternalData(inFlags, theTextures);
-    this->mManager = inManager;
+    const unsigned long theCounts[6] = {inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount,
+                                        inSubModelCount};
+    this->mRust = ee_ge_mod_new_with_counts(&GEModel::Host, this, theCounts, &inName, inFlags, inManager);
 }
 
 // FUNCTION: LLE 0x1001eed6
@@ -159,442 +254,98 @@ GEModel::GEModel(unsigned long inPolygonCount, unsigned long inVertexCount, unsi
 // releases its materials and sub-models
 GEModel::~GEModel()
 {
-    unsigned long i;
-    for (i = 0; i < this->mFrameCount; i++) {
-        std::map<unsigned long, long>::iterator theIterator = this->mSharedFrames.find(i);
-        if (theIterator != this->mSharedFrames.end())
-            continue;
-        if (this->mVertexArrays[i])
-            delete this->mVertexArrays[i];
-        if (this->mFrameTagPoints[i])
-            delete[] this->mFrameTagPoints[i];
-    }
-    for (i = 0; i < this->mLODCount && this->mPolygonArrays; i++) {   // port: none allocated, see the constructor
-        if (this->mPolygonArrays[i])
-            delete this->mPolygonArrays[i];
-    }
-    if (this->mBoundingBoxes)
-        delete[] this->mBoundingBoxes;
-    delete[] this->mBoundingRadii;
-    delete[] this->mFrameTagPoints;
-    delete[] this->mPolygonArrays;
-    delete[] this->mVertexArrays;
-    delete[] this->mInternalTransforms;
-    if (this->mMaterials) {
-        for (i = 0; i < this->mMaterialCount; i++)
-            this->mMaterials[i]->UReferenceCounter::Dereference();
-        delete[] this->mMaterials;
-    }
-    if (this->mTextureFilenames)
-        delete[] this->mTextureFilenames;
-    if (this->mTagPointNames)
-        delete[] this->mTagPointNames;
-    if (this->mSubModels) {
-        for (i = 0; i < this->mSubModelCount; i++)
-            this->SetSubModel(NULL, i);
-        delete[] this->mSubModels;
-    }
-}
-
-// FUNCTION: LLE 0x1001f080
-// Allocates the vertex arrays (shared frames point at their source frame), polygon array, transforms, boxes,
-// radii, tag points, materials and names; returns 8 when an allocation fails
-long GEModel::AllocateInternalData(unsigned long inFlags, std::map<unsigned long, long>& inSharedFrames)
-{
-    long theResult = kErrorOK;
-    unsigned long i;
-    this->mGraphicsCurrentFrame = 0;
-    GERasterizer* theRasterizer = GERasterizer::GetActiveRasterizer();
-    this->mVertexArrays = new GEVertexArray*[this->mFrameCount];
-    for (i = 0; i < this->mFrameCount; i++) {
-        std::map<unsigned long, long>::iterator theIterator = inSharedFrames.find(i);
-        if (theIterator == inSharedFrames.end())
-            this->mVertexArrays[i] = theRasterizer->CreateVertexArray(inFlags, this->mVertexCount);
-    }
-    this->mPolygonArrays = new GEPolygonArray*[this->mLODCount];
-    this->mPolygonArrays[0] = theRasterizer->CreatePolygonArray(this->mPolygonCount);
-    for (i = 1; i < this->mLODCount; i++)
-        this->mPolygonArrays[i] = NULL;
-    this->mSharedFrames = inSharedFrames;
-    this->mInternalTransforms = new GETransformation[this->mFrameCount];
-    if (this->mInternalTransforms) {
-        this->mSubModels = new GEModel*[this->mSubModelCount];
-        if (this->mSubModels) {
-            memset(this->mSubModels, 0, this->mSubModelCount * sizeof(GEModel*));
-            this->mBoundingBoxes = new GEBoundingBox[this->mFrameCount];
-            if (this->mBoundingBoxes) {
-                this->mGraphicsBoundingBox = &this->mBoundingBoxes[this->mGraphicsCurrentFrame];
-                this->mBoundingRadii = new float[this->mFrameCount];
-                if (this->mBoundingRadii) {
-                    this->mFrameTagPoints = new GE3DPoint*[this->mFrameCount];
-                    if (this->mFrameTagPoints) {
-                        for (i = 0; i < this->mFrameCount; i++) {
-                            if (theResult == kErrorOK && this->mTagPointCount > 0) {
-                                std::map<unsigned long, long>::iterator theIterator = inSharedFrames.find(i);
-                                if (theIterator == inSharedFrames.end()) {
-                                    this->mFrameTagPoints[i] = new GE3DPoint[this->mTagPointCount];
-                                    if (this->mFrameTagPoints[i] == NULL)
-                                        theResult = 8;
-                                }
-                            } else
-                                this->mFrameTagPoints[i] = NULL;
-                        }
-                        this->mTagPoints = this->mFrameTagPoints[0];
-                    } else
-                        theResult = 8;
-                } else {
-                    this->mFrameTagPoints = NULL;
-                    theResult = 8;
-                }
-            } else {
-                this->mFrameTagPoints = NULL;
-                theResult = 8;
-            }
-        } else {
-            this->mFrameTagPoints = NULL;
-            theResult = 8;
-        }
-    } else {
-        this->mFrameTagPoints = NULL;
-        theResult = 8;
-    }
-    for (i = 0; i < this->mFrameCount; i++) {
-        std::map<unsigned long, long>::iterator theIterator = inSharedFrames.find(i);
-        if (theIterator != inSharedFrames.end()) {
-            this->mVertexArrays[i] = this->mVertexArrays[theIterator->second + i];
-            this->mFrameTagPoints[i] = this->mFrameTagPoints[theIterator->second + i];
-        }
-    }
-    if (theResult == kErrorOK) {
-        this->mMaterials = new GEMaterial*[this->mMaterialCount];
-        if (this->mMaterials) {
-            for (i = 0; i < this->mMaterialCount; i++) {
-                if (theResult == kErrorOK) {
-                    this->mMaterials[i] = new GEMaterial(theRasterizer->GetScreenID() + 1, this->mLODCount);
-                    if (this->mMaterials[i] == NULL)
-                        theResult = 8;
-                } else
-                    this->mMaterials[i] = NULL;
-            }
-        } else
-            theResult = 8;
-    } else
-        this->mMaterials = NULL;
-    if (theResult == kErrorOK) {
-        this->mTextureFilenames = new UString[this->mMaterialCount];
-        this->mTagPointNames = this->mTagPointCount > 0 ? new UString[this->mTagPointCount] : NULL;
-    } else {
-        this->mTextureFilenames = NULL;
-        this->mTagPointNames = NULL;
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001f544
-// Computes each frame's bounding box from its vertices, then the sub-models' boxes (Rust: ee_ge_model_frame_box)
-void GEModel::ComputeBoundingBoxes()
-{
-    std::vector<GE3DPoint> thePoints;
-    unsigned long i;
-    for (i = 0; i < this->mFrameCount; i++) {
-        GEGatherPoints(this->mVertexArrays[i], this->mVertexCount, thePoints);
-        ee_ge_model_frame_box(GERustPoints(thePoints), thePoints.size(), GERust(this->mBoundingBoxes[i]));
-    }
-    for (i = 0; i < this->mSubModelCount; i++)
-        this->mSubModels[i]->ComputeBoundingBoxes();
+    ee_ge_mod_destroy(this->mRust);
 }
 
 // FUNCTION: LLE 0x1001f69a
-// Computes bounding boxes, the centre point (average of every frame's box) and each frame's bounding radius,
-// sub-models first (Rust: ee_ge_model_center, ee_ge_model_radius)
 void GEModel::ComputeBoundingVolumes()
 {
-    std::vector<GE3DPoint> thePoints;
-    unsigned long i;
-    this->ComputeBoundingBoxes();
-    for (i = 0; i < this->mSubModelCount; i++)
-        this->mSubModels[i]->ComputeBoundingVolumes();
-    ee_ge_model_center(GERust(this->mBoundingBoxes[0]), this->mFrameCount, GERust(this->mCenterPoint));
-    for (i = 0; i < this->mFrameCount; i++) {
-        GEGatherPoints(this->mVertexArrays[i], this->mVertexCount, thePoints);
-        this->mBoundingRadii[i] =
-            ee_ge_model_radius(GERust(this->mCenterPoint), GERustPoints(thePoints), thePoints.size());
-    }
+    ee_ge_mod_compute_bounding_volumes(this->mRust);
 }
 
 // FUNCTION: LLE 0x1001f80c
-// Recomputes vertex normals from the polygons of LOD 0 for every frame (Rust: ee_ge_model_vertex_normals)
 void GEModel::ComputeModelNormals()
 {
-    std::vector<GE3DPoint> thePoints;
-    std::vector<uint32_t> theIndices;
-    std::vector<GEVector> theNormals(this->mVertexCount);
-    GEGatherIndices(this->GetPolygonArray(0), this->GetPolygonCount(), theIndices);
-    for (unsigned long i = 0; i < this->GetFrameCount(); i++) {
-        GEVertexArray* theArray = this->GetVertexArray(i);
-        GEGatherPoints(theArray, this->mVertexCount, thePoints);
-        if (thePoints.empty())
-            continue;
-        ee_ge_model_vertex_normals(GERustPoints(thePoints), thePoints.size(), GERustIndices(theIndices),
-                                   theIndices.size(), GERust(theNormals[0]));
-        for (unsigned long j = 0; j < this->mVertexCount; j++)
-            theArray->SetNormal(theNormals[j], j);
-    }
+    ee_ge_mod_compute_normals(this->mRust);
 }
 
 // FUNCTION: LLE 0x1001fa84
 // Releases a reference; when only the manager's (and one caller's) reference is left, removes it from the manager
 void GEModel::Dereference()
 {
-    if (this->mReferenceCount > 2)
-        UReferenceCounter::Dereference();
-    else {
-        if (this->mReferenceCount > 1)
-            UReferenceCounter::Dereference();
-        this->mManager->RemoveModel(this);
-    }
+    ee_ge_mod_dereference(this->mRust);
 }
 
 // FUNCTION: LLE 0x1001fab0
-// Returns the number of polygons at an LOD, summed over the materials
 unsigned long GEModel::GetPolygonCount(unsigned long inLOD) const
 {
-    unsigned long theCount = 0;
-    for (unsigned long i = 0; i < this->mMaterialCount; i++)
-        theCount += this->mMaterials[i]->GetPolygonRangeLength(inLOD);
-    return theCount;
+    return ee_ge_mod_polygon_count(this->mRust, inLOD);
 }
 
 // FUNCTION: LLE 0x1001fade
-// Returns the number of polygons at an LOD in the model and all its sub-models
 unsigned long GEModel::GetPolygonCountOfHierarchy(unsigned long inLOD) const
 {
-    unsigned long theCount = this->GetPolygonCount(inLOD);
-    for (unsigned long i = 0; i < this->mSubModelCount; i++)
-        theCount += this->mSubModels[i]->GetPolygonCountOfHierarchy(inLOD);
-    return theCount;
+    return ee_ge_mod_polygon_count_of_hierarchy(this->mRust, inLOD);
 }
 
 // FUNCTION: LLE 0x1001fb1d
-// Builds the graphics transform for the current frame (pre transform, internal transform, scale, post transform)
-// for the model and its sub-models (Rust: ee_ge_model_graphics_transform)
 void GEModel::PrepareTransforms()
 {
-    unsigned long theSubModelCount = this->mSubModelCount;
-    ee_ge_model_graphics_transform(GERust(this->mInternalTransforms[this->mGraphicsCurrentFrame]),
-                                   GERust(this->mGraphicsPreModelTransform), GERust(this->mGraphicsPostModelTransform),
-                                   this->mGraphicsScale, GERust(this->mGraphicsTransform));
-    for (unsigned long i = 0; i < theSubModelCount; i++)
-        this->mSubModels[i]->PrepareTransforms();
-}
-
-// FUNCTION: LLE 0x1001fc00
-// Bakes the frame's transform scale into its vertices, tag points, box, radius and centre and leaves the
-// transform unscaled; recurses into the sub-models (Rust: ee_ge_model_scale_removal, the matrices)
-void GEModel::RemoveModelScale(unsigned long inFrame, const GETransformation& inParent, float inX, float inY,
-                               float inZ)
-{
-    GE3DPoint thePoint;
-    GE3DPoint theResult;
-    GEBoundingBox theBox;
-    GEVector theNormal;
-    GEVector theTransformedNormal;
-    EeGeScaleRemoval theRemoval;
-    unsigned long theCount;
-    unsigned long i;
-    unsigned long theSubModelCount = this->mSubModelCount;
-    ee_ge_model_scale_removal(GERust(this->mInternalTransforms[inFrame]), GERust(inParent), inX, inY, inZ,
-                              &theRemoval);
-    const GETransformation& theScale = *reinterpret_cast<const GETransformation*>(&theRemoval.scale);
-    if (inFrame == 0) {
-        theScale.Apply(this->mCenterPoint, theResult);
-        this->mCenterPoint = theResult;
-    }
-    this->mBoundingRadii[inFrame] *= theRemoval.largest;
-    this->mBoundingBoxes[inFrame].Transform(theScale, theBox);
-    this->mBoundingBoxes[inFrame] = theBox;
-    theCount = this->mVertexArrays[inFrame]->GetSize();
-    for (i = 0; i < theCount; i++) {
-        this->mVertexArrays[inFrame]->GetPoint(thePoint, i);
-        theScale.Apply(thePoint, theResult);
-        this->mVertexArrays[inFrame]->SetPoint(theResult, i);
-        this->mVertexArrays[inFrame]->GetNormal(theNormal, i);
-        theScale.Apply(theNormal, theTransformedNormal);
-        // Fixed: used to call GetNormal here, so the scaled normal was never stored
-        this->mVertexArrays[inFrame]->SetNormal(theTransformedNormal, i);
-    }
-    theCount = this->mTagPointCount;
-    for (i = 0; i < theCount; i++) {
-        theScale.Apply(this->mFrameTagPoints[inFrame][i], theResult);
-        this->mFrameTagPoints[inFrame][i] = theResult;
-    }
-    this->mInternalTransforms[inFrame] = *reinterpret_cast<const GETransformation*>(&theRemoval.unscaled);
-    const GETransformation& theTransform = *reinterpret_cast<const GETransformation*>(&theRemoval.transform);
-    for (unsigned long k = 0; k < theSubModelCount; k++)
-        this->mSubModels[k]->RemoveModelScale(inFrame, theTransform, theRemoval.x, theRemoval.y, theRemoval.z);
+    ee_ge_mod_prepare_transforms(this->mRust);
 }
 
 // FUNCTION: LLE 0x1002004b
-// Removes the scale from every frame of the model, then goes back to frame 0
 void GEModel::RemoveScale()
 {
-    GETransformation theIdentity;
-    for (unsigned long i = 0; i < this->mFrameCount; i++)
-        this->RemoveModelScale(i, theIdentity, 1.0f, 1.0f, 1.0f);
-    this->SetGraphicsCurrentFrame(0);
+    ee_ge_mod_remove_scale(this->mRust);
 }
 
 // FUNCTION: LLE 0x1002009b
-// Sets the position between the current and next frame for the model and its sub-models
 void GEModel::SetFractionalFramePosition(float inPosition)
 {
-    unsigned long theSubModelCount = this->mSubModelCount;
-    this->mFractionalFramePosition = inPosition;
-    for (unsigned long i = 0; i < theSubModelCount; i++)
-        this->mSubModels[i]->SetFractionalFramePosition(inPosition);
+    ee_ge_mod_set_fractional(this->mRust, inPosition);
 }
 
 // FUNCTION: LLE 0x100200d7
-// Sets the current frame (tag points and bounding box follow) for the model and its sub-models
 void GEModel::SetGraphicsCurrentFrame(unsigned long inFrame)
 {
-    unsigned long theSubModelCount = this->mSubModelCount;
-    this->mGraphicsCurrentFrame = inFrame;
-    this->mTagPoints = this->mFrameTagPoints[inFrame];
-    this->mGraphicsBoundingBox = &this->mBoundingBoxes[inFrame];
-    for (unsigned long i = 0; i < theSubModelCount; i++)
-        this->mSubModels[i]->SetGraphicsCurrentFrame(inFrame);
+    ee_ge_mod_set_current_frame(this->mRust, inFrame);
 }
 
 // FUNCTION: LLE 0x1002012f
-// Sets the next frame for the model and its sub-models
 void GEModel::SetGraphicsNextFrame(unsigned long inFrame)
 {
-    unsigned long theSubModelCount = this->mSubModelCount;
-    this->mGraphicsNextFrame = inFrame;
-    for (unsigned long i = 0; i < theSubModelCount; i++)
-        this->mSubModels[i]->SetGraphicsNextFrame(inFrame);
+    ee_ge_mod_set_next_frame(this->mRust, inFrame);
 }
 
 // FUNCTION: LLE 0x10020166
-// Replaces the sub-model at an index, releasing the old one and referencing the new one
 void GEModel::SetSubModel(GEModel* inModel, unsigned long inIndex)
 {
-    if (this->mSubModels[inIndex]) {
-        this->mSubModels[inIndex]->mParentModel = NULL;
-        this->mSubModels[inIndex]->UReferenceCounter::Dereference();
-    }
-    if (inModel) {
-        inModel->Reference();
-        inModel->mParentModel = this;
-    }
-    this->mSubModels[inIndex] = inModel;
+    ee_ge_mod_set_sub_model(this->mRust, inModel, inIndex);
 }
 
 // FUNCTION: LLE 0x100201b4
-// Sets one screen's texture on every material of the model and its sub-models
 void GEModel::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
-    unsigned long theSubModelCount = this->mSubModelCount;
-    unsigned long theMaterialCount = this->mMaterialCount;
-    unsigned long i;
-    for (i = 0; i < theMaterialCount; i++)
-        this->mMaterials[i]->SetTexture(inTexture, inScreen);
-    for (i = 0; i < theSubModelCount; i++)
-        this->mSubModels[i]->SetTexture(inTexture, inScreen);
+    ee_ge_mod_set_texture(this->mRust, inTexture, inScreen);
 }
 
 // FUNCTION: LLE 0x10020213
-// Returns an estimate of the memory used by the model and its sub-models, in bytes
 unsigned long GEModel::SizeOf()
 {
-    unsigned long theSize = 0xd8 + this->mName.SizeOf() + this->mSharedFrames.size() * 8 + this->mFrameCount * sizeof(GETransformation) +
-                            this->mSubModelCount * sizeof(GEModel*);
-    for (unsigned long i = 0; i < this->mSubModelCount; i++)
-        theSize += this->mSubModels[i]->SizeOf();
-    theSize += this->mLODCount * sizeof(GEPolygonArray*) + 4;
-    for (unsigned long j = 0; j < this->mLODCount; j++)
-        theSize += this->mPolygonArrays[j]->SizeOf();
-    theSize += (this->mFrameCount - this->mSharedFrames.size()) * this->mVertexArrays[0]->SizeOf() + 8;
-    theSize += this->mMaterialCount * sizeof(GEMaterial*);
-    for (unsigned long k = 0; k < this->mMaterialCount; k++)
-        theSize += this->mMaterials[k]->SizeOf();
-    theSize += (this->mFrameCount - this->mSharedFrames.size()) * this->mTagPointCount * sizeof(GE3DPoint) +
-               this->mFrameCount * (sizeof(GEBoundingBox) + sizeof(float)) + 0x14;
-    for (unsigned long l = 0; l < this->mMaterialCount; l++)
-        theSize += this->mTextureFilenames[l].SizeOf();
-    theSize += 4;
-    for (unsigned long m = 0; m < this->mTagPointCount; m++)
-        theSize += this->mTagPointNames[m].SizeOf();
-    theSize += this->mFrameCount * sizeof(GE3DPoint*) + 0x60;
-    return theSize;
+    return ee_ge_mod_size_of(this->mRust);
 }
 
 // FUNCTION: LLE 0x10020338
-// Sorts the tag points by the first letter of their names, in every frame, then in the sub-models (Rust:
-// ee_ge_model_tag_point_order decides the swaps)
 void GEModel::SortTagPoints()
 {
-    UString theName;
-    GE3DPoint theTemp;
-    unsigned long theFrameCount = this->mFrameCount;
-    unsigned long theTagPointCount = this->mTagPointCount;
-    std::vector<int8_t> theFirst(theTagPointCount);
-    std::vector<uint32_t> theOrder(theTagPointCount);
-    unsigned long i;
-    for (i = 0; i < theTagPointCount; i++)
-        theFirst[i] = (int8_t)((const char*)this->mTagPointNames[i])[0];
-    if (theTagPointCount > 0)
-        ee_ge_model_tag_point_order(&theFirst[0], theTagPointCount, &theOrder[0]);
-    for (i = 0; i < theTagPointCount; i++) {
-        unsigned long theMinimum = theOrder[i];
-        if (theMinimum == i)
-            continue;
-        theName = this->mTagPointNames[i];
-        this->mTagPointNames[i] = this->mTagPointNames[theMinimum];
-        this->mTagPointNames[theMinimum] = theName;
-        for (unsigned long k = 0; k < theFrameCount; k++) {
-            GE3DPoint* thePoints = this->mFrameTagPoints[k];
-            theTemp = thePoints[i];
-            thePoints[i] = thePoints[theMinimum];
-            thePoints[theMinimum] = theTemp;
-        }
-    }
-    for (unsigned long l = 0; l < this->mSubModelCount; l++)
-        this->mSubModels[l]->SortTagPoints();
+    ee_ge_mod_sort_tag_points(this->mRust);
 }
 
 // FUNCTION: LLE 0x10020495
-// Returns false when any LOD 0 polygon of any frame has two equal corners; checks the sub-models too (Rust:
-// ee_ge_model_frame_is_sound)
 bool GEModel::Verify() const
 {
-    unsigned long theMaterialCount = this->mMaterialCount;
-    unsigned long theFrameCount = this->mFrameCount;
-    bool theResult = true;
-    std::vector<GE3DPoint> thePoints;
-    std::vector<uint32_t> theIndices;
-    std::vector<uint32_t> theRanges(theMaterialCount * 3);
-    GEGatherIndices(this->mPolygonArrays[0], this->mPolygonCount, theIndices);
-    for (unsigned long j = 0; j < theMaterialCount; j++) {
-        theRanges[j * 3] = (uint32_t)this->mMaterials[j]->GetPolygonStartingIndex(0);
-        theRanges[j * 3 + 1] = (uint32_t)this->mMaterials[j]->GetPolygonRangeLength(0);
-        theRanges[j * 3 + 2] = (uint32_t)this->mMaterials[j]->GetVertexStartingIndex();
-    }
-    for (unsigned long i = 0; i < theFrameCount; i++) {
-        GEGatherPoints(this->mVertexArrays[i], this->mVertexCount, thePoints);
-        if (!ee_ge_model_frame_is_sound(GERustPoints(thePoints), thePoints.size(), GERustIndices(theIndices),
-                                        theIndices.size(), GERustIndices(theRanges), theMaterialCount))
-            theResult = false;
-    }
-    if (theResult) {
-        for (unsigned long l = 0; l < this->mSubModelCount; l++) {
-            theResult = this->mSubModels[l]->Verify();
-            if (!theResult)
-                break;
-        }
-    }
-    return theResult;
+    return ee_ge_mod_verify(this->mRust);
 }
 
 // map<unsigned long, long> COMDAT (mSharedFrames)
