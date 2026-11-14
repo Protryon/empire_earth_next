@@ -416,21 +416,6 @@ void UIForm::AddControl(UIControl* inControl, unsigned long inGroup)
     this->mEntityGroups[inGroup]->AddEntity(inControl);
 }
 
-// FUNCTION: LLE 0x10070ddb
-// Adds a rectangle to the background-redraw list, splitting it around listed rectangles so none overlap
-void UIForm::AddCopyDirtyRectangle(const GERectangle& inRectangle)
-{
-    EeUiRect theRectangle = UIFormRust::Rect(inRectangle);
-    ee_ui_form_add_copy_dirty_rectangle(this, &theRectangle);
-}
-
-// FUNCTION: LLE 0x1007110f
-// Lists the control in the given slot for drawing this frame
-void UIForm::AddDrawControl(unsigned long inIndex)
-{
-    this->mDrawControls[inIndex] = this->mControls[inIndex];
-}
-
 // FUNCTION: LLE 0x1007112b
 // Queues a dirty rectangle for every drawing surface, dropping queued ones it covers; marks an overlapped popup dirty
 void UIForm::AddDirtyRectangle(const GERectangle& inRectangle)
@@ -704,13 +689,6 @@ extern "C" long ee_uicpp_form_life_ctl_call(void* inControl, int inCall, unsigne
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x100714f3
-// Moves a radio-button index to the checked button of its run of radio buttons (unchanged if it is checked)
-void UIForm::CheckedRadioButton(long& ioIndex)
-{
-    ee_ui_form_checked_radio_button(this, &ioIndex);
-}
-
 // FUNCTION: LLE 0x10071592
 // Closes the form: fires the close event, clears the draw list and popup, closes the backgrounds, flushes its events
 // and deletes the controls created from the database
@@ -930,22 +908,6 @@ long UIForm::DrawTextA()
     return theResult;
 }
 
-// FUNCTION: LLE 0x10072452
-// Finds the highest empty control slot and returns the slot after it; false when none is empty or it is the last slot
-bool UIForm::GetAvailableIndex(unsigned long& outIndex) const
-{
-    bool theResult = false;
-    for (long i = this->mControlCount - 1; i >= 0; i--)
-        if (this->mControls[i] == NULL) {
-            if (i + 1 != this->mControlCount) {
-                theResult = true;
-                outIndex = i + 1;
-            }
-            break;
-        }
-    return theResult;
-}
-
 // FUNCTION: LLE 0x1007248c
 // Returns the background with the given ID, or NULL
 UIBackground* UIForm::GetBackgroundByID(unsigned long inID) const
@@ -1005,14 +967,6 @@ bool UIForm::GetShouldFadeIn()
 void UIForm::GetToolTipShadowRectangle(const GERectangle& inRectangle, GERectangle& outRectangle)
 {
     outRectangle = UIFormRust::Rect(ee_ui_form_tool_tip_shadow(UIFormRust::Rect(inRectangle)));
-}
-
-// FUNCTION: LLE 0x100725fd
-// Loads every background's texture
-void UIForm::LoadBackgrounds()
-{
-    for (unsigned long i = 0; i < this->mBackgrounds.size(); i++)
-        this->mBackgrounds[i]->LoadBackground();
 }
 
 // FUNCTION: LLE 0x10072624
@@ -1614,14 +1568,6 @@ void UIForm::ShiftTab()
 void UIForm::Tab()
 {
     ee_ui_form_tab(this, this->mTabbingOn, this->mTabStop);
-}
-
-// FUNCTION: LLE 0x10073a61
-// Unloads every background's texture
-void UIForm::UnloadBackgrounds()
-{
-    for (unsigned long i = 0; i < this->mBackgrounds.size(); i++)
-        this->mBackgrounds[i]->UnloadBackground();
 }
 
 // FUNCTION: LLE 0x10073a88

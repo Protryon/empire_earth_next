@@ -58,45 +58,20 @@ public:
 #endif
     GEColor GetBackground() const { return this->mBackground; }
     GEColor GetTextForeground() const { return this->mTextForeground; }
-    GEColor GetSeletedListBox() const { return this->mSelectedListBox; }
-    GEColor GetFocusedLineColor() const { return this->mFocusedLineColor; }
     UString GetNormalFileName() const { return this->mNormalFileName; }
-    UString GetPressedFileName() const { return this->mPressedFileName; }
-    UString GetFocusedFileName() const { return this->mFocusedFileName; }
     GEFont* GetFont() const { return this->mFont; }
     GEBitmap* GetNormal() const { return this->mNormal; }
-    GEBitmap* GetPressed() const { return this->mPressed; }
-    GEBitmap* GetFocused() const { return this->mFocused; }
     float GetBackgroundOpacity() const { return this->mBackgroundOpacity; }
-    float GetTextBoxOpacity() const { return this->mTextBoxOpacity; }
-    float GetScrollBarBgOpacity() const { return this->mScrollBarBgOpacity; }
     long GetID() const { return this->mID; }
     long GetFormID() const { return this->mFormID; }
     unsigned long GetGroup() const { return this->mGroup; }
-    long GetGroupID() const { return this->mGroup; }
     unsigned long GetControlType() const { return this->mControlType; }
     long GetFormIndex() const { return this->mFormIndex; }
     long GetBorderThickness() const { return this->mBorderThickness; }
     unsigned long GetStringTableID() const { return this->mStringTableID; }
-    long GetStringTableBegin() const { return this->mStringTableBegin; }
-    long GetStringTableEnd() const { return this->mStringTableEnd; }
-    long GetTextAlignment() const { return this->mTextAlignment; }
-    long GetMaxChars() const { return this->mMaxChars; }
-    long GetStartCurrentSelection() const { return this->mStartCurrentSelection; }
-    long GetStartRange() const { return this->mStartRange; }
-    long GetEndRange() const { return this->mEndRange; }
-    long GetCurrentRange() const { return this->mCurrentRange; }
     const UILayoutUtility& GetLayout() const { return this->mLayout; }
-    const GERectangle& GetNormalTextureRect() const { return this->mNormalTextureRect; }
-    const GERectangle& GetPressedTextureRect() const { return this->mPressedTextureRect; }
-    const GERectangle& GetFocusedTextureRect() const { return this->mFocusedTextureRect; }
     bool GetIsVisible() const { return this->mIsVisible; }
     bool GetStartChecked() const { return this->mStartChecked; }
-    bool GetListBoxAlwaysDirty() const { return this->mListBoxAlwaysDirty; }
-    bool GetSortListBox() const { return this->mSortListBox; }
-    bool GetFocusedHasAlpha() const { return this->mFocusedHasAlpha; }
-    bool GetPressedHasAlpha() const { return this->mPressedHasAlpha; }
-    bool GetNormalHasAlpha() const { return this->mNormalHasAlpha; }
     bool GetAlwaysDirty() const { return this->mAlwaysDirty; }
     bool GetLoopMovie() const { return this->mLoopMovie; }
     void RelayoutControl(UIControl* inControl, UIManager* inManager);
@@ -104,12 +79,6 @@ public:
     void SetupGEText(GEText* inText) const;
     void SetupStringArray(UIManager* inManager, std::vector<UWideString>& outStrings) const;
 private:
-    void CalculateColor(GEColor& outColor, unsigned long inRed, unsigned long inGreen, unsigned long inBlue) const
-    {
-        outColor.mRed = inRed * (1.0f / 255.0f);
-        outColor.mGreen = inGreen * (1.0f / 255.0f);
-        outColor.mBlue = inBlue * (1.0f / 255.0f);
-    }
     UIControl* CreateBitmap(UIManager* inManager, const GERectangle& inRectangle);
     UIControl* CreateButton(UIManager* inManager, const GERectangle& inRectangle);
     UIControl* CreateCheckBox(UIManager* inManager, const GERectangle& inRectangle);

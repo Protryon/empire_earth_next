@@ -737,13 +737,6 @@ UIEvent* UIManager::CreateFormEvent(unsigned long inEventID)
     return theEvent;
 }
 
-// FUNCTION: LLE 0x1007a5c2
-// Creates the IME candidate window with the given font
-void UIManager::CreateIMECandidateWindow(GEFont* inFont)
-{
-    this->mCandidateWindow = new UIIMECandidate(this, 0.2f, 0.35f, inFont);
-}
-
 // FUNCTION: LLE 0x1007a602
 // Draws the snapshotted forms with alpha blending (their text too, unless drawn by GDI) and the candidate window
 long UIManager::DrawPolygons()
@@ -938,13 +931,6 @@ void UIManager::RedrawAll()
 // FUNCTION: LLE 0x1007af90 (RemoveClippedForms): the body is Rust (ee_ui manager.rs, inside Push and SwapForm); the
 // member stays declared, with no C++ definition.
 
-// FUNCTION: LLE 0x1007b147
-// Rebuilds each visible form's clip rectangles from the visible forms above it
-void UIManager::ResetClippedForms()
-{
-    ee_ui_manager_reset_clipped_forms(this);
-}
-
 // FUNCTION: LLE 0x1007b1a2
 // Re-lays out every stacked form to the window size and rebuilds the clip rectangles
 void UIManager::RelayoutAllForms()
@@ -967,13 +953,6 @@ void UIManager::RemoveAndStopSoundInstance()
     ee_ui_manager_remove_and_stop_sound_instance(this);
 }
 
-// FUNCTION: LLE 0x1007b310
-// Releases the music instance
-void UIManager::RemoveSoundInstance()
-{
-    ee_ui_manager_remove_sound_instance(this);
-}
-
 // FUNCTION: LLE 0x1007b338
 // Deletes the UI database tables (controls, backgrounds, fonts)
 void UIManager::RemoveDatabase()
@@ -981,13 +960,6 @@ void UIManager::RemoveDatabase()
     UIControlsTable::DeleteAll();
     UIBackgroundTable::DeleteAll();
     UIFontTable::DeleteAll();
-}
-
-// FUNCTION: LLE 0x1007b347
-// Replaces the music instance, moving the reference to the new one
-void UIManager::SetSoundInstance(SESMInstanceNode* inInstance)
-{
-    ee_ui_manager_set_sound_instance(this, inInstance);
 }
 
 // FUNCTION: LLE 0x1007b36e

@@ -120,7 +120,6 @@ public:
     // port: makes room for a control at inIndex (the controls the table did not have: UIControlsTable::AddControlLike);
     // grows the control arrays (made with the form, mControlCount long)
     void ReserveControlIndex(unsigned long inIndex);
-    void AddDrawControl(unsigned long inIndex);
     void AddEvent(const UIEventData& inEvent) { this->mEventData.push_back(inEvent); }
     void AddHotKey(const UIHotKey& inHotKey, unsigned long inGroup);
     void AddHotKey(unsigned long inKey, unsigned long inModifier1, unsigned long inModifier2,
@@ -133,44 +132,28 @@ public:
     long DrawBackground(GEBitmap* inBitmap, const GERectangle& inRectangle, const GERectangle& inDrawRectangle,
                         const GERectangle& inTileRectangle);
     long DrawClippedText(const GERectangle& inRectangle, GEText* inText, UIControl* inControl);
-    bool GetAvailableIndex(unsigned long& outIndex) const;
     UIBackground* GetBackgroundByID(unsigned long inID) const;
-    const std::vector<GERectangle>& GetClipRectangles() { return this->mClipRectangles; }
     UIControl* GetControl(unsigned long inIndex) const { return this->mControls[inIndex]; }
     UIControl* GetControlById(unsigned long inId);
     unsigned long GetControlCount() const { return this->mControlCount; }
-    unsigned long GetControlGroupCount() const { return this->mControlGroupCount; }
     unsigned long GetDesignedHeight() const { return this->mDesignedHeight; }  // ICF-folded (0x1004040d)
     unsigned long GetDesignedWidth() const { return this->mDesignedWidth; }
     UIEntityGroup* GetEntityGroup(unsigned long inIndex) const { return this->mEntityGroups[inIndex]; }
     UIEntityGroup* GetEntityGroupById(unsigned long inId) const;
     float GetFadeOpacity() { return this->mFadeOpacity; }
-    UIEvent* GetFormActivateEvent() const { return this->mFormActivateEvent; }
-    UIEvent* GetFormDeactivateEvent() const { return this->mFormDeactivateEvent; }
     unsigned long GetFormID() const { return this->mFormID; }
     UIFormManager* GetFormManager() const { return this->mFormManager; }
     UIEvent* GetFormUpdateEvent() const { return this->mFormUpdateEvent; }
     UITextLabel* GetHelpTextLabel() const { return this->mHelpTextLabel; }  // ICF-folded (0x100633d4)
     UIHotKey* GetHotKey(unsigned long inIndex, unsigned long inGroup) const { return this->mHotKeys[inGroup][inIndex]; }
     unsigned long GetHotKeyCount(unsigned long inGroup) const { return this->mHotKeys[inGroup].size(); }
-    unsigned long GetHowLongHasFormBeenOpen() { return TMGetTime() - this->mOpenTime; }
     bool GetIsKeyboardCaptured() const { return this->mKeyboardCaptured != NULL; }
     bool GetIsMouseCaptured() const { return this->mMouseCaptured != NULL; }
     bool GetUseExclusiveCoords() const { return this->mUseExclusiveCoords; }
     UIManager* GetManager() const { return this->mManager; }  // ICF-folded (0x100633b1)
-    UIEvent* GetMouseLeftButtonPressedEvent() const { return this->mMouseLeftButtonPressedEvent; }
-    UIEvent* GetMouseLeftButtonUnpressedEvent() const { return this->mMouseLeftButtonUnpressedEvent; }
-    UIEvent* GetMouseLeftButtonDoublePressedEvent() const { return this->mMouseLeftButtonDoublePressedEvent; }
     const GE2DPoint& GetMouseLocation() const { return this->mMouseLocation; }
-    UIEvent* GetMouseMiddleButtonPressedEvent() const { return this->mMouseMiddleButtonPressedEvent; }
-    UIEvent* GetMouseMiddleButtonUnpressedEvent() const { return this->mMouseMiddleButtonUnpressedEvent; }
-    UIEvent* GetMouseMiddleButtonDoublePressedEvent() const { return this->mMouseMiddleButtonDoublePressedEvent; }
     UIEvent* GetMouseMoveEvent() const { return this->mMouseMoveEvent; }  // ICF-folded (0x1001132b)
     UIControl* GetMouseOverControl() const { return this->mMouseOverControl; }  // ICF-folded (0x1005a0e8)
-    UIEvent* GetMouseRightButtonPressedEvent() const { return this->mMouseRightButtonPressedEvent; }
-    UIEvent* GetMouseRightButtonUnpressedEvent() const { return this->mMouseRightButtonUnpressedEvent; }
-    UIEvent* GetMouseRightButtonDoublePressedEvent() const { return this->mMouseRightButtonDoublePressedEvent; }
-    UIEvent* GetMouseWheelMoveEvent() const { return this->mMouseWheelMoveEvent; }
     const UWideString& GetMusicFileName() const { return this->mMusicFileName; }
     // Num Lock is off (GetKeyState(VK_NUMLOCK) & 1 was the original's test; 0x100596a2)
     static bool GetNumLockOff() { return PlatKeyIsToggled(VK_NUMLOCK) ? false : true; }
@@ -180,7 +163,6 @@ public:
     unsigned long GetTabStop() const { return this->mTabStop; }
     void GetToolTipShadowRectangle(const GERectangle& inRectangle, GERectangle& outRectangle);
     bool GetUseGDIForText() const { return this->mUseGDIForText; }
-    void LoadBackgrounds();
     void LockDrawBackground() { this->mDrawBackgroundLock->Enter(); }
     void RedrawIntersectControls(const GERectangle& inRectangle);
     void RemoveAllHotKeys();
@@ -227,7 +209,6 @@ public:
     void SetUseToolTips(bool inUseToolTips) { this->mUseToolTips = inUseToolTips; }
     void ShiftTab();
     void Tab();
-    void UnloadBackgrounds();
     void UnlockDrawBackground() { this->mDrawBackgroundLock->Leave(); }
     void UpdateHelpString();
     void UpdateMouseLocation(const GE2DPoint& inLocation);
@@ -235,9 +216,7 @@ protected:
     UIControl* GetKeyboardCaptured() const { return this->mKeyboardCaptured; }  // ICF-folded (0x100660be)
     UIControl* GetMouseCaptured() const { return this->mMouseCaptured; }   // ICF-folded (0x100633db)
 private:
-    void AddCopyDirtyRectangle(const GERectangle& inRectangle);
     void AddDirtyRectangle(const GERectangle& inRectangle);
-    void CheckedRadioButton(long& ioIndex);
     void Init();
     void SetFormEvent(unsigned long inType, UIEvent* inEvent);
     void SetKeyboardCaptured(UIControl* inControl);

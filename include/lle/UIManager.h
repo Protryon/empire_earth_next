@@ -85,7 +85,6 @@ public:
     GEBitmap* CreateBitmapForScaledControl(GEBitmap* inBitmap, const GERectangle& inRectangle);
     UIEvent* CreateControlEvent(UIForm* inForm, unsigned long inEventID);
     UIEvent* CreateFormEvent(unsigned long inEventID);
-    void CreateIMECandidateWindow(GEFont* inFont);
     virtual UIBackground* CreateUserDefinedBackground(const UIBackgroundTable& inTable) { return NULL; }
     virtual UIControl* CreateUserDefinedControl(UIControlsTable& inTable) { return NULL; }
     // inline: exported 0x1005a028 (UIBackground.cpp's inline block)
@@ -129,7 +128,6 @@ public:
 #endif
 #ifdef LOWLEVELENGINE_EXPORTS
 #if defined(LLE_UIFORM_CPP) || defined(LLE_UIMANAGER_CPP) || defined(LLE_UIBACKGROUND_CPP)
-    static bool GetMouseLeftHanded() { return UIManager::sMouseLeftHanded; }
     static ISEntity* GetMouseWheel() { return UIManager::sMouseWheel; }
 #endif
 #endif
@@ -155,7 +153,6 @@ public:
     SESoundManager* GetSoundManager() const { return this->mSoundManager; }
     UResourceFile* GetStringTable() const { return this->mStringTable; }
     unsigned long GetUITextureBitDepth() const { return this->mUITextureBitDepth; }  // ICF-folded (0x10065fe4)
-    unsigned long GetVisibleFormCount() const { return this->mVisibleForms.size(); }
     bool IsFormOnStack(UIForm* inForm)
     {
         return std::find(this->mFormStack.begin(), this->mFormStack.end(), inForm) != this->mFormStack.end();
@@ -189,7 +186,6 @@ public:
     static void SetMouseLeftHanded(bool inLeftHanded);
     long SwapForm(UIForm* inForm);
     void SetMusicVolume(float inVolume);
-    void SetNumberOfFonts(unsigned long inCount) { this->mFonts.resize(inCount); }
     void StartMusic(const UWideString& inFileName);
     void StopMusic();
     void UnlockUIForCopyData() { this->mCriticalSection->Leave(); }
@@ -199,11 +195,7 @@ protected:
     virtual long UpdateKeyboard();
     virtual long UpdateMouse(const GE2DPoint& inMouseLocation);   // slot 0x30
     void RemoveAndStopSoundInstance();
-    void RemoveSoundInstance();
-    void SetSoundInstance(SESMInstanceNode* inInstance);
 private:
-    void AddClippedForms(unsigned long inIndex);
-    unsigned long AddToVisibleForms(UIForm* inForm);
     void CreateBitmap(GEBitmap* inBitmap, GETextureCoordinate& inTopLeft, GETextureCoordinate& inTopRight,
                       GETextureCoordinate& inBottomRight, GETextureCoordinate& inBottomLeft);
 #ifdef __clang__
@@ -214,8 +206,6 @@ private:
         { CreateBitmap(inBitmap, const_cast<GETextureCoordinate&>(inTopLeft), const_cast<GETextureCoordinate&>(inTopRight), const_cast<GETextureCoordinate&>(inBottomRight), const_cast<GETextureCoordinate&>(inBottomLeft)); }
 #endif
     void LoadTexture(const UString& inName, GETexture*& outTexture);
-    void RemoveClippedForms(unsigned long inIndex);
-    void ResetClippedForms();
 protected:
     TSCriticalSection* mCriticalSection;    // +0x004 forms, stack and events (LockUIForCopyData)
     TSCriticalSection* mDrawCriticalSection;   // +0x008 the copied forms

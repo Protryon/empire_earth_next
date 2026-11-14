@@ -96,9 +96,6 @@ void UICheckBox::SetText(const UWideString& inText, GEFont* inFont)
 }
 // Toggles the check, then releases the button
 void UICheckBox::ButtonUp() { EE_UI_CHECK(CheckButtonUp); }
-// FUNCTION: LLE 0x10060256
-// Flips the check state unless the box is disabled
-void UICheckBox::ToggleCheck() { EE_UI_CHECK(CheckToggle); }
 // FUNCTION: LLE 0x10060270
 // Presses the box unless it is disabled
 void UICheckBox::ButtonDown() { EE_UI_CHECK(CheckButtonDown); }

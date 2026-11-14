@@ -31,8 +31,6 @@ class LLE_API UIControl : public UIEntity {
     friend struct UIObjHost;                // UIControl.cpp: the whole objects' base ops (ee_ui obj.rs)
 public:
     virtual void AddIMEResultString(const UWideString& inString) {}   // slot 0x04
-    // the key statics are ISEntity*: GetValue() is slot 0x0c
-    static bool AltKeyPressed() { return UIControl::sAltKey->GetValue() > 0; }
     virtual long ChangeIMECompositionString(const UWideString& inString, const UString& inAttributes,
                                             unsigned long inCursor) { return kErrorFailed; }
     virtual void ChangeFont(GEFont* inFont) {}
@@ -66,13 +64,11 @@ public:
         return theOpacity;
     }
     void GetBgColor(GEColor& outColor) const { this->mBgRhombus.GetColorPerVertex(outColor, outColor, outColor, outColor); }
-    const GERectangle& GetBgRectangle() const { return this->mBgRhombus.GetRectangle(); }
     const GERectangle& GetCopiedDrawRectangle() const { return this->mCopiedDrawRectangle; }
     unsigned long GetDisplayMode() const { return this->mDisplayMode; }
     unsigned long GetDrawCount() const { return this->mDrawCount; }
     GESurface* GetDrawingSurface() const;
     UIForm* GetForm() const { return this->mForm; }
-    bool GetHasKeyboardCapture() const;
     bool GetHasMouseCapture() const;
     unsigned long GetHeight() const { return UMFloor(this->mRectangle.GetBottom() - this->mRectangle.GetTop() + 1.0f); }
     virtual bool GetHelpString(UWideString& outString) const;
@@ -141,14 +137,8 @@ public:
         this->SetDirty(true);
     }
     void SetBorderType(unsigned long inType) { this->mBorderType = inType; }
-#ifdef LLE_EXE_HEADERS
-    // inline forwards (the diplomacy form 0x5d4165, built without /Og: no extra code, each is one more inline site)
-    void SetHiddenMode() { this->SetDisplayMode(0); }
-    void SetTrigger(unsigned long inEvent, UIEvent* inTriggerEvent) { this->SetTriggerEvent(inEvent, inTriggerEvent); }
-#endif
     virtual void SetDirty(bool inDirty);
     virtual void SetDisplayMode(unsigned long inMode);
-    void SetHotKey(UIHotKey* inHotKey) { this->mHotKey = inHotKey; }
     virtual void SetLocation(const GE2DPoint& inLocation);
     virtual void SetRectangle(const GERectangle& inRectangle);
     void SetStringTableID(unsigned long inID) { this->mStringTableID = inID; }
