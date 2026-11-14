@@ -5379,6 +5379,98 @@ C++ 0.8.
 The `cp unit.death` trace line covers only the C++ seats' citizens. A script's seat has its `next.death` line.
 
 0 script errors. Determinism (land, seeds 2 and 5, 60 minutes, --repeat 2) is identical.
+### 8.84 Stage 3: the cross-epoch bench (2026-11-14, EE-SIM)
+
+**The bench.** classic_lua (seat 2) against the C++ classic (seat 3):
+- every start epoch past the Prehistoric (`--start-epoch`, the lobby's lines from Stone Age to Space Age);
+- on the land map (Continental) and a water map (Small Islands);
+- 32 seeds each, 60 minutes, balanced, no cheats.
+
+The two losing cells of the first 32 seeds were confirmed on 64. EE-SIM's samples now carry each player's naval,
+air, towers, walls and wonders.
+
+Verdict: the won-lost difference beyond 4 of 32 (8 of 64) decides, with the citizens and army at 60 minutes beside it.
+Epoch advances: the advances past the start, with the median minute of the first. No cell had a script error, and
+neither engine built a wonder in 60 minutes.
+
+| start | map | port W-L-close (seeds) | verdict | citizens at 60 min, port/C++ | army at 60 min, port/C++ | advances port ; C++ |
+|---|---|---|---|---|---|---|
+| Stone | land | 2-46-16 (64) | behind | 57.3/128 | 13.6/8.1 | 26 (43.1) ; 31 (41.6) |
+| Stone | water | 12-2-18 | ahead | 69.5/47.6 | 35.3/30.1 | 32 (39.5) ; 28 (40.0) |
+| Copper | land | 12-6-14 | ahead | 55.8/53.5 | 14.1/4.5 | 19 (53.8) ; 6 (53.4) |
+| Copper | water | 7-31-26 (64) | behind | 40.5/61.4 | 14.4/12.8 | 16 (49.7) ; 22 (51.4) |
+| Bronze | land | 15-10-7 | ahead | 65.3/71.2 | 12.7/2.8 | 16 (54.5) ; 4 (57.8) |
+| Bronze | water | 15-3-14 | ahead | 44.4/28.8 | 9.9/4.5 | 12 (55.6) ; 4 (55.2) |
+| Dark | land | 17-2-13 | ahead | 62.7/39.4 | 11.8/1.8 | 14 (52.4) ; 2 (53.4) |
+| Dark | water | 6-14-12 | behind | 38.0/43.8 | 9.9/10.0 | 8 (54.9) ; 9 (53.5) |
+| Middle Ages | land | 12-9-11 | match | 46.0/51.4 | 10.8/3.1 | 13 (54.8) ; 9 (53.8) |
+| Middle Ages | water | 6-10-16 | match | 33.7/39.4 | 9.1/7.2 | 1 (51.6) ; 4 (57.0) |
+| Renaissance | land | 17-8-7 | ahead | 39.2/34.4 | 9.3/3.1 | 14 (51.1) ; 1 (55.8) |
+| Renaissance | water | 4-5-23 | match | 23.2/26.4 | 7.2/4.4 | 3 (55.0) ; 1 (59.4) |
+| Imperial | land | 13-5-14 | ahead | 26.5/22.7 | 6.2/2.3 | 2 ; 1 |
+| Imperial | water | 4-8-20 | match | 20.9/25.3 | 8.7/9.7 | 5 ; 0 |
+| Industrial | land | 13-8-11 | ahead | 23.0/27.1 | 7.6/2.5 | 2 ; 0 |
+| Industrial | water | 3-13-16 | behind | 19.2/28.2 | 11.2/12.2 | 0 ; 0 |
+| Atomic WW1 | land | 11-5-16 | ahead | 25.0/22.9 | 6.2/2.6 | 4 ; 0 |
+| Atomic WW1 | water | 0-15-17 | behind | 17.6/27.2 | 5.7/7.5 | 0 ; 0 |
+| Atomic WW2 | land | 9-4-19 | ahead | 28.6/26.8 | 7.2/1.3 | 6 ; 0 |
+| Atomic WW2 | water | 1-4-27 | match | 18.5/19.8 | 3.3/3.3 | 0 ; 0 |
+| Atomic Modern | land | 6-7-19 | match | 26.5/33.0 | 6.8/2.0 | 2 ; 0 |
+| Atomic Modern | water | 1-4-27 | match | 19.4/22.1 | 3.8/3.4 | 0 ; 0 |
+| Digital | land | 11-6-15 | ahead | 21.6/23.1 | 7.3/1.8 | 0 ; 0 |
+| Digital | water | 3-15-14 | behind | 17.1/24.3 | 4.1/7.4 | 0 ; 0 |
+| Nano | land | 12-6-14 | ahead | 20.6/23.2 | 6.6/1.7 | 1 ; 0 |
+| Nano | water | 1-8-23 | behind | 17.4/21.3 | 4.4/4.2 | 0 ; 0 |
+| Space | land | 29-0-3 | ahead | 54.7/10.6 | 19.9/3.3 | 0 ; 0 |
+| Space | water | 31-0-1 | ahead | 75.4/12.6 | 18.9/4.4 | 0 ; 0 |
+
+Summary: 14 ahead, 7 match, 7 behind. On land the port is ahead or level from the Copper Age on. Behind are the Stone
+Age on land, and the water map from the Copper Age on except the Bronze Age, where it is mostly behind or level. In
+the Space Age the C++ collapses on both maps (11-13 citizens at 60 minutes).
+
+**Stone Age on land: the epoch reserve's timing.** The port's citizens part from the C++'s at 7 minutes:
+- the Copper Age is asked for early;
+- its reserve holds the food: at 6 minutes 15 of 32 port games reserve against 6 of the C++'s.
+
+The C++ is without epoch_pressure.safe_bonus: EECPArmyThreat holds in half its games from minute 2-3, when the
+port's first explorer reaches its town. A diagnostic copy of the port without the bonus (not kept) drew level:
+7-13-12, citizens at 30 minutes 41.7 against 42.7 (was 32.1 against 44.8). The rule is the same in both engines;
+the port is the one that explores early.
+
+Tried and not kept:
+- the threat test through the fog with sees_all (ai.enemy_force, as EECPArmyThreat counts): 3-22-7;
+- the first queue's temple sited round the centre's resource units, where the C++ finds no site and drops it: 1-26-5.
+
+**The water map from the Copper Age: the C++'s fishing boats.** At 15 minutes the C++ has 4.1 fishing boats at work
+in a Copper Age start, the port 0.1. Its food income from 5 to 30 minutes is 1526 against 976. Two C++ behaviours
+explain it:
+- Regroup counts the map's every fish for mUsesFishing. The port counts the fish it has explored, a few at the start,
+  so it never fishes.
+- EECPUnitManager::GatherUnits counts the requests of mRequests[mStartEpoch .. mEndEpoch] only. At a late start the
+  Stone Age fishing boat sits in an earlier list, so RequestFishingBoats sees no request. It asks again every 30 s:
+  5.7 boat requests a game from a Copper Age start and 6.0 from a Dark Age start, against 1.1 from the Stone Age and
+  1.2 from the Bronze Age, whose boat is of the start epoch. Those cells are the water cells the port wins.
+
+Both were ported in a trial (not kept):
+- ai.resources{unexplored = true} with sees_all, for the map's fish;
+- the boat requests counted from the start epoch's list.
+
+Results:
+- Copper Age water: 4-14-14 (citizens at 30 minutes 26.2, was 22.9);
+- Dark Age water: 9-13-10 (was 6-14-12);
+- but the Prehistoric start lost: land 11-12-9 against 13-13-6, citizens at 60 minutes 65.9 against 73.0; Small
+  Islands 15-5-12 against 14-3-15, citizens 53.1 against 68.3.
+
+With mUsesFishing from the start the islands give up their farms for one boat. Fog-free dock sites
+(ai.water_sites) did not bring the docks forward either: half the port's docks still stand after 13 minutes against
+the C++'s 5-15.
+
+The later water cells (Industrial to Nano) show the port with more buildings at 30 minutes (19-22 against 14-17):
+granaries, universities, hospitals, stables and towers. The C++'s FindCenterSite and production sites fail there
+(build.nosite: 142 docks, 42 stables, 34 universities in 32 Imperial games), so it saves the resources.
+
+Open: the explorer timing in the Stone Age, the late-start boats without the Prehistoric farms' cost, and the
+docks' placement on the islands.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
