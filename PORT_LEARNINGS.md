@@ -18210,3 +18210,215 @@ answered messages (the communications tick, pause, unpause) and the game's messa
   value an out-parameter of a call in the same argument list writes; a stand-in that identifies objects by address
   ties a golden to the object layout: key it by a value the change keeps, and prove the re-keyed stand-in against
   the golden over the old code before changing the code.
+
+## R6: the game screens, twenty-seventh round: the message box's constructor, the icon bar whole, the portrait's and the improvement button's decisions in Rust (ee_screens dialog.rs, icon_bar.rs, portrait.rs, upgrade.rs; branch rust-screens27, 2026-11-14)
+
+Round 26's leftovers, biggest first. Count (round 22's `count.sh`, copied to `build/sc27`: User Interface Thread
+without the unit utilities, UI Events, `include/ee/EEUI*.h`): 20,374 at the branch's start (e80deffc) -> 20,135 at
+685ff457 (-239; git over `src` and `include/ee`: +556 -795).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| f2d7c811 | `EEUIFError`'s constructor in Rust (`dialog.rs` `construct`) | +66 -65, net +1 |
+| de00feb6 | `EEUICUnitIconBar` whole in Rust (`icon_bar.rs`) | +152 -309, net -157 |
+| 0f839651 | `EEUICPortrait`'s `Update`, `DrawPolygons`, `GetHelpString`, `MouseLButtonDown` in Rust (`portrait.rs`) | +145 -235, net -90 |
+| 685ff457 | `EEUIBUpgrade`'s `GetCanUpgrade`, `GetDisabled`, `GetHelpString`, `ButtonUp`, `MouseMove`, `MouseRButtonUp`, `UpdateCost` in Rust (`upgrade.rs`) | +193 -186, net +7 |
+
+- **The message box's constructor (commit 1)**: `construct` drives nine new ops of round 13's dialog host
+  (`EE_SCREENS_DLG_FLOAT` .. `_BACKGROUND`): the scaled Tahoma 16 (the existing font op), the message label (280x135,
+  white scroll bar 0.3 opaque, centred black text), OK, No and Cancel, the edit box (220x24, black on white, a gold
+  selection), each added in the original's order, the entity group, mode 0, the form's layout (295..730 of 1024,
+  262..506 of 768) and the gold framed parchment background. Sizes and colours cross through a nine-float register
+  (`EE_SCREENS_DLG_FLOAT`), so the host keeps its `(op, a, b) -> u32` shape and the golden its `op a b answer` lines.
+  The constructor nulls the five control members first (the host's control table reads them before the `new`s). The
+  original's five `ESVERIFY`s after each `new` went (`new` never returns NULL). The net is +1: the C++ `new` of each
+  control and the description's eight fields stay.
+- **Its golden** (`build/sc27/err`): the original constructor (cut from e80deffc, with its colour constants) against
+  the new one, the statics and the whole host, over fake controls, fonts, layout and background on random window
+  sizes, Tahoma heights and UI texture depths. Seeds 2-4 x 2,000: 0 differences. Host mutations: 13 of 13 (the first
+  run's background colour swap was equivalent, white is white; replaced by the selection colour's). The host log is
+  the same for every world (`golden_dialog_construct.txt`, 50 ops), replayed by
+  `dialog::golden::construct_replays_the_golden`; 10 of 10 Rust mutations fail it.
+- **The icon bar (commit 2)**: the class's 13 members past `UIControl` but the two bitmaps are a Rust `IconBar`
+  (`Box` behind `mState`; `ee_screens_icon_bar_new` returns it with the icon rectangle the constructor's bitmap
+  needs, `ee_screens_icon_bar_free` releases the snapshot's buttons). `CopyData`, `DrawPolygons`, `Update`, the two
+  releases and `MouseMove` are one-line forwarders; `GetUnit`, `GetIconIndex`, `GetUnitIDs` (only the class called
+  them) are Rust's. The host `EEUICUnitIconBar::HostOp` (`ee_screenscpp_icon_bar`, 35 ops; a static member for the
+  protected toolkit calls) takes units and buttons as handles and floats through a pointer (the rectangles, the
+  icon's place, the bars, the lines). The icon index is the x86 conversion (`cvtt`: NaN and out of range give
+  `i32::MIN`, so a NaN spacing finds no unit, as the original); the `min`/`max` macros keep their NaN behaviour.
+- **Its golden** (`build/sc27/ib`): the original unit (cut from e80deffc) against the new, each case a random world
+  (selections of 0-44 units, lone transports with cargo, every family, queued goals, hit points out of range,
+  maximums of 0, bars 24 wide and narrower, the mouse on and past the edges, Ctrl and Shift) and a sequence of 1-10
+  calls ending in `CopyData`, `DrawPolygons` and the destructor; every effect plus the button reference counts.
+  Seeds 2-4 x 20,000: 0 differences. Host mutations: 22 of 22 (the mouse's y was read and never used: the op now
+  returns the x only). `golden_icon_bar.txt` (400 sequences, 2.5 MB) is replayed by
+  `icon_bar::golden::replays_the_golden`; 20 of 21 Rust mutations fail it; the 21st (the atomic bomber's queue 3 as
+  2) is reached by too few golden clicks, so `an_air_base_asks_the_family_s_queue` pins each family's queue.
+- **The portrait (commit 3)**: `portrait.rs` over `EEUICPortrait::HostOp` (`ee_screenscpp_portrait`, 33 ops): the
+  level and the two bar flags cross as one state word read first and written back before the text and the help
+  update (the form's `UpdateHelpString` reads the flags); the bar rectangles, the drawing plan (each shown bar with
+  the background over the rest of its row), the tooltip's choice (the host prints the resource format with the
+  name) and the click's choice. `GetBarRectangles` left the header (only the class used it). `SetUnit` (references),
+  `DrawTextA`, `MouseMove`, the constructor and destructor stay C++.
+- **Its golden** (`build/sc27/pt`): 1-5 calls per case over a world of units alive or not, missing complex units,
+  local or foreign players, production times below 0, research of no technology or a missing node, nodes that make
+  upgraded classes, build times and world times of 0, levels past the maximum, portraits of width 0, the mouse on the
+  bars' edges and middle line. Two original crashes shaped the world: `Update` reads the node without a test when
+  both bars show, the tooltip reads the complex unit's research without one. Seeds 2-4 x 20,000: 0 differences. Host
+  mutations: 18 of 19; the 19th (the level masked to 16 bits) is equivalent. `golden_portrait.txt` (1,200 cases) is
+  replayed by `portrait::golden::replays_the_golden`; 12 of 13 Rust mutations fail it; the 13th (the first bar
+  rectangle's top) is equivalent: the original computes it and never reads it.
+- **The improvement button (commit 4)**: `upgrade.rs` over `EEUIBUpgrade::HostOp` (`ee_screenscpp_upgrade`, 44 ops)
+  on a call record (`EEUIBUpgradeCall`: the button, the out text, a held text, the mouse location). The out text is
+  whatever the member's text is: the tooltip, `ButtonUp`'s reason, `GetCanUpgrade`'s reason or NULL, `UpdateCost`'s
+  new cost. `GetCanUpgrade` returns the unit it stored or none (the editor stores it even when false). The calls
+  between the members (`GetCanUpgrade`, `GetDisabled` from the presses) are Rust's own: no subclass overrides them
+  (`EEUIFMGAttribute`, `EEUIFMGStatusBar` do not); `MouseMove`'s tooltip is the virtual `GetHelpString` through the host
+  (op `HELP_TEXT`), a nested Rust call on its own call record. The net is +7: seven forwarders and the record.
+- **Its golden** (`build/sc27/ub`): 1-6 calls per case over a world of selections or none, three classes with step
+  factors of 0, below 0 and above, players that can buy or not (with a reason or an empty one), maxed
+  improvements, the help-only and repair improvements, the editor's first unit or none, missing nodes and class
+  entries, refusal intervals of 0, a help label or none, cost labels. The recorder lists only the outer call's ops
+  (the nested tooltip is the host's). Seeds 2-4 x 20,000: 0 differences. Host mutations: 19 of 20 (two by a crash);
+  the 20th (the reason's length less 1) is equivalent in the world's reasons. `golden_upgrade.txt` (1,200 cases) is
+  replayed by `upgrade::golden::replays_the_golden`; 13 of 13 Rust mutations fail it.
+- **Lessons**: (1) the here-document backslash again (rounds 24, 25): two Python patches lost their `\n`; the
+  scripts with escapes went through the file tools. (2) A golden that records a nested call's ops makes the replay
+  see ops it never makes: record only the outermost depth. (3) The goldens' worlds must keep out of the original's
+  crashes (a missing group in `Update`, a node in both bars): each one is a `continue` or a world rule, said in the
+  driver.
+- **Behaviour**: none intended. The icon bar's `Update` with no selected group counts 0 units (the original
+  crashed; the player always has a group); the message box's `ESVERIFY`s after `new` went.
+- **What runs it**: the message box is built once per UI manager (every session; the tour's settings and the
+  game's messages show it); the icon bar's `Update`, `CopyData` and `DrawPolygons` run on every selection and frame
+  with units selected (the orders game's box selection); the portrait's `SetUnit`/`Update`/`DrawPolygons` with a
+  selection; the status box's improvement buttons' `UpdateCost` every refresh. EE-SIM builds no form: the oracle and
+  the editor gate are unchanged by construction. **Only a person reaches**: the icon bar's clicks (select, Ctrl,
+  Shift collect, the right click's drop, the cargo unload, the air base's scramble), the portrait's tooltip and
+  cancel clicks, the improvement buttons' presses, tooltips and refusals (the fixture presses none), the message
+  box's prompts.
+- **Merge with rust** (95e12af8, rust 354fde6a): the game messages lane's round 3 (`EEMRecord`) conflicted in the
+  icon bar's and the portrait's units (the original code it rewrote is Rust here): mine kept, the hosts' select,
+  scramble (fields: tile x, tile y, id), remove-from-selection and remove-improvement messages rebuilt as
+  `EEMRecord`s as that lane did. The goldens ran before the merge (their fakes build the old message classes).
+- **Gates**: per commit (on that commit's tree) the build `--sim` 0/0 (EE-AOC and EE-SIM), `tools/sim_editor.py` PASS
+  (1820 lines), the oracle identical on seeds 2-3, the Rust gate PASS (the icon bar's first run: rustfmt, fixed
+  before the commit). The portrait and the improvement button were built and gated together (one build, both
+  drivers, then split into two commits with each commit's generated header; the portrait commit's tree alone was
+  not rebuilt). On the merge with rust (95e12af8; `rust_build.py header` and `rust_includes.py` changed nothing): the
+  build `--sim` 0/0, the test profile 0/0, the Rust gate PASS, the editor gate PASS (2686 lines: rust's merged
+  rounds changed the editor log's length, not this round), the oracle identical on seeds 2-7. Tours (`fixture_game.py`,
+  the harness lock held, the merged test profile): `--exercise tour --play-seconds 60` `RESULT PASS tour`, `gx_errors`
+  {}; `--exercise random-game --play-seconds 60 --orders --box-select` `RESULT PASS random-game`, `BOX SELECT PASS` (4
+  steps, the add grew the group), `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground
+  skipped: no button, no unit), `gx_errors` {}. The `box-selected` frame shows the icon bar with the four selected
+  citizens (each icon with its green health bar over black, in its frame), the portrait (a female citizen, 65/65) and
+  the status box: the icon bar's `Update`, `CopyData` and `DrawPolygons` and the portrait's `SetUnit`, `Update` and
+  `DrawPolygons` ran in Rust there.
+- **Left**: the main game form's `Open`, `Close`, `Activate`, `Deactivate`, `UpdateBackgroundMedia`,
+  `ShowAllBackgrounds`, `HideAllBackgrounds`, `HideMessages`; `EEUserInterface`'s `EnterScenarioEditor`,
+  `ShowCivilizationBuilder`, `LeaveMap`, `StartLoadingFromEditor`; the portrait's `SetUnit`; the UI manager's
+  factories (C++ objects).
+
+## R6: the game screens, twenty-eighth round: the main game form's members, the UI thread's map and editor transitions, the portrait's SetUnit and the main panel group in Rust (ee_screens main_form.rs, ui_game.rs, portrait.rs, main_group.rs; branch rust-screens28, 2026-11-14)
+
+Round 27's leftovers, then the largest untouched logic of the panel (`EEUIFMGMainGroup`). Count (round 22's
+`count.sh`, `build/sc28`: User Interface Thread without the unit utilities, UI Events, `include/ee/EEUI*.h`): 20,138
+at the branch's start (2cac466f, rust merged) -> 19,834 (-304; git over `src` and `include/ee`: +484 -795, net -311).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| e02abe6f | `EEUIFMainGame`'s `Activate`, `Deactivate`, `Open`, `Close`, `DrawPolygons` and the original's `UpdateBackgroundMedia`, `ShowAllBackgrounds`, `HideAllBackgrounds`, `HideMessages`, `SetPauseText`, `Pause`/`ResumeInformation`, `SetChatTop`, `RefreshSavedGroups`, `UpdateIconBar` in Rust (`main_form.rs`) | +161 -250, net -89 |
+| f9731801 | `EEUserInterface`'s `LeaveMap`, `CancelGame`, `CloseScenarioEditor`, `EnterScenarioEditor`, `StartLoadingFromEditor`, `ShowCivilizationBuilder`, `RestartGame` in Rust (`ui_game.rs`) | +104 -214, net -110 |
+| b92e3fca | `EEUICPortrait::SetUnit` in Rust (`portrait.rs`) | +17 -17, net 0 |
+| 37c7b3d7 | `EEUIFMGMainGroup`'s `Refresh`, `SetUnit`, `GetSelectedUnit`, `Open`, `ShowCommandButton`, `ShowSpecialButtons`, `Update`, `WantsRefresh` in Rust (`main_group.rs`) | +202 -314, net -112 |
+
+- **The main game form (commit 1)**: one entry, `EEUIFMainGame::Rust(which, a)` (`ee_screens_main_form_member`,
+  `EE_SCREENS_MF_DO_*`), runs every member that is Rust's whole; the five overrides are one-line calls of it and the
+  ten other members left the class (their callers, the UI thread's message host and the main form's own host, call
+  `Rust`; `Show`/`HideAllBackgrounds` stay as one-line members for `EERenderObject.cpp`, which should not include the
+  screens' header). 41 more host ops (111..151): the mouse, the scroll edges, `UIForm`'s base members, the pause test,
+  the UI render object, the sound, the cancel button's one event on both triggers, the two blinkings, the unit hack's
+  list, the main group's `Open` and `mL20`, the epoch's title, the backgrounds and their media (the old and new
+  `EEMedia` held in the call record), the information text's stop and pause, the chat lines' shadow, the saved-group
+  buttons, the icon bar, the panel draws.
+- **Its golden** (`build/sc28/mf`, round 25's driver extended): the 15 originals cut from 2cac466f against `Rust`
+  and the overrides over random worlds (no player or tech tree, the media missing, carbon, the form visible or
+  current or not, the main game form this one or another, controls missing, a paused game by a server or not).
+  Seeds 2-4 x 2,000: 0 differences. Host mutations: 25 of 26 (the backgrounds' and entity groups' owner form needed
+  a tag in the fake's trace to be seen; the 26th, `HIDE_MESSAGES` as an op, belongs to round 24's golden).
+  `golden_main_form_members.txt` (700 calls) is replayed by `main_form::tests::golden_main_form_members`; 21 of 21
+  Rust mutations fail it.
+- **The UI thread (commit 2)**: `ee_screens_ui_member(ui, which, a, b, c)` (`EE_SCREENS_UG_DO_*`) runs the seven from the
+  thread's messages; the members left `EEUserInterface` (`LeaveMap` had only these callers). 34 more ops of
+  `ee_screenscpp_ui_game` (57..90); the existing ones (graphics, world lock, timer, server, load) are reused, so
+  `RestartGame` needed none of its own. The civilization builder's music is kept in a static of the host between
+  ops 0 and 2 (the UI thread's). The civilization message's flag is still the low byte of the raw dword (the owner's
+  STAND-IN), now `(uint8_t)` at the call.
+- **Its golden** (`build/sc28/ui`, round 25's driver extended): forms on a stack (the current form `mDepth` pops
+  above the main one), statistics of 0-2 records, clients that lost their server or not, servers, a lobby open or
+  not, ScenDefault loads failing, the graphics paused or not, civilizations buyable, custom or chosen. Seeds 2-4 x
+  2,000: 0 differences. Host mutations: 19 of 19. `golden_ui_members.txt` (700 calls) is replayed by
+  `ui_game::tests::golden_ui_members`.
+- **The portrait's SetUnit (commit 3)**: 5 ops (has a unit, release, store, acquire, face); the bars off through the
+  state word, then `update`. Round 27's driver gained an `S` call (its unit a stable handle in the golden); 7 of 7
+  host mutations; `golden_portrait.txt` regenerated (1,200 cases, now with 852 `SetUnit`s). Net 0: the original's 17
+  lines became the ops.
+- **The main panel group (commit 4)**: `ee_screens_main_group_member(group, which, unit, b)` (`EE_SCREENS_MGR_DO_*`;
+  `ShowCommandButton`'s button and control packed in b) over `ee_screenscpp_main_group` (43 ops: the group's eight
+  fields, the selection, the units, the cloak, the status box's calls and its eight control slots through a table of
+  member pointers, the status buttons' counts, faces and commands, the hot keys, the airport's timers, the build
+  queues). `ShowCommands` stays C++ (its reads feed `command_panel.rs`); its command buttons and the airport's
+  buttons are Rust's now, and its research hot keys and the command buttons' go through one helper
+  (`EEMainGroupHotKey`: the events, the add, the Shift copy). `SetUnit`, `ShowCommandButton`, `ShowSpecialButtons`
+  and `Update` left the class; `Refresh`, `WantsRefresh`, `GetSelectedUnit` and `Open` are one-line members (the
+  vtable, `EEMessage.cpp`, `EEScreens.cpp`, the main form).
+- **Its golden** (`build/sc28/mg`, new): the eight originals and `ShowCommands`' research hot key block (cut from
+  2cac466f) against the new side, 1-4 calls per case over worlds of 0-4 selected units or a viewed unit, dead
+  units, units without a complex unit or off the map, other players', citizens, markets (cloaked) and airports,
+  behaviours and formations past the faces, missing button objects and hot keys, running goal queues, epochs around
+  WW2, build queues with runs of one technology. The world keeps out of the original's crashes (a unit or complex
+  unit read without a test: `Update`, `ShowSpecialButtons`, the behaviour button, `Refresh`'s update). Seeds 2-4 x
+  5,000 (1 x 3,000): 0 differences. Host mutations: 20 of 21 (the 21st, the behaviours asked in another order, is
+  equivalent: one matches). `golden_main_group.txt` (1,200 cases) is replayed by `main_group::golden`; 16 of 17 Rust
+  mutations fail it (the 17th, `GetSelectedUnit`'s fallback to the first unit, is reached only with a NULL unit in
+  a selection, which no world has).
+- **Lessons**: (1) the first helper made its Shift copy of a hot key for every call (an extra `UIHotKey` copy per
+  event set); the golden's trace of the copy constructor caught it: build the copy only where the original did. (2)
+  A fake's trace that names only the object's id cannot tell two forms apart: give every fake object its owner in
+  the trace when the host chooses between `this` and a global (`gUIManager->mMainGameForm`). (3) The here-document
+  backslash again (rounds 24, 25, 27): `\n` in a Python string inside a Bash here-document became a newline; the
+  mutation lists went through the file tools.
+- **Behaviour**: none intended. The helper builds the research hot keys' Shift copy as the original did; the cancel
+  button's single event is still one object on both triggers.
+- **What runs it**: the main form's `Open`, `Activate`, `Close`, `Deactivate`, `UpdateBackgroundMedia` and the panel
+  draws run in every game (the tour's random map, the orders game); the main group's `Refresh`, `SetUnit`, `Update`
+  and the command buttons on every selection (the box selection); `LeaveMap` and `CancelGame` when a game ends or is
+  left (the tour's quit to the menu). EE-SIM builds no form: the oracle and the editor gate are unchanged by
+  construction. **Only a person reaches**: `EnterScenarioEditor`, `CloseScenarioEditor`, `StartLoadingFromEditor`
+  (the editor), `RestartGame` (the in-game restart), `ShowCivilizationBuilder` (the in-game civilization builder and
+  the predefined civilization choice), `CancelGame`'s lost-server path (multiplayer), the airport's timers and the
+  market's cloak, `Pause`/`ResumeInformation` and `HideMessages` (scenario dialogs), the behaviour and formation
+  buttons' faces, the hot keys of the command and research buttons.
+- **Gates**: the four commits were built and gated together (one tree, then split into commits with the generated
+  header in the first; the intermediate trees were not rebuilt one by one): the build `--sim` 0/0 (EE-AOC and
+  EE-SIM), the editor gate PASS (2686 lines), the oracle identical on seeds 2-3 (twice: before and after the main
+  group), the Rust gate PASS (its first runs failed on clippy's single-range array and rustfmt's module order,
+  fixed before the commits). At the end (rust unchanged since the round's merge, 2cac466f; `rust_build.py header`
+  and `rust_includes.py` changed nothing): the build `--sim` 0/0, the test profile 0/0, the editor gate PASS, the
+  oracle identical on seeds 2-7, the Rust gate PASS. Tours (`fixture_game.py`, the harness lock held, the test
+  profile): `--exercise tour --play-seconds 60` `RESULT PASS tour`, `gx_errors` {}; `--exercise random-game
+  --play-seconds 60 --orders --box-select` `RESULT PASS random-game`, `BOX SELECT PASS` (4 steps, the add grew the
+  group), `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped: no button, no unit),
+  `gx_errors` {}. The `box-selected` frame shows the portrait (a female citizen, 65/65), the status box, the
+  citizen's command buttons and the icon bar's four citizens: the main group's `Refresh`, `SetUnit` and `Update`,
+  the main form's `Open`, `Activate`, `DrawPolygons` and `UpdateBackgroundMedia` ran in Rust there. No simulation
+  code changed: no capture profile ran.
+- **Left**: `ShowCommands` (its reads), the main form's small members (`SetStatusText`, `DisplayChat`,
+  `IsInGameView`, `SetErrorString`, `Load`/`Save`, `CreateGroup`) and its two hosts (`HostOp` 560 lines, the
+  cursor's 140); the UI manager's factories (C++ `new`s of C++ classes: moving their switch to Rust adds lines until
+  the controls are Rust's); the untouched controls (`EEUIFMGStatusBar` 331, `EEUICCommandUnits` 328,
+  `EEUIBSavedGroup` 238, `EEUICSelectUnits` 233, `EEUICChatLine` 213, the wall and gate builders 342,
+  `EEUIFMGAttribute` 136, `EEUIFileComboBox` 128, `EEUICPing` 105, `EEUIBColor` 104, `EEUIFMGErrorLog` 80): mostly
+  toolkit and renderer calls, so a move nets little until the toolkit's controls are Rust objects.

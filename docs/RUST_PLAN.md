@@ -39,7 +39,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R6 LLE User Interface toolkit (14.4k)** | **Started** (`ee_ui`): [progress/r6-lle-user-interface-toolkit-14-4k.md](progress/r6-lle-user-interface-toolkit-14-4k.md) |
 | **R5b.2 combat and unit formulas** | **Done, second part** (`ee_combat`): [progress/r5b2-combat-and-unit-formulas.md](progress/r5b2-combat-and-unit-formulas.md) |
 | **LLE whole classes (NE, FS, Utilities, Sound, TS/TM/ES, Input)** | **Started**: [progress/lle-whole-classes-ne-fs-utilities-sound-ts-tm-es-input.md](progress/lle-whole-classes-ne-fs-utilities-sound-ts-tm-es-input.md) |
-| **R6 game screens (â‰ˆ60k lines on the toolkit)** | **Started** (`ee_screens`): [progress/r6-game-screens-60k-lines-on-the-toolkit.md](progress/r6-game-screens-60k-lines-on-the-toolkit.md) |
+| **R6 game screens (Ã¢â€°Ë†60k lines on the toolkit)** | **Started** (`ee_screens`): [progress/r6-game-screens-60k-lines-on-the-toolkit.md](progress/r6-game-screens-60k-lines-on-the-toolkit.md) |
 | R5a.1 per-CT checksum trace | Done: `EE-SIM --checksum-trace`, `sim_oracle.py run --checksums` and `ticks` (the first divergent tick). The option leaves the traces of seeds 2-7 equal to the reference |
 | R5a.2 side-effect-free save | Done: [progress/r5a2-side-effect-free-save.md](progress/r5a2-side-effect-free-save.md) |
 | R6 WON leaves (D8) | Done (`ee_won`): [progress/r6-won-leaves-d8.md](progress/r6-won-leaves-d8.md) |
