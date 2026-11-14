@@ -93,12 +93,12 @@ impl World {
     fn t(&self) -> Tree {
         Tree(self.tree)
     }
-    fn rec(&self, id: i32) -> &mut Rec {
+    fn rec(&mut self, id: i32) -> &mut Rec {
         let p = if id < 3 { self.epochs[id as usize] } else { *self.nodes.iter().find_map(|m| m.get(&id)).unwrap() };
         // SAFETY: a test's short access, no host call meanwhile
         unsafe { &mut *p }
     }
-    fn tree(&self) -> &mut EeTechTreeFields {
+    fn tree(&mut self) -> &mut EeTechTreeFields {
         // SAFETY: as rec
         unsafe { &mut *self.tree }
     }
@@ -209,7 +209,7 @@ impl TechHost for World {
 /// The game's epoch 1 tree: 1000 (comes with epoch 0), 1001 (needs 1000; counts toward the next epoch), 2000 in
 /// epoch 1.
 fn game() -> World {
-    let w = World::new(&[(0, 1000, [0; 4]), (0, 1001, [1000, 0, 0, 0]), (1, 2000, [0; 4])]);
+    let mut w = World::new(&[(0, 1000, [0; 4]), (0, 1001, [1000, 0, 0, 0]), (1, 2000, [0; 4])]);
     w.rec(1000).d.mAvailableWithEpoch = true;
     w.rec(1001).d.mCountsTowardEpoch = true;
     w
@@ -278,8 +278,7 @@ fn research_counts_toward_the_next_epoch() {
 
 #[test]
 fn availability_and_obsolescence_by_kind() {
-    let w = game();
-    let mut w = w;
+    let mut w = game();
     let t = w.t();
     let n = reference(w.epochs[0]);
     w.rec(0).f.mIsAvailable = true;
