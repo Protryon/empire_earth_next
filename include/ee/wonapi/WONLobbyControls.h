@@ -3,6 +3,7 @@
 #ifndef EE_WONAPI_WONLOBBYCONTROLS_H
 #define EE_WONAPI_WONLOBBYCONTROLS_H
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONLobbyRustCtrl.h"
 namespace WONAPI {
 class LoginInitStatusEvent;
 class LoginStatusCtrl : public Container {
@@ -24,20 +25,10 @@ public:
     SmartPtr<Button> mRetryButton; // +88
     SmartPtr<Button> mIgnoreButton; // +8c; allocation90
 };
-class GameStagingCtrl : public Container {
+// GameStagingCtrl (R6 WONLobby round 4): the game room's leave/dissolve and start/ready buttons, a lobbyctl.rs object
+class GameStagingCtrl : public LobbyRustCtrl {
 public:
-    GameStagingCtrl();
-    // Implicit inherited virtual destructor (the original stores no own vptr).
-    virtual void InitComponent(ComponentInit& inInit);
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);
-    void UpdateStartButton();
-    void JoinedGame();
-    void LeftGame();
-    SmartPtr<Button> mLeaveGameButton; //84
-    SmartPtr<Button> mStartGameButton; //88
-    long mRoomSpecFlags; //8c
-    bool mInGame; //90
-    bool mLastReady; // offset 0x91; class size 0x94 with alignment
+    GameStagingCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::Staging) {}
 };
 }
 
@@ -82,36 +73,11 @@ public:
 // LobbyOptionsCtrl.
 namespace WONAPI {
 class ImageComponent;
-class LobbyOptionsCtrl : public Container {
+// LobbyOptionsCtrl (R6 WONLobby round 4): the LAN or Internet options tab, a lobbyctl.rs object
+class LobbyOptionsCtrl : public LobbyRustCtrl {
 public:
-    LobbyOptionsCtrl(bool inIsLan);
-    virtual ~LobbyOptionsCtrl(); // empty; stores its own vptr (0x007be08f)
-    virtual void InitComponent(ComponentInit& inInit);
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);
-    bool HandleButton(Component* inComponent);
-    void RefreshLanOptions();
-    void RefreshOptions();
-    void SyncOptions();
-    void RefreshPublicAddress();
-    bool mIsLan; //84, natural padding85..87
-    SmartPtr<ComboBox> mTabSelectCombo; //88
-    SmartPtr<ComboBox> mConnectionSpeedCombo; //8c
-    SmartPtr<Button> mCrossPromotionCheck; //90
-    SmartPtr<Button> mLobbySoundEffectsCheck; //94
-    SmartPtr<Button> mChatSoundEffectsCheck; //98
-    SmartPtr<Button> mStagingSoundEffectsCheck; //9c
-    SmartPtr<Button> mLobbyMusicCheck; //a0
-    SmartPtr<Button> mShowConfirmationsCheck; //a4
-    SmartPtr<Button> mShowGamesInProgressCheck; //a8
-    SmartPtr<Button> mAnonymousToFriendsCheck; //ac
-    SmartPtr<Button> mAutoPingGamesCheck; //b0
-    SmartPtr<Label> mLocalAddressDetailLabel; //b4
-    SmartPtr<Label> mPublicAddressDetailLabel; //b8
-    SmartPtr<ImageComponent> mFirewalledIcon; // offset 0xbc (RTTI 0x008d66c0)
-    SmartPtr<ComboBox> mUserNameCombo; //c0
-    SmartPtr<Label> mLANBroadcastDetailLabel; //c4
-    SmartPtr<Button> mFilterDirtyWordsCheck; //c8
-    SmartPtr<Button> mDoAutoAFKCheck; //cc; allocationd0
+    explicit LobbyOptionsCtrl(bool inIsLan)
+        : LobbyRustCtrl(inIsLan ? EeWonLobbyCtlKind::LanOptions : EeWonLobbyCtlKind::NetOptions) {}
 };
 }
 

@@ -4114,6 +4114,290 @@ enum class EeWonListCall : uint32_t {
   SetPaintWidth,
 };
 
+/// A control's type: the `SmartPtr<T>` the original's `SafeGetComponent` filled (its `dynamic_cast`).
+enum class EeWonLobbyCtlType : uint32_t {
+  Button = 0,
+  Label = 1,
+  Combo = 2,
+  Input = 3,
+  Browser = 4,
+  MultiList = 5,
+  /// `ImageComponent`
+  Image = 6,
+  /// `Container`
+  Container = 7,
+  /// `Component`
+  Component = 8,
+};
+
+/// The control kinds (the original classes; LobbyOptionsCtrl's LAN and Internet tabs are two kinds).
+enum class EeWonLobbyCtlKind : uint32_t {
+  Browser = 0,
+  Staging = 1,
+  /// `LobbyOptionsCtrl(true)`
+  LanOptions = 2,
+  /// `LobbyOptionsCtrl(false)`
+  NetOptions = 3,
+  UserList = 4,
+  /// EELobbyGameOptionsCtrl (the EE game room's options panel)
+  GameOptions = 5,
+};
+
+/// The ops (`a`, `b`, `c` as documented; "the control" is the C++ control this object belongs to).
+enum class EeWonLobbyCtlOp : uint32_t {
+  /// `dynamic_cast<T*>(ComponentConfigGet(a, slot->name))` of the slot `b`'s type, its absence reported
+  /// (`ComponentConfigMissing(name, file, line)`); no reference added (the `SmartPtr` assignment follows).
+  Find = 1,
+  /// `dynamic_cast<T*>(((ComponentConfig*)a)->Fn386860(slot->name))` of the slot `b` (no report).
+  FindOptional,
+  /// `a->AddRef()` (a `SmartPtr`'s reference).
+  AddRef,
+  /// `a->Release()`.
+  Release,
+  /// `a->mControlId = b`.
+  SetControlId,
+  /// `a->SetEnabled(b != 0)`.
+  SetEnabled,
+  /// `a->SetVisible(b != 0)`.
+  SetVisible,
+  /// `a->Invalidate()`.
+  Invalidate,
+  /// `this->SubscribeToBroadcast(a != 0)`.
+  SubscribeBroadcast,
+  /// `this->Component::HandleComponentEvent(a)`.
+  BaseEvent,
+  /// `this->Container::Paint(*(Graphics*)a)`.
+  BasePaint,
+  /// `a->GetControlId()` (the event's).
+  EventControlId,
+  /// `((SetRoomSpecFlagsEvent*)a)->mFlags`.
+  EventFlags,
+  /// `((ClientChangedEvent*)a)->mRoomSpec`.
+  EventRoomSpec,
+  /// `((LobbyChangeEvent*)a)->IsModify()` (0 or 1).
+  EventIsModify,
+  /// `((LobbyChangeEvent*)a)->IsAdd()` (0 or 1).
+  EventIsAdd,
+  /// `((LobbyChangeEvent*)a)->IsDelete()` (0 or 1).
+  EventIsDelete,
+  /// `((ClientChangedEvent*)a)->mClient.get()`.
+  ClientChangedClient,
+  /// `((PlayerChangedEvent*)a)->mClient.get()`.
+  PlayerChangedClient,
+  /// `((ListItemClickedEvent*)a)->IsSelectedItem()` (0 or 1).
+  EventIsSelectedItem,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  EventButton,
+  /// `((ListItemClickedEvent*)a)->mDoubleClick` (0 or 1).
+  EventDoubleClick,
+  /// `((BrowserComponent*)a)->BackButtonEnabled()` (0 or 1).
+  BrowserBackEnabled,
+  /// `((BrowserComponent*)a)->ForwardButtonEnabled()` (0 or 1).
+  BrowserForwardEnabled,
+  /// `((BrowserComponent*)a)->StopButtonEnabled()` (0 or 1).
+  BrowserStopEnabled,
+  /// `((BrowserComponent*)a)->FindStr(((InputBox*)b)->GetText(), c & 1, c & 2)`.
+  BrowserFind,
+  /// `((BrowserComponent*)a)->Reset()`.
+  BrowserReset,
+  /// `((BrowserComponent*)a)->Go(this->mHomeLocation, false, 0, -1)`.
+  BrowserGoHome,
+  /// `((BrowserComponent*)a)->Back()`.
+  BrowserBack,
+  /// `((BrowserComponent*)a)->Forward()`.
+  BrowserForward,
+  /// `((BrowserComponent*)a)->Stop()`.
+  BrowserStop,
+  /// `((BrowserComponent*)a)->Refresh()`.
+  BrowserRefresh,
+  /// `((Label*)a)->SetText(((BrowserComponent*)b)->GetCurStatus(), true)`.
+  LabelSetBrowserStatus,
+  /// `((Button*)a)->IsChecked()` (0 or 1).
+  ButtonIsChecked,
+  /// `((Button*)a)->SetCheck(b != 0, c != 0)`.
+  ButtonSetCheck,
+  /// `((Button*)a)->SetText(the string b, true)`.
+  ButtonSetText,
+  /// `((Label*)a)->SetText(the string b, true)`.
+  LabelSetText,
+  /// `GetMyLobbyGame()`.
+  MyGame,
+  /// `((LobbyGame*)a)->GetIsHost()` (0 or 1).
+  GameIsHost,
+  /// `((LobbyGame*)a)->CanStartGame()` (0 or 1).
+  GameCanStart,
+  /// `((LobbyGame*)a)->CanReady()` (0 or 1).
+  GameCanReady,
+  /// `((LobbyGame*)a)->MatchesRoomSpec(b)` (0 or 1).
+  GameMatchesSpec,
+  /// `((LobbyGame*)a)->GetCaptainId()`.
+  GameCaptainId,
+  /// `((LobbyGame*)a)->GetClients().get()`.
+  GameClients,
+  /// `LobbyIAmReady()` (0 or 1).
+  IAmReady,
+  /// `((LobbyClientList*)a)->GetCount()`.
+  ClientsCount,
+  /// `((LobbyClientList*)a)->ClientAt(b)`.
+  ClientsAt,
+  /// `((LobbyClient*)a)->GetClientId()`.
+  ClientId,
+  /// `((LobbyClient*)a)->HasPlayer()` (0 or 1).
+  ClientHasPlayer,
+  /// `LobbyKickClient((LobbyClient*)a, b != 0)`.
+  KickClient,
+  /// `this->DeliverEvent(new ClientActionEvent(a, b, (LobbyClient*)c), false)`.
+  DeliverClientAction,
+  /// `LobbyBroadcastEvent(new SetChatInputEvent(2, ((LobbyClient*)a)->GetName(), b, false), true)`.
+  BroadcastWhisper,
+  /// `((ListArea*)a)->GetSelItem()`.
+  ListGetSel,
+  /// `((ListArea*)a)->GetNumItems()`.
+  ListNumItems,
+  /// `((ListArea*)a)->GetItem(b)`.
+  ListItem,
+  /// `((ListArea*)a)->RefreshItem((ListItem*)b)`.
+  ListRefresh,
+  /// `((ListArea*)a)->ListArea::InsertItem((ListItem*)b, -1)`.
+  ListInsert,
+  /// `((ListArea*)a)->RemoveItem((ListItem*)b)`.
+  ListRemove,
+  /// `((ListArea*)a)->Clear(b != 0)`.
+  ListClear,
+  /// `((ListArea*)a)->BeginUpdate()`.
+  ListBeginUpdate,
+  /// `((ListArea*)a)->EndUpdate()`.
+  ListEndUpdate,
+  /// `new GameUserListItem((LobbyClient*)a)` with a reference added (the original's local `SmartPtr`).
+  ItemNew,
+  /// `((GameUserListItem*)a)->mClient.get()`.
+  ItemClient,
+  /// `((GameUserListItem*)a)->mClient->` the test `b` (0 or 1).
+  ItemClientIs,
+  /// `((GameUserListItem*)a)->mImage = ` the picture `b`.
+  ItemSetImage,
+  /// `dynamic_cast<Button*>((Component*)a)`.
+  ButtonOf,
+  /// `((Component*)a)->mControlId`.
+  ControlId,
+  /// `LobbyGet<a>()` (a bool as 0 or 1; the connection speed's value).
+  PrefGet,
+  /// `LobbySet<a>(b)`.
+  PrefSet,
+  /// `((ComboBox*)a)->GetSelItem()`.
+  ComboGetSel,
+  /// `((ComboBox*)a)->SetSelItem(b, c != 0)`.
+  ComboSetSel,
+  /// `((ComboBox*)a)->Clear(b != 0)`.
+  ComboClear,
+  /// `((ComboBox*)a)->SetTextAndSel(LobbyGetTabSelect(), false)`.
+  ComboShowTabSelect,
+  /// `LobbySetTabSelect(((ComboBox*)a)->mEdit->GetText())`.
+  SaveTabSelect,
+  /// `LobbySetLanName(((ComboBox*)a)->mEdit->GetText())`.
+  SaveLanName,
+  /// `LobbyGetLanNameCount()`.
+  LanNameCount,
+  /// `((ComboBox*)a)->AddString(LobbyGetLanNameAt(b), -1)`.
+  ComboAddLanName,
+  /// `((ComboBox*)a)->SetTextAndSel(LobbyGetLanName(), true)`.
+  ComboShowLanName,
+  /// `LobbyGetLanBroadcastPort()`.
+  LanBroadcastPort,
+  /// `sprintf(port, "%d", b); ((Label*)a)->SetText(port, true)` (a 20-byte buffer).
+  LabelSetNumber,
+  /// `((Label*)a)->SetText(IPAddr::GetLocalAddr().GetHostString(true), true)`.
+  LabelSetLocalAddress,
+  /// `LobbyBroadcastLobbyEvent(a, b != 0)`.
+  BroadcastLobbyEvent,
+  /// `LobbyRestoreDefaults()`.
+  RestoreDefaults,
+  /// `LobbySetNetworkAdapter(LobbyGetNetworkAdapter())`.
+  ResetNetworkAdapter,
+  /// `LobbyResetFilters()`.
+  ResetFilters,
+  /// `LobbyGetCurrentScreen()`.
+  CurrentScreen,
+  /// `((Component*)a)->BroadcastEventDown(new LobbyEvent(b))`.
+  BroadcastDown,
+  /// `LobbyGlobal_LobbyMusic_Sound->Resume()`.
+  MusicResume,
+  /// `LobbyGlobal_LobbyMusic_Sound->Stop()`.
+  MusicStop,
+  /// `LobbyGlobal_ButtonClick_Sound->SetMuted(a != 0)`.
+  ClickSoundMute,
+  /// `LobbyGlobal_SierraLogon_Sound->Stop()`.
+  LogonSoundStop,
+  /// `LobbyRemoveLanName()`.
+  RemoveLanName,
+  /// `LobbyOnLoginScreen()` (0 or 1).
+  OnLoginScreen,
+  /// `LobbyOnLanScreen()` (0 or 1).
+  OnLanScreen,
+  /// `LobbyIsFirewallTestDone()` (0 or 1).
+  FirewallTestDone,
+  /// `LobbyIsBehindFirewall()` (0 or 1).
+  BehindFirewall,
+  /// `((ImageComponent*)a)->SetImage(` the picture `b` `.get())`.
+  IconSetImage,
+  /// `LobbyGetPublicAddress().IsValid()` (0 or 1).
+  PublicAddressValid,
+  /// `((Label*)a)->SetText(LobbyGetPublicAddress().GetHostString(true), true)`.
+  LabelSetPublicAddress,
+  /// `ComponentConfigMissing(std::string("Invalid type for ") + slot a's name, its file, 89)`.
+  ReportInvalidType,
+  /// `dynamic_cast<Button*>((Component*)a) != NULL`.
+  IsButton,
+  /// `dynamic_cast<ComboBox*>((Component*)a) != NULL`.
+  IsCombo,
+  /// `sprintf(buffer, "%d", b); ((ComboBox*)a)->AddString(buffer)` (a 50-byte buffer).
+  ComboAddNumber,
+  /// `EELobbyFillMapTypeCombo((ComboBox*)a)`.
+  FillMapTypes,
+  /// `((ComboBox*)a)->mListArea->GetSelItem() != NULL`.
+  ComboHasSel,
+  /// `((EELobbyGame*)a)->GetOption(b)`.
+  GameOption,
+  /// `((EELobbyGame*)a)->SetOption(b, c)`.
+  GameSetOption,
+  /// `((EELobbyGame*)a)->ChangeOption(b, c, true)`.
+  GameChangeOption,
+  /// `((EELobbyGame*)a)->SendGameState()`.
+  GameSendState,
+  /// `((EELobbyGame*)a)->HasGameFile()` (0 or 1).
+  GameHasFile,
+  /// `((Label*)a)->SetText(((EELobbyGame*)b)->GetGameFileName())`.
+  LabelSetGameFile,
+  /// `((EELobbyGame*)a)->GetPlayerSlot(b)`.
+  GameSlot,
+  /// `((EELobbyPlayerSlot*)a)->mOptions[0]` (the slot's state).
+  SlotState,
+  /// `((EELobbyPlayerSlot*)a)->SetOpen()`.
+  SlotSetOpen,
+  /// `LobbyIAmCaptain()` (0 or 1).
+  IAmCaptain,
+  /// `((EELobbySyncOptionEvent*)a)->mParam`.
+  EventParam,
+  /// The saved game's choice: `EELobbyFn2988E9()`'s directory, `EELobbyGetFileDialog()`, its
+  /// `ListFiles(dir, ".ees")` and `LobbyDoDialog`'s result (-1 without a dialog).
+  ChooseSavedGame,
+};
+
+/// The inward calls.
+enum class EeWonLobbyCtlCall : uint32_t {
+  /// `InitComponent` of a config init: `a` the `ComponentConfig*`.
+  Init = 1,
+  /// `HandleComponentEvent(a)`: `b` the `EeWonLobbyCtlEvent`, `c` the event's `mComponent`.
+  Event,
+  /// GameBrowserCtrl::Paint(`*(Graphics*)a`).
+  Paint,
+  /// GameBrowserCtrl::ResetBrowser.
+  ResetBrowser,
+  /// a member: `a` < 19 a control member, 100 the room flags, 101 in game (EELobbyGameOptionsCtrl: active), 102
+  /// the last ready state, 103 the browser's reset flag.
+  Field,
+};
+
 /// The dialog kinds (each one of the original classes).
 enum class EeWonLobbyDlgKind : uint32_t {
   LanName = 0,
@@ -6202,6 +6486,99 @@ enum class EeWonLobbyPopupEvent : uint32_t {
   ItemUpClicked = 1,
 };
 
+/// The event an inward `Event` carries (the C++ shell maps the `ComponentEvent`'s type).
+enum class EeWonLobbyCtlEvent : uint32_t {
+  Other = 0,
+  ButtonPressed,
+  ComboSelChanged,
+  ListSelChanged,
+  /// `ComponentEvent_ListItemClicked` (a `ListItemClickedEvent`)
+  ListItemClicked,
+  BrowserButtonChange,
+  BrowserStatusChange,
+  /// 100029: the game room was joined
+  JoinedGame,
+  /// 100032: the game room was left
+  LeftGame,
+  /// `LobbyEvent_SetRoomSpecFlags` (a `SetRoomSpecFlagsEvent`)
+  SetRoomSpecFlags,
+  /// 100061: a ready state changed
+  ReadyChanged,
+  /// `LobbyEvent_ClientChanged` (a `ClientChangedEvent`)
+  ClientChanged,
+  /// `LobbyEvent_PlayerChanged` (a `PlayerChangedEvent`)
+  PlayerChanged,
+  /// 100014: the options to show again
+  SyncOptions,
+  /// 100050: the LAN options changed
+  LanOptions,
+  /// 100055: the public address changed
+  PublicAddress,
+  /// 100065: every game option to show again (EELobbyGameOptionsCtrl)
+  AllOptions,
+  /// `LobbyEvent_EELobbySyncOption` (an `EELobbySyncOptionEvent`)
+  SyncOption,
+};
+
+/// The texts the controls set (the lobby's resource strings).
+enum class EeWonLobbyCtlString : uint32_t {
+  Ready = 0,
+  NotReady,
+  StartGame,
+  LeaveGame,
+  DissolveGame,
+  Ban,
+  Kick,
+  CheckingAddress,
+  AddressUnavailable,
+};
+
+/// The pictures (the lobby's resource images).
+enum class EeWonLobbyCtlImage : uint32_t {
+  Ignored = 0,
+  Blocked,
+  Muted,
+  Away,
+  Admin,
+  Moderator,
+  Captain,
+  Normal,
+  /// `LobbyGlobal_Firewall_Image`
+  Firewall,
+  /// `LobbyGlobal_Searching_Image`
+  Searching,
+};
+
+/// A player row's client tests (`item->mClient->...`).
+enum class EeWonLobbyCtlClientTest : uint32_t {
+  IsIgnored = 0,
+  IsBlocked,
+  /// `IsMuted(true)`
+  IsMuted,
+  IsAway,
+  IsAdmin,
+  IsModerator,
+  /// `IsCaptain(1)`
+  IsCaptain,
+  HasPlayer,
+};
+
+/// The saved settings the options tab reads and writes (`LobbyGet*` / `LobbySet*`).
+enum class EeWonLobbyCtlPref : uint32_t {
+  CrossPromotion = 0,
+  DoAutoAfk,
+  AutoPingGames,
+  ShowGamesInProgress,
+  LobbyMusic,
+  LobbySoundEffects,
+  ChatSoundEffects,
+  StagingSoundEffects,
+  ShowConfirmations,
+  FilterDirtyWords,
+  AnonymousToFriends,
+  ConnectionSpeed,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -6299,6 +6676,9 @@ struct EeWonLightCert;
 
 /// The Rust ListArea.
 struct EeWonList;
+
+/// One control's Rust half.
+struct EeWonLobbyCtl;
 
 /// One lobby dialog's Rust half.
 struct EeWonLobbyDlg;
@@ -7642,6 +8022,24 @@ struct EeWonLayoutInit {
   bool horz;
   bool vert;
 };
+
+/// One control look-up: the resource name, the original's file and line (for the missing-control report), the type,
+/// the control id `SafeGetComponent` set (-1: none) and the member it fills (-1: LobbyOptionsCtrl's local button).
+struct EeWonLobbyCtlSlot {
+  const char *name;
+  const char *file;
+  int32_t line;
+  EeWonLobbyCtlType ty;
+  int32_t control_id;
+  int32_t member;
+};
+
+/// The host: `(control, op, a, b, c) -> result`.
+using EeWonLobbyCtlHostFn = ptrdiff_t(*)(void *ctl,
+                                         EeWonLobbyCtlOp op,
+                                         ptrdiff_t a,
+                                         ptrdiff_t b,
+                                         ptrdiff_t c);
 
 /// The host: `(dialog, op, a, b, c) -> result`. `dialog` is the C++ dialog the Rust object belongs to.
 using EeWonLobbyDlgHostFn = ptrdiff_t(*)(void *dialog,
@@ -13479,6 +13877,31 @@ ptrdiff_t ee_won_list_call(const EeWonList *list,
                            ptrdiff_t a,
                            ptrdiff_t b,
                            ptrdiff_t c);
+
+/// The look-up `index` of `SLOTS` (NULL past the end).
+const EeWonLobbyCtlSlot *ee_won_lobbyctl_slot(uint32_t index);
+
+/// The number of look-ups in `SLOTS`.
+uint32_t ee_won_lobbyctl_slot_count();
+
+/// A new control object for the C++ `ctl` of `kind`.
+EeWonLobbyCtl *ee_won_lobbyctl_new(void *ctl, EeWonLobbyCtlKind kind, EeWonLobbyCtlHostFn host);
+
+/// Releases the members (reverse member order) and frees the object.
+///
+/// # Safety
+/// `p` came from `ee_won_lobbyctl_new` (or is NULL) and is not used again.
+void ee_won_lobbyctl_free(EeWonLobbyCtl *p);
+
+/// One inward call (`EeWonLobbyCtlCall`).
+///
+/// # Safety
+/// `p` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lobbyctl_call(const EeWonLobbyCtl *p,
+                               EeWonLobbyCtlCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c);
 
 /// A new dialog object for the C++ `dialog` of `kind`.
 EeWonLobbyDlg *ee_won_lobbydlg_new(void *dialog, EeWonLobbyDlgKind kind, EeWonLobbyDlgHostFn host);
