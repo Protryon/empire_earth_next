@@ -232,6 +232,8 @@ public:
     void UpdateHelpString();
     void UpdateMouseLocation(const GE2DPoint& inLocation);
 protected:
+    bool GetDrawToolTipShadow() const { return this->mDrawToolTipShadow; }
+    void SetDrawToolTipShadow(bool inDraw) { this->mDrawToolTipShadow = inDraw; }
     UIControl* GetKeyboardCaptured() const { return this->mKeyboardCaptured; }  // ICF-folded (0x100660be)
     UIControl* GetMouseCaptured() const { return this->mMouseCaptured; }   // ICF-folded (0x100633db)
 private:
