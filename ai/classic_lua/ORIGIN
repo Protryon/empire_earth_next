@@ -147,7 +147,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 main.lua: the initial delay per epoch span and the frequency, the difficulty's modifiers, the bounds),
                 the target player (computers by the aggression's chance when humans are there too; theLargest, else
                 the nearest; theAided by the damage taken from each player, with the chances' roll), the personality's
-                peace rules (prehistoric_attacks, stone_attacks: EECPACPrehistoricPeace), CreateGroup(kind 0);
+                peace rules (prehistoric_attacks, stone_attacks: EECPACPrehistoricPeace: on every group against an enemy but the defend group, as the C++'s CreateGroup, AI_RESEARCH 8.82), CreateGroup(kind 0);
                 NoteThreat (more than 20 own citizens lost in a 9-tile region: the nearest group not attacking goes
                 there); GetUnitsAvailable, GetUnitLimit. DEVIATIONS (fog): theLargest (the enemy whose land overlaps
                 the own) is the enemy with the known building nearest the town; theWeakest (short of a resource the
