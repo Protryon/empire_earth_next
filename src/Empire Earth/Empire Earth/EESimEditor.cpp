@@ -65,6 +65,8 @@
 //   tscreen select N|new|dup|delete|up|down|sort|name   the trigger tab's list and its buttons (EESETriggerScreen)
 //   tsclick select|add UNIT               the object screen's click (EESETSAMouseClick: the selection, then its list)
 //   object                                the trigger tab's open scenario object (ObjectDigest)
+//   triggerstate                          the trigger tab's open trigger (TriggerDigest)
+//   fire ID                               a control's button-up event processed
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -141,6 +143,8 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESMObject.h"
 #include "ee/EESMTrigger.h"
+#include "ee/EESMTConditionWrapper.h"
+#include "ee/EESMTEffectWrapper.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEDatabaseTables.h"
@@ -1181,6 +1185,37 @@ struct EditAccess : UIEditBox {
     static void Enter(UIEditBox* inBox) { (inBox->*(&EditAccess::ProcessEnterKey))(); }
 };
 
+// the trigger tab's open trigger (TEST ONLY): the sub-screen's selection, then the trigger's flags, timer, conditions
+// (not, condition, operator) and effects (delay, effect, operator)
+void TriggerDigest(std::vector<std::string>& outLines)
+{
+    EESETSBaseObject* theScreen = gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger);
+    EESMTrigger* t = gWorld.mScenarioManager->GetTrigger(theScreen->mSelection);
+    char theText[256];
+    snprintf(theText, sizeof(theText), "  trigger selection=%ld has=%d", (long)theScreen->mSelection,
+             theScreen->mHasSelection ? 1 : 0);
+    outLines.push_back(theText);
+    if (t == NULL) {
+        outLines.push_back("  trigger none");
+        return;
+    }
+    std::string theConditions, theEffects;
+    for (unsigned long i = 0; i < t->GetConditionCount(); i++) {
+        EESMTConditionWrapper* c = t->GetConditionAt(i);
+        theConditions += (i == 0 ? "" : ",") + std::string(c->mIsNot ? "!" : "") + std::to_string(c->mValue) + "/" +
+                         std::to_string(c->mOperator);
+    }
+    for (unsigned long i = 0; i < t->GetEffectCount(); i++) {
+        EESMTEffectWrapper* e = t->GetEffectAt(i);
+        theEffects += (i == 0 ? "" : ",") + std::to_string(e->mDelay) + ":" + std::to_string(e->mEffectIndex) + "/" +
+                      std::to_string(e->mOperator);
+    }
+    snprintf(theText, sizeof(theText), "  trigger '%s' text='%s' on=%d duration=%lu looping=%d cinematic=%d",
+             (const char*)t->mName, (const char*)t->mText, t->mIsOn ? 1 : 0, t->mConditionDuration,
+             t->mIsLooping ? 1 : 0, t->mIsInCinematic ? 1 : 0);
+    outLines.push_back(std::string(theText) + " conditions=" + theConditions + " effects=" + theEffects);
+}
+
 // the trigger tab's open object (TEST ONLY): the sub-screen's selection, then the scenario object's fields
 void ObjectDigest(std::vector<std::string>& outLines)
 {
@@ -1662,6 +1697,14 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 gUserInterface->PostAction(a);
                 a->Dereference();
             };
+        else if (c == "fire")   // fire ID: a control's button-up event processed (as its release fires it)
+            theCode = [=] {
+                UIControl* theControl = EditorControl(w[1]);
+                if (UIEvent* theEvent = theControl->GetTriggerEvent(kControlTriggerButtonUp))
+                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theControl);
+            };
+        else if (c == "triggerstate")   // the trigger tab's open trigger (TriggerDigest)
+            theCode = [=, &theOutput] { TriggerDigest(theOutput); };
         else if (c == "object")   // the trigger tab's open scenario object (ObjectDigest)
             theCode = [=, &theOutput] { ObjectDigest(theOutput); };
         else if (c == "sm")   // sm OP LIST [INDEX] | sm fill | sm state: the scenario lists (ScenarioListStep)

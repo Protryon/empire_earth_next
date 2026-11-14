@@ -5969,3 +5969,591 @@ step 432 form 227 263
 step 433 object
   object selection=0 has=1
   object '<<NONE>>' map=1 units= count=1,1 dynamic=1 owner=7 family=0 class=0 parent=0 checks=0,0,0,0,0,0 area=0 near=0,0 attribute=0,0,0,0 visible=1 state=1000 selected=7
+step 436 tab 4
+step 437 trigger 0
+step 438 form 114 150
+  c114 UITextLabel id=0x9c4 ix=114 g=9d r=3,664,42,683 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'If'
+  c115 UITextLabel id=0x9c5 ix=115 g=9d r=3,711,42,730 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Then'
+  c116 UITextLabel id=0x9c6 ix=116 g=9d r=0,616,149,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Statement'
+  c117 UITextLabel id=0x9c7 ix=117 g=9d r=45,689,89,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c118 UITextLabel id=0x9c8 ix=118 g=9d r=353,689,397,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c119 UITextLabel id=0x9c9 ix=119 g=9d r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9d r=353,641,397,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9d r=411,557,510,576 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9d r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c123 UITextLabel id=0x9e5 ix=123 g=9d r=411,641,610,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c124 UITextLabel id=0x9e6 ix=124 g=9d r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c125 UITextLabel id=0x9e7 ix=125 g=9d r=411,689,610,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c126 UICheckBox id=0x9cc ix=126 g=9d r=56,664,77,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c127 UICheckBox id=0x9cd ix=127 g=9d r=364,664,385,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c128 EESETSTriggerUIComboBox id=0x9ce ix=128 g=9d r=92,664,291,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=4 sel=none 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c129 EESETSTriggerUIComboBox id=0x9cf ix=129 g=9d r=400,664,599,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=4 sel=none 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c130 UIComboBox id=0x9d0 ix=130 g=9d r=294,664,348,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=2 sel=0 'And'|'Or'
+  c131 UIComboBox id=0x9d1 ix=131 g=9d r=602,664,656,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=2 sel=0 'And'|'Or'
+  c132 UIEditBox id=0x9d2 ix=132 g=9d r=45,711,89,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c133 UIEditBox id=0x9d3 ix=133 g=9d r=353,711,397,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c134 EESETSTriggerUIComboBox id=0x9d4 ix=134 g=9d r=92,711,291,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=1 sel=none 'Do Nothing'
+  c135 EESETSTriggerUIComboBox id=0x9d5 ix=135 g=9d r=400,711,599,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=1 sel=none 'Do Nothing'
+  c136 UIComboBox id=0x9d6 ix=136 g=9d r=294,711,348,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=2 sel=0 'And'|'Or'
+  c137 UIComboBox id=0x9d7 ix=137 g=9d r=602,711,656,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=2 sel=0 'And'|'Or'
+  c138 UIButton id=0x9d8 ix=138 g=9d r=180,616,294,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Remove' e8=EEScreenEvent
+  c139 UIButton id=0x9d9 ix=139 g=9d r=296,616,410,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Remove' e8=EEScreenEvent
+  c140 UIButton id=0x9da ix=140 g=9d r=412,616,526,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Remove' e8=EEScreenEvent
+  c141 UIButton id=0x9db ix=141 g=9d r=528,616,642,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '--------------' e8=EEScreenEvent
+  c142 UIButton id=0x9dc ix=142 g=9d r=3,641,22,660 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c143 UIButton id=0x9dd ix=143 g=9d r=636,641,655,660 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c144 UIButton id=0x9de ix=144 g=9d r=3,689,22,708 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c145 UIButton id=0x9df ix=145 g=9d r=636,689,655,708 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9d r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9d r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c148 UIEditBox id=0x9e2 ix=148 g=9d r=349,557,408,576 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c149 UICheckBox id=0x9e3 ix=149 g=9d r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9d r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+step 439 triggerstate
+  trigger selection=0 has=0
+  trigger none
+step 440 tscreen new
+step 441 form 114 150
+  c114 UITextLabel id=0x9c4 ix=114 g=9 r=3,664,42,683 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'If'
+  c115 UITextLabel id=0x9c5 ix=115 g=9 r=3,711,42,730 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Then'
+  c116 UITextLabel id=0x9c6 ix=116 g=9 r=0,616,149,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Statement'
+  c117 UITextLabel id=0x9c7 ix=117 g=9 r=45,689,89,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c118 UITextLabel id=0x9c8 ix=118 g=9 r=353,689,397,708 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c119 UITextLabel id=0x9c9 ix=119 g=9 r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9 r=353,641,397,660 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9 r=411,557,510,576 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9 r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 0'
+  c123 UITextLabel id=0x9e5 ix=123 g=9 r=411,641,610,660 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 1'
+  c124 UITextLabel id=0x9e6 ix=124 g=9 r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 0'
+  c125 UITextLabel id=0x9e7 ix=125 g=9 r=411,689,610,708 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 1'
+  c126 UICheckBox id=0x9cc ix=126 g=9 r=56,664,77,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c127 UICheckBox id=0x9cd ix=127 g=9 r=364,664,385,683 m=0 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c128 EESETSTriggerUIComboBox id=0x9ce ix=128 g=9 r=92,664,291,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=none 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c129 EESETSTriggerUIComboBox id=0x9cf ix=129 g=9 r=400,664,599,683 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=4 sel=none 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c130 UIComboBox id=0x9d0 ix=130 g=9 r=294,664,348,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c131 UIComboBox id=0x9d1 ix=131 g=9 r=602,664,656,683 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=2 sel=0 'And'|'Or'
+  c132 UIEditBox id=0x9d2 ix=132 g=9 r=45,711,89,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c133 UIEditBox id=0x9d3 ix=133 g=9 r=353,711,397,730 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c134 EESETSTriggerUIComboBox id=0x9d4 ix=134 g=9 r=92,711,291,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c135 EESETSTriggerUIComboBox id=0x9d5 ix=135 g=9 r=400,711,599,730 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=1 sel=none 'Do Nothing'
+  c136 UIComboBox id=0x9d6 ix=136 g=9 r=294,711,348,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c137 UIComboBox id=0x9d7 ix=137 g=9 r=602,711,656,730 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=2 sel=0 'And'|'Or'
+  c138 UIButton id=0x9d8 ix=138 g=9 r=180,616,294,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Remove' e8=EEScreenEvent
+  c139 UIButton id=0x9d9 ix=139 g=9 r=296,616,410,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 1' e8=EEScreenEvent
+  c140 UIButton id=0x9da ix=140 g=9 r=412,616,526,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Remove' e8=EEScreenEvent
+  c141 UIButton id=0x9db ix=141 g=9 r=528,616,642,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 1' e8=EEScreenEvent
+  c142 UIButton id=0x9dc ix=142 g=9 r=3,641,22,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+step 442 triggerstate
+  trigger selection=0 has=1
+  trigger '<Trigger0>' text='' on=1 duration=0 looping=0 cinematic=0 conditions=0/0 effects=0:0/0
+step 443 changesel %128 2                   # the first condition, not, delay and effect (stored on the next change)
+step 444 check %126 1
+step 445 edit %132 15
+step 446 changesel %134 3
+step 447 check %146 1                       # on, the timer (its event shows the duration), looping, in cinematics
+step 448 check %147 1
+step 449 edit %148 30
+step 450 check %149 1
+step 451 check %150 1
+step 452 changesel %130 0                   # "and": ChangeOperator, a second condition row
+step 453 form 114 150
+  c114 UITextLabel id=0x9c4 ix=114 g=9 r=3,664,42,683 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'If'
+  c115 UITextLabel id=0x9c5 ix=115 g=9 r=3,711,42,730 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Then'
+  c116 UITextLabel id=0x9c6 ix=116 g=9 r=0,616,149,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Statement'
+  c117 UITextLabel id=0x9c7 ix=117 g=9 r=45,689,89,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c118 UITextLabel id=0x9c8 ix=118 g=9 r=353,689,397,708 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c119 UITextLabel id=0x9c9 ix=119 g=9 r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9 r=353,641,397,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9 r=411,557,510,576 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9 r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 0'
+  c123 UITextLabel id=0x9e5 ix=123 g=9 r=411,641,610,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 1'
+  c124 UITextLabel id=0x9e6 ix=124 g=9 r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 0'
+  c125 UITextLabel id=0x9e7 ix=125 g=9 r=411,689,610,708 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 1'
+  c126 UICheckBox id=0x9cc ix=126 g=9 r=56,664,77,683 m=1 bg=0,0,0,0 b=0 h=0 k=1 label=none
+  c127 UICheckBox id=0x9cd ix=127 g=9 r=364,664,385,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c128 EESETSTriggerUIComboBox id=0x9ce ix=128 g=9 r=92,664,291,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<<Citizen243+> Exists>' n=4 sel=2 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c129 EESETSTriggerUIComboBox id=0x9cf ix=129 g=9 r=400,664,599,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=none 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c130 UIComboBox id=0x9d0 ix=130 g=9 r=294,664,348,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'And' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c131 UIComboBox id=0x9d1 ix=131 g=9 r=602,664,656,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c132 UIEditBox id=0x9d2 ix=132 g=9 r=45,711,89,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '15'
+  c133 UIEditBox id=0x9d3 ix=133 g=9 r=353,711,397,730 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c134 EESETSTriggerUIComboBox id=0x9d4 ix=134 g=9 r=92,711,291,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c135 EESETSTriggerUIComboBox id=0x9d5 ix=135 g=9 r=400,711,599,730 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=1 sel=none 'Do Nothing'
+  c136 UIComboBox id=0x9d6 ix=136 g=9 r=294,711,348,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c137 UIComboBox id=0x9d7 ix=137 g=9 r=602,711,656,730 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=2 sel=0 'And'|'Or'
+  c138 UIButton id=0x9d8 ix=138 g=9 r=180,616,294,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 0' e8=EEScreenEvent
+  c139 UIButton id=0x9d9 ix=139 g=9 r=296,616,410,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 1' e8=EEScreenEvent
+  c140 UIButton id=0x9da ix=140 g=9 r=412,616,526,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Remove' e8=EEScreenEvent
+  c141 UIButton id=0x9db ix=141 g=9 r=528,616,642,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 1' e8=EEScreenEvent
+  c142 UIButton id=0x9dc ix=142 g=9 r=3,641,22,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+step 454 triggerstate
+  trigger selection=0 has=1
+  trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,0/0 effects=15:0/0
+step 455 changesel %129 1
+step 456 check %127 1
+step 457 changesel %131 1                   # "or" on the second row: a third one, the rows one on
+step 458 form 114 150
+  c114 UITextLabel id=0x9c4 ix=114 g=9 r=3,664,42,683 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'If'
+  c115 UITextLabel id=0x9c5 ix=115 g=9 r=3,711,42,730 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Then'
+  c116 UITextLabel id=0x9c6 ix=116 g=9 r=0,616,149,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Statement'
+  c117 UITextLabel id=0x9c7 ix=117 g=9 r=45,689,89,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c118 UITextLabel id=0x9c8 ix=118 g=9 r=353,689,397,708 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c119 UITextLabel id=0x9c9 ix=119 g=9 r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9 r=353,641,397,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9 r=411,557,510,576 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9 r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 2'
+  c123 UITextLabel id=0x9e5 ix=123 g=9 r=411,641,610,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 3'
+  c124 UITextLabel id=0x9e6 ix=124 g=9 r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 0'
+  c125 UITextLabel id=0x9e7 ix=125 g=9 r=411,689,610,708 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 1'
+  c126 UICheckBox id=0x9cc ix=126 g=9 r=56,664,77,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c127 UICheckBox id=0x9cd ix=127 g=9 r=364,664,385,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c128 EESETSTriggerUIComboBox id=0x9ce ix=128 g=9 r=92,664,291,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=0 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c129 EESETSTriggerUIComboBox id=0x9cf ix=129 g=9 r=400,664,599,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=0 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c130 UIComboBox id=0x9d0 ix=130 g=9 r=294,664,348,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Or' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c131 UIComboBox id=0x9d1 ix=131 g=9 r=602,664,656,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c132 UIEditBox id=0x9d2 ix=132 g=9 r=45,711,89,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '15'
+  c133 UIEditBox id=0x9d3 ix=133 g=9 r=353,711,397,730 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 ''
+  c134 EESETSTriggerUIComboBox id=0x9d4 ix=134 g=9 r=92,711,291,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c135 EESETSTriggerUIComboBox id=0x9d5 ix=135 g=9 r=400,711,599,730 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=1 sel=none 'Do Nothing'
+  c136 UIComboBox id=0x9d6 ix=136 g=9 r=294,711,348,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c137 UIComboBox id=0x9d7 ix=137 g=9 r=602,711,656,730 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=2 sel=0 'And'|'Or'
+  c138 UIButton id=0x9d8 ix=138 g=9 r=180,616,294,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 2' e8=EEScreenEvent
+  c139 UIButton id=0x9d9 ix=139 g=9 r=296,616,410,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 3' e8=EEScreenEvent
+  c140 UIButton id=0x9da ix=140 g=9 r=412,616,526,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Remove' e8=EEScreenEvent
+  c141 UIButton id=0x9db ix=141 g=9 r=528,616,642,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 1' e8=EEScreenEvent
+  c142 UIButton id=0x9dc ix=142 g=9 r=3,641,22,660 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+step 459 triggerstate
+  trigger selection=0 has=1
+  trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,!1/2,0/2,0/0 effects=15:0/0
+step 460 changesel %136 1                   # the effects: "or", a second row, "and" on it
+step 461 changesel %135 2
+step 462 edit %133 7
+step 463 changesel %137 0
+step 464 form 114 150
+  c114 UITextLabel id=0x9c4 ix=114 g=9 r=3,664,42,683 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'If'
+  c115 UITextLabel id=0x9c5 ix=115 g=9 r=3,711,42,730 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Then'
+  c116 UITextLabel id=0x9c6 ix=116 g=9 r=0,616,149,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Statement'
+  c117 UITextLabel id=0x9c7 ix=117 g=9 r=45,689,89,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c118 UITextLabel id=0x9c8 ix=118 g=9 r=353,689,397,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c119 UITextLabel id=0x9c9 ix=119 g=9 r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9 r=353,641,397,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9 r=411,557,510,576 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9 r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 2'
+  c123 UITextLabel id=0x9e5 ix=123 g=9 r=411,641,610,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 3'
+  c124 UITextLabel id=0x9e6 ix=124 g=9 r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 2'
+  c125 UITextLabel id=0x9e7 ix=125 g=9 r=411,689,610,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 3'
+  c126 UICheckBox id=0x9cc ix=126 g=9 r=56,664,77,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c127 UICheckBox id=0x9cd ix=127 g=9 r=364,664,385,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c128 EESETSTriggerUIComboBox id=0x9ce ix=128 g=9 r=92,664,291,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=0 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c129 EESETSTriggerUIComboBox id=0x9cf ix=129 g=9 r=400,664,599,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=0 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c130 UIComboBox id=0x9d0 ix=130 g=9 r=294,664,348,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Or' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c131 UIComboBox id=0x9d1 ix=131 g=9 r=602,664,656,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c132 UIEditBox id=0x9d2 ix=132 g=9 r=45,711,89,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c133 UIEditBox id=0x9d3 ix=133 g=9 r=353,711,397,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c134 EESETSTriggerUIComboBox id=0x9d4 ix=134 g=9 r=92,711,291,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c135 EESETSTriggerUIComboBox id=0x9d5 ix=135 g=9 r=400,711,599,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c136 UIComboBox id=0x9d6 ix=136 g=9 r=294,711,348,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'And' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c137 UIComboBox id=0x9d7 ix=137 g=9 r=602,711,656,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c138 UIButton id=0x9d8 ix=138 g=9 r=180,616,294,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 2' e8=EEScreenEvent
+  c139 UIButton id=0x9d9 ix=139 g=9 r=296,616,410,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 3' e8=EEScreenEvent
+  c140 UIButton id=0x9da ix=140 g=9 r=412,616,526,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 2' e8=EEScreenEvent
+  c141 UIButton id=0x9db ix=141 g=9 r=528,616,642,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 3' e8=EEScreenEvent
+  c142 UIButton id=0x9dc ix=142 g=9 r=3,641,22,660 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+step 465 triggerstate
+  trigger selection=0 has=1
+  trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,!1/2,0/2,0/0 effects=15:0/2,7:0/1,0:0/1,0:0/0
+step 466 fire %142                      # the condition rows one back
+step 467 form 119 125
+  c119 UITextLabel id=0x9c9 ix=119 g=9 r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9 r=353,641,397,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9 r=411,557,510,576 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9 r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 1'
+  c123 UITextLabel id=0x9e5 ix=123 g=9 r=411,641,610,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 2'
+  c124 UITextLabel id=0x9e6 ix=124 g=9 r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 2'
+  c125 UITextLabel id=0x9e7 ix=125 g=9 r=411,689,610,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 3'
+step 468 fire %143                      # and on
+step 469 fire %144
+step 470 fire %145
+step 471 form 114 150
+  c114 UITextLabel id=0x9c4 ix=114 g=9 r=3,664,42,683 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'If'
+  c115 UITextLabel id=0x9c5 ix=115 g=9 r=3,711,42,730 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Then'
+  c116 UITextLabel id=0x9c6 ix=116 g=9 r=0,616,149,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Statement'
+  c117 UITextLabel id=0x9c7 ix=117 g=9 r=45,689,89,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c118 UITextLabel id=0x9c8 ix=118 g=9 r=353,689,397,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c119 UITextLabel id=0x9c9 ix=119 g=9 r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9 r=353,641,397,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9 r=411,557,510,576 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9 r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 2'
+  c123 UITextLabel id=0x9e5 ix=123 g=9 r=411,641,610,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 3'
+  c124 UITextLabel id=0x9e6 ix=124 g=9 r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 2'
+  c125 UITextLabel id=0x9e7 ix=125 g=9 r=411,689,610,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 3'
+  c126 UICheckBox id=0x9cc ix=126 g=9 r=56,664,77,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c127 UICheckBox id=0x9cd ix=127 g=9 r=364,664,385,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c128 EESETSTriggerUIComboBox id=0x9ce ix=128 g=9 r=92,664,291,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=0 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c129 EESETSTriggerUIComboBox id=0x9cf ix=129 g=9 r=400,664,599,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=0 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c130 UIComboBox id=0x9d0 ix=130 g=9 r=294,664,348,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Or' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c131 UIComboBox id=0x9d1 ix=131 g=9 r=602,664,656,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c132 UIEditBox id=0x9d2 ix=132 g=9 r=45,711,89,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c133 UIEditBox id=0x9d3 ix=133 g=9 r=353,711,397,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c134 EESETSTriggerUIComboBox id=0x9d4 ix=134 g=9 r=92,711,291,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c135 EESETSTriggerUIComboBox id=0x9d5 ix=135 g=9 r=400,711,599,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c136 UIComboBox id=0x9d6 ix=136 g=9 r=294,711,348,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'And' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c137 UIComboBox id=0x9d7 ix=137 g=9 r=602,711,656,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c138 UIButton id=0x9d8 ix=138 g=9 r=180,616,294,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 2' e8=EEScreenEvent
+  c139 UIButton id=0x9d9 ix=139 g=9 r=296,616,410,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 3' e8=EEScreenEvent
+  c140 UIButton id=0x9da ix=140 g=9 r=412,616,526,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 2' e8=EEScreenEvent
+  c141 UIButton id=0x9db ix=141 g=9 r=528,616,642,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 3' e8=EEScreenEvent
+  c142 UIButton id=0x9dc ix=142 g=9 r=3,641,22,660 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=1 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+step 472 triggerstate
+  trigger selection=0 has=1
+  trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,!1/2,0/2,0/0 effects=15:0/2,7:0/1,0:0/1,0:0/0
+step 473 fire %139                      # the second condition removed
+step 474 triggerstate
+  trigger selection=0 has=1
+  trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,!1/2,0/0 effects=15:0/2,7:0/1,0:0/1,0:0/0
+step 475 fire %138                      # the first
+step 476 triggerstate
+  trigger selection=0 has=1
+  trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,0/0 effects=15:0/2,7:0/1,0:0/1,0:0/0
+step 477 fire %141                      # the effects
+step 478 fire %140
+step 479 form 114 150
+  c114 UITextLabel id=0x9c4 ix=114 g=9 r=3,664,42,683 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'If'
+  c115 UITextLabel id=0x9c5 ix=115 g=9 r=3,711,42,730 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Then'
+  c116 UITextLabel id=0x9c6 ix=116 g=9 r=0,616,149,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Statement'
+  c117 UITextLabel id=0x9c7 ix=117 g=9 r=45,689,89,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c118 UITextLabel id=0x9c8 ix=118 g=9 r=353,689,397,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c119 UITextLabel id=0x9c9 ix=119 g=9 r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9 r=353,641,397,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9 r=411,557,510,576 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9 r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 0'
+  c123 UITextLabel id=0x9e5 ix=123 g=9 r=411,641,610,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 1'
+  c124 UITextLabel id=0x9e6 ix=124 g=9 r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 0'
+  c125 UITextLabel id=0x9e7 ix=125 g=9 r=411,689,610,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 1'
+  c126 UICheckBox id=0x9cc ix=126 g=9 r=56,664,77,683 m=1 bg=0,0,0,0 b=0 h=0 k=1 label=none
+  c127 UICheckBox id=0x9cd ix=127 g=9 r=364,664,385,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c128 EESETSTriggerUIComboBox id=0x9ce ix=128 g=9 r=92,664,291,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<<Citizen243+> Exists>' n=4 sel=2 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c129 EESETSTriggerUIComboBox id=0x9cf ix=129 g=9 r=400,664,599,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=0 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c130 UIComboBox id=0x9d0 ix=130 g=9 r=294,664,348,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'And' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c131 UIComboBox id=0x9d1 ix=131 g=9 r=602,664,656,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c132 UIEditBox id=0x9d2 ix=132 g=9 r=45,711,89,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '15'
+  c133 UIEditBox id=0x9d3 ix=133 g=9 r=353,711,397,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c134 EESETSTriggerUIComboBox id=0x9d4 ix=134 g=9 r=92,711,291,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c135 EESETSTriggerUIComboBox id=0x9d5 ix=135 g=9 r=400,711,599,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c136 UIComboBox id=0x9d6 ix=136 g=9 r=294,711,348,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Or' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c137 UIComboBox id=0x9d7 ix=137 g=9 r=602,711,656,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c138 UIButton id=0x9d8 ix=138 g=9 r=180,616,294,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 0' e8=EEScreenEvent
+  c139 UIButton id=0x9d9 ix=139 g=9 r=296,616,410,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 1' e8=EEScreenEvent
+  c140 UIButton id=0x9da ix=140 g=9 r=412,616,526,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 0' e8=EEScreenEvent
+  c141 UIButton id=0x9db ix=141 g=9 r=528,616,642,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 1' e8=EEScreenEvent
+  c142 UIButton id=0x9dc ix=142 g=9 r=3,641,22,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '30'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+step 480 triggerstate
+  trigger selection=0 has=1
+  trigger '<Trigger0>' text='' on=1 duration=30 looping=1 cinematic=1 conditions=!2/1,0/0 effects=15:0/2,0:0/0
+step 481 check %147 0                       # the timer off: stored as 0
+step 482 tscreen new
+step 483 tscreen select 0
+step 484 form 114 150
+  c114 UITextLabel id=0x9c4 ix=114 g=9 r=3,664,42,683 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'If'
+  c115 UITextLabel id=0x9c5 ix=115 g=9 r=3,711,42,730 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Then'
+  c116 UITextLabel id=0x9c6 ix=116 g=9 r=0,616,149,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Statement'
+  c117 UITextLabel id=0x9c7 ix=117 g=9 r=45,689,89,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c118 UITextLabel id=0x9c8 ix=118 g=9 r=353,689,397,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c119 UITextLabel id=0x9c9 ix=119 g=9 r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9 r=353,641,397,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9 r=411,557,510,576 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9 r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 0'
+  c123 UITextLabel id=0x9e5 ix=123 g=9 r=411,641,610,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 1'
+  c124 UITextLabel id=0x9e6 ix=124 g=9 r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 0'
+  c125 UITextLabel id=0x9e7 ix=125 g=9 r=411,689,610,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 1'
+  c126 UICheckBox id=0x9cc ix=126 g=9 r=56,664,77,683 m=1 bg=0,0,0,0 b=0 h=0 k=1 label=none
+  c127 UICheckBox id=0x9cd ix=127 g=9 r=364,664,385,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c128 EESETSTriggerUIComboBox id=0x9ce ix=128 g=9 r=92,664,291,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '<<Citizen243+> Exists>' n=4 sel=2 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c129 EESETSTriggerUIComboBox id=0x9cf ix=129 g=9 r=400,664,599,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=0 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c130 UIComboBox id=0x9d0 ix=130 g=9 r=294,664,348,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'And' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c131 UIComboBox id=0x9d1 ix=131 g=9 r=602,664,656,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c132 UIEditBox id=0x9d2 ix=132 g=9 r=45,711,89,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '15'
+  c133 UIEditBox id=0x9d3 ix=133 g=9 r=353,711,397,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c134 EESETSTriggerUIComboBox id=0x9d4 ix=134 g=9 r=92,711,291,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c135 EESETSTriggerUIComboBox id=0x9d5 ix=135 g=9 r=400,711,599,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c136 UIComboBox id=0x9d6 ix=136 g=9 r=294,711,348,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Or' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c137 UIComboBox id=0x9d7 ix=137 g=9 r=602,711,656,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c138 UIButton id=0x9d8 ix=138 g=9 r=180,616,294,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 0' e8=EEScreenEvent
+  c139 UIButton id=0x9d9 ix=139 g=9 r=296,616,410,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 1' e8=EEScreenEvent
+  c140 UIButton id=0x9da ix=140 g=9 r=412,616,526,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 0' e8=EEScreenEvent
+  c141 UIButton id=0x9db ix=141 g=9 r=528,616,642,635 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 1' e8=EEScreenEvent
+  c142 UIButton id=0x9dc ix=142 g=9 r=3,641,22,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+step 485 triggerstate
+  trigger selection=0 has=1
+  trigger '<Trigger0>' text='' on=1 duration=0 looping=1 cinematic=1 conditions=!2/1,0/0 effects=15:0/2,0:0/0
+step 486 tscreen dup
+step 487 triggerstate
+  trigger selection=2 has=1
+  trigger '<Trigger0_Copy>' text='' on=1 duration=0 looping=1 cinematic=1 conditions=!2/1,0/0 effects=15:0/2,0:0/0
+step 488 tscreen delete
+step 489 triggerstate
+  trigger selection=1 has=1
+  trigger '<Trigger1>' text='' on=1 duration=0 looping=0 cinematic=0 conditions=0/0 effects=0:0/0
+step 490 tab 0
+step 491 tab 4
+step 492 form 114 150
+  c114 UITextLabel id=0x9c4 ix=114 g=9 r=3,664,42,683 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'If'
+  c115 UITextLabel id=0x9c5 ix=115 g=9 r=3,711,42,730 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Then'
+  c116 UITextLabel id=0x9c6 ix=116 g=9 r=0,616,149,635 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Statement'
+  c117 UITextLabel id=0x9c7 ix=117 g=9 r=45,689,89,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c118 UITextLabel id=0x9c8 ix=118 g=9 r=353,689,397,708 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Delay'
+  c119 UITextLabel id=0x9c9 ix=119 g=9 r=45,641,89,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c120 UITextLabel id=0x9ca ix=120 g=9 r=353,641,397,660 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'not'
+  c121 UITextLabel id=0x9cb ix=121 g=9 r=411,557,510,576 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'seconds'
+  c122 UITextLabel id=0x9e4 ix=122 g=9 r=103,641,302,660 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 0'
+  c123 UITextLabel id=0x9e5 ix=123 g=9 r=411,641,610,660 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Condition 1'
+  c124 UITextLabel id=0x9e6 ix=124 g=9 r=103,689,302,708 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 0'
+  c125 UITextLabel id=0x9e7 ix=125 g=9 r=411,689,610,708 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Effect 1'
+  c126 UICheckBox id=0x9cc ix=126 g=9 r=56,664,77,683 m=1 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c127 UICheckBox id=0x9cd ix=127 g=9 r=364,664,385,683 m=0 bg=0,0,0,0 b=0 h=0 k=0 label=none
+  c128 EESETSTriggerUIComboBox id=0x9ce ix=128 g=9 r=92,664,291,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Always True' n=4 sel=none 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c129 EESETSTriggerUIComboBox id=0x9cf ix=129 g=9 r=400,664,599,683 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=4 sel=none 'Always True'|'<<<NONE>> Exists>'|'<<Citizen243+> Exists>'|'<<Citizen243+> Exists>'
+  c130 UIComboBox id=0x9d0 ix=130 g=9 r=294,664,348,683 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or' e3=EEScreenEvent
+  c131 UIComboBox id=0x9d1 ix=131 g=9 r=602,664,656,683 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=1 'And'|'Or'
+  c132 UIEditBox id=0x9d2 ix=132 g=9 r=45,711,89,730 m=1 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c133 UIEditBox id=0x9d3 ix=133 g=9 r=353,711,397,730 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c134 EESETSTriggerUIComboBox id=0x9d4 ix=134 g=9 r=92,711,291,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Do Nothing' n=1 sel=none 'Do Nothing'
+  c135 EESETSTriggerUIComboBox id=0x9d5 ix=135 g=9 r=400,711,599,730 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 '' n=1 sel=none 'Do Nothing'
+  c136 UIComboBox id=0x9d6 ix=136 g=9 r=294,711,348,730 m=1 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=1 'And'|'Or' e3=EEScreenEvent
+  c137 UIComboBox id=0x9d7 ix=137 g=9 r=602,711,656,730 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'End' n=2 sel=0 'And'|'Or'
+  c138 UIButton id=0x9d8 ix=138 g=9 r=180,616,294,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 0' e8=EEScreenEvent
+  c139 UIButton id=0x9d9 ix=139 g=9 r=296,616,410,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Condition 1' e8=EEScreenEvent
+  c140 UIButton id=0x9da ix=140 g=9 r=412,616,526,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 0' e8=EEScreenEvent
+  c141 UIButton id=0x9db ix=141 g=9 r=528,616,642,635 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 'Del Effect 1' e8=EEScreenEvent
+  c142 UIButton id=0x9dc ix=142 g=9 r=3,641,22,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c143 UIButton id=0x9dd ix=143 g=9 r=636,641,655,660 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c144 UIButton id=0x9de ix=144 g=9 r=3,689,22,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c145 UIButton id=0x9df ix=145 g=9 r=636,689,655,708 m=0 bg=0,0,0,0 b=0 h=0 fg=none e8=EEScreenEvent
+  c146 UICheckBox id=0x9e0 ix=146 g=9 r=329,510,578,529 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Trigger Is On'
+  c147 UICheckBox id=0x9e1 ix=147 g=9 r=329,535,578,554 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Conditions True For' e1=EEScreenEvent e2=EEScreenEvent
+  c148 UIEditBox id=0x9e2 ix=148 g=9 r=349,557,408,576 m=0 bg=0.4,0,0,0 b=2 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 '0'
+  c149 UICheckBox id=0x9e3 ix=149 g=9 r=329,586,578,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Looping'
+  c150 UICheckBox id=0x9e8 ix=150 g=9 r=583,586,832,605 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Include In Cinematic'
+step 493 triggerstate
+  trigger selection=1 has=1
+  trigger '<Trigger1>' text='' on=1 duration=0 looping=0 cinematic=0 conditions=0/0 effects=0:0/0
+step 497 tab 3
+step 498 form 55 73
+  c55 UITextLabel id=0x3f3 ix=55 g=6 r=260,613,484,628 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Cargo'
+  c56 UIRadioButton id=0x3e8 ix=56 g=6 r=0,30,139,49 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'World Player' btn fg=none e1=EESEERust
+  c57 UIRadioButton id=0x3ea ix=57 g=6 r=0,51,139,70 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Players' btn fg=none e1=EESEERust
+  c58 UITextLabel id=0x3ed ix=58 g=6 r=145,30,211,45 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Sort'
+  c59 EEUIFSEBUnitType id=0x406 ix=59 g=6 r=0,0,34,24 m=1 bg=0,0,0,0 b=0 h=8501 k=1 label=none btn fg=none e8=EESEERust
+  c60 EEUIFSEBUnitType id=0x407 ix=60 g=6 r=35,0,69,24 m=1 bg=0,0,0,0 b=0 h=8505 k=0 label=none btn fg=none e8=EESEERust
+  c61 EEUIFSEBUnitType id=0x408 ix=61 g=6 r=70,0,104,24 m=1 bg=0,0,0,0 b=0 h=8502 k=0 label=none btn fg=none e8=EESEERust
+  c62 EEUIFSEBUnitType id=0x409 ix=62 g=6 r=105,0,139,24 m=1 bg=0,0,0,0 b=0 h=8504 k=0 label=none btn fg=none e8=EESEERust
+  c63 EEUIFSEBUnitType id=0x40a ix=63 g=6 r=140,0,174,24 m=1 bg=0,0,0,0 b=0 h=8503 k=0 label=none btn fg=none e8=EESEERust
+  c64 EEUIFSEBUnitType id=0x40b ix=64 g=6 r=175,0,209,24 m=1 bg=0,0,0,0 b=0 h=8500 k=0 label=none btn fg=none e8=EESEERust
+  c65 EEUIFSELBUnitList id=0x3f1 ix=65 g=6 r=0,125,211,605 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=15 sel=0 'Artifact'|'Canine Scout'|'Chicken'|'Deer'|'Elephant'|'Flies'
+  c66 UIRadioButton id=0x3ee ix=66 g=6 r=145,47,211,66 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Alpha' btn fg=none e1=EESEERust
+  c67 UIRadioButton id=0x3ef ix=67 g=6 r=145,68,211,87 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Epoch' btn fg=none e1=EESEERust
+  c68 UIRadioButton id=0x3f0 ix=68 g=6 r=145,89,211,108 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family' btn fg=none e1=EESEERust
+  c69 EEUIFSELBCargoList id=0x3f2 ix=69 g=6 r=260,633,484,731 m=0 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' n=0 sel=none
+  c70 EEUIFSEBRemoveCargo id=0x3f4 ix=70 g=6 r=486,707,585,731 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=16 'Remove'
+  c71 EEUIFSEBRotation id=0x3f5 ix=71 g=6 r=500,633,549,682 m=1 bg=0,0,0,0 b=0 h=8516 fg=none
+  c72 EEUICSelectUnits id=0x3f6 ix=72 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c73 EESEUICCommandUnits id=0x3f7 ix=73 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+step 499 radio %60                       # air units (EEUIFSEBUnitType::Check, then the sort event)
+step 500 fire %60
+step 501 unitlist
+  units 1: 'Eagle'
+step 502 radio %62                       # structures
+step 503 fire %62
+step 504 unitlist
+  units 13: 'Arc Lamp' 'Camera Marker' 'Crate' 'Flag 1' 'Flag 2' 'Iwo Jima Hilltop'
+step 505 radio %63                       # heroes
+step 506 fire %63
+step 507 unitlist
+  units 0:
+step 508 radio %64                       # resources
+step 509 fire %64
+step 510 unitlist
+  units 149: 'Algae' 'Algae 2' 'Aloe' 'Bamboo' 'Bones' 'Bush'
+step 511 radio %56                          # world: the player combo hidden
+step 512 controls 0x149
+  0x149 mode=0
+step 513 unitlist
+  units 149: 'Algae' 'Algae 2' 'Aloe' 'Bamboo' 'Bones' 'Bush'
+step 514 radio %61                       # naval units
+step 515 fire %61
+step 516 unitlist
+  units 11: 'Dolphin' 'Fish' 'Iceberg1' 'Iceberg2' 'Iceberg3' 'Iceberg4'
+step 517 radio %57                          # players: the combo shown
+step 518 controls 0x149
+  0x149 mode=1
+step 519 unitlist
+  units 58: 'Battleship - Agincourt' 'Battleship - Bismarck' 'Battleship - Bronze' 'Battleship - Byzantine' 'Battleship - Copper' 'Battleship - Dreadnought'
+step 520 radio %68                          # by family
+step 521 unitlist
+  units 58: '7: Sub - Hammerhead' '7: Sub - Nautilus' '7: Sub - Trident' '7: Sub - Triton' '7: Sub - U-Boat' '9: Catapult Ship'
+step 522 radio %67                          # by epoch
+step 523 unitlist
+  units 58: '1: Dolphin' '1: Golden Hind' '1: Shark' '2: Fishing Raft' '2: Transport Raft' '2: War Raft'
+step 524 buttonup %59                       # land units
+step 525 unitlist
+  units 58: '1: Dolphin' '1: Golden Hind' '1: Shark' '2: Fishing Raft' '2: Transport Raft' '2: War Raft'
+step 526 radio %66                          # by name
+step 527 unitlist
+  units 169: '120mm AT Gun' '57mm AT Gun' 'A7V Tank (AP)' 'Advanced Mining Unit' 'Anti Missile Battery' 'Arquebus'
+step 528 form 55 73
+  c55 UITextLabel id=0x3f3 ix=55 g=6 r=260,613,484,628 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Cargo'
+  c56 UIRadioButton id=0x3e8 ix=56 g=6 r=0,30,139,49 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'World Player' btn fg=none e1=EESEERust
+  c57 UIRadioButton id=0x3ea ix=57 g=6 r=0,51,139,70 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Players' btn fg=none e1=EESEERust
+  c58 UITextLabel id=0x3ed ix=58 g=6 r=145,30,211,45 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Sort'
+  c59 EEUIFSEBUnitType id=0x406 ix=59 g=6 r=0,0,34,24 m=1 bg=0,0,0,0 b=0 h=8501 k=1 label=none btn fg=none e8=EESEERust
+  c60 EEUIFSEBUnitType id=0x407 ix=60 g=6 r=35,0,69,24 m=1 bg=0,0,0,0 b=0 h=8505 k=0 label=none btn fg=none e8=EESEERust
+  c61 EEUIFSEBUnitType id=0x408 ix=61 g=6 r=70,0,104,24 m=1 bg=0,0,0,0 b=0 h=8502 k=0 label=none btn fg=none e8=EESEERust
+  c62 EEUIFSEBUnitType id=0x409 ix=62 g=6 r=105,0,139,24 m=1 bg=0,0,0,0 b=0 h=8504 k=0 label=none btn fg=none e8=EESEERust
+  c63 EEUIFSEBUnitType id=0x40a ix=63 g=6 r=140,0,174,24 m=1 bg=0,0,0,0 b=0 h=8503 k=0 label=none btn fg=none e8=EESEERust
+  c64 EEUIFSEBUnitType id=0x40b ix=64 g=6 r=175,0,209,24 m=1 bg=0,0,0,0 b=0 h=8500 k=0 label=none btn fg=none e8=EESEERust
+  c65 EEUIFSELBUnitList id=0x3f1 ix=65 g=6 r=0,125,211,605 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=169 sel=0 '120mm AT Gun'|'57mm AT Gun'|'A7V Tank (AP)'|'Advanced Mining Unit'|'Anti Missile Battery'|'Arquebus'
+  c66 UIRadioButton id=0x3ee ix=66 g=6 r=145,47,211,66 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Alpha' btn fg=none e1=EESEERust
+  c67 UIRadioButton id=0x3ef ix=67 g=6 r=145,68,211,87 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Epoch' btn fg=none e1=EESEERust
+  c68 UIRadioButton id=0x3f0 ix=68 g=6 r=145,89,211,108 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family' btn fg=none e1=EESEERust
+  c69 EEUIFSELBCargoList id=0x3f2 ix=69 g=6 r=260,633,484,731 m=0 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' n=0 sel=none
+  c70 EEUIFSEBRemoveCargo id=0x3f4 ix=70 g=6 r=486,707,585,731 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=16 'Remove'
+  c71 EEUIFSEBRotation id=0x3f5 ix=71 g=6 r=500,633,549,682 m=1 bg=0,0,0,0 b=0 h=8516 fg=none
+  c72 EEUICSelectUnits id=0x3f6 ix=72 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c73 EESEUICCommandUnits id=0x3f7 ix=73 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+step 529 blank 40 40 3
+step 530 ghost 1 209 42 40 0                # a trojan horse and two citizens boarding it
+  ghosts 209@42,40+
+step 531 placeghost 1
+  placed 1
+step 532 ghost 1 32 44 41 1.0
+  ghosts 32@44,41+
+step 533 placeghost 1 @42,40
+  placed 1
+step 534 ghost 1 32 44 42 1.0
+  ghosts 32@44,42+
+step 535 placeghost 1 @42,40
+  placed 1
+step 536 select @42,40                      # the horse: its cargo listed
+step 537 form 55 73
+  c55 UITextLabel id=0x3f3 ix=55 g=6 r=260,613,484,628 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Cargo'
+  c56 UIRadioButton id=0x3e8 ix=56 g=6 r=0,30,139,49 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'World Player' btn fg=none e1=EESEERust
+  c57 UIRadioButton id=0x3ea ix=57 g=6 r=0,51,139,70 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Players' btn fg=none e1=EESEERust
+  c58 UITextLabel id=0x3ed ix=58 g=6 r=145,30,211,45 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Sort'
+  c59 EEUIFSEBUnitType id=0x406 ix=59 g=6 r=0,0,34,24 m=1 bg=0,0,0,0 b=0 h=8501 k=1 label=none btn fg=none e8=EESEERust
+  c60 EEUIFSEBUnitType id=0x407 ix=60 g=6 r=35,0,69,24 m=1 bg=0,0,0,0 b=0 h=8505 k=0 label=none btn fg=none e8=EESEERust
+  c61 EEUIFSEBUnitType id=0x408 ix=61 g=6 r=70,0,104,24 m=1 bg=0,0,0,0 b=0 h=8502 k=0 label=none btn fg=none e8=EESEERust
+  c62 EEUIFSEBUnitType id=0x409 ix=62 g=6 r=105,0,139,24 m=1 bg=0,0,0,0 b=0 h=8504 k=0 label=none btn fg=none e8=EESEERust
+  c63 EEUIFSEBUnitType id=0x40a ix=63 g=6 r=140,0,174,24 m=1 bg=0,0,0,0 b=0 h=8503 k=0 label=none btn fg=none e8=EESEERust
+  c64 EEUIFSEBUnitType id=0x40b ix=64 g=6 r=175,0,209,24 m=1 bg=0,0,0,0 b=0 h=8500 k=0 label=none btn fg=none e8=EESEERust
+  c65 EEUIFSELBUnitList id=0x3f1 ix=65 g=6 r=0,125,211,605 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=169 sel=0 '120mm AT Gun'|'57mm AT Gun'|'A7V Tank (AP)'|'Advanced Mining Unit'|'Anti Missile Battery'|'Arquebus'
+  c66 UIRadioButton id=0x3ee ix=66 g=6 r=145,47,211,66 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Alpha' btn fg=none e1=EESEERust
+  c67 UIRadioButton id=0x3ef ix=67 g=6 r=145,68,211,87 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Epoch' btn fg=none e1=EESEERust
+  c68 UIRadioButton id=0x3f0 ix=68 g=6 r=145,89,211,108 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family' btn fg=none e1=EESEERust
+  c69 EEUIFSELBCargoList id=0x3f2 ix=69 g=6 r=260,633,484,731 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' n=2 sel=0 'Citizen'|'Citizen'
+  c70 EEUIFSEBRemoveCargo id=0x3f4 ix=70 g=6 r=486,707,585,731 m=1 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=16 'Remove'
+  c71 EEUIFSEBRotation id=0x3f5 ix=71 g=6 r=500,633,549,682 m=1 bg=0,0,0,0 b=0 h=8516 fg=none
+  c72 EEUICSelectUnits id=0x3f6 ix=72 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c73 EESEUICCommandUnits id=0x3f7 ix=73 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+step 538 clear
+step 539 form 55 73
+  c55 UITextLabel id=0x3f3 ix=55 g=6 r=260,613,484,628 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Cargo'
+  c56 UIRadioButton id=0x3e8 ix=56 g=6 r=0,30,139,49 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'World Player' btn fg=none e1=EESEERust
+  c57 UIRadioButton id=0x3ea ix=57 g=6 r=0,51,139,70 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Players' btn fg=none e1=EESEERust
+  c58 UITextLabel id=0x3ed ix=58 g=6 r=145,30,211,45 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Sort'
+  c59 EEUIFSEBUnitType id=0x406 ix=59 g=6 r=0,0,34,24 m=1 bg=0,0,0,0 b=0 h=8501 k=1 label=none btn fg=none e8=EESEERust
+  c60 EEUIFSEBUnitType id=0x407 ix=60 g=6 r=35,0,69,24 m=1 bg=0,0,0,0 b=0 h=8505 k=0 label=none btn fg=none e8=EESEERust
+  c61 EEUIFSEBUnitType id=0x408 ix=61 g=6 r=70,0,104,24 m=1 bg=0,0,0,0 b=0 h=8502 k=0 label=none btn fg=none e8=EESEERust
+  c62 EEUIFSEBUnitType id=0x409 ix=62 g=6 r=105,0,139,24 m=1 bg=0,0,0,0 b=0 h=8504 k=0 label=none btn fg=none e8=EESEERust
+  c63 EEUIFSEBUnitType id=0x40a ix=63 g=6 r=140,0,174,24 m=1 bg=0,0,0,0 b=0 h=8503 k=0 label=none btn fg=none e8=EESEERust
+  c64 EEUIFSEBUnitType id=0x40b ix=64 g=6 r=175,0,209,24 m=1 bg=0,0,0,0 b=0 h=8500 k=0 label=none btn fg=none e8=EESEERust
+  c65 EEUIFSELBUnitList id=0x3f1 ix=65 g=6 r=0,125,211,605 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=169 sel=0 '120mm AT Gun'|'57mm AT Gun'|'A7V Tank (AP)'|'Advanced Mining Unit'|'Anti Missile Battery'|'Arquebus'
+  c66 UIRadioButton id=0x3ee ix=66 g=6 r=145,47,211,66 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Alpha' btn fg=none e1=EESEERust
+  c67 UIRadioButton id=0x3ef ix=67 g=6 r=145,68,211,87 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Epoch' btn fg=none e1=EESEERust
+  c68 UIRadioButton id=0x3f0 ix=68 g=6 r=145,89,211,108 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family' btn fg=none e1=EESEERust
+  c69 EEUIFSELBCargoList id=0x3f2 ix=69 g=6 r=260,633,484,731 m=0 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' n=0 sel=none
+  c70 EEUIFSEBRemoveCargo id=0x3f4 ix=70 g=6 r=486,707,585,731 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=16 'Remove'
+  c71 EEUIFSEBRotation id=0x3f5 ix=71 g=6 r=500,633,549,682 m=1 bg=0,0,0,0 b=0 h=8516 fg=none
+  c72 EEUICSelectUnits id=0x3f6 ix=72 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c73 EESEUICCommandUnits id=0x3f7 ix=73 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+step 540 tab 0                              # left
+step 541 controls 0x149
+  0x149 mode=0
+step 542 tab 3                              # entered
+step 543 controls 0x149
+  0x149 mode=1
+step 544 form 55 73
+  c55 UITextLabel id=0x3f3 ix=55 g=6 r=260,613,484,628 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Cargo'
+  c56 UIRadioButton id=0x3e8 ix=56 g=6 r=0,30,139,49 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'World Player' btn fg=none e1=EESEERust
+  c57 UIRadioButton id=0x3ea ix=57 g=6 r=0,51,139,70 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Players' btn fg=none e1=EESEERust
+  c58 UITextLabel id=0x3ed ix=58 g=6 r=145,30,211,45 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Sort'
+  c59 EEUIFSEBUnitType id=0x406 ix=59 g=6 r=0,0,34,24 m=1 bg=0,0,0,0 b=0 h=8501 k=1 label=none btn fg=none e8=EESEERust
+  c60 EEUIFSEBUnitType id=0x407 ix=60 g=6 r=35,0,69,24 m=1 bg=0,0,0,0 b=0 h=8505 k=0 label=none btn fg=none e8=EESEERust
+  c61 EEUIFSEBUnitType id=0x408 ix=61 g=6 r=70,0,104,24 m=1 bg=0,0,0,0 b=0 h=8502 k=0 label=none btn fg=none e8=EESEERust
+  c62 EEUIFSEBUnitType id=0x409 ix=62 g=6 r=105,0,139,24 m=1 bg=0,0,0,0 b=0 h=8504 k=0 label=none btn fg=none e8=EESEERust
+  c63 EEUIFSEBUnitType id=0x40a ix=63 g=6 r=140,0,174,24 m=1 bg=0,0,0,0 b=0 h=8503 k=0 label=none btn fg=none e8=EESEERust
+  c64 EEUIFSEBUnitType id=0x40b ix=64 g=6 r=175,0,209,24 m=1 bg=0,0,0,0 b=0 h=8500 k=0 label=none btn fg=none e8=EESEERust
+  c65 EEUIFSELBUnitList id=0x3f1 ix=65 g=6 r=0,125,211,605 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=169 sel=0 '120mm AT Gun'|'57mm AT Gun'|'A7V Tank (AP)'|'Advanced Mining Unit'|'Anti Missile Battery'|'Arquebus'
+  c66 UIRadioButton id=0x3ee ix=66 g=6 r=145,47,211,66 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Alpha' btn fg=none e1=EESEERust
+  c67 UIRadioButton id=0x3ef ix=67 g=6 r=145,68,211,87 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Epoch' btn fg=none e1=EESEERust
+  c68 UIRadioButton id=0x3f0 ix=68 g=6 r=145,89,211,108 m=1 bg=0.4,0,0,0 b=0 h=0 k=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Family' btn fg=none e1=EESEERust
+  c69 EEUIFSELBCargoList id=0x3f2 ix=69 g=6 r=260,633,484,731 m=0 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' n=0 sel=none
+  c70 EEUIFSEBRemoveCargo id=0x3f4 ix=70 g=6 r=486,707,585,731 m=0 bg=1,0,0,0 b=2 h=0 fg=1,1,1 tr=1 fh=16 'Remove'
+  c71 EEUIFSEBRotation id=0x3f5 ix=71 g=6 r=500,633,549,682 m=1 bg=0,0,0,0 b=0 h=8516 fg=none
+  c72 EEUICSelectUnits id=0x3f6 ix=72 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
+  c73 EESEUICCommandUnits id=0x3f7 ix=73 g=0 r=0,25,1,26 m=0 bg=0,0,0,0 b=0 h=0
