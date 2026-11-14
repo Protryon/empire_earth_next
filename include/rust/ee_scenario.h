@@ -32,6 +32,152 @@ constexpr static const uint32_t EE_SCENARIO_AI_CALL_DM_ATTACK_FREQUENCY_MODIFIER
 
 constexpr static const uint32_t EE_SCENARIO_AI_CALL_DM_INITIAL_ATTACK_MODIFIER = 3;
 
+/// The context unit's member `b` (`EE_SCENARIO_UNIT_*`): an integer, or a `float`'s bits for the float fields.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_FIELD = 69;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_HAS_COMPLEX = 0;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_HAS_STATS = 1;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_HAS_CLASS = 2;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_HIT_POINTS = 3;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_RESOURCE_TYPE = 4;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_RESOURCE_AMOUNT = 5;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_FLIGHT_TIME = 6;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_CARGO = 7;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_GARRISON = 8;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_AMMUNITION = 9;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_PAUSED = 10;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_RELOAD_TIMER = 11;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_UNIT_SCALE = 12;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_POWER = 13;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_ROTTING = 14;
+
+constexpr static const int32_t EE_SCENARIO_UNIT_BUILT = 15;
+
+/// `mUnitVariables[b - this]`, 3 of them.
+constexpr static const int32_t EE_SCENARIO_UNIT_VARIABLE = 16;
+
+constexpr static const int32_t EE_SCENARIO_STATS_MAX_HIT_POINTS = 20;
+
+constexpr static const int32_t EE_SCENARIO_STATS_CARRY = 21;
+
+constexpr static const int32_t EE_SCENARIO_STATS_FLIGHT_TIME = 22;
+
+constexpr static const int32_t EE_SCENARIO_STATS_MAX_CARRY = 23;
+
+constexpr static const int32_t EE_SCENARIO_STATS_RELOAD = 24;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_SCALE = 25;
+
+constexpr static const int32_t EE_SCENARIO_STATS_POWER = 26;
+
+/// float `mArmor[b - this]`, 6 of them.
+constexpr static const int32_t EE_SCENARIO_STATS_ARMOR = 27;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_ATTACK = 33;
+
+constexpr static const int32_t EE_SCENARIO_STATS_WORK_RATE = 34;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_LEADERSHIP = 35;
+
+constexpr static const int32_t EE_SCENARIO_STATS_REPAIR = 36;
+
+constexpr static const int32_t EE_SCENARIO_STATS_HEALING = 37;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_RANGE = 38;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_LINE_OF_SIGHT = 39;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_VELOCITY = 40;
+
+constexpr static const int32_t EE_SCENARIO_STATS_INITIALIZED = 41;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_STATS_CAMERA_FOCUS = 42;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_GARRISON = 50;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_AMMUNITION = 51;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_ROTTING = 52;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_POWER = 53;
+
+/// `mArmor[b - this]` (`long`), 6 of them.
+constexpr static const int32_t EE_SCENARIO_CLASS_ARMOR = 54;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_RELOAD = 60;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_ATTACK = 61;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_WORK_RATE = 62;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_FLIGHT_TIME = 63;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_LEADERSHIP = 64;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_MAX_CARRY = 65;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_REPAIR = 66;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_HIT_POINTS = 67;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_CARRY = 68;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_HEALING = 69;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_CLASS_RANGE = 70;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_CLASS_LINE_OF_SIGHT = 71;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_CLASS_VELOCITY = 72;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_TRANSPORT = 73;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_WEIGHT = 74;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_TILE_SIZE = 75;
+
+/// float (`GetCruiseAltitude()`)
+constexpr static const int32_t EE_SCENARIO_CLASS_CRUISE = 76;
+
+/// float
+constexpr static const int32_t EE_SCENARIO_CLASS_MIN_RANGE = 77;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_AIR = 78;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_LAND = 79;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_SEA = 80;
+
+constexpr static const int32_t EE_SCENARIO_CLASS_FORTRESS = 81;
+
+/// Added to a class field: the upgrade's class (`GetStats()->mUnitClass`) instead of the unit's.
+constexpr static const int32_t EE_SCENARIO_OF_STATS = 100;
+
 /// `kSMCondition*` (ee/EEScenarioIDs.h).
 constexpr static const uint32_t EE_SCENARIO_CONDITION_ALWAYS_TRUE = 0;
 
@@ -1144,6 +1290,13 @@ char *ee_scenario_expand_tokens(const EeScenarioHost *host,
 /// # Safety
 /// `text` must come from `ee_scenario_expand_tokens` and not be freed before.
 void ee_scenario_text_free(char *text);
+
+/// `EESMObject::GetUnitAttribute` for the host's unit (not NULL; attribute.rs): its members through
+/// `EE_SCENARIO_READ_UNIT_FIELD`.
+///
+/// # Safety
+/// `host` must be valid for the call.
+long ee_scenario_unit_attribute(const EeScenarioHost *host, uint32_t attribute, bool percent);
 
 }  // extern "C"
 

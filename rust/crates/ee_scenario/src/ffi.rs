@@ -6,6 +6,7 @@ use std::os::raw::{c_long, c_ulong};
 
 use crate::aivar::{self, EeScenarioAiWrite, EE_SCENARIO_AI_MAX_WRITES};
 use crate::area::{self, EeScenarioAreaRecord};
+use crate::attribute;
 use crate::condition::{self, EeScenarioCondition};
 use crate::fields::{
     self, EeScenarioAreaSave, EeScenarioConditionFields, EeScenarioEffectFields, EeScenarioObjectFields,
@@ -771,4 +772,20 @@ pub unsafe extern "C" fn ee_scenario_text_free(text: *mut std::os::raw::c_char) 
         // SAFETY: the caller's contract: a CString's raw pointer
         drop(unsafe { std::ffi::CString::from_raw(text) });
     }
+}
+
+/// `EESMObject::GetUnitAttribute` for the host's unit (not NULL; attribute.rs): its members through
+/// `EE_SCENARIO_READ_UNIT_FIELD`.
+///
+/// # Safety
+/// `host` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_unit_attribute(
+    host: *const EeScenarioHost,
+    attribute: u32,
+    percent: bool,
+) -> c_long {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { host_of(host) };
+    attribute::unit_attribute(&mut h, attribute, percent) as c_long
 }

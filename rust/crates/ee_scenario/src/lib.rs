@@ -20,12 +20,14 @@
 //!   its `Load` and `Save`.
 //! - [`round`]: `EEScenarioManager::Update`, the clocks and the trigger round with the timed effects.
 //! - [`player`]: the Set Player Attribute effect as a plan of writes (`EESMEffect::SetPlayerAttribute`).
+//! - [`attribute`]: a unit's value for an object's attribute filter (`EESMObject::GetUnitAttribute`) as a table.
 //! - [`aivar`]: the Set AI Variable effect's table as data (`EESMEffect::SetAIVariable`).
 //! - [`tokens`]: a message's tags expanded (`EESMEffect::ExpandTokens`).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
 pub mod aivar;
 pub mod area;
+pub mod attribute;
 pub mod condition;
 pub mod ffi;
 pub mod fields;

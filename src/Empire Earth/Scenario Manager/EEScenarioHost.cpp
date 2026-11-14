@@ -171,6 +171,7 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
     case EE_SCENARIO_READ_OBJ_NEAR_UNIT:
     case EE_SCENARIO_READ_PLAYER_UNIT:
         return EESMObjectRead(theContext, inOp, inA, inB, inC);
+    case EE_SCENARIO_READ_UNIT_FIELD: return EESMUnitField(theContext->mUnit, inA);
     case EE_SCENARIO_READ_TOKEN_OBJECT: {
         EESMObject* theObject = theManager->FindObjectByID(inA);
         if (theObject == NULL || (inB != 0 && theObject->mHasAttributeCheck == 0))

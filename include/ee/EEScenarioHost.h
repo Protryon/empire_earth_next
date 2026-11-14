@@ -30,6 +30,8 @@ struct EESMHostContext {
 int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC);
 void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB);
 
+// a unit's member for GetUnitAttribute (attribute.rs; EESMObject.cpp)
+int64_t EESMUnitField(EEUnit* inUnit, int32_t inField);
 // the host table over inContext (it must outlive the Rust call)
 EeScenarioHost EESMHost(EESMHostContext* inContext);
 EeScenarioAreaRecord EESMAreaRecord(const EESMArea& inArea);
