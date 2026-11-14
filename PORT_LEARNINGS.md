@@ -20354,3 +20354,136 @@ conscription, drop object and special location live under five seconds, so CALK 
   and buttons) and `PlaySound` run in EE-SIM but draw and sound nothing there: the lead should cast an earthquake,
   hurricane, volcano and meteor storm in a tour and see and hear them.
 - **Gates.** Commit 1 (on the unmodified code): build `--sim` 0/0, calamity capture seeds 2-3 PASS (183 digests; CALI/CALK recorded), oracle seeds 2-3 identical. Commit 2: build `--sim` 0/0, calamity capture seeds 2-3 PASS (187 digests, CALI/CALK included), oracle 2-3 identical; the Rust gate's one failure was ee_gx's timing test `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags` under load (passes alone), ee_tech clippy and rustfmt clean. Commits 3-4 (built together): calamity capture 2-3 PASS (CALK: every save byte and reload equal), oracle 2-3 identical, saveload `oracle,calamity` 4/4 each with `--expect` PASS. Commit 5: calamity capture 2-3 PASS, oracle 2-3 identical. Merged with `rust` 024b9ef2 (no conflict; headers current, no include to narrow): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle (169 digests), late (170), space (171), calamity (187), scenario (22) PASS; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4); the Rust gate PASS (tests, clippy, rustfmt, headers); the test profile 0/0.
+
+## R6: UIControl's members a Rust record; the legacy harness on moved state (ee_ui controlobj.rs; branch rust-r6-ui19, 2026-11-14)
+
+The step the game screens lane waits on: `UIControl`, the base of every control (19 direct subclasses, the toolkit's
+whole objects among them), had its members in C++; rounds 16-17 planned the move (members private, then a record).
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 78bd8160 | `UIControl`'s members private; the toolkit's 26 reads (`UIBitmap`, `UIButton`, `UIEditBox`, `UIGraph`, `UILBString`, `UIMovie`, `UIScrollBar`, `UISlider`, `UITextLabel`) behind accessors | +1 |
+| d65be834 | the members a Rust record, the class's base (`controlobj.rs`) | -109 |
+| ba512ef2 | harness: the presentation bridge reaches the UI manager and forms by name (`EETestUI*`) | (TEST ONLY) |
+| aeb52fa8 | harness: the communications' numbers through a mirror (`gEETestComms`) | (TEST ONLY) |
+| (after the merge) | harness: the renderer offsets the bridge never read dropped from hbuild.py | (TEST ONLY) |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 12,459 -> 12,372 before the
+TEST ONLY functions (12,394 with them). Net C++ for the round's toolkit work is -108, far short of the 1,500 asked: the
+step that unblocks the screens lane is a small class (`UIControl.cpp` 686 lines, most of them the key statics and the
+GE getters that stay C++), and the lead's harness request took the rest of the round.
+
+- **The census.** A scratch compile with the members private (`clang_build.py --out build/ui19/census lle exe`):
+  the game compiled clean (round 17's census held), the toolkit failed in 9 files, 26 reads. Each now uses an
+  accessor: `GetForm`, `GetId`, `GetIndex`, `GetRectangle`, `GetBorderThickness`, `SetBorderType`, and
+  `UIControl::DrawTextA()` for `mDrawCount--` (the base body is exactly that). The census missed the classes that are
+  `UIControl`'s friends (`UIComboBox`'s three `mRectangle` reads, `UIObjHost::List`'s `mDrawCount`, `mId`, `mForm`,
+  `mIndex` in UILBString.cpp): access checks do not fire for friends; the record's change of types found them.
+- **The record.** `EeUiControlFields` holds every member under its C++ name (`ee_scenario`'s `EeScenarioObjectFields`
+  pattern; `unsigned long` as `c_ulong`, the rectangles as `EeUiRect`, `GERectangle`'s layout, asserted) plus `mCpp`
+  (the C++ control, `this` in the comparisons with the form's slots and captures), `mHost` and the trigger events
+  (`mTriggerEvents`, a Rust map in id order, owned). It is `UIControl`'s **private** base (`class UIControl : public
+  UIEntity, private EeUiControlFields`): the members keep their names in the class's code, stay private to everyone
+  else, and `GetFields()` hands the record to Rust callers. The two background rhombi are `GERhombus` objects the
+  C++ constructor makes (`new`) and the destructor deletes; the record holds them by address (the getters
+  `GetBgOpacity`/`GetBgColor`/`GetBgRectangle` and the inline `SetBgColor`/`SetBgOpacity` call them). `GetRectangle`
+  and `GetCopiedDrawRectangle` answer the record's rectangles reinterpreted as `GERectangle` (round 16's form did the
+  same).
+- **The logic.** `controlobj.rs`'s `Ctl` (a record by address, every access a fresh read or write: the virtuals the
+  base calls re-enter) runs the constructor's state, `CopyData`, `SetDirty`, `SetDisplayMode`, `SetLocation`,
+  `SetRectangle`, `SetBgRectangle`, `SetTriggerEvent`/`GetTriggerEvent`/`FireTriggerEvent` and the destructor's
+  release, `CaptureKeyboard`/`CaptureMouse` and their releases, `GetHasKeyboardCapture`/`GetHasMouseCapture`,
+  `GetHelpString` and `GetLeft/RightMouseButtonDown`. Its calls out are `EeUiOp`s on `UIControl::HostOp` (a static
+  member, so it has `UIForm`'s friendship for the captures): the form's and manager's questions (520..526, pure), the
+  captures, `HideControl`, `AddDirtyRectangle`, `Tab`, `AddEventToTrigger`, the string table (527..533), and the
+  existing numbers for the virtual `SetDirty` (5), `SetLocation` (169), another control's `SetDirty` (245), the events
+  (274), the rhombi (71..74), the tab stop (16, 17) and the surfaces (218). `DrawBorder`, `DrawPolygons`, the 24 key
+  statics, the border colours and the getters that only ask the manager (`GetRasterizer`, `GetScreenIndex`, ...) stay
+  C++. The whole objects still reach the base through `UIObjHost::Base` (now reading the record): answering those ops
+  from the record in Rust changes their goldens' pure ops, left for a later round.
+- **Behaviour.** None changed. The trigger map's order is the `std::map`'s (ids ascending), so the destructor releases
+  in the same order.
+- **The golden** (`build/ui19/ctl_driver.cpp` over round 18's `world.h`). The world: this control (0x1000), two others,
+  its form and another, the rhombi, events and a help string; pure answers for the form's slot (none, this control,
+  another), the button flags, the group, the current form, the captures, the tab stop and tabbing, the surfaces,
+  re-rolled between calls; the virtual `SetDirty` calls the base back (60%), the virtual `SetLocation` the base at the
+  given place (60%) or elsewhere (an override, 20%), `HideControl` and another control's `SetDirty` sometimes store a
+  display mode. Each sequence makes the control, then 10-40 calls (the 18 methods, the inline setters as field writes,
+  a digest of the fields as the getters read them), a digest, the destructor. `orig` is UIControl.cpp at 78bd8160
+  transcribed over the world's ops (its members a struct, the map a `std::map`), `cur` the Rust record. 20,000
+  sequences (seed 7): 2,819,801 lines, orig = cur (sha256 9904f17f...); seed 1, 2,000 sequences, equal too. Each
+  sequence has its own random stream (a first run without it counted every later sequence of a divergence as failing).
+
+  | Mutation | Sequences failing of 2,000 |
+  |---|---|
+  | `SetDirty` marks this control when another owns the slot | 1,022 |
+  | `CopyData` copies the background whatever the opacity | 1,301 |
+  | `CopyData` keeps the copied border type | 388 |
+  | `SetDisplayMode` hides on another form too | 236 |
+  | `SetDisplayMode` keeps the draw count | 565 |
+  | `SetDisplayMode` tabs whatever the tab stop | 85 |
+  | `SetLocation` moves to the point, not by the delta | 1,805 |
+  | `SetLocation`'s background not grown | 1,806 |
+  | `SetRectangle` dirties a hidden control's area | 353 |
+  | `SetRectangle`'s background from the given rectangle | 501 |
+  | `SetTriggerEvent` keeps the old event's reference | 445 |
+  | `SetTriggerEvent(NULL)` keeps the old event | 426 |
+  | `ReleaseCapturedMouse` releases another control's capture | 415 |
+  | `GetHelpString` answers for id 0 | 910 |
+  | the destructor releases last to first | 662 |
+  | the constructor's draw count 1 | 715 |
+
+  `SetRectangle`'s background mutation was equivalent in the first world (the base `SetLocation` to the rectangle's own
+  top-left leaves it in place); the override that places the control elsewhere catches it. The first 25 sequences are
+  `golden_controlobj.txt` (3,700 lines), replayed by cargo (`controlobj_tests.rs`: a zeroed record initialised by the
+  `new` line, `host_current` as its host, the driver's own calls 90..99 done on the record), with a changed background
+  and a changed surface count that must fail.
+- **For the screens lane.** Every control is now a C++ object whose state is a Rust record: a Rust screen holding a
+  `UIControl*` gets its record with `GetFields()` (or the C++ host passes it) and reads it through
+  `ee_ui::controlobj::Ctl` (`rect`, `id`, `index`, `display_mode`, `form`, `cpp`) or calls the base's logic on it;
+  the virtuals (`SetDisplayMode`, `SetLocation`, `SetDirty`, the subclasses' own) must still go through the C++ object
+  (`cpp()`), so an override runs. The game's eight direct subclasses keep their own members; they can move onto
+  records of their own the same way.
+- **The legacy harness** (the lead's request). Gate run b32 died in `hbuild.bridge_defines()`: the presentation bridge
+  (`tools/harness/presentation_bridge.c`) read `UIManager::mCriticalSection` and `mFormStack` and `UIForm`'s
+  `mControlCount`, `mFormID`, `mControls` at layout offsets, and all five are Rust's since rounds 16-17. UIManager.cpp
+  now exports six TEST ONLY `extern "C"` functions, kept by `/include` and resolved by the bridge from the map like its
+  other names: `EETestUILock` (`UIManager::GetUILock`, a new `EeUiManagerCall::UiLock`: the lock `UpdateUI` holds, which
+  the bridge try-enters as before), `EETestUIFormCount`, `EETestUIForm`, `EETestUIFormID`, `EETestUIFormControlCount`,
+  `EETestUIFormControl`. hbuild.py asks the layouts for none of those offsets; the self test's stand-in implements the
+  six. With the bridge fixed the tour reached the game, then stopped at the next moved state:
+  `game_state_probe.py` read `NESynchronousCommunications`' last tick, CTs processed, pause and multiplayer flags at
+  VC6 offsets from outside the process, and they are `ee_net`'s since its rounds. EETestFixture.cpp now keeps a TEST
+  ONLY mirror (`gEETestComms`: the four numbers and a valid flag) that the bridge refreshes before each present
+  (`EETestCommsRefresh`, by name); game_session.py passes the mirror's address and the probe reads it (the offsets
+  remain the fallback for a build without it).
+- **Lessons.**
+  - Friends escape a member-privacy census: compile with the members' types changed too, or grep the friends.
+  - A golden's random stream shared across sequences makes every sequence after a divergence fail: seed each sequence.
+  - A world whose override is always the base can make a mutation equivalent: give the virtuals an override that does
+    something else.
+- **What runs it.** Every control. EE-SIM makes no form (the oracle, seeds 2-3, identical); the editor gate makes the
+  editor's forms and controls (PASS, 5,560 lines). **Only the tour shows** the controls' dirtying, hiding, moves and
+  events on screen.
+- **Gates.** After the record commit: `build.py -j 3 --sim` 0/0, the driver over the new record equal to the reference
+  (seed 1 and seed 7), the oracle seeds 2-3 identical, the editor gate PASS, the Rust gate's tests and clippy PASS
+  (rustfmt failed on two lines of controlobj.rs, formatted before the commit). Harness: the self test ALL PASS; the legacy
+  tour (`game_session.py --exercise tour --input-check --play-seconds 120 --timeout 900000`) reached every milestone,
+  120 s of play (physics ticks 122 -> 437), `INPUT CHECK F3 paused False -> True -> False: ok`, `STOP <windowed
+  session complete> reached`; the legacy save (`--exercise ai-game --ai-players 2 --map-size Small --difficulty Hard
+  --save-at-pt 1500 --save-out build/gates/x.ees --stop-after-save`) wrote at PT 1721 and `--load-save` loaded it and ran
+  to the time cap. On the result merged with `rust` (0f6c0fb0; one conflict, UIControl.cpp/.h against the dead-code round's
+  removal of `GetHasKeyboardCapture`, `GetBgRectangle`, `SetHotKey`, `AltKeyPressed` and the exe-view forwarders:
+  both kept, the C++ forwarder of `GetHasKeyboardCapture` dropped, its Rust logic kept for the golden; `rust_build.py
+  header` current, `rust_includes.py` nothing to narrow): build `--sim` 0/0, the oracle seeds 2-7 identical, the
+  editor gate PASS (5,560 lines), the Rust gate PASS, the test-profile build 0/0, the fixture tour `RESULT PASS tour`,
+  the orders game `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped by the driver) and
+  `RESULT PASS random-game`. The merge brought the next legacy break: `DX7Rasterizer::mScreenStates` (GERasterizer
+  whole in Rust) and three renderer offsets hbuild.py still asked the layouts for, which the GX bridge never read:
+  dropped. Then the legacy tour (STOP reached, INPUT CHECK ok), save (PT 2148) and load (loaded, time cap at PT 3680)
+  passed again and the self test ALL PASS. EE-SIM makes no form, so the sim_capture profiles were not run.
+- **What is left.** The whole objects' base ops (`UIObjHost::Base`) answered from the record in Rust; the game's eight
+  direct subclasses onto records of their own (screens lane); `UIGraph`/`UILineGraph` (a census of the game's `mGraph`
+  reads); `UIBackgroundTable` with `UIManager::CreateBackgrounds`; `UIHotKey`, `UIIMECandidate`, `UIBFull`. Other
+  legacy harness reads at VC6 offsets (EEWorld, EEPlayer, EEPhysics in game_state_probe.py) still resolve today; they
+  break the same way when those lanes move the members, and want the same by-name treatment.
