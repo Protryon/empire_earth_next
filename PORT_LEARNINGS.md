@@ -18127,3 +18127,51 @@ op cases); the final tree's LAN run covers it.
   room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic, RoutingLogic last) and the
   resource tables and factories.
 - The list rows kept in C++ (BadUserItem, NetworkAdapterListItem) go with the WON GUI lane's list widgets.
+
+## The physics models, round 1: the twelve EEPM* models whole in Rust (ee_units pm.rs, pm_ground.rs, pm_air.rs, pm_host.rs; branch rust-physics1, 2026-11-14)
+
+- **Stateless singletons move as a dispatch.** `gPhysicsModels[12]` held one empty object per model class; every value
+  a model reads or writes is the unit's. So "the class whole" is its vtable and bodies: `ee_units_pm_step(kind, unit)`
+  runs `Step` (the physics action's step, then `AfterStep`) with every virtual a `match` on the kind that picks the
+  override the class's vtable picked. `EEPhysicsModel` is one C++ class (its kind and three forwarders: `Step`,
+  `Step0` for EE-SIM's missile sweep, `ComputeRoll` for the airplane classes' death roll); the twelve EEPM*.cpp files
+  (4,300 lines) are deleted, EEPhysicsModel.cpp is the host. The two `dynamic_cast<EEPMAirplane*>` /
+  `<EEPMAirAnimal*>` in EEUCLandable.cpp and EEUCAirAnimal.cpp became `IsAirplane()` and the kind's `ComputeRoll`
+  (one line each in the core lane's files).
+- **The vtables had traps, written out once as matches.** `EEPMSpaceship` overrides `PitchMode` (the naval mode) but
+  not `ApproachPitch`: its pitch is the base's approach (unit rates) over the naval mode. `EEPMSeaAnimal::Step1`,
+  `Step4`, `Move` call `EEPMSubmergedNaval::...` qualified, but those bodies' `this->TurnToward`, `ClipStep` and
+  `Accelerate` still dispatch to the sea animal's; the Rust bodies take the kind and pass it on. `EEPMBuilding`'s and
+  the airplanes' `AfterStep` are empty (buildings and aircraft never collide or take a push); the airplane's
+  `ClipStep` is unreachable (no airplane step clips) and differs from the helicopter's off the map (x and y undone,
+  not the whole move). `EEPMHovercraft` is the land model.
+- **The unit's members are read in place.** The plain members (velocity, push, roll, bob phase, collision time and
+  state, physics action and order, flags) are the records the C++ object derives from (round 26's
+  `EeUnitsComplexUnitFields` and the two others), reached through `EeUnitsPmUnit`'s three pointers (the
+  `static_cast`s of one object) one field at a time, never as a reference across a host call; `bool`s read as bytes.
+  The location's matrix, angular velocity, orientation, path, goals, map, tiles' unit lists and effects are 60-odd
+  host calls (pm_host.rs over EEPhysicsModel.cpp's `ee_units_pm_host_*`, several multiplexed by a selector to keep
+  the C++ short).
+- **Lists are walked live, by node.** `Collide`'s contacts and the tile scans (`ClipStep`'s blockers, the submarine's
+  and helicopter's `Collide`) take the next node after the body, as the C++ did: a snapshot would differ if a push's
+  trample removed a unit mid-walk.
+- **The USST notes moved with the leaves.** The base model's arithmetic was already Rust (physics.rs, motion.rs) with a
+  note per call (turn, spin down, steady turn, accelerate, speed mode, pitch mode, approach pitch, push, roll); the
+  Rust bodies write the same words through the host (`EEUnitStateNote`), so USST stays equal; the roll's
+  original-statement recheck went with the C++ body.
+- **One unsigned comparison.** `EEPMNaval::PushMoving`'s `inOther->mPushImmuneUntil < gPhysics->mGameTime` compares an
+  `unsigned long` with a `long`: an unsigned comparison in C++; the Rust compares the two as `u32`.
+- **Golden first: PMST.** Before anything moved, `EEPhysicsModel::Step` noted every call's unit, model, physics action
+  and the state the models write after it (the matrix, velocities, push, roll, bob phase, collision time, state and
+  blocker, tile, arrival, animation, hit points, contact point, orientation, height), folded per tick
+  (tools/sim_capture.py PMST), recorded on the unmodified C++ in the oracle, late, space and calamity profiles at
+  seeds 2-3. The missile profile's sweep calls `Step0` directly (no PMST); its CBMA/CBMH records cover the missile's
+  step, which stays C++ glue over ee_combat.
+- **Stays C++:** the projectile's and missile's steps (ee_combat's flight arithmetic; the combat lane's captures and
+  the drop target are in their C++), the carrier planes' deck walk (`IsDocked`, `FollowCarrier`,
+  `OrientOnCarrier`: the carrier model's tag points), the unit's group-aware rates and `IsSwimming` (EEComplexUnit
+  methods that lived in this unit), `EEPPatrolGroup`.
+- **Gates of the move (its commit):** the build (`--sim`) 0/0; the oracle identical on seeds 2-3 at the first run;
+  the captures of the oracle, space, late and calamity profiles at seeds 2-3 equal to every golden (PMST, USST, USTM,
+  USCK and the rest: 171, 173, 172 and 185 digests); the Rust gate. C++ of the commit: 5,146 lines deleted, 852 added
+  (the host and the moved projectile, missile and deck-walk bodies), net -4,294.

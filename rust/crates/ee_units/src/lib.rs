@@ -47,6 +47,12 @@ pub mod physics;
 pub mod player_save;
 pub mod player_tick;
 pub mod players;
+pub mod pm;
+pub mod pm_air;
+pub mod pm_ground;
+pub mod pm_host;
+#[cfg(test)]
+mod pm_tests;
 pub mod rally;
 pub mod registry;
 pub mod research;
