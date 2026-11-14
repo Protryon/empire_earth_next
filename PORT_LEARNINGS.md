@@ -15379,3 +15379,69 @@ without the unit utilities, UI Events, `include/ee/EEUI*.h`): 20,627 at the bran
   start modes (gate, wall, calamity, flare, patrol, build); `EEUserInterface`'s `SaveAndTestScenario`, `Run`,
   `TestScenario`, `LoadSavedGame` (call sequences over the world lock: one host op per call, the restart of the
   world shared by the two scenario tests).
+
+## R6: the game screens, twenty-fifth round: the main game form's constructor and modes, the UI thread's scenario tests, saved game load and loop in Rust (ee_screens main_form.rs, ui_game.rs; branch rust-screens25, 2026-11-13)
+
+Round 24's leftovers. Count (round 22's `count.sh`: User Interface Thread without the unit utilities, UI Events,
+`include/ee/EEUI*.h`): 20,573 at the branch's start (7f5a8b0a) -> 20,415 (-158; git over `src` and `include/ee`: +359 -517).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 0e83f4ec | `EEUIFMainGame`'s constructor, `SetEntityGroup`, `SetUIState`, `SetHotKeyMode`, `BuildUnit`, `StartGate`, `StartWall`, `StartCalamity`, `StartFlare`, `StartPatrol` in Rust (`main_form.rs`) | +184 -302, net -118 |
+| 8560d90f | `EEUserInterface::TestScenario`, `SaveAndTestScenario`, `LoadSavedGame`, `Run` in Rust (`ui_game.rs`) | +175 -215, net -40 |
+
+- **The constructor and modes (commit 1)**: over round 24's host (`EEUIFMainGame::HostOp`), 34 new ops (77-110) and
+  10 new fields. The constructor is `construct`: the error lock (its `ESVERIFY_AT` now names `theForm->` in its
+  text), the flags, the six panel groups, the unit hack, the 200 ms poll, the scroll's edges from
+  `gGameWindowWidth`/`Height`, the four mouse actions, the entity groups, `SetEntityGroup(1)`, every mode's mouse and
+  keyboard test (Rust's (mode, test) tables; the host's table of the 22 mouse and 3 keyboard functions in
+  `main_form.rs`' order), the wheel zoom and grab scroll, the 113 hot keys (`hot_keys()`: a Rust table of key,
+  three modifiers, four event codes or `EE_SCREENS_MF_NO_EVENT`, the always flag; the host makes each event with
+  `EECreateScreenEvent`), `SetHotKeyMode(0)`. It reads no control (round 21's start-up hang came from a control read
+  before `UIForm` made them): the label ops' `GetControl` stays behind their op numbers. The start modes hold their
+  node, unit, caster and calamity class in the call record (`EEUIFMGFormCall`) between ops.
+- **Its golden** (`build/sc25/mf`: `mkfake.py` extends round 24's fake world, `cut.py`, `driver.cpp`, `drv.py`,
+  `mutate.py`, `rmutate.py` + `rmuts.txt`): the ten functions cut verbatim from 7f5a8b0a (as `OrigForm`; `UIForm` is
+  `#define`d to the fake's form base so the constructor's base initialiser compiles), the call record, host and
+  forwarders cut from the work tree. Per case one of K (the constructor, placement-new over a zeroed store), E, U, H,
+  B, G, W, A, F, P; the traces (every effect: hot keys with their four codes, entity groups, tests by name, the
+  sound, ghosts, casts, chat log, terminate) plus the form's final fields. Seeds 2-4 x 20,000: 0 differences (the
+  only difference of the first run: the verify text above, now left out of the fake's trace). Host mutations: 18 of
+  18 (one by a crash: the unit's complex test dropped). `golden_main_form_modes.txt` (seed 1, 600 calls, 0.76 MB) is
+  replayed by `main_form::tests::golden_main_form_modes`; 19 of 19 Rust mutations fail it.
+- **The UI thread's game starts and loop (commit 2)**: `ui_game.rs` over a new host, `ee_screenscpp_ui_game` (56 ops,
+  `EE_SCREENS_UG_OP_*`; the thread messages' host `ee_screenscpp_ui_message` is unchanged, its ops for the four
+  members still call them). `test_scenario` and `save_and_test_scenario` share `restart_world` (herds, towns, the
+  paths, AI centres or town groups, sight, units, land continents); `load_saved_game` keeps the wait for the physics'
+  timer as a Rust loop over one op per test and sleep; `run` keeps the messages in a Rust `Vec` between the queue's
+  lock and their handling (`HANDLE` calls `HandleMessage`, which forwards to `ui_thread.rs`), the free camera's
+  seconds are `u32` wrapping difference `as f32 * 0.001` (the original's `(unsigned long) * 0.001f`).
+- **Its golden** (`build/sc25/ui`): its own fake world (no form, no control: the four functions read only globals and
+  the UI object). T, S and L cases: seeds 2-4, 43,000 calls, 0 differences. `Run`'s original has a function static
+  (`sLastTime`, set on the first call), so each R case is its own process (`driver.exe SEED 1 - R`): 200 seeds, 0
+  differences. A fake whose loop could never quit hung the first R runs (a case with no update and no quit
+  message): the fake now posts the quit message after five empty passes. Host mutations caught 17 of 19; the two
+  left are equivalent (the resize's second flag is 1 in both callers; `Find` never returns exactly the length).
+  `golden_ui_game.txt` (240 T/S/L calls and 60 R) is replayed by `ui_game::tests::golden_ui_game`; 17 of 17 Rust
+  mutations fail it.
+- **Lessons**: (1) a shell `;` chain runs the build after a failed Python patch: a stale build ran on the unpatched
+  tree once (it failed to compile and changed nothing); chain patches and builds with `&&`. (2) STATUS_DLL_INIT_FAILED
+  from `sccache rustc -vV` twice under load: the Rust gate passed with `RUSTC_WRAPPER` unset. (3) A golden fake must
+  terminate every loop the original can spin in: an infinite `Run` blocked the driver loop (and its exe's relink).
+  (4) The here-document backslash lesson again (round 24's (2)): a `"\n"` in a fake's `fprintf` became a line feed;
+  write such edits with the file tools.
+- **Behaviour**: none intended. The two empty `FnE123D` calls (the environment manager's in both scenario tests,
+  the scenario editor form's in `SaveAndTestScenario`) went; `StartGate`/`StartWall` with no tech tree node return
+  where the original read through the NULL node (crash); `Run`'s `sLastTime` is the loop's local (the original's
+  function static differed only on a second `Run`, which never happens).
+- **What runs it**: every game creates the main game form (the constructor: the tour's start), every hot key press
+  goes through the table it registered, `SetUIState` runs on every mode change (the orders game's commands);
+  `Run` is the UI thread of every session (the tour, EE-SIM, the editor gate); the editor gate's scenario test
+  passes through `TestScenario` or `StartLoadingFromEditor`. **Only a person reaches**: `BuildUnit`, the gate,
+  wall, calamity and flare starts (no fixture command presses them), `SaveAndTestScenario` (the editor's save and
+  test button), `LoadSavedGame` of a file (the load screens; the lead's legacy sessions load a game).
+- **Gates**: per commit (on that commit's tree) the build `--sim` 0/0 (EE-AOC and EE-SIM), `tools/sim_editor.py` PASS (1820 lines), the oracle identical on seeds 2-3, the Rust gate PASS (commit 1's first runs: clippy's `field_reassign_with_default`, fixed, then `sccache` STATUS_DLL_INIT_FAILED twice, passed with `RUSTC_WRAPPER` unset). On the merge with rust (a14f2161, rust 88f9be65: no conflict; `rust_build.py header` and `rust_includes.py` changed nothing): the build `--sim` 0/0, the test profile 0/0, the Rust gate PASS, the editor gate PASS (1820 lines), the oracle identical on seeds 2-7. Tours (`fixture_game.py`, the harness lock held, test profile of the merged tree): `--exercise tour --play-seconds 60` `RESULT PASS tour`, `gx_errors` {}; `--exercise random-game --play-seconds 60 --orders --box-select` `RESULT PASS random-game`, `BOX SELECT PASS` (4 steps, the Shift add grew the group), `ORDERS PASS` (gather, repair, repair-queued, move; patrol and attack-ground skipped: no button, no unit), `gx_errors` {} (the round 24 merge's box selection failures did not recur here). The scenario test and the saved game load of the lead's legacy sessions did not run here (no legacy session in this lane).
+- **Left**: `EEUIManager` (654), `EEUIMiniMap` (467), `EEUICUnitIconBar` (433), `EEUICPortrait` (404), `EEUIBUpgrade`
+  (365), `EEUIFError`'s constructor (454); the main game form's `Open`, `Close`, `Activate`, `Deactivate`,
+  `UpdateBackgroundMedia`, `ShowAllBackgrounds`, `HideAllBackgrounds`, `HideMessages` (call sequences over the same
+  host); `EEUserInterface`'s `EnterScenarioEditor`, `ShowCivilizationBuilder`, `LeaveMap`, `StartLoadingFromEditor`.
