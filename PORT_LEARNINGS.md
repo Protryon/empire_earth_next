@@ -14208,3 +14208,102 @@ over the unmodified unit with traced fakes, mutations, a cargo replay).
   renderer, the effects and the graphic objects: a census commit first; 'GEModel Load.cpp'), GETerrainMesh,
   GERasterizer, GEBitmap, GEFontBitmap, GETransformation's member copies. GETexture.cpp keeps 113 logic lines, the
   host's switch.
+
+## LLE lane, round 2: the keyboard and mouse with their entities, the Error System, FSPersistentList and ESChecksum whole in Rust (ee_input devices.rs, ee_error, ee_fs persistent_list.rs; branch rust-lle2, 2026-11-13)
+
+Round 2 of the Low-Level Engine lane (round 1's census is the section above). Net C++ over src + include without the
+generated `include/rust` (`git diff --numstat`), per commit: build.py fix 0; input -890; Error System -180;
+FSPersistentList -70; ESChecksum -118: -1,258 in all. Every move with logic has a golden over the unmodified class (a driver under `tests/`, the original copied
+verbatim into an `*_orig.h` beside it) replayed by cargo.
+
+- **build.py** creates `build/clang/exe` (or `clang-test/exe`) before writing `link.rsp`: a fresh worktree's first
+  link failed with "link.rsp not found".
+- **The keyboard, the mouse and their entities** (`ee_input` `devices.rs`): `ISKeyboard`, `ISMouse`, `ISKey`,
+  `ISExtendedKey`, `ISMouseButton`, `ISMouseAxis` and `ISDevice` (its device list nothing read) are Rust: the
+  per-scan-code transition counts (bit 0 held) and their previous values, the presses/releases since the last
+  refresh from their difference, the modifiers (toggled on release, only below 0xdd), the keys-down counts, the
+  double presses (the delay +200 ms for keys, the plain delay for buttons; the double-press delay is a Rust atomic,
+  `ISSetDoublePressTimeDelta` forwards), the mouse's motion, wheel and buffered-movement switch, the 121 key names
+  (the resource strings or the English table) and the three either-side keys ("<left> and <right>").
+  - **Pattern: a data-less C++ class over a Rust record.** `ISEntity`, `ISKeyboard` and `ISMouse` keep their names
+    and the methods callers use (about 150 files), but have no data and a deleted constructor: `gISKeyboard` and
+    `gISMouse` point at Rust statics (`EeInputKeyboard`/`EeInputMouse`, each a `Mutex<Option<..>>`) and an
+    `ISEntity*` points at one of Rust's 263 immutable entity records; each method is
+    `ee_input_*(reinterpret_cast<const EeInput*>(this))`. Callers compile unchanged (UIHotKey's
+    `static_cast<ISKey*>(...)->GetIndex()` became `GetIndex()` on the entity). The C++ that stays: `TMGetTime` passed
+    into Refresh/Resume (one read per call; the original read it per key, the same millisecond in practice), the
+    window's relative mode around the mouse's Resume/Suspend (Platform), and the resource strings read in
+    `ISInitialize` (a string that is not found repeats the previous one, as before).
+  - Possibly-NULL receivers (round 30's lesson): `GetEntity` of a scan code without a key hands out NULL with
+    `kErrorOK`, and some callers call it unchecked; the original crashed in the virtual call. Every entity function
+    now takes NULL and reads "released" (0, false, ""); a NULL `gISKeyboard`/`gISMouse` (EE-SIM never creates
+    them) does too.
+  - **Fixed:** the keyboard's refresh after a read cleared the double-press state of "every key" by
+    `static_cast<ISKey*>` over all 256 entries, including the three `ISExtendedKey`s, whose layout differs: on x64 it
+    wrote zeros into the first copied key's name string (pointer low byte, vtable upper half) whenever that byte was
+    nonzero, which corrupted the heap at the keyboard's destruction. Rust resets keys only. The golden's copy carries
+    the same one-line fix (marked `GOLDEN FIX`); otherwise it is the original. An either-side key's
+    `JustDoublePressed` is always false (the original's pair held copies of its keys made at construction, whose flags
+    nothing updated): kept.
+  - **The golden** (`tests/input/is_keyboard_golden.cpp` over `is_keyboard_orig.h` on round 1's original device
+    `is_device_orig.h`): 5,000 sequences of keys and buttons held before construction, events, direct key calls,
+    bursts that overflow the buffer, clock steps (also across the 32-bit wrap), refresh/resume/suspend/RefreshXY,
+    buffered movement on/off and GetEntity, each followed by a dump of every internal and observable value
+    (statuses, counts, modifiers, press times, every entity's value/normalized/amounts/double): 224,025 lines equal in
+    the Rust replay (`EE_INPUT_KEYBOARD_GOLDEN=<file> cargo test -p ee_input golden_keyboard_trace_replays_long_run`).
+    Ten mutations fail it (21..3,511 sequences): no +200 ms for keys, no double-press reset after a read, a release
+    clearing the modifier, the either-side scan codes setting modifiers, the constructor keeping the state read,
+    the wheel ignored, a held key's odd count one press short, Recompute keeping the keys-down count, an inclusive
+    double-press bound, the mouse's Recompute keeping the last buttons. cargo replays the first 40 sequences.
+- **The Error System** (`ee_error`, a new crate): the `Filter.txt` filter (`fgets` with a 1024-byte buffer: a longer
+  line is several filters, a line ends at its first NUL; the first line may be `-`, `+` or `OutputToDebugger`; after
+  the first filter an empty line is skipped because the original compared each line with `';'`, which converted
+  through `UString(unsigned long)` to an empty string; a first empty line is a filter that matches everything;
+  `strstr` matching; `!` always passes), `ESVerify`'s report (nested failures ignored; stderr, `int3`/`brk`, abort)
+  and the last native error. C++ keeps the exported names as forwarders, `ESDebugOut`'s `printf` formatting
+  (`vsnprintf` now: `vsprintf` overran 1,024 bytes) and reads `Filter.txt` through `FSFileSpec::FOpen("r")` (text
+  mode, so CR LF and Windows' Ctrl-Z end are what the filter saw before) into `ee_error_filters_load`.
+  - **Deleted** (behaviour change): the error log. `ESBeginRecording` created and opened `0_Error.log` in the startup
+    directory at every start and nothing ever wrote it; it, `ESEndRecording` (the shutdown hook and the out-of-sync
+    dump called it), the lock it used, the static lock holder nothing used and the empty `ESDumpStack` and
+    `ESReportMessage` went. No empty `0_Error.log` appears any more.
+  - **The golden** (`tests/error/es_filter_golden.cpp` over `es_filter_orig.h`, the function copied verbatim): 20,000
+    random `Filter.txt` texts written in binary and read by the original's `fgets` in text mode (CR LF, lone CR,
+    1,000+ byte lines, NULs, control bytes, the mode words in any position, the file absent, the startup path unset),
+    170,154 message verdicts equal in the Rust replay; seven mutations fail it (51..6,248 sequences); cargo replays
+    60 sequences.
+- **FSPersistentList** (`ee_fs` `persistent_list.rs`): the tag -> prototype map (a `BTreeMap` of opaque pointers:
+  register, find, take lowest-first for the shutdown, the `std::map`'s order). The class is three statics that make
+  the prototypes' virtual calls; the singleton, its creation lock and `Instance()` went (12 registrations in
+  `Empire Earth.cpp` and FSChunk call the statics). Unit tests only: there is no logic beyond the map.
+- **ESChecksum** (`ee_error` `checksum.rs`): the set (verbose: one described entry per checksum; summed: one
+  anonymous entry), the 32-bit wrapping total and `Compare`'s three error texts. `ESChecksum` keeps its vtable
+  (`EEPChecksum` derives from it, `EEGameState` embeds it) and owns an `EeErrorChecksum*`; the copy constructor and
+  assignment clone it (`EEGameStateLoader`'s `mChecksum = *theChecksum` slices an `EEPChecksum`, as before).
+  `ESChecksumEntry` and `PrintReport` (an empty loop) went; `EEPChecksum::Load/Save` read and write the same bytes
+  through `ee_error_checksum_entry/_push`. `Compare` returns its texts as a Rust list the C++ copies into the
+  `std::vector<UString>`.
+  - **The golden** (`tests/error/es_checksum_golden.cpp` over `es_checksum_orig.h`): 20,000 sequences on three sets
+  (verbose and summed adds, the protected add, copies, fresh sets, totals, dumps, compares with their texts):
+  395,963 lines equal; seven mutations fail it (3,195..19,558 sequences); cargo replays 60 sequences.
+  - Simulation-visible: the world checksum's total is saved and compared. Oracle seeds 2-3 identical, the saveload
+    matrix (`--settings all --seeds 2-3 --at 1000,1900`) expect PASS (before and after merging `rust` 94898cb2), captures oracle and late at seeds 2-3 PASS
+    (169 and 170 digests equal).
+- **What only the game reaches.** EE-SIM never creates the Input System, reads no `Filter.txt` with a debugger and
+  never fails a verification: the input move and the Error System's C++ side run only in a windowed game (the tour
+  with its F3 input check: `fixture_game.py --exercise tour --input-check --play-seconds 60` on the result merged with `rust` 94898cb2: `RESULT PASS tour`, `INPUT CHECK F3 paused 0 -> 1 -> 0: ok`). The checksum, the registry and the native error run in every EE-SIM game and
+  save/load.
+- **The timer tests made load-tolerant** (`ee_plat_core` `time.rs`, the lead's extra item): the periodic, one-shot
+  and factor timer tests slept a fixed 200 ms and counted ticks, so a loaded machine saw 0 ticks (the timer thread
+  never ran in the window) or 141 (the sleep overran it). They now poll for the ticks they need (20 s deadline) and
+  bound the count by the measured real time; a one-shot is re-read 40-50 periods later; the scaled waits keep "well
+  under the unscaled time" with load slack. 20/20 runs of `cargo test -p ee_plat_core time -- --test-threads=1`
+  beside a saveload matrix and a tour (17/20 before, beside a build).
+- **Lesson for harness runs from a worktree:** `fixture_game.py` builds `build/open_data/tree` in the worktree when
+  there is none (several minutes, holding the harness lock), and `sim.py --data open` prefers the worktree's tree
+  over the main checkout's: an EE-SIM run started meanwhile reads a half-written tree (every run exited -1). Pass
+  `EE_GATES_TREE`/`--data` the main checkout's tree, or run nothing beside it; delete the worktree's tree after.
+- **Left** (in this order): `TMPoll`/`TMTimer` (`TMPoll`'s `sCounterFrequency` is one static that every new poll
+  overwrites: a microsecond poll changes every millisecond poll's scale; keep that or fix it knowingly), the thread
+  system over PlatThread, then the File System's walk and the Sound Engine's objects (they need `UString` and the
+  FSFile virtuals across first), the string classes last.
