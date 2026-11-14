@@ -47,7 +47,7 @@ pub(crate) enum Item {
     CacheEntry(Mutex<crate::httpcache::CacheEntry>),
     /// a peer session (`AuthSession`; round 22): the peer auth op that made it, the auth context's cache and the
     /// sockets' `CryptTransform`s hold it
-    Session(Mutex<EeWonAuthSession>),
+    Session(Box<Mutex<EeWonAuthSession>>),
 }
 
 impl Drop for Item {
@@ -206,7 +206,7 @@ pub(crate) fn session_last_use(o: Obj) -> i64 {
 
 /// A new session handle (one reference).
 pub(crate) fn session_handle(s: EeWonAuthSession) -> Obj {
-    handle(Item::Session(Mutex::new(s)))
+    handle(Item::Session(Box::new(Mutex::new(s))))
 }
 
 /// A peer auth op's session calls, given the op's session (`EE_WON_PEEROP_SESSION`, borrowed; none for none):
