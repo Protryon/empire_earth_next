@@ -1,35 +1,27 @@
-// C:\EEX\Low-Level Engine\Input System\ISEntity.h (RECONSTRUCTION). Abstract input element (key, axis, button).
-// No ISEntity.cpp: every member is inline (emitted first by Input System.cpp, 0x38abf..0x38b29). Virtual slot order
-// proven by the vtables (ISEntity 0x98108: 14 pure virtuals, the dtor at +0x38, CheckForDoublePress at +0x3c).
+// C:\EEX\Low-Level Engine\Input System\ISEntity.h (RECONSTRUCTION). An input element: a keyboard key (by DIK_* scan
+// code; 0xe0..0xe2 the either-side Control, Shift and Alt keys), a mouse axis or button. The entities are Rust's
+// (rust/crates/ee_input devices.rs, LLE lane round 2; the abstract class with the ISKey, ISExtendedKey, ISMouseAxis
+// and ISMouseButton subclasses before): the devices' GetEntity hands out pointers to Rust's records and these
+// forwarders read the system keyboard's or mouse's state. The class has no data and is never constructed in C++.
+// A NULL entity (a scan code without a key) reads as released.
 #ifndef LLE_ISENTITY_H
 #define LLE_ISENTITY_H
 
-class UString;
-class UWideString;
-struct ISCalibration;
+#include "rust/ee_input.h"
 
-class LLE_API ISEntity {
-    friend class ISKeyboard;                // the devices delete their entities (the dtor is protected)
-    friend class ISMouse;
+class ISEntity {
 public:
-    virtual long GetDirectionNames(UString& outNegative, UString& outPositive) const = 0;
-    virtual const UWideString& GetName() const = 0;
-    virtual long GetNormalizedValue() const = 0;
-    virtual long GetValue() const = 0;
-    virtual bool IsAnalog() const = 0;
-    virtual bool IsCalibrated() const = 0;
-    virtual bool JustDoublePressed() = 0;
-    virtual bool JustPressed() = 0;
-    virtual bool JustUnpressed() = 0;
-    virtual unsigned long JustPressedAmount() = 0;
-    virtual unsigned long JustUnpressedAmount() = 0;
-    virtual bool NeedsCalibration() const = 0;
-    virtual long SetCalibration(ISCalibration& inCalibration) = 0;
-    virtual long SetMode(unsigned long inMode) = 0;
-protected:
-    ISEntity() {}                           // 0x38abf
-    virtual ~ISEntity() {}                  // 0x38ac8
-    virtual void CheckForDoublePress() = 0;
+    long GetValue() const { return ee_input_entity_value(Rust()); }                     // 1 held; an axis its motion
+    long GetNormalizedValue() const { return ee_input_entity_normalized_value(Rust()); } // 0x7fff held; wheel notches
+    bool JustPressed() const { return ee_input_entity_just_pressed(Rust()); }
+    bool JustUnpressed() const { return ee_input_entity_just_unpressed(Rust()); }
+    bool JustDoublePressed() const { return ee_input_entity_just_double_pressed(Rust()); }
+    unsigned long GetIndex() const { return ee_input_entity_index(Rust()); }             // a key's scan code
+    const char* GetName() const { return ee_input_entity_name(Rust()); }                 // UTF-8 ("A key")
+private:
+    ISEntity() = delete;
+    ~ISEntity() = delete;
+    const EeInputEntity* Rust() const { return reinterpret_cast<const EeInputEntity*>(this); }
 };
 
 #endif

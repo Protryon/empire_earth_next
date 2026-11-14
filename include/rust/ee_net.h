@@ -67,10 +67,75 @@ enum class EeNetMmOp : uint32_t {
   FileName = 27,
 };
 
+/// The queues' calls out (`qhost::QHost`); a, b, c, d as each op says, the answer as isize.
+enum class EeNetQOp : uint32_t {
+  /// -> TMGetTime()
+  Time = 0,
+  /// unit (0 NELagLossSimulator.cpp, 1 NERecordPlayback.cpp, 2 NETimestampedMessage.cpp), line: a failed ESVERIFY_AT
+  Verify = 1,
+  /// UMSetFloatingPointPrecision(kFPPrecision53)
+  FpuStart = 2,
+  /// the thread loop's precision and rounding check
+  FpuCheck = 3,
+  /// -> a new TSEvent (TSScheduler::CreateEvent), NULL when it failed
+  EventNew = 4,
+  /// an event: TSScheduler::DestroyEvent
+  EventFree = 5,
+  /// an event: Set()
+  EventSet = 6,
+  /// an event: Clear()
+  EventClear = 7,
+  /// an event, a timeout -> Wait(timeout)
+  EventWait = 8,
+  /// kind (0 the lag thread, 1 the playback thread), the Rust object, a TSThread** -> CreateThread's result
+  ThreadNew = 9,
+  /// a thread, a name, its length: SetName
+  ThreadName = 10,
+  /// a thread: TSScheduler::DestroyThread
+  ThreadFree = 11,
+  /// a message: Reference()
+  MsgReference = 12,
+  /// a message: Dereference()
+  MsgDereference = 13,
+  /// a message -> ExportSize()
+  MsgExportSize = 14,
+  /// a message, a buffer, its size: ExportMessage, at most that many bytes copied -> the export's size
+  MsgExport = 15,
+  /// bytes (NULL or a buffer), their count -> NEMessage::ConvertMemoryToMessage(bytes)
+  MsgFromBytes = 16,
+  /// kind (0 the lag simulator's receive callback, 1 its send callback, 2 the recorder's callback), a message ->
+  /// the send callback's result
+  Deliver = 17,
+  /// a file -> Create()
+  FileCreate = 18,
+  /// a file -> Delete()
+  FileDelete = 19,
+  /// a file, an access -> Open(access)
+  FileOpen = 20,
+  /// a file: Close()
+  FileClose = 21,
+  /// a file, bytes, their count -> Write(bytes, count, written)
+  FileWrite = 22,
+  /// a file, a value -> Write(value) (4 bytes)
+  FileWriteU32 = 23,
+  /// a file, a uint32_t* -> Read(*value)
+  FileReadU32 = 24,
+  /// a file, a buffer, its size -> Read(buffer, size, read)
+  FileRead = 25,
+};
+
+/// The client's lag and loss simulator (`NELagLossSimulator`).
+struct EeNetLagLoss;
+
 /// The server's message manager (`NEMessageManager`).
 struct EeNetMsgMgr;
 
+/// The client's and the server's message recorder (`NERecordPlayback`).
+struct EeNetRecPlay;
+
 using EeNetMmHostFn = ptrdiff_t(*)(void *ctx, EeNetMmOp op, size_t a, size_t b, size_t c, size_t d);
+
+using EeNetQHostFn = ptrdiff_t(*)(void *ctx, EeNetQOp op, size_t a, size_t b, size_t c, size_t d);
 
 extern "C" {
 
@@ -142,6 +207,66 @@ uint32_t ee_net_mm_current_number(const EeNetMsgMgr *m);
 void ee_net_mm_set_current_number(const EeNetMsgMgr *m, uint32_t number);
 
 void ee_net_mm_set_force_ct(const EeNetMsgMgr *m, bool on);
+
+/// # Safety
+/// `host` answers every op for `ctx` until `ee_net_ll_free`.
+EeNetLagLoss *ee_net_ll_new(void *ctx, EeNetQHostFn host);
+
+/// # Safety
+/// `l` from `ee_net_ll_new` (or NULL), used by nothing after.
+void ee_net_ll_free(EeNetLagLoss *l);
+
+/// The lag thread's body (the host's `ThreadNew` of kind 0 runs it with the object it was given).
+uint32_t ee_net_ll_thread(const EeNetLagLoss *l);
+
+void ee_net_ll_enable_lag(const EeNetLagLoss *l, uint32_t minimum, uint32_t maximum);
+
+void ee_net_ll_disable_lag(const EeNetLagLoss *l, bool flush);
+
+void ee_net_ll_enable_receive_loss(const EeNetLagLoss *l, float percentage);
+
+void ee_net_ll_enable_send_loss(const EeNetLagLoss *l, float percentage);
+
+void ee_net_ll_disable_receive_loss(const EeNetLagLoss *l);
+
+void ee_net_ll_disable_send_loss(const EeNetLagLoss *l);
+
+int32_t ee_net_ll_process(const EeNetLagLoss *l, void *msg);
+
+int32_t ee_net_ll_send(const EeNetLagLoss *l, void *msg);
+
+/// # Safety
+/// `host` answers every op for `ctx` until `ee_net_rp_free`.
+EeNetRecPlay *ee_net_rp_new(void *ctx, EeNetQHostFn host);
+
+/// # Safety
+/// `r` from `ee_net_rp_new` (or NULL), used by nothing after.
+void ee_net_rp_free(EeNetRecPlay *r);
+
+/// The playback thread's body (the host's `ThreadNew` of kind 1 runs it with the object it was given).
+uint32_t ee_net_rp_thread(const EeNetRecPlay *r);
+
+/// The mode (1 passing, 2 recording, 3 playing back); a NULL recorder (a server that was not published) passes.
+uint8_t ee_net_rp_mode(const EeNetRecPlay *r);
+
+/// A message for the game (a NULL recorder: nothing, where the original crashed).
+void ee_net_rp_process(const EeNetRecPlay *r, void *msg);
+
+int32_t ee_net_rp_pass_mode(const EeNetRecPlay *r);
+
+int32_t ee_net_rp_record_mode_file(const EeNetRecPlay *r, void *file);
+
+int32_t ee_net_rp_record_mode_network(const EeNetRecPlay *r);
+
+int32_t ee_net_rp_playback_mode_file(const EeNetRecPlay *r, void *file);
+
+int32_t ee_net_rp_playback_mode_network(const EeNetRecPlay *r);
+
+bool ee_net_rp_playback_complete(const EeNetRecPlay *r);
+
+void ee_net_rp_set_slow_playback(const EeNetRecPlay *r);
+
+void ee_net_rp_set_normal_playback(const EeNetRecPlay *r);
 
 }  // extern "C"
 

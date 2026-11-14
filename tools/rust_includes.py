@@ -23,6 +23,8 @@ COMMON = "ee_rust_common"
 SUFFIXES = (".cpp", ".c", ".cc", ".h", ".hpp", ".inl", ".mm")
 INCLUDE = re.compile(rb'^([ \t]*#[ \t]*include[ \t]*)"([^"]+)"(.*?)(\r?\n|$)', re.M)
 WORD = re.compile(rb"[A-Za-z_][A-Za-z0-9_]*")
+# verbatim copies of the original units that goldens compile (tests/net/orig_*/, tests/*/..._orig.h): never edited
+ORIGINAL_COPIES = re.compile(r"tests/[^/]+/orig[^/]*/|tests/.*_orig\.h$")
 COMMENTS_AND_STRINGS = re.compile(rb'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'', re.S)
 
 
@@ -95,18 +97,24 @@ def closure(stems, deps):
 
 def tracked_sources():
     out = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, check=True).stdout
-    return [ROOT / p for p in out.decode().split("\0") if p.endswith(SUFFIXES) and not p.startswith("include/rust/")]
+    return [ROOT / p for p in out.decode().split("\0") if p.endswith(SUFFIXES) and not p.startswith("include/rust/")
+            and not ORIGINAL_COPIES.match(p)]
 
 
-def used_crates(data, table, own_declarations=False):
-    """The crates whose names a file uses; with own_declarations, less the names it declares itself (a forward
-    `struct EeX;`, an `extern "C"` prototype): such a file avoids the header on purpose."""
+def declares(data, code, w):
+    """Whether a file declares a crate's name itself (a forward `struct EeX;` or `typedef struct EeX EeX;`, an
+    `extern "C"` prototype): such a file, and every file that includes it, avoids the crate's header on purpose."""
+    return bool(re.search(rb"\bstruct\s+" + w + rb"\b\s*(?:" + w + rb"\s*)?;", code)
+                or re.search(rb'extern\s+"C"[^;{]*\b' + w + rb"\s*\(", data))
+
+
+def used_crates(data, table, own_declarations=False, declared=frozenset()):
+    """The crates whose names a file uses; with own_declarations, less the names it (or, through `declared`, one of
+    the files it includes) declares itself."""
     code = COMMENTS_AND_STRINGS.sub(b" ", data)
     words = {w for w in set(WORD.findall(code)) if w in table}
     if own_declarations:
-        words = {w for w in words
-                 if not re.search(rb"\bstruct\s+" + w + rb"\s*;", code)
-                 and not re.search(rb'extern\s+"C"[^;{]*\b' + w + rb"\s*\(", data)}
+        words = {w for w in words if w not in declared and not declares(data, code, w)}
     return {table[w] for w in words}
 
 
@@ -215,20 +223,35 @@ def main():
                 files.extend(resolver.resolve(f, target))
         direct[f], edges[f] = stems, files
 
+    own_decl = {}
+
+    def declared_in(g):
+        if g not in own_decl:
+            text = new.get(g)
+            if text is None:
+                own_decl[g] = set()
+            else:
+                code = COMMENTS_AND_STRINGS.sub(b" ", text)
+                own_decl[g] = {w for w in set(WORD.findall(code)) if w in table and declares(text, code, w)}
+        return own_decl[g]
+
     def provided(f):
-        got, seen, todo = set(), {f}, [f]
+        got, decl, seen, todo = set(), set(), {f}, [f]
         while todo:
             g = todo.pop()
             got |= direct.get(g, set())
+            if g != f:
+                decl |= declared_in(g)
             for h in edges.get(g, ()):
                 if h not in seen:
                     seen.add(h)
                     todo.append(h)
-        return got
+        return got, decl
 
     added = []
     for f in targets:
-        missing = used_crates(new[f], table, own_declarations=True) - provided(f) - {COMMON}
+        got, decl = provided(f)
+        missing = used_crates(new[f], table, own_declarations=True, declared=decl) - got - {COMMON}
         if not missing:
             continue
         at = insert_at(new[f])

@@ -167,7 +167,7 @@ impl EeUiSlider {
         let scale = self.host.get_point(Op::DragBarScale, 0);
         let bitmap = self.fields().thumb_bitmap as isize;
         let mut b = [scale.x * thickness * 0.05, scale.y * thickness * 0.05, 0.0, 0.0];
-        self.host.op_f(Op::ThumbSetScale, bitmap, 0, 0, 0, &mut b);
+        self.host.op_f(Op::BitmapSetScale, bitmap, 0, 0, 0, &mut b);
     }
 
     pub fn change_range(&self, value: c_ulong) {

@@ -426,7 +426,7 @@ const ACTION_AIRPORT_OPEN: i32 = 13000;
 const ACTION_FLY: i64 = 1006;
 
 /// A selected unit's plain state: the store's record, else (a unit already out of its list) the object's.
-fn selected(host: &mut impl Host, id: u32) -> Option<EeUnitRecord> {
+pub(crate) fn selected(host: &mut impl Host, id: u32) -> Option<EeUnitRecord> {
     match host.unit(id) {
         Some(unit) => Some(unit),
         None => host.object_record(id),
@@ -680,6 +680,28 @@ mod tests {
         set_rally_goal(&mut h, r(P), barracks, 1.0, 2.0, 0x0300_0001, false);
         set_rally_goal(&mut h, r(P), 0x0100_0077, 1.0, 2.0, -1, false);
         assert!(queues(&h).is_empty());
+        assert_eq!(h.live, 0);
+    }
+
+    #[test]
+    fn rally_point_at_an_unseen_enemy_in_a_carrier_moves() {
+        // the enemy is inside a carrier: unseen, off the tiles; the ghost test answers "not seen" (the original read
+        // the NULL tile) and the rally point is a move, not an attack
+        let mut h = host();
+        let barracks = 0x0100_0001;
+        let pilot = 0x0200_0003;
+        h.units.insert(barracks, unit(barracks, P, 0x30, 0x13));
+        h.units.insert(pilot, unit(pilot, Q, 0x10, CATEGORY_AIRPLANE));
+        h.off_tiles.push(pilot);
+        h.ghosts.push(pilot);
+        h.targetable.push(pilot);
+        h.groups.insert(S, vec![barracks]);
+        h.selections.insert(P, S);
+        set_rally_goal(&mut h, r(P), barracks, 1.0, 2.0, pilot as i32, false);
+        assert!(h.calls.contains(&Call::SeenBy(pilot, r(P))));
+        assert!(h.calls.contains(&Call::GhostSeen(pilot)));
+        assert_eq!(queues(&h), vec![(barracks, 1, 1)]);
+        assert!(h.calls.contains(&Call::Send(r(S), EE_UNIT_ID_NONE, r(P), COMMAND_MOVE, 1)));
         assert_eq!(h.live, 0);
     }
 

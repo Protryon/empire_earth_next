@@ -33,7 +33,7 @@ void DialogLogic::InitComponent(ComponentConfig* inConfig)
     SafeGetComponent(inConfig, this->mOkCancelDialog, "OkCancelDialog", __FILE__, 48);
     SafeGetComponent(inConfig, this->mStatusDialog, "StatusDialog", __FILE__, 49);
     if (WONAPI::WindowManager::GetDefaultWindowManager() != NULL)
-        this->mPopupWindows = WONAPI::WindowManager::GetDefaultWindowManager()->mBA5;
+        this->mPopupWindows = WONAPI::WindowManager::GetDefaultWindowManager()->GetPopupsInOwnWindow();
 }
 // FUNCTION: WON 0x7dc630
 // Cancels the operation behind the status box and removes every dialog that is not running

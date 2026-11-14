@@ -4,6 +4,9 @@
 // own code (0x1005fdef..). ChangeWidth and DrawTextA (0x10080916, 0x10080a05) sit in a later unit. Vtable
 // 0x10099030. Layout proven by the implicit copy ctor 0x1005fa18 (sizeof 0x10c). Requires lle/UIButton.h and
 // lle/UITextLabel.h.
+//
+// The class is whole in Rust (rust/crates/ee_ui/src/checkobj.rs, R6 ui round 12): its record (the label, the
+// checked, has-text, scaled-bitmap and disabled flags) is the Rust button's, and every method forwards to it.
 #ifndef LLE_UICHECKBOX_H
 #define LLE_UICHECKBOX_H
 
@@ -13,29 +16,23 @@
 class UITextLabel;
 
 class LLE_API UICheckBox : public UIButton {
-    friend struct UIButtonRust;             // the Rust button logic's host calls (User Interface/UIButtonRust.h)
 public:
     UICheckBox(unsigned long inId, const UWideString& inText, GEFont* inFont, const GERectangle& inRectangle,
                UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness, bool inScaleBitmap);
-    virtual ~UICheckBox() { delete this->mTextLabel; }  // 0x1005f9da
+    // the dtor (0x1005f9da) deleted the label: the Rust button's release does
     void ChangeWidth(unsigned long inWidth);
     virtual long CopyData();
     virtual long DrawPolygons();
     virtual long DrawTextA();
-    bool GetIsChecked() const { return this->mIsChecked; }  // 0x1005f9fc
-    UITextLabel* GetTextLabel() const { return this->mTextLabel; }  // 0x100633b1 (ICF)
+    bool GetIsChecked() const;              // 0x1005f9fc
+    UITextLabel* GetTextLabel() const;      // 0x100633b1 (ICF)
     virtual unsigned long GetType() const { return kControlTypeCheckBox; }  // 0x1005fa03
     void SetChecked(bool inChecked);
     void SetDisabled(bool inDisabled);
     virtual void SetLocation(const GE2DPoint& inLocation);
     void SetText(const UWideString& inText, GEFont* inFont);
 protected:
-    // 0x1005fa07
-    virtual void ButtonUp()
-    {
-        this->ToggleCheck();
-        UIButton::ButtonUp();
-    }
+    virtual void ButtonUp();                // 0x1005fa07: the toggle, then UIButton's
     void ToggleCheck();
     virtual void ButtonDown();
     virtual long MouseLButtonDown();
@@ -46,12 +43,8 @@ protected:
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void TabbedTo() { UIButton::TabbedTo(); }     // 0x1005fcac (ICF)
     virtual void TabbedFrom() { UIButton::TabbedFrom(); } // 0x1005fcb1 (ICF)
-
-    UITextLabel* mTextLabel;                // +0x104 (deleted by the dtor)
-    bool mIsChecked;                        // +0x108
-    bool mHasText;                          // +0x109 SetText: a non-empty text
-    bool mScaleBitmap;                      // +0x10a the check bitmap scales with the box height
-    bool mIsDisabled;                       // +0x10b
+    // the original's members (+0x104 mTextLabel, +0x108 mIsChecked, +0x109 mHasText, +0x10a mScaleBitmap,
+    // +0x10b mIsDisabled) are the Rust button's record (checkobj.rs)
 };
 
 #endif

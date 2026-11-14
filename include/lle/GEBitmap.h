@@ -1,7 +1,16 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GEBitmap.h (RECONSTRUCTION). A textured quad: four vertices in a
 // rasterizer vertex array, one texture per screen. GEBitmap.cpp 0x1000f3a4..0x1000105c.
+//
+// port (R4.3, ninth part): the bitmap is a whole Rust object (ee_ge bmpobj.rs): its location, frame size, rotation,
+// scales, vertex array and textures with every method. The class's only member is that object; the accessors below
+// forward to it, and GEBitmap.cpp's GEBitmap section is the forwarders and the host (its calls on other objects).
+// The original's exe view expanded GetHeight, GetWidth and SetRotation inline (reading +0x18..+0x28): one inline
+// forwarder serves both views now.
 #ifndef LLE_GEBITMAP_H
 #define LLE_GEBITMAP_H
+
+#include <stdint.h>
+#include "rust/ee_ge.h"   // the bitmap (ee_ge bmpobj.rs), its host's EeGeBmpOp
 
 class GETexture;
 class GEVertexArray;
@@ -15,45 +24,29 @@ public:
     void FlipVertically();
     void GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
                            GEColor& outBottomLeft) const;
-#ifdef LLE_EXE_HEADERS
-    // inline in the exe's view: the exe never imports it (EESETriggerScreen ctor 0x57b0b7 expands it)
-    float GetHeight() const { return this->mYScale * this->mHeight; }
-#else
-    float GetHeight() const;
-#endif
-    const GE2DPoint& GetLocation() const { return this->mLocation; }  // exported, ICF-folded (0x38b41)
+    float GetHeight() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::Height); }
+    const GE2DPoint& GetLocation() const { return *(const GE2DPoint*)ee_ge_bmp_location(this->mRust); }  // exported, ICF-folded (0x38b41)
     void GetLocationPerVertex(GE2DPoint& outTopLeft, GE2DPoint& outTopRight, GE2DPoint& outBottomRight,
                               GE2DPoint& outBottomLeft) const;
-    float GetRotation() const { return this->mRotation; }  // exported, ICF-folded (0x4c369)
+    float GetRotation() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::Rotation); }  // exported, ICF-folded (0x4c369)
     void GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
                              float& outBottomLeft) const;
-    GETexture* GetTexture(unsigned long inScreen) const { return this->mTextures[inScreen]; }  // 0xf4eb; the UI expands it
+    GETexture* GetTexture(unsigned long inScreen) const { return (GETexture*)ee_ge_bmp_texture(this->mRust, inScreen); }  // 0xf4eb
     // Provisional name (GELine/GEPoint/GERhombus have it); DX7Rasterizer::Draw(GEBitmap*) 0x10002c62 reads +0x10
-    GEVertexArray* GetVertexArray() { return this->mVertices; }
+    GEVertexArray* GetVertexArray() { return (GEVertexArray*)ee_ge_bmp_vertices(this->mRust); }
     void GetTextureCoordinatesPerVertex(GETextureCoordinate& outTopLeft, GETextureCoordinate& outTopRight,
                                         GETextureCoordinate& outBottomRight, GETextureCoordinate& outBottomLeft) const;
-#ifdef LLE_EXE_HEADERS
-    // inline in the exe's view: the exe never imports it and expands it (EEUIMiniMap::CopyData 0x275585)
-    float GetWidth() const { return this->mXScale * this->mWidth; }
-#else
-    float GetWidth() const;
-#endif
-    float GetXScale() const { return this->mXScale; }  // exported (ICF-folded 0x100112ce); the UI reads +0x24 directly
-    float GetYScale() const { return this->mYScale; }  // 0xf53e; the UI reads +0x28 directly
+    float GetWidth() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::Width); }
+    float GetXScale() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::XScale); }  // exported (ICF-folded 0x100112ce)
+    float GetYScale() const { return ee_ge_bmp_getf(this->mRust, EeGeBmpFloat::YScale); }  // 0xf53e
     void GetZPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight, float& outBottomLeft) const;
     void SetColor(const GEColor& inColor);
     void SetColorPerVertex(const GEColor& inTopLeft, const GEColor& inTopRight, const GEColor& inBottomRight,
                            const GEColor& inBottomLeft);
-    void SetLocation(const GE2DPoint& inLocation) { this->mLocation = inLocation; this->ComputeRotation(); }  // 0xf65c; the UI expands it
+    void SetLocation(const GE2DPoint& inLocation) { ee_ge_bmp_set_location(this->mRust, (const EeGe2DPoint*)&inLocation); }  // 0xf65c
     void SetOpacity(float inOpacity);
     void SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft);
-#ifdef LLE_EXE_HEADERS
-    // inline in the exe's view: the exe never imports ?SetRotation@GEBitmap@@QAEXM@Z and expands it (store +0x20,
-    // call ComputeRotation: EEUIFSEBRotation::ButtonUp 0x59a574)
-    void SetRotation(float inRotation) { this->mRotation = inRotation; this->ComputeRotation(); }
-#else
-    void SetRotation(float inRotation);
-#endif
+    void SetRotation(float inRotation) { ee_ge_bmp_set_rotation(this->mRust, inRotation); }
     void SetScale(float inScale);
     void SetTexture(GETexture* inTexture, unsigned long inScreen);
     void SetTextureCoordinates(GETextureCoordinate& inTopLeft, GETextureCoordinate& inTopRight,
@@ -65,22 +58,18 @@ public:
                                const GETextureCoordinate& inBottomRight, const GETextureCoordinate& inBottomLeft)
         { SetTextureCoordinates(const_cast<GETextureCoordinate&>(inTopLeft), const_cast<GETextureCoordinate&>(inTopRight), const_cast<GETextureCoordinate&>(inBottomRight), const_cast<GETextureCoordinate&>(inBottomLeft)); }
 #endif
-    void SetXYScale(float inXScale, float inYScale) { this->mXScale = inXScale; this->mYScale = inYScale; this->ComputeRotation(); }  // 0xf771; the UI expands it
+    void SetXYScale(float inXScale, float inYScale) { ee_ge_bmp_set_xy_scale(this->mRust, inXScale, inYScale); }  // 0xf771
     void SetZ(float inZ);
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft);
+    GEBitmap(const GEBitmap&) = delete;
+    GEBitmap& operator=(const GEBitmap&) = delete;
 private:
     virtual ~GEBitmap();
-    void ComputeRotation();
+    // (ComputeRotation 0x1000fbb9 is the Rust object's)
+    // The calls the bitmap makes on other objects (EeGeBmpOp), in the original's statements
+    static intptr_t Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b);
 
-    GE2DPoint mLocation;                    // +0x08
-    GEVertexArray* mVertices;               // +0x10
-    GETexture** mTextures;                  // +0x14 one per screen
-    float mHeight;                          // +0x18 (texture frame height)
-    float mWidth;                           // +0x1c
-    float mRotation;                        // +0x20
-    float mXScale;                          // +0x24
-    float mYScale;                          // +0x28
-    unsigned long mTextureCount;            // +0x2c (the active rasterizer's screen count)
+    EeGeBitmap* mRust;                      // the bitmap (ee_ge bmpobj.rs)
 };
 
 #endif

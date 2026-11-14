@@ -1,4 +1,6 @@
-// AuthContext: login credentials, communities, CD keys, login secrets, peer-session cache and certificate refresh
+// AuthContext: a RefCount shim over ee_won's auth context (rust/crates/ee_won/src/authobj.rs: the lock, the peer
+// sessions and certificate flow, the peer data, the login data with its secrets, CD keys and hashes, the server list
+// and the verifier key); every method forwards
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <stdio.h>
@@ -13,61 +15,10 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONAuthPeerData.h"
-#include "ee/wonapi/WONMD5Digest.h"
-#include "ee/wonapi/WONMD5.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONBuffer.h"
-#include "platform/PlatFile.h"
 #include "platform/PlatPath.h"
-// File-local lazy critical section: the original's getter is 0x006ddda0 (50 bytes), its atexit cleanup 0x2ddde0
-static WONAPI::CriticalSection& GetVerifierCrit()
-{
-    static WONAPI::CriticalSection verifierCritical;
-    return verifierCritical;
-}
-
-
-static char VerifierKeyBuf[] = 
-	"\x30\x82\x03\x2c\x02\x82\x01\x01\x00\x86\x18\x0e\x3d\xd4\x9e\xfa\x42\xb9\x4c\xb3\x3e"
-	"\xf7\x2b\x76\xce\xe6\xb0\x27\x8c\x64\x07\x93\x3b\x24\x64\x6c\x47\xb6\x9e\x51\x7b\xbf"
-	"\xc9\xd5\xa1\xfb\xcf\x04\xfa\x7b\x8e\xc3\x6e\xd1\x88\xf6\x2e\xbd\x2b\x29\xda\xb5\x76"
-	"\x66\x12\xb9\x7a\x64\x73\x19\x53\xa9\x78\xd8\x1e\xe5\x11\x0a\x23\x1c\x08\x21\x33\xad"
-	"\x65\x76\x48\xff\xc5\x0b\xa2\xaa\x10\x22\xcb\x63\xbb\x68\xfc\xf0\x15\xf3\xe9\x90\x5f"
-	"\x9d\x17\x8e\x77\x67\xec\xde\xdf\x8b\xcc\xbb\xa4\xd6\x06\xfa\x0e\xd8\xc0\x67\xd4\x36"
-	"\xc9\x3a\xeb\x3f\xa4\x93\x57\xad\x62\x29\x24\x08\x67\x91\x6a\x0b\xd4\xdc\xad\xa4\x86"
-	"\x85\x9f\xed\xf8\xb8\xda\xe1\xac\xf3\xf4\x44\xaf\x85\x8d\x21\x95\x6a\xf4\x6e\xac\x36"
-	"\x83\x8f\x70\x0a\xc6\x17\xc1\x90\xc4\x7f\xbb\xe8\x18\xed\x4d\x0b\x8c\xdc\x76\x7f\xa9"
-	"\xb2\x45\x0f\xc6\xa8\xca\x0a\x9f\xec\x9f\xe5\xe0\xbd\x71\x63\x06\xef\x32\xba\xe0\x40"
-	"\x47\xf1\x91\xa8\xbf\x5e\xad\xb8\x2d\x28\x3a\x94\x63\xfa\x85\x1d\x24\xe3\xd2\x78\x7f"
-	"\x0e\x85\xb1\xbb\x3f\x2d\x27\x16\x34\xcf\x94\x7d\x71\xdd\xf3\xec\x41\xc1\x27\xe5\x6f"
-	"\xe6\x88\x78\xc8\x65\x15\x45\x3c\x0c\x5f\x30\x60\xc7\x02\x1d\x02\xe1\x4f\x25\x13\x97"
-	"\xee\xdb\x46\x94\xb2\x54\xfc\x54\x26\x20\xa2\x6d\x57\x72\xdd\x47\xd2\xf0\x92\x00\x38"
-	"\x51\xad\x02\x82\x01\x00\x72\x44\x9d\x49\x40\xff\x84\x75\xd8\x73\x57\x1f\xa7\xff\x52"
-	"\x08\x82\x63\xfa\xd1\xa7\x30\xb8\x63\xc5\x10\x45\x8e\x12\xca\x9c\x36\x4f\xc8\x3e\xe8"
-	"\x9a\x95\xfc\x48\xae\xcf\x80\xea\x75\xf6\x11\x3b\x2a\xf0\xd9\x52\xfb\x66\xee\x4b\xdb"
-	"\x6c\xc4\x06\x28\x12\x28\xd2\x2c\x53\x3f\x08\x86\x89\x69\x6a\x89\x57\x7e\xb0\xd7\x81"
-	"\xac\x79\xae\xfb\x56\xc0\x24\x0d\x84\x5a\xe1\x22\xc8\x3f\xba\x3c\x77\xbc\x22\x56\xdf"
-	"\xf1\x78\x55\xcc\xd5\x97\x88\x00\x71\x1a\xe8\x8e\xa7\xb6\x87\x62\x55\x4d\x53\x87\xa2"
-	"\x49\x3e\xa2\x79\x99\x51\x94\xd7\xe2\xf5\xce\x37\x1e\xc7\x79\xbd\xea\x0a\x31\x56\x1d"
-	"\x56\x1a\x8c\xb7\xf3\xa5\xdc\x2a\xcd\xdc\xb1\x5c\x3e\x47\x20\xc7\xc2\x30\x32\xdf\x64"
-	"\x91\xd5\xc6\xab\x85\x21\x67\x59\xc6\x09\x7c\x61\xd5\x90\x9b\xff\x5c\x6b\x48\x5e\x41"
-	"\x85\xdb\x12\xed\x63\x04\xd3\x35\xca\x86\xce\x64\xa6\x54\x5b\x0f\x77\x90\x7e\xad\xd9"
-	"\x56\x5d\x2f\x8a\x52\xd9\xcc\x79\x41\x69\x73\xca\x15\x0a\xbc\x68\x93\xbe\x2f\x03\x7c"
-	"\x60\x7b\xf2\xa3\x03\x98\x34\x36\x9f\x88\x8e\xfb\x2b\x8a\x40\xdd\x35\xa9\x21\x2d\x92"
-	"\xba\x1b\xe8\x58\xe1\x1c\xc2\x47\x34\x9c\x02\x82\x01\x00\x7f\xb4\x68\x1d\xde\x12\xd3"
-	"\x00\x3a\x26\xb6\x60\x7e\xb9\x62\x9f\x31\xcb\x6b\x3a\x4f\x0e\x18\x64\x4f\x65\xad\x79"
-	"\x1d\xd7\xe8\xbf\x83\x68\x78\xc4\x9e\x2b\x90\xcd\xd8\xad\x36\x1a\x1d\x4f\x56\x4b\x8a"
-	"\x6f\xc3\x77\x93\x5e\xf4\x7d\x61\xfd\x48\xa5\xa5\xbe\x27\xa3\x5d\xa9\x0a\xb0\x77\xc9"
-	"\x6d\x8d\xae\x94\x5a\x90\x07\xb4\x96\x1b\xda\x93\x56\xc5\x50\x19\xdd\xa4\xb3\x40\x66"
-	"\x0b\xb0\x55\xdd\xd7\x9a\x50\x7b\x9a\xe7\xbc\x63\x65\x9b\x45\x2d\x82\xf3\xe7\x49\x19"
-	"\x71\x10\x9d\x46\x2e\x82\x8e\x15\x35\xf8\x53\x99\x3f\x4f\xec\x83\x48\xef\x0f\x27\x28"
-	"\x75\x1f\x73\x97\x1e\x14\x16\x24\x16\xe6\x3f\x67\xdc\x50\x4a\xdc\x83\x89\x47\xf9\x41"
-	"\xa5\xec\xe1\x86\x08\x46\xf4\xa9\x97\x14\x73\xaf\xe6\x01\x30\xa1\xad\x2f\xb0\x2a\x35"
-	"\xdd\xad\x1d\x70\x25\x95\xbf\x07\xd2\x8c\x14\x46\xc4\xd2\x79\x21\xdc\xa9\x21\x6e\xff"
-	"\x99\x69\x47\x8b\x67\x95\x98\x4d\x09\x75\xee\x97\x0b\xd9\x3d\x75\xd1\xa8\x82\x1f\xc8"
-	"\x15\x2e\x39\x29\x6f\x95\x4b\xf4\x94\x74\xeb\xd8\xe3\x4a\xfb\x41\xa8\x4c\x5c\x3d\xb6"
-	"\x42\xc0\x15\x35\x9e\x1a\xe2\x54\x2c\x0c\x0b\x34\x5f\xe2\x35\x8d\x30\x73";
 namespace WONAPI {
 // The hooks of the sessions and certificate flow (ee_won authflow.rs): the objects it holds are RefCounts
 struct AuthContextFlow {
@@ -97,12 +48,13 @@ struct AuthContextFlow {
             op->SetCompletion(new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(AuthContext::StaticGetCertCallback,static_cast<AuthContext*>(c)));
         return static_cast<RefCount*>(static_cast<AsyncOp*>(op));
     }
+    // GetCertOp::GetPeerData: a new reference to its Rust peer data, or NULL
     static EeWonAuthObj* CertPeerData(void* p)
     {
-        const AuthPeerData* peer = static_cast<GetCertOp*>(Op(p))->GetPeerData();
-        return peer!=NULL ? ee_won_authobj_clone(peer->Impl()) : NULL;
+        return reinterpret_cast<EeWonAuthObj*>((intptr_t)ee_won_hostop_num(static_cast<GetCertOp*>(Op(p))->GetRustOp(),
+                                                                           EE_WON_GETCERT_PEER_DATA, 0));
     }
-    static EeWonAuthFlow* New(AuthContext* c)
+    static const EeWonAuthCtx* New(AuthContext* c, const std::string& inSecretFile)
     {
         EeWonAuthFlowHooks h;
         h.context = c;
@@ -118,28 +70,19 @@ struct AuthContextFlow {
         h.new_timer = NewTimer;
         h.new_cert_op = NewCertOp;
         h.cert_peer_data = CertPeerData;
-        return ee_won_auth_flow_new(&h);
+        return ee_won_authctx_new(&h, reinterpret_cast<const uint8_t*>(inSecretFile.data()), inSecretFile.size());
     }
 };
-
-// Class statics: the signing public key (0x566018, 0x1a8 bytes) and its file-checked flag (0x5661e1)
-ElGamal AuthContext::mVerifierKey(VerifierKeyBuf,sizeof(VerifierKeyBuf),false);
-bool AuthContext::mCheckedVerifierFile=false;
+static const uint8_t* U8(const std::string& s) { return reinterpret_cast<const uint8_t*>(s.data()); }
 
 // FUNCTION: WON 0x006ddb70
 // Sets up the peer data, login-secret file path and server context, and loads the key file once per process
 void AuthContext::Init()
 {
-    this->mFlow=AuthContextFlow::New(this);
-    std::string aSecretFile=WONAPICore::GetDefaultFileDirectory()+"_wonlogin.ks";
-    this->mLogin=ee_won_auth_login_new(reinterpret_cast<const uint8_t*>(aSecretFile.data()),aSecretFile.size());
-    EeWonAuthObj* aPeer=ee_won_peer_new_empty(NULL); // new AuthPeerData
-    ee_won_auth_flow_set_peer_data(this->mFlow,aPeer);
-    ee_won_authobj_free(aPeer);
-    this->mServerContext=new ServerContext;
-    AutoCrit lock(GetVerifierCrit());
-    if(AuthContext::mCheckedVerifierFile) return;
-    AuthContext::LoadVerifierKey(WONAPICore::GetDefaultFileDirectory()+"_wonkver.pub");
+    this->mCore=AuthContextFlow::New(this,WONAPICore::GetDefaultFileDirectory()+"_wonlogin.ks");
+    ee_won_authctx_set_server_context(this->mCore,static_cast<RefCount*>(new ServerContext));
+    const std::string& aDir=WONAPICore::GetDefaultFileDirectory();
+    ee_won_auth_verifier_init(U8(aDir),aDir.size());
 }
 // FUNCTION: WON 0x006dddf0
 // Creates an empty auth context
@@ -148,31 +91,23 @@ AuthContext::AuthContext()
     this->Init();
 }
 // FUNCTION: WON 0x006de370
-// Destroys the auth context (members only)
+// Destroys the auth context (its reference to the Rust object)
 AuthContext::~AuthContext()
 {
-    ee_won_auth_flow_free(this->mFlow);
-    ee_won_auth_login_free(this->mLogin);
+    ee_won_authctx_free(this->mCore);
 }
-
-// The peer sessions and the certificate flow are ee_won's (authflow.rs): the session map and its clean-up cursor,
-// the waiting ops (their members too), the GetCertOp, the auto-refresh timer, the refresh status and flag and the
-// peer data; the lock stays here. The peer data's expire delta is read at time(NULL), as the original's.
 
 // FUNCTION: WON 0x006deeb0
 // Caches a peer session for an address and drops up to five map entries unused for over 300 seconds
 void AuthContext::PutSession(const IPAddr& address,AuthSession* session)
 {
-    AutoCrit lock(this->mDataCrit);
-    if(session==NULL) return;
-    ee_won_auth_flow_put_session(this->mFlow,address.GetValue(),static_cast<RefCount*>(session),(int64_t)time(NULL));
+    ee_won_authctx_put_session(this->mCore,address.GetValue(),session!=NULL?static_cast<RefCount*>(session):NULL);
 }
 // FUNCTION: WON 0x006df080
 // Takes a session used within 300 seconds for the address out of the cache; NULL when none
 SmartPtr<AuthSession> AuthContext::GetSession(const IPAddr& address)
 {
-    AutoCrit lock(this->mDataCrit);
-    void* aSession=ee_won_auth_flow_get_session(this->mFlow,address.GetValue(),(int64_t)time(NULL));
+    void* aSession=ee_won_authctx_get_session(this->mCore,address.GetValue());
     if(aSession==NULL) return NULL;
     SmartPtr<AuthSession> session(static_cast<AuthSession*>(static_cast<RefCount*>(aSession)));
     static_cast<RefCount*>(aSession)->Release();
@@ -182,31 +117,17 @@ SmartPtr<AuthSession> AuthContext::GetSession(const IPAddr& address)
 // Starts a certificate refresh when the current auto-refresh timer fires (not when killed)
 void AuthContext::AutoRefreshCallback(AsyncOp* op)
 {
-    AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_auto_refresh_callback(this->mFlow,static_cast<RefCount*>(op));
+    ee_won_authctx_auto_refresh_callback(this->mCore,static_cast<RefCount*>(op));
 }
 // FUNCTION: WON 0x006de8e0
 // Kills and drops the pending auto-refresh timer
-void AuthContext::StopAutoRefresh()
-{
-    AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_stop_auto_refresh(this->mFlow);
-}
+void AuthContext::StopAutoRefresh() { ee_won_authctx_stop_auto_refresh(this->mCore); }
 // FUNCTION: WON 0x006deb30
 // Turns certificate auto-refresh on or off and restarts the timer
-void AuthContext::SetDoAutoRefresh(bool enabled)
-{
-    AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_set_do_auto_refresh(this->mFlow,enabled,(int64_t)time(NULL));
-}
+void AuthContext::SetDoAutoRefresh(bool enabled) { ee_won_authctx_set_do_auto_refresh(this->mCore,enabled); }
 // FUNCTION: WON 0x006df260
 // Kills the running certificate request and the auto-refresh timer
-void AuthContext::Kill()
-{
-    AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_kill(this->mFlow);
-}
-
+void AuthContext::Kill() { ee_won_authctx_kill(this->mCore); }
 // FUNCTION: WON 0x006de760
 // Forwards the auto-refresh timer completion to its context
 void AuthContext::StaticAutoRefreshCallback(SmartPtr<AsyncOp> op,SmartPtr<RefCount> parameter)
@@ -215,16 +136,11 @@ void AuthContext::StaticAutoRefreshCallback(SmartPtr<AsyncOp> op,SmartPtr<RefCou
 }
 // FUNCTION: WON 0x006de970
 // Restarts the auto-refresh timer: 2 minutes before the certificate expires (at least 2), or 5 when forced
-void AuthContext::StartAutoRefresh(bool force)
-{
-    AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_start_auto_refresh(this->mFlow,force,(int64_t)time(NULL));
-}
+void AuthContext::StartAutoRefresh(bool force) { ee_won_authctx_start_auto_refresh(this->mCore,force); }
 
-
-// The login data is ee_won's (rust/crates/ee_won/src/authlogin.rs): the user name and password, the secrets and their
-// file (_wonlogin.ks: a count byte, then a 32-bit expiry and 8 bytes each), the communities, their CD keys and file
-// hashes, the joins, the user data and the nicknames, and the login request's blocks; its own lock.
+// The login data (ee_won authlogin.rs, its own lock): the user name and password, the secrets and their file
+// (_wonlogin.ks), the communities, their CD keys and file hashes, the joins, the user data and the nicknames, and the
+// login request's blocks.
 static void AuthAppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
 {
     static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes), inLength);
@@ -238,7 +154,7 @@ static std::string AuthUtf16(const std::wstring& inText)
 std::wstring AuthContext::LoginText(int inWhich) const
 {
     std::string aBytes;
-    ee_won_auth_login_text(this->mLogin,inWhich,AuthAppendBytes,&aBytes);
+    ee_won_auth_login_text(ee_won_authctx_login(this->mCore),inWhich,AuthAppendBytes,&aBytes);
     std::wstring aText;
     WideAssignUtf16LE(aText,aBytes.data(),(unsigned long)(aBytes.size()/2));
     return aText;
@@ -246,80 +162,61 @@ std::wstring AuthContext::LoginText(int inWhich) const
 void AuthContext::LoginSet(int inWhich, const std::wstring& inKey, const std::string& inValue, long long inNum)
 {
     std::string aKey=AuthUtf16(inKey);
-    ee_won_auth_login_set(this->mLogin,inWhich,reinterpret_cast<const uint8_t*>(aKey.data()),aKey.size(),
-                          reinterpret_cast<const uint8_t*>(inValue.data()),inValue.size(),inNum);
+    ee_won_auth_login_set(ee_won_authctx_login(this->mCore),inWhich,U8(aKey),aKey.size(),U8(inValue),inValue.size(),inNum);
 }
 static std::string AuthKeyBytes(const CDKey& inKey)
 {
     return inKey.mKey.get()!=NULL?std::string(inKey.mKey->data(),inKey.mKey->length()):std::string();
 }
-static void AuthAppendBlock(EeWonAuthLogin* inLogin, int inWhich, WriteBuffer& output, const RawBuffer* inChallenge)
+static void AuthAppendBlock(const EeWonAuthCtx* inCore, int inWhich, WriteBuffer& output, const RawBuffer* inChallenge)
 {
     std::string aBytes;
-    ee_won_auth_login_block(inLogin,inWhich,inChallenge!=NULL?inChallenge->data():NULL,
+    ee_won_auth_login_block(ee_won_authctx_login(inCore),inWhich,inChallenge!=NULL?inChallenge->data():NULL,
                             inChallenge!=NULL?inChallenge->size():0,AuthAppendBytes,&aBytes);
     output.AppendBytes(aBytes.data(),aBytes.length());
+}
+static bool AuthSecrets(const EeWonAuthCtx* inCore, int inWhich, const void* inKey = NULL, time_t t0 = 0, time_t t1 = 0)
+{
+    return ee_won_auth_login_secrets(ee_won_authctx_login(inCore),inWhich,static_cast<const uint8_t*>(inKey),(int64_t)t0,(int64_t)t1);
 }
 
 // FUNCTION: WON 0x006e1240
 // Reads the saved login secrets (expiry + 8 bytes each) from the secret file; false when it cannot open
-bool AuthContext::LoadSecretList() { return ee_won_auth_login_secrets(this->mLogin,0,NULL,0,0); }
+bool AuthContext::LoadSecretList() { return AuthSecrets(this->mCore,0); }
 // FUNCTION: WON 0x006e1460
 // Writes the login secrets to the secret file; false when it cannot be created
-bool AuthContext::SaveSecretList() { return ee_won_auth_login_secrets(this->mLogin,1,NULL,0,0); }
+bool AuthContext::SaveSecretList() { return AuthSecrets(this->mCore,1); }
 // FUNCTION: WON 0x006e1560
 // Appends a count byte and every login secret to the login request
-void AuthContext::AppendLoginSecrets(WriteBuffer& output) { AuthAppendBlock(this->mLogin,2,output,NULL); }
+void AuthContext::AppendLoginSecrets(WriteBuffer& output) { AuthAppendBlock(this->mCore,2,output,NULL); }
 // FUNCTION: WON 0x006e1650
 // Adds a new uncommitted 8-byte login secret at the front and saves the list
-void AuthContext::AddSecret(const void* secret)
-{
-    ee_won_auth_login_secrets(this->mLogin,2,static_cast<const uint8_t*>(secret),0,0);
-}
+void AuthContext::AddSecret(const void* secret) { AuthSecrets(this->mCore,2,secret); }
 // FUNCTION: WON 0x006e1790
 // Removes the matching uncommitted login secret and saves the list
-void AuthContext::RemoveSecret(const void* secret)
-{
-    ee_won_auth_login_secrets(this->mLogin,3,static_cast<const uint8_t*>(secret),0,0);
-}
+void AuthContext::RemoveSecret(const void* secret) { AuthSecrets(this->mCore,3,secret); }
 // FUNCTION: WON 0x006e1890
 // Gives uncommitted secrets an expiry, drops expired ones, caps the list below 256 entries and saves it
-void AuthContext::CommitSecrets(time_t authTime,time_t duration)
-{
-    ee_won_auth_login_secrets(this->mLogin,4,NULL,(int64_t)authTime,(int64_t)duration);
-}
+void AuthContext::CommitSecrets(time_t authTime,time_t duration) { AuthSecrets(this->mCore,4,NULL,authTime,duration); }
 // FUNCTION: WON 0x006e19e0
 // Returns the current peer data (certificate and keys) under the lock: a shim over the Rust object
-ConstSmartPtr<AuthPeerData> AuthContext::GetPeerData()
-{
-    AutoCrit lock(this->mDataCrit);
-    return AuthPeerData::Adopt(ee_won_auth_flow_peer_data(this->mFlow));
-}
+ConstSmartPtr<AuthPeerData> AuthContext::GetPeerData() { return AuthPeerData::Adopt(ee_won_authctx_peer_data(this->mCore)); }
 // FUNCTION: WON 0x006e1a30
 // Returns whether the auth2 certificate expires within the given number of seconds
-bool AuthContext::IsExpired(time_t extra)
-{
-    AutoCrit lock(this->mDataCrit);
-    return ee_won_auth_flow_is_expired(this->mFlow,(int64_t)extra,(int64_t)time(NULL));
-}
+bool AuthContext::IsExpired(time_t extra) { return ee_won_authctx_is_expired(this->mCore,(int64_t)extra); }
 // FUNCTION: WON 0x006e1aa0
 // Replaces the peer data and clears the peer-session cache
 void AuthContext::SetPeerData(const AuthPeerData* data)
 {
-    AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_set_peer_data(this->mFlow,data!=NULL?data->Impl():NULL);
+    ee_won_authctx_set_peer_data(this->mCore,data!=NULL?data->Impl():NULL);
 }
-
 
 // FUNCTION: WON 0x006e0c50
 // Appends each hashed community's file hash and its hash keyed with the server challenge
-void AuthContext::AppendHashes(WriteBuffer& output,const RawBuffer& challenge)
-{
-    AuthAppendBlock(this->mLogin,1,output,&challenge);
-}
+void AuthContext::AppendHashes(WriteBuffer& output,const RawBuffer& challenge) { AuthAppendBlock(this->mCore,1,output,&challenge); }
 // FUNCTION: WON 0x006e0e50
 // Appends the login's community names and typed records (CD keys, joins, user data, secrets, nicknames)
-void AuthContext::AppendCommunityData(WriteBuffer& output) { AuthAppendBlock(this->mLogin,0,output,NULL); }
+void AuthContext::AppendCommunityData(WriteBuffer& output) { AuthAppendBlock(this->mCore,0,output,NULL); }
 
 // FUNCTION: WON 0x006de560
 // Forwards the certificate request completion to its context
@@ -331,24 +228,18 @@ void AuthContext::StaticGetCertCallback(SmartPtr<AsyncOp> op,SmartPtr<RefCount> 
 // Hands the new peer data and status to every waiting refresh op, then restarts auto-refresh
 void AuthContext::GetCertCallback(GetCertOp* op)
 {
-    AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_get_cert_callback(this->mFlow,static_cast<RefCount*>(static_cast<AsyncOp*>(op)),(int64_t)time(NULL));
+    ee_won_authctx_get_cert_callback(this->mCore,static_cast<RefCount*>(static_cast<AsyncOp*>(op)));
 }
 // FUNCTION: WON 0x006deba0
 // Queues a refresh op (its run and its member) and starts a certificate request when none is running
 void AuthContext::RefreshAsync(AsyncOp* op,EeWonLightCert* cert,DWORD timeout)
 {
-    AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_refresh_async(this->mFlow,op!=NULL?static_cast<RefCount*>(op):NULL,cert,timeout);
+    ee_won_authctx_refresh_async(this->mCore,op!=NULL?static_cast<RefCount*>(op):NULL,cert,timeout);
 }
 // FUNCTION: WON 0x006dedf0
 // Fetches a new certificate synchronously; restarts auto-refresh on success and returns the status (no lock, as
 // the original)
-WONStatus AuthContext::RefreshBlock(DWORD timeout)
-{
-    return ee_won_auth_flow_refresh_block(this->mFlow,timeout,(int64_t)time(NULL));
-}
-
+WONStatus AuthContext::RefreshBlock(DWORD timeout) { return ee_won_authctx_refresh_block(this->mCore,timeout); }
 
 // FUNCTION: WON 0x006e0380
 // Sets the CD key sent for a community
@@ -390,8 +281,7 @@ bool AuthContext::SetHashFileList(const std::wstring& community,const std::list<
     std::string aFiles;
     for(std::list<std::string>::const_iterator next=files.begin();next!=files.end();++next)
         aFiles.append(next->c_str(),next->size()+1);
-    return ee_won_auth_login_hash_files(this->mLogin,reinterpret_cast<const uint8_t*>(aCommunity.data()),aCommunity.size(),
-                                        reinterpret_cast<const uint8_t*>(aFiles.data()),aFiles.size());
+    return ee_won_auth_login_hash_files(ee_won_authctx_login(this->mCore),U8(aCommunity),aCommunity.size(),U8(aFiles),aFiles.size());
 }
 // FUNCTION: WON 0x006df620
 // Sets the login user name
@@ -419,33 +309,24 @@ void AuthContext::RemoveCommunity(const std::wstring& community)
 // Loads the signing public key from a file; false when the file is missing or the key invalid
 bool AuthContext::LoadVerifierKey(const std::string& filename)
 {
-    AuthContext::mCheckedVerifierFile=true;
-    FILE* file=PlatFOpen(filename.c_str(),"rb");
-    if(file==NULL) return false;
-    unsigned char buffer[1024];
-    RawBuffer key;
-    while(!feof(file)) {
-        int count=fread(buffer,1,1024,file);
-        if(count>0) key.append(buffer,count);
-    }
-    fclose(file);
-    AutoCrit lock(GetVerifierCrit());
-    return AuthContext::mVerifierKey.SetPublicKey(key.data(),key.length());
+    return ee_won_auth_verifier_load(U8(filename),filename.size());
 }
 
 // FUNCTION: WON 0x006df330
 // Sets the auth server list
 void AuthContext::SetServerContext(ServerContext* context)
 {
-    AutoCrit lock(this->mDataCrit);
-    this->mServerContext=context;
+    ee_won_authctx_set_server_context(this->mCore,context!=NULL?static_cast<RefCount*>(context):NULL);
 }
 // FUNCTION: WON 0x006df3e0
 // Returns the auth server list
 SmartPtr<ServerContext> AuthContext::GetServerContext()
 {
-    AutoCrit lock(this->mDataCrit);
-    return this->mServerContext;
+    void* aServers=ee_won_authctx_server_context(this->mCore);
+    if(aServers==NULL) return NULL;
+    SmartPtr<ServerContext> servers(static_cast<ServerContext*>(static_cast<RefCount*>(aServers)));
+    static_cast<RefCount*>(aServers)->Release();
+    return servers;
 }
 
 }
@@ -462,21 +343,13 @@ AuthContext::AuthContext(const std::wstring &theUserName, const std::wstring& th
     this->AddCommunity(theCommunity);
 }
 
-// No original address identified: WON SDK support body
-bool AuthContext::AddAddress(const IPAddr &theAddr)
-{
-	AutoCrit aCrit(this->mDataCrit);
-	return this->mServerContext->AddAddress(theAddr);
-}
-
-// No original address identified: WON SDK support body
+// No original address identified: WON SDK support bodies. The server list's own lock serializes its calls; the
+// context's lock is taken to read the member (the original held it around the call).
+bool AuthContext::AddAddress(const IPAddr &theAddr) { return this->GetServerContext()->AddAddress(theAddr); }
 bool AuthContext::AddAddressesFromDir(const DirEntityList &theDir, const wchar_t *theNameFilter)
 {
-	AutoCrit aCrit(this->mDataCrit);
-	return this->mServerContext->AddAddressesFromDir(theDir, theNameFilter);
+	return this->GetServerContext()->AddAddressesFromDir(theDir, theNameFilter);
 }
-
-// No original address identified: WON SDK support bodies
 void AuthContext::RemoveAllCommunity() { this->LoginSet(EE_WON_AUTH_LOGIN_REMOVE_ALL_COMMUNITY,std::wstring()); }
 void AuthContext::AddCDKeyCommunityJoin(const std::wstring &theCommunity, const CDKey &theKey)
 {
@@ -489,8 +362,7 @@ void AuthContext::AddUserData(const std::wstring &theCommunity, const ByteBuffer
 }
 void AuthContext::SetLoginSecretFile(const std::string &theFile)
 {
-	ee_won_auth_login_set(this->mLogin,EE_WON_AUTH_LOGIN_SECRET_FILE,NULL,0,
-	                      reinterpret_cast<const uint8_t*>(theFile.data()),theFile.size(),0);
+	ee_won_auth_login_set(ee_won_authctx_login(this->mCore),EE_WON_AUTH_LOGIN_SECRET_FILE,NULL,0,U8(theFile),theFile.size(),0);
 }
 void AuthContext::AddNickname(const std::wstring &theKey) { this->LoginSet(EE_WON_AUTH_LOGIN_ADD_NICKNAME,theKey); }
 void AuthContext::SetNickname(const std::wstring &theKey, const std::wstring &theName)
@@ -498,29 +370,11 @@ void AuthContext::SetNickname(const std::wstring &theKey, const std::wstring &th
 	this->LoginSet(EE_WON_AUTH_LOGIN_SET_NICKNAME,theKey,AuthUtf16(theName));
 }
 void AuthContext::ClearNicknames() { this->LoginSet(EE_WON_AUTH_LOGIN_CLEAR_NICKNAMES,std::wstring()); }
-}
-
-namespace WONAPI {
-
-// No original address identified: WON SDK locked server-context API
-bool AuthContext::RemoveAddress(const IPAddr &theAddr)
-{
-	AutoCrit aCrit(this->mDataCrit);
-	return this->mServerContext->RemoveAddress(theAddr);
-}
-
-// No original address identified: WON SDK locked server-context API
-void AuthContext::RemoveAllAddresses()
-{
-	AutoCrit aCrit(this->mDataCrit);
-	this->mServerContext->RemoveAllAddresses();
-}
-
-// No original address identified: WON SDK locked server-context API
+bool AuthContext::RemoveAddress(const IPAddr &theAddr) { return this->GetServerContext()->RemoveAddress(theAddr); }
+void AuthContext::RemoveAllAddresses() { this->GetServerContext()->RemoveAllAddresses(); }
 bool AuthContext::AddAddressesFromDir(const DirEntityMap &theDir, const std::wstring &thePath, const wchar_t *theNameFilter)
 {
-	AutoCrit aCrit(this->mDataCrit);
-	return this->mServerContext->AddAddressesFromDir(theDir, thePath, theNameFilter);
+	return this->GetServerContext()->AddAddressesFromDir(theDir, thePath, theNameFilter);
 }
 }
 

@@ -1,0 +1,9 @@
+[package]
+name = "ee_error"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The Low-Level Engine's Error System: the Filter.txt debug-output filter, ESVerify, the native error (LLE lane round 2).
+[lib]
+crate-type = ["rlib"]
