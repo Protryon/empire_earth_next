@@ -209,7 +209,6 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESEPlayerScreen.h"
-#include "ee/EESEPlayerControls.h"
 #include <typeinfo>
 #include <map>
 #include "lle/UICheckBox.h"
@@ -1566,14 +1565,16 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "epoch")   // epoch ROW START END: a player row's end epoch set, then its start epoch picked
             theCode = [=, &theOutput] {
-                EESEPlayerRow* theRow = gUIManager->mScenarioEditorForm->GetPlayerScreen()->mPlayers[L(1)];
-                theRow->mEndEpoch->SetCurrentSelection((unsigned long)L(3));
-                theRow->mStartEpoch->SetCurrentSelection((unsigned long)L(2));
-                if (UIEvent* theEvent = theRow->mStartEpoch->GetTriggerEvent(kControlTriggerSelectionChanged))
-                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theRow->mStartEpoch);
+                EESEPlayerScreen* theScreen = gUIManager->mScenarioEditorForm->GetPlayerScreen();
+                UIComboBox* theStart = theScreen->GetRowEpochs(L(1), false);
+                UIComboBox* theEndBox = theScreen->GetRowEpochs(L(1), true);
+                theEndBox->SetCurrentSelection((unsigned long)L(3));
+                theStart->SetCurrentSelection((unsigned long)L(2));
+                if (UIEvent* theEvent = theStart->GetTriggerEvent(kControlTriggerSelectionChanged))
+                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theStart);
                 unsigned long theEnd = 0;
-                bool theSelected = theRow->mEndEpoch->GetCurrentSelection(theEnd) == kErrorOK;
-                theOutput.push_back("  end epochs " + std::to_string(theRow->mEndEpoch->GetListBox()->GetLineCount()) +
+                bool theSelected = theEndBox->GetCurrentSelection(theEnd) == kErrorOK;
+                theOutput.push_back("  end epochs " + std::to_string(theEndBox->GetListBox()->GetLineCount()) +
                                     " selection " + (theSelected ? std::to_string(theEnd) : std::string("none")));
             };
         else if (c == "form")   // form FIRST LAST [GROUP]: the editor form's controls by index (FormDigest)

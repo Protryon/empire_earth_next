@@ -61,6 +61,8 @@
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
 //!   paints' queued areas and runs, the trigger area's rectangle.
+//! - [`editor_players`]: the scenario editor's player tab whole in Rust (`EESEPlayerScreen`, its player rows and
+//!   game options page): the controls it makes as tables, its pages, rows, diplomacy grid, load and store.
 //! - [`editor_whole`]: the scenario editor's actions whole in Rust behind one C++ action (`EESEARust`): save, test,
 //!   exit, quick save, the tech lists, the rotation, the trigger area, the blank map (the elevation file's heights)
 //!   and the random map, the wall and gate placements, the unit placement and move ([`editor_place`]).
@@ -120,6 +122,9 @@ pub mod editor_actions;
 mod editor_actions_ffi;
 pub mod editor_events;
 pub mod editor_place;
+pub mod editor_players;
+#[cfg(not(test))]
+mod editor_players_ffi;
 pub mod editor_whole;
 #[cfg(not(test))]
 mod editor_whole_ffi;

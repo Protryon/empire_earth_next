@@ -1,11 +1,12 @@
 // C:\EEX\Empire Earth\Scenario Editor\EESERBUnitTypes.cpp (file name inferred): the class family of the scenario
-// editor's player tab, EESEPlayerScreen (vtable 0x4430dc; ctor 0x173313, dtor 0x1733bf), and its controls
-// EESERBUnitTypes/EESECBMaxPlayer/EESEUIBDiplomacy, the player-count action, the epoch/unit-limit events:
-// 0x173218..0x17acf6. The player screen's members (arrays at +0x1c[5], +0x80[0x11], +0x114 bool pairs[0x11]) use
-// the original-backed layouts in EESEPlayerScreen.h and EESEPlayerControls.h. Unit flags: the exe module set.
+// editor's player tab, EESEPlayerScreen (vtable 0x4430dc), its controls EESERBUnitTypes/EESECBMaxPlayer/
+// EESEUIBDiplomacy and the player-count action: 0x573218..0x57acf6. The player tab, its player rows and its game
+// options page are whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen holds the object, and this unit
+// is its host (ee_screenscpp_sepl). Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
+#include <set>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -118,7 +119,6 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
-#include "ee/EESEPlayerControls.h"
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EEUIBColor.h"
 #include "ee/EESEBSelect.h"
@@ -176,66 +176,37 @@ void EESECBMaxPlayer::ChangeSelection()
     UIComboBox::ChangeSelection();
 }
 
+// The player tab whole in Rust (ee_screens editor_players.rs): EESEPlayerScreen holds its object; the members
+// forward. Its constructor (0x573313), CreatePlayerControls (0x5737f9), CreateTechControls (0x57509c), the
+// destructor (0x5733bf), SetPlayerCount (0x573653), Leave (0x5737ac), GetPlayerCount (0x575a1f), Refresh
+// (0x575a3e), Load (0x575c0b), Enter (0x575c48), MarkPlayerChanged (0x575d58), Store (0x575d7e),
+// CopyFirstPlayerToAll (0x575eb2), ApplyPlayerSettings (0x575ee5), BuildTechTypeLists (0x575f38), FillTechLists
+// (0x5760ad), SelectPage (0x5761c8), RebuildTechLists (0x5766ed); the game options page EESEGamePage (0x576be4 ..
+// 0x578342) and the player rows EESEPlayerRow (0x578a29 .. 0x57a53e) are the object's records.
+
+static GEFont* sPlayerScreenFont;   // the screen's font while the object makes its controls
+
 // FUNCTION: EXE 0x573313
-// Creates the player tab: player page, tech tree page and game options page controls, using the given player combo
+// Creates the player tab: player page, tech tree page and game options page controls (editor_players.rs)
 EESEPlayerScreen::EESEPlayerScreen(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont,
                                    UIComboBox* inPlayerSelection)
 {
-    this->CreatePlayerControls(ioIndex, inForm, inFont);
-    this->CreateTechControls(ioIndex, inForm, inFont);
-    unsigned long theID = 1200;
-    this->mGame = new EESEGamePage(ioIndex, theID, inForm);
-    this->mDirty = false;
-    this->mPlayerSelection = inPlayerSelection;
+    sPlayerScreenFont = inFont;
+    uint32_t theIndex = (uint32_t)ioIndex;
+    this->mRust = ee_screens_sepl_new(inForm, inPlayerSelection, &theIndex);
+    ioIndex = theIndex;
 }
-
-// SYNTHETIC: EXE 0x5733a3
-// (the scalar deleting destructor, emitted with the vtable; slot EESEPlayerScreen+0x0)
 
 // FUNCTION: EXE 0x5733bf
-// Destroys the player tab, deleting every label, tab, list, button, page and player row it created
+// Destroys the player tab, deleting every control it created (editor_players.rs)
 EESEPlayerScreen::~EESEPlayerScreen()
 {
-    delete this->mTitle;
-    delete this->mMaxPlayersLabel;
-    delete this->mGame;
-    long i; for (i = 0; i < 5; i++) delete this->mColumnLabels[i];
-    delete this->mCPUOnlyTopLabel; delete this->mCPUOnlyBottomLabel; delete this->mSharedLOSTopLabel; delete this->mSharedLOSBottomLabel;
-    delete this->mStartEpochLabel; delete this->mEndEpochLabel; delete this->mPlayerLabel;
-    delete this->mMaxPlayer; delete this->mCivilizationLabel;
-    delete this->mTabs[0]; delete this->mTabs[1]; delete this->mTabs[2]; delete this->mTabs[3]; delete this->mTabs[4];
-    delete this->mSetPlayers;
-    delete this->mTechPlayerLabel; delete this->mUnitTypesLabel; delete this->mEnableTechnologiesLabel; delete this->mDisableTechnologiesLabel;
-    delete this->mTypeButtons[0]; delete this->mTypeButtons[1]; delete this->mTypeButtons[2]; delete this->mTypeButtons[3];
-    delete this->mTechList; delete this->mOtherTechList;
-    delete this->mAdd; delete this->mRemove; delete this->mAddAll; delete this->mRemoveAll;
-    delete this->mAllPlayersLabel; delete this->mDisplayEpoch;
-    delete this->mActiveLabel; delete this->mCheatLabel; delete this->mAttackLabel; delete this->mDefendLabel;
-    delete this->mBuildRepairLabel; delete this->mExploreLabel; delete this->mIgnoreLabel; delete this->mGatherLabel; delete this->mCitizenPercentageLabel;
-    for (i = 0; i < 17; i++) delete this->mPlayers[i];
+    ee_screens_sepl_free(this->mRust);
 }
 
-// FUNCTION: EXE 0x573653
-// Shows player rows 1..inCount and hides the rest, refills the player combo (Human, Player 2, ...), resizes the
-// diplomacy grid and posts an action setting the world's player count to inCount + 1
 void EESEPlayerScreen::SetPlayerCount(unsigned long inCount)
 {
-    UWideString theText, thePrefix, theFirstPlayer;
-    this->mPlayerSelection->DeleteAllEntries();
-    gResource->GetString(IDS_SE_PLAYER, thePrefix);
-    gResource->GetString(IDS_SE_HUMAN, theFirstPlayer);
-    unsigned long i; for (i = 1; i <= inCount; i++) {
-        this->mPlayers[i]->Show(this->mPage, i);
-        if (i > 1) sprintf(theText, "%s %ld", (const char*)thePrefix, i);
-        else theText = theFirstPlayer;
-        this->mPlayerSelection->AppendLine(theText);
-    }
-    this->mPlayerSelection->SetCurrentSelection(0);
-    for (i = inCount + 1; i <= 16; i++) this->mPlayers[i]->Hide();
-    this->mGame->SetPlayerCount(inCount);
-    EEAction* theAction = new EESEAChangeWorldPlayerCount(inCount + 1);
-    gUserInterface->PostAction(theAction);
-    theAction->Dereference();
+    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_SET_PLAYER_COUNT, (uint32_t)inCount, 0);
 }
 
 // FUNCTION: EXE 0x5737a3
@@ -245,327 +216,40 @@ void EESEAChangeWorldPlayerCount::Virtual4()
     gMaxPlayers = this->mCount;
 }
 
-// FUNCTION: EXE 0x5737ac
-// Leaves the player tab: disables the tech tree and options control groups, hides the player combo, stores the edits
-void EESEPlayerScreen::Leave()
+void EESEPlayerScreen::Leave() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_LEAVE, 0, 0); }
+void EESEPlayerScreen::Load() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_LOAD, 0, 0); }
+void EESEPlayerScreen::Enter() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_ENTER, 0, 0); }
+void EESEPlayerScreen::Store() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_STORE, 0, 0); }
+void EESEPlayerScreen::Refresh() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_REFRESH, 0, 0); }
+void EESEPlayerScreen::SelectPage(unsigned long inPage)
 {
-    this->mRemoveAll->GetForm()->GetEntityGroup(5)->Disable();
-    this->mRemoveAll->GetForm()->GetEntityGroup(8)->Disable();
-    this->mPlayerSelection->SetDisplayMode(kDisplayModeHidden);
-    this->Store();
+    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_SELECT_PAGE, (uint32_t)inPage, 0);
 }
-
-// FUNCTION: EXE 0x5737f9
-// Creates the player pages' controls: column headers, the max-players combo, the all-players setter, 17 player rows
-// (row 0 edits all players) and the five page tabs
-void EESEPlayerScreen::CreatePlayerControls(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
+void EESEPlayerScreen::FillTechLists() { ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_FILL_TECH_LISTS, 0, 0); }
+void EESEPlayerScreen::RebuildTechLists()
 {
-    GE2DPoint theLocation;
-    UWideString theText;
-    std::vector<UWideString> theStrings;
-    GEText* theGEText;
-    this->mPage = 0;
-    gResource->GetString(IDS_LOBBY_RESOURCES, theText);
-    theLocation.SetXY(145.0f, 25.0f);
-    this->mTitle = new UITextLabel(theText, inFont, 0x12e,
-        GERectangle(theLocation, 290.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mTitle->SetAlignment(kTextAlignCenter);
-    this->mTitle->SetBgOpacity(0.4f);
-    theGEText = this->mTitle->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mTitle, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_MAX_PLAYERS, theText);
-    theLocation.SetXY(5.0f, 25.0f);
-    this->mMaxPlayersLabel = new UITextLabel(theText, inFont, 0x15b,
-        GERectangle(theLocation, 125.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mMaxPlayersLabel->SetAlignment(kTextAlignCenter);
-    this->mMaxPlayersLabel->SetBgOpacity(0.4f);
-    theGEText = this->mMaxPlayersLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mMaxPlayersLabel, 4);
-    ++ioIndex;
-    unsigned long i; for (i = 0; i < 5; ++i) {
-        gResource->GetString(IDS_RESOURCE_NAME_FIRST + i, theText);
-        theLocation.SetXY((float)i * 55.0f + 145.0f, 50.0f);
-        this->mColumnLabels[i] = new UITextLabel(theText, inFont, 0x12f + i,
-            GERectangle(theLocation, 55.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-        this->mColumnLabels[i]->SetAlignment(kTextAlignCenter);
-        this->mColumnLabels[i]->SetBgOpacity(0.4f);
-        theGEText = this->mColumnLabels[i]->GetGEText();
-        theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-        theGEText->SetIsTransparent(true);
-        inForm->AddControl(this->mColumnLabels[i], 4);
-        ++ioIndex;
-    }
-    gResource->GetString(IDS_START_EPOCH, theText);
-    theLocation.SetXY(440.0f, 50.0f);
-    this->mStartEpochLabel = new UITextLabel(theText, inFont, 0x13b,
-        GERectangle(theLocation, 175.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mStartEpochLabel->SetAlignment(kTextAlignCenter);
-    this->mStartEpochLabel->SetBgOpacity(0.4f);
-    theGEText = this->mStartEpochLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mStartEpochLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_END_EPOCH, theText);
-    theLocation.SetX(620.0f);
-    theLocation.SetY(50.0f);
-    this->mEndEpochLabel = new UITextLabel(theText, inFont, 0x16b,
-        GERectangle(theLocation, 175.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mEndEpochLabel->SetAlignment(kTextAlignCenter);
-    this->mEndEpochLabel->SetBgOpacity(0.4f);
-    theGEText = this->mEndEpochLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mEndEpochLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_CPU, theText);
-    theLocation.SetX(505.0f);
-    theLocation.SetY(25.0f);
-    this->mCPUOnlyTopLabel = new UITextLabel(theText, inFont, 0x16c,
-        GERectangle(theLocation, 48.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mCPUOnlyTopLabel->SetAlignment(kTextAlignCenter);
-    this->mCPUOnlyTopLabel->SetBgOpacity(0.4f);
-    theGEText = this->mCPUOnlyTopLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mCPUOnlyTopLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_ONLY, theText);
-    theLocation.SetX(505.0f);
-    theLocation.SetY(50.0f);
-    this->mCPUOnlyBottomLabel = new UITextLabel(theText, inFont, 0x16d,
-        GERectangle(theLocation, 48.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mCPUOnlyBottomLabel->SetAlignment(kTextAlignCenter);
-    this->mCPUOnlyBottomLabel->SetBgOpacity(0.4f);
-    theGEText = this->mCPUOnlyBottomLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mCPUOnlyBottomLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SHARED, theText);
-    theLocation.SetX(560.0f);
-    theLocation.SetY(25.0f);
-    this->mSharedLOSTopLabel = new UITextLabel(theText, inFont, 0x16e,
-        GERectangle(theLocation, 48.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mSharedLOSTopLabel->SetAlignment(kTextAlignCenter);
-    this->mSharedLOSTopLabel->SetBgOpacity(0.4f);
-    theGEText = this->mSharedLOSTopLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mSharedLOSTopLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_GAME_LOS, theText);
-    theLocation.SetX(560.0f);
-    theLocation.SetY(50.0f);
-    this->mSharedLOSBottomLabel = new UITextLabel(theText, inFont, 0x16f,
-        GERectangle(theLocation, 48.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mSharedLOSBottomLabel->SetAlignment(kTextAlignCenter);
-    this->mSharedLOSBottomLabel->SetBgOpacity(0.4f);
-    theGEText = this->mSharedLOSBottomLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mSharedLOSBottomLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_CIVILIZATION, theText);
-    theLocation.SetX(325.0f);
-    theLocation.SetY(50.0f);
-    this->mCivilizationLabel = new UITextLabel(theText, inFont, 0x13e,
-        GERectangle(theLocation, 175.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mCivilizationLabel->SetAlignment(kTextAlignCenter);
-    this->mCivilizationLabel->SetBgOpacity(0.4f);
-    theGEText = this->mCivilizationLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mCivilizationLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_PLAYER, theText);
-    theLocation.SetXY(145.0f, 50.0f);
-    this->mPlayerLabel = new UITextLabel(theText, inFont, 0x13f,
-        GERectangle(theLocation, 175.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mPlayerLabel->SetAlignment(kTextAlignCenter);
-    this->mPlayerLabel->SetBgOpacity(0.4f);
-    theGEText = this->mPlayerLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mPlayerLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_ACTIVE, theText);
-    theLocation.SetXY(158.0f, 50.0f);
-    this->mActiveLabel = new UITextLabel(theText, inFont, 0x171,
-        GERectangle(theLocation, 75.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mActiveLabel->SetAlignment(kTextAlignCenter);
-    this->mActiveLabel->SetBgOpacity(0.4f);
-    theGEText = this->mActiveLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mActiveLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_CHEAT, theText);
-    theLocation.SetXY(208.0f, 25.0f);
-    this->mCheatLabel = new UITextLabel(theText, inFont, 0x172,
-        GERectangle(theLocation, 75.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mCheatLabel->SetAlignment(kTextAlignCenter);
-    this->mCheatLabel->SetBgOpacity(0.4f);
-    theGEText = this->mCheatLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mCheatLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_ATTACK, theText);
-    theLocation.SetXY(258.0f, 50.0f);
-    this->mAttackLabel = new UITextLabel(theText, inFont, 0x173,
-        GERectangle(theLocation, 75.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mAttackLabel->SetAlignment(kTextAlignCenter);
-    this->mAttackLabel->SetBgOpacity(0.4f);
-    theGEText = this->mAttackLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mAttackLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_DEFEND, theText);
-    theLocation.SetXY(308.0f, 25.0f);
-    this->mDefendLabel = new UITextLabel(theText, inFont, 0x174,
-        GERectangle(theLocation, 75.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mDefendLabel->SetAlignment(kTextAlignCenter);
-    this->mDefendLabel->SetBgOpacity(0.4f);
-    theGEText = this->mDefendLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mDefendLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_BUILD_REPAIR, theText);
-    theLocation.SetXY(358.0f, 50.0f);
-    this->mBuildRepairLabel = new UITextLabel(theText, gU531930, 0x175,
-        GERectangle(theLocation, 75.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mBuildRepairLabel->SetAlignment(kTextAlignCenter);
-    this->mBuildRepairLabel->SetBgOpacity(0.4f);
-    theGEText = this->mBuildRepairLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mBuildRepairLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_EXPLORE, theText);
-    theLocation.SetXY(408.0f, 25.0f);
-    this->mExploreLabel = new UITextLabel(theText, inFont, 0x176,
-        GERectangle(theLocation, 75.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mExploreLabel->SetAlignment(kTextAlignCenter);
-    this->mExploreLabel->SetBgOpacity(0.4f);
-    theGEText = this->mExploreLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mExploreLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_IGNORE, theText);
-    theLocation.SetXY(458.0f, 50.0f);
-    this->mIgnoreLabel = new UITextLabel(theText, inFont, 0x177,
-        GERectangle(theLocation, 75.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mIgnoreLabel->SetAlignment(kTextAlignCenter);
-    this->mIgnoreLabel->SetBgOpacity(0.4f);
-    theGEText = this->mIgnoreLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mIgnoreLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_SE_GATHER, theText);
-    theLocation.SetXY(508.0f, 25.0f);
-    this->mGatherLabel = new UITextLabel(theText, inFont, 0x178,
-        GERectangle(theLocation, 75.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mGatherLabel->SetAlignment(kTextAlignCenter);
-    this->mGatherLabel->SetBgOpacity(0.4f);
-    theGEText = this->mGatherLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mGatherLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_CITIZEN_PERCENTAGE, theText);
-    theLocation.SetXY(570.0f, 50.0f);
-    this->mCitizenPercentageLabel = new UITextLabel(theText, inFont, 0x179,
-        GERectangle(theLocation, 175.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mCitizenPercentageLabel->SetAlignment(kTextAlignCenter);
-    this->mCitizenPercentageLabel->SetBgOpacity(0.4f);
-    theGEText = this->mCitizenPercentageLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mCitizenPercentageLabel, 4);
-    ++ioIndex;
-    gResource->GetString(IDS_ALL_PLAYERS, theText);
-    theLocation.SetXY(5.0f, 74.0f);
-    this->mAllPlayersLabel = new UITextLabel(theText, inFont, 0x143,
-        GERectangle(theLocation, 100.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mAllPlayersLabel->SetAlignment(kTextAlignCenter);
-    this->mAllPlayersLabel->SetBgOpacity(0.4f);
-    theGEText = this->mAllPlayersLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mAllPlayersLabel, 4);
-    ++ioIndex;
-    theStrings.resize(15);
-    gResource->GetString(IDS_SE_PLAYERS, theText);
-    for (i = 2; i <= 16; ++i)
-        sprintf(theStrings[i - 2], "%ld %s", i, (const char*)theText);
-    theLocation.SetXY(5.0f, 47.0f);
-    this->mMaxPlayer = new EESECBMaxPlayer(0x15c, 1, theStrings, inFont, theLocation,
-        125, inFont->GetHeight() << 4, inForm, ioIndex, 0, 2);
-    theGEText = this->mMaxPlayer->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mMaxPlayer->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mMaxPlayer->SetTextBoxBgOpacity(0.4f);
-    inForm->AddControl(this->mMaxPlayer, 4);
-    ++ioIndex;
-    theLocation.SetX(5.0f);
-    theLocation.SetY(this->mAllPlayersLabel->GetRectangle().GetBottom() + 2.0f);
-    this->mSetPlayers = new EESEPSSetPlayers(theLocation, inFont, inForm, ioIndex);
-    this->mSetPlayers->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mSetPlayers, 4);
-    ++ioIndex;
-    unsigned long theID = 400;
-    theLocation.SetY(74.0f);
-    this->mPlayers[0] = new EESEPlayerRow(theID, theLocation.GetY(), inFont, ioIndex, 0, inForm, true);
-    theLocation.SetY(130.0f);
-    for (i = 1; i <= 16; ++i)
-        this->mPlayers[i] = new EESEPlayerRow(theID, (float)(i - 1) * 26.0f + theLocation.GetY(),
-            inFont, ioIndex, i, inForm, false);
-    theLocation.SetXY(0.0f, 0.0f);
-    this->mTabs[kPlayerScreenPlayerPage1] = new EESETab(kPlayerTabPlayerPage1, theLocation, inFont, inForm, ioIndex, true);
-    this->mTabs[kPlayerScreenPlayerPage1]->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mTabs[kPlayerScreenPlayerPage1], 4);
-    inForm->AddControl(this->mTabs[kPlayerScreenPlayerPage1], 5);
-    inForm->AddControl(this->mTabs[kPlayerScreenPlayerPage1], 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mTabs[kPlayerScreenPlayerPage1]->GetRectangle().GetRight() + 1.0f, 0.0f);
-    this->mTabs[kPlayerScreenPlayerPage2] = new EESETab(kPlayerTabPlayerPage2, theLocation, inFont, inForm, ioIndex, false);
-    this->mTabs[kPlayerScreenPlayerPage2]->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mTabs[kPlayerScreenPlayerPage2], 4);
-    inForm->AddControl(this->mTabs[kPlayerScreenPlayerPage2], 5);
-    inForm->AddControl(this->mTabs[kPlayerScreenPlayerPage2], 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mTabs[kPlayerScreenPlayerPage2]->GetRectangle().GetRight() + 1.0f, 0.0f);
-    this->mTabs[kPlayerScreenAISettings] = new EESETab(kPlayerTabAISettings, theLocation, inFont, inForm, ioIndex, false);
-    this->mTabs[kPlayerScreenAISettings]->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mTabs[kPlayerScreenAISettings], 4);
-    inForm->AddControl(this->mTabs[kPlayerScreenAISettings], 5);
-    inForm->AddControl(this->mTabs[kPlayerScreenAISettings], 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mTabs[kPlayerScreenAISettings]->GetRectangle().GetRight() + 1.0f, 0.0f);
-    this->mTabs[kPlayerScreenTechTree] = new EESETab(kPlayerTabTechTree, theLocation, inFont, inForm, ioIndex, false);
-    this->mTabs[kPlayerScreenTechTree]->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mTabs[kPlayerScreenTechTree], 4);
-    inForm->AddControl(this->mTabs[kPlayerScreenTechTree], 5);
-    inForm->AddControl(this->mTabs[kPlayerScreenTechTree], 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mTabs[kPlayerScreenTechTree]->GetRectangle().GetRight() + 1.0f, 0.0f);
-    this->mTabs[kPlayerScreenOptions] = new EESETab(kPlayerTabOptions, theLocation, inFont, inForm, ioIndex, false);
-    this->mTabs[kPlayerScreenOptions]->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mTabs[kPlayerScreenOptions], 4);
-    inForm->AddControl(this->mTabs[kPlayerScreenOptions], 5);
-    inForm->AddControl(this->mTabs[kPlayerScreenOptions], 8);
-    ++ioIndex;
+    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_REBUILD_TECH_LISTS, 0, 0);
+}
+void EESEPlayerScreen::CopyFirstPlayerToAll()
+{
+    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_COPY_FIRST_TO_ALL, 0, 0);
+}
+unsigned long EESEPlayerScreen::GetPlayerCount()
+{
+    return ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_PLAYER_COUNT, 0, 0);
+}
+void EESEPlayerScreen::MarkPlayerChanged(unsigned long inPlayer, bool inFlag)
+{
+    ee_screens_sepl_call(this->mRust, EE_SCREENS_SEPL_MARK_CHANGED, (uint32_t)inPlayer, inFlag);
+}
+UIComboBox* EESEPlayerScreen::GetPlayerSelection()
+{
+    return static_cast<UIComboBox*>(ee_screens_sepl_control(this->mRust, 0xffffffffu, 0));
+}
+UIComboBox* EESEPlayerScreen::GetRowEpochs(unsigned long inRow, bool inEnd)
+{
+    return static_cast<UIComboBox*>(ee_screens_sepl_control(
+        this->mRust, (uint32_t)inRow, inEnd ? EE_SCREENS_SEPL_ROW_END_EPOCH : EE_SCREENS_SEPL_ROW_START_EPOCH));
 }
 
 // FUNCTION: EXE 0x575001
@@ -582,505 +266,6 @@ EESECBMaxPlayer::EESECBMaxPlayer(unsigned long inID, unsigned long inTextBoxType
 
 // SYNTHETIC: EXE 0x575079
 // (the scalar deleting destructor, emitted with the vtable; slot EESECBMaxPlayer+0x0, stores EESECBMaxPlayer vtable)
-
-// FUNCTION: EXE 0x57509c
-// Creates the tech tree page: labels, the four unit-type buttons, the enabled and disabled tech lists, the four
-// move buttons and the Display Epochs check box
-void EESEPlayerScreen::CreateTechControls(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
-{
-    GE2DPoint theLocation;
-    UWideString theText;
-    GEText* theGEText;
-    gResource->GetString(IDS_SE_PLAYER, theText);
-    theLocation.SetX(5.0f);
-    theLocation.SetY(50.0f);
-    this->mTechPlayerLabel = new UITextLabel(theText, inFont, 0x145,
-        GERectangle(theLocation, 140.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mTechPlayerLabel->SetAlignment(kTextAlignLeft);
-    this->mTechPlayerLabel->SetBgOpacity(0.4f);
-    theGEText = this->mTechPlayerLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mTechPlayerLabel, 5);
-    ++ioIndex;
-    gResource->GetString(IDS_UNIT_TYPES, theText);
-    theLocation.SetX(5.0f);
-    theLocation.SetY(200.0f);
-    this->mUnitTypesLabel = new UITextLabel(theText, inFont, 0x146,
-        GERectangle(theLocation, 140.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mUnitTypesLabel->SetAlignment(kTextAlignLeft);
-    this->mUnitTypesLabel->SetBgOpacity(0.4f);
-    theGEText = this->mUnitTypesLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mUnitTypesLabel, 5);
-    ++ioIndex;
-    gResource->GetString(IDS_ENABLE_TECHNOLOGIES, theText);
-    theLocation.SetX(245.0f);
-    theLocation.SetY(50.0f);
-    this->mEnableTechnologiesLabel = new UITextLabel(theText, inFont, 0x147,
-        GERectangle(theLocation, 250.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mEnableTechnologiesLabel->SetAlignment(kTextAlignCenter);
-    this->mEnableTechnologiesLabel->SetBgOpacity(0.4f);
-    theGEText = this->mEnableTechnologiesLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mEnableTechnologiesLabel, 5);
-    ++ioIndex;
-    gResource->GetString(IDS_DISABLE_TECHNOLOGIES, theText);
-    theLocation.SetX(545.0f);
-    theLocation.SetY(50.0f);
-    this->mDisableTechnologiesLabel = new UITextLabel(theText, inFont, 0x148,
-        GERectangle(theLocation, 250.0f, (float)inFont->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mDisableTechnologiesLabel->SetAlignment(kTextAlignCenter);
-    this->mDisableTechnologiesLabel->SetBgOpacity(0.4f);
-    theGEText = this->mDisableTechnologiesLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mDisableTechnologiesLabel, 5);
-    ++ioIndex;
-    theLocation.SetX(5.0f);
-    theLocation.SetY(220.0f);
-    for (unsigned long i = 0; i < 4; ++i) {
-        gResource->GetString(IDS_SE_UNIT_GROUP_FIRST + i, theText);
-        this->mTypeButtons[i] = new EESERBUnitTypes(0x14a + i, theText, inFont, theLocation,
-            140, 24, inForm, ioIndex, 0, false, i == 0);
-        this->mTypeButtons[i]->GetTextLabel()->SetBgOpacity(0.4f);
-        theGEText = this->mTypeButtons[i]->GetTextLabel()->GetGEText();
-        theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-        theGEText->SetIsTransparent(true);
-        inForm->AddControl(this->mTypeButtons[i], 5);
-        ++ioIndex;
-        theLocation.SetY(this->mTypeButtons[i]->GetRectangle().GetBottom() + 2.0f);
-    }
-    theLocation.SetX(245.0f);
-    theLocation.SetY(74.0f);
-    std::vector<UWideString> theTemp1;
-    this->mTechList = new EESEUITechListBox(kSERBUnitTypesTechList, theTemp1, inFont, false, theLocation,
-        250, 450, inForm, ioIndex, 3);
-    theGEText = this->mTechList->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mTechList->SetScrollBarBgOpacity(0.4f);
-    this->mTechList->SetBgOpacity(0.4f);
-    inForm->AddControl(this->mTechList, 5);
-    ++ioIndex;
-    theLocation.SetX(500.0f);
-    theLocation.SetY(240.0f);
-    this->mAdd = new EESEBSelect(kSelectButtonMoveRight, theLocation, inForm, inFont, ioIndex);
-    this->mAdd->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mAdd, 5);
-    ++ioIndex;
-    theLocation.SetX(500.0f);
-    theLocation.SetY(271.0f);
-    this->mRemove = new EESEBSelect(kSelectButtonMoveLeft, theLocation, inForm, inFont, ioIndex);
-    this->mRemove->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mRemove, 5);
-    ++ioIndex;
-    theLocation.SetX(500.0f);
-    theLocation.SetY(302.0f);
-    this->mAddAll = new EESEBSelect(kSelectButtonMoveAllRight, theLocation, inForm, inFont, ioIndex);
-    this->mAddAll->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mAddAll, 5);
-    ++ioIndex;
-    theLocation.SetX(500.0f);
-    theLocation.SetY(333.0f);
-    this->mRemoveAll = new EESEBSelect(kSelectButtonMoveAllLeft, theLocation, inForm, inFont, ioIndex);
-    this->mRemoveAll->SetBgOpacity(1.0f);
-    inForm->AddControl(this->mRemoveAll, 5);
-    ++ioIndex;
-    theLocation.SetX(545.0f);
-    theLocation.SetY(74.0f);
-    std::vector<UWideString> theTemp2;
-    this->mOtherTechList = new EESEUITechListBox(kSERBUnitTypesOtherTechList, theTemp2, inFont, false, theLocation,
-        250, 450, inForm, ioIndex, 3);
-    theGEText = this->mOtherTechList->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mOtherTechList->SetBgOpacity(0.4f);
-    this->mOtherTechList->SetScrollBarBgOpacity(0.4f);
-    inForm->AddControl(this->mOtherTechList, 5);
-    ++ioIndex;
-    theLocation.SetX(5.0f);
-    theLocation.SetY(370.0f);
-    gResource->GetString(IDS_DISPLAY_EPOCHS, theText);
-    this->mDisplayEpoch = new UICheckBox(kSERBUnitTypesDisplayEpoch, theText, gU531938,
-        GERectangle(theLocation, 150.0f, (float)(gU531938->GetHeight() + 1.0f)), inForm, ioIndex, 0, false);
-    this->mDisplayEpoch->SetBgOpacity(0.4f);
-    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_DISPLAY_EPOCH);
-    this->mDisplayEpoch->SetTriggerEvent(kControlTriggerChecked, theEvent);
-    this->mDisplayEpoch->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
-    theEvent->Dereference();
-    theGEText = this->mDisplayEpoch->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mDisplayEpoch, 5);
-    ++ioIndex;
-}
-
-// FUNCTION: EXE 0x575a1f
-// Returns the player count chosen in the max-players combo (selection + 2), despite the name
-unsigned long EESEPlayerScreen::GetPlayerCount()
-{
-    unsigned long theSelection;
-    this->mMaxPlayer->GetListBox()->GetCurrentSelection(theSelection);
-    return theSelection + 2;
-}
-
-// FUNCTION: EXE 0x575a3e
-// Resets the player tab to page 1's headers, refills the max-players combo (2 up to the world's player count - 1),
-// selects gMaxPlayers - 1 players and rebuilds the tech type lists
-void EESEPlayerScreen::Refresh()
-{
-    UWideString thePrefix;
-    UWideString theText;
-    this->mTitle->SetDisplayMode(kDisplayModeShown);
-    this->mStartEpochLabel->SetDisplayMode(kDisplayModeShown);
-    this->mEndEpochLabel->SetDisplayMode(kDisplayModeShown);
-    for (unsigned long theColumn = 0; theColumn < 5; ++theColumn)
-        this->mColumnLabels[theColumn]->SetDisplayMode(kDisplayModeShown);
-    this->mCivilizationLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mPlayerLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCPUOnlyTopLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCPUOnlyBottomLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mSharedLOSTopLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mSharedLOSBottomLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mActiveLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCheatLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mAttackLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mDefendLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mBuildRepairLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mExploreLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mIgnoreLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mGatherLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCitizenPercentageLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mMaxPlayer->DeleteAllEntries();
-    gResource->GetString(IDS_SE_PLAYERS, thePrefix);
-    for (unsigned long thePlayerCount = 2; thePlayerCount < (unsigned long)gWorld.GetNumPlayers(); ++thePlayerCount) {
-        sprintf(theText, "%ld %s", thePlayerCount, (const char*)thePrefix);
-        this->mMaxPlayer->AppendLine(theText);
-    }
-    unsigned long theSelection;
-    this->mMaxPlayer->GetListBox()->GetCurrentSelection(theSelection);
-    unsigned long theCount = theSelection + 2;
-    unsigned long i = 0;
-    do {
-        this->mPlayers[i]->Show(kPlayerScreenPlayerPage1, i);
-        ++i;
-    } while (i <= theCount);
-    for (i = theCount + 1; i <= 16; i++) this->mPlayers[i]->Hide();
-    this->mMaxPlayer->SetCurrentSelection(gMaxPlayers - 3);
-    this->SetPlayerCount(gMaxPlayers - 1);
-    this->BuildTechTypeLists();
-}
-
-// FUNCTION: EXE 0x575c0b
-// Refreshes the player tab and loads every player row and the game options page from the world
-void EESEPlayerScreen::Load()
-{
-    this->Refresh();
-    for (unsigned long i = 0; i < gWorld.GetNumPlayers(); i++) this->mPlayers[i]->Load(i);
-    this->mGame->Load();
-}
-
-// FUNCTION: EXE 0x575c48
-// Enters the player tab on player page 1 and moves the player combo to (5, 74); checking page 1 unchecks the other
-// tabs, so only the player page groups are switched (the dead tech tree / AI branches used shifted groups)
-void EESEPlayerScreen::Enter()
-{
-    this->mPage = 0;
-    GE2DPoint theLocation(5.0f, 74.0f);
-    this->mTabs[kPlayerScreenPlayerPage1]->Check();
-    UIForm* theForm = this->mTabs[kPlayerScreenPlayerPage1]->GetForm();
-    theForm->GetEntityGroup(5)->Disable();
-    theForm->GetEntityGroup(4)->Enable();
-    theForm->GetEntityGroup(8)->Disable();
-    this->mPlayerSelection->SetLocation(theLocation);
-}
-
-// FUNCTION: EXE 0x575d58
-// Marks a player's settings as changed, and as needing a full tech tree reload when inFlag is set
-void EESEPlayerScreen::MarkPlayerChanged(unsigned long inPlayer, bool inFlag)
-{
-    this->mChanges[inPlayer].mChanged = true;
-    if (!this->mChanges[inPlayer].mRefresh) this->mChanges[inPlayer].mRefresh = inFlag;
-}
-
-// FUNCTION: EXE 0x575d7e
-// Stores the player tab: saves the rows' epochs, applies all settings, has the load thread reload each changed
-// player's epoch media and tech tree, and redraws the mini-map after a color change
-void EESEPlayerScreen::Store()
-{
-    unsigned long theCount;
-    // the selection lives in its own block: the original shares its frame slot with the loop counters (an inline
-    // player-count helper may stand behind it)
-    {
-        unsigned long theSelection;
-        this->mMaxPlayer->GetListBox()->GetCurrentSelection(theSelection);
-        theCount = theSelection + 3;
-    }
-    unsigned long i; for (i = 1; i < theCount; i++) this->mPlayers[i]->Save(i);
-    this->ApplyPlayerSettings();
-    // The existing queue API transports the original scalar message words as void*.
-    for (i = 0; i <= 16; i++) {
-        if (this->mChanges[i].mChanged == true)
-            static_cast<EEUIFScenarioEditor*>(this->mAllPlayersLabel->GetForm())->mLoadThread->Post406(
-                reinterpret_cast<void*>(i), reinterpret_cast<void*>(gWorld.GetPlayer(i)->GetTechTree()->mStartEpoch));
-    }
-    for (i = 0; i <= 16; i++) {
-        if (this->mChanges[i].mChanged == true)
-            static_cast<EEUIFScenarioEditor*>(this->mAllPlayersLabel->GetForm())->mLoadThread->Post403(
-                reinterpret_cast<void*>(i), this->mChanges[i].mRefresh);
-    }
-    for (i = 0; i <= 16; i++) {
-        if (this->mChanges[i].mChanged != true)
-            continue;
-        static_cast<EEUIFScenarioEditor*>(this->mAllPlayersLabel->GetForm())->mLoadThread->Post407(
-            reinterpret_cast<void*>(i), reinterpret_cast<void*>(gWorld.GetPlayer(i)->GetTechTree()->mStartEpoch));
-        this->mChanges[i].mRefresh = false;
-        this->mChanges[i].mChanged = false;
-    }
-    if (this->mDirty == true) {
-        if (gMiniMap) gMiniMap->Redraw();
-        this->mDirty = false;
-    }
-}
-
-// FUNCTION: EXE 0x575eb2
-// Copies the all-players row (row 0) into every player row
-void EESEPlayerScreen::CopyFirstPlayerToAll()
-{
-    for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++) this->mPlayers[i]->CopyFrom(this->mPlayers[0]);
-}
-
-// FUNCTION: EXE 0x575ee5
-// Applies every existing player's row and the game options page to the world, then recolors the mini-map
-void EESEPlayerScreen::ApplyPlayerSettings()
-{
-    for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++) {
-        if (gWorld.GetPlayer(i)) this->mPlayers[i]->ApplySettings(i);
-    }
-    this->mGame->Save();
-    gMiniMap->Recolor();
-}
-
-// FUNCTION: EXE 0x575f38
-// Sorts every tech tree node into the editor's building, hero, unit and technology lists (no unit class means a
-// technology), then refills the tech lists
-void EESEPlayerScreen::BuildTechTypeLists()
-{
-    std::vector<long> theIDs;
-    gTechTree.GetNodeIDs(theIDs);
-    unsigned long theCount = theIDs.size();
-    EESEPSSetPlayers::sV531FB0.clear();
-    EESEPSSetPlayers::sBuildingTechs.clear();
-    EESEPSSetPlayers::sTechnologyTechs.clear();
-    EESEPSSetPlayers::sV531F88.clear();
-    for (unsigned long i = 0; i < theCount; ++i) {
-        long theClassIndex = gTechTree.Get(theIDs[i])->mData->mUnitClass;
-        if (theClassIndex >= 0) {
-            EEUnitClass* theClass = gUnitClassTable[theClassIndex];
-            if (theClass) {
-                if (theClass->IsLandBuilding())
-                    EESEPSSetPlayers::sBuildingTechs.push_back(theIDs[i]);
-                else if (theClass->mAIKind == kAIKindHero)
-                    EESEPSSetPlayers::sV531F88.push_back(theIDs[i]);
-                else
-                    EESEPSSetPlayers::sV531FB0.push_back(theIDs[i]);
-            } else
-                EESEPSSetPlayers::sTechnologyTechs.push_back(theIDs[i]);
-        } else {
-            EESEPSSetPlayers::sTechnologyTechs.push_back(theIDs[i]);
-        }
-    }
-    this->FillTechLists();
-}
-
-// FUNCTION: EXE 0x5760ad
-// Refills both tech lists for the chosen player and unit type: editor-visible techs go to the enabled list, or to
-// the disabled list when obsoleted in the editor
-void EESEPlayerScreen::FillTechLists()
-{
-    unsigned long theSelection;
-    this->mPlayerSelection->GetCurrentSelection(theSelection);
-    EETechTree* theTree = gWorld.mPlayers[theSelection + 1]->GetTechTree();
-    std::vector<long>* theTechs;
-    if (this->mTypeButtons[kSETechListUnits]->GetIsChecked()) theTechs = &EESEPSSetPlayers::sV531FB0;
-    else if (this->mTypeButtons[kSETechListBuildings]->GetIsChecked()) theTechs = &EESEPSSetPlayers::sBuildingTechs;
-    else if (this->mTypeButtons[kSETechListHeroes]->GetIsChecked()) theTechs = &EESEPSSetPlayers::sV531F88;
-    else theTechs = &EESEPSSetPlayers::sTechnologyTechs;
-    this->mOtherTechList->Clear();
-    this->mTechList->Clear();
-    unsigned long theCount = theTechs->size();
-    this->mOtherTechList->mTechs.reserve(theCount);
-    this->mTechList->mTechs.reserve(theCount);
-    for (unsigned long i = 0; i < theCount; i++) {
-        EETechTreeNode* theNode = theTree->Get((*theTechs)[i]);
-        if (theNode->mData->mShowInEditor == true) {
-            if (theNode->mScenEditorObsoleted) this->mOtherTechList->AddTech((*theTechs)[i]);
-            else this->mTechList->AddTech((*theTechs)[i]);
-        }
-    }
-    this->mTechList->Rebuild();
-    this->mOtherTechList->Rebuild();
-}
-
-// FUNCTION: EXE 0x5761c8
-// Switches the player tab to a page (player 1/2, AI settings, tech tree, options): enables its control group and
-// shows its headers and the player rows' controls for it; does nothing if already there
-void EESEPlayerScreen::SelectPage(unsigned long inPage)
-{
-    UIForm* theForm = this->mTabs[kPlayerScreenPlayerPage1]->GetForm();
-    if (this->mPage == inPage) return;
-    this->mPage = inPage;
-    switch (inPage) {
-    case kPlayerScreenPlayerPage1: {
-    theForm->GetEntityGroup(4)->Enable();
-    theForm->GetEntityGroup(5)->Disable();
-    theForm->GetEntityGroup(8)->Disable();
-    this->mTitle->SetDisplayMode(kDisplayModeShown);
-    this->mStartEpochLabel->SetDisplayMode(kDisplayModeShown);
-    this->mEndEpochLabel->SetDisplayMode(kDisplayModeShown);
-    for (unsigned long theColumn = 0; theColumn < 5; ++theColumn)
-        this->mColumnLabels[theColumn]->SetDisplayMode(kDisplayModeShown);
-    this->mCivilizationLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mPlayerLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mPlayerSelection->SetDisplayMode(kDisplayModeHidden);
-    this->mCPUOnlyTopLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCPUOnlyBottomLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mSharedLOSTopLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mSharedLOSBottomLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mActiveLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCheatLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mAttackLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mDefendLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mBuildRepairLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mExploreLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mIgnoreLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mGatherLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCitizenPercentageLabel->SetDisplayMode(kDisplayModeHidden);
-    unsigned long theSelection;
-    this->mMaxPlayer->GetListBox()->GetCurrentSelection(theSelection);
-    unsigned long theCount = theSelection + 2;
-    unsigned long i = 0;
-    do {
-        this->mPlayers[i]->Show(kPlayerScreenPlayerPage1, i);
-        ++i;
-    } while (i <= theCount);
-    for (i = theCount + 1; i <= 16; i++) this->mPlayers[i]->Hide();
-        break;
-    }
-    case kPlayerScreenPlayerPage2: {
-    theForm->GetEntityGroup(4)->Enable();
-    theForm->GetEntityGroup(8)->Disable();
-    theForm->GetEntityGroup(5)->Disable();
-    this->mTitle->SetDisplayMode(kDisplayModeHidden);
-    this->mStartEpochLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mEndEpochLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mPlayerSelection->SetDisplayMode(kDisplayModeHidden);
-    for (unsigned long theColumn = 0; theColumn < 5; ++theColumn)
-        this->mColumnLabels[theColumn]->SetDisplayMode(kDisplayModeHidden);
-    this->mCivilizationLabel->SetDisplayMode(kDisplayModeShown);
-    this->mPlayerLabel->SetDisplayMode(kDisplayModeShown);
-    this->mCPUOnlyTopLabel->SetDisplayMode(kDisplayModeShown);
-    this->mCPUOnlyBottomLabel->SetDisplayMode(kDisplayModeShown);
-    this->mSharedLOSTopLabel->SetDisplayMode(kDisplayModeShown);
-    this->mSharedLOSBottomLabel->SetDisplayMode(kDisplayModeShown);
-    this->mActiveLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCheatLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mAttackLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mDefendLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mBuildRepairLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mExploreLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mIgnoreLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mGatherLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCitizenPercentageLabel->SetDisplayMode(kDisplayModeHidden);
-    unsigned long theSelection;
-    this->mMaxPlayer->GetListBox()->GetCurrentSelection(theSelection);
-    unsigned long theCount = theSelection + 2;
-    unsigned long i = 0;
-    do {
-        this->mPlayers[i]->Show(kPlayerScreenPlayerPage2, i);
-        ++i;
-    } while (i <= theCount);
-    for (i = theCount + 1; i <= 16; i++) this->mPlayers[i]->Hide();
-        break;
-    }
-    case kPlayerScreenAISettings: {
-    theForm->GetEntityGroup(4)->Enable();
-    theForm->GetEntityGroup(8)->Disable();
-    theForm->GetEntityGroup(5)->Disable();
-    this->mTitle->SetDisplayMode(kDisplayModeHidden);
-    this->mStartEpochLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mEndEpochLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mPlayerSelection->SetDisplayMode(kDisplayModeHidden);
-    for (unsigned long theColumn = 0; theColumn < 5; ++theColumn)
-        this->mColumnLabels[theColumn]->SetDisplayMode(kDisplayModeHidden);
-    this->mCivilizationLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mPlayerLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCPUOnlyTopLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mCPUOnlyBottomLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mSharedLOSTopLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mSharedLOSBottomLabel->SetDisplayMode(kDisplayModeHidden);
-    this->mActiveLabel->SetDisplayMode(kDisplayModeShown);
-    this->mCheatLabel->SetDisplayMode(kDisplayModeShown);
-    this->mAttackLabel->SetDisplayMode(kDisplayModeShown);
-    this->mDefendLabel->SetDisplayMode(kDisplayModeShown);
-    this->mBuildRepairLabel->SetDisplayMode(kDisplayModeShown);
-    this->mExploreLabel->SetDisplayMode(kDisplayModeShown);
-    this->mIgnoreLabel->SetDisplayMode(kDisplayModeShown);
-    this->mGatherLabel->SetDisplayMode(kDisplayModeShown);
-    this->mCitizenPercentageLabel->SetDisplayMode(kDisplayModeShown);
-    unsigned long theSelection;
-    this->mMaxPlayer->GetListBox()->GetCurrentSelection(theSelection);
-    unsigned long theCount = theSelection + 2;
-    unsigned long i = 0;
-    do {
-        this->mPlayers[i]->Show(kPlayerScreenAISettings, i);
-        ++i;
-    } while (i <= theCount);
-    for (i = theCount + 1; i <= 16; i++) this->mPlayers[i]->Hide();
-        break;
-    }
-    case kPlayerScreenTechTree: {
-        theForm->GetEntityGroup(4)->Disable();
-        theForm->GetEntityGroup(5)->Enable();
-        theForm->GetEntityGroup(8)->Disable();
-        this->mPlayerSelection->SetDisplayMode(kDisplayModeShown);
-        break;
-    }
-    case kPlayerScreenOptions: {
-        theForm->GetEntityGroup(4)->Disable();
-        theForm->GetEntityGroup(5)->Disable();
-        theForm->GetEntityGroup(8)->Enable();
-        this->mPlayerSelection->SetDisplayMode(kDisplayModeHidden);
-        break;
-    }
-    }
-}
-
-// TEMPLATE: EXE 0x576686
-// ??0?$vector@VUWideString@@V?$allocator@VUWideString@@@std@@@std@@QAE@ABV01@@Z
-
-// SYNTHETIC: EXE 0x5766d0
-// (the scalar deleting destructor, emitted with the vtable; slot UICheckBox+0x0)
-
-// FUNCTION: EXE 0x5766ed
-// Re-sorts and rewrites both tech lists
-void EESEPlayerScreen::RebuildTechLists()
-{
-    this->mTechList->Rebuild();
-    this->mOtherTechList->Rebuild();
-}
-
-// TEMPLATE: EXE 0x576708
-// ?resize@?$vector@VUWideString@@V?$allocator@VUWideString@@@std@@@std@@QAEXI@Z
-
-// TEMPLATE: EXE 0x576725
-// (names.txt)
-
-// TEMPLATE: EXE 0x5767e2
-// ?_Ucopy@?$vector@VUWideString@@V?$allocator@VUWideString@@@std@@@std@@IAEPAVUWideString@@V?$_Ptrit@VUWideString@@HPBV1@ABV1@PAV1@AAV1@@2@0PAV3@@Z
 
 // FUNCTION: EXE 0x576818
 // Creates a 23x23 diplomacy grid button, starting as enemies (state 1)
@@ -1179,933 +364,570 @@ void EESEUIBDiplomacy::ButtonUp()
     UIButton::ButtonUp();
 }
 
-// FUNCTION: EXE 0x576be4
-// Creates the game options page: the diplomacy grid and its labels, unit limit and wonders-for-victory sliders
-// with counts, and the victory, teams locked, cheat codes, unit improvements and carbon check boxes
-EESEGamePage::EESEGamePage(unsigned long& ioIndex, unsigned long& ioID, UIForm* inForm)
+
+// ---- the player tab's host (editor_players.rs; EE_SCREENS_SEPL_OP_*): the controls it makes and drives, the
+// players and the world it loads from and stores to
+
+static_assert(EE_SCREENS_SEPL_ALIGN_LEFT == kTextAlignLeft && EE_SCREENS_SEPL_ALIGN_CENTER == kTextAlignCenter,
+              "the alignments");
+static_assert(EE_SCREENS_SEPL_SHOWN == kDisplayModeShown && EE_SCREENS_SEPL_HIDDEN == kDisplayModeHidden, "modes");
+static_assert(EE_SCREENS_SEPL_TRIGGER_RANGE == kControlTriggerRangeChanged &&
+                  EE_SCREENS_SEPL_TRIGGER_CHECKED == kControlTriggerChecked &&
+                  EE_SCREENS_SEPL_TRIGGER_SELECTION == kControlTriggerSelectionChanged,
+              "the triggers");
+static_assert(EE_SCREENS_SEPL_IDS_MAX_PLAYERS == IDS_MAX_PLAYERS && EE_SCREENS_SEPL_IDS_START_EPOCH == IDS_START_EPOCH &&
+                  EE_SCREENS_SEPL_IDS_ALL_PLAYERS == IDS_ALL_PLAYERS && EE_SCREENS_SEPL_IDS_SE_PLAYERS == IDS_SE_PLAYERS &&
+                  EE_SCREENS_SEPL_IDS_SE_PLAYER == IDS_SE_PLAYER &&
+                  EE_SCREENS_SEPL_IDS_SE_CIVILIZATION == IDS_SE_CIVILIZATION &&
+                  EE_SCREENS_SEPL_IDS_ENABLE_TECHNOLOGIES == IDS_ENABLE_TECHNOLOGIES &&
+                  EE_SCREENS_SEPL_IDS_DISABLE_TECHNOLOGIES == IDS_DISABLE_TECHNOLOGIES &&
+                  EE_SCREENS_SEPL_IDS_UNIT_TYPES == IDS_UNIT_TYPES &&
+                  EE_SCREENS_SEPL_IDS_SE_UNIT_GROUP_FIRST == IDS_SE_UNIT_GROUP_FIRST &&
+                  EE_SCREENS_SEPL_IDS_DISPLAY_EPOCHS == IDS_DISPLAY_EPOCHS &&
+                  EE_SCREENS_SEPL_IDS_END_EPOCH == IDS_END_EPOCH && EE_SCREENS_SEPL_IDS_SE_HUMAN == IDS_SE_HUMAN &&
+                  EE_SCREENS_SEPL_IDS_SE_ACTIVE == IDS_SE_ACTIVE && EE_SCREENS_SEPL_IDS_SE_ACTIVE + 4 == IDS_SE_BUILD_REPAIR &&
+                  EE_SCREENS_SEPL_IDS_SE_ACTIVE + 8 == IDS_CITIZEN_PERCENTAGE &&
+                  EE_SCREENS_SEPL_IDS_RESOURCE_NAME_FIRST == IDS_RESOURCE_NAME_FIRST &&
+                  EE_SCREENS_SEPL_IDS_GAME_OPTIONS == IDS_GAME_OPTIONS &&
+                  EE_SCREENS_SEPL_IDS_LOBBY_RESOURCES == IDS_LOBBY_RESOURCES &&
+                  EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT == IDS_GAME_GAME_UNIT_LIMIT &&
+                  EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT + 6 == IDS_UNIT_IMPROVEMENTS &&
+                  EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT + 7 == IDS_CPU &&
+                  EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT + 10 == IDS_GAME_LOS &&
+                  EE_SCREENS_SEPL_IDS_MUTUAL_DIPLOMACY_SETTINGS == IDS_MUTUAL_DIPLOMACY_SETTINGS &&
+                  EE_SCREENS_SEPL_IDS_USE_CARBON_RESOURCE == IDS_USE_CARBON_RESOURCE,
+              "the strings");
+
+namespace {
+
+const GEColor kSeplYellow(0.99607843f, 0.96862745f, 0.1254902f);
+
+// a control's text: none, a resource string, a number, "%s %ld", "%ld %s"
+UWideString SeplText(uint32_t inKind, uint32_t inString, long inNumber)
 {
-    UWideString theText;
-    GEText* theGEText;
-    this->CreateLabels(ioIndex, ioID, inForm);
-    EESEUIBDiplomacy::LoadBitmaps(static_cast<EEUIFScenarioEditor*>(inForm));
-    this->mDiplomacy = new EESEUIBDiplomacy*[120];
-    for (unsigned long i = 0; i < 16; ++i) this->CreateDiplomacyRow(i + 1, ioIndex, ioID, inForm);
-    GE2DPoint theLocation;
-    gResource->GetString(IDS_MUTUAL_DIPLOMACY_SETTINGS, theText);
-    theLocation.SetXY(7.0f, 50.0f);
-    this->mTitle = new UITextLabel(theText, gFontArial18, 0x17a,
-        GERectangle(theLocation, 555.0f, 25.0f), inForm, 0, ioIndex, 0);
-    this->mTitle->SetBgOpacity(0.4f);
-    this->mTitle->SetAlignment(kTextAlignCenter);
-    theGEText = this->mTitle->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mTitle, 8);
-    ++ioIndex;
-    gResource->GetString(IDS_GAME_OPTIONS, theText);
-    theLocation.SetXY(600.0f, 50.0f);
-    this->mPlayerTitle = new UITextLabel(theText, gFontArial18, 0x17b,
-        GERectangle(theLocation, 175.0f, 25.0f), inForm, 0, ioIndex, 0);
-    this->mPlayerTitle->SetBgOpacity(0.4f);
-    this->mPlayerTitle->SetAlignment(kTextAlignCenter);
-    theGEText = this->mPlayerTitle->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mPlayerTitle, 8);
-    ++ioIndex;
-    gResource->GetString(IDS_GAME_GAME_UNIT_LIMIT, theText);
-    theLocation.SetXY(600.0f, 100.0f);
-    this->mUnitLimitLabel = new UITextLabel(theText, gU531934, 0x15f,
-        GERectangle(theLocation, 175.0f, (float)gU531934->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mUnitLimitLabel->SetBgOpacity(0.4f);
-    theGEText = this->mUnitLimitLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mUnitLimitLabel, 8);
-    ++ioIndex;
-    theLocation.SetXY(600.0f, this->mUnitLimitLabel->GetRectangle().GetBottom() + 1.0f);
-    this->mUnitLimit = new UISlider(0x160, GERectangle(theLocation, 125.0f, 20.0f), 0, inForm, ioIndex, 2);
-    this->mUnitLimit->SetBgOpacity(0.4f);
-    this->mUnitLimit->SetPageSize(1);
-    this->mUnitLimit->SetRange(EERuleLong(EEGetRules().mGameOptions.mUnitLimitMinimum),
-                               EERuleLong(EEGetRules().mGameOptions.mUnitLimitMaximum));   // gameoptions.yaml
-    this->mUnitLimit->SetCurrentRangeValue(EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault));
-    inForm->AddControl(this->mUnitLimit, 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mUnitLimit->GetRectangle().GetRight() + 1.0f, this->mUnitLimit->GetRectangle().GetTop());
-    this->mUnitLimitCountLabel = new UITextLabel(UWideString("0"), gU531934, 0x16a,
-        GERectangle(theLocation, 50.0f, (float)gU531934->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mUnitLimitCountLabel->SetBgOpacity(0.4f);
-    theGEText = this->mUnitLimitCountLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mUnitLimitCountLabel, 8);
-    ++ioIndex;
-    this->mUnitLimitCountLabel->SetText(EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault));
-    UIEvent* theEvent = EESEENewUnitLimit(this->mUnitLimitCountLabel, 1.0f, 0);
-    this->mUnitLimit->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
-    theEvent->Dereference();
-    theLocation.SetXY(this->mUnitLimit->GetRectangle().GetLeft(), this->mUnitLimit->GetRectangle().GetBottom() + 1.0f);
-    gResource->GetString(IDS_PER_PLAYER, theText);
-    this->mPerPlayerLabel = new UITextLabel(theText, gU531934, 0x161,
-        GERectangle(theLocation, 125.0f, (float)gU531934->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mPerPlayerLabel->SetBgOpacity(0.4f);
-    theGEText = this->mPerPlayerLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mPerPlayerLabel, 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mPerPlayerLabel->GetRectangle().GetRight() + 1.0f, this->mPerPlayerLabel->GetRectangle().GetTop());
-    this->mPerPlayerCountLabel = new UITextLabel(UWideString("0"), gU531934, kSERBUnitTypesPerPlayerCountLabel,
-        GERectangle(theLocation, 50.0f, (float)gU531934->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mPerPlayerCountLabel->SetBgOpacity(0.4f);
-    theGEText = this->mPerPlayerCountLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mPerPlayerCountLabel, 8);
-    ++ioIndex;
-    this->mPerPlayerCountLabel->SetText((long)EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault) / 2);
-    theLocation.SetXY(this->mPerPlayerLabel->GetRectangle().GetLeft(), this->mPerPlayerLabel->GetRectangle().GetBottom() + 5.0f);
-    gResource->GetString(IDS_WONDERS_FOR_VICTORY, theText);
-    this->mWondersForVictoryLabel = new UITextLabel(theText, gU531934, 0x163,
-        GERectangle(theLocation, 175.0f, (float)gU531934->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mWondersForVictoryLabel->SetBgOpacity(0.4f);
-    theGEText = this->mWondersForVictoryLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mWondersForVictoryLabel, 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mPerPlayerLabel->GetRectangle().GetLeft(), this->mWondersForVictoryLabel->GetRectangle().GetBottom() + 1.0f);
-    this->mWondersForVictory = new UISlider(0x164, GERectangle(theLocation, 125.0f, 20.0f), 0, inForm, ioIndex, 2);
-    this->mWondersForVictory->SetBgOpacity(0.4f);
-    this->mWondersForVictory->SetPageSize(1);
-    this->mWondersForVictory->SetRange(0, 6);
-    this->mWondersForVictory->SetCurrentRangeValue(3);
-    inForm->AddControl(this->mWondersForVictory, 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mWondersForVictory->GetRectangle().GetRight() + 1.0f, this->mWondersForVictory->GetRectangle().GetTop());
-    this->mWondersForVictoryCountLabel = new UITextLabel(UWideString("0"), gU531934, 0x165,
-        GERectangle(theLocation, 50.0f, (float)gU531934->GetHeight()), inForm, 0, ioIndex, 0);
-    this->mWondersForVictoryCountLabel->SetBgOpacity(0.4f);
-    theGEText = this->mWondersForVictoryCountLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mWondersForVictoryCountLabel, 8);
-    ++ioIndex;
-    this->mWondersForVictoryCountLabel->SetText(3);
-    theEvent = new UIESliderChange(this->mWondersForVictoryCountLabel, 1.0f, 0);
-    this->mWondersForVictory->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
-    theEvent->Dereference();
-    theLocation.SetXY(this->mWondersForVictory->GetRectangle().GetLeft(), this->mWondersForVictory->GetRectangle().GetBottom() + 5.0f);
-    gResource->GetString(IDS_GAME_VICTORY_ALLOWED, theText);
-    this->mVictoryCheckBox = new UICheckBox(0x166, theText, gU531934,
-        GERectangle(theLocation, 175.0f, 20.0f), inForm, ioIndex, 0, false);
-    this->mVictoryCheckBox->SetBgOpacity(0.4f);
-    theGEText = this->mVictoryCheckBox->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mVictoryCheckBox, 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mVictoryCheckBox->GetRectangle().GetLeft(), this->mVictoryCheckBox->GetRectangle().GetBottom() + 5.0f);
-    gResource->GetString(IDS_TEAMS_LOCKED, theText);
-    this->mTeamsLockedCheckBox = new UICheckBox(0x167, theText, gU531934,
-        GERectangle(theLocation, 175.0f, 20.0f), inForm, ioIndex, 0, false);
-    this->mTeamsLockedCheckBox->SetBgOpacity(0.4f);
-    theGEText = this->mTeamsLockedCheckBox->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mTeamsLockedCheckBox, 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mTeamsLockedCheckBox->GetRectangle().GetLeft(), this->mTeamsLockedCheckBox->GetRectangle().GetBottom() + 5.0f);
-    gResource->GetString(IDS_GAME_CHEAT_CODES, theText);
-    this->mCheatCodesCheckBox = new UICheckBox(0x168, theText, gU531934,
-        GERectangle(theLocation, 175.0f, 20.0f), inForm, ioIndex, 0, false);
-    this->mCheatCodesCheckBox->SetBgOpacity(0.4f);
-    theGEText = this->mCheatCodesCheckBox->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mCheatCodesCheckBox, 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mCheatCodesCheckBox->GetRectangle().GetLeft(), this->mCheatCodesCheckBox->GetRectangle().GetBottom() + 5.0f);
-    gResource->GetString(IDS_UNIT_IMPROVEMENTS, theText);
-    this->mUnitImprovementsCheckBox = new UICheckBox(0x169, theText, gU531934,
-        GERectangle(theLocation, 175.0f, 20.0f), inForm, ioIndex, 0, false);
-    this->mUnitImprovementsCheckBox->SetBgOpacity(0.4f);
-    theGEText = this->mUnitImprovementsCheckBox->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mUnitImprovementsCheckBox, 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mUnitImprovementsCheckBox->GetRectangle().GetLeft(), this->mUnitImprovementsCheckBox->GetRectangle().GetBottom() + 5.0f);
-    gResource->GetString(IDS_USE_CARBON_RESOURCE, theText);
-    this->mUseCarbonCheckBox = new UICheckBox(0x17c, theText, gU531934,
-        GERectangle(theLocation, 175.0f, 20.0f), inForm, ioIndex, 0, false);
-    this->mUseCarbonCheckBox->SetBgOpacity(0.4f);
-    theGEText = this->mUseCarbonCheckBox->GetTextLabel()->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mUseCarbonCheckBox, 8);
-    ++ioIndex;
-    theLocation.SetXY(this->mUseCarbonCheckBox->GetRectangle().GetLeft(), this->mUseCarbonCheckBox->GetRectangle().GetBottom() + 5.0f);
+    UWideString theText, theString;
+    if (inKind == EE_SCREENS_SEPL_TEXT_STRING || inKind >= EE_SCREENS_SEPL_TEXT_STRING_NUMBER)
+        gResource->GetString(inString, inKind == EE_SCREENS_SEPL_TEXT_STRING ? theText : theString);
+    if (inKind == EE_SCREENS_SEPL_TEXT_NUMBER)
+        sprintf(theText, "%ld", inNumber);
+    else if (inKind == EE_SCREENS_SEPL_TEXT_STRING_NUMBER)
+        sprintf(theText, "%s %ld", (const char*)theString, inNumber);
+    else if (inKind == EE_SCREENS_SEPL_TEXT_NUMBER_STRING)
+        sprintf(theText, "%ld %s", inNumber, (const char*)theString);
+    else if (inKind == EE_SCREENS_SEPL_TEXT_NONE)
+        theText = "";
+    return theText;
 }
 
-// FUNCTION: EXE 0x577b83
-// Destroys the game options page's controls and releases the diplomacy bitmaps and the 120-entry button array
-EESEGamePage::~EESEGamePage()
+GEFont* SeplFont(uint32_t inFont)
 {
-    for (unsigned long theLabel = 0; theLabel < 15; ++theLabel) {
-        delete this->mColumnLabels[theLabel];
-        delete this->mRowLabels[theLabel];
-        delete this->mPlayerNames[theLabel];
+    switch (inFont) {
+    case EE_SCREENS_SEPL_FONT_530: return gU531930;
+    case EE_SCREENS_SEPL_FONT_534: return gU531934;
+    case EE_SCREENS_SEPL_FONT_538: return gU531938;
+    case EE_SCREENS_SEPL_FONT_ARIAL18: return gFontArial18;
+    default: return sPlayerScreenFont;
     }
-    for (unsigned long i = 0; i < 120; ++i) delete this->mDiplomacy[i];
-    delete[] this->mDiplomacy;  // the pointer array itself (it leaked)
-    EESEUIBDiplomacy::ReleaseBitmaps();
-    delete this->mUnitLimitLabel;
-    delete this->mUnitLimitCountLabel;
-    delete this->mPerPlayerLabel;
-    delete this->mPerPlayerCountLabel;
-    delete this->mWondersForVictoryLabel;
-    delete this->mWondersForVictoryCountLabel;
-    delete this->mUnitLimit;
-    delete this->mWondersForVictory;
-    delete this->mVictoryCheckBox;
-    delete this->mTeamsLockedCheckBox;
-    delete this->mCheatCodesCheckBox;
-    delete this->mUnitImprovementsCheckBox;
-    delete this->mPlayerTitle;
-    delete this->mTitle;
-    delete this->mUseCarbonCheckBox;
 }
 
-// FUNCTION: EXE 0x577cc1
-// Shows the diplomacy grid's labels and buttons for inCount players, hides the rest, updates the per-player limit
-void EESEGamePage::SetPlayerCount(unsigned long inCount)
+void SeplYellow(GEText* inText)
 {
-    unsigned long i;
-    unsigned long j;
-    unsigned long k;
-    for (i = 0; i < 15; ++i) {
-        if (i + 1 < inCount)
-            this->mColumnLabels[i]->SetDisplayMode(kDisplayModeShown);
-        else
-            this->mColumnLabels[i]->SetDisplayMode(kDisplayModeHidden);
-        if (i < inCount - 1) {
-            this->mRowLabels[i]->SetDisplayMode(kDisplayModeShown);
-            this->mPlayerNames[i]->SetDisplayMode(kDisplayModeShown);
+    inText->SetFgColor(kSeplYellow);
+    inText->SetIsTransparent(true);
+}
+
+// one control of the record on the form (EE_SCREENS_SEPL_OP_MAKE)
+UIControl* SeplMake(const EeScreensSeplCtl& c, UIForm* inForm)
+{
+    GEFont* theFont = SeplFont(c.font);
+    GE2DPoint theLocation(c.x, c.y);
+    float theHeight = c.h;
+    if (c.flags & EE_SCREENS_SEPL_FONT_HEIGHT)   // gU531930's one label takes the screen font's height
+        theHeight = (float)(c.font == EE_SCREENS_SEPL_FONT_530 ? sPlayerScreenFont : theFont)->GetHeight() + c.h;
+    GERectangle theRect = (c.flags & EE_SCREENS_SEPL_LTRB) ? GERectangle(c.x, c.y, c.w, c.h)
+                                                            : GERectangle(theLocation, c.w, theHeight);
+    UWideString theText = SeplText(c.text, c.string, c.number);
+    bool theFg = (c.flags & EE_SCREENS_SEPL_FG) != 0;
+    UIControl* theControl = NULL;
+    switch (c.kind) {
+    case EE_SCREENS_SEPL_LABEL: {
+        UITextLabel* t = new UITextLabel(theText, theFont, c.id, theRect, inForm, 0, c.index, 0);
+        if (c.align >= 0) t->SetAlignment((unsigned long)c.align);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (theFg) SeplYellow(t->GetGEText());
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_EDIT: {
+        UIEditBox* t = new UIEditBox(c.id, theFont, c.extra[0], c.extra[1] != 0, theRect, inForm, c.index, 2, false, false);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (c.text != EE_SCREENS_SEPL_TEXT_NONE) t->SetText(theText);
+        if (theFg) SeplYellow(t->GetGEText());
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_COMBO: {
+        std::vector<UWideString> theLines;
+        if (c.extra[0] == EE_SCREENS_SEPL_LINES_EPOCHS) {
+            theLines.resize(EEEpochCount());
+            for (unsigned long e = 0; e < (unsigned long)EEEpochCount(); ++e)
+                gResource->GetString(EEEpochTitleID(e), theLines[e]);
+        }
+        UIComboBox* t = new UIComboBox(c.id, 1, theLines, theFont, theRect, 400, inForm, c.index, 0, 2);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (c.bg2 >= 0.0f) t->SetTextBoxBgOpacity(c.bg2);
+        if (theFg) SeplYellow(t->GetGEText());
+        t->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
+        if (c.extra[1] >= 0) t->SetCurrentSelection((unsigned long)c.extra[1]);
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_MAX_PLAYER: {
+        std::vector<UWideString> theLines(15);
+        for (long i = 2; i <= 16; ++i)
+            theLines[i - 2] = SeplText(c.text, c.string, i);
+        EESECBMaxPlayer* t = new EESECBMaxPlayer(c.id, 1, theLines, theFont, theLocation, (unsigned long)c.w,
+                                                 theFont->GetHeight() << 4, inForm, c.index, 0, 2);
+        if (theFg) SeplYellow(t->GetGEText());
+        t->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
+        if (c.bg2 >= 0.0f) t->SetTextBoxBgOpacity(c.bg2);
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_CHECK: {
+        UICheckBox* t = new UICheckBox(c.id, theText, theFont, theRect, inForm, c.index, 0, false);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (theFg) SeplYellow(t->GetTextLabel()->GetGEText());
+        theControl = t;
+        break;
+    }
+    case EE_SCREENS_SEPL_SLIDER: {
+        UISlider* t = new UISlider(c.id, theRect, 0, inForm, c.index, 2);
+        if (c.bg >= 0.0f) t->SetBgOpacity(c.bg);
+        if (c.flags & EE_SCREENS_SEPL_RANGE_FIRST) {
+            t->SetRange(c.extra[0], c.extra[1]);
+            t->SetPageSize(c.extra[2]);
         } else {
-            this->mRowLabels[i]->SetDisplayMode(kDisplayModeHidden);
-            this->mPlayerNames[i]->SetDisplayMode(kDisplayModeHidden);
+            t->SetPageSize(c.extra[2]);
+            t->SetRange(c.extra[0], c.extra[1]);
         }
-    }
-    for (j = 2; j <= 16; ++j) {
-        i = this->PairIndex(j - 1);
-        for (k = j; k <= 16; ++k) {
-            if (k > inCount)
-                this->mDiplomacy[i - j + k]->SetDisplayMode(kDisplayModeHidden);
-            else
-                this->mDiplomacy[i - j + k]->SetDisplayMode(kDisplayModeShown);
-        }
-    }
-    this->mPerPlayerCountLabel->SetText((unsigned long)this->mUnitLimit->GetCurrentRangeValue() / inCount);
-}
-
-// FUNCTION: EXE 0x577da2
-// Returns the index of a player's first diplomacy button (the upper-triangle grid packed row by row)
-unsigned long EESEGamePage::PairIndex(unsigned long inPlayer)
-{
-    unsigned long theRemaining = 16 - inPlayer;
-    return 120 - (unsigned long)((float)((theRemaining + 1) * theRemaining) * 0.5f);
-}
-
-// FUNCTION: EXE 0x577dd3
-// Creates a player's row of diplomacy buttons, one per higher-numbered player, advancing the control index and id
-void EESEGamePage::CreateDiplomacyRow(unsigned long inPlayer, unsigned long& ioIndex,
-                                      unsigned long& ioID, UIForm* inForm)
-{
-    GE2DPoint theLocation;
-    unsigned long theIndex = this->PairIndex(inPlayer);
-    unsigned long theEnd = theIndex - inPlayer + 16;
-    theLocation.SetX((float)inPlayer * 25.0f + 274.0f);
-    theLocation.SetY((float)(inPlayer - 1) * 25.0f + 125.0f);
-    for (; theIndex < theEnd; ++theIndex) {
-        this->mDiplomacy[theIndex] = new EESEUIBDiplomacy(ioID, theLocation, inForm, ioIndex, 0);
-        inForm->AddControl(this->mDiplomacy[theIndex], 8);
-        ++ioIndex;
-        theLocation.SetX(theLocation.GetX() + 25.0f);
-        ++ioID;
-    }
-}
-
-// FUNCTION: EXE 0x577ea6
-// Loads the game options page from the world: player names, each pair's stance (enemies if either side is), unit
-// limit, wonders for victory and the five option check boxes
-void EESEGamePage::Load()
-{
-    for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
-        EEPlayer* thePlayer = gWorld.mPlayers[i];
-        unsigned long theStart = this->PairIndex(i);
-        if (i < gWorld.mNumPlayers - 1)
-            this->mPlayerNames[i - 1]->SetText(thePlayer->mName);
-        for (unsigned long j = i + 1; j < gWorld.mNumPlayers; j++) {
-            EESEUIBDiplomacy* theButton = this->mDiplomacy[theStart + j - i - 1];
-            theButton->mState = max(thePlayer->mEnemies[j], gWorld.mPlayers[j]->mEnemies[i]);
-            theButton->UpdateBitmaps();
-        }
-    }
-    this->mUnitLimit->SetCurrentRangeValue(gWorld.mPopulationLimit);
-    this->mWondersForVictory->SetCurrentRangeValue(gWorld.mNumberOfWondersToWin);
-    this->mVictoryCheckBox->SetChecked(gWorld.mVictoryEnabled);
-    this->mTeamsLockedCheckBox->SetChecked(gWorld.mTeamsLocked);
-    this->mCheatCodesCheckBox->SetChecked(gWorld.mCheatsEnabled);
-    this->mUnitImprovementsCheckBox->SetChecked(gWorld.mUnitImprovementsAllowed);
-    this->mUseCarbonCheckBox->SetChecked(gWorld.mUsingCarbon);
-}
-
-// FUNCTION: EXE 0x57802c
-// Creates the diplomacy grid's column labels (players 2..16), row labels (1..15) and row player name labels
-void EESEGamePage::CreateLabels(unsigned long& ioIndex, unsigned long& ioID, UIForm* inForm)
-{
-    UWideString theText;
-    GEText* theGEText;
-    for (unsigned long theColumn = 0; theColumn < 15; ++theColumn) {
-        float theX = (float)(theColumn + 1) * 25.0f + 274.0f;
-        sprintf(theText, "%ld", theColumn + 2);
-        this->mColumnLabels[theColumn] = new UITextLabel(theText, gU531938, ioID,
-            GERectangle(theX, 100.0f, theX + 22.0f, 122.0f), inForm, 0, ioIndex, 0);
-        this->mColumnLabels[theColumn]->SetAlignment(kTextAlignCenter);
-        this->mColumnLabels[theColumn]->SetBgOpacity(0.4f);
-        theGEText = this->mColumnLabels[theColumn]->GetGEText();
-        theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-        theGEText->SetIsTransparent(true);
-        inForm->AddControl(this->mColumnLabels[theColumn], 8);
-        ++ioIndex;
-        ++ioID;
-    }
-    for (unsigned long i = 0; i < 15; ++i) {
-        float theY = (float)i * 25.0f + 125.0f;
-        sprintf(theText, "%ld", i + 1);
-        this->mRowLabels[i] = new UITextLabel(theText, gU531938, ioID,
-            GERectangle(249.0f, theY, 271.0f, theY + 22.0f), inForm, 0, ioIndex, 0);
-        this->mRowLabels[i]->SetAlignment(kTextAlignCenter);
-        this->mRowLabels[i]->SetBgOpacity(0.4f);
-        theGEText = this->mRowLabels[i]->GetGEText();
-        theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-        theGEText->SetIsTransparent(true);
-        inForm->AddControl(this->mRowLabels[i], 8);
-        ++ioIndex;
-        ++ioID;
-        this->mPlayerNames[i] = new UITextLabel(UWideString(""), gU531938, ioID,
-            GERectangle(7.0f, theY, 131.0f, theY + 22.0f), inForm, 0, ioIndex, 0);
-        this->mPlayerNames[i]->SetAlignment(kTextAlignLeft);
-        this->mPlayerNames[i]->SetBgOpacity(0.4f);
-        theGEText = this->mPlayerNames[i]->GetGEText();
-        theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-        theGEText->SetIsTransparent(true);
-        inForm->AddControl(this->mPlayerNames[i], 8);
-        ++ioIndex;
-        ++ioID;
-    }
-}
-
-// FUNCTION: EXE 0x578342
-// Writes each existing pair's stance both ways and, when player 0 exists, the unit limit, wonders for victory and
-// option flags to the world (most also to its game options)
-void EESEGamePage::Save()
-{
-    for (unsigned long i = 1; i <= 16; i++) {
-        if (!gWorld.GetPlayer(i))
-            continue;
-        unsigned long theStart = this->PairIndex(i);
-        for (unsigned long j = i + 1; j <= 16; j++) {
-            if (!gWorld.GetPlayer(j))
-                continue;
-            unsigned long theState = this->mDiplomacy[theStart + j - i - 1]->mState;
-            gWorld.SetDiplomaticStance(i, j, theState);
-            gWorld.SetDiplomaticStance(j, i, theState);
-        }
-    }
-    if (!gWorld.GetPlayer(0))
-        return;
-    gWorld.SetPopulationLimit(this->mUnitLimit->GetCurrentRangeValue());
-    gWorld.mGameOptions.mUnitLimit = this->mUnitLimit->GetCurrentRangeValue();
-    gWorld.mNumberOfWondersToWin = this->mWondersForVictory->GetCurrentRangeValue();
-    gWorld.mGameOptions.mWondersForVictory = this->mWondersForVictory->GetCurrentRangeValue();
-    gWorld.mVictoryEnabled = this->mVictoryCheckBox->GetIsChecked();
-    gWorld.mGameOptions.mVictory = this->mVictoryCheckBox->GetIsChecked();
-    gWorld.mTeamsLocked = this->mTeamsLockedCheckBox->GetIsChecked();
-    gWorld.mGameOptions.mLockTeams = this->mTeamsLockedCheckBox->GetIsChecked();
-    gWorld.mCheatsEnabled = this->mCheatCodesCheckBox->GetIsChecked();
-    gWorld.mGameOptions.mCheatCodes = this->mCheatCodesCheckBox->GetIsChecked();
-    gWorld.mUnitImprovementsAllowed = this->mUnitImprovementsCheckBox->GetIsChecked();
-    gWorld.mUsingCarbon = this->mUseCarbonCheckBox->GetIsChecked();
-}
-
-// SYNTHETIC: EXE 0x5784ea
-// (the scalar deleting destructor, emitted with the vtable; slot UISlider+0x0)
-
-// SYNTHETIC: EXE 0x57851c
-// (the scalar deleting destructor, emitted with the vtable; slot UIESliderChange+0x0)
-
-// FUNCTION: EXE 0x578554
-// Returns a world table row's second long value (EEWorldTable::GetLongValue2; the unit limit slider's maximum)
-
-// SYNTHETIC: EXE 0x578566
-// (the scalar deleting destructor, emitted with the vtable; slot EESEEGameUnitLimit+0x0)
-
-// FUNCTION: EXE 0x578582
-// Destroys the unit limit slider event (members only; EESEEGameUnitLimit is an EESEERust)
-
-// TEMPLATE: EXE 0x5785ae
-// ??0?$map@MVUWideString@@U?$less@M@std@@V?$allocator@U?$pair@$$CBMVUWideString@@@std@@@3@@std@@QAE@XZ
-
-// TEMPLATE: EXE 0x5785ca
-// (names.txt)
-
-// TEMPLATE: EXE 0x5785f5
-// (names.txt)
-
-// TEMPLATE: EXE 0x578666
-// (names.txt)
-
-// TEMPLATE: EXE 0x57891d
-// (names.txt)
-
-// FUNCTION: EXE 0x578958
-// On a start epoch change, refills the row's end epoch combo from the new start, keeping the chosen end epoch (or
-// the first when it is now earlier); returns OK
-// (EESEEChangeStartEpoch; ee_screens editor_events.rs)
-
-// FUNCTION: EXE 0x578a29
-// Creates a player row: title, five resource caps, epoch and civilization combos, name, color, CPU-only and shared
-// LOS (not on the all-players row), the AI check boxes and the citizen percentage slider
-EESEPlayerRow::EESEPlayerRow(unsigned long& ioID, float inY, GEFont* inFont,
-                               unsigned long& ioIndex, unsigned long inPlayer, UIForm* inForm, bool inGlobal)
-{
-    GE2DPoint theLocation;
-    UWideString theValue;
-    UWideString theText;
-    std::vector<UWideString> theEpochNames;
-    GEText* theGEText;
-    theLocation.SetY(inY);
-    if (!inGlobal) {
-        if (inPlayer != 1) {
-            gResource->GetString(IDS_SE_PLAYER, theValue);
-            sprintf(theText, "%s %ld", (const char*)theValue, inPlayer);
-        }
-        else gResource->GetString(IDS_SE_HUMAN, theText);
-        theLocation.SetX(5.0f);
-        this->mTitle = new UITextLabel(theText, inFont, 0x13d,
-            GERectangle(theLocation, 100.0f, 24.0f), inForm, 0, ioIndex, 0);
-        this->mTitle->SetAlignment(kTextAlignLeft);
-    this->mTitle->SetBgOpacity(0.4f);
-    theGEText = this->mTitle->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    inForm->AddControl(this->mTitle, 4);
-    ++ioIndex;
-    ++ioID;
-    } else this->mTitle = NULL;
-    sprintf(theValue, "%d", 1000);
-    for (unsigned long i = 0; i < 5; ++i) {
-        theLocation.SetX((float)i * 55.0f + 145.0f);
-        this->mValues[i] = new UIEditBox(ioID, inFont, 6, true,
-            GERectangle(theLocation, 55.0f, 24.0f), inForm, ioIndex, 2, false, false);
-        this->mValues[i]->SetBgOpacity(0.4f);
-        this->mValues[i]->SetText(theValue);
-        theGEText = this->mValues[i]->GetGEText();
-        theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-        theGEText->SetIsTransparent(true);
-        inForm->AddControl(this->mValues[i], 4);
-        ++ioIndex;
-        ++ioID;
-    }
-    theEpochNames.resize(EEEpochCount());
-    for (unsigned long theEpoch = 0; theEpoch < (unsigned long)EEEpochCount(); ++theEpoch)
-        gResource->GetString(EEEpochTitleID(theEpoch), theEpochNames[theEpoch]);
-    theLocation.SetXY(620.0f, inY);
-    this->mEndEpoch = new UIComboBox(ioID, 1, theEpochNames, inFont,
-        GERectangle(theLocation, 175.0f, 20.0f), 400, inForm, ioIndex, 0, 2);
-    this->mEndEpoch->SetBgOpacity(0.4f);
-    this->mEndEpoch->SetTextBoxBgOpacity(0.4f);
-    theGEText = this->mEndEpoch->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mEndEpoch->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mEndEpoch->SetCurrentSelection(inGlobal ? 14 : 0);
-    inForm->AddControl(this->mEndEpoch, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(440.0f, inY);
-    this->mStartEpoch = new UIComboBox(ioID, 1, theEpochNames, inFont,
-        GERectangle(theLocation, 175.0f, 20.0f), 400, inForm, ioIndex, 0, 2);
-    this->mStartEpoch->SetBgOpacity(0.4f);
-    this->mStartEpoch->SetTextBoxBgOpacity(0.4f);
-    theGEText = this->mStartEpoch->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mStartEpoch->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    this->mStartEpoch->SetCurrentSelection(0);
-    EESEERust* theEpochEvent = new EESEERust(kSEEStartEpoch, this->mEndEpoch);
-    this->mStartEpoch->SetTriggerEvent(kControlTriggerSelectionChanged, theEpochEvent);
-    theEpochEvent->Dereference();
-    inForm->AddControl(this->mStartEpoch, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(325.0f, inY);
-    this->mControl = new UIComboBox(ioID, 1, std::vector<UWideString>(), inFont,
-        GERectangle(theLocation, 175.0f, 20.0f), 400, inForm, ioIndex, 0, 2);
-    this->mControl->SetBgOpacity(0.4f);
-    this->mControl->SetTextBoxBgOpacity(0.4f);
-    theGEText = this->mControl->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mControl->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
-    inForm->AddControl(this->mControl, 4);
-    ++ioIndex;
-    ++ioID;
-    if (!inGlobal) {
-        theLocation.SetX(145.0f);
-        this->mName = new UIEditBox(ioID, inFont, 50, false,
-            GERectangle(theLocation, 175.0f, 20.0f), inForm, ioIndex, 2, false, false);
-    theGEText = this->mName->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-        this->mName->SetBgOpacity(0.5f);
-    inForm->AddControl(this->mName, 4);
-    ++ioIndex;
-    ++ioID;
-        theLocation.SetX(110.0f);
-        this->mColor = new EEUIBColor(inPlayer, ioID, theLocation, inForm, ioIndex);
-    inForm->AddControl(this->mColor, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(519.0f, inY);
-    this->mCPUOnlyCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mCPUOnlyCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(574.0f, inY);
-    this->mSharedLOSCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mSharedLOSCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    } else {
-        this->mName = NULL;
-        this->mColor = NULL;
-        this->mCPUOnlyCheckBox = NULL;
-        this->mSharedLOSCheckBox = NULL;
-    }
-    theLocation.SetXY(182.0f, inY);
-    this->mActiveCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mActiveCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(232.0f, inY);
-    this->mCheatCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mCheatCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(282.0f, inY);
-    this->mAttackCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mAttackCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(332.0f, inY);
-    this->mDefendCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mDefendCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(382.0f, inY);
-    this->mBuildRepairCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mBuildRepairCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(432.0f, inY);
-    this->mExploreCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mExploreCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(482.0f, inY);
-    this->mIgnoreCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mIgnoreCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetXY(532.0f, inY);
-    this->mGatherCheckBox = new UICheckBox(ioID, UWideString(""), inFont,
-        GERectangle(theLocation, 20.0f, 20.0f), inForm, ioIndex, 0, false);
-    inForm->AddControl(this->mGatherCheckBox, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetX(570.0f);
-    this->mSlider = new UISlider(ioID, GERectangle(theLocation, 116.0f, 20.0f), 0, inForm, ioIndex, 2);
-    this->mSlider->SetRange(0, 100);
-    this->mSlider->SetPageSize(1);
-    inForm->AddControl(this->mSlider, 4);
-    ++ioIndex;
-    ++ioID;
-    theLocation.SetX(this->mSlider->GetRectangle().GetRight() + 5.0f);
-    this->mSliderLabel = new UITextLabel(UWideString(""), inFont, ioID,
-        GERectangle(theLocation, 50.0f, 20.0f), inForm, 0, ioIndex, 0);
-    theGEText = this->mSliderLabel->GetGEText();
-    theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
-    theGEText->SetIsTransparent(true);
-    this->mSliderLabel->SetBgOpacity(0.5f);
-    inForm->AddControl(this->mSliderLabel, 4);
-    ++ioIndex;
-    ++ioID;
-    UIEvent* theSliderEvent = new UIESliderChange(this->mSliderLabel, 1.0f, 0);
-    this->mSlider->SetTriggerEvent(kControlTriggerRangeChanged, theSliderEvent);
-    theSliderEvent->Dereference();
-    this->mSliderLabel->SetText(0);
-}
-
-// SYNTHETIC: EXE 0x579a00
-// (EESEEChangeStartEpoch's scalar deleting destructor)
-
-// FUNCTION: EXE 0x579a2b
-// Destroys the player row's controls
-EESEPlayerRow::~EESEPlayerRow()
-{
-    delete this->mTitle;
-    delete this->mStartEpoch;
-    delete this->mEndEpoch;
-    delete this->mName;
-    delete this->mColor;
-    delete this->mControl;
-    delete this->mCPUOnlyCheckBox;
-    delete this->mSharedLOSCheckBox;
-    for (unsigned long i = 0; i < 5; ++i) delete this->mValues[i];
-    delete this->mActiveCheckBox;
-    delete this->mCheatCheckBox;
-    delete this->mAttackCheckBox;
-    delete this->mDefendCheckBox;
-    delete this->mBuildRepairCheckBox;
-    delete this->mExploreCheckBox;
-    delete this->mIgnoreCheckBox;
-    delete this->mGatherCheckBox;
-    delete this->mSlider;
-    delete this->mSliderLabel;
-}
-
-// FUNCTION: EXE 0x579b27
-// Copies another row's settings into this row's shown controls (color, epochs, civilization, name, CPU-only,
-// shared LOS, resource caps, AI flags, citizen percentage)
-void EESEPlayerRow::CopyFrom(EESEPlayerRow* inSource)
-{
-    if (inSource->mColor && this->mColor && this->mColor->GetDisplayMode() == kDisplayModeShown)
-        this->mColor->SetColor(inSource->mColor->GetColor());
-    unsigned long theDestinationEpoch;
-    unsigned long theSourceEpoch;
-    unsigned long theSourceEnd;
-    unsigned long theSourceControl;
-    this->mStartEpoch->GetCurrentSelection(theDestinationEpoch);
-    inSource->mStartEpoch->GetCurrentSelection(theSourceEpoch);
-    if (!UIsNone32(theSourceEpoch) && this->mStartEpoch->GetDisplayMode() == kDisplayModeShown)
-        this->mStartEpoch->SetCurrentSelection(theSourceEpoch);
-    inSource->mEndEpoch->GetCurrentSelection(theSourceEnd);
-    if (!UIsNone32(theSourceEnd) && this->mEndEpoch->GetDisplayMode() == kDisplayModeShown)
-        this->mEndEpoch->SetCurrentSelection(theSourceEnd - theDestinationEpoch + theSourceEpoch);
-    inSource->mControl->GetCurrentSelection(theSourceControl);
-    if (!UIsNone32(theSourceControl) && this->mControl->GetDisplayMode() == kDisplayModeShown)
-        this->mControl->SetCurrentSelection(theSourceControl);
-    if (inSource->mName && this->mName) this->mName->SetText(inSource->mName->GetText(0));
-    if (inSource->mCPUOnlyCheckBox && this->mCPUOnlyCheckBox && this->mCPUOnlyCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mCPUOnlyCheckBox->SetChecked(inSource->mCPUOnlyCheckBox->GetIsChecked());
-    if (inSource->mSharedLOSCheckBox && this->mSharedLOSCheckBox && this->mSharedLOSCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mSharedLOSCheckBox->SetChecked(inSource->mSharedLOSCheckBox->GetIsChecked());
-    for (unsigned long i = 0; i < 5; ++i) {
-        if (this->mValues[i]->GetDisplayMode() == kDisplayModeShown)
-            this->mValues[i]->SetText(inSource->mValues[i]->GetText(0));
-    }
-    if (this->mActiveCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mActiveCheckBox->SetChecked(inSource->mActiveCheckBox->GetIsChecked());
-    if (this->mCheatCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mCheatCheckBox->SetChecked(inSource->mCheatCheckBox->GetIsChecked());
-    if (this->mAttackCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mAttackCheckBox->SetChecked(inSource->mAttackCheckBox->GetIsChecked());
-    if (this->mDefendCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mDefendCheckBox->SetChecked(inSource->mDefendCheckBox->GetIsChecked());
-    if (this->mBuildRepairCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mBuildRepairCheckBox->SetChecked(inSource->mBuildRepairCheckBox->GetIsChecked());
-    if (this->mExploreCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mExploreCheckBox->SetChecked(inSource->mExploreCheckBox->GetIsChecked());
-    if (this->mIgnoreCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mIgnoreCheckBox->SetChecked(inSource->mIgnoreCheckBox->GetIsChecked());
-    if (this->mGatherCheckBox->GetDisplayMode() == kDisplayModeShown)
-        this->mGatherCheckBox->SetChecked(inSource->mGatherCheckBox->GetIsChecked());
-    if (this->mSlider->GetDisplayMode() == kDisplayModeShown)
-        this->mSlider->SetCurrentRangeValue(inSource->mSlider->GetCurrentRangeValue());
-}
-
-// FUNCTION: EXE 0x579d63
-// Shows the row's controls for a page: epochs, color, resource caps (page 1); civilization, name, shared LOS and
-// computer players' CPU-only (page 2); the AI check boxes and slider for computer players (AI settings)
-void EESEPlayerRow::Show(unsigned long inPage, unsigned long inPlayer)
-{
-    EEPlayer* thePlayer = inPlayer > 0 ? gWorld.mPlayers[inPlayer] : NULL;
-    this->Hide();
-    switch (inPage) {
-    case kPlayerScreenPlayerPage1: {
-    if (this->mTitle) this->mTitle->SetDisplayMode(kDisplayModeShown);
-    this->mStartEpoch->SetDisplayMode(kDisplayModeShown);
-    this->mEndEpoch->SetDisplayMode(kDisplayModeShown);
-    if (this->mColor) this->mColor->SetDisplayMode(kDisplayModeShown);
-    for (unsigned long i = 0; i < 5; ++i) this->mValues[i]->SetDisplayMode(kDisplayModeShown);
+        if (c.extra[3] != INT32_MIN) t->SetCurrentRangeValue(c.extra[3]);
+        theControl = t;
         break;
     }
-    case kPlayerScreenPlayerPage2: {
-    if (this->mTitle) this->mTitle->SetDisplayMode(kDisplayModeShown);
-    if (this->mColor) this->mColor->SetDisplayMode(kDisplayModeShown);
-    this->mControl->SetDisplayMode(kDisplayModeShown);
-    if (this->mName) this->mName->SetDisplayMode(kDisplayModeShown);
-    if (!thePlayer) return;
-    this->mSharedLOSCheckBox->SetDisplayMode(kDisplayModeShown);
-    if (!thePlayer->mComputerPlayer) return;
-    this->mCPUOnlyCheckBox->SetDisplayMode(kDisplayModeShown);
+    case EE_SCREENS_SEPL_UNIT_TYPE: {
+        EESERBUnitTypes* t = new EESERBUnitTypes(c.id, theText, theFont, theLocation, (unsigned long)c.w,
+                                                 (unsigned long)c.h, inForm, c.index, 0, false, c.extra[0] != 0);
+        if (c.bg >= 0.0f) t->GetTextLabel()->SetBgOpacity(c.bg);
+        if (theFg) SeplYellow(t->GetTextLabel()->GetGEText());
+        theControl = t;
         break;
     }
-    case kPlayerScreenAISettings: {
-    if (this->mTitle) this->mTitle->SetDisplayMode(kDisplayModeShown);
-    if (this->mColor) this->mColor->SetDisplayMode(kDisplayModeShown);
-    if (thePlayer && !thePlayer->mComputerPlayer) return;
-    this->mActiveCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mCheatCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mAttackCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mDefendCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mBuildRepairCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mExploreCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mIgnoreCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mGatherCheckBox->SetDisplayMode(kDisplayModeShown);
-    this->mSlider->SetDisplayMode(kDisplayModeShown);
-    this->mSliderLabel->SetDisplayMode(kDisplayModeShown);
+    case EE_SCREENS_SEPL_TECH_LIST: {
+        std::vector<UWideString> theNone;
+        EESEUITechListBox* t = new EESEUITechListBox(c.id, theNone, theFont, false, theLocation, (unsigned long)c.w,
+                                                     (unsigned long)c.h, inForm, c.index, 3);
+        if (theFg) SeplYellow(t->GetGEText());
+        t->SetScrollBarBgOpacity(c.bg2);
+        t->SetBgOpacity(c.bg);
+        theControl = t;
         break;
     }
+    case EE_SCREENS_SEPL_SELECT:
+        theControl = new EESEBSelect(c.id, theLocation, inForm, theFont, c.index);
+        theControl->SetBgOpacity(c.bg);
+        break;
+    case EE_SCREENS_SEPL_TAB:
+        theControl = new EESETab(c.id, theLocation, theFont, inForm, c.index, c.extra[0] != 0);
+        theControl->SetBgOpacity(c.bg);
+        break;
+    case EE_SCREENS_SEPL_SET_PLAYERS:
+        theControl = new EESEPSSetPlayers(theLocation, theFont, inForm, c.index);
+        theControl->SetBgOpacity(c.bg);
+        break;
+    case EE_SCREENS_SEPL_COLOR:
+        theControl = new EEUIBColor((unsigned long)c.extra[0], c.id, theLocation, inForm, c.index);
+        break;
+    case EE_SCREENS_SEPL_DIPLOMACY:
+        theControl = new EESEUIBDiplomacy(c.id, theLocation, inForm, c.index, 0);
+        break;
     }
+    for (unsigned long g = 0; g < 32; g++)
+        if (theControl != NULL && (c.groups >> g) & 1)
+            inForm->AddControl(theControl, g);
+    return theControl;
 }
 
-// FUNCTION: EXE 0x579ebe
-// Hides all of the row's controls
-void EESEPlayerRow::Hide()
+// the world's values (EE_SCREENS_SEPL_WORLD_*)
+long SeplWorld(int32_t inWhat, bool inSet, long inValue)
 {
-    if (this->mTitle) this->mTitle->SetDisplayMode(kDisplayModeHidden);
-    this->mStartEpoch->SetDisplayMode(kDisplayModeHidden);
-    this->mEndEpoch->SetDisplayMode(kDisplayModeHidden);
-    if (this->mColor) this->mColor->SetDisplayMode(kDisplayModeHidden);
-    this->mControl->SetDisplayMode(kDisplayModeHidden);
-    if (this->mName) this->mName->SetDisplayMode(kDisplayModeHidden);
-    if (this->mCPUOnlyCheckBox) this->mCPUOnlyCheckBox->SetDisplayMode(kDisplayModeHidden);
-    if (this->mSharedLOSCheckBox) this->mSharedLOSCheckBox->SetDisplayMode(kDisplayModeHidden);
-    for (unsigned long i = 0; i < 5; ++i) this->mValues[i]->SetDisplayMode(kDisplayModeHidden);
-    this->mActiveCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mCheatCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mAttackCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mDefendCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mBuildRepairCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mExploreCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mIgnoreCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mGatherCheckBox->SetDisplayMode(kDisplayModeHidden);
-    this->mSlider->SetDisplayMode(kDisplayModeHidden);
-    this->mSliderLabel->SetDisplayMode(kDisplayModeHidden);
+    switch (inWhat) {
+    case EE_SCREENS_SEPL_WORLD_POPULATION:
+        if (inSet) gWorld.SetPopulationLimit(inValue);
+        return gWorld.mPopulationLimit;
+    case EE_SCREENS_SEPL_WORLD_WONDERS:
+        if (inSet) gWorld.mNumberOfWondersToWin = inValue;
+        return gWorld.mNumberOfWondersToWin;
+    case EE_SCREENS_SEPL_WORLD_VICTORY:
+        if (inSet) gWorld.mVictoryEnabled = inValue != 0;
+        return gWorld.mVictoryEnabled;
+    case EE_SCREENS_SEPL_WORLD_TEAMS:
+        if (inSet) gWorld.mTeamsLocked = inValue != 0;
+        return gWorld.mTeamsLocked;
+    case EE_SCREENS_SEPL_WORLD_CHEATS:
+        if (inSet) gWorld.mCheatsEnabled = inValue != 0;
+        return gWorld.mCheatsEnabled;
+    case EE_SCREENS_SEPL_WORLD_IMPROVEMENTS:
+        if (inSet) gWorld.mUnitImprovementsAllowed = inValue != 0;
+        return gWorld.mUnitImprovementsAllowed;
+    case EE_SCREENS_SEPL_WORLD_CARBON:
+        if (inSet) gWorld.mUsingCarbon = inValue != 0;
+        return gWorld.mUsingCarbon;
+    case EE_SCREENS_SEPL_WORLD_OPT_UNIT_LIMIT:
+        if (inSet) gWorld.mGameOptions.mUnitLimit = inValue;
+        return gWorld.mGameOptions.mUnitLimit;
+    case EE_SCREENS_SEPL_WORLD_OPT_WONDERS:
+        if (inSet) gWorld.mGameOptions.mWondersForVictory = inValue;
+        return gWorld.mGameOptions.mWondersForVictory;
+    case EE_SCREENS_SEPL_WORLD_OPT_VICTORY:
+        if (inSet) gWorld.mGameOptions.mVictory = inValue != 0;
+        return gWorld.mGameOptions.mVictory;
+    case EE_SCREENS_SEPL_WORLD_OPT_TEAMS:
+        if (inSet) gWorld.mGameOptions.mLockTeams = inValue != 0;
+        return gWorld.mGameOptions.mLockTeams;
+    case EE_SCREENS_SEPL_WORLD_OPT_CHEATS:
+        if (inSet) gWorld.mGameOptions.mCheatCodes = inValue != 0;
+        return gWorld.mGameOptions.mCheatCodes;
+    }
+    return 0;
 }
 
-// FUNCTION: EXE 0x579f94
-// Writes the row's start and end epochs to the player's tech tree, marking the player changed if the start moved
-void EESEPlayerRow::Save(unsigned long inPlayer)
+// a computer player's flag k (active, cheating, attack, defend, build, explore, ignore others, gather)
+bool* SeplAIFlag(EEComputerPlayer* inPlayer, int32_t inFlag)
 {
-    unsigned long theStart;
-    unsigned long theEnd;
-    EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
-    this->mStartEpoch->GetCurrentSelection(theStart);
-    this->mEndEpoch->GetCurrentSelection(theEnd);
-    theEnd += theStart;
-    if (theStart != (unsigned long)thePlayer->GetTechTree()->mCurrentEpoch)
-        static_cast<EEUIFScenarioEditor*>(this->mColor->GetForm())->GetPlayerScreen()->MarkPlayerChanged(inPlayer, true);
-    thePlayer->GetTechTree()->ResetEpochRange(theStart, theEnd);
+    bool* theFlags[EE_SCREENS_SEPL_AI_COUNT] = {
+        &inPlayer->mActive,     &inPlayer->mIsCheating, &inPlayer->mCanAttack,    &inPlayer->mCanDefend,
+        &inPlayer->mCanBuild,   &inPlayer->mCanExplore, &inPlayer->mIgnoreOthers, &inPlayer->mCanGather};
+    return theFlags[inFlag];
 }
 
-// FUNCTION: EXE 0x579fee
-// Fills the civilization combo (none, built-ins, custom files); for a player also loads resource caps, color, flags,
-// epochs, name, civilization ("unknown" if not found) and AI settings
-void EESEPlayerRow::Load(unsigned long inPlayer)
+// player i0's value i1 (argument i2): read, or set to i3 (EE_SCREENS_SEPL_PV_*)
+int32_t SeplPlayer(bool inSet, int32_t* i, float* f)
+{
+    EEPlayer* thePlayer = gWorld.mPlayers[i[0]];
+    switch (i[1]) {
+    case EE_SCREENS_SEPL_PV_CAP:
+        if (inSet) thePlayer->mResourceCaps[i[2]] = i[3];
+        return (int32_t)thePlayer->mResourceCaps[i[2]];
+    case EE_SCREENS_SEPL_PV_CURRENT_EPOCH: return thePlayer->GetTechTree()->mCurrentEpoch;
+    case EE_SCREENS_SEPL_PV_END_EPOCH: return thePlayer->GetTechTree()->mEndEpoch;
+    case EE_SCREENS_SEPL_PV_START_EPOCH: return thePlayer->GetTechTree()->mStartEpoch;
+    case EE_SCREENS_SEPL_PV_SHARED_LOS:
+        if (inSet) thePlayer->SetSharedLOS(i[3] != 0, gWorld.mMap);
+        return thePlayer->mSharedLOS;
+    case EE_SCREENS_SEPL_PV_OPTIONS_COLOR:
+        if (inSet) gWorld.mGameOptions.mPlayers[i[0] - 1].mColor = (unsigned long)i[3];
+        return (int32_t)gWorld.mGameOptions.mPlayers[i[0] - 1].mColor;
+    case EE_SCREENS_SEPL_PV_OPTIONS_CPU:
+        if (inSet) gWorld.mGameOptions.mPlayers[i[0] - 1].mB36 = i[3] != 0;
+        return gWorld.mGameOptions.mPlayers[i[0] - 1].mB36;
+    case EE_SCREENS_SEPL_PV_AI:
+        if (inSet && i[2] == 0)
+            thePlayer->mComputerPlayer->SetActive(i[3] != 0);
+        else if (inSet)
+            *SeplAIFlag(thePlayer->mComputerPlayer, i[2]) = i[3] != 0;
+        return *SeplAIFlag(thePlayer->mComputerPlayer, i[2]);
+    case EE_SCREENS_SEPL_PV_CITIZENS:
+        if (inSet) thePlayer->mComputerPlayer->SetCitizenPercentage((float)i[3] * kHeightEpsilon);
+        f[0] = thePlayer->mComputerPlayer->mCitizenPercentage;
+        return 0;
+    case EE_SCREENS_SEPL_PV_ID: return (int32_t)thePlayer->mPlayerID;
+    }
+    return 0;
+}
+
+// the civilization combo: none, the built-ins, the custom files, the first picked (EESEPlayerRow::Load 0x579fee)
+void SeplCivFill(UIComboBox* inControl)
 {
     std::set<UString> theFiles;
-    FSFileSpec theUnusedFile;
-    EEGameOptionsPlayer theOptions;
     UWideString theText;
-    std::vector<UWideString> theEpochs;
-    EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
-    UWideString theNumber;
-    this->mControl->DeleteAllEntries();
+    inControl->DeleteAllEntries();
     gResource->GetString(IDS_NONE, theText);
-    this->mControl->AppendLine(theText);
-    unsigned long i; for (i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
+    inControl->AppendLine(theText);
+    for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
         EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[i];
         gResource->GetString(theEntry.mNameID, theText);
-        this->mControl->AppendLine(theText);
+        inControl->AppendLine(theText);
     }
     gCivilizationDataPath->ListFiles(UString("*") + gSECivilizationExtension, theFiles);
     for (std::set<UString>::iterator theFile = theFiles.begin(); theFile != theFiles.end(); ++theFile) {
         UWideString theName(theFile->GetIndexedSubstring(0, theFile->GetLength() - 5));
-        this->mControl->AppendLine(theName);
+        inControl->AppendLine(theName);
     }
-    this->mControl->SetCurrentSelection(0);
-    if (inPlayer > 0) {
-        for (i = 0; i < 5; i++) {
-            sprintf(theNumber, "%lu", thePlayer->mResourceCaps[i + 2]);
-            this->mValues[i]->SetText(theNumber);
-        }
-        theOptions = gWorld.mGameOptions.mPlayers[inPlayer - 1];
-        this->mColor->SetColor(theOptions.mColor);
-        this->mCPUOnlyCheckBox->SetChecked(theOptions.mB36);
-        this->mSharedLOSCheckBox->SetChecked(thePlayer->mSharedLOS);
-        this->mStartEpoch->SetCurrentSelection(thePlayer->GetTechTree()->mCurrentEpoch);
-        for (unsigned long theEpoch = thePlayer->GetTechTree()->mCurrentEpoch; theEpoch < EEEpochCount(); theEpoch++) {
-            gResource->GetString(EEEpochTitleID(theEpoch), theNumber);
-            theEpochs.push_back(theNumber);
-        }
-        this->mEndEpoch->DeleteAllEntries();
-        this->mEndEpoch->AppendStringArray(theEpochs);
-        long theEnd = thePlayer->GetTechTree()->mEndEpoch;
-        long theStart = thePlayer->GetTechTree()->mCurrentEpoch;
-        this->mEndEpoch->SetCurrentSelection(theStart > theEnd ? 0 : theEnd - theStart);
-        this->mName->SetText(thePlayer->mName);
-        if (thePlayer->mCivilizationFile.GetLength() == 0)
-            this->mControl->SetCurrentSelection(0);
-        else {
-            for (i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
-                EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[i];
-                if (UString(theEntry.mFileName) == thePlayer->mCivilizationFile)
-                    break;
-            }
-            if (i != gCivilizationManager.GetNumCivilizations())
-                this->mControl->SetCurrentSelection(i + 1);
-            else {
-                while (true) {
-                    if (i < this->mControl->GetListBox()->GetLineCount()) {
-                        theText = this->mControl->GetListBox()->GetData(i);
-                        if (theText == (const char*)thePlayer->mCivilizationFile) {
-                            this->mControl->SetCurrentSelection(i);
-                            break;
-                        }
-                        i++;
-                    } else {
-                        this->mControl->SetCurrentSelection(0);
-                        gResource->GetString(IDS_UNKNOWN_CIVILIZATION, theText);
-                        this->mControl->mTextLabel->SetText(theText);
-                        break;
-                    }
-                }
-            }
-        }
-        if (thePlayer->mComputerPlayer != NULL) {
-            this->mActiveCheckBox->SetChecked(thePlayer->mComputerPlayer->mActive);
-            this->mCheatCheckBox->SetChecked(thePlayer->mComputerPlayer->mIsCheating);
-            this->mAttackCheckBox->SetChecked(thePlayer->mComputerPlayer->mCanAttack);
-            this->mDefendCheckBox->SetChecked(thePlayer->mComputerPlayer->mCanDefend);
-            this->mBuildRepairCheckBox->SetChecked(thePlayer->mComputerPlayer->mCanBuild);
-            this->mExploreCheckBox->SetChecked(thePlayer->mComputerPlayer->mCanExplore);
-            this->mIgnoreCheckBox->SetChecked(thePlayer->mComputerPlayer->mIgnoreOthers);
-            this->mGatherCheckBox->SetChecked(thePlayer->mComputerPlayer->mCanGather);
-            this->mSlider->SetCurrentRangeValue((long)(thePlayer->mComputerPlayer->mCitizenPercentage * 100.0f + 0.0001f));
-            this->mSliderLabel->SetText(this->mSlider->GetCurrentRangeValue());
-        }
-    }
+    inControl->SetCurrentSelection(0);
 }
 
-// TEMPLATE: EXE 0x57a522
-// (names.txt)
-
-// FUNCTION: EXE 0x57a53e
-// Applies the row to its player: resource caps, color, CPU-only, name, shared LOS, civilization (loads a new one or
-// clears it and its upgrades, marking the player changed) and the computer player's AI settings
-void EESEPlayerRow::ApplySettings(unsigned long inPlayer)
+// the player's civilization picked: none, a built-in, a custom file's line, else none titled "unknown"
+void SeplCivSelect(UIComboBox* inControl, EEPlayer* inPlayer)
 {
-    EEGameOptionsPlayer theOptions;
+    UWideString theText;
+    if (inPlayer->mCivilizationFile.GetLength() == 0) {
+        inControl->SetCurrentSelection(0);
+        return;
+    }
+    unsigned long i;
+    for (i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
+        EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[i];
+        if (UString(theEntry.mFileName) == inPlayer->mCivilizationFile)
+            break;
+    }
+    if (i != gCivilizationManager.GetNumCivilizations()) {
+        inControl->SetCurrentSelection(i + 1);
+        return;
+    }
+    for (; i < inControl->GetListBox()->GetLineCount(); i++) {
+        theText = inControl->GetListBox()->GetData(i);
+        if (theText == (const char*)inPlayer->mCivilizationFile) {
+            inControl->SetCurrentSelection(i);
+            return;
+        }
+    }
+    inControl->SetCurrentSelection(0);
+    gResource->GetString(IDS_UNKNOWN_CIVILIZATION, theText);
+    inControl->GetTextLabel()->SetText(theText);
+}
+
+// the chosen civilization to the player (EESEPlayerRow::ApplySettings 0x57a53e): whether it changed
+bool SeplCivApply(UIComboBox* inControl, EEPlayer* inPlayer)
+{
     UString theCivilization;
     UWideString theText;
-    EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
-    bool theChanged = false;
-    for (unsigned long i = 0; i < 5; i++)
-        thePlayer->mResourceCaps[i + 2] = this->mValues[i]->GetTextAsInt(0);
-    if (thePlayer->mColor != EEGetPlayerColor(this->mColor->GetColor()))
-        static_cast<EEUIFScenarioEditor*>(this->mColor->GetForm())->GetPlayerScreen()->mDirty = true;
-    thePlayer->SetColor(EEGetPlayerColor(this->mColor->GetColor()));
-    if (inPlayer > 0)
-        theOptions = gWorld.mGameOptions.mPlayers[inPlayer - 1];
-    theOptions.mColor = this->mColor->GetColor();
-    theOptions.mB36 = this->mCPUOnlyCheckBox->GetIsChecked();
-    if (inPlayer > 0)
-        gWorld.mGameOptions.mPlayers[inPlayer - 1] = theOptions;
-    thePlayer->mName = UWideString(this->mName->GetText(0));
-    thePlayer->SetSharedLOS(this->mSharedLOSCheckBox->GetIsChecked(), gWorld.mMap);
     unsigned long theSelection;
-    this->mControl->GetCurrentSelection(theSelection);
+    inControl->GetCurrentSelection(theSelection);
     gResource->GetString(IDS_UNKNOWN_CIVILIZATION, theText);
     if (theSelection > 0 && theSelection <= gCivilizationManager.mCivilizations.size()) {
         EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[theSelection - 1];
         theCivilization = theEntry.mFileName;
     } else
-        theCivilization = UString(this->mControl->GetListBox()->GetData(theSelection));
+        theCivilization = UString(inControl->GetListBox()->GetData(theSelection));
     if (theSelection == 0) {
-        if (thePlayer->mCivilizationFile.GetLength() > 0 && this->mControl->mTextLabel->GetText(0) != theText) {
-            thePlayer->mCivilization.mPurchasedUpgrades.clear();
-            thePlayer->mCivilization.mAvailablePoints = thePlayer->mCivilization.mMaxPoints;
-            theChanged = true;
-            thePlayer->mCivilizationFile = UString("");
+        if (inPlayer->mCivilizationFile.GetLength() > 0 && inControl->GetTextLabel()->GetText(0) != theText) {
+            inPlayer->mCivilization.mPurchasedUpgrades.clear();
+            inPlayer->mCivilization.mAvailablePoints = inPlayer->mCivilization.mMaxPoints;
+            inPlayer->mCivilizationFile = UString("");
+            return true;
         }
-    } else if (theCivilization != thePlayer->mCivilizationFile) {
-        thePlayer->mCivilizationFile = theCivilization;
-        EEApplyCivilizationFile(thePlayer->mCivilizationFile, thePlayer);
-        theChanged = true;
+    } else if (theCivilization != inPlayer->mCivilizationFile) {
+        inPlayer->mCivilizationFile = theCivilization;
+        EEApplyCivilizationFile(inPlayer->mCivilizationFile, inPlayer);
+        return true;
     }
-    if (thePlayer->mComputerPlayer != NULL) {
-        thePlayer->mComputerPlayer->SetActive(this->mActiveCheckBox->GetIsChecked());
-        thePlayer->mComputerPlayer->mIsCheating = this->mCheatCheckBox->GetIsChecked();
-        thePlayer->mComputerPlayer->mCanAttack = this->mAttackCheckBox->GetIsChecked();
-        thePlayer->mComputerPlayer->mCanDefend = this->mDefendCheckBox->GetIsChecked();
-        thePlayer->mComputerPlayer->mCanBuild = this->mBuildRepairCheckBox->GetIsChecked();
-        thePlayer->mComputerPlayer->mCanExplore = this->mExploreCheckBox->GetIsChecked();
-        thePlayer->mComputerPlayer->mIgnoreOthers = this->mIgnoreCheckBox->GetIsChecked();
-        thePlayer->mComputerPlayer->mCanGather = this->mGatherCheckBox->GetIsChecked();
-        thePlayer->mComputerPlayer->SetCitizenPercentage((float)this->mSlider->GetCurrentRangeValue() * kHeightEpsilon);
-    }
-    if (theChanged == true)
-        static_cast<EEUIFScenarioEditor*>(this->mGatherCheckBox->GetForm())->GetPlayerScreen()->MarkPlayerChanged(thePlayer->mPlayerID, false);
+    return false;
 }
 
-// FUNCTION: EXE 0x57a904
-// Returns the number of civilization entries (vector<EECivilizationEntry>::size, 0x78-byte entries)
+// the editor's tech type lists from the tech tree (EESEPlayerScreen::BuildTechTypeLists 0x575f38): no unit class
+// means a technology
+void SeplTechTypes()
+{
+    std::vector<long> theIDs;
+    gTechTree.GetNodeIDs(theIDs);
+    unsigned long theCount = theIDs.size();
+    EESEPSSetPlayers::sV531FB0.clear();
+    EESEPSSetPlayers::sBuildingTechs.clear();
+    EESEPSSetPlayers::sTechnologyTechs.clear();
+    EESEPSSetPlayers::sV531F88.clear();
+    for (unsigned long i = 0; i < theCount; ++i) {
+        long theClassIndex = gTechTree.Get(theIDs[i])->mData->mUnitClass;
+        EEUnitClass* theClass = theClassIndex >= 0 ? gUnitClassTable[theClassIndex] : NULL;
+        if (theClass == NULL)
+            EESEPSSetPlayers::sTechnologyTechs.push_back(theIDs[i]);
+        else if (theClass->IsLandBuilding())
+            EESEPSSetPlayers::sBuildingTechs.push_back(theIDs[i]);
+        else if (theClass->mAIKind == kAIKindHero)
+            EESEPSSetPlayers::sV531F88.push_back(theIDs[i]);
+        else
+            EESEPSSetPlayers::sV531FB0.push_back(theIDs[i]);
+    }
+}
 
-// FUNCTION: EXE 0x57a91a
-// Returns a civilization entry by index (vector<EECivilizationEntry>::operator[])
+// both tech lists for the player combo's player and the list inWhich (FillTechLists 0x5760ad): editor-visible
+// techs go to the enabled list, or to the disabled one when obsoleted in the editor
+void SeplFillTechs(EESEUITechListBox* inList, EESEUITechListBox* inOther, UIComboBox* inPlayer, int32_t inWhich)
+{
+    unsigned long theSelection;
+    inPlayer->GetCurrentSelection(theSelection);
+    EETechTree* theTree = gWorld.mPlayers[theSelection + 1]->GetTechTree();
+    std::vector<long>* theLists[4] = {&EESEPSSetPlayers::sV531FB0, &EESEPSSetPlayers::sBuildingTechs,
+                                      &EESEPSSetPlayers::sV531F88, &EESEPSSetPlayers::sTechnologyTechs};
+    std::vector<long>* theTechs = theLists[inWhich];
+    inOther->Clear();
+    inList->Clear();
+    unsigned long theCount = theTechs->size();
+    inOther->mTechs.reserve(theCount);
+    inList->mTechs.reserve(theCount);
+    for (unsigned long i = 0; i < theCount; i++) {
+        EETechTreeNode* theNode = theTree->Get((*theTechs)[i]);
+        if (theNode->mData->mShowInEditor == true) {
+            if (theNode->mScenEditorObsoleted) inOther->AddTech((*theTechs)[i]);
+            else inList->AddTech((*theTechs)[i]);
+        }
+    }
+    inList->Rebuild();
+    inOther->Rebuild();
+}
 
-// TEMPLATE: EXE 0x57a927
-// ??1?$_Tree@VUString@@V1@U_Kfn@?$set@VUString@@U?$less@VUString@@@std@@V?$allocator@VUString@@@3@@std@@U?$less@VUString@@@4@V?$allocator@VUString@@@4@$0A@@std@@QAE@XZ
+}   // namespace
 
-// TEMPLATE: EXE 0x57a952
-// ?begin@?$vector@JV?$allocator@J@std@@@std@@QAE?AV?$_Ptrit@JHPAJAAJPAJAAJ@2@XZ
-
-// TEMPLATE: EXE 0x57a95e
-// ??H?$_Ptrit@UEECivilizationEntry@@HPAU1@AAU1@PAU1@AAU1@@std@@QBE?AV01@H@Z
-
-// FUNCTION: EXE 0x57a970
-// Creates an empty set of strings (set<UString> constructor: comparator, allocator, _Init; unnamed)
-
-// TEMPLATE: EXE 0x57a991
-// (names.txt)
-
-// TEMPLATE: EXE 0x57aa02
-// (names.txt)
-
-// TEMPLATE: EXE 0x57acba
-// (names.txt)
+// The ops (editor_players.rs; p: three handles, i: four integers, f: four floats)
+extern "C" int32_t ee_screenscpp_sepl(uint32_t inOp, void* const* p, int32_t* i, float* f)
+{
+    UIControl* c = static_cast<UIControl*>(p[0]);
+    UIComboBox* theCombo = static_cast<UIComboBox*>(p[0]);
+    switch (inOp) {
+    case EE_SCREENS_SEPL_OP_MAKE:
+        *static_cast<UIControl**>(p[0]) =
+            SeplMake(*static_cast<const EeScreensSeplCtl*>(p[1]), static_cast<UIForm*>(p[2]));
+        return 0;
+    case EE_SCREENS_SEPL_OP_DELETE: delete c; return 0;
+    case EE_SCREENS_SEPL_OP_RECT: {
+        const GERectangle& r = c->GetRectangle();
+        f[0] = r.GetLeft(); f[1] = r.GetTop(); f[2] = r.GetRight(); f[3] = r.GetBottom();
+        return 0;
+    }
+    case EE_SCREENS_SEPL_OP_SET_DISPLAY: c->SetDisplayMode((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SEPL_OP_DISPLAY: return (int32_t)c->GetDisplayMode();
+    case EE_SCREENS_SEPL_OP_SET_CHECKED: static_cast<UICheckBox*>(c)->SetChecked(i[0] != 0); return 0;
+    case EE_SCREENS_SEPL_OP_CHECKED: return static_cast<UICheckBox*>(c)->GetIsChecked();
+    case EE_SCREENS_SEPL_OP_COMBO_CLEAR: theCombo->DeleteAllEntries(); return 0;
+    case EE_SCREENS_SEPL_OP_COMBO_APPEND: theCombo->AppendLine(SeplText((uint32_t)i[0], (uint32_t)i[1], i[2])); return 0;
+    case EE_SCREENS_SEPL_OP_COMBO_SELECTION: {
+        unsigned long s;
+        theCombo->GetCurrentSelection(s);
+        return (int32_t)s;
+    }
+    case EE_SCREENS_SEPL_OP_LIST_SELECTION: {
+        unsigned long s;
+        theCombo->GetListBox()->GetCurrentSelection(s);
+        return (int32_t)s;
+    }
+    case EE_SCREENS_SEPL_OP_SET_SELECTION: theCombo->SetCurrentSelection((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SEPL_OP_EDIT_NUMBER: {
+        UWideString theNumber;
+        sprintf(theNumber, "%lu", (unsigned long)i[0]);
+        static_cast<UIEditBox*>(c)->SetText(theNumber);
+        return 0;
+    }
+    case EE_SCREENS_SEPL_OP_EDIT_COPY:
+        static_cast<UIEditBox*>(c)->SetText(static_cast<UIEditBox*>(p[1])->GetText(0));
+        return 0;
+    case EE_SCREENS_SEPL_OP_EDIT_INT: return static_cast<UIEditBox*>(c)->GetTextAsInt(0);
+    case EE_SCREENS_SEPL_OP_SLIDER: return static_cast<UISlider*>(c)->GetCurrentRangeValue();
+    case EE_SCREENS_SEPL_OP_SET_SLIDER: static_cast<UISlider*>(c)->SetCurrentRangeValue(i[0]); return 0;
+    case EE_SCREENS_SEPL_OP_LABEL_NUMBER:   // both overloads the original called print "%ld"
+        static_cast<UITextLabel*>(c)->SetText((long)i[0]);
+        return 0;
+    case EE_SCREENS_SEPL_OP_COLOR: return static_cast<EEUIBColor*>(c)->GetColor();
+    case EE_SCREENS_SEPL_OP_SET_COLOR: static_cast<EEUIBColor*>(c)->SetColor((unsigned long)i[0]); return 0;
+    case EE_SCREENS_SEPL_OP_GROUP:
+        if (i[1]) c->GetForm()->GetEntityGroup(i[0])->Enable();
+        else c->GetForm()->GetEntityGroup(i[0])->Disable();
+        return 0;
+    case EE_SCREENS_SEPL_OP_SET_LOCATION: c->SetLocation(GE2DPoint(f[0], f[1])); return 0;
+    case EE_SCREENS_SEPL_OP_RADIO_CHECK: static_cast<UIRadioButton*>(c)->Check(); return 0;
+    case EE_SCREENS_SEPL_OP_RADIO_CHECKED: return static_cast<EESERBUnitTypes*>(c)->GetIsChecked();
+    case EE_SCREENS_SEPL_OP_EVENT: {
+        UIEvent* theEvent = NULL;
+        switch (i[1]) {
+        case EE_SCREENS_SEPL_EVENT_START_EPOCH: theEvent = new EESEERust(kSEEStartEpoch, p[1]); break;
+        case EE_SCREENS_SEPL_EVENT_SLIDER: theEvent = new UIESliderChange(static_cast<UITextLabel*>(p[1]), 1.0f, 0); break;
+        case EE_SCREENS_SEPL_EVENT_UNIT_LIMIT: theEvent = EESEENewUnitLimit(static_cast<UITextLabel*>(p[1]), 1.0f, 0); break;
+        case EE_SCREENS_SEPL_EVENT_DISPLAY_EPOCH:   // one event on both the checked and the unchecked trigger
+            theEvent = EECreateScreenEvent(EE_SCREENS_SE_DISPLAY_EPOCH);
+            c->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
+            break;
+        }
+        c->SetTriggerEvent((unsigned long)i[0], theEvent);
+        theEvent->Dereference();
+        return 0;
+    }
+    case EE_SCREENS_SEPL_OP_LOAD_BITMAPS: EESEUIBDiplomacy::LoadBitmaps(static_cast<EEUIFScenarioEditor*>(p[0])); return 0;
+    case EE_SCREENS_SEPL_OP_RELEASE_BITMAPS: EESEUIBDiplomacy::ReleaseBitmaps(); return 0;
+    case EE_SCREENS_SEPL_OP_DIPLOMACY: return (int32_t)static_cast<EESEUIBDiplomacy*>(c)->mState;
+    case EE_SCREENS_SEPL_OP_SET_DIPLOMACY:
+        static_cast<EESEUIBDiplomacy*>(c)->mState = i[0];
+        static_cast<EESEUIBDiplomacy*>(c)->UpdateBitmaps();
+        return 0;
+    case EE_SCREENS_SEPL_OP_UNIT_LIMIT_RULES:   // gameoptions.yaml
+        i[0] = EERuleLong(EEGetRules().mGameOptions.mUnitLimitMinimum);
+        i[1] = EERuleLong(EEGetRules().mGameOptions.mUnitLimitMaximum);
+        i[2] = EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault);
+        return 0;
+    case EE_SCREENS_SEPL_OP_NUM_PLAYERS: return (int32_t)gWorld.GetNumPlayers();
+    case EE_SCREENS_SEPL_OP_PLAYER_EXISTS: return gWorld.GetPlayer(i[0]) != NULL;
+    case EE_SCREENS_SEPL_OP_MAX_PLAYERS: return (int32_t)gMaxPlayers;
+    case EE_SCREENS_SEPL_OP_POST_PLAYER_COUNT: {
+        EEAction* theAction = new EESEAChangeWorldPlayerCount((unsigned long)i[0]);
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        return 0;
+    }
+    case EE_SCREENS_SEPL_OP_IS_COMPUTER: return gWorld.mPlayers[i[0]] != NULL && gWorld.mPlayers[i[0]]->mComputerPlayer != NULL;
+    case EE_SCREENS_SEPL_OP_TECH_TYPES: SeplTechTypes(); return 0;
+    case EE_SCREENS_SEPL_OP_FILL_TECHS:
+        SeplFillTechs(static_cast<EESEUITechListBox*>(p[0]), static_cast<EESEUITechListBox*>(p[1]),
+                      static_cast<UIComboBox*>(p[2]), i[0]);
+        return 0;
+    case EE_SCREENS_SEPL_OP_REBUILD_TECHS:
+        static_cast<EESEUITechListBox*>(p[0])->Rebuild();
+        static_cast<EESEUITechListBox*>(p[1])->Rebuild();
+        return 0;
+    case EE_SCREENS_SEPL_OP_PLAYER_GET: return SeplPlayer(false, i, f);
+    case EE_SCREENS_SEPL_OP_PLAYER_SET: return SeplPlayer(true, i, f);
+    case EE_SCREENS_SEPL_OP_CIV_FILL: SeplCivFill(theCombo); return 0;
+    case EE_SCREENS_SEPL_OP_CIV_SELECT: SeplCivSelect(theCombo, gWorld.mPlayers[i[0]]); return 0;
+    case EE_SCREENS_SEPL_OP_CIV_APPLY: return SeplCivApply(theCombo, gWorld.mPlayers[i[0]]);
+    case EE_SCREENS_SEPL_OP_FILL_EPOCHS: {
+        std::vector<UWideString> theEpochs;
+        UWideString theTitle;
+        for (unsigned long e = (unsigned long)i[0]; e < (unsigned long)EEEpochCount(); e++) {
+            gResource->GetString(EEEpochTitleID(e), theTitle);
+            theEpochs.push_back(theTitle);
+        }
+        theCombo->DeleteAllEntries();
+        theCombo->AppendStringArray(theEpochs);
+        return 0;
+    }
+    case EE_SCREENS_SEPL_OP_NAME_TO_EDIT: static_cast<UIEditBox*>(c)->SetText(gWorld.mPlayers[i[0]]->mName); return 0;
+    case EE_SCREENS_SEPL_OP_NAME_FROM_EDIT:
+        gWorld.mPlayers[i[0]]->mName = UWideString(static_cast<UIEditBox*>(c)->GetText(0));
+        return 0;
+    case EE_SCREENS_SEPL_OP_NAME_TO_LABEL: static_cast<UITextLabel*>(c)->SetText(gWorld.mPlayers[i[0]]->mName); return 0;
+    case EE_SCREENS_SEPL_OP_EPOCH_RANGE: gWorld.mPlayers[i[0]]->GetTechTree()->ResetEpochRange(i[1], i[2]); return 0;
+    case EE_SCREENS_SEPL_OP_APPLY_COLOR: {
+        EEPlayer* thePlayer = gWorld.mPlayers[i[0]];
+        bool theDiffers = thePlayer->mColor != EEGetPlayerColor(static_cast<EEUIBColor*>(c)->GetColor());
+        thePlayer->SetColor(EEGetPlayerColor(static_cast<EEUIBColor*>(c)->GetColor()));
+        return theDiffers;
+    }
+    case EE_SCREENS_SEPL_OP_ENEMY:
+        return gWorld.mPlayers[i[0]] != NULL ? (int32_t)gWorld.mPlayers[i[0]]->mEnemies[i[1]] : 0;
+    case EE_SCREENS_SEPL_OP_SET_STANCE: gWorld.SetDiplomaticStance(i[0], i[1], i[2]); return 0;
+    case EE_SCREENS_SEPL_OP_WORLD_GET: return (int32_t)SeplWorld(i[0], false, 0);
+    case EE_SCREENS_SEPL_OP_WORLD_SET: SeplWorld(i[0], true, i[1]); return 0;
+    case EE_SCREENS_SEPL_OP_LOAD_THREAD: {
+        // the existing queue API carries the original scalar message words as void*
+        EESELoadThread* theThread = gUIManager->mScenarioEditorForm->mLoadThread;
+        void* thePlayer = reinterpret_cast<void*>((uintptr_t)i[1]);
+        void* theEpoch = reinterpret_cast<void*>((intptr_t)gWorld.GetPlayer(i[1])->GetTechTree()->mStartEpoch);
+        if (i[0] == 406) theThread->Post406(thePlayer, theEpoch);
+        else if (i[0] == 403) theThread->Post403(thePlayer, i[2] != 0);
+        else theThread->Post407(thePlayer, theEpoch);
+        return 0;
+    }
+    case EE_SCREENS_SEPL_OP_MINIMAP_REDRAW:
+        if (gMiniMap) gMiniMap->Redraw();
+        return 0;
+    case EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR: gMiniMap->Recolor(); return 0;
+    }
+    return 0;
+}
