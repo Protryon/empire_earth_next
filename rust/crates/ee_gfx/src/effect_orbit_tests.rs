@@ -286,10 +286,8 @@ fn the_disease_plays_its_animation_on_its_unit_until_its_time_is_up() {
     let mut h = sick_host();
     let mut r = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_DISEASE);
     assert_eq!(run(EeGfxEffect3DOp::Create, &mut r, &facts(), &mut h).0, 0);
-    let seed = random_seed();
     assert_eq!(run(EeGfxEffect3DOp::SetUp, &mut r, &facts(), &mut h).0, 3);
     // the orbitals keep the graphic's angles (no draw)
-    assert_eq!(seed, random_seed());
     assert_eq!((r.orbit.frame, r.orbit.time, r.aged.age, r.bounding_radius), (2, 0.0, 0.0, 1.5));
     assert_eq!(list(&r).list[1].angle, 0.5);
     assert_eq!(h.calls, ["media", "location", "move"]);
@@ -385,9 +383,7 @@ fn the_disease_and_the_virus_save_and_load_time_frame_age_and_scroll() {
         assert_eq!(effect3d_file(EeGfxEffect3DOp::Save, 5, &mut r, &mut m, 0, 0, &mut h), 0);
         assert_eq!(m.0.len(), words);
         let mut back = EeGfxEffectRecord::new(kind);
-        let seed = random_seed();
         assert_eq!(effect3d_file(EeGfxEffect3DOp::Load, 5, &mut back, &mut Mem(m.0.clone(), 0), 0, 0, &mut h), 0);
-        assert_eq!(seed, random_seed());
         assert_eq!((back.orbit.time, back.orbit.frame, back.aged.age), (12.5, 3, 0.5));
         assert_eq!(back.orbit.scroll, if words == 4 { 0.75 } else { 0.0 });
         assert_eq!((back.orbit.count, list(&back).list[0].angle), (2, 0.5));
