@@ -18304,3 +18304,108 @@ is a control table plus page logic like the player tab: the `EeScreensSeplCtl` m
 shared (move it to an editor-wide module when the second screen needs it). The gate's `form` dump already records
 every control those screens make; their logic needs steps like this round's (the trigger tab's object screen's
 lasso and lists, the unit tab's sort and cargo).
+
+## R6: the scenario editor screens, round 2: the trigger tab's object and trigger screens whole in Rust; the editor gate drives them and the unit tab (ee_screens editor_object.rs, editor_trigger.rs; branch rust-editor2, 2026-11-14)
+
+### The gate first (four commits, each recorded on the unmodified screen, old lines unchanged, twice identical)
+
+- **Round 1's gap closed**: each player page step is now followed by `controls 0x149` (the player combo's mode).
+  The combo is in no control group and the tab's Leave hides it before a full dump, so a SelectPage that left it
+  shown passed. 5,560 -> 5,581 lines.
+- **New steps**: `enter ID` (an edit box's protected `ProcessEnterKey`), `tscreen select N|new|dup|delete|up|down|
+  sort|name` (the trigger tab's list and its buttons), `tsclick select|add UNIT` (the object screen's own click
+  action, `EESETSAMouseClick`, which updates the screen after the selection), `object` and `triggerstate` (the open
+  scenario object's and trigger's fields), `fire ID` (a control's button-up event processed). `controls` prints a
+  tri-state box's state (no older step names one, so no old line changed).
+- **`%N` names the form's control N** in every step that takes an id. The trigger screens repeat ids (the object
+  screen's owner, family and class combos are all 0x841), and some of their ids are not found by
+  `GetControlById` at all (0x835, the object screen's second radio: the step crashed on the NULL). Indexes are
+  stable across a move (the move must keep them), so they are the gate's handle on a screen whose members became
+  Rust handles. `#` would have been the obvious prefix, but it starts a script comment. `check` took the id path of
+  its own and needed the same change.
+- **`buttonup` fires nothing on a plain button**: `UIButton::ButtonUp` only fires its button-up event after a
+  press, so the trigger rows' arrows and remove buttons and the unit palette buttons did nothing through it (the
+  first recording showed no change). `fire ID` runs the event as the release would; a palette button is `radio %N`
+  (its `Check` sets the palette) then `fire %N` (its sort event).
+- The tails: the object screen (both modes, the generated names from family, class, owner, parent and the picked
+  units, the counts' clamp on Enter, the six filters and their third state, two objects stored and loaded, the
+  list's buttons, the tab left and entered: 5,581 -> 5,971); the trigger screen (a trigger's rows, "and"/"or"
+  adding rows, a second row's operator showing the rows one on, the steps, the removals, the timer, duplicate and
+  delete) and the unit tab (palettes, owners, sorts, a transport's cargo shown and hidden): 5,971 -> 6,559.
+
+### The moves
+
+Both screens follow round 1's pattern: the object owns every control as a handle and its few changing numbers as
+`Cell`s (a host call can come back in: a mode radio's event refreshes the object screen, an operator combo's event
+changes the trigger), C++ keeps a shell of one-line forwarders and the screen's host.
+
+- **The shared maker grew instead of forking.** `EeScreensSeplCtl` and the host's `SeplMake` (EESERBUnitTypes.cpp)
+  take the trigger screens' kinds: radio button, tri-state box, the counts' `EESETSAEditBox`, one "trigger screens'
+  combo box" kind whose extra words pick the class (`UIComboBox`, `EESETSAComboBox`, `EESETSUICBPlayer`,
+  `EESETSEScenarioComboBox`, `EESETSTriggerUIComboBox`), its lines (none, the families and listed unit sets, a run of
+  resource strings) and the border, the unit list, a text button and the scroll arrows. The combo kind keeps the
+  trigger screens' call order (text box opacity, always dirty, colour, selected colour, opacity), which differs from
+  the player tab's combo (opacity first): a `UIComboBox::SetBgOpacity` can reach its parts, so the order is kept per
+  kind rather than unified. Generic ops added: tri-state get/set, a radio's check, a list cleared, a line count,
+  `atoi` of an edit box, a screen event on chosen triggers, a label's text. The screen font is `gSeplScreenFont`,
+  set by each screen's constructor before its object makes controls.
+- **One host function per screen, split by op number**: the FFI's host sends ops below 100 to
+  `ee_screenscpp_sepl` (the controls), 100.. to `ee_screenscpp_seob` (the object screen: the scenario object, the
+  editor's selection, unit classes and actions), 200.. to `ee_screenscpp_setr` (the triggers). The modules reuse
+  round 1's `SeplHost` trait, so one recording test host can drive any of them.
+- **Kept C++ on purpose**: the class list's `std::sort` with the original comparator (it is not a strict weak
+  order: class 0 compares "less" both ways; Rust's sort would not reproduce the order of equal names), the unit
+  actions' names (`EEUnitAction`), the small control classes with vtables (`EESETSOUnitList`, `EESETSAMouseClick`,
+  `EESETSALasso`, `EESETSAComboBox`, `EESETSAEditBox`, `EESETSTriggerUIComboBox` and its right-click jump).
+- **What the original read past or through NULL** (behaviour on undefined paths only): a family past the listed
+  sets, an action combo without a selection and a line past a combo's list now read the first set, the empty name
+  and the empty text; a trigger row whose entry does not exist is left as it is (the original read a null
+  wrapper).
+- **Unsigned arithmetic kept**: the trigger's counts are `unsigned long` and the indexes `long`; the original's
+  mixed comparisons (`first >= count - 1` unsigned, `first < (long)(count - 2)` signed) are written with
+  `wrapping_sub` and the same signedness, and a "none" selection is passed through as all ones and sign-extended
+  by the host (`(unsigned long)(long)`) so LP64 sees the original's value.
+- **The host must not look up the trigger screen eagerly**: the editor makes its tabs (and the screens their
+  controls) before `mScenarioEditorForm` is set; the first build crashed in the host's prologue. The lookups are
+  lambdas called only by the ops that need them.
+
+C++ lines (src and include, include/rust aside): the object screen +441 -1,080 (net -639), the trigger screen +210
+-877 (net -667): net -1,306 for the two moves. The gate's commits: EESimEditor.cpp +113 -1, TEST ONLY.
+
+### Mutations of the Rust against the editor gate (each built and run: build/ed2/mut2.py, mut3.py)
+
+| Mutation | Lines changed |
+|---|---|
+| object: Store's count clamp writes the min box instead of the max | 7 |
+| object: UpdateSelection drops the "+" of several picked units | 11 |
+| object: CheckChanged leaves the percent box of the attribute filter alone | 6 |
+| trigger: a second row's operator leaves the rows where they are | 95 |
+| trigger: Load shows the next conditions arrow one row too long | 6 |
+| trigger: RemoveEntry does not step the rows back past the end | 14 |
+
+### Only a person reaches
+
+- The destructors (closing the editor).
+- The object screen's `MouseMove` (a press in the game view starting a selection: EE-SIM has no mouse buttons),
+  the picking of the click and the lasso (EE-SIM draws nothing).
+- The trigger combo boxes' right click (`EESETSTriggerUIComboBox::MouseRButtonUp`, unchanged C++).
+- How the controls look: the new kinds' bitmaps (the scroll arrows), fonts and colours as drawn. No tour opens the
+  editor; the gate's form dumps check every control's class, rectangle, colours, texts and events.
+
+### Gates
+
+| Gate | Per commit | At the end (rust f2813578 is this branch's base: `git merge rust` was already up to date) |
+|---|---|---|
+| `build.py -j 3 --sim` | EE-AOC and EE-SIM 0 unresolved, 0 duplicates | the same |
+| `tools/sim_editor.py` | each recording twice identical on the unmodified screen; each move PASS | PASS 6,559 |
+| oracle against the main checkout's `ref` | seeds 2-3 identical | seeds 2-7 identical |
+| `rust_build.py gate` | the object move's run failed only the header check (cargo fmt had reflowed doc comments after the header was written: regenerated, the xtask test passes); the trigger move's failed clippy (an 8-argument helper, `is_multiple_of`, test casts: fixed in their own commit) | PASS (3,188 tests) |
+| `build.py --test-profile windowed-software` | | EE-AOC 0 unresolved, 0 duplicates |
+| captures | not run: the screens write the scenario's objects and triggers only in the editor (no simulation code changed) | |
+
+### Left
+
+The unit tab (EESEUnit, 820 body lines) is gated now (palettes, owners, sorts, cargo) but not moved: much of it is
+the mouse's placement state (`mPlacing`, the wall and gate tools, `mUnitUnderMouse`), read by the UI thread, the
+render and the actions, so a whole move needs those reads behind accessors first. Then the player effects
+(EESETSETPlayer), the editor form itself (EEUIFScenarioEditor) and EESETriggerScreen, on the same maker.
