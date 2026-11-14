@@ -3000,6 +3000,8 @@ enum class EeWonGuiOp : uint32_t {
   WbFont,
   /// `Button::CopyAttributes((Button*)a)`.
   WbBaseCopy,
+  /// a layout's call (`a` an `EeWonSkinLay`; `b`, `c`, `d` its arguments).
+  SkinLay = 620,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -5334,6 +5336,32 @@ enum class EeWonScrollTextCall : uint32_t {
   Field,
 };
 
+/// Which method (`ee_won_skin_layout`'s `kind`).
+enum class EeWonSkinLayKind : uint32_t {
+  /// `MSComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  MsCombo = 1,
+  /// `MSScrollContainer::Virtual08` (after `Container::Virtual08`).
+  MsScroll,
+  /// `MSListCtrl::Virtual08`: the scroll container's, then the header.
+  MsList,
+  /// `WONComboBox::GetDesiredSize` (the size out).
+  WonComboSize,
+  /// `WONComboBox::Virtual08` (after `ComboBox::Virtual08`).
+  WonCombo,
+  /// `WONScrollContainer::Virtual08` (after `Container::Virtual08`).
+  WonScroll,
+  /// `WONListCtrl::Virtual08`: the scroll container's, then the header.
+  WonList,
+  /// `WONListCtrl::SetStandarColumnHeader(a, *(const GUIString*)b, c)`.
+  WonListTextHeader,
+  /// `WONListCtrl::SetColumnHeader(a, (Component*)b, c)`.
+  WonListHeader,
+  /// `MSEtchedFrameGroup::GetDesiredSize` (the size out).
+  EtchedSize,
+  /// `WONSimpleButton::GetDesiredSize` (the size out).
+  SimpleButtonSize,
+};
+
 /// Which copy `ee_won_smart_get` makes.
 enum class EeWonSmartGet {
   /// `GetClient(a)`
@@ -6729,6 +6757,77 @@ enum class EeWonLobbyCtlPref : uint32_t {
   FilterDirtyWords,
   AnonymousToFriends,
   ConnectionSpeed,
+};
+
+/// The host's calls (`EeWonGuiOp::SkinLay`; `a` this, `b`, `c`, `d` its arguments; `k` the layout's kind).
+enum class EeWonSkinLay : uint32_t {
+  /// The receiver's part `c` (`EeWonSkinPart`) as the kind `b`'s class holds it.
+  Part = 1,
+  /// The receiver's field `c` (`EeWonSkinField`) as the kind `b`'s class holds it.
+  Field,
+  /// `mHeaderHeight = b`.
+  SetHeaderHeight,
+  /// `((Component*)b)->Width()`.
+  Width,
+  Height,
+  Left,
+  Top,
+  Right,
+  /// `IsVisible()` (0 or 1).
+  Visible,
+  /// `((Component*)b)->SetPosSize(r[0], r[1], r[2], r[3])` with `r` the four ints at `c`.
+  SetPosSize,
+  /// `((Component*)b)->GetDesiredSize(wh[0], wh[1])` with `wh` the two ints at `c`.
+  DesiredSize,
+  /// `((InputBox*)b)->SetLeftPad(c)`.
+  SetLeftPad,
+  /// `((ListArea*)b)->GetNumItems()`.
+  ListCount,
+  /// `((ListArea*)b)->GetTotalWidth()`.
+  ListTotalWidth,
+  /// `mHeader->SetColumn(b, *(const GUIString*)c, (int*)d)`.
+  SetColumn,
+  /// `mHeader->SetColumnItem(b, (Component*)c)`.
+  SetColumnItem,
+  /// `((MultiListArea*)GetScrollArea())->SetColumnWidth(b, c, false)`.
+  SetColumnWidth,
+  /// `mImages[b]`'s width and height into the two ints at `c` (0: no image, else 1).
+  Image,
+};
+
+/// A part of the receiver (`EeWonSkinLay::Part`): a `Component*`, 0 for none.
+enum class EeWonSkinPart : uint32_t {
+  /// A combo box's `mButton`.
+  Button = 1,
+  /// A combo box's `mEdit`.
+  Edit,
+  /// A combo box's `mListArea`.
+  ListArea,
+  /// A scroll container's `GetScrollArea()`.
+  ScrollArea,
+  /// `GetScrollbar(true)`.
+  VertBar,
+  /// `GetScrollbar(false)`.
+  HorzBar,
+  /// A list control's `mHeader`.
+  Header,
+  /// An etched group's `mLabel`.
+  Label,
+  /// An etched group's `mComponent`.
+  Contained,
+};
+
+/// A field of the receiver (`EeWonSkinLay::Field`).
+enum class EeWonSkinField : uint32_t {
+  DrawFrame = 1,
+  Draw3DFrame,
+  ButtonInFrame,
+  HeaderHeight,
+  /// `mFrame.mLeft` (the WON skin's frame).
+  FrameLeft,
+  FrameTop,
+  FrameRight,
+  FrameBottom,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -16287,6 +16386,19 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// # Safety
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
+
+/// `layout` for the C++ (`w`, `h` null for a layout that has no size out).
+///
+/// # Safety
+/// `me` is the component `host` serves; `w` and `h` are null or point at ints.
+void ee_won_skin_layout(EeWonSkinLayKind kind,
+                        void *me,
+                        EeWonGuiHostFn host,
+                        int32_t a,
+                        ptrdiff_t b,
+                        int32_t c,
+                        int32_t *w,
+                        int32_t *h);
 
 /// A new model: the ignore file's path (`path_len` bytes), the C++'s `wchar_t` size.
 ///

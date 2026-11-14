@@ -814,6 +814,9 @@ pub enum EeWonGuiOp {
     WbFont,
     /// `Button::CopyAttributes((Button*)a)`.
     WbBaseCopy,
+    // ---- the skins' layouts (R6 WON round 37: `skinlay`; the receiver the composite control as a `Component*`)
+    /// a layout's call (`a` an `EeWonSkinLay`; `b`, `c`, `d` its arguments).
+    SkinLay = 620,
 }
 
 /// A wrapped text's method (`WbText`; `b` the text).

@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyMSExtraConfig.h"
 #include "ee/wonapi/WONGUIDraw.h"
+#include "ee/wonapi/WONSkinLayout.h"
 
 namespace WONAPI {
 // FUNCTION: WON 0x006ffa70
@@ -40,46 +41,21 @@ void MSComboBox::GetDesiredSize(int& width,int& height)
 }
 
 // FUNCTION: WON 0x006ffe30
-// Lays out the combo box: the arrow button (if visible) at the right inside the frame, the edit box
-// filling the rest of the width and the full height
+// Lays out the combo box: the arrow button (if visible) at the right inside the frame, the edit box filling the rest
+// of the width and the full height (skinlay.rs)
 void MSComboBox::Virtual08()
 {
     ComboBox::Virtual08();
-    int topPad=0,bottomPad=0,rightPad=0,leftPad=0;
-    if(this->mDrawFrame)
-        topPad=bottomPad=rightPad=2;
-    int inputHeight=this->Height();
-    int buttonHeight=inputHeight-bottomPad-topPad;
-    int buttonWidth=this->mButton->Width();
-    if(!this->mButton->IsVisible()) buttonWidth=0;
-    int inputWidth=this->Width()-buttonWidth-leftPad-rightPad;
-    if(this->mButton->IsVisible())
-        this->mButton->SetPosSize(inputWidth+leftPad,topPad,buttonWidth,buttonHeight);
-    this->mEdit->SetPosSize(leftPad,0,inputWidth,inputHeight);
+    WONSkinLayout(this,EeWonSkinLayKind::MsCombo);
 }
 
 // FUNCTION: WON 0x00700290
-// Lays out the scroll container: visible scrollbars along the right and bottom edges inside the
-// 3D frame, the scroll area in the rest below the header
+// Lays out the scroll container: visible scrollbars along the right and bottom edges inside the 3D frame, the scroll
+// area in the rest below the header (skinlay.rs)
 void MSScrollContainer::Virtual08()
 {
     Container::Virtual08();
-    if(this->GetScrollArea()==NULL) return;
-    bool horzOn=this->GetScrollbar(false)->IsVisible();
-    bool vertOn=this->GetScrollbar(true)->IsVisible();
-    int xoff=0,yoff=0;
-    if(this->mDrawFrame && this->mDraw3DFrame) xoff=yoff=2;
-    int scrollbarWidth=this->GetScrollbar(true)->Width();
-    int scrollbarHeight=this->GetScrollbar(false)->Height();
-    int scrollWidth=this->Width()-xoff*2;
-    if(vertOn) scrollWidth-=scrollbarWidth;
-    int scrollHeight=this->Height()-yoff*2;
-    if(horzOn) scrollHeight-=scrollbarHeight;
-    if(vertOn)
-        this->GetScrollbar(true)->SetPosSize(this->Width()-scrollbarWidth-xoff,yoff,scrollbarWidth,scrollHeight);
-    if(horzOn)
-        this->GetScrollbar(false)->SetPosSize(xoff,this->Height()-scrollbarHeight-yoff,scrollWidth,scrollbarHeight);
-    this->GetScrollArea()->SetPosSize(xoff,this->mHeaderHeight+yoff,scrollWidth,scrollHeight-this->mHeaderHeight);
+    WONSkinLayout(this,EeWonSkinLayKind::MsScroll);
 }
 
 // FUNCTION: WON 0x00700390

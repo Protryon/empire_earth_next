@@ -500,6 +500,9 @@ WON_TESTS = {
     # the software raster surface as a whole Rust object (surface.rs) against the WON SDK's Surface.cpp
     # (golden: rust/crates/ee_won/src/golden_surface.txt)
     "won_surface_test": [],
+    # the skins' layouts (skinlay.rs: the combo boxes', scroll containers' and list controls' Virtual08, the column
+    # headers, three desired sizes) against the original statements (golden: rust/crates/ee_won/src/golden_skinlay.txt)
+    "won_skinlay_test": [],
     # the image and rectangle components' paints as Rust plans (guidraw.rs image_component_paint, rectangle_paint,
     # rectangle_3d_paint) against the original statements (golden: rust/crates/ee_won/src/golden_compaint.txt)
     "won_compaint_test": [],

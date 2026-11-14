@@ -135,6 +135,7 @@ pub mod scrolltext;
 pub mod servconn;
 pub mod servctx;
 pub mod server;
+pub mod skinlay;
 pub mod smartroute;
 pub mod socket;
 pub mod sockobj;

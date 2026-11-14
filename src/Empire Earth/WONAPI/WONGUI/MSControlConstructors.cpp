@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbySkinnedContainers.h"
 #include "ee/wonapi/WONComponentFlags.h"
+#include "ee/wonapi/WONSkinLayout.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006f5560
 // Sets or clears the given component flags
@@ -123,12 +124,12 @@ MSListCtrl::MSListCtrl(MultiListArea* area)
     this->mHeaderHeight=15;
 }
 // FUNCTION: WON 0x007010b0
-// Relays out the list control, placing the header just above the scroll area
+// Relays out the list control (the scroll container's layout), placing the header just above the scroll area
+// (skinlay.rs)
 void MSListCtrl::Virtual08()
 {
-    MSScrollContainer::Virtual08();
-    this->mHeader->SetPosSize(this->GetScrollArea()->Left(),this->GetScrollArea()->Top()-this->mHeaderHeight,
-                     this->GetScrollArea()->Width(),this->mHeaderHeight);
+    Container::Virtual08();
+    WONSkinLayout(this,EeWonSkinLayKind::MsList);
 }
 }
 
