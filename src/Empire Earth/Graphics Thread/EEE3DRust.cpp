@@ -1,10 +1,10 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
 // effect_beam.rs, effect_aged.rs, effect_additive.rs,
-// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_orbit.rs, effect_hurricane.rs, effect_nuclear.rs, effect_multi.rs, effect_wall.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
 // EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
 // EEE3DAdditivePass.cpp, EEE3DLinearProjectile.cpp, EEE3DDisease.cpp, EEE3DVirus.cpp, EEE3DHurricane.cpp,
-// EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp and EEE3DMultiEffect.cpp.
+// EEE3DNuclearExplosion.cpp, EEE3DEnergyWave.cpp, EEE3DMultiEffect.cpp and EEE3DEnergyWall.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -49,6 +49,10 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DRust.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EEUCBuilding.h"
+#include "ee/EEUCGate.h"
+#include "ee/EEDoppelgangerManager.h"
+#include "ee/EEUnitUtilities.h"
 
 namespace {
 // the world's answers for one call
@@ -296,6 +300,60 @@ struct Ask {
             return gEffectManager->CreatePlacedEffect(*static_cast<GE3DPoint*>(theAsk->mArg), theLinked, NULL);
         return gEffectManager->CreateUnitEffect(static_cast<EEUnit*>(theAsk->mArg), theLinked, NULL, 0, 0, 0);
     }
+    // the energy wall's posts on a gate: its two end parts (EEE3DEnergyWall::Place, 0xed784)
+    static bool WallGatePosts(void* inAsk, EeGe3DPoint* outFirst, EeGe3DPoint* outSecond)
+    {
+        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
+        if (theUnit->GetClass()->mCategory != kUnitCategoryGate)
+            return false;
+        EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetClass());
+        EEComplexUnit* theFirst = theGate->GetPart(theUnit, 0);
+        EEComplexUnit* theSecond = theGate->GetPart(theUnit, 4);
+        GE3DPoint theFrom;
+        GE3DPoint theTo;
+        theFirst->GetPosition(theFrom);
+        theSecond->GetPosition(theTo);
+        *outFirst = EeGe3DPoint{theFrom.mX, theFrom.mY, theFrom.mZ};
+        *outSecond = EeGe3DPoint{theTo.mX, theTo.mY, theTo.mZ};
+        return true;
+    }
+    // the height of the last living, finished wall piece or gate side part of the wall's owner on a tile (0xee00c)
+    static bool WallPiece(void* inAsk, int32_t inX, int32_t inY, float* outZ)
+    {
+        unsigned long theOwner = E(inAsk)->mUnit->mComplexUnit->mPlayer->mPlayerID;
+        bool theFound = false;
+        std::vector<EEUnit*> theUnits;
+        EEGetUnitsOnTile(inX, inY, theUnits);
+        for (unsigned long j = 0; j < theUnits.size(); j++) {
+            EEComplexUnit* theOther = dynamic_cast<EEComplexUnit*>(theUnits[j]);
+            if (!theOther || theOther->mPlayer->mPlayerID != theOwner || !(theOther->mHitPoints > 0) ||
+                theOther->IsFoundation())
+                continue;
+            long theType = theOther->GetClass()->mUnitType;
+            if (theType == kUnitTypeWallSpace
+                || (theType == kUnitTypeGateSpace && static_cast<EEUCGate*>(theOther->GetClass())->IsSidePart(theOther))) {
+                GE3DPoint thePosition;
+                theOther->GetPosition(thePosition);
+                *outZ = thePosition.GetZ();
+                theFound = true;
+            }
+        }
+        return theFound;
+    }
+    // a gate's opening (EEE3DEnergyWall::Queue, 0xed9d0)
+    static bool GateOpen(void* inAsk, float* outOpen)
+    {
+        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
+        if (theUnit->GetClass()->mCategory != kUnitCategoryGate)
+            return false;
+        *outOpen = theUnit->GetOpenFraction();
+        return true;
+    }
+    static EeGfxColor PlayerColor(void* inAsk)
+    {
+        const GEColor& theColor = E(inAsk)->mUnit->mComplexUnit->mPlayer->mColor;
+        return EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue};
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -411,7 +469,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
                                  Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
                                  Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
-                                 Ask::SpaceTile, Ask::CreateLinked};
+                                 Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
+                                 Ask::GateOpen, Ask::PlayerColor};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
@@ -444,6 +503,7 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
         theFacts.has_linked3 = theEffect->mLinkedEffect3 != NULL;
     }
     theFacts.game_time_bits = (uint32_t)(unsigned long)gPhysics->mGameTime;
+    theFacts.free_camera = gFreeCamera;
     return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
 }
 
@@ -460,6 +520,21 @@ long EEE3DRust::RepairPointers()
 {
     long theResult = EEEffect::RepairPointers();
     return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
+}
+
+// the energy wall (0x34): the current player sees the tile or holds a doppelganger of the unit there (then the wall
+// is marked seen: its texture frame restarts) (EEE3DEnergyWall::IsTileVisible, 0xed98d); the others: the base's
+bool EEE3DRust::IsTileVisible(EEMapTile* inTile)
+{
+    bool theResult = inTile->IsSeenBy(gWorld.GetCurrentPlayer());
+    if (theResult || this->mKind != 0x34)
+        return theResult;
+    long thePlayer = gWorld.mCurrentPlayer;
+    EEUnit* theUnit = this->mUnit;
+    theResult = gDoppelgangerManager.HasDoppelganger(inTile, theUnit, thePlayer);
+    if (theResult)
+        this->mRecord->wall.seen = true;
+    return theResult;
 }
 
 long EEE3DRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)

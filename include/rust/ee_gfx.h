@@ -125,6 +125,9 @@ constexpr static const int32_t EE_GFX_TRACER_HIT = 2;
 /// The beam ends (7).
 constexpr static const int32_t EE_GFX_TRACER_OVER = 4;
 
+/// `kEffect3DEnergyWall`
+constexpr static const int32_t EE_GFX_EFFECT_KIND_ENERGY_WALL = 52;
+
 /// The calls of one set-up, in order.
 constexpr static const size_t EE_GFX_RASTER_OPS = 8;
 
@@ -759,6 +762,16 @@ struct EeGfxEffectWall {
   bool placed;
   /// `mGate`: two posts (saved)
   bool gate;
+  /// `mSeen`: seen only through a doppelganger since the last queue (the texture frame restarts)
+  bool seen;
+  /// `mAlpha`, `mGateAlpha`: the strips' and the gate's (the queue's)
+  float alpha;
+  float gate_alpha;
+  /// `mTextureOffset`: the animation frame's (the queue's)
+  float offset_u;
+  float offset_v;
+  /// `mColor`: the owner's (the queue's; `GEColor()`'s white before)
+  EeGfxColor color;
 };
 
 /// `EEE3DTracerBeam`'s state.
@@ -1240,6 +1253,8 @@ struct EeGfxGraphicFacts {
   bool has_linked1;
   /// the graphic effect has its linked effect 3
   bool has_linked3;
+  /// `gFreeCamera`
+  bool free_camera;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1364,6 +1379,14 @@ struct EeGfxEffect3DHost {
   /// the graphic effect's linked effect `index` (1..3) made through the entry point that made the effect (on its
   /// unit, at its point, along its line); the creation's result
   int32_t (*create_linked)(void *context, uint32_t index);
+  /// the unit's complex unit is a gate: its two end parts' positions
+  bool (*wall_gate_posts)(void *context, EeGe3DPoint *first, EeGe3DPoint *second);
+  /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
+  bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
+  /// the unit's complex unit is a gate: how open it is into `open`
+  bool (*gate_open)(void *context, float *open);
+  /// the unit's complex unit's player's colour
+  EeGfxColor (*player_color)(void *context);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1433,6 +1456,18 @@ struct EeGfxRaster {
                       const float *heights,
                       float brightness,
                       float alpha_ref);
+  /// `AddGroundStrip(from, to, width, color, offset, size, alpha, brightness, alpha reference)`
+  void (*ground_strip)(const EeGe3DPoint *from,
+                       const EeGe3DPoint *to,
+                       float width,
+                       EeGfxColor color,
+                       float offset_u,
+                       float offset_v,
+                       float size_u,
+                       float size_v,
+                       float alpha,
+                       float brightness,
+                       float alpha_ref);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.

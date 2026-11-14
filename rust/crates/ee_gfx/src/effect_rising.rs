@@ -31,6 +31,8 @@ use crate::effect_state::{
     EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_SCREEN_FLASH, EE_GFX_EFFECT_KIND_TELEPORT,
     EE_GFX_EFFECT_KIND_TIME_WARP, EE_GFX_EFFECT_KIND_WATER_SPLASH, EE_GFX_EFFECT_MOVED,
 };
+use crate::effect_wall::{wall, wall_file, EE_GFX_EFFECT_KIND_ENERGY_WALL};
+use crate::effects::EeGfxColor;
 use crate::lighting::EeGfxLighting;
 use crate::raster::{EeGfxModel, Raster, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE};
 
@@ -98,6 +100,8 @@ pub struct EeGfxGraphicFacts {
     pub has_linked1: bool,
     /// the graphic effect has its linked effect 3
     pub has_linked3: bool,
+    /// `gFreeCamera`
+    pub free_camera: bool,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -180,6 +184,14 @@ pub struct EeGfxEffect3DHost {
     /// the graphic effect's linked effect `index` (1..3) made through the entry point that made the effect (on its
     /// unit, at its point, along its line); the creation's result
     pub create_linked: extern "C" fn(context: *mut c_void, index: u32) -> i32,
+    /// the unit's complex unit is a gate: its two end parts' positions
+    pub wall_gate_posts: extern "C" fn(context: *mut c_void, first: *mut Ge3DPoint, second: *mut Ge3DPoint) -> bool,
+    /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
+    pub wall_piece: extern "C" fn(context: *mut c_void, x: i32, y: i32, z: *mut f32) -> bool,
+    /// the unit's complex unit is a gate: how open it is into `open`
+    pub gate_open: extern "C" fn(context: *mut c_void, open: *mut f32) -> bool,
+    /// the unit's complex unit's player's colour
+    pub player_color: extern "C" fn(context: *mut c_void) -> EeGfxColor,
 }
 
 /// The world as the effects ask it.
@@ -263,6 +275,19 @@ pub trait Effect3DHost {
     /// the tests' hosts that make no multi-effect make nothing
     fn create_linked(&mut self, _index: u32) -> i32 {
         0
+    }
+    /// the tests' hosts that make no energy wall stand on no gate and find no wall
+    fn wall_gate_posts(&mut self) -> Option<(Ge3DPoint, Ge3DPoint)> {
+        None
+    }
+    fn wall_piece(&mut self, _x: i32, _y: i32) -> Option<f32> {
+        None
+    }
+    fn gate_open(&mut self) -> Option<f32> {
+        None
+    }
+    fn player_color(&mut self) -> EeGfxColor {
+        EeGfxColor::default()
     }
 }
 
@@ -375,6 +400,21 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn create_linked(&mut self, index: u32) -> i32 {
         (self.create_linked)(self.context, index)
     }
+    fn wall_gate_posts(&mut self) -> Option<(Ge3DPoint, Ge3DPoint)> {
+        let (mut first, mut second) = (Ge3DPoint::default(), Ge3DPoint::default());
+        (self.wall_gate_posts)(self.context, &mut first, &mut second).then_some((first, second))
+    }
+    fn wall_piece(&mut self, x: i32, y: i32) -> Option<f32> {
+        let mut z = 0.0;
+        (self.wall_piece)(self.context, x, y, &mut z).then_some(z)
+    }
+    fn gate_open(&mut self) -> Option<f32> {
+        let mut open = 0.0;
+        (self.gate_open)(self.context, &mut open).then_some(open)
+    }
+    fn player_color(&mut self) -> EeGfxColor {
+        (self.player_color)(self.context)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -404,6 +444,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_HURRICANE => unsafe { hurricane(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_NUCLEAR_EXPLOSION | EE_GFX_EFFECT_KIND_ENERGY_WAVE => unsafe { blast(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_MULTI_EFFECT => unsafe { multi(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_ENERGY_WALL => unsafe { wall(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -493,6 +534,7 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
         }
         // the base's alone
         EE_GFX_EFFECT_KIND_MULTI_EFFECT => base,
+        EE_GFX_EFFECT_KIND_ENERGY_WALL => wall_file(load, base, r, f, major, minor, h),
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
             // the base's result is ignored; the media's stops the load
             let res = h.load_media();

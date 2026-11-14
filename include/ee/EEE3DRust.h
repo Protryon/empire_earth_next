@@ -9,7 +9,8 @@
 // linear projectile (EEE3DLinearProjectile, 0xf2d93..0xf3580), 0x23 the disease (EEE3DDisease, 0xebde9..0xec6e4) and
 // 0x42 the virus (EEE3DVirus, 0xfdbab..0xfe553), 0x24 the hurricane (EEE3DHurricane, 0xf1600..0xf2046), 0x28 the
 // nuclear explosion (EEE3DNuclearExplosion, 0xf43c7..0xf4bf3) and 0x47 the energy wave (EEE3DEnergyWave,
-// 0xee1b4..0xee5c0), 0x3b the multi-effect (EEE3DMultiEffect, 0xf4247..0xf43c7), all deleted.
+// 0xee1b4..0xee5c0), 0x3b the multi-effect (EEE3DMultiEffect, 0xf4247..0xf43c7), 0x34 the energy wall
+// (EEE3DEnergyWall, 0xed606..0xee1b4), all deleted.
 // Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
@@ -44,6 +45,8 @@ public:
     virtual long RepairPointers();
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     virtual long Step() { return this->Call(EeGfxEffect3DOp::Step); }
+    // the energy wall's: also true where the current player holds a doppelganger of its unit (then marked seen)
+    virtual bool IsTileVisible(EEMapTile* inTile);
 
     // inArg: a constructor's unit, point or line (the multi-effect's linked effects are made through it)
     long Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues = NULL, const EeGfxEffectFile* inFile = NULL, long inBase = 0,

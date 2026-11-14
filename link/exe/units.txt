@@ -194,7 +194,6 @@ e8158 e89c6 Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp
 e9bee ea703 Empire Earth/Graphics Thread/EEE3DCommandConfirmation.cpp
 ea9e2 ebbba Empire Earth/Graphics Thread/EEE3DDamageVent.cpp
 ec6e4 ed606 Empire Earth/Graphics Thread/EEE3DEarthquake.cpp
-ed606 ee1b4 Empire Earth/Graphics Thread/EEE3DEnergyWall.cpp
 ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
 f1327 f1600 Empire Earth/Graphics Thread/EEE3DGoal.cpp
 f2046 f2d93 Empire Earth/Graphics Thread/EEE3DIcon.cpp

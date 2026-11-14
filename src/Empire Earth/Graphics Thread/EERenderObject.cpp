@@ -1602,6 +1602,11 @@ static void ApplyLighting(EeGfxLighting inKind)
     }
 }
 
+// EEEffect.cpp's ground strip (0x103ac8; the energy wall's draw)
+void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeight, const GEColor& inColor,
+              const GETextureCoordinate& inOrigin, const GETextureCoordinate& inSize, float inAlpha, float inBrightness,
+              float inAlphaReference);
+
 // the rasterizer as the Rust draws call it (ee_gfx raster.rs), on the current screen
 extern const EeGfxRaster gEERustRaster;
 static std::vector<float> sKeptV;      // the texture coordinates' v that model_scroll_v changed
@@ -1717,6 +1722,18 @@ const EeGfxRaster gEERustRaster = {
         AddGroundQuad(GE3DPoint(inCenter->x, inCenter->y, inCenter->z), GEColor(inColor.red, inColor.green, inColor.blue),
                       inYaw, inSize, theHeights, inBrightness, inAlphaReference);
     },
+    [](const EeGe3DPoint* inFrom, const EeGe3DPoint* inTo, float inWidth, EeGfxColor inColor, float inOffsetU, float inOffsetV,
+       float inSizeU, float inSizeV, float inAlpha, float inBrightness, float inAlphaReference) {
+        GETextureCoordinate theOffset;
+        theOffset.SetU(inOffsetU);
+        theOffset.SetV(inOffsetV);
+        GETextureCoordinate theSize;
+        theSize.SetU(inSizeU);
+        theSize.SetV(inSizeV);
+        AddGroundStrip(GE3DPoint(inFrom->x, inFrom->y, inFrom->z), GE3DPoint(inTo->x, inTo->y, inTo->z), inWidth,
+                       GEColor(inColor.red, inColor.green, inColor.blue), theOffset, theSize, inAlpha, inBrightness,
+                       inAlphaReference);
+    }
 };
 
 // FUNCTION: EXE 0x50f60f
