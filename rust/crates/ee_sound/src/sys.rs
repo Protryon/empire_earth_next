@@ -23,6 +23,8 @@ pub(crate) const WAIT_TIMEOUT: i32 = -1;
 pub(crate) const WAIT_FAILED: i32 = -2;
 
 extern "C" {
+    /// The engine's shutdown list (ee_util, a sibling crate of the static library; faked by the tests).
+    pub fn ee_util_register_shutdown(function: unsafe extern "C" fn(bool)) -> std::ffi::c_long;
     pub fn ee_ts_section_new() -> *mut c_void;
     pub fn ee_ts_section_free(section: *mut c_void);
     pub fn ee_ts_section_enter(section: *const c_void);

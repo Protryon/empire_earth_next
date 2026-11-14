@@ -1043,7 +1043,11 @@ static void Sequence(uint64_t inSeed)
         }
     End("-");
     Begin("shutdown");
+#ifdef SE_NEW
+    ee_sound_shutdown(false);   // SEShutdown (LLE lane round 7: registered by ee_sound_initialize)
+#else
     SEShutdown(false);
+#endif
     End("%lu %d", SEMixer::GetCount(), SEMixer::GetActiveMixer() != NULL);
     if (R(4) == 0) {
         Begin("cleanup");
