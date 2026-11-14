@@ -18127,3 +18127,84 @@ op cases); the final tree's LAN run covers it.
   room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic, RoutingLogic last) and the
   resource tables and factories.
 - The list rows kept in C++ (BadUserItem, NetworkAdapterListItem) go with the WON GUI lane's list widgets.
+
+## R5b.4, twenty-eighth round: the stats object, the physics' and the map's plain state as Rust records; the stats read in place; the improvements, the physics' and the map's Load and Save in Rust (ee_units stats.rs, improve.rs, physics_save.rs, map_save.rs; branch rust-r5b4-core28, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 0b2988f4 | `EEUnitClassUpgrade` derives from `EeUnitsUnitClassUpgradeFields` (47 members); the stats readers read it in place; `Init`'s copies and `SetMaxVelocity` in Rust; the stats table, `StatsFill`, the 12 `EEUnitStatsScope` writers, `EEUnitStatsReport`/`Remove`, `EEUnitStoreStatsChanged` and USCK's stats check gone | +14 -245, net -231 |
+| 477ddf16 | the improvements over the records in place (`ClassRecord`, `StatsRecord` and `ChangeLevel`'s write-back switch gone); `SetRange` in Rust | +19 -118, net -99 |
+| 96cfd554 | `EEPhysics` derives from `EeUnitsPhysicsSaved` (+0x080 .. +0x0e8, 33 members); its Load (two era bodies, 160 lines) and Save in Rust; the file primitives one shared C++ function (`EESavePrimitive`) | +53 -246, net -193 |
+| 5cd3fdb2 | `RTSMap` derives from `EeUnitsRtsMapFields` (12 members), `EEMap` from `EeUnitsMapFields` (6); `RTSMap::Load`/`Save` and `EEMap::Load` (two era bodies as one sequence)/`Save` in Rust over `EEMapSaveOperation` | +114 -168, net -54 |
+| (merge) | `rust` f2813578 (95 commits: WON, WONLobby, GE, NE rounds; RUST_PLAN progress split into docs/progress): no conflict; `rust_build.py header` and `rust_includes.py` changed nothing | |
+
+The round's C++: net -577 (+200 -777).
+
+**The measure, and the order.** By round 27's list: the stats object first (its table and scopes were pure bookkeeping
+once the record exists). `EEMap`'s Load was not 420 lines: `EEMap::Load` is 80 (two copies of one era body), with
+`RTSMap::Load`/`Save` (60) and `EEMap::Save` (12) about 150 lines of a map's save; moved here, a C++ host of 18
+operations remains. `EEGroup`'s Load/Save (26 + 20 lines) were left: a formation pointer, a vector of unit pointers
+and their ids, each statement an object operation (no plain member to make a record of); `EEActiveGroup` has no
+Load/Save. `EEPhysics` (item 4's first candidate) was taken before the map: its Load is 160 lines of nested reads of
+plain members, the best deletion of the list. `RTSPhysics`' block holds a volatile member (`mTicksOwed`, polled
+across threads) in the middle, so it stays C++; `EEWorld`'s save is `EEPWorldHelper`'s, a sequence of sub-object
+loads.
+
+- **The stats object's record** (stats.rs): `class EEUnitClassUpgrade : public EeUnitsUnitClassUpgradeFields` (a
+  polymorphic class with a non-polymorphic base: the vtable stays at 0, the record follows); the two volatile busy
+  flags stay C++ members. `stats_of(object)` reads the needed members in place at the record's offset in the object
+  (`EeUnitsStoreSlots::stats_fields`, set with the store's slots; 0 in unit tests, whose objects are records), so the
+  fourteenth round's table (reports at every writer, a version per change, a removal in the destructor, USCK's
+  comparison of every unit's stats object with its copy) is gone with its C++. The store reads `mStats` in place too
+  (`EeUnitsStoreSlots::stats`). The versioning had no reader (ee_rust's bridge copies the fields, never the version).
+  The record lives while its player does; a unit points to its player's object only while both live (the table
+  answered None for a removed object; the in-place read has no such answer, and no gate game reached one).
+- **`Init`** keeps its media setters, `SetRange` and `Reapply` in C++, in the original's order around two Rust fills
+  (`init`: the copies before `Reapply`; `init_finish`: the templates, wonder set, flag, camera focus 0.5 and the
+  terrain mask). `SetRange` writes only `mRange`/`mLaunchSpeed`, which no copy touches, so calling it before the first
+  fill instead of after the scale's copy changes nothing. A class `bool` is copied as its byte (a byte other than 0/1
+  is never a Rust `bool`). `SetMaxVelocity` and `SetRange` are Rust (`um_cos(FRAC_PI_4)` is the original's
+  `UMCos(0.78539819f)`: the same float; the square root of a float product as `sqrtf`).
+- **The improvements** (improve.rs `improve_class`, `improve_stats`, `change_level_records`): the class's fields and the
+  upgrade's stats are made from the records in Rust; a level change writes back only the stat it moved, as the C++
+  switch did (all six armours for an armour; range through `set_range` and line of sight; speed through
+  `set_max_velocity`); the C++ passes the class's 16 step factors (null: no table). `GetGainText` and `CanUpgrade` read
+  the records the same way.
+- **The physics' block** (physics_save.rs): `class EEPhysics : public RTSPhysics, public EeUnitsPhysicsSaved`, 33
+  members from `mCurrentTick` to `mResourceTimerPending` (all plain; `mLoadSaveRequests`/`mSaveGameLock` before it now
+  follow `RTSPhysics` directly). `load` is the original's chain (each read after the last succeeded; the milliseconds
+  of the tick time rounded by `lrintf` after its read, the game time the clock's x86 truncation, the two averages
+  through one carried `unsigned long`; up to 0.206 the game-over flag cleared, later read, from minor 0xfa the
+  resource timer). `RTSPhysics::Load`/`Save` stay C++ operations (101, 102); the loaded seed's hand-off stays after
+  the Rust call. The physics' and the player's hosts share `EESavePrimitive` (EEPlayer.cpp, ee/EEPlayer.h: the
+  player_save.rs primitives 1-8); the physics reuses player_save.rs's `PlayerSaveHost` and io.
+- **The map's records** (map_save.rs): `class RTSMap : public FSRestorable, public EeUnitsRtsMapFields` (the block
+  `mF1955F4` .. `mB195620`), `class EEMap : public RTSMap, public FSPersistent, public EeUnitsMapFields`
+  (`mMapCharacteristics` .. `mChecksumCursor`); `RTSMap`'s constructor's member initializers became assignments. The
+  diamond walk (`diamond_rows`, `Create`'s and `Load`'s rows: the left edge shrinks to 0 then grows, the right grows
+  to `size - 1` then shrinks) is Rust; the tile loads and saves, the mesh, `Create`, the terrain tables (the default
+  chosen once, each tile's table cached for its `Load`), the region tables and `UpdateCliffs` are operations 111-125
+  (a tile's y in the index, its x in the low 32 bits of `io.i`, a terrain type in the upper 32). The two era bodies
+  of `EEMap::Load` differ only in the space test (0.204 on) and the cliff terrain's read and check: one sequence.
+  A terrain table whose type is -1 is still a table (the operation answers presence separately).
+
+**For the legacy harness and the renderer.** Offsets moved: `EEUnitClassUpgrade`'s members (after the vtable now),
+`EEPhysics`' block (after `RTSPhysics`), `RTSMap`'s block (after `FSRestorable`), `EEMap`'s (after `FSPersistent`).
+`layout_gen.py` flattens bases by member name, so `layout.json` names them as before. `game_state_probe.py` reads
+`EEPhysics` at the translated offsets of `mGameTime` (0xd0), `mGameOver` (0xe6) and `mNumTicksDone` (0xb4) inside a
+body read up to `mResourceTimerPending`'s offset (0xe8): all four are in the record in their old order, so the bound
+still covers them. Nothing in tools reads `RTSMap`/`EEMap` or `EEUnitClassUpgrade`. The renderer reads moved members
+by name: the map's `mSize` (`GetSize()`, the terrain and mini map), `mL195610`, `mF1955F4` (`gMapTileSize`); the
+physics' tick time and game clock (`GetTickTime()`, `GetGameClock()`: the effects' animation); the stats' scale, range
+and line of sight (`mStats->`: the unit picker, light glows, render objects). Only a tour shows them drawn.
+
+- **Coverage.** The stats read in place on every combat, update and `ActionChanged` read of every game (oracle);
+  `Init` for every player's every class at every start; the improvements whenever a game researches one; `SetRange` with a projectile class in every game; the physics' and the map's Load and Save in
+  every save and continued game of the saveload matrix (0.280; era 2 only). The older eras (the physics' 0.206 game
+  over, the map's pre-0.204 tiles and cliff), failed reads and the Roman Legionnaire's heal range are unit tests only
+  (stats.rs 3, improve.rs 3 new, physics_save.rs 3, map_save.rs 3).
+- **Behaviour:** none (the oracle identical; the matrix equals its expect file).
+- **Gates.** Commit 1: build `--sim` 0/0; oracle seeds 2-3 identical to `ref`; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4), no load fault. Commits 2-4 were built together (each commit's tree alone was not built; its header was generated for it): build `--sim` 0/0 (one fix: `RTSMap`'s constructor initialised record members in its initializer list), oracle seeds 2-3 identical, the matrix PASS with the same rows, the Rust gate PASS (after a clippy allow for `long`-sized casts and rustfmt). On the result merged with rust (f2813578): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle (169 digests), late (170), space (171), calamity (183), scenario (22) PASS, USCK included, every run exit 0; the matrix PASS with the same rows; the Rust gate PASS (ee_units 279 tests, 9 new); the test profile 0/0.
+- **For the next round.** `RTSPlayer::Load`/`Save` (72 lines) and `EEAirTrafficControl`'s (84) by the same pattern;
+  `EETechTree`'s (137) once its nodes' state is a record; the unit save host's primitives onto `EESavePrimitive` (its
+  io type is the same shape); `EEPWorldHelper`'s plain reads (mostly sub-object loads).
