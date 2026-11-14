@@ -103,28 +103,6 @@ NEMessage* NEMessage::ConvertMemoryToMessage(unsigned char* inMemory)
     return NEMessage::sConstructors[theType](inMemory);
 }
 
-// FUNCTION: LLE 0x1003e093
-// Writes the 4-byte message header (reserved, type, target slot, originating slot); returns 4
-unsigned long NEMessage::ExportHeader(unsigned char* outData)
-{
-    memcpy(outData, &this->mReserved, sizeof(this->mReserved));
-    memcpy(outData + 1, &this->mType, sizeof(this->mType));
-    memcpy(outData + 2, &this->mForSpecificSlot, sizeof(this->mForSpecificSlot));
-    memcpy(outData + 3, &this->mOriginatingSlot, sizeof(this->mOriginatingSlot));
-    return 4;
-}
-
-// FUNCTION: LLE 0x1003e0df
-// Reads the 4-byte message header (reserved, type, target slot, originating slot); returns 4
-unsigned long NEMessage::ImportHeader(unsigned char* inData)
-{
-    memcpy(&this->mReserved, inData, sizeof(this->mReserved));
-    memcpy(&this->mType, inData + 1, sizeof(this->mType));
-    memcpy(&this->mForSpecificSlot, inData + 2, sizeof(this->mForSpecificSlot));
-    memcpy(&this->mOriginatingSlot, inData + 3, sizeof(this->mOriginatingSlot));
-    return 4;
-}
-
 // FUNCTION: LLE 0x1003e12b
 // Registers the engine's own message builder for the engine message types 0x20..0x3c
 void NEMessage::RegisterKnownMessages()

@@ -22,7 +22,6 @@ public:
     long GetMaxY() const { return this->mMaxY; }
     long GetMinX() const { return this->mMinX; }
     long GetMinY() const { return this->mMinY; }
-    void RemoveDataPoint(unsigned long inIndex);
     void SetColor(const GEColor& inColor) { this->mColor = inColor; }
     void SetIsEnabled(bool inIsEnabled) { this->mIsEnabled = inIsEnabled; }
 
@@ -57,7 +56,6 @@ public:
     const UWideString& GetXLabel() const { return this->mXLabel; }
     const UWideString& GetYLabel() const { return this->mYLabel; }
     void PruneGraph();
-    void RemoveSeries(unsigned long inIndex);
     void SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled);
     void SetTitle(const UWideString& inTitle) { this->mTitle = inTitle; }
     void SetXLabel(const UWideString& inLabel) { this->mXLabel = inLabel; }

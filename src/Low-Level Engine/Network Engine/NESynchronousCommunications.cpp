@@ -37,44 +37,6 @@ NESynchronousCommunications::~NESynchronousCommunications()
     TSScheduler::DestroyCriticalSection(this->mDebugInfoLock);
 }
 
-// FUNCTION: LLE 0x10047375
-// Returns bytes received per second since the last call
-unsigned long NESynchronousCommunications::GetCurrentReceiveBytesPerSec()
-{
-    NEProtocol* theProtocol = NULL;
-    NEProtocol::GetProtocol(0, theProtocol);
-    unsigned long theTime = TMGetTime();
-    unsigned long theBytes = theProtocol->GetBytesReceived();
-    unsigned long theDeltaBytes = theBytes - this->mLastReceiveBytes;
-    unsigned long theDeltaTime = theTime - this->mLastReceiveTime;
-    // Fix: a second call within the same millisecond divided by zero; it now reports 0 and keeps measuring from
-    // the previous call.
-    if (theDeltaTime == 0)
-        return 0;
-    this->mLastReceiveBytes = theBytes;
-    this->mLastReceiveTime = theTime;
-    return theDeltaBytes * 1000 / theDeltaTime;
-}
-
-// FUNCTION: LLE 0x100473bc
-// Returns bytes sent per second since the last call
-unsigned long NESynchronousCommunications::GetCurrentSendBytesPerSec()
-{
-    NEProtocol* theProtocol = NULL;
-    NEProtocol::GetProtocol(0, theProtocol);
-    unsigned long theTime = TMGetTime();
-    unsigned long theBytes = theProtocol->GetBytesSent();
-    unsigned long theDeltaBytes = theBytes - this->mLastSendBytes;
-    unsigned long theDeltaTime = theTime - this->mLastSendTime;
-    // Fix: a second call within the same millisecond divided by zero; it now reports 0 and keeps measuring from
-    // the previous call.
-    if (theDeltaTime == 0)
-        return 0;
-    this->mLastSendBytes = theBytes;
-    this->mLastSendTime = theTime;
-    return theDeltaBytes * 1000 / theDeltaTime;
-}
-
 // The calls out of the lag simulator and the recorder (ee_net lagloss.rs, recplay.rs) that the original units made
 // on the engine: each op is the statement NELagLossSimulator.cpp, NERecordPlayback.cpp or NETimestampedMessage.cpp
 // made (the owner answers Deliver, the callbacks)

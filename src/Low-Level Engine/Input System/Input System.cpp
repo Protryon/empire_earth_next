@@ -104,13 +104,6 @@ long ISInitialize(HINSTANCE inInstance, GEWindow* inWindow, UResourceFile* inRes
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x10039691
-// Sets the maximum time between two presses that counts as a double press
-void ISSetDoublePressTimeDelta(unsigned long inDelta)
-{
-    ee_input_set_double_press_delay(inDelta);
-}
-
 // FUNCTION: LLE 0x1003969b
 // Suspends and destroys the system mouse and keyboard and their event buffers
 void ISShutdown(bool inForced)

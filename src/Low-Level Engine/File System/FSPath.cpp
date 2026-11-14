@@ -265,18 +265,6 @@ long FSPath::ListFiles(const UString& inPattern, std::set<UString>& outFiles)
     return theResult;
 }
 
-// FUNCTION: LLE 0x1000b0cd
-// Closes and removes the archive at an index; kErrorBeyondEnd past the last one
-long FSPath::RemoveArchive(unsigned long inIndex)
-{
-    if (inIndex < this->mArchives.size()) {
-        this->mArchives[inIndex].Close();
-        this->mArchives.erase(this->mArchives.begin() + inIndex);
-        return kErrorOK;
-    }
-    return kErrorBeyondEnd;
-}
-
 // FUNCTION: LLE 0x1000b136
 // Removes the directory at an index; kErrorBeyondEnd past the last one
 long FSPath::RemoveDirectory(unsigned long inIndex)

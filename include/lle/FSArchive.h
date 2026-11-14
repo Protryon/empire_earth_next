@@ -31,7 +31,6 @@ public:
     long Create(const FSFileSpec& inRoot, const UString& inPattern, unsigned long inCompression,
                 bool inRecursive);                                              // 0x5429
     long Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression);   // 0x5618
-    long ExtractAll(const FSFileSpec& inDestination);                           // 0x5801
     long FindFile(const UString& inName, FSMemoryFile*& outFile);               // 0x5a79
     long FindFile(const UWideString& inName, FSMemoryFile*& outFile)
         { UString theName((const char*)inName); return this->FindFile(theName, outFile); }

@@ -140,23 +140,6 @@ long SESoundManager::CreateSoundPoolLock()
     return TSScheduler::CreateCriticalSection(SESoundManager::sSoundNodePoolLock);
 }
 
-// FUNCTION: LLE 0x1004f932
-// Drops one reference to the instance node (NULL is ignored)
-void SESoundManager::DestroySoundInstance(SESMInstanceNode* inNode)
-{
-    if (inNode)
-        inNode->Dereference();
-}
-
-// Returns the number of channels the manager uses (out of line now: the count is Rust's)
-unsigned long SESoundManager::GetAvailableChannels() const
-{
-    this->mLock->Enter();
-    unsigned long theCount = ee_sound_available_channels(this->mRust);
-    this->mLock->Leave();
-    return theCount;
-}
-
 // FUNCTION: LLE 0x1004fc19
 // Returns the node's instance ID (-1: no node)
 unsigned long SESoundManager::GetInstanceID(SESMInstanceNode* inNode)
@@ -307,31 +290,6 @@ unsigned long SESoundManager::GetSampleRate(unsigned long inInstanceID)
     unsigned long theRate = ee_sound_sample_rate(this->mRust, this, (uint32_t)inInstanceID);
     this->mLock->Leave();
     return theRate;
-}
-
-// FUNCTION: LLE 0x100501eb
-// Returns the playing or paused instance with an added reference (NULL: none)
-SESMInstanceNode* SESoundManager::GetAndReferenceSoundInstance(unsigned long inInstanceID)
-{
-    SESMInstanceNode* theNode = NULL;
-    if (!UIsNone32(inInstanceID)) {
-        this->mLock->Enter();
-        theNode = static_cast<SESMInstanceNode*>(ee_sound_find_instance(this->mRust, this, (uint32_t)inInstanceID));
-        if (theNode)
-            theNode->Reference();
-        this->mLock->Leave();
-    }
-    return theNode;
-}
-
-// FUNCTION: LLE 0x10050273
-// Returns the milliseconds left to play of the playing or paused instance (0: none; -1: looping)
-long SESoundManager::GetTimeLeftInMilli(unsigned long inInstanceID)
-{
-    this->mLock->Enter();
-    long theTime = ee_sound_time_left(this->mRust, this, (uint32_t)inInstanceID);
-    this->mLock->Leave();
-    return theTime;
 }
 
 // FUNCTION: LLE 0x100502c6

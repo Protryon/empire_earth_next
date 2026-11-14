@@ -48,9 +48,6 @@ public:
     virtual void SetCurrentCommunicationsTick(unsigned long inTick) = 0;        // slot 8
 
     unsigned long GetAveragePhysicsUpdateTime() { return this->mAveragePhysicsUpdateTime; }  // 0x40123 (ICF-folded)
-    unsigned long GetAverageTimeBetweenPhysicsTicks() { return this->mAverageTimeBetweenPhysicsTicks; }  // 0x40127 (ICF-folded)
-    unsigned long GetCurrentReceiveBytesPerSec();
-    unsigned long GetCurrentSendBytesPerSec();
     bool GetIsGamePaused() { return this->mIsGamePaused; }
     bool GetIsMultiplayerSession() { return this->mIsMultiplayerSession; }
     unsigned long GetLastTickReceived() { return this->mLastTickReceived; }    // ICF-folded (0x4380)
@@ -58,7 +55,6 @@ public:
     unsigned long GetNumberOfCTsProcessedInPhysics() { return this->mNumberOfCTsProcessedInPhysics; }  // 0x4012b (folded)
     unsigned long GetPlayerNumber() { return this->mPlayerNumber; }            // ICF-folded (0x4495)
     void IncrementNumberOfCTsProcessedInPhysics() { this->mNumberOfCTsProcessedInPhysics++; }
-    void LockDebugInfo() { this->mDebugInfoLock->Enter(); }
     // exported setters, all ICF-folded elsewhere (0xdfc9, 0x124c1, 0xc56c, 0x572e7, 0x4c3eb, 0xe773)
     void SetAveragePhysicsUpdateTime(unsigned long inTime) { this->mAveragePhysicsUpdateTime = inTime; }
     void SetAverageTimeBetweenPhysicsTicks(unsigned long inTime) { this->mAverageTimeBetweenPhysicsTicks = inTime; }
@@ -67,7 +63,6 @@ public:
     void SetNumHumanPlayers(unsigned char inNumHumanPlayers) { this->mNumHumanPlayers = inNumHumanPlayers; }
     void SetNumberOfCTsProcessedInPhysics(unsigned long inNumber) { this->mNumberOfCTsProcessedInPhysics = inNumber; }
     void SetPlayerNumber(unsigned long inPlayerNumber) { this->mPlayerNumber = inPlayerNumber; }
-    void UnlockDebugInfo() { this->mDebugInfoLock->Leave(); }
 protected:
     void SetIsGamePaused(bool inIsGamePaused) { this->mIsGamePaused = inIsGamePaused; }
     // the calls out of the lag simulator and the recorder (ee_net's EeNetQOp) that do not reach their owner: the

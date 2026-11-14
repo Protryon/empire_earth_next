@@ -41,7 +41,6 @@ public:
     virtual long GetFirstFile(const UString& inPattern, FSFileSpec& outFile);  // +0xac 0x9406
     virtual bool GetIsOpen() const;                                             // +0x24 (folded 0x4b4d9)
     virtual long GetLength(unsigned long& outLength) const;                     // +0xb4 0x95e3
-    long GetLengthFromClosedFile(unsigned long& outLength);   // 0x9627
     virtual long GetNextFile(FSFileSpec& outFile);                              // +0xb8 0x9661
     virtual void GetParentDirectory(FSFileSpec& outDirectory) const;            // +0xbc 0x9816
     virtual long GetPosition(long& outPosition) const;                          // +0xc0 0x98d8

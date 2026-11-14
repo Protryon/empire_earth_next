@@ -251,61 +251,6 @@ void FSArchive::CheckFATAfterCreate()
     }
 }
 
-// FUNCTION: LLE 0x10005801
-// Extracts every archived file below a destination directory, creating directories as needed
-long FSArchive::ExtractAll(const FSFileSpec& inDestination)
-{
-    long theResult = kErrorOK;
-    std::vector<FATEntry> theFAT;
-    ee_fs_archive_for_each_fat(this->mTable, CollectFAT, &theFAT);
-    for (unsigned long i = 0; i < theFAT.size() && theResult == kErrorOK; i++) {
-        FSMemoryFile* theFile;
-        printf("Extracting file %s%s%s...", (const char*)inDestination.GetVolume(),
-               (const char*)inDestination.GetDirectory(), (const char*)theFAT[i].mName);
-        FSFileSpec theDirectory(inDestination.GetVolume() + inDestination.GetDirectory() + theFAT[i].mName);
-        theDirectory.SetFile("");
-        theResult = theDirectory.CreateDirectory();
-        if (theResult == kErrorAlreadyExists)
-            theResult = kErrorOK;
-        if (theResult == kErrorOK) {
-            theFile = NULL;
-            theResult = this->ReadFATFile(theFAT[i].mFile, theFile);
-            if (theResult == kErrorOK && theFile != NULL) {
-                FSFileSpec theOutput(inDestination.GetVolume() + inDestination.GetDirectory() + theFAT[i].mName);
-                theResult = theOutput.Create();
-                if (theResult == kErrorAlreadyExists)
-                    theResult = kErrorOK;
-                if (theResult == kErrorOK) {
-                    unsigned long theLength;
-                    theResult = theOutput.Open(kFileAccessWrite);
-                    if (theResult == kErrorOK && theFile->GetLength(theLength) == kErrorOK) {
-                        unsigned long theWritten;
-                        theResult = theOutput.Write(theFile->GetData(), theLength, theWritten);
-                        if (theResult == kErrorOK) {
-                            if (theWritten == theLength)
-                                printf("success!\n");
-                            else {
-                                printf("extraction failed: unable to write all data to file\n");
-                                theResult = kErrorFailed;
-                            }
-                        } else
-                            printf("extraction failed: unable to write to file\n");
-                        theOutput.Close();
-                    } else
-                        printf("extraction failed: unable to open file\n");
-                } else
-                    printf("extraction failed: unable to create file\n");
-                delete theFile;
-                theFile = NULL;
-            } else
-                printf("extraction failed: unable to read from archive\n");
-        } else
-            printf("extraction faild: unable to create directory %s%s\n", (const char*)theDirectory.GetVolume(),
-                   (const char*)theDirectory.GetDirectory());
-    }
-    return theResult;
-}
-
 // FUNCTION: LLE 0x10005a79
 // Finds a file by name (case-insensitive) and returns it decompressed as a memory file
 long FSArchive::FindFile(const UString& inName, FSMemoryFile*& outFile)

@@ -43,8 +43,6 @@ public:
     static NEMessage* ConvertMemoryToMessage(unsigned char* inData);
     static NEMessage* BuildNEMessage(unsigned char* inData);
     static void RegisterKnownMessages();
-    unsigned long ExportHeader(unsigned char* outData);
-    unsigned long ImportHeader(unsigned char* inData);
     void GetHeaderSlots(EeNetMsgSlot* outSlots);   // New (port): the header as the codec's first four slots
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe registers its game messages here (imports it; 0xb8cda)
     static NEMessage* (*sConstructors[256])(unsigned char*);   // ?sConstructors@NEMessage@@2PAP6APAV1@PAE@ZA (0x12d9cc)
@@ -456,7 +454,6 @@ public:
     NEMStartGameResponse(unsigned long& inApplicationTimeAtStart) : NEMessage(kNetMessageStartGameResponse), mApplicationTimeAtStart(inApplicationTimeAtStart) {}
     NEMStartGameResponse(unsigned char* inData) { this->ImportMessage(inData); }
     virtual char* GetMessageLabel() const { return "Start Game Response"; }
-    unsigned long GetApplicationTimeAtStart() const { return this->mApplicationTimeAtStart; }
     virtual bool GetCountsTowardsPlayerInputThrottle() const { return false; }
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
@@ -532,8 +529,6 @@ public:
     NEMWorldDatabaseChecksum(unsigned long& inPhysicsTickTrigger, bool inDumpWorld) : NEMessage(kNetMessageWorldDatabaseChecksum), mPhysicsTickTrigger(inPhysicsTickTrigger), mDumpWorld(inDumpWorld) {}
     NEMWorldDatabaseChecksum(unsigned char* inData) { this->ImportMessage(inData); }
     virtual char* GetMessageLabel() const { return "World Database Checksum"; }
-    unsigned long GetPhysicsTickTrigger() const { return this->mPhysicsTickTrigger; }
-    bool GetDumpWorld() { return this->mDumpWorld; }
     virtual bool GetCountsTowardsPlayerInputThrottle() const { return false; }
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();

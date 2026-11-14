@@ -95,7 +95,6 @@ LLE_API long URegisterShutdown(void (*inFunction)(bool));
 LLE_API void UShutdown(bool inForced, bool inTerminate);    // Utilities.cpp 0x83838; provisional parameter names
 LLE_API bool UShutdownInProgress();
 LLE_API unsigned short UGetOSLanguage();
-LLE_API unsigned long UGetOSType();                         // 1: 95, 2: 98/ME, 3: NT 5+, 4: NT 4 or older (inferred meanings)
 
 // ---- Utility math (UM)
 LLE_API void UMSetFloatingPointPrecision(unsigned long inPrecision);
@@ -107,7 +106,6 @@ LLE_API float UMCos(float inAngle);             // proven ?UMCos@@YAMM@Z (Defaul
 LLE_API float UMArcCos(float inValue);          // proven ?UMArcCos@@YAMM@Z (GETransformation::GetPitch 0xd7dd)
 LLE_API float UMArcTan(float inValue);          // proven ?UMArcTan@@YAMM@Z (GEViewport::ComputePlanes 0x37270)
 LLE_API float UMTan(float inAngle);             // proven ?UMTan@@YAMM@Z (GEViewport ctor 0x36aba)
-LLE_API bool UMQuadraticEquation(float inA, float inB, float inC, float& outRoot1, float& outRoot2);   // proven ?UMQuadraticEquation@@YA_NMMMAAM0@Z (exe import)
 // Provisional name: no UMSin export; GEQuaternion::Slerp (0x23526) computes sines as UMCos(pi/2 - x) inline
 // pi/2 is 1.5707964f (0x3fc90fdb) in every module: the engine's word 0x10097808, the exe's 0x43c008
 // (1.5707963f would be 0x3fc90fda, one ulp lower)
