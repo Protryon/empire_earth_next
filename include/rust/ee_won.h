@@ -1008,7 +1008,7 @@ constexpr static const int32_t EE_WON_HOST_GET_SESSION = 87;
 /// `mAuthContext->PutSession(addr, obj0)`
 constexpr static const int32_t EE_WON_HOST_PUT_SESSION = 88;
 
-/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session)
+/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session handle the transform holds)
 constexpr static const int32_t EE_WON_HOST_ADD_CRYPT = 89;
 
 /// `mTracker.KillAll()` (may call back)
@@ -1212,7 +1212,8 @@ constexpr static const int32_t EE_WON_HOST_PEER_NEW_LIGHT = 157;
 /// may call back
 constexpr static const int32_t EE_WON_HOST_PEER_REFRESH_ASYNC = 158;
 
-/// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
+/// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj: answered in Rust for a bound op,
+/// a session handle (hostauth.rs, round 22)
 constexpr static const int32_t EE_WON_HOST_PEER_NEW_SESSION = 160;
 
 /// a C++ `AuthContext*` obj0 (NULL: the op's `mAuthContext`) -> out_obj: its Rust object (`AuthContext::Core()`,
@@ -5439,8 +5440,6 @@ struct EeWonAuthFlowHooks {
   void (*add_ref)(void*);
   /// `RefCount::Release`
   void (*release)(void*);
-  /// `AuthSession::GetLastUseTime`
-  int64_t (*session_last_use)(void*);
   /// `AsyncOp::Kill(true)`
   void (*op_kill)(void*);
   /// `AsyncOp::IsKilled`
@@ -7643,9 +7642,13 @@ int64_t ee_won_auth_auto_refresh_wait(bool enabled,
                                       bool peer_valid,
                                       int64_t expire_delta);
 
+/// A flow alone (the drivers'; the game's is the auth context's): its sessions are stand-ins held through the hooks
+/// with `session_last_use` as their `GetLastUseTime`, or session handles when it is NULL.
+///
 /// # Safety
 /// `hooks` points to a hook table; its context outlives the flow.
-EeWonAuthFlow *ee_won_auth_flow_new(const EeWonAuthFlowHooks *hooks);
+EeWonAuthFlow *ee_won_auth_flow_new(const EeWonAuthFlowHooks *hooks,
+                                    int64_t (*session_last_use)(void*));
 
 /// The members' references dropped.
 ///
@@ -7654,7 +7657,7 @@ EeWonAuthFlow *ee_won_auth_flow_new(const EeWonAuthFlowHooks *hooks);
 void ee_won_auth_flow_free(EeWonAuthFlow *f);
 
 /// # Safety
-/// `f` a flow, `a` a live IPAddr value, `session` an `AuthSession`'s `RefCount*` or NULL.
+/// `f` a flow, `a` a live IPAddr value, `session` a session (as the flow was made) or NULL.
 void ee_won_auth_flow_put_session(const EeWonAuthFlow *f,
                                   const EeWonIpAddr *a,
                                   void *session,
@@ -7833,18 +7836,6 @@ void ee_won_authctx_free(const EeWonAuthCtx *c);
 /// # Safety
 /// `c` is a live context.
 const EeWonAuthLogin *ee_won_authctx_login(const EeWonAuthCtx *c);
-
-/// `PutSession(address, session)` (a session's `RefCount*`; NULL: nothing).
-///
-/// # Safety
-/// `c` a live context, `a` a live IPAddr value, `session` NULL or a live session.
-void ee_won_authctx_put_session(const EeWonAuthCtx *c, const EeWonIpAddr *a, void *session);
-
-/// `GetSession(address)`: a reference the caller adopts, or NULL.
-///
-/// # Safety
-/// `c` a live context, `a` a live IPAddr value.
-void *ee_won_authctx_get_session(const EeWonAuthCtx *c, const EeWonIpAddr *a);
 
 /// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
 ///
@@ -11674,6 +11665,33 @@ bool ee_won_gui_max_width(int32_t new_width,
                           bool has_breaks,
                           int32_t *out_width,
                           bool *out_rewrap);
+
+/// `CryptTransform`'s constructor: one more reference to the session handle.
+///
+/// # Safety
+/// `session` is a live session handle (or NULL).
+void ee_won_session_hold(void *session);
+
+/// `CryptTransform`'s destructor: its reference given back.
+///
+/// # Safety
+/// `session` is a reference the caller held (or NULL).
+void ee_won_session_release(void *session);
+
+/// `CryptTransform::Send` (`decrypt` false: `AuthSession::Encrypt`) or `Recv` (`Decrypt`) at the current time: the
+/// status; the replacing message handed to `sink` when there is one (`*replaced`). Anything but a session handle
+/// leaves the message as it is (the original dereferenced it).
+///
+/// # Safety
+/// `session` is a live handle or NULL; `data` holds `len` bytes; `sink` is valid with `context`; `replaced` is
+/// writable.
+int32_t ee_won_session_crypt(void *session,
+                             bool decrypt,
+                             const uint8_t *data,
+                             size_t len,
+                             EeWonByteSink sink,
+                             void *context,
+                             bool *replaced);
 
 /// `HTTPGetOp`'s constructors' proxy file read (`dir`: `WONAPICore::GetDefaultFileDirectory()`, `len` bytes).
 ///

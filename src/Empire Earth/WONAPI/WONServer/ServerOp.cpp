@@ -175,6 +175,18 @@ PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType in
     this->mAuthType = inType;
     this->mSocket = inSocket;
 }
+// The session's Encrypt (send) or Decrypt (receive): the message replaced when the Rust side made a new one
+WONStatus CryptTransform::Crypt(bool inDecrypt, ByteBufferPtr& ioMessage)
+{
+    ByteBufferPtr anOut;
+    bool replaced = false;
+    WONStatus aStatus = (WONStatus)ee_won_session_crypt(this->mSession, inDecrypt,
+                                                        reinterpret_cast<const uint8_t*>(ioMessage->data()),
+                                                        ioMessage->length(), WonByteBufferSink, &anOut, &replaced);
+    if (replaced)
+        ioMessage = anOut;
+    return aStatus;
+}
 // FUNCTION: WON 0x006e8950
 // A server-side peer auth op for an auth context and an accepted socket (ee_won peerop.rs)
 PeerAuthServerOp::PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket)
@@ -413,11 +425,6 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     case EE_WON_HOST_OP_SOCKET:
         if (SocketOp* s = dynamic_cast<SocketOp*>(Op(o0))) c->out_obj = s->GetSocket() ? Obj(s->GetSocket()) : NULL;
         break;
-    case EE_WON_HOST_PEER_AUTH_KEY: {
-        AuthSession* aSession = static_cast<PeerAuthOp*>(Op(o0))->GetSession();
-        if (aSession != NULL) Give(c, aSession->GetKey().GetKey(), aSession->GetKey().GetKeyLen());
-        break;
-    }
     case EE_WON_HOST_OP_KILLED: c->out_num = (o0 != NULL ? Op(o0) : o)->IsKilled() ? 1 : 0; break;
     case EE_WON_HOST_RECV_PROGRESS:
         static_cast<RecvBytesOp*>(Op(o0))->SetProgressCompletion(static_cast<CompletionBase<AsyncOpPtr>*>(Obj(c->obj[1])),
@@ -485,14 +492,9 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     }
     case EE_WON_HOST_CTX_FAILED: static_cast<ServerContext*>(Obj(o0))->NotifyFailed(Addr(c)); break;
     case EE_WON_HOST_ADD_CRYPT:
-        Sock(o0)->AddMsgTransform(new CryptTransform(static_cast<AuthSession*>(Obj(c->obj[1]))));
+        Sock(o0)->AddMsgTransform(new CryptTransform(c->obj[1]));
         break;
     case EE_WON_HOST_KILL_ALL: o->mTracker.KillAll(); break;
-    case EE_WON_HOST_PEER_AUTH_SESSION: {
-        AuthSession* aSession = static_cast<PeerAuthOp*>(Op(o0))->GetSession();
-        c->out_obj = aSession != NULL ? Out(aSession) : NULL;
-        break;
-    }
     case EE_WON_HOST_PEER_AUTH_CERT: c->out_num = static_cast<PeerAuthOp*>(Op(o0))->GetGetCertStatus(); break;
     case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = dynamic_cast<RecvMsgOp*>(Op(o0)) != NULL; break;
     // DetectFirewallOp's (ee_won fwhost.rs)
@@ -543,9 +545,6 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     case EE_WON_HOST_SOCKET_LFS: c->out_num = Sock(o0)->GetLengthFieldSize(); break;
     case EE_WON_HOST_CLIENT_KEY: c->out_num = o->mClientKeySize | (o->mUseClientKey ? 0x100 : 0); break;
     case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = Out(new AsyncOp); break;
-    case EE_WON_HOST_PEER_NEW_SESSION:
-        c->out_obj = Out(new AuthSession(reinterpret_cast<EeWonAuthSession*>((intptr_t)n0)));
-        break;
     default: break;
     }
 }
