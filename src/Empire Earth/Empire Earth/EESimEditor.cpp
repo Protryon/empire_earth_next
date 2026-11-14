@@ -209,7 +209,16 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESEPlayerScreen.h"
-#include "ee/EESEPlayerControls.h"
+#include <typeinfo>
+#include <map>
+#include "lle/UICheckBox.h"
+#include "ee/EEComputerPlayer.h"
+#include "ee/EESERBUnitTypes.h"
+#include "lle/TSThread.h"
+#include "lle/TSEvent.h"
+#include "ee/EESEAChangeLoadText.h"
+#include "ee/EESELoadThread.h"
+#include "ee/EEScenarioEditorIDs.h"
 #include "rust/ee_time.h"
 
 // TEST ONLY: ee_time_pin sets the time TMGetTime answers on this thread (-1: the clock; rust/crates/ee_time)
@@ -976,6 +985,190 @@ void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
     }
 }
 
+// the form's controls (TEST ONLY): every control with an index in [inFirst, inLast] or in the entity group inGroup
+// (-1: any): its class, id, groups, rectangle, display mode, background, border, help string, text colour and font
+// height, texts, check state, selection and lines, slider value and range, and the trigger events by id
+std::string Colour(const GEColor& inColor)
+{
+    char theText[64];
+    snprintf(theText, sizeof(theText), "%g,%g,%g", (double)inColor.mRed, (double)inColor.mGreen, (double)inColor.mBlue);
+    return theText;
+}
+
+std::string TypeName(const void* inObject, const std::type_info& inType)
+{
+    std::string theName = inObject == NULL ? "null" : inType.name();
+    if (theName.compare(0, 6, "class ") == 0)
+        theName.erase(0, 6);
+    return theName;
+}
+
+std::string GETextText(GEText* inText)
+{
+    if (inText == NULL)
+        return " fg=none";
+    char theText[96];
+    snprintf(theText, sizeof(theText), " fg=%s tr=%d fh=%lu", Colour(inText->GetFgColor()).c_str(),
+             inText->GetIsTransparent() ? 1 : 0, inText->GetFont() != NULL ? inText->GetFont()->GetHeight() : 0UL);
+    return theText + std::string(" '") + (const char*)inText->GetText() + "'";
+}
+
+std::string LabelText(const UITextLabel* inLabel)
+{
+    if (inLabel == NULL)
+        return " label=none";
+    std::string theText = GETextText(inLabel->GetGEText()) + " lines=" + std::to_string(inLabel->GetLineCount());
+    for (unsigned long k = 0; k < inLabel->GetLineCount() && k < 4; k++)
+        theText += std::string(k == 0 ? " '" : "|'") + (const char*)inLabel->GetText(k) + "'";
+    return theText;
+}
+
+std::string ListText(const UILBString* inList)
+{
+    if (inList == NULL)
+        return " list=none";
+    unsigned long theSelection = 0;
+    bool theSelected = inList->GetCurrentSelection(theSelection) == kErrorOK;
+    std::string theText = " n=" + std::to_string(inList->GetLineCount()) + " sel=" +
+                          (theSelected ? std::to_string(theSelection) : std::string("none"));
+    for (unsigned long k = 0; k < inList->GetLineCount() && k < 6; k++)
+        theText += std::string(k == 0 ? " '" : "|'") + (const char*)inList->GetData(k) + "'";
+    return theText;
+}
+
+void FormDigest(unsigned long inFirst, unsigned long inLast, long inGroup, std::vector<std::string>& outLines)
+{
+    UIForm* theForm = gUIManager->mScenarioEditorForm;
+    std::map<UIControl*, std::string> theGroups;
+    for (unsigned long g = 0; g < theForm->GetControlGroupCount(); g++) {
+        UIEntityGroup* theGroup = theForm->GetEntityGroup(g);
+        for (unsigned long e = 0; theGroup != NULL && e < theGroup->GetEntityCount(); e++) {
+            std::string& theList = theGroups[static_cast<UIControl*>(theGroup->GetEntity(e))];
+            theList += (theList.empty() ? "" : ",") + std::to_string(g) + (theGroup->GetIsEnabled() ? "" : "d");
+        }
+    }
+    for (unsigned long i = inFirst; i <= inLast && i < theForm->GetControlCount(); i++) {
+        UIControl* c = theForm->GetControl(i);
+        if (c == NULL)
+            continue;
+        std::string theGroupList = theGroups.count(c) ? theGroups[c] : std::string("-");
+        if (inGroup >= 0 && ("," + theGroupList + ",").find("," + std::to_string(inGroup) + ",") == std::string::npos &&
+            ("," + theGroupList + ",").find("," + std::to_string(inGroup) + "d,") == std::string::npos)
+            continue;
+        if (c->GetId() == 9 && dynamic_cast<UITextLabel*>(c) != NULL) {
+            // the load text: its text (and the rectangle fitted to it) is the load thread's last, a timing
+            outLines.push_back("  c" + std::to_string(i) + " the load text g=" + theGroupList);
+            continue;
+        }
+        const GERectangle& r = c->GetRectangle();
+        GEColor theBg;
+        c->GetBgColor(theBg);
+        char theText[320];
+        snprintf(theText, sizeof(theText), "  c%lu %s id=0x%lx ix=%lu g=%s r=%g,%g,%g,%g m=%lu bg=%g,%s b=%lu h=%lu", i,
+                 TypeName(c, typeid(*c)).c_str(), c->GetId(), c->GetIndex(), theGroupList.c_str(), (double)r.GetLeft(),
+                 (double)r.GetTop(), (double)r.GetRight(), (double)r.GetBottom(), c->GetDisplayMode(),
+                 (double)c->GetBgOpacity(), Colour(theBg).c_str(), c->GetBorderThickness(), c->GetStringTableID());
+        std::string theLine = theText;
+        if (UIRadioButton* b = dynamic_cast<UIRadioButton*>(c))
+            theLine += std::string(" k=") + (b->GetIsChecked() ? "1" : "0") + LabelText(b->GetTextLabel()) +
+                       " btn" + GETextText(b->GetGEText());
+        else if (UICheckBox* b = dynamic_cast<UICheckBox*>(c))
+            theLine += std::string(" k=") + (b->GetIsChecked() ? "1" : "0") + LabelText(b->GetTextLabel());
+        else if (UIButton* b = dynamic_cast<UIButton*>(c))
+            theLine += GETextText(b->GetGEText());
+        else if (UIComboBox* b = dynamic_cast<UIComboBox*>(c))
+            theLine += " tb=" + std::to_string(b->GetTextBoxType()) + LabelText(b->GetTextLabel()) +
+                       ListText(b->GetListBox());
+        else if (UILBString* b = dynamic_cast<UILBString*>(c))
+            theLine += GETextText(b->GetGEText()) + ListText(b);
+        else if (UIEditBox* b = dynamic_cast<UIEditBox*>(c))
+            theLine += GETextText(b->GetGEText()) + " lines=" + std::to_string(b->GetLineCount()) + " '" +
+                       (b->GetLineCount() > 0 ? b->GetText(0) : "") + "'";
+        else if (UISlider* b = dynamic_cast<UISlider*>(c))
+            theLine += " v=" + std::to_string(b->GetCurrentRangeValue()) + " max=" + std::to_string(b->GetMaxRange());
+        else if (i > 0 && theForm->GetControl(i - 1) != NULL &&
+                 TypeName(theForm->GetControl(i - 1), typeid(*theForm->GetControl(i - 1))) == "EEUIFMGAttribute")
+            // a unit attribute's value (the unit tab's panel): its bonus follows the tech tree the load thread
+            // reloads, shown on a later frame (a timing)
+            theLine += " (an attribute value)";
+        else if (UITextLabel* b = dynamic_cast<UITextLabel*>(c))
+            theLine += LabelText(b);
+        for (unsigned long t = kControlTriggerRangeChanged; t <= kControlTriggerButtonUp; t++)
+            if (UIEvent* e = c->GetTriggerEvent(t))
+                theLine += " e" + std::to_string(t - kControlTriggerRangeChanged) + "=" + TypeName(e, typeid(*e));
+        outLines.push_back(theLine);
+    }
+}
+
+// the players as the player tab writes them (TEST ONLY): names, colours, civilizations, epochs, resource caps,
+// shared line of sight, game options, the computer players' settings, stances; the world's game options
+void PlayersDigest(std::vector<std::string>& outLines)
+{
+    char theText[512];
+    for (unsigned long p = 0; p < (unsigned long)gWorld.GetNumPlayers(); p++) {
+        EEPlayer* q = gWorld.GetPlayer(p);
+        if (q == NULL) {
+            outLines.push_back("  player " + std::to_string(p) + " none");
+            continue;
+        }
+        EETechTree* t = q->GetTechTree();
+        std::string theCaps, theEnemies;
+        for (int i = 2; i < 7; i++)
+            theCaps += (i == 2 ? "" : ",") + std::to_string(q->mResourceCaps[i]);
+        for (unsigned long j = 0; j < (unsigned long)gWorld.GetNumPlayers(); j++)
+            theEnemies += std::to_string((long)q->mEnemies[j]);
+        snprintf(theText, sizeof(theText),
+                 "  player %lu '%s' colour=%s civ='%s' epochs=%ld,%ld,%ld caps=%s los=%d upgrades=%zu points=%g enemies=%s",
+                 p, (const char*)q->mName, Colour(q->mColor).c_str(), (const char*)q->mCivilizationFile, (long)t->mCurrentEpoch,
+                 (long)t->mStartEpoch, (long)t->mEndEpoch, theCaps.c_str(), q->mSharedLOS ? 1 : 0,
+                 q->mCivilization.mPurchasedUpgrades.size(), (double)q->mCivilization.mAvailablePoints,
+                 theEnemies.c_str());
+        std::string theLine = theText;
+        if (p > 0) {
+            const EEGameOptionsPlayer& o = gWorld.mGameOptions.mPlayers[p - 1];
+            snprintf(theText, sizeof(theText), " options=%lu,%d", o.mColor, o.mB36 ? 1 : 0);
+            theLine += theText;
+        }
+        if (EEComputerPlayer* c = q->mComputerPlayer) {
+            snprintf(theText, sizeof(theText), " ai=%d%d%d%d%d%d%d%d citizens=%g", c->mActive ? 1 : 0,
+                     c->mIsCheating ? 1 : 0, c->mCanAttack ? 1 : 0, c->mCanDefend ? 1 : 0, c->mCanBuild ? 1 : 0,
+                     c->mCanExplore ? 1 : 0, c->mIgnoreOthers ? 1 : 0, c->mCanGather ? 1 : 0,
+                     (double)c->mCitizenPercentage);
+            theLine += theText;
+        }
+        outLines.push_back(theLine);
+    }
+    snprintf(theText, sizeof(theText),
+             "  world max=%ld population=%ld wonders=%ld victory=%d teams=%d cheats=%d improvements=%d carbon=%d "
+             "options=%ld,%ld,%d,%d,%d",
+             (long)gMaxPlayers, (long)gWorld.mPopulationLimit, (long)gWorld.mNumberOfWondersToWin,
+             gWorld.mVictoryEnabled ? 1 : 0, gWorld.mTeamsLocked ? 1 : 0, gWorld.mCheatsEnabled ? 1 : 0,
+             gWorld.mUnitImprovementsAllowed ? 1 : 0, gWorld.mUsingCarbon ? 1 : 0, (long)gWorld.mGameOptions.mUnitLimit,
+             (long)gWorld.mGameOptions.mWondersForVictory, gWorld.mGameOptions.mVictory ? 1 : 0,
+             gWorld.mGameOptions.mLockTeams ? 1 : 0, gWorld.mGameOptions.mCheatCodes ? 1 : 0);
+    outLines.push_back(theText);
+}
+
+// the editor's load thread drained (TEST ONLY): every message posted to it so far handled, as
+// EEDataPreLoading::WaitForMessageQueue (its 0x40a sets mMessageQueueDone); the digests that read what it loads
+// (epochs, tech trees, the load text) run after it, so they do not depend on its timing
+void SyncLoadThread()
+{
+    EESELoadThread* theThread = gUIManager->mScenarioEditorForm->mLoadThread;
+    if (theThread->mThread->Post(kLoadThreadMessageQueueDone, NULL, NULL, true) == kErrorOK) {
+        theThread->mMessageQueueDone->Wait(kTSWaitInfinite);
+        theThread->mMessageQueueDone->Clear();
+    }
+}
+
+// the protected virtuals a person's mouse reaches (TEST ONLY): a button's release, a combo box's chosen line
+struct ButtonAccess : UIButton {
+    static void Up(UIButton* inButton) { (inButton->*(&ButtonAccess::ButtonUp))(); }
+};
+struct ComboAccess : UIComboBox {
+    static void Change(UIComboBox* inBox) { (inBox->*(&ComboAccess::ChangeSelection))(); }
+};
+
 }   // namespace
 
 int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outError)
@@ -1372,15 +1565,35 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "epoch")   // epoch ROW START END: a player row's end epoch set, then its start epoch picked
             theCode = [=, &theOutput] {
-                EESEPlayerRow* theRow = gUIManager->mScenarioEditorForm->GetPlayerScreen()->mPlayers[L(1)];
-                theRow->mEndEpoch->SetCurrentSelection((unsigned long)L(3));
-                theRow->mStartEpoch->SetCurrentSelection((unsigned long)L(2));
-                if (UIEvent* theEvent = theRow->mStartEpoch->GetTriggerEvent(kControlTriggerSelectionChanged))
-                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theRow->mStartEpoch);
+                EESEPlayerScreen* theScreen = gUIManager->mScenarioEditorForm->GetPlayerScreen();
+                UIComboBox* theStart = theScreen->GetRowEpochs(L(1), false);
+                UIComboBox* theEndBox = theScreen->GetRowEpochs(L(1), true);
+                theEndBox->SetCurrentSelection((unsigned long)L(3));
+                theStart->SetCurrentSelection((unsigned long)L(2));
+                if (UIEvent* theEvent = theStart->GetTriggerEvent(kControlTriggerSelectionChanged))
+                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theStart);
                 unsigned long theEnd = 0;
-                bool theSelected = theRow->mEndEpoch->GetCurrentSelection(theEnd) == kErrorOK;
-                theOutput.push_back("  end epochs " + std::to_string(theRow->mEndEpoch->GetListBox()->GetLineCount()) +
+                bool theSelected = theEndBox->GetCurrentSelection(theEnd) == kErrorOK;
+                theOutput.push_back("  end epochs " + std::to_string(theEndBox->GetListBox()->GetLineCount()) +
                                     " selection " + (theSelected ? std::to_string(theEnd) : std::string("none")));
+            };
+        else if (c == "form")   // form FIRST LAST [GROUP]: the editor form's controls by index (FormDigest)
+            theCode = [=, &theOutput] {
+                FormDigest((unsigned long)L(1), (unsigned long)L(2), w.size() > 3 ? L(3) : -1L, theOutput);
+            };
+        else if (c == "players")   // the players and the world as the player tab writes them (PlayersDigest)
+            theCode = [=, &theOutput] { PlayersDigest(theOutput); };
+        else if (c == "edit")   // edit ID TEXT: an editor edit box's text set ("-" for none)
+            theCode = [=] {
+                static_cast<UIEditBox*>(EditorControl(w[1]))->SetText(UWideString(w[2] == "-" ? "" : w[2].c_str()));
+            };
+        else if (c == "buttonup")   // buttonup ID: an editor button released (its ButtonUp, as by the mouse)
+            theCode = [=] { ButtonAccess::Up(static_cast<UIButton*>(EditorControl(w[1]))); };
+        else if (c == "changesel")   // changesel ID LINE: a combo box's line chosen (its ChangeSelection)
+            theCode = [=] {
+                UIComboBox* theBox = static_cast<UIComboBox*>(EditorControl(w[1]));
+                theBox->SetCurrentSelection((unsigned long)L(2));
+                ComboAccess::Change(theBox);
             };
         else if (c == "sm")   // sm OP LIST [INDEX] | sm fill | sm state: the scenario lists (ScenarioListStep)
             theCode = [=, &theOutput] { ScenarioListStep(w, theOutput); };
@@ -1393,6 +1606,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             outError = inScript + ":" + std::to_string(k + 1) + ": unknown command " + c;
             return 2;
         }
+        if (c == "form" || c == "players")
+            SyncLoadThread();
         size_t theBefore = theOutput.size();
         if (!RunStep(theCode)) {
             outError = inScript + ":" + std::to_string(k + 1) + ": '" + c + "' did not finish";
