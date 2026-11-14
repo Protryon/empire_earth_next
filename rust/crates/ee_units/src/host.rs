@@ -1658,7 +1658,8 @@ pub(crate) mod tests {
         }
         fn unit_ghost_seen(&mut self, unit: u32) -> bool {
             self.calls.push(Call::GhostSeen(unit));
-            self.ghosts.contains(&unit)
+            // a unit off the tiles (in a carrier) has no tile and so no doppelganger (EEUnitHost.cpp)
+            !self.off_tiles.contains(&unit) && self.ghosts.contains(&unit)
         }
         fn unit_attackable(&mut self, unit: u32, damage_index: i64) -> bool {
             self.calls.push(Call::Attackable(unit, damage_index));
