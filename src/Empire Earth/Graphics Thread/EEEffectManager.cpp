@@ -636,6 +636,7 @@ void EEEffectCaptureSweep()
         long mKind;
         int mEntry;
         long mBorrowed;   // the kind whose graphic effects it borrows (0: its own)
+        bool mArmed;      // made by the armed unit (a weapon tag point at its animation) as A, B as before
     };
     static const Case kSweep[] = {
         {0x18, kOnUnit, 0},        {0x18, kAtPoint, 0},       {0x1b, kAtPoint, 0},       {0x21, kBetweenUnits, 0},
@@ -661,6 +662,10 @@ void EEEffectCaptureSweep()
         {0x08, kAtPoint, 0},       {0x0b, kAtPoint, 0},       {0x12, kAtPoint, 0},       {0x22, kAtPoint, 0},
         {0x2e, kAtPoint, 0},       {0x31, kAtPoint, 0},       {0x32, kAtPoint, 0},       {0x16, kBetweenUnits, 0},
         {0x22, kTransformation, 0}, {0x32, kTransformation, 0}, {0x0c, kLine, 0},       {0x2e, kLine, 0},
+        // R4.4, twentieth round: the three weapon-point kinds on the armed unit (the newest unit of any player whose
+        // model has a tag point list at its animation holding its weapon tag point; none: the cases are skipped)
+        {0x09, kOnUnit, 0, true},  {0x14, kBetweenUnits, 0, true}, {0x14, kUnitToPoint, 0, true},
+        {0x30, kBetweenUnits, 0, true}, {0x30, kUnitToPoint, 0, true},
     };
     EEEffectManager* theManager = gEffectManager;
     if (theManager == NULL)
@@ -681,12 +686,29 @@ void EEEffectCaptureSweep()
         if (theNewest != NULL)
             theUnits[theUnits[0] == NULL ? 0 : 1] = theNewest;
     }
+    EEUnit* theArmed = NULL;
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL;
+             theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* theComplex = theUnit->mComplexUnit;
+            if (theComplex == NULL || theUnit->mHitPoints <= 0 || theUnit->mStats == NULL || theComplex->mTileNode == NULL
+                || theComplex->GetTileX() == -10000 || theUnit->GetModel() == NULL)
+                continue;
+            EETagPointList* theList = theUnit->GetModel()->mTagPoints[theComplex->mAnimation];
+            if (theList != NULL && theComplex->mWeaponTagPoint < theList->mPoints.size())
+                theArmed = theUnit;
+        }
+    }
     if (theUnits[0] != NULL) {
-        EEUnit* a = theUnits[0];
-        EEUnit* b = theUnits[1] != NULL ? theUnits[1] : a;
+        EEUnit* theFirst = theUnits[0];
+        EEUnit* b = theUnits[1] != NULL ? theUnits[1] : theFirst;
         unsigned long theDetail = gEffectDetail;
         gEffectDetail = 0xff;   // every detail level
         for (const Case& theCase : kSweep) {
+            if (theCase.mArmed && theArmed == NULL)
+                continue;
+            EEUnit* a = theCase.mArmed ? theArmed : theFirst;
             long theSource = theCase.mBorrowed != 0 ? theCase.mBorrowed : theCase.mKind;
             unsigned long theRows = 0;
             for (unsigned long theRow = 0; theRow < EEGraphicEffect::GetCount() && theRows < 2; theRow++) {
