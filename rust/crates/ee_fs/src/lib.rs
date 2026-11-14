@@ -9,6 +9,7 @@
 //! `golden_fs.txt` holds the values of the C++ implementation, dumped by a throwaway driver before it was replaced.
 
 mod archive;
+pub mod archive_obj;
 mod chunk;
 pub mod ffi;
 mod file;
@@ -38,5 +39,7 @@ pub mod status {
 
 #[cfg(test)]
 mod golden;
+#[cfg(all(test, windows))]
+mod golden_archive;
 #[cfg(all(test, windows))]
 mod golden_spec;

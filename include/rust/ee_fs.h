@@ -22,6 +22,45 @@ struct EeFsArchive;
 
 struct EeFsMemFile;
 
+/// A `UString` member as the C++ object lays it out: its vtable pointer, then the Rust record (`EeUString`).
+struct EeFsString {
+  const void *vtable;
+  char *string;
+  unsigned long length;
+  unsigned long capacity;
+};
+
+/// `FSFileSpec` (and its base `FSBasicFile`) from the vtable pointer on, as the C++ object lays it out.
+struct EeFsSpec {
+  const void *vtable;
+  EeFsString volume;
+  EeFsString directory;
+  EeFsString file;
+  /// `mFileAccess`: Open's access, 1 = read
+  unsigned long file_access;
+  unsigned long version;
+  bool is_open;
+  /// `mHandle`: the open `PlatFile*`, or a search's `PlatFind*`
+  void *handle;
+  /// `mStream`: FOpen's stream
+  void *stream;
+};
+
+/// `FSArchive` from its vtable pointer on, as the C++ object lays it out.
+struct EeFsArchiveObj {
+  const void *vtable;
+  /// `mArchiveFile` (an `FSFileSpec` by value)
+  EeFsSpec archive_file;
+  /// `mTable`: the file and tag tables
+  EeFsArchive *table;
+  /// `mMapping`: `PlatFileMap`'s mapping
+  void *mapping;
+  /// `mView`
+  const uint8_t *view;
+  /// `mViewLength`
+  unsigned long view_length;
+};
+
 /// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
 /// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
 struct EeFsFileOps {
@@ -55,31 +94,108 @@ using EeFsFatVisitor = void(*)(void *context,
                                int32_t end,
                                int32_t length);
 
-/// A `UString` member as the C++ object lays it out: its vtable pointer, then the Rust record (`EeUString`).
-struct EeFsString {
-  const void *vtable;
-  char *string;
-  unsigned long length;
-  unsigned long capacity;
-};
-
-/// `FSFileSpec` (and its base `FSBasicFile`) from the vtable pointer on, as the C++ object lays it out.
-struct EeFsSpec {
-  const void *vtable;
-  EeFsString volume;
-  EeFsString directory;
-  EeFsString file;
-  /// `mFileAccess`: Open's access, 1 = read
-  unsigned long file_access;
-  unsigned long version;
-  bool is_open;
-  /// `mHandle`: the open `PlatFile*`, or a search's `PlatFind*`
-  void *handle;
-  /// `mStream`: FOpen's stream
-  void *stream;
-};
-
 extern "C" {
+
+/// `FSArchive()`'s body: empty tables, nothing mapped (the archive file is the C++ member's `FSFileSpec()`).
+///
+/// # Safety
+/// `a` is a live record (its archive file constructed).
+void ee_fs_arch_init(EeFsArchiveObj *a);
+
+/// `FSArchive(const FSFileSpec&)`'s body: as [`ee_fs_arch_init`], then the archive file assigned.
+///
+/// # Safety
+/// As [`ee_fs_arch_init`]; `file` is a live spec.
+void ee_fs_arch_init_file(EeFsArchiveObj *a, const EeFsSpec *file);
+
+/// The copy constructor's body (the archive file is the C++ member's copy): the tables copied, the view shared
+/// (only closed archives are copied: `FSPath::AddArchive`).
+///
+/// # Safety
+/// Both are live records.
+void ee_fs_arch_init_copy(EeFsArchiveObj *a,
+                          const EeFsArchiveObj *from);
+
+/// `~FSArchive()`'s body: closed, the tables freed (the archive file's destructor is the C++ member's).
+///
+/// # Safety
+/// `a` is a live record; its tables are dead afterwards.
+void ee_fs_arch_finish(EeFsArchiveObj *a);
+
+/// `operator=`: closed, then the other archive's file name (not its contents).
+///
+/// # Safety
+/// Both are live records.
+void ee_fs_arch_assign(EeFsArchiveObj *a, const EeFsArchiveObj *from);
+
+/// `SetArchive`: closed, then pointed at another archive file.
+///
+/// # Safety
+/// `a` is a live record, `file` a live spec.
+long ee_fs_arch_set_archive(EeFsArchiveObj *a, const EeFsSpec *file);
+
+/// `Close`: reset and the tags dropped.
+///
+/// # Safety
+/// `a` is a live record.
+long ee_fs_arch_close(EeFsArchiveObj *a);
+
+/// `Open`: the archive file opened for reading, its header, file table and tags read, the file mapped; the file
+/// closed again on any failure. kErrorAlreadyExists when open.
+///
+/// # Safety
+/// `a` is a live record.
+long ee_fs_arch_open(EeFsArchiveObj *a);
+
+/// `FindFile`'s search after the facade lower-cased the name: on a hit `*out` receives the member as a new memory
+/// file (always, even when its decompression failed) and the status is returned; a miss returns kErrorNotFound.
+///
+/// # Safety
+/// `a` is a live record, `name` a C string, `out` writable.
+long ee_fs_arch_find(const EeFsArchiveObj *a,
+                     const char *name,
+                     EeFsMemFile **out);
+
+/// `FindFile`'s names for the member found (`SetVolume`, `SetDirectory`, `SetFile` on the new `FSMemoryFile`): the
+/// archive's volume, its directory and file name as a directory, the lower-cased name.
+///
+/// # Safety
+/// `a` is a live record, `member` the found member's live spec record, `name` the lower-cased name's live record.
+void ee_fs_arch_name_member(const EeFsArchiveObj *a,
+                            EeFsSpec *member,
+                            const EeFsString *name);
+
+/// `Create(root, pattern, level, recursive)`: the archive built from the files under the root matching the pattern.
+///
+/// # Safety
+/// `a` is a live record, `root` a live spec, `pattern` a C string, the startup strings live.
+long ee_fs_arch_create_walk(EeFsArchiveObj *a,
+                            const EeFsSpec *root,
+                            const char *pattern,
+                            unsigned long level,
+                            bool recursive,
+                            const EeFsString *startup_volume,
+                            const EeFsString *startup_directory);
+
+/// `Create(root, files, level)`: the archive built from the listed files under the root.
+///
+/// # Safety
+/// `a` is a live record, `root` a live spec, `files` `count` live `UString` records.
+long ee_fs_arch_create_list(EeFsArchiveObj *a,
+                            const EeFsSpec *root,
+                            const EeFsString *const *files,
+                            size_t count,
+                            unsigned long level);
+
+/// `ExtractAll`: every member written below the destination (its directory made first), with the original's
+/// progress lines on stdout; stops at the first failure.
+///
+/// # Safety
+/// `a` is a live record, `destination` a live spec, the startup strings live.
+long ee_fs_arch_extract_all(EeFsArchiveObj *a,
+                            const EeFsSpec *destination,
+                            const EeFsString *startup_volume,
+                            const EeFsString *startup_directory);
 
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);

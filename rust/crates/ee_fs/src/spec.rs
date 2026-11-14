@@ -111,7 +111,7 @@ thread_local! {
 }
 
 /// `ESRecordNativeError(PlatGetLastError())`
-unsafe fn record_native() {
+pub(crate) unsafe fn record_native() {
     let error = PlatGetLastError() as c_ulong;
     ee_error::ee_error_record_native(error);
     #[cfg(test)]
