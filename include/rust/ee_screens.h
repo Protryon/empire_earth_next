@@ -3302,6 +3302,802 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 
+/// The icons `mIcons[0..9]` are controls 0..8.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_ICON = 0;
+
+/// The labels `mLabels[0..9]` are controls 9..17.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_LABEL = 9;
+
+/// `mC84`: the hit points bar (control 0x1e).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_LEFT_BAR = 18;
+
+/// `mC88`: the second bar (control 0x1f).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_MIDDLE_BAR = 19;
+
+/// `mC8C`: the portrait.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_PORTRAIT = 20;
+
+/// `mC90`: the unit's name.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_NAME = 21;
+
+/// `mC94`: the civilization's name (absent in the scenario editor).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_CIV = 22;
+
+/// `mC98`: the armor title.
+constexpr static const int64_t EE_SCREENS_BOX_CTL_ARMOR_TITLE = 23;
+
+/// `mCA8`: the third bar (control 0x33; absent in the scenario editor).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_THIRD_BAR = 24;
+
+/// `mCAC`: the fourth bar (control 0x32; absent in the scenario editor).
+constexpr static const int64_t EE_SCREENS_BOX_CTL_FOURTH_BAR = 25;
+
+/// `mAttributeCount`.
+constexpr static const int64_t EE_SCREENS_BOX_FIELD_COUNT = 0;
+
+/// `mArmorAttributeCount`.
+constexpr static const int64_t EE_SCREENS_BOX_FIELD_ARMOR_COUNT = 1;
+
+/// `mIsResourceShown`.
+constexpr static const int64_t EE_SCREENS_BOX_FIELD_RESOURCE_SHOWN = 2;
+
+/// `mAttributes[i]` is field 16 + i.
+constexpr static const int64_t EE_SCREENS_BOX_FIELD_ATTRIBUTES = 16;
+
+/// The member a (`EE_SCREENS_BOX_FIELD_*`).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_GET = 1;
+
+/// The member a = b.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET = 2;
+
+/// Whether control a is set.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_PRESENT = 3;
+
+/// Control a's `GetDisplayMode()`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_MODE = 4;
+
+/// Control a's `SetDisplayMode(b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_MODE = 5;
+
+/// Button a's queued count b: `SetDirty(true)` when it changes, then `mNumQueued = b`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_QUEUED = 6;
+
+/// Button a's `mAttribute`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_ATTRIBUTE = 7;
+
+/// Button a's `mAttribute = b`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_ATTRIBUTE = 8;
+
+/// Button a's `mCostLabel` = control b (-1: NULL).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_COST_LABEL = 9;
+
+/// The held text = the unit's name with the gate's lock state (a = 0: `Fill`'s test of the stats' name, 1:
+/// `Refresh`'s).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_NAME = 10;
+
+/// The held text = the unit's owner's civilization's name.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_CIV = 11;
+
+/// Label a's `SetText(held)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_TEXT = 12;
+
+/// Whether label a's first line differs from the held text.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_TEXT_DIFFERS = 13;
+
+/// Bar a's `SetIconBitmap` with icon bitmap b.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_ICON = 14;
+
+/// Bar a's `mBar->SetRange(0, b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_RANGE = 15;
+
+/// Bar a's `mBar->SetCurrentRangeValue(b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_VALUE = 16;
+
+/// Control a's `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_DIRTY = 17;
+
+/// Bar a's `mBar->SetStatusBarColor` of the box's colour b (1 blue, 2 yellow, 3 green).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_COLOR = 18;
+
+/// Bar a's `mEnabled = b`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BAR_ENABLED = 19;
+
+/// Control a's `SetStringTableID(b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_STRING_ID = 20;
+
+/// Icon bitmap a's `ComputeStretchedCoordsAndScale` over the icon rectangle of attribute b, on control c's screen.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_STRETCH = 21;
+
+/// Button a's normal (b = 0) or pressed (b = 1) bitmap = icon bitmap c.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_BITMAP = 22;
+
+/// Whether button a's normal (b = 0) or pressed (b = 1) bitmap is icon bitmap c.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BITMAP_IS = 23;
+
+/// The portrait's `SetUnit` (a = 1: the call's unit, 0: NULL).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_PORTRAIT = 24;
+
+/// The portrait's `Update()`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_PORTRAIT_UPDATE = 25;
+
+/// The original's `ESVerify` at line a (367: the armor count, 708: the attribute count).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_VERIFY = 26;
+
+/// `gWorld.mInCinematic`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_IN_CINEMATIC = 27;
+
+/// The main game form's background a made visible (b != 0) or hidden, when it has one.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BACKGROUND = 28;
+
+/// The held text = format a (`EE_SCREENS_BOX_FMT_*`) of b and c.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_FORMAT = 29;
+
+/// Whether bar a's value label b (0 the first, 1 the second) differs from the held text.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_VALUE_DIFFERS = 30;
+
+/// Bar a's value label b's `SetText(held)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_VALUE = 31;
+
+/// Button a's `UpdateCost(held)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_UPDATE_COST = 32;
+
+/// Armor kind a of the unit's stats (b = 0, f32 bits), its class (1) or the stats' class (2).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_ARMOR = 33;
+
+/// The complex unit's class's `mUnitType`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_UNIT_TYPE = 34;
+
+/// The complex unit's player's `CountQueuedImprovements(a, b)`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_COUNT_QUEUED = 35;
+
+/// `sIconBitmaps[a].mBitmap = new GEBitmap`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_NEW_BITMAP = 36;
+
+/// `LoadIcons`' texture description (the pixel depth, the primary surface's width).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_DESCRIPTION = 37;
+
+/// Texture a (1..3) loaded with the description, its seven stage modes set.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_LOAD_TEXTURE = 38;
+
+/// `sIconBitmaps[a].mRectangle` from the corners b and c (two f32s each, x low).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_SET_RECT = 39;
+
+/// Texture a's surface's width (high 32 bits) and height (low).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_TEXTURE_SIZE = 40;
+
+/// `sIconBitmaps[a & 0xff]`'s `SetTexture(texture a >> 8, gScreenIndex)` and `SetTextureCoordinates` of the top
+/// left b and bottom right c (u low, v high).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BITMAP_TEXTURE = 41;
+
+/// `sIconBitmaps[a]`'s `SetXYScale` (b: x low, y high).
+constexpr static const uint32_t EE_SCREENS_BOX_OP_BITMAP_SCALE = 42;
+
+/// `sIconsLoaded = true`.
+constexpr static const uint32_t EE_SCREENS_BOX_OP_ICONS_LOADED = 43;
+
+/// "%ld/%ld".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_PAIR = 0;
+
+/// "+ %ld".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_BONUS = 1;
+
+/// "%ld+%ld".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_SUM = 2;
+
+/// "%ld".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_ONE = 3;
+
+/// "".
+constexpr static const int64_t EE_SCREENS_BOX_FMT_EMPTY = 4;
+
+/// `kImprovementFlightTimeOrPower`.
+constexpr static const int64_t EE_SCREENS_BOX_IMPROVEMENT_FLIGHT_OR_POWER = 8;
+
+/// `kImprovementHitPoints`.
+constexpr static const int64_t EE_SCREENS_BOX_IMPROVEMENT_HIT_POINTS = 9;
+
+/// `kImprovementTransport`.
+constexpr static const int64_t EE_SCREENS_BOX_IMPROVEMENT_TRANSPORT = 15;
+
+/// `IDS_IMPROVEMENT_GARRISON`.
+constexpr static const int64_t EE_SCREENS_BOX_IDS_GARRISON = 30023;
+
+/// The button's `mIsCommand`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_IS_COMMAND = 1;
+
+/// The button's `mButton` (its `EEButtonObject` index).
+constexpr static const uint32_t EE_SCREENS_SB_OP_BUTTON = 2;
+
+/// The main game form's entity group a enabled (c != 0) or disabled, then its background b made visible or hidden.
+constexpr static const uint32_t EE_SCREENS_SB_OP_PANEL = 3;
+
+/// `gUIManager->Fn26FA6A()` (a = 0) or `Fn26FA55()` (a = 1).
+constexpr static const uint32_t EE_SCREENS_SB_OP_MAIN_GROUP = 4;
+
+/// The local player's selected group's unit count; -1 without a group.
+constexpr static const uint32_t EE_SCREENS_SB_OP_GROUP_COUNT = 5;
+
+/// Whether the selected group's unit a is set.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNIT = 6;
+
+/// The selected unit a's class's `mUnitType`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNIT_TYPE = 7;
+
+/// The selected unit a's `mPower` (b = 0) or `GetPower()` (b = 1).
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNIT_POWER = 8;
+
+/// `gFortressUnloadCost`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNLOAD_COST = 9;
+
+/// `EEGetFirstSelectedUnit`: 1 when it found one (the host keeps it as the transport).
+constexpr static const uint32_t EE_SCREENS_SB_OP_FIRST_SELECTED = 10;
+
+/// The transport's class's `mCategory`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_FIRST_CATEGORY = 11;
+
+/// The transport's class's `mUnitType`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_FIRST_TYPE = 12;
+
+/// A message sent (`gCommunications->ProcessLocalUserInput`): a = `EE_SCREENS_SB_SEND_*`, b and c its arguments.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SEND = 13;
+
+/// The form's `mIsCursorLocked = true`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_LOCK_CURSOR = 14;
+
+/// `gMouse->mPointer = a`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_POINTER = 15;
+
+/// The form's `SetUIState(a)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UI_STATE = 16;
+
+/// The form's cancel button shown (`kMainGameCancelUIMode`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_SHOW_CANCEL = 17;
+
+/// The main game form's `mRefreshGroup = true` when there is one.
+constexpr static const uint32_t EE_SCREENS_SB_OP_REFRESH_GROUP = 18;
+
+/// The form's `StartPatrol()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_PATROL = 19;
+
+/// The form's `StartFlare()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_FLARE = 20;
+
+/// `gGameResources`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_GAME_RESOURCES = 21;
+
+/// `gPhysics->GetGameClock()` (f32 bits).
+constexpr static const uint32_t EE_SCREENS_SB_OP_GAME_CLOCK = 22;
+
+/// A world table long value (a: the key).
+constexpr static const uint32_t EE_SCREENS_SB_OP_WORLD_LONG = 23;
+
+/// The string a into the chat log (`gResource->GetString`, `gUserInterface->AddChatLogEntry(..., 0)`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CHAT_STRING = 24;
+
+/// `EECanAffordTrade(a)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_AFFORD_TRADE = 25;
+
+/// `EEDecodeTradeButton(a, ...)`: -1 when it fails, else the resource * 2 + the sell flag.
+constexpr static const uint32_t EE_SCREENS_SB_OP_DECODE_TRADE = 26;
+
+/// `UIControl::ShiftKeyPressed()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SHIFT = 27;
+
+/// `EESoundObject::Get(a)`'s sample played (`gSoundManager->Play`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_SOUND = 28;
+
+/// The button's technology's node's data `mKind`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_KIND = 29;
+
+/// The node's data `mUnitClass`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_CLASS = 30;
+
+/// Whether `gUnitClassTable[a]` is set.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CLASS_PRESENT = 31;
+
+/// The class a is a land building (`IsLandBuilding()` and not a naval building).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CLASS_LAND_BUILDING = 32;
+
+/// The class a's `mCategory` is the gate's.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CLASS_GATE = 33;
+
+/// The node's data `mMakesUnit`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_MAKES_UNIT = 34;
+
+/// The form's `BuildUnit(mUnitID, mTechnology)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BUILD_UNIT = 35;
+
+/// The form's `StartWall(mTechnology)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_WALL = 36;
+
+/// The form's `StartGate(mTechnology)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_GATE = 37;
+
+/// The current player's `CanProduce(mTechnology, mUnitType, a, true, 3, &reason)` (the host keeps the reason).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_PRODUCE = 38;
+
+/// `TMGetTime()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_TIME = 39;
+
+/// The button's `mLastErrorTime`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_LAST_ERROR = 40;
+
+/// The button's `mLastErrorTime = a`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SET_LAST_ERROR = 41;
+
+/// The kept reason into the chat log (`gUserInterface->AddChatLogEntry(reason, 0)`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CHAT_REASON = 42;
+
+/// The string a as the kept reason (`gResource->GetString`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_REASON_STRING = 43;
+
+/// The node's calamity's class's `GetCost()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CALAMITY_COST = 44;
+
+/// The node's `Contains(a)` (a unit type).
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_CONTAINS = 45;
+
+/// The form's `StartCalamity(mTechnology)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_CALAMITY = 46;
+
+/// `UIButton::ButtonUp()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BASE_BUTTON_UP = 47;
+
+/// `ReleaseCapturedMouse()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_RELEASE_MOUSE = 48;
+
+/// The button's (virtual) `ButtonUp()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BUTTON_UP = 49;
+
+/// The mouse is in the button's rectangle.
+constexpr static const uint32_t EE_SCREENS_SB_OP_MOUSE_INSIDE = 50;
+
+/// The button's `mShowCount = a != 0`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SET_SHOW_COUNT = 51;
+
+/// The button's `mCount`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_COUNT = 52;
+
+/// The queue count a as the build queue's text ("%ld").
+constexpr static const uint32_t EE_SCREENS_SB_OP_COUNT_TEXT = 53;
+
+/// The node's data `GetCalamity()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_CALAMITY = 54;
+
+/// The calamity manager's class a's `GetCost()` (unchecked, as `CopyData`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CALAMITY_CLASS_COST = 55;
+
+/// `gUnitSetManager.GetSet(0x2f)->Contains(a)` (the fanatics' set).
+constexpr static const uint32_t EE_SCREENS_SB_OP_IN_FANATIC_SET = 56;
+
+/// The selected unit a's `IsCloaked()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNIT_CLOAKED = 57;
+
+/// The button's `mAvailable = a != 0`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SET_AVAILABLE = 58;
+
+/// Whether the button has its `mButtonObject`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_HAS_OBJECT = 59;
+
+/// The button's `GetState()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_STATE = 60;
+
+/// The button's bitmaps: 1 normal is pressed, 2 focused is pressed, 4 no pressed bitmap.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BITMAPS = 61;
+
+/// The icon drawn (a = `EE_SCREENS_BUTTON_ICON_*`): none (`mDrawIcon = false`), or the button object's pressed or
+/// face bitmap set to the icon over the button's rectangle and `mDrawIcon = true`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_ICON = 62;
+
+/// `UIButton::CopyData()`'s result.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BASE_COPY_DATA = 63;
+
+/// The current player's `CanProduce(mTechnology, mUnitType, 1, true, 3, NULL)` (`CopyData`'s, no reason).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_PRODUCE_QUIET = 64;
+
+/// `EEMUnloadTransport(the transport's id, tile x, tile y)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_UNLOAD = 1;
+
+/// `EEMStopActiveGroup`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_STOP = 2;
+
+/// `EEMDisband`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_DISBAND = 3;
+
+/// `EEMSelfDestruct`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_SELF_DESTRUCT = 4;
+
+/// `EEMPatrol(-1)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_PATROL = 5;
+
+/// `EEMReplantFarms(-1)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_REPLANT = 6;
+
+/// `EEMClearAirportCommands`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_CLEAR_AIRPORT = 7;
+
+/// `EEMExplore`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_EXPLORE = 8;
+
+/// `EEMLockUnlock(b != 0)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_LOCK = 9;
+
+/// `EEMPackUnpack(b != 0)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_PACK = 10;
+
+/// `EEMGoFanatic`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_FANATIC = 11;
+
+/// `EEMJITManufacturing`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_JIT = 12;
+
+/// `EEMExchangeResources(sell, resource, shift)`: b = resource * 2 + sell, c = shift.
+constexpr static const int64_t EE_SCREENS_SB_SEND_EXCHANGE = 13;
+
+/// `EEMResearchTechnology(mUnitID, mTechnology, b != 0)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_RESEARCH = 14;
+
+/// `EEMRemoveTechnology(mUnitID, mTechnology, false, b != 0)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_REMOVE = 15;
+
+/// `kUnitTypeTeleporter`.
+constexpr static const int64_t EE_SCREENS_SB_TYPE_TELEPORTER = 787;
+
+/// `kUnitCategoryFortress`.
+constexpr static const int64_t EE_SCREENS_SB_CATEGORY_FORTRESS = 29;
+
+/// `kSoundButton1`, `kSoundButton2`.
+constexpr static const int64_t EE_SCREENS_SB_SOUND_BUTTON1 = 519;
+
+constexpr static const int64_t EE_SCREENS_SB_SOUND_BUTTON2 = 520;
+
+/// `kWorldDeathmatchJitManufacturingDelay`, `kWorldRefusalMessageInterval`.
+constexpr static const int64_t EE_SCREENS_SB_WORLD_JIT_DELAY = 94;
+
+constexpr static const int64_t EE_SCREENS_SB_WORLD_REFUSAL_INTERVAL = 75;
+
+/// `IDS_JUST_IN_TIME_MANUFACTURING_IS_NOT`, `IDS_INSUFFICIENT_POWER`.
+constexpr static const int64_t EE_SCREENS_SB_IDS_JIT_NOT_YET = 31892;
+
+constexpr static const int64_t EE_SCREENS_SB_IDS_INSUFFICIENT_POWER = 10062;
+
+/// `this->PauseGraphics()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_PAUSE = 1;
+
+/// `this->ResumeGraphics()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESUME = 2;
+
+/// A lock: a = 0 `gUIManager->LockUIForCopyData()`, 1 the world's read lock, 2 its write lock.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOCK = 3;
+
+/// The matching unlock (a as for `LOCK`).
+constexpr static const uint32_t EE_SCREENS_UI_OP_UNLOCK = 4;
+
+/// `gUIManager != NULL`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_HAS_MANAGER = 5;
+
+/// `gUIManager->mMainGameForm` (a pointer, 0 when none).
+constexpr static const uint32_t EE_SCREENS_UI_OP_MAIN_FORM = 6;
+
+/// `gUIManager->mScenarioEditorForm` (a pointer, 0 when none).
+constexpr static const uint32_t EE_SCREENS_UI_OP_EDITOR_FORM = 7;
+
+/// `gUIManager->GetCurrentForm()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CURRENT_FORM = 8;
+
+/// `gUIManager->GetFormByID(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_FORM_BY_ID = 9;
+
+/// `gUIManager->SwapForm(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SWAP = 10;
+
+/// `gUIManager->Push(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_PUSH = 11;
+
+/// `gUIManager->Pop()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POP = 12;
+
+/// `gUIManager->PopTo(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POP_TO = 13;
+
+/// `gUIManager->IsFormOnStack(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_ON_STACK = 14;
+
+/// `gUIManager->IsFormVisible(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_VISIBLE = 15;
+
+/// `gUIManager->RedrawAll()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_REDRAW = 16;
+
+/// Form a's control b (a `UIStatusBar`): `SetCurrentRangeValue(c)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_STATUS_VALUE = 17;
+
+/// `this->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, true, true)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESIZE_GAME = 18;
+
+/// `this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESIZE_MENU = 19;
+
+/// `gGameScreenActive = true` (under the write lock).
+constexpr static const uint32_t EE_SCREENS_UI_OP_SCREEN_ACTIVE = 20;
+
+/// `gDataPreLoading->PostLoadGame(false, false)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POST_LOAD_GAME = 21;
+
+/// `this->ShowEpochName()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SHOW_EPOCH_NAME = 22;
+
+/// The main game form's `UpdateBackgroundMedia(true)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_BACKGROUND_MEDIA = 23;
+
+/// `this->mIsUpdating = a`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SET_UPDATING = 24;
+
+/// `this->mIsQuitting = true`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SET_QUITTING = 25;
+
+/// `this->LoadSavedGame(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOAD_SAVED_GAME = 26;
+
+/// The posted event a: `ProcessEvent(NULL, b)`, then its `Dereference`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_PROCESS_EVENT = 27;
+
+/// `gGraphics->PostPause() == kErrorOK`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_GFX_POST_PAUSE = 28;
+
+/// `gGraphics->mIsPaused`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_GFX_PAUSED = 29;
+
+/// `PlatSleep(1)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SLEEP = 30;
+
+/// `gGraphics->PostResume()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_GFX_POST_RESUME = 31;
+
+/// The quick load action a: `mIsLoad = true`, `mGameState = &gGameState`, `gUserInterface->PostAction`, its
+/// `Dereference`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_QUICK_LOAD = 32;
+
+/// `this->ShowLoadingText(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOADING_TEXT = 33;
+
+/// `this->SaveAndTestScenario()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SAVE_AND_TEST = 34;
+
+/// `EEResetGraphicsValues()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESET_GFX_VALUES = 35;
+
+/// The screen capture a: its event made, `gGraphics->PostScreenShot`, the wait, the event destroyed, its surface
+/// released when it has a width, the capture deleted.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SCREEN_CAPTURE = 36;
+
+/// `EEPostGraphicsAll()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POST_GFX_ALL = 37;
+
+/// `this->CloseScenarioEditor()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CLOSE_EDITOR = 38;
+
+/// `this->EnterScenarioEditor(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_ENTER_EDITOR = 39;
+
+/// `this->CancelGame()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CANCEL_GAME = 40;
+
+/// `this->StartLoadingFromEditor()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOAD_FROM_EDITOR = 41;
+
+/// `this->TestScenario()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_TEST_SCENARIO = 42;
+
+/// The main game form's `mRefreshGroup = true`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_REFRESH_GROUP = 43;
+
+/// The error dialog's callback data a: whether its `mCallback` is set.
+constexpr static const uint32_t EE_SCREENS_UI_OP_ERROR_HAS_CALLBACK = 44;
+
+/// The error dialog's callback data a: `mCallback(mData)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_ERROR_CALLBACK = 45;
+
+/// `delete` the form a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_FORM = 46;
+
+/// `delete` the error dialog's callback data a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_ERROR_DATA = 47;
+
+/// The chat log entry a shown on the main game form (`DisplayChat`).
+constexpr static const uint32_t EE_SCREENS_UI_OP_CHAT_SHOW = 48;
+
+/// The chat log entry a's `mType`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CHAT_TYPE = 49;
+
+/// `EEUIECLEFormManager::AddEntry` of the chat log entry a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CHAT_LOG = 50;
+
+/// `delete` the chat log entry a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_CHAT = 51;
+
+/// `gGraphics->mIsMoviePlaying`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_MOVIE_PLAYING = 52;
+
+/// `gGraphics->PlayMovie(*a, b) == kErrorOK`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_PLAY_MOVIE = 53;
+
+/// `gMouse->mPointer = a`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SET_POINTER = 54;
+
+/// `gGraphics->PostStopMovie()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_STOP_MOVIE = 55;
+
+/// `gUserInterface->PostPlayMovie(*a, b)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_REPOST_MOVIE = 56;
+
+/// The reference counter a's `Dereference()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DEREFERENCE = 57;
+
+/// `delete` the file spec a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_SPEC = 58;
+
+/// The main game form's `ShowInformation` of the dialog message a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SHOW_INFORMATION = 59;
+
+/// The dialog message a's text into the chat log (a new entry of type 1, `AddEntry`, deleted).
+constexpr static const uint32_t EE_SCREENS_UI_OP_DIALOG_LOG = 60;
+
+/// `delete` the dialog message a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_DIALOG = 61;
+
+/// The host has gone: `EESetQuitFlag`, the boot action posted, the client disconnected, deleted and made anew.
+constexpr static const uint32_t EE_SCREENS_UI_OP_HOST_GONE = 62;
+
+/// The main game form's `UpdateIconBar()`, then `this->mIconBarUpdatePosted = false`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_UPDATE_ICON_BAR = 63;
+
+/// `this->ChangeRasterizer(a, b)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CHANGE_RASTERIZER = 64;
+
+/// The main game form's `PauseInformation()` (a != 0) or `ResumeInformation()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_INFORMATION = 65;
+
+/// `this->ShowCivilizationBuilder(a, the low byte of b as a bool, false)` (message 0x420), or with c != 0
+/// `ShowCivilizationBuilder(0, false, true)` (0x41f).
+constexpr static const uint32_t EE_SCREENS_UI_OP_CIV_BUILDER = 66;
+
+/// `gUserInterface->PostEvent(a, NULL)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POST_EVENT = 67;
+
+/// The main game form's `HideMessages()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_HIDE_MESSAGES = 68;
+
+/// The scenario editor form's `SelectTab((unsigned char)a, b)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SELECT_TAB = 69;
+
+/// `this->RestartGame()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESTART = 70;
+
+/// The main game form's control a (an `EEUIBSavedGroup`): `Refresh()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SAVED_GROUP = 71;
+
+/// `this->OpenSelectServer()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SELECT_SERVER = 72;
+
+/// `this->ShowMessageOfTheDay(*a, *b)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_MOTD = 73;
+
+/// `delete` the wide string a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_WSTRING = 74;
+
+/// The lobby's updates: a = 0 `ee_screens_lobby_update_player(b, c)`, 1 `..._update_game_options()`,
+/// 2 `..._show_transfer_progress(b, c)`, 3 `..._update_form()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOBBY = 75;
+
+/// `this->ShowLagStatus(a, b != 0)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LAG = 76;
+
+/// `this->mMessageQueueDone->Set()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_QUEUE_DONE = 77;
+
+/// Whether a global is set: a = one of `EE_SCREENS_UI_GLOBAL_*`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_HAS = 1;
+
+/// `EELobbyIsShown()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_LOBBY_SHOWN = 2;
+
+/// `EEIsLobbyOpen()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_LOBBY_OPEN = 3;
+
+/// `EELobbyShutdown()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_LOBBY_SHUTDOWN = 4;
+
+/// `gUserInterface->mThread->Post(0x12, NULL, NULL, false)` (WM_QUIT).
+constexpr static const uint32_t EE_SCREENS_UI_EV_POST_QUIT = 5;
+
+/// The conductor's volume (f32 bits; 0.0 without a conductor).
+constexpr static const uint32_t EE_SCREENS_UI_EV_MUSIC_VOLUME = 6;
+
+/// The conductor's `SetVolume` (a: f32 bits).
+constexpr static const uint32_t EE_SCREENS_UI_EV_SET_MUSIC_VOLUME = 7;
+
+/// The sound manager's master volume (f32 bits; 0.0 without a sound manager).
+constexpr static const uint32_t EE_SCREENS_UI_EV_MASTER_VOLUME = 8;
+
+/// The sound manager's `SetMasterVolume` (a: f32 bits).
+constexpr static const uint32_t EE_SCREENS_UI_EV_SET_MASTER_VOLUME = 9;
+
+/// `SPIMSetMuted(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_MUTE = 10;
+
+/// `gISKeyboard->Resume()` (a != 0) or `Suspend()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_KEYBOARD = 11;
+
+/// `gISMouse->Resume()` (a != 0) or `Suspend()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_MOUSE = 12;
+
+/// `gMouse->SetPosition` at the game window's centre.
+constexpr static const uint32_t EE_SCREENS_UI_EV_CENTER_MOUSE = 13;
+
+/// `gMousePointer->mThread->Post(a, NULL, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_POINTER_POST = 14;
+
+/// `gMousePointer->mIsShown`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_POINTER_SHOWN = 15;
+
+/// `PlatSleep(1)`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_SLEEP = 16;
+
+/// The "Mute in Background" setting.
+constexpr static const uint32_t EE_SCREENS_UI_EV_MUTE_IN_BACKGROUND = 17;
+
+/// `gUserInterface->mIsQuitting`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_QUITTING = 18;
+
+/// The full screen setting.
+constexpr static const uint32_t EE_SCREENS_UI_EV_FULL_SCREEN = 19;
+
+/// `PlatWindowMinimize` of the game window.
+constexpr static const uint32_t EE_SCREENS_UI_EV_MINIMIZE = 20;
+
+/// `gUserInterface->OpenIMECompositionString()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_IME_OPEN = 21;
+
+/// `gUserInterface->UpdateIMECompositionString(a, b, c)` (a: the text).
+constexpr static const uint32_t EE_SCREENS_UI_EV_IME_UPDATE = 22;
+
+/// `gUserInterface->AddIMEResultString(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_IME_RESULT = 23;
+
+/// `gUserInterface->CloseIMECompositionString()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_IME_CLOSE = 24;
+
+/// `gUIManager->UpdateTranslatedKey(a, 1)` (a: one character's bytes, zero-padded to 8).
+constexpr static const uint32_t EE_SCREENS_UI_EV_TRANSLATED_KEY = 25;
+
+/// `gUserInterface` (for `EE_SCREENS_UI_EV_HAS`).
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_USER_INTERFACE = 0;
+
+/// `gUIManager`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_MANAGER = 1;
+
+/// `gConductor`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_CONDUCTOR = 2;
+
+/// `gSoundManager`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_SOUND = 3;
+
+/// `gISKeyboard`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_KEYBOARD = 4;
+
+/// `gISMouse`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_MOUSE = 5;
+
+/// `gGameWindow != NULL && gMouse != NULL`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_WINDOW_AND_MOUSE = 6;
+
+/// `gMousePointer`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_POINTER = 7;
+
+/// `gGameWindow`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_WINDOW = 8;
+
 /// `FillComboBox`.
 constexpr static const uint32_t EE_SCREENS_UH_FILL_COMBO_BOX = 1;
 
@@ -3391,32 +4187,6 @@ struct EeScreensChatLogHead {
   uint32_t time;
 };
 
-/// What a button's test reads besides the units.
-struct EeScreensButtonFacts {
-  /// The player has a selected group (else no unit test passes).
-  bool has_group;
-  bool affordable;
-  bool can_produce;
-  /// `gGameResources`, the game clock and the deathmatch JIT delay (seconds: `kWorldDeathmatchJitManufacturingDelay`).
-  long game_resources;
-  float clock;
-  unsigned long jit_delay;
-  long unload_cost;
-  long calamity_cost;
-};
-
-/// What a button's test reads of one selected unit (`present` false: the group's entry is empty).
-struct EeScreensButtonUnit {
-  bool present;
-  unsigned long unit_type;
-  long power;
-  /// The fanatic test: in unit set 0x2f, cloaked.
-  bool in_set;
-  bool cloaked;
-  /// The calamity test: the tech node holds the unit's type.
-  bool in_node;
-};
-
 /// A technology button's tooltip: where the name comes from, the cost, the population cost, the unit's name.
 struct EeScreensTechHelp {
   /// 0 the class's name string, 1 the player's upgrade name, 2 the node's name string.
@@ -3480,126 +4250,6 @@ struct EeScreensPanelButton {
   unsigned long button;
   uint32_t research;
   unsigned long control;
-};
-
-/// What the status box's `Fill` and `Refresh` read of the selected unit: its class (`theClass`), its stats
-/// (`theStats`), the stats' own class (`theStats->mUnitClass`: an upgraded unit's stats keep their class), the unit
-/// and its complex unit. The C++ reads them under the world's read lock and hands them over.
-struct EeScreensHudUnit {
-  unsigned long category;
-  unsigned long unit_type;
-  /// Hit points: the class's, the unit's, the stats' maximum, the stats' class's.
-  long class_hit_points;
-  long hit_points;
-  long max_hit_points;
-  long stats_class_hit_points;
-  /// Attack: the class's (a `long`), the stats' (a `float`), the stats' class's.
-  long class_attack;
-  float stats_attack;
-  long stats_class_attack;
-  float class_range;
-  float stats_range;
-  float stats_class_range;
-  float class_speed;
-  float stats_speed;
-  float stats_class_speed;
-  float class_area_effect;
-  float stats_area_effect;
-  float stats_class_area_effect;
-  long class_repair;
-  long stats_repair;
-  long stats_class_repair;
-  /// The class's upgrade flags: range, area effect, repair, then the armor kinds in `mAttributes[4..9]`' order
-  /// (shock, pierce, arrow, gun, missile, laser).
-  bool upgrades_range;
-  bool upgrades_area_effect;
-  bool upgrades_repair;
-  bool upgrades_armor[6];
-  long class_transport;
-  long class_flight_time;
-  long class_garrison;
-  /// The unit's owner is the local player or not at war with it (read only when the class carries or garrisons).
-  bool friendly;
-  /// The unit is a complex unit: the rest is its (zero otherwise).
-  bool complex;
-  long complex_class_transport;
-  long complex_class_garrison;
-  long cargo_room;
-  long flight_time;
-  long stats_flight_time;
-  long stats_class_flight_time;
-  long power;
-  long stats_power;
-  long stats_class_power;
-  long garrison_count;
-  /// The box has its third and fourth bars (controls 0x33 and 0x32).
-  bool two_bars;
-  unsigned long resource_type;
-  long resource_amount;
-  long carry_amount;
-  /// `gUsingCarbon`: the wood icon's variant.
-  bool using_carbon;
-};
-
-/// One attribute icon `Fill` shows: `mAttributes[slot] = icon` (-1: not shown, nothing else done), the icon's
-/// bitmaps `bitmap` and `bitmap + 1` (`sIconBitmaps`) stretched over the icon rectangle of `rect_icon` (the armor
-/// icons all take the first armor icon's, as the original), and its improvement.
-struct EeScreensHudIcon {
-  uint32_t slot;
-  long icon;
-  long rect_icon;
-  uint32_t bitmap;
-  long improvement;
-};
-
-/// A group of attribute icons in the order the C++ shows them; `next` the next free icon after them.
-struct EeScreensHudIcons {
-  uint32_t count;
-  long next;
-  EeScreensHudIcon icons[6];
-};
-
-/// The bars `Fill` sets up: the hit points bar, the first complex bar (flight time on the second bar, or power on
-/// the bar [`power_bar`] picks) and the garrison bar (the second bar), each with its range and current value.
-struct EeScreensHudFillBars {
-  bool hit_points;
-  /// 0 none, 1 flight time, 2 power.
-  uint32_t kind;
-  /// 0 the second bar (control 0x1f), 1 the third (0x33), 2 the fourth (0x32).
-  uint32_t bar;
-  long max;
-  long current;
-  bool garrison;
-  long garrison_max;
-  long garrison_current;
-};
-
-/// What `Refresh` shows: each text's numbers (the C++ formats them: "%ld/%ld", "+ %ld", "%ld+%ld", "%ld") and
-/// each bar's range and current value.
-struct EeScreensHudRefresh {
-  bool hit_points;
-  long hit_points_text[2];
-  long hit_points_bonus;
-  /// The attack, range, speed, area effect and repair icons' "base+bonus".
-  long attributes[5][2];
-  long cargo[2];
-  /// 0 none, 1 flight time (the second bar), 2 power (on `bar`, as [`power_bar`]).
-  uint32_t kind;
-  uint32_t bar;
-  long bar_text[2];
-  long bar_bonus;
-  long bar_max;
-  long bar_current;
-  bool garrison;
-  long garrison_text[2];
-  long garrison_max;
-  long garrison_current;
-  /// The carried resource: shown, its icon's bitmap (-1: the icon left as it is), "%ld/%ld" of the amount and
-  /// the capacity (a citizen) or "%ld" of the amount.
-  bool resource;
-  long resource_bitmap;
-  bool resource_pair;
-  long resource_text[2];
 };
 
 /// A lobby slot (`EEGameOptionsPlayer`) but its name.
@@ -3797,6 +4447,65 @@ struct EeScreensFramePiece {
   bool swap_scale;
 };
 
+/// What the status box's `Fill` and `Refresh` read of the selected unit: its class (`theClass`), its stats
+/// (`theStats`), the stats' own class (`theStats->mUnitClass`: an upgraded unit's stats keep their class), the unit
+/// and its complex unit. The C++ reads them under the world's read lock and hands them over.
+struct EeScreensHudUnit {
+  unsigned long category;
+  unsigned long unit_type;
+  /// Hit points: the class's, the unit's, the stats' maximum, the stats' class's.
+  long class_hit_points;
+  long hit_points;
+  long max_hit_points;
+  long stats_class_hit_points;
+  /// Attack: the class's (a `long`), the stats' (a `float`), the stats' class's.
+  long class_attack;
+  float stats_attack;
+  long stats_class_attack;
+  float class_range;
+  float stats_range;
+  float stats_class_range;
+  float class_speed;
+  float stats_speed;
+  float stats_class_speed;
+  float class_area_effect;
+  float stats_area_effect;
+  float stats_class_area_effect;
+  long class_repair;
+  long stats_repair;
+  long stats_class_repair;
+  /// The class's upgrade flags: range, area effect, repair, then the armor kinds in `mAttributes[4..9]`' order
+  /// (shock, pierce, arrow, gun, missile, laser).
+  bool upgrades_range;
+  bool upgrades_area_effect;
+  bool upgrades_repair;
+  bool upgrades_armor[6];
+  long class_transport;
+  long class_flight_time;
+  long class_garrison;
+  /// The unit's owner is the local player or not at war with it (read only when the class carries or garrisons).
+  bool friendly;
+  /// The unit is a complex unit: the rest is its (zero otherwise).
+  bool complex;
+  long complex_class_transport;
+  long complex_class_garrison;
+  long cargo_room;
+  long flight_time;
+  long stats_flight_time;
+  long stats_class_flight_time;
+  long power;
+  long stats_power;
+  long stats_class_power;
+  long garrison_count;
+  /// The box has its third and fourth bars (controls 0x33 and 0x32).
+  bool two_bars;
+  unsigned long resource_type;
+  long resource_amount;
+  long carry_amount;
+  /// `gUsingCarbon`: the wood icon's variant.
+  bool using_carbon;
+};
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
@@ -3853,29 +4562,6 @@ long ee_screens_chat_log_load(void *file);
 
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
-
-/// The test a command button's availability takes (`EE_SCREENS_BUTTON_*`).
-uint32_t ee_screens_button_command_test(unsigned long button);
-
-/// Whether a technology button is a calamity's (its cost then decides the test).
-bool ee_screens_button_tech_is_calamity(long kind, unsigned long calamity);
-
-/// A technology button's test (`EE_SCREENS_BUTTON_POWER` or `_PRODUCE`).
-uint32_t ee_screens_button_tech_test(bool calamity, long cost);
-
-/// Whether the button is available under `test` (`units`: `count` selected units).
-bool ee_screens_button_available(uint32_t test,
-                                 const EeScreensButtonFacts *facts,
-                                 const EeScreensButtonUnit *units,
-                                 size_t count);
-
-/// The icon `CopyData` draws (`EE_SCREENS_BUTTON_ICON_*`).
-uint32_t ee_screens_button_icon(bool has_object,
-                                unsigned long button,
-                                unsigned long state,
-                                bool normal_is_pressed,
-                                bool focused_is_pressed,
-                                bool pressed_is_none);
 
 /// A command button's first tooltip string.
 long ee_screens_command_help_string(unsigned long button);
@@ -4180,40 +4866,6 @@ uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
                                            bool idle_military,
                                            bool select_all);
 
-/// `GetAttributeText`: the base and the bonus "base+bonus" shows.
-void ee_screens_hud_attribute_text(float base, float bonus, long *out_base, long *out_bonus);
-
-/// The armor kind armor attribute `slot` (0..5: `mAttributes[4 + slot]`) shows; 0 past them.
-uint32_t ee_screens_hud_armor_kind(uint32_t slot);
-
-/// One armor attribute's `GetAttributeText` arguments from the stats' armor, the unit class's base and the stats'
-/// own class's base.
-void ee_screens_hud_armor_attribute(float stat,
-                                    long class_base,
-                                    long stats_class_base,
-                                    float *out_base,
-                                    float *out_bonus);
-
-/// `Fill`'s first attribute icons (attack, range, speed, area effect, repair) from icon 0.
-void ee_screens_hud_fill_icons(const EeScreensHudUnit *unit, EeScreensHudIcons *out);
-
-/// `FillArmorAttributes`' icons from icon `start`; `upgrades` the six armor flags (shock, pierce, arrow, gun,
-/// missile, laser).
-void ee_screens_hud_armor_icons(long start,
-                                const bool *upgrades,
-                                EeScreensHudIcons *out);
-
-/// `Fill`'s transport icon at icon `start` (one entry, its icon -1 when not shown).
-void ee_screens_hud_transport_icon(long start,
-                                   const EeScreensHudUnit *unit,
-                                   EeScreensHudIcons *out);
-
-/// `Fill`'s bars.
-void ee_screens_hud_fill_bars(const EeScreensHudUnit *unit, EeScreensHudFillBars *out);
-
-/// `Refresh`'s numbers and bars.
-void ee_screens_hud_refresh(const EeScreensHudUnit *unit, EeScreensHudRefresh *out);
-
 /// A slot of `source` (`EE_SCREENS_LE_SOURCE_*`) into `out`, its name into `name` (up to `capacity` bytes); the
 /// name's length.
 extern size_t ee_screenscpp_lobby_player(uint32_t source,
@@ -4290,6 +4942,47 @@ uint32_t ee_screens_settings_event_for(unsigned long id);
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+
+/// `EEUIFMGStatusBox::Fill` (`unit`: the call's unit is set).
+void ee_screens_status_box_fill(void *call, bool unit);
+
+/// `EEUIFMGStatusBox::Refresh`.
+void ee_screens_status_box_refresh(void *call);
+
+/// `EEUIFMGStatusBox::UpdateQueuedCounts`.
+void ee_screens_status_box_update_queued(void *call);
+
+/// `EEUIFMGStatusBox::HideBackgrounds`.
+void ee_screens_status_box_hide_backgrounds(void *call);
+
+/// `EEUIFMGStatusBox::LoadIcons`.
+void ee_screens_status_box_load_icons(void *call);
+
+/// `EEUIFMGStatusButton::ButtonUp` over the host's press record.
+void ee_screens_status_button_up(void *press);
+
+/// `EEUIFMGStatusButton::MouseRButtonUp` over the host's press record.
+void ee_screens_status_button_right_up(void *press);
+
+/// `EEUIFMGStatusButton::CopyData` over the host's press record: `UIButton::CopyData`'s result.
+int64_t ee_screens_status_button_copy_data(void *press);
+
+/// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
+void ee_screens_ui_message(void *ui,
+                           uint32_t message,
+                           int64_t p1,
+                           int64_t p2);
+
+/// `EEUserInterface::HandleEvent`: the window event of type `kind` (its key's `virtual_key`, its zero-terminated
+/// `text`, the composition's `cursor` and `length`).
+///
+/// # Safety
+/// `text` is NULL or zero-terminated.
+void ee_screens_ui_event(uint32_t kind,
+                         uint32_t virtual_key,
+                         const char *text,
+                         int32_t cursor,
+                         int32_t length);
 
 /// The hack made for the form (the class list read through the host). Freed by `ee_screens_unit_hack_free`.
 EeScreensUnitHack *ee_screens_unit_hack_new(void *form);

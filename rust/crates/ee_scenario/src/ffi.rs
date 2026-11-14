@@ -2,7 +2,7 @@
 //! `Scenario Manager/EEScenarioHost.cpp`). Plain records in and out; the world through the host's reads, and no
 //! Rust reference lives across one (a read may run a condition's or an object's `Evaluate`, which calls back here).
 
-use std::os::raw::c_ulong;
+use std::os::raw::{c_long, c_ulong};
 
 use crate::aivar::{self, EeScenarioAiWrite, EE_SCENARIO_AI_MAX_WRITES};
 use crate::area::{self, EeScenarioAreaRecord};
@@ -12,7 +12,11 @@ use crate::fields::{
     EeScenarioTriggerFields,
 };
 use crate::host::EeScenarioHost;
+use crate::manager::{self, EeScenarioManagerFields, EeScenarioTimedEntry, EeScenarioTimedQueue};
 use crate::object::{self, EeScenarioObjectFilter};
+use crate::objeval::{self, ObjectTable};
+use crate::player;
+use crate::round::{self, EeScenarioRoundHost};
 use crate::save;
 use crate::stream::EeScenarioStream;
 use crate::trigger::{
@@ -28,7 +32,7 @@ pub const EE_SCENARIO_MAX_PLAYERS: usize = 64;
 /// `host` must be valid for a read.
 unsafe fn host_of(host: *const EeScenarioHost) -> EeScenarioHost {
     // SAFETY: the caller's contract
-    unsafe { EeScenarioHost { ctx: (*host).ctx, read: (*host).read, players: (*host).players } }
+    unsafe { EeScenarioHost { ctx: (*host).ctx, read: (*host).read, players: (*host).players, write: (*host).write } }
 }
 
 // SAFETY (every function taking pointers below): the caller passes valid, aligned pointers for the documented reads
@@ -487,4 +491,255 @@ pub unsafe extern "C" fn ee_scenario_strings_io(stream: *const EeScenarioStream,
     // SAFETY: the caller's contract
     let mut s = unsafe { stream_of(stream) };
     save::strings(&mut s, count, save)
+}
+
+// The manager (manager.rs): its numbers are the record the C++ class derives from; the timed effects' queue is
+// owned here, the C++ holding the pointer from `ee_scenario_timed_new` to `ee_scenario_timed_free`.
+
+/// A new, empty timed effects' queue.
+#[no_mangle]
+pub extern "C" fn ee_scenario_timed_new() -> *mut EeScenarioTimedQueue {
+    Box::into_raw(Box::default())
+}
+
+/// Frees a queue of `ee_scenario_timed_new` (null: nothing).
+///
+/// # Safety
+/// `queue` must be null or a queue of `ee_scenario_timed_new` not freed before.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_free(queue: *mut EeScenarioTimedQueue) {
+    if !queue.is_null() {
+        // SAFETY: the caller's contract
+        drop(unsafe { Box::from_raw(queue) });
+    }
+}
+
+/// The queue for one short call (no C++ runs while it is borrowed).
+///
+/// # Safety
+/// `queue` must be a live queue of `ee_scenario_timed_new`.
+unsafe fn queue_of<'a>(queue: *mut EeScenarioTimedQueue) -> &'a mut EeScenarioTimedQueue {
+    // SAFETY: the caller's contract
+    unsafe { &mut *queue }
+}
+
+/// The number of timed effects.
+///
+/// # Safety
+/// `queue` must be a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_count(queue: *mut EeScenarioTimedQueue) -> usize {
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.entries.len()
+}
+
+/// Timed effect `index` (a copy; `index` must be below the count).
+///
+/// # Safety
+/// `queue` must be a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_at(queue: *mut EeScenarioTimedQueue, index: usize) -> EeScenarioTimedEntry {
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.entries[index]
+}
+
+/// `EEScenarioManager::AddTimedEffect`.
+///
+/// # Safety
+/// `queue` must be a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_add(
+    queue: *mut EeScenarioTimedQueue,
+    effect: c_long,
+    time: c_ulong,
+    cinematic: bool,
+) {
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.add(effect, time, cinematic);
+}
+
+/// `EEScenarioManager::RemoveTimedEffects`.
+///
+/// # Safety
+/// `queue` must be a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_remove_effect(queue: *mut EeScenarioTimedQueue, effect: c_long) {
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.remove_effect(effect);
+}
+
+/// `EEScenarioManager::EraseTimedEffect` (`index` below the count).
+///
+/// # Safety
+/// `queue` must be a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_erase(queue: *mut EeScenarioTimedQueue, index: usize) {
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.entries.remove(index);
+}
+
+/// Empties the queue (`SortEffects`).
+///
+/// # Safety
+/// `queue` must be a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_clear(queue: *mut EeScenarioTimedQueue) {
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.entries.clear();
+}
+
+/// `RenumberEffects`' timed part.
+///
+/// # Safety
+/// `queue` must be a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_renumber(queue: *mut EeScenarioTimedQueue, old: c_ulong, new: c_ulong) {
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.renumber(old, new);
+}
+
+/// `RemapEffects`' timed part: the map as `count` pairs `olds[i]` -> `news[i]`.
+///
+/// # Safety
+/// `queue` must be a live queue; `olds` and `news` valid for `count` reads (either may be null when it is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_remap(
+    queue: *mut EeScenarioTimedQueue,
+    olds: *const c_ulong,
+    news: *const c_ulong,
+    count: usize,
+) {
+    // SAFETY: the caller's contract
+    let (olds, news) = unsafe {
+        if count == 0 {
+            (&[][..], &[][..])
+        } else {
+            (std::slice::from_raw_parts(olds, count), std::slice::from_raw_parts(news, count))
+        }
+    };
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.remap(olds, news);
+}
+
+/// `SetTimedEffectHasRun`: the effect's `mEffects` index (`found` false: not in the list).
+///
+/// # Safety
+/// `queue` must be a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_set_has_run(
+    queue: *mut EeScenarioTimedQueue,
+    found: bool,
+    effect: c_ulong,
+    flag: bool,
+) {
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.set_has_run(found.then_some(effect), flag);
+}
+
+/// `EndCinematic`'s timed part (`shift` = `(long)elapsed + 3000`).
+///
+/// # Safety
+/// `queue` must be a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_timed_end_cinematic(queue: *mut EeScenarioTimedQueue, shift: c_long) {
+    // SAFETY: the caller's contract
+    unsafe { queue_of(queue) }.end_cinematic(shift);
+}
+
+/// `EEScenarioManager::Reset`'s numbers and the queue emptied.
+///
+/// # Safety
+/// `fields` must be valid for a read and a write, `queue` a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_manager_reset(
+    fields: *mut EeScenarioManagerFields,
+    queue: *mut EeScenarioTimedQueue,
+) {
+    // SAFETY: the caller's contract
+    unsafe { manager::reset(&mut *fields, queue_of(queue)) };
+}
+
+/// `EEScenarioManager::Load` after its `Reset`: the first error. The numbers are read into a copy stored back after
+/// the last callback; each timed effect is appended to the queue as it is read.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read and a write, `queue` a live queue no callback touches.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_manager_load(
+    stream: *const EeScenarioStream,
+    fields: *mut EeScenarioManagerFields,
+    queue: *mut EeScenarioTimedQueue,
+    minor: c_ulong,
+) -> i32 {
+    // SAFETY: the caller's contract
+    let (mut s, mut f) = unsafe { (stream_of(stream), *fields) };
+    let r = manager::load(&mut s, &mut f, minor, &mut |e| {
+        // SAFETY: the caller's contract; the borrow ends with the push
+        unsafe { queue_of(queue) }.entries.push(e)
+    });
+    // SAFETY: the caller's contract
+    unsafe { *fields = f };
+    r
+}
+
+/// `EEScenarioManager::Save`: the first error.
+///
+/// # Safety
+/// `stream` must be valid for the call, `fields` for a read, `queue` a live queue.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_manager_save(
+    stream: *const EeScenarioStream,
+    fields: *const EeScenarioManagerFields,
+    queue: *mut EeScenarioTimedQueue,
+    minor: c_ulong,
+) -> i32 {
+    // SAFETY: the caller's contract; the entries are copied before the first callback
+    let (mut s, f, timed) = unsafe { (stream_of(stream), *fields, queue_of(queue).entries.clone()) };
+    manager::save(&mut s, &f, &timed, minor)
+}
+
+/// `EEScenarioManager::Update` (round.rs): the clocks and, every 500 ms while a human plays, the trigger round.
+///
+/// # Safety
+/// `host` must be valid for the call: its `fields` and `queue` the live manager's, reached only between callbacks.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_manager_update(host: *const EeScenarioRoundHost) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe {
+        EeScenarioRoundHost { ctx: (*host).ctx, fields: (*host).fields, queue: (*host).queue, op: (*host).op }
+    };
+    round::update(&mut h);
+}
+
+/// `EESMEffect::SetPlayerAttribute` (player.rs): its writes through the host's `write`.
+///
+/// # Safety
+/// `host` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_set_player_attribute(
+    host: *const EeScenarioHost,
+    player: c_long,
+    attribute: c_ulong,
+    mode: c_long,
+    amount: c_long,
+) {
+    // SAFETY: the caller's contract
+    let mut h = unsafe { host_of(host) };
+    player::set_player_attribute(&mut h, player, attribute, mode, amount);
+}
+
+/// `EESMObject::Evaluate`'s body (objeval.rs): the object's units by the host's operations, its numbers through
+/// `fields`.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` the live object's numbers.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_object_evaluate(
+    host: *const EeScenarioHost,
+    fields: *mut EeScenarioObjectFields,
+    include_dead: bool,
+) -> bool {
+    // SAFETY: the caller's contract
+    let mut t = ObjectTable { host: unsafe { host_of(host) }, fields };
+    objeval::evaluate(&mut t, include_dead)
 }

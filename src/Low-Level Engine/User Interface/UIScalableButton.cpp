@@ -30,19 +30,11 @@
 #include "lle/UIControl.h"
 #include "lle/UIButton.h"
 #include "lle/UIScalableButton.h"
+#include "lle/UITextLabel.h"
+#include "UIButtonRust.h"
 
-// The Rust slices' records (rust/crates/ee_ui/src/button_variants.rs) and the GE types
-struct UIScalableButtonRust {
-    static EeUiRect Rect(const GERectangle& inRectangle)
-    {
-        return EeUiRect{inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
-    }
-    static GERectangle Rect(const EeUiRect& inRectangle)
-    {
-        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
-    }
-    static GE2DPoint Point(const EeUiPoint& inPoint) { return GE2DPoint(inPoint.x, inPoint.y); }
-};
+typedef EeUiButtonCall C;
+#define EE_UI_SCALABLE(c, ...) UIButtonRust::Call(this, C::c, ##__VA_ARGS__)
 
 // FUNCTION: LLE 0x1007c4ae
 // Creates a scalable button from source rectangles for its normal, focused, pressed and text parts
@@ -53,56 +45,22 @@ UIScalableButton::UIScalableButton(unsigned long inId, GEBitmap* inNormalBitmap,
                                    UIForm* inForm, unsigned long inIndex)
     : UIButton(inId, inNormalBitmap, inFocusedBitmap, inPressedBitmap, inRectangle, inForm, inIndex, 0)
 {
-    this->mNormalRectangle = inNormalRectangle;
-    this->mFocusedRectangle = inFocusedRectangle;
-    this->mPressedRectangle = inPressedRectangle;
+    const GERectangle* theRectangles[3] = {&inNormalRectangle, &inFocusedRectangle, &inPressedRectangle};
+    for (int i = 0; i < 3; i++)
+        EE_UI_SCALABLE(ScalableInit, i, 0, theRectangles[i]->mBottom, theRectangles[i]->mLeft, theRectangles[i]->mRight,
+                       theRectangles[i]->mTop);
     this->SetTextRectangle(inTextRectangle);
 }
 
 // FUNCTION: LLE 0x1007c609
 // Picks the source rectangle for the button state (focused falls back to normal without a focus bitmap), then snapshots
-long UIScalableButton::CopyData()
-{
-    EeUiRect theNormal = UIScalableButtonRust::Rect(this->mNormalRectangle);
-    EeUiRect theFocused = UIScalableButtonRust::Rect(this->mFocusedRectangle);
-    EeUiRect thePressed = UIScalableButtonRust::Rect(this->mPressedRectangle);
-    EeUiRect theCurrent = UIScalableButtonRust::Rect(this->mCopiedRectangle);
-    this->mCopiedRectangle = UIScalableButtonRust::Rect(ee_ui_scalable_copied_rect(this->GetState(), this->GetFocusedBitmap() != NULL, &theNormal,
-                                                                           &theFocused, &thePressed, &theCurrent));
-    return UIButton::CopyData();
-}
-
+long UIScalableButton::CopyData() { return (long)EE_UI_SCALABLE(ScalableCopyData); }
 // FUNCTION: LLE 0x1007c65b
 // Draws the button as a left cap, a right cap and a stretched middle cut from its bitmap; returns the last draw result
-long UIScalableButton::DrawPolygons()
-{
-    GERectangle theSource;
-    GERectangle theDestination;
-    long theResult = kErrorOK;
-    GEBitmap* theBitmap = this->GetCopiedBitmap();
-    if (theBitmap) {
-        // the left cap, the right cap and the stretched middle (ee_ui button_variants.rs)
-        EeUiSlice theSlices[3];
-        EeUiRect theCopied = UIScalableButtonRust::Rect(this->mCopiedRectangle);
-        EeUiRect theDraw = UIScalableButtonRust::Rect(this->mCopiedDrawRectangle);
-        ee_ui_scalable_slices(&theCopied, &theDraw, theBitmap->GetTexture(this->GetScreenIndex())->GetWidth(), theSlices);
-        for (int i = 0; i < 3; i++) {
-            theSource = UIScalableButtonRust::Rect(theSlices[i].source);
-            theDestination = UIScalableButtonRust::Rect(theSlices[i].destination);
-            theBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetScreenIndex());
-            theBitmap->SetLocation(UIScalableButtonRust::Point(theSlices[i].location));
-            theResult = this->GetRasterizer()->Draw(theBitmap, this->GetScreenIndex());
-        }
-    }
-    return theResult;
-}
-
+long UIScalableButton::DrawPolygons() { return (long)EE_UI_SCALABLE(ScalableDrawPolygons); }
 // FUNCTION: LLE 0x1007c8f5
 // Moves the button (plain button behaviour)
-void UIScalableButton::SetLocation(const GE2DPoint& inLocation)
-{
-    UIButton::SetLocation(inLocation);
-}
+void UIScalableButton::SetLocation(const GE2DPoint& inLocation) { UIButton::SetLocation(inLocation); }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // SYNTHETIC: LLE 0x1007c5e7

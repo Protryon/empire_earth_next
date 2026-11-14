@@ -17,6 +17,7 @@
 #include "ee/EESMObject.h"
 #include "ee/EESMTrigger.h"
 #include "ee/EESMArea.h"
+#include "ee/EESMEffect.h"
 #include "ee/EEUnit.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
@@ -153,12 +154,67 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
         return theUnit != NULL ? theUnit->mUnitClass->GetUnitType() : -1;
     }
     case EE_SCENARIO_READ_OBJECT_PICK: return theManager->GetScenarioObject((unsigned long)inA)->PickUnitType();
+    case EE_SCENARIO_READ_SHARE_BONUS: return thePlayer->mShareBonus;
+    case EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: return gWorld.mPlayerPopulationLimit;
+    case EE_SCENARIO_READ_PLAYER_ID: return thePlayer->mPlayerID;
+    case EE_SCENARIO_READ_OBJ_UNIT_COUNT:
+    case EE_SCENARIO_READ_OBJ_UNIT_AT:
+    case EE_SCENARIO_READ_OBJ_EVALUATE:
+    case EE_SCENARIO_READ_UNIT_FLAGS:
+    case EE_SCENARIO_READ_UNIT_CLASS_TYPE:
+    case EE_SCENARIO_READ_UNIT_PLAYER:
+    case EE_SCENARIO_READ_UNIT_COMMAND:
+    case EE_SCENARIO_READ_UNIT_ATTRIBUTE:
+    case EE_SCENARIO_READ_UNIT_SELECTED_BY:
+    case EE_SCENARIO_READ_UNIT_SEEN_BY:
+    case EE_SCENARIO_READ_AREA_CONTAINS_UNIT:
+    case EE_SCENARIO_READ_OBJ_NEAR_UNIT:
+    case EE_SCENARIO_READ_PLAYER_UNIT:
+        return EESMObjectRead(theContext, inOp, inA, inB, inC);
     case EE_SCENARIO_READ_CONDITION: {
         EESMCondition* theOther = theManager->GetCondition((unsigned long)inA);
         return theOther == NULL ? -1 : theOther->Evaluate();
     }
     }
     return 0;
+}
+
+// a plan's write (ee_scenario player.rs): each the original's statement on player inPlayer
+void Write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t inC, int64_t inD)
+{
+    EESMHostContext* theContext = static_cast<EESMHostContext*>(inContext);
+    EEPlayer* thePlayer = Player((int32_t)inPlayer);
+    switch (inOp) {
+    case EE_SCENARIO_WRITE_SET_ATTRIBUTE:
+        theContext->mEffect->SetPlayerAttribute(inPlayer, (unsigned long)inB, (long)inC, (long)inD);
+        break;
+    case EE_SCENARIO_WRITE_RESOURCE: thePlayer->mResourceCaps[inB] = (long)inC; break;
+    case EE_SCENARIO_WRITE_SHARE_BONUS: thePlayer->mShareBonus = (long)inB; break;
+    case EE_SCENARIO_WRITE_PENDING_POPULATION: {
+        EESMEffect theEffect;
+        theEffect.Copy(*theContext->mEffect);
+        theEffect.mPlayer = (unsigned long)inB;
+        theEffect.mPlayerAttributeMode = 0;
+        theEffect.mPlayerAttributeAmount = (unsigned long)inC;
+        gWorld.mScenarioManager->AddV134Effect(theEffect);
+        break;
+    }
+    case EE_SCENARIO_WRITE_DIFFICULTY: thePlayer->mComputerPlayer->mDifficulty = (long)inB; break;
+    case EE_SCENARIO_WRITE_VARIABLE: thePlayer->mScenarioVariables[inB] = (unsigned long)inC; break;
+    case EE_SCENARIO_WRITE_TRIBUTE: thePlayer->mTributes[inB] = (unsigned long)inC; break;
+    case EE_SCENARIO_WRITE_ADD_TRIBUTE: thePlayer->AddTribute((long)inB, (long)inC, (long)inD); break;
+    case EE_SCENARIO_WRITE_STATISTIC_ADD: thePlayer->mSavedGroups.Reset((long)inB, (long)inC); break;
+    case EE_SCENARIO_WRITE_STATISTIC_SET: thePlayer->mSavedGroups.Set((long)inB, (long)inC); break;
+    case EE_SCENARIO_WRITE_MINING_LIMIT: thePlayer->mMiningLimit = (long)inB; break;
+    case EE_SCENARIO_WRITE_OBJ_CLEAR:
+    case EE_SCENARIO_WRITE_OBJ_COPY_PARENT:
+    case EE_SCENARIO_WRITE_OBJ_ERASE:
+    case EE_SCENARIO_WRITE_OBJ_PUSH:
+    case EE_SCENARIO_WRITE_OBJ_SHUFFLE:
+    case EE_SCENARIO_WRITE_OBJ_TRUNCATE:
+        EESMObjectWrite(theContext, inOp, inB);
+        break;
+    }
 }
 
 // TEST ONLY: a player choice's SMCP record (ee/EEScenarioCapture.h)
@@ -223,6 +279,12 @@ int32_t StreamIO(void* inContext, uint32_t inOp, uint32_t inSlot, unsigned long 
         }
         return 0;
     }
+    case EE_SCENARIO_IO_ELEMENT_LOAD:
+    case EE_SCENARIO_IO_ELEMENT_SAVE:
+    case EE_SCENARIO_IO_ELEMENT_COUNT:
+    case EE_SCENARIO_IO_MEDIA:
+    case EE_SCENARIO_IO_MESSAGES:
+        return EESMManagerIO(theStream, inOp, inSlot, inIndex, ioValue);
     }
     return 0;
 }
@@ -237,7 +299,7 @@ EeScenarioStream EESMStreamTable(EESMStream* inStream)
 
 EeScenarioHost EESMHost(EESMHostContext* inContext)
 {
-    EeScenarioHost theHost = {inContext, Read, Players};
+    EeScenarioHost theHost = {inContext, Read, Players, Write};
     return theHost;
 }
 

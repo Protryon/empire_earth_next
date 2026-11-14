@@ -7,6 +7,8 @@
 // GEViewport, GEVertexArray, the U2DPoint/U2DRectangle key statics, GERasterizer, GE2DVertex), then GEBitmap's own
 // code (0x1000f3a4) and the map<UString, GETexture*> / vector<GERScreenState*> COMDATs.
 #include <windows.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -326,23 +328,96 @@ void GERectangle::RoundToNearest()
 // FUNCTION: LLE 0x1000f34f
 
 // ---- GEBitmap (0x1000f3a4..). Vertex order: 0 top left, 1 top right, 2 bottom left, 3 bottom right.
+//
+// port (R4.3, ninth part): the bitmap is a whole Rust object (ee_ge bmpobj.rs): the constructor's quad, the
+// destructor's releases, the corners, the stretched coordinates, the flips, the per-vertex values and SetTexture.
+// This section is its shell: the forwarders and the host, which makes each call the original made on another
+// object (the rasterizer, the vertex array, the textures). Floats cross the host as their bits.
+
+static intptr_t GEBitmapFloatBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return (intptr_t)theBits;
+}
+
+static float GEBitmapBitsFloat(intptr_t inBits)
+{
+    uint32_t theBits = (uint32_t)inBits;
+    float theValue;
+    memcpy(&theValue, &theBits, 4);
+    return theValue;
+}
+
+intptr_t GEBitmap::Host(void* inOwner, EeGeBmpOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    GEVertexArray* theVertices = (GEVertexArray*)inObj;
+    GETexture* theTexture = (GETexture*)inObj;
+    unsigned long i = (unsigned long)a;
+    switch (inOp) {
+    case EeGeBmpOp::RasterActive:
+        return (intptr_t)GERasterizer::GetActiveRasterizer();
+    case EeGeBmpOp::RasterScreenCount:
+        return (intptr_t)((GERasterizer*)inObj)->GetScreenCount();
+    case EeGeBmpOp::RasterVertexArray:
+        return (intptr_t)((GERasterizer*)inObj)->CreateVertexArray((unsigned long)a, (unsigned long)b);
+    case EeGeBmpOp::VertexDelete:
+        delete theVertices;
+        return 0;
+    case EeGeBmpOp::VertexGetColor:
+        theVertices->GetColor(*(GEColor*)b, i);
+        return 0;
+    case EeGeBmpOp::VertexSetColor:
+        theVertices->SetColor(*(const GEColor*)b, i);
+        return 0;
+    case EeGeBmpOp::VertexGetPoint:
+        theVertices->GetPoint(*(GE3DPoint*)b, i);
+        return 0;
+    case EeGeBmpOp::VertexSetPoint:
+        theVertices->SetPoint(*(const GE3DPoint*)b, i);
+        return 0;
+    case EeGeBmpOp::VertexSetNormal:
+        theVertices->SetNormal(*(const GEVector*)b, i);
+        return 0;
+    case EeGeBmpOp::VertexGetOpacity:
+        return GEBitmapFloatBits(theVertices->GetOpacity(i));
+    case EeGeBmpOp::VertexSetOpacity:
+        theVertices->SetOpacity(GEBitmapBitsFloat(b), i);
+        return 0;
+    case EeGeBmpOp::VertexGetUv:
+        theVertices->GetTextureCoordinate(*(GETextureCoordinate*)b, i);
+        return 0;
+    case EeGeBmpOp::VertexSetUv:
+        theVertices->SetTextureCoordinate(*(const GETextureCoordinate*)b, i);
+        return 0;
+    case EeGeBmpOp::TexReference:
+        theTexture->Reference();
+        return 0;
+    case EeGeBmpOp::TexDereference:
+        theTexture->Dereference();
+        return 0;
+    case EeGeBmpOp::TexFrameWidth:
+        return GEBitmapFloatBits(theTexture->GetFrameWidth());
+    case EeGeBmpOp::TexFrameHeight:
+        return GEBitmapFloatBits(theTexture->GetFrameHeight());
+    case EeGeBmpOp::TexWidth:
+        return (intptr_t)theTexture->GetWidth();
+    case EeGeBmpOp::TexHeight:
+        return (intptr_t)theTexture->GetHeight();
+    case EeGeBmpOp::TexDropLevels:
+        return (intptr_t)theTexture->GetNumMipLevelsToDrop();
+    }
+    (void)inOwner;
+    return 0;
+}
 
 // FUNCTION: LLE 0x1000f3a4
 // Returns the colours of the bitmap's four corners in vertex order (top left, top right, bottom left, bottom right)
 void GEBitmap::GetColorPerVertex(GEColor& outTopLeft, GEColor& outTopRight, GEColor& outBottomRight,
                                  GEColor& outBottomLeft) const
 {
-    this->mVertices->GetColor(outTopLeft, 0);
-    this->mVertices->GetColor(outTopRight, 1);
-    this->mVertices->GetColor(outBottomRight, 2);
-    this->mVertices->GetColor(outBottomLeft, 3);
-}
-
-// FUNCTION: LLE 0x1000f3e3
-// Returns the bitmap's drawn height (frame height times the vertical scale)
-float GEBitmap::GetHeight() const
-{
-    return this->mYScale * this->mHeight;
+    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
+    ee_ge_bmp_colors(this->mRust, &theOut);
 }
 
 // FUNCTION: LLE 0x1000f3ea
@@ -350,22 +425,8 @@ float GEBitmap::GetHeight() const
 void GEBitmap::GetLocationPerVertex(GE2DPoint& outTopLeft, GE2DPoint& outTopRight, GE2DPoint& outBottomRight,
                                     GE2DPoint& outBottomLeft) const
 {
-    GE3DPoint thePoint0;
-    GE3DPoint thePoint1;
-    GE3DPoint thePoint2;
-    GE3DPoint thePoint3;
-    this->mVertices->GetPoint(thePoint0, 0);
-    this->mVertices->GetPoint(thePoint1, 1);
-    this->mVertices->GetPoint(thePoint2, 2);
-    this->mVertices->GetPoint(thePoint3, 3);
-    outTopLeft.SetX(thePoint0.GetX());
-    outTopLeft.SetY(thePoint0.GetY());
-    outTopRight.SetX(thePoint1.GetX());
-    outTopRight.SetY(thePoint1.GetY());
-    outBottomRight.SetX(thePoint2.GetX());
-    outBottomRight.SetY(thePoint2.GetY());
-    outBottomLeft.SetX(thePoint3.GetX());
-    outBottomLeft.SetY(thePoint3.GetY());
+    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
+    ee_ge_bmp_locations(this->mRust, &theOut);
 }
 
 // FUNCTION: LLE 0x1000f4a4
@@ -373,14 +434,9 @@ void GEBitmap::GetLocationPerVertex(GE2DPoint& outTopLeft, GE2DPoint& outTopRigh
 void GEBitmap::GetOpacityPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
                                    float& outBottomLeft) const
 {
-    outTopLeft = this->mVertices->GetOpacity(0);
-    outTopRight = this->mVertices->GetOpacity(1);
-    outBottomRight = this->mVertices->GetOpacity(2);
-    outBottomLeft = this->mVertices->GetOpacity(3);
+    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
+    ee_ge_bmp_opacities(this->mRust, &theOut);
 }
-
-// SYNTHETIC: LLE 0x1000f4eb
-// GEBitmap::GetTexture: header-inline (lle/GEBitmap.h), emitted here
 
 // FUNCTION: LLE 0x1000f4f8
 // Returns the texture coordinates of the bitmap's four corners in vertex order
@@ -388,49 +444,24 @@ void GEBitmap::GetTextureCoordinatesPerVertex(GETextureCoordinate& outTopLeft, G
                                               GETextureCoordinate& outBottomRight,
                                               GETextureCoordinate& outBottomLeft) const
 {
-    this->mVertices->GetTextureCoordinate(outTopLeft, 0);
-    this->mVertices->GetTextureCoordinate(outTopRight, 1);
-    this->mVertices->GetTextureCoordinate(outBottomRight, 2);
-    this->mVertices->GetTextureCoordinate(outBottomLeft, 3);
+    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
+    ee_ge_bmp_uvs(this->mRust, &theOut);
 }
-
-// FUNCTION: LLE 0x1000f537
-// Returns the bitmap's drawn width (frame width times the horizontal scale)
-float GEBitmap::GetWidth() const
-{
-    return this->mXScale * this->mWidth;
-}
-
-// SYNTHETIC: LLE 0x1000f53e
-// GEBitmap::GetYScale: header-inline (lle/GEBitmap.h), emitted here
 
 // FUNCTION: LLE 0x1000f542
 // Returns the depths (Z) of the bitmap's four corners in vertex order
 void GEBitmap::GetZPerVertex(float& outTopLeft, float& outTopRight, float& outBottomRight,
                              float& outBottomLeft) const
 {
-    GE3DPoint thePoint0;
-    GE3DPoint thePoint1;
-    GE3DPoint thePoint2;
-    GE3DPoint thePoint3;
-    this->mVertices->GetPoint(thePoint0, 0);
-    this->mVertices->GetPoint(thePoint1, 1);
-    this->mVertices->GetPoint(thePoint2, 2);
-    this->mVertices->GetPoint(thePoint3, 3);
-    outTopLeft = thePoint0.GetZ();
-    outTopRight = thePoint1.GetZ();
-    outBottomRight = thePoint2.GetZ();
-    outBottomLeft = thePoint3.GetZ();
+    const EeGeBmpQuad theOut = {&outTopLeft, &outTopRight, &outBottomRight, &outBottomLeft};
+    ee_ge_bmp_depths(this->mRust, &theOut);
 }
 
 // FUNCTION: LLE 0x1000f5e4
 // Gives all four corners of the bitmap the same colour
 void GEBitmap::SetColor(const GEColor& inColor)
 {
-    this->mVertices->SetColor(inColor, 0);
-    this->mVertices->SetColor(inColor, 1);
-    this->mVertices->SetColor(inColor, 2);
-    this->mVertices->SetColor(inColor, 3);
+    this->SetColorPerVertex(inColor, inColor, inColor, inColor);
 }
 
 // FUNCTION: LLE 0x1000f61d
@@ -438,50 +469,30 @@ void GEBitmap::SetColor(const GEColor& inColor)
 void GEBitmap::SetColorPerVertex(const GEColor& inTopLeft, const GEColor& inTopRight, const GEColor& inBottomRight,
                                  const GEColor& inBottomLeft)
 {
-    this->mVertices->SetColor(inTopLeft, 0);
-    this->mVertices->SetColor(inTopRight, 1);
-    this->mVertices->SetColor(inBottomRight, 2);
-    this->mVertices->SetColor(inBottomLeft, 3);
+    const EeGeBmpQuad theColors = {(void*)&inTopLeft, (void*)&inTopRight, (void*)&inBottomRight, (void*)&inBottomLeft};
+    ee_ge_bmp_set_colors(this->mRust, &theColors);
 }
-
-// SYNTHETIC: LLE 0x1000f65c
-// GEBitmap::SetLocation: header-inline (lle/GEBitmap.h), emitted here
 
 // FUNCTION: LLE 0x1000f673
 // Gives all four corners of the bitmap the same opacity
 void GEBitmap::SetOpacity(float inOpacity)
 {
-    this->mVertices->SetOpacity(inOpacity, 0);
-    this->mVertices->SetOpacity(inOpacity, 1);
-    this->mVertices->SetOpacity(inOpacity, 2);
-    this->mVertices->SetOpacity(inOpacity, 3);
+    this->SetOpacityPerVertex(inOpacity, inOpacity, inOpacity, inOpacity);
 }
 
 // FUNCTION: LLE 0x1000f6c2
 // Sets the opacities of the bitmap's four corners in vertex order
 void GEBitmap::SetOpacityPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
 {
-    this->mVertices->SetOpacity(inTopLeft, 0);
-    this->mVertices->SetOpacity(inTopRight, 1);
-    this->mVertices->SetOpacity(inBottomRight, 2);
-    this->mVertices->SetOpacity(inBottomLeft, 3);
-}
-
-// FUNCTION: LLE 0x1000f711
-// Sets the bitmap's rotation angle and recomputes its corner positions
-void GEBitmap::SetRotation(float inRotation)
-{
-    this->mRotation = inRotation;
-    this->ComputeRotation();
+    const float theOpacities[4] = {inTopLeft, inTopRight, inBottomRight, inBottomLeft};
+    ee_ge_bmp_set_opacities(this->mRust, &theOpacities);
 }
 
 // FUNCTION: LLE 0x1000f720
 // Sets one scale for both axes of the bitmap and recomputes its corner positions
 void GEBitmap::SetScale(float inScale)
 {
-    this->mXScale = inScale;
-    this->mYScale = inScale;
-    this->ComputeRotation();
+    this->SetXYScale(inScale, inScale);
 }
 
 // FUNCTION: LLE 0x1000f732
@@ -489,14 +500,9 @@ void GEBitmap::SetScale(float inScale)
 void GEBitmap::SetTextureCoordinates(GETextureCoordinate& inTopLeft, GETextureCoordinate& inTopRight,
                                      GETextureCoordinate& inBottomRight, GETextureCoordinate& inBottomLeft)
 {
-    this->mVertices->SetTextureCoordinate(inTopLeft, 0);
-    this->mVertices->SetTextureCoordinate(inTopRight, 1);
-    this->mVertices->SetTextureCoordinate(inBottomRight, 2);
-    this->mVertices->SetTextureCoordinate(inBottomLeft, 3);
+    const EeGeBmpQuad theCoordinates = {&inTopLeft, &inTopRight, &inBottomRight, &inBottomLeft};
+    ee_ge_bmp_set_uvs(this->mRust, &theCoordinates);
 }
-
-// SYNTHETIC: LLE 0x1000f771
-// GEBitmap::SetXYScale: header-inline (lle/GEBitmap.h), emitted here
 
 // FUNCTION: LLE 0x1000f787
 // Gives all four corners of the bitmap the same depth (Z)
@@ -509,159 +515,53 @@ void GEBitmap::SetZ(float inZ)
 // Sets the depths (Z) of the bitmap's four corners in vertex order, keeping their X and Y
 void GEBitmap::SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft)
 {
-    GE3DPoint thePoint0;
-    GE3DPoint thePoint1;
-    GE3DPoint thePoint2;
-    GE3DPoint thePoint3;
-    this->mVertices->GetPoint(thePoint0, 0);
-    this->mVertices->GetPoint(thePoint1, 1);
-    this->mVertices->GetPoint(thePoint2, 2);
-    this->mVertices->GetPoint(thePoint3, 3);
-    thePoint0.SetZ(inTopLeft);
-    thePoint1.SetZ(inTopRight);
-    thePoint2.SetZ(inBottomRight);
-    thePoint3.SetZ(inBottomLeft);
-    this->mVertices->SetPoint(thePoint0, 0);
-    this->mVertices->SetPoint(thePoint1, 1);
-    this->mVertices->SetPoint(thePoint2, 2);
-    this->mVertices->SetPoint(thePoint3, 3);
+    const float theDepths[4] = {inTopLeft, inTopRight, inBottomRight, inBottomLeft};
+    ee_ge_bmp_set_depths(this->mRust, &theDepths);
 }
-
-// implicit copy ctor 0x1000f881, operator= 0x1000f8d8, vector deleting dtor 0x1000f923
-// FUNCTION: LLE 0x1000f881
-// FUNCTION: LLE 0x1000f8d8
-// SYNTHETIC: LLE 0x1000f923
 
 // FUNCTION: LLE 0x1000f97f
 // Creates an untextured, unscaled, unrotated white bitmap: one texture slot per screen and a four-vertex quad
 GEBitmap::GEBitmap()
 {
-    GEColor theColor;
-    GE3DPoint thePoint;
-    GEVector theNormal(0.0f, 0.0f, -1.0f);
-    GERasterizer* theRasterizer = GERasterizer::GetActiveRasterizer();
-    unsigned long i;
-    this->mTextureCount = theRasterizer->GetScreenCount();
-    this->mTextures = new GETexture*[this->mTextureCount];
-    for (i = 0; i < this->mTextureCount; i++)
-        this->mTextures[i] = NULL;
-    this->mVertices = theRasterizer->CreateVertexArray(1, 4);
-    this->mRotation = 0.0f;
-    this->mXScale = 1.0f;
-    this->mYScale = 1.0f;
-    this->mHeight = 0.0f;
-    this->mWidth = 0.0f;
-    this->mVertices->SetPoint(thePoint, 0);
-    this->mVertices->SetPoint(thePoint, 1);
-    this->mVertices->SetPoint(thePoint, 2);
-    this->mVertices->SetPoint(thePoint, 3);
-    this->mVertices->SetNormal(theNormal, 0);
-    this->mVertices->SetNormal(theNormal, 1);
-    this->mVertices->SetNormal(theNormal, 2);
-    this->mVertices->SetNormal(theNormal, 3);
-    this->mVertices->SetColor(theColor, 0);
-    this->mVertices->SetColor(theColor, 1);
-    this->mVertices->SetColor(theColor, 2);
-    this->mVertices->SetColor(theColor, 3);
-    this->mVertices->SetOpacity(1.0f, 0);
-    this->mVertices->SetOpacity(1.0f, 1);
-    this->mVertices->SetOpacity(1.0f, 2);
-    this->mVertices->SetOpacity(1.0f, 3);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(0.0f, 0.0f), 0);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(1.0f, 0.0f), 1);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(0.0f, 1.0f), 2);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(1.0f, 1.0f), 3);
-    this->ComputeRotation();
+    this->mRust = ee_ge_bmp_new(&GEBitmap::Host, this);
 }
 
 // FUNCTION: LLE 0x1000fb74
 // Destroys the bitmap, deleting its vertex array and releasing the texture of every screen
 GEBitmap::~GEBitmap()
 {
-    unsigned long i;
-    if (this->mVertices)
-        delete this->mVertices;
-    for (i = 0; i < this->mTextureCount; i++)
-        if (this->mTextures[i])
-            this->mTextures[i]->Dereference();
-    delete[] this->mTextures;
+    ee_ge_bmp_destroy(this->mRust);
 }
 
-// FUNCTION: LLE 0x1000fbb9
-// Recomputes the four corner positions from location, frame size, scale and rotation (about the centre)
-// (the corners are Rust: ee_ge bitmap.rs)
-void GEBitmap::ComputeRotation()
-{
-    GE2DPoint theCorners[4];
-    GE3DPoint thePoints[4];
-    ee_ge_bitmap_corners(GERust(this->mLocation), this->mWidth, this->mHeight, this->mXScale, this->mYScale,
-                         this->mRotation, GERust(theCorners[0]));
-    for (int i = 0; i < 4; i++) {
-        this->mVertices->GetPoint(thePoints[i], i);
-        thePoints[i].SetX(theCorners[i].GetX());
-        thePoints[i].SetY(theCorners[i].GetY());
-        this->mVertices->SetPoint(thePoints[i], i);
-    }
-}
-
-// 94.7: the original gives the dead parameter slots +0xc/+8 to theTextureYRange/theDestinationYRange (ours +8/+0x10)
-// and schedules the "+ 1.0f" before the unsigned conversion; the (double) divisors give its `fild qword; fdivp`
 // FUNCTION: LLE 0x1000fda1
 // Maps a source rectangle of the screen's texture onto texture coordinates and sets the matching X/Y scale
-// (the arithmetic is Rust: ee_ge bitmap.rs)
 void GEBitmap::ComputeStretchedCoordsAndScale(const GERectangle& inTextureRectangle,
                                               const GERectangle& inSourceRectangle,
                                               const GERectangle& inDestinationRectangle, unsigned long inScreen)
 {
-    GETexture* theTexture = this->mTextures[inScreen];
-    EeGeBitmapStretch theStretch;
-    ee_ge_bitmap_stretch(GERust(inTextureRectangle), GERust(inSourceRectangle), GERust(inDestinationRectangle),
-                         theTexture->GetWidth(), theTexture->GetHeight(), theTexture->GetNumMipLevelsToDrop(),
-                         &theStretch);
-    GETextureCoordinate theTopLeft(theStretch.uv[0][0], theStretch.uv[0][1]);
-    GETextureCoordinate theTopRight(theStretch.uv[1][0], theStretch.uv[1][1]);
-    GETextureCoordinate theBottomLeft(theStretch.uv[2][0], theStretch.uv[2][1]);
-    GETextureCoordinate theBottomRight(theStretch.uv[3][0], theStretch.uv[3][1]);
-    // (positionally as the original: the third argument is the bottom left corner)
-    this->SetTextureCoordinates(theTopLeft, theTopRight, theBottomLeft, theBottomRight);
-    this->SetXYScale(theStretch.x_scale, theStretch.y_scale);
+    ee_ge_bmp_stretch(this->mRust, GERust(inTextureRectangle), GERust(inSourceRectangle),
+                      GERust(inDestinationRectangle), inScreen);
 }
 
 // FUNCTION: LLE 0x1000ff33
 // Mirrors the bitmap's texture left to right (resets the texture coordinates to the full flipped texture)
 void GEBitmap::FlipHorizontally()
 {
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(1.0f, 0.0f), 0);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(0.0f, 0.0f), 1);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(1.0f, 1.0f), 2);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(0.0f, 1.0f), 3);
+    ee_ge_bmp_flip(this->mRust, false);
 }
 
 // FUNCTION: LLE 0x1000ff9e
 // Mirrors the bitmap's texture top to bottom (resets the texture coordinates to the full flipped texture)
 void GEBitmap::FlipVertically()
 {
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(0.0f, 1.0f), 0);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(1.0f, 1.0f), 1);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(0.0f, 0.0f), 2);
-    this->mVertices->SetTextureCoordinate(GETextureCoordinate(1.0f, 0.0f), 3);
+    ee_ge_bmp_flip(this->mRust, true);
 }
 
 // FUNCTION: LLE 0x10010009
 // Sets the bitmap's texture for one screen, referencing the new one and releasing the old; takes its frame size
 void GEBitmap::SetTexture(GETexture* inTexture, unsigned long inScreen)
 {
-    if (this->mTextures[inScreen] == inTexture)
-        return;
-    if (this->mTextures[inScreen])
-        this->mTextures[inScreen]->Dereference();
-    this->mTextures[inScreen] = inTexture;
-    if (inTexture) {
-        inTexture->Reference();
-        this->mHeight = inTexture->GetFrameHeight();
-        this->mWidth = inTexture->GetFrameWidth();
-    }
-    this->ComputeRotation();
+    ee_ge_bmp_set_texture(this->mRust, inTexture, inScreen);
 }
 
 // U2DPoint/U2DRectangle key init chains (wrapper, ctor, atexit registration, dtor per key)

@@ -3,7 +3,10 @@
 
 use std::ffi::{c_char, c_void, CStr};
 
+use crate::lagloss::LagLoss;
 use crate::msgmgr::{File, Host, Msg, MsgMgr};
+use crate::qhost::{Ev, FileH, Msg as QMsg, QHost, Thr};
+use crate::recplay::RecPlay;
 
 /// A message manager's calls out (`msgmgr::Host`); a, b, c, d as each op says, the answer as isize.
 #[repr(u32)]
@@ -340,4 +343,322 @@ pub extern "C" fn ee_net_mm_set_current_number(m: *const EeNetMsgMgr, number: u3
 #[no_mangle]
 pub extern "C" fn ee_net_mm_set_force_ct(m: *const EeNetMsgMgr, on: bool) {
     mm(m).set_force_ct(on)
+}
+
+// ---- the client-side queues: NELagLossSimulator (lagloss.rs) and NERecordPlayback (recplay.rs)
+
+/// The queues' calls out (`qhost::QHost`); a, b, c, d as each op says, the answer as isize.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeNetQOp {
+    /// -> TMGetTime()
+    Time = 0,
+    /// unit (0 NELagLossSimulator.cpp, 1 NERecordPlayback.cpp, 2 NETimestampedMessage.cpp), line: a failed ESVERIFY_AT
+    Verify = 1,
+    /// UMSetFloatingPointPrecision(kFPPrecision53)
+    FpuStart = 2,
+    /// the thread loop's precision and rounding check
+    FpuCheck = 3,
+    /// -> a new TSEvent (TSScheduler::CreateEvent), NULL when it failed
+    EventNew = 4,
+    /// an event: TSScheduler::DestroyEvent
+    EventFree = 5,
+    /// an event: Set()
+    EventSet = 6,
+    /// an event: Clear()
+    EventClear = 7,
+    /// an event, a timeout -> Wait(timeout)
+    EventWait = 8,
+    /// kind (0 the lag thread, 1 the playback thread), the Rust object, a TSThread** -> CreateThread's result
+    ThreadNew = 9,
+    /// a thread, a name, its length: SetName
+    ThreadName = 10,
+    /// a thread: TSScheduler::DestroyThread
+    ThreadFree = 11,
+    /// a message: Reference()
+    MsgReference = 12,
+    /// a message: Dereference()
+    MsgDereference = 13,
+    /// a message -> ExportSize()
+    MsgExportSize = 14,
+    /// a message, a buffer, its size: ExportMessage, at most that many bytes copied -> the export's size
+    MsgExport = 15,
+    /// bytes (NULL or a buffer), their count -> NEMessage::ConvertMemoryToMessage(bytes)
+    MsgFromBytes = 16,
+    /// kind (0 the lag simulator's receive callback, 1 its send callback, 2 the recorder's callback), a message ->
+    /// the send callback's result
+    Deliver = 17,
+    /// a file -> Create()
+    FileCreate = 18,
+    /// a file -> Delete()
+    FileDelete = 19,
+    /// a file, an access -> Open(access)
+    FileOpen = 20,
+    /// a file: Close()
+    FileClose = 21,
+    /// a file, bytes, their count -> Write(bytes, count, written)
+    FileWrite = 22,
+    /// a file, a value -> Write(value) (4 bytes)
+    FileWriteU32 = 23,
+    /// a file, a uint32_t* -> Read(*value)
+    FileReadU32 = 24,
+    /// a file, a buffer, its size -> Read(buffer, size, read)
+    FileRead = 25,
+}
+
+pub type EeNetQHostFn =
+    unsafe extern "C" fn(ctx: *mut c_void, op: EeNetQOp, a: usize, b: usize, c: usize, d: usize) -> isize;
+
+pub struct QFfiHost {
+    ctx: *mut c_void,
+    f: EeNetQHostFn,
+}
+
+// The context is the C++ client or server, used from its threads as the original's objects were.
+unsafe impl Send for QFfiHost {}
+unsafe impl Sync for QFfiHost {}
+
+impl QFfiHost {
+    fn call(&self, op: EeNetQOp, a: usize, b: usize, c: usize, d: usize) -> isize {
+        unsafe { (self.f)(self.ctx, op, a, b, c, d) }
+    }
+}
+
+impl QHost for QFfiHost {
+    fn time(&self) -> u32 {
+        self.call(EeNetQOp::Time, 0, 0, 0, 0) as u32
+    }
+    fn verify(&self, unit: u32, line: u32) {
+        self.call(EeNetQOp::Verify, unit as usize, line as usize, 0, 0);
+    }
+    fn fpu_start(&self) {
+        self.call(EeNetQOp::FpuStart, 0, 0, 0, 0);
+    }
+    fn fpu_check(&self) {
+        self.call(EeNetQOp::FpuCheck, 0, 0, 0, 0);
+    }
+    fn event_new(&self) -> Ev {
+        self.call(EeNetQOp::EventNew, 0, 0, 0, 0) as Ev
+    }
+    fn event_free(&self, e: Ev) {
+        self.call(EeNetQOp::EventFree, e, 0, 0, 0);
+    }
+    fn event_set(&self, e: Ev) {
+        self.call(EeNetQOp::EventSet, e, 0, 0, 0);
+    }
+    fn event_clear(&self, e: Ev) {
+        self.call(EeNetQOp::EventClear, e, 0, 0, 0);
+    }
+    fn event_wait(&self, e: Ev, timeout: u32) -> i32 {
+        self.call(EeNetQOp::EventWait, e, timeout as usize, 0, 0) as i32
+    }
+    fn thread_new(&self, kind: u32, obj: usize, out: &mut Thr) -> i32 {
+        self.call(EeNetQOp::ThreadNew, kind as usize, obj, out as *mut Thr as usize, 0) as i32
+    }
+    fn thread_name(&self, t: Thr, name: &str) {
+        self.call(EeNetQOp::ThreadName, t, name.as_ptr() as usize, name.len(), 0);
+    }
+    fn thread_free(&self, t: Thr) {
+        self.call(EeNetQOp::ThreadFree, t, 0, 0, 0);
+    }
+    fn msg_reference(&self, m: QMsg) {
+        self.call(EeNetQOp::MsgReference, m, 0, 0, 0);
+    }
+    fn msg_dereference(&self, m: QMsg) {
+        self.call(EeNetQOp::MsgDereference, m, 0, 0, 0);
+    }
+    fn msg_export_size(&self, m: QMsg) -> u32 {
+        self.call(EeNetQOp::MsgExportSize, m, 0, 0, 0) as u32
+    }
+    fn msg_export(&self, m: QMsg, buf: &mut [u8]) -> u32 {
+        self.call(EeNetQOp::MsgExport, m, buf.as_mut_ptr() as usize, buf.len(), 0) as u32
+    }
+    fn msg_from_bytes(&self, data: Option<&[u8]>) -> QMsg {
+        let (p, n) = data.map_or((0, 0), |d| (d.as_ptr() as usize, d.len()));
+        self.call(EeNetQOp::MsgFromBytes, p, n, 0, 0) as QMsg
+    }
+    fn deliver(&self, kind: u32, m: QMsg) -> i32 {
+        self.call(EeNetQOp::Deliver, kind as usize, m, 0, 0) as i32
+    }
+    fn file_create(&self, f: FileH) -> i32 {
+        self.call(EeNetQOp::FileCreate, f, 0, 0, 0) as i32
+    }
+    fn file_delete(&self, f: FileH) -> i32 {
+        self.call(EeNetQOp::FileDelete, f, 0, 0, 0) as i32
+    }
+    fn file_open(&self, f: FileH, access: u32) -> i32 {
+        self.call(EeNetQOp::FileOpen, f, access as usize, 0, 0) as i32
+    }
+    fn file_close(&self, f: FileH) {
+        self.call(EeNetQOp::FileClose, f, 0, 0, 0);
+    }
+    fn file_write(&self, f: FileH, data: &[u8]) -> i32 {
+        self.call(EeNetQOp::FileWrite, f, data.as_ptr() as usize, data.len(), 0) as i32
+    }
+    fn file_write_u32(&self, f: FileH, value: u32) -> i32 {
+        self.call(EeNetQOp::FileWriteU32, f, value as usize, 0, 0) as i32
+    }
+    fn file_read_u32(&self, f: FileH, value: &mut u32) -> i32 {
+        self.call(EeNetQOp::FileReadU32, f, value as *mut u32 as usize, 0, 0) as i32
+    }
+    fn file_read(&self, f: FileH, buf: &mut [u8]) -> i32 {
+        self.call(EeNetQOp::FileRead, f, buf.as_mut_ptr() as usize, buf.len(), 0) as i32
+    }
+}
+
+/// The client's lag and loss simulator (`NELagLossSimulator`).
+pub struct EeNetLagLoss(LagLoss<QFfiHost>);
+/// The client's and the server's message recorder (`NERecordPlayback`).
+pub struct EeNetRecPlay(RecPlay<QFfiHost>);
+
+fn ll<'a>(l: *const EeNetLagLoss) -> &'a LagLoss<QFfiHost> {
+    unsafe { &(*l).0 }
+}
+
+fn rp<'a>(r: *const EeNetRecPlay) -> Option<&'a RecPlay<QFfiHost>> {
+    unsafe { r.as_ref().map(|r| &r.0) }
+}
+
+/// # Safety
+/// `host` answers every op for `ctx` until `ee_net_ll_free`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_net_ll_new(ctx: *mut c_void, host: EeNetQHostFn) -> *mut EeNetLagLoss {
+    Box::into_raw(Box::new(EeNetLagLoss(LagLoss::new(QFfiHost { ctx, f: host }))))
+}
+
+/// # Safety
+/// `l` from `ee_net_ll_new` (or NULL), used by nothing after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_net_ll_free(l: *mut EeNetLagLoss) {
+    if !l.is_null() {
+        let b = Box::from_raw(l);
+        b.0.release();
+    }
+}
+
+/// The lag thread's body (the host's `ThreadNew` of kind 0 runs it with the object it was given).
+#[no_mangle]
+pub extern "C" fn ee_net_ll_thread(l: *const EeNetLagLoss) -> u32 {
+    ll(l).lag_thread()
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_ll_enable_lag(l: *const EeNetLagLoss, minimum: u32, maximum: u32) {
+    ll(l).enable_lag(l as usize, minimum, maximum)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_ll_disable_lag(l: *const EeNetLagLoss, flush: bool) {
+    ll(l).disable_lag(flush)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_ll_enable_receive_loss(l: *const EeNetLagLoss, percentage: f32) {
+    ll(l).enable_receive_loss(percentage)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_ll_enable_send_loss(l: *const EeNetLagLoss, percentage: f32) {
+    ll(l).enable_send_loss(percentage)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_ll_disable_receive_loss(l: *const EeNetLagLoss) {
+    ll(l).disable_receive_loss()
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_ll_disable_send_loss(l: *const EeNetLagLoss) {
+    ll(l).disable_send_loss()
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_ll_process(l: *const EeNetLagLoss, msg: *mut c_void) -> i32 {
+    ll(l).process(msg as QMsg)
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_ll_send(l: *const EeNetLagLoss, msg: *mut c_void) -> i32 {
+    ll(l).send(msg as QMsg)
+}
+
+/// # Safety
+/// `host` answers every op for `ctx` until `ee_net_rp_free`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_net_rp_new(ctx: *mut c_void, host: EeNetQHostFn) -> *mut EeNetRecPlay {
+    Box::into_raw(Box::new(EeNetRecPlay(RecPlay::new(QFfiHost { ctx, f: host }))))
+}
+
+/// # Safety
+/// `r` from `ee_net_rp_new` (or NULL), used by nothing after.
+#[no_mangle]
+pub unsafe extern "C" fn ee_net_rp_free(r: *mut EeNetRecPlay) {
+    if !r.is_null() {
+        let b = Box::from_raw(r);
+        b.0.release();
+    }
+}
+
+/// The playback thread's body (the host's `ThreadNew` of kind 1 runs it with the object it was given).
+#[no_mangle]
+pub extern "C" fn ee_net_rp_thread(r: *const EeNetRecPlay) -> u32 {
+    rp(r).map_or(0, |r| r.playback_thread())
+}
+
+/// The mode (1 passing, 2 recording, 3 playing back); a NULL recorder (a server that was not published) passes.
+#[no_mangle]
+pub extern "C" fn ee_net_rp_mode(r: *const EeNetRecPlay) -> u8 {
+    rp(r).map_or(crate::recplay::MODE_PASSING, |r| r.mode())
+}
+
+/// A message for the game (a NULL recorder: nothing, where the original crashed).
+#[no_mangle]
+pub extern "C" fn ee_net_rp_process(r: *const EeNetRecPlay, msg: *mut c_void) {
+    if let Some(r) = rp(r) {
+        r.process(msg as QMsg)
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_rp_pass_mode(r: *const EeNetRecPlay) -> i32 {
+    rp(r).map_or(0, |r| r.pass_mode())
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_rp_record_mode_file(r: *const EeNetRecPlay, file: *mut c_void) -> i32 {
+    rp(r).map_or(0, |r| r.record_mode_file(file as FileH))
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_rp_record_mode_network(r: *const EeNetRecPlay) -> i32 {
+    rp(r).map_or(0, |r| r.record_mode_network())
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_rp_playback_mode_file(r: *const EeNetRecPlay, file: *mut c_void) -> i32 {
+    rp(r).map_or(0, |x| x.playback_mode_file(r as usize, file as FileH))
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_rp_playback_mode_network(r: *const EeNetRecPlay) -> i32 {
+    rp(r).map_or(0, |r| r.playback_mode_network())
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_rp_playback_complete(r: *const EeNetRecPlay) -> bool {
+    rp(r).is_some_and(|r| r.playback_complete())
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_rp_set_slow_playback(r: *const EeNetRecPlay) {
+    if let Some(r) = rp(r) {
+        r.set_slow_playback()
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn ee_net_rp_set_normal_playback(r: *const EeNetRecPlay) {
+    if let Some(r) = rp(r) {
+        r.set_normal_playback()
+    }
 }
