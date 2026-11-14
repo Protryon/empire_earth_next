@@ -752,7 +752,7 @@ void EEPMNotePush(EEComplexUnit* inUnit, float inSpeed, bool inMoving, float inD
 {
     if (!EEUnitStepNoting())
         return;
-    uint32_t theWords[13] = {PMBits(inUnit->mPushVelocityX.Get()), PMBits(inUnit->mPushVelocityY.Get()),
+    uint32_t theWords[13] = {PMBits(inUnit->mPushVelocityX), PMBits(inUnit->mPushVelocityY),
                              (uint32_t)gCollisionPeriod, PMBits(inSpeed), PMBits(gPhysics->GetTickSeconds()),
                              PMBits(inUnit->mPhysicalModel.GetLocation().GetX()),
                              PMBits(inUnit->mPhysicalModel.GetLocation().GetY()), 0, 0, 0, 0, 0, 0};
@@ -913,7 +913,7 @@ void EEPhysicsModel::AfterStep(EEComplexUnit* inUnit)
             if (PMBits(theOriginal) != PMBits(theRoll))
                 EEUnitStepDiffers("EEPhysicsModel::AfterStep (the roll's bits)", inUnit->mUnitID, (long)PMBits(theRoll),
                                   (long)PMBits(theOriginal));
-            uint32_t theWords[3] = {PMBits(theRollBefore), PMBits(gPhysics->mTickSeconds), PMBits(inUnit->mRoll.Get())};
+            uint32_t theWords[3] = {PMBits(theRollBefore), PMBits(gPhysics->mTickSeconds), PMBits(inUnit->mRoll)};
             EEUnitStateNote(kUnitStateRoll, inUnit->mUnitID, theWords, 3);
         }
     }

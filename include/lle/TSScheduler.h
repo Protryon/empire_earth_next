@@ -1,14 +1,12 @@
 // C:\EEX\Low-Level Engine\Thread System\TSScheduler.h (RECONSTRUCTION; TSScheduler.cpp 0x53e55..0x54203).
 // Include <windows.h> first: CreateEvent is exported as ?CreateEventA@TSScheduler@@...
+// Whole in Rust (rust/crates/ee_ts, LLE lane round 3): the statics forward (TSScheduler.cpp); the thread registry
+// is the crate's SCHEDULER.
 #ifndef LLE_TSSCHEDULER_H
 #define LLE_TSSCHEDULER_H
 
-#include <vector>
 #include "lle/TSCriticalSection.h"
 
-// Only declared here: TSEvent, TSReadWriteLock and TSThread have exported inline members, which the original's first
-// includer (NELagLossSimulator.cpp) emits; Error System.cpp uses the scheduler without seeing them.
-// lle/LowLevelEngine.h includes their headers before this one.
 class TSEvent;
 class TSReadWriteLock;
 class TSThread;
@@ -16,7 +14,6 @@ class TSThread;
 LLE_API long TSInitialize();   // Thread System.cpp
 
 class LLE_API TSScheduler {
-    friend LLE_API long TSInitialize();           // registers the main thread through the private CreateThread
 public:
     static long CreateCriticalSection(TSCriticalSection*& outSection);
     static void DestroyCriticalSection(TSCriticalSection* inSection);
@@ -31,15 +28,6 @@ public:
     static long DestroyThread(TSThread* inThread);
     static TSThread* GetCurrentThread();
     static unsigned long GetCurrentThreadIndex();
-private:
-    static long CreateThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended);
-
-    // Inferred: visible to the engine only. A static data member consumes a VC6 `$E` number in every unit that
-    // sees the class, and the plug-ins that use TSScheduler (tcp, mixer) number their initializers as if they saw
-    // none (see LowLevelEngine.h, Timing).
-#ifdef LOWLEVELENGINE_EXPORTS
-    static std::vector<TSThread*> sThreads;
-#endif
 };
 
 #endif

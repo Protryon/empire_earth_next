@@ -825,8 +825,8 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
     }
     if (theValue == 0)
         return;
-    long theCurrent = theValue == 1 ? theComplex->mReloadTimer.Get()
-                    : theValue == 2 ? theComplex->mPower.Get() : theComplex->mRottingAwayTime.Get();
+    long theCurrent = theValue == 1 ? theComplex->mReloadTimer
+                    : theValue == 2 ? theComplex->mPower : theComplex->mRottingAwayTime;
     if (inPercentage) theAmount = UMFloatToLong((float)theBase * theAmount * 0.01f);
     if (inMode == kSMAttributeModeIncrease) theAmount += theCurrent;
     else if (inMode == kSMAttributeModeDecrease) theAmount = theCurrent - theAmount;

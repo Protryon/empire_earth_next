@@ -1,10 +1,26 @@
 use super::*;
 
-/// The host's recorded ops of one golden press: each `(op, a, b, c)` must come in order, answered with its result.
+/// The host's recorded ops of one golden press: each `(op, a, b, c)` must come in order, answered with its result;
+/// the help text's bytes (read into a, or handed out at a) as payloads.
 struct Replay {
     ops: Vec<[i64; 5]>,
+    payloads: Vec<Option<Vec<u8>>>,
     at: usize,
     line: usize,
+}
+
+/// One op's numbers and its payload (" x" and hex).
+fn parse_op(f: &str) -> ([i64; 5], Option<Vec<u8>>) {
+    let (nums, payload) = match f.find(" x") {
+        Some(i) => {
+            let hex = &f[i + 2..];
+            let bytes = (0..hex.len() / 2).map(|k| u8::from_str_radix(&hex[2 * k..2 * k + 2], 16).unwrap()).collect();
+            (&f[..i], Some(bytes))
+        }
+        None => (f, None),
+    };
+    let v: Vec<i64> = nums.split(' ').map(|x| x.parse().unwrap()).collect();
+    ([v[0], v[1], v[2], v[3], v[4]], payload)
 }
 
 impl ButtonHost for Replay {
@@ -14,33 +30,47 @@ impl ButtonHost for Replay {
             button_up(self);
         }
         let want = self.ops.get(self.at).copied().unwrap_or_else(|| panic!("line {}: extra op {op}", self.line));
-        assert_eq!([op as i64, a, b, c], want[..4], "line {}: op {}", self.line, self.at);
+        let payload = self.payloads[self.at].clone();
+        let a_ = if payload.is_some() { 0 } else { a };
+        assert_eq!([op as i64, a_, b, c], want[..4], "line {}: op {}", self.line, self.at);
         self.at += 1;
+        if let Some(bytes) = payload {
+            if op == EE_SCREENS_SB_OP_HELP_OUT {
+                // SAFETY: help_string hands out its b bytes at a
+                let out = unsafe { core::slice::from_raw_parts(a as *const u8, b as usize) };
+                assert_eq!(out, &bytes[..], "line {}: the help string", self.line);
+            } else {
+                assert!(bytes.len() <= b as usize, "line {}: the read's room", self.line);
+                // SAFETY: the read's buffer at a has room for b bytes
+                unsafe { core::ptr::copy_nonoverlapping(bytes.as_ptr(), a as *mut u8, bytes.len()) };
+            }
+        }
         want[4]
     }
 }
 
 const GOLDEN: &str = include_str!("../golden_status_button.txt");
 
-/// `build/sc23/sb/driver.cpp 1 4000 golden` (round 22's driver with `CopyData`): per call (L: `ButtonUp`, R:
-/// `MouseRButtonUp`, C: `CopyData`, whose original is the one before command_panel.rs, a137f1a9^), the new host's ops
-/// and answers; the driver checked them against the original's calls.
+/// `build/sc24/sb/driver.cpp 1 5000 golden` (round 22's driver with `CopyData` and `GetHelpString`): per call (L:
+/// `ButtonUp`, R: `MouseRButtonUp`, C: `CopyData`, H: `GetHelpString`, the last two's originals the ones before
+/// command_panel.rs, a137f1a9^), the new host's ops and answers; the driver checked them against the original's
+/// calls.
 #[test]
 fn golden_status_button() {
     let mut n = 0;
     let mut copies = 0;
+    let mut helps = 0;
     for (k, line) in GOLDEN.lines().enumerate() {
         let mut parts = line.split('|');
         let kind = parts.next().unwrap();
-        let ops = parts
-            .map(|f| {
-                let v: Vec<i64> = f.split(' ').map(|x| x.parse().unwrap()).collect();
-                [v[0], v[1], v[2], v[3], v[4]]
-            })
-            .collect();
-        let mut h = Replay { ops, at: 0, line: k + 1 };
+        let (ops, payloads) = parts.map(parse_op).unzip();
+        let mut h = Replay { ops, payloads, at: 0, line: k + 1 };
         match kind {
             "R" => right_button_up(&mut h),
+            "H" => {
+                assert!(help_string(&mut h));
+                helps += 1;
+            }
             "C" => {
                 let result = copy_data(&mut h);
                 assert_eq!(result, h.ops[h.at - 1][4], "line {}: CopyData's result", k + 1);
@@ -51,7 +81,7 @@ fn golden_status_button() {
         assert_eq!(h.at, h.ops.len(), "line {}: ops missing", k + 1);
         n += 1;
     }
-    assert!(n >= 3000 && copies >= 500, "{n} cases, {copies} CopyData");
+    assert!(n >= 3000 && copies >= 500 && helps >= 500, "{n} cases, {copies} CopyData, {helps} GetHelpString");
 }
 
 /// Every message kind is sent somewhere in the golden.
@@ -60,7 +90,7 @@ fn golden_sends_every_message() {
     let mut seen = std::collections::BTreeSet::new();
     for line in GOLDEN.lines() {
         for f in line.split('|').skip(1) {
-            let v: Vec<i64> = f.split(' ').map(|x| x.parse().unwrap()).collect();
+            let (v, _) = parse_op(f);
             if v[0] == EE_SCREENS_SB_OP_SEND as i64 {
                 seen.insert(v[1]);
             }

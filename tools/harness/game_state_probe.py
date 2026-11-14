@@ -83,7 +83,9 @@ def sample(pid,addresses=None,players=False):
             for i in range(min(struct.unpack('<I',read(world_va+off('EEWorld',0xcc),4))[0],17)):
                 p=ptr(world_va+off('EEWorld',0x74)+P*i)
                 if not p:continue
-                body=read(p,off('EEPlayer',0xb50))
+                # up to the furthest member read below: the members' order is this build's, not VC6's (EEPlayer's saved
+                # fields live in a base record since core round 24), so a VC6 end offset no longer bounds them
+                body=read(p,max(off('EEPlayer',o) for o in (0x467,0xa28,0xaf4,0xb14,0xb18,0xb49,0xb4a,0xb50))+0x20)
                 rows.append(dict(index=i,vtable=hex(struct.unpack_from(PF,body,0)[0]),observer_b467=body[off('EEPlayer',0x467)],
                                  result_a28=struct.unpack_from('<I',body,off('EEPlayer',0xa28))[0],
                                  resources=list(struct.unpack_from('<5i',body,off('EEPlayer',0xaf4)+8)),

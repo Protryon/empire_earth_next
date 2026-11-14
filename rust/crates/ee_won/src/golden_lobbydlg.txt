@@ -1,0 +1,6037 @@
+seq 0 kind 4
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+ret 0
+call 3 1 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 65535
+op 21 4832 0 0 = 0
+ret 0
+call 4 9 0 0
+ret 0
+call 2 225 1 4112
+op 3 225 0 0 = 0
+ret 0
+call 8 4999 0 0
+op 17 4112 4999 0 = 0
+ret 0
+call 2 225 3 4112
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4752
+op 3 225 0 0 = 0
+ret 0
+call 15 1 0 0
+ret 0
+call 9 74565 0 0
+op 12 4752 0 0 = 65536
+ret 0
+call 3 0 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 65535
+op 21 4832 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 7777
+op 21 4832 0 0 = 0
+ret 0
+call 9 5000 0 0
+op 12 4752 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 5000
+op 21 4832 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4112 0 0 = 0
+op 2 4752 0 0 = 0
+seq 1 kind 2
+call 1 119 0 0
+op 1 119 NameInput AddFriendDialog.cpp 25 0 = 4592
+op 1 119 OkButton AddFriendDialog.cpp 26 1 = 4320
+op 1 119 CancelButton AddFriendDialog.cpp 27 1 = 4800
+ret 0
+call 4 3 0 0
+ret 0
+call 15 2 0 0
+ret 0
+call 15 0 0 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 2 225 1 17476
+op 11 4592 0 0 = 2
+op 6 4320 1 0 = 0
+ret 0
+call 15 0 0 0
+ret 0
+call 2 225 1 17476
+op 11 4592 0 0 = 1
+op 6 4320 1 0 = 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 2 225 3 4320
+op 3 225 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 15 0 0 0
+ret 0
+call 2 225 1 4320
+op 11 4592 0 0 = 1
+op 6 4320 1 0 = 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4592 0 0 = 0
+seq 2 kind 4
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+ret 0
+call 3 0 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 65535
+op 21 4832 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+call 7 5000 0 0
+op 14 4752 5000 1 = 0
+reenter 4752
+op 12 4752 0 0 = 7777
+op 21 4832 0 0 = 0
+op 16 4752 0 -1 = 0
+ret 0
+call 9 4999 0 0
+op 12 4752 0 0 = 0
+ret 0
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 65535
+op 21 4832 0 0 = 0
+ret 0
+call 2 225 2 4112
+op 3 225 0 0 = 0
+ret 0
+call 9 74565 0 0
+op 12 4752 0 0 = 4999
+ret 4999
+call 9 5000 0 0
+op 12 4752 0 0 = 7777
+ret 7777
+call 3 0 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 0
+op 21 4832 0 0 = 1
+ret 0
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 7 6000 0 0
+op 14 4752 6000 1 = 0
+reenter 4752
+op 12 4752 0 0 = 7777
+op 21 4832 0 0 = 1
+op 6 4832 1 0 = 0
+op 16 4752 0 -1 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4112 0 0 = 0
+op 2 4752 0 0 = 0
+seq 3 kind 4
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+ret 0
+call 2 225 2 4832
+op 3 225 0 0 = 0
+ret 0
+call 15 3 0 0
+ret 0
+call 4 4 0 0
+ret 0
+call 4 5 0 0
+ret 0
+call 5 0 0 0
+op 12 4752 0 0 = 0
+op 21 4832 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 7 7777 0 0
+op 14 4752 7777 1 = 0
+op 16 4752 0 -1 = 0
+ret 0
+call 9 5000 0 0
+op 12 4752 0 0 = 5000
+ret 5000
+call 9 6000 0 0
+op 12 4752 0 0 = 6000
+ret 6000
+call 8 74565 0 0
+op 17 4112 9029 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 2 4752 0 0 = 0
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 2 4112 0 0 = 0
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+op 2 4832 0 0 = 0
+ret 0
+call 9 4999 0 0
+op 12 4752 0 0 = 7777
+ret 7777
+call 8 6000 0 0
+op 17 4112 6000 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4112 0 0 = 0
+op 2 4752 0 0 = 0
+seq 4 kind 0
+call 1 119 0 0
+op 1 119 LanNameInput LanNameDialog.cpp 31 0 = 4192
+op 1 119 OkButton LanNameDialog.cpp 32 1 = 4320
+op 1 119 CancelButton LanNameDialog.cpp 33 1 = 4800
+ret 0
+call 4 1 0 0
+ret 4320
+call 2 225 0 4800
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+call 15 3 0 0
+ret 0
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 2 225 1 4192
+op 3 225 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4192
+call 4 3 0 0
+ret 0
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4192 0 0 = 0
+seq 5 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 1 5008
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 15 2 0 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 4 4 0 0
+ret 4832
+call 2 225 0 4160
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4160 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 6 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 4320
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 2 4320 0 0 = 0
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+op 2 4800 0 0 = 0
+ret 0
+call 2 225 2 4800
+op 3 225 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 7 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 3 4336
+op 3 225 0 0 = 0
+ret 0
+call 4 5 0 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 15 3 0 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 4 0 0 0
+ret 4160
+call 5 0 0 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 2 225 0 4832
+op 3 225 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 8 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 3 7 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 4 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 4 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 2 225 0 4976
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = -1
+op 24 4736 0 0 = 3
+ret 3600
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 2 225 1 4800
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 5
+op 24 4736 0 0 = 4
+ret 3600
+call 14 0 0 0
+op 24 5024 0 0 = 1
+op 24 4736 0 0 = 2
+ret 432000
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 5024
+op 3 225 0 0 = 0
+ret 0
+call 3 15 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 0 0 = 0
+op 20 4544 1 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 1 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 9 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 4 6 0 0
+ret 4400
+call 15 0 0 0
+ret 0
+call 4 1 0 0
+ret 4704
+call 2 225 1 5024
+op 3 225 0 0 = 0
+ret 0
+call 15 1 0 0
+ret 0
+call 3 2 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 5 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 5 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 14 0 0 0
+op 24 5024 0 0 = 0
+op 24 4736 0 0 = 0
+ret 60
+call 14 0 0 0
+op 24 5024 0 0 = 5
+op 24 4736 0 0 = 1
+ret 12960000
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 10 kind 0
+call 1 119 0 0
+op 1 119 LanNameInput LanNameDialog.cpp 31 0 = 4192
+op 1 119 OkButton LanNameDialog.cpp 32 1 = 4320
+op 1 119 CancelButton LanNameDialog.cpp 33 1 = 4800
+ret 0
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 4 0 0 0
+ret 4192
+call 4 0 0 0
+ret 4192
+call 4 1 0 0
+ret 4320
+call 5 0 0 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 4 6 0 0
+ret 0
+call 4 3 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 0 0 0
+ret 4192
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4192 0 0 = 0
+seq 11 kind 6
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+ret 0
+call 3 0 0 0
+op 5 4304 0 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 2 5008
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4304 0 0 = 0
+op 23 5104 1 0 = 0
+op 25 4560 0 0 = 0
+op 9 4304 0 0 = 0
+op 9 4336 0 0 = 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 2 4560
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 5008
+op 3 225 0 0 = 0
+ret 0
+call 6 3 0 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 15 0 0 0
+ret 0
+call 2 225 2 4560
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+op 3 225 0 0 = 0
+ret 0
+call 4 8 0 0
+ret 4832
+call 2 225 2 17476
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 4560
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 2 4336
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4192 0 0 = 0
+op 2 4096 0 0 = 0
+op 2 5104 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4304 0 0 = 0
+seq 12 kind 3
+call 1 119 0 0
+op 1 119 NameInput DirectConnectDialog.cpp 25 0 = 4592
+op 1 119 AddressInput DirectConnectDialog.cpp 26 0 = 4448
+op 1 119 AddButton DirectConnectDialog.cpp 27 1 = 4400
+op 1 119 CancelButton DirectConnectDialog.cpp 28 1 = 4800
+ret 0
+call 4 3 0 0
+ret 4800
+call 4 0 0 0
+ret 4592
+call 3 0 0 0
+op 5 4592 0 0 = 0
+op 9 4592 0 0 = 0
+op 9 4448 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 2 225 0 4448
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 3 0 0
+ret 4800
+call 5 0 0 0
+ret 0
+call 15 3 0 0
+ret 0
+call 4 0 0 0
+ret 4592
+free
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4448 0 0 = 0
+op 2 4592 0 0 = 0
+seq 13 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 0 4832
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 4 0 0 0
+ret 4160
+call 15 1 0 0
+ret 0
+call 2 225 2 4160
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 2 4832
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4160 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 0 5008
+op 3 225 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 14 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 4 0 0 0
+ret 4160
+call 15 2 0 0
+ret 0
+call 2 225 2 4336
+op 3 225 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 4 7 0 0
+ret 0
+call 2 225 0 4304
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 15 1 0 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 3 4336
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 15 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 4 0 0 0
+ret 4336
+call 4 0 0 0
+ret 4336
+call 3 1 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 4 9 0 0
+ret 0
+call 2 225 1 4336
+op 3 225 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 4 1 0 0
+ret 4320
+call 4 1 0 0
+ret 4320
+call 15 3 0 0
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 16 kind 2
+call 1 119 0 0
+op 1 119 NameInput AddFriendDialog.cpp 25 0 = 4592
+op 1 119 OkButton AddFriendDialog.cpp 26 1 = 4320
+op 1 119 CancelButton AddFriendDialog.cpp 27 1 = 4800
+ret 0
+call 5 0 0 0
+op 11 4592 0 0 = 0
+op 6 4320 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 NameInput AddFriendDialog.cpp 25 0 = 4592
+op 2 4592 0 0 = 0
+op 1 119 OkButton AddFriendDialog.cpp 26 1 = 4320
+op 2 4320 0 0 = 0
+op 1 119 CancelButton AddFriendDialog.cpp 27 1 = 4800
+op 2 4800 0 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4592 1 0 = 0
+reenter 4592
+op 11 4592 0 0 = 1
+op 6 4320 1 0 = 0
+op 5 4592 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4592
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 9 4592 1 0 = 0
+reenter 4592
+op 11 4592 0 0 = 2
+op 6 4320 1 0 = 0
+op 5 4592 0 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4592 0 0 = 1
+op 6 4320 1 0 = 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 3 0 0 0
+op 9 4592 1 0 = 0
+op 5 4592 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 4 0 0 0
+ret 4592
+call 4 1 0 0
+ret 4320
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4592 0 0 = 0
+seq 17 kind 2
+call 1 119 0 0
+op 1 119 NameInput AddFriendDialog.cpp 25 0 = 4592
+op 1 119 OkButton AddFriendDialog.cpp 26 1 = 4320
+op 1 119 CancelButton AddFriendDialog.cpp 27 1 = 4800
+ret 0
+call 2 225 2 4592
+op 3 225 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 4 3 0 0
+ret 0
+call 4 0 0 0
+ret 4592
+call 2 225 1 4800
+op 11 4592 0 0 = 2
+op 6 4320 1 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4592 1 0 = 0
+reenter 4592
+op 11 4592 0 0 = 1
+op 6 4320 1 0 = 0
+op 5 4592 0 0 = 0
+ret 0
+call 2 225 3 4320
+op 3 225 0 0 = 0
+ret 0
+call 4 8 0 0
+ret 0
+call 2 225 0 4800
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4592 0 0 = 0
+seq 18 kind 0
+call 1 119 0 0
+op 1 119 LanNameInput LanNameDialog.cpp 31 0 = 4192
+op 1 119 OkButton LanNameDialog.cpp 32 1 = 4320
+op 1 119 CancelButton LanNameDialog.cpp 33 1 = 4800
+ret 0
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 4 7 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 4 0 0
+ret 0
+call 4 0 0 0
+ret 4192
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4192 0 0 = 0
+seq 19 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 15 3 0 0
+ret 0
+call 4 3 0 0
+ret 0
+call 3 1 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 4 8 0 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 5 0 0 0
+ret 0
+call 15 1 0 0
+ret 0
+call 2 225 3 4336
+op 3 225 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 4 3 0 0
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4336
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 20 kind 0
+call 1 119 0 0
+op 1 119 LanNameInput LanNameDialog.cpp 31 0 = 4192
+op 1 119 OkButton LanNameDialog.cpp 32 1 = 4320
+op 1 119 CancelButton LanNameDialog.cpp 33 1 = 4800
+ret 0
+call 4 2 0 0
+ret 4800
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 15 3 0 0
+ret 0
+call 4 0 0 0
+ret 4192
+call 4 0 0 0
+ret 4192
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 4320
+op 3 225 0 0 = 0
+ret 0
+call 2 225 1 4320
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 4 10 0 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 2 225 1 4800
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4192 0 0 = 0
+seq 21 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 4 10 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 2 225 1 4336
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 4 6 0 0
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 4 0 0 0
+ret 4336
+call 5 0 0 0
+ret 0
+call 4 3 0 0
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 22 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 1
+op 24 4736 0 0 = 5
+ret 5
+call 14 0 0 0
+op 24 5024 0 0 = 3
+op 24 4736 0 0 = 4
+ret 30
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 2 4704 0 0 = 0
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 2 5008 0 0 = 0
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 2 4624 0 0 = 0
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 2 5024 0 0 = 0
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 2 4736 0 0 = 0
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 2 4400 0 0 = 0
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 2 4800 0 0 = 0
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 2 4976 0 0 = 0
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 2 4336 0 0 = 0
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+op 2 4544 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+ret 0
+call 4 1 0 0
+ret 4704
+call 14 0 0 0
+op 24 5024 0 0 = 1
+op 24 4736 0 0 = 4
+ret 5
+call 2 225 2 4400
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 1
+op 24 4736 0 0 = 5
+ret 5
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 23 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4304
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4160 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4160 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 24 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4160 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 4 4 0 0
+ret 4832
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 2 4160 0 0 = 0
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 2 5008 0 0 = 0
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 2 4304 0 0 = 0
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 2 4832 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 2 4304
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 1 4160
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 25 kind 3
+call 1 119 0 0
+op 1 119 NameInput DirectConnectDialog.cpp 25 0 = 4592
+op 1 119 AddressInput DirectConnectDialog.cpp 26 0 = 4448
+op 1 119 AddButton DirectConnectDialog.cpp 27 1 = 4400
+op 1 119 CancelButton DirectConnectDialog.cpp 28 1 = 4800
+ret 0
+call 4 2 0 0
+ret 4400
+call 4 0 0 0
+ret 4592
+call 15 1 0 0
+ret 0
+call 2 225 0 4448
+op 3 225 0 0 = 0
+ret 0
+call 15 0 0 0
+ret 0
+call 4 0 0 0
+ret 4592
+call 5 0 0 0
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 1 0 0
+ret 4448
+call 4 0 0 0
+ret 4592
+free
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4448 0 0 = 0
+op 2 4592 0 0 = 0
+seq 26 kind 0
+call 1 119 0 0
+op 1 119 LanNameInput LanNameDialog.cpp 31 0 = 4192
+op 1 119 OkButton LanNameDialog.cpp 32 1 = 4320
+op 1 119 CancelButton LanNameDialog.cpp 33 1 = 4800
+ret 0
+call 4 1 0 0
+ret 4320
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 0 0 0
+ret 4192
+call 4 9 0 0
+ret 0
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4192 0 0 = 0
+seq 27 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 2 4336
+op 3 225 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 15 1 0 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 5008
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 15 1 0 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 3 4160
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 28 kind 0
+call 1 119 0 0
+op 1 119 LanNameInput LanNameDialog.cpp 31 0 = 4192
+op 1 119 OkButton LanNameDialog.cpp 32 1 = 4320
+op 1 119 CancelButton LanNameDialog.cpp 33 1 = 4800
+ret 0
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 LanNameInput LanNameDialog.cpp 31 0 = 4192
+op 2 4192 0 0 = 0
+op 1 119 OkButton LanNameDialog.cpp 32 1 = 4320
+op 2 4320 0 0 = 0
+op 1 119 CancelButton LanNameDialog.cpp 33 1 = 4800
+op 2 4800 0 0 = 0
+ret 0
+call 15 1 0 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 2 225 0 4800
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 4 9 0 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 4 0 0 0
+ret 4192
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4192 0 0 = 0
+seq 29 kind 3
+call 1 119 0 0
+op 1 119 NameInput DirectConnectDialog.cpp 25 0 = 4592
+op 1 119 AddressInput DirectConnectDialog.cpp 26 0 = 4448
+op 1 119 AddButton DirectConnectDialog.cpp 27 1 = 4400
+op 1 119 CancelButton DirectConnectDialog.cpp 28 1 = 4800
+ret 0
+call 2 225 3 4592
+op 3 225 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4448
+call 4 3 0 0
+ret 4800
+call 2 225 1 4592
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 2 0 0
+ret 4400
+call 3 0 0 0
+op 5 4592 0 0 = 0
+op 9 4592 0 0 = 0
+op 9 4448 0 0 = 0
+ret 0
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 15 1 0 0
+ret 0
+call 15 2 0 0
+ret 0
+call 4 1 0 0
+ret 4448
+call 4 2 0 0
+ret 4400
+free
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4448 0 0 = 0
+op 2 4592 0 0 = 0
+seq 30 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 3 0 0 0
+op 5 4160 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 0 4160
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 31 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 3 1 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 0 0 0
+ret 4336
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 2 4320 0 0 = 0
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+op 2 4800 0 0 = 0
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 15 0 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 3 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 5 0 0 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 32 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 0 0 0
+ret 4336
+call 2 225 1 4320
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 9 0 0
+ret 0
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 2 4320 0 0 = 0
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+op 2 4800 0 0 = 0
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 2 225 3 4320
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4320
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4336
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 33 kind 3
+call 1 119 0 0
+op 1 119 NameInput DirectConnectDialog.cpp 25 0 = 4592
+op 1 119 AddressInput DirectConnectDialog.cpp 26 0 = 4448
+op 1 119 AddButton DirectConnectDialog.cpp 27 1 = 4400
+op 1 119 CancelButton DirectConnectDialog.cpp 28 1 = 4800
+ret 0
+call 3 1 0 0
+op 5 4592 0 0 = 0
+op 9 4592 0 0 = 0
+op 9 4448 0 0 = 0
+ret 0
+call 2 225 0 4400
+op 3 225 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 4800
+call 4 1 0 0
+ret 4448
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4592
+call 3 1 0 0
+op 5 4592 0 0 = 0
+op 9 4592 0 0 = 0
+op 9 4448 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4592
+call 4 1 0 0
+ret 4448
+call 4 2 0 0
+ret 4400
+call 5 0 0 0
+ret 0
+call 4 3 0 0
+ret 4800
+free
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4448 0 0 = 0
+op 2 4592 0 0 = 0
+seq 34 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 3 14 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 3 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 3 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 14
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 2 225 1 5008
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = -1
+op 24 4736 0 0 = 5
+ret 3600
+call 3 15 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 1 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 1 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 3
+op 24 4736 0 0 = 0
+ret 1800
+call 14 0 0 0
+op 24 5024 0 0 = 2
+op 24 4736 0 0 = 0
+ret 600
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 3
+op 24 4736 0 0 = 2
+ret 2592000
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 3 2 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 5 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 5 0 = 0
+op 4 0 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 35 kind 3
+call 1 119 0 0
+op 1 119 NameInput DirectConnectDialog.cpp 25 0 = 4592
+op 1 119 AddressInput DirectConnectDialog.cpp 26 0 = 4448
+op 1 119 AddButton DirectConnectDialog.cpp 27 1 = 4400
+op 1 119 CancelButton DirectConnectDialog.cpp 28 1 = 4800
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+call 2 225 1 4400
+op 3 225 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4592
+call 2 225 2 4400
+op 3 225 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4448
+call 5 0 0 0
+ret 0
+call 4 1 0 0
+ret 4448
+call 15 0 0 0
+ret 0
+call 15 3 0 0
+ret 0
+call 15 0 0 0
+ret 0
+call 15 2 0 0
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4448 0 0 = 0
+op 2 4592 0 0 = 0
+seq 36 kind 3
+call 1 119 0 0
+op 1 119 NameInput DirectConnectDialog.cpp 25 0 = 4592
+op 1 119 AddressInput DirectConnectDialog.cpp 26 0 = 4448
+op 1 119 AddButton DirectConnectDialog.cpp 27 1 = 4400
+op 1 119 CancelButton DirectConnectDialog.cpp 28 1 = 4800
+ret 0
+call 4 1 0 0
+ret 4448
+call 4 9 0 0
+ret 0
+call 2 225 0 4400
+op 3 225 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4448
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4592 0 0 = 0
+op 9 4592 0 0 = 0
+op 9 4448 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 4800
+call 4 3 0 0
+ret 4800
+call 2 225 2 4448
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 4448
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 3 0 0
+ret 4800
+free
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4448 0 0 = 0
+op 2 4592 0 0 = 0
+seq 37 kind 4
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+ret 0
+call 8 6000 0 0
+op 17 4112 6000 0 = 0
+ret 0
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 9 5000 0 0
+op 12 4752 0 0 = -1
+ret 65535
+call 15 2 0 0
+ret 0
+call 5 0 0 0
+op 12 4752 0 0 = 4999
+op 21 4832 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 2 4752
+op 3 225 0 0 = 0
+ret 0
+call 9 5000 0 0
+op 12 4752 0 0 = -1
+ret 65535
+call 3 0 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 4999
+op 21 4832 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 8 6000 0 0
+op 17 4112 6000 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 2 4752 0 0 = 0
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 2 4112 0 0 = 0
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+op 2 4832 0 0 = 0
+ret 0
+call 5 0 0 0
+op 12 4752 0 0 = 0
+op 21 4832 0 0 = 1
+ret 0
+call 8 74565 0 0
+op 17 4112 9029 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4112 0 0 = 0
+op 2 4752 0 0 = 0
+seq 38 kind 2
+call 1 119 0 0
+op 1 119 NameInput AddFriendDialog.cpp 25 0 = 4592
+op 1 119 OkButton AddFriendDialog.cpp 26 1 = 4320
+op 1 119 CancelButton AddFriendDialog.cpp 27 1 = 4800
+ret 0
+call 3 0 0 0
+op 9 4592 1 0 = 0
+op 5 4592 0 0 = 0
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 4 6 0 0
+ret 0
+call 4 0 0 0
+ret 4592
+call 4 1 0 0
+ret 4320
+call 4 2 0 0
+ret 4800
+call 3 1 0 0
+op 9 4592 1 0 = 0
+reenter 4592
+op 11 4592 0 0 = 2
+op 6 4320 1 0 = 0
+op 5 4592 0 0 = 0
+ret 0
+call 2 225 0 4800
+op 3 225 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 NameInput AddFriendDialog.cpp 25 0 = 4592
+op 2 4592 0 0 = 0
+op 1 119 OkButton AddFriendDialog.cpp 26 1 = 4320
+op 2 4320 0 0 = 0
+op 1 119 CancelButton AddFriendDialog.cpp 27 1 = 4800
+op 2 4800 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 4 2 0 0
+ret 4800
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4592 0 0 = 0
+seq 39 kind 2
+call 1 119 0 0
+op 1 119 NameInput AddFriendDialog.cpp 25 0 = 4592
+op 1 119 OkButton AddFriendDialog.cpp 26 1 = 4320
+op 1 119 CancelButton AddFriendDialog.cpp 27 1 = 4800
+ret 0
+call 2 225 3 4320
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 9 4592 1 0 = 0
+op 5 4592 0 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4592 0 0 = 2
+op 6 4320 1 0 = 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 4 3 0 0
+ret 0
+call 5 0 0 0
+op 11 4592 0 0 = 0
+op 6 4320 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 15 3 0 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 5 0 0 0
+op 11 4592 0 0 = 0
+op 6 4320 0 0 = 0
+ret 0
+call 4 10 0 0
+ret 0
+call 4 2 0 0
+ret 4800
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4592 0 0 = 0
+seq 40 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 4 0 0 0
+ret 4336
+call 4 0 0 0
+ret 4336
+call 15 1 0 0
+ret 0
+call 15 3 0 0
+ret 0
+call 15 3 0 0
+ret 0
+call 3 1 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 2 225 1 4320
+op 3 225 0 0 = 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 4 3 0 0
+ret 0
+call 4 2 0 0
+ret 4800
+call 5 0 0 0
+ret 0
+call 4 4 0 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 41 kind 0
+call 1 119 0 0
+op 1 119 LanNameInput LanNameDialog.cpp 31 0 = 4192
+op 1 119 OkButton LanNameDialog.cpp 32 1 = 4320
+op 1 119 CancelButton LanNameDialog.cpp 33 1 = 4800
+ret 0
+call 2 225 2 4192
+op 3 225 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 4 2 0 0
+ret 4800
+call 4 1 0 0
+ret 4320
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 2 225 0 4800
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 4 4 0 0
+ret 0
+call 4 3 0 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4192 0 0 = 0
+seq 42 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 3 7 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 4 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 4 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 3 15 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 0 0 = 0
+op 20 4544 1 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 1 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 0
+op 24 4736 0 0 = 4
+ret 1
+call 2 225 0 4736
+op 3 225 0 0 = 0
+ret 0
+call 3 14 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 3 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 3 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 2 4704 0 0 = 0
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 2 5008 0 0 = 0
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 2 4624 0 0 = 0
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 2 5024 0 0 = 0
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 2 4736 0 0 = 0
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 2 4400 0 0 = 0
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 2 4800 0 0 = 0
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 2 4976 0 0 = 0
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 2 4336 0 0 = 0
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+op 2 4544 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 1
+op 24 4736 0 0 = 1
+ret 18000
+call 2 225 2 4400
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 43 kind 6
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+ret 0
+call 3 0 0 0
+op 5 4304 0 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 15 1 0 0
+ret 0
+call 2 225 3 4832
+op 3 225 0 0 = 0
+ret 0
+call 11 1 0 0
+op 26 0 0 0 = 36864
+op 27 36864 4304 0 = 0
+op 22 4096 0 0 = 1
+op 28 36864 4336 0 = 0
+op 22 4560 0 0 = 1
+op 29 36864 1 0 = 0
+op 22 4192 0 0 = 0
+op 30 36864 0 0 = 0
+op 24 4560 0 0 = 4
+op 31 36864 4 0 = 0
+ret 36864
+call 15 3 0 0
+ret 0
+call 4 0 0 0
+ret 4304
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 2 4304 0 0 = 0
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 2 4560 0 0 = 0
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 2 5008 0 0 = 0
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 2 5104 0 0 = 0
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 2 4096 0 0 = 0
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 2 4192 0 0 = 0
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 2 4560 0 0 = 0
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+op 2 4832 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4304 0 0 = 0
+op 23 5104 1 0 = 0
+op 25 4560 0 0 = 0
+op 9 4304 0 0 = 0
+op 9 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 6 2 0 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 11 4 0 0
+op 26 0 0 0 = 36864
+op 27 36864 4304 0 = 0
+op 22 4096 0 0 = 0
+op 22 4560 0 0 = 0
+op 29 36864 0 0 = 0
+op 22 4192 0 0 = 0
+op 30 36864 0 0 = 0
+op 24 4560 0 0 = 1
+op 31 36864 1 0 = 0
+ret 36864
+call 10 0 0 0
+op 22 4192 0 0 = 1
+op 23 5104 1 0 = 0
+op 7 4192 0 0 = 0
+op 7 4560 0 0 = 0
+ret 0
+call 10 1 0 0
+op 22 4192 0 0 = 0
+op 22 4560 0 0 = 1
+op 23 5104 1 0 = 0
+op 7 4192 0 0 = 0
+op 7 4560 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4192 0 0 = 0
+op 2 4096 0 0 = 0
+op 2 5104 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4304 0 0 = 0
+seq 44 kind 4
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+ret 0
+call 15 0 0 0
+ret 0
+call 9 7777 0 0
+op 12 4752 0 0 = 6000
+ret 6000
+call 15 2 0 0
+ret 0
+call 15 3 0 0
+ret 0
+call 4 2 0 0
+ret 4832
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 2 225 1 4112
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = -1
+op 21 4832 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 3 4112
+op 3 225 0 0 = 0
+ret 0
+call 7 74565 0 0
+op 14 4752 9029 1 = 0
+reenter 4752
+op 12 4752 0 0 = 65535
+op 21 4832 0 0 = 1
+op 6 4832 1 0 = 0
+op 16 4752 0 -1 = 0
+ret 0
+call 15 3 0 0
+ret 0
+call 4 0 0 0
+ret 4752
+free
+op 2 4832 0 0 = 0
+op 2 4112 0 0 = 0
+op 2 4752 0 0 = 0
+seq 45 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 2 4160 0 0 = 0
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 2 5008 0 0 = 0
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 2 4304 0 0 = 0
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 2 4832 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 0 4832
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4304
+op 3 225 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 1 4832
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 15 0 0 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 15 2 0 0
+ret 0
+call 2 225 3 5008
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 46 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 3 14 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 3 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 3 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = -1
+op 24 4736 0 0 = 1
+ret 12960000
+call 14 0 0 0
+op 24 5024 0 0 = 1
+op 24 4736 0 0 = 4
+ret 5
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 4 9 0 0
+ret 4336
+call 5 0 0 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+ret 0
+call 5 0 0 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+ret 0
+call 3 15 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 0 0 = 0
+op 20 4544 1 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 1 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4704
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 47 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 3 7 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 4 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 4 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4736
+op 3 225 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4976
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 2 4704 0 0 = 0
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 2 5008 0 0 = 0
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 2 4624 0 0 = 0
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 2 5024 0 0 = 0
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 2 4736 0 0 = 0
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 2 4400 0 0 = 0
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 2 4800 0 0 = 0
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 2 4976 0 0 = 0
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 2 4336 0 0 = 0
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+op 2 4544 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 48 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 4 0 0 0
+ret 4336
+call 4 1 0 0
+ret 4320
+call 5 0 0 0
+ret 0
+call 4 9 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 0 0 0
+ret 4336
+call 3 1 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 2 225 1 4800
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4320
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 49 kind 6
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+ret 0
+call 2 225 0 4336
+op 3 225 0 0 = 0
+ret 0
+call 2 225 1 4336
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 4 5 0 0
+ret 4096
+call 10 3 0 0
+op 22 4192 0 0 = 1
+op 23 5104 1 0 = 0
+op 7 4192 0 0 = 0
+op 7 4560 0 0 = 0
+ret 0
+call 4 7 0 0
+ret 4560
+call 6 3 0 0
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 10 4 0 0
+op 22 4192 0 0 = 0
+op 22 4560 0 0 = 1
+op 23 5104 1 0 = 0
+op 7 4192 0 0 = 0
+op 7 4560 0 0 = 0
+ret 0
+call 6 3 0 0
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4304 0 0 = 0
+op 23 5104 1 0 = 0
+op 25 4560 0 0 = 0
+op 9 4304 0 0 = 0
+op 9 4336 0 0 = 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 3 5008
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4304 0 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 11 3 0 0
+op 26 0 4 0 = 36864
+op 27 36864 4304 0 = 0
+op 22 4096 0 0 = 0
+op 22 4560 0 0 = 1
+op 29 36864 1 0 = 0
+op 22 4192 0 0 = 1
+op 30 36864 1 0 = 0
+op 24 4560 0 0 = 2
+op 31 36864 2 0 = 0
+ret 36864
+free
+op 2 4832 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4192 0 0 = 0
+op 2 4096 0 0 = 0
+op 2 5104 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4304 0 0 = 0
+seq 50 kind 0
+call 1 119 0 0
+op 1 119 LanNameInput LanNameDialog.cpp 31 0 = 4192
+op 1 119 OkButton LanNameDialog.cpp 32 1 = 4320
+op 1 119 CancelButton LanNameDialog.cpp 33 1 = 4800
+ret 0
+call 3 0 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 3 0 0
+ret 0
+call 4 3 0 0
+ret 0
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 0 0 0
+ret 4192
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+call 3 1 0 0
+op 9 4192 0 0 = 0
+op 5 4192 0 0 = 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4192 0 0 = 0
+seq 51 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 3 5008
+op 3 225 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 2 225 1 17476
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 5 0 0 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 4 4 0 0
+ret 4832
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 1 5008
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 52 kind 6
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+ret 0
+call 3 0 0 0
+op 5 4304 0 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 5 0 0 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 4 6 0 0
+ret 4192
+call 3 1 0 0
+op 5 4304 0 0 = 0
+op 23 5104 1 0 = 0
+op 25 4560 0 0 = 0
+op 9 4304 0 0 = 0
+op 9 4336 0 0 = 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 1 4560
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 5 0 0 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 5 0 0 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4304 0 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 2 225 1 5008
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 15 3 0 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4192 0 0 = 0
+op 2 4096 0 0 = 0
+op 2 5104 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4304 0 0 = 0
+seq 53 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 0
+call 4 3 0 0
+ret 0
+call 4 6 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 2 225 1 4336
+op 3 225 0 0 = 0
+ret 0
+call 4 10 0 0
+ret 0
+call 2 225 3 4336
+op 3 225 0 0 = 0
+ret 0
+call 4 1 0 0
+ret 4320
+call 4 1 0 0
+ret 4320
+call 2 225 1 4336
+op 3 225 0 0 = 0
+ret 0
+call 4 6 0 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 54 kind 4
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+ret 0
+call 3 1 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 6000
+op 21 4832 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 8 4999 0 0
+op 17 4112 4999 0 = 0
+ret 0
+call 5 0 0 0
+op 12 4752 0 0 = 5000
+op 21 4832 0 0 = 0
+ret 0
+call 5 0 0 0
+op 12 4752 0 0 = 65535
+op 21 4832 0 0 = 0
+ret 0
+call 2 225 3 4112
+op 3 225 0 0 = 0
+ret 0
+call 8 7777 0 0
+op 17 4112 7777 0 = 0
+ret 0
+call 9 5000 0 0
+op 12 4752 0 0 = 65536
+ret 0
+call 3 1 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = -1
+op 21 4832 0 0 = 1
+ret 0
+call 9 6000 0 0
+op 12 4752 0 0 = 7777
+ret 7777
+call 4 5 0 0
+ret 0
+call 2 225 3 4112
+op 3 225 0 0 = 0
+ret 0
+call 8 6000 0 0
+op 17 4112 6000 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4112 0 0 = 0
+op 2 4752 0 0 = 0
+seq 55 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 1 4304
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 1
+ret 4336
+call 15 0 0 0
+ret 0
+call 15 3 0 0
+ret 0
+call 3 0 0 0
+op 5 4160 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4160 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 56 kind 1
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+ret 0
+call 4 1 0 0
+ret 4320
+call 3 1 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 4 4 0 0
+ret 0
+call 5 0 0 0
+ret 0
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 2 4320 0 0 = 0
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+op 2 4800 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 2 4320 0 0 = 0
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+op 2 4800 0 0 = 0
+ret 0
+call 3 0 0 0
+op 9 4336 0 0 = 0
+op 5 4336 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 PasswordInput PasswordDialog.cpp 24 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 OkButton PasswordDialog.cpp 25 1 = 4320
+op 2 4320 0 0 = 0
+op 1 119 CancelButton PasswordDialog.cpp 26 1 = 4800
+op 2 4800 0 0 = 0
+ret 0
+call 5 0 0 0
+ret 0
+free
+op 2 4800 0 0 = 0
+op 2 4320 0 0 = 0
+op 2 4336 0 0 = 0
+seq 57 kind 5
+call 1 119 0 0
+op 1 119 RoomNameInput CreateRoomDialog.cpp 25 0 = 4160
+op 1 119 PasswordInput CreateRoomDialog.cpp 26 0 = 4336
+op 1 119 PasswordLabel CreateRoomDialog.cpp 27 2 = 5008
+op 1 119 PasswordCheck CreateRoomDialog.cpp 28 1 = 4304
+op 1 119 CreateButton CreateRoomDialog.cpp 29 1 = 4832
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4160 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 2 225 0 4832
+op 3 225 0 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4160 0 0 = 0
+op 9 4160 0 0 = 0
+op 9 4336 0 0 = 0
+op 23 4304 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 1
+op 7 5008 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 2 225 0 4160
+op 3 225 0 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+call 2 225 0 4336
+op 3 225 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 2 225 2 4160
+op 3 225 0 0 = 0
+ret 0
+call 6 0 0 0
+op 22 4304 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4304 0 0 = 0
+op 7 5008 0 0 = 0
+op 11 4160 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 12 0 0 0
+op 22 4304 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4304 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4160 0 0 = 0
+seq 58 kind 6
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+ret 0
+call 6 1 0 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4304 0 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 6 1 0 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 4 3 0 0
+ret 5008
+call 11 4 0 0
+op 26 0 0 0 = 36864
+op 27 36864 4304 0 = 0
+op 22 4096 0 0 = 1
+op 28 36864 4336 0 = 0
+op 22 4560 0 0 = 0
+op 29 36864 0 0 = 0
+op 22 4192 0 0 = 1
+op 30 36864 1 0 = 0
+op 24 4560 0 0 = 1
+op 31 36864 1 0 = 0
+ret 36864
+call 3 1 0 0
+op 5 4304 0 0 = 0
+op 23 5104 1 0 = 0
+op 25 4560 0 0 = 0
+op 9 4304 0 0 = 0
+op 9 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4304
+call 2 225 0 4832
+op 3 225 0 0 = 0
+ret 0
+call 6 1 0 0
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 2 4304 0 0 = 0
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 2 4560 0 0 = 0
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 2 5008 0 0 = 0
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 2 5104 0 0 = 0
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 2 4096 0 0 = 0
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 2 4192 0 0 = 0
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 2 4560 0 0 = 0
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+op 2 4832 0 0 = 0
+ret 0
+call 11 0 0 0
+op 26 0 0 0 = 36864
+op 27 36864 4304 0 = 0
+op 22 4096 0 0 = 1
+op 28 36864 4336 0 = 0
+op 22 4560 0 0 = 0
+op 29 36864 0 0 = 0
+op 22 4192 0 0 = 1
+op 30 36864 1 0 = 0
+op 24 4560 0 0 = 2
+op 31 36864 2 0 = 0
+ret 36864
+call 6 1 0 0
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4192 0 0 = 0
+op 2 4096 0 0 = 0
+op 2 5104 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4304 0 0 = 0
+seq 59 kind 4
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+ret 0
+call 7 7777 0 0
+op 14 4752 7777 1 = 0
+op 16 4752 0 -1 = 0
+ret 0
+call 7 65535 0 0
+op 14 4752 65535 1 = 0
+op 16 4752 0 -1 = 0
+ret 0
+call 9 74565 0 0
+op 12 4752 0 0 = 65535
+ret 65535
+call 3 0 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 65536
+op 21 4832 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 7 65535 0 0
+op 14 4752 65535 1 = 0
+op 16 4752 0 -1 = 0
+ret 0
+call 9 65535 0 0
+op 12 4752 0 0 = 65535
+ret 65535
+call 2 225 2 4112
+op 3 225 0 0 = 0
+ret 0
+call 7 5000 0 0
+op 14 4752 5000 1 = 0
+op 16 4752 0 -1 = 0
+ret 0
+call 4 4 0 0
+ret 0
+call 7 5000 0 0
+op 14 4752 5000 1 = 0
+op 16 4752 0 -1 = 0
+ret 0
+call 2 225 2 4752
+op 3 225 0 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = -1
+op 21 4832 0 0 = 1
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4112 0 0 = 0
+op 2 4752 0 0 = 0
+seq 65 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 2
+op 24 4736 0 0 = 3
+ret 10
+call 14 0 0 0
+op 24 5024 0 0 = 5
+op 24 4736 0 0 = 0
+ret 216000
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 2 225 2 4704
+op 3 225 0 0 = 0
+ret 0
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 1
+op 24 4736 0 0 = 2
+ret 432000
+call 5 0 0 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 2 225 2 4800
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 3
+op 24 4736 0 0 = -1
+ret 30
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 74 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 4 9 0 0
+ret 4336
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 4 3 0 0
+ret 4624
+call 5 0 0 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+ret 0
+call 15 1 0 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 4
+op 24 4736 0 0 = 2
+ret 0
+call 15 0 0 0
+ret 0
+call 4 9 0 0
+ret 4336
+call 2 225 2 4400
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 0
+call 2 225 0 4976
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 75 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 15 1 0 0
+ret 0
+call 2 225 2 4976
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 2
+op 24 4736 0 0 = -1
+ret 10
+call 14 0 0 0
+op 24 5024 0 0 = 3
+op 24 4736 0 0 = 2
+ret 2592000
+call 3 15 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 1 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 1 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 3 7 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 4 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 4 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 2
+op 24 4736 0 0 = 0
+ret 600
+call 2 225 2 5024
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 0
+op 24 4736 0 0 = -1
+ret 1
+call 14 0 0 0
+op 24 5024 0 0 = 0
+op 24 4736 0 0 = 4
+ret 1
+call 4 4 0 0
+ret 5024
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 82 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 14 0 0 0
+op 24 5024 0 0 = -1
+op 24 4736 0 0 = 0
+ret 216000
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 0
+op 24 4736 0 0 = 1
+ret 3600
+call 14 0 0 0
+op 24 5024 0 0 = 0
+op 24 4736 0 0 = 2
+ret 86400
+call 3 14 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 3 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 3 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = -1
+op 24 4736 0 0 = 0
+ret 216000
+call 2 225 3 4624
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 86 kind 4
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+ret 0
+call 8 6000 0 0
+op 17 4112 6000 0 = 0
+ret 0
+call 2 225 0 4832
+op 3 225 0 0 = 0
+ret 0
+call 2 225 1 4832
+op 3 225 0 0 = 0
+ret 0
+call 15 0 0 0
+ret 6000
+call 9 5000 0 0
+op 12 4752 0 0 = 6000
+ret 6000
+call 3 0 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 7777
+op 21 4832 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 8 74565 0 0
+op 17 4112 9029 0 = 0
+ret 0
+call 15 0 0 0
+ret 9029
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 9 65535 0 0
+op 12 4752 0 0 = 5000
+ret 5000
+call 3 0 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = -1
+op 21 4832 0 0 = 0
+op 6 4832 0 0 = 0
+ret 0
+call 5 0 0 0
+op 12 4752 0 0 = 0
+op 21 4832 0 0 = 1
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4112 0 0 = 0
+op 2 4752 0 0 = 0
+seq 88 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 4
+op 24 4736 0 0 = 1
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 2 225 3 4976
+op 3 225 0 0 = 0
+ret 0
+call 3 14 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 3 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 3 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 3 7 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 4 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 4 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 3
+op 24 4736 0 0 = 3
+ret 30
+call 5 0 0 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+ret 0
+call 2 225 0 4400
+op 3 225 0 0 = 0
+ret 0
+call 4 5 0 0
+ret 4736
+call 15 1 0 0
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 92 kind 6
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+ret 0
+call 4 8 0 0
+ret 4832
+call 6 1 0 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 11 3 0 0
+op 26 0 0 0 = 36864
+op 27 36864 4304 0 = 0
+op 22 4096 0 0 = 0
+op 22 4560 0 0 = 0
+op 29 36864 0 0 = 0
+op 22 4192 0 0 = 0
+op 30 36864 0 0 = 0
+op 24 4560 0 0 = 0
+op 31 36864 0 0 = 0
+ret 36864
+call 2 225 2 4560
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 0
+op 6 4832 1 0 = 0
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 5104
+op 22 4096 0 0 = 0
+op 7 4336 0 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 5104
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 0
+op 6 4832 0 0 = 0
+op 3 225 0 0 = 0
+ret 0
+call 6 4 0 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 0
+op 7 5008 0 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 4 7 0 0
+ret 4560
+call 6 1 0 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 10 2 0 0
+op 22 4192 0 0 = 1
+op 23 5104 1 0 = 0
+op 7 4192 1 0 = 0
+op 7 4560 1 0 = 0
+ret 0
+call 4 4 0 0
+ret 5104
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4192 0 0 = 0
+op 2 4096 0 0 = 0
+op 2 5104 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4304 0 0 = 0
+seq 96 kind 4
+call 1 119 0 0
+op 1 119 PortInput LanPortDialog.cpp 32 0 = 4752
+op 13 4752 0 0 = 0
+op 1 119 GamePortLabel LanPortDialog.cpp 35 2 = 4112
+op 1 119 OKButton LanPortDialog.cpp 36 1 = 4832
+ret 0
+call 8 4999 0 0
+op 17 4112 4999 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4752 0 0 = 0
+op 12 4752 0 0 = 6000
+op 21 4832 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 9 74565 0 0
+op 12 4752 0 0 = 6000
+ret 6000
+call 15 0 0 0
+ret 4999
+call 2 225 3 4112
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4832
+op 3 225 0 0 = 0
+ret 0
+call 15 3 0 0
+ret 0
+call 4 1 0 0
+ret 4112
+call 2 225 3 17476
+op 3 225 0 0 = 0
+ret 0
+call 9 65535 0 0
+op 12 4752 0 0 = 0
+ret 0
+call 4 7 0 0
+ret 0
+call 15 1 0 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4112 0 0 = 0
+op 2 4752 0 0 = 0
+seq 100 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 3 14 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 3 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 3 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 2 225 0 17476
+op 3 225 0 0 = 0
+ret 0
+call 3 14 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 3 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 3 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 2
+op 24 4736 0 0 = 4
+ret 10
+call 4 8 0 0
+ret 4976
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 14 0 0 0
+op 24 5024 0 0 = 2
+op 24 4736 0 0 = 2
+ret 864000
+call 2 225 3 5024
+op 3 225 0 0 = 0
+ret 0
+call 15 1 0 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 2 225 2 4704
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 146 kind 6
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+ret 0
+call 2 225 1 4832
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 15 0 0 0
+ret 0
+call 2 225 1 4560
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 3 0 0 0
+op 5 4304 0 0 = 0
+op 10 4304 0 0 = 0
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 GameNameInput CreateGameDialog.cpp 34 0 = 4304
+op 2 4304 0 0 = 0
+op 1 119 SkillCombo CreateGameDialog.cpp 35 3 = 4560
+op 2 4560 0 0 = 0
+op 1 119 PasswordInput CreateGameDialog.cpp 36 0 = 4336
+op 2 4336 0 0 = 0
+op 1 119 PasswordLabel CreateGameDialog.cpp 37 2 = 5008
+op 2 5008 0 0 = 0
+op 1 119 OpenToAllRadio CreateGameDialog.cpp 38 1 = 5104
+op 2 5104 0 0 = 0
+op 1 119 PasswordRadio CreateGameDialog.cpp 39 1 = 4096
+op 2 4096 0 0 = 0
+op 1 119 InviteOnlyRadio CreateGameDialog.cpp 40 1 = 4192
+op 2 4192 0 0 = 0
+op 1 119 AskToJoinRadio CreateGameDialog.cpp 41 1 = 4560
+op 2 4560 0 0 = 0
+op 1 119 CreateButton CreateGameDialog.cpp 42 1 = 4832
+op 2 4832 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+ret 0
+call 5 0 0 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 3 1 0 0
+op 5 4304 0 0 = 0
+op 23 5104 1 0 = 0
+op 25 4560 0 0 = 0
+op 9 4304 0 0 = 0
+op 9 4336 0 0 = 0
+op 22 4096 0 0 = 1
+op 7 4336 1 0 = 0
+op 22 4096 0 0 = 1
+op 7 5008 1 0 = 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 1
+op 6 4832 1 0 = 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 1
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 10 4 0 0
+op 22 4192 0 0 = 0
+op 22 4560 0 0 = 0
+op 7 4192 0 0 = 0
+op 7 4560 0 0 = 0
+ret 0
+call 15 1 0 0
+ret 4
+call 5 0 0 0
+op 10 4304 0 0 = 2
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+call 5 0 0 0
+op 10 4304 0 0 = 1
+op 8 4336 0 0 = 0
+op 11 4336 0 0 = 2
+op 6 4832 1 0 = 0
+ret 0
+free
+op 2 4832 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4192 0 0 = 0
+op 2 4096 0 0 = 0
+op 2 5104 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4336 0 0 = 0
+op 2 4560 0 0 = 0
+op 2 4304 0 0 = 0
+seq 169 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 5
+op 24 4736 0 0 = 2
+ret 311040000
+call 4 5 0 0
+ret 4736
+call 15 0 0 0
+ret 0
+call 2 225 1 4704
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 4704
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4400
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 3
+op 24 4736 0 0 = 3
+ret 30
+call 2 225 2 17476
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 5
+op 24 4736 0 0 = 5
+ret 3600
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 2 225 1 5024
+op 3 225 0 0 = 0
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 181 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 2 225 0 4736
+op 3 225 0 0 = 0
+ret 0
+call 3 2 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 5 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 5 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 15 1 0 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 2 225 0 4800
+op 3 225 0 0 = 0
+ret 0
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 2 225 3 4800
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4400
+op 3 225 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 8
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 8
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 257 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 14 0 0 0
+op 24 5024 0 0 = 4
+op 24 4736 0 0 = 3
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 2 225 1 17476
+op 3 225 0 0 = 0
+ret 0
+call 4 0 0 0
+ret 4544
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 2 225 2 4400
+op 3 225 0 0 = 0
+ret 0
+call 2 225 3 4704
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 5008
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 0
+op 24 4736 0 0 = 2
+ret 86400
+call 15 0 0 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 310 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 5 0 0 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 2 4704 0 0 = 0
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 2 5008 0 0 = 0
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 2 4624 0 0 = 0
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 2 5024 0 0 = 0
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 2 4736 0 0 = 0
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 2 4400 0 0 = 0
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 2 4800 0 0 = 0
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 2 4976 0 0 = 0
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 2 4336 0 0 = 0
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+op 2 4544 0 0 = 0
+ret 0
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 2 4704 0 0 = 0
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 2 5008 0 0 = 0
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 2 4624 0 0 = 0
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 2 5024 0 0 = 0
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 2 4736 0 0 = 0
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 2 4400 0 0 = 0
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 2 4800 0 0 = 0
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 2 4976 0 0 = 0
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 2 4336 0 0 = 0
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+op 2 4544 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 14 0 0 0
+op 24 5024 0 0 = 3
+op 24 4736 0 0 = 5
+ret 30
+call 2 225 1 4336
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 1
+op 24 4736 0 0 = 0
+ret 300
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 2 225 1 4800
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 313 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 3 15 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 1 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 1 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 5
+op 24 4736 0 0 = 1
+ret 12960000
+call 15 2 0 0
+ret 15
+call 14 0 0 0
+op 24 5024 0 0 = 4
+op 24 4736 0 0 = 2
+ret 0
+call 15 0 0 0
+ret 0
+call 4 0 0 0
+ret 4544
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 4 10 0 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 2 225 2 5024
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 326 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 2 225 2 4800
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 3
+op 24 4736 0 0 = 1
+ret 108000
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 4 7 0 0
+ret 4800
+call 2 225 1 4336
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 5008
+op 3 225 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 2 225 2 4544
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 5024
+op 3 225 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 2 225 0 4624
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 423 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 1
+op 24 4736 0 0 = 0
+ret 300
+call 2 225 0 5008
+op 3 225 0 0 = 0
+ret 0
+call 4 9 0 0
+ret 4336
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 5 0 0 0
+op 10 5008 0 0 = 0
+op 6 4400 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 2
+op 24 4736 0 0 = 1
+ret 36000
+call 2 225 1 5008
+op 10 5008 0 0 = 0
+op 6 4400 0 0 = 0
+ret 0
+call 2 225 1 4336
+op 3 225 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 0
+op 24 4736 0 0 = 5
+ret 1
+call 2 225 1 4800
+op 3 225 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 494 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 15 2 0 0
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 5 0 0 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 2 4704 0 0 = 0
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 2 5008 0 0 = 0
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 2 4624 0 0 = 0
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 2 5024 0 0 = 0
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 2 4736 0 0 = 0
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 2 4400 0 0 = 0
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 2 4800 0 0 = 0
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 2 4976 0 0 = 0
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 2 4336 0 0 = 0
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+op 2 4544 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 3
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 15 3 0 0
+ret 1
+call 3 15 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 0 0 = 0
+op 20 4544 1 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 1 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 3 2 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 2
+op 6 4400 1 0 = 0
+op 20 4544 5 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 5 0 = 0
+op 4 0 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 603 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 3 7 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 4 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 4 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 2 225 2 4976
+op 3 225 0 0 = 0
+ret 0
+call 2 225 0 4800
+op 3 225 0 0 = 0
+ret 0
+call 2 225 2 4400
+op 3 225 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 7
+call 4 3 0 0
+ret 4624
+call 3 8 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 1 0 = 0
+op 20 4544 2 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 2 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 14 0 0 0
+op 24 5024 0 0 = 5
+op 24 4736 0 0 = -1
+ret 3600
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 2 4704 0 0 = 0
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 2 5008 0 0 = 0
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 2 4624 0 0 = 0
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 2 5024 0 0 = 0
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 2 4736 0 0 = 0
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 2 4400 0 0 = 0
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 2 4800 0 0 = 0
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 2 4976 0 0 = 0
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 2 4336 0 0 = 0
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+op 2 4544 0 0 = 0
+ret 0
+call 2 225 2 4336
+op 3 225 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0
+seq 842 kind 7
+call 1 119 0 0
+op 1 119 ExplanationHeader AdminActionDialog.cpp 105 2 = 4704
+op 1 119 Explanation AdminActionDialog.cpp 106 0 = 5008
+op 1 119 DurationHeader AdminActionDialog.cpp 107 2 = 4624
+op 1 119 DurationCombo AdminActionDialog.cpp 108 3 = 5024
+op 1 119 TimeSegmentCombo AdminActionDialog.cpp 109 3 = 4736
+op 1 119 DoActionButton AdminActionDialog.cpp 110 1 = 4400
+op 1 119 CancelButton AdminActionDialog.cpp 111 1 = 4800
+op 1 119 ApplyToRoomRadio AdminActionDialog.cpp 112 1 = 4976
+op 1 119 ApplyToServerRadio AdminActionDialog.cpp 113 1 = 4336
+op 1 119 TitleLabel AdminActionDialog.cpp 114 2 = 4544
+ret 0
+call 3 2 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 1 0 = 0
+op 7 5024 1 0 = 0
+op 7 4736 1 0 = 0
+op 7 4336 1 0 = 0
+op 7 4976 1 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 0 0 = 0
+op 20 4544 5 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 5 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 15 2 0 0
+ret 2
+call 2 225 1 4400
+op 3 225 0 0 = 0
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 0 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 3 3 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 0 0 = 0
+op 10 5008 0 0 = 0
+op 6 4400 0 0 = 0
+op 20 4544 0 20480 = 0
+op 18 4704 7 0 = 0
+op 19 4400 0 0 = 0
+op 4 0 0 0 = 0
+ret 0
+call 2 225 3 4336
+op 3 225 0 0 = 0
+ret 0
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 13 0 0 0
+op 22 4336 0 0 = 1
+ret 1
+call 4 6 0 0
+ret 4400
+call 2 225 3 4400
+op 3 225 0 0 = 0
+ret 0
+call 3 7 20480 0
+op 23 4336 0 0 = 0
+op 23 4976 1 0 = 0
+op 15 5008 0 0 = 0
+op 25 5024 1 0 = 0
+op 25 4736 0 0 = 0
+op 7 4624 0 0 = 0
+op 7 5024 0 0 = 0
+op 7 4736 0 0 = 0
+op 7 4336 0 0 = 0
+op 7 4976 0 0 = 0
+op 6 5008 1 0 = 0
+op 5 5008 0 0 = 0
+op 10 5008 0 0 = 1
+op 6 4400 1 0 = 0
+op 20 4544 4 20480 = 0
+op 18 4704 6 0 = 0
+op 19 4400 4 0 = 0
+op 4 0 0 0 = 0
+ret 0
+free
+op 2 4336 0 0 = 0
+op 2 4976 0 0 = 0
+op 2 4800 0 0 = 0
+op 2 4400 0 0 = 0
+op 2 4736 0 0 = 0
+op 2 5024 0 0 = 0
+op 2 4624 0 0 = 0
+op 2 5008 0 0 = 0
+op 2 4704 0 0 = 0
+op 2 4544 0 0 = 0

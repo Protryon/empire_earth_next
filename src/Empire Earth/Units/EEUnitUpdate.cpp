@@ -131,7 +131,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_UPD_R_OWNER:
         return (int64_t)theUnit->mPlayer->mPlayerID;
     case EE_UNITS_UPD_R_TILE_X:
-        return (int64_t)theUnit->mTileX.Get();
+        return (int64_t)theUnit->mTileX;
     case EE_UNITS_UPD_R_COMMAND:
         return theUnit->mCommand ? (int64_t)theUnit->mCommand->mType : 0;
     case EE_UNITS_UPD_R_GOAL_KIND:
@@ -139,13 +139,13 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_UPD_R_UNIT_TYPE:
         return (int64_t)theUnit->mUnitClass->mUnitType;
     case EE_UNITS_UPD_R_HIT_POINTS:
-        return (int64_t)theUnit->mHitPoints.Get();
+        return (int64_t)theUnit->mHitPoints;
     case EE_UNITS_UPD_R_FAMILY:
         return (int64_t)theUnit->mUnitClass->mFamily;
     case EE_UNITS_UPD_R_BUILT:
         return theUnit->mIsBuilt ? 1 : 0;
     case EE_UNITS_UPD_R_FLIGHT_TIME:
-        return (int64_t)theUnit->mFlightTime.Get();
+        return (int64_t)theUnit->mFlightTime;
     // the others
     case EE_UNITS_UPD_R_CONVERSION_START:
         return (int64_t)theUnit->mConversionStartTime;
@@ -236,7 +236,7 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
     case EE_UNITS_ACT_R_CONTAINER:
         return theUnit->mContainer != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_RESOURCE_AMOUNT:
-        return (int64_t)theUnit->mResourceAmount.Get();
+        return (int64_t)theUnit->mResourceAmount;
     // the fourteenth round's
     case EE_UNITS_ACT_R_IS_HUMAN:
         return theUnit->mPlayer->IsHuman() ? 1 : 0;
