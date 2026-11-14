@@ -42,6 +42,7 @@ local ECON = {
     useful_cap = false,     -- from the Copper Age, as in the Prehistoric, no more citizens than the places have work for
     order = false,          -- the owner's build order (lib.build_order): the phases, their exact gatherers and buildings
     iron_guard = false,     -- from the Copper Age, while saving, the epoch's iron kept from the army's exemption (§8.51)
+    iron_guard_stone = false,   -- (with iron_guard) the same from the Stone Age (the Copper save)
     iron_push = false,      -- from the Copper Age, while the save lacks iron: iron claimed further out, 18 on it, from
                             -- the food once the epoch's food is in stock (§8.51)
 }
@@ -713,7 +714,9 @@ function M.step(view, memory)
         -- (ECON.iron_guard, boom-defence's late-game finding: the Bronze save unpaid 44 minutes on iron alone, stock 3-27,
         -- the reserve 0 iron while the light army, always short in Copper, retrained spearmen and macemen from it) from
         -- the Copper Age, while saving, the epoch's iron is kept from the army too
-        if ECON.iron_guard and r == "iron" and age >= 3 and saving and cost[r] > 0 then
+        -- (ECON.iron_guard_stone: from the Stone Age; normal starts against the classic reached developed with 10-190
+        -- gold and iron in stock and paid the Copper save's iron last in 20 of 25 games)
+        if ECON.iron_guard and r == "iron" and age >= (ECON.iron_guard_stone and 2 or 3) and saving and cost[r] > 0 then
             return true
         end
         return cost[r] > 0 and (view.stock[r] * 10 >= cost[r] * 7 or no_site[r] == true)
@@ -755,8 +758,11 @@ function M.step(view, memory)
     for _, r in ipairs(V.resources) do
         local want = 0
         -- (ECON.order: only while saving; the raid force's spearmen, 30 food and 30 iron each, wait on no reserve)
+        -- (BO.OPT.stone_metal_keep: under ECON.order the gold and iron are kept from stone_grow, before the save)
         local kept = not last and not view.advancing and not unreachable
-            and (saving or (age >= 2 and (r == "gold" or r == "iron") and not ECON.order))
+            and (saving or (age >= 2 and (r == "gold" or r == "iron") and not ECON.order)
+                or (ECON.order and BO.OPT.stone_metal_keep and age == 2 and phase == "stone_grow"
+                    and (r == "gold" or r == "iron")))
         if kept then
             want = cost[r]
             epoch_need[r] = cost[r]

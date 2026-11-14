@@ -61,6 +61,7 @@ M.OPT = {
                             -- the claim range holds none
     stone_mines = false,    -- (off until benched) copper_mines from the Stone Age's growth (stone_grow on)
     save_developed = false, -- (off until benched) the Copper Age saved for once developed, the raid not waited for
+    stone_metal_keep = false,   -- (off until benched) the Copper Age's gold and iron kept from stone_grow, before the save
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
