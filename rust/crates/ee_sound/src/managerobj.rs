@@ -237,7 +237,11 @@ pub unsafe extern "C" fn ee_sound_manager_new(
         let r = sys::ee_ts_event_new(&mut (*m).exit, true);
         sys::verify(r == 0, b"TSScheduler::CreateEvent(this->mScavengerThreadExitEvent) == keseOK\0", 249);
         let r = sys::ee_ts_thread_new(&mut (*m).thread, Some(scavenger), m.cast(), 0, false);
-        sys::verify(r == 0, b"TSScheduler::CreateThread(this->mScavengerThread, SESoundManager::Scavenger, this) == keseOK\0", 255);
+        sys::verify(
+            r == 0,
+            b"TSScheduler::CreateThread(this->mScavengerThread, SESoundManager::Scavenger, this) == keseOK\0",
+            255,
+        );
         sys::ee_ts_thread_set_name((*m).thread, c"SoundScavngr".as_ptr());
     }
     m
@@ -494,7 +498,12 @@ pub unsafe extern "C" fn ee_sound_manager_get_and_reference(m: *const EeSoundMan
 /// # Safety
 /// `m` is a live manager, `name` NUL-terminated.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_manager_load(m: *const EeSoundManager, name: *const c_char, category: u32, max: u32) -> u32 {
+pub unsafe extern "C" fn ee_sound_manager_load(
+    m: *const EeSoundManager,
+    name: *const c_char,
+    category: u32,
+    max: u32,
+) -> u32 {
     let name = unsafe { CStr::from_ptr(name) }.to_bytes();
     unsafe { me(m) }.locked(|s, h| s.load(h, name, category, max))
 }
@@ -553,7 +562,11 @@ pub unsafe extern "C" fn ee_sound_manager_register_one_shot(m: *const EeSoundMan
 /// # Safety
 /// `m` is a live manager.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_manager_set_category_percentage(m: *const EeSoundManager, category: u32, percent: f32) -> u32 {
+pub unsafe extern "C" fn ee_sound_manager_set_category_percentage(
+    m: *const EeSoundManager,
+    category: u32,
+    percent: f32,
+) -> u32 {
     let p = percent as f64;
     sys::verify((0.0..=1.0).contains(&p), b"inPercent >= 0.0 && inPercent <= 1.0\0", 2936);
     unsafe { me(m) }.locked(|s, _| s.set_category_percentage(category, percent))
@@ -564,7 +577,11 @@ pub unsafe extern "C" fn ee_sound_manager_set_category_percentage(m: *const EeSo
 /// # Safety
 /// `m` is a live manager.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_manager_set_category_priority(m: *const EeSoundManager, category: u32, priority: u32) -> i32 {
+pub unsafe extern "C" fn ee_sound_manager_set_category_priority(
+    m: *const EeSoundManager,
+    category: u32,
+    priority: u32,
+) -> i32 {
     unsafe { me(m) }.locked(|s, _| s.set_category_priority(category, priority))
 }
 
@@ -626,7 +643,13 @@ pub unsafe extern "C" fn ee_sound_manager_set_pitch(m: *const EeSoundManager, id
 /// # Safety
 /// `m` is a live manager.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_manager_set_parameters(m: *const EeSoundManager, id: u32, volume: f32, pan: f32, pitch: f32) -> i32 {
+pub unsafe extern "C" fn ee_sound_manager_set_parameters(
+    m: *const EeSoundManager,
+    id: u32,
+    volume: f32,
+    pan: f32,
+    pitch: f32,
+) -> i32 {
     unsafe { me(m) }.locked(|s, h| s.set_parameters(h, id, volume, pan, pitch))
 }
 
@@ -635,7 +658,12 @@ pub unsafe extern "C" fn ee_sound_manager_set_parameters(m: *const EeSoundManage
 /// # Safety
 /// `m` is a live manager, `node` NULL or a live node.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_manager_node_set(m: *const EeSoundManager, node: *mut EeSoundNode, which: u32, v: f32) -> i32 {
+pub unsafe extern "C" fn ee_sound_manager_node_set(
+    m: *const EeSoundManager,
+    node: *mut EeSoundNode,
+    which: u32,
+    v: f32,
+) -> i32 {
     sys::locked(unsafe { me(m) }.lock, || {
         if node.is_null() {
             return 0;
@@ -687,7 +715,11 @@ pub unsafe extern "C" fn ee_sound_manager_stop(m: *const EeSoundManager, id: u32
 /// # Safety
 /// `node` is NULL or a live node; `m` is live when it is not.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_manager_stop_node(m: *const EeSoundManager, node: *mut EeSoundNode, flag: bool) -> i32 {
+pub unsafe extern "C" fn ee_sound_manager_stop_node(
+    m: *const EeSoundManager,
+    node: *mut EeSoundNode,
+    flag: bool,
+) -> i32 {
     if node.is_null() {
         return 0;
     }

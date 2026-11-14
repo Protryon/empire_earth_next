@@ -71,7 +71,12 @@ extern "C" {
     ) -> c_int;
     pub fn DmPerformance_setVolume(performance: *mut c_void, volume: f32);
     pub fn DmPerformance_setMasterGrooveLevel(performance: *mut c_void, level: i8);
-    pub fn DmPerformance_renderPcm(performance: *mut c_void, buffer: *mut c_void, count: usize, options: c_int) -> c_int;
+    pub fn DmPerformance_renderPcm(
+        performance: *mut c_void,
+        buffer: *mut c_void,
+        count: usize,
+        options: c_int,
+    ) -> c_int;
 
     /// `ESVerify(__FILE__, line, expression)` (SESoundManager.cpp).
     pub fn ee_soundcpp_verify(expression: *const c_char, line: u32);

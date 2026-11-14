@@ -339,7 +339,11 @@ pub unsafe extern "C" fn ee_sound_mixer_output_rate(m: *mut EeSoundMixer) -> c_u
 /// # Safety
 /// `m` is a live mixer.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_mixer_set_music_source(m: *mut EeSoundMixer, source: EeSoundSource, context: *mut c_void) {
+pub unsafe extern "C" fn ee_sound_mixer_set_music_source(
+    m: *mut EeSoundMixer,
+    source: EeSoundSource,
+    context: *mut c_void,
+) {
     if let Some(f) = unsafe { spim(m).set_music_source } {
         unsafe { f(source, context) }
     }
@@ -350,7 +354,11 @@ pub unsafe extern "C" fn ee_sound_mixer_set_music_source(m: *mut EeSoundMixer, s
 /// # Safety
 /// `m` is a live mixer.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_mixer_set_movie_source(m: *mut EeSoundMixer, source: EeSoundSource, context: *mut c_void) {
+pub unsafe extern "C" fn ee_sound_mixer_set_movie_source(
+    m: *mut EeSoundMixer,
+    source: EeSoundSource,
+    context: *mut c_void,
+) {
     if let Some(f) = unsafe { spim(m).set_movie_source } {
         unsafe { f(source, context) }
     }

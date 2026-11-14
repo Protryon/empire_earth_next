@@ -679,7 +679,12 @@ extern "C" fn DmPerformance_setMasterGrooveLevel(_p: *mut c_void, level: i8) {
     t(format!("groove={level}"));
 }
 #[no_mangle]
-unsafe extern "C" fn DmPerformance_renderPcm(_p: *mut c_void, buffer: *mut c_void, count: usize, options: c_int) -> c_int {
+unsafe extern "C" fn DmPerformance_renderPcm(
+    _p: *mut c_void,
+    buffer: *mut c_void,
+    count: usize,
+    options: c_int,
+) -> c_int {
     t(format!("render{count}/{options}"));
     for i in 0..count {
         unsafe { *(buffer as *mut f32).add(i) = 0.5 };
@@ -799,7 +804,10 @@ impl Replay {
                 "use0" => format!("{}", ee_sound_mixer_use(mixer_at(0))),
                 "cfolder0" => {
                     let z = format!("{}\0", self.music);
-                    format!("{}", ee_sound_conductor_set_music_folder(ee_sound_mixer_conductor(mixer_at(0)), z.as_ptr().cast()))
+                    format!(
+                        "{}",
+                        ee_sound_conductor_set_music_folder(ee_sound_mixer_conductor(mixer_at(0)), z.as_ptr().cast())
+                    )
                 }
                 "use" => {
                     let mx = mixer_at(i(1) as i32);
@@ -980,12 +988,14 @@ impl Replay {
                 "rate" => format!("{}", ee_sound_manager_sample_rate(m, u(1))),
                 "scav" => {
                     ee_sound_manager_set_muted(m, a[1] == "1");
-                    let script: Vec<i32> = a[2].bytes().map(|c| match c {
-                        b'0' => 0,
-                        b't' => -1,
-                        _ => -2,
-                    })
-                    .collect();
+                    let script: Vec<i32> = a[2]
+                        .bytes()
+                        .map(|c| match c {
+                            b'0' => 0,
+                            b't' => -1,
+                            _ => -2,
+                        })
+                        .collect();
                     w(|w| w.wait_script = script);
                     let (f, p) = w(|w| w.last_thread.unwrap());
                     let f: unsafe extern "C" fn(*mut c_void) -> c_ulong = std::mem::transmute(f);
@@ -1107,7 +1117,14 @@ impl Replay {
                 "cplaying" => format!("{}", ee_sound_conductor_playing(c)),
                 "cget" => {
                     let f = ee_sound_conductor_fields(c);
-                    format!("{} {} {} {} {}", f.state, f.intensity, bits(f.volume), f.reverb_state, f.channel_group_count)
+                    format!(
+                        "{} {} {} {} {}",
+                        f.state,
+                        f.intensity,
+                        bits(f.volume),
+                        f.reverb_state,
+                        f.channel_group_count
+                    )
                 }
                 "crender" => match w(|w| w.music_source) {
                     Some((f, ctx)) => {

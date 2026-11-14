@@ -111,7 +111,9 @@ impl Host for Dm<'_> {
     fn play_transition(&mut self, s: Score, pattern: Embellishment) -> bool {
         let segment = unsafe { (*(s.0 as *const EeSoundScore)).segment };
         let p = self.c.performance.load(Ordering::SeqCst);
-        unsafe { sys::DmPerformance_playTransition(p, segment, pattern as i32, sys::DM_TIMING_MEASURE) == sys::DM_SUCCESS }
+        unsafe {
+            sys::DmPerformance_playTransition(p, segment, pattern as i32, sys::DM_TIMING_MEASURE) == sys::DM_SUCCESS
+        }
     }
     fn set_performance_volume(&mut self, amplitude: f32) {
         unsafe { sys::DmPerformance_setVolume(self.c.performance.load(Ordering::SeqCst), amplitude) }
@@ -305,7 +307,11 @@ pub unsafe extern "C" fn ee_sound_conductor_set_state(c: *const EeSoundConductor
 /// # Safety
 /// `c` is a live conductor.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_conductor_set_intensity(c: *const EeSoundConductor, intensity: u32, immediate: bool) -> i32 {
+pub unsafe extern "C" fn ee_sound_conductor_set_intensity(
+    c: *const EeSoundConductor,
+    intensity: u32,
+    immediate: bool,
+) -> i32 {
     unsafe { &*c }.with(|_, h, f| Conductor::set_intensity(h, f, intensity, immediate))
 }
 
@@ -398,7 +404,11 @@ pub unsafe extern "C" fn ee_sound_conductor_fields(c: *const EeSoundConductor) -
 /// # Safety
 /// `c` is a live conductor, `event` < 6.
 #[no_mangle]
-pub unsafe extern "C" fn ee_sound_conductor_set_callback(c: *const EeSoundConductor, event: u32, callback: *mut c_void) {
+pub unsafe extern "C" fn ee_sound_conductor_set_callback(
+    c: *const EeSoundConductor,
+    event: u32,
+    callback: *mut c_void,
+) {
     unsafe { (*(*c).inner.get()).callbacks[event as usize] = callback };
 }
 
