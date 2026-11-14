@@ -16755,3 +16755,83 @@ The merge of rust met `rust/cbindgen.toml`'s export list (both sides added names
 - Then top-down: the controls of the LAN screens (GameBrowserCtrl, GameUserListCtrl, LobbyOptionsCtrl,
   GameStagingCtrl), the EE room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic,
   RoutingLogic last, Internet only), and the resource tables and factories.
+
+## R6: the game screens, twenty-sixth round: the UI manager's constructor work, scenario editor start and input updates, the mini map's snapshot, drawing plan, bounds and mouse in Rust (ee_screens ui_manager.rs, mini_map.rs; branch rust-screens26, 2026-11-14)
+
+Round 25's leftovers, biggest first. Count (round 22's `count.sh`, copied to `build/sc26`: User Interface Thread
+without the unit utilities, UI Events, `include/ee/EEUI*.h`): 20,415 at the branch's start (b8316f3a) -> 20,374 at b1c40f91
+(-41; git over `src` and `include/ee`: +298 -339).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 03f5e59e | `EEUIManager`'s constructor work, `StartScenarioEditor`, `UpdateKeyboard`, `UpdateMouse` in Rust (`ui_manager.rs`) | +140 -155, net -15 |
+| b1c40f91 | `EEUIMiniMap::CopyData`, `DrawPolygons`, `Update`, `MouseLButtonUp`, `MouseMove` in Rust (`mini_map.rs`) | +158 -184, net -26 |
+
+- **The UI manager (commit 1)**: `ui_manager.rs` over `ee_screenscpp_ui_manager` (21 ops, `EE_SCREENS_UM_OP_*`), a
+  static member `EEUIManager::HostOp` (UIManager's `UpdateKeyboard`/`UpdateMouse` are protected) on a call record
+  (`EEUIManagerCall`, in the .cpp: the manager, the editor's two names, the mouse location). The constructor's port
+  controls (the texture resolution box, the 12 display/interface/audio controls, the lobby's three column moves and
+  its 33 engine controls) are Rust tables and loops (f32 in the original's order); each `AddControlLike` /
+  `MoveControlsHorizontally` crosses as a `#[repr(C)]` record (`EeScreensManagerControl`, `EeScreensManagerMove`),
+  the ids as exported consts `static_assert`ed against the game's enums. `StartScenarioEditor`'s 16 lobby slots are
+  `EeScreensManagerPlayer` records (an explicit `reserved` byte: the golden records the record's bytes, and Rust
+  padding is undefined); the host builds each `EEGameOptionsPlayer` fresh with the same seven fields (the original
+  reused one computer player across the slots: the same values). The movie wait loops are Rust's. Staying C++: the
+  factories (`CreateUserDefinedControl`, `CreateUserDefinedBackground`, `CreateForm`: each a `new` of a C++ class),
+  the five message boxes (one line each into `EEUIFError`), the scenario editor form's create/delete and the
+  destructor.
+- **Its golden** (`build/sc26/um`: `fake.h`, `driver.cpp`, `cut.py`, `drv.py`, `mutate.py`, `rmutate.py`): the
+  constructor, `StartScenarioEditor`, `UpdateKeyboard`, `UpdateMouse` cut verbatim from b8316f3a (as `OrigMgr` over
+  a fake `UIManager` base), the call record, forwarders and host cut from the work tree. Per case K (placement-new
+  of the manager), S, Y, M over a random world (forms present or not, the engine count 0-13, the music setting, the
+  old communications absent, a client or a server, the citizens' value changing per read, the keys and buttons, a
+  movie that stops after 0-3 sleeps, the current form captured or not, a saved game loading). Seeds 2-4: 45,000
+  cases, 0 differences. Host mutations: 11 of 11 caught (the 12th, a slot written as its colour, is equivalent:
+  the editor's slots have colour = slot). `golden_ui_manager.txt` (seed 1, 600 calls; the records as words) is
+  replayed by `ui_manager::tests::golden_ui_manager`; 12 of 12 Rust mutations fail it.
+- **The mini map (commit 2)**: no host ops for the numbers. `CopyData` fills `EeScreensMiniMapCopy` (the rectangle,
+  the window, gMiniMap's corners, flare flag and point, its map-to-pixel matrix's six 2D entries, the flare
+  texture's sizes, the flare bitmap's location and width, `gFreeCamera`, the two flags) after
+  `UpdateWorldTexture()` (the flare flag is read before it, as the original did), `ee_screens_mini_map_copy_data`
+  computes the scales, the outline's lines, the flags, the flare's colour, place, scale and the screen's redraw,
+  and the C++ applies them in the original's order (bitmaps, flags, colour, `RedrawAll`, flare, lines,
+  `UIControl::CopyData`). `DrawPolygons` executes `ee_screens_mini_map_draw_plan`'s steps (lock, base, map, units,
+  flare, clip one pixel inside the copied rectangle, the flagged lines, restore, unlock; the result is the last
+  units/flare/line draw's). `Update` fills `EeScreensMiniMapUpdate` (the map's width, height, size, matrix) and
+  applies the units texture's extent and `sBounds`. `MouseLButtonUp` (the flare sent at the tile under the mouse,
+  or the camera centred) and `MouseMove` run over `ee_screenscpp_mini_map` (10 ops, `EEUIMiniMap::HostOp`); the
+  mouse, rectangle and pixel-to-map matrix come back in one record (`EeScreensMiniMapMouse`, op `READ_MOUSE`).
+  Staying C++: the constructor, destructor, `SetLocation`, `LoadMedia`/`UnloadMedia` (texture set-up),
+  `CenterCamera` and `MouseRButtonDown` (their math is `ee_gfx` minimap.rs since R4.4), the one-line captures.
+- **Its golden** (`build/sc26/mm`): the five functions cut from b8316f3a (as `OrigMap`) and the new ones with the
+  matrix helper and host, over a fake world (bitmaps that trace locations, scales, colours, coordinates and
+  textures; a rasterizer that traces draws and viewports; the terrain lock; a map whose tiles exist inside its
+  size; the flare at its own computed place in 25% of the worlds, on its inner area's edge in 10%; the mouse on
+  the rectangle's edge; textures of power-of-two and other sizes; maps of side 64). Seeds 2-4: 43,000 cases, 0
+  differences. Host mutations: 17 of 19 caught; 2 equivalent (the map bitmap's draw result kept: the units' draw
+  overwrites it; none other). `golden_mini_map.txt` (seed 1, 1,000 calls; the records as hex) is replayed by
+  `mini_map::tests::golden_mini_map`; 14 of 18 Rust mutations fail it. The 4 left: the 2D apply's terms swapped
+  (float addition commutes), `< 64` as `<= 64` (64 * 1/64 is 1), `s - 1 + 0.5` as `s - 0.5` (exact for integer
+  sides), and the inset's 4/3 one ulp lower (no world falls in that ulp). Two mutations (the rectangle's `>=`,
+  the texture's `* sx * 0.375` reassociated) passed the first golden and were caught after the world gained the
+  edge mice and the non-power-of-two textures.
+- **Lessons**: (1) a Rust `#[repr(C)]` record with padding cannot be recorded byte for byte (the padding is
+  undefined): give it an explicit `reserved` field. (2) A mutation that survives the golden is often a world that
+  never reaches the edge: equality tests (`>=`, `<=`, `<`) need inputs on the edge, and float reassociations need
+  operands that are not powers of two.
+- **Behaviour**: none intended. `CopyData` reads the flare texture's sizes on every call (the original only with
+  the flare shown) and tolerates a missing texture (sizes 0; the original crashed); the flare release's tile is
+  the float truncated with Rust's `as` (saturating where the original's conversion was undefined: only for
+  points far outside any map).
+- **What runs it**: every game creates the UI manager (the constructor: the settings' and the lobby's added
+  controls, seen in the tour's settings tabs and the random game's lobby) and runs `UpdateKeyboard` and
+  `UpdateMouse` every UI frame; every frame of a game runs the mini map's `CopyData` and `DrawPolygons`, every new
+  map its `Update`. EE-SIM builds no UI manager: the oracle and the editor gate are unchanged by construction.
+  **Only a person reaches**: `StartScenarioEditor` (the main menu's editor button; EE-SIM builds no UI manager),
+  the movie skip (Escape, Return, Space, a click), F9's screenshot, the flare (the flare command and a left click
+  on the mini map), the left drag on the mini map.
+- **Gates**: per commit (on that commit's tree) the build `--sim` 0/0 (EE-AOC and EE-SIM), `tools/sim_editor.py` PASS (1820 lines), the oracle identical on seeds 2-3, the Rust gate PASS (commit 1's first run: clippy's `type_complexity` on the port controls' tuple, then rustfmt; fixed before the commit). Tours on b1c40f91 (test profile 0/0, the harness lock held): `--exercise tour --play-seconds 60` `RESULT PASS tour`; `--exercise random-game --play-seconds 30 --scroll-check --zoom-captures 50 100 200` `RESULT PASS random-game`, `SCROLL CHECK PASS` (zoom 1.000 -> 0.126 -> 0.983 -> 0.833 -> 0.983); `--exercise random-game --play-seconds 60 --orders --box-select` failed once (`box select: the box caught none of the local player's units`: the fixture's own projection also expected 0, the camera's view held none of them) and passed rerun (`BOX SELECT PASS` 4 steps, `ORDERS PASS` gather, repair, repair-queued, move). On the merge with rust (a097e373, rust 008e14c0: only `rust/cbindgen.toml`'s export list conflicted, both sides' records kept; `rust_build.py header` and `rust_includes.py` changed nothing): the build `--sim` 0/0, the test profile 0/0, the Rust gate PASS, the editor gate PASS (1820 lines), the oracle identical on seeds 2-7; the tour `RESULT PASS tour`; the orders game failed once on the box selection's dead-unit step (`box dead: the case was not reached (unit disbanded; in the box's ids: 1; its state: alive)`: the unit disbanded just before the release was still alive at the check) and passed rerun (`BOX SELECT PASS` 4 steps, `ORDERS PASS`). Neither box failure touches this round's code (the box selection is the main game form's and the selection controls'); the lead may want to watch both cases' flakiness.
+- **Left**: `EEUICUnitIconBar` (433), `EEUICPortrait` (404), `EEUIBUpgrade` (365), `EEUIFError`'s constructor
+  (454); the UI manager's factories (C++ objects); the main game form's `Open`, `Close`, `Activate`, `Deactivate`,
+  backgrounds and `HideMessages`; `EEUserInterface`'s `EnterScenarioEditor`, `ShowCivilizationBuilder`,
+  `LeaveMap`, `StartLoadingFromEditor`.
