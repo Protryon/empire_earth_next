@@ -2688,7 +2688,7 @@ step 297 tab 5
 step 298 form 0 99999
   c0 EEUIMiniMap id=0x8 ix=0 g=0 r=854.16,598.16,1023,767 m=0 bg=0,0,0,0 b=3 h=0
   c1 UIComboBox id=0x149 ix=1 g=0 r=5,74,144,93 m=0 bg=0,0,0,0 b=0 h=0 tb=1 fg=0.996078,0.968627,0.12549 tr=1 fh=16 '' lines=1 'Human' n=2 sel=none 'Human'|'Player 2' e3=EEScreenEvent
-  c2 UITextLabel id=0x9 ix=2 g=0 r=593,0,805,11 m=0 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 'Loading Industrial Age Epoch , for Player (1)' lines=1 'Loading Industrial Age Epoch , for Player (1)'
+  c2 the load text g=0
   c3 UITextLabel id=0x10 ix=3 g=0 r=0,0,6,0 m=0 bg=1,1,1,1 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=0
   c4 UITextLabel id=0x7 ix=4 g=2d,3d r=5,616,104,626 m=1 bg=0.4,0,0,0 b=0 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Brush Size'
   c5 EEUIFSERBBrush id=0x2 ix=5 g=2d,3d r=5,627,104,646 m=1 bg=0.4,0,0,0 b=0 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Tiny' btn fg=none
@@ -2763,23 +2763,23 @@ step 298 form 0 99999
   c76 EEUIFMGStatusBar id=0x41c ix=76 g=6d r=6,656,56,690 m=0 bg=1,0,0,0 b=1 h=0 fg=none
   c77 EEUIFMGStatusBar id=0x41d ix=77 g=6d r=6,693,56,727 m=0 bg=1,0,0,0 b=1 h=0 fg=none
   c78 EEUIFMGAttribute id=0x41e ix=78 g=6d r=62,634,137,650 m=0 bg=0.14902,0,0,0 b=1 h=0 fg=none
-  c79 UITextLabel id=0x41f ix=79 g=6d r=81,634,137,650 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 '5+0'
+  c79 UITextLabel id=0x41f ix=79 g=6d r=81,634,137,650 m=0 bg=0,0,0,0 b=0 h=0 (an attribute value)
   c80 EEUIFMGAttribute id=0x420 ix=80 g=6d r=62,654,137,670 m=0 bg=0.14902,0,0,0 b=1 h=0 fg=none
-  c81 UITextLabel id=0x421 ix=81 g=6d r=81,654,137,670 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 '2+0'
+  c81 UITextLabel id=0x421 ix=81 g=6d r=81,654,137,670 m=0 bg=0,0,0,0 b=0 h=0 (an attribute value)
   c82 EEUIFMGAttribute id=0x422 ix=82 g=6d r=62,674,137,690 m=0 bg=0.14902,0,0,0 b=1 h=0 fg=none
-  c83 UITextLabel id=0x423 ix=83 g=6d r=81,674,137,690 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 '10+0'
+  c83 UITextLabel id=0x423 ix=83 g=6d r=81,674,137,690 m=0 bg=0,0,0,0 b=0 h=0 (an attribute value)
   c84 EEUIFMGAttribute id=0x424 ix=84 g=6d r=62,694,137,710 m=0 bg=0.14902,0,0,0 b=1 h=0 fg=none
-  c85 UITextLabel id=0x425 ix=85 g=6d r=81,694,137,710 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 '0+0'
+  c85 UITextLabel id=0x425 ix=85 g=6d r=81,694,137,710 m=0 bg=0,0,0,0 b=0 h=0 (an attribute value)
   c86 EEUIFMGAttribute id=0x426 ix=86 g=6d r=62,714,137,730 m=0 bg=0.14902,0,0,0 b=1 h=0 fg=none
-  c87 UITextLabel id=0x427 ix=87 g=6d r=81,714,137,730 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 '1/20'
+  c87 UITextLabel id=0x427 ix=87 g=6d r=81,714,137,730 m=0 bg=0,0,0,0 b=0 h=0 (an attribute value)
   c88 EEUIFMGAttribute id=0x428 ix=88 g=6d r=156,654,222,670 m=0 bg=0.14902,0,0,0 b=1 h=0 fg=none
-  c89 UITextLabel id=0x429 ix=89 g=6d r=175,654,222,670 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 ''
+  c89 UITextLabel id=0x429 ix=89 g=6d r=175,654,222,670 m=0 bg=0,0,0,0 b=0 h=0 (an attribute value)
   c90 EEUIFMGAttribute id=0x42a ix=90 g=6d r=156,674,222,690 m=0 bg=0.14902,0,0,0 b=1 h=0 fg=none
-  c91 UITextLabel id=0x42b ix=91 g=6d r=175,674,222,690 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 ''
+  c91 UITextLabel id=0x42b ix=91 g=6d r=175,674,222,690 m=0 bg=0,0,0,0 b=0 h=0 (an attribute value)
   c92 EEUIFMGAttribute id=0x42c ix=92 g=6d r=156,694,222,710 m=0 bg=0.14902,0,0,0 b=1 h=0 fg=none
-  c93 UITextLabel id=0x42d ix=93 g=6d r=175,694,222,710 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 ''
+  c93 UITextLabel id=0x42d ix=93 g=6d r=175,694,222,710 m=0 bg=0,0,0,0 b=0 h=0 (an attribute value)
   c94 EEUIFMGAttribute id=0x42e ix=94 g=6d r=156,714,222,730 m=0 bg=0.14902,0,0,0 b=1 h=0 fg=none
-  c95 UITextLabel id=0x42f ix=95 g=6d r=175,714,222,730 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 ''
+  c95 UITextLabel id=0x42f ix=95 g=6d r=175,714,222,730 m=0 bg=0,0,0,0 b=0 h=0 (an attribute value)
   c96 UITextLabel id=0x430 ix=96 g=6d r=156,634,240,650 m=0 bg=0,0,0,0 b=0 h=0 fg=0,0,0 tr=1 fh=14 '' lines=1 'Armor'
   c97 UILBString id=0x7da ix=97 g=14d r=4,480,303,584 m=1 bg=0.4,0,0,0 b=3 h=0 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' n=1 sel=0 '<Effect0>' e3=EEScreenEvent
   c98 UIRadioButton id=0x7d0 ix=98 g=14d r=4,458,61,477 m=1 bg=0.4,0,0,0 b=2 h=0 k=1 fg=0.996078,0.968627,0.12549 tr=1 fh=11 '' lines=1 'Trigger' btn fg=none e1=EEScreenEvent

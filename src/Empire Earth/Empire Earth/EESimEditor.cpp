@@ -215,6 +215,11 @@
 #include "lle/UICheckBox.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EESERBUnitTypes.h"
+#include "lle/TSThread.h"
+#include "lle/TSEvent.h"
+#include "ee/EESEAChangeLoadText.h"
+#include "ee/EESELoadThread.h"
+#include "ee/EEScenarioEditorIDs.h"
 #include "rust/ee_time.h"
 
 // TEST ONLY: ee_time_pin sets the time TMGetTime answers on this thread (-1: the clock; rust/crates/ee_time)
@@ -1051,6 +1056,11 @@ void FormDigest(unsigned long inFirst, unsigned long inLast, long inGroup, std::
         if (inGroup >= 0 && ("," + theGroupList + ",").find("," + std::to_string(inGroup) + ",") == std::string::npos &&
             ("," + theGroupList + ",").find("," + std::to_string(inGroup) + "d,") == std::string::npos)
             continue;
+        if (c->GetId() == 9 && dynamic_cast<UITextLabel*>(c) != NULL) {
+            // the load text: its text (and the rectangle fitted to it) is the load thread's last, a timing
+            outLines.push_back("  c" + std::to_string(i) + " the load text g=" + theGroupList);
+            continue;
+        }
         const GERectangle& r = c->GetRectangle();
         GEColor theBg;
         c->GetBgColor(theBg);
@@ -1077,6 +1087,11 @@ void FormDigest(unsigned long inFirst, unsigned long inLast, long inGroup, std::
                        (b->GetLineCount() > 0 ? b->GetText(0) : "") + "'";
         else if (UISlider* b = dynamic_cast<UISlider*>(c))
             theLine += " v=" + std::to_string(b->GetCurrentRangeValue()) + " max=" + std::to_string(b->GetMaxRange());
+        else if (i > 0 && theForm->GetControl(i - 1) != NULL &&
+                 TypeName(theForm->GetControl(i - 1), typeid(*theForm->GetControl(i - 1))) == "EEUIFMGAttribute")
+            // a unit attribute's value (the unit tab's panel): its bonus follows the tech tree the load thread
+            // reloads, shown on a later frame (a timing)
+            theLine += " (an attribute value)";
         else if (UITextLabel* b = dynamic_cast<UITextLabel*>(c))
             theLine += LabelText(b);
         for (unsigned long t = kControlTriggerRangeChanged; t <= kControlTriggerButtonUp; t++)
@@ -1133,6 +1148,18 @@ void PlayersDigest(std::vector<std::string>& outLines)
              (long)gWorld.mGameOptions.mWondersForVictory, gWorld.mGameOptions.mVictory ? 1 : 0,
              gWorld.mGameOptions.mLockTeams ? 1 : 0, gWorld.mGameOptions.mCheatCodes ? 1 : 0);
     outLines.push_back(theText);
+}
+
+// the editor's load thread drained (TEST ONLY): every message posted to it so far handled, as
+// EEDataPreLoading::WaitForMessageQueue (its 0x40a sets mMessageQueueDone); the digests that read what it loads
+// (epochs, tech trees, the load text) run after it, so they do not depend on its timing
+void SyncLoadThread()
+{
+    EESELoadThread* theThread = gUIManager->mScenarioEditorForm->mLoadThread;
+    if (theThread->mThread->Post(kLoadThreadMessageQueueDone, NULL, NULL, true) == kErrorOK) {
+        theThread->mMessageQueueDone->Wait(kTSWaitInfinite);
+        theThread->mMessageQueueDone->Clear();
+    }
 }
 
 // the protected virtuals a person's mouse reaches (TEST ONLY): a button's release, a combo box's chosen line
@@ -1578,6 +1605,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             outError = inScript + ":" + std::to_string(k + 1) + ": unknown command " + c;
             return 2;
         }
+        if (c == "form" || c == "players")
+            SyncLoadThread();
         size_t theBefore = theOutput.size();
         if (!RunStep(theCode)) {
             outError = inScript + ":" + std::to_string(k + 1) + ": '" + c + "' did not finish";
