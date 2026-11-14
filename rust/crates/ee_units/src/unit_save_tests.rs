@@ -138,10 +138,7 @@ fn the_complex_unit_writes_every_section_in_order() {
     let floats: Vec<f32> =
         m.log[base..].iter().filter(|e| e.0 == EE_UNITS_UNIT_SAVE_WRITE_FLOAT).map(|e| f32::from_bits(e.3)).collect();
     assert!(floats.contains(&0.2) && floats.contains(&0.25) && floats.contains(&0.75));
-    let writes = m.log[base..]
-        .iter()
-        .filter(|e| (EE_UNITS_UNIT_SAVE_WRITE_LONG..=EE_UNITS_UNIT_SAVE_WRITE_USHORT).contains(&e.0))
-        .count();
+    let writes = m.log[base..].iter().filter(|e| crate::player_save::is_save_write(e.0)).count();
     // 116 primitive writes with the live and running state (counted by hand from the original's statements)
     assert_eq!(writes, 116);
     // the next trigger time crosses as the unsigned long it is

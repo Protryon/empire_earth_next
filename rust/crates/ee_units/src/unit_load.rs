@@ -27,11 +27,11 @@ use crate::unit_fields::{EeUnitsComplexUnitFields, EeUnitsRtsUnitFields, EeUnits
 use crate::unit_save::{EeUnitsUnitSaveFn, EeUnitsUnitSaveIn, EeUnitsUnitSaveIo, SaveHost};
 
 // ---- the file's primitives (io holds the old value in, the read value out)
-pub const EE_UNITS_UNIT_LOAD_READ_LONG: i32 = 101;
-pub const EE_UNITS_UNIT_LOAD_READ_ULONG: i32 = 102;
-pub const EE_UNITS_UNIT_LOAD_READ_FLOAT: i32 = 103;
-pub const EE_UNITS_UNIT_LOAD_READ_BOOL: i32 = 104;
-pub const EE_UNITS_UNIT_LOAD_READ_USHORT: i32 = 105;
+pub const EE_UNITS_UNIT_LOAD_READ_LONG: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_READ_LONG;
+pub const EE_UNITS_UNIT_LOAD_READ_ULONG: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_READ_ULONG;
+pub const EE_UNITS_UNIT_LOAD_READ_FLOAT: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_READ_FLOAT;
+pub const EE_UNITS_UNIT_LOAD_READ_BOOL: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_READ_BOOL;
+pub const EE_UNITS_UNIT_LOAD_READ_USHORT: i32 = crate::player_save::EE_UNITS_PLAYER_SAVE_READ_USHORT;
 /// a section (`index`: `EE_UNITS_UNIT_LOAD_SECTION_*`), the result; io.b = 1 when the held units' loop left for
 /// `LoadLateVersions`; io.i carries the original's `theValue` (the citizen queue, the cargo, the held units) or
 /// `theState` (the unit variables) in and out

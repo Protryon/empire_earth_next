@@ -19748,3 +19748,78 @@ left").
   each Rust object and `UIObjHost::Base` shrinking op by op), `UIGraph`/`UILineGraph` (the game's
   `EEUIPGSLineGraph` reads `mGraph`: a census first), `UIBackgroundTable` and `UIManager::CreateBackgrounds` (the same
   pattern as the controls table, smaller), `UIHotKey`, `UIIMECandidate`, `UIBFull`.
+
+## R5b.4, twenty-ninth round: RTSPlayer's saved state and the air traffic's save in Rust; the tech tree's state as Rust records and its walks, saved game, checksum and media table in Rust (ee_units rts_player_save.rs, atc_save.rs; ee_tech nodes.rs; branch rust-r5b4-core29, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 6edf801b | `RTSPlayer` derives from `EeUnitsRtsPlayerFields` (mNextUniqueID .. mObserverMode), its Load and Save in Rust; `EEAirTrafficControl`'s Load and Save in Rust; the units' save and load primitives on `EESavePrimitive` (the unit io a typedef of the player's; the unsigned short's read and write added) | +124 -208, net -84 |
+| 615247eb | the tech tree's nodes, epochs and tree as Rust records (`EeTechNodeFields`, `EeTechNodeDataFields`, `EeTechTreeFields`); every walk, the saved game's Load/Save and applied state, the checksum, the media table (`sUnitClassInfo`) and the file record's fill in Rust over `EETechHost`; the three C++ views and 23 decision exports gone | +265 -1031, net -766 |
+| f260ec92 | the tests' clippy (`mut_from_ref`) | 0 |
+| (merge) | `rust` 024b9ef2 (64 commits): no conflict; `rust_build.py header` and `rust_includes.py` changed nothing | |
+
+The round's C++: net -850 (+389 -1239).
+
+**The order.** Round 28's leftovers first (small: `RTSPlayer::Load`/`Save` 95 lines, the air traffic's 86, the unit
+save host's 40 lines of primitives), then the tech tree, whole classes at a time. The calamities were handed to a
+new lane (branch `rust-calamities1`) during the round; nothing of them was started here.
+
+- **`RTSPlayer`'s block** (rts_player_save.rs): the seven plain members from `mNextUniqueID` to `mObserverMode` are a
+  record `RTSPlayer` derives from (a polymorphic class with a non-polymorphic base: the vtable at 0, the record
+  after it). The Load and Save are Rust over player_save.rs's host type with the class's C++ parts as operations
+  201-208 (the colour and the name's own `Load`/`Save`, the shade colour, one unit's `LoadUnit`, `AddPendingUnits`,
+  `SaveUnits`). Kept: the 0.207 saves' "sees all" cleared, the hash bucket length read and dropped, a failed bucket
+  count ending the loop with the pending units still added and the observer flag unread.
+- **The air traffic** (atc_save.rs): no record (its state is a vector of airports with two deques each, all pointers);
+  Load builds the original's local airport by operations 301-306 (a slot begun, an item pushed by kind, the slot
+  pushed), Save reads by 307-310 (the counts, the airport's id, an item's unit id and kind). Kept: an airport kept
+  when one of its items failed, the kind carried from the item before.
+- **`EESavePrimitive` for the units**: `EeUnitsUnitSaveIo` is now `EeUnitsPlayerSaveIo` (cbindgen: a `using`), the
+  units' primitive operations take the player's numbers (and 98/99 for `unsigned short`), and
+  `EEUnitSaveOperation`'s ten primitive cases are one `EESaveIsPrimitive` test (ee/EEPlayer.h).
+- **The tech tree's records** (nodes.rs): `RTSTechTreeNode : public EeTechNodeFields` holds `RTSTechTreeNode`'s,
+  `EETechTreeNode`'s and `EETechTreeEpoch`'s plain members (an epoch is a node: its five counters are in every node's
+  record, 0 for a node); `RTSTechTreeNodeData : public EeTechNodeDataFields` (the costs .. the six flags; the class cost
+  map and the unit class vector stay C++); `EETechTree : public RTSTechTree, public EeTechTreeFields` (the epochs,
+  the name id, the loaded flag, and `mSaved`: the saved game's four lists, Rust-owned, freed by the destructor; the
+  C++ vectors `mResearchedIDs`, `mObsoleteIDs`, `mScenEditorObsoletedIDs`, `mSavedSOLs` are gone with `Add*ID`).
+  The pointers (`mData`, `mTree`, `mButton`, `mPlayer`) stay C++ members, so the walks take a node as an
+  `EeTechNodeRef` (the object, its record, its data's record: `EETechRef`, ee/EETechRust.h).
+- **The walks** are the C++ bodies in their order over one host (`EETechHost`, EETechTree.cpp, operations 1-42): the
+  containers (the epochs, an epoch's `std::map` of nodes copied into a buffer in id order, `Get`), the world (the
+  events, the interface, the player's statistics and `EpochReached`, the media unload, `gEventsEnabled`, the local
+  player, the epoch name) and the capture's records (TNWK's begin, steps and record; TEPO; TRTE). The entry points the
+  capture wraps (a node's `ResearchNode` and `SetPrerequisite`, an epoch's `Research`, `AddSOL`,
+  `UpdateAvailability`) stay C++ and the walks call them through the host, so TNRS/TNPR/TSOL records keep their
+  nesting and order; the virtual `ResearchNode` keeps its dispatch. The saved game's walks get the file through a
+  second host (`EETechSaveHost`) that forwards the rest. `GetIsAvailable`/`GetIsObsolete` are Rust (the epoch's or the
+  node's rule by the id).
+- **The media table** (`BuildUnitClassInfo`, `IsLatestEffect`): a Rust table by unit type behind a mutex (the media
+  loader's thread asks it); `IsLatestEffect` copies its entry out before the host calls. Two of the original's
+  undefined cases are defined: an id not in the list (the original's past-the-end iterator) answers true, a later id
+  with no node in the tree is skipped.
+- **The file record**: `EeTechTreeRecord` is the Rust mirror of `ee/EETechTreeRecord.h` (which stays: the data tools
+  parse it); the epoch's unit asserts their size and eleven offsets equal. Its bools are bytes in Rust: a byte other
+  than 0/1 becomes true (the C++ copied the byte; the text compiler writes 0/1).
+
+**For the legacy harness and the renderer.** Offsets moved: `RTSPlayer`'s block (now after the vtable),
+`EETechTreeNode`'s and `EETechTreeEpoch`'s members (in the record after the vtable), `RTSTechTreeNodeData`'s plain
+members (first now), `EETechTree`'s block (after `RTSTechTree`). `layout_gen.py` flattens bases by member name.
+`game_state_probe.py` reads `EEPlayer`'s `mObserverMode` (VC6 0x467) by its translated offset: it is in
+`RTSPlayer`'s record now, still inside the body it reads up to `mB50`'s offset. Nothing in tools reads the tech tree
+or the air traffic. The renderer and the UI read moved members by name: the epoch name (`mEpochNameID`, the epoch
+banner), `mCurrentEpoch` (the music, the statistics panel), a node's `GetIsAvailable()` (the command buttons, now a
+Rust call), `mSlot`/`mPlayerID`/`mObserverMode` (the lobby, chat, diplomacy). Only a tour shows them.
+
+- **Coverage.** Every random-map game runs the start's `SetEpochRange`/`ResearchToEpoch`, research, prerequisites,
+  counts toward epochs, obsolescence and the checksum (oracle); the late and space profiles the later epochs; the
+  saveload matrix the tree's, the player's and the air traffic's Load and Save (an air traffic save with planes only
+  where a game has an airport). The editor flag's recursion, the media table's upgrade kind, the old saves' 14 epochs,
+  failed reads, `RTSPlayer`'s 0.207 flag and the air traffic's failed items are unit tests only (nodes_tests.rs 13,
+  rts_player_save.rs 4, atc_save.rs 3).
+- **Behaviour:** none (the oracle identical; the captures equal their goldens; the matrix equals its expect file).
+- **Gates.** Commit 1: build `--sim` 0/0; oracle seeds 2-3 identical to `ref`; the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4). Commit 2: build `--sim` 0/0 (a compile-only pass first); oracle seeds 2-3 identical; captures at seeds 2-3: oracle (169 digests), late (170), space (171), calamity (183) PASS (the TNMT digests without a golden are the other threads' records, as before); the ee_tech tests (69, 13 new) and clippy after the fix commit. On the result merged with rust (024b9ef2): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`; captures at seeds 2-3: oracle 169, late 170, space 171, calamity 183, scenario 22 digests PASS; the matrix PASS with the same rows; the Rust gate's tests 1,250 passed with one ee_gx timing test (`device_dropped_bind_groups_stay_bounded_when_the_gpu_lags`) failing under the machine's load and passing alone, then the gate rerun (1,250 tests passed again with the same one failing under load; its clippy `-D warnings`, rustfmt `--check` and header check run separately: clean, the headers current); the test profile links 0/0.
+- **For the next round.** The tech tree's C++ left: the captured entry points, `GetCost` (the world's factors) and
+  `SumCosts`' callbacks, the media loads (`LoadMedia`/`UnloadMedia`, the epoch's by kind), `GetCostString`, the db
+  `Load`'s containers and `operator=`. Then `EEGroup`'s Load/Save, `EEPWorldHelper`'s plain reads, and
+  `EEAirTrafficControl` whole (860 lines; its state is unit pointers, so after the units' handles).
