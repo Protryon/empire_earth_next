@@ -3080,6 +3080,53 @@ EeGeTmRenderVertex *const *ee_ge_tm_edge_vertices(const EeGeTerrainMesh *p, bool
 /// `p` is live.
 const EeGe3DPoint *ee_ge_tm_edge_points(const EeGeTerrainMesh *p, bool cliff);
 
+/// `GETransformation()` and `MakeIdentity()`: the identity.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_identity(EeGeTransformation *t);
+
+/// The copy constructor, `operator=` and `GETransformation(const float[4][4])`: the sixteen elements.
+///
+/// # Safety
+/// `t` and `m` are valid (they may be the same matrix).
+void ee_ge_t_copy(EeGeTransformation *t,
+                  const float (*m)[4][4]);
+
+/// `operator==(GETransformation)`: every element equal (a NaN never is).
+///
+/// # Safety
+/// `a` and `b` are valid.
+bool ee_ge_t_equal(const EeGeTransformation *a, const EeGeTransformation *b);
+
+/// `operator==(GE3DPoint)`: the position equals the point.
+///
+/// # Safety
+/// `t` and `p` are valid.
+bool ee_ge_t_at_point(const EeGeTransformation *t, const EeGe3DPoint *p);
+
+/// `SetScale(x, y, z)`: a pure scale, the position kept.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_set_scale(EeGeTransformation *t, float x, float y, float z);
+
+/// `ZeroOrientation(out)` (and `ZeroOrientation()` with `out` = `t`): the identity rotation at `t`'s position.
+///
+/// # Safety
+/// `t` and `out` are valid (they may be the same matrix).
+void ee_ge_t_zero_orientation(const EeGeTransformation *t,
+                              EeGeTransformation *out);
+
+/// `Load(FSFile&)` (`write` false) or `Save(FSFile&)`: the sixteen elements row by row through the file's own
+/// float reads or writes, stopping at the first error (a load leaves the elements read so far).
+///
+/// # Safety
+/// `t` is valid; `io` is a live field stream.
+long ee_ge_t_io(EeGeTransformation *t,
+                const EeGeFieldIo *io,
+                bool write);
+
 /// `GEViewport()`.
 ///
 /// # Safety

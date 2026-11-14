@@ -90,6 +90,7 @@ pub mod transform;
 pub mod types;
 /// cbindgen:ignore
 pub mod um;
+pub mod values;
 /// cbindgen:ignore
 pub mod vector;
 pub mod viewport;
