@@ -2896,6 +2896,17 @@ enum class EeWonGuiOp : uint32_t {
   WmSelfRelease,
   /// the window set's `a`-th window (0 past the end; a pure read).
   WmWindowAt,
+  /// a cache's reference: `b` (an `EeWonWmRefKind` `a`) held (`c != 0`) or given back.
+  WmRef,
+  /// `mImageDecoder.Decode((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with one reference, or 0).
+  WmDecode,
+  /// `mImageDecoder.DecodeRaw(path a of b bytes)` (a `RawImage*` with one reference, or 0).
+  WmDecodeRaw,
+  /// `new DelayLoadImage(path a of b bytes, its width, its height)` with one reference, or 0 when the file's
+  /// attributes cannot be read.
+  WmDelayImage,
+  /// `mDefaultWindow->GetFont(FontDescriptor("Tahoma", 0, 8))` (a `Font*` with one reference).
+  WmDefaultWindowFont,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -4686,6 +4697,22 @@ enum class EeWonWmCall : uint32_t {
   GetField,
   /// the field `a` set to `b`.
   SetField,
+  /// `SetNamedFont` of the name `a` (`b` bytes) to the font `c`.
+  SetNamedFont,
+  /// `GetNamedFont` of the name `a` (`b` bytes; a raw `Font*`).
+  GetNamedFont,
+  /// `GetDefaultFont()` (a raw `Font*`).
+  GetDefaultFont,
+  /// `SetDefaultFont((Font*)a)`.
+  SetDefaultFont,
+  /// `SetCacheImages(a != 0)`.
+  SetCacheImages,
+  /// `DecodeImage((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with the caller's reference).
+  DecodeImage,
+  /// `DecodeImageRaw(path a of b bytes)` (a `RawImage*` with the caller's reference).
+  DecodeImageRaw,
+  /// `DecodeDelayImage(path a of b bytes)` (an `Image*` with the caller's reference).
+  DecodeDelayImage,
 };
 
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
@@ -5128,6 +5155,15 @@ enum class EeWonWmField : uint32_t {
   PopupCount,
   PopupBack,
   PopupFront,
+};
+
+/// Which kind of object a reference op is on (`WmRef`'s `a`).
+enum class EeWonWmRefKind : uint32_t {
+  Font = 1,
+  NativeImage,
+  RawImage,
+  /// a delay-load image (an `Image`)
+  Image,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -15568,7 +15604,8 @@ ptrdiff_t ee_won_win_call(const EeWonWindow *win, EeWonWinCall call, ptrdiff_t a
 /// A new Rust WindowManager for the C++ `manager`, its calls out through `host`.
 EeWonWm *ee_won_wm_new(void *manager, EeWonGuiHostFn host);
 
-/// The manager's object freed, its held members given back first.
+/// The manager's object freed, its held members given back first (the popup members, then the caches: the
+/// original's members in reverse order).
 ///
 /// # Safety
 /// `wm` came from `ee_won_wm_new` (or is NULL) and is not used again.
@@ -15590,6 +15627,14 @@ ptrdiff_t ee_won_wm_call(const EeWonWm *wm,
 /// # Safety
 /// `wm` is live.
 ptrdiff_t ee_won_wm_popup_at(const EeWonWm *wm, size_t i);
+
+/// The caches as one line (the goldens' trace) into `buf` (at most `cap` bytes); the length written.
+///
+/// # Safety
+/// `wm` is live; `buf` has room for `cap` bytes.
+size_t ee_won_wm_cache_line(const EeWonWm *wm,
+                            uint8_t *buf,
+                            size_t cap);
 
 }  // extern "C"
 

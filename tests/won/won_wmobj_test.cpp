@@ -17,6 +17,11 @@
 // (traced as "call" and "ret" lines between the op and its answer), so the message loop ends and a popup's
 // listener can close popups; after each top-level call the manager's fields and popup list are traced.
 //
+// The caches (the named fonts, the default font, the native, raw and delay-load images and the caching count) use
+// the same world: fonts and images are ids with reference counts; the decoders answer a new image, or NULL for some
+// names; the default window's font is a new font. A cache is traced as one line after each call; the maps' clears
+// give their images back in name order on both sides (the original's tree went in its own order).
+//
 // Each of 20,000 sequences makes 40 random calls (every method, the setters, world changes). The traces must be
 // the same. The first 30 sequences and every later one that makes an op or a call none before made are
 // rust/crates/ee_won/src/golden_wmobj.txt, which the Rust tests replay; `--print` prints them.
@@ -28,6 +33,8 @@
 #include <vector>
 #include <list>
 #include <set>
+#include <map>
+#include <ctype.h>
 #include "rust/ee_won.h"
 
 typedef EeWonGuiOp Op;
@@ -109,6 +116,19 @@ static intptr_t SchemeOf(intptr_t c)
 }
 static bool WinOk(intptr_t w) { return w >= 1 && w <= kWins && sWin[w].exists; }
 
+// ---- the caches' objects: fonts and images by id, with their references (fonts 0x3001..0x3004 exist at the start)
+static std::map<intptr_t, int> sObj;
+static int sNextObj;
+static intptr_t NewObj() { intptr_t id = 0x4000 + (++sNextObj); sObj[id] = 1; return id; }
+static unsigned NameHash(const char* s, size_t n)
+{
+    unsigned h = 7;
+    for (size_t i = 0; i < n; i++) h = h * 31 + (unsigned)tolower((unsigned char)s[i]);
+    return h;
+}
+static const char* const kNames[] = {"a.png", "A.PNG", "b.png", "Lobby.jpg", "LOBBY.jpg", "c.png", "Title", "title", "Body"};
+enum { kNameCount = 9 };
+
 // the side's nested calls
 enum { kArgs = 12 };
 static intptr_t SideCall(bool rust, int call, const int* v);
@@ -121,7 +141,12 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
     bool rectA = op == Op::WmScreenRect;
     bool rectC = op == Op::WmWin && (a == (intptr_t)WW::GetRect || a == (intptr_t)WW::SetPosSize);
     bool rectB = op == Op::WmNewPopupWindow;
+    bool strB = op == Op::WmDecode, strA = op == Op::WmDecodeRaw || op == Op::WmDelayImage;
     char extra[64] = "";
+    if (strA || strB) {
+        std::string s(strB ? (const char*)b : (const char*)a, (size_t)(strB ? c : b));
+        snprintf(extra, sizeof extra, " s %s", s.c_str());
+    }
     if (op == Op::WmWin && a == (intptr_t)WW::SetPosSize) {
         const Rect& r = *(const Rect*)c;
         snprintf(extra, sizeof extra, " r %d %d %d %d", r.x, r.y, r.w, r.h);
@@ -129,8 +154,8 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
         const Rect& r = *(const Rect*)b;
         snprintf(extra, sizeof extra, " r %d %d %d %d", r.x, r.y, r.w, r.h);
     }
-    Line("op %d %ld %ld %ld %ld%s", (int)op, rectA ? 0L : (long)a, rectB ? 0L : (long)b, rectC ? 0L : (long)c, (long)d,
-         extra);
+    Line("op %d %ld %ld %ld %ld%s", (int)op, (rectA || strA) ? 0L : (long)a, (rectB || strB) ? 0L : (long)b,
+         rectC ? 0L : (long)c, (long)d, extra);
     char key[32];
     snprintf(key, sizeof key, "op %d %ld", (int)op, (op == Op::WmComp || op == Op::WmWin) ? (long)a : 0L);
     sMet.insert(key);
@@ -237,6 +262,11 @@ static intptr_t World(bool rust, Op op, intptr_t a, intptr_t b, intptr_t c, intp
             Nested(rust, true);
         }
         break;
+    case Op::WmRef: sObj[b] += c ? 1 : -1; break;
+    case Op::WmDecode: r = NameHash((const char*)b, (size_t)c) % 4 == 0 ? 0 : NewObj(); break;
+    case Op::WmDecodeRaw: r = NameHash((const char*)a, (size_t)b) % 5 == 0 ? 0 : NewObj(); break;
+    case Op::WmDelayImage: r = NameHash((const char*)a, (size_t)b) % 3 == 0 ? 0 : NewObj(); break;
+    case Op::WmDefaultWindowFont: r = NewObj(); break;
     case Op::WmSelfHold: sSelfRefs++; break;
     case Op::WmSelfRelease: sSelfRefs--; break;
     case Op::WmWindowAt: {
@@ -272,6 +302,26 @@ template <bool kWindow> struct Ptr {
 };
 typedef Ptr<true> WinPtr;
 typedef Ptr<false> CompPtr;
+template <EeWonWmRefKind kKind> struct ObjPtr {
+    intptr_t p;
+    ObjPtr() : p(0) {}
+    ObjPtr(const ObjPtr& o) : p(o.p) { if (p) Hold(p); }
+    ~ObjPtr() { if (p) Rel(p); }
+    static void Hold(intptr_t q) { Wo(Op::WmRef, (intptr_t)kKind, q, 1); }
+    static void Rel(intptr_t q) { Wo(Op::WmRef, (intptr_t)kKind, q, 0); }
+    ObjPtr& operator=(intptr_t q) { if (p != q) { if (p) Rel(p); p = q; if (p) Hold(p); } return *this; }
+    ObjPtr& operator=(const ObjPtr& o) { intptr_t q = o.p; return *this = q; }
+    void Adopt(intptr_t q) { p = q; }
+    intptr_t get() const { return p; }
+};
+struct StringLessNoCase {
+    bool operator()(const std::string& a, const std::string& b) const
+    { return ee_won_compare_no_case((const uint8_t*)a.data(), a.size(), (const uint8_t*)b.data(), b.size()) < 0; }
+};
+typedef ObjPtr<EeWonWmRefKind::Font> FontPtr;
+typedef ObjPtr<EeWonWmRefKind::NativeImage> NativePtr;
+typedef ObjPtr<EeWonWmRefKind::RawImage> RawPtr;
+typedef ObjPtr<EeWonWmRefKind::Image> ImagePtr;
 
 enum { PopupFlag_WantInput = 0x80, PopupFlag_AdjustPosition = 0x200, PopupFlag_EatMouseDownOnEnd = 0x800,
        PopupFlag_FireEventOnEnd = 0x2000, PopupFlag_DontWantMouse = 0x4000 };
@@ -295,6 +345,129 @@ struct OrigWm {
     std::list<intptr_t> mPopupList;
     intptr_t mFocusWindow, mMouseDownWindow;
     DWORD mLastLoseFocusTick;
+    FontPtr mDefaultFont;
+    std::map<std::string, FontPtr, StringLessNoCase> mNamedFontMap;
+    std::map<std::string, NativePtr, StringLessNoCase> mNativeImageMap;
+    std::map<std::string, RawPtr, StringLessNoCase> mRawImageMap;
+    std::map<std::string, ImagePtr, StringLessNoCase> mDelayImageMap;
+    int mCacheImageCount;
+
+    // a map's clear (and its destruction): the entries given back in name order
+    template <class M> static void Clear(M& m)
+    {
+        for (typename M::iterator i = m.begin(); i != m.end(); ++i) i->second = 0;
+        m.clear();
+    }
+
+    void SetNamedFont(const std::string& theName, intptr_t theFont) { this->mNamedFontMap[theName] = theFont; }
+    intptr_t GetNamedFont(const std::string& theName)
+    {
+        std::map<std::string, FontPtr, StringLessNoCase>::iterator anItr = this->mNamedFontMap.find(theName);
+        if (anItr == this->mNamedFontMap.end())
+            return GetDefaultFont();
+        else
+            return anItr->second.get();
+    }
+    intptr_t GetDefaultFont()
+    {
+        if (this->mDefaultFont.get() == 0)
+        {
+            FontPtr aTemp;
+            aTemp.Adopt(Wo(Op::WmDefaultWindowFont));
+            this->mDefaultFont = aTemp;
+        }
+        return this->mDefaultFont.get();
+    }
+    void SetDefaultFont(intptr_t theFont) { this->mDefaultFont = theFont; }
+    void SetCacheImages(bool cache)
+    {
+        if (cache)
+            this->mCacheImageCount++;
+        else
+        {
+            this->mCacheImageCount--;
+            if (this->mCacheImageCount <= 0)
+            {
+                this->mCacheImageCount = 0;
+                Clear(this->mNativeImageMap);
+                Clear(this->mRawImageMap);
+            }
+        }
+    }
+    // the answers carry the returned SmartPtr's reference (the caller gives it back)
+    intptr_t DecodeImage(intptr_t theContext, const std::string& theFilePath)
+    {
+        if (theContext == 0)
+            return 0;
+        if (this->mCacheImageCount)
+        {
+            std::map<std::string, NativePtr, StringLessNoCase>::iterator anItr =
+                this->mNativeImageMap.insert(std::make_pair(theFilePath, NativePtr())).first;
+            if (anItr->second.get() == 0)
+            {
+                NativePtr aTemp;
+                aTemp.Adopt(Wo(Op::WmDecode, theContext, (intptr_t)theFilePath.data(), (intptr_t)theFilePath.size()));
+                anItr->second = aTemp;
+            }
+            if (anItr->second.get()) NativePtr::Hold(anItr->second.get());
+            return anItr->second.get();
+        }
+        else
+            return Wo(Op::WmDecode, theContext, (intptr_t)theFilePath.data(), (intptr_t)theFilePath.size());
+    }
+    intptr_t DecodeImageRaw(const std::string& theFilePath)
+    {
+        if (this->mCacheImageCount)
+        {
+            std::map<std::string, RawPtr, StringLessNoCase>::iterator anItr =
+                this->mRawImageMap.insert(std::make_pair(theFilePath, RawPtr())).first;
+            if (anItr->second.get() == 0)
+            {
+                RawPtr aTemp;
+                aTemp.Adopt(Wo(Op::WmDecodeRaw, (intptr_t)theFilePath.data(), (intptr_t)theFilePath.size()));
+                anItr->second = aTemp;
+            }
+            if (anItr->second.get()) RawPtr::Hold(anItr->second.get());
+            return anItr->second.get();
+        }
+        else
+            return Wo(Op::WmDecodeRaw, (intptr_t)theFilePath.data(), (intptr_t)theFilePath.size());
+    }
+    intptr_t DecodeDelayImage(const std::string& theFilePath)
+    {
+        if (this->mCacheImageCount)
+        {
+            std::pair<std::map<std::string, ImagePtr, StringLessNoCase>::iterator, bool> aRet =
+                this->mDelayImageMap.insert(std::make_pair(theFilePath, ImagePtr()));
+            if (aRet.second)
+                aRet.first->second.Adopt(Wo(Op::WmDelayImage, (intptr_t)theFilePath.data(), (intptr_t)theFilePath.size()));
+            if (aRet.first->second.get()) ImagePtr::Hold(aRet.first->second.get());
+            return aRet.first->second.get();
+        }
+        else
+            return Wo(Op::WmDelayImage, (intptr_t)theFilePath.data(), (intptr_t)theFilePath.size());
+    }
+    template <class M> static void DumpMap(std::string& l, const char* tag, M& m)
+    {
+        l += " ";
+        l += tag;
+        for (typename M::iterator i = m.begin(); i != m.end(); ++i) {
+            char b[64];
+            snprintf(b, sizeof b, " %s=%ld", i->first.c_str(), (long)i->second.get());
+            l += b;
+        }
+    }
+    void DumpCache()
+    {
+        char b[64];
+        snprintf(b, sizeof b, "cache %d %ld", mCacheImageCount, (long)mDefaultFont.get());
+        std::string l = b;
+        DumpMap(l, "fonts", mNamedFontMap);
+        DumpMap(l, "native", mNativeImageMap);
+        DumpMap(l, "raw", mRawImageMap);
+        DumpMap(l, "delay", mDelayImageMap);
+        Line("%s", l.c_str());
+    }
 
     void Construct()
     {
@@ -308,6 +481,9 @@ struct OrigWm {
         mDoMouseCapturePopupSupport = false;
         mPopupList.clear();
         mPopupWindowSave.p = 0; mPopupInputComponent.p = 0; mPopupOwnerComponent.p = 0;
+        mDefaultFont.p = 0;
+        mNamedFontMap.clear(); mNativeImageMap.clear(); mRawImageMap.clear(); mDelayImageMap.clear();
+        mCacheImageCount = 0; // the original left it unset
     }
     void Destruct()
     {
@@ -315,6 +491,11 @@ struct OrigWm {
         mPopupOwnerComponent = 0;
         mPopupInputComponent = 0;
         mPopupWindowSave = 0;
+        Clear(mDelayImageMap);
+        Clear(mRawImageMap);
+        Clear(mNativeImageMap);
+        Clear(mNamedFontMap);
+        mDefaultFont = 0;
     }
 
     void NotifyLostFocus()
@@ -804,6 +985,7 @@ struct OrigWm {
             l += b;
         }
         Line("%s", l.c_str());
+        DumpCache();
     }
 };
 
@@ -832,14 +1014,21 @@ static void DumpRust()
         l += b;
     }
     Line("%s", l.c_str());
+    char aCache[4096];
+    size_t n2 = ee_won_wm_cache_line(sRust, (uint8_t*)aCache, sizeof aCache - 1);
+    aCache[n2] = 0;
+    Line("%s", aCache);
+    return;
+    Line("%s", l.c_str());
 }
 
 // ---- the calls (the "call" lines' numbers; the Rust replay maps the same numbers)
 enum Call {
     kNotifyLost, kNotifyGot, kPopupWindow, kCalcModality, kNotModal, kDoDialog, kEndDialogCall, kExitLoopCall,
     kMessageLoop, kAdjust, kDoPopup, kEndPopup, kCheckEndPopup, kFindMouse, kCheckClick, kCheckModalValid,
-    kSetOwnWindow, kSetCapture, kSetEndPopup, kSetMouseDown, kSetTarget, kSetLastLose, kSetWindowSave, kWorld,
-    kCallCount
+    kSetOwnWindow, kSetCapture, kSetEndPopup, kSetMouseDown, kSetTarget, kSetLastLose, kSetWindowSave,
+    kSetNamedFont, kGetNamedFont, kGetDefaultFont, kSetDefaultFont, kSetCacheImages, kDecodeImage, kDecodeRaw,
+    kDecodeDelay, kWorld, kCallCount
 };
 
 static intptr_t SideCall(bool rust, int call, const int* v)
@@ -901,6 +1090,25 @@ static intptr_t SideCall(bool rust, int call, const int* v)
     case kSetTarget: if (rust) RC(K::SetField, EeWonWmField::TargetDepth, v[0], 0, 0); else o.mTargetMsgLoopDepth = v[0]; return 0;
     case kSetLastLose: if (rust) RC(K::SetField, EeWonWmField::LastLoseFocusTick, v[0], 0, 0); else o.mLastLoseFocusTick = (DWORD)v[0]; return 0;
     case kSetWindowSave: if (rust) RC(K::SetField, EeWonWmField::PopupWindowSave, v[0], 0, 0); else o.mPopupWindowSave = v[0]; return 0;
+    case kSetNamedFont: case kGetNamedFont: case kDecodeImage: case kDecodeRaw: case kDecodeDelay: {
+        std::string n = kNames[v[call == kDecodeImage ? 1 : 0]];
+        intptr_t s = (intptr_t)n.data(), len = (intptr_t)n.size();
+        intptr_t r = 0;
+        EeWonWmRefKind kind = EeWonWmRefKind::NativeImage;
+        switch (call) {
+        case kSetNamedFont: if (rust) RC(K::SetNamedFont, s, len, v[1], 0); else o.SetNamedFont(n, v[1]); return 0;
+        case kGetNamedFont: return rust ? RC(K::GetNamedFont, s, len, 0, 0) : o.GetNamedFont(n);
+        case kDecodeImage: r = rust ? RC(K::DecodeImage, v[0], s, len, 0) : o.DecodeImage(v[0], n); break;
+        case kDecodeRaw: r = rust ? RC(K::DecodeImageRaw, s, len, 0, 0) : o.DecodeImageRaw(n); kind = EeWonWmRefKind::RawImage; break;
+        default: r = rust ? RC(K::DecodeDelayImage, s, len, 0, 0) : o.DecodeDelayImage(n); kind = EeWonWmRefKind::Image; break;
+        }
+        // the caller's SmartPtr given back
+        if (r) World(rust, Op::WmRef, (intptr_t)kind, r, 0, 0);
+        return r;
+    }
+    case kGetDefaultFont: return rust ? RC(K::GetDefaultFont, 0, 0, 0, 0) : o.GetDefaultFont();
+    case kSetDefaultFont: if (rust) RC(K::SetDefaultFont, v[0], 0, 0, 0); else o.SetDefaultFont(v[0]); return 0;
+    case kSetCacheImages: if (rust) RC(K::SetCacheImages, v[0], 0, 0, 0); else o.SetCacheImages(v[0] != 0); return 0;
     }
 #undef RC
     return 0;
@@ -952,12 +1160,28 @@ static bool Args(Rng& g, int call, int* v)
     case kEndPopup: v[0] = g.Int(3) == 0 ? 0 : 1 + g.Int(kComps); break;
     case kCheckEndPopup: v[0] = AnyComp(g); break;
     case kFindMouse: case kCheckClick:
-        v[0] = 1 + g.Int(kWins); v[1] = g.Int(500) - 50; v[2] = g.Int(500) - 50; v[3] = g.Int(4) == 0 ? g.Int(5) - 1 : 0; break;
-    case kSetOwnWindow: case kSetCapture: case kSetEndPopup: v[0] = g.Int(3) == 0; break;
+        v[0] = 1 + g.Int(kWins); v[1] = g.Int(500) - 50; v[2] = g.Int(500) - 50; v[3] = g.Int(4) == 0 ? g.Int(5) - 1 : 0;
+        if (g.Bool()) {
+            // often inside a popup window, from its parent's place (where popup windows overlap, the topmost wins)
+            int w = 5 + g.Int(4);
+            if (sWin[w].exists && WinOk(sWin[w].parent)) {
+                v[0] = sWin[w].parent;
+                v[1] = sWin[w].rect.x - sWin[sWin[w].parent].rect.x + g.Int(30);
+                v[2] = sWin[w].rect.y - sWin[sWin[w].parent].rect.y + g.Int(30);
+            }
+        }
+        break;
+    case kSetOwnWindow: case kSetEndPopup: v[0] = g.Int(3) == 0; break;
+    case kSetCapture: v[0] = g.Int(3) != 0; break;
     case kSetMouseDown: v[0] = AnyWin(g); break;
     case kSetTarget: v[0] = g.Int(5) - 1; break;
     case kSetLastLose: v[0] = g.Int(3) == 0 ? 0 : (int)(sClock - (uint32_t)g.Int(5000)); break;
     case kSetWindowSave: v[0] = g.Int(3) == 0 ? 0 : 5 + g.Int(4); if (v[0] && !sWin[v[0]].exists) v[0] = 0; break;
+    case kSetNamedFont: v[0] = g.Int(kNameCount); v[1] = g.Int(5) == 0 ? 0 : 0x3001 + g.Int(4); break;
+    case kGetNamedFont: case kDecodeRaw: case kDecodeDelay: v[0] = g.Int(kNameCount); break;
+    case kSetDefaultFont: v[0] = g.Int(4) == 0 ? 0 : 0x3001 + g.Int(4); break;
+    case kSetCacheImages: v[0] = g.Int(5) < 3; break;
+    case kDecodeImage: v[0] = g.Int(6) == 0 ? 0 : 0x7777; v[1] = g.Int(kNameCount); break;
     }
     return true;
 }
@@ -1003,6 +1227,8 @@ static std::vector<std::string> RunSide(bool rust, unsigned seed, int calls)
     sClock = g.Int(4) == 0 ? 0xFFFFFF00u : 1000;
     sScreen.x = g.Int(20); sScreen.y = g.Int(20); sScreen.w = 640 + g.Int(400); sScreen.h = 480 + g.Int(300);
     sSelfRefs = 1; sNextNew = 0; sEvents = 0; sNest = 0;
+    sObj.clear(); sNextObj = 0;
+    for (intptr_t f = 0x3001; f <= 0x3004; f++) sObj[f] = 1;
     for (int w = 1; w <= kWins; w++) {
         WinW& x = sWin[w];
         x = WinW();
@@ -1056,6 +1282,11 @@ static std::vector<std::string> RunSide(bool rust, unsigned seed, int calls)
     for (int w = 1; w <= 4; w++) { char b[16]; snprintf(b, sizeof b, " %d", sWin[w].refs); refs += b; }
     for (int c = 1; c <= kComps; c++) { char b[16]; snprintf(b, sizeof b, " %d", sComp[c].refs); refs += b; }
     Line("%s %d", refs.c_str(), sSelfRefs);
+    // the fonts back at 1, every font or image the world made back at 0
+    int aBad = 0;
+    for (std::map<intptr_t, int>::iterator i = sObj.begin(); i != sObj.end(); ++i)
+        if (i->second != (i->first < 0x4000 ? 1 : 0)) aBad++;
+    Line("objs %u %d", (unsigned)sObj.size(), aBad);
     return trace;
 }
 
@@ -1075,7 +1306,8 @@ int main(int argc, char** argv)
         bool same = a == b;
         CHECK(same);
         // every reference given back (the windows' and components' counts back at 1, the manager's at 1)
-        const std::string& r = a.back();
+        const std::string& r = a[a.size() - 2];
+        if (a.back().substr(a.back().rfind(' ')) != " 0") aRefsOff++;
         bool back = true;
         for (size_t i = 5; i < r.size(); i++) if (r[i] != ' ' && r[i] != '1') back = false;
         if (!back) aRefsOff++;

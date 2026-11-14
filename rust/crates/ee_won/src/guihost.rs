@@ -779,6 +779,17 @@ pub enum EeWonGuiOp {
     WmSelfRelease,
     /// the window set's `a`-th window (0 past the end; a pure read).
     WmWindowAt,
+    /// a cache's reference: `b` (an `EeWonWmRefKind` `a`) held (`c != 0`) or given back.
+    WmRef,
+    /// `mImageDecoder.Decode((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with one reference, or 0).
+    WmDecode,
+    /// `mImageDecoder.DecodeRaw(path a of b bytes)` (a `RawImage*` with one reference, or 0).
+    WmDecodeRaw,
+    /// `new DelayLoadImage(path a of b bytes, its width, its height)` with one reference, or 0 when the file's
+    /// attributes cannot be read.
+    WmDelayImage,
+    /// `mDefaultWindow->GetFont(FontDescriptor("Tahoma", 0, 8))` (a `Font*` with one reference).
+    WmDefaultWindowFont,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

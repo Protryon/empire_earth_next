@@ -1,5 +1,6 @@
 //! WONGUI's WindowManager as a Rust object (R6 WON round 33): the popup stack, the modal dialog and the nested
-//! message loop, focus and the mouse-down window (the original's WindowManager.cpp).
+//! message loop, focus and the mouse-down window, and the font and image caches (`wmcache.rs`) (the original's
+//! WindowManager.cpp).
 //!
 //! The C++ `WindowManager` stays the type the windows, the components, the platform subclass (`PlatWindowManager`)
 //! and the lobby use: the moved methods are one-line forwarders to `ee_won_wm_call` and the accessors read
@@ -19,6 +20,7 @@ use crate::guictl::EeWonRect4;
 use crate::guievent;
 use crate::guihost::{EeWonGuiHostFn, EeWonGuiOp as Op};
 use crate::guiwin;
+use crate::wmcache::Caches;
 
 /// `PopupFlag_*` (`WONLobbyGUI.h`).
 const POPUP_WANT_INPUT: i32 = 0x0080;
@@ -167,6 +169,22 @@ pub enum EeWonWmCall {
     GetField,
     /// the field `a` set to `b`.
     SetField,
+    /// `SetNamedFont` of the name `a` (`b` bytes) to the font `c`.
+    SetNamedFont,
+    /// `GetNamedFont` of the name `a` (`b` bytes; a raw `Font*`).
+    GetNamedFont,
+    /// `GetDefaultFont()` (a raw `Font*`).
+    GetDefaultFont,
+    /// `SetDefaultFont((Font*)a)`.
+    SetDefaultFont,
+    /// `SetCacheImages(a != 0)`.
+    SetCacheImages,
+    /// `DecodeImage((DisplayContext*)a, path b of c bytes)` (a `NativeImage*` with the caller's reference).
+    DecodeImage,
+    /// `DecodeImageRaw(path a of b bytes)` (a `RawImage*` with the caller's reference).
+    DecodeImageRaw,
+    /// `DecodeDelayImage(path a of b bytes)` (an `Image*` with the caller's reference).
+    DecodeDelayImage,
 }
 
 /// The fields (the accessors, the goldens and the unit tests).
@@ -271,15 +289,21 @@ pub struct EeWonWm {
     comp: *mut c_void,
     host: EeWonGuiHostFn,
     st: RefCell<State>,
+    pub(crate) caches: RefCell<Caches>,
 }
 
 impl EeWonWm {
     /// The constructor's state: no popup, no dialog, no focus, popups in their own window.
     pub fn new(comp: *mut c_void, host: EeWonGuiHostFn) -> Self {
-        EeWonWm { comp, host, st: RefCell::new(State { own_window: true, ..State::default() }) }
+        EeWonWm {
+            comp,
+            host,
+            st: RefCell::new(State { own_window: true, ..State::default() }),
+            caches: RefCell::new(Caches::default()),
+        }
     }
 
-    fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+    pub(crate) fn op(&self, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
         match self.host {
             // SAFETY: the host was given with this object's manager; no borrow of the state is live here
             Some(h) => unsafe { h(self.comp, op, a, b, c, d) },
@@ -1006,7 +1030,23 @@ impl EeWonWm {
 
     pub fn call(&self, call: EeWonWmCall, a: isize, b: isize, c: isize, d: isize) -> isize {
         type C = EeWonWmCall;
+        let bytes = |p: isize, n: isize| -> Vec<u8> {
+            if p == 0 || n <= 0 {
+                Vec::new()
+            } else {
+                // SAFETY: the C++ passes a string's bytes and length
+                unsafe { std::slice::from_raw_parts(p as *const u8, n as usize) }.to_vec()
+            }
+        };
         match call {
+            C::SetNamedFont => self.set_named_font(&bytes(a, b), c),
+            C::GetNamedFont => return self.named_font(&bytes(a, b)),
+            C::GetDefaultFont => return self.default_font(),
+            C::SetDefaultFont => self.set_default_font(a),
+            C::SetCacheImages => self.set_cache_images(a != 0),
+            C::DecodeImage => return self.decode_image(a, &bytes(b, c)),
+            C::DecodeImageRaw => return self.decode_image_raw(&bytes(a, b)),
+            C::DecodeDelayImage => return self.decode_delay_image(&bytes(a, b)),
             C::NotifyLostFocus => self.notify_lost_focus(),
             C::NotifyGotFocus => self.notify_got_focus(a),
             C::PopupWindow => return self.popup_window(),
@@ -1057,7 +1097,8 @@ pub extern "C" fn ee_won_wm_new(manager: *mut c_void, host: EeWonGuiHostFn) -> *
     Box::into_raw(Box::new(EeWonWm::new(manager, host)))
 }
 
-/// The manager's object freed, its held members given back first.
+/// The manager's object freed, its held members given back first (the popup members, then the caches: the
+/// original's members in reverse order).
 ///
 /// # Safety
 /// `wm` came from `ee_won_wm_new` (or is NULL) and is not used again.
@@ -1067,6 +1108,7 @@ pub unsafe extern "C" fn ee_won_wm_free(wm: *mut EeWonWm) {
         // SAFETY: the contract
         unsafe {
             (*wm).release_members();
+            (*wm).release_caches();
             drop(Box::from_raw(wm));
         }
     }
@@ -1097,6 +1139,20 @@ pub unsafe extern "C" fn ee_won_wm_call(
 pub unsafe extern "C" fn ee_won_wm_popup_at(wm: *const EeWonWm, i: usize) -> isize {
     // SAFETY: live (the contract)
     unsafe { (*wm).st.borrow().popups.get(i).copied().unwrap_or(0) }
+}
+
+/// The caches as one line (the goldens' trace) into `buf` (at most `cap` bytes); the length written.
+///
+/// # Safety
+/// `wm` is live; `buf` has room for `cap` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_wm_cache_line(wm: *const EeWonWm, buf: *mut u8, cap: usize) -> usize {
+    // SAFETY: live (the contract)
+    let s = unsafe { (*wm).cache_line() };
+    let n = s.len().min(cap);
+    // SAFETY: room for `cap` bytes (the contract)
+    unsafe { std::ptr::copy_nonoverlapping(s.as_ptr(), buf, n) };
+    n
 }
 
 #[cfg(test)]

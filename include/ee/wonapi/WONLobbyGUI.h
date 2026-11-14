@@ -1864,10 +1864,6 @@ public:
     DWORD GetLastInputTick() const { return this->mLastInputTick; }
     Window* GetDefaultWindow() const { return this->mDefaultWindow; }
 
-    typedef std::map<std::string,SmartPtr<Font>,StringLessNoCase> NamedFontMap;
-    typedef std::map<std::string,SmartPtr<NativeImage>,StringLessNoCase> NativeImageMap;
-    typedef std::map<std::string,SmartPtr<RawImage>,StringLessNoCase> RawImageMap;
-    typedef std::map<std::string,SmartPtr<Image>,StringLessNoCase> DelayImageMap;
     typedef std::set<SmartPtr<Window>,SmartPtr<Window>::Comp> WindowSet;
     typedef std::list<SmartPtr<WindowEventBase> > WindowEventList;
     typedef std::set<SmartPtr<WindowEventBase> > WindowEventSet;
@@ -1884,13 +1880,9 @@ public:
     SmartPtr<ColorScheme> mColorScheme; //20
     MultiImageDecoder mImageDecoder; // at +0x24..0x57 (0x34 bytes)
     SmartPtr<SoundDecoder> mSoundDecoder; //58
-    SmartPtr<Font> mDefaultFont; //5c
     SmartPtr<NativeIcon> mDefaultWindowIcon; //60
-    NamedFontMap mNamedFontMap; //64
-    NativeImageMap mNativeImageMap; //70
-    RawImageMap mRawImageMap; //7c
-    DelayImageMap mDelayImageMap; //88
-    int mCacheImageCount; //94
+    // the default font (+5c), the named fonts (+64) and the native, raw and delay-load image caches (+70, +7c, +88)
+    // with their count (+94) are the Rust manager's (wmobj.rs, wmcache.rs; R6 WON round 33)
     DWORD mLastTimerTick,mLastInputTick; //98/9c
     bool mIsValid; //a1
     bool mIsFullScreen; //ad
@@ -2276,7 +2268,7 @@ public:
     virtual int GetDescent();
     FontDescriptor mDescriptor;             // +08..1f
 };
-inline void WindowManager::SetDefaultFont(Font* font) {this->mDefaultFont=font;} // inline (needs the complete Font)
+inline void WindowManager::SetDefaultFont(Font* font) {this->WmCall(EeWonWmCall::SetDefaultFont,(intptr_t)font);} // the Rust manager's
 
 // FontConfig (0x98 bytes): the factory 0x38a160 allocates it, constructor 0x38a1c0, implicit destructor 0x38a250.
 class FontConfig : public ComponentConfig {

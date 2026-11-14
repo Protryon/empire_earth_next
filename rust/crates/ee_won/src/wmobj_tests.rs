@@ -1,4 +1,5 @@
 use super::*;
+use crate::wmcache::EeWonWmRefKind;
 use std::cell::RefCell as Cell;
 use std::collections::HashMap;
 
@@ -149,7 +150,14 @@ unsafe extern "C" fn replay_host(_wm: *mut c_void, op: Op, a: isize, b: isize, c
     let set_pos = op == Op::WmWin && a == EeWonWmWin::SetPosSize as isize;
     let rect_c = op == Op::WmWin && (a == EeWonWmWin::GetRect as isize || set_pos);
     let rect_b = op == Op::WmNewPopupWindow;
-    let extra = if set_pos || rect_b {
+    let str_b = op == Op::WmDecode;
+    let str_a = op == Op::WmDecodeRaw || op == Op::WmDelayImage;
+    let extra = if str_a || str_b {
+        let (p, n) = if str_b { (b, c) } else { (a, b) };
+        // SAFETY: the Rust passed a path's bytes
+        let s = unsafe { std::slice::from_raw_parts(p as *const u8, n as usize) };
+        format!(" s {}", String::from_utf8_lossy(s))
+    } else if set_pos || rect_b {
         // SAFETY: the Rust passed a rectangle
         let r = unsafe { *((if set_pos { c } else { b }) as *const EeWonRect4) };
         format!(" r {} {} {} {}", r.x, r.y, r.w, r.h)
@@ -159,8 +167,8 @@ unsafe extern "C" fn replay_host(_wm: *mut c_void, op: Op, a: isize, b: isize, c
     let want = format!(
         "op {} {} {} {} {}{}",
         op as u32,
-        if rect_a { 0 } else { a },
-        if rect_b { 0 } else { b },
+        if rect_a || str_a { 0 } else { a },
+        if rect_b || str_b { 0 } else { b },
         if rect_c { 0 } else { c },
         d,
         extra
@@ -202,7 +210,8 @@ fn state_lines() -> (String, String) {
         // SAFETY: live
         l += &format!(" {}", unsafe { ee_won_wm_popup_at(w, i) });
     }
-    (s, l)
+    // SAFETY: live
+    (s, l + "\n" + &unsafe { (*w).cache_line() })
 }
 
 fn run_call(call: i64, v: &[i64]) -> (isize, Option<EeWonWmMouse>) {
@@ -259,6 +268,32 @@ fn run_call(call: i64, v: &[i64]) -> (isize, Option<EeWonWmMouse>) {
         20 => field(F::TargetDepth, a(0)),
         21 => field(F::LastLoseFocusTick, a(0)),
         22 => field(F::PopupWindowSave, a(0)),
+        23..=27 | 28..=30 => {
+            const NAMES: [&str; 9] = ["a.png", "A.PNG", "b.png", "Lobby.jpg", "LOBBY.jpg", "c.png", "Title", "title", "Body"];
+            let idx = match call {
+                28 => v[1],
+                23 | 24 | 29 | 30 => v[0],
+                _ => 0,
+            };
+            let n = NAMES[idx as usize].as_bytes();
+            let (s, len) = (n.as_ptr() as isize, n.len() as isize);
+            let (r, kind) = match call {
+                23 => (wm.call(K::SetNamedFont, s, len, a(1), 0), None),
+                24 => (wm.call(K::GetNamedFont, s, len, 0, 0), None),
+                25 => (wm.call(K::GetDefaultFont, 0, 0, 0, 0), None),
+                26 => (wm.call(K::SetDefaultFont, a(0), 0, 0, 0), None),
+                27 => (wm.call(K::SetCacheImages, a(0), 0, 0, 0), None),
+                28 => (wm.call(K::DecodeImage, a(0), s, len, 0), Some(EeWonWmRefKind::NativeImage)),
+                29 => (wm.call(K::DecodeImageRaw, s, len, 0, 0), Some(EeWonWmRefKind::RawImage)),
+                _ => (wm.call(K::DecodeDelayImage, s, len, 0, 0), Some(EeWonWmRefKind::Image)),
+            };
+            // the caller's SmartPtr given back
+            if let (Some(k), true) = (kind, r != 0) {
+                // SAFETY: the replay's host
+                unsafe { replay_host(std::ptr::null_mut(), Op::WmRef, k as isize, r, 0, 0) };
+            }
+            r
+        }
         _ => panic!("call {call}"),
     };
     (r, None)
@@ -276,7 +311,9 @@ fn run_call_line(top: bool) {
     if top {
         let (s, li) = state_lines();
         assert_eq!(next_line(), s, "after {l}");
+        let (li, cache) = li.split_once('\n').unwrap();
         assert_eq!(next_line(), li, "after {l}");
+        assert_eq!(next_line(), cache, "after {l}");
     }
 }
 
@@ -303,6 +340,7 @@ fn replay(text: &str) -> usize {
             // SAFETY: from Box::into_raw just above
             unsafe { ee_won_wm_free(p) };
             assert!(next_line().starts_with("refs"));
+            assert!(next_line().starts_with("objs"));
         } else {
             panic!("unexpected line {l}");
         }

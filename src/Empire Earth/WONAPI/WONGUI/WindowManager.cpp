@@ -109,6 +109,41 @@ extern "C" intptr_t ee_won_guicpp_wm_call(void* inWm, EeWonGuiOp op, intptr_t a,
         aPopupWindow->Create(*(const WONRectangle*)b);
         return (intptr_t)aPopupWindow;
     }
+    case Op::WmRef:
+        switch ((EeWonWmRefKind)a) {
+        case EeWonWmRefKind::Font: if (c) ((Font*)b)->AddRef(); else ((Font*)b)->Release(); return 0;
+        case EeWonWmRefKind::NativeImage: if (c) ((NativeImage*)b)->AddRef(); else ((NativeImage*)b)->Release(); return 0;
+        case EeWonWmRefKind::RawImage: if (c) ((RawImage*)b)->AddRef(); else ((RawImage*)b)->Release(); return 0;
+        case EeWonWmRefKind::Image: if (c) ((Image*)b)->AddRef(); else ((Image*)b)->Release(); return 0;
+        }
+        return 0;
+    case Op::WmDecode: {
+        // the decoder's SmartPtr: its object answered with one reference
+        std::string aPath((const char*)b, (size_t)c);
+        SmartPtr<NativeImage> anImage = t->mImageDecoder.Decode((DisplayContext*)a, aPath.c_str());
+        if (anImage.get() != NULL) anImage->AddRef();
+        return (intptr_t)anImage.get();
+    }
+    case Op::WmDecodeRaw: {
+        std::string aPath((const char*)a, (size_t)b);
+        SmartPtr<RawImage> anImage = t->mImageDecoder.DecodeRaw(aPath.c_str());
+        if (anImage.get() != NULL) anImage->AddRef();
+        return (intptr_t)anImage.get();
+    }
+    case Op::WmDelayImage: {
+        std::string aPath((const char*)a, (size_t)b);
+        ImageAttributes anAttr;
+        if (!t->mImageDecoder.GetImageAttributes(aPath.c_str(), anAttr))
+            return 0;
+        Image* anImage = new DelayLoadImage(aPath.c_str(), anAttr.mWidth, anAttr.mHeight);
+        anImage->AddRef();
+        return (intptr_t)anImage;
+    }
+    case Op::WmDefaultWindowFont: {
+        SmartPtr<Font> aFont = t->GetDefaultWindow()->GetFont(FontDescriptor("Tahoma", 0, 8));
+        if (aFont.get() != NULL) aFont->AddRef();
+        return (intptr_t)aFont.get();
+    }
     case Op::WmNextEvent: t->GetNextEvent(); return 0;
     case Op::WmSelfHold: t->AddRef(); return 0;
     case Op::WmSelfRelease: t->Release(); return 0;
@@ -268,30 +303,21 @@ Window* WindowManager::GetPopupWindow()
 // Stores a font under a name (case-insensitive), replacing any earlier one
 void WindowManager::SetNamedFont(const std::string &theName, Font *theFont)
 {
-	this->mNamedFontMap[theName] = theFont;
+	this->WmCall(EeWonWmCall::SetNamedFont, (intptr_t)theName.data(), (intptr_t)theName.size(), (intptr_t)theFont);
 }
 
 // FUNCTION: WON 0x0072c4d0
 // Returns the font stored under a name, or the default font when there is none
 Font* WindowManager::GetNamedFont(const std::string &theName)
 {
-	NamedFontMap::iterator anItr = this->mNamedFontMap.find(theName);
-	if(anItr==this->mNamedFontMap.end())
-		return GetDefaultFont();
-	else
-		return anItr->second.get();
+	return (Font*)this->WmCall(EeWonWmCall::GetNamedFont, (intptr_t)theName.data(), (intptr_t)theName.size());
 }
 
 // FUNCTION: WON 0x0072c540
 // Returns the default font, creating Tahoma 8 on the default window the first time
 Font* WindowManager::GetDefaultFont()
 {
-	if(this->mDefaultFont.get()==NULL)
-		{
-        this->mDefaultFont=this->mDefaultWindow->GetFont(FontDescriptor("Tahoma",0,8));
-    }
-
-	return this->mDefaultFont.get();
+	return (Font*)this->WmCall(EeWonWmCall::GetDefaultFont);
 }
 
 // FUNCTION: WON 0x0072c700
@@ -311,37 +337,18 @@ Font* WindowManager::GetDefaultFontMod(int theStyle, int theSize)
 // Adds or drops one image-caching request; when the count reaches 0 it empties the native and raw image caches
 void WindowManager::SetCacheImages(bool cache)
 {
-	if(cache)
-		this->mCacheImageCount++;
-	else
-	{
-		this->mCacheImageCount--;
-		if(this->mCacheImageCount<=0)
-		{
-			this->mCacheImageCount = 0;
-			this->mNativeImageMap.clear();
-			this->mRawImageMap.clear();
-		}
-	}
+	this->WmCall(EeWonWmCall::SetCacheImages, cache ? 1 : 0);
 }
 
 // FUNCTION: WON 0x0072c950
 // Decodes an image file for a display context, cached while caching is on; NULL without a context
 SmartPtr<NativeImage> WindowManager::DecodeImage(DisplayContext *theContext, const char *theFilePath)
 {
-	if(theContext==NULL)
-		return NULL;
-
-	if(this->mCacheImageCount)
-	{
-		NativeImageMap::iterator anItr = this->mNativeImageMap.insert(NativeImageMap::value_type(theFilePath,NULL)).first;
-		if(anItr->second.get()==NULL)
-			anItr->second = this->mImageDecoder.Decode(theContext,theFilePath);
-
-		return anItr->second;
-	}
-	else
-		return this->mImageDecoder.Decode(theContext,theFilePath);
+	// the Rust's answer carries the returned SmartPtr's reference
+	SmartPtr<NativeImage> anImage;
+	anImage.mPtr = (NativeImage*)this->WmCall(EeWonWmCall::DecodeImage, (intptr_t)theContext, (intptr_t)theFilePath,
+	                                          (intptr_t)strlen(theFilePath));
+	return anImage;
 }
 
 // FUNCTION: WON 0x0072cc20
@@ -363,28 +370,9 @@ SmartPtr<NativeImage> WindowManager::DecodeImage(const char *theFilePath)
 // caching is on; NULL when the attributes cannot be read
 SmartPtr<Image> WindowManager::DecodeDelayImage(const char *theFilePath)
 {
-	if(this->mCacheImageCount)
-	{
-		std::pair<DelayImageMap::iterator,bool> aRet;
-		aRet = this->mDelayImageMap.insert(DelayImageMap::value_type(theFilePath,NULL));
-
-		if(aRet.second)
-		{
-			ImageAttributes anAttr;
-			if(this->mImageDecoder.GetImageAttributes(theFilePath,anAttr))
-				aRet.first->second = new DelayLoadImage(theFilePath,anAttr.mWidth,anAttr.mHeight);
-		}
-
-		return aRet.first->second;
-	}
-	else
-	{
-		ImageAttributes anAttr;
-		if(this->mImageDecoder.GetImageAttributes(theFilePath,anAttr))
-			return new DelayLoadImage(theFilePath,anAttr.mWidth,anAttr.mHeight);
-		else
-			return NULL;
-	}
+	SmartPtr<Image> anImage;
+	anImage.mPtr = (Image*)this->WmCall(EeWonWmCall::DecodeDelayImage, (intptr_t)theFilePath, (intptr_t)strlen(theFilePath));
+	return anImage;
 }
 
 // FUNCTION: WON 0x0072d0d0
@@ -395,17 +383,9 @@ SmartPtr<Image> WindowManager::DecodeDelayImage(const char *theFilePath)
 // Decodes an image file into a raw image, through the raw image cache while caching is on
 SmartPtr<RawImage> WindowManager::DecodeImageRaw(const char *theFilePath)
 {
-	if(this->mCacheImageCount)
-	{
-		RawImageMap::iterator anItr = this->mRawImageMap.insert(RawImageMap::value_type(std::string(theFilePath),SmartPtr<RawImage>())).first;
-
-		if(anItr->second.get()==NULL)
-			anItr->second = this->mImageDecoder.DecodeRaw(theFilePath);
-
-		return anItr->second;
-	}
-	else
-		return this->mImageDecoder.DecodeRaw(theFilePath);
+	SmartPtr<RawImage> anImage;
+	anImage.mPtr = (RawImage*)this->WmCall(EeWonWmCall::DecodeImageRaw, (intptr_t)theFilePath, (intptr_t)strlen(theFilePath));
+	return anImage;
 }
 
 // FUNCTION: WON 0x0072d400
