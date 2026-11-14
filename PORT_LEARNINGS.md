@@ -16755,3 +16755,80 @@ The merge of rust met `rust/cbindgen.toml`'s export list (both sides added names
 - Then top-down: the controls of the LAN screens (GameBrowserCtrl, GameUserListCtrl, LobbyOptionsCtrl,
   GameStagingCtrl), the EE room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic,
   RoutingLogic last, Internet only), and the resource tables and factories.
+
+## R5b.4, twenty-seventh round: EEUnitClass as a Rust record filled from the db row; FinishLoad's fractions in Rust; the unit store reads the pointer members in place (ee_units unit_class_fields.rs, unit_load.rs, store.rs; branch rust-r5b4-core27, 2026-11-14)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 2ce616e5 | `EEUnitClass` derives from `EeUnitsUnitClassFields` (169 members); the constructor's plain stores are one Rust fill from the db row | +58 -611, net -553 |
+| 784a29f4 | `EEComplexUnit::FinishLoad`'s four fractions and `EEUnit::FinishLoad`'s hit points in Rust over the records | +10 -27, net -17 |
+| 1f2accfe | the unit store reads the seven pointer members in place; `EEUnitStoreField` and its reports gone | +74 -219, net -145 |
+| (merge) | `rust` 008e14c0: no conflict | |
+
+The round's C++: net -715 (EEUnitClass.cpp 4,504 -> ~4,120 lines; EEUnitStore.cpp 865 -> ~770; ee/EEUnit.h -175).
+
+**The measure** (before the round): `EEUnitClass` had 171 plain members (`mAirTrafficType`, `mCommands[9]` and the block
+`mCruiseAltitude` +0x11c .. `mS32A` +0x32a), every one but `mIsMedic`/`mIsFlare`/`mIsBoobyTrap`/`mIsParatrooperBomber`
+(set by `CreateUnitClasses`) and the never-read `mB329`/`mS32A` stored by the constructor's ~250 copies from
+`EEUnitClassRecord`; the store had 7 pointer holders (`mUnitClass`, `mComplexUnit`, `mActiveGroup`, `mContainer`,
+`mCommand`, `mGoalState`, `mHerd`), each write a `switch` case and up to eleven `ee_units_store_set` calls.
+
+- **`EEUnitClass`'s record** (`unit_class_fields.rs`): `class EEUnitClass : public UReferenceCounter, public
+  EeUnitsUnitClassFields`; the members' C++ names and types (`c_long`/`c_ulong`, `f32`, `bool`, `u8` for `mDomains`,
+  the arrays) and order, `mAirTrafficType` and `mCommands` first (they sat between the names and the research list).
+  The volatile `mIsMediaLoaded` stays a C++ member (a Rust field cannot be volatile); `mB329` and `mS32A` (never
+  read or written) are gone. Nothing takes `offsetof`/`sizeof` of a unit class.
+- **The fill reads ee_data's generated row** (`ee_data::generated::specs_gen::records::EEUnitClassRecord`, the layout
+  the generator asserts field by field and `EEDataTextFile.cpp` asserts by size): ee_units depends on ee_data now.
+  The FFI takes the row as `const void*` (cbindgen would otherwise emit a second `EEUnitClassRecord`). The C++ looks
+  up what the row does not hold and passes it in `EeUnitsUnitClassFillIn`: the tech tree node's epoch, the calamity
+  (kind 5) research technology, `EEAnimal::Find`'s id (looked up once: the original's second identical lookup was a
+  pure repeat), the AI script handle (the patrol action is found in Rust: script.rs `find_action`, as `FindAction`
+  was). The LOS warning's `ESDebugOut` stays C++. The fill keeps the conversions: `(long)` of a float truncates
+  (`as`), the flight time is an `int32` product (`wrapping_mul`), `unsigned long` from `int32` sign-extends, the
+  rate is `(float)int * 0.01f`, the degrees use the original's 0.017453292f, a row byte other than 0/1 is true.
+  The four flags `CreateUnitClasses` sets start false (the original left them unset until then).
+- **The effects block** (29 `EEGraphicEffect::Get` + `Reference`) is one local lambda in the original's order.
+- **Golden (temporary, removed):** every class's 169 fields after `CreateUnitClasses` (floats as bits, bools as
+  bytes) dumped by the unmodified build and by the new one: 145,600 lines, identical.
+- **FinishLoad** (`unit_load.rs` `finish_fractions`, `finish_hit_points`): the float bits the load left in the first
+  four bytes of each `long` (`as u32`: the low half where `long` has 64 bits) back into amounts. The complex unit's
+  four truncate (`(long)(x + 0.00001f)`) with the original's operand order (max * fraction for the hit points,
+  fraction * max for the others); `EEUnit`'s hit points round by `lrintf` (`UMFloatToLong`), as the original did:
+  the two functions differ there. The old saves' (<= 200) foundation test stays C++.
+- **The store reads the pointer members in place** (`store.rs` `EeUnitsStoreSlots`, `refresh_pointers`): the C++ sets
+  the members' offsets in the object, the record base's offset in `EEUnitClass`, the goal's `mKind`/`mID` offsets and
+  the action's `mType` offset once (`SetSlots`, the first `Fill`); every store read derives from the members what the
+  holders reported: from the class's record the category, type, domains, `mCanAttackGround`, family, cloak radius,
+  `mIsParatrooperBomber`, heal threshold and the class flags (wall, projectile, paratrooper, melee); `IsCrusader()`
+  from the type (0x2e6..0x2e9); `IsLandBuilding()` (virtual) as the port's `mIsLandBuildingClass`, set by
+  `CreateUnitClasses` once the vtable is final; the goal's kind (-1: none) and id; the command's type (0: none); the
+  complex flag (none, self, other); set or not for the group, container and herd. `ee_units_store_set_fields` puts
+  -1 in the category, type and goal kind first (an object below `EEUnit`/`EEComplexUnit` keeps them). The unit tests
+  never set the slots (their objects are not units), so only the in-game store reads pointers. Only the location,
+  the on-map flag and the stats object are still reported.
+- **Kept, and why:** `EEComplexUnit::RepairPointers` (the ids the load left turned back into objects: every statement
+  is a C++ lookup, a `Reference()` or a container edit; as Rust it would be one host operation per statement) and
+  the load's live-state block (eight scalars read into a struct that a deferred lambda applies; its containers and
+  the lambda stay C++, so Rust would delete about twenty lines for a new host section).
+
+**For the legacy harness and the renderer.** `EEUnitClass`'s moved members now sit after `UReferenceCounter`
+(`mAirTrafficType` first) and before `mAIScriptName`; `layout_gen.py` flattens base subobjects by member name, so
+`layout.json` names them under `EEUnitClass` at new offsets; `game_state_probe.py` and `layout.py` read no
+`EEUnitClass` member (they read `EEWorld`/`EEPlayer`/unit fields; checked by grep). The seven pointer members keep
+their offsets and size (a holder was the pointer). The renderer reads moved class members by name
+(the Graphics Thread files: `mCategory` 22 sites, `mTileSize` 17, `mUnitType` 12, `mIsTree`, `mSelectionSize`,
+`mFacesCamera`, `mIsObstacle`, `mFamily`, `mScale`, `mShootsHigh`, `mIsWall`, `mIsProjectile`, `mIsFlare`,
+`mAirTrafficType`; the shadow scale through `GetShadowScale()`/`GetF170()`) and one
+`.Get()` became a plain read there (`mUnitClass`): only a tour shows them drawn.
+
+- **Coverage.** The fill runs for every class at every start (the golden compared all of them); the store's pointer
+  reads run on every store read of every game (USCK compared every listed and unlisted unit at every tick of the
+  capture profiles); FinishLoad runs for every unit of every loaded game of the saveload matrix.
+- **Behaviour:** none (oracle identical, captures equal, the matrix equals its expect file).
+- **Gates.** Commit 1: the golden above; build `--sim` 0/0; oracle seeds 2-3 identical to `ref`. Commit 2 (built with commit 1): build `--sim` 0/0, oracle seeds 2-3 identical, the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt`) PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4), no load fault; the Rust gate PASS after a clippy fix folded into commit 1 (a same-type cast in a test). Commit 3: build `--sim` 0/0, oracle seeds 2-3 identical, the Rust gate PASS, capture oracle seeds 2-3 PASS (169 digests, USCK included); the matrix was not rerun (the holders were the pointers: no layout or save change). On the result merged with rust (008e14c0, no conflict; `rust_build.py header` and `rust_includes.py` changed nothing): build `--sim` 0/0; oracle seeds 2-7 identical to `ref`; the Rust gate PASS (ee_units 270 tests, 11 new); captures at seeds 2-3: oracle (169 digests), late (170), space (171), calamity (183), scenario (22) PASS, every run exit 0; the test profile 0/0.
+- **For the next round.** `EEUnitClassUpgrade` (the stats object: 47 plain members) as a record: its `Init`'s copies
+  from the class's record as a Rust fill (between `SetRange` and `Reapply`), and the stats table (stats.rs) reading
+  the record in place as the store now does, which deletes `StatsFill`, `EEUnitStatsReport`/`EEUnitStatsScope` (13
+  scopes) and the table's versioning (check its one reader in ee_rust first). Then `EEMap`'s plain state with its
+  420-line Load, `EEGroup`'s Load/Save.
