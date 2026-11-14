@@ -107,6 +107,8 @@ pub struct EeGfxGraphicFacts {
     pub flag2: bool,
     pub param7: f32,
     pub param8: f32,
+    /// `gPhysics->mSpeed` (the game speed)
+    pub speed: f32,
 }
 
 /// The C++'s answers for an `EEE3DRust`.

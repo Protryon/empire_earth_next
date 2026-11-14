@@ -97,6 +97,11 @@ pub struct EeGfxRaster {
     ),
     /// `SetFrame(frame)` of a texture (`GETexture*`)
     pub texture_frame: extern "C" fn(texture: EeGfxModel, frame: u32),
+    /// the camera's yaw (`gRenderSnapshot.mCameraYaw`)
+    pub camera_yaw: extern "C" fn() -> f32,
+    /// `GetZBuffer`, `GetZCompare`
+    pub get_zbuffer: extern "C" fn() -> u32,
+    pub get_zcompare: extern "C" fn() -> u32,
     /// `AddGroundStrip(from, to, width, color, offset, size, alpha, brightness, alpha reference)`
     pub ground_strip: extern "C" fn(
         from: *const Ge3DPoint,
@@ -174,6 +179,9 @@ pub trait Raster {
         alpha_ref: f32,
     );
     fn texture_frame(&mut self, texture: EeGfxModel, frame: u32);
+    fn camera_yaw(&mut self) -> f32;
+    fn get_zbuffer(&mut self) -> u32;
+    fn get_zcompare(&mut self) -> u32;
 }
 
 impl Raster for &EeGfxRaster {
@@ -307,6 +315,15 @@ impl Raster for &EeGfxRaster {
     }
     fn texture_frame(&mut self, texture: EeGfxModel, frame: u32) {
         (self.texture_frame)(texture, frame)
+    }
+    fn camera_yaw(&mut self) -> f32 {
+        (self.camera_yaw)()
+    }
+    fn get_zbuffer(&mut self) -> u32 {
+        (self.get_zbuffer)()
+    }
+    fn get_zcompare(&mut self) -> u32 {
+        (self.get_zcompare)()
     }
 }
 
@@ -462,5 +479,14 @@ impl Raster for LogRaster {
     }
     fn texture_frame(&mut self, _texture: EeGfxModel, frame: u32) {
         self.calls.push(format!("frame {frame}"));
+    }
+    fn camera_yaw(&mut self) -> f32 {
+        0.25
+    }
+    fn get_zbuffer(&mut self) -> u32 {
+        0
+    }
+    fn get_zcompare(&mut self) -> u32 {
+        0
     }
 }

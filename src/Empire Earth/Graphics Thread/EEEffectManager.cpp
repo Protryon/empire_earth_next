@@ -75,7 +75,7 @@
 #include "ee/EEE3DParticleEmitter.h"
 #include "ee/EEEDamagedEffect.h"
 #include "ee/EEE3DRust.h"
-#include "ee/EEE3DCommandConfirmation.h"
+#include "ee/EEE2DRust.h"
 #include "ee/EEE3DTracerBeam.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
@@ -298,7 +298,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x2c: theEffect = new EEE3DSmokeGenerator(inUnit, inEffect, 0x2c); break;
     case 0x2b: theEffect = new EEE3DSmokeGenerator(inUnit, inEffect, 0x2b); break;
     case 0x35: theEffect = new EEE3DRust(inUnit, inEffect, 0x35); break;
-    case 0x41: theEffect = new EEE3DCommandConfirmation(inUnit, inEffect, inGoalIndex, 0x41); break;
+    case 0x41: theEffect = new EEE2DRust(inUnit, inEffect, inGoalIndex, 0x41); break;
     case 0x3f: theEffect = new EEE3DRust(inUnit, inEffect, 0x3f); break;
     case 0x3e: theEffect = new EEEDamagedEffect(inUnit, inEffect); break;
     case 0x3b: theEffect = new EEE3DRust(inUnit, inEffect, 0x3b); break;
@@ -355,7 +355,7 @@ long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGrap
     case kEffect3DCitizenBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x33); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(inUnit, inLocation, inEffect, 0x40); break;
     case kEffect3DCommandConfirmation:
-        theEffect = new EEE3DCommandConfirmation(inUnit, inLocation, inEffect, inUnknown, 0x41);
+        theEffect = new EEE2DRust(inUnit, inLocation, inEffect, inUnknown, 0x41);
         break;
     case kEffect3DPulseCannonBall: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x43); break;
     }

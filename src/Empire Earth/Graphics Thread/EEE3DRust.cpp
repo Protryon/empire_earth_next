@@ -49,6 +49,7 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DRust.h"
+#include "ee/EEE2DRust.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
@@ -519,24 +520,11 @@ EEE3DRust::~EEE3DRust()
     }
 }
 
-long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
-                     unsigned long inMajorVersion, unsigned long inMinorVersion, void* inArg)
+// the facts of an effect's graphic effect (inEffect), unit (inUnit) and the tick the Rust effects read (EEE3DRust's and
+// EEE2DRust's)
+EeGfxGraphicFacts EEEffectFacts(EEGraphicEffect* inEffect, EEUnit* inUnit)
 {
-    Ask theAsk = {this, inQueues, NULL, inOp, inArg, NULL, NULL};
-    EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
-                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
-                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
-                                 Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitScale, Ask::UnitLocation,
-                                 Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
-                                 Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
-                                 Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
-                                 Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
-                                 Ask::GateOpen, Ask::PlayerColor, Ask::VentLists, Ask::VentUnit, Ask::VentCount,
-                                 Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::UnitClassScale};
-    // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
-    if (inFile != NULL)
-        return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
-    EEGraphicEffect* theEffect = this->mGraphicEffect;
+    EEGraphicEffect* theEffect = inEffect;
     EEGraphicObject* theObject = theEffect ? theEffect->mGraphicObject : NULL;
     EeGfxGraphicFacts theFacts = {};
     if (theEffect != NULL) {
@@ -558,8 +546,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
     }
     theFacts.tick_seconds = gPhysics->GetTickSeconds();
     theFacts.tick_time = gPhysics->GetTickTime();
-    theFacts.has_unit = this->mUnit != NULL;
-    theFacts.unit_hit_points = this->mUnit != NULL ? (int32_t)this->mUnit->mHitPoints : 0;
+    theFacts.has_unit = inUnit != NULL;
+    theFacts.unit_hit_points = inUnit != NULL ? (int32_t)inUnit->mHitPoints : 0;
     if (theEffect != NULL) {
         theFacts.int_param1 = (int32_t)theEffect->mIntParam1;
         theFacts.int_param2 = (int32_t)theEffect->mIntParam2;
@@ -569,6 +557,28 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
     }
     theFacts.game_time_bits = (uint32_t)(unsigned long)gPhysics->mGameTime;
     theFacts.free_camera = gFreeCamera;
+    theFacts.speed = gPhysics->mSpeed;
+    return theFacts;
+}
+
+long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
+                     unsigned long inMajorVersion, unsigned long inMinorVersion, void* inArg)
+{
+    Ask theAsk = {this, inQueues, NULL, inOp, inArg, NULL, NULL};
+    EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
+                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
+                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
+                                 Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitScale, Ask::UnitLocation,
+                                 Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
+                                 Ask::Orbital, Ask::Animation, Ask::AnimationSound, Ask::SpawnCount, Ask::SpawnAt,
+                                 Ask::Spawn, Ask::TextureAt, Ask::UnitTile, Ask::TerrainZ, Ask::UnitHidden,
+                                 Ask::SpaceTile, Ask::CreateLinked, Ask::WallGatePosts, Ask::WallPiece,
+                                 Ask::GateOpen, Ask::PlayerColor, Ask::VentLists, Ask::VentUnit, Ask::VentCount,
+                                 Ask::VentOffsets, Ask::VentPoints, Ask::Frames, Ask::UnitClassScale};
+    // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
+    if (inFile != NULL)
+        return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
+    EeGfxGraphicFacts theFacts = EEEffectFacts(this->mGraphicEffect, this->mUnit);
     return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
 }
 

@@ -26,9 +26,11 @@
 pub mod beam;
 pub mod camera;
 pub mod capture;
+pub mod effect_2d;
 pub mod effect_additive;
 pub mod effect_aged;
 pub mod effect_beam;
+pub mod effect_confirm;
 pub mod effect_follow;
 pub mod effect_hurricane;
 pub mod effect_icon;
