@@ -1,10 +1,10 @@
 //! `extern "C"` for the command buttons' presses (`status_button.rs`). The host is `ee_screenscpp_status_button`
-//! (`User Interface Thread/EEUIFMGStatusButton.cpp`): `press` is its record of one press (the button, the unload's
+//! (`User Interface Thread/EEUIFMGStatusButton.cpp`): `press` is its record of one press (or `CopyData` call) (the button, the unload's
 //! transport, `CanProduce`'s reason).
 
 use core::ffi::c_void;
 
-use crate::status_button::{button_up, right_button_up, ButtonHost};
+use crate::status_button::{button_up, copy_data, right_button_up, ButtonHost};
 
 /// cbindgen:ignore
 mod sys {
@@ -33,4 +33,10 @@ pub extern "C" fn ee_screens_status_button_up(press: *mut c_void) {
 #[no_mangle]
 pub extern "C" fn ee_screens_status_button_right_up(press: *mut c_void) {
     right_button_up(&mut Host(press));
+}
+
+/// `EEUIFMGStatusButton::CopyData` over the host's press record: `UIButton::CopyData`'s result.
+#[no_mangle]
+pub extern "C" fn ee_screens_status_button_copy_data(press: *mut c_void) -> i64 {
+    copy_data(&mut Host(press))
 }

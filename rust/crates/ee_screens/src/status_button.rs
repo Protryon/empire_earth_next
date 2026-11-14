@@ -6,7 +6,12 @@
 //! op ([`ButtonHost`], `EE_SCREENS_SB_OP_*`) on the button, asked where and as often as the original asked it. The
 //! messages the presses send are one op with their kind (`EE_SCREENS_SB_SEND_*`) and arguments.
 
-use crate::command_panel::command_mode;
+use core::ffi::{c_long, c_ulong};
+
+use crate::command_panel::{
+    self, command_mode, EeScreensButtonFacts, EeScreensButtonUnit, EE_SCREENS_BUTTON_FANATIC, EE_SCREENS_BUTTON_JIT,
+    EE_SCREENS_BUTTON_POWER, EE_SCREENS_BUTTON_PRODUCE, EE_SCREENS_BUTTON_TRADE, EE_SCREENS_BUTTON_UNLOAD,
+};
 
 /// The host: one op on the button with up to three arguments and its answer.
 pub trait ButtonHost {
@@ -113,6 +118,36 @@ pub const EE_SCREENS_SB_OP_RELEASE_MOUSE: u32 = 48;
 pub const EE_SCREENS_SB_OP_BUTTON_UP: u32 = 49;
 /// The mouse is in the button's rectangle.
 pub const EE_SCREENS_SB_OP_MOUSE_INSIDE: u32 = 50;
+
+/// The button's `mShowCount = a != 0`.
+pub const EE_SCREENS_SB_OP_SET_SHOW_COUNT: u32 = 51;
+/// The button's `mCount`.
+pub const EE_SCREENS_SB_OP_COUNT: u32 = 52;
+/// The queue count a as the build queue's text ("%ld").
+pub const EE_SCREENS_SB_OP_COUNT_TEXT: u32 = 53;
+/// The node's data `GetCalamity()`.
+pub const EE_SCREENS_SB_OP_NODE_CALAMITY: u32 = 54;
+/// The calamity manager's class a's `GetCost()` (unchecked, as `CopyData`).
+pub const EE_SCREENS_SB_OP_CALAMITY_CLASS_COST: u32 = 55;
+/// `gUnitSetManager.GetSet(0x2f)->Contains(a)` (the fanatics' set).
+pub const EE_SCREENS_SB_OP_IN_FANATIC_SET: u32 = 56;
+/// The selected unit a's `IsCloaked()`.
+pub const EE_SCREENS_SB_OP_UNIT_CLOAKED: u32 = 57;
+/// The button's `mAvailable = a != 0`.
+pub const EE_SCREENS_SB_OP_SET_AVAILABLE: u32 = 58;
+/// Whether the button has its `mButtonObject`.
+pub const EE_SCREENS_SB_OP_HAS_OBJECT: u32 = 59;
+/// The button's `GetState()`.
+pub const EE_SCREENS_SB_OP_STATE: u32 = 60;
+/// The button's bitmaps: 1 normal is pressed, 2 focused is pressed, 4 no pressed bitmap.
+pub const EE_SCREENS_SB_OP_BITMAPS: u32 = 61;
+/// The icon drawn (a = `EE_SCREENS_BUTTON_ICON_*`): none (`mDrawIcon = false`), or the button object's pressed or
+/// face bitmap set to the icon over the button's rectangle and `mDrawIcon = true`.
+pub const EE_SCREENS_SB_OP_ICON: u32 = 62;
+/// `UIButton::CopyData()`'s result.
+pub const EE_SCREENS_SB_OP_BASE_COPY_DATA: u32 = 63;
+/// The current player's `CanProduce(mTechnology, mUnitType, 1, true, 3, NULL)` (`CopyData`'s, no reason).
+pub const EE_SCREENS_SB_OP_CAN_PRODUCE_QUIET: u32 = 64;
 
 /// `EEMUnloadTransport(the transport's id, tile x, tile y)`.
 pub const EE_SCREENS_SB_SEND_UNLOAD: i64 = 1;
@@ -301,6 +336,73 @@ pub fn command(host: &mut impl ButtonHost) {
         }
     }
     h.sound(EE_SCREENS_SB_SOUND_BUTTON1);
+}
+
+/// `EEUIFMGStatusButton::CopyData`: the queue count, whether the button is available under its test
+/// ([`command_panel`]'s), and its icon; then `UIButton::CopyData`.
+pub fn copy_data(host: &mut impl ButtonHost) -> i64 {
+    let mut h = Ops(host);
+    let mut facts = EeScreensButtonFacts::default();
+    let mut units = Vec::new();
+    h.a(EE_SCREENS_SB_OP_SET_SHOW_COUNT, 0);
+    let test = if h.o(EE_SCREENS_SB_OP_IS_COMMAND) != 0 {
+        command_panel::command_test(h.o(EE_SCREENS_SB_OP_BUTTON) as c_ulong)
+    } else {
+        let count = h.o(EE_SCREENS_SB_OP_COUNT);
+        if count != 0 {
+            h.a(EE_SCREENS_SB_OP_COUNT_TEXT, count);
+            h.a(EE_SCREENS_SB_OP_SET_SHOW_COUNT, 1);
+        }
+        let kind = h.o(EE_SCREENS_SB_OP_NODE_KIND) as c_long;
+        let calamity = h.o(EE_SCREENS_SB_OP_NODE_CALAMITY) as c_ulong;
+        let is_calamity = command_panel::tech_is_calamity(kind, calamity);
+        if is_calamity {
+            facts.calamity_cost = h.a(EE_SCREENS_SB_OP_CALAMITY_CLASS_COST, calamity as i64) as c_long;
+        }
+        command_panel::tech_test(is_calamity, facts.calamity_cost)
+    };
+    match test {
+        EE_SCREENS_BUTTON_FANATIC | EE_SCREENS_BUTTON_UNLOAD | EE_SCREENS_BUTTON_POWER => {
+            let count = h.o(EE_SCREENS_SB_OP_GROUP_COUNT);
+            facts.has_group = count >= 0;
+            facts.unload_cost = h.o(EE_SCREENS_SB_OP_UNLOAD_COST) as c_long;
+            for i in 0..count.max(0) as u32 as i64 {
+                let mut unit =
+                    EeScreensButtonUnit { present: h.a(EE_SCREENS_SB_OP_UNIT, i) != 0, ..Default::default() };
+                if unit.present {
+                    unit.unit_type = h.a(EE_SCREENS_SB_OP_UNIT_TYPE, i) as c_ulong;
+                    unit.power = h.0.op(EE_SCREENS_SB_OP_UNIT_POWER, i, 1, 0) as c_long;
+                    if test == EE_SCREENS_BUTTON_FANATIC {
+                        unit.in_set = h.a(EE_SCREENS_SB_OP_IN_FANATIC_SET, unit.unit_type as i64) != 0;
+                        unit.cloaked = h.a(EE_SCREENS_SB_OP_UNIT_CLOAKED, i) != 0;
+                    } else if test == EE_SCREENS_BUTTON_POWER {
+                        unit.in_node = h.a(EE_SCREENS_SB_OP_NODE_CONTAINS, unit.unit_type as i64) != 0;
+                    }
+                }
+                units.push(unit);
+            }
+        }
+        EE_SCREENS_BUTTON_TRADE => {
+            let button = h.o(EE_SCREENS_SB_OP_BUTTON);
+            facts.affordable = h.a(EE_SCREENS_SB_OP_CAN_AFFORD_TRADE, button) != 0;
+        }
+        EE_SCREENS_BUTTON_JIT => {
+            facts.game_resources = h.o(EE_SCREENS_SB_OP_GAME_RESOURCES) as c_long;
+            facts.clock = f32::from_bits(h.o(EE_SCREENS_SB_OP_GAME_CLOCK) as u32);
+            facts.jit_delay = h.a(EE_SCREENS_SB_OP_WORLD_LONG, EE_SCREENS_SB_WORLD_JIT_DELAY) as c_ulong;
+        }
+        EE_SCREENS_BUTTON_PRODUCE => facts.can_produce = h.o(EE_SCREENS_SB_OP_CAN_PRODUCE_QUIET) != 0,
+        _ => {}
+    }
+    let available = command_panel::available(test, &facts, &units);
+    h.a(EE_SCREENS_SB_OP_SET_AVAILABLE, available as i64);
+    let has_object = h.o(EE_SCREENS_SB_OP_HAS_OBJECT) != 0;
+    let button = h.o(EE_SCREENS_SB_OP_BUTTON) as c_ulong;
+    let state = h.o(EE_SCREENS_SB_OP_STATE) as c_ulong;
+    let bitmaps = h.o(EE_SCREENS_SB_OP_BITMAPS);
+    let icon = command_panel::icon(has_object, button, state, bitmaps & 1 != 0, bitmaps & 2 != 0, bitmaps & 4 != 0);
+    h.a(EE_SCREENS_SB_OP_ICON, icon as i64);
+    h.o(EE_SCREENS_SB_OP_BASE_COPY_DATA)
 }
 
 /// `EEUIFMGStatusButton::ButtonUp`: a command, or a tech node (build, wall, gate, research with Shift's five,

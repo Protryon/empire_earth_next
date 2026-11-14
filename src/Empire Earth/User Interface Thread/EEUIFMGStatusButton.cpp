@@ -203,8 +203,9 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
     EESelectedGroup* theGroup = thePlayer != NULL ? thePlayer->mSelectedGroup : NULL;   // read only by the ops that use it
     EEComplexUnit* theUnit = inOp >= EE_SCREENS_SB_OP_UNIT && inOp <= EE_SCREENS_SB_OP_UNIT_POWER ? theGroup->GetUnit(inA) : NULL;
-    EETechTreeNode* theNode = inOp >= EE_SCREENS_SB_OP_NODE_KIND && !theButton->mIsCommand
-                                  ? thePlayer->GetTechTree()->Get(theButton->mTechnology) : NULL;
+    bool theNodeOp = (inOp >= EE_SCREENS_SB_OP_NODE_KIND && inOp <= EE_SCREENS_SB_OP_MOUSE_INSIDE) ||
+                     inOp == EE_SCREENS_SB_OP_NODE_CALAMITY;
+    EETechTreeNode* theNode = theNodeOp && !theButton->mIsCommand ? thePlayer->GetTechTree()->Get(theButton->mTechnology) : NULL;
     EEUnitClass* theClass = inOp >= EE_SCREENS_SB_OP_CLASS_PRESENT && inOp <= EE_SCREENS_SB_OP_CLASS_GATE ? gUnitClassTable[inA] : NULL;
     EESoundObject* theSound;
     switch (inOp) {
@@ -320,6 +321,39 @@ extern "C" int64_t ee_screenscpp_status_button(void* inPress, uint32_t inOp, int
     case EE_SCREENS_SB_OP_RELEASE_MOUSE: theButton->ReleaseCapturedMouse(); break;
     case EE_SCREENS_SB_OP_BUTTON_UP: theButton->ButtonUp(); break;
     case EE_SCREENS_SB_OP_MOUSE_INSIDE: return theButton->IsMouseInside();
+    case EE_SCREENS_SB_OP_SET_SHOW_COUNT: theButton->mShowCount = inA != 0; break;
+    case EE_SCREENS_SB_OP_COUNT: return theButton->mCount;
+    case EE_SCREENS_SB_OP_COUNT_TEXT: {
+        UWideString theString;
+        sprintf(theString, "%ld", (long)inA);
+        theButton->mBuildQueue->SetText(theString);
+        break;
+    }
+    case EE_SCREENS_SB_OP_NODE_CALAMITY: return theNode->mData->GetCalamity();
+    case EE_SCREENS_SB_OP_CALAMITY_CLASS_COST:
+        return USingleton<EECalamityManager>::GetInstance()->GetCalamityClass((EECalamityEnum)inA)->GetCost();
+    case EE_SCREENS_SB_OP_IN_FANATIC_SET: return gUnitSetManager.GetSet(0x2f)->Contains((unsigned long)inA);
+    case EE_SCREENS_SB_OP_UNIT_CLOAKED: return theGroup->GetUnit(inA)->IsCloaked();
+    case EE_SCREENS_SB_OP_SET_AVAILABLE: theButton->mAvailable = inA != 0; break;
+    case EE_SCREENS_SB_OP_HAS_OBJECT: return theButton->mButtonObject != NULL;
+    case EE_SCREENS_SB_OP_STATE: return theButton->GetState();
+    case EE_SCREENS_SB_OP_BITMAPS:
+        return (theButton->GetNormalBitmap() == theButton->GetPressedBitmap() ? 1 : 0) |
+               (theButton->GetFocusedBitmap() == theButton->GetPressedBitmap() ? 2 : 0) | (theButton->GetPressedBitmap() == NULL ? 4 : 0);
+    case EE_SCREENS_SB_OP_ICON:
+        if (inA == EE_SCREENS_BUTTON_ICON_NONE) {
+            theButton->mDrawIcon = false;
+        } else {
+            if (inA == EE_SCREENS_BUTTON_ICON_PRESSED)
+                theButton->mButtonObject->SetPressedBitmap(theButton->mIcon, theButton->GetRectangle(), theButton->GetScreenIndex());
+            else
+                theButton->mButtonObject->SetFaceBitmap(theButton->mIcon, theButton->GetRectangle(), theButton->GetScreenIndex());
+            theButton->mDrawIcon = true;
+        }
+        break;
+    case EE_SCREENS_SB_OP_BASE_COPY_DATA: return theButton->UIButton::CopyData();
+    case EE_SCREENS_SB_OP_CAN_PRODUCE_QUIET:
+        return thePlayer->CanProduce(theButton->mTechnology, theButton->mUnitType, 1, true, 3, NULL) == true;
     }
     return 0;
 }
@@ -351,90 +385,8 @@ void EEUIFMGStatusButton::ReleaseButton()
 // mAvailable; VC6 merges the stores)
 long EEUIFMGStatusButton::CopyData()
 {
-    // the test, the availability and the icon are Rust's (ee_screens command_panel.rs); the C++ reads what the
-    // test needs and keeps every call
-    UWideString theString;
-    EeScreensButtonFacts theFacts;
-    memset(&theFacts, 0, sizeof(theFacts));
-    std::vector<EeScreensButtonUnit> theUnits;
-    EETechTreeNode* theNode = NULL;
-    unsigned long theTest;
-    this->mShowCount = false;
-    if (this->mIsCommand) {
-        theTest = ee_screens_button_command_test(this->mButton);
-    } else {
-        theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(this->mTechnology);
-        if (this->mCount) {
-            sprintf(theString, "%ld", this->mCount);
-            this->mBuildQueue->SetText(theString);
-            this->mShowCount = true;
-        }
-        RTSTechTreeNodeData* theData = theNode->mData;
-        bool theCalamity = ee_screens_button_tech_is_calamity(theData->mKind, theData->GetCalamity());
-        if (theCalamity) {
-            EECalamityEnum theEnum = (EECalamityEnum)theData->GetCalamity();
-            theFacts.calamity_cost = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theEnum)->GetCost();
-        }
-        theTest = ee_screens_button_tech_test(theCalamity, theFacts.calamity_cost);
-    }
-    switch (theTest) {
-    case EE_SCREENS_BUTTON_FANATIC:
-    case EE_SCREENS_BUTTON_UNLOAD:
-    case EE_SCREENS_BUTTON_POWER: {
-        EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-        theFacts.has_group = theGroup != NULL;
-        theFacts.unload_cost = gFortressUnloadCost;
-        unsigned long theCount = theGroup ? theGroup->GetNumUnits() : 0;
-        for (unsigned long i = 0; i < theCount; i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            EeScreensButtonUnit theView;
-            memset(&theView, 0, sizeof(theView));
-            theView.present = theUnit != NULL;
-            if (theUnit) {
-                theView.unit_type = theUnit->GetUnitClass()->GetUnitType();
-                theView.power = theUnit->GetPower();
-                if (theTest == EE_SCREENS_BUTTON_FANATIC) {
-                    theView.in_set = gUnitSetManager.GetSet(0x2f)->Contains(theView.unit_type);
-                    theView.cloaked = theUnit->IsCloaked();
-                } else if (theTest == EE_SCREENS_BUTTON_POWER) {
-                    theView.in_node = theNode->Contains(theView.unit_type);
-                }
-            }
-            theUnits.push_back(theView);
-        }
-        break;
-    }
-    case EE_SCREENS_BUTTON_TRADE:
-        theFacts.affordable = EECanAffordTrade(this->mButton);
-        break;
-    case EE_SCREENS_BUTTON_JIT:
-        theFacts.game_resources = gGameResources;
-        theFacts.clock = gPhysics->GetGameClock();
-        theFacts.jit_delay = gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay);
-        break;
-    case EE_SCREENS_BUTTON_PRODUCE:
-        theFacts.can_produce = gWorld.GetCurrentPlayer()->CanProduce(this->mTechnology, this->mUnitType, 1, true, 3, NULL);
-        break;
-    default:
-        break;
-    }
-    this->mAvailable = ee_screens_button_available(theTest, &theFacts, theUnits.empty() ? NULL : &theUnits[0],
-                                                   theUnits.size());
-    // the icon: none for the two group buttons
-    unsigned long theIcon = ee_screens_button_icon(this->mButtonObject != NULL, this->mButton, this->GetState(),
-                                                   this->GetNormalBitmap() == this->GetPressedBitmap(),
-                                                   this->GetFocusedBitmap() == this->GetPressedBitmap(),
-                                                   this->GetPressedBitmap() == NULL);
-    if (theIcon == EE_SCREENS_BUTTON_ICON_NONE) {
-        this->mDrawIcon = false;
-    } else {
-        if (theIcon == EE_SCREENS_BUTTON_ICON_PRESSED)
-            this->mButtonObject->SetPressedBitmap(this->mIcon, this->GetRectangle(), this->GetScreenIndex());
-        else
-            this->mButtonObject->SetFaceBitmap(this->mIcon, this->GetRectangle(), this->GetScreenIndex());
-        this->mDrawIcon = true;
-    }
-    return UIButton::CopyData();
+    EEUIFMGStatusButtonPress thePress = {this, NULL};
+    return (long)ee_screens_status_button_copy_data(&thePress);   // ee_screens status_button.rs copy_data
 }
 
 // FUNCTION: EXE 0x66eaf4

@@ -3652,6 +3652,49 @@ constexpr static const uint32_t EE_SCREENS_SB_OP_BUTTON_UP = 49;
 /// The mouse is in the button's rectangle.
 constexpr static const uint32_t EE_SCREENS_SB_OP_MOUSE_INSIDE = 50;
 
+/// The button's `mShowCount = a != 0`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SET_SHOW_COUNT = 51;
+
+/// The button's `mCount`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_COUNT = 52;
+
+/// The queue count a as the build queue's text ("%ld").
+constexpr static const uint32_t EE_SCREENS_SB_OP_COUNT_TEXT = 53;
+
+/// The node's data `GetCalamity()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_CALAMITY = 54;
+
+/// The calamity manager's class a's `GetCost()` (unchecked, as `CopyData`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CALAMITY_CLASS_COST = 55;
+
+/// `gUnitSetManager.GetSet(0x2f)->Contains(a)` (the fanatics' set).
+constexpr static const uint32_t EE_SCREENS_SB_OP_IN_FANATIC_SET = 56;
+
+/// The selected unit a's `IsCloaked()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNIT_CLOAKED = 57;
+
+/// The button's `mAvailable = a != 0`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SET_AVAILABLE = 58;
+
+/// Whether the button has its `mButtonObject`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_HAS_OBJECT = 59;
+
+/// The button's `GetState()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_STATE = 60;
+
+/// The button's bitmaps: 1 normal is pressed, 2 focused is pressed, 4 no pressed bitmap.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BITMAPS = 61;
+
+/// The icon drawn (a = `EE_SCREENS_BUTTON_ICON_*`): none (`mDrawIcon = false`), or the button object's pressed or
+/// face bitmap set to the icon over the button's rectangle and `mDrawIcon = true`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_ICON = 62;
+
+/// `UIButton::CopyData()`'s result.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BASE_COPY_DATA = 63;
+
+/// The current player's `CanProduce(mTechnology, mUnitType, 1, true, 3, NULL)` (`CopyData`'s, no reason).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_PRODUCE_QUIET = 64;
+
 /// `EEMUnloadTransport(the transport's id, tile x, tile y)`.
 constexpr static const int64_t EE_SCREENS_SB_SEND_UNLOAD = 1;
 
@@ -4144,32 +4187,6 @@ struct EeScreensChatLogHead {
   uint32_t time;
 };
 
-/// What a button's test reads besides the units.
-struct EeScreensButtonFacts {
-  /// The player has a selected group (else no unit test passes).
-  bool has_group;
-  bool affordable;
-  bool can_produce;
-  /// `gGameResources`, the game clock and the deathmatch JIT delay (seconds: `kWorldDeathmatchJitManufacturingDelay`).
-  long game_resources;
-  float clock;
-  unsigned long jit_delay;
-  long unload_cost;
-  long calamity_cost;
-};
-
-/// What a button's test reads of one selected unit (`present` false: the group's entry is empty).
-struct EeScreensButtonUnit {
-  bool present;
-  unsigned long unit_type;
-  long power;
-  /// The fanatic test: in unit set 0x2f, cloaked.
-  bool in_set;
-  bool cloaked;
-  /// The calamity test: the tech node holds the unit's type.
-  bool in_node;
-};
-
 /// A technology button's tooltip: where the name comes from, the cost, the population cost, the unit's name.
 struct EeScreensTechHelp {
   /// 0 the class's name string, 1 the player's upgrade name, 2 the node's name string.
@@ -4545,29 +4562,6 @@ long ee_screens_chat_log_load(void *file);
 
 /// `EEUIECLEFormManager::Save` to the saved game `file` (an `FSFile*`).
 long ee_screens_chat_log_save(void *file);
-
-/// The test a command button's availability takes (`EE_SCREENS_BUTTON_*`).
-uint32_t ee_screens_button_command_test(unsigned long button);
-
-/// Whether a technology button is a calamity's (its cost then decides the test).
-bool ee_screens_button_tech_is_calamity(long kind, unsigned long calamity);
-
-/// A technology button's test (`EE_SCREENS_BUTTON_POWER` or `_PRODUCE`).
-uint32_t ee_screens_button_tech_test(bool calamity, long cost);
-
-/// Whether the button is available under `test` (`units`: `count` selected units).
-bool ee_screens_button_available(uint32_t test,
-                                 const EeScreensButtonFacts *facts,
-                                 const EeScreensButtonUnit *units,
-                                 size_t count);
-
-/// The icon `CopyData` draws (`EE_SCREENS_BUTTON_ICON_*`).
-uint32_t ee_screens_button_icon(bool has_object,
-                                unsigned long button,
-                                unsigned long state,
-                                bool normal_is_pressed,
-                                bool focused_is_pressed,
-                                bool pressed_is_none);
 
 /// A command button's first tooltip string.
 long ee_screens_command_help_string(unsigned long button);
@@ -4969,6 +4963,9 @@ void ee_screens_status_button_up(void *press);
 
 /// `EEUIFMGStatusButton::MouseRButtonUp` over the host's press record.
 void ee_screens_status_button_right_up(void *press);
+
+/// `EEUIFMGStatusButton::CopyData` over the host's press record: `UIButton::CopyData`'s result.
+int64_t ee_screens_status_button_copy_data(void *press);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,

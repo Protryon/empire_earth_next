@@ -22,14 +22,16 @@ impl ButtonHost for Replay {
 
 const GOLDEN: &str = include_str!("../golden_status_button.txt");
 
-/// `build/sc22/sb/driver.cpp 1 4000 golden`: per press (L: `ButtonUp`, R: `MouseRButtonUp`), the new host's ops and
-/// answers; the driver checked them against the original's calls.
+/// `build/sc23/sb/driver.cpp 1 4000 golden` (round 22's driver with `CopyData`): per call (L: `ButtonUp`, R:
+/// `MouseRButtonUp`, C: `CopyData`, whose original is the one before command_panel.rs, a137f1a9^), the new host's ops
+/// and answers; the driver checked them against the original's calls.
 #[test]
 fn golden_status_button() {
     let mut n = 0;
+    let mut copies = 0;
     for (k, line) in GOLDEN.lines().enumerate() {
         let mut parts = line.split('|');
-        let right = parts.next().unwrap() == "R";
+        let kind = parts.next().unwrap();
         let ops = parts
             .map(|f| {
                 let v: Vec<i64> = f.split(' ').map(|x| x.parse().unwrap()).collect();
@@ -37,15 +39,19 @@ fn golden_status_button() {
             })
             .collect();
         let mut h = Replay { ops, at: 0, line: k + 1 };
-        if right {
-            right_button_up(&mut h);
-        } else {
-            button_up(&mut h);
+        match kind {
+            "R" => right_button_up(&mut h),
+            "C" => {
+                let result = copy_data(&mut h);
+                assert_eq!(result, h.ops[h.at - 1][4], "line {}: CopyData's result", k + 1);
+                copies += 1;
+            }
+            _ => button_up(&mut h),
         }
         assert_eq!(h.at, h.ops.len(), "line {}: ops missing", k + 1);
         n += 1;
     }
-    assert!(n >= 3000);
+    assert!(n >= 3000 && copies >= 500, "{n} cases, {copies} CopyData");
 }
 
 /// Every message kind is sent somewhere in the golden.
