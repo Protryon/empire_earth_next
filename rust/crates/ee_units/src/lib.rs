@@ -35,6 +35,7 @@ pub mod ffi;
 pub mod gather;
 pub mod goals;
 pub mod group;
+pub mod group_save;
 pub mod hack;
 mod header_consts;
 pub mod host;

@@ -552,6 +552,21 @@ constexpr static const int32_t EE_ACTION_DROPOFF_RESOURCE = 4011;
 /// `kActionUnloadTransport` (ee/EEUnitAction.h)
 constexpr static const int32_t EE_ACTION_UNLOAD_TRANSPORT = 12001;
 
+/// `EEFormation::Create(io.i)`; when made, the old formation dereferenced and the new one the group's
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_FORMATION_SET = 320;
+
+/// `mUnits.push_back(id io.i)` (the id in the pointer, as the original)
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_PUSH_ID = 321;
+
+/// the formation's `mType` into `io.i`, 8 without one
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_KIND = 322;
+
+/// `mUnits.size()` into `io.i`
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_COUNT = 323;
+
+/// `GetUnitAt(index)->mUnitID` into `io.i`
+constexpr static const int32_t EE_UNITS_GROUP_SAVE_UNIT_ID = 324;
+
 /// The goal constructors the host builds (`EeGoalSpec::ctor`; ee/EEUnitStore.h `EEGoalConstructor`).
 /// `new EEUGExplore(flag_a)`
 constexpr static const uint32_t EE_GOAL_CTOR_EXPLORE = 1;
@@ -4174,6 +4189,18 @@ uint32_t ee_units_goal_queue_check_unit(uint64_t unit,
 
 /// TEST ONLY: the mirrors held (the containers alive).
 uint32_t ee_units_goal_queue_count();
+
+/// `EEGroup::Load` over the group's parts and the file in `f`.
+///
+/// # Safety
+/// `f` is valid with `ctx` for the call.
+int32_t ee_units_group_load(void *ctx, EeUnitsPlayerSaveFn f);
+
+/// `EEGroup::Save`: as [`ee_units_group_load`].
+///
+/// # Safety
+/// As [`ee_units_group_load`].
+int32_t ee_units_group_save(void *ctx, EeUnitsPlayerSaveFn f);
 
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
