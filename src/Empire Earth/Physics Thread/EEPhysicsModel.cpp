@@ -211,8 +211,7 @@ static void PMStepNote(EEPhysicsModel* inModel, EEComplexUnit* inUnit, unsigned 
             fprintf(stderr, "EE-PM-COUNT %lu", sPMStepTick);
             for (int i = 0; i < 12; i++)
                 fprintf(stderr, " %u", sPMStepKinds[i]);
-            fprintf(stderr, "
-");
+            fprintf(stderr, "\n");
         }
     }
     uint32_t theModel = 0xff;
