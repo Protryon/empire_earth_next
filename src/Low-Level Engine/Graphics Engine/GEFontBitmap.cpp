@@ -77,6 +77,178 @@
 // SYNTHETIC: LLE 0x100153ee
 // SYNTHETIC: LLE 0x100153fa
 
+// ---- GEFontBitmap.
+//
+// port (R4.3, tenth part): the font bitmap is a whole Rust object (ee_ge fbobj.rs): the constructor's glyph rendering,
+// the destructor, CreateNewFontTexture, CreateSurfaceAlpha and the two draws. This unit is its shell: the forwarders
+// and the host, which makes each call the original made on another object (the rasterizer, the font, the working
+// text, the drawing bitmap, the textures, surfaces and screens). Floats cross the host as their bits.
+
+static_assert(sizeof(EeGeSurfaceDescription) == sizeof(GESurfaceDescription), "ee_ge texobj.rs EeGeSurfaceDescription");
+
+intptr_t GEFontBitmap::Host(void* inOwner, EeGeFbOp inOp, void* inObj, intptr_t a, intptr_t b)
+{
+    GEText* theText = (GEText*)inObj;
+    GEBitmap* theBitmap = (GEBitmap*)inObj;
+    GESurface* theSurface = (GESurface*)inObj;
+    GERasterizer* theRasterizer = (GERasterizer*)inObj;
+    GETexture* theTexture = (GETexture*)inObj;
+    GEScreen* theScreen = (GEScreen*)inObj;
+    unsigned long* theLongs = (unsigned long*)a;
+    float* theFloats = (float*)a;
+    GETextureCoordinate* theCoordinates = (GETextureCoordinate*)a;
+    switch (inOp) {
+    case EeGeFbOp::TextNew:
+        return (intptr_t)new GEText((GEFont*)inObj);
+    case EeGeFbOp::TextDelete:
+        delete theText;
+        return 0;
+    case EeGeFbOp::TextPrepare:
+        theText->SetFgColor(GEColor());
+        theText->SetIsTransparent(true);
+        return 0;
+    case EeGeFbOp::TextSetByte: {
+        // a cell is a Windows-1252 byte's character (decision D6: the text is UTF-8, so the cell holds that
+        // character's UTF-8 and Draw maps a drawn character back to its cell)
+        char theByte = (char)a;
+        char theCell[8];
+        PlatCp1252ToUtf8(&theByte, 1, theCell, sizeof(theCell));
+        UWideString theString;
+        theString = theCell;
+        theText->SetText(theString);
+        return 0;
+    }
+    case EeGeFbOp::TextExtent:
+        theFloats[0] = theText->GetTextExtent().GetWidth();
+        theFloats[1] = theText->GetTextExtent().GetHeight();
+        return 0;
+    case EeGeFbOp::TextSetLocation:
+        theText->SetLocation(*(const GE2DPoint*)a);
+        return 0;
+    case EeGeFbOp::TextString:
+        return (intptr_t)(const char*)theText->GetText();
+    case EeGeFbOp::TextLocation:
+        return (intptr_t)&theText->GetLocation();
+    case EeGeFbOp::TextColor:
+        return (intptr_t)&theText->GetFgColor();
+    case EeGeFbOp::TextOps:
+        return (intptr_t)GERustTextOps();
+    case EeGeFbOp::FontRange: {
+        PlatFontMetrics theMetrics;   // the font's character range (TEXTMETRIC's tmFirstChar..tmLastChar)
+        PlatFontGetMetrics(((GEFont*)inObj)->GetOSFont(), &theMetrics);
+        theLongs[0] = theMetrics.mFirstChar;
+        theLongs[1] = theMetrics.mLastChar;
+        return 0;
+    }
+    case EeGeFbOp::FontSetBitmap:
+        ((GEFont*)inObj)->SetFontBitmap((GEFontBitmap*)inOwner);
+        return 0;
+    case EeGeFbOp::RasterScreen:
+        return (intptr_t)theRasterizer->GetScreen((unsigned long)a);
+    case EeGeFbOp::RasterGetBlending:
+        theRasterizer->GetBlending(theLongs[0], theLongs[1], (unsigned long)b);
+        return 0;
+    case EeGeFbOp::RasterSetBlending:
+        theRasterizer->SetBlending(theLongs[0], theLongs[1], (unsigned long)b);
+        return 0;
+    case EeGeFbOp::RasterDrawText:
+        return theRasterizer->Draw((GEText*)a, (GESurface*)b);
+    case EeGeFbOp::RasterDrawBitmap:
+        return theRasterizer->Draw((GEBitmap*)a, (unsigned long)b);
+    case EeGeFbOp::BmpNew:
+        return (intptr_t)new GEBitmap;
+    case EeGeFbOp::BmpDereference:
+        theBitmap->Dereference();
+        return 0;
+    case EeGeFbOp::BmpSetTexture:
+        theBitmap->SetTexture((GETexture*)a, (unsigned long)b);
+        return 0;
+    case EeGeFbOp::BmpStretch: {
+        const GERectangle* theRects = (const GERectangle*)a;
+        theBitmap->ComputeStretchedCoordsAndScale(theRects[0], theRects[0], theRects[1], (unsigned long)b);
+        return 0;
+    }
+    case EeGeFbOp::BmpUvsPerVertex: {
+        GETextureCoordinate theCoordinate;
+        theBitmap->GetTextureCoordinatesPerVertex(theCoordinates[0], theCoordinate, theCoordinate, theCoordinates[1]);
+        return 0;
+    }
+    case EeGeFbOp::BmpScales:
+        theFloats[0] = theBitmap->GetXScale();
+        theFloats[1] = theBitmap->GetYScale();
+        return 0;
+    case EeGeFbOp::BmpSetColor:
+        theBitmap->SetColor(*(const GEColor*)a);
+        return 0;
+    case EeGeFbOp::BmpSetUvs:
+        theBitmap->SetTextureCoordinates(theCoordinates[0], theCoordinates[1], theCoordinates[2], theCoordinates[3]);
+        return 0;
+    case EeGeFbOp::BmpSetXyScale: {
+        uint32_t theBits[2] = {(uint32_t)a, (uint32_t)b};
+        float theScales[2];
+        memcpy(theScales, theBits, sizeof(theScales));
+        theBitmap->SetXYScale(theScales[0], theScales[1]);
+        return 0;
+    }
+    case EeGeFbOp::BmpSetLocation:
+        theBitmap->SetLocation(*(const GE2DPoint*)a);
+        return 0;
+    case EeGeFbOp::TexSurface:
+        return (intptr_t)theTexture->GetSurface();
+    case EeGeFbOp::TexReference:
+        theTexture->Reference();
+        return 0;
+    case EeGeFbOp::TexStage:
+        switch ((EeGeTexStage)a) {
+        case EeGeTexStage::MinFilterMode:
+            theTexture->SetStageMinFilterMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::MagFilterMode:
+            theTexture->SetStageMagFilterMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::MipFilterMode:
+            theTexture->SetStageMipFilterMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::TextureAddressingMode:
+            theTexture->SetStageTextureAddressingMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::AlphaMode:
+            theTexture->SetStageAlphaMode((unsigned long)b, -1);
+            break;
+        case EeGeTexStage::ColorMode:
+            theTexture->SetStageColorMode((unsigned long)b, -1);
+            break;
+        default:
+            break;
+        }
+        return 0;
+    case EeGeFbOp::SurfTextUnlock:
+        return theSurface->TextUnlock();
+    case EeGeFbOp::SurfLock:
+        return theSurface->Lock();
+    case EeGeFbOp::SurfUnlock:
+        return theSurface->Unlock();
+    case EeGeFbOp::SurfPixels:
+        theLongs[0] = theSurface->GetWidth();
+        theLongs[1] = theSurface->GetHeight();
+        theLongs[2] = theSurface->GetBytesPerRow();
+        return (intptr_t)theSurface->GetMemoryAddress();
+    case EeGeFbOp::SurfClear: {
+        GEColor theBlack(0.0f, 0.0f, 0.0f);
+        return theSurface->Clear(theBlack, 1.0f);
+    }
+    case EeGeFbOp::ScreenCreateSurface:
+        return theScreen->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b);
+    case EeGeFbOp::ScreenMakeTexture:
+        return (intptr_t)theScreen->GetTextureManager()->MakeTexture((GESurface*)a);
+    case EeGeFbOp::Verify:
+        ESVerify(__FILE__, a == 0 ? 228 : 235, a == 0 ? "theResult == keseOK" : "theTexture != NULL");
+        return 0;
+    default:
+        return 0;
+    }
+}
+
 // FUNCTION: LLE 0x10015404
 // Always returns true (any font matches)
 bool GEFontBitmap::operator==(GEFont* inFont)
@@ -85,185 +257,31 @@ bool GEFontBitmap::operator==(GEFont* inFont)
 }
 
 // FUNCTION: LLE 0x10015409
-// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (the cells' layout is
-// Rust: ee_ge font.rs GeFontPacker)
+// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell (Rust: ee_ge fbobj.rs)
 GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
 {
-    UWideString theString;
-    GERectangle theRect;
-    GETextureCoordinate theCoordinate;
-    GEText theText(inFont);
-    EeGeFontPacker thePacker = {};   // the pen at the top left, no texture yet
-    GEScreen* theScreen = inRasterizer->GetScreen(inScreen);
-    GETexture* theTexture = NULL;
-    unsigned long theSource;
-    unsigned long theDestination;
-    inRasterizer->GetBlending(theSource, theDestination, inScreen);
-    inRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, inScreen);
-    this->mBitmap = new GEBitmap;
-    theText.SetFgColor(GEColor());
-    theText.SetIsTransparent(true);
-    PlatFontMetrics theMetrics;   // the font's character range (TEXTMETRIC's tmFirstChar..tmLastChar)
-    PlatFontGetMetrics(inFont->GetOSFont(), &theMetrics);
-    this->mFirstCharacter = theMetrics.mFirstChar;
-    this->mCharacters.resize(theMetrics.mLastChar - theMetrics.mFirstChar + 1);
-    // the last character of the font is included (mCharacters has room for it). A cell is a Windows-1252 byte's
-    // character (port, decision D6: the text is UTF-8, so the cell holds that character's UTF-8 and Draw maps a
-    // drawn character back to its cell; a Latin-1 or 1252 text draws as before)
-    for (unsigned long theCharacter = theMetrics.mFirstChar; theCharacter <= theMetrics.mLastChar; theCharacter++) {
-        unsigned long theIndex = theCharacter - this->mFirstCharacter;
-        char theByte = static_cast<char>(theCharacter);
-        char theCell[8];
-        PlatCp1252ToUtf8(&theByte, 1, theCell, sizeof(theCell));
-        theString = theCell;
-        theText.SetText(theString);
-        // the next cell: a new row at the right edge, a new texture at the bottom edge
-        EeGeRectangle thePlace;
-        if (ee_ge_font_cell_place(&thePacker, theText.GetTextExtent().GetWidth(), theText.GetTextExtent().GetHeight(),
-                                  &thePlace)) {
-            if (theTexture != NULL) {
-                theTexture->GetSurface()->TextUnlock();
-                this->CreateSurfaceAlpha(theTexture->GetSurface());
-            }
-            theTexture = this->CreateNewFontTexture(theScreen);
-        }
-        *GERust(this->mCharacters[theIndex].mRect) = thePlace;
-        theText.SetLocation(this->mCharacters[theIndex].mRect.GetTopLeft());
-        inRasterizer->Draw(&theText, theTexture->GetSurface());
-        this->mCharacters[theIndex].mTexture = theTexture;
-        this->mCharacters[theIndex].mTexture->Reference();
-        this->mBitmap->SetTexture(theTexture, inScreen);
-        theRect.SetTopLeft(this->mCharacters[theIndex].mRect.GetTopLeft());
-        theRect.SetRight(this->mCharacters[theIndex].mRect.GetRight() - 1.0f);
-        theRect.SetBottom(this->mCharacters[theIndex].mRect.GetBottom() - 1.0f);
-        this->mBitmap->ComputeStretchedCoordsAndScale(theRect, theRect, this->mCharacters[theIndex].mRect, inScreen);
-        this->mBitmap->GetTextureCoordinatesPerVertex(this->mCharacters[theIndex].mTopLeft, theCoordinate, theCoordinate,
-                                                this->mCharacters[theIndex].mBottomRight);
-        this->mCharacters[theIndex].mXScale = this->mBitmap->GetXScale();
-        this->mCharacters[theIndex].mYScale = this->mBitmap->GetYScale();
-    }
-    inFont->SetFontBitmap(this);
-    theTexture->GetSurface()->TextUnlock();
-    this->CreateSurfaceAlpha(theTexture->GetSurface());
-    inRasterizer->SetBlending(theSource, theDestination, inScreen);
+    this->mRust = NULL;
+    this->mRust = ee_ge_fb_new(&GEFontBitmap::Host, this, inRasterizer, inFont, inScreen);
 }
 
 // FUNCTION: LLE 0x100159ac
 // Destroys the glyph bitmap, releasing its drawing bitmap
 GEFontBitmap::~GEFontBitmap()
 {
-    this->mBitmap->Dereference();
-}
-
-// FUNCTION: LLE 0x100159cd
-// Creates a cleared 256x256 A4R4G4B4 texture for glyphs: clamped, unfiltered, alpha from the texture
-GETexture* GEFontBitmap::CreateNewFontTexture(GEScreen* inScreen)
-{
-    GESurfaceDescription theDescription;
-    GESurface* theSurface;
-    theDescription.mType = kSurfaceTexture;
-    theDescription.mPixelFormat = kPixelFormatA4R4G4B4;
-    theDescription.mPixelDepth = 16;
-    theDescription.mSurfaceVolatility = 1;
-    theDescription.mWidth = 256;
-    theDescription.mHeight = 256;
-    theDescription.m14 = 0;
-    theDescription.mMipLevelCount = 0;
-    theDescription.mIs3DRenderable = false;
-    theDescription.mIsTransparencyEnabled = false;
-    long theResult = inScreen->CreateSurface(theDescription, &theSurface);
-    ESVERIFY_AT(theResult == keseOK, 228);
-GEColor theTemp1(0.0f, 0.0f, 0.0f);
-
-    theSurface->Clear(theTemp1, 1.0f);
-    GETexture* theTexture = inScreen->GetTextureManager()->MakeTexture(theSurface);
-    ESVERIFY_AT(theTexture != NULL, 235);
-    theTexture->SetStageMinFilterMode(0, -1);
-    theTexture->SetStageMagFilterMode(0, -1);
-    theTexture->SetStageMipFilterMode(kMipFilterNone, -1);
-    theTexture->SetStageTextureAddressingMode(kAddressingClamp, -1);
-    theTexture->SetStageAlphaMode(kStageOpTexture, -1);
-    theTexture->SetStageColorMode(kStageOpModulate, -1);
-    return theTexture;
-}
-
-// FUNCTION: LLE 0x10015ac5
-// Turns a rendered glyph texture into white with alpha taken from the green channel (black stays transparent; the
-// pixel pass is Rust: ee_ge font.rs)
-long GEFontBitmap::CreateSurfaceAlpha(GESurface* inSurface)
-{
-    inSurface->Lock();
-    ee_ge_font_surface_alpha(reinterpret_cast<uint16_t*>(inSurface->GetMemoryAddress()), inSurface->GetWidth(),
-                             inSurface->GetHeight(), inSurface->GetBytesPerRow());
-    inSurface->Unlock();
-    return 0;
-}
-
-// The glyphs of a text's draw (Rust: ee_ge font.rs draw_plan; inClip NULL: unclipped), at most one a byte
-static std::vector<EeGeGlyphDraw> GEFontBitmapPlan(GEText* inText, const GERectangle* inClip, unsigned long inFirst,
-                                                   const std::vector<GEFBCharacter>& inCharacters)
-{
-    const char* theText = inText->GetText();
-    std::vector<EeGeGlyphDraw> thePlan(strlen(theText));
-    thePlan.resize(ee_ge_font_draw_plan(GERustTextOps(), theText, inFirst,
-                                        reinterpret_cast<const EeGeFbCharacter*>(inCharacters.data()),
-                                        inCharacters.size(), GERust(inText->GetLocation()),
-                                        inClip != NULL ? GERust(*inClip) : NULL, thePlan.data(), thePlan.size()));
-    return thePlan;
+    ee_ge_fb_destroy(this->mRust);
 }
 
 // FUNCTION: LLE 0x10015b99
-// Draws the text glyph by glyph at its location in its colour; returns the last draw's result. A character's cell is
-// its Windows-1252 byte (decision D6: the text is UTF-8); a character outside the code page or the font is skipped,
-// as a byte outside the font was. The walk is Rust (ee_ge font.rs); the bitmap's calls are made here in its order.
+// Draws the text glyph by glyph at its location in its colour; returns the last draw's result (Rust: ee_ge fbobj.rs)
 long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned long inScreen)
 {
-    long theResult = 0;
-    std::vector<EeGeGlyphDraw> thePlan = GEFontBitmapPlan(inText, NULL, this->mFirstCharacter, this->mCharacters);
-    this->mBitmap->SetColor(inText->GetFgColor());
-    for (size_t i = 0; i < thePlan.size(); i++) {
-        const GEFBCharacter& theCell = this->mCharacters[thePlan[i].cell];
-        this->mBitmap->SetTexture(theCell.mTexture, inScreen);
-        this->mBitmap->SetTextureCoordinates(theCell.mTopLeft,
-                                             GETextureCoordinate(theCell.mBottomRight.GetU(), theCell.mTopLeft.GetV()),
-                                             GETextureCoordinate(theCell.mTopLeft.GetU(), theCell.mBottomRight.GetV()),
-                                             theCell.mBottomRight);
-        this->mBitmap->SetXYScale(theCell.mXScale, theCell.mYScale);
-        this->mBitmap->SetLocation(*reinterpret_cast<const GE2DPoint*>(&thePlan[i].location));
-        theResult = inRasterizer->Draw(this->mBitmap, inScreen);
-    }
-    return theResult;
+    return ee_ge_fb_draw(this->mRust, inText, NULL, inRasterizer, inScreen);
 }
 
 // FUNCTION: LLE 0x10015dcd
-// Draws the text glyph by glyph clipped to a rectangle: a glyph inside it whole, one across its edge cut to it, one
-// fully outside not at all (its texture is still set and the pen still advances). The walk and the cuts are Rust
-// (ee_ge font.rs).
+// Draws the text glyph by glyph clipped to a rectangle (Rust: ee_ge fbobj.rs)
 long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer,
                         unsigned long inScreen)
 {
-    long theResult = 0;
-    std::vector<EeGeGlyphDraw> thePlan = GEFontBitmapPlan(inText, &inRectangle, this->mFirstCharacter, this->mCharacters);
-    this->mBitmap->SetColor(inText->GetFgColor());
-    for (size_t i = 0; i < thePlan.size(); i++) {
-        const EeGeGlyphDraw& theGlyph = thePlan[i];
-        const GEFBCharacter& theCell = this->mCharacters[theGlyph.cell];
-        this->mBitmap->SetTexture(theCell.mTexture, inScreen);
-        if (theGlyph.kind == GE_GLYPH_SKIPPED)
-            continue;
-        if (theGlyph.kind == GE_GLYPH_FULL) {
-            this->mBitmap->SetTextureCoordinates(theCell.mTopLeft,
-                                                 GETextureCoordinate(theCell.mBottomRight.GetU(), theCell.mTopLeft.GetV()),
-                                                 GETextureCoordinate(theCell.mTopLeft.GetU(), theCell.mBottomRight.GetV()),
-                                                 theCell.mBottomRight);
-            this->mBitmap->SetXYScale(theCell.mXScale, theCell.mYScale);
-        } else {
-            const GERectangle& theDestination = *reinterpret_cast<const GERectangle*>(&theGlyph.destination);
-            this->mBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination,
-                                                          *reinterpret_cast<const GERectangle*>(&theGlyph.source), inScreen);
-        }
-        this->mBitmap->SetLocation(*reinterpret_cast<const GE2DPoint*>(&theGlyph.location));
-        theResult = inRasterizer->Draw(this->mBitmap, inScreen);
-    }
-    return theResult;
+    return ee_ge_fb_draw(this->mRust, inText, GERust(inRectangle), inRasterizer, inScreen);
 }
