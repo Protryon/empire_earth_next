@@ -1818,3 +1818,525 @@ step 209 delete 2 first
 step 210 units
   unit 16777241 type=32 player=1 tile=40,40
   unit 16777242 type=32 player=1 tile=41,40
+step 213 sm state
+  condition 0 Always True id 0 type 0 object 0 trigger 0
+  effect 0 Do Nothing id 0 areas 0 0 0 0 objects 0 0 0 0 0 trigger 0 list
+  object 0 <NONE> id 0 area 0 parent 0 near 0
+  area 0 Off Map id 0
+  area 1 Previous Location id 0
+  timed
+  next 0 0 0 0 0
+  triggers
+  conditions |Always True
+  user conditions
+  effects |Do Nothing
+  user effects
+  objects |<NONE>
+  user objects
+  areas |Off Map |Previous Location
+  user areas
+  triggers
+  conditions |[0]Always True
+  user conditions
+  effects |[0]Do Nothing
+  user effects
+  objects |[0]<NONE>
+  user objects
+  areas |[0]Off Map |[0]Previous Location
+  user areas
+  find 0:Always True/Do Nothing/<NONE>/0 1:-/-/-/-2 2:-/-/-/-2 3:-/-/-/-2 4:-/-/-/-2 5:-/-/-/-2 6:-/-/-/-2 7:-/-/-/-2
+step 214 sm new 4
+  new 4 0
+step 215 sm new 4
+  new 4 0
+step 216 sm new 4
+  new 4 0
+step 217 sm new 3
+  new 3 0
+step 218 sm new 3
+  new 3 0
+step 219 sm new 3
+  new 3 0
+step 220 sm new 1
+  new 1 0
+step 221 sm new 1
+  new 1 0
+step 222 sm new 1
+  new 1 0
+step 223 sm new 2
+  new 2 0
+step 224 sm new 2
+  new 2 0
+step 225 sm new 2
+  new 2 0
+step 226 sm new 2
+  new 2 0
+step 227 sm new 0
+  new 0 0
+step 228 sm new 0
+  new 0 0
+step 229 sm new 0
+  new 0 0
+step 230 sm fill
+step 231 sm state
+  trigger 0 <Trigger0> id 1 c 1 2 e 1 2
+  trigger 1 <Trigger1> id 2 c 2 3 e 2 3
+  trigger 2 <Trigger2> id 3 c 3 4 e 3 4
+  condition 0 Always True id 0 type 0 object 1 trigger 1
+  condition 1 <Condition3> id 4 type 2 object 2 trigger 2
+  condition 2 <Condition4> id 5 type 2 object 3 trigger 0
+  condition 3 <Condition5> id 6 type 2 object 0 trigger 1
+  condition 4 <1:<NONE> Exists> id 1 type 1 object 1 trigger 2
+  condition 5 <2:<NONE> Exists> id 2 type 1 object 2 trigger 0
+  condition 6 <3:<NONE> Exists> id 3 type 1 object 3 trigger 1
+  effect 0 Do Nothing id 0 areas 0 1 2 3 objects 0 1 2 3 0 trigger 1 list 0 2
+  effect 1 <Effect0> id 1 areas 1 2 3 4 objects 1 2 3 0 1 trigger 2 list 1 3
+  effect 2 <Effect1> id 2 areas 2 3 4 0 objects 2 3 0 1 2 trigger 0 list 2 0
+  effect 3 <Effect2> id 3 areas 3 4 0 1 objects 3 0 1 2 3 trigger 1 list 3 1
+  effect 4 <Effect3> id 4 areas 4 0 1 2 objects 0 1 2 3 0 trigger 2 list 0 2
+  object 0 <NONE> id 0 area 2 parent 1 near 2
+  object 1 <NONE> id 1 area 3 parent 2 near 3
+  object 2 <NONE> id 2 area 4 parent 3 near 0
+  object 3 <NONE> id 3 area 0 parent 0 near 1
+  area 0 Off Map id 0
+  area 1 Previous Location id 0
+  area 2 <Area0> id 1
+  area 3 <Area1> id 2
+  area 4 <Area2> id 3
+  timed 4@1000 3@2000 2@3000 1@4000 0@5000
+  next 3 6 4 3 3
+  triggers |<Trigger0> |<Trigger1> |<Trigger2>
+  conditions |Always True |<Condition3> |<Condition4> |<Condition5> |<<NONE> Exists> |<<NONE> Exists> |<<NONE> Exists>
+  user conditions |<Condition3> |<Condition4> |<Condition5>
+  effects |Do Nothing |<Effect0> |<Effect1> |<Effect2> |<Effect3>
+  user effects |<Effect0> |<Effect1> |<Effect2> |<Effect3>
+  objects |<NONE> |<NONE> |<NONE> |<NONE>
+  user objects |<NONE> |<NONE> |<NONE>
+  areas |Off Map |Previous Location |<Area0> |<Area1> |<Area2>
+  user areas |<Area0> |<Area1> |<Area2>
+  triggers |[1]<Trigger0> |[2]<Trigger1> |[3]<Trigger2>
+  conditions |[0]Always True |[4]<Condition3> |[5]<Condition4> |[6]<Condition5> |[1]<<NONE> Exists> |[2]<<NONE> Exists> |[3]<<NONE> Exists>
+  user conditions |[4]<Condition3> |[5]<Condition4> |[6]<Condition5>
+  effects |[0]Do Nothing |[1]<Effect0> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3>
+  user effects |[1]<Effect0> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3>
+  objects |[0]<NONE> |[1]<NONE> |[2]<NONE> |[3]<NONE>
+  user objects |[1]<NONE> |[2]<NONE> |[3]<NONE>
+  areas |[0]Off Map |[0]Previous Location |[1]<Area0> |[2]<Area1> |[3]<Area2>
+  user areas |[1]<Area0> |[2]<Area1> |[3]<Area2>
+  find 0:Always True/Do Nothing/<NONE>/0 1:<<NONE> Exists>/<Effect0>/<NONE>/1 2:<<NONE> Exists>/<Effect1>/<NONE>/2 3:<<NONE> Exists>/<Effect2>/<NONE>/3 4:<Condition3>/<Effect3>/-/-2 5:<Condition4>/-/-/-2 6:<Condition5>/-/-/-2 7:-/-/-/-2
+step 232 sm dup 4 2
+  dup 4 2
+step 233 sm dup 3 1
+  dup 3 1
+step 234 sm dup 3 2
+  dup 3 2
+step 235 sm dup 1 1
+  dup 1 1
+step 236 sm dup 2 1
+  dup 2 1
+step 237 sm dup 0 0
+  dup 0 0
+step 238 sm state
+  trigger 0 <Trigger0> id 1 c 1 2 e 1 2
+  trigger 1 <Trigger1> id 2 c 2 3 e 2 3
+  trigger 2 <Trigger2> id 3 c 3 5 e 3 4
+  trigger 3 <Trigger0_Copy> id 4 c 1 2 e 1 2
+  condition 0 Always True id 0 type 0 object 1 trigger 1
+  condition 1 <Condition3> id 4 type 2 object 2 trigger 2
+  condition 2 <Condition4> id 5 type 2 object 3 trigger 0
+  condition 3 <Condition5> id 6 type 2 object 0 trigger 1
+  condition 4 <Condition3_Copy> id 9 type 2 object 2 trigger 2
+  condition 5 <<NONE> Exists> id 1 type 1 object 1 trigger 2
+  condition 6 <<NONE> Exists> id 2 type 1 object 2 trigger 0
+  condition 7 <<NONE> Exists> id 3 type 1 object 3 trigger 1
+  condition 8 <NONE_Copy> Exists id 7 type 1 object 4 trigger 0
+  condition 9 <NONE_Copy> Exists id 8 type 1 object 5 trigger 0
+  effect 0 Do Nothing id 0 areas 0 1 2 3 objects 0 1 2 3 0 trigger 1 list 0 2
+  effect 1 <Effect0> id 1 areas 1 2 3 4 objects 1 2 3 0 1 trigger 2 list 1 3
+  effect 2 <Effect1> id 2 areas 2 3 4 0 objects 2 3 0 1 2 trigger 0 list 2 0
+  effect 3 <Effect2> id 3 areas 3 4 0 1 objects 3 0 1 2 3 trigger 1 list 3 1
+  effect 4 <Effect3> id 4 areas 4 0 1 2 objects 0 1 2 3 0 trigger 2 list 0 2
+  effect 5 <Effect0_Copy> id 5 areas 1 2 3 4 objects 1 2 3 0 1 trigger 2 list 1 3
+  object 0 <NONE> id 0 area 2 parent 1 near 2
+  object 1 <NONE> id 1 area 3 parent 2 near 3
+  object 2 <NONE> id 2 area 4 parent 3 near 0
+  object 3 <NONE> id 3 area 0 parent 0 near 1
+  object 4 <NONE_Copy> id 4 area 3 parent 2 near 3
+  object 5 <NONE_Copy> id 5 area 4 parent 3 near 0
+  area 0 Off Map id 0
+  area 1 Previous Location id 0
+  area 2 <Area0> id 1
+  area 3 <Area1> id 2
+  area 4 <Area2> id 3
+  area 5 <Area0_Copy> id 4
+  timed 4@1000 3@2000 2@3000 1@4000 0@5000
+  next 4 9 5 5 4
+  triggers |<Trigger0> |<Trigger1> |<Trigger2> |<Trigger0_Copy>
+  conditions |Always True |<Condition3> |<Condition4> |<Condition5> |<Condition3_Copy> |<<NONE> Exists> |<<NONE> Exists> |<<NONE> Exists> |<<NONE_Copy> Exists> |<<NONE_Copy> Exists>
+  user conditions |<Condition3> |<Condition4> |<Condition5> |<Condition3_Copy>
+  effects |Do Nothing |<Effect0> |<Effect1> |<Effect2> |<Effect3> |<Effect0_Copy>
+  user effects |<Effect0> |<Effect1> |<Effect2> |<Effect3> |<Effect0_Copy>
+  objects |<NONE> |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  user objects |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  areas |Off Map |Previous Location |<Area0> |<Area1> |<Area2> |<Area0_Copy>
+  user areas |<Area0> |<Area1> |<Area2> |<Area0_Copy>
+  triggers |[1]<Trigger0> |[2]<Trigger1> |[3]<Trigger2> |[4]<Trigger0_Copy>
+  conditions |[0]Always True |[4]<Condition3> |[5]<Condition4> |[6]<Condition5> |[9]<Condition3_Copy> |[1]<<NONE> Exists> |[2]<<NONE> Exists> |[3]<<NONE> Exists> |[7]<<NONE_Copy> Exists> |[8]<<NONE_Copy> Exists>
+  user conditions |[4]<Condition3> |[5]<Condition4> |[6]<Condition5> |[9]<Condition3_Copy>
+  effects |[0]Do Nothing |[1]<Effect0> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3> |[5]<Effect0_Copy>
+  user effects |[1]<Effect0> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3> |[5]<Effect0_Copy>
+  objects |[0]<NONE> |[1]<NONE> |[2]<NONE> |[3]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  user objects |[1]<NONE> |[2]<NONE> |[3]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  areas |[0]Off Map |[0]Previous Location |[1]<Area0> |[2]<Area1> |[3]<Area2> |[4]<Area0_Copy>
+  user areas |[1]<Area0> |[2]<Area1> |[3]<Area2> |[4]<Area0_Copy>
+  find 0:Always True/Do Nothing/<NONE>/0 1:<<NONE> Exists>/<Effect0>/<NONE>/1 2:<<NONE> Exists>/<Effect1>/<NONE>/2 3:<<NONE> Exists>/<Effect2>/<NONE>/3 4:<Condition3>/<Effect3>/<NONE_Copy>/4 5:<Condition4>/<Effect0_Copy>/<NONE_Copy>/5 6:<Condition5>/-/-/-2 7:<<NONE_Copy> Exists>/-/-/-2
+step 239 sm sort 4
+  sort 4 0
+step 240 sm sort 3
+  sort 3 0
+step 241 sm sort 1
+  sort 1 0
+step 242 sm sort 2
+  sort 2 0
+step 243 sm sort 0
+  sort 0 0
+step 244 sm state
+  trigger 0 <Trigger0> id 1 c 1 3 e 1 3
+  trigger 1 <Trigger0_Copy> id 4 c 1 3 e 1 3
+  trigger 2 <Trigger1> id 2 c 3 4 e 3 4
+  trigger 3 <Trigger2> id 3 c 4 5 e 4 5
+  condition 0 Always True id 0 type 0 object 1 trigger 2
+  condition 1 <Condition3> id 4 type 2 object 2 trigger 3
+  condition 2 <Condition3_Copy> id 9 type 2 object 2 trigger 3
+  condition 3 <Condition4> id 5 type 2 object 3 trigger 0
+  condition 4 <Condition5> id 6 type 2 object 0 trigger 2
+  condition 5 <<NONE> Exists> id 1 type 1 object 1 trigger 3
+  condition 6 <<NONE> Exists> id 2 type 1 object 2 trigger 0
+  condition 7 <<NONE> Exists> id 3 type 1 object 3 trigger 2
+  condition 8 <<NONE_Copy> Exists> id 7 type 1 object 4 trigger 0
+  condition 9 <<NONE_Copy> Exists> id 8 type 1 object 5 trigger 0
+  effect 0 Do Nothing id 0 areas 0 1 2 4 objects 0 1 2 3 0 trigger 2 list 0 2
+  effect 1 <Effect0> id 1 areas 1 2 4 5 objects 1 2 3 0 1 trigger 3 list 1 3
+  effect 2 <Effect0_Copy> id 5 areas 1 2 4 5 objects 1 2 3 0 1 trigger 3 list 1 3
+  effect 3 <Effect1> id 2 areas 2 4 5 0 objects 2 3 0 1 2 trigger 0 list 2 0
+  effect 4 <Effect2> id 3 areas 4 5 0 1 objects 3 0 1 2 3 trigger 2 list 3 1
+  effect 5 <Effect3> id 4 areas 5 0 1 2 objects 0 1 2 3 0 trigger 3 list 0 2
+  object 0 <NONE> id 0 area 2 parent 1 near 2
+  object 1 <NONE> id 1 area 4 parent 2 near 3
+  object 2 <NONE> id 2 area 5 parent 3 near 0
+  object 3 <NONE> id 3 area 0 parent 0 near 1
+  object 4 <NONE_Copy> id 4 area 4 parent 2 near 3
+  object 5 <NONE_Copy> id 5 area 5 parent 3 near 0
+  area 0 Off Map id 0
+  area 1 Previous Location id 0
+  area 2 <Area0> id 1
+  area 3 <Area0_Copy> id 4
+  area 4 <Area1> id 2
+  area 5 <Area2> id 3
+  timed
+  next 4 9 5 5 4
+  triggers |<Trigger0> |<Trigger0_Copy> |<Trigger1> |<Trigger2>
+  conditions |Always True |<Condition3> |<Condition3_Copy> |<Condition4> |<Condition5> |<<NONE> Exists> |<<NONE> Exists> |<<NONE> Exists> |<<NONE_Copy> Exists> |<<NONE_Copy> Exists>
+  user conditions |<Condition3> |<Condition3_Copy> |<Condition4> |<Condition5>
+  effects |Do Nothing |<Effect0> |<Effect0_Copy> |<Effect1> |<Effect2> |<Effect3>
+  user effects |<Effect0> |<Effect0_Copy> |<Effect1> |<Effect2> |<Effect3>
+  objects |<NONE> |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  user objects |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  areas |Off Map |Previous Location |<Area0> |<Area0_Copy> |<Area1> |<Area2>
+  user areas |<Area0> |<Area0_Copy> |<Area1> |<Area2>
+  triggers |[1]<Trigger0> |[4]<Trigger0_Copy> |[2]<Trigger1> |[3]<Trigger2>
+  conditions |[0]Always True |[4]<Condition3> |[9]<Condition3_Copy> |[5]<Condition4> |[6]<Condition5> |[1]<<NONE> Exists> |[2]<<NONE> Exists> |[3]<<NONE> Exists> |[7]<<NONE_Copy> Exists> |[8]<<NONE_Copy> Exists>
+  user conditions |[4]<Condition3> |[9]<Condition3_Copy> |[5]<Condition4> |[6]<Condition5>
+  effects |[0]Do Nothing |[1]<Effect0> |[5]<Effect0_Copy> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3>
+  user effects |[1]<Effect0> |[5]<Effect0_Copy> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3>
+  objects |[0]<NONE> |[1]<NONE> |[2]<NONE> |[3]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  user objects |[1]<NONE> |[2]<NONE> |[3]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  areas |[0]Off Map |[0]Previous Location |[1]<Area0> |[4]<Area0_Copy> |[2]<Area1> |[3]<Area2>
+  user areas |[1]<Area0> |[4]<Area0_Copy> |[2]<Area1> |[3]<Area2>
+  find 0:Always True/Do Nothing/<NONE>/0 1:<<NONE> Exists>/<Effect0>/<NONE>/1 2:<<NONE> Exists>/<Effect1>/<NONE>/2 3:<<NONE> Exists>/<Effect2>/<NONE>/3 4:<Condition3>/<Effect3>/<NONE_Copy>/4 5:<Condition4>/<Effect0_Copy>/<NONE_Copy>/5 6:<Condition5>/-/-/-2 7:<<NONE_Copy> Exists>/-/-/-2
+step 245 sm down 4 1
+  down 4 1
+step 246 sm down 4 2
+  down 4 2
+step 247 sm up 4 2
+  up 4 2
+step 248 sm up 4 4
+  up 4 4
+step 249 sm down 3 1
+  down 3 1
+step 250 sm up 3 3
+  up 3 3
+step 251 sm down 1 1
+  down 1 1
+step 252 sm down 1 2
+  down 1 2
+step 253 sm up 1 1
+  up 1 1
+step 254 sm up 1 3
+  up 1 3
+step 255 sm down 2 1
+  down 2 1
+step 256 sm up 2 3
+  up 2 3
+step 257 sm down 0 0
+  down 0 0
+step 258 sm up 0 2
+  up 0 2
+step 259 sm state
+  trigger 0 <Trigger0_Copy> id 4 c 2 3 e 3 2
+  trigger 1 <Trigger1> id 2 c 3 4 e 2 4
+  trigger 2 <Trigger0> id 1 c 2 3 e 3 2
+  trigger 3 <Trigger2> id 3 c 4 7 e 4 5
+  condition 0 Always True id 0 type 0 object 3 trigger 1
+  condition 1 <Condition3_Copy> id 9 type 2 object 1 trigger 3
+  condition 2 <Condition3> id 4 type 2 object 1 trigger 3
+  condition 3 <Condition4> id 5 type 2 object 2 trigger 2
+  condition 4 <Condition5> id 6 type 2 object 0 trigger 1
+  condition 5 <<NONE> Exists> id 2 type 1 object 1 trigger 2
+  condition 6 <<NONE> Exists> id 3 type 1 object 2 trigger 1
+  condition 7 <<NONE> Exists> id 1 type 1 object 3 trigger 3
+  condition 8 <<NONE_Copy> Exists> id 7 type 1 object 4 trigger 2
+  condition 9 <<NONE_Copy> Exists> id 8 type 1 object 5 trigger 2
+  effect 0 Do Nothing id 0 areas 0 1 4 3 objects 0 3 1 2 0 trigger 1 list 0 1
+  effect 1 <Effect0_Copy> id 5 areas 1 4 3 5 objects 3 1 2 0 3 trigger 3 list 3 2
+  effect 2 <Effect1> id 2 areas 4 3 5 0 objects 1 2 0 3 1 trigger 2 list 1 0
+  effect 3 <Effect0> id 1 areas 1 4 3 5 objects 3 1 2 0 3 trigger 3 list 3 2
+  effect 4 <Effect2> id 3 areas 3 5 0 1 objects 2 0 3 1 2 trigger 1 list 2 3
+  effect 5 <Effect3> id 4 areas 5 0 1 4 objects 0 3 1 2 0 trigger 3 list 0 1
+  object 0 <NONE> id 0 area 4 parent 3 near 1
+  object 1 <NONE> id 2 area 5 parent 2 near 0
+  object 2 <NONE> id 3 area 0 parent 0 near 3
+  object 3 <NONE> id 1 area 3 parent 1 near 2
+  object 4 <NONE_Copy> id 4 area 3 parent 1 near 2
+  object 5 <NONE_Copy> id 5 area 5 parent 2 near 0
+  area 0 Off Map id 0
+  area 1 Previous Location id 0
+  area 2 <Area0_Copy> id 4
+  area 3 <Area1> id 2
+  area 4 <Area0> id 1
+  area 5 <Area2> id 3
+  timed
+  next 4 9 5 5 4
+  triggers |<Trigger0_Copy> |<Trigger1> |<Trigger0> |<Trigger2>
+  conditions |Always True |<Condition3_Copy> |<Condition3> |<Condition4> |<Condition5> |<<NONE> Exists> |<<NONE> Exists> |<<NONE> Exists> |<<NONE_Copy> Exists> |<<NONE_Copy> Exists>
+  user conditions |<Condition3_Copy> |<Condition3> |<Condition4> |<Condition5>
+  effects |Do Nothing |<Effect0_Copy> |<Effect1> |<Effect0> |<Effect2> |<Effect3>
+  user effects |<Effect0_Copy> |<Effect1> |<Effect0> |<Effect2> |<Effect3>
+  objects |<NONE> |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  user objects |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  areas |Off Map |Previous Location |<Area0_Copy> |<Area1> |<Area0> |<Area2>
+  user areas |<Area0_Copy> |<Area1> |<Area0> |<Area2>
+  triggers |[4]<Trigger0_Copy> |[2]<Trigger1> |[1]<Trigger0> |[3]<Trigger2>
+  conditions |[0]Always True |[9]<Condition3_Copy> |[4]<Condition3> |[5]<Condition4> |[6]<Condition5> |[2]<<NONE> Exists> |[3]<<NONE> Exists> |[1]<<NONE> Exists> |[7]<<NONE_Copy> Exists> |[8]<<NONE_Copy> Exists>
+  user conditions |[9]<Condition3_Copy> |[4]<Condition3> |[5]<Condition4> |[6]<Condition5>
+  effects |[0]Do Nothing |[5]<Effect0_Copy> |[2]<Effect1> |[1]<Effect0> |[3]<Effect2> |[4]<Effect3>
+  user effects |[5]<Effect0_Copy> |[2]<Effect1> |[1]<Effect0> |[3]<Effect2> |[4]<Effect3>
+  objects |[0]<NONE> |[2]<NONE> |[3]<NONE> |[1]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  user objects |[2]<NONE> |[3]<NONE> |[1]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  areas |[0]Off Map |[0]Previous Location |[4]<Area0_Copy> |[2]<Area1> |[1]<Area0> |[3]<Area2>
+  user areas |[4]<Area0_Copy> |[2]<Area1> |[1]<Area0> |[3]<Area2>
+  find 0:Always True/Do Nothing/<NONE>/0 1:<<NONE> Exists>/<Effect0>/<NONE>/3 2:<<NONE> Exists>/<Effect1>/<NONE>/1 3:<<NONE> Exists>/<Effect2>/<NONE>/2 4:<Condition3>/<Effect3>/<NONE_Copy>/4 5:<Condition4>/<Effect0_Copy>/<NONE_Copy>/5 6:<Condition5>/-/-/-2 7:<<NONE_Copy> Exists>/-/-/-2
+step 260 sm down 4 5
+  down 4 5
+step 261 sm down 3 5
+  down 3 5
+step 262 sm down 1 3
+  down 1 3
+step 263 sm down 2 5
+  down 2 5
+step 264 sm down 0 3
+  down 0 3
+step 265 sm up 4 1
+  up 4 1
+step 266 sm up 0 0
+  up 0 0
+step 267 sm state
+  trigger 0 <Trigger0_Copy> id 4 c 2 4 e 3 2
+  trigger 1 <Trigger1> id 2 c 4 3 e 2 4
+  trigger 2 <Trigger0> id 1 c 2 4 e 3 2
+  trigger 3 <Trigger2> id 3 c 3 7 e 4 5
+  condition 0 Always True id 0 type 0 object 3 trigger 1
+  condition 1 <Condition3_Copy> id 9 type 2 object 1 trigger 3
+  condition 2 <Condition3> id 4 type 2 object 1 trigger 3
+  condition 3 <Condition5> id 6 type 2 object 0 trigger 1
+  condition 4 <Condition4> id 5 type 2 object 2 trigger 2
+  condition 5 <<NONE> Exists> id 2 type 1 object 1 trigger 2
+  condition 6 <<NONE> Exists> id 3 type 1 object 2 trigger 1
+  condition 7 <<NONE> Exists> id 1 type 1 object 3 trigger 3
+  condition 8 <<NONE_Copy> Exists> id 7 type 1 object 4 trigger 2
+  condition 9 <<NONE_Copy> Exists> id 8 type 1 object 5 trigger 2
+  effect 0 Do Nothing id 0 areas 0 1 4 3 objects 0 3 1 2 0 trigger 1 list 0 1
+  effect 1 <Effect0_Copy> id 5 areas 1 4 3 5 objects 3 1 2 0 3 trigger 3 list 3 2
+  effect 2 <Effect1> id 2 areas 4 3 5 0 objects 1 2 0 3 1 trigger 2 list 1 0
+  effect 3 <Effect0> id 1 areas 1 4 3 5 objects 3 1 2 0 3 trigger 3 list 3 2
+  effect 4 <Effect2> id 3 areas 3 5 0 1 objects 2 0 3 1 2 trigger 1 list 2 3
+  effect 5 <Effect3> id 4 areas 5 0 1 4 objects 0 3 1 2 0 trigger 3 list 0 1
+  object 0 <NONE> id 0 area 4 parent 3 near 1
+  object 1 <NONE> id 2 area 5 parent 2 near 0
+  object 2 <NONE> id 3 area 0 parent 0 near 3
+  object 3 <NONE> id 1 area 3 parent 1 near 2
+  object 4 <NONE_Copy> id 4 area 3 parent 1 near 2
+  object 5 <NONE_Copy> id 5 area 5 parent 2 near 0
+  area 0 Off Map id 0
+  area 1 Previous Location id 0
+  area 2 <Area0_Copy> id 4
+  area 3 <Area1> id 2
+  area 4 <Area0> id 1
+  area 5 <Area2> id 3
+  timed
+  next 4 9 5 5 4
+  triggers |<Trigger0_Copy> |<Trigger1> |<Trigger0> |<Trigger2>
+  conditions |Always True |<Condition3_Copy> |<Condition3> |<Condition5> |<Condition4> |<<NONE> Exists> |<<NONE> Exists> |<<NONE> Exists> |<<NONE_Copy> Exists> |<<NONE_Copy> Exists>
+  user conditions |<Condition3_Copy> |<Condition3> |<Condition5> |<Condition4>
+  effects |Do Nothing |<Effect0_Copy> |<Effect1> |<Effect0> |<Effect2> |<Effect3>
+  user effects |<Effect0_Copy> |<Effect1> |<Effect0> |<Effect2> |<Effect3>
+  objects |<NONE> |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  user objects |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  areas |Off Map |Previous Location |<Area0_Copy> |<Area1> |<Area0> |<Area2>
+  user areas |<Area0_Copy> |<Area1> |<Area0> |<Area2>
+  triggers |[4]<Trigger0_Copy> |[2]<Trigger1> |[1]<Trigger0> |[3]<Trigger2>
+  conditions |[0]Always True |[9]<Condition3_Copy> |[4]<Condition3> |[6]<Condition5> |[5]<Condition4> |[2]<<NONE> Exists> |[3]<<NONE> Exists> |[1]<<NONE> Exists> |[7]<<NONE_Copy> Exists> |[8]<<NONE_Copy> Exists>
+  user conditions |[9]<Condition3_Copy> |[4]<Condition3> |[6]<Condition5> |[5]<Condition4>
+  effects |[0]Do Nothing |[5]<Effect0_Copy> |[2]<Effect1> |[1]<Effect0> |[3]<Effect2> |[4]<Effect3>
+  user effects |[5]<Effect0_Copy> |[2]<Effect1> |[1]<Effect0> |[3]<Effect2> |[4]<Effect3>
+  objects |[0]<NONE> |[2]<NONE> |[3]<NONE> |[1]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  user objects |[2]<NONE> |[3]<NONE> |[1]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  areas |[0]Off Map |[0]Previous Location |[4]<Area0_Copy> |[2]<Area1> |[1]<Area0> |[3]<Area2>
+  user areas |[4]<Area0_Copy> |[2]<Area1> |[1]<Area0> |[3]<Area2>
+  find 0:Always True/Do Nothing/<NONE>/0 1:<<NONE> Exists>/<Effect0>/<NONE>/3 2:<<NONE> Exists>/<Effect1>/<NONE>/1 3:<<NONE> Exists>/<Effect2>/<NONE>/2 4:<Condition3>/<Effect3>/<NONE_Copy>/4 5:<Condition4>/<Effect0_Copy>/<NONE_Copy>/5 6:<Condition5>/-/-/-2 7:<<NONE_Copy> Exists>/-/-/-2
+step 268 sm delete 4 0
+  delete 4 0
+  deleted 0
+step 269 sm delete 4 3
+  delete 4 3
+  deleted 1
+step 270 sm delete 3 0
+  delete 3 0
+  deleted 0
+step 271 sm delete 3 2
+  delete 3 2
+  deleted 1
+step 272 sm delete 1 0
+  delete 1 0
+  deleted 0
+step 273 sm delete 1 2
+  delete 1 2
+  deleted 1
+step 274 sm delete 2 0
+  delete 2 0
+  deleted 0
+step 275 sm delete 2 3
+  delete 2 3
+  deleted 1
+step 276 sm delete 0 1
+  delete 0 1
+  deleted 1
+step 277 sm state
+  trigger 0 <Trigger0_Copy> id 4 c 0 3 e 0 2
+  trigger 1 <Trigger0> id 1 c 0 3 e 0 2
+  trigger 2 <Trigger2> id 3 c 2 5 e 3 4
+  condition 0 Always True id 0 type 0 object 2 trigger 0
+  condition 1 <Condition3_Copy> id 9 type 2 object 1 trigger 2
+  condition 2 <Condition5> id 6 type 2 object 0 trigger 0
+  condition 3 <Condition4> id 5 type 2 object 0 trigger 1
+  condition 4 <<NONE> Exists> id 2 type 1 object 1 trigger 1
+  condition 5 <<NONE> Exists> id 1 type 1 object 2 trigger 2
+  condition 6 <<NONE_Copy> Exists> id 7 type 1 object 3 trigger 1
+  condition 7 <<NONE_Copy> Exists> id 8 type 1 object 4 trigger 1
+  effect 0 Do Nothing id 0 areas 0 1 3 0 objects 0 2 1 0 0 trigger 0 list 0 1
+  effect 1 <Effect0_Copy> id 5 areas 1 3 0 4 objects 2 1 0 0 2 trigger 2 list 2 0
+  effect 2 <Effect1> id 2 areas 3 0 4 0 objects 1 0 0 2 1 trigger 1 list 1 0
+  effect 3 <Effect2> id 3 areas 0 4 0 1 objects 0 0 2 1 0 trigger 0 list 0 2
+  effect 4 <Effect3> id 4 areas 4 0 1 3 objects 0 2 1 0 0 trigger 2 list 0 1
+  object 0 <NONE> id 0 area 3 parent 2 near 1
+  object 1 <NONE> id 2 area 4 parent 0 near 0
+  object 2 <NONE> id 1 area 0 parent 1 near 0
+  object 3 <NONE_Copy> id 4 area 0 parent 1 near 0
+  object 4 <NONE_Copy> id 5 area 4 parent 0 near 0
+  area 0 Off Map id 0
+  area 1 Previous Location id 0
+  area 2 <Area0_Copy> id 4
+  area 3 <Area0> id 1
+  area 4 <Area2> id 3
+  timed
+  next 4 9 5 5 4
+  triggers |<Trigger0_Copy> |<Trigger0> |<Trigger2>
+  conditions |Always True |<Condition3_Copy> |<Condition5> |<Condition4> |<<NONE> Exists> |<<NONE> Exists> |<<NONE_Copy> Exists> |<<NONE_Copy> Exists>
+  user conditions |<Condition3_Copy> |<Condition5> |<Condition4>
+  effects |Do Nothing |<Effect0_Copy> |<Effect1> |<Effect2> |<Effect3>
+  user effects |<Effect0_Copy> |<Effect1> |<Effect2> |<Effect3>
+  objects |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  user objects |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy>
+  areas |Off Map |Previous Location |<Area0_Copy> |<Area0> |<Area2>
+  user areas |<Area0_Copy> |<Area0> |<Area2>
+  triggers |[4]<Trigger0_Copy> |[1]<Trigger0> |[3]<Trigger2>
+  conditions |[0]Always True |[9]<Condition3_Copy> |[6]<Condition5> |[5]<Condition4> |[2]<<NONE> Exists> |[1]<<NONE> Exists> |[7]<<NONE_Copy> Exists> |[8]<<NONE_Copy> Exists>
+  user conditions |[9]<Condition3_Copy> |[6]<Condition5> |[5]<Condition4>
+  effects |[0]Do Nothing |[5]<Effect0_Copy> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3>
+  user effects |[5]<Effect0_Copy> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3>
+  objects |[0]<NONE> |[2]<NONE> |[1]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  user objects |[2]<NONE> |[1]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy>
+  areas |[0]Off Map |[0]Previous Location |[4]<Area0_Copy> |[1]<Area0> |[3]<Area2>
+  user areas |[4]<Area0_Copy> |[1]<Area0> |[3]<Area2>
+  find 0:Always True/Do Nothing/<NONE>/0 1:<<NONE> Exists>/-/<NONE>/2 2:<<NONE> Exists>/<Effect1>/<NONE>/1 3:-/<Effect2>/-/-2 4:-/<Effect3>/<NONE_Copy>/3 5:<Condition4>/<Effect0_Copy>/<NONE_Copy>/4 6:<Condition5>/-/-/-2 7:<<NONE_Copy> Exists>/-/-/-2
+step 278 sm new 1
+  new 1 0
+step 279 sm new 3
+  new 3 0
+step 280 sm dup 3 1
+  dup 3 1
+step 281 sm sort 3
+  sort 3 0
+step 282 sm state
+  trigger 0 <Trigger0_Copy> id 4 c 0 3 e 0 2
+  trigger 1 <Trigger0> id 1 c 0 3 e 0 2
+  trigger 2 <Trigger2> id 3 c 2 7 e 3 4
+  condition 0 Always True id 0 type 0 object 2 trigger 0
+  condition 1 <Condition3_Copy> id 9 type 2 object 1 trigger 2
+  condition 2 <Condition5> id 6 type 2 object 0 trigger 0
+  condition 3 <Condition4> id 5 type 2 object 0 trigger 1
+  condition 4 <Condition9> id 10 type 2 object 0 trigger 0
+  condition 5 <11:<NONE> Exists> id 11 type 1 object 3 trigger 0
+  condition 6 <<NONE> Exists> id 2 type 1 object 1 trigger 1
+  condition 7 <<NONE> Exists> id 1 type 1 object 2 trigger 2
+  condition 8 <<NONE_Copy> Exists> id 7 type 1 object 4 trigger 1
+  condition 9 <<NONE_Copy> Exists> id 8 type 1 object 5 trigger 1
+  condition 10 <NONE_Copy> Exists id 12 type 1 object 6 trigger 0
+  effect 0 Do Nothing id 0 areas 0 1 3 0 objects 0 2 1 0 0 trigger 0 list 0 1
+  effect 1 <Effect0_Copy> id 5 areas 1 3 0 4 objects 2 1 0 0 2 trigger 2 list 2 0
+  effect 2 <Effect1> id 2 areas 3 0 4 0 objects 1 0 0 2 1 trigger 1 list 1 0
+  effect 3 <Effect2> id 3 areas 0 4 0 1 objects 0 0 2 1 0 trigger 0 list 0 2
+  effect 4 <Effect3> id 4 areas 4 0 1 3 objects 0 2 1 0 0 trigger 2 list 0 1
+  object 0 <NONE> id 0 area 3 parent 2 near 1
+  object 1 <NONE> id 2 area 4 parent 0 near 0
+  object 2 <NONE> id 1 area 0 parent 1 near 0
+  object 3 <NONE> id 6 area 0 parent 0 near 0
+  object 4 <NONE_Copy> id 4 area 0 parent 1 near 0
+  object 5 <NONE_Copy> id 5 area 4 parent 0 near 0
+  object 6 <NONE_Copy> id 7 area 4 parent 0 near 0
+  area 0 Off Map id 0
+  area 1 Previous Location id 0
+  area 2 <Area0_Copy> id 4
+  area 3 <Area0> id 1
+  area 4 <Area2> id 3
+  timed
+  next 4 12 5 7 4
+  triggers |<Trigger0_Copy> |<Trigger0> |<Trigger2>
+  conditions |Always True |<Condition3_Copy> |<Condition5> |<Condition4> |<Condition9> |<<NONE> Exists> |<<NONE> Exists> |<<NONE> Exists> |<<NONE_Copy> Exists> |<<NONE_Copy> Exists> |<<NONE_Copy> Exists>
+  user conditions |<Condition3_Copy> |<Condition5> |<Condition4> |<Condition9>
+  effects |Do Nothing |<Effect0_Copy> |<Effect1> |<Effect2> |<Effect3>
+  user effects |<Effect0_Copy> |<Effect1> |<Effect2> |<Effect3>
+  objects |<NONE> |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy> |<NONE_Copy>
+  user objects |<NONE> |<NONE> |<NONE> |<NONE_Copy> |<NONE_Copy> |<NONE_Copy>
+  areas |Off Map |Previous Location |<Area0_Copy> |<Area0> |<Area2>
+  user areas |<Area0_Copy> |<Area0> |<Area2>
+  triggers |[4]<Trigger0_Copy> |[1]<Trigger0> |[3]<Trigger2>
+  conditions |[0]Always True |[9]<Condition3_Copy> |[6]<Condition5> |[5]<Condition4> |[10]<Condition9> |[11]<<NONE> Exists> |[2]<<NONE> Exists> |[1]<<NONE> Exists> |[7]<<NONE_Copy> Exists> |[8]<<NONE_Copy> Exists> |[12]<<NONE_Copy> Exists>
+  user conditions |[9]<Condition3_Copy> |[6]<Condition5> |[5]<Condition4> |[10]<Condition9>
+  effects |[0]Do Nothing |[5]<Effect0_Copy> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3>
+  user effects |[5]<Effect0_Copy> |[2]<Effect1> |[3]<Effect2> |[4]<Effect3>
+  objects |[0]<NONE> |[2]<NONE> |[1]<NONE> |[6]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy> |[7]<NONE_Copy>
+  user objects |[2]<NONE> |[1]<NONE> |[6]<NONE> |[4]<NONE_Copy> |[5]<NONE_Copy> |[7]<NONE_Copy>
+  areas |[0]Off Map |[0]Previous Location |[4]<Area0_Copy> |[1]<Area0> |[3]<Area2>
+  user areas |[4]<Area0_Copy> |[1]<Area0> |[3]<Area2>
+  find 0:Always True/Do Nothing/<NONE>/0 1:<<NONE> Exists>/-/<NONE>/2 2:<<NONE> Exists>/<Effect1>/<NONE>/1 3:-/<Effect2>/-/-2 4:-/<Effect3>/<NONE_Copy>/4 5:<Condition4>/<Effect0_Copy>/<NONE_Copy>/5 6:<Condition5>/-/<NONE>/3 7:<<NONE_Copy> Exists>/-/<NONE_Copy>/6

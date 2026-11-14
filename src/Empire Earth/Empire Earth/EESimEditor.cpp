@@ -54,6 +54,9 @@
 //   digest LABEL                          the map's tiles and mesh, every unit, the selection, the paint area, and
 //                                         the game's save chunks (the header, which holds the date, left out;
 //                                         four chunks differ by run: ChunkByRun)
+//   sm OP LIST [INDEX] | sm fill | sm state  the scenario manager's lists: an editor list operation (new, sort, up,
+//                                         down, delete, dup), index references set on every element, every element's
+//                                         references and the name lists (ScenarioListStep)
 // Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
 // the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
 // lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
@@ -123,6 +126,12 @@
 #include "ee/EEUIMiniMap.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEScenarioManager.h"
+#include "ee/EEScenarioIDs.h"
+#include "ee/EESMArea.h"
+#include "ee/EESMCondition.h"
+#include "ee/EESMEffect.h"
+#include "ee/EESMObject.h"
+#include "ee/EESMTrigger.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EEDatabaseTables.h"
@@ -465,6 +474,208 @@ void Digest(const std::string& inLabel, std::vector<std::string>& outLines)
              (double)theArea.GetRight(), (double)theArea.GetBottom());
     outLines.push_back(theText);
     SaveDigest(outLines);
+}
+
+// ------------------------------------------------------------------------------------------------ the scenario lists
+// TEST ONLY: the scenario manager's list operations as the trigger screens call them (EESETSArea's, EESETSCondition's
+// ... Sort, MoveUp, MoveDown, Delete, Duplicate, New), and the lists' state: every element's name, id and index
+// references, the trigger entries, the timed effects and the name lists the screens show
+
+std::string Num(unsigned long inValue)
+{
+    return std::to_string((long)inValue);
+}
+
+void NameList(const char* inLabel, const std::vector<UWideString>& inNames, std::vector<std::string>& outLines)
+{
+    std::string theText = std::string("  ") + inLabel;
+    for (const UWideString& n : inNames)
+        theText += std::string(" |") + (const char*)n;
+    outLines.push_back(theText);
+}
+
+void ScenarioListState(std::vector<std::string>& outLines)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    for (unsigned long i = 0; i < m->mTriggers.size(); i++) {
+        EESMTrigger* t = m->mTriggers[i];
+        std::string s = "  trigger " + Num(i) + " " + (const char*)t->mName + " id " + Num(t->mID) + " c";
+        for (EESMTConditionWrapper* c : t->mConditions)
+            s += " " + Num(c->mValue);
+        s += " e";
+        for (EESMTEffectWrapper* e : t->mEffects)
+            s += " " + Num(e->mEffectIndex);
+        outLines.push_back(s);
+    }
+    for (unsigned long i = 0; i < m->mConditions.size(); i++) {
+        EESMCondition* c = m->mConditions[i];
+        outLines.push_back("  condition " + Num(i) + " " + (const char*)c->mName + " id " + Num(c->mID) + " type " +
+                           Num(c->mType) + " object " + Num(c->mObjectIndex) + " trigger " + Num(c->mTrigger));
+    }
+    std::vector<EESMEffect*> theEffects(m->mEffects);
+    theEffects.insert(theEffects.end(), m->mPendingEffects.begin(), m->mPendingEffects.end());
+    for (unsigned long i = 0; i < theEffects.size(); i++) {
+        EESMEffect* e = theEffects[i];
+        std::string s = std::string(i < m->mEffects.size() ? "  effect " : "  pending ") + Num(i) + " " +
+                        (const char*)e->mName + " id " + Num(e->mID) + " areas " + Num(e->mTaskArea) + " " +
+                        Num(e->mTargetArea) + " " + Num(e->mPlaceArea) + " " + Num(e->mLocationArea) + " objects " +
+                        Num(e->mObject) + " " + Num(e->mLocationObject) + " " + Num(e->mTaskObject) + " " +
+                        Num(e->mPlaceObject) + " " + Num(e->mTargetObject) + " trigger " + Num(e->mTrigger) + " list";
+        for (unsigned long o : e->mObjects)
+            s += " " + Num(o);
+        outLines.push_back(s);
+    }
+    for (unsigned long i = 0; i < m->mObjects.size(); i++) {
+        EESMObject* o = m->mObjects[i];
+        outLines.push_back("  object " + Num(i) + " " + (const char*)o->mName + " id " + Num(o->mL64) + " area " +
+                           Num(o->mArea) + " parent " + Num(o->mParent) + " near " + Num(o->mNearObject));
+    }
+    for (unsigned long i = 0; i < m->mAreas.size(); i++)
+        outLines.push_back("  area " + Num(i) + " " + (const char*)m->mAreas[i]->mName + " id " + Num(m->mAreas[i]->mID));
+    std::string s = "  timed";
+    for (unsigned long i = 0; i < m->GetNumTimedEffects(); i++)
+        s += " " + Num(m->GetTimedEntry(i).mEffectIndex) + "@" + Num(m->GetTimedEntry(i).mTime);
+    outLines.push_back(s);
+    outLines.push_back("  next " + Num(m->mNextTriggerID) + " " + Num(m->mNextConditionID) + " " +
+                       Num(m->mNextEffectID) + " " + Num(m->mNextObjectID) + " " + Num(m->mNextAreaID));
+    for (int theDebug = 0; theDebug < 2; theDebug++) {
+        bool theOld = m->mShowDebugIDs;
+        m->mShowDebugIDs = theDebug != 0;
+        std::vector<UWideString> n[10];
+        m->GetTriggerNames(n[0]);
+        m->GetAllConditionNames(n[1]);
+        m->GetUserConditionNames(n[2]);
+        m->GetAllEffectNames(n[3]);
+        m->GetUserEffectNames(n[4]);
+        m->GetObjectNames(n[5]);
+        m->GetUserObjectNames(n[6]);
+        m->GetAreaNames(n[7]);
+        m->GetUserAreaNames(n[8]);
+        m->mShowDebugIDs = theOld;
+        const char* theLabels[] = {"triggers", "conditions", "user conditions", "effects", "user effects", "objects",
+                                   "user objects", "areas", "user areas"};
+        for (int k = 0; k < 9; k++)
+            NameList(theLabels[k], n[k], outLines);
+    }
+    std::string f = "  find";
+    for (long theID = 0; theID < 8; theID++) {
+        EESMCondition* c = m->FindConditionByID(theID);
+        EESMEffect* e = m->FindEffectByID(theID);
+        EESMObject* o = m->FindObjectByID(theID);
+        f += " " + std::to_string(theID) + ":" + (c ? (const char*)c->mName : "-") + "/" + (e ? (const char*)e->mName : "-") +
+             "/" + (o ? (const char*)o->mName : "-") + "/" + std::to_string(o ? m->GetObjectIndex(o) : -2);
+    }
+    outLines.push_back(f);
+}
+
+// sm OP LIST [INDEX]: LIST 0 triggers, 1 conditions, 2 effects, 3 objects, 4 areas; OP new, sort, up, down, delete,
+// dup; "sm fill": every element's index references set from its place (each list's size modulo), two trigger entries
+// of each kind, a timed entry per effect and a pending copy of effect 1; "sm state": the state above
+void ScenarioListStep(const std::vector<std::string>& w, std::vector<std::string>& outLines)
+{
+    EEScenarioManager* m = gWorld.mScenarioManager;
+    const std::string& theOp = w.size() > 1 ? w[1] : std::string();
+    long k = w.size() > 2 ? atol(w[2].c_str()) : 0;
+    unsigned long i = w.size() > 3 ? (unsigned long)atol(w[3].c_str()) : 0;
+    if (theOp == "state") {
+        ScenarioListState(outLines);
+        return;
+    }
+    if (theOp == "fill") {
+        unsigned long nt = m->mTriggers.size(), nc = m->mConditions.size(), ne = m->mEffects.size();
+        unsigned long no = m->mObjects.size(), na = m->mAreas.size();
+        for (unsigned long j = 0; j < nt; j++) {
+            EESMTrigger* t = m->mTriggers[j];
+            t->SetCondition(0, false, (j + 1) % nc);
+            t->SetConditionOperator(0, 1);
+            t->SetCondition(1, true, (j + 2) % nc);
+            t->SetEffect(0, 0, (j + 1) % ne);
+            t->SetEffectOperator(0, 1);
+            t->SetEffect(1, 5, (j + 2) % ne);
+        }
+        for (unsigned long j = 0; j < nc; j++) {
+            if (m->mConditions[j]->mType != kSMConditionObject)
+                m->mConditions[j]->mObjectIndex = (j + 1) % no;
+            m->mConditions[j]->mTrigger = nt ? (j + 1) % nt : 0;
+        }
+        for (unsigned long j = 0; j < ne; j++) {
+            EESMEffect* e = m->mEffects[j];
+            e->mTaskArea = j % na;
+            e->mTargetArea = (j + 1) % na;
+            e->mPlaceArea = (j + 2) % na;
+            e->mLocationArea = (j + 3) % na;
+            e->mObject = j % no;
+            e->mLocationObject = (j + 1) % no;
+            e->mTaskObject = (j + 2) % no;
+            e->mPlaceObject = (j + 3) % no;
+            e->mTargetObject = (j + 4) % no;
+            e->mTrigger = nt ? (j + 1) % nt : 0;
+            e->mObjects.clear();
+            for (unsigned long o = 0; o < no; o += 2)
+                e->mObjects.push_back((o + j) % no);
+            m->AddTimedEffect((long)j, 1000 * (unsigned long)(ne - j), false);
+        }
+        for (unsigned long j = 0; j < no; j++) {
+            m->mObjects[j]->mArea = (j + 2) % na;
+            m->mObjects[j]->mParent = (j + 1) % no;
+            m->mObjects[j]->mNearObject = (j + 2) % no;
+        }
+        if (ne > 1)
+            m->AddV134Effect(*m->mEffects[1]);
+        return;
+    }
+    outLines.push_back("  " + theOp + " " + std::to_string(k) + " " + std::to_string(i));
+    if (theOp == "new") {
+        switch (k) {
+        case 0: m->NewTrigger(); break;
+        case 1: m->NewCondition(); break;
+        case 2: m->NewEffect(); break;
+        case 3: m->NewObject(); break;
+        case 4: m->NewArea(); break;
+        }
+    } else if (theOp == "sort") {
+        switch (k) {
+        case 0: m->SortTriggers(); break;
+        case 1: m->SortConditions(); break;
+        case 2: m->SortEffects(); break;
+        case 3: m->SortObjects(); break;
+        case 4: m->SortAreas(); break;
+        }
+    } else if (theOp == "up") {
+        switch (k) {
+        case 0: m->MoveTriggerUp(i); break;
+        case 1: m->MoveConditionUp(i); break;
+        case 2: m->MoveEffectUp(i); break;
+        case 3: m->MoveObjectUp(i); break;
+        case 4: m->MoveAreaUp(i); break;
+        }
+    } else if (theOp == "down") {
+        switch (k) {
+        case 0: m->MoveTriggerDown(i); break;
+        case 1: m->MoveConditionDown(i); break;
+        case 2: m->MoveEffectDown(i); break;
+        case 3: m->MoveObjectDown(i); break;
+        case 4: m->MoveAreaDown(i); break;
+        }
+    } else if (theOp == "delete") {
+        bool r = false;
+        switch (k) {
+        case 0: r = m->DeleteTrigger(i); break;
+        case 1: r = m->DeleteCondition(i); break;
+        case 2: r = m->DeleteEffect(i); break;
+        case 3: r = m->DeleteObject(i); break;
+        case 4: r = m->DeleteArea(i); break;
+        }
+        outLines.push_back(std::string("  deleted ") + (r ? "1" : "0"));
+    } else if (theOp == "dup") {
+        switch (k) {
+        case 0: m->DuplicateTrigger(i); break;
+        case 1: m->DuplicateCondition(i); break;
+        case 2: m->DuplicateEffect(i); break;
+        case 3: m->DuplicateObject(i); break;
+        case 4: m->DuplicateArea(i); break;
+        }
+    }
 }
 
 // ------------------------------------------------------------------------------------------------ the script
@@ -1078,6 +1289,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 theOutput.push_back("  end epochs " + std::to_string(theRow->mEndEpoch->GetListBox()->GetLineCount()) +
                                     " selection " + (theSelected ? std::to_string(theEnd) : std::string("none")));
             };
+        else if (c == "sm")   // sm OP LIST [INDEX] | sm fill | sm state: the scenario lists (ScenarioListStep)
+            theCode = [=, &theOutput] { ScenarioListStep(w, theOutput); };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
             theCode = [=, &theOutput] {
                 gPhysics->FlushWorld();

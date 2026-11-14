@@ -208,3 +208,75 @@ delete 99999
 selection
 delete 2 first
 units
+# R5b.5 sixth round: the scenario manager's lists as the trigger screens change them (sm: new, sort, up, down,
+# delete, dup; fill sets every element's references from its place, state prints them and the name lists)
+sm state
+sm new 4
+sm new 4
+sm new 4
+sm new 3
+sm new 3
+sm new 3
+sm new 1
+sm new 1
+sm new 1
+sm new 2
+sm new 2
+sm new 2
+sm new 2
+sm new 0
+sm new 0
+sm new 0
+sm fill
+sm state
+sm dup 4 2
+sm dup 3 1
+sm dup 3 2
+sm dup 1 1
+sm dup 2 1
+sm dup 0 0
+sm state
+sm sort 4
+sm sort 3
+sm sort 1
+sm sort 2
+sm sort 0
+sm state
+sm down 4 1
+sm down 4 2
+sm up 4 2
+sm up 4 4
+sm down 3 1
+sm up 3 3
+sm down 1 1
+sm down 1 2
+sm up 1 1
+sm up 1 3
+sm down 2 1
+sm up 2 3
+sm down 0 0
+sm up 0 2
+sm state
+sm down 4 5
+sm down 3 5
+sm down 1 3
+sm down 2 5
+sm down 0 3
+sm up 4 1
+sm up 0 0
+sm state
+sm delete 4 0
+sm delete 4 3
+sm delete 3 0
+sm delete 3 2
+sm delete 1 0
+sm delete 1 2
+sm delete 2 0
+sm delete 2 3
+sm delete 0 1
+sm state
+sm new 1
+sm new 3
+sm dup 3 1
+sm sort 3
+sm state
