@@ -738,7 +738,7 @@ EEComplexUnit* BoxOwnComplex(EEPlayer* inPlayer, long inID)
     if (theUnit == NULL)
         return NULL;
     EEUnit* theEEUnit = static_cast<EEUnit*>(theUnit);
-    EEComplexUnit* theComplex = theEEUnit->mComplexUnit.Get();
+    EEComplexUnit* theComplex = theEEUnit->mComplexUnit;
     return static_cast<EEUnit*>(theComplex) == theEEUnit ? theComplex : NULL;
 }
 

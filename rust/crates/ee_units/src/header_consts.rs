@@ -13,6 +13,8 @@ mod tests {
     /// the Rust prefixes of copied constants and the headers' (longest first)
     const PREFIXES: &[(&str, &str)] = &[
         ("EE_UNIT_CATEGORY_", "kUnitCategory"),
+        ("UNIT_KIND_", "kUnitKind"),
+        ("TERRAIN_", "kTerrain"),
         ("EE_UNIT_TYPE_", "kUnitType"),
         ("EE_MOVEMENT_", "kMovement"),
         ("EE_ACTION_", "kAction"),
