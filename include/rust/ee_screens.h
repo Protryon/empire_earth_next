@@ -1321,6 +1321,410 @@ constexpr static const int32_t EE_SCREENS_SEP_U_AIRPORT = 16;
 
 constexpr static const int32_t EE_SCREENS_SEP_U_BUILDING = 32;
 
+/// `UITextLabel`.
+constexpr static const uint32_t EE_SCREENS_SEPL_LABEL = 1;
+
+/// `UIEditBox` (extra: max characters, numeric).
+constexpr static const uint32_t EE_SCREENS_SEPL_EDIT = 2;
+
+/// `UIComboBox` (extra: the lines (`EE_SCREENS_SEPL_LINES_*`), the first selection or -1).
+constexpr static const uint32_t EE_SCREENS_SEPL_COMBO = 3;
+
+/// `EESECBMaxPlayer` (the player counts 2..16 as lines).
+constexpr static const uint32_t EE_SCREENS_SEPL_MAX_PLAYER = 4;
+
+/// `UICheckBox`.
+constexpr static const uint32_t EE_SCREENS_SEPL_CHECK = 5;
+
+/// `UISlider` (extra: the range's low and high, the page size, the value).
+constexpr static const uint32_t EE_SCREENS_SEPL_SLIDER = 6;
+
+/// `EESERBUnitTypes` (extra: checked).
+constexpr static const uint32_t EE_SCREENS_SEPL_UNIT_TYPE = 7;
+
+/// `EESEUITechListBox`.
+constexpr static const uint32_t EE_SCREENS_SEPL_TECH_LIST = 8;
+
+/// `EESEBSelect`.
+constexpr static const uint32_t EE_SCREENS_SEPL_SELECT = 9;
+
+/// `EESETab` (extra: checked).
+constexpr static const uint32_t EE_SCREENS_SEPL_TAB = 10;
+
+/// `EESEPSSetPlayers`.
+constexpr static const uint32_t EE_SCREENS_SEPL_SET_PLAYERS = 11;
+
+/// `EEUIBColor` (extra: the player).
+constexpr static const uint32_t EE_SCREENS_SEPL_COLOR = 12;
+
+/// `EESEUIBDiplomacy`.
+constexpr static const uint32_t EE_SCREENS_SEPL_DIPLOMACY = 13;
+
+/// A combo box's first lines: none, the epochs' titles.
+constexpr static const int32_t EE_SCREENS_SEPL_LINES_NONE = 0;
+
+constexpr static const int32_t EE_SCREENS_SEPL_LINES_EPOCHS = 1;
+
+/// The texts (`EeScreensSeplCtl::text`): none (""), a resource string, the number printed ("%ld"), the resource
+/// string then the number ("%s %ld"), the number then the resource string ("%ld %s").
+constexpr static const uint32_t EE_SCREENS_SEPL_TEXT_NONE = 0;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_TEXT_STRING = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_TEXT_NUMBER = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_TEXT_STRING_NUMBER = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_TEXT_NUMBER_STRING = 4;
+
+/// The fonts: the screen's, `gU531930`, `gU531934`, `gU531938`, `gFontArial18`.
+constexpr static const uint32_t EE_SCREENS_SEPL_FONT_SCREEN = 0;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_FONT_530 = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_FONT_534 = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_FONT_538 = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_FONT_ARIAL18 = 4;
+
+/// `EeScreensSeplCtl::flags`: the text yellow and transparent; the rectangle given as left, top, right, bottom;
+/// the height the font's (`h` added).
+constexpr static const uint32_t EE_SCREENS_SEPL_FG = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_LTRB = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_FONT_HEIGHT = 4;
+
+/// A slider's range set before its page size (else the page size first); its value set unless `i32::MIN`.
+constexpr static const uint32_t EE_SCREENS_SEPL_RANGE_FIRST = 8;
+
+/// No alignment set; no opacity set.
+constexpr static const int32_t EE_SCREENS_SEPL_NONE = -1;
+
+/// p0 made from the control record p1 (an `EeScreensSeplCtl`) on the form p2 -> the handle in p0.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_MAKE = 1;
+
+/// The control p0 deleted (none: nothing).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_DELETE = 2;
+
+/// The control p0's rectangle -> f0..f3 (left, top, right, bottom).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_RECT = 3;
+
+/// The control p0's display mode set to i0 / -> its display mode.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SET_DISPLAY = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_DISPLAY = 5;
+
+/// The check box p0 checked (i0) / -> whether it is.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SET_CHECKED = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_CHECKED = 7;
+
+/// The combo box p0 emptied / given a line (text i0, string i1, number i2 as `EE_SCREENS_SEPL_TEXT_*`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_COMBO_CLEAR = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_COMBO_APPEND = 9;
+
+/// -> the combo box p0's selection (`GetCurrentSelection`; -1 left when it has none) / its list box's.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_COMBO_SELECTION = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_LIST_SELECTION = 11;
+
+/// The combo box p0's selection set to i0.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SET_SELECTION = 12;
+
+/// The edit box p0's text set to the number i0 ("%lu") / to the edit box p1's first line / -> its first line as
+/// an integer (`GetTextAsInt`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_EDIT_NUMBER = 13;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_EDIT_COPY = 14;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_EDIT_INT = 15;
+
+/// -> the slider p0's value / its value set to i0.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SLIDER = 16;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SET_SLIDER = 17;
+
+/// The label p0's text set to the number i0 (`SetText(long)`; i1: `SetText(unsigned long)`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_LABEL_NUMBER = 18;
+
+/// The colour button p0's colour -> / set to i0.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_COLOR = 19;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SET_COLOR = 20;
+
+/// The control group i0 of the form of the control p0 enabled (i1) or disabled.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_GROUP = 21;
+
+/// The control p0 moved to (f0, f1).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SET_LOCATION = 22;
+
+/// The radio button p0 checked (`Check`: its own events run).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_RADIO_CHECK = 23;
+
+/// -> whether the unit type button p0 is checked.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_RADIO_CHECKED = 24;
+
+/// The trigger event i0 of the control p0 set: i1 the event (`EE_SCREENS_SEPL_EVENT_*`) over the control p1.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_EVENT = 25;
+
+/// The diplomacy buttons' bitmaps cut from the editor p0's texture / released.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_LOAD_BITMAPS = 26;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_RELEASE_BITMAPS = 27;
+
+/// The diplomacy button p0's state -> / set to i0 with its bitmaps (`UpdateBitmaps`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_DIPLOMACY = 28;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SET_DIPLOMACY = 29;
+
+/// The game options' rules: -> f-less i0 minimum, i1 maximum, i2 default of the unit limit.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_UNIT_LIMIT_RULES = 30;
+
+/// -> `gWorld.GetNumPlayers()` / whether player i0 exists / `gMaxPlayers`.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_NUM_PLAYERS = 31;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_PLAYER_EXISTS = 32;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_MAX_PLAYERS = 33;
+
+/// An `EESEAChangeWorldPlayerCount(i0)` posted.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_POST_PLAYER_COUNT = 34;
+
+/// -> whether player i0 has a computer player.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_IS_COMPUTER = 35;
+
+/// The tech type lists rebuilt from the tech tree (`BuildTechTypeLists`' sort into `EESEPSSetPlayers`' lists).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_TECH_TYPES = 36;
+
+/// The tech lists p0 (enabled) and p1 (disabled) refilled for the player combo p2's player from the list i0
+/// (`kSETechList*`) / both rebuilt.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_FILL_TECHS = 37;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_REBUILD_TECHS = 38;
+
+/// -> player i0's: resource cap i1 / tech tree's current epoch / end epoch / start epoch / shared line of sight /
+/// the game options' colour / CPU-only flag; the computer player's flag i1 (`EE_SCREENS_SEPL_AI_*`); f0 its
+/// citizen percentage.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_PLAYER_GET = 39;
+
+/// Player i0's value i1 (as above) set to i2 (the citizen percentage f0).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_PLAYER_SET = 40;
+
+/// The combo box p0 filled with the civilizations (none, the built-ins, the custom files), the first picked.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_CIV_FILL = 41;
+
+/// The combo box p0's civilization picked for player i0 (unknown: none, titled "unknown").
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_CIV_SELECT = 42;
+
+/// Player i0's civilization from the combo box p0 -> whether it changed.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_CIV_APPLY = 43;
+
+/// The combo box p0 emptied and given the epochs' titles from i0 on.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_FILL_EPOCHS = 44;
+
+/// The edit box p0's text set to player i0's name / player i0's name set from it / the label p0's text set to it.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_NAME_TO_EDIT = 45;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_NAME_FROM_EDIT = 46;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_NAME_TO_LABEL = 47;
+
+/// Player i0's tech tree's epoch range reset to i1..i2 (`ResetEpochRange`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_EPOCH_RANGE = 48;
+
+/// Player i0's colour set from the colour button p0 -> whether it differed.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_APPLY_COLOR = 49;
+
+/// -> player i0's `mEnemies[i1]`.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_ENEMY = 50;
+
+/// The stance of players i0 and i1 set to i2 (`SetDiplomaticStance`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_SET_STANCE = 51;
+
+/// -> / set to i1 the world's value i0 (`EE_SCREENS_SEPL_WORLD_*`).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_WORLD_GET = 52;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_WORLD_SET = 53;
+
+/// The load thread's message i0 (406, 403, 407) posted for player i1 with i2 (406, 407: the player's tech tree's
+/// start epoch, read by the host).
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_LOAD_THREAD = 54;
+
+/// The mini-map redrawn (if any) / recoloured.
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_MINIMAP_REDRAW = 55;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OP_MINIMAP_RECOLOR = 56;
+
+/// The trigger events: the start epoch's (`EESEERust` start epoch over the end epoch combo box p1), a slider's
+/// label (`UIESliderChange(p1, 1, 0)`), the unit limit's (`EESEENewUnitLimit(p1, 1, 0)`), the display epochs box's
+/// screen event.
+constexpr static const int32_t EE_SCREENS_SEPL_EVENT_START_EPOCH = 1;
+
+constexpr static const int32_t EE_SCREENS_SEPL_EVENT_SLIDER = 2;
+
+constexpr static const int32_t EE_SCREENS_SEPL_EVENT_UNIT_LIMIT = 3;
+
+constexpr static const int32_t EE_SCREENS_SEPL_EVENT_DISPLAY_EPOCH = 4;
+
+/// Player values (`EE_SCREENS_SEPL_OP_PLAYER_GET`/`SET`).
+constexpr static const int32_t EE_SCREENS_SEPL_PV_CAP = 1;
+
+constexpr static const int32_t EE_SCREENS_SEPL_PV_CURRENT_EPOCH = 2;
+
+constexpr static const int32_t EE_SCREENS_SEPL_PV_END_EPOCH = 3;
+
+constexpr static const int32_t EE_SCREENS_SEPL_PV_START_EPOCH = 4;
+
+constexpr static const int32_t EE_SCREENS_SEPL_PV_SHARED_LOS = 5;
+
+constexpr static const int32_t EE_SCREENS_SEPL_PV_OPTIONS_COLOR = 6;
+
+constexpr static const int32_t EE_SCREENS_SEPL_PV_OPTIONS_CPU = 7;
+
+constexpr static const int32_t EE_SCREENS_SEPL_PV_AI = 8;
+
+constexpr static const int32_t EE_SCREENS_SEPL_PV_CITIZENS = 9;
+
+constexpr static const int32_t EE_SCREENS_SEPL_PV_ID = 10;
+
+/// The computer player's flags (`EE_SCREENS_SEPL_PV_AI`'s third integer): active, cheating, attack, defend,
+/// build, explore, ignore others, gather.
+constexpr static const size_t EE_SCREENS_SEPL_AI_COUNT = 8;
+
+/// The world's values: the population limit, the wonders to win, victory, teams locked, cheats, unit
+/// improvements, carbon; the game options' unit limit, wonders, victory, lock teams, cheat codes.
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_POPULATION = 1;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_WONDERS = 2;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_VICTORY = 3;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_TEAMS = 4;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_CHEATS = 5;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_IMPROVEMENTS = 6;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_CARBON = 7;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_OPT_UNIT_LIMIT = 8;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_OPT_WONDERS = 9;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_OPT_VICTORY = 10;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_OPT_TEAMS = 11;
+
+constexpr static const int32_t EE_SCREENS_SEPL_WORLD_OPT_CHEATS = 12;
+
+/// `kDisplayModeShown` / `kDisplayModeHidden`.
+constexpr static const int32_t EE_SCREENS_SEPL_SHOWN = 1;
+
+constexpr static const int32_t EE_SCREENS_SEPL_HIDDEN = 0;
+
+/// `kTextAlignLeft` / `kTextAlignCenter`.
+constexpr static const int32_t EE_SCREENS_SEPL_ALIGN_LEFT = 0;
+
+constexpr static const int32_t EE_SCREENS_SEPL_ALIGN_CENTER = 1;
+
+/// The pages (`kPlayerScreen*`).
+constexpr static const uint32_t EE_SCREENS_SEPL_PAGE1 = 0;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_PAGE2 = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_AI_SETTINGS = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_TECH_TREE = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_OPTIONS = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_MAX_PLAYERS = 20512;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_START_EPOCH = 20515;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_ALL_PLAYERS = 20517;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_SE_PLAYERS = 20518;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_SE_PLAYER = 20523;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_SE_CIVILIZATION = 20524;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_ENABLE_TECHNOLOGIES = 20528;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_DISABLE_TECHNOLOGIES = 20529;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_UNIT_TYPES = 20530;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_SE_UNIT_GROUP_FIRST = 20531;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_DISPLAY_EPOCHS = 20547;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_END_EPOCH = 20548;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_SE_HUMAN = 20552;
+
+/// Active, Cheat, Attack, Defend, Build/Repair, Explore, Ignore, Gather, Citizen Percentage: 20556..20564.
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_SE_ACTIVE = 20556;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_RESOURCE_NAME_FIRST = 30116;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_GAME_OPTIONS = 30237;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_LOBBY_RESOURCES = 30252;
+
+/// Game Unit Limit, Per Player, Wonders For Victory, Victory Allowed, Teams Locked, Cheat Codes, Unit Improvements,
+/// CPU, Only, Shared, LOS: 30448..30458.
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_GAME_GAME_UNIT_LIMIT = 30448;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_MUTUAL_DIPLOMACY_SETTINGS = 30480;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_IDS_USE_CARBON_RESOURCE = 30493;
+
+/// `kControlTriggerRangeChanged`, `kControlTriggerChecked`, `kControlTriggerUnchecked`,
+/// `kControlTriggerSelectionChanged`.
+constexpr static const int32_t EE_SCREENS_SEPL_TRIGGER_RANGE = 1000;
+
+constexpr static const int32_t EE_SCREENS_SEPL_TRIGGER_CHECKED = 1001;
+
+constexpr static const int32_t EE_SCREENS_SEPL_TRIGGER_UNCHECKED = 1002;
+
+constexpr static const int32_t EE_SCREENS_SEPL_TRIGGER_SELECTION = 1003;
+
+/// A row's start and end epoch combo boxes (`ee_screens_sepl_row_control`).
+constexpr static const uint32_t EE_SCREENS_SEPL_ROW_START_EPOCH = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_ROW_END_EPOCH = 2;
+
+/// `Leave`, `Load`, `Enter`, `Store`, `Refresh`, `SetPlayerCount(a)`, `SelectPage(a)`, `FillTechLists`,
+/// `RebuildTechLists`, `CopyFirstPlayerToAll`, `GetPlayerCount` (answered), `MarkPlayerChanged(a, b)`.
+constexpr static const uint32_t EE_SCREENS_SEPL_LEAVE = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_LOAD = 2;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_ENTER = 3;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_STORE = 4;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_REFRESH = 5;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_SET_PLAYER_COUNT = 6;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_SELECT_PAGE = 7;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_FILL_TECH_LISTS = 8;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_REBUILD_TECH_LISTS = 9;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_COPY_FIRST_TO_ALL = 10;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_PLAYER_COUNT = 11;
+
+constexpr static const uint32_t EE_SCREENS_SEPL_MARK_CHANGED = 12;
+
 /// `EESEASaveScenario`.
 constexpr static const uint32_t EE_SCREENS_SEW_SAVE = 1;
 
@@ -5961,6 +6365,9 @@ constexpr static const int64_t EE_SCREENS_UP_FIELD_DISABLED = 3;
 
 constexpr static const int64_t EE_SCREENS_UP_FIELD_LAST_MESSAGE = 4;
 
+/// The player tab (opaque to C++).
+struct EeScreensSePlayers;
+
 /// A paint action's record (opaque to C++).
 struct EeScreensSeaPaint;
 
@@ -6387,6 +6794,30 @@ struct EeScreensMiniMapMouse {
   float pixel_to_map[6];
 };
 
+/// One control as the host makes it: `new` of the kind's class at the index, the alignment, the opacities, the
+/// text colour, then `AddControl` to each control group of `groups` (a bit per group).
+struct EeScreensSeplCtl {
+  uint32_t kind;
+  uint32_t id;
+  uint32_t index;
+  uint32_t font;
+  uint32_t text;
+  uint32_t string;
+  int32_t number;
+  uint32_t flags;
+  float x;
+  float y;
+  float w;
+  float h;
+  int32_t align;
+  /// the background opacity (`SetBgOpacity`), the text box's or scroll bar's (`SetTextBoxBgOpacity`,
+  /// `SetScrollBarBgOpacity`); negative: not set
+  float bg;
+  float bg2;
+  uint32_t groups;
+  int32_t extra[4];
+};
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
@@ -6529,6 +6960,38 @@ void ee_screens_seu_lasso_select(const void *rectangle,
 
 /// `EESEARotateUnits::Virtual4`.
 void ee_screens_seu_rotate(float yaw);
+
+/// `EESEPlayerScreen`'s constructor: every control made on `form` from the control index `*index` (advanced);
+/// `player_selection` is the editor's player combo box. Freed by `ee_screens_sepl_free`.
+///
+/// # Safety
+/// `index` points at the form's next control index.
+EeScreensSePlayers *ee_screens_sepl_new(void *form,
+                                        void *player_selection,
+                                        uint32_t *index);
+
+/// The destructor: every control deleted (the original's order), the object freed.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sepl_new` (or is NULL) and is not used again.
+void ee_screens_sepl_free(EeScreensSePlayers *screen);
+
+/// One of the tab's members (`EE_SCREENS_SEPL_LEAVE` ...) with its arguments; `GetPlayerCount`'s answer.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sepl_new` (or is NULL).
+uint32_t ee_screens_sepl_call(const EeScreensSePlayers *screen,
+                              uint32_t what,
+                              uint32_t a,
+                              uint32_t b);
+
+/// A player row's control (`EE_SCREENS_SEPL_ROW_*`), or the player combo box for row `u32::MAX`; NULL for none.
+///
+/// # Safety
+/// `screen` comes from `ee_screens_sepl_new` (or is NULL).
+void *ee_screens_sepl_control(const EeScreensSePlayers *screen,
+                              uint32_t row,
+                              uint32_t which);
 
 /// The action of `kind` (`EE_SCREENS_SEW_*`) for the `EESEARust` `owner`, with its object and arguments; NULL for
 /// an unknown kind. Freed by `ee_screens_sew_free`.
