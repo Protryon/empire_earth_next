@@ -24,6 +24,7 @@
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EETechCapture.h"
+#include "ee/EECalamityCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EEMap.h"
 #include "ee/EEEffectManager.h"
@@ -205,6 +206,9 @@ EEUnit* FirstLivingUnit(EEPlayer* inPlayer)
 
 void EETechCaptureCastCalamities(long inCall)
 {
+    if (inCall == 0)
+        EECalamityCaptureClasses();   // CALI (ee/EECalamityCapture.h)
+    EECalamityCaptureSaves();   // CALK
     EECalamityManager* theManager = EECalamityManager::GetInstance();
     unsigned long n = gWorld.GetNumPlayers();
     for (unsigned long theRow = 0; theRow < 64; theRow++) {

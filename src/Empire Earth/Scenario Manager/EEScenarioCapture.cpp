@@ -208,11 +208,6 @@ void EESMCaptureObjectEnd(EESMObject* inObject, bool inIncludeDead, bool inResul
     r.Commit();
 }
 
-bool EESMCaptureInObject()
-{
-    return sObjectDepth > 0;
-}
-
 void EESMCapturePlayers(long inType, bool inSingle, long inResult, const void* inPlayers, unsigned int inSeed)
 {
     if (sObjectDepth > 0)

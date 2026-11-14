@@ -18,64 +18,6 @@
 #include "ee/EEAreaEffect.h"
 #include "ee/EEUnit.h"
 
-// FUNCTION: EXE 0x4b1f4f
-// Creates the line-of-sight calamity class
-EECCLineOfSight::EECCLineOfSight()
-{
-}
-
-// SYNTHETIC: EXE 0x4b1f61
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b1f7d
-// Destroys the calamity class
-EECCLineOfSight::~EECCLineOfSight()
-{
-}
-
-// FUNCTION: EXE 0x4b1f88
-// Raises the caster's sight by the class's bonus, redoing its sight on the map; returns false without a caster
-bool EECCLineOfSight::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    theParams.sight_bonus = this->mSightBonus;
-    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, NULL);
-}
-
-// FUNCTION: EXE 0x4b1fc4
-// Takes the sight bonus back from the caster if it is still alive
-void EECCLineOfSight::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    theParams.sight_bonus = this->mSightBonus;
-    EECalamityRunStop(this, inCalamity, theParams, NULL, NULL, NULL);
-}
-
-// FUNCTION: EXE 0x4b2000
-// Reads the calamity data and the sight bonus
-void EECCLineOfSight::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    this->mSightBonus = inData->mFloatParam1;
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCLineOfSight::Reset(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4b2019
-// Ages the calamity; returns the time-alive result (Rust)
-long EECCLineOfSight::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, NULL);
-}
-
 // FUNCTION: EXE 0x4b202f
 // Always allows the cast (returns 0)
 long EECCLineOfSight::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY,

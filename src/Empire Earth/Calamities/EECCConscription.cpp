@@ -25,67 +25,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 
-// FUNCTION: EXE 0x4afdd3
-// Creates the conscription calamity class
-EECCConscription::EECCConscription()
-{
-}
-
-// SYNTHETIC: EXE 0x4afde5
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4afe01
-// Destroys the calamity class (nothing of its own to free)
-EECCConscription::~EECCConscription()
-{
-}
-
-// FUNCTION: EXE 0x4afe0c
-// Conscripts a living target: when the caster's player can afford the conscription technology, pays it
-// and runs unit effect 0x138d on the target. Always returns true
-bool EECCConscription::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, &EECCConscription::StartStep);
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCConscription::Stop(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4afea3
-// Reads the calamity data (the base part only)
-void EECCConscription::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-}
-
-// ICF-FOLDED: EXE 0x557269
-// (empty: folded into a shared empty function)
-void EECCConscription::Reset(EECalamity* inCalamity)
-{
-}
-
-// FUNCTION: EXE 0x4afeaf
-// Returns 7: done at once (Rust)
-long EECCConscription::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, NULL, NULL, NULL);
-}
-
-// FUNCTION: EXE 0x4afeb5
-// Accepts another unit of the caster's own player that is on the map and in the calamity's unit set
-bool EECCConscription::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    return EECalamityValidTarget(this, inUnit, inTargetUnit);
-}
-
 // New (port): EECCConscription's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
 bool EECCConscription::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
 {

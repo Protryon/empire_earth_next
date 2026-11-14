@@ -31,15 +31,8 @@ public:
     {
         ee_ge_texture_set_coordinate(inX, inY, this->mTextureTileCoverage, &outCoordinate.mU, &outCoordinate.mV);
     }
-    // 0x124aa: only the X index reaches the caller (the Y index parameter is by value in the export's signature)
-    void GetTextureIndices(unsigned long inX, unsigned long inY, unsigned long& outX, unsigned long outY)
-    {
-        ee_ge_texture_set_slot(inX, inY, this->mTextureTileCoverage, this->mNumTexturesInWidth,
-                               this->mNumTexturesInHeight, &outX, &outY);
-    }
     unsigned long GetTextureTileCoverage() { return this->mTextureTileCoverage; }
     void SetTexture(unsigned long inX, unsigned long inY, GETexture* inTexture);
-    void SetTextureTileCoverage(unsigned long inCoverage) { this->mTextureTileCoverage = inCoverage; }
 
 private:
     std::vector<std::vector<GETexture*> > mTextures;   // +0x00 [x][y]

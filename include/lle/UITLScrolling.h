@@ -18,8 +18,6 @@ public:
                   UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);
     UITLScrolling(const UITLScrolling&) = delete;
     UITLScrolling& operator=(const UITLScrolling&) = delete;
-    unsigned long GetPixelStartingOffset() const;
-    unsigned long GetStartingLine() const;
     void PauseScrolling();
     void ResumeScrolling();
     void ScrollText(float inSpeed, long inStartDelay, long inEndDelay, long inStartOffset, long inEndOffset);

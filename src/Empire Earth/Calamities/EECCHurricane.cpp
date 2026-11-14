@@ -37,44 +37,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEEffectKindIDs.h"
 
-// FUNCTION: EXE 0x4b114a
-// Creates the hurricane calamity class with no effects or sound
-EECCHurricane::EECCHurricane()
-{
-    this->mGraphicEffect2 = NULL;
-    this->mGraphicEffect3 = NULL;
-    this->mGraphicEffect1 = NULL;
-    this->mSound = NULL;
-}
-
-// SYNTHETIC: EXE 0x4b116a
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x4b1186
-// Destroys the calamity class, releasing its three effects
-EECCHurricane::~EECCHurricane()
-{
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Dereference();
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Dereference();
-    if (this->mGraphicEffect1 != NULL)
-        this->mGraphicEffect1->Dereference();
-}
-
-// FUNCTION: EXE 0x4b11bf
-// Starts a hurricane: takes the storm effect's size as the calamity height and sends the launch effect from the caster
-// to above the target; always returns true
-bool EECCHurricane::Start(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.start_size = this->mGraphicEffect2->GetSize();
-    if (this->mGraphicEffect1 != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCHurricane::StartStep);
-}
-
 // FUNCTION: EXE 0x4b1226
 // Creates the storm unit centred on the target location at the calamity height, with the storm effect on it, and makes
 // it the calamity's target; returns false if the unit could not be created
@@ -99,107 +61,6 @@ bool EECCHurricane::CreateStorm(EECalamity* inCalamity)
         theResult = true;
     }
     return theResult;
-}
-
-// FUNCTION: EXE 0x4b12d4
-// Stops the hurricane's sounds and kills and deselects its storm unit
-void EECCHurricane::Stop(EECalamity* inCalamity)
-{
-    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    theParams.start_size = this->mGraphicEffect2->GetSize();
-    if (this->mGraphicEffect1 != NULL)
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCHurricane::StartStep);
-}
-
-// FUNCTION: EXE 0x4b1324
-// Reads the calamity data: three effects, sound, damage, area, tick time, radius, storm unit class and water-only flag
-void EECCHurricane::Initialize(EECalamityData* inData)
-{
-    EECalamityClass::Initialize(inData);
-    if (inData->mGraphicEffectID1 != 0) {
-        this->mGraphicEffect1 = EEGraphicEffect::Get(inData->mGraphicEffectID1);
-        this->mGraphicEffect1->Reference();
-    }
-    if (inData->mGraphicEffectID2 != 0) {
-        this->mGraphicEffect2 = EEGraphicEffect::Get(inData->mGraphicEffectID2);
-        this->mGraphicEffect2->Reference();
-    }
-    if (inData->mGraphicEffectID3 != 0) {
-        this->mGraphicEffect3 = EEGraphicEffect::Get(inData->mGraphicEffectID3);
-        this->mGraphicEffect3->Reference();
-    }
-    this->mSound = EESoundObject::Get(inData->mSoundID);
-    this->mDamage = inData->mIntParam1;
-    this->mArea = inData->mIntParam6;
-    this->mTickTime = inData->mIntParam2;
-    this->mRadius = inData->mFloatParam1;
-    this->mUnitClassIndex = inData->mUnitClassIndex;
-    this->mOverWater = inData->mBoolParam1;
-}
-
-// FUNCTION: EXE 0x4b13be
-// Clears the calamity's damage-tick timer
-void EECCHurricane::Reset(EECalamity* inCalamity)
-{
-    inCalamity->mIntPlaceHolder1 = 0;
-}
-
-// FUNCTION: EXE 0x4b13c9
-// Loads the storm and strike effects, the sound and the storm unit class's media and buttons
-void EECCHurricane::LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand)
-{
-    this->mGraphicEffect2->Load(inIsOnDemand);
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Load(inIsOnDemand);
-    this->mSound->LoadMedia();
-    if (inIsOnDemand == true)
-        inPlayer->LoadUnitClassMedia(this->mUnitClassIndex);
-    inPlayer->SetUnitClassMedia(this->mUnitClassIndex, 0x7f);
-    inPlayer->LoadUnitClassButtons(this->mUnitClassIndex);
-}
-
-// FUNCTION: EXE 0x4b141f
-// Starts the hurricane's sound as the calamity's sound
-void EECCHurricane::PlaySound(EECalamity* inCalamity)
-{
-    inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(), 0.0f,
-                                                                    1.0f, this->mSound->GetLooping(), NULL));
-    if (inCalamity->mSound != NULL)
-        inCalamity->mSound->Dereference();
-}
-
-// FUNCTION: EXE 0x4b1480
-// Unloads the storm and strike effects, the sound and the storm unit class's media and buttons
-void EECCHurricane::UnloadMedia(EEPlayer* inPlayer)
-{
-    if (this->mGraphicEffect2 != NULL)
-        this->mGraphicEffect2->Unload();
-    if (this->mGraphicEffect3 != NULL)
-        this->mGraphicEffect3->Unload();
-    if (this->mSound != NULL)
-        this->mSound->UnloadMedia();
-    inPlayer->UnloadUnitClassMedia(this->mUnitClassIndex);
-    inPlayer->UnloadUnitClassButtons(this->mUnitClassIndex);
-}
-
-// FUNCTION: EXE 0x4b14c3
-// After the launch effect creates the storm (or updates its sound), follows the storm unit and every tick time damages
-// living enemy units of the class's unit set within reach, with a strike effect each (Rust); returns the time-alive
-// result
-long EECCHurricane::Update(EECalamity* inCalamity, float inElapsedTime)
-{
-    // the update is Rust (ee_tech calamity_update.rs; ee/EECalamityUpdate.h)
-    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
-    if (this->mGraphicEffect1 != NULL) {
-        theParams.flags |= EE_CALAMITY_EFFECT1;
-        theParams.storm_delay = (uint32_t)this->mGraphicEffect1->mDuration;
-    }
-    theParams.storm_damage = (int32_t)this->mDamage;
-    theParams.storm_tick_time = (uint32_t)this->mTickTime;
-    theParams.storm_radius = this->mRadius;
-    return EECalamityRunUpdate(this, inCalamity, inElapsedTime, theParams, this->mSound, NULL, &EECCHurricane::UpdateStep);
 }
 
 // New (port): EECCHurricane's world steps for its Rust update (ee/EECalamityUpdate.h)
@@ -239,18 +100,6 @@ bool EECCHurricane::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamityCal
     default:
         return false;
     }
-}
-
-// FUNCTION: EXE 0x4b17cb
-// Accepts a tile (water only if the class is water-only, never terrain 12) whose area is on the map and has no live
-// hurricane or anti-matter storm nearby
-bool EECCHurricane::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsigned long inY)
-{
-    // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
-    EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
-    theCast.over_water = this->mOverWater;
-    theCast.area = (int32_t)this->mArea;
-    return EECalamityValidLocation(this, theCast, inUnit, this->mUnitClassIndex);
 }
 
 // New (port): EECCHurricane's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)

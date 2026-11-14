@@ -8,29 +8,20 @@
 #include "lle/LowLevelEngineCore.h"
 #include "lle/FSFile.h"
 #include "lle/GEColor.h"
+#include "GERustIO.h"
 
 // FUNCTION: LLE 0x10015151
 // Reads the colour's red, green and blue from the file; returns the first read error
 long GEColor::Load(FSFile& inFile)
 {
-    long theResult = inFile.Read(this->mRed);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Read(this->mGreen);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mBlue);
-    return theResult;
+    const float* theFields[] = {&this->mRed, &this->mGreen, &this->mBlue};
+    return GERustFields(inFile, theFields, 3, -1, false, false);
 }
 
 // FUNCTION: LLE 0x10015184
 // Writes the colour's red, green and blue to the file; returns the first write error
 long GEColor::Save(FSFile& inFile)
 {
-    long theResult = inFile.Write(this->mRed);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Write(this->mGreen);
-    if (theResult == kErrorOK)
-        theResult = inFile.Write(this->mBlue);
-    return theResult;
+    const float* theFields[] = {&this->mRed, &this->mGreen, &this->mBlue};
+    return GERustFields(inFile, theFields, 3, -1, true, false);
 }

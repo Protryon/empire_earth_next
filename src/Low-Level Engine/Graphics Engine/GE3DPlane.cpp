@@ -31,20 +31,6 @@ bool GE3DPlane::Intersects(const GE3DPlane& inPlane, GE3DLine& outLine) const
     return ee_ge_plane_intersects(GERust(*this), GERust(inPlane), GERust(outLine));
 }
 
-// FUNCTION: LLE 0x1000d3a7
-// Tells whether a point lies strictly on the normal's side of the plane
-bool GE3DPlane::IsPointAbovePlane(const GE3DPoint& inPoint) const
-{
-    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 0);
-}
-
-// FUNCTION: LLE 0x1000d3ee
-// Tells whether a point lies strictly behind the plane
-bool GE3DPlane::IsPointBelowPlane(const GE3DPoint& inPoint) const
-{
-    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 1);
-}
-
 // FUNCTION: LLE 0x1000d435
 // Tells whether a point lies on the plane or on the normal's side
 bool GE3DPlane::IsPointOnOrAbovePlane(const GE3DPoint& inPoint) const
@@ -57,13 +43,6 @@ bool GE3DPlane::IsPointOnOrAbovePlane(const GE3DPoint& inPoint) const
 bool GE3DPlane::IsPointOnOrBelowPlane(const GE3DPoint& inPoint) const
 {
     return ee_ge_plane_side(GERust(*this), GERust(inPoint), 3);
-}
-
-// FUNCTION: LLE 0x1000d4c3
-// Tells whether a point lies on the plane (direction from the plane point within 1e-6 of perpendicular to the normal)
-bool GE3DPlane::IsPointOnPlane(const GE3DPoint& inPoint) const
-{
-    return ee_ge_plane_side(GERust(*this), GERust(inPoint), 4);
 }
 
 // FUNCTION: LLE 0x1000d52f

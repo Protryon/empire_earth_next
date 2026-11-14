@@ -1881,13 +1881,6 @@ bool EEUGRust::IsGatherWaiting()
     return theArgs.i[2] != 0;
 }
 
-void EEUGRust::GetGatherDestination(GE3DPoint& outLocation)
-{
-    EeUnitsGoalIo theArgs = {};
-    Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
-    PointIn(theArgs, outLocation);
-}
-
 void EEUGRust::SetGatherResource(EEUnit* inResource)
 {
     Goal(EE_UNITS_GOAL_GATHER_SET_RESOURCE, this, Handle(inResource));
@@ -2037,11 +2030,6 @@ long EEUGRust::GetOutOfSynchChecksum()
 void EEUGRust::GetDebugLine(UWideString& ioText)
 {
     Goal(EE_UNITS_GOAL_DEBUG_LINE, this, 0, 0, NULL, NULL, &ioText);
-}
-
-void EEUGRust::GetDebugText(UWideString& ioText)
-{
-    Goal(EE_UNITS_GOAL_DEBUG_TEXT, this, 0, 0, NULL, NULL, &ioText);
 }
 
 void EEUGRust::GetGoalLocation(GE3DPoint& outLocation)

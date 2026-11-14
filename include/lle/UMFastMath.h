@@ -6,8 +6,6 @@
 
 class LLE_API UMFastMath {
 public:
-    // inline: emitted first in the GE2DPoint.cpp block (0x1000c129), `fld; fstp qword; call sqrt`
-    static float Sqrt(float inValue) { return (float)sqrt(inValue); }
     static void BuildSqrtTable();           // exported 0x10080c07
 };
 

@@ -1939,6 +1939,16 @@ int32_t EESavePrimitive(FSFile& theFile, int32_t inOp, EeUnitsPlayerSaveIo* io)
         bool theValue = io->b != 0;
         return theFile.Write(theValue);
     }
+    case EE_UNITS_PLAYER_SAVE_READ_USHORT: {
+        unsigned short theValue = (unsigned short)io->i;
+        long theResult = theFile.Read(theValue);
+        io->i = (int64_t)theValue;
+        return theResult;
+    }
+    case EE_UNITS_PLAYER_SAVE_WRITE_USHORT: {
+        unsigned short theValue = (unsigned short)io->i;
+        return theFile.Write(theValue);
+    }
     }
     return -1;
 }
@@ -1950,7 +1960,7 @@ static int32_t EEPlayerSaveOperation(void* inContext, int32_t inOp, uint32_t inI
     FSFile& theFile = *theContext.mFile;
     unsigned long theMajor = theContext.mMajorVersion;
     unsigned long theMinor = theContext.mMinorVersion;
-    if (inOp >= EE_UNITS_PLAYER_SAVE_READ_ULONG && inOp <= EE_UNITS_PLAYER_SAVE_WRITE_BOOL)
+    if (EESaveIsPrimitive(inOp))
         return EESavePrimitive(theFile, inOp, io);
     switch (inOp) {
     // the load

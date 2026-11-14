@@ -30,10 +30,6 @@ public:
     virtual long CopyData();
     virtual long DrawPolygons();
     virtual long DrawTextA();
-    unsigned long GetButtonDownSound() const;
-    unsigned long GetButtonUpSound() const;
-    GEBitmap* GetCurrentBitmap() const;     // the state's bitmap (NULL for an unknown state)
-    GEBitmap* GetCopiedBitmap() const;
     GE2DPoint GetBitmapLocation() const;
     unsigned long GetState() const;         // UIButtonState
     GEBitmap* GetFocusedBitmap() const;

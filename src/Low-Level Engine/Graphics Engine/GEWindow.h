@@ -27,9 +27,6 @@ public:
     const GE2DPoint& GetClientOrigin();
     unsigned long GetHeight() const { return this->mHeight; }
     PlatWindow* GetOSRepresentation() const { return this->mWindow; }
-    // the system's own handle of the window (Win32: its HWND, for DirectInput and the IME until PORT.md steps 4.4
-    // and 4.6; the X11 Window, the wl_surface or the CAMetalLayer elsewhere)
-    void* GetNativeHandle() const;
     unsigned long GetWidth() const { return this->mWidth; }
     void Resize(unsigned long inWidth, unsigned long inHeight);
 
