@@ -17537,3 +17537,136 @@ without the unit utilities, UI Events, `include/ee/EEUI*.h`): 20,415 at the bran
   (454); the UI manager's factories (C++ objects); the main game form's `Open`, `Close`, `Activate`, `Deactivate`,
   backgrounds and `HideMessages`; `EEUserInterface`'s `EnterScenarioEditor`, `ShowCivilizationBuilder`,
   `LeaveMap`, `StartLoadingFromEditor`.
+
+## R4.3, eleventh part: GETerrainMesh whole in Rust (ee_ge tmobj.rs; branch rust-ge11, 2026-11-13)
+
+The fifth whole-class round of the Graphics Engine, in parts seven to ten's pattern (a census commit, then the move,
+a golden over the unmodified unit with traced fakes, mutations, a cargo replay). By `tools/ge_census.py`: 2,724
+logic lines at the start, 2,388 after (GETerrainMesh.cpp 394 -> 58, the host's switch counted as
+logic).
+
+| Commit | What | C++ (`git diff --numstat` over src, include/lle, include/ee) |
+|---|---|---|
+| 030d814a | GETerrainMesh's census: the DX7 plug-in reads the frame through accessors | +62 -37, net +25 (census: positive) |
+| 541a5d32 | GETerrainMesh whole in Rust (`tmobj.rs`) | +250 -949, net -699 |
+| 72ec49b7 | two unit tests for the mutations the golden cannot see | 0 (Rust only) |
+
+- **The census was one file.** Part seven's upper bound named GETerrainMesh in 141 outside files (339 by name today),
+  but its members were private: every outside file calls the header's methods, whose signatures stay, except
+  `DX7Rasterizer DrawTerrain.cpp` (the DX7 plug-in, not the renderer lane's `Graphics Thread`), which took the
+  frame's containers by reference (`GetTerrainMaterialList`, `GetWaterMaterialList`, `GetTerrainMaterialMap`, the
+  skirt and cliff vectors) to build its `ee_dx7` views. The census commit replaced those with
+  `GetMaterialView(water, index, view)` (a `GETMMaterialView`: the texture and the three polygon lists as pointers
+  and lengths), `GetTerrainMaterialMap(entries)` (a copy of the map's pairs) and the skirt/cliff counts and arrays,
+  over the C++ members; oracle identical (seeds 2-3), store gate PASS. No `Graphics Thread` file changed.
+- **The move** (`tmobj.rs`, `EeGeTerrainMesh`): the point and tile rows (`Vec`s of the `#[repr(C)]` `GeTmPoint` and
+  `GeTmTile` with a `GeTmRow` table pointing into them, so `terrain.rs`'s queries read them in place as before), the
+  registered texture sets (handles) and colour sets, the colour table, the four map-edge planes, the water state
+  (animation frames, the 33 x 33 texture grid, period, scale, set ids), and the visible frame: the two 257 x 257
+  render-vertex arrays (`EeGeTmRenderVertex`, `GETMRenderVertex`'s layout) and point flags, the 12,000 terrain and
+  5,000 water polygons (`EeGeTmPolygon`), the materials (texture, polygon list, the two index lists the renderer
+  fills), the texture -> material map (a `BTreeMap` of the handle: `std::map<GETexture*>`'s address order), the
+  visible rows, and the skirt and cliff vertices (each a `Box`, as the original's `new`). The arrays live in one
+  zeroed allocation (about 7.6 MB on x64, as the C++ members were) set to what the member constructors left (white colours, the planes' up normals). Every
+  method of GETerrainMesh.cpp and every inline accessor of its header is Rust; the C++ class's only member is
+  `mRust`, its members are one-line forwarders (`GetTileRowsInVolume`, `GetTerrainMaterialMap` and the pair getters a
+  few lines) over 40 `ee_ge_tm_*` functions (the tile edits share
+  `ee_ge_tm_tile_edit`, the point edits `ee_ge_tm_point_edit`, the scalars `ee_ge_tm_get`/`ee_ge_tm_get_f` with a
+  field enum), and its copy is deleted. The header no longer includes `rust/ee_ge.h` (a forward declaration of
+  `EeGeTerrainMesh`): the 339 units that include it do not rebuild on an `ee_ge` FFI change.
+- **The host** (`TerrainMeshHost`, a static function of GETerrainMesh.cpp, `EeGeTmOp`, 14 operations): the clock
+  (`TMGetTime`, the constructor's fractal seed and the water step), the colour fractal (`new U2DFractal(64, 0,
+  10.5, seed)`, delete, `GetValue`, `ComputeFractal`), `GEVector::GetQuantizedVersion` (the normals point into the
+  C++ table), the texture sets (delete, width, height, coverage, `GetTexture`, `GetTextureAt`) and the textures'
+  `Reference`/`Dereference`, in the original's order (each set's width, height, textures, then coverage before the
+  plan; the old map's textures released in address order, then the new ones referenced in list order). `ffi.rs`
+  lost the eleven `ee_ge_terrain_*` edit, codec, layout and water functions and `visible_ffi.rs` the plan's
+  handle (`ee_ge_terrain_visible_plan`/`_free`): only the C++ class called them (the scratch library keeps them for
+  the original side). `GERustTerrain.h` is gone. The query functions (`ee_ge_terrain_z` and the four others) stay:
+  `golden_terrain.rs` calls them.
+- **`EEMap::CreateMap`** assigned the mesh to itself (`theMesh = theMesh`, the original's implicit `operator=`, a
+  no-op); with the copy deleted the statement is gone.
+- **The golden** (scratch, `build/ge11/golden`: `build.py gtm orig 030d814a | cur`, `mutate_gtm.py`):
+  GETerrainMesh.cpp and its header of the census commit (unmodified, with that commit's `rust/ee_ge.h`) or the
+  worktree's, over traced fakes (`fake_gtm.h`: a clock, fractals whose values hash the seed and the point,
+  quantized normals over the real table (`ee_ge_vector_quantized_table`), 48 reference-counted textures, texture
+  sets of 1-3 x 1-3 textures with a coverage, a memory file whose reads stop at the end and whose writes stop at a
+  limit, viewports made by `ee_ge_viewport_init`), linked with a scratch staticlib of `ee_ge` (the real plan, queries
+  and codec run on both sides). Random sequences on diamonds of 1-20 x 1-20 tiles: texture sets (one slot in ten
+  NULL), colour sets, colour tables of 0-299 colours, the thirteen cliff textures, heights, texture sets, water and
+  space tiles (one map in four mostly space), water info, tile references, shorelines, normals, colours, the water
+  state and its animation, the queries (closest tiles, mesh height and normal, line hits, the rows in a volume),
+  frames for random cameras (perspective and orthographic, near and far), the fog of war, saves (some into a file
+  that refuses writes past a random size) and loads back (one in three truncated), each followed by the mesh's state
+  through the accessors (every point and tile, the planes, the frame's rows, materials, polygons as vertex codes,
+  the map, the skirt and cliff vertices, both arrays and point flags hashed). Allocations are zeroed (`operator new`
+  as `calloc`). 5,000 sequences (376,245 trace lines over the first 200; the 5,000 were compared by digest), identical over the shell. The first 12 digests are
+  `golden_gtm.txt`, which cargo replays (`tmobj_golden.rs`): the driver ported onto the Rust object's C ABI with a
+  mock host that is the fakes, drawing the same stream and writing the same lines (5.9 s in a debug build).
+
+  | Mutation of the Rust | Sequences of 500 that change | cargo (unit tests and replay) |
+  |---|---|---|
+  | the destructor releases no texture | 491 | fails |
+  | a first tile reference counts one | 109 | fails |
+  | SetZ's minimum keeps the larger | 480 | fails |
+  | SetIsWater ignores the space map | 160 | fails |
+  | SetIsSpace's shorelines start at the tile's row | 23 | fails |
+  | SetColorSet scales by the set's size, not its last index | 380 | fails |
+  | the water frames come from GetTextureAt | 383 | fails |
+  | the material map keeps a texture's last index | 215 | fails |
+  | the skirt vertices are white | 486 | fails |
+  | a cliff vertex follows the water vertex | 19 | fails |
+  | the index lists hold one NULL | 494 | fails |
+  | Load takes a NULL set slot for registered | 0 (no tile of the driver names a NULL slot) | fails (unit test added, 72ec49b7) |
+  | Load does not recompute the fractal | 377 | fails |
+  | every water material shows the same frame | 249 | fails |
+  | the flat mesh keeps the height range | 500 | fails |
+  | the default water period is 81 | 0 (the driver animates only after a water state) | fails (unit test added, 72ec49b7) |
+  | a skirt polygon takes the plan's texture coordinates | 297 | fails |
+  | the fog of war reads the water flags for the terrain | 331 | fails |
+
+  The restored source: 0 of 500.
+
+- **The domain the original crashes out of.** A first driver run crashed the original side and not the shell:
+  a frame indexed `mTerrainMaterialList` past its end when the cliff textures were fewer than the plan's cliff
+  materials need (the driver gave 1-4; the game always loads 13, `EERenderObject.cpp` LoadCliffTextures). And the
+  water animation writes `mWaterMaterialList[i]` for every frame although the list is rebuilt only by the next
+  `UpdateVisibleTerrain` (shorter after a `SetGlobalWaterState` with more frames: the original writes past the
+  vector). The driver stays in the game's domain (13 cliff textures; the animation only when the water list holds
+  the frames); the Rust skips an out-of-range material or water entry where the original wrote past the list.
+- **Behaviour changes** (undefined paths of the original only): an out-of-range material index of a planned
+  polygon, a water material past the list, a colour index past its colour set and an unregistered texture set id
+  read as nothing (skipped, 0, NULL) where the original read or wrote past a vector; the render vertices' and
+  polygons' fields the original left unset (the arrays', the skirt vertices' fog and link) are zero; the copy and
+  assignment are deleted (one use, the self-assignment above); the never-filled `mWaterMaterialMap` and the unused
+  static `UString` ids (`sPlayableWidthID` and six more) are gone; sizeof GETerrainMesh is a pointer and a vtable
+  (EEMap embeds it: EEMap shrinks by the 7.6 MB, which now live on the heap). `UpdateVisibleTerrain`'s camera, width, height and screen were never
+  read and are not passed on.
+- **What runs it.** EE-SIM builds, edits, saves and loads the mesh and queries it every tick (heights, normals,
+  closest tiles, water and space tiles, edges): the oracle, the captures and the saveload matrix run that. Only the
+  game draws: `UpdateVisibleTerrain`, the fog of war, the water animation, the material views, the render-vertex
+  arrays and the skirt/cliff vertices (DX7Rasterizer DrawTerrain.cpp's views) run in the tour and the random game
+  only.
+- **Driver lessons.** C++ argument evaluation order is unspecified: a driver whose random draws sit in one call's
+  arguments (`GE3DPoint(F(), F(), F())`) cannot be replayed exactly elsewhere. Sequence them (one declaration per
+  draw, or comma-separated declarators) before the golden is recorded. Hash every dump of a 66,049-vertex array (the
+  per-sequence time is the dumps'), and keep the sequence's digest the only output: a Rust port of the driver can
+  then replay the digests with no stored trace. The Bash tool collapsed `\\n` in a Python heredoc again (an
+  `fflush` patch did not apply): edit C sources with the editor tool.
+- **Gates.** Census commit: build `--sim` 0/0, the store gate PASS (25,140 lines), the oracle identical on seeds 2-3.
+  The move: build `--sim` 0/0 (EE-AOC 1,119 inputs), the Rust gate PASS (after clippy's `chunks_exact` ->
+  `as_chunks`, `std::ptr::eq` and a `const` thread-local in the tests, and rustfmt), the store gate PASS, the
+  oracle identical on seeds 2-3. The merge of `rust` (ac3ecc9a; the time, thread, string, network-client, UI,
+  screens, WON, scenario and effects rounds since d8551990) conflicted in `rust/cbindgen.toml`'s `include` list
+  only (both sides added names: kept both); `rust_build.py header` current, `rust_includes.py` changed nothing. On
+  the merged tree: build `--sim` 0/0, the Rust gate PASS (3,061 tests), the store gate PASS (25,140 lines), the
+  oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169, late 170, calamity 183, space 171
+  digests; `--profile effects` 6), the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) expect PASS with the expect file's rows (oracle 4/4, plains 2/4, islands 3/4,
+  highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 0/4), the test profile 0/0,
+  and under the harness lock the tour (`fixture_game.py --exercise tour --play-seconds 60`) `RESULT PASS tour`
+  (the render checks ok: view 84.7% lit) and the random game (`--exercise random-game --play-seconds 30
+  --scroll-check --zoom-captures 50 100 200`) `SCROLL CHECK PASS` and `RESULT PASS random-game` (the captures show
+  the terrain, the fog of war's unexplored black past the start area and the map edge). Not run: the LAN game, the menu pixel comparison, macOS or Linux builds.
+- **Left** (by the census, 2,388 logic lines): GERasterizer (DX7Rasterizer's base: its members are read by
+  the plug-in), GETransformation's member copies, GESurface's libjpeg plumbing (stays: C), the moved classes' hosts.
