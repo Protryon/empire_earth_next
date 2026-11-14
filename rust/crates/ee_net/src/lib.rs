@@ -18,6 +18,7 @@
 //! - `server`: `NESynchronousServer`, the lock-step server with its main, send and transfer threads, its message
 //!   manager, tuning and recorder;
 //! - `qhost`: the two queues' calls out, and the timestamped record format;
+//! - `native`: the engine's clock, events and threads the game's server and client call directly;
 //! - `ffi_protocol`: `NEProtocol` whole, over the TCP plug-in (`ee_net_tcp`'s C ABI), with its C ABI;
 //! - `ffi`, `ffi_comms`, `ffi_client`, `ffi_tune`, `ffi_server`: the C ABI (`rust/ee_net.h`).
 
@@ -29,6 +30,8 @@ pub mod comms;
 pub mod lagloss;
 /// cbindgen:ignore
 pub mod msgmgr;
+/// cbindgen:ignore
+pub mod native;
 /// cbindgen:ignore
 pub mod qhost;
 /// cbindgen:ignore

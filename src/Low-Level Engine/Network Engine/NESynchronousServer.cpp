@@ -254,7 +254,6 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
 {
     NESynchronousServer* theServer = static_cast<NESynchronousServer*>(inServer);
     NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
-    NEMRecord* theRecord = static_cast<NEMRecord*>(theMessage);   // an engine message (the ops that read members)
     FSFileSpec* theFile = reinterpret_cast<FSFileSpec*>(a);
     switch (inOp) {
     case EeNetMmOp::MsgReference:
@@ -269,16 +268,6 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
         return theMessage->IsResponse(reinterpret_cast<NEMessage*>(b));
     case EeNetMmOp::MsgSlot:
         return theMessage->GetOriginatingSlot();
-    case EeNetMmOp::MsgSendTo: {
-        unsigned char* theData;
-        unsigned long theSize;
-        reinterpret_cast<NEMessage*>(b)->ExportMessage(&theData, theSize);
-        long theResult = ee_net_pr_send_to(theServer->Protocol(), theServer->Server(), false, (uint32_t)a, theData, theSize);
-        delete[] theData;
-        return (uint32_t)theResult;
-    }
-    case EeNetMmOp::MsgTick:
-        return theRecord->Get<uint32_t>(0);   // the communications tick's
     case EeNetMmOp::NewResponse: {
         // the sent message's first member: the tick's tick, the pause's or unpause's unique ID
         uint32_t theSent = reinterpret_cast<NEMRecord*>(b)->Get<uint32_t>(0);
@@ -296,26 +285,11 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
     case EeNetMmOp::ProcessSystemMessage:
         theServer->ProcessSystemMessage(theMessage);
         return 0;
-    case EeNetMmOp::ResetClientConnection:
-        theServer->ResetClientConnection(a);
-        return 0;
     case EeNetMmOp::XferStatus: {
         unsigned char theSlot = (unsigned char)a, thePercent = (unsigned char)b, theStatus = (unsigned char)d;
         uint32_t theID = (uint32_t)c;
         theServer->HandleXferStatus(theSlot, thePercent, theID, theStatus);
         return 0;
-    }
-    case EeNetMmOp::XferSend: {
-        unsigned long theSize = (unsigned long)d;
-        NEMRecord* theXfer = new NEMRecord(kNetMessageXferMessage, {(unsigned char)b, theSize});
-        if (theSize > 0)
-            memcpy(theXfer->Field(2, 0x400), reinterpret_cast<unsigned char*>(c), theSize);   // the block
-        unsigned char* theData = NULL;
-        theXfer->ExportMessage(&theData, theSize);
-        theXfer->Dereference();
-        long theResult = ee_net_pr_send_to(theServer->Protocol(), theServer->Server(), true, (uint32_t)a, theData, theSize);
-        delete[] theData;
-        return theResult == kErrorOK;
     }
     case EeNetMmOp::FileClone: {
         FSFileSpec* theCopy = new FSFileSpec;
@@ -346,7 +320,8 @@ ptrdiff_t NESynchronousServer::MessageManagerHost(void* inServer, EeNetMmOp inOp
     case EeNetMmOp::FileName:
         return reinterpret_cast<ptrdiff_t>(static_cast<const char*>(theFile->GetFile()));
     default:
-        // (ForceCt, LastCtMessageId, StartSendToAllAndWait and Time are the Rust server's)
+        // (ForceCt, LastCtMessageId, StartSendToAllAndWait and Time are the Rust server's; MsgSendTo, MsgTick,
+        // ResetClientConnection and XferSend its host's, ee_net ffi_server.rs)
         return 0;
     }
 }
@@ -365,14 +340,6 @@ ptrdiff_t NESynchronousServer::Host(void* inServer, EeNetSvOp inOp, size_t a, si
     NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
     NEMRecord* theRecord = static_cast<NEMRecord*>(theMessage);   // an engine message (the ops that read members)
     switch (inOp) {
-    case EeNetSvOp::WaitAny:
-        return TSEvent::WaitAny(reinterpret_cast<TSEvent* const*>(a), (unsigned long)b, (unsigned long)c);
-    case EeNetSvOp::ThreadPriority:
-        reinterpret_cast<TSThread*>(a)->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
-        return 0;
-    case EeNetSvOp::Sleep:
-        PlatSleep((unsigned long)a);
-        return 0;
     case EeNetSvOp::SimMode:
         return gPlatSimMode;
     case EeNetSvOp::MsgType:

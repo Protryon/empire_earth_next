@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use crate::ffi::{EeNetMmHostFn, EeNetMmOp, EeNetQHostFn, QFfiHost};
 use crate::ffi_comms::{comms_of, EeNetComms};
 use crate::ffi_protocol::*;
+use crate::native;
 use crate::qhost::*;
 use crate::recplay::RecPlay;
 use crate::server::{Back, Server, ServerArgs, ServerHost};
@@ -181,6 +182,8 @@ struct SvTcp {
     announce: bool,
     adapter: u32,
     protocol: AtomicUsize,
+    /// the published server (the plug-in's handle; the message manager's sends go to it)
+    server: AtomicUsize,
 }
 
 impl SvTcp {
@@ -191,6 +194,9 @@ impl SvTcp {
 
 /// The service the game publishes and searches for
 const SERVICE: &[u8] = b"EEService";
+/// The transfer message (`NEMXferMessage`) and its block's member
+const MSG_XFER_MESSAGE: u8 = 0x3b;
+const XFER_DATA: u32 = 2;
 
 pub struct SvFfiHost {
     ctx: *mut c_void,
@@ -205,6 +211,42 @@ unsafe impl Send for SvFfiHost {}
 unsafe impl Sync for SvFfiHost {}
 
 impl SvFfiHost {
+    /// The message manager's calls out that need no C++ with the protocol the server's own (MessageManagerHost's
+    /// statements): a message sent to a client, a transfer block sent, a client's connection reset, a tick's tick
+    fn mm_tcp(&self, t: &SvTcp, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> Option<isize> {
+        let server = t.server.load(SeqCst) as *mut c_void;
+        match op {
+            EeNetMmOp::MsgSendTo => {
+                // ExportMessage, SendTo(server, slot, data, size), delete[]
+                let mut size = 0;
+                let data = self.msg_export_new(b, &mut size);
+                let r = unsafe { ee_net_pr_send_to(t.p(), server, false, a as u32, data as *mut u8, size) };
+                self.bytes_free(data);
+                Some(r as u32 as isize)
+            }
+            EeNetMmOp::XferSend => {
+                // an NEMXferMessage(id, size) with the block, exported, released, sent by XferSendTo -> 1 when it went
+                let x = self.msg_new(MSG_XFER_MESSAGE, &[b as u32, d as u32]);
+                if d > 0 {
+                    let block = self.call(EeNetSvOp::MsgGet, x, XFER_DATA as usize, 0, 0) as *mut u8;
+                    unsafe { std::ptr::copy_nonoverlapping(c as *const u8, block, d) };
+                }
+                let mut size = 0;
+                let data = self.msg_export_new(x, &mut size);
+                self.msg_dereference(x);
+                let r = unsafe { ee_net_pr_send_to(t.p(), server, true, a as u32, data as *mut u8, size) };
+                self.bytes_free(data);
+                Some((r == 0) as isize)
+            }
+            EeNetMmOp::ResetClientConnection => {
+                unsafe { ee_net_pr_reset(t.p(), server, false, a as u32) };
+                Some(0)
+            }
+            // the communications tick's tick
+            EeNetMmOp::MsgTick => Some(self.msg_get(a, 0) as isize),
+            _ => None,
+        }
+    }
     fn call(&self, op: EeNetSvOp, a: usize, b: usize, c: usize, d: usize) -> isize {
         unsafe { (self.f)(self.ctx, op, a, b, c, d) }
     }
@@ -293,18 +335,32 @@ impl QHost for SvFfiHost {
 
 impl ServerHost for SvFfiHost {
     fn wait_any(&self, events: &[Ev], timeout: u32) -> i32 {
+        if self.q.native {
+            return native::wait_any(events, timeout);
+        }
         self.call(EeNetSvOp::WaitAny, events.as_ptr() as usize, events.len(), timeout as usize, 0) as i32
     }
     fn thread_priority(&self, t: Thr) {
+        if self.q.native {
+            return native::thread_priority(t);
+        }
         self.call(EeNetSvOp::ThreadPriority, t, 0, 0, 0);
     }
     fn sleep(&self, ms: u32) {
+        if self.q.native {
+            return native::sleep(ms);
+        }
         self.call(EeNetSvOp::Sleep, ms as usize, 0, 0, 0);
     }
     fn sim_mode(&self) -> bool {
         self.call(EeNetSvOp::SimMode, 0, 0, 0, 0) != 0
     }
     fn mm(&self, op: EeNetMmOp, a: usize, b: usize, c: usize, d: usize) -> isize {
+        if let Some(t) = &self.tcp {
+            if let Some(r) = self.mm_tcp(t, op, a, b, c, d) {
+                return r;
+            }
+        }
         unsafe { (self.mm)(self.ctx, op, a, b, c, d) }
     }
     fn protocol_count(&self) -> u32 {
@@ -327,16 +383,32 @@ impl ServerHost for SvFfiHost {
             let e = [events[0] as *const c_void, events[1] as *const c_void, events[2] as *const c_void];
             let out = server as *mut usize as *mut *mut c_void;
             let p = protocol as *const EeNetProtocol;
-            return unsafe {
-                ee_net_pr_publish(p, n.as_ptr(), n.len(), a.as_ptr(), a.len(), 2, e.as_ptr(), out, allow, t.announce, t.adapter)
+            let r = unsafe {
+                ee_net_pr_publish(
+                    p,
+                    n.as_ptr(),
+                    n.len(),
+                    a.as_ptr(),
+                    a.len(),
+                    2,
+                    e.as_ptr(),
+                    out,
+                    allow,
+                    t.announce,
+                    t.adapter,
+                )
             };
+            t.server.store(*server, SeqCst);
+            return r;
         }
         self.call(EeNetSvOp::Publish, protocol, events.as_ptr() as usize, server as *mut usize as usize, allow as usize)
             as i32
     }
     fn allow_new_connections(&self, protocol: usize, server: usize, allow: bool) {
         if self.tcp.is_some() {
-            return unsafe { ee_net_pr_allow_new_connections(protocol as *const EeNetProtocol, server as *mut c_void, allow) };
+            return unsafe {
+                ee_net_pr_allow_new_connections(protocol as *const EeNetProtocol, server as *mut c_void, allow)
+            };
         }
         self.call(EeNetSvOp::AllowNewConnections, protocol, server, allow as usize, 0);
     }
@@ -358,7 +430,9 @@ impl ServerHost for SvFfiHost {
     }
     fn server_send_to(&self, server: usize, slot: u8, data: usize, size: u32) -> i32 {
         if let Some(t) = &self.tcp {
-            return unsafe { ee_net_pr_send_to(t.p(), server as *mut c_void, false, slot as u32, data as *mut u8, size) };
+            return unsafe {
+                ee_net_pr_send_to(t.p(), server as *mut c_void, false, slot as u32, data as *mut u8, size)
+            };
         }
         self.call(EeNetSvOp::ServerSendTo, server, slot as usize, data, size as usize) as i32
     }
@@ -482,8 +556,10 @@ pub unsafe extern "C" fn ee_net_sv_new(
         announce: a.announce,
         adapter: a.network_adapter,
         protocol: AtomicUsize::new(0),
+        server: AtomicUsize::new(0),
     });
-    let h = SvFfiHost { ctx, f: host, mm: mmhost, q: QFfiHost { ctx, f: qhost }, tcp };
+    let q = QFfiHost { ctx, f: qhost, native: a.tcp };
+    let h = SvFfiHost { ctx, f: host, mm: mmhost, q, tcp };
     let a = ServerArgs {
         max_players: a.max_players,
         default_send_interval: a.default_send_interval,

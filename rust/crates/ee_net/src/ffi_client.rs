@@ -10,6 +10,7 @@ use crate::ffi::{EeNetQHostFn, QFfiHost};
 use crate::ffi_comms::{comms_of, EeNetComms};
 use crate::ffi_protocol::*;
 use crate::lagloss::LagLoss;
+use crate::native;
 use crate::qhost::{Ev, FileH, Msg, QHost, Thr};
 use crate::recplay::RecPlay;
 
@@ -245,9 +246,15 @@ impl QHost for ClFfiHost {
 
 impl ClientHost for ClFfiHost {
     fn wait_any(&self, events: &[Ev], timeout: u32) -> i32 {
+        if self.q.native {
+            return native::wait_any(events, timeout);
+        }
         self.call(EeNetClOp::WaitAny, events.as_ptr() as usize, events.len(), timeout as usize, 0) as i32
     }
     fn thread_priority(&self, t: Thr) {
+        if self.q.native {
+            return native::thread_priority(t);
+        }
         self.call(EeNetClOp::ThreadPriority, t, 0, 0, 0);
     }
     fn protocol_count(&self) -> u32 {
@@ -434,8 +441,9 @@ pub unsafe extern "C" fn ee_net_cl_new(
     comms: *const EeNetComms,
     tcp: bool,
 ) -> *mut EeNetClient {
+    let q = QFfiHost { ctx, f: qhost, native: tcp };
     let tcp = tcp.then(|| AtomicUsize::new(0));
-    let h = ClFfiHost { ctx, f: host, q: QFfiHost { ctx, f: qhost }, tcp };
+    let h = ClFfiHost { ctx, f: host, q, tcp };
     Box::into_raw(Box::new(EeNetClient(Client::new(h, comms_of(comms)))))
 }
 

@@ -164,11 +164,6 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
     NEMRecord* theRecord = static_cast<NEMRecord*>(theMessage);   // an engine message (the ops that read members)
     FSFile* theFile = reinterpret_cast<FSFile*>(a);
     switch (inOp) {
-    case EeNetClOp::WaitAny:
-        return TSEvent::WaitAny(reinterpret_cast<TSEvent* const*>(a), (unsigned long)b, (unsigned long)c);
-    case EeNetClOp::ThreadPriority:
-        reinterpret_cast<TSThread*>(a)->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
-        return 0;
     case EeNetClOp::XferExportSize:
         return (ptrdiff_t)NEMRecord::XferExportSize();
     case EeNetClOp::MsgType:
