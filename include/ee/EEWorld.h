@@ -96,6 +96,9 @@ public:
     void AddGhostUnit(EEGhostUnit* inGhost);   // 0x137f68
     void ActivateUnit(EEComplexUnit* inUnit);  // 0x13b8e8 (EEUnit::SetHitPoints: a dead unit of a +0x312 class) (provisional name)
     void DeactivateUnit(EEComplexUnit* inUnit);  // 0x13b965 (EEUnit::Remove) (provisional name)
+    // port: the deactivations of units that had no id yet join the queue once their player has given them one
+    // (EEPhysics::FlushWorld, UpdateActiveUnits; EEWorld.cpp)
+    void QueueBornDeactivations();
     // 0x13c5ad (thiscall, ret 0x14: the 5th argument is unused; the body names gWorld; EEUIEMGEnterScenarioEditor)
     // (provisional name)
     void MovePlayerToSlot(unsigned char inSlot, char inNewSlot, unsigned char inPlayer, UWideString& inName, long inUnused);
