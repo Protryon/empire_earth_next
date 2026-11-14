@@ -1,6 +1,7 @@
 #ifndef EE_WONAPI_WONLOBBYSCREENS_H
 #define EE_WONAPI_WONLOBBYSCREENS_H
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONLobbyRustCtrl.h"
 namespace WONAPI {
 class JoinedRoomEvent;
 class LeftRoomEvent;
@@ -57,26 +58,14 @@ public:
     SmartPtr<Button> mExpertRadio; // 0xa8
     SmartPtr<Button> mPlayButton; // 0xac
 };
-// GameBrowserCtrl (0xb8 bytes, constructor 0x7bbdc0): an HTML browser with navigation and find.
-class BrowserComponent;
-class GameBrowserCtrl : public Container {
+// GameBrowserCtrl (R6 WONLobby round 4): the help and news browser tabs, a lobbyctl.rs object; the home location
+// (assigned by the constructor and the config's HOMELOCATION) and the Paint override stay here.
+class GameBrowserCtrl : public LobbyRustCtrl {
 public:
-    GameBrowserCtrl(const GUIString& = "");
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    virtual void Paint(Graphics&);
-    void EnableButtons();
-    void DoFind(bool);
-    void ResetBrowser();
-    void GoHomeIfReset();
-    void GoHome();
-    void SetHomeLocation(const GUIString& theLocation) { this->mHomeLocation=theLocation; } // 0xb4
-    SmartPtr<BrowserComponent> mBrowser;
-    SmartPtr<Button> mBackButton,mForwardButton,mStopButton,mHomeButton,mRefreshButton;
-    SmartPtr<InputBox> mFindInput;
-    SmartPtr<Button> mFindNextButton,mFindPrevButton,mCaseSensitiveCheck;
-    SmartPtr<Label> mStatusLabel;
-    bool mIsReset;
+    GameBrowserCtrl(const GUIString& inHome = "") : LobbyRustCtrl(EeWonLobbyCtlKind::Browser) { this->mHomeLocation = inHome; }
+    virtual void Paint(Graphics& inGraphics) { this->CCall(EeWonLobbyCtlCall::Paint, (intptr_t)&inGraphics); }
+    void ResetBrowser() { this->CCall(EeWonLobbyCtlCall::ResetBrowser); }
+    void SetHomeLocation(const GUIString& theLocation) { this->mHomeLocation=theLocation; }
     GUIString mHomeLocation;
 };
 class QueryAccountResultEvent;
@@ -88,32 +77,14 @@ public:
     virtual void Paint(Graphics&,ListArea*);
     virtual void CalcDimensions(ListArea*);
     virtual int Compare(const ListItem*,ListArea*) const;
-    void UpdateIcon();
     SmartPtr<LobbyClient> mClient;
-    SmartPtr<Image> mImage;
+    SmartPtr<Image> mImage; // set by lobbyctl.rs's icon rule (the original UpdateIcon)
     SmartPtr<Font> mFont;
 };
-class MultiListArea;
-class PlayerChangedEvent;
-// GameUserListCtrl (0x94 bytes): the staged game's players; room flags at 0x8c, in-game flag at 0x90.
-class GameUserListCtrl : public Container {
+// GameUserListCtrl (R6 WONLobby round 4): the game room's players and Kick/Ban button, a lobbyctl.rs object
+class GameUserListCtrl : public LobbyRustCtrl {
 public:
-    GameUserListCtrl();
-    virtual void InitComponent(ComponentInit&);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    LobbyClient* GetSelectedClient();
-    GameUserListItem* GetListItem(LobbyClient*);
-    void HandleKickPlayer(bool);
-    void UpdateKickButton();
-    void HandlePlayerChanged(PlayerChangedEvent*);
-    void HandleClientChanged(ClientChangedEvent*);
-    void HandleJoinedGame();
-    void HandleLeftGame();
-    SmartPtr<MultiListArea> mUserList;
-    SmartPtr<Button> mKickButton;
-    int GetRoomSpecFlags() const { return this->mRoomSpecFlags; }
-    int mRoomSpecFlags;
-    bool mInGame;
+    GameUserListCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::UserList) {}
 };
 
 // UpdateAccountCtrl (0xbc bytes): Container (0x84), 13 owned controls and the old password at 0xb8.
