@@ -89,6 +89,7 @@ pub mod lanlogic;
 pub mod lanobj;
 pub mod layoutobj;
 pub mod listobj;
+pub mod lobbyctl;
 pub mod lobbydlg;
 pub mod lobbyhost;
 pub mod lobbymap;

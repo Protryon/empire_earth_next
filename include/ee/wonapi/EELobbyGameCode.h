@@ -7,6 +7,7 @@
 #include <set>                              // EELobbyFileTransfer::mClients
 #include "ee/wonapi/WONLobbyEvents.h" // the shared LobbyEvent base (0x20 bytes)
 #include "ee/wonapi/WONLobbyEventTypes.h"
+#include "ee/wonapi/WONLobbyRustCtrl.h"
 
 namespace WONAPI {
 
@@ -237,30 +238,11 @@ public:
 
 // the game room's game options (EELobbyGameOptionsCtrl.cpp; 0xd8 bytes; vtable 0x84c540). Its 16 option controls
 // are named by a table (0x9657b8) of combo boxes (type 0) and check boxes (type 1); control ids are index + 1.
-class EELobbyGameOptionsCtrl : public Container {
+// R6 WONLobby round 4: a lobbyctl.rs object (the controls, the room flags, the active flag, every rule); the
+// shell is WONLobbyRustCtrl.h's, the host WONLobby/LobbyCtrlHost.cpp
+class EELobbyGameOptionsCtrl : public LobbyRustCtrl {
 public:
-    EELobbyGameOptionsCtrl();               // 0x2942ce
-    virtual ~EELobbyGameOptionsCtrl();      // 0x294336
-    virtual void InitComponent(ComponentInit& inInit);         // +0x1c 0x2944ae
-    Component* GetControl(int inOption);    // 0x294680
-    ComboBox* GetComboBox(int inOption);    // 0x29469b
-    Button* GetCheckBox(int inOption);      // 0x2946c0
-    void UpdateOption(int inOption, EELobbyGame* inGame);      // 0x2946e5
-    void UpdateOption(int inOption);        // 0x294788
-    void UpdateAll();                       // 0x2947a0
-    void Activate();                        // 0x29488a
-    void Deactivate();                      // 0x2948e2
-    void ChangeGameType();                  // 0x2948f5 (the game type changed)
-    void OptionChanged(int inOption);       // 0x294a77
-    virtual void HandleComponentEvent(ComponentEvent* inEvent);    // +0x7c 0x294b57
-    EELobbyGame* GetGame();                 // ICF-folded into 0x299dcd (jmp GetMyLobbyGame)
-
-    SmartPtr<Label> mCampaignInfoLabel;     // +0x84
-    SmartPtr<Container> mCampaignInfoBox1;  // +0x88
-    SmartPtr<Container> mCampaignInfoBox2;  // +0x8c
-    long mRoomSpec;                         // +0x90 (2; ORed with event 100054's parameter)
-    bool mIsActive;                         // +0x94
-    SmartPtr<Component> mOptions[16];       // +0x98
+    EELobbyGameOptionsCtrl() : LobbyRustCtrl(EeWonLobbyCtlKind::GameOptions) {}
 };
 
 // the game room's players: eight rows of a name combo, team, color, citizen, observe and transfer controls

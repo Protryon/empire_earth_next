@@ -180,8 +180,6 @@
 3630a0 3632fc WONLobby/WONLobbyPrvLifetime.cpp
 365120 39b5e3 WONGUI/WONGUIConfig.cpp
 3651e0 3ba288 WONLobby/ChatCtrl.cpp
-365460 3bc6ae WONLobby/GameBrowserCtrl.cpp
-3654c0 3bda9f WONLobby/GameUserListCtrl.cpp
 3655e0 3c3bfe WONLobby/RoomLabelCtrl.cpp
 365640 3cc511 WONLobby/ServerListCtrl.cpp
 365700 3c9c36 WONLobby/CrossPromotionButton.cpp
@@ -254,10 +252,8 @@
 3ba4f0 3bac0f WONLobby/CreateAccountCtrl.cpp
 3baeb0 3baffe WONLobby/DirectConnectCtrl.cpp
 3bb000 3bbdb8 WONLobby/FriendsListCtrl.cpp
-3bc740 3bcac5 WONLobby/GameStagingCtrl.cpp
 3bdbb0 3bdd0e WONLobby/InitFailedCtrl.cpp
 3bdd60 3bdfbe WONLobby/LobbyContainer.cpp
-3bdfc0 3bf18d WONLobby/LobbyOptionsCtrl.cpp
 3bf190 3bfb23 WONLobby/LoginCtrl.cpp
 3bfcd0 3bfecb WONLobby/LoginHelpCtrl.cpp
 3c0060 3c01f5 WONLobby/LoginScreen.cpp

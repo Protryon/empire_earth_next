@@ -292,3 +292,40 @@ sm import 3 1 1
 sm import 4 1 1
 sm import 4 1 0
 sm export
+# editor screens round 1: every control of the editor form as made (FormDigest), the players as the player tab
+# writes them; then the player tab driven: its pages, tech lists, diplomacy grid, rows, copy to all, player count
+tab 5
+form 0 99999
+players
+changesel 0x15c 2                  # 4 players (EESECBMaxPlayer::ChangeSelection: SetPlayerCount)
+radio 0x15d                        # player page 2 (EESETab::Check: SelectPage)
+form 0 99999 4
+radio 0x170                        # AI settings
+form 0 99999 4
+radio 0x12d                        # tech tree
+radio 0x14b                        # buildings (EESERBUnitTypes::Check: FillTechLists)
+check 0x15e 1                      # display epochs (RebuildTechLists)
+form 0 99999 5
+radio 0x15a                        # options: the diplomacy grid, wonders, teams locked
+buttonup 1245                      # players 1 and 2 allied
+buttonup 1260                      # players 2 and 3
+slider 0x164 5
+check 0x167 1
+form 0 99999 8
+radio 0x12c                        # page 1: all players' food cap and start epoch, copied to all (Set All Players)
+edit 400 777
+combo 406 3
+edit 427 Zed
+buttonup 0x144
+form 0 99999 4
+radio 0x170                        # AI settings: all players' cheat and citizens, copied to all
+check 409 1
+slider 416 40
+buttonup 0x144
+edit 442 1234                      # player 2's food cap
+tab 0                              # leave: Store, ApplyPlayerSettings
+players
+tab 5                              # Enter
+blank 40 40 3                      # a new map on the player tab: its Load
+form 0 99999 4
+players

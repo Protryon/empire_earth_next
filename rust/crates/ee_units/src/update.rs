@@ -268,7 +268,7 @@ impl UpdateReads<'_> {
     fn read(&mut self, code: i32) -> i64 {
         self.host.read(code)
     }
-    /// a read of the unit's stats: the stats table's record of its stats object (stats.rs), else the host's
+    /// a read of the unit's stats: its stats object's record read in place (stats.rs), else the host's
     fn stat(&mut self, code: i32) -> i64 {
         match (self.record)().and_then(|r| crate::stats::stats_of(r.stats)) {
             Some(s) => stat_field(&s, code).unwrap_or_else(|| self.host.read(code)),

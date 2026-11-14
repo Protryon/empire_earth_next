@@ -6,7 +6,8 @@
 //! the domain of `RTSPlayer::GetUnit` / `gWorld.GetUnit`. Between, every read refreshes the record from its object
 //! ([`refresh`]): the plain members from the Rust records the unit classes derive from (round 26), the pointer
 //! members' derived values from the members at their places in the object ([`EeUnitsStoreSlots`], round 27); only
-//! the location, the on-map flag and the stats object are still reported (`set`).
+//! the location and the on-map flag are still reported (`set`); the stats object (`mStats`) is read in place too
+//! (round 28).
 //!
 //! Determinism: the game only looks records up by id. The map is a `BTreeMap` (no hash order); the walks
 //! (`clear_player`, `check`) are in id order and observe nothing the game reads. A write is a plain store of the
@@ -98,7 +99,7 @@ pub const EE_UNIT_FIELD_HEAL_THRESHOLD: u32 = 46;
 /// `EEUnit::mUnitClass` too: the class's flags the combat reads test (`EE_UNIT_CLASS_*`: the combat lane's
 /// `EE_COMBAT_CLASS_*` bits), fixed once the db's classes are made
 pub const EE_UNIT_FIELD_CLASS_FLAGS: u32 = 47;
-/// the fourteenth round's: `mStats` (the `EEUnitClassUpgrade*`'s address; the stats table's key: stats.rs)
+/// the fourteenth round's: `mStats` (the `EEUnitClassUpgrade*`'s address: stats.rs; read in place from round 28)
 pub const EE_UNIT_FIELD_STATS: u32 = 48;
 /// the fifteenth round's: the active goal's id (`mGoalState->mID`; 0: no goal), beside its kind
 pub const EE_UNIT_FIELD_GOAL_ID: u32 = 49;
@@ -305,12 +306,17 @@ pub struct EeUnitsStoreSlots {
     pub goal_kind: u64,
     pub goal_id: u64,
     pub action_type: u64,
+    /// the twenty-eighth round's: `EEUnit::mStats` (the record's `stats`) and the record base's offset in
+    /// `EEUnitClassUpgrade` (stats.rs)
+    pub stats: u64,
+    pub stats_fields: u64,
 }
 
 static SLOTS: std::sync::OnceLock<EeUnitsStoreSlots> = std::sync::OnceLock::new();
 
 /// Sets the slots (the first call wins: the layout is the build's).
 pub fn set_slots(slots: EeUnitsStoreSlots) {
+    crate::stats::set_fields_offset(slots.stats_fields);
     let _ = SLOTS.set(slots);
 }
 
@@ -381,6 +387,8 @@ fn refresh_pointers(r: &mut EeUnitRecord, slots: &EeUnitsStoreSlots) {
         // SAFETY: the object is a live EEUnit (its record is in the store): its pointer members are readable
         let class = unsafe { pointer_at(object, slots.unit_class) };
         refresh_class(r, class, slots);
+        // SAFETY: as above
+        r.stats = unsafe { pointer_at(object, slots.stats) } as u64;
         // SAFETY: as above
         let complex = unsafe { pointer_at(object, slots.complex_unit) };
         r.complex = if complex == 0 {
@@ -1320,6 +1328,7 @@ mod tests {
         object[4] = std::ptr::addr_of!(action) as usize;
         object[5] = goal.as_ptr() as usize;
         object[6] = 0x80; // a herd
+        object[7] = 0x5000; // the stats object
         let w = std::mem::size_of::<usize>() as u64;
         let slots = EeUnitsStoreSlots {
             unit_class: 0,
@@ -1333,6 +1342,8 @@ mod tests {
             goal_kind: 5,
             goal_id: 16,
             action_type: 0,
+            stats: 7 * w,
+            stats_fields: 0,
         };
         let mut r = EeUnitRecord { object: base as u64, unit_fields: 1, complex_fields: 1, ..Default::default() };
         refresh_pointers(&mut r, &slots);
@@ -1343,6 +1354,7 @@ mod tests {
         assert_eq!(r.complex, EE_UNIT_COMPLEX_SELF);
         assert_eq!((r.goal_kind, r.goal_id, r.command), (11, 0x1234, 5000));
         assert_eq!((r.active_group, r.container, r.herd), (1, 0, 1));
+        assert_eq!(r.stats, 0x5000);
         // no class, no goal, no command, another complex unit
         object[0] = 0;
         object[1] = 0x99;

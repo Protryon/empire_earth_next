@@ -227,7 +227,7 @@ long EESEUITechListBox::CopyData()
                 EETechTreeNode* theNode = theTree->Get(this->mTechs[i]);
                 if (i == theSelection)
                     continue;
-                if (this->mId == kSERBUnitTypesTechList) {
+                if (this->GetId() == kSERBUnitTypesTechList) {
                     if (theNode->DependsOn(this->mTechs[theSelection]))
                         this->mDependents.push_back(i - theFirst);
                 } else {
@@ -305,14 +305,14 @@ void EESEUITechListBox::Fill(long inFirst, long inLast)
     }
 
     for (it = this->mTechs.begin() + inLast; it != this->mTechs.end(); it++) {
-        if (theTree->Get(*it)->mScenEditorObsoleted == (this->mId != kSERBUnitTypesTechList)) {
+        if (theTree->Get(*it)->mScenEditorObsoleted == (this->GetId() != kSERBUnitTypesTechList)) {
             theTech = *it;
             break;
         }
     }
     if (theTech == 100000) {
         for (it = this->mTechs.begin() + inFirst; it != this->mTechs.begin(); it--) {
-            if (theTree->Get(*it)->mScenEditorObsoleted == (this->mId != kSERBUnitTypesTechList)) {
+            if (theTree->Get(*it)->mScenEditorObsoleted == (this->GetId() != kSERBUnitTypesTechList)) {
                 theTech = *it;
                 break;
             }
@@ -341,8 +341,8 @@ void EESEUITechListBox::Rebuild()
     UWideString theName;
     unsigned long theSelection;
     long theCount = this->mTechs.size();
-    bool theByEpoch = static_cast<UICheckBox*>(this->mForm->GetControlById(kSERBUnitTypesDisplayEpoch))->GetIsChecked();
-    bool theByTech = static_cast<UIRadioButton*>(this->mForm->GetControlById(0x14d))->GetIsChecked();
+    bool theByEpoch = static_cast<UICheckBox*>(this->GetForm()->GetControlById(kSERBUnitTypesDisplayEpoch))->GetIsChecked();
+    bool theByTech = static_cast<UIRadioButton*>(this->GetForm()->GetControlById(0x14d))->GetIsChecked();
     long i;
 
     if (theByEpoch) {
@@ -591,6 +591,6 @@ void EESEUITechListBox::Rebuild()
 EEPlayer* EESEPlayerScreen::GetCurrentPlayer()
 {
     unsigned long theSelection;
-    this->mPlayerSelection->GetCurrentSelection(theSelection);
+    this->GetPlayerSelection()->GetCurrentSelection(theSelection);
     return gWorld.mPlayers[theSelection + 1];
 }

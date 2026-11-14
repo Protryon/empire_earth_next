@@ -14,7 +14,7 @@
 // FUNCTION: LLE 0x1004607d
 NESynchronousClient::NESynchronousClient()
 {
-    this->mRust = ee_net_cl_new(this, NESynchronousClient::Host, NESynchronousClient::QueueHost);
+    this->mRust = ee_net_cl_new(this, NESynchronousClient::Host, NESynchronousClient::QueueHost, this->mComms);
 }
 
 // FUNCTION: LLE 0x10046401
@@ -155,38 +155,17 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
 {
     NESynchronousClient* theClient = static_cast<NESynchronousClient*>(inClient);
     NEMessage* theMessage = reinterpret_cast<NEMessage*>(a);
-    NEConnection* theConnection = reinterpret_cast<NEConnection*>(a);
+    NEConnection* theConnection = reinterpret_cast<NEConnection*>(a);   // the plug-in's handle
     FSFile* theFile = reinterpret_cast<FSFile*>(a);
-    // (not during the constructor: no op the constructor makes reads it)
+    // the client's protocol, protocol 0 (no op the constructor makes reads it)
     NEProtocol* theProtocol = NULL;
-    if (inOp == EeNetClOp::Connect || inOp == EeNetClOp::ConnectForXfer || inOp == EeNetClOp::DetectedGameCount ||
-        inOp == EeNetClOp::DetectedGame || inOp == EeNetClOp::SearchForGame || inOp == EeNetClOp::XferReceive)
+    if (inOp >= EeNetClOp::Connect && inOp <= EeNetClOp::XferReceive)
         theProtocol = static_cast<NEProtocol*>(ee_net_cl_protocol(theClient->mRust));
     switch (inOp) {
     case EeNetClOp::WaitAny:
         return TSEvent::WaitAny(reinterpret_cast<TSEvent* const*>(a), (unsigned long)b, (unsigned long)c);
     case EeNetClOp::ThreadPriority:
         reinterpret_cast<TSThread*>(a)->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
-        return 0;
-    case EeNetClOp::BaseGet:
-        switch ((EeNetClBase)a) {
-        case EeNetClBase::LastTickReceived:
-            return (ptrdiff_t)(uint32_t)theClient->mLastTickReceived;
-        case EeNetClBase::CtsProcessed:
-            return (ptrdiff_t)(uint32_t)theClient->mNumberOfCTsProcessedInPhysics;
-        case EeNetClBase::AveragePhysicsUpdateTime:
-            return (ptrdiff_t)(uint32_t)theClient->GetAveragePhysicsUpdateTime();
-        case EeNetClBase::IsGamePaused:
-            return theClient->mIsGamePaused;
-        case EeNetClBase::IsMultiplayerSession:
-            return theClient->mIsMultiplayerSession;
-        }
-        return 0;
-    case EeNetClOp::BaseSet:
-        if ((EeNetClBase)a == EeNetClBase::LastTickReceived)
-            theClient->mLastTickReceived = (long)(int32_t)(uint32_t)b;
-        else if ((EeNetClBase)a == EeNetClBase::IsGamePaused)
-            theClient->SetIsGamePaused(b != 0);
         return 0;
     case EeNetClOp::ProtocolCount:
         return (ptrdiff_t)NEProtocol::GetCount();
@@ -198,20 +177,18 @@ ptrdiff_t NESynchronousClient::Host(void* inClient, EeNetClOp inOp, size_t a, si
                                     *static_cast<const UWideString*>(theStrings[2]), 2, reinterpret_cast<TSEvent*>(b),
                                     *reinterpret_cast<NEConnection**>(c), (unsigned long)d);
     }
-    case EeNetClOp::ConnectForXfer: {
-        const NEConnection* theFrom = theConnection;
-        return theProtocol->ConnectForXfer(theFrom, 1, reinterpret_cast<TSEvent*>(b), *reinterpret_cast<NEConnection**>(c));
-    }
+    case EeNetClOp::ConnectForXfer:
+        return theProtocol->ConnectForXfer(theConnection, 1, reinterpret_cast<TSEvent*>(b), *reinterpret_cast<NEConnection**>(c));
     case EeNetClOp::ConnClose:
-        return theConnection->Close();
+        return theProtocol->Close(theConnection);
     case EeNetClOp::ConnReceive: {
         unsigned long theLength = *reinterpret_cast<uint32_t*>(d);
-        long theResult = theConnection->Receive((unsigned long)c, reinterpret_cast<unsigned char*>(b), theLength);
+        long theResult = theProtocol->Receive(theConnection, (unsigned long)c, reinterpret_cast<unsigned char*>(b), theLength);
         *reinterpret_cast<uint32_t*>(d) = (uint32_t)theLength;
         return theResult;
     }
     case EeNetClOp::ConnSend:
-        return theConnection->Send(reinterpret_cast<const unsigned char*>(b), (unsigned long)c);
+        return theProtocol->Send(theConnection, reinterpret_cast<const unsigned char*>(b), (unsigned long)c);
     case EeNetClOp::DetectedGameCount:
         return (ptrdiff_t)theProtocol->GetDetectedGameCount();
     case EeNetClOp::DetectedGame: {

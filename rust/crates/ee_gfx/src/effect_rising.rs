@@ -32,7 +32,9 @@ use crate::effect_state::{
     EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_SCREEN_FLASH, EE_GFX_EFFECT_KIND_TELEPORT,
     EE_GFX_EFFECT_KIND_TIME_WARP, EE_GFX_EFFECT_KIND_WATER_SPLASH, EE_GFX_EFFECT_MOVED,
 };
+use crate::effect_tracer::{tracer, tracer_file, EeGfxTracerEnds, EE_GFX_EFFECT_KIND_TRACER_BEAM};
 use crate::effect_vent::{damage_vent, EeGfxFrames, EeGfxVentPoints, EeGfxVentUnit, EE_GFX_EFFECT_KIND_DAMAGE_VENT};
+use crate::effect_volcano::{volcano, volcano_file, EE_GFX_EFFECT_KIND_VOLCANO};
 use crate::effect_wall::{wall, wall_file, EE_GFX_EFFECT_KIND_ENERGY_WALL};
 use crate::effects::EeGfxColor;
 use crate::lighting::EeGfxLighting;
@@ -116,6 +118,9 @@ pub struct EeGfxGraphicFacts {
     pub param11: f32,
     /// the effect has its graphic effect
     pub has_effect: bool,
+    /// `mTime1`, `mTime2` (ms)
+    pub time1: u32,
+    pub time2: i32,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -230,6 +235,26 @@ pub struct EeGfxEffect3DHost {
     /// push the effect into render queue `index` under the graphic effect's object's texture of the preferences'
     /// screen (none without an object)
     pub queue_screen: extern "C" fn(context: *mut c_void, index: u32),
+    /// the tracer beam's ends (`EEE3DTracerBeam::Aim`, 0xfc5a4, before its `beam.rs` part): the shooter's weapon tag
+    /// point (or its tag point of kind 6, or its stats' default point) and the target point (on the target unit's
+    /// location, or the fixed point); whether the beam has a target unit
+    pub tracer_ends: extern "C" fn(context: *mut c_void) -> EeGfxTracerEnds,
+    /// the tracer beam's impact: the linked effect 1 placed at the target point on the target unit (or at the fixed
+    /// point); the placement's result
+    pub tracer_impact: extern "C" fn(context: *mut c_void) -> i32,
+    /// the tracer beam's hit: the target unit's class's `UnitDamaged`
+    pub tracer_hit: extern "C" fn(context: *mut c_void),
+    /// the tracer beam's target as its saved id (`Load`: `RepairPointers` resolves it)
+    pub tracer_saved_target: extern "C" fn(context: *mut c_void, id: u32),
+    /// the tracer beam's target unit's id, 0xffffffff for none (`Save`)
+    pub tracer_target_id: extern "C" fn(context: *mut c_void) -> u32,
+    /// the volcano's `BuildModel` (0xfe79d) over the record's mesh lists (`count` points and heights): the image's
+    /// colours and cone heights and the mesh (`volcano.rs`), the model made and referenced, the centre's height, the
+    /// placement, the radius and the texture; its result
+    pub volcano_build:
+        extern "C" fn(context: *mut c_void, points: *mut Ge3DPoint, heights: *mut f32, count: u32) -> i32,
+    /// the volcano's model
+    pub volcano_model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
 }
 
 /// The world as the effects ask it.
@@ -358,6 +383,25 @@ pub trait Effect3DHost {
         false
     }
     fn queue_screen(&mut self, _index: u32) {}
+    /// the tests' hosts that make no tracer beam aim from the origin to the origin, without a target
+    fn tracer_ends(&mut self) -> EeGfxTracerEnds {
+        EeGfxTracerEnds::default()
+    }
+    fn tracer_impact(&mut self) -> i32 {
+        0
+    }
+    fn tracer_hit(&mut self) {}
+    fn tracer_saved_target(&mut self, _id: u32) {}
+    fn tracer_target_id(&mut self) -> u32 {
+        0xffff_ffff
+    }
+    /// the tests' hosts that make no volcano build nothing
+    fn volcano_build(&mut self, _points: *mut Ge3DPoint, _heights: *mut f32, _count: u32) -> i32 {
+        0
+    }
+    fn volcano_model(&mut self) -> EeGfxModel {
+        std::ptr::null_mut()
+    }
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -519,6 +563,27 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn queue_screen(&mut self, index: u32) {
         (self.queue_screen)(self.context, index)
     }
+    fn tracer_ends(&mut self) -> EeGfxTracerEnds {
+        (self.tracer_ends)(self.context)
+    }
+    fn tracer_impact(&mut self) -> i32 {
+        (self.tracer_impact)(self.context)
+    }
+    fn tracer_hit(&mut self) {
+        (self.tracer_hit)(self.context)
+    }
+    fn tracer_saved_target(&mut self, id: u32) {
+        (self.tracer_saved_target)(self.context, id)
+    }
+    fn tracer_target_id(&mut self) -> u32 {
+        (self.tracer_target_id)(self.context)
+    }
+    fn volcano_build(&mut self, points: *mut Ge3DPoint, heights: *mut f32, count: u32) -> i32 {
+        (self.volcano_build)(self.context, points, heights, count)
+    }
+    fn volcano_model(&mut self) -> EeGfxModel {
+        (self.volcano_model)(self.context)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -551,6 +616,8 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_ENERGY_WALL => unsafe { wall(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_DAMAGE_VENT => unsafe { damage_vent(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_ICON | EE_GFX_EFFECT_KIND_GOAL => unsafe { icon(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_TRACER_BEAM => unsafe { tracer(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_VOLCANO => unsafe { volcano(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -659,6 +726,9 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 save_icon(r, f)
             }
         }
+        EE_GFX_EFFECT_KIND_TRACER_BEAM => tracer_file(load, base, r, f, major, minor, h),
+        // the base's result is ignored
+        EE_GFX_EFFECT_KIND_VOLCANO => volcano_file(load, r, f, h),
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
             // the base's result is ignored; the media's stops the load
             let res = h.load_media();
