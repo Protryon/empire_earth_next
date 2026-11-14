@@ -23,6 +23,7 @@ pub mod entity_group;
 pub mod event;
 pub mod find_key;
 pub mod font;
+pub mod fonttableobj;
 pub mod form;
 pub mod form_state;
 pub mod formobj;
@@ -59,9 +60,6 @@ mod background_ffi;
 // absent from a test binary
 #[cfg(not(test))]
 mod background_table_ffi;
-// imports the C++ shared font list (UIFontTable.cpp), absent from a test binary
-#[cfg(not(test))]
-mod font_ffi;
 // imports the C++ entity groups' entities and the string list's lines (UIEntityGroup.cpp, UILBString.cpp), absent
 // from a test binary
 #[cfg(not(test))]

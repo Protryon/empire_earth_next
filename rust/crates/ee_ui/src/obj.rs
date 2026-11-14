@@ -725,6 +725,20 @@ pub enum EeUiOp {
     TblEventRelease = 493,
     /// Form `a`'s `GetControl(b)`.
     TblFormControl = 494,
+
+    // ---- UIFontTable (R6 ui round 18, fonttableobj.rs; its file ops are the controls table's TblFile*)
+    /// The manager `a`'s string table's string `b` as a new `UString` (a font's face) -> the string.
+    FontName = 500,
+    /// `delete` the face `a`.
+    FontNameDelete = 501,
+    /// Font `a`'s `CompareFont(face b, style c, quality d & 0xffffffff, size d >> 32)`.
+    FontCompare = 502,
+    /// Font `a`'s `Reference()`.
+    FontReference = 503,
+    /// `new GEFont(face a, size d, style b, quality c)`, referenced -> the font.
+    FontNew = 504,
+    /// Font `a`'s `Dereference()`.
+    FontRelease = 505,
 }
 
 impl EeUiOp {

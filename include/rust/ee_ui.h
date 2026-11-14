@@ -780,6 +780,18 @@ enum class EeUiOp : uint32_t {
   TblEventRelease = 493,
   /// Form `a`'s `GetControl(b)`.
   TblFormControl = 494,
+  /// The manager `a`'s string table's string `b` as a new `UString` (a font's face) -> the string.
+  FontName = 500,
+  /// `delete` the face `a`.
+  FontNameDelete = 501,
+  /// Font `a`'s `CompareFont(face b, style c, quality d & 0xffffffff, size d >> 32)`.
+  FontCompare = 502,
+  /// Font `a`'s `Reference()`.
+  FontReference = 503,
+  /// `new GEFont(face a, size d, style b, quality c)`, referenced -> the font.
+  FontNew = 504,
+  /// Font `a`'s `Dereference()`.
+  FontRelease = 505,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -1137,6 +1149,24 @@ enum class EeUiEditCall : uint32_t {
   TabbedFrom = 48,
   /// `TabbedTo()`.
   TabbedTo = 49,
+};
+
+/// The statics ([`ee_ui_font_tables`]).
+enum class EeUiFontsCall : uint32_t {
+  /// `Create(file a, manager b)` -> the last read's result.
+  Create = 1,
+  /// `CreateClosestFont(a, pixel height b)` -> the font or NULL.
+  CreateClosestFont = 2,
+  /// `DeleteAll()`.
+  DeleteAll = 3,
+  /// `GetFont(a)` -> the font (NULL for an empty or missing record).
+  GetFont = 4,
+  /// `FindOrCreateFont(name a, style b, quality c, size d)` -> the font.
+  FindOrCreateFont = 5,
+  /// The number of records (the drivers').
+  Count = 6,
+  /// Whether record `a` has a font (the drivers').
+  Present = 7,
 };
 
 /// The inward calls (the C++ shim's methods). Rectangles and points travel in `f`.
@@ -2125,32 +2155,6 @@ struct EeUiBackgroundTableRefs {
   EeUiColor *color;
 };
 
-/// What `Create` makes of a record: no entry for an empty font name, else its face (by string ID), style, quality
-/// and size.
-struct EeUiFontEntry {
-  bool present;
-  unsigned long string_id;
-  unsigned long style;
-  unsigned long quality;
-  unsigned long size;
-};
-
-/// `UIDbDataFonts`: one font record of the UI database (0x80 bytes on every target).
-struct EeUiDbFont {
-  /// Empty: no font.
-  char font_name[108];
-  /// The face name's string-table ID.
-  uint32_t string_id;
-  uint32_t size;
-  uint32_t quality;
-  uint8_t bold;
-  uint8_t italic;
-  uint8_t underline;
-  uint8_t style10;
-  uint8_t style08;
-  char pad[3];
-};
-
 /// `CopyData`'s rectangles: the title's, the axis labels' (empty when off) and the plot area.
 struct EeUiGraphLayout {
   EeUiRect title;
@@ -2416,6 +2420,17 @@ ptrdiff_t ee_ui_edit_call(const EeUiEdit *edit,
                           ptrdiff_t c,
                           ptrdiff_t d,
                           float *f);
+
+/// `UIFontTable`'s statics ([`EeUiFontsCall`]).
+///
+/// # Safety
+/// The host answers the ops; the arguments are the call's.
+ptrdiff_t ee_ui_font_tables(EeUiFontsCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c,
+                            ptrdiff_t d,
+                            EeUiHostFn host);
 
 /// A new Rust form for the C++ `form`: `UIForm(controls, groups, manager, id, gdi)`.
 EeUiForm *ee_ui_form_new(void *form,
@@ -2742,15 +2757,6 @@ long ee_ui_event_initialize(unsigned long *count, void *event);
 
 /// `UIEvent::Uninitialize`.
 long ee_ui_event_uninitialize(unsigned long *count, void *event);
-
-/// `UIFontTable::Create`'s reading of one font record.
-EeUiFontEntry ee_ui_font_entry(const EeUiDbFont *record);
-
-/// `UIFontTable::CreateClosestFont`'s point size for a pixel height.
-long ee_ui_font_closest_size(unsigned long pixel_height);
-
-/// `UIFontTable::FindOrCreateFont` -> the index in `sFont` of the font handed out (referenced).
-size_t ee_ui_font_find_or_create(const void *query);
 
 /// `UIEntityGroup::Disable`'s loop (the C++ sets `mDisableCount` first).
 void ee_ui_group_disable(void *group);
