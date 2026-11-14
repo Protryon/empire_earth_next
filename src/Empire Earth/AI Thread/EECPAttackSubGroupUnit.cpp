@@ -99,7 +99,7 @@ static float ASGUWonderValue(EEComplexUnit* inUnit)
         theResult = 1.0f;
     else if (inUnit->mUnitClass->mIsTower)
         theResult = 0.9f;
-    else if (dynamic_cast<EEUCGate*>(inUnit->mUnitClass.Get()) != NULL)
+    else if (dynamic_cast<EEUCGate*>(inUnit->mUnitClass) != NULL)
         theResult = 0.8f;
     else {
         switch (inUnit->mUnitClass->mUnitType) {

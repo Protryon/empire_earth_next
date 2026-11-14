@@ -86,8 +86,8 @@ EEUICWonNetStatBox::~EEUICWonNetStatBox()
 long EEUICWonNetStatBox::CopyData()
 {
     long theResult = UIListBox<EEUICWNSBStat>::CopyData();
-    if (this->mNumberLinesDisplayed < 2)
-        this->mCopiedHasSelection = false;
+    if (this->GetNumberLinesDisplayed() < 2)
+        this->SetCopiedHasSelection(false);
     return theResult;
 }
 
@@ -166,7 +166,7 @@ long EEUICWonNetStatBox::DrawTextA()
                 break;
             }
             case 9: {
-                theRect.SetLeft((long)(this->mCopyTextRectangle.GetLeft() + 711.0f));
+                theRect.SetLeft((long)(this->GetCopyTextRectangle().GetLeft() + 711.0f));
                 theRect.SetRight((long)(theRect.GetLeft() + 69.0f));
                 float theCount = (float)this->mCopyLineArray[i].mL28;
                 float thePercent = theCount / (float)this->mCopyLineArray[i].mNumGames * 100.0f;
@@ -175,13 +175,13 @@ long EEUICWonNetStatBox::DrawTextA()
                 break;
             }
             case 10:
-                theRect.SetLeft((long)(this->mCopyTextRectangle.GetLeft() + 781.0f));
+                theRect.SetLeft((long)(this->GetCopyTextRectangle().GetLeft() + 781.0f));
                 theRect.SetRight((long)(theRect.GetLeft() + 69.0f));
                 sprintf(theText, "%ld", this->mCopyLineArray[i].mL2C);
                 this->mText->SetText(theText);
                 break;
             case 11: {
-                theRect.SetLeft((long)(this->mCopyTextRectangle.GetLeft() + 851.0f));
+                theRect.SetLeft((long)(this->GetCopyTextRectangle().GetLeft() + 851.0f));
                 theRect.SetRight((long)(theRect.GetLeft() + 69.0f));
                 unsigned long theSeconds = this->mCopyLineArray[i].mTotalTime / this->mCopyLineArray[i].mNumGames;
                 if (theSeconds >= 3600) {
@@ -220,7 +220,7 @@ void EEUICWonNetStatBox::Refresh()
     theStat.mL18 = 492;
     theStat.mL2C = -6;
     theStat.mText = UWideString("Joe Mamma II");
-    for (unsigned long i = 0; i < this->mNumberLinesDisplayed; i++)
+    for (unsigned long i = 0; i < this->GetNumberLinesDisplayed(); i++)
         this->AppendLine(theStat);
 }
 

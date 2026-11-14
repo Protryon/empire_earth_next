@@ -178,12 +178,12 @@ void EEAMouseClick::SelectAtMouse(unsigned long inModifiers)
         else if (inModifiers & kModifierControl)
             theMessage = new EEMAddUnitToSelectedGroup(theUnit->GetUnitID());
         else
-            theMessage = new EEMSelectUnit(theUnit->GetUnitID());
+            theMessage = new EEMRecord(kMessageSelectUnit, {theUnit->GetUnitID()});
         theUnit->Dereference();
     } else {
         if (inModifiers != 0)
             return;
-        theMessage = new EEMUnselectAllUnits;
+        theMessage = new EEMRecord(kMessageUnselectAllUnits);
     }
     if (theMessage) {
         this->mMessage = theMessage;
@@ -412,7 +412,7 @@ void EEAMouseClick::Execute(float inX, float inY, bool inMove, unsigned long inM
                                 else if (theClass->GetUnitType() == kUnitTypePathPoint)
                                     theMoveTo = true;
                                 else if (theClass->IsAirBase())
-                                    theMessage = new EEMReturnToBase(theTarget->GetUnitID(), theShift);
+                                    theMessage = new EEMRecord(kMessageReturnToBase, {theTarget->GetUnitID(), theShift});
                                 else if (theGroup->Contains(theTarget->GetComplexUnit()) && inMove)
                                     theMoveTo = true;
                                 else {

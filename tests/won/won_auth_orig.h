@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONElGamal.h"
 #include "ee/wonapi/WONRouting.h"
 #include "won_peerauth_msg.h"
+#include "won_auth_session_glue.h"
 
 namespace orig {
 using namespace WONAPI;

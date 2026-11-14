@@ -562,7 +562,7 @@ void OriginalBuildUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTechnology
                             if (inQueued) {
                                 ee_units_host_unit_add_build_target(theWorker, theBuilding);
                                 EEComplexUnit* theObject = static_cast<EEComplexUnit*>(ObjectOf(theWorker));
-                                if (theObject->mGoalState.Get() && theObject->mGoalState->mKind != kGoalBuildRepair)
+                                if (theObject->mGoalState && theObject->mGoalState->mKind != kGoalBuildRepair)
                                     ee_units_host_unit_start_action(theWorker, kActionIdle);
                             } else
                                 ee_units_host_unit_order_build(theWorker, theBuilding);
@@ -1773,7 +1773,7 @@ void EEGroupCommandSweep()
                 continue;
             EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
             theOwn.push_back(theComplex);
-            if (thePathPoint == NULL && theComplex->mUnitClass.Get() != NULL && theComplex->mUnitClass->mUnitType == kUnitTypePathPoint)
+            if (thePathPoint == NULL && theComplex->mUnitClass != NULL && theComplex->mUnitClass->mUnitType == kUnitTypePathPoint)
                 thePathPoint = theComplex;
         }
         std::vector<EEComplexUnit*> theReversed(theOwn.rbegin(), theOwn.rend());
@@ -1967,7 +1967,7 @@ void EEGroupCommandSweep()
             for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext) {
                 if (theUnit->mObjectKind.mValue != EE_OBJECT_COMPLEX_UNIT)
                     continue;
-                EEUnitClass* theClass = static_cast<EEComplexUnit*>(theUnit)->mUnitClass.Get();
+                EEUnitClass* theClass = static_cast<EEComplexUnit*>(theUnit)->mUnitClass;
                 if (theClass != NULL && (theClass->mUnitType == kUnitTypeGranary || theClass->mUnitType == kUnitTypeGranaryImproved)) {
                     theFarmTargets.push_back((int32_t)IDOf(theUnit));
                     break;
@@ -2038,7 +2038,7 @@ void EEGroupCommandSweep()
             int32_t theFound[6] = {-1, -1, -1, -1, -1, -1};   // airport, navy yard, building, garrison, farm, damaged
             for (size_t k = 0; k < theOwn.size(); k++) {
                 EEComplexUnit* theUnit = theOwn[k];
-                EEUnitClass* theClass = theUnit->mUnitClass.Get();
+                EEUnitClass* theClass = theUnit->mUnitClass;
                 if (theClass == NULL)
                     continue;
                 int32_t theID = (int32_t)IDOf(theUnit);
@@ -2109,7 +2109,7 @@ void EEGroupCommandSweep()
             // the passenger and a passenger id no unit has
             int32_t theTransport = -1;
             for (size_t k = 0; k < theOwn.size() && theTransport == -1; k++)
-                if (theOwn[k]->mUnitClass.Get() != NULL && theOwn[k]->mUnitClass->IsTransport())
+                if (theOwn[k]->mUnitClass != NULL && theOwn[k]->mUnitClass->IsTransport())
                     theTransport = (int32_t)IDOf(theOwn[k]);
             if (theTransport != -1)
                 theCarriers.insert(theCarriers.begin(), theTransport);
@@ -2175,11 +2175,11 @@ void EEGroupCommandSweep()
             // tile, the map's centre, its corner and its far edge
             std::vector<int32_t> theHackClasses;
             theHackClasses.push_back(-1);
-            if (!theOwn.empty() && theOwn[0]->mUnitClass.Get() != NULL)
+            if (!theOwn.empty() && theOwn[0]->mUnitClass != NULL)
                 theHackClasses.push_back((int32_t)theOwn[0]->mUnitClass->mUnitType);
             if (theFound[2] != -1)
                 theHackClasses.push_back((int32_t)ObjectOf((uint32_t)theFound[2])->mUnitClass->mUnitType);
-            if (theResource != NULL && static_cast<EEUnit*>(theResource)->mUnitClass.Get() != NULL)
+            if (theResource != NULL && static_cast<EEUnit*>(theResource)->mUnitClass != NULL)
                 theHackClasses.push_back((int32_t)static_cast<EEUnit*>(theResource)->mUnitClass->mUnitType);
             theHackClasses.push_back(0x7fff);
             float theEdge = (float)gWorld.GetMap()->GetSize() - 0.5f;

@@ -25,6 +25,9 @@
 //! - [`attribute`]: a unit's value for an object's attribute filter (`EESMObject::GetUnitAttribute`) as a table.
 //! - [`aivar`]: the Set AI Variable effect's table as data (`EESMEffect::SetAIVariable`).
 //! - [`tokens`]: a message's tags expanded (`EESMEffect::ExpandTokens`).
+//! - [`lists`]: the manager's element lists as the editor changes them (sort, new, move, delete, duplicate, the
+//!   name lists) and the index upkeep after each change (the `Renumber*` and `Remap*` broadcasts).
+//! - [`text`]: the trigger text file (the editor's export and import of the scenario's translatable texts).
 //! - [`ffi`]: the C ABI the C++ classes call.
 
 pub mod aivar;
@@ -35,6 +38,7 @@ pub mod create;
 pub mod ffi;
 pub mod fields;
 pub mod host;
+pub mod lists;
 pub mod manager;
 pub mod object;
 pub mod objeval;
@@ -43,6 +47,7 @@ pub mod player;
 pub mod round;
 pub mod save;
 pub mod stream;
+pub mod text;
 pub mod tokens;
 pub mod trigger;
 

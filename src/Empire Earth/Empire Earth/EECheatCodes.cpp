@@ -504,16 +504,9 @@ void EECheatCodes::MakeWorldVisible(unsigned long inPlayer)
     EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
     if (thePlayer != gWorld.GetCurrentPlayer())
         return;
-    EEMMakeWorldVisible* theMessage = new EEMMakeWorldVisible;
+    EEMRecord* theMessage = new EEMRecord(kMessageMakeWorldVisible);
     theMessage->SetOriginatingSlot(thePlayer->mSlot);
     gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
-}
-
-// FUNCTION: EXE 0x52ba49
-// Creates the empty make-world-visible message
-EEMMakeWorldVisible::EEMMakeWorldVisible()
-    : EEMessage(kMessageMakeWorldVisible, false)
-{
 }
 
 // FUNCTION: EXE 0x52ba6d

@@ -686,6 +686,82 @@ pub unsafe extern "C" fn ee_units_unit_load(
     unsafe { complex_load_rest(&mut host, complex, &inp, r) }
 }
 
+/// The maxima `EEComplexUnit::FinishLoad` turns the saved fractions back into amounts with (the unit's stats' and
+/// class's).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeUnitsFinishLoadIn {
+    /// `mStats->mMaxHitPoints` (the last hit points' fraction)
+    pub max_hit_points: std::os::raw::c_long,
+    /// `mStats->mFlightTime`
+    pub flight_time: std::os::raw::c_long,
+    /// `GetUnitClass()->mGarrisonCapacity`
+    pub garrison_capacity: std::os::raw::c_long,
+    /// `mStats->mPower`
+    pub power: std::os::raw::c_long,
+}
+
+/// The float a load left in a `long`'s first four bytes (`memcpy(&theFraction, &this->m, 4)`; little-endian).
+fn bits_of(value: std::os::raw::c_long) -> f32 {
+    f32::from_bits(value as u32)
+}
+
+/// One fraction back into an amount: `(long)(fraction * maximum + 0.00001f)`, at least 1 when the fraction is not 0.
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+fn amount(fraction: f32, product: f32) -> std::os::raw::c_long {
+    let v = (product + 0.00001) as std::os::raw::c_long;
+    if fraction != 0.0 && v == 0 {
+        1
+    } else {
+        v
+    }
+}
+
+/// `EEComplexUnit::FinishLoad`'s four fractions (0x5f3395), in its order and with its operand order.
+pub fn finish_fractions(cx: &mut EeUnitsComplexUnitFields, input: &EeUnitsFinishLoadIn) {
+    let f = bits_of(cx.mLastHitPoints);
+    cx.mLastHitPoints = amount(f, input.max_hit_points as f32 * f);
+    let f = bits_of(cx.mFlightTime);
+    cx.mFlightTime = amount(f, f * input.flight_time as f32);
+    let f = bits_of(cx.mGarrisonCount);
+    cx.mGarrisonCount = amount(f, f * input.garrison_capacity as f32);
+    let f = bits_of(cx.mPower);
+    cx.mPower = amount(f, f * input.power as f32);
+}
+
+/// `EEUnit::FinishLoad`'s hit points (0x629973): rounded by `UMFloatToLong` (the UCRT's `lrintf`), unlike the four.
+pub fn finish_hit_points(unit: &mut EeUnitsUnitFields, max_hit_points: std::os::raw::c_long) {
+    let f = bits_of(unit.mHitPoints);
+    let v = ee_ge::um::lrintf(max_hit_points as f32 * f + 0.00001) as std::os::raw::c_long;
+    unit.mHitPoints = if f != 0.0 && v == 0 { 1 } else { v };
+}
+
+/// `EEComplexUnit::FinishLoad`'s four fractions over the unit's record.
+///
+/// # Safety
+/// `cx` is the unit's live record; `input` readable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_unit_finish_fractions(
+    cx: *mut EeUnitsComplexUnitFields,
+    input: *const EeUnitsFinishLoadIn,
+) {
+    // SAFETY: the caller's contract; no host call while the references live
+    unsafe { finish_fractions(&mut *cx, &*input) };
+}
+
+/// `EEUnit::FinishLoad`'s hit points over the unit's record.
+///
+/// # Safety
+/// `unit` is the unit's live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_unit_finish_hit_points(
+    unit: *mut EeUnitsUnitFields,
+    max_hit_points: std::os::raw::c_long,
+) {
+    // SAFETY: the caller's contract
+    unsafe { finish_hit_points(&mut *unit, max_hit_points) };
+}
+
 #[cfg(test)]
 #[path = "unit_load_tests.rs"]
 mod tests;

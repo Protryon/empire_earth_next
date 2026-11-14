@@ -20,8 +20,7 @@ namespace WONAPI {
 WONHeaderButton::WONHeaderButton()
 {
     this->SetHorzAlign(HorzAlign_Left);
-    this->mLeftTextPad=this->mRightTextPad=4;
-    this->mTopTextPad=this->mBottomTextPad=4;
+    this->SetTextPadding(4,4,4,4);
     this->SetComponentFlags(ComponentFlag_WantFocus,false);
 }
 // Creates an opaque skinned scrollbar, vertical or horizontal (emitted at 0x00719540)

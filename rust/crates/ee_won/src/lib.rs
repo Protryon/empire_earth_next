@@ -36,6 +36,7 @@ pub mod dialogs;
 pub mod dir;
 pub mod dirchange;
 pub mod dirops;
+pub mod dlglogic;
 pub mod elgamal;
 pub mod ffi;
 pub mod ffi_lan;
@@ -89,10 +90,12 @@ pub mod listobj;
 pub mod lobbydlg;
 pub mod lobbyhost;
 pub mod lobbymap;
+pub mod lobbypopup;
 pub mod md5;
 pub mod menuobj;
 pub mod miscops;
 pub mod model;
+pub mod msbtnobj;
 pub mod multiobj;
 pub mod multiping;
 /// cbindgen:ignore
@@ -124,6 +127,7 @@ pub mod routemsg;
 pub mod routeop;
 pub mod routing;
 pub mod scrollerobj;
+pub mod scrolltext;
 pub mod servconn;
 pub mod servctx;
 pub mod server;
@@ -154,6 +158,7 @@ pub mod wire;
 pub mod wmcache;
 pub mod wmloop;
 pub mod wmobj;
+pub mod wonbtnobj;
 
 #[cfg(test)]
 mod buffer_golden;

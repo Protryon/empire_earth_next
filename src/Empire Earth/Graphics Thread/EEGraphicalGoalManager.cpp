@@ -34,7 +34,8 @@
 #include "ee/EEEffect.h"
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
-#include "ee/EEE3DIcon.h"
+#include "rust/ee_gfx.h"
+#include "ee/EEE3DRust.h"
 #include "ee/EEE3DMarchingLine.h"
 #include "ee/EEGraphicalGoal.h"
 #include "ee/EEGraphicalGoalManager.h"
@@ -124,7 +125,7 @@ void EEGraphicalGoal::Update()
     case 4:
     case 5:
     case 6: {
-        EEE3DIcon* theIcon = static_cast<EEE3DIcon*>(gEffectManager->GetEffect(this->mEffect));
+        EEE3DRust* theIcon = dynamic_cast<EEE3DRust*>(gEffectManager->GetEffect(this->mEffect));
         if (theIcon != NULL)
             theIcon->SetLocation(this->mTo);
         break;

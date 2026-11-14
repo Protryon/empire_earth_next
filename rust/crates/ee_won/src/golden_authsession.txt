@@ -1,0 +1,85 @@
+context 1001 peer valid 1 user 1001 expired 0/0
+context 2002 peer valid 1 user 2002 expired 0/0
+listen 0 0
+accept 1
+type 2 client status 0 server status 0 lfs 4/4
+client session s0(new)
+client again session s0
+server session s1(new)
+keys 8 8 same 1
+client send 0
+server recv 0 12:68656c6c6f20736572766572
+server send 0
+client recv 0 12:68656c6c6f20636c69656e74
+client send 0
+server recv 0 0:
+client send 0
+server recv 0 300:78787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878
+server send 0
+client recv 0 6:7365636f6e64
+get none null
+get s0
+get again null
+connect 1
+reused client send 0
+reused server recv 0 15:6f6e2061206e657720736f636b6574
+reused server send 0
+reused client recv 0 4:6261636b
+reused client send 0
+raw server recv 0 length 17 first 1:0c plain 0
+reused client send 0
+reused server recv 0 17:61667465722074686520726177206f6e65
+connect 1
+new session type 1 id 4660 lfs 4 s2(new)
+new session type 1 id 4660 lfs 4 s3(new)
+new session type 2 id 77 lfs 4 s4(new)
+new session type 2 id 78 lfs 4 s5(new)
+new session type 1 id 4661 lfs 4 s6(new)
+new session type 3 id 5 lfs 4 s7(new)
+new session type 1 id 4660 lfs 4 s8(new)
+known client send 0
+raw server recv 0 27:0c34126b92789b9314c881940475f0bf8a0fd374b27b321c187e3b
+known client send 0
+raw server recv 0 27:0c34127e8adf03d63f79ee759a0fe07df152c7457a05cbb976daa2
+known client send 0
+known server recv 0 5:7468697264
+known client send 0
+known server recv 0 6:666f75727468
+known client send 0
+raw server recv 0 19:0c341243270c532abf0b75122ef33a86e8848d
+known client send 0
+skip server recv 100086 none
+known client send 0
+skip server recv 100086 none
+known client send 0
+mismatch server recv 100083 none
+persistent client send 0
+raw server recv 0 17:0c50c46135c22a44eebf91999d37ae3103
+persistent client send 0
+persistent server recv 0 14:70657273697374656e742074776f
+persistent server send 0
+persistent client recv 0 15:70657273697374656e74206261636b
+nocrypt client send 0
+raw server recv 0 5:706c61696e
+new session type 2 id 9 lfs 4 s9(new)
+new session type 2 id 9 lfs 4 s10(new)
+twice client send 0
+raw server recv 0 25:0c97283bb435e5f29a086fca0661d0dd30e06b6588d51c439b
+twice client send 0
+twice server recv 0 11:747769636520616761696e
+released client send 0
+released server recv 0 5:7374696c6c
+accept 1
+type 1 client status 100053 server status 100044 lfs 4/4
+session client session null
+session server session null
+keys same 1
+client send 0
+server recv 0 17:756e656e637279707465642068656c6c6f
+client after release send 0
+server after release recv 0 12:616674657220746865206f70
+server after release send 0
+client after release recv 0 17:6261636b20616674657220746865206f70
+unrun op session null
+unrun key 6:286e6f6e6529
+done

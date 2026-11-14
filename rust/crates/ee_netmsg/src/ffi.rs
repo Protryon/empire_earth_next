@@ -209,6 +209,39 @@ pub unsafe extern "C" fn ee_netmsg_import(class_id: u32, data: *const u8, slots:
     }
 }
 
+/// `ee_netmsg_field_kind`: no such member.
+pub const EE_NETMSG_FIELD_NONE: u8 = 0;
+/// `ee_netmsg_field_kind`: a fixed member (its slot is the member's address and size).
+pub const EE_NETMSG_FIELD_FIXED: u8 = 1;
+/// `ee_netmsg_field_kind`: a string (the slot's bytes and their count).
+pub const EE_NETMSG_FIELD_STRING: u8 = 2;
+/// `ee_netmsg_field_kind`: records (the slot's first record, a record's size, the count).
+pub const EE_NETMSG_FIELD_RECORDS: u8 = 3;
+/// `ee_netmsg_field_kind`: a blob (the slot's bytes, as many as the member before it says).
+pub const EE_NETMSG_FIELD_BLOB: u8 = 4;
+/// `ee_netmsg_field_kind`: the players' inputs.
+pub const EE_NETMSG_FIELD_INPUTS: u8 = 5;
+
+/// How a class's member `index` (after the header) travels: `EE_NETMSG_FIELD_*` (NONE past the last member), so a
+/// reader of the slots (the capture's member records) knows what each slot holds.
+#[no_mangle]
+pub extern "C" fn ee_netmsg_field_kind(class_id: u32, index: u32) -> u8 {
+    match class(class_id).fields.get(index as usize).map(|f| f.kind) {
+        None => EE_NETMSG_FIELD_NONE,
+        Some(Kind::WStr) => EE_NETMSG_FIELD_STRING,
+        Some(Kind::Records8(_) | Kind::Records32(_)) => EE_NETMSG_FIELD_RECORDS,
+        Some(Kind::Blob) => EE_NETMSG_FIELD_BLOB,
+        Some(Kind::Inputs) => EE_NETMSG_FIELD_INPUTS,
+        Some(_) => EE_NETMSG_FIELD_FIXED,
+    }
+}
+
+/// How many members (after the header) a class's import reads: all of them but for `EEMChangeFormation`.
+#[no_mangle]
+pub extern "C" fn ee_netmsg_import_fields(class_id: u32) -> u32 {
+    class(class_id).import_fields as u32
+}
+
 /// The class the game's or the engine's factory builds for message type `message_type`, or `u32::MAX`.
 #[no_mangle]
 pub extern "C" fn ee_netmsg_class_of_type(message_type: u8) -> u32 {
@@ -472,6 +505,30 @@ mod tests {
             ee_netmsg_inputs_import(out.as_ptr().add(12), build, &mut seen as *mut Vec<u8> as *mut std::ffi::c_void)
         };
         assert_eq!((end, seen.as_slice()), (10, &[0x3a, 0x41][..]));
+    }
+
+    #[test]
+    fn field_kinds_and_import_counts() {
+        let civ = classes::EE_NETMSG_CIV_UPGRADES;
+        let kinds: Vec<u8> = (0..6).map(|i| ee_netmsg_field_kind(civ, i)).collect();
+        assert_eq!(
+            kinds,
+            [
+                EE_NETMSG_FIELD_FIXED,
+                EE_NETMSG_FIELD_FIXED,
+                EE_NETMSG_FIELD_FIXED,
+                EE_NETMSG_FIELD_RECORDS,
+                EE_NETMSG_FIELD_STRING,
+                EE_NETMSG_FIELD_NONE
+            ]
+        );
+        assert_eq!(ee_netmsg_field_kind(classes::EE_NETMSG_SELECT_UNITS, 2), EE_NETMSG_FIELD_BLOB);
+        let tick = crate::engine::EE_NETMSG_NE_COMMUNICATIONS_TICK;
+        let last = crate::engine::ENGINE_CLASSES[(tick - EE_NETMSG_ENGINE_BASE) as usize].fields.len() as u32 - 1;
+        assert_eq!(ee_netmsg_field_kind(tick, last), EE_NETMSG_FIELD_INPUTS);
+        assert_eq!(ee_netmsg_import_fields(classes::EE_NETMSG_CHANGE_FORMATION), 2);
+        assert_eq!(CLASSES[classes::EE_NETMSG_CHANGE_FORMATION as usize].fields.len(), 3);
+        assert_eq!(ee_netmsg_import_fields(classes::EE_NETMSG_PAY_TRIBUTE), 7);
     }
 
     #[test]
