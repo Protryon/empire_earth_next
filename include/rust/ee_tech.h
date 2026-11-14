@@ -68,6 +68,18 @@ constexpr static const uint32_t EE_CALAMITY_FUNCTOR_LEPROSY = 5;
 /// `EEPlagueFunctor(mRadius, mChance, mDamage, mSpreadTime, unit set, mode)`.
 constexpr static const uint32_t EE_CALAMITY_FUNCTOR_PLAGUE = 6;
 
+/// What a class is cast at ([`target_kind`]; its `GetTargetKind`): no class of the kind.
+constexpr static const uint32_t EE_CALAMITY_TARGET_NONE = 0;
+
+/// `EEGlobalCalamityClass` (1): nothing (the cloaking, the line of sight).
+constexpr static const uint32_t EE_CALAMITY_TARGET_GLOBAL = 1;
+
+/// `EELocationCalamityClass` (2): a tile.
+constexpr static const uint32_t EE_CALAMITY_TARGET_LOCATION = 2;
+
+/// `EEUnitCalamityClass` (3): a unit.
+constexpr static const uint32_t EE_CALAMITY_TARGET_UNIT = 3;
+
 /// The step lists of [`media_step`]: `LoadMedia(player, on demand)`.
 constexpr static const uint32_t EE_CALAMITY_MEDIA_LOAD = 0;
 
@@ -1258,6 +1270,9 @@ void ee_calamity_class_fill(EeCalamityClassFields *fields,
 
 /// [`functor_kind`].
 uint32_t ee_calamity_class_functor_kind(int32_t class_enum);
+
+/// [`target_kind`].
+uint32_t ee_calamity_class_target_kind(int32_t class_enum);
 
 /// [`media_step`].
 uint32_t ee_calamity_class_media_step(int32_t class_enum, uint32_t list, uint32_t index);

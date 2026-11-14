@@ -24,26 +24,6 @@
 #include "ee/EEGlobalCalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
-#include "ee/EECCAreaEffect.h"
-#include "ee/EECCAEExtraDamage.h"
-#include "ee/EECCAEMindControl.h"
-#include "ee/EECCCloaking.h"
-#include "ee/EECCConscription.h"
-#include "ee/EECCDropObject.h"
-#include "ee/EECCEarthquake.h"
-#include "ee/EECCFire.h"
-#include "ee/EECCHurricane.h"
-#include "ee/EECCLeprosy.h"
-#include "ee/EECCLineOfSight.h"
-#include "ee/EECCLogicBomb.h"
-#include "ee/EECCMeteorStorm.h"
-#include "ee/EECCMorale.h"
-#include "ee/EECCPlague.h"
-#include "ee/EECCSpecialAttack.h"
-#include "ee/EECCSpecialLocation.h"
-#include "ee/EECCTeleport.h"
-#include "ee/EECCTimeWarp.h"
-#include "ee/EECCVolcano.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEAreaEffect.h"
@@ -78,31 +58,15 @@ void EECalamityManager::DestroyCalamities()
 
 namespace {
 
-// New (port): the calamity class of a record's kind, as LoadCalamityClasses's switch made it (its ESVERIFYs on
-// `new`'s result, lines 128..235, could never fail)
+// New (port): the calamity class of a record's kind: the base its EECC* class derived from (ee_tech calamity_class.rs
+// target_kind; the classes' own steps are EECalamityUpdate.cpp's); none for kinds 1, 2, 5, 6, 11, 12 and unknown ones
+// (LoadCalamityClasses's ESVERIFYs on `new`'s result, lines 128..235, could never fail)
 EECalamityClass* NewCalamityClass(long inClassEnum)
 {
-    switch (inClassEnum) {
-    case kCalamityEarthquake: return new EECCEarthquake;
-    case kCalamityHurricane: return new EECCHurricane;
-    case kCalamityPlague: return new EECCPlague;
-    case kCalamityLeprosy: return new EECCLeprosy;
-    case kCalamityVolcano: return new EECCVolcano;
-    case kCalamityFire: return new EECCFire;
-    case kCalamityMorale: return new EECCMorale;
-    case kCalamityTimeWarp: return new EECCTimeWarp;
-    case kCalamityTeleport: return new EECCTeleport;
-    case kCalamityAreaEffect: return new EECCAreaEffect;
-    case kCalamityAEExtraDamage: return new EECCAEExtraDamage;
-    case kCalamitySpecialAttack: return new EECCSpecialAttack;
-    case kCalamityAEMindControl: return new EECCAEMindControl;
-    case kCalamityConscription: return new EECCConscription;
-    case kCalamityLogicBomb: return new EECCLogicBomb;
-    case kCalamityDropObject: return new EECCDropObject;
-    case kCalamityCloaking: return new EECCCloaking;
-    case kCalamityMeteorStorm: return new EECCMeteorStorm;
-    case kCalamityLineOfSight: return new EECCLineOfSight;
-    case kCalamitySpecialLocation: return new EECCSpecialLocation;
+    switch (ee_calamity_class_target_kind((int32_t)inClassEnum)) {
+    case EE_CALAMITY_TARGET_GLOBAL: return new EEGlobalCalamityClass;
+    case EE_CALAMITY_TARGET_LOCATION: return new EELocationCalamityClass;
+    case EE_CALAMITY_TARGET_UNIT: return new EEUnitCalamityClass;
     }
     return NULL;
 }
