@@ -77,6 +77,7 @@ pub mod httpcache;
 pub mod httpdoc;
 pub mod httpengine;
 pub mod httpget;
+pub mod imgfilter;
 pub mod inputobj;
 /// cbindgen:ignore
 pub mod ipaddr;
