@@ -2816,6 +2816,70 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
 
+/// The flare's colour (`EeScreensMiniMapCopy::flare_color`): none set, `sFlareColor` (red), `sFlareBlinkColor`.
+constexpr static const uint8_t EE_SCREENS_MM_COLOR_NONE = 0;
+
+constexpr static const uint8_t EE_SCREENS_MM_COLOR_FLARE = 1;
+
+constexpr static const uint8_t EE_SCREENS_MM_COLOR_BLINK = 2;
+
+/// `gMiniMap->mTerrainCriticalSection->Enter()`.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_ENTER = 1;
+
+/// `UIControl::DrawPolygons()`.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_BASE = 2;
+
+/// The rasterizer's `Draw(sMapBitmap)` (its result unused).
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_MAP = 3;
+
+/// `Draw(sWorldBitmap)`, `Draw(sFlareBitmap)`: the result.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_WORLD = 4;
+
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_FLARE = 5;
+
+/// The viewport's view rectangle kept, the viewport set to the plan's clip rectangle.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_CLIP = 6;
+
+/// `Draw(&mLines[i], 1)` for i = step - LINE: the result.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_LINE = 7;
+
+/// The viewport's view rectangle put back.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_RESTORE = 11;
+
+/// `mTerrainCriticalSection->Leave()`.
+constexpr static const uint8_t EE_SCREENS_MM_DRAW_LEAVE = 12;
+
+/// `GetHasMouseCapture()`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_HAS_CAPTURE = 1;
+
+/// `GetLeftMouseButtonDown()`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_LEFT_DOWN = 2;
+
+/// `gMouse->mPointer`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_POINTER = 3;
+
+/// `CenterCamera()`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_CENTER = 4;
+
+/// `SetDirty(true)`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_DIRTY = 5;
+
+/// The [`EeScreensMiniMapMouse`] at c filled: the form's mouse location, the rectangle, gMiniMap's
+/// pixel-to-map matrix.
+constexpr static const uint32_t EE_SCREENS_MM_OP_READ_MOUSE = 6;
+
+/// `gWorld.mMap->GetTileAtLocation((a, b)) != NULL`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_TILE_EXISTS = 7;
+
+/// `gCommunications->ProcessLocalUserInput(new EEMSendFlare((a, b)), kSlotNone)`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_SEND_FLARE = 8;
+
+/// `gMouse->mPointer = 0`, the form's `SetUIState(0)`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_FLARE_DONE = 9;
+
+/// `ReleaseCapturedMouse()`.
+constexpr static const uint32_t EE_SCREENS_MM_OP_RELEASE = 10;
+
 /// The statistics group (`mGroups[1]`).
 constexpr static const uint32_t EE_SCREENS_GROUP_STATISTICS = 1;
 
@@ -5112,6 +5176,54 @@ struct EeScreensLobbyOptionsRecord {
   bool victory;
 };
 
+/// `CopyData`'s record: what the C++ read (in), what it applies (out).
+struct EeScreensMiniMapCopy {
+  float rect[4];
+  uint32_t window_width;
+  uint32_t window_height;
+  float corners[4][2];
+  float origin[2];
+  float flare_point[2];
+  float map_to_pixel[6];
+  uint32_t flare_texture_height;
+  uint32_t flare_texture_width;
+  float flare_location[2];
+  float flare_width;
+  uint8_t flare_on;
+  uint8_t free_camera;
+  /// in and out: `mShowFlare`, `mFlareBlink`
+  uint8_t show_flare;
+  uint8_t flare_blink;
+  uint8_t flare_color;
+  uint8_t redraw_all;
+  uint8_t set_flare;
+  uint8_t reserved;
+  float map_scale[2];
+  float world_scale[2];
+  float flare_new_location[2];
+  float flare_scale[2];
+  float lines[4][2][2];
+};
+
+/// `DrawPolygons`' plan: its steps (`count` of `steps`) and the clip rectangle (left, top, right, bottom).
+struct EeScreensMiniMapDraw {
+  uint8_t steps[16];
+  uint32_t count;
+  float clip[4];
+};
+
+/// `Update`'s record: the map's width (`mL195614`), height (`mL195610`) and size, the mini map's map-to-pixel
+/// matrix (in); the units texture's coordinate extent and the map's bounds in mini-map units (left, top, right,
+/// bottom) (out).
+struct EeScreensMiniMapUpdate {
+  int32_t width;
+  int32_t height;
+  int32_t size;
+  float map_to_pixel[6];
+  float extent;
+  float bounds[4];
+};
+
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
 struct EeScreensSinglePlayerSlot {
   /// `EE_SCREENS_SP_*`: whose slot (the human's and the computer's take their names; a closed one keeps a new
@@ -5370,6 +5482,14 @@ struct EeScreensManagerPlayer {
   uint8_t name;
   /// 0 (the record's last byte, so that it has no padding)
   uint8_t reserved;
+};
+
+/// What the left release reads of the form's mouse: its location, the control's rectangle (left, top, right,
+/// bottom) and gMiniMap's pixel-to-map matrix (m00 m01 m03 m10 m11 m13).
+struct EeScreensMiniMapMouse {
+  float mouse[2];
+  float rect[4];
+  float pixel_to_map[6];
 };
 
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
@@ -5786,6 +5906,33 @@ long ee_screens_event(uint32_t event,
 
 /// The menus' event code for a control event id, 0 for another form's.
 uint32_t ee_screens_menus_event_for(unsigned long id);
+
+/// `EEUIMiniMap::CopyData`'s numbers over the record the C++ read (`copy`'s in fields; its out fields written).
+///
+/// # Safety
+/// `copy` points to a valid record.
+void ee_screens_mini_map_copy_data(EeScreensMiniMapCopy *copy);
+
+/// `EEUIMiniMap::DrawPolygons`' plan: the flare shown or not, the lines' draw flags (bit i: line i) and the
+/// copied draw rectangle.
+EeScreensMiniMapDraw ee_screens_mini_map_draw_plan(bool show_flare,
+                                                   uint32_t draw_lines,
+                                                   float left,
+                                                   float top,
+                                                   float right,
+                                                   float bottom);
+
+/// `EEUIMiniMap::Update`'s numbers over the record the C++ read.
+///
+/// # Safety
+/// `update` points to a valid record.
+void ee_screens_mini_map_update(EeScreensMiniMapUpdate *update);
+
+/// `EEUIMiniMap::MouseLButtonUp` on the control `map`: its result.
+int64_t ee_screens_mini_map_mouse_l_up(void *map);
+
+/// `EEUIMiniMap::MouseMove` on the control `map`: its result.
+int64_t ee_screens_mini_map_mouse_move(void *map);
 
 /// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
 void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);

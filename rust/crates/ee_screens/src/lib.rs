@@ -72,6 +72,8 @@
 //!   over the C++ host.
 //! - [`ui_game`]: the UI thread's game starts (the scenario tests, a saved game's load) and its loop (`Run`)
 //!   over the C++ host.
+//! - [`mini_map`]: the mini map control's `CopyData` numbers, `DrawPolygons`' plan, `Update`'s numbers, the
+//!   left release and drag over the C++ host.
 //! - [`ui_manager`]: the game's UI manager's constructor work (the port's controls), `StartScenarioEditor`,
 //!   `UpdateKeyboard`, `UpdateMouse` over the C++ host.
 //! - [`ui_thread`]: the UI thread's message switch (`EEUserInterface::HandleMessage`) and the game window's event
@@ -151,6 +153,9 @@ pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
 mod menus_ffi;
+pub mod mini_map;
+#[cfg(not(test))]
+mod mini_map_ffi;
 pub mod panel_groups;
 #[cfg(not(test))]
 mod panel_groups_ffi;
