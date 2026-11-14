@@ -16755,3 +16755,120 @@ The merge of rust met `rust/cbindgen.toml`'s export list (both sides added names
 - Then top-down: the controls of the LAN screens (GameBrowserCtrl, GameUserListCtrl, LobbyOptionsCtrl,
   GameStagingCtrl), the EE room (EELobbyGame and its controls), the logics (AccountLogic, InitLogic, PingLogic,
   RoutingLogic last, Internet only), and the resource tables and factories.
+
+## LLE Network Engine, round 4: NESynchronousServer whole in Rust (ee_net server.rs; branch rust-ne4, 2026-11-14)
+
+Round 3's order, next step: the rest of the server. The lead's split (constructor and Publish; threads and
+SendCommunicationsTick; checksums and OOS; pause and send-to-all-and-wait) became two code commits: the checksums and
+the out-of-sync handling first (a leaf with its own state), then the rest in one, because the constructor and the
+three threads share every field: splitting them would have needed a temporary field-accessor layer that the next
+commit deletes.
+
+| Commit | What | C++ (src + include, without include/rust) |
+|---|---|---|
+| 1d0a91ac | LogChecksumResponse, RemovePlayerFromGameInProgress and SendCommunicationsTick's out-of-sync block in Rust (`server.rs`); RemovePlayer (no caller) deleted | +57 -120, net -63 |
+| 7031f85b | NESynchronousServer whole in Rust: the constructor and Publish, the main, send and transfer threads, SendCommunicationsTick, the packets, tick responses, reconnection, pause, unpause, send-to-all-and-wait, broadcasts, every accessor | +454 -1309, net -855 |
+| cd92a8ac | ee_net msgmgr: a message resent into the ring entry that holds it keeps its reference; the golden world's packet-filling inputs and reconnect resumes | Rust and tests only |
+
+Round: -918. The Network Engine's C++ is 3,935 lines (src + include/lle NE*).
+
+**The server** (`server.rs`, `ffi_server.rs`): every field of the original class, every member and the three thread
+bodies, with the message manager (`MsgMgr`), the tuning (`Tune`) and the recorder (`RecPlay`) as the server's own
+objects whose hosts point back at it (`Back`, as the client's `ClientQ`): the manager's calls that touch the server
+(the forced tick, the last tick's message number, the start of a send-to-all-and-wait, the clock) and all of the
+tuning's (fields, events, the manager, the game) are answered in Rust; the recorder's callback is the server's
+method. The C++ class keeps the type callers hold (`EEServer` subclasses it), its virtual members, the base class's
+fields (`NESynchronousCommunications`: humans, multiplayer, paused, the last tick, the CTs processed, the average
+physics time) and Publish's name, announcement and adapter, and answers three host functions: `Host`
+(`EeNetSvOp`, 37 ops: WaitAny, the protocol and its published server, the typed messages' fields and constructors,
+the game's virtual members, the virtual ProcessLocalUserInput), `MessageManagerHost` (the manager's message, server,
+base-class, game and file ops, as before) and `QueueHost` (the queues' common ops; the thread table gained the
+server's playback, main, send and transfer bodies, kinds 6 to 9, and the ESVERIFY table the server's unit). Every
+inline accessor of the header is an out-of-line forwarder; `MessageManagerHost`'s, `TuneHost`'s and `QueueHost`'s
+field cases, `NECDIServer`/`GetDebugInfo` (no caller), `GetIsOOS` (no caller) and `RemovePlayer` (no caller) went.
+`ffi.rs`'s manager host became `MmVia<C: MmCall>` (the C++ function, or the server's call that answers four ops
+itself). `RLock` gained `enter`/`leave` for `LockSendCommunicationsTick` / `UnlockSendCommunicationsTick`, which the
+game holds across its own calls.
+
+- **Locks:** the five critical sections are re-entrant locks held where the original held them (the tick across its
+  whole send, the send-to-all-and-wait queue across the tick and the main thread's answer, pause and unpause, the
+  incoming inputs, the checksums); the queues and maps are reached only under them in closures that make no call out.
+  Every other field is an atomic.
+- **Determinism (RUST_PLAN 2.1):** the send thread's interval arithmetic is the original's 32-bit `long`
+  (`interval - 50`, the lateness carried over, `theDrift + interval - 50` clamped to 1), wrapping; the simulation's
+  PTs per tick keep round 3's `f32_to_u32`. The single-player game's local server sends every tick through
+  `send_communications_tick`, so the oracle runs it: seeds identical to `ref`.
+- **The golden** (`tests/net/ne_server_test.cpp`, in `nettest`): the original unit as the round found it, unmodified
+  (`tests/net/orig_s/NESynchronousServer.cpp` with its header; its manager, tuning and recorder are already ee_net's
+  objects behind their C ABI, so both sides run the same Rust there), over stand-in headers in `tests/net/orig_s/lle`
+  (the protocol and its published server with a packet queue, typed messages with export sizes and keys that their
+  responses repeat, transferred file specs) on round 2's baton world: the server's main, send and transfer threads
+  are real threads that run one at a time. Each of 1,500 sequences builds a server (Publish failing in one of
+  twelve, the simulation's switch on in one of ten) and makes 80 random steps: time passing (ticks, the send
+  thread's lateness, answer waits, retries, boots, reconnect waits), the clients' packets (tick responses with
+  inputs, pause answers, checksums, connection, disconnection and reconnection requests, connection checks, inputs,
+  bytes naming no message), the server's own inputs (a quarter of them sized to fill a tick's packet exactly),
+  start, stop, pause, unpause, send-to-all-and-wait, the base class's fields, the setters, transfers queued and
+  aborted, broadcasts, sends, removals, reconnect waits resumed near the 3.5 s cut, pings, slots, the simulation's
+  tick, TuneServer; then the threads stopped, the server freed and the messages left listed: 1,500 sequences, 26.6
+  million trace lines, all equal (the first version, with the tick boundary and the reconnect window unreachable,
+  let two mutations live). Two world rules were needed: a wait of 0 ms lets a millisecond pass (`mZeroWaitTicks`,
+  off for the other goldens), and a timeout past the 32-bit clock's wrap waits forever, as a real one waits weeks.
+- **Mutations** (300 sequences each; the cargo replay):
+
+  | Mutation | Sequences differing | Replay |
+  |---|---|---|
+  | a tick's inputs stop past the packet (`>` for `>=`) | 5 | fails |
+  | the checksum tick one later | 103 | fails |
+  | a send-to-all-and-wait boots after one retry more | 88 | fails |
+  | the reconnect wait cut when 3,000 ms are left (3,500) | 3 | passes |
+  | a ping every 2 s | 32 | fails |
+  | checksums asked for outside a multiplayer game | 138 | fails |
+  | the send thread forgets its lateness | 261 | fails |
+  | a paused game's input sent whether or not it may be | 19 | fails |
+  | the humans after reconnects without the server | 2 | fails |
+  | no physics held while a send-to-all-and-wait goes | 170 | fails |
+
+  Round 4's first commit had its own golden (`ne_checks_test`, the three members cut unmodified, 20,000 sequences,
+  7 mutations caught); the whole server's golden covers them and replaced it.
+- **Cargo:** `golden_server.txt` (40 sequences whose op record stays under 120 KB; 2 MB) is replayed by
+  `tests_server.rs` with real threads handed the baton where the record says, the nested virtual
+  ProcessLocalUserInput made by the replay itself, and the server's state checked after each step.
+- **A bug the golden found in the original manager** (both sides, sequence 1319): a send-to-all-and-wait still
+  unanswered 50 stores later is resent into its own ring entry; StoreSentMessage released the entry's message (its
+  last reference: freed) and then referenced the freed message. The store now leaves a message that goes back into
+  its own entry alone (one reference); ne_msgmgr_test's 20,000 sequences never reach it and stay equal. In a game
+  this needs a pause or save whose answers stay missing while 50 ticks go: a lagging LAN game.
+- **Behaviour changes, on undefined or crashing paths only:** fields the original never initialized (mRestartCT,
+  mTempOutOfSynchPTs, the threads and events of a server whose Publish failed) start at 0; a server that was not
+  published frees no threads; an interval of 0 at construction (a division by zero) gives 0 PTs a second;
+  `MsgSendTo`/`BroadcastMessage` free exports with `delete[]` (the original's scalar `delete`); the transfer send no
+  longer leaks the buffer it allocated before ExportMessage replaced it. Dropped: the discarded `GetMessageLabel`
+  calls, `PlatGetLastError` after a failed wait, the compiled-out trace's argument evaluation, the send thread's
+  `static sStartTime`.
+- **What runs it:** every game (the single-player game's local server: start, the ticks, inputs, the recorder's pass
+  mode; EE-SIM's `SimCommunicationsTick`), so the oracle and the captures exercise the constructor, the threads and
+  the tick; pause and save go through send-to-all-and-wait (the saveload matrix); the clients' packets, tuning,
+  booting, reconnection and transfers only in a LAN game (`lan_game.py`) and the golden.
+- **Gates.** Commit 1 (1d0a91ac): build --sim 0/0 (EE-AOC, EE-SIM); oracle seeds 2-3 identical to `ref`; the Rust
+  gate PASS; nettest (msgmgr 20,000, queues 1,500, client 1,500, tune 20,000, checks 20,000 sequences equal, protocol
+  equal to its golden); tcptest passes; the test-profile build 0/0; `lan_game.py` RESULT PASS lan-game PT host=3026
+  joiner=2622 (the joiner fell behind from t+33 s while this lane's cargo clippy loaded the machine; CTs within 50).
+  Commit 2 (7031f85b): build --sim 0/0; oracle seeds 2-3 identical; the Rust gate PASS; nettest with ne_server_test
+  1,500 sequences equal; the saveload matrix (`saveload --settings all --seeds 2-3 --at 1000,1900 --expect
+  tools/saveload_expect.txt`) expect PASS; tcptest failed once at Publish (port taken during the lead's harness
+  session), passed later. On the round merged with `rust` (bfcefd26, 008e14c0; conflicts in PORT_LEARNINGS and
+  cbindgen.toml, rust_includes' changes none): build --sim 0/0, oracle seeds 2-7 identical, the Rust gate PASS,
+  nettest (all six; ne_server_test 26,640,797 lines equal), sim_capture at seeds 2-3: oracle PASS (169 digests, 4
+  without a golden), late PASS (170, 4 without), the test-profile build 0/0, tcptest passes, and `lan_game.py` on the
+  merged test exe RESULT PASS lan-game PT host=3110 joiner=3113 (CTs equal at every 5 s sample, 189/189 at 60 s), no
+  EE-AOC FAULT in either game.log. The merge needed tcp_test and ne_protocol_test moved onto the Rust Thread System
+  (5684cefe: the deleted TSEvent/TSCriticalSection units, `mHandle` -> `GetHandle()`).
+- **Left:** NEProtocol's forwarders (a thin C++ class over ee_net_tcp, its byte counters), NESynchronousCommunications
+  (the base class: its fields are read by EEServer/EEClient directly), and NEMessage last (the game's base class).
+- **Lessons:** a golden driver's stand-in objects must not be cast to subclasses with fields they lack (a tick
+  response's extra-input count written past a base message corrupted the heap on one side only); a thread world must
+  let time pass for waits of 0 ms and treat wrapped deadlines as forever, or a polling thread spins it; the original
+  unit's undefined paths (a failed Publish's uninitialized events and server, a reconnect wait that ignores the exit)
+  must be kept out of the driver's steps, not "fixed" in the stand-ins; record only the small sequences for cargo
+  (the first full record was 89 MB).
