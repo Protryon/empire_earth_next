@@ -386,7 +386,7 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
     std::vector<UWideString> theStrings;
     GERectangle theRectangle, theParent;
     UIForm* theForm = this->GetFormByID(inTable.GetFormID());
-    GEWindow* theWindow = this->mRasterizer->GetWindow(this->mScreen);
+    GEWindow* theWindow = this->GetRasterizer()->GetWindow(this->GetScreen());
     float theExclusive = theForm->GetUseExclusiveCoords() ? 0.0f : 1.0f;
     theParent.SetLeft(0.0f);
     theParent.SetTop(0.0f);
